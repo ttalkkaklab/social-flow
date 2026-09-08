@@ -181,10 +181,6 @@ def inner_main(job_path):
     from mathutils import Quaternion, Vector
     job = json.load(open(job_path, encoding="utf-8"))
     say = lambda *a: print("⟫", *a, flush=True)
-    # The scene build uses the Khronos PBR Neutral view transform (4.2), the Principled Coat inputs
-    # (4.0) and cycles.denoising_use_gpu (3.5). An older Blender throws a traceback deep inside instead.
-    if bpy.app.version < (4, 2):
-        sys.exit(f"bake-blender.py needs Blender 4.2 or newer, found {bpy.app.version_string}")
     if job["mode"] == "capacity":
         prefs = bpy.context.preferences.addons["cycles"].preferences
         prefs.refresh_devices()
@@ -194,9 +190,15 @@ def inner_main(job_path):
             except TypeError: continue
             gpus = [d for d in prefs.devices if d.type != "CPU"]
             if gpus: backend, names = kind, [d.name for d in gpus]; break
+        # Capacity mode uses only refresh_devices and compute_device_type, which every supported Blender
+        # has, so it answers even on an install too old to bake — reporting that is its whole job.
         say("capacity", json.dumps({"blender": bpy.app.version_string, "backend": backend or "CPU",
-                                     "devices": names or ["CPU"]}))
+                                     "devices": names or ["CPU"], "tooOld": bpy.app.version < (4, 2)}))
         return
+    # The scene build uses the Khronos PBR Neutral view transform (4.2), the Principled Coat inputs
+    # (4.0) and cycles.denoising_use_gpu (3.5). An older Blender throws a traceback deep inside instead.
+    if bpy.app.version < (4, 2):
+        sys.exit(f"bake-blender.py needs Blender 4.2 or newer, found {bpy.app.version_string}")
     recipe = job["recipe"]; recipe_dir = job["recipe_dir"]
     bpy.ops.wm.read_factory_settings(use_empty=True)
     sc = bpy.context.scene
@@ -230,7 +232,9 @@ def inner_main(job_path):
     sc.view_settings.view_transform = job["view"]; sc.view_settings.look = "None"
     lighting = recipe.get("lighting") or {}
     light = float(job["light"])
-    sc.view_settings.exposure = math.log2(lighting.get("exposure", 1.05))
+    exposure = float(lighting.get("exposure", 1.05))
+    if exposure <= 0: sys.exit("lighting.exposure must be greater than 0")   # the contract allows 0; log2 does not
+    sc.view_settings.exposure = math.log2(exposure)
 
     # world — a lit room like the runtime's RoomEnvironment: brighter overhead, warm grey floor.
     # Three.js's room is emissive panels in the tens of units under environmentIntensity, so the
@@ -392,7 +396,9 @@ def inner_main(job_path):
     for prefix, rule in overrides.items():
         hit = 0
         for mat in bpy.data.materials:
-            if not mat.use_nodes or not (mat.name == prefix or mat.name.startswith(prefix + ".") or mat.name.startswith(prefix)): continue
+            # glTF keeps the authored name and suffixes duplicates .001, .002 — match those two, not any
+            # name that merely starts with the prefix (which would catch metal_rough for "metal").
+            if not mat.use_nodes or not (mat.name == prefix or re.fullmatch(re.escape(prefix) + r"\.\d{3}", mat.name)): continue
             nodes, links = mat.node_tree.nodes, mat.node_tree.links
             bsdf = next((n for n in nodes if n.type == "BSDF_PRINCIPLED"), None)
             if not bsdf: continue
@@ -719,7 +725,12 @@ def outer_main():
             frames_dir = tempfile.mkdtemp(prefix="bake-blender-capacity-")
             found = run_blender(blender, {"mode": "capacity", "frames_dir": frames_dir})
             shutil.rmtree(frames_dir, ignore_errors=True)
-        advice = lane_advice(found.get("backend") if blender else None, ram_gb, cores)
+        # An install too old to bake advises the mesh lane exactly as a missing one does.
+        usable = blender and not found.get("tooOld")
+        advice = lane_advice(found.get("backend") if usable else None, ram_gb, cores)
+        if found.get("tooOld"):
+            advice["reason"] = (f"Blender {found.get('blender')} is installed but the bake needs 4.2 or newer "
+                                "(view transform, Principled coat inputs) — use the browser mesh lane, or upgrade Blender")
         out = {"blender": found.get("blender"), "executable": blender or None,
                "backend": found.get("backend") if blender else None, "devices": found.get("devices"),
                "ramGB": round(ram_gb, 1), "cores": cores, "sheetPixelCap": SHEET_PIXEL_CAP, **advice}

@@ -9,12 +9,27 @@ import path from 'node:path';
 test('BLENDER env wins when it points at an existing file', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'blender-bin-'));
   const fake = path.join(dir, 'Blender');
-  fs.writeFileSync(fake, '#!/bin/sh\n');
+  fs.writeFileSync(fake, '#!/bin/sh\n', { mode: 0o755 });   // blenderBin only accepts an executable
   const saved = process.env.BLENDER;
   process.env.BLENDER = fake;
   try {
     const { blenderBin } = await import('../dist/config.js');
     assert.equal(blenderBin(), fake);
+  } finally {
+    if (saved === undefined) delete process.env.BLENDER; else process.env.BLENDER = saved;
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('a BLENDER path that exists but cannot be executed is not reported as the binary', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'blender-noexec-'));
+  const fake = path.join(dir, 'Blender');
+  fs.writeFileSync(fake, '#!/bin/sh\n', { mode: 0o644 });
+  const saved = process.env.BLENDER;
+  process.env.BLENDER = fake;
+  try {
+    const { blenderBin } = await import('../dist/config.js');
+    assert.notEqual(blenderBin(), fake);
   } finally {
     if (saved === undefined) delete process.env.BLENDER; else process.env.BLENDER = saved;
     fs.rmSync(dir, { recursive: true, force: true });

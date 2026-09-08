@@ -459,14 +459,19 @@ const openPage = async () => {
   // nothing caught a re-cut narration (blender-objects.md §4). Compare the two here, where both are known.
   if (segMap) {
     const baked = await evalJS(`(() => { const o = window.SLIDE_OBJECTS || {};
-      const k = Object.keys(o).find(k => o[k] && o[k].segs); return k ? o[k].segs : null; })()`);
-    if (baked) for (const [group, ms] of Object.entries(baked)) {
-      const asked = segMap[Number(group)];
-      if (!asked) continue;
-      const drift = Math.abs(asked - ms) / ms;
-      if (drift > 0.05) warn.push(`group ${group}: the object sheet was baked for ${ms}ms but this render passes ` +
-        `${asked}ms (${Math.round(drift * 100)}% off) — its frames stretch to fit, so subject motion runs at ` +
-        `${Math.round(30 * ms / asked)}fps instead of 30. Rebake with --segs before delivery`);
+      return Object.fromEntries(Object.entries(o).filter(([, v]) => v && v.segs)
+        .map(([k, v]) => [k, {segs: v.segs, fps: v.fps}])); })()`);
+    for (const [id, entry] of Object.entries(baked || {})) {
+      for (const [group, ms] of Object.entries(entry.segs || {})) {
+        const asked = segMap[Number(group)];
+        if (!asked || !(ms > 0)) continue;
+        const drift = Math.abs(asked - ms) / ms;
+        // The bake laid down bakedFps frames a second for ms; stretched over asked they arrive slower.
+        const bakedFps = Number(entry.fps) > 0 ? Number(entry.fps) : opt.fps;
+        if (drift > 0.05) warn.push(`${id} group ${group}: the object sheet was baked for ${ms}ms but this render ` +
+          `passes ${asked}ms (${Math.round(drift * 100)}% off) — its frames stretch to fit, so subject motion runs ` +
+          `at ${(bakedFps * ms / asked).toFixed(1)}fps against this render's ${opt.fps}. Rebake with --segs before delivery`);
+      }
     }
   }
   // Sustain layer — hand the page its segment lengths before reading group durations, so

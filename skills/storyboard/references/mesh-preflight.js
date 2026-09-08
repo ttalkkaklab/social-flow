@@ -28,7 +28,7 @@ function checkRecipeFiles(dir, scene) {
       if (!fs.realpathSync(source).startsWith(fs.realpathSync(path.dirname(filename)) + path.sep)) throw new Error('GLB symlink escapes assets');
       readGLB(source);
     }
-    if (ob.renderer === 'blender' && recipe.states.some(s => s && s.clips && Object.keys(s.clips).length))
+    if (ob.renderer === 'blender' && (recipe.states || []).some(s => s && s.clips && Object.keys(s.clips).length))
       errors.push('the Blender bake does not play GLB clips; pose the parts with bindings or use renderer mesh');
   } catch (e) { errors.push(`mesh preflight: ${e.message}`); }
   return errors;
