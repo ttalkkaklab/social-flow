@@ -86,7 +86,7 @@ const IGNORANCE = new RegExp([
   '알\\s*수(?:가|는|도)?\\s*없(?:다|어요|습니다|죠|네요|음)(?![가-힣])',
   '알\\s*길(?:이|은)?\\s*없(?:다|어요|습니다|죠)(?![가-힣])',
   '(?:모른다|모릅니다|몰라요|모르죠|모르겠(?:다|어요|습니다)|모르네요|모름|몰랐(?:다|어요|습니다))(?![가-힣])',
-  '(?:밝혀지|알려지|풀리|해결되|규명되)지\\s*않(?:았다|았어요|았습니다|았죠|는다|아요|습니다|죠)(?![가-힣])',
+  '(?:밝혀지|알려지|풀리|규명되)지\\s*않(?:았다|았어요|았습니다|았죠|는다|아요|습니다|죠)(?![가-힣])',
   '아무도\\s*(?:알지\\s*못(?:한다|합니다|해요|했다|했습니다))(?![가-힣])',
   '(?:미스터리|수수께끼|미제)(?:다|이다|입니다|예요|죠)(?![가-힣])',
   '(?:미스터리|수수께끼|미제)로\\s*남(?:았다|았어요|았습니다|았죠|는다|아요|습니다|은\\s*채)(?![가-힣])',
@@ -387,12 +387,13 @@ function analyse(src, fmt, scenes, opts) {
   const CITE_CELL = /^\**\s*M\s*(\d+)\s*\**$/i;
   dirIds.forEach((d) => {
     const mIdx = d.cells.findIndex((c, i) => i > 0 && CITE_CELL.test(String(c || '').trim()));
-    // The 주제 sits right after the citation. A row that puts the M# last has it in front
-    // instead, so fall back to the first cell that is neither the row id nor the citation —
-    // an empty read would skip the sentence this rule exists to judge.
-    let topic = mIdx >= 0 ? String(d.cells[mIdx + 1] || '') : '';
-    if (!topic.trim())
-      topic = String(d.cells.find((c, i) => i > 0 && i !== mIdx && String(c || '').trim()) || '');
+    // The 주제 sits right after the citation — or right before it on a row that puts the M#
+    // last. Nothing else on the row is ever read: a blank 주제 stays blank rather than
+    // borrowing the hero or status cell's words, which is how rounds 1-2 failed honest rows.
+    const last = d.cells.length - 1;
+    const topic = String((mIdx < 0 ? d.cells[1]
+      : mIdx === last ? (mIdx > 1 ? d.cells[mIdx - 1] : '')
+      : d.cells[mIdx + 1]) || '');
     const hit = topic.match(IGNORANCE);
     if (hit)
       bad(`D${d.n} is a report of ignorance ("…${hit[0]}") — the 주제 names what the evidence ` +
@@ -754,7 +755,9 @@ function selftest() {
   ok('미스터리로 남았다 is caught', has(ign('사건은 미스터리로 남았다'), /report of ignorance/));
   ok('밝혀지지 않았다 is caught', has(ign('원인은 밝혀지지 않았다'), /report of ignorance/));
   ok('풀리지 않았다 is caught', has(ign('사건은 끝내 풀리지 않았다'), /report of ignorance/));
-  ok('해결되지 않았다 is caught', has(ign('문제는 해결되지 않았다'), /report of ignorance/));
+  ok('규명되지 않았다 is caught', has(ign('원인은 끝내 규명되지 않았다'), /report of ignorance/));
+  ok('an unresolved problem is a fact, not ignorance',
+     !has(ign('이 갈등은 여전히 해결되지 않았다'), /report of ignorance/));
   ok('알려지지 않았다 is caught', has(ign('경위는 알려지지 않았다'), /report of ignorance/));
   ok('a 지 form inside a longer word passes',
      !has(ign('풀리지 않던 매듭을 누가 어떻게 풀었나'), /report of ignorance/));
