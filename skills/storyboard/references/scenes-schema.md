@@ -356,10 +356,12 @@ the actual source and clip hashes, checked before the build.
 ### Episode visual style selection
 
 Before authoring, follow [visual-style.md](visual-style.md). Both production modes store
-`PRODUCTION.style.preset`: `cinematic-miniature`, `photoreal`, or `webtoon`, with the actual
+`PRODUCTION.style.preset`: one of `cinematic-miniature`, `photoreal`, `webtoon`, `claymation`,
+`paper-cutout`, `ink-wash` or `toon-3d` (`production-mode.js` `STYLES`), with the actual
 `selection: { kind: "user" | "standing", reference: "actual choice or plan" }`.
 The `spatial-explainer` preset is accepted for existing boards only. New episodes require HITL.
-Use `videoDesign.look: "realistic"` for photoreal and `"webtoon"` for webtoon; neither attaches
+Use `videoDesign.look: "realistic"` for photoreal, `"webtoon"` for webtoon, `"clay"`, `"papercut"`,
+`"inkwash"` and `"toon3d"` for the four prompt-only presets; only cinematic-miniature attaches
 the miniature pack. Source, end-frame and motion prompts carry the selected treatment.
 
 ### Bundled full-video style references
@@ -2622,10 +2624,12 @@ production plan signature. Do not store resolved machine-specific image paths in
 ### Episode visual style selection
 
 Before authoring, follow [visual-style.md](visual-style.md). Both production modes store
-`PRODUCTION.style.preset`: `cinematic-miniature`, `photoreal`, or `webtoon`, with the actual
+`PRODUCTION.style.preset`: one of `cinematic-miniature`, `photoreal`, `webtoon`, `claymation`,
+`paper-cutout`, `ink-wash` or `toon-3d` (`production-mode.js` `STYLES`), with the actual
 `selection: { kind: "user" | "standing", reference: "actual choice or plan" }`.
 The `spatial-explainer` preset is accepted for existing boards only. New episodes require HITL.
-Use `videoDesign.look: "realistic"` for photoreal and `"webtoon"` for webtoon; neither attaches
+Use `videoDesign.look: "realistic"` for photoreal, `"webtoon"` for webtoon, `"clay"`, `"papercut"`,
+`"inkwash"` and `"toon3d"` for the four prompt-only presets; only cinematic-miniature attaches
 the miniature pack. Source, end-frame and motion prompts carry the selected treatment.
 
 ## Existing generated clip input (`visual.reuse`)

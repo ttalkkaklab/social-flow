@@ -26,7 +26,7 @@ separately billed provider if that capability is unavailable.
 The episode style chosen in [visual-style.md](../../storyboard/references/visual-style.md)
 overrides the generic photo defaults below for every new still, start and end frame, in
 hybrid and full_video alike. The miniature pack is attached only for cinematic-miniature;
-photoreal and webtoon use their own treatment and approved character references. In
+every other preset uses its own treatment and approved character references. In
 full_video use the approved look and world bible; physical subjects need no decorative person.
 
 Measured 2026-08-12 (`docs/research/2026-08-12-local-image-generation`).
