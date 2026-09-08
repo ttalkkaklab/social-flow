@@ -387,7 +387,12 @@ function analyse(src, fmt, scenes, opts) {
   const CITE_CELL = /^\**\s*M\s*(\d+)\s*\**$/i;
   dirIds.forEach((d) => {
     const mIdx = d.cells.findIndex((c, i) => i > 0 && CITE_CELL.test(String(c || '').trim()));
-    const topic = String((mIdx >= 0 ? d.cells[mIdx + 1] : d.cells[1]) || '');
+    // The 주제 sits right after the citation. A row that puts the M# last has it in front
+    // instead, so fall back to the first cell that is neither the row id nor the citation —
+    // an empty read would skip the sentence this rule exists to judge.
+    let topic = mIdx >= 0 ? String(d.cells[mIdx + 1] || '') : '';
+    if (!topic.trim())
+      topic = String(d.cells.find((c, i) => i > 0 && i !== mIdx && String(c || '').trim()) || '');
     const hit = topic.match(IGNORANCE);
     if (hit)
       bad(`D${d.n} is a report of ignorance ("…${hit[0]}") — the 주제 names what the evidence ` +
@@ -769,6 +774,13 @@ function selftest() {
      !has(ign('이 사건을 미제로 남기지 않으려 무엇을 했나'), /report of ignorance/));
   ok('a past-tense 몰랐다 is caught', has(ign('그날 무엇이 떨어졌는지 아무도 몰랐다'), /report of ignorance/));
   ok('"아무도 알지 못한다" is caught', has(ign('원인은 아무도 알지 못한다'), /report of ignorance/));
+  ok('a row that puts the M# last still has its 주제 read',
+     has(analyse(good.replace('| # | Message | 주제 · question | Hook form | Hero / stake | Already verified | Still to research | Status |\n|---|---|---|---|---|---|---|---|',
+                              '| # | 주제 | Message |\n|---|---|---|')
+                     .replace('| D1 | M1 | a | gap | x | 1 | — | chosen |', '| D1 | 진실은 알 수 없다 | M1 |')
+                     .replace('| D2 | M2 | b | number | y | 2 | — | not used |', '| D2 | b | M2 |')
+                     .replace('| D3 | M3 | c | identify | z | 3 | — | not used |', '| D3 | c | M3 |'), null),
+         /D1 is a report of ignorance/));
   ok('the "Still to research" column may say what is not established yet',
      !has(analyse(good.replace('| D1 | M1 | a | gap | x | 1 | — | chosen |',
                                '| D1 | M1 | a | gap | x | 1 | 인명피해 규모는 아직 밝혀지지 않았다 | chosen |'),
