@@ -24,7 +24,8 @@
  *
  *   ## Questions …            one row per question · Status says answered / written off
  *   ## Verified               one row per claim, numbered, with source links · ★ marks a key claim
- *   ## Directions             three rows · `Chosen: D#` locks the pick (owed on close, not on --direction)
+ *   ## Messages               three rows · what a viewer living now takes away — decided before the directions
+ *   ## Directions             three rows, one topic per message (`M#`) · `Chosen: D#` locks the pick (owed on close, not on --direction)
  *   ## Counter-evidence …     one row per key claim, `Claim #` naming which (ranges allowed)
  *   ## Failed verification …  what was excluded and why
  *   ## Sufficiency            the self-reported counts
@@ -43,9 +44,12 @@
  * A channel whose profile skips research has no research.md at all, and that is not a defect —
  * the caller decides whether the file was supposed to exist.
  *
- * `--direction` is the first-pass gate: three verified claims, ten searches, and three
- * direction rows, no pick and no counter-evidence yet. The default run is the close: the
- * floor, every question answered or written off, and one `Chosen:` direction.
+ * `--direction` is the first-pass gate: three verified claims, ten searches, three messages
+ * and three direction rows each citing one of them, no pick and no counter-evidence yet. The
+ * default run is the close: the floor, every question answered or written off, and one
+ * `Chosen:` direction. On both runs a message or direction sentence that ends on ignorance
+ * ("X는 아직 모른다", "미스터리로 남았다") is a violation — an episode built on one has nothing
+ * to hand over at the 마무리 (user directive 2026-09-07; scenario-stage §Messages first).
  *
  * Exit codes:
  *   0  the research closes (or, with --direction, is enough to ask)
@@ -71,7 +75,25 @@ const FLOOR_ABSOLUTE = 3;
 const FLOOR_SHORT = 5;
 const FLOOR_LONG = 12;
 const FLOOR_DIRECTIONS = 3;
+const FLOOR_MESSAGES = 3;
 const FLOOR_DIRECTION_SEARCHES = 10;
+
+/* A sentence that ends on ignorance. Predicate forms only — "알 수 없는 물체" is a modifier and
+   its predicate sits elsewhere, so it passes here and a person reads it; "알 수 없다" is the whole
+   point of the sentence, and that is what the rule bans. The (?![가-힣]) tail keeps 모른다면 and
+   없다는 out — a conditional or a quoted clause is not the sentence's verdict. */
+const IGNORANCE = new RegExp([
+  '알\\s*수(?:가|는|도)?\\s*없(?:다|어요|습니다|죠|네요|음)(?![가-힣])',
+  '알\\s*길(?:이|은)?\\s*없(?:다|어요|습니다|죠)(?![가-힣])',
+  '(?:모른다|모릅니다|몰라요|모르죠|모르겠(?:다|어요|습니다)|모르네요|모름|몰랐(?:다|어요|습니다))(?![가-힣])',
+  '(?:밝혀지|알려지|풀리|규명되)지\\s*않(?:았다|았어요|았습니다|았죠|는다|아요|습니다|죠)(?![가-힣])',
+  '아무도\\s*(?:알지\\s*못(?:한다|합니다|해요|했다|했습니다))(?![가-힣])',
+  '(?:미스터리|수수께끼|미제)(?:다|이다|입니다|예요|죠)(?![가-힣])',
+  '(?:미스터리|수수께끼|미제)로\\s*남(?:았다|았어요|았습니다|았죠|는다|아요|습니다|은\\s*채)(?![가-힣])',
+  '\\b(?:nobody|no\\s+one)\\s+knows\\b',
+  '\\b(?:remains?|is|are|was|were)\\s+(?:still\\s+)?(?:an?\\s+)?(?:mystery|unknown|unsolved|unexplained)\\b',
+  "\\b(?:we|they|scientists|historians)\\s+(?:still\\s+)?(?:don'?t|do\\s+not|may\\s+never)\\s+know\\b"
+].join('|'), 'i');
 
 function die(msg) {
   process.stderr.write('check-research: ' + msg + '\n');
@@ -234,6 +256,7 @@ function analyse(src, fmt, scenes, opts) {
   const vRows = rows(section(src, new RegExp('^##\\s+' + NUM + '(?:[\\w가-힣]{1,8}\\s)?(Verified|검증\\s*(표|통과))', 'i')));
   const dirBody = section(src, /Directions?|시나리오\s*방향|방향성|방향\s*후보/i) || '';
   const dRows = rows(dirBody);
+  const mRows = rows(section(src, new RegExp('^##\\s+' + NUM + '(Messages?(\\s|$)|메시지)', 'i')));
   const cRows = rows(section(src, /Counter-evidence|반증|역검증/i));
   const fRows = rows(section(src, /Failed\s*(verification)?|검증\s*실패|본문\s*금지|제외/i));
   const suffBody = section(src, /Sufficiency|충분성|충족/i) || '';
@@ -310,7 +333,27 @@ function analyse(src, fmt, scenes, opts) {
       warn(`Sufficiency counts ${answeredLine[2]} questions, the table has ${qRows.length}`);
   }
 
-  // ── Directions (three options, one pick) ──
+  // ── Messages (three, decided before the directions) ──
+  // §2.1: what a viewer living now understands, reconsiders or can do after the episode —
+  // three different ones, each on Verified rows. A direction is the topic cut from one of
+  // them, so a log with directions and no messages wrote its topics before their reason.
+  // None may be a report of ignorance — "X는 알 수 없다" hands the viewer nothing at the
+  // 마무리 (user directive 2026-09-07; scenario-stage §Messages first).
+  const msgIds = mRows.filter((r) => /^\**\s*M?\s*\d+\s*\**$/i.test(r[0] || ''))
+    .map((r) => ({ n: Number(String(r[0] || '').replace(/[^\d]/g, '')), cells: r }));
+  if (msgIds.length < FLOOR_MESSAGES)
+    bad(`${msgIds.length} message(s) — §2.1 writes three before any direction: what a viewer ` +
+        'living now understands, reconsiders or can do after the episode, each a different message on Verified rows');
+  // Only the Message cell is the sentence under judgement. "Why today" next to it explains
+  // what the viewer does not yet know, and reading that column made honest rows fail.
+  msgIds.forEach((m) => {
+    const hit = String(m.cells[1] || '').match(IGNORANCE);
+    if (hit)
+      bad(`M${m.n} is a report of ignorance ("…${hit[0]}") — a message names what the evidence ` +
+          'establishes, not what nobody knows (scenario-stage §Messages first)');
+  });
+
+  // ── Directions (three topics, one per message, one pick) ──
   // First pass (--direction) needs three rows and no pick. Close needs the same three rows
   // plus one Chosen: line (or a Status cell that says chosen). Unchosen rows stay as not used.
   const dirIds = dRows.filter((r) => /^\**\s*D?\s*\d+\s*\**$/i.test(r[0] || ''))
@@ -333,6 +376,40 @@ function analyse(src, fmt, scenes, opts) {
   } else if (chosen.size > 1) {
     warn(`directions ${[...chosen].join(', ')} are all marked chosen — pick one`);
   }
+
+  // Each direction is the topic cut from one message, and says which. The citation is a cell
+  // that holds nothing but an M# — a product name in the hero cell ("갤럭시 M2") is not one —
+  // and the 주제 read for ignorance is the cell right after it. Everything else on the row
+  // stays out of both reads: "Still to research" says what is not established yet, which is
+  // the column's job, and reading it made honest rows fail the gate.
+  const msgNums = new Set(msgIds.map((m) => m.n));
+  const citedMsgs = [];
+  const CITE_CELL = /^\**\s*M\s*(\d+)\s*\**$/i;
+  dirIds.forEach((d) => {
+    const mIdx = d.cells.findIndex((c, i) => i > 0 && CITE_CELL.test(String(c || '').trim()));
+    // The 주제 sits right after the citation — or right before it on a row that puts the M#
+    // last. Nothing else on the row is ever read: a blank 주제 stays blank rather than
+    // borrowing the hero or status cell's words, which is how rounds 1-2 failed honest rows.
+    const last = d.cells.length - 1;
+    const topic = String((mIdx < 0 ? d.cells[1]
+      : mIdx === last ? (mIdx > 1 ? d.cells[mIdx - 1] : '')
+      : d.cells[mIdx + 1]) || '');
+    const hit = topic.match(IGNORANCE);
+    if (hit)
+      bad(`D${d.n} is a report of ignorance ("…${hit[0]}") — the 주제 names what the evidence ` +
+          'establishes, never "X는 알 수 없다" (scenario-stage §Messages first)');
+    if (!msgIds.length) return;
+    if (mIdx < 0) bad(`D${d.n} cites no message (M#) — every direction is the topic cut from one of the three messages`);
+    else {
+      const n = Number(String(d.cells[mIdx]).replace(/[^\d]/g, ''));
+      if (!msgNums.has(n)) bad(`D${d.n} cites M${n}, which is not in the Messages table`);
+      else citedMsgs.push(n);
+    }
+  });
+  const shared = citedMsgs.filter((n, i) => citedMsgs.indexOf(n) !== i);
+  if (shared.length)
+    bad(`directions share a message (M${[...new Set(shared)].join(', M')}) — one topic per message, ` +
+        'so a message is left with no episode; write that message a topic of its own');
 
   // ── Which claims are key ──
   // Two readings, and both count: ★ in the # column, and the rows the sentences cite. A claim
@@ -409,7 +486,7 @@ function analyse(src, fmt, scenes, opts) {
 
   return {
     claims: claimCount, keyClaims: keys.length, keyBasis, questions: qRows.length,
-    directions: dirIds.length, chosen: [...chosen],
+    messages: msgIds.length, directions: dirIds.length, chosen: [...chosen],
     phase: directionPhase ? 'direction' : 'close',
     counterRows: cRows.length, counterUnmapped: unmapped, excluded: fRows.length,
     searches, floor: FLOOR_ABSOLUTE, searchFloor: FLOOR_DIRECTION_SEARCHES, aim, traceability: trace,
@@ -441,12 +518,19 @@ function selftest() {
     '| 2 | y | [a](https://a.example) | [b](https://b.example) | WebSearch | 2026-08-28 | |',
     '| 3 | z | [a](https://a.example) | [b](https://b.example) | WebSearch | 2026-08-28 | |',
     '',
+    '## Messages',
+    '| # | Message | Why today | On claims | Status |',
+    '|---|---|---|---|---|',
+    '| M1 | x-msg | now | 1 | → D1 |',
+    '| M2 | y-msg | now | 2 | → D2 |',
+    '| M3 | z-msg | now | 3 | → D3 |',
+    '',
     '## Directions',
-    '| # | Question | Hook form | Hero / stake | Already verified | Still to research | Status |',
-    '|---|---|---|---|---|---|---|',
-    '| D1 | a | gap | x | 1 | — | chosen |',
-    '| D2 | b | number | y | 2 | — | not used |',
-    '| D3 | c | identify | z | 3 | — | not used |',
+    '| # | Message | 주제 · question | Hook form | Hero / stake | Already verified | Still to research | Status |',
+    '|---|---|---|---|---|---|---|---|',
+    '| D1 | M1 | a | gap | x | 1 | — | chosen |',
+    '| D2 | M2 | b | number | y | 2 | — | not used |',
+    '| D3 | M3 | c | identify | z | 3 | — | not used |',
     '',
     'Chosen: D1 (2026-08-28)',
     '',
@@ -616,10 +700,10 @@ function selftest() {
   ok('a missing Directions section is a violation on close',
      has(analyse(noDir, null), /no direction pick|0 direction/));
   ok('two direction rows is a violation',
-     has(analyse(good.replace('| D3 | c | identify | z | 3 | — | not used |\n', ''), null),
+     has(analyse(good.replace('| D3 | M3 | c | identify | z | 3 | — | not used |\n', ''), null),
          /2 direction/));
-  const unpicked = good.replace('| D1 | a | gap | x | 1 | — | chosen |',
-                               '| D1 | a | gap | x | 1 | — | proposed |')
+  const unpicked = good.replace('| D1 | M1 | a | gap | x | 1 | — | chosen |',
+                               '| D1 | M1 | a | gap | x | 1 | — | proposed |')
     .replace('Chosen: D1 (2026-08-28)', '');
   ok('three rows with no pick is a violation on close',
      has(analyse(unpicked, null), /no direction pick/));
@@ -628,7 +712,7 @@ function selftest() {
   ok('--direction accepts three rows and no pick, even without counter-evidence',
      bads(analyse(dirOnly, { format: 'shorts-9x16' }, null, { directionPhase: true })).length === 0);
   ok('--direction still wants three rows',
-     has(analyse(dirOnly.replace('| D3 | c | identify | z | 3 | — | not used |\n', ''),
+     has(analyse(dirOnly.replace('| D3 | M3 | c | identify | z | 3 | — | not used |\n', ''),
                  null, null, { directionPhase: true }), /2 direction/));
   const nine = dirOnly.replace('| datago_search | a 통계 | … |', '');
   ok('--direction wants ten searches',
@@ -641,6 +725,103 @@ function selftest() {
   ok('a Korean 시나리오 방향 heading is the Directions table',
      analyse(good.replace('## Directions', '## 시나리오 방향'), null).directions === 3);
 
+  // ── Messages — three, before the directions, and each direction cites one ──
+  ok('it counts the messages', g.messages === 3);
+  ok('a Korean 메시지 heading is the Messages table',
+     analyse(good.replace('## Messages', '## 2. 메시지'), null).messages === 3);
+  const noMsg = good.replace(/\n## Messages[\s\S]*?(?=\n## Directions)/, '');
+  ok('a missing Messages section is a violation on close', has(analyse(noMsg, null), /0 message\(s\)/));
+  ok('a missing Messages section is a violation on --direction',
+     has(analyse(noMsg, null, null, { directionPhase: true }), /0 message\(s\)/));
+  ok('with no messages the directions raise nothing about citations at all',
+     !has(analyse(noMsg, null), /cites (no message|M\d)/));
+  ok('two messages is a violation',
+     has(analyse(good.replace('| M3 | z-msg | now | 3 | → D3 |\n', ''), null), /2 message\(s\)/));
+  ok('a direction citing no message is a violation',
+     has(analyse(good.replace('| D2 | M2 | b |', '| D2 | — | b |'), null), /D2 cites no message/));
+  ok('a direction citing a message that is not on the page is a violation',
+     has(analyse(good.replace('| D2 | M2 | b |', '| D2 | M7 | b |'), null), /D2 cites M7/));
+  ok('the M in a status word or a hero stat is not a citation',
+     !has(analyse(good.replace('| D2 | M2 | b |', '| D2 | M2 | b — 5M 원 |'), null), /cites M/));
+
+  // ── A topic is never a report of ignorance (user directive 2026-09-07) ──
+  const ign = (row) => analyse(good.replace('| D1 | M1 | a |', '| D1 | M1 | ' + row + ' |'), null);
+  ok('a message that ends on 모른다 is a violation',
+     has(analyse(good.replace('| M1 | x-msg |', '| M1 | 무엇이 떨어졌는지는 아직 모른다 |'), null),
+         /M1 is a report of ignorance/));
+  ok('a direction whose 주제 says nobody knows is a violation',
+     has(ign('진실은 아무도 모른다'), /D1 is a report of ignorance/));
+  ok('알 수 없습니다 is caught', has(ign('그날 무엇이 있었는지는 알 수 없습니다'), /report of ignorance/));
+  ok('미스터리로 남았다 is caught', has(ign('사건은 미스터리로 남았다'), /report of ignorance/));
+  ok('밝혀지지 않았다 is caught', has(ign('원인은 밝혀지지 않았다'), /report of ignorance/));
+  ok('풀리지 않았다 is caught', has(ign('사건은 끝내 풀리지 않았다'), /report of ignorance/));
+  ok('규명되지 않았다 is caught', has(ign('원인은 끝내 규명되지 않았다'), /report of ignorance/));
+  ok('an unresolved problem is a fact, not ignorance',
+     !has(ign('이 갈등은 여전히 해결되지 않았다'), /report of ignorance/));
+  ok('알려지지 않았다 is caught', has(ign('경위는 알려지지 않았다'), /report of ignorance/));
+  ok('a 지 form inside a longer word passes',
+     !has(ign('풀리지 않던 매듭을 누가 어떻게 풀었나'), /report of ignorance/));
+  ok('an English "remains a mystery" is caught', has(ign('what fell remains a mystery'), /report of ignorance/));
+  ok('"we still don\'t know" is caught', has(ign("we still don't know what fell"), /report of ignorance/));
+  ok('"알 수 없는" as a modifier passes the machine check',
+     !has(ign('정체를 알 수 없는 물체가 떨어진 뒤 군은 왜 설명을 바꿨나'), /report of ignorance/));
+  ok('a conditional 모른다면 passes', !has(ign('변속 원리를 모른다면 오르막에서 무엇을 잃나'), /report of ignorance/));
+  ok('a quoted 없다는 clause passes', !has(ign('알 수 없다는 발표가 왜 불신을 키웠나'), /report of ignorance/));
+  ok('"아무도 모르게" is an adverb, not a verdict',
+     !has(ign('아무도 모르게 옮겨진 상자가 왜 문제였나'), /report of ignorance/));
+  ok('"아무도 모르는 곳" is a modifier',
+     !has(ign('아무도 모르는 곳에 숨긴 이유가 무엇이었나'), /report of ignorance/));
+  ok('"미스터리다운" is not a predicate',
+     !has(ign('그 기록에는 미스터리다운 매력이 있다'), /report of ignorance/));
+  ok('a promise not to leave it unsolved passes',
+     !has(ign('이 사건을 미제로 남기지 않으려 무엇을 했나'), /report of ignorance/));
+  ok('a past-tense 몰랐다 is caught', has(ign('그날 무엇이 떨어졌는지 아무도 몰랐다'), /report of ignorance/));
+  ok('"아무도 알지 못한다" is caught', has(ign('원인은 아무도 알지 못한다'), /report of ignorance/));
+  // The 주제 read has borrowed a neighbouring cell three times now. These two pin it: a blank
+  // 주제 must stay blank, whether the violating phrase sits in the hero cell or the status cell.
+  ok('a blank 주제 does not borrow a later cell on a half-filled draft row',
+     !has(analyse(good.replace('| D1 | M1 | a | gap | x | 1 | — | chosen |',
+                               '| D1 | M1 |  |  | 진실은 아무도 모른다 | 1 | — | chosen |'), null),
+          /report of ignorance/));
+  ok('a blank 주제 does not borrow the status cell either',
+     !has(analyse(good.replace('| D1 | M1 | a | gap | x | 1 | — | chosen |',
+                               '| D1 | M1 |  |  |  | 1 | — | 미제로 남았다 |'), null),
+          /report of ignorance/));
+  ok('a row that puts the M# last still has its 주제 read',
+     has(analyse(good.replace('| # | Message | 주제 · question | Hook form | Hero / stake | Already verified | Still to research | Status |\n|---|---|---|---|---|---|---|---|',
+                              '| # | 주제 | Message |\n|---|---|---|')
+                     .replace('| D1 | M1 | a | gap | x | 1 | — | chosen |', '| D1 | 진실은 알 수 없다 | M1 |')
+                     .replace('| D2 | M2 | b | number | y | 2 | — | not used |', '| D2 | b | M2 |')
+                     .replace('| D3 | M3 | c | identify | z | 3 | — | not used |', '| D3 | c | M3 |'), null),
+         /D1 is a report of ignorance/));
+  ok('the "Still to research" column may say what is not established yet',
+     !has(analyse(good.replace('| D1 | M1 | a | gap | x | 1 | — | chosen |',
+                               '| D1 | M1 | a | gap | x | 1 | 인명피해 규모는 아직 밝혀지지 않았다 | chosen |'),
+                  null), /report of ignorance/));
+  ok('the "Why today" column may say the viewer does not know it yet',
+     !has(analyse(good.replace('| M2 | y-msg | now | 2 | → D2 |',
+                               '| M2 | y-msg | 사람들이 여전히 진실을 모른다 | 2 | → D2 |'), null),
+          /report of ignorance/));
+  ok('an M# inside another cell does not stand in for a missing citation',
+     has(analyse(good.replace('| D2 | M2 | b | number | y | 2 | — | not used |',
+                              '| D2 | — | b | number | 갤럭시 M2 언팩 반응 | 2 | — | not used |'), null),
+         /D2 cites no message/));
+  ok('a two-column Messages table is still read for ignorance',
+     has(analyse(good.replace('| # | Message | Why today | On claims | Status |\n|---|---|---|---|---|',
+                              '| # | Message |\n|---|---|')
+                     .replace('| M1 | x-msg | now | 1 | → D1 |', '| M1 | 진실은 아무도 모른다 |')
+                     .replace('| M2 | y-msg | now | 2 | → D2 |', '| M2 | y-msg |')
+                     .replace('| M3 | z-msg | now | 3 | → D3 |', '| M3 | z-msg |'), null),
+         /M1 is a report of ignorance/));
+  ok('the message status cell is not read for ignorance',
+     !has(analyse(good.replace('| M2 | y-msg | now | 2 | → D2 |',
+                               '| M2 | y-msg | now | 2 | 미제로 남았다 |'), null), /M2 is a report of ignorance/));
+  ok('two directions on one message is a violation',
+     has(analyse(good.replace('| D2 | M2 | b |', '| D2 | M1 | b |'), null), /share a message \(M1\)/));
+  ok('the status cell is not read for ignorance',
+     !has(analyse(good.replace('| D2 | M2 | b | number | y | 2 | — | not used |',
+                               '| D2 | M2 | b | number | y | 2 | — | 미제로 남았다 |'), null), /report of ignorance/));
+
   // Drift guard — the floors live in the skill, and this file has to agree with it.
   const skill = path.resolve(SELF_DIR, '..', 'SKILL.md');
   if (fs.existsSync(skill)) {
@@ -650,6 +831,7 @@ function selftest() {
     ok('SKILL §2 still aims a short at five or more', /\*\*five or more\*\*/.test(s));
     ok('SKILL §2 still aims a long-form at twelve or more', /\*\*twelve or more\*\*/.test(s));
     ok('SKILL §2.1 still writes three directions', /three honest directions/i.test(s));
+    ok('SKILL §2.1 still writes three messages first', /§Messages first/.test(s));
     ok('SKILL §2.1 still asks ten or more searches', /\*\*ten or more\*\*/.test(s));
     ok('SKILL still names check-research.js --direction', /check-research\.js storyboard\/ --direction/.test(s));
   } else {
@@ -687,13 +869,14 @@ function main() {
   }
 
   const lines = ['research.md — ' + result.claims + ' verified claim(s) · ' +
-                 result.questions + ' question(s) · ' + result.directions + ' direction(s)' +
+                 result.questions + ' question(s) · ' + result.messages + ' message(s) · ' +
+                 result.directions + ' direction(s)' +
                  (result.chosen.length ? ' · chosen D' + result.chosen.join(', D') : '') +
                  ' · ' + result.excluded + ' excluded', ''];
   if (!result.findings.length) {
     if (result.phase === 'direction') {
-      lines.push('  First pass closes: three directions are on the page, ten or more searches');
-      lines.push('  are logged, and there are enough verified claims to ask which one the episode is.');
+      lines.push('  First pass closes: three messages and three directions citing them are on the page,');
+      lines.push('  ten or more searches are logged, and there are enough verified claims to ask which one the episode is.');
     } else {
       lines.push('  The research closes: the floor is met, a direction is picked, every question');
       lines.push('  ends answered or written off, and each claim was searched against itself.');
