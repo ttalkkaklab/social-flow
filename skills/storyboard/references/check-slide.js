@@ -83,9 +83,10 @@ const MSG = {
   castMissing: "여러 배우가 사건을 연기하는 act 객체에는 visual.slide.cast 가 필요하다",
   castId: id => `캐릭터 연기 act의 actor/target "${id}" 가 visual.slide.cast 에 없다`,
   objectFile: "slide.object 에 file 이 없다 — slides/assets/s<샷>-<slug>.png (bake-object.py --out)",
+  objectSheet: "slide.object 에 sheet 가 없다 — slides/assets/s<샷>-<slug>.png (bake-blender.py --out, blender-objects.md)",
   objectExt: f => `slide.object 시트 "${f}" 는 png 가 아니다 — webp 는 움직이는 파일과 확장자로 못 가른다`,
-  objectMissing: f => `구운 시트가 없다 — ${f} (bake-object.py 로 먼저 굽는다, rendered-object.md)`,
-  objectSidecar: f => `사이드카가 없다 — ${f} (bake-object.py 가 시트 옆에 쓴다)`,
+  objectMissing: (f, tool = "bake-object.py") => `구운 시트가 없다 — ${f} (${tool} 로 먼저 굽는다, ${tool === "bake-object.py" ? "rendered-object.md" : "blender-objects.md"})`,
+  objectSidecar: (f, tool = "bake-object.py") => `사이드카가 없다 — ${f} (${tool} 가 시트 옆에 쓴다)`,
   objectSidecarBad: (f, e) => `사이드카를 읽지 못했다 — ${f}: ${e}`,
   objectInclude: f => `슬라이드가 사이드카를 안 읽는다 — scenes.js 다음에 <script src="${f}"></script>`,
   objectUnused: "slide.object 가 있는데 render 가 h.object(rg, id) 를 부르지 않는다 — 물체가 화면에 없다",
@@ -286,18 +287,25 @@ function checkDir(dir, only, opts) {
     if (slide && slide.object && slide.object.renderer === 'mesh') {
       require('./mesh-preflight.js').checkMesh(dir, scene, code).forEach(message => fail(base, message));
     }
+    // renderer:"blender" (blender-objects.md) — the mesh recipe is checked like the mesh lane's, and
+    // the baked sheet plays through the sheet contract below; the sidecar must come from that recipe.
+    const blender = Boolean(slide && slide.object && slide.object.renderer === 'blender');
+    if (blender) {
+      require('./mesh-preflight.js').checkRecipeFiles(dir, scene).forEach(message => fail(base, message));
+    }
     if (slide && slide.object && slide.object.renderer !== 'mesh') {
       const ob = slide.object;
-      const f = String(ob.file || "");
-      if (!f) fail(base, MSG.objectFile);
+      const tool = blender ? "bake-blender.py" : "bake-object.py";
+      const f = String((blender ? ob.sheet : ob.file) || "");
+      if (!f) fail(base, blender ? MSG.objectSheet : MSG.objectFile);
       else {
         const id = path.basename(f).replace(/\.png$/i, "");
         if (!/\.png$/i.test(f)) fail(base, MSG.objectExt(f));
-        if (!fs.existsSync(path.join(dir, f))) fail(base, MSG.objectMissing(f));
+        if (!fs.existsSync(path.join(dir, f))) fail(base, MSG.objectMissing(f, tool));
         const side = f.replace(/\.png$/i, ".js");
         const sideAbs = path.resolve(dir, side);   // require 는 상대 경로를 모듈 이름으로 본다 — 절대 경로로
         let meta = null;
-        if (!fs.existsSync(sideAbs)) fail(base, MSG.objectSidecar(side));
+        if (!fs.existsSync(sideAbs)) fail(base, MSG.objectSidecar(side, tool));
         else {
           const tail = side.replace(/^slides\//, "");
           if (!new RegExp("<script[^>]*\\bsrc\\s*=\\s*[\"']" + tail.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "[\"']").test(code))
@@ -308,21 +316,38 @@ function checkDir(dir, only, opts) {
           global.window = keep;
           if (!meta) fail(base, MSG.objectSidecarBad(side, "window.SLIDE_OBJECTS[\"" + id + "\"] 가 없다"));
           if (meta && slide.quality === 'object-state-v1') {
-            for (const key of ['shape', 'keys', 'frames']) {
-              if (meta[key] !== ob[key]) fail(base, `object sidecar ${key} differs from scenes.js; rebake the sheet`);
+            if (blender) {
+              if (meta.renderer !== 'blender') fail(base, 'object sidecar was not written by bake-blender.py; rebake the sheet');
+              for (const key of ['engine', 'samples', 'fps']) {
+                if (meta[key] !== ob[key]) fail(base, `object sidecar ${key} differs from scenes.js; rebake the sheet`);
+              }
+              const recipeRel = String(ob.file || '').replace(/^slides\//, '');
+              const recipeAbs = path.resolve(dir, String(ob.file || ''));
+              if (meta.recipe !== recipeRel) fail(base, 'object sidecar recipe differs from scenes.js; rebake the sheet');
+              else if (fs.existsSync(recipeAbs) &&
+                       meta.recipeSha256 !== require('crypto').createHash('sha256').update(fs.readFileSync(recipeAbs)).digest('hex'))
+                fail(base, 'mesh recipe changed after the bake; rebake the sheet');
+              const segments = (scene.narration || []).length;
+              const groups = Object.keys(meta.ranges || {}).length;
+              if (segments && groups !== segments)
+                fail(base, `object sidecar has ${groups} frame groups for ${segments} narration segments; rebake with --segs`);
+            } else {
+              for (const key of ['shape', 'keys', 'frames']) {
+                if (meta[key] !== ob[key]) fail(base, `object sidecar ${key} differs from scenes.js; rebake the sheet`);
+              }
+              let startFrame = 0;
+              const expectedRanges = {};
+              for (const token of String(ob.frames || '').split(/\s+/).filter(Boolean)) {
+                const match = /^(\d+):(\d+)$/.exec(token);
+                if (!match) continue;
+                const endFrame = startFrame + Number(match[2]);
+                expectedRanges[match[1]] = [startFrame, endFrame]; startFrame = endFrame;
+              }
+              if (JSON.stringify(meta.ranges) !== JSON.stringify(expectedRanges))
+                fail(base, 'object sidecar ranges differ from the planned frame groups');
             }
             const expectedFile = f.replace(/^slides\//, '');
             if (meta.file !== expectedFile) fail(base, 'object sidecar file differs from scenes.js');
-            let startFrame = 0;
-            const expectedRanges = {};
-            for (const token of String(ob.frames || '').split(/\s+/).filter(Boolean)) {
-              const match = /^(\d+):(\d+)$/.exec(token);
-              if (!match) continue;
-              const endFrame = startFrame + Number(match[2]);
-              expectedRanges[match[1]] = [startFrame, endFrame]; startFrame = endFrame;
-            }
-            if (JSON.stringify(meta.ranges) !== JSON.stringify(expectedRanges))
-              fail(base, 'object sidecar ranges differ from the planned frame groups');
             try {
               require('./object-sheet.js').checkObjectSheet(meta, path.join(dir, f));
             } catch (error) {

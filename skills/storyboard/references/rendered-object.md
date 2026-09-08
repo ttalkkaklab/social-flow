@@ -19,7 +19,11 @@ with lit slabs and type (right, but with nothing standing in the space). The ren
 the fourth: the studio plate kept, plus an object that is a render.
 
 For new physical subjects use [mesh-objects.md](mesh-objects.md): real meshes and GLB animation
-are rendered at every output frame. This document describes the legacy CPU sheet lane.
+are rendered at every output frame. A mesh recipe can also be **baked by Blender Cycles into
+this same sheet contract** — `renderer:"blender"`, [blender-objects.md](blender-objects.md) —
+which is how a path-traced object with a real cast shadow reaches a slide without touching the
+runtime. This document describes the legacy CPU sheet lane; §4–§5 (authoring and playback) hold
+for a Blender sheet too, and its sidecar says `renderer:"blender"`.
 
 ## Contents
 

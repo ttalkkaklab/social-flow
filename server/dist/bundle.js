@@ -18926,7 +18926,7 @@ var require_util3 = __commonJS({
     exports.isValidFile = isValidFile;
     exports.getWellKnownCertificateConfigFileLocation = getWellKnownCertificateConfigFileLocation;
     var fs8 = __require("fs");
-    var os = __require("os");
+    var os2 = __require("os");
     var path10 = __require("path");
     var WELL_KNOWN_CERTIFICATE_CONFIG_FILE = "certificate_config.json";
     var CLOUDSDK_CONFIG_DIRECTORY = "gcloud";
@@ -19024,7 +19024,7 @@ var require_util3 = __commonJS({
       return path10.join(configDir, WELL_KNOWN_CERTIFICATE_CONFIG_FILE);
     }
     function _isWindows() {
-      return os.platform().startsWith("win");
+      return os2.platform().startsWith("win");
     }
   }
 });
@@ -24407,7 +24407,7 @@ var require_googleauth = __commonJS({
     var fs8 = __require("fs");
     var gaxios_1 = require_src2();
     var gcpMetadata = require_src4();
-    var os = __require("os");
+    var os2 = __require("os");
     var path10 = __require("path");
     var crypto_1 = require_crypto3();
     var computeclient_1 = require_computeclient();
@@ -24916,7 +24916,7 @@ var require_googleauth = __commonJS({
        * @api private
        */
       _isWindows() {
-        const sys = os.platform();
+        const sys = os2.platform();
         if (sys && sys.length >= 3) {
           if (sys.substring(0, 3).toLowerCase() === "win") {
             return true;
@@ -75455,6 +75455,19 @@ function mlxServeApiKey() {
 function binOnPath(name) {
   return (process.env.PATH || "").split(delimiter).some((dir) => dir && existsSync(join(dir, name)));
 }
+function blenderBin() {
+  const candidates = [
+    process.env.BLENDER || "",
+    "/Applications/Blender.app/Contents/MacOS/Blender",
+    join(homedir(), "Applications", "Blender.app", "Contents", "MacOS", "Blender"),
+    "/opt/homebrew/bin/blender",
+    "/usr/local/bin/blender",
+    "/usr/bin/blender",
+    "/snap/bin/blender"
+  ];
+  for (const c of candidates) if (c && existsSync(c)) return c;
+  return binOnPath("blender") ? "blender" : "";
+}
 function mlxServeConfigured() {
   if (mlxServeUrl() !== DEFAULT_MLX_SERVE_URL) return true;
   if (existsSync("/Applications/MLX Core.app")) return true;
@@ -88105,6 +88118,7 @@ ${errors.join("\n")}`);
 // src/capability-status.ts
 import { existsSync as existsSync11 } from "node:fs";
 import path9 from "node:path";
+import os from "node:os";
 var has2 = (v) => Boolean(v && v.length > 0);
 var binOk = (p) => {
   try {
@@ -88230,6 +88244,12 @@ function capabilityStatus() {
           configured: mlx,
           needs: "MLX Core.app or mlx-serve on PATH",
           note: "mlx_3d_generate \u2014 writes GLB; HTML mesh slides consume embedded models (mesh-objects.md)"
+        },
+        {
+          provider: "blender (local, Cycles)",
+          configured: Boolean(blenderBin()),
+          needs: "Blender 4.2+ (brew install --cask blender) or BLENDER=<executable>",
+          note: `bake-blender.py \u2014 bakes a mesh recipe into a frame sheet with path-traced light and shadows (blender-objects.md). This machine has ${os.cpus().length} cores and ${Math.round(os.totalmem() / 1e9)} GB; run --capacity for the GPU backend and which object lane suits it, then --probe on the recipe for minutes per cut`
         }
       ]
     },
@@ -89533,7 +89553,7 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
 
 // src/index.ts
 var server = new Server(
-  { name: "social-flow", version: "0.60.0" },
+  { name: "social-flow", version: "0.62.0" },
   { capabilities: { tools: {} } }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {

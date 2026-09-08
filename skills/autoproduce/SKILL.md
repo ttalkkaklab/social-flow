@@ -706,7 +706,8 @@ For every `visual.slide` scene, follow storyboard
    hairlines (`h.stem` · `h.bus` · `h.chamber`). Editorial diagrams use the declared `role`
    and `motif`; they compose the whole frame rather than placing callouts over an unchanged photo.
    With `slide.object`, bake the sheet first (`bake-object.py` with the scene's keys · frames,
-   `rendered-object.md` §3) — `check-slide.js` refuses a slide whose sidecar is missing.
+   `rendered-object.md` §3; `bake-blender.py` with the recipe and `--segs` for `renderer:"blender"`,
+   `blender-objects.md` §4) — `check-slide.js` refuses a slide whose sidecar is missing.
 2. Run `node $SB/check-slide.js storyboard/ --require-all`, render the sheet with
    `render-motion-slide.mjs --sheet --png-only --keep-frames`, and stop on either failure.
    For timeline, statistic, and principle scenes the render also matches every declared

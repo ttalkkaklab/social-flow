@@ -114,6 +114,23 @@ function binOnPath(name) {
     return (process.env.PATH || '').split(delimiter).some((dir) => dir && existsSync(join(dir, name)));
 }
 /**
+ * The Blender executable bake-blender.py will spawn, or '' when none resolves — BLENDER first,
+ * then the macOS app bundle, then a `blender` on PATH or in the usual Linux prefixes. The same
+ * search order as the script's, so capability_status and the bake agree.
+ */
+export function blenderBin() {
+    const candidates = [
+        process.env.BLENDER || '',
+        '/Applications/Blender.app/Contents/MacOS/Blender',
+        join(homedir(), 'Applications', 'Blender.app', 'Contents', 'MacOS', 'Blender'),
+        '/opt/homebrew/bin/blender', '/usr/local/bin/blender', '/usr/bin/blender', '/snap/bin/blender',
+    ];
+    for (const c of candidates)
+        if (c && existsSync(c))
+            return c;
+    return binOnPath('blender') ? 'blender' : '';
+}
+/**
  * Configuration only — does not probe /health. True when MLX Core.app is
  * installed, mlx-serve is on PATH, or MLX_SERVE_URL is set away from the
  * default (a server on another port or host). A present app that is not

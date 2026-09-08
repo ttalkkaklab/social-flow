@@ -14,7 +14,8 @@ function readGLB(file) {
     throw new Error('compressed GLB needs offline decoders; export uncompressed embedded GLB');
   return json;
 }
-function checkMesh(dir, scene, code) {
+/* The recipe and its GLBs — shared by the browser mesh lane and the Blender bake (blender-objects.md). */
+function checkRecipeFiles(dir, scene) {
   const errors = [], ob = scene.visual.slide.object;
   try {
     const filename = path.resolve(dir, ob.file);
@@ -27,6 +28,14 @@ function checkMesh(dir, scene, code) {
       if (!fs.realpathSync(source).startsWith(fs.realpathSync(path.dirname(filename)) + path.sep)) throw new Error('GLB symlink escapes assets');
       readGLB(source);
     }
+    if (ob.renderer === 'blender' && recipe.states.some(s => s && s.clips && Object.keys(s.clips).length))
+      errors.push('the Blender bake does not play GLB clips; pose the parts with bindings or use renderer mesh');
+  } catch (e) { errors.push(`mesh preflight: ${e.message}`); }
+  return errors;
+}
+function checkMesh(dir, scene, code) {
+  const errors = checkRecipeFiles(dir, scene), ob = scene.visual.slide.object;
+  try {
     const runtime = path.join(dir, 'slides/assets/mesh-runtime.js');
     const digest = f => crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex');
     if (digest(runtime) !== digest(path.join(__dirname,'mesh-runtime.js'))) errors.push('mesh-runtime.js differs from the plugin; copy the bundled runtime');
@@ -38,4 +47,4 @@ function checkMesh(dir, scene, code) {
   } catch (e) { errors.push(`mesh preflight: ${e.message}`); }
   return errors;
 }
-module.exports = {checkMesh, readGLB};
+module.exports = {checkMesh, checkRecipeFiles, readGLB};
