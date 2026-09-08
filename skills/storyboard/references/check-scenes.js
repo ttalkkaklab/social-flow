@@ -80,6 +80,10 @@ const FOOTAGE_RETIRED = 'treatment:"footage" is retired (user directive 2026-09-
   'an event or a place is a motion background or a b-roll with nothing drawn on it';
 const EDITORIAL_ROLES = ['evidence', 'relationship', 'mechanism', 'timeline', 'statistic', 'transition', 'verdict'];
 const INFO_TYPES = ['other', 'timeline', 'statistic', 'principle'];
+/* What shape the forwardable thing takes (scenes-schema.md §playback order, the `cta` beat row).
+   `shot.share` is the sentence, figure or verdict a viewer would pass on as-is; `shot.shareType`
+   labels it the way `shot.infoType` labels `shot.info`. `none` says the shot carries no trigger. */
+const SHARE_TYPES = ['fact', 'verdict', 'line', 'checklist', 'none'];
 const INFO_ROLE = { timeline: 'timeline', statistic: 'statistic', principle: 'mechanism' };
 // object-move — a baked object arrives, turns or recedes (rendered-object.md · h.object); the sentence's
 // value can be the object itself on any of the three types, so it is allowed on all of them.
@@ -119,7 +123,7 @@ function isStillCard(scene) {
   const v = (scene && scene.visual) || {};
   if (scene && (scene.type === 'broll' || scene.type === 'outro')) return false;
   if (v.source === 'recording' || v.source === 'screencast' || v.picture === 'recording') return false;
-  if ((v.slide && v.slide.kind !== 'camera') || v.video || v.clip) return false;
+  if ((v.slide && v.slide.kind !== 'camera') || v.video || v.clip || v.reuse !== undefined) return false;
   return true;
 }
 
@@ -160,11 +164,13 @@ function formatOf(scenesPath) {
   }
 }
 
+const LONG_FORMAT = 'youtube-long-16x9';
 const MOTION_KINDS = ['ai-video', 'recording', 'motion-slide'];
 const MOTION_PROFILE_KEYS = [
   'motion_min_true', 'motion_allowed_kinds', 'motion_max_consecutive_stills',
   'motion_max_still_seconds', 'motion_require_action', 'generated_video_max',
   'max_static_ground_seconds', 'html_plate_max', 'video_budget_usd', 'hook_video',
+  'length_min_seconds', 'length_max_seconds',
 ];
 // Plugin-wide defaults (owner directives 2026-09-03 "the viewer has to feel a video" and
 // 2026-09-05 "the hook is video, one more cut at most, the rest is a moving still or an HTML
@@ -230,8 +236,15 @@ function numberOrDefault(v, dflt, errors, field, integer) {
   return optionalNumber(v, errors, field, integer);
 }
 
-function normalizeMotionPolicy(raw, defaultVideoMax, source) {
+/* `pacing` is the format preset's pacing block. The length band's default is format-derived —
+   it is the only policy value this file must not carry a number for — so it arrives as an
+   argument instead of a module constant. `isShort` says which band that is; an omitted flag
+   reads as short-form, the way an omitted `window.FORMAT` does. */
+function normalizeMotionPolicy(raw, defaultVideoMax, source, pacing, isShort) {
   const errors = [];
+  const band = pacing || {};
+  const shortForm = isShort !== false;
+  const bandDefault = (v) => (Number.isFinite(Number(v)) ? Number(v) : null);
   const profileShape = raw && MOTION_PROFILE_KEYS.some((k) => raw[k] !== undefined);
   const sceneShape = !!raw && !profileShape;
   const pick = (profileKey, sceneKey) => profileShape ? raw[profileKey] : sceneShape ? raw[sceneKey] : undefined;
@@ -275,6 +288,28 @@ function normalizeMotionPolicy(raw, defaultVideoMax, source) {
   const videoBudgetUsd = numberOrDefault(
     scalar(pick('video_budget_usd', 'videoBudgetUsd')), VIDEO_BUDGET_DEFAULT_USD,
     errors, 'video_budget_usd/videoBudgetUsd', false);
+  /* The channel may narrow the recommended length band on short-form; the format's hard cap is
+     not a channel field and stays with the preset. An absent key takes the preset's own band.
+     Long-form never reads the pair, so a channel that narrows one end only does not get its
+     other end filled from the 8–15 min preset and cross-checked against a shorts number.
+     Every other policy key switches off with `off`, but there is no episode without a length,
+     so `off` here is a mistake worth naming instead of quietly handing the preset back — the
+     doc side is scenes-schema §Channel true-motion policy. */
+  const bandNumber = (v, dflt, field) => {
+    if (v === 'off' || v === 'none') {
+      errors.push(`${field} does not take off — write a number, or drop the key to keep the preset's band`);
+      return dflt;
+    }
+    return numberOrDefault(v, dflt, errors, field, false);
+  };
+  const lengthMin = shortForm ? bandNumber(
+    scalar(pick('length_min_seconds', 'lengthMin')), bandDefault(band.totalMin),
+    'length_min_seconds/lengthMin') : null;
+  const lengthMax = shortForm ? bandNumber(
+    scalar(pick('length_max_seconds', 'lengthMax')), bandDefault(band.totalMax),
+    'length_max_seconds/lengthMax') : null;
+  if (lengthMin !== null && lengthMax !== null && lengthMin > lengthMax)
+    errors.push('length_min_seconds/lengthMin is above length_max_seconds/lengthMax');
   const hookRaw = scalar(pick('hook_video', 'hookVideo'));
   const hookVideo = hookRaw === 'off' || hookRaw === 'none' ? false
     : hookRaw === 'on' ? true
@@ -285,7 +320,7 @@ function normalizeMotionPolicy(raw, defaultVideoMax, source) {
     minTrueMotion, allowedKinds: [...new Set(allowedKinds)].sort(), maxConsecutiveStills,
     maxStillSeconds, requireAction,
     generatedVideoMax: videoOverride === null ? defaultVideoMax : videoOverride,
-    maxStaticGroundSeconds, htmlPlateMax, videoBudgetUsd, hookVideo,
+    maxStaticGroundSeconds, htmlPlateMax, videoBudgetUsd, hookVideo, lengthMin, lengthMax,
   };
 }
 
@@ -301,6 +336,8 @@ function policyComparable(p) {
     htmlPlateMax: p.htmlPlateMax,
     videoBudgetUsd: p.videoBudgetUsd,
     hookVideo: p.hookVideo,
+    lengthMin: p.lengthMin,
+    lengthMax: p.lengthMax,
   });
 }
 
@@ -322,7 +359,7 @@ function generatedVideo(scene) {
   const v = (scene && scene.visual) || {};
   // The shape decides, not the lane marker: a filmed shot carries none of these, so a shot
   // that has both is a malformed board the cap and the camera-slot rules still have to reject.
-  return !!(scene && (scene.type === 'broll' || v.video ||
+  return !!(scene && (scene.type === 'broll' || v.video || v.reuse !== undefined ||
                       (scene.type === 'quote' && v.clip && typeof v.clip === 'object')));
 }
 
@@ -332,7 +369,7 @@ function motionKind(scene) {
     return 'recording';
   // The ground decides the kind: a motion background or clip under a motion-slide overlay
   // (the cover's code-rendered title over `visual.video`) is video, not a plate.
-  if (scene && (scene.type === 'broll' || v.video || v.clip)) return 'ai-video';
+  if (scene && (scene.type === 'broll' || v.video || v.clip || v.reuse !== undefined)) return 'ai-video';
   if (v.slide && v.slide.kind !== 'camera' && v.slide.motion === true) return 'motion-slide';
   return null;
 }
@@ -410,17 +447,42 @@ function check(win, fmt, opts) {
     ? Math.floor(Number(fmt.video.generatedSecondsMax) / 8) : 2;
   const productionMode = require('./production-mode.js');
   productionMode.check(win, { draft }).forEach(message => bad('production mode', message));
-  const motionPolicy = productionMode.policy((opts && opts.policy) || normalizeMotionPolicy(null, formatVideoMax, 'default'), win.PRODUCTION, scenes);
+  const isShort = fmt.format !== LONG_FORMAT;
+  const motionPolicy = productionMode.policy((opts && opts.policy) || normalizeMotionPolicy(null, formatVideoMax, 'default', pacing, isShort), win.PRODUCTION, scenes);
   const main = scenes.filter((s) => s.type !== 'broll' && s.type !== 'outro');
   const cover = scenes.find((s) => s.type === 'cover');
-  const isShort = fmt.format !== 'youtube-long-16x9';
 
   // ── Episode level ──
   if (!cover) bad('episode', 'no cover shot — every episode opens on one');
-  if (pacing.shotMin && main.length < pacing.shotMin)
-    warn('episode', `${main.length} main shots — the ${fmt.label} band is ${pacing.shotMin}~${pacing.shotMax}`);
-  if (pacing.shotMax && main.length > pacing.shotMax)
-    warn('episode', `${main.length} main shots — the ${fmt.label} band is ${pacing.shotMin}~${pacing.shotMax}`);
+  /* The preset spells the shot band `sceneCountMin`/`sceneCountMax` (formats.js §3.2), which is
+     also what the approval page's strip reads. This check asked for `shotMin`/`shotMax` — keys
+     no preset has ever emitted — so it never fired until 2026-09-07. */
+  if (pacing.sceneCountMin && main.length < pacing.sceneCountMin)
+    warn('episode', `${main.length} main shots — the ${fmt.label} band is ${pacing.sceneCountMin}~${pacing.sceneCountMax}`);
+  if (pacing.sceneCountMax && main.length > pacing.sceneCountMax)
+    warn('episode', `${main.length} main shots — the ${fmt.label} band is ${pacing.sceneCountMin}~${pacing.sceneCountMax}`);
+
+  /* Total length against the channel's band, with the preset's underneath it (`length_min_seconds`
+     / `length_max_seconds`, scenes-schema §Channel true-motion policy). The two keys narrow the
+     short-form band only — long-form does not read them at all and keeps the preset's own band,
+     so a dual-format channel that tightens its shorts does not drag its long-form boards down.
+     storyboard.html's length strip runs this same ladder over the same scenes — everything but
+     the outro asset, b-roll included, because a b-roll plays — so the page and this file give one
+     verdict. The hard cap belongs to the platform, not to any channel. A board with no durations
+     yet is left to the per-scene `no duration` warning rather than told its total is 0. */
+  const played = scenes.filter((s) => s.type !== 'outro')
+    .reduce((a, s) => a + (Number(s.duration) > 0 ? Number(s.duration) : 0), 0);
+  const bandFloor = isShort && Number.isFinite(motionPolicy.lengthMin) ? motionPolicy.lengthMin : pacing.totalMin;
+  const bandCeil = isShort && Number.isFinite(motionPolicy.lengthMax) ? motionPolicy.lengthMax : pacing.totalMax;
+  const lenTxt = (v) => `${Math.round(v * 10) / 10}s`;
+  if (played > 0 && Number.isFinite(pacing.totalHard) && played > pacing.totalHard)
+    bad('episode', `main body ${lenTxt(played)} — past the cap of ${lenTxt(pacing.totalHard)}`);
+  else if (played > 0 && Number.isFinite(bandFloor) && Number.isFinite(bandCeil) &&
+           (played < bandFloor || played > bandCeil))
+    warn('episode', `main body ${lenTxt(played)} — outside the ` +
+                    `${bandFloor !== pacing.totalMin || bandCeil !== pacing.totalMax ? 'channel band' : 'default'} ` +
+                    `${lenTxt(bandFloor)}~${lenTxt(bandCeil)} (going over needs a design reason; ` +
+                    `cap ${lenTxt(pacing.totalHard)})`);
 
   /* ── Comprehension contract ──
      The promise ledger in storyboard.html is useful to a person but invisible to this CLI.
@@ -519,22 +581,23 @@ function check(win, fmt, opts) {
                     story         cover → hooking → body → turn → result → cta
      A short that writes hooking/result/body/turn is a defect, not an alias. An outro asset
      is the CTA on long-form only; a short needs a spoken `beat:"cta"` as the last narrated
-     shot. storyboard.html's check strip carries the same rule. */
-  if (isShort && cover) {
-    if (cover.hookType === 'spoiler')
-      bad('cover', 'hookType "spoiler" dumps the ending on a short — use fear · empathy · curiosity; ' +
-                  'the last drip is where the answer completes');
-    if (cover.hookForm === 'payoff')
-      bad('cover', 'hookForm "payoff" dumps the result on a short — use paradox · gap · identify · number · secret');
-  }
+     shot. storyboard.html's check strip carries the same rule.
 
-  if (isShort && cover && comp && typeof comp === 'object' && !Array.isArray(comp)) {
+     A short-form cover may state the result. `hookType:"spoiler"` and `hookForm:"payoff"` are
+     legal on every format (owner directive, the twist reveal moves forward), so the answer-dump
+     check below runs on gap covers only — a result-first cover is expected to speak the answer,
+     and `payoff` puts the result at 0 s the same way `spoiler` does (§the four opening
+     strategies), so both fields excuse it here and in storyboard.html's promise ledger. The
+     title and the description are a separate surface and stay under platform-playbook §2. */
+  if (isShort && cover && cover.hookType !== 'spoiler' && cover.hookForm !== 'payoff' &&
+      comp && typeof comp === 'object' && !Array.isArray(comp)) {
     const ans = compactText(comp.answer);
     if (ans.length >= 8) {
       const hookSpoken = compactText([cover.title, cover.stat, spokenText(cover)].join(' '));
       if (hookSpoken.indexOf(ans) !== -1)
-        bad('cover', 'the hook dumps COMPREHENSION.answer — on a short the cover opens a gap, ' +
-                    'and the last drip is the first place the answer is complete');
+        bad('cover', 'the hook dumps COMPREHENSION.answer while hookType is not "spoiler" — a gap cover ' +
+                    'opens the question and the last drip completes the answer; declare hookType:"spoiler" ' +
+                    'to reveal on the cover');
     }
   }
 
@@ -551,6 +614,12 @@ function check(win, fmt, opts) {
                       '(an outro asset is not the spoken close)');
       else if (!spokenText(scenes[last.i - 1]).trim())
         bad('episode', 'a short ends on a spoken CTA — the last narrated shot has no narration');
+      /* An ask stays optional; a forwardable thing does not — an ask requests behaviour from the
+         viewer, while a forwardable thing is one sentence, figure or verdict they can pass on
+         as-is. Asking to be shared is an ask, not a trigger. */
+      else if (compactLength(((scenes[last.i - 1] || {}).shot || {}).share) < 8)
+        bad('episode', 'the close has no share trigger — write shot.share on the beat:"cta" shot: ' +
+                      'the one sentence, figure or verdict a viewer would forward as-is');
       const dripCount = mainBeats.filter((s) => s.beat === 'drip').length;
       if (dripCount < 1)
         bad('episode', 'a short has no drip beat — after the hook, 1–n shots pay curiosity in stages ' +
@@ -672,7 +741,7 @@ function check(win, fmt, opts) {
   }
 
   // The format owns the default cap; an explicit channel motion policy may raise or lower it.
-  // A supplied clip is a file that already exists, so it is not a slot the engine bills for.
+  // This is a screen-policy cap: imported generated clips count even when they cost $0.
   const videoSlots = scenes.filter((s) => generatedVideo(s));
   // Long-form counts b-roll and motion backgrounds only (§checklist); a short pays for every
   // generated cut, speech clips included, which the hook rule below enforces.
@@ -843,6 +912,10 @@ function check(win, fmt, opts) {
       else if (INFO_TYPES.indexOf(shot.infoType) === -1)
         bad(where, `shot.infoType "${shot.infoType}" is outside ${INFO_TYPES.join(' · ')}`);
     }
+    /* The forwardable thing. Required on a short's close (checked once at episode level), free
+       to appear anywhere else; the label is optional and only has to come from the vocabulary. */
+    if (String(shot.shareType || '').trim() && SHARE_TYPES.indexOf(shot.shareType) === -1)
+      bad(where, `shot.shareType "${shot.shareType}" is outside ${SHARE_TYPES.join(' · ')}`);
 
     const slide = v.slide;
     require('./slide-quality.js').checkQuality(slide, (s.narration || []).length)
@@ -986,7 +1059,7 @@ function check(win, fmt, opts) {
 
     // Every shot that becomes a generated video leaves the storyboard with its prompt stored
     // and its four camera slots filled — the storyboard is where that is still free to fix.
-    if (generatedVideo(s)) {
+    if (generatedVideo(s) && v.reuse === undefined) {
       try { scenePlan(s); } catch (e) { machine(where, e.message); }
       // The slot rule lives in production-mode.js (shared with the approval page): a static
       // camera has no speed to state, so that one slot may stay empty (§camera).
@@ -1085,10 +1158,15 @@ function selftest() {
     process.stdout.write((cond ? 'ok   ' : 'FAIL ') + name + '\n');
     if (!cond) failed++;
   };
-  const fmt = { format: 'shorts-9x16', label: 'test', pacing: { sceneMin: 4, sceneMax: 13, shotMin: 4, shotMax: 7 },
+  // The preset keys, spelled the way formats.js spells them — a fixture that invents key names
+  // certifies dead code (that is how the shot band went five months without firing).
+  const fmt = { format: 'shorts-9x16', label: 'test',
+                pacing: { sceneMin: 4, sceneMax: 13, totalMin: 35, totalMax: 120, totalHard: 180,
+                          sceneCountMin: 4, sceneCountMax: 7 },
                 video: { generatedSecondsMax: 16 } };
   const fmtLong = { format: 'youtube-long-16x9', label: 'test long',
-                    pacing: { sceneMin: 6, sceneMax: 20, shotMin: 28, shotMax: 70 },
+                    pacing: { sceneMin: 6, sceneMax: 20, totalMin: 480, totalMax: 900, totalHard: 1200,
+                              sceneCountMin: 28, sceneCountMax: 70 },
                     video: { generatedSecondsMax: 40 } };
   // Legacy fixtures predate the static-ground and plate rules (2026-09-03); they run with the
   // two switched off and the dedicated tests further down pin them.
@@ -1111,7 +1189,10 @@ function selftest() {
     shot: { feel: 'relief', size: 'mcu', angle: 'eye', info: '한 가지 정보', infoType: 'other' },
     narration: [{ tts: '가', sub: '가' }], visual: {}
   };
-  const ctaShot = Object.assign({}, goodShot, { beat: 'cta' });
+  const ctaShot = Object.assign({}, goodShot, {
+    beat: 'cta',
+    shot: Object.assign({}, goodShot.shot, { share: '하루 한 번이면 충분해요', shareType: 'line' }),
+  });
   const cover = { type: 'cover', duration: 5, beat: 'hook',
                   hookType: 'curiosity', hookForm: 'gap',
                   shot: { feel: 'x', size: 'mcu', angle: 'eye', info: '질문', infoType: 'other' },
@@ -1236,6 +1317,61 @@ function selftest() {
   ok('hook_video on reads as true (the wording storyboard/SKILL.md uses)',
      normalizeMotionPolicy({ hook_video: 'on' }, 2, 'fixture').hookVideo === true &&
      normalizeMotionPolicy({ hook_video: 'on' }, 2, 'fixture').errors.length === 0);
+
+  // ── channel length band (owner directive 2026-09-07) ──
+  ok('an absent length key takes the format band, not off',
+     normalizeMotionPolicy({ hook_video: 'off' }, 2, 'fixture', fmt.pacing).lengthMin === 35 &&
+     normalizeMotionPolicy({ hook_video: 'off' }, 2, 'fixture', fmt.pacing).lengthMax === 120 &&
+     normalizeMotionPolicy(null, 2, 'fixture', fmtLong.pacing).lengthMax === 900);
+  ok('a channel may narrow the band from either end',
+     normalizeMotionPolicy({ length_min_seconds: 40, length_max_seconds: 75 }, 2, 'fixture', fmt.pacing).lengthMin === 40 &&
+     normalizeMotionPolicy({ length_min_seconds: 40, length_max_seconds: 75 }, 2, 'fixture', fmt.pacing).lengthMax === 75 &&
+     normalizeMotionPolicy({ lengthMax: 75 }, 2, 'fixture', fmt.pacing).lengthMin === 35);
+  ok('a band whose floor is above its ceiling is an error',
+     normalizeMotionPolicy({ length_min_seconds: 90, length_max_seconds: 60 }, 2, 'fixture', fmt.pacing)
+       .errors.some((e) => /length_min_seconds/.test(e)));
+  ok('the band does not switch off — every other key does, this one names the mistake',
+     normalizeMotionPolicy({ length_max_seconds: 'off' }, 2, 'fixture', fmt.pacing)
+       .errors.some((e) => /length_max_seconds\/lengthMax does not take off/.test(e)) &&
+     normalizeMotionPolicy({ length_min_seconds: 'none' }, 2, 'fixture', fmt.pacing)
+       .errors.some((e) => /length_min_seconds\/lengthMin does not take off/.test(e)) &&
+     normalizeMotionPolicy({ length_max_seconds: 'off' }, 2, 'fixture', fmt.pacing).lengthMax === 120);
+  /* A dual-format channel narrows its shorts and nothing else. Reading one key here and
+     filling the other from the 8~15 min preset used to cross-check 480 against 75 and fail
+     the long-form board on a profile error it had no business reading. */
+  ok('long-form reads neither band key, so one end alone stays out of its preset',
+     normalizeMotionPolicy({ length_min_seconds: 45 }, 2, 'fixture', fmtLong.pacing, false).lengthMin === null &&
+     normalizeMotionPolicy({ length_min_seconds: 45 }, 2, 'fixture', fmtLong.pacing, false).lengthMax === null &&
+     normalizeMotionPolicy({ length_max_seconds: 75 }, 2, 'fixture', fmtLong.pacing, false).errors.length === 0);
+  ok('a length-only profile counts as declaring a policy',
+     MOTION_PROFILE_KEYS.indexOf('length_min_seconds') !== -1 &&
+     MOTION_PROFILE_KEYS.indexOf('length_max_seconds') !== -1);
+  /* The band is a verdict on the finished board, not just a parsed key — storyboard.html said so
+     from the start and this file said nothing until 2026-09-07. */
+  const timed = (n, d) => Array.from({ length: n }, (_, i) => Object.assign({}, i === 0 ? cover : i === n - 1 ? ctaShot : goodShot, { duration: d }));
+  const bandPolicy = (raw) => normalizeMotionPolicy(raw, 2, 'fixture', fmt.pacing);
+  const atLevel = (findings, level) => findings.filter((f) => f.level === level);
+  ok('a short inside the band says nothing about its length',
+     !has(run(timed(6, 8), null, { policy: bandPolicy({ hook_video: 'off' }) }), /main body/));
+  ok('a short under the band is a warning, not a violation',
+     has(atLevel(run(timed(4, 5), null, { policy: bandPolicy({ hook_video: 'off' }) }), 'warn'), /main body 20s — outside the default 35s~120s/) &&
+     !has(bads(run(timed(4, 5), null, { policy: bandPolicy({ hook_video: 'off' }) })), /main body/));
+  ok('a channel that narrows the band is the one quoted back',
+     has(atLevel(run(timed(10, 8), null, { policy: bandPolicy({ length_max_seconds: 50 }) }), 'warn'), /main body 80s — outside the channel band 35s~50s/));
+  ok('past the 180s hard cap is a violation, and no channel key moves it',
+     has(bads(run(timed(24, 8), null, { policy: bandPolicy({ length_max_seconds: 300 }) })), /main body 192s — past the cap of 180s/));
+  ok('the channel band is short-form only — long-form is measured against its own preset',
+     !has(runLong(timed(31, 20), null, { policy: bandPolicy({ length_max_seconds: 75 }) }), /main body/) &&
+     has(atLevel(runLong(timed(20, 20), null, { policy: bandPolicy({ length_max_seconds: 75 }) }), 'warn'),
+         /main body 400s — outside the default 480s~900s/));
+  ok('a board with no durations yet is left to the per-scene warning',
+     !has(run(timed(4, 0).map((s) => { const c = Object.assign({}, s); delete c.duration; return c; }),
+              null, { policy: bandPolicy({ hook_video: 'off' }) }), /main body/));
+  ok('the band is part of the profile↔scenes comparison',
+     policyComparable(normalizeMotionPolicy({ length_max_seconds: 75 }, 2, 'profile', fmt.pacing)) !==
+     policyComparable(normalizeMotionPolicy({ lengthMax: 90 }, 2, 'scenes', fmt.pacing)) &&
+     policyComparable(normalizeMotionPolicy({ length_max_seconds: 75 }, 2, 'profile', fmt.pacing)) ===
+     policyComparable(normalizeMotionPolicy({ lengthMax: 75 }, 2, 'scenes', fmt.pacing)));
   ok('a still under its camera move holds one cut (8 s)',
      !has(bads(run([videoScene, goodShot, videoScene], null, { policy: groundPolicy })), /one picture stays/));
   ok('a still that holds one picture past one cut is rejected',
@@ -1486,13 +1622,22 @@ function selftest() {
      has(bads(run([cover, goodShot, goodShot, goodShot])), /spoken CTA/));
   ok('an outro is not the spoken CTA on a short',
      has(bads(run([cover, goodShot, goodShot, { type: 'outro', visual: {} }])), /spoken CTA/));
-  ok('spoiler is forbidden on a short',
-     has(bads(run([Object.assign({}, cover, { hookType: 'spoiler' }), goodShot, goodShot, ctaShot])),
-         /hookType "spoiler"/));
-  ok('payoff is forbidden on a short',
-     has(bads(run([Object.assign({}, cover, { hookForm: 'payoff' }), goodShot, goodShot, ctaShot])),
-         /hookForm "payoff"/));
-  ok('a short cover that speaks the answer is a violation',
+  // The twist reveal moves forward (owner directive) — a short-form cover may state the result.
+  ok('spoiler is legal on a short',
+     bads(run([Object.assign({}, cover, { hookType: 'spoiler' }), goodShot, goodShot, ctaShot])).length === 0);
+  ok('payoff is legal on a short',
+     bads(run([Object.assign({}, cover, { hookForm: 'payoff' }), goodShot, goodShot, ctaShot])).length === 0);
+  ok('a spoiler cover may speak the answer',
+     !has(bads(run([Object.assign({}, cover, {
+       hookType: 'spoiler', hookForm: 'payoff',
+       narration: [{ tts: '한 가지가 달라졌어요.', sub: '한 가지가 달라졌어요.' }]
+     }), goodShot, goodShot, ctaShot])), /dumps COMPREHENSION\.answer/));
+  ok('a payoff cover that never declares spoiler may speak the answer too',
+     !has(bads(run([Object.assign({}, cover, {
+       hookForm: 'payoff',
+       narration: [{ tts: '한 가지가 달라졌어요.', sub: '한 가지가 달라졌어요.' }]
+     }), goodShot, goodShot, ctaShot])), /dumps COMPREHENSION\.answer/));
+  ok('a gap cover that speaks the answer is still a violation',
      has(bads(run([Object.assign({}, cover, {
        narration: [{ tts: '한 가지가 달라졌어요.', sub: '한 가지가 달라졌어요.' }]
      }), goodShot, goodShot, ctaShot])), /dumps COMPREHENSION\.answer/));
@@ -1515,6 +1660,23 @@ function selftest() {
      has(bads(run([cover, beat('turn'), goodShot, ctaShot])), /belongs to long-form/));
   ok('a short with one drip is enough',
      bads(run([cover, goodShot, ctaShot])).length === 0);
+
+  // ── the forwardable thing ──
+  const noShareCta = Object.assign({}, ctaShot, { shot: Object.assign({}, goodShot.shot) });
+  ok('a short whose close has no share trigger is a violation',
+     has(bads(run([cover, goodShot, goodShot, noShareCta])), /share trigger/));
+  ok('a share trigger under 8 letters is a violation',
+     has(bads(run([cover, goodShot, goodShot, Object.assign({}, ctaShot, {
+       shot: Object.assign({}, ctaShot.shot, { share: '좋아요!' }) })])), /share trigger/));
+  ok('long-form does not demand a share trigger on the close',
+     !has(bads(runLong([longCover, beat('hooking'), beat('result'), beat('body'), beat('cta')])),
+          /share trigger/));
+  ok('an invented shareType is a violation',
+     has(bads(run([cover, goodShot, goodShot, Object.assign({}, ctaShot, {
+       shot: Object.assign({}, ctaShot.shot, { shareType: 'forward' }) })])), /shot\.shareType "forward"/));
+  ok('every shareType word passes',
+     SHARE_TYPES.every((t) => !has(bads(run([cover, goodShot, goodShot, Object.assign({}, ctaShot, {
+       shot: Object.assign({}, ctaShot.shot, { shareType: t }) })])), /shot\.shareType/)));
 
   ok('a well-ordered answer-first episode passes', bads(runLong(afOK)).length === 0);
   ok('body before result on answer-first is a violation',
@@ -1602,10 +1764,11 @@ function selftest() {
           /not in window\.MUSIC/));
 
   // ── the story pass (--draft) ──
-  // A 4a skeleton: beats, feels, narration sentences, the two hook fields. No tts spelling,
-  // no camera slots, no stored prompt — the fields 4b writes.
+  // A 4a skeleton: beats, feels, narration sentences, the two hook fields, and the close's
+  // share trigger. No tts spelling, no camera slots, no stored prompt — the fields 4b writes.
   const skel = (b) => ({ type: b === 'hook' ? 'cover' : 'points', beat: b,
-                         shot: { feel: 'x', size: 'mcu', angle: 'eye', info: '한 가지 정보', infoType: 'other' },
+                         shot: Object.assign({ feel: 'x', size: 'mcu', angle: 'eye', info: '한 가지 정보', infoType: 'other' },
+                                             b === 'cta' ? { share: '하루 한 번이면 충분해요' } : {}),
                          narration: [{ sub: '가' }], visual: {} });   // no transition either — 4b writes it
   const skelCover = Object.assign(skel('hook'), { hookType: 'fear', hookForm: 'gap' });
   const skeleton = [skelCover, skel('drip'), skel('drip'), skel('cta')];
@@ -1628,10 +1791,13 @@ function selftest() {
      has(bads(run([skelCover, Object.assign(skel('drip'), { shot: { feel: 'x', size: 'closeup' } }),
                    skel('drip'), skel('cta')], null, { draft: true })), /size "closeup"/));
 
-  // Bands come from the preset, never from this file.
+  // Bands come from the preset, never from this file. The channel length band arrives as
+  // normalizeMotionPolicy's `pacing` argument for the same reason, so a literal 35 or 120
+  // written as a default here has to be caught — the header at the top of the file promises it.
   const src = fs.readFileSync(__filename, 'utf8');
   ok('no length band is hardcoded here',
-     !/sceneMin\s*[:=]\s*\d/.test(src.replace(/pacing:\s*\{[^}]*\}/g, '')));
+     !/(sceneMin|sceneMax|sceneCountMin|sceneCountMax|totalMin|totalMax|totalHard)\s*[:=]\s*\d/
+       .test(src.replace(/pacing:\s*\{[^}]*\}/g, '')));
 
   // ── a still never sits frozen (2026-09-03) ──
   const frozenStill = Object.assign({}, goodShot, {
@@ -1673,11 +1839,12 @@ function main() {
   const profilePath = findProfile(scenesPath);
   const profileRaw = profilePath ? frontmatter(profilePath) : {};
   const profileHasPolicy = MOTION_PROFILE_KEYS.some((k) => profileRaw[k] !== undefined);
+  const isShort = fmt.format !== LONG_FORMAT;
   const profilePolicy = normalizeMotionPolicy(profileHasPolicy ? profileRaw : null, formatVideoMax,
-                                               profilePath || 'format default');
-  const scenePolicy = normalizeMotionPolicy(win.MOTION_POLICY || null, formatVideoMax, 'window.MOTION_POLICY');
+                                               profilePath || 'format default', fmt.pacing, isShort);
+  const scenePolicy = normalizeMotionPolicy(win.MOTION_POLICY || null, formatVideoMax, 'window.MOTION_POLICY', fmt.pacing, isShort);
   const effectivePolicy = profileHasPolicy ? profilePolicy
-    : normalizeMotionPolicy(null, formatVideoMax, 'format default');
+    : normalizeMotionPolicy(null, formatVideoMax, 'format default', fmt.pacing, isShort);
   const findings = check(win, fmt, { draft, policy: effectivePolicy, requireRenderPlan: true });
   require('./render-routing.js').checkEpisode(win).forEach(what =>
     findings.push({ level: 'bad', where: 'visual direction', what }));

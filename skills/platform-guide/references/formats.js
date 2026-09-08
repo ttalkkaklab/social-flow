@@ -93,6 +93,13 @@ const FORMATS = {
     // clip per sentence, so 7 scenes stopped fitting. 35–75s stays the band for a
     // single-question episode; 76–120s is allowed when the story carries it; 180s is the
     // YouTube Shorts limit. build-screencast.sh's t>N literal mirrors totalHard.
+    // 2026-09-07: totalMin/totalMax are the plugin default, not a fixed contract — a channel
+    // narrows the band in profile.md (`length_min_seconds` / `length_max_seconds`) and the
+    // reader layers that over this pair (check-scenes.js against the --json preset, the
+    // approval page's check strip against its own mirror). With neither key set this pair
+    // stands, so a channel that says nothing keeps today's behavior. totalHard takes no
+    // channel field: it is the platform limit and the one pacing value that reaches the shell
+    // (format-resolve.js TOTAL_HARD → build-screencast.sh's t>N), where profile.md is unreadable.
     pacing: {
       sceneMin: 4,
       sceneMax: 13,
@@ -216,6 +223,8 @@ const FORMATS = {
       sentMin: 12,
       sentMax: 40,
       rate: 4.5,
+      // profile.md's `length_min_seconds` / `length_max_seconds` narrow whichever band the
+      // format resolves to, so with neither key set this pair stands. totalHard is fixed.
       totalMin: 480,
       totalMax: 900,
       totalHard: 1200,

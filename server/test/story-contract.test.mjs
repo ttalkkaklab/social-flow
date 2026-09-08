@@ -50,6 +50,23 @@ test('rejects fabricated evidence, invalid indices and an ending before payoff',
   w.STORY.payoff = ref(3); w.STORY.ending = ref(2);
   assert.match(checkStory(w).join(), /cannot precede/);
 });
+test('the payoff lands in the opening group only when the cover states the result', () => {
+  // A short-form cover may state the result, so the reveal can sit in the first spoken group
+  // and payoff and opening are then the same reference. The licence is the cover's own
+  // hookType/hookForm, the same pair the approval page's promise ledger reads — an ordinary
+  // cover that pays itself is still refused.
+  const w = fixture(); w.STORY.payoff = ref(1); w.STORY.review.hash = storyHash(w);
+  assert.match(checkStory(w).join(' '), /STORY\.payoff must follow the opening/);
+  w.SCENES[0].hookType = 'spoiler'; w.STORY.review.hash = storyHash(w);
+  assert.deepEqual(checkStory(w), []);
+  delete w.SCENES[0].hookType; w.SCENES[0].hookForm = 'payoff'; w.STORY.review.hash = storyHash(w);
+  assert.deepEqual(checkStory(w), []);
+  // Playing it ahead of the opening still trips the opening check and the ordering check.
+  w.STORY.opening = ref(2); w.STORY.review.hash = storyHash(w);
+  const errors = checkStory(w).join(' ');
+  assert.match(errors, /first spoken group/);
+  assert.match(errors, /STORY\.payoff cannot precede the opening/);
+});
 test('an optional ask must follow the payoff with its own reason', () => {
   const w = fixture(); w.STORY.cta = 'question'; w.STORY.ask = ref(2);
   assert.match(checkStory(w).join(), /must follow the paid promise/);
@@ -136,6 +153,8 @@ test('CLI gates block missing plans in draft and missing review in full producti
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
+// The forwardable close is `shot.share` in scenes.js, not a STORY reference — no share trigger
+// is routed through ref(), so this guard stays as strict as it reads.
 test('a quote too short to identify the line is refused', () => {
   const w = fixture();
   w.STORY.opening = { shot: 1, group: 1, quote: '?' };
@@ -158,4 +177,14 @@ test('rewriting slide copy invalidates the review hash', () => {
   const withLabels = storyHash(w);
   w.SCENES[1].visual.slide.subject = { kind: 'data', changes: [] };
   assert.notEqual(storyHash(w), withLabels);
+});
+
+test('imported original speech uses trimmed-file times and binds the story review to imported bytes',()=>{
+ const w=fixture(),s=w.SCENES[0];s.duration=5;s.narration=[];
+ s.visual={reuse:{clip:'clips/old-hook.mp4',sha256:'a'.repeat(64),sourceEpisode:'archived',sourceRange:{start:10,end:15}}};
+ w.STORY.transcripts=[{shot:1,source:s.visual.reuse.clip,groups:[{start:0,end:4,text:ref(1).quote}]}];
+ w.STORY.review.hash=storyHash(w);assert.deepEqual(checkStory(w),[]);
+ s.visual.reuse.sha256='b'.repeat(64);assert.match(checkStory(w).join(),/stale|hash/);
+ w.STORY.review.hash=storyHash(w);w.STORY.transcripts[0].groups[0].end=6;
+ assert.match(checkStory(w).join(),/ordered timed speech/);
 });

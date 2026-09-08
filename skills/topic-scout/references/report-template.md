@@ -9,8 +9,12 @@ covers and the episode we'll make. How we picked is one section at the end.
 Don't leave English or Chinese fragments as they are, and don't use jargon like
 seed, phrase, or outlier. The `## Chosen topics` line says "The market videos
 cover ~. We ~." in plain words. Don't put multiplier or research-method
-sentences in it. The script reads the last column of the topic-phrase table
-(`yes` · `skip`) and reflects it in the cards and the family strip. The script
+sentences in it. The script reads the Mark column of the topic-phrase table and
+reflects it in the cards and the family strip — `yes` for a topic we already made,
+`skip` for one off the channel's topic axis, `banned` for one that profile §2/§3 or
+the growth plan's forbidden subjects rules out, blank for a live candidate. A
+`banned` row never reaches the cards, the family strip or the chosen-topics box; it
+shows up only on the "Off limits for this channel" line. The script
 fills the interpretation blocks from the numbers too. Don't rewrite the same
 commentary in the md. Fill the `## SNS issues` section only when you ran
 `sns_issue_scout` — without it, drop the section entirely and render the HTML
@@ -39,9 +43,9 @@ that came in at 5x or more the channel median. Not absolute views.
 
 ## Topic phrases
 
-| Phrase | Score | Outliers | Best multiplier | Already used |
+| Phrase | Score | Outliers | Best multiplier | Mark |
 | --- | --- | --- | --- | --- |
-| | | | | yes/no |
+| | | | | blank · yes · skip · banned |
 
 ## Outliers (evidence)
 

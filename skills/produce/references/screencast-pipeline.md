@@ -92,10 +92,16 @@ BG="#0b1020" $REF/build-screencast.sh .work   # → reel.mp4 (clean) · reel-sub
 - The outro is the **same shared asset** as the TTS pipeline
   (`resolve-asset.py data/<channel> outro <platform|default>` —
   default `assets/outro/default.mp4`; the legacy `assets/outro.mp4` is also found),
-  copied to `.work/outro.mp4`.
+  copied to `.work/outro.mp4` — **when the channel's `shortform_outro` is on, which is the
+  default**. With it off, skip the copy and append `: "${OUTRO:=0}"` to `.work/format.env`
+  (produce §1 writes that line beside `SPEED`); the builder then muxes the recording alone and
+  says so. The flag decides, not the file: `OUTRO=1` with nothing to splice stops the build, and a
+  leftover `outro.mp4` under `OUTRO=0` is ignored by the builder and the speed pass alike. Flip the
+  flag between the build and the pass and the pass stops — it reads the build report, not the file.
 - Then the **speed pass, which a shooting edit gets too** — `$REF/speedup.sh .work` (produce
   §7.5). This builder joins the outro with an xfade, and the pass reads that from the report
-  line, so the outro tail still comes out at 1.0x. The default factor is 1.0, which preserves the
+  line, so the outro tail still comes out at 1.0x; with `OUTRO=0` there is no tail and the whole
+  file speeds up. The default factor is 1.0, which preserves the
   user's recorded voice and timing. This builder has no rate normalization of its own.
   A channel-selected 1.2x raises a take at the 5~6 characters/s shooting standard to 6.0~7.2,
   which can exceed the final 6.2 characters/s gate. Profile.md §2 can override the default.
@@ -112,7 +118,12 @@ BG="#0b1020" $REF/build-screencast.sh .work   # → reel.mp4 (clean) · reel-sub
 | `⚠ scene N duration > 20s` | split the scene (two cuts in alignment) or reshoot with tighter speech |
 | `⚠ overlay file missing` | capture missed — redo ② |
 | `⚠ main part > 180s` | tighten cuts or drop scenes |
-| Total length | 35–75s recommended, up to 120s, 180s cap (main + outro − 0.6s) — **measured on the speed pass's output** |
+| Total length | the channel's band (`length_min_seconds`/`length_max_seconds`); unset, the preset's 35–120s stands, of which 35–75s is the recommendation, and 180s is the platform's own cap. This builder overlaps its xfade, so expect main + outro − 0.6s with the outro on, main alone with `OUTRO=0` — **measured on the speed pass's output** |
+| `── no outro (OUTRO=0, …)` | Expected on a channel whose `shortform_outro` is off; with the outro on, **do not proceed** — fix `OUTRO` in `.work/format.env` and rebuild |
+| `✗ OUTRO=1 but <asset> isn't in the workdir` | **Do not proceed** — copy the outro under `format.env`'s `OUTRO_ASSET` name, or set `OUTRO=0` |
+| `✗ OUTRO=0 but the build spliced an outro` | **Do not proceed** — the flag changed after the build, so the spliced outro would be sped up with the feature. Rebuild under the flag you want |
+| `✗ OUTRO=1 but the build joined no outro` | **Do not proceed** — the flag changed after the build, so the tail would be cut out of the recording and its last seconds shipped unsped. Rebuild under the flag you want |
+| `⚠ first cue at …s — past the 1.0s mark` | The opening second carries no words. Not a build failure: look at `.work/qa/first-frame.png` and, if the take opens on a held frame, recut the first scene |
 | No `── speedup x…` line | **Do not proceed** — the required speed pass never ran (produce §7.5) |
 
 ## Pitfalls

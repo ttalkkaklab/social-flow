@@ -68,6 +68,10 @@ SUB_OUT=${SUB_OUT:-5}              # outline thickness
 SUB_SHA=${SUB_SHA:-1.7}            # shadow
 COVER_TS=${COVER_TS:-1.2}          # cover still timestamp (a frame where the title overlay is visible)
 OUTRO_ASSET=${OUTRO_ASSET:-outro.mp4}   # outro to splice — a different file per format
+OUTRO=${OUTRO:-1}                  # 1=splice the outro (default), 0=the channel's shortform_outro is off
+# profile.md spells the choice `on`/`off`; the flag is the number. Anything else would fall to
+# the off path and drop the outro without saying so.
+case "$OUTRO" in 0|1) ;; *) echo "✗ OUTRO=$OUTRO — the flag is 1 or 0, not profile.md's shortform_outro on/off wording" >&2; exit 1;; esac
 STRICT_DIM=${STRICT_DIM:-0}        # 1=exit 1 on asset dimension mismatch, 0=one warning line
 
 rm -rf work && mkdir -p work
@@ -164,7 +168,14 @@ assert_exact() {   # <path> <role>
   [ "$got" = "${W}x${H}" ] || {
     say "⚠ $2 $1 is ${got} — it must match the canvas ${W}x${H} exactly"; DIMBAD=1; }
 }
-[ -f "$OUTRO_ASSET" ] && assert_exact "$OUTRO_ASSET" "outro"
+# One predicate for every outro branch — the channel's flag and the copied file. OUTRO=1 with
+# nothing to splice is a broken workdir, not an outro-off episode, so it stops here instead of
+# printing the same line the deliberate case prints.
+outro_on() { [ "$OUTRO" = 1 ] && [ -f "$OUTRO_ASSET" ]; }
+if [ "$OUTRO" = 1 ]; then
+  [ -f "$OUTRO_ASSET" ] || { say "✗ OUTRO=1 but $OUTRO_ASSET isn't in the workdir — copy it (screencast-pipeline.md §Edit procedure), or set OUTRO=0 in format.env when the channel ships without one"; exit 1; }
+  assert_exact "$OUTRO_ASSET" "outro"
+fi
 while IFS=$'\t' read -r _ _ _ _ _ SOVL; do
   [ "${SOVL:-}" = "-" ] && continue
   [ -n "${SOVL:-}" ] && [ -f "$SOVL" ] && assert_exact "$SOVL" "overlay"
@@ -323,12 +334,12 @@ ENC=(-c:v libx264 -profile:v high -level 4.1 -preset slow -crf 19 -pix_fmt yuv42
      -g $((FPS*2)) -keyint_min "$FPS" -sc_threshold 0 -r "$FPS"
      -c:a aac -b:a 192k -ar 48000 -ac 2 -movflags +faststart)
 OFF=""
-[ -f "$OUTRO_ASSET" ] && OFF=$(awk -v t="$VT" -v x="$XFADE" 'BEGIN{printf "%.6f", t-x}')
+outro_on && OFF=$(awk -v t="$VT" -v x="$XFADE" 'BEGIN{printf "%.6f", t-x}')
 
 render() {                          # $1=output file  $2=subtitle filter (empty string = no burn-in)
   local OUT="$1" SF="${2:-}" VSRC="[0:v]"
   [ -n "$SF" ] && VSRC="[vsub]"
-  if [ -f "$OUTRO_ASSET" ]; then
+  if outro_on; then
     ffmpeg -y -v error -i work/video.mp4 -i work/mix.wav -i "$OUTRO_ASSET" -filter_complex "
       ${SF:+[0:v]$SF[vsub];}
       ${VSRC}[2:v]xfade=transition=$XFADE_T:duration=$XFADE:offset=$OFF[v];
@@ -343,8 +354,8 @@ render() {                          # $1=output file  $2=subtitle filter (empty 
 }
 
 render reel.mp4 ""
-if [ -f "$OUTRO_ASSET" ]; then say "── outro splice: xfade ${XFADE_T} ${XFADE}s @ ${OFF}s"
-else say "── no outro: muxing the main part alone"; fi
+if outro_on; then say "── outro splice: xfade ${XFADE_T} ${XFADE}s @ ${OFF}s"
+else say "── no outro (OUTRO=0, the channel ships without one): muxing the main part alone"; fi
 
 rm -f reel-sub.mp4
 if [ "$BURN" = "1" ] && [ -n "$SUBFILTER" ]; then

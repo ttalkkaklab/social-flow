@@ -19,6 +19,9 @@ that viewers finish a video.
 Read [story-quality.md](story-quality.md) first. Establish the supported content and ending
 before the opening. Its optional-CTA rule overrides any mandatory closing question here;
 modern examples and emotional reversals are tools, not requirements for every subject.
+An ask stays optional; a forwardable thing does not — an ask requests behaviour from the viewer,
+while a forwardable thing is one sentence, figure or verdict they can pass on as-is. Asking to be
+shared is an ask, not a trigger.
 
 Before drafting, identify the viewer, the specific thing they want to find out, and what
 changes for them when they find it out. Start with a concrete action, contradiction,
@@ -35,10 +38,13 @@ another candidate form:
 - In each development item, give an answer, evidence, consequence or changed interpretation
   that makes the next item matter. Connect the items with a cause or an obstacle. If they
   connect only as "and another example", revise their relationship or shorten the item.
-- Give the viewer something early. Withhold the complete answer on a short as the existing
-  arc requires, but pay a useful piece in the first drip. "Wait until the end" and repeated
-  questions are not progress. On answer-first long-form, show the result early and make
-  the method, limitation or difficult choice the reason to continue.
+- Give the viewer something early. A short decides where its answer lands. Hold it and pay a
+  useful piece in each drip, or state the result on the cover and spend the drips on why it is
+  true and what it costs. Holding is the default and buys the stronger finish; opening on the
+  result buys the stop and then owes the viewer a reason to stay for the rest. Pick one on
+  purpose and keep to it. "Wait until the end" and repeated questions are not progress either
+  way. On answer-first long-form, show the result early and make the method, limitation or
+  difficult choice the reason to continue.
 - Plant a true detail before a turn that changes its meaning. State uncertainty where the
   evidence needs it. Never manufacture a popular misconception, danger, quote or causal
   link to make a reversal possible. If the evidence has no reversal, use discovery or a
@@ -48,6 +54,10 @@ another candidate form:
 - Resolve the main promise before the comment invite. The callback should let the opening
   mean something more specific on a second viewing. A next-episode teaser cannot pay this
   episode's debt. Keep the closing question brief and answerable from what just happened.
+- Name the one thing a viewer would forward — a fact, a verdict, a line or a short checklist,
+  said plainly enough to repeat from memory. Write it into the closing shot's `shot.share`
+  (`shot.shareType`: `fact` · `verdict` · `line` · `checklist` · `none`); on a short that field
+  is required on the `cta` shot. It is a line the episode says, never a request to send it on.
 
 Read the narration aloud without the board. Mark the first sentence where attention
 could wander and the exact missing development. Cut throat-clearing and duplicated

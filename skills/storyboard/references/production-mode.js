@@ -21,11 +21,50 @@
     'photoreal': { label: '완전 실사풍', looks: ['realistic'],
       prompt: 'Photoreal live-action cinematography: life-size human proportions, natural skin and fabric texture, real locations, physically plausible light and photographic lenses; every surface reads as a real material at real scale.' },
     'webtoon': { label: '웹툰풍', looks: ['webtoon'],
-      prompt: 'Korean webtoon illustration: consistent expressive character linework, clean contour lines, controlled cel shading, illustrated backgrounds and a coherent drawn palette; skin and cloth are drawn, and the frame is one unbroken picture.' }
+      prompt: 'Korean webtoon illustration: consistent expressive character linework, clean contour lines, controlled cel shading, illustrated backgrounds and a coherent drawn palette; skin and cloth are drawn, and the frame is one unbroken picture.' },
+    // Added 2026-09-08 from the Shorts style survey (docs/research/2026-09-08-shorts-visual-styles).
+    // Named studios and living artists stay out of every prompt: the image lane refuses them.
+    'claymation': { label: '클레이 스톱모션', looks: ['clay'],
+      prompt: 'Stop-motion claymation: matte plasticine figures and sets with visible thumbprints and slight surface imperfections, chunky simplified forms, handcrafted miniature props, warm tactile studio light and soft contact shadows; the whole frame is one sculpted scene photographed on a set.' },
+    'paper-cutout': { label: '종이 컷아웃 디오라마', looks: ['papercut'],
+      prompt: 'Layered paper-cut diorama: every figure, prop and backdrop is a flat cut-paper shape with visible fibre edges, stacked in separated depth layers with soft cast shadows between the layers, a muted paper palette, simple readable silhouettes and a shallow theatre-stage depth.' },
+    'ink-wash': { label: '수묵화', looks: ['inkwash'],
+      prompt: 'East Asian ink-wash painting: confident brushed black ink lines with wet-on-wet grey gradients on pale rice-paper texture, generous empty space, one restrained mineral accent colour, figures and places drawn in calligraphic strokes; the frame stays one painted picture.' },
+    'toon-3d': { label: '3D 카툰 캐릭터', looks: ['toon3d'],
+      prompt: 'Stylised 3D cartoon animation: appealing characters with large expressive eyes and simplified rounded proportions, soft subsurface skin, clean material shaders on props and sets, warm rim light and cinematic depth of field, rendered like a feature-animation frame.' }
   };
+  // Only the miniature presets carry a bundled reference pack; every other preset is prompt-only.
+  const packPresets = ['cinematic-miniature', 'spatial-explainer'];
+  const ALL_LOOKS = ['archive', ...new Set(Object.values(STYLES).flatMap(s => s.looks))];
+  // Explicit imported inputs, never inferred from an existing generation output.
+  function reused(scene) { return scene.visual?.reuse !== undefined; }
+  function reuseErrors(scene) {
+    if (!reused(scene)) return [];
+    const v = scene.visual || {}, r = v.reuse, errors = [];
+    if (!r || typeof r !== 'object' || Array.isArray(r)) return ['visual.reuse must be an imported clip record'];
+    const local = file => text(file) && !/^[a-z][a-z0-9+.-]*:|^\/\//i.test(file) && !/[\t\r\n|]/.test(file);
+    if (!local(r.clip) || !/\.(mp4|mov|m4v|webm)$/i.test(r.clip)) errors.push('visual.reuse.clip must be a local, already trimmed file path');
+    if (!/^[a-f0-9]{64}$/.test(r.sha256 || '')) errors.push('visual.reuse.sha256 must identify the imported file bytes');
+    if (!text(r.sourceEpisode)) errors.push('visual.reuse.sourceEpisode must identify the original generated episode');
+    const range = r.sourceRange;
+    if (!range || !Number.isFinite(range.start) || !Number.isFinite(range.end) || range.start < 0 || range.end <= range.start ||
+        !Number.isFinite(scene.duration) || scene.duration <= 0 || Math.abs(range.end - range.start - scene.duration) > .001)
+      errors.push('visual.reuse.sourceRange must give original start/end seconds spanning exactly scene.duration');
+    if (v.video !== undefined || v.clip !== undefined || v.source !== undefined || v.slide !== undefined || v.renderedFile !== undefined ||
+        v.engine !== undefined || v.prompt !== undefined || v.bgPrompt !== undefined || v.bg !== undefined || ['broll', 'quote', 'outro'].includes(scene.type))
+      errors.push('A reused clip cannot also declare a generation, recording, slide or alternate file handoff');
+    if (v.picture !== 'ai-video' || v.overlay !== 'none') errors.push('Reused generated clips keep picture:ai-video and overlay:none');
+    if (scene.title || scene.stat || (scene.bullets || []).length || scene.footnote)
+      errors.push('Reused video allows subtitles only; clear title, stat, bullets and footnote');
+    if (scene.shot?.render?.mode !== 'generated_video' || scene.shot?.render?.purpose !== 'live_action' ||
+        scene.shot?.render?.motionEssential !== true || !text(scene.shot?.render?.whyNotStill) || !text(scene.shot?.render?.action) || !text(v.why))
+      errors.push('Reused video needs essential live_action with action, whyNotStill and visual.why');
+    errors.push(...motionErrors(scene));
+    return errors;
+  }
   function eligible(scene) {
     const v = scene.visual || {};
-    return scene.type !== 'outro' && !(!v.video &&
+    return scene.type !== 'outro' && !(!reused(scene) && !v.video &&
       (['recording', 'screencast'].includes(v.source) || v.picture === 'recording'));
   }
   function full(production) { return production?.mode === 'full_video'; }
@@ -38,6 +77,7 @@
         const v = s.visual || {}, video = { ...v.video };
         delete video.clip;
         return { type: s.type, duration: s.duration, narration: s.narration,
+          ...(reused(s) ? { reuse: v.reuse } : {}),
           render: s.shot?.render, design: s.shot?.videoDesign,
           frames: v.frames, imagePair: v.imagePair, styleRole: v.styleRole, stylePack: v.stylePack,
           bg: v.bg, bgPrompt: v.bgPrompt, camera: v.camera, action: v.action, video, engine: v.engine,
@@ -68,8 +108,9 @@
     return errors;
   }
   function check(win, { requireSelection = false, requireApproval = false, draft = false } = {}) {
-    const p = win.PRODUCTION, errors = [];
-    if (!p) return requireSelection ? ['Choose hybrid or full_video with a cost comparison before generation'] : [];
+    const p = win.PRODUCTION, errors = Array.from(win.SCENES || []).flatMap((s, i) => reuseErrors(s).map(e => `shot ${i + 1}: ${e}`));
+    if (!p) return requireSelection || (win.SCENES || []).some(reused)
+      ? errors.concat(['Choose hybrid or full_video with a cost comparison before generation']) : errors;
     if (!MODES[p.mode]) errors.push('PRODUCTION.mode must be hybrid or full_video');
     if (!Number.isFinite(p.videoBudgetUsd) || p.videoBudgetUsd < 0)
       errors.push('PRODUCTION.videoBudgetUsd must be a finite nonnegative episode cap');
@@ -82,13 +123,13 @@
     if (chosen && chosen !== 'spatial-explainer' && !STYLES[chosen]) errors.push('Unknown PRODUCTION.style.preset');
     if (STYLES[chosen] && (!['user', 'standing'].includes(p.style.selection?.kind) ||
         !text(p.style.selection?.reference))) errors.push('Record the actual style HITL choice in PRODUCTION.style.selection');
-    if (['photoreal', 'webtoon'].includes(chosen) && p.style.referencePack)
-      errors.push('Photoreal/webtoon must not inherit the miniature reference pack');
+    if (STYLES[chosen] && !packPresets.includes(chosen) && p.style.referencePack)
+      errors.push('Only cinematic-miniature carries the miniature reference pack; drop referencePack for ' + chosen);
     if (draft) return errors; // Shot assets/designs are authored after the narration-only draft.
     if (!full(p)) {
       const count = (win.SCENES || []).filter(s => eligible(s) &&
         (s.visual?.video || s.type === 'broll' || (s.type === 'quote' && typeof s.visual?.clip === 'object'))).length;
-      if (p.mode === 'hybrid' && (count < 1 || count > 2)) errors.push('hybrid needs 1–2 generated clips; revise conflicting channel constraints before production');
+      if (p.mode === 'hybrid' && ((count < 1 && !(win.SCENES || []).some(reused)) || count > 2)) errors.push('hybrid needs 1–2 generated clips or at least one reused clip with zero generation; revise conflicting channel constraints before production');
       return errors;
     }
     const style = p.style || {};
@@ -96,7 +137,7 @@
     for (const key of ['reference', 'world', 'materials', 'palette', 'lighting', 'camera'])
       if (!text(style[key])) errors.push('PRODUCTION.style.' + key + ' is required');
     (win.SCENES || []).forEach((s, i) => {
-      if (!eligible(s)) return;
+      if (!eligible(s) || reused(s)) return;
       const v = s.visual || {}, design = s.shot?.videoDesign || {};
       const bad = message => errors.push('shot ' + (i + 1) + ': ' + message);
       if (s.shot?.render?.mode !== 'generated_video' || !v.video || v.slide || v.source || v.clip)
@@ -113,8 +154,8 @@
       if (design.camera !== undefined) bad('videoDesign.camera is retired; the camera lives in the four visual.camera slots');
       for (const slot of missingCameraSlots(v.camera))
         bad('visual.camera.' + slot + ' is required; the motion prompt is assembled from the four slots (speed may stay empty on a static camera)');
-      if (!['miniature', 'architectural', 'realistic', 'webtoon', 'archive'].includes(design.look))
-        bad('videoDesign.look must be miniature, architectural, realistic, webtoon or archive');
+      if (!ALL_LOOKS.includes(design.look))
+        bad('videoDesign.look must be one of ' + ALL_LOOKS.join(', '));
       if (STYLES[style.preset] && design.look !== 'archive' && !STYLES[style.preset].looks.includes(design.look))
         bad('videoDesign.look conflicts with the selected episode style');
       motionErrors(s).forEach(bad);
@@ -141,7 +182,7 @@
     return { ...base, videoBudgetUsd: production.videoBudgetUsd,
       generatedVideoMax: full(production) ? scenes.filter(eligible).length : Math.min(base.generatedVideoMax ?? 2, 2) };
   }
-  const api = { STYLES, MODES, CAMERA_SLOTS, eligible, full, signature, check, policy, motionErrors, missingCameraSlots, finalState };
+  const api = { STYLES, MODES, CAMERA_SLOTS, packPresets, ALL_LOOKS, eligible, reused, reuseErrors, full, signature, check, policy, motionErrors, missingCameraSlots, finalState };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.PRODUCTION_MODE = api;
 })(typeof window === 'object' ? window : globalThis);

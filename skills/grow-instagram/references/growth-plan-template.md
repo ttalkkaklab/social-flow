@@ -132,7 +132,11 @@ topic_keywords: ["Vietnam visa", "expat paperwork"]   # only with topic_source: 
 - **Queues stamped together** — `mark_queues`. One video goes out to both
   platforms, so adding `youtube` here makes the YouTube loop publish the same
   episode (that side uploads the local file directly and needs no hosting).
-  **Only add a platform whose growth-plan.md is approved.**
+  **Only add a platform whose growth-plan.md is approved.** The YouTube plan's
+  breakout push targets carry the same guard for the same reason — a platform
+  list only counts where that platform's own plan is approved and says so.
+  **Instagram is never one of those targets**: a caption carries no clickable
+  link and this loop has no publishing stage outside the queue.
 
 ## Comment-reply scope
 

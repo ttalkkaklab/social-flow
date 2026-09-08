@@ -83,6 +83,10 @@ reruns source-plan and slide checks before encoding and records the plugin versi
 
 Story approval uses an [evidence-backed contract](skills/storyboard/references/story-quality.md):
 choose supported content and an earned ending before polishing the hook. CTA is optional.
+An ask stays optional; a forwardable thing does not — an ask requests behaviour from the viewer,
+while a forwardable thing is one sentence, figure or verdict they can pass on as-is. Asking to be
+shared is an ask, not a trigger. On a short that forwardable thing is `shot.share` on the closing
+shot, and `check-scenes.js` fails a board without it.
 Every spoken scene needs a purpose, and the narration review cites actual lines for meaning,
 progression, payoff and grounding. `check-story.js` and full `check-scenes.js` block missing
 or stale reviews before production; a numeric score cannot waive failure. Existing boards
@@ -175,9 +179,13 @@ optional, and they're what turns the tool from a video maker into an operator.**
   `grow-youtube`, `grow-instagram`) take over day-to-day operation on `/loop` —
   replying to comments, watching insights, joining keyword conversations, refilling
   the publish queue, and posting inside the standing authorization you approved once
-  at `init`. Insight tools (`threads_insights`, `youtube_insights`,
-  `instagram_insights`, `content_feedback`) start reporting real numbers, and
-  `review-recent` can score your last five episodes against your own medians.
+  at `init`. A just-published YouTube video also gets a velocity watch: the tick samples
+  its live view counter every `velocity_watch_minutes` (default 30), and a video running
+  ahead of the channel's own recent episodes at the same age goes into a channel-shared
+  handoff that the Threads loop can spend one push post on. Insight tools
+  (`threads_insights`, `youtube_insights`, `instagram_insights`, `content_feedback`)
+  start reporting real numbers, and `review-recent` can score your last five
+  episodes against your own medians.
 - **Skip them** and everything up to and including production still works. Research,
   storyboard, image generation, narration, the build — `produce` writes the finished
   9:16 or 16:9 video plus per-platform text into
@@ -312,9 +320,9 @@ editorial checks; completion-rate improvements require audience measurements.
 /social-flow:produce my-channel 20260729-fx           # 3. video + per-platform text
 /social-flow:publish my-channel 20260729-fx           # 4. [approval] → publish → record permalinks
 /social-flow:grow-threads my-channel init             # 5. (optional) Threads growth plan [approval — standing authorization]
-/loop 30m /social-flow:grow-threads my-channel        #    then an autonomous growth tick every 30m (inbox replies · insights · keyword conversations · judgment-based posting — 95-point gate)
+/loop 30m /social-flow:grow-threads my-channel        #    then an autonomous growth tick every 30m (inbox replies · insights · keyword conversations · judgment-based posting · one push post for a handed-over breakout — 95-point gate)
 /social-flow:grow-youtube my-channel init             # 5-b. (optional) YouTube growth plan [approval — standing authorization]
-/loop 1h /social-flow:grow-youtube my-channel         #     then an hourly tick (comment replies · metrics · queue refill authoring · queue publishing)
+/loop 1h /social-flow:grow-youtube my-channel         #     then a tick every hour at rest (comment replies · metrics · queue refill authoring · queue publishing · velocity watch → breakout handoff), 15–30m while a watch is open
 /social-flow:grow-instagram my-channel init           # 5-c. (optional) Instagram growth plan [approval — standing authorization]
 /loop 1h /social-flow:grow-instagram my-channel       #     then an hourly tick (comment replies · skip-rate watch · queue refill authoring · queue publishing)
 /social-flow:topic-scout my-channel                   # 1.6 topics the market has already validated — md source of truth + chart HTML
@@ -460,7 +468,7 @@ social-flow/
 │   ├── publish/                 # /social-flow:publish — HITL approval, then platform publishing
 │   ├── grow-threads/            # /social-flow:grow-threads — one autonomous Threads growth tick (init plan = standing authorization, repeat via /loop — growth skills are per-platform)
 │   │   └── references/          #   growth-playbook.md (tactics SoT) · growth-plan-template.md (plan/state schema)
-│   ├── grow-youtube/            # /social-flow:grow-youtube — one autonomous YouTube growth tick (comment replies · metrics · queue refill authoring · queue publishing — only items marked queue: ready by a human or by auto-authoring)
+│   ├── grow-youtube/            # /social-flow:grow-youtube — one autonomous YouTube growth tick (comment replies · metrics · queue refill authoring · queue publishing · velocity watch → breakout handoff — only items marked queue: ready by a human or by auto-authoring)
 │   │   └── references/          #   growth-playbook.md (evidence-grade notation SoT) · growth-plan-template.md
 │   ├── grow-instagram/          # /social-flow:grow-instagram — one autonomous Instagram growth tick (comment replies · skip/watch metrics · queue refill authoring · queue publishing — Reels go out only with queue_instagram: ready + a public URL)
 │   │   └── references/          #   growth-playbook.md (two gates · disqualification SoT) · growth-plan-template.md
@@ -524,9 +532,9 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | Capability | `capability_status` | What this machine has configured, grouped by capability with an "N of M" count, plus the env var that would unlock each missing provider. Call it before planning anything that spends money — otherwise a missing key only surfaces when the call fails, after the plan was built around it. Reports configuration, not reachability |
 | Check | `sns_account_check` | Batch /me check across tokens (token values never shown) |
 | Growth insights | `threads_insights` / `threads_search` | Threads insights (account/post metrics) + public keyword search — for grow-threads (`threads_manage_insights` · `threads_keyword_search` scopes) |
-| Growth insights | `youtube_insights` | Channel stats + Analytics period metrics (views · engagedViews · average view ratio · subscriber delta) + per-video metrics — for grow-youtube (`youtube.readonly` · `yt-analytics.readonly` scopes; data lags 2–3 days) |
+| Growth insights | `youtube_insights` | Channel stats + Analytics period metrics (views · engagedViews · average view ratio · shares · subscriber delta) + per-video metrics — for grow-youtube (`youtube.readonly` · `yt-analytics.readonly` scopes). **The 2–3 day lag covers half the response.** Everything Analytics serves — the channel window, each video's `period` block, `shares`, `averageViewPercentage` — runs 2–3 days behind at day granularity, so sharing cannot be read in the first hours. Each video's `lifetime` block (views · likes · comments) is the Data API's public counter and carries no lag; that is what the velocity watch samples. It is a cached counter that can sit still on a fresh video, so one low reading is not a verdict — the threshold comes from the channel's own growth-log, not from a number written here |
 | Growth insights | `instagram_insights` | Account period metrics (reach · views · profile visits · saves) + per-media metrics — Reels alone carry `reels_skip_rate` and `ig_reels_avg_watch_time` (hook/retention verdicts). For grow-instagram (`instagram_business_manage_insights` scope; follower count comes from the profile field) |
-| Growth insights | `content_feedback` | Scores the last N episodes (default 5) against channel medians, split YouTube/Instagram, and writes a funnel/bar HTML to `data/<channel>/growth/review-recent.html`. Platforms without tokens just lose their section |
+| Growth insights | `content_feedback` | Scores the last N episodes (default 5) against channel medians, split YouTube/Instagram, and writes a funnel/bar HTML to `data/<channel>/growth/review-recent.html`. Share rate is one of the compared axes on both platforms, but the two are not the same number — YouTube divides shares by views because Analytics gives it no reach, Instagram divides by reach — so a rate is read within its own platform. Platforms without tokens just lose their section |
 
 Search tools (`*_search`) share argument names — **`query` · `limit` · `page`**.
 Whatever the backend API calls them (`q`, `display`, `num`, `start`), the server does
