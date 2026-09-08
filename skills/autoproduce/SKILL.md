@@ -275,11 +275,16 @@ skill's §2 shape inside the quota — **two passes, a pick in between**:
 1. **First research (§2.1)** — write the direction-finding question map (3–5 rows:
    what people ask, what's true, which explanations compete), search per question
    from two directions (`kin`·`news`·`blog` on naver_search, WebSearch, `datago`
-   for government-origin figures), log **ten or more** searches, and write **three
-   directions** in `research.md` §Directions. Each row is a different episode this
-   topic could be (question · hook form · primary engine · hero · what the second
-   pass still owes), not three wordings of the same two lookups. Three different
-   primaries from `curiosity` · `fear` · `intrigue` · `comedy`.
+   for government-origin figures), log **ten or more** searches, then decide **three
+   messages** for the viewer living now in `research.md` §Messages — what they
+   understand, reconsider or can do after the episode, three different ones, each on
+   Verified rows — and write **three directions** in §Directions, one topic cut from each
+   message (`M#` · 주제 with its question · hook form · primary engine · hero · what the
+   second pass still owes), not three wordings of the same two lookups. Three different
+   primaries from `curiosity` · `fear` · `intrigue` · `comedy`. **A topic is never a report
+   of ignorance** — "X는 알 수 없다", "X는 아직 모른다" is not an episode; the message and
+   the 주제 name what the evidence establishes, and `check-research.js` rejects those
+   sentences (user directive 2026-09-07; storyboard `scenario-stage.md` §Messages first).
 2. **Three candidates, then pick one (gate 6a / §2.2 below)** — don't start the
    second pass before `Chosen:` is on the page.
 3. **Additional research (§2.3)** — rewrite the question map to the chosen
@@ -309,8 +314,10 @@ node $SB/check-research.js storyboard/               # exit 1 = the research doe
 
 ### 2.2 Scenario candidates (gate 6a — storyboard-reviewer scenario mode, one batched read)
 
-Both formats. After the three direction rows and `check-research.js --direction` exit 0,
-write three candidate pages — **the seven items, in order, on every one**: 주제 · 훅 (a
+Both formats. After the three messages, the three direction rows and `check-research.js
+--direction` exit 0, write three candidate pages — the message verbatim under the title, then
+**the seven items, in order, on every one**: 주제 (the subject cut from the message — what the
+episode is about and the question it answers; never "…는 알 수 없다") · 훅 (a
 dramatised scene that invents no fact) · 전개 #1 (what actually happened) · 전개 #2 (what it
 makes the next development necessary) · 전개 #3 (evidence, consequence or limit) · 마무리
 (earned resolution, naming the one forwardable thing — the fact, verdict, line or checklist

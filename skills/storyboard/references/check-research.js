@@ -24,7 +24,8 @@
  *
  *   ## Questions …            one row per question · Status says answered / written off
  *   ## Verified               one row per claim, numbered, with source links · ★ marks a key claim
- *   ## Directions             three rows · `Chosen: D#` locks the pick (owed on close, not on --direction)
+ *   ## Messages               three rows · what a viewer living now takes away — decided before the directions
+ *   ## Directions             three rows, one topic per message (`M#`) · `Chosen: D#` locks the pick (owed on close, not on --direction)
  *   ## Counter-evidence …     one row per key claim, `Claim #` naming which (ranges allowed)
  *   ## Failed verification …  what was excluded and why
  *   ## Sufficiency            the self-reported counts
@@ -43,9 +44,12 @@
  * A channel whose profile skips research has no research.md at all, and that is not a defect —
  * the caller decides whether the file was supposed to exist.
  *
- * `--direction` is the first-pass gate: three verified claims, ten searches, and three
- * direction rows, no pick and no counter-evidence yet. The default run is the close: the
- * floor, every question answered or written off, and one `Chosen:` direction.
+ * `--direction` is the first-pass gate: three verified claims, ten searches, three messages
+ * and three direction rows each citing one of them, no pick and no counter-evidence yet. The
+ * default run is the close: the floor, every question answered or written off, and one
+ * `Chosen:` direction. On both runs a message or direction sentence that ends on ignorance
+ * ("X는 아직 모른다", "미스터리로 남았다") is a violation — an episode built on one has nothing
+ * to hand over at the 마무리 (user directive 2026-09-07; scenario-stage §Messages first).
  *
  * Exit codes:
  *   0  the research closes (or, with --direction, is enough to ask)
@@ -71,7 +75,24 @@ const FLOOR_ABSOLUTE = 3;
 const FLOOR_SHORT = 5;
 const FLOOR_LONG = 12;
 const FLOOR_DIRECTIONS = 3;
+const FLOOR_MESSAGES = 3;
 const FLOOR_DIRECTION_SEARCHES = 10;
+
+/* A sentence that ends on ignorance. Predicate forms only — "알 수 없는 물체" is a modifier and
+   its predicate sits elsewhere, so it passes here and a person reads it; "알 수 없다" is the whole
+   point of the sentence, and that is what the rule bans. The (?![가-힣]) tail keeps 모른다면 and
+   없다는 out — a conditional or a quoted clause is not the sentence's verdict. */
+const IGNORANCE = new RegExp([
+  '알\\s*수(?:가|는|도)?\\s*없(?:다|어요|습니다|죠|네요|음)(?![가-힣])',
+  '알\\s*길(?:이|은)?\\s*없(?:다|어요|습니다|죠)(?![가-힣])',
+  '(?:모른다|모릅니다|몰라요|모르죠|모르겠(?:다|어요|습니다)|모르네요|모름)(?![가-힣])',
+  '(?:밝혀|풀리|알려)지지\\s*않(?:았다|았어요|았습니다|았죠|는다|아요|습니다|죠)(?![가-힣])',
+  '아무도\\s*(?:모른|모릅|몰라|모르|알지\\s*못)',
+  '(?:미스터리|수수께끼|미제)(?:다|이다|입니다|예요|죠|로\\s*남)',
+  '\\b(?:nobody|no\\s+one)\\s+knows\\b',
+  '\\b(?:remains?|is|are|was|were)\\s+(?:still\\s+)?(?:an?\\s+)?(?:mystery|unknown|unsolved|unexplained)\\b',
+  "\\b(?:we|they|scientists|historians)\\s+(?:still\\s+)?(?:don'?t|do\\s+not|may\\s+never)\\s+know\\b"
+].join('|'), 'i');
 
 function die(msg) {
   process.stderr.write('check-research: ' + msg + '\n');
@@ -234,6 +255,7 @@ function analyse(src, fmt, scenes, opts) {
   const vRows = rows(section(src, new RegExp('^##\\s+' + NUM + '(?:[\\w가-힣]{1,8}\\s)?(Verified|검증\\s*(표|통과))', 'i')));
   const dirBody = section(src, /Directions?|시나리오\s*방향|방향성|방향\s*후보/i) || '';
   const dRows = rows(dirBody);
+  const mRows = rows(section(src, new RegExp('^##\\s+' + NUM + '(Messages?(\\s|$)|메시지)', 'i')));
   const cRows = rows(section(src, /Counter-evidence|반증|역검증/i));
   const fRows = rows(section(src, /Failed\s*(verification)?|검증\s*실패|본문\s*금지|제외/i));
   const suffBody = section(src, /Sufficiency|충분성|충족/i) || '';
@@ -310,7 +332,25 @@ function analyse(src, fmt, scenes, opts) {
       warn(`Sufficiency counts ${answeredLine[2]} questions, the table has ${qRows.length}`);
   }
 
-  // ── Directions (three options, one pick) ──
+  // ── Messages (three, decided before the directions) ──
+  // §2.1b: what a viewer living now understands, reconsiders or can do after the episode —
+  // three different ones, each on Verified rows. A direction is the topic cut from one of
+  // them, so a log with directions and no messages wrote its topics before their reason.
+  // None may be a report of ignorance — "X는 알 수 없다" hands the viewer nothing at the
+  // 마무리 (user directive 2026-09-07; scenario-stage §Messages first).
+  const msgIds = mRows.filter((r) => /^\**\s*M?\s*\d+\s*\**$/i.test(r[0] || ''))
+    .map((r) => ({ n: Number(String(r[0] || '').replace(/[^\d]/g, '')), cells: r }));
+  if (msgIds.length < FLOOR_MESSAGES)
+    bad(`${msgIds.length} message(s) — §2.1b writes three before any direction: what a viewer ` +
+        'living now understands, reconsiders or can do after the episode, each a different message on Verified rows');
+  msgIds.forEach((m) => {
+    const hit = m.cells.slice(1).join(' ').match(IGNORANCE);
+    if (hit)
+      bad(`M${m.n} is a report of ignorance ("…${hit[0]}") — a message names what the evidence ` +
+          'establishes, not what nobody knows (scenario-stage §Messages first)');
+  });
+
+  // ── Directions (three topics, one per message, one pick) ──
   // First pass (--direction) needs three rows and no pick. Close needs the same three rows
   // plus one Chosen: line (or a Status cell that says chosen). Unchosen rows stay as not used.
   const dirIds = dRows.filter((r) => /^\**\s*D?\s*\d+\s*\**$/i.test(r[0] || ''))
@@ -333,6 +373,27 @@ function analyse(src, fmt, scenes, opts) {
   } else if (chosen.size > 1) {
     warn(`directions ${[...chosen].join(', ')} are all marked chosen — pick one`);
   }
+
+  // Each direction is the topic cut from one message, and says which. The # and Status cells
+  // are left out of the read so a status word or the row id never trips the ignorance rule.
+  const msgNums = new Set(msgIds.map((m) => m.n));
+  const citedMsgs = [];
+  dirIds.forEach((d) => {
+    const text = d.cells.slice(1, -1).join(' ');
+    const hit = text.match(IGNORANCE);
+    if (hit)
+      bad(`D${d.n} is a report of ignorance ("…${hit[0]}") — the 주제 names what the evidence ` +
+          'establishes, never "X는 알 수 없다" (scenario-stage §Messages first)');
+    if (!msgIds.length) return;
+    const cite = text.match(/\bM\s*(\d+)\b/);
+    if (!cite) bad(`D${d.n} cites no message (M#) — every direction is the topic cut from one of the three messages`);
+    else if (!msgNums.has(Number(cite[1]))) bad(`D${d.n} cites M${cite[1]}, which is not in the Messages table`);
+    else citedMsgs.push(Number(cite[1]));
+  });
+  const shared = citedMsgs.filter((n, i) => citedMsgs.indexOf(n) !== i);
+  if (shared.length)
+    warn(`directions share a message (M${[...new Set(shared)].join(', M')}) — one topic per message; ` +
+         'write the missing message instead of a second topic on this one');
 
   // ── Which claims are key ──
   // Two readings, and both count: ★ in the # column, and the rows the sentences cite. A claim
@@ -409,7 +470,7 @@ function analyse(src, fmt, scenes, opts) {
 
   return {
     claims: claimCount, keyClaims: keys.length, keyBasis, questions: qRows.length,
-    directions: dirIds.length, chosen: [...chosen],
+    messages: msgIds.length, directions: dirIds.length, chosen: [...chosen],
     phase: directionPhase ? 'direction' : 'close',
     counterRows: cRows.length, counterUnmapped: unmapped, excluded: fRows.length,
     searches, floor: FLOOR_ABSOLUTE, searchFloor: FLOOR_DIRECTION_SEARCHES, aim, traceability: trace,
@@ -441,12 +502,19 @@ function selftest() {
     '| 2 | y | [a](https://a.example) | [b](https://b.example) | WebSearch | 2026-08-28 | |',
     '| 3 | z | [a](https://a.example) | [b](https://b.example) | WebSearch | 2026-08-28 | |',
     '',
+    '## Messages',
+    '| # | Message | Why today | On claims | Status |',
+    '|---|---|---|---|---|',
+    '| M1 | x-msg | now | 1 | → D1 |',
+    '| M2 | y-msg | now | 2 | → D2 |',
+    '| M3 | z-msg | now | 3 | → D3 |',
+    '',
     '## Directions',
-    '| # | Question | Hook form | Hero / stake | Already verified | Still to research | Status |',
-    '|---|---|---|---|---|---|---|',
-    '| D1 | a | gap | x | 1 | — | chosen |',
-    '| D2 | b | number | y | 2 | — | not used |',
-    '| D3 | c | identify | z | 3 | — | not used |',
+    '| # | Message | 주제 · question | Hook form | Hero / stake | Already verified | Still to research | Status |',
+    '|---|---|---|---|---|---|---|---|',
+    '| D1 | M1 | a | gap | x | 1 | — | chosen |',
+    '| D2 | M2 | b | number | y | 2 | — | not used |',
+    '| D3 | M3 | c | identify | z | 3 | — | not used |',
     '',
     'Chosen: D1 (2026-08-28)',
     '',
@@ -616,10 +684,10 @@ function selftest() {
   ok('a missing Directions section is a violation on close',
      has(analyse(noDir, null), /no direction pick|0 direction/));
   ok('two direction rows is a violation',
-     has(analyse(good.replace('| D3 | c | identify | z | 3 | — | not used |\n', ''), null),
+     has(analyse(good.replace('| D3 | M3 | c | identify | z | 3 | — | not used |\n', ''), null),
          /2 direction/));
-  const unpicked = good.replace('| D1 | a | gap | x | 1 | — | chosen |',
-                               '| D1 | a | gap | x | 1 | — | proposed |')
+  const unpicked = good.replace('| D1 | M1 | a | gap | x | 1 | — | chosen |',
+                               '| D1 | M1 | a | gap | x | 1 | — | proposed |')
     .replace('Chosen: D1 (2026-08-28)', '');
   ok('three rows with no pick is a violation on close',
      has(analyse(unpicked, null), /no direction pick/));
@@ -628,7 +696,7 @@ function selftest() {
   ok('--direction accepts three rows and no pick, even without counter-evidence',
      bads(analyse(dirOnly, { format: 'shorts-9x16' }, null, { directionPhase: true })).length === 0);
   ok('--direction still wants three rows',
-     has(analyse(dirOnly.replace('| D3 | c | identify | z | 3 | — | not used |\n', ''),
+     has(analyse(dirOnly.replace('| D3 | M3 | c | identify | z | 3 | — | not used |\n', ''),
                  null, null, { directionPhase: true }), /2 direction/));
   const nine = dirOnly.replace('| datago_search | a 통계 | … |', '');
   ok('--direction wants ten searches',
@@ -641,6 +709,47 @@ function selftest() {
   ok('a Korean 시나리오 방향 heading is the Directions table',
      analyse(good.replace('## Directions', '## 시나리오 방향'), null).directions === 3);
 
+  // ── Messages — three, before the directions, and each direction cites one ──
+  ok('it counts the messages', g.messages === 3);
+  ok('a Korean 메시지 heading is the Messages table',
+     analyse(good.replace('## Messages', '## 2. 메시지'), null).messages === 3);
+  const noMsg = good.replace(/\n## Messages[\s\S]*?(?=\n## Directions)/, '');
+  ok('a missing Messages section is a violation on close', has(analyse(noMsg, null), /0 message\(s\)/));
+  ok('a missing Messages section is a violation on --direction',
+     has(analyse(noMsg, null, null, { directionPhase: true }), /0 message\(s\)/));
+  ok('with no messages the directions are not also reported as citing none',
+     !has(analyse(noMsg, null), /cites no message/));
+  ok('two messages is a violation',
+     has(analyse(good.replace('| M3 | z-msg | now | 3 | → D3 |\n', ''), null), /2 message\(s\)/));
+  ok('a direction citing no message is a violation',
+     has(analyse(good.replace('| D2 | M2 | b |', '| D2 | — | b |'), null), /D2 cites no message/));
+  ok('a direction citing a message that is not on the page is a violation',
+     has(analyse(good.replace('| D2 | M2 | b |', '| D2 | M7 | b |'), null), /D2 cites M7/));
+  ok('two directions on one message is a warning',
+     has(analyse(good.replace('| D2 | M2 | b |', '| D2 | M1 | b |'), null), /share a message \(M1\)/));
+  ok('the M in a status word or a hero stat is not a citation',
+     !has(analyse(good.replace('| D2 | M2 | b |', '| D2 | M2 | b — 5M 원 |'), null), /cites M/));
+
+  // ── A topic is never a report of ignorance (user directive 2026-09-07) ──
+  const ign = (row) => analyse(good.replace('| D1 | M1 | a |', '| D1 | M1 | ' + row + ' |'), null);
+  ok('a message that ends on 모른다 is a violation',
+     has(analyse(good.replace('| M1 | x-msg |', '| M1 | 무엇이 떨어졌는지는 아직 모른다 |'), null),
+         /M1 is a report of ignorance/));
+  ok('a direction whose 주제 says nobody knows is a violation',
+     has(ign('진실은 아무도 모른다'), /D1 is a report of ignorance/));
+  ok('알 수 없습니다 is caught', has(ign('그날 무엇이 있었는지는 알 수 없습니다'), /report of ignorance/));
+  ok('미스터리로 남았다 is caught', has(ign('사건은 미스터리로 남았다'), /report of ignorance/));
+  ok('밝혀지지 않았다 is caught', has(ign('원인은 밝혀지지 않았다'), /report of ignorance/));
+  ok('an English "remains a mystery" is caught', has(ign('what fell remains a mystery'), /report of ignorance/));
+  ok('"we still don\'t know" is caught', has(ign("we still don't know what fell"), /report of ignorance/));
+  ok('"알 수 없는" as a modifier passes the machine check',
+     !has(ign('정체를 알 수 없는 물체가 떨어진 뒤 군은 왜 설명을 바꿨나'), /report of ignorance/));
+  ok('a conditional 모른다면 passes', !has(ign('변속 원리를 모른다면 오르막에서 무엇을 잃나'), /report of ignorance/));
+  ok('a quoted 없다는 clause passes', !has(ign('알 수 없다는 발표가 왜 불신을 키웠나'), /report of ignorance/));
+  ok('the status cell is not read for ignorance',
+     !has(analyse(good.replace('| D2 | M2 | b | number | y | 2 | — | not used |',
+                               '| D2 | M2 | b | number | y | 2 | — | 미제 |'), null), /report of ignorance/));
+
   // Drift guard — the floors live in the skill, and this file has to agree with it.
   const skill = path.resolve(SELF_DIR, '..', 'SKILL.md');
   if (fs.existsSync(skill)) {
@@ -650,6 +759,7 @@ function selftest() {
     ok('SKILL §2 still aims a short at five or more', /\*\*five or more\*\*/.test(s));
     ok('SKILL §2 still aims a long-form at twelve or more', /\*\*twelve or more\*\*/.test(s));
     ok('SKILL §2.1 still writes three directions', /three honest directions/i.test(s));
+    ok('SKILL §2.1b still writes three messages first', /§Messages first/.test(s));
     ok('SKILL §2.1 still asks ten or more searches', /\*\*ten or more\*\*/.test(s));
     ok('SKILL still names check-research.js --direction', /check-research\.js storyboard\/ --direction/.test(s));
   } else {
@@ -687,13 +797,14 @@ function main() {
   }
 
   const lines = ['research.md — ' + result.claims + ' verified claim(s) · ' +
-                 result.questions + ' question(s) · ' + result.directions + ' direction(s)' +
+                 result.questions + ' question(s) · ' + result.messages + ' message(s) · ' +
+                 result.directions + ' direction(s)' +
                  (result.chosen.length ? ' · chosen D' + result.chosen.join(', D') : '') +
                  ' · ' + result.excluded + ' excluded', ''];
   if (!result.findings.length) {
     if (result.phase === 'direction') {
-      lines.push('  First pass closes: three directions are on the page, ten or more searches');
-      lines.push('  are logged, and there are enough verified claims to ask which one the episode is.');
+      lines.push('  First pass closes: three messages and three directions citing them are on the page,');
+      lines.push('  ten or more searches are logged, and there are enough verified claims to ask which one the episode is.');
     } else {
       lines.push('  The research closes: the floor is met, a direction is picked, every question');
       lines.push('  ends answered or written off, and each claim was searched against itself.');

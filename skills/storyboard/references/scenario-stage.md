@@ -12,15 +12,16 @@ instead of a board. Both formats run this stage. On long-form a candidate used t
 · hero) is too thin to judge whether a viewer would stay — that is the "밋밋하다" failure
 the 95-point loop exists to catch.
 
-The loop happens **after first research and before the pick** (storyboard §2.2). Three
-different episodes this topic could be are written as three pages **in one fixed shape —
-the seven items below** (user directive, 2026-09-02) — each one is scored, the user sees all
-three in full and picks among the ones that cleared 95. Additional research and the board
-come after that, on the winner only.
+The loop happens **after first research and the three messages, before the pick** (storyboard
+§2.1b · §2.2). Three different episodes this topic could be — one topic cut from each message
+— are written as three pages **in one fixed shape — the seven items below** (user directive,
+2026-09-02) — each one is scored, the user sees all three in full and picks among the ones
+that cleared 95. Additional research and the board come after that, on the winner only.
 
 ## Contents
 
 - [Its status: an upstream input, not a second contract](#its-status-an-upstream-input-not-a-second-contract)
+- [Messages first — three things today's viewer takes away](#messages-first-three-things-todays-viewer-takes-away)
 - [Viewer engines — what the 95 bar actually scores](#viewer-engines-what-the-95-bar-actually-scores)
 - [The three-candidate loop](#the-three-candidate-loop-storyboard-22-autoproduce-gate-6a)
 - [What the page carries — the seven items](#what-the-page-carries-the-seven-items)
@@ -56,6 +57,51 @@ hold.
 4. **The checker watches the clock.** `check-scenes.js` warns when `scenario.md` is newer
    than `scenes.js` — an upstream input that changed after its consumer is the drift this
    stage was built to avoid.
+
+## Messages first — three things today's viewer takes away
+
+The order is fixed (user directive, 2026-09-07): **research enough → decide three messages
+for the viewer living now → cut one topic from each message → write one scenario per topic.**
+A direction row written before its message is a topic looking for a reason, and the
+"밋밋하다" page usually started that way.
+
+### The message
+
+After the first research pass closes (storyboard §2.1: ten or more searches, three or more
+Verified rows) and before any direction row, write `research.md` §Messages — **three rows**.
+A message is one sentence in the viewer's words: what a viewer of this channel, living now,
+**understands, reconsiders or can do** after the episode (story-quality §Design step 2). It
+names the subject, what happened or works, and why that matters to them today — not a topic
+label, not an emotion label, not "협력이 중요하다". Three different messages, not three
+wordings; each rests on Verified rows already on the page, and the row says which.
+
+### The topic, cut from the message
+
+Each direction row (D1–D3) cites its message (`M1`–`M3`, one message per direction) and
+writes the **주제** — the concrete subject this episode is about, the event, the mechanism or
+the person that will deliver that message, in one sentence with the question it answers. The
+hook form, engine and hero are chosen for that topic. The candidate page carries the message
+verbatim under its title and its 주제 item names the subject; at §4 the message becomes
+`COMPREHENSION.takeaway` and `STORY.thesis`, and the 주제 becomes `COMPREHENSION.question`.
+
+### A topic is never a report of ignorance
+
+"X는 알 수 없다", "X는 아직까지 모른다", "X는 미스터리로 남았다" are not topics — an episode
+built on one has nothing to hand over at the 마무리, and the viewer who stayed for the answer
+is told there is none (reviewer P0-14 is the same take-back one item later). The mystery may
+open the 훅 — that is where `intrigue` lives — but the message and the 주제 name what the
+evidence **does** establish: what changed, what it did to people, what the viewer can do with
+it. 로즈웰 is not "무엇이 떨어졌는지는 아직 모른다"; it is "설명이 바뀌면 사람들은 무엇을 믿게
+되나", which the record answers.
+
+`check-research.js --direction` (and the close) rejects a message or direction sentence
+that ends on ignorance — the predicate forms `알 수 없다/없어요/없습니다`, `모른다/모릅니다/
+몰라요/모르겠다`, `아무도 모른다`, `밝혀지지/풀리지/알려지지 않았다`, `미스터리다/미스터리로
+남았다`, `수수께끼로 남았다`, `미제로 남았다`, and the English `nobody knows`, `remains a
+mystery`, `we still don't know`, `may never know`. A modifier ("정체를 알 수 없는 물체가
+떨어진 뒤 군은 설명을 바꿨다") passes the machine check because its predicate sits elsewhere
+— you still read the sentence for what it hands over. The reviewer's scenario mode raises
+P0-15 on a candidate 주제 that is one of these, or that carries no message.
 
 ## Viewer engines — what the 95 bar actually scores
 
@@ -106,9 +152,10 @@ formats. Channels that skip research skip this whole stage with the three-direct
 ### Write
 
 For each of the three direction rows, write
-`storyboard/candidates/d<n>.md` from the template below — the seven items, in order, on
-every candidate. Frontmatter carries `direction`, `engine_primary`, `engine_secondary` (or
-`none`), `score` and `p0` (empty until the first read), `round: 0`. Each item is a
+`storyboard/candidates/d<n>.md` from the template below — the message verbatim under the
+title, then the seven items, in order, on every candidate. Frontmatter carries `direction`,
+`message` (the `M#` it carries), `engine_primary`, `engine_secondary` (or `none`), `score`
+and `p0` (empty until the first read), `round: 0`. Each item is a
 paragraph (전개 #3 is a numbered list of its cases); on long-form the 전개 paragraphs run
 longer, they do not multiply.
 
@@ -203,7 +250,7 @@ event itself; inventing a modern connection to prolong it is not a solution.
 
 | # | Item | What goes in it |
 |---|---|---|
-| 1 | **주제** | What the episode makes the viewer think about — one sentence in the viewer's words, at the 초3~4 floor (korean-style §Eye level). Not a topic label ("로즈웰 사건") but the thought they leave with ("설명이 바뀌면 사람들은 무엇을 믿게 되나"). `COMPREHENSION.question` and `takeaway` are cut from this line. |
+| 1 | **주제** | The subject cut from the page's message — what this episode is about and the question it answers, one sentence in the viewer's words at the 초3~4 floor (korean-style §Eye level). Not a topic label ("로즈웰 사건"), and never a report of ignorance ("무엇이 떨어졌는지는 아직 모른다") — the sentence names what the evidence establishes ("군은 왜 발표를 바꿨을까 — 설명이 바뀌면 사람들이 무엇을 믿게 되는지"). `COMPREHENSION.question` is cut from this line; `takeaway` from the message (§Messages first). |
 | 2 | **훅** | A dramatised scene that pulls the viewer in — a person at that moment, a "만약 그날 …" the viewer can picture. Its first spoken sentence names what is at stake before anything is asked; it ends on the promise — what the viewer will know by the end. It may invent a scene. It may not invent a fact (below). |
 | 3 | **전개 #1** | What actually happened — the real event behind the hook, told as an account (who · when · what), every fact on a `research.md` row. Where the research holds an answer most viewers would guess first, this item opens on it and takes it apart (scenario-craft §11). |
 | 4 | **전개 #2** | The next necessary evidence, choice or consequence that changes understanding. A modern bridge is optional. On answer-first this supplies the early result and names its subject directly. |
@@ -259,6 +306,7 @@ long-form, how 전개 #1's investigation is laid out inside (curiosity loop · p
 channel: <slug>
 topic: <slug>
 direction: D1
+message: M1
 engine_primary: <curiosity | fear | intrigue | comedy>
 engine_secondary: <curiosity | fear | intrigue | comedy | none>
 structure: <short: hook-drip-cta | long-form: the arc + the shape 전개 #1 rides inside>
@@ -271,10 +319,12 @@ frozen:                     # stamped on entering §4, on scenario.md only
 
 # <topic> — 시나리오 D1
 
+**Message.** <the M1 sentence, verbatim from research.md §Messages>
 **Engine.** primary <…> · secondary <…>
 
 ## 주제
-<what the viewer is made to think about — one sentence in the viewer's words>
+<the subject cut from the message — what the episode is about and the question it answers,
+one sentence in the viewer's words; never "…는 알 수 없다">
 
 ## 훅 — feel <sign · feeling>
 <the dramatised scene. First spoken sentence verbatim: "…". Ends on the promise — and the

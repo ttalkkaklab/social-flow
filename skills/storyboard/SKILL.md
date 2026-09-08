@@ -4,8 +4,8 @@ description: >
   Plans one episode and stops for approval before generation. Use when
   the user asks to "스토리보드 만들어", "스토리보드 작성", "이 주제로 영상 기획", "촬영 대본 만들어", "내가 녹화할 대본", "make
   a storyboard", "plan a video for topic X", or starts a new topic in a channel.
-  Researches the topic, writes three seven-item scenarios, shows
-  all three for the pick, researches the winner, and writes the storyboard
+  Researches the topic, decides three messages for today's viewer, writes one seven-item
+  scenario per message, shows all three for the pick, researches the winner, and writes the storyboard
   under data/[channel]/episodes/[topic]/storyboard/. Format with the user first: 9:16 shorts
   by default, or 16:9 long-form with chapters. The narration is written before any shot and
   read on its own twice — the chain, then the words — each looped to 95 in at most three
@@ -20,7 +20,7 @@ allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "Agent", "AskUserQuesti
 
 Read [story-quality.md](references/story-quality.md) before candidates or narration. Its evidence → meaning → ending → optional CTA contract overrides older mandatory-question and modern-case rules. Write `window.STORY` in §4a; draft checks require it. The existing narration review supplies its four evidence-backed findings; after vocabulary edits revalidate the read and run `check-story.js storyboard/` before §4b or approval. No score waives a failed criterion.
 
-Takes one topic through **research → three scenario candidates → one pick → more research →
+Takes one topic through **research → three messages → three scenario candidates → one pick → more research →
 narration (the story pass) → narration read-through (looped to 95) → narration vocabulary
 (looped to 95) → the narration approval → the board (camera · space · sound · slides) →
 the image and clip plan → storyboard approval**. **No generation call happens in this skill** —
@@ -188,16 +188,16 @@ the second pass closes (user note 2026-08-23). Create the topic directory now so
 a path (`mkdir -p data/<channel>/episodes/<topic slug>/storyboard`); §3 still reads
 episode-state before scenes.
 
-**§2.1 first research** (enough to offer three honest directions) → **§2.2 three scored
-scenarios, then one pick** → **§2.3 additional research** on the chosen direction (the
-exit). Tool choice, ingest, and the skip-research exception sit under all three, at the
-end of this section.
+**§2.1 first research** (enough to say what today's viewer should take away) → **§2.1b three
+messages, one topic each** → **§2.2 three scored scenarios, then one pick** → **§2.3 additional
+research** on the chosen direction (the exit). Tool choice, ingest, and the skip-research
+exception sit under all of them, at the end of this section.
 
 #### 2.1 First research — enough to propose three directions
 
 Do not lock every figure. Do not write scenes. The question map here is **what we need to
 know to offer three honest directions** — what people ask, what's actually true, which
-explanations compete — **3–5 rows**, not the episode's full 5–8.
+explanations compete, what it touches in the viewer's life now — **3–5 rows**, not the full 5–8.
 
 1. **Write that map before the first search** (`research.md` §Questions). Each row ends
    answered by claim #N or written off.
@@ -207,13 +207,17 @@ explanations compete — **3–5 rows**, not the episode's full 5–8.
 3. **Put every claim in the evidence table** (`research.md` §Verified) — failed claims in
    §Failed. **Number the rows and keep the numbers.** Two independent sources for anything
    time-sensitive; one official origin counts as both. Don't shrink a range to its upper bound.
-4. **Write `research.md` §Directions — three rows, none marked chosen yet.** A direction is
-   **a different episode this topic could be**, not three wordings of the same one. Each row
-   names the question, the hook form (`gap`·`number`·`identify`·`paradox`·`secret`·`payoff`),
-   the **primary engine** (`curiosity`·`fear`·`intrigue`·`comedy` — three different
-   primaries), the hero or unresolved thing, which claims hold it up, the
-   any modern cases the content actually needs (a search-log row each, or none),
-   and what the second pass still owes.
+4. **§2.1b — write `research.md` §Messages first: three messages for the viewer living now,** each
+   one sentence on what they understand, reconsider or can do after the episode, on Verified rows —
+   three different messages, not three wordings (scenario-stage §Messages first).
+5. **Then §Directions — three rows, one topic cut from each message (`M#`), none chosen yet.** A
+   direction is **a different episode this topic could be**. Each row names its message, the 주제
+   with the question it answers, the hook form (`gap`·`number`·`identify`·`paradox`·`secret`·`payoff`),
+   the **primary engine** (`curiosity`·`fear`·`intrigue`·`comedy` — three different primaries),
+   the hero (a stat, a person, a mechanism), which claims hold it up, any modern cases the content
+   actually needs (a search-log row each, or none), and what the second pass still owes.
+   **A topic is never a report of ignorance** — "X는 알 수 없다", "X는 아직 모른다"
+   is not an episode; the message and the 주제 name what the evidence establishes, and the checker rejects them (user directive 2026-09-07).
 
 Three verified claims is the floor below which there is no video (the same floor autoproduce
 drops a topic at), and **ten or more** searches is the floor below which there are no directions. Short of either, change the topic rather than inventing a third direction.
@@ -223,20 +227,21 @@ SB=${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references
 node $SB/check-research.js storyboard/ --direction   # exit 1 = not enough to ask yet
 ```
 
-**Does each direction's question survive to the last frame?** If the answer is "in one
-sentence, halfway through", it is an explanation — don't offer it. Reframe it around
-whatever stays unresolved, or drop that row (own-channel retention report, 2026-08-26).
+**Does each direction's question survive to the last frame — and get answered there?** "In one
+sentence, halfway through" is an explanation, don't offer it; a question the evidence cannot answer
+is not a direction either. Reframe around what the record establishes, or drop the row (own-channel retention report, 2026-08-26).
 
 #### 2.2 Three candidates, then one pick — HITL, before more searching
 
-Turn each direction row into `candidates/d<n>.md` — **the seven items, in this order, on
-every candidate and both formats** (user directive, 2026-09-02): 주제 (what the viewer is
-made to think about) · 훅 (a dramatised scene) · 전개 #1 (what actually happened) · 전개 #2
-(necessary evidence or choice) · 전개 #3 (consequence, demonstration or limit) · 마무리
-(earned resolution) · CTA (optional, otherwise 없음 with reason). Three different primaries (`curiosity` · `fear` · `intrigue` · `comedy`). Items,
-caps, template, the 훅's fact rule and the item-to-beat map:
-[scenario-stage.md](references/scenario-stage.md). Skip-research channels skip this with
-the three-direction pick.
+Turn each direction row into `candidates/d<n>.md` — its message verbatim under the title, then
+**the seven items, in this order, on every candidate and both formats** (user directive,
+2026-09-02): 주제 (the subject cut from the message — what the episode is about and the question
+it answers; never "…는 알 수 없다") · 훅 (a dramatised scene) · 전개 #1 (what actually happened) ·
+전개 #2 (necessary evidence or choice) · 전개 #3 (consequence, demonstration or limit) · 마무리
+(earned resolution) · CTA (optional, otherwise 없음 with reason). Three different primaries
+(`curiosity` · `fear` · `intrigue` · `comedy`). Items, caps, template, the 훅's fact rule and the
+item-to-beat map: [scenario-stage.md](references/scenario-stage.md). Skip-research channels skip
+this with the three-direction pick.
 
 **The candidate pages are checked for words before they are shown.** The 주제 line and the
 훅 are the sentences the narration gets built from, so a page written in adult prose hands
@@ -261,11 +266,11 @@ get their turn at §4.5, on the sentences that actually get spoken.
 
 **No reviewer here** — the user is the judge of this stage, and the narration reads at §4.4
 and §4.5 catch a story that does not carry. Test each page against scenario-stage.md's
-engine test yourself before showing it: does the 훅 stage a moment, does 전개 #1 open on the
-false answer, does the feel curve dip. **Show the three pages in full before asking** — for
-each candidate print the seven items as written (the 훅's first sentence, the three 전개
-paragraphs, the earned resolution, the optional CTA decision) with its engine. A one-line option is not
-what the user approves; the seven items are. Then AskUserQuestion:
+engine test yourself before showing it: does the 주제 hand over what its message says, does the 훅
+stage a moment, does 전개 #1 open on the false answer, does the feel curve dip. **Show the three pages
+in full before asking** — for each candidate print its message and the seven items as written (the
+훅's first sentence, the three 전개 paragraphs, the earned resolution, the optional CTA decision) with
+its engine. A one-line option is not what the user approves; the seven items are. Then AskUserQuestion:
 
 ```
 [D1 · <주제> — <engine> (Recommended)]
@@ -304,7 +309,7 @@ node $SB/check-research.js storyboard/        # exit 1 = the research does not c
 
 It counts the Verified rows against the Sufficiency line, reads every question's status,
 counts searches against the question map, checks counter-evidence against the key claims,
-and reads the direction pick (three rows and one `Chosen:`). Headings may carry a number
+and reads the messages and the direction pick (three each, one `Chosen:`). Headings may carry a number
 or a word in front (`## 2. 검증 통과`, `## 사실 검증표`).
 
 The hook material comes out of this pass — `kin` questions are the `identify` and `gap`
