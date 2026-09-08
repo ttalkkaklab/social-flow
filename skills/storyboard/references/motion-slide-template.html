@@ -922,9 +922,14 @@ const SLIDE_SHOT = 0;
     const ranges = Object.keys(ob.ranges || {}).map(g => g + ":" + ob.ranges[g][0] + "-" + ob.ranges[g][1]).join(" ");
     const sheet = '<div class="obj" data-sheet="' + file + '" data-sheet-cell="' + cw + " " + ch + '" data-sheet-cols="' + ob.cols +
       '" data-sheet-ranges="' + ranges + '" style="background-image:url(' + file + ");background-size:" + (ob.cols * cw) + "px " + (rows * ch) + 'px"></div>';
-    /* 들어오는 그룹과 물러나는 그룹이 object-move 프리미티브다 — motionBeats 가 그 그룹에 그렇게 적는다 */
+    /* 들어오는 그룹과 물러나는 그룹이 object-move 프리미티브다 — motionBeats 가 그 그룹에 그렇게 적는다.
+       시트가 그 밖의 그룹에서도 돌고 motionBeats 가 그 그룹을 object-move 로 선언했으면(두 문장에 걸쳐
+       구르는 수레) 빈 표식을 하나 둔다 — 렌더러가 선언과 화면의 프리미티브를 그룹마다 대조한다. */
     const inner = rv(rg, o.out ? rv(o.out, sheet, { fx: "objout", primitive: "object-move" }) : sheet, { fx: "objin", lead: o.lead, primitive: "object-move" });
-    const wrap = '<div class="objwrap" style="left:' + (o.x || 0) + "px;top:" + (o.y || 0) + "px;width:" + cw + "px;height:" + ch + 'px">' + inner + "</div>";
+    const beats = (S.visual && S.visual.slide && Array.isArray(S.visual.slide.motionBeats)) ? S.visual.slide.motionBeats : [];
+    const marks = beats.filter(b => b && b.primitive === "object-move" && +b.group !== +rg && +b.group !== +(o.out || 0) && ob.ranges && ob.ranges[b.group])
+      .map(b => '<span data-rg="' + (+b.group) + '" data-primitive="object-move"></span>').join("");
+    const wrap = '<div class="objwrap" style="left:' + (o.x || 0) + "px;top:" + (o.y || 0) + "px;width:" + cw + "px;height:" + ch + 'px">' + inner + marks + "</div>";
     if (!o.slot) return wrap;
     return '<div class="objslot" style="height:' + (o.slot === true ? ch : o.slot) + 'px">' + wrap +
       (o.html ? '<div class="aside"' + (o.aside ? ' style="' + o.aside + '"' : "") + ">" + o.html + "</div>" : "") + "</div>";

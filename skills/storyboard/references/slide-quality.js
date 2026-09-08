@@ -27,7 +27,7 @@ function checkQuality(slide, segments) {
   if (subject.kind === 'object') {
     if (!slide.object) errors.push('object subject needs slide.object with a baked state-changing render');
     const keys = String(slide.object?.keys || '').trim().split(/\s+/).filter(Boolean);
-    if (slide.object && slide.object.renderer !== 'mesh' && !keys.length) errors.push('slide.object needs keys — one state name per group plus the start state');
+    if (slide.object && !['mesh', 'blender'].includes(slide.object.renderer) && !keys.length) errors.push('slide.object needs keys — one state name per group plus the start state');
     for (let i = 1; i < keys.length; i++) {
       if (keys[i] === keys[i - 1]) errors.push(`object keys freeze in group ${i}`);
     }
@@ -38,7 +38,18 @@ function checkQuality(slide, segments) {
     if (!/^slides\/assets\/s\d+-[a-z0-9-]+\.json$/.test(ob.file || '')) errors.push('mesh object.file must be slides/assets/s<shot>-<slug>.json');
     if (!require('./mesh-contract.js').STYLES.includes(ob.style)) errors.push('mesh object.style must be illustration3d or photoreal3d');
     if (!String(ob.plan || '').trim()) errors.push('mesh object.plan must describe the subject motion');
-  } else if (slide.object?.renderer != null && slide.object.renderer !== 'sheet') errors.push('unknown object.renderer; choose mesh or sheet');
+  } else if (slide.object?.renderer === 'blender') {
+    // A mesh recipe baked by Blender Cycles into a frame sheet (blender-objects.md). The
+    // recipe rules are the mesh lane's; the sheet, engine, samples and fps make the bake reproducible.
+    const ob = slide.object;
+    if (!/^slides\/assets\/s\d+-[a-z0-9-]+\.json$/.test(ob.file || '')) errors.push('blender object.file must be the mesh recipe slides/assets/s<shot>-<slug>.json');
+    if (!/^slides\/assets\/s\d+-[a-z0-9-]+\.png$/.test(ob.sheet || '')) errors.push('blender object.sheet must be the baked sheet slides/assets/s<shot>-<slug>.png');
+    if (!require('./mesh-contract.js').STYLES.includes(ob.style)) errors.push('blender object.style must be illustration3d or photoreal3d');
+    if (ob.engine !== 'cycles') errors.push('blender object.engine must be cycles (the shadow catcher needs it)');
+    if (!Number.isInteger(ob.samples) || ob.samples < 8 || ob.samples > 1024) errors.push('blender object.samples must be an integer 8–1024');
+    if (![15, 24, 30].includes(ob.fps)) errors.push('blender object.fps must be 15, 24 or 30');
+    if (!String(ob.plan || '').trim()) errors.push('blender object.plan must describe the subject motion');
+  } else if (slide.object?.renderer != null && slide.object.renderer !== 'sheet') errors.push('unknown object.renderer; choose mesh, blender or sheet');
   return errors;
 }
 module.exports = { VERSION, checkQuality };
