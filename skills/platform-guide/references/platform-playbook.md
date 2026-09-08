@@ -40,7 +40,9 @@ one per episode, storyboard scenes-schema §four opening strategies).
 For a video episode the storyboard cover's `hookType` has already picked it, so
 the platform title and first line carry that strategy through — if the cover
 opened on fear but the YouTube title explains a method, the thumbnail/title
-expectation and the first 30 seconds fall out of step. Fear speaks in
+expectation and the first 30 seconds fall out of step. Continuity applies to
+the stimulus, not to the outcome — playbook §2 governs the title and
+description whatever the cover's hookType is. Fear speaks in
 tell-them-what-they-lose terms, and the threat is either grounded in evidence or
 cushioned with possibility phrasing ("~일 수도", "might be").
 ③ platform fit — IG must answer "who saves this" (checklists · figures · chart
@@ -167,6 +169,9 @@ five read — so it now sits here, in `check-meta.js` (verbatim copies of
   — from July 2026"). The stimulus is the same strategy as the storyboard
   cover's `hookType` (the example above is fear) — if the title switches to a
   different stimulus, first-30-second retention (the Intro metric) drops.
+  Continuity applies to the stimulus, not to the outcome — playbook §2 governs
+  the title and description whatever the cover's hookType is. A short cover may
+  open on the result (`hookType:"spoiler"`); the title it links from does not.
   **The topic noun sits in the first half** — the Shorts overlay and the feed
   tile cut the title off early (third-party tool pages put it at 40–50 Latin
   characters, so about half that in Korean; we haven't measured it ourselves,
@@ -276,8 +281,13 @@ five read — so it now sits here, in `check-meta.js` (verbatim copies of
 
 ## §7 Video specs (same as the produce contract)
 
-- 1080×1920 / 30fps / H.264 High 4.1 / faststart. Main body 35–75s recommended, up to
-  120s when the story carries it, 180s hard cap (the Shorts limit).
+- 1080×1920 / 30fps / H.264 High 4.1 / faststart. Main body 35–75s recommended,
+  up to 120s when the story carries it, 180s hard cap (the Shorts limit). A
+  channel narrows the band with `length_min_seconds` / `length_max_seconds` in
+  its profile front matter, short form only — unset, the preset's 35–120s band
+  stands, of which 35–75s is the recommendation, so a channel that says nothing
+  behaves exactly as before. The 180s cap takes no profile key; it is the
+  platform's.
 - Safe zones: text zone x 176–904 · y 190–1350. Subtitle band y 1380–1560.
   - **The platforms' ad specs ask for more clearance than this** — Meta reels
     top 14% · bottom 35% · sides 6%, YouTube portrait ads left 48 · right 192 ·
@@ -302,6 +312,11 @@ five read — so it now sits here, in `check-meta.js` (verbatim copies of
   figure; no subtitle line, no source. **The first frame of every surface must
   be the cover** — if an automatic frame (mid-speech, etc.) is still there,
   publishing isn't done.
+- **The first second is measured, not assumed** — after the build, the first
+  subtitle cue's start time is read off the shipped SRT and reported, with the
+  t=0 frame captured beside it. Past 1.0s it warns; it never fails the build,
+  because by then the episode is encoded and the fix belongs to the board (the
+  hook sentence starts later than the cut does), not to the encoder.
 - Most viewing is muted — never turn off burned-in subtitles.
 
 ## §8 Anti-pattern checklist (self-check before the approval gate)
@@ -318,7 +333,9 @@ five read — so it now sits here, in `check-meta.js` (verbatim copies of
 - [ ] The title/cover opens on a method or tool only — a first-time viewer can't read it as their own problem (§1 ②)
 - [ ] The title/first line rides none of the four opening strategies (fear ·
       empathy · curiosity · showing the ending first), or opens on a different
-      stimulus than the storyboard cover's `hookType` (§1 ②)
+      stimulus than the storyboard cover's `hookType` (§1 ②). Continuity
+      applies to the stimulus, not to the outcome — playbook §2 governs the
+      title and description whatever the cover's hookType is.
 - [ ] The title, description or IG caption names the result — the tally, the
       winner, the twist, the answer, the payoff number (§2). `check-meta.js`
       catches a verbatim copy of `COMPREHENSION.answer`; the paraphrase is the
@@ -339,3 +356,14 @@ five read — so it now sits here, in `check-meta.js` (verbatim copies of
       news footage
 - [ ] Hashtag limits exceeded (Threads >1, IG/YT >5)
 - [ ] The brand logo shows in the cover's first 3 seconds (a skip signal)
+- [ ] The first subtitle cue starts later than 1.0s — the build measures it off
+      the shipped SRT and warns, and a muted viewer spends that second with
+      nothing to read (§7)
+- [ ] **A short with nothing to forward** — the `beat:"cta"` shot carries no
+      `shot.share` (`check-scenes.js` fails it). An ask stays optional; a
+      forwardable thing does not — an ask requests behaviour from the viewer,
+      while a forwardable thing is one sentence, figure or verdict they can pass
+      on as-is. Asking to be shared is an ask, not a trigger.
+- [ ] The cut ends on an outro the channel doesn't publish, or drops the one it
+      does — `shortform_outro` in the profile front matter (`on` when the key is
+      absent) and `OUTRO` in `.work/format.env` have to agree

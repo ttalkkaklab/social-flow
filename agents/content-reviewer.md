@@ -46,6 +46,9 @@ For episode review, read `${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/sto
 and verify the current STORY review with `check-story.js`. Missing or stale evidence is P0.
 Check that the final edit still delivers the quoted payoff. A closing question or CTA is
 optional; do not penalize its absence or let attractive visuals excuse an unpaid promise.
+An ask stays optional; a forwardable thing does not — an ask requests behaviour from the
+viewer, while a forwardable thing is one sentence, figure or verdict they can pass on
+as-is. Asking to be shared is an ask, not a trigger.
 
 - `scenes.js` path — the SoT for facts and figures
 - `research.md` path (if present) — the ledger of verified claims
@@ -81,7 +84,9 @@ and set that line against `COMPREHENSION.answer` and the last drip's narration.
 A match, verbatim or in other words, is P0-10. The order is the whole
 mechanism: once you have read scenes.js you know the ending, and nothing in the
 copy reads as given away any more (the same reason storyboard-reviewer's
-narration mode reads the narration before the scenario).
+narration mode reads the narration before the scenario). A cover that states the
+result licenses nothing here — the video may open on the answer while the title,
+the description and the caption still withhold it.
 
 ## Plan mode — the gate before generation calls
 
@@ -96,6 +101,8 @@ This is the last gate before calls that cost money and time
 to generate as planned. With two slots, **judge each separately and name the
 slot in the P0** — one slot passing never passes the other.
 In this mode skip the style check and per-axis scores — judge only the plan P0s below.
+The episode's share trigger is settled on the board — `check-scenes.js` fails a short whose
+`beat:"cta"` shot carries no `shot.share` — so don't score it in this mode.
 
 **Plan P0s (any one → FAIL — do not generate):**
 
@@ -304,19 +311,29 @@ you still can't find it, report every surface as "unverified" (never as all-S1
     or the last drip in other words, the number that is the payoff
     (platform-playbook §2). Judged from the blind read above, not from the
     checker — `check-meta.js` sees only a verbatim copy. The Threads body and a
-    one-line fact notice are the two surfaces allowed to tell.
+    one-line fact notice are the two surfaces allowed to tell. **A cover that
+    states the result changes nothing here** — the video may now open on the
+    answer, and these three surfaces still may not name it.
 11. **Experience not verified or not delivered**: the required final-playback report is
     missing, an essential motion/listening check is unverified, the main promise has no
     payoff, or an essential reveal/sound is missing or unintelligible in the final edit.
     Name the missing evidence or cite the observed scene and time. A subjective preference
     for faster pacing alone is a correction directive, not this P0.
+12. **Nothing to forward, on a short** — the close names no forwardable thing: no fact,
+    verdict, line or checklist a viewer could send someone as-is, in the final edit or in
+    the platform copy. The trigger the storyboard declared on the `cta` shot (`shot.share`)
+    never reached the edit, or what reached it is an ask ("구독하고 가세요", "공유해 주세요")
+    rather than a thing. A close that lands the answer in one quotable sentence already is
+    the trigger — don't raise this because no separate line was written for it. Long-form
+    sits outside this P0: `shot.share` is a short's field, and a long-form close with
+    nothing to forward costs the closing axis its 5 points instead.
 
 ## Per-axis scores (additive out of 100; no points without evidence)
 
 - **Visual (100)**: impact and polish 25 / theme consistency (profile THEME) 20 /
   typography and legibility 20 / layout integrity 20 / retention devices (rhythm, transitions) 15
-- **Copy (100)**: hook tension 25 / platform grammar 20 / **style 15** / call to
-  action 15 / factual fidelity 15 / tone match (profile §2) 10.
+- **Copy (100)**: hook tension 25 / platform grammar 20 / **style 15** / the close
+  15 / factual fidelity 15 / tone match (profile §2) 10.
   Hook tension earns full marks only when the title, cover, and first line open
   with a felt problem rather than a method or tool (platform-playbook §1 ②).
   Also check that the stimulus hanging that problem rides one of the four
@@ -324,13 +341,22 @@ you still can't find it, report every surface as "unverified" (never as all-S1
   rides none, hook tension is 15 or less. Matching the cover's `hookType` is
   the default, but the hard rule sits on the receiving side — if the title or
   first line hangs a different object or promise than the cover threw, 10 or
-  less (scenes-schema §four opening strategies). Full marks also need the
-  description's first line to name a concrete thing — a document, a date, a
-  person, a number that isn't the payoff — while withholding the outcome
-  (playbook §6). A description that walks the episode in order, or whose main
-  clauses are summary verbs (살펴봅니다 · 확인해요 · 정리했습니다 · 풀었어요 —
-  the narrator reporting what the video does), scores 10 or less here and goes
-  into fix suggestions with the pattern named, never with a rewritten sentence.
+  less (scenes-schema §four opening strategies). Continuity applies to the
+  stimulus, not to the outcome — playbook §2 governs the title and description
+  whatever the cover's hookType is. Full marks also need the description's first
+  line to name a concrete thing — a document, a date, a person, a number that
+  isn't the payoff — while withholding the outcome (playbook §6). A description
+  that walks the episode in order, or whose main clauses are summary verbs
+  (살펴봅니다 · 확인해요 · 정리했습니다 · 풀었어요 — the narrator reporting what the
+  video does), scores 10 or less here and goes into fix suggestions with the
+  pattern named, never with a rewritten sentence.
+
+The 15 closing points split 10 / 5. The close pays the promise this episode made
+and belongs to this episode, not to the channel in general — 10. The copy hands
+the viewer one forwardable thing, a fact, a verdict, a line or a checklist they
+could send someone as it stands, spoken in the close and readable in the platform
+copy — 5. An ask earns neither half and its absence costs nothing; a close that
+lands the answer in one quotable sentence takes the 5 without a line added for it.
 
 The 15 style points convert from the checker's score — a per-surface `score`
 average of 100 is 15 points, below 85 is 0, linear in between. Quote the script

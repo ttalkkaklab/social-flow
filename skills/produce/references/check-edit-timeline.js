@@ -17,6 +17,9 @@ function check(work){
   if(rows.length!==plan.shots.length)throw new Error('Missing rendered edit boundaries');
   const master=path.join(work,'reel.mp4'),seams=path.join(work,'work/seams');fs.mkdirSync(seams,{recursive:true});
   const reportFile=path.join(work,'build-report.txt');
+  // No match is the outro-off build (OUTRO=0), not a parse failure: build-reel.sh applies the tail
+  // fade only inside its outro branch, so with no line there is no fade to compensate for. Anyone
+  // adding an unconditional tail fade has to add a report line with it, or every seam here fails.
   const fade=fs.existsSync(reportFile)?fs.readFileSync(reportFile,'utf8').match(/outro splice: black fade ([\d.]+)s @ ([\d.]+)s/):null;
   const fadeDuration=fade?Number(fade[1]):0,fadeStart=fade?Number(fade[2]):Infinity;
   const samples=[];let offset=0;let timelineFps=null;

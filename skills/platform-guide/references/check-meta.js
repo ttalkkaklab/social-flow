@@ -173,8 +173,13 @@ function check(meta, ctx) {
   } else {
     const cAnswer = compact(ctx.answer);
     const gapEpisode = ctx.isShort || ctx.arc === 'story';
-    if (ctx.hookType === 'spoiler' || !gapEpisode) {
-      notes.push('answer-first episode — the title may name the result, answer-leak check skipped');
+    // A spoiler cover buys no exemption on any surface. A short may open on the result
+    // (check-scenes.js allows it) and a story-arc long-form keeps its gap either way, so the
+    // cover never enters this decision — §2 governs the title and the description whatever the
+    // cover's hookType is. Only long-form whose arc already shows the result has nothing left
+    // to withhold, and `gapEpisode` alone says so.
+    if (!gapEpisode) {
+      notes.push('answer-first long-form — the title may name the result, answer-leak check skipped');
     } else if (cAnswer.length < ANSWER_MIN) {
       warn('answer-unverified', `COMPREHENSION.answer compacts to ${cAnswer.length} characters — under ${ANSWER_MIN}, too short to search for`);
     } else if (compact(`${title} ${desc}`).indexOf(cAnswer) !== -1) {
@@ -275,10 +280,14 @@ const FIXTURES = [
   ['description repeats the title', GOOD.replace('1947년 7월 8일 아침 발표문과 그날 저녁 발표문이 정반대예요.', '로즈웰 사건, 군은 왜 같은 날 말을 바꿨을까?'), SHORT, 2, ['desc-repeat'], []],
   ['answer verbatim in description', GOOD.replace('두 장을 나란히 놓으면 어느 쪽이 거짓말인지 보여요.', '공개할 수 없던 모굴 계획의 풍선 잔해였다는 설명이 가장 유력해요.'), SHORT, 2, ['answer-leak'], []],
   ['answer verbatim in title', GOOD.replace('로즈웰 사건, 군은 왜 같은 날 말을 바꿨을까?', '로즈웰 — 공개할 수 없던 모굴 계획의 풍선 잔해였다는 설명이 가장 유력해요'), SHORT, 2, ['answer-leak'], []],
+  ['a spoiler cover on a short keeps the metadata gate', GOOD.replace('두 장을 나란히 놓으면 어느 쪽이 거짓말인지 보여요.', '공개할 수 없던 모굴 계획의 풍선 잔해였다는 설명이 가장 유력해요.'),
+    Object.assign({}, SHORT, { hookType: 'spoiler' }), 2, ['answer-leak'], []],
   ['answer-first long-form may name the result', GOOD.replace('두 장을 나란히 놓으면 어느 쪽이 거짓말인지 보여요.', '공개할 수 없던 모굴 계획의 풍선 잔해였다는 설명이 가장 유력해요.').replace('#Shorts', '#역사'),
     Object.assign({}, SHORT, { isShort: false, arc: 'answer-first', required: [] }), 0, [], ['answer-leak']],
   ['story long-form keeps the gap', GOOD.replace('두 장을 나란히 놓으면 어느 쪽이 거짓말인지 보여요.', '공개할 수 없던 모굴 계획의 풍선 잔해였다는 설명이 가장 유력해요.').replace('#Shorts', '#역사'),
     Object.assign({}, SHORT, { isShort: false, arc: 'story', required: [] }), 2, ['answer-leak'], []],
+  ['a spoiler cover on story long-form keeps the gap too', GOOD.replace('두 장을 나란히 놓으면 어느 쪽이 거짓말인지 보여요.', '공개할 수 없던 모굴 계획의 풍선 잔해였다는 설명이 가장 유력해요.').replace('#Shorts', '#역사'),
+    Object.assign({}, SHORT, { isShort: false, hookType: 'spoiler', required: [] }), 2, ['answer-leak'], []],
   ['no COMPREHENSION warns, never passes silently', GOOD, Object.assign({}, SHORT, { answer: '', scenes: 'no-comprehension' }), 1, ['answer-unverified'], []],
   ['scenes.js missing warns', GOOD, Object.assign({}, SHORT, { scenes: 'missing' }), 1, ['answer-unverified'], []],
   ['preset-required hashtag missing', GOOD.replace('#Shorts ', ''), SHORT, 2, ['hashtag-required'], []],

@@ -19,7 +19,9 @@ you which of the four dials to turn; written down after, it only explains what y
 **And in short-form the dials serve the drop-off curve, not the look of the panels.** The
 variable the storyboard manages is stop · hold · satisfy · act (scenes-schema §playback order)
 — on a short: the hook that stops the thumb, the drips that hold by paying curiosity in
-stages, the last drip that satisfies, the spoken CTA. On long-form: the first frame that
+stages, the beat that satisfies (the last drip when the answer is held, the cover itself when
+the episode states its result and the drips then earn it), and the act — the spoken CTA plus
+the one line a viewer can pass on. On long-form: the first frame that
 stops the thumb, the hooking that holds it, the result that pays the promise (on a story
 arc, the payoff after the turn). A size or an angle is picked because it makes the viewer feel what that beat needs,
 and a "cinematic" choice that doesn't serve the beat is a choice against the episode.
@@ -428,7 +430,7 @@ what the audience is supposed to get.
 `[course]` unless marked.
 
 1. **One shot, one new piece of information** (`shot.info`). Two shots in a scene saying the
-   same thing — one can go. 4–6 shots in a dialogue scene; a 35–75 s informational short has a
+   same thing — one can go. 4–6 shots in a dialogue scene; a short informational piece has a
    floor of two sizes per scene (wide + close). The check that catches a fake: cover the `info`
    lines and read only the sizes, angles and moves down the scene. If every setup shows the
    same thing from the same distance, the scene is one viewpoint chopped into decorative cuts,

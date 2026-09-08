@@ -30,6 +30,12 @@ const SEEDANCE_KEYS = ['model', 'modelPurpose', 'modelReason', 'referenceImagePa
 /** Resolve a planned shot before either forecasting or calling the generation tool. */
 function scenePlan(scene) {
   const v = scene.visual || {};
+  const mode = require('../../storyboard/references/production-mode.js');
+  if (mode.reused(scene)) {
+    const errors = mode.reuseErrors(scene);
+    if (errors.length) throw new Error(errors.join('; '));
+    return null; // Imported media never produces API arguments.
+  }
   // A filmed shot carries none of these shapes, so it falls out with kind null on its own.
   // `visual.video.clip` is produce's output record and does not make the shot supplied.
   const kind = scene.type === 'broll' ? 'broll' : v.video ? 'motion'

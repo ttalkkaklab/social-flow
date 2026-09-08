@@ -25,8 +25,11 @@ content-reviewer agent all take this skill's playbook as their baseline.
    term is unavoidable, lead with the plain word and gloss the term in
    parentheses on first appearance only.
 3. **The first encounter is everything** — the first line on Threads, the first
-   125 characters of an IG caption, the YT title+thumbnail, the first 3 seconds
-   of the video. If you don't win there, the rest never gets read.
+   125 characters of an IG caption, the YT title+thumbnail, the first second and
+   then the first 3 seconds of the video. If you don't win there, the rest never
+   gets read. The first second is a measurement, not a feeling: after the build,
+   the first subtitle cue's start time is read off the shipped SRT, and past
+   1.0s it warns (playbook §7).
 4. **Golden-hour replies** — how fast you answer comments in the first 60
    minutes after publishing decides reach (Buffer's analysis of 1.9M posts:
    replying lifts engagement Threads +42% / IG +21% / FB +9.5%).
@@ -78,7 +81,10 @@ The YouTube meta file gets a second, structural check on top of the style one �
 the title limits, the preset hashtags, the summary voice, and a verbatim copy of
 `COMPREHENSION.answer` (it finds scenes.js from the episode layout). Same exit
 codes. Its 0 is "layout and verbatim leak clean" — a paraphrased result is the
-reviewer's blind read.
+reviewer's blind read. A short whose cover opens on the result
+(`hookType:"spoiler"`) keeps this gate: the cover may say the answer, the title
+and the description still withhold it (playbook §2). Only long-form answer-first
+episodes skip it.
 
 ## Adversarial review gate — the shared contract for outgoing copy
 

@@ -8,7 +8,7 @@ const {spawnSync} = require('node:child_process');
 const {createHash} = require('node:crypto');
 const {verifyClip}=require('./slide-render-proof.js');
 
-function verifyManifest(work,board,scenes){
+function verifyManifest(work,board,scenes,format){
   const media={};
   const remember=file=>{media[file]=createHash('sha256').update(fs.readFileSync(file)).digest('hex')};
   const lines=fs.readFileSync(path.join(work,'segs.tsv'),'utf8').split(/\r?\n/).filter(l=>l.trim()&&!l.startsWith('#')).map(l=>l.split('\t'));
@@ -36,10 +36,13 @@ function verifyManifest(work,board,scenes){
         verifyClip(file,path.resolve(board,s.visual.slide.file),group);remember(file);
       }
     } else {
+      const production=require('./check-production.js');
+      const reuse=s.visual?.reuse;
+      if(reuse!==undefined)production.validateReuseAsset(board,s,format);
       const generated=s.visual?.video?.clip;
-      const declared=generated||s.visual?.renderedFile||s.visual?.clip;
+      const declared=reuse?.clip||generated||s.visual?.renderedFile||s.visual?.clip;
       if(typeof declared!=='string'||!declared.trim())throw new Error('non-slide scene needs visual.video.clip, visual.renderedFile or visual.clip before assembly');
-      const source=generated ? require('./check-production.js').assetPath(board,declared) : path.resolve(board,declared);
+      const source=(generated||reuse) ? require('./check-production.js').assetPath(board,declared) : path.resolve(board,declared);
       if(!fs.statSync(source).isFile())throw new Error('declared source is not a file');
       if(cols[2].includes('::')||cols[2].includes('|')||path.resolve(work,cols[2].replace(/^@/,''))!==source)throw new Error('segment media differs from the declared source');
       remember(source);
@@ -63,7 +66,7 @@ function verify(work, board) {
   const ids = cards.map(l=>l.split('\t')[0]);
   if (JSON.stringify(ids)!==JSON.stringify(expected.map(String))) throw new Error('cards.tsv does not match SCENES order; no unplanned opening, missing card or duplicate card is allowed');
   require('./edit-plan.js').write(work,win.window.SCENES);
-  const mediaSha256={...verifyManifest(work,board,win.window.SCENES),...require('./check-tts-quality.js').check(work,board)};
+  const mediaSha256={...verifyManifest(work,board,win.window.SCENES,win.window.FORMAT),...require('./check-tts-quality.js').check(work,board)};
   const hash = p=>createHash('sha256').update(fs.readFileSync(p)).digest('hex');
   const plugin = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../../.claude-plugin/plugin.json'),'utf8'));
   fs.writeFileSync(path.join(work, 'build-plan-check.json'), JSON.stringify({mediaSha256,version:plugin.version,storyboard:board,scenesSha256:hash(file),cardsSha256:hash(path.join(work,'cards.tsv')),segsSha256:hash(path.join(work,'segs.tsv')),resolvedCardsSha256:hash(path.join(work,'cards.resolved.tsv')),editPlanSha256:hash(path.join(work,'edit-plan.json')),checks:['check-scenes','check-slide','segment-inputs','edit-plan'],cards:expected},null,2)+'\n');

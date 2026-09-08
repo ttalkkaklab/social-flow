@@ -5,7 +5,7 @@
  const LABELS={still_camera:'정지 이미지 · 카메라 무빙',character_html:'3D 캐릭터 · HTML',object_html:'3D 사물 · HTML',data_graph:'수치·그래프 · HTML',generated_video:'영상 생성',editorial_html:'짧은 인용·결론 · HTML'};
  const CHARTS={comparison:['bar','dot'],trend:['line'],share:['stacked-bar','donut','pie'],distribution:['histogram'],geographic:['map'],timeline:['timeline']};
  const text=x=>typeof x==='string'&&!!x.trim();
- function exempt(scene){return scene.type==='outro'||(!scene.visual?.video&&(['recording','screencast'].includes(scene.visual?.source)||scene.visual?.picture==='recording'))}
+ function exempt(scene){return scene.type==='outro'||(scene.visual?.reuse===undefined&&!scene.visual?.video&&(['recording','screencast'].includes(scene.visual?.source)||scene.visual?.picture==='recording'))}
  function recommend(purpose){return PURPOSES[purpose]||null}
  function framePlan(scene){
   const v=scene.visual||{}, f=v.frames||{}, end=f.end||v.video?.lastImagePath||v.lastImagePath||v.imagePair?.end||'';
@@ -80,7 +80,7 @@ if(r.mode==='data_graph'||(fullVideo&&CHARTS[r.purpose])){
   }
   // Draft validates meaning; production also validates the selected renderer's handoff.
   if(!draft){
-   const slide=v.slide,generated=!!v.video||scene.type==='broll'||(scene.type==='quote'&&!!v.clip);
+   const slide=v.slide,generated=v.reuse!==undefined||!!v.video||scene.type==='broll'||(scene.type==='quote'&&!!v.clip);
    if(r.mode==='still_camera'){
     if(!Number.isFinite(scene.duration)||scene.duration<=0)bad('still camera needs a finite positive duration');
     if(!text(v.bg))bad('still camera needs its source image');

@@ -79,7 +79,7 @@ engine are three copies of one episode, which §2.1 already bans.
 |---|---|---|---|---|
 | `curiosity` 호기심 | "that's interesting — how?" | a specific, closable gap about a surprising fact, paradox, or identity, paid in installments | a topic announcement, a definition, "today we look at" | scenario-craft §5 |
 | `fear` 공포 | "this could happen to me" | a threat and its clock on the table in the opening, plus a doable door later | a jump scare saved for the end, or a threat with no step the viewer can take | scenario-craft §4 |
-| `intrigue` 궁금증 | "I need to know what happens" | an unresolved outcome or secret whose paying item is named | a teaser with no named payer, or the answer dumped in the opening | scenario-craft §5 ledger · hookForm `gap`/`secret` |
+| `intrigue` 궁금증 | "I need to know what happens" | an unresolved outcome or secret whose paying item is named | a teaser with no named payer, or an opening that states the answer and then has nothing left to pay | scenario-craft §5 ledger · hookForm `gap`/`secret` |
 | `comedy` 코믹 | "wait — that broke the pattern" | a pattern the body sets, a punchline that breaks it last | "funny" as an adjective, a joke explained in the next sentence | scenario-craft §6 |
 
 `curiosity` and `intrigue` are not the same engine. Curiosity is an intellectual gap
@@ -208,8 +208,8 @@ event itself; inventing a modern connection to prolong it is not a solution.
 | 3 | **전개 #1** | What actually happened — the real event behind the hook, told as an account (who · when · what), every fact on a `research.md` row. Where the research holds an answer most viewers would guess first, this item opens on it and takes it apart (scenario-craft §11). |
 | 4 | **전개 #2** | The next necessary evidence, choice or consequence that changes understanding. A modern bridge is optional. On answer-first this supplies the early result and names its subject directly. |
 | 5 | **전개 #3** | Develop or test the answer with evidence, action or a limit. Use sourced modern cases only when they serve this content; no minimum case count. |
-| 6 | **마무리** | The earned resolution: answer the opening with evidence or a decisive action and make the meaning understandable. State limits honestly. Do not outsource the answer to a generic opinion question. |
-| 7 | **CTA** | Optional. Write `없음` and why the ending is sufficient, or one relevant ask after the resolution. Never use an ask to replace the answer. Subscribe and like stay banned. |
+| 6 | **마무리** | The earned resolution: answer the opening with evidence or a decisive action and make the meaning understandable. State limits honestly. Do not outsource the answer to a generic opinion question. Name the one forwardable thing here — the fact, verdict, line or checklist a viewer could pass on as-is; §4 writes it into the closing shot's `shot.share`, where a short requires it. |
+| 7 | **CTA** | Optional. Write `없음` and why the ending is sufficient, or one relevant ask after the resolution. Never use an ask to replace the answer. Subscribe and like stay banned. An ask stays optional; a forwardable thing does not — an ask requests behaviour from the viewer, while a forwardable thing is one sentence, figure or verdict they can pass on as-is. Asking to be shared is an ask, not a trigger. |
 
 ### 훅 may invent a scene, not a fact
 
@@ -233,18 +233,24 @@ at §2.3; unused cases never become a claim or caption.
 | 훅 | `hook` — the cover, 1 shot | cover + `hooking` | cover + `hooking` |
 | 전개 #1 | `drip`, 1–2 shots | `body` | `body` |
 | 전개 #2 | `drip`, 1 shot | `result` — the present answer plays before the body | `turn` |
-| 전개 #3 | `drip`, 1–2 shots — the last drip is where the answer is first complete | `body` | `result` |
-| 마무리 + optional CTA | `cta` — the last narrated shot delivers the closing meaning, with an optional ask after the answer; no fixed group count | `cta` | `cta` |
+| 전개 #3 | `drip`, 1–2 shots — where the held answer is first complete, or where the answer the cover already stated meets its hardest test | `body` | `result` |
+| 마무리 + optional CTA | `cta` — the last narrated shot delivers the closing meaning and carries the forwardable thing in `shot.share`, with an optional ask after the answer; no fixed group count | `cta` | `cta` |
 
 A short lands inside the 4–7 shot band (5–7 by this map). Long-form keeps the arc
 storyboard §2.3 picked (scenes-schema §playback order): unfinished-sentence material is
 `story`, where 전개 #2 is the turn; everything else is `answer-first`, where 전개 #2's present
 answer is the result shown before the body. `COMPREHENSION.question` is the specific question
-the episode answers, historical or present-day. On a short the last drip has to be the
-first place the answer is complete (scenes-schema §playback order), and a question the
-historical fact already answers puts that moment at 전개 #1. On long-form, how 전개 #1's
-investigation is laid out inside (curiosity loop · problem stack · …) is the one thing
-storyboard §2.5 still asks.
+the episode answers, historical or present-day. A short candidate picks where its reveal
+sits, and its 훅 item says which of the two it took. Held is the default: the last drip is
+the first place the answer is complete (scenes-schema §playback order), and a question the
+historical fact already answers puts that moment at 전개 #1. Stated up front is the other
+legal shape — the 훅 says the result and the 전개 rows spend their time on why it is true,
+what it cost and where it breaks. Take it when the fact itself is the surprise and the
+reason is worth three items; the price is the finish, which no longer has a reveal to land
+on, so 전개 #3 has to carry the hardest test instead. A cover that states the answer and
+leaves the body nothing to develop is the intrigue row's failure case, not this shape. On
+long-form, how 전개 #1's investigation is laid out inside (curiosity loop · problem stack
+· …) is the one thing storyboard §2.5 still asks.
 
 ## Template
 
@@ -288,6 +294,7 @@ taken apart, when the research holds one. Its darkest beat is usually the curve'
 
 ## 마무리 — feel <sign · feeling>
 <the earned resolution, verbatim: "…">
+<forwardable — the one fact, verdict, line or checklist a viewer could pass on as-is, verbatim: "…">
 
 ## CTA — feel <sign · feeling>
 <없음 + reason, or the optional relevant ask verbatim after the resolution>
