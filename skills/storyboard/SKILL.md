@@ -164,7 +164,7 @@ default, skips it.**
 
 Read [visual-style.md](references/visual-style.md). Before writing the storyboard, ask the user
 to choose one of the presets in `production-mode.js` `STYLES` — cinematic-miniature, photoreal,
-webtoon, claymation, paper-cutout, ink-wash or toon-3d.
+webtoon, claymation, paper-cutout, ink-wash, toon-3d or arcade-2d.
 Wait for the actual choice, persist it for this episode, and apply it to every generated
 start/end storyboard image and subsequent video prompt, in hybrid and full_video alike.
 Reuse an explicit existing choice; do not infer a style from production mode.

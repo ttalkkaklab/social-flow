@@ -421,6 +421,23 @@ test('a shot look outside the selected preset fails the full check, not only the
   win.SCENES.forEach(s => { s.shot.videoDesign.look = 'realistic'; });
   assert.deepEqual(mode.check(win), []);
 });
+test('the arcade-2d preset is prompt-only, carries the arcade look and keeps the HUD out of the picture', () => {
+  const { LOOKS } = require('../../skills/storyboard/references/spatial-prompts.js');
+  assert.deepEqual(mode.STYLES['arcade-2d'].looks, ['arcade']);
+  assert.ok(mode.ALL_LOOKS.includes('arcade') && LOOKS.arcade);
+  assert.ok(!mode.packPresets.includes('arcade-2d'));
+  const win = fixture();
+  win.PRODUCTION.style.preset = 'arcade-2d';
+  win.PRODUCTION.style.selection = { kind: 'user', reference: 'User chose arcade-2d for this episode.' };
+  assert.match(mode.check(win).join(), /conflicts with the selected episode style/);
+  win.SCENES.forEach(s => { s.shot.videoDesign.look = 'arcade'; });
+  assert.deepEqual(mode.check(win), []);
+  const out = assemble(win, 0);
+  assert.match(out.sourcePrompt, /Hand-painted 1990s arcade game art/);
+  assert.match(out.motionPrompt, /The look holds: Hand-painted 1990s arcade game art/);
+  assert.doesNotMatch(mode.STYLES['arcade-2d'].prompt, /HUD|health bar|lettering|portrait/i);
+  assert.deepEqual(out.sourceReferenceImages, []);
+});
 
 test('imported clips preserve the whole file through the cinematic edit compiler',()=>{
  const {preview}=require('../../skills/produce/references/edit-plan.js');
