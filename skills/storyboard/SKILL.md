@@ -4,9 +4,9 @@ description: >
   Plans one episode and stops for approval before generation. Use when
   the user asks to "스토리보드 만들어", "스토리보드 작성", "이 주제로 영상 기획", "촬영 대본 만들어", "내가 녹화할 대본", "make
   a storyboard", "plan a video for topic X", or starts a new topic in a channel.
-  Researches the topic, finds the wow points (what the viewer believes → what the evidence shows), decides three messages for today's viewer, writes one seven-item
-  scenario per message, shows all three with their wow for the pick, researches the winner, and writes the storyboard
-  under data/[channel]/episodes/[topic]/storyboard/. Format with the user first: 9:16 shorts
+  Researches the topic, finds the wow points, decides three messages for today's viewer, writes one seven-item
+  scenario per message, shows all three for the pick, researches the winner, and writes the storyboard
+  under data/[channel]/episodes/[topic]/storyboard/. Format: 9:16 shorts
   by default, or 16:9 long-form with chapters. The narration is written before any shot and
   read on its own twice — the chain, then the words — each looped to 95 in at most three
   reads with the sentences handed to the reviewer inline; the board gets the contract
