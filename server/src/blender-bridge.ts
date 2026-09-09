@@ -57,7 +57,7 @@ export const DEFAULT_FRAME_START = 1;
 export const DEFAULT_FRAME_END = 150;
 /** 100 s at 30 fps — a previz is a cut, not an episode */
 export const MAX_PREVIZ_FRAMES = 3000;
-/** Blender object names are capped at 63 bytes */
+/** Blender 4.x caps an ID name at 63 bytes of UTF-8 (5.0 raised it) — measured in bytes, not characters */
 export const MAX_BLENDER_NAME = 63;
 
 // ── Request schemas ─────────────────────────────────────────────
@@ -67,8 +67,10 @@ const frameNumber = z.number().int().min(0).max(1_000_000);
 const blenderName = z
   .string()
   .min(1)
-  .max(MAX_BLENDER_NAME)
+  .refine((n) => Buffer.byteLength(n, 'utf8') <= MAX_BLENDER_NAME, { message: `a Blender object name is at most ${MAX_BLENDER_NAME} bytes of UTF-8` })
   .refine((n) => !n.includes('/') && !n.includes('\\'), { message: 'a Blender object name cannot contain path separators' });
+/** H.264 wants even dimensions; catch it here rather than after a Blender spawn */
+const evenPixels = (min: number) => z.number().int().min(min).max(4096).multipleOf(2, 'must be an even number of pixels (H.264)');
 const hexColor = z.string().regex(/^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, 'color must be a hex triplet such as #4a90d9');
 
 const blendPath = z
@@ -117,8 +119,8 @@ export const blenderSceneBuildSchema = z
     fps: z.number().int().min(1).max(120).optional(),
     frameStart: frameNumber.optional(),
     frameEnd: frameNumber.optional(),
-    width: z.number().int().min(64).max(4096).optional(),
-    height: z.number().int().min(64).max(4096).optional(),
+    width: evenPixels(64).optional(),
+    height: evenPixels(64).optional(),
     floor: z.boolean().optional().default(true),
     floorSize: z.number().positive().max(10_000).optional().default(40),
     proxies: z.array(proxySchema).max(100).optional().default([]),
@@ -217,8 +219,8 @@ export const blenderRenderPrevizSchema = z
     outputPath: z.string().optional(),
     filename: bareFilenameSchema('video').optional().default(DEFAULT_PREVIZ_FILENAME),
     engine: z.enum(BLENDER_PREVIZ_ENGINES).optional().default(DEFAULT_PREVIZ_ENGINE),
-    width: z.number().int().min(64).max(4096).optional(),
-    height: z.number().int().min(64).max(4096).optional(),
+    width: evenPixels(64).optional(),
+    height: evenPixels(64).optional(),
     fps: z.number().int().min(1).max(120).optional(),
     frameStart: frameNumber.optional(),
     frameEnd: frameNumber.optional(),
@@ -540,20 +542,25 @@ def fcurves_of(idblock):
     if not ad or not ad.action:
         return []
     act = ad.action
-    out = []
+    # 4.4+: an action holds one slot per animated ID (a camera object and its camera data
+    # share one action), so read only this ID's channelbag or the object's keys leak into
+    # the data's report. Older Blender has one flat fcurve list.
     try:
-        for layer in act.layers:
-            for strip in layer.strips:
-                for bag in strip.channelbags:
-                    out.extend(bag.fcurves)
-        if out:
-            return out
-    except AttributeError:
+        slot = ad.action_slot
+        out = []
+        if slot is not None:
+            for layer in act.layers:
+                for strip in layer.strips:
+                    bag = strip.channelbag(slot)
+                    if bag is not None:
+                        out.extend(bag.fcurves)
+        return out
+    except (AttributeError, TypeError):
         pass
     try:
         return list(act.fcurves)
     except AttributeError:
-        return out
+        return []
 
 
 def key_frames(idblock):
@@ -870,15 +877,21 @@ def op_camera(job):
         d.lens = float(job["lensMm"])
     elif job.get("fovDeg") is not None:
         d.angle = math.radians(float(job["fovDeg"]))
+    prev_q = None
     if job["clearExisting"]:
         cam.animation_data_clear()
         d.animation_data_clear()
+    else:
+        # continue the hemisphere from the last existing key, or the first new key may take the long way round
+        existing = key_frames(cam)
+        if existing:
+            sc.frame_set(max(existing))
+            prev_q = cam.matrix_basis.to_quaternion()
     cam.rotation_mode = "QUATERNION"
     keys = job["keys"]
     static = len(keys) == 1 and keys[0].get("frame") is None
     # a zoom needs the lens keyed at every pose, or the one lens key holds for the whole move
     zoom = any(k.get("lensMm") is not None for k in keys)
-    prev_q = None
     frames = []
     for k in keys:
         loc = Vector([float(x) for x in k["location"]])
@@ -1006,9 +1019,10 @@ def op_render(job):
     out_dir = os.path.dirname(video_path)
     os.makedirs(out_dir, exist_ok=True)
     stem = os.path.splitext(os.path.basename(video_path))[0]
-    # a render that was killed mid-way leaves its private-prefix file behind; sweep before starting
+    # sweep before starting: a killed render leaves its private-prefix file, and a failed one
+    # must not leave last time's mp4 and stills where they read as this time's result
     for stale in os.listdir(out_dir):
-        if stale.startswith(".previz-"):
+        if stale.startswith(".previz-") or stale == os.path.basename(video_path) or (stale.startswith(stem + "-f") and stale.endswith(".png")):
             os.remove(os.path.join(out_dir, stale))
     ims = sc.render.image_settings
     if hasattr(ims, "media_type"):      # 5.0+; 4.x picks video from file_format alone
@@ -1031,8 +1045,6 @@ def op_render(job):
     written = sorted(f for f in os.listdir(out_dir) if f.startswith(os.path.basename(prefix)))
     if not written:
         raise RuntimeError("Blender rendered but wrote no video under %s" % out_dir)
-    if os.path.exists(video_path):
-        os.remove(video_path)
     os.replace(os.path.join(out_dir, written[-1]), video_path)
     for extra in written[:-1]:
         os.remove(os.path.join(out_dir, extra))

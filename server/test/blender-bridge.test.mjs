@@ -50,6 +50,9 @@ describe('blender bridge schemas', () => {
     assert.equal(ok.data.floor, true);
     assert.deepEqual(ok.data.proxies[0].location, [0, 0, 0]);
     assert.ok(!blenderSceneBuildSchema.safeParse({ blendPath: 's.blend', frameStart: 10, frameEnd: 5 }).success);
+    assert.ok(!blenderSceneBuildSchema.safeParse({ blendPath: 's.blend', width: 217 }).success, 'odd width is refused before Blender runs');
+    assert.ok(!blenderSceneBuildSchema.safeParse({ blendPath: 's.blend', proxies: [{ name: '가'.repeat(22), kind: 'sphere' }] }).success, '66 bytes of UTF-8 is over the 4.x name cap');
+    assert.ok(blenderSceneBuildSchema.safeParse({ blendPath: 's.blend', proxies: [{ name: '가'.repeat(21), kind: 'sphere' }] }).success, '63 bytes passes');
 
     const dupe = blenderSceneBuildSchema.safeParse({
       blendPath: 's.blend',
@@ -119,6 +122,7 @@ describe('blender bridge schemas', () => {
     assert.ok(!blenderRenderPrevizSchema.safeParse({ blendPath: 's.blend', filename: 'previz.webm' }).success);
     assert.ok(!blenderRenderPrevizSchema.safeParse({ blendPath: 's.blend', frameStart: 1, frameEnd: MAX_PREVIZ_FRAMES + 1 }).success);
     assert.ok(!blenderRenderPrevizSchema.safeParse({ blendPath: 's.blend', filename: '../previz.mp4' }).success);
+    assert.ok(!blenderRenderPrevizSchema.safeParse({ blendPath: 's.blend', height: 961 }).success, 'odd height is refused before Blender runs');
   });
 
   it('the render timeout grows with the frame count and the engine', () => {
@@ -220,8 +224,22 @@ describe('blender round trip', { skip: !blenderBin() && 'no Blender on this mach
     assert.deepEqual(read.scene.camera?.keyframes, [1, 12], 'camera keys survived the parallel object edit');
     assert.equal(read.scene.camera?.lensMm, 35, 'at frame 1 the lens is the camera lens, not the frame-12 zoom');
     assert.deepEqual(read.scene.objects.find((o) => o.name === 'can')?.keyframes, [1, 12], 'object keys survived the parallel camera edit');
+    // the camera's own object line reports only the object's keys — the lens key on the camera data does not leak into it
+    assert.deepEqual(read.scene.objects.find((o) => o.name === 'Camera')?.keyframes, [1, 12]);
 
-    const previz = await renderPreviz(blenderRenderPrevizSchema.parse({ blendPath, outputPath: join(dir, 'out'), stills: [1, 12, 40] }));
+    // layering keys onto an existing move keeps the old ones and continues from them
+    const layered = await setCamera(blenderCameraSetSchema.parse({ blendPath, clearExisting: false, keys: [{ frame: 20, location: [-2, -3, 1.2], target: [0, 0, 1] }] }));
+    assert.ok(layered.success, layered.success ? '' : layered.error);
+    assert.deepEqual(layered.scene.camera?.keyframes, [1, 12, 20]);
+    assert.equal(layered.scene.frame.end, 20, 'a key past the range extends it');
+    const back = await setCamera(blenderCameraSetSchema.parse({ blendPath, lensMm: 35, keys: [
+      { frame: 1, location: [0, -4, 1.6], target: [0, 0, 1.0] },
+      { frame: 12, location: [1.5, -2.5, 0.6], target: [0.3, -0.3, 1.2], lensMm: 50 },
+    ] }));
+    assert.ok(back.success);
+
+    // the layered key above grew the scene to 20 frames; render the 12-frame slice explicitly
+    const previz = await renderPreviz(blenderRenderPrevizSchema.parse({ blendPath, outputPath: join(dir, 'out'), frameStart: 1, frameEnd: 12, stills: [1, 12, 40] }));
     assert.ok(previz.success, previz.success ? '' : previz.error);
     assert.equal(previz.frames, 12);
     assert.equal(previz.fps, 24);

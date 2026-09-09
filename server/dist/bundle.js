@@ -79167,7 +79167,8 @@ var MAX_PREVIZ_FRAMES = 3e3;
 var MAX_BLENDER_NAME = 63;
 var vec3 = external_exports.tuple([external_exports.number(), external_exports.number(), external_exports.number()]);
 var frameNumber = external_exports.number().int().min(0).max(1e6);
-var blenderName = external_exports.string().min(1).max(MAX_BLENDER_NAME).refine((n) => !n.includes("/") && !n.includes("\\"), { message: "a Blender object name cannot contain path separators" });
+var blenderName = external_exports.string().min(1).refine((n) => Buffer.byteLength(n, "utf8") <= MAX_BLENDER_NAME, { message: `a Blender object name is at most ${MAX_BLENDER_NAME} bytes of UTF-8` }).refine((n) => !n.includes("/") && !n.includes("\\"), { message: "a Blender object name cannot contain path separators" });
+var evenPixels = (min) => external_exports.number().int().min(min).max(4096).multipleOf(2, "must be an even number of pixels (H.264)");
 var hexColor = external_exports.string().regex(/^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, "color must be a hex triplet such as #4a90d9");
 var blendPath = external_exports.string().min(1, "blendPath is required").refine((p) => !p.includes(".."), { message: 'blendPath must not contain ".."' }).refine((p) => extname5(p).toLowerCase() === ".blend", { message: "blendPath must end in .blend" }).transform((p) => resolve2(p));
 var blenderSceneReadSchema = external_exports.object({ blendPath });
@@ -79195,8 +79196,8 @@ var blenderSceneBuildSchema = external_exports.object({
   fps: external_exports.number().int().min(1).max(120).optional(),
   frameStart: frameNumber.optional(),
   frameEnd: frameNumber.optional(),
-  width: external_exports.number().int().min(64).max(4096).optional(),
-  height: external_exports.number().int().min(64).max(4096).optional(),
+  width: evenPixels(64).optional(),
+  height: evenPixels(64).optional(),
   floor: external_exports.boolean().optional().default(true),
   floorSize: external_exports.number().positive().max(1e4).optional().default(40),
   proxies: external_exports.array(proxySchema).max(100).optional().default([]),
@@ -79281,8 +79282,8 @@ var blenderRenderPrevizSchema = external_exports.object({
   outputPath: external_exports.string().optional(),
   filename: bareFilenameSchema("video").optional().default(DEFAULT_PREVIZ_FILENAME),
   engine: external_exports.enum(BLENDER_PREVIZ_ENGINES).optional().default(DEFAULT_PREVIZ_ENGINE),
-  width: external_exports.number().int().min(64).max(4096).optional(),
-  height: external_exports.number().int().min(64).max(4096).optional(),
+  width: evenPixels(64).optional(),
+  height: evenPixels(64).optional(),
   fps: external_exports.number().int().min(1).max(120).optional(),
   frameStart: frameNumber.optional(),
   frameEnd: frameNumber.optional(),
@@ -79502,20 +79503,25 @@ def fcurves_of(idblock):
     if not ad or not ad.action:
         return []
     act = ad.action
-    out = []
+    # 4.4+: an action holds one slot per animated ID (a camera object and its camera data
+    # share one action), so read only this ID's channelbag or the object's keys leak into
+    # the data's report. Older Blender has one flat fcurve list.
     try:
-        for layer in act.layers:
-            for strip in layer.strips:
-                for bag in strip.channelbags:
-                    out.extend(bag.fcurves)
-        if out:
-            return out
-    except AttributeError:
+        slot = ad.action_slot
+        out = []
+        if slot is not None:
+            for layer in act.layers:
+                for strip in layer.strips:
+                    bag = strip.channelbag(slot)
+                    if bag is not None:
+                        out.extend(bag.fcurves)
+        return out
+    except (AttributeError, TypeError):
         pass
     try:
         return list(act.fcurves)
     except AttributeError:
-        return out
+        return []
 
 
 def key_frames(idblock):
@@ -79832,15 +79838,21 @@ def op_camera(job):
         d.lens = float(job["lensMm"])
     elif job.get("fovDeg") is not None:
         d.angle = math.radians(float(job["fovDeg"]))
+    prev_q = None
     if job["clearExisting"]:
         cam.animation_data_clear()
         d.animation_data_clear()
+    else:
+        # continue the hemisphere from the last existing key, or the first new key may take the long way round
+        existing = key_frames(cam)
+        if existing:
+            sc.frame_set(max(existing))
+            prev_q = cam.matrix_basis.to_quaternion()
     cam.rotation_mode = "QUATERNION"
     keys = job["keys"]
     static = len(keys) == 1 and keys[0].get("frame") is None
     # a zoom needs the lens keyed at every pose, or the one lens key holds for the whole move
     zoom = any(k.get("lensMm") is not None for k in keys)
-    prev_q = None
     frames = []
     for k in keys:
         loc = Vector([float(x) for x in k["location"]])
@@ -79968,9 +79980,10 @@ def op_render(job):
     out_dir = os.path.dirname(video_path)
     os.makedirs(out_dir, exist_ok=True)
     stem = os.path.splitext(os.path.basename(video_path))[0]
-    # a render that was killed mid-way leaves its private-prefix file behind; sweep before starting
+    # sweep before starting: a killed render leaves its private-prefix file, and a failed one
+    # must not leave last time's mp4 and stills where they read as this time's result
     for stale in os.listdir(out_dir):
-        if stale.startswith(".previz-"):
+        if stale.startswith(".previz-") or stale == os.path.basename(video_path) or (stale.startswith(stem + "-f") and stale.endswith(".png")):
             os.remove(os.path.join(out_dir, stale))
     ims = sc.render.image_settings
     if hasattr(ims, "media_type"):      # 5.0+; 4.x picks video from file_format alone
@@ -79993,8 +80006,6 @@ def op_render(job):
     written = sorted(f for f in os.listdir(out_dir) if f.startswith(os.path.basename(prefix)))
     if not written:
         raise RuntimeError("Blender rendered but wrote no video under %s" % out_dir)
-    if os.path.exists(video_path):
-        os.remove(video_path)
     os.replace(os.path.join(out_dir, written[-1]), video_path)
     for extra in written[:-1]:
         os.remove(os.path.join(out_dir, extra))
@@ -82267,10 +82278,10 @@ Returns: the same summary as blender_scene_read plus the list of what was built.
           type: "number",
           description: `Last frame. A fresh scene defaults to ${DEFAULT_FRAME_END} (5 s at 30 fps); with reset:false an omitted value keeps the file's. Camera and object keys past it extend the range.`
         },
-        width: { type: "number", description: `Render width in px. A fresh scene defaults to ${DEFAULT_PREVIZ_WIDTH}; with reset:false an omitted value keeps the file's.` },
+        width: { type: "number", description: `Render width in px (even). A fresh scene defaults to ${DEFAULT_PREVIZ_WIDTH}; with reset:false an omitted value keeps the file's.` },
         height: {
           type: "number",
-          description: `Render height in px. A fresh scene defaults to ${DEFAULT_PREVIZ_HEIGHT} (9:16; pass 1920\xD71080 for long-form); with reset:false an omitted value keeps the file's.`
+          description: `Render height in px (even). A fresh scene defaults to ${DEFAULT_PREVIZ_HEIGHT} (9:16; pass 1920\xD71080 for long-form); with reset:false an omitted value keeps the file's.`
         },
         floor: { type: "boolean", default: true, description: "Add a grey ground plane at z = 0 (default true)." },
         floorSize: { type: "number", default: 40, description: "Side of the floor plane in metres (default 40)." },
@@ -82503,8 +82514,8 @@ Returns: a text block with the mp4 path, still paths (and any requested still ou
           default: DEFAULT_PREVIZ_ENGINE,
           description: "workbench (default): flat studio light, cavity, outlines, fastest. eevee: scene light and materials, a few seconds a frame."
         },
-        width: { type: "number", description: "Override render width in px (default: the scene's)." },
-        height: { type: "number", description: "Override render height in px (default: the scene's)." },
+        width: { type: "number", description: "Override render width in px, even (default: the scene's)." },
+        height: { type: "number", description: "Override render height in px, even (default: the scene's)." },
         fps: { type: "number", description: "Override frames per second (default: the scene's)." },
         frameStart: { type: "number", description: "First frame to render (default: the scene's)." },
         frameEnd: { type: "number", description: `Last frame to render (default: the scene's). At most ${MAX_PREVIZ_FRAMES} frames per render.` },
