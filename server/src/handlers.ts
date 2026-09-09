@@ -11,6 +11,7 @@ import * as serp from './serp-client.js';
 import * as sns from './sns-client.js';
 import * as supertonic from './supertonic-client.js';
 import * as zimage from './zimage-client.js';
+import * as blender from './blender-bridge.js';
 import * as mlx from './mlx-serve-client.js';
 import * as tts from './tts-client.js';
 import { checkedSpeechSchema, generateCheckedSpeech } from './tts-quality.js';
@@ -1028,6 +1029,53 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
         `Model: ${result.model}\nLanguage: ${result.language}\n` +
         `Segments: ${result.segments?.length ?? 0}\n` +
         `Elapsed: ${result.elapsedSeconds}s\n\nTranscript:\n${preview}`,
+    );
+  },
+
+  // ── Blender bridge — previz camera and blocking on the local Blender (no key, no network) ──
+  blender_scene_read: async (args) => {
+    const r = await blender.readScene(parseArgs(blender.blenderSceneReadSchema, args));
+    if (!r.success) return text(`Blender scene read failed: ${r.error}`, true);
+    return text(`Blender scene read (nothing changed).\n\n${blender.describeScene(r.scene)}`);
+  },
+
+  blender_scene_build: async (args) => {
+    const request = parseArgs(blender.blenderSceneBuildSchema, args);
+    const r = await blender.buildScene(request);
+    if (!r.success) return text(`Blender scene build failed: ${r.error}`, true);
+    const built = (r.scene.built ?? []).map((b) => (b.kind ? `${b.name} (${b.kind})` : `${b.name} (glb, ${b.objects} objects)`));
+    return text(
+      `Blender previz set ${request.reset ? 'built' : 'extended'} — ${built.length} added${built.length ? `: ${built.join(', ')}` : ''}.\n` +
+        `Next: blender_camera_set to frame it, then blender_render_previz to look.\n\n${blender.describeScene(r.scene)}`,
+    );
+  },
+
+  blender_camera_set: async (args) => {
+    const r = await blender.setCamera(parseArgs(blender.blenderCameraSetSchema, args));
+    if (!r.success) return text(`Blender camera set failed: ${r.error}`, true);
+    const keys = r.scene.applied?.keyframes ?? [];
+    return text(
+      `Camera "${r.scene.applied?.camera ?? 'Camera'}" ${keys.length ? `keyed at frames [${keys.join(', ')}]` : 'set as a static shot'}.\n` +
+        `Next: blender_render_previz and open the stills; iterate in numbers.\n\n${blender.describeScene(r.scene)}`,
+    );
+  },
+
+  blender_object_animate: async (args) => {
+    const r = await blender.animateObject(parseArgs(blender.blenderObjectAnimateSchema, args));
+    if (!r.success) return text(`Blender object animate failed: ${r.error}`, true);
+    const keys = r.scene.applied?.keyframes ?? [];
+    return text(`Object "${r.scene.applied?.object}" keyed at frames [${keys.join(', ')}].\n\n${blender.describeScene(r.scene)}`);
+  },
+
+  blender_render_previz: async (args) => {
+    const r = await blender.renderPreviz(parseArgs(blender.blenderRenderPrevizSchema, args));
+    if (!r.success) return text(`Blender previz render failed: ${r.error}`, true);
+    const skipped = r.skippedStills.length ? `\nSkipped stills (outside frames ${r.frameStart}–${r.frameEnd}): ${r.skippedStills.join(', ')}` : '';
+    return text(
+      `Previz rendered.\n\nFile: ${r.videoPath}\nStills: ${r.stillPaths.join(', ') || '(none)'}${skipped}\n` +
+        `Engine: ${r.engine} · ${r.width}×${r.height} @ ${r.fps} fps · frames ${r.frameStart}–${r.frameEnd} (${r.frames} = ${r.seconds}s)\n` +
+        `Render time: ${r.elapsedSeconds}s\n\n` +
+        `Open the stills before judging the move — the stamp shows frame, camera and lens. The clip is a camera and blocking plan, not appearance.`,
     );
   },
 

@@ -2999,7 +2999,7 @@ var require_compile = __commonJS({
       const schOrFunc = root.refs[ref];
       if (schOrFunc)
         return schOrFunc;
-      let _sch = resolve3.call(this, root, ref);
+      let _sch = resolve4.call(this, root, ref);
       if (_sch === void 0) {
         const schema = (_a4 = root.localRefs) === null || _a4 === void 0 ? void 0 : _a4[ref];
         const { schemaId } = this.opts;
@@ -3026,7 +3026,7 @@ var require_compile = __commonJS({
     function sameSchemaEnv(s1, s2) {
       return s1.schema === s2.schema && s1.root === s2.root && s1.baseId === s2.baseId;
     }
-    function resolve3(root, ref) {
+    function resolve4(root, ref) {
       let sch;
       while (typeof (sch = this.refs[ref]) == "string")
         ref = sch;
@@ -3657,7 +3657,7 @@ var require_fast_uri = __commonJS({
       }
       return uri;
     }
-    function resolve3(baseURI, relativeURI, options) {
+    function resolve4(baseURI, relativeURI, options) {
       const schemelessOptions = options ? Object.assign({ scheme: "null" }, options) : { scheme: "null" };
       const { parsed: baseParsed, malformedAuthorityOrPort: baseMalformed } = parseWithStatus(baseURI, schemelessOptions);
       const { parsed: relativeParsed, malformedAuthorityOrPort: relativeMalformed } = parseWithStatus(relativeURI, schemelessOptions);
@@ -3941,7 +3941,7 @@ var require_fast_uri = __commonJS({
     var fastUri = {
       SCHEMES,
       normalize,
-      resolve: resolve3,
+      resolve: resolve4,
       resolveComponent,
       equal,
       serialize,
@@ -6190,11 +6190,11 @@ var require_format = __commonJS({
           }
           function getFormat(fmtDef) {
             const code = fmtDef instanceof RegExp ? (0, codegen_1.regexpCode)(fmtDef) : opts.code.formats ? (0, codegen_1._)`${opts.code.formats}${(0, codegen_1.getProperty)(schema)}` : void 0;
-            const fmt2 = gen.scopeValue("formats", { key: schema, ref: fmtDef, code });
+            const fmt3 = gen.scopeValue("formats", { key: schema, ref: fmtDef, code });
             if (typeof fmtDef == "object" && !(fmtDef instanceof RegExp)) {
-              return [fmtDef.type || "string", fmtDef.validate, (0, codegen_1._)`${fmt2}.validate`];
+              return [fmtDef.type || "string", fmtDef.validate, (0, codegen_1._)`${fmt3}.validate`];
             }
-            return ["string", fmtDef, fmt2];
+            return ["string", fmtDef, fmt3];
           }
           function validCondition() {
             if (typeof formatDef == "object" && !(formatDef instanceof RegExp) && formatDef.async) {
@@ -6856,8 +6856,8 @@ var require_limit = __commonJS({
             ref: self2.formats,
             code: opts.code.formats
           });
-          const fmt2 = gen.const("fmt", (0, codegen_1._)`${fmts}[${fCxt.schemaCode}]`);
-          cxt.fail$data((0, codegen_1.or)((0, codegen_1._)`typeof ${fmt2} != "object"`, (0, codegen_1._)`${fmt2} instanceof RegExp`, (0, codegen_1._)`typeof ${fmt2}.compare != "function"`, compareCode(fmt2)));
+          const fmt3 = gen.const("fmt", (0, codegen_1._)`${fmts}[${fCxt.schemaCode}]`);
+          cxt.fail$data((0, codegen_1.or)((0, codegen_1._)`typeof ${fmt3} != "object"`, (0, codegen_1._)`${fmt3} instanceof RegExp`, (0, codegen_1._)`typeof ${fmt3}.compare != "function"`, compareCode(fmt3)));
         }
         function validateFormat() {
           const format = fCxt.schema;
@@ -6867,15 +6867,15 @@ var require_limit = __commonJS({
           if (typeof fmtDef != "object" || fmtDef instanceof RegExp || typeof fmtDef.compare != "function") {
             throw new Error(`"${keyword}": format "${format}" does not define "compare" function`);
           }
-          const fmt2 = gen.scopeValue("formats", {
+          const fmt3 = gen.scopeValue("formats", {
             key: format,
             ref: fmtDef,
             code: opts.code.formats ? (0, codegen_1._)`${opts.code.formats}${(0, codegen_1.getProperty)(format)}` : void 0
           });
-          cxt.fail$data(compareCode(fmt2));
+          cxt.fail$data(compareCode(fmt3));
         }
-        function compareCode(fmt2) {
-          return (0, codegen_1._)`${fmt2}.compare(${data}, ${schemaCode}) ${KWDs[keyword].fail} 0`;
+        function compareCode(fmt3) {
+          return (0, codegen_1._)`${fmt3}.compare(${data}, ${schemaCode}) ${KWDs[keyword].fail} 0`;
         }
       },
       dependencies: ["format"]
@@ -7194,7 +7194,7 @@ var require_p_retry = __commonJS({
       return error2;
     };
     var isNetworkError = (errorMessage) => networkErrorMsgs.includes(errorMessage);
-    var pRetry2 = (input, options) => new Promise((resolve3, reject) => {
+    var pRetry2 = (input, options) => new Promise((resolve4, reject) => {
       options = {
         onFailedAttempt: () => {
         },
@@ -7204,7 +7204,7 @@ var require_p_retry = __commonJS({
       const operation = retry2.operation(options);
       operation.attempt(async (attemptNumber) => {
         try {
-          resolve3(await input(attemptNumber));
+          resolve4(await input(attemptNumber));
         } catch (error2) {
           if (!(error2 instanceof Error)) {
             reject(new TypeError(`Non-error was thrown: "${error2}". You should only throw errors.`));
@@ -7738,8 +7738,8 @@ var require_retry3 = __commonJS({
       }
       const delay2 = getNextRetryDelay(config3);
       err4.config.retryConfig.currentRetryAttempt += 1;
-      const backoff = config3.retryBackoff ? config3.retryBackoff(err4, delay2) : new Promise((resolve3) => {
-        setTimeout(resolve3, delay2);
+      const backoff = config3.retryBackoff ? config3.retryBackoff(err4, delay2) : new Promise((resolve4) => {
+        setTimeout(resolve4, delay2);
       });
       if (config3.onRetryAttempt) {
         await config3.onRetryAttempt(err4);
@@ -8515,8 +8515,8 @@ var require_helpers = __commonJS({
     function req(url, opts = {}) {
       const href = typeof url === "string" ? url : url.href;
       const req2 = (href.startsWith("https:") ? https2 : http3).request(url, opts);
-      const promise = new Promise((resolve3, reject) => {
-        req2.once("response", resolve3).once("error", reject).end();
+      const promise = new Promise((resolve4, reject) => {
+        req2.once("response", resolve4).once("error", reject).end();
       });
       req2.then = promise.then.bind(promise);
       return req2;
@@ -8693,7 +8693,7 @@ var require_parse_proxy_response = __commonJS({
     var debug_1 = __importDefault(require_src());
     var debug = (0, debug_1.default)("https-proxy-agent:parse-proxy-response");
     function parseProxyResponse(socket) {
-      return new Promise((resolve3, reject) => {
+      return new Promise((resolve4, reject) => {
         let buffersLength = 0;
         const buffers = [];
         function read2() {
@@ -8759,7 +8759,7 @@ var require_parse_proxy_response = __commonJS({
           }
           debug("got proxy server response: %o %o", firstLine, headers);
           cleanup();
-          resolve3({
+          resolve4({
             connect: {
               statusCode,
               statusText,
@@ -9001,7 +9001,7 @@ var require_ponyfill_es2018 = __commonJS({
         return new originalPromise(executor);
       }
       function promiseResolvedWith(value) {
-        return newPromise((resolve3) => resolve3(value));
+        return newPromise((resolve4) => resolve4(value));
       }
       function promiseRejectedWith(reason) {
         return originalPromiseReject(reason);
@@ -9171,8 +9171,8 @@ var require_ponyfill_es2018 = __commonJS({
         return new TypeError("Cannot " + name + " a stream using a released reader");
       }
       function defaultReaderClosedPromiseInitialize(reader) {
-        reader._closedPromise = newPromise((resolve3, reject) => {
-          reader._closedPromise_resolve = resolve3;
+        reader._closedPromise = newPromise((resolve4, reject) => {
+          reader._closedPromise_resolve = resolve4;
           reader._closedPromise_reject = reject;
         });
       }
@@ -9346,8 +9346,8 @@ var require_ponyfill_es2018 = __commonJS({
           }
           let resolvePromise;
           let rejectPromise;
-          const promise = newPromise((resolve3, reject) => {
-            resolvePromise = resolve3;
+          const promise = newPromise((resolve4, reject) => {
+            resolvePromise = resolve4;
             rejectPromise = reject;
           });
           const readRequest = {
@@ -9452,8 +9452,8 @@ var require_ponyfill_es2018 = __commonJS({
           const reader = this._reader;
           let resolvePromise;
           let rejectPromise;
-          const promise = newPromise((resolve3, reject) => {
-            resolvePromise = resolve3;
+          const promise = newPromise((resolve4, reject) => {
+            resolvePromise = resolve4;
             rejectPromise = reject;
           });
           const readRequest = {
@@ -10472,8 +10472,8 @@ var require_ponyfill_es2018 = __commonJS({
           }
           let resolvePromise;
           let rejectPromise;
-          const promise = newPromise((resolve3, reject) => {
-            resolvePromise = resolve3;
+          const promise = newPromise((resolve4, reject) => {
+            resolvePromise = resolve4;
             rejectPromise = reject;
           });
           const readIntoRequest = {
@@ -10785,10 +10785,10 @@ var require_ponyfill_es2018 = __commonJS({
           wasAlreadyErroring = true;
           reason = void 0;
         }
-        const promise = newPromise((resolve3, reject) => {
+        const promise = newPromise((resolve4, reject) => {
           stream._pendingAbortRequest = {
             _promise: void 0,
-            _resolve: resolve3,
+            _resolve: resolve4,
             _reject: reject,
             _reason: reason,
             _wasAlreadyErroring: wasAlreadyErroring
@@ -10805,9 +10805,9 @@ var require_ponyfill_es2018 = __commonJS({
         if (state === "closed" || state === "errored") {
           return promiseRejectedWith(new TypeError(`The stream (in ${state} state) is not in the writable state and cannot be closed`));
         }
-        const promise = newPromise((resolve3, reject) => {
+        const promise = newPromise((resolve4, reject) => {
           const closeRequest = {
-            _resolve: resolve3,
+            _resolve: resolve4,
             _reject: reject
           };
           stream._closeRequest = closeRequest;
@@ -10820,9 +10820,9 @@ var require_ponyfill_es2018 = __commonJS({
         return promise;
       }
       function WritableStreamAddWriteRequest(stream) {
-        const promise = newPromise((resolve3, reject) => {
+        const promise = newPromise((resolve4, reject) => {
           const writeRequest = {
-            _resolve: resolve3,
+            _resolve: resolve4,
             _reject: reject
           };
           stream._writeRequests.push(writeRequest);
@@ -11438,8 +11438,8 @@ var require_ponyfill_es2018 = __commonJS({
         return new TypeError("Cannot " + name + " a stream using a released writer");
       }
       function defaultWriterClosedPromiseInitialize(writer) {
-        writer._closedPromise = newPromise((resolve3, reject) => {
-          writer._closedPromise_resolve = resolve3;
+        writer._closedPromise = newPromise((resolve4, reject) => {
+          writer._closedPromise_resolve = resolve4;
           writer._closedPromise_reject = reject;
           writer._closedPromiseState = "pending";
         });
@@ -11475,8 +11475,8 @@ var require_ponyfill_es2018 = __commonJS({
         writer._closedPromiseState = "resolved";
       }
       function defaultWriterReadyPromiseInitialize(writer) {
-        writer._readyPromise = newPromise((resolve3, reject) => {
-          writer._readyPromise_resolve = resolve3;
+        writer._readyPromise = newPromise((resolve4, reject) => {
+          writer._readyPromise_resolve = resolve4;
           writer._readyPromise_reject = reject;
         });
         writer._readyPromiseState = "pending";
@@ -11563,7 +11563,7 @@ var require_ponyfill_es2018 = __commonJS({
         source._disturbed = true;
         let shuttingDown = false;
         let currentWrite = promiseResolvedWith(void 0);
-        return newPromise((resolve3, reject) => {
+        return newPromise((resolve4, reject) => {
           let abortAlgorithm;
           if (signal !== void 0) {
             abortAlgorithm = () => {
@@ -11708,7 +11708,7 @@ var require_ponyfill_es2018 = __commonJS({
             if (isError) {
               reject(error2);
             } else {
-              resolve3(void 0);
+              resolve4(void 0);
             }
             return null;
           }
@@ -11989,8 +11989,8 @@ var require_ponyfill_es2018 = __commonJS({
         let branch1;
         let branch2;
         let resolveCancelPromise;
-        const cancelPromise = newPromise((resolve3) => {
-          resolveCancelPromise = resolve3;
+        const cancelPromise = newPromise((resolve4) => {
+          resolveCancelPromise = resolve4;
         });
         function pullAlgorithm() {
           if (reading) {
@@ -12081,8 +12081,8 @@ var require_ponyfill_es2018 = __commonJS({
         let branch1;
         let branch2;
         let resolveCancelPromise;
-        const cancelPromise = newPromise((resolve3) => {
-          resolveCancelPromise = resolve3;
+        const cancelPromise = newPromise((resolve4) => {
+          resolveCancelPromise = resolve4;
         });
         function forwardReaderError(thisReader) {
           uponRejection(thisReader._closedPromise, (r2) => {
@@ -12862,8 +12862,8 @@ var require_ponyfill_es2018 = __commonJS({
           const writableHighWaterMark = ExtractHighWaterMark(writableStrategy, 1);
           const writableSizeAlgorithm = ExtractSizeAlgorithm(writableStrategy);
           let startPromise_resolve;
-          const startPromise = newPromise((resolve3) => {
-            startPromise_resolve = resolve3;
+          const startPromise = newPromise((resolve4) => {
+            startPromise_resolve = resolve4;
           });
           InitializeTransformStream(this, startPromise, writableHighWaterMark, writableSizeAlgorithm, readableHighWaterMark, readableSizeAlgorithm);
           SetUpTransformStreamDefaultControllerFromTransformer(this, transformer);
@@ -12956,8 +12956,8 @@ var require_ponyfill_es2018 = __commonJS({
         if (stream._backpressureChangePromise !== void 0) {
           stream._backpressureChangePromise_resolve();
         }
-        stream._backpressureChangePromise = newPromise((resolve3) => {
-          stream._backpressureChangePromise_resolve = resolve3;
+        stream._backpressureChangePromise = newPromise((resolve4) => {
+          stream._backpressureChangePromise_resolve = resolve4;
         });
         stream._backpressure = backpressure;
       }
@@ -13125,8 +13125,8 @@ var require_ponyfill_es2018 = __commonJS({
           return controller._finishPromise;
         }
         const readable = stream._readable;
-        controller._finishPromise = newPromise((resolve3, reject) => {
-          controller._finishPromise_resolve = resolve3;
+        controller._finishPromise = newPromise((resolve4, reject) => {
+          controller._finishPromise_resolve = resolve4;
           controller._finishPromise_reject = reject;
         });
         const cancelPromise = controller._cancelAlgorithm(reason);
@@ -13152,8 +13152,8 @@ var require_ponyfill_es2018 = __commonJS({
           return controller._finishPromise;
         }
         const readable = stream._readable;
-        controller._finishPromise = newPromise((resolve3, reject) => {
-          controller._finishPromise_resolve = resolve3;
+        controller._finishPromise = newPromise((resolve4, reject) => {
+          controller._finishPromise_resolve = resolve4;
           controller._finishPromise_reject = reject;
         });
         const flushPromise = controller._flushAlgorithm();
@@ -13183,8 +13183,8 @@ var require_ponyfill_es2018 = __commonJS({
           return controller._finishPromise;
         }
         const writable = stream._writable;
-        controller._finishPromise = newPromise((resolve3, reject) => {
-          controller._finishPromise_resolve = resolve3;
+        controller._finishPromise = newPromise((resolve4, reject) => {
+          controller._finishPromise_resolve = resolve4;
           controller._finishPromise_reject = reject;
         });
         const cancelPromise = controller._cancelAlgorithm(reason);
@@ -15135,7 +15135,7 @@ import zlib from "node:zlib";
 import Stream2, { PassThrough as PassThrough2, pipeline as pump } from "node:stream";
 import { Buffer as Buffer3 } from "node:buffer";
 async function fetch2(url, options_) {
-  return new Promise((resolve3, reject) => {
+  return new Promise((resolve4, reject) => {
     const request = new Request2(url, options_);
     const { parsedURL, options } = getNodeRequestOptions(request);
     if (!supportedSchemas.has(parsedURL.protocol)) {
@@ -15144,7 +15144,7 @@ async function fetch2(url, options_) {
     if (parsedURL.protocol === "data:") {
       const data = dist_default(request.url);
       const response2 = new Response2(data, { headers: { "Content-Type": data.typeFull } });
-      resolve3(response2);
+      resolve4(response2);
       return;
     }
     const send = (parsedURL.protocol === "https:" ? https : http2).request;
@@ -15266,7 +15266,7 @@ async function fetch2(url, options_) {
             if (responseReferrerPolicy) {
               requestOptions.referrerPolicy = responseReferrerPolicy;
             }
-            resolve3(fetch2(new Request2(locationURL, requestOptions)));
+            resolve4(fetch2(new Request2(locationURL, requestOptions)));
             finalize();
             return;
           }
@@ -15299,7 +15299,7 @@ async function fetch2(url, options_) {
       const codings = headers.get("Content-Encoding");
       if (!request.compress || request.method === "HEAD" || codings === null || response_.statusCode === 204 || response_.statusCode === 304) {
         response = new Response2(body, responseOptions);
-        resolve3(response);
+        resolve4(response);
         return;
       }
       const zlibOptions = {
@@ -15313,7 +15313,7 @@ async function fetch2(url, options_) {
           }
         });
         response = new Response2(body, responseOptions);
-        resolve3(response);
+        resolve4(response);
         return;
       }
       if (codings === "deflate" || codings === "x-deflate") {
@@ -15337,12 +15337,12 @@ async function fetch2(url, options_) {
             });
           }
           response = new Response2(body, responseOptions);
-          resolve3(response);
+          resolve4(response);
         });
         raw.once("end", () => {
           if (!response) {
             response = new Response2(body, responseOptions);
-            resolve3(response);
+            resolve4(response);
           }
         });
         return;
@@ -15354,11 +15354,11 @@ async function fetch2(url, options_) {
           }
         });
         response = new Response2(body, responseOptions);
-        resolve3(response);
+        resolve4(response);
         return;
       }
       response = new Response2(body, responseOptions);
-      resolve3(response);
+      resolve4(response);
     });
     writeToStream(request_, request).catch(reject);
   });
@@ -21426,7 +21426,7 @@ var require_jwtaccess = __commonJS({
         }
       }
       fromStreamAsync(inputStream) {
-        return new Promise((resolve3, reject) => {
+        return new Promise((resolve4, reject) => {
           if (!inputStream) {
             reject(new Error("Must pass in a stream containing the service account auth settings."));
           }
@@ -21435,7 +21435,7 @@ var require_jwtaccess = __commonJS({
             try {
               const data = JSON.parse(s2);
               this.fromJSON(data);
-              resolve3();
+              resolve4();
             } catch (err4) {
               reject(err4);
             }
@@ -21674,7 +21674,7 @@ var require_jwtclient = __commonJS({
         }
       }
       fromStreamAsync(inputStream) {
-        return new Promise((resolve3, reject) => {
+        return new Promise((resolve4, reject) => {
           if (!inputStream) {
             throw new Error("Must pass in a stream containing the service account auth settings.");
           }
@@ -21683,7 +21683,7 @@ var require_jwtclient = __commonJS({
             try {
               const data = JSON.parse(s2);
               this.fromJSON(data);
-              resolve3();
+              resolve4();
             } catch (e2) {
               reject(e2);
             }
@@ -21816,7 +21816,7 @@ var require_refreshclient = __commonJS({
         }
       }
       async fromStreamAsync(inputStream) {
-        return new Promise((resolve3, reject) => {
+        return new Promise((resolve4, reject) => {
           if (!inputStream) {
             return reject(new Error("Must pass in a stream containing the user refresh token."));
           }
@@ -21825,7 +21825,7 @@ var require_refreshclient = __commonJS({
             try {
               const data = JSON.parse(s2);
               this.fromJSON(data);
-              return resolve3();
+              return resolve4();
             } catch (err4) {
               return reject(err4);
             }
@@ -23658,7 +23658,7 @@ var require_pluggable_auth_handler = __commonJS({
        * @return A promise that resolves with the executable response.
        */
       retrieveResponseFromExecutable(envMap) {
-        return new Promise((resolve3, reject) => {
+        return new Promise((resolve4, reject) => {
           const child = childProcess.spawn(this.commandComponents[0], this.commandComponents.slice(1), {
             env: { ...process.env, ...Object.fromEntries(envMap) }
           });
@@ -23680,7 +23680,7 @@ var require_pluggable_auth_handler = __commonJS({
               try {
                 const responseJson = JSON.parse(output);
                 const response = new executable_response_1.ExecutableResponse(responseJson);
-                return resolve3(response);
+                return resolve4(response);
               } catch (error2) {
                 if (error2 instanceof executable_response_1.ExecutableResponseError) {
                   return reject(error2);
@@ -24872,7 +24872,7 @@ var require_googleauth = __commonJS({
         }
       }
       fromStreamAsync(inputStream, options) {
-        return new Promise((resolve3, reject) => {
+        return new Promise((resolve4, reject) => {
           if (!inputStream) {
             throw new Error("Must pass in a stream containing the Google auth settings.");
           }
@@ -24882,7 +24882,7 @@ var require_googleauth = __commonJS({
               try {
                 const data = JSON.parse(chunks.join(""));
                 const r2 = this._cacheClientFromJSON(data, options);
-                return resolve3(r2);
+                return resolve4(r2);
               } catch (err4) {
                 if (!this.keyFilename)
                   throw err4;
@@ -24892,7 +24892,7 @@ var require_googleauth = __commonJS({
                 });
                 this.cachedCredential = client;
                 this.setGapicJWTValues(client);
-                return resolve3(client);
+                return resolve4(client);
               }
             } catch (err4) {
               return reject(err4);
@@ -24928,17 +24928,17 @@ var require_googleauth = __commonJS({
        * Run the Google Cloud SDK command that prints the default project ID
        */
       async getDefaultServiceProjectId() {
-        return new Promise((resolve3) => {
+        return new Promise((resolve4) => {
           (0, child_process_1.exec)("gcloud config config-helper --format json", (err4, stdout) => {
             if (!err4 && stdout) {
               try {
                 const projectId = JSON.parse(stdout).configuration.properties.core.project;
-                resolve3(projectId);
+                resolve4(projectId);
                 return;
               } catch (e2) {
               }
             }
-            resolve3(null);
+            resolve4(null);
           });
         });
       }
@@ -32939,14 +32939,14 @@ function __asyncValues(o) {
   }, i2);
   function verb(n) {
     i2[n] = o[n] && function(v) {
-      return new Promise(function(resolve3, reject) {
-        v = o[n](v), settle(resolve3, reject, v.done, v.value);
+      return new Promise(function(resolve4, reject) {
+        v = o[n](v), settle(resolve4, reject, v.done, v.value);
       });
     };
   }
-  function settle(resolve3, reject, d, v) {
+  function settle(resolve4, reject, d, v) {
     Promise.resolve(v).then(function(v2) {
-      resolve3({ value: v2, done: d });
+      resolve4({ value: v2, done: d });
     }, reject);
   }
 }
@@ -39880,7 +39880,7 @@ function retryIntervalFromResponse(res) {
   return 0;
 }
 async function delay(delay2) {
-  return new Promise((resolve3) => setTimeout(resolve3, delay2));
+  return new Promise((resolve4) => setTimeout(resolve4, delay2));
 }
 async function logRequest(logger, req) {
   if (!logger) {
@@ -47323,8 +47323,8 @@ var init_node = __esm({
         const url = `${websocketBaseUrl}/ws/google.ai.generativelanguage.${apiVersion}.GenerativeService.BidiGenerateMusic?key=${apiKey}`;
         let onopenResolve = () => {
         };
-        const onopenPromise = new Promise((resolve3) => {
-          onopenResolve = resolve3;
+        const onopenPromise = new Promise((resolve4) => {
+          onopenResolve = resolve4;
         });
         const callbacks = params.callbacks;
         const onopenAwaitedCallback = function() {
@@ -47530,8 +47530,8 @@ var init_node = __esm({
         }
         let onopenResolve = () => {
         };
-        const onopenPromise = new Promise((resolve3) => {
-          onopenResolve = resolve3;
+        const onopenPromise = new Promise((resolve4) => {
+          onopenResolve = resolve4;
         });
         const callbacks = params.callbacks;
         const onopenAwaitedCallback = function() {
@@ -47544,8 +47544,8 @@ var init_node = __esm({
         const messageQueue = [];
         let setupCompleteResolve = () => {
         };
-        const setupCompletePromise = new Promise((resolve3) => {
-          setupCompleteResolve = resolve3;
+        const setupCompletePromise = new Promise((resolve4) => {
+          setupCompleteResolve = resolve4;
         });
         const websocketCallbacks = {
           onopen: onopenAwaitedCallback,
@@ -52087,7 +52087,7 @@ var init_values = __esm({
 var sleep5;
 var init_sleep = __esm({
   "node_modules/openai/internal/utils/sleep.mjs"() {
-    sleep5 = (ms) => new Promise((resolve3) => setTimeout(resolve3, ms));
+    sleep5 = (ms) => new Promise((resolve4) => setTimeout(resolve4, ms));
   }
 });
 
@@ -53280,8 +53280,8 @@ var init_api_promise = __esm({
     init_parse();
     APIPromise2 = class _APIPromise extends Promise {
       constructor(client, responsePromise, parseResponse2 = defaultParseResponse) {
-        super((resolve3) => {
-          resolve3(null);
+        super((resolve4) => {
+          resolve4(null);
         });
         this.responsePromise = responsePromise;
         this.parseResponse = parseResponse2;
@@ -54251,12 +54251,12 @@ var init_EventStream = __esm({
         _EventStream_errored.set(this, false);
         _EventStream_aborted.set(this, false);
         _EventStream_catchingPromiseCreated.set(this, false);
-        __classPrivateFieldSet(this, _EventStream_connectedPromise, new Promise((resolve3, reject) => {
-          __classPrivateFieldSet(this, _EventStream_resolveConnectedPromise, resolve3, "f");
+        __classPrivateFieldSet(this, _EventStream_connectedPromise, new Promise((resolve4, reject) => {
+          __classPrivateFieldSet(this, _EventStream_resolveConnectedPromise, resolve4, "f");
           __classPrivateFieldSet(this, _EventStream_rejectConnectedPromise, reject, "f");
         }), "f");
-        __classPrivateFieldSet(this, _EventStream_endPromise, new Promise((resolve3, reject) => {
-          __classPrivateFieldSet(this, _EventStream_resolveEndPromise, resolve3, "f");
+        __classPrivateFieldSet(this, _EventStream_endPromise, new Promise((resolve4, reject) => {
+          __classPrivateFieldSet(this, _EventStream_resolveEndPromise, resolve4, "f");
           __classPrivateFieldSet(this, _EventStream_rejectEndPromise, reject, "f");
         }), "f");
         __classPrivateFieldGet(this, _EventStream_connectedPromise, "f").catch(() => {
@@ -54356,11 +54356,11 @@ var init_EventStream = __esm({
        *   const message = await stream.emitted('message') // rejects if the stream errors
        */
       emitted(event) {
-        return new Promise((resolve3, reject) => {
+        return new Promise((resolve4, reject) => {
           __classPrivateFieldSet(this, _EventStream_catchingPromiseCreated, true, "f");
           if (event !== "error")
             this.once("error", reject);
-          this.once(event, resolve3);
+          this.once(event, resolve4);
         });
       }
       /**
@@ -54443,8 +54443,8 @@ var init_EventStream = __esm({
             }
             if (ended)
               return Promise.resolve(doneResult());
-            return new Promise((resolve3, reject) => {
-              readQueue.push({ resolve: resolve3, reject });
+            return new Promise((resolve4, reject) => {
+              readQueue.push({ resolve: resolve4, reject });
             });
           },
           return: () => {
@@ -55662,7 +55662,7 @@ var init_ChatCompletionStream = __esm({
               if (done) {
                 return { value: void 0, done: true };
               }
-              return new Promise((resolve3, reject) => readQueue.push({ resolve: resolve3, reject })).then((chunk3) => chunk3 ? { value: chunk3, done: false } : { value: void 0, done: true });
+              return new Promise((resolve4, reject) => readQueue.push({ resolve: resolve4, reject })).then((chunk3) => chunk3 ? { value: chunk3, done: false } : { value: void 0, done: true });
             }
             const chunk2 = pushQueue.shift();
             return { value: chunk2, done: false };
@@ -55752,7 +55752,7 @@ var init_ChatCompletionStreamingRunner = __esm({
               if (done) {
                 return { value: void 0, done: true };
               }
-              return new Promise((resolve3, reject) => readQueue.push({ resolve: resolve3, reject })).then((event2) => event2 ? { value: event2, done: false } : { value: void 0, done: true });
+              return new Promise((resolve4, reject) => readQueue.push({ resolve: resolve4, reject })).then((event2) => event2 ? { value: event2, done: false } : { value: void 0, done: true });
             }
             const event = pushQueue.shift();
             if (!event) {
@@ -59546,7 +59546,7 @@ var init_AssistantStream = __esm({
               if (done) {
                 return { value: void 0, done: true };
               }
-              return new Promise((resolve3, reject) => readQueue.push({ resolve: resolve3, reject })).then((chunk3) => chunk3 ? { value: chunk3, done: false } : { value: void 0, done: true });
+              return new Promise((resolve4, reject) => readQueue.push({ resolve: resolve4, reject })).then((chunk3) => chunk3 ? { value: chunk3, done: false } : { value: void 0, done: true });
             }
             const chunk2 = pushQueue.shift();
             return { value: chunk2, done: false };
@@ -62210,7 +62210,7 @@ var init_ResponseStream = __esm({
               if (done) {
                 return { value: void 0, done: true };
               }
-              return new Promise((resolve3, reject) => readQueue.push({ resolve: resolve3, reject })).then((event2) => event2 ? { value: event2, done: false } : { value: void 0, done: true });
+              return new Promise((resolve4, reject) => readQueue.push({ resolve: resolve4, reject })).then((event2) => event2 ? { value: event2, done: false } : { value: void 0, done: true });
             }
             const event = pushQueue.shift();
             return { value: event, done: false };
@@ -74143,7 +74143,7 @@ var Protocol = class {
           return;
         }
         const pollInterval = task2.pollInterval ?? this._options?.defaultTaskPollInterval ?? 1e3;
-        await new Promise((resolve3) => setTimeout(resolve3, pollInterval));
+        await new Promise((resolve4) => setTimeout(resolve4, pollInterval));
         options?.signal?.throwIfAborted();
       }
     } catch (error2) {
@@ -74160,7 +74160,7 @@ var Protocol = class {
    */
   request(request, resultSchema, options) {
     const { relatedRequestId, resumptionToken, onresumptiontoken, task, relatedTask } = options ?? {};
-    return new Promise((resolve3, reject) => {
+    return new Promise((resolve4, reject) => {
       const earlyReject = (error2) => {
         reject(error2);
       };
@@ -74238,7 +74238,7 @@ var Protocol = class {
           if (!parseResult.success) {
             reject(parseResult.error);
           } else {
-            resolve3(parseResult.data);
+            resolve4(parseResult.data);
           }
         } catch (error2) {
           reject(error2);
@@ -74499,12 +74499,12 @@ var Protocol = class {
       }
     } catch {
     }
-    return new Promise((resolve3, reject) => {
+    return new Promise((resolve4, reject) => {
       if (signal.aborted) {
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
         return;
       }
-      const timeoutId = setTimeout(resolve3, interval);
+      const timeoutId = setTimeout(resolve4, interval);
       signal.addEventListener("abort", () => {
         clearTimeout(timeoutId);
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
@@ -75380,12 +75380,12 @@ var StdioServerTransport = class {
     this.onclose?.();
   }
   send(message) {
-    return new Promise((resolve3) => {
+    return new Promise((resolve4) => {
       const json2 = serializeMessage(message);
       if (this._stdout.write(json2)) {
-        resolve3();
+        resolve4();
       } else {
-        this._stdout.once("drain", resolve3);
+        this._stdout.once("drain", resolve4);
       }
     });
   }
@@ -76128,7 +76128,7 @@ async function generateAdvanced(request) {
     const timeoutMs = targetDuration * 1e3 + REALTIME_TIMEOUT_MARGIN_MS;
     while (state.received < targetBytes && Date.now() - startTime < timeoutMs) {
       if (state.error) throw state.error;
-      await new Promise((resolve3) => setTimeout(resolve3, REALTIME_POLL_INTERVAL_MS));
+      await new Promise((resolve4) => setTimeout(resolve4, REALTIME_POLL_INTERVAL_MS));
     }
     state.done = true;
     closeQuietly(session);
@@ -76282,7 +76282,7 @@ async function generateLocalSpeech(request) {
   );
   let stdout;
   try {
-    stdout = await new Promise((resolve3, reject) => {
+    stdout = await new Promise((resolve4, reject) => {
       execFile(
         python,
         ["-c", SYNTH_SNIPPET, payload],
@@ -76298,7 +76298,7 @@ async function generateLocalSpeech(request) {
 ${errOut.trim()}`.trim())));
             return;
           }
-          resolve3(out);
+          resolve4(out);
         }
       );
     });
@@ -76605,7 +76605,7 @@ var seedanceReferenceSchema = external_exports.object({
   }
 });
 function sleep2(ms) {
-  return new Promise((resolve3) => setTimeout(resolve3, ms));
+  return new Promise((resolve4) => setTimeout(resolve4, ms));
 }
 function describeHttpError(status, body) {
   try {
@@ -76707,14 +76707,14 @@ function loadReferenceAudio(filePaths) {
   });
 }
 function probeAudioSeconds(filePath) {
-  return new Promise((resolve3) => {
+  return new Promise((resolve4) => {
     execFile2(
       "ffprobe",
       ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", filePath],
       { timeout: 15e3 },
       (error2, out) => {
         const seconds = Number.parseFloat(String(out ?? "").trim());
-        resolve3(!error2 && Number.isFinite(seconds) && seconds > 0 ? seconds : null);
+        resolve4(!error2 && Number.isFinite(seconds) && seconds > 0 ? seconds : null);
       }
     );
   });
@@ -76994,7 +76994,7 @@ async function synthesizeWithRetry(model, contentText, speechConfig, temperature
     } catch (error2) {
       lastError = error2;
       if (attempt < MAX_ATTEMPTS - 1) {
-        await new Promise((resolve3) => setTimeout(resolve3, RETRY_BASE_DELAY_MS * (attempt + 1)));
+        await new Promise((resolve4) => setTimeout(resolve4, RETRY_BASE_DELAY_MS * (attempt + 1)));
       }
     }
   }
@@ -77270,7 +77270,7 @@ function isRetryable(httpStatus) {
   return httpStatus === 429 || httpStatus >= 500;
 }
 function sleep3(ms) {
-  return new Promise((resolve3) => setTimeout(resolve3, ms));
+  return new Promise((resolve4) => setTimeout(resolve4, ms));
 }
 function timeoutFor2(textLength) {
   return Math.min(5 * 6e4, 6e4 + textLength * 40);
@@ -77803,7 +77803,7 @@ async function loadModel(id) {
     if (!listed.ok) return listed;
     const found = listed.models?.find((m2) => m2.id === id);
     if (found?.state === "ready") return { ok: true };
-    await new Promise((resolve3) => setTimeout(resolve3, 2e3));
+    await new Promise((resolve4) => setTimeout(resolve4, 2e3));
   }
   return { ok: false, error: `Timed out waiting for model "${id}" to become ready.` };
 }
@@ -77928,7 +77928,7 @@ async function muxRgbToMp4(opts) {
     );
     if (opts.audio) args.push("-c:a", "aac", "-shortest");
     args.push(opts.outFile);
-    await new Promise((resolve3, reject) => {
+    await new Promise((resolve4, reject) => {
       execFile3("ffmpeg", args, { timeout: 12e4, maxBuffer: 2 * 1024 * 1024 }, (error2, _out, errOut) => {
         if (error2) {
           const code = error2.code;
@@ -77940,7 +77940,7 @@ async function muxRgbToMp4(opts) {
 ${String(errOut).slice(-500)}` : ""}`));
           return;
         }
-        resolve3();
+        resolve4();
       });
     });
     if (!existsSync3(opts.outFile)) return { ok: false, error: "ffmpeg exited 0 but the mp4 was not written" };
@@ -78838,7 +78838,7 @@ async function generateLocalImage(request) {
   );
   const startedAt = Date.now();
   try {
-    await new Promise((resolve3, reject) => {
+    await new Promise((resolve4, reject) => {
       execFile5(
         bin,
         cliArgs,
@@ -78860,7 +78860,7 @@ async function generateLocalImage(request) {
 ${tail}` : ""}`));
             return;
           }
-          resolve3();
+          resolve4();
         }
       );
     });
@@ -79020,7 +79020,7 @@ var qwen3AsrTranscribeSchema = external_exports.object({
   filename: bareFilenameSchema("json").optional()
 });
 function probeDurationSeconds(audioPath) {
-  return new Promise((resolve3) => {
+  return new Promise((resolve4) => {
     execFile6(
       "ffprobe",
       ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", audioPath],
@@ -79028,10 +79028,10 @@ function probeDurationSeconds(audioPath) {
       (error2, out) => {
         const seconds = Number.parseFloat((out || "").trim());
         if (error2 || !Number.isFinite(seconds) || seconds <= 0) {
-          resolve3(60);
+          resolve4(60);
           return;
         }
-        resolve3(seconds);
+        resolve4(seconds);
       }
     );
   });
@@ -79088,7 +79088,7 @@ async function transcribeLocal(request) {
   );
   const startedAt = Date.now();
   try {
-    await new Promise((resolve3, reject) => {
+    await new Promise((resolve4, reject) => {
       execFile6(
         bin,
         cliArgs,
@@ -79108,7 +79108,7 @@ async function transcribeLocal(request) {
 ${tail}` : ""}`));
             return;
           }
-          resolve3();
+          resolve4();
         }
       );
     });
@@ -79147,6 +79147,949 @@ ${tail}` : ""}`));
     elapsedSeconds: elapsed
   };
 }
+
+// src/blender-bridge.ts
+import { execFile as execFile7 } from "node:child_process";
+import { existsSync as existsSync8, mkdtempSync as mkdtempSync3, readFileSync as readFileSync6, rmSync as rmSync4, writeFileSync as writeFileSync6 } from "node:fs";
+import { tmpdir as tmpdir2 } from "node:os";
+import { dirname as dirname2, extname as extname5, join as join6, resolve as resolve2 } from "node:path";
+var BLENDER_PROXY_KINDS = ["person", "dog", "car", "box", "cylinder", "sphere"];
+var BLENDER_INTERPOLATIONS = ["LINEAR", "BEZIER", "CONSTANT"];
+var BLENDER_PREVIZ_ENGINES = ["workbench", "eevee"];
+var DEFAULT_PREVIZ_ENGINE = "workbench";
+var DEFAULT_PREVIZ_WIDTH = 1080;
+var DEFAULT_PREVIZ_HEIGHT = 1920;
+var DEFAULT_PREVIZ_FILENAME = "previz.mp4";
+var DEFAULT_SCENE_FPS = 30;
+var DEFAULT_FRAME_START = 1;
+var DEFAULT_FRAME_END = 150;
+var MAX_PREVIZ_FRAMES = 3e3;
+var MAX_BLENDER_NAME = 63;
+var vec3 = external_exports.tuple([external_exports.number(), external_exports.number(), external_exports.number()]);
+var frameNumber = external_exports.number().int().min(0).max(1e6);
+var blenderName = external_exports.string().min(1).refine((n) => Buffer.byteLength(n, "utf8") <= MAX_BLENDER_NAME, { message: `a Blender object name is at most ${MAX_BLENDER_NAME} bytes of UTF-8` }).refine((n) => !n.includes("/") && !n.includes("\\"), { message: "a Blender object name cannot contain path separators" });
+var evenPixels = (min) => external_exports.number().int().min(min).max(4096).multipleOf(2, "must be an even number of pixels (H.264)");
+var hexColor = external_exports.string().regex(/^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, "color must be a hex triplet such as #4a90d9");
+var blendPath = external_exports.string().min(1, "blendPath is required").refine((p) => !p.includes(".."), { message: 'blendPath must not contain ".."' }).refine((p) => extname5(p).toLowerCase() === ".blend", { message: "blendPath must end in .blend" }).transform((p) => resolve2(p));
+var blenderSceneReadSchema = external_exports.object({ blendPath });
+var proxySchema = external_exports.object({
+  name: blenderName,
+  kind: external_exports.enum(BLENDER_PROXY_KINDS),
+  location: vec3.optional().default([0, 0, 0]),
+  rotationZDeg: external_exports.number().optional().default(0),
+  height: external_exports.number().positive().max(100).optional(),
+  radius: external_exports.number().positive().max(100).optional(),
+  size: vec3.optional(),
+  color: hexColor.optional()
+});
+var importSchema = external_exports.object({
+  glbPath: external_exports.string().min(1).refine((p) => !p.includes(".."), { message: 'glbPath must not contain ".."' }).refine((p) => [".glb", ".gltf"].includes(extname5(p).toLowerCase()), { message: "glbPath must end in .glb or .gltf" }).transform((p) => resolve2(p)),
+  name: blenderName,
+  location: vec3.optional().default([0, 0, 0]),
+  rotationDeg: vec3.optional().default([0, 0, 0]),
+  scale: external_exports.number().positive().optional().default(1)
+});
+var blenderSceneBuildSchema = external_exports.object({
+  blendPath,
+  reset: external_exports.boolean().optional().default(true),
+  force: external_exports.boolean().optional().default(false),
+  fps: external_exports.number().int().min(1).max(120).optional(),
+  frameStart: frameNumber.optional(),
+  frameEnd: frameNumber.optional(),
+  width: evenPixels(64).optional(),
+  height: evenPixels(64).optional(),
+  floor: external_exports.boolean().optional().default(true),
+  floorSize: external_exports.number().positive().max(1e4).optional().default(40),
+  proxies: external_exports.array(proxySchema).max(100).optional().default([]),
+  imports: external_exports.array(importSchema).max(50).optional().default([])
+}).superRefine((data, ctx) => {
+  if (data.frameStart !== void 0 && data.frameEnd !== void 0 && data.frameEnd < data.frameStart) {
+    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["frameEnd"], message: "frameEnd must not be before frameStart" });
+  }
+  const names = [...data.proxies.map((p) => p.name), ...data.imports.map((i2) => i2.name)];
+  const dupes = names.filter((n, i2) => names.indexOf(n) !== i2);
+  if (dupes.length > 0) {
+    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["proxies"], message: `object names must be unique \u2014 repeated: ${[...new Set(dupes)].join(", ")}` });
+  }
+  for (const [i2, p] of data.proxies.entries()) {
+    if (p.kind === "box" && p.size === void 0) {
+      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["proxies", i2, "size"], message: "a box proxy needs size [x, y, z] in metres" });
+    }
+  }
+});
+var cameraKeySchema = external_exports.object({
+  frame: frameNumber.optional(),
+  location: vec3,
+  target: vec3.optional(),
+  rotationDeg: vec3.optional(),
+  lensMm: external_exports.number().min(1).max(1e3).optional()
+});
+var blenderCameraSetSchema = external_exports.object({
+  blendPath,
+  name: blenderName.optional().default("Camera"),
+  lensMm: external_exports.number().min(1).max(1e3).optional(),
+  fovDeg: external_exports.number().min(1).max(179).optional(),
+  keys: external_exports.array(cameraKeySchema).min(1).max(500),
+  interpolation: external_exports.enum(BLENDER_INTERPOLATIONS).optional().default("LINEAR"),
+  clearExisting: external_exports.boolean().optional().default(true)
+}).superRefine((data, ctx) => {
+  if (data.lensMm !== void 0 && data.fovDeg !== void 0) {
+    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["fovDeg"], message: "give lensMm or fovDeg, not both" });
+  }
+  const frames = /* @__PURE__ */ new Set();
+  for (const [i2, k] of data.keys.entries()) {
+    const hasTarget = k.target !== void 0;
+    const hasRotation = k.rotationDeg !== void 0;
+    if (hasTarget === hasRotation) {
+      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["keys", i2], message: "each key needs exactly one of target (a point the camera looks at) or rotationDeg" });
+    }
+    if (hasTarget && k.target.every((v, j) => v === k.location[j])) {
+      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["keys", i2, "target"], message: "target must differ from location" });
+    }
+    if (data.keys.length > 1 && k.frame === void 0) {
+      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["keys", i2, "frame"], message: "with more than one key, every key needs a frame" });
+    }
+    if (k.frame !== void 0) {
+      if (frames.has(k.frame)) ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["keys", i2, "frame"], message: `frame ${k.frame} is keyed twice` });
+      frames.add(k.frame);
+    }
+  }
+});
+var objectKeySchema = external_exports.object({
+  frame: frameNumber,
+  location: vec3.optional(),
+  rotationDeg: vec3.optional(),
+  scale: external_exports.union([external_exports.number().positive(), vec3]).optional()
+});
+var blenderObjectAnimateSchema = external_exports.object({
+  blendPath,
+  object: blenderName,
+  keys: external_exports.array(objectKeySchema).min(1).max(1e3),
+  interpolation: external_exports.enum(BLENDER_INTERPOLATIONS).optional().default("LINEAR"),
+  clearExisting: external_exports.boolean().optional().default(true)
+}).superRefine((data, ctx) => {
+  const frames = /* @__PURE__ */ new Set();
+  for (const [i2, k] of data.keys.entries()) {
+    if (k.location === void 0 && k.rotationDeg === void 0 && k.scale === void 0) {
+      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["keys", i2], message: "a key needs at least one of location, rotationDeg, scale" });
+    }
+    if (frames.has(k.frame)) ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["keys", i2, "frame"], message: `frame ${k.frame} is keyed twice` });
+    frames.add(k.frame);
+  }
+});
+var blenderRenderPrevizSchema = external_exports.object({
+  blendPath,
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").optional().default(DEFAULT_PREVIZ_FILENAME),
+  engine: external_exports.enum(BLENDER_PREVIZ_ENGINES).optional().default(DEFAULT_PREVIZ_ENGINE),
+  width: evenPixels(64).optional(),
+  height: evenPixels(64).optional(),
+  fps: external_exports.number().int().min(1).max(120).optional(),
+  frameStart: frameNumber.optional(),
+  frameEnd: frameNumber.optional(),
+  stills: external_exports.array(frameNumber).max(24).optional(),
+  stamp: external_exports.boolean().optional().default(true),
+  samples: external_exports.number().int().min(1).max(256).optional().default(16),
+  timeoutSeconds: external_exports.number().int().min(30).max(3600).optional()
+}).superRefine((data, ctx) => {
+  if (data.frameStart !== void 0 && data.frameEnd !== void 0) {
+    if (data.frameEnd < data.frameStart) {
+      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["frameEnd"], message: "frameEnd must not be before frameStart" });
+    } else if (data.frameEnd - data.frameStart + 1 > MAX_PREVIZ_FRAMES) {
+      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["frameEnd"], message: `a previz is at most ${MAX_PREVIZ_FRAMES} frames` });
+    }
+  }
+  if (extname5(data.filename).toLowerCase() !== ".mp4") {
+    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["filename"], message: "the previz clip is written as .mp4 (H.264)" });
+  }
+});
+var fmt = (v) => `(${v.map((x2) => Number.isInteger(x2) ? String(x2) : x2.toFixed(2)).join(", ")})`;
+function describeScene(scene) {
+  const lines = [];
+  lines.push(`Blender ${scene.blender} \xB7 ${scene.blendPath}`);
+  lines.push(`Frames ${scene.frame.start}\u2013${scene.frame.end} @ ${scene.frame.fps} fps \xB7 ${scene.resolution[0]}\xD7${scene.resolution[1]}`);
+  if (scene.camera) {
+    const c = scene.camera;
+    lines.push(
+      `Camera: ${c.name} at ${fmt(c.location)} rot ${fmt(c.rotationDeg)} \xB7 ${c.lensMm} mm \xB7 fov ${c.fovDeg}\xB0 \xB7 keys [${c.keyframes.join(", ")}]`
+    );
+  } else {
+    lines.push("Camera: none \u2014 run blender_camera_set before rendering");
+  }
+  if (scene.cameras.length > 1) lines.push(`Cameras in file: ${scene.cameras.join(", ")}`);
+  const shown = scene.objects.slice(0, 200);
+  lines.push(`Objects (${scene.objects.length}):`);
+  for (const o of shown) {
+    const keys = o.keyframes.length ? ` keys [${o.keyframes.join(", ")}]` : "";
+    const parent = o.parent ? ` \u2190 ${o.parent}` : "";
+    lines.push(`  ${o.name} (${o.type}${parent}) at ${fmt(o.location)} rot ${fmt(o.rotationDeg)} dims ${fmt(o.dimensions)}${keys}`);
+  }
+  if (scene.objects.length > shown.length) lines.push(`  \u2026 ${scene.objects.length - shown.length} more`);
+  return lines.join("\n");
+}
+function installHint4(detail) {
+  return `${detail}
+
+The Blender bridge needs Blender 4.2 or newer on this machine:
+  brew install --cask blender        (macOS)
+or point BLENDER at the executable (BLENDER=/Applications/Blender.app/Contents/MacOS/Blender).
+capability_status lists it under 3d_generation once it resolves.`;
+}
+function previzTimeoutMs(frames, engine) {
+  const perFrame = engine === "eevee" ? 4e3 : 1e3;
+  return Math.min(60 * 6e4, 12e4 + Math.max(frames, 1) * perFrame);
+}
+var EDIT_TIMEOUT_MS = 18e4;
+var fileLocks = /* @__PURE__ */ new Map();
+async function withFileLock(key, fn) {
+  const previous = fileLocks.get(key) ?? Promise.resolve();
+  let release = () => {
+  };
+  const mine = new Promise((r2) => {
+    release = r2;
+  });
+  const chained = previous.then(() => mine);
+  fileLocks.set(key, chained);
+  await previous;
+  try {
+    return await fn();
+  } finally {
+    release();
+    if (fileLocks.get(key) === chained) fileLocks.delete(key);
+  }
+}
+function runBridge(job, timeoutMs) {
+  return withFileLock(job.blendPath, () => runBridgeUnlocked(job, timeoutMs));
+}
+async function runBridgeUnlocked(job, timeoutMs) {
+  const blender = blenderBin();
+  if (!blender) return { success: false, error: installHint4("Blender was not found on this machine.") };
+  const dir = mkdtempSync3(join6(tmpdir2(), "blender-bridge-"));
+  const script = join6(dir, "bridge.py");
+  const jobPath = join6(dir, "job.json");
+  const resultPath = join6(dir, "result.json");
+  writeFileSync6(script, BRIDGE_PY, "utf-8");
+  writeFileSync6(jobPath, JSON.stringify({ ...job, resultPath }), "utf-8");
+  try {
+    const run = await new Promise((resolveRun) => {
+      execFile7(
+        blender,
+        ["--background", "--factory-startup", "--python", script, "--", jobPath],
+        { timeout: timeoutMs, maxBuffer: 32 * 1024 * 1024, env: { ...process.env, PYTHONIOENCODING: "utf-8" } },
+        (error2, stdout, stderr) => {
+          const lines = `${stdout}
+${stderr}`.split("\n").filter((l) => l.trim().length > 0);
+          const err4 = error2;
+          resolveRun({
+            code: err4 ? typeof err4.code === "number" ? err4.code : null : 0,
+            timedOut: Boolean(err4 && (err4.killed || err4.signal === "SIGTERM")),
+            tail: lines.slice(-30).join("\n")
+          });
+        }
+      );
+    });
+    if (existsSync8(resultPath)) {
+      const raw = JSON.parse(readFileSync6(resultPath, "utf-8"));
+      if (raw.ok) return { success: true, result: raw.result };
+      return { success: false, error: `${raw.error ?? "Blender reported an error"}${raw.trace ? `
+${raw.trace}` : ""}` };
+    }
+    if (run.timedOut) {
+      return { success: false, error: `Blender did not finish within ${Math.round(timeoutMs / 1e3)}s \u2014 shorten the frame range, lower the resolution, or raise timeoutSeconds.` };
+    }
+    return { success: false, error: `Blender exited with code ${run.code ?? "unknown"} before writing a result:
+${run.tail}` };
+  } finally {
+    rmSync4(dir, { recursive: true, force: true });
+  }
+}
+async function readScene(request) {
+  if (!existsSync8(request.blendPath)) {
+    return { success: false, error: `blend file not found: ${request.blendPath} \u2014 blender_scene_build creates one.` };
+  }
+  const r2 = await runBridge({ op: "read", blendPath: request.blendPath }, EDIT_TIMEOUT_MS);
+  return r2.success ? { success: true, scene: r2.result } : r2;
+}
+async function buildScene(request) {
+  for (const imp of request.imports) {
+    if (!existsSync8(imp.glbPath)) return { success: false, error: `GLB not found: ${imp.glbPath}` };
+  }
+  if (!request.reset && !existsSync8(request.blendPath)) {
+    return { success: false, error: `reset is false but ${request.blendPath} does not exist yet \u2014 set reset to true to create it.` };
+  }
+  const r2 = await runBridge({ op: "build", ...request }, EDIT_TIMEOUT_MS);
+  return r2.success ? { success: true, scene: r2.result } : r2;
+}
+async function setCamera(request) {
+  if (!existsSync8(request.blendPath)) {
+    return { success: false, error: `blend file not found: ${request.blendPath} \u2014 blender_scene_build creates one.` };
+  }
+  const r2 = await runBridge({ op: "camera", ...request }, EDIT_TIMEOUT_MS);
+  return r2.success ? { success: true, scene: r2.result } : r2;
+}
+async function animateObject(request) {
+  if (!existsSync8(request.blendPath)) {
+    return { success: false, error: `blend file not found: ${request.blendPath} \u2014 blender_scene_build creates one.` };
+  }
+  const r2 = await runBridge({ op: "animate", ...request }, EDIT_TIMEOUT_MS);
+  return r2.success ? { success: true, scene: r2.result } : r2;
+}
+async function renderPreviz(request) {
+  if (!existsSync8(request.blendPath)) {
+    return { success: false, error: `blend file not found: ${request.blendPath} \u2014 blender_scene_build creates one.` };
+  }
+  const outputDir = request.outputPath ? resolve2(request.outputPath) : join6(dirname2(request.blendPath), "previz");
+  const videoPath = resolveOutputFile(outputDir, request.filename, "video");
+  const framesForTimeout = request.frameStart !== void 0 && request.frameEnd !== void 0 ? request.frameEnd - request.frameStart + 1 : MAX_PREVIZ_FRAMES;
+  const timeoutMs = request.timeoutSeconds ? request.timeoutSeconds * 1e3 : previzTimeoutMs(framesForTimeout, request.engine);
+  const { timeoutSeconds: _t, outputPath: _o, filename: _f, ...rest } = request;
+  const r2 = await runBridge(
+    { op: "render", ...rest, videoPath, maxFrames: MAX_PREVIZ_FRAMES },
+    timeoutMs
+  );
+  if (!r2.success) return r2;
+  return { success: true, ...r2.result, engine: request.engine };
+}
+var BRIDGE_PY = String.raw`
+# social-flow Blender bridge (inner side) — one job per process, see blender-bridge.ts.
+import json, math, os, sys, time, traceback
+import bpy
+from mathutils import Euler, Vector
+
+PROXY_GRAY = (0.55, 0.55, 0.58, 1.0)
+FLOOR_GRAY = (0.32, 0.32, 0.33, 1.0)
+WORLD_GRAY = (0.82, 0.82, 0.84)
+MARKER = "social_flow_previz"          # scene custom property: this .blend was made by blender_scene_build
+MIN_VERSION = (4, 2)
+# 4.2–4.5 call the engine BLENDER_EEVEE_NEXT; 5.0 renamed it back
+EEVEE = "BLENDER_EEVEE" if bpy.app.version >= (5, 0) else "BLENDER_EEVEE_NEXT"
+DEFAULTS = {"fps": 30, "frameStart": 1, "frameEnd": 150, "width": 1080, "height": 1920}
+
+
+def job_path():
+    argv = sys.argv
+    if "--" not in argv:
+        raise RuntimeError("job path missing after --")
+    return argv[argv.index("--") + 1]
+
+
+def r3(v, n=4):
+    return [round(float(x), n) for x in v]
+
+
+def deg3(e):
+    return [round(math.degrees(x), 3) for x in e]
+
+
+def rad3(v):
+    return [math.radians(float(x)) for x in v]
+
+
+def open_blend(path):
+    if not os.path.isfile(path):
+        raise RuntimeError("blend file not found: %s (blender_scene_build creates one)" % path)
+    bpy.ops.wm.open_mainfile(filepath=path, load_ui=False)
+
+
+def save_blend(path):
+    os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+    bpy.ops.wm.save_as_mainfile(filepath=path, compress=True)
+
+
+# ── animation helpers (slotted actions in 4.4+, legacy fcurves before) ─────
+
+def fcurves_of(idblock):
+    ad = idblock.animation_data
+    if not ad or not ad.action:
+        return []
+    act = ad.action
+    # 4.4+: an action holds one slot per animated ID (a camera object and its camera data
+    # share one action), so read only this ID's channelbag or the object's keys leak into
+    # the data's report. Older Blender has one flat fcurve list.
+    try:
+        slot = ad.action_slot
+        out = []
+        if slot is not None:
+            for layer in act.layers:
+                for strip in layer.strips:
+                    bag = strip.channelbag(slot)
+                    if bag is not None:
+                        out.extend(bag.fcurves)
+        return out
+    except (AttributeError, TypeError):
+        pass
+    try:
+        return list(act.fcurves)
+    except AttributeError:
+        return []
+
+
+def key_frames(idblock):
+    frames = set()
+    for fc in fcurves_of(idblock):
+        for kp in fc.keyframe_points:
+            frames.add(int(round(kp.co[0])))
+    return sorted(frames)
+
+
+def set_interpolation(idblock, mode):
+    for fc in fcurves_of(idblock):
+        for kp in fc.keyframe_points:
+            kp.interpolation = mode
+
+
+def extend_frame_range(sc, frames):
+    if not frames:
+        return
+    sc.frame_start = min(sc.frame_start, min(frames))
+    sc.frame_end = max(sc.frame_end, max(frames))
+
+
+# ── scene summary ──────────────────────────────────────────────────────────
+
+def summary(path):
+    sc = bpy.context.scene
+    objs = []
+    for o in bpy.data.objects:
+        objs.append({
+            "name": o.name,
+            "type": o.type,
+            "location": r3(o.matrix_world.translation),
+            "rotationDeg": deg3(o.matrix_world.to_euler("XYZ")),
+            "scale": r3(o.scale),
+            "dimensions": r3(o.dimensions),
+            "parent": o.parent.name if o.parent else None,
+            "keyframes": key_frames(o),
+        })
+    cam = sc.camera
+    cam_info = None
+    if cam is not None:
+        d = cam.data
+        cam_info = {
+            "name": cam.name,
+            "location": r3(cam.matrix_world.translation),
+            "rotationDeg": deg3(cam.matrix_world.to_euler("XYZ")),
+            "lensMm": round(d.lens, 3),
+            "fovDeg": round(math.degrees(d.angle), 3),
+            "sensorFit": d.sensor_fit,
+            "clip": [round(d.clip_start, 4), round(d.clip_end, 2)],
+            "keyframes": sorted(set(key_frames(cam)) | set(key_frames(d))),
+        }
+    return {
+        "blender": bpy.app.version_string,
+        "blendPath": path,
+        "frame": {"start": sc.frame_start, "end": sc.frame_end, "fps": sc.render.fps},
+        "resolution": [sc.render.resolution_x, sc.render.resolution_y],
+        "camera": cam_info,
+        "cameras": [o.name for o in bpy.data.objects if o.type == "CAMERA"],
+        "objects": objs,
+    }
+
+
+# ── materials and primitives ───────────────────────────────────────────────
+
+def srgb_to_linear(c):
+    return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+
+
+def hex_rgba(h, default):
+    if not h:
+        return default
+    h = h.lstrip("#")
+    if len(h) == 3:
+        h = "".join(c * 2 for c in h)
+    r, g, b = (int(h[i:i + 2], 16) / 255.0 for i in (0, 2, 4))
+    return (srgb_to_linear(r), srgb_to_linear(g), srgb_to_linear(b), 1.0)
+
+
+def material(name, rgba):
+    m = bpy.data.materials.get(name)
+    if m is None:
+        m = bpy.data.materials.new(name)
+        m.use_nodes = True
+    m.diffuse_color = rgba
+    bsdf = m.node_tree.nodes.get("Principled BSDF") if m.node_tree else None
+    if bsdf is not None:
+        bsdf.inputs["Base Color"].default_value = rgba
+        bsdf.inputs["Roughness"].default_value = 0.6
+    return m
+
+
+def finish(o, name, mat, parent):
+    o.name = name
+    if o.data is not None:
+        o.data.name = name
+        if hasattr(o.data, "materials"):
+            o.data.materials.append(mat)
+    o.parent = parent
+    return o
+
+
+def cyl(name, radius, depth, location, mat, parent, rotation=(0.0, 0.0, 0.0)):
+    bpy.ops.mesh.primitive_cylinder_add(radius=radius, depth=depth, location=location, rotation=rotation, vertices=24)
+    return finish(bpy.context.object, name, mat, parent)
+
+
+def ball(name, radius, location, mat, parent):
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=radius, location=location, segments=24, ring_count=12)
+    o = finish(bpy.context.object, name, mat, parent)
+    try:
+        bpy.ops.object.shade_smooth()
+    except Exception:
+        pass
+    return o
+
+
+def box(name, size, location, mat, parent):
+    bpy.ops.mesh.primitive_cube_add(size=1.0, location=location)
+    o = finish(bpy.context.object, name, mat, parent)
+    o.scale = (size[0], size[1], size[2])
+    return o
+
+
+def empty(name, display_size=0.25):
+    root = bpy.data.objects.new(name, None)
+    root.empty_display_type = "PLAIN_AXES"
+    root.empty_display_size = display_size
+    bpy.context.scene.collection.objects.link(root)
+    return root
+
+
+# Every proxy faces -Y (Blender's front view looks along +Y), so a nose block marks the front.
+def person_parts(p, h, mat, root):
+    for side, x in (("L", -0.10), ("R", 0.10)):
+        cyl(p + ".leg." + side, 0.045 * h, 0.50 * h, (x * h, 0, 0.25 * h), mat, root)
+    cyl(p + ".torso", 0.10 * h, 0.34 * h, (0, 0, 0.67 * h), mat, root)
+    for side, x in (("L", -0.15), ("R", 0.15)):
+        cyl(p + ".arm." + side, 0.03 * h, 0.34 * h, (x * h, 0, 0.66 * h), mat, root)
+    ball(p + ".head", 0.07 * h, (0, 0, 0.93 * h), mat, root)
+    box(p + ".nose", (0.03 * h, 0.03 * h, 0.03 * h), (0, -0.07 * h, 0.93 * h), mat, root)
+
+
+def dog_parts(p, h, mat, root):
+    box(p + ".body", (0.45 * h, 1.0 * h, 0.45 * h), (0, 0, 0.60 * h), mat, root)
+    for side, x in (("L", -0.15), ("R", 0.15)):
+        for end, y in (("front", -0.32), ("back", 0.32)):
+            cyl(p + ".leg." + end + side, 0.06 * h, 0.40 * h, (x * h, y * h, 0.20 * h), mat, root)
+    ball(p + ".head", 0.20 * h, (0, -0.62 * h, 0.72 * h), mat, root)
+    box(p + ".nose", (0.10 * h, 0.12 * h, 0.08 * h), (0, -0.82 * h, 0.70 * h), mat, root)
+
+
+def car_parts(p, mat, root):
+    dark = material("proxy-tyre", (0.08, 0.08, 0.08, 1.0))
+    box(p + ".body", (1.8, 4.4, 0.6), (0, 0, 0.55), mat, root)
+    box(p + ".cabin", (1.6, 2.2, 0.5), (0, 0.2, 1.10), mat, root)
+    for side, x in (("L", -0.85), ("R", 0.85)):
+        for end, y in (("front", -1.4), ("back", 1.4)):
+            cyl(p + ".wheel." + end + side, 0.33, 0.22, (x, y, 0.33), dark, root, rotation=(0.0, math.pi / 2, 0.0))
+
+
+def make_proxy(spec):
+    name = spec["name"]
+    if bpy.data.objects.get(name) is not None:
+        raise RuntimeError("an object named %s already exists in this scene" % name)
+    kind = spec["kind"]
+    mat = material("proxy-" + name, hex_rgba(spec.get("color"), PROXY_GRAY))
+    root = empty(name)
+    if kind == "person":
+        person_parts(name, float(spec.get("height") or 1.75), mat, root)
+    elif kind == "dog":
+        dog_parts(name, float(spec.get("height") or 0.55), mat, root)
+    elif kind == "car":
+        car_parts(name, mat, root)
+        size = spec.get("size")
+        if size:
+            root.scale = (size[0] / 1.8, size[1] / 4.4, size[2] / 1.45)
+    elif kind == "box":
+        size = spec["size"]
+        box(name + ".mesh", size, (0, 0, size[2] / 2.0), mat, root)
+    elif kind == "cylinder":
+        radius = float(spec.get("radius") or 0.5)
+        height = float(spec.get("height") or 1.0)
+        cyl(name + ".mesh", radius, height, (0, 0, height / 2.0), mat, root)
+    elif kind == "sphere":
+        radius = float(spec.get("radius") or 0.5)
+        ball(name + ".mesh", radius, (0, 0, radius), mat, root)
+    else:
+        raise RuntimeError("unknown proxy kind %s" % kind)
+    root.location = Vector([float(x) for x in spec.get("location", (0, 0, 0))])
+    root.rotation_euler = Euler((0.0, 0.0, math.radians(float(spec.get("rotationZDeg", 0)))), "XYZ")
+    return root
+
+
+def import_glb(imp):
+    name = imp["name"]
+    if bpy.data.objects.get(name) is not None:
+        raise RuntimeError("an object named %s already exists in this scene" % name)
+    before = set(o.name for o in bpy.data.objects)
+    bpy.ops.import_scene.gltf(filepath=imp["glbPath"])
+    new = [o for o in bpy.data.objects if o.name not in before]
+    if not new:
+        raise RuntimeError("nothing was imported from %s" % imp["glbPath"])
+    root = empty(name, 0.5)
+    for o in new:
+        if o.parent is None or o.parent.name in before:
+            o.parent = root
+    root.location = Vector([float(x) for x in imp["location"]])
+    root.rotation_euler = Euler(rad3(imp["rotationDeg"]), "XYZ")
+    s = float(imp["scale"])
+    root.scale = (s, s, s)
+    return {"name": name, "objects": len(new)}
+
+
+def ensure_world(sc):
+    if sc.world is None:
+        sc.world = bpy.data.worlds.get("World") or bpy.data.worlds.new("World")
+    sc.world.color = WORLD_GRAY
+    if sc.world.use_nodes and sc.world.node_tree:
+        bg = sc.world.node_tree.nodes.get("Background")
+        if bg is not None:
+            bg.inputs[0].default_value = (WORLD_GRAY[0], WORLD_GRAY[1], WORLD_GRAY[2], 1.0)
+            bg.inputs[1].default_value = 1.0
+
+
+# ── operations ─────────────────────────────────────────────────────────────
+
+def op_build(job):
+    path = job["blendPath"]
+    exists = os.path.isfile(path)
+    fresh = job["reset"] or not exists
+    if job["reset"] and exists and not job.get("force"):
+        # refuse to wipe a .blend this lane did not make — a hand-authored file is not previz scratch
+        open_blend(path)
+        if not bpy.context.scene.get(MARKER):
+            raise RuntimeError("%s was not made by blender_scene_build — refusing to overwrite it; pass force:true to replace it, or reset:false to add to it" % path)
+    if fresh:
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+    else:
+        open_blend(path)
+    sc = bpy.context.scene
+    sc[MARKER] = 1
+    sc.unit_settings.system = "METRIC"
+    sc.unit_settings.length_unit = "METERS"
+    sc.unit_settings.scale_length = 1.0
+
+    def given(key):
+        return job.get(key) is not None
+
+    def value(key):
+        return job[key] if given(key) else DEFAULTS[key]
+
+    # a fresh scene takes the defaults; an extended one keeps its values unless the caller names new ones
+    if fresh or given("fps"):
+        sc.render.fps = int(value("fps"))
+        sc.render.fps_base = 1.0
+    if fresh or given("frameStart"):
+        sc.frame_start = int(value("frameStart"))
+    if fresh or given("frameEnd"):
+        sc.frame_end = int(value("frameEnd"))
+    if sc.frame_end < sc.frame_start:
+        raise RuntimeError("frameEnd %d is before frameStart %d" % (sc.frame_end, sc.frame_start))
+    sc.frame_current = sc.frame_start
+    if fresh or given("width"):
+        sc.render.resolution_x = int(value("width"))
+    if fresh or given("height"):
+        sc.render.resolution_y = int(value("height"))
+    sc.render.resolution_percentage = 100
+    ensure_world(sc)
+    if job["floor"] and bpy.data.objects.get("Floor") is None:
+        bpy.ops.mesh.primitive_plane_add(size=float(job["floorSize"]), location=(0, 0, 0))
+        finish(bpy.context.object, "Floor", material("floor", FLOOR_GRAY), None)
+    if not any(o.type == "LIGHT" for o in bpy.data.objects):
+        sun = bpy.data.objects.new("Sun", bpy.data.lights.new("Sun", "SUN"))
+        sun.data.energy = 3.0
+        sun.data.angle = math.radians(5)
+        sun.rotation_euler = Euler((math.radians(50), math.radians(10), math.radians(35)), "XYZ")
+        sc.collection.objects.link(sun)
+    built = []
+    for imp in job["imports"]:
+        built.append(import_glb(imp))
+    for spec in job["proxies"]:
+        make_proxy(spec)
+        built.append({"name": spec["name"], "kind": spec["kind"]})
+    save_blend(path)
+    res = summary(path)
+    res["built"] = built
+    return res
+
+
+def look_at_quat(location, target):
+    d = Vector(target) - Vector(location)
+    if d.length < 1e-9:
+        d = Vector((0.0, 1.0, 0.0))
+    return d.to_track_quat("-Z", "Y")
+
+
+def op_camera(job):
+    sc = bpy.context.scene
+    name = job["name"]
+    cam = bpy.data.objects.get(name)
+    if cam is not None and cam.type != "CAMERA":
+        raise RuntimeError("%s exists but is a %s, not a camera" % (name, cam.type))
+    if cam is None:
+        cam = bpy.data.objects.new(name, bpy.data.cameras.new(name))
+        sc.collection.objects.link(cam)
+    sc.camera = cam
+    d = cam.data
+    d.sensor_fit = "AUTO"
+    d.clip_start = 0.05
+    d.clip_end = 2000.0
+    if job.get("lensMm") is not None:
+        d.lens = float(job["lensMm"])
+    elif job.get("fovDeg") is not None:
+        d.angle = math.radians(float(job["fovDeg"]))
+    prev_q = None
+    if job["clearExisting"]:
+        cam.animation_data_clear()
+        d.animation_data_clear()
+    else:
+        # continue the hemisphere from the last existing key, or the first new key may take the long way round
+        existing = key_frames(cam)
+        if existing:
+            sc.frame_set(max(existing))
+            # the stored key, sign and all — a matrix-derived quaternion is sign-normalised and
+            # could sit on the opposite hemisphere from a key this lane negated for continuity
+            prev_q = cam.rotation_quaternion.copy() if cam.rotation_mode == "QUATERNION" else cam.matrix_basis.to_quaternion()
+    cam.rotation_mode = "QUATERNION"
+    keys = job["keys"]
+    static = len(keys) == 1 and keys[0].get("frame") is None
+    # a zoom needs the lens keyed at every pose, or the one lens key holds for the whole move
+    zoom = any(k.get("lensMm") is not None for k in keys)
+    frames = []
+    for k in keys:
+        loc = Vector([float(x) for x in k["location"]])
+        if k.get("target") is not None:
+            q = look_at_quat(loc, [float(x) for x in k["target"]])
+        else:
+            q = Euler(rad3(k["rotationDeg"]), "XYZ").to_quaternion()
+        # keep the quaternion on the same hemisphere as the previous key, or the
+        # interpolation takes the long way round between two nearly equal poses
+        if prev_q is not None and prev_q.dot(q) < 0:
+            q.negate()
+        prev_q = q.copy()
+        cam.location = loc
+        cam.rotation_quaternion = q
+        if k.get("lensMm") is not None:
+            d.lens = float(k["lensMm"])
+        if not static:
+            f = int(k["frame"])
+            frames.append(f)
+            cam.keyframe_insert(data_path="location", frame=f)
+            cam.keyframe_insert(data_path="rotation_quaternion", frame=f)
+            if zoom:
+                d.keyframe_insert(data_path="lens", frame=f)
+    if not static:
+        set_interpolation(cam, job["interpolation"])
+        set_interpolation(d, job["interpolation"])
+        extend_frame_range(sc, frames)
+    sc.frame_current = sc.frame_start
+    return {"camera": cam.name, "keyframes": sorted(frames)}
+
+
+def op_animate(job):
+    sc = bpy.context.scene
+    o = bpy.data.objects.get(job["object"])
+    if o is None:
+        names = ", ".join(sorted(x.name for x in bpy.data.objects if x.parent is None))
+        raise RuntimeError("no object named %s — top-level objects: %s" % (job["object"], names))
+    if job["clearExisting"]:
+        o.animation_data_clear()
+    o.rotation_mode = "XYZ"
+    frames = []
+    for k in job["keys"]:
+        f = int(k["frame"])
+        frames.append(f)
+        if k.get("location") is not None:
+            o.location = Vector([float(x) for x in k["location"]])
+            o.keyframe_insert(data_path="location", frame=f)
+        if k.get("rotationDeg") is not None:
+            o.rotation_euler = Euler(rad3(k["rotationDeg"]), "XYZ")
+            o.keyframe_insert(data_path="rotation_euler", frame=f)
+        if k.get("scale") is not None:
+            s = k["scale"]
+            o.scale = (float(s), float(s), float(s)) if not isinstance(s, list) else tuple(float(x) for x in s)
+            o.keyframe_insert(data_path="scale", frame=f)
+    set_interpolation(o, job["interpolation"])
+    extend_frame_range(sc, frames)
+    sc.frame_current = sc.frame_start
+    return {"object": o.name, "keyframes": sorted(frames)}
+
+
+def configure_stamp(sc, on, height):
+    r = sc.render
+    r.use_stamp = bool(on)
+    if not on:
+        return
+    for attr in ("use_stamp_date", "use_stamp_time", "use_stamp_render_time", "use_stamp_filename",
+                 "use_stamp_scene", "use_stamp_memory", "use_stamp_hostname", "use_stamp_marker",
+                 "use_stamp_sequencer_strip", "use_stamp_note", "use_stamp_frame_range"):
+        if hasattr(r, attr):
+            setattr(r, attr, False)
+    r.use_stamp_frame = True
+    r.use_stamp_camera = True
+    r.use_stamp_lens = True
+    r.use_stamp_labels = True
+    r.stamp_font_size = max(12, int(height) // 45)
+    r.stamp_foreground = (1.0, 1.0, 1.0, 1.0)
+    r.stamp_background = (0.0, 0.0, 0.0, 0.5)
+
+
+def op_render(job):
+    sc = bpy.context.scene
+    if sc.camera is None:
+        raise RuntimeError("the scene has no active camera — run blender_camera_set first")
+    engine = job["engine"]
+    if job.get("width") is not None:
+        sc.render.resolution_x = int(job["width"])
+    if job.get("height") is not None:
+        sc.render.resolution_y = int(job["height"])
+    sc.render.resolution_percentage = 100
+    if job.get("fps") is not None:
+        sc.render.fps = int(job["fps"])
+        sc.render.fps_base = 1.0
+    start = int(job["frameStart"]) if job.get("frameStart") is not None else sc.frame_start
+    end = int(job["frameEnd"]) if job.get("frameEnd") is not None else sc.frame_end
+    if end < start:
+        raise RuntimeError("frameEnd %d is before frameStart %d" % (end, start))
+    n = end - start + 1
+    if n > int(job["maxFrames"]):
+        raise RuntimeError("%d frames asked for; a previz is at most %d — split the cut or pass frameStart/frameEnd" % (n, int(job["maxFrames"])))
+    sc.frame_start = start
+    sc.frame_end = end
+    ensure_world(sc)
+    sc.render.film_transparent = False
+    if engine == "eevee":
+        sc.render.engine = EEVEE
+        sc.eevee.taa_render_samples = int(job["samples"])
+    else:
+        sc.render.engine = "BLENDER_WORKBENCH"
+        sh = sc.display.shading
+        sh.light = "STUDIO"
+        sh.color_type = "MATERIAL"
+        sh.show_cavity = True
+        sh.show_object_outline = True
+        sh.show_shadows = True
+        sh.shadow_intensity = 0.4
+        sh.show_specular_highlight = True
+        try:
+            sh.background_type = "WORLD"
+        except Exception:
+            pass
+        sc.display.render_aa = "8"
+    configure_stamp(sc, job["stamp"], sc.render.resolution_y)
+
+    video_path = job["videoPath"]
+    out_dir = os.path.dirname(video_path)
+    os.makedirs(out_dir, exist_ok=True)
+    stem = os.path.splitext(os.path.basename(video_path))[0]
+    # sweep before starting: a killed render leaves its private-prefix file, and a failed one
+    # must not leave last time's mp4 and stills where they read as this time's result. Only
+    # this stem's files — another .blend rendering into the same folder keeps its own.
+    private = ".previz-%s-" % stem
+    for stale in os.listdir(out_dir):
+        if stale.startswith(private) or stale == os.path.basename(video_path) or (stale.startswith(stem + "-f") and stale.endswith(".png")):
+            os.remove(os.path.join(out_dir, stale))
+    ims = sc.render.image_settings
+    if hasattr(ims, "media_type"):      # 5.0+; 4.x picks video from file_format alone
+        ims.media_type = "VIDEO"
+    ims.file_format = "FFMPEG"
+    ims.color_mode = "RGB"
+    ff = sc.render.ffmpeg
+    ff.format = "MPEG4"
+    ff.codec = "H264"
+    ff.constant_rate_factor = "MEDIUM"
+    ff.ffmpeg_preset = "GOOD"
+    ff.gopsize = max(1, min(int(sc.render.fps), 30))
+    ff.audio_codec = "NONE"
+    # Blender appends the frame range to a video file name, so render to a private prefix
+    # and move the one file it writes to the name the caller asked for.
+    prefix = os.path.join(out_dir, private + "%d-" % os.getpid())
+    sc.render.filepath = prefix
+    t0 = time.time()
+    bpy.ops.render.render(animation=True)
+    written = sorted(f for f in os.listdir(out_dir) if f.startswith(os.path.basename(prefix)))
+    if not written:
+        raise RuntimeError("Blender rendered but wrote no video under %s" % out_dir)
+    os.replace(os.path.join(out_dir, written[-1]), video_path)
+    for extra in written[:-1]:
+        os.remove(os.path.join(out_dir, extra))
+
+    stills = job.get("stills")
+    if stills is None:
+        mid = start + (end - start) // 2
+        stills = sorted(set([start, mid, end]))
+    still_paths = []
+    skipped = []
+    if hasattr(ims, "media_type"):
+        ims.media_type = "IMAGE"
+    ims.file_format = "PNG"
+    ims.color_mode = "RGB"
+    for f in stills:
+        f = int(f)
+        if f < start or f > end:
+            skipped.append(f)
+            continue
+        sc.frame_set(f)
+        p = os.path.join(out_dir, "%s-f%04d.png" % (stem, f))
+        sc.render.filepath = p
+        bpy.ops.render.render(write_still=True)
+        still_paths.append(p)
+    elapsed = time.time() - t0
+    return {
+        "videoPath": video_path,
+        "stillPaths": still_paths,
+        "skippedStills": skipped,
+        "width": sc.render.resolution_x,
+        "height": sc.render.resolution_y,
+        "fps": sc.render.fps,
+        "frameStart": start,
+        "frameEnd": end,
+        "frames": n,
+        "seconds": round(n / float(sc.render.fps), 3),
+        "elapsedSeconds": round(elapsed, 2),
+    }
+
+
+def main():
+    job = json.load(open(job_path(), encoding="utf-8"))
+    out = {"ok": False, "error": "no operation ran"}
+    try:
+        if bpy.app.version < MIN_VERSION:
+            raise RuntimeError("Blender %s is older than %d.%d — the bridge needs 4.2 or newer (brew upgrade --cask blender)"
+                               % (bpy.app.version_string, MIN_VERSION[0], MIN_VERSION[1]))
+        op = job["op"]
+        path = job["blendPath"]
+        if op == "read":
+            open_blend(path)
+            res = summary(path)
+        elif op == "build":
+            res = op_build(job)
+        elif op == "camera":
+            open_blend(path)
+            info = op_camera(job)
+            save_blend(path)
+            res = summary(path)
+            res["applied"] = info
+        elif op == "animate":
+            open_blend(path)
+            info = op_animate(job)
+            save_blend(path)
+            res = summary(path)
+            res["applied"] = info
+        elif op == "render":
+            open_blend(path)
+            res = op_render(job)
+        else:
+            raise RuntimeError("unknown op %s" % op)
+        out = {"ok": True, "result": res}
+    except Exception as e:
+        out = {"ok": False, "error": str(e), "trace": traceback.format_exc()[-2500:]}
+    with open(job["resultPath"], "w", encoding="utf-8") as fh:
+        json.dump(out, fh)
+
+
+main()
+`;
 
 // src/suno-client.ts
 import { spawnSync } from "node:child_process";
@@ -79227,7 +80170,7 @@ var sunoLyricsSchema = external_exports.object({
   prompt: external_exports.string().min(1).max(200)
 });
 function sleep4(ms) {
-  return new Promise((resolve3) => setTimeout(resolve3, ms));
+  return new Promise((resolve4) => setTimeout(resolve4, ms));
 }
 function describeSunoError(code, msg, httpStatus) {
   const text2 = (msg || "").trim() || "(no message)";
@@ -81283,6 +82226,323 @@ Returns: a text block with the saved .glb path and model.`,
       required: ["imagePath"]
     }
   },
+  // ── Blender bridge — previz camera and blocking on the local Blender (blender-previz.md) ──
+  {
+    name: "blender_scene_read",
+    title: "Read a Blender scene (bridge)",
+    annotations: HINT.local,
+    description: `Read a .blend file **on this machine** and report what is in it \u2014 every object with world position, rotation, size, parent and keyframes, the active camera with lens, field of view and keyframes, the frame range and fps. Opens Blender headless for about a second; changes nothing.
+
+Use as the first call of any previz session ("connect and read the scene, do not modify it yet"), and after any edit you did not make yourself, before blender_camera_set or blender_object_animate name an object. The other four blender_* tools return the same summary after they save, so a read right after one of them is redundant.
+Do NOT use to inspect a GLB or an image \u2014 it reads .blend files only. Do NOT guess object names from memory when this can list them.
+Requires Blender 4.2+ (brew install --cask blender, or BLENDER=<executable>); capability_status lists it under 3d_generation.
+
+Returns: a text block with the Blender version, frame range, resolution, the active camera and one line per object.`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        blendPath: { type: "string", description: 'Absolute path to the .blend file (must end in .blend, no "..").' }
+      },
+      required: ["blendPath"]
+    }
+  },
+  {
+    name: "blender_scene_build",
+    title: "Build a Blender previz set (bridge)",
+    // Overwrites only the previz .blend it owns (reset:true) — a local scratch file, so it is a
+    // generate-class tool, not a HITL one like the publishers.
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    description: `Create (or extend) a .blend previz set **on this machine**: metric units, the cut's frame range and fps, the format's resolution, a floor, a sun, grey proxy figures for people and animals, primitive stand-ins for objects, and GLB imports placed by location, rotation and scale. Saves the file and returns the scene summary.
+
+Use once per cut before framing \u2014 the previz lane of skills/storyboard/references/blender-previz.md \u2014 with one proxy per subject that must be in frame: person and dog take a height, box a size, cylinder and sphere a radius, car an optional size. Proxies face -Y; rotationZDeg turns them. A GLB from mesh-objects.md or mlx_3d_generate goes through imports. reset:true (default) starts from an empty scene and **overwrites the file**; reset:false opens the existing file and adds to it, keeping the camera and its keys.
+Do NOT model appearance here \u2014 proxies are grey blocking, and face, clothing and props belong to the image sheets. Do NOT animate people here; a stiff proxy is what a video model would copy. Do NOT use the .blend as a rendered asset \u2014 it is a camera and blocking plan.
+Requires Blender 4.2+; the glTF importer is built in.
+
+Returns: the same summary as blender_scene_read plus the list of what was built.`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        blendPath: { type: "string", description: 'Absolute path of the .blend to create or extend (ends in .blend, no "..").' },
+        reset: {
+          type: "boolean",
+          default: true,
+          description: "true (default) starts from an empty scene and replaces blendPath \u2014 only a file this tool made; a .blend from anywhere else is refused unless force is true. false opens the existing file and adds proxies/imports to it, keeping the camera, keys, fps, frame range and resolution."
+        },
+        force: {
+          type: "boolean",
+          default: false,
+          description: "With reset:true, also replace a .blend that blender_scene_build did not make (default false \u2014 a hand-authored file is never wiped by accident)."
+        },
+        fps: {
+          type: "number",
+          description: `Frames per second of the cut (1\u2013120). A fresh scene defaults to ${DEFAULT_SCENE_FPS}; with reset:false an omitted value keeps the file's.`
+        },
+        frameStart: { type: "number", description: `First frame. A fresh scene defaults to ${DEFAULT_FRAME_START}; with reset:false an omitted value keeps the file's.` },
+        frameEnd: {
+          type: "number",
+          description: `Last frame. A fresh scene defaults to ${DEFAULT_FRAME_END} (5 s at 30 fps); with reset:false an omitted value keeps the file's. Camera and object keys past it extend the range.`
+        },
+        width: { type: "number", description: `Render width in px (even). A fresh scene defaults to ${DEFAULT_PREVIZ_WIDTH}; with reset:false an omitted value keeps the file's.` },
+        height: {
+          type: "number",
+          description: `Render height in px (even). A fresh scene defaults to ${DEFAULT_PREVIZ_HEIGHT} (9:16; pass 1920\xD71080 for long-form); with reset:false an omitted value keeps the file's.`
+        },
+        floor: { type: "boolean", default: true, description: "Add a grey ground plane at z = 0 (default true)." },
+        floorSize: { type: "number", default: 40, description: "Side of the floor plane in metres (default 40)." },
+        proxies: {
+          type: "array",
+          maxItems: 100,
+          description: "Grey stand-ins, one per subject that must be in frame.",
+          items: {
+            type: "object",
+            required: ["name", "kind"],
+            properties: {
+              name: { type: "string", description: "Unique object name (\u226463 chars) \u2014 the name blender_object_animate and the read-back use." },
+              kind: {
+                type: "string",
+                enum: [...BLENDER_PROXY_KINDS],
+                description: "person (blocking figure with head, torso, limbs and a nose block marking the front), dog, car, box, cylinder, sphere. Every kind faces -Y."
+              },
+              location: {
+                type: "array",
+                items: { type: "number" },
+                minItems: 3,
+                maxItems: 3,
+                description: "[x, y, z] in metres of the proxy's base point (feet, wheels, bottom face) \u2014 default [0, 0, 0]."
+              },
+              rotationZDeg: { type: "number", description: "Turn about Z in degrees (default 0 = facing -Y)." },
+              height: {
+                type: "number",
+                description: "person / dog / cylinder: total height in metres (person default 1.75, dog 0.55, cylinder 1)."
+              },
+              radius: { type: "number", description: "cylinder / sphere: radius in metres (default 0.5)." },
+              size: {
+                type: "array",
+                items: { type: "number" },
+                minItems: 3,
+                maxItems: 3,
+                description: "box: [x, y, z] size in metres (required); car: optional size scaling the 1.8 \xD7 4.4 \xD7 1.45 m default."
+              },
+              color: { type: "string", description: "Optional hex colour (#d0342c) to tell proxies apart \u2014 default grey." }
+            }
+          }
+        },
+        imports: {
+          type: "array",
+          maxItems: 50,
+          description: "GLB/glTF files to place \u2014 a mesh-objects.md recipe export or an mlx_3d_generate result.",
+          items: {
+            type: "object",
+            required: ["glbPath", "name"],
+            properties: {
+              glbPath: { type: "string", description: 'Absolute path to the .glb/.gltf (no "..").' },
+              name: { type: "string", description: "Unique name of the empty that parents the imported objects \u2014 move or animate this name." },
+              location: {
+                type: "array",
+                items: { type: "number" },
+                minItems: 3,
+                maxItems: 3,
+                description: "[x, y, z] in metres (default [0, 0, 0])."
+              },
+              rotationDeg: {
+                type: "array",
+                items: { type: "number" },
+                minItems: 3,
+                maxItems: 3,
+                description: "Euler XYZ in degrees (default [0, 0, 0])."
+              },
+              scale: { type: "number", description: "Uniform scale (default 1)." }
+            }
+          }
+        }
+      },
+      required: ["blendPath"]
+    }
+  },
+  {
+    name: "blender_camera_set",
+    title: "Set or animate the previz camera (bridge)",
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    description: `Place the camera of a .blend previz **on this machine** as numbers \u2014 a location in metres, a target point it looks at (or an explicit rotation), a lens in mm or a field of view \u2014 and key it over frames for a move. Creates the camera if it is missing, makes it the active camera, saves, and returns the scene summary with the camera's keyframes.
+
+Use for every framing decision in a previz: one key with no frame is a locked-off shot; two or more keys with frames are a dolly, arc, crane or push, interpolated LINEAR by default (constant speed reads as intent; BEZIER eases; CONSTANT cuts). Iterate in numbers \u2014 "height 1.2 m", "start at (-3, -3, 1), end at (3, -3, 1)", "24 mm" \u2014 each round is one call and costs nothing. Keys past the scene's frame range extend it. clearExisting (default true) replaces the previous move; false layers new keys onto it.
+Do NOT describe a camera in adverbs and hope \u2014 pass coordinates. Do NOT pass both lensMm and fovDeg, or both target and rotationDeg on one key. Do NOT use this for objects \u2014 that is blender_object_animate. A lensMm on any key turns the move into a zoom: every key then records its lens.
+Coordinates are Blender's: metres, Z up, +Y away from the front view; proxies face -Y, so a camera at negative Y sees their front. Calls on the same .blend run one at a time inside the server (parallel calls on one file are queued, not lost); different files run side by side.
+
+Returns: the scene summary \u2014 the camera line shows location, rotation, lens, fov and keyframes.`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        blendPath: { type: "string", description: 'Absolute path to the .blend file (must end in .blend, no "..").' },
+        name: { type: "string", default: "Camera", description: 'Camera object name (default "Camera"); created if missing, made the active camera.' },
+        lensMm: {
+          type: "number",
+          description: "Focal length in mm on a 36 mm sensor \u2014 24 wide, 35 normal, 50\u201385 tight. Alternative to fovDeg."
+        },
+        fovDeg: { type: "number", description: "Field of view in degrees across the frame's longer side. Alternative to lensMm." },
+        keys: {
+          type: "array",
+          minItems: 1,
+          maxItems: 500,
+          description: "Camera poses. One key without a frame is a locked-off shot; several keys (each with a frame) are a move.",
+          items: {
+            type: "object",
+            required: ["location"],
+            properties: {
+              frame: { type: "number", description: "Frame number of this pose. Omit only when this is the single key of a static shot." },
+              location: {
+                type: "array",
+                items: { type: "number" },
+                minItems: 3,
+                maxItems: 3,
+                description: "Camera position [x, y, z] in metres."
+              },
+              target: {
+                type: "array",
+                items: { type: "number" },
+                minItems: 3,
+                maxItems: 3,
+                description: "Point the camera looks at [x, y, z] in metres \u2014 the usual way to aim it. Exactly one of target or rotationDeg."
+              },
+              rotationDeg: {
+                type: "array",
+                items: { type: "number" },
+                minItems: 3,
+                maxItems: 3,
+                description: "Explicit Blender Euler XYZ rotation in degrees ([90, 0, 0] looks along +Y). Exactly one of target or rotationDeg."
+              },
+              lensMm: { type: "number", description: "Focal length at this key, for a zoom; omit to keep the camera's lens." }
+            }
+          }
+        },
+        interpolation: {
+          type: "string",
+          enum: [...BLENDER_INTERPOLATIONS],
+          default: "LINEAR",
+          description: "Between keys: LINEAR (default, constant speed), BEZIER (ease in and out), CONSTANT (cut)."
+        },
+        clearExisting: {
+          type: "boolean",
+          default: true,
+          description: "Replace the camera's previous keys (default true); false adds these keys on top."
+        }
+      },
+      required: ["blendPath", "keys"]
+    }
+  },
+  {
+    name: "blender_object_animate",
+    title: "Animate a previz object (bridge)",
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    description: `Key an object of a .blend previz **on this machine** \u2014 location in metres, rotation in degrees (Euler XYZ, spins past 360 allowed), scale \u2014 over frames: the thrown can, the paper plane's path, the car crossing the bridge. Saves and returns the scene summary with the object's keyframes.
+
+Use for things that move through space \u2014 vehicles, props, projectiles \u2014 so the previz clip carries their timing and path. Name the object exactly as blender_scene_read lists it (a proxy's root is its name, "can", not "can.mesh"). Interpolation is LINEAR by default; keys past the frame range extend it; clearExisting (default true) replaces the object's previous keys.
+Do NOT animate people or animals with this \u2014 limbs are not keyed here, and a video model handed a stiff proxy copies the stiffness; their acting is a prompt sentence. Do NOT move the camera with this \u2014 that is blender_camera_set. Calls on the same .blend run one at a time inside the server; different files run side by side.
+
+Returns: the scene summary; the object's line shows its keyframes.`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        blendPath: { type: "string", description: 'Absolute path to the .blend file (must end in .blend, no "..").' },
+        object: { type: "string", description: `Exact object name from blender_scene_read \u2014 a proxy's root ("can"), not its mesh ("can.mesh").` },
+        keys: {
+          type: "array",
+          minItems: 1,
+          maxItems: 1e3,
+          description: "Poses over time; each needs a frame and at least one of location, rotationDeg, scale.",
+          items: {
+            type: "object",
+            required: ["frame"],
+            properties: {
+              frame: { type: "number", description: "Frame number of this pose." },
+              location: {
+                type: "array",
+                items: { type: "number" },
+                minItems: 3,
+                maxItems: 3,
+                description: "[x, y, z] in metres."
+              },
+              rotationDeg: {
+                type: "array",
+                items: { type: "number" },
+                minItems: 3,
+                maxItems: 3,
+                description: "Euler XYZ in degrees; values past 360 spin the object."
+              },
+              scale: {
+                description: "Uniform scale as a number, or [x, y, z].",
+                anyOf: [{ type: "number" }, { type: "array", items: { type: "number" }, minItems: 3, maxItems: 3 }]
+              }
+            }
+          }
+        },
+        interpolation: {
+          type: "string",
+          enum: [...BLENDER_INTERPOLATIONS],
+          default: "LINEAR",
+          description: "Between keys: LINEAR (default, constant speed), BEZIER (ease in and out), CONSTANT (cut)."
+        },
+        clearExisting: {
+          type: "boolean",
+          default: true,
+          description: "Replace the object's previous keys (default true); false adds these keys on top."
+        }
+      },
+      required: ["blendPath", "object", "keys"]
+    }
+  },
+  {
+    name: "blender_render_previz",
+    title: "Render a previz clip (bridge)",
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    description: `Render a .blend previz **on this machine** to an H.264 mp4 plus first, middle and last frame PNGs (or the frames you list), with the frame number, camera and lens stamped in the corner. workbench (default) is flat studio light with cavity shading and outlines \u2014 grey figures read against a grey floor, well under a second a frame; eevee renders the scene's light and materials for a previz that also has to say something about mood, a few seconds a frame. Silent \u2014 no audio track.
+
+Use after blender_camera_set to look at the move \u2014 open the stills, then iterate the camera in numbers \u2014 and at the end of a previz session to produce the clip the cut's camera and blocking are planned from. Resolution, fps and frame range default to the scene's (set by blender_scene_build); pass frameStart/frameEnd to render a slice. Output goes to outputPath or <blend dir>/previz/.
+Do NOT treat the previz as a deliverable frame \u2014 nothing in it is final appearance; it is a camera and blocking plan. Do NOT pad or loop a failed render \u2014 the tool reports failure and writes no mp4.
+Requires Blender 4.2+; the mp4 is written by Blender's own FFmpeg, so no ffmpeg on PATH is needed.
+
+Returns: a text block with the mp4 path, still paths (and any requested still outside the range, which is skipped and named), engine, resolution, fps, frame range, seconds and render time.`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        blendPath: { type: "string", description: 'Absolute path to the .blend file (must end in .blend, no "..").' },
+        outputPath: { type: "string", description: "Directory for the mp4 and stills (default: <blend dir>/previz)." },
+        filename: {
+          type: "string",
+          default: DEFAULT_PREVIZ_FILENAME,
+          description: `Bare mp4 file name (default ${DEFAULT_PREVIZ_FILENAME}); stills are named <stem>-fNNNN.png beside it.`
+        },
+        engine: {
+          type: "string",
+          enum: [...BLENDER_PREVIZ_ENGINES],
+          default: DEFAULT_PREVIZ_ENGINE,
+          description: "workbench (default): flat studio light, cavity, outlines, fastest. eevee: scene light and materials, a few seconds a frame."
+        },
+        width: { type: "number", description: "Override render width in px, even (default: the scene's)." },
+        height: { type: "number", description: "Override render height in px, even (default: the scene's)." },
+        fps: { type: "number", description: "Override frames per second (default: the scene's)." },
+        frameStart: { type: "number", description: "First frame to render (default: the scene's)." },
+        frameEnd: { type: "number", description: `Last frame to render (default: the scene's). At most ${MAX_PREVIZ_FRAMES} frames per render.` },
+        stills: {
+          type: "array",
+          maxItems: 24,
+          items: { type: "number" },
+          description: "Frames to also save as PNG (default: first, middle, last)."
+        },
+        stamp: {
+          type: "boolean",
+          default: true,
+          description: "Burn frame number, camera name and lens into the corner (default true) \u2014 what makes a still reviewable."
+        },
+        samples: { type: "number", default: 16, description: "eevee only: render samples (default 16)." },
+        timeoutSeconds: {
+          type: "number",
+          description: "Override the render time limit in seconds (default grows with the frame count: 120 s + 1 s per frame on workbench, 4 s on eevee)."
+        }
+      },
+      required: ["blendPath"]
+    }
+  },
   // ── Speech synthesis (Google Gemini TTS — ported from the fect-mcp tts module) ─────────
   {
     name: "tts_generate_checked",
@@ -82719,9 +83979,9 @@ var SNS_PLATFORM_BY_TOOL = {
 
 // src/datago-client.ts
 import { mkdir, writeFile as writeFile2 } from "node:fs/promises";
-import { existsSync as existsSync8 } from "node:fs";
-import { tmpdir as tmpdir2 } from "node:os";
-import { join as join7 } from "node:path";
+import { existsSync as existsSync9 } from "node:fs";
+import { tmpdir as tmpdir3 } from "node:os";
+import { join as join8 } from "node:path";
 var PORTAL_BASE = "https://www.data.go.kr";
 var ODCLOUD_BASE = "https://api.odcloud.kr/api";
 var OPENAPI_BASE = "https://apis.data.go.kr";
@@ -82960,14 +84220,14 @@ async function downloadFile2(input) {
   const cd = fileRes.headers.get("content-disposition") ?? "";
   const rawName = cd.match(/filename\*?=(?:UTF-8''|")?([^";]+)/i)?.[1] ?? `datago-${input.publicDataPk}.bin`;
   const filename = sanitizeFilename(fixHeaderEncoding(rawName.replace(/"/g, "")));
-  const saveDir = input.saveDir ?? join7(tmpdir2(), "social-flow-datago");
+  const saveDir = input.saveDir ?? join8(tmpdir3(), "social-flow-datago");
   await mkdir(saveDir, { recursive: true });
-  let savedPath = join7(saveDir, filename);
-  for (let i2 = 1; existsSync8(savedPath); i2++) {
+  let savedPath = join8(saveDir, filename);
+  for (let i2 = 1; existsSync9(savedPath); i2++) {
     if (i2 >= 100) {
       return err(`there are already 100+ files with the same name in ${saveDir} \u2014 clean up saveDir or point at a different directory.`);
     }
-    savedPath = join7(saveDir, filename.replace(/(\.[^.]*)?$/, `-${i2}$1`));
+    savedPath = join8(saveDir, filename.replace(/(\.[^.]*)?$/, `-${i2}$1`));
   }
   await writeFile2(savedPath, buf);
   const preview = decodePreview(buf.subarray(0, 4096));
@@ -83974,22 +85234,22 @@ async function fetchGoogleOrganic(input) {
 // src/sns-client.ts
 import { createHash as createHash2, randomUUID as randomUUID2 } from "node:crypto";
 import {
-  existsSync as existsSync9,
+  existsSync as existsSync10,
   mkdirSync as nodeMkdirSync,
   readFileSync as nodeReadFileSync,
   rmSync as nodeRmSync,
   writeFileSync as nodeWriteFileSync
 } from "node:fs";
 import { open as nodeOpen, readFile, stat as stat3 } from "node:fs/promises";
-import { basename as basename6, dirname as dirname3, extname as extname6, join as join8 } from "node:path";
+import { basename as basename6, dirname as dirname4, extname as extname7, join as join9 } from "node:path";
 function enabledPlatforms() {
   const channelDirs = listChannelDirs();
   return SNS_PLATFORMS.filter(
-    (platform) => existsSync9(snsCredentialFile(platform)) || channelDirs.some((dir) => dir.platforms.includes(platform))
+    (platform) => existsSync10(snsCredentialFile(platform)) || channelDirs.some((dir) => dir.platforms.includes(platform))
   );
 }
 function availablePlatformsFor(channel) {
-  return SNS_PLATFORMS.filter((platform) => existsSync9(snsCredentialFile(platform, channel)));
+  return SNS_PLATFORMS.filter((platform) => existsSync10(snsCredentialFile(platform, channel)));
 }
 var GRAPH_VERSION = "v23.0";
 var THREADS_BASE = "https://graph.threads.net/v1.0";
@@ -83997,7 +85257,7 @@ var IG_BASE = `https://graph.instagram.com/${GRAPH_VERSION}`;
 var FB_BASE = `https://graph.facebook.com/${GRAPH_VERSION}`;
 var DEFAULT_POLL_INTERVAL_MS = 2e3;
 var DEFAULT_POLL_MAX_TRIES = 60;
-var sleep6 = (ms) => new Promise((resolve3) => setTimeout(resolve3, ms));
+var sleep6 = (ms) => new Promise((resolve4) => setTimeout(resolve4, ms));
 function fail2(status, message) {
   return { ok: false, status, body: message };
 }
@@ -84560,7 +85820,7 @@ var YT_THUMB_MAX_BYTES = 2 * 1024 * 1024;
 var CAPTION_MAX_BYTES_YT = 100 * 1024 * 1024;
 var CAPTION_MAX_BYTES_FB = 200 * 1024;
 async function readCaptionFile(path10, maxBytes) {
-  if (extname6(path10).toLowerCase() !== ".srt") {
+  if (extname7(path10).toLowerCase() !== ".srt") {
     return { error: fail2(400, `Caption file must be .srt (SubRip): ${path10}`) };
   }
   let bytes;
@@ -84673,7 +85933,7 @@ function parseResumeOffset(range) {
 }
 function sessionStateFile(filePath) {
   const key = createHash2("sha256").update(filePath).digest("hex").slice(0, 16);
-  return join8(snsTokenDir, ".yt-upload", `${key}.json`);
+  return join9(snsTokenDir, ".yt-upload", `${key}.json`);
 }
 function readState(filePath) {
   try {
@@ -84692,7 +85952,7 @@ function writeState(filePath, s2) {
       nodeRmSync(p, { force: true });
       return;
     }
-    nodeMkdirSync(dirname3(p), { recursive: true });
+    nodeMkdirSync(dirname4(p), { recursive: true });
     nodeWriteFileSync(p, JSON.stringify(s2), "utf8");
   } catch {
   }
@@ -84773,7 +86033,7 @@ async function queryResumeOffset(sessionUrl, total, mimeType) {
   }
 }
 async function publishYoutube(input) {
-  const mimeType = YT_VIDEO_MIME_BY_EXT[extname6(input.videoFilePath).toLowerCase()];
+  const mimeType = YT_VIDEO_MIME_BY_EXT[extname7(input.videoFilePath).toLowerCase()];
   if (!mimeType) return fail2(400, `Unsupported video extension: ${input.videoFilePath} (.mp4/.mov)`);
   let videoSize;
   let videoMtimeMs;
@@ -84788,7 +86048,7 @@ async function publishYoutube(input) {
   }
   let thumb;
   if (input.thumbnailFilePath) {
-    const thumbMime = YT_THUMB_MIME_BY_EXT[extname6(input.thumbnailFilePath).toLowerCase()];
+    const thumbMime = YT_THUMB_MIME_BY_EXT[extname7(input.thumbnailFilePath).toLowerCase()];
     if (!thumbMime) {
       return fail2(400, `Unsupported thumbnail extension: ${input.thumbnailFilePath} (.jpg/.jpeg/.png)`);
     }
@@ -85858,7 +87118,7 @@ function requireOneSource(data, ctx) {
 var omniExtendSchema = external_exports.object({ ...continuationFields, durationSeconds: durationSchema2 }).superRefine(requireOneSource);
 var omniEditSchema = external_exports.object(continuationFields).superRefine(requireOneSource);
 function sleep7(ms) {
-  return new Promise((resolve3) => setTimeout(resolve3, ms));
+  return new Promise((resolve4) => setTimeout(resolve4, ms));
 }
 function readInlineFile(filePath, kind) {
   const data = fs6.readFileSync(filePath).toString("base64");
@@ -86206,7 +87466,7 @@ async function downloadVideo2(apiKey, videoUri) {
   return Buffer.from(arrayBuffer);
 }
 function sleep8(ms) {
-  return new Promise((resolve3) => setTimeout(resolve3, ms));
+  return new Promise((resolve4) => setTimeout(resolve4, ms));
 }
 async function awaitVideoAndSave2(apiKey, operationName, outputPath, filename, label) {
   let pollCount = 0;
@@ -86483,14 +87743,14 @@ async function generateWithReferences2(request) {
 }
 
 // src/content-feedback.ts
-import { mkdirSync as mkdirSync5, writeFileSync as writeFileSync8 } from "node:fs";
-import { dirname as dirname4, isAbsolute, join as join9, resolve as resolve2 } from "node:path";
+import { mkdirSync as mkdirSync5, writeFileSync as writeFileSync9 } from "node:fs";
+import { dirname as dirname5, isAbsolute, join as join10, resolve as resolve3 } from "node:path";
 
 // src/content-feedback-html.ts
 function escapeHtml(value) {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
-function fmt(value, digits = 0, suffix = "") {
+function fmt2(value, digits = 0, suffix = "") {
   if (value == null || !Number.isFinite(value)) return "\u2014";
   return `${value.toFixed(digits)}${suffix}`;
 }
@@ -86599,22 +87859,22 @@ function platformSection(section, title, accent) {
     </section>`;
   }
   const tones = countTones(section.items);
-  const accountLine = section.platform === "YOUTUBE" ? `Subscribers ${fmt(numish(section.account?.subscriberCount))} \xB7 Videos ${fmt(numish(section.account?.videoCount))}` : `Followers ${fmt(numish(section.account?.followersCount))} \xB7 Media ${fmt(numish(section.account?.mediaCount))}`;
+  const accountLine = section.platform === "YOUTUBE" ? `Subscribers ${fmt2(numish(section.account?.subscriberCount))} \xB7 Videos ${fmt2(numish(section.account?.videoCount))}` : `Followers ${fmt2(numish(section.account?.followersCount))} \xB7 Media ${fmt2(numish(section.account?.mediaCount))}`;
   const funnelHtml = section.platform === "YOUTUBE" ? funnel(
     [
-      { k: "Views", v: fmt(section.cohort.views, 0), hint: "not a quality signal" },
-      { k: "Opening pass", v: fmt(section.cohort.hook, 0, "%"), hint: "engaged / views" },
-      { k: "Retention", v: fmt(section.cohort.retain, 0, "%"), hint: "average view percentage" },
-      { k: "Shares", v: fmt(section.cohort.shareRate, 2, "%"), hint: "against engaged views" },
-      { k: "Subs (channel)", v: fmt(section.cohort.channelSubRate, 2, "%"), hint: "no per-episode number" }
+      { k: "Views", v: fmt2(section.cohort.views, 0), hint: "not a quality signal" },
+      { k: "Opening pass", v: fmt2(section.cohort.hook, 0, "%"), hint: "engaged / views" },
+      { k: "Retention", v: fmt2(section.cohort.retain, 0, "%"), hint: "average view percentage" },
+      { k: "Shares", v: fmt2(section.cohort.shareRate, 2, "%"), hint: "against engaged views" },
+      { k: "Subs (channel)", v: fmt2(section.cohort.channelSubRate, 2, "%"), hint: "no per-episode number" }
     ],
     accent
   ) : funnel(
     [
-      { k: "Reach", v: fmt(section.cohort.reach, 0), hint: "the non-follower audition" },
+      { k: "Reach", v: fmt2(section.cohort.reach, 0), hint: "the non-follower audition" },
       { k: "3s stay", v: section.cohort.skip == null ? "\u2014" : `${(100 - section.cohort.skip).toFixed(0)}%`, hint: "the inverse of drop-off" },
-      { k: "Watch", v: fmt(section.cohort.watch, 1, "s"), hint: "compare within the same length band" },
-      { k: "Shares", v: fmt(section.cohort.shareRate, 2, "%"), hint: "against reach" }
+      { k: "Watch", v: fmt2(section.cohort.watch, 1, "s"), hint: "compare within the same length band" },
+      { k: "Shares", v: fmt2(section.cohort.shareRate, 2, "%"), hint: "against reach" }
     ],
     accent
   );
@@ -86623,12 +87883,12 @@ function platformSection(section, title, accent) {
     if (section.platform === "YOUTUBE") {
       return itemCard(
         item,
-        metricCell("Views", fmt(item.metrics.views), vsClass(item.vsCohort.views)) + metricCell("Opening pass", fmt(item.metrics.hook, 0, "%"), vsClass(item.vsCohort.hook)) + metricCell("Retention", fmt(item.metrics.retain, 0, "%"), vsClass(item.vsCohort.retain)) + metricCell("Share rate", fmt(item.metrics.shareRate, 2, "%"), vsClass(item.vsCohort.shareRate))
+        metricCell("Views", fmt2(item.metrics.views), vsClass(item.vsCohort.views)) + metricCell("Opening pass", fmt2(item.metrics.hook, 0, "%"), vsClass(item.vsCohort.hook)) + metricCell("Retention", fmt2(item.metrics.retain, 0, "%"), vsClass(item.vsCohort.retain)) + metricCell("Share rate", fmt2(item.metrics.shareRate, 2, "%"), vsClass(item.vsCohort.shareRate))
       );
     }
     return itemCard(
       item,
-      metricCell("Reach", fmt(item.metrics.reach), "") + metricCell("3s drop-off", fmt(item.metrics.skip, 0, "%"), vsClass(item.vsCohort.skip)) + metricCell("Watch", fmt(item.metrics.watch, 1, "s"), vsClass(item.vsCohort.watch)) + metricCell("Share rate", fmt(item.metrics.shareRate, 2, "%"), vsClass(item.vsCohort.shareRate))
+      metricCell("Reach", fmt2(item.metrics.reach), "") + metricCell("3s drop-off", fmt2(item.metrics.skip, 0, "%"), vsClass(item.vsCohort.skip)) + metricCell("Watch", fmt2(item.metrics.watch, 1, "s"), vsClass(item.vsCohort.watch)) + metricCell("Share rate", fmt2(item.metrics.shareRate, 2, "%"), vsClass(item.vsCohort.shareRate))
     );
   }).join("");
   return `<section id="${id}" class="plat">
@@ -87069,14 +88329,14 @@ function analyzeInstagramMedia(media, limit2) {
   return { items, cohort, notes };
 }
 function defaultHtmlPath(channel) {
-  return join9(process.cwd(), "data", channel, "growth", "review-recent.html");
+  return join10(process.cwd(), "data", channel, "growth", "review-recent.html");
 }
 function resolveHtmlPath(channel, outputPath) {
   if (outputPath) {
     if (outputPath.includes("..")) {
       throw new Error(`Path traversal detected: ${outputPath}`);
     }
-    const resolved = isAbsolute(outputPath) ? outputPath : resolve2(process.cwd(), outputPath);
+    const resolved = isAbsolute(outputPath) ? outputPath : resolve3(process.cwd(), outputPath);
     if (!resolved.toLowerCase().endsWith(".html")) {
       throw new Error(`outputPath must end in .html: ${outputPath}`);
     }
@@ -87115,8 +88375,8 @@ async function contentFeedback(input) {
     instagram
   };
   if (htmlPath) {
-    mkdirSync5(dirname4(htmlPath), { recursive: true });
-    writeFileSync8(htmlPath, renderFeedbackHtml(report), "utf8");
+    mkdirSync5(dirname5(htmlPath), { recursive: true });
+    writeFileSync9(htmlPath, renderFeedbackHtml(report), "utf8");
   }
   return { ok: true, status: 200, body: JSON.stringify(report) };
 }
@@ -88158,14 +89418,14 @@ ${errors.join("\n")}`);
 }
 
 // src/capability-status.ts
-import { existsSync as existsSync11 } from "node:fs";
+import { existsSync as existsSync12 } from "node:fs";
 import path9 from "node:path";
 import os from "node:os";
 var has2 = (v) => Boolean(v && v.length > 0);
 var binOk = (p) => {
   try {
-    if (p.includes(path9.sep)) return existsSync11(p);
-    return (process.env.PATH || "").split(path9.delimiter).some((dir) => dir && existsSync11(path9.join(dir, p)));
+    if (p.includes(path9.sep)) return existsSync12(p);
+    return (process.env.PATH || "").split(path9.delimiter).some((dir) => dir && existsSync12(path9.join(dir, p)));
   } catch {
     return false;
   }
@@ -88291,7 +89551,7 @@ function capabilityStatus() {
           provider: "blender (local, Cycles)",
           configured: Boolean(blenderBin()),
           needs: "Blender 4.2+ (brew install --cask blender) or BLENDER=<executable>",
-          note: `bake-blender.py \u2014 bakes a mesh recipe into a frame sheet with path-traced light and shadows (blender-objects.md). This machine has ${os.cpus().length} cores and ${Math.round(os.totalmem() / 1e9)} GB; run --capacity for the GPU backend and which object lane suits it, then --probe on the recipe for minutes per cut`
+          note: `blender_scene_read \xB7 blender_scene_build \xB7 blender_camera_set \xB7 blender_object_animate \xB7 blender_render_previz \u2014 the previz bridge (blender-previz.md): camera and blocking as numbers, rendered headless with no add-on or GUI. bake-blender.py \u2014 bakes a mesh recipe into a frame sheet with path-traced light and shadows (blender-objects.md). This machine has ${os.cpus().length} cores and ${Math.round(os.totalmem() / 1e9)} GB; run --capacity for the GPU backend and which object lane suits it, then --probe on the recipe for minutes per cut`
         }
       ]
     },
@@ -89326,6 +90586,61 @@ Elapsed: ${result.elapsedSeconds}s
 
 Transcript:
 ${preview}`
+    );
+  },
+  // ── Blender bridge — previz camera and blocking on the local Blender (no key, no network) ──
+  blender_scene_read: async (args) => {
+    const r2 = await readScene(parseArgs(blenderSceneReadSchema, args));
+    if (!r2.success) return text(`Blender scene read failed: ${r2.error}`, true);
+    return text(`Blender scene read (nothing changed).
+
+${describeScene(r2.scene)}`);
+  },
+  blender_scene_build: async (args) => {
+    const request = parseArgs(blenderSceneBuildSchema, args);
+    const r2 = await buildScene(request);
+    if (!r2.success) return text(`Blender scene build failed: ${r2.error}`, true);
+    const built = (r2.scene.built ?? []).map((b) => b.kind ? `${b.name} (${b.kind})` : `${b.name} (glb, ${b.objects} objects)`);
+    return text(
+      `Blender previz set ${request.reset ? "built" : "extended"} \u2014 ${built.length} added${built.length ? `: ${built.join(", ")}` : ""}.
+Next: blender_camera_set to frame it, then blender_render_previz to look.
+
+${describeScene(r2.scene)}`
+    );
+  },
+  blender_camera_set: async (args) => {
+    const r2 = await setCamera(parseArgs(blenderCameraSetSchema, args));
+    if (!r2.success) return text(`Blender camera set failed: ${r2.error}`, true);
+    const keys = r2.scene.applied?.keyframes ?? [];
+    return text(
+      `Camera "${r2.scene.applied?.camera ?? "Camera"}" ${keys.length ? `keyed at frames [${keys.join(", ")}]` : "set as a static shot"}.
+Next: blender_render_previz and open the stills; iterate in numbers.
+
+${describeScene(r2.scene)}`
+    );
+  },
+  blender_object_animate: async (args) => {
+    const r2 = await animateObject(parseArgs(blenderObjectAnimateSchema, args));
+    if (!r2.success) return text(`Blender object animate failed: ${r2.error}`, true);
+    const keys = r2.scene.applied?.keyframes ?? [];
+    return text(`Object "${r2.scene.applied?.object}" keyed at frames [${keys.join(", ")}].
+
+${describeScene(r2.scene)}`);
+  },
+  blender_render_previz: async (args) => {
+    const r2 = await renderPreviz(parseArgs(blenderRenderPrevizSchema, args));
+    if (!r2.success) return text(`Blender previz render failed: ${r2.error}`, true);
+    const skipped = r2.skippedStills.length ? `
+Skipped stills (outside frames ${r2.frameStart}\u2013${r2.frameEnd}): ${r2.skippedStills.join(", ")}` : "";
+    return text(
+      `Previz rendered.
+
+File: ${r2.videoPath}
+Stills: ${r2.stillPaths.join(", ") || "(none)"}${skipped}
+Engine: ${r2.engine} \xB7 ${r2.width}\xD7${r2.height} @ ${r2.fps} fps \xB7 frames ${r2.frameStart}\u2013${r2.frameEnd} (${r2.frames} = ${r2.seconds}s)
+Render time: ${r2.elapsedSeconds}s
+
+Open the stills before judging the move \u2014 the stamp shows frame, camera and lens. The clip is a camera and blocking plan, not appearance.`
     );
   },
   // ── music generation (Lyria) — 30s batch clip / streaming with an exact duration ──
