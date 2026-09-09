@@ -102,7 +102,10 @@ window.PRODUCTION = {
 Both modes keep the selected `style`; hybrid keeps purpose-based render routing.
 For full_video, follow `full-video.md` in the produce skill and use the stored style across
 every shot. Each generated shot's camera is the four `visual.camera` slots; `videoDesign`
-holds the subject plan only, and `spatial-prompts.js` assembles the motion prompt from both. Do not read the old HTML-only explanation and person-required video clauses as
+holds the subject plan only, and `spatial-prompts.js` assembles the motion prompt from both.
+The camera slots name a move the viewer can see (no `very slow`/`subtle`/`gentle`/`hold
+composition`; `cameraFixed` only under `static`), and a full-video episode keeps static
+cameras to one shot in three and wide framing to half (full-video.md §Camera dynamics). Do not read the old HTML-only explanation and person-required video clauses as
 overriding this explicit episode choice.
 
 The initial question can use a provisional duration estimate. Before the final storyboard

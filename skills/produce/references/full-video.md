@@ -210,6 +210,27 @@ as a sequence:
 - Let the cut land on the subject: end a reveal on the thing the next sentence names, so the
   first frame of the next shot answers the last frame of this one.
 
+### Camera dynamics
+
+`production-mode.js` holds these on the four camera slots of every generated shot; ep402
+(2026-09-06) and ep411 (2026-09-09) broke each one and read as slideshows.
+
+- **A move the viewer can see.** `movement` and `speed` never carry `very slow`, `subtle`,
+  `gentle`, `tiny`, `slight`, `barely`, `restrained`, `quiet`, `hold composition` or
+  `breathing only`. A move written to be invisible is a still with extra steps. Write `slow`,
+  `steady` or `fast` with a vendor move — `dolly in`, `truck right`, `arc shot`, `pedestal up`,
+  `crane down` — or choose `static` on purpose.
+- **Static is the minority.** At most one shot in three holds a static camera, never two in a
+  row. The subject action carries a static shot; the other two carry the viewer.
+- **Wide is the minority.** At most half the shots are framed wide. Small full-body figures
+  on a wide stage move a few pixels on a phone; bring the other half to medium or close, where
+  a gesture fills the frame.
+- **No provider lock under a written move.** `visual.video.cameraFixed:true` is only legal with
+  `movement: static`; ep402 shot 12 asked for an optical push and locked the camera at once.
+- **Generate at the card length.** The beats end inside `scene.duration`; a 10-second clip for
+  a 5-second card spreads the action past the cut. `check-production.js --ready` refuses a clip
+  more than three seconds longer than its card unless `edit.in` skips into the action.
+
 ## Generation and cost
 
 1. Run `check-scenes.js storyboard/`, then
@@ -291,6 +312,22 @@ defects, media resolution and duration. It cannot judge aesthetics: the reviewer
 rubbery buildings, popping objects, sliding terrain, action discontinuity, muddy materials,
 or a shot that misses the reference style even when its metadata passes.
 
+### Measured motion
+
+The review says a person saw the subject move; `measure-motion.js` says how much of the clip
+moves. `check-production.js --ready` measures every accepted clip (cached by SHA-256 in
+`.work/motion-metrics.json`) and refuses one that stands still longer than 2 seconds, repeats
+the previous picture on more than half its samples, or averages under 1.8 on the proxy scale.
+ep402's frozen clips measured 0.85–1.16 with every sample a repeat; ep411's quietest accepted
+clips measured 2.15–2.8. The same pass reads where visible motion starts: when the action
+begins after the first second and `edit.in` is still 0, set `edit.in` to the onset
+([cinematic-edit.md](cinematic-edit.md)) or regenerate. A failed measurement is a failed clip;
+regenerate it with a visible subject action or camera move.
+
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/skills/produce/references/measure-motion.js .work/video/s07-attempt-1.mp4
+```
+
 ## Build handoff
 
 Run `check-production.js storyboard/ --ready` before capture/build. Generate no HTML scene
@@ -303,7 +340,10 @@ reserve its handle before quoting generation, and use the common builder for del
 Do not blanket-assign `cut` or replace the builder with an episode-specific concatenation script. Keep narration and burned subtitles; clear on-screen `title`, `bullets`, `stat` and
 `footnote`, storing thumbnail/title copy in platform metadata instead.
 
-`build-reel.sh` reruns the approved-quote, review and manifest gates. The normal build report,
+`build-reel.sh` reruns the approved-quote, review and manifest gates, and `verify-assembled.js`
+measures every card of the assembled reel with the same proxy: a clip card that reads as a
+still, or an authored slide that repeats its picture on most samples or holds one plate past
+the channel plate limit (ceiling 8 seconds), stops the build. The normal build report,
 speed pass, phone QA and content review still run. Watch the final edit for timing and subject
 continuity; an individually accepted clip can still cut badly with its neighbours. A failed
 quality check holds the deliverable and queue. Report actual video spend separately from the

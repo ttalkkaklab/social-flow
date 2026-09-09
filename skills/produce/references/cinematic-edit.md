@@ -35,6 +35,11 @@ edit: {
 
 `edit.in` selects the source-video start in seconds without moving narration or subtitles.
 Use it to avoid an idle generated lead-in and choose the visible action that fits the line.
+`check-production.js --ready` measures where each accepted clip starts to move
+(`measure-motion.js`): when the onset is past the first second and `edit.in` is 0, the card
+would open on a still, so set `edit.in` to the onset or regenerate. A clip more than three
+seconds longer than its card is refused for the same reason unless `edit.in` skips into the
+action — generate at the card length instead (ep411 cut 10-second clips at 4–9 seconds, in=0).
 Do not use it on authored slide reveal groups or sync footage. `pre` and `post` control
 added narration margins (0..2 seconds). Default pre is zero, post is 0.12 seconds; dip has
 0.30 seconds of pre. Source-recorded breaths still count, so listen before adding a pause.
@@ -92,6 +97,12 @@ block the checked delivery path. `speedup.sh` writes `delivery-proof.json` for t
 set; copy it into `output/video/` with the video and subtitles. `episode-state.js` blocks an
 unpublished episode with a missing/stale proof or a storyboard changed after assembly. `edit-check.json` records the checks and flags handles with
 little visible motion for inspection; it does not claim aesthetic approval.
+`verify-assembled.js` also measures every card of the clean master (`measure-motion.js`, four
+samples a second on a proxy) and writes the numbers into `assembled-check.json`: a clip card
+that stands still over 2 seconds or repeats its picture on more than half its samples, or an
+authored slide that repeats on more than 60% of its samples or holds one plate past the
+channel plate limit (ceiling 8 seconds), stops the build. Still cards with a Ken Burns move
+are not gated here; the builder already refuses a still without a move.
 
 Watch every file in `work/seams/`, which contains the final master's boundary excerpts with
 sound. Also watch the entire final clean and subtitled exports at normal speed. Record in
