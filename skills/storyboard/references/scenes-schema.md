@@ -1177,7 +1177,7 @@ The continuous music bed runs across the feature; do not fade it at every scene 
 ```js
 camera: {
   movement: "dolly in",                                   // what the camera does — `static` is a choice, not an empty slot
-  speed: "very slow",                                     // how fast it does it — stays empty on a static camera
+  speed: "slow",                                          // how fast it does it — stays empty on a static camera
   framing: "chest-up, eyes on the upper third",           // what is held while it moves
   end: "subject centred, hands entering the lower third"  // where it stops
 }
@@ -1225,6 +1225,14 @@ The rules that applied to the old one-string camera line now apply per slot:
   one-move-per-cut rule is Seedance 2.0's alone — write a second move only with a reason. On a
   deliberate long take (10s+) it is one, no exception.
 - **No seconds in any slot** — length is `duration` (§cut length).
+- **A move the viewer can see, on a generated shot.** `very slow`, `subtle`, `gentle`, `tiny`,
+  `slight`, `barely`, `restrained`, `quiet`, `hold composition` and `breathing only` are refused
+  in `movement`/`speed` by `production-mode.js` and `check-scenes.js` — ep402 asked for them and
+  got clips whose every frame repeats the last. Write `slow`/`steady`/`fast`, or `static` on
+  purpose. `visual.video.cameraFixed:true` is legal only under `movement: "static"`. The still
+  lane keeps its own ladder (`very slow` for explain) — its move is the builder's, not the model's.
+  Full video adds episode rules: static on at most one shot in three, never twice in a row, and
+  wide framing on at most half (full-video.md §Camera dynamics).
 - **No exclusions in any slot** — that is Veo's `negativePrompt` argument, and for Seedance it
   means re-describing the scene so the thing doesn't appear (§motion background).
 - **The move is chosen from `shot.feel`, and it supports the feel rather than carrying it.**
