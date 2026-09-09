@@ -143,6 +143,9 @@ publishable episodes. Improve reusable plugin templates and rebuild; do not hand
 - `uv tool install --python 3.12 "mlx-qwen3-asr[aligner]"` — for `stt_local_transcribe`
   and ingest's Korean STT. The first call downloads ~3.4GB of Qwen3-ASR-1.7B weights
   into `~/.cache/huggingface`. Installed elsewhere, point `QWEN3_ASR_BIN` at it
+- Blender 4.2+ (`brew install --cask blender`, or `BLENDER=<executable>`) — for the five
+  `blender_*` previz tools (camera and blocking as numbers, rendered headless) and for
+  `bake-blender.py`'s Cycles object sheets. No add-on, no GUI session, no account
 - whisper.cpp (`brew install whisper-cpp`) + `~/.cache/whisper-cpp/ggml-large-v3-turbo.bin`
   — the ingest STT fallback when mlx-qwen3-asr is missing. Recording mode needs
   **Screen Recording and Microphone** permission for your terminal app
@@ -316,7 +319,7 @@ editorial checks; completion-rate improvements require audience measurements.
 /social-flow:intro my-channel              # 1.3 (optional) channel intro — 4 concepts HITL → 4s veo render → 90-point convergence (spliced after the episode as a closer)
 /social-flow:setup-threads my-channel      # 1.4 (optional) SNS account setup + API tokens — browser HITL, ego lite first, Chrome fallback (per platform: setup-instagram · setup-youtube)
 /social-flow:ingest my-channel record      # 1.5 (optional) screen+voice recording → timeline — an alternative research source
-/social-flow:storyboard my-channel "July FX swings"   # 2. research → 3 messages for today's viewer → 3 seven-item scenarios (one topic each) [scored to 95] → pick → more research → scenes [narration read alone, to 95] → [narration approval] → storyboard → [approval] · nothing generated
+/social-flow:storyboard my-channel "July FX swings"   # 2. research → wow points → 3 messages for today's viewer → 3 seven-item scenarios (one topic each, shown with their wow) → pick → more research → scenes [narration read alone, to 95] → [narration approval] → storyboard → [approval] · nothing generated
 /social-flow:produce my-channel 20260729-fx           # 3. video + per-platform text
 /social-flow:publish my-channel 20260729-fx           # 4. [approval] → publish → record permalinks
 /social-flow:grow-threads my-channel init             # 5. (optional) Threads growth plan [approval — standing authorization]
@@ -341,11 +344,11 @@ them the pipeline ends at `produce` with the finished video and per-platform tex
 **One topic string straight to a finished video** (steps 2–3 with no human approval):
 
 ```
-/social-flow:autoproduce my-channel "July FX swings"   # research → 3 messages → 3 seven-item scenarios [one batched read] → pick → more research → scenes.js [narration read alone to 95, then its words to 95] → images → TTS → build → output
+/social-flow:autoproduce my-channel "July FX swings"   # research → wow points → 3 messages → 3 seven-item scenarios [one batched read] → pick → more research → scenes.js [narration read alone to 95, then its words to 95] → images → TTS → build → output
 ```
 
 The machine gates stand where the approval gates were — fact verification (3+
-cross-verified claims and three messages, one topic cut from each), three seven-item
+cross-verified claims, three or more wow points and three messages, one topic cut from each), three seven-item
 scenario candidates judged in one batched read
 (curiosity · fear · intrigue · comedy), the narration read on its own and looped to 95 twice
 (the chain, then the words — three reads each, the sentences handed inline), the copy style
@@ -426,7 +429,7 @@ social-flow/
 ├── .plugin/plugin.json          # Buzz persona pack (Open Plugin Spec)
 ├── personas/                    # Buzz pack persona (pipeline.persona.md)
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 66 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 71 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
 │       ├── tools.ts             # tool definitions (research 8 + open data 5 + generation 18 + publish 6 + comments 3 + check 1 + growth insights 5)
@@ -459,11 +462,11 @@ social-flow/
 │   │   └── references/          #   setup-playbook.md (loopback listener · production-stage 7-day expiry trap · Chrome lane map)
 │   ├── datago/                  # /social-flow:datago — open-data research → collection → seed records
 │   ├── ingest/                  # /social-flow:ingest — screen recording (+voice) → timeline (recording control · STT · scene boundaries · keyframes)
-│   ├── storyboard/              # /social-flow:storyboard — research → 3 messages for today's viewer → 3 seven-item scenarios (one topic each, never "X는 알 수 없다") → pick → more research → narration → narration read-through looped to 95 → vocabulary looped to 95 (both inline, ≤3 reads) → [narration approval] → the board (author's read + check-scenes.js) → the image and clip plan → [approval]. No generation call — produce makes the stills, slides and clips
+│   ├── storyboard/              # /social-flow:storyboard — research → wow points (what the viewer believes → what the evidence shows) → 3 messages for today's viewer → 3 seven-item scenarios (one topic each, never "X는 알 수 없다", each shown with its wow) → pick → more research → narration → narration read-through looped to 95 → vocabulary looped to 95 (both inline, ≤3 reads) → [narration approval] → the board (author's read + check-scenes.js) → the image and clip plan → [approval]. No generation call — produce makes the stills, slides and clips
 │   │   └── references/          #   scenes-schema.md · directing-grammar.md · motion-slide-template.html (studio ground · slab material · rendered object) · slide-design.md (look · motion tokens · the slide-reviewer rubric) · check-slide.js · footage-lane.md (retired 2026-09-05 — nothing is drawn over video) · footage-frames.sh · rendered-object.md + bake-object.py (an SDF-raymarched object baked to a frame sheet, numpy + Pillow, ₩0 an episode) · blender-objects.md + bake-blender.py (the mesh recipe path-traced by Blender Cycles into the same sheet — real cast shadow, minutes of local GPU per cut, `--probe` forecasts them)
 │   ├── produce/                 # /social-flow:produce — stills (§1.5) → clips → slides (§3.6) → video build + per-platform text
 │   │   └── references/          #   build-reel.sh (SUB_MODE sentence · word · phrase) · speedup.sh (required final pace pass, 1.0 default, ≤6.2 chars/s) · bgm-bed.sh · bgm-scoring.md · video-template.html · render-motion-slide.mjs (motion slide → one clip per reveal group, no npm dependency) · make-matte.py (subject matte → VP9-alpha webm, needs rembg) · QA harness
-│   ├── autoproduce/             # /social-flow:autoproduce — one topic through research → 3 messages → 3 seven-item scenarios [scored to 95 on curiosity · fear · intrigue · comedy, auto-pick unattended] → more research → authoring [narration read alone, to 95] → video (human gates replaced by the machine gates, economy tier default)
+│   ├── autoproduce/             # /social-flow:autoproduce — one topic through research → wow points → 3 messages → 3 seven-item scenarios [scored to 95 on the wow and curiosity · fear · intrigue · comedy, auto-pick unattended] → more research → authoring [narration read alone, to 95] → video (human gates replaced by the machine gates, economy tier default)
 │   │   └── references/          #   cost-tiers.md (model ladder · promotion rules) · prices.tsv (price SoT) · cost-report.sh
 │   │                            #   cost-tally.md (per-episode cost ledger convention — shared by storyboard/produce)
 │   ├── publish/                 # /social-flow:publish — HITL approval, then platform publishing
@@ -488,14 +491,14 @@ social-flow/
 └── data/                        # content data root (see data/README.md)
 ```
 
-## MCP tool surface (66 tools)
+## MCP tool surface (71 tools)
 
-**`tools/list` does not show all 66.** The nine publish/insights tools
+**`tools/list` does not show all 71.** The nine publish/insights tools
 (`threads_publish` · `instagram_publish` · `facebook_publish` · `facebook_comment` ·
 `youtube_publish` · `threads_insights` · `instagram_insights` · `youtube_insights` ·
 `threads_search`) are exposed **only for platforms whose credential file exists** —
 evaluated at list time, so adding a token makes them appear without restarting the
-server. With no tokens at all you'll count 57. Hidden tools still have live handlers:
+server. With no tokens at all you'll count 62. Hidden tools still have live handlers:
 calling one directly returns a missing-token error rather than failing silently.
 `content_feedback`, `youtube_topic_scout`, and `sns_issue_scout` sit outside the
 platform gate and stay listed without tokens — the YouTube scout needs
@@ -528,6 +531,7 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | Music generation | `suno_generate` / `suno_generate_sound` / `suno_generate_lyrics` / `suno_credits` | sunoapi.org third-party REST (not an official Suno Inc. API). Sung full songs (2 tracks, 2–8 min) · loopable beds with BPM/key · lyrics only · remaining credits. `SUNO_API_KEY`. Autoproduce does not call these |
 | Music generation | `mlx_music_generate` | MLX Core / mlx-serve (WAV. Default instrumental. Optional bed; default BGM stays Lyria) |
 | 3D | `mlx_3d_generate` | MLX Core / mlx-serve (GLB from an image, consumed by the offline HTML mesh slide lane) |
+| 3D previz | `blender_scene_read` / `blender_scene_build` / `blender_camera_set` / `blender_object_animate` / `blender_render_previz` | The local Blender, headless (**no API key, no network, no add-on, no GUI** — needs Blender 4.2+). Reads a .blend; builds a set of grey proxies (person·dog·car·box·cylinder·sphere) and GLB imports at the cut's frame range and resolution; places and keys the camera by location, look-at target and lens in metres, degrees and mm; keys objects through space; renders an H.264 previz with stamped stills in Workbench or Eevee. Camera and blocking as numbers, iterated for free before any paid generation — the three-channel hand-off (previz → camera, sheets → look, prompt → acting) is in [blender-previz.md](skills/storyboard/references/blender-previz.md) |
 | Publish | `threads_publish` / `instagram_publish` / `facebook_publish` / `facebook_comment` / `youtube_publish` / `youtube_update` | Direct platform API calls — **exposed only for platforms with a credential file** (`youtube_update` edits title/description/tags/visibility of an already-uploaded video) |
 | Comment inbox | `sns_comment_inbox` / `sns_comment_reply` / `sns_comment_moderate` | Cross-platform normalized inbox · replies · hiding (no deletes). Inbox and replies cover all 4 platforms; hiding excludes YouTube (its API only offers held-for-review, which means something else) |
 | Capability | `capability_status` | What this machine has configured, grouped by capability with an "N of M" count, plus the env var that would unlock each missing provider. Call it before planning anything that spends money — otherwise a missing key only surfaces when the call fails, after the plan was built around it. Reports configuration, not reachability |

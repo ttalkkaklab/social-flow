@@ -5,6 +5,7 @@ const mode = require('../../storyboard/references/production-mode.js');
 const { framePlan } = require('../../storyboard/references/render-routing.js');
 const cost = require('../../autoproduce/references/cost-preview.js');
 const { quote, digest } = require('../../autoproduce/references/production-cost.js');
+const motion = require('./measure-motion.js');
 
 function assetPath(storyboard, file) {
   if (typeof file !== 'string' || !file.trim() || /^https?:/.test(file)) throw new Error('A local asset path is required');
@@ -19,6 +20,28 @@ function readReviews(work) {
   return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : { shots: [] };
 }
 function videoFile(scene) { return mode.reused(scene) ? scene.visual.reuse.clip : scene.visual.video.clip; }
+// Measured once per file: the summary is cached by the clip's SHA-256 in .work/motion-metrics.json.
+function motionMetrics(work, file, sha256) {
+  const cache = path.join(work, 'motion-metrics.json');
+  const saved = fs.existsSync(cache) ? JSON.parse(fs.readFileSync(cache, 'utf8')) : {};
+  if (!saved[sha256] || saved[sha256].sampleFps !== motion.SAMPLE_FPS) {
+    saved[sha256] = { ...motion.measure(file), sampleFps: motion.SAMPLE_FPS, file: path.basename(file) };
+    fs.mkdirSync(work, { recursive: true });
+    fs.writeFileSync(cache, JSON.stringify(saved, null, 2) + '\n');
+  }
+  return saved[sha256];
+}
+// The review says a person saw the subject move; the measurement says how much of the clip
+// actually moves. Both hold before a clip enters the timeline (full-video.md §Measured motion).
+function motionGateErrors(scene, metrics, clipSeconds) {
+  const errors = motion.findings(metrics, 'video').map(f => 'measured motion: ' + f + '; regenerate with a visible subject action or camera move');
+  const inPoint = Number(scene.edit?.in) || 0;
+  if (metrics.onsetSeconds !== null && metrics.onsetSeconds > 1 && inPoint + .5 < metrics.onsetSeconds)
+    errors.push(`visible motion starts at ${metrics.onsetSeconds}s but edit.in is ${inPoint}; start the card at the action (edit.in) or regenerate`);
+  if (!mode.reused(scene) && Number.isFinite(clipSeconds) && clipSeconds > scene.duration + inPoint + 3.05)
+    errors.push(`clip runs ${clipSeconds.toFixed(1)}s for a ${scene.duration}s card; the planned final beat never reaches the screen — generate at the card length or set edit.in to the action`);
+  return errors;
+}
 function accepted(win, index, storyboard, review) {
   const scene = win.SCENES[index];
   if (mode.reused(scene)) return review && review.planDigest === shotDigest(win, index) &&
@@ -117,6 +140,7 @@ function check(storyboard, { requireSelection = false, ready = false, beforeCall
         const wide = win.FORMAT === 'youtube-long-16x9';
         if (!stream || stream.width < (wide ? 1920 : 1080) || stream.height < (wide ? 1080 : 1920)) bad('clip is below the approved 1080p canvas');
         if (!(Number(media.format?.duration) + .05 >= scene.duration)) bad('clip is shorter than the shot; never loop, reverse or freeze-pad');
+        motionGateErrors(scene, motionMetrics(work, assetPath(storyboard, videoFile(scene)), hashFile(storyboard, videoFile(scene))), Number(media.format?.duration)).forEach(bad);
         if (review.playback !== true || !review.reviewer || !Number.isFinite(Date.parse(review.at))) bad('record full playback inspection, reviewer and time');
         for (const key of ['composition', 'materials', 'continuity', 'action', 'camera', 'referenceMatch'])
           if (typeof review[key] !== 'string' || review[key].trim().length < 12) bad('review needs concrete evidence for ' + key);
@@ -145,7 +169,7 @@ function check(storyboard, { requireSelection = false, ready = false, beforeCall
   }
   return { active: true, mode: p.mode, generatedShots, reusedShots, plainVideoShots, errors, quote: current };
 }
-module.exports = { check, shotDigest, hashFile, assetPath, motionReviewErrors, videoFile, validateReuseAsset };
+module.exports = { check, shotDigest, hashFile, assetPath, motionReviewErrors, motionGateErrors, motionMetrics, videoFile, validateReuseAsset };
 if (require.main === module) {
   try {
     const args = process.argv.slice(2), target = args[0];

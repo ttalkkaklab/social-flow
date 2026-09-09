@@ -1066,6 +1066,8 @@ function check(win, fmt, opts) {
       productionMode.missingCameraSlots(v.camera).forEach((slot) => {
         machine(where, `visual.camera.${slot} is empty — a generated shot leaves here with all four filled (speed may stay empty on a static camera)`);
       });
+      // A move the viewer cannot see, or a provider camera lock under a written move (production-mode.js).
+      productionMode.cameraErrors(s).forEach((e) => machine(where, e));
       const prompt = v.prompt || (v.video && v.video.prompt) ||
                      (v.clip && typeof v.clip === 'object' && v.clip.prompt);
       if (!prompt) machine(where, 'no stored clip prompt — produce sends this verbatim (scenes-schema §clip prompt)');

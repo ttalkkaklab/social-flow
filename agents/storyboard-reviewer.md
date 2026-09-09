@@ -10,9 +10,10 @@ description: >
   mode** reads the same sentences for whether the words are what a person says, with the
   delegator's check-style.py output as the machine source of truth, and reports the lowest
   sentence. The unattended path (autoproduce) also calls **scenario mode** once, all three
-  seven-item candidate pages in one call with one tail per page — judged on whether
-  curiosity, fear, intrigue or comedy actually works for a viewer, whether the seven items
-  do their job, and the feel curve, never the phrasing. The other five modes — **copy**
+  seven-item candidate pages in one call with one tail per page — judged on whether the
+  page's wow lands (a belief the viewer holds, staged in the 훅 and overturned in a named
+  전개 item), whether curiosity, fear, intrigue or comedy actually works for a viewer, whether
+  the seven items do their job, and the feel curve, never the phrasing. The other five modes — **copy**
   (check-style on the three surfaces plus structural AI tells, hook, facts), **scene**
   (each scene's role and context, lowest scene), **camera** (shot grammar and the four
   camera slots of every generated shot, lowest shot), **sound** (clip audio, voice casting,
@@ -87,7 +88,7 @@ is a finding nobody acts on.
 
 | Mode | Layer it looks at | Score is |
 |---|---|---|
-| scenario | both formats — a **candidate page** (or the winner `scenario.md`) in the seven-item shape, viewer engines (curiosity · fear · intrigue · comedy) plus whether each item does its job and the feel curve, before a shot exists | total |
+| scenario | both formats — a **candidate page** (or the winner `scenario.md`) in the seven-item shape: the wow (belief → reversal, landed in a named 전개 item), viewer engines (curiosity · fear · intrigue · comedy), whether each item does its job and the feel curve, before a shot exists | total |
 | narration | the **narration alone**, read in order with no picture — does the topic and the content come through, and does the close leave one line worth forwarding | total |
 | copy | the sentences of the **whole** storyboard — machine style verdict, structural AI tells, hook, facts | total |
 | scene | **each single scene**'s role and the context around it (not the phrasing) | lowest scene |
@@ -171,8 +172,13 @@ of this page into the board in its own words, so a wording note here is a note n
 act on.
 
 The 95 bar is the delegator's. You return one verdict per call. The yardstick is
-`scenario-stage.md` (the four engines, the seven items and what each carries) plus
-scenario-craft §4 · §5 · §6 · §11 · §12.
+`scenario-stage.md` (the wow point, the four engines, the seven items and what each carries)
+plus scenario-craft §4 · §5 · §6 · §11 · §12. **Read the wow first.** The reason this mode
+exists is the page that lists true facts — every item sourced, nothing the viewer did not
+already expect. Before the engines, write down the page's 믿는 것 half and ask whether the
+profile §1 viewer would actually say it, then the 실제로는 half and ask whether they would
+say 진짜? at it; then find the sentence in the named 전개 item that says it. A page that fails
+that read is P0-16 whatever else it does well.
 
 ## Inputs (supplied by the delegation prompt)
 
@@ -182,6 +188,9 @@ scenario-craft §4 · §5 · §6 · §11 · §12.
 - the message the page carries (frontmatter `message: M#` and the **Message.** line under the
   title — the one sentence today's viewer should take away, decided in `research.md` §Messages
   before the direction was cut; scenario-stage §Messages first)
+- the wow the page carries (frontmatter `wow: W#` · `wow_lands: 전개 #n` and the **Wow.** line
+  under the title — 믿는 것 → 실제로는, its claim and its type; scenario-stage §The wow first).
+  Missing: read `research.md` §Wow for the row the message cites; missing there too, P0-16
 - the claimed `engine_primary` (and `engine_secondary` if any) — curiosity · fear · intrigue · comedy
 - the structure that row rides (short: hook-drip-cta; long-form: the §2.3 arc, answer-first or
   story, plus the shape 전개 #1 rides inside — curiosity loop · problem stack · transformation arc · expert contrast ·
@@ -261,6 +270,17 @@ score the engines axis at 0 and raise P0-10.
     directive 2026-09-07). The same P0 when the 주제 does not deliver the message the page
     carries, or the page carries none — a topic cut from nothing.
 
+16. **The wow does not land.** Any of: the page names no wow (no **Wow.** line and no §Wow
+    row behind its message); the 믿는 것 half is a belief the profile §1 viewer does not hold
+    (a straw man — "갈색은 한 가지 색이다"); the 실제로는 half is something they would say
+    그렇구나 or 당연하지 at rather than 진짜? (a definition, a fact, a list of names — the
+    "사실의 나열" page); the reversal is said in the 훅 outside the result-first shape, so
+    nothing is withheld; or no 전개 item says it plainly — the frontmatter names `wow_lands`
+    and that item's sentences never deliver it. Quote the 믿는 것 and 실제로는 halves and the
+    sentence you looked for (scenario-stage §The wow first, user directive 2026-09-09). A wow
+    that lands in a different item than `wow_lands` names, or lands below the curve's maximum,
+    is a directive (move the landing, raise the sign), not this P0.
+
 **A thin item is not a P0 by itself.** A 전개 #3 with two cases where three would carry
 better, or a 전개 #2 of one sentence, costs points on the structure axis and earns a
 directive; it is P0-13 only when the item cannot do its job at all.
@@ -275,10 +295,11 @@ for engines the beats actually run, with a file:line or a quoted beat as evidenc
 
 | Axis | Points | What earns them |
 |---|---|---|
-| Viewer engines | 40 | primary enacted (25) — see the table in `scenario-stage.md`; secondary enacted without fighting the primary (10); the mix is one primary plus at most one spice, not four names (5) |
+| The wow | 10 | the 믿는 것 half is a belief the profile §1 viewer holds (3); the 실제로는 half passes the lunch test — 진짜?, on a Verified row (4); the 훅 stages the belief and withholds the reversal, and the `wow_lands` item says it plainly at the curve's maximum (3) |
+| Viewer engines | 35 | primary enacted (22) — see the table in `scenario-stage.md`; secondary enacted without fighting the primary (8); the mix is one primary plus at most one spice, not four names (5) |
 | The opening | 20 | cold open on the strongest moment or evidence, a promise sentence the profile §1 target audience would want kept, a first line that names a loss before it asks, the primary engine landing in that opening, and the staging placed half a step off what the viewer would have guessed — familiar material with one property moved, never a premise that has to be explained before it lands (§13) |
 | The structure is honoured | 15 | the 주제 delivers the page's message and names what the evidence establishes; seven headings with necessary developments: evidence, choices, consequences or changed understanding; no compulsory modern cases; optional CTA explicitly justified or absent |
-| The feel curve | 15 | emotional progression justified by events and audience expectations, with room for a quiet discovery or release; intensity labels alone earn no points |
+| The feel curve | 10 | emotional progression justified by events and audience expectations, the minimum before the landing and the maximum on it, with room for a quiet discovery or release; intensity labels alone earn no points |
 | Items and ending | 10 | the promise is paid with specific content and the ending makes its meaning understandable; an optional ask follows the answer and belongs to this episode; a no-CTA ending can earn all points, an ending that leaves nothing a viewer could repeat cannot |
 
 A page that honours structure, opening, curve and ending with **no working engine** tops out
@@ -288,6 +309,11 @@ engine the research could actually carry.
 ## Output format (fixed, machine-parseable)
 
 ```
+## Wow
+| 믿는 것 | 실제로는 | Lunch test | Lands | Found in the item? |
+|---|---|---|---|---|
+| "요금 폭탄이 났다" — the viewer's first read, yes | "98%는 캐시 재사용" (claim #3) | 진짜? | 전개 #2 | yes — its last sentence says it |
+
 ## Engines
 | Engine | Claimed | Enacted? | Evidence |
 |---|---|---|---|
