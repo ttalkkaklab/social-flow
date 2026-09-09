@@ -24,7 +24,8 @@
  *
  *   ## Questions …            one row per question · Status says answered / written off
  *   ## Verified               one row per claim, numbered, with source links · ★ marks a key claim
- *   ## Messages               three rows · what a viewer living now takes away — decided before the directions
+ *   ## Wow                    three or more rows · what the viewer believes → what the evidence shows — decided before the messages
+ *   ## Messages               three rows · what a viewer living now takes away, each citing its wow (`W#`) — decided before the directions
  *   ## Directions             three rows, one topic per message (`M#`) · `Chosen: D#` locks the pick (owed on close, not on --direction)
  *   ## Counter-evidence …     one row per key claim, `Claim #` naming which (ranges allowed)
  *   ## Failed verification …  what was excluded and why
@@ -44,12 +45,15 @@
  * A channel whose profile skips research has no research.md at all, and that is not a defect —
  * the caller decides whether the file was supposed to exist.
  *
- * `--direction` is the first-pass gate: three verified claims, ten searches, three messages
- * and three direction rows each citing one of them, no pick and no counter-evidence yet. The
+ * `--direction` is the first-pass gate: three verified claims, ten searches, three or more wow
+ * points (a belief and a reversal on each), three messages each citing one of them, and three
+ * direction rows each citing a message, no pick and no counter-evidence yet. The
  * default run is the close: the floor, every question answered or written off, and one
- * `Chosen:` direction. On both runs a message or direction sentence that ends on ignorance
+ * `Chosen:` direction. On both runs a message, direction or reversal sentence that ends on ignorance
  * ("X는 아직 모른다", "미스터리로 남았다") is a violation — an episode built on one has nothing
- * to hand over at the 마무리 (user directive 2026-09-07; scenario-stage §Messages first).
+ * to hand over at the 마무리 (user directive 2026-09-07; scenario-stage §Messages first). The wow
+ * rows are what keeps a page from being a list of true facts — the "사실의 나열" candidate
+ * (user directive 2026-09-09; scenario-stage §The wow first).
  *
  * Exit codes:
  *   0  the research closes (or, with --direction, is enough to ask)
@@ -76,6 +80,7 @@ const FLOOR_SHORT = 5;
 const FLOOR_LONG = 12;
 const FLOOR_DIRECTIONS = 3;
 const FLOOR_MESSAGES = 3;
+const FLOOR_WOWS = 3;
 const FLOOR_DIRECTION_SEARCHES = 10;
 
 /* A sentence that ends on ignorance. Predicate forms only — "알 수 없는 물체" is a modifier and
@@ -257,6 +262,7 @@ function analyse(src, fmt, scenes, opts) {
   const dirBody = section(src, /Directions?|시나리오\s*방향|방향성|방향\s*후보/i) || '';
   const dRows = rows(dirBody);
   const mRows = rows(section(src, new RegExp('^##\\s+' + NUM + '(Messages?(\\s|$)|메시지)', 'i')));
+  const wRows = rows(section(src, new RegExp('^##\\s+' + NUM + '(Wows?(\\s|$)|와우)', 'i')));
   const cRows = rows(section(src, /Counter-evidence|반증|역검증/i));
   const fRows = rows(section(src, /Failed\s*(verification)?|검증\s*실패|본문\s*금지|제외/i));
   const suffBody = section(src, /Sufficiency|충분성|충족/i) || '';
@@ -333,6 +339,31 @@ function analyse(src, fmt, scenes, opts) {
       warn(`Sufficiency counts ${answeredLine[2]} questions, the table has ${qRows.length}`);
   }
 
+  // ── Wow points (three or more, decided before the messages) ──
+  // §2.1: what the viewer walks in believing against what the evidence shows — the gap a
+  // viewer would say 진짜? at. A message is the so-what of one of these, so a log with
+  // messages and no wow points wrote its takeaways before anything made the viewer sit up,
+  // which is the "사실의 나열" page (user directive 2026-09-09; scenario-stage §The wow first).
+  // The belief and the reversal are the two cells right after the id, and both have to hold a
+  // sentence; the reversal is read for ignorance too — "실제로는 아무도 모른다" reverses nothing.
+  const BLANK = /^[-—–?.<>…\s]*$/;
+  const wowIds = wRows.filter((r) => /^\**\s*W?\s*\d+\s*\**$/i.test(r[0] || ''))
+    .map((r) => ({ n: Number(String(r[0] || '').replace(/[^\d]/g, '')), cells: r }));
+  if (wowIds.length < FLOOR_WOWS)
+    bad(`${wowIds.length} wow point(s) — §2.1 writes three or more before any message: what the viewer ` +
+        'walks in believing and what the evidence shows instead, on Verified rows (scenario-stage §The wow first)');
+  wowIds.forEach((w) => {
+    const belief = String(w.cells[1] || '').replace(/\*/g, '').trim();
+    const truth = String(w.cells[2] || '').replace(/\*/g, '').trim();
+    if (BLANK.test(belief))
+      bad(`W${w.n} has no 믿는 것 — the belief the viewer walks in with is half of the wow`);
+    if (BLANK.test(truth))
+      bad(`W${w.n} has no 실제로는 — what the evidence shows is the other half`);
+    const hit = truth.match(IGNORANCE);
+    if (hit)
+      bad(`W${w.n}'s 실제로는 ends on ignorance ("…${hit[0]}") — a reversal says what is true`);
+  });
+
   // ── Messages (three, decided before the directions) ──
   // §2.1: what a viewer living now understands, reconsiders or can do after the episode —
   // three different ones, each on Verified rows. A direction is the topic cut from one of
@@ -345,13 +376,31 @@ function analyse(src, fmt, scenes, opts) {
     bad(`${msgIds.length} message(s) — §2.1 writes three before any direction: what a viewer ` +
         'living now understands, reconsiders or can do after the episode, each a different message on Verified rows');
   // Only the Message cell is the sentence under judgement. "Why today" next to it explains
-  // what the viewer does not yet know, and reading that column made honest rows fail.
+  // what the viewer does not yet know, and reading that column made honest rows fail. The
+  // wow citation is a cell holding nothing but a W#; the template puts it right after the id,
+  // so the sentence is the first cell after the id that is not that citation.
+  const WOW_CELL = /^\**\s*W\s*(\d+)\s*\**$/i;
+  const wowNums = new Set(wowIds.map((w) => w.n));
+  const citedWows = [];
   msgIds.forEach((m) => {
-    const hit = String(m.cells[1] || '').match(IGNORANCE);
+    const wIdx = m.cells.findIndex((c, i) => i > 0 && WOW_CELL.test(String(c || '').trim()));
+    const sentence = String(m.cells[wIdx === 1 ? 2 : 1] || '');
+    const hit = sentence.match(IGNORANCE);
     if (hit)
       bad(`M${m.n} is a report of ignorance ("…${hit[0]}") — a message names what the evidence ` +
           'establishes, not what nobody knows (scenario-stage §Messages first)');
+    if (!wowIds.length) return;
+    if (wIdx < 0) bad(`M${m.n} cites no wow point (W#) — a message is the so-what of one wow (scenario-stage §The wow first)`);
+    else {
+      const n = Number(String(m.cells[wIdx]).replace(/[^\d]/g, ''));
+      if (!wowNums.has(n)) bad(`M${m.n} cites W${n}, which is not in the Wow table`);
+      else citedWows.push(n);
+    }
   });
+  const sharedWows = citedWows.filter((n, i) => citedWows.indexOf(n) !== i);
+  if (sharedWows.length)
+    warn(`messages share a wow point (W${[...new Set(sharedWows)].join(', W')}) — two so-whats of one gap ` +
+         'can be two episodes, but check that the second page is not a rewording of the first');
 
   // ── Directions (three topics, one per message, one pick) ──
   // First pass (--direction) needs three rows and no pick. Close needs the same three rows
@@ -486,7 +535,7 @@ function analyse(src, fmt, scenes, opts) {
 
   return {
     claims: claimCount, keyClaims: keys.length, keyBasis, questions: qRows.length,
-    messages: msgIds.length, directions: dirIds.length, chosen: [...chosen],
+    wows: wowIds.length, messages: msgIds.length, directions: dirIds.length, chosen: [...chosen],
     phase: directionPhase ? 'direction' : 'close',
     counterRows: cRows.length, counterUnmapped: unmapped, excluded: fRows.length,
     searches, floor: FLOOR_ABSOLUTE, searchFloor: FLOOR_DIRECTION_SEARCHES, aim, traceability: trace,
@@ -518,12 +567,19 @@ function selftest() {
     '| 2 | y | [a](https://a.example) | [b](https://b.example) | WebSearch | 2026-08-28 | |',
     '| 3 | z | [a](https://a.example) | [b](https://b.example) | WebSearch | 2026-08-28 | |',
     '',
+    '## Wow',
+    '| # | 믿는 것 | 실제로는 | Type | On claims | → M# |',
+    '|---|---|---|---|---|---|',
+    '| W1 | x-belief | x-truth | 반전 | 1 | → M1 |',
+    '| W2 | y-belief | y-truth | 숫자 | 2 | → M2 |',
+    '| W3 | z-belief | z-truth | 숨은 원인 | 3 | → M3 |',
+    '',
     '## Messages',
-    '| # | Message | Why today | On claims | Status |',
-    '|---|---|---|---|---|',
-    '| M1 | x-msg | now | 1 | → D1 |',
-    '| M2 | y-msg | now | 2 | → D2 |',
-    '| M3 | z-msg | now | 3 | → D3 |',
+    '| # | Wow | Message | Why today | On claims | Status |',
+    '|---|---|---|---|---|---|',
+    '| M1 | W1 | x-msg | now | 1 | → D1 |',
+    '| M2 | W2 | y-msg | now | 2 | → D2 |',
+    '| M3 | W3 | z-msg | now | 3 | → D3 |',
     '',
     '## Directions',
     '| # | Message | 주제 · question | Hook form | Hero / stake | Already verified | Still to research | Status |',
@@ -736,7 +792,44 @@ function selftest() {
   ok('with no messages the directions raise nothing about citations at all',
      !has(analyse(noMsg, null), /cites (no message|M\d)/));
   ok('two messages is a violation',
-     has(analyse(good.replace('| M3 | z-msg | now | 3 | → D3 |\n', ''), null), /2 message\(s\)/));
+     has(analyse(good.replace('| M3 | W3 | z-msg | now | 3 | → D3 |\n', ''), null), /2 message\(s\)/));
+
+  // ── Wow points — three or more, before the messages, and each message cites one ──
+  ok('it counts the wow points', g.wows === 3);
+  ok('a Korean 와우 heading is the Wow table',
+     analyse(good.replace('## Wow', '## 와우 포인트'), null).wows === 3);
+  const noWow = good.replace(/\n## Wow[\s\S]*?(?=\n## Messages)/, '');
+  ok('a missing Wow section is a violation on close', has(analyse(noWow, null), /0 wow point\(s\)/));
+  ok('a missing Wow section is a violation on --direction',
+     has(analyse(noWow, null, null, { directionPhase: true }), /0 wow point\(s\)/));
+  ok('with no wow points the messages raise nothing about citations at all',
+     !has(analyse(noWow, null), /cites (no wow|W\d)/));
+  ok('two wow points is a violation',
+     has(analyse(good.replace('| W3 | z-belief | z-truth | 숨은 원인 | 3 | → M3 |\n', ''), null), /2 wow point\(s\)/));
+  ok('a wow row with no belief is a violation',
+     has(analyse(good.replace('| W1 | x-belief |', '| W1 |  |'), null), /W1 has no 믿는 것/));
+  ok('a wow row with no reversal is a violation',
+     has(analyse(good.replace('| x-belief | x-truth |', '| x-belief | — |'), null), /W1 has no 실제로는/));
+  ok('a reversal that ends on 모른다 is a violation',
+     has(analyse(good.replace('| x-belief | x-truth |', '| x-belief | 진실은 아무도 모른다 |'), null),
+         /W1's 실제로는 ends on ignorance/));
+  ok('a belief may say the viewer does not know something',
+     !has(analyse(good.replace('| W1 | x-belief |', '| W1 | 원인은 아무도 모른다 |'), null), /W1's 실제로는/));
+  ok('a message citing no wow point is a violation',
+     has(analyse(good.replace('| M2 | W2 | y-msg |', '| M2 | — | y-msg |'), null), /M2 cites no wow point/));
+  ok('a message citing a wow that is not on the page is a violation',
+     has(analyse(good.replace('| M2 | W2 | y-msg |', '| M2 | W9 | y-msg |'), null),
+         /M2 cites W9, which is not in the Wow table/));
+  ok('two messages on one wow is a warning, not a violation', (() => {
+    const r = analyse(good.replace('| M2 | W2 | y-msg |', '| M2 | W1 | y-msg |'), null);
+    return has(r, /share a wow point \(W1\)/) && bads(r).length === 0;
+  })());
+  ok('the message sentence is still read for ignorance with the W# in front of it',
+     has(analyse(good.replace('| M1 | W1 | x-msg |', '| M1 | W1 | 진실은 아무도 모른다 |'), null),
+         /M1 is a report of ignorance/));
+  ok('a W# after the sentence is still the citation',
+     !has(analyse(good.replace('| M1 | W1 | x-msg | now | 1 | → D1 |', '| M1 | x-msg | now | 1 | → D1 | W1 |'), null),
+          /M1 cites no wow/));
   ok('a direction citing no message is a violation',
      has(analyse(good.replace('| D2 | M2 | b |', '| D2 | — | b |'), null), /D2 cites no message/));
   ok('a direction citing a message that is not on the page is a violation',
@@ -747,7 +840,7 @@ function selftest() {
   // ── A topic is never a report of ignorance (user directive 2026-09-07) ──
   const ign = (row) => analyse(good.replace('| D1 | M1 | a |', '| D1 | M1 | ' + row + ' |'), null);
   ok('a message that ends on 모른다 is a violation',
-     has(analyse(good.replace('| M1 | x-msg |', '| M1 | 무엇이 떨어졌는지는 아직 모른다 |'), null),
+     has(analyse(good.replace('| M1 | W1 | x-msg |', '| M1 | W1 | 무엇이 떨어졌는지는 아직 모른다 |'), null),
          /M1 is a report of ignorance/));
   ok('a direction whose 주제 says nobody knows is a violation',
      has(ign('진실은 아무도 모른다'), /D1 is a report of ignorance/));
@@ -799,23 +892,23 @@ function selftest() {
                                '| D1 | M1 | a | gap | x | 1 | 인명피해 규모는 아직 밝혀지지 않았다 | chosen |'),
                   null), /report of ignorance/));
   ok('the "Why today" column may say the viewer does not know it yet',
-     !has(analyse(good.replace('| M2 | y-msg | now | 2 | → D2 |',
-                               '| M2 | y-msg | 사람들이 여전히 진실을 모른다 | 2 | → D2 |'), null),
+     !has(analyse(good.replace('| M2 | W2 | y-msg | now | 2 | → D2 |',
+                               '| M2 | W2 | y-msg | 사람들이 여전히 진실을 모른다 | 2 | → D2 |'), null),
           /report of ignorance/));
   ok('an M# inside another cell does not stand in for a missing citation',
      has(analyse(good.replace('| D2 | M2 | b | number | y | 2 | — | not used |',
                               '| D2 | — | b | number | 갤럭시 M2 언팩 반응 | 2 | — | not used |'), null),
          /D2 cites no message/));
   ok('a two-column Messages table is still read for ignorance',
-     has(analyse(good.replace('| # | Message | Why today | On claims | Status |\n|---|---|---|---|---|',
+     has(analyse(good.replace('| # | Wow | Message | Why today | On claims | Status |\n|---|---|---|---|---|---|',
                               '| # | Message |\n|---|---|')
-                     .replace('| M1 | x-msg | now | 1 | → D1 |', '| M1 | 진실은 아무도 모른다 |')
-                     .replace('| M2 | y-msg | now | 2 | → D2 |', '| M2 | y-msg |')
-                     .replace('| M3 | z-msg | now | 3 | → D3 |', '| M3 | z-msg |'), null),
+                     .replace('| M1 | W1 | x-msg | now | 1 | → D1 |', '| M1 | 진실은 아무도 모른다 |')
+                     .replace('| M2 | W2 | y-msg | now | 2 | → D2 |', '| M2 | y-msg |')
+                     .replace('| M3 | W3 | z-msg | now | 3 | → D3 |', '| M3 | z-msg |'), null),
          /M1 is a report of ignorance/));
   ok('the message status cell is not read for ignorance',
-     !has(analyse(good.replace('| M2 | y-msg | now | 2 | → D2 |',
-                               '| M2 | y-msg | now | 2 | 미제로 남았다 |'), null), /M2 is a report of ignorance/));
+     !has(analyse(good.replace('| M2 | W2 | y-msg | now | 2 | → D2 |',
+                               '| M2 | W2 | y-msg | now | 2 | 미제로 남았다 |'), null), /M2 is a report of ignorance/));
   ok('two directions on one message is a violation',
      has(analyse(good.replace('| D2 | M2 | b |', '| D2 | M1 | b |'), null), /share a message \(M1\)/));
   ok('the status cell is not read for ignorance',
@@ -832,6 +925,7 @@ function selftest() {
     ok('SKILL §2 still aims a long-form at twelve or more', /\*\*twelve or more\*\*/.test(s));
     ok('SKILL §2.1 still writes three directions', /three honest directions/i.test(s));
     ok('SKILL §2.1 still writes three messages first', /§Messages first/.test(s));
+    ok('SKILL §2.1 still writes the wow points before the messages', /§The wow first/.test(s));
     ok('SKILL §2.1 still asks ten or more searches', /\*\*ten or more\*\*/.test(s));
     ok('SKILL still names check-research.js --direction', /check-research\.js storyboard\/ --direction/.test(s));
   } else {
@@ -869,13 +963,14 @@ function main() {
   }
 
   const lines = ['research.md — ' + result.claims + ' verified claim(s) · ' +
-                 result.questions + ' question(s) · ' + result.messages + ' message(s) · ' +
+                 result.questions + ' question(s) · ' + result.wows + ' wow point(s) · ' +
+                 result.messages + ' message(s) · ' +
                  result.directions + ' direction(s)' +
                  (result.chosen.length ? ' · chosen D' + result.chosen.join(', D') : '') +
                  ' · ' + result.excluded + ' excluded', ''];
   if (!result.findings.length) {
     if (result.phase === 'direction') {
-      lines.push('  First pass closes: three messages and three directions citing them are on the page,');
+      lines.push('  First pass closes: three or more wow points, three messages citing them and three directions citing the messages are on the page,');
       lines.push('  ten or more searches are logged, and there are enough verified claims to ask which one the episode is.');
     } else {
       lines.push('  The research closes: the floor is met, a direction is picked, every question');

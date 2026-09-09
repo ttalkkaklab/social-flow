@@ -4,9 +4,9 @@ description: >
   Plans one episode and stops for approval before generation. Use when
   the user asks to "스토리보드 만들어", "스토리보드 작성", "이 주제로 영상 기획", "촬영 대본 만들어", "내가 녹화할 대본", "make
   a storyboard", "plan a video for topic X", or starts a new topic in a channel.
-  Researches the topic, decides three messages for today's viewer, writes one seven-item
+  Researches the topic, finds the wow points, decides three messages for today's viewer, writes one seven-item
   scenario per message, shows all three for the pick, researches the winner, and writes the storyboard
-  under data/[channel]/episodes/[topic]/storyboard/. Format with the user first: 9:16 shorts
+  under data/[channel]/episodes/[topic]/storyboard/. Format: 9:16 shorts
   by default, or 16:9 long-form with chapters. The narration is written before any shot and
   read on its own twice — the chain, then the words — each looped to 95 in at most three
   reads with the sentences handed to the reviewer inline; the board gets the contract
@@ -20,7 +20,7 @@ allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "Agent", "AskUserQuesti
 
 Read [story-quality.md](references/story-quality.md) before candidates or narration. Its evidence → meaning → ending → optional CTA contract overrides older mandatory-question and modern-case rules. Write `window.STORY` in §4a; draft checks require it. The existing narration review supplies its four evidence-backed findings; after vocabulary edits revalidate the read and run `check-story.js storyboard/` before §4b or approval. No score waives a failed criterion.
 
-Takes one topic through **research → three messages → three scenario candidates → one pick → more research →
+Takes one topic through **research → wow points → three messages → three scenario candidates → one pick → more research →
 narration (the story pass) → narration read-through (looped to 95) → narration vocabulary
 (looped to 95) → the narration approval → the board (camera · space · sound · slides) →
 the image and clip plan → storyboard approval**. **No generation call happens in this skill** —
@@ -207,7 +207,7 @@ explanations compete, what it touches in the viewer's life now — **3–5 rows*
 3. **Put every claim in the evidence table** (`research.md` §Verified) — failed claims in
    §Failed. **Number the rows and keep the numbers.** Two independent sources for anything
    time-sensitive; one official origin counts as both. Don't shrink a range to its upper bound.
-4. **Write `research.md` §Messages first — three messages for the viewer living now,** each
+4. **Write `research.md` §Wow, then §Messages.** §Wow first: **three or more rows** — what the viewer walks in believing → what the evidence shows instead (claim #N, a type, and the lunch test: the 실제로는 half gets a 진짜?, not a 그렇구나 — scenario-stage §The wow first; a belief nobody holds is a straw man, and a topic with no gap has no short in it). Then §Messages: three messages for the viewer living now, each the so-what of one wow (`W#`) —
    one sentence on what they understand, reconsider or can do after the episode, on Verified rows —
    three different messages, not three wordings (scenario-stage §Messages first).
 5. **Then §Directions — three rows, one topic cut from each message (`M#`), none chosen yet.** A
@@ -233,7 +233,7 @@ is not a direction either. Reframe around what the record establishes, or drop t
 
 #### 2.2 Three candidates, then one pick — HITL, before more searching
 
-Turn each direction row into `candidates/d<n>.md` — its message verbatim under the title, then
+Turn each direction row into `candidates/d<n>.md` — its message verbatim under the title, its wow line under that (믿는 것 → 실제로는 · claim · type · `wow_lands`, the 전개 item where the reversal is first said plainly), then
 **the seven items, in this order, on every candidate and both formats** (user directive,
 2026-09-02): 주제 (the subject cut from the message — what the episode is about and the question
 it answers; never "…는 알 수 없다") · 훅 (a dramatised scene) · 전개 #1 (what actually happened) ·
@@ -266,19 +266,19 @@ get their turn at §4.5, on the sentences that actually get spoken.
 
 **No reviewer here** — the user is the judge of this stage, and the narration reads at §4.4
 and §4.5 catch a story that does not carry. Test each page against scenario-stage.md's
-engine test yourself before showing it: does the 주제 hand over what its message says, does the 훅
-stage a moment, does 전개 #1 open on the false answer, does the feel curve dip. **Show the three pages
-in full before asking** — for each candidate print its message and the seven items as written (the
+wow and engine tests yourself before showing it: does the 주제 hand over what its message says, does the 훅
+stage the 믿는 것 half and withhold the reversal, does the `wow_lands` item say the reversal plainly at the curve's maximum, does 전개 #1 open on the false answer, does the feel curve dip. **Show the three pages
+in full before asking** — for each candidate print its message, its wow line, and the seven items as written (the
 훅's first sentence, the three 전개 paragraphs, the earned resolution, the optional CTA decision) with
-its engine. A one-line option is not what the user approves; the seven items are. Then AskUserQuestion:
+its engine. A one-line option is not what the user approves; the wow and the seven items are. Then AskUserQuestion, the option description carrying the 실제로는 half so the user compares three reversals:
 
 ```
-[D1 · <주제> — <engine> (Recommended)]
-[D2 · <주제> — <engine>]
-[D3 · <주제> — <engine>]
+[D1 · <주제> — <engine> (Recommended)]   description: 실제로는 <the reversal> · lands 전개 #<n>
+[D2 · <주제> — <engine>]                 description: 실제로는 <…>
+[D3 · <주제> — <engine>]                 description: 실제로는 <…>
 ```
 
-Recommended is the page whose engine you can point at in its own sentences. **Approval of
+Recommended is the page whose wow you would say at lunch and whose engine you can point at in its own sentences. **Approval of
 the seven items is what starts the rest** — write `Chosen: D#`, copy the winner to
 `scenario.md`, then §2.3. Unattended autoproduce has no user to ask, so it gets one batched
 reviewer read of the three pages and takes the highest (its §2.2).

@@ -193,13 +193,21 @@ must map 1:1 to an entry here.
 | ★1 | <figure·deadline·effective date> | <URL> | <URL> | naver_search | <YYYY-MM-DD> | source excerpt: "…" |
 | 2 | <context the lines lean on> | <URL> | <named source> | WebSearch | <YYYY-MM-DD> | |
 
-## Messages                                     # three things a viewer living now takes away (SKILL §2.1) — decided before any direction. None is a report of ignorance ("X는 알 수 없다").
+## Wow                                          # three or more gaps a viewer would say 진짜? at (SKILL §2.1, scenario-stage §The wow first) — decided before any message. The 믿는 것 half is something the profile §1 viewer actually believes; the 실제로는 half is on Verified rows and never ends on 모른다.
 
-| # | Message — what the viewer understands, reconsiders or can do after this | Why it reaches them today | On claims | Status |
-|---|---|---|---|---|
-| M1 | <one sentence — the subject, what happened or works, why it matters to them> | <what in their life it touches> | 1, 3 | → D1 |
-| M2 | <a different message, not a rephrase> | <…> | 2 | → D2 |
-| M3 | <…> | <…> | 3 | → D3 |
+| # | 믿는 것 — what the viewer walks in believing | 실제로는 — what the evidence shows | Type | On claims | → M# |
+|---|---|---|---|---|---|
+| W1 | <the belief, in the viewer's words> | <the reversal, said plainly> | 반전 | 1, 3 | → M1 |
+| W2 | <a different belief> | <a figure that should not be possible> | 숫자 | 2 | → M2 |
+| W3 | <…> | <…> | 숨은 원인 | 3 | → M3 |
+
+## Messages                                     # three things a viewer living now takes away (SKILL §2.1) — each the so-what of one wow, decided before any direction. None is a report of ignorance ("X는 알 수 없다").
+
+| # | Wow | Message — what the viewer understands, reconsiders or can do after this | Why it reaches them today | On claims | Status |
+|---|---|---|---|---|---|
+| M1 | W1 | <one sentence — the subject, what happened or works, why it matters to them> | <what in their life it touches> | 1, 3 | → D1 |
+| M2 | W2 | <a different message, not a rephrase> | <…> | 2 | → D2 |
+| M3 | W3 | <…> | <…> | 3 | → D3 |
 
 ## Directions                                   # three different episodes this topic could be — one topic cut from each message (SKILL §2.1). None marked chosen until §2.2 picks one.
 

@@ -66,7 +66,7 @@ a contract checker at exit 1.
 |---|---|---|
 | Are the facts right | Time-sensitive values cross-checked against 2 independent sources + **3 or more** verified facts | Topic discarded (§2) |
 | Does the copy read like a human wrote it | `check-style.py` exit ≤ 1 per surface (4 = not Korean, so unchecked — it needs a human, and unattended runs stop at it) | Fix and retry; abort after 2 failures (§4·§9) |
-| Is the story worth telling (both formats) | three seven-item candidates judged in one batched storyboard-reviewer read on curiosity · fear · intrigue · comedy → the highest at **≥95 · P0 = 0** (one improving re-read of the best page at most) | Topic dropped (§2.2) |
+| Is the story worth telling (both formats) | three seven-item candidates judged in one batched storyboard-reviewer read on the wow (a belief the viewer holds, overturned in a named 전개 item) and curiosity · fear · intrigue · comedy → the highest at **≥95 · P0 = 0** (one improving re-read of the best page at most) | Topic dropped (§2.2) |
 | Does the narration alone carry the episode | storyboard-reviewer narration mode on the inline sentences, looped → **≥95 · P0 = 0** (cap 3 reads) | Authoring aborted (§3.5) |
 | Is the wording what a person would say | storyboard-reviewer vocabulary mode on the same sentences, looped → **≥95 · P0 = 0** (cap 3 reads) | Authoring aborted (§3.6) |
 | Does the video hold together | `build-report.txt` drift 0 · 0 missing reveals · voice-to-bed separation ≥ 4 LU | Abort (§8) |
@@ -275,9 +275,13 @@ skill's §2 shape inside the quota — **two passes, a pick in between**:
 1. **First research (§2.1)** — write the direction-finding question map (3–5 rows:
    what people ask, what's true, which explanations compete), search per question
    from two directions (`kin`·`news`·`blog` on naver_search, WebSearch, `datago`
-   for government-origin figures), log **ten or more** searches, then decide **three
-   messages** for the viewer living now in `research.md` §Messages — what they
-   understand, reconsider or can do after the episode, three different ones, each on
+   for government-origin figures), log **ten or more** searches, then find the **wow
+   points** in `research.md` §Wow — three or more rows, what the viewer walks in believing
+   → what the evidence shows (claim #N, a type; the 실제로는 half gets a 진짜?, not a
+   그렇구나 — storyboard `scenario-stage.md` §The wow first), then decide **three
+   messages** for the viewer living now in §Messages — what they
+   understand, reconsider or can do after the episode, each the so-what of one wow
+   (`W#`), three different ones, each on
    Verified rows — and write **three directions** in §Directions, one topic cut from each
    message (`M#` · 주제 with its question · hook form · primary engine · hero · what the
    second pass still owes), not three wordings of the same two lookups. Three different
@@ -315,14 +319,17 @@ node $SB/check-research.js storyboard/               # exit 1 = the research doe
 ### 2.2 Scenario candidates (gate 6a — storyboard-reviewer scenario mode, one batched read)
 
 Both formats. After the three messages, the three direction rows and `check-research.js
---direction` exit 0, write three candidate pages — the message verbatim under the title, then
+--direction` exit 0, write three candidate pages — the message verbatim under the title, the
+wow line under it (믿는 것 → 실제로는 · claim · type · `wow_lands`, the 전개 item where the
+reversal is first said plainly — the 훅 stages the belief and withholds it), then
 **the seven items, in order, on every one**: 주제 (the subject cut from the message — what the
 episode is about and the question it answers; never "…는 알 수 없다") · 훅 (a
 dramatised scene that invents no fact) · 전개 #1 (what actually happened) · 전개 #2 (what it
 makes the next development necessary) · 전개 #3 (evidence, consequence or limit) · 마무리
 (earned resolution, naming the one forwardable thing — the fact, verdict, line or checklist
 a viewer could pass on as-is) · CTA (optional, otherwise 없음 with reason), per storyboard §2.2 and
-`../storyboard/references/scenario-stage.md`. A page that only explains, a hook that is the
+`../storyboard/references/scenario-stage.md`. A page that only explains, a wow the viewer
+already believed, a hook that is the
 start of the timeline, or a feel curve that never dips costs nothing to fix here and costs
 the whole board later. Three different primaries. Naming an engine is not enough — the
 items have to run it.

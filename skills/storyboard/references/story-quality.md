@@ -26,7 +26,10 @@ board without it.
    sentence. A topic label, emotion label or "cooperation matters" is insufficient. Name
    the subject, what happened or works, and why this relationship matters here. Write three
    of these for the viewer living now before any direction row (`research.md` §Messages,
-   scenario-stage §Messages first); each direction is one message's topic. A sentence that
+   scenario-stage §Messages first); each direction is one message's topic. Before the
+   messages, write the wow points — what the viewer walks in believing against what the
+   evidence shows, the gap a viewer would say 진짜? at (`research.md` §Wow, scenario-stage
+   §The wow first); each message is the so-what of one. A sentence that
    says the thing cannot be known is not a message — the episode would have nothing to hand over.
 3. Choose the evidence, action, demonstration or punchline that delivers that content.
    Design the ending before polishing the opening. A resolution, demonstrated limit or
