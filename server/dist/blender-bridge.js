@@ -29,9 +29,7 @@
  * origin sees their front.
  */
 import { execFile } from 'node:child_process';
-import { createHash } from 'node:crypto';
-import { existsSync, mkdtempSync, renameSync, rmSync, writeFileSync } from 'node:fs';
-import { readFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, extname, join, resolve } from 'node:path';
 import { z } from 'zod';
@@ -90,22 +88,26 @@ const importSchema = z.object({
     rotationDeg: vec3.optional().default([0, 0, 0]),
     scale: z.number().positive().optional().default(1),
 });
+// fps · frame range · resolution carry no zod default on purpose: a fresh scene (reset:true)
+// gets the constants inside Blender, and reset:false keeps whatever the file already has
+// unless the caller names a new value.
 export const blenderSceneBuildSchema = z
     .object({
     blendPath,
     reset: z.boolean().optional().default(true),
-    fps: z.number().int().min(1).max(120).optional().default(DEFAULT_SCENE_FPS),
-    frameStart: frameNumber.optional().default(DEFAULT_FRAME_START),
-    frameEnd: frameNumber.optional().default(DEFAULT_FRAME_END),
-    width: z.number().int().min(64).max(4096).optional().default(DEFAULT_PREVIZ_WIDTH),
-    height: z.number().int().min(64).max(4096).optional().default(DEFAULT_PREVIZ_HEIGHT),
+    force: z.boolean().optional().default(false),
+    fps: z.number().int().min(1).max(120).optional(),
+    frameStart: frameNumber.optional(),
+    frameEnd: frameNumber.optional(),
+    width: z.number().int().min(64).max(4096).optional(),
+    height: z.number().int().min(64).max(4096).optional(),
     floor: z.boolean().optional().default(true),
     floorSize: z.number().positive().max(10_000).optional().default(40),
     proxies: z.array(proxySchema).max(100).optional().default([]),
     imports: z.array(importSchema).max(50).optional().default([]),
 })
     .superRefine((data, ctx) => {
-    if (data.frameEnd < data.frameStart) {
+    if (data.frameStart !== undefined && data.frameEnd !== undefined && data.frameEnd < data.frameStart) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['frameEnd'], message: 'frameEnd must not be before frameStart' });
     }
     const names = [...data.proxies.map((p) => p.name), ...data.imports.map((i) => i.name)];
@@ -255,28 +257,44 @@ export function previzTimeoutMs(frames, engine) {
 }
 const EDIT_TIMEOUT_MS = 180_000;
 /**
- * The bridge script is written once per content hash into the temp directory and reused
- * across calls — a temp file plus rename, so two concurrent first calls cannot race each
- * other into a half-written script.
+ * One Blender at a time per .blend file. The client runs independent tool calls in
+ * parallel, and two Blenders opening, editing and saving the same file at once lose one
+ * edit silently (the later save wins with the earlier one's state). Different files still
+ * run side by side.
  */
-function ensureScript() {
-    const hash = createHash('sha1').update(BRIDGE_PY).digest('hex').slice(0, 12);
-    const path = join(tmpdir(), `social-flow-blender-bridge-${hash}.py`);
-    if (existsSync(path))
-        return path;
-    const staging = `${path}.${process.pid}.tmp`;
-    writeFileSync(staging, BRIDGE_PY, 'utf-8');
-    renameSync(staging, path);
-    return path;
+const fileLocks = new Map();
+async function withFileLock(key, fn) {
+    const previous = fileLocks.get(key) ?? Promise.resolve();
+    let release = () => { };
+    const mine = new Promise((r) => {
+        release = r;
+    });
+    const chained = previous.then(() => mine);
+    fileLocks.set(key, chained);
+    await previous;
+    try {
+        return await fn();
+    }
+    finally {
+        release();
+        if (fileLocks.get(key) === chained)
+            fileLocks.delete(key);
+    }
 }
-async function runBridge(job, timeoutMs) {
+function runBridge(job, timeoutMs) {
+    return withFileLock(job.blendPath, () => runBridgeUnlocked(job, timeoutMs));
+}
+async function runBridgeUnlocked(job, timeoutMs) {
     const blender = blenderBin();
     if (!blender)
         return { success: false, error: installHint('Blender was not found on this machine.') };
-    const script = ensureScript();
+    // Script, job and result all live in a private per-call directory (mkdtemp is 0700), so a
+    // shared /tmp cannot hand Blender someone else's script under a predictable name.
     const dir = mkdtempSync(join(tmpdir(), 'blender-bridge-'));
+    const script = join(dir, 'bridge.py');
     const jobPath = join(dir, 'job.json');
     const resultPath = join(dir, 'result.json');
+    writeFileSync(script, BRIDGE_PY, 'utf-8');
     writeFileSync(jobPath, JSON.stringify({ ...job, resultPath }), 'utf-8');
     try {
         const run = await new Promise((resolveRun) => {
@@ -344,7 +362,9 @@ export async function renderPreviz(request) {
     }
     const outputDir = request.outputPath ? resolve(request.outputPath) : join(dirname(request.blendPath), 'previz');
     const videoPath = resolveOutputFile(outputDir, request.filename, 'video');
-    const framesForTimeout = request.frameStart !== undefined && request.frameEnd !== undefined ? request.frameEnd - request.frameStart + 1 : DEFAULT_FRAME_END;
+    // The scene's own range is unknown here, so budget for the cap the script enforces rather
+    // than for a guess that would cut a legitimate long render short.
+    const framesForTimeout = request.frameStart !== undefined && request.frameEnd !== undefined ? request.frameEnd - request.frameStart + 1 : MAX_PREVIZ_FRAMES;
     const timeoutMs = request.timeoutSeconds ? request.timeoutSeconds * 1000 : previzTimeoutMs(framesForTimeout, request.engine);
     const { timeoutSeconds: _t, outputPath: _o, filename: _f, ...rest } = request;
     const r = await runBridge({ op: 'render', ...rest, videoPath, maxFrames: MAX_PREVIZ_FRAMES }, timeoutMs);
@@ -365,6 +385,11 @@ from mathutils import Euler, Vector
 PROXY_GRAY = (0.55, 0.55, 0.58, 1.0)
 FLOOR_GRAY = (0.32, 0.32, 0.33, 1.0)
 WORLD_GRAY = (0.82, 0.82, 0.84)
+MARKER = "social_flow_previz"          # scene custom property: this .blend was made by blender_scene_build
+MIN_VERSION = (4, 2)
+# 4.2–4.5 call the engine BLENDER_EEVEE_NEXT; 5.0 renamed it back
+EEVEE = "BLENDER_EEVEE" if bpy.app.version >= (5, 0) else "BLENDER_EEVEE_NEXT"
+DEFAULTS = {"fps": 30, "frameStart": 1, "frameEnd": 150, "width": 1080, "height": 1920}
 
 
 def job_path():
@@ -648,21 +673,44 @@ def ensure_world(sc):
 
 def op_build(job):
     path = job["blendPath"]
-    if job["reset"] or not os.path.isfile(path):
+    exists = os.path.isfile(path)
+    fresh = job["reset"] or not exists
+    if job["reset"] and exists and not job.get("force"):
+        # refuse to wipe a .blend this lane did not make — a hand-authored file is not previz scratch
+        open_blend(path)
+        if not bpy.context.scene.get(MARKER):
+            raise RuntimeError("%s was not made by blender_scene_build — refusing to overwrite it; pass force:true to replace it, or reset:false to add to it" % path)
+    if fresh:
         bpy.ops.wm.read_factory_settings(use_empty=True)
     else:
         open_blend(path)
     sc = bpy.context.scene
+    sc[MARKER] = 1
     sc.unit_settings.system = "METRIC"
     sc.unit_settings.length_unit = "METERS"
     sc.unit_settings.scale_length = 1.0
-    sc.render.fps = int(job["fps"])
-    sc.render.fps_base = 1.0
-    sc.frame_start = int(job["frameStart"])
-    sc.frame_end = int(job["frameEnd"])
+
+    def given(key):
+        return job.get(key) is not None
+
+    def value(key):
+        return job[key] if given(key) else DEFAULTS[key]
+
+    # a fresh scene takes the defaults; an extended one keeps its values unless the caller names new ones
+    if fresh or given("fps"):
+        sc.render.fps = int(value("fps"))
+        sc.render.fps_base = 1.0
+    if fresh or given("frameStart"):
+        sc.frame_start = int(value("frameStart"))
+    if fresh or given("frameEnd"):
+        sc.frame_end = int(value("frameEnd"))
+    if sc.frame_end < sc.frame_start:
+        raise RuntimeError("frameEnd %d is before frameStart %d" % (sc.frame_end, sc.frame_start))
     sc.frame_current = sc.frame_start
-    sc.render.resolution_x = int(job["width"])
-    sc.render.resolution_y = int(job["height"])
+    if fresh or given("width"):
+        sc.render.resolution_x = int(value("width"))
+    if fresh or given("height"):
+        sc.render.resolution_y = int(value("height"))
     sc.render.resolution_percentage = 100
     ensure_world(sc)
     if job["floor"] and bpy.data.objects.get("Floor") is None:
@@ -717,6 +765,8 @@ def op_camera(job):
     cam.rotation_mode = "QUATERNION"
     keys = job["keys"]
     static = len(keys) == 1 and keys[0].get("frame") is None
+    # a zoom needs the lens keyed at every pose, or the one lens key holds for the whole move
+    zoom = any(k.get("lensMm") is not None for k in keys)
     prev_q = None
     frames = []
     for k in keys:
@@ -739,7 +789,7 @@ def op_camera(job):
             frames.append(f)
             cam.keyframe_insert(data_path="location", frame=f)
             cam.keyframe_insert(data_path="rotation_quaternion", frame=f)
-            if k.get("lensMm") is not None:
+            if zoom:
                 d.keyframe_insert(data_path="lens", frame=f)
     if not static:
         set_interpolation(cam, job["interpolation"])
@@ -822,7 +872,7 @@ def op_render(job):
     ensure_world(sc)
     sc.render.film_transparent = False
     if engine == "eevee":
-        sc.render.engine = "BLENDER_EEVEE"
+        sc.render.engine = EEVEE
         sc.eevee.taa_render_samples = int(job["samples"])
     else:
         sc.render.engine = "BLENDER_WORKBENCH"
@@ -845,8 +895,13 @@ def op_render(job):
     out_dir = os.path.dirname(video_path)
     os.makedirs(out_dir, exist_ok=True)
     stem = os.path.splitext(os.path.basename(video_path))[0]
+    # a render that was killed mid-way leaves its private-prefix file behind; sweep before starting
+    for stale in os.listdir(out_dir):
+        if stale.startswith(".previz-"):
+            os.remove(os.path.join(out_dir, stale))
     ims = sc.render.image_settings
-    ims.media_type = "VIDEO"
+    if hasattr(ims, "media_type"):      # 5.0+; 4.x picks video from file_format alone
+        ims.media_type = "VIDEO"
     ims.file_format = "FFMPEG"
     ims.color_mode = "RGB"
     ff = sc.render.ffmpeg
@@ -876,12 +931,15 @@ def op_render(job):
         mid = start + (end - start) // 2
         stills = sorted(set([start, mid, end]))
     still_paths = []
-    ims.media_type = "IMAGE"
+    skipped = []
+    if hasattr(ims, "media_type"):
+        ims.media_type = "IMAGE"
     ims.file_format = "PNG"
     ims.color_mode = "RGB"
     for f in stills:
         f = int(f)
         if f < start or f > end:
+            skipped.append(f)
             continue
         sc.frame_set(f)
         p = os.path.join(out_dir, "%s-f%04d.png" % (stem, f))
@@ -892,6 +950,7 @@ def op_render(job):
     return {
         "videoPath": video_path,
         "stillPaths": still_paths,
+        "skippedStills": skipped,
         "width": sc.render.resolution_x,
         "height": sc.render.resolution_y,
         "fps": sc.render.fps,
@@ -907,6 +966,9 @@ def main():
     job = json.load(open(job_path(), encoding="utf-8"))
     out = {"ok": False, "error": "no operation ran"}
     try:
+        if bpy.app.version < MIN_VERSION:
+            raise RuntimeError("Blender %s is older than %d.%d — the bridge needs 4.2 or newer (brew upgrade --cask blender)"
+                               % (bpy.app.version_string, MIN_VERSION[0], MIN_VERSION[1]))
         op = job["op"]
         path = job["blendPath"]
         if op == "read":

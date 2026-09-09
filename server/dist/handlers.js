@@ -950,7 +950,8 @@ export const ROUTES = {
         const r = await blender.renderPreviz(parseArgs(blender.blenderRenderPrevizSchema, args));
         if (!r.success)
             return text(`Blender previz render failed: ${r.error}`, true);
-        return text(`Previz rendered.\n\nFile: ${r.videoPath}\nStills: ${r.stillPaths.join(', ') || '(none)'}\n` +
+        const skipped = r.skippedStills.length ? `\nSkipped stills (outside frames ${r.frameStart}–${r.frameEnd}): ${r.skippedStills.join(', ')}` : '';
+        return text(`Previz rendered.\n\nFile: ${r.videoPath}\nStills: ${r.stillPaths.join(', ') || '(none)'}${skipped}\n` +
             `Engine: ${r.engine} · ${r.width}×${r.height} @ ${r.fps} fps · frames ${r.frameStart}–${r.frameEnd} (${r.frames} = ${r.seconds}s)\n` +
             `Render time: ${r.elapsedSeconds}s\n\n` +
             `Open the stills before judging the move — the stamp shows frame, camera and lens. The clip is a camera and blocking plan, not appearance.`);

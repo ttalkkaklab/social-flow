@@ -1856,20 +1856,26 @@ Returns: the same summary as blender_scene_read plus the list of what was built.
                 reset: {
                     type: 'boolean',
                     default: true,
-                    description: 'true (default) starts from an empty scene and overwrites blendPath; false opens the existing file and adds proxies/imports to it, keeping the camera and keys.',
+                    description: 'true (default) starts from an empty scene and replaces blendPath — only a file this tool made; a .blend from anywhere else is refused unless force is true. false opens the existing file and adds proxies/imports to it, keeping the camera, keys, fps, frame range and resolution.',
                 },
-                fps: { type: 'number', default: DEFAULT_SCENE_FPS, description: `Frames per second of the cut (1–120, default ${DEFAULT_SCENE_FPS} — the reel rate).` },
-                frameStart: { type: 'number', default: DEFAULT_FRAME_START, description: `First frame (default ${DEFAULT_FRAME_START}).` },
+                force: {
+                    type: 'boolean',
+                    default: false,
+                    description: 'With reset:true, also replace a .blend that blender_scene_build did not make (default false — a hand-authored file is never wiped by accident).',
+                },
+                fps: {
+                    type: 'number',
+                    description: `Frames per second of the cut (1–120). A fresh scene defaults to ${DEFAULT_SCENE_FPS}; with reset:false an omitted value keeps the file's.`,
+                },
+                frameStart: { type: 'number', description: `First frame. A fresh scene defaults to ${DEFAULT_FRAME_START}; with reset:false an omitted value keeps the file's.` },
                 frameEnd: {
                     type: 'number',
-                    default: DEFAULT_FRAME_END,
-                    description: `Last frame (default ${DEFAULT_FRAME_END} = 5 s at 30 fps). Camera and object keys past it extend the range.`,
+                    description: `Last frame. A fresh scene defaults to ${DEFAULT_FRAME_END} (5 s at 30 fps); with reset:false an omitted value keeps the file's. Camera and object keys past it extend the range.`,
                 },
-                width: { type: 'number', default: DEFAULT_PREVIZ_WIDTH, description: `Render width in px (default ${DEFAULT_PREVIZ_WIDTH}).` },
+                width: { type: 'number', description: `Render width in px. A fresh scene defaults to ${DEFAULT_PREVIZ_WIDTH}; with reset:false an omitted value keeps the file's.` },
                 height: {
                     type: 'number',
-                    default: DEFAULT_PREVIZ_HEIGHT,
-                    description: `Render height in px (default ${DEFAULT_PREVIZ_HEIGHT} — 9:16; pass 1920×1080 for long-form).`,
+                    description: `Render height in px. A fresh scene defaults to ${DEFAULT_PREVIZ_HEIGHT} (9:16; pass 1920×1080 for long-form); with reset:false an omitted value keeps the file's.`,
                 },
                 floor: { type: 'boolean', default: true, description: 'Add a grey ground plane at z = 0 (default true).' },
                 floorSize: { type: 'number', default: 40, description: 'Side of the floor plane in metres (default 40).' },
@@ -1950,8 +1956,8 @@ Returns: the same summary as blender_scene_read plus the list of what was built.
         description: `Place the camera of a .blend previz **on this machine** as numbers — a location in metres, a target point it looks at (or an explicit rotation), a lens in mm or a field of view — and key it over frames for a move. Creates the camera if it is missing, makes it the active camera, saves, and returns the scene summary with the camera's keyframes.
 
 Use for every framing decision in a previz: one key with no frame is a locked-off shot; two or more keys with frames are a dolly, arc, crane or push, interpolated LINEAR by default (constant speed reads as intent; BEZIER eases; CONSTANT cuts). Iterate in numbers — "height 1.2 m", "start at (-3, -3, 1), end at (3, -3, 1)", "24 mm" — each round is one call and costs nothing. Keys past the scene's frame range extend it. clearExisting (default true) replaces the previous move; false layers new keys onto it.
-Do NOT describe a camera in adverbs and hope — pass coordinates. Do NOT pass both lensMm and fovDeg, or both target and rotationDeg on one key. Do NOT use this for objects — that is blender_object_animate.
-Coordinates are Blender's: metres, Z up, +Y away from the front view; proxies face -Y, so a camera at negative Y sees their front.
+Do NOT describe a camera in adverbs and hope — pass coordinates. Do NOT pass both lensMm and fovDeg, or both target and rotationDeg on one key. Do NOT use this for objects — that is blender_object_animate. A lensMm on any key turns the move into a zoom: every key then records its lens.
+Coordinates are Blender's: metres, Z up, +Y away from the front view; proxies face -Y, so a camera at negative Y sees their front. Calls on the same .blend run one at a time inside the server (parallel calls on one file are queued, not lost); different files run side by side.
 
 Returns: the scene summary — the camera line shows location, rotation, lens, fov and keyframes.`,
         inputSchema: {
@@ -2021,7 +2027,7 @@ Returns: the scene summary — the camera line shows location, rotation, lens, f
         description: `Key an object of a .blend previz **on this machine** — location in metres, rotation in degrees (Euler XYZ, spins past 360 allowed), scale — over frames: the thrown can, the paper plane's path, the car crossing the bridge. Saves and returns the scene summary with the object's keyframes.
 
 Use for things that move through space — vehicles, props, projectiles — so the previz clip carries their timing and path. Name the object exactly as blender_scene_read lists it (a proxy's root is its name, "can", not "can.mesh"). Interpolation is LINEAR by default; keys past the frame range extend it; clearExisting (default true) replaces the object's previous keys.
-Do NOT animate people or animals with this — limbs are not keyed here, and a video model handed a stiff proxy copies the stiffness; their acting is a prompt sentence. Do NOT move the camera with this — that is blender_camera_set.
+Do NOT animate people or animals with this — limbs are not keyed here, and a video model handed a stiff proxy copies the stiffness; their acting is a prompt sentence. Do NOT move the camera with this — that is blender_camera_set. Calls on the same .blend run one at a time inside the server; different files run side by side.
 
 Returns: the scene summary; the object's line shows its keyframes.`,
         inputSchema: {
@@ -2085,7 +2091,7 @@ Use after blender_camera_set to look at the move — open the stills, then itera
 Do NOT treat the previz as a deliverable frame — nothing in it is final appearance; it is a camera and blocking plan. Do NOT pad or loop a failed render — the tool reports failure and writes no mp4.
 Requires Blender 4.2+; the mp4 is written by Blender's own FFmpeg, so no ffmpeg on PATH is needed.
 
-Returns: a text block with the mp4 path, still paths, engine, resolution, fps, frame range, seconds and render time.`,
+Returns: a text block with the mp4 path, still paths (and any requested still outside the range, which is skipped and named), engine, resolution, fps, frame range, seconds and render time.`,
         inputSchema: {
             type: 'object',
             properties: {

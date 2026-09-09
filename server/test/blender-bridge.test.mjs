@@ -41,10 +41,15 @@ describe('blender bridge schemas', () => {
   it('build fills defaults, rejects duplicate names and a box without size', () => {
     const ok = blenderSceneBuildSchema.safeParse({ blendPath: 's.blend', proxies: [{ name: 'man', kind: 'person' }] });
     assert.ok(ok.success);
-    assert.equal(ok.data.fps, 30);
-    assert.equal(ok.data.frameEnd, 150);
+    // fps · range · resolution stay undefined here: Blender applies the fresh-scene defaults,
+    // and reset:false keeps the file's values when they are omitted
+    assert.equal(ok.data.fps, undefined);
+    assert.equal(ok.data.frameEnd, undefined);
+    assert.equal(ok.data.reset, true);
+    assert.equal(ok.data.force, false);
     assert.equal(ok.data.floor, true);
     assert.deepEqual(ok.data.proxies[0].location, [0, 0, 0]);
+    assert.ok(!blenderSceneBuildSchema.safeParse({ blendPath: 's.blend', frameStart: 10, frameEnd: 5 }).success);
 
     const dupe = blenderSceneBuildSchema.safeParse({
       blendPath: 's.blend',
@@ -171,52 +176,77 @@ describe('blender round trip', { skip: !blenderBin() && 'no Blender on this mach
     const man = built.scene.objects.find((o) => o.name === 'man.head');
     assert.ok(man && Math.abs(man.location[2] - 0.93 * 1.75) < 0.01, 'the head sits at 0.93 of the height');
 
-    const cam = await setCamera(
-      blenderCameraSetSchema.parse({
-        blendPath,
-        lensMm: 35,
-        keys: [
-          { frame: 1, location: [0, -4, 1.6], target: [0, 0, 1.0] },
-          { frame: 12, location: [1.5, -2.5, 0.6], target: [0.3, -0.3, 1.2] },
-        ],
-      }),
-    );
+    // extending keeps fps, range and resolution when they are omitted
+    const extended = await buildScene(blenderSceneBuildSchema.parse({ blendPath, reset: false, proxies: [{ name: 'crate', kind: 'box', size: [0.5, 0.5, 0.5], location: [-1, 0, 0] }] }));
+    assert.ok(extended.success, extended.success ? '' : extended.error);
+    assert.equal(extended.scene.frame.fps, 24);
+    assert.deepEqual([extended.scene.frame.start, extended.scene.frame.end], [1, 12]);
+    assert.deepEqual(extended.scene.resolution, [216, 384]);
+    assert.ok(extended.scene.objects.some((o) => o.name === 'crate') && extended.scene.objects.some((o) => o.name === 'man'));
+
+    // the camera move and the object move arrive in parallel — the same file must serialize them, not lose one
+    const [cam, thrown] = await Promise.all([
+      setCamera(
+        blenderCameraSetSchema.parse({
+          blendPath,
+          lensMm: 35,
+          keys: [
+            { frame: 1, location: [0, -4, 1.6], target: [0, 0, 1.0] },
+            { frame: 12, location: [1.5, -2.5, 0.6], target: [0.3, -0.3, 1.2], lensMm: 50 },
+          ],
+        }),
+      ),
+      animateObject(
+        blenderObjectAnimateSchema.parse({
+          blendPath,
+          object: 'can',
+          keys: [
+            { frame: 1, location: [0.3, -0.3, 1.2] },
+            { frame: 12, location: [1.2, 0.5, 0.8], rotationDeg: [0, 720, 0] },
+          ],
+        }),
+      ),
+    ]);
     assert.ok(cam.success, cam.success ? '' : cam.error);
     assert.equal(cam.scene.camera?.name, 'Camera');
     assert.deepEqual(cam.scene.camera?.keyframes, [1, 12]);
-    assert.equal(cam.scene.camera?.lensMm, 35);
-
-    const thrown = await animateObject(
-      blenderObjectAnimateSchema.parse({
-        blendPath,
-        object: 'can',
-        keys: [
-          { frame: 1, location: [0.3, -0.3, 1.2] },
-          { frame: 12, location: [1.2, 0.5, 0.8], rotationDeg: [0, 720, 0] },
-        ],
-      }),
-    );
     assert.ok(thrown.success, thrown.success ? '' : thrown.error);
-    const can = thrown.scene.objects.find((o) => o.name === 'can');
-    assert.deepEqual(can?.keyframes, [1, 12]);
+    assert.deepEqual(thrown.scene.objects.find((o) => o.name === 'can')?.keyframes, [1, 12]);
 
     const read = await readScene(blenderSceneReadSchema.parse({ blendPath }));
     assert.ok(read.success, read.success ? '' : read.error);
     assert.equal(read.scene.frame.start, 1);
     assert.equal(read.scene.frame.end, 12);
-    assert.deepEqual(read.scene.camera?.keyframes, [1, 12]);
+    assert.deepEqual(read.scene.camera?.keyframes, [1, 12], 'camera keys survived the parallel object edit');
+    assert.equal(read.scene.camera?.lensMm, 35, 'at frame 1 the lens is the camera lens, not the frame-12 zoom');
+    assert.deepEqual(read.scene.objects.find((o) => o.name === 'can')?.keyframes, [1, 12], 'object keys survived the parallel camera edit');
 
-    const previz = await renderPreviz(blenderRenderPrevizSchema.parse({ blendPath, outputPath: join(dir, 'out'), stills: [1, 12] }));
+    const previz = await renderPreviz(blenderRenderPrevizSchema.parse({ blendPath, outputPath: join(dir, 'out'), stills: [1, 12, 40] }));
     assert.ok(previz.success, previz.success ? '' : previz.error);
     assert.equal(previz.frames, 12);
     assert.equal(previz.fps, 24);
     assert.equal(previz.seconds, 0.5);
     assert.ok(existsSync(previz.videoPath) && statSync(previz.videoPath).size > 1000, 'mp4 written');
     assert.equal(previz.stillPaths.length, 2);
+    assert.deepEqual(previz.skippedStills, [40]);
     for (const p of previz.stillPaths) assert.ok(existsSync(p) && statSync(p).size > 500, p);
 
     const missing = await animateObject(blenderObjectAnimateSchema.parse({ blendPath, object: 'ghost', keys: [{ frame: 1, location: [0, 0, 0] }] }));
     assert.ok(!missing.success);
     assert.match(missing.error, /no object named ghost/);
+  });
+
+  it('refuses to reset a .blend it did not make unless forced', async () => {
+    const foreign = join(dir, 'foreign.blend');
+    execFileSync(blenderBin(), ['--background', '--factory-startup', '--python-expr', `import bpy; bpy.ops.wm.save_as_mainfile(filepath=${JSON.stringify(foreign)})`], { stdio: 'ignore' });
+    assert.ok(existsSync(foreign));
+    const refused = await buildScene(blenderSceneBuildSchema.parse({ blendPath: foreign, proxies: [{ name: 'p', kind: 'sphere' }] }));
+    assert.ok(!refused.success);
+    assert.match(refused.error, /not made by blender_scene_build/);
+    const forced = await buildScene(blenderSceneBuildSchema.parse({ blendPath: foreign, force: true, proxies: [{ name: 'p', kind: 'sphere' }] }));
+    assert.ok(forced.success, forced.success ? '' : forced.error);
+    assert.ok(forced.scene.objects.some((o) => o.name === 'p'));
+    const again = await buildScene(blenderSceneBuildSchema.parse({ blendPath: foreign, proxies: [{ name: 'q', kind: 'sphere' }] }));
+    assert.ok(again.success, 'a file this lane made can be reset without force');
   });
 });

@@ -104,10 +104,16 @@ fixes the numbers the prompt and the camera sentence are then written from.
 - **A box proxy needs `size`.** `person` and `dog` take `height`; `cylinder` and `sphere`
   take `radius` (and `height` for the cylinder); `car` takes an optional `size` that scales
   a 1.8 × 4.4 × 1.45 m default.
-- **`reset:true` overwrites the file.** Building onto an existing set is `reset:false`,
-  which adds the new proxies and imports and keeps the camera and its keys.
-- **Blender 5.x names.** The bridge uses `BLENDER_WORKBENCH` and `BLENDER_EEVEE`; on a
-  Blender older than 4.2 `capability_status` reports it as too old and the calls fail
-  with the install hint.
+- **`reset:true` replaces the file — but only a file this lane made.** A .blend from
+  anywhere else is refused unless `force:true`. Building onto an existing set is
+  `reset:false`, which adds the new proxies and imports and keeps the camera, its keys,
+  and the file's fps, frame range and resolution unless you name new ones.
+- **One file, one Blender at a time.** Parallel calls on the same .blend are queued inside
+  the server, so a camera call and an object call in one turn both land; different files
+  run side by side.
+- **Blender 4.2 or newer.** The bridge picks the engine name per version
+  (`BLENDER_EEVEE_NEXT` on 4.2–4.5, `BLENDER_EEVEE` from 5.0) and sets the 5.0-only
+  video media type only where it exists; an older Blender stops at the first call with a
+  version message rather than an API error.
 - **Do not hide a failed previz behind a still.** If the render fails, the tool says so;
   the mp4 is either the whole cut at the requested frame rate or absent.

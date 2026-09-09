@@ -27846,7 +27846,7 @@ var require_websocket = __commonJS({
     var http3 = __require("http");
     var net = __require("net");
     var tls = __require("tls");
-    var { randomBytes, createHash: createHash4 } = __require("crypto");
+    var { randomBytes, createHash: createHash3 } = __require("crypto");
     var { Duplex, Readable: Readable2 } = __require("stream");
     var { URL: URL2 } = __require("url");
     var PerMessageDeflate2 = require_permessage_deflate();
@@ -28514,7 +28514,7 @@ var require_websocket = __commonJS({
           abortHandshake(websocket, socket, "Invalid Upgrade header");
           return;
         }
-        const digest = createHash4("sha1").update(key + GUID).digest("base64");
+        const digest = createHash3("sha1").update(key + GUID).digest("base64");
         if (res.headers["sec-websocket-accept"] !== digest) {
           abortHandshake(websocket, socket, "Invalid Sec-WebSocket-Accept header");
           return;
@@ -28883,7 +28883,7 @@ var require_websocket_server = __commonJS({
     var EventEmitter = __require("events");
     var http3 = __require("http");
     var { Duplex } = __require("stream");
-    var { createHash: createHash4 } = __require("crypto");
+    var { createHash: createHash3 } = __require("crypto");
     var extension2 = require_extension();
     var PerMessageDeflate2 = require_permessage_deflate();
     var subprotocol2 = require_subprotocol();
@@ -29190,7 +29190,7 @@ var require_websocket_server = __commonJS({
           );
         }
         if (this._state > RUNNING) return abortHandshake(socket, 503);
-        const digest = createHash4("sha1").update(key + GUID).digest("base64");
+        const digest = createHash3("sha1").update(key + GUID).digest("base64");
         const headers = [
           "HTTP/1.1 101 Switching Protocols",
           "Upgrade: websocket",
@@ -79150,9 +79150,7 @@ ${tail}` : ""}`));
 
 // src/blender-bridge.ts
 import { execFile as execFile7 } from "node:child_process";
-import { createHash as createHash2 } from "node:crypto";
-import { existsSync as existsSync8, mkdtempSync as mkdtempSync3, renameSync as renameSync3, rmSync as rmSync4, writeFileSync as writeFileSync6 } from "node:fs";
-import { readFileSync as readFileSync6 } from "node:fs";
+import { existsSync as existsSync8, mkdtempSync as mkdtempSync3, readFileSync as readFileSync6, rmSync as rmSync4, writeFileSync as writeFileSync6 } from "node:fs";
 import { tmpdir as tmpdir2 } from "node:os";
 import { dirname as dirname2, extname as extname5, join as join6, resolve as resolve2 } from "node:path";
 var BLENDER_PROXY_KINDS = ["person", "dog", "car", "box", "cylinder", "sphere"];
@@ -79193,17 +79191,18 @@ var importSchema = external_exports.object({
 var blenderSceneBuildSchema = external_exports.object({
   blendPath,
   reset: external_exports.boolean().optional().default(true),
-  fps: external_exports.number().int().min(1).max(120).optional().default(DEFAULT_SCENE_FPS),
-  frameStart: frameNumber.optional().default(DEFAULT_FRAME_START),
-  frameEnd: frameNumber.optional().default(DEFAULT_FRAME_END),
-  width: external_exports.number().int().min(64).max(4096).optional().default(DEFAULT_PREVIZ_WIDTH),
-  height: external_exports.number().int().min(64).max(4096).optional().default(DEFAULT_PREVIZ_HEIGHT),
+  force: external_exports.boolean().optional().default(false),
+  fps: external_exports.number().int().min(1).max(120).optional(),
+  frameStart: frameNumber.optional(),
+  frameEnd: frameNumber.optional(),
+  width: external_exports.number().int().min(64).max(4096).optional(),
+  height: external_exports.number().int().min(64).max(4096).optional(),
   floor: external_exports.boolean().optional().default(true),
   floorSize: external_exports.number().positive().max(1e4).optional().default(40),
   proxies: external_exports.array(proxySchema).max(100).optional().default([]),
   imports: external_exports.array(importSchema).max(50).optional().default([])
 }).superRefine((data, ctx) => {
-  if (data.frameEnd < data.frameStart) {
+  if (data.frameStart !== void 0 && data.frameEnd !== void 0 && data.frameEnd < data.frameStart) {
     ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["frameEnd"], message: "frameEnd must not be before frameStart" });
   }
   const names = [...data.proxies.map((p) => p.name), ...data.imports.map((i2) => i2.name)];
@@ -79340,22 +79339,35 @@ function previzTimeoutMs(frames, engine) {
   return Math.min(60 * 6e4, 12e4 + Math.max(frames, 1) * perFrame);
 }
 var EDIT_TIMEOUT_MS = 18e4;
-function ensureScript() {
-  const hash = createHash2("sha1").update(BRIDGE_PY).digest("hex").slice(0, 12);
-  const path10 = join6(tmpdir2(), `social-flow-blender-bridge-${hash}.py`);
-  if (existsSync8(path10)) return path10;
-  const staging = `${path10}.${process.pid}.tmp`;
-  writeFileSync6(staging, BRIDGE_PY, "utf-8");
-  renameSync3(staging, path10);
-  return path10;
+var fileLocks = /* @__PURE__ */ new Map();
+async function withFileLock(key, fn) {
+  const previous = fileLocks.get(key) ?? Promise.resolve();
+  let release = () => {
+  };
+  const mine = new Promise((r2) => {
+    release = r2;
+  });
+  const chained = previous.then(() => mine);
+  fileLocks.set(key, chained);
+  await previous;
+  try {
+    return await fn();
+  } finally {
+    release();
+    if (fileLocks.get(key) === chained) fileLocks.delete(key);
+  }
 }
-async function runBridge(job, timeoutMs) {
+function runBridge(job, timeoutMs) {
+  return withFileLock(job.blendPath, () => runBridgeUnlocked(job, timeoutMs));
+}
+async function runBridgeUnlocked(job, timeoutMs) {
   const blender = blenderBin();
   if (!blender) return { success: false, error: installHint4("Blender was not found on this machine.") };
-  const script = ensureScript();
   const dir = mkdtempSync3(join6(tmpdir2(), "blender-bridge-"));
+  const script = join6(dir, "bridge.py");
   const jobPath = join6(dir, "job.json");
   const resultPath = join6(dir, "result.json");
+  writeFileSync6(script, BRIDGE_PY, "utf-8");
   writeFileSync6(jobPath, JSON.stringify({ ...job, resultPath }), "utf-8");
   try {
     const run = await new Promise((resolveRun) => {
@@ -79427,7 +79439,7 @@ async function renderPreviz(request) {
   }
   const outputDir = request.outputPath ? resolve2(request.outputPath) : join6(dirname2(request.blendPath), "previz");
   const videoPath = resolveOutputFile(outputDir, request.filename, "video");
-  const framesForTimeout = request.frameStart !== void 0 && request.frameEnd !== void 0 ? request.frameEnd - request.frameStart + 1 : DEFAULT_FRAME_END;
+  const framesForTimeout = request.frameStart !== void 0 && request.frameEnd !== void 0 ? request.frameEnd - request.frameStart + 1 : MAX_PREVIZ_FRAMES;
   const timeoutMs = request.timeoutSeconds ? request.timeoutSeconds * 1e3 : previzTimeoutMs(framesForTimeout, request.engine);
   const { timeoutSeconds: _t, outputPath: _o, filename: _f, ...rest } = request;
   const r2 = await runBridge(
@@ -79446,6 +79458,11 @@ from mathutils import Euler, Vector
 PROXY_GRAY = (0.55, 0.55, 0.58, 1.0)
 FLOOR_GRAY = (0.32, 0.32, 0.33, 1.0)
 WORLD_GRAY = (0.82, 0.82, 0.84)
+MARKER = "social_flow_previz"          # scene custom property: this .blend was made by blender_scene_build
+MIN_VERSION = (4, 2)
+# 4.2–4.5 call the engine BLENDER_EEVEE_NEXT; 5.0 renamed it back
+EEVEE = "BLENDER_EEVEE" if bpy.app.version >= (5, 0) else "BLENDER_EEVEE_NEXT"
+DEFAULTS = {"fps": 30, "frameStart": 1, "frameEnd": 150, "width": 1080, "height": 1920}
 
 
 def job_path():
@@ -79729,21 +79746,44 @@ def ensure_world(sc):
 
 def op_build(job):
     path = job["blendPath"]
-    if job["reset"] or not os.path.isfile(path):
+    exists = os.path.isfile(path)
+    fresh = job["reset"] or not exists
+    if job["reset"] and exists and not job.get("force"):
+        # refuse to wipe a .blend this lane did not make — a hand-authored file is not previz scratch
+        open_blend(path)
+        if not bpy.context.scene.get(MARKER):
+            raise RuntimeError("%s was not made by blender_scene_build — refusing to overwrite it; pass force:true to replace it, or reset:false to add to it" % path)
+    if fresh:
         bpy.ops.wm.read_factory_settings(use_empty=True)
     else:
         open_blend(path)
     sc = bpy.context.scene
+    sc[MARKER] = 1
     sc.unit_settings.system = "METRIC"
     sc.unit_settings.length_unit = "METERS"
     sc.unit_settings.scale_length = 1.0
-    sc.render.fps = int(job["fps"])
-    sc.render.fps_base = 1.0
-    sc.frame_start = int(job["frameStart"])
-    sc.frame_end = int(job["frameEnd"])
+
+    def given(key):
+        return job.get(key) is not None
+
+    def value(key):
+        return job[key] if given(key) else DEFAULTS[key]
+
+    # a fresh scene takes the defaults; an extended one keeps its values unless the caller names new ones
+    if fresh or given("fps"):
+        sc.render.fps = int(value("fps"))
+        sc.render.fps_base = 1.0
+    if fresh or given("frameStart"):
+        sc.frame_start = int(value("frameStart"))
+    if fresh or given("frameEnd"):
+        sc.frame_end = int(value("frameEnd"))
+    if sc.frame_end < sc.frame_start:
+        raise RuntimeError("frameEnd %d is before frameStart %d" % (sc.frame_end, sc.frame_start))
     sc.frame_current = sc.frame_start
-    sc.render.resolution_x = int(job["width"])
-    sc.render.resolution_y = int(job["height"])
+    if fresh or given("width"):
+        sc.render.resolution_x = int(value("width"))
+    if fresh or given("height"):
+        sc.render.resolution_y = int(value("height"))
     sc.render.resolution_percentage = 100
     ensure_world(sc)
     if job["floor"] and bpy.data.objects.get("Floor") is None:
@@ -79798,6 +79838,8 @@ def op_camera(job):
     cam.rotation_mode = "QUATERNION"
     keys = job["keys"]
     static = len(keys) == 1 and keys[0].get("frame") is None
+    # a zoom needs the lens keyed at every pose, or the one lens key holds for the whole move
+    zoom = any(k.get("lensMm") is not None for k in keys)
     prev_q = None
     frames = []
     for k in keys:
@@ -79820,7 +79862,7 @@ def op_camera(job):
             frames.append(f)
             cam.keyframe_insert(data_path="location", frame=f)
             cam.keyframe_insert(data_path="rotation_quaternion", frame=f)
-            if k.get("lensMm") is not None:
+            if zoom:
                 d.keyframe_insert(data_path="lens", frame=f)
     if not static:
         set_interpolation(cam, job["interpolation"])
@@ -79903,7 +79945,7 @@ def op_render(job):
     ensure_world(sc)
     sc.render.film_transparent = False
     if engine == "eevee":
-        sc.render.engine = "BLENDER_EEVEE"
+        sc.render.engine = EEVEE
         sc.eevee.taa_render_samples = int(job["samples"])
     else:
         sc.render.engine = "BLENDER_WORKBENCH"
@@ -79926,8 +79968,13 @@ def op_render(job):
     out_dir = os.path.dirname(video_path)
     os.makedirs(out_dir, exist_ok=True)
     stem = os.path.splitext(os.path.basename(video_path))[0]
+    # a render that was killed mid-way leaves its private-prefix file behind; sweep before starting
+    for stale in os.listdir(out_dir):
+        if stale.startswith(".previz-"):
+            os.remove(os.path.join(out_dir, stale))
     ims = sc.render.image_settings
-    ims.media_type = "VIDEO"
+    if hasattr(ims, "media_type"):      # 5.0+; 4.x picks video from file_format alone
+        ims.media_type = "VIDEO"
     ims.file_format = "FFMPEG"
     ims.color_mode = "RGB"
     ff = sc.render.ffmpeg
@@ -79957,12 +80004,15 @@ def op_render(job):
         mid = start + (end - start) // 2
         stills = sorted(set([start, mid, end]))
     still_paths = []
-    ims.media_type = "IMAGE"
+    skipped = []
+    if hasattr(ims, "media_type"):
+        ims.media_type = "IMAGE"
     ims.file_format = "PNG"
     ims.color_mode = "RGB"
     for f in stills:
         f = int(f)
         if f < start or f > end:
+            skipped.append(f)
             continue
         sc.frame_set(f)
         p = os.path.join(out_dir, "%s-f%04d.png" % (stem, f))
@@ -79973,6 +80023,7 @@ def op_render(job):
     return {
         "videoPath": video_path,
         "stillPaths": still_paths,
+        "skippedStills": skipped,
         "width": sc.render.resolution_x,
         "height": sc.render.resolution_y,
         "fps": sc.render.fps,
@@ -79988,6 +80039,9 @@ def main():
     job = json.load(open(job_path(), encoding="utf-8"))
     out = {"ok": False, "error": "no operation ran"}
     try:
+        if bpy.app.version < MIN_VERSION:
+            raise RuntimeError("Blender %s is older than %d.%d — the bridge needs 4.2 or newer (brew upgrade --cask blender)"
+                               % (bpy.app.version_string, MIN_VERSION[0], MIN_VERSION[1]))
         op = job["op"]
         path = job["blendPath"]
         if op == "read":
@@ -82197,20 +82251,26 @@ Returns: the same summary as blender_scene_read plus the list of what was built.
         reset: {
           type: "boolean",
           default: true,
-          description: "true (default) starts from an empty scene and overwrites blendPath; false opens the existing file and adds proxies/imports to it, keeping the camera and keys."
+          description: "true (default) starts from an empty scene and replaces blendPath \u2014 only a file this tool made; a .blend from anywhere else is refused unless force is true. false opens the existing file and adds proxies/imports to it, keeping the camera, keys, fps, frame range and resolution."
         },
-        fps: { type: "number", default: DEFAULT_SCENE_FPS, description: `Frames per second of the cut (1\u2013120, default ${DEFAULT_SCENE_FPS} \u2014 the reel rate).` },
-        frameStart: { type: "number", default: DEFAULT_FRAME_START, description: `First frame (default ${DEFAULT_FRAME_START}).` },
+        force: {
+          type: "boolean",
+          default: false,
+          description: "With reset:true, also replace a .blend that blender_scene_build did not make (default false \u2014 a hand-authored file is never wiped by accident)."
+        },
+        fps: {
+          type: "number",
+          description: `Frames per second of the cut (1\u2013120). A fresh scene defaults to ${DEFAULT_SCENE_FPS}; with reset:false an omitted value keeps the file's.`
+        },
+        frameStart: { type: "number", description: `First frame. A fresh scene defaults to ${DEFAULT_FRAME_START}; with reset:false an omitted value keeps the file's.` },
         frameEnd: {
           type: "number",
-          default: DEFAULT_FRAME_END,
-          description: `Last frame (default ${DEFAULT_FRAME_END} = 5 s at 30 fps). Camera and object keys past it extend the range.`
+          description: `Last frame. A fresh scene defaults to ${DEFAULT_FRAME_END} (5 s at 30 fps); with reset:false an omitted value keeps the file's. Camera and object keys past it extend the range.`
         },
-        width: { type: "number", default: DEFAULT_PREVIZ_WIDTH, description: `Render width in px (default ${DEFAULT_PREVIZ_WIDTH}).` },
+        width: { type: "number", description: `Render width in px. A fresh scene defaults to ${DEFAULT_PREVIZ_WIDTH}; with reset:false an omitted value keeps the file's.` },
         height: {
           type: "number",
-          default: DEFAULT_PREVIZ_HEIGHT,
-          description: `Render height in px (default ${DEFAULT_PREVIZ_HEIGHT} \u2014 9:16; pass 1920\xD71080 for long-form).`
+          description: `Render height in px. A fresh scene defaults to ${DEFAULT_PREVIZ_HEIGHT} (9:16; pass 1920\xD71080 for long-form); with reset:false an omitted value keeps the file's.`
         },
         floor: { type: "boolean", default: true, description: "Add a grey ground plane at z = 0 (default true)." },
         floorSize: { type: "number", default: 40, description: "Side of the floor plane in metres (default 40)." },
@@ -82291,8 +82351,8 @@ Returns: the same summary as blender_scene_read plus the list of what was built.
     description: `Place the camera of a .blend previz **on this machine** as numbers \u2014 a location in metres, a target point it looks at (or an explicit rotation), a lens in mm or a field of view \u2014 and key it over frames for a move. Creates the camera if it is missing, makes it the active camera, saves, and returns the scene summary with the camera's keyframes.
 
 Use for every framing decision in a previz: one key with no frame is a locked-off shot; two or more keys with frames are a dolly, arc, crane or push, interpolated LINEAR by default (constant speed reads as intent; BEZIER eases; CONSTANT cuts). Iterate in numbers \u2014 "height 1.2 m", "start at (-3, -3, 1), end at (3, -3, 1)", "24 mm" \u2014 each round is one call and costs nothing. Keys past the scene's frame range extend it. clearExisting (default true) replaces the previous move; false layers new keys onto it.
-Do NOT describe a camera in adverbs and hope \u2014 pass coordinates. Do NOT pass both lensMm and fovDeg, or both target and rotationDeg on one key. Do NOT use this for objects \u2014 that is blender_object_animate.
-Coordinates are Blender's: metres, Z up, +Y away from the front view; proxies face -Y, so a camera at negative Y sees their front.
+Do NOT describe a camera in adverbs and hope \u2014 pass coordinates. Do NOT pass both lensMm and fovDeg, or both target and rotationDeg on one key. Do NOT use this for objects \u2014 that is blender_object_animate. A lensMm on any key turns the move into a zoom: every key then records its lens.
+Coordinates are Blender's: metres, Z up, +Y away from the front view; proxies face -Y, so a camera at negative Y sees their front. Calls on the same .blend run one at a time inside the server (parallel calls on one file are queued, not lost); different files run side by side.
 
 Returns: the scene summary \u2014 the camera line shows location, rotation, lens, fov and keyframes.`,
     inputSchema: {
@@ -82362,7 +82422,7 @@ Returns: the scene summary \u2014 the camera line shows location, rotation, lens
     description: `Key an object of a .blend previz **on this machine** \u2014 location in metres, rotation in degrees (Euler XYZ, spins past 360 allowed), scale \u2014 over frames: the thrown can, the paper plane's path, the car crossing the bridge. Saves and returns the scene summary with the object's keyframes.
 
 Use for things that move through space \u2014 vehicles, props, projectiles \u2014 so the previz clip carries their timing and path. Name the object exactly as blender_scene_read lists it (a proxy's root is its name, "can", not "can.mesh"). Interpolation is LINEAR by default; keys past the frame range extend it; clearExisting (default true) replaces the object's previous keys.
-Do NOT animate people or animals with this \u2014 limbs are not keyed here, and a video model handed a stiff proxy copies the stiffness; their acting is a prompt sentence. Do NOT move the camera with this \u2014 that is blender_camera_set.
+Do NOT animate people or animals with this \u2014 limbs are not keyed here, and a video model handed a stiff proxy copies the stiffness; their acting is a prompt sentence. Do NOT move the camera with this \u2014 that is blender_camera_set. Calls on the same .blend run one at a time inside the server; different files run side by side.
 
 Returns: the scene summary; the object's line shows its keyframes.`,
     inputSchema: {
@@ -82426,7 +82486,7 @@ Use after blender_camera_set to look at the move \u2014 open the stills, then it
 Do NOT treat the previz as a deliverable frame \u2014 nothing in it is final appearance; it is a camera and blocking plan. Do NOT pad or loop a failed render \u2014 the tool reports failure and writes no mp4.
 Requires Blender 4.2+; the mp4 is written by Blender's own FFmpeg, so no ffmpeg on PATH is needed.
 
-Returns: a text block with the mp4 path, still paths, engine, resolution, fps, frame range, seconds and render time.`,
+Returns: a text block with the mp4 path, still paths (and any requested still outside the range, which is skipped and named), engine, resolution, fps, frame range, seconds and render time.`,
     inputSchema: {
       type: "object",
       properties: {
@@ -85157,7 +85217,7 @@ async function fetchGoogleOrganic(input) {
 }
 
 // src/sns-client.ts
-import { createHash as createHash3, randomUUID as randomUUID2 } from "node:crypto";
+import { createHash as createHash2, randomUUID as randomUUID2 } from "node:crypto";
 import {
   existsSync as existsSync10,
   mkdirSync as nodeMkdirSync,
@@ -85857,7 +85917,7 @@ function parseResumeOffset(range) {
   return m2 ? Number(m2[1]) + 1 : 0;
 }
 function sessionStateFile(filePath) {
-  const key = createHash3("sha256").update(filePath).digest("hex").slice(0, 16);
+  const key = createHash2("sha256").update(filePath).digest("hex").slice(0, 16);
   return join9(snsTokenDir, ".yt-upload", `${key}.json`);
 }
 function readState(filePath) {
@@ -90555,11 +90615,13 @@ ${describeScene(r2.scene)}`);
   blender_render_previz: async (args) => {
     const r2 = await renderPreviz(parseArgs(blenderRenderPrevizSchema, args));
     if (!r2.success) return text(`Blender previz render failed: ${r2.error}`, true);
+    const skipped = r2.skippedStills.length ? `
+Skipped stills (outside frames ${r2.frameStart}\u2013${r2.frameEnd}): ${r2.skippedStills.join(", ")}` : "";
     return text(
       `Previz rendered.
 
 File: ${r2.videoPath}
-Stills: ${r2.stillPaths.join(", ") || "(none)"}
+Stills: ${r2.stillPaths.join(", ") || "(none)"}${skipped}
 Engine: ${r2.engine} \xB7 ${r2.width}\xD7${r2.height} @ ${r2.fps} fps \xB7 frames ${r2.frameStart}\u2013${r2.frameEnd} (${r2.frames} = ${r2.seconds}s)
 Render time: ${r2.elapsedSeconds}s
 
