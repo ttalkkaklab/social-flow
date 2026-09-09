@@ -31,7 +31,12 @@
     'ink-wash': { label: '수묵화', looks: ['inkwash'],
       prompt: 'East Asian ink-wash painting: confident brushed black ink lines with wet-on-wet grey gradients on pale rice-paper texture, generous empty space, one restrained mineral accent colour, figures and places drawn in calligraphic strokes; the frame stays one painted picture.' },
     'toon-3d': { label: '3D 카툰 캐릭터', looks: ['toon3d'],
-      prompt: 'Stylised 3D cartoon animation: appealing characters with large expressive eyes and simplified rounded proportions, soft subsurface skin, clean material shaders on props and sets, warm rim light and cinematic depth of field, rendered like a feature-animation frame.' }
+      prompt: 'Stylised 3D cartoon animation: appealing characters with large expressive eyes and simplified rounded proportions, soft subsurface skin, clean material shaders on props and sets, warm rim light and cinematic depth of field, rendered like a feature-animation frame.' },
+    // Added 2026-09-09 from a user reference: a 1990s hand-painted arcade fighting/action game frame.
+    // The game HUD (health bars, portraits, player names) is not part of the generated picture:
+    // the image lane garbles lettering, generated video warps a static overlay, and nothing is drawn over video.
+    'arcade-2d': { label: '아케이드 게임 화면', looks: ['arcade'],
+      prompt: 'Hand-painted 1990s arcade game art: characters as large painted sprites with bold dark outlines, exaggerated heroic proportions and saturated colours with hard cel highlights, staged side-on in front of layered parallax backgrounds (painted foreground props, a mid-ground set, a distant painted backdrop), slightly grainy CRT-era colour and a wide stage read; the whole frame is one painted game scene and the picture holds only the stage and its characters, every frame edge kept as painted scenery.' }
   };
   // Only the miniature presets carry a bundled reference pack; every other preset is prompt-only.
   const packPresets = ['cinematic-miniature', 'spatial-explainer'];
