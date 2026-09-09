@@ -254,6 +254,25 @@ describe('blender round trip', { skip: !blenderBin() && 'no Blender on this mach
     assert.match(missing.error, /no object named ghost/);
   });
 
+  it('two files rendering into one folder keep their own private files', async () => {
+    const a = join(dir, 'a.blend');
+    const b = join(dir, 'b.blend');
+    const out = join(dir, 'shared');
+    for (const p of [a, b]) {
+      const r = await buildScene(blenderSceneBuildSchema.parse({ blendPath: p, fps: 24, frameEnd: 6, width: 128, height: 224, proxies: [{ name: 'p', kind: 'sphere' }] }));
+      assert.ok(r.success, r.success ? '' : r.error);
+      const c = await setCamera(blenderCameraSetSchema.parse({ blendPath: p, keys: [{ location: [0, -3, 1], target: [0, 0, 0.5] }] }));
+      assert.ok(c.success, c.success ? '' : c.error);
+    }
+    const [ra, rb] = await Promise.all([
+      renderPreviz(blenderRenderPrevizSchema.parse({ blendPath: a, outputPath: out, filename: 'a.mp4', stills: [] })),
+      renderPreviz(blenderRenderPrevizSchema.parse({ blendPath: b, outputPath: out, filename: 'b.mp4', stills: [] })),
+    ]);
+    assert.ok(ra.success, ra.success ? '' : ra.error);
+    assert.ok(rb.success, rb.success ? '' : rb.error);
+    assert.ok(existsSync(join(out, 'a.mp4')) && existsSync(join(out, 'b.mp4')));
+  });
+
   it('refuses to reset a .blend it did not make unless forced', async () => {
     const foreign = join(dir, 'foreign.blend');
     execFileSync(blenderBin(), ['--background', '--factory-startup', '--python-expr', `import bpy; bpy.ops.wm.save_as_mainfile(filepath=${JSON.stringify(foreign)})`], { stdio: 'ignore' });

@@ -886,7 +886,9 @@ def op_camera(job):
         existing = key_frames(cam)
         if existing:
             sc.frame_set(max(existing))
-            prev_q = cam.matrix_basis.to_quaternion()
+            # the stored key, sign and all — a matrix-derived quaternion is sign-normalised and
+            # could sit on the opposite hemisphere from a key this lane negated for continuity
+            prev_q = cam.rotation_quaternion.copy() if cam.rotation_mode == "QUATERNION" else cam.matrix_basis.to_quaternion()
     cam.rotation_mode = "QUATERNION"
     keys = job["keys"]
     static = len(keys) == 1 and keys[0].get("frame") is None
@@ -1020,9 +1022,11 @@ def op_render(job):
     os.makedirs(out_dir, exist_ok=True)
     stem = os.path.splitext(os.path.basename(video_path))[0]
     # sweep before starting: a killed render leaves its private-prefix file, and a failed one
-    # must not leave last time's mp4 and stills where they read as this time's result
+    # must not leave last time's mp4 and stills where they read as this time's result. Only
+    # this stem's files — another .blend rendering into the same folder keeps its own.
+    private = ".previz-%s-" % stem
     for stale in os.listdir(out_dir):
-        if stale.startswith(".previz-") or stale == os.path.basename(video_path) or (stale.startswith(stem + "-f") and stale.endswith(".png")):
+        if stale.startswith(private) or stale == os.path.basename(video_path) or (stale.startswith(stem + "-f") and stale.endswith(".png")):
             os.remove(os.path.join(out_dir, stale))
     ims = sc.render.image_settings
     if hasattr(ims, "media_type"):      # 5.0+; 4.x picks video from file_format alone
@@ -1038,7 +1042,7 @@ def op_render(job):
     ff.audio_codec = "NONE"
     # Blender appends the frame range to a video file name, so render to a private prefix
     # and move the one file it writes to the name the caller asked for.
-    prefix = os.path.join(out_dir, ".previz-%d-" % os.getpid())
+    prefix = os.path.join(out_dir, private + "%d-" % os.getpid())
     sc.render.filepath = prefix
     t0 = time.time()
     bpy.ops.render.render(animation=True)
