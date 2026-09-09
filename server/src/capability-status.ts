@@ -123,7 +123,9 @@ export function capabilityStatus(): {
         { provider: 'mlx-serve (local, MLX Core)', configured: mlx, needs: 'MLX Core.app or mlx-serve on PATH',
           note: 'mlx_3d_generate — writes GLB; HTML mesh slides consume embedded models (mesh-objects.md)' },
         { provider: 'blender (local, Cycles)', configured: Boolean(blenderBin()), needs: 'Blender 4.2+ (brew install --cask blender) or BLENDER=<executable>',
-          note: `bake-blender.py — bakes a mesh recipe into a frame sheet with path-traced light and shadows (blender-objects.md). `
+          note: `blender_scene_read · blender_scene_build · blender_camera_set · blender_object_animate · blender_render_previz — `
+            + `the previz bridge (blender-previz.md): camera and blocking as numbers, rendered headless with no add-on or GUI. `
+            + `bake-blender.py — bakes a mesh recipe into a frame sheet with path-traced light and shadows (blender-objects.md). `
             + `This machine has ${os.cpus().length} cores and ${Math.round(os.totalmem() / 1e9)} GB; `
             + `run --capacity for the GPU backend and which object lane suits it, then --probe on the recipe for minutes per cut` },
       ],

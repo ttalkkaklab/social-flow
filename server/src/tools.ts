@@ -51,6 +51,19 @@ import {
   QWEN3_ASR_MODELS,
 } from './qwen3-asr-client.js';
 import {
+  BLENDER_INTERPOLATIONS,
+  BLENDER_PREVIZ_ENGINES,
+  BLENDER_PROXY_KINDS,
+  DEFAULT_FRAME_END,
+  DEFAULT_FRAME_START,
+  DEFAULT_PREVIZ_ENGINE,
+  DEFAULT_PREVIZ_FILENAME,
+  DEFAULT_PREVIZ_HEIGHT,
+  DEFAULT_PREVIZ_WIDTH,
+  DEFAULT_SCENE_FPS,
+  MAX_PREVIZ_FRAMES,
+} from './blender-bridge.js';
+import {
   DEFAULT_SUNO_MODEL,
   SUNO_MODELS,
   SUNO_PERSONA_MODELS,
@@ -2007,6 +2020,322 @@ Returns: a text block with the saved .glb path and model.`,
         },
       },
       required: ['imagePath'],
+    },
+  },
+
+  // ── Blender bridge — previz camera and blocking on the local Blender (blender-previz.md) ──
+  {
+    name: 'blender_scene_read',
+    title: 'Read a Blender scene (bridge)',
+    annotations: HINT.local,
+    description: `Read a .blend file **on this machine** and report what is in it — every object with world position, rotation, size, parent and keyframes, the active camera with lens, field of view and keyframes, the frame range and fps. Opens Blender headless for about a second; changes nothing.
+
+Use as the first call of any previz session ("connect and read the scene, do not modify it yet"), and after any edit you did not make yourself, before blender_camera_set or blender_object_animate name an object. The other four blender_* tools return the same summary after they save, so a read right after one of them is redundant.
+Do NOT use to inspect a GLB or an image — it reads .blend files only. Do NOT guess object names from memory when this can list them.
+Requires Blender 4.2+ (brew install --cask blender, or BLENDER=<executable>); capability_status lists it under 3d_generation.
+
+Returns: a text block with the Blender version, frame range, resolution, the active camera and one line per object.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        blendPath: { type: 'string', description: 'Absolute path to the .blend file (must end in .blend, no "..").' },
+      },
+      required: ['blendPath'],
+    },
+  },
+
+  {
+    name: 'blender_scene_build',
+    title: 'Build a Blender previz set (bridge)',
+    // Overwrites only the previz .blend it owns (reset:true) — a local scratch file, so it is a
+    // generate-class tool, not a HITL one like the publishers.
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    description: `Create (or extend) a .blend previz set **on this machine**: metric units, the cut's frame range and fps, the format's resolution, a floor, a sun, grey proxy figures for people and animals, primitive stand-ins for objects, and GLB imports placed by location, rotation and scale. Saves the file and returns the scene summary.
+
+Use once per cut before framing — the previz lane of skills/storyboard/references/blender-previz.md — with one proxy per subject that must be in frame: person and dog take a height, box a size, cylinder and sphere a radius, car an optional size. Proxies face -Y; rotationZDeg turns them. A GLB from mesh-objects.md or mlx_3d_generate goes through imports. reset:true (default) starts from an empty scene and **overwrites the file**; reset:false opens the existing file and adds to it, keeping the camera and its keys.
+Do NOT model appearance here — proxies are grey blocking, and face, clothing and props belong to the image sheets. Do NOT animate people here; a stiff proxy is what a video model would copy. Do NOT use the .blend as a rendered asset — it is a camera and blocking plan.
+Requires Blender 4.2+; the glTF importer is built in.
+
+Returns: the same summary as blender_scene_read plus the list of what was built.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        blendPath: { type: 'string', description: 'Absolute path of the .blend to create or extend (ends in .blend, no "..").' },
+        reset: {
+          type: 'boolean',
+          default: true,
+          description: 'true (default) starts from an empty scene and overwrites blendPath; false opens the existing file and adds proxies/imports to it, keeping the camera and keys.',
+        },
+        fps: { type: 'number', default: DEFAULT_SCENE_FPS, description: `Frames per second of the cut (1–120, default ${DEFAULT_SCENE_FPS} — the reel rate).` },
+        frameStart: { type: 'number', default: DEFAULT_FRAME_START, description: `First frame (default ${DEFAULT_FRAME_START}).` },
+        frameEnd: {
+          type: 'number',
+          default: DEFAULT_FRAME_END,
+          description: `Last frame (default ${DEFAULT_FRAME_END} = 5 s at 30 fps). Camera and object keys past it extend the range.`,
+        },
+        width: { type: 'number', default: DEFAULT_PREVIZ_WIDTH, description: `Render width in px (default ${DEFAULT_PREVIZ_WIDTH}).` },
+        height: {
+          type: 'number',
+          default: DEFAULT_PREVIZ_HEIGHT,
+          description: `Render height in px (default ${DEFAULT_PREVIZ_HEIGHT} — 9:16; pass 1920×1080 for long-form).`,
+        },
+        floor: { type: 'boolean', default: true, description: 'Add a grey ground plane at z = 0 (default true).' },
+        floorSize: { type: 'number', default: 40, description: 'Side of the floor plane in metres (default 40).' },
+        proxies: {
+          type: 'array',
+          maxItems: 100,
+          description: 'Grey stand-ins, one per subject that must be in frame.',
+          items: {
+            type: 'object',
+            required: ['name', 'kind'],
+            properties: {
+              name: { type: 'string', description: 'Unique object name (≤63 chars) — the name blender_object_animate and the read-back use.' },
+              kind: {
+                type: 'string',
+                enum: [...BLENDER_PROXY_KINDS],
+                description: 'person (blocking figure with head, torso, limbs and a nose block marking the front), dog, car, box, cylinder, sphere. Every kind faces -Y.',
+              },
+              location: {
+                type: 'array',
+                items: { type: 'number' },
+                minItems: 3,
+                maxItems: 3,
+                description: "[x, y, z] in metres of the proxy's base point (feet, wheels, bottom face) — default [0, 0, 0].",
+              },
+              rotationZDeg: { type: 'number', description: 'Turn about Z in degrees (default 0 = facing -Y).' },
+              height: {
+                type: 'number',
+                description: 'person / dog / cylinder: total height in metres (person default 1.75, dog 0.55, cylinder 1).',
+              },
+              radius: { type: 'number', description: 'cylinder / sphere: radius in metres (default 0.5).' },
+              size: {
+                type: 'array',
+                items: { type: 'number' },
+                minItems: 3,
+                maxItems: 3,
+                description: 'box: [x, y, z] size in metres (required); car: optional size scaling the 1.8 × 4.4 × 1.45 m default.',
+              },
+              color: { type: 'string', description: 'Optional hex colour (#d0342c) to tell proxies apart — default grey.' },
+            },
+          },
+        },
+        imports: {
+          type: 'array',
+          maxItems: 50,
+          description: 'GLB/glTF files to place — a mesh-objects.md recipe export or an mlx_3d_generate result.',
+          items: {
+            type: 'object',
+            required: ['glbPath', 'name'],
+            properties: {
+              glbPath: { type: 'string', description: 'Absolute path to the .glb/.gltf (no "..").' },
+              name: { type: 'string', description: 'Unique name of the empty that parents the imported objects — move or animate this name.' },
+              location: {
+                type: 'array',
+                items: { type: 'number' },
+                minItems: 3,
+                maxItems: 3,
+                description: '[x, y, z] in metres (default [0, 0, 0]).',
+              },
+              rotationDeg: {
+                type: 'array',
+                items: { type: 'number' },
+                minItems: 3,
+                maxItems: 3,
+                description: 'Euler XYZ in degrees (default [0, 0, 0]).',
+              },
+              scale: { type: 'number', description: 'Uniform scale (default 1).' },
+            },
+          },
+        },
+      },
+      required: ['blendPath'],
+    },
+  },
+
+  {
+    name: 'blender_camera_set',
+    title: 'Set or animate the previz camera (bridge)',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    description: `Place the camera of a .blend previz **on this machine** as numbers — a location in metres, a target point it looks at (or an explicit rotation), a lens in mm or a field of view — and key it over frames for a move. Creates the camera if it is missing, makes it the active camera, saves, and returns the scene summary with the camera's keyframes.
+
+Use for every framing decision in a previz: one key with no frame is a locked-off shot; two or more keys with frames are a dolly, arc, crane or push, interpolated LINEAR by default (constant speed reads as intent; BEZIER eases; CONSTANT cuts). Iterate in numbers — "height 1.2 m", "start at (-3, -3, 1), end at (3, -3, 1)", "24 mm" — each round is one call and costs nothing. Keys past the scene's frame range extend it. clearExisting (default true) replaces the previous move; false layers new keys onto it.
+Do NOT describe a camera in adverbs and hope — pass coordinates. Do NOT pass both lensMm and fovDeg, or both target and rotationDeg on one key. Do NOT use this for objects — that is blender_object_animate.
+Coordinates are Blender's: metres, Z up, +Y away from the front view; proxies face -Y, so a camera at negative Y sees their front.
+
+Returns: the scene summary — the camera line shows location, rotation, lens, fov and keyframes.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        blendPath: { type: 'string', description: 'Absolute path to the .blend file (must end in .blend, no "..").' },
+        name: { type: 'string', default: 'Camera', description: 'Camera object name (default "Camera"); created if missing, made the active camera.' },
+        lensMm: {
+          type: 'number',
+          description: 'Focal length in mm on a 36 mm sensor — 24 wide, 35 normal, 50–85 tight. Alternative to fovDeg.',
+        },
+        fovDeg: { type: 'number', description: "Field of view in degrees across the frame's longer side. Alternative to lensMm." },
+        keys: {
+          type: 'array',
+          minItems: 1,
+          maxItems: 500,
+          description: 'Camera poses. One key without a frame is a locked-off shot; several keys (each with a frame) are a move.',
+          items: {
+            type: 'object',
+            required: ['location'],
+            properties: {
+              frame: { type: 'number', description: 'Frame number of this pose. Omit only when this is the single key of a static shot.' },
+              location: {
+                type: 'array',
+                items: { type: 'number' },
+                minItems: 3,
+                maxItems: 3,
+                description: 'Camera position [x, y, z] in metres.',
+              },
+              target: {
+                type: 'array',
+                items: { type: 'number' },
+                minItems: 3,
+                maxItems: 3,
+                description: 'Point the camera looks at [x, y, z] in metres — the usual way to aim it. Exactly one of target or rotationDeg.',
+              },
+              rotationDeg: {
+                type: 'array',
+                items: { type: 'number' },
+                minItems: 3,
+                maxItems: 3,
+                description: 'Explicit Blender Euler XYZ rotation in degrees ([90, 0, 0] looks along +Y). Exactly one of target or rotationDeg.',
+              },
+              lensMm: { type: 'number', description: "Focal length at this key, for a zoom; omit to keep the camera's lens." },
+            },
+          },
+        },
+        interpolation: {
+          type: 'string',
+          enum: [...BLENDER_INTERPOLATIONS],
+          default: 'LINEAR',
+          description: 'Between keys: LINEAR (default, constant speed), BEZIER (ease in and out), CONSTANT (cut).',
+        },
+        clearExisting: {
+          type: 'boolean',
+          default: true,
+          description: "Replace the camera's previous keys (default true); false adds these keys on top.",
+        },
+      },
+      required: ['blendPath', 'keys'],
+    },
+  },
+
+  {
+    name: 'blender_object_animate',
+    title: 'Animate a previz object (bridge)',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    description: `Key an object of a .blend previz **on this machine** — location in metres, rotation in degrees (Euler XYZ, spins past 360 allowed), scale — over frames: the thrown can, the paper plane's path, the car crossing the bridge. Saves and returns the scene summary with the object's keyframes.
+
+Use for things that move through space — vehicles, props, projectiles — so the previz clip carries their timing and path. Name the object exactly as blender_scene_read lists it (a proxy's root is its name, "can", not "can.mesh"). Interpolation is LINEAR by default; keys past the frame range extend it; clearExisting (default true) replaces the object's previous keys.
+Do NOT animate people or animals with this — limbs are not keyed here, and a video model handed a stiff proxy copies the stiffness; their acting is a prompt sentence. Do NOT move the camera with this — that is blender_camera_set.
+
+Returns: the scene summary; the object's line shows its keyframes.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        blendPath: { type: 'string', description: 'Absolute path to the .blend file (must end in .blend, no "..").' },
+        object: { type: 'string', description: 'Exact object name from blender_scene_read — a proxy\'s root ("can"), not its mesh ("can.mesh").' },
+        keys: {
+          type: 'array',
+          minItems: 1,
+          maxItems: 1000,
+          description: 'Poses over time; each needs a frame and at least one of location, rotationDeg, scale.',
+          items: {
+            type: 'object',
+            required: ['frame'],
+            properties: {
+              frame: { type: 'number', description: 'Frame number of this pose.' },
+              location: {
+                type: 'array',
+                items: { type: 'number' },
+                minItems: 3,
+                maxItems: 3,
+                description: '[x, y, z] in metres.',
+              },
+              rotationDeg: {
+                type: 'array',
+                items: { type: 'number' },
+                minItems: 3,
+                maxItems: 3,
+                description: 'Euler XYZ in degrees; values past 360 spin the object.',
+              },
+              scale: {
+                description: 'Uniform scale as a number, or [x, y, z].',
+                anyOf: [{ type: 'number' }, { type: 'array', items: { type: 'number' }, minItems: 3, maxItems: 3 }],
+              },
+            },
+          },
+        },
+        interpolation: {
+          type: 'string',
+          enum: [...BLENDER_INTERPOLATIONS],
+          default: 'LINEAR',
+          description: 'Between keys: LINEAR (default, constant speed), BEZIER (ease in and out), CONSTANT (cut).',
+        },
+        clearExisting: {
+          type: 'boolean',
+          default: true,
+          description: "Replace the object's previous keys (default true); false adds these keys on top.",
+        },
+      },
+      required: ['blendPath', 'object', 'keys'],
+    },
+  },
+
+  {
+    name: 'blender_render_previz',
+    title: 'Render a previz clip (bridge)',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    description: `Render a .blend previz **on this machine** to an H.264 mp4 plus first, middle and last frame PNGs (or the frames you list), with the frame number, camera and lens stamped in the corner. workbench (default) is flat studio light with cavity shading and outlines — grey figures read against a grey floor, well under a second a frame; eevee renders the scene's light and materials for a previz that also has to say something about mood, a few seconds a frame. Silent — no audio track.
+
+Use after blender_camera_set to look at the move — open the stills, then iterate the camera in numbers — and at the end of a previz session to produce the clip the cut's camera and blocking are planned from. Resolution, fps and frame range default to the scene's (set by blender_scene_build); pass frameStart/frameEnd to render a slice. Output goes to outputPath or <blend dir>/previz/.
+Do NOT treat the previz as a deliverable frame — nothing in it is final appearance; it is a camera and blocking plan. Do NOT pad or loop a failed render — the tool reports failure and writes no mp4.
+Requires Blender 4.2+; the mp4 is written by Blender's own FFmpeg, so no ffmpeg on PATH is needed.
+
+Returns: a text block with the mp4 path, still paths, engine, resolution, fps, frame range, seconds and render time.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        blendPath: { type: 'string', description: 'Absolute path to the .blend file (must end in .blend, no "..").' },
+        outputPath: { type: 'string', description: 'Directory for the mp4 and stills (default: <blend dir>/previz).' },
+        filename: {
+          type: 'string',
+          default: DEFAULT_PREVIZ_FILENAME,
+          description: `Bare mp4 file name (default ${DEFAULT_PREVIZ_FILENAME}); stills are named <stem>-fNNNN.png beside it.`,
+        },
+        engine: {
+          type: 'string',
+          enum: [...BLENDER_PREVIZ_ENGINES],
+          default: DEFAULT_PREVIZ_ENGINE,
+          description: 'workbench (default): flat studio light, cavity, outlines, fastest. eevee: scene light and materials, a few seconds a frame.',
+        },
+        width: { type: 'number', description: "Override render width in px (default: the scene's)." },
+        height: { type: 'number', description: "Override render height in px (default: the scene's)." },
+        fps: { type: 'number', description: "Override frames per second (default: the scene's)." },
+        frameStart: { type: 'number', description: "First frame to render (default: the scene's)." },
+        frameEnd: { type: 'number', description: `Last frame to render (default: the scene's). At most ${MAX_PREVIZ_FRAMES} frames per render.` },
+        stills: {
+          type: 'array',
+          maxItems: 24,
+          items: { type: 'number' },
+          description: 'Frames to also save as PNG (default: first, middle, last).',
+        },
+        stamp: {
+          type: 'boolean',
+          default: true,
+          description: 'Burn frame number, camera name and lens into the corner (default true) — what makes a still reviewable.',
+        },
+        samples: { type: 'number', default: 16, description: 'eevee only: render samples (default 16).' },
+        timeoutSeconds: {
+          type: 'number',
+          description: 'Override the render time limit in seconds (default grows with the frame count: 120 s + 1 s per frame on workbench, 4 s on eevee).',
+        },
+      },
+      required: ['blendPath'],
     },
   },
 
