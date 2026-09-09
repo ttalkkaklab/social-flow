@@ -20,6 +20,7 @@ it never goes into a generation prompt.
 > - 종이 컷아웃 디오라마 — 오려 낸 종이를 겹쳐 세운 그림자극 무대입니다. 지도·전투·역사 장면의 깊이감에 맞고 얼굴 표정은 약합니다.
 > - 수묵화 — 화선지에 먹으로 그린 동양화입니다. 삼국지·조선사 같은 동양 역사물에 맞고 움직임은 안개·물·바람처럼 느린 것만 씁니다.
 > - 3D 카툰 캐릭터 — 극장 애니메이션처럼 큰 눈과 둥근 비례의 3D 캐릭터입니다. 캐릭터가 직접 설명하는 채널, 표정이 잘 읽혀야 하는 편에 맞습니다.
+> - 아케이드 게임 화면 — 90년대 오락실 액션 게임처럼 굵은 윤곽선과 진한 채색으로 그린 캐릭터가 겹겹이 세운 배경 앞에 서는 화면입니다. 신화·영웅담·대결 구도의 이야기, 인물이 크게 보여야 하는 편에 맞습니다. 상단 체력바 같은 게임 인터페이스는 안 그립니다.
 
 When the user proposes another style, spell out its rendering rules and add a supported
 preset before continuing. Without a choice, wait before authoring. Never record a
@@ -34,7 +35,7 @@ or the written plan that authorized the style; never copy the example as an appr
 
 ```js
 style: {
-  preset: 'webtoon', // cinematic-miniature | photoreal | webtoon | claymation | paper-cutout | ink-wash | toon-3d
+  preset: 'webtoon', // cinematic-miniature | photoreal | webtoon | claymation | paper-cutout | ink-wash | toon-3d | arcade-2d
   selection: { kind: 'user', reference: 'ACTUAL_USER_CHOICE' },
   reference: 'Korean webtoon illustration',   // where the look comes from: a URL or one line
   world: 'A period office with a consistent desk and doorway.',
@@ -67,7 +68,15 @@ style: {
   clean shaders; keep each character's model, costume and colours identical across cuts by
   referencing the approved character image. Never name a studio or a living artist in a prompt;
   the image lane refuses those and the rendering rules above already carry the look.
-- None of the four presets above attaches the miniature pack; each removes `referencePack`
+- `arcade-2d`: `look` is arcade. A 1990s hand-painted arcade game frame: characters are large
+  painted sprites with bold dark outlines and exaggerated heroic proportions, standing side-on in
+  front of layered parallax backgrounds. Stage every cut like a game stage — the camera is static
+  or pans sideways, never orbits, because a 2D sprite has no back side. Generated video holds a
+  few strong poses per action, the way a sprite animates. The game HUD (health bars, portraits,
+  player names) is never in the picture: the image lane garbles lettering, generated video warps
+  a static overlay, and nothing is drawn over video. Named game companies and titles stay out of
+  prompts like studios do.
+- None of the five presets above attaches the miniature pack; each removes `referencePack`
   and any earlier `visual.stylePack` like photoreal and webtoon do.
 
 Each cut first settles the narration's actor, action and recipient and its start and end
@@ -82,15 +91,16 @@ cut still provides `shot.videoDesign`'s look, before, action, after and continui
 `subject_action` motion the last beat is the final state and `after` may be left out. Use the returned
 `sourcePrompt` for the actual image generation and link the result into the storyboard HTML.
 For miniature, attach the pack's reference image with the returned `sourceImageArgs`.
-Photoreal, webtoon and the four prompt-only presets make the first image from the preset
+Photoreal, webtoon and the five prompt-only presets make the first image from the preset
 description and reference the approved character image in later cuts.
 
 A cut that needs an end image edits the start image with `endFramePrompt`. Start and end keep
 the same style, people, costume and space. Video uses `motionPrompt`, which the helper
 assembles from the four `visual.camera` slots and checks against the Seedance prompt gate.
 After generation, open the image and review content and style separately. A doll-like
-surface in photoreal, photographic skin in webtoon, a smooth plastic figure in claymation or a
-painted-looking photo in ink-wash is a mismatch; remake it. A metadata
+surface in photoreal, photographic skin in webtoon, a smooth plastic figure in claymation, a
+painted-looking photo in ink-wash or a soft airbrushed figure without outlines in arcade-2d is a
+mismatch; remake it. A metadata
 pass is not a visual review.
 
 Write the chosen style's name and rendering rules in the storyboard HTML's `SB_DOC`

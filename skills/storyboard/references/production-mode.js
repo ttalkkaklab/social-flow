@@ -10,6 +10,23 @@
   // A static camera has no speed to state (the span reads "static camera"), so that one slot may stay empty.
   const staticCamera = camera => /^(static|fixed|locked)/i.test(String(camera?.movement || '').trim());
   const missingCameraSlots = camera => CAMERA_SLOTS.filter(slot => !text(camera?.[slot]) && !(slot === 'speed' && staticCamera(camera)));
+  // A move written to be invisible is a still with extra steps. ep402 (2026-09-06) asked for
+  // "very small optical focus change", "gentle focus", "hold composition with subtle light
+  // variation" and got clips whose every frame repeats the last; ep411 (2026-09-09) asked for
+  // "slow dolly in" on wide miniature stages and read as stills on a phone. The camera slots
+  // name a move the viewer can see, in vendor vocabulary: dolly in, truck right, arc shot,
+  // pedestal up, at slow / steady / fast — or static, chosen, on at most a third of the shots.
+  const NEUTERED = /\b(?:very|extremely|almost|ever so)\s+(?:slow|slight|small|subtle|gentle)|\b(?:barely|hardly|imperceptibl[ey]|subtle|subtly|tiny|minimal|micro|slight|slightly|gentle|gently|restrained|quiet)\b|\bhold(?:ing)?\s+(?:the\s+)?(?:composition|frame|shot)\b|\block(?:ed)?[- ]off\b|\bbreathing only\b/i;
+  const WIDE = /\b(?:wide|establishing|extreme long|long shot|full[- ]body figures|small figures)\b/i;
+  function cameraErrors(scene) {
+    const v = scene.visual || {}, camera = v.camera || {}, errors = [];
+    const span = [camera.movement, camera.speed].filter(text).join(' ');
+    const hit = NEUTERED.exec(span);
+    if (hit) errors.push(`visual.camera asks for a move the viewer cannot see ("${hit[0]}"); write a visible move at slow, steady or fast, or choose static`);
+    if (v.video?.cameraFixed === true && !staticCamera(camera))
+      errors.push(`visual.video.cameraFixed locks the provider camera while visual.camera.movement is "${camera.movement}"; drop cameraFixed or write static`);
+    return errors;
+  }
   // The final state is written once: the last motion beat on an acted shot, videoDesign.after otherwise.
   function finalState(design) {
     const beats = design?.motion?.kind === 'subject_action' ? design.motion.beats : null;
@@ -31,7 +48,12 @@
     'ink-wash': { label: '수묵화', looks: ['inkwash'],
       prompt: 'East Asian ink-wash painting: confident brushed black ink lines with wet-on-wet grey gradients on pale rice-paper texture, generous empty space, one restrained mineral accent colour, figures and places drawn in calligraphic strokes; the frame stays one painted picture.' },
     'toon-3d': { label: '3D 카툰 캐릭터', looks: ['toon3d'],
-      prompt: 'Stylised 3D cartoon animation: appealing characters with large expressive eyes and simplified rounded proportions, soft subsurface skin, clean material shaders on props and sets, warm rim light and cinematic depth of field, rendered like a feature-animation frame.' }
+      prompt: 'Stylised 3D cartoon animation: appealing characters with large expressive eyes and simplified rounded proportions, soft subsurface skin, clean material shaders on props and sets, warm rim light and cinematic depth of field, rendered like a feature-animation frame.' },
+    // Added 2026-09-09 from a user reference: a 1990s hand-painted arcade fighting/action game frame.
+    // The game HUD (health bars, portraits, player names) is not part of the generated picture:
+    // the image lane garbles lettering, generated video warps a static overlay, and nothing is drawn over video.
+    'arcade-2d': { label: '아케이드 게임 화면', looks: ['arcade'],
+      prompt: 'Hand-painted 1990s arcade game art: characters as large painted sprites with bold dark outlines, exaggerated heroic proportions and saturated colours with hard cel highlights, staged side-on in front of layered parallax backgrounds (painted foreground props, a mid-ground set, a distant painted backdrop), slightly grainy CRT-era colour and a wide stage read; the whole frame is one painted game scene and the picture holds only the stage and its characters, every frame edge kept as painted scenery.' }
   };
   // Only the miniature presets carry a bundled reference pack; every other preset is prompt-only.
   const packPresets = ['cinematic-miniature', 'spatial-explainer'];
@@ -126,6 +148,9 @@
     if (STYLES[chosen] && !packPresets.includes(chosen) && p.style.referencePack)
       errors.push('Only cinematic-miniature carries the miniature reference pack; drop referencePack for ' + chosen);
     if (draft) return errors; // Shot assets/designs are authored after the narration-only draft.
+    (win.SCENES || []).forEach((s, i) => {
+      if (eligible(s) && !reused(s) && s.visual?.video) cameraErrors(s).forEach(e => errors.push('shot ' + (i + 1) + ': ' + e));
+    });
     if (!full(p)) {
       const count = (win.SCENES || []).filter(s => eligible(s) &&
         (s.visual?.video || s.type === 'broll' || (s.type === 'quote' && typeof s.visual?.clip === 'object'))).length;
@@ -173,6 +198,23 @@
       run.push({ key, shot: i + 1 });
       if (run.length === 3) errors.push('shots ' + run.map(r => r.shot).join(', ') + ': the same framing and camera move three times in a row; change size, angle or move for a reason');
     });
+    // A full-video episode is carried by the camera as much as by the subject. ep411 held a
+    // static or slow camera on wide miniature stages for 8 of 15 shots and measured like a
+    // slideshow (2026-09-09): the camera moves on at least two of every three shots, never
+    // stands still twice in a row, and at least half the shots come closer than wide.
+    const generated = (win.SCENES || []).map((s, i) => ({ s, shot: i + 1 })).filter(({ s }) => eligible(s) && !reused(s));
+    if (generated.length >= 3) {
+      const statics = generated.filter(({ s }) => staticCamera(s.visual?.camera));
+      if (statics.length * 3 > generated.length)
+        errors.push(`${statics.length} of ${generated.length} shots hold a static camera; a full-video episode moves the camera on at least two of every three shots`);
+      generated.forEach(({ s, shot }, k) => {
+        if (k && staticCamera(s.visual?.camera) && staticCamera(generated[k - 1].s.visual?.camera))
+          errors.push(`shots ${generated[k - 1].shot}, ${shot}: two static cameras in a row; move on one of them`);
+      });
+      const wide = generated.filter(({ s }) => WIDE.test(String(s.visual?.camera?.framing || '')));
+      if (wide.length * 2 > generated.length)
+        errors.push(`${wide.length} of ${generated.length} shots are framed wide; small figures on a wide stage read as a still on a phone — bring at least half the shots to medium or close`);
+    }
     return errors;
   }
   function policy(base, production, scenes) {
@@ -182,7 +224,7 @@
     return { ...base, videoBudgetUsd: production.videoBudgetUsd,
       generatedVideoMax: full(production) ? scenes.filter(eligible).length : Math.min(base.generatedVideoMax ?? 2, 2) };
   }
-  const api = { STYLES, MODES, CAMERA_SLOTS, packPresets, ALL_LOOKS, eligible, reused, reuseErrors, full, signature, check, policy, motionErrors, missingCameraSlots, finalState };
+  const api = { STYLES, MODES, CAMERA_SLOTS, packPresets, ALL_LOOKS, eligible, reused, reuseErrors, full, signature, check, policy, motionErrors, missingCameraSlots, cameraErrors, staticCamera, finalState };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.PRODUCTION_MODE = api;
 })(typeof window === 'object' ? window : globalThis);

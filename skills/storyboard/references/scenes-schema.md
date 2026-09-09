@@ -357,11 +357,11 @@ the actual source and clip hashes, checked before the build.
 
 Before authoring, follow [visual-style.md](visual-style.md). Both production modes store
 `PRODUCTION.style.preset`: one of `cinematic-miniature`, `photoreal`, `webtoon`, `claymation`,
-`paper-cutout`, `ink-wash` or `toon-3d` (`production-mode.js` `STYLES`), with the actual
+`paper-cutout`, `ink-wash`, `toon-3d` or `arcade-2d` (`production-mode.js` `STYLES`), with the actual
 `selection: { kind: "user" | "standing", reference: "actual choice or plan" }`.
 The `spatial-explainer` preset is accepted for existing boards only. New episodes require HITL.
 Use `videoDesign.look: "realistic"` for photoreal, `"webtoon"` for webtoon, `"clay"`, `"papercut"`,
-`"inkwash"` and `"toon3d"` for the four prompt-only presets; only cinematic-miniature attaches
+`"inkwash"`, `"toon3d"` and `"arcade"` for the five prompt-only presets; only cinematic-miniature attaches
 the miniature pack. Source, end-frame and motion prompts carry the selected treatment.
 
 ### Bundled full-video style references
@@ -1177,7 +1177,7 @@ The continuous music bed runs across the feature; do not fade it at every scene 
 ```js
 camera: {
   movement: "dolly in",                                   // what the camera does — `static` is a choice, not an empty slot
-  speed: "very slow",                                     // how fast it does it — stays empty on a static camera
+  speed: "slow",                                          // how fast it does it — stays empty on a static camera
   framing: "chest-up, eyes on the upper third",           // what is held while it moves
   end: "subject centred, hands entering the lower third"  // where it stops
 }
@@ -1225,6 +1225,14 @@ The rules that applied to the old one-string camera line now apply per slot:
   one-move-per-cut rule is Seedance 2.0's alone — write a second move only with a reason. On a
   deliberate long take (10s+) it is one, no exception.
 - **No seconds in any slot** — length is `duration` (§cut length).
+- **A move the viewer can see, on a generated shot.** `very slow`, `subtle`, `gentle`, `tiny`,
+  `slight`, `barely`, `restrained`, `quiet`, `hold composition` and `breathing only` are refused
+  in `movement`/`speed` by `production-mode.js` and `check-scenes.js` — ep402 asked for them and
+  got clips whose every frame repeats the last. Write `slow`/`steady`/`fast`, or `static` on
+  purpose. `visual.video.cameraFixed:true` is legal only under `movement: "static"`. The still
+  lane keeps its own ladder (`very slow` for explain) — its move is the builder's, not the model's.
+  Full video adds episode rules: static on at most one shot in three, never twice in a row, and
+  wide framing on at most half (full-video.md §Camera dynamics).
 - **No exclusions in any slot** — that is Veo's `negativePrompt` argument, and for Seedance it
   means re-describing the scene so the thing doesn't appear (§motion background).
 - **The move is chosen from `shot.feel`, and it supports the feel rather than carrying it.**
@@ -2625,11 +2633,11 @@ production plan signature. Do not store resolved machine-specific image paths in
 
 Before authoring, follow [visual-style.md](visual-style.md). Both production modes store
 `PRODUCTION.style.preset`: one of `cinematic-miniature`, `photoreal`, `webtoon`, `claymation`,
-`paper-cutout`, `ink-wash` or `toon-3d` (`production-mode.js` `STYLES`), with the actual
+`paper-cutout`, `ink-wash`, `toon-3d` or `arcade-2d` (`production-mode.js` `STYLES`), with the actual
 `selection: { kind: "user" | "standing", reference: "actual choice or plan" }`.
 The `spatial-explainer` preset is accepted for existing boards only. New episodes require HITL.
 Use `videoDesign.look: "realistic"` for photoreal, `"webtoon"` for webtoon, `"clay"`, `"papercut"`,
-`"inkwash"` and `"toon3d"` for the four prompt-only presets; only cinematic-miniature attaches
+`"inkwash"`, `"toon3d"` and `"arcade"` for the five prompt-only presets; only cinematic-miniature attaches
 the miniature pack. Source, end-frame and motion prompts carry the selected treatment.
 
 ## Existing generated clip input (`visual.reuse`)

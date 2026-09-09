@@ -14,6 +14,7 @@ const LOOKS = {
   papercut: 'A layered cut-paper diorama with fibre edges, separated depth layers and soft shadows between them.',
   inkwash: 'A brushed ink-wash painting on rice paper with wet grey gradients, empty space and one accent colour.',
   toon3d: 'A stylised 3D cartoon render with rounded appealing characters, clean shaders and cinematic light.',
+  arcade: 'A hand-painted 2D arcade game stage with bold-outlined painted sprites, layered parallax backdrops and saturated cel colour.',
   archive: 'A faithful presentation of the supplied archival reference, preserving its composition and marks as source evidence.'
 };
 const text = value => typeof value === 'string' && !!value.trim();
