@@ -443,7 +443,7 @@ describe('blender round trip', { skip: !blenderBin() && 'no Blender on this mach
     assert.ok(whole.success, whole.success ? '' : whole.error);
     const accent = await poseKey(blenderPoseKeySchema.parse({ blendPath: blend, object: 'actor', clearExisting: false, ease: 3, keys: [{ frame: 5, pose: { armL: { raise: 170 } } }, { frame: 7, pose: { legL: { knee: 30 } } }] }));
     assert.ok(accent.success, accent.success ? '' : accent.error);
-    assert.ok(accent.scene.applied.tails['hand.L'][2] > 1.9 || accent.scene.applied.keyframes[0] === 5, 'the accent frame is keyed');
+    assert.deepEqual(accent.scene.applied.keyframes, [5, 7], 'both accent frames are keyed');
     const reached = await poseKey(blenderPoseKeySchema.parse({ blendPath: blend, object: 'actor', clearExisting: false, ease: 0, keys: [{ frame: 5, pose: { armL: { raise: 170 } } }] }));
     assert.ok(reached.success && reached.scene.applied.tails['hand.L'][2] > 1.9, `the accent is reached: ${JSON.stringify(reached.success && reached.scene.applied.tails)}`);
     assert.ok(accent.scene.objects.find((o) => o.name === 'actor.rig').keyframes.length >= 9, 'the clip keys on the other bones stay');
