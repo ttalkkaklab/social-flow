@@ -1088,7 +1088,7 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
     const mapped = Object.entries(m?.mapped ?? {}).map(([c, s]) => `${c} ← ${s}`);
     return text(
       `Motion retargeted onto "${a?.object}" (${a?.rig}) — scene frames ${first}–${last} (${m?.frames} keys, one per frame).\n` +
-        `Source: ${m?.source} · ${m?.sourceBones} bones · ${m?.sourceSeconds}s; slice ${m?.fromSeconds}–${m?.toSeconds}s at speed ${m?.speed}${m?.loop ? ', looped' : ''} · root motion ${m?.rootMotion} · scale ×${m?.heightRatio} · facing turned ${m?.yawDeg}°\n` +
+        `Source: ${m?.source} · ${m?.sourceBones} bones · ${m?.sourceSeconds}s @ ${m?.sourceFps} fps; slice ${m?.fromSeconds}–${m?.toSeconds}s at speed ${m?.speed}${m?.loop ? ', looped' : ''} · root motion ${m?.rootMotion} · scale ×${m?.heightRatio} · facing turned ${m?.yawDeg}°\n` +
         `Matched ${mapped.length}/${blender.BLENDER_RIG_BONES.length} bones: ${mapped.join(', ')}\n` +
         `${m?.unmapped?.length ? `Unmatched (hold rest relative to parent): ${m.unmapped.join(', ')}\n` : ''}` +
         `At frame ${first}: ${blender.describeTails(a?.tails)}\nAt frame ${last}: ${blender.describeTails(a?.tailsEnd)}\n` +

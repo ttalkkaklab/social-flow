@@ -2088,7 +2088,7 @@ Returns: the scene summary; the object's line shows its keyframes.`,
         description: `Key the body of a person proxy in a .blend previz **on this machine** — poses over frames in plain channels, degrees in the figure's own frame: arms (raise, side, twist, elbow), legs (raise, side, knee, ankle), torso (bow, lean, turn), head (nod, tilt, turn) and hips (offset in metres, turn, bow, lean). The mannequin bends at its 19 joints; between keys the pose eases (BEZIER by default). Saves and returns the scene summary plus where the hands, feet and head ended up.
 
 Use for acted beats the cut is about — a point, a wave, a bow, a crouch and jump, a dance count — when no motion-capture clip fits (blender_motion_import is the natural-motion path). A group that is present keys every bone it covers with omitted channels at 0 (the rest pose: arms hanging, standing straight); a group that is absent leaves those bones alone at that frame. raise 90 puts a limb horizontal in front, side 90 horizontal out to the side, elbow/knee 0–150 bend the joint; bow/nod + lean forward, lean/tilt + go to the figure's left, turn + turns to the figure's left; hips.offset [0, 0, -0.2] drops the pelvis 20 cm (a crouch, with knees and thighs bent to match). The raw bones map takes any rig bone as [x, y, z] degrees about the figure's X (side), Y (front-back) and Z (up) axes. Keys more than about 120° apart need an intermediate key or the joint may swing the other way round.
-Do NOT pose with this what a clip can carry — a full dance by hand is hundreds of keys and reads mechanical; import a clip and hand-key only the accents. Do NOT move the figure across the floor with this — that is blender_object_animate on the person's root. Do NOT name the rig or the body — name the person proxy.
+Do NOT pose with this what a clip can carry — a full dance by hand is hundreds of keys and reads mechanical; import a clip and hand-key only the accents with clearExisting false (each accent takes over ±ease frames of the clip, default 6, so it is reached and left rather than spiked). Do NOT move the figure across the floor with this — that is blender_object_animate on the person's root. Do NOT name the rig or the body — name the person proxy.
 
 Returns: the scene summary; the person's rig line shows its keyframes, and a landmark line gives hand.L, hand.R, foot.L, foot.R and head positions in world metres at the last keyed frame.`,
         inputSchema: {
@@ -2197,7 +2197,12 @@ Returns: the scene summary; the person's rig line shows its keyframes, and a lan
                 clearExisting: {
                     type: 'boolean',
                     default: true,
-                    description: "Replace the person's previous body keys, including an imported motion (default true); false layers these keys on top.",
+                    description: "Replace the person's previous body keys, including an imported motion, and put every bone back at rest (default true); false layers these keys on top of what is there — each keyed bone's older keys within ±ease frames of the new key are dropped, so the pose is eased into and out of instead of spiking for one frame.",
+                },
+                ease: {
+                    type: 'number',
+                    default: 6,
+                    description: 'With clearExisting false: half-width in frames of the window a layered key takes over from the existing keys (default 6, 0 keeps every neighbour and changes that frame alone).',
                 },
             },
             required: ['blendPath', 'object', 'keys'],

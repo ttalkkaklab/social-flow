@@ -371,6 +371,13 @@ describe('blender round trip', { skip: !blenderBin() && 'no Blender on this mach
     assert.ok(walked.success, walked.success ? '' : walked.error);
     assert.deepEqual(walked.scene.objects.find((o) => o.name === 'dancer.rig')?.keyframes, [1, 24], 'the body keys survive a root move');
 
+    // a fresh call (clearExisting true) puts the bones it does not key back at rest — the
+    // right arm that was out to the side hangs again, not frozen where the last call left it
+    const again = await poseKey(blenderPoseKeySchema.parse({ blendPath: blend, object: 'dancer', keys: [{ frame: 1, pose: { head: { nod: 20 } } }] }));
+    assert.ok(again.success, again.success ? '' : again.error);
+    assert.ok(Math.abs(again.scene.applied.tails['hand.R'][0] + 0.12 * 1.6) < 0.05 && again.scene.applied.tails['hand.R'][2] < 0.7, `hand.R hangs after a fresh call ${again.scene.applied.tails['hand.R']}`);
+    assert.ok(again.scene.applied.tails['foot.L'][2] < 0.05, `foot.L is down again ${again.scene.applied.tails['foot.L']}`);
+
     const notRigged = await poseKey(blenderPoseKeySchema.parse({ blendPath, object: 'dog', keys: [{ frame: 1, pose: { head: { nod: 10 } } }] }));
     assert.ok(!notRigged.success);
     assert.match(notRigged.error, /has no rig/);
@@ -428,6 +435,54 @@ describe('blender round trip', { skip: !blenderBin() && 'no Blender on this mach
     const fast = await importMotion(blenderMotionImportSchema.parse({ blendPath: blend, object: 'actor', motionPath: clip, speed: 2 }));
     assert.ok(fast.success, fast.success ? '' : fast.error);
     assert.ok(fast.scene.applied.motion.frames <= 6, `double speed halves the keys: ${fast.scene.applied.motion.frames}`);
+
+    // an accent layered on the baked clip takes over a window, not one frame: with ease 3 at
+    // frame 5 the upper arm's clip keys at 3, 4, 6, 7 go and the key at 5 is the accent
+    const whole = await importMotion(blenderMotionImportSchema.parse({ blendPath: blend, object: 'actor', motionPath: clip }));
+    assert.ok(whole.success, whole.success ? '' : whole.error);
+    const accent = await poseKey(blenderPoseKeySchema.parse({ blendPath: blend, object: 'actor', clearExisting: false, ease: 3, keys: [{ frame: 5, pose: { armL: { raise: 170 } } }] }));
+    assert.ok(accent.success, accent.success ? '' : accent.error);
+    assert.ok(accent.scene.applied.tails['hand.L'][2] > 1.9, `the accent is reached: ${accent.scene.applied.tails['hand.L']}`);
+    assert.ok(accent.scene.objects.find((o) => o.name === 'actor.rig').keyframes.length >= 9, 'the clip keys on the other bones stay');
+    const keyProbe = [
+      'import bpy',
+      'o = bpy.data.objects["actor.rig"]; ad = o.animation_data; act = ad.action; fcs = []',
+      'try:',
+      '    for layer in act.layers:',
+      '        for strip in layer.strips:',
+      '            bag = strip.channelbag(ad.action_slot)',
+      '            if bag is not None: fcs.extend(bag.fcurves)',
+      'except Exception:',
+      '    fcs = list(act.fcurves)',
+      'fc = [f for f in fcs if f.data_path == \'pose.bones["upper_arm.L"].rotation_quaternion\'][0]',
+      'print("KEYS", len(fc.keyframe_points), sorted(int(round(k.co[0])) for k in fc.keyframe_points))',
+    ].join('\n');
+    const keyCount = execFileSync(blenderBin(), ['--background', '--factory-startup', blend, '--python-expr', keyProbe], { encoding: 'utf-8', stdio: ['ignore', 'pipe', 'pipe'] })
+      .split('\n')
+      .find((l) => l.startsWith('KEYS'));
+    assert.ok(keyCount && !/\b[3467]\b/.test(keyCount.split('[')[1]) && / 5[,\]]/.test(keyCount), `window (2, 8) cleared around the accent: ${keyCount}`);
+
+    // an FBX keeps the file's frame rate: exported at 30 fps, it lands in a 24 fps cut at the
+    // right speed and leaves the scene's fps alone
+    const fbx = join(dir, 'tpose-drop.fbx');
+    execFileSync(
+      blenderBin(),
+      ['--background', '--factory-startup', '--python-expr',
+        // the exporter bakes the scene's frame range, so pin it to the clip's ten frames
+        `import bpy\nbpy.ops.wm.read_factory_settings(use_empty=True)\nsc=bpy.context.scene\nsc.render.fps=30\nsc.frame_start=1\nsc.frame_end=10\nbpy.ops.import_anim.bvh(filepath=${JSON.stringify(clip)}, target="ARMATURE", frame_start=1, use_fps_scale=True, update_scene_fps=False, update_scene_duration=False)\nbpy.ops.export_scene.fbx(filepath=${JSON.stringify(fbx)}, bake_anim=True, bake_anim_use_all_actions=False, bake_anim_use_nla_strips=False, add_leaf_bones=False)`],
+      { stdio: 'ignore' },
+    );
+    assert.ok(existsSync(fbx), 'Blender exported the FBX fixture');
+    const slow = join(dir, 'motion24.blend');
+    const built24 = await buildScene(blenderSceneBuildSchema.parse({ blendPath: slow, fps: 24, frameEnd: 24, width: 128, height: 224, proxies: [{ name: 'actor', kind: 'person', height: 1.75 }] }));
+    assert.ok(built24.success, built24.success ? '' : built24.error);
+    const fromFbx = await importMotion(blenderMotionImportSchema.parse({ blendPath: slow, object: 'actor', motionPath: fbx }));
+    assert.ok(fromFbx.success, fromFbx.success ? '' : fromFbx.error);
+    assert.equal(fromFbx.scene.frame.fps, 24, 'the scene keeps its own fps after an FBX import');
+    assert.equal(fromFbx.scene.applied.motion.sourceFps, 30);
+    assert.ok(fromFbx.scene.applied.motion.frames >= 7 && fromFbx.scene.applied.motion.frames <= 9, `ten 30-fps frames are about eight 24-fps keys: ${fromFbx.scene.applied.motion.frames}`);
+    assert.ok(Math.abs(fromFbx.scene.applied.motion.sourceSeconds - 0.333) < 0.05, `clip length in seconds ${fromFbx.scene.applied.motion.sourceSeconds}`);
+    assert.ok(fromFbx.scene.applied.tails['hand.L'][0] > 0.6, `the FBX pose arrives too: ${fromFbx.scene.applied.tails['hand.L']}`);
 
     const wrongMap = await importMotion(blenderMotionImportSchema.parse({ blendPath: blend, object: 'actor', motionPath: clip, boneMap: { 'thigh.L': 'NoSuchBone' } }));
     assert.ok(!wrongMap.success);

@@ -493,7 +493,7 @@ social-flow/
 
 ## MCP tool surface (73 tools)
 
-**`tools/list` does not show all 71.** The nine publish/insights tools
+**`tools/list` does not show all 73.** The nine publish/insights tools
 (`threads_publish` · `instagram_publish` · `facebook_publish` · `facebook_comment` ·
 `youtube_publish` · `threads_insights` · `instagram_insights` · `youtube_insights` ·
 `threads_search`) are exposed **only for platforms whose credential file exists** —

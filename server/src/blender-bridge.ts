@@ -263,6 +263,7 @@ export const blenderPoseKeySchema = z
     keys: z.array(poseKeyEntrySchema).min(1).max(1000),
     interpolation: z.enum(BLENDER_INTERPOLATIONS).optional().default('BEZIER'),
     clearExisting: z.boolean().optional().default(true),
+    ease: z.number().int().min(0).max(120).optional().default(6),
   })
   .superRefine((data, ctx) => {
     const frames = new Set<number>();
@@ -354,6 +355,8 @@ export interface BlenderMotionInfo {
   source: string;
   sourceBones: number;
   sourceSeconds: number;
+  /** the rate the clip's keys are in — an FBX keeps its own, a BVH is retimed to the scene's */
+  sourceFps: number;
   fromSeconds: number;
   toSeconds: number;
   speed: number;
@@ -740,10 +743,11 @@ SYNONYMS = [
     ("shoulder", ("clavicle", "collar", "shoulder")),
     ("upper_arm", ("upperarm", "uparm", "arm", "humerus")),
     ("forearm", ("forearm", "lowerarm", "elbow", "radius")),
-    ("hand", ("hand", "wrist")),
+    # the joint names come first: an SMPL rig has both L_Wrist (the joint) and L_Hand (the fingers)
+    ("hand", ("wrist", "hand")),
     ("thigh", ("upleg", "upperleg", "thigh", "femur", "hip")),
     ("shin", ("leg", "lowerleg", "shin", "calf", "knee", "tibia")),
-    ("foot", ("foot", "ankle")),
+    ("foot", ("ankle", "foot")),
 ]
 SPINE_RE = re.compile(r"^(spine\d*|lowerback|chest|upperback|torso|abdomen)$")
 NOISE_TOKENS = {"joint", "bone", "bip", "bip01", "bip001", "mixamorig", "def", "org", "mch", "b", "jnt"}
@@ -1111,24 +1115,73 @@ def landmark_tails(rig, frame):
     return out
 
 
+def reset_pose(rig):
+    # animation_data_clear only detaches the action; the pose values themselves are saved in
+    # the file, so without this a bone this call does not key keeps the last call's pose
+    for pb in rig.pose.bones:
+        pb.rotation_quaternion = (1.0, 0.0, 0.0, 0.0)
+        pb.rotation_euler = (0.0, 0.0, 0.0)
+        pb.location = (0.0, 0.0, 0.0)
+        pb.scale = (1.0, 1.0, 1.0)
+
+
+def bone_fcurves(rig, bname):
+    prefix = 'pose.bones["%s"].' % bname
+    return [fc for fc in fcurves_of(rig) if fc.data_path.startswith(prefix)]
+
+
+def clear_window(rig, bname, frame, ease, keep):
+    # a key layered on a baked clip would change one frame only (the clip has a key on every
+    # neighbour), so drop this bone's existing keys strictly inside (frame - ease, frame + ease) —
+    # the interpolation then runs from the clip into the new pose and back out to the clip
+    if ease <= 0:
+        return
+    for fc in bone_fcurves(rig, bname):
+        while True:
+            hit = None
+            for kp in fc.keyframe_points:
+                x = kp.co[0]
+                if frame - ease < x < frame + ease and abs(x - frame) > 1e-6 and int(round(x)) not in keep:
+                    hit = kp
+                    break
+            if hit is None:
+                break
+            fc.keyframe_points.remove(hit)
+
+
+def set_interpolation_at(rig, bnames, frames, mode):
+    fs = set(int(round(f)) for f in frames)
+    for b in bnames:
+        for fc in bone_fcurves(rig, b):
+            for kp in fc.keyframe_points:
+                if int(round(kp.co[0])) in fs:
+                    kp.interpolation = mode
+
+
 def op_pose(job):
     sc = bpy.context.scene
     root, rig = find_rig(job["object"])
+    layered = not job["clearExisting"]
+    ease = int(job["ease"]) if job.get("ease") is not None else 6
     prev = {}
-    if job["clearExisting"]:
+    if not layered:
         rig.animation_data_clear()
-    else:
-        existing = key_frames(rig)
-        if existing:
-            sc.frame_set(max(existing))
-            for pb in rig.pose.bones:
-                prev[pb.name] = pb.rotation_quaternion.copy()
-    frames = []
+        reset_pose(rig)
+    frames = [int(k["frame"]) for k in job["keys"]]
+    keep = set(frames)
     touched = set()
     for k in job["keys"]:
         f = int(k["frame"])
-        frames.append(f)
-        for bname, world, offset in pose_to_bones(k["pose"]):
+        bones = pose_to_bones(k["pose"])
+        if layered:
+            # continue from what the clip or the earlier keys hold at this frame, and open a
+            # window around it so the new pose is reached and left, not spiked
+            sc.frame_set(f)
+            for pb in rig.pose.bones:
+                prev[pb.name] = pb.rotation_quaternion.copy()
+            for bname, _world, _offset in bones:
+                clear_window(rig, bname, f, ease, keep)
+        for bname, world, offset in bones:
             pb = set_bone_rotation(rig, bname, world, prev)
             pb.keyframe_insert(data_path="rotation_quaternion", frame=f, group=bname)
             if offset is not None:
@@ -1136,7 +1189,10 @@ def op_pose(job):
                 pb.location = rest.inverted() @ Vector(offset)
                 pb.keyframe_insert(data_path="location", frame=f, group=bname)
             touched.add(bname)
-    set_interpolation(rig, job["interpolation"])
+    if layered:
+        set_interpolation_at(rig, touched, frames, job["interpolation"])   # the clip's own keys keep theirs
+    else:
+        set_interpolation(rig, job["interpolation"])
     extend_frame_range(sc, frames)
     tails = landmark_tails(rig, max(frames))
     sc.frame_current = sc.frame_start
@@ -1190,13 +1246,39 @@ def match_bones(src, override):
                     continue
                 key = canon + "." + side if sided else canon
                 found.setdefault(key, n)
-    # the spine chain: every spine-family bone without a side, root first — the first is the
-    # spine, the last (when there are several) the chest
+    # the spine chain, root first. Rigify has no hips bone — its root "spine" is the pelvis —
+    # and runs the chain up through the neck and head (spine.004–006), so the chest is the
+    # deepest spine-family bone an arm hangs from and what sits above it is neck and head.
     spines = sorted([n for n, side, body in scored if side is None and SPINE_RE.match(body)], key=lambda n: bone_depth(src, n))
+    if spines and "hips" not in found:
+        found["hips"] = spines[0]
+        spines = spines[1:]
+
+    def ancestors(n):
+        b = src.data.bones.get(n)
+        out = []
+        while b is not None and b.parent is not None:
+            b = b.parent
+            out.append(b.name)
+        return out
+    arm_roots = [found[k] for k in ("shoulder.L", "shoulder.R", "upper_arm.L", "upper_arm.R") if k in found]
+    chest = None
+    for n in reversed(spines):
+        if any(n in ancestors(a) for a in arm_roots):
+            chest = n
+            break
     if spines:
         found.setdefault("spine", spines[0])
-        if len(spines) > 1:
+        if chest is not None and chest != found["spine"]:
+            found.setdefault("chest", chest)
+        elif chest is None and len(spines) > 1:
             found.setdefault("chest", spines[-1])
+        if chest is not None:
+            above = [n for n in spines if bone_depth(src, n) > bone_depth(src, chest)]
+            if above:
+                found.setdefault("neck", above[0])
+                if len(above) > 1:
+                    found.setdefault("head", above[-1])
     # SMPL-style names call the upper arm "Shoulder" and the clavicle "Collar"
     used = set(found.values())
     for side in ("L", "R"):
@@ -1303,6 +1385,7 @@ def op_motion(job):
     before_arms = set(a.name for a in bpy.data.armatures)
     before_meshes = set(m.name for m in bpy.data.meshes)
     frame_before = (sc.frame_start, sc.frame_end)
+    fps_before = (sc.render.fps, sc.render.fps_base)
     ext = os.path.splitext(path)[1].lower()
     if ext == ".bvh":
         # the importer retimes the file's frame time to the scene fps and starts at frame 1
@@ -1312,7 +1395,12 @@ def op_motion(job):
     else:
         bpy.ops.import_scene.fbx(filepath=path, use_anim=True, anim_offset=1.0, ignore_leaf_bones=False,
                                  automatic_bone_orientation=False, global_scale=1.0)
+    # the FBX importer sets the scene's fps to the file's and keys at that rate; the BVH importer
+    # (use_fps_scale) keys at the scene's. Read the rate the keys are in, then give the scene its own back.
+    src_fps = float(sc.render.fps) / float(sc.render.fps_base or 1.0)
+    sc.render.fps, sc.render.fps_base = fps_before
     sc.frame_start, sc.frame_end = frame_before
+    rate = src_fps / fps            # source frames per scene frame
     keep_actions = set()
 
     def cleanup():
@@ -1339,7 +1427,7 @@ def op_motion(job):
         first, last = act.frame_range
         first = int(math.floor(first))
         last = int(math.ceil(last))
-        src_seconds = (last - first + 1) / fps
+        src_seconds = (last - first + 1) / src_fps
         src_names = [b.name for b in src.data.bones]
         mapping = match_bones(src, job.get("boneMap"))
         for canon, n in list(mapping.items()):
@@ -1348,16 +1436,16 @@ def op_motion(job):
         if "hips" not in mapping:
             raise RuntimeError("no hips/pelvis bone recognised in %s — pass boneMap (bones: %s)" % (path, ", ".join(src_names)))
 
-        # slice and timing: source frames are already at the scene fps
-        f0 = first + float(job.get("fromSeconds") or 0) * fps
-        f1 = min(float(last), first + float(job["toSeconds"]) * fps) if job.get("toSeconds") is not None else float(last)
+        # slice and timing, in source frames (at src_fps)
+        f0 = first + float(job.get("fromSeconds") or 0) * src_fps
+        f1 = min(float(last), first + float(job["toSeconds"]) * src_fps) if job.get("toSeconds") is not None else float(last)
         if f0 > float(last):
             raise RuntimeError("fromSeconds %.2f is past the end of the clip (%.2f s)" % (float(job.get("fromSeconds") or 0), src_seconds))
         if f1 < f0:
             raise RuntimeError("the slice is empty — toSeconds must be after fromSeconds")
         speed = float(job["speed"])
         start = int(job["frameStart"]) if job.get("frameStart") is not None else sc.frame_start
-        span = (f1 - f0) / speed
+        span = (f1 - f0) / (speed * rate)       # in scene frames
         end = max(sc.frame_end, start) if job["loop"] else start + int(math.floor(span))
         n = end - start + 1
         if n > int(job["maxFrames"]):
@@ -1417,13 +1505,14 @@ def op_motion(job):
 
         if job["clearExisting"]:
             rig.animation_data_clear()
+            reset_pose(rig)
         order = [b.name for b in rig.data.bones]        # armature order is parents first
         prev = {}
         keyed = set()
         hips_rest = rest_ours["hips"].to_3x3()
         rest_dir = {c: (rest_ours[c].to_3x3() @ Vector((0.0, 1.0, 0.0))).normalized() for c in order}
         for t in range(start, end + 1):
-            fsrc = f0 + (t - start) * speed
+            fsrc = f0 + (t - start) * speed * rate
             if job["loop"] and f1 > f0:
                 fsrc = f0 + math.fmod(fsrc - f0, f1 - f0)
             fsrc = min(fsrc, f1)
@@ -1476,8 +1565,9 @@ def op_motion(job):
             "source": path,
             "sourceBones": len(src_names),
             "sourceSeconds": round(src_seconds, 3),
-            "fromSeconds": round((f0 - first) / fps, 3),
-            "toSeconds": round((f1 - first) / fps, 3),
+            "sourceFps": round(src_fps, 3),
+            "fromSeconds": round((f0 - first) / src_fps, 3),
+            "toSeconds": round((f1 - first) / src_fps, 3),
             "speed": speed,
             "loop": bool(job["loop"]),
             "rootMotion": job["rootMotion"],

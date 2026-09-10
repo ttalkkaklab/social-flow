@@ -127,7 +127,12 @@ not becomes a bigger `raise` on the next call, not a guess.
 
 Keys more than about 120° apart on one joint need an intermediate key, or the joint may
 swing the long way round. A full dance by hand is hundreds of keys and reads mechanical;
-for that, import a clip (§5) and hand-key only the accents on top (`clearExisting:false`).
+for that, import a clip (§5) and hand-key only the accents on top with `clearExisting:false`.
+A baked clip has a key on every frame, so a layered key takes over a window: the keyed
+bone's clip keys within ±`ease` frames (default 6) are dropped and the pose is eased into
+from the clip and back out to it. `ease: 0` changes that one frame alone. `clearExisting:true`
+(the default) also puts every bone back at rest, so a bone this call does not key is not
+left holding the previous call's pose.
 
 ## 5. Motion capture onto the mannequin
 
@@ -149,7 +154,12 @@ Arguments that shape the bake:
 - `rootMotion` — `inplace` (default) keeps the pelvis over the figure's root and only lets
   it rise and fall, so the formation is yours through `blender_object_animate`; `full`
   keeps the actor's travel across the floor.
-- `clearExisting:false` layers the clip over hand-made keys rather than replacing them.
+- `clearExisting:false` layers the clip over hand-made keys rather than replacing them
+  (bones the clip does not drive keep whatever they hold); the default replaces everything
+  and puts every bone back at rest first.
+- An FBX keeps the file's own frame rate for its keys; the bridge reads that rate for the
+  slice maths and gives the scene its fps back, so a 30 fps clip in a 24 fps cut plays at
+  the right speed (the reply names the source fps).
 
 Where clips come from: the CMU library (free BVH, converted by cgspeed), the Bandai Namco
 Research motion dataset-1 (BVH, **CC BY-NC 4.0 — research and personal use, not a
@@ -207,8 +217,9 @@ from.
 - **One file, one Blender at a time.** Parallel calls on the same .blend are queued inside
   the server, so a camera call and an object call in one turn both land; different files
   run side by side.
-- **A clip needs a skeleton with keys.** An FBX of a mesh alone, or a BVH with one frame,
-  is refused with the bone list; a skeleton with no recognisable hips needs `boneMap`.
+- **A clip needs a skeleton with keys.** An FBX of a mesh alone is refused; a skeleton
+  whose hips the vocabulary does not recognise is refused with its bone list and needs
+  `boneMap`. A one-frame clip is accepted and bakes one key — a pose, not a motion.
 - **Blender 4.2 or newer.** The bridge picks the engine name per version
   (`BLENDER_EEVEE_NEXT` on 4.2–4.5, `BLENDER_EEVEE` from 5.0) and sets the 5.0-only
   video media type only where it exists; an older Blender stops at the first call with a
