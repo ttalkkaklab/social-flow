@@ -143,8 +143,8 @@ publishable episodes. Improve reusable plugin templates and rebuild; do not hand
 - `uv tool install --python 3.12 "mlx-qwen3-asr[aligner]"` — for `stt_local_transcribe`
   and ingest's Korean STT. The first call downloads ~3.4GB of Qwen3-ASR-1.7B weights
   into `~/.cache/huggingface`. Installed elsewhere, point `QWEN3_ASR_BIN` at it
-- Blender 4.2+ (`brew install --cask blender`, or `BLENDER=<executable>`) — for the five
-  `blender_*` previz tools (camera and blocking as numbers, rendered headless) and for
+- Blender 4.2+ (`brew install --cask blender`, or `BLENDER=<executable>`) — for the seven
+  `blender_*` previz tools (camera, blocking and body timing as numbers, rendered headless) and for
   `bake-blender.py`'s Cycles object sheets. No add-on, no GUI session, no account
 - whisper.cpp (`brew install whisper-cpp`) + `~/.cache/whisper-cpp/ggml-large-v3-turbo.bin`
   — the ingest STT fallback when mlx-qwen3-asr is missing. Recording mode needs
@@ -429,7 +429,7 @@ social-flow/
 ├── .plugin/plugin.json          # Buzz persona pack (Open Plugin Spec)
 ├── personas/                    # Buzz pack persona (pipeline.persona.md)
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 71 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 73 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
 │       ├── tools.ts             # tool definitions (research 8 + open data 5 + generation 18 + publish 6 + comments 3 + check 1 + growth insights 5)
@@ -491,14 +491,14 @@ social-flow/
 └── data/                        # content data root (see data/README.md)
 ```
 
-## MCP tool surface (71 tools)
+## MCP tool surface (73 tools)
 
-**`tools/list` does not show all 71.** The nine publish/insights tools
+**`tools/list` does not show all 73.** The nine publish/insights tools
 (`threads_publish` · `instagram_publish` · `facebook_publish` · `facebook_comment` ·
 `youtube_publish` · `threads_insights` · `instagram_insights` · `youtube_insights` ·
 `threads_search`) are exposed **only for platforms whose credential file exists** —
 evaluated at list time, so adding a token makes them appear without restarting the
-server. With no tokens at all you'll count 62. Hidden tools still have live handlers:
+server. With no tokens at all you'll count 64. Hidden tools still have live handlers:
 calling one directly returns a missing-token error rather than failing silently.
 `content_feedback`, `youtube_topic_scout`, and `sns_issue_scout` sit outside the
 platform gate and stay listed without tokens — the YouTube scout needs
@@ -531,7 +531,7 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | Music generation | `suno_generate` / `suno_generate_sound` / `suno_generate_lyrics` / `suno_credits` | sunoapi.org third-party REST (not an official Suno Inc. API). Sung full songs (2 tracks, 2–8 min) · loopable beds with BPM/key · lyrics only · remaining credits. `SUNO_API_KEY`. Autoproduce does not call these |
 | Music generation | `mlx_music_generate` | MLX Core / mlx-serve (WAV. Default instrumental. Optional bed; default BGM stays Lyria) |
 | 3D | `mlx_3d_generate` | MLX Core / mlx-serve (GLB from an image, consumed by the offline HTML mesh slide lane) |
-| 3D previz | `blender_scene_read` / `blender_scene_build` / `blender_camera_set` / `blender_object_animate` / `blender_render_previz` | The local Blender, headless (**no API key, no network, no add-on, no GUI** — needs Blender 4.2+). Reads a .blend; builds a set of grey proxies (person·dog·car·box·cylinder·sphere) and GLB imports at the cut's frame range and resolution; places and keys the camera by location, look-at target and lens in metres, degrees and mm; keys objects through space; renders an H.264 previz with stamped stills in Workbench or Eevee. Camera and blocking as numbers, iterated for free before any paid generation — the three-channel hand-off (previz → camera, sheets → look, prompt → acting) is in [blender-previz.md](skills/storyboard/references/blender-previz.md) |
+| 3D previz | `blender_scene_read` / `blender_scene_build` / `blender_camera_set` / `blender_object_animate` / `blender_pose_key` / `blender_motion_import` / `blender_render_previz` | The local Blender, headless (**no API key, no network, no add-on, no GUI** — needs Blender 4.2+). Reads a .blend; builds a set of grey proxies — a person is a jointed mannequin on a 19-bone rig — plus dog·car·box·cylinder·sphere and GLB imports at the cut's frame range and resolution; places and keys the camera by location, look-at target and lens in metres, degrees and mm; keys objects and people's roots through space; poses a person by channel (raise, elbow, knee, bow …) or retargets a BVH/FBX motion-capture clip onto it, scaled, faced and floored; renders an H.264 previz with stamped stills in Workbench or Eevee. Camera, blocking and body timing as numbers, iterated for free before any paid generation — the three-channel hand-off (previz → camera and timing, sheets → look, prompt → acting) is in [blender-previz.md](skills/storyboard/references/blender-previz.md) |
 | Publish | `threads_publish` / `instagram_publish` / `facebook_publish` / `facebook_comment` / `youtube_publish` / `youtube_update` | Direct platform API calls — **exposed only for platforms with a credential file** (`youtube_update` edits title/description/tags/visibility of an already-uploaded video) |
 | Comment inbox | `sns_comment_inbox` / `sns_comment_reply` / `sns_comment_moderate` | Cross-platform normalized inbox · replies · hiding (no deletes). Inbox and replies cover all 4 platforms; hiding excludes YouTube (its API only offers held-for-review, which means something else) |
 | Capability | `capability_status` | What this machine has configured, grouped by capability with an "N of M" count, plus the env var that would unlock each missing provider. Call it before planning anything that spends money — otherwise a missing key only surfaces when the call fails, after the plan was built around it. Reports configuration, not reachability |

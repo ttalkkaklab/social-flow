@@ -1,7 +1,7 @@
 /**
  * Blender bridge — drives a local Blender the way the Higgsfield Bridge drives it for
- * ChatGPT, without the cloud relay: five tools that read, build, frame, animate and
- * render a previz scene, each one a short `blender --background --python` run.
+ * ChatGPT, without the cloud relay: seven tools that read, build, frame, animate, pose,
+ * retarget and render a previz scene, each one a short `blender --background --python` run.
  *
  * ## Why a subprocess per call
  *
@@ -19,14 +19,17 @@
  *
  * A previz clip is grey proxies and a camera path, rendered with Workbench in seconds.
  * It pins what a prompt cannot — where the camera is, how high, how wide, how long it
- * moves, who stands where — as numbers. It carries no acting: a video model handed a
- * previz clip copies its whole motion, stiff limbs included, so the previz decides camera
- * and blocking, the image sheets decide appearance, and the prompt decides the acting
- * (skills/storyboard/references/blender-previz.md).
+ * moves, who stands where — as numbers. A person proxy is a jointed mannequin on a
+ * 19-bone armature (hips · spine · chest · neck · head, shoulder · upper arm · forearm ·
+ * hand and thigh · shin · foot per side), so a cut whose content is the body — a dance, a
+ * gesture, a fall — carries its timing too: blender_pose_key writes poses in plain
+ * channels (raise, elbow, knee, bow …) and blender_motion_import retargets a BVH or FBX
+ * motion-capture clip onto the mannequin. Appearance still belongs to the image sheets
+ * and the prompt (skills/storyboard/references/blender-previz.md).
  *
  * Coordinates are Blender's: metres, Z up, +Y away from the front view, angles in
  * degrees. Characters built here face -Y, so a camera at negative Y looking back at the
- * origin sees their front.
+ * origin sees their front, and a character's own left is +X.
  */
 import { execFile } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -50,6 +53,17 @@ export const DEFAULT_FRAME_END = 150;
 export const MAX_PREVIZ_FRAMES = 3000;
 /** Blender 4.x caps an ID name at 63 bytes of UTF-8 (5.0 raised it) — measured in bytes, not characters */
 export const MAX_BLENDER_NAME = 63;
+/** The person proxy's armature, parents first — the names blender_pose_key's raw `bones` map and boneMap use */
+export const BLENDER_RIG_BONES = [
+    'hips', 'spine', 'chest', 'neck', 'head',
+    'shoulder.L', 'upper_arm.L', 'forearm.L', 'hand.L',
+    'shoulder.R', 'upper_arm.R', 'forearm.R', 'hand.R',
+    'thigh.L', 'shin.L', 'foot.L',
+    'thigh.R', 'shin.R', 'foot.R',
+];
+export const BLENDER_POSE_GROUPS = ['hips', 'torso', 'head', 'armL', 'armR', 'legL', 'legR'];
+export const BLENDER_MOTION_FORMATS = ['.bvh', '.fbx'];
+export const BLENDER_ROOT_MOTIONS = ['inplace', 'full'];
 // ── Request schemas ─────────────────────────────────────────────
 const vec3 = z.tuple([z.number(), z.number(), z.number()]);
 const frameNumber = z.number().int().min(0).max(1_000_000);
@@ -189,6 +203,73 @@ export const blenderObjectAnimateSchema = z
         frames.add(k.frame);
     }
 });
+// Pose channels are degrees in the figure's own frame (it faces -Y, its left is +X); a group
+// that is present keys every bone it covers, with omitted channels at 0 (the rest pose).
+const poseDeg = z.number().min(-360).max(360);
+const armPoseSchema = z.object({ raise: poseDeg.optional(), side: poseDeg.optional(), twist: poseDeg.optional(), elbow: poseDeg.optional() }).strict();
+const legPoseSchema = z.object({ raise: poseDeg.optional(), side: poseDeg.optional(), knee: poseDeg.optional(), ankle: poseDeg.optional() }).strict();
+const torsoPoseSchema = z.object({ bow: poseDeg.optional(), lean: poseDeg.optional(), turn: poseDeg.optional() }).strict();
+const headPoseSchema = z.object({ nod: poseDeg.optional(), tilt: poseDeg.optional(), turn: poseDeg.optional() }).strict();
+const hipsPoseSchema = z.object({ offset: vec3.optional(), bow: poseDeg.optional(), lean: poseDeg.optional(), turn: poseDeg.optional() }).strict();
+const poseSchema = z
+    .object({
+    hips: hipsPoseSchema.optional(),
+    torso: torsoPoseSchema.optional(),
+    head: headPoseSchema.optional(),
+    armL: armPoseSchema.optional(),
+    armR: armPoseSchema.optional(),
+    legL: legPoseSchema.optional(),
+    legR: legPoseSchema.optional(),
+    bones: z.record(z.enum(BLENDER_RIG_BONES), vec3).optional(),
+})
+    .strict();
+const poseKeyEntrySchema = z.object({ frame: frameNumber, pose: poseSchema });
+export const blenderPoseKeySchema = z
+    .object({
+    blendPath,
+    object: blenderName,
+    keys: z.array(poseKeyEntrySchema).min(1).max(1000),
+    interpolation: z.enum(BLENDER_INTERPOLATIONS).optional().default('BEZIER'),
+    clearExisting: z.boolean().optional().default(true),
+    ease: z.number().int().min(0).max(120).optional().default(6),
+})
+    .superRefine((data, ctx) => {
+    const frames = new Set();
+    for (const [i, k] of data.keys.entries()) {
+        // an empty group ({}) is meaningful — it keys that part of the body at rest
+        if (Object.values(k.pose).every((v) => v === undefined)) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['keys', i, 'pose'], message: `a pose needs at least one of ${BLENDER_POSE_GROUPS.join(', ')} or bones` });
+        }
+        if (frames.has(k.frame))
+            ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['keys', i, 'frame'], message: `frame ${k.frame} is keyed twice` });
+        frames.add(k.frame);
+    }
+});
+const motionPath = z
+    .string()
+    .min(1, 'motionPath is required')
+    .refine((p) => !p.includes('..'), { message: 'motionPath must not contain ".."' })
+    .refine((p) => BLENDER_MOTION_FORMATS.includes(extname(p).toLowerCase()), { message: `motionPath must end in ${BLENDER_MOTION_FORMATS.join(' or ')}` })
+    .transform((p) => resolve(p));
+export const blenderMotionImportSchema = z
+    .object({
+    blendPath,
+    object: blenderName,
+    motionPath,
+    frameStart: frameNumber.optional(),
+    fromSeconds: z.number().min(0).max(36_000).optional().default(0),
+    toSeconds: z.number().positive().max(36_000).optional(),
+    speed: z.number().min(0.1).max(10).optional().default(1),
+    loop: z.boolean().optional().default(false),
+    rootMotion: z.enum(BLENDER_ROOT_MOTIONS).optional().default('inplace'),
+    boneMap: z.record(z.enum(BLENDER_RIG_BONES), z.string().min(1).max(255)).optional(),
+    clearExisting: z.boolean().optional().default(true),
+})
+    .superRefine((data, ctx) => {
+    if (data.toSeconds !== undefined && data.toSeconds <= data.fromSeconds) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['toSeconds'], message: 'toSeconds must be after fromSeconds' });
+    }
+});
 export const blenderRenderPrevizSchema = z
     .object({
     blendPath,
@@ -219,6 +300,22 @@ export const blenderRenderPrevizSchema = z
     }
 });
 const fmt = (v) => `(${v.map((x) => (Number.isInteger(x) ? String(x) : x.toFixed(2))).join(', ')})`;
+/** A baked motion keys every frame; listing 900 numbers helps nobody, so long lists collapse to a range. */
+export function describeKeys(keys) {
+    if (keys.length === 0)
+        return '';
+    if (keys.length > 12)
+        return `keys ${keys[0]}–${keys[keys.length - 1]} (${keys.length})`;
+    return `keys [${keys.join(', ')}]`;
+}
+/** The one-line landmark report after a pose or motion call — hands, feet and head in world metres. */
+export function describeTails(tails) {
+    if (!tails)
+        return '';
+    return Object.entries(tails)
+        .map(([bone, p]) => `${bone} ${fmt(p)}`)
+        .join(' · ');
+}
 /** The text block every bridge tool returns — one line per object, so the model can name things exactly. */
 export function describeScene(scene) {
     const lines = [];
@@ -236,9 +333,10 @@ export function describeScene(scene) {
     const shown = scene.objects.slice(0, 200);
     lines.push(`Objects (${scene.objects.length}):`);
     for (const o of shown) {
-        const keys = o.keyframes.length ? ` keys [${o.keyframes.join(', ')}]` : '';
+        const keys = o.keyframes.length ? ` ${describeKeys(o.keyframes)}` : '';
         const parent = o.parent ? ` ← ${o.parent}` : '';
-        lines.push(`  ${o.name} (${o.type}${parent}) at ${fmt(o.location)} rot ${fmt(o.rotationDeg)} dims ${fmt(o.dimensions)}${keys}`);
+        const bones = o.bones !== undefined ? `, ${o.bones} bones` : '';
+        lines.push(`  ${o.name} (${o.type}${bones}${parent}) at ${fmt(o.location)} rot ${fmt(o.rotationDeg)} dims ${fmt(o.dimensions)}${keys}`);
     }
     if (scene.objects.length > shown.length)
         lines.push(`  … ${scene.objects.length - shown.length} more`);
@@ -258,6 +356,8 @@ export function previzTimeoutMs(frames, engine) {
     return Math.min(60 * 60_000, 120_000 + Math.max(frames, 1) * perFrame);
 }
 const EDIT_TIMEOUT_MS = 180_000;
+/** A retarget steps every target frame and keys 19 bones each — a 3000-frame cap at a few ms a frame */
+const MOTION_TIMEOUT_MS = 600_000;
 /**
  * One Blender at a time per .blend file. The client runs independent tool calls in
  * parallel, and two Blenders opening, editing and saving the same file at once lose one
@@ -358,6 +458,22 @@ export async function animateObject(request) {
     const r = await runBridge({ op: 'animate', ...request }, EDIT_TIMEOUT_MS);
     return r.success ? { success: true, scene: r.result } : r;
 }
+export async function poseKey(request) {
+    if (!existsSync(request.blendPath)) {
+        return { success: false, error: `blend file not found: ${request.blendPath} — blender_scene_build creates one.` };
+    }
+    const r = await runBridge({ op: 'pose', ...request }, EDIT_TIMEOUT_MS);
+    return r.success ? { success: true, scene: r.result } : r;
+}
+export async function importMotion(request) {
+    if (!existsSync(request.blendPath)) {
+        return { success: false, error: `blend file not found: ${request.blendPath} — blender_scene_build creates one.` };
+    }
+    if (!existsSync(request.motionPath))
+        return { success: false, error: `motion file not found: ${request.motionPath}` };
+    const r = await runBridge({ op: 'motion', ...request, maxFrames: MAX_PREVIZ_FRAMES }, MOTION_TIMEOUT_MS);
+    return r.success ? { success: true, scene: r.result } : r;
+}
 export async function renderPreviz(request) {
     if (!existsSync(request.blendPath)) {
         return { success: false, error: `blend file not found: ${request.blendPath} — blender_scene_build creates one.` };
@@ -380,9 +496,10 @@ export async function renderPreviz(request) {
 // Keep it dependency-free — Blender's Python has no pip here.
 export const BRIDGE_PY = String.raw `
 # social-flow Blender bridge (inner side) — one job per process, see blender-bridge.ts.
-import json, math, os, sys, time, traceback
+import json, math, os, re, sys, time, traceback
 import bpy
-from mathutils import Euler, Vector
+import bmesh
+from mathutils import Euler, Matrix, Vector
 
 PROXY_GRAY = (0.55, 0.55, 0.58, 1.0)
 FLOOR_GRAY = (0.32, 0.32, 0.33, 1.0)
@@ -392,6 +509,92 @@ MIN_VERSION = (4, 2)
 # 4.2–4.5 call the engine BLENDER_EEVEE_NEXT; 5.0 renamed it back
 EEVEE = "BLENDER_EEVEE" if bpy.app.version >= (5, 0) else "BLENDER_EEVEE_NEXT"
 DEFAULTS = {"fps": 30, "frameStart": 1, "frameEnd": 150, "width": 1080, "height": 1920}
+RIG_SUFFIX = ".rig"
+BODY_SUFFIX = ".body"
+UP = Vector((0.0, 0.0, 1.0))
+DOWN = Vector((0.0, 0.0, -1.0))
+FORWARD = Vector((0.0, -1.0, 0.0))     # every figure faces -Y; its left hand is at +X
+
+# The person rig, parents first. Head and tail are fractions of the figure's height in the
+# armature's own space (feet at z = 0); the left side is listed and the right is mirrored.
+RIG_LEFT = [
+    ("hips", None, (0.0, 0.0, 0.50), (0.0, 0.0, 0.56)),
+    ("spine", "hips", (0.0, 0.0, 0.56), (0.0, 0.0, 0.70)),
+    ("chest", "spine", (0.0, 0.0, 0.70), (0.0, 0.0, 0.84)),
+    ("neck", "chest", (0.0, 0.0, 0.84), (0.0, 0.0, 0.88)),
+    ("head", "neck", (0.0, 0.0, 0.88), (0.0, 0.0, 1.00)),
+    ("shoulder.L", "chest", (0.03, 0.0, 0.82), (0.12, 0.0, 0.82)),
+    ("upper_arm.L", "shoulder.L", (0.12, 0.0, 0.82), (0.12, 0.0, 0.64)),
+    ("forearm.L", "upper_arm.L", (0.12, 0.0, 0.64), (0.12, 0.0, 0.48)),
+    ("hand.L", "forearm.L", (0.12, 0.0, 0.48), (0.12, 0.0, 0.40)),
+    ("thigh.L", "hips", (0.055, 0.0, 0.50), (0.055, 0.0, 0.27)),
+    ("shin.L", "thigh.L", (0.055, 0.0, 0.27), (0.055, 0.0, 0.05)),
+    ("foot.L", "shin.L", (0.055, 0.0, 0.05), (0.055, -0.10, 0.01)),
+]
+AXIAL = ("hips", "spine", "chest", "neck", "head")
+LANDMARKS = ("hand.L", "hand.R", "foot.L", "foot.R", "head")
+
+# The mannequin: a rigid piece per bone, joint balls on the parent bone so the child turns
+# around them. (bone, kind, size, centre) with sizes and centres as fractions of height.
+BODY_LEFT = [
+    ("hips", "cyl", (0.095, 0.10), (0.0, 0.0, 0.55)),
+    ("spine", "cyl", (0.085, 0.12), (0.0, 0.0, 0.63)),
+    ("chest", "cyl", (0.105, 0.14), (0.0, 0.0, 0.77)),
+    ("neck", "cyl", (0.028, 0.05), (0.0, 0.0, 0.86)),
+    ("head", "ball", (0.07,), (0.0, 0.0, 0.93)),
+    ("head", "box", (0.03, 0.03, 0.03), (0.0, -0.07, 0.93)),          # nose: the front marker
+    ("shoulder.L", "ball", (0.038,), (0.12, 0.0, 0.82)),
+    ("upper_arm.L", "cyl", (0.03, 0.15), (0.12, 0.0, 0.73)),
+    ("upper_arm.L", "ball", (0.032,), (0.12, 0.0, 0.64)),              # elbow
+    ("forearm.L", "cyl", (0.026, 0.13), (0.12, 0.0, 0.56)),
+    ("hand.L", "box", (0.035, 0.02, 0.08), (0.12, 0.0, 0.44)),
+    ("hips", "ball", (0.05,), (0.055, 0.0, 0.50)),                    # hip joint
+    ("thigh.L", "cyl", (0.05, 0.19), (0.055, 0.0, 0.385)),
+    ("thigh.L", "ball", (0.045,), (0.055, 0.0, 0.27)),                # knee
+    ("shin.L", "cyl", (0.04, 0.18), (0.055, 0.0, 0.16)),
+    ("foot.L", "box", (0.06, 0.15, 0.04), (0.055, -0.04, 0.02)),
+]
+
+
+def right_of(name):
+    return name[:-2] + ".R" if name.endswith(".L") else name
+
+
+def mirror_x(p):
+    return (-p[0], p[1], p[2])
+
+
+RIG_BONES = []
+for _name, _parent, _head, _tail in RIG_LEFT:
+    RIG_BONES.append((_name, _parent, _head, _tail))
+    if _name.endswith(".L"):
+        RIG_BONES.append((right_of(_name), right_of(_parent), mirror_x(_head), mirror_x(_tail)))
+
+BODY_PARTS = []
+for _bone, _kind, _size, _centre in BODY_LEFT:
+    BODY_PARTS.append((_bone, _kind, _size, _centre))
+    # a side bone's piece and the hip joint ball (bone "hips", off centre) both get a mirror
+    if _bone.endswith(".L") or _centre[0] != 0.0:
+        BODY_PARTS.append((right_of(_bone), _kind, _size, mirror_x(_centre)))
+
+# Source-rig vocabularies for the retarget: normalised token strings (lower case, separators
+# and a "left/right" token removed) → canonical bone. Order matters — the first match wins.
+SYNONYMS = [
+    ("hips", ("hips", "hip", "pelvis")),
+    ("neck", ("neck", "neck1", "neck01")),
+    ("head", ("head",)),
+    ("shoulder", ("clavicle", "collar", "shoulder")),
+    ("upper_arm", ("upperarm", "uparm", "arm", "humerus")),
+    ("forearm", ("forearm", "lowerarm", "elbow", "radius")),
+    # the joint names come first: an SMPL rig has both L_Wrist (the joint) and L_Hand (the fingers)
+    ("hand", ("wrist", "hand")),
+    ("thigh", ("upleg", "upperleg", "thigh", "femur", "hip")),
+    ("shin", ("leg", "lowerleg", "shin", "calf", "knee", "tibia")),
+    ("foot", ("ankle", "foot")),
+]
+SPINE_RE = re.compile(r"^(spine\d*|lowerback|chest|upperback|torso|abdomen)$")
+NOISE_TOKENS = {"joint", "bone", "bip", "bip01", "bip001", "mixamorig", "def", "org", "mch", "b", "jnt"}
+SIDE_TOKENS = {"l": "L", "left": "L", "r": "R", "right": "R", "lft": "L", "rgt": "R"}
 
 
 def job_path():
@@ -479,7 +682,7 @@ def summary(path):
     sc = bpy.context.scene
     objs = []
     for o in bpy.data.objects:
-        objs.append({
+        info = {
             "name": o.name,
             "type": o.type,
             "location": r3(o.matrix_world.translation),
@@ -488,7 +691,10 @@ def summary(path):
             "dimensions": r3(o.dimensions),
             "parent": o.parent.name if o.parent else None,
             "keyframes": key_frames(o),
-        })
+        }
+        if o.type == "ARMATURE":
+            info["bones"] = len(o.data.bones)
+        objs.append(info)
     cam = sc.camera
     cam_info = None
     if cam is not None:
@@ -584,14 +790,681 @@ def empty(name, display_size=0.25):
 
 
 # Every proxy faces -Y (Blender's front view looks along +Y), so a nose block marks the front.
-def person_parts(p, h, mat, root):
-    for side, x in (("L", -0.10), ("R", 0.10)):
-        cyl(p + ".leg." + side, 0.045 * h, 0.50 * h, (x * h, 0, 0.25 * h), mat, root)
-    cyl(p + ".torso", 0.10 * h, 0.34 * h, (0, 0, 0.67 * h), mat, root)
-    for side, x in (("L", -0.15), ("R", 0.15)):
-        cyl(p + ".arm." + side, 0.03 * h, 0.34 * h, (x * h, 0, 0.66 * h), mat, root)
-    ball(p + ".head", 0.07 * h, (0, 0, 0.93 * h), mat, root)
-    box(p + ".nose", (0.03 * h, 0.03 * h, 0.03 * h), (0, -0.07 * h, 0.93 * h), mat, root)
+# A person is an armature (name.rig) under the root empty and one mannequin mesh (name.body)
+# deformed by it: each rigid piece is weighted 100 % to one bone, so the figure bends at the
+# joints and nowhere else — a wooden drawing mannequin, not a skinned character.
+def person_rig(name, h, root):
+    arm = bpy.data.armatures.new(name + RIG_SUFFIX)
+    rig = bpy.data.objects.new(name + RIG_SUFFIX, arm)
+    bpy.context.scene.collection.objects.link(rig)
+    rig.parent = root
+    arm.display_type = "OCTAHEDRAL"
+    bpy.context.view_layer.objects.active = rig
+    bpy.ops.object.mode_set(mode="EDIT")
+    for bname, parent, head, tail in RIG_BONES:
+        eb = arm.edit_bones.new(bname)
+        eb.head = Vector(head) * h
+        eb.tail = Vector(tail) * h
+        d = (eb.tail - eb.head).normalized()
+        # roll only decides how the bone is drawn in Blender's own UI — poses here are
+        # figure-axis rotations converted per bone, so any perpendicular reference will do
+        eb.align_roll(UP if abs(d.y) > 0.5 else FORWARD)
+        if parent:
+            eb.parent = arm.edit_bones[parent]
+    bpy.ops.object.mode_set(mode="OBJECT")
+    for pb in rig.pose.bones:
+        pb.rotation_mode = "QUATERNION"
+    return rig
+
+
+def person_body(name, h, mat, rig):
+    me = bpy.data.meshes.new(name + BODY_SUFFIX)
+    body = bpy.data.objects.new(name + BODY_SUFFIX, me)
+    bpy.context.scene.collection.objects.link(body)
+    groups = {}
+    for b in rig.data.bones:
+        groups[b.name] = body.vertex_groups.new(name=b.name).index
+    bm = bmesh.new()
+    deform = bm.verts.layers.deform.verify()
+    for bone, kind, size, centre in BODY_PARTS:
+        at = Matrix.Translation(Vector(centre) * h)
+        if kind == "cyl":
+            made = bmesh.ops.create_cone(bm, cap_ends=True, cap_tris=False, segments=20,
+                                         radius1=size[0] * h, radius2=size[0] * h, depth=size[1] * h, matrix=at)
+        elif kind == "ball":
+            made = bmesh.ops.create_uvsphere(bm, u_segments=20, v_segments=10, radius=size[0] * h, matrix=at)
+        else:
+            made = bmesh.ops.create_cube(bm, size=1.0, matrix=at @ Matrix.Diagonal((size[0] * h, size[1] * h, size[2] * h, 1.0)))
+        gi = groups[bone]
+        faces = set()
+        for v in made["verts"]:
+            v[deform][gi] = 1.0
+            if kind == "ball":
+                faces.update(v.link_faces)
+        for f in faces:
+            f.smooth = True
+    bm.to_mesh(me)
+    bm.free()
+    me.materials.append(mat)
+    body.parent = rig
+    mod = body.modifiers.new("Armature", "ARMATURE")
+    mod.object = rig
+    return body
+
+
+# ── posing: figure-axis rotations → bone-local quaternions ─────────────────
+
+def rot(axis, deg):
+    return Matrix.Rotation(math.radians(float(deg)), 3, axis)
+
+
+def rot_zyx(turn, lean, bow):
+    # bow about X first, then lean about Y, then turn about Z — all in the figure's frame
+    return rot("Z", turn) @ rot("Y", lean) @ rot("X", bow)
+
+
+def aim_from_down(direction):
+    # the smallest rotation that takes a hanging limb (0, 0, -1) to the direction
+    d = Vector(direction)
+    if d.length < 1e-9:
+        return Matrix.Identity(3)
+    d.normalize()
+    if (d + DOWN).length < 1e-6:
+        return rot("X", 180)      # straight up: go the forward way round
+    return DOWN.rotation_difference(d).to_matrix()
+
+
+def limb_world(ch, sx):
+    # raise: forward and up (90 = horizontal in front, 180 = straight up); side: out from the
+    # body (90 = horizontal to the side); sx is +1 for the figure's left, -1 for its right
+    a = math.radians(float(ch.get("raise", 0) or 0))
+    s = math.radians(float(ch.get("side", 0) or 0))
+    d = Vector((sx * math.sin(s), -math.sin(a), -math.cos(a) * math.cos(s)))
+    w = aim_from_down(d)
+    t = float(ch.get("twist", 0) or 0)
+    if t and d.length > 1e-9:
+        w = Matrix.Rotation(math.radians(t * sx), 3, d.normalized()) @ w
+    return w
+
+
+def pose_to_bones(pose):
+    # → [(bone, world rotation 3x3 in the figure frame, hips offset or None)]
+    out = []
+    hp = pose.get("hips")
+    if hp is not None:
+        off = hp.get("offset") or (0.0, 0.0, 0.0)
+        out.append(("hips", rot_zyx(hp.get("turn", 0) or 0, hp.get("lean", 0) or 0, hp.get("bow", 0) or 0), [float(x) for x in off]))
+    t = pose.get("torso")
+    if t is not None:
+        half = rot_zyx((t.get("turn", 0) or 0) / 2.0, (t.get("lean", 0) or 0) / 2.0, (t.get("bow", 0) or 0) / 2.0)
+        out.append(("spine", half, None))
+        out.append(("chest", half, None))
+    hd = pose.get("head")
+    if hd is not None:
+        half = rot_zyx((hd.get("turn", 0) or 0) / 2.0, (hd.get("tilt", 0) or 0) / 2.0, (hd.get("nod", 0) or 0) / 2.0)
+        out.append(("neck", half, None))
+        out.append(("head", half, None))
+    for side, sx in (("L", 1.0), ("R", -1.0)):
+        arm = pose.get("arm" + side)
+        if arm is not None:
+            out.append(("upper_arm." + side, limb_world(arm, sx), None))
+            out.append(("forearm." + side, rot("X", -float(arm.get("elbow", 0) or 0)), None))
+        leg = pose.get("leg" + side)
+        if leg is not None:
+            out.append(("thigh." + side, limb_world(leg, sx), None))
+            out.append(("shin." + side, rot("X", float(leg.get("knee", 0) or 0)), None))
+            out.append(("foot." + side, rot("X", float(leg.get("ankle", 0) or 0)), None))
+    for bname, e in (pose.get("bones") or {}).items():
+        out.append((bname, rot_zyx(e[2], e[1], e[0]), None))
+    return out
+
+
+def find_rig(name):
+    o = bpy.data.objects.get(name)
+    if o is None:
+        names = ", ".join(sorted(x.name for x in bpy.data.objects if x.parent is None))
+        raise RuntimeError("no object named %s — top-level objects: %s" % (name, names))
+    if o.type == "ARMATURE":
+        return (o.parent or o), o
+    for c in o.children:
+        if c.type == "ARMATURE":
+            return o, c
+    raise RuntimeError("%s has no rig — only person proxies are jointed; blender_object_animate moves other things whole" % name)
+
+
+def set_bone_rotation(rig, bname, world, prev):
+    # local = rest^-1 · world · rest, so a rotation stated in the figure's axes lands on the bone
+    b = rig.data.bones.get(bname)
+    if b is None:
+        raise RuntimeError("the rig has no bone %s — bones: %s" % (bname, ", ".join(x.name for x in rig.data.bones)))
+    rest = b.matrix_local.to_3x3()
+    q = (rest.inverted() @ world @ rest).to_quaternion()
+    pq = prev.get(bname)
+    if pq is not None and pq.dot(q) < 0:
+        q.negate()
+    prev[bname] = q.copy()
+    pb = rig.pose.bones[bname]
+    pb.rotation_quaternion = q
+    return pb
+
+
+def landmark_tails(rig, frame):
+    bpy.context.scene.frame_set(int(frame))
+    out = {}
+    for bname in LANDMARKS:
+        pb = rig.pose.bones.get(bname)
+        if pb is not None:
+            out[bname] = r3(rig.matrix_world @ pb.tail, 3)
+    return out
+
+
+def reset_pose(rig):
+    # animation_data_clear only detaches the action; the pose values themselves are saved in
+    # the file, so without this a bone this call does not key keeps the last call's pose
+    for pb in rig.pose.bones:
+        pb.rotation_quaternion = (1.0, 0.0, 0.0, 0.0)
+        pb.rotation_euler = (0.0, 0.0, 0.0)
+        pb.location = (0.0, 0.0, 0.0)
+        pb.scale = (1.0, 1.0, 1.0)
+
+
+def bone_fcurves(rig, bname):
+    prefix = 'pose.bones["%s"].' % bname
+    return [fc for fc in fcurves_of(rig) if fc.data_path.startswith(prefix)]
+
+
+def clear_window(rig, bname, frame, ease, keep):
+    # a key layered on a baked clip would change one frame only (the clip has a key on every
+    # neighbour), so drop this bone's existing keys strictly inside (frame - ease, frame + ease) —
+    # the interpolation then runs from the clip into the new pose and back out to the clip
+    if ease <= 0:
+        return
+    for fc in bone_fcurves(rig, bname):
+        while True:
+            hit = None
+            for kp in fc.keyframe_points:
+                x = kp.co[0]
+                if frame - ease < x < frame + ease and abs(x - frame) > 1e-6 and int(round(x)) not in keep:
+                    hit = kp
+                    break
+            if hit is None:
+                break
+            fc.keyframe_points.remove(hit)
+
+
+def set_interpolation_at(rig, per_bone, mode):
+    # per_bone: {bone: set of frames} — only those keys change, the clip's others keep theirs
+    for b, fs in per_bone.items():
+        for fc in bone_fcurves(rig, b):
+            for kp in fc.keyframe_points:
+                if int(round(kp.co[0])) in fs:
+                    kp.interpolation = mode
+
+
+def last_key_before(rig, bname, frame):
+    best = None
+    for fc in bone_fcurves(rig, bname):
+        for kp in fc.keyframe_points:
+            x = kp.co[0]
+            if x < frame - 1e-6 and (best is None or x > best):
+                best = x
+    return int(round(best)) if best is not None else None
+
+
+def op_pose(job):
+    sc = bpy.context.scene
+    root, rig = find_rig(job["object"])
+    layered = not job["clearExisting"]
+    ease = int(job["ease"]) if job.get("ease") is not None else 6
+    prev = {}
+    if not layered:
+        rig.animation_data_clear()
+        reset_pose(rig)
+    frames = [int(k["frame"]) for k in job["keys"]]
+    # which frames this call keys on each bone — a window must keep a bone's own keys, not
+    # another bone's, and only those keys (plus the clip key each window opens from) take
+    # this call's interpolation
+    per_bone = {}
+    for k in job["keys"]:
+        for bname, _world, _offset in pose_to_bones(k["pose"]):
+            per_bone.setdefault(bname, set()).add(int(k["frame"]))
+    interp = {b: set(fs) for b, fs in per_bone.items()}
+    touched = set()
+    for k in job["keys"]:
+        f = int(k["frame"])
+        bones = pose_to_bones(k["pose"])
+        clip_hips = None
+        if layered:
+            # continue from what the clip or the earlier keys hold at this frame, and open a
+            # window around it so the new pose is reached and left, not spiked
+            sc.frame_set(f)
+            for pb in rig.pose.bones:
+                prev[pb.name] = pb.rotation_quaternion.copy()
+            hp = rig.pose.bones["hips"]
+            clip_hips = (hp.rotation_quaternion.copy(), hp.location.copy())
+            for bname, _world, _offset in bones:
+                clear_window(rig, bname, f, ease, per_bone[bname])
+                left = last_key_before(rig, bname, f)
+                if left is not None:
+                    interp[bname].add(left)
+        for bname, world, offset in bones:
+            rest = rig.data.bones[bname].matrix_local.to_3x3() if bname in rig.data.bones else None
+            if layered and bname == "hips" and rest is not None:
+                # on a clip the pelvis is a delta: the clip's own turn and floor height stay
+                # and the channels move it from there, or the feet leave the floor
+                q = (rest.inverted() @ world @ rest).to_quaternion() @ clip_hips[0]
+                pq = prev.get("hips")
+                if pq is not None and pq.dot(q) < 0:
+                    q.negate()
+                prev["hips"] = q.copy()
+                pb = rig.pose.bones["hips"]
+                pb.rotation_quaternion = q
+                pb.keyframe_insert(data_path="rotation_quaternion", frame=f, group="hips")
+                if offset is not None:
+                    pb.location = clip_hips[1] + rest.inverted() @ Vector(offset)
+                    pb.keyframe_insert(data_path="location", frame=f, group="hips")
+                touched.add("hips")
+                continue
+            pb = set_bone_rotation(rig, bname, world, prev)
+            pb.keyframe_insert(data_path="rotation_quaternion", frame=f, group=bname)
+            if offset is not None:
+                pb.location = rest.inverted() @ Vector(offset)
+                pb.keyframe_insert(data_path="location", frame=f, group=bname)
+            touched.add(bname)
+    if layered:
+        set_interpolation_at(rig, interp, job["interpolation"])
+    else:
+        set_interpolation(rig, job["interpolation"])
+    extend_frame_range(sc, frames)
+    tails = landmark_tails(rig, max(frames))
+    sc.frame_current = sc.frame_start
+    return {"object": root.name, "rig": rig.name, "keyframes": sorted(set(frames)), "bones": sorted(touched), "tails": tails}
+
+
+# ── motion capture retarget ────────────────────────────────────────────────
+
+def tokens_of(name):
+    # "mixamorig:LeftForeArm" → ("L", "forearm"); "UpperLeg_R" → ("R", "upperleg"); "Chest" → (None, "chest")
+    s = name.split(":")[-1]
+    s = re.sub(r"^([LR])([A-Z][a-z])", r"\1 \2", s)          # LHip → L Hip
+    s = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", s)             # camelCase → words
+    parts = [t for t in re.split(r"[^A-Za-z0-9]+", s.lower()) if t]
+    side = None
+    body = []
+    for t in parts:
+        if t in SIDE_TOKENS and side is None:
+            side = SIDE_TOKENS[t]
+        elif t in NOISE_TOKENS:
+            continue
+        else:
+            body.append(t)
+    return side, "".join(body)
+
+
+def bone_depth(src, name):
+    b = src.data.bones.get(name)
+    d = 0
+    while b is not None and b.parent is not None:
+        b = b.parent
+        d += 1
+    return d
+
+
+def match_bones(src, override):
+    # canonical → source bone name. Side bones need a side token; the axial chain must have
+    # none; a bone whose name ends in end/nub/top/tip is a leaf marker, not a joint.
+    found = {}
+    scored = []
+    for b in src.data.bones:
+        side, body = tokens_of(b.name)
+        if not body or body.endswith(("end", "nub", "top", "tip")):
+            continue
+        scored.append((b.name, side, body))
+    for canon, words in SYNONYMS:
+        sided = canon not in AXIAL
+        for w in words:
+            for n, side, body in scored:
+                if body != w or (sided and side is None) or (not sided and side is not None):
+                    continue
+                key = canon + "." + side if sided else canon
+                found.setdefault(key, n)
+    # the spine chain, root first. Rigify has no hips bone — its root "spine" is the pelvis —
+    # and runs the chain up through the neck and head (spine.004–006), so the chest is the
+    # deepest spine-family bone an arm hangs from and what sits above it is neck and head.
+    spines = sorted([n for n, side, body in scored if side is None and SPINE_RE.match(body)], key=lambda n: bone_depth(src, n))
+    if spines and "hips" not in found:
+        found["hips"] = spines[0]
+        spines = spines[1:]
+
+    def ancestors(n):
+        b = src.data.bones.get(n)
+        out = []
+        while b is not None and b.parent is not None:
+            b = b.parent
+            out.append(b.name)
+        return out
+    arm_roots = [found[k] for k in ("shoulder.L", "shoulder.R", "upper_arm.L", "upper_arm.R") if k in found]
+    chest = None
+    for n in reversed(spines):
+        if any(n in ancestors(a) for a in arm_roots):
+            chest = n
+            break
+    if spines:
+        found.setdefault("spine", spines[0])
+        if chest is not None and chest != found["spine"]:
+            found.setdefault("chest", chest)
+        elif chest is None and len(spines) > 1:
+            found.setdefault("chest", spines[-1])
+        if chest is not None:
+            above = [n for n in spines if bone_depth(src, n) > bone_depth(src, chest)]
+            if above:
+                found.setdefault("neck", above[0])
+                if len(above) > 1:
+                    found.setdefault("head", above[-1])
+    # SMPL-style names call the upper arm "Shoulder" and the clavicle "Collar"
+    used = set(found.values())
+    for side in ("L", "R"):
+        if "upper_arm." + side not in found:
+            for n, s, body in scored:
+                if s == side and body == "shoulder" and n not in used:
+                    found["upper_arm." + side] = n
+                    used.add(n)
+                    break
+    for canon, n in (override or {}).items():
+        found[canon] = n
+    return found
+
+
+def frame_from(up, side):
+    # a 3x3 with columns (side, up, forward) — the axial bones' rest frame, so it is the pose
+    y = Vector(up)
+    if y.length < 1e-9:
+        y = UP.copy()
+    y.normalize()
+    x = Vector(side) - Vector(side).dot(y) * y
+    if x.length < 1e-6:
+        x = UP.cross(y) if abs(y.dot(UP)) < 0.99 else Vector((1.0, 0.0, 0.0))
+    x.normalize()
+    z = x.cross(y)
+    m = Matrix((x, y, z))
+    m.transpose()
+    return m
+
+
+def joint_positions(src, S, mapping, Y):
+    # world heads (joints) of the mapped source bones and, where the bone has length, tails —
+    # turned by the facing correction Y
+    heads = {}
+    tails = {}
+    for c, m in mapping.items():
+        pb = src.pose.bones[m]
+        heads[c] = Y @ (S @ pb.head)
+        if (pb.tail - pb.head).length > 1e-6:
+            tails[c] = Y @ (S @ pb.tail)
+    return heads, tails
+
+
+def pose_targets(J, T):
+    # → {bone: 3x3 pose rotation in the figure frame}. The axial chain gets a full frame (up
+    # from the joint above, side from the hip or shoulder line); a limb bone gets the smallest
+    # turn of its rest direction onto the joint-to-joint direction.
+    def diff(a, b):
+        if a in J and b in J and (J[b] - J[a]).length > 1e-6:
+            return J[b] - J[a]
+        return None
+    side_hips = diff("thigh.R", "thigh.L")
+    side_chest = diff("shoulder.R", "shoulder.L") or diff("upper_arm.R", "upper_arm.L")
+    if side_hips is None and side_chest is None:
+        side_hips = Vector((1.0, 0.0, 0.0))
+    sides = {
+        "hips": side_hips or side_chest,
+        "spine": (side_hips + side_chest) if (side_hips is not None and side_chest is not None) else (side_hips or side_chest),
+        "chest": side_chest or side_hips,
+        "neck": side_chest or side_hips,
+        "head": side_chest or side_hips,
+    }
+    out = {}
+    dirs = {}
+    for i, c in enumerate(AXIAL):
+        if c not in J:
+            continue
+        above = None
+        for n in AXIAL[i + 1:]:
+            if n in J:
+                above = n
+                break
+        if above is not None:
+            up = J[above] - J[c]
+        elif c in T:
+            up = T[c] - J[c]
+        else:
+            below = None
+            for n in reversed(AXIAL[:i]):
+                if n in J:
+                    below = n
+                    break
+            up = (J[c] - J[below]) if below is not None else UP.copy()
+        out[c] = frame_from(up, sides[c])
+    for side in ("L", "R"):
+        for a, b in (("shoulder", "upper_arm"), ("upper_arm", "forearm"), ("forearm", "hand"), ("thigh", "shin"), ("shin", "foot")):
+            d = diff(a + "." + side, b + "." + side)
+            if d is not None:
+                dirs[a + "." + side] = d
+        for end in ("hand", "foot"):
+            c = end + "." + side
+            if c in J and c in T:
+                dirs[c] = T[c] - J[c]
+    return out, dirs
+
+
+def op_motion(job):
+    sc = bpy.context.scene
+    root, rig = find_rig(job["object"])
+    path = job["motionPath"]
+    fps = float(sc.render.fps)
+    before_objects = set(o.name for o in bpy.data.objects)
+    before_actions = set(a.name for a in bpy.data.actions)
+    before_arms = set(a.name for a in bpy.data.armatures)
+    before_meshes = set(m.name for m in bpy.data.meshes)
+    frame_before = (sc.frame_start, sc.frame_end)
+    fps_before = (sc.render.fps, sc.render.fps_base)
+    ext = os.path.splitext(path)[1].lower()
+    if ext == ".bvh":
+        # the importer retimes the file's frame time to the scene fps and starts at frame 1
+        bpy.ops.import_anim.bvh(filepath=path, target="ARMATURE", global_scale=1.0, frame_start=1, use_fps_scale=True,
+                                update_scene_fps=False, update_scene_duration=False, use_cyclic=False,
+                                rotate_mode="NATIVE", axis_forward="-Z", axis_up="Y")
+    else:
+        bpy.ops.import_scene.fbx(filepath=path, use_anim=True, anim_offset=1.0, ignore_leaf_bones=False,
+                                 automatic_bone_orientation=False, global_scale=1.0)
+    # the FBX importer sets the scene's fps to the file's and keys at that rate; the BVH importer
+    # (use_fps_scale) keys at the scene's. Read the rate the keys are in, then give the scene its own back.
+    src_fps = float(sc.render.fps) / float(sc.render.fps_base or 1.0)
+    sc.render.fps, sc.render.fps_base = fps_before
+    sc.frame_start, sc.frame_end = frame_before
+    rate = src_fps / fps            # source frames per scene frame
+    keep_actions = set()
+
+    def cleanup():
+        for o in list(bpy.data.objects):
+            if o.name not in before_objects:
+                bpy.data.objects.remove(o, do_unlink=True)
+        for a in list(bpy.data.actions):
+            if a.name not in before_actions and a.name not in keep_actions:
+                bpy.data.actions.remove(a)
+        for a in list(bpy.data.armatures):
+            if a.name not in before_arms and a.users == 0:
+                bpy.data.armatures.remove(a)
+        for m in list(bpy.data.meshes):
+            if m.name not in before_meshes and m.users == 0:
+                bpy.data.meshes.remove(m)
+
+    try:
+        sources = [o for o in bpy.data.objects if o.name not in before_objects and o.type == "ARMATURE"
+                   and o.animation_data is not None and o.animation_data.action is not None]
+        if not sources:
+            raise RuntimeError("no animated armature in %s — the file needs a skeleton with keyframes (BVH, or an FBX with animation)" % path)
+        src = sources[0]
+        act = src.animation_data.action
+        first, last = act.frame_range
+        first = int(math.floor(first))
+        last = int(math.ceil(last))
+        src_seconds = (last - first + 1) / src_fps
+        src_names = [b.name for b in src.data.bones]
+        mapping = match_bones(src, job.get("boneMap"))
+        for canon, n in list(mapping.items()):
+            if n not in src.data.bones:
+                raise RuntimeError("boneMap names %s for %s, but the file has no such bone — bones: %s" % (n, canon, ", ".join(src_names)))
+        if "hips" not in mapping:
+            raise RuntimeError("no hips/pelvis bone recognised in %s — pass boneMap (bones: %s)" % (path, ", ".join(src_names)))
+
+        # slice and timing, in source frames (at src_fps)
+        f0 = first + float(job.get("fromSeconds") or 0) * src_fps
+        f1 = min(float(last), first + float(job["toSeconds"]) * src_fps) if job.get("toSeconds") is not None else float(last)
+        if f0 > float(last):
+            raise RuntimeError("fromSeconds %.2f is past the end of the clip (%.2f s)" % (float(job.get("fromSeconds") or 0), src_seconds))
+        if f1 < f0:
+            raise RuntimeError("the slice is empty — toSeconds must be after fromSeconds")
+        speed = float(job["speed"])
+        start = int(job["frameStart"]) if job.get("frameStart") is not None else sc.frame_start
+        span = (f1 - f0) / (speed * rate)       # in scene frames
+        end = max(sc.frame_end, start) if job["loop"] else start + int(math.floor(span))
+        n = end - start + 1
+        if n > int(job["maxFrames"]):
+            raise RuntimeError("%d frames to bake; a previz is at most %d — pass fromSeconds/toSeconds or speed" % (n, int(job["maxFrames"])))
+
+        S = src.matrix_world.copy()
+        rest_ours = {b.name: b.matrix_local.copy() for b in rig.data.bones}
+
+        # the first frame decides the facing correction and the scale
+        sc.frame_set(int(f0), subframe=f0 - int(f0))
+        J0, T0 = joint_positions(src, S, mapping, Matrix.Identity(3))
+        yaw = 0.0
+        for lc, rc in (("thigh.L", "thigh.R"), ("shoulder.L", "shoulder.R"), ("upper_arm.L", "upper_arm.R")):
+            if lc in J0 and rc in J0:
+                side = J0[lc] - J0[rc]
+                fwd = side.cross(UP)
+                if fwd.length > 1e-6:
+                    yaw = math.atan2(FORWARD.y, FORWARD.x) - math.atan2(fwd.y, fwd.x)
+                break
+        Y = Matrix.Rotation(yaw, 3, "Z")
+
+        # scale by leg length (pose-independent), else by the trunk
+        def our_len(c):
+            b = rig.data.bones[c]
+            return (b.tail_local - b.head_local).length
+        ratio = None
+        for side in ("L", "R"):
+            t, s, f = "thigh." + side, "shin." + side, "foot." + side
+            if t in J0 and s in J0 and f in J0:
+                theirs = (J0[s] - J0[t]).length + (J0[f] - J0[s]).length
+                if theirs > 1e-6:
+                    ratio = (our_len(t) + our_len(s)) / theirs
+                    break
+        if ratio is None:
+            chain = [c for c in AXIAL if c in J0]
+            theirs = sum((J0[chain[i + 1]] - J0[chain[i]]).length for i in range(len(chain) - 1))
+            ours = sum(our_len(c) for c in chain[:-1]) if len(chain) > 1 else 0.0
+            if theirs < 1e-6 or ours < 1e-6:
+                raise RuntimeError("cannot scale %s to the figure — neither a leg nor a trunk chain was matched (bones: %s)" % (path, ", ".join(src_names)))
+            ratio = ours / theirs
+        hips0 = Y @ J0["hips"]
+
+        # the floor is the lowest the feet get in the slice, so the figure stands on z = 0 and a
+        # crouch at the first frame does not sink the whole clip
+        def lowest(J, T):
+            zs = [J[c].z for c in ("foot.L", "foot.R", "shin.L", "shin.R") if c in J] + [T[c].z for c in ("foot.L", "foot.R") if c in T]
+            return min(zs) if zs else None
+        floor_src = None
+        probe = f0
+        while probe <= f1:
+            sc.frame_set(int(math.floor(probe)), subframe=probe - math.floor(probe))
+            z = lowest(*joint_positions(src, S, mapping, Y))
+            if z is not None and (floor_src is None or z < floor_src):
+                floor_src = z
+            probe += max(1.0, (f1 - f0) / 120.0)
+        hips_rest_z = rest_ours["hips"].translation.z
+
+        if job["clearExisting"]:
+            rig.animation_data_clear()
+            reset_pose(rig)
+        order = [b.name for b in rig.data.bones]        # armature order is parents first
+        prev = {}
+        keyed = set()
+        hips_rest = rest_ours["hips"].to_3x3()
+        rest_dir = {c: (rest_ours[c].to_3x3() @ Vector((0.0, 1.0, 0.0))).normalized() for c in order}
+        for t in range(start, end + 1):
+            fsrc = f0 + (t - start) * speed * rate
+            if job["loop"] and f1 > f0:
+                fsrc = f0 + math.fmod(fsrc - f0, f1 - f0)
+            fsrc = min(fsrc, f1)
+            sc.frame_set(int(math.floor(fsrc)), subframe=fsrc - math.floor(fsrc))
+            J, T = joint_positions(src, S, mapping, Y)
+            frames3, dirs = pose_targets(J, T)
+            posed = {}
+            for c in order:
+                Rb = rest_ours[c].to_3x3()
+                parent = rig.data.bones[c].parent
+                if c in frames3:
+                    Pt = frames3[c]
+                elif c in dirs:
+                    Pt = rest_dir[c].rotation_difference(dirs[c].normalized()).to_matrix() @ Rb
+                elif parent is not None:
+                    Pt = posed[parent.name] @ rest_ours[parent.name].to_3x3().inverted() @ Rb
+                else:
+                    Pt = Rb
+                posed[c] = Pt
+                if c not in frames3 and c not in dirs:
+                    continue
+                if parent is not None:
+                    local = (posed[parent.name] @ rest_ours[parent.name].to_3x3().inverted() @ Rb).inverted() @ Pt
+                else:
+                    local = Rb.inverted() @ Pt
+                q = local.to_quaternion()
+                pq = prev.get(c)
+                if pq is not None and pq.dot(q) < 0:
+                    q.negate()
+                prev[c] = q.copy()
+                pb = rig.pose.bones[c]
+                pb.rotation_quaternion = q
+                pb.keyframe_insert(data_path="rotation_quaternion", frame=t, group=c)
+                keyed.add(c)
+            d = (J["hips"] - hips0) * ratio
+            if floor_src is not None:
+                d.z = (J["hips"].z - floor_src) * ratio - hips_rest_z
+            if job["rootMotion"] == "inplace":
+                d.x = 0.0
+                d.y = 0.0
+            pb = rig.pose.bones["hips"]
+            pb.location = hips_rest.inverted() @ d
+            pb.keyframe_insert(data_path="location", frame=t, group="hips")
+        if rig.animation_data is not None and rig.animation_data.action is not None:
+            keep_actions.add(rig.animation_data.action.name)
+        set_interpolation(rig, "LINEAR")
+        extend_frame_range(sc, [start, end])
+        unmapped = [c for c in order if c not in keyed]
+        info = {
+            "source": path,
+            "sourceBones": len(src_names),
+            "sourceSeconds": round(src_seconds, 3),
+            "sourceFps": round(src_fps, 3),
+            "fromSeconds": round((f0 - first) / src_fps, 3),
+            "toSeconds": round((f1 - first) / src_fps, 3),
+            "speed": speed,
+            "loop": bool(job["loop"]),
+            "rootMotion": job["rootMotion"],
+            "mapped": dict(sorted((c, mapping[c]) for c in mapping if c in keyed)),
+            "unmapped": unmapped,
+            "frames": n,
+            "heightRatio": round(ratio, 5),
+            "yawDeg": round(math.degrees(yaw), 2),
+        }
+    finally:
+        cleanup()
+    tails = landmark_tails(rig, start)
+    tails_end = landmark_tails(rig, end)
+    sc.frame_current = sc.frame_start
+    return {"object": root.name, "rig": rig.name, "keyframes": [start, end], "bones": sorted(keyed), "tails": tails, "tailsEnd": tails_end, "motion": info}
 
 
 def dog_parts(p, h, mat, root):
@@ -620,7 +1493,8 @@ def make_proxy(spec):
     mat = material("proxy-" + name, hex_rgba(spec.get("color"), PROXY_GRAY))
     root = empty(name)
     if kind == "person":
-        person_parts(name, float(spec.get("height") or 1.75), mat, root)
+        h = float(spec.get("height") or 1.75)
+        person_body(name, h, mat, person_rig(name, h, root))
     elif kind == "dog":
         dog_parts(name, float(spec.get("height") or 0.55), mat, root)
     elif kind == "car":
@@ -1001,6 +1875,18 @@ def main():
         elif op == "animate":
             open_blend(path)
             info = op_animate(job)
+            save_blend(path)
+            res = summary(path)
+            res["applied"] = info
+        elif op == "pose":
+            open_blend(path)
+            info = op_pose(job)
+            save_blend(path)
+            res = summary(path)
+            res["applied"] = info
+        elif op == "motion":
+            open_blend(path)
+            info = op_motion(job)
             save_blend(path)
             res = summary(path)
             res["applied"] = info
