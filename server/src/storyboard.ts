@@ -24,7 +24,7 @@
  */
 
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, renameSync, statSync, writeFileSync } from 'node:fs';
 import * as nodeModule from 'node:module';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -301,6 +301,8 @@ export function applyPatch(win: Board, patch: StoryboardApplyArgs): { win: Board
   if (patch.structure) next.STRUCTURE = patch.structure;
 
   const st: Structure = next.STRUCTURE ?? { version: STRUCTURE_VERSION, sequences: [], scenes: [] };
+  if (!Array.isArray(st.sequences) || !Array.isArray(st.scenes) || st.scenes.some((sc) => !sc || typeof sc !== 'object'))
+    return { win: next, findings: [{ level: 'bad', where: 'structure', what: 'STRUCTURE.sequences and STRUCTURE.scenes are arrays of objects — this board was hand-edited into a shape the tools cannot patch; rewrite it with `set`' }], synced: 0 };
   let sequences = st.sequences.slice();
   let scenes = st.scenes.slice();
   if (patch.sequences) sequences = upsertBy(sequences, patch.sequences, 'id');
@@ -318,7 +320,7 @@ export function applyPatch(win: Board, patch: StoryboardApplyArgs): { win: Board
     next.STRUCTURE = { version: st.version ?? STRUCTURE_VERSION, sequences, scenes };  // an older version is kept so check() reports it, never silently upgraded
 
   let shots: Shot[] = Array.isArray(next.SCENES) ? next.SCENES.slice() : [];
-  if (patch.shots) for (const { no, shot } of patch.shots) {
+  if (patch.shots) for (const { no, shot } of patch.shots.slice().sort((a, b) => a.no - b.no)) {
     if (no > shots.length + 1) throw new Error(`shot ${no}: the board has ${shots.length} shots — no = ${shots.length + 1} appends`);
     shots[no - 1] = shot;
   }
@@ -369,7 +371,10 @@ export function applyStoryboard(args: StoryboardApplyArgs): ApplyResult {
     synced, findings,
   };
   if (bad || args.dryRun) return result;
-  writeFileSync(file, serializeBoard(next, header), 'utf8');
+  // Same-directory temp file + rename: a crash mid-write never leaves a truncated scenes.js behind.
+  const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
+  writeFileSync(tmp, serializeBoard(next, header), 'utf8');
+  renameSync(tmp, file);
   result.written = true;
   return result;
 }

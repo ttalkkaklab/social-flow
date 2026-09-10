@@ -183,6 +183,8 @@
       else if (ids.has(q.id)) bad(where, 'sequence.id repeats');
       else ids.add(q.id);
       if (!text(q.title)) bad(where, 'sequence.title is empty — the heading the approval page draws');
+      else if (st.sequences.some((o, j) => j !== i && o && compact(o.title) === compact(q.title)))
+        warn(where, `sequence.title "${q.title.trim()}" repeats another sequence's — the shot label \`sequence\` and the approval page find a sequence by its title, so two alike draw the wrong purpose`);
       if (!text(q.purpose)) bad(where, 'sequence.purpose is empty — one purpose binds its scenes; two purposes are two sequences');
       else if (SUMMARY_RE.test(q.purpose.trim()))
         warn(where, `purpose "${q.purpose.trim()}" says what the viewer learns — write the tension the stretch carries (셋을 한 팀으로 만든다), not a delivery`);
@@ -687,14 +689,14 @@
       return row;
     };
     const placed = shots.map((s, i) => ({ s, i })).filter(x => PLACED(x.s));
-    const sceneRows = (st.scenes || []).map(sc => Object.assign({}, sc, {
+    const sceneRows = (Array.isArray(st.scenes) ? st.scenes : []).filter(sc => sc && typeof sc === 'object').map(sc => Object.assign({}, sc, {
       slug: text(sc.place) && text(sc.time) ? slugOf(sc) : undefined,
       shots: level === 'scenes' ? placed.filter(x => x.s.scene === sc.no).map(x => x.i + 1)
                                 : placed.filter(x => x.s.scene === sc.no).map(x => shotRow(x.s, x.i)),
     }));
     const byNo = new Map(sceneRows.map(r => [r.no, r]));
-    const sequences = (st.sequences || []).map(q => Object.assign({}, q, {
-      scenes: level === 'outline' ? (q.scenes || []) : (q.scenes || []).map(no => byNo.get(no) || { no, missing: true }),
+    const sequences = (Array.isArray(st.sequences) ? st.sequences : []).filter(q => q && typeof q === 'object').map(q => Object.assign({}, q, {
+      scenes: level === 'outline' ? (Array.isArray(q.scenes) ? q.scenes : []) : (Array.isArray(q.scenes) ? q.scenes : []).map(no => byNo.get(no) || { no, missing: true }),
     }));
     const orphans = placed.filter(x => x.s.scene === undefined || !byNo.has(x.s.scene)).map(x => shotRow(x.s, x.i));
     const spliced = shots.map((s, i) => ({ s, i })).filter(x => !PLACED(x.s)).map(x => shotRow(x.s, x.i));

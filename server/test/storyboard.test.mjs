@@ -157,6 +157,47 @@ describe('file round trip', () => {
     assert.ok(!dry.written && !dry.findings.some((f) => f.level === 'bad'));
     assert.equal(readFileSync(join(dir, 'scenes.js'), 'utf8'), before);
   });
+  it('a dry run never writes into the caller\'s shot objects', () => {
+    const shots = board();
+    const win = { FORMAT: 'shorts-9x16', COMPREHENSION: comprehension, STRUCTURE: structure([scene(1), scene(2)]), SCENES: shots };
+    const r = applyPatch(win, storyboardApplySchema.parse({ path: '.', dryRun: true, scenes: [scene(2, { place: '옥상', time: '밤' })] }));
+    assert.ok(!r.findings.some((f) => f.level === 'bad'));
+    assert.equal(r.win.SCENES[3].sceneSlug, '옥상 / 밤');
+    assert.equal(shots[3].sceneSlug, undefined);
+    assert.equal(win.STRUCTURE.scenes[1].place, '작업실');
+  });
+  it('an older STRUCTURE.version is kept and reported, never silently stamped', () => {
+    const win = { FORMAT: 'shorts-9x16', COMPREHENSION: comprehension, STRUCTURE: { ...structure([scene(1), scene(2)]), version: 'structure-v0' }, SCENES: board() };
+    const r = applyPatch(win, storyboardApplySchema.parse({ path: '.', globals: { FORMAT: 'shorts-9x16' } }));
+    assert.equal(r.win.STRUCTURE.version, 'structure-v0');
+    assert.ok(r.findings.some((f) => f.level === 'bad' && /version/.test(f.what)));
+  });
+  it('a hand-broken STRUCTURE is a finding, not a TypeError, in apply and outline', () => {
+    const win = { FORMAT: 'shorts-9x16', COMPREHENSION: comprehension, STRUCTURE: { version: STRUCTURE_VERSION, sequences: {}, scenes: [null] }, SCENES: board() };
+    const r = applyPatch(win, storyboardApplySchema.parse({ path: '.', globals: { FORMAT: 'shorts-9x16' } }));
+    assert.ok(r.findings.some((f) => f.level === 'bad' && /arrays of objects/.test(f.what)));
+    assert.doesNotThrow(() => contract().outline(win, 'full'));
+  });
+  it('shot positions may arrive in any order', () => {
+    const win = { FORMAT: 'shorts-9x16', COMPREHENSION: comprehension, STRUCTURE: structure([scene(1), scene(2)]), SCENES: board() };
+    const extra = (no) => ({ ...board()[1], scene: 2, shot: { ...board()[1].shot, info: '정보 ' + no } });
+    const r = applyPatch(win, storyboardApplySchema.parse({ path: '.', shots: [{ no: 6, shot: extra(6) }, { no: 5, shot: extra(5) }] }));
+    assert.equal(r.win.SCENES.length, 6);
+  });
+  it('storyboard_apply is not advertised as idempotent — inserts and appends repeat', () => {
+    const apply = TOOLS.find((t) => t.name === 'storyboard_apply');
+    assert.equal(apply.annotations.idempotentHint, false);
+  });
+  it('the version fallback in storyboard.ts equals the contract VERSION', () => {
+    assert.equal(STRUCTURE_VERSION, contract().VERSION);
+    assert.equal(STRUCTURE_VERSION, 'structure-v1');
+  });
+  it('a repeated sequence.title warns', () => {
+    const st = structure([scene(1), scene(2)]);
+    st.sequences = [{ id: 'q1', title: '같은 제목', purpose: '한 목적', scenes: [1] }, { id: 'q2', title: '같은 제목', purpose: '다른 목적', scenes: [2] }];
+    const f = contract().check({ FORMAT: 'shorts-9x16', COMPREHENSION: comprehension, STRUCTURE: st, SCENES: board() });
+    assert.ok(f.some((x) => /repeats another sequence's/.test(x.what)));
+  });
 });
 
 describe('checkStoryboard', () => {

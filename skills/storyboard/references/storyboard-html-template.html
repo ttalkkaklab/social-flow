@@ -3450,7 +3450,7 @@ window.SB_DOC = {
       var sc = stScene(grp.scene);
       h += '<section class="scene-band"><div class="scene-band-head"><span class="sn">S#' +
            esc(String(grp.scene)) + "</span><span>" + esc(grp.slug || T.sceneNamed(grp.scene)) + "</span>" +
-           (sc ? '<span class="scene-turn">' + esc(sc.event || "") + (sc.charge ? ' · ' + esc(String(sc.charge.open) + " → " + String(sc.charge.close)) : "") + ', ' + esc(sc.turn || "") + "</span>" : "") + "</div>";
+           (sc ? '<span class="scene-turn">' + esc(sc.event || "") + (sc.charge && sc.charge.open !== undefined && sc.charge.close !== undefined ? ' · ' + esc(String(sc.charge.open) + " → " + String(sc.charge.close)) : "") + ', ' + esc(sc.turn || "") + "</span>" : "") + "</div>";
     }
     grp.items.forEach(function (item) {
     var s = item.s, i = item.i, g = item.g, no = i + 1;

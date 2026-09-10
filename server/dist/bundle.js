@@ -88186,7 +88186,7 @@ async function checkAccounts(channel) {
 
 // src/storyboard.ts
 import { execFileSync } from "node:child_process";
-import { existsSync as existsSync11, readFileSync as readFileSync7, statSync as statSync4, writeFileSync as writeFileSync7 } from "node:fs";
+import { existsSync as existsSync11, readFileSync as readFileSync7, renameSync as renameSync3, statSync as statSync4, writeFileSync as writeFileSync7 } from "node:fs";
 import * as nodeModule from "node:module";
 import { basename as basename7, dirname as dirname5, join as join10, resolve as resolve3 } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -88388,6 +88388,8 @@ function applyPatch(win, patch) {
   }
   if (patch.structure) next.STRUCTURE = patch.structure;
   const st = next.STRUCTURE ?? { version: STRUCTURE_VERSION, sequences: [], scenes: [] };
+  if (!Array.isArray(st.sequences) || !Array.isArray(st.scenes) || st.scenes.some((sc) => !sc || typeof sc !== "object"))
+    return { win: next, findings: [{ level: "bad", where: "structure", what: "STRUCTURE.sequences and STRUCTURE.scenes are arrays of objects \u2014 this board was hand-edited into a shape the tools cannot patch; rewrite it with `set`" }], synced: 0 };
   let sequences = st.sequences.slice();
   let scenes = st.scenes.slice();
   if (patch.sequences) sequences = upsertBy(sequences, patch.sequences, "id");
@@ -88404,7 +88406,7 @@ function applyPatch(win, patch) {
   if (patch.sequences || patch.scenes || patch.removeScenes || patch.removeSequences || next.STRUCTURE)
     next.STRUCTURE = { version: st.version ?? STRUCTURE_VERSION, sequences, scenes };
   let shots = Array.isArray(next.SCENES) ? next.SCENES.slice() : [];
-  if (patch.shots) for (const { no, shot } of patch.shots) {
+  if (patch.shots) for (const { no, shot } of patch.shots.slice().sort((a, b) => a.no - b.no)) {
     if (no > shots.length + 1) throw new Error(`shot ${no}: the board has ${shots.length} shots \u2014 no = ${shots.length + 1} appends`);
     shots[no - 1] = shot;
   }
@@ -88456,7 +88458,9 @@ function applyStoryboard(args) {
     findings
   };
   if (bad || args.dryRun) return result;
-  writeFileSync7(file, serializeBoard(next, header), "utf8");
+  const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
+  writeFileSync7(tmp, serializeBoard(next, header), "utf8");
+  renameSync3(tmp, file);
   result.written = true;
   return result;
 }
@@ -92394,15 +92398,18 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
   },
   // ── Storyboard ──
   storyboard_read: async (args) => {
+    contract();
     const a = parseArgs(storyboardReadSchema, args);
     const { win } = readBoard(a.path);
     return text(JSON.stringify(contract().outline(win, a.level), null, 2));
   },
   storyboard_apply: async (args) => {
+    contract();
     const r2 = applyStoryboard(parseArgs(storyboardApplySchema, args));
     return text(renderApply(r2), r2.findings.some((f3) => f3.level === "bad"));
   },
   storyboard_check: async (args) => {
+    contract();
     const r2 = checkStoryboard(parseArgs(storyboardCheckSchema, args));
     return text(renderCheck(r2), r2.violations > 0);
   }

@@ -1186,15 +1186,18 @@ export const ROUTES = {
     },
     // ── Storyboard ──
     storyboard_read: async (args) => {
+        storyboard.contract(); // a missing structure-contract.js reports itself here, before the argument schema does
         const a = parseArgs(storyboard.storyboardReadSchema, args);
         const { win } = storyboard.readBoard(a.path);
         return text(JSON.stringify(storyboard.contract().outline(win, a.level), null, 2));
     },
     storyboard_apply: async (args) => {
+        storyboard.contract();
         const r = storyboard.applyStoryboard(parseArgs(storyboard.storyboardApplySchema, args));
         return text(storyboard.renderApply(r), r.findings.some((f) => f.level === 'bad'));
     },
     storyboard_check: async (args) => {
+        storyboard.contract();
         const r = storyboard.checkStoryboard(parseArgs(storyboard.storyboardCheckSchema, args));
         return text(storyboard.renderCheck(r), r.violations > 0);
     },
