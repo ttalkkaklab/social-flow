@@ -130,9 +130,11 @@ swing the long way round. A full dance by hand is hundreds of keys and reads mec
 for that, import a clip (§5) and hand-key only the accents on top with `clearExisting:false`.
 A baked clip has a key on every frame, so a layered key takes over a window: the keyed
 bone's clip keys within ±`ease` frames (default 6) are dropped and the pose is eased into
-from the clip and back out to it. `ease: 0` changes that one frame alone. `clearExisting:true`
-(the default) also puts every bone back at rest, so a bone this call does not key is not
-left holding the previous call's pose.
+from the clip and back out to it. `ease: 0` changes that one frame alone. On a clip the
+`hips` group is a delta — the clip's own pelvis turn and floor height stay and `offset`,
+`turn`, `bow`, `lean` move it from there — while every other group is the absolute pose
+it always is. `clearExisting:true` (the default) also puts every bone back at rest, so a
+bone this call does not key is not left holding the previous call's pose.
 
 ## 5. Motion capture onto the mannequin
 

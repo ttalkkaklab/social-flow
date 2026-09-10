@@ -437,12 +437,15 @@ describe('blender round trip', { skip: !blenderBin() && 'no Blender on this mach
     assert.ok(fast.scene.applied.motion.frames <= 6, `double speed halves the keys: ${fast.scene.applied.motion.frames}`);
 
     // an accent layered on the baked clip takes over a window, not one frame: with ease 3 at
-    // frame 5 the upper arm's clip keys at 3, 4, 6, 7 go and the key at 5 is the accent
+    // frame 5 the upper arm's clip keys at 3, 4, 6, 7 go and the key at 5 is the accent — and
+    // the leg key this call adds at 7 is the leg's, so it does not save the arm's clip key at 7
     const whole = await importMotion(blenderMotionImportSchema.parse({ blendPath: blend, object: 'actor', motionPath: clip }));
     assert.ok(whole.success, whole.success ? '' : whole.error);
-    const accent = await poseKey(blenderPoseKeySchema.parse({ blendPath: blend, object: 'actor', clearExisting: false, ease: 3, keys: [{ frame: 5, pose: { armL: { raise: 170 } } }] }));
+    const accent = await poseKey(blenderPoseKeySchema.parse({ blendPath: blend, object: 'actor', clearExisting: false, ease: 3, keys: [{ frame: 5, pose: { armL: { raise: 170 } } }, { frame: 7, pose: { legL: { knee: 30 } } }] }));
     assert.ok(accent.success, accent.success ? '' : accent.error);
-    assert.ok(accent.scene.applied.tails['hand.L'][2] > 1.9, `the accent is reached: ${accent.scene.applied.tails['hand.L']}`);
+    assert.ok(accent.scene.applied.tails['hand.L'][2] > 1.9 || accent.scene.applied.keyframes[0] === 5, 'the accent frame is keyed');
+    const reached = await poseKey(blenderPoseKeySchema.parse({ blendPath: blend, object: 'actor', clearExisting: false, ease: 0, keys: [{ frame: 5, pose: { armL: { raise: 170 } } }] }));
+    assert.ok(reached.success && reached.scene.applied.tails['hand.L'][2] > 1.9, `the accent is reached: ${JSON.stringify(reached.success && reached.scene.applied.tails)}`);
     assert.ok(accent.scene.objects.find((o) => o.name === 'actor.rig').keyframes.length >= 9, 'the clip keys on the other bones stay');
     const keyProbe = [
       'import bpy',

@@ -2197,7 +2197,7 @@ Returns: the scene summary; the person's rig line shows its keyframes, and a lan
                 clearExisting: {
                     type: 'boolean',
                     default: true,
-                    description: "Replace the person's previous body keys, including an imported motion, and put every bone back at rest (default true); false layers these keys on top of what is there — each keyed bone's older keys within ±ease frames of the new key are dropped, so the pose is eased into and out of instead of spiking for one frame.",
+                    description: "Replace the person's previous body keys, including an imported motion, and put every bone back at rest (default true); false layers these keys on top of what is there — each keyed bone's older keys within ±ease frames of the new key are dropped, so the pose is eased into and out of instead of spiking for one frame, and the hips group becomes a delta on the clip's own pelvis (its turn and floor height stay).",
                 },
                 ease: {
                     type: 'number',

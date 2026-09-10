@@ -992,13 +992,23 @@ def clear_window(rig, bname, frame, ease, keep):
             fc.keyframe_points.remove(hit)
 
 
-def set_interpolation_at(rig, bnames, frames, mode):
-    fs = set(int(round(f)) for f in frames)
-    for b in bnames:
+def set_interpolation_at(rig, per_bone, mode):
+    # per_bone: {bone: set of frames} — only those keys change, the clip's others keep theirs
+    for b, fs in per_bone.items():
         for fc in bone_fcurves(rig, b):
             for kp in fc.keyframe_points:
                 if int(round(kp.co[0])) in fs:
                     kp.interpolation = mode
+
+
+def last_key_before(rig, bname, frame):
+    best = None
+    for fc in bone_fcurves(rig, bname):
+        for kp in fc.keyframe_points:
+            x = kp.co[0]
+            if x < frame - 1e-6 and (best is None or x > best):
+                best = x
+    return int(round(best)) if best is not None else None
 
 
 def op_pose(job):
@@ -1011,29 +1021,58 @@ def op_pose(job):
         rig.animation_data_clear()
         reset_pose(rig)
     frames = [int(k["frame"]) for k in job["keys"]]
-    keep = set(frames)
+    # which frames this call keys on each bone — a window must keep a bone's own keys, not
+    # another bone's, and only those keys (plus the clip key each window opens from) take
+    # this call's interpolation
+    per_bone = {}
+    for k in job["keys"]:
+        for bname, _world, _offset in pose_to_bones(k["pose"]):
+            per_bone.setdefault(bname, set()).add(int(k["frame"]))
+    interp = {b: set(fs) for b, fs in per_bone.items()}
     touched = set()
     for k in job["keys"]:
         f = int(k["frame"])
         bones = pose_to_bones(k["pose"])
+        clip_hips = None
         if layered:
             # continue from what the clip or the earlier keys hold at this frame, and open a
             # window around it so the new pose is reached and left, not spiked
             sc.frame_set(f)
             for pb in rig.pose.bones:
                 prev[pb.name] = pb.rotation_quaternion.copy()
+            hp = rig.pose.bones["hips"]
+            clip_hips = (hp.rotation_quaternion.copy(), hp.location.copy())
             for bname, _world, _offset in bones:
-                clear_window(rig, bname, f, ease, keep)
+                clear_window(rig, bname, f, ease, per_bone[bname])
+                left = last_key_before(rig, bname, f)
+                if left is not None:
+                    interp[bname].add(left)
         for bname, world, offset in bones:
+            rest = rig.data.bones[bname].matrix_local.to_3x3() if bname in rig.data.bones else None
+            if layered and bname == "hips" and rest is not None:
+                # on a clip the pelvis is a delta: the clip's own turn and floor height stay
+                # and the channels move it from there, or the feet leave the floor
+                q = (rest.inverted() @ world @ rest).to_quaternion() @ clip_hips[0]
+                pq = prev.get("hips")
+                if pq is not None and pq.dot(q) < 0:
+                    q.negate()
+                prev["hips"] = q.copy()
+                pb = rig.pose.bones["hips"]
+                pb.rotation_quaternion = q
+                pb.keyframe_insert(data_path="rotation_quaternion", frame=f, group="hips")
+                if offset is not None:
+                    pb.location = clip_hips[1] + rest.inverted() @ Vector(offset)
+                    pb.keyframe_insert(data_path="location", frame=f, group="hips")
+                touched.add("hips")
+                continue
             pb = set_bone_rotation(rig, bname, world, prev)
             pb.keyframe_insert(data_path="rotation_quaternion", frame=f, group=bname)
             if offset is not None:
-                rest = rig.data.bones[bname].matrix_local.to_3x3()
                 pb.location = rest.inverted() @ Vector(offset)
                 pb.keyframe_insert(data_path="location", frame=f, group=bname)
             touched.add(bname)
     if layered:
-        set_interpolation_at(rig, touched, frames, job["interpolation"])   # the clip's own keys keep theirs
+        set_interpolation_at(rig, interp, job["interpolation"])
     else:
         set_interpolation(rig, job["interpolation"])
     extend_frame_range(sc, frames)
