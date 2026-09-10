@@ -54,6 +54,8 @@ import {
   BLENDER_INTERPOLATIONS,
   BLENDER_PREVIZ_ENGINES,
   BLENDER_PROXY_KINDS,
+  BLENDER_RIG_BONES,
+  BLENDER_ROOT_MOTIONS,
   DEFAULT_FRAME_END,
   DEFAULT_FRAME_START,
   DEFAULT_PREVIZ_ENGINE,
@@ -2030,7 +2032,7 @@ Returns: a text block with the saved .glb path and model.`,
     annotations: HINT.local,
     description: `Read a .blend file **on this machine** and report what is in it — every object with world position, rotation, size, parent and keyframes, the active camera with lens, field of view and keyframes, the frame range and fps. Opens Blender headless for about a second; changes nothing.
 
-Use as the first call of any previz session ("connect and read the scene, do not modify it yet"), and after any edit you did not make yourself, before blender_camera_set or blender_object_animate name an object. The other four blender_* tools return the same summary after they save, so a read right after one of them is redundant.
+Use as the first call of any previz session ("connect and read the scene, do not modify it yet"), and after any edit you did not make yourself, before blender_camera_set, blender_object_animate, blender_pose_key or blender_motion_import name an object. The other six blender_* tools return the same summary after they save, so a read right after one of them is redundant. A person proxy shows as its root, its <name>.rig armature (19 bones) and its <name>.body mannequin mesh.
 Do NOT use to inspect a GLB or an image — it reads .blend files only. Do NOT guess object names from memory when this can list them.
 Requires Blender 4.2+ (brew install --cask blender, or BLENDER=<executable>); capability_status lists it under 3d_generation.
 
@@ -2050,10 +2052,10 @@ Returns: a text block with the Blender version, frame range, resolution, the act
     // Overwrites only the previz .blend it owns (reset:true) — a local scratch file, so it is a
     // generate-class tool, not a HITL one like the publishers.
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-    description: `Create (or extend) a .blend previz set **on this machine**: metric units, the cut's frame range and fps, the format's resolution, a floor, a sun, grey proxy figures for people and animals, primitive stand-ins for objects, and GLB imports placed by location, rotation and scale. Saves the file and returns the scene summary.
+    description: `Create (or extend) a .blend previz set **on this machine**: metric units, the cut's frame range and fps, the format's resolution, a floor, a sun, a jointed grey mannequin per person (a 19-bone armature — hips, spine, chest, neck, head, and shoulder, upper arm, forearm, hand, thigh, shin, foot per side — under a mesh that bends at those joints), grey proxies for animals, primitive stand-ins for objects, and GLB imports placed by location, rotation and scale. Saves the file and returns the scene summary.
 
-Use once per cut before framing — the previz lane of skills/storyboard/references/blender-previz.md — with one proxy per subject that must be in frame: person and dog take a height, box a size, cylinder and sphere a radius, car an optional size. Proxies face -Y; rotationZDeg turns them. A GLB from mesh-objects.md or mlx_3d_generate goes through imports. reset:true (default) starts from an empty scene and **overwrites the file**; reset:false opens the existing file and adds to it, keeping the camera and its keys.
-Do NOT model appearance here — proxies are grey blocking, and face, clothing and props belong to the image sheets. Do NOT animate people here; a stiff proxy is what a video model would copy. Do NOT use the .blend as a rendered asset — it is a camera and blocking plan.
+Use once per cut before framing — the previz lane of skills/storyboard/references/blender-previz.md — with one proxy per subject that must be in frame: person and dog take a height, box a size, cylinder and sphere a radius, car an optional size. Proxies face -Y, a person's own left is +X; rotationZDeg turns them. A person's body is posed by blender_pose_key or driven by a motion-capture clip through blender_motion_import; its root moves with blender_object_animate. A GLB from mesh-objects.md or mlx_3d_generate goes through imports. reset:true (default) starts from an empty scene and **overwrites the file**; reset:false opens the existing file and adds to it, keeping the camera and its keys.
+Do NOT model appearance here — proxies are grey blocking, and face, clothing and props belong to the image sheets. Do NOT use the .blend as a rendered asset — it is a camera, blocking and body-timing plan.
 Requires Blender 4.2+; the glTF importer is built in.
 
 Returns: the same summary as blender_scene_read plus the list of what was built.`,
@@ -2237,8 +2239,8 @@ Returns: the scene summary — the camera line shows location, rotation, lens, f
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     description: `Key an object of a .blend previz **on this machine** — location in metres, rotation in degrees (Euler XYZ, spins past 360 allowed), scale — over frames: the thrown can, the paper plane's path, the car crossing the bridge. Saves and returns the scene summary with the object's keyframes.
 
-Use for things that move through space — vehicles, props, projectiles — so the previz clip carries their timing and path. Name the object exactly as blender_scene_read lists it (a proxy's root is its name, "can", not "can.mesh"). Interpolation is LINEAR by default; keys past the frame range extend it; clearExisting (default true) replaces the object's previous keys.
-Do NOT animate people or animals with this — limbs are not keyed here, and a video model handed a stiff proxy copies the stiffness; their acting is a prompt sentence. Do NOT move the camera with this — that is blender_camera_set. Calls on the same .blend run one at a time inside the server; different files run side by side.
+Use for things that move through space — vehicles, props, projectiles — and for a person's path across the set (a walk, a formation change: key the person's root, the body keeps its pose or motion on top), so the previz clip carries their timing and path. Name the object exactly as blender_scene_read lists it (a proxy's root is its name, "can", not "can.mesh"; a person's root is "dancer", not "dancer.rig"). Interpolation is LINEAR by default; keys past the frame range extend it; clearExisting (default true) replaces the object's previous keys.
+Do NOT bend a person's limbs with this — this moves the whole figure; joints are blender_pose_key (poses in plain channels) or blender_motion_import (a motion-capture clip). Do NOT move the camera with this — that is blender_camera_set. Calls on the same .blend run one at a time inside the server; different files run side by side.
 
 Returns: the scene summary; the object's line shows its keyframes.`,
     inputSchema: {
@@ -2290,6 +2292,172 @@ Returns: the scene summary; the object's line shows its keyframes.`,
         },
       },
       required: ['blendPath', 'object', 'keys'],
+    },
+  },
+
+  {
+    name: 'blender_pose_key',
+    title: 'Pose a previz person (bridge)',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    description: `Key the body of a person proxy in a .blend previz **on this machine** — poses over frames in plain channels, degrees in the figure's own frame: arms (raise, side, twist, elbow), legs (raise, side, knee, ankle), torso (bow, lean, turn), head (nod, tilt, turn) and hips (offset in metres, turn, bow, lean). The mannequin bends at its 19 joints; between keys the pose eases (BEZIER by default). Saves and returns the scene summary plus where the hands, feet and head ended up.
+
+Use for acted beats the cut is about — a point, a wave, a bow, a crouch and jump, a dance count — when no motion-capture clip fits (blender_motion_import is the natural-motion path). A group that is present keys every bone it covers with omitted channels at 0 (the rest pose: arms hanging, standing straight); a group that is absent leaves those bones alone at that frame. raise 90 puts a limb horizontal in front, side 90 horizontal out to the side, elbow/knee 0–150 bend the joint; bow/nod + lean forward, lean/tilt + go to the figure's left, turn + turns to the figure's left; hips.offset [0, 0, -0.2] drops the pelvis 20 cm (a crouch, with knees and thighs bent to match). The raw bones map takes any rig bone as [x, y, z] degrees about the figure's X (side), Y (front-back) and Z (up) axes. Keys more than about 120° apart need an intermediate key or the joint may swing the other way round.
+Do NOT pose with this what a clip can carry — a full dance by hand is hundreds of keys and reads mechanical; import a clip and hand-key only the accents. Do NOT move the figure across the floor with this — that is blender_object_animate on the person's root. Do NOT name the rig or the body — name the person proxy.
+
+Returns: the scene summary; the person's rig line shows its keyframes, and a landmark line gives hand.L, hand.R, foot.L, foot.R and head positions in world metres at the last keyed frame.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        blendPath: { type: 'string', description: 'Absolute path to the .blend file (must end in .blend, no "..").' },
+        object: { type: 'string', description: 'The person proxy\'s name as blender_scene_build created it ("dancer" — not "dancer.rig").' },
+        keys: {
+          type: 'array',
+          minItems: 1,
+          maxItems: 1000,
+          description: 'Poses over time; each needs a frame and a pose with at least one group.',
+          items: {
+            type: 'object',
+            required: ['frame', 'pose'],
+            properties: {
+              frame: { type: 'number', description: 'Frame number of this pose.' },
+              pose: {
+                type: 'object',
+                description: 'Body channels in degrees in the figure\'s own frame; a present group keys all of its bones (omitted channels are 0).',
+                properties: {
+                  hips: {
+                    type: 'object',
+                    description: 'The pelvis — every other bone follows it.',
+                    properties: {
+                      offset: { type: 'array', items: { type: 'number' }, minItems: 3, maxItems: 3, description: '[x, y, z] metres from the rest position: -z crouches, ±x sways.' },
+                      turn: { type: 'number', description: 'Degrees about the up axis, + turns the pelvis to the figure\'s left.' },
+                      bow: { type: 'number', description: 'Degrees about the side axis, + tips the pelvis forward.' },
+                      lean: { type: 'number', description: 'Degrees about the front-back axis, + tips it to the figure\'s left.' },
+                    },
+                  },
+                  torso: {
+                    type: 'object',
+                    description: 'Spine and chest together (the bend is split between them).',
+                    properties: {
+                      bow: { type: 'number', description: '+ bends forward, - arches back.' },
+                      lean: { type: 'number', description: '+ leans to the figure\'s left.' },
+                      turn: { type: 'number', description: '+ twists the torso to the figure\'s left.' },
+                    },
+                  },
+                  head: {
+                    type: 'object',
+                    description: 'Neck and head together.',
+                    properties: {
+                      nod: { type: 'number', description: '+ looks down, - looks up.' },
+                      tilt: { type: 'number', description: '+ tilts the head to the figure\'s left shoulder.' },
+                      turn: { type: 'number', description: '+ looks to the figure\'s left.' },
+                    },
+                  },
+                  armL: {
+                    type: 'object',
+                    description: 'The figure\'s left arm (at +X).',
+                    properties: {
+                      raise: { type: 'number', description: 'Forward and up: 90 horizontal in front, 180 straight up.' },
+                      side: { type: 'number', description: 'Out to the side: 90 horizontal (a T), 180 straight up.' },
+                      twist: { type: 'number', description: 'About the arm\'s own length, + turns the palm forward.' },
+                      elbow: { type: 'number', description: 'Bend 0–150; the forearm folds toward the front of the upper arm.' },
+                    },
+                  },
+                  armR: {
+                    type: 'object',
+                    description: 'The figure\'s right arm (at -X), same channels mirrored.',
+                    properties: {
+                      raise: { type: 'number', description: 'Forward and up: 90 horizontal in front, 180 straight up.' },
+                      side: { type: 'number', description: 'Out to the side: 90 horizontal (a T), 180 straight up.' },
+                      twist: { type: 'number', description: 'About the arm\'s own length, + turns the palm forward.' },
+                      elbow: { type: 'number', description: 'Bend 0–150; the forearm folds toward the front of the upper arm.' },
+                    },
+                  },
+                  legL: {
+                    type: 'object',
+                    description: 'The figure\'s left leg.',
+                    properties: {
+                      raise: { type: 'number', description: 'Thigh forward: 90 horizontal (a high kick or a seat).' },
+                      side: { type: 'number', description: 'Thigh out to the side.' },
+                      knee: { type: 'number', description: 'Bend 0–150; the shin folds back.' },
+                      ankle: { type: 'number', description: '+ points the toes, - flexes the foot up.' },
+                    },
+                  },
+                  legR: {
+                    type: 'object',
+                    description: 'The figure\'s right leg, same channels mirrored.',
+                    properties: {
+                      raise: { type: 'number', description: 'Thigh forward: 90 horizontal (a high kick or a seat).' },
+                      side: { type: 'number', description: 'Thigh out to the side.' },
+                      knee: { type: 'number', description: 'Bend 0–150; the shin folds back.' },
+                      ankle: { type: 'number', description: '+ points the toes, - flexes the foot up.' },
+                    },
+                  },
+                  bones: {
+                    type: 'object',
+                    description: `Raw override per rig bone — [x, y, z] degrees about the figure's side, front-back and up axes, applied after the groups. Bones: ${BLENDER_RIG_BONES.join(', ')}.`,
+                    additionalProperties: { type: 'array', items: { type: 'number' }, minItems: 3, maxItems: 3, description: '[x, y, z] degrees.' },
+                  },
+                },
+              },
+            },
+          },
+        },
+        interpolation: {
+          type: 'string',
+          enum: [...BLENDER_INTERPOLATIONS],
+          default: 'BEZIER',
+          description: 'Between keys: BEZIER (default, eases in and out — how a body moves), LINEAR (constant speed), CONSTANT (snap).',
+        },
+        clearExisting: {
+          type: 'boolean',
+          default: true,
+          description: "Replace the person's previous body keys, including an imported motion (default true); false layers these keys on top.",
+        },
+      },
+      required: ['blendPath', 'object', 'keys'],
+    },
+  },
+
+  {
+    name: 'blender_motion_import',
+    title: 'Retarget motion capture onto a previz person (bridge)',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    description: `Drive a person proxy in a .blend previz **on this machine** with a motion-capture clip — a BVH or an FBX with animation — retargeted onto the mannequin's 19 bones: bones are matched by name across the usual vocabularies (Biovision/CMU/Mixamo LeftUpLeg·LeftLeg, Unreal thigh_l·calf_l, Bandai UpperLeg_L·LowerLeg_L, Rigify thigh.L, SMPL L_Hip·L_Knee), the clip is scaled to the figure's leg length, turned so the actor faces -Y at the first frame, and baked to one key per frame. Saves and returns the scene summary plus the bone match.
+
+Use when the cut's content is the body — a dance, a fight, a fall, a walk cycle — and a clip of it exists: free BVH libraries (CMU, Bandai Namco Research dataset-1 under CC BY-NC 4.0, Mixamo FBX after a browser download) or a capture of your own. fromSeconds/toSeconds cut a slice, frameStart places it in the cut, speed retimes it, loop repeats it to the scene's last frame, rootMotion "inplace" (default) keeps the figure where its root stands (the formation is yours through blender_object_animate) while "full" keeps the actor's travel. A source bone the vocabulary misses is named in boneMap; unmatched bones hold their rest pose relative to the parent.
+Do NOT expect appearance from this — it is timing and limb positions on a grey mannequin. Do NOT stack it with blender_pose_key on the same frames unless clearExisting is false on purpose. Do NOT pass files of other kinds — .bvh and .fbx only, and the file must hold an animated skeleton.
+Requires Blender 4.2+; the BVH and FBX importers are built in. At most ${MAX_PREVIZ_FRAMES} frames per import.
+
+Returns: the scene summary; the person's rig line shows the baked frame range, a motion line names the source, its length, the slice and speed, which canonical bone took which source bone and which found none, the scale ratio and the facing correction, and a landmark line gives hand, foot and head positions at the first baked frame.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        blendPath: { type: 'string', description: 'Absolute path to the .blend file (must end in .blend, no "..").' },
+        object: { type: 'string', description: 'The person proxy\'s name as blender_scene_build created it ("dancer" — not "dancer.rig").' },
+        motionPath: { type: 'string', description: 'Absolute path to the motion-capture file — .bvh or .fbx with an animated skeleton (no "..").' },
+        frameStart: { type: 'number', description: "Scene frame where the slice's first frame lands (default: the scene's first frame)." },
+        fromSeconds: { type: 'number', default: 0, description: 'Start of the slice inside the clip, seconds from its beginning (default 0).' },
+        toSeconds: { type: 'number', description: 'End of the slice inside the clip, seconds (default: the whole clip).' },
+        speed: { type: 'number', default: 1, description: 'Playback speed, 0.1–10 (default 1 = as captured; 1.2 plays it 20 % faster).' },
+        loop: { type: 'boolean', default: false, description: 'Repeat the slice until the scene\'s last frame (default false: the slice plays once and the frame range grows to fit it).' },
+        rootMotion: {
+          type: 'string',
+          enum: [...BLENDER_ROOT_MOTIONS],
+          default: 'inplace',
+          description: 'inplace (default): the pelvis keeps its floor position and only rises and falls — the figure\'s root decides where it stands. full: the actor\'s travel across the floor is kept.',
+        },
+        boneMap: {
+          type: 'object',
+          description: `Override or complete the name match: canonical rig bone → source bone name. Canonical bones: ${BLENDER_RIG_BONES.join(', ')}.`,
+          additionalProperties: { type: 'string', description: 'Exact source bone name in the clip.' },
+        },
+        clearExisting: {
+          type: 'boolean',
+          default: true,
+          description: "Replace the person's previous body keys (default true); false layers the clip on top of hand-made keys.",
+        },
+      },
+      required: ['blendPath', 'object', 'motionPath'],
     },
   },
 

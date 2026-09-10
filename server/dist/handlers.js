@@ -946,6 +946,31 @@ export const ROUTES = {
         const keys = r.scene.applied?.keyframes ?? [];
         return text(`Object "${r.scene.applied?.object}" keyed at frames [${keys.join(', ')}].\n\n${blender.describeScene(r.scene)}`);
     },
+    blender_pose_key: async (args) => {
+        const r = await blender.poseKey(parseArgs(blender.blenderPoseKeySchema, args));
+        if (!r.success)
+            return text(`Blender pose key failed: ${r.error}`, true);
+        const a = r.scene.applied;
+        const keys = a?.keyframes ?? [];
+        return text(`Person "${a?.object}" posed — ${blender.describeKeys(keys)} on ${a?.bones?.length ?? 0} bones (${(a?.bones ?? []).join(', ')}).\n` +
+            `At frame ${keys[keys.length - 1]}: ${blender.describeTails(a?.tails)}\n` +
+            `Next: blender_render_previz and open the stills; the landmark line above says where the hands and feet are, so iterate in numbers.\n\n${blender.describeScene(r.scene)}`);
+    },
+    blender_motion_import: async (args) => {
+        const r = await blender.importMotion(parseArgs(blender.blenderMotionImportSchema, args));
+        if (!r.success)
+            return text(`Blender motion import failed: ${r.error}`, true);
+        const a = r.scene.applied;
+        const m = a?.motion;
+        const [first, last] = a?.keyframes ?? [0, 0];
+        const mapped = Object.entries(m?.mapped ?? {}).map(([c, s]) => `${c} ← ${s}`);
+        return text(`Motion retargeted onto "${a?.object}" (${a?.rig}) — scene frames ${first}–${last} (${m?.frames} keys, one per frame).\n` +
+            `Source: ${m?.source} · ${m?.sourceBones} bones · ${m?.sourceSeconds}s; slice ${m?.fromSeconds}–${m?.toSeconds}s at speed ${m?.speed}${m?.loop ? ', looped' : ''} · root motion ${m?.rootMotion} · scale ×${m?.heightRatio} · facing turned ${m?.yawDeg}°\n` +
+            `Matched ${mapped.length}/${blender.BLENDER_RIG_BONES.length} bones: ${mapped.join(', ')}\n` +
+            `${m?.unmapped?.length ? `Unmatched (hold rest relative to parent): ${m.unmapped.join(', ')}\n` : ''}` +
+            `At frame ${first}: ${blender.describeTails(a?.tails)}\nAt frame ${last}: ${blender.describeTails(a?.tailsEnd)}\n` +
+            `Next: blender_render_previz to watch it; blender_object_animate on the root for the path across the floor.\n\n${blender.describeScene(r.scene)}`);
+    },
     blender_render_previz: async (args) => {
         const r = await blender.renderPreviz(parseArgs(blender.blenderRenderPrevizSchema, args));
         if (!r.success)
