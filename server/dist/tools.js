@@ -3721,6 +3721,84 @@ Returns: integer credit balance.`,
             required: ['query'],
         },
     },
+    // ── Storyboard — sequence → scene → shot (skills/storyboard/references/structure-contract.js) ──
+    {
+        name: 'storyboard_read',
+        title: 'Read a storyboard as sequences → scenes → shots',
+        annotations: HINT.local,
+        description: `Read an episode's scenes.js and return it as a tree: sequences (purpose · question · payoff) → scenes (place · time · event · charge · turn · out) → shots (feel · info · size · angle · render · narration). Reads the file only; no API call.
+
+Use it before editing an existing board, and after storyboard_apply to see the board the way the approval page groups it. level=outline is enough to plan a change; level=full carries every raw shot object (large — one shot is ~40 fields).
+Do NOT use it to validate — storyboard_check runs the contract. A board with no window.STRUCTURE comes back with every shot under unplacedShots; write the structure with storyboard_apply.
+
+Returns: JSON — { version, format, shots, sequences[…scenes[…shots]], unplacedShots, splicedShots (broll · outro) }.`,
+        inputSchema: {
+            type: 'object',
+            properties: {
+                path: { type: 'string', description: 'The storyboard directory (data/<channel>/episodes/<topic>/storyboard/) or its scenes.js' },
+                level: { type: 'string', enum: ['outline', 'scenes', 'shots', 'full'], description: 'outline = sequences with scene numbers · scenes = scene cards with shot numbers · shots (default) = every shot summarised under its scene · full = raw shot objects too' },
+            },
+            required: ['path'],
+        },
+    },
+    {
+        name: 'storyboard_apply',
+        title: 'Write or patch a storyboard with validation',
+        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+        description: `Write a storyboard's scenes.js from a sequence → scene → shot model, or patch part of it, in one call. Every shot is validated against the grammar vocabularies (type · beat · size · angle · infoType · shareType · render.mode · transition), the structure against its rules (one place and time per scene, a charge that turns, every scene in exactly one sequence, shots grouped by scene in sequence order, two sizes per scene), and the derived shot labels (sceneSlug · sequence) are written from the structure. Nothing is written when a violation is found — the findings come back instead. Warnings are written and reported.
+
+Use it to author a new board (set = { structure, shots }) after the narration is approved (storyboard §4), and to change one thing later (scenes / sequences / shots by key, insertShots, removeShots, globals for FORMAT · THEME · COMPREHENSION · STORY · PRODUCTION · MUSIC). One call carries the whole change — do not write scenes.js by hand and do not call this once per shot. dryRun:true validates without writing.
+Do NOT pass a shot's visual plan through a summary — pass the object scenes-schema.md defines (visual · shot.space · visual.camera · visual.video …); unknown keys on a shot pass through untouched. Editing an approved board drops its \`// approved:\` line; it is approved again at the HITL gate.
+
+Scene: { no, place, time, event, charge: { open: "+"|"-", close: "+"|"-"|"++"|"--" }, turn, out? }. Sequence: { id, title, purpose, question?, payoff?, scenes: [no…] }. The reasons for each field are in scenes-schema.md §structure.
+
+Returns: the file written or not, counts, and findings (! violation · warning).`,
+        inputSchema: {
+            type: 'object',
+            properties: {
+                path: { type: 'string', description: 'The storyboard directory (scenes.js is created there when missing) or its scenes.js' },
+                set: {
+                    type: 'object',
+                    description: 'Replace the whole board — how a new board is written',
+                    properties: {
+                        structure: { type: 'object', description: '{ version: "structure-v1", sequences: [...], scenes: [...] }' },
+                        shots: { type: 'array', items: { type: 'object', description: 'The scenes-schema.md shot object' }, description: 'Every shot in playback order — the scenes-schema.md shot object; each playback shot carries `scene`' },
+                    },
+                    required: ['structure', 'shots'],
+                },
+                structure: { type: 'object', description: 'Replace window.STRUCTURE only' },
+                sequences: { type: 'array', items: { type: 'object', description: '{ id, title, purpose, question?, payoff?, scenes }' }, description: 'Upsert sequences by id' },
+                scenes: { type: 'array', items: { type: 'object', description: '{ no, place, time, event, charge, turn, out? }' }, description: 'Upsert scenes by no' },
+                shots: { type: 'array', items: { type: 'object', description: 'One positional upsert', properties: { no: { type: 'number', description: '1-based position' }, shot: { type: 'object', description: 'The scenes-schema.md shot object' } }, required: ['no', 'shot'] }, description: 'Upsert shots by 1-based position; no = length + 1 appends' },
+                insertShots: { type: 'array', items: { type: 'object', description: 'One insert', properties: { after: { type: 'number', description: '1-based position to insert after; 0 = at the start' }, shots: { type: 'array', items: { type: 'object', description: 'The scenes-schema.md shot object' }, description: 'Shots to insert, in order' } }, required: ['after', 'shots'] }, description: 'Insert shots after a 1-based position (0 = at the start)' },
+                removeShots: { type: 'array', items: { type: 'number', description: '1-based position' }, description: '1-based positions to drop (resolved before inserts)' },
+                removeScenes: { type: 'array', items: { type: 'number', description: 'Scene number' }, description: 'Scene numbers to drop from STRUCTURE.scenes and from every sequence' },
+                removeSequences: { type: 'array', items: { type: 'string', description: 'Sequence id' }, description: 'Sequence ids to drop' },
+                globals: { type: 'object', description: 'Other window.* blocks to set — FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, VOICE, MOTION_POLICY' },
+                dryRun: { type: 'boolean', description: 'Validate and report, write nothing' },
+            },
+            required: ['path'],
+        },
+    },
+    {
+        name: 'storyboard_check',
+        title: 'Check a storyboard against its contract',
+        annotations: HINT.local,
+        description: `Run the sequence → scene → shot rules and the full scenes.js contract (check-scenes.js: vocabularies, beat order, camera slots, motion policy, production mode) on a board and return every finding. Reads the file and runs a local script; no API call.
+
+Use it after storyboard_apply and before delegating a reviewer or generating anything — the same command the storyboard skill runs by hand (\`node check-scenes.js storyboard/\`). draft:true is the story pass (§4a): machine-layer absences are deferred and counted, vocabularies and beat order still fail.
+Do NOT treat a pass as visual quality — frame overflow, hero-stat width and speech rate are measured on the rendered canvas in storyboard.html's check strip.
+
+Returns: counts (violations · warnings · deferred) and two lists — structure findings, then shot-contract findings — each line "! where what" (violation) or "· where what" (warning).`,
+        inputSchema: {
+            type: 'object',
+            properties: {
+                path: { type: 'string', description: 'The storyboard directory or its scenes.js' },
+                draft: { type: 'boolean', description: 'The story pass (storyboard §4a) — machine-layer absences deferred' },
+            },
+            required: ['path'],
+        },
+    },
 ];
 /**
  * Per-platform publish tool → required credential platform — index.ts uses this

@@ -12,6 +12,7 @@ import * as sns from './sns-client.js';
 import * as supertonic from './supertonic-client.js';
 import * as zimage from './zimage-client.js';
 import * as blender from './blender-bridge.js';
+import * as storyboard from './storyboard.js';
 import * as mlx from './mlx-serve-client.js';
 import * as tts from './tts-client.js';
 import { checkedSpeechSchema, generateCheckedSpeech } from './tts-quality.js';
@@ -1339,5 +1340,19 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   threads_search: async (args) => {
     const input = parseArgs(threadsSearchSchema, args);
     return fromApi(await sns.threadsKeywordSearch(input));
+  },
+  // ── Storyboard ──
+  storyboard_read: async (args) => {
+    const a = parseArgs(storyboard.storyboardReadSchema, args);
+    const { win } = storyboard.readBoard(a.path);
+    return text(JSON.stringify(storyboard.contract().outline(win, a.level), null, 2));
+  },
+  storyboard_apply: async (args) => {
+    const r = storyboard.applyStoryboard(parseArgs(storyboard.storyboardApplySchema, args));
+    return text(storyboard.renderApply(r), r.findings.some((f) => f.level === 'bad'));
+  },
+  storyboard_check: async (args) => {
+    const r = storyboard.checkStoryboard(parseArgs(storyboard.storyboardCheckSchema, args));
+    return text(storyboard.renderCheck(r), r.violations > 0);
   },
 };

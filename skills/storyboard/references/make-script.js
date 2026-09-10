@@ -36,7 +36,7 @@ const slide = s => !!(s.visual && s.visual.slide);
 const shots = [];
 let total = 0;
 S.forEach((s, i) => { shots.push({ s, no: i + 1, at: total }); total += s.duration || 0; });
-const takes = shots.filter(x => rec(x.s));
+const filmed = shots.filter(x => rec(x.s));
 const body = shots.filter(x => x.s.type !== "outro");
 const voiceShots = body.filter(x => !rec(x.s) && (x.s.narration || []).length);
 const list = VOICE ? body : shots.filter(x => rec(x.s) && x.s.type !== "outro");
@@ -45,7 +45,7 @@ let m = `---
 topic: ${topic}
 mode: mixed
 format: ${FORMAT}
-scenes: ${takes.length} 촬영 / ${body.length} 샷(아웃트로 제외)
+scenes: ${filmed.length} 촬영 / ${body.length} 샷(아웃트로 제외)
 target: ${mmss(total)}
 generated: ${new Date().toISOString().slice(0, 10)}
 ---
@@ -55,13 +55,13 @@ generated: ${new Date().toISOString().slice(0, 10)}
 `;
 
 if (VOICE) {
-  m += `전 샷의 대사를 실었다. **촬영 ${takes.length}샷**은 화면을 조작하면서 말하고,
+  m += `전 샷의 대사를 실었다. **촬영 ${filmed.length}샷**은 화면을 조작하면서 말하고,
 나머지 ${voiceShots.length}샷은 찍을 화면이 없으니 **소리만 녹음**한다.
 대사 원문은 \`scenes.js\` 가 정본이고 이 문서는 그것을 읽기 좋게 옮긴 것이다 —
 문장을 여기서 고치지 말고 스토리보드를 고친다.
 `;
 } else {
-  m += `촬영 샷 ${takes.length}개만 실었다 — 나머지 씬의 나레이션은 TTS 가 맡는다.
+  m += `촬영 샷 ${filmed.length}개만 실었다 — 나머지 씬의 나레이션은 TTS 가 맡는다.
 대사 원문은 \`scenes.js\` 가 정본이다.
 `;
 }
@@ -72,7 +72,7 @@ m += `
 | 파일명 | 샷 | 무엇을 찍나 | 목표 길이 |
 |---|---|---|---|
 `;
-takes.forEach(x => {
+filmed.forEach(x => {
   const kind = scast(x.s) ? "화면 녹화" : "촬영";
   m += `| \`${x.s.visual.clip}\` | 샷 ${x.no} | ${kind} — ${x.s.visual.shot} | ~${x.s.visual.takeSec || x.s.duration}초 |\n`;
 });
@@ -176,6 +176,10 @@ list.forEach(({ s, no, at }) => {
   if (s.scene !== curScene) {
     curScene = s.scene;
     m += `\n### S#${s.scene}. ${s.sceneSlug}\n`;
+    // window.STRUCTURE (scenes-schema §structure) — the scene's event and turn, so the person
+    // filming knows what has to change on camera before the first shot heading.
+    const sc = (window.STRUCTURE && window.STRUCTURE.scenes || []).find(x => x.no === s.scene);
+    if (sc) m += `\n사건: ${sc.event} · 전환: ${sc.charge.open} → ${sc.charge.close}, ${sc.turn}\n`;
   }
   const beat = { hook: "커버", hooking: "후킹", result: "결과물", body: "내용", turn: "전환", cta: "마무리" }[s.beat] || s.beat || s.type;
   m += `\n#### 샷 ${no} — ${plain(s.title) || s.type} · ${beat} · ${s.duration}초\n\n`;
@@ -220,5 +224,5 @@ m += `---
 `;
 
 fs.writeFileSync(path.join(dir, "script.md"), m);
-console.log(`script.md 작성 완료 · ${m.split("\n").length}줄 · 촬영 ${takes.length}샷` +
+console.log(`script.md 작성 완료 · ${m.split("\n").length}줄 · 촬영 ${filmed.length}샷` +
   (VOICE ? ` · 소리만 ${voiceShots.length}샷` : " · TTS 회차"));

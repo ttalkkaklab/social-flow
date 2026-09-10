@@ -447,6 +447,9 @@ function check(win, fmt, opts) {
     ? Math.floor(Number(fmt.video.generatedSecondsMax) / 8) : 2;
   const productionMode = require('./production-mode.js');
   productionMode.check(win, { draft }).forEach(message => bad('production mode', message));
+  /* Sequence → scene → shot (structure-contract.js) — the same rules storyboard_apply refuses
+     to write past. A board with no window.STRUCTURE only warns here: old boards still build. */
+  require('./structure-contract.js').check(win).forEach(f => (f.level === 'bad' ? bad : warn)(f.where, f.what));
   const isShort = fmt.format !== LONG_FORMAT;
   const motionPolicy = productionMode.policy((opts && opts.policy) || normalizeMotionPolicy(null, formatVideoMax, 'default', pacing, isShort), win.PRODUCTION, scenes);
   const main = scenes.filter((s) => s.type !== 'broll' && s.type !== 'outro');
@@ -1764,6 +1767,216 @@ function selftest() {
   ok('a cue that exists passes',
      !has(bads(run([cover, Object.assign({}, goodShot, { sound: { cue: 'base' } }), ctaShot], { MUSIC: { base: {} } })),
           /not in window\.MUSIC/));
+
+  // ── sequence → scene → shot (structure-contract.js) ──
+  {
+    const sc = require('./structure-contract.js');
+    ok('the structure vocabularies match this file\'s', SIZES.join() === sc.VOCAB.SIZES.join() &&
+       ANGLES.join() === sc.VOCAB.ANGLES.join() && BEATS.join() === sc.VOCAB.BEATS.join() &&
+       TYPES.join() === sc.VOCAB.TYPES.join() && INFO_TYPES.join() === sc.VOCAB.INFO_TYPES.join() &&
+       SHARE_TYPES.join() === sc.VOCAB.SHARE_TYPES.join() && HOOK_TYPES.join() === sc.VOCAB.HOOK_TYPES.join() &&
+       HOOK_FORMS.join() === sc.VOCAB.HOOK_FORMS.join() && ARCS.join() === sc.VOCAB.ARCS.join() &&
+       TRANSITIONS.every(t => sc.VOCAB.TRANSITION_RE.test(t)) && sc.VOCAB.TRANSITION_RE.test('push:l2r') &&
+       !sc.VOCAB.TRANSITION_RE.test('push:left'));
+    const scene = (no, extra) => Object.assign({ no, place: '작업실', time: '낮', event: '한 사건', charge: { open: '-', close: '+' }, turn: 'x → relief' }, extra || {});
+    const structure = (scenes, sequences) => ({ version: 'structure-v1', scenes, sequences: sequences ||
+      [{ id: 'q1', title: '한 대목', purpose: '한 목적', scenes: scenes.map(x => x.no) }] });
+    const at = (shot, no, extra) => Object.assign({}, shot, { scene: no }, extra || {});
+    const wide = { shot: Object.assign({}, goodShot.shot, { size: 'ls', info: '다른 정보' }) };
+    const board = [at(cover, 1), at(goodShot, 1, wide), at(goodShot, 2), at(ctaShot, 2, wide)];
+    ok('a board with no STRUCTURE only warns',
+       has(run(board), /no window\.STRUCTURE/) && !bads(run(board)).some(f => /STRUCTURE/.test(f.what)));
+    const clean = [scene(1, { out: '가' }), scene(2, { place: '부엌', out: '가' })];
+    ok('a structured board passes',
+       !has(run(board, { STRUCTURE: structure(clean) }), /structure|scene \d|sequence/i));
+    ok('a place that names a picture warns',
+       has(run(board, { STRUCTURE: structure([clean[0], scene(2, { place: '땅속 단면 도해', out: '가' })]) }), /names a picture/));
+    ok('two scenes back to back on one slugline warn',
+       has(run(board, { STRUCTURE: structure([scene(1), scene(2)]) }), /same slugline/));
+    ok('an event that says what the viewer learns warns',
+       has(run(board, { STRUCTURE: structure([scene(1, { event: '땅속 온도의 원리가 드러난다' }), clean[1]]) }), /what the viewer learns/));
+    ok('an event that chains two actions warns',
+       has(run(board, { STRUCTURE: structure([scene(1, { event: '딸깍맨이 경고를 무시하고 버튼을 눌러 물을 맞는다' }), clean[1]]) }), /chains two actions/));
+    ok('a turn that repeats the event warns',
+       has(run(board, { STRUCTURE: structure([scene(1, { event: '광고 시간과 실제 시간이 다르다는 걸 안다', turn: '광고 시간과 실제 시간이 다르다는 걸 알게 된다' }), clean[1]]) }), /turn repeats event/));
+    ok('an out the last shot does not say warns',
+       has(run(board, { STRUCTURE: structure([scene(1, { out: '아무도 안 하는 말' }), clean[1]]) }), /is not said in the scene's last shot/));
+    ok('a last scene with no out warns',
+       has(run(board, { STRUCTURE: structure([clean[0], scene(2, { place: '부엌' })]) }), /last scene has no out/));
+    ok('a payoff on the sequence\'s first scene warns',
+       has(run(board, { STRUCTURE: structure(clean, [{ id: 'q1', title: 't', purpose: 'p', question: '왜?', payoff: 1, scenes: [1, 2] }]) }), /the sequence's first/));
+    const five = [at(cover, 1), at(goodShot, 1, wide), at(goodShot, 2), at(goodShot, 2, wide), at(ctaShot, 3, wide)];
+    const three = [scene(1, { out: '가' }), scene(2, { place: '부엌', out: '가' }), scene(3, { place: '마당', out: '가' })];
+    ok('every scene turning the same way is a metronome warning', has(run(five, { STRUCTURE: structure(three) }), /metronome/));
+    ok('a one-shot scene warns', has(run(five, { STRUCTURE: structure(three) }), /one shot — coverage/));
+    ok('a studio place beside real places warns',
+       has(run(board, { STRUCTURE: structure([clean[0], scene(2, { place: '설명 스튜디오', out: '가' })]) }), /is a studio while other scenes/));
+    ok('a one-scene sequence beside others warns',
+       has(run(board, { STRUCTURE: structure(clean, [{ id: 'q1', title: '앞', purpose: 'p', scenes: [1] }, { id: 'q2', title: '뒤', purpose: 'p', scenes: [2] }]) }), /one scene — a sequence/));
+    ok('a question no narration asks warns',
+       has(run(board, { STRUCTURE: structure(clean, [{ id: 'q1', title: 't', purpose: 'p', question: '왜 아무도 몰랐을까요', payoff: 2, scenes: [1, 2] }]) }), /is not asked/));
+    ok('an out said before the shot\'s last sentence warns',
+       has(run([at(cover, 1), at(goodShot, 1, Object.assign({ narration: [{ tts: '가' }, { tts: '나' }] }, wide)), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /goes on after it/));
+    ok('a whole episode in one scene warns',
+       has(run([at(cover, 1), at(goodShot, 1, wide), at(goodShot, 1, { shot: Object.assign({}, goodShot.shot, { info: '둘' }) }), at(goodShot, 1, { shot: Object.assign({}, goodShot.shot, { size: 'ls', info: '셋' }) }), at(ctaShot, 1, wide)], { STRUCTURE: structure([scene(1, { out: '가' })]) }), /no cut point/));
+    ok('a scene with no wide warns',
+       has(run([at(cover, 1), at(goodShot, 1, { shot: Object.assign({}, goodShot.shot, { size: 'cu', info: '둘' }) }), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /no wide/));
+    ok('a shot whose scene the structure does not define fails',
+       has(bads(run(board, { STRUCTURE: structure([scene(1)]) })), /scene 2 is not in STRUCTURE/));
+    ok('a scene in no sequence fails',
+       has(bads(run(board, { STRUCTURE: structure([scene(1), scene(2)], [{ id: 'q1', title: 't', purpose: 'p', scenes: [1] }]) })), /belongs to no sequence/));
+    ok('the same charge at both ends is a nonevent warning',
+       has(run(board, { STRUCTURE: structure([scene(1, { charge: { open: '+', close: '+' } }), scene(2)]) }), /nonevent/));
+    ok('deepening into the same pole is a turn', !has(run(board, { STRUCTURE: structure([scene(1, { charge: { open: '-', close: '--' } }), scene(2)]) }), /nonevent|deepens/));
+    ok('"++" on a "-" open is a big swing, not a violation', !has(bads(run(board, { STRUCTURE: structure([scene(1, { charge: { open: '-', close: '++' }, out: '가' }), clean[1]]) })), /charge/));
+    ok('a scene split by another scene fails',
+       has(bads(run([at(cover, 1), at(goodShot, 2, wide), at(goodShot, 1, wide), at(ctaShot, 2)], { STRUCTURE: structure([scene(1), scene(2)]) })), /split by another scene/));
+    ok('shots that play the sequences out of order fail',
+       has(bads(run(board, { STRUCTURE: structure([scene(1), scene(2)], [{ id: 'q1', title: 't', purpose: 'p', scenes: [2, 1] }]) })), /one order/));
+    ok('a stale sceneSlug fails',
+       has(bads(run([at(cover, 1, { sceneSlug: '다른 곳 / 밤' })].concat(board.slice(1)), { STRUCTURE: structure([scene(1), scene(2)]) })), /sceneSlug .* differs/));
+    ok('one size across a scene is a coverage warning',
+       has(run([at(cover, 1), at(goodShot, 1), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure([scene(1), scene(2)]) }), /coverage is two sizes/));
+    ok('a repeated shot.info anywhere on the board is a coverage warning',
+       has(run([at(cover, 1), at(goodShot, 1, { shot: Object.assign({}, goodShot.shot, { size: 'ls', info: '질문' }) }), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure([scene(1), scene(2)]) }), /shot\.info says what shot/));
+    ok('a near-duplicate shot.info warns too',
+       has(run([at(cover, 1, { shot: Object.assign({}, cover.shot, { info: '땅속 온도는 겨울에도 거의 변하지 않는다' }) }), at(goodShot, 1, Object.assign({}, wide, { shot: Object.assign({}, wide.shot, { info: '겨울에도 땅속 온도는 거의 변하지 않아요' }) })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /says what shot 1/));
+    ok('a purpose that repeats the question warns',
+       has(run(board, { STRUCTURE: structure(clean, [{ id: 'q1', title: 't', purpose: '김치가 왜 안 얼었는지 알아낸다', question: '김치가 왜 안 얼었을까', payoff: 2, scenes: [1, 2] }]) }), /purpose repeats question|says what the viewer learns/));
+    ok('a payoff scene another scene out-answers warns',
+       has(run([at(cover, 1, { narration: [{ tts: '한 가지가 달라졌어요' }] }), at(goodShot, 1, wide), at(goodShot, 2), at(ctaShot, 2, wide)],
+               { STRUCTURE: structure(clean, [{ id: 'q1', title: 't', purpose: '한 목적', question: '왜?', payoff: 2, scenes: [1, 2] }]) }), /scene 1's lines say the answer/));
+    ok('a turn pole no line carries warns',
+       has(run(board, { STRUCTURE: structure([scene(1, { turn: '모른다 → 안다', out: '가' }), clean[1]]) }), /turn's "모른다" is in no line/));
+    ok('a charge.open against the first feel warns',
+       has(run([at(cover, 1, { shot: Object.assign({}, cover.shot, { feel: '안심 — 다 알았다' }) }), at(goodShot, 1, wide), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /charge\.open "-" but the first shot's feel/));
+    ok('a feel that flips twice inside one scene warns',
+       has(run([at(cover, 1, { shot: Object.assign({}, cover.shot, { feel: '불안' }) }), at(goodShot, 1, Object.assign({}, wide, { shot: Object.assign({}, wide.shot, { feel: '안심' }) })), at(goodShot, 1, { shot: Object.assign({}, goodShot.shot, { feel: '걱정', info: '셋' }) }), at(goodShot, 1, { shot: Object.assign({}, goodShot.shot, { feel: '안도', info: '넷', size: 'ls' }) }), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /flips sign \d+ times/));
+    ok('a span in the lines under a one-moment time warns',
+       has(run([at(cover, 1, { narration: [{ tts: '겨울 내내 묻어 뒀어요' }] }), at(goodShot, 1, wide), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /lines speak of a span/));
+    ok('an out that is not the last segment word for word warns',
+       has(run([at(cover, 1), at(goodShot, 1, Object.assign({ narration: [{ tts: '지금 가' }] }, wide)), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /word for word/));
+    ok('a turn written without → warns',
+       has(run(board, { STRUCTURE: structure([scene(1, { turn: '의심이 확신으로 바뀐다', out: '가' }), clean[1]]) }), /has no →/));
+    ok('a question that asks two things warns',
+       has(run(board, { STRUCTURE: structure(clean, [{ id: 'q1', title: 't', purpose: '한 목적', question: '세종은 왜 눈을 상하면서 몰래 글자를 지었을까', payoff: 2, scenes: [1, 2] }]) }), /asks two things/));
+    ok('a purpose that chains two actions warns',
+       has(run(board, { STRUCTURE: structure(clean, [{ id: 'q1', title: 't', purpose: '홀로 글자를 만든 세종이 반대를 딛고 그 글자를 세상에 낸다', scenes: [1, 2] }]) }), /purpose chains two actions/));
+    ok('a shot.info an earlier shot already said out loud warns',
+       has(run([at(cover, 1, { narration: [{ tts: '오늘 한 가지가 달라졌어요' }] }), at(goodShot, 1, Object.assign({}, wide, { shot: Object.assign({}, wide.shot, { info: '오늘 한 가지가 달라졌다' }) })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /repeats what shot 1 already said out loud/));
+    ok('a gaze at something with no space.line in the scene warns',
+       has(run([at(cover, 1, { shot: Object.assign({}, cover.shot, { space: { frame: 'x', layout: '단상 앞 인물들' } }) }), at(goodShot, 1, Object.assign({}, wide, { shot: Object.assign({}, wide.shot, { space: { frame: 'x', layout: '인물들', facing: '인물들은 단상을 향해 서 있음' } }) })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /writes space\.line/) &&
+       !has(run([at(cover, 1), at(goodShot, 1, Object.assign({}, wide, { shot: Object.assign({}, wide.shot, { space: { frame: 'x', layout: 'y', facing: '인물이 카메라를 정면으로 바라봄' } }) })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /writes space\.line/));
+    ok('a takeaway no shot says warns on a full board',
+       has(run([at(cover, 1), at(goodShot, 1, wide), at(goodShot, 1, { shot: Object.assign({}, goodShot.shot, { info: '셋' }) }), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /takeaway .* is said by no shot/) &&
+       !has(run([at(cover, 1, { narration: [{ tts: '한 가지만 기억하면 돼요' }] }), at(goodShot, 1, wide), at(goodShot, 1, { shot: Object.assign({}, goodShot.shot, { info: '셋' }) }), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /takeaway .* is said by no shot/));
+    ok('a charge.close against the last feel warns',
+       has(run([at(cover, 1), at(goodShot, 1, Object.assign({}, wide, { shot: Object.assign({}, wide.shot, { feel: '답답함' }) })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /charge\.close "\+" but the last shot's feel/));
+    ok('a feel that flips twice inside a three-shot scene warns',
+       has(run([at(cover, 1, { shot: Object.assign({}, cover.shot, { feel: '불안' }) }), at(goodShot, 1, Object.assign({}, wide, { shot: Object.assign({}, wide.shot, { feel: '안심' }) })), at(goodShot, 1, { shot: Object.assign({}, goodShot.shot, { feel: '걱정', info: '셋' }) }), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /flips sign 2 times across 3 shots/));
+    ok('an event chained with a bare -고 or -다가 warns',
+       has(run(board, { STRUCTURE: structure([scene(1, { event: '청소기를 개봉해 손잡이를 쥐고 카펫 위를 한 번 밀어본다', out: '가' }), clean[1]]) }), /chains two actions/) &&
+       has(run(board, { STRUCTURE: structure([scene(1, { event: '먼지통을 열다가 버튼을 두 번 눌러 먼지를 손에 묻힌다', out: '가' }), clean[1]]) }), /chains two actions/));
+    ok('a span time no shot draws warns',
+       has(run(board, { STRUCTURE: structure([scene(1, { time: '2주 동안', out: '가' }), clean[1]]) }), /is a span but no shot draws it/) &&
+       !has(run([at(cover, 1, { narration: [{ tts: '2주 내내 청소할 때마다 꺼졌어요' }] }), at(goodShot, 1, wide), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure([scene(1, { time: '2주 동안', out: '가' }), clean[1]]) }), /is a span but no shot draws it/));
+    ok('an umbrella place warns',
+       has(run(board, { STRUCTURE: structure([scene(1, { place: '집 안', out: '가' }), clean[1]]) }), /is an umbrella, not a slugline/));
+    ok('two picture shots with a person and no space.line warn',
+       has(run([at(cover, 1, { shot: Object.assign({}, cover.shot, { space: { frame: 'x', layout: '사람이 손잡이를 쥔 손이 중앙' } }) }), at(goodShot, 1, Object.assign({}, wide, { shot: Object.assign({}, wide.shot, { space: { frame: 'x', layout: '사람이 왼쪽에서 청소기를 민다' } }) })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /picture shots with a person and no space\.line/));
+    ok('a sequence whose lines never ask warns, an embedded 까 싶어서 passes',
+       has(run([at(cover, 1, { narration: [{ tts: '아침이 편해지는 다섯 가지 습관이에요' }] }), at(goodShot, 1, wide), at(goodShot, 2), at(ctaShot, 2, wide)],
+               { STRUCTURE: structure(clean, [{ id: 'q1', title: 't', purpose: '한 목적', question: '아침이 편해지는 습관', payoff: 2, scenes: [1, 2] }]) }), /no line in this sequence is a question/) &&
+       !has(run([at(cover, 1, { narration: [{ tts: '아침이 편해지는 습관이 뭘까 싶어서 써 봤어요' }] }), at(goodShot, 1, wide), at(goodShot, 2), at(ctaShot, 2, wide)],
+               { STRUCTURE: structure(clean, [{ id: 'q1', title: 't', purpose: '한 목적', question: '아침이 편해지는 습관', payoff: 2, scenes: [1, 2] }]) }), /no line in this sequence is a question/));
+    ok('four scenes on one swing but for one is a metronome',
+       has(run([at(cover, 1), at(goodShot, 1, wide), at(goodShot, 2), at(goodShot, 3, wide), at(goodShot, 4), at(ctaShot, 4, wide)], { STRUCTURE: structure([clean[0], clean[1], scene(3, { place: '마당', charge: { open: '+', close: '-' }, out: '가' }), scene(4, { place: '골목', out: '가' })]) }), /3 of 4 scenes turn/));
+    ok('a scene that opens on a list number warns',
+       has(run([at(cover, 1), at(goodShot, 1, wide), at(goodShot, 2, { narration: [{ tts: '두 번째는 환기예요' }] }), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /a list number is not a 그런데/));
+    ok('five scenes in a short warn',
+       has(run([at(cover, 1), at(goodShot, 1, wide), at(goodShot, 2), at(goodShot, 3, wide), at(goodShot, 4), at(goodShot, 5, wide), at(ctaShot, 5)], { STRUCTURE: structure([clean[0], clean[1], scene(3, { place: '마당', out: '가' }), scene(4, { place: '골목', charge: { open: '+', close: '-' }, out: '가' }), scene(5, { place: '역', out: '가' })]) }), /5 scenes in \d+s/));
+    ok('a line that says again an earlier shot.info warns',
+       has(run([at(cover, 1, { shot: Object.assign({}, cover.shot, { info: '라면 한 봉지가 10원이었다' }) }), at(goodShot, 1, Object.assign({}, wide, { narration: [{ tts: '라면 한 봉지가 10원이었어요' }] })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /says again what shot 1's info/));
+    ok('a question first heard in the payoff scene warns',
+       has(run([at(cover, 1), at(goodShot, 1, wide), at(goodShot, 2, { narration: [{ tts: '왜 그럴까요' }] }), at(ctaShot, 2, wide)],
+               { STRUCTURE: structure(clean, [{ id: 'q1', title: 't', purpose: '한 목적', question: '왜 그럴까요', payoff: 2, scenes: [1, 2] }]) }), /first heard in scene 2, the payoff/));
+    ok('a sequence question far from COMPREHENSION.question warns',
+       has(run([at(cover, 1, { narration: [{ tts: '사무실에도 이런 버튼 있나요' }] }), at(goodShot, 1, wide), at(goodShot, 2), at(ctaShot, 2, wide)],
+               { STRUCTURE: structure(clean, [{ id: 'q1', title: 't', purpose: '한 목적', question: '사무실에도 이런 버튼 있나요', payoff: 2, scenes: [1, 2] }]) }), /is not COMPREHENSION\.question/));
+    ok('two scenes on one slugline with different events and turns do not warn',
+       !has(run(board, { STRUCTURE: structure([scene(1, { event: '로봇이 딸깍맨을 말린다', turn: '경고 → 무시', out: '가' }), scene(2, { event: '딸깍맨이 버튼을 누른다', turn: '초조 → 웃음', out: '가' })]) }), /same slugline/));
+    ok('an explanation screen does not fill the wide slot',
+       has(run([at(cover, 1), at(goodShot, 1, Object.assign({}, wide, { shot: Object.assign({}, wide.shot, { render: { mode: 'editorial_html', purpose: 'verdict', reason: 'r' } }) })), at(goodShot, 1, { shot: Object.assign({}, goodShot.shot, { info: '셋' }) }), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /no wide .* an explanation screen's ls is not the wide/));
+    ok('a turn read backwards warns',
+       has(run([at(cover, 1, { shot: Object.assign({}, cover.shot, { feel: 'relief' }) }), at(goodShot, 1, Object.assign({}, wide, { shot: Object.assign({}, wide.shot, { feel: 'x' }) })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure([scene(1, { turn: 'x → relief', out: '가' }), clean[1]]) }), /carried only by the later shots/));
+    ok('a gaze on an object with no person is not a gaze',
+       !has(run([at(cover, 1), at(goodShot, 1, Object.assign({}, wide, { shot: Object.assign({}, wide.shot, { space: { frame: 'x', layout: '청소기 헤드가 중앙', facing: '헤드가 문 쪽을 향해 놓임' } }) })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /writes space\.line/));
+    ok('a close against the last shot\'s lines before the out warns',
+       has(run([at(cover, 1), at(goodShot, 1, Object.assign({}, wide, { narration: [{ tts: '마음의 짐이 더 무겁게 쌓여요' }, { tts: '가' }] })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /lines before the out read -/));
+    ok('a time-only cut whose first layout shows no time warns',
+       has(run([at(cover, 1), at(goodShot, 1, wide), at(goodShot, 2, { shot: Object.assign({}, goodShot.shot, { space: { frame: 'x', layout: '인물이 옷장 앞에 선다' } }) }), at(ctaShot, 2, wide)], { STRUCTURE: structure([clean[0], scene(2, { time: '전날 밤', out: '가' })]) }), /shows no time/) &&
+       !has(run([at(cover, 1), at(goodShot, 1, wide), at(goodShot, 2, { shot: Object.assign({}, goodShot.shot, { space: { frame: 'x', layout: '스탠드 불빛 아래 인물이 옷장 앞에 선다' } }) }), at(ctaShot, 2, wide)], { STRUCTURE: structure([clean[0], scene(2, { time: '전날 밤', out: '가' })]) }), /shows no time/));
+    ok('an event no layout or line shows warns',
+       has(run([at(cover, 1, { shot: Object.assign({}, cover.shot, { space: { frame: 'x', layout: '여자가 냉장고 문을 닫는다' } }) }), at(goodShot, 1, wide), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure([scene(1, { event: '남자가 온도조절판을 매만진다', out: '가' }), clean[1]]) }), /is drawn by no shot/));
+    ok('a question and a statement in one shot warn',
+       has(run([at(cover, 1), at(goodShot, 1, Object.assign({}, wide, { narration: [{ tts: '이게 정말 손해일까요' }, { tts: '최저임금도 올랐거든요' }] })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /a question to the viewer and a statement in one shot/));
+    ok('an info that shares nothing with its own lines warns unless staged',
+       has(run([at(cover, 1), at(goodShot, 1, Object.assign({}, wide, { narration: [{ tts: '안 돼요' }], shot: Object.assign({}, wide.shot, { info: '그가 결국 버튼을 누른다는 것' }) })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /shares almost nothing with the shot's own lines/) &&
+       !has(run([at(cover, 1), at(goodShot, 1, Object.assign({}, wide, { narration: [{ tts: '안 돼요' }], shot: Object.assign({}, wide.shot, { info: '연출 — 그가 결국 버튼을 누른다' }) })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /shares almost nothing/));
+    ok('an info that ends on a delivery verb warns',
+       has(run([at(cover, 1), at(goodShot, 1, Object.assign({}, wide, { shot: Object.assign({}, wide.shot, { info: '가 라는 여운으로 마무리한다' }) })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /ends on a delivery verb/));
+    ok('a share the cta shot does not say warns',
+       has(run([at(cover, 1), at(goodShot, 1, wide), at(goodShot, 2), at(ctaShot, 2, Object.assign({}, wide, { shot: Object.assign({}, ctaShot.shot, { size: 'ls', info: '다른 정보', share: '전혀 다른 문장이에요' }) }))], { STRUCTURE: structure(clean) }), /is not a line this shot says/));
+    ok('a long-form board with few scenes warns',
+       has(run([at(cover, 1), at(goodShot, 1, wide)].concat(Array.from({ length: 8 }, (_, i) => at(goodShot, i < 4 ? 1 : 2, { shot: Object.assign({}, goodShot.shot, { info: '정보 ' + i }) }))).concat([at(ctaShot, 2, wide)]), { STRUCTURE: structure(clean), FORMAT: 'youtube-long-16x9' }), /scenes on a long-form board/));
+    ok('a long-form board with one sequence warns',
+       has(run([at(cover, 1), at(goodShot, 1, wide)].concat(Array.from({ length: 8 }, (_, i) => at(goodShot, i < 4 ? 1 : 2, { shot: Object.assign({}, goodShot.shot, { info: '정보 ' + i }) }))).concat([at(ctaShot, 2, wide)]), { STRUCTURE: structure(clean), FORMAT: 'youtube-long-16x9' }), /one sequence on a long-form board/));
+    ok('an open against the first shot\'s lines warns',
+       has(run([at(cover, 1, { narration: [{ tts: '든든하고 편안한 아침이에요' }] }), at(goodShot, 1, wide), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /first shot's lines read \+/));
+    ok('a clock time is still one moment',
+       has(run([at(cover, 1, { narration: [{ tts: '겨울 내내 묻어 뒀어요' }] }), at(goodShot, 1, wide), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure([scene(1, { time: '새벽 2시', out: '가' }), clean[1]]) }), /lines speak of a span/));
+    ok('a turn that lives only in the feel column warns',
+       has(run([at(cover, 1, { shot: Object.assign({}, cover.shot, { feel: '불안 — 아직 모른다' }) }), at(goodShot, 1, Object.assign({}, wide, { shot: Object.assign({}, wide.shot, { feel: '안심 — 이제 안다' }) })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure([scene(1, { turn: '불안 → 안심', out: '가' }), clean[1]]) }), /lives only in the feel column/));
+    ok('a first pole denied in the first line warns',
+       has(run([at(cover, 1, { narration: [{ tts: '그냥 숫자가 아니라 지혜예요' }] }), at(goodShot, 1, Object.assign({}, wide, { narration: [{ tts: '지혜가 담긴 값이에요' }] })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure([scene(1, { turn: '그냥 숫자 → 지혜가 담긴 값', out: '가' }), clean[1]]) }), /appears only denied or as a what-if/));
+    ok('an explanation screen unrelated to its scene warns even when a neighbour reads it back',
+       has(run([at(cover, 1, { narration: [{ tts: '배터리는 38분 갔어요' }] }), at(goodShot, 1, Object.assign({}, wide, { shot: Object.assign({}, wide.shot, { info: '배터리가 광고 60분 대신 38분 간다', render: { mode: 'data_graph', purpose: 'comparison', reason: 'r' } }) })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure([scene(1, { event: '화자가 먼지통을 비운다', turn: '답답 → 후련', out: '가' }), clean[1]]) }), /shares nothing with scene 1's event, turn or place/));
+    ok('a hand-back shot whose staged info is a gesture warns',
+       has(run([at(cover, 1), at(goodShot, 1, wide), at(goodShot, 2), at(ctaShot, 2, Object.assign({}, wide, { shot: Object.assign({}, ctaShot.shot, { size: 'ls', info: '연출 — 세종이 옅게 미소 짓는다' }) }))], { STRUCTURE: structure(clean) }), /is a gesture or a framing note/));
+    ok('a purpose that binds two objects with 와/과 warns',
+       has(run(board, { STRUCTURE: structure(clean, [{ id: 'q1', title: 't', purpose: '구할 방법과 점주의 심정을 세운다', scenes: [1, 2] }]) }), /binds two objects/));
+    ok('a wide size on a close layout warns',
+       has(run([at(cover, 1), at(goodShot, 1, Object.assign({}, wide, { shot: Object.assign({}, wide.shot, { space: { frame: 'x', layout: '정산기 앞에 선 점주의 상반신' } }) })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /is a close view/));
+    ok('a first line that repeats the previous out warns',
+       has(run([at(cover, 1), at(goodShot, 1, Object.assign({}, wide, { narration: [{ tts: '이 도시락 다 버려질까요' }] })), at(goodShot, 2, { narration: [{ tts: '이 도시락 다 버려질까요' }] }), at(ctaShot, 2, wide)], { STRUCTURE: structure([scene(1, { out: '이 도시락 다 버려질까요' }), clean[1]]) }), /repeats scene 1's out/));
+    ok('an episode question no sequence holds warns on a two-sequence board',
+       has(run([at(cover, 1), at(goodShot, 1, wide), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean, [{ id: 'q1', title: 't', purpose: '한 목적', question: '왜 버릴까요', scenes: [1] }, { id: 'q2', title: 'u', purpose: '다른 목적', question: '누가 살까요', scenes: [2] }]) }), /is held by no sequence/));
+    ok('a hook word the cover info names and no later shot returns to warns',
+       has(run([at(cover, 1, { narration: [{ tts: '무선청소기 배터리가 광고랑 달라요' }], shot: Object.assign({}, cover.shot, { info: '배터리 스펙과 실사용이 다르다는 것' }) }), at(goodShot, 1, wide), at(goodShot, 1, { shot: Object.assign({}, goodShot.shot, { info: '셋' }) }), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /the hook names "배터리"/));
+    ok('a line late in the scene when the first peopled shot has none warns',
+       has(run([at(cover, 1, { shot: Object.assign({}, cover.shot, { space: { frame: 'x', layout: '사람이 먼지통을 든다' } }) }), at(goodShot, 1, Object.assign({}, wide, { shot: Object.assign({}, wide.shot, { space: { frame: 'x', layout: '사람이 버튼을 누른다', line: '화자 왼쪽' } }) })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /written on a later shot but not on shot 1/));
+    ok('both poles in one line warn',
+       has(run([at(cover, 1, { narration: [{ tts: '뭘 놓쳤는지 몰라도 다 알아요' }] }), at(goodShot, 1, wide), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure([scene(1, { turn: '몰라요 → 알아요', out: '가' }), clean[1]]) }), /sit in one line/));
+    ok('an event spoken but drawn by no layout warns',
+       has(run([at(cover, 1, { narration: [{ tts: '화자가 2주 동안 배터리를 60분씩 써 봤어요' }], shot: Object.assign({}, cover.shot, { space: { frame: 'x', layout: '거실 소파와 창문' } }) }), at(goodShot, 1, Object.assign({}, wide, { shot: Object.assign({}, wide.shot, { space: { frame: 'x', layout: '창가의 화분' } }) })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure([scene(1, { event: '화자가 2주 동안 배터리를 60분씩 써 본다', out: '가' }), clean[1]]) }), /no picture layout of the scene draws it/));
+    ok('a delivery verb hidden under …는 것 warns',
+       has(run([at(cover, 1), at(goodShot, 1, Object.assign({}, wide, { narration: [{ tts: '뭘 놓고 가는지 몰라서 찜찜해요' }], shot: Object.assign({}, wide.shot, { info: '나가기 전 마지막으로 소지품을 확인한다는 것' }) })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /hides a delivery verb/));
+    ok('a staged info that restates the line warns',
+       has(run([at(cover, 1), at(goodShot, 1, Object.assign({}, wide, { narration: [{ tts: '마감 직전부터 반값에 파는 할인 앱을 쓰는 가게가 늘고 있어요' }], shot: Object.assign({}, wide.shot, { info: '연출 — 손님이 폰을 보는 사이 마감 직전부터 반값에 파는 할인 앱을 쓰는 가게가 늘고 있다' }) })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /goes on to state what the line says/));
+    ok('a branch whose open shot does not ask warns',
+       has(run([at(cover, 1), at(goodShot, 1, wide), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean), COMPREHENSION: Object.assign({}, comprehension, { branches: [{ question: '정말 몸에 해로운 걸까요', open: 2, pay: 4 }] }) }), /open says shot 2 but that shot's lines do not ask/));
+    ok('a question with no payoff scene is a warning',
+       has(run(board, { STRUCTURE: structure([scene(1), scene(2)], [{ id: 'q1', title: 't', purpose: 'p', question: '왜?', scenes: [1, 2] }]) }), /no payoff scene/));
+    ok('three shots on one feel is a flat-stretch warning',
+       has(run([at(cover, 1, { shot: Object.assign({}, cover.shot, { feel: 'same' }) }), at(goodShot, 1, { shot: Object.assign({}, goodShot.shot, { size: 'ls', feel: 'same' }) }), at(goodShot, 2, { shot: Object.assign({}, goodShot.shot, { feel: 'same' }) }), at(ctaShot, 2, wide)], { STRUCTURE: structure([scene(1), scene(2)]) }), /flat stretch/));
+    const w = { SCENES: [at(cover, 1), at(goodShot, 2)], STRUCTURE: structure([scene(1), scene(2, { place: '부엌', time: '밤' })],
+                [{ id: 'q1', title: '앞', purpose: 'p', scenes: [1] }, { id: 'q2', title: '뒤', purpose: 'p', scenes: [2] }]) };
+    ok('sync writes the slug and, with two sequences, the sequence title',
+       sc.sync(w) === 2 && w.SCENES[1].sceneSlug === '부엌 / 밤' && w.SCENES[1].sequence === '뒤' && w.SCENES[0].sequence === '앞');
+    const tree = sc.outline(w, 'shots');
+    ok('outline nests shots under scenes under sequences',
+       tree.sequences.length === 2 && tree.sequences[1].scenes[0].shots[0].no === 2 && tree.sequences[1].scenes[0].slug === '부엌 / 밤');
+  }
 
   // ── the story pass (--draft) ──
   // A 4a skeleton: beats, feels, narration sentences, the two hook fields, and the close's

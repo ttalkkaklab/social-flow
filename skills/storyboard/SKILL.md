@@ -179,7 +179,7 @@ Only for the cinematic-miniature style, load the bundled [style guide and image 
 and each `videoDesign`, including the subject-motion contract and timed action states in full-video.md, fill the four `visual.camera` slots under its §Camera dynamics (a move the viewer can see, static on at most one shot in three, wide on at most half, `cameraFixed` only under static), then use [spatial-prompts.js](references/spatial-prompts.js), which assembles both prompts and runs the Seedance prompt gate. This branch
 supersedes hybrid's shot cap, mandatory HTML explanation and person-required source clauses.
 Keep facts, narration reviews and the no-marks-over-video rule. Copy `production-mode.js`
-with the HTML template and render-routing.js; `cost-preview.js --sbdoc` supplies both prices.
+with the HTML template, render-routing.js and structure-contract.js; `cost-preview.js --sbdoc` supplies both prices.
 
 ### 2. Research and fact-checking (follows profile §5 policy)
 
@@ -399,13 +399,9 @@ No reviewer reads this page — §4.4 reads the narration it becomes.
 
 ### 4. Scene design — writing scenes.js
 
-Write it to the contract in `references/scenes-schema.md`. Keep the array name (`SCENES`);
-one entry is a **shot**. Group the same place and time with `scene`+`sceneSlug`, and write
-`sequence` only when purposes diverge. Per shot, write `shot.feel`, `shot.size`, `shot.angle`,
-`shot.info`, `shot.infoType`, `shot.space` on a generated still, and `visual.picture` (still photo / AI video / recording / shared asset) plus `visual.overlay`
-(HTML staging / none) — one shot can have both. A cover laying an HTML reveal over a still
-photo is the default. The source of truth for field definitions is the schema's §grammar
-units and production layers.
+Write it to the contract in `references/scenes-schema.md` **through `storyboard_apply`** — one call carries the whole board (`set`: `structure` + `shots`) or one change (`scenes`·`sequences`·`shots` by key), validates the grammar vocabularies and the structure rules, and writes nothing past a violation. Keep the array name (`SCENES`); one entry is a **shot**.
+**Sequences and scenes are objects in `window.STRUCTURE`, not labels on shots** (schema §structure — read its cut test before writing a scene). Write the scenes first — `{ no, place, time, event, charge: {open, close}, turn, out }` — then group the shots under them. A scene breaks for three reasons only: the place changes, the time breaks, or the value has turned and a second event begins in the same place; a slide, a chart, a new subject or a new list item is never a scene, and an explanation screen is a shot inside the scene of the story it explains (`place` stays the story's place, never "도해"·"그래픽"). `place` is the place a shot shows (거실, not 집 안) and a span `time` needs a shot that draws it. `event` is one subject and one verb on screen (리더가 셋을 소집한다), not what the viewer learns and not actions chained with -고·-다가; `turn` is written 앞 → 뒤 (의심 → 확신), one subject's value on one axis, the first pole in the opening shots and the second in the closing shots; `charge.open` is what the first shot feels and `charge.close` what the last shot feels and says before its out, never the reverse of the last close; `out` is the last sentence the scene's last shot says, verbatim, does not count as that shot's one new thing, calls the next scene (a scene that opens on "두 번째는" was not called), and on the last scene it is the hand-back to the cover. A sequence is `{ id, title, purpose, question, payoff, scenes }` — one purpose written as its tension with one main verb, one question its later scenes hold open and a line asks as a question, and `payoff` the scene where `COMPREHENSION.answer` completes (never the first). A short is one sequence with 2–4 scenes (the band beats the room count); each scene has a wide and a close, the cover's and the CTA's scenes included, and the CTA's answer (a drip) and hand-back (the `beat:"cta"` shot, carrying `share`) are two shots; the wide and the close are picture shots, never an explanation screen; a question the last shot throws to the viewer is `share`, not the sequence question. Each playback shot points at its scene with `scene`; the tool derives `sceneSlug`·`sequence`.
+Per shot, write `title`, `shot.feel`, `shot.size`, `shot.angle`, `shot.info`, `shot.infoType`, `shot.space` on every generated or filmed picture shot (skipped on an HTML explanation screen), and `visual.picture` (still photo / AI video / recording / shared asset) plus `visual.overlay` (HTML staging / none) — one shot can have both. A cover laying an HTML reveal over a still photo is the default. One shot says one new thing — a line that addresses two things (a question and a fact) is two shots, the shot's own lines say its `info` (a picture-carried info starts "연출 —"), and a measured value is a statistic on an HTML screen. Inside a scene: a wide and a close, no `info` any other shot gave or said, and `space.line` on the first shot that has a person with what they look at or handle, kept to the scene's end. `storyboard_read` shows the tree the approval page draws.
 
 **Write it in two passes.** **4a — story**: `window.COMPREHENSION` · `beat` · `shot.feel` ·
 `shot.info` · `shot.infoType` · `shot.share`/`shot.shareType` · `narration` · `arc` · `hookType`/`hookForm` · `title` and the
@@ -776,6 +772,7 @@ SB=${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references
 node $SB/check-scenes.js storyboard/ --draft  # after 4a — machine-layer absences deferred
 node $SB/check-scenes.js storyboard/          # after 4b — exit 1 = a violation
 ```
+`storyboard_check` (`draft: true` / `false`) is the same run through the MCP tool, structure findings first.
 
 **`--draft` is the story pass** — machine-layer absences deferred and counted; vocabularies and
 beat order still fail.
@@ -1127,7 +1124,7 @@ files. Only a TTS episode carries filmed scenes alone — there the generated sc
 nothing for the user to do, and including them blurs what has to be done.
 
 **storyboard.html (the review render)** — copy `references/storyboard-html-template.html` into
-storyboard/, copy `references/render-routing.js` and `references/production-mode.js` beside it, and fill in **only the `<title>` and the `✎ SB_DOC` block**. Its labels follow the
+storyboard/, copy `references/render-routing.js`, `references/production-mode.js` and `references/structure-contract.js` beside it, and fill in **only the `<title>` and the `✎ SB_DOC` block**. Its labels follow the
 reader's language (`?lang=en` · `?lang=ko`, or the picker at the end of the section menu); the
 episode's own copy stays in the language scenes.js is written in, so nothing here needs setting. Never write scene data
 (title, lines, bullets, shot, duration, THEME) into the HTML — the document loads the SoT
@@ -1190,7 +1187,7 @@ The document shows six things.
   hook-form and arc name tags on the cover card) and the **two production-layer badges** (screen body = still photo / AI video /
   recording / shared asset, on-screen = HTML reveal · captions · typing / none); under it the
   **feel line** (what the audience should feel) and the info line (what it newly tells). Entries
-  sharing `scene` are grouped into a scene band (`S#1. place / time`). The last main shot
+  sharing `scene` are grouped into a scene band (`S#1. place / time` with the scene's event and turn) under a sequence heading that carries its purpose. The last main shot
   isn't stamped PAYOFF. Channel color means AI video; an outline-only badge means HTML
   staging. Don't merge them into one badge.
 - **Scene-frame rows** — one reveal (the moment text appears within the same shot) is one row.
