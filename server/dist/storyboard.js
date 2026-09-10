@@ -24,7 +24,7 @@
  */
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
+import * as nodeModule from 'node:module';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
@@ -35,7 +35,9 @@ export const PLUGIN_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..'
 export const REFERENCES_DIR = join(PLUGIN_ROOT, 'skills', 'storyboard', 'references');
 export const CONTRACT_FILE = join(REFERENCES_DIR, 'structure-contract.js');
 export const CHECK_SCENES_FILE = join(REFERENCES_DIR, 'check-scenes.js');
-const loadFromHere = createRequire(import.meta.url);
+// Namespace import: the esbuild banner already declares a top-level `createRequire`, and a named
+// import of the same identifier makes the bundle a SyntaxError.
+const loadFromHere = nodeModule.createRequire(import.meta.url);
 let contractCache;
 export function contract() {
     if (!contractCache)
@@ -44,9 +46,28 @@ export function contract() {
 }
 // ── Schemas ─────────────────────────────────────────────────────
 const tuple = (list) => z.enum(list);
-const V = contract().VOCAB;
+// The schemas are built at module load, so a missing contract file must not take the whole
+// server down with it — the three storyboard tools fail at call time (contract() throws) while
+// the other tools keep working. The placeholder vocabulary accepts nothing real.
+const MISSING = ['__contract-missing__'];
+function vocabAtLoad() {
+    try {
+        return contract().VOCAB;
+    }
+    catch {
+        return { SIZES: MISSING, ANGLES: MISSING, BEATS: MISSING, TYPES: MISSING, INFO_TYPES: MISSING, SHARE_TYPES: MISSING,
+            HOOK_TYPES: MISSING, HOOK_FORMS: MISSING, ARCS: MISSING, RENDER_MODES: MISSING, CHARGES_OPEN: MISSING, CHARGES_CLOSE: MISSING,
+            TRANSITION_RE: /^$/ };
+    }
+}
+const V = vocabAtLoad();
 const nonEmpty = z.string().trim().min(1);
-export const STRUCTURE_VERSION = contract().VERSION;
+export const STRUCTURE_VERSION = (() => { try {
+    return contract().VERSION;
+}
+catch {
+    return 'structure-v1';
+} })();
 export const sceneSchema = z
     .object({
     no: z.number().int().positive().describe('Scene number — the value shots point at with `scene`'),
@@ -253,7 +274,7 @@ export function applyPatch(win, patch) {
         sequences = sequences.filter((q) => !drop.has(q.id));
     }
     if (patch.sequences || patch.scenes || patch.removeScenes || patch.removeSequences || next.STRUCTURE)
-        next.STRUCTURE = { version: STRUCTURE_VERSION, sequences, scenes };
+        next.STRUCTURE = { version: st.version ?? STRUCTURE_VERSION, sequences, scenes }; // an older version is kept so check() reports it, never silently upgraded
     let shots = Array.isArray(next.SCENES) ? next.SCENES.slice() : [];
     if (patch.shots)
         for (const { no, shot } of patch.shots) {
@@ -277,7 +298,7 @@ export function applyPatch(win, patch) {
             shots.splice(after, 0, ...add);
         }
     }
-    next.SCENES = shots;
+    next.SCENES = shots.map((shot) => ({ ...shot })); // sync() writes sceneSlug/sequence — never into the caller's objects
     const findings = [];
     if (!shots.length)
         findings.push({ level: 'bad', where: 'board', what: 'the board has no shots' });

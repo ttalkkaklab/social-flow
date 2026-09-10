@@ -85028,7 +85028,7 @@ Returns: JSON \u2014 { version, format, shots, sequences[\u2026scenes[\u2026shot
   {
     name: "storyboard_apply",
     title: "Write or patch a storyboard with validation",
-    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     description: `Write a storyboard's scenes.js from a sequence \u2192 scene \u2192 shot model, or patch part of it, in one call. Every shot is validated against the grammar vocabularies (type \xB7 beat \xB7 size \xB7 angle \xB7 infoType \xB7 shareType \xB7 render.mode \xB7 transition), the structure against its rules (one place and time per scene, a charge that turns, every scene in exactly one sequence, shots grouped by scene in sequence order, two sizes per scene), and the derived shot labels (sceneSlug \xB7 sequence) are written from the structure. Nothing is written when a violation is found \u2014 the findings come back instead. Warnings are written and reported.
 
 Use it to author a new board (set = { structure, shots }) after the narration is approved (storyboard \xA74), and to change one thing later (scenes / sequences / shots by key, insertShots, removeShots, globals for FORMAT \xB7 THEME \xB7 COMPREHENSION \xB7 STORY \xB7 PRODUCTION \xB7 MUSIC). One call carries the whole change \u2014 do not write scenes.js by hand and do not call this once per shot. dryRun:true validates without writing.
@@ -88187,7 +88187,7 @@ async function checkAccounts(channel) {
 // src/storyboard.ts
 import { execFileSync } from "node:child_process";
 import { existsSync as existsSync11, readFileSync as readFileSync7, statSync as statSync4, writeFileSync as writeFileSync7 } from "node:fs";
-import { createRequire } from "node:module";
+import * as nodeModule from "node:module";
 import { basename as basename7, dirname as dirname5, join as join10, resolve as resolve3 } from "node:path";
 import { fileURLToPath } from "node:url";
 import vm from "node:vm";
@@ -88195,16 +88195,44 @@ var PLUGIN_ROOT = resolve3(dirname5(fileURLToPath(import.meta.url)), "..", "..")
 var REFERENCES_DIR = join10(PLUGIN_ROOT, "skills", "storyboard", "references");
 var CONTRACT_FILE = join10(REFERENCES_DIR, "structure-contract.js");
 var CHECK_SCENES_FILE = join10(REFERENCES_DIR, "check-scenes.js");
-var loadFromHere = createRequire(import.meta.url);
+var loadFromHere = nodeModule.createRequire(import.meta.url);
 var contractCache;
 function contract() {
   if (!contractCache) contractCache = loadFromHere(CONTRACT_FILE);
   return contractCache;
 }
 var tuple = (list) => external_exports.enum(list);
-var V = contract().VOCAB;
+var MISSING = ["__contract-missing__"];
+function vocabAtLoad() {
+  try {
+    return contract().VOCAB;
+  } catch {
+    return {
+      SIZES: MISSING,
+      ANGLES: MISSING,
+      BEATS: MISSING,
+      TYPES: MISSING,
+      INFO_TYPES: MISSING,
+      SHARE_TYPES: MISSING,
+      HOOK_TYPES: MISSING,
+      HOOK_FORMS: MISSING,
+      ARCS: MISSING,
+      RENDER_MODES: MISSING,
+      CHARGES_OPEN: MISSING,
+      CHARGES_CLOSE: MISSING,
+      TRANSITION_RE: /^$/
+    };
+  }
+}
+var V = vocabAtLoad();
 var nonEmpty = external_exports.string().trim().min(1);
-var STRUCTURE_VERSION = contract().VERSION;
+var STRUCTURE_VERSION = (() => {
+  try {
+    return contract().VERSION;
+  } catch {
+    return "structure-v1";
+  }
+})();
 var sceneSchema = external_exports.object({
   no: external_exports.number().int().positive().describe("Scene number \u2014 the value shots point at with `scene`"),
   place: nonEmpty.describe("One place \u2014 the slugline location"),
@@ -88374,7 +88402,7 @@ function applyPatch(win, patch) {
     sequences = sequences.filter((q) => !drop.has(q.id));
   }
   if (patch.sequences || patch.scenes || patch.removeScenes || patch.removeSequences || next.STRUCTURE)
-    next.STRUCTURE = { version: STRUCTURE_VERSION, sequences, scenes };
+    next.STRUCTURE = { version: st.version ?? STRUCTURE_VERSION, sequences, scenes };
   let shots = Array.isArray(next.SCENES) ? next.SCENES.slice() : [];
   if (patch.shots) for (const { no, shot } of patch.shots) {
     if (no > shots.length + 1) throw new Error(`shot ${no}: the board has ${shots.length} shots \u2014 no = ${shots.length + 1} appends`);
@@ -88392,7 +88420,7 @@ function applyPatch(win, patch) {
       shots.splice(after, 0, ...add);
     }
   }
-  next.SCENES = shots;
+  next.SCENES = shots.map((shot) => ({ ...shot }));
   const findings = [];
   if (!shots.length) findings.push({ level: "bad", where: "board", what: "the board has no shots" });
   if (next.STRUCTURE === void 0) findings.push({ level: "bad", where: "structure", what: "no window.STRUCTURE \u2014 write the sequences and scenes (set, structure, sequences + scenes)" });

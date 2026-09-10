@@ -681,7 +681,7 @@
         feel: s.shot.feel, info: s.shot.info, infoType: s.shot.infoType, size: s.shot.size, angle: s.shot.angle,
         render: s.shot.render && s.shot.render.mode, share: s.shot.share,
       });
-      row.narration = (s.narration || []).map(seg => seg.tts || seg.sub || '').join(' ');
+      row.narration = (s.narration || []).map(seg => seg && (seg.tts || seg.sub) || '').join(' ');
       if (s.transition) row.transition = s.transition;
       if (full) row.raw = s;
       return row;

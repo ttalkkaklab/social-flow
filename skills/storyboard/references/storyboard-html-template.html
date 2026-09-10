@@ -2411,6 +2411,8 @@ window.SB_DOC = {
   // The sequence → scene → shot rules, the same ones storyboard_apply and check-scenes.js run.
   if (window.STRUCTURE !== undefined && window.STRUCTURE_CONTRACT)
     window.STRUCTURE_CONTRACT.check(window).forEach(function (f) { flag(f.level === "bad" ? "bad" : "warn", f.where, f.what); });
+  else if (window.STRUCTURE !== undefined)
+    flag("bad", "structure", "Missing structure-contract.js — copy it beside scenes.js; without it the sequence → scene → shot rules are not checked");
   if (window.PRODUCTION) {
     if (!window.PRODUCTION_MODE) flag("bad", T.where.production, "Missing production-mode.js");
     else {
@@ -3448,7 +3450,7 @@ window.SB_DOC = {
       var sc = stScene(grp.scene);
       h += '<section class="scene-band"><div class="scene-band-head"><span class="sn">S#' +
            esc(String(grp.scene)) + "</span><span>" + esc(grp.slug || T.sceneNamed(grp.scene)) + "</span>" +
-           (sc ? '<span class="scene-turn">' + esc(sc.event) + ' · ' + esc(sc.charge.open + " → " + sc.charge.close) + ', ' + esc(sc.turn) + "</span>" : "") + "</div>";
+           (sc ? '<span class="scene-turn">' + esc(sc.event || "") + (sc.charge ? ' · ' + esc(String(sc.charge.open) + " → " + String(sc.charge.close)) : "") + ', ' + esc(sc.turn || "") + "</span>" : "") + "</div>";
     }
     grp.items.forEach(function (item) {
     var s = item.s, i = item.i, g = item.g, no = i + 1;
