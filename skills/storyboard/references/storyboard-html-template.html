@@ -307,6 +307,8 @@
     font-size: var(--t-aux); font-weight: 700; letter-spacing: .08em;
     color: var(--accent-ink); margin: var(--s6) 0 var(--s3);
   }
+  .seq-head .seq-purpose { font-weight: 400; letter-spacing: 0; color: var(--faint); }
+  .scene-band-head .scene-turn { font-size: var(--t-aux); font-weight: 400; letter-spacing: 0; color: var(--faint); flex-basis: 100%; }
   .scene-band {
     margin: var(--s5) 0; padding: var(--s4);
     border: 1px solid var(--line); border-radius: 14px;
@@ -883,6 +885,7 @@
 <script src="./scenes.js"></script>
 <script src="./render-routing.js"></script>
 <script src="./production-mode.js"></script>
+<script src="./structure-contract.js"></script>
 <script>
 /* ✎ SB_DOC BEGIN — fill in this block only (editorial metadata that is not in scenes.js).
    Scene titles, dialogue, bullets, shot and duration are never written here — scenes.js is the SoT. */
@@ -2405,6 +2408,11 @@ window.SB_DOC = {
   var policyVideoMax = MP.generatedVideoMax !== null && MP.generatedVideoMax !== undefined &&
                        Number.isFinite(Number(MP.generatedVideoMax))
     ? Number(MP.generatedVideoMax) : FMT.videoMax;
+  // The sequence → scene → shot rules, the same ones storyboard_apply and check-scenes.js run.
+  if (window.STRUCTURE !== undefined && window.STRUCTURE_CONTRACT)
+    window.STRUCTURE_CONTRACT.check(window).forEach(function (f) { flag(f.level === "bad" ? "bad" : "warn", f.where, f.what); });
+  else if (window.STRUCTURE !== undefined)
+    flag("bad", "structure", "Missing structure-contract.js — copy it beside scenes.js; without it the sequence → scene → shot rules are not checked");
   if (window.PRODUCTION) {
     if (!window.PRODUCTION_MODE) flag("bad", T.where.production, "Missing production-mode.js");
     else {
@@ -3422,14 +3430,31 @@ window.SB_DOC = {
   });
 
   var carryNoted = false, prevSeq = "";
+  /* window.STRUCTURE (scenes-schema §structure) — the sequence's purpose under its heading and
+     the scene's event and turn under the band head. Boards without it draw the labels alone. */
+  var ST = window.STRUCTURE || {};
+  // A hand-edited scenes.js can hold null entries — the check strip reports them; the list still draws.
+  var stScenes = Array.isArray(ST.scenes) ? ST.scenes.filter(function (x) { return x && typeof x === "object"; }) : [];
+  var stSeqs = Array.isArray(ST.sequences) ? ST.sequences.filter(function (q) { return q && typeof q === "object"; }) : [];
+  var stScene = function (no) { return stScenes.filter(function (x) { return x.no === no; })[0]; };
+  var seqHead = function (title, q) {
+    return '<div class="seq-head">' + esc(T.sequence(title)) +
+      (q && q.purpose ? '<span class="seq-purpose"> — ' + esc(q.purpose) +
+        (q.question ? ' · ' + esc(q.question) + (q.payoff ? ' → S#' + esc(String(q.payoff)) : '') : '') + "</span>" : '') + "</div>";
+  };
+  if (stSeqs.length === 1 && !shotGroups.some(function (g) { return g.sequence; }))
+    h += seqHead(stSeqs[0].title, stSeqs[0]);
   shotGroups.forEach(function (grp) {
     if (grp.sequence && grp.sequence !== prevSeq) {
-      h += '<div class="seq-head">' + esc(T.sequence(grp.sequence)) + "</div>";
+      h += seqHead(grp.sequence, stSeqs.filter(function (q) { return q.title === grp.sequence; })[0]);
       prevSeq = grp.sequence;
     }
-    if (hasSceneField)
+    if (hasSceneField) {
+      var sc = stScene(grp.scene);
       h += '<section class="scene-band"><div class="scene-band-head"><span class="sn">S#' +
-           esc(String(grp.scene)) + "</span><span>" + esc(grp.slug || T.sceneNamed(grp.scene)) + "</span></div>";
+           esc(String(grp.scene)) + "</span><span>" + esc(grp.slug || T.sceneNamed(grp.scene)) + "</span>" +
+           (sc ? '<span class="scene-turn">' + esc(sc.event || "") + (sc.charge && sc.charge.open !== undefined && sc.charge.close !== undefined ? ' · ' + esc(String(sc.charge.open) + " → " + String(sc.charge.close)) : "") + ', ' + esc(sc.turn || "") + "</span>" : "") + "</div>";
+    }
     grp.items.forEach(function (item) {
     var s = item.s, i = item.i, g = item.g, no = i + 1;
     // sceneNotes · audioNotes · privacy are keyed by scene number, not shot number.

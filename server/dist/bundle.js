@@ -2999,7 +2999,7 @@ var require_compile = __commonJS({
       const schOrFunc = root.refs[ref];
       if (schOrFunc)
         return schOrFunc;
-      let _sch = resolve4.call(this, root, ref);
+      let _sch = resolve5.call(this, root, ref);
       if (_sch === void 0) {
         const schema = (_a4 = root.localRefs) === null || _a4 === void 0 ? void 0 : _a4[ref];
         const { schemaId } = this.opts;
@@ -3026,7 +3026,7 @@ var require_compile = __commonJS({
     function sameSchemaEnv(s1, s2) {
       return s1.schema === s2.schema && s1.root === s2.root && s1.baseId === s2.baseId;
     }
-    function resolve4(root, ref) {
+    function resolve5(root, ref) {
       let sch;
       while (typeof (sch = this.refs[ref]) == "string")
         ref = sch;
@@ -3657,7 +3657,7 @@ var require_fast_uri = __commonJS({
       }
       return uri;
     }
-    function resolve4(baseURI, relativeURI, options) {
+    function resolve5(baseURI, relativeURI, options) {
       const schemelessOptions = options ? Object.assign({ scheme: "null" }, options) : { scheme: "null" };
       const { parsed: baseParsed, malformedAuthorityOrPort: baseMalformed } = parseWithStatus(baseURI, schemelessOptions);
       const { parsed: relativeParsed, malformedAuthorityOrPort: relativeMalformed } = parseWithStatus(relativeURI, schemelessOptions);
@@ -3941,7 +3941,7 @@ var require_fast_uri = __commonJS({
     var fastUri = {
       SCHEMES,
       normalize,
-      resolve: resolve4,
+      resolve: resolve5,
       resolveComponent,
       equal,
       serialize,
@@ -7194,7 +7194,7 @@ var require_p_retry = __commonJS({
       return error2;
     };
     var isNetworkError = (errorMessage) => networkErrorMsgs.includes(errorMessage);
-    var pRetry2 = (input, options) => new Promise((resolve4, reject) => {
+    var pRetry2 = (input, options) => new Promise((resolve5, reject) => {
       options = {
         onFailedAttempt: () => {
         },
@@ -7204,7 +7204,7 @@ var require_p_retry = __commonJS({
       const operation = retry2.operation(options);
       operation.attempt(async (attemptNumber) => {
         try {
-          resolve4(await input(attemptNumber));
+          resolve5(await input(attemptNumber));
         } catch (error2) {
           if (!(error2 instanceof Error)) {
             reject(new TypeError(`Non-error was thrown: "${error2}". You should only throw errors.`));
@@ -7738,8 +7738,8 @@ var require_retry3 = __commonJS({
       }
       const delay2 = getNextRetryDelay(config3);
       err4.config.retryConfig.currentRetryAttempt += 1;
-      const backoff = config3.retryBackoff ? config3.retryBackoff(err4, delay2) : new Promise((resolve4) => {
-        setTimeout(resolve4, delay2);
+      const backoff = config3.retryBackoff ? config3.retryBackoff(err4, delay2) : new Promise((resolve5) => {
+        setTimeout(resolve5, delay2);
       });
       if (config3.onRetryAttempt) {
         await config3.onRetryAttempt(err4);
@@ -8515,8 +8515,8 @@ var require_helpers = __commonJS({
     function req(url, opts = {}) {
       const href = typeof url === "string" ? url : url.href;
       const req2 = (href.startsWith("https:") ? https2 : http3).request(url, opts);
-      const promise = new Promise((resolve4, reject) => {
-        req2.once("response", resolve4).once("error", reject).end();
+      const promise = new Promise((resolve5, reject) => {
+        req2.once("response", resolve5).once("error", reject).end();
       });
       req2.then = promise.then.bind(promise);
       return req2;
@@ -8693,7 +8693,7 @@ var require_parse_proxy_response = __commonJS({
     var debug_1 = __importDefault(require_src());
     var debug = (0, debug_1.default)("https-proxy-agent:parse-proxy-response");
     function parseProxyResponse(socket) {
-      return new Promise((resolve4, reject) => {
+      return new Promise((resolve5, reject) => {
         let buffersLength = 0;
         const buffers = [];
         function read2() {
@@ -8759,7 +8759,7 @@ var require_parse_proxy_response = __commonJS({
           }
           debug("got proxy server response: %o %o", firstLine, headers);
           cleanup();
-          resolve4({
+          resolve5({
             connect: {
               statusCode,
               statusText,
@@ -9001,7 +9001,7 @@ var require_ponyfill_es2018 = __commonJS({
         return new originalPromise(executor);
       }
       function promiseResolvedWith(value) {
-        return newPromise((resolve4) => resolve4(value));
+        return newPromise((resolve5) => resolve5(value));
       }
       function promiseRejectedWith(reason) {
         return originalPromiseReject(reason);
@@ -9033,15 +9033,15 @@ var require_ponyfill_es2018 = __commonJS({
         }
         return _queueMicrotask(callback);
       };
-      function reflectCall(F2, V, args) {
+      function reflectCall(F2, V2, args) {
         if (typeof F2 !== "function") {
           throw new TypeError("Argument is not a function");
         }
-        return Function.prototype.apply.call(F2, V, args);
+        return Function.prototype.apply.call(F2, V2, args);
       }
-      function promiseCall(F2, V, args) {
+      function promiseCall(F2, V2, args) {
         try {
-          return promiseResolvedWith(reflectCall(F2, V, args));
+          return promiseResolvedWith(reflectCall(F2, V2, args));
         } catch (value) {
           return promiseRejectedWith(value);
         }
@@ -9171,8 +9171,8 @@ var require_ponyfill_es2018 = __commonJS({
         return new TypeError("Cannot " + name + " a stream using a released reader");
       }
       function defaultReaderClosedPromiseInitialize(reader) {
-        reader._closedPromise = newPromise((resolve4, reject) => {
-          reader._closedPromise_resolve = resolve4;
+        reader._closedPromise = newPromise((resolve5, reject) => {
+          reader._closedPromise_resolve = resolve5;
           reader._closedPromise_reject = reject;
         });
       }
@@ -9346,8 +9346,8 @@ var require_ponyfill_es2018 = __commonJS({
           }
           let resolvePromise;
           let rejectPromise;
-          const promise = newPromise((resolve4, reject) => {
-            resolvePromise = resolve4;
+          const promise = newPromise((resolve5, reject) => {
+            resolvePromise = resolve5;
             rejectPromise = reject;
           });
           const readRequest = {
@@ -9452,8 +9452,8 @@ var require_ponyfill_es2018 = __commonJS({
           const reader = this._reader;
           let resolvePromise;
           let rejectPromise;
-          const promise = newPromise((resolve4, reject) => {
-            resolvePromise = resolve4;
+          const promise = newPromise((resolve5, reject) => {
+            resolvePromise = resolve5;
             rejectPromise = reject;
           });
           const readRequest = {
@@ -10472,8 +10472,8 @@ var require_ponyfill_es2018 = __commonJS({
           }
           let resolvePromise;
           let rejectPromise;
-          const promise = newPromise((resolve4, reject) => {
-            resolvePromise = resolve4;
+          const promise = newPromise((resolve5, reject) => {
+            resolvePromise = resolve5;
             rejectPromise = reject;
           });
           const readIntoRequest = {
@@ -10785,10 +10785,10 @@ var require_ponyfill_es2018 = __commonJS({
           wasAlreadyErroring = true;
           reason = void 0;
         }
-        const promise = newPromise((resolve4, reject) => {
+        const promise = newPromise((resolve5, reject) => {
           stream._pendingAbortRequest = {
             _promise: void 0,
-            _resolve: resolve4,
+            _resolve: resolve5,
             _reject: reject,
             _reason: reason,
             _wasAlreadyErroring: wasAlreadyErroring
@@ -10805,9 +10805,9 @@ var require_ponyfill_es2018 = __commonJS({
         if (state === "closed" || state === "errored") {
           return promiseRejectedWith(new TypeError(`The stream (in ${state} state) is not in the writable state and cannot be closed`));
         }
-        const promise = newPromise((resolve4, reject) => {
+        const promise = newPromise((resolve5, reject) => {
           const closeRequest = {
-            _resolve: resolve4,
+            _resolve: resolve5,
             _reject: reject
           };
           stream._closeRequest = closeRequest;
@@ -10820,9 +10820,9 @@ var require_ponyfill_es2018 = __commonJS({
         return promise;
       }
       function WritableStreamAddWriteRequest(stream) {
-        const promise = newPromise((resolve4, reject) => {
+        const promise = newPromise((resolve5, reject) => {
           const writeRequest = {
-            _resolve: resolve4,
+            _resolve: resolve5,
             _reject: reject
           };
           stream._writeRequests.push(writeRequest);
@@ -11438,8 +11438,8 @@ var require_ponyfill_es2018 = __commonJS({
         return new TypeError("Cannot " + name + " a stream using a released writer");
       }
       function defaultWriterClosedPromiseInitialize(writer) {
-        writer._closedPromise = newPromise((resolve4, reject) => {
-          writer._closedPromise_resolve = resolve4;
+        writer._closedPromise = newPromise((resolve5, reject) => {
+          writer._closedPromise_resolve = resolve5;
           writer._closedPromise_reject = reject;
           writer._closedPromiseState = "pending";
         });
@@ -11475,8 +11475,8 @@ var require_ponyfill_es2018 = __commonJS({
         writer._closedPromiseState = "resolved";
       }
       function defaultWriterReadyPromiseInitialize(writer) {
-        writer._readyPromise = newPromise((resolve4, reject) => {
-          writer._readyPromise_resolve = resolve4;
+        writer._readyPromise = newPromise((resolve5, reject) => {
+          writer._readyPromise_resolve = resolve5;
           writer._readyPromise_reject = reject;
         });
         writer._readyPromiseState = "pending";
@@ -11563,7 +11563,7 @@ var require_ponyfill_es2018 = __commonJS({
         source._disturbed = true;
         let shuttingDown = false;
         let currentWrite = promiseResolvedWith(void 0);
-        return newPromise((resolve4, reject) => {
+        return newPromise((resolve5, reject) => {
           let abortAlgorithm;
           if (signal !== void 0) {
             abortAlgorithm = () => {
@@ -11708,7 +11708,7 @@ var require_ponyfill_es2018 = __commonJS({
             if (isError) {
               reject(error2);
             } else {
-              resolve4(void 0);
+              resolve5(void 0);
             }
             return null;
           }
@@ -11989,8 +11989,8 @@ var require_ponyfill_es2018 = __commonJS({
         let branch1;
         let branch2;
         let resolveCancelPromise;
-        const cancelPromise = newPromise((resolve4) => {
-          resolveCancelPromise = resolve4;
+        const cancelPromise = newPromise((resolve5) => {
+          resolveCancelPromise = resolve5;
         });
         function pullAlgorithm() {
           if (reading) {
@@ -12081,8 +12081,8 @@ var require_ponyfill_es2018 = __commonJS({
         let branch1;
         let branch2;
         let resolveCancelPromise;
-        const cancelPromise = newPromise((resolve4) => {
-          resolveCancelPromise = resolve4;
+        const cancelPromise = newPromise((resolve5) => {
+          resolveCancelPromise = resolve5;
         });
         function forwardReaderError(thisReader) {
           uponRejection(thisReader._closedPromise, (r2) => {
@@ -12862,8 +12862,8 @@ var require_ponyfill_es2018 = __commonJS({
           const writableHighWaterMark = ExtractHighWaterMark(writableStrategy, 1);
           const writableSizeAlgorithm = ExtractSizeAlgorithm(writableStrategy);
           let startPromise_resolve;
-          const startPromise = newPromise((resolve4) => {
-            startPromise_resolve = resolve4;
+          const startPromise = newPromise((resolve5) => {
+            startPromise_resolve = resolve5;
           });
           InitializeTransformStream(this, startPromise, writableHighWaterMark, writableSizeAlgorithm, readableHighWaterMark, readableSizeAlgorithm);
           SetUpTransformStreamDefaultControllerFromTransformer(this, transformer);
@@ -12956,8 +12956,8 @@ var require_ponyfill_es2018 = __commonJS({
         if (stream._backpressureChangePromise !== void 0) {
           stream._backpressureChangePromise_resolve();
         }
-        stream._backpressureChangePromise = newPromise((resolve4) => {
-          stream._backpressureChangePromise_resolve = resolve4;
+        stream._backpressureChangePromise = newPromise((resolve5) => {
+          stream._backpressureChangePromise_resolve = resolve5;
         });
         stream._backpressure = backpressure;
       }
@@ -13125,8 +13125,8 @@ var require_ponyfill_es2018 = __commonJS({
           return controller._finishPromise;
         }
         const readable = stream._readable;
-        controller._finishPromise = newPromise((resolve4, reject) => {
-          controller._finishPromise_resolve = resolve4;
+        controller._finishPromise = newPromise((resolve5, reject) => {
+          controller._finishPromise_resolve = resolve5;
           controller._finishPromise_reject = reject;
         });
         const cancelPromise = controller._cancelAlgorithm(reason);
@@ -13152,8 +13152,8 @@ var require_ponyfill_es2018 = __commonJS({
           return controller._finishPromise;
         }
         const readable = stream._readable;
-        controller._finishPromise = newPromise((resolve4, reject) => {
-          controller._finishPromise_resolve = resolve4;
+        controller._finishPromise = newPromise((resolve5, reject) => {
+          controller._finishPromise_resolve = resolve5;
           controller._finishPromise_reject = reject;
         });
         const flushPromise = controller._flushAlgorithm();
@@ -13183,8 +13183,8 @@ var require_ponyfill_es2018 = __commonJS({
           return controller._finishPromise;
         }
         const writable = stream._writable;
-        controller._finishPromise = newPromise((resolve4, reject) => {
-          controller._finishPromise_resolve = resolve4;
+        controller._finishPromise = newPromise((resolve5, reject) => {
+          controller._finishPromise_resolve = resolve5;
           controller._finishPromise_reject = reject;
         });
         const cancelPromise = controller._cancelAlgorithm(reason);
@@ -15135,7 +15135,7 @@ import zlib from "node:zlib";
 import Stream2, { PassThrough as PassThrough2, pipeline as pump } from "node:stream";
 import { Buffer as Buffer3 } from "node:buffer";
 async function fetch2(url, options_) {
-  return new Promise((resolve4, reject) => {
+  return new Promise((resolve5, reject) => {
     const request = new Request2(url, options_);
     const { parsedURL, options } = getNodeRequestOptions(request);
     if (!supportedSchemas.has(parsedURL.protocol)) {
@@ -15144,7 +15144,7 @@ async function fetch2(url, options_) {
     if (parsedURL.protocol === "data:") {
       const data = dist_default(request.url);
       const response2 = new Response2(data, { headers: { "Content-Type": data.typeFull } });
-      resolve4(response2);
+      resolve5(response2);
       return;
     }
     const send = (parsedURL.protocol === "https:" ? https : http2).request;
@@ -15266,7 +15266,7 @@ async function fetch2(url, options_) {
             if (responseReferrerPolicy) {
               requestOptions.referrerPolicy = responseReferrerPolicy;
             }
-            resolve4(fetch2(new Request2(locationURL, requestOptions)));
+            resolve5(fetch2(new Request2(locationURL, requestOptions)));
             finalize();
             return;
           }
@@ -15299,7 +15299,7 @@ async function fetch2(url, options_) {
       const codings = headers.get("Content-Encoding");
       if (!request.compress || request.method === "HEAD" || codings === null || response_.statusCode === 204 || response_.statusCode === 304) {
         response = new Response2(body, responseOptions);
-        resolve4(response);
+        resolve5(response);
         return;
       }
       const zlibOptions = {
@@ -15313,7 +15313,7 @@ async function fetch2(url, options_) {
           }
         });
         response = new Response2(body, responseOptions);
-        resolve4(response);
+        resolve5(response);
         return;
       }
       if (codings === "deflate" || codings === "x-deflate") {
@@ -15337,12 +15337,12 @@ async function fetch2(url, options_) {
             });
           }
           response = new Response2(body, responseOptions);
-          resolve4(response);
+          resolve5(response);
         });
         raw.once("end", () => {
           if (!response) {
             response = new Response2(body, responseOptions);
-            resolve4(response);
+            resolve5(response);
           }
         });
         return;
@@ -15354,11 +15354,11 @@ async function fetch2(url, options_) {
           }
         });
         response = new Response2(body, responseOptions);
-        resolve4(response);
+        resolve5(response);
         return;
       }
       response = new Response2(body, responseOptions);
-      resolve4(response);
+      resolve5(response);
     });
     writeToStream(request_, request).catch(reject);
   });
@@ -21426,7 +21426,7 @@ var require_jwtaccess = __commonJS({
         }
       }
       fromStreamAsync(inputStream) {
-        return new Promise((resolve4, reject) => {
+        return new Promise((resolve5, reject) => {
           if (!inputStream) {
             reject(new Error("Must pass in a stream containing the service account auth settings."));
           }
@@ -21435,7 +21435,7 @@ var require_jwtaccess = __commonJS({
             try {
               const data = JSON.parse(s2);
               this.fromJSON(data);
-              resolve4();
+              resolve5();
             } catch (err4) {
               reject(err4);
             }
@@ -21674,7 +21674,7 @@ var require_jwtclient = __commonJS({
         }
       }
       fromStreamAsync(inputStream) {
-        return new Promise((resolve4, reject) => {
+        return new Promise((resolve5, reject) => {
           if (!inputStream) {
             throw new Error("Must pass in a stream containing the service account auth settings.");
           }
@@ -21683,7 +21683,7 @@ var require_jwtclient = __commonJS({
             try {
               const data = JSON.parse(s2);
               this.fromJSON(data);
-              resolve4();
+              resolve5();
             } catch (e2) {
               reject(e2);
             }
@@ -21816,7 +21816,7 @@ var require_refreshclient = __commonJS({
         }
       }
       async fromStreamAsync(inputStream) {
-        return new Promise((resolve4, reject) => {
+        return new Promise((resolve5, reject) => {
           if (!inputStream) {
             return reject(new Error("Must pass in a stream containing the user refresh token."));
           }
@@ -21825,7 +21825,7 @@ var require_refreshclient = __commonJS({
             try {
               const data = JSON.parse(s2);
               this.fromJSON(data);
-              return resolve4();
+              return resolve5();
             } catch (err4) {
               return reject(err4);
             }
@@ -23658,7 +23658,7 @@ var require_pluggable_auth_handler = __commonJS({
        * @return A promise that resolves with the executable response.
        */
       retrieveResponseFromExecutable(envMap) {
-        return new Promise((resolve4, reject) => {
+        return new Promise((resolve5, reject) => {
           const child = childProcess.spawn(this.commandComponents[0], this.commandComponents.slice(1), {
             env: { ...process.env, ...Object.fromEntries(envMap) }
           });
@@ -23680,7 +23680,7 @@ var require_pluggable_auth_handler = __commonJS({
               try {
                 const responseJson = JSON.parse(output);
                 const response = new executable_response_1.ExecutableResponse(responseJson);
-                return resolve4(response);
+                return resolve5(response);
               } catch (error2) {
                 if (error2 instanceof executable_response_1.ExecutableResponseError) {
                   return reject(error2);
@@ -24872,7 +24872,7 @@ var require_googleauth = __commonJS({
         }
       }
       fromStreamAsync(inputStream, options) {
-        return new Promise((resolve4, reject) => {
+        return new Promise((resolve5, reject) => {
           if (!inputStream) {
             throw new Error("Must pass in a stream containing the Google auth settings.");
           }
@@ -24882,7 +24882,7 @@ var require_googleauth = __commonJS({
               try {
                 const data = JSON.parse(chunks.join(""));
                 const r2 = this._cacheClientFromJSON(data, options);
-                return resolve4(r2);
+                return resolve5(r2);
               } catch (err4) {
                 if (!this.keyFilename)
                   throw err4;
@@ -24892,7 +24892,7 @@ var require_googleauth = __commonJS({
                 });
                 this.cachedCredential = client;
                 this.setGapicJWTValues(client);
-                return resolve4(client);
+                return resolve5(client);
               }
             } catch (err4) {
               return reject(err4);
@@ -24928,17 +24928,17 @@ var require_googleauth = __commonJS({
        * Run the Google Cloud SDK command that prints the default project ID
        */
       async getDefaultServiceProjectId() {
-        return new Promise((resolve4) => {
+        return new Promise((resolve5) => {
           (0, child_process_1.exec)("gcloud config config-helper --format json", (err4, stdout) => {
             if (!err4 && stdout) {
               try {
                 const projectId = JSON.parse(stdout).configuration.properties.core.project;
-                resolve4(projectId);
+                resolve5(projectId);
                 return;
               } catch (e2) {
               }
             }
-            resolve4(null);
+            resolve5(null);
           });
         });
       }
@@ -32939,14 +32939,14 @@ function __asyncValues(o) {
   }, i2);
   function verb(n) {
     i2[n] = o[n] && function(v) {
-      return new Promise(function(resolve4, reject) {
-        v = o[n](v), settle(resolve4, reject, v.done, v.value);
+      return new Promise(function(resolve5, reject) {
+        v = o[n](v), settle(resolve5, reject, v.done, v.value);
       });
     };
   }
-  function settle(resolve4, reject, d, v) {
+  function settle(resolve5, reject, d, v) {
     Promise.resolve(v).then(function(v2) {
-      resolve4({ value: v2, done: d });
+      resolve5({ value: v2, done: d });
     }, reject);
   }
 }
@@ -39880,7 +39880,7 @@ function retryIntervalFromResponse(res) {
   return 0;
 }
 async function delay(delay2) {
-  return new Promise((resolve4) => setTimeout(resolve4, delay2));
+  return new Promise((resolve5) => setTimeout(resolve5, delay2));
 }
 async function logRequest(logger, req) {
   if (!logger) {
@@ -47323,8 +47323,8 @@ var init_node = __esm({
         const url = `${websocketBaseUrl}/ws/google.ai.generativelanguage.${apiVersion}.GenerativeService.BidiGenerateMusic?key=${apiKey}`;
         let onopenResolve = () => {
         };
-        const onopenPromise = new Promise((resolve4) => {
-          onopenResolve = resolve4;
+        const onopenPromise = new Promise((resolve5) => {
+          onopenResolve = resolve5;
         });
         const callbacks = params.callbacks;
         const onopenAwaitedCallback = function() {
@@ -47530,8 +47530,8 @@ var init_node = __esm({
         }
         let onopenResolve = () => {
         };
-        const onopenPromise = new Promise((resolve4) => {
-          onopenResolve = resolve4;
+        const onopenPromise = new Promise((resolve5) => {
+          onopenResolve = resolve5;
         });
         const callbacks = params.callbacks;
         const onopenAwaitedCallback = function() {
@@ -47544,8 +47544,8 @@ var init_node = __esm({
         const messageQueue = [];
         let setupCompleteResolve = () => {
         };
-        const setupCompletePromise = new Promise((resolve4) => {
-          setupCompleteResolve = resolve4;
+        const setupCompletePromise = new Promise((resolve5) => {
+          setupCompleteResolve = resolve5;
         });
         const websocketCallbacks = {
           onopen: onopenAwaitedCallback,
@@ -52087,7 +52087,7 @@ var init_values = __esm({
 var sleep5;
 var init_sleep = __esm({
   "node_modules/openai/internal/utils/sleep.mjs"() {
-    sleep5 = (ms) => new Promise((resolve4) => setTimeout(resolve4, ms));
+    sleep5 = (ms) => new Promise((resolve5) => setTimeout(resolve5, ms));
   }
 });
 
@@ -53280,8 +53280,8 @@ var init_api_promise = __esm({
     init_parse();
     APIPromise2 = class _APIPromise extends Promise {
       constructor(client, responsePromise, parseResponse2 = defaultParseResponse) {
-        super((resolve4) => {
-          resolve4(null);
+        super((resolve5) => {
+          resolve5(null);
         });
         this.responsePromise = responsePromise;
         this.parseResponse = parseResponse2;
@@ -54251,12 +54251,12 @@ var init_EventStream = __esm({
         _EventStream_errored.set(this, false);
         _EventStream_aborted.set(this, false);
         _EventStream_catchingPromiseCreated.set(this, false);
-        __classPrivateFieldSet(this, _EventStream_connectedPromise, new Promise((resolve4, reject) => {
-          __classPrivateFieldSet(this, _EventStream_resolveConnectedPromise, resolve4, "f");
+        __classPrivateFieldSet(this, _EventStream_connectedPromise, new Promise((resolve5, reject) => {
+          __classPrivateFieldSet(this, _EventStream_resolveConnectedPromise, resolve5, "f");
           __classPrivateFieldSet(this, _EventStream_rejectConnectedPromise, reject, "f");
         }), "f");
-        __classPrivateFieldSet(this, _EventStream_endPromise, new Promise((resolve4, reject) => {
-          __classPrivateFieldSet(this, _EventStream_resolveEndPromise, resolve4, "f");
+        __classPrivateFieldSet(this, _EventStream_endPromise, new Promise((resolve5, reject) => {
+          __classPrivateFieldSet(this, _EventStream_resolveEndPromise, resolve5, "f");
           __classPrivateFieldSet(this, _EventStream_rejectEndPromise, reject, "f");
         }), "f");
         __classPrivateFieldGet(this, _EventStream_connectedPromise, "f").catch(() => {
@@ -54356,11 +54356,11 @@ var init_EventStream = __esm({
        *   const message = await stream.emitted('message') // rejects if the stream errors
        */
       emitted(event) {
-        return new Promise((resolve4, reject) => {
+        return new Promise((resolve5, reject) => {
           __classPrivateFieldSet(this, _EventStream_catchingPromiseCreated, true, "f");
           if (event !== "error")
             this.once("error", reject);
-          this.once(event, resolve4);
+          this.once(event, resolve5);
         });
       }
       /**
@@ -54443,8 +54443,8 @@ var init_EventStream = __esm({
             }
             if (ended)
               return Promise.resolve(doneResult());
-            return new Promise((resolve4, reject) => {
-              readQueue.push({ resolve: resolve4, reject });
+            return new Promise((resolve5, reject) => {
+              readQueue.push({ resolve: resolve5, reject });
             });
           },
           return: () => {
@@ -55662,7 +55662,7 @@ var init_ChatCompletionStream = __esm({
               if (done) {
                 return { value: void 0, done: true };
               }
-              return new Promise((resolve4, reject) => readQueue.push({ resolve: resolve4, reject })).then((chunk3) => chunk3 ? { value: chunk3, done: false } : { value: void 0, done: true });
+              return new Promise((resolve5, reject) => readQueue.push({ resolve: resolve5, reject })).then((chunk3) => chunk3 ? { value: chunk3, done: false } : { value: void 0, done: true });
             }
             const chunk2 = pushQueue.shift();
             return { value: chunk2, done: false };
@@ -55752,7 +55752,7 @@ var init_ChatCompletionStreamingRunner = __esm({
               if (done) {
                 return { value: void 0, done: true };
               }
-              return new Promise((resolve4, reject) => readQueue.push({ resolve: resolve4, reject })).then((event2) => event2 ? { value: event2, done: false } : { value: void 0, done: true });
+              return new Promise((resolve5, reject) => readQueue.push({ resolve: resolve5, reject })).then((event2) => event2 ? { value: event2, done: false } : { value: void 0, done: true });
             }
             const event = pushQueue.shift();
             if (!event) {
@@ -59546,7 +59546,7 @@ var init_AssistantStream = __esm({
               if (done) {
                 return { value: void 0, done: true };
               }
-              return new Promise((resolve4, reject) => readQueue.push({ resolve: resolve4, reject })).then((chunk3) => chunk3 ? { value: chunk3, done: false } : { value: void 0, done: true });
+              return new Promise((resolve5, reject) => readQueue.push({ resolve: resolve5, reject })).then((chunk3) => chunk3 ? { value: chunk3, done: false } : { value: void 0, done: true });
             }
             const chunk2 = pushQueue.shift();
             return { value: chunk2, done: false };
@@ -62210,7 +62210,7 @@ var init_ResponseStream = __esm({
               if (done) {
                 return { value: void 0, done: true };
               }
-              return new Promise((resolve4, reject) => readQueue.push({ resolve: resolve4, reject })).then((event2) => event2 ? { value: event2, done: false } : { value: void 0, done: true });
+              return new Promise((resolve5, reject) => readQueue.push({ resolve: resolve5, reject })).then((event2) => event2 ? { value: event2, done: false } : { value: void 0, done: true });
             }
             const event = pushQueue.shift();
             return { value: event, done: false };
@@ -74143,7 +74143,7 @@ var Protocol = class {
           return;
         }
         const pollInterval = task2.pollInterval ?? this._options?.defaultTaskPollInterval ?? 1e3;
-        await new Promise((resolve4) => setTimeout(resolve4, pollInterval));
+        await new Promise((resolve5) => setTimeout(resolve5, pollInterval));
         options?.signal?.throwIfAborted();
       }
     } catch (error2) {
@@ -74160,7 +74160,7 @@ var Protocol = class {
    */
   request(request, resultSchema, options) {
     const { relatedRequestId, resumptionToken, onresumptiontoken, task, relatedTask } = options ?? {};
-    return new Promise((resolve4, reject) => {
+    return new Promise((resolve5, reject) => {
       const earlyReject = (error2) => {
         reject(error2);
       };
@@ -74238,7 +74238,7 @@ var Protocol = class {
           if (!parseResult.success) {
             reject(parseResult.error);
           } else {
-            resolve4(parseResult.data);
+            resolve5(parseResult.data);
           }
         } catch (error2) {
           reject(error2);
@@ -74499,12 +74499,12 @@ var Protocol = class {
       }
     } catch {
     }
-    return new Promise((resolve4, reject) => {
+    return new Promise((resolve5, reject) => {
       if (signal.aborted) {
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
         return;
       }
-      const timeoutId = setTimeout(resolve4, interval);
+      const timeoutId = setTimeout(resolve5, interval);
       signal.addEventListener("abort", () => {
         clearTimeout(timeoutId);
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
@@ -75380,12 +75380,12 @@ var StdioServerTransport = class {
     this.onclose?.();
   }
   send(message) {
-    return new Promise((resolve4) => {
+    return new Promise((resolve5) => {
       const json2 = serializeMessage(message);
       if (this._stdout.write(json2)) {
-        resolve4();
+        resolve5();
       } else {
-        this._stdout.once("drain", resolve4);
+        this._stdout.once("drain", resolve5);
       }
     });
   }
@@ -76128,7 +76128,7 @@ async function generateAdvanced(request) {
     const timeoutMs = targetDuration * 1e3 + REALTIME_TIMEOUT_MARGIN_MS;
     while (state.received < targetBytes && Date.now() - startTime < timeoutMs) {
       if (state.error) throw state.error;
-      await new Promise((resolve4) => setTimeout(resolve4, REALTIME_POLL_INTERVAL_MS));
+      await new Promise((resolve5) => setTimeout(resolve5, REALTIME_POLL_INTERVAL_MS));
     }
     state.done = true;
     closeQuietly(session);
@@ -76282,7 +76282,7 @@ async function generateLocalSpeech(request) {
   );
   let stdout;
   try {
-    stdout = await new Promise((resolve4, reject) => {
+    stdout = await new Promise((resolve5, reject) => {
       execFile(
         python,
         ["-c", SYNTH_SNIPPET, payload],
@@ -76298,7 +76298,7 @@ async function generateLocalSpeech(request) {
 ${errOut.trim()}`.trim())));
             return;
           }
-          resolve4(out);
+          resolve5(out);
         }
       );
     });
@@ -76605,7 +76605,7 @@ var seedanceReferenceSchema = external_exports.object({
   }
 });
 function sleep2(ms) {
-  return new Promise((resolve4) => setTimeout(resolve4, ms));
+  return new Promise((resolve5) => setTimeout(resolve5, ms));
 }
 function describeHttpError(status, body) {
   try {
@@ -76707,14 +76707,14 @@ function loadReferenceAudio(filePaths) {
   });
 }
 function probeAudioSeconds(filePath) {
-  return new Promise((resolve4) => {
+  return new Promise((resolve5) => {
     execFile2(
       "ffprobe",
       ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", filePath],
       { timeout: 15e3 },
       (error2, out) => {
         const seconds = Number.parseFloat(String(out ?? "").trim());
-        resolve4(!error2 && Number.isFinite(seconds) && seconds > 0 ? seconds : null);
+        resolve5(!error2 && Number.isFinite(seconds) && seconds > 0 ? seconds : null);
       }
     );
   });
@@ -76994,7 +76994,7 @@ async function synthesizeWithRetry(model, contentText, speechConfig, temperature
     } catch (error2) {
       lastError = error2;
       if (attempt < MAX_ATTEMPTS - 1) {
-        await new Promise((resolve4) => setTimeout(resolve4, RETRY_BASE_DELAY_MS * (attempt + 1)));
+        await new Promise((resolve5) => setTimeout(resolve5, RETRY_BASE_DELAY_MS * (attempt + 1)));
       }
     }
   }
@@ -77270,7 +77270,7 @@ function isRetryable(httpStatus) {
   return httpStatus === 429 || httpStatus >= 500;
 }
 function sleep3(ms) {
-  return new Promise((resolve4) => setTimeout(resolve4, ms));
+  return new Promise((resolve5) => setTimeout(resolve5, ms));
 }
 function timeoutFor2(textLength) {
   return Math.min(5 * 6e4, 6e4 + textLength * 40);
@@ -77803,7 +77803,7 @@ async function loadModel(id) {
     if (!listed.ok) return listed;
     const found = listed.models?.find((m2) => m2.id === id);
     if (found?.state === "ready") return { ok: true };
-    await new Promise((resolve4) => setTimeout(resolve4, 2e3));
+    await new Promise((resolve5) => setTimeout(resolve5, 2e3));
   }
   return { ok: false, error: `Timed out waiting for model "${id}" to become ready.` };
 }
@@ -77928,7 +77928,7 @@ async function muxRgbToMp4(opts) {
     );
     if (opts.audio) args.push("-c:a", "aac", "-shortest");
     args.push(opts.outFile);
-    await new Promise((resolve4, reject) => {
+    await new Promise((resolve5, reject) => {
       execFile3("ffmpeg", args, { timeout: 12e4, maxBuffer: 2 * 1024 * 1024 }, (error2, _out, errOut) => {
         if (error2) {
           const code = error2.code;
@@ -77940,7 +77940,7 @@ async function muxRgbToMp4(opts) {
 ${String(errOut).slice(-500)}` : ""}`));
           return;
         }
-        resolve4();
+        resolve5();
       });
     });
     if (!existsSync3(opts.outFile)) return { ok: false, error: "ffmpeg exited 0 but the mp4 was not written" };
@@ -78838,7 +78838,7 @@ async function generateLocalImage(request) {
   );
   const startedAt = Date.now();
   try {
-    await new Promise((resolve4, reject) => {
+    await new Promise((resolve5, reject) => {
       execFile5(
         bin,
         cliArgs,
@@ -78860,7 +78860,7 @@ async function generateLocalImage(request) {
 ${tail}` : ""}`));
             return;
           }
-          resolve4();
+          resolve5();
         }
       );
     });
@@ -79020,7 +79020,7 @@ var qwen3AsrTranscribeSchema = external_exports.object({
   filename: bareFilenameSchema("json").optional()
 });
 function probeDurationSeconds(audioPath) {
-  return new Promise((resolve4) => {
+  return new Promise((resolve5) => {
     execFile6(
       "ffprobe",
       ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", audioPath],
@@ -79028,10 +79028,10 @@ function probeDurationSeconds(audioPath) {
       (error2, out) => {
         const seconds = Number.parseFloat((out || "").trim());
         if (error2 || !Number.isFinite(seconds) || seconds <= 0) {
-          resolve4(60);
+          resolve5(60);
           return;
         }
-        resolve4(seconds);
+        resolve5(seconds);
       }
     );
   });
@@ -79088,7 +79088,7 @@ async function transcribeLocal(request) {
   );
   const startedAt = Date.now();
   try {
-    await new Promise((resolve4, reject) => {
+    await new Promise((resolve5, reject) => {
       execFile6(
         bin,
         cliArgs,
@@ -79108,7 +79108,7 @@ async function transcribeLocal(request) {
 ${tail}` : ""}`));
             return;
           }
-          resolve4();
+          resolve5();
         }
       );
     });
@@ -81042,7 +81042,7 @@ var sunoLyricsSchema = external_exports.object({
   prompt: external_exports.string().min(1).max(200)
 });
 function sleep4(ms) {
-  return new Promise((resolve4) => setTimeout(resolve4, ms));
+  return new Promise((resolve5) => setTimeout(resolve5, ms));
 }
 function describeSunoError(code, msg, httpStatus) {
   const text2 = (msg || "").trim() || "(no message)";
@@ -85004,6 +85004,84 @@ Returns: integer credit balance.`,
       },
       required: ["query"]
     }
+  },
+  // ── Storyboard — sequence → scene → shot (skills/storyboard/references/structure-contract.js) ──
+  {
+    name: "storyboard_read",
+    title: "Read a storyboard as sequences \u2192 scenes \u2192 shots",
+    annotations: HINT.local,
+    description: `Read an episode's scenes.js and return it as a tree: sequences (purpose \xB7 question \xB7 payoff) \u2192 scenes (place \xB7 time \xB7 event \xB7 charge \xB7 turn \xB7 out) \u2192 shots (feel \xB7 info \xB7 size \xB7 angle \xB7 render \xB7 narration). Reads the file only; no API call.
+
+Use it before editing an existing board, and after storyboard_apply to see the board the way the approval page groups it. level=outline is enough to plan a change; level=full carries every raw shot object (large \u2014 one shot is ~40 fields).
+Do NOT use it to validate \u2014 storyboard_check runs the contract. A board with no window.STRUCTURE comes back with every shot under unplacedShots; write the structure with storyboard_apply.
+
+Returns: JSON \u2014 { version, format, shots, sequences[\u2026scenes[\u2026shots]], unplacedShots, splicedShots (broll \xB7 outro) }.`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        path: { type: "string", description: "The storyboard directory (data/<channel>/episodes/<topic>/storyboard/) or its scenes.js" },
+        level: { type: "string", enum: ["outline", "scenes", "shots", "full"], description: "outline = sequences with scene numbers \xB7 scenes = scene cards with shot numbers \xB7 shots (default) = every shot summarised under its scene \xB7 full = raw shot objects too" }
+      },
+      required: ["path"]
+    }
+  },
+  {
+    name: "storyboard_apply",
+    title: "Write or patch a storyboard with validation",
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    description: `Write a storyboard's scenes.js from a sequence \u2192 scene \u2192 shot model, or patch part of it, in one call. Every shot is validated against the grammar vocabularies (type \xB7 beat \xB7 size \xB7 angle \xB7 infoType \xB7 shareType \xB7 render.mode \xB7 transition), the structure against its rules (one place and time per scene, a charge that turns, every scene in exactly one sequence, shots grouped by scene in sequence order, two sizes per scene), and the derived shot labels (sceneSlug \xB7 sequence) are written from the structure. Nothing is written when a violation is found \u2014 the findings come back instead. Warnings are written and reported.
+
+Use it to author a new board (set = { structure, shots }) after the narration is approved (storyboard \xA74), and to change one thing later (scenes / sequences / shots by key, insertShots, removeShots, globals for FORMAT \xB7 THEME \xB7 COMPREHENSION \xB7 STORY \xB7 PRODUCTION \xB7 MUSIC). One call carries the whole change \u2014 do not write scenes.js by hand and do not call this once per shot. dryRun:true validates without writing.
+Do NOT pass a shot's visual plan through a summary \u2014 pass the object scenes-schema.md defines (visual \xB7 shot.space \xB7 visual.camera \xB7 visual.video \u2026); unknown keys on a shot pass through untouched. Editing an approved board drops its \`// approved:\` line; it is approved again at the HITL gate.
+
+Scene: { no, place, time, event, charge: { open: "+"|"-", close: "+"|"-"|"++"|"--" }, turn, out? }. Sequence: { id, title, purpose, question?, payoff?, scenes: [no\u2026] }. The reasons for each field are in scenes-schema.md \xA7structure.
+
+Returns: the file written or not, counts, and findings (! violation \xB7 warning).`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        path: { type: "string", description: "The storyboard directory (scenes.js is created there when missing) or its scenes.js" },
+        set: {
+          type: "object",
+          description: "Replace the whole board \u2014 how a new board is written",
+          properties: {
+            structure: { type: "object", description: '{ version: "structure-v1", sequences: [...], scenes: [...] }' },
+            shots: { type: "array", items: { type: "object", description: "The scenes-schema.md shot object" }, description: "Every shot in playback order \u2014 the scenes-schema.md shot object; each playback shot carries `scene`" }
+          },
+          required: ["structure", "shots"]
+        },
+        structure: { type: "object", description: "Replace window.STRUCTURE only" },
+        sequences: { type: "array", items: { type: "object", description: "{ id, title, purpose, question?, payoff?, scenes }" }, description: "Upsert sequences by id" },
+        scenes: { type: "array", items: { type: "object", description: "{ no, place, time, event, charge, turn, out? }" }, description: "Upsert scenes by no" },
+        shots: { type: "array", items: { type: "object", description: "One positional upsert", properties: { no: { type: "number", description: "1-based position" }, shot: { type: "object", description: "The scenes-schema.md shot object" } }, required: ["no", "shot"] }, description: "Upsert shots by 1-based position; no = length + 1 appends" },
+        insertShots: { type: "array", items: { type: "object", description: "One insert", properties: { after: { type: "number", description: "1-based position to insert after; 0 = at the start" }, shots: { type: "array", items: { type: "object", description: "The scenes-schema.md shot object" }, description: "Shots to insert, in order" } }, required: ["after", "shots"] }, description: "Insert shots after a 1-based position (0 = at the start)" },
+        removeShots: { type: "array", items: { type: "number", description: "1-based position" }, description: "1-based positions to drop (resolved before inserts)" },
+        removeScenes: { type: "array", items: { type: "number", description: "Scene number" }, description: "Scene numbers to drop from STRUCTURE.scenes and from every sequence" },
+        removeSequences: { type: "array", items: { type: "string", description: "Sequence id" }, description: "Sequence ids to drop" },
+        globals: { type: "object", description: "Other window.* blocks to set \u2014 FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, VOICE, MOTION_POLICY" },
+        dryRun: { type: "boolean", description: "Validate and report, write nothing" }
+      },
+      required: ["path"]
+    }
+  },
+  {
+    name: "storyboard_check",
+    title: "Check a storyboard against its contract",
+    annotations: HINT.local,
+    description: `Run the sequence \u2192 scene \u2192 shot rules and the full scenes.js contract (check-scenes.js: vocabularies, beat order, camera slots, motion policy, production mode) on a board and return every finding. Reads the file and runs a local script; no API call.
+
+Use it after storyboard_apply and before delegating a reviewer or generating anything \u2014 the same command the storyboard skill runs by hand (\`node check-scenes.js storyboard/\`). draft:true is the story pass (\xA74a): machine-layer absences are deferred and counted, vocabularies and beat order still fail.
+Do NOT treat a pass as visual quality \u2014 frame overflow, hero-stat width and speech rate are measured on the rendered canvas in storyboard.html's check strip.
+
+Returns: counts (violations \xB7 warnings \xB7 deferred) and two lists \u2014 structure findings, then shot-contract findings \u2014 each line "! where what" (violation) or "\xB7 where what" (warning).`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        path: { type: "string", description: "The storyboard directory or its scenes.js" },
+        draft: { type: "boolean", description: "The story pass (storyboard \xA74a) \u2014 machine-layer absences deferred" }
+      },
+      required: ["path"]
+    }
   }
 ];
 var SNS_PLATFORM_BY_TOOL = {
@@ -86298,7 +86376,7 @@ var IG_BASE = `https://graph.instagram.com/${GRAPH_VERSION}`;
 var FB_BASE = `https://graph.facebook.com/${GRAPH_VERSION}`;
 var DEFAULT_POLL_INTERVAL_MS = 2e3;
 var DEFAULT_POLL_MAX_TRIES = 60;
-var sleep6 = (ms) => new Promise((resolve4) => setTimeout(resolve4, ms));
+var sleep6 = (ms) => new Promise((resolve5) => setTimeout(resolve5, ms));
 function fail2(status, message) {
   return { ok: false, status, body: message };
 }
@@ -88106,6 +88184,353 @@ async function checkAccounts(channel) {
   return { ok: true, status: 200, body: JSON.stringify(body, null, 2) };
 }
 
+// src/storyboard.ts
+import { execFileSync } from "node:child_process";
+import { existsSync as existsSync11, readFileSync as readFileSync7, renameSync as renameSync3, statSync as statSync4, unlinkSync, writeFileSync as writeFileSync7 } from "node:fs";
+import * as nodeModule from "node:module";
+import { basename as basename7, dirname as dirname5, join as join10, resolve as resolve3 } from "node:path";
+import { fileURLToPath } from "node:url";
+import vm from "node:vm";
+var PLUGIN_ROOT = resolve3(dirname5(fileURLToPath(import.meta.url)), "..", "..");
+var REFERENCES_DIR = join10(PLUGIN_ROOT, "skills", "storyboard", "references");
+var CONTRACT_FILE = join10(REFERENCES_DIR, "structure-contract.js");
+var CHECK_SCENES_FILE = join10(REFERENCES_DIR, "check-scenes.js");
+var loadFromHere = nodeModule.createRequire(import.meta.url);
+var contractCache;
+function contract() {
+  if (!contractCache) contractCache = loadFromHere(CONTRACT_FILE);
+  return contractCache;
+}
+var tuple = (list) => external_exports.enum(list);
+var MISSING = ["__contract-missing__"];
+function vocabAtLoad() {
+  try {
+    return contract().VOCAB;
+  } catch {
+    return {
+      SIZES: MISSING,
+      ANGLES: MISSING,
+      BEATS: MISSING,
+      TYPES: MISSING,
+      INFO_TYPES: MISSING,
+      SHARE_TYPES: MISSING,
+      HOOK_TYPES: MISSING,
+      HOOK_FORMS: MISSING,
+      ARCS: MISSING,
+      RENDER_MODES: MISSING,
+      CHARGES_OPEN: MISSING,
+      CHARGES_CLOSE: MISSING,
+      TRANSITION_RE: /^$/
+    };
+  }
+}
+var V = vocabAtLoad();
+var nonEmpty = external_exports.string().trim().min(1);
+var STRUCTURE_VERSION = (() => {
+  try {
+    return contract().VERSION;
+  } catch {
+    return "structure-v1";
+  }
+})();
+var sceneSchema = external_exports.object({
+  no: external_exports.number().int().positive().describe("Scene number \u2014 the value shots point at with `scene`"),
+  place: nonEmpty.describe("One place \u2014 the slugline location"),
+  time: nonEmpty.describe("One continuous stretch of time \u2014 \uB0AE \xB7 \uBC24 \xB7 \uC0C8\uBCBD \xB7 10\uB144 \uB4A4"),
+  event: nonEmpty.describe("The one thing that happens in this scene"),
+  charge: external_exports.object({
+    open: tuple(V.CHARGES_OPEN).describe('Value at the open: "+" or "-"'),
+    close: tuple(V.CHARGES_CLOSE).describe('Value at the close: "+", "-", or deeper into the same pole "++" / "--"')
+  }),
+  turn: nonEmpty.describe("What flipped between the open and the close"),
+  out: nonEmpty.optional().describe("The sentence the scene goes out on \u2014 the one that forces a \uADF8\uB7F0\uB370 or \uADF8\uB798\uC11C into the next scene")
+}).strict();
+var sequenceSchema = external_exports.object({
+  id: nonEmpty.describe('Stable id, e.g. "q1"'),
+  title: nonEmpty.describe("The heading the approval page draws"),
+  purpose: nonEmpty.describe("The one purpose that binds these scenes \u2014 two purposes are two sequences"),
+  question: nonEmpty.optional().describe("The dramatic question this stretch opens"),
+  payoff: external_exports.number().int().positive().optional().describe("The scene number that answers the question"),
+  scenes: external_exports.array(external_exports.number().int().positive()).min(1).describe("Scene numbers in playback order")
+}).strict();
+var structureSchema = external_exports.object({
+  version: external_exports.literal(STRUCTURE_VERSION),
+  sequences: external_exports.array(sequenceSchema).min(1),
+  scenes: external_exports.array(sceneSchema).min(1)
+}).strict();
+var shotSchema = external_exports.object({
+  type: tuple(V.TYPES),
+  title: external_exports.string().optional(),
+  narration: external_exports.array(external_exports.object({ tts: external_exports.string(), sub: external_exports.string().optional() }).passthrough()).optional(),
+  visual: external_exports.record(external_exports.unknown()).optional(),
+  duration: external_exports.number().positive().optional(),
+  scene: external_exports.number().int().positive().optional(),
+  sceneSlug: external_exports.string().optional(),
+  sequence: external_exports.string().optional(),
+  transition: external_exports.string().regex(V.TRANSITION_RE, "not a join from scenes-schema \xA7scene transition").optional(),
+  beat: tuple(V.BEATS).optional(),
+  arc: tuple(V.ARCS).optional(),
+  hookType: tuple(V.HOOK_TYPES).optional(),
+  hookForm: tuple(V.HOOK_FORMS).optional(),
+  chapter: external_exports.string().optional(),
+  after: external_exports.number().int().positive().optional(),
+  shot: external_exports.object({
+    feel: external_exports.string().optional(),
+    size: tuple(V.SIZES).optional(),
+    angle: tuple(V.ANGLES).optional(),
+    info: external_exports.string().optional(),
+    infoType: tuple(V.INFO_TYPES).optional(),
+    share: external_exports.string().optional(),
+    shareType: tuple(V.SHARE_TYPES).optional(),
+    space: external_exports.record(external_exports.unknown()).optional(),
+    render: external_exports.object({ mode: tuple(V.RENDER_MODES), purpose: external_exports.string().optional(), reason: external_exports.string().optional() }).passthrough().optional()
+  }).passthrough().optional(),
+  sound: external_exports.record(external_exports.unknown()).optional()
+}).passthrough();
+var readLevelSchema = external_exports.enum(["outline", "scenes", "shots", "full"]);
+var storyboardReadSchema = external_exports.object({
+  path: external_exports.string().min(1).describe("The storyboard directory, or its scenes.js"),
+  level: readLevelSchema.default("shots").describe("outline = sequences with scene numbers \xB7 scenes = scene cards with shot numbers \xB7 shots = every shot summarised under its scene \xB7 full = the raw shot objects too")
+});
+var storyboardCheckSchema = external_exports.object({
+  path: external_exports.string().min(1).describe("The storyboard directory, or its scenes.js"),
+  draft: external_exports.boolean().default(false).describe("The story pass (storyboard \xA74a) \u2014 machine-layer absences are deferred, not violations")
+});
+var globalsSchema = external_exports.record(external_exports.string().regex(/^[A-Z][A-Z0-9_]*$/, "a window.* global is UPPER_CASE"), external_exports.unknown());
+var storyboardApplySchema = external_exports.object({
+  path: external_exports.string().min(1).describe("The storyboard directory (scenes.js is created there when missing), or its scenes.js"),
+  set: external_exports.object({ structure: structureSchema, shots: external_exports.array(shotSchema).min(1) }).optional().describe("Replace the whole board \u2014 the structure and every shot. The way a new board is written"),
+  structure: structureSchema.optional().describe("Replace window.STRUCTURE only"),
+  sequences: external_exports.array(sequenceSchema).optional().describe("Upsert sequences by id"),
+  scenes: external_exports.array(sceneSchema).optional().describe("Upsert scenes by no"),
+  shots: external_exports.array(external_exports.object({ no: external_exports.number().int().positive(), shot: shotSchema })).optional().describe("Upsert shots by 1-based position; no = length + 1 appends"),
+  insertShots: external_exports.array(external_exports.object({ after: external_exports.number().int().min(0), shots: external_exports.array(shotSchema).min(1) })).optional().describe("Insert shots after a 1-based position (0 = at the start). Later positions shift"),
+  removeShots: external_exports.array(external_exports.number().int().positive()).optional().describe("1-based positions to drop, resolved before the insert"),
+  removeScenes: external_exports.array(external_exports.number().int().positive()).optional(),
+  removeSequences: external_exports.array(external_exports.string()).optional(),
+  globals: globalsSchema.optional().describe("Set other window.* blocks \u2014 FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, VOICE, MOTION_POLICY"),
+  dryRun: external_exports.boolean().default(false).describe("Validate and report, write nothing")
+});
+function scenesPath(target) {
+  const abs = resolve3(target);
+  if (basename7(abs) === "scenes.js") return abs;
+  return join10(abs, "scenes.js");
+}
+function readBoard(target) {
+  const file = scenesPath(target);
+  if (!existsSync11(file)) throw new Error(`no scenes.js at ${file}`);
+  if (!statSync4(file).isFile()) throw new Error(`${file} is not a file`);
+  const src = readFileSync7(file, "utf8");
+  const header = [];
+  for (const line of src.split("\n")) {
+    if (/^\s*\/\//.test(line)) header.push(line.trim());
+    else if (line.trim()) break;
+  }
+  const win = {};
+  const sandbox = { window: win, console: { log() {
+  }, warn() {
+  }, error() {
+  } } };
+  sandbox.globalThis = sandbox;
+  try {
+    vm.runInNewContext(src, sandbox, { filename: file, timeout: 5e3 });
+  } catch (e2) {
+    throw new Error(`failed to evaluate ${file}: ${e2.message}`);
+  }
+  if (!Array.isArray(win.SCENES)) throw new Error(`${file} has no window.SCENES array`);
+  return { file, header, win };
+}
+var GLOBAL_ORDER = ["FORMAT", "VOICE", "THEME", "COMPREHENSION", "STORY", "PRODUCTION", "MOTION_POLICY", "MUSIC", "STRUCTURE", "SCENES"];
+function serializeBoard(win, header = []) {
+  const keys = Object.keys(win).filter((k) => win[k] !== void 0);
+  keys.sort((a, b) => {
+    const ia = GLOBAL_ORDER.indexOf(a), ib = GLOBAL_ORDER.indexOf(b);
+    if (ia !== -1 || ib !== -1) return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+    return a.localeCompare(b);
+  });
+  const lines = header.filter((h2) => !/^\/\/\s*approved:/.test(h2));
+  if (lines.length) lines.push("");
+  for (const k of keys) lines.push(`window.${k} = ${JSON.stringify(win[k], null, 2)};`);
+  return lines.join("\n") + "\n";
+}
+function upsertBy(list, items, key) {
+  const out = list.slice();
+  for (const item of items) {
+    const i2 = out.findIndex((x2) => x2[key] === item[key]);
+    if (i2 === -1) out.push(item);
+    else out[i2] = item;
+  }
+  return out;
+}
+function validateShots(shots) {
+  const out = [];
+  shots.forEach((s2, i2) => {
+    const parsed = shotSchema.safeParse(s2);
+    if (parsed.success) return;
+    for (const issue2 of parsed.error.issues) out.push({ level: "bad", where: `shot ${i2 + 1}`, what: `${issue2.path.join(".") || "(root)"}: ${issue2.message}` });
+  });
+  return out;
+}
+function validateStructure(structure) {
+  const parsed = structureSchema.safeParse(structure);
+  if (parsed.success) return [];
+  return parsed.error.issues.map((issue2) => ({ level: "bad", where: "structure", what: `${issue2.path.join(".") || "(root)"}: ${issue2.message}` }));
+}
+function applyPatch(win, patch) {
+  const next = { ...win };
+  if (patch.globals) for (const [k, v] of Object.entries(patch.globals)) {
+    if (k === "SCENES" || k === "STRUCTURE") throw new Error(`set ${k} through the dedicated fields, not globals`);
+    next[k] = v;
+  }
+  if (patch.set) {
+    next.STRUCTURE = patch.set.structure;
+    next.SCENES = patch.set.shots.slice();
+  }
+  if (patch.structure) next.STRUCTURE = patch.structure;
+  const st = next.STRUCTURE ?? { version: STRUCTURE_VERSION, sequences: [], scenes: [] };
+  if (!Array.isArray(st.sequences) || !Array.isArray(st.scenes) || st.scenes.some((sc) => !sc || typeof sc !== "object") || st.sequences.some((q) => !q || typeof q !== "object" || !Array.isArray(q.scenes)))
+    return { win: next, findings: [{ level: "bad", where: "structure", what: "STRUCTURE.sequences and STRUCTURE.scenes are arrays of objects \u2014 this board was hand-edited into a shape the tools cannot patch; rewrite it with `set`" }], synced: 0 };
+  let sequences = st.sequences.slice();
+  let scenes = st.scenes.slice();
+  if (patch.sequences) sequences = upsertBy(sequences, patch.sequences, "id");
+  if (patch.scenes) scenes = upsertBy(scenes, patch.scenes, "no");
+  if (patch.removeScenes) {
+    const drop = new Set(patch.removeScenes);
+    scenes = scenes.filter((sc) => !drop.has(sc.no));
+    sequences = sequences.map((q) => ({ ...q, scenes: q.scenes.filter((no) => !drop.has(no)) }));
+  }
+  if (patch.removeSequences) {
+    const drop = new Set(patch.removeSequences);
+    sequences = sequences.filter((q) => !drop.has(q.id));
+  }
+  if (patch.sequences || patch.scenes || patch.removeScenes || patch.removeSequences || next.STRUCTURE)
+    next.STRUCTURE = { version: st.version ?? STRUCTURE_VERSION, sequences, scenes };
+  let shots = Array.isArray(next.SCENES) ? next.SCENES.slice() : [];
+  if (patch.shots) for (const { no, shot } of patch.shots.slice().sort((a, b) => a.no - b.no)) {
+    if (no > shots.length + 1) throw new Error(`shot ${no}: the board has ${shots.length} shots \u2014 no = ${shots.length + 1} appends`);
+    shots[no - 1] = shot;
+  }
+  if (patch.removeShots) {
+    const drop = new Set(patch.removeShots);
+    for (const no of drop) if (no > shots.length) throw new Error(`removeShots: there is no shot ${no}`);
+    shots = shots.filter((_, i2) => !drop.has(i2 + 1));
+  }
+  if (patch.insertShots) {
+    const inserts = patch.insertShots.slice().sort((a, b) => b.after - a.after);
+    for (const { after, shots: add } of inserts) {
+      if (after > shots.length) throw new Error(`insertShots: after ${after} is past the last shot (${shots.length})`);
+      shots.splice(after, 0, ...add);
+    }
+  }
+  next.SCENES = shots.map((shot) => ({ ...shot }));
+  const findings = [];
+  if (!shots.length) findings.push({ level: "bad", where: "board", what: "the board has no shots" });
+  if (next.STRUCTURE === void 0) findings.push({ level: "bad", where: "structure", what: "no window.STRUCTURE \u2014 write the sequences and scenes (set, structure, sequences + scenes)" });
+  else findings.push(...validateStructure(next.STRUCTURE));
+  findings.push(...validateShots(shots));
+  let synced = 0;
+  if (!findings.some((f3) => f3.level === "bad")) {
+    synced = contract().sync(next);
+    findings.push(...contract().check(next));
+  }
+  return { win: next, findings, synced };
+}
+function applyStoryboard(args) {
+  const file = scenesPath(args.path);
+  const exists = existsSync11(file);
+  let header = [];
+  let win = {};
+  if (exists) ({ header, win } = readBoard(file));
+  else if (!args.set) throw new Error(`no scenes.js at ${file} \u2014 a new board is written with \`set\` (structure + shots)`);
+  else if (!existsSync11(dirname5(file))) throw new Error(`directory does not exist: ${dirname5(file)}`);
+  const { win: next, findings, synced } = applyPatch(win, args);
+  const bad = findings.some((f3) => f3.level === "bad");
+  const st = next.STRUCTURE;
+  const result = {
+    file,
+    written: false,
+    created: !exists,
+    approvalDropped: header.some((h2) => /^\/\/\s*approved:/.test(h2)),
+    shots: (next.SCENES ?? []).length,
+    scenes: st ? st.scenes.length : 0,
+    sequences: st ? st.sequences.length : 0,
+    synced,
+    findings
+  };
+  if (bad || args.dryRun) return result;
+  const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
+  try {
+    writeFileSync7(tmp, serializeBoard(next, header), "utf8");
+    renameSync3(tmp, file);
+  } catch (err4) {
+    try {
+      unlinkSync(tmp);
+    } catch {
+    }
+    throw err4;
+  }
+  result.written = true;
+  return result;
+}
+function checkStoryboard(args) {
+  const { file, win } = readBoard(args.path);
+  const structure = contract().check(win);
+  const argv = [CHECK_SCENES_FILE, file, "--json"];
+  if (args.draft) argv.push("--draft");
+  let raw = "";
+  try {
+    raw = execFileSync(process.execPath, argv, { encoding: "utf8", timeout: 6e4, stdio: ["ignore", "pipe", "pipe"] });
+  } catch (e2) {
+    const err4 = e2;
+    raw = err4.stdout || "";
+    if (!raw.trim()) throw new Error(`check-scenes.js failed: ${(err4.stderr || err4.message).trim()}`);
+  }
+  let parsed = {};
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error(`check-scenes.js returned no JSON: ${raw.slice(0, 400)}`);
+  }
+  const dup = new Set(structure.map((f3) => f3.level + "\0" + f3.where + "\0" + f3.what));
+  const rest = (parsed.findings ?? []).filter((f3) => !dup.has(f3.level + "\0" + f3.where + "\0" + f3.what));
+  const all = structure.concat(rest);
+  return {
+    file,
+    format: parsed.format ?? String(win.FORMAT ?? "shorts-9x16"),
+    shots: (win.SCENES ?? []).length,
+    draft: args.draft,
+    structure,
+    contract: rest,
+    violations: all.filter((f3) => f3.level === "bad").length,
+    warnings: all.filter((f3) => f3.level === "warn").length,
+    deferred: all.filter((f3) => f3.level === "later").length
+  };
+}
+function renderFindings(findings) {
+  if (!findings.length) return "  (none)";
+  const mark = { bad: "!", warn: "\xB7", later: "\u2026" };
+  return findings.map((f3) => `  ${mark[f3.level]} ${f3.where.padEnd(12)} ${f3.what}`).join("\n");
+}
+function renderApply(r2) {
+  const bad = r2.findings.filter((f3) => f3.level === "bad");
+  const head = r2.written ? `${r2.created ? "Created" : "Wrote"} ${r2.file}` : bad.length ? `NOT written \u2014 ${bad.length} violation(s) in ${r2.file}` : `Dry run \u2014 ${r2.file} untouched`;
+  const lines = [head, `  ${r2.sequences} sequence(s) \xB7 ${r2.scenes} scene(s) \xB7 ${r2.shots} shot(s) \xB7 ${r2.synced} shot label(s) synced from the structure`];
+  if (r2.approvalDropped && r2.written) lines.push("  the `// approved:` line was dropped \u2014 an edited board is approved again at the HITL gate");
+  lines.push("Findings:", renderFindings(r2.findings));
+  return lines.join("\n");
+}
+function renderCheck(r2) {
+  const lines = [
+    `scenes.js contract \u2014 ${r2.format} \xB7 ${r2.shots} shots${r2.draft ? " \xB7 story pass (--draft)" : ""}`,
+    `  ${r2.violations} violation(s), ${r2.warnings} to look at${r2.draft ? `, ${r2.deferred} deferred to \xA74b` : ""}`,
+    "Structure (sequences \u2192 scenes \u2192 shots):",
+    renderFindings(r2.structure),
+    "Shot contract (check-scenes.js):",
+    renderFindings(r2.contract)
+  ];
+  return lines.join("\n");
+}
+
 // src/omni-client.ts
 import * as fs6 from "node:fs";
 var OMNI_MODEL = "gemini-omni-1.1-flash";
@@ -88159,7 +88584,7 @@ function requireOneSource(data, ctx) {
 var omniExtendSchema = external_exports.object({ ...continuationFields, durationSeconds: durationSchema2 }).superRefine(requireOneSource);
 var omniEditSchema = external_exports.object(continuationFields).superRefine(requireOneSource);
 function sleep7(ms) {
-  return new Promise((resolve4) => setTimeout(resolve4, ms));
+  return new Promise((resolve5) => setTimeout(resolve5, ms));
 }
 function readInlineFile(filePath, kind) {
   const data = fs6.readFileSync(filePath).toString("base64");
@@ -88507,7 +88932,7 @@ async function downloadVideo2(apiKey, videoUri) {
   return Buffer.from(arrayBuffer);
 }
 function sleep8(ms) {
-  return new Promise((resolve4) => setTimeout(resolve4, ms));
+  return new Promise((resolve5) => setTimeout(resolve5, ms));
 }
 async function awaitVideoAndSave2(apiKey, operationName, outputPath, filename, label) {
   let pollCount = 0;
@@ -88784,8 +89209,8 @@ async function generateWithReferences2(request) {
 }
 
 // src/content-feedback.ts
-import { mkdirSync as mkdirSync5, writeFileSync as writeFileSync9 } from "node:fs";
-import { dirname as dirname5, isAbsolute, join as join10, resolve as resolve3 } from "node:path";
+import { mkdirSync as mkdirSync5, writeFileSync as writeFileSync10 } from "node:fs";
+import { dirname as dirname6, isAbsolute, join as join11, resolve as resolve4 } from "node:path";
 
 // src/content-feedback-html.ts
 function escapeHtml(value) {
@@ -89370,14 +89795,14 @@ function analyzeInstagramMedia(media, limit2) {
   return { items, cohort, notes };
 }
 function defaultHtmlPath(channel) {
-  return join10(process.cwd(), "data", channel, "growth", "review-recent.html");
+  return join11(process.cwd(), "data", channel, "growth", "review-recent.html");
 }
 function resolveHtmlPath(channel, outputPath) {
   if (outputPath) {
     if (outputPath.includes("..")) {
       throw new Error(`Path traversal detected: ${outputPath}`);
     }
-    const resolved = isAbsolute(outputPath) ? outputPath : resolve3(process.cwd(), outputPath);
+    const resolved = isAbsolute(outputPath) ? outputPath : resolve4(process.cwd(), outputPath);
     if (!resolved.toLowerCase().endsWith(".html")) {
       throw new Error(`outputPath must end in .html: ${outputPath}`);
     }
@@ -89416,8 +89841,8 @@ async function contentFeedback(input) {
     instagram
   };
   if (htmlPath) {
-    mkdirSync5(dirname5(htmlPath), { recursive: true });
-    writeFileSync9(htmlPath, renderFeedbackHtml(report), "utf8");
+    mkdirSync5(dirname6(htmlPath), { recursive: true });
+    writeFileSync10(htmlPath, renderFeedbackHtml(report), "utf8");
   }
   return { ok: true, status: 200, body: JSON.stringify(report) };
 }
@@ -90459,14 +90884,14 @@ ${errors.join("\n")}`);
 }
 
 // src/capability-status.ts
-import { existsSync as existsSync12 } from "node:fs";
+import { existsSync as existsSync13 } from "node:fs";
 import path9 from "node:path";
 import os from "node:os";
 var has2 = (v) => Boolean(v && v.length > 0);
 var binOk = (p) => {
   try {
-    if (p.includes(path9.sep)) return existsSync12(p);
-    return (process.env.PATH || "").split(path9.delimiter).some((dir) => dir && existsSync12(path9.join(dir, p)));
+    if (p.includes(path9.sep)) return existsSync13(p);
+    return (process.env.PATH || "").split(path9.delimiter).some((dir) => dir && existsSync13(path9.join(dir, p)));
   } catch {
     return false;
   }
@@ -91978,12 +92403,29 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
   threads_search: async (args) => {
     const input = parseArgs(threadsSearchSchema, args);
     return fromApi(await threadsKeywordSearch(input));
+  },
+  // ── Storyboard ──
+  storyboard_read: async (args) => {
+    contract();
+    const a = parseArgs(storyboardReadSchema, args);
+    const { win } = readBoard(a.path);
+    return text(JSON.stringify(contract().outline(win, a.level), null, 2));
+  },
+  storyboard_apply: async (args) => {
+    contract();
+    const r2 = applyStoryboard(parseArgs(storyboardApplySchema, args));
+    return text(renderApply(r2), r2.findings.some((f3) => f3.level === "bad"));
+  },
+  storyboard_check: async (args) => {
+    contract();
+    const r2 = checkStoryboard(parseArgs(storyboardCheckSchema, args));
+    return text(renderCheck(r2), r2.violations > 0);
   }
 };
 
 // src/index.ts
 var server = new Server(
-  { name: "social-flow", version: "0.66.0" },
+  { name: "social-flow", version: "0.67.0" },
   { capabilities: { tools: {} } }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {
