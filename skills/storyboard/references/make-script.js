@@ -179,7 +179,7 @@ list.forEach(({ s, no, at }) => {
     // window.STRUCTURE (scenes-schema §structure) — the scene's event and turn, so the person
     // filming knows what has to change on camera before the first shot heading.
     const sc = (window.STRUCTURE && Array.isArray(window.STRUCTURE.scenes) ? window.STRUCTURE.scenes : []).find(x => x && x.no === s.scene);
-    if (sc) m += `\n사건: ${sc.event}${sc.charge && sc.charge.open !== undefined && sc.charge.close !== undefined ? ` · 전환: ${sc.charge.open} → ${sc.charge.close}` : ""}, ${sc.turn}\n`;
+    if (sc) m += `\n사건: ${sc.event || ""}${sc.charge && sc.charge.open !== undefined && sc.charge.close !== undefined ? ` · 전환: ${sc.charge.open} → ${sc.charge.close}` : ""}, ${sc.turn || ""}\n`;
   }
   const beat = { hook: "커버", hooking: "후킹", result: "결과물", body: "내용", turn: "전환", cta: "마무리" }[s.beat] || s.beat || s.type;
   m += `\n#### 샷 ${no} — ${plain(s.title) || s.type} · ${beat} · ${s.duration}초\n\n`;

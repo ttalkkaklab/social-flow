@@ -3433,17 +3433,20 @@ window.SB_DOC = {
   /* window.STRUCTURE (scenes-schema §structure) — the sequence's purpose under its heading and
      the scene's event and turn under the band head. Boards without it draw the labels alone. */
   var ST = window.STRUCTURE || {};
-  var stScene = function (no) { return (ST.scenes || []).filter(function (x) { return x.no === no; })[0]; };
+  // A hand-edited scenes.js can hold null entries — the check strip reports them; the list still draws.
+  var stScenes = Array.isArray(ST.scenes) ? ST.scenes.filter(function (x) { return x && typeof x === "object"; }) : [];
+  var stSeqs = Array.isArray(ST.sequences) ? ST.sequences.filter(function (q) { return q && typeof q === "object"; }) : [];
+  var stScene = function (no) { return stScenes.filter(function (x) { return x.no === no; })[0]; };
   var seqHead = function (title, q) {
     return '<div class="seq-head">' + esc(T.sequence(title)) +
       (q && q.purpose ? '<span class="seq-purpose"> — ' + esc(q.purpose) +
         (q.question ? ' · ' + esc(q.question) + (q.payoff ? ' → S#' + esc(String(q.payoff)) : '') : '') + "</span>" : '') + "</div>";
   };
-  if ((ST.sequences || []).length === 1 && !shotGroups.some(function (g) { return g.sequence; }))
-    h += seqHead(ST.sequences[0].title, ST.sequences[0]);
+  if (stSeqs.length === 1 && !shotGroups.some(function (g) { return g.sequence; }))
+    h += seqHead(stSeqs[0].title, stSeqs[0]);
   shotGroups.forEach(function (grp) {
     if (grp.sequence && grp.sequence !== prevSeq) {
-      h += seqHead(grp.sequence, (ST.sequences || []).filter(function (q) { return q.title === grp.sequence; })[0]);
+      h += seqHead(grp.sequence, stSeqs.filter(function (q) { return q.title === grp.sequence; })[0]);
       prevSeq = grp.sequence;
     }
     if (hasSceneField) {

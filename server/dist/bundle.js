@@ -88186,7 +88186,7 @@ async function checkAccounts(channel) {
 
 // src/storyboard.ts
 import { execFileSync } from "node:child_process";
-import { existsSync as existsSync11, readFileSync as readFileSync7, renameSync as renameSync3, statSync as statSync4, writeFileSync as writeFileSync7 } from "node:fs";
+import { existsSync as existsSync11, readFileSync as readFileSync7, renameSync as renameSync3, statSync as statSync4, unlinkSync, writeFileSync as writeFileSync7 } from "node:fs";
 import * as nodeModule from "node:module";
 import { basename as basename7, dirname as dirname5, join as join10, resolve as resolve3 } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -88388,7 +88388,7 @@ function applyPatch(win, patch) {
   }
   if (patch.structure) next.STRUCTURE = patch.structure;
   const st = next.STRUCTURE ?? { version: STRUCTURE_VERSION, sequences: [], scenes: [] };
-  if (!Array.isArray(st.sequences) || !Array.isArray(st.scenes) || st.scenes.some((sc) => !sc || typeof sc !== "object"))
+  if (!Array.isArray(st.sequences) || !Array.isArray(st.scenes) || st.scenes.some((sc) => !sc || typeof sc !== "object") || st.sequences.some((q) => !q || typeof q !== "object" || !Array.isArray(q.scenes)))
     return { win: next, findings: [{ level: "bad", where: "structure", what: "STRUCTURE.sequences and STRUCTURE.scenes are arrays of objects \u2014 this board was hand-edited into a shape the tools cannot patch; rewrite it with `set`" }], synced: 0 };
   let sequences = st.sequences.slice();
   let scenes = st.scenes.slice();
@@ -88459,8 +88459,16 @@ function applyStoryboard(args) {
   };
   if (bad || args.dryRun) return result;
   const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
-  writeFileSync7(tmp, serializeBoard(next, header), "utf8");
-  renameSync3(tmp, file);
+  try {
+    writeFileSync7(tmp, serializeBoard(next, header), "utf8");
+    renameSync3(tmp, file);
+  } catch (err4) {
+    try {
+      unlinkSync(tmp);
+    } catch {
+    }
+    throw err4;
+  }
   result.written = true;
   return result;
 }
