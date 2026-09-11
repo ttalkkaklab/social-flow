@@ -27,10 +27,11 @@ wrote (who is in the source, whether the slot uses its sound, the duration), **t
 records the planned route** — `visual.engine`, or the type default (b-roll → veo, motion
 background → seedance, speech clip → veo_reference) — and writes the stored prompt in that
 route's grammar. This section is how you **validate** the route against those facts, not
-re-decide it. The one live deviation is a missing `ARK_API_KEY` sending a Seedance-routed
-motion background to Veo — the stored prompt survives that as written (no timecodes on a
-Seedance route, and the positive-locks tail is harmless prose to Veo; the stored `negative`
-list moves into the `negativePrompt` argument) — and the deviation goes in `build-report.txt`.
+re-decide it. There is no live deviation for a motion background any more: every generated
+motion background is a previz cut and the previz rides only Seedance 2.x (blender-previz.md
+§6), so a missing `ARK_API_KEY` means the cut waits for the key or moves to the host lane
+(`videoProvider:"host"`) — never a Veo substitute, which takes no reference clip. A held cut
+goes in `build-report.txt` with the reason.
 A route that fails validation (a real face on a 2.x model, a 13-second Veo scene) is a
 storyboard defect: send it back.
 
@@ -187,8 +188,8 @@ generated cover. These three are generated only when the episode has that kind o
     (**`.work/broll/broll-a<after>.mp4`**) — it's the reference point for a retrim.
     There's one reason `after` is in the filename — two slots with the same name overwrite
     each other.
-  Send the scene's stored `visual.prompt` verbatim, with the stored `visual.negative` noun
-  list in the `negativePrompt` argument (this slot is a Veo call). On an older scenes.js with
+  Send the scene's stored `visual.prompt` verbatim. On fast/standard the stored `visual.negative`
+  noun list rides in the `negativePrompt` argument; lite takes no `negativePrompt` (the API returns 400 and `video-client.ts` refuses the argument before the call) — every exclusion goes into the prompt body as positive description, so the b-roll recipe above (lite) sends none. On an older scenes.js with
   no stored prompt, assemble from the `visual.camera` four slots (above), keep it **motion
   only, in English**, and add the audio instruction at the end — `dolly in`, not `push in`
   (the vocabulary rule above). For example:
@@ -210,10 +211,10 @@ generated cover. These three are generated only when the episode has that kind o
   **`.work/motion/motion-i<scene index>.mp4`**.
   **This is Seedance's slot** (the video engine split above) — `seedance_reference` with the
   cut's previz (`durationSeconds` = the length that scene uses · the grade in
-  `PRODUCTION.videoModel` · `generateAudio: false`; `seedance_img2video` on 1.5 Pro only for a
-  slot without a previz). Without `ARK_API_KEY`, make it with
-  `veo_img2video` (`aspectRatio: "9:16"` · `resolution: "1080p"` · `durationSeconds: 8` ·
-  `veo-3.1-lite-generate-preview`). Use `visual.video.prompt` verbatim as the prompt — the
+  `PRODUCTION.videoModel` · `generateAudio: false`; 1.5 Pro image-to-video is only for a b-roll
+  or speech slot that landed on Seedance, never a motion background). Without `ARK_API_KEY` the
+  cut waits or moves to the host lane — a previz cut has no Veo fallback (no clip input
+  there). Use `visual.video.prompt` verbatim as the prompt — the
   stored final clip prompt (camera span, subject motion, the consistency lock, the audio
   sentence; on an older file it holds the motion only, and the camera span is assembled from
   the slots). It never re-describes **the layout, facing or lighting** — the PNG already drew

@@ -905,7 +905,7 @@ whether the declared type tells the truth and whether the declared trigger is re
     scenes — the one route since 2026-09-05; a clip with marks or labels over it is retired and
     a P0 wherever it appears). A wrong role, missing `motionBeats`, or a narration group with
     no semantic primitive is the same defect
-15. **One picture under the narration — the scene's picture does not change for longer than
+15. **One picture under the narration** — the scene's picture does not change for longer than
     the channel's static-ground limit (`window.MOTION_POLICY.maxStaticGroundSeconds`, default
     8 s — one still may hold one cut under its camera move, directive 2026-09-05): a points
     still that runs past a cut's length, an HTML plate or kinetic screen that runs a whole

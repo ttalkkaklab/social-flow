@@ -375,8 +375,8 @@ function usd(n) { return '$' + n.toFixed(2); }
    check-scenes.js carries in its motion policy) caps what one episode may spend on
    generated video: b-roll, motion backgrounds, quote clips and footage shots, billed and
    projected together. Stills, TTS and music are outside it. Over the budget the verdict
-   is `!!` and exit 1 — storyboard §5 fits the board first (scenes-schema §Channel true-motion policy has the
-   ladder) and asks the user only for a number that fits. */
+   is `!!` and exit 1 — storyboard §5 fits the board first (scenes-schema §Channel true-motion policy,
+   "Fitting the board to videoBudgetUsd", has the ladder) and asks the user only for a number that fits. */
 const VIDEO_BUDGET_DEFAULT_USD = 10;
 const VIDEO_FAMILIES = ['seedance', 'veo'];
 
@@ -426,7 +426,7 @@ function budgetVerdict(spentItems, forecastTotal, budgetUsd) {
   return { budgetUsd, spent, forecast: forecastTotal, committed, over,
            line: budgetUsd === null ? null
              : (over ? '!! ' : '   ') + 'video budget ' + usd(committed) + ' committed of ' + usd(budgetUsd) +
-               (over ? ' — over by ' + usd(committed - budgetUsd) + '; fit the board before generating (storyboard §5)'
+               (over ? ' — over by ' + usd(committed - budgetUsd) + '; fit the board before generating (storyboard §5 · scenes-schema §Channel true-motion policy ladder)'
                      : ' (' + usd(budgetUsd - committed) + ' headroom for regenerations)') };
 }
 

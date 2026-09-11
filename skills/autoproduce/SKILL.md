@@ -25,7 +25,7 @@ allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Age
   "mcp__social-flow__tts_generate_checked", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue",
   "mcp__social-flow__tts_list_voices", "mcp__social-flow__mlx_tts_generate",
   "mcp__social-flow__veo_img2video",
-  "mcp__social-flow__seedance_img2video",
+  "mcp__social-flow__seedance_img2video", "mcp__social-flow__seedance_reference",
   "mcp__social-flow__music_generate_clip", "mcp__social-flow__mlx_music_generate"]
 ---
 
@@ -658,15 +658,24 @@ the price.
   arguments. Replace the baseline video projection in `.work/cost-estimate.tsv` with those
   model-specific rows and rerun the full episode cap check, including spent attempts.
   Never add a paid comparison by default or exceed the standing budget for an upgrade.
-- **Hook motion background (only when selected by the cut plan)** — `shot.render` must
-  justify continuous action or the channel must explicitly require `hook_video`: `seedance_img2video` silent, 1080p, the
-  cover-background PNG as the source, the cover's `duration` as the requested length
-  (4–8 s — Seedance bills the seconds asked for; use the resolved per-cut model above), the storyboard's stored
-  `visual.video.prompt` sent verbatim. The builder keeps only the video track, so the
-  narration, subtitles and the code-rendered title stay. Without `ARK_API_KEY` the slot
-  falls back to `veo_img2video` lite 1080p (8 s billed whatever the cover uses).
+- **Hook motion background (only when selected by the cut plan, and only with standing
+  answers)** — every generated cut is a 3D previz cut with two HITL choices behind it
+  (CLAUDE.md §AI video cuts are pre-rendered in 3D first): the previz renderer and the video
+  model. The unattended loop cannot ask, so it plans a `generated_video` cut **only when the
+  growth plan's `autoproduce:` block names both** — `previz_renderer: threejs` (Blender needs
+  a machine with it) and `video_model: dreamina-seedance-2-0-mini-260615 720p` (or another
+  2.x grade) — and records them as `PRODUCTION.previz` / `PRODUCTION.videoModel` with
+  `selection.kind: "standing"` and the plan as the reference. Without both, `hook_video` stays
+  off and the opening is a still with a camera move; `production-mode.js` refuses the board
+  otherwise. With them: render the three.js previz (`previz-template.html` →
+  `render-motion-slide.mjs --previz`), edit the cover still from its first frame, and call
+  `seedance_reference` with the previz as `referenceVideoPaths`, the stored `visual.video.prompt`
+  verbatim, `generateAudio: false`, the cover's `duration` (4–8 s; input plus output seconds are
+  billed on the `…-video` rows — 2.0 mini 720p ≈ $0.54 for a 6 s cut, 2.0 1080p ≈ $2.74). The
+  builder keeps only the video track, so the narration, subtitles and the code-rendered title
+  stay. No `ARK_API_KEY` means no hook video (the previz has no Veo fallback).
   `.work/motion/motion-i0.mp4`. This is the one slot the baseline pays for
-  (cost-tiers §economy baseline — about $0.35 seedance · $0.64 veo lite).
+  (cost-tiers §economy baseline).
 - **Opening b-roll (only when escalated)** — `veo_img2video`
   (`aspectRatio: "9:16"`, `resolution: "1080p"`, `durationSeconds: 8`, model
   `veo-3.1-lite-generate-preview` — in blind-arena testing the three tiers'
@@ -686,8 +695,8 @@ the price.
   `duration` (default 4s)** — per produce §6's trim+mix conventions, cut from
   the head of the original and keep the original. No upscaling (the body is
   1080×1920 — user decision 2026-08-11 not to go down to 720p).
-  **Send the scene's stored `visual.prompt` verbatim**, with `visual.negative`
-  in the `negativePrompt` argument (scenes-schema §clip prompt); an older
+  **Send the scene's stored `visual.prompt` verbatim** — on lite without `negativePrompt`
+  (lite takes no `negativePrompt` (the API returns 400 and `video-client.ts` refuses the argument before the call) — every exclusion goes into the prompt body as positive description; scenes-schema §clip prompt); an older
   scenes.js with no stored prompt gets the fallback assembly — English, motion
   only, one line of audio directives at the end. Re-describing what's already
   visible in the source image makes the model

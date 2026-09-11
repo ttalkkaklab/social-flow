@@ -244,10 +244,12 @@ A realistic paid episode is small. The default economy tier spends about
 **$0.27–0.29** — one high-quality cover image plus one 30-second BGM clip, with
 everything else local — against a per-episode cap the growth plan sets
 (`max_cost_per_video`, template default $1.00) and the pipeline enforces before
-spending, not after. Generated video is the expensive step: a silent Seedance hook
-clip takes the episode to about $0.61 and one 8-second Veo lite escalation adds
-roughly $0.64, which is why both stay off unless the cut needs true motion, hook
-metrics justify it, and the cap allows it.
+spending, not after. Generated video is the expensive step: a silent previz-guided
+Seedance hook clip takes the episode to about $0.81 on the 2.0 mini grade (about $3.00
+on 2.0 at 1080p) and one 8-second Veo lite escalation adds roughly $0.64, which is why both
+stay off unless the cut needs true motion, hook metrics justify it, the cap allows it, and
+— for the hook — the growth plan names the previz renderer and video model the unattended
+loop cannot ask for.
 
 Prices live in one file, `skills/autoproduce/references/prices.tsv`, each row
 carrying its evidence grade and source. `cost-report.sh` reads only that file and
@@ -376,8 +378,9 @@ scenario candidates judged in one batched read
 checker and the contract checkers, build report (drift 0), one content-reviewer read at 95
 with P0=0, and a cost cap. The **economy tier is the
 default**: still backgrounds with Ken Burns and HTML motion slides, roughly $0.27–0.29 per
-episode (a silent Seedance hook clip, only where the routing or an explicit `hook_video`
-picks video, takes it to about $0.61, $0.90 on the veo-lite fallback; plan cap default $1.00);
+episode (a silent previz-guided Seedance hook clip, only where the routing or an explicit
+`hook_video` picks video and the plan names the previz renderer and model, takes it to about
+$0.81 on 2.0 mini 720p; plan cap default $1.00);
 only when hook metrics fall below threshold does the
 one b-roll after the cover get promoted to `veo-3.1-lite`. Authoring is capped at **2 episodes
 per platform loop per day** (hard cap, counting successes and failures), and
@@ -542,7 +545,7 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | Image generation | `gpt_image_text2img` / `gpt_image_img2img` | OpenAI GPT Image (OPENAI_API_KEY — **the text-and-quality path**: text rendering, arbitrary WIDTHxHEIGHT, up to 16 reference images, mask inpainting) |
 | Video generation | `veo_text2video` / `veo_img2video` / `veo_extension` / `veo_reference` | Veo 3.1 (GEMINI_API_KEY — 720p–4k, 4/6/8s grid; **native audio, local-file extension, and live-person reference** are this engine's edge) |
 | Video generation | `omni_text2video` / `omni_img2video` / `omni_extend` / `omni_edit` | Gemini Omni 1.1 Flash (GEMINI_API_KEY, Interactions API — 360p–4k, **any whole 3–10s**, and the only lane that **edits a clip by instruction** or extends a local mp4 to a 40s cumulative cap. **Billed flat ~$1.01 per call** — measured against the spend counter, not per second as the pricing page reads — so a 3s draft costs more than a full 8s veo-3.1-lite shot; worth it at the full 10s or for the edit lane, never for a short cut. No reference-image or negative-prompt field, and its person policy is unmeasured — photoreal faces stay on `veo_img2video`) |
-| Video generation | `seedance_text2video` / `seedance_img2video` / `seedance_reference` | Seedance (ARK_API_KEY, BytePlus ModelArk — 480p–4k, **2–30s in 1-second steps** billed for what you request, 7 aspect ratios, up to 30 reference images plus reference audio — a character's fixed voice (`referenceAudioPaths`, 2.x) — plus reference video (`referenceVideoPaths`, 2.x): the 3D previz as `Video 1`, the vendor's clay-model reference — every generated cut pre-renders in Blender or three.js first (user directive 2026-09-11), so the camera path and timing land as planned; a local clip is served through `MEDIA_UPLOAD_URL` or a cloudflared quick tunnel for the life of the task. Audio can be turned off, so silent cuts are cheap — $0.23 for 1080p 4s vs $0.64 on Veo lite. Ordinary hooks use 1.5 Pro; eligible complex action and reference cuts use 2.0, fixed voice or over nine reference images use 2.5. The storyboard records the reason and forecasts that model's cost. Which engine when: [decision table](skills/produce/references/video-model-selection.md)) |
+| Video generation | `seedance_text2video` / `seedance_img2video` / `seedance_reference` | Seedance (ARK_API_KEY, BytePlus ModelArk — 480p–4k, **2–30s in 1-second steps** billed for what you request, 7 aspect ratios, up to 30 reference images plus reference audio — a character's fixed voice (`referenceAudioPaths`, 2.x) — plus reference video (`referenceVideoPaths`, 2.x): the 3D previz as `Video 1`, the vendor's clay-model reference — every generated cut pre-renders in Blender or three.js first (user directive 2026-09-11), so the camera path and timing land as planned; a local clip is served through `MEDIA_UPLOAD_URL` or a cloudflared quick tunnel for the life of the task. Audio can be turned off, so silent cuts are cheap — $0.23 for 1080p 4s vs $0.64 on Veo lite. Every generated motion background is a previz cut on the 2.x grade the user chose (`PRODUCTION.videoModel`); 1.5 Pro serves only b-roll or speech slots that land on Seedance; fixed voice or over nine reference images use 2.5. The storyboard records the reason and forecasts that model's cost. Which engine when: [decision table](skills/produce/references/video-model-selection.md)) |
 | Video generation | `mlx_video_generate` | MLX Core / mlx-serve (24fps rgb8 muxed to mp4 with ffmpeg. Default 768×1280, RAM-capped at 800MB decoded RGB. Not the default path and not on the Veo/Seedance face-policy table) |
 | Checked narration | `tts_generate_checked` | Generates with the pinned engine and reviews the actual WAV: blind transcript, pronunciation, naturalness and clarity. Up to three takes; current hash-bound PASS required for assembly. Requires Gemini API review even for local TTS; see [speech quality gate](skills/produce/references/tts-quality.md). |
 | Voice generation | `tts_generate` / `tts_multi_speaker` / `tts_list_voices` | Gemini TTS (GEMINI_API_KEY — 30 voices, automatic language detection, saves mono 24kHz wav) |

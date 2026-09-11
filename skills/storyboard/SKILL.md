@@ -199,8 +199,7 @@ Do not lock every figure. Do not write scenes. The question map here is **what w
 know to offer three honest directions** — what people ask, what's actually true, which
 explanations compete, what it touches in the viewer's life now — **3–5 rows**, not the full 5–8.
 
-1. **Write that map before the first search** (`research.md` §Questions). Each row ends
-   answered by claim #N or written off.
+1. **Write that map before the first search** (`research.md` §Questions). Each row ends answered by claim #N or written off.
 2. **Search per question, not per topic, from more than one direction** (the tool guidance
    below). Two or more searches from different tools or types per question, **ten or more**
    logged in all — not three wordings of two lookups. Counter-evidence belongs after the pick.
@@ -717,8 +716,9 @@ Core rules:
   strip warns on a multi-reference clip with no scope anywhere (scenes-schema §character
   reference).
 - **Select Seedance per cut** using produce `references/video-model-selection.md` §Seedance
-  per-cut selection. Ordinary hook: 1.5 Pro. Essential complex action: 2.0 if the source
-  qualifies. Multiple character/product references: 2.0; fixed voice or over nine reference
+  per-cut selection. Every motion background is a previz cut on the 2.x grade in
+  `PRODUCTION.videoModel` (§1.7); 1.5 Pro serves only a b-roll or speech slot that landed on
+  Seedance. Multiple character/product references: 2.0; fixed voice or over nine reference
   images: 2.5. Record the purpose, reason, face eligibility and reference paths beside the
   prompt (scenes-schema §Motion background). Rebuild the cost preview after any change;
   its generation settings are the ones produce sends. Keep the episode video cap without filling unused slots.
@@ -741,7 +741,7 @@ Core rules:
   wide holds ≥1.5× a close. The model fills whatever time it is handed, so asking 8 seconds for a
   4-second idea buys 4 seconds of invention (§cut length). Narration-carrying scenes keep the
   speech math — characters / 4.5 — **and on a motion background that math has to land inside
-  the route's one-call cap** (seedance 12s on the default 1.5 pro, veo 8s): a 13-second
+  the route's one-call cap** (seedance 15s on the 2.0 grades and 30s on 2.5, veo 8s): a 16-second
   narration over a 12-second clip is a loop seam nobody planned, so trim the narration or
   split the scene.
 - **Write what the episode sounds like, not only what it looks like.** Every shot that becomes a
@@ -1013,7 +1013,7 @@ so produce doesn't have to guess.
   local engine breaks Korean jamo (measured: "딸깍연구소" → "달닥연구소").
 - **A scene with `visual.character` → a reference call** (`gpt_image_img2img`), that
   character's panels as input images, face first then body, `back.png` only on a back-facing
-  shot. Never merge the panels into one sheet (`../produce/references/video-model-selection.md` §6).
+  shot. Never merge the panels into one sheet (`../produce/references/video-model-selection.md` §The character panels).
 
 **The cover background is this episode's meta image** — the cover frame becomes `cover.jpg`
 (the YouTube thumbnail and the first frame of the IG and FB videos) as-is. Not a metaphorical
@@ -1057,7 +1057,7 @@ Two generated forms count against the slot cap together:
 - **Motion background (`visual.video`)** — the scene itself as video. The scene's still becomes
   a parameter for a video laid under the background, and **narration, captions, and subtitles
   stay**. Use it where the movement itself is the content. `duration` inside one clip (veo 8s ·
-  seedance 2.x 4–15s on the previz route, 1.5 pro 4–12s on a slot without a previz, server-validated) · points only · not combined with
+  seedance 4–15s on the 2.0 grades and 4–30s on 2.5 — the previz route every motion background takes — server-validated) · points only · not combined with
   per-line illustrations. Store the assembled prompt in `visual.video.prompt` (§clip prompt —
   `--clip --engine seedance --locks "…"`). Three rules hold on that route and the assembler
   exits 1 on each: the body is **English** (Korean only inside a dialogue quote), it **never

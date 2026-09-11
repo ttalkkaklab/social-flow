@@ -185,7 +185,7 @@ The episode's share trigger is settled on the board — `check-scenes.js` fails 
    first because array order is weight. A live-action character keeps its
    single image. Panels handed over as separate files are not a finding;
    panels pasted together into one sheet are. The rule's source of truth is
-   produce `references/video-model-selection.md` §6
+   produce `references/video-model-selection.md` §The character panels
 
 13. **Spatial language the model cannot follow** — the cover `bgPrompt` or a still's
     `shot.space` uses camera-inference (`left view of`, `right view of`, `front view of`),

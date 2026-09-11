@@ -164,7 +164,7 @@ from file://). The character list shows every panel image in
 swaps the main panel from thumbnails, and plays `voice.wav`.
 
 **Panels come back face → front → back** — the order the reference set goes into a
-generation call (`../produce/references/video-model-selection.md` §6), so the card
+generation call (`../produce/references/video-model-selection.md` §The character panels), so the card
 thumbnail and the detail page's opening panel are both the face. Naming isn't uniform
 across channels, so the rank is read off the filename: `face`/`head` is the face,
 `back`/`rear` is the rear, everything else (`body`, `front`, `real`, `three-quarter`)

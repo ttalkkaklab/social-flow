@@ -54,7 +54,7 @@ Under Codex or Grok the host `image_gen` replaces both image rows, and under Gro
 | Layer | What's used | Notes |
 |---|---|---|
 | Cover background | `gpt_image_text2img` quality **`high`**, 1088x1920, 1 image | Photoreal scene in the episode's visual-style preset, a person only when the shot needs one (rule 11) — the cover frame becomes the thumbnail as-is (absolute rule 12) and is the source of the hook motion background; on escalated episodes it doubles as the b-roll source |
-| Optional selected video hook | `seedance_img2video` silent 1080p, the cover PNG as the source, the cover's `duration` (4–8 s) — **about $0.35 at 6 s** | Only when `shot.render` selects video or the channel explicitly enables `hook_video`. The builder keeps only the video track, so narration and the code-rendered title stay. Without `ARK_API_KEY` the slot falls back to `veo_img2video` lite 1080p, 8 s billed — $0.64 |
+| Optional selected video hook | `seedance_reference` with the cut's 3D previz as the reference clip, silent, on the standing 2.x grade — input plus output seconds billed: **about $0.54 at 6 s on 2.0 mini 720p**, $2.74 on 2.0 1080p | Only when `shot.render` selects video or the channel explicitly enables `hook_video`, **and** the growth plan's `autoproduce:` block names `previz_renderer` and `video_model` (autoproduce §5) — the two HITL choices the unattended loop cannot ask. The builder keeps only the video track, so narration and the code-rendered title stay. No `ARK_API_KEY`: no hook video — a previz cut has no Veo fallback |
 | Points backgrounds | `image_local_generate` (local Z-Image) 1088x1920, **2–4 images** — **$0** | The photo is the star (absolute rule 14) — captions use only the top band so the photo shows in full. Change the shot when the content axis changes. Only machines without mflux fall back to `gpt_image_text2img` quality `low` ($0.007/image) |
 | Motion (body) | ffmpeg Ken Burns still lane (eased zoom · focus · pan · punch · drift, 4%/s capped at 1.075) + HTML motion slides | The builder already does this — one still per cut, at most 8 s on one still. Use the chosen per-cut route; there is no required number of generated clips |
 | Narration | whatever engine profile §2 says | `local` (Supertonic) costs 0; `gemini` bills per 1,000 characters |
@@ -63,9 +63,9 @@ Under Codex or Grok the host `image_gen` replaces both image rows, and under Gro
 
 The following historical example includes a selected video hook; it is not a required baseline.
 With points backgrounds moved to local Z-Image (2026-08-12), that share
-($0.007 × 2–4 images) drops out — a local-TTS channel runs **about $0.61** per
-episode (1 high image + a 6 s Seedance hook + 1 BGM clip; **$0.90** on the
-veo-lite fallback); a Gemini-engine channel adds **$0.015** for a
+($0.007 × 2–4 images) drops out — a local-TTS channel runs **about $0.81–0.83** per
+episode (1 high image + a 6 s previz-guided hook on 2.0 mini 720p + 1 BGM clip; about
+$3.00 on 2.0 1080p; there is no Veo fallback for the hook); a Gemini-engine channel adds **$0.015** for a
 400-character narration. Before the hook became video (2026-09-05) the same
 baseline was about $0.26. The image-count cap stops being about cost (pick
 2–4 purely on screen rhythm); on the mflux-missing fallback (gpt low) add
@@ -199,11 +199,12 @@ judgment**.
 The plan's `max_cost_per_video` (template default **$1.00** since 2026-09-05;
 plans written earlier carry $0.30) is the per-episode cap. With the cover
 background at high (absolute rule 12) the economy baseline is ~$0.27–0.29;
-a channel that switched `hook_video` on adds the hook clip (~$0.61 seedance ·
-~$0.90 veo lite). $1.00 **passes either baseline**. A lite·1080p·8s escalation adds $0.64: with `hook_video`
+a channel that switched `hook_video` on (with standing previz and model answers) adds the
+hook clip (~$0.54 on 2.0 mini 720p, ~$2.74 on 2.0 1080p). $1.00 **passes the still
+baseline and the mini hook**. A lite·1080p·8s escalation adds $0.64: with `hook_video`
 off that lands at ~$0.91–0.93, inside $1.00, so the default cap allows one lite escalation;
-with `hook_video` on it lands at $1.25–1.54, so that cap has to rise to **$1.60 or
-more** to let it through (before 2026-08-15 escalation was fast at $1.23 with
+with a mini hook on it lands at ~$1.45–1.47, so that cap has to rise to **$1.50 or
+more** to let it through, and a 2.0 1080p hook needs **$3.70** (before 2026-08-15 escalation was fast at $1.23 with
 a $1.30 cap — the three tiers' quality differences fell inside the confidence
 interval in blind-arena testing, so we dropped to the cheapest tier.
 `max_cost_per_video` itself is a user setting). The unattended loop never
