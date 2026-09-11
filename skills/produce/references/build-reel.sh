@@ -598,7 +598,19 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
       > "work/silraw$IDX.txt"
     awk -v L="$L" '$1>0.05 && $2<L-0.05' "work/silraw$IDX.txt" > "work/silin$IDX.txt"
     NSIL=$(wc -l < "work/silin$IDX.txt" | tr -d ' ')
-    if [ "$NSIL" -ge $((M-1)) ]; then
+    # The checked TTS tool writes <audio>.sentences.json beside an ElevenLabs take — the start of
+    # every sentence in the WAV it shipped, with a fixed pause laid in before each. Snap those to
+    # the detected silences and the boundary is the pause that was put there, not the longest
+    # pause in the card (a comma can out-pause a period: 0.3–1.2s measured on ep401/ep411).
+    SIDE="$SRC.sentences.json"; HB=""
+    if [ "$NSIL" -ge $((M-1)) ] && [ -f "$SIDE" ]; then
+      HB=$(python3 "$HERE/snap-boundaries.py" "$SIDE" "work/silin$IDX.txt" "$M" --tempo "$F" 2>"work/snap$IDX.txt" || true)
+      [ -z "$HB" ] && { say "⚠ card $IDX sentence sidecar did not match the detected pauses ($(head -1 "work/snap$IDX.txt")) — using the longest pauses instead."; WARN=1; }
+    fi
+    if [ -n "$HB" ]; then
+      BLIST="$HB "
+      BMETHOD="sidecar $((M-1))/$NSIL"
+    elif [ "$NSIL" -ge $((M-1)) ]; then
       # boundary = end of the silence (start of the next sentence) — a reveal finishes appearing just before it
       BLIST=$(sort -k3,3gr "work/silin$IDX.txt" | head -n $((M-1)) | sort -k1,1g | awk '{printf "%s ", $2}')
       BMETHOD="detected $((M-1))/$NSIL"

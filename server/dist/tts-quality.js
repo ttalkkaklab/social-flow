@@ -13,6 +13,7 @@ import * as local from './supertonic-client.js';
 import * as eleven from './elevenlabs-client.js';
 import * as mlx from './mlx-serve-client.js';
 import { priceOf, recordUsage } from './usage-ledger.js';
+import { SPACING_POLICY, respace, splitSentences } from './sentence-spacing.js';
 const exec = promisify(execFile);
 export const QUALITY_POLICY = 'speech-quality-v1';
 export const REVIEW_API_VERSION = process.env.SOCIAL_FLOW_TTS_REVIEW_API_VERSION?.trim() || 'v1';
@@ -28,7 +29,15 @@ export const checkedSpeechSchema = z.object({
     filename: bareFilenameSchema('audio').refine(s => s.endsWith('.wav'), 'Use a .wav filename'),
     maxAttempts: z.number().int().min(1).max(3).default(3),
     rejectTake: z.object({ audioSha256: z.string().regex(/^[a-f0-9]{64}$/), reason: z.string().trim().min(10).max(1000) }).strict().optional(),
-}).strict();
+    /** The scene's narration[].tts sentences in order — where the fixed pauses go (ElevenLabs takes). */
+    segments: z.array(z.string().trim().min(1).max(1000)).min(1).max(80).optional(),
+    sentencePause: z.number().min(0.25).max(1.5).default(0.5),
+    playbackSpeed: z.number().min(0.5).max(2).default(1),
+}).strict().superRefine((value, ctx) => {
+    if (value.segments && normalizeSpeech(value.segments.join(' ')) !== normalizeSpeech(value.expectedText)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['segments'], message: 'segments joined must read exactly as expectedText' });
+    }
+});
 const score = z.number().finite().min(0).max(100);
 export const reviewSchema = z.object({
     accuracy: score, pronunciation: score, naturalness: score, clarity: score,
@@ -152,7 +161,7 @@ Score 0–100: accuracy (all words, quantities, names, endings, no omissions or 
 /** Parse before spending anything; nested args cannot override the output or change voices between retries. */
 export function prepareGeneration(request) {
     const args = { ...request.generation, outputPath: request.outputPath, filename: request.filename };
-    let spoken, parsed, run;
+    let spoken, parsed, run, spacing = false, seed;
     switch (request.generator) {
         case 'tts_generate': {
             const p = gemini.ttsGenerateSchema.parse(args);
@@ -175,18 +184,22 @@ export function prepareGeneration(request) {
             run = () => local.generateLocalSpeech(p);
             break;
         }
+        // Timestamps cost nothing extra and are what the sentence spacing reads, so the checked lane always asks for them.
         case 'tts_elevenlabs_generate': {
-            const p = eleven.elevenLabsGenerateSchema.parse(args);
+            const p = eleven.elevenLabsGenerateSchema.parse({ ...args, timestamps: true });
             parsed = p;
             spoken = p.text.replace(/\[[^\]]*\]/g, '');
-            run = () => eleven.generateElevenLabsSpeech(p);
+            run = (o) => eleven.generateElevenLabsSpeech({ ...p, ...(o?.seed !== undefined ? { seed: o.seed } : {}) });
+            spacing = true;
+            seed = p.seed;
             break;
         }
         case 'tts_elevenlabs_dialogue': {
             const p = eleven.elevenLabsDialogueSchema.parse(args);
             parsed = p;
             spoken = p.inputs.map(i => i.text.replace(/\[[^\]]*\]/g, '')).join(' ');
-            run = () => eleven.generateElevenLabsDialogue(p);
+            run = (o) => eleven.generateElevenLabsDialogue({ ...p, ...(o?.seed !== undefined ? { seed: o.seed } : {}) });
+            seed = p.seed;
             break;
         }
         case 'mlx_tts_generate': {
@@ -201,7 +214,35 @@ export function prepareGeneration(request) {
         throw new Error('expectedText must match the complete spoken generation text; only punctuation, spacing, speaker labels and ElevenLabs acting tags may differ');
     if ('outputFormat' in parsed && !String(parsed.outputFormat).startsWith('wav_'))
         throw new Error('Checked narration requires WAV output');
-    return { args: parsed, run };
+    return { args: parsed, run, spacing, seed };
+}
+/** Sidecar beside the checked WAV: the sentence table the builder aligns reveals and cues to. */
+export const sentencesPathFor = (wav) => wav + '.sentences.json';
+/**
+ * Lays the fixed sentence pauses into a fresh take and rewrites its alignment to match. Runs before
+ * the take is hashed, so the proof binds to the audio that ships. A take without a usable alignment
+ * is kept as generated and the reason recorded — the builder then falls back to silence detection.
+ */
+export function applySentenceSpacing(output, request) {
+    const alignmentPath = output.replace(/\.wav$/i, '') + '.alignment.json';
+    if (!existsSync(alignmentPath))
+        return { skipped: 'no alignment sidecar beside the take' };
+    try {
+        const sidecar = JSON.parse(readFileSync(alignmentPath, 'utf8'));
+        const alignment = sidecar.alignment;
+        if (!alignment?.characters?.length)
+            return { skipped: 'alignment sidecar carries no characters' };
+        const segments = request.segments ?? splitSentences(alignment.characters.join(''));
+        const result = respace(readFileSync(output), alignment, segments, { pause: request.sentencePause, playbackSpeed: request.playbackSpeed });
+        writeFileSync(output, result.wav);
+        const meta = { policy: SPACING_POLICY, pause: request.sentencePause, playbackSpeed: request.playbackSpeed, lead: result.lead, gaps: result.gaps, inserted: result.inserted, boundaries: result.boundaries, duration: result.duration, segmentsFrom: request.segments ? 'request' : 'sentence-final punctuation' };
+        writeFileSync(alignmentPath, JSON.stringify({ ...sidecar, alignment: result.alignment, vendor_alignment: sidecar.vendor_alignment ?? sidecar.alignment, respaced: meta }, null, 2));
+        writeFileSync(sentencesPathFor(output), JSON.stringify({ version: 1, ...meta, audio: path.basename(output), sentences: result.sentences }, null, 2) + '\n');
+        return meta;
+    }
+    catch (error) {
+        return { skipped: error instanceof Error ? error.message : String(error) };
+    }
 }
 export async function generateCheckedSpeech(input, dependencies) {
     const request = checkedSpeechSchema.parse(input);
@@ -281,8 +322,14 @@ export async function generateCheckedSpeech(input, dependencies) {
                 save('unverified');
                 const started = Date.now();
                 let generated;
+                // Same voice, model and settings on every take; only the dice move, or a pinned seed would hand back the same bytes.
+                const overrides = prepared.seed !== undefined && attempt > 1 ? { seed: (prepared.seed + attempt - 1) % 4_294_967_296 } : {};
+                if (overrides.seed !== undefined)
+                    take.seed = overrides.seed;
+                else if (prepared.seed !== undefined)
+                    take.seed = prepared.seed;
                 try {
-                    generated = await deps.generate();
+                    generated = await deps.generate(overrides);
                 }
                 finally {
                     const price = priceOf(request.generator, prepared.args);
@@ -292,6 +339,8 @@ export async function generateCheckedSpeech(input, dependencies) {
                 }
                 if (!generated.success || path.resolve(generated.audioPath || generated.path || '') !== output)
                     throw new Error(generated.error || 'Generator did not return the requested audio path');
+                if (prepared.spacing)
+                    take.spacing = applySentenceSpacing(output, request);
                 take.audioSha256 = sha256(readFileSync(output));
                 save('unverified');
             }

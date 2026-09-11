@@ -8,6 +8,7 @@ Assembly and the delivery speed pass verify the evidence again.
 ## Contents
 
 - [Generation contract](#generation-contract)
+- [Sentence spacing (ElevenLabs)](#sentence-spacing-elevenlabs)
 - [What passes](#what-passes)
 - [Retry and stop](#retry-and-stop)
 - [Cost and prerequisites](#cost-and-prerequisites)
@@ -38,8 +39,41 @@ Example for a profile that specifies Supertonic F1 (replace these values with th
 
 `generator` accepts `tts_generate`, `tts_multi_speaker`, `tts_local_generate`,
 `tts_elevenlabs_generate`, `tts_elevenlabs_dialogue` or `mlx_tts_generate`.
-Outer `outputPath` and `filename` control all attempts. Voice, model, style, speed, temperature
-and seed stay unchanged. The expected text must match the generator's entire spoken text.
+Outer `outputPath` and `filename` control all attempts. Voice, model, style, speed and
+temperature stay unchanged. A pinned ElevenLabs seed advances by one on each retake — the same
+seed returns the same bytes, so a retake at the pinned seed would be the rejected take again;
+each attempt records the seed it used. The expected text must match the generator's entire
+spoken text.
+
+Add `segments` on every scene: the scene's `narration[].tts` sentences in order (joined, they
+read as `expectedText`). Add `playbackSpeed` when profile §2 sets a playback speed. Both feed
+the sentence spacing below; on engines without an alignment they are recorded and nothing else.
+
+## Sentence spacing (ElevenLabs)
+
+ElevenLabs reads sentences back to back — 0.04–0.19 s of quiet between them on pundago ep10
+(2026-08-31, the earlier voice) — so the builder's silence detection missed the boundary and
+reveals and subtitle cues landed late. The checked tool therefore fetches every
+`tts_elevenlabs_generate` take with timestamps and, before it measures or reviews anything,
+lays the pauses in from the take's own character alignment:
+
+- one fixed `sentencePause` (default 0.5 s) of digital silence at each segment boundary,
+  cut from the short natural gap 0.12 s after the sentence's last letter — a take that already
+  pauses longer than that is left alone there;
+- the pause grows past `sentencePause`, up to 1.0 s, only where that sentence's subtitle cue
+  would otherwise read faster than 6.0 chars/s after `playbackSpeed` (cue = sentence start to
+  next sentence start; the ship gate is 6.2);
+- a fixed 0.14 s lead before the first word (the builder keeps 0.10 s, so every card opens
+  the same way), a 12 ms fade on either side of each cut, and not one speech sample changed.
+
+It writes `<wav>.sentences.json` — each sentence's start and end in the shipped WAV — and
+rewrites `.alignment.json` to that timeline (`vendor_alignment` keeps the original, `respaced`
+the parameters). `build-reel.sh` snaps its sentence boundaries to that sidecar, so the reveal
+fades inside the pause that was actually laid in. The proof binds to the re-spaced audio; the
+review hears what ships. Measured 2026-09-11 on the pundago voice: a 0.50 s and a 0.39 s insert
+reviewed at accuracy 100 · pronunciation 100 · naturalness 98 · clarity 98 with no defect.
+A take with no usable alignment is kept as generated and `spacing.skipped` says why; the builder
+then falls back to silence detection as before.
 
 ## What passes
 

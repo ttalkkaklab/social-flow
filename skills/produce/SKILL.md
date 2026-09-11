@@ -690,7 +690,11 @@ A raw TTS call has no quality proof and cannot enter assembly.
 
 One checked call per scene — the profile registry as it stands, and the script is the full text
 of that scene's narration segments' `tts` sentences joined with periods. `.work/pcm/c<n>.wav`.
-Don't split a scene into several calls by sentence (the voice varies between calls).
+Don't split a scene into several calls by sentence (the voice varies between calls). Pass the
+same `tts` sentences as `segments`, and the profile's playback speed as `playbackSpeed` when
+§2 sets one: on an ElevenLabs take the wrapper lays a fixed pause at each segment boundary and
+writes `c<n>.wav.sentences.json`, which the builder snaps its reveals and cues to
+(`references/tts-quality.md` §Sentence spacing).
 
 **profile §2 decides the engine.** A new channel's narration default is `tts_local_generate`
 (Supertonic, local) — no key, no quota, and 0 cost however many times you rerun the episode,
@@ -698,7 +702,9 @@ so regenerating is free. Only lines that need a style instruction, meaning shots
 emotion has to be acted, go to `tts_generate` (Gemini). The local side has no stylePrompt.
 A profile with `engine: elevenlabs` calls `tts_elevenlabs_generate` with the profile's
 voiceId · model · stability (and seed, if pinned) and leaves `outputFormat` at its default
-`wav_24000` — mono 24kHz WAV, the same spec as Gemini, so the builder reads it as-is.
+`wav_24000` — mono 24kHz WAV, the same spec as Gemini, so the builder reads it as-is. The
+checked wrapper adds `timestamps` itself and moves a pinned seed by one on each retake (the
+same seed returns the same bytes); don't pass `previousText`/`nextText` — the scene is one call.
 **Never pass an mp3_* outputFormat for narration**: build-reel.sh reads any non-RIFF audio
 file as raw PCM and that card becomes noise. A scene with three or more speakers goes to
 `tts_elevenlabs_dialogue` in one call (no per-speaker stitching, no 0.75s gaps). Audio tags
