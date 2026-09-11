@@ -142,6 +142,17 @@ as per-region colour, counts as circle area. Boundaries and coordinates need a s
 region with no data is hatched, which is different from zero. Each format's data contract and
 examples are in [chart-design.md](chart-design.md).
 
+## Previz-guided generated video
+
+When a `generated_video` cut's camera path or timing has to land exactly — an orbit that
+must end on the sentence, a fall whose count is the joke — render a Blender previz first
+and store it as `visual.video.previz` with `modelPurpose:"previz"`. `checkPreviz` in
+render-routing.js refuses a clip that is not a local mp4 rendered at whole seconds and
+24–60 fps, a missing hash, a `referenceImagePaths[0]` that is not the source still, an end
+frame, or a prompt that does not bind `Video 1` and `Image 1` and close the clay read with
+"Do not reference its visual content". The contract, render rules and prompt skeleton are
+in [blender-previz.md](blender-previz.md) §6.
+
 ## Start and end frame planning
 
 For every newly authored image-to-video shot, set `visual.frames.mode` to `first` or

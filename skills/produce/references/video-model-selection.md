@@ -88,11 +88,12 @@ Store the selection fields beside the prompt: `visual.video` for motion backgrou
 | Field | Contract |
 |---|---|
 | `engine` | `seedance` for this route; b-roll and speaking clips otherwise default to Veo |
-| `modelPurpose` | `standard` (default), `complex-motion`, `reference`, or `fixed-voice` |
+| `modelPurpose` | `standard` (default), `complex-motion`, `reference`, `fixed-voice`, or `previz` (a Blender previz clip as `Video 1` — storyboard `blender-previz.md` §6) |
 | `modelReason` | Concrete action or reference requirement; required for every model other than 1.5 Pro |
 | `realFaceInput` | Set after inspecting all source/reference images. 2.x requires `false`; a generated photoreal face counts as a face too |
 | `referenceImagePaths` | Planned character/product panel paths, in prompt reference order; one source frame is not a reference set |
 | `referenceAudioPaths` | Planned fixed-voice samples; forces the 2.5 speaking/b-roll route |
+| `previz` | `{ clip, sha256, fps, seconds, blend }` with `modelPurpose:"previz"` — the clip rendered at the billed length, `referenceImagePaths[0]` the source still, no end frame; billed as input + output seconds on the `…-video` price rows |
 | `model` | Optional exact model ID; omit to use the purpose-based selection. An explicit override must pass the same capability checks |
 | `resolution` | Defaults to `1080p`; do not choose a 720p-only tier for a 1080p episode |
 
@@ -108,7 +109,8 @@ paths in the API call. Resolve relative reference paths from the storyboard dire
 Add the stored prompt and source/output paths. Do not send planning fields such as
 `modelPurpose`, `modelReason`, `realFaceInput`, `priceKey`, or `kind` as tool arguments.
 `seedance_img2video` takes the existing source still; `seedance_reference` takes the
-resolved reference paths. Bind image/audio indices in the stored prompt before approval.
+resolved reference paths, and on a previz cut `referenceVideoPaths` too. Bind image/video/audio
+indices in the stored prompt before approval.
 
 The forecast bills the model's minimum duration and rounds fractional used seconds up;
 a 3-second 1.5 scene therefore pays for 4 seconds. It rejects overlong scenes. Changing
@@ -131,6 +133,7 @@ before calling. Reference/voice requirements cannot be dropped just to fit the c
 | **b-roll slot** (produce absolute rule 9 uses the clip's own sound) | `veo_img2video` — a silent clip leaves that segment mute |
 | Source background contains an **adult live-action person** | Veo (`veo_img2video`, verified pass) or Seedance 1.5 pro/1.0 pro — **only 2.x rejects face input** |
 | You must **reproduce the composition** of a source picture | First/last frames (`sourceImagePath`+`lastImagePath`), not reference images — both engines. References carry look and style, not composition |
+| The **camera path and timing must land exactly** as planned | `seedance_reference` · 2.x · a Blender previz as `referenceVideoPaths` (`modelPurpose:"previz"`), the source still as `Image 1` — the vendor's clay-model reference. Veo takes no video input |
 | **Register a character once and keep calling it** | Only the Seedance asset library (`asset://`) — Veo has no registry; it's base64 inline per request |
 | **A cut with dialogue/sound effects** | `veo_text2video` / `veo_img2video` — Veo's audio is better |
 | **Extending** an existing Veo clip | `veo_extension` — Seedance has no counterpart tool |
@@ -743,11 +746,9 @@ angles — eye level vs high is only a trend (p=.082). This is a default guide, 
 ## What Seedance can't do
 
 - **Extend or edit local video.** ModelArk's video input takes public URLs and asset IDs
-  only, no base64. Our pipeline's mp4s are local files, so they can't go in as-is. That's why
-  there is no `seedance_extension` tool, and extension belongs to `veo_extension`.
-  (To use 2.x video reference/edit/extension you'd first upload to public hosting —
-  `skills/grow-threads/references/upload-media.sh` is that slot. Not exposed as a tool for now.)
-- **Audio reference.** 2.x's reference audio isn't on the tool surface yet.
+  only, no base64. `seedance_reference` publishes a local reference video for the life of the
+  task (`MEDIA_UPLOAD_URL` hosting, else a cloudflared quick tunnel — `media-publish.ts`), but
+  2.5's edit and extend task types are not wired, so extension still belongs to `veo_extension`.
 - **Korean prompts.** Official support is 2.5 only. Write English for the other models.
 
 ---

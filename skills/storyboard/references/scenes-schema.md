@@ -1797,7 +1797,16 @@ the tail at the scene boundary.
 `referenceAudioPaths`, relative to this storyboard directory or absolute. A source still
 alone stays on image-to-video. The full contract is produce `video-model-selection.md`
 §Seedance per-cut selection. Check-scenes validates it and cost-preview returns the exact
-resolved generation settings. Example of an eligible action hook:
+resolved generation settings.
+
+**Previz-guided cut** — `modelPurpose: "previz"` with `previz: { clip, sha256, fps, seconds,
+blend }`: a Blender previz rendered at the billed length (whole seconds, 24 fps, clean mp4,
+one flat colour per actor) rides the reference route as `Video 1`, and
+`referenceImagePaths[0]` must be the source still (`Image 1 is the first frame`); no end
+frame, since the reference lane cannot carry `last_frame`. The prompt binds both and closes
+the clay read with `Do not reference its visual content`. The vendor bills the previz seconds
+alongside the output seconds. Contract and prompt skeleton: `blender-previz.md` §6.
+Example of an eligible action hook:
 
 ```js
 video: {

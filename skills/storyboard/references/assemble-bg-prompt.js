@@ -147,7 +147,9 @@ const BANNED = [
 // §clip audio). Edit directives about cutting keep whichever negation word carries them.
 // storyboard-html-template.html carries NEG_RE/NEG_OK verbatim (negHits) — the selftest
 // checks the two copies match.
-const NEG_OK = /^(cut|cuts|camera cuts|timecode|timecodes|timecode splits)\b/;
+// The previz binding sentences are the vendor's own clay-model template (Seedance 2.5 prompt
+// guide): the reference video supplies camera and motion, not its look or shot structure.
+const NEG_OK = /^(cut|cuts|camera cuts|timecode|timecodes|timecode splits|reference its visual|reference the visual|change the shot|add new shots|alter the subject)\b/;
 const NEG_RE = /\b(no|not|avoid|avoids|never|don't|dont|doesn't|won't)\b[ \t]*([a-z' \t-]{0,24})/gi;
 // On a seedance route the vendor's own 2.0 guide templates directive negatives for the
 // artifact classes only — subtitles, on-frame text, logos, watermarks (2.5 adds audio/BGM).

@@ -159,6 +159,11 @@ test('a model and resolution nobody priced comes back null, not as an invented k
       .flatMap((model) => ['480p', '720p', '1080p', '4k'].flatMap((resolution) =>
         [false, true].map((generateAudio) =>
           ['seedance_text2video', { model, resolution, generateAudio, durationSeconds: 5 }]))),
+    // A reference video (the previz lane) bills on its own with-video rows.
+    ...['dreamina-seedance-2-5-260628', 'dreamina-seedance-2-0-260128',
+        'dreamina-seedance-2-0-fast-260128', 'dreamina-seedance-2-0-mini-260615']
+      .flatMap((model) => ['480p', '720p', '1080p', '4k'].map((resolution) =>
+        ['seedance_reference', { model, resolution, durationSeconds: 5, referenceVideoUrls: ['https://host/previz.mp4'] }])),
   ];
   const invented = [];
   for (const [tool, args] of combos) {
@@ -284,4 +289,17 @@ test('only generation tools are recorded', () => {
                    'stt_local_transcribe', 'content_feedback']) {
     assert.ok(!isBillableTool(t), `${t} should not be billable`);
   }
+});
+
+test('a reference video bills its own seconds next to the output on the with-video rows', () => {
+  // tokens = (input + output seconds) × w × h × fps / 1024 — a URL cannot be probed, so it is
+  // taken at the output length, which is the previz lane's own contract.
+  const priced = priceOf('seedance_reference', { model: 'dreamina-seedance-2-0-260128', resolution: '1080p', durationSeconds: 5,
+    referenceVideoUrls: ['https://host/previz.mp4'] });
+  assert.equal(priced.key, 'seedance.2-0-video.1080p');
+  assert.equal(priced.quantity, 10);
+  assert.match(priced.note, /reference video 5s/);
+  // the same call without a video stays on the plain row at output seconds
+  assert.deepEqual(priceOf('seedance_reference', { model: 'dreamina-seedance-2-0-260128', resolution: '1080p', durationSeconds: 5,
+    referenceImagePaths: ['/tmp/a.png'] }), { key: 'seedance.2-0.1080p', quantity: 5 });
 });

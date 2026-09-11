@@ -1211,6 +1211,36 @@ describe('video engine separation (Veo · Seedance)', () => {
       assert.equal(ref.inputSchema.properties.referenceImagePaths.minItems, undefined);
     });
 
+    it('reference video mirrors the model table, needs a Video 1 binding, and rejects the wrong shape', () => {
+      for (const model of SEEDANCE_REFERENCE_MODELS) {
+        const video = SEEDANCE_MODEL_SPECS[model].referenceVideos;
+        assert.notEqual(video, false, `${model} has no reference-video spec`);
+        assert.ok(video.clipSeconds[0] >= 2 && video.totalSeconds >= video.clipSeconds[1], `${model} video limits are inconsistent`);
+      }
+      const prop = ref.inputSchema.properties.referenceVideoPaths;
+      assert.ok(prop, 'seedance_reference has no referenceVideoPaths');
+      assert.equal(prop.maxItems, Math.max(...SEEDANCE_REFERENCE_MODELS.map((m) => SEEDANCE_MODEL_SPECS[m].referenceVideos.maxClips)));
+      assert.match(prop.description, /previz|clay/i);
+      assert.match(prop.description, /MEDIA_UPLOAD_URL/);
+      assert.match(ref.description, /Video 1/);
+      const bound = { prompt: 'Image 1 is the first frame. Use Video 1 for the camera only. Do not reference its visual content. The subject stays consistent.', model: MODEL_20, referenceImagePaths: ['/tmp/a.png'] };
+      assert.ok(seedanceReferenceSchema.safeParse({ ...bound, referenceVideoPaths: ['/tmp/previz.mp4'] }).success);
+      assert.ok(seedanceReferenceSchema.safeParse({ ...bound, referenceVideoUrls: ['https://host/previz.mp4'] }).success);
+      // a video alone is a reference — nothing else is required
+      assert.ok(seedanceReferenceSchema.safeParse({ prompt: bound.prompt, model: MODEL_25, referenceVideoUrls: ['https://host/previz.mp4'] }).success);
+      const unbound = seedanceReferenceSchema.safeParse({ ...bound, prompt: 'A courtyard at dusk, the subject stays consistent.', referenceVideoPaths: ['/tmp/previz.mp4'] });
+      assert.equal(unbound.success, false);
+      assert.match(unbound.error.issues[0].message, /Video 1/);
+      const tooMany = seedanceReferenceSchema.safeParse({ ...bound, referenceVideoPaths: ['/1.mp4', '/2.mp4', '/3.mp4', '/4.mp4'] });
+      assert.equal(tooMany.success, false);
+      assert.match(tooMany.error.issues[0].message, /at most 3 reference videos/);
+      const badFormat = seedanceReferenceSchema.safeParse({ ...bound, referenceVideoPaths: ['/tmp/previz.webm'] });
+      assert.equal(badFormat.success, false);
+      assert.match(badFormat.error.issues[0].message, /mp4 or mov/);
+      const badUrl = seedanceReferenceSchema.safeParse({ ...bound, referenceVideoUrls: ['previz.mp4'] });
+      assert.equal(badUrl.success, false);
+    });
+
     it('2.5 accepts an audio-only call; 2.0 needs an image alongside', () => {
       const audioOnly = { prompt: 'x', referenceAudioPaths: ['/tmp/v.wav'], generateAudio: true };
       assert.ok(seedanceReferenceSchema.safeParse({ ...audioOnly, model: MODEL_25 }).success);

@@ -1063,7 +1063,8 @@ Two generated forms count against the slot cap together:
   redesign it — and it **closes on a consistency lock**, the only place an exclusion can go on
   an engine with no `negativePrompt` argument. Who the subject *is* may stay; where things sit
   may not. Write `visual.audio` anyway — the build discards the clip's sound, but the model
-  composes a calmer clip when it isn't left to invent a soundtrack.
+  composes a calmer clip when it isn't left to invent a soundtrack. **When the camera path or the timing has to land exactly, plan it in Blender first** — `blender_scene_build` → `blender_camera_set` → `blender_render_previz` at the cut's billed length, 24 fps, one flat colour per actor — and store the clip as `visual.video.previz` with `modelPurpose:"previz"` ([blender-previz.md](references/blender-previz.md) §6):
+  produce hands it to Seedance 2.x as `Video 1`, the still as `Image 1`, and the prompt is written from the previz's numbers.
 **Backgrounds that become video sources** (scenes with b-roll attached, motion-background
 scenes) have to be photorealistic people planned onto `gpt_image_text2img` (high), not the
 local engine — blurry or peopleless, and those 8 seconds look like a still frame. The two
