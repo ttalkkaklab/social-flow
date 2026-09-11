@@ -1890,7 +1890,7 @@ window.SB_DOC = {
     var d = SIZE_ICON[size];
     return d ? '<svg class="size-ico f-' + SIZE_FAMILY[size] + '" viewBox="0 0 32 32" aria-hidden="true">' + d + "</svg>" : "";
   }
-  function sizeTitle(size) { return size + " — " + (T.sizeHint[size] || ""); }
+  function sizeTitle(size) { return (T.size[size] || size) + " — " + (T.sizeHint[size] || ""); }
   /* Render-route pictograms — what makes the picture move: an AI clip, an HTML animation,
      or a camera over a photo. Same 32×32 tile as the size icons. */
   var RENDER_ICON = (function () {
@@ -1940,7 +1940,7 @@ window.SB_DOC = {
     var routes = ["generated_video", "still_camera", "character_html", "object_html", "data_graph", "editorial_html", "recording", "asset"];
     return '<div class="size-key"><span class="kt">' + esc(T.sizeKey) + "</span>" +
       order.map(function (k) {
-        return '<span class="k" title="' + esc(sizeTitle(k)) + '">' + sizeIcon(k) + '<span>' + esc(T.size[k] || k) + '</span><span class="kk">' + esc(k) + "</span></span>";
+        return '<span class="k" title="' + esc(sizeTitle(k)) + '">' + sizeIcon(k) + '<span>' + esc(T.size[k] || k) + "</span></span>";
       }).join("") + "</div>" +
       '<div class="size-key routes"><span class="kt">' + esc(T.renderKey) + "</span>" +
       routes.map(function (k) {
@@ -3713,7 +3713,7 @@ window.SB_DOC = {
     // head keeps the number, title and beat tags and the row wraps cleanly on a phone.
     var gram = "";
     if (g.size) gram += '<span class="shot-size' + (T.size[g.size] ? "" : " unknown") + '" title="' + esc(sizeTitle(g.size)) + '">' +
-                        sizeIcon(g.size) + '<span class="sz"><b>' + esc(T.size[g.size] || (g.size + " ?")) + "</b><small>" + esc(g.size) + "</small></span></span>";
+                        sizeIcon(g.size) + '<span class="sz"><b>' + esc(T.size[g.size] || (g.size + " ?")) + "</b></span></span>";
     if (g.angle && T.angle[g.angle]) gram += '<span class="shot-angle angle-' + esc(g.angle) + '">' + esc(T.angle[g.angle]) + "</span>";
     var rmode = renderModeOf(s, g);
     if (rmode) gram += '<span class="shot-size' + (T.render[rmode] ? "" : " unknown") + '" title="' + esc(renderTitle(rmode)) + '">' +
