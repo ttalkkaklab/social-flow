@@ -542,7 +542,7 @@ Core rules:
   and the result is the payoff, **the first place the answer appears**. Write a `beat` on each
   shot. **Inside the long-form skeleton, the body's beats follow the structure the user picked
   in §2.5** (scenario-craft §11).
-- **Underneath the beats, run the twelve craft rules** (`references/scenario-craft.md`). After
+- **Underneath the beats, run the fourteen craft rules** (`references/scenario-craft.md`). After
   drafting, walk the scenes top to bottom and speak the connective at every seam — each one
   reads "그래서" or "그런데", never "그리고" (an and-then seam is a scene to merge, cut, or
   reorder); check each scene turns a charge (what's at stake reads differently at close than
@@ -581,7 +581,7 @@ Core rules:
   builds, and on a short the result-first cover, where the drips then make that result hold up. The cover title and the platform title carry the same stimulus. Continuity applies to the stimulus, not to the outcome — playbook §2 governs the title and description whatever the cover's hookType is. If you pick fear,
   the threat needs evidence in research.md or a hedge to a possibility, and the drips (short)
   or the body (long-form) have to answer that threat. An opening with none of the four is a
-  copy-mode P0. The source of truth is scenes-schema §the four opening strategies.
+  copy-mode P0 (on request; in the flow this is the author's own check). The source of truth is scenes-schema §the four opening strategies.
 - **Short-form is run by early drop-off — stop · hold · satisfy · act, not the look of the
   panels.** Half or more of the viewers who leave a Short leave inside the first 3 seconds,
   completion decides distribution under 60 s, and the platform now reads "stopped, then left
@@ -710,7 +710,7 @@ Core rules:
   with the shot's subject first (order is reference weight). It is what lets produce attach the
   character panels without re-reading the scene, and what resolves a character's veo ban per cut
   instead of per episode. Ids come from the channel's `assets/catalog.md`
-  (`resolve-asset.py --list <channel dir>`). **Where a generated clip hands over more than one
+  (`channel/references/resolve-asset.py --list <channel dir>`). **Where a generated clip hands over more than one
   reference, write each entry as `{ id, scope }`** — one clause per reference saying what it
   governs and where it may appear ("controls the helmet and body only", "appears only in the last
   second, and its face never transfers"). Unscoped references leak into each other, and the check
@@ -1165,7 +1165,7 @@ in any scene's `visual.character`, no more. One entry each: `id`, `name`, `role`
 `../../../assets/characters/<id>/face.png` and so on; list only files that exist), `note` (what
 governs this character on screen — a veo ban, a fixed voice), and `veo` (`"banned"` when the
 profile bans it, otherwise omitted). Leave the array out entirely and the document simply has no
-cast section. `resolve-asset.py --list <channel dir>` prints the ids and paths.
+cast section. `channel/references/resolve-asset.py --list <channel dir>` prints the ids and paths.
 
 **Fill `SB_DOC.craft` with the promises the episode makes** — the loop ledger the §4 craft
 rules ask for, in the one place the approver reads. `loops[]` first: the cover's own hook as

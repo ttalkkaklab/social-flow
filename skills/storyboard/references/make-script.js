@@ -43,7 +43,7 @@ const list = VOICE ? body : shots.filter(x => rec(x.s) && x.s.type !== "outro");
 
 let m = `---
 topic: ${topic}
-mode: mixed
+mode: ${filmed.length === body.length ? "screencast" : "mixed"}
 format: ${FORMAT}
 scenes: ${filmed.length} 촬영 / ${body.length} 샷(아웃트로 제외)
 target: ${mmss(total)}
@@ -181,7 +181,7 @@ list.forEach(({ s, no, at }) => {
     const sc = (window.STRUCTURE && Array.isArray(window.STRUCTURE.scenes) ? window.STRUCTURE.scenes : []).find(x => x && x.no === s.scene);
     if (sc) m += `\n사건: ${sc.event || ""}${sc.charge && sc.charge.open !== undefined && sc.charge.close !== undefined ? ` · 전환: ${sc.charge.open} → ${sc.charge.close}` : ""}, ${sc.turn || ""}\n`;
   }
-  const beat = { hook: "커버", hooking: "후킹", result: "결과물", body: "내용", turn: "전환", cta: "마무리" }[s.beat] || s.beat || s.type;
+  const beat = { hook: "커버", hooking: "후킹", drip: "전개", result: "결과물", body: "내용", turn: "전환", cta: "마무리" }[s.beat] || s.beat || s.type;
   m += `\n#### 샷 ${no} — ${plain(s.title) || s.type} · ${beat} · ${s.duration}초\n\n`;
   if (rec(s)) {
     m += `**저장할 파일**: \`${s.visual.clip}\`\n`;

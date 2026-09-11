@@ -15,7 +15,8 @@ shape, `references/shot-script-template.md` for the shooting-script document.
 
 ## What differs in shooting mode
 
-mode**. Confirm with AskUserQuestion when unsure. What differs in shooting mode (the
+A topic the user will record themselves, demoing and narrating on screen, is **shooting
+mode** (SKILL §1.6). Confirm with AskUserQuestion when unsure. What differs in shooting mode (the
 `references/shot-script-template.md` contract):
 
 - Scene `visual` is `{ source: "recording", clip, shot, action }` — §5 image generation is

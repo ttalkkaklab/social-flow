@@ -5,7 +5,7 @@ is three beats, always: hook → drip (1–n) → cta. Long-form still walks two
 says **how scenes push each other** — the craft layer classic screenwriting settled long
 before short-form existed, cut down to what a 4–70-shot storyboard can actually use. On a
 short the "body" in the rules below is the drip shots. The
-storyboard skill applies these while designing scenes (§4); the reviewer's scene mode reads
+storyboard skill applies these while designing scenes (§4); the reviewer's scene mode (on request only since 0.50.0 — in the flow, the author's own read) reads
 them as the yardstick behind its flow and role checks. None of them adds a `scenes.js`
 field — every rule lands on fields that already exist (`beat` · `shot.feel` · `narration`
 · `hookForm` · `chapter` · `duration` · `shot.size`/`angle`/`space` · `sound.drop`).

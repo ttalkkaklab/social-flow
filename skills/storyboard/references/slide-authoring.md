@@ -54,8 +54,8 @@ rubric the reviewer applies.
    primitive: `h.date` · `h.range` · `h.link`; `h.count` · `h.bar` · `h.dots` · `h.axis`;
    `h.flow` · `h.node` · `h.state`; `h.fig` · `h.stem` · `h.bus` · `h.chamber` ·
    `h.disk` · `h.ring` · `h.press` · `h.shift`. Those helpers stamp `data-primitive` into
-   the frame, and the renderer matches it to the same narration group. Group 0 is the
-   kicker and title. One kind of movement per group.
+   the frame, and the renderer matches it to the same narration group. Group 0 is the base
+   (source, scrim, axis); the kicker and title open group 1. One kind of movement per group.
    - **Pick an archetype before laying out freeform** (slide-design.md §4): the stat poster
      (`h.stage("spread")` + `h.stat` with `cls:"max"`), the `.split` compare (cells with
      `h.vdiv(rg)` between them), the `.timeline` rail, the plate grid (`h.plate` cells), or
@@ -237,7 +237,7 @@ The closed vocabulary is `enter` · `point` · `nod` · `shrug` · `think` · `w
 `conceal` · `signal` · `inspect` · `gather` · `surround` · `bind` · `escort` · `release`.
 `renderCharacter()` lays out the words and the template tableau; it never adds a keyframe.
 `check-slide.js` fails an unknown action, a missing cast actor, or fewer acts than narration
-segments. A keyframe added by hand is a §7 P0 in the review.
+segments. A keyframe added by hand is a §8 P0 in the review.
 
 **Make the claim happen in the picture.** “The government banned the group” is not a date over a
 paper texture: a large-head masked figure is met by two police figures and a restraint line closes
@@ -251,8 +251,8 @@ person likeness), place them through `slide.arts`, then make HTML control their 
 relations, and state changes. The code-native chibi tableau is the fallback only when no image tool
 is configured. Do not replace an available illustration pass with labelled boxes.
 
-If the beat genuinely needs an action that isn't in the seven, that is a change to the template,
-`check-slide.js`, and `slide-design.md` §7 together — bring it to the user rather than solving it
+If the beat genuinely needs an action that isn't in the closed vocabulary (slide-design §8), that is a change to the template,
+`check-slide.js`, and `slide-design.md` §8 together — bring it to the user rather than solving it
 inside one slide. A slide that invents its own motion renders differently on the next re-render,
 which is the whole reason the vocabulary is closed.
 

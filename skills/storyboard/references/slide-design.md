@@ -179,7 +179,7 @@ or the strike-through. Bar tracks are `--bar-h` 44px tall.
 - **The spine.** `h.stage("spine")` stands a 6px accent bar at the left of the zone for
   the height of the content — the edge bar every news graphic carries. Use it on diagram
   and evidence slides; a stat poster and a kinetic screen do without.
-- Content sits in the zone (`formats.js zone` — portrait x 176 · top 190 · bottom 570;
+- Content sits in the zone (`platform-guide/references/formats.js` zone — portrait x 176 · top 190 · bottom 570;
   wide x 96 · top 96 · bottom 285), vertically centred with a 4% optical lift. The bottom
   band belongs to the subtitles; only the ground reaches it.
 - Read order is top → bottom, left → right; the hero comes first in that order. Left
@@ -466,7 +466,7 @@ set and a stroke is part of the authored picture rather than a sticker on a phot
 |---|---|---|---|
 | route | `h.mark.route(rg, pts, {dash, arrow, pen})` | movement — a march, a sea lane, a retreat | a smoothed line through the points, drawn from the start; a dashed route is revealed through a mask; the arrowhead is the next stroke |
 | X | `h.mark.x(rg, x, y)` | defeat, a stop, a block | two strokes, the second `--mark-lead` after the first |
-| ring | `h.mark.ring(rg, x, y, r)` | the target — the one thing to look at | one circle drawn from the top |
+| ring | `h.mark.ring(rg, x, y, r)` | the target — the one thing to look at (small, on a diagram; never a large ring around a rendered subject — illustrated-scenes.md) | one circle drawn from the top |
 | hatch | `h.mark.hatch(rg, poly, {gap, angle, wave})` | spread — an army across a plain, an area, a flood | parallel lines clipped to a polygon, one after another at `--mark-stagger` |
 | box | `h.mark.box(rg, x, y, w, h)` | a place — a settlement, a building, a thing | four corner brackets |
 | dot | `h.mark.dot(rg, x, y)` | a position | a pop — the one overshoot on this slide |
@@ -482,8 +482,9 @@ Rules:
   sentence says they moved; the X lands when it says they lost. A mark that decorates —
   brackets around nothing, a ring on the prettiest part of the frame — fails the motion axis.
 - **One colour, one stroke.** `THEME.accent`, `--mark-w`, round caps and joins, `.94` opacity.
-  No second colour, no fill but the dot, no gradient. On the studio ground the stroke tapers
-  (`pen:true`) and casts the shadow the head CSS gives it under `html.studio` — the pen and
+  No second colour, no fill but the dot, no gradient. The default studio mark is `h.mark.arrow`
+  (a smooth curve, small head); `pen:true` is the optional hand-drawn treatment — there the
+  stroke tapers and casts the shadow the head CSS gives it under `html.studio` — the pen and
   the slabs answer the same key light, which is what makes them one scene.
 - **Write-on, not fade.** Every mark is drawn (`stroke-dashoffset`) or pops; nothing fades in.
   A stroke takes `--mark-draw` (700ms); the arrowhead and the second stroke of an X follow at
@@ -526,9 +527,9 @@ decisions.
 
 **P0, added for this kind**
 
-11. A screen phrase identical to its segment's `sub` — the same sentence twice, once burned in and once as the picture
-12. More than one hero-sized phrase, or a line past five words
-13. Two effect kinds on one screen, or a word that rotates, bounces, or arcs in. An art that travels and a word that enters on the same group is one event, not two. Mixing `drop` and `wipe` is still two; `mask` and `words:true` are one.
+13. A screen phrase identical to its segment's `sub` — the same sentence twice, once burned in and once as the picture
+14. More than one hero-sized phrase, or a line past five words
+15. Two effect kinds on one screen, or a word that rotates, bounces, or arcs in. An art that travels and a word that enters on the same group is one event, not two. Mixing `drop` and `wipe` is still two; `mask` and `words:true` are one.
 
 **What the axes look at here** — design craft reads type hierarchy and line breaking instead of
 diagram composition; motion-carries-meaning asks whether each phrase lands on the sentence that
@@ -566,10 +567,10 @@ rules keep the scene from becoming a mascot show or a row of labelled boxes.
 
 **P0, added for this kind**
 
-14. A CSS keyframe, an action outside the closed vocabulary, or an event actor/target missing from `cast` — motion authored inside the slide instead of chosen
-15. A pose that persists into the next clip (an action that does not return to rest), visible as the figure starting group k+1 mid-gesture
-16. The scene's claim or value exists only as a gesture, with no text on screen carrying it
-17. The figure overlapping the text block or crossing the zone edge in any sheet frame
+16. A CSS keyframe, an action outside the closed vocabulary, or an event actor/target missing from `cast` — motion authored inside the slide instead of chosen
+17. A pose that persists into the next clip (an action that does not return to rest), visible as the figure starting group k+1 mid-gesture
+18. The scene's claim or value exists only as a gesture, with no text on screen carrying it
+19. The figure overlapping the text block or crossing the zone edge in any sheet frame
 
 **What the axes look at here** — nothing-reads-as-generated adds the mascot markers (a face, a
 fill colour, a second figure, an idle bob); motion-carries-meaning asks whether the chosen action

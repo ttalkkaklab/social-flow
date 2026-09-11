@@ -1,5 +1,10 @@
 # scenes.js data contract (SoT)
 
+> Where this file says a reviewer's copy, scene, camera, sound or image mode "reads" or
+> "docks" something, that mode runs only when a user asks for it (0.50.0); in the flow the
+> same check is the author's own read and the checkers. Narration and vocabulary mode are
+> the two reads the flow runs.
+
 `data/<channel>/episodes/<topic>/storyboard/scenes.js` — the one data source produce
 consumes after storyboard approval. `video-template.html` loads it with
 `<script src="./scenes.js">`.
@@ -41,7 +46,7 @@ consumes after storyboard approval. `video-template.html` loads it with
   - [Filmed scenes — clips the user shot themselves (`visual.source: "recording"`)](#filmed-scenes-clips-the-user-shot-themselves-visualsource-recording)
   - [Stock material — free clips and photographs from outside (`visual.source: "stock"`)](#stock-material-free-clips-and-photographs-from-outside-visualsource-stock)
   - [Screencast splice — one recorded screen inside an ordinary episode (`visual.source: "screencast"`)](#screencast-splice-one-recorded-screen-inside-an-ordinary-episode-visualsource-screencast)
-  - [The authored-screen lane — three kinds under one key (`visual.slide.kind`)](#the-authored-screen-lane-three-kinds-under-one-key-visualslidekind)
+  - [The authored-screen lane — four kinds under one key (`visual.slide.kind`)](#the-authored-screen-lane-four-kinds-under-one-key-visualslidekind)
   - [Slide scenes — a screen where text and shapes are the subject (`visual.slide`)](#slide-scenes-a-screen-where-text-and-shapes-are-the-subject-visualslide)
   - [Motion diagram treatments — editorial frame or photo action (`visual.slide.treatment`)](#motion-diagram-treatments-editorial-frame-or-photo-action-visualslidetreatment)
   - [Footage treatment — retired 2026-09-05 (`visual.slide.treatment: "footage"`)](#footage-treatment-retired-2026-09-05-visualslidetreatment-footage)
@@ -838,7 +843,7 @@ visual: {
   motion: "very slow dolly in",      // cover only: the veo camera direction for the opening b-roll
                                      // written in veo vocabulary — push and orbit appear 0 times in the canonical docs
   video: null,                       // points only: the motion-background shot marker (§motion background) — omitted for stills
-  clip: null,                        // quote only: the speech clip plan (below)
+  clip: null,                        // quote: the speech clip plan (below) · stock_video: the footage/ path (§stock material)
   source: null,                      // "recording" (§filmed scenes) | "screencast" (§screencast splice) | "stock" (§stock material) — where the picture came from
   license: null,                     // stock only — the license record every outside file carries (§stock material)
   slide: null,                       // authored screen — { file, kind, treatment, role, motif, plan, labels, motion, acts }
@@ -2372,20 +2377,21 @@ still TTS, the card is still an ordinary card, and only the picture comes from a
   blocks it — the storyboard sets the filename, `script.md` prints it, and `episode-state.js`
   reports it as missing.
 
-### The authored-screen lane — three kinds under one key (`visual.slide.kind`)
+### The authored-screen lane — four kinds under one key (`visual.slide.kind`)
 
 Physical subjects use the mesh object contract in [mesh-objects.md](mesh-objects.md).
 Choose `illustration3d` or `photoreal3d`; a flat disk cannot stand in for a subject.
 
 `visual.slide` is not only diagrams. It is **the screen we author ourselves**: one HTML file per
 shot, baked into clips by seek-rendering, checked by `check-slide.js`, and judged by
-`slide-reviewer`. What that file draws is `kind`, and there are three:
+`slide-reviewer`. What that file draws is `kind`, and there are four:
 
 | `kind` | What is on screen | Section |
 |---|---|---|
 | `"diagram"` (the default when absent) | text and shapes — structure, comparison, steps, a flow of numbers | §slide scenes · §motion slides |
 | `"kinetic"` | the words themselves — one phrase landing per sentence | §kinetic type |
 | `"character"` | a cast enacts the sentence — a figure reacts, officers surround, documents reveal | §character act |
+| `"camera"` | a still moved by the shared camera runtime — a `still_camera` cut's handoff (render-routing.md) | §still-camera cuts |
 
 Everything else is shared and does not change per kind: the file naming
 (`slides/s<shot number>-<slug>.html`), reveal groups 1:1 with narration segments, the state rule,
@@ -3006,27 +3012,6 @@ and a distinct `end` image before video generation. The approval page displays b
 [render-routing.md](render-routing.md#start-and-end-frame-planning) for the selection and
 continuity rules. Legacy boards without `frames` retain their original single-frame display,
 unless an existing `lastImagePath` supplies a second frame.
-# Bundled full-video style references
-
-`PRODUCTION.style.referencePack` uses `tactile-miniature-v1` only for cinematic-miniature
-generated scenes. `visual.styleRole` selects `environment`, `character`, `interaction`,
-`transport`, or `reported_story`. These roles select appearance references, not story subjects.
-`spatial-prompts.js` returns `styleBinding`; save that object as `visual.stylePack`. It contains
-the pack ID/version, content digest and plugin-relative reference paths, all covered by the
-production plan signature. Do not store resolved machine-specific image paths in scenes.js.
-`look:"archive"` bypasses generated style references and preserves authentic source material.
-
-
-### Episode visual style selection
-
-Before authoring, follow [visual-style.md](visual-style.md). Both production modes store
-`PRODUCTION.style.preset`: one of `cinematic-miniature`, `photoreal`, `webtoon`, `claymation`,
-`paper-cutout`, `ink-wash`, `toon-3d` or `arcade-2d` (`production-mode.js` `STYLES`), with the actual
-`selection: { kind: "user" | "standing", reference: "actual choice or plan" }`.
-The `spatial-explainer` preset is accepted for existing boards only. New episodes require HITL.
-Use `videoDesign.look: "realistic"` for photoreal, `"webtoon"` for webtoon, `"clay"`, `"papercut"`,
-`"inkwash"`, `"toon3d"` and `"arcade"` for the five prompt-only presets; only cinematic-miniature attaches
-the miniature pack. Source, end-frame and motion prompts carry the selected treatment.
 
 ## Existing generated clip input (`visual.reuse`)
 

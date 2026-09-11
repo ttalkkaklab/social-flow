@@ -1035,7 +1035,7 @@ echo "[narration] gate_exit=$?"   # this read is narration only (0.50.0); the ot
 
 1. **S1 detected** — check-style.py exit 2. It's a P0 for that sentence
 2. **Translationese wording** — the indirect particles, nominalized verbs, and double passive
-   listed in korean-style §B·§T instead of a direct spoken verb
+   listed in korean-style §T instead of a direct spoken verb
 3. **Unexplained jargon** — a term above the 초3~4 floor with no plain wording on first use.
    If spelling it out reads awkwardly, doubt whether the term is needed at all
 4. **AI stock phrases** — stock openings, inflated implications, and empty modifiers from

@@ -619,7 +619,7 @@ below are what the script's standing notes carry `[course]`.
 
 | Value | Written in | Read by |
 |---|---|---|
-| `shot.feel` | every shot | storyboard.html (the feel line · missing-feel warning), script.md (the `느낌` line), reviewer camera mode (does the technique serve it), image mode (does the picture show it) |
+| `shot.feel` | every shot | storyboard.html (the feel line · missing-feel warning), script.md (the `느낌` line), reviewer camera mode (on request only, 0.50.0 — does the technique serve it), image mode (does the picture show it) |
 | `shot.size` | every shot (`check-scenes.js` fails any shot but the outro without one after the story pass) | storyboard.html badge · script.md (the `사이즈·앵글` line — size with its distance — and the `소리` line that follows the size) · `bgPrompt` (the size words) · `visual.camera.framing` on generated shots · reviewer camera mode (does the size show what `info` needs — §2.1 — plus rationing and establish-then-close) |
 | `shot.why` | when `size`/`angle` leave their row, or a composition tag needs its distance | storyboard.html (beside the badges) · reviewer camera mode (a written reason is a departure, not a finding) |
 | `shot.angle` | every shot (default `eye`) | storyboard.html badge · script.md (the same `사이즈·앵글` line — angle with the eye-height baseline) · `bgPrompt` ("eye level" / "seen from above" / "low angle") · reviewer camera mode (angle as change, dutch fee, hook at eye level) |
