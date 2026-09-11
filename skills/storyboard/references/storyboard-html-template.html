@@ -1393,10 +1393,13 @@ window.SB_DOC = {
 
       // ── vocabulary read off scenes.js keys ──
       fmt: { "shorts-9x16": "세로 쇼트폼 9:16", "youtube-long-16x9": "YouTube 롱폼 16:9" },
-      size: { els: "익스트림 롱숏", ls: "롱숏", ws: "와이드숏", fs: "풀숏", mfs: "미디엄 풀숏", ms: "미디엄숏",
-              mcu: "미디엄 클로즈업", cu: "클로즈업", choker: "초커", ecu: "익스트림 클로즈업", insert: "인서트",
-              two: "투숏", three: "쓰리숏", ots: "오버 더 숄더", pov: "POV", back: "백숏",
-              cutaway: "컷어웨이", reaction: "리액션숏" },
+      // Shot-size terms stay in English in the Korean UI too — the trade words are what the
+      // reader is meant to pick up; the Korean gloss lives in sizeHint (the tooltip).
+      size: { els: "extreme long shot", ls: "long shot", ws: "wide shot", fs: "full shot",
+              mfs: "medium full shot", ms: "medium shot", mcu: "medium close-up", cu: "close-up",
+              choker: "choker", ecu: "extreme close-up", insert: "insert",
+              two: "two shot", three: "three shot", ots: "over the shoulder",
+              pov: "POV", back: "back shot", cutaway: "cutaway", reaction: "reaction shot" },
       sizeKey: "샷 사이즈",
       renderKey: "렌더 방식",
       render: { still_camera: "사진 카메라 무빙", character_html: "3D 캐릭터 HTML", object_html: "3D 사물 HTML",
