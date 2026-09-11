@@ -159,10 +159,10 @@ done
 - Card contract (§6): audio = that wav, on the **normal lane** — do not set `sync=1`.
   Trimming, loudnorm, and sentence-boundary detection are all wanted here (the boundaries
   drive the reveal transitions), and with no mouth on screen there's no sync constraint.
-- **Run the build with `ATEMPO_MIN=1 ATEMPO_MAX=1`** — don't apply machine speed
-  correction to a human voice (provisional, 2026-08-18, measured on the first live-voice
-  build). A speaking-rate REGEN recommendation is not a regeneration target here — that
-  shot needs a re-record or a script change.
+- **No machine speed correction on a human voice** — the build's default since 2026-09-11
+  (`ATEMPO_MIN`/`ATEMPO_MAX` 1.0; before that this lane set them on the build line). A
+  speaking-rate REGEN recommendation is not a regeneration target here — that shot needs a
+  re-record or a script change.
 - If noise at the head of a recording slips under the trim threshold (-50dB) and comes out
   as dead air, trim that one card by hand — also measured on the first episode.
 

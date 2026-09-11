@@ -43,14 +43,17 @@ shortform_outro: on       # on | off (absent = on)
     6.3x real time); use `gemini` only when acted emotion is the channel's identity, and
     `elevenlabs` when the channel needs a specific cloned or Voice Library voice, inline
     audio-tag acting (eleven_v3), or scenes with three or more speakers (paid — about 2.6x Gemini)
-  - With local → voice: `<F1~F5 | M1~M5>` · lang: `ko` · speed: `<0.7~2.0, default 1.05>`
+  - With local → voice: `<F1~F5 | M1~M5>` · lang: `ko` · speed: `<0.7~1.2, default 1.05>` —
+    above 1.2 the model drops syllables (measured), so a faster cut comes from the playback speed below
   - With gemini → voiceName: `<Gemini voice name>` ·
     stylePrompt: `<the English style direction — reused without changing a character>`
   - With elevenlabs → voiceId: `<the 20-character voice_id, not the display name>` ·
     model: `<eleven_multilingual_v2 | eleven_v3 | eleven_flash_v2_5>` ·
     stability: `<0–1; on eleven_v3 one of 0.0 / 0.5 / 1.0>` · seed: `<optional integer — once set, never changes>` ·
     outputFormat stays `wav_24000` (the builder needs RIFF; mp3 is not narration input)
-  - Target speaking rate: <characters/sec, default 4.5>
+  - Target speaking rate: <characters/sec, default 4.5> — the cards.tsv column; since 2026-09-11 the
+    build ignores it unless `ATEMPO_MIN`/`ATEMPO_MAX` are set. The build's REGEN warning uses the
+    ship gate's band [3.2, 6.2] ÷ playback factor, not this value
 - **Playback speed (the post-build pace pass)**: `<0.5~3.0, default 1.0>` — produce §7.5 applies
   this factor to the finished feature while the outro stays at 1.0x. It **multiplies with the TTS
   `speed` above**, so choose it against the final subtitle timeline, not by habit. The pass blocks
@@ -201,7 +204,7 @@ the tools trust.
 | approachable practitioner | Achird | Korean, hands-on field practitioner. Friendly, direct, practical, moderate pace. |
 | weighty senior | Sadaltager | Korean, authoritative senior advisor. Knowledgeable, deliberate, calm weight, moderate pace. |
 
-- stylePrompt is **standardized on "moderate pace"** — the build's atempo normalization owns the speed decision.
+- stylePrompt is **standardized on "moderate pace"** — the pace is chosen once here and the build ships it as read; nothing time-stretches the voice inside the build.
 - The full voice list is available via `mcp__social-flow__tts_list_voices`.
 
 ## Local TTS voices (Supertonic)

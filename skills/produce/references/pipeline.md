@@ -46,7 +46,7 @@ bottom 570px     burned-in subtitle band (y 1380–1560) + IG caption / YT chann
 
 ## What build-reel.sh does (in order)
 
-Silence trim → loudnorm -16 → measured speech rate + atempo normalization (outside ±5%, clamped 0.88–1.18)
+Silence trim → loudnorm -16 → measured speech rate (warning band only — the voice is not time-stretched; `ATEMPO_MIN`/`ATEMPO_MAX` default to 1.0 since 2026-09-11)
 → sentence-boundary detection (silencedetect — character-count proportional fallback on failure) → card
 duration rounded up to whole frames + sample-accurate audio padding (**zero drift**) → reveal transition
 timing (reveal-timing.py) → visual chain (video + alpha overlay composite → reveal xfade) → Ken Burns
@@ -97,7 +97,7 @@ falls back silently and no short video loops or freezes to fill its window.
 | `boundary proportional fallback` | OK to continue — if it recurs, fix the script's sentence boundaries (periods) |
 | `segment window under 0.9s` | Merge the short sentence with a neighbor |
 | `min gap between reveals <0.40s` | Trim bullets or lengthen the sentence |
-| `duration > 13s` (card) | Shorten the script and regenerate that card's TTS. Hitting the atempo ceiling (1.18) is also a shorten signal |
+| `duration > 13s` (card) | Shorten the script and regenerate that card's TTS |
 | `separation <N> LU is under the <floor> LU floor` | **Do not proceed** — the build exits 1; the bed is competing with the voice. Lower the bed (`BGM_SEP`), swap in a quieter cue, or fix a narration track that came in hot, then rebuild |
 | `separation <N> LU is no wider than the <N> LU resting distance` | The ducking never fired — the voice key went silent or the bed reached the mix around it. Rebuild after fixing; continue only if the voice is audibly clear over the music |
 | `── voice-to-bed separation <N> LU` (no mark) | OK — at or above the 4 LU floor and wider than the resting distance |
@@ -129,8 +129,11 @@ Unavailable review holds production. After any audio replacement, obtain a new p
    unverified, not an instruction to spend three more takes.
 
 The three axes of voice consistency: ① fixed stylePrompt/voiceName ② loudnorm per-segment
-normalization ③ atempo speech-rate normalization. Output may be raw PCM (24kHz/s16/mono) — the
-build auto-detects via the RIFF magic. temperature 0.4.
+normalization ③ one pace chosen at the engine and kept on every cut — the build no longer
+stretches cards toward a chars/s target (measured 2026-09-11: the engine ran 5.3–6.4 chars/s
+against a 4.5 target, so every card sat at the 0.88 floor and adjacent cards differed by up to
+30%). Output may be raw PCM (24kHz/s16/mono) — the build auto-detects via the RIFF magic.
+temperature 0.4.
 
 ## Palindrome loop (8s clip → 16s)
 

@@ -6,6 +6,7 @@ import {
   DEFAULT_SUPERTONIC_STEPS,
   DEFAULT_SUPERTONIC_VOICE,
   MAX_SUPERTONIC_INPUT_CHARS,
+  MAX_SUPERTONIC_SPEED,
   SUPERTONIC_LANGUAGES,
   SUPERTONIC_VOICE_NAMES,
 } from './supertonic-client.js';
@@ -2713,9 +2714,9 @@ Returns: a text block with the saved .wav path, voice, language, audio duration,
         },
         speed: {
           type: 'number',
-          description: `Speech speed 0.7–2.0 (default: ${DEFAULT_SUPERTONIC_SPEED}). Keep it identical across every cut of one video.`,
+          description: `Speech speed 0.7–${MAX_SUPERTONIC_SPEED} (default: ${DEFAULT_SUPERTONIC_SPEED}). Keep it identical across every cut of one video. Above 1.2 the model drops syllables (measured), so a faster delivery comes from the produce playback speed pass, not from this value.`,
           minimum: 0.7,
-          maximum: 2.0,
+          maximum: MAX_SUPERTONIC_SPEED,
           default: DEFAULT_SUPERTONIC_SPEED,
         },
         steps: {
