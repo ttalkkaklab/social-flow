@@ -46,7 +46,7 @@ above (the `[study]` rows).
 
 - [1. Four dials, four fields — never merged](#1-four-dials-four-fields-never-merged)
 - [2. Size — the audience's distance](#2-size-the-audiences-distance)
-  - [2.1 What the shot has to show → the size that shows it](#21-what-the-shot-has-to-show--the-size-that-shows-it)
+  - [2.1 What the shot has to show → the size that shows it](#21-what-the-shot-has-to-show-→-the-size-that-shows-it)
 - [3. Angle — the seat you give the audience](#3-angle-the-seat-you-give-the-audience)
 - [3.5 Frame space — what is where, and which way it faces](#35-frame-space-what-is-where-and-which-way-it-faces)
 - [4. Move — what the camera does while the shot runs (generated video)](#4-move-what-the-camera-does-while-the-shot-runs-generated-video)
@@ -177,7 +177,7 @@ has to see, not by taste `[course]`. Read the two together: on the first shot of
 info wins (establish, then close); on the line that matters the feel wins; leaving either
 default means writing why on the shot — `shot.why`, one line. A scene that opens on the `mcu` hook still owes its
 wide — the `ls` comes before the first `insert`, or the viewer never learns where the hands
-are. `check-scenes.js` fails a narrated shot with no
+are. `check-scenes.js` fails any shot but the outro with no
 `shot.size` after the story pass; the reviewer's camera mode reads the fit.
 
 | What `info` has to show | Size | Why this size and not the next |
@@ -617,7 +617,7 @@ below are what the script's standing notes carry `[course]`.
 | Value | Written in | Read by |
 |---|---|---|
 | `shot.feel` | every shot | storyboard.html (the feel line · missing-feel warning), script.md (the `느낌` line), reviewer camera mode (does the technique serve it), image mode (does the picture show it) |
-| `shot.size` | every shot (`check-scenes.js` fails a narrated shot without one after the story pass) | storyboard.html badge · script.md (the `사이즈·앵글` line — size with its distance — and the `소리` line that follows the size) · `bgPrompt` (the size words) · `visual.camera.framing` on generated shots · reviewer camera mode (does the size show what `info` needs — §2.1 — plus rationing and establish-then-close) |
+| `shot.size` | every shot (`check-scenes.js` fails any shot but the outro without one after the story pass) | storyboard.html badge · script.md (the `사이즈·앵글` line — size with its distance — and the `소리` line that follows the size) · `bgPrompt` (the size words) · `visual.camera.framing` on generated shots · reviewer camera mode (does the size show what `info` needs — §2.1 — plus rationing and establish-then-close) |
 | `shot.why` | when `size`/`angle` leave their row, or a composition tag needs its distance | storyboard.html (beside the badges) · reviewer camera mode (a written reason is a departure, not a finding) |
 | `shot.angle` | every shot (default `eye`) | storyboard.html badge · script.md (the same `사이즈·앵글` line — angle with the eye-height baseline) · `bgPrompt` ("eye level" / "seen from above" / "low angle") · reviewer camera mode (angle as change, dutch fee, hook at eye level) |
 | `shot.space` | generated stills (filmed shots when two people, or a person and what they look at, share the scene) | `assemble-bg-prompt.js` (the spatial prefix of `bgPrompt`) · storyboard.html (the space line · missing-layout warning) · script.md (the `자리` line) · reviewer camera mode (banned language, missing layout/facing) · image mode (does the PNG match layout and facing) |
