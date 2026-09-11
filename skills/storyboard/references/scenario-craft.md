@@ -1,4 +1,4 @@
-# Scenario craft — thirteen rules that run underneath the beats
+# Scenario craft — fourteen rules that run underneath the beats
 
 The beat skeleton (`scenes-schema.md` §playback order) says **where** scenes go. Short-form
 is three beats, always: hook → drip (1–n) → cta. Long-form still walks two arcs. This file
@@ -52,6 +52,7 @@ episode, and it says in what order to write it and how far off the obvious to pl
 - [11. The storyline is an investigation, not a diary](#11-the-storyline-is-an-investigation-not-a-diary)
 - [12. The arc goes down before it comes up — catharsis is release that was paid for](#12-the-arc-goes-down-before-it-comes-up-catharsis-is-release-that-was-paid-for)
 - [13. Cut points first, then half a step](#13-cut-points-first-then-half-a-step)
+- [14. The person short — one person, one turn, a cut per sentence](#14-the-person-short-one-person-one-turn-a-cut-per-sentence)
 - [Sources](#sources)
 
 ## 1. The connective test — every cut is a "but" or a "therefore"
@@ -656,6 +657,19 @@ Checks the pass runs (§10's spirit):
   only a sentence.
 - No shot needs its narration to explain what its picture is.
 - The 마무리 takes nothing back from what the body charged the viewer for.
+
+## 14. The person short — one person, one turn, a cut per sentence
+
+A shape, not a new rule: the seven history shorts channels surveyed on 2026-09-10 hold §7,
+§9 and §11 more strictly than the ordinary board does, and the whole shape fits in one
+declaration. The first sentence is a scene already under way — no name, no year, no result
+(§11's cold open with the date removed). The body is 원인 → 막힘 → 한 방, one person and one
+stroke (§9's double hit on the payoff shot, `sound.drop` on it — §7). The close is one
+picture after the blow, and when the record is disputed the last line shows the dispute
+instead of picking a side. The screen changes with every sentence, and the subtitle colours
+only the year and the name. `STORY.person` declares it and `check-story.js` holds the shape:
+[person-short.md](person-short.md). Field practice — observed on top episodes, no
+retention measurement behind it.
 
 ## Sources
 
