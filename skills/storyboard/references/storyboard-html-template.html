@@ -4281,8 +4281,10 @@ window.SB_DOC = {
 
   app.innerHTML = h;
 
-  /* Icon tooltips — first line bold (the term), the rest as written */
+  /* Icon tooltips — first line bold (the term), the rest as written. The server tests render
+     this script in a vm with a stub document that has no event API, so bail out there. */
   (function () {
+    if (typeof document.addEventListener !== "function") return;
     var box = document.createElement("div"); box.className = "tipbox"; document.body.appendChild(box);
     var cur = null;
     function show(el) {
