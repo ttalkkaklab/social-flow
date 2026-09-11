@@ -427,7 +427,7 @@
   .shot-size.unknown { color: var(--warn-ink, var(--accent-ink)); border-style: dashed; }
   .shot-why { font-size: 0.8em; color: var(--muted); margin-left: 0.4em; }
   .shot-grammar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s3); margin: var(--s2) 0 0; }
-  .shot-size { display: inline-flex; align-items: center; gap: 8px; cursor: help; border: 0; padding: 0; letter-spacing: 0; }
+  .shot-size { display: inline-flex; align-items: center; gap: 8px; cursor: default; border: 0; padding: 0; letter-spacing: 0; }
   .shot-size .size-ico { width: 32px; height: 32px; border-radius: 23%; }
   .shot-size .sz { display: flex; flex-direction: column; line-height: 1.15; }
   .shot-size .sz b { font-size: var(--t-cap); font-weight: 700; color: var(--text); }
@@ -463,13 +463,23 @@
   }
   .size-key .k {
     display: flex; flex-direction: column; align-items: center; gap: 5px;
-    font-size: 10.5px; line-height: 1.2; text-align: center; color: var(--muted); cursor: help; word-break: keep-all;
+    font-size: 10.5px; line-height: 1.2; text-align: center; color: var(--muted); cursor: default; word-break: keep-all;
   }
   .size-key .k .kk { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9.5px; color: var(--faint); }
   .size-key .size-ico { width: 38px; height: 38px; border-radius: 22.5%; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3), 0 2px 4px rgba(0, 0, 0, .18); }
   /* Route keys are long snake_case words — wider cells, and the key may break mid-word */
   .size-key.routes { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
   .size-key.routes .k .kk { overflow-wrap: anywhere; }
+  /* Instant tooltip for the icon tiles (data-tip) — the browser's own title tip waits a second
+     and folds the line breaks, so a small box follows the pointer instead. */
+  .tipbox {
+    position: fixed; z-index: 50; max-width: 320px; padding: 8px 11px; border-radius: 9px;
+    background: var(--text); color: var(--bg); font-size: 12.5px; line-height: 1.5;
+    white-space: pre-line; word-break: keep-all; pointer-events: none;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, .22); opacity: 0; transition: opacity .08s;
+  }
+  .tipbox.on { opacity: 1; }
+  .tipbox b { display: block; font-weight: 700; margin-bottom: 2px; }
   .shot-meta .shot-feel { margin: 0; flex-basis: 100%; }
   .shot-feel.miss b { color: var(--warn-ink, var(--accent-ink)); }
   .shot-info {
@@ -1968,15 +1978,15 @@ window.SB_DOC = {
     var routes = ["generated_video", "still_camera", "character_html", "object_html", "data_graph", "editorial_html", "recording", "asset"];
     return '<div class="size-key"><span class="kt">' + esc(T.sizeKey) + "</span>" +
       order.map(function (k) {
-        return '<span class="k" title="' + esc(sizeTitle(k)) + '">' + sizeIcon(k) + '<span>' + esc(T.size[k] || k) + "</span></span>";
+        return '<span class="k" data-tip="' + esc(sizeTitle(k)) + '">' + sizeIcon(k) + '<span>' + esc(T.size[k] || k) + "</span></span>";
       }).join("") + "</div>" +
       '<div class="size-key"><span class="kt">' + esc(T.angleKey) + "</span>" +
       ["eye", "high", "low", "overhead", "dutch"].map(function (k) {
-        return '<span class="k" title="' + esc(angleTitle(k)) + '">' + angleIcon(k) + '<span>' + esc(T.angle[k] || k) + "</span></span>";
+        return '<span class="k" data-tip="' + esc(angleTitle(k)) + '">' + angleIcon(k) + '<span>' + esc(T.angle[k] || k) + "</span></span>";
       }).join("") + "</div>" +
       '<div class="size-key routes"><span class="kt">' + esc(T.renderKey) + "</span>" +
       routes.map(function (k) {
-        return '<span class="k" title="' + esc(renderTitle(k)) + '">' + renderIcon(k) + '<span>' + esc(T.render[k] || k) + '</span><span class="kk">' + esc(k) + "</span></span>";
+        return '<span class="k" data-tip="' + esc(renderTitle(k)) + '">' + renderIcon(k) + '<span>' + esc(T.render[k] || k) + '</span><span class="kk">' + esc(k) + "</span></span>";
       }).join("") + "</div>";
   }
   function grammarOf(s, i) {
@@ -3745,7 +3755,7 @@ window.SB_DOC = {
     // this shot's why / render.reason are the tile's tooltip; the legend above names every icon.
     var gram = "";
     function tile(icon, label, tip, unknown) {
-      return '<span class="shot-size' + (unknown ? " unknown" : "") + '" title="' + esc(tip) + '">' +
+      return '<span class="shot-size' + (unknown ? " unknown" : "") + '" data-tip="' + esc(tip) + '">' +
              (icon || '<span class="sz"><b>' + esc(label) + "</b></span>") + "</span>";
     }
     if (g.size) gram += tile(sizeIcon(g.size), T.size[g.size] || (g.size + " ?"),
@@ -4142,6 +4152,28 @@ window.SB_DOC = {
        '<a href="./research.md">research.md</a> · <a href="./scenes.js">scenes.js</a></footer>';
 
   app.innerHTML = h;
+
+  /* Icon tooltips — first line bold (the term), the rest as written */
+  (function () {
+    var box = document.createElement("div"); box.className = "tipbox"; document.body.appendChild(box);
+    var cur = null;
+    function show(el) {
+      var tip = el.getAttribute("data-tip") || ""; if (!tip) return;
+      var nl = tip.indexOf(" — ");
+      box.innerHTML = nl > 0 ? "<b>" + esc(tip.slice(0, nl)) + "</b>" + esc(tip.slice(nl + 3)) : esc(tip);
+      var r = el.getBoundingClientRect(), pad = 8;
+      box.style.left = "0px"; box.style.top = "0px"; box.classList.add("on");
+      var w = box.offsetWidth, hgt = box.offsetHeight;
+      var x = Math.max(pad, Math.min(r.left, window.innerWidth - w - pad));
+      var y = r.bottom + 6; if (y + hgt > window.innerHeight - pad) y = r.top - hgt - 6;
+      box.style.left = x + "px"; box.style.top = y + "px"; cur = el;
+    }
+    function hide() { box.classList.remove("on"); cur = null; }
+    document.addEventListener("mouseover", function (e) { var el = e.target.closest && e.target.closest("[data-tip]"); if (el && el !== cur) show(el); });
+    document.addEventListener("mouseout", function (e) { var el = e.target.closest && e.target.closest("[data-tip]"); if (el && el === cur && !el.contains(e.relatedTarget)) hide(); });
+    document.addEventListener("click", function (e) { var el = e.target.closest && e.target.closest("[data-tip]"); if (!el) { if (cur) hide(); } else if (el === cur) hide(); else show(el); });
+    window.addEventListener("scroll", function () { if (cur) hide(); }, true);
+  })();
 
   /* Filling the check strip — nothing is missed only once every violation has been registered */
   auditSealed = true;
