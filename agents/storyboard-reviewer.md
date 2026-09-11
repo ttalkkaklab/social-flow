@@ -1193,15 +1193,15 @@ finding; a silent departure is.
   server grid — veo takes 4/6/8s (1080p/4K and the reference lane 8s only), the default
   seedance 1.5 pro takes 4–12s. In-clip state changes are written in words ("in under half a
   second") on either route.
+- **P0-13 fake action under an action-required motion policy** — `visual.action` merely renames
+  a camera move, whole-photo zoom or pan, caption change, still swap, or ambient drift. The field
+  has to say what the subject or evidence visibly does; a motion slide also names that change in
+  its `plan` against the narration groups.
 - **P0-14 the size contradicts the info** — `cu`/`ecu`/`insert` on a shot whose `info` is the
   place, the head count or the distance between people; `ls`/`els` on the one line that has to
   land on a face; `ms` on a walk, a dance or a fight; a lone figure at `els` meant as scale —
   with no reason written on the shot (directing-grammar §2.1). A written reason is a departure,
   not a P0.
-- **P0-13 fake action under an action-required motion policy** — `visual.action` merely renames
-  a camera move, whole-photo zoom or pan, caption change, still swap, or ambient drift. The field
-  has to say what the subject or evidence visibly does; a motion slide also names that change in
-  its `plan` against the narration groups.
 
 ## Per-shot axes (additive out of 100 — scored separately for each shot)
 

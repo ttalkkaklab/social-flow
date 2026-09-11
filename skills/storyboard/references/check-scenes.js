@@ -745,8 +745,9 @@ function check(win, fmt, opts) {
       byScene.get(key).push({ s, i });
     });
     // A scene returning to a place an earlier scene already laid out with a wide carries no debt —
-    // the viewer still holds the room (directing-grammar §6 rule 2). The place is sceneSlug's first half.
-    const placeOf = (s) => String(s.sceneSlug || '').split('/')[0].trim();
+    // the viewer still holds the room (directing-grammar §6 rule 2). The place is sceneSlug's first half,
+    // whitespace removed the way structure-contract.js keys places.
+    const placeOf = (s) => String(s.sceneSlug || '').split('/')[0].replace(/\s+/g, '');
     const seenWide = new Set();
     byScene.forEach((rows, key) => {
       const first = rows[0].s.shot && rows[0].s.shot.size, second = rows[1] && rows[1].s.shot && rows[1].s.shot.size;

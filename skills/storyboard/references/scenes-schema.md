@@ -186,7 +186,7 @@ One short is a book, a sequence is a paragraph, a scene is a sentence, a shot is
 | Shot (a "cut" on set) | One unbroken chunk from recording ON to OFF | **one `SCENES[]` entry**. `type` is the role (cover/points/…), not a grammar unit |
 | Reveal | The moment on-screen text appears within the same shot | `narration` segments and bullets. Not a shot — the scene-frame row label is "reveal" |
 | Take | A retry of the same shot | Not an entry in this array. Generation rounds live in `PRODUCTION.maxAttempts` and `.work/cost-tally.tsv`; a filmed shot's retries are the last take in the file (shot-script-template) |
-| Coverage | Material from filming one scene at several sizes | Shots sharing a `scene` number — two sizes per scene (a wide and a close), no repeated `shot.info`, one `space.line`. `structure-contract.js` warns past those |
+| Coverage | Material from filming one scene at several sizes | Shots sharing a `scene` number — two sizes per scene (a wide — `els`·`ls`·`ws`·`fs`·`mfs` — and a close), no repeated `shot.info`, one `space.line`; a scene that opens close still owes an `ls`/`els` (`mfs`/`two` for two people) next, which `fs` does not pay. `structure-contract.js` warns past those |
 
 A short is usually one sequence. A scene breaks when the place changes, the time breaks, or the
 value has turned and a second event begins — never for a slide, a chart or a new subject

@@ -59,7 +59,9 @@
   const compact = v => String(v == null ? '' : v).replace(/\s+/g, '');
   const bare = v => compact(v).replace(/[\p{P}\p{S}]/gu, '');
   const slugOf = sc => sc.place.trim() + ' / ' + sc.time.trim();
-  /* A wide sets the place, a close pays the moment — coverage is one of each (directing-grammar §6.1–2). */
+  /* A wide sets the place, a close pays the moment — coverage is one of each (directing-grammar §6.1–2).
+     Coverage takes fs as a scene's wide (a whole body in its room still frames the place); the
+     close-opening debt in check-scenes.js and the approval page is stricter and fs does not pay it. */
   const WIDE = ['els', 'ls', 'ws', 'fs', 'mfs'];
   const CLOSE = ['mcu', 'cu', 'choker', 'ecu', 'insert'];
   /* A place that names a picture — the scene is where the story is, the diagram is one of its shots. */
