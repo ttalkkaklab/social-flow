@@ -66,9 +66,12 @@ function withBoard(fn) {
   const save = win => writeFileSync(path.join(board, 'scenes.js'), Object.entries(win).map(([k, v]) => `window.${k}=${JSON.stringify(v)};`).join('\n'));
   try { return fn({ dir, board, work, save }); } finally { rmSync(dir, { recursive: true, force: true }); }
 }
-test('quotes both modes with billed seconds, retry range and API rates, excluding recordings', () => {
+test('quotes four choices with billed seconds, retry range and API rates, excluding recordings', () => {
   const win = fixture(15), q = quote(win);
-  assert.equal(q.options.hybrid.firstPassUsd, .58);
+  assert.deepEqual(Object.keys(q.options), ['full_video', 'video_50', 'video_30', 'hook_only']);
+  assert.equal(q.options.video_50.clips, 8);
+  assert.equal(q.options.video_30.clips, 5);
+  assert.equal(q.options.hook_only.firstPassUsd, .29);
   assert.equal(q.options.full_video.firstPassUsd, 4.35);
   assert.equal(q.options.full_video.retryHighUsd, 13.05);
   assert.equal(q.options.full_video.retryHighKrw, 18270);
@@ -149,7 +152,7 @@ test('approval is bound to actual plan and prices but recording a generated outp
   win.SCENES[0].duration = 6; save(win); assert.match(check(board).errors.join(), /quote is stale/);
   approve(win); save(win); assert.deepEqual(check(board).errors, []);
   win.PRODUCTION.approval.quoteFingerprint = 'old-price-table'; save(win); assert.match(check(board).errors.join(), /quote is stale/);
-  delete win.PRODUCTION; save(win); assert.match(check(board, { requireSelection: true }).errors.join(), /Choose hybrid/);
+  delete win.PRODUCTION; save(win); assert.match(check(board, { requireSelection: true }).errors.join(), /Choose a production mode/);
 }));
 test('retry-inclusive budget, per-shot attempt limit and actual spend block new calls', () => withBoard(({ board, work, save }) => {
   const win = fixture(); win.PRODUCTION.videoBudgetUsd = .5; approve(win); save(win);
@@ -519,7 +522,7 @@ test('the previz renderer and the video model are HITL choices recorded before a
   assert.match(text(options(host)), /videoProvider host/);
   // No mode yet → a clear error, not a TypeError; a hybrid board with no cut yet is marked provisional (review M7).
   const noMode = fixture(); delete noMode.PRODUCTION.mode;
-  assert.throws(() => options(noMode), /Choose hybrid or full_video first/);
+  assert.throws(() => options(noMode), /Choose full_video, video_50, video_30 or hook_only first/);
   const hybrid = fixture(); hybrid.PRODUCTION.mode = 'hybrid'; hybrid.PRODUCTION.comparison = { model: 'seedance-1-5-pro-251215', resolution: '1080p', hybridShots: [1, 2] };
   for (const s of hybrid.SCENES) { s.shot.render.mode = 'still_camera'; delete s.visual.video; }
   const ht = options(hybrid); assert.equal(ht.cuts, 0);
@@ -658,4 +661,51 @@ test('a supplied stock clip is outside the generated set; a stock photograph may
   const sig = mode.signature({ SCENES: [photo, clip], PRODUCTION: { mode: 'hybrid' } });
   assert.match(sig, /"license"/, 'the approval fingerprint covers the license record');
   assert.equal(mode.policy({ generatedVideoMax: 2 }, { mode: 'full_video', videoBudgetUsd: 1 }, [clip, photo]).generatedVideoMax, 1);
+});
+
+
+test('percentage minima round up by new cut count and hook-only rejects extra videos', () => {
+  const cuts = Array.from({ length: 7 }, (_, i) => ({ type: i ? 'points' : 'cover', duration: i ? 5 : 20, visual: {} }));
+  const win = { PRODUCTION: { mode: 'video_50' }, SCENES: cuts };
+  for (const s of cuts.slice(0, 3)) s.visual.video = { engine: 'host' };
+  assert.match(mode.coverageErrors(win).join(), /at least 4 of 7/);
+  assert.match(mode.check(win).join(), /at least 4 of 7/);
+  cuts[3].visual.video = { engine: 'host' };
+  assert.deepEqual(mode.coverageErrors(win), []);
+  win.SCENES.push({ type: 'outro' }, { visual: { source: 'recording' } }, { visual: { source: 'stock', clip: 'stock.mp4' } }, { visual: { reuse: {} } });
+  assert.deepEqual(mode.coverageErrors(win), []);
+  win.PRODUCTION.mode = 'video_30';
+  delete cuts[3].visual.video;
+  assert.deepEqual(mode.coverageErrors(win), []);
+  delete cuts[2].visual.video;
+  assert.match(mode.coverageErrors(win).join(), /at least 3 of 7/);
+  win.PRODUCTION.mode = 'hook_only';
+  assert.match(mode.coverageErrors(win).join(), /only the opening hook/);
+  delete cuts[1].visual.video;
+  assert.deepEqual(mode.coverageErrors(win), []);
+  delete cuts[0].visual.video;
+  cuts[1].visual.video = {};
+  assert.match(mode.coverageErrors(win).join(), /only the opening hook/);
+  assert.equal(mode.policy({ generatedVideoMax: 2 }, { mode: 'video_50', videoBudgetUsd: 10 }, cuts).generatedVideoMax, 8);
+  assert.equal(mode.policy({}, win.PRODUCTION, cuts).generatedVideoMax, 1);
+});
+
+test('long-form hook-only comparison quotes hooking rather than cover', () => {
+  const win = { SCENES: [{ type: 'cover', duration: 4, visual: {} }, { type: 'hooking', duration: 8, visual: {} }], PRODUCTION: { videoProvider: 'host' } };
+  const q = quote(win);
+  assert.equal(q.options.hook_only.clips, 1);
+  assert.equal(q.options.hook_only.generatedSeconds, 8);
+  win.PRODUCTION.mode = 'hook_only';
+  win.SCENES[1].visual.video = { engine: 'host' };
+  assert.deepEqual(mode.coverageErrors(win), []);
+});
+
+
+test('partial production choices can assemble generated-cut prompts and model quotes', () => {
+  for (const key of ['video_50', 'video_30', 'hook_only']) {
+    const win = fixture(1); win.PRODUCTION.mode = key;
+    assert.doesNotThrow(() => assemble(win, 0, root));
+    assert.equal(quote(win).options[key].provisional, false);
+    assert.equal(quote(win).options[key].clips, 1);
+  }
 });

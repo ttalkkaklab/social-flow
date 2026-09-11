@@ -49,6 +49,7 @@
   const HOOK_FORMS = ['paradox', 'gap', 'payoff', 'identify', 'number', 'secret'];
   const ARCS = ['answer-first', 'story'];
   const RENDER_MODES = ['still_camera', 'character_html', 'object_html', 'data_graph', 'generated_video', 'editorial_html', 'stock_video'];
+  const LINE_CROSSING_METHODS = ['camera_move', 'subject_move', 'neutral', 'intentional'];
   const TRANSITION_RE = /^(jcut|cut|dissolve|dip|dip:white|iris|blur|zoom|push:(l2r|r2l|u2d|d2u)|whip:(l2r|r2l|u2d|d2u))$/;
   /* Shots that sit in the playback line and belong to a scene. broll is spliced by `after`
      and the outro is the shared asset — neither is a shot in a scene. */
@@ -64,6 +65,7 @@
      close-opening debt in check-scenes.js and the approval page is stricter and fs does not pay it. */
   const WIDE = ['els', 'ls', 'ws', 'fs', 'mfs'];
   const CLOSE = ['mcu', 'cu', 'choker', 'ecu', 'insert'];
+  const SIZE_RANK = { els: 0, ls: 1, ws: 1, fs: 2, mfs: 3, ms: 4, mcu: 5, cu: 6, choker: 7, ecu: 8, insert: 9 };
   /* A place that names a picture — the scene is where the story is, the diagram is one of its shots. */
   const SCREEN_RE = /도해|그래픽|슬라이드|차트|그래프|도표|인포그래픽|diagram|slide|chart|graph|infographic/i;
   /* Predicates that say what the viewer learns, not what happens. */
@@ -114,10 +116,12 @@
   }
 
   /** Structural findings — [{ level: 'bad' | 'warn', where, what }]. */
-  function check(win) {
+  function check(win, opts) {
     const out = [];
     const bad = (where, what) => out.push({ level: 'bad', where, what });
+    const later = (where, what) => out.push({ level: 'later', where, what });
     const warn = (where, what) => out.push({ level: 'warn', where, what });
+    const cameraRule = opts && opts.draft ? later : bad;
     const shots = Array.isArray(win.SCENES) ? win.SCENES : [];
     const placed = shots.map((s, i) => ({ s, no: i + 1 })).filter(x => PLACED(x.s));
     const st = win.STRUCTURE;
@@ -432,6 +436,7 @@
     // A scene whose place an earlier scene already laid out with a wide needs no wide of its own —
     // the viewer still holds the room (directing-grammar §6 rule 2).
     const seenWidePlace = new Set();
+    const intentionalCrossings = [];
     groups.forEach((xs, no) => {
       const where = 'scene ' + no;
       const sc = byNo.get(no);
@@ -464,8 +469,69 @@
           warn('shot ' + x.no, `size "${sz}" but the layout is a close view ("${lay.trim().slice(0, 30)}…") — the size is what the frame shows; a wide labelled on a close-up does not set the place (rule 9)`);
       });
       const lines = xs.map(x => x.s.shot && x.s.shot.space && x.s.shot.space.line).filter(text).map(compact);
-      if (lines.length >= 2 && new Set(lines).size > 1)
-        warn(where, 'space.line changes inside the scene — the 180° lock holds for the scene unless a crossing is written on the shot (directing-grammar §6.11)');
+      const locked = xs.map(x => ({ x, line: x.s.shot && x.s.shot.space && x.s.shot.space.line }))
+        .filter(row => text(row.line)).map(row => ({ x: row.x, line: compact(row.line) }));
+      if (locked.length >= 2) {
+        let previous = locked[0].line;
+        locked.slice(1).forEach(({ x, line }) => {
+          const crossing = x.s.shot && x.s.shot.lineCrossing;
+          if (line === previous) {
+            if (crossing !== undefined)
+              bad('shot ' + x.no, 'shot.lineCrossing is set but space.line did not change — record it on the first shot from the new side');
+            return;
+          }
+          if (!crossing || typeof crossing !== 'object') {
+            cameraRule('shot ' + x.no, `space.line changes from "${previous}" to "${line}" — declare shot.lineCrossing with camera_move, subject_move, neutral or intentional`);
+            previous = line;
+            return;
+          }
+          if (LINE_CROSSING_METHODS.indexOf(crossing.method) === -1)
+            bad('shot ' + x.no, 'shot.lineCrossing.method is camera_move, subject_move, neutral or intentional');
+          if (compact(crossing.from) !== previous || compact(crossing.to) !== line)
+            bad('shot ' + x.no, `shot.lineCrossing.from/to must name "${previous}" → "${line}"`);
+          if (!text(crossing.reason))
+            bad('shot ' + x.no, 'shot.lineCrossing.reason says what makes the new side legible');
+          if (crossing.method === 'neutral') {
+            const bridge = xs.find(y => y.no === crossing.bridgeShot);
+            if (!Number.isInteger(crossing.bridgeShot) || !bridge || bridge.no >= x.no || !(bridge.s.shot && bridge.s.shot.lineNeutral === true))
+              bad('shot ' + x.no, 'a neutral crossing names an earlier bridgeShot whose shot.lineNeutral is true');
+          } else if (crossing.bridgeShot !== undefined) {
+            bad('shot ' + x.no, 'bridgeShot belongs only to a neutral crossing');
+          }
+          if (crossing.method === 'intentional') intentionalCrossings.push(x.no);
+          previous = line;
+        });
+      }
+      xs.forEach(x => {
+        const neutral = x.s.shot && x.s.shot.lineNeutral;
+        if (neutral !== undefined && neutral !== true)
+          bad('shot ' + x.no, 'shot.lineNeutral is true when the shot sits on the axis');
+        if (neutral === true && x.s.shot && x.s.shot.space && text(x.s.shot.space.line))
+          bad('shot ' + x.no, 'a neutral shot has no space.line — it bridges the two sides instead of claiming either one');
+      });
+
+      /* `shot.angle` is height, not a horizontal turn. A risky cut therefore records a
+         bearing within the selected semicircle, changes size by two ranks, or names the
+         action that hides the edit. */
+      const picture = x => x.s.type !== 'broll' && x.s.type !== 'outro' && !(x.s.shot && x.s.shot.render && EXPLAIN_MODES.indexOf(x.s.shot.render.mode) !== -1);
+      xs.forEach((x, i) => {
+        if (!i || !picture(xs[i - 1]) || !picture(x)) return;
+        const prev = xs[i - 1];
+        const prevRank = SIZE_RANK[prev.s.shot && prev.s.shot.size];
+        const rank = SIZE_RANK[x.s.shot && x.s.shot.size];
+        if (prevRank !== undefined && rank !== undefined && Math.abs(prevRank - rank) >= 2) return;
+        const a = prev.s.shot && prev.s.shot.coverage;
+        const b = x.s.shot && x.s.shot.coverage;
+        if (b && text(b.action)) return;
+        if (!a || !b || !Number.isFinite(a.azimuth) || !Number.isFinite(b.azimuth)) {
+          cameraRule('shot ' + x.no, 'this adjacent picture cut changes size by less than two steps — set shot.coverage.azimuth on both shots, or name the action that carries this cut');
+          return;
+        }
+        if (a.azimuth < 0 || a.azimuth > 180 || b.azimuth < 0 || b.azimuth > 180)
+          bad('shot ' + x.no, 'shot.coverage.azimuth is 0–180 degrees inside the selected side of the axis');
+        else if (Math.abs(a.azimuth - b.azimuth) < 30)
+          bad('shot ' + x.no, `camera azimuth changes ${Math.abs(a.azimuth - b.azimuth)}° — change it by at least 30°, change size by two steps, or cut on the written action`);
+      });
       // The out-line is spoken — it is the last sentence of the scene's last shot, not a planning note.
       const last = xs[xs.length - 1];
       const segs = (last.s.narration || []).map(seg => seg && (seg.tts || seg.sub) || '').filter(text);
@@ -623,6 +689,8 @@
       if (sc && no === lastNo && sc.out === undefined && groups.size >= 2)
         warn(where, 'the last scene has no out — its out is the hand-back to the cover, the line the episode ends on (scenario-craft §5, §7)');
     });
+    if (intentionalCrossings.length > 2)
+      bad('episode', `${intentionalCrossings.length} intentional 180° crossings on shots ${intentionalCrossings.join(', ')} — confusion is an accent, at most two per episode`);
 
     // A pole the previous scene already flipped is not this scene's turn (rule 6).
     runs.forEach((no, i) => {

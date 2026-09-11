@@ -89227,6 +89227,17 @@ var structureSchema = external_exports.object({
   sequences: external_exports.array(sequenceSchema).min(1),
   scenes: external_exports.array(sceneSchema).min(1)
 }).strict();
+var coverageSchema = external_exports.object({
+  azimuth: external_exports.number().finite().min(0).max(180).optional().describe("Horizontal camera bearing, 0\u2013180\xB0 inside the selected side of the axis"),
+  action: external_exports.string().trim().min(1).optional().describe("Visible action that carries this cut when no 30\xB0 or two-step change is used")
+}).strict().refine((value) => value.azimuth !== void 0 || value.action !== void 0, "coverage names an azimuth or the action that carries the cut");
+var lineCrossingSchema = external_exports.object({
+  method: external_exports.enum(["camera_move", "subject_move", "neutral", "intentional"]),
+  from: nonEmpty.describe("The previous space.line value"),
+  to: nonEmpty.describe("The new space.line value"),
+  reason: nonEmpty.describe("What the viewer sees that makes the new side legible"),
+  bridgeShot: external_exports.number().int().positive().optional().describe('Earlier neutral shot number; required only for method "neutral"')
+}).strict();
 var shotSchema = external_exports.object({
   type: tuple(V.TYPES),
   title: external_exports.string().optional(),
@@ -89253,6 +89264,9 @@ var shotSchema = external_exports.object({
     share: external_exports.string().optional(),
     shareType: tuple(V.SHARE_TYPES).optional(),
     space: external_exports.record(external_exports.unknown()).optional(),
+    coverage: coverageSchema.optional(),
+    lineNeutral: external_exports.literal(true).optional(),
+    lineCrossing: lineCrossingSchema.optional(),
     render: external_exports.object({ mode: tuple(V.RENDER_MODES), purpose: external_exports.string().optional(), reason: external_exports.string().optional() }).passthrough().optional()
   }).passthrough().optional(),
   sound: external_exports.record(external_exports.unknown()).optional()
@@ -93449,7 +93463,7 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
 
 // src/index.ts
 var server = new Server(
-  { name: "social-flow", version: "0.76.0" },
+  { name: "social-flow", version: "0.77.0" },
   { capabilities: { tools: {} } }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {

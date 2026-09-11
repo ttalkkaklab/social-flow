@@ -1,7 +1,7 @@
 # Choosing the storyboard's visual style
 
 A new episode asks for a visual style in HITL before the storyboard and its images are
-written. Production mode (hybrid or full video) and style are separate choices; the two
+written. Production mode (100%, at least 50%, at least 30%, or hook only) and style are separate choices; the two
 questions may be shown together. The production-mode question carries production-mode.md's
 first-pass cost, retry cost and budget cap. Do not say that the style alone changes the API
 price; price follows model, length, resolution and retry count.
@@ -87,7 +87,7 @@ including hybrid's still-camera cuts. HTML explanation cuts share the palette an
 treatment but keep text and figures readable. Actual archival photos and user recordings
 keep their original appearance.
 
-Both hybrid and full video can write image prompts with `spatial-prompts.js`. An image-only
+All production modes can write image prompts with `spatial-prompts.js`. An image-only
 cut still provides `shot.videoDesign`'s look, before, action, after and continuity, plus
 `visual.camera.framing`; that metadata does not turn the cut into video. On a video shot with
 `subject_action` motion the last beat is the final state and `after` may be left out. Use the returned

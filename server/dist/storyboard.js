@@ -99,6 +99,17 @@ export const structureSchema = z
     scenes: z.array(sceneSchema).min(1),
 })
     .strict();
+const coverageSchema = z.object({
+    azimuth: z.number().finite().min(0).max(180).optional().describe('Horizontal camera bearing, 0–180° inside the selected side of the axis'),
+    action: z.string().trim().min(1).optional().describe('Visible action that carries this cut when no 30° or two-step change is used'),
+}).strict().refine((value) => value.azimuth !== undefined || value.action !== undefined, 'coverage names an azimuth or the action that carries the cut');
+const lineCrossingSchema = z.object({
+    method: z.enum(['camera_move', 'subject_move', 'neutral', 'intentional']),
+    from: nonEmpty.describe('The previous space.line value'),
+    to: nonEmpty.describe('The new space.line value'),
+    reason: nonEmpty.describe('What the viewer sees that makes the new side legible'),
+    bridgeShot: z.number().int().positive().optional().describe('Earlier neutral shot number; required only for method "neutral"'),
+}).strict();
 /** The grammar half of a shot is exact; the visual plan and the machine layer pass through (scenes-schema.md owns them). */
 export const shotSchema = z
     .object({
@@ -128,6 +139,9 @@ export const shotSchema = z
         share: z.string().optional(),
         shareType: tuple(V.SHARE_TYPES).optional(),
         space: z.record(z.unknown()).optional(),
+        coverage: coverageSchema.optional(),
+        lineNeutral: z.literal(true).optional(),
+        lineCrossing: lineCrossingSchema.optional(),
         render: z.object({ mode: tuple(V.RENDER_MODES), purpose: z.string().optional(), reason: z.string().optional() }).passthrough().optional(),
     })
         .passthrough()

@@ -70,6 +70,10 @@ describe('storyboard schemas', () => {
     assert.ok(!shotSchema.safeParse({ ...board()[1], beat: 'middle' }).success);
     const extra = shotSchema.safeParse({ ...board()[1], visual: { video: { engine: 'veo' } }, edit: { reason: 'x' } });
     assert.ok(extra.success && extra.data.edit.reason === 'x');
+    assert.ok(shotSchema.safeParse({ ...board()[1], shot: { ...board()[1].shot, coverage: { azimuth: 35 } } }).success);
+    assert.ok(shotSchema.safeParse({ ...board()[1], shot: { ...board()[1].shot, lineCrossing: { method: 'camera_move', from: 'A left, B right', to: 'B left, A right', reason: '카메라가 선을 지나간다' } } }).success);
+    assert.ok(!shotSchema.safeParse({ ...board()[1], shot: { ...board()[1].shot, coverage: { azimuth: 181 } } }).success);
+    assert.ok(!shotSchema.safeParse({ ...board()[1], shot: { ...board()[1].shot, lineCrossing: { method: 'teleport', from: 'A', to: 'B', reason: 'x' } } }).success);
   });
   it('the vocabularies come from structure-contract.js, the file check-scenes.js pins', () => {
     assert.ok(existsSync(CONTRACT_FILE));
