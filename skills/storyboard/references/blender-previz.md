@@ -254,7 +254,10 @@ Written from the vendor's clay-model template, in this order:
 2. `Use Video 1, a 3D clay-model previz, as the only reference for camera movement, shot
    rhythm, shot-size changes, subject positions, motion trajectory and blocking; strictly
    keep its camera path, pacing and order of actions.`
-3. `Do not reference its visual content — no grey clay surfaces, no mannequins.`
+3. `Do not reference its visual content.` (The clay replacement goes into the positive
+   lock in 7: every surface is rendered in the episode's style and the figures are the
+   characters from the images — a "no grey clay, no mannequins" tail is an exclusion the
+   prompt gate rejects.)
 4. The colour bindings: `The red model in Video 1 is the porter from Image 2.`
 5. The scene, materials, lighting and the episode's visual style, written in full — the
    clip carries no look, so an unmentioned surface is the model's guess.
@@ -265,8 +268,8 @@ Written from the vendor's clay-model template, in this order:
    consistency lock every Seedance prompt ends on.
 
 On 2.0 write shot labels, never timestamps; 2.5 takes integer-second timestamps and Korean.
-The two negative sentences in 2–3 are the vendor's own wording and pass the prompt gate; any
-other exclusion still goes into the positive lock.
+The two negative sentences in 2–3 are the vendor's exact wording and are the only exclusions
+the prompt gate lets through on this route; anything else goes into the positive lock.
 
 ### 6.4 The call and the check
 

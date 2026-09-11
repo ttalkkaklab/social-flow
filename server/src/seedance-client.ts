@@ -983,6 +983,16 @@ export async function generateWithReferences(
     if (request.referenceVideoPaths.length > 0 && spec.referenceVideos !== false) {
       referenceVideoSeconds = await checkReferenceVideos(request.referenceVideoPaths, spec.referenceVideos, request.model);
     }
+    // A URL clip cannot be probed; it is counted at the output length toward the model total
+    // (the ledger's assumption too), so a local+URL mix over the cap fails here, not in the queue.
+    if (request.referenceVideoUrls.length > 0 && spec.referenceVideos !== false) {
+      const assumed = request.referenceVideoUrls.length * request.durationSeconds;
+      if (referenceVideoSeconds + assumed > spec.referenceVideos.totalSeconds) {
+        throw new Error(
+          `Reference videos total at least ${(referenceVideoSeconds + assumed).toFixed(1)}s (URL clips counted at ${request.durationSeconds}s each) — ${request.model} allows ${spec.referenceVideos.totalSeconds}s across all clips.`,
+        );
+      }
+    }
 
     // The vendor reads a video from a public URL only, so local previz clips are published
     // for the life of the task and released once it settles (media-publish.ts).

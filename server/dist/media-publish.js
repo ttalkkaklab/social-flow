@@ -160,9 +160,17 @@ function killTunnelsOnExit() {
     const killAll = () => { for (const child of liveTunnels)
         if (child.exitCode === null)
             child.kill('SIGTERM'); };
+    // The exit hook covers every path that ends in process.exit (the server's own graceful
+    // shutdown included). A signal handler is added only where nobody else handles the signal,
+    // and it re-raises after the kill so the exit code stays the signal's own.
     process.once('exit', killAll);
     for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP']) {
-        process.once(signal, () => { killAll(); process.exit(); });
+        if (process.listenerCount(signal) > 0)
+            continue;
+        process.once(signal, () => {
+            killAll();
+            process.kill(process.pid, signal);
+        });
     }
 }
 /** Route 2 — a cloudflared quick tunnel in front of the loopback server. */

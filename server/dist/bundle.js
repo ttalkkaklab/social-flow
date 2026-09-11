@@ -76470,9 +76470,10 @@ function killTunnelsOnExit() {
   };
   process.once("exit", killAll);
   for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"]) {
+    if (process.listenerCount(signal) > 0) continue;
     process.once(signal, () => {
       killAll();
-      process.exit();
+      process.kill(process.pid, signal);
     });
   }
 }
@@ -77142,6 +77143,14 @@ async function generateWithReferences(request) {
     let referenceVideoSeconds = 0;
     if (request.referenceVideoPaths.length > 0 && spec.referenceVideos !== false) {
       referenceVideoSeconds = await checkReferenceVideos(request.referenceVideoPaths, spec.referenceVideos, request.model);
+    }
+    if (request.referenceVideoUrls.length > 0 && spec.referenceVideos !== false) {
+      const assumed = request.referenceVideoUrls.length * request.durationSeconds;
+      if (referenceVideoSeconds + assumed > spec.referenceVideos.totalSeconds) {
+        throw new Error(
+          `Reference videos total at least ${(referenceVideoSeconds + assumed).toFixed(1)}s (URL clips counted at ${request.durationSeconds}s each) \u2014 ${request.model} allows ${spec.referenceVideos.totalSeconds}s across all clips.`
+        );
+      }
     }
     const published = await publishFiles(request.referenceVideoPaths);
     try {
