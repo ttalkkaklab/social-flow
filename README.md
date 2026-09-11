@@ -203,7 +203,7 @@ optional, and they're what turns the tool from a video maker into an operator.**
   9:16 or 16:9 video plus per-platform text into
   `data/<channel>/episodes/<topic>/output/`, and you upload those files by hand. Only
   the publishing and growth-loop half is unavailable: the nine publish/insight tools
-  aren't even listed (`tools/list` shows 57 instead of 66), and the growth skills have
+  aren't even listed (`tools/list` shows 68 instead of 77), and the growth skills have
   nothing to drive.
 
 Credentials are per platform, so this is not all-or-nothing — a YouTube-only setup
@@ -240,11 +240,13 @@ review of every generated narration scene, and what you give up is a proper cove
 frame (it needs rendered text) and background music.
 
 A realistic paid episode is small. The default economy tier spends about
-**$0.26–0.29** — one high-quality cover image plus one 30-second BGM clip, with
-everything else local — against a per-episode cap of $0.30 that the pipeline
-enforces before spending, not after. Generated video is the expensive step: one
-8-second Veo lite escalation adds roughly $0.64, which is why it stays off unless
-hook metrics justify it and you raise the cap yourself.
+**$0.27–0.29** — one high-quality cover image plus one 30-second BGM clip, with
+everything else local — against a per-episode cap the growth plan sets
+(`max_cost_per_video`, template default $1.00) and the pipeline enforces before
+spending, not after. Generated video is the expensive step: a silent Seedance hook
+clip takes the episode to about $0.61 and one 8-second Veo lite escalation adds
+roughly $0.64, which is why both stay off unless the cut needs true motion, hook
+metrics justify it, and the cap allows it.
 
 Prices live in one file, `skills/autoproduce/references/prices.tsv`, each row
 carrying its evidence grade and source. `cost-report.sh` reads only that file and
@@ -308,8 +310,8 @@ ln -sfn /path/to/social-flow ~/.buzz/packs/com.ttalkkaklab.social-flow
 
 API keys travel the same way as under Claude — shell environment variables.
 
-**Host media tools come first there.** Codex and Grok ship their own `image_gen`, and Grok
-ships `image_to_video`; a skill running under those CLIs sends every generated still to the
+**Host media tools come first there.** Codex and Grok ship their own `image_gen` (Grok also `image_edit`), and Grok
+ships `image_to_video` and `reference_to_video`; a skill running under those CLIs sends every generated still to the
 host image tool and, under Grok, every generated clip to the host video tool, on the
 subscription allowance and with `image.host` / `video.host` ledger lines at $0. The plugin's
 own image and video tools become the fallback the user is asked about. Claude Code has no such
@@ -335,7 +337,7 @@ editorial checks; completion-rate improvements require audience measurements.
 /social-flow:channel add my-channel        # 1. channel profile (once)
 /social-flow:branding my-channel           # 1.2 (optional) profile image — 4 candidates → HITL pick → 95-point convergence
 /social-flow:intro my-channel              # 1.3 (optional) channel intro — 4 concepts HITL → 4s veo render → 90-point convergence (spliced after the episode as a closer)
-/social-flow:setup-threads my-channel      # 1.4 (optional) SNS account setup + API tokens — browser HITL, ego lite first, Chrome fallback (per platform: setup-instagram · setup-youtube)
+/social-flow:setup-threads my-channel      # 1.4 (optional) SNS account setup + API tokens — browser HITL, ego lite only (per platform: setup-instagram · setup-youtube)
 /social-flow:ingest my-channel record      # 1.5 (optional) screen+voice recording → timeline — an alternative research source
 /social-flow:storyboard my-channel "July FX swings"   # 2. research → wow points → 3 messages for today's viewer → 3 seven-item scenarios (one topic each, shown with their wow) → pick → more research → scenes [narration read alone, to 95] → [narration approval] → storyboard → [approval] · nothing generated
 /social-flow:produce my-channel 20260729-fx           # 3. video + per-platform text
@@ -372,9 +374,10 @@ scenario candidates judged in one batched read
 (the chain, then the words — three reads each, the sentences handed inline), the copy style
 checker and the contract checkers, build report (drift 0), one content-reviewer read at 95
 with P0=0, and a cost cap. The **economy tier is the
-default**: a silent Seedance motion background under the cover when the routing picks video
-there, still backgrounds with Ken Burns for the body, roughly $0.61 per episode ($0.90 on the veo-lite
-fallback, plan cap default $1.00); only when hook metrics fall below threshold does the
+default**: still backgrounds with Ken Burns and HTML motion slides, roughly $0.27–0.29 per
+episode (a silent Seedance hook clip, only where the routing or an explicit `hook_video`
+picks video, takes it to about $0.61, $0.90 on the veo-lite fallback; plan cap default $1.00);
+only when hook metrics fall below threshold does the
 one b-roll after the cover get promoted to `veo-3.1-lite`. Authoring is capped at **2 episodes
 per platform loop per day** (hard cap, counting successes and failures), and
 `check-duplicate.py` compares every candidate topic against the channel's whole back
@@ -390,7 +393,7 @@ comma-after-connective habits, and words above the reading floor, tiered S1/S2/S
 remaining S1 blocks publishing (exit 2). Each of the 8 surfaces (narration, subtitles, card text, four platform
 copies, comments) has its own thresholds and disabled rules — the gate doesn't fight
 the register the playbook itself demands, like Threads banmal or Facebook's
-case-collecting closers. For video surfaces, `extract-text.js` pulls the text out of
+case-collecting closers. For video surfaces, `platform-guide/references/extract-text.js` pulls the text out of
 scenes.js.
 
 **The reading floor is a 초3~4 listener (만 9~10세)** — NIKL's 2022 vocabulary grading,
@@ -450,7 +453,7 @@ social-flow/
 ├── server/                      # internal MCP server (TypeScript, stdio) — 77 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
-│       ├── tools.ts             # tool definitions (research 8 + open data 5 + generation 18 + publish 6 + comments 3 + check 1 + growth insights 5)
+│       ├── tools.ts             # tool definitions — 77: research 9 + open data 5 + generation 37 + publish 6 + comments 3 + growth insights 5 + check 2 + blender 7 + storyboard 3
 │       ├── handlers.ts          # zod validation + routing
 │       ├── sns-client.ts        # Threads·IG·FB·YouTube publish/comments
 │       ├── serp-client.ts       # SerpApi (key masking + response slimming)
@@ -473,11 +476,11 @@ social-flow/
 │   ├── branding/                # /social-flow:branding — channel profile image (4 candidates → HITL pick → adversarial convergence at 95)
 │   ├── intro/                   # /social-flow:intro — channel intro video (4 concepts HITL → veo character acting → name reveal + sonic logo → 90-point convergence)
 │   ├── setup-threads/           # /social-flow:setup-threads — Threads account setup + API hookup (browser HITL — signup·branding·Meta app·60-day token, state detection & resume)
-│   │   └── references/          #   setup-playbook.md (CDP recipes · Chrome lane map · token exchange · 60-day renewal)
+│   │   └── references/          #   setup-playbook.md (CDP recipes · token exchange · 60-day renewal)
 │   ├── setup-instagram/         # /social-flow:setup-instagram — Instagram account setup + API hookup (browser HITL — professional conversion · Instagram Login OAuth · 60-day token)
-│   │   └── references/          #   setup-playbook.md (UID reserved-variable trap · tester invite path · Chrome lane map)
+│   │   └── references/          #   setup-playbook.md (UID reserved-variable trap · tester invite path)
 │   ├── setup-youtube/           # /social-flow:setup-youtube — YouTube brand channel setup + API hookup (browser HITL — advanced-features verification → channel creation → refresh_token, multi-day resume)
-│   │   └── references/          #   setup-playbook.md (loopback listener · production-stage 7-day expiry trap · Chrome lane map)
+│   │   └── references/          #   setup-playbook.md (loopback listener · production-stage 7-day expiry trap)
 │   ├── datago/                  # /social-flow:datago — open-data research → collection → seed records
 │   ├── ingest/                  # /social-flow:ingest — screen recording (+voice) → timeline (recording control · STT · scene boundaries · keyframes)
 │   ├── storyboard/              # /social-flow:storyboard — research → wow points (what the viewer believes → what the evidence shows) → 3 messages for today's viewer → 3 seven-item scenarios (one topic each, never "X는 알 수 없다", each shown with its wow) → pick → more research → narration → narration read-through looped to 95 → vocabulary looped to 95 (both inline, ≤3 reads) → [narration approval] → the board (author's read + check-scenes.js) → the image and clip plan → [approval]. No generation call — produce makes the stills, slides and clips
@@ -497,7 +500,7 @@ social-flow/
 │   ├── review-recent/           # /social-flow:review-recent — feedback HTML for the last 5 episodes across YouTube/Instagram (funnel · bars · problem→hypothesis→next episode)
 │   ├── topic-scout/             # /social-flow:topic-scout — market-validated YouTube topics (5× channel median · chart HTML) + an SNS issues section (Threads/X/Instagram mentions · trending searches)
 │   └── platform-guide/          # knowledge skill — platform grammar · video specs · Korean style SoT
-│       └── references/          #   platform-playbook.md · korean-style.md · check-style.py (style gate) · check-meta.js (YouTube meta gate)
+│       └── references/          #   platform-playbook.md · korean-style.md · check-style.py (style gate) · check-meta.js (YouTube meta gate) · extract-text.js · formats.js + format-lint.js · pipeline.js + pipeline-lint.js · skill-lint.js · reply-gate.md · safezone-landscape.md
 ├── agents/
 │   ├── brand-reviewer.md        # adversarial review of profile images & intro videos (95/90-point convergence gates)
 │   ├── content-reviewer.md      # adversarial pre-publish verification (one read at produce §10 on publish-bound episodes; plan mode on request)
@@ -516,7 +519,7 @@ social-flow/
 `youtube_publish` · `threads_insights` · `instagram_insights` · `youtube_insights` ·
 `threads_search`) are exposed **only for platforms whose credential file exists** —
 evaluated at list time, so adding a token makes them appear without restarting the
-server. With no tokens at all you'll count 65. Hidden tools still have live handlers:
+server. With no tokens at all you'll count 68. Hidden tools still have live handlers:
 calling one directly returns a missing-token error rather than failing silently.
 `content_feedback`, `youtube_topic_scout`, and `sns_issue_scout` sit outside the
 platform gate and stay listed without tokens — the YouTube scout needs
@@ -587,7 +590,7 @@ human. grow-instagram publishes only with a public HTTPS URL, and with no hostin
 configured it disables both publishing and auto-authoring (the loop won't start
 tunnels, and it won't spend money making a video with no way out).
 
-All 27 generation tools run **inside this plugin — no external MCP server required**.
+All 37 generation tools run **inside this plugin — no external MCP server required**.
 Two keys cover the hosted ones: OPENAI_API_KEY for images, GEMINI_API_KEY for
 video/voice/music (Seedance adds ARK_API_KEY, ElevenLabs adds ELEVENLABS_API_KEY).
 `image_local_generate` and `tts_local_generate` run on-device and need no key at
@@ -697,7 +700,7 @@ server calls, and how this implementation honors (or deliberately narrows) each 
 - **[MCP tool spec & best practices](docs/api-reference/mcp-tools.html)** — Tool
   fields, behavior-hint decision table, 7 authoring principles, quality rubric
 - **[Tool quality audit](docs/api-reference/tool-audit.html)** — scores and fixes for
-  the 31 tools as of 2026-07-29 (the 30 added since are unaudited)
+  the 31 tools as of 2026-07-29 (the 46 added since are unaudited)
 - Individual APIs — [Gemini TTS](docs/api-reference/gemini-tts.html) ·
   [ElevenLabs TTS](docs/api-reference/elevenlabs-tts.html) ·
   [Veo 3.1](docs/api-reference/gemini-veo.html) ·
@@ -754,9 +757,9 @@ external vendor contract to document, so their evidence lives in research notes 
 ## Safety contract (summary)
 
 - **Double HITL gate** — storyboard approval (before production) + publish approval
-  (before going public). No publish tool call without approval. Six adversarial
-  reviews run once each in front of storyboard approval; they don't block on a score,
-  so the approval screen is where an unresolved finding gets its human look.
+  (before going public). No publish tool call without approval. Two narration reads (the chain, then the
+  words) loop to 95 in front of storyboard approval (0.50.0); anything they leave
+  open gets its human look on the approval screen.
 - **No fact distortion** — time-sensitive values get two independent sources; ranges
   stay ranges.
 - **No cross-post copy-paste** — every platform gets its sentences redesigned.

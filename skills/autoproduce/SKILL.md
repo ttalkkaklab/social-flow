@@ -76,7 +76,7 @@ a contract checker at exit 1.
 ## Absolute rules
 
 Before storyboard authoring, follow [visual-style.md](../storyboard/references/visual-style.md).
-Ask for one of the `STYLES` presets (miniature, photoreal, webtoon, claymation, paper-cutout, ink-wash, toon-3d, arcade-2d) and use the actual choice for all new storyboard images.
+Ask for one of the `STYLES` presets (cinematic-miniature, photoreal, webtoon, claymation, paper-cutout, ink-wash, toon-3d, arcade-2d) and use the actual choice for all new storyboard images.
 Unattended authoring needs an explicit standing style choice; otherwise wait for HITL.
 
 Read [production-mode.md](../storyboard/references/production-mode.md). Human invocations choose
