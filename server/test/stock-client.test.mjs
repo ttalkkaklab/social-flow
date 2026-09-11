@@ -168,6 +168,13 @@ describe('provider isolation', () => {
     }
   });
 
+  it('a provider failure never echoes the query-string API key', async () => {
+    mockAll({ 'https://pixabay.com/': () => { throw new Error('ECONNRESET'); } });
+    const out = JSON.parse((await stockSearch({ query: 'seoul', media: 'video', providers: ['pixabay'] })).text);
+    assert.match(out.providers.pixabay.note, /^failed — /);
+    assert.doesNotMatch(out.providers.pixabay.note, /pixabay-test-key/);
+  });
+
   it('is an error only when every requested provider failed or was skipped', async () => {
     mockAll({ 'https://images-api.nasa.gov/': () => { throw new Error('offline'); } });
     const r = await stockSearch({ query: 'moon', media: 'photo', providers: ['nasa'] });

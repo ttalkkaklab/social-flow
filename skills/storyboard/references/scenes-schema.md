@@ -851,7 +851,7 @@ rate) too. The renderer, the check badges, and the reviewer all look per scene.
 
 | `overlay` | Over the screen | When |
 |---|---|---|
-| `none` | No text overlay. Just the video itself | b-roll, the shared outro, slide scenes (the slide draws its own text) |
+| `none` | No text overlay. Just the video itself | b-roll, the shared outro, slide scenes (the slide draws its own text), and the default of every video cut — nothing is drawn over video (CLAUDE.md 2026-09-05); a video cut that writes `html` gets no warning, produce decides what it stages |
 
 Left unwritten, storyboard.html infers from the clues above. When the written value disagrees
 with the structure, the check strip catches it — `picture:"ai-video"` with no `video`, `clip`,

@@ -86783,13 +86783,16 @@ function compact4(obj) {
   }
   return out;
 }
+function maskKey3(text2) {
+  return text2.replace(/([?&](?:key|api_key)=)[^&\s"')]+/g, "$1***");
+}
 async function getJson(url, headers = {}) {
   const res = await requestRaw("get", url, headers);
-  if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.body.slice(0, 200)}`);
+  if (!res.ok) throw new Error(maskKey3(`HTTP ${res.status}: ${res.body.slice(0, 200)}`));
   try {
     return JSON.parse(res.body);
   } catch {
-    throw new Error(`non-JSON response from ${url}`);
+    throw new Error(maskKey3(`non-JSON response from ${url}`));
   }
 }
 function orientationOf(width, height) {
@@ -90668,7 +90671,7 @@ function parseJson2(body) {
 function str7(value) {
   return typeof value === "string" ? value : value == null ? "" : String(value);
 }
-function maskKey3(text2) {
+function maskKey4(text2) {
   return text2.replace(/key=[^&\s"']+/g, "key=***");
 }
 function median2(values) {
@@ -90820,10 +90823,10 @@ async function youtubeGet(path11, params, auth) {
     });
     const text2 = await res.text();
     if (res.ok) return { ok: true, status: res.status, body: text2 };
-    return { ok: false, status: res.status, body: maskKey3(text2) };
+    return { ok: false, status: res.status, body: maskKey4(text2) };
   } catch (error2) {
     const message = error2 instanceof Error ? error2.message : String(error2);
-    return fail3(502, `YouTube Data API call failed (${path11}): ${maskKey3(message)}`);
+    return fail3(502, `YouTube Data API call failed (${path11}): ${maskKey4(message)}`);
   }
 }
 function chunk(items, size) {

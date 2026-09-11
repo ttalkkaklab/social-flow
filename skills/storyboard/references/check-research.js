@@ -108,6 +108,19 @@ const IGNORANCE = new RegExp([
    checker can read: a final predicate in the past tense, and an Arabic digit anywhere. */
 const PAST_FINAL = /(았|었|였|했|왔|갔|봤|됐|냈|셨|잤|샀|썼|줬|놨|뒀|했었|았었|었었)(?:다|어요|어|습니다|죠|네요|거든요|대요|답니다|지요|잖아요|던\s*것이다|던\s*거다|던\s*겁니다|던\s*거예요)\s*$/;
 const HERO_HEAD = /^[\s*「」"'“”‘’(]*([가-힣A-Za-z]{2,})/;
+// A hero cell that opens on a modifier ("작은 부탁 — 법의 예외", "The 1969 launch") has no name at
+// its head: determiners and articles are skipped, an English head has to be capitalised, and a
+// two-syllable Korean head that ends like a modifier (작은 · 어떤 · 이런) is read as one — the
+// price is a two-syllable given name with that ending (지은), which the reviewer still catches.
+const HERO_STOP = new Set(['the', 'a', 'an', 'this', 'that', 'one', 'two', 'its', 'our', 'his', 'her', 'their',
+  '작은', '큰', '어떤', '이런', '그런', '저런', '모든', '여러', '다른', '같은', '새', '옛', '첫', '한', '두', '세', '그', '이', '저']);
+function heroName(cell) {
+  const head = (String(cell || '').match(HERO_HEAD) || [])[1];
+  if (!head || HERO_STOP.has(head.toLowerCase())) return null;
+  if (/^[a-z]/.test(head)) return null;
+  if (/^[가-힣]{2}$/.test(head) && /[은는던한된될런]$/.test(head)) return null;
+  return head;
+}
 
 /** The message cell without its trailing punctuation and citation marks, for the shape tests. */
 function messageCore(sentence) {
@@ -495,8 +508,7 @@ function analyse(src, fmt, scenes, opts) {
         // only. A three-character Korean name is also read without its surname (김만덕 →
         // 만덕), which is how the narration says it. The hero column is found by its header
         // (logs add an Engine or Score column and the position moves); no such header, no test.
-        const heroCell = heroIdx < 0 ? '' : String(d.cells[heroIdx] || '');
-        const head = (heroCell.match(HERO_HEAD) || [])[1];
+        const head = heroIdx < 0 ? null : heroName(d.cells[heroIdx]);
         if (head) {
           const forms = [head];
           if (/^[가-힣]{3}$/.test(head)) forms.push(head.slice(1));
@@ -873,6 +885,18 @@ function selftest() {
                      .replace('| D1 | M1 | a | gap | x | 1 |', '| D1 | M1 | a | gap | curiosity | 김만덕 — 상 대신 문 | 1 |')
                      .replace('| M1 | W1 | x-msg |', '| M1 | W1 | 만덕이 부탁한 건 법의 예외다 |'), null),
          /M1 names its hero \("만덕"\)/));
+  ok('a modifier at the head of the hero cell is not a name',
+     !has(analyse(good.replace('| D1 | M1 | a | gap | x | 1 |', '| D1 | M1 | a | gap | 작은 부탁 — 법의 예외 | 1 |')
+                      .replace('| M1 | W1 | x-msg |', '| M1 | W1 | 작은 부탁이 큰 이유는 그 뒤에 법이 서 있어서다 |'), null),
+          /names its hero/));
+  ok('an English article at the head of the hero cell is not a name',
+     !has(analyse(good.replace('| D1 | M1 | a | gap | x | 1 |', '| D1 | M1 | a | gap | The 1969 launch | 1 |')
+                      .replace('| M1 | W1 | x-msg |', '| M1 | W1 | The rule outlives the man who wrote it |'), null),
+          /names its hero/));
+  ok('a capitalised English hero is still a name',
+     has(analyse(good.replace('| D1 | M1 | a | gap | x | 1 |', '| D1 | M1 | a | gap | Apollo 11 — the landing | 1 |')
+                     .replace('| M1 | W1 | x-msg |', '| M1 | W1 | Apollo lands when the rule bends |'), null),
+         /names its hero \("Apollo"\)/));
   ok('a message that survives with the hero erased passes',
      !has(analyse(good.replace('| D1 | M1 | a | gap | x | 1 |', '| D1 | M1 | a | gap | 김만덕 — 상 대신 문 | 1 |')
                       .replace('| M1 | W1 | x-msg |', '| M1 | W1 | 작은 부탁이 큰 이유는 그 뒤에 법이 서 있어서다 |'), null),

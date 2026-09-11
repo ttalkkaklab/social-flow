@@ -38,15 +38,19 @@ function compact(obj) {
     }
     return out;
 }
+/** Pexels sends its key in a header, Pixabay in the query string — an error that quotes the URL must not carry it */
+function maskKey(text) {
+    return text.replace(/([?&](?:key|api_key)=)[^&\s"')]+/g, '$1***');
+}
 async function getJson(url, headers = {}) {
     const res = await requestRaw('get', url, headers);
     if (!res.ok)
-        throw new Error(`HTTP ${res.status}: ${res.body.slice(0, 200)}`);
+        throw new Error(maskKey(`HTTP ${res.status}: ${res.body.slice(0, 200)}`));
     try {
         return JSON.parse(res.body);
     }
     catch {
-        throw new Error(`non-JSON response from ${url}`);
+        throw new Error(maskKey(`non-JSON response from ${url}`));
     }
 }
 /** Orientation is filtered here, after the call: only Pexels and Pixabay photos take it as a parameter */

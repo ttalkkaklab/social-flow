@@ -107,13 +107,18 @@ function compact<T extends Record<string, unknown>>(obj: T): Partial<T> {
   return out as Partial<T>;
 }
 
+/** Pexels sends its key in a header, Pixabay in the query string — an error that quotes the URL must not carry it */
+function maskKey(text: string): string {
+  return text.replace(/([?&](?:key|api_key)=)[^&\s"')]+/g, '$1***');
+}
+
 async function getJson(url: string, headers: Record<string, string> = {}): Promise<unknown> {
   const res = await requestRaw('get', url, headers);
-  if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.body.slice(0, 200)}`);
+  if (!res.ok) throw new Error(maskKey(`HTTP ${res.status}: ${res.body.slice(0, 200)}`));
   try {
     return JSON.parse(res.body);
   } catch {
-    throw new Error(`non-JSON response from ${url}`);
+    throw new Error(maskKey(`non-JSON response from ${url}`));
   }
 }
 
