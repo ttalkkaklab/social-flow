@@ -131,8 +131,20 @@ test('Seedance settings on a Veo slot are refused instead of silently skipped', 
     /only applies to Seedance/);
 });
 
+test('a previz on the host lane is not a Seedance field, and on the Seedance route it must travel as Video 1', () => {
+  const previz = { renderer: 'blender', clip: 'previz/s4.mp4', firstFrame: 'previz/s4-f0001.png', sha256: 'a'.repeat(64), fps: 24, seconds: 5, camera: { movement: 'arc shot' } };
+  const host = { type: 'cover', duration: 5, visual: { bg: 'images/scene-4.png', video: { engine: 'host', prompt: 'x', previz: { ...previz, handoff: 'frame_and_prompt' } } } };
+  assert.deepEqual(scenePlan(host), { kind: 'motion', engine: 'host' });
+  // The lane implies the handoff (render-routing previzHandoff), so an omitted handoff passes here too (review H2).
+  assert.deepEqual(scenePlan({ ...host, visual: { ...host.visual, video: { engine: 'host', prompt: 'x', previz } } }), { kind: 'motion', engine: 'host' });
+  assert.throws(() => scenePlan({ ...host, visual: { ...host.visual, video: { ...host.visual.video, previz: { ...previz, handoff: 'reference_video' } } } }), /only applies to Seedance/);
+  const api = { type: 'cover', duration: 5, visual: { bg: 'images/scene-4.png', video: { engine: 'seedance', modelPurpose: 'previz', modelReason: 'r',
+    realFaceInput: false, referenceImagePaths: ['images/scene-4.png'], prompt: 'x', previz: { ...previz, handoff: 'frame_and_prompt' } } } };
+  assert.throws(() => scenePlan(api), /must be reference_video/);
+});
+
 test('a previz cut rides the reference route as Video 1 and bills input + output seconds', () => {
-  const previz = { clip: 'previz/s4.mp4', sha256: 'a'.repeat(64), fps: 24, seconds: 5 };
+  const previz = { renderer: 'blender', clip: 'previz/s4.mp4', firstFrame: 'previz/s4-f0001.png', sha256: 'a'.repeat(64), fps: 24, seconds: 5, camera: { movement: 'arc shot' } };
   const base = { engine: 'seedance', modelPurpose: 'previz', modelReason: 'The orbit must end on the sentence',
     realFaceInput: false, referenceImagePaths: ['images/scene-4.png', 'characters/porter/body.png'], previz };
   const shot = { type: 'cover', duration: 5, visual: { bg: 'images/scene-4.png', video: { prompt: 'x', ...base } } };
@@ -152,6 +164,8 @@ test('a previz cut rides the reference route as Video 1 and bills input + output
   assert.throws(() => scenePlan({ ...shot, visual: { ...shot.visual, video: { ...shot.visual.video, lastImagePath: 'images/scene-4-end.png' } } }), /no end frame/);
   assert.throws(() => scenePlan({ ...shot, visual: { ...shot.visual, video: { ...shot.visual.video, modelPurpose: 'reference' } } }), /modelPurpose:"previz"/);
   assert.throws(() => scenePlan({ ...shot, visual: { ...shot.visual, video: { ...shot.visual.video, previz: { ...previz, fps: 23.976 } } } }), /24–60/);
+  for (const clip of ['/abs/s4.mp4', '../s4.mp4', 'previz/../../x.mp4'])
+    assert.throws(() => scenePlan({ ...shot, visual: { ...shot.visual, video: { ...shot.visual.video, previz: { ...previz, clip } } } }), /no absolute path, no \.\./);
   // More than nine reference images escalates to 2.5, whose with-video rows are priced too.
   const many = scenePlan({ ...shot, visual: { ...shot.visual, video: { ...shot.visual.video,
     referenceImagePaths: ['images/scene-4.png', ...Array(10).fill('characters/porter/body.png')] } } });

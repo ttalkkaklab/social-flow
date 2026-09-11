@@ -138,6 +138,15 @@ visual: {
 }
 ```
 
+**Every shot is pre-rendered in 3D before its prompt is written** (user directive 2026-09-11,
+[blender-previz.md](../../storyboard/references/blender-previz.md) §6): a Blender or three.js
+previz at the billed length, 24 fps, stored as `visual.video.previz` with the move it performs
+in `previz.camera.movement` — the four `visual.camera` slots are then written to match it, the
+still is edited from its first frame (§6.6), and on the API lane the shot is a Seedance 2.x
+reference cut (`modelPurpose:"previz"`, the clip as `Video 1`; the vendor bills input plus
+output seconds, `cost-preview.js` prices it on the `…-video` rows). `check-scenes.js` refuses a
+generated cut without the previz once the camera pass is written.
+
 One camera contract per shot: the four `visual.camera` slots, in vendor vocabulary; on a
 static camera `speed` stays empty and the span reads `static camera`. `videoDesign.camera` is
 retired and rejected. The final state is written once: on a `subject_action` shot it is the
@@ -238,7 +247,10 @@ as a sequence:
    Missing/stale approval or an estimate above the approved cap blocks all assets.
 2. Generate and inspect source images at high quality. With `imageProvider:'host'` (Codex,
    Grok — the storyboard's detection), use the CLI's own `image_gen` / `image_edit` on its
-   allowance. If unavailable, ask before any separately billed image API. Keep originals under storyboard/images/. Inspect silhouette,
+   allowance. If unavailable, ask before any separately billed image API. Every still is edited
+   from the shot's previz first frame — `spatial-prompts.js` puts `previz.firstFrame` first in
+   `sourceImageArgs` with the composition lock in `sourcePrompt` (blender-previz.md §6.6) — so
+   the composition the clip starts on is the composition the still has. Keep originals under storyboard/images/. Inspect silhouette,
    topology, scale, materials and continuity before spending on motion.
 3. Generate narration before final video calls to measure the required playback duration.
    Fit it within the approved shot duration and provider limit. If it needs a longer shot,
@@ -249,7 +261,11 @@ as a sequence:
    `imagePath`, optional `lastImagePath`, and stored prompt to `mcp__social-flow__seedance_img2video`.
    Under `videoProvider:'host'` the call is the host `image_to_video` instead (source image,
    stored prompt, `duration`, 720p) and the ledger row is `video.host` for the requested seconds.
-   On the API lane the baseline is Seedance 1.5 Pro, explicit 1080p, `generateAudio:false`. Keep spoken narration
+   On the API lane a previz cut is `seedance_reference` on the model the user chose
+   (`PRODUCTION.videoModel` — 2.0 at 1080p, 2.0 fast or mini at 720p, or 2.5; asked with
+   `video-model-options.js`'s table before any call) with the clip as `referenceVideoPaths`,
+   `generateAudio:false`; 1.5 Pro takes no reference video and is only the baseline for a slot
+   that carries no previz. Keep spoken narration
    on the channel voice. An upgrade requires a priced plan and approval; never silently escalate.
 5. Keep every attempt; set `visual.video.clip` to the chosen file. Append actual billed usage
    to `.work/cost-tally.tsv` immediately, including billed rejects:
