@@ -664,15 +664,16 @@ and `camera-slide-template.html`; its image and effect parameters come from scen
 | `transition` | required after the first shot | the boundary **before this shot**, chosen from what happened between the two shots. `"jcut"` is the continuity cut (the sound leads); `"cut"` is a smash; `"dissolve"` · `"dip"` · `"dip:white"` · `"iris"` · `"blur"` · `"zoom"` · `"push:<dir>"` · `"whip:<dir>"` each say what moved. See §scene transition |
 | `beat` | optional on long-form, required on a short | short: `hook` \| `drip` \| `cta`. long-form: `hook` \| `hooking` \| `result` \| `body` \| `turn` \| `cta` (`turn` on the story arc only). See §playback order above |
 | `arc` | long-form cover only | `answer-first` (default) \| `story` — which playback order a long-form episode walks. Ignored on a short. See §playback order above |
-| `shot` | recommended | `{ feel, size, angle, info, infoType, share, shareType, space }` — below. `feel` and `infoType` are written **before** `size`·`angle`·`space`·`camera` are chosen (directing-grammar §5) |
+| `shot` | recommended | `{ feel, size, angle, why, info, infoType, share, shareType, space }` — below. `feel` and `infoType` are written **before** `size`·`angle`·`space`·`camera` are chosen (directing-grammar §5) |
 | `sound` | optional | `{ cue, drop, sfx }` — what the audience hears under this shot (§music cues). Narrated shots only (`cover`, `points`, `quote`); `broll` and `outro` aren't cards, so there is nothing for a cue to key to |
 
 ```js
 shot: {
   feel: "relief — it really is that short",  // what the audience should FEEL here — written first, the dials follow
-  size: "mcu",                             // els · ls · fs · mfs · ms · mcu · cu · choker · ecu · insert
+  size: "mcu",                             // els · ls · fs · mfs · ms · mcu · cu · choker · ecu · insert — from what `info` shows (§2.1) and what `feel` needs (§5)
                                            // + compositions two · three · ots · pov · back · cutaway · reaction (ws = legacy ls)
   angle: "eye",                            // eye (default) · high · low · overhead · dutch — against the SUBJECT's eyes
+  why: "",                                 // optional — one line when size or angle leaves the §2.1/§5 row, or a composition tag needs its distance ("back at ms")
   info: "that the install is one command", // one line on what this shot newly TELLS the audience
   infoType: "other",                       // other · timeline · statistic · principle
   share: "install is one command",         // the one sentence, figure or verdict a viewer forwards as-is
@@ -719,7 +720,10 @@ shot: {
   shot. The size words, the angle words and the space block go into `bgPrompt` too, since the
   still is where they get drawn — `assemble-bg-prompt.js` writes that prefix (directing-grammar
   §3.5). The vocabulary, the cut lines (never at a joint), the distances and the sound that
-  matches each size are `directing-grammar.md` §2–§3.
+  matches each size are `directing-grammar.md` §2–§3. The size is read twice — against what
+  `info` has to show (§2.1: place and head count want a wide, the one line wants the face, the
+  thing itself wants an insert) and against the feel row — and `check-scenes.js` fails a
+  narrated shot with no `size` after the story pass.
 - If `info` matches another shot in the same scene, that shot can be dropped. That's what
   coverage design is.
 - When you open on a close-up, pay back "where are we" with a wide or medium in the next shot.

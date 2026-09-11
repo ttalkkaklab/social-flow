@@ -88278,6 +88278,7 @@ var shotSchema = external_exports.object({
     feel: external_exports.string().optional(),
     size: tuple(V.SIZES).optional(),
     angle: tuple(V.ANGLES).optional(),
+    why: external_exports.string().optional(),
     info: external_exports.string().optional(),
     infoType: tuple(V.INFO_TYPES).optional(),
     share: external_exports.string().optional(),
@@ -92425,7 +92426,7 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
 
 // src/index.ts
 var server = new Server(
-  { name: "social-flow", version: "0.67.0" },
+  { name: "social-flow", version: "0.68.0" },
   { capabilities: { tools: {} } }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {

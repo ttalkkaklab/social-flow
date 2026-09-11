@@ -425,6 +425,7 @@
   }
   .shot-angle.angle-dutch, .shot-angle.angle-low, .shot-angle.angle-high, .shot-angle.angle-overhead { color: var(--accent-ink); }
   .shot-size.unknown { color: var(--warn-ink, var(--accent-ink)); border-style: dashed; }
+  .shot-why { font-size: 0.8em; color: var(--muted); margin-left: 0.4em; }
   .shot-meta .shot-feel { margin: 0; flex-basis: 100%; }
   .shot-feel.miss b { color: var(--warn-ink, var(--accent-ink)); }
   .shot-info {
@@ -1717,6 +1718,7 @@ window.SB_DOC = {
       sequence: s.sequence || "",
       size: (s.shot && s.shot.size) || "",
       angle: (s.shot && s.shot.angle) || "",
+      why: (s.shot && s.shot.why) || "",
       feel: (s.shot && s.shot.feel) || "",
       info: (s.shot && s.shot.info) || "",
       infoType: (s.shot && s.shot.infoType) || "",
@@ -2575,11 +2577,13 @@ window.SB_DOC = {
                " carry the same new information — one of them is enough");
         else seenInfo[info] = row.i;
       });
-      // Establish, then close (directing-grammar §6) — a close-up opening (cu · choker · ecu) pays
-      // its debt with any non-close size on the next shot: ls/ws, fs, mfs, ms, mcu, two, ots …
+      // Establish, then close (directing-grammar §6 rule 2) — a scene opening close (the mcu hook,
+      // cu · choker · ecu, an insert) pays its debt on the next shot with an ls/els (mfs/two for
+      // two people); fs and ms show a body, not a place.
       var first = rows[0];
-      if (first && CLOSE_SIZES[first.g.size] && rows[1] && rows[1].g.size && CLOSE_SIZES[rows[1].g.size])
-        flag("warn", "S#" + sc, "opening on a close-up owes the viewer a wider next shot that says where this is (directing-grammar §6)");
+      var CLOSE_OPEN = { mcu: 1, cu: 1, choker: 1, ecu: 1, insert: 1 }, PAYS = { els: 1, ls: 1, ws: 1, mfs: 1, two: 1 };
+      if (first && CLOSE_OPEN[first.g.size] && rows[1] && rows[1].g.size && !PAYS[rows[1].g.size])
+        flag("warn", "S#" + sc, "opening on " + first.g.size + " owes the viewer an ls/els next (mfs/two for two people) that says where this is — fs and ms show a body, not a place (directing-grammar §6 rule 2)");
     });
   }
   // b-roll slots — two slots in the same position leave the insert order undecided (scenes-schema §broll)
@@ -2936,6 +2940,9 @@ window.SB_DOC = {
     if (!g.feel) {
       feelGaps++;
       flag("warn", T.shotCap(i + 1), "shot.feel not written — say what the audience should feel here before choosing the size, the angle and the camera (directing-grammar §5)");
+    }
+    if (!g.size) {
+      flag("warn", T.shotCap(i + 1), "shot.size not written — where does the frame cut the subject? Pick it from what shot.info has to show (directing-grammar §2.1)");
     }
     if (g.size && !T.size[g.size]) {
       sizeUnknown++;
@@ -3466,6 +3473,7 @@ window.SB_DOC = {
     h += '<span class="scene-no">' + esc(T.shotCap(no)) + " · " + esc(T.type[s.type] || s.type) + "</span>";
     if (g.size) h += '<span class="shot-size' + (T.size[g.size] ? "" : " unknown") + '">' + esc(T.size[g.size] || (g.size + " ?")) + "</span>";
     if (g.angle && T.angle[g.angle]) h += '<span class="shot-angle angle-' + esc(g.angle) + '">' + esc(T.angle[g.angle]) + "</span>";
+    if (g.why) h += '<span class="shot-why" title="shot.why">' + esc(g.why) + "</span>";
     // A shot with no title (screen text only when needed — scenes-schema) builds its header from badges alone
     var headTitle = s.title || (s.type === "quote" ? s.text : "");
     if (headTitle) h += '<span class="scene-title">' + mark(headTitle) + "</span>";

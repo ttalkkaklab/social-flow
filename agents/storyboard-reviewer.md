@@ -1093,8 +1093,10 @@ dial fixed after generation costs the clip, and on a filmed shot it costs a refi
 ## Scope
 
 In scope, **on every shot**: the shot grammar — is `shot.feel` written, is it a feeling rather
-than a restated `info` or a request for a move ("cinematic", "dynamic"), and do `shot.size` and
-`shot.angle` serve it against the directing-grammar §5 row; on a generated still, is `shot.space`
+than a restated `info` or a request for a move ("cinematic", "dynamic"), do `shot.size` and
+`shot.angle` serve it against the directing-grammar §5 row, and does the size show what
+`shot.info` needs against the §2.1 table (place and head count want a wide, the one line wants
+the face, the thing itself wants an insert); on a generated still, is `shot.space`
 written in the camera frame with a visible-result `facing` and a `layout` that names sides
 (directing-grammar §3.5); the rationing and sequencing across shots (one close-up — `cu`·`choker`·`ecu` — per scene, `choker`/`ecu` once or twice per episode, one `dutch` per episode with
 its reason written, a close-up opening paid back in the next shot, the hook cut and speech clips
@@ -1191,6 +1193,11 @@ finding; a silent departure is.
   server grid — veo takes 4/6/8s (1080p/4K and the reference lane 8s only), the default
   seedance 1.5 pro takes 4–12s. In-clip state changes are written in words ("in under half a
   second") on either route.
+- **P0-14 the size contradicts the info** — `cu`/`ecu`/`insert` on a shot whose `info` is the
+  place, the head count or the distance between people; `ls`/`els` on the one line that has to
+  land on a face; `ms` on a walk, a dance or a fight; a lone figure at `els` meant as scale —
+  with no reason written on the shot (directing-grammar §2.1). A written reason is a departure,
+  not a P0.
 - **P0-13 fake action under an action-required motion policy** — `visual.action` merely renames
   a camera move, whole-photo zoom or pan, caption change, still swap, or ambient drift. The field
   has to say what the subject or evidence visibly does; a motion slide also names that change in
@@ -1200,7 +1207,7 @@ finding; a silent departure is.
 
 | Axis | Points | What earns them | Applies to |
 |---|---|---|---|
-| Feel written and served | 30 | `shot.feel` is a feeling (not a restated `info`, not "cinematic"/"dynamic"); `size` and `angle` match the directing-grammar §5 row for it, or a reason for leaving the row is written on the shot; the hook cut and speech clips sit at `eye`; on a generated still, `shot.space` is in the camera frame with `layout` and (when a person is on screen) `facing` as the visible result, no banned language | every shot |
+| Feel written and served | 30 | `shot.feel` is a feeling (not a restated `info`, not "cinematic"/"dynamic"); `size` and `angle` match the directing-grammar §5 row for it, or a reason for leaving the row is written on the shot; the size also shows what `info` needs (§2.1 — the establishing shot of a scene wide, the line that matters on the face, the object as an insert); the hook cut and speech clips sit at `eye`; on a generated still, `shot.space` is in the camera frame with `layout` and (when a person is on screen) `facing` as the visible result, no banned language | every shot |
 | Rationing and sequencing | 10 | this shot doesn't break the across-shot rules — a second close-up (`cu`·`choker`·`ecu`) in the scene, a third `choker`/`ecu` in the episode, a second `dutch` or one without its reason, a close-up opening not paid back by the next shot, a wide under 1.5× the close beside it, a later shot of the scene that flips `space.line` without a legal 180° crossing written (directing-grammar §6 rule 11), a shot after the first with no `transition`, a `jcut` where time, place or attention moved between the two shots, a join that says something other than what happened between them (the ordered table in scenes-schema §scene transition), consecutive stills of the same size and angle in one scene (directing-grammar §6 rule 16) | every shot |
 | Slots complete, in the engine's own words, one move chosen from the feel | 30 | four slots filled, vendor vocabulary, one move, and the move sits in the §4–§5 rows for that feel (a `dolly in` on "loss" or a `dolly out` on "realisation" contradicts it); the stored clip prompt exists, says what the slots say, and keeps the route's timing grammar | generated shots |
 | Length fits the purpose | 15 | matches the §cut length table and the feel row, it is the length that will be used, and it sits inside the routed engine's server grid (veo 4/6/8 · 1.5 pro 4–12s) | generated shots |
@@ -1222,7 +1229,9 @@ feel left to ride on the move while size and angle stayed at their defaults.
 
 **A missing `shot.feel` on an older file is not a P0** — score the first axis 0 on that shot,
 write the directive, and move on; a missing field is a gap the author fills, not a reason to
-halt. The same goes for a `shot.size` value outside the vocabulary (legacy `ws` reads as `ls`).
+halt. The same goes for a `shot.size` value outside the vocabulary (legacy `ws` reads as `ls`),
+and for a missing `shot.size` — the first axis scores 0 on that shot and the directive names
+the §2.1 row.
 
 Start from 0 and add points only with evidence you read that shot's `shot` block, and on a
 generated shot its slots and its `duration`.

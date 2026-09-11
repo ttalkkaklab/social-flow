@@ -122,6 +122,7 @@ export const shotSchema = z
         feel: z.string().optional(),
         size: tuple(V.SIZES).optional(),
         angle: tuple(V.ANGLES).optional(),
+        why: z.string().optional(),
         info: z.string().optional(),
         infoType: tuple(V.INFO_TYPES).optional(),
         share: z.string().optional(),

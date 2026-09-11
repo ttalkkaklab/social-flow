@@ -427,9 +427,14 @@
     }
     if (groups.size === 1 && placed.length >= 5)
       warn('structure', `${placed.length} shots in one scene — the whole episode has no cut point; a story in one place still breaks where the value turns (scenes-schema §structure rule 4)`);
+    // A scene whose place an earlier scene already laid out with a wide needs no wide of its own —
+    // the viewer still holds the room (directing-grammar §6 rule 2).
+    const seenWidePlace = new Set();
     groups.forEach((xs, no) => {
       const where = 'scene ' + no;
       const sc = byNo.get(no);
+      const placeKey = sc && text(sc.place) ? compact(sc.place) : null;
+      const placeKnown = placeKey && seenWidePlace.has(placeKey);
       const isScreen = x => x.s.shot && x.s.shot.render && EXPLAIN_MODES.indexOf(x.s.shot.render.mode) !== -1;
       const pics = xs.filter(x => !isScreen(x));
       const sizes = new Set(pics.map(x => x.s.shot && x.s.shot.size).filter(Boolean));
@@ -438,7 +443,7 @@
       else if (xs.length >= 2 && pics.length === 1 && placed.length >= 5)
         warn(where, `one picture shot and ${xs.length - 1} explanation screen(s) — an explanation screen's size frames the drawing and fills neither slot; coverage is two picture sizes, a wide and a close (rule 9)`);
       else if (xs.length >= 2 && sizes.size) {
-        if (!WIDE.some(z => sizes.has(z)))
+        if (!WIDE.some(z => sizes.has(z)) && !placeKnown)
           warn(where, `${pics.length} picture shots and no wide (${WIDE.join('·')}) — coverage is two sizes per scene, a wide that sets the place and a close; an explanation screen's ls is not the wide (directing-grammar §6.1–2)`);
         if (!CLOSE.some(z => sizes.has(z)))
           warn(where, `${pics.length} picture shots and no close (${CLOSE.join('·')}) — coverage is two sizes per scene, a wide and a close that pays the moment (directing-grammar §6.1–3)`);
@@ -446,6 +451,7 @@
         if (tight >= 2)
           warn(where, `${tight} close-ups (cu·choker·ecu) in one scene — a scene pays its moment once with one close-up; the rest is the wide, the mediums and inserts (directing-grammar §6.3)`);
       }
+      if (placeKey && WIDE.some(z => sizes.has(z))) seenWidePlace.add(placeKey);
       pics.forEach(x => {
         const sz = x.s.shot && x.s.shot.size, lay = x.s.shot && x.s.shot.space && String(x.s.shot.space.layout || '');
         if (['cu', 'mcu', 'choker'].indexOf(sz) !== -1 && lay && /손(?!글씨|님)|화면|라벨|딱지|바코드|스캐너/.test(lay) && !/얼굴|표정|인물|사람|점주|손님|화자|눈|입|고개|상반신|어깨|머리|로봇|딸깍맨|캐릭터|세종|최만리|백성|연구원|아이|남자|여자/.test(lay))
@@ -680,7 +686,7 @@
     const shotRow = (s, i) => {
       const row = { no: i + 1, type: s.type, beat: s.beat, duration: s.duration };
       if (s.shot) Object.assign(row, {
-        feel: s.shot.feel, info: s.shot.info, infoType: s.shot.infoType, size: s.shot.size, angle: s.shot.angle,
+        feel: s.shot.feel, info: s.shot.info, infoType: s.shot.infoType, size: s.shot.size, angle: s.shot.angle, why: s.shot.why,
         render: s.shot.render && s.shot.render.mode, share: s.shot.share,
       });
       row.narration = (s.narration || []).map(seg => seg && (seg.tts || seg.sub) || '').join(' ');
