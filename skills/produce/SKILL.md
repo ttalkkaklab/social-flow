@@ -49,8 +49,7 @@ Read [story-quality.md](../storyboard/references/story-quality.md) and run `node
    The image is the reference point for reproducing a shot: if the video isn't right,
    rerun it off the same PNG with only the motion prompt changed. Video made straight from
    text gives a different scene every time even from the same prompt, so there's nothing
-   to go back to. **Never delete `storyboard/images/*.png`** — delete them and that episode
-   can't be rebuilt.
+   to go back to. **Never delete `storyboard/images/*.png`** — delete them and that episode can't be rebuilt.
 9. **Don't lay narration over a stretch where generated video plays** — that stretch uses
    **the sound the clip came with**. Put TTS on top and the two sounds fight, and the
    synthetic voice flattens the generated clip's sense of space. That scene is
@@ -78,8 +77,7 @@ Read [story-quality.md](../storyboard/references/story-quality.md) and run `node
    requires the publishing disclosure (`containsSyntheticMedia: true` on YouTube).
 12. **Don't throw the cover background PNG (the meta image) together** — the cover frame
    becomes `cover.jpg` (the YouTube thumbnail and the first screen of the IG and FB videos)
-   as-is. No still lifes or abstract backgrounds unrelated to the topic — the default is one
-   of two:
+   as-is. No still lifes or abstract backgrounds unrelated to the topic — the default is one of two:
    **a photoreal scene with a person that shows the topic at a glance** (the person contract
    from rule 11, unchanged), or **the topic itself** (the result screen or product screenshot
    the episode is about — for dev and tool channels, where the evidence is a screen rather
@@ -1313,11 +1311,13 @@ Report every `fallback` and each `engine_selection` or `voice_selection` marked 
 
 On a pass, update storyboard.md to `status: produced`, present the artifact table (paths,
 length, platforms) together with the cost summary, and point the user at
-`/social-flow:publish`. If the portal MCP is configured (`mcp__ttalkkakstory__*`), call
-`storyboard_save` once more on the episode directory (the board may have moved since approval —
-regenerated prompts, slide plans) and then `episode_set_status` with `status: "produced"`;
-`storyboard_list` with the storyboard id gives the episode id if you don't have it from the
-save result.
+`/social-flow:publish`. If the portal MCP is registered (`mcp__ttalkkakstory__*`, README
+§Optional), call `storyboard_save` once more with the episode directory's absolute path (the
+board may have moved since approval — regenerated prompts, slide plans) and then
+`episode_set_status` with `status: "produced"` and the `episodeId` the save returned (the same
+uuid as `portal_episode` in `storyboard.md`'s frontmatter). Tools absent: one line, move on.
+A call that errors: report the message in one line, retry a 409 once, and finish the report
+and the `status: produced` file update regardless — the portal is a mirror, not a gate.
 
 ## Additional Resources
 

@@ -520,8 +520,7 @@ Core rules:
   moves, drifting dust, flashing accents and animated subtitles still fail either contract.
 - **Long-form spreads one result across chapters over one episode; it isn't several
   short-form episodes stitched together.** A different topic per chapter makes a playlist,
-  not an episode. Long-form walks cover → hooking → … with the arc picking the rest; the
-  "body" is split into chapters and runs longer.
+  not an episode. Long-form walks cover → hooking → … with the arc picking the rest; the "body" is split into chapters and runs longer.
 - **Playback order follows the format, then (on long-form) the cover's `arc`.** The source of
   truth is scenes-schema §playback order. **A short is always hook → drip (1–n) → cta.** Write
   `beat:"hook"` on the cover, `beat:"drip"` on every middle shot, `beat:"cta"` on the last
@@ -662,8 +661,7 @@ Core rules:
 - **Plain-language principle (profile §2), written for a 초3~4 listener** — on-screen text
   and narration alike. The floor is korean-style §Eye level: the words a 만 9~10세 viewer
   already has (NIKL vocabulary grading, grade 3). Unpacking the terms at the deck-authoring
-  stage is what makes the narration plain too. Four moves do the work, and the checker sees
-  only the first:
+  stage is what makes the narration plain too. Four moves do the work, and the checker sees only the first:
   - **Swap the document-register word.** 여부·기입하다·소요된다·초래하다 all have an
     everyday twin, and E1~E3 reject them. **Register is untouched** — profile §2's 존댓말
     stays 존댓말, and talking down to a child ("~했어요~ 그쵸?") is its own defect.
@@ -704,8 +702,7 @@ Core rules:
   reference, write each entry as `{ id, scope }`** — one clause per reference saying what it
   governs and where it may appear ("controls the helmet and body only", "appears only in the last
   second, and its face never transfers"). Unscoped references leak into each other, and the check
-  strip warns on a multi-reference clip with no scope anywhere (scenes-schema §character
-  reference).
+  strip warns on a multi-reference clip with no scope anywhere (scenes-schema §character reference).
 - **Select Seedance per cut** using produce `references/video-model-selection.md` §Seedance
   per-cut selection. Ordinary hook: 1.5 Pro. Essential complex action: 2.0 if the source
   qualifies. Multiple character/product references: 2.0; fixed voice or over nine reference
@@ -732,8 +729,7 @@ Core rules:
   4-second idea buys 4 seconds of invention (§cut length). Narration-carrying scenes keep the
   speech math — characters / 4.5 — **and on a motion background that math has to land inside
   the route's one-call cap** (seedance 12s on the default 1.5 pro, veo 8s): a 13-second
-  narration over a 12-second clip is a loop seam nobody planned, so trim the narration or
-  split the scene.
+  narration over a 12-second clip is a loop seam nobody planned, so trim the narration or split the scene.
 - **Write what the episode sounds like, not only what it looks like.** Every shot that becomes a
   generated video gets `visual.audio` — one sentence on what that clip sounds like, ending in
   `no music, no speech` unless speech is the point. Leave it out and the engine invents a
@@ -846,14 +842,12 @@ python3 $PG/check-style.py --surface narration .work/text-narration.txt; echo "g
 
 1. **Delegate to the storyboard-reviewer agent (Agent) in "vocabulary mode"** with the
    numbered sentence list (the `subtitle` extract, as in §4.4), the checker's output above
-   pasted verbatim, and the `profile.md` path (§1 target audience · §2 plain-language
-   principle — who the listener is). Read the tail
+   pasted verbatim, and the `profile.md` path (§1 target audience · §2 plain-language principle — who the listener is). Read the tail
    `STORYBOARD_REVIEW: mode=lexicon score=NN p0=N worst=<sentence number>` — `score` is the
    lowest sentence's score.
 2. **Swap only the words that were flagged**, in `scenes.js`.
    - **Don't rewrite sentences** — a swap that spreads into a rewrite changes the chain §4.4
-     read. Where a single word won't do, change that one sentence and re-read it against the
-     chain yourself.
+     read. Where a single word won't do, change that one sentence and re-read it against the chain yourself.
    - **Only subtract.** Planting a metaphor or stock phrase that wasn't there while erasing a
      hard word is a new AI tell.
    - Don't touch figures, proper nouns, or `tts` phonetic spellings.
@@ -920,8 +914,7 @@ once, in this order, before §5:
   the last narrated shot is the CTA and carries its `shot.share`); on long-form the result comes
   before the body on answer-first and after the turn on a story arc. A scene the video still
   stands without is merged or dropped; recalculate the duration without padding the other
-  scenes. Respect format minimums with useful material before approval. Reorder beats rather than rewriting sentences (scenario-craft.md is
-  the yardstick).
+  scenes. Respect format minimums with useful material before approval. Reorder beats rather than rewriting sentences (scenario-craft.md is the yardstick).
 - **Per shot, does the camera serve the feel** — the size and the angle against the
   directing-grammar §5 row for that feel, `shot.space` in visible-result language (no camera
   inference, no metric — directing-grammar §3.5), the rationing and sequencing of §6, and on
@@ -1277,15 +1270,22 @@ Once approved, write two lines at the top of scenes.js — `// approved: <YYYY-M
 produced which performance. `unresolved` is how many findings went to the user unfixed,
 reviewer findings and your own board notes together.
 
-**Then put the approved board on the portal (when the portal MCP is configured).** If the
-`mcp__ttalkkakstory__*` tools are available (`.mcp.json` `ttalkkakstory` — needs
-`TTALKKAKSTORY_API_URL` · `TTALKKAKSTORY_WORKSPACE` · `TTALKKAKSTORY_API_KEY`), call
-`storyboard_save` with `episodeDir = data/<channel>/episodes/<topic>` right after the two
-approval lines are written. It uploads `scenes.js` (the shots verbatim, the `window.*` blocks as
-episode meta), `storyboard.md`, `research.md`, `script.md` and `storyboard.html`, and reports
-`pageUrl` — show that URL on the wrap-up line. Re-running on the same topic updates the same
-episode, so a change request followed by re-approval is one more call, not a new record. If the
-tools are not there, say so in one line and move on — the portal is a mirror, not a gate.
+**Then put the approved board on the portal (when the portal MCP is registered).** If the
+`mcp__ttalkkakstory__*` tools are available (the server is registered in the user's own Claude
+Code settings, README §Optional: the ttalkkakstory portal mirror — never in the plugin's
+`.mcp.json`), first set `status: approved` in `storyboard.md`'s frontmatter (the portal copies
+that field; an earlier save shows `draft`), then call `storyboard_save` with `episodeDir` as
+the **absolute** path of `data/<channel>/episodes/<topic>` right after the two approval lines
+are written. It uploads `scenes.js` (the shots verbatim, the `window.*` blocks as episode meta),
+`storyboard.md`, `research.md`, `script.md` and `storyboard.html`, and returns `pageUrl`,
+`episodeId` and `storyboardId` — show the URL on the wrap-up line and write `portal_episode:
+<episodeId>` and `portal_url: <pageUrl>` into `storyboard.md`'s frontmatter, which is how
+produce and publish address the same record later. The portal matches a storyboard by its
+title, so a re-save after a change request updates the same episode only while the title (or
+the `storyboardTitle` you passed) stays the same; a retitled board is a new record. If the
+tools are not there, say so in one line and move on; if a call errors (missing variables, 401,
+a 409 asking for a retry), report the message in one line, retry a 409 once, and never hold
+the approval on it — the portal is a mirror, not a gate.
 
 **If there are filmed scenes**, the hand-off after approval is recording. It differs by lane.
 

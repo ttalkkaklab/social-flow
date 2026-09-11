@@ -697,8 +697,11 @@ machine. Register it once (user scope) and set three variables:
 ```
 
 With the `mcp__ttalkkakstory__*` tools present, approval calls `storyboard_save` on the
-episode directory, produce calls it again and sets `produced`, publish sets `published`. Without
-them the skills say so in one line and carry on — the portal is a mirror, not a gate.
+episode directory's absolute path and records the returned `episodeId`/`pageUrl` in
+`storyboard.md`'s frontmatter (`portal_episode` · `portal_url`), produce saves again and sets
+`produced`, publish sets `published` by that id. Without the tools the skills say so in one
+line and carry on, and an errored call is reported in one line (a 409 retried once) — the
+portal is a mirror, not a gate.
 
 ## Documentation (docs/)
 
