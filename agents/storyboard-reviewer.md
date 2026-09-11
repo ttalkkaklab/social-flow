@@ -464,6 +464,15 @@ picture was going to show, and you will fill the gap for the author without noti
    sentence already is one, so write the sentence down instead of raising this. On long-form
    the same emptiness costs the ending axis its 3 points and is not a P0 — `shot.share` is a
    short's field.
+12. **A person short that is not one** — only when the supplied STORY declares `person`
+   (storyboard's person-short.md). The checker already holds the name, the year, the cover
+   form, one sentence a shot and the payoff/ending order; these five are the read's. The
+   first sentence is a riddle, a title or a claim rather than an event under way — a hand,
+   a thing, a moment the listener can see. The blow is spread across two or three sentences
+   instead of landing in one. A second person is named and given a move of their own — a
+   person short speaks one name, everyone else is a role. The close is a summary, a moral or
+   a list of what happened afterwards instead of one picture after the blow. On a disputed
+   record, only one side is spoken, or the dispute is decided instead of shown.
 
 ## Axis scores (additive out of 100, no points without evidence)
 

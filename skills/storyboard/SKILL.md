@@ -364,7 +364,7 @@ problem stack · transformation arc · expert contrast · ticking clock · revea
 design rationale; §7 shows it back. The four §11 rules hold whatever the pick: the cold open (the
 훅 is a staged moment, never the start of the timeline), a promise sentence inside the opening,
 the false-answer beat at the top of 전개 #1 when the research holds one, and heavy context as
-bridges past the first tension. Skip-research channels skip this with §2.2.
+bridges past the first tension. Skip-research channels skip this with §2.2. **A one-person history episode declares `STORY.person`** and lays the items out as 원인 → 막힘 → 한 방 with a cut per sentence, an opening that names nobody and a close on one scene: [person-short.md](references/person-short.md).
 
 ### 3. Create the topic directory
 
