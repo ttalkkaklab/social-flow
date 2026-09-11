@@ -70,8 +70,8 @@
   <strong>2026-08-16 update — three things changed since.</strong> The body stays exactly as the August 11 research left it; the places where the code moved are collected here.
   <ul style="margin:10px 0 0">
     <li><strong>There are two video engines now.</strong> Seedance (<code>seedance_*</code>) joined and makes 2–30 seconds in 1-second steps — the "8-second grid" in §2 below is now a constraint on the Veo side only. Which engine when: <a href="../../../skills/produce/references/video-model-selection.md">video-model-selection.md</a> is the source of truth.</li>
-    <li><strong><code>negativePrompt</code> exists.</strong> The field written up as "missing" in the §7 table is now on all four Veo tools. The negative-prompt rule in §3 is directly usable.</li>
-    <li><strong>Per-episode cost has numbers.</strong> The hole §9 described as "not one value passed verification" was filled by <code>skills/autoproduce/references/prices.tsv</code> and <code>cost-tiers.md</code>. The economy tier — the default for autonomous authoring — never calls Veo once and runs <strong>about $0.26–0.29</strong> per episode (capped at $0.30).</li>
+    <li><strong><code>negativePrompt</code> exists.</strong> The field written up as "missing" in the §7 table is now on <code>veo_text2video</code> and <code>veo_img2video</code> (reference and extension reject it upstream, so 0.75.0 dropped it there). The negative-prompt rule in §3 is directly usable.</li>
+    <li><strong>Per-episode cost has numbers.</strong> The hole §9 described as "not one value passed verification" was filled by <code>skills/autoproduce/references/prices.tsv</code> and <code>cost-tiers.md</code>. The economy tier — the default for autonomous authoring — never calls Veo once and runs <strong>about $0.27–0.29</strong> per episode (plan cap default $1.00).</li>
   </ul>
 </div>
 

@@ -30,7 +30,7 @@ better). Translated into practice:
   Don't close with a verdict — leave a gap someone can step into. A post that
   collects replies beats one that only collects likes.
 - **Early velocity beats total volume.** The same reactions spread further
-  when they land within the first 60–90 minutes — which is why golden-hour
+  when they land within the first 60 minutes — which is why golden-hour
   reply handling is the tick's top priority.
 - **Engage before you post.** Spending the 10–15 minutes before publishing on
   replies to other people's posts marks you as an active user and lifts the

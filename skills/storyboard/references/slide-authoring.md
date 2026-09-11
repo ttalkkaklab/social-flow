@@ -54,8 +54,8 @@ rubric the reviewer applies.
    primitive: `h.date` · `h.range` · `h.link`; `h.count` · `h.bar` · `h.dots` · `h.axis`;
    `h.flow` · `h.node` · `h.state`; `h.fig` · `h.stem` · `h.bus` · `h.chamber` ·
    `h.disk` · `h.ring` · `h.press` · `h.shift`. Those helpers stamp `data-primitive` into
-   the frame, and the renderer matches it to the same narration group. Group 0 is the
-   kicker and title. One kind of movement per group.
+   the frame, and the renderer matches it to the same narration group. Group 0 is the base
+   (source, scrim, axis); the kicker and title open group 1. One kind of movement per group.
    - **Pick an archetype before laying out freeform** (slide-design.md §4): the stat poster
      (`h.stage("spread")` + `h.stat` with `cls:"max"`), the `.split` compare (cells with
      `h.vdiv(rg)` between them), the `.timeline` rail, the plate grid (`h.plate` cells), or
@@ -103,7 +103,8 @@ rubric the reviewer applies.
    - A diagram with `treatment:"editorial"` sits on the **studio ground** by default
      (slide-design.md §1): a cyclorama plate, slab material on every tag, band and plate, a cast
      shadow under the type, the stage alone drifting 1% a group. Nothing to call — `h.stage("flat")`
-     is the way back to the plain plate. Marks use `h.mark.arrow` with a small tangent-following head. Call
+     is the plain plate for a `camera` or `kinetic` screen only; on an editorial diagram
+     `check-slide.js` rejects it (the studio ground is required). Marks use `h.mark.arrow` with a small tangent-following head. Call
      `h.stage(…)` before any `h.mark.*` — the mark layer reads the studio class when it is made.
    - New physical subjects use the mesh lane in [mesh-objects.md](mesh-objects.md). The same recipe
      can bake into a path-traced sheet with `renderer:"blender"` ([blender-objects.md](blender-objects.md));
@@ -236,7 +237,7 @@ The closed vocabulary is `enter` · `point` · `nod` · `shrug` · `think` · `w
 `conceal` · `signal` · `inspect` · `gather` · `surround` · `bind` · `escort` · `release`.
 `renderCharacter()` lays out the words and the template tableau; it never adds a keyframe.
 `check-slide.js` fails an unknown action, a missing cast actor, or fewer acts than narration
-segments. A keyframe added by hand is a §7 P0 in the review.
+segments. A keyframe added by hand is a §8 P0 in the review.
 
 **Make the claim happen in the picture.** “The government banned the group” is not a date over a
 paper texture: a large-head masked figure is met by two police figures and a restraint line closes
@@ -250,13 +251,12 @@ person likeness), place them through `slide.arts`, then make HTML control their 
 relations, and state changes. The code-native chibi tableau is the fallback only when no image tool
 is configured. Do not replace an available illustration pass with labelled boxes.
 
-If the beat genuinely needs an action that isn't in the seven, that is a change to the template,
-`check-slide.js`, and `slide-design.md` §7 together — bring it to the user rather than solving it
+If the beat genuinely needs an action that isn't in the closed vocabulary (slide-design §8), that is a change to the template,
+`check-slide.js`, and `slide-design.md` §8 together — bring it to the user rather than solving it
 inside one slide. A slide that invents its own motion renders differently on the next re-render,
 which is the whole reason the vocabulary is closed.
 
-When that's done you're waiting — once the user's `footage/` and `voice/` files arrive, produce
-uses the per-group clips as the segment visuals (produce §3.6).
+When that's done the slide is ready for produce §3.6, which renders it into its segment clip.
 
 ## Data charts
 

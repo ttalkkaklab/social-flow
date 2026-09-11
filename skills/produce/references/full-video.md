@@ -269,7 +269,7 @@ as a sequence:
    on the channel voice. An upgrade requires a priced plan and approval; never silently escalate.
 5. Keep every attempt; set `visual.video.clip` to the chosen file. Append actual billed usage
    to `.work/cost-tally.tsv` immediately, including billed rejects:
-   `seedance.1-5-pro-silent.1080p<TAB>5<TAB>video:shot=1:attempt=1`.
+   `seedance.2-0-video.1080p<TAB>10<TAB>video:shot=1:attempt=1` (output plus previz seconds on the with-video row).
    Shot numbers start at 1; an attempt includes the first call. An uncertain bill blocks the
    next call until reconciled. Never erase ledger rows to create room for another attempt.
 6. Reuse the same source for retries, adjust the action plan when necessary and re-approve a

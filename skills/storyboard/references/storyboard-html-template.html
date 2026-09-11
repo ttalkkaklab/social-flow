@@ -1010,7 +1010,7 @@ window.SB_DOC = {
   // visual.character). Leave it out and the document has no cast section.
   // panels: the panel files that actually exist, relative to this directory.
   // The reference set going into generation is face → body (order is weight), plus back
-  // only for a back-facing shot — video-model-selection.md §6.
+  // only for a back-facing shot — video-model-selection.md §The character panels.
   characters: [
     // { id: "claude", name: "Claude", role: "the AI — answers carefully",
     //   panels: { face: "../../../assets/characters/claude/face.png",
@@ -4184,7 +4184,7 @@ window.SB_DOC = {
          '<span class="aside">' + esc(T.castAside) + "</span></h2>";
     h += '<div class="cast">';
     // face → body → back is the order the reference set goes into a generation call
-    // (video-model-selection §6); front and real are the older per-channel names.
+    // (video-model-selection §The character panels); front and real are the older per-channel names.
     var PANEL_ORDER = ["face", "body", "back", "front", "real"];
     CAST.forEach(function (c) {
       var panels = c.panels || {};

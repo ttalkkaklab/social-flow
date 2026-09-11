@@ -29,9 +29,10 @@ then captured at 6.3 fps against 1.1–2.6 fps for the same cut through the brow
 The two lanes trade opposite resources, so the machine decides as much as the shot does. Ask it:
 
 ```bash
+REF=${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references
 python3 $REF/bake-blender.py --capacity      # no recipe needed
 # blender lane — Cycles renders on METAL; run --probe on the recipe for this machine's seconds a
-# frame, and render the slide with --jobs 4 so the decoded sheet (0.6 GB a tab) fits memory
+# frame, and render the slide with the --jobs figure --capacity reports so the decoded sheet (0.6 GB a tab) fits memory
 # {"blender":"5.2.1 LTS","backend":"METAL","ramGB":137,"cores":16,"lane":"blender","jobs":4, …}
 ```
 

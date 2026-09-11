@@ -89,7 +89,7 @@ slide: {
 | `object.keys` · `object.frames` | ✅ | the bake arguments, kept here so the sheet is reproducible from scenes.js alone. `keys` is N+1 keyframes (the start state, then the state at the end of each group); `frames` is how many new frames each group gets |
 | `object.plan` | ✅ | what the object does on which sentence — the approval screen reads this line |
 
-`check-scenes.js` requires file, shape, keys and frames, and refuses more `frames` groups than
+On the sheet lane `check-scenes.js` requires file, shape, keys and frames (mesh and blender objects carry their own contract), and refuses more `frames` groups than
 narration segments. `object-move` is the `motionBeats` primitive for a group whose meaning is
 the object arriving, turning or receding; a group where the object changes under a count-up
 declares the count-up, and the object follows.
@@ -192,7 +192,7 @@ Composition notes, all measured on the fixture:
 The sheet is the fifth movement path in the template's determinism contract (head comment ⑤):
 `h.object` emits one element with `data-sheet`, `data-sheet-cell`, `data-sheet-cols` and
 `data-sheet-ranges="1:0-11 2:11-38 …"`, and the SEEK-RUNTIME block — identical in the three
-authored-screen templates, `format-lint.js` checks that — sets its `background-position` on
+authored-screen templates, `platform-guide/references/format-lint.js` checks that — sets its `background-position` on
 every `__seek(t, g)`:
 
 - group k with a range `[a, b]` shows frame `a + round((b − a) · t / dur[k])`;

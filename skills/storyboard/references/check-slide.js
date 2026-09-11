@@ -11,7 +11,7 @@
  *   1. 파일명 s<샷번호>-<slug>.html ↔ SLIDE_SHOT ↔ scenes.js visual.slide.file 삼자 일치
  *   2. 한글 문자열 리터럴이 전부 scenes.js 에 있다 — 문체 게이트(screen 표면)를
  *      통과한 적 없는 글자가 화면에 나가는 길을 막는다 (주석 속 한글은 허용)
- *   3. 갈래(kind) — diagram(기본) · kinetic · character. 움직이는 diagram 은 treatment 로
+ *   3. 갈래(kind) — diagram(기본) · kinetic · character · camera. 움직이는 diagram 은 treatment 로
  *      editorial(HTML 이 화면 전체를 설계) · photo-action(사진 속 대상이 실제로 바뀜)을 가른다.
  *      footage(생성 클립 위에 표식)는 2026-09-05 사용자 지시로 폐기 — 영상 위에는 아무것도
  *      그리지 않는다. 화살표·수치·원리가 필요한 컷은 스튜디오 판 HTML 슬라이드다.
@@ -94,7 +94,7 @@ const MSG = {
   objectZone: (side, px) => `물체의 잉크가 존 ${side}쪽으로 ${px}px 나간다 — h.object 의 ${side === "위" || side === "아래" ? "y" : "x"} 를 옮긴다(그림자 반그늘까지 잉크다)`,
 };
 
-/* 저작 화면의 세 갈래와, 캐릭터 연기가 고를 수 있는 동작. 정본은 scenes-schema §저작 화면 레인과
+/* 저작 화면의 네 갈래와, 캐릭터 연기가 고를 수 있는 동작. 정본은 scenes-schema §저작 화면 레인과
    character-act-template.html 머리말이다 — 여기 이름을 늘리려면 템플릿의 키프레임도 같이 는다. */
 const KINDS = ["diagram", "kinetic", "character", "camera"];
 const TREATMENTS = ["editorial", "photo-action"];

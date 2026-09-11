@@ -63,7 +63,9 @@ style: {
 - `ink-wash`: `look` is inkwash. Brushed ink on rice paper with empty space and one accent
   colour; the frame is one painting. Generated video holds only slow environment motion (mist,
   water, wind, a brush stroke appearing) — fast subject motion breaks the ink lines, so acted
-  cuts stay stills with a camera move.
+  cuts stay stills with a camera move. (The still-with-a-camera-move advice here and under
+  `paper-cutout` is for hybrid; in `full_video` every non-stock cut is generated video
+  (production-mode.md), so keep those cuts' subject motion minimal instead.)
 - `toon-3d`: `look` is toon3d. Rounded stylised 3D characters with large expressive eyes and
   clean shaders; keep each character's model, costume and colours identical across cuts by
   referencing the approved character image. Never name a studio or a living artist in a prompt;

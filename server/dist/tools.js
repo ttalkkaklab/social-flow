@@ -10,15 +10,15 @@ import { BLENDER_INTERPOLATIONS, BLENDER_PREVIZ_ENGINES, BLENDER_PROXY_KINDS, BL
 import { DEFAULT_SUNO_MODEL, SUNO_MODELS, SUNO_PERSONA_MODELS, SUNO_SOUND_KEYS, SUNO_VOCAL_GENDERS, } from './suno-client.js';
 import { DEFAULT_MLX_IMAGE_SIZE, DEFAULT_MLX_MUSIC_SECONDS, DEFAULT_MLX_VIDEO_FRAMES, DEFAULT_MLX_VIDEO_HEIGHT, DEFAULT_MLX_VIDEO_WIDTH, MAX_MLX_IMAGE_DIMENSION, MAX_MLX_IMAGE_REFS, MAX_MLX_MUSIC_SECONDS, MAX_MLX_TTS_CHARS, MAX_MLX_VIDEO_DIMENSION, MAX_MLX_VIDEO_FRAMES, MAX_VIDEO_RGB_BYTES, MIN_MLX_IMAGE_DIMENSION, MIN_MLX_MUSIC_SECONDS, MIN_MLX_VIDEO_DIMENSION, MIN_MLX_VIDEO_FRAMES, MLX_IMAGE_DIMENSION_STEP, MLX_VIDEO_DIMENSION_STEP, MLX_VIDEO_FPS, } from './mlx-serve-client.js';
 /**
- * Tool surface definitions (61 tools) — 6 research + 5 open-data +
- * 27 generation (5 image + 8 video + 6 speech + 7 music + 1 mesh) +
- * 5 per-platform publishing + 3 inbound comments + 1 account check +
- * 5 growth lookups (Threads insights/keyword search · YouTube insights ·
- * Instagram insights · recent-content feedback — the insights trio is for the
- * grow-* skills only; content_feedback covers both video platforms and writes
- * an HTML report) + 1 capability_status + 1 STT + 1 music-options + 1 suno credits.
- * The six mlx_* tools wrap MLX Core / mlx-serve on loopback; they are not a
- * second MCP server. 52 of those list without SNS tokens.
+ * Tool surface definitions (77 tools) — 9 research (incl. stock_search) + 5 open-data +
+ * 37 generation (5 image + 12 video + 9 voice + 1 STT + 9 music + 1 mesh) +
+ * 6 per-platform publishing + 3 inbound comments + 5 growth lookups (Threads
+ * insights/keyword search · YouTube insights · Instagram insights · recent-content
+ * feedback — the insights trio is for the grow-* skills only; content_feedback covers
+ * both video platforms and writes an HTML report) + 2 checks (sns_account_check ·
+ * capability_status) + 7 blender previz + 3 storyboard. The six mlx_* tools wrap
+ * MLX Core / mlx-serve on loopback; they are not a second MCP server. 68 of those
+ * list without SNS tokens (README §MCP tools is the per-tool table).
  *
  * Publish tool descriptions embed the HITL contract — this server has no
  * review gate, so a call is an immediately public post, and the descriptions
@@ -86,7 +86,7 @@ const VEO_DURATION_PROPERTY = {
  */
 const VEO_NEGATIVE_PROMPT_PROPERTY = {
     type: 'string',
-    description: 'What to keep OUT of the frame, as comma-separated noun or adjective phrases: "wall, frame, on-screen text, subtitles". Do NOT write instructions such as "no walls" or "don\'t show walls" — Google\'s prompt guide names that form as not recommended, and writing an exclusion into the prompt body tends to summon the very noun you named. Put every exclusion here instead of in prompt.',
+    description: 'What to keep OUT of the frame, as comma-separated noun or adjective phrases: "wall, frame, on-screen text, subtitles". Accepted by the API on veo-3.1 fast/standard only — veo-3.1-lite rejects it (400, measured 2026-08-26), so on lite write the exclusion into the prompt as positive description; veo_reference and veo_extension have no such field (400, measured 2026-08-15). Do NOT write instructions such as "no walls" or "don\'t show walls" — Google\'s prompt guide names that form as not recommended, and writing an exclusion into the prompt body tends to summon the very noun you named. Put every exclusion here instead of in prompt.',
 };
 /**
  * Shared Gemini Omni property definitions (gemini-omni-1.1-flash).
@@ -121,7 +121,7 @@ const OMNI_ASPECT_RATIO_PROPERTY = {
  */
 const SEEDANCE_MODEL_PROPERTY = {
     type: 'string',
-    description: `Seedance model (default: "${DEFAULT_SEEDANCE_MODEL}" — the cheapest model that reaches 1080p, accepts photoreal human faces as input, supports seed, and has no activation gate). ` +
+    description: `Seedance model (default: "${DEFAULT_SEEDANCE_MODEL}" — the cheapest model that reaches 1080p, accepts photoreal human faces as input, supports seed, and has no balance gate — every ModelArk model still needs console activation). ` +
         'Quality, from the Artificial Analysis blind image-to-video arena: dreamina-seedance-2-0-260128 ranks 1st overall (Elo 1,198), the three Veo 3.1 tiers sit at 1,066-1,086, and seedance-1-5-pro-251215 is the arena baseline at 1,000 — so 2.0 is clearly the best Seedance, and 1.5 pro trades roughly a 59:41 preference against Veo for about a third of the price. ' +
         'dreamina-seedance-2-5-260628, the 2.0 fast/mini variants, and seedance-1-0-pro-fast-251015 have NO public evaluation at all — prefer them only for cost or for a capability the tested models lack, not for a shot that matters. ' +
         'The 2.x models REJECT input images containing real human faces and need account balance > $30 to activate, which rules them out for photoreal-person sources.',
@@ -1303,7 +1303,6 @@ Returns: a text block with the saved .mp4 file path, source video path, model, r
                     type: 'string',
                     description: 'Text description for the video continuation',
                 },
-                negativePrompt: VEO_NEGATIVE_PROMPT_PROPERTY,
                 sourceVideoPath: {
                     type: 'string',
                     description: 'Absolute path to the source video file to extend (must be a Veo-generated 720p video, 141 seconds or shorter, saved with its .veo.json handle)',
@@ -1350,7 +1349,6 @@ Returns: a text block with the saved .mp4 file path, reference image list, model
                     type: 'string',
                     description: 'Detailed text description of the video scene and subject interactions',
                 },
-                negativePrompt: VEO_NEGATIVE_PROMPT_PROPERTY,
                 referenceImagePaths: {
                     type: 'array',
                     items: {
@@ -3057,7 +3055,7 @@ Returns: a text block with the saved .wav path, model, duration, and generation 
 Use it BEFORE planning anything that spends money or depends on a provider — the top of a storyboard, produce, or autoproduce run. Without it, a missing key shows up only when the call fails, which is after the plan was built around a tool that was never going to run: planning two Veo b-roll slots on a machine with no GEMINI_API_KEY costs the review rounds before anyone finds out. Also use it when the user asks what they can make, or why a tool is failing.
 Do NOT use it to test whether a key still works. It reports CONFIGURATION, not reachability — a revoked key reads as configured here and fails at the call. Local engines report only whether their binary resolves (mflux, python3, mlx-qwen3-asr) or whether MLX Core.app / mlx-serve is installed — not whether :11234 is up. Read-only; makes no API call, so one call per session is enough.
 
-Returns: a capability menu — video_generation, image_generation, tts, music_generation, 3d_generation, speech_to_text, research — each listing its providers with the env var or local install each one needs, then the publishing platforms that have credential files, then the env vars grouped by what each would turn on.`,
+Returns: a capability menu — video_generation, image_generation, tts, music_generation, 3d_generation, speech_to_text, stock_footage, research — each listing its providers with the env var or local install each one needs, then the publishing platforms that have credential files, then the env vars grouped by what each would turn on.`,
         inputSchema: {
             type: 'object',
             properties: {},

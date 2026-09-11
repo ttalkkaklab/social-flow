@@ -77,8 +77,8 @@ into promoting that prompt to "always allow".
 
    **The portrait frame is set in a browser** (measured 2026-08-19) —
    `studio.youtube.com/video/<id>/edit` → the `⋮` over the portrait image in the
-   thumbnail box → **"Select from video"** → the cover frame → Done → Save. Any browser
-   we drive works (ego lite by default, Chrome MCP as fallback); the native app is not
+   thumbnail box → **"Select from video"** → the cover frame → Done → Save. Drive it with
+   ego lite (the only browser lane — no Chrome MCP fallback); the native app is not
    needed. Don't pick `Change` (file upload) in that same menu — it only swaps the
    landscape surface. If the picker is missing or the cover isn't among the candidates,
    fall back to the emulator procedure in `references/shorts-surface-adb.md`.
@@ -311,7 +311,7 @@ permalink, say).
    **Set it in a browser while the video is still private** —
    `studio.youtube.com/video/<id>/edit` → the `⋮` over the portrait image in the
    thumbnail box → **"Select from video"** → the cover frame → Done → Save. Drive it
-   with whatever browser this session has (ego lite by default, Chrome MCP as fallback).
+   with ego lite (the only browser lane — no Chrome MCP fallback).
    `Change` in that same menu is file upload and only swaps the landscape surface.
    The emulator route in `references/shorts-surface-adb.md` is the fallback for when
    the picker is missing or the cover isn't among the candidates.

@@ -127,7 +127,7 @@ The THEME contract of video-template.html — it goes into scenes.js as-is:
 
 | Platform | Used | Notes |
 |---|---|---|
-| threads | ✅/❌ | no video — one casual post body + a video link (IG reel), no attached image |
+| threads | ✅/❌ | one casual post body with the subtitle-burned video as `videoUrl` (needs public HTTPS hosting, 2026-08-19); growth posts may attach one image |
 | instagram | ✅/❌ | reels — needs public HTTPS hosting |
 | facebook | ✅/❌ | ordinary video post (not a reel) |
 | youtube | ✅/❌ | shorts — local upload, 100 uploads/day quota |
@@ -139,8 +139,8 @@ The THEME contract of video-template.html — it goes into scenes.js as-is:
   The burned-in copy for IG/Threads stays in the default language>
 - **Per-platform signature**: <hashtag set, CTA wording — within the platform's grammar>
 - **Public media hosting**: <how to upload publicly over HTTPS for IG/FB — if there
-  isn't one, write "undecided" and settle it at publish time. Threads attaches no
-  media, so it needs no hosting>
+  isn't one, write "undecided" and settle it at publish time. Threads video posts and
+  image posts use the same hosting>
 
 ## 5. Fact-check policy
 

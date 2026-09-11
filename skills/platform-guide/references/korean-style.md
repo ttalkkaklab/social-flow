@@ -8,7 +8,7 @@ sentences themselves is set by this document.
 **The target is outgoing text.** Plugin-internal docs (SKILL.md, agent definitions,
 README) are not gated. Instructions are actually more precise with contrast and
 emphasis structures, so holding them to the same standard makes the rules fight
-their own purpose. Checks run only on `output/` artifacts and `scenes.js` narration.
+their own purpose. Checks run on outgoing text — `output/` artifacts, `scenes.js` narration, growth drafts, channel bios and intro taglines.
 
 `check-style.py` delivers the verdict. This document holds the why behind each fix.
 
@@ -175,7 +175,7 @@ consonant and drop out automatically. Sentence-final only — connectives ("간�
 했어"), adnominals ("가는 길"), and conditionals ("간다면") are not targets.
 
 **D9b (past) is S2 with the first hit exempt.** S2 costs 7 points, so just two
-sentences closed with `-았다` hit 86 and miss the 90 gate. What the user flagged was
+sentences closed with `-았다` hit 86 and fall under the 95 line. What the user flagged was
 present-tense procedural prose, and people do write "~했다" on Threads. The
 arithmetic was known when this was set.
 
@@ -586,6 +586,7 @@ Branch on the exit code.
 | 1 | Warn — S2 accumulation **or a quote exemption applied** | Fix it; if not fixing, report to the user with reasons. If the header shows `quote-exempt N`, first check whether that quote is real |
 | 2 | Fail — S1 found | Fix and re-run. The only exception is violations inside a source-identified quote, which drop from the score and get reported as exit 1 instead |
 | 3 | Execution error — empty input, missing path, analysis failure | Check input and paths, retry. Never skip the gate |
+| 4 | Skip — the surface's rules are all off for this text (reply-gate §exit codes) | Nothing to fix; the reviewer read still runs |
 
 **If `--selftest` is red, don't trust the verdicts in this table.** Get it back to
 green first, then check the copy. A PASS from a checker with broken rules isn't a
@@ -636,7 +637,7 @@ a path problem.
 printf '신고 기한이 바뀌었다.\n' | python3 $PG/check-style.py --surface fb -   # exit 0 means healthy
 ```
 
-The T·D·C·A tables in this document and the script's `PATTERNS` map 1:1 by ID and
+The T·D·C·A·E tables in this document and the script's `PATTERNS` map 1:1 by ID and
 severity — with three exceptions. C4 (emoji) is a per-surface count limit computed
 outside the regex list, and its severity splits by surface (S1 where the limit is
 0, S2 elsewhere), so the table writes `S1~S2`. C5 (repeated endings) and C7 (no

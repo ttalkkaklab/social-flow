@@ -473,11 +473,11 @@
     total <b>$0.90</b> &nbsp;(on top of configuration B, $0.915)
   </div>
 
-  <p>The model-ladder doc quotes this combination at <strong>about $0.91 per episode</strong>, rounding the economy baseline to $0.27. Either way it's <strong>three times over the default $0.30 cap.</strong></p>
+  <p>The model-ladder doc quotes this combination at <strong>about $0.91 per episode</strong>, rounding the economy baseline to $0.27. Either way it sits <strong>inside the default $1.00 cap (a plan written before 2026-09-05 still carries $0.30, which it triples).</strong></p>
 
   <h3>How that meets the cap</h3>
 
-  <p>The growth plan's <code>max_cost_per_video</code> defaults to <strong>$0.30</strong>. With the cover pinned at high, that value <strong>passes the economy tier and blocks every Veo escalation.</strong> To let one through, you raise the cap in the plan to <strong>$1.00 or more</strong>. The autonomous loop never raises it on its own — while the escalation condition holds, it keeps building at economy baseline and says so in the completion report.</p>
+  <p>The growth plan's <code>max_cost_per_video</code> defaults to <strong>$1.00</strong> (plans written before 2026-09-05 still carry $0.30). With <code>hook_video</code> off (the default) that value <strong>passes the economy tier and one lite escalation ($0.91–0.93).</strong> A channel with the hook clip on (since 0.73.0 the hook is a 3D previz cut too, so it is made only as a Seedance 2.x reference-video call — 2.0 mini 720p at 6 s bills input plus output seconds, about $0.54) lands at $1.45–1.47 on escalation, so there you raise the cap to <strong>$1.50 or more</strong>, and to <strong>$3.70</strong> for a 2.0 1080p hook (about $2.74). The autonomous loop never raises it on its own — while the escalation condition holds, it keeps building at economy baseline and says so in the completion report.</p>
 
   <h3>Machines without mflux</h3>
 
@@ -488,12 +488,12 @@
     <thead><tr><th>Narration engine</th><th class="num">2 low images</th><th class="num">3 low images</th><th class="num">4 low images</th></tr></thead>
     <tbody>
       <tr><td>Local</td><td class="num">$0.274</td><td class="num">$0.281</td><td class="num">$0.288</td></tr>
-      <tr><td>Gemini (400 chars)</td><td class="num">$0.289</td><td class="num">$0.296</td><td class="num"><strong>$0.303</strong> — over the cap</td></tr>
+      <tr><td>Gemini (400 chars)</td><td class="num">$0.289</td><td class="num">$0.296</td><td class="num"><strong>$0.303</strong> — over only the old $0.30 plan cap</td></tr>
     </tbody>
   </table>
   </div>
 
-  <p>A Gemini channel using 4 low images busts the default $0.30 cap, so use at most 3 in that case. With mflux installed, image count stops being a cost question — pick 2–4 purely on screen rhythm.</p>
+  <p>A Gemini channel using 4 low images stays inside the default $1.00 cap (only a pre-2026-09-05 plan at $0.30 is busted — use at most 3 there). With mflux installed, image count stops being a cost question — pick 2–4 purely on screen rhythm.</p>
 </section>
 
 <!-- ══════════ 9 ══════════ -->
@@ -709,7 +709,7 @@ music.lyria-clip	1	produce: BGM 30s</code></pre>
   <h3>The calculator — read the exit code literally</h3>
 
 <pre><code>REF=${CLAUDE_PLUGIN_ROOT}/skills/autoproduce/references
-$REF/cost-report.sh .work/cost-estimate.tsv --cap 0.30; echo "cost_exit=$?"</code></pre>
+$REF/cost-report.sh .work/cost-estimate.tsv --cap 1.00; echo "cost_exit=$?"</code></pre>
 
   <div class="table-scroll">
   <table>
@@ -738,7 +738,7 @@ $REF/cost-report.sh .work/cost-estimate.tsv --cap 0.30; echo "cost_exit=$?"</cod
   <table>
     <thead><tr><th>Setting</th><th>Default</th><th>What it stops</th></tr></thead>
     <tbody>
-      <tr><td><code>max_cost_per_video</code></td><td class="num">$0.30</td><td>One episode — passes economy tier, blocks Veo escalation</td></tr>
+      <tr><td><code>max_cost_per_video</code></td><td class="num">$1.00</td><td>One episode — passes the economy tier and one lite escalation (hook_video off); pre-2026-09-05 plans carry $0.30</td></tr>
       <tr><td><code>daily_cost_cap</code></td><td class="num">$0.60</td><td>One day, channel-wide</td></tr>
       <tr><td><code>weekly_cap</code></td><td class="num">$2.00</td><td>One week, channel-wide</td></tr>
     </tbody>
