@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI 영상 컷은 3D 사전 렌더가 먼저 — 프리비즈 필수화 (2026-09-11)</title>
+<style>
+  :root { --ink: #1c1c1c; --muted: #5d5d5d; --line: #e2e2e2; --accent: #b3341f; --bg: #fbfaf7; }
+  body { margin: 0; padding: 40px 20px 80px; font: 16px/1.7 -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; color: var(--ink); background: var(--bg); }
+  main { max-width: 860px; margin: 0 auto; }
+  h1 { font-size: 30px; line-height: 1.3; margin: 0 0 8px; }
+  h2 { font-size: 21px; margin: 44px 0 12px; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+  h3 { font-size: 17px; margin: 26px 0 8px; }
+  .meta { color: var(--muted); font-size: 14px; margin-bottom: 28px; }
+  .lead { font-size: 17px; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0 20px; font-size: 14.5px; }
+  th, td { border: 1px solid var(--line); padding: 8px 10px; vertical-align: top; text-align: left; }
+  th { background: #f1efe9; }
+  code { font-family: "SF Mono", Menlo, monospace; font-size: 13.5px; background: #f0eee8; padding: 1px 5px; border-radius: 4px; }
+  pre { background: #f0eee8; padding: 14px; overflow-x: auto; font-size: 13px; line-height: 1.5; }
+  pre code { background: none; padding: 0; }
+  .kpi { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin: 20px 0; }
+  .kpi div { border: 1px solid var(--line); background: #fff; padding: 12px 14px; }
+  .kpi b { display: block; font-size: 22px; color: var(--accent); }
+  .kpi span { color: var(--muted); font-size: 13.5px; }
+  .note { border-left: 3px solid var(--accent); padding: 6px 14px; background: #fff; margin: 14px 0; }
+  ul { padding-left: 22px; }
+  li { margin: 4px 0; }
+  a { color: #1d4f8c; }
+</style>
+</head>
+<body>
+<main>
+<h1>AI 영상 컷은 3D 사전 렌더가 먼저 — 프리비즈 필수화</h1>
+<p class="meta">social-flow · 지시와 구현 기록 · 2026-09-11 · 플러그인 0.73.0 (feat/previz-mandatory) · 앞선 조사 <a href="../2026-09-11-blender-to-video-ai-handoff/index.html">블렌더 산출물을 영상 AI 에 넘기는 세 갈래</a></p>
+
+<p class="lead">진의 지시는 한 문장이다. AI 영상 생성 유형의 샷은 반드시 블렌더나 three.js 로 먼저 렌더하고 그 렌더로 영상 AI 를 더 정확하게 쓴다. 0.68.0 에서 선택 사항으로 붙어 있던 프리비즈 레인을 <code>generated_video</code> 컷 전부의 필수 조건으로 올렸고, 블렌더가 없는 기계를 위해 three.js 렌더러를 새로 만들었고, 앞선 조사가 「빠졌다」고 적은 두 가지 가운데 프롬프트 게이트 쪽을 닫았다.</p>
+
+<div class="kpi">
+  <div><b>필수</b><span>generated_video 컷마다 <code>visual.video.previz</code>. 검사기가 없는 컷을 거절한다</span></div>
+  <div><b>2 렌더러</b><span>블렌더 브릿지 7툴 또는 three.js 페이지(previz-template.html)</span></div>
+  <div><b>121 프레임 / 9초</b><span>three.js 1080×1920 24fps 5초 컷 실측(M4)</span></div>
+  <div><b>×10</b><span>컷당 비용 — 1.5 Pro $0.23 에서 2.0 참조 영상 $2.28 로</span></div>
+</div>
+
+<h2>1. 무엇이 바뀌나</h2>
+<p>이전에는 「카메라 경로나 타이밍이 정확히 맞아야 하는 컷」에만 프리비즈를 달았다. 이제는 영상으로 생성하는 컷이면 예외 없이 3D 에서 카메라와 배치를 먼저 잡고, 그 렌더가 세 갈래로 영상 모델에 들어간다.</p>
+<table>
+  <tr><th>갈래</th><th>프리비즈가 넘겨주는 것</th><th>어디서</th></tr>
+  <tr><td>참조 영상</td><td>회색 클레이 mp4 가 Video 1. 카메라 경로·샷 리듬·피사체 궤적·배치</td><td>API 레인 — Seedance 2.x <code>seedance_reference</code>(<code>modelPurpose:"previz"</code>, <code>handoff:"reference_video"</code>)</td></tr>
+  <tr><td>첫 프레임 → 스틸</td><td>1번 프레임 png 를 구도 참조로 놓고 스틸을 편집한다. 클립이 시작하는 구도와 스틸의 구도가 같아진다</td><td>양쪽 레인 모두 — <code>spatial-prompts.js</code> 가 <code>previz.firstFrame</code> 을 이미지 툴 참조 첫 자리에 넣고 구도 잠금 문장을 붙인다</td></tr>
+  <tr><td>프롬프트</td><td>카메라 무브가 클립과 같아야 한다. §6.3 바인딩 문장은 조립기가 쓴다</td><td>호스트 레인(Grok image_to_video 처럼 클립 입력이 없는 툴)은 이것과 스틸만으로 간다 — <code>handoff:"frame_and_prompt"</code></td></tr>
+</table>
+<p>예외는 넷이다. 가져온 클립(<code>visual.reuse</code>), 무료 소재(<code>stock_video</code>), 녹화, 공유 아웃트로. 이것들은 우리가 생성하지 않는다.</p>
+<p>두 가지는 진이 고른다(같은 날 추가 지시). 첫 프리비즈를 렌더하기 전에 <b>어느 렌더러</b>(블렌더·three.js)인지, 영상 호출 전에 <b>어느 모델</b>인지. 후자는 <code>video-model-options.js</code> 가 보드 전체를 모델마다 견적 내어 표로 보여 주고 답한 모델을 <code>PRODUCTION.videoModel</code> 과 컷마다 적는다. <code>production-mode.js</code> 는 생성 컷이 있는데 두 기록이 없으면 보드를 거절한다.</p>
+
+<h2>2. 저장 계약</h2>
+<pre><code>previz: {
+  renderer: "blender" | "threejs",
+  clip: "previz/s4.mp4",  firstFrame: "previz/s4-f0001.png",
+  sha256: "&lt;64 hex&gt;",  fps: 24,  seconds: 5,          // 과금 길이와 같은 정수 초
+  camera: { movement: "arc shot" },                     // visual.camera.movement 와 같아야 한다
+  handoff: "reference_video" | "frame_and_prompt",     // 레인이 정한다, 안 적어도 된다
+  actors: [{ color: "red", is: "the porter", image: 2 }] // 선택 — 색 바인딩 문장의 재료
+}</code></pre>
+<p><code>render-routing.js checkPreviz</code> 가 보는 것: 렌더러 이름, 로컬 mp4, 로컬 png, 해시, 정수 초, 24~60fps, 카메라 무브 일치, 레인에 맞는 handoff, 그리고 Seedance 경로에서는 <code>referenceImagePaths[0]</code> 이 소스 스틸인지, 끝 프레임이 없는지, 프롬프트가 Video 1·Image 1·「Do not reference its visual content」를 담는지. <code>checkScene</code> 은 --draft 밖에서 previz 가 없는 generated_video 컷을 거절한다. 라우트(<code>seedance-route.js</code>)는 1.5 Pro 에 previz 를 달면 「참조 영상을 안 받는 모델」이라고 바로 말한다.</p>
+
+<h2>3. three.js 렌더러</h2>
+<p>블렌더 브릿지와 같은 숫자를 받는다. 미터, Z 업, 프록시는 -Y 를 본다. 페이지 하나(<code>previz-template.html</code>)가 슬라이드 렌더러의 seek API 를 그대로 구현해서, 이미 있는 <code>render-motion-slide.mjs</code> 가 <code>--previz</code> 플래그로 프레임을 잡는다. 새로 짠 건 계약 파일(<code>previz-contract.js</code> — spec 검사, LINEAR 보간, 좌표 변환, 긴 변 36mm 렌즈)과 런타임 번들(<code>previz-runtime.js</code>, three.js 를 물어 499KB)뿐이다.</p>
+<table>
+  <tr><th>항목</th><th>실측</th></tr>
+  <tr><td>캔버스·프레임</td><td>1080×1920, 24fps, 5초 spec → 첫 실측은 121프레임(mp4 5.04초)이었고, 리뷰(M1)로 fps×seconds = 120프레임에 못 박았다 — 블렌더 레인과 같은 길이</td></tr>
+  <tr><td>시간</td><td>9.3초(캡처 17fps, M4, 헤드리스 크롬 + ffmpeg)</td></tr>
+  <tr><td>그림</td><td>회색 바닥, 배우별 단색 마네킹(다리·몸통·팔·머리·코 블록), 그림자·기즈모 없음 — 벤더가 말하는 클레이 참조 조건 그대로</td></tr>
+  <tr><td>못 하는 것</td><td>관절이 없다. 춤·낙하처럼 몸의 박자가 내용인 컷은 블렌더 마네킹(§4~5)</td></tr>
+</table>
+
+<h2>4. 앞선 조사의 빈칸 둘 가운데</h2>
+<ul>
+  <li><b>클립과 싸우는 텍스트 — 닫았다.</b> 프롬프트의 카메라 문장은 네 개 <code>visual.camera</code> 슬롯에서 조립되고, 클립은 <code>previz.camera.movement</code> 를 수행한다. 둘이 다르면 검사기가 거절한다. 형용사 셋 제한과 「한 번에 한 가지만 바꾸기」는 문서 규칙으로 두었다 — 형용사 수는 기계가 세기 어렵고 오탐이 더 큰 비용이다.</li>
+  <li><b>컨트롤 패스(depth·pose → Wan VACE) — 그대로 빈칸.</b> ComfyUI 로컬 구성이 먼저라 이번 범위 밖이다.</li>
+</ul>
+
+<h2>5. 비용이 바뀐다</h2>
+<p>참조 영상은 Seedance 2.x 만 받고 입력 초까지 과금한다. 그래서 프리비즈 필수화는 컷당 단가를 한 자릿수 올린다.</p>
+<table>
+  <tr><th>등급</th><th>5초 컷 + 5초 프리비즈</th><th>12컷 첫 시도</th></tr>
+  <tr><td>1.5 Pro 1080p (이전 기본, 프리비즈 없음)</td><td>$0.23 (4초)</td><td>$3.83 (김만덕 보드 견적)</td></tr>
+  <tr><td>2.0 + 참조 영상 1080p</td><td>$2.28</td><td>약 $27</td></tr>
+  <tr><td>2.0 fast + 참조 영상 720p</td><td>$0.71</td><td>약 $8.5</td></tr>
+  <tr><td>2.0 mini + 참조 영상 720p</td><td>$0.45</td><td>약 $5.4</td></tr>
+</table>
+<div class="note">김만덕 편(ep410)은 12컷 전부 generated_video 라 새 검사기에서 12건 위반이다. 프리비즈 12개를 만들고 등급을 고르면 1080p 로는 $25 예산을 넘는다. 등급이나 예산은 진이 정한다.</div>
+
+<h2>6. 검증</h2>
+<ul>
+  <li>서버 테스트 1176/1176 (previz-contract·render-routing·seedance-routing·production-mode 에 새 사례 — 필수 위반, 드래프트 유예, 호스트 handoff, 카메라 불일치, 1.5 Pro 거절, 프리앰블·구도 잠금·첫 프레임 우선).</li>
+  <li><code>check-scenes.js --selftest</code> OK, <code>skill-lint</code> 15규칙 OK.</li>
+  <li>three.js 페이지를 스크래치 스토리보드에서 실제로 렌더해 r0.png·f0120.png 를 눈으로 봤다 — 아크 무브와 배우 이동·회전이 프레임에 있다.</li>
+  <li>안 한 것: 실제 Seedance 2.x 참조 생성(720p 2.0 한 번에 약 $0.93). 프리비즈 → 결과 콘택트 시트 대조는 첫 실전 컷에서 한다.</li>
+</ul>
+
+<h2>7. 웹 조사 보강 — 여섯 질문</h2>
+<p>앞선 조사가 다루지 않은 여섯 가지를 따로 찾았다(범용 에이전트, WebSearch·WebFetch, 2026-09-11). 못 찾은 것도 그대로 적는다.</p>
+<h3>7.1 three.js·브라우저 렌더를 프리비즈로 쓰는 사례</h3>
+<p>하나뿐이다. <a href="https://github.com/notfukuda/previz-motion-studio">previz-motion-studio</a>는 three.js 로 마네킹 포즈와 카메라 무브를 잡아 MP4 로 내보내고, 용도를 "image-to-video AI tools (Kling, Seedance, Runway, Veo, etc.) as a motion + camera-work reference" 라고 적었다(별 0, 커밋 5). 헤드리스 브라우저 캡처를 참조 클립으로 쓴 글은 없고, 브라우저 렌더와 Blender 렌더가 같은 취급을 받는다는 문서도 없다. 모델 쪽 계약은 전부 파일 규격(mp4·초·해상도)이지 렌더러 종류가 아니고, <a href="https://www.mixar.app/blog/seedance-2-5">Mixar</a>는 모델이 읽는 게 "silhouette, depth and framing" 이라고 쓴다. 같은 플랫 셰이딩·같은 카메라면 같은 입력이라는 추론까지만 된다. 우리 three.js 레인은 이 추론 위에 서 있고, 첫 실전 컷의 콘택트 시트가 그 근거가 된다.</p>
+<h3>7.2 참조·컨트롤 영상을 받는 모델 (2026-09)</h3>
+<table>
+  <tr><th>모델</th><th>영상 입력</th><th>카메라·블로킹</th><th>길이</th><th>블록아웃 명시</th></tr>
+  <tr><td>Seedance 2.0 (fal)</td><td>참조 3개, @Video1</td><td>예</td><td>합계 2~15초</td><td>아니오</td></tr>
+  <tr><td>Seedance 2.5</td><td>최대 10개, 개당 2~30초, 합계 30초, 24~60fps</td><td>"camera movement reference, motion reference"</td><td>출력 4~30초</td><td><b>예</b> — "3D white-model blockouts … to lock camera position, staging, and blocking" (<a href="https://www.cined.com/bytedance-seedance-2-5-api-goes-live-30-second-single-shot-clips-50-reference-inputs-and-3d-camera-blockouts/">CineD 2026-07-21</a>)</td></tr>
+  <tr><td>Kling 3.0 Motion Control</td><td>동작 참조 1개</td><td>동작만, 2.6 가이드는 카메라 무브를 피하라 함</td><td>3~30초</td><td>아니오</td></tr>
+  <tr><td>Veo 3.1</td><td><b>없음</b>(참조 이미지 3장·첫/끝 프레임·연장)</td><td>—</td><td>—</td><td>아니오</td></tr>
+  <tr><td>Runway Aleph 2.0</td><td>video-to-video reference</td><td>원본 프레이밍·타이밍 유지(리스타일)</td><td>2~30초</td><td>아니오</td></tr>
+  <tr><td>Luma Ray 3.2 v2v</td><td>원본 클립</td><td>Motion·Structure 슬라이더 1~9</td><td>≤20초</td><td>아니오</td></tr>
+  <tr><td>MiniMax H3</td><td>영상 3개</td><td>"how they move, how the camera behaves"</td><td>합계 15초</td><td>아니오</td></tr>
+  <tr><td>Wan 2.6 R2V</td><td>영상 1~3개</td><td><b>아니오</b>, 피사체 일관성 전용</td><td>출력 5·10초</td><td>아니오</td></tr>
+  <tr><td>Wan 2.2 VACE Fun (fal)</td><td>depth·pose 컨트롤 영상</td><td>예(컨트롤 패스)</td><td>81~241프레임, ≤720p</td><td>아니오</td></tr>
+  <tr><td>Vidu Q2 Reference</td><td>영상 2 + 이미지 4</td><td>문서 없음, 정체성 위주</td><td>≤8초</td><td>아니오</td></tr>
+</table>
+<p>블록아웃을 의도된 입력으로 적은 곳은 Seedance 2.5 하나다. 그래서 필수 레인의 API 쪽은 Seedance 2.x 하나로 두고 Kling·Veo 는 배선하지 않았다. 출처: <a href="https://fal.ai/models/bytedance/seedance-2.0/reference-to-video">fal Seedance 2.0</a> · <a href="https://evolink.ai/docs/en/api-manual/video-series/seedance2.5/seedance-2.5-overview">Seedance 2.5</a> · <a href="https://kling.ai/quickstart/motion-control-user-guide">Kling</a> · <a href="https://developers.googleblog.com/introducing-veo-3-1-and-new-creative-capabilities-in-the-gemini-api/">Veo 3.1</a> · <a href="https://docs.dev.runwayml.com/assets/inputs/">Runway</a> · <a href="https://lumalabs.ai/learning-center/articles/ray-3-2-video-to-video">Luma</a> · <a href="https://morphic.com/resources/models/minimax-h3">H3</a> · <a href="https://fal.ai/models/wan/v2.6/reference-to-video/api">Wan 2.6</a> · <a href="https://fal.ai/models/fal-ai/wan-vace-14b/pose/api">VACE</a> · <a href="https://www.eachlabs.ai/vidu/vidu-q2/vidu-q2-reference-to-image">Vidu</a>.</p>
+<h3>7.3 첫 프레임 리스타일</h3>
+<p>Nano Banana·GPT Image 2 로 첫 프레임을 고치는 게 표준 절차다. <a href="https://flick.art/blog/blender-ai-filmmaking">Flick</a>: "use Nano Banana to edit the first frame, keeping the composition and character pose unchanged", 프롬프트 "Keep composition a 100% exactly match of the provided sketch. Keep camera position 100% unchanged". 두 모델 다 strength 인자가 없고, gpt-image-2 는 <a href="https://wavespeed.ai/blog/posts/gpt-image-2-api-guide/">항상 high fidelity</a>(input_fidelity 를 주면 실패). Seedream 5.0 Pro edit 는 <a href="https://fal.ai/learn/tools/how-to-use-seedream-5-0-pro-v2">보호 목록 문장</a>("Keep the … camera crop, and background unchanged")으로 잠근다. 우리 구도 잠금 문장(§1)은 이 둘을 합친 꼴이다.</p>
+<h3>7.4 depth·pose 패스를 받는 호스팅 API</h3>
+<p><a href="https://fal.ai/models/fal-ai/wan-22-vace-fun-a14b/depth/api">fal wan-22-vace-fun-a14b</a>: task 에 depth·pose, video_url 필수, preprocess 로 서버가 맵을 뽑거나 미리 뽑은 맵을 받는다, 81~241프레임, 최대 720p. Runway Act-Two 는 실사 연기 영상이 입력이지 깊이 맵이 아니고, <a href="https://runware.ai/docs/models/bytedance-seedance-2-5/guides/editing">Seedance 2.5 edit</a> 는 원본을 유지하며 고치는 모드라 컨트롤 패스가 아니다. Kling·Luma·Veo·Wan 2.5/2.6 호스팅엔 없다. 컨트롤 패스 레인을 연다면 fal VACE 한 곳이다.</p>
+<h3>7.5 정확도 실측</h3>
+<p>수치가 있는 비교는 없다. 가장 가까운 것: <a href="https://www.technology.org/2026/02/23/how-i-used-reference-videos-to-replicate-complex-camera-movements-in-seedance-2-0/">technology.org 필자 테스트</a>(2026-02-23)는 5초 돌리 푸시인 하나를 참조로 프롬프트 셋을 돌려 "all three outputs had the exact same camera movement" 를 얻었고, 12초짜리(돌리+걷기+팬)는 "picked random parts each time", 6초 돌리만 남기니 일관됐다. <a href="https://alici.ai/blog/kling-motion-control-guide">Kling 사용자 실측</a>: 첫 프레임이 깨끗하면 성공률 90% 이상. 학술 벤치마크(PostCam·Track2View·WorldStereo)는 연구 모델 대상이라 상용 API 수치가 아니다.</p>
+<h3>7.6 실패 유형과 수렴한 설정</h3>
+<ul>
+  <li>디테일이 많으면 나빠진다 — Mixar "Untextured grey boxes … guide the model better than a finished render", Flick "Too much detail can confuse the model".</li>
+  <li>한 무브에 한 생각 — <a href="https://wavespeed.ai/blog/posts/blog-how-to-use-seedance-2-0-reference-video/">WaveSpeed</a> "Either the subject moves or the camera moves, not both, unless you really need it"; 무브가 무시되면 조금 과장하고 피사체를 가운데 두고 가장 강한 2~3초만 잘라 쓴다.</li>
+  <li>길이 3~8초, 2초 아래는 뭉개진다(WaveSpeed). <a href="https://www.atlascloud.ai/blog/tips/seedance-2.0-animation-2d">Atlas Cloud</a> "A busy reference dilutes the one beat you actually wanted".</li>
+  <li>Kling 은 마네킹·CG 를 조건부로만 읽는다 — "Real human actions are recommended, while certain stylized humanoid … can be recognized", 빠른 동작·가림 금지.</li>
+  <li>뻣뻣한 참조 동작이 결과로 옮겨 가는지는 아무도 실측하지 않았다. 간접 증거만 있다("respect push-in from reference: reinterpret texture and color").</li>
+  <li>인코딩 — 네이티브 프레임레이트 H.264, 과압축 금지(플랫 영역의 매크로블록이 텍스처로 샌다), 앞뒤 4~6프레임 미세 흔들림 제거.</li>
+</ul>
+<p>못 찾은 것: three.js 자동화 파이프라인, 브라우저 렌더와 Blender 렌더의 동등성 근거, 프롬프트 대 참조 영상의 수치 비교, 뻣뻣한 동작의 전이 실측, 리스타일 strength 권장값. 전체 보고서는 세션 스크래치 <code>previz-research-report.md</code>.</p>
+
+<h2>바뀐 파일</h2>
+<ul>
+  <li>계약·검사: <code>CLAUDE.md</code>, <code>render-routing.js</code>, <code>seedance-route.js</code>, <code>spatial-prompts.js</code>, <code>check-scenes.js</code>(selftest), <code>render-motion-slide.mjs --previz</code></li>
+  <li>three.js 레인: <code>previz-contract.js</code>, <code>previz-runtime.mjs → previz-runtime.js</code>, <code>previz-template.html</code>, <code>build-mesh.mjs</code></li>
+  <li>문서: <code>blender-previz.md</code> §6.2·6.3·6.5·6.6·6.7, <code>render-routing.md</code>, <code>scenes-schema.md</code>, storyboard·produce SKILL.md, <code>full-video.md</code>, <code>video-model-selection.md</code>, <code>still-generation.md</code>, README, 승인 페이지(렌더러·첫 프레임 표시)</li>
+  <li>버전 0.73.0 (매니페스트 4 + server package + index.ts)</li>
+</ul>
+</main>
+</body>
+</html>

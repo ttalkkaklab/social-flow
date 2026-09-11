@@ -45,6 +45,15 @@ allowance, $0 — a quota is not a price). Two CLIs, two mechanics:
 A host call that fails, or a tool that is missing, is put to the user before any separately
 billed API call — a fallback nobody approved is money nobody approved.
 
+**A generated-video cut's still is edited from its previz first frame** (user directive
+2026-09-11, storyboard blender-previz.md §6.6). `spatial-prompts.js --shot N` returns
+`previzFirstFrame` and puts it first in `sourceImageArgs.referenced_image_paths`, ahead of the
+style-pack image, with the composition lock already in `sourcePrompt`. Hand that frame to the
+tool as the reference — Grok `image_edit` (`image` = the frame), Codex `image_gen` after
+`view_image` on the frame, `gpt_image_img2img` on the API lane — so the camera, framing and
+subject positions of the clip's frame 1 are the still's. A still designed from the prompt
+alone and a previz that starts elsewhere hand the video model two different first frames.
+
 ### The API table (Claude Code, or `imageProvider:"api"`)
 
 The episode style chosen in [visual-style.md](../../storyboard/references/visual-style.md)

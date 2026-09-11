@@ -394,13 +394,11 @@ means generating something nobody approved.
 - **`duration` — the used length.** On a generated clip this is what the cut needs
   (scenes-schema §cut length), not a default: an insert is 3–4s, a face carrying emotion is
   7–10s. **Ask for exactly that** — Seedance makes and bills the seconds you request, so
-  `durationSeconds` is the used length, **clamped to the routed model's server floor**: 1.5
-  pro takes 4–12s, so a 3-second scene requests 4 and the build cuts at the scene boundary.
-  Veo's reference lane is the exception the other way, pinned at 8s, so
-  there you generate 8 and trim. Handing a model more seconds than the idea holds is how the
+  `durationSeconds` is the used length, **clamped to the routed model's server floor**: 1.5 pro takes 4–12s, so a 3-second scene requests 4 and the build cuts at the scene boundary.
+  Veo's reference lane is the exception the other way, pinned at 8s, so there you generate 8 and trim. Handing a model more seconds than the idea holds is how the
   middle of a clip goes dead — it fills the time it is given.
 
-- **`visual.video.previz` — the Blender clip.** Pass the `generation` object's `referenceVideoPaths` to `seedance_reference` resolved from the storyboard directory like `referenceImagePaths` — never a re-rendered or substituted clip (its bytes are hash-bound to the approval; `check-production.js` refuses a mismatch), and check the result against the previz — a contact sheet at 0/25/50/75/100 % and an edge overlay — before accepting it ([blender-previz.md](../storyboard/references/blender-previz.md) §6.4).
+- **`visual.video.previz` — the 3D previz every generated cut carries** (user directive 2026-09-11; `check-scenes.js` refuses a cut without it). On the Seedance route pass the `generation` object's `referenceVideoPaths` to `seedance_reference` resolved from the storyboard directory like `referenceImagePaths` — never a re-rendered or substituted clip (its bytes are hash-bound to the approval; `check-production.js` refuses a mismatch); on a host video tool (`handoff:"frame_and_prompt"`) the still edited from `previz.firstFrame` and the stored prompt carry it. Either way check the result against the previz — a contact sheet at 0/25/50/75/100 % and an edge overlay — before accepting it ([blender-previz.md](../storyboard/references/blender-previz.md) §6.4, §6.7). **The model is the user's choice, asked before any video call**: `PRODUCTION.videoModel` holds it (storyboard §1.7, production-mode.md §Two more questions); on an older board without the record, print `video-model-options.js storyboard/` and ask with AskUserQuestion, write the answer and the same model on every generated cut, re-quote and re-approve before the first call — `check-production.js` refuses the call until then.
 
 **Use the Seedance `generation` arguments from `cost-preview.js --json`; resolve errors and re-estimate retries before spending. Which engine, prompt, and per-slot recipe** —
 [video-generation.md](references/video-generation.md). It carries the face → sound → grid

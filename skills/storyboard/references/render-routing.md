@@ -115,7 +115,7 @@ the sentence, so compare the narration with the reasons once more before approva
 | `object_html` | The same mesh path, without characters the explanation does not need. |
 | `data_graph` | `subject.kind:"data"` moves values and relations. A graph is never a decorative 3D object. |
 | `editorial_html` | `kind:"diagram"`, `motion:true`, `treatment:"editorial"`, `subject.kind:"type"` for a short quotation or verdict. |
-| `generated_video` | `visual.video` or a video cut, with the reason in `visual.why`. The existing engine, cost and reference-image rules apply; under `PRODUCTION.videoProvider:"host"` the slot is `engine:"host"` (the CLI's own `image_to_video`). |
+| `generated_video` | `visual.video` or a video cut, with the reason in `visual.why`, and its 3D previz in `visual.video.previz` (§Every generated video cut is previz-guided). The existing engine, cost and reference-image rules apply; under `PRODUCTION.videoProvider:"host"` the slot is `engine:"host"` (the CLI's own `image_to_video`) and the previz shapes the still and the prompt. |
 | `stock_video` | `visual.source: "stock"` and `visual.clip` under `footage/` — the same supplied-file lane as a recording. Produce downloads and normalizes it, drops its audio and trims from `visual.in`; TTS, subtitles and BGM run over it, nothing is drawn on it. It bills nothing and sits outside the generated-video cap. |
 
 Camera HTML copies [camera-slide-template.html](camera-slide-template.html) and changes only
@@ -154,16 +154,22 @@ as per-region colour, counts as circle area. Boundaries and coordinates need a s
 region with no data is hatched, which is different from zero. Each format's data contract and
 examples are in [chart-design.md](chart-design.md).
 
-## Previz-guided generated video
+## Every generated video cut is previz-guided
 
-When a `generated_video` cut's camera path or timing has to land exactly — an orbit that
-must end on the sentence, a fall whose count is the joke — render a Blender previz first
-and store it as `visual.video.previz` with `modelPurpose:"previz"`. `checkPreviz` in
-render-routing.js refuses a clip that is not a local mp4 rendered at whole seconds and
-24–60 fps, a missing hash, a `referenceImagePaths[0]` that is not the source still, an end
-frame, or a prompt that does not bind `Video 1` and `Image 1` and close the clay read with
-"Do not reference its visual content". The contract, render rules and prompt skeleton are
-in [blender-previz.md](blender-previz.md) §6.
+Every `generated_video` cut with a `visual.video` slot pre-renders its camera and blocking in
+3D first (user directive 2026-09-11) — a Blender previz through the `blender_*` bridge or a
+three.js previz through `previz-template.html` — rendered at the cut's billed length, 24 fps,
+and stored as `visual.video.previz` with `renderer`, `clip`, `firstFrame`, `sha256`, `fps`,
+`seconds` and `camera.movement`. `checkScene` refuses the cut without it after the draft pass;
+`checkPreviz` refuses a renderer other than `blender`/`threejs`, a clip that is not a local mp4
+rendered at whole seconds and 24–60 fps, a first frame that is not a local png, a missing hash,
+a `camera.movement` that differs from `visual.camera.movement`, and — on the Seedance route
+(`handoff:"reference_video"`, `modelPurpose:"previz"`) — a `referenceImagePaths[0]` that is not
+the source still, an end frame, or a prompt that does not bind `Video 1` and `Image 1` and
+close the clay read with "Do not reference its visual content". On `engine:"host"` the handoff
+is `frame_and_prompt`: the still is edited from the first frame and the prompt carries the
+move. Imported clips (`visual.reuse`) carry none. The contract, both renderers, the first-frame
+still and the prompt skeleton are in [blender-previz.md](blender-previz.md) §6.
 
 ## Start and end frame planning
 
