@@ -201,7 +201,7 @@ must map 1:1 to an entry here.
 | W2 | <a different belief> | <a figure that should not be possible> | 숫자 | 2 | → M2 |
 | W3 | <…> | <…> | 숨은 원인 | 3 | → M3 |
 
-## Messages                                     # three things a viewer living now takes away (SKILL §2.1) — each the so-what of one wow, decided before any direction. None is a report of ignorance ("X는 알 수 없다").
+## Messages                                     # three things a viewer living now takes away (SKILL §2.1) — each the so-what of one wow, decided before any direction. A sentence true with the names gone: what leads to what, present tense, no figure, no name (scenario-stage §The message). None is what happened, and none is a report of ignorance ("X는 알 수 없다").
 
 | # | Wow | Message — what the viewer understands, reconsiders or can do after this | Why it reaches them today | On claims | Status |
 |---|---|---|---|---|---|

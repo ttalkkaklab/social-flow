@@ -8,6 +8,7 @@ import * as suno from './suno-client.js';
 import * as naver from './naver-client.js';
 import * as seedance from './seedance-client.js';
 import * as serp from './serp-client.js';
+import * as stock from './stock-client.js';
 import * as sns from './sns-client.js';
 import * as supertonic from './supertonic-client.js';
 import * as zimage from './zimage-client.js';
@@ -195,6 +196,17 @@ const serpImageSchema = z.object({
         .enum(['bw', 'trans', 'red', 'orange', 'yellow', 'green', 'teal', 'blue', 'purple', 'pink', 'white', 'gray', 'black', 'brown'])
         .optional(),
     safe: z.boolean().optional(),
+});
+const stockSearchSchema = z.object({
+    query: searchQuery,
+    media: z.enum(stock.STOCK_MEDIA).optional(),
+    providers: z.array(z.enum(stock.STOCK_PROVIDERS)).min(1).optional(),
+    orientation: z.enum(stock.STOCK_ORIENTATIONS).optional(),
+    limit: z.number().int().min(1).max(stock.STOCK_MAX_LIMIT).optional(),
+    minWidth: z.number().int().min(1).optional(),
+    minDuration: z.number().min(0).optional(),
+    maxDuration: z.number().min(0).optional(),
+    locale: langCode,
 });
 const serpTrendingSchema = z.object({
     geo: countryCode,
@@ -566,6 +578,10 @@ export const ROUTES = {
     },
     serp_trending_now: async (args) => {
         const result = await serp.trendingNow(parseArgs(serpTrendingSchema, args));
+        return text(result.text, result.isError);
+    },
+    stock_search: async (args) => {
+        const result = await stock.stockSearch(parseArgs(stockSearchSchema, args));
         return text(result.text, result.isError);
     },
     naver_search: async (args) => {

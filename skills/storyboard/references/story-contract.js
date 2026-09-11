@@ -6,6 +6,11 @@ const object = x => x !== null && typeof x === 'object' && !Array.isArray(x);
 const text = x => typeof x === 'string' && x.trim().length > 0;
 const canonical = x => Array.isArray(x) ? x.map(canonical) : object(x)
   ? Object.fromEntries(Object.keys(x).sort().map(k => [k, canonical(x[k])])) : x;
+// The shape of a message — the same two regexes check-research.js reads the M# cell with.
+// A final predicate in the past tense tells what happened; a hortative or imperative ending
+// tells the viewer what to do. A thesis does neither: it states what leads to what.
+const PAST_FINAL = /(았|었|였|했|왔|갔|봤|됐|냈|셨|잤|샀|썼|줬|놨|뒀|했었|았었|었었)(?:다|어요|어|습니다|죠|네요|거든요|대요|답니다|지요|잖아요|던\s*것이다|던\s*거다|던\s*겁니다|던\s*거예요)\s*$/;
+const MORAL_FINAL = /(?:하자|합시다|말자|맙시다|세요|십시오|해야\s*(?:한다|해요|합니다|해|돼요|됩니다|된다)|[아어해마]라)\s*$/;
 
 function storySpeech(win) {
   const scenes = Array.isArray(win.SCENES) ? win.SCENES : [];
@@ -114,6 +119,40 @@ function checkStory(win, { requireReview = true } = {}) {
   }
   if (ending && position(ending) !== speech.length - 1) fail('STORY.ending must reference the last spoken group');
   if (payoff && ending && before(ending, payoff)) fail('STORY.ending cannot precede the payoff');
+  // The thesis is the message the viewer carries out of the episode — the research.md M#
+  // sentence in the narration's words (scenario-stage §The message). It is a sentence that
+  // stays true with the names gone, so it is told in the present, carries no figure, and does
+  // not command; it is heard once, at or after the payoff, over the closing picture (the
+  // 「그날 이후로」 frame — story-quality §Design step 3); and it is not the payoff line, which is
+  // the reversal itself. The 2026-09-11 김만덕 board carried a fact in this field and a picture
+  // in the takeaway, and the narration read passed both — a listener could repeat what
+  // happened and not what it meant. Meaning stays the reviewer's; the shape is checked here.
+  if (text(story.thesis)) {
+    const thesis = story.thesis.trim();
+    const core = thesis.replace(/[\s.。!?…」"'”’)]+$/g, '');
+    const past = core.match(PAST_FINAL);
+    if (past) fail(`STORY.thesis is told in the past tense ("…${past[0].trim()}") — a fact about this episode; the message is a present-tense sentence that stays true with the names gone`);
+    if (/\d/.test(core)) fail('STORY.thesis carries a figure — a figure is a fact for the body; the thesis is what it means');
+    const moral = core.match(MORAL_FINAL);
+    if (moral) fail(`STORY.thesis commands ("…${moral[0].trim()}") — a moral tells the viewer what to do; a thesis states what leads to what`);
+    if (payoff && speech.length) {
+      const norm = v => String(v || '').replace(/[\s\p{P}]+/gu, '');
+      const want = norm(thesis);
+      const heard = speech.filter((x, i) => i >= position(payoff) &&
+        [x.n?.tts, x.n?.sub].some(v => text(v) && norm(v).includes(want)));
+      if (!heard.length)
+        fail('STORY.thesis is heard by no spoken group at or after the payoff — the message is a sentence the viewer hears over the closing picture, not a note');
+      const payoffLine = norm(story.payoff.quote);
+      if (want && payoffLine && (want.includes(payoffLine) || payoffLine.includes(want)))
+        fail('STORY.thesis restates the payoff line — the payoff is the reversal, the thesis is what it means once the names are gone');
+    }
+  }
+  // Optional: the belief spoken early in someone else's mouth, so the close overturns a
+  // sentence the viewer heard (Save the Cat's theme stated; scenario-stage §The message).
+  if (story.themeStated !== undefined) {
+    const stated = ref(story.themeStated, 'STORY.themeStated');
+    if (stated && payoff && !before(stated, payoff)) fail('STORY.themeStated must be spoken before the payoff');
+  }
   // The person short (person-short.md): one person, one turn, a cut per sentence, and an
   // opening that lands inside the event — no name, no year, no result — before anyone is
   // introduced. Declared by STORY.person; every other board skips this block.
@@ -132,6 +171,10 @@ function checkStory(win, { requireReview = true } = {}) {
       const said = [first?.tts, first?.sub].filter(v => text(v));
       if (said.some(v => names.some(name => v.includes(name.trim()))))
         fail('STORY.person: the opening sentence names the person — open inside the event, introduce nobody');
+      // The name-erasure test (scenario-stage §The message): a thesis that names the person
+      // is a sentence about this person only, and the viewer has nothing to carry out.
+      if (text(story.thesis) && names.some(name => story.thesis.includes(name.trim())))
+        fail('STORY.person: the thesis names the person — erase the name and the message has to still stand');
       // A calendar year, a century or a dated day (year-month-day, so "1200.5킬로" is a decimal, not a date).
       // Four digits before 년 are always a year — an age
       // past 999 years is spelled out (천 년). Three digits are a year unless a span marker follows

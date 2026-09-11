@@ -16,8 +16,11 @@ this file starts after the engine has to be chosen.
 
 ## Video engines, split by job
 
-There are two (`veo_*` · `seedance_*`) and they're good at
-different things. The decision table's source of truth is
+There are two API engines (`veo_*` · `seedance_*`) and they're good at
+different things — and one route above both: under Grok the CLI's own `image_to_video`
+takes every clip (`engine:"host"`, [video-model-selection.md](references/video-model-selection.md)
+§The host video tool comes first), so this section applies where `PRODUCTION.videoProvider`
+is `"api"`. The decision table's source of truth is
 [video-model-selection.md](references/video-model-selection.md), and the order is
 **face → sound → grid**. Since the route is deterministic from facts the storyboard already
 wrote (who is in the source, whether the slot uses its sound, the duration), **the storyboard

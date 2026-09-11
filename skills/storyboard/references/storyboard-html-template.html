@@ -1000,7 +1000,7 @@ window.SB_DOC = {
   // (or null) and the document simply has no cost panel.
   cost: null,
 
-  keyMessage: "{{the one sentence this video delivers}}",
+  keyMessage: "{{STORY.thesis — the message in the narration's words: present tense, no figure, no name; heard over the closing picture}}",
   hook: "{{cover hook summary — e.g. \"title\" — hero stat X (statLabel)}}",
   seriesNote: "{{position in the series, standalone-viewing design, etc. — empty string if none}}",
   // Document-level notes — design decisions that belong to no single scene (use [] if none)
@@ -1339,6 +1339,7 @@ window.SB_DOC = {
       feelLabel: "What the viewer should feel",
       feelMissing: "not written — write shot.feel before the size, angle and camera (directing-grammar §5)",
       infoLabel: "What this shot adds",
+      licenseLabel: "Source and license",
       infoTypeLabel: "Information route",
       shareLabel: "What a viewer would forward",
       shareTypeLabel: "Forwardable shape",
@@ -1350,7 +1351,7 @@ window.SB_DOC = {
       vtRecording: "recorded screen", vtOutro: "shared outro mp4",
       vtSpeechClip: function (eng) { return "speech clip · " + eng; },
       vtImgToVideo: function (eng) { return "still→video · " + eng; },
-      vtTyping: "typing video · code render", vtArt: "illustration", vtStill: "still background",
+      vtTyping: "typing video · code render", vtArt: "illustration", vtStill: "still background", vtStock: "stock clip",
       revealNo: function (n) { return "reveal " + n; },
       screenText: "Screen text", noScreenText: "no screen text — the picture alone",
       audioSec: "Sound", subtitleLabel: "Subtitle",
@@ -1652,6 +1653,7 @@ window.SB_DOC = {
       feelLabel: "보는 사람이 느낄 것",
       feelMissing: "안 적힘 — 크기·각도·카메라보다 shot.feel 을 먼저 적어 주세요 (directing-grammar §5)",
       infoLabel: "이 샷이 더하는 것",
+      licenseLabel: "출처·라이선스",
       infoTypeLabel: "정보 표현 방식",
       shareLabel: "보는 사람이 퍼 나를 것",
       shareTypeLabel: "퍼 나를 것의 모양",
@@ -1663,7 +1665,7 @@ window.SB_DOC = {
       vtRecording: "녹화 화면", vtOutro: "공용 아웃트로 mp4",
       vtSpeechClip: function (eng) { return "말하는 클립 · " + eng; },
       vtImgToVideo: function (eng) { return "그림→영상 · " + eng; },
-      vtTyping: "타이핑 영상 · 코드 렌더", vtArt: "삽화", vtStill: "정지 배경",
+      vtTyping: "타이핑 영상 · 코드 렌더", vtArt: "삽화", vtStill: "정지 배경", vtStock: "외부 영상",
       revealNo: function (n) { return "공개 " + n; },
       screenText: "화면 글자", noScreenText: "화면 글자 없음 — 그림만",
       audioSec: "소리", subtitleLabel: "자막",
@@ -1846,7 +1848,7 @@ window.SB_DOC = {
     /* A motion background may name its route on the video object itself — the same place the
        cost panel reads it from. check-scenes.js engineOf resolves it in this order too. */
     var named = (v.video && v.video.engine) || (v.clip && v.clip.engine) || v.engine;
-    if (named === "veo" || named === "seedance") return named;
+    if (named === "veo" || named === "seedance" || named === "host") return named;   // host: the CLI's own video tool
     if (s.type === "broll" || s.type === "quote") return "veo";
     return "seedance";
   }
@@ -1897,6 +1899,7 @@ window.SB_DOC = {
   var CLOSE_SIZES = { cu: 1, choker: 1, ecu: 1 };
   /* Shot-type and picture-layer display names: STRINGS.*.type · STRINGS.*.pic */
   function inferredPicture(s) {
+    if (s.visual && s.visual.source === "stock" && s.visual.clip) return "stock";
     if (s.visual && (s.visual.source === "recording" || s.visual.source === "screencast")) return "recording";
     if (s.visual && s.visual.slide && s.visual.slide.kind === "camera") return "still";
     if (s.visual && s.visual.slide) return "slide";
@@ -1908,6 +1911,10 @@ window.SB_DOC = {
   function inferredOverlay(s) {
     if (s.type === "broll" || s.type === "outro") return "none";
     if (s.visual && s.visual.slide) return "none";   // the slide draws its own text
+    // Nothing is drawn over video (user directive 2026-09-05): a generated clip's default is
+    // no overlay, so a full-video board does not carry one warning per shot for obeying it.
+    if (s.visual && (s.visual.video || s.visual.clip)) return "none";
+    if (s.shot && s.shot.render && s.shot.render.mode === "generated_video") return "none";
     return "html";
   }
   function pictureOf(s) { return (s.visual && s.visual.picture) || inferredPicture(s); }
@@ -2197,6 +2204,14 @@ window.SB_DOC = {
      let one shooting scene drag the generated scenes into the shooting contract too
      (40 characters, 5~6 characters per second). */
   function recOf(s) { return !!(s && s.visual && s.visual.source === "recording"); }
+  /* A supplied stock file shows where it came from and under what terms (scenes-schema §stock material) —
+     the approver reads the license next to the cut, not in a sidecar. */
+  function licenseText(l) {
+    var parts = [l.provider, l.license, l.author].filter(Boolean);
+    if (l.attributionRequired) parts.push("credit: " + (l.attribution || "(missing)"));
+    if (l.url) parts.push(l.url);
+    return parts.join(" · ");
+  }
   /* Only the portrait shooting lane is "top block + recording band" — a 16:9 recording gets
      seated as a strip to fit the portrait canvas (screencast-overlay). In landscape the clip
      fills the frame, so there is no strip and the text goes to the lower third. */
@@ -2244,9 +2259,10 @@ window.SB_DOC = {
       var s = scenes[i] || {}, v = s.visual || {};
       if (v.reuse !== undefined) parts.push((i + 1) + ":reuse:" + encodeURIComponent(JSON.stringify(v.reuse)));
       var slot = null;
-      if (s.type === "broll") slot = ["broll", v.engine === "seedance" ? "seedance" : "veo", Number(s.duration) || 0];
-      else if (v.video) slot = ["motion", (v.video.engine || v.engine) === "veo" ? "veo" : "seedance", Number(s.duration) || 0];
-      else if (s.type === "quote" && v.clip && typeof v.clip === "object") slot = ["quote", (v.clip.engine || v.engine) === "seedance" ? "seedance" : "veo", Number(s.duration) || 8];
+      var route = function (named, fallback) { return named === "host" || named === "veo" || named === "seedance" ? named : fallback; };
+      if (s.type === "broll") slot = ["broll", route(v.engine, "veo"), Number(s.duration) || 0];
+      else if (v.video) slot = ["motion", route(v.video.engine || v.engine, "seedance"), Number(s.duration) || 0];
+      else if (s.type === "quote" && v.clip && typeof v.clip === "object") slot = ["quote", route(v.clip.engine || v.engine, "veo"), Number(s.duration) || 8];
       if (slot) {
         var config = Object.assign({}, v, slot[0] === "motion" ? v.video : slot[0] === "quote" ? v.clip : {});
         var fields = ["model", "modelPurpose", "modelReason", "resolution", "generateAudio", "realFaceInput", "referenceImagePaths", "referenceAudioPaths", "previz"];
@@ -2258,7 +2274,7 @@ window.SB_DOC = {
         for (var j = 0; j < sl.shots.length; j++) {
           var sh = sl.shots[j] || {};
           if (sh.reuse) continue;
-          parts.push((i + 1) + "g" + (sh.group || j + 1) + ":footage/" + ((sh.engine || v.engine) === "veo" ? "veo" : "seedance") + "/" + (Number(sh.duration) || 0));
+          parts.push((i + 1) + "g" + (sh.group || j + 1) + ":footage/" + route(sh.engine || v.engine, "seedance") + "/" + (Number(sh.duration) || 0));
         }
       }
     }
@@ -2588,7 +2604,7 @@ window.SB_DOC = {
         // (scenes-schema §clip prompt). The default route 1.5 pro takes 4–12s — the old 15s
         // figure was Seedance 2.0's. Veo is fixed at 8. The real danger is a clip shorter
         // than its scene: it loops, and the loop shows its seam.
-        var mbCap = engineOf(s) === "veo" ? 8 : 12;
+        var mbCap = engineOf(s) === "veo" ? 8 : engineOf(s) === "host" ? 15 : 12;   // host image_to_video takes 1–15 s
         if (s.duration > mbCap)
           flag("warn", T.shotCap(no), "motion background " + s.duration + "s — past the " + engineOf(s) +
                " route's one-call cap (" + mbCap + "s; server-validated), so the clip loops and the seam shows. Trim the narration, split the scene, or route to a model that takes it");
@@ -3195,7 +3211,10 @@ window.SB_DOC = {
       }
       return;
     }
-    var missing = CAM_SLOTS.filter(function (slot) { return !cam[slot]; });
+    // A static camera has no speed (full-video.md §Camera dynamics: speed belongs to a move),
+    // so the slot is empty by contract on that shot and is not a gap.
+    var isStatic = /^\s*static\b/i.test(String(cam.movement || ""));
+    var missing = CAM_SLOTS.filter(function (slot) { return !cam[slot] && !(slot === "speed" && isStatic); });
     if (missing.length) {
       camGaps++;
       flag("warn", T.shotCap(i + 1), "visual.camera is missing " + missing.join(", ") +
@@ -3280,7 +3299,7 @@ window.SB_DOC = {
     var shots = (v.slide && Array.isArray(v.slide.shots)) ? v.slide.shots : [];
     shots.forEach(function (sh, j) {
       out.push({ cap: T.shotCap(i + 1), prompt: String(sh.prompt || ""),
-                 eng: (sh.engine || v.engine) === "veo" ? "veo" : "seedance",
+                 eng: (sh.engine || v.engine) === "veo" ? "veo" : (sh.engine || v.engine) === "host" ? "host" : "seedance",
                  where: "shots[" + j + "]'s prompt" });
     });
     return out;
@@ -3507,7 +3526,10 @@ window.SB_DOC = {
         var lastDripN = lastDrip ? lastDrip.i + 1 : 0;
         // Only a gap cover owes its answer to the last drip. A cover that already revealed the
         // result pays wherever it pays, including on itself.
-        if (cover.hookType !== "spoiler" && cover.hookForm !== "payoff" && pay !== lastDripN)
+        // A person short (person-short.md) pays at the blow — STORY.payoff — and the close
+        // comes after it by contract, so its cover is paid at the payoff shot, not the last drip.
+        var personPayoff = window.STORY && window.STORY.person && window.STORY.payoff && window.STORY.payoff.shot;
+        if (cover.hookType !== "spoiler" && cover.hookForm !== "payoff" && pay !== lastDripN && pay !== personPayoff)
           flag("warn", T.where.promise, "the cover's promise is paid at shot " + pay + (beatWord(pay) ? " (" + beatWord(pay) + ")" : "") +
                " — the last drip is where the answer first completes (scenes-schema §playback order); pay: " + (lastDripN || "<the last drip>"));
       } else if (payBeat !== "result")
@@ -3726,10 +3748,11 @@ window.SB_DOC = {
     var money = function (n) { return "$" + (Number(n) || 0).toFixed(2); };
     var slotRows = SCENES.map(function (s, i) {
       var v = s.visual || {};
-      if (s.type === "broll") return { n: i + 1, what: "b-roll", eng: v.engine === "seedance" ? "seedance" : "veo" };
-      if (v.video) return { n: i + 1, what: T.motionBg, eng: (v.video.engine || v.engine) === "veo" ? "veo" : "seedance" };
+      var route = function (named, fallback) { return named === "host" || named === "veo" || named === "seedance" ? named : fallback; };
+      if (s.type === "broll") return { n: i + 1, what: "b-roll", eng: route(v.engine, "veo") };
+      if (v.video) return { n: i + 1, what: T.motionBg, eng: route(v.video.engine || v.engine, "seedance") };
       if (s.type === "quote" && v.clip && typeof v.clip === "object")
-        return { n: i + 1, what: T.speechClipRow + (s.speaker ? " · " + s.speaker : ""), eng: "veo" };
+        return { n: i + 1, what: T.speechClipRow + (s.speaker ? " · " + s.speaker : ""), eng: route(v.clip.engine || v.engine, "veo") };
       return null;
     }).filter(Boolean);
 
@@ -3915,6 +3938,7 @@ window.SB_DOC = {
            '<span class="shot-info shot-feel' + (g.feel ? "" : " miss") + '"><b>' + esc(T.feelLabel) + "</b>" +
            esc(g.feel || T.feelMissing) + "</span>") +
          (g.info ? '<span class="shot-info"><b>' + esc(T.infoLabel) + "</b>" + esc(g.info) + "</span>" : "") +
+         (s.visual && s.visual.license ? '<span class="shot-info"><b>' + esc(T.licenseLabel) + "</b>" + esc(licenseText(s.visual.license)) + "</span>" : "") +
          (g.infoType ? '<span class="shot-info"><b>' + esc(T.infoTypeLabel) + "</b>" + esc(g.infoType) + "</span>" : "") +
          (g.share ? '<span class="shot-info"><b>' + esc(T.shareLabel) + "</b>" + esc(g.share) + "</span>" : "") +
          (g.shareType ? '<span class="shot-info"><b>' + esc(T.shareTypeLabel) + "</b>" + esc(g.shareType) + "</span>" : "") +
@@ -3960,6 +3984,7 @@ window.SB_DOC = {
           recOf(s) ? [T.vtRecording, ""] :
           s.type === "outro" ? [T.vtOutro, "gen"] :
           (s.type === "quote" && vis.clip) ? [T.vtSpeechClip(engineOf(s)), "gen"] :
+          (vis.source === "stock" && vis.clip) ? [T.vtStock, "gen"] :
           vis.video ? [T.vtImgToVideo((vis.video && vis.video.engine) || engineOf(s)), "gen"] :
           (seg && /^card:/.test(seg.imgPrompt || "")) ? [T.vtTyping, "gen"] :
           (seg && seg.img) ? [T.vtArt, ""] :

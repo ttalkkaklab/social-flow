@@ -314,8 +314,9 @@ hosting to get one.
    gate). The same applies when the upload fails with 404 (no endpoint) or 503
    (server key unset) — write one line in growth-log and proceed without the
    image.
-2. **Generate** — use `image_local_generate` (local Z-Image — the default,
-   zero cost). Reflect the profile's §THEME colors and channel tone in the
+2. **Generate** — under Codex or Grok use the host `image_gen` (subscription
+   allowance, `image.host`); on Claude Code use `image_local_generate` (local
+   Z-Image — the default, zero cost). Reflect the profile's §THEME colors and channel tone in the
    prompt, and **put no text inside the image** — Korean glyph rendering
    breaks easily (local measurement: "딸깍연구소" → "달닥연구소") and broken
    glyphs are an AI tell all by themselves. The body copy does the talking;

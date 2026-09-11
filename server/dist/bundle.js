@@ -116,7 +116,7 @@ var require_code = __commonJS({
     }
     exports._ = _;
     var plus = new _Code("+");
-    function str7(strs, ...args) {
+    function str8(strs, ...args) {
       const expr = [safeStringify(strs[0])];
       let i2 = 0;
       while (i2 < args.length) {
@@ -127,7 +127,7 @@ var require_code = __commonJS({
       optimize(expr);
       return new _Code(expr);
     }
-    exports.str = str7;
+    exports.str = str8;
     function addCodeArg(code, arg) {
       if (arg instanceof _Code)
         code.push(...arg._items);
@@ -170,7 +170,7 @@ var require_code = __commonJS({
       return;
     }
     function strConcat(c1, c2) {
-      return c2.emptyStr() ? c1 : c1.emptyStr() ? c2 : str7`${c1}${c2}`;
+      return c2.emptyStr() ? c1 : c1.emptyStr() ? c2 : str8`${c1}${c2}`;
     }
     exports.strConcat = strConcat;
     function interpolate(x2) {
@@ -1132,22 +1132,22 @@ var require_util = __commonJS({
       return (0, codegen_1._)`${topSchemaRef}${schemaPath}${(0, codegen_1.getProperty)(keyword)}`;
     }
     exports.schemaRefOrVal = schemaRefOrVal;
-    function unescapeFragment(str7) {
-      return unescapeJsonPointer(decodeURIComponent(str7));
+    function unescapeFragment(str8) {
+      return unescapeJsonPointer(decodeURIComponent(str8));
     }
     exports.unescapeFragment = unescapeFragment;
-    function escapeFragment(str7) {
-      return encodeURIComponent(escapeJsonPointer(str7));
+    function escapeFragment(str8) {
+      return encodeURIComponent(escapeJsonPointer(str8));
     }
     exports.escapeFragment = escapeFragment;
-    function escapeJsonPointer(str7) {
-      if (typeof str7 == "number")
-        return `${str7}`;
-      return str7.replace(/~/g, "~0").replace(/\//g, "~1");
+    function escapeJsonPointer(str8) {
+      if (typeof str8 == "number")
+        return `${str8}`;
+      return str8.replace(/~/g, "~0").replace(/\//g, "~1");
     }
     exports.escapeJsonPointer = escapeJsonPointer;
-    function unescapeJsonPointer(str7) {
-      return str7.replace(/~1/g, "/").replace(/~0/g, "~");
+    function unescapeJsonPointer(str8) {
+      return str8.replace(/~1/g, "/").replace(/~0/g, "~");
     }
     exports.unescapeJsonPointer = unescapeJsonPointer;
     function eachItem(xs, f3) {
@@ -2172,8 +2172,8 @@ var require_json_schema_traverse = __commonJS({
         post(schema, jsonPtr, rootSchema, parentJsonPtr, parentKeyword, parentSchema, keyIndex);
       }
     }
-    function escapeJsonPtr(str7) {
-      return str7.replace(/~/g, "~0").replace(/\//g, "~1");
+    function escapeJsonPtr(str8) {
+      return str8.replace(/~/g, "~0").replace(/\//g, "~1");
     }
   }
 });
@@ -3237,10 +3237,10 @@ var require_utils = __commonJS({
         return { host, isIPV6: false };
       }
     }
-    function findToken(str7, token) {
+    function findToken(str8, token) {
       let ind = 0;
-      for (let i2 = 0; i2 < str7.length; i2++) {
-        if (str7[i2] === token) ind++;
+      for (let i2 = 0; i2 < str8.length; i2++) {
+        if (str8[i2] === token) ind++;
       }
       return ind;
     }
@@ -4003,7 +4003,7 @@ var require_core = __commonJS({
     var util_1 = require_util();
     var $dataRefSchema = require_data();
     var uri_1 = require_uri();
-    var defaultRegExp = (str7, flags) => new RegExp(str7, flags);
+    var defaultRegExp = (str8, flags) => new RegExp(str8, flags);
     defaultRegExp.code = "new RegExp";
     var META_IGNORE_OPTIONS = ["removeAdditional", "useDefaults", "coerceTypes"];
     var EXT_SCOPE_NAMES = /* @__PURE__ */ new Set([
@@ -4798,16 +4798,16 @@ var require_ucs2length = __commonJS({
   "node_modules/ajv/dist/runtime/ucs2length.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    function ucs2length(str7) {
-      const len = str7.length;
+    function ucs2length(str8) {
+      const len = str8.length;
       let length = 0;
       let pos = 0;
       let value;
       while (pos < len) {
         length++;
-        value = str7.charCodeAt(pos++);
+        value = str8.charCodeAt(pos++);
         if (value >= 55296 && value <= 56319 && pos < len) {
-          value = str7.charCodeAt(pos);
+          value = str8.charCodeAt(pos);
           if ((value & 64512) === 56320)
             pos++;
         }
@@ -6690,8 +6690,8 @@ var require_formats = __commonJS({
     }
     var DATE = /^(\d\d\d\d)-(\d\d)-(\d\d)$/;
     var DAYS = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-    function date3(str7) {
-      const matches = DATE.exec(str7);
+    function date3(str8) {
+      const matches = DATE.exec(str8);
       if (!matches)
         return false;
       const year = +matches[1];
@@ -6710,8 +6710,8 @@ var require_formats = __commonJS({
     }
     var TIME = /^(\d\d):(\d\d):(\d\d(?:\.\d+)?)(z|([+-])(\d\d)(?::?(\d\d))?)?$/i;
     function getTime(strictTimeZone) {
-      return function time3(str7) {
-        const matches = TIME.exec(str7);
+      return function time3(str8) {
+        const matches = TIME.exec(str8);
         if (!matches)
           return false;
         const hr = +matches[1];
@@ -6757,8 +6757,8 @@ var require_formats = __commonJS({
     var DATE_TIME_SEPARATOR = /t|\s/i;
     function getDateTime(strictTimeZone) {
       const time3 = getTime(strictTimeZone);
-      return function date_time(str7) {
-        const dateTime = str7.split(DATE_TIME_SEPARATOR);
+      return function date_time(str8) {
+        const dateTime = str8.split(DATE_TIME_SEPARATOR);
         return dateTime.length === 2 && date3(dateTime[0]) && time3(dateTime[1]);
       };
     }
@@ -6783,13 +6783,13 @@ var require_formats = __commonJS({
     }
     var NOT_URI_FRAGMENT = /\/|:/;
     var URI = /^(?:[a-z][a-z0-9+\-.]*:)(?:\/?\/(?:(?:[a-z0-9\-._~!$&'()*+,;=:]|%[0-9a-f]{2})*@)?(?:\[(?:(?:(?:(?:[0-9a-f]{1,4}:){6}|::(?:[0-9a-f]{1,4}:){5}|(?:[0-9a-f]{1,4})?::(?:[0-9a-f]{1,4}:){4}|(?:(?:[0-9a-f]{1,4}:){0,1}[0-9a-f]{1,4})?::(?:[0-9a-f]{1,4}:){3}|(?:(?:[0-9a-f]{1,4}:){0,2}[0-9a-f]{1,4})?::(?:[0-9a-f]{1,4}:){2}|(?:(?:[0-9a-f]{1,4}:){0,3}[0-9a-f]{1,4})?::[0-9a-f]{1,4}:|(?:(?:[0-9a-f]{1,4}:){0,4}[0-9a-f]{1,4})?::)(?:[0-9a-f]{1,4}:[0-9a-f]{1,4}|(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?))|(?:(?:[0-9a-f]{1,4}:){0,5}[0-9a-f]{1,4})?::[0-9a-f]{1,4}|(?:(?:[0-9a-f]{1,4}:){0,6}[0-9a-f]{1,4})?::)|[Vv][0-9a-f]+\.[a-z0-9\-._~!$&'()*+,;=:]+)\]|(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)|(?:[a-z0-9\-._~!$&'()*+,;=]|%[0-9a-f]{2})*)(?::\d*)?(?:\/(?:[a-z0-9\-._~!$&'()*+,;=:@]|%[0-9a-f]{2})*)*|\/(?:(?:[a-z0-9\-._~!$&'()*+,;=:@]|%[0-9a-f]{2})+(?:\/(?:[a-z0-9\-._~!$&'()*+,;=:@]|%[0-9a-f]{2})*)*)?|(?:[a-z0-9\-._~!$&'()*+,;=:@]|%[0-9a-f]{2})+(?:\/(?:[a-z0-9\-._~!$&'()*+,;=:@]|%[0-9a-f]{2})*)*)(?:\?(?:[a-z0-9\-._~!$&'()*+,;=:@/?]|%[0-9a-f]{2})*)?(?:#(?:[a-z0-9\-._~!$&'()*+,;=:@/?]|%[0-9a-f]{2})*)?$/i;
-    function uri(str7) {
-      return NOT_URI_FRAGMENT.test(str7) && URI.test(str7);
+    function uri(str8) {
+      return NOT_URI_FRAGMENT.test(str8) && URI.test(str8);
     }
     var BYTE = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/gm;
-    function byte(str7) {
+    function byte(str8) {
       BYTE.lastIndex = 0;
-      return BYTE.test(str7);
+      return BYTE.test(str8);
     }
     var MIN_INT32 = -(2 ** 31);
     var MAX_INT32 = 2 ** 31 - 1;
@@ -6803,11 +6803,11 @@ var require_formats = __commonJS({
       return true;
     }
     var Z_ANCHOR = /[^\\]\\Z/;
-    function regex(str7) {
-      if (Z_ANCHOR.test(str7))
+    function regex(str8) {
+      if (Z_ANCHOR.test(str8))
         return false;
       try {
-        new RegExp(str7);
+        new RegExp(str8);
         return true;
       } catch (e2) {
         return false;
@@ -7828,13 +7828,13 @@ var require_ms = __commonJS({
         "val is not a non-empty string or a valid number. val=" + JSON.stringify(val)
       );
     };
-    function parse3(str7) {
-      str7 = String(str7);
-      if (str7.length > 100) {
+    function parse3(str8) {
+      str8 = String(str8);
+      if (str8.length > 100) {
         return;
       }
       var match2 = /^(-?(?:\d+)?\.?\d+) *(milliseconds?|msecs?|ms|seconds?|secs?|s|minutes?|mins?|m|hours?|hrs?|h|days?|d|weeks?|w|years?|yrs?|y)?$/i.exec(
-        str7
+        str8
       );
       if (!match2) {
         return;
@@ -8435,7 +8435,7 @@ var require_node = __commonJS({
     var { formatters: formatters2 } = module.exports;
     formatters2.o = function(v) {
       this.inspectOpts.colors = this.useColors;
-      return util2.inspect(v, this.inspectOpts).split("\n").map((str7) => str7.trim()).join(" ");
+      return util2.inspect(v, this.inspectOpts).split("\n").map((str8) => str8.trim()).join(" ");
     };
     formatters2.O = function(v) {
       this.inspectOpts.colors = this.useColors;
@@ -8502,12 +8502,12 @@ var require_helpers = __commonJS({
     exports.toBuffer = toBuffer;
     async function json2(stream) {
       const buf = await toBuffer(stream);
-      const str7 = buf.toString("utf8");
+      const str8 = buf.toString("utf8");
       try {
-        return JSON.parse(str7);
+        return JSON.parse(str8);
       } catch (_err) {
         const err4 = _err;
-        err4.message += ` (input: ${str7})`;
+        err4.message += ` (input: ${str8})`;
         throw err4;
       }
     }
@@ -13398,12 +13398,12 @@ var init_fetch_blob = __esm({
        */
       async text() {
         const decoder = new TextDecoder();
-        let str7 = "";
+        let str8 = "";
         for await (const part of toIterator(this.#parts, false)) {
-          str7 += decoder.decode(part, { stream: true });
+          str8 += decoder.decode(part, { stream: true });
         }
-        str7 += decoder.decode();
-        return str7;
+        str8 += decoder.decode();
+        return str8;
       }
       /**
        * The arrayBuffer() method in the Blob interface returns a
@@ -15946,7 +15946,7 @@ var require_bignumber = __commonJS({
           suffix: ""
         }, ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyz", alphabetHasNormalDecimalDigits = true;
         function BigNumber2(v, b) {
-          var alphabet, c, caseChanged, e2, i2, isNum, len, str7, x2 = this;
+          var alphabet, c, caseChanged, e2, i2, isNum, len, str8, x2 = this;
           if (!(x2 instanceof BigNumber2)) return new BigNumber2(v, b);
           if (b == null) {
             if (v && v._isBigNumber === true) {
@@ -15973,18 +15973,18 @@ var require_bignumber = __commonJS({
                 }
                 return;
               }
-              str7 = String(v);
+              str8 = String(v);
             } else {
-              if (!isNumeric.test(str7 = String(v))) return parseNumeric(x2, str7, isNum);
-              x2.s = str7.charCodeAt(0) == 45 ? (str7 = str7.slice(1), -1) : 1;
+              if (!isNumeric.test(str8 = String(v))) return parseNumeric(x2, str8, isNum);
+              x2.s = str8.charCodeAt(0) == 45 ? (str8 = str8.slice(1), -1) : 1;
             }
-            if ((e2 = str7.indexOf(".")) > -1) str7 = str7.replace(".", "");
-            if ((i2 = str7.search(/e/i)) > 0) {
+            if ((e2 = str8.indexOf(".")) > -1) str8 = str8.replace(".", "");
+            if ((i2 = str8.search(/e/i)) > 0) {
               if (e2 < 0) e2 = i2;
-              e2 += +str7.slice(i2 + 1);
-              str7 = str7.substring(0, i2);
+              e2 += +str8.slice(i2 + 1);
+              str8 = str8.substring(0, i2);
             } else if (e2 < 0) {
-              e2 = str7.length;
+              e2 = str8.length;
             }
           } else {
             intCheck(b, 2, ALPHABET.length, "Base");
@@ -15992,27 +15992,27 @@ var require_bignumber = __commonJS({
               x2 = new BigNumber2(v);
               return round(x2, DECIMAL_PLACES + x2.e + 1, ROUNDING_MODE);
             }
-            str7 = String(v);
+            str8 = String(v);
             if (isNum = typeof v == "number") {
-              if (v * 0 != 0) return parseNumeric(x2, str7, isNum, b);
-              x2.s = 1 / v < 0 ? (str7 = str7.slice(1), -1) : 1;
-              if (BigNumber2.DEBUG && str7.replace(/^0\.0*|\./, "").length > 15) {
+              if (v * 0 != 0) return parseNumeric(x2, str8, isNum, b);
+              x2.s = 1 / v < 0 ? (str8 = str8.slice(1), -1) : 1;
+              if (BigNumber2.DEBUG && str8.replace(/^0\.0*|\./, "").length > 15) {
                 throw Error(tooManyDigits + v);
               }
             } else {
-              x2.s = str7.charCodeAt(0) === 45 ? (str7 = str7.slice(1), -1) : 1;
+              x2.s = str8.charCodeAt(0) === 45 ? (str8 = str8.slice(1), -1) : 1;
             }
             alphabet = ALPHABET.slice(0, b);
             e2 = i2 = 0;
-            for (len = str7.length; i2 < len; i2++) {
-              if (alphabet.indexOf(c = str7.charAt(i2)) < 0) {
+            for (len = str8.length; i2 < len; i2++) {
+              if (alphabet.indexOf(c = str8.charAt(i2)) < 0) {
                 if (c == ".") {
                   if (i2 > e2) {
                     e2 = len;
                     continue;
                   }
                 } else if (!caseChanged) {
-                  if (str7 == str7.toUpperCase() && (str7 = str7.toLowerCase()) || str7 == str7.toLowerCase() && (str7 = str7.toUpperCase())) {
+                  if (str8 == str8.toUpperCase() && (str8 = str8.toLowerCase()) || str8 == str8.toLowerCase() && (str8 = str8.toUpperCase())) {
                     caseChanged = true;
                     i2 = -1;
                     e2 = 0;
@@ -16023,13 +16023,13 @@ var require_bignumber = __commonJS({
               }
             }
             isNum = false;
-            str7 = convertBase(str7, b, 10, x2.s);
-            if ((e2 = str7.indexOf(".")) > -1) str7 = str7.replace(".", "");
-            else e2 = str7.length;
+            str8 = convertBase(str8, b, 10, x2.s);
+            if ((e2 = str8.indexOf(".")) > -1) str8 = str8.replace(".", "");
+            else e2 = str8.length;
           }
-          for (i2 = 0; str7.charCodeAt(i2) === 48; i2++) ;
-          for (len = str7.length; str7.charCodeAt(--len) === 48; ) ;
-          if (str7 = str7.slice(i2, ++len)) {
+          for (i2 = 0; str8.charCodeAt(i2) === 48; i2++) ;
+          for (len = str8.length; str8.charCodeAt(--len) === 48; ) ;
+          if (str8 = str8.slice(i2, ++len)) {
             len -= i2;
             if (isNum && BigNumber2.DEBUG && len > 15 && (v > MAX_SAFE_INTEGER || v !== mathfloor(v))) {
               throw Error(tooManyDigits + x2.s * v);
@@ -16044,16 +16044,16 @@ var require_bignumber = __commonJS({
               i2 = (e2 + 1) % LOG_BASE;
               if (e2 < 0) i2 += LOG_BASE;
               if (i2 < len) {
-                if (i2) x2.c.push(+str7.slice(0, i2));
+                if (i2) x2.c.push(+str8.slice(0, i2));
                 for (len -= LOG_BASE; i2 < len; ) {
-                  x2.c.push(+str7.slice(i2, i2 += LOG_BASE));
+                  x2.c.push(+str8.slice(i2, i2 += LOG_BASE));
                 }
-                i2 = LOG_BASE - (str7 = str7.slice(i2)).length;
+                i2 = LOG_BASE - (str8 = str8.slice(i2)).length;
               } else {
                 i2 -= len;
               }
-              for (; i2--; str7 += "0") ;
-              x2.c.push(+str7);
+              for (; i2--; str8 += "0") ;
+              x2.c.push(+str8);
             }
           } else {
             x2.c = [x2.e = 0];
@@ -16276,11 +16276,11 @@ var require_bignumber = __commonJS({
         };
         convertBase = /* @__PURE__ */ (function() {
           var decimal = "0123456789";
-          function toBaseOut(str7, baseIn, baseOut, alphabet) {
-            var j, arr = [0], arrL, i2 = 0, len = str7.length;
+          function toBaseOut(str8, baseIn, baseOut, alphabet) {
+            var j, arr = [0], arrL, i2 = 0, len = str8.length;
             for (; i2 < len; ) {
               for (arrL = arr.length; arrL--; arr[arrL] *= baseIn) ;
-              arr[0] += alphabet.indexOf(str7.charAt(i2++));
+              arr[0] += alphabet.indexOf(str8.charAt(i2++));
               for (j = 0; j < arr.length; j++) {
                 if (arr[j] > baseOut - 1) {
                   if (arr[j + 1] == null) arr[j + 1] = 0;
@@ -16291,14 +16291,14 @@ var require_bignumber = __commonJS({
             }
             return arr.reverse();
           }
-          return function(str7, baseIn, baseOut, sign, callerIsToString) {
-            var alphabet, d, e2, k, r2, x2, xc, y, i2 = str7.indexOf("."), dp = DECIMAL_PLACES, rm = ROUNDING_MODE;
+          return function(str8, baseIn, baseOut, sign, callerIsToString) {
+            var alphabet, d, e2, k, r2, x2, xc, y, i2 = str8.indexOf("."), dp = DECIMAL_PLACES, rm = ROUNDING_MODE;
             if (i2 >= 0) {
               k = POW_PRECISION;
               POW_PRECISION = 0;
-              str7 = str7.replace(".", "");
+              str8 = str8.replace(".", "");
               y = new BigNumber2(baseIn);
-              x2 = y.pow(str7.length - i2);
+              x2 = y.pow(str8.length - i2);
               POW_PRECISION = k;
               y.c = toBaseOut(
                 toFixedPoint(coeffToString(x2.c), x2.e, "0"),
@@ -16308,7 +16308,7 @@ var require_bignumber = __commonJS({
               );
               y.e = y.c.length;
             }
-            xc = toBaseOut(str7, baseIn, baseOut, callerIsToString ? (alphabet = ALPHABET, decimal) : (alphabet = decimal, ALPHABET));
+            xc = toBaseOut(str8, baseIn, baseOut, callerIsToString ? (alphabet = ALPHABET, decimal) : (alphabet = decimal, ALPHABET));
             e2 = k = xc.length;
             for (; xc[--k] == 0; xc.pop()) ;
             if (!xc[0]) return alphabet.charAt(0);
@@ -16329,7 +16329,7 @@ var require_bignumber = __commonJS({
             r2 = r2 || d < 0 || xc[d + 1] != null;
             r2 = rm < 4 ? (i2 != null || r2) && (rm == 0 || rm == (x2.s < 0 ? 3 : 2)) : i2 > k || i2 == k && (rm == 4 || r2 || rm == 6 && xc[d - 1] & 1 || rm == (x2.s < 0 ? 8 : 7));
             if (d < 1 || !xc[0]) {
-              str7 = r2 ? toFixedPoint(alphabet.charAt(1), -dp, alphabet.charAt(0)) : alphabet.charAt(0);
+              str8 = r2 ? toFixedPoint(alphabet.charAt(1), -dp, alphabet.charAt(0)) : alphabet.charAt(0);
             } else {
               xc.length = d;
               if (r2) {
@@ -16342,10 +16342,10 @@ var require_bignumber = __commonJS({
                 }
               }
               for (k = xc.length; !xc[--k]; ) ;
-              for (i2 = 0, str7 = ""; i2 <= k; str7 += alphabet.charAt(xc[i2++])) ;
-              str7 = toFixedPoint(str7, e2, alphabet.charAt(0));
+              for (i2 = 0, str8 = ""; i2 <= k; str8 += alphabet.charAt(xc[i2++])) ;
+              str8 = toFixedPoint(str8, e2, alphabet.charAt(0));
             }
-            return str7;
+            return str8;
           };
         })();
         div = /* @__PURE__ */ (function() {
@@ -16491,38 +16491,38 @@ var require_bignumber = __commonJS({
           };
         })();
         function format(n, i2, rm, id) {
-          var c0, e2, ne, len, str7;
+          var c0, e2, ne, len, str8;
           if (rm == null) rm = ROUNDING_MODE;
           else intCheck(rm, 0, 8);
           if (!n.c) return n.toString();
           c0 = n.c[0];
           ne = n.e;
           if (i2 == null) {
-            str7 = coeffToString(n.c);
-            str7 = id == 1 || id == 2 && (ne <= TO_EXP_NEG || ne >= TO_EXP_POS) ? toExponential(str7, ne) : toFixedPoint(str7, ne, "0");
+            str8 = coeffToString(n.c);
+            str8 = id == 1 || id == 2 && (ne <= TO_EXP_NEG || ne >= TO_EXP_POS) ? toExponential(str8, ne) : toFixedPoint(str8, ne, "0");
           } else {
             n = round(new BigNumber2(n), i2, rm);
             e2 = n.e;
-            str7 = coeffToString(n.c);
-            len = str7.length;
+            str8 = coeffToString(n.c);
+            len = str8.length;
             if (id == 1 || id == 2 && (i2 <= e2 || e2 <= TO_EXP_NEG)) {
-              for (; len < i2; str7 += "0", len++) ;
-              str7 = toExponential(str7, e2);
+              for (; len < i2; str8 += "0", len++) ;
+              str8 = toExponential(str8, e2);
             } else {
               i2 -= ne + (id === 2 && e2 > ne);
-              str7 = toFixedPoint(str7, e2, "0");
+              str8 = toFixedPoint(str8, e2, "0");
               if (e2 + 1 > len) {
-                if (--i2 > 0) for (str7 += "."; i2--; str7 += "0") ;
+                if (--i2 > 0) for (str8 += "."; i2--; str8 += "0") ;
               } else {
                 i2 += e2 - len;
                 if (i2 > 0) {
-                  if (e2 + 1 == len) str7 += ".";
-                  for (; i2--; str7 += "0") ;
+                  if (e2 + 1 == len) str8 += ".";
+                  for (; i2--; str8 += "0") ;
                 }
               }
             }
           }
-          return n.s < 0 && c0 ? "-" + str7 : str7;
+          return n.s < 0 && c0 ? "-" + str8 : str8;
         }
         function maxOrMin(args, n) {
           var k, y, i2 = 1, x2 = new BigNumber2(args[0]);
@@ -16550,8 +16550,8 @@ var require_bignumber = __commonJS({
         }
         parseNumeric = /* @__PURE__ */ (function() {
           var basePrefix = /^(-?)0([xbo])(?=\w[\w.]*$)/i, dotAfter = /^([^.]+)\.$/, dotBefore = /^\.([^.]+)$/, isInfinityOrNaN = /^-?(Infinity|NaN)$/, whitespaceOrPlus = /^\s*\+(?=[\w.])|^\s+|\s+$/g;
-          return function(x2, str7, isNum, b) {
-            var base, s2 = isNum ? str7 : str7.replace(whitespaceOrPlus, "");
+          return function(x2, str8, isNum, b) {
+            var base, s2 = isNum ? str8 : str8.replace(whitespaceOrPlus, "");
             if (isInfinityOrNaN.test(s2)) {
               x2.s = isNaN(s2) ? null : s2 < 0 ? -1 : 1;
             } else {
@@ -16564,10 +16564,10 @@ var require_bignumber = __commonJS({
                   base = b;
                   s2 = s2.replace(dotAfter, "$1").replace(dotBefore, "0.$1");
                 }
-                if (str7 != s2) return new BigNumber2(s2, base);
+                if (str8 != s2) return new BigNumber2(s2, base);
               }
               if (BigNumber2.DEBUG) {
-                throw Error(bignumberError + "Not a" + (b ? " base " + b : "") + " number: " + str7);
+                throw Error(bignumberError + "Not a" + (b ? " base " + b : "") + " number: " + str8);
               }
               x2.s = null;
             }
@@ -16661,11 +16661,11 @@ var require_bignumber = __commonJS({
           return x2;
         }
         function valueOf(n) {
-          var str7, e2 = n.e;
+          var str8, e2 = n.e;
           if (e2 === null) return n.toString();
-          str7 = coeffToString(n.c);
-          str7 = e2 <= TO_EXP_NEG || e2 >= TO_EXP_POS ? toExponential(str7, e2) : toFixedPoint(str7, e2, "0");
-          return n.s < 0 ? "-" + str7 : str7;
+          str8 = coeffToString(n.c);
+          str8 = e2 <= TO_EXP_NEG || e2 >= TO_EXP_POS ? toExponential(str8, e2) : toFixedPoint(str8, e2, "0");
+          return n.s < 0 ? "-" + str8 : str8;
         }
         P.absoluteValue = P.abs = function() {
           var x2 = new BigNumber2(this);
@@ -17086,7 +17086,7 @@ var require_bignumber = __commonJS({
           return format(this, dp, rm);
         };
         P.toFormat = function(dp, rm, format2) {
-          var str7, x2 = this;
+          var str8, x2 = this;
           if (format2 == null) {
             if (dp != null && rm && typeof rm == "object") {
               format2 = rm;
@@ -17100,9 +17100,9 @@ var require_bignumber = __commonJS({
           } else if (typeof format2 != "object") {
             throw Error(bignumberError + "Argument not an object: " + format2);
           }
-          str7 = x2.toFixed(dp, rm);
+          str8 = x2.toFixed(dp, rm);
           if (x2.c) {
-            var i2, arr = str7.split("."), g1 = +format2.groupSize, g2 = +format2.secondaryGroupSize, groupSeparator = format2.groupSeparator || "", intPart = arr[0], fractionPart = arr[1], isNeg = x2.s < 0, intDigits = isNeg ? intPart.slice(1) : intPart, len = intDigits.length;
+            var i2, arr = str8.split("."), g1 = +format2.groupSize, g2 = +format2.secondaryGroupSize, groupSeparator = format2.groupSeparator || "", intPart = arr[0], fractionPart = arr[1], isNeg = x2.s < 0, intDigits = isNeg ? intPart.slice(1) : intPart, len = intDigits.length;
             if (g2) {
               i2 = g1;
               g1 = g2;
@@ -17116,12 +17116,12 @@ var require_bignumber = __commonJS({
               if (g2 > 0) intPart += groupSeparator + intDigits.slice(i2);
               if (isNeg) intPart = "-" + intPart;
             }
-            str7 = fractionPart ? intPart + (format2.decimalSeparator || "") + ((g2 = +format2.fractionGroupSize) ? fractionPart.replace(
+            str8 = fractionPart ? intPart + (format2.decimalSeparator || "") + ((g2 = +format2.fractionGroupSize) ? fractionPart.replace(
               new RegExp("\\d{" + g2 + "}\\B", "g"),
               "$&" + (format2.fractionGroupSeparator || "")
             ) : fractionPart) : intPart;
           }
-          return (format2.prefix || "") + str7 + (format2.suffix || "");
+          return (format2.prefix || "") + str8 + (format2.suffix || "");
         };
         P.toFraction = function(md) {
           var d, d0, d1, d2, e2, exp, n, n0, n1, q, r2, s2, x2 = this, xc = x2.c;
@@ -17173,27 +17173,27 @@ var require_bignumber = __commonJS({
           return format(this, sd, rm, 2);
         };
         P.toString = function(b) {
-          var str7, n = this, s2 = n.s, e2 = n.e;
+          var str8, n = this, s2 = n.s, e2 = n.e;
           if (e2 === null) {
             if (s2) {
-              str7 = "Infinity";
-              if (s2 < 0) str7 = "-" + str7;
+              str8 = "Infinity";
+              if (s2 < 0) str8 = "-" + str8;
             } else {
-              str7 = "NaN";
+              str8 = "NaN";
             }
           } else {
             if (b == null) {
-              str7 = e2 <= TO_EXP_NEG || e2 >= TO_EXP_POS ? toExponential(coeffToString(n.c), e2) : toFixedPoint(coeffToString(n.c), e2, "0");
+              str8 = e2 <= TO_EXP_NEG || e2 >= TO_EXP_POS ? toExponential(coeffToString(n.c), e2) : toFixedPoint(coeffToString(n.c), e2, "0");
             } else if (b === 10 && alphabetHasNormalDecimalDigits) {
               n = round(new BigNumber2(n), DECIMAL_PLACES + e2 + 1, ROUNDING_MODE);
-              str7 = toFixedPoint(coeffToString(n.c), n.e, "0");
+              str8 = toFixedPoint(coeffToString(n.c), n.e, "0");
             } else {
               intCheck(b, 2, ALPHABET.length, "Base");
-              str7 = convertBase(toFixedPoint(coeffToString(n.c), e2, "0"), 10, b, s2, true);
+              str8 = convertBase(toFixedPoint(coeffToString(n.c), e2, "0"), 10, b, s2, true);
             }
-            if (s2 < 0 && n.c[0]) str7 = "-" + str7;
+            if (s2 < 0 && n.c[0]) str8 = "-" + str8;
           }
-          return str7;
+          return str8;
         };
         P.valueOf = P.toJSON = function() {
           return valueOf(this);
@@ -17241,24 +17241,24 @@ var require_bignumber = __commonJS({
         var k = n.c.length - 1;
         return bitFloor(n.e / LOG_BASE) == k && n.c[k] % 2 != 0;
       }
-      function toExponential(str7, e2) {
-        return (str7.length > 1 ? str7.charAt(0) + "." + str7.slice(1) : str7) + (e2 < 0 ? "e" : "e+") + e2;
+      function toExponential(str8, e2) {
+        return (str8.length > 1 ? str8.charAt(0) + "." + str8.slice(1) : str8) + (e2 < 0 ? "e" : "e+") + e2;
       }
-      function toFixedPoint(str7, e2, z) {
+      function toFixedPoint(str8, e2, z) {
         var len, zs;
         if (e2 < 0) {
           for (zs = z + "."; ++e2; zs += z) ;
-          str7 = zs + str7;
+          str8 = zs + str8;
         } else {
-          len = str7.length;
+          len = str8.length;
           if (++e2 > len) {
             for (zs = z, e2 -= len; --e2; zs += z) ;
-            str7 += zs;
+            str8 += zs;
           } else if (e2 < len) {
-            str7 = str7.slice(0, e2) + "." + str7.slice(e2);
+            str8 = str8.slice(0, e2) + "." + str8.slice(e2);
           }
         }
-        return str7;
+        return str8;
       }
       BigNumber = clone3();
       BigNumber["default"] = BigNumber.BigNumber = BigNumber;
@@ -17305,7 +17305,7 @@ var require_stringify = __commonJS({
           return typeof c === "string" ? c : "\\u" + ("0000" + a.charCodeAt(0).toString(16)).slice(-4);
         }) + '"' : '"' + string3 + '"';
       }
-      function str7(key, holder) {
+      function str8(key, holder) {
         var i2, k, v, length, mind = gap, partial2, value = holder[key], isBigNumber = value != null && (value instanceof BigNumber || BigNumber.isBigNumber(value));
         if (value && typeof value === "object" && typeof value.toJSON === "function") {
           value = value.toJSON(key);
@@ -17337,7 +17337,7 @@ var require_stringify = __commonJS({
             if (Object.prototype.toString.apply(value) === "[object Array]") {
               length = value.length;
               for (i2 = 0; i2 < length; i2 += 1) {
-                partial2[i2] = str7(i2, value) || "null";
+                partial2[i2] = str8(i2, value) || "null";
               }
               v = partial2.length === 0 ? "[]" : gap ? "[\n" + gap + partial2.join(",\n" + gap) + "\n" + mind + "]" : "[" + partial2.join(",") + "]";
               gap = mind;
@@ -17348,7 +17348,7 @@ var require_stringify = __commonJS({
               for (i2 = 0; i2 < length; i2 += 1) {
                 if (typeof rep[i2] === "string") {
                   k = rep[i2];
-                  v = str7(k, value);
+                  v = str8(k, value);
                   if (v) {
                     partial2.push(quote(k) + (gap ? ": " : ":") + v);
                   }
@@ -17356,7 +17356,7 @@ var require_stringify = __commonJS({
               }
             } else {
               Object.keys(value).forEach(function(k2) {
-                var v2 = str7(k2, value);
+                var v2 = str8(k2, value);
                 if (v2) {
                   partial2.push(quote(k2) + (gap ? ": " : ":") + v2);
                 }
@@ -17383,7 +17383,7 @@ var require_stringify = __commonJS({
           if (replacer && typeof replacer !== "function" && (typeof replacer !== "object" || typeof replacer.length !== "number")) {
             throw new Error("JSON.stringify");
           }
-          return str7("", { "": value });
+          return str8("", { "": value });
         };
       }
     })();
@@ -18437,8 +18437,8 @@ var require_base64_js = __commonJS({
       }
       return arr;
     }
-    function tripletToBase64(num4) {
-      return lookup[num4 >> 18 & 63] + lookup[num4 >> 12 & 63] + lookup[num4 >> 6 & 63] + lookup[num4 & 63];
+    function tripletToBase64(num5) {
+      return lookup[num5 >> 18 & 63] + lookup[num5 >> 12 & 63] + lookup[num5 >> 6 & 63] + lookup[num5 & 63];
     }
     function encodeChunk(uint8, start, end) {
       var tmp;
@@ -18503,8 +18503,8 @@ var require_crypto = __commonJS({
           throw new Error("SubtleCrypto not found. Make sure it's an https:// website.");
         }
       }
-      async sha256DigestBase64(str7) {
-        const inputBuffer = new TextEncoder().encode(str7);
+      async sha256DigestBase64(str8) {
+        const inputBuffer = new TextEncoder().encode(str8);
         const outputBuffer = await window.crypto.subtle.digest("SHA-256", inputBuffer);
         return base64js.fromByteArray(new Uint8Array(outputBuffer));
       }
@@ -18556,8 +18556,8 @@ var require_crypto = __commonJS({
        * @return A promise that resolves with the SHA-256 hash of the provided
        *   string in hexadecimal encoding.
        */
-      async sha256DigestHex(str7) {
-        const inputBuffer = new TextEncoder().encode(str7);
+      async sha256DigestHex(str8) {
+        const inputBuffer = new TextEncoder().encode(str8);
         const outputBuffer = await window.crypto.subtle.digest("SHA-256", inputBuffer);
         return (0, shared_1.fromArrayBufferToHex)(outputBuffer);
       }
@@ -18593,8 +18593,8 @@ var require_crypto2 = __commonJS({
     exports.NodeCrypto = void 0;
     var crypto2 = __require("crypto");
     var NodeCrypto = class {
-      async sha256DigestBase64(str7) {
-        return crypto2.createHash("sha256").update(str7).digest("base64");
+      async sha256DigestBase64(str8) {
+        return crypto2.createHash("sha256").update(str8).digest("base64");
       }
       randomBytesBase64(count) {
         return crypto2.randomBytes(count).toString("base64");
@@ -18623,8 +18623,8 @@ var require_crypto2 = __commonJS({
        * @return A promise that resolves with the SHA-256 hash of the provided
        *   string in hexadecimal encoding.
        */
-      async sha256DigestHex(str7) {
-        return crypto2.createHash("sha256").update(str7).digest("hex");
+      async sha256DigestHex(str8) {
+        return crypto2.createHash("sha256").update(str8).digest("hex");
       }
       /**
        * Computes the HMAC hash of a message using the provided crypto key and the
@@ -18930,8 +18930,8 @@ var require_util3 = __commonJS({
     var path11 = __require("path");
     var WELL_KNOWN_CERTIFICATE_CONFIG_FILE = "certificate_config.json";
     var CLOUDSDK_CONFIG_DIRECTORY = "gcloud";
-    function snakeToCamel(str7) {
-      return str7.replace(/([_][^_])/g, (match2) => match2.slice(1).toUpperCase());
+    function snakeToCamel(str8) {
+      return str8.replace(/([_][^_])/g, (match2) => match2.slice(1).toUpperCase());
     }
     function originalOrCamelOptions(obj) {
       function get(key) {
@@ -19135,8 +19135,8 @@ var require_shared2 = __commonJS({
     exports.pkg = pkg;
     var PRODUCT_NAME = "google-api-nodejs-client";
     exports.PRODUCT_NAME = PRODUCT_NAME;
-    var USER_AGENT = `${PRODUCT_NAME}/${pkg.version}`;
-    exports.USER_AGENT = USER_AGENT;
+    var USER_AGENT2 = `${PRODUCT_NAME}/${pkg.version}`;
+    exports.USER_AGENT = USER_AGENT2;
   }
 });
 
@@ -24388,8 +24388,8 @@ var require_gdchclient = __commonJS({
       [/* @__PURE__ */ Symbol.for("nodejs.util.inspect.custom")]() {
         return this.toJSON();
       }
-      base64UrlEncode(str7) {
-        const buffer = typeof str7 === "string" ? Buffer.from(str7) : str7;
+      base64UrlEncode(str8) {
+        const buffer = typeof str8 === "string" ? Buffer.from(str8) : str8;
         return buffer.toString("base64url");
       }
     };
@@ -25948,26 +25948,26 @@ var require_permessage_deflate = __commonJS({
             value = value[0];
             if (key === "client_max_window_bits") {
               if (value !== true) {
-                const num4 = +value;
-                if (!Number.isInteger(num4) || num4 < 8 || num4 > 15) {
+                const num5 = +value;
+                if (!Number.isInteger(num5) || num5 < 8 || num5 > 15) {
                   throw new TypeError(
                     `Invalid value for parameter "${key}": ${value}`
                   );
                 }
-                value = num4;
+                value = num5;
               } else if (!this._isServer) {
                 throw new TypeError(
                   `Invalid value for parameter "${key}": ${value}`
                 );
               }
             } else if (key === "server_max_window_bits") {
-              const num4 = +value;
-              if (!Number.isInteger(num4) || num4 < 8 || num4 > 15) {
+              const num5 = +value;
+              if (!Number.isInteger(num5) || num5 < 8 || num5 > 15) {
                 throw new TypeError(
                   `Invalid value for parameter "${key}": ${value}`
                 );
               }
-              value = num4;
+              value = num5;
             } else if (key === "client_no_context_takeover" || key === "server_no_context_takeover") {
               if (value !== true) {
                 throw new TypeError(
@@ -26681,8 +26681,8 @@ var require_receiver = __commonJS({
           return;
         }
         const buf = this.consume(8);
-        const num4 = buf.readUInt32BE(0);
-        if (num4 > Math.pow(2, 53 - 32) - 1) {
+        const num5 = buf.readUInt32BE(0);
+        if (num5 > Math.pow(2, 53 - 32) - 1) {
           const error2 = this.createError(
             RangeError,
             "Unsupported WebSocket frame: payload length > 2^53 - 1",
@@ -26693,7 +26693,7 @@ var require_receiver = __commonJS({
           cb(error2);
           return;
         }
-        this._payloadLength = num4 * Math.pow(2, 32) + buf.readUInt32BE(4);
+        this._payloadLength = num5 * Math.pow(2, 32) + buf.readUInt32BE(4);
         this.haveLength(cb);
       }
       /**
@@ -39420,11 +39420,11 @@ function ERR(error2) {
 function bytesToBase64(u8arr) {
   return btoa(String.fromCodePoint(...u8arr));
 }
-function stringToBytes(str7) {
-  return new TextEncoder().encode(str7);
+function stringToBytes(str8) {
+  return new TextEncoder().encode(str8);
 }
-function stringToBase64(str7) {
-  return bytesToBase64(stringToBytes(str7));
+function stringToBase64(str8) {
+  return bytesToBase64(stringToBytes(str8));
 }
 function pathToFunc(pathPattern, options) {
   const paramRE = /\{([a-zA-Z0-9_][a-zA-Z0-9_-]*?)\}/g;
@@ -44140,11 +44140,11 @@ function getEnv(env2) {
   var _a4, _b, _c;
   return (_c = (_b = (_a4 = process === null || process === void 0 ? void 0 : process.env) === null || _a4 === void 0 ? void 0 : _a4[env2]) === null || _b === void 0 ? void 0 : _b.trim()) !== null && _c !== void 0 ? _c : void 0;
 }
-function stringToBoolean(str7) {
-  if (str7 === void 0) {
+function stringToBoolean(str8) {
+  if (str8 === void 0) {
     return false;
   }
-  return str7.toLowerCase() === "true";
+  return str8.toLowerCase() === "true";
 }
 function getApiKeyFromEnv() {
   const envGoogleApiKey = getEnv("GOOGLE_API_KEY");
@@ -52374,15 +52374,15 @@ var init_utils = __esm({
       return array2;
     })();
     limit = 1024;
-    encode = (str7, _defaultEncoder, charset, _kind, format) => {
-      if (str7.length === 0) {
-        return str7;
+    encode = (str8, _defaultEncoder, charset, _kind, format) => {
+      if (str8.length === 0) {
+        return str8;
       }
-      let string3 = str7;
-      if (typeof str7 === "symbol") {
-        string3 = Symbol.prototype.toString.call(str7);
-      } else if (typeof str7 !== "string") {
-        string3 = String(str7);
+      let string3 = str8;
+      if (typeof str8 === "symbol") {
+        string3 = Symbol.prototype.toString.call(str8);
+      } else if (typeof str8 !== "string") {
+        string3 = String(str8);
       }
       if (charset === "iso-8859-1") {
         return escape(string3).replace(/%u[0-9a-f]{4}/gi, function($0) {
@@ -52738,9 +52738,9 @@ function concatBytes(buffers) {
   }
   return output;
 }
-function encodeUTF8(str7) {
+function encodeUTF8(str8) {
   let encoder;
-  return (encodeUTF8_ ?? (encoder = new globalThis.TextEncoder(), encodeUTF8_ = encoder.encode.bind(encoder)))(str7);
+  return (encodeUTF8_ ?? (encoder = new globalThis.TextEncoder(), encodeUTF8_ = encoder.encode.bind(encoder)))(str8);
 }
 function decodeUTF8(bytes) {
   let decoder;
@@ -52959,12 +52959,12 @@ async function* iterSSEChunks(iterator) {
     yield data;
   }
 }
-function partition(str7, delimiter2) {
-  const index = str7.indexOf(delimiter2);
+function partition(str8, delimiter2) {
+  const index = str8.indexOf(delimiter2);
   if (index !== -1) {
-    return [str7.substring(0, index), delimiter2, str7.substring(index + delimiter2.length)];
+    return [str8.substring(0, index), delimiter2, str8.substring(index + delimiter2.length)];
   }
-  return [str7, "", ""];
+  return [str8, "", ""];
 }
 var _Stream_client, Stream4, SSEDecoder;
 var init_streaming = __esm({
@@ -54004,8 +54004,8 @@ var init_resource = __esm({
 });
 
 // node_modules/openai/internal/utils/path.mjs
-function encodeURIPath(str7) {
-  return str7.replace(/[^A-Za-z0-9\-._~!$&'()*+,;=:@]+/g, encodeURIComponent);
+function encodeURIPath(str8) {
+  return str8.replace(/[^A-Za-z0-9\-._~!$&'()*+,;=:@]+/g, encodeURIComponent);
 }
 var EMPTY, createPathTagFunction, path9;
 var init_path = __esm({
@@ -68516,14 +68516,14 @@ function promiseAllObject(promisesObj) {
 }
 function randomString(length = 10) {
   const chars = "abcdefghijklmnopqrstuvwxyz";
-  let str7 = "";
+  let str8 = "";
   for (let i2 = 0; i2 < length; i2++) {
-    str7 += chars[Math.floor(Math.random() * chars.length)];
+    str8 += chars[Math.floor(Math.random() * chars.length)];
   }
-  return str7;
+  return str8;
 }
-function esc(str7) {
-  return JSON.stringify(str7);
+function esc(str8) {
+  return JSON.stringify(str8);
 }
 var captureStackTrace = Error.captureStackTrace ? Error.captureStackTrace : (..._args) => {
 };
@@ -68611,8 +68611,8 @@ var getParsedType2 = (data) => {
 };
 var propertyKeyTypes = /* @__PURE__ */ new Set(["string", "number", "symbol"]);
 var primitiveTypes = /* @__PURE__ */ new Set(["string", "number", "bigint", "boolean", "symbol", "undefined"]);
-function escapeRegex(str7) {
-  return str7.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+function escapeRegex(str8) {
+  return str8.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 function clone(inst, def, params) {
   const cl = new inst._zod.constr(def ?? inst._zod.def);
@@ -75403,6 +75403,10 @@ var config2 = {
   naverClientSecret: process.env.NAVER_CLIENT_SECRET || "",
   /** data.go.kr auth key (required by datago_file_fetch/datago_api_call — search/detail/download need no auth) */
   dataGoKrApiKey: process.env.DATA_GO_KR_API_KEY || "",
+  /** Pexels API key (optional — stock_search skips Pexels without it) — https://www.pexels.com/api/ */
+  pexelsApiKey: process.env.PEXELS_API_KEY || "",
+  /** Pixabay API key (optional — stock_search skips Pixabay without it) — https://pixabay.com/api/docs/ */
+  pixabayApiKey: process.env.PIXABAY_API_KEY || "",
   /** Gemini API key (shared requirement of the veo_ and omni_ video, tts_* speech, and music_* music tools) — https://aistudio.google.com/apikey */
   geminiApiKey: process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "",
   /** OpenAI API key (required by the gpt_image_* image generation tools) — https://platform.openai.com/api-keys */
@@ -76964,8 +76968,8 @@ function probeVideo(filePath) {
         try {
           const parsed = JSON.parse(String(out));
           const stream = parsed.streams?.[0];
-          const [num4, den] = String(stream?.r_frame_rate || "").split("/").map(Number);
-          const fps = num4 && den ? num4 / den : NaN;
+          const [num5, den] = String(stream?.r_frame_rate || "").split("/").map(Number);
+          const fps = num5 && den ? num5 / den : NaN;
           const seconds = Number.parseFloat(String(parsed.format?.duration ?? ""));
           if (!stream?.width || !stream?.height || !Number.isFinite(fps) || !Number.isFinite(seconds) || seconds <= 0) return resolve5(null);
           resolve5({ seconds, fps, width: stream.width, height: stream.height });
@@ -82350,6 +82354,31 @@ var TOOLS = [
     }
   },
   {
+    name: "stock_search",
+    title: "Free stock search (Pexels \xB7 Pixabay \xB7 NASA \xB7 Commons)",
+    annotations: HINT.read,
+    description: 'Free, commercially usable photos and clips for a cut that needs the real thing \u2014 an actual place, era, event or live action \u2014 at zero generation cost. Searches Pexels and Pixabay (PEXELS_API_KEY / PIXABAY_API_KEY; a missing key skips that provider with a note), the NASA Image and Video Library and Wikimedia Commons (no key). Every item returns a ready `visual.license` block (provider, page url, license name and url, commercial/modify flags, attribution text, retrievedAt) \u2014 store it verbatim on the `visual.source: "stock"` cut; check-scenes.js refuses a stock cut without it. Commons results are filtered to public domain, CC0 and plain CC BY (share-alike, non-commercial and no-derivatives files are dropped and counted) because an edited, monetized cut cannot carry those terms. This tool does not download: fetch `files[0].url` with curl into storyboard/footage/ (video, as footage/s<n>-<provider>-<id>.mp4) or storyboard/images/stock/ (photo); Commons video is WebM and needs an ffmpeg transcode. People, logos and brands in frame stay a separate rights question on every provider; NASA insignia and identifiable current astronauts are excluded from commercial use. English keywords work best on Pexels, Pixabay and NASA. Read-only; Pexels allows 200 requests/hour, Pixabay 100/minute.',
+    inputSchema: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: 'Search terms \u2014 a concrete subject in English ("1960s street tram", "rice paddy aerial"); Pixabay reads the first 100 characters' },
+        media: { type: "string", enum: ["video", "photo"], description: "video (default) for a stock_video cut \xB7 photo for a still_camera source image" },
+        providers: {
+          type: "array",
+          items: { type: "string", enum: ["pexels", "pixabay", "nasa", "commons"] },
+          description: "Which providers to ask (default all four). NASA for space, earth science and aviation history; Commons for archival and historical files"
+        },
+        orientation: { type: "string", enum: ["portrait", "landscape", "square", "any"], description: "portrait for a 9:16 short, landscape for 16:9 long-form (default any). Applied after the call; NASA reports no dimensions" },
+        limit: { type: "number", description: "Items per provider (default 8, max 30; NASA pages 10 at a time)" },
+        minWidth: { type: "number", description: "Minimum pixel width \u2014 1080 for a portrait short, 1920 for landscape" },
+        minDuration: { type: "number", description: "Video only \u2014 shortest clip in seconds to keep" },
+        maxDuration: { type: "number", description: "Video only \u2014 longest clip in seconds to keep (long archive reels are trimmed with visual.in)" },
+        locale: { type: "string", description: "Pexels locale (ko-KR, en-US) or a Pixabay two-letter lang; Commons and NASA ignore it" }
+      },
+      required: ["query"]
+    }
+  },
+  {
     name: "serp_trending_now",
     title: "Google trending searches (SerpApi)",
     annotations: HINT.read,
@@ -86734,6 +86763,329 @@ async function fetchGoogleOrganic(input) {
   return { hits };
 }
 
+// src/stock-client.ts
+var STOCK_PROVIDERS = ["pexels", "pixabay", "nasa", "commons"];
+var STOCK_MEDIA = ["video", "photo"];
+var STOCK_ORIENTATIONS = ["portrait", "landscape", "square", "any"];
+var STOCK_MAX_LIMIT = 30;
+var NASA_MAX = 10;
+var USER_AGENT = "social-flow-mcp (https://github.com/ttalkkaklab/social-flow)";
+var today = () => (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+var num3 = (v) => typeof v === "number" && Number.isFinite(v) ? v : void 0;
+var str5 = (v) => typeof v === "string" && v.trim() ? v.trim() : void 0;
+var stripTags2 = (v) => str5(String(v ?? "").replace(/<[^>]*>/g, "").replace(/\s+/g, " "));
+function compact4(obj) {
+  const out = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value === void 0 || value === null || value === "") continue;
+    if (Array.isArray(value) && value.length === 0) continue;
+    out[key] = value;
+  }
+  return out;
+}
+async function getJson(url, headers = {}) {
+  const res = await requestRaw("get", url, headers);
+  if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.body.slice(0, 200)}`);
+  try {
+    return JSON.parse(res.body);
+  } catch {
+    throw new Error(`non-JSON response from ${url}`);
+  }
+}
+function orientationOf(width, height) {
+  if (!width || !height) return void 0;
+  if (Math.abs(width - height) / Math.max(width, height) < 0.05) return "square";
+  return height > width ? "portrait" : "landscape";
+}
+function keep(item, input) {
+  const wanted = input.orientation && input.orientation !== "any" ? input.orientation : void 0;
+  const actual = orientationOf(item.width, item.height);
+  if (wanted && actual && actual !== wanted) return false;
+  if (input.minWidth && item.width && item.width < input.minWidth) return false;
+  if (item.media === "video" && item.duration !== void 0) {
+    if (input.minDuration !== void 0 && item.duration < input.minDuration) return false;
+    if (input.maxDuration !== void 0 && item.duration > input.maxDuration) return false;
+  }
+  return true;
+}
+var PEXELS_LICENSE = {
+  license: "Pexels License",
+  licenseUrl: "https://www.pexels.com/license/",
+  note: "No credit required. Do not imply endorsement by the people or brands shown, do not show identifiable people in a bad light, no standalone redistribution."
+};
+async function pexels(input, media, limit2) {
+  const key = config2.pexelsApiKey;
+  if (!key) return { items: [], note: "skipped \u2014 PEXELS_API_KEY is not set (https://www.pexels.com/api/)" };
+  const orientation = input.orientation && input.orientation !== "any" ? input.orientation : void 0;
+  const base = media === "video" ? "https://api.pexels.com/videos/search" : "https://api.pexels.com/v1/search";
+  const json2 = await getJson(
+    base + buildQuery({ query: input.query, orientation, per_page: Math.min(80, limit2 * 2), locale: input.locale }),
+    { Authorization: key }
+  );
+  const rows = (media === "video" ? json2.videos : json2.photos) ?? [];
+  const items = rows.map((r2) => {
+    const author = str5(r2.user?.name) ?? str5(r2.photographer);
+    const authorUrl = str5(r2.user?.url) ?? str5(r2.photographer_url);
+    const files = media === "video" ? (r2.video_files ?? []).filter((f3) => !f3.file_type || /mp4/i.test(String(f3.file_type))).map((f3) => compact4({ url: String(f3.link), width: num3(f3.width), height: num3(f3.height), label: str5(f3.quality), mime: str5(f3.file_type) })).sort((a, b) => (b.height ?? 0) - (a.height ?? 0)) : [
+      { url: String(r2.src?.original), width: num3(r2.width), height: num3(r2.height), label: "original", mime: "image/jpeg" },
+      { url: String(r2.src?.large2x), label: "large2x (1880w)", mime: "image/jpeg" }
+    ].filter((f3) => f3.url && f3.url !== "undefined");
+    return compact4({
+      provider: "pexels",
+      id: String(r2.id),
+      media,
+      title: str5(r2.alt),
+      pageUrl: String(r2.url),
+      author,
+      width: num3(r2.width),
+      height: num3(r2.height),
+      duration: num3(r2.duration),
+      thumbnail: str5(r2.image) ?? str5(r2.src?.medium),
+      files,
+      license: compact4({
+        provider: "pexels",
+        url: String(r2.url),
+        ...PEXELS_LICENSE,
+        author,
+        authorUrl,
+        attributionRequired: false,
+        attribution: `${media === "video" ? "Video" : "Photo"} by ${author ?? "a Pexels contributor"} on Pexels`,
+        commercial: true,
+        modify: true,
+        retrievedAt: today()
+      })
+    });
+  });
+  return { items };
+}
+var PIXABAY_LICENSE = {
+  license: "Pixabay Content License",
+  licenseUrl: "https://pixabay.com/service/license-summary/",
+  note: "No credit required. Content showing trademarks, logos or brands may not be used commercially in relation to goods and services; no standalone redistribution. AI-generated items are mixed in \u2014 read the page before using one on a factual channel."
+};
+async function pixabay(input, media, limit2) {
+  const key = config2.pixabayApiKey;
+  if (!key) return { items: [], note: "skipped \u2014 PIXABAY_API_KEY is not set (https://pixabay.com/api/docs/)" };
+  const orientation = input.orientation === "portrait" ? "vertical" : input.orientation === "landscape" ? "horizontal" : void 0;
+  const lang = input.locale && /^[a-z]{2}$/i.test(input.locale) ? input.locale.toLowerCase() : void 0;
+  const params = {
+    key,
+    q: input.query.slice(0, 100),
+    per_page: Math.max(3, Math.min(200, limit2 * 2)),
+    safesearch: true,
+    lang,
+    ...media === "video" ? { video_type: "film" } : { image_type: "photo", orientation, min_width: input.minWidth }
+  };
+  const base = media === "video" ? "https://pixabay.com/api/videos/" : "https://pixabay.com/api/";
+  const json2 = await getJson(base + buildQuery(params));
+  const items = (json2.hits ?? []).map((r2) => {
+    const author = str5(r2.user);
+    let files, width, height, thumbnail;
+    if (media === "video") {
+      const v = r2.videos ?? {};
+      files = ["large", "medium", "small", "tiny"].filter((k) => str5(v[k]?.url)).map((k) => compact4({ url: String(v[k].url), width: num3(v[k].width), height: num3(v[k].height), label: k, mime: "video/mp4" }));
+      width = files[0]?.width;
+      height = files[0]?.height;
+      thumbnail = str5(v.medium?.thumbnail) ?? str5(v.small?.thumbnail);
+    } else {
+      files = [
+        r2.imageURL && { url: String(r2.imageURL), width: num3(r2.imageWidth), height: num3(r2.imageHeight), label: "original", mime: "image/jpeg" },
+        r2.fullHDURL && { url: String(r2.fullHDURL), label: "fullHD (1920w)", mime: "image/jpeg" },
+        r2.largeImageURL && { url: String(r2.largeImageURL), label: "large (1280w)", mime: "image/jpeg" }
+      ].filter(Boolean);
+      width = num3(r2.imageWidth);
+      height = num3(r2.imageHeight);
+      thumbnail = str5(r2.previewURL);
+    }
+    return compact4({
+      provider: "pixabay",
+      id: String(r2.id),
+      media,
+      title: str5(r2.tags),
+      pageUrl: String(r2.pageURL),
+      author,
+      width,
+      height,
+      duration: num3(r2.duration),
+      thumbnail,
+      files,
+      license: compact4({
+        provider: "pixabay",
+        url: String(r2.pageURL),
+        ...PIXABAY_LICENSE,
+        author,
+        attributionRequired: false,
+        attribution: `${author ?? "a Pixabay contributor"} via Pixabay`,
+        commercial: true,
+        modify: true,
+        retrievedAt: today()
+      })
+    });
+  });
+  return { items };
+}
+var NASA_LICENSE = {
+  license: "NASA media usage guidelines (US government work, not subject to copyright)",
+  licenseUrl: "https://www.nasa.gov/nasa-brand-center/images-and-media/",
+  note: "Credit NASA. Not usable: the NASA insignia and logotype, names or likenesses of current astronauts and employees on commercial products, anything implying NASA endorsement, and third-party material NASA uses with permission \u2014 read the description for embedded third-party credits."
+};
+async function nasa(input, media, limit2) {
+  const page = Math.min(NASA_MAX, limit2);
+  const search = await getJson("https://images-api.nasa.gov/search" + buildQuery({ q: input.query, media_type: media === "video" ? "video" : "image", page_size: page }));
+  const rows = (search.collection?.items ?? []).slice(0, page);
+  const manifests = await Promise.all(rows.map(async (r2) => {
+    const id = str5(r2.data?.[0]?.nasa_id);
+    if (!id) return [];
+    try {
+      const m2 = await getJson(`https://images-api.nasa.gov/asset/${encodeURIComponent(id)}`);
+      return (m2.collection?.items ?? []).map((x2) => String(x2.href));
+    } catch {
+      return [];
+    }
+  }));
+  const items = rows.map((r2, i2) => {
+    const d = r2.data?.[0] ?? {};
+    const id = str5(d.nasa_id);
+    if (!id) return null;
+    const hrefs = manifests[i2].map((h2) => h2.replace(/^http:\/\//, "https://"));
+    const rank = (h2) => /~orig\./.test(h2) ? 0 : /~large\./.test(h2) ? 1 : /~medium\./.test(h2) ? 2 : /~small\./.test(h2) ? 3 : 9;
+    const wanted = media === "video" ? /\.mp4$/i : /\.(jpe?g|png|tiff?)$/i;
+    const files = hrefs.filter((h2) => wanted.test(h2) && !/~thumb|~preview|~mobile|_\d\.jpg$/i.test(h2)).sort((a, b) => rank(a) - rank(b)).map((h2) => ({ url: h2, label: (h2.match(/~([a-z]+)\.[a-z0-9]+$/i) ?? [])[1] ?? "file", mime: media === "video" ? "video/mp4" : "image/jpeg" }));
+    const center = str5(d.center);
+    const thumb = (r2.links ?? []).map((l) => str5(l.href)).find(Boolean);
+    return compact4({
+      provider: "nasa",
+      id,
+      media,
+      title: str5(d.title),
+      pageUrl: `https://images.nasa.gov/details/${encodeURIComponent(id)}`,
+      author: center ? `NASA/${center}` : "NASA",
+      thumbnail: thumb,
+      files,
+      license: compact4({
+        provider: "nasa",
+        url: `https://images.nasa.gov/details/${encodeURIComponent(id)}`,
+        ...NASA_LICENSE,
+        author: center ? `NASA/${center}` : "NASA",
+        attributionRequired: false,
+        attribution: center ? `NASA/${center}` : "NASA",
+        commercial: true,
+        modify: true,
+        retrievedAt: today()
+      })
+    });
+  }).filter((x2) => !!x2);
+  return { items, note: limit2 > NASA_MAX ? `NASA pages ${NASA_MAX} at a time (one manifest request per item); no dimensions are reported, so orientation and minWidth are not applied here` : "NASA reports no dimensions, so orientation and minWidth are not applied here" };
+}
+function commonsLicenseAllowed(code, shortName) {
+  const c = (code ?? "").toLowerCase().trim();
+  if (/-(sa|nc|nd)(-|$)/.test(c)) return false;
+  if (/^(pd|pd-[a-z0-9-]+|cc0|cc-zero)$/.test(c)) return true;
+  if (/^cc-by(-\d+(\.\d+)?)?(-[a-z]{2,3})?$/.test(c)) return true;
+  if (!c) {
+    const s2 = (shortName ?? "").toLowerCase();
+    return /public domain|cc0/.test(s2) && !/share ?alike|non ?commercial|no ?deriv/.test(s2);
+  }
+  return false;
+}
+async function commons(input, media, limit2) {
+  const url = "https://commons.wikimedia.org/w/api.php" + buildQuery({
+    action: "query",
+    format: "json",
+    formatversion: 2,
+    generator: "search",
+    gsrnamespace: 6,
+    gsrlimit: Math.min(50, limit2 * 2),
+    gsrsearch: `${media === "video" ? "filetype:video" : "filetype:bitmap"} ${input.query}`,
+    prop: "imageinfo",
+    iiprop: "url|size|mime|extmetadata",
+    iiurlwidth: 1280,
+    iiextmetadatafilter: "LicenseShortName|License|LicenseUrl|Artist|Credit|Attribution|AttributionRequired|UsageTerms|ImageDescription"
+  });
+  const json2 = await getJson(url, { "User-Agent": USER_AGENT });
+  let dropped = 0;
+  const items = [];
+  for (const p of json2.query?.pages ?? []) {
+    const ii = p.imageinfo?.[0] ?? {};
+    const meta = ii.extmetadata ?? {};
+    const m2 = (k) => stripTags2(meta[k]?.value);
+    const mime = str5(ii.mime) ?? "";
+    if (media === "video" ? !mime.startsWith("video/") : !/^image\/(jpeg|png|tiff|webp)$/.test(mime)) continue;
+    if (!commonsLicenseAllowed(m2("License"), m2("LicenseShortName"))) {
+      dropped++;
+      continue;
+    }
+    const pageUrl = str5(ii.descriptionurl) ?? `https://commons.wikimedia.org/wiki/${encodeURIComponent(String(p.title))}`;
+    const author = m2("Artist");
+    const attributionRequired = String(meta.AttributionRequired?.value ?? "").toLowerCase() === "true";
+    const attribution = m2("Attribution") ?? author;
+    const license = m2("LicenseShortName") ?? m2("UsageTerms") ?? "Public domain";
+    const files = [{ url: String(ii.url), width: num3(ii.width), height: num3(ii.height), label: "original", mime }];
+    if (media === "photo" && str5(ii.thumburl)) files.push({ url: String(ii.thumburl), width: num3(ii.thumbwidth), height: num3(ii.thumbheight), label: "scaled (1280w)", mime });
+    items.push(compact4({
+      provider: "commons",
+      id: String(p.pageid),
+      media,
+      title: String(p.title).replace(/^File:/, ""),
+      pageUrl,
+      author,
+      width: num3(ii.width),
+      height: num3(ii.height),
+      duration: num3(ii.duration) === void 0 ? void 0 : Math.round(ii.duration * 100) / 100,
+      thumbnail: str5(ii.thumburl),
+      files,
+      license: compact4({
+        provider: "commons",
+        url: pageUrl,
+        license,
+        licenseUrl: m2("LicenseUrl") ?? "https://commons.wikimedia.org/wiki/Commons:Licensing",
+        author,
+        attributionRequired,
+        attribution: attributionRequired ? `${attribution ?? "see file page"}, ${license}, via Wikimedia Commons` : void 0,
+        commercial: true,
+        modify: true,
+        retrievedAt: today(),
+        note: (media === "video" ? "WebM/Ogg only \u2014 transcode with ffmpeg before the builder. " : "") + "Personality rights, trademarks and freedom of panorama are separate from the file license; the file page is the source of truth."
+      })
+    }));
+  }
+  return { items, note: dropped ? `${dropped} file(s) dropped: share-alike, non-commercial or no-derivatives licenses are not usable on an edited, monetized cut` : void 0 };
+}
+var RUNNERS = {
+  pexels,
+  pixabay,
+  nasa,
+  commons
+};
+async function stockSearch(input) {
+  const media = input.media ?? "video";
+  const limit2 = Math.min(STOCK_MAX_LIMIT, Math.max(1, input.limit ?? 8));
+  const providers = input.providers?.length ? input.providers : [...STOCK_PROVIDERS];
+  const outcomes = await Promise.all(providers.map(async (name) => {
+    try {
+      const out = await RUNNERS[name](input, media, limit2);
+      const items2 = out.items.filter((item) => keep(item, input)).slice(0, limit2);
+      return { name, items: items2, note: out.note, failed: false };
+    } catch (error2) {
+      return { name, items: [], note: `failed \u2014 ${error2 instanceof Error ? error2.message : String(error2)}`, failed: true };
+    }
+  }));
+  const items = outcomes.flatMap((o) => o.items);
+  const summary = Object.fromEntries(outcomes.map((o) => [o.name, compact4({ count: o.items.length, note: o.note })]));
+  const allFailed = outcomes.every((o) => o.failed || o.items.length === 0 && /^skipped/.test(o.note ?? ""));
+  return {
+    text: JSON.stringify(compact4({
+      query: input.query,
+      media,
+      orientation: input.orientation ?? "any",
+      providers: summary,
+      note: items.length ? "Every item carries the visual.license block to store on the cut; download files[0] with curl into storyboard/footage/ (video) or storyboard/images/stock/ (photo). People, logos and brands in frame stay a separate rights question on every provider." : 'No usable results. Try English keywords, orientation "any", another media type, or the manual archives in docs/research/2026-09-07-free-stock-sources/index.html.',
+      items
+    }), null, 1),
+    isError: allFailed && items.length === 0
+  };
+}
+
 // src/sns-client.ts
 import { createHash as createHash2, randomUUID as randomUUID2 } from "node:crypto";
 import {
@@ -86893,7 +87245,7 @@ async function threadsInsights(input) {
   const me = await fetchMe(THREADS_BASE, token, "id,username");
   if (!me.ok) return me;
   const account = parseJson(me.body) ?? {};
-  const uid = str5(account.id);
+  const uid = str6(account.id);
   if (!uid) return fail2(502, `Threads /me returned no id: ${me.body}`);
   const days = input.days ?? 7;
   const nowSec = Math.floor(Date.now() / 1e3);
@@ -86914,14 +87266,14 @@ async function threadsInsights(input) {
   if (!followers.ok) return withScopeHint(followers, "threads_manage_insights");
   const userMetrics = {};
   for (const item of [...rawList(ranged.body), ...rawList(followers.body)]) {
-    const name = str5(item.name);
+    const name = str6(item.name);
     if (!name) continue;
     const totalValue = item.total_value?.value;
     if (totalValue !== void 0) {
       userMetrics[name] = totalValue;
     } else if (Array.isArray(item.values)) {
       const daily = item.values.map((v) => ({
-        date: str5(v.end_time).slice(0, 10),
+        date: str6(v.end_time).slice(0, 10),
         value: numOrNull(v.value) ?? 0
       }));
       userMetrics[name] = { total: daily.reduce((sum, v) => sum + v.value, 0), daily };
@@ -86940,7 +87292,7 @@ async function threadsInsights(input) {
     const roots = rawList(list.body).filter((item) => item.is_reply !== true).slice(0, postLimit);
     posts = await Promise.all(
       roots.map(async (item) => {
-        const postId = str5(item.id);
+        const postId = str6(item.id);
         const ins = await graphRequest("get", `${THREADS_BASE}/${postId}/insights`, {
           metric: THREADS_MEDIA_METRICS,
           access_token: token
@@ -86949,14 +87301,14 @@ async function threadsInsights(input) {
         if (ins.ok) {
           for (const m2 of rawList(ins.body)) {
             const values = m2.values;
-            metrics[str5(m2.name)] = numOrNull(values?.[0]?.value ?? m2.total_value?.value);
+            metrics[str6(m2.name)] = numOrNull(values?.[0]?.value ?? m2.total_value?.value);
           }
         }
         return {
           postId,
-          permalink: item.permalink ? str5(item.permalink) : null,
-          excerpt: excerpt(str5(item.text)),
-          timestamp: item.timestamp ? str5(item.timestamp) : null,
+          permalink: item.permalink ? str6(item.permalink) : null,
+          excerpt: excerpt(str6(item.text)),
+          timestamp: item.timestamp ? str6(item.timestamp) : null,
           metrics: ins.ok ? metrics : null,
           ...ins.ok ? {} : { metricsError: `HTTP ${ins.status}: ${ins.body.slice(0, 200)}` }
         };
@@ -86965,7 +87317,7 @@ async function threadsInsights(input) {
   }
   return okJson({
     channel: input.channel ?? null,
-    account: { id: uid, username: str5(account.username) },
+    account: { id: uid, username: str6(account.username) },
     period: { since: new Date(since * 1e3).toISOString(), until: new Date(nowSec * 1e3).toISOString(), days },
     user: userMetrics,
     posts
@@ -86986,13 +87338,13 @@ async function threadsKeywordSearch(input) {
   });
   if (!res.ok) return withScopeHint(res, "threads_keyword_search");
   const results = rawList(res.body).map((item) => {
-    const timestamp = item.timestamp ? str5(item.timestamp) : null;
+    const timestamp = item.timestamp ? str6(item.timestamp) : null;
     return {
-      postId: str5(item.id),
-      username: str5(item.username),
-      text: str5(item.text),
-      mediaType: str5(item.media_type) || null,
-      permalink: item.permalink ? str5(item.permalink) : null,
+      postId: str6(item.id),
+      username: str6(item.username),
+      text: str6(item.text),
+      mediaType: str6(item.media_type) || null,
+      permalink: item.permalink ? str6(item.permalink) : null,
       timestamp,
       ageMinutes: minutesSince(timestamp, now),
       isReply: item.is_reply === true,
@@ -87092,7 +87444,7 @@ async function instagramInsights(input) {
   );
   if (!me.ok) return me;
   const profile = parseJson(me.body) ?? {};
-  const uid = str5(profile.id);
+  const uid = str6(profile.id);
   if (!uid) return fail2(502, `Instagram /me returned no id: ${me.body}`);
   const days = input.days ?? 7;
   const nowSec = Math.floor(Date.now() / 1e3);
@@ -87108,7 +87460,7 @@ async function instagramInsights(input) {
   if (!ranged.ok) return withScopeHint(ranged, "instagram_business_manage_insights");
   const userMetrics = {};
   for (const item of rawList(ranged.body)) {
-    const name = str5(item.name);
+    const name = str6(item.name);
     if (!name) continue;
     userMetrics[name] = numOrNull(item.total_value?.value);
   }
@@ -87123,8 +87475,8 @@ async function instagramInsights(input) {
     if (!list.ok) return list;
     media = await Promise.all(
       rawList(list.body).map(async (item) => {
-        const mediaId = str5(item.id);
-        const productType = str5(item.media_product_type) || null;
+        const mediaId = str6(item.id);
+        const productType = str6(item.media_product_type) || null;
         const surfaceMetrics = productType === "REELS" ? IG_REELS_METRICS : productType === "FEED" ? IG_FEED_METRICS : "";
         const ins = await graphRequest("get", `${IG_BASE}/${mediaId}/insights`, {
           metric: surfaceMetrics ? `${IG_MEDIA_METRICS},${surfaceMetrics}` : IG_MEDIA_METRICS,
@@ -87134,16 +87486,16 @@ async function instagramInsights(input) {
         if (ins.ok) {
           for (const m2 of rawList(ins.body)) {
             const values = m2.values;
-            metrics[str5(m2.name)] = numOrNull(values?.[0]?.value ?? m2.total_value?.value);
+            metrics[str6(m2.name)] = numOrNull(values?.[0]?.value ?? m2.total_value?.value);
           }
         }
         return {
           mediaId,
-          mediaType: str5(item.media_type) || null,
+          mediaType: str6(item.media_type) || null,
           mediaProductType: productType,
-          permalink: item.permalink ? str5(item.permalink) : null,
-          excerpt: excerpt(str5(item.caption)),
-          timestamp: item.timestamp ? str5(item.timestamp) : null,
+          permalink: item.permalink ? str6(item.permalink) : null,
+          excerpt: excerpt(str6(item.caption)),
+          timestamp: item.timestamp ? str6(item.timestamp) : null,
           metrics: ins.ok ? metrics : null,
           ...ins.ok ? {} : { metricsError: `HTTP ${ins.status}: ${ins.body.slice(0, 200)}` }
         };
@@ -87154,8 +87506,8 @@ async function instagramInsights(input) {
     channel: input.channel ?? null,
     account: {
       id: uid,
-      username: str5(profile.username),
-      accountType: str5(profile.account_type) || null,
+      username: str6(profile.username),
+      accountType: str6(profile.account_type) || null,
       followersCount: numOrNull(profile.followers_count),
       followsCount: numOrNull(profile.follows_count),
       mediaCount: numOrNull(profile.media_count)
@@ -87819,7 +88171,7 @@ async function youtubeInsights(input) {
   const channelItem = parseJson(mine.body)?.items?.[0];
   if (!channelItem) return fail2(502, `YouTube channels.list returned no channel: ${mine.body}`);
   const stats = channelItem.statistics ?? {};
-  const uploadsPlaylist = str5(
+  const uploadsPlaylist = str6(
     channelItem.contentDetails?.relatedPlaylists?.uploads
   );
   const analytics = await youtubeRequest(
@@ -87856,7 +88208,7 @@ async function youtubeInsights(input) {
     if (!list.ok) videoErrors.push(`playlistItems HTTP ${list.status}: ${list.body.slice(0, 200)}`);
     if (list.ok) {
       const items = parseJson(list.body)?.items ?? [];
-      const ids = items.map((item) => str5(item.contentDetails?.videoId)).filter(Boolean);
+      const ids = items.map((item) => str6(item.contentDetails?.videoId)).filter(Boolean);
       const [detail, perVideo] = await Promise.all([
         ids.length ? youtubeRequest("get", `${YT_DATA_BASE}/videos`, { part: "snippet,statistics,contentDetails", id: ids.join(",") }, token) : Promise.resolve(okJson({ items: [] })),
         ids.length ? youtubeRequest(
@@ -87878,19 +88230,19 @@ async function youtubeInsights(input) {
       if (!perVideo.ok) videoErrors.push(`per-video Analytics HTTP ${perVideo.status}: ${perVideo.body.slice(0, 200)} (period will be null)`);
       const detailById = /* @__PURE__ */ new Map();
       for (const item of parseJson(detail.body)?.items ?? []) {
-        detailById.set(str5(item.id), item);
+        detailById.set(str6(item.id), item);
       }
       const metricsById = perVideo.ok ? ytReportRowsByKey(perVideo.body) : /* @__PURE__ */ new Map();
       videos = ids.map((videoId) => {
         const item = detailById.get(videoId);
         const snippet = item?.snippet ?? {};
         const videoStats = item?.statistics ?? {};
-        const duration3 = str5(item?.contentDetails?.duration);
+        const duration3 = str6(item?.contentDetails?.duration);
         return {
           videoId,
           permalink: `https://www.youtube.com/watch?v=${videoId}`,
-          title: excerpt(str5(snippet.title), 100),
-          publishedAt: snippet.publishedAt ? str5(snippet.publishedAt) : null,
+          title: excerpt(str6(snippet.title), 100),
+          publishedAt: snippet.publishedAt ? str6(snippet.publishedAt) : null,
           duration: duration3 || null,
           // Seconds pulled from the ISO8601 duration, used to tell whether it's a Short (portrait, 3 minutes or less)
           durationSeconds: ytDurationSeconds(duration3),
@@ -87909,8 +88261,8 @@ async function youtubeInsights(input) {
   return okJson({
     channel: input.channel ?? null,
     account: {
-      channelId: str5(channelItem.id),
-      title: str5(channelItem.snippet?.title),
+      channelId: str6(channelItem.id),
+      title: str6(channelItem.snippet?.title),
       subscriberCount: Number(stats.subscriberCount ?? 0),
       viewCount: Number(stats.viewCount ?? 0),
       videoCount: Number(stats.videoCount ?? 0),
@@ -87933,7 +88285,7 @@ function ytReportRow(body) {
   if (!row) return {};
   const out = {};
   headers.forEach((header, index) => {
-    const name = str5(header.name);
+    const name = str6(header.name);
     if (name) out[name] = Number(row[index] ?? 0);
   });
   return out;
@@ -87944,12 +88296,12 @@ function ytReportRowsByKey(body) {
   const rows = parsed?.rows ?? [];
   const out = /* @__PURE__ */ new Map();
   for (const row of rows) {
-    const key = str5(row[0]);
+    const key = str6(row[0]);
     if (!key) continue;
     const metrics = {};
     headers.forEach((header, index) => {
       if (index === 0) return;
-      const name = str5(header.name);
+      const name = str6(header.name);
       if (name) metrics[name] = Number(row[index] ?? 0);
     });
     out.set(key, metrics);
@@ -87967,7 +88319,7 @@ var rawList = (body) => {
   const data = parseJson(body)?.data;
   return Array.isArray(data) ? data : [];
 };
-var str5 = (value) => value === void 0 || value === null ? "" : String(value);
+var str6 = (value) => value === void 0 || value === null ? "" : String(value);
 var numOrNull = (value) => typeof value === "number" ? value : null;
 var excerpt = (text2, max = 140) => text2.length > max ? `${text2.slice(0, max)}\u2026` : text2;
 function minutesSince(timestamp, now) {
@@ -87981,7 +88333,7 @@ async function inboxThreads(input, now, channel) {
   const me = await fetchMe(THREADS_BASE, token, "id,username");
   if (!me.ok) return { error: me };
   const account = parseJson(me.body) ?? {};
-  const uid = str5(account.id);
+  const uid = str6(account.id);
   if (!uid) return { error: fail2(502, `Threads /me returned no id: ${me.body}`) };
   const list = await graphRequest("get", `${THREADS_BASE}/${uid}/threads`, {
     fields: "id,text,timestamp,permalink,is_reply",
@@ -87991,14 +88343,14 @@ async function inboxThreads(input, now, channel) {
   if (!list.ok) return { account, error: list };
   const posts = [];
   for (const item of rawList(list.body).filter((item2) => item2.is_reply !== true)) {
-    const postId = str5(item.id);
+    const postId = str6(item.id);
     if (!postId) continue;
     const post = {
       platform: "THREADS",
       postId,
-      permalink: item.permalink ? str5(item.permalink) : null,
-      excerpt: excerpt(str5(item.text)),
-      timestamp: item.timestamp ? str5(item.timestamp) : null,
+      permalink: item.permalink ? str6(item.permalink) : null,
+      excerpt: excerpt(str6(item.text)),
+      timestamp: item.timestamp ? str6(item.timestamp) : null,
       comments: []
     };
     const conv = await graphRequest("get", `${THREADS_BASE}/${postId}/conversation`, {
@@ -88017,29 +88369,29 @@ async function inboxThreads(input, now, channel) {
     const answered = /* @__PURE__ */ new Set();
     for (const reply of replies) {
       if (reply.is_reply_owned_by_me !== true) continue;
-      const parent = str5(reply.replied_to?.id);
+      const parent = str6(reply.replied_to?.id);
       if (parent) answered.add(parent);
     }
     for (const reply of replies) {
-      const commentId = str5(reply.id);
+      const commentId = str6(reply.id);
       if (!commentId) continue;
-      const timestamp = reply.timestamp ? str5(reply.timestamp) : null;
-      const parentId = str5(reply.replied_to?.id);
+      const timestamp = reply.timestamp ? str6(reply.timestamp) : null;
+      const parentId = str6(reply.replied_to?.id);
       post.comments.push({
         platform: "THREADS",
         postId,
         commentId,
         parentCommentId: parentId && parentId !== postId ? parentId : null,
-        author: str5(reply.username),
+        author: str6(reply.username),
         isOwn: reply.is_reply_owned_by_me === true,
         answeredByUs: answered.has(commentId),
-        text: str5(reply.text),
+        text: str6(reply.text),
         timestamp,
         ageMinutes: minutesSince(timestamp, now),
         likeCount: null,
         // Threads replies have no public like-count field
-        hidden: str5(reply.hide_status) === "HIDDEN",
-        permalink: reply.permalink ? str5(reply.permalink) : null
+        hidden: str6(reply.hide_status) === "HIDDEN",
+        permalink: reply.permalink ? str6(reply.permalink) : null
       });
     }
     posts.push(post);
@@ -88052,8 +88404,8 @@ async function inboxInstagram(input, now, channel) {
   const me = await fetchMe(IG_BASE, token, "id,username");
   if (!me.ok) return { error: me };
   const account = parseJson(me.body) ?? {};
-  const uid = str5(account.id);
-  const ourName = str5(account.username);
+  const uid = str6(account.id);
+  const ourName = str6(account.username);
   if (!uid) return { error: fail2(502, `Instagram /me returned no id: ${me.body}`) };
   const list = await graphRequest("get", `${IG_BASE}/${uid}/media`, {
     fields: "id,permalink,caption,timestamp,comments_count",
@@ -88063,14 +88415,14 @@ async function inboxInstagram(input, now, channel) {
   if (!list.ok) return { account, error: list };
   const posts = [];
   for (const item of rawList(list.body)) {
-    const postId = str5(item.id);
+    const postId = str6(item.id);
     if (!postId) continue;
     const post = {
       platform: "INSTAGRAM",
       postId,
-      permalink: item.permalink ? str5(item.permalink) : null,
-      excerpt: excerpt(str5(item.caption)),
-      timestamp: item.timestamp ? str5(item.timestamp) : null,
+      permalink: item.permalink ? str6(item.permalink) : null,
+      excerpt: excerpt(str6(item.caption)),
+      timestamp: item.timestamp ? str6(item.timestamp) : null,
       comments: []
     };
     if (numOrNull(item.comments_count) === 0) {
@@ -88088,14 +88440,14 @@ async function inboxInstagram(input, now, channel) {
       continue;
     }
     for (const top of rawList(comments.body)) {
-      const topId = str5(top.id);
+      const topId = str6(top.id);
       if (!topId) continue;
       const nested = Array.isArray(top.replies?.data) ? top.replies.data : [];
       const push = (node, parentCommentId) => {
-        const commentId = str5(node.id);
+        const commentId = str6(node.id);
         if (!commentId) return;
-        const timestamp = node.timestamp ? str5(node.timestamp) : null;
-        const author = str5(node.username);
+        const timestamp = node.timestamp ? str6(node.timestamp) : null;
+        const author = str6(node.username);
         post.comments.push({
           platform: "INSTAGRAM",
           postId,
@@ -88104,8 +88456,8 @@ async function inboxInstagram(input, now, channel) {
           author,
           isOwn: !!ourName && author === ourName,
           // On IG replies also hang off the top-level comment, so one of ours among the children means it's handled
-          answeredByUs: parentCommentId === null && nested.some((reply) => !!ourName && str5(reply.username) === ourName),
-          text: str5(node.text),
+          answeredByUs: parentCommentId === null && nested.some((reply) => !!ourName && str6(reply.username) === ourName),
+          text: str6(node.text),
           timestamp,
           ageMinutes: minutesSince(timestamp, now),
           likeCount: numOrNull(node.like_count),
@@ -88127,7 +88479,7 @@ async function inboxFacebook(input, now, channel) {
   const me = await fetchMe(FB_BASE, token, "id,name");
   if (!me.ok) return { error: me };
   const account = parseJson(me.body) ?? {};
-  const pageId = str5(account.id);
+  const pageId = str6(account.id);
   if (!pageId) return { error: fail2(502, `Facebook /me returned no id: ${me.body}`) };
   const list = await graphRequest("get", `${FB_BASE}/${pageId}/posts`, {
     fields: "id,message,created_time,permalink_url",
@@ -88137,14 +88489,14 @@ async function inboxFacebook(input, now, channel) {
   if (!list.ok) return { account, error: list };
   const posts = [];
   for (const item of rawList(list.body)) {
-    const postId = str5(item.id);
+    const postId = str6(item.id);
     if (!postId) continue;
     const post = {
       platform: "FACEBOOK",
       postId,
-      permalink: item.permalink_url ? str5(item.permalink_url) : null,
-      excerpt: excerpt(str5(item.message)),
-      timestamp: item.created_time ? str5(item.created_time) : null,
+      permalink: item.permalink_url ? str6(item.permalink_url) : null,
+      excerpt: excerpt(str6(item.message)),
+      timestamp: item.created_time ? str6(item.created_time) : null,
       comments: []
     };
     const comments = await graphRequest("get", `${FB_BASE}/${postId}/comments`, {
@@ -88163,29 +88515,29 @@ async function inboxFacebook(input, now, channel) {
     const rows = rawList(comments.body);
     const answered = /* @__PURE__ */ new Set();
     for (const row of rows) {
-      if (str5(row.from?.id) !== pageId) continue;
-      const parent = str5(row.parent?.id);
+      if (str6(row.from?.id) !== pageId) continue;
+      const parent = str6(row.parent?.id);
       if (parent) answered.add(parent);
     }
     for (const row of rows) {
-      const commentId = str5(row.id);
+      const commentId = str6(row.id);
       if (!commentId) continue;
-      const timestamp = row.created_time ? str5(row.created_time) : null;
+      const timestamp = row.created_time ? str6(row.created_time) : null;
       const from = row.from;
       post.comments.push({
         platform: "FACEBOOK",
         postId,
         commentId,
-        parentCommentId: str5(row.parent?.id) || null,
-        author: str5(from?.name) || str5(from?.id),
-        isOwn: str5(from?.id) === pageId,
+        parentCommentId: str6(row.parent?.id) || null,
+        author: str6(from?.name) || str6(from?.id),
+        isOwn: str6(from?.id) === pageId,
         answeredByUs: answered.has(commentId),
-        text: str5(row.message),
+        text: str6(row.message),
         timestamp,
         ageMinutes: minutesSince(timestamp, now),
         likeCount: numOrNull(row.like_count),
         hidden: row.is_hidden === true,
-        permalink: row.permalink_url ? str5(row.permalink_url) : null
+        permalink: row.permalink_url ? str6(row.permalink_url) : null
       });
     }
     posts.push(post);
@@ -88206,9 +88558,9 @@ async function inboxYoutube(input, now, channel) {
   if (!mine.ok) return { error: withYoutubeScopeHint(mine, "youtube.readonly (or youtube)") };
   const channelItem = parseJson(mine.body)?.items?.[0];
   if (!channelItem) return { error: fail2(502, `YouTube channels.list returned no channel: ${mine.body}`) };
-  const myChannelId = str5(channelItem.id);
-  const account = { id: myChannelId, title: str5(channelItem.snippet?.title) };
-  const uploads = str5(
+  const myChannelId = str6(channelItem.id);
+  const account = { id: myChannelId, title: str6(channelItem.snippet?.title) };
+  const uploads = str6(
     channelItem.contentDetails?.relatedPlaylists?.uploads
   );
   if (!uploads) return { account, error: fail2(502, "YouTube channel has no uploads playlist") };
@@ -88221,15 +88573,15 @@ async function inboxYoutube(input, now, channel) {
   if (!list.ok) return { account, error: list };
   const posts = [];
   for (const entry of parseJson(list.body)?.items ?? []) {
-    const videoId = str5(entry.contentDetails?.videoId);
+    const videoId = str6(entry.contentDetails?.videoId);
     if (!videoId) continue;
     const snippet = entry.snippet ?? {};
     const post = {
       platform: "YOUTUBE",
       postId: videoId,
       permalink: `https://www.youtube.com/watch?v=${videoId}`,
-      excerpt: excerpt(str5(snippet.title)),
-      timestamp: snippet.publishedAt ? str5(snippet.publishedAt) : null,
+      excerpt: excerpt(str6(snippet.title)),
+      timestamp: snippet.publishedAt ? str6(snippet.publishedAt) : null,
       comments: []
     };
     const threads = await youtubeRequest(
@@ -88252,7 +88604,7 @@ async function inboxYoutube(input, now, channel) {
     for (const thread of parseJson(threads.body)?.items ?? []) {
       const threadSnippet = thread.snippet ?? {};
       const top = threadSnippet.topLevelComment ?? {};
-      const topId = str5(top.id);
+      const topId = str6(top.id);
       if (!topId) continue;
       const totalReplies = Number(threadSnippet.totalReplyCount ?? 0);
       let replies = thread.replies?.comments ?? [];
@@ -88272,30 +88624,30 @@ async function inboxYoutube(input, now, channel) {
           post.commentsError = [post.commentsError, `replies HTTP ${full.status}: ${full.body.slice(0, 120)}`].filter(Boolean).join(" \xB7 ");
         }
       }
-      const authorChannelId = (comment) => str5(comment.snippet?.authorChannelId?.value);
+      const authorChannelId = (comment) => str6(comment.snippet?.authorChannelId?.value);
       const publishedMs = (comment) => {
-        const parsed = Date.parse(str5(comment.snippet?.publishedAt));
+        const parsed = Date.parse(str6(comment.snippet?.publishedAt));
         return Number.isNaN(parsed) ? 0 : parsed;
       };
       const myLastReplyMs = replies.filter((reply) => authorChannelId(reply) === myChannelId).reduce((max, reply) => Math.max(max, publishedMs(reply)), 0);
       const push = (comment, parentCommentId) => {
-        const commentId = str5(comment.id);
+        const commentId = str6(comment.id);
         if (!commentId) return;
         const commentSnippet = comment.snippet ?? {};
-        const timestamp = commentSnippet.publishedAt ? str5(commentSnippet.publishedAt) : null;
+        const timestamp = commentSnippet.publishedAt ? str6(commentSnippet.publishedAt) : null;
         post.comments.push({
           platform: "YOUTUBE",
           postId: videoId,
           commentId,
           parentCommentId,
-          author: str5(commentSnippet.authorDisplayName),
+          author: str6(commentSnippet.authorDisplayName),
           isOwn: authorChannelId(comment) === myChannelId,
           // With an incomplete reply list there's no basis for claiming "not answered yet" —
           // our reply may just be cut off, so treat it as handled and drop it from the
           // default filter. A missed comment gets caught next tick; erring the other way
           // sends a duplicate reply out in public.
           answeredByUs: repliesIncomplete || myLastReplyMs > 0 && publishedMs(comment) <= myLastReplyMs,
-          text: str5(commentSnippet.textOriginal || commentSnippet.textDisplay),
+          text: str6(commentSnippet.textOriginal || commentSnippet.textDisplay),
           timestamp,
           ageMinutes: minutesSince(timestamp, now),
           likeCount: numOrNull(commentSnippet.likeCount),
@@ -88422,7 +88774,7 @@ async function replyToComment(input) {
     access_token: token
   });
   if (!create.ok) return create;
-  const replyId = str5(parseJson(create.body)?.id);
+  const replyId = str6(parseJson(create.body)?.id);
   if (!replyId) return fail2(502, `Instagram reply returned no id: ${create.body}`);
   return okJson({ platform: "INSTAGRAM", replyId, permalink: null });
 }
@@ -88440,7 +88792,7 @@ async function replyYoutubeComment(input) {
   if (!lookup.ok) return withYoutubeScopeHint(lookup, "youtube.force-ssl");
   const found = parseJson(lookup.body)?.items?.[0];
   if (!found) return fail2(404, `YouTube comment not found: ${input.commentId}`);
-  const parentId = str5(found.snippet?.parentId) || input.commentId;
+  const parentId = str6(found.snippet?.parentId) || input.commentId;
   const created = await youtubeRequest(
     "post",
     `${YT_DATA_BASE}/comments`,
@@ -88449,7 +88801,7 @@ async function replyYoutubeComment(input) {
     { snippet: { parentId, textOriginal: input.message } }
   );
   if (!created.ok) return withYoutubeScopeHint(created, "youtube.force-ssl");
-  const replyId = str5(parseJson(created.body)?.id);
+  const replyId = str6(parseJson(created.body)?.id);
   if (!replyId) return fail2(502, `YouTube comment insert returned no id: ${created.body}`);
   return okJson({
     platform: "YOUTUBE",
@@ -89970,7 +90322,7 @@ function parseObject(body) {
     return null;
   }
 }
-function num3(value) {
+function num4(value) {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value === "string" && value.trim() !== "") {
     const n = Number(value);
@@ -89988,11 +90340,11 @@ function analyzeYoutubeVideos(videos, account, channelMetrics) {
   const rows = videos.map((video) => {
     const period = video.period ?? null;
     const lifetime = video.lifetime ?? {};
-    const views = num3(period?.views) ?? num3(lifetime.views);
-    const engaged = num3(period?.engagedViews);
+    const views = num4(period?.views) ?? num4(lifetime.views);
+    const engaged = num4(period?.engagedViews);
     const hook = views && views > 0 && engaged != null ? engaged / views * 100 : null;
-    const retain = num3(period?.averageViewPercentage);
-    const shares = num3(period?.shares);
+    const retain = num4(period?.averageViewPercentage);
+    const shares = num4(period?.shares);
     const shareRate = engaged && engaged > 0 && shares != null ? shares / engaged * 100 : null;
     return { video, period, views, hook, retain, shares, shareRate };
   });
@@ -90007,8 +90359,8 @@ function analyzeYoutubeVideos(videos, account, channelMetrics) {
     views: median(rows.map((r2) => r2.views).filter((n) => n != null)),
     shareRate: shareMid === 0 ? null : shareMid,
     channelSubRate: (() => {
-      const gained = num3(channelMetrics?.subscribersGained);
-      const views = num3(channelMetrics?.views);
+      const gained = num4(channelMetrics?.subscribersGained);
+      const views = num4(channelMetrics?.views);
       if (gained == null || views == null || views <= 0) return null;
       return gained / views * 100;
     })()
@@ -90071,8 +90423,8 @@ function analyzeYoutubeVideos(videos, account, channelMetrics) {
         retain,
         shares,
         shareRate,
-        likes: num3(period?.likes) ?? num3(video.lifetime?.likes),
-        comments: num3(period?.comments) ?? num3(video.lifetime?.comments)
+        likes: num4(period?.likes) ?? num4(video.lifetime?.likes),
+        comments: num4(period?.comments) ?? num4(video.lifetime?.comments)
       },
       vsCohort: {
         hook: vsMedian(hook, cohort.hook, true),
@@ -90097,10 +90449,10 @@ function analyzeInstagramMedia(media, limit2) {
   const picked = reels.length > 0 ? reels : media.slice(0, limit2);
   const rows = picked.map((item) => {
     const metrics = item.metrics ?? null;
-    const skip = asPercent(num3(metrics?.reels_skip_rate));
-    const watch = watchSeconds(num3(metrics?.ig_reels_avg_watch_time));
-    const reach = num3(metrics?.reach);
-    const shares = num3(metrics?.shares);
+    const skip = asPercent(num4(metrics?.reels_skip_rate));
+    const watch = watchSeconds(num4(metrics?.ig_reels_avg_watch_time));
+    const reach = num4(metrics?.reach);
+    const shares = num4(metrics?.shares);
     const shareRate = reach && reach > 0 && shares != null ? shares / reach * 100 : null;
     return { item, metrics, skip, watch, reach, shares, shareRate };
   });
@@ -90161,13 +90513,13 @@ function analyzeInstagramMedia(media, limit2) {
       publishedAt: item.timestamp ? String(item.timestamp) : null,
       tone: worstTone(steps),
       metrics: {
-        views: num3(metrics?.views),
+        views: num4(metrics?.views),
         reach,
         skip,
         watch,
         shares,
         shareRate,
-        likes: num3(metrics?.likes)
+        likes: num4(metrics?.likes)
       },
       vsCohort: {
         skip: vsMedian(skip, cohort.skip, false),
@@ -90275,7 +90627,7 @@ function sectionFromInstagram(res, limit2) {
   const account = parsed?.account ?? null;
   const user = parsed?.user ?? {};
   const analyzed = analyzeInstagramMedia(media, limit2);
-  const profileViews = num3(user.profile_views);
+  const profileViews = num4(user.profile_views);
   if (profileViews != null) analyzed.cohort.profileViews = profileViews;
   return {
     platform: "INSTAGRAM",
@@ -90313,7 +90665,7 @@ function parseJson2(body) {
     return null;
   }
 }
-function str6(value) {
+function str7(value) {
   return typeof value === "string" ? value : value == null ? "" : String(value);
 }
 function maskKey3(text2) {
@@ -90499,7 +90851,7 @@ async function ownChannelId(auth) {
   if (auth.kind !== "bearer") return void 0;
   const res = await youtubeGet("channels", { part: "id", mine: "true" }, auth);
   if (!res.ok) return void 0;
-  const id = str6((parseJson2(res.body)?.items?.[0] ?? {}).id);
+  const id = str7((parseJson2(res.body)?.items?.[0] ?? {}).id);
   return id || void 0;
 }
 async function searchChannels(queries, auth, opts) {
@@ -90527,9 +90879,9 @@ async function searchChannels(queries, auth, opts) {
     }
     for (const item of parseJson2(res.body)?.items ?? []) {
       const snippet = item.snippet ?? {};
-      const channelId = str6(snippet.channelId);
+      const channelId = str7(snippet.channelId);
       if (!channelId) continue;
-      hits.push({ channelId, channelTitle: str6(snippet.channelTitle) });
+      hits.push({ channelId, channelTitle: str7(snippet.channelTitle) });
     }
   }
   return { hits, units, errors };
@@ -90551,15 +90903,15 @@ async function loadChannelUploads(channelIds, auth, videosPerChannel) {
       continue;
     }
     for (const item of parseJson2(res.body)?.items ?? []) {
-      const channelId = str6(item.id);
+      const channelId = str7(item.id);
       const snippet = item.snippet ?? {};
       const stats = item.statistics ?? {};
-      const uploads = str6(
+      const uploads = str7(
         item.contentDetails?.relatedPlaylists?.uploads
       );
       const hidden = stats.hiddenSubscriberCount === true || stats.hiddenSubscriberCount === "true";
       byChannel.set(channelId, {
-        title: str6(snippet.title),
+        title: str7(snippet.title),
         subscriberCount: hidden ? null : Number(stats.subscriberCount ?? 0),
         uploads: []
       });
@@ -90587,7 +90939,7 @@ async function loadChannelUploads(channelIds, auth, videosPerChannel) {
         return;
       }
       for (const item of parseJson2(res.body)?.items ?? []) {
-        const videoId = str6(item.contentDetails?.videoId);
+        const videoId = str7(item.contentDetails?.videoId);
         if (!videoId) continue;
         videoIds.push(videoId);
         ownerByVideo.set(videoId, channelId);
@@ -90606,21 +90958,21 @@ async function loadChannelUploads(channelIds, auth, videosPerChannel) {
       continue;
     }
     for (const item of parseJson2(res.body)?.items ?? []) {
-      const videoId = str6(item.id);
-      const channelId = ownerByVideo.get(videoId) ?? str6(item.snippet?.channelId);
+      const videoId = str7(item.id);
+      const channelId = ownerByVideo.get(videoId) ?? str7(item.snippet?.channelId);
       const bucket = byChannel.get(channelId);
       if (!bucket) continue;
       const snippet = item.snippet ?? {};
       const stats = item.statistics ?? {};
-      const tags = Array.isArray(snippet.tags) ? snippet.tags.map((t2) => str6(t2)).filter(Boolean) : [];
+      const tags = Array.isArray(snippet.tags) ? snippet.tags.map((t2) => str7(t2)).filter(Boolean) : [];
       bucket.uploads.push({
         videoId,
-        title: str6(snippet.title),
+        title: str7(snippet.title),
         channelId,
-        channelTitle: bucket.title || str6(snippet.channelTitle),
+        channelTitle: bucket.title || str7(snippet.channelTitle),
         views: Number(stats.viewCount ?? 0),
-        publishedAt: snippet.publishedAt ? str6(snippet.publishedAt) : null,
-        durationSeconds: parseIsoDurationSeconds(str6(item.contentDetails?.duration)),
+        publishedAt: snippet.publishedAt ? str7(snippet.publishedAt) : null,
+        durationSeconds: parseIsoDurationSeconds(str7(item.contentDetails?.duration)),
         commentCount: Number(stats.commentCount ?? 0),
         tags
       });
@@ -90646,7 +90998,7 @@ async function loadCommentGaps(outliers, auth) {
     const gaps = [];
     for (const item of parseJson2(res.body)?.items ?? []) {
       const top = item.snippet?.topLevelComment?.snippet;
-      const text2 = str6(top?.textDisplay || top?.textOriginal).replace(/\s+/g, " ").trim();
+      const text2 = str7(top?.textDisplay || top?.textOriginal).replace(/\s+/g, " ").trim();
       if (!text2 || !looksLikeQuestion(text2)) continue;
       if (gaps.length >= 3) break;
       gaps.push(text2.slice(0, 140));
@@ -91418,6 +91770,35 @@ function capabilityStatus() {
       ]
     },
     {
+      capability: "stock_footage",
+      providers: [
+        {
+          provider: "pexels",
+          configured: has2(config2.pexelsApiKey),
+          needs: "PEXELS_API_KEY",
+          note: "stock_search \u2014 free photos and clips under the Pexels License, 200/hour"
+        },
+        {
+          provider: "pixabay",
+          configured: has2(config2.pixabayApiKey),
+          needs: "PIXABAY_API_KEY",
+          note: "stock_search \u2014 free photos and clips under the Pixabay Content License, 100/minute"
+        },
+        {
+          provider: "nasa",
+          configured: true,
+          needs: "no key",
+          note: "stock_search \u2014 images-api.nasa.gov, US government works (insignia and current astronauts excluded)"
+        },
+        {
+          provider: "wikimedia commons",
+          configured: true,
+          needs: "no key",
+          note: "stock_search \u2014 public domain, CC0 and CC BY files only; video arrives as WebM"
+        }
+      ]
+    },
+    {
       capability: "research",
       providers: [
         {
@@ -91609,6 +91990,17 @@ var serpImageSchema = external_exports.object({
   license: external_exports.enum(IMAGE_LICENSES).optional(),
   color: external_exports.enum(["bw", "trans", "red", "orange", "yellow", "green", "teal", "blue", "purple", "pink", "white", "gray", "black", "brown"]).optional(),
   safe: external_exports.boolean().optional()
+});
+var stockSearchSchema = external_exports.object({
+  query: searchQuery,
+  media: external_exports.enum(STOCK_MEDIA).optional(),
+  providers: external_exports.array(external_exports.enum(STOCK_PROVIDERS)).min(1).optional(),
+  orientation: external_exports.enum(STOCK_ORIENTATIONS).optional(),
+  limit: external_exports.number().int().min(1).max(STOCK_MAX_LIMIT).optional(),
+  minWidth: external_exports.number().int().min(1).optional(),
+  minDuration: external_exports.number().min(0).optional(),
+  maxDuration: external_exports.number().min(0).optional(),
+  locale: langCode
 });
 var serpTrendingSchema = external_exports.object({
   geo: countryCode,
@@ -91894,6 +92286,10 @@ var ROUTES = {
   },
   serp_trending_now: async (args) => {
     const result = await trendingNow(parseArgs(serpTrendingSchema, args));
+    return text(result.text, result.isError);
+  },
+  stock_search: async (args) => {
+    const result = await stockSearch(parseArgs(stockSearchSchema, args));
     return text(result.text, result.isError);
   },
   naver_search: async (args) => {
@@ -92813,7 +93209,7 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
 
 // src/index.ts
 var server = new Server(
-  { name: "social-flow", version: "0.70.0" },
+  { name: "social-flow", version: "0.71.0" },
   { capabilities: { tools: {} } }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {

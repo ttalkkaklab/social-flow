@@ -96,6 +96,11 @@ A one-person history short declares `STORY.person` and follows
 [person-short.md](skills/storyboard/references/person-short.md): the opening names nobody and
 carries no year, the body is cause → block → one blow, the close is one scene after the blow,
 the picture changes with every sentence, and the subtitle colours only the year and the name.
+A message is a sentence that stays true with the episode's names gone — *what leads to what*,
+present tense, no figure, no name ([scenario-stage.md](skills/storyboard/references/scenario-stage.md)
+§The message): `check-research.js` refuses a past-tense, numbered or hero-named Message cell,
+and `check-story.js` requires `STORY.thesis` to be that sentence, heard over the closing picture
+at or after the payoff — not the reversal again, not a moral, not the picture described.
 
 The video pipeline (safe zones, reveal sync, subtitle contracts) and the SNS publishing
 client carry over from an earlier in-house plugin where they were verified in
@@ -223,8 +228,8 @@ the whole projection rather than a bill that has already partly arrived.
 
 | Capability | Free / on-device | Paid | Costs money unless… |
 |---|---|---|---|
-| **Images** | `image_local_generate` — Z-Image Turbo via mflux, $0. Optional: `mlx_image_*` when MLX Core is running | `gpt_image_*` — OpenAI, per image by quality | …you accept no text in the frame. Local generation breaks Korean glyphs apart, so covers and any text-bearing frame have to go to the paid path. Default stays Z-Image |
-| **Video** | deterministic HTML motion slides rendered locally with headless Chrome. Optional: `mlx_video_generate` (24fps, RAM-capped) | Veo 3.1 (Gemini) per second · Seedance (ModelArk) per second | …you use the HTML motion lane. A channel can prohibit stills and still spend zero on generated video; Ken Burns does not count as true motion. mlx_video is not the default and is not on the Veo/Seedance face-policy table |
+| **Images** | `image_local_generate` — Z-Image Turbo via mflux, $0. Optional: `mlx_image_*` when MLX Core is running. Under Codex or Grok the CLI's own `image_gen` comes first, on the subscription allowance | `gpt_image_*` — OpenAI, per image by quality | …you accept no text in the frame. Local generation breaks Korean glyphs apart, so covers and any text-bearing frame have to go to the paid path. Default stays Z-Image on Claude Code and the host tool on Codex and Grok |
+| **Video** | deterministic HTML motion slides rendered locally with headless Chrome. Optional: `mlx_video_generate` (24fps, RAM-capped). Under Grok the CLI's own `image_to_video` comes first (1–15 s, 720p ceiling, subscription allowance) | Veo 3.1 (Gemini) per second · Seedance (ModelArk) per second | …you use the HTML motion lane or the Grok host lane. A channel can prohibit stills and still spend zero on generated video; Ken Burns does not count as true motion. mlx_video is not the default and is not on the Veo/Seedance face-policy table |
 | **Speech (TTS)** | `tts_local_generate` — Supertonic 3, $0 synthesis. Optional: `mlx_tts_generate` | `tts_generate` / `tts_multi_speaker` — Gemini, per 1,000 chars. Every generated scene also pays the Gemini audio review inside `tts_generate_checked` (two calls per take) | …the scene is your own recording. Local synthesis is free, but the builder only accepts narration with a current review proof, and the review is a paid Gemini call even for local voices. The local engine has no style or emotion control. mlx_tts is never a silent fallback for profile §2 |
 | **Transcription (STT)** | `stt_local_transcribe` — Qwen3-ASR via mlx, $0 (whisper.cpp fallback) | none | never — there is no paid STT path here |
 | **Music (BGM)** | `mlx_music_generate` when MLX Core is running | Lyria clip via Gemini (the default) | …you ship without BGM, or you have MLX Core up with a music model |
@@ -302,6 +307,15 @@ ln -sfn /path/to/social-flow ~/.buzz/packs/com.ttalkkaklab.social-flow
 ```
 
 API keys travel the same way as under Claude — shell environment variables.
+
+**Host media tools come first there.** Codex and Grok ship their own `image_gen`, and Grok
+ships `image_to_video`; a skill running under those CLIs sends every generated still to the
+host image tool and, under Grok, every generated clip to the host video tool, on the
+subscription allowance and with `image.host` / `video.host` ledger lines at $0. The plugin's
+own image and video tools become the fallback the user is asked about. Claude Code has no such
+tools, so the engine tables above are unchanged there. The storyboard records the detection in
+`window.PRODUCTION.imageProvider` and `videoProvider`; write `api` in either to opt an episode
+out. The Grok video tool tops out at 720p, and the builder scales that onto the 1080p canvas.
 
 Work products accumulate under `data/` relative to the session cwd, so the convenient
 setup is to start Claude Code in the directory where you want your content and add
@@ -433,7 +447,7 @@ social-flow/
 ├── .plugin/plugin.json          # Buzz persona pack (Open Plugin Spec)
 ├── personas/                    # Buzz pack persona (pipeline.persona.md)
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 76 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 77 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
 │       ├── tools.ts             # tool definitions (research 8 + open data 5 + generation 18 + publish 6 + comments 3 + check 1 + growth insights 5)
@@ -495,14 +509,14 @@ social-flow/
 └── data/                        # content data root (see data/README.md)
 ```
 
-## MCP tool surface (76 tools)
+## MCP tool surface (77 tools)
 
-**`tools/list` does not show all 76.** The nine publish/insights tools
+**`tools/list` does not show all 77.** The nine publish/insights tools
 (`threads_publish` · `instagram_publish` · `facebook_publish` · `facebook_comment` ·
 `youtube_publish` · `threads_insights` · `instagram_insights` · `youtube_insights` ·
 `threads_search`) are exposed **only for platforms whose credential file exists** —
 evaluated at list time, so adding a token makes them appear without restarting the
-server. With no tokens at all you'll count 64. Hidden tools still have live handlers:
+server. With no tokens at all you'll count 65. Hidden tools still have live handlers:
 calling one directly returns a missing-token error rather than failing silently.
 `content_feedback`, `youtube_topic_scout`, and `sns_issue_scout` sit outside the
 platform gate and stay listed without tokens — the YouTube scout needs
@@ -516,9 +530,10 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | Research | `sns_issue_scout` | SerpApi Google search with `site:threads.com` · `site:x.com` · `site:instagram.com`, collecting recent posts and counting topic phrases that recur across posts and platforms (+ Google trending searches). **A mention list with no engagement counts** — don't mix it into the same table as YouTube multipliers. Threads keyword search only returns your own posts before advanced access, and the Instagram Login API has no public search, so this is the only no-account path that sees all three at once |
 | Research | `naver_search` | Naver Open API (25,000 calls/day free — first choice for Korean). 8 types: news·blog·web·cafe·kin (Knowledge-iN)·image·encyc·local |
 | Research | `serp_web_search` / `serp_news_search` / `serp_naver_search` / `serp_image_search` / `serp_trending_now` | SerpApi (250 free/month — precision + international). naver takes where=web·news·image·video + a period filter, image takes license/size/aspect filters, trending_now returns per-country Google trending searches (4/24/48/168-hour windows, approximate volume and growth) |
+| Research | `stock_search` | Free stock photos and clips — Pexels · Pixabay (`PEXELS_API_KEY` / `PIXABAY_API_KEY`) · NASA Image and Video Library · Wikimedia Commons (no key). Every item returns the `visual.license` block a `visual.source: "stock"` cut stores; Commons is filtered to public domain, CC0 and CC BY. The survey behind it, with license quotes and the Korean public-domain sources: [free stock sources](docs/research/2026-09-07-free-stock-sources/index.html) (Korean) |
 | Open data | `datago_search` / `datago_detail` / `datago_file_download` | data.go.kr (no auth — search·detail·raw file) |
 | Open data | `datago_file_fetch` / `datago_api_call` | odcloud · apis.data.go.kr (auth key + **per-API usage application** required) |
-| Image generation | `image_local_generate` | Z-Image Turbo on-device via mflux (**no API key, no network, no billing — the default path**. Needs Apple Silicon + `uv tool install --python 3.12 mflux`; first call downloads 31GB of weights. No text inside images — Korean jamo break up) |
+| Image generation | `image_local_generate` | Z-Image Turbo on-device via mflux (**no API key, no network, no billing — the default path on Claude Code**; under Codex and Grok the CLI's own `image_gen` comes first. Needs Apple Silicon + `uv tool install --python 3.12 mflux`; first call downloads 31GB of weights. No text inside images — Korean jamo break up) |
 | Image generation | `mlx_image_generate` / `mlx_image_edit` | MLX Core / mlx-serve on loopback (**no vendor bill**. Optional lane — default stays Z-Image. Hangul still goes to gpt_image. Fail closed if :11234 is down; this plugin never launches the app. `brew install --cask mlx-core`) |
 | Image generation | `gpt_image_text2img` / `gpt_image_img2img` | OpenAI GPT Image (OPENAI_API_KEY — **the text-and-quality path**: text rendering, arbitrary WIDTHxHEIGHT, up to 16 reference images, mask inpainting) |
 | Video generation | `veo_text2video` / `veo_img2video` / `veo_extension` / `veo_reference` | Veo 3.1 (GEMINI_API_KEY — 720p–4k, 4/6/8s grid; **native audio, local-file extension, and live-person reference** are this engine's edge) |
@@ -620,6 +635,8 @@ explicit error and everything else works.
 |---|---|---|---|
 | `NAVER_CLIENT_ID` / `NAVER_CLIENT_SECRET` | naver_search | — | Naver Open API (developers.naver.com) |
 | `SERPAPI_API_KEY` | serp_* | — | SerpApi key |
+| `PEXELS_API_KEY` | stock_search (Pexels) | — | Pexels API key (pexels.com/api — free, 200 requests/hour; NASA and Wikimedia Commons need no key) |
+| `PIXABAY_API_KEY` | stock_search (Pixabay) | — | Pixabay API key (pixabay.com/api/docs — free, 100 requests/minute) |
 | `DATA_GO_KR_API_KEY` | datago_file_fetch · api_call | — | data.go.kr auth key (My Page on data.go.kr — beyond the key, each API needs a **per-API usage application**. Search/detail/download work without a key) |
 | `OPENAI_API_KEY` | gpt_image_* | — | OpenAI API key (platform.openai.com/api-keys — image generation) |
 | `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) | veo_* · omni_* · tts_generate · tts_multi_speaker · music_* | — | Gemini API key (aistudio.google.com/apikey — video, voice, and music generation. `tts_local_generate` works without it) |

@@ -47,6 +47,10 @@ plugin default. Recalculate from the selected assets with `cost-preview.js`.
 
 ## Economy baseline (the automated-authoring default)
 
+Under Codex or Grok the host `image_gen` replaces both image rows, and under Grok the host
+`image_to_video` replaces the hook row, at $0 on the subscription allowance (owner directive
+2026-09-07); the rows below are the Claude Code path.
+
 | Layer | What's used | Notes |
 |---|---|---|
 | Cover background | `gpt_image_text2img` quality **`high`**, 1088x1920, 1 image | Photorealistic human scene (default: a Korean woman) — the cover frame becomes the thumbnail as-is (absolute rule 12) and is the source of the hook motion background; on escalated episodes it doubles as the b-roll source |

@@ -42,7 +42,9 @@ subscription price for this plugin's BytePlus API calls. Unknown prices stop the
 Show, for **each** choice: model/provider, resolution, generated audio on/off, clip count,
 generated seconds, first-pass USD, retry-inclusive USD range, approximate KRW, its explicit
 exchange-rate assumption, and the **maximum video budget to approve**. Attempts include the
-first call: the default range is 2–3 total attempts per shot, not 2–3 extra retries.
+first call: the default range is 2–3 total attempts per shot, not 2–3 extra retries. Under
+`videoProvider:'host'` show the tool and its ceiling (Grok `image_to_video`, 720p, 1–15 s) where
+the model and price would be.
 Identify provisional alternatives; they are comparison assumptions, not automatically rewritten
 shot plans. Images, narration, music, editing, taxes and payment fees are outside this video quote.
 Explain those exclusions rather than presenting a video-only number as the complete bill.
@@ -72,10 +74,19 @@ clips with at least one explicit `visual.reuse` input. Zero of both is rejected.
 separate reuse counts and the final $0 estimate. Reuse does not relax the screen policy. `full_video` permits every generated scene to be a
 video, including explanations. Existing user recordings and the shared outro retain their source.
 
+`imageProvider` and `videoProvider` record which lane generates (owner directive 2026-09-07):
+`host` when the CLI running the skill ships the tool — `image_gen` on Codex and Grok,
+`image_to_video` on Grok — and `api` on Claude Code or where the user chose the plugin's API
+engines for this episode. The host lanes bill nothing here (`image.host` and `video.host` rows
+at $0), so under `videoProvider:'host'` both quotes come out at $0 and the approval shows the
+720p ceiling where a price would be. An absent field reads as `api`, which is how boards from
+before 2026-09-07 keep their quotes.
+
 ```js
 window.PRODUCTION = {
   mode: 'full_video',                 // hybrid | full_video
-  imageProvider: 'host',              // use the host's included image-generation allowance
+  imageProvider: 'host',              // host | api — host where the CLI ships image_gen (Codex, Grok)
+  videoProvider: 'host',              // host | api — host where the CLI ships image_to_video (Grok)
   maxAttempts: 3,                     // total per shot, first attempt included
   videoBudgetUsd: 15,                 // example ONLY: use the cap actually approved
   comparison: { model: 'seedance-1-5-pro-251215', resolution: '1080p', hybridShots: [1, 2] },

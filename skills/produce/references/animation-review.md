@@ -12,8 +12,9 @@ The collection has three lanes of its own: `still_camera` for people and mood,
 `character_explanation` for an explanation a person acts out, and `object_explanation` when
 objects alone explain it. Physical objects in explanation cuts are real meshes.
 
-Images come from the tool the host and the user chose. In Codex use the built-in image tool,
-which can also take an already approved image as input. Never switch to a separately billed
+Images come from the tool the host and the user chose. In Codex or Grok use the built-in
+`image_gen` (Grok `image_edit` for a reference), which can also take an already approved image
+as input. Never switch to a separately billed
 API.
 
 ```bash
