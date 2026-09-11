@@ -441,6 +441,12 @@ const openPage = async () => {
   // First seek only after fonts, image decodes and video first frames are all settled. Load alone
   // is not enough for an image — capture before decode finishes and the first frame comes out blank.
   await evalJS("window.__ready()", true);
+  if (opt.previz) {
+    // The page samples its spec at spec.fps (previz-contract frameAt); the capture runs at 24, so a spec
+    // written at another rate would silently break "clip frame n = spec frame n".
+    const specFps = await evalJS("window.PREVIZ && window.PREVIZ.fps");
+    if (specFps !== 24) return die(`--previz captures at 24 fps but window.PREVIZ.fps is ${specFps} — set the spec to 24 (blender-previz.md §6.1)`);
+  }
   if (treatment === 'editorial' && !await evalJS("document.documentElement.classList.contains('studio') && !!document.querySelector('.studio-plate')"))
     return die('editorial slides require the studio ground and material system; h.stage("flat") cannot satisfy object-state quality');
   const size = await evalJS("window.__size()");

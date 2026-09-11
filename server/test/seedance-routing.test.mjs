@@ -164,6 +164,8 @@ test('a previz cut rides the reference route as Video 1 and bills input + output
   assert.throws(() => scenePlan({ ...shot, visual: { ...shot.visual, video: { ...shot.visual.video, lastImagePath: 'images/scene-4-end.png' } } }), /no end frame/);
   assert.throws(() => scenePlan({ ...shot, visual: { ...shot.visual, video: { ...shot.visual.video, modelPurpose: 'reference' } } }), /modelPurpose:"previz"/);
   assert.throws(() => scenePlan({ ...shot, visual: { ...shot.visual, video: { ...shot.visual.video, previz: { ...previz, fps: 23.976 } } } }), /24–60/);
+  for (const clip of ['/abs/s4.mp4', '../s4.mp4', 'previz/../../x.mp4'])
+    assert.throws(() => scenePlan({ ...shot, visual: { ...shot.visual, video: { ...shot.visual.video, previz: { ...previz, clip } } } }), /no absolute path, no \.\./);
   // More than nine reference images escalates to 2.5, whose with-video rows are priced too.
   const many = scenePlan({ ...shot, visual: { ...shot.visual, video: { ...shot.visual.video,
     referenceImagePaths: ['images/scene-4.png', ...Array(10).fill('characters/porter/body.png')] } } });

@@ -610,8 +610,8 @@ never a `videoDesign.camera` sentence, and `spatial-prompts.js` assembles the mo
 from them through the same recipe and prompt gate as every other clip. Keep real
 infoType/purpose, data evidence and narration. The source PNG, stored motion prompt and
 optional `visual.frames.end` drive the same spatial action. Runtime output path is
-`visual.video.clip`. Use explicit 1080p and audio false; only burned subtitles overlay the
-video. The selected style replaces the generic photo rule. A verified recording or shared
+`visual.video.clip`. Use the resolution `PRODUCTION.videoModel` records (720p on the 2.0
+fast/mini grades, 1080p otherwise) and audio false; only burned subtitles overlay the video. The selected style replaces the generic photo rule. A verified recording or shared
 outro retains its source. Full-video quality evidence is in `.work/video-review.json`, tied to
 the actual source and clip hashes, checked before the build.
 

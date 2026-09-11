@@ -79,8 +79,10 @@ function scenePlan(scene) {
   if (purpose === 'previz' && kind !== 'motion') throw new Error('the previz route is a motion-background (visual.video) slot; b-roll and speech clips do not carry a previz');
   if (purpose === 'previz') {
     if (!previz || typeof previz !== 'object' || Array.isArray(previz)) throw new Error('modelPurpose previz needs visual.video.previz { clip, sha256, fps, seconds }');
-    if (typeof previz.clip !== 'string' || !/\.(mp4|mov)$/i.test(previz.clip.trim()) || /^[a-z][a-z0-9+.-]*:/i.test(previz.clip))
-      throw new Error('previz.clip must be a local mp4/mov path (the blender_render_previz output)');
+    // Same shape rule as render-routing checkPreviz: storyboard-relative, no scheme, no absolute path, no .. segment.
+    if (typeof previz.clip !== 'string' || !/\.(mp4|mov)$/i.test(previz.clip.trim()) || /^[a-z][a-z0-9+.-]*:/i.test(previz.clip) ||
+        /^[\/\\]/.test(previz.clip) || /(^|[\/\\])\.\.([\/\\]|$)/.test(previz.clip))
+      throw new Error('previz.clip must be a storyboard-relative mp4/mov path (no scheme, no absolute path, no ..) — the rendered previz');
     if (previz.handoff !== undefined && previz.handoff !== 'reference_video') throw new Error('on the Seedance route the previz travels as Video 1 — previz.handoff must be reference_video');
     if (!Number.isInteger(previz.seconds) || previz.seconds < 2) throw new Error('previz.seconds must be a whole number of seconds (2 or more)');
     if (!Number.isFinite(previz.fps) || previz.fps < 24 || previz.fps > 60) throw new Error('previz.fps must be 24–60 (render at 24 for frame-for-frame QA)');
