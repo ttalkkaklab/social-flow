@@ -43,12 +43,12 @@ content-reviewer agent all take this skill's playbook as their baseline.
 
 | | Threads | Instagram | Facebook | YouTube |
 |---|---|---|---|---|
-| Form | text (+link card)/1 image (no video) | reels · carousel ≤10 images | text/image/regular video | Shorts (9:16 ≤3 min) |
+| Form | text · 1 image · video on the post (`videoUrl`) | reels · carousel ≤10 images | text/image/regular video | Shorts (9:16 ≤3 min) |
 | Body limit | 500 chars | caption 2,200 chars | 5,000 chars | title 100 · description 5,000 |
 | Register | casual spoken, 1–3 lines | hook + save CTA | structured expository | one spoken sentence, result withheld |
 | Links | 1 in body (`linkUrl` card) | caption links not clickable → comment | banned in body → first comment | description OK |
 | Hashtags | ≤1 (ranking weight 0) | 3–5 | 0–2 | 3–5 (#Shorts by preset) |
-| Media | link card (video episodes) · public HTTPS URL | public HTTPS URL | public HTTPS URL | local file upload |
+| Media | video/image as public HTTPS URL | public HTTPS URL | public HTTPS URL | local file upload |
 | Limits | 250 posts/24h | 100 posts/24h | — | 100 uploads/day |
 
 Detailed grammar, copy formulas, the anti-pattern checklist, and video specs
@@ -69,7 +69,7 @@ node $PG/extract-text.js ./storyboard/scenes.js <narration|subtitle|screen> | \
 
 8 surfaces: `narration` `subtitle` `screen` `threads` `ig` `fb` `yt` `reply`.
 exit 0 pass / 1 warning (S2 accumulation) / 2 fail (S1) / 3 gate did not run
-(empty input · path error).
+(empty input · path error) / 4 skip (every rule off for the surface).
 
 **S1 gets fixed and re-run, no exceptions.** exit 3 is not a pass either — fix
 the path and run again. Write paths against `${CLAUDE_PLUGIN_ROOT}`
@@ -93,7 +93,7 @@ only after passing two stages. Stage 1 is the style checker above (the machine
 verdict is the source of truth); stage 2 is an adversarial reviewer agent — it
 tries to refute the copy: does it sound AI-written, and can a first-time reader
 follow the vocabulary. **Publish only at score ≥95 with P0=0**; if the copy
-can't clear that within 3 rounds (2 on unattended paths), don't publish —
+can't clear that within 3 rounds, don't publish —
 not posting beats posting copy that falls short.
 
 **Storyboard copy is read differently** — as the narration alone, before any
@@ -124,7 +124,7 @@ appears, add a row to this table and extend an existing reviewer.
 ### Reference Files
 
 - **`references/platform-playbook.md`** — per-platform grammar in detail, copy formulas, video specs, anti-pattern checklist (SoT)
-- **`references/korean-style.md`** — Korean style SoT: AI-tell pattern tables (T·D·C·A), severities, per-surface application, delete-only principle
+- **`references/korean-style.md`** — Korean style SoT: AI-tell pattern tables (T·D·C·A·E), severities, per-surface application, delete-only principle
 - **`references/check-style.py`** — deterministic style checker (stdlib only; `--surface` · `--json` · `--doc` · `--selftest`)
 - **`references/check-meta.js`** — the YouTube meta.md gate: the §6 layout, title limits (100 chars · no `<>` · front-loading warning), the format preset's required hashtags, the summary voice, and a verbatim `COMPREHENSION.answer` in the title or description (`--print title|description|tags` · `--selftest`)
 - **`references/pipeline.js`** — pipeline SoT: the stage ladder, every gate (attended and unattended), the reviewer verdict-tail contract, and produce's three build lanes. `episode-state.js` derives an episode's stage from it; `docs/pipeline-manifest.md` explains the design

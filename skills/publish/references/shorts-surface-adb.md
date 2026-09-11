@@ -3,9 +3,10 @@
 `thumbnailFilePath` (the `thumbnails.set` API) only changes the **landscape surface**
 (hq720/maxresdefault — search results, link previews, embeds, ordinary suggestions).
 The **portrait frame (`oar*`)** used by the shorts feed, the channel shorts tab and
-shorts search results changes **only through frame selection in the YouTube native
-app** (not via the API or web Studio — measured on fect 2026-07-27, reconfirmed on
-ttalkkak-lab 2026-08-13). Leave it unset and YouTube auto-picks a random mid-video
+shorts search results changes **only through frame selection** — in web Studio (`⋮` over the portrait
+image → "Select from video", measured 2026-08-19, publish §Shorts frame — the default) or
+in the YouTube native app (this file's emulator route, the fallback when the picker is
+missing) — never via the API. Leave it unset and YouTube auto-picks a random mid-video
 frame and shows it as the shorts first frame. A YouTube publish isn't finished until
 this step is done (publish SKILL §3).
 
@@ -112,9 +113,10 @@ them as a reference and pull them again per screen with `uiautomator dump`.
    - **It turns 200 right after Save** — measured 2026-08-14, the first query 8 seconds
      after saving returned 200. If 404 keeps coming back, don't wait it out; Save
      didn't take (go back into the editor).
-   - `oar1`/`oar2` and the web channel grid serve the old frame for days — **the only
-     basis for the verdict is oardefault 200**. Don't redo the work; wait for the cache
-     to catch up.
+   - `oar1`/`oar2` and the web channel grid serve the old frame for days. On the web
+     Studio route `oardefault.jpg` stays 404 (measured 2026-08-19), so the verdict there
+     is the shorts-tab tile itself (publish §Shorts frame); on this emulator route
+     oardefault 200 is the verdict. Don't redo the work; wait for the cache to catch up.
    - After the frame is set, `maxresdefault` turns into a letterboxed version of the
      chosen frame — if the content is the cover that's normal, so don't "fix" it with
      `thumbnails.set`. Upload a landscape-only 16:9 again and **oardefault reverts to

@@ -8,10 +8,6 @@ Numbers rank episodes, not sentences — the point of every item below is to nam
 of the board an underperforming curve is asking you to change, so the rework lands there and
 nowhere else.
 
-If you can read `grow-youtube` output or YouTube Analytics records, settle each of the
-following in one line before authoring and write it into the `storyboard.md` design rationale
-and `SB_DOC.seriesNote`.
-
 1. **A stopping problem** — if `stayed to watch` is low, change the first frame and the first
    line. Don't substitute a harder CTA for it.
 2. **An interest problem** — if engaged views are low against raw views, cut explanation.

@@ -3,7 +3,7 @@ name: produce
 description: >
   Builds the video and the per-platform text from an already-approved storyboard. Use when the user asks to "영상 만들어", "콘텐츠 제작", "produce the video", "플랫폼별 콘텐츠 만들어", or right after a storyboard is approved. Turns the approved scenes.js under data/[channel]/episodes/[topic]/storyboard/ into a narrated 9:16 video at 1080x1920/30fps — generated backgrounds, TTS narration, BGM with ducking, kinetic subtitles, brand outro — plus the Threads, Instagram, Facebook and YouTube text under the episode's output/, checked on a phone viewport before publishing. Where recording/alignment.json exists it cuts the user's own screen recording instead of generating scenes. Boundary — storyboard plans and stops for approval, produce starts after it, autoproduce runs both unattended.
 argument-hint: "<channel> <topic> [platformCSV|auto]"
-allowed-tools: ["Bash", "Read", "Write", "Edit", "Glob", "AskUserQuestion", "Agent", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_generate_checked", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue", "mcp__social-flow__tts_list_voices", "mcp__social-flow__music_generate", "mcp__social-flow__music_generate_clip", "mcp__social-flow__suno_generate", "mcp__social-flow__suno_generate_sound", "mcp__social-flow__suno_generate_lyrics", "mcp__social-flow__suno_credits", "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__gpt_image_img2img", "mcp__social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__social-flow__seedance_img2video", "mcp__social-flow__seedance_reference", "mcp__social-flow__mlx_image_generate", "mcp__social-flow__mlx_image_edit", "mcp__social-flow__mlx_tts_generate", "mcp__social-flow__mlx_music_generate", "mcp__social-flow__mlx_video_generate", "mcp__social-flow__mlx_3d_generate"]
+allowed-tools: ["Bash", "Read", "Write", "Edit", "Glob", "AskUserQuestion", "Agent", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_generate_checked", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue", "mcp__social-flow__tts_list_voices", "mcp__social-flow__music_generate", "mcp__social-flow__music_generate_clip", "mcp__social-flow__music_generate_advanced", "mcp__social-flow__stock_search", "mcp__social-flow__suno_generate", "mcp__social-flow__suno_generate_sound", "mcp__social-flow__suno_generate_lyrics", "mcp__social-flow__suno_credits", "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__gpt_image_img2img", "mcp__social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__social-flow__seedance_img2video", "mcp__social-flow__seedance_reference", "mcp__social-flow__mlx_image_generate", "mcp__social-flow__mlx_image_edit", "mcp__social-flow__mlx_tts_generate", "mcp__social-flow__mlx_music_generate", "mcp__social-flow__mlx_video_generate", "mcp__social-flow__mlx_3d_generate"]
 ---
 # Per-platform content production — data/[channel]/episodes/[topic]/output/
 Turn the approved storyboard (`storyboard/scenes.js`) into a narrated video and per-platform text.
@@ -83,15 +83,13 @@ Read [story-quality.md](../storyboard/references/story-quality.md) and run `node
    the episode is about — for dev and tool channels, where the evidence is a screen rather
    than a person. "Expertise shows in evidence, not in claims", 2026-08-15).
    Either way make it at `quality: "high"`, and if channel profile §3 sets a different art
-   style, that wins. The text is still code-rendered (rule 10) — this rule is about the
-   background picture.
+   style, that wins. The text is still code-rendered (rule 10) — this rule is about the background picture.
    **A b-roll source is the same file as the background of the scene it attaches to
    (`after`)** — the photo the previous scene showed as a still starts moving, so one image
    does two jobs. For an opening b-roll (`after: 0`) that file is the cover background. For
    a body b-roll it's that points scene's background, and **that one image gets made with
-   `gpt_image_text2img` (high) rather than local Z-Image** — it's veo's input, so a blurry
-   source makes a blurry video, and with no person in it the model finds nothing to move
-   (rule 11).
+   `gpt_image_text2img` (high) or the host image tool rather than local Z-Image** — it's veo's input, so a blurry
+   source makes a blurry video, and with nothing in it for the clip to move the model invents motion (rule 11).
    **Generated-video slots follow the approved channel motion policy.** Count b-roll and
    motion-background scenes (`visual.video`) together. The format default is 2, and **on a
    short both are optional**. Each selected cut writes `visual.why` because continuous motion
@@ -108,13 +106,12 @@ Read [story-quality.md](../storyboard/references/story-quality.md) and run `node
    contract's source of truth is scenes-schema §Channel true-motion policy.
 13. **Generation that costs money runs only after the plan is checked** — the cover
    background and the b-roll need a plan in the storyboard first (source prompt, motion,
-   used length + why), and you check it yourself before calling `gpt_image_text2img` (high)
-   or `veo_img2video`: no still life as a source, no real person, the target person on a
+   used length + why), and you check it yourself before calling the still or clip generator (host tool,
+   gpt_image high, veo, seedance): no still life as a source, no real person, the target person on a
    target channel, no text expected from the engine, the exclusions written, a duration the
    cut earns, no minor in frame, the engine the route names. The content-reviewer plan-mode
    read of 0.49 is no longer part of the flow (six million tokens a call, measured); it
-   stays available when the user asks for it. A plan that fails a point gets fixed before
-   the call — don't burn veo money on a bad source.
+   stays available when the user asks for it. A plan that fails a point gets fixed before the call — don't burn veo money on a bad source.
 14. **The photo is the lead on screen — no slide (PPT) look.** Scene text lives inside the
    top and bottom bands only: points uses the top block (title + **one caption at a time** +
    source), cover uses the bottom block, and the bottom subtitles say what the narration
@@ -128,8 +125,7 @@ Read [story-quality.md](../storyboard/references/story-quality.md) and run `node
    On a channel whose motion policy forbids stills, the photo is source material rather than
    the finished screen: place it full-frame in `visual.slide.motion:true` and animate the
    subject or evidence named by `visual.action`. A whole-photo zoom or pan is still Ken Burns
-   and does not qualify. `check-scenes.js` blocks the build before capture when this contract
-   is not met.
+   and does not qualify. `check-scenes.js` blocks the build before capture when this contract is not met.
 15. **Every episode runs the final pace pass — the pass is not optional.** After the build (and
    after any clip splice) `references/speedup.sh` writes the one deliverable set and checks the
    speech rate on its retimed subtitles. The default factor is **1.0x**, which preserves the pace of the finished build. A channel may set
@@ -169,8 +165,7 @@ Read [story-quality.md](../storyboard/references/story-quality.md) and run `node
   backgrounds, no reveals; the voice is the user's own). The artifact names (reel.mp4 ·
   reel-sub.mp4 · subs.srt · cover.jpg · build-report.txt) are the same, so §7.5–10 (the speed
   pass, phone QA, platform text, quality gate) run unchanged — **a shooting edit ships sped up
-  too**, and `speedup.sh` reads the xfade join that builder makes on its own. Use
-  screencast-pipeline.md's gate table.
+  too**, and `speedup.sh` reads the xfade join that builder makes on its own. Use screencast-pipeline.md's gate table.
 
   **`alignment.json` + landscape doesn't work.** `build-screencast.sh`'s band constants
   (BAND_MAX_H 900 · BAND_CY 880 · BAND_MIN_Y 460) and its background compositing are
@@ -212,7 +207,7 @@ Read [story-quality.md](../storyboard/references/story-quality.md) and run `node
   Top-level `window.FORMAT` in `scenes.js` is the format axis, and **without it the format
   is `shorts-9x16`**. No existing episode has the key, so they all come out the same as
   today — a unit test pins the emitted values to be character-identical with the builder's
-  inline defaults (`format-resolve.test.mjs`). There's one reason to write it every time
+  inline defaults (`server/test/format-resolve.test.mjs`). There's one reason to write it every time
   regardless of format. Make it conditional and the first time someone forgets "write it
   only for landscape", that episode quietly builds at the portrait defaults.
 
@@ -363,7 +358,7 @@ means generating something nobody approved.
   back-facing. No panels yet means falling back to that character's `front.png`; a live-action
   character keeps its single image (`real.png`). Drawn character → `seedance_reference`,
   photoreal person → `veo_reference` (**3 images max**, validated in code). The full rule is
-  [video-model-selection.md](references/video-model-selection.md) §6.
+  [video-model-selection.md](references/video-model-selection.md) §The character panels.
 
   **The character's voice travels the same way.** `$CH/voice.wav` is the fixed voice sample
   (`resolve-asset.py "$CHANNEL_DIR" voice claude`; §6). When the model voices the cut —
@@ -405,8 +400,8 @@ not on that face-policy table and is not the default. `mlx_3d_generate` writes a
 Follow [illustrated-scenes.md](../storyboard/references/illustrated-scenes.md): people/mood cuts use still-camera motion; explanations use recognizable 3D objects in contextual settings, with matching cute 3D characters performing the task when needed. Match still-camera direction to the cut’s purpose; character scenes default to no marks, mechanism scenes use brief, legible part callouts.
 
 - **Cover background = b-roll source (one image, `storyboard/images/scene-1.png`)**:
-  `gpt_image_text2img`, `size: "1088x1920"`, **`quality: "high"`**. **Photoreal style with a
-  person in it** (absolute rules 11·12) — generated people only (a Korean woman by default),
+  `gpt_image_text2img`, `size: "1088x1920"`, **`quality: "high"`**. **Photoreal style, with a
+  person only when the shot needs one** (absolute rules 11·12 — no demographic default),
   an angle that puts the channel's subject at the center, a scene that shows the topic at a
   glance. Inherit profile §3's mood, its required negative instructions, and the
   fill-the-frame tail (owner 2026-08-25 — never a letterbox or a lower-third fade), but
@@ -475,7 +470,7 @@ was using. The convention's source of truth is
 ```bash
 printf 'image.gpt-image-2.high\t1\tproduce: cover background regenerated\n'          >> .work/cost-tally.tsv
 printf 'veo.lite.1080p\t8\tproduce: b-roll a1 — generated 8s, used 4s\n'             >> .work/cost-tally.tsv
-printf 'seedance.1-5-pro-silent.1080p\t5\tproduce: motion background i3 (completion_tokens 102960)\n' >> .work/cost-tally.tsv
+printf 'seedance.2-0-video.1080p\t10\tproduce: motion background i3 — 5s cut + 5s previz (completion_tokens 486000)\n' >> .work/cost-tally.tsv
 printf 'music.lyria-realtime\t90\tproduce: BGM cue "base" 90s — unit price unconfirmed\n' >> .work/cost-tally.tsv
 # one line per cue in window.MUSIC — a three-cue episode is three calls, not one
 printf 'music.suno-generate\t1\tproduce: Suno full song, 1 call (2 tracks)\n'        >> .work/cost-tally.tsv
@@ -506,7 +501,7 @@ an unexplained difference between the storyboard's plan and the video.
 
 ```bash
 printf 'produce\tmusic_source\tepisode BGM\tmusic_generate_clip\t30s Lyria clip, builder extends; rejected suno (sung vocals fight the voiceover)\n' >> .work/decisions.tsv
-printf 'produce\tfallback\tmotion background i3\tveo_img2video\tARK_API_KEY absent — seedance route unreachable; recorded in build-report.md as the allowed deviation\n' >> .work/decisions.tsv
+printf 'produce\tfallback\tmotion background i3\thold\tARK_API_KEY absent — a previz cut has no Veo route; waiting for the key (or the host lane); recorded in build-report.txt\n' >> .work/decisions.tsv
 ```
 
 ### 3.5 Take in the filmed clips (mixed-shooting episodes only)
@@ -525,7 +520,7 @@ order.
 
 1. **Generate `slide.arts` first** when the array is set — `slides/assets/s<shot>-<slug>.png`,
    tactile 3D illustration or photoreal 3D object, soft studio light, consistent material
-   and camera, transparent background, no readable text (`image_local_generate`; gpt or mlx where the plan says so). Log each call in
+   and camera, transparent background, no readable text (the host image tool under Codex/Grok, else `image_local_generate`; gpt or mlx where the plan says so). Log each call in
    `.work/cost-tally.tsv`. Sit a principle actor with `h.fig`.
 2. **Author the HTML** from the matching template. Data graphs copy
    [chart-slide-template.html](../storyboard/references/chart-slide-template.html) and its two
@@ -682,7 +677,11 @@ A raw TTS call has no quality proof and cannot enter assembly.
 
 One checked call per scene — the profile registry as it stands, and the script is the full text
 of that scene's narration segments' `tts` sentences joined with periods. `.work/pcm/c<n>.wav`.
-Don't split a scene into several calls by sentence (the voice varies between calls).
+Don't split a scene into several calls by sentence (the voice varies between calls). Pass the
+same `tts` sentences as `segments`, and the profile's playback speed as `playbackSpeed` when
+§2 sets one: on an ElevenLabs take the wrapper lays a fixed pause at each segment boundary and
+writes `c<n>.wav.sentences.json`, which the builder snaps its reveals and cues to
+(`references/tts-quality.md` §Sentence spacing).
 
 **profile §2 decides the engine.** A new channel's narration default is `tts_local_generate`
 (Supertonic, local) — no key, no quota, and 0 cost however many times you rerun the episode,
@@ -690,7 +689,9 @@ so regenerating is free. Only lines that need a style instruction, meaning shots
 emotion has to be acted, go to `tts_generate` (Gemini). The local side has no stylePrompt.
 A profile with `engine: elevenlabs` calls `tts_elevenlabs_generate` with the profile's
 voiceId · model · stability (and seed, if pinned) and leaves `outputFormat` at its default
-`wav_24000` — mono 24kHz WAV, the same spec as Gemini, so the builder reads it as-is.
+`wav_24000` — mono 24kHz WAV, the same spec as Gemini, so the builder reads it as-is. The
+checked wrapper adds `timestamps` itself and moves a pinned seed by one on each retake (the
+same seed returns the same bytes); don't pass `previousText`/`nextText` — the scene is one call.
 **Never pass an mp3_* outputFormat for narration**: build-reel.sh reads any non-RIFF audio
 file as raw PCM and that card becomes noise. A scene with three or more speakers goes to
 `tts_elevenlabs_dialogue` in one call (no per-speaker stitching, no 0.75s gaps). Audio tags
@@ -745,8 +746,7 @@ The builder runs `verify-build-plan.js` against the source storyboard before any
 full scene/story checks, required slides and exact card order must pass. It writes
 `.work/build-plan-check.json` with the plugin version and input hashes. Slide clips need the
 renderer's `render-proof.json`; stale sources, replaced clips and changed segment narration fail.
-Measure the opening after TTS and update its plan before assembly; the encoded opening must
-match within 0.5s. The final pace pass also checks total length after planned b-roll inserts. There is no
+The final pace pass also checks total length after planned b-roll inserts. There is no
 skip flag and no cached PASS file. Do not replace the builder with an episode-specific
 assembly script. Any opening belongs in SCENES; no separate PRELUDE is accepted.
 
@@ -1015,8 +1015,7 @@ audible jump back to the theme in the middle of a scene.
 
 **Don't cut the mixed file again** — the fades are pinned to its length, so cutting loses the
 tail fade and shifts the BGM fade out of place. To change the length, re-mix from the
-8-second original. (veo's output is 24fps, so the 30fps re-encode happens here at the same
-time.)
+original clip. (A 24fps veo clip gets its 30fps re-encode here at the same time.)
 
 Get the insertion time T by **accumulating the confirmed lengths up to the `after` card** from
 the `card` lines in `build-report.txt`. broll and outro aren't in the manifest and broll
@@ -1081,7 +1080,7 @@ is the only tempo change the voice goes through.
 
 ```bash
 $REF/speedup.sh .work        # → .work/reel-fast.mp4 · reel-sub-fast.mp4 · subs-fast.srt · chapters-fast.txt
-$REF/speedup.sh .work 1.6    # a channel-specific rate — profile.md §2 decides, not the moment
+$REF/speedup.sh .work 1.2    # a channel-specific rate — profile.md §2 decides, not the moment (§7.5: the gate is 6.2 chars/s on the engine's own pace)
 ```
 
 - **The default is 1.0x.** A profile may choose another factor for the whole feature — narration,
@@ -1218,24 +1217,23 @@ skips this.**
 
 Delegate artifact verification to the content-reviewer agent (Agent) — hand over video frame
 screenshots (**taken from the sped-up burn-in `reel-sub-fast.mp4`** — the clean one has no subtitles, so
-typos and clipping aren't visible), the per-platform copy, and scenes.js, and get back P0
+typos and clipping aren't visible), the per-platform copy, scenes.js, §8's `.work/experience-review.md`,
+`build-report.txt` and the storyboard's hand-to-produce table (the reviewer's P0-11 needs all three), and get back P0
 detections (typos, clipping, factual mismatch, platform taboos, copy-pasted sentences,
 unexplained jargon, AI tells, a result given away in the title or description) and axis scores.
 Pass the `check-style.py` path along with the
 exit codes and quote-exemption counts from §5 and §9 (the `check-meta.js` exit too) in the
 delegation prompt — the reviewer
 treats those numbers as the source of truth and doesn't override them with its own impression.
-If the channel skips research, state that in the delegation prompt too (the reviewer converts
-the facts axis to full marks).
+If the channel skips research, state that in the delegation prompt too (the reviewer scores copy
+out of 85 and rescales the tail to 100).
 **One read, on an episode that is going to be published** — a test build, or a version the
 user has said is not going out, skips this delegation (the phone QA in §8 and the checkers in
 §5·§9 still run). Apply its directives; if the tail (`CONTENT_REVIEW:`) came back under copy
 95 or with P0 > 0, don't delegate again — report the unresolved findings to the user as they
-are and let them decide. (0.50.0: a read cost 8.6 million tokens and 14 minutes, measured, so
-the three-round loop of 0.49 became one read.)
+are and let them decide (0.50.0 — one read, measured at 8.6 million tokens).
 
-**First-3-seconds check** (2026-08-15 — forced by the measured skip rates. The author does this
-directly, separately from the reviewer delegation):
+**First-3-seconds check** (2026-08-15, forced by the measured skip rates — the author's own read, not the reviewer's):
 
 - [ ] Actually **watch** the 0–3s opening and `.work/qa/first-frame.png` — a real subject or movement
       in the first frame, not a title card holding still, plus a word on screen inside the first second
@@ -1292,6 +1290,7 @@ Cost — what this episode ran to (stills → video)
                BGM 90s                                      excluded — unit price unconfirmed
   ────────────────────────────────────────────────────────────
   total                                                     $1.08  (+ 1 item excluded)
+  forecast (.work/cost-forecast.tsv, the storyboard's projection)  $0.98 — say when the gap is over 20%
   full report: output/video/cost-report.txt
 ```
 
@@ -1338,6 +1337,7 @@ and the `status: produced` file update regardless — the portal is a mirror, no
 - **`references/splice-clip.sh`** — post-build clip insertion (b-roll up to 2 slots · series stinger). Takes several `<clip> <T>` pairs and splices them in **a single run** (split it into two calls and the first splice is erased), handles clean and burned-in separately, shifts each subtitle cue by the sum of the measured lengths of the insertions before it, and checks for cues straddling T and for matching lengths
 - **`references/capture-frames.sh` / `capture-reveals.sh`** — headless capture (state count derived automatically)
 - **`references/render-motion-slide.mjs`** — motion-slide renderer (§3.6): one clip per reveal group, headless Chrome over the DevTools pipe with no npm dependency, every frame seeked to an exact time so a re-render is byte-identical; `--sheet` writes the frames the §3.6 sheet read looks at. It renders **every authored screen** — diagram, kinetic type, character act — since all it asks a page for is the seek contract
+- **`references/snap-boundaries.py`** — the checked take's sentence sidecar snapped to the detected pauses, bound to the WAV's hash (build-reel §4)
 - **`references/reveal-timing.py`** — reveal timing derived backwards from the narration's pauses
 - **`references/frame-persona-clip.py`** — unifies speaking-clip framing + palindrome
 - **`references/reel-qa.html`** — the phone-mode QA harness (IG/YT UI mockups · crop reproduction · safe-zone guides)

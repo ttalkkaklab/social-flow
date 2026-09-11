@@ -1314,17 +1314,28 @@ describe('video engine separation (Veo · Seedance)', () => {
    * Write an exclusion into the prompt body and the very noun gets drawn
    * (measured on local images: 4 out of 4 failed). Google's prompt guide also
    * marks the instruction form as not recommended and advises noun-phrase
-   * lists. So all four tools need the dedicated exclusion inlet, and the
-   * description must teach the grammar — an inlet without the grammar and
-   * callers write "no walls" into the field.
+   * lists. So the two tools whose API call takes the field need the dedicated
+   * exclusion inlet, and the description must teach the grammar — an inlet
+   * without the grammar and callers write "no walls" into the field. The
+   * reference and extension calls return 400 with the field set (measured
+   * 2026-08-15), and so does the lite model in any mode (2026-08-26), so those
+   * carry no inlet and lite rejects it at validation.
    */
-  it('all four veo tools expose the exclusion inlet — so "no ~" stays out of the body', () => {
-    for (const name of ['veo_text2video', 'veo_img2video', 'veo_extension', 'veo_reference']) {
+  it('the two veo tools the API accepts it on expose the exclusion inlet — so "no ~" stays out of the body', () => {
+    for (const name of ['veo_text2video', 'veo_img2video']) {
       const prop = byName.get(name).inputSchema.properties.negativePrompt;
       assert.ok(prop, `${name} has no negativePrompt inlet`);
       assert.match(prop.description, /comma-separated/i, `the ${name} description does not teach the noun-list grammar`);
       assert.match(prop.description, /Do NOT write instructions/, `the ${name} description does not ban instruction forms`);
     }
+    for (const name of ['veo_extension', 'veo_reference']) {
+      assert.equal(byName.get(name).inputSchema.properties.negativePrompt, undefined, `${name} exposes a field the API rejects`);
+    }
+    const lite = img2VideoSchema.safeParse({
+      prompt: 'very slow push-in', sourceImagePath: '/tmp/x.png',
+      model: 'veo-3.1-lite-generate-preview', negativePrompt: 'on-screen text',
+    });
+    assert.equal(lite.success, false, 'lite must reject negativePrompt before the API does');
     // the schema must actually accept it too — a description whose value gets dropped is useless
     const parsed = img2VideoSchema.safeParse({
       prompt: 'very slow push-in',

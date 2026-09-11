@@ -695,8 +695,7 @@ const SLIDE_SHOT = 0;
   const photo = (rg, src, o = {}) => rv(rg, '<img class="photo" src="' + esc(String(src).replace(/^slides\//, "")) + '" alt="">', { fx: "none" });
   const scrim = (rg) => rv(rg, '<div class="scrim"></div>', { fx: "none" });
   /* ── 실사 컷(treatment:"footage") — slide-design.md §6.2. 클립 하나 = 그룹 하나(문장 하나 = 클립
-     하나·둘, 둘이면 A|B 서브리빌). 표식은 클립을 본 뒤 좌표를 잡는다(footage-frames.sh 의 중간
-     프레임). 좌표는 1080×1920(롱폼 1920×1080) 캔버스 픽셀이다. */
+     하나·둘, 둘이면 A|B 서브리빌). 2026-09-05 폐기 — 영상 위엔 아무것도 그리지 않는다(check-slide.js 가 거부). 좌표는 1080×1920(롱폼 1920×1080) 캔버스 픽셀이다. */
   const CW = parseInt(getComputedStyle(root).getPropertyValue("--w"), 10);
   const CH = parseInt(getComputedStyle(root).getPropertyValue("--h"), 10);
   const FZ = rg => -300 + rg * 3;
@@ -720,7 +719,7 @@ const SLIDE_SHOT = 0;
        카드 첫 프레임과 r0.png 가 잉크 단색이다(리뷰 M1 실측). vdur 0 이라 언제나 첫 프레임에 서 있다. */
     return (rg === 1 ? fz(0, FZ(0), vid(0, 0)) : "") + fz(rg, FZ(rg), vid(rg, o.dur || segMs(rg)));
   };
-  /* 매트 — 인물만 남긴 VP9 알파 webm(make-matte.py). 표식 위에 얹혀 선이 인물 뒤로 간다. 같은 그룹의 클립과 같은 from·dur. */
+  /* 매트 — 인물만 남긴 VP9 알파 webm(폐기된 footage 레인의 이력). 표식 위에 얹혀 선이 인물 뒤로 간다. 같은 그룹의 클립과 같은 from·dur. */
   const matte = (rg, webm, o = {}) =>
     fz(rg, FZ(rg) + 2, '<video class="matte" data-rg="' + rg + '" data-vfrom="' + (o.from || 0) +
       '" data-vdur="' + (o.dur || segMs(rg)) + '" src="' + vsrc(webm) + '" muted playsinline preload="auto"></video>');

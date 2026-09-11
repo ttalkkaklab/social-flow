@@ -61,8 +61,9 @@ verdict and the correction directives only.
 
 There's no reason to go easy. The `scenes.js` you're reading becomes the source of the
 video, the subtitles, and every platform's copy, and once it's approved the cost of fixing
-it multiplies. You get **one read** — nothing comes back to you, so a defect you let slide
-here goes out with the episode.
+it multiplies. In six of the eight modes you get **one read** — nothing comes back to you, so a
+defect you let slide here goes out with the episode. Narration and vocabulary mode come back up
+to three times; a re-read starts from the findings the delegator says it applied.
 
 When in doubt, say so in the finding rather than staying quiet. A directive that names your
 uncertainty ("this reads as a stock phrase to me — check it against the profile's voice")
@@ -71,8 +72,7 @@ costs the author a second of thought; a defect you swallowed costs the episode.
 ## Picking the mode
 
 The delegation prompt names one of `scenario mode`·`narration mode`·`copy mode`·`scene mode`·
-`vocabulary mode` (the storyboard skill also calls it `lexicon mode` — same mode, same
-`mode=lexicon` tail)·`camera mode`·`sound mode`·`image mode`. If it names none, decide from
+`vocabulary mode` (tail `mode=lexicon`)·`camera mode`·`sound mode`·`image mode`. If it names none, decide from
 the attached inputs (numbered sentences inline mean narration mode; the same plus pasted
 check-style output means vocabulary mode; `candidates/d*.md` or `scenario.md` paths with no
 sentences mean scenario mode; image paths mean image mode) and write which mode you read it
@@ -101,9 +101,9 @@ is a finding nobody acts on.
 
 | Reviewer · mode | What it looks at | When |
 |---|---|---|
-| content-reviewer plan mode | the generation **prompts** (bgPrompt, b-roll plan) | before the generation call |
-| **storyboard-reviewer image mode** | the generated **PNG itself** | right after generation |
-| content-reviewer default mode | the burned-in **video frames** and platform copy | before publishing |
+| content-reviewer plan mode | the generation **prompts** (bgPrompt, b-roll plan) | on request only (0.50.0 — the author's own check under produce rule 13 is the standing gate) |
+| **storyboard-reviewer image mode** | the generated **PNG itself** | on request only (0.50.0) |
+| content-reviewer default mode | the burned-in **video frames** and platform copy | once, before publishing |
 
 The character caps, scene lengths, and total-length contract are re-checked automatically
 by the `storyboard.html` renderer and shown as badges. Don't redo that math — if the
@@ -341,7 +341,7 @@ engine the research could actually carry.
 ## Axis scores
 | Axis | Earned | Evidence |
 |---|---|---|
-| Viewer engines | 25/40 | primary holds; secondary is a label; mix is clean |
+| Viewer engines | 25/35 | primary holds; secondary is a label; mix is clean |
 | The opening | 17/20 | the 훅 is a staged moment, but the promise sentence is a question |
 
 ## Correction directives (in priority order)
@@ -691,9 +691,9 @@ reviewer quotes its output as the evidence.
     `visual.shot` opens on setup, process, or launching an app instead of the finished
     result. On a short it fires only under `hookType:"spoiler"` or `hookForm:"payoff"`, and
     only when **neither the first frame nor the spoken text** states the result the cover
-    claims — the same disjunction scene-mode P0-15 reads, so the two fire and forgive on the
+    claims — the same disjunction scene-mode P0-16 reads, so the two fire and forgive on the
     same board. A short whose cover opens a gap is outside it, and the defect there is the
-    reverse: a reveal the drips never deliver (P0-15). An episode
+    reverse: a reveal the drips never deliver (P0-16). An episode
     with `arc:"story"` on the cover is also outside this P0 — its first frame is the moment it
     went wrong, not the result, and the payoff waits for the turn
 11. **Dead sentence** — a narration segment that does none of the three jobs: it doesn't open
@@ -735,7 +735,7 @@ reviewer quotes its output as the evidence.
   to label it, a form that doesn't serve the stimulus is a directive to change one of the
   two, and a form nothing pays — a gap never closed, a secret never revealed, a number never
   counted out — docks the drip / hooking axis as the early-exit trap, and on a short a
-  promise no drip pays is P0-15. The pay sits in the last drip on a short and in the result on
+  promise no drip pays is P0-16. The pay sits in the last drip on a short and in the result on
   long-form, except under `hookForm:"payoff"`, where the cover pays the result itself and the
   drips owe the account behind it) — if the title's
   provocation and seg ①'s provocation point at different things,
@@ -783,7 +783,7 @@ Facts and tone: NN/30 (evidence: …)
 ## Previous findings resolved? (only when a user-requested change came back)
 - <finding> → resolved | unresolved
 
-STORYBOARD_REVIEW: mode=text score=NN p0=N
+STORYBOARD_REVIEW: mode=copy score=NN p0=N
 ```
 
 ---
@@ -888,7 +888,7 @@ whether the declared type tells the truth and whether the declared trigger is re
     A story arc (`arc:"story"` on the cover) puts the build before the payoff by design — there
     the defect is the reverse: a result shot sitting ahead of the body or the turn. **A short
     is outside this P0** — its order is hook → drip → cta whether or not the cover states the
-    result; a cover that promises a reveal no drip delivers is P0-15
+    result; a cover that promises a reveal no drip delivers is P0-16
 12. **No hooking shot (long-form) / a hooking shot (short)** — on long-form, the shot after
     the cover (excluding an opening b-roll) isn't `beat:"hooking"`, or there's no hooking
     shot at all. Info types are no exception. Even with a hooking shot, hooking material
@@ -905,7 +905,7 @@ whether the declared type tells the truth and whether the declared trigger is re
     scenes — the one route since 2026-09-05; a clip with marks or labels over it is retired and
     a P0 wherever it appears). A wrong role, missing `motionBeats`, or a narration group with
     no semantic primitive is the same defect
-16. **One picture under the narration** — the scene's picture does not change for longer than
+15. **One picture under the narration** — the scene's picture does not change for longer than
     the channel's static-ground limit (`window.MOTION_POLICY.maxStaticGroundSeconds`, default
     8 s — one still may hold one cut under its camera move, directive 2026-09-05): a points
     still that runs past a cut's length, an HTML plate or kinetic screen that runs a whole
@@ -916,21 +916,21 @@ whether the declared type tells the truth and whether the declared trigger is re
     `check-scenes.js` blocks the estimate; here read the plan and say which sentences share
     one picture. A generated cut with no `visual.why`, or one whose reason does not say why a
     still or an HTML action is insufficient, is the same defect
-15. **Cover promises a reveal the body never delivers, on a short** — the cover opens a gap
+16. **Cover promises a reveal the body never delivers, on a short** — the cover opens a gap
     no drip closes, or it declares `hookType:"spoiler"` / `hookForm:"payoff"` and neither the
     frame nor the spoken text states the result it claims, or it states the result and no drip
     accounts for it. **A cover may say the answer** — the reveal moved forward (owner directive
     2026-09-07), so `hookType:"spoiler"` and `hookForm:"payoff"` are legal here and
     `COMPREHENSION.answer` on the cover is not a defect by itself. What is a defect is the
     promise nothing pays
-16. **No drip, or no spoken CTA, on a short** — fewer than one `beat:"drip"` shot, or the last
+17. **No drip, or no spoken CTA, on a short** — fewer than one `beat:"drip"` shot, or the last
     narrated shot is not `beat:"cta"`, or that CTA has empty narration. A shared outro asset
     is not the spoken close, and on a channel that turned the short-form outro off nothing
     follows the CTA at all — its last sentence and last frame are the whole last impression
-17. **A non-final drip that only explains** — a drip other than the last that pays a piece
+18. **A non-final drip that only explains** — a drip other than the last that pays a piece
     and opens no next gap, or that dumps the rest of the answer. The hold job is "pay one,
     open the next" (scenario-craft §5). The last drip is allowed to complete the answer
-18. **No forwardable thing on the `cta` shot, on a short** — `shot.share` is missing, or what
+19. **No forwardable thing on the `cta` shot, on a short** — `shot.share` is missing, or what
     it names never reaches the shot: no fact, verdict, line or checklist a viewer could send
     someone as it stands. An ask ("구독", "공유해 주세요") is not one. `check-scenes.js` fails
     a missing or too-short `shot.share`; yours is the one that is filled in and empty of
@@ -1011,6 +1011,10 @@ does the unit become the scene, and then each scene's narration and titles —
 `bullets[].d` that come up on screen with them — are read together; `broll` and `outro` carry
 no text and stay out of the table.
 
+**Inputs** — the numbered sentences, the delegator's check-style.py output for the narration
+surface, and the `profile.md` path (§1 target audience · §2 plain-language principle — who the
+listener is; P0-7 reads it).
+
 ## Machine verdict first
 
 The delegator pastes the `check-style.py --surface narration` output into the prompt. Read it
@@ -1023,17 +1027,15 @@ prompt carries no checker output run it yourself (Bash):
 ```bash
 set -o pipefail
 PG=${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references
-for S in narration subtitle screen; do
-  node "$PG/extract-text.js" ./storyboard/scenes.js $S | python3 "$PG/check-style.py" --surface $S -
-  echo "[$S] gate_exit=$?"
-done
+node "$PG/extract-text.js" ./storyboard/scenes.js narration | python3 "$PG/check-style.py" --surface narration -
+echo "[narration] gate_exit=$?"   # this read is narration only (0.50.0); the other surfaces are copy mode's
 ```
 
 ## P0 defects (one in any single sentence is a must-fix for that sentence)
 
-1. **S1 detected** — check-style.py exit 2. It's a P0 for the scene that sentence sits in
+1. **S1 detected** — check-style.py exit 2. It's a P0 for that sentence
 2. **Translationese wording** — the indirect particles, nominalized verbs, and double passive
-   listed in korean-style §B·§T instead of a direct spoken verb
+   listed in korean-style §T instead of a direct spoken verb
 3. **Unexplained jargon** — a term above the 초3~4 floor with no plain wording on first use.
    If spelling it out reads awkwardly, doubt whether the term is needed at all
 4. **AI stock phrases** — stock openings, inflated implications, and empty modifiers from
@@ -1074,8 +1076,7 @@ Start from 0 and add points **only with evidence that you actually read that sen
 
 ```
 ## Style check (check-style.py output)
-narration exit=0 score=100 / subtitle exit=2 score=60 (S1 D9 "달라진다" — scene 3)
-/ screen exit=1 score=95
+narration exit=2 score=60 (S1 D9 "달라진다" — sentence 7)
 
 ## Per-sentence vocabulary scores
 | Sentence | Plain | Spoken | Fresh | Total | Words flagged |
@@ -1144,7 +1145,8 @@ and `quote` speech clips (`visual.clip`) — anything produce will hand to `veo_
 fit, and **the stored clip prompt** (scenes-schema §clip prompt): each generated shot is one
 API call whose final prompt is stored on the shot (`visual.prompt` · `visual.video.prompt` ·
 `visual.clip.prompt`) in the planned route's grammar (`visual.engine` or the type default —
-b-roll → veo, motion background → seedance, speech clip → veo_reference); produce sends it
+b-roll → veo, motion background → seedance, speech clip → veo_reference — or the host video tool
+when `PRODUCTION.videoProvider` is `host`, CLAUDE.md §Host media tools first); produce sends it
 verbatim, so what you read here is what the model gets. On a still, `camera.movement` picks the builder's Ken Burns move (the still lane — eased
 zoom towards a focus point, pan, cover punch, handheld drift; directing-grammar §5 Still
 column) and `speed` sets how hard the window moves (the §4 still-lane beat ladder — the two
@@ -1154,9 +1156,9 @@ read it and carry anything wrong (a vendor word, seconds in a slot, a move that 
 the declared feel) as a correction directive.
 
 Out of scope: what the picture contains (image mode), whether the scene earns its place (scene
-mode), and the wording of the lines (copy and vocabulary modes). **This mode runs on every
-episode** — an episode with no generated shots still has a feel, a size and an angle on every
-shot; only the slot axes go `n/a` on the shots that don't become video.
+mode), and the wording of the lines (copy and vocabulary modes). **This mode runs only when a
+user asks for it by name** (0.50.0) — an episode with no generated shots still has a feel, a size and
+an angle on every shot; only the slot axes go `n/a` on the shots that don't become video.
 
 ## Inputs (supplied by the delegation prompt)
 
@@ -1297,9 +1299,9 @@ is scored on the shot-grammar axes alone.
 
 # Sound mode
 
-**What the episode will sound like, judged while changing it is still free.** The picture gets
-read three times over — its role, its camera, then the frame that came out — and the sound
-gets read none. You are that read. The music bed itself is
+**What the episode will sound like, judged while changing it is still free.** The flow's two
+narration reads judge the words, not the sound. This mode runs only when a user asks for it by
+name (0.50.0). The music bed itself is
 made later in produce §3; what you judge is the plan the storyboard commits to.
 
 ## Scope
@@ -1446,10 +1448,11 @@ generated image but an HTML slide that produce §3.6 builds, so having no
    "딸깍연구소" → "달닥연구소"). **Blow symbols on line art or busy backgrounds up 6× to read
    them** — a `=` overlapping a background line has been read as an inverted `≠`
 3. **Person contract violation** — a likeness that could be confused with a real person or a
-   specific celebrity / no person on the cover / **no person in an image serving as a b-roll
-   source** (the PNG named by a `broll` scene's `visual.src` — veo needs something to move.
-   Two images max per episode, and the opening slot is usually the cover background) / a
-   person who doesn't match profile §1's target audience
+   specific celebrity / a person pasted into a shot that doesn't need one (produce hard rule
+   11 — no demographic default) / **a b-roll source image with nothing for the clip to move**
+   (the PNG named by a `broll` scene's `visual.src`. Two images max per episode, and the
+   opening slot is usually the cover background) / a person who doesn't match profile §1's
+   target audience
 4. **National symbols** — flags, national emblems, maps, government buildings, people in
    uniform (banned without prior approval)
 5. **Bright subtitle zone** — the bottom third is bright enough that white subtitles don't
@@ -1543,9 +1546,9 @@ scenario, narration, copy, sound and image mode `score` is the total; in **scene
 mode it is the lowest scene's or shot's, and in vocabulary mode the lowest sentence's** (never
 the average — an average lets one collapsed item through).
 
-**You are read once.** There is no next round to catch what you skipped, so score only what
-you actually looked at and write every finding you have, including the ones you'd normally
-hold back for a second pass.
+**Write as if you are read once** — even in the two looped modes the next read may never come,
+so score only what you actually looked at and write every finding you have, including the
+ones you'd normally hold back for a second pass.
 
 Carry a finding you aren't sure about as a correction directive instead of a P0, except
 where you suspect **AI-tell structure (copy P0-2), a factual mismatch (copy P0-3), no role

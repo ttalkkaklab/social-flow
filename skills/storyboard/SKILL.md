@@ -13,7 +13,7 @@ description: >
   checkers and the author's own read. Plans each promise, visual change and sound event.
   Nothing is generated here. Produce builds the approved board; autoproduce runs unattended.
 argument-hint: "<channel> <topic or topic hint>"
-allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "Agent", "AskUserQuestion", "WebSearch", "WebFetch", "mcp__social-flow__capability_status", "mcp__social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__social-flow__serp_image_search", "mcp__social-flow__stock_search", "mcp__social-flow__datago_search", "mcp__social-flow__datago_detail", "mcp__social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch", "mcp__social-flow__datago_api_call", "mcp__social-flow__suno_generate_lyrics"]
+allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "Agent", "AskUserQuestion", "WebSearch", "WebFetch", "mcp__social-flow__capability_status", "mcp__social-flow__storyboard_apply", "mcp__social-flow__storyboard_check", "mcp__social-flow__storyboard_read", "mcp__social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__social-flow__serp_image_search", "mcp__social-flow__stock_search", "mcp__social-flow__datago_search", "mcp__social-flow__datago_detail", "mcp__social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch", "mcp__social-flow__datago_api_call", "mcp__social-flow__suno_generate_lyrics"]
 ---
 
 # Storyboard authoring — data/[channel]/episodes/[topic]/storyboard/
@@ -53,7 +53,7 @@ file, and both write their score and read count into `scenes.js` at approval.
 ```
 data/<channel>/episodes/<topic slug>/storyboard/
 ├── research.md      # evidence, sources, cross-check log (skipped on channels that skip research)
-├── candidates/      # d1.md · d2.md · d3.md — the three scored scenarios (§2.2); kept after the pick
+├── candidates/      # d1.md · d2.md · d3.md — the three candidate scenarios (§2.2; scored only on the unattended path); kept after the pick
 ├── scenario.md      # the winner, copied from candidates/ after the pick; consumed by §4
 ├── storyboard.md    # the human-readable storyboard — shot tables + embedded images
 ├── storyboard.html  # review render — loads scenes.js directly and draws it (template-based, §6)
@@ -189,7 +189,7 @@ a path (`mkdir -p data/<channel>/episodes/<topic slug>/storyboard`); §3 still r
 episode-state before scenes.
 
 **§2.1 first research, then the three messages and one topic cut from each** → **§2.2 three
-scored scenarios, then one pick** → **§2.3 additional research** on the chosen direction (the
+candidate scenarios, then one pick** → **§2.3 additional research** on the chosen direction (the
 exit). Tool choice, ingest, and the skip-research exception sit under all of them, at the end
 of this section.
 
@@ -445,7 +445,7 @@ Core rules:
     understand (180s is the absolute cap, and it is not a channel field).
     Choose each cut, including the hook, with [render-routing.md](references/render-routing.md).
     Write `shot.render` before assets: still camera, character HTML, object HTML, data graph,
-    or generated video. The default video cap of 2 is a ceiling, not a target. `hook_video`
+    generated video, editorial HTML (quote/verdict) or stock video. The default video cap of 2 is a ceiling, not a target. `hook_video`
     defaults off; an explicit channel override remains a constraint. Every paid video cut
     explains why continuous motion is essential. Keep the static-ground and budget checks.
   - **YouTube long-form 16:9**: **28–70 shots · 8–15 min** (20 min absolute cap) +
@@ -456,7 +456,7 @@ Core rules:
   **stayed to watch, engaged views, and subscribers gained per video**. Pick length and
   format from the episodes that produced engaged views and subscriptions, not raw views.
 - **Meet the channel's true-motion floor before calling a still "enough."** Only
-  `window.MOTION_POLICY.allowedKinds` counts: `ai-video`, `recording`, or `motion-slide`.
+  `window.MOTION_POLICY.allowedKinds` counts: `ai-video`, `recording`, `stock-video` or `motion-slide`.
   Ken Burns, camera instructions, caption changes and still swaps do not. With `requireAction`,
   each qualifying shot writes the visible subject change in `visual.action`; the full checker
   blocks a weak ratio, an overlong still, or too many still shots in a row.
@@ -536,7 +536,7 @@ Core rules:
   the setup, the body builds the conflict, the turn is the moment someone saw it differently,
   and the result is the payoff, **the first place the answer appears**. Write a `beat` on each
   shot. **Inside the long-form skeleton, the body's beats follow the structure the user picked in §2.5** (scenario-craft §11).
-- **Underneath the beats, run the twelve craft rules** (`references/scenario-craft.md`). After
+- **Underneath the beats, run the fourteen craft rules** (`references/scenario-craft.md`). After
   drafting, walk the scenes top to bottom and speak the connective at every seam — each one
   reads "그래서" or "그런데", never "그리고" (an and-then seam is a scene to merge, cut, or
   reorder); check each scene turns a charge (what's at stake reads differently at close than
@@ -574,7 +574,7 @@ Core rules:
   builds, and on a short the result-first cover, where the drips then make that result hold up. The cover title and the platform title carry the same stimulus. Continuity applies to the stimulus, not to the outcome — playbook §2 governs the title and description whatever the cover's hookType is. If you pick fear,
   the threat needs evidence in research.md or a hedge to a possibility, and the drips (short)
   or the body (long-form) have to answer that threat. An opening with none of the four is a
-  copy-mode P0. The source of truth is scenes-schema §the four opening strategies.
+  copy-mode P0 (on request; in the flow this is the author's own check). The source of truth is scenes-schema §the four opening strategies.
 - **Short-form is run by early drop-off — stop · hold · satisfy · act, not the look of the
   panels.** Half or more of the viewers who leave a Short leave inside the first 3 seconds,
   completion decides distribution under 60 s, and the platform now reads "stopped, then left
@@ -679,10 +679,10 @@ Core rules:
   slots (`movement` · `speed` · `framing` · `end`) filled on b-roll, motion-background scenes,
   and quote speech clips. The clip prompt is assembled out of them here and stored; leave `end`
   empty and the ending nobody reviewed is exactly the last second that drifts.
-  `movement: "static"` is a decision, not a blank. On stills the block is optional —
-  write it when the still should move with intent: `movement` picks the builder's Ken Burns
-  move (eased zoom towards a focus point, pan, cover punch, handheld drift — the feel each
-  serves is directing-grammar §5's Still column). The vocabulary rules (vendor words, one move,
+  `movement: "static"` is a decision, not a blank. On a `still_camera` cut the move is
+  `shot.render.camera` (effect · target · reason, render-routing.md) through the camera HTML
+  runtime; this block is optional there, its `movement` the legacy Ken Burns vocabulary for a
+  card that reaches the builder as an image (the feel: directing-grammar §5's Still column). The vocabulary rules (vendor words, one move,
   no seconds, no exclusions) are `references/scenes-schema.md` §camera, and the move itself
   comes from the shot's `feel` (directing-grammar §4–§5) — it supports the feel, it doesn't
   carry it alone, and `framing` restates the shot's size and angle in the engine's words.
@@ -698,14 +698,15 @@ Core rules:
   with the shot's subject first (order is reference weight). It is what lets produce attach the
   character panels without re-reading the scene, and what resolves a character's veo ban per cut
   instead of per episode. Ids come from the channel's `assets/catalog.md`
-  (`resolve-asset.py --list <channel dir>`). **Where a generated clip hands over more than one
+  (`channel/references/resolve-asset.py --list <channel dir>`). **Where a generated clip hands over more than one
   reference, write each entry as `{ id, scope }`** — one clause per reference saying what it
   governs and where it may appear ("controls the helmet and body only", "appears only in the last
   second, and its face never transfers"). Unscoped references leak into each other, and the check
   strip warns on a multi-reference clip with no scope anywhere (scenes-schema §character reference).
 - **Select Seedance per cut** using produce `references/video-model-selection.md` §Seedance
-  per-cut selection. Ordinary hook: 1.5 Pro. Essential complex action: 2.0 if the source
-  qualifies. Multiple character/product references: 2.0; fixed voice or over nine reference
+  per-cut selection. Every motion background is a previz cut on the 2.x grade in
+  `PRODUCTION.videoModel` (§1.7); 1.5 Pro serves only a b-roll or speech slot that landed on
+  Seedance. Multiple character/product references: 2.0; fixed voice or over nine reference
   images: 2.5. Record the purpose, reason, face eligibility and reference paths beside the
   prompt (scenes-schema §Motion background). Rebuild the cost preview after any change;
   its generation settings are the ones produce sends. Keep the episode video cap without filling unused slots.
@@ -728,8 +729,8 @@ Core rules:
   wide holds ≥1.5× a close. The model fills whatever time it is handed, so asking 8 seconds for a
   4-second idea buys 4 seconds of invention (§cut length). Narration-carrying scenes keep the
   speech math — characters / 4.5 — **and on a motion background that math has to land inside
-  the route's one-call cap** (seedance 12s on the default 1.5 pro, veo 8s): a 13-second
-  narration over a 12-second clip is a loop seam nobody planned, so trim the narration or split the scene.
+  the route's one-call cap** (seedance 15s on the 2.0 grades and 30s on 2.5, veo 8s): a 16-second
+  narration over a 15-second clip is a loop seam nobody planned, so trim the narration or split the scene.
 - **Write what the episode sounds like, not only what it looks like.** Every shot that becomes a
   generated video gets `visual.audio` — one sentence on what that clip sounds like, ending in
   `no music, no speech` unless speech is the point. Leave it out and the engine invents a
@@ -841,7 +842,7 @@ python3 $PG/check-style.py --surface narration .work/text-narration.txt; echo "g
 ```
 
 1. **Delegate to the storyboard-reviewer agent (Agent) in "vocabulary mode"** with the
-   numbered sentence list (the `subtitle` extract, as in §4.4), the checker's output above
+   numbered sentence list (the same `check-story.js --text` list §4.4 handed over), the checker's output above
    pasted verbatim, and the `profile.md` path (§1 target audience · §2 plain-language principle — who the listener is). Read the tail
    `STORYBOARD_REVIEW: mode=lexicon score=NN p0=N worst=<sentence number>` — `score` is the
    lowest sentence's score.
@@ -926,8 +927,7 @@ once, in this order, before §5:
 - **The sound** — `visual.audio` written on every generated video shot, voice casting against
   profile §2 (never three speakers in one scene), `tts` spellings for digits and swallowed
   endings (「에이트」), every `sound.cue` naming a cue that exists, the drop spent on the line the
-  episode is about. What has no scenes.js field (the mix, the generation call, the engine) goes
-  into the §7 note under "hand to produce".
+  episode is about. What has no scenes.js field (the mix, the generation call, the engine) goes into the §7 note under "hand to produce".
 
 Write what you changed and what you chose not to change into the §7 hand-off note — the
 approval screen is where a defect on the board gets its human look.
@@ -996,7 +996,7 @@ so produce doesn't have to guess.
   local engine breaks Korean jamo (measured: "딸깍연구소" → "달닥연구소").
 - **A scene with `visual.character` → a reference call** (`gpt_image_img2img`), that
   character's panels as input images, face first then body, `back.png` only on a back-facing
-  shot. Never merge the panels into one sheet (`../produce/references/video-model-selection.md` §6).
+  shot. Never merge the panels into one sheet (`../produce/references/video-model-selection.md` §The character panels).
 
 **The cover background is this episode's meta image** — the cover frame becomes `cover.jpg`
 (the YouTube thumbnail and the first frame of the IG and FB videos) as-is. Not a metaphorical
@@ -1040,7 +1040,7 @@ Two generated forms count against the slot cap together:
 - **Motion background (`visual.video`)** — the scene itself as video. The scene's still becomes
   a parameter for a video laid under the background, and **narration, captions, and subtitles
   stay**. Use it where the movement itself is the content. `duration` inside one clip (veo 8s ·
-  the default seedance 1.5 pro 4–12s, server-validated) · points only · not combined with
+  seedance 4–15s on the 2.0 grades and 4–30s on 2.5 — the previz route every motion background takes — server-validated) · points only · not combined with
   per-line illustrations. Store the assembled prompt in `visual.video.prompt` (§clip prompt —
   `--clip --engine seedance --locks "…"`). Three rules hold on that route and the assembler
   exits 1 on each: the body is **English** (Korean only inside a dialogue quote), it **never
@@ -1075,7 +1075,7 @@ this says why. The convention is
 
 ```bash
 mkdir -p .work
-printf 'storyboard	engine_selection	motion background shot 3	seedance-1-5-pro-silent	silent slot, builder discards audio; rejected veo.lite (pays 8s for a 4s cut)\n' >> .work/decisions.tsv
+printf 'storyboard	engine_selection	motion background shot 3	seedance-2-0-video	previz cut on the reference route (PRODUCTION.videoModel), silent slot; rejected veo.lite (no clip input, pays 8s for a 4s cut)\n' >> .work/decisions.tsv
 printf 'storyboard	image_engine	points backgrounds	image_local_generate	no text in frame, $0; rejected gpt high (cost, not needed here)\n' >> .work/decisions.tsv
 ```
 
@@ -1148,7 +1148,7 @@ in any scene's `visual.character`, no more. One entry each: `id`, `name`, `role`
 `../../../assets/characters/<id>/face.png` and so on; list only files that exist), `note` (what
 governs this character on screen — a veo ban, a fixed voice), and `veo` (`"banned"` when the
 profile bans it, otherwise omitted). Leave the array out entirely and the document simply has no
-cast section. `resolve-asset.py --list <channel dir>` prints the ids and paths.
+cast section. `channel/references/resolve-asset.py --list <channel dir>` prints the ids and paths.
 
 **Fill `SB_DOC.craft` with the promises the episode makes** — the loop ledger the §4 craft
 rules ask for, in the one place the approver reads. `loops[]` first: the cover's own hook as
@@ -1238,7 +1238,7 @@ plan and the contract `check-slide.js` already read out of scenes.js. Same for t
 what goes on the screen is each shot's `bgPrompt` and its engine, not a picture.
 **Show the motion contract too** — measured true-motion shots against the required count, the
 longest still run in shots and seconds, the allowed motion kinds, and the generated-video cap;
-on a short, the hook's moving form and, if a second generated cut exists, its `visual.why`.
+on a short, every generated cut's `shot.render.reason` (and `visual.why` where it is written).
 The numbers come from the profile-backed `window.MOTION_POLICY`; a motion finding from
 `check-scenes.js` blocks this approval screen rather than becoming an unresolved reviewer note.
 **Carry the review results here too** — the narration read-through's final score and how
@@ -1322,7 +1322,7 @@ the approval on it — the portal is a mirror, not a gate.
   own, still have to reach the §7 screen in writing.
 - **Don't answer a read-through finding with the picture.** "It's on screen" is the failure §4.4
   exists to catch; the fix is a spoken sentence. Self-check from the extract, not from scenes.js.
-- **Don't open scenes.js while still searching** — research is two passes with a scored pick
+- **Don't open scenes.js while still searching** — research is two passes with the pick
   in between (§2.1 first research → §2.2 three candidates and the pick → §2.3 additional
   research, then the sufficiency check). Don't start the second pass before the pick. Don't
   offer three wordings of the same question, or three pages with the same primary engine, as

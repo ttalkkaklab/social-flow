@@ -96,8 +96,8 @@ deliverables — the storyboard's cover background prompt (`scenes.js` cover
 source prompt, motion, usage duration, justification), against `profile.md` §3.
 A `treatment:"footage"` slide anywhere in the plan is a P0 on its own — nothing is
 drawn over video (user directive 2026-09-05, CLAUDE.md §Nothing is drawn over video).
-This is the last gate before calls that cost money and time
-(image_local_generate, gpt_image high, veo), so the goal is finding reasons NOT
+This mode runs on request only (0.50.0 — the standing gate before calls that cost money
+is the author's own check under produce rule 13); when it runs, the goal is finding reasons NOT
 to generate as planned. With two slots, **judge each separately and name the
 slot in the P0** — one slot passing never passes the other.
 In this mode skip the style check and per-axis scores — judge only the plan P0s below.
@@ -106,11 +106,13 @@ The episode's share trigger is settled on the board — `check-scenes.js` fails 
 
 **Plan P0s (any one → FAIL — do not generate):**
 
-1. **Still-life source** — no person in the cover-background or b-roll source
-   prompt (produce hard rule 11. With only objects, Veo has nothing to move)
+1. **Source can't carry the action** — the cover-background or b-roll source
+   prompt gives the clip nothing to move (produce hard rule 11 — a person belongs in
+   the source only when the shot needs that person; a demographic default pasted into
+   an unrelated topic is a finding, not a fix)
 2. **Person-contract violation** — directs a real person or specific celebrity,
-   or nudges resemblance to one / not photorealistic style / target-person
-   mismatch (default: a Korean woman — if profile §3 sets a different target, that one)
+   or nudges resemblance to one / not photorealistic style / a person who doesn't
+   match the target profile §3 names (there is no default person)
 3. **Context mismatch** — the cover-background plan fails to put the episode's
    topic on screen (the cover frame becomes cover.jpg, the thumbnail — no
    off-topic scenes or generic still lifes)
@@ -160,7 +162,7 @@ The episode's share trigger is settled on the board — `check-scenes.js` fails 
 9. **Slot-contract violation** — 3 or more b-roll scenes, or two slots with the
    same `after` (cap: 2 per episode — scenes-schema §broll) / two slots using
    the same source PNG so the same shot appears twice / the scene a body b-roll
-   attaches to has a locally-generated background (veo input must be gpt_image high)
+   attaches to has a locally-generated background (veo input is a gpt_image high or host-tool still, never local Z-Image — produce rule 12)
 10. **Minor in frame** — the source/reference plan includes a person who looks
    like a child or teenager. Photo or illustration alike, Veo's image lane
    blocks it (Support code 17301594) and Seedance 1.x is unconfirmed — this is
@@ -183,7 +185,7 @@ The episode's share trigger is settled on the board — `check-scenes.js` fails 
    first because array order is weight. A live-action character keeps its
    single image. Panels handed over as separate files are not a finding;
    panels pasted together into one sheet are. The rule's source of truth is
-   produce `references/video-model-selection.md` §6
+   produce `references/video-model-selection.md` §The character panels
 
 13. **Spatial language the model cannot follow** — the cover `bgPrompt` or a still's
     `shot.space` uses camera-inference (`left view of`, `right view of`, `front view of`),
@@ -276,7 +278,7 @@ you still can't find it, report every surface as "unverified" (never as all-S1
    `<IG_REELS_URL>` in `output/threads/post.md` is a designed placeholder, not
    an unfinished leftover — publish substitutes the IG permalink in §3. Never
    score it as a P0
-2. **Clipping / overlap** — in frames, text leaves the safe zone (x 176~904) or elements overlap
+2. **Clipping / overlap** — in frames, text leaves the safe zone (portrait x 176–904 · y 190–1350; wide x 96–1824 · y 96–795) or elements overlap
 3. **Factual mismatch** — figures, dates, or proper nouns in copy/subtitles
    differ from scenes.js/research.md. **Collapsing a range to its upper bound is
    also distortion** ("300만~500만" → "500만"). A cover the storyboard marked as
@@ -305,7 +307,10 @@ you still can't find it, report every surface as "unverified" (never as all-S1
    a list instead of appearing one at a time (produce hard rule 14 — points puts
    title + one caption in the top block, cover uses the bottom block; the quote
    freeze-frame card centers its quotation, and a gradient wash behind it is
-   banned like everywhere else — owner 2026-08-25)
+   banned like everywhere else — owner 2026-08-25). **Not this P0:** a
+   `kind:"diagram", treatment:"editorial"` slide on the studio stage — lit slabs, a
+   cyclorama, a rendered object — is full-frame by design (produce hard rule 16,
+   CLAUDE.md §Nothing is drawn over video); judge it on §9 of slide-design.md instead
 10. **Result given away** — the YT title, the description, or the IG caption
     names the outcome: the tally, the winner, the twist, `COMPREHENSION.answer`
     or the last drip in other words, the number that is the payoff
@@ -315,7 +320,8 @@ you still can't find it, report every surface as "unverified" (never as all-S1
     states the result changes nothing here** — the video may now open on the
     answer, and these three surfaces still may not name it.
 11. **Experience not verified or not delivered**: the required final-playback report is
-    missing, an essential motion/listening check is unverified, the main promise has no
+    missing, the STORY review evidence (`check-story.js`) is missing or stale, an essential
+    motion/listening check is unverified, the main promise has no
     payoff, or an essential reveal/sound is missing or unintelligible in the final edit.
     Name the missing evidence or cite the observed scene and time. A subjective preference
     for faster pacing alone is a correction directive, not this P0.

@@ -29,7 +29,7 @@ lightens the cross-check burden: 1 primary source = settled, 2 articles = cross-
 | `datago_file_fetch` | key + 활용신청 (usage application) | page through large file datasets row by row (odcloud) |
 | `datago_api_call` | key + 활용신청 (usage application) | call a standard open API (live and query-conditional data) |
 
-The auth key is injected as `DATA_GO_KR_API_KEY` (project `.claude/settings.local.json`).
+The auth key is injected as `DATA_GO_KR_API_KEY` from the shell environment (README §Environment variables).
 Even with a key, a **per-API 활용신청** (usage application on the portal — log in;
 most are auto-approved) has to come first — see §4 below.
 

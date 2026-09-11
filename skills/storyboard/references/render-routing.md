@@ -56,7 +56,9 @@ their source and stay outside this classification.
 | Continuous action that carries the meaning | `live_action` | `generated_video` | Cloth in the wind, or a person's movement, when that movement is the point. |
 | Real footage of the actual place, era or event | `archive` (this route only); `live_action`, `atmosphere` and `place` may take it instead of their default | `stock_video` | A 1950 newsreel of the street; a real launch from the NASA library; a real market at dawn from Pexels. The license record travels with the cut (scenes-schema §stock material). |
 
-Stills also record `camera.effect`, `target` and `reason`. Focus-in suits introducing a
+Stills also record `camera.effect`, `target` and `reason` — eight effects: `focus-in` ·
+`rack-focus` · `approach` · `pull` · `pan` · `push` (the plain slow zoom-in, still-camera.js's
+default) · `reveal` · `parallax`. Focus-in suits introducing a
 person, approach suits stressing a clue, rack focus a shift of attention, pull a place. Do
 not repeat one effect on every cut. Foreground reveals and depth parallax need prepared
 layers. Asset conditions are in [illustrated-scenes.md](illustrated-scenes.md).
@@ -177,21 +179,33 @@ For every newly authored image-to-video shot, set `visual.frames.mode` to `first
 `first_last` and write `reason`. Use `first_last` when the final position, a camera destination,
 opening/closing, assembly, removal or another visible state change must be controlled. Write
 `endState` before generating images. Use `first` for a mood shot or subtle ambient motion with
-no required destination. The decision is per shot, independent of hybrid/full-video choice.
+no required destination. The decision is per shot, independent of hybrid/full-video choice —
+with one rule on top since 0.73.0: a previz cut (every generated motion background) is `first`
+only, because the reference route takes no `last_frame`; its destination is the previz's own
+last frame, which the clip follows. `first_last` remains for a slot without a previz (a b-roll
+on Seedance 1.x or Veo).
 
 ```js
 visual: {
   bg: 'images/s1-start.png',
   frames: {
-    mode: 'first_last',
-    reason: 'The camera must end close to the closed book.',
-    endState: 'The same closed book fills the lower center; furniture stays in place.',
-    end: 'images/s1-end.png'
+    mode: 'first',
+    reason: 'The camera ends close to the closed book — the previz\'s last frame is that destination.'
   },
-  video: { engine: 'seedance', model: 'seedance-1-5-pro-251215',
-    resolution: '1080p', generateAudio: false, prompt: 'Slow forward dolly toward the closed book.' }
+  camera: { framing: 'medium on the closed book', movement: 'dolly in', speed: 'slow', end: 'the closed book' },
+  video: { engine: 'seedance', model: 'dreamina-seedance-2-0-260128', modelPurpose: 'previz',
+    modelReason: 'the previz carries the camera', realFaceInput: false,
+    resolution: '1080p', generateAudio: false, referenceImagePaths: ['images/s1-start.png'],
+    previz: { renderer: 'threejs', clip: 'previz/s1.mp4', firstFrame: 'previz/s1-f0001.png',
+      sha256: '<64 hex>', fps: 24, seconds: 5, camera: { movement: 'dolly in' } },
+    prompt: 'Image 1 is the first frame. Use Video 1, a 3D clay-model previz, as the only reference for camera movement… Do not reference its visual content. …' }
 }
 ```
+
+The previz block is what makes this a legal generated cut (§Every generated video cut is
+previz-guided); the model is the grade the user chose in `PRODUCTION.videoModel`. Note the
+end frame: a previz cut cannot carry `first_last` — the reference route takes no `last_frame` —
+so on a previz cut `frames.mode` is `first` and the destination is the previz's own last frame.
 
 `visual.bg` is the start image. `visual.frames.end` is the end image; the Seedance router
 forwards it as `lastImagePath`. Do not maintain a second divergent end path. Legacy
