@@ -1535,9 +1535,9 @@ produce keeps the same recipe as its fallback for an older scenes.js with no sto
 The rules that applied to the old one-string camera line now apply per slot:
 
 - **Vendor vocabulary only** — `dolly in` not `push in`, `arc shot` not `orbit`. `push` appears 0
-  times in the canonical Veo text, and without `ARK_API_KEY` a motion background falls back to
-  Veo (§motion background).
-- **`movement` holds one move.** Two is the ceiling on the default 1.5 Pro, and the
+  times in the canonical Veo text, and a b-roll or speech slot lands on Veo (a motion
+  background is a previz cut on Seedance 2.x and has no Veo route, §motion background).
+- **`movement` holds one move.** Two is the ceiling on 1.5 Pro (a b-roll or speech slot that landed on Seedance), and the
   one-move-per-cut rule is Seedance 2.0's alone — write a second move only with a reason. On a
   deliberate long take (10s+) it is one, no exception.
 - **No seconds in any slot** — length is `duration` (§cut length).
@@ -1926,8 +1926,9 @@ assembler builds it from the four `visual.camera` slots (§camera), which is exa
 `opening frame composition + move + closing frame composition`. What `--motion` adds on top is
 the subject motion — what moves in the picture while the camera does its one thing — and the
 `visual.audio` sentence closes it. The reason an approaching move is written as `dolly in` is
-that **this prompt may also go to Veo** — without `ARK_API_KEY` the motion background falls
-back to `veo_img2video`, and the word `push` appears 0 times in the canonical Veo text.
+that **the same camera vocabulary serves a Veo call on a b-roll or speech slot** — a motion
+background itself never goes to Veo now, being a previz cut on Seedance 2.x — and the word
+`push` appears 0 times in the canonical Veo text.
 Seedance's own vendor vocabulary is Chinese (`推`), so neither is confirmed in English, and
 `dolly in` satisfies both paths; a Seedance-shaped prompt would survive a Veo call as written
 (no timecodes by rule), though a motion background never makes one now — the previz rides

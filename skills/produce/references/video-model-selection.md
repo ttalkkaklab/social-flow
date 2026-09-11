@@ -156,10 +156,11 @@ model, purpose, resolution, audio, or references invalidates the cost snapshot. 
 price combinations block a budget verdict instead of using the 1.5 price. Forecasts use
 list prices, including 2.5 at 1080p, so expiring discounts cannot understate the budget.
 
-Keep upgrades inside the episode budget and existing approval scope. Unattended runs
-use 1.5 for ordinary hooks; they may select 2.x for the requirements above only when the
-full revised estimate fits the authorized cap. Do not make a paid A/B comparison by default.
-If a compatible 1.5 clip repeatedly misses an essential action, a 2.0 retry is an escalation:
+Keep upgrades inside the episode budget and existing approval scope. Unattended runs make
+a hook only on the growth plan's standing `video_model` (a 2.x grade; with none, no generated
+hook at all), and may pick a higher 2.x grade for the requirements above only when the full
+revised estimate fits the authorized cap. Do not make a paid A/B comparison by default.
+If a compatible 1.5 clip on a b-roll or speech slot repeatedly misses an essential action, a 2.0 retry is an escalation:
 record the failure and reason, retain the spent ledger, and recalculate the remaining budget
 before calling. Reference/voice requirements cannot be dropped just to fit the cap.
 
@@ -754,12 +755,12 @@ twice, and it's attached to the **angle section and the lens section** — `clos
 `medium shot`, `wide shot` live there. The 12-move section has no such warning. But "so moves
 work better" is an inference from silence.
 
-**Set moves-per-cut per model — what the engine allows.** Our default model **Seedance 1.5 Pro
-has the vendor teaching combinations** (Hitchcock shot = `推拉`+`变焦`), so a second move can be
+**Set moves-per-cut per model — what the engine allows.** **Seedance 1.5 Pro (a b-roll or
+speech slot that landed on Seedance) has the vendor teaching combinations** (Hitchcock shot = `推拉`+`变焦`), so a second move can be
 tried there. The one-move-per-cut advice is **2.0-only**, and even there hedged as `尽量` (where
 possible). Carrying a rule read in one version to a sibling version collides head-on with the
 vendor docs. **What the storyboard writes is a separate contract** — one move per cut by default,
-a second only on 1.5 Pro and only with the reason written on the shot (scenes-schema §camera ·
+a second only on a 1.5 Pro slot and only with the reason written on the shot (scenes-schema §camera ·
 directing-grammar §4): the engine allows two, the pipeline asks why.
 
 **A move supports the shot's feel; it doesn't carry it.** The storyboard picks the move from

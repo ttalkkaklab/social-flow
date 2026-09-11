@@ -93,8 +93,10 @@ Two lines that hold whichever engine you pick belong here too.
   (the official docs point you at the experimental 2.0 model, which can't even produce
   audio). To hand a sketch or a toon scene frame over as a style, use `seedance_reference`.
 
-Without `ARK_API_KEY` the Seedance calls fail. Then make it with Veo as before, keeping ①'s
-face clauses intact — the two engines don't block each other.
+Without `ARK_API_KEY` the Seedance calls fail. A b-roll or speech slot can then be made on
+Veo, keeping ①'s face clauses intact — the two engines don't block each other — but a motion
+background cannot: it is a previz cut and only Seedance 2.x takes the reference clip, so it
+waits for the key or moves to the host lane.
 
 ## Video prompt grammar — it differs by engine
 
@@ -148,7 +150,7 @@ only the summary is here.
   in `build-report.txt`.
 - **Don't put seconds in a Seedance prompt** — the scene's `duration` sets the length and the
   edit does the cutting. The vendor notice covers 2.0 (2.5 responds to whole seconds) and
-  nothing is confirmed for the default model 1.5 Pro — this rule rests on our pipeline, not
+  nothing is confirmed for 1.5 Pro — this rule rests on our pipeline, not
   on vendor documentation. **Veo is the opposite** — the 3.1 blog presents `[00:00-00:02]`-style
   span splitting as a workflow (blog grade — the reference docs never took it up, checked
   2026-08-25).

@@ -505,7 +505,7 @@ an unexplained difference between the storyboard's plan and the video.
 
 ```bash
 printf 'produce\tmusic_source\tepisode BGM\tmusic_generate_clip\t30s Lyria clip, builder extends; rejected suno (sung vocals fight the voiceover)\n' >> .work/decisions.tsv
-printf 'produce\tfallback\tmotion background i3\tveo_img2video\tARK_API_KEY absent — seedance route unreachable; recorded in build-report.txt as the allowed deviation\n' >> .work/decisions.tsv
+printf 'produce\tfallback\tmotion background i3\thold\tARK_API_KEY absent — a previz cut has no Veo route; waiting for the key (or the host lane); recorded in build-report.txt\n' >> .work/decisions.tsv
 ```
 
 ### 3.5 Take in the filmed clips (mixed-shooting episodes only)

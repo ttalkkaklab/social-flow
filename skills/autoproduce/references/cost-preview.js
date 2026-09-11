@@ -96,7 +96,7 @@ const ROUTES = {
   },
   'motion/veo': {
     key: 'veo.lite.1080p', fixedSeconds: 8,
-    why: 'veo_img2video · lite — the no-ARK_API_KEY fallback route · 1080p is 8s-only'
+    why: 'veo_img2video · lite — an explicit engine:"veo" motion slot (a previz cut never routes here; render-routing refuses it) · 1080p is 8s-only'
   },
   'quote/veo': {
     key: 'veo.fast.1080p', fixedSeconds: 8,

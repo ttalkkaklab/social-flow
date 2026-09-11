@@ -155,7 +155,10 @@ data/<channel>/episodes/<topic-slug>/
 
 Load `data/<channel>/profile.md` (abort if missing). On an unattended call,
 also read the calling growth plan's `autoproduce:` block
-(`growth/<platform>/growth-plan.md` — the `<platform>` argument).
+(`growth/<platform>/growth-plan.md` — the `<platform>` argument): `enabled`, `topic_source`,
+`min_queue`, `daily_produce_cap`, `duplicate_threshold`, `max_cost_per_video`, `daily_cost_cap`,
+`weekly_cap`, `mark_queues`, and the two standing previz answers `previz_renderer` and
+`video_model` (§5 — absent, no generated cut is planned).
 
 **The lock is per channel** — two growth loops share one channel, so a
 per-platform lock is useless. Use `mkdir`'s atomicity.

@@ -742,7 +742,7 @@ Core rules:
   4-second idea buys 4 seconds of invention (§cut length). Narration-carrying scenes keep the
   speech math — characters / 4.5 — **and on a motion background that math has to land inside
   the route's one-call cap** (seedance 15s on the 2.0 grades and 30s on 2.5, veo 8s): a 16-second
-  narration over a 12-second clip is a loop seam nobody planned, so trim the narration or
+  narration over a 15-second clip is a loop seam nobody planned, so trim the narration or
   split the scene.
 - **Write what the episode sounds like, not only what it looks like.** Every shot that becomes a
   generated video gets `visual.audio` — one sentence on what that clip sounds like, ending in
