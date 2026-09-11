@@ -908,8 +908,8 @@ Delegate to the content-reviewer agent — **frames pulled from the burned-in
 copy** (the clean master has no subtitles, so typos and clipping don't show),
 the `t=0` frame and §8's first-cue start among them,
 the platform copy, scenes.js, and §4·§9's exit codes.
-If the channel skips research, state that too (the facts axis converts to full
-marks).
+If the channel skips research, state that too (copy is scored out of 85 and the
+tail rescaled to 100).
 **One read.** Apply its directives; if the tail (`CONTENT_REVIEW:`) came back under copy 95
 or with P0 > 0, don't delegate again — write `queue_*: hold` with the unresolved findings at
 wrap-up and let a human decide.

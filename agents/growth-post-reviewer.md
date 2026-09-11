@@ -48,9 +48,10 @@ cheaper than publishing a defect.
 - **Source context for reply drafts** — for search_reply, the target root post's
   body; for inbox_reply, the original comment plus the body of our post it was
   left on. Never judge a reply without this
-- `data/<channel>/growth/threads/growth-plan.md` — tone, topic pool, banned topics, keywords
+- `data/<channel>/growth/<platform>/growth-plan.md` — tone, topic pool, banned topics, keywords
+  (threads · instagram · youtube; standalone copy from publish, channel or intro carries no plan)
 - `data/<channel>/profile.md` — channel identity, target, taboos
-- Playbook: `${CLAUDE_PLUGIN_ROOT}/skills/grow-threads/references/growth-playbook.md`
+- Playbook: the delegating skill's `references/growth-playbook.md` (grow-threads · grow-instagram · grow-youtube)
 - Style baseline: `${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references/korean-style.md`
 - Style checker: `${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references/check-style.py`
 - Unresolved findings from the previous round (if any) — judge explicitly whether each is resolved

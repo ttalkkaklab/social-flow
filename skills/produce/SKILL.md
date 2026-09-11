@@ -1226,15 +1226,16 @@ skips this.**
 
 Delegate artifact verification to the content-reviewer agent (Agent) — hand over video frame
 screenshots (**taken from the sped-up burn-in `reel-sub-fast.mp4`** — the clean one has no subtitles, so
-typos and clipping aren't visible), the per-platform copy, and scenes.js, and get back P0
+typos and clipping aren't visible), the per-platform copy, scenes.js, §8's `.work/experience-review.md`,
+`build-report.txt` and the storyboard's hand-to-produce table (the reviewer's P0-11 needs all three), and get back P0
 detections (typos, clipping, factual mismatch, platform taboos, copy-pasted sentences,
 unexplained jargon, AI tells, a result given away in the title or description) and axis scores.
 Pass the `check-style.py` path along with the
 exit codes and quote-exemption counts from §5 and §9 (the `check-meta.js` exit too) in the
 delegation prompt — the reviewer
 treats those numbers as the source of truth and doesn't override them with its own impression.
-If the channel skips research, state that in the delegation prompt too (the reviewer converts
-the facts axis to full marks).
+If the channel skips research, state that in the delegation prompt too (the reviewer scores copy
+out of 85 and rescales the tail to 100).
 **One read, on an episode that is going to be published** — a test build, or a version the
 user has said is not going out, skips this delegation (the phone QA in §8 and the checkers in
 §5·§9 still run). Apply its directives; if the tail (`CONTENT_REVIEW:`) came back under copy
