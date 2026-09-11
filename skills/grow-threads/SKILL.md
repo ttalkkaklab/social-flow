@@ -27,8 +27,8 @@ allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Age
 # Threads growth loop — one autonomous tick
 
 Growth skills are **split per platform** — tactics, tools, and state differ
-platform by platform. This skill is Threads-only; grow-instagram, grow-youtube,
-and grow-tiktok get added later on the same skeleton (plan = standing
+platform by platform. This skill is Threads-only; grow-instagram and grow-youtube
+sit on the same skeleton (plan = standing
 authorization · judgment-based publishing + review gate · idempotent state).
 That's also why the state path is scoped to `growth/threads/`.
 
@@ -84,7 +84,7 @@ account. Tactics and style rules live in `references/growth-playbook.md`
    If a draft can't clear it within 3 rounds, don't publish it — record it in
    growth-log as skipped, with its score. There is no per-day or per-tick count
    cap — the only remaining limits are the platform's own quotas (publish
-   250/24h · search 2,200/24h) and the qualitative rules (no re-engaging the
+   250/24h, api-limits.md) and the qualitative rules (no re-engaging the
    same post, no trailing the same account with back-to-back replies).
 6. **Every tool call specifies `channel: <channel-slug>`** — use only the
    channel's token, with no fallback to a default token (prevents
@@ -485,7 +485,7 @@ it isn't in `filledSlots[today]`, review material for that slot first, and on
 a successful publish record the slot into filledSlots (prevents double-filling
 a slot). Outside slots, publish whenever timely material appears (something
 found in a conversation just joined, the day's observation). Conversely, if
-the previous post is still inside its golden hour (60–90 min), hold the new
+the previous post is still inside its golden hour (first 60 minutes), hold the new
 one — your own posts would split the early distribution. **On a publish
 failure, don't retry within the tick** (the next tick retries — duplicate-post
 prevention).

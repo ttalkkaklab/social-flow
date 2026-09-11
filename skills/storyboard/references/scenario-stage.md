@@ -15,8 +15,9 @@ the 95-point loop exists to catch.
 The loop happens **after first research, the wow points and the three messages, before the
 pick** (storyboard §2.1 · §2.2). Three different episodes this topic could be — one topic cut
 from each message, each message the so-what of one wow point — are written as three pages
-**in one fixed shape — the seven items below** (user directive, 2026-09-02) — each one is
-scored, the user sees all three in full and picks among the ones that cleared 95. Additional
+**in one fixed shape — the seven items below** (user directive, 2026-09-02) — the user sees
+all three in full and picks (§Score: no reviewer on the attended path; autoproduce scores the
+three once in scenario mode and picks only among pages that cleared 95). Additional
 research and the board come after that, on the winner only.
 
 ## Contents
@@ -467,12 +468,12 @@ taken apart, when the research holds one. Its darkest beat is usually the curve'
 When this is `wow_lands`, its last sentence is the reversal, said plainly.>
 
 ## 전개 #2 — feel <sign · feeling>
-<what that event makes us think about now — the bridge, as a spoken thought>
+<the next necessary evidence, choice or consequence, on claims #N — a modern bridge only if
+the story needs one (item 4 above)>
 
 ## 전개 #3 — feel <sign · feeling>
-1. <case — what it is · what it has to do with the topic · row #N>
-2. <case>
-3. <case, optional>
+<the item that pays the promise or lands the wow — cases (1–3, each on a row) only when
+cases are the evidence>
 
 ## 마무리 — feel <sign · feeling>
 <the 「그날 이후로」 picture — where the world stands after the reversal, one sentence>

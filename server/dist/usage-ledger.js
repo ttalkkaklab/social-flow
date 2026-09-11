@@ -345,6 +345,9 @@ export function isBillableTool(tool) {
     // This wrapper records each synthesis and review itself, including rejected takes.
     if (tool === 'tts_generate_checked')
         return false;
+    // Catalogue reads cost nothing and belong in no ledger.
+    if (tool === 'tts_list_voices' || tool === 'tts_elevenlabs_voices' || tool === 'music_list_options')
+        return false;
     return (tool.startsWith('veo_') ||
         tool.startsWith('omni_') ||
         tool.startsWith('seedance_') ||

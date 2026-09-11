@@ -186,7 +186,7 @@ The template and state schema are in `references/growth-plan-template.md`.
    user and **stop**. Don't start the loop without insights (observing results
    is the loop's eyes).
 3. Fix the plan items with AskUserQuestion: 1–3 publish slots (the target's
-   active hours), queue eligibility (default `status: produced` +
+   active hours), queue eligibility (default `status: produced|published` +
    `queue: ready`), comment-reply tone (profile inheritance is the default),
    reply exclusions (spam, hostility), AI disclosure policy (default: always
    disclose).
@@ -194,7 +194,7 @@ The template and state schema are in `references/growth-plan-template.md`.
    **Autoproduce is asked separately** — it's the point where the loop's
    authority widens from publishing to authoring, so it's never on by default.
    On or off; where topics come from (`pool` default / `keywords` / `scout`);
-   the topic-pool entries; the per-episode cost cap (default $0.30); daily and
+   the topic-pool entries; the per-episode cost cap (default $1.00); daily and
    weekly cost caps; authoring runs per day (default 1 — within this platform's
    hard cap of 2); minimum queue level (default 1); which platform queues to
    stamp on success (`mark_queues` — offer only platforms with an approved
@@ -381,10 +381,12 @@ only):
    if not, the other platform's loop is authoring, so just move on
 
 On pass, Read `${CLAUDE_PLUGIN_ROOT}/skills/autoproduce/SKILL.md` and **follow
-the unattended-mode procedure as written**. Pass the metric read in §2
+the unattended-mode procedure as written** — the invocation is
+`autoproduce <channel> unattended youtube` (no topic: the plan's `topic_source` decides). Pass the metric read in §2
 (`averageViewPercentage`) as the tier-judgment input — the judgment is a trend
 (if the last 3 episodes' average worsened 5%p or more against the previous 3,
-promote the cover to motion). Under 6 published episodes, no promotion
+promote the opening b-roll after the cover to veo-lite — the cover's text never
+escalates, cost-tiers §The economy tier). Under 6 published episodes, no promotion
 (source of truth: autoproduce `references/cost-tiers.md`).
 
 **On authoring success, stamp every platform queue in the plan's
@@ -468,14 +470,13 @@ in the tick report (the most common cause is a token missing the
   §Funnel).
 - **Set the Shorts vertical-surface frame** — `thumbnailFilePath` changes only
   the landscape surface; the vertical frame in the Shorts feed and the
-  channel's Shorts tab changes only through the YouTube app's frame picker
-  (publish skill `references/shorts-surface-adb.md`). If the channel's
-  dedicated AVD (profile.md §4) is still logged in on its snapshot, the tick
-  runs it directly and confirms `oardefault.jpg` 200. If the emulator is
-  missing or logged out, **don't halt the loop** — write the videoId and the
-  hold reason into growth-log and the tick report for a human (the frame picker
-  is unstable for ~5 minutes after upload, so deferring to the next tick is
-  fine).
+  channel's Shorts tab is set in web Studio ("Select from video", driven with ego
+  lite — publish skill §Shorts frame), with the YouTube app's frame picker as the
+  fallback (`references/shorts-surface-adb.md`). Confirm the shorts-tab tile once
+  the video is public. If the browser needs a login the tick can't do, **don't
+  halt the loop** — write the videoId and the hold reason into growth-log and the
+  tick report for a human (the frame picker is unstable for ~5 minutes after
+  upload, so deferring to the next tick is fine).
 - **Open the velocity watch** — append
   `{ videoId, topic, publishedAt, samples: [], verdict: null }` to
   `state.watching`, `publishedAt` off our own clock (`youtube_publish` returns

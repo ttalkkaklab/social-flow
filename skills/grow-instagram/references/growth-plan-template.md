@@ -12,9 +12,7 @@ status: approved            # draft | approved — only approved allows autonomo
 approved_at: 2026-08-11
 tone: 존댓말                # comment-reply tone — 존댓말 (polite) or 반말 (casual), inherited from profile.md
 slots: ["09:00", "21:00"]   # 1–3 publish slots (local time, the target's active hours)
-daily_caps:
-  publishes: 2              # = slot count (cap 3)
-weekly_target: 4            # weekly publish target 3–5 (Buffer's measured balance point — a target, not a cap)
+weekly_target: 4            # weekly publish target 3–5 (Buffer's measured balance point — a target, not a cap; nothing reads it as a cap)
 queue_rule: "status: produced|published + queue_instagram: ready + public URL resolvable"
 media_hosting: base_url     # base_url | staged | off — with off the loop doesn't publish
 media_base_url: "https://cdn.example.com/social-flow"
@@ -25,8 +23,10 @@ autoproduce:                # when the queue runs dry the loop authors directly 
   min_queue: 1              # author only when the ready level is below this
   daily_produce_cap: 1      # this plan's episodes per day (success+failure combined, cap 2 — per-platform hard cap)
   duplicate_threshold: 0.5  # duplicate-verdict threshold (check-duplicate.py) — raise only for series channels
-  max_cost_per_video: 1.00  # USD — passes the economy baseline with the hook motion background (~$0.61 seedance · ~$0.90 veo lite); the lite b-roll promotion needs 1.60
-  daily_cost_cap: 2.00      # USD — two episodes at the veo-lite worst case; a single episode must fit under it
+  max_cost_per_video: 1.00  # USD — passes the economy baseline ($0.27–0.29) and one lite b-roll promotion ($0.91–0.93); with a hook on the mini grade below the promotion needs 1.50, on 2.0 1080p 3.70
+  daily_cost_cap: 2.00      # USD — two economy episodes with one promotion, or one episode with a mini hook and a promotion; a single episode must fit under it
+  previz_renderer: threejs  # threejs | blender — the standing answer to PRODUCTION.previz (every generated cut is a 3D previz cut); absent = the loop plans no generated cut
+  video_model: "dreamina-seedance-2-0-mini-260615 720p"   # a Seedance 2.x grade + resolution, the standing answer to PRODUCTION.videoModel (video-model-options.js prices the grades); absent = no generated cut
   weekly_cap: 7.00          # USD
   mark_queues: ["instagram"]  # queues to stamp on authoring success — only platforms with an approved growth plan
 ---
@@ -110,8 +110,9 @@ topic_keywords: ["Vietnam visa", "expat paperwork"]   # only with topic_source: 
   accrue in the channel-shared `data/<channel>/growth/autoproduce.json`. The
   ladder and promotion conditions:
   `skills/autoproduce/references/cost-tiers.md` is the source of truth, and
-  Instagram's promotion trigger is a 3-episode average `reels_skip_rate` above
-  55 (percentage-point scale).
+  Instagram's promotion trigger is a trend — the last 3 episodes' average
+  `reels_skip_rate` up 5+ points against the previous 3 (no absolute threshold,
+  revised 2026-08-15).
 - **Quality** — only episodes that pass every machine gate (fact check, style,
   storyboard-review copy, images, build report, content-reviewer P0, cost)
   become `queue_instagram: ready`; one failure means `hold`.

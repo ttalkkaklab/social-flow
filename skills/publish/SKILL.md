@@ -77,8 +77,8 @@ into promoting that prompt to "always allow".
 
    **The portrait frame is set in a browser** (measured 2026-08-19) —
    `studio.youtube.com/video/<id>/edit` → the `⋮` over the portrait image in the
-   thumbnail box → **"Select from video"** → the cover frame → Done → Save. Any browser
-   we drive works (ego lite by default, Chrome MCP as fallback); the native app is not
+   thumbnail box → **"Select from video"** → the cover frame → Done → Save. Drive it with
+   ego lite (the only browser lane — no Chrome MCP fallback); the native app is not
    needed. Don't pick `Change` (file upload) in that same menu — it only swaps the
    landscape surface. If the picker is missing or the cover isn't among the candidates,
    fall back to the emulator procedure in `references/shorts-surface-adb.md`.
@@ -311,7 +311,7 @@ permalink, say).
    **Set it in a browser while the video is still private** —
    `studio.youtube.com/video/<id>/edit` → the `⋮` over the portrait image in the
    thumbnail box → **"Select from video"** → the cover frame → Done → Save. Drive it
-   with whatever browser this session has (ego lite by default, Chrome MCP as fallback).
+   with ego lite (the only browser lane — no Chrome MCP fallback).
    `Change` in that same menu is file upload and only swaps the landscape surface.
    The emulator route in `references/shorts-surface-adb.md` is the fallback for when
    the picker is missing or the cover isn't among the candidates.
@@ -471,7 +471,12 @@ write the reason into the publish log.
   (rule 11) — write what they asked for and why under the episode's row, and the next
   episode carries the fix. Comment replies are the exception; they're the post-publish
   work, and the copy check above covers them.
-- Update `storyboard.md` to `status: published`.
+- Update `storyboard.md` to `status: published`. If the portal MCP is registered
+  (`mcp__ttalkkakstory__*`, README §Optional), call `episode_set_status` with
+  `status: "published"` and the `episodeId` in `storyboard.md`'s `portal_episode` frontmatter
+  (written at approval); without that field, `storyboard_save` on the episode directory's
+  absolute path returns it. Tools absent: one line, move on. A call that errors: report the
+  message in one line, retry a 409 once, and never hold the final report on it.
 - If you used a temporary tunnel, verify the teardown per §1, then give the final
   report as a platform/permalink table.
 

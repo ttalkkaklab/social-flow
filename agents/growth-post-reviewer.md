@@ -48,9 +48,10 @@ cheaper than publishing a defect.
 - **Source context for reply drafts** — for search_reply, the target root post's
   body; for inbox_reply, the original comment plus the body of our post it was
   left on. Never judge a reply without this
-- `data/<channel>/growth/threads/growth-plan.md` — tone, topic pool, banned topics, keywords
+- `data/<channel>/growth/<platform>/growth-plan.md` — tone, topic pool, banned topics, keywords
+  (threads · instagram · youtube; standalone copy from publish, channel or intro carries no plan)
 - `data/<channel>/profile.md` — channel identity, target, taboos
-- Playbook: `${CLAUDE_PLUGIN_ROOT}/skills/grow-threads/references/growth-playbook.md`
+- Playbook: the delegating skill's `references/growth-playbook.md` (grow-threads · grow-instagram · grow-youtube)
 - Style baseline: `${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references/korean-style.md`
 - Style checker: `${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references/check-style.py`
 - Unresolved findings from the previous round (if any) — judge explicitly whether each is resolved
@@ -156,9 +157,7 @@ Resolution of previous findings (only when there was a previous round): <finding
 GROWTH_POST_REVIEW: draft=N score=NN p0=N verdict=PASS|FAIL
 ```
 
-Verdict rule: **PASS when score ≥95 and p0=0**, otherwise FAIL (the user
-lowered the passing line from 95 to 90 on 2026-08-12 and reverted it to 95 on
-2026-08-13). The tail line is machine-parsed by the delegator — don't change
+Verdict rule: **PASS when score ≥95 and p0=0**, otherwise FAIL. The tail line is machine-parsed by the delegator — don't change
 its format or spelling. Downgrade findings you aren't sure about from P0 to fix
 directives, except suspected AI-tell structure (P0-8) and answering past the
 point (P0-7), which always go to P0 — those two are the defects that kill an

@@ -96,15 +96,15 @@ import {
 } from './mlx-serve-client.js';
 
 /**
- * Tool surface definitions (61 tools) — 6 research + 5 open-data +
- * 27 generation (5 image + 8 video + 6 speech + 7 music + 1 mesh) +
- * 5 per-platform publishing + 3 inbound comments + 1 account check +
- * 5 growth lookups (Threads insights/keyword search · YouTube insights ·
- * Instagram insights · recent-content feedback — the insights trio is for the
- * grow-* skills only; content_feedback covers both video platforms and writes
- * an HTML report) + 1 capability_status + 1 STT + 1 music-options + 1 suno credits.
- * The six mlx_* tools wrap MLX Core / mlx-serve on loopback; they are not a
- * second MCP server. 52 of those list without SNS tokens.
+ * Tool surface definitions (77 tools) — 9 research (incl. stock_search) + 5 open-data +
+ * 37 generation (5 image + 12 video + 9 voice + 1 STT + 9 music + 1 mesh) +
+ * 6 per-platform publishing + 3 inbound comments + 5 growth lookups (Threads
+ * insights/keyword search · YouTube insights · Instagram insights · recent-content
+ * feedback — the insights trio is for the grow-* skills only; content_feedback covers
+ * both video platforms and writes an HTML report) + 2 checks (sns_account_check ·
+ * capability_status) + 7 blender previz + 3 storyboard. The six mlx_* tools wrap
+ * MLX Core / mlx-serve on loopback; they are not a second MCP server. 68 of those
+ * list without SNS tokens (README §MCP tools is the per-tool table).
  *
  * Publish tool descriptions embed the HITL contract — this server has no
  * review gate, so a call is an immediately public post, and the descriptions
@@ -178,7 +178,7 @@ const VEO_DURATION_PROPERTY = {
 const VEO_NEGATIVE_PROMPT_PROPERTY = {
   type: 'string',
   description:
-    'What to keep OUT of the frame, as comma-separated noun or adjective phrases: "wall, frame, on-screen text, subtitles". Do NOT write instructions such as "no walls" or "don\'t show walls" — Google\'s prompt guide names that form as not recommended, and writing an exclusion into the prompt body tends to summon the very noun you named. Put every exclusion here instead of in prompt.',
+    'What to keep OUT of the frame, as comma-separated noun or adjective phrases: "wall, frame, on-screen text, subtitles". Accepted by the API on veo-3.1 fast/standard only — veo-3.1-lite rejects it (400, measured 2026-08-26), so on lite write the exclusion into the prompt as positive description; veo_reference and veo_extension have no such field (400, measured 2026-08-15). Do NOT write instructions such as "no walls" or "don\'t show walls" — Google\'s prompt guide names that form as not recommended, and writing an exclusion into the prompt body tends to summon the very noun you named. Put every exclusion here instead of in prompt.',
 } as const;
 
 /**
@@ -219,7 +219,7 @@ const OMNI_ASPECT_RATIO_PROPERTY = {
 const SEEDANCE_MODEL_PROPERTY = {
   type: 'string',
   description:
-    `Seedance model (default: "${DEFAULT_SEEDANCE_MODEL}" — the cheapest model that reaches 1080p, accepts photoreal human faces as input, supports seed, and has no activation gate). ` +
+    `Seedance model (default: "${DEFAULT_SEEDANCE_MODEL}" — the cheapest model that reaches 1080p, accepts photoreal human faces as input, supports seed, and has no balance gate — every ModelArk model still needs console activation). ` +
     'Quality, from the Artificial Analysis blind image-to-video arena: dreamina-seedance-2-0-260128 ranks 1st overall (Elo 1,198), the three Veo 3.1 tiers sit at 1,066-1,086, and seedance-1-5-pro-251215 is the arena baseline at 1,000 — so 2.0 is clearly the best Seedance, and 1.5 pro trades roughly a 59:41 preference against Veo for about a third of the price. ' +
     'dreamina-seedance-2-5-260628, the 2.0 fast/mini variants, and seedance-1-0-pro-fast-251015 have NO public evaluation at all — prefer them only for cost or for a capability the tested models lack, not for a shot that matters. ' +
     'The 2.x models REJECT input images containing real human faces and need account balance > $30 to activate, which rules them out for photoreal-person sources.',
@@ -1511,7 +1511,6 @@ Returns: a text block with the saved .mp4 file path, source video path, model, r
           type: 'string',
           description: 'Text description for the video continuation',
         },
-        negativePrompt: VEO_NEGATIVE_PROMPT_PROPERTY,
         sourceVideoPath: {
           type: 'string',
           description: 'Absolute path to the source video file to extend (must be a Veo-generated 720p video, 141 seconds or shorter, saved with its .veo.json handle)',
@@ -1558,7 +1557,6 @@ Returns: a text block with the saved .mp4 file path, reference image list, model
           type: 'string',
           description: 'Detailed text description of the video scene and subject interactions',
         },
-        negativePrompt: VEO_NEGATIVE_PROMPT_PROPERTY,
         referenceImagePaths: {
           type: 'array',
           items: {
@@ -2565,7 +2563,8 @@ Returns: a text block with the mp4 path, still paths (and any requested still ou
     title: 'Generate and review narration',
     annotations: HINT.generate,
     description: `Generate one scene with the pinned TTS engine, review the actual WAV, and regenerate failed takes up to maxAttempts (1–3, including the first take).
-Use for every generated narration scene in produce/autoproduce. Pass the existing generator's arguments in generation, the complete spoken expectedText (phonetic spelling; no acting tags or speaker labels), language, and the profile's intended delivery. Voice and generation settings stay unchanged across attempts. An entire scene is one call; never split it into sentence calls.
+Use for every generated narration scene in produce/autoproduce. Pass the existing generator's arguments in generation, the complete spoken expectedText (phonetic spelling; no acting tags or speaker labels), language, and the profile's intended delivery. Voice and generation settings stay unchanged across attempts; a pinned seed advances by one per retake, because the same seed returns the same bytes. An entire scene is one call; never split it into sentence calls.
+On tts_elevenlabs_generate the take is fetched with timestamps and its sentences are re-spaced before review: a fixed sentencePause of digital silence between sentences (stretched up to 1.0s where a subtitle cue would read faster than 6.0 chars/s after playbackSpeed), a 0.14s lead, speech samples copied as generated (the 12 ms fades stay on the natural gap). Pass segments (the scene's narration[].tts list) so the pauses land on the builder's segment boundaries; the wrapper writes <wav>.sentences.json and shifts the .alignment.json to the shipped audio.
 Checks signal/duration, a blind transcript (CER <=2%), then ${REVIEW_MODEL} listening scores: accuracy >=98, pronunciation/naturalness/clarity >=95, confidence >=0.9, no audible defects. Returns a hash-bound .wav.quality.json proof required by the builder. Missing keys, unavailable reviewer, malformed responses or exhausted attempts block production. Scores are operational thresholds, not a guarantee of human judgement.
 Requires ffmpeg and GEMINI_API_KEY even for local synthesis. Two paid audio-review calls per acoustically valid take, plus the selected generator's costs. Record the retry-inclusive allowance before calling; review tokens are logged as unpriced until reconciled with provider billing. Do not call again to reset an exhausted attempt budget. Do not use for recordings or native clip speech; retain their final listening QA. Do not change engines/voices or lower thresholds to obtain PASS.`,
     inputSchema: {
@@ -2582,6 +2581,9 @@ Requires ffmpeg and GEMINI_API_KEY even for local synthesis. Two paid audio-revi
         rejectTake: { type: 'object', additionalProperties: false, required: ['audioSha256','reason'], description: 'When final listening finds a defect in a previously checked take, reject that exact WAV and use only remaining attempts. Never waives any check.', properties: {
           audioSha256: { type: 'string', pattern: '^[a-f0-9]{64}$', description: 'SHA-256 of the current checked WAV, as recorded in its quality proof.' }, reason: { type: 'string', minLength: 10, maxLength: 1000, description: 'Actual time, word or sound defect observed during listening.' },
         } },
+        segments: { type: 'array', minItems: 1, maxItems: 80, items: { type: 'string', minLength: 1, maxLength: 1000 }, description: 'The scene\'s narration[].tts sentences in order (joined they read as expectedText). ElevenLabs takes get a fixed pause at each segment boundary — the boundary the builder\'s reveals and subtitle cues use. Without it, pauses go after sentence-final punctuation.' },
+        sentencePause: { type: 'number', minimum: 0.25, maximum: 1.5, default: 0.5, description: 'Silence between sentences in the take\'s own timeline, seconds. The builder detects pauses from 0.16s and fits a 0.35s reveal fade inside one.' },
+        playbackSpeed: { type: 'number', minimum: 0.5, maximum: 3, default: 1, description: 'The channel\'s playback factor from profile §2 (speedup.sh). A pause grows past sentencePause only where that sentence\'s subtitle cue would otherwise read faster than 6.0 chars/s after the speed-up.' },
       },
       required: ['generator','generation','expectedText','language','delivery','outputPath','filename'],
     },
@@ -3278,7 +3280,7 @@ Returns: a text block with the saved .wav path, model, duration, and generation 
 Use it BEFORE planning anything that spends money or depends on a provider — the top of a storyboard, produce, or autoproduce run. Without it, a missing key shows up only when the call fails, which is after the plan was built around a tool that was never going to run: planning two Veo b-roll slots on a machine with no GEMINI_API_KEY costs the review rounds before anyone finds out. Also use it when the user asks what they can make, or why a tool is failing.
 Do NOT use it to test whether a key still works. It reports CONFIGURATION, not reachability — a revoked key reads as configured here and fails at the call. Local engines report only whether their binary resolves (mflux, python3, mlx-qwen3-asr) or whether MLX Core.app / mlx-serve is installed — not whether :11234 is up. Read-only; makes no API call, so one call per session is enough.
 
-Returns: a capability menu — video_generation, image_generation, tts, music_generation, 3d_generation, speech_to_text, research — each listing its providers with the env var or local install each one needs, then the publishing platforms that have credential files, then the env vars grouped by what each would turn on.`,
+Returns: a capability menu — video_generation, image_generation, tts, music_generation, 3d_generation, speech_to_text, stock_footage, research — each listing its providers with the env var or local install each one needs, then the publishing platforms that have credential files, then the env vars grouped by what each would turn on.`,
     inputSchema: {
       type: 'object',
       properties: {},

@@ -82,7 +82,7 @@ FORMAT_ENV="$PWD/.work/format.env" \
 BG="#0b1020" $REF/build-screencast.sh .work   # → reel.mp4 (clean) · reel-sub.mp4 (burn-in) · subs.srt · cover.jpg · build-report.txt
 ```
 
-- After capturing overlays, confirm `window.__overflow === 0` via `evaluate_script` or by eye
+- After capturing overlays, confirm `window.__overflow === 0` via the `--dump-dom` capture (produce §4) or by eye
   (long titles auto-shrink through tight1–3, remainder exposed).
 - BGM is the same as produce §3 — copy the file that `resolve-asset.py data/<channel> bgm
   default` returns, and only when there is none, generate a `music_generate` instrumental. It

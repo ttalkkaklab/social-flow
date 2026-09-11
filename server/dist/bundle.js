@@ -78808,7 +78808,173 @@ function charUnits(args) {
 }
 function isBillableTool(tool) {
   if (tool === "tts_generate_checked") return false;
+  if (tool === "tts_list_voices" || tool === "tts_elevenlabs_voices" || tool === "music_list_options") return false;
   return tool.startsWith("veo_") || tool.startsWith("omni_") || tool.startsWith("seedance_") || tool.startsWith("gpt_image_") || tool.startsWith("tts_") || tool.startsWith("music_") || tool.startsWith("suno_generate") || tool.startsWith("mlx_") || tool === "image_local_generate";
+}
+
+// src/sentence-spacing.ts
+var SPACING_POLICY = "sentence-spacing-v1";
+var SPACING_DEFAULTS = {
+  rateCap: 6,
+  maxPause: 1,
+  /** Silence before the first word. The builder keeps 0.10 s of lead, so every card gets the same. */
+  lead: 0.14,
+  /** Speech kept after a sentence's last letter before the cut — the natural release of the word. */
+  tail: 0.12,
+  /** Speech kept before the next sentence's first letter — the onset the aligner does not count. */
+  head: 0.03,
+  /** Linear fade on either side of a cut (seconds). */
+  fade: 0.012
+};
+function parseWav(buffer) {
+  if (buffer.length < 12 || buffer.toString("ascii", 0, 4) !== "RIFF" || buffer.toString("ascii", 8, 12) !== "WAVE") throw new Error("Not a RIFF/WAVE file");
+  let sampleRate = 0, channels = 0, bitsPerSample = 0, format = 0, offset = 12;
+  while (offset + 8 <= buffer.length) {
+    const id = buffer.toString("ascii", offset, offset + 4);
+    const size = buffer.readUInt32LE(offset + 4);
+    const body = offset + 8;
+    if (id === "fmt " && body + 16 <= buffer.length) {
+      format = buffer.readUInt16LE(body);
+      channels = buffer.readUInt16LE(body + 2);
+      sampleRate = buffer.readUInt32LE(body + 4);
+      bitsPerSample = buffer.readUInt16LE(body + 14);
+    } else if (id === "data") {
+      if (format !== 1 || bitsPerSample !== 16) throw new Error(`Only 16-bit PCM WAV is supported (format ${format}, ${bitsPerSample} bit)`);
+      if (channels !== 1) throw new Error(`Only mono WAV is supported (${channels} channels)`);
+      const end = Math.min(body + size, buffer.length);
+      return { sampleRate, channels, bitsPerSample, pcm: buffer.subarray(body, end - (end - body & 1)) };
+    }
+    offset = body + size + (size & 1);
+  }
+  throw new Error("WAV has no data chunk");
+}
+var isLetter = (c) => /[\p{L}\p{N}]/u.test(c);
+function tagClose(chars, open2) {
+  for (let k = open2 + 1; k < chars.length && k <= open2 + 40; k++) {
+    if (chars[k] === "]") return k;
+    if (/[.?!…\[]/.test(chars[k])) return -1;
+  }
+  return -1;
+}
+function splitSentences(text2) {
+  return text2.split(/(?<=[.?!…]+)\s+/u).map((s2) => s2.trim()).filter(Boolean);
+}
+function locateSegments(alignment, segments) {
+  const chars = alignment.characters, starts = alignment.character_start_times_seconds, ends = alignment.character_end_times_seconds;
+  if (!Array.isArray(chars) || chars.length !== starts.length || chars.length !== ends.length) throw new Error("Alignment arrays differ in length");
+  let i2 = 0;
+  const out = [];
+  for (const [n, segment] of segments.entries()) {
+    const letters = [...segment.replace(/\[[^\]]*\]/g, "")].filter(isLetter);
+    if (!letters.length) throw new Error(`Segment ${n + 1} has no letters`);
+    let first = -1, last = -1;
+    for (const letter of letters) {
+      while (i2 < chars.length && chars[i2] !== letter) {
+        if (chars[i2] === "[") {
+          const close = tagClose(chars, i2);
+          if (close > i2) {
+            i2 = close + 1;
+            continue;
+          }
+        }
+        if (isLetter(chars[i2])) throw new Error(`Segment ${n + 1} (${segment.slice(0, 20)}\u2026) does not follow the take's text at character ${i2}`);
+        i2++;
+      }
+      if (i2 >= chars.length) throw new Error(`Segment ${n + 1} (${segment.slice(0, 20)}\u2026) runs past the end of the alignment`);
+      if (first < 0) first = i2;
+      last = i2;
+      i2++;
+    }
+    out.push({ text: segment, chars: letters.length, first, last, start: starts[first], end: ends[last] });
+  }
+  for (let j = i2; j < chars.length; j++) {
+    if (chars[j] === "[") {
+      const close = tagClose(chars, j);
+      if (close > j) {
+        j = close;
+        continue;
+      }
+    }
+    if (isLetter(chars[j])) throw new Error("The take speaks more text than the segments cover");
+  }
+  return out;
+}
+function planGaps(segments, options) {
+  const rateCap = options.rateCap ?? SPACING_DEFAULTS.rateCap, maxPause = Math.max(options.pause, options.maxPause ?? SPACING_DEFAULTS.maxPause);
+  return segments.slice(0, -1).map((s2) => {
+    const spoken = s2.end - s2.start;
+    const needed = s2.chars * options.playbackSpeed / rateCap - spoken;
+    return Math.min(maxPause, Math.max(options.pause, needed));
+  });
+}
+function respace(wavBuffer, alignment, segments, options) {
+  const { sampleRate, pcm } = parseWav(wavBuffer);
+  const total = pcm.length / 2;
+  const toSample = (seconds) => Math.min(total, Math.max(0, Math.round(seconds * sampleRate)));
+  const located = locateSegments(alignment, segments);
+  const gaps = planGaps(located, options);
+  const lead = SPACING_DEFAULTS.lead, tail = SPACING_DEFAULTS.tail, head = SPACING_DEFAULTS.head;
+  const fadeN = Math.max(1, Math.round(SPACING_DEFAULTS.fade * sampleRate));
+  const pieces = [];
+  const cuts = [];
+  const fade = SPACING_DEFAULTS.fade;
+  const slice = (fromSample, toSampleExclusive, fadeIn, fadeOut) => {
+    const out = Buffer.from(pcm.subarray(fromSample * 2, toSampleExclusive * 2));
+    const n = out.length / 2;
+    if (fadeIn) for (let k = 0; k < Math.min(fadeN, n); k++) out.writeInt16LE(Math.round(out.readInt16LE(k * 2) * (k / fadeN)), k * 2);
+    if (fadeOut) for (let k = 0; k < Math.min(fadeN, n); k++) {
+      const idx = n - 1 - k;
+      out.writeInt16LE(Math.round(out.readInt16LE(idx * 2) * (k / fadeN)), idx * 2);
+    }
+    return out;
+  };
+  const silence = (seconds) => Buffer.alloc(Math.round(seconds * sampleRate) * 2);
+  const s0 = Math.max(0, located[0].start - head);
+  pieces.push(silence(lead));
+  let cursor = toSample(s0);
+  let fadeInNext = true;
+  const inserted = [];
+  for (let k = 0; k < located.length - 1; k++) {
+    const natural = located[k + 1].start - located[k].end;
+    const target = gaps[k];
+    if (natural >= target) {
+      inserted.push(0);
+      continue;
+    }
+    const cutAt = Math.max(located[k].end, Math.min(located[k].end + tail, located[k + 1].start - head));
+    const add = target - natural;
+    const cutSample = toSample(cutAt);
+    pieces.push(slice(cursor, cutSample, fadeInNext, true));
+    pieces.push(silence(add));
+    cuts.push({ atInput: cutAt, insertedSeconds: add });
+    inserted.push(add);
+    cursor = cutSample;
+    fadeInNext = located[k + 1].start - cutAt >= fade;
+  }
+  pieces.push(slice(cursor, total, fadeInNext, false));
+  const outPcm = Buffer.concat(pieces);
+  const duration3 = outPcm.length / 2 / sampleRate;
+  const shift = (t2, isEnd = false) => {
+    let o = lead - s0;
+    for (const c of cuts) if (isEnd ? t2 > c.atInput + 1e-6 : t2 >= c.atInput - 1e-6) o += c.insertedSeconds;
+    return Math.max(0, Math.round((t2 + o) * 1e3) / 1e3);
+  };
+  const shifted = {
+    characters: [...alignment.characters],
+    character_start_times_seconds: alignment.character_start_times_seconds.map((t2) => shift(t2)),
+    character_end_times_seconds: alignment.character_end_times_seconds.map((t2) => shift(t2, true))
+  };
+  const sentences = located.map((s2) => ({ text: s2.text, chars: s2.chars, start: shift(s2.start), end: shift(s2.end, true) }));
+  return {
+    wav: pcmToWav(outPcm, sampleRate, 1),
+    alignment: shifted,
+    sentences,
+    boundaries: sentences.slice(1).map((s2) => s2.start),
+    gaps: gaps.map((g) => Math.round(g * 1e3) / 1e3),
+    inserted: inserted.map((g) => Math.round(g * 1e3) / 1e3),
+    lead,
+    duration: Math.round(duration3 * 1e3) / 1e3
+  };
 }
 
 // src/tts-quality.ts
@@ -78826,8 +78992,16 @@ var checkedSpeechSchema = external_exports.object({
   outputPath: external_exports.string().min(1),
   filename: bareFilenameSchema("audio").refine((s2) => s2.endsWith(".wav"), "Use a .wav filename"),
   maxAttempts: external_exports.number().int().min(1).max(3).default(3),
-  rejectTake: external_exports.object({ audioSha256: external_exports.string().regex(/^[a-f0-9]{64}$/), reason: external_exports.string().trim().min(10).max(1e3) }).strict().optional()
-}).strict();
+  rejectTake: external_exports.object({ audioSha256: external_exports.string().regex(/^[a-f0-9]{64}$/), reason: external_exports.string().trim().min(10).max(1e3) }).strict().optional(),
+  /** The scene's narration[].tts sentences in order — where the fixed pauses go (ElevenLabs takes). */
+  segments: external_exports.array(external_exports.string().trim().min(1).max(1e3)).min(1).max(80).optional(),
+  sentencePause: external_exports.number().min(0.25).max(1.5).default(0.5),
+  playbackSpeed: external_exports.number().min(0.5).max(3).default(1)
+}).strict().superRefine((value, ctx) => {
+  if (value.segments && normalizeSpeech(value.segments.join(" ")) !== normalizeSpeech(value.expectedText)) {
+    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["segments"], message: "segments joined must read exactly as expectedText" });
+  }
+});
 var score = external_exports.number().finite().min(0).max(100);
 var reviewSchema = external_exports.object({
   accuracy: score,
@@ -78910,6 +79084,15 @@ var REVIEW_JSON_SCHEMA = {
   }
 };
 async function listen(file, request) {
+  let laidInPauses = null;
+  try {
+    if (existsSync6(sentencesPathFor(file))) {
+      const side = JSON.parse(readFileSync5(sentencesPathFor(file), "utf8"));
+      if (Array.isArray(side.boundaries)) laidInPauses = { lead: Number(side.lead) || 0, boundaries: side.boundaries };
+    }
+  } catch {
+    laidInPauses = null;
+  }
   const { GoogleGenAI: GoogleGenAI3 } = await Promise.resolve().then(() => (init_node(), node_exports));
   const client = new GoogleGenAI3({ apiKey: requireGeminiKey(), httpOptions: { apiVersion: REVIEW_API_VERSION, timeout: 18e4 } });
   const audio = readFileSync5(file);
@@ -78954,7 +79137,7 @@ async function listen(file, request) {
     "blind-transcription"
   ));
   const review = reviewSchema.parse(await call(
-    `Audit the full audio against this data: ${JSON.stringify({ expectedText: request.expectedText, language: request.language, delivery: request.delivery, blindTranscript: blind.transcript })}.
+    `Audit the full audio against this data: ${JSON.stringify({ expectedText: request.expectedText, language: request.language, delivery: request.delivery, blindTranscript: blind.transcript, ...laidInPauses ? { laidInPauses } : {} })}.${laidInPauses ? " laidInPauses lists the seconds where fixed digital silence was laid in between sentences on purpose; those pauses and the quiet lead are not pacing defects or audible joins." : ""}
 Score 0\u2013100: accuracy (all words, quantities, names, endings, no omissions or additions), pronunciation (native phonemes, liaison, stress), naturalness (human phrasing, breath, pacing, intonation appropriate to delivery), clarity (no noise, clipping, metallic artifacts, audible joins or unstable voice).
 100 means no audible defect; 95 is professional delivery with no correction needed; 90 means a noticeable defect needs a retake; below 80 is distracting. Do not inflate scores because the script is plausible. Check every word, especially names/numbers and final syllables. Do not silently correct a wrong word using the script. List every defect with actual start/end seconds, heard/expected wording and a concrete correction. complete is true only if the whole audio was heard. Give confidence 0\u20131 and specific listening evidence even on a pass.`,
     REVIEW_JSON_SCHEMA,
@@ -78964,7 +79147,7 @@ Score 0\u2013100: accuracy (all words, quantities, names, endings, no omissions 
 }
 function prepareGeneration(request) {
   const args = { ...request.generation, outputPath: request.outputPath, filename: request.filename };
-  let spoken, parsed, run;
+  let spoken, parsed, run, spacing = false, seed;
   switch (request.generator) {
     case "tts_generate": {
       const p = ttsGenerateSchema.parse(args);
@@ -78990,18 +79173,22 @@ function prepareGeneration(request) {
       run = () => generateLocalSpeech(p);
       break;
     }
+    // Timestamps cost nothing extra and are what the sentence spacing reads, so the checked lane always asks for them.
     case "tts_elevenlabs_generate": {
-      const p = elevenLabsGenerateSchema.parse(args);
+      const p = elevenLabsGenerateSchema.parse({ ...args, timestamps: true });
       parsed = p;
       spoken = p.text.replace(/\[[^\]]*\]/g, "");
-      run = () => generateElevenLabsSpeech(p);
+      run = (o) => generateElevenLabsSpeech({ ...p, ...o?.seed !== void 0 ? { seed: o.seed } : {} });
+      spacing = true;
+      seed = p.seed;
       break;
     }
     case "tts_elevenlabs_dialogue": {
       const p = elevenLabsDialogueSchema.parse(args);
       parsed = p;
       spoken = p.inputs.map((i2) => i2.text.replace(/\[[^\]]*\]/g, "")).join(" ");
-      run = () => generateElevenLabsDialogue(p);
+      run = (o) => generateElevenLabsDialogue({ ...p, ...o?.seed !== void 0 ? { seed: o.seed } : {} });
+      seed = p.seed;
       break;
     }
     case "mlx_tts_generate": {
@@ -79014,7 +79201,27 @@ function prepareGeneration(request) {
   }
   if (normalizeSpeech(spoken) !== normalizeSpeech(request.expectedText)) throw new Error("expectedText must match the complete spoken generation text; only punctuation, spacing, speaker labels and ElevenLabs acting tags may differ");
   if ("outputFormat" in parsed && !String(parsed.outputFormat).startsWith("wav_")) throw new Error("Checked narration requires WAV output");
-  return { args: parsed, run };
+  return { args: parsed, run, spacing, seed };
+}
+var sentencesPathFor = (wav) => wav + ".sentences.json";
+function applySentenceSpacing(output, request) {
+  const alignmentPath = output.replace(/\.wav$/i, "") + ".alignment.json";
+  rmSync2(sentencesPathFor(output), { force: true });
+  if (!existsSync6(alignmentPath)) return { skipped: "no alignment sidecar beside the take" };
+  try {
+    const sidecar = JSON.parse(readFileSync5(alignmentPath, "utf8"));
+    const alignment = sidecar.alignment;
+    if (!alignment?.characters?.length) return { skipped: "alignment sidecar carries no characters" };
+    const segments = request.segments ?? splitSentences(alignment.characters.join(""));
+    const result = respace(readFileSync5(output), alignment, segments, { pause: request.sentencePause, playbackSpeed: request.playbackSpeed });
+    writeFileSync5(output, result.wav);
+    const meta = { policy: SPACING_POLICY, pause: request.sentencePause, playbackSpeed: request.playbackSpeed, lead: result.lead, gaps: result.gaps, inserted: result.inserted, boundaries: result.boundaries, duration: result.duration, segmentsFrom: request.segments ? "request" : "sentence-final punctuation" };
+    writeFileSync5(alignmentPath, JSON.stringify({ ...sidecar, alignment: result.alignment, vendor_alignment: sidecar.vendor_alignment ?? sidecar.alignment, respaced: meta }, null, 2));
+    writeFileSync5(sentencesPathFor(output), JSON.stringify({ version: 1, ...meta, audio: path7.basename(output), audioSha256: sha256(result.wav), sentences: result.sentences }, null, 2) + "\n");
+    return meta;
+  } catch (error2) {
+    return { skipped: error2 instanceof Error ? error2.message : String(error2) };
+  }
 }
 async function generateCheckedSpeech(input, dependencies) {
   const request = checkedSpeechSchema.parse(input);
@@ -79035,13 +79242,14 @@ async function generateCheckedSpeech(input, dependencies) {
     await exec("ffmpeg", ["-version"], { timeout: 1e4 });
   }, generate: prepared.run, measure: measureSignal, listen };
   const attempts = [];
+  const settings = prepared.spacing ? { ...prepared.args, spacing: { segments: request.segments ?? null, sentencePause: request.sentencePause, playbackSpeed: request.playbackSpeed } } : prepared.args;
   const base = {
     version: 1,
     policy: QUALITY_POLICY,
     expectedText: request.expectedText,
     textSha256: sha256(normalizeSpeech(request.expectedText)),
     generator: request.generator,
-    settingsSha256: sha256(JSON.stringify(prepared.args)),
+    settingsSha256: sha256(JSON.stringify(settings)),
     model: REVIEW_MODEL,
     language: request.language,
     delivery: request.delivery
@@ -79067,7 +79275,16 @@ async function generateCheckedSpeech(input, dependencies) {
           last.failures = [...Array.isArray(last.failures) ? last.failures : [], "Rejected during final listening: " + request.rejectTake.reason];
         }
         if (!request.rejectTake && old.model === REVIEW_MODEL && old.status === "pass" && last?.pending === false && Array.isArray(last.failures) && !last.failures.length && typeof last.transcript === "string" && existsSync6(output) && old.audioSha256 === sha256(readFileSync5(output)) && last.audioSha256 === old.audioSha256 && !signalFailures(last.signal, request.expectedText).length && !reviewFailures(request.expectedText, String(last.transcript), reviewSchema.parse(last.review), last.signal.duration).length) {
-          return { success: true, status: "pass", audioPath: output, proofPath: proofFile, attempts: attempts.length, reused: true };
+          const lastSpacing = last.spacing;
+          return {
+            success: true,
+            status: "pass",
+            audioPath: output,
+            proofPath: proofFile,
+            attempts: attempts.length,
+            reused: true,
+            spacing: !prepared.spacing ? "not applicable" : lastSpacing?.skipped ? "skipped: " + String(lastSpacing.skipped) : "applied"
+          };
         }
         if (!request.rejectTake && old.model !== REVIEW_MODEL && old.status === "pass" && last && existsSync6(output) && last.audioSha256 === sha256(readFileSync5(output))) {
           last.previousReviews = [
@@ -79093,8 +79310,11 @@ async function generateCheckedSpeech(input, dependencies) {
         save("unverified");
         const started = Date.now();
         let generated;
+        const overrides = prepared.seed !== void 0 && attempt > 1 ? { seed: (prepared.seed + attempt - 1) % 4294967296 } : {};
+        if (overrides.seed !== void 0) take.seed = overrides.seed;
+        else if (prepared.seed !== void 0) take.seed = prepared.seed;
         try {
-          generated = await deps.generate();
+          generated = await deps.generate(overrides);
         } finally {
           const price = priceOf(request.generator, prepared.args);
           recordUsage(request.outputPath, {
@@ -79109,6 +79329,11 @@ async function generateCheckedSpeech(input, dependencies) {
           });
         }
         if (!generated.success || path7.resolve(generated.audioPath || generated.path || "") !== output) throw new Error(generated.error || "Generator did not return the requested audio path");
+        if (prepared.spacing) take.spacing = applySentenceSpacing(output, request);
+        else {
+          rmSync2(sentencesPathFor(output), { force: true });
+          take.spacing = { skipped: "engine has no alignment" };
+        }
         take.audioSha256 = sha256(readFileSync5(output));
         save("unverified");
       }
@@ -79123,8 +79348,10 @@ async function generateCheckedSpeech(input, dependencies) {
       }
       if (audioSha256 !== sha256(readFileSync5(output))) throw new Error("Audio changed during review");
       Object.assign(take, { pending: false, audioSha256, signal, ...listened ? { model: REVIEW_MODEL, ...listened } : {}, cer: listened ? characterErrorRate(request.expectedText, listened.transcript) : null, failures });
-      if (!failures.length) return save("pass", { audioSha256 });
-      save("retry", { audioSha256 });
+      const spacingState = take.spacing;
+      const spacing = !prepared.spacing ? "not applicable" : spacingState?.skipped ? "skipped: " + String(spacingState.skipped) : "applied";
+      if (!failures.length) return save("pass", { audioSha256, spacing });
+      save("retry", { audioSha256, spacing });
     }
     return save("fail", { error: "Speech did not pass within the attempt limit. Hold production; inspect the per-attempt issues. Do not reset the retry budget or change the voice to bypass review." });
   } catch (error2) {
@@ -81785,7 +82012,7 @@ var VEO_DURATION_PROPERTY = {
 };
 var VEO_NEGATIVE_PROMPT_PROPERTY = {
   type: "string",
-  description: `What to keep OUT of the frame, as comma-separated noun or adjective phrases: "wall, frame, on-screen text, subtitles". Do NOT write instructions such as "no walls" or "don't show walls" \u2014 Google's prompt guide names that form as not recommended, and writing an exclusion into the prompt body tends to summon the very noun you named. Put every exclusion here instead of in prompt.`
+  description: `What to keep OUT of the frame, as comma-separated noun or adjective phrases: "wall, frame, on-screen text, subtitles". Accepted by the API on veo-3.1 fast/standard only \u2014 veo-3.1-lite rejects it (400, measured 2026-08-26), so on lite write the exclusion into the prompt as positive description; veo_reference and veo_extension have no such field (400, measured 2026-08-15). Do NOT write instructions such as "no walls" or "don't show walls" \u2014 Google's prompt guide names that form as not recommended, and writing an exclusion into the prompt body tends to summon the very noun you named. Put every exclusion here instead of in prompt.`
 };
 var OMNI_RESOLUTION_PROPERTY = {
   type: "string",
@@ -81808,7 +82035,7 @@ var OMNI_ASPECT_RATIO_PROPERTY = {
 };
 var SEEDANCE_MODEL_PROPERTY = {
   type: "string",
-  description: `Seedance model (default: "${DEFAULT_SEEDANCE_MODEL}" \u2014 the cheapest model that reaches 1080p, accepts photoreal human faces as input, supports seed, and has no activation gate). Quality, from the Artificial Analysis blind image-to-video arena: dreamina-seedance-2-0-260128 ranks 1st overall (Elo 1,198), the three Veo 3.1 tiers sit at 1,066-1,086, and seedance-1-5-pro-251215 is the arena baseline at 1,000 \u2014 so 2.0 is clearly the best Seedance, and 1.5 pro trades roughly a 59:41 preference against Veo for about a third of the price. dreamina-seedance-2-5-260628, the 2.0 fast/mini variants, and seedance-1-0-pro-fast-251015 have NO public evaluation at all \u2014 prefer them only for cost or for a capability the tested models lack, not for a shot that matters. The 2.x models REJECT input images containing real human faces and need account balance > $30 to activate, which rules them out for photoreal-person sources.`,
+  description: `Seedance model (default: "${DEFAULT_SEEDANCE_MODEL}" \u2014 the cheapest model that reaches 1080p, accepts photoreal human faces as input, supports seed, and has no balance gate \u2014 every ModelArk model still needs console activation). Quality, from the Artificial Analysis blind image-to-video arena: dreamina-seedance-2-0-260128 ranks 1st overall (Elo 1,198), the three Veo 3.1 tiers sit at 1,066-1,086, and seedance-1-5-pro-251215 is the arena baseline at 1,000 \u2014 so 2.0 is clearly the best Seedance, and 1.5 pro trades roughly a 59:41 preference against Veo for about a third of the price. dreamina-seedance-2-5-260628, the 2.0 fast/mini variants, and seedance-1-0-pro-fast-251015 have NO public evaluation at all \u2014 prefer them only for cost or for a capability the tested models lack, not for a shot that matters. The 2.x models REJECT input images containing real human faces and need account balance > $30 to activate, which rules them out for photoreal-person sources.`,
   enum: [...VALID_SEEDANCE_MODELS],
   default: DEFAULT_SEEDANCE_MODEL
 };
@@ -82961,7 +83188,6 @@ Returns: a text block with the saved .mp4 file path, source video path, model, r
           type: "string",
           description: "Text description for the video continuation"
         },
-        negativePrompt: VEO_NEGATIVE_PROMPT_PROPERTY,
         sourceVideoPath: {
           type: "string",
           description: "Absolute path to the source video file to extend (must be a Veo-generated 720p video, 141 seconds or shorter, saved with its .veo.json handle)"
@@ -83008,7 +83234,6 @@ Returns: a text block with the saved .mp4 file path, reference image list, model
           type: "string",
           description: "Detailed text description of the video scene and subject interactions"
         },
-        negativePrompt: VEO_NEGATIVE_PROMPT_PROPERTY,
         referenceImagePaths: {
           type: "array",
           items: {
@@ -84004,7 +84229,8 @@ Returns: a text block with the mp4 path, still paths (and any requested still ou
     title: "Generate and review narration",
     annotations: HINT.generate,
     description: `Generate one scene with the pinned TTS engine, review the actual WAV, and regenerate failed takes up to maxAttempts (1\u20133, including the first take).
-Use for every generated narration scene in produce/autoproduce. Pass the existing generator's arguments in generation, the complete spoken expectedText (phonetic spelling; no acting tags or speaker labels), language, and the profile's intended delivery. Voice and generation settings stay unchanged across attempts. An entire scene is one call; never split it into sentence calls.
+Use for every generated narration scene in produce/autoproduce. Pass the existing generator's arguments in generation, the complete spoken expectedText (phonetic spelling; no acting tags or speaker labels), language, and the profile's intended delivery. Voice and generation settings stay unchanged across attempts; a pinned seed advances by one per retake, because the same seed returns the same bytes. An entire scene is one call; never split it into sentence calls.
+On tts_elevenlabs_generate the take is fetched with timestamps and its sentences are re-spaced before review: a fixed sentencePause of digital silence between sentences (stretched up to 1.0s where a subtitle cue would read faster than 6.0 chars/s after playbackSpeed), a 0.14s lead, speech samples copied as generated (the 12 ms fades stay on the natural gap). Pass segments (the scene's narration[].tts list) so the pauses land on the builder's segment boundaries; the wrapper writes <wav>.sentences.json and shifts the .alignment.json to the shipped audio.
 Checks signal/duration, a blind transcript (CER <=2%), then ${REVIEW_MODEL} listening scores: accuracy >=98, pronunciation/naturalness/clarity >=95, confidence >=0.9, no audible defects. Returns a hash-bound .wav.quality.json proof required by the builder. Missing keys, unavailable reviewer, malformed responses or exhausted attempts block production. Scores are operational thresholds, not a guarantee of human judgement.
 Requires ffmpeg and GEMINI_API_KEY even for local synthesis. Two paid audio-review calls per acoustically valid take, plus the selected generator's costs. Record the retry-inclusive allowance before calling; review tokens are logged as unpriced until reconciled with provider billing. Do not call again to reset an exhausted attempt budget. Do not use for recordings or native clip speech; retain their final listening QA. Do not change engines/voices or lower thresholds to obtain PASS.`,
     inputSchema: {
@@ -84022,7 +84248,10 @@ Requires ffmpeg and GEMINI_API_KEY even for local synthesis. Two paid audio-revi
         rejectTake: { type: "object", additionalProperties: false, required: ["audioSha256", "reason"], description: "When final listening finds a defect in a previously checked take, reject that exact WAV and use only remaining attempts. Never waives any check.", properties: {
           audioSha256: { type: "string", pattern: "^[a-f0-9]{64}$", description: "SHA-256 of the current checked WAV, as recorded in its quality proof." },
           reason: { type: "string", minLength: 10, maxLength: 1e3, description: "Actual time, word or sound defect observed during listening." }
-        } }
+        } },
+        segments: { type: "array", minItems: 1, maxItems: 80, items: { type: "string", minLength: 1, maxLength: 1e3 }, description: "The scene's narration[].tts sentences in order (joined they read as expectedText). ElevenLabs takes get a fixed pause at each segment boundary \u2014 the boundary the builder's reveals and subtitle cues use. Without it, pauses go after sentence-final punctuation." },
+        sentencePause: { type: "number", minimum: 0.25, maximum: 1.5, default: 0.5, description: "Silence between sentences in the take's own timeline, seconds. The builder detects pauses from 0.16s and fits a 0.35s reveal fade inside one." },
+        playbackSpeed: { type: "number", minimum: 0.5, maximum: 3, default: 1, description: "The channel's playback factor from profile \xA72 (speedup.sh). A pause grows past sentencePause only where that sentence's subtitle cue would otherwise read faster than 6.0 chars/s after the speed-up." }
       },
       required: ["generator", "generation", "expectedText", "language", "delivery", "outputPath", "filename"]
     }
@@ -84713,7 +84942,7 @@ Returns: a text block with the saved .wav path, model, duration, and generation 
 Use it BEFORE planning anything that spends money or depends on a provider \u2014 the top of a storyboard, produce, or autoproduce run. Without it, a missing key shows up only when the call fails, which is after the plan was built around a tool that was never going to run: planning two Veo b-roll slots on a machine with no GEMINI_API_KEY costs the review rounds before anyone finds out. Also use it when the user asks what they can make, or why a tool is failing.
 Do NOT use it to test whether a key still works. It reports CONFIGURATION, not reachability \u2014 a revoked key reads as configured here and fails at the call. Local engines report only whether their binary resolves (mflux, python3, mlx-qwen3-asr) or whether MLX Core.app / mlx-serve is installed \u2014 not whether :11234 is up. Read-only; makes no API call, so one call per session is enough.
 
-Returns: a capability menu \u2014 video_generation, image_generation, tts, music_generation, 3d_generation, speech_to_text, research \u2014 each listing its providers with the env var or local install each one needs, then the publishing platforms that have credential files, then the env vars grouped by what each would turn on.`,
+Returns: a capability menu \u2014 video_generation, image_generation, tts, music_generation, 3d_generation, speech_to_text, stock_footage, research \u2014 each listing its providers with the env var or local install each one needs, then the publishing platforms that have credential files, then the env vars grouped by what each would turn on.`,
     inputSchema: {
       type: "object",
       properties: {},
@@ -89578,6 +89807,15 @@ function validateResolutionConstraints(model, resolution, durationSeconds, ctx) 
     });
   }
 }
+function rejectLiteNegativePrompt(negativePrompt, model, ctx) {
+  if (negativePrompt && model === "veo-3.1-lite-generate-preview") {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["negativePrompt"],
+      message: "negativePrompt is not accepted on veo-3.1-lite-generate-preview (the API returns 400). Write the exclusion into the prompt as positive description, or use veo-3.1-fast-generate-preview."
+    });
+  }
+}
 function rejectLiteModel(feature, model, ctx) {
   if (model === "veo-3.1-lite-generate-preview") {
     ctx.addIssue({
@@ -89601,6 +89839,7 @@ var text2VideoSchema = external_exports.object({
   filename: bareFilenameSchema("video").optional()
 }).superRefine((data, ctx) => {
   validateResolutionConstraints(data.model, data.resolution, data.durationSeconds, ctx);
+  rejectLiteNegativePrompt(data.negativePrompt, data.model, ctx);
 });
 var img2VideoSchema = external_exports.object({
   prompt: external_exports.string().min(1, "Prompt is required"),
@@ -89615,10 +89854,10 @@ var img2VideoSchema = external_exports.object({
   filename: bareFilenameSchema("video").optional()
 }).superRefine((data, ctx) => {
   validateResolutionConstraints(data.model, data.resolution, data.durationSeconds, ctx);
+  rejectLiteNegativePrompt(data.negativePrompt, data.model, ctx);
 });
 var videoExtensionSchema = external_exports.object({
   prompt: external_exports.string().min(1, "Prompt is required"),
-  negativePrompt: negativePromptSchema,
   sourceVideoPath: external_exports.string().min(1, "Source video path is required"),
   sourceVideoUri: external_exports.string().startsWith(FILES_URI_PREFIX, `Source video URI must start with ${FILES_URI_PREFIX}`).optional(),
   model: external_exports.enum(VALID_VIDEO_MODELS).optional().default(DEFAULT_VIDEO_MODEL),
@@ -89627,7 +89866,6 @@ var videoExtensionSchema = external_exports.object({
 }).superRefine((data, ctx) => rejectLiteModel("video extension", data.model, ctx));
 var referenceVideoSchema = external_exports.object({
   prompt: external_exports.string().min(1, "Prompt is required"),
-  negativePrompt: negativePromptSchema,
   referenceImagePaths: external_exports.array(external_exports.string()).min(1, "At least one reference image is required").max(3, "Maximum 3 reference images allowed"),
   model: external_exports.enum(VALID_VIDEO_MODELS).optional().default(DEFAULT_VIDEO_MODEL),
   aspectRatio: external_exports.enum(VALID_VIDEO_ASPECT_RATIOS).optional().default("16:9"),
@@ -89860,7 +90098,6 @@ async function extendVideo2(request) {
       numberOfVideos: 1,
       resolution: "720p"
     };
-    if (request.negativePrompt) config3.negativePrompt = request.negativePrompt;
     const operation = await genai.models.generateVideos({
       model,
       prompt: request.prompt,
@@ -89921,7 +90158,6 @@ async function generateWithReferences2(request) {
       durationSeconds: DEFAULT_DURATION_SECONDS,
       referenceImages
     };
-    if (request.negativePrompt) config3.negativePrompt = request.negativePrompt;
     const operation = await genai.models.generateVideos({ model, prompt: request.prompt, config: config3 });
     if (!operation.name) return { success: false, error: "No operation name returned from API" };
     const saved = await awaitVideoAndSave2(
@@ -93213,7 +93449,7 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
 
 // src/index.ts
 var server = new Server(
-  { name: "social-flow", version: "0.73.0" },
+  { name: "social-flow", version: "0.76.0" },
   { capabilities: { tools: {} } }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {

@@ -10,7 +10,8 @@ style rules there are enforced by a checker.
 
 These are the lanes the skills are allowed to name. A skill's `allowed-tools` may
 list the plugin's own server and nothing else; a host CLI's native media tools are not MCP
-tools and never appear there.
+tools and never appear there, and the portal mirror below is called by name in prose only,
+never listed.
 
 | Job | Lane | Not allowed |
 |---|---|---|
@@ -19,6 +20,7 @@ tools and never appear there.
 | Images and video where the host CLI ships its own media tools (Codex `image_gen`; Grok `image_gen` · `image_edit` · `image_to_video` · `reference_to_video`) | the host tool first (user directive 2026-09-07); the plugin server only as a fallback the user asked for | any external MCP server |
 | Images, video, voice, music, search otherwise | `mcp__social-flow__*` — the server this plugin ships | any external MCP server |
 | Reading an image | the `Read` tool, which takes images natively | vision MCP servers |
+| Mirroring an episode to the ttalkkakstory portal (approval · produced · published) | `mcp__ttalkkakstory__*`, registered in the user's own settings (README §Optional) — a mirror the skills call only when present, never a gate | shipping that server in the plugin's `.mcp.json` |
 
 **ego lite has no fallback.** It is macOS-only. Where it is missing, the skill says
 so and stops; it does not reach for a second browser. Two of these lanes exist

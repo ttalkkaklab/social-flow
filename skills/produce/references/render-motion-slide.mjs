@@ -86,8 +86,8 @@
  *   frame at t (canvas/SVG — the path for rotation, traces, anything keyframes can't express),
  *   and <video data-rg data-vfrom data-vdur> seeked by currentTime. All four are functions of
  *   (g, t) alone, which is what makes a re-render draw the same picture.
- *   A footage slide (scenes.js visual.slide.treatment:"footage", slide-design.md §6.2) is that
- *   fourth path as the ground: one generated clip per group under drawn marks. The renderer
+ *   A footage slide (scenes.js visual.slide.treatment:"footage" — retired 2026-09-05, nothing is
+ *   drawn over video; kept only so archived episodes re-render) is that fourth path as the ground: one generated clip per group under drawn marks. The renderer
  *   reads the treatment from scenes.js, sets each clip's data-vdur to its segment length (never
  *   past what the file holds — a seek beyond the end shows the last frame), and drops the
  *   zone-fill and 2.6s-entrance warnings, which describe a plate composition, not a shot. WebGL works too — Chrome
@@ -193,7 +193,7 @@ if (scene?.visual?.slide?.quality != null || scene?.visual?.slide?.treatment ===
 const semanticBeats = scene && scene.visual && scene.visual.slide && Array.isArray(scene.visual.slide.motionBeats)
   ? scene.visual.slide.motionBeats.filter(b => b && Number.isInteger(Number(b.group)) && b.primitive)
   : [];
-// treatment:"footage" — generated clips are the ground (slide-design.md §6.2). The renderer learns it
+// treatment:"footage" (retired 2026-09-05; archived episodes only) — generated clips are the ground. The renderer learns it
 // from scenes.js so the SEEK-RUNTIME block stays byte-identical across the three templates.
 const treatment = scene && scene.visual && scene.visual.slide ? String(scene.visual.slide.treatment || "") : "";
 const isFootage = treatment === "footage";
@@ -543,7 +543,7 @@ const openPage = async () => {
     for (const c of short)
       warn.push(`group ${c.rg} ${c.cls} ${c.src} holds ${(c.media / 1000).toFixed(1)}s but its segment runs ` +
                 `${(c.want / 1000).toFixed(1)}s — the last ${((c.want - c.media) / 1000).toFixed(1)}s freeze on the clip's ` +
-                `final frame; generate the clip longer (footage-lane.md §shot length)`);
+                `final frame; generate the clip longer than the segment`);
   }
   const groups = await evalJS("window.__groups()");
   const N = groups.length - 1;
@@ -619,8 +619,8 @@ const openPage = async () => {
     if (isFootage) await w.evalJS(footageVdurJS(JSON.stringify(segMap && segsApplied ? segMap : {})));
   }
   const rows = new Array(todo.length);
-  // The seam. Group k's f0000 is by design the picture at the end of group k−1 (footage-lane.md:
-  // the cut lands on f0001), and seeking group k to 0 in a tab that never ran group k−1 paints that
+  // The seam. Group k's f0000 is by design the picture at the end of group k−1 (the retired footage lane
+  // cut on f0001), and seeking group k to 0 in a tab that never ran group k−1 paints that
   // same picture with the mark edges off by a few pixels — measured on ep209 s10 as 3 px in one
   // tab layout and 44 px (max 20/255) in another, the old renderer included, the video frame
   // identical either way. So group k's f0000 is not captured; it is the end frame group k−1

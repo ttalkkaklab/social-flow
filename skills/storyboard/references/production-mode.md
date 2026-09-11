@@ -175,9 +175,12 @@ The page displays a proposal; selection is recorded by the host's HITL, not a pr
 
 ## Autonomous callers
 
-A growth plan can explicitly authorize `production_mode`, `video_budget_usd`, and
-`video_max_attempts`. Copy its mode/cap/attempts and identify that exact plan in an approval
-with `kind:'standing'`. A plain `autoproduce:true` does not authorize a switch to full_video.
+A growth plan can explicitly authorize `production_mode`, `video_budget_usd`,
+`video_max_attempts`, and — for the two previz questions — `previz_renderer` and `video_model`
+(the `autoproduce:` block; both or neither, and without them the unattended loop plans no
+generated cut). Copy its mode/cap/attempts/renderer/model and identify that exact plan in an
+approval, and in `PRODUCTION.previz.selection` / `PRODUCTION.videoModel.selection`, with
+`kind:'standing'`. A plain `autoproduce:true` does not authorize a switch to full_video.
 Existing unattended callers retain hybrid; if their written scope cannot cover the estimate,
 hold before spending and ask at the next human interaction. Never raise an unattended cap.
 

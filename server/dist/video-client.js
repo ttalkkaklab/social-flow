@@ -2,7 +2,7 @@
  * Google Veo 3.1 video generation client — ported from the fect-mcp-server video module.
  *
  * Generates video via the Google Gen AI SDK.
- * - Models: veo-3.1-generate-preview (default) / veo-3.1-fast-generate-preview / veo-3.1-lite-generate-preview
+ * - Models: veo-3.1-fast-generate-preview (default) / veo-3.1-generate-preview / veo-3.1-lite-generate-preview
  * - Supports Text-to-Video, Image-to-Video, Video Extension, Reference Images
  * - Resolution 720p/1080p/4k, duration 4/6/8s (constraints enforced by schema validation)
  * - Extension adds +7s per call · fixed 720p (3.1 / 3.1 Fast only)
@@ -70,6 +70,16 @@ function validateResolutionConstraints(model, resolution, durationSeconds, ctx) 
         });
     }
 }
+/** The API accepts negativePrompt on veo-3.1 fast/standard only — lite returns 400 with it set (measured 2026-08-26). */
+function rejectLiteNegativePrompt(negativePrompt, model, ctx) {
+    if (negativePrompt && model === 'veo-3.1-lite-generate-preview') {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['negativePrompt'],
+            message: 'negativePrompt is not accepted on veo-3.1-lite-generate-preview (the API returns 400). Write the exclusion into the prompt as positive description, or use veo-3.1-fast-generate-preview.',
+        });
+    }
+}
 /** Shared validation for features (extension·reference) the lite model doesn't support */
 function rejectLiteModel(feature, model, ctx) {
     if (model === 'veo-3.1-lite-generate-preview') {
@@ -109,6 +119,7 @@ export const text2VideoSchema = z
 })
     .superRefine((data, ctx) => {
     validateResolutionConstraints(data.model, data.resolution, data.durationSeconds, ctx);
+    rejectLiteNegativePrompt(data.negativePrompt, data.model, ctx);
 });
 // Image-to-Video request schema
 export const img2VideoSchema = z
@@ -126,6 +137,7 @@ export const img2VideoSchema = z
 })
     .superRefine((data, ctx) => {
     validateResolutionConstraints(data.model, data.resolution, data.durationSeconds, ctx);
+    rejectLiteNegativePrompt(data.negativePrompt, data.model, ctx);
 });
 // Video Extension request schema
 // Constraints (official docs): 3.1 / 3.1 Fast only; the input video must be a Veo
@@ -136,7 +148,6 @@ export const img2VideoSchema = z
 export const videoExtensionSchema = z
     .object({
     prompt: z.string().min(1, 'Prompt is required'),
-    negativePrompt: negativePromptSchema,
     sourceVideoPath: z.string().min(1, 'Source video path is required'),
     sourceVideoUri: z
         .string()
@@ -152,7 +163,6 @@ export const videoExtensionSchema = z
 export const referenceVideoSchema = z
     .object({
     prompt: z.string().min(1, 'Prompt is required'),
-    negativePrompt: negativePromptSchema,
     referenceImagePaths: z
         .array(z.string())
         .min(1, 'At least one reference image is required')
@@ -441,8 +451,6 @@ export async function extendVideo(request) {
             numberOfVideos: 1,
             resolution: '720p',
         };
-        if (request.negativePrompt)
-            config.negativePrompt = request.negativePrompt;
         const operation = await genai.models.generateVideos({
             model,
             prompt: request.prompt,
@@ -503,8 +511,6 @@ export async function generateWithReferences(request) {
             durationSeconds: DEFAULT_DURATION_SECONDS,
             referenceImages,
         };
-        if (request.negativePrompt)
-            config.negativePrompt = request.negativePrompt;
         const operation = await genai.models.generateVideos({ model, prompt: request.prompt, config });
         if (!operation.name)
             return { success: false, error: 'No operation name returned from API' };

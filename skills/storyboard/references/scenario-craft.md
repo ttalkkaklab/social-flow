@@ -5,14 +5,15 @@ is three beats, always: hook → drip (1–n) → cta. Long-form still walks two
 says **how scenes push each other** — the craft layer classic screenwriting settled long
 before short-form existed, cut down to what a 4–70-shot storyboard can actually use. On a
 short the "body" in the rules below is the drip shots. The
-storyboard skill applies these while designing scenes (§4); the reviewer's scene mode reads
+storyboard skill applies these while designing scenes (§4); the reviewer's scene mode (on request only since 0.50.0 — in the flow, the author's own read) reads
 them as the yardstick behind its flow and role checks. None of them adds a `scenes.js`
 field — every rule lands on fields that already exist (`beat` · `shot.feel` · `narration`
 · `hookForm` · `chapter` · `duration` · `shot.size`/`angle`/`space` · `sound.drop`).
 
-Before any of that, storyboard §2.2 scores three candidate pages on whether **curiosity,
-fear, intrigue or comedy** actually work for a viewer. The engine table and the 95-point
-loop live in the scenario-stage reference the skill loads. §4 · §5 · §6 here are what
+Before any of that, storyboard §2.2 writes three candidate pages and tests each on whether
+**curiosity, fear, intrigue or comedy** actually work for a viewer — the user picks; only the
+unattended path scores them (scenario mode). The engine table and that loop live in the
+scenario-stage reference the skill loads. §4 · §5 · §6 here are what
 "working" means for those four; the candidate stage is where they are the bar.
 
 Survey with sources: [docs/research/2026-08-25-scenario-craft](../../../docs/research/2026-08-25-scenario-craft/).
@@ -287,7 +288,8 @@ frame, so the end is where they are won or thrown away.
   marks it in memory.
 - **The end is a designed beat, not a drift.** The act job's outward loop (scenes-schema
   §playback order, act row) is what "strongest last beat" means in practice — a question
-  the comments will argue over beats a summary of what was just said. Plan the other act
+  the comments will argue over beats a summary of what was just said (an ask stays optional,
+  story-quality.md; the forwardable thing does not). Plan the other act
   too: the one thing a viewer would forward as-is, a fact, a verdict, a line or a short
   checklist that survives being retold with none of the video attached. Commenting and
   sending are different acts and a question does not produce the second one, so the close
@@ -512,7 +514,7 @@ stayed at one level, an end that summarized.
   the character, and it rides §4's "the viewer knows first" lane: the door is paid inside the
   story (turn and result), not as advice to the viewer. Write that reason on the cover's
   `shot.info` so copy mode reads a narrative stake, not an unanswered threat.
-- **Pick high-arousal feelings for both poles.** Berger & Milkman (2012, **measured** on
+- **High-arousal feelings for both poles are a tool, not a requirement** (story-quality.md overrides the older must). Berger & Milkman (2012, **measured** on
   NYT sharing, not video): awe, anger and anxiety travel; sadness — deactivating — does not.
   So the low is dread or anger ("열기 전까진 아무도 몰라요, 해마다요"), not melancholy, and the
   high is awe or relief ("안 상했어요 — 익었더라고요"), not "nice". The Korean short-drama

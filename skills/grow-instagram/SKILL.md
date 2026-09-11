@@ -184,7 +184,7 @@ The template and state schema are in `references/growth-plan-template.md`.
    **Autoproduce is asked separately** — it's the point where the loop's
    authority widens from publishing to authoring, so it's never on by default.
    On or off; where topics come from (`pool` default / `keywords`); the
-   topic-pool entries; the per-episode cost cap (default $0.30); daily and
+   topic-pool entries; the per-episode cost cap (default $1.00); daily and
    weekly cost caps; authoring runs per day (default 1 — within this
    platform's hard cap of 2); minimum queue level (default 1); which platform
    queues to stamp on success (`mark_queues` — offer only platforms with an
@@ -298,7 +298,8 @@ only):
    if not, the YouTube loop is authoring, so just move on
 
 On pass, Read `${CLAUDE_PLUGIN_ROOT}/skills/autoproduce/SKILL.md` and **follow
-the unattended-mode procedure as written**. Pass the metrics read in §2 as the
+the unattended-mode procedure as written** — the invocation is
+`autoproduce <channel> unattended instagram` (no topic: the plan's `topic_source` decides). Pass the metrics read in §2 as the
 tier-judgment input — the judgment is a **trend**, not an absolute threshold
 (the last 3 episodes' average `reels_skip_rate` up 5%p or more against the
 previous 3, in percentage points). No promotion under 6 published episodes, or

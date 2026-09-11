@@ -17,7 +17,7 @@ function decodePNG(buffer) {
       if (data[8] !== 8 || !channels || data[10] || data[11] || data[12])
         throw new Error('bake sheet as 8-bit RGB/RGBA non-interlaced PNG');
       // 160 Mpx decodes to 640 MB per Chrome tab — a two-group cut at 30 fps with a cell the size of
-      // the zone fits; render-motion-slide.mjs --jobs 1 on a 16 GB machine (blender-objects.md).
+      // the zone fits; render-motion-slide.mjs --jobs <the figure bake-blender.py --capacity reports> (blender-objects.md).
       if (!width || !height || width * height > 160000000) throw new Error('invalid/oversized PNG');
     } else if (type === 'acTL') throw new Error('animated PNG is not a seekable sheet');
     else if (type === 'IDAT') chunks.push(data);

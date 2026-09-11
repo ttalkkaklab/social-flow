@@ -386,7 +386,7 @@ PATTERNS: list[Pattern] = [
      "End in casual spoken form — '화면이 나온다' → '화면이 나와', '주소부터 준다' →"
      " '주소부터 줘', '이렇게 친다' → '이렇게 쳐'"),
     # D9b is the diary-style past. It's S2, but **thr=1 exempts the first hit** — S2
-    # costs 7 points, so just two sentences closed this way hit 86 and fail the 90 gate.
+    # costs 7 points, so just two sentences closed this way hit 86 and fall under the 95 line.
     # What the user flagged was present-tense procedural prose, and people do write
     # '~했다' on Threads. The arithmetic was known when this went in.
     ("D9b", "S2", "diary-style past ending (-았다/었다/였다/했다)",
