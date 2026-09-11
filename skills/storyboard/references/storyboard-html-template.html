@@ -448,6 +448,12 @@
   .size-ico.f-thing { background: linear-gradient(160deg, #ffd60a, #ff8a00); }
   .size-ico.f-group { background: linear-gradient(160deg, #c46dff, #5e5ce6); }
   .size-ico.f-view { background: linear-gradient(160deg, #40d6d0, #0a84a5); }
+  /* Render-route tiles (render-routing.md) — three families the eye must tell apart at a glance:
+     generated video, an HTML animation, a photo with a camera move. */
+  .size-ico.r-video { background: linear-gradient(160deg, #ff6b6b, #c2185b); }
+  .size-ico.r-html { background: linear-gradient(160deg, #34d399, #0d7f6b); }
+  .size-ico.r-photo { background: linear-gradient(160deg, #60a5fa, #3730a3); }
+  .size-ico.r-asset { background: linear-gradient(160deg, #a1a1aa, #52525b); }
   .size-key {
     display: grid; grid-template-columns: repeat(auto-fill, minmax(66px, 1fr)); gap: var(--s3) var(--s1);
     margin: var(--s3) 0 0; padding: var(--s3) var(--s4); border-radius: 12px; background: var(--sunk);
@@ -462,6 +468,9 @@
   }
   .size-key .k .kk { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9.5px; color: var(--faint); }
   .size-key .size-ico { width: 38px; height: 38px; border-radius: 22.5%; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3), 0 2px 4px rgba(0, 0, 0, .18); }
+  /* Route keys are long snake_case words — wider cells, and the key may break mid-word */
+  .size-key.routes { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
+  .size-key.routes .k .kk { overflow-wrap: anywhere; }
   .shot-meta .shot-feel { margin: 0; flex-basis: 100%; }
   .shot-feel.miss b { color: var(--warn-ink, var(--accent-ink)); }
   .shot-info {
@@ -1100,6 +1109,20 @@ window.SB_DOC = {
               two: "two shot", three: "three shot", ots: "over the shoulder",
               pov: "POV", back: "back shot", cutaway: "cutaway", reaction: "reaction shot" },
       sizeKey: "shot size",
+      renderKey: "render route",
+      render: { still_camera: "still + camera move", character_html: "3D character HTML", object_html: "3D object HTML",
+                data_graph: "data graph HTML", editorial_html: "quote · verdict HTML", generated_video: "AI video",
+                recording: "recording", asset: "shared asset", slide: "HTML slide" },
+      renderHint: { still_camera: "a photo — the only motion is the camera (push, pull, rack focus)",
+                    character_html: "HTML animation — a 3D doll acts the task on the studio stage",
+                    object_html: "HTML animation — a 3D object moves the way the sentence says",
+                    data_graph: "HTML animation — bars, lines and shares count while the sentence runs",
+                    editorial_html: "HTML animation — a short quotation or verdict in type",
+                    generated_video: "AI-generated video — real continuous motion, paid per clip",
+                    recording: "a recording — screen capture or footage the channel already has",
+                    asset: "shared asset — the channel's outro or intro clip",
+                    slide: "HTML slide — route not declared in shot.render" },
+      renderWhy: "why this route",
       sizeHint: { els: "very far · a person is a dot — the place is the subject; alone reads as lonely, a crowd reads as scale",
                   ls: "far, wide · whole body with room — where this is, how many, how far apart (the establishing shot)",
                   ws: "same as the long shot",
@@ -1375,6 +1398,20 @@ window.SB_DOC = {
               two: "투숏", three: "쓰리숏", ots: "오버 더 숄더", pov: "POV", back: "백숏",
               cutaway: "컷어웨이", reaction: "리액션숏" },
       sizeKey: "샷 사이즈",
+      renderKey: "렌더 방식",
+      render: { still_camera: "사진 카메라 무빙", character_html: "3D 캐릭터 HTML", object_html: "3D 사물 HTML",
+                data_graph: "그래프 HTML", editorial_html: "인용·결론 HTML", generated_video: "AI 영상",
+                recording: "녹화분", asset: "공용 소재", slide: "HTML 슬라이드" },
+      renderHint: { still_camera: "사진 한 장 — 움직이는 건 카메라뿐 (푸시·풀·초점 이동)",
+                    character_html: "HTML 애니메이션 — 3D 인형이 스튜디오 판 위에서 동작을 연기한다",
+                    object_html: "HTML 애니메이션 — 3D 사물이 문장이 말하는 대로 움직인다",
+                    data_graph: "HTML 애니메이션 — 막대·선·비율이 문장 동안 값을 센다",
+                    editorial_html: "HTML 애니메이션 — 짧은 인용이나 결론을 글자로",
+                    generated_video: "AI 생성 영상 — 진짜 연속 동작, 클립마다 비용",
+                    recording: "녹화분 — 화면 녹화나 채널이 이미 가진 영상",
+                    asset: "공용 소재 — 채널 아웃트로·인트로 클립",
+                    slide: "HTML 슬라이드 — shot.render 에 방식이 안 적혀 있다" },
+      renderWhy: "이 방식인 이유",
       sizeHint: { els: "완전 풀, 아주 먼 · 사람이 점 — 공간이 주인공, 혼자면 고독·여럿이면 규모",
                   ls: "와이드, 먼 · 전신에 여유 — 어디인지·몇 명인지·얼마나 떨어졌는지 (설정샷)",
                   ws: "롱숏과 같다",
@@ -1851,12 +1888,60 @@ window.SB_DOC = {
     return d ? '<svg class="size-ico f-' + SIZE_FAMILY[size] + '" viewBox="0 0 32 32" aria-hidden="true">' + d + "</svg>" : "";
   }
   function sizeTitle(size) { return size + " — " + (T.sizeHint[size] || ""); }
+  /* Render-route pictograms — what makes the picture move: an AI clip, an HTML animation,
+     or a camera over a photo. Same 32×32 tile as the size icons. */
+  var RENDER_ICON = (function () {
+    var C = 'fill="currentColor"', S = 'stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" fill="none"';
+    var photo = '<rect x="5" y="7" width="22" height="18" rx="3" ' + S + ' stroke-width="2"/>' +
+                '<circle cx="12" cy="13" r="2" ' + C + '/>' +
+                '<path d="M8 22l5-5 4 4 3-3 4 4" ' + S + ' stroke-width="2"/>';
+    return {
+      generated_video: '<path d="M6 10.5a2.5 2.5 0 0 1 2.5-2.5h11a2.5 2.5 0 0 1 2.5 2.5v11a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 6 21.5z" ' + C + '/>' +
+                       '<path d="M22 13.5l5-3v11l-5-3z" ' + C + '/>' +
+                       '<path d="M12 12.5v7l5.5-3.5z" fill="#1c1c2e" opacity=".62"/>' +
+                       '<path d="M25 4.5l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z" ' + C + '/>',
+      still_camera: photo + '<path d="M9 28.5h14M9 28.5l2.2-2M9 28.5l2.2 2M23 28.5l-2.2-2M23 28.5l-2.2 2" ' + S + ' stroke-width="1.8"/>',
+      character_html: '<circle cx="16" cy="9.5" r="4.2" ' + C + '/>' +
+                      '<rect x="11.5" y="14" width="9" height="9.5" rx="3.2" ' + C + '/>' +
+                      '<path d="M11.5 16.5l-4 3M20.5 16.5l4-3.5M13.5 23.5l-1.5 5M18.5 23.5l1.5 5" ' + S + ' stroke-width="2.4"/>' +
+                      '<path d="M4.5 12l-2 2 2 2M27.5 12l2 2-2 2" ' + S + ' stroke-width="1.6"/>',
+      object_html: '<path d="M16 5.5l2 2.2h2.9l.8 2.8 2.5 1.4-.6 2.9 1.5 2.5-2.1 2.1-.2 2.9-2.8 1-1.6 2.5-2.9-.6-2.6 1.3-2.1-2.1-2.9-.4-.9-2.8-2.4-1.6.8-2.8-1.4-2.6 2.2-1.9.4-2.9 2.8-.8L11 7.7h2.9z" ' + C + '/>' +
+                   '<circle cx="16" cy="16" r="4" fill="#1c1c2e" opacity=".62"/>',
+      data_graph: '<rect x="6" y="17" width="5" height="9" rx="1.5" ' + C + '/>' +
+                  '<rect x="13.5" y="11" width="5" height="15" rx="1.5" ' + C + '/>' +
+                  '<rect x="21" y="6" width="5" height="20" rx="1.5" ' + C + '/>',
+      editorial_html: '<path d="M8 20c0-4.5 2-8 6-9.5v3c-1.8.9-2.7 2.3-2.9 4H14v6H8zM18 20c0-4.5 2-8 6-9.5v3c-1.8.9-2.7 2.3-2.9 4H24v6h-6z" ' + C + '/>',
+      recording: '<circle cx="16" cy="16" r="9" ' + S + ' stroke-width="2.2"/><circle cx="16" cy="16" r="4.2" ' + C + '/>',
+      asset: '<path d="M5 11l11-5 11 5-11 5z" ' + C + '/><path d="M5 11v10l11 5V16zM27 11v10l-11 5" ' + S + ' stroke-width="2"/>',
+      slide: '<rect x="5" y="7" width="22" height="16" rx="3" ' + S + ' stroke-width="2"/>' +
+             '<path d="M12.5 12l-3 3 3 3M19.5 12l3 3-3 3" ' + S + ' stroke-width="1.8"/><path d="M11 27h10" ' + S + ' stroke-width="2"/>'
+    };
+  })();
+  var RENDER_FAMILY = { generated_video: "video", recording: "video", still_camera: "photo",
+                        character_html: "html", object_html: "html", data_graph: "html", editorial_html: "html", slide: "html",
+                        asset: "asset" };
+  function renderIcon(mode) {
+    var d = RENDER_ICON[mode];
+    return d ? '<svg class="size-ico r-' + RENDER_FAMILY[mode] + '" viewBox="0 0 32 32" aria-hidden="true">' + d + "</svg>" : "";
+  }
+  function renderTitle(mode) { return mode + " — " + (T.renderHint[mode] || ""); }
+  /* The route of a shot: shot.render.mode when declared, else what the picture inference says */
+  function renderModeOf(s, g) {
+    if (g.render && g.render.mode) return g.render.mode;
+    var pic = pictureOf(s);
+    return pic === "ai-video" ? "generated_video" : pic === "still" ? "still_camera" : pic;
+  }
   function sizeKey() {
     var order = ["els", "ls", "fs", "mfs", "ms", "mcu", "cu", "choker", "ecu", "insert",
                  "two", "three", "ots", "pov", "back", "cutaway", "reaction"];
+    var routes = ["generated_video", "still_camera", "character_html", "object_html", "data_graph", "editorial_html", "recording", "asset"];
     return '<div class="size-key"><span class="kt">' + esc(T.sizeKey) + "</span>" +
       order.map(function (k) {
         return '<span class="k" title="' + esc(sizeTitle(k)) + '">' + sizeIcon(k) + '<span>' + esc(T.size[k] || k) + '</span><span class="kk">' + esc(k) + "</span></span>";
+      }).join("") + "</div>" +
+      '<div class="size-key routes"><span class="kt">' + esc(T.renderKey) + "</span>" +
+      routes.map(function (k) {
+        return '<span class="k" title="' + esc(renderTitle(k)) + '">' + renderIcon(k) + '<span>' + esc(T.render[k] || k) + '</span><span class="kk">' + esc(k) + "</span></span>";
       }).join("") + "</div>";
   }
   function grammarOf(s, i) {
@@ -3627,6 +3712,9 @@ window.SB_DOC = {
     if (g.size) gram += '<span class="shot-size' + (T.size[g.size] ? "" : " unknown") + '" title="' + esc(sizeTitle(g.size)) + '">' +
                         sizeIcon(g.size) + '<span class="sz"><b>' + esc(T.size[g.size] || (g.size + " ?")) + "</b><small>" + esc(g.size) + "</small></span></span>";
     if (g.angle && T.angle[g.angle]) gram += '<span class="shot-angle angle-' + esc(g.angle) + '">' + esc(T.angle[g.angle]) + "</span>";
+    var rmode = renderModeOf(s, g);
+    if (rmode) gram += '<span class="shot-size' + (T.render[rmode] ? "" : " unknown") + '" title="' + esc(renderTitle(rmode)) + '">' +
+                       renderIcon(rmode) + '<span class="sz"><b>' + esc(T.render[rmode] || (rmode + " ?")) + "</b><small>" + esc(rmode) + "</small></span></span>";
     if (g.why) gram += '<span class="shot-why" title="shot.why">' + esc(g.why) + "</span>";
     // A shot with no title (screen text only when needed — scenes-schema) builds its header from badges alone
     var headTitle = s.title || (s.type === "quote" ? s.text : "");
@@ -3660,7 +3748,7 @@ window.SB_DOC = {
            '<span class="shot-info shot-feel' + (g.feel ? "" : " miss") + '"><b>' + esc(T.feelLabel) + "</b>" +
            esc(g.feel || T.feelMissing) + "</span>") +
          (g.info ? '<span class="shot-info"><b>' + esc(T.infoLabel) + "</b>" + esc(g.info) + "</span>" : "") +
-         (g.render ? '<span class="shot-info"><b>' + esc(window.RENDER_ROUTING ? window.RENDER_ROUTING.LABELS[g.render.mode] || g.render.mode : g.render.mode) + "</b>" + esc(g.render.reason || "") + "</span>" : "") +
+         (g.render && g.render.reason ? '<span class="shot-info"><b>' + esc(T.renderWhy) + "</b>" + esc(g.render.reason) + "</span>" : "") +
          (g.infoType ? '<span class="shot-info"><b>' + esc(T.infoTypeLabel) + "</b>" + esc(g.infoType) + "</span>" : "") +
          (g.share ? '<span class="shot-info"><b>' + esc(T.shareLabel) + "</b>" + esc(g.share) + "</span>" : "") +
          (g.shareType ? '<span class="shot-info"><b>' + esc(T.shareTypeLabel) + "</b>" + esc(g.shareType) + "</span>" : "") +
