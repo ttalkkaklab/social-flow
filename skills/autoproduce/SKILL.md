@@ -41,8 +41,11 @@ are all used as-is from them — this document decides only two things: **who
 judges when no human is present** and **which model to use**.
 
 ```
-/social-flow:autoproduce <channel> "<topic>"              # human invocation — confirm the result at the end
-/social-flow:autoproduce <channel> "<topic>" unattended    # growth-loop invocation — no questions
+/social-flow:autoproduce <channel> "<topic>"                          # human invocation — confirm the result at the end
+/social-flow:autoproduce <channel> ["<topic>"] unattended <platform>   # growth-loop invocation — no questions.
+                                                                      # <platform> (threads · instagram · youtube) names the calling plan
+                                                                      # growth/<platform>/growth-plan.md; with no topic the plan's topic_source
+                                                                      # decides; the loop pastes the §2 insights it just read into the delegation
 ```
 
 ## What stands in for the human gates
@@ -151,7 +154,8 @@ data/<channel>/episodes/<topic-slug>/
 ### 0. Load · lock · budget
 
 Load `data/<channel>/profile.md` (abort if missing). On an unattended call,
-also read the calling growth plan's `autoproduce:` block.
+also read the calling growth plan's `autoproduce:` block
+(`growth/<platform>/growth-plan.md` — the `<platform>` argument).
 
 **The lock is per channel** — two growth loops share one channel, so a
 per-platform lock is useless. Use `mkdir`'s atomicity.
@@ -163,7 +167,7 @@ mkdir -p "$G"
 # held longer than 60 minutes = dead lock (Veo async takes at most 6 minutes, so the margin is generous)
 [ -d "$LOCK" ] && [ -n "$(find "$LOCK" -maxdepth 0 -mmin +60 2>/dev/null)" ] && rm -rf "$LOCK"
 mkdir "$LOCK" 2>/dev/null || { echo "another loop is authoring — skipping this tick"; exit 0; }
-printf '%s %s <caller>\n' "$TOKEN" "$(date -u +%FT%TZ)" > "$LOCK/owner"
+printf '%s %s <platform>\n' "$TOKEN" "$(date -u +%FT%TZ)" > "$LOCK/owner"
 ```
 
 Once you hold the lock, **release it no matter how the run ends — success,

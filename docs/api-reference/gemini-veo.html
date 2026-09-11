@@ -199,7 +199,7 @@ x-goog-api-key: {API_KEY}</code></pre>
       <tr><td>폴링</td><td>operation 폴링 필요</td><td>10초 × 60회, RAI 확인 후 다운로드까지 한 헬퍼로 통합</td></tr>
       <tr><td>결과 반환</td><td>영상 URI</td><td>로컬 <code>.mp4</code>로 저장 후 <strong>경로만</strong> 반환</td></tr>
       <tr><td>출력 파일명</td><td>—</td><td>경로 분리자·<code>..</code> 거부 + 비디오 확장자 화이트리스트</td></tr>
-      <tr><td><code>negativePrompt</code></td><td>제외 전용 필드 · 명사구 문법</td><td><code>veo_*</code> 4종 전부에 노출 · zod 500자 상한 · 지시문 금지를 인자 설명에 적어 둔다</td></tr>
+      <tr><td><code>negativePrompt</code></td><td>제외 전용 필드 · 명사구 문법</td><td><code>veo_*</code> 4종 전부에 노출되지만 API 는 fast/standard 의 <code>veo_text2video</code> · <code>veo_img2video</code> 에서만 받는다 — <code>veo_reference</code> · <code>veo_extension</code> · lite 모델은 넣으면 400(2026-08-15 · 08-26 실측) · zod 500자 상한 · 지시문 금지를 인자 설명에 적어 둔다</td></tr>
       <tr><td><code>personGeneration</code></td><td>지원</td><td>미노출 — 공급사 기본 정책 사용</td></tr>
       <tr><td>다중 생성</td><td><code>numberOfVideos</code></td><td>미노출 (연장 호출에만 내부적으로 1 지정) — 쇼트폼 파이프라인은 컷 단위 1개 생성이 기본이고, N개 생성은 비용이 N배다</td></tr>
     </tbody>

@@ -200,7 +200,7 @@ x-goog-api-key: {API_KEY}</code></pre>
       <tr><td>Polling</td><td>Operation polling required</td><td>10s × 60, with the RAI check and the download folded into one helper</td></tr>
       <tr><td>Result return</td><td>Video URI</td><td>Saved as a local <code>.mp4</code>, then <strong>only the path</strong> returned</td></tr>
       <tr><td>Output filename</td><td>—</td><td>Rejects path separators and <code>..</code> + a video-extension allowlist</td></tr>
-      <tr><td><code>negativePrompt</code></td><td>Exclusion-only field · noun-phrase grammar</td><td>Exposed on all four <code>veo_*</code> tools · zod caps it at 500 characters · the argument description spells out the ban on instructive forms</td></tr>
+      <tr><td><code>negativePrompt</code></td><td>Exclusion-only field · noun-phrase grammar</td><td>Exposed on all four <code>veo_*</code> tools, but the API accepts it only on fast/standard <code>veo_text2video</code> · <code>veo_img2video</code> — <code>veo_reference</code>, <code>veo_extension</code> and every lite call return 400 with it set (measured 2026-08-15 · 08-26) · zod caps it at 500 characters · the argument description spells out the ban on instructive forms</td></tr>
       <tr><td><code>personGeneration</code></td><td>Supported</td><td>Not exposed — the vendor default policy applies</td></tr>
       <tr><td>Multiple generation</td><td><code>numberOfVideos</code></td><td>Not exposed (only set to 1 internally on extension calls) — the short-form pipeline generates one video per cut by default, and generating N costs N times as much</td></tr>
     </tbody>

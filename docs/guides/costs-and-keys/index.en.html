@@ -473,11 +473,11 @@
     total <b>$0.90</b> &nbsp;(on top of configuration B, $0.915)
   </div>
 
-  <p>The model-ladder doc quotes this combination at <strong>about $0.91 per episode</strong>, rounding the economy baseline to $0.27. Either way it's <strong>three times over the default $0.30 cap.</strong></p>
+  <p>The model-ladder doc quotes this combination at <strong>about $0.91 per episode</strong>, rounding the economy baseline to $0.27. Either way it sits <strong>inside the default $1.00 cap (a plan written before 2026-09-05 still carries $0.30, which it triples).</strong></p>
 
   <h3>How that meets the cap</h3>
 
-  <p>The growth plan's <code>max_cost_per_video</code> defaults to <strong>$0.30</strong>. With the cover pinned at high, that value <strong>passes the economy tier and blocks every Veo escalation.</strong> To let one through, you raise the cap in the plan to <strong>$1.00 or more</strong>. The autonomous loop never raises it on its own — while the escalation condition holds, it keeps building at economy baseline and says so in the completion report.</p>
+  <p>The growth plan's <code>max_cost_per_video</code> defaults to <strong>$1.00</strong> (plans written before 2026-09-05 still carry $0.30). With the cover pinned at high, that value <strong>passes the economy tier and blocks every Veo escalation.</strong> To let one through, you raise the cap in the plan to <strong>$1.00 or more</strong>. The autonomous loop never raises it on its own — while the escalation condition holds, it keeps building at economy baseline and says so in the completion report.</p>
 
   <h3>Machines without mflux</h3>
 

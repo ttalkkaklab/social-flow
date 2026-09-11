@@ -61,8 +61,10 @@ reused in two or more episodes; single-episode artifacts go in the topic's `.wor
    - Fact-check policy (informational=research required / creative·daily-life=skip)
 
 3. **Assign the TTS voice** — from the `mcp__social-flow__tts_list_voices` result
-   or the voice examples in `references/profile-template.md`, propose one Gemini
-   voice that fits the tone and pin down the stylePrompt. **Once fixed, never
+   or the voice examples in `references/profile-template.md`, propose the engine
+   (`local` Supertonic is the default — zero cost; `gemini` only when acted emotion
+   is the channel's identity) and one voice that fits the tone, and pin down the
+   stylePrompt. **Once fixed, never
    change voiceName·stylePrompt** — Gemini TTS interprets style directions as
    natural language, so if the wording drifts, the voice changes from episode to
    episode. Change them only when the user explicitly says so.

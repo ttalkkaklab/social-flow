@@ -12,8 +12,6 @@ status: approved            # draft | approved — only approved allows autonomo
 approved_at: 2026-08-11
 tone: 존댓말                # comment-reply tone — 존댓말 (polite) or 반말 (casual), inherited from profile.md
 slots: ["09:00", "21:00"]   # 1–3 publish slots (local time, the target's active hours)
-daily_caps:
-  publishes: 2              # = slot count (cap 3)
 queue_rule: "status: produced|published + queue: ready"   # queue eligibility (default)
 ai_disclosure: always       # always | per-topic — with always the loop never turns disclosure off
 velocity_watch_minutes: 30  # sampling interval for a fresh video's view counter (0 = no watch) — see §Breakout

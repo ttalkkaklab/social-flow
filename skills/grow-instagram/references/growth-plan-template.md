@@ -12,9 +12,7 @@ status: approved            # draft | approved — only approved allows autonomo
 approved_at: 2026-08-11
 tone: 존댓말                # comment-reply tone — 존댓말 (polite) or 반말 (casual), inherited from profile.md
 slots: ["09:00", "21:00"]   # 1–3 publish slots (local time, the target's active hours)
-daily_caps:
-  publishes: 2              # = slot count (cap 3)
-weekly_target: 4            # weekly publish target 3–5 (Buffer's measured balance point — a target, not a cap)
+weekly_target: 4            # weekly publish target 3–5 (Buffer's measured balance point — a target, not a cap; nothing reads it as a cap)
 queue_rule: "status: produced|published + queue_instagram: ready + public URL resolvable"
 media_hosting: base_url     # base_url | staged | off — with off the loop doesn't publish
 media_base_url: "https://cdn.example.com/social-flow"
@@ -110,8 +108,9 @@ topic_keywords: ["Vietnam visa", "expat paperwork"]   # only with topic_source: 
   accrue in the channel-shared `data/<channel>/growth/autoproduce.json`. The
   ladder and promotion conditions:
   `skills/autoproduce/references/cost-tiers.md` is the source of truth, and
-  Instagram's promotion trigger is a 3-episode average `reels_skip_rate` above
-  55 (percentage-point scale).
+  Instagram's promotion trigger is a trend — the last 3 episodes' average
+  `reels_skip_rate` up 5+ points against the previous 3 (no absolute threshold,
+  revised 2026-08-15).
 - **Quality** — only episodes that pass every machine gate (fact check, style,
   storyboard-review copy, images, build report, content-reviewer P0, cost)
   become `queue_instagram: ready`; one failure means `hold`.

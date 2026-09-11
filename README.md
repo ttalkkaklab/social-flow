@@ -654,7 +654,13 @@ explicit error and everything else works.
 | `MLX_SERVE_URL` | mlx_* | `http://127.0.0.1:11234` | MLX Core / mlx-serve HTTP base. This plugin never launches the app; a down server fails closed |
 | `MLX_SERVE_API_KEY` | mlx_* on a non-loopback bind | — | Optional bearer. Loopback needs no key unless the server was started with `--api-key-strict` |
 | `SNS_TOKEN_DIR` | | `~/.config/social-flow` | Root directory for SNS credentials |
-| `MEDIA_UPLOAD_URL` / `MEDIA_UPLOAD_API_KEY` | grow-threads image posts | — | Media hosting endpoint + key. Threads only accepts images as **public URLs**, so local files need somewhere to live. Anything works that accepts `POST` with an `x-api-key` header + raw bytes, returns `201 {data:{url}}`, and serves that url as unauthenticated public GET (the header of `skills/grow-threads/references/upload-media.sh` is the contract SoT). Unset, only the image step turns off — text posts still go out |
+| `MFLUX_ZIMAGE_BIN` | image_local_generate | `~/.local/bin/mflux-generate-z-image-turbo` | Local Z-Image executable |
+| `BLENDER` | blender_* | auto-resolved (Blender.app, PATH) | Blender executable or app bundle for the previz tools |
+| `YOUTUBE_API_KEY` | youtube_topic_scout | — | YouTube Data API key (public stats; the OAuth client covers publishing) |
+| `SOCIAL_FLOW_TTS_REVIEW_MODEL` / `_API_VERSION` | tts_generate_checked | `gemini-3.8-flash` | The review model whose verdict is hash-bound to the take |
+| `SOCIAL_FLOW_YT_CHUNK_MB` | youtube_publish | `8` | Resumable-upload chunk size |
+| `HF_HOME` | image_local_generate · stt_local_transcribe | HF default | Hugging Face cache for the local models |
+| `MEDIA_UPLOAD_URL` / `MEDIA_UPLOAD_API_KEY` | grow-threads image posts · Seedance reference-video hosting | — | Media hosting endpoint + key. Threads only accepts images as **public URLs**, so local files need somewhere to live. Anything works that accepts `POST` with an `x-api-key` header + raw bytes, returns `201 {data:{url}}`, and serves that url as unauthenticated public GET (the header of `skills/grow-threads/references/upload-media.sh` is the contract SoT). Unset, only the image step turns off — text posts still go out |
 | `THREADS_TOKEN_FILE` and friends | | `<SNS_TOKEN_DIR>/conventional name` | Per-platform override of the default (flat) path — not applied to channel directories |
 
 Credential file convention (mode 600, never committed) — `threads_token` ·
