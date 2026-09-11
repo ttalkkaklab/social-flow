@@ -224,15 +224,18 @@ test('a person short opens without the name or a year, one sentence a shot, clos
                       '문이 닫힌 지 100년이 지났어요.', '100년 묵은 성벽 앞이에요.', '918년 넘은 탑이었어요.', '300년을 버틴 성벽이에요.'])
     assert.match(person(opens(year)), /carries a year/, year);
   assert.match(person(opens('1592년 옥포 앞바다에 배가 떠 있어요.')), /carries a year/);
+  assert.match(person(opens('1950. 6. 25. 새벽에 배가 떠 있어요.')), /carries a year/);
+  assert.match(person(opens('1950-06-25 새벽에 배가 떠 있어요.')), /carries a year/);
+  assert.equal(person(opens('1200.5킬로를 걸어온 남자예요.')), '');
   assert.match(person(opens('16세기 어느 항구에 배가 떠 있어요.')), /carries a year/);
   // A particle alone does not make a span — the verb does.
   for (const year of ['1592년이 밝았어요.', '드디어 1592년이 시작됐어요.', '역사는 1592년을 기억해요.', '그 해 1592년을 잊지 못했어요.',
                       '그렇게 1592년이 된 거예요.', '새해가 밝아 1592년이 된 순간이었어요.'])
     assert.match(person(opens(year)), /carries a year/, year);
   // An ellipsis pause, an embedded question and a quoted question with its attribution are one
-  // sentence; a ? closes a sentence only after a polite finite ending (요·죠·니까).
+  // sentence; a ? closes a sentence only after a polite finite ending (요·죠).
   const says = (line) => (x) => { x.SCENES[1].narration[0] = { tts: line, sub: line }; };
-  for (const one of ['설마… 진짜일까 싶었어요.', '대체 무슨 일이야? 하고 그가 중얼거렸어요.', '그게 사실일까? 궁금했어요.',
+  for (const one of ['설마… 진짜일까 싶었어요.', '설마... 진짜일까 싶어서 다시 봤어요.', '1950. 6. 25. 새벽에 배가 떠 있어요.', 'B.C. 500년 무렵의 성벽이에요.', '대체 무슨 일이야? 하고 그가 중얼거렸어요.', '그게 사실일까? 궁금했어요.',
                      '그가 살아있을까? 싶었어요.', '설마 진짜일까? 싶어서 다시 봤어요.', '불이야! 하고 그가 소리쳤어요.',
                      '대체 무슨 일일까요? 하고 그가 중얼거렸어요.', '그게 사실일까요? 궁금했어요.', '만수는 왜요? 하고 되물었어요.',
                      '배가 진짜 왔을까요? 하고 다들 물었어요.', '그는 "괜찮아요?" 하고 물었어요.', '괜찮아? 물었어요.', '정말요? 되물었죠.', '불이야! 소리 질렀어요.'])

@@ -110,7 +110,8 @@ window.STORY = {
    sentences and two pictures, in any register.
 
 Two things the checks cannot tell apart, so pick around them: an alias that is also inside
-an ordinary word ("만수" inside 만수국) flags the opening — choose the fuller name; and a
+an ordinary word ("만수" inside 만수국) flags the opening and colours that word in the subtitle
+(`SUB_ACCENT_WORDS` matches the same way) — choose the fuller name; and a
 span is read two ways and no other, and only on a three-digit number: a marker
 (째·동안·넘게·만에·간·이상·가까이·가량·남짓 — "300년째", "500년 동안", "100년 넘게 버틴 성벽"), or a particle
 (이·을·를·은·는·만·이나) with a finite past span verb a year cannot be the subject of ("500년이

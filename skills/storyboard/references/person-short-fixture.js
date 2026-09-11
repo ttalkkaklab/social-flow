@@ -6,7 +6,7 @@
 window.COMPREHENSION = {
   question: "폭풍 밤에 기름이 없는 등대가 어떻게 배를 돌려세웠나",
   answer: "등대지기가 자기 집 문짝과 이불을 등탑 위에서 태워 불빛을 냈다",
-  takeaway: "불빛 하나가 배를 살렸는데, 그 배가 있었는지는 마을에서도 말이 갈려요"
+  takeaway: "불빛 하나가 배를 살렸는데 그 배가 있었는지는 마을 사람 절반이 다르게 말해요"
 };
 window.STORY = {
   version: "story-v1", kind: "fiction",

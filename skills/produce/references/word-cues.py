@@ -49,7 +49,7 @@ import sys
 
 # Same rule as story-contract.js: a four-digit number before 년 is always a year; a three-digit one is a year
 # unless a span marker (째·동안·넘게…) or a particle and a finite past span verb (흘렀·넘었…) follows.
-DATE = re.compile(r"(^|[^\d])(\d{4}\s*년|\d{3}\s*년(?!째|\s*(동안|넘게|만에|간|이상|가까이|가량|남짓)|(이|을|를|은|는|만|이나)\s*(흘렀|넘었|버텼|견뎠|기다렸|이어졌)))|\d+\s*세기|\d{4}\s*[-–.]\s*\d{1,2}")
+DATE = re.compile(r"(^|[^\d])(\d{4}\s*년|\d{3}\s*년(?!째|\s*(동안|넘게|만에|간|이상|가까이|가량|남짓)|(이|을|를|은|는|만|이나)\s*(흘렀|넘었|버텼|견뎠|기다렸|이어졌)))|\d+\s*세기|\d{4}\s*[-–.]\s*\d{1,2}\s*[-–.]\s*\d{1,2}(?!\d)")
 
 
 def accent_flags(words, names):
@@ -62,8 +62,10 @@ def accent_flags(words, names):
         pos += len(w) + 1
     flags = [any(n and n in w for n in names) for w in words]
     for m in DATE.finditer(joined):
+        # group 1 is the non-digit before the year (often the space), so the match proper starts at group 2
+        m0 = m.start(2) if m.group(2) else m.start()
         for i, st in enumerate(starts):
-            if st <= m.start() < st + len(words[i]) or st < m.end() <= st + len(words[i]):
+            if st <= m0 < st + len(words[i]) or st < m.end() <= st + len(words[i]):
                 flags[i] = True
     return flags
 
