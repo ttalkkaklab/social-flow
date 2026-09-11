@@ -426,19 +426,35 @@
   .shot-angle.angle-dutch, .shot-angle.angle-low, .shot-angle.angle-high, .shot-angle.angle-overhead { color: var(--accent-ink); }
   .shot-size.unknown { color: var(--warn-ink, var(--accent-ink)); border-style: dashed; }
   .shot-why { font-size: 0.8em; color: var(--muted); margin-left: 0.4em; }
-  .shot-size { display: inline-flex; align-items: center; gap: 5px; cursor: help; }
-  /* Shot-size pictogram — a square frame around a small figure, cut where that size cuts a person */
+  .shot-size { display: inline-flex; align-items: center; gap: 6px; cursor: help; border-color: transparent; padding-left: 0; }
+  .shot-size.unknown { border-color: var(--warn-ink, var(--accent-ink)); padding-left: 7px; }
+  /* Shot-size pictogram — an app-icon tile: a gradient squircle per size family and a white
+     figure cut where that size cuts a person. The tile's rounded box does the cropping. */
   .size-ico {
-    width: 22px; height: 22px; flex: none; border-radius: 5px; overflow: hidden;
-    background: var(--sunk); border: 1px solid var(--hair); color: var(--muted);
+    width: 22px; height: 22px; flex: none; border-radius: 24%; overflow: hidden; color: #fff;
+    background: linear-gradient(160deg, #8e8e93, #636366);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .28), 0 1px 2px rgba(0, 0, 0, .22);
   }
+  .size-ico.f-wide { background: linear-gradient(160deg, #5ac8fa, #0a6cff); }
+  .size-ico.f-body { background: linear-gradient(160deg, #4cd964, #0f9d58); }
+  .size-ico.f-face { background: linear-gradient(160deg, #ffa53d, #ff2d55); }
+  .size-ico.f-thing { background: linear-gradient(160deg, #ffd60a, #ff8a00); }
+  .size-ico.f-group { background: linear-gradient(160deg, #c46dff, #5e5ce6); }
+  .size-ico.f-view { background: linear-gradient(160deg, #40d6d0, #0a84a5); }
   .size-key {
-    display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s3);
-    margin: var(--s2) 0 0; font-size: var(--t-micro); color: var(--muted);
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: var(--s3) var(--s1);
+    margin: var(--s3) 0 0; padding: var(--s3) var(--s4); border-radius: 12px; background: var(--sunk);
   }
-  .size-key .kt { color: var(--faint); font-weight: 700; letter-spacing: .06em; margin-right: var(--s1); }
-  .size-key .k { display: inline-flex; align-items: center; gap: 5px; cursor: help; }
-  .size-key .size-ico { width: 26px; height: 26px; }
+  .size-key .kt {
+    grid-column: 1 / -1; margin: 0; font-size: var(--t-micro); color: var(--faint);
+    font-weight: 700; letter-spacing: .06em;
+  }
+  .size-key .k {
+    display: flex; flex-direction: column; align-items: center; gap: 5px;
+    font-size: 10.5px; line-height: 1.2; text-align: center; color: var(--muted); cursor: help;
+  }
+  .size-key .k .kk { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9.5px; color: var(--faint); }
+  .size-key .size-ico { width: 38px; height: 38px; border-radius: 22.5%; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3), 0 2px 4px rgba(0, 0, 0, .18); }
   .shot-meta .shot-feel { margin: 0; flex-basis: 100%; }
   .shot-feel.miss b { color: var(--warn-ink, var(--accent-ink)); }
   .shot-info {
@@ -1766,7 +1782,7 @@ window.SB_DOC = {
      where that size cuts a person (mid-shin · mid-thigh · mid-chest, never a joint). Anything
      outside the viewBox is simply not drawn, so the frame does the cropping. */
   var SIZE_ICON = (function () {
-    var C = 'fill="currentColor"', W = 'fill="var(--card)"';
+    var C = 'fill="currentColor"', W = 'fill="#1c1c2e" opacity=".62"';
     function person(cx, top, h, o) {
       o = o || {};
       var k = h / 100;
@@ -1780,22 +1796,24 @@ window.SB_DOC = {
         var r = o.face === "wow" ? 3 : 2.2;
         g += '<circle cx="44" cy="16" r="' + r + '" ' + W + '/><circle cx="56" cy="16" r="' + r + '" ' + W + '/>';
         g += o.face === "wow" ? '<circle cx="50" cy="24.5" r="2.8" ' + W + '/>'
-          : '<path d="M45.5 22q4.5 4 9 0" fill="none" stroke="var(--card)" stroke-width="2" stroke-linecap="round"/>';
+          : '<path d="M45.5 22q4.5 4 9 0" fill="none" stroke="#1c1c2e" stroke-opacity=".62" stroke-width="2" stroke-linecap="round"/>';
       }
       return g + "</g>";
     }
-    var ground = '<path d="M0 27.5h32" stroke="currentColor" stroke-width="1.2" opacity=".45"/>';
+    var ground = '<path d="M0 27.5h32" stroke="currentColor" stroke-width="1.2" opacity=".55"/>';
     var D = {
-      els: '<circle cx="25" cy="8" r="3" ' + C + ' opacity=".5"/>' +
-           '<path d="M0 27 L9 16 L15 22 L22 14 L32 26 Z" ' + C + ' opacity=".28"/>' + ground +
+      els: '<circle cx="25" cy="8" r="3" ' + C + ' opacity=".7"/>' +
+           '<path d="M0 27 L9 16 L15 22 L22 14 L32 26 Z" ' + C + ' opacity=".35"/>' + ground +
            '<circle cx="15.5" cy="24.2" r="1.4" ' + C + '/><rect x="14.7" y="25.2" width="1.6" height="2.8" ' + C + '/>',
-      ls: '<path d="M0 27 L7 20 L14 26 L20 18 L32 27 Z" ' + C + ' opacity=".18"/>' + ground + person(16, 12, 16, { arms: false }),
+      ls: '<path d="M0 27 L7 20 L14 26 L20 18 L32 27 Z" ' + C + ' opacity=".25"/>' + ground + person(16, 12, 16, { arms: false }),
       fs: person(16, 1.5, 29),
       mfs: person(16, 1, 35),
       ms: person(16, 0.5, 40),
       mcu: person(16, 1, 55),
-      cu: person(16, -3, 105),
-      choker: person(16, -12, 140),
+      cu: person(16, -1, 96),
+      choker: '<ellipse cx="10.5" cy="12.5" rx="4.6" ry="4.2" ' + C + '/><ellipse cx="21.5" cy="12.5" rx="4.6" ry="4.2" ' + C + '/>' +
+              '<circle cx="11.2" cy="13" r="2" ' + W + '/><circle cx="22.2" cy="13" r="2" ' + W + '/>' +
+              '<ellipse cx="16" cy="23" rx="4" ry="3.2" ' + C + '/>',
       ecu: '<ellipse cx="9" cy="17" rx="6.5" ry="6" ' + C + '/><ellipse cx="23" cy="17" rx="6.5" ry="6" ' + C + '/>' +
            '<circle cx="9.8" cy="17.6" r="2.6" ' + W + '/><circle cx="23.8" cy="17.6" r="2.6" ' + W + '/>' +
            '<path d="M3 8q6 -3.5 12 0M17 8q6 -3.5 12 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
@@ -1804,11 +1822,11 @@ window.SB_DOC = {
               '<path d="M11 8.5v-3M14.5 8.5v-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" opacity=".5"/>',
       two: person(9.5, 2, 38, { arms: false }) + person(22.5, 2, 38, { arms: false }),
       three: ground + person(6, 8, 21, { arms: false }) + person(16, 6, 23, { arms: false }) + person(26, 8, 21, { arms: false }),
-      ots: '<g opacity=".6">' + person(21, 3, 60, { arms: false }) + "</g>" +
+      ots: '<g opacity=".55">' + person(21, 3, 60, { arms: false }) + "</g>" +
            '<circle cx="6" cy="14" r="9.5" ' + C + '/><rect x="-8" y="22" width="30" height="20" rx="9" ' + C + '/>',
       pov: '<path d="M2.5 16Q16 3 29.5 16Q16 29 2.5 16Z" ' + C + '/><circle cx="16" cy="16" r="5.5" ' + W + '/><circle cx="16" cy="16" r="2.8" ' + C + '/>',
       back: '<rect x="2" y="23" width="28" height="18" rx="9" ' + C + '/><circle cx="16" cy="13" r="10" ' + C + '/>' +
-            '<path d="M13 9.5q3 -2.5 6 0" fill="none" stroke="var(--card)" stroke-width="1.6" stroke-linecap="round" opacity=".7"/>',
+            '<path d="M13 9.5q3 -2.5 6 0" fill="none" stroke="#1c1c2e" stroke-opacity=".5" stroke-width="1.6" stroke-linecap="round"/>',
       cutaway: '<path d="M10 20h12l-1.5 9h-9Z" ' + C + '/><path d="M16 20V9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
                '<ellipse cx="11" cy="12.5" rx="5.2" ry="2.7" transform="rotate(-35 11 12.5)" ' + C + '/>' +
                '<ellipse cx="21" cy="12.5" rx="5.2" ry="2.7" transform="rotate(35 21 12.5)" ' + C + '/>',
@@ -1818,9 +1836,12 @@ window.SB_DOC = {
     D.ws = D.ls;
     return D;
   })();
+  var SIZE_FAMILY = { els: "wide", ls: "wide", ws: "wide", fs: "body", mfs: "body", ms: "body",
+                      mcu: "face", cu: "face", choker: "face", ecu: "face", insert: "thing",
+                      two: "group", three: "group", ots: "group", pov: "view", back: "view", cutaway: "view", reaction: "view" };
   function sizeIcon(size) {
     var d = SIZE_ICON[size];
-    return d ? '<svg class="size-ico" viewBox="0 0 32 32" aria-hidden="true">' + d + "</svg>" : "";
+    return d ? '<svg class="size-ico f-' + SIZE_FAMILY[size] + '" viewBox="0 0 32 32" aria-hidden="true">' + d + "</svg>" : "";
   }
   function sizeTitle(size) { return size + " — " + (T.sizeHint[size] || ""); }
   function sizeKey() {
@@ -1828,7 +1849,7 @@ window.SB_DOC = {
                  "two", "three", "ots", "pov", "back", "cutaway", "reaction"];
     return '<div class="size-key"><span class="kt">' + esc(T.sizeKey) + "</span>" +
       order.map(function (k) {
-        return '<span class="k" title="' + esc(sizeTitle(k)) + '">' + sizeIcon(k) + esc(T.size[k] || k) + "</span>";
+        return '<span class="k" title="' + esc(sizeTitle(k)) + '">' + sizeIcon(k) + '<span>' + esc(T.size[k] || k) + '</span><span class="kk">' + esc(k) + "</span></span>";
       }).join("") + "</div>";
   }
   function grammarOf(s, i) {
