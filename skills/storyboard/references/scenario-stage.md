@@ -118,9 +118,13 @@ Every wow has one landing item, written in the frontmatter as `wow_lands: 전개
 - **The landing item is the peak.** Its last sentence is the reversal said plainly, on its
   claim, and the curve's maximum sits there (§7 · §12). Everything after it — the rest of the
   전개 rows, the 마무리 — is what the reversal costs, where it breaks, and what changes now.
-- **The 마무리 is the message.** With the belief gone, what the viewer understands, reconsiders
-  or can do — the M# sentence, in the episode's own words, and the forwardable thing is
-  usually the reversal itself in one line.
+- **The 마무리 is the message, delivered as a picture and a line.** With the belief gone, the
+  close is the 「그날 이후로」 frame — where the world stands after the reversal (the story
+  spine's last step, the one most copies drop) — and over it the M# sentence in the narration's
+  words, heard once, last (지식채널e's last caption: 20 years of five-minute pieces closing on
+  one white line after the reversal). The line is not the reversal said again and not the
+  picture described; it is what the reversal means with the names gone. The forwardable thing
+  is that line, or the reversal in one sentence when the line is too general to pass on.
 
 A page whose 실제로는 half is stated in the 훅 (outside the result-first shape), or is never
 said plainly in any 전개 item, has a wow on the frontmatter and none in the episode. That is
@@ -151,16 +155,40 @@ started one of those two ways.
 
 After the first research pass closes (storyboard §2.1: ten or more searches, three or more
 Verified rows) and before any direction row, write `research.md` §Messages — **three rows**.
-A message is one sentence in the viewer's words: what a viewer of this channel, living now,
-**understands, reconsiders or can do** after the episode (story-quality §Design step 2). It
-names the subject, what happened or works, and why that matters to them today — not a topic
-label, not an emotion label, not "협력이 중요하다". Three different messages, not three
-wordings; each rests on Verified rows already on the page, and the row says which. **Each
-message cites the wow it is the so-what of** (`W#`, §The wow first) — the message is what the
-viewer does with the belief gone, and a message with no wow behind it is the fact-list page
-one step earlier. Two messages may share a wow when the research holds only one real gap and
-two honest so-whats; the checker warns, and the pick shows whether the second page is an
-episode or a rewording.
+A message is one sentence in the viewer's words that **stays true with the episode's names
+gone** — what a viewer of this channel, living now, understands, reconsiders or can do after
+the episode (story-quality §Design step 2). Its shape is Egri's premise or McKee's controlling
+idea: *what leads to what* — "맹목적 믿음은 파멸로 이어진다", "정의가 이기는 건 주인공이 범인보다
+영리할 때다", "작은 부탁이 큰 이유는 그 뒤에 법이 서 있어서다" — a value and its cause, told in
+the present, with no figure, no year and no name in it. Not a topic label, not an emotion label,
+not "협력이 중요하다", and **not what happened**: "만덕이 청한 건 상이 아니라 법의 예외였고 임금이
+그 법에 예외를 냈다" is the wow's 실제로는 half said again, a fact about this person only, and
+the board built on it in 2026-09-11 had nothing to hand over at the 마무리 — a listener could
+repeat what happened and not what it meant. Three tests, in this order:
+
+- **The name-erasure test.** Take the person, the place and the thing out of the sentence. What
+  is left has to still be a sentence someone could say about their own life. "만덕이 부탁한 건
+  법의 예외였다" leaves nothing; "겸손해 보이는 부탁의 크기는 그 뒤에 어떤 법이 서 있는지로 잰다"
+  stands. ("The more specific the story, the more universal" is the bridge, and the message is
+  the sentence at the far end of it.)
+- **The tomorrow test.** What does the viewer see differently, or do differently, tomorrow —
+  the "so what" as a sentence, not a column beside it. The *Why today* cell explains this; the
+  Message cell has to carry it on its own.
+- **The wow-separation test.** Put the message next to its wow's 실제로는 half. If they are the
+  same sentence in two wordings, the message has not been written yet.
+
+Three different messages, not three wordings; each rests on Verified rows already on the page,
+and the row says which. **Each message cites the wow it is the so-what of** (`W#`, §The wow
+first) — the message is what the viewer does with the belief gone, and a message with no wow
+behind it is the fact-list page one step earlier. Two messages may share a wow when the research
+holds only one real gap and two honest so-whats; the checker warns, and the pick shows whether
+the second page is an episode or a rewording.
+
+`check-research.js` reads the shape it can read (docs/research/2026-09-11-message-delivery):
+a Message cell whose final predicate is in the past tense (냈다 · 했어요 · 였습니다) is a fact
+and fails; one carrying an Arabic digit fails; one carrying the first word of its direction's
+*Hero / stake* cell (김만덕 → 만덕 too) fails the name-erasure test. What it cannot read — whether
+the sentence means anything — is the §2.2 pick's and the narration read's.
 
 ### The topic, cut from the message
 
@@ -349,12 +377,12 @@ event itself; inventing a modern connection to prolong it is not a solution.
 | # | Item | What goes in it |
 |---|---|---|
 | 1 | **주제** | The subject cut from the page's message — what this episode is about and the question it answers, one sentence in the viewer's words at the 초3~4 floor (korean-style §Eye level). Not a topic label ("로즈웰 사건"), and never a report of ignorance ("무엇이 떨어졌는지는 아직 모른다") — the sentence names what the evidence establishes ("군은 왜 발표를 바꿨을까 — 설명이 바뀌면 사람들이 무엇을 믿게 되는지"). `COMPREHENSION.question` is cut from this line; `takeaway` from the message (§Messages first). |
-| 2 | **훅** | A dramatised scene that pulls the viewer in — a person at that moment, a "만약 그날 …" the viewer can picture — and it puts the viewer inside the wow's 믿는 것 half (§The wow first: the type's third column says what to stage). Its first spoken sentence names what is at stake before anything is asked; it ends on the promise — what the viewer will know by the end — and withholds the 실제로는 half unless the page is the result-first shape. It may invent a scene. It may not invent a fact (below). |
+| 2 | **훅** | A dramatised scene that pulls the viewer in — a person at that moment, a "만약 그날 …" the viewer can picture — and it puts the viewer inside the wow's 믿는 것 half (§The wow first: the type's third column says what to stage). Its first spoken sentence names what is at stake before anything is asked; it ends on the promise — what the viewer will know by the end — and withholds the 실제로는 half unless the page is the result-first shape. It may invent a scene. It may not invent a fact (below). Where the belief can be put in someone else's mouth — "겸손한 소원이라고들 하는데" — do it here or in 전개 #1: a stated belief the close overturns is heard as a turn, an unstated one as a lecture (Save the Cat's *theme stated*; `STORY.themeStated` on the board, optional). |
 | 3 | **전개 #1** | What actually happened — the real event behind the hook, told as an account (who · when · what), every fact on a `research.md` row. Where the research holds an answer most viewers would guess first, this item opens on it and takes it apart (scenario-craft §11) — the 믿는 것 half spoken and taken seriously before it goes. |
 | 4 | **전개 #2** | The next necessary evidence, choice or consequence that changes understanding. A modern bridge is optional. On answer-first this supplies the early result and names its subject directly. |
 | 5 | **전개 #3** | Develop or test the answer with evidence, action or a limit. Use sourced modern cases only when they serve this content; no minimum case count. |
 | — | *(the landing)* | One of 전개 #1–#3 is `wow_lands`: the reversal said plainly in its last sentence, on its claim, the feel curve's maximum on its header. Whatever follows it is the cost, the limit and what changes now. |
-| 6 | **마무리** | The earned resolution: answer the opening with evidence or a decisive action and make the meaning understandable. State limits honestly. Do not outsource the answer to a generic opinion question. Name the one forwardable thing here — the fact, verdict, line or checklist a viewer could pass on as-is; §4 writes it into the closing shot's `shot.share`, where a short requires it. |
+| 6 | **마무리** | The earned resolution as a picture and a line: the 「그날 이후로」 frame — where the world stands after the reversal — and over it the page's Message sentence in the narration's words, heard once, last (§The wow first · §The message). Not a summary, not a moral, not the reversal said again, not the picture described in words. State limits honestly. Do not outsource the answer to a generic opinion question. Name the one forwardable thing here — the message line, or the reversal in one sentence when the line is too general to pass on; §4 writes it into the closing shot's `shot.share`, where a short requires it, and the message line into `STORY.thesis`, which the checker requires to be heard at or after the payoff. |
 | 7 | **CTA** | Optional. Write `없음` and why the ending is sufficient, or one relevant ask after the resolution. Never use an ask to replace the answer. Subscribe and like stay banned. An ask stays optional; a forwardable thing does not — an ask requests behaviour from the viewer, while a forwardable thing is one sentence, figure or verdict they can pass on as-is. Asking to be shared is an ask, not a trigger. |
 
 ### 훅 may invent a scene, not a fact
@@ -447,8 +475,9 @@ When this is `wow_lands`, its last sentence is the reversal, said plainly.>
 3. <case, optional>
 
 ## 마무리 — feel <sign · feeling>
-<the earned resolution, verbatim: "…">
-<forwardable — the one fact, verdict, line or checklist a viewer could pass on as-is, verbatim: "…">
+<the 「그날 이후로」 picture — where the world stands after the reversal, one sentence>
+<the message line, verbatim — the **Message.** sentence in the narration's words, heard last: "…">
+<forwardable — that line, or the reversal in one sentence, verbatim: "…">
 
 ## CTA — feel <sign · feeling>
 <없음 + reason, or the optional relevant ask verbatim after the resolution>

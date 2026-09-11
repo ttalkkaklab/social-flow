@@ -49,8 +49,10 @@ function scenePlan(scene) {
   if (frameErrors.length) throw new Error(frameErrors.join('; '));
   const endFrame = framePlan(scene).end;
   if (endFrame) settings.lastImagePath = endFrame;
+  // `host` is the CLI's own video tool (Grok image_to_video — owner directive 2026-09-07); it takes
+  // the same source and prompt as Veo and none of the Seedance planning fields.
   const engine = settings.engine || (kind === 'motion' ? 'seedance' : 'veo');
-  if (!['seedance', 'veo'].includes(engine)) throw new Error('unknown video engine: ' + engine);
+  if (!['seedance', 'veo', 'host'].includes(engine)) throw new Error('unknown video engine: ' + engine);
   if (engine !== 'seedance') {
     const named = SEEDANCE_KEYS.filter((k) => settings[k] !== undefined);
     if (named.length)

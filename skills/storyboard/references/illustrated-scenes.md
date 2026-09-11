@@ -53,8 +53,8 @@ a piece, stamping a document or pulling a cart: anticipation, hand contact, the 
 effort, release. While walking, match feet and body travel, and keep the hand on the object
 it holds. Repeated nods and fan waving cannot stand in for different actions.
 
-Generated images follow the image tool the host and the user chose. Files made with Codex's
-built-in image tool are copied into the project. Never switch to a separate API on your own.
+Generated images follow the image tool the host and the user chose. Files made with the host's
+built-in `image_gen` (Codex, Grok) are copied into the project. Never switch to a separate API on your own.
 
 ## Optional: the scope of 2.5D illustration
 

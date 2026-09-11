@@ -606,6 +606,12 @@ the price.
 
 ### 6. Visual generation
 
+- **Host tools first (owner directive 2026-09-07)** — read your own tool list before the
+  engines below. `image_gen` present (Codex, Grok): every background and slide art goes to
+  it, `image.host` at $0, `PRODUCTION.imageProvider:"host"`. `image_to_video` present (Grok):
+  the selected hook and any escalated clip go to it, `engine:"host"`, `video.host` at $0,
+  `videoProvider:"host"` — the cap check then sees only what the API lanes still bill. The
+  gpt/local/seedance/veo lines below are the Claude Code path.
 - **Backgrounds — 1 cover + 2–4 points** — `size: "1088x1920"`.
   - **Cover background = `gpt_image_text2img` `quality: "high"`, a
     photorealistic human scene** (generated people only; default a Korean

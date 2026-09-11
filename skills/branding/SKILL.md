@@ -69,6 +69,9 @@ Generate **4 distinct style directions** with `gpt_image_text2img`
 is **an exception to the local-first default path (image_local_generate)** —
 this master becomes the channel's face, so it falls under the quality clause,
 and gpt-side rendering is also safer against brand-reviewer's broken-glyph P0.
+Under Codex or Grok the host `image_gen` makes the four instead (`1:1`, the same prompts,
+`image.host` in the ledger) — the quality clause is about glyphs, and the host tools render
+them as well as the API (owner directive 2026-09-07).
 Default directions (swap per the brief):
 
 - **A flat-mascot** — flat vector mascot, thick outlines, simple shapes

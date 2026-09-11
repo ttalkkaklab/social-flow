@@ -122,7 +122,8 @@ This outranks every other rule in the plugin, the skills and the reference docs.
 This replaces the older mandatory-video hook and fixed editorial-cut quotas.
 Use `skills/storyboard/references/render-routing.md` before choosing any assets.
 Every generated cut declares `shot.render.mode`, `purpose` and `reason`:
-`still_camera`, `character_html`, `object_html`, `data_graph`, `generated_video`, or `editorial_html`.
+`still_camera`, `character_html`, `object_html`, `data_graph`, `generated_video`, `editorial_html`,
+or `stock_video` (a free stock or archive clip with its `visual.license` record, 2026-09-07).
 People mentioned in narration do not automatically need 3D characters; incidental numbers
 in a mechanism do not automatically need a graph. Choose the information the viewer needs.
 
@@ -146,6 +147,19 @@ Choose photographs, acted 3D processes, object mechanisms and charts from the st
 Data graphs follow `skills/storyboard/references/chart-design.md` and the shared SVG renderer.
 No unsupported route, substituted number card or separate PRELUDE may reach assembly.
 The builder reruns source-plan checks and records its version and input hashes before encoding.
+
+## Host media tools first (user directive, 2026-09-07)
+
+When the CLI running a skill ships its own media generation, that tool comes before the
+plugin's API lanes. Codex and Grok expose `image_gen` (Grok also `image_edit`), so every
+generated still, slide art, candidate logo, intro keyframe and growth-post image goes there
+first; Grok exposes `image_to_video` and `reference_to_video`, so every generated clip goes
+there first. Claude Code has neither, so the API table applies unchanged there. The storyboard
+records the detection in `window.PRODUCTION.imageProvider` and `videoProvider` (`host` | `api`);
+an explicit `api` written for the episode wins, and the fallback from a failed host call is
+asked for, never silent. Host output is logged as `image.host` / `video.host` at $0 with the
+allowance noted. The contract is `skills/produce/references/still-generation.md` §1 and
+`skills/produce/references/video-model-selection.md` §The host video tool comes first.
 
 ## Branch strategy
 

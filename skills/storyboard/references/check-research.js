@@ -100,6 +100,33 @@ const IGNORANCE = new RegExp([
   "\\b(?:we|they|scientists|historians)\\s+(?:still\\s+)?(?:don'?t|do\\s+not|may\\s+never)\\s+know\\b"
 ].join('|'), 'i');
 
+/* A message is a sentence that stays true with the episode's names gone — Egri's "A leads to B",
+   McKee's value + cause — so it is told in the present, carries no figure, and names no hero
+   (scenario-stage §The message, docs/research/2026-09-11-message-delivery). The 2026-09-11
+   김만덕 log wrote "…임금은 그 법에 예외를 냈다" in the Message cell: a fact, the wow's 실제로는
+   half said again, and the board downstream had nothing to hand over. The first two shapes a
+   checker can read: a final predicate in the past tense, and an Arabic digit anywhere. */
+const PAST_FINAL = /(았|었|였|했|왔|갔|봤|됐|냈|셨|잤|샀|썼|줬|놨|뒀|했었|았었|었었)(?:다|어요|어|습니다|죠|네요|거든요|대요|답니다|지요|잖아요|던\s*것이다|던\s*거다|던\s*겁니다|던\s*거예요)\s*$/;
+const HERO_HEAD = /^[\s*「」"'“”‘’(]*([가-힣A-Za-z]{2,})/;
+// A hero cell that opens on a modifier ("작은 부탁 — 법의 예외", "The 1969 launch") has no name at
+// its head: determiners and articles are skipped, an English head has to be capitalised, and a
+// two-syllable Korean head that ends like a modifier (작은 · 어떤 · 이런) is read as one — the
+// price is a two-syllable given name with that ending (지은), which the reviewer still catches.
+const HERO_STOP = new Set(['the', 'a', 'an', 'this', 'that', 'one', 'two', 'its', 'our', 'his', 'her', 'their',
+  '작은', '큰', '어떤', '이런', '그런', '저런', '모든', '여러', '다른', '같은', '새', '옛', '첫', '한', '두', '세', '그', '이', '저']);
+function heroName(cell) {
+  const head = (String(cell || '').match(HERO_HEAD) || [])[1];
+  if (!head || HERO_STOP.has(head.toLowerCase())) return null;
+  if (/^[a-z]/.test(head)) return null;
+  if (/^[가-힣]{2}$/.test(head) && /[은는던한된될런]$/.test(head)) return null;
+  return head;
+}
+
+/** The message cell without its trailing punctuation and citation marks, for the shape tests. */
+function messageCore(sentence) {
+  return String(sentence || '').replace(/\[[^\]]*\]/g, '').replace(/[\s.。!?…」"'”’)]+$/g, '').trim();
+}
+
 function die(msg) {
   process.stderr.write('check-research: ' + msg + '\n');
   process.exit(3);
@@ -133,6 +160,13 @@ function rows(body) {
       const firstReal = all.findIndex((r) => !r.every((c) => /^:?-+:?$/.test(c) || c === ''));
       return i !== firstReal;
     });
+}
+
+/** The header cells of a section's first markdown table — the row `rows()` drops. */
+function headerCells(body) {
+  const line = String(body || '').split('\n').find((l) => /^\s*\|/.test(l) &&
+    !l.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').every((c) => /^\s*:?-+:?\s*$/.test(c) || c.trim() === ''));
+  return line ? line.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map((c) => c.trim()) : [];
 }
 
 /**
@@ -382,13 +416,27 @@ function analyse(src, fmt, scenes, opts) {
   const WOW_CELL = /^\**\s*W\s*(\d+)\s*\**$/i;
   const wowNums = new Set(wowIds.map((w) => w.n));
   const citedWows = [];
+  const msgSentence = new Map();
   msgIds.forEach((m) => {
     const wIdx = m.cells.findIndex((c, i) => i > 0 && WOW_CELL.test(String(c || '').trim()));
     const sentence = String(m.cells[wIdx === 1 ? 2 : 1] || '');
+    msgSentence.set(m.n, sentence);
     const hit = sentence.match(IGNORANCE);
     if (hit)
       bad(`M${m.n} is a report of ignorance ("…${hit[0]}") — a message names what the evidence ` +
           'establishes, not what nobody knows (scenario-stage §Messages first)');
+    // The shape of a message, not its truth: a sentence in the past tense tells what happened,
+    // which is the wow's 실제로는 half said again; a figure is a fact. Both hand the 마무리
+    // nothing that outlives the episode's names (scenario-stage §The message).
+    const core = messageCore(sentence);
+    const past = core.match(PAST_FINAL);
+    if (past)
+      bad(`M${m.n} is told in the past tense ("…${past[0].trim()}") — that is what happened, the wow's ` +
+          '실제로는 half again; a message is a present-tense sentence that stays true with the names gone ' +
+          '(scenario-stage §The message)');
+    if (/\d/.test(core))
+      bad(`M${m.n} carries a figure — a figure is a fact for the 전개 items; the message is what it ` +
+          'means, with no number in it (scenario-stage §The message)');
     if (!wowIds.length) return;
     if (wIdx < 0) bad(`M${m.n} cites no wow point (W#) — a message is the so-what of one wow (scenario-stage §The wow first)`);
     else {
@@ -434,6 +482,7 @@ function analyse(src, fmt, scenes, opts) {
   const msgNums = new Set(msgIds.map((m) => m.n));
   const citedMsgs = [];
   const CITE_CELL = /^\**\s*M\s*(\d+)\s*\**$/i;
+  const heroIdx = headerCells(dirBody).findIndex((h) => /hero|stake|주인공|영웅|걸린\s*것/i.test(h));
   dirIds.forEach((d) => {
     const mIdx = d.cells.findIndex((c, i) => i > 0 && CITE_CELL.test(String(c || '').trim()));
     // The 주제 sits right after the citation — or right before it on a row that puts the M#
@@ -452,7 +501,24 @@ function analyse(src, fmt, scenes, opts) {
     else {
       const n = Number(String(d.cells[mIdx]).replace(/[^\d]/g, ''));
       if (!msgNums.has(n)) bad(`D${d.n} cites M${n}, which is not in the Messages table`);
-      else citedMsgs.push(n);
+      else {
+        citedMsgs.push(n);
+        // The name-erasure test: the hero cell's first word is the episode's own name (a
+        // person, a thing, a stat), and a message that carries it is about this episode
+        // only. A three-character Korean name is also read without its surname (김만덕 →
+        // 만덕), which is how the narration says it. The hero column is found by its header
+        // (logs add an Engine or Score column and the position moves); no such header, no test.
+        const head = heroIdx < 0 ? null : heroName(d.cells[heroIdx]);
+        if (head) {
+          const forms = [head];
+          if (/^[가-힣]{3}$/.test(head)) forms.push(head.slice(1));
+          const sentence = messageCore(msgSentence.get(n));
+          const found = forms.find((f) => sentence.includes(f));
+          if (found)
+            bad(`M${n} names its hero ("${found}") — erase the name and the message has to still stand; ` +
+                'a sentence about this person only is the 전개, not the message (scenario-stage §The message)');
+        }
+      }
     }
   });
   const shared = citedMsgs.filter((n, i) => citedMsgs.indexOf(n) !== i);
@@ -793,6 +859,48 @@ function selftest() {
      !has(analyse(noMsg, null), /cites (no message|M\d)/));
   ok('two messages is a violation',
      has(analyse(good.replace('| M3 | W3 | z-msg | now | 3 | → D3 |\n', ''), null), /2 message\(s\)/));
+  // The shape of a message (scenario-stage §The message): present tense, no figure, no hero name.
+  ok('a message told in the past tense is a violation',
+     has(analyse(good.replace('| M1 | W1 | x-msg |', '| M1 | W1 | 임금은 그 법에 예외를 냈다 |'), null),
+         /M1 is told in the past tense/));
+  ok('a past-tense message ending on -어요 is a violation too',
+     has(analyse(good.replace('| M1 | W1 | x-msg |', '| M1 | W1 | 만덕이 청한 건 상이 아니라 법의 예외였어요. |'), null),
+         /M1 is told in the past tense/));
+  ok('a present-tense message passes the tense test',
+     !has(analyse(good.replace('| M1 | W1 | x-msg |', '| M1 | W1 | 작은 부탁이 큰 이유는 그 뒤에 법이 서 있어서다 |'), null),
+          /M1 is told in the past tense/));
+  ok('a past-tense clause inside a present-tense message passes',
+     !has(analyse(good.replace('| M1 | W1 | x-msg |', '| M1 | W1 | 상을 마다했을 때 문이 열린다 |'), null),
+          /M1 is told in the past tense/));
+  ok('a message carrying a figure is a violation',
+     has(analyse(good.replace('| M1 | W1 | x-msg |', '| M1 | W1 | 쌀 60섬의 값은 때가 정한다 |'), null),
+         /M1 carries a figure/));
+  ok('a message naming the hero of its direction is a violation',
+     has(analyse(good.replace('| D1 | M1 | a | gap | x | 1 |', '| D1 | M1 | a | gap | 김만덕 — 상 대신 문 | 1 |')
+                     .replace('| M1 | W1 | x-msg |', '| M1 | W1 | 만덕이 부탁한 건 법의 예외다 |'), null),
+         /M1 names its hero \("만덕"\)/));
+  ok('the hero name test reads the hero column by its header, wherever it sits',
+     has(analyse(good.replace('| # | Message | 주제 · question | Hook form | Hero / stake |', '| # | Message | 주제 · question | Hook form | Engine | Hero / stake |')
+                     .replace('|---|---|---|---|---|---|---|---|\n| D1', '|---|---|---|---|---|---|---|---|---|\n| D1')
+                     .replace('| D1 | M1 | a | gap | x | 1 |', '| D1 | M1 | a | gap | curiosity | 김만덕 — 상 대신 문 | 1 |')
+                     .replace('| M1 | W1 | x-msg |', '| M1 | W1 | 만덕이 부탁한 건 법의 예외다 |'), null),
+         /M1 names its hero \("만덕"\)/));
+  ok('a modifier at the head of the hero cell is not a name',
+     !has(analyse(good.replace('| D1 | M1 | a | gap | x | 1 |', '| D1 | M1 | a | gap | 작은 부탁 — 법의 예외 | 1 |')
+                      .replace('| M1 | W1 | x-msg |', '| M1 | W1 | 작은 부탁이 큰 이유는 그 뒤에 법이 서 있어서다 |'), null),
+          /names its hero/));
+  ok('an English article at the head of the hero cell is not a name',
+     !has(analyse(good.replace('| D1 | M1 | a | gap | x | 1 |', '| D1 | M1 | a | gap | The 1969 launch | 1 |')
+                      .replace('| M1 | W1 | x-msg |', '| M1 | W1 | The rule outlives the man who wrote it |'), null),
+          /names its hero/));
+  ok('a capitalised English hero is still a name',
+     has(analyse(good.replace('| D1 | M1 | a | gap | x | 1 |', '| D1 | M1 | a | gap | Apollo 11 — the landing | 1 |')
+                     .replace('| M1 | W1 | x-msg |', '| M1 | W1 | Apollo lands when the rule bends |'), null),
+         /names its hero \("Apollo"\)/));
+  ok('a message that survives with the hero erased passes',
+     !has(analyse(good.replace('| D1 | M1 | a | gap | x | 1 |', '| D1 | M1 | a | gap | 김만덕 — 상 대신 문 | 1 |')
+                      .replace('| M1 | W1 | x-msg |', '| M1 | W1 | 작은 부탁이 큰 이유는 그 뒤에 법이 서 있어서다 |'), null),
+          /names its hero/));
 
   // ── Wow points — three or more, before the messages, and each message cites one ──
   ok('it counts the wow points', g.wows === 3);

@@ -14,7 +14,7 @@ function fixture() {
     SCENES: [1, 2, 3, 4].map(i => ({ type: i === 1 ? 'cover' : 'points',
       beat: i === 1 ? 'hook' : i === 4 ? 'cta' : 'drip', narration: [{ tts: ref(i).quote, sub: ref(i).quote }] })),
     STORY: { version: 'story-v1', kind: 'fiction', viewerNeed: 'Solve the moving-box puzzle',
-      thesis: 'The support moves the box.', basis: 'An explicitly fictional demonstration',
+      thesis: 'Check the table before the box.', basis: 'An explicitly fictional demonstration',
       opening: ref(1), payoff: ref(3), ending: ref(4), endingReason: 'Return to the initial mistaken attribution',
       cta: 'none', beats: [1, 2, 3, 4].map(shot => ({ shot, change: `New clue ${shot}`, necessity: `Required step ${shot}` })) }
   };
@@ -256,4 +256,44 @@ test('the person-short fixture passes the draft gate and fails once the name mov
     const out = run(broken, '--draft');
     assert.equal(out.status, 1); assert.match(out.stdout, /names the person/);
   } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+test('the thesis is a present-tense message heard after the payoff, not the payoff line, a figure, a moral or the name', () => {
+  // scenario-stage §The message: the M# sentence in the narration's words — it stays true with
+  // the names gone (present tense, no figure, no command), the viewer hears it at or after the
+  // payoff, and it is not the reversal line said again. The person short adds the name test.
+  const w = fixture();
+  w.STORY.thesis = 'The fan moved the table.'; w.SCENES[3].narration[0] = { tts: 'The fan moved the table.', sub: 'The fan moved the table.' };
+  w.STORY.ending = { shot: 4, group: 1, quote: 'The fan moved the table.' };
+  w.STORY.review.hash = storyHash(w);
+  assert.deepEqual(checkStory(w), []);   // English has no Korean tense ending to read; heard after the payoff, and not the payoff line
+  const ko = (thesis, said = thesis) => {
+    const k = fixture(); k.STORY.thesis = thesis;
+    k.SCENES[3].narration[0] = { tts: said, sub: said }; k.STORY.ending = { shot: 4, group: 1, quote: said };
+    k.STORY.review.hash = storyHash(k); return checkStory(k).join(' ');
+  };
+  assert.equal(ko('작은 부탁이 큰 이유는 그 뒤에 법이 서 있어서예요'), '');
+  assert.match(ko('임금은 그 법에 예외를 냈어요'), /past tense/);
+  assert.match(ko('쌀 60섬의 값은 때가 정해요'), /carries a figure/);
+  assert.match(ko('규칙을 짚어 보세요'), /commands/);
+  assert.match(ko('작은 부탁이 큰 이유는 법이 서 있어서예요', '다른 문장이 나가요'), /heard by no spoken group/);
+  const early = fixture(); early.STORY.thesis = 'Why is the box moving?'; early.STORY.review.hash = storyHash(early);
+  assert.match(checkStory(early).join(' '), /heard by no spoken group at or after the payoff/);
+  const same = fixture(); same.STORY.thesis = 'A fan moves the table.'; same.STORY.review.hash = storyHash(same);
+  assert.match(checkStory(same).join(' '), /restates the payoff line/);
+  const stated = fixture(); stated.STORY.themeStated = ref(2); stated.STORY.review.hash = storyHash(stated);
+  assert.deepEqual(checkStory(stated), []);
+  stated.STORY.themeStated = ref(4); stated.STORY.review.hash = storyHash(stated);
+  assert.match(checkStory(stated).join(' '), /themeStated must be spoken before the payoff/);
+
+});
+test('a person short refuses a thesis that names the person', () => {
+  const file = path.join(root, 'person-short-fixture.js');
+  const src = readFileSync(file, 'utf8').replace('thesis: "배 한 척을 돌리는 불빛은 집 한 채 값이에요"', 'thesis: "만수의 불빛은 집 한 채 값이에요"')
+    .replace('배 한 척을 돌리는 불빛은 집 한 채 값이에요."', '만수의 불빛은 집 한 채 값이에요."');
+  const dir = mkdtempSync(path.join(tmpdir(), 'person-'));
+  writeFileSync(path.join(dir, 'scenes.js'), src);
+  const r = spawnSync('node', [path.join(root, 'check-story.js'), dir, '--draft'], { encoding: 'utf8' });
+  rmSync(dir, { recursive: true, force: true });
+  assert.equal(r.status, 1);
+  assert.match(r.stdout, /thesis names the person/);
 });

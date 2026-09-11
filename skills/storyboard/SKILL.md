@@ -13,7 +13,7 @@ description: >
   checkers and the author's own read. Plans each promise, visual change and sound event.
   Nothing is generated here. Produce builds the approved board; autoproduce runs unattended.
 argument-hint: "<channel> <topic or topic hint>"
-allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "Agent", "AskUserQuestion", "WebSearch", "WebFetch", "mcp__social-flow__capability_status", "mcp__social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__social-flow__serp_image_search", "mcp__social-flow__datago_search", "mcp__social-flow__datago_detail", "mcp__social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch", "mcp__social-flow__datago_api_call", "mcp__social-flow__suno_generate_lyrics"]
+allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "Agent", "AskUserQuestion", "WebSearch", "WebFetch", "mcp__social-flow__capability_status", "mcp__social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__social-flow__serp_image_search", "mcp__social-flow__stock_search", "mcp__social-flow__datago_search", "mcp__social-flow__datago_detail", "mcp__social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch", "mcp__social-flow__datago_api_call", "mcp__social-flow__suno_generate_lyrics"]
 ---
 
 # Storyboard authoring — data/[channel]/episodes/[topic]/storyboard/
@@ -78,7 +78,7 @@ publishable episode and does not fabricate a story approval. Match camera effect
 capability with an "N of M configured" count. Planning two Veo b-roll slots on a machine with no
 `GEMINI_API_KEY` spends five review rounds before anything reveals the problem, and the tool
 answers it in one call before any of that. If a capability the episode needs is missing, say so
-now — with what one env var would turn on — rather than routing around it silently.
+now — with what one env var would turn on — rather than routing around it silently. **Then look at your own tool list** — the server cannot see the CLI. `image_gen` present (Codex, Grok) means `PRODUCTION.imageProvider:"host"`; `image_to_video` present (Grok) means `videoProvider:"host"`; neither (Claude Code) means `"api"`. The host tool outranks every API lane; an explicit `"api"` written for the episode wins.
 
 Read `data/<channel slug>/profile.md`. If it's missing, stop and point the user at
 `/social-flow:channel add` first. Tone, voice, theme, verification policy, and the topic
@@ -173,7 +173,7 @@ Read [production-mode.md](references/production-mode.md). Before visual planning
 (1–2 videos plus HTML/still-camera scenes) and full_video (every new scene generated as video)
 with `production-cost.js` first-pass and retry-inclusive estimates, model, resolution, audio,
 clip counts, exchange-rate assumption, exclusions and the explicit episode budget cap.
-Persist the actual HITL answer in `window.PRODUCTION`; no paid generation happens here.
+Persist the actual HITL answer in `window.PRODUCTION` beside the §1 `imageProvider`/`videoProvider` detection; no paid generation happens here.
 At final board approval refresh the exact quote and bind its fingerprint to that approval.
 Only for the cinematic-miniature style, load the bundled [style guide and image pack](assets/styles/tactile-miniature-v1/STYLE.md); choose `visual.styleRole` by the narrated subject/action, not the shot number. The assembler emits real reference-image arguments and a portable style binding. Never use a reference's historical props as a substitute for the new topic. Read [full-video.md](../produce/references/full-video.md), write the spatial style
 and each `videoDesign`, including the subject-motion contract and timed action states in full-video.md, fill the four `visual.camera` slots under its §Camera dynamics (a move the viewer can see, static on at most one shot in three, wide on at most half, `cameraFixed` only under static), then use [spatial-prompts.js](references/spatial-prompts.js), which assembles both prompts and runs the Seedance prompt gate. This branch
@@ -209,7 +209,7 @@ explanations compete, what it touches in the viewer's life now — **3–5 rows*
    time-sensitive; one official origin counts as both. Don't shrink a range to its upper bound.
 4. **Write `research.md` §Wow, then §Messages.** §Wow first: **three or more rows** — what the viewer walks in believing → what the evidence shows instead (claim #N, a type, and the lunch test: the 실제로는 half gets a 진짜?, not a 그렇구나 — scenario-stage §The wow first; a belief nobody holds is a straw man, and a topic with no gap has no short in it). Then §Messages: three messages for the viewer living now, each the so-what of one wow (`W#`) —
    one sentence on what they understand, reconsider or can do after the episode, on Verified rows —
-   three different messages, not three wordings (scenario-stage §Messages first).
+   three different messages, not three wordings (scenario-stage §Messages first). **A message is a sentence that stays true with the names gone** — *what leads to what*, present tense, no figure, no name (scenario-stage §The message: name-erasure · tomorrow · wow-separation). "임금은 그 법에 예외를 냈다" is the wow's 실제로는 half again and the checker refuses it; "작은 부탁이 큰 이유는 그 뒤에 법이 서 있어서다" is a message.
 5. **Then §Directions — three rows, one topic cut from each message (`M#`), none chosen yet.** A
    direction is **a different episode this topic could be**. Each row names its message, the 주제
    with the question it answers, the hook form (`gap`·`number`·`identify`·`paradox`·`secret`·`payoff`),
@@ -334,7 +334,7 @@ pick an arc** — hook → drip → cta (scenes-schema §playback order).
   `naver_search` (the larger quota).
 - For **reference images**, `serp_image_search` or `naver_search(type: "image")`. A searched
   image used as-is needs `license` — unspecified results have no rights check. **Screens you
-  make yourself get generated, not searched** (engine split in §5).
+  make yourself get generated, not searched** (engine split in §5). **Real footage or a real photograph of the subject** comes from `stock_search` (Pexels · Pixabay · NASA · Commons, each item with its `visual.license` block) or the Korean archives in [docs/research/2026-09-07-free-stock-sources](../../docs/research/2026-09-07-free-stock-sources/index.html).
 - **Government-origin evidence** (statistics, policy, regional status) comes from
   `datago_search` (data.go.kr). One official origin satisfies the cross-check. Collection,
   attribution, and the data-as-of-date trap: the **datago skill**.
@@ -409,7 +409,7 @@ approved scenario's three verbatim lines only, so shots stay cheap to cut; the c
 ("연출 — 전개 #1 이 사실을 댄다"). 4a is done when §4.4 and §4.5 clear. **4b — machine**, after §4.5: everything else. scenario-craft §12 measures it.
 Core rules:
 - **Compress the episode before polishing its sentences.** `window.COMPREHENSION` names one question,
-  answer, takeaway, cross-scene branches, and unfamiliar terms. A short informational episode has
+  answer, takeaway, cross-scene branches, and unfamiliar terms. `STORY.thesis` is the scenario's **Message.** line in the narration's words, and the closing picture's sentence says it — heard once, at or after the payoff, present tense, no figure, no name (scenario-stage §The message; `check-story.js` refuses a thesis no group speaks, the payoff line again, or a moral). Where the belief was put in someone's mouth early, point `STORY.themeStated` at that line. A short informational episode has
   no cross-scene branch. Every `shot.info` reaches the answer or takeaway; otherwise cut it. Explain
   each term verbatim in its first shot and cut disposable proper names. See scenes-schema
   §comprehension contract; `check-scenes.js --draft` enforces it before camera work.
@@ -895,6 +895,7 @@ Present it with AskUserQuestion, and put on the screen with it:
 
 - **the narration itself**, joined — if it runs long, the whole thing still goes on the screen;
   this is the one place a person reads it end to end
+- **the message line** — `STORY.thesis` and the shot that says it — under the narration, so the person approving reads the one sentence the episode hands over and can say it is not one
 - **the two scores and their read counts** (`narration 96/2 · lexicon 95/1`), and **every
   reviewer finding you didn't apply, in the reviewer's own words**
 - **the total spoken length** the character count implies, and the shot count
@@ -957,7 +958,7 @@ costs nothing — which is the whole reason the plan and the spend were split (o
 2026-09-04).
 
 **Shooting mode plans no stills at all** (the screen comes from the user's recording), and
-**slide scenes have no image** — their screen is HTML, authored at produce §3.6.
+**slide scenes have no image** — their screen is HTML, authored at produce §3.6. **A stock cut is planned here and downloaded by produce**: `stock_search` gives the file URL and the license record; the board stores `visual.source: "stock"`, the `footage/` or `images/stock/` name and `visual.license` (scenes-schema §stock material).
 
 **Read the size off the preset, don't memorize it** — it goes in the plan so produce doesn't
 re-decide it.
@@ -1004,6 +1005,7 @@ assembler's stdout as `visual.bgPrompt` — the whole string.
 `.work/decisions.tsv`, and where a scene departs from the default put the engine in the scene
 so produce doesn't have to guess.
 
+- **`imageProvider:"host"` → every still and slide art goes to the host image tool** (Codex or Grok `image_gen`; Grok `image_edit` for a reference), `image.host` at $0. The four API lines below apply on Claude Code, or where the episode wrote `"api"` (still-generation §1).
 - **points backgrounds → `image_local_generate`** (local Z-Image, $0). The default.
 - **The cover background (scene-1) → `gpt_image_text2img` `quality: "high"`** ($0.22). It's
   both the thumbnail and veo's input, so the quality clause applies.
@@ -1040,7 +1042,7 @@ whether this material belongs in the filmed lane.
 **Generated video is selected per cut, including the opening.** Use `shot.render` and
 [render-routing.md](references/render-routing.md); every selected video also writes `visual.why`.
 The short-form cap is 2 and the default video budget is $10. They are ceilings, not quotas.
-Explicit channel overrides still apply. Explanations use the appropriate HTML mode;
+With `videoProvider:"host"` every selected slot is `engine:"host"` (Grok `image_to_video`, 1–15 s, 720p, $0 on the allowance) unless the cut writes why a paid engine is needed. Explicit channel overrides still apply. Explanations use the appropriate HTML mode;
 long-form keeps its format cap without a mandatory video hook.
 Two generated forms count against the slot cap together:
 

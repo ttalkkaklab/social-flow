@@ -84,16 +84,19 @@
     errors.push(...motionErrors(scene));
     return errors;
   }
+  // A supplied file — the user's recording, or a free stock clip (visual.source "stock" with a
+  // clip path) — is never a generated shot; a stock photograph may still feed a generated cut.
   function eligible(scene) {
     const v = scene.visual || {};
     return scene.type !== 'outro' && !(!reused(scene) && !v.video &&
-      (['recording', 'screencast'].includes(v.source) || v.picture === 'recording'));
+      (['recording', 'screencast'].includes(v.source) || v.picture === 'recording' ||
+       (v.source === 'stock' && typeof v.clip === 'string')));
   }
   function full(production) { return production?.mode === 'full_video'; }
   // Outputs and approval metadata must not invalidate their own input signature.
   function signature(win) {
     const p = win.PRODUCTION || {};
-    return JSON.stringify({ format: win.FORMAT, mode: p.mode, imageProvider: p.imageProvider, videoBudgetUsd: p.videoBudgetUsd,
+    return JSON.stringify({ format: win.FORMAT, mode: p.mode, imageProvider: p.imageProvider, videoProvider: p.videoProvider, videoBudgetUsd: p.videoBudgetUsd,
       maxAttempts: p.maxAttempts, generationRevision: p.generationRevision, comparison: p.comparison, style: p.style,
       scenes: (win.SCENES || []).filter(eligible).map(s => {
         const v = s.visual || {}, video = { ...v.video };
@@ -103,7 +106,8 @@
           render: s.shot?.render, design: s.shot?.videoDesign,
           frames: v.frames, imagePair: v.imagePair, styleRole: v.styleRole, stylePack: v.stylePack,
           bg: v.bg, bgPrompt: v.bgPrompt, camera: v.camera, action: v.action, video, engine: v.engine,
-          prompt: v.prompt, clip: typeof v.clip === 'object' ? v.clip : undefined };
+          prompt: v.prompt, clip: typeof v.clip === 'object' ? v.clip : undefined,
+          source: v.source, license: v.license, file: typeof v.clip === 'string' ? v.clip : undefined };
       }) });
   }
   function motionErrors(scene) {
@@ -134,6 +138,9 @@
     if (!p) return requireSelection || (win.SCENES || []).some(reused)
       ? errors.concat(['Choose hybrid or full_video with a cost comparison before generation']) : errors;
     if (!MODES[p.mode]) errors.push('PRODUCTION.mode must be hybrid or full_video');
+    // host = the CLI's own media tool (image_gen on Codex and Grok, image_to_video on Grok); absent reads as api.
+    for (const key of ['imageProvider', 'videoProvider'])
+      if (p[key] !== undefined && !['host', 'api'].includes(p[key])) errors.push('PRODUCTION.' + key + ' must be host or api');
     if (!Number.isFinite(p.videoBudgetUsd) || p.videoBudgetUsd < 0)
       errors.push('PRODUCTION.videoBudgetUsd must be a finite nonnegative episode cap');
     if (!Number.isInteger(p.maxAttempts) || p.maxAttempts < 1 || p.maxAttempts > 5)
@@ -165,14 +172,20 @@
       if (!eligible(s) || reused(s)) return;
       const v = s.visual || {}, design = s.shot?.videoDesign || {};
       const bad = message => errors.push('shot ' + (i + 1) + ': ' + message);
-      if (s.shot?.render?.mode !== 'generated_video' || !v.video || v.slide || v.source || v.clip)
+      if (s.shot?.render?.mode !== 'generated_video' || !v.video || v.slide || (v.source && v.source !== 'stock') || v.clip)
         bad('full_video needs a narrated visual.video handoff; no slide/still substitution or b-roll splice');
       if (['broll', 'quote'].includes(s.type)) bad('full_video generated cuts use ordinary narrated cards');
-      if (!text(v.bg) || !text(v.bgPrompt)) bad('keep a source image path and its generation prompt');
+      // A stock photograph (visual.source "stock") is a supplied source image: a license record, no prompt.
+      if (!text(v.bg) || (!text(v.bgPrompt) && v.source !== 'stock')) bad('keep a source image path and its generation prompt');
       if (!text(v.video?.prompt)) bad('store the motion prompt before generation');
-      if (v.video?.resolution !== '1080p' || v.video?.generateAudio !== false)
-        bad('reference quality uses explicit 1080p and generateAudio:false with separate narration');
-      if (v.video?.engine !== 'seedance') bad('full_video uses the priced Seedance image-to-video route');
+      // The host video tool (owner directive 2026-09-07) tops out at 720p and takes every full_video cut.
+      const hostVideo = p.videoProvider === 'host';
+      if (v.video?.resolution !== (hostVideo ? '720p' : '1080p') || v.video?.generateAudio !== false)
+        bad(hostVideo ? 'the host video tool tops out at 720p; write resolution:"720p" and generateAudio:false with separate narration'
+                      : 'reference quality uses explicit 1080p and generateAudio:false with separate narration');
+      if (v.video?.engine !== (hostVideo ? 'host' : 'seedance'))
+        bad(hostVideo ? 'videoProvider:host routes every full_video cut to engine:"host" (the CLI\'s own image_to_video)'
+                      : 'full_video uses the priced Seedance image-to-video route');
       for (const key of ['look', 'worldId', 'before', 'action', 'continuity', 'reject'])
         if (!text(design[key])) bad('videoDesign.' + key + ' is required');
       if (design.motion?.kind !== 'subject_action' && !text(design.after)) bad('videoDesign.after is required unless the last motion beat states the final result');

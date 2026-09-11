@@ -311,7 +311,7 @@ function reuseFixture(video) {
   s.visual={picture:'ai-video',overlay:'none',why:'Movement is the evidence.',action:'The box slides.',reuse:{clip:video,sha256:digest(readFileSync(video)),sourceEpisode:'archived-episode-7 (provenance only)',sourceRange:{start:10,end:15}}};
  });
  w.SCENES[0].hookType='curiosity';w.SCENES[0].hookForm='gap';
- w.STORY={version:'story-v1',kind:'fiction',viewerNeed:'Solve the moving-box puzzle',thesis:'The support moves the box.',basis:'An explicitly fictional demonstration',opening:ref(1),payoff:ref(3),ending:ref(4),endingReason:'Return to the initial mistaken attribution',cta:'none',beats:[1,2,3,4].map(shot=>({shot,change:`New clue ${shot}`,necessity:`Required step ${shot}`}))};
+ w.STORY={version:'story-v1',kind:'fiction',viewerNeed:'Solve the moving-box puzzle',thesis:'Check the table before the box.',basis:'An explicitly fictional demonstration',opening:ref(1),payoff:ref(3),ending:ref(4),endingReason:'Return to the initial mistaken attribution',cta:'none',beats:[1,2,3,4].map(shot=>({shot,change:`New clue ${shot}`,necessity:`Required step ${shot}`}))};
  w.STORY.review={hash:require('../../skills/storyboard/references/story-contract.js').storyHash(w),verdict:'pass',unresolved:[],...Object.fromEntries(['meaning','progression','payoff','grounding'].map(k=>[k,{reason:`${k} evidence in fictional premise`,refs:[ref(3)]}]))};
  approve(w);return w;
 }
@@ -541,4 +541,16 @@ test('imported clips preserve the whole file through the cinematic edit compiler
  delete scenes[0].edit;scenes[1].transition='dissolve';assert.throws(()=>preview(scenes),/Reused clips cannot/);
  scenes[1].transition='dip';assert.equal(preview(scenes)[0].handle,0);
  delete scenes[0].visual;scenes[1].transition='dissolve';assert.equal(preview(scenes)[0].handle,.4);
+});
+
+test('a supplied stock clip is outside the generated set; a stock photograph may still source a generated cut', () => {
+  const license = { provider: 'pexels', url: 'https://www.pexels.com/video/1', license: 'Pexels License', licenseUrl: 'https://www.pexels.com/license/',
+    attributionRequired: false, commercial: true, modify: true, retrievedAt: '2026-09-07' };
+  const clip = { type: 'points', duration: 6, visual: { source: 'stock', clip: 'footage/s2-pexels-1.mp4', license } };
+  const photo = { type: 'points', duration: 6, visual: { source: 'stock', bg: 'images/stock/s3-met-1.jpg', license, video: { engine: 'seedance' } } };
+  assert.equal(mode.eligible(clip), false);
+  assert.equal(mode.eligible(photo), true);
+  const sig = mode.signature({ SCENES: [photo, clip], PRODUCTION: { mode: 'hybrid' } });
+  assert.match(sig, /"license"/, 'the approval fingerprint covers the license record');
+  assert.equal(mode.policy({ generatedVideoMax: 2 }, { mode: 'full_video', videoBudgetUsd: 1 }, [clip, photo]).generatedVideoMax, 1);
 });

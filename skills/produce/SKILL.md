@@ -49,7 +49,7 @@ Read [story-quality.md](../storyboard/references/story-quality.md) and run `node
    voiceName and stylePrompt.
 8. **Generated video comes from an image** — don't use `veo_text2video`. The order is always
    approved image provider → keep the PNG in `storyboard/images/` → the selected image-to-video engine.
-   With `PRODUCTION.imageProvider:"host"`, use the product-provided image tool; ask before any separately billed fallback.
+   With `PRODUCTION.imageProvider:"host"` (Codex, Grok) the still comes from the host `image_gen`, and with `videoProvider:"host"` (Grok) the clip comes from the host `image_to_video` — the plugin's API tools are the fallback the user is asked about, never a silent one (still-generation §1, video-model-selection §The host video tool comes first).
    The image is the reference point for reproducing a shot: if the video isn't right,
    rerun it off the same PNG with only the motion prompt changed. Video made straight from
    text gives a different scene every time even from the same prompt, so there's nothing
@@ -272,7 +272,7 @@ source, no real person, no text expected from an engine that can't write it, the
 written, no minor in frame. The storyboard checked this against a plan; you are checking it
 against the call that is about to go out.
 
-Then generate, **resending each stored `visual.bgPrompt` verbatim**, and **look at every
+**A stock photograph is not generated**: a `visual.source: "stock"` still names its file under `images/stock/` and carries `visual.license`; download it from the record's `url` (or the `stock_search` file URL) into that exact name, and log the date beside the license in `.work/decisions.tsv`. Then generate the rest, **resending each stored `visual.bgPrompt` verbatim**, and **look at every
 picture that comes back** before moving on — a wrong still is the cheapest thing in this
 pipeline to catch and the most expensive to carry, since §3 turns it into a clip.
 
@@ -285,6 +285,8 @@ printf 'image.gpt-image-2.high	1	produce: cover background scene-1
 ' >> .work/cost-tally.tsv
 printf 'image.local	3	produce: points backgrounds scene-2~4
 '        >> .work/cost-tally.tsv
+printf 'image.host	4	produce: cover + points on the host image_gen
+'   >> .work/cost-tally.tsv   # Codex · Grok
 ```
 
 ### 2. Prepare the frame render
@@ -306,7 +308,7 @@ The §6 manifest references these file paths directly, so follow the naming belo
 motion-background scenes from scenes.js against the rule's list, with profile.md §3 open for
 the target person, and only then start the generation calls. The stills those clips are made
 from already exist and were already looked at (§1.5); an engine question about a still belongs
-there, in [still-generation.md](references/still-generation.md).
+there, in [still-generation.md](references/still-generation.md). **With `videoProvider:"host"` every clip in this section is a host `image_to_video` call** — same source PNG, same stored prompt, `video.host` in the ledger; the `veo_*` / `seedance_*` recipes are the API lane.
 
 **What the storyboard already settled — pass it through, don't re-decide it.** These values
 arrive from scenes.js already chosen and already reviewed. Inventing a replacement at call time
@@ -519,8 +521,7 @@ printf 'produce\tfallback\tmotion background i3\tveo_img2video\tARK_API_KEY abse
 
 Normalize the user's `footage/` files once, then hand them to the builder as cards.
 The full lane — the VFR trap, the normalize command, the naming the builder expects —
-is in [optional-lanes.md](references/optional-lanes.md) §3.5. **No `footage/` directory
-means skip this step.**
+is in [optional-lanes.md](references/optional-lanes.md) §3.5. **Stock clips** (`visual.source: "stock"`, scenes-schema §stock material) take the same lane after a download into the name the board set; their sound is dropped. **No `footage/` directory and no stock cut means skip this step.**
 ### 3.6 Author the slides, then capture them (only on episodes that have them)
 
 **The slides are authored here, not in the storyboard** (owner directive 2026-09-04 — slide
@@ -1180,8 +1181,7 @@ description whatever the cover's hookType is. **The result stays inside the vide
 winner, the twist and the payoff number; a description that walks the episode in order, or whose
 main clauses are summary verbs (살펴봅니다 · 확인해요 · 정리했습니다), is report voice, not a hook. Before
 saving, read the title and the description alone with scenes.js closed and write one line — what
-do I now know about the ending? If that line names it, rewrite. Then the two machine checks, right
-after saving:
+do I now know about the ending? If that line names it, rewrite. **Credits for stock material**: every `visual.license` on the board with `attributionRequired: true` goes under a `출처` line at the end of the YouTube description and of the IG and FB captions (`attribution` verbatim, one per line); add the same line for a Pexels, Pixabay or government file when the author is known. Then the two machine checks, right after saving:
 ```bash
 PG=${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references
 for P in threads:output/threads/post.md ig:output/instagram/caption.md \
