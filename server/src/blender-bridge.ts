@@ -1935,7 +1935,9 @@ def op_render(job):
         except Exception:
             pass
         sc.display.render_aa = "8"
-    configure_stamp(sc, job["stamp"], sc.render.resolution_y)
+    # The mp4 is the hand-off (a reference video for generation) and stays clean; the stamp
+    # goes on the stills only, where a person reads it.
+    configure_stamp(sc, False, sc.render.resolution_y)
 
     video_path = job["videoPath"]
     out_dir = os.path.dirname(video_path)
@@ -1983,6 +1985,7 @@ def op_render(job):
         ims.media_type = "IMAGE"
     ims.file_format = "PNG"
     ims.color_mode = "RGB"
+    configure_stamp(sc, job["stamp"], sc.render.resolution_y)
     for f in stills:
         f = int(f)
         if f < start or f > end:

@@ -891,8 +891,11 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
     const refAudioInfo = result.referenceAudios?.length
       ? `\nReference Audio (${result.referenceAudios.length}):\n  - ${result.referenceAudios.join('\n  - ')}`
       : '';
+    const refVideoInfo = result.referenceVideos?.length
+      ? `\nReference Videos (${result.referenceVideos.length}, ${result.referenceVideoSeconds ?? '?'}s billed as input${result.referenceVideoRoute ? `, served by ${result.referenceVideoRoute}` : ''}):\n  - ${result.referenceVideos.join('\n  - ')}`
+      : '';
     return text(
-      `Video generated with references successfully!\n\nOutput: ${result.videoPath}${refImagesInfo}${refAudioInfo}\n${seedanceMeta(result)}\nPrompt: ${result.prompt}`,
+      `Video generated with references successfully!\n\nOutput: ${result.videoPath}${refImagesInfo}${refVideoInfo}${refAudioInfo}\n${seedanceMeta(result)}\nPrompt: ${result.prompt}`,
     );
   },
 

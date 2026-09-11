@@ -30,6 +30,7 @@
  * The ledger line is JSON, one per line, appended with O_APPEND so several sessions writing
  * at once interleave whole lines instead of corrupting each other.
  */
+import { execFileSync } from 'node:child_process';
 import { appendFileSync, existsSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { DEFAULT_MLX_MUSIC_SECONDS, DEFAULT_MLX_VIDEO_FRAMES, MLX_VIDEO_FPS } from './mlx-serve-client.js';
@@ -147,6 +148,10 @@ export const PRICED_VIDEO_KEYS = new Set([
     'seedance.1-0-pro.1080p',
     'seedance.2-0-mini.720p', 'seedance.2-0-fast.720p',
     'seedance.2-0.1080p', 'seedance.2-5.720p', 'seedance.2-5.1080p',
+    // A request that carries a reference video (the previz lane) bills input + output seconds
+    // at the vendor's lower with-video token rate — its own rows.
+    'seedance.2-0-video.1080p', 'seedance.2-5-video.720p', 'seedance.2-5-video.1080p',
+    'seedance.2-0-fast-video.720p', 'seedance.2-0-mini-video.720p',
 ]);
 const ELEVENLABS_KEY = {
     eleven_multilingual_v2: 'tts.elevenlabs',
@@ -155,6 +160,19 @@ const ELEVENLABS_KEY = {
     eleven_flash_v2_5: 'tts.elevenlabs-flash',
     eleven_turbo_v2_5: 'tts.elevenlabs-flash',
 };
+/** Whole seconds of a local media file via ffprobe — null when ffprobe or the file is missing. */
+function probeSeconds(file) {
+    try {
+        const out = execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', file], {
+            encoding: 'utf8', timeout: 15_000, stdio: ['ignore', 'pipe', 'ignore'],
+        });
+        const seconds = Number.parseFloat(out.trim());
+        return Number.isFinite(seconds) && seconds > 0 ? Math.round(seconds * 1000) / 1000 : null;
+    }
+    catch {
+        return null;
+    }
+}
 const num = (v, fallback) => typeof v === 'number' && Number.isFinite(v) ? v : fallback;
 const str = (v, fallback) => (typeof v === 'string' && v ? v : fallback);
 /**
@@ -207,15 +225,37 @@ export function priceOf(tool, args) {
         const resolution = str(args.resolution, '720p');
         const seconds = num(args.durationSeconds, 5);
         // 1.5 pro is the only model whose price splits on audio — silent is exactly half.
-        const family = model === 'seedance-1-5-pro-251215'
+        const base = model === 'seedance-1-5-pro-251215'
             ? `1-5-pro-${args.generateAudio === true ? 'audio' : 'silent'}`
             : SEEDANCE_FAMILY[model];
-        if (!family)
+        if (!base)
             return { key: null, quantity: seconds, note: `unmapped seedance model: ${model}` };
+        const videos = [
+            ...(Array.isArray(args.referenceVideoPaths) ? args.referenceVideoPaths : []),
+            ...(Array.isArray(args.referenceVideoUrls) ? args.referenceVideoUrls : []),
+        ].filter((v) => typeof v === 'string');
+        const family = videos.length ? `${base}-video` : base;
         const key = `seedance.${family}.${resolution}`;
         if (!PRICED_VIDEO_KEYS.has(key))
             return { key: null, quantity: seconds, note: `no price row for ${key}` };
-        return { key, quantity: seconds };
+        if (!videos.length)
+            return { key, quantity: seconds };
+        // tokens = (input + output seconds) × w × h × fps / 1024 — the input clips count. Their
+        // length is read off the files; a URL or a missing ffprobe falls back to one output length
+        // per clip, the previz lane's own contract (the clip is rendered at the billed length).
+        let input = 0;
+        const unread = [];
+        for (const video of videos) {
+            const probed = /^[a-z][a-z0-9+.-]*:/i.test(video) ? null : probeSeconds(video);
+            if (probed === null)
+                unread.push(video);
+            input += probed ?? seconds;
+        }
+        return {
+            key,
+            quantity: seconds + input,
+            note: `output ${seconds}s + reference video ${input}s${unread.length ? ` (${unread.length} clip(s) assumed ${seconds}s — not probed)` : ''}`,
+        };
     }
     if (tool.startsWith('gpt_image_')) {
         const quality = str(args.quality, 'medium');

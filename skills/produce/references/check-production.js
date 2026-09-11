@@ -46,9 +46,11 @@ function accepted(win, index, storyboard, review) {
   const scene = win.SCENES[index];
   if (mode.reused(scene)) return review && review.planDigest === shotDigest(win, index) &&
     review.videoSha256 === scene.visual.reuse.sha256 && review.videoSha256 === hashFile(storyboard, videoFile(scene));
+  const previz = scene.visual.video.previz;
   return review && review.planDigest === shotDigest(win, index) &&
     review.sourceSha256 === hashFile(storyboard, scene.visual.bg) &&
     (!framePlan(scene).end || review.endSha256 === hashFile(storyboard, framePlan(scene).end)) &&
+    (!previz || previz.sha256 === hashFile(storyboard, previz.clip)) &&
     review.videoSha256 === hashFile(storyboard, scene.visual.video.clip);
 }
 function motionReviewErrors(scene, review) {
