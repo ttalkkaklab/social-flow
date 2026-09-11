@@ -53,7 +53,7 @@ another candidate form:
   tests its boundary or changes what the viewer would do. They still need their own sources.
 - Resolve the main promise before the comment invite. The callback should let the opening
   mean something more specific on a second viewing. A next-episode teaser cannot pay this
-  episode's debt. Keep the closing question brief and answerable from what just happened.
+  episode's debt. If there is a closing question (optional, story-quality.md), keep it brief and answerable from what just happened.
 - Name the one thing a viewer would forward — a fact, a verdict, a line or a short checklist,
   said plainly enough to repeat from memory. Write it into the closing shot's `shot.share`
   (`shot.shareType`: `fact` · `verdict` · `line` · `checklist` · `none`); on a short that field
@@ -95,8 +95,8 @@ related shots so the viewer can follow the cause and result.
 
 - The opening video must stage the hook's situation immediately. A generic attractive
   person or landscape that could open any episode fails this test.
-- Use the short's one optional extra generated clip only when its action earns the slot.
-  Keep the hook-video rule and the two-generated-cut cap. Stills can reveal a detail with
+- Use a generated clip only when its action earns the slot (`shot.render.reason`). Keep
+  the channel's `hook_video` setting (off by default) and its generated-video ceiling. Stills can reveal a detail with
   their camera move; HTML motion slides can show a comparison or a mechanism unfolding.
 - Put explanations, arrows, figures and principles on HTML slides. Nothing is drawn over
   video except the already permitted subtitles and cover treatment. Follow CLAUDE.md.

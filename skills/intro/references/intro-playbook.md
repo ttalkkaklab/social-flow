@@ -183,7 +183,7 @@ screen. But text left to a generative model produces typos and near-glyphs
 (P0). The contract:
 
 1. Render text via `lockup-template.html` → headless capture (full lockup +
-   transparent text plate). Every veo call puts `text` in `negativePrompt`.
+   transparent text plate). Every fast/standard `veo_img2video`/`veo_text2video` call puts `text` in `negativePrompt`; `veo_reference` and lite calls reject the field (400), so there the exclusion is written into the prompt as positive description.
 2. build-intro.sh slides the text plate in just before landing (`TEXT_AT`) —
    the name reads first without covering the character's acting, then hands
    off to the lockup.

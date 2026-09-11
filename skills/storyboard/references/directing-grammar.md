@@ -417,9 +417,12 @@ subject instead of the frame's middle — motion that directs attention is the w
 the practice), a **handheld drift** (a few pixels of never-repeating wobble — the still
 counterpart of the `handheld` row above), and **hold** (a fixed scale — only as the base
 under a `drift` or a `pan`: a still never sits frozen under the voice, and the build refuses
-a bare hold on a still). The storyboard writes the same `visual.camera.movement` words it already knows —
-`dolly in`, `dolly out`, `handheld`, `truck` — and produce translates them into this lane
-(produce SKILL §6 has the mapping and the knob names).
+a bare hold on a still). A board that declares `shot.render` does not reach this lane on its stills: every
+`still_camera` cut carries `shot.render.camera` (effect · target · reason) and is rendered
+through the shared camera HTML runtime above (render-routing.js requires `visual.slide.kind:
+"camera"`), which hands produce a clip. The `visual.camera.movement` words — `dolly in`,
+`dolly out`, `handheld`, `truck` — are the legacy vocabulary produce still translates into
+this lane for cards that reach the builder as images (produce SKILL §6 has the mapping).
 
 Two disciplines carry over unchanged. The move supports the declared feel — it never carries
 it (the evidence base for stills is practitioner practice, not measurement, so claim even
@@ -616,7 +619,7 @@ below are what the script's standing notes carry `[course]`.
 
 | Value | Written in | Read by |
 |---|---|---|
-| `shot.feel` | every shot | storyboard.html (the feel line · missing-feel warning), script.md (the `느낌` line), reviewer camera mode (does the technique serve it), image mode (does the picture show it) |
+| `shot.feel` | every shot | storyboard.html (the feel line · missing-feel warning), script.md (the `느낌` line), reviewer camera mode (on request only, 0.50.0 — does the technique serve it), image mode (does the picture show it) |
 | `shot.size` | every shot (`check-scenes.js` fails any shot but the outro without one after the story pass) | storyboard.html badge · script.md (the `사이즈·앵글` line — size with its distance — and the `소리` line that follows the size) · `bgPrompt` (the size words) · `visual.camera.framing` on generated shots · reviewer camera mode (does the size show what `info` needs — §2.1 — plus rationing and establish-then-close) |
 | `shot.why` | when `size`/`angle` leave their row, or a composition tag needs its distance | storyboard.html (beside the badges) · reviewer camera mode (a written reason is a departure, not a finding) |
 | `shot.angle` | every shot (default `eye`) | storyboard.html badge · script.md (the same `사이즈·앵글` line — angle with the eye-height baseline) · `bgPrompt` ("eye level" / "seen from above" / "low angle") · reviewer camera mode (angle as change, dutch fee, hook at eye level) |

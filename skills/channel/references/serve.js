@@ -291,7 +291,7 @@ function catalogNotes(dir) {
 }
 
 // Panel order — face, then front, then back, which is the order the reference set is handed
-// to a generation call (video-model-selection §6) and the order a person reads a model sheet.
+// to a generation call (video-model-selection §The character panels) and the order a person reads a model sheet.
 // Naming is not uniform across channels, so the rank is read off the filename: anything
 // carrying face/head is the face, anything carrying back/rear is the rear, everything else
 // (body, front, front-body, real, three-quarter) is a front view. Within one rank the

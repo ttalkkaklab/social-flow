@@ -28,10 +28,10 @@ description: >
   file the delegator names.
 
   <example>
-  Context: the produce skill delegates a §3.6 convergence-loop iteration.
-  user: "Evaluate the motion slide slides/s5-gear-ratio.html — sheet frames in .work/slide-check/s5/sheet/, scenes.js, profile.md and slide-design.md paths are …"
+  Context: the user asks for a second read on a slide the author already admitted under produce §3.6.
+  user: "Have the slide reviewer look at slides/s5-gear-ratio.html — sheet frames in .work/slide-check/s5/sheet/, scenes.js, profile.md and slide-design.md paths are …"
   assistant: "I'll run the slide-reviewer agent to collect P0 findings and the score."
-  <commentary>A motion-slide convergence-loop evaluation request, so use slide-reviewer.</commentary>
+  <commentary>An on-request motion-slide evaluation, so use slide-reviewer.</commentary>
   </example>
 
   <example>

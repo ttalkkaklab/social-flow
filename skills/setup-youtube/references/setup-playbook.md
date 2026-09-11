@@ -144,4 +144,4 @@ chmod 600 "$DEST"
   (keep `client_id`/`client_secret`).
 - **Custom thumbnails · Related video**: they need at least phone verification
   (intermediate features), and the Shorts portrait-surface thumbnail can't be
-  changed via API (YouTube app Edit thumbnail only).
+  changed via API (web Studio "Select from video" or the YouTube app only).

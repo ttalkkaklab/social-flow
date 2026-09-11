@@ -173,10 +173,10 @@ const MOTION_PROFILE_KEYS = [
   'max_static_ground_seconds', 'html_plate_max', 'video_budget_usd', 'hook_video',
   'length_min_seconds', 'length_max_seconds',
 ];
-// Plugin-wide defaults (owner directives 2026-09-03 "the viewer has to feel a video" and
-// 2026-09-05 "the hook is video, one more cut at most, the rest is a moving still or an HTML
-// motion slide"). They apply whether or not a profile declares a motion policy; a profile may
-// raise, lower, or switch each one off with `off`.
+// Plugin-wide defaults (owner directives 2026-09-03 "the viewer has to feel a video", 2026-09-05
+// "nothing is drawn over video", 2026-09-06 "choose each cut by purpose — caps are ceilings, not
+// quotas, and hook_video defaults off"). They apply whether or not a profile declares a motion
+// policy; a profile may raise, lower, or switch each one off with `off`.
 const STATIC_GROUND_DEFAULT_SECONDS = 8;   // one still under its camera move may hold one cut — the top of the directing-grammar §5 length column
 const HTML_PLATE_DEFAULT_MAX = 2;          // static plates on `other` beats per episode — motion slides and explanation slides sit outside the cap
 const VIDEO_BUDGET_DEFAULT_USD = 10;       // generated video per episode — read by cost-preview.js
@@ -794,11 +794,12 @@ function check(win, fmt, opts) {
                    `${motionPolicy.generatedVideoMax} ` +
                    '(channel motion policy; format default applies when the profile has no override)');
 
-  /* ── Short-form body (owner directive 2026-09-05) ──
-     The hook is video: on a short the cover carries a motion background (`visual.video`, the
-     cover still as the engine's source, the title still code-rendered on top) or a recording. The format cap of 2 leaves one more generated cut, and that cut writes
-     `visual.why` — the movement itself has to be the content, or the beat is a still under its
-     camera move or an HTML motion slide. The machine layer is written in §4b, so a draft defers. */
+  /* ── Short-form body (owner directives 2026-09-05 · 2026-09-06) ──
+     Only when the channel enables `hook_video` (off by default — content chooses the opening
+     treatment) must the cover carry a motion background (`visual.video`, the cover still as the
+     engine's source, the title still code-rendered on top) or a recording. Every other generated
+     cut writes `visual.why` — the movement itself has to be the content, or the beat is a still
+     under its camera move or an HTML motion slide. The machine layer is written in §4b, so a draft defers. */
   if (isShort && cover && motionPolicy.hookVideo) {
     const coverKind = motionKind(cover);
     if (coverKind !== 'ai-video' && coverKind !== 'recording' && coverKind !== 'stock-video')

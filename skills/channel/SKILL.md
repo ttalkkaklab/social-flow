@@ -61,8 +61,10 @@ reused in two or more episodes; single-episode artifacts go in the topic's `.wor
    - Fact-check policy (informational=research required / creative·daily-life=skip)
 
 3. **Assign the TTS voice** — from the `mcp__social-flow__tts_list_voices` result
-   or the voice examples in `references/profile-template.md`, propose one Gemini
-   voice that fits the tone and pin down the stylePrompt. **Once fixed, never
+   or the voice examples in `references/profile-template.md`, propose the engine
+   (`local` Supertonic is the default — zero cost; `gemini` only when acted emotion
+   is the channel's identity) and one voice that fits the tone, and pin down the
+   stylePrompt. **Once fixed, never
    change voiceName·stylePrompt** — Gemini TTS interprets style directions as
    natural language, so if the wording drifts, the voice changes from episode to
    episode. Change them only when the user explicitly says so.
@@ -162,7 +164,7 @@ from file://). The character list shows every panel image in
 swaps the main panel from thumbnails, and plays `voice.wav`.
 
 **Panels come back face → front → back** — the order the reference set goes into a
-generation call (`../produce/references/video-model-selection.md` §6), so the card
+generation call (`../produce/references/video-model-selection.md` §The character panels), so the card
 thumbnail and the detail page's opening panel are both the face. Naming isn't uniform
 across channels, so the rank is read off the filename: `face`/`head` is the face,
 `back`/`rear` is the rear, everything else (`body`, `front`, `real`, `three-quarter`)

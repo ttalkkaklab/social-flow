@@ -96,7 +96,7 @@ const ROUTES = {
   },
   'motion/veo': {
     key: 'veo.lite.1080p', fixedSeconds: 8,
-    why: 'veo_img2video · lite — the no-ARK_API_KEY fallback route · 1080p is 8s-only'
+    why: 'veo_img2video · lite — an explicit engine:"veo" motion slot (a previz cut never routes here; render-routing refuses it) · 1080p is 8s-only'
   },
   'quote/veo': {
     key: 'veo.fast.1080p', fixedSeconds: 8,
@@ -122,7 +122,8 @@ const ROUTES = {
     key: 'video.host',
     why: 'host image_to_video — a footage slide clip on the CLI\'s own tool · 720p ceiling'
   },
-  /* A footage slide (scenes-schema §footage treatment) carries one generated clip per reveal
+  /* A footage slide (scenes-schema §footage treatment — retired 2026-09-05, priced only so an
+     archived board's forecast still adds up) carries one generated clip per reveal
      group. The builder keeps only the video track, so the silent Seedance route applies — and
      it bills the seconds each shot asks for. These shots are outside generatedVideoMax; the
      forecast is where their spend becomes visible, and storyboard §5's gate is where it is approved. */
@@ -224,7 +225,7 @@ function videoSlots(scenes) {
     if (sl && sl.treatment === 'footage' && Array.isArray(sl.shots)) {
       sl.shots.forEach((sh, j) => {
         const shot = sh || {};
-        if (shot.reuse) return;   // a reuse shot copies an existing clip (footage-lane.md §3) — no call, no slot
+        if (shot.reuse) return;   // a reuse shot copies an existing clip (scenes-schema §Existing generated clip input) — no call, no slot
         const engine = routeEngine(shot.engine || v.engine, 'seedance');
         slots.push({ shot: shotNo, kind: 'footage', engine, duration: Number(shot.duration) || 0,
                      label: 'footage clip g' + (shot.group || j + 1) });
@@ -374,8 +375,8 @@ function usd(n) { return '$' + n.toFixed(2); }
    check-scenes.js carries in its motion policy) caps what one episode may spend on
    generated video: b-roll, motion backgrounds, quote clips and footage shots, billed and
    projected together. Stills, TTS and music are outside it. Over the budget the verdict
-   is `!!` and exit 1 — storyboard §5 fits the board first (footage-lane.md §3 has the
-   ladder) and asks the user only for a number that fits. */
+   is `!!` and exit 1 — storyboard §5 fits the board first (scenes-schema §Channel true-motion policy,
+   "Fitting the board to videoBudgetUsd", has the ladder) and asks the user only for a number that fits. */
 const VIDEO_BUDGET_DEFAULT_USD = 10;
 const VIDEO_FAMILIES = ['seedance', 'veo'];
 
@@ -425,7 +426,7 @@ function budgetVerdict(spentItems, forecastTotal, budgetUsd) {
   return { budgetUsd, spent, forecast: forecastTotal, committed, over,
            line: budgetUsd === null ? null
              : (over ? '!! ' : '   ') + 'video budget ' + usd(committed) + ' committed of ' + usd(budgetUsd) +
-               (over ? ' — over by ' + usd(committed - budgetUsd) + '; fit the board before generating (footage-lane.md §3)'
+               (over ? ' — over by ' + usd(committed - budgetUsd) + '; fit the board before generating (storyboard §5 · scenes-schema §Channel true-motion policy ladder)'
                      : ' (' + usd(budgetUsd - committed) + ' headroom for regenerations)') };
 }
 

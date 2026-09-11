@@ -89,7 +89,9 @@ chmod 600 ~/.config/social-flow/<channel-slug>/*
 
 1. Switch the IG account to professional (business/creator).
 2. Set up an Instagram API with Instagram Login app (or the FB-page-linked kind).
-   Scopes: `instagram_business_basic`, `instagram_business_content_publish`.
+   Scopes: `instagram_business_basic`, `instagram_business_content_publish`; the growth loop
+   also needs `instagram_business_manage_comments`, `instagram_business_manage_messages`,
+   `instagram_business_manage_insights` (setup-instagram §scopes).
 3. Issuing and refreshing the long-lived (60-day) token follows the same pattern as
    Threads (`graph.instagram.com/refresh_access_token?grant_type=ig_refresh_token&…`).
 
@@ -136,9 +138,9 @@ chmod 600 ~/.config/social-flow/<channel-slug>/*
    support).
 5. **The shorts portrait surface (feed, shorts tab) thumbnail can't be changed through
    the API** — `thumbnailFilePath` applies to the landscape surface (share previews,
-   search) only. The portrait surface frame can only be set through Edit → Edit
-   thumbnail in the YouTube native app, so for a video where the first frame matters,
-   set the cover frame from the app after publishing.
+   search) only. The portrait surface frame is set in web Studio ("Select from video",
+   publish §Shorts frame) or the YouTube native app, so for a video where the first
+   frame matters, set the cover frame there after publishing.
 
 ## On expiry or failure
 

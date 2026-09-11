@@ -260,8 +260,8 @@ const GATES = [
  * The reviewer agents and their verdict tails. Transcribed from platform-guide/SKILL.md's
  * adversarial-review table and the agent definitions in agents/.
  *
- * `bar: null` means the score is filed rather than cleared — storyboard copy came out from
- * under the 95 bar by user directive on 2026-08-22, and its reviews run once each.
+ * `bar: null` means no fixed bar lives here — the narration and vocabulary loops apply their
+ * 95 line in the delegator (see the gate definitions above); the other modes file the score.
  */
 const REVIEWERS = [
   {
