@@ -31,7 +31,10 @@ TAIL=${TAIL:-1.0}                # room to read the CTA — too long and a still
 BGM_VOL=${BGM_VOL:-0.30}
 DUCK_RELEASE=${DUCK_RELEASE:-250}
 TARGET_RATE=${TARGET_RATE:-4.4}  # target speech rate for the brand narration (chars/sec, spaces and punctuation excluded)
-CHARS=${CHARS:-0}                # script char count — 0 skips atempo normalization
+CHARS=${CHARS:-0}                # script char count — 0 skips the speech-rate report/correction
+# Same policy as build-reel.sh (2026-09-11): no time-stretch by default — the outro voice ships at the
+# pace the engine read it. Set both bounds on the command line to opt back in for one build.
+ATEMPO_MIN=${ATEMPO_MIN:-1.0}; ATEMPO_MAX=${ATEMPO_MAX:-1.0}
 
 VOICE=$(ls outro-voice.* 2>/dev/null | head -1)
 [ -n "$VOICE" ] || { echo "outro-voice.* missing"; exit 1; }
@@ -47,10 +50,10 @@ ffmpeg -y -v error "${INARGS[@]}" -af "
   loudnorm=I=-16:TP=-1.5:LRA=11,aresample=48000" -ac 1 -ar 48000 work/ov.wav
 L=$(ffprobe -v error -show_entries format=duration -of csv=p=0 work/ov.wav)
 
-# ── 1.5) Speech-rate normalization (same clamp as build-reel.sh [0.88, 1.18], skipped within ±5%)
+# ── 1.5) Speech-rate report + optional correction (F stays 1.0000 at the default bounds, skipped within ±5%)
 if [ "$CHARS" -gt 0 ]; then
   R0=$(awk -v c="$CHARS" -v l="$L" 'BEGIN{printf "%.2f", c/l}')
-  F=$(awk -v t="$TARGET_RATE" -v r="$R0" 'BEGIN{f=t/r; if (f>0.95 && f<1.05) f=1; if (f<0.88) f=0.88; if (f>1.18) f=1.18; printf "%.4f", f}')
+  F=$(awk -v t="$TARGET_RATE" -v r="$R0" -v mn="$ATEMPO_MIN" -v mx="$ATEMPO_MAX" 'BEGIN{f=t/r; if (f>0.95 && f<1.05) f=1; if (f<mn) f=mn; if (f>mx) f=mx; printf "%.4f", f}')
   if [ "$F" != "1.0000" ]; then
     ffmpeg -y -v error -i work/ov.wav -af "atempo=$F" work/ov2.wav && mv work/ov2.wav work/ov.wav
     L=$(ffprobe -v error -show_entries format=duration -of csv=p=0 work/ov.wav)

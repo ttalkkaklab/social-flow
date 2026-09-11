@@ -76215,6 +76215,7 @@ var SUPERTONIC_LANGUAGES = [
 var DEFAULT_SUPERTONIC_LANGUAGE = "ko";
 var DEFAULT_SUPERTONIC_SPEED = 1.05;
 var DEFAULT_SUPERTONIC_STEPS = 8;
+var MAX_SUPERTONIC_SPEED = 1.2;
 var SUPERTONIC_SAMPLE_RATE = 44100;
 var MAX_SUPERTONIC_INPUT_CHARS = 16e3;
 function timeoutFor(textLength) {
@@ -76224,7 +76225,7 @@ var supertonicGenerateSchema = external_exports.object({
   text: external_exports.string().min(1, "Text is required").max(MAX_SUPERTONIC_INPUT_CHARS, `Text exceeds ${MAX_SUPERTONIC_INPUT_CHARS} characters; split the script by scene`),
   voice: external_exports.enum(SUPERTONIC_VOICE_NAMES).optional().default(DEFAULT_SUPERTONIC_VOICE),
   lang: external_exports.enum(SUPERTONIC_LANGUAGES).optional().default(DEFAULT_SUPERTONIC_LANGUAGE),
-  speed: external_exports.number().min(0.7).max(2).optional().default(DEFAULT_SUPERTONIC_SPEED),
+  speed: external_exports.number().min(0.7).max(MAX_SUPERTONIC_SPEED, `speed above ${MAX_SUPERTONIC_SPEED} drops syllables; synthesize at 1.2 or below and use the playback speed pass for a faster cut`).optional().default(DEFAULT_SUPERTONIC_SPEED),
   steps: external_exports.number().int().min(1).max(100).optional().default(DEFAULT_SUPERTONIC_STEPS),
   outputPath: external_exports.string().optional(),
   filename: bareFilenameSchema("audio").optional()
@@ -84154,9 +84155,9 @@ Returns: a text block with the saved .wav path, voice, language, audio duration,
         },
         speed: {
           type: "number",
-          description: `Speech speed 0.7\u20132.0 (default: ${DEFAULT_SUPERTONIC_SPEED}). Keep it identical across every cut of one video.`,
+          description: `Speech speed 0.7\u2013${MAX_SUPERTONIC_SPEED} (default: ${DEFAULT_SUPERTONIC_SPEED}). Keep it identical across every cut of one video. Above 1.2 the model drops syllables (measured), so a faster delivery comes from the produce playback speed pass, not from this value.`,
           minimum: 0.7,
-          maximum: 2,
+          maximum: MAX_SUPERTONIC_SPEED,
           default: DEFAULT_SUPERTONIC_SPEED
         },
         steps: {
@@ -93212,7 +93213,7 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
 
 // src/index.ts
 var server = new Server(
-  { name: "social-flow", version: "0.71.0" },
+  { name: "social-flow", version: "0.72.0" },
   { capabilities: { tools: {} } }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {

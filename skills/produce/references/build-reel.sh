@@ -6,6 +6,8 @@
 #
 # Usage: build-reel.sh <workdir>
 #   <workdir>/cards.tsv : idx <TAB> narration-audio-path <TAB> target-rate(chars/sec) <TAB> zoom(in|out|auto|none|punch|hold) [<TAB> opts]
+#                         target-rate stays a required column but has no effect unless ATEMPO_MIN/ATEMPO_MAX
+#                         are set on the build line — by default the voice is never time-stretched (see below).
 #                         in/out/auto zoom over the whole card by the card's span: span= when written,
 #                         else KB_RATE × card seconds capped at KB_ZMAX (the baked text stays in the zone).
 #                         zoom=none skips Ken Burns — for footage that already moves, like filmed clips.
@@ -124,7 +126,16 @@ SPF=$((48000 / FPS))               # audio samples per frame
 MIN_DUR=${MIN_DUR:-0.0}            # optional explicit minimum; short cuts stay short by default
 MAX_DUR=${MAX_DUR:-13.0}           # warn when exceeded (signal to shorten the script)
 RATE_TOL=${RATE_TOL:-0.05}
-ATEMPO_MIN=${ATEMPO_MIN:-0.88}; ATEMPO_MAX=${ATEMPO_MAX:-1.18}
+# Per-card tempo correction is off by default (2026-09-11). The engine at its profile speed already
+# runs at 5.3–6.4 chars/s (Supertonic 1.05, 12 takes measured), so a 4.5 target pinned every card to
+# the 0.88 floor — the whole episode dragged 12% slower — and cards with longer pauses swung the
+# other way, up to 1.18. Adjacent cards differed by 30%. Stacking that stretch under speedup.sh's
+# pass ran WSOLA twice and blurred consonants (사전 → 사점 in ASR). The voice ships at the engine's
+# own pace; pick the pace once, at the engine. Set both bounds to opt back in for one build.
+# The REGEN advisory below still measures the engine's own pace against [3.2, 6.2]/SPEED — the same
+# band the ship gate (check-final-speech-rate.py) enforces — so a card that trips it is a pace to fix at
+# the engine or in the script, not something this build corrects.
+ATEMPO_MIN=${ATEMPO_MIN:-1.0}; ATEMPO_MAX=${ATEMPO_MAX:-1.0}
 # The playback factor speedup.sh will apply after this build (produce §7.5). produce §1 appends the
 # channel's factor to .work/format.env, which both scripts source, so the build and the pass agree.
 # Sourced above; the inline default matches speedup.sh's for a hand-run build with no format.env.
@@ -554,7 +565,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
     WARN=1
   fi
 
-  # ── 3) Speech-rate normalization atempo (same as v2)
+  # ── 3) Speech-rate normalization atempo — F stays 1.0000 at the default bounds (see ATEMPO_MIN)
   if [ "$MUTE" -eq 1 ]; then F=1.0000
   else F=$(awk -v t="$TARGET" -v r="$R0" -v tol="$RATE_TOL" -v mn="$ATEMPO_MIN" -v mx="$ATEMPO_MAX" \
       'BEGIN{f=t/r; if (f>1-tol && f<1+tol) f=1; if (f<mn) f=mn; if (f>mx) f=mx; printf "%.4f", f}'); fi
