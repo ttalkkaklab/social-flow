@@ -23,7 +23,7 @@ function previzCuts(win) {
 /* One quote per model: the board with every previz cut routed to that model and resolution. */
 function options(win, { krwPerUsd = 1400 } = {}) {
   const cuts = previzCuts(win), rows = [];
-  if (!win.PRODUCTION) throw new Error('Choose hybrid or full_video first (PRODUCTION is missing)');
+  if (!mode.MODES[win.PRODUCTION?.mode]) throw new Error('Choose hybrid or full_video first (PRODUCTION.mode is missing)');
   if (win.PRODUCTION.videoProvider === 'host') return { host: true, cuts: cuts.length, rows: [] };
   for (const [model, spec] of Object.entries(mode.VIDEO_MODELS)) {
     for (const resolution of spec.resolutions) {
@@ -39,6 +39,7 @@ function options(win, { krwPerUsd = 1400 } = {}) {
       let q;
       try { q = quote(clone, { krwPerUsd }).options[clone.PRODUCTION.mode]; }
       catch (e) { rows.push({ model, resolution, label: spec.label, error: e.message }); continue; }
+      if (!q) { rows.push({ model, resolution, label: spec.label, error: 'no quote for mode ' + clone.PRODUCTION.mode }); continue; }
       rows.push({ model, resolution, label: spec.label, clips: q.clips, generatedSeconds: q.generatedSeconds,
         firstPassUsd: q.firstPassUsd, retryLowUsd: q.retryLowUsd, retryHighUsd: q.retryHighUsd, maxAttempts: q.maxAttempts,
         firstPassKrw: q.firstPassKrw, retryHighKrw: q.retryHighKrw, provisional: q.provisional });
@@ -52,7 +53,8 @@ function text(result) {
   for (const r of result.rows) {
     if (r.error) { lines.push(`  ${r.label} ${r.resolution}: !! ${r.error}`); continue; }
     lines.push(`  ${r.label} ${r.resolution} (${r.model}): 최초 $${r.firstPassUsd.toFixed(2)} (약 ${r.firstPassKrw.toLocaleString('ko-KR')}원) · ${Math.min(2, r.maxAttempts)}–${r.maxAttempts}회 시도 $${r.retryLowUsd.toFixed(2)}–$${r.retryHighUsd.toFixed(2)}` +
-      (r.retryHighUsd > result.budgetUsd + 1e-9 ? ` · 예산 상한 $${result.budgetUsd} 초과` : ''));
+      (r.retryHighUsd > result.budgetUsd + 1e-9 ? ` · 예산 상한 $${result.budgetUsd} 초과` : '') +
+      (r.provisional ? ' · 아직 컷이 없어 비교 모델 기준 — 컷을 쓰고 다시 뽑는다' : ''));
   }
   return lines.join('\n');
 }

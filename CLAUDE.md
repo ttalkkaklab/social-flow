@@ -175,7 +175,8 @@ no clip it shapes the still and the prompt instead (`handoff:"frame_and_prompt"`
 still is edited from the previz's first frame, so the composition the clip starts on is the
 composition the still has. The previz's move and the shot's `visual.camera.movement` must agree;
 a prompt that fights the clip drifts. Imported clips (`visual.reuse`), stock footage, recordings
-and the outro carry none. Two of the choices are the user's, asked with AskUserQuestion and
+and the outro carry none, and neither do b-roll and speech clips on the Veo sound lane (no clip
+input there; the reference route is the motion-background route). Two of the choices are the user's, asked with AskUserQuestion and
 recorded before anything renders or bills: **which renderer** (Blender or three.js) before the
 first previz render — `PRODUCTION.previz` — and **which video model** (the Seedance 2.x grades,
 with `video-model-options.js`'s cost table) before any video call — `PRODUCTION.videoModel`;

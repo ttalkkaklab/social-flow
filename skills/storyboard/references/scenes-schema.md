@@ -1819,7 +1819,7 @@ carry `last_frame`; the prompt binds both and closes the clay read with `Do not 
 visual content`, and the vendor bills the previz seconds alongside the output seconds. On
 `engine: "host"` the handoff is `frame_and_prompt` — the still and the prompt carry the previz.
 `check-scenes.js` refuses a `generated_video` cut with a `visual.video` slot and no previz
-(deferred in `--draft`). Contract, both renderers and the prompt skeleton: `blender-previz.md` §6.
+(deferred in `--draft`); b-roll and speech clips ride the Veo sound lane and carry none. Contract, both renderers and the prompt skeleton: `blender-previz.md` §6.
 Example of an eligible action hook:
 
 ```js

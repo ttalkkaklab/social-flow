@@ -445,7 +445,7 @@ test('generation output existence never discounts a new generation or its retrie
 test('a previz cut gets the clay-model preamble, the composition lock and the first frame as the first still reference', () => {
   const win = fixture(), prompts = withPreviz(win, 1), scene = win.SCENES[1];
   assert.match(prompts.motionPrompt, /^Image 1 is the first frame\. Use Video 1, a 3D clay-model previz, as the only reference for camera movement.*Do not reference its visual content\. The red model in Video 1 is the buildings from Image 2\. Low wide view of the valley, slow dolly in, ending on The open stream\./);
-  assert.match(prompts.sourcePrompt, /Composition lock: the attached previz frame/);
+  assert.match(prompts.sourcePrompt, /Composition lock: the first attached image is frame 1 of the 3D previz/);
   assert.equal(prompts.previzFirstFrame, path.resolve('/board', 'previz/s2-f0001.png'));
   // The frame comes first (the composition), the miniature pack image second (the look).
   assert.equal(prompts.sourceImageArgs.referenced_image_paths[0], prompts.previzFirstFrame);
@@ -493,6 +493,21 @@ test('the previz renderer and the video model are HITL choices recorded before a
   assert.doesNotMatch(mode.check(host).join(), /Ask which|videoModel/);
   host.PRODUCTION.videoModel = { model: 'dreamina-seedance-2-0-260128', resolution: '1080p', selection: { kind: 'user', reference: 'x' } };
   assert.match(mode.check(host).join(), /must be host under videoProvider host/);
+  // A 720p grade the table offers must pass the full-video checks on the shots that carry it (review H1).
+  const mini = fixture(); mini.PRODUCTION.videoModel = { model: 'dreamina-seedance-2-0-mini-260615', resolution: '720p', selection: { kind: 'user', reference: 'User chose 2.0 mini at 720p.' } };
+  for (let i = 0; i < mini.SCENES.length; i++) { const v = mini.SCENES[i].visual.video; v.resolution = '720p'; }
+  assert.deepEqual(mode.check(mini, { requireApproval: true }).filter(m => /resolution|1080p/.test(m)), []);
+  mini.SCENES[0].visual.video.model = mini.PRODUCTION.videoModel.model; mini.SCENES[0].visual.video.resolution = '720p';
+  Object.assign(mini.SCENES[0].visual.video, { modelPurpose: 'previz', modelReason: 'r', realFaceInput: false, referenceImagePaths: [mini.SCENES[0].visual.bg],
+    previz: { renderer: 'threejs', clip: 'previz/s1.mp4', firstFrame: 'previz/s1-f0001.png', sha256: 'e'.repeat(64), fps: 24, seconds: 5, camera: { movement: 'static' } } });
+  mini.SCENES[0].visual.video.prompt = assemble(mini, 0, '/board').motionPrompt;
+  assert.deepEqual(checkScene(mini.SCENES[0], { production: mini.PRODUCTION }), []);
+  assert.equal(scenePlan(mini.SCENES[0]).priceKey, 'seedance.2-0-mini-video.720p');
+  // Every model the table offers has a with-video price row on the route (drift guard).
+  const { PRICED } = require('../../skills/produce/references/seedance-route.js');
+  for (const [m, spec] of Object.entries(mode.VIDEO_MODELS)) for (const res of spec.resolutions)
+    assert.ok(PRICED.has('seedance.' + m.replace(/^dreamina-seedance-|-\d{6}$/g, '').replace(/^(\d)-(\d)/, '$1-$2') + '-video.' + res) ||
+      [...PRICED].some(k => k.endsWith('-video.' + res) && k.includes(m.includes('mini') ? 'mini' : m.includes('fast') ? 'fast' : m.includes('2-5') ? '2-5' : '2-0.') ), m + ' ' + res);
   // The options table quotes the same board once per model, with the numbers the approval will bind.
   const { options, text } = require('../../skills/produce/references/video-model-options.js');
   const table = options(fixture());
@@ -502,6 +517,13 @@ test('the previz renderer and the video model are HITL choices recorded before a
   assert.equal(rows['dreamina-seedance-2-0-260128@1080p'].firstPassUsd, +(3 * 10 * 0.228).toFixed(2));
   assert.match(text(table), /Seedance 2\.0 mini 720p/);
   assert.match(text(options(host)), /videoProvider host/);
+  // No mode yet → a clear error, not a TypeError; a hybrid board with no cut yet is marked provisional (review M7).
+  const noMode = fixture(); delete noMode.PRODUCTION.mode;
+  assert.throws(() => options(noMode), /Choose hybrid or full_video first/);
+  const hybrid = fixture(); hybrid.PRODUCTION.mode = 'hybrid'; hybrid.PRODUCTION.comparison = { model: 'seedance-1-5-pro-251215', resolution: '1080p', hybridShots: [1, 2] };
+  for (const s of hybrid.SCENES) { s.shot.render.mode = 'still_camera'; delete s.visual.video; }
+  const ht = options(hybrid); assert.equal(ht.cuts, 0);
+  assert.ok(ht.rows.every(r => r.error || r.provisional === true), JSON.stringify(ht.rows[0]));
 });
 test('the assembled motion prompt clears the Seedance prompt gate that check-scenes.js runs', () => {
   const PROMPT = require('../../skills/storyboard/references/assemble-bg-prompt.js');

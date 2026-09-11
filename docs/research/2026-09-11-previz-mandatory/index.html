@@ -69,7 +69,7 @@
 <p>블렌더 브릿지와 같은 숫자를 받는다. 미터, Z 업, 프록시는 -Y 를 본다. 페이지 하나(<code>previz-template.html</code>)가 슬라이드 렌더러의 seek API 를 그대로 구현해서, 이미 있는 <code>render-motion-slide.mjs</code> 가 <code>--previz</code> 플래그로 프레임을 잡는다. 새로 짠 건 계약 파일(<code>previz-contract.js</code> — spec 검사, LINEAR 보간, 좌표 변환, 긴 변 36mm 렌즈)과 런타임 번들(<code>previz-runtime.js</code>, three.js 를 물어 499KB)뿐이다.</p>
 <table>
   <tr><th>항목</th><th>실측</th></tr>
-  <tr><td>캔버스·프레임</td><td>1080×1920, 24fps, 5초 spec → 121프레임(t = 0 … 5초 포함), mp4 5.04초</td></tr>
+  <tr><td>캔버스·프레임</td><td>1080×1920, 24fps, 5초 spec → 첫 실측은 121프레임(mp4 5.04초)이었고, 리뷰(M1)로 fps×seconds = 120프레임에 못 박았다 — 블렌더 레인과 같은 길이</td></tr>
   <tr><td>시간</td><td>9.3초(캡처 17fps, M4, 헤드리스 크롬 + ffmpeg)</td></tr>
   <tr><td>그림</td><td>회색 바닥, 배우별 단색 마네킹(다리·몸통·팔·머리·코 블록), 그림자·기즈모 없음 — 벤더가 말하는 클레이 참조 조건 그대로</td></tr>
   <tr><td>못 하는 것</td><td>관절이 없다. 춤·낙하처럼 몸의 박자가 내용인 컷은 블렌더 마네킹(§4~5)</td></tr>

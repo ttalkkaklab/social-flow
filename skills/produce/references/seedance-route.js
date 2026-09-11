@@ -11,7 +11,7 @@ const MODELS = {
   'seedance-1-0-pro-fast-251015': { family: '1-0-pro-fast', duration: [2, 12], resolutions: ['480p', '720p', '1080p'], images: 0, videos: 0, audio: false }
 };
 const DEFAULT_MODEL = 'seedance-1-5-pro-251215';
-const { checkFrames, framePlan } = require('../../storyboard/references/render-routing.js');
+const { checkFrames, framePlan, previzHandoff } = require('../../storyboard/references/render-routing.js');
 
 // A model may render a resolution the price table has no row for. Forecasting silently drops
 // such a shot, so the plan is rejected here instead. Mirrors autoproduce/references/prices.tsv;
@@ -57,7 +57,7 @@ function scenePlan(scene) {
     // A host video tool takes no reference clip, so a previz on that lane shapes the still and the
     // prompt instead (handoff frame_and_prompt, render-routing checkPreviz) and is not a Seedance field.
     const named = SEEDANCE_KEYS.filter((k) => settings[k] !== undefined &&
-      !(k === 'previz' && engine === 'host' && settings.previz && settings.previz.handoff === 'frame_and_prompt'));
+      !(k === 'previz' && engine === 'host' && previzHandoff(scene) === 'frame_and_prompt'));
     if (named.length)
       throw new Error(named.join(', ') + ' only applies to Seedance — set engine:"seedance" or drop the setting');
     return { kind, engine };

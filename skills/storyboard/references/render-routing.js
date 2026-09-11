@@ -58,7 +58,8 @@
     vendor receives, and the clip and the camera slot must agree: a prompt that fights the clip drifts. */
  const PREVIZ_RENDERERS=['blender','threejs'];
  const PREVIZ_HANDOFFS=['reference_video','frame_and_prompt'];
- const localFile=(s,ext)=>text(s)&&ext.test(s)&&!/^[a-z][a-z0-9+.-]*:/i.test(s);
+ // A storyboard-relative file: no scheme, no absolute path, no .. segment — the clip is served to the vendor and hashed from here.
+ const localFile=(s,ext)=>text(s)&&ext.test(s)&&!/^[a-z][a-z0-9+.-]*:/i.test(s)&&!/^[\/\\]/.test(s)&&!/(^|[\/\\])\.\.([\/\\]|$)/.test(s);
  function previzHandoff(scene){
   const v=scene.visual||{},video=v.video||{},p=video.previz||{};
   const engine=video.engine||v.engine||'seedance';
@@ -72,8 +73,8 @@
   if(scene.shot?.render?.mode!=='generated_video')bad('a previz only belongs to a generated_video cut');
   if(!PREVIZ_RENDERERS.includes(p.renderer))bad('renderer must be blender (the blender_* bridge) or threejs (previz-template.html)');
   else if(production?.previz?.renderer&&p.renderer!==production.previz.renderer)bad('renderer "'+p.renderer+'" is not the one the user chose for this episode (PRODUCTION.previz.renderer "'+production.previz.renderer+'")');
-  if(!localFile(p.clip,/\.(mp4|mov)$/i))bad('clip must be a local mp4/mov path — the rendered previz');
-  if(!localFile(p.firstFrame,/\.png$/i))bad('firstFrame must be the local png of frame 1 — the composition the source still is edited from');
+  if(!localFile(p.clip,/\.(mp4|mov)$/i))bad('clip must be a storyboard-relative mp4/mov path (no scheme, no absolute path, no ..) — the rendered previz');
+  if(!localFile(p.firstFrame,/\.png$/i))bad('firstFrame must be the storyboard-relative png of frame 1 (no scheme, no absolute path, no ..) — the composition the source still is edited from');
   if(!draft&&!/^[a-f0-9]{64}$/.test(p.sha256||''))bad('sha256 must identify the rendered previz bytes');
   if(!Number.isInteger(p.seconds)||p.seconds<2)bad('seconds must be a whole number — the cut length the clip was rendered at');
   if(!Number.isFinite(p.fps)||p.fps<24||p.fps>60)bad('fps must be 24–60 (24 for frame-for-frame QA)');
@@ -188,7 +189,7 @@ if(r.mode==='data_graph'||(fullVideo&&CHARTS[r.purpose])){
     if(['character_html','object_html'].includes(r.mode)&&(slide?.subject?.kind!=='object'||slide?.object?.renderer!=='mesh'))bad('physical explanation needs a real mesh object subject');
    }
    if(r.mode==='generated_video'&&(!generated||slide||!text(v.why)))bad('generated video needs a video handoff and visual.why, including the opening cut');
-   if(r.mode==='generated_video'&&v.video&&v.reuse===undefined&&v.video.previz===undefined)bad('every generated_video cut pre-renders its camera and blocking in 3D first — render a Blender or three.js previz at the cut length and store visual.video.previz (blender-previz.md §6, user directive 2026-09-11)');
+   if(r.mode==='generated_video'&&v.video&&v.reuse===undefined&&v.video.previz===undefined)bad('every generated_video cut pre-renders its camera and blocking in 3D first — render a Blender or three.js previz at the cut length and store visual.video.previz (blender-previz.md §6, user directive 2026-09-11; b-roll and speech clips on the Veo sound lane are the documented exception)');
    if(r.mode==='editorial_html'&&(generated||!slide||slide.kind!=='diagram'||slide.motion!==true||slide.treatment!=='editorial'||slide.subject?.kind!=='type'||slide.object))bad('editorial quote/verdict needs a text subject on an editorial motion diagram');
    if(r.mode==='data_graph'&&slide?.chartRenderer!=='svg-v1')bad('data graphs require chartRenderer svg-v1 and the shared chart template');
   }

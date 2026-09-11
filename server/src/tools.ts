@@ -2547,7 +2547,7 @@ Returns: a text block with the mp4 path, still paths (and any requested still ou
         stamp: {
           type: 'boolean',
           default: true,
-          description: 'Burn frame number, camera name and lens into the corner of the PNG stills (default true) — what makes a still reviewable. The mp4 is never stamped, so it can go straight to seedance_reference.',
+          description: 'Burn frame number, camera name and lens into the corner of the PNG stills (default true) — what makes a still reviewable. Render the frame-1 still that becomes visual.video.previz.firstFrame with stamp:false (blender-previz.md §6.6): the image tool keeps whatever is in that frame as composition. The mp4 is never stamped, so it can go straight to seedance_reference.',
         },
         samples: { type: 'number', default: 16, description: 'eevee only: render samples (default 16).' },
         timeoutSeconds: {

@@ -180,7 +180,7 @@
         if (vm && vm.model !== 'host') errors.push('PRODUCTION.videoModel.model must be host under videoProvider host');
       } else if (!vm || !VIDEO_MODELS[vm.model]) errors.push('Ask which video model makes the generated cuts and record it in PRODUCTION.videoModel (' + Object.keys(VIDEO_MODELS).join(' | ') + ')');
       else if (!VIDEO_MODELS[vm.model].resolutions.includes(vm.resolution)) errors.push('PRODUCTION.videoModel.resolution must be one of ' + VIDEO_MODELS[vm.model].resolutions.join(', ') + ' for ' + vm.model);
-      if (vm && !selectionRecorded(vm.selection)) errors.push('Record the actual video model HITL choice in PRODUCTION.videoModel.selection');
+      if (vm && vm.model !== 'host' && !selectionRecorded(vm.selection)) errors.push('Record the actual video model HITL choice in PRODUCTION.videoModel.selection');
     }
     if (!full(p)) {
       const count = (win.SCENES || []).filter(s => eligible(s) &&
@@ -204,9 +204,11 @@
       if (!text(v.video?.prompt)) bad('store the motion prompt before generation');
       // The host video tool (owner directive 2026-09-07) tops out at 720p and takes every full_video cut.
       const hostVideo = p.videoProvider === 'host';
-      if (v.video?.resolution !== (hostVideo ? '720p' : '1080p') || v.video?.generateAudio !== false)
+      // The API lane renders at the resolution the user chose with the model (PRODUCTION.videoModel); 1080p before that record exists.
+      const wantRes = hostVideo ? '720p' : (p.videoModel?.resolution || '1080p');
+      if (v.video?.resolution !== wantRes || v.video?.generateAudio !== false)
         bad(hostVideo ? 'the host video tool tops out at 720p; write resolution:"720p" and generateAudio:false with separate narration'
-                      : 'reference quality uses explicit 1080p and generateAudio:false with separate narration');
+                      : 'write the chosen model\'s resolution (' + wantRes + ') and generateAudio:false with separate narration');
       if (v.video?.engine !== (hostVideo ? 'host' : 'seedance'))
         bad(hostVideo ? 'videoProvider:host routes every full_video cut to engine:"host" (the CLI\'s own image_to_video)'
                       : 'full_video uses the priced Seedance image-to-video route');

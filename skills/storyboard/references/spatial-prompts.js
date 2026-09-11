@@ -53,7 +53,7 @@ function previzPreamble(p) {
 }
 /* The source still of a previz cut is edited from the previz's first frame, so the composition the
    clip starts on is the composition the still has (blender-previz.md §6.6). */
-const PREVIZ_SOURCE_LOCK = 'Composition lock: the attached previz frame (frame 1 of the 3D previz) fixes the camera, the framing, and where every subject stands and how large it is in frame; keep that composition exactly and render every surface, figure and light in the episode style described here.';
+const PREVIZ_SOURCE_LOCK = 'Composition lock: the first attached image is frame 1 of the 3D previz, rendered clean (no stamp, no gizmo); it fixes the camera, the framing, and where every subject stands and how large it is in frame; keep that composition exactly and render every surface, figure and light in the episode style described here.';
 function assemble(win, index, dir) {
   if (!['hybrid', 'full_video'].includes(win.PRODUCTION?.mode)) throw new Error('Choose a production mode before assembling prompts');
   const scene = win.SCENES[index], d = scene?.shot?.videoDesign, style = win.PRODUCTION.style, v = scene?.visual;
@@ -89,7 +89,8 @@ function assemble(win, index, dir) {
     'Opening state: ' + d.before,
     ...(previzFrame ? [PREVIZ_SOURCE_LOCK] : []),
     'The image must make the narrated subject and action understandable; a beautiful but unrelated scene fails.',
-    ...(pack ? ['Use the attached image for STYLE ONLY. Design a new scene for the narration.', ...Object.values(pack.rules)] : []),
+    ...(pack ? [previzFrame ? 'The first attached image is the previz frame: its composition is kept exactly. The second attached image is for STYLE ONLY.'
+                            : 'Use the attached image for STYLE ONLY. Design a new scene for the narration.', ...Object.values(pack.rules)] : []),
     treatment, style.world,
     'Materials: ' + style.materials, 'Palette: ' + style.palette, 'Lighting: ' + style.lighting,
     'Camera language: ' + style.camera,

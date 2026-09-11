@@ -156,7 +156,8 @@ if (!HTML || !opt.out) usage("a slide file and --out are required");
 if (opt.previz) {
   // A previz is frame-for-frame QA material: 24 fps so frame n of the clip is frame n of the result,
   // and no grain — the vendor reads a clean clay render (blender-previz.md §6.1).
-  if (!given.has("--fps")) opt.fps = 24;
+  if (given.has("--fps")) usage("--previz renders at 24 fps so frame n of the clip is frame n of the spec (previz-contract frameAt); --fps does not apply");
+  opt.fps = 24;
   if (!given.has("--grain")) opt.grain = 0;
   if (opt.segs) usage("--previz renders one clip for the whole cut; --segs does not apply");
 }
@@ -650,7 +651,9 @@ const openPage = async () => {
   const captureGroup = async (w, idx) => {
     const k = todo[idx];
     const dur = groups[k].dur;
-    const nF = Math.max(2, Math.round(dur / 1000 * opt.fps) + 1);
+    // A previz clip is exactly fps × seconds frames (t = 0 … (N−1)/fps), the length the vendor bills and
+    // the Blender lane renders; a slide clip also captures t = dur, its rest frame.
+    const nF = Math.max(2, Math.round(dur / 1000 * opt.fps) + (opt.previz ? 0 : 1));
     const fdir = path.join(OUT, `frames-r${k}`);
     fs.rmSync(fdir, { recursive: true, force: true }); fs.mkdirSync(fdir, { recursive: true });
     for (let i = seamFrom(k) == null ? 0 : 1; i < nF; i++) {

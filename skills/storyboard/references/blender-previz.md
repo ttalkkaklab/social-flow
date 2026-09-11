@@ -6,7 +6,9 @@ Blender previz through the bridge tools below, or a three.js previz through
 generated cut without `visual.video.previz`, and the video model receives the render — as the
 reference clip on Seedance 2.x, or as the composition of the still and the numbers in the
 prompt on a host video tool that takes no clip (§6.7). Imported clips (`visual.reuse`), stock
-footage, recordings and the outro carry none. **Which renderer and which video model are the
+footage, recordings and the outro carry none, and neither do b-roll (`type:"broll"`) and speech
+clips (`visual.clip`): those are Veo sound-lane slots with no clip input, and the reference
+route is a motion-background (`visual.video`) route. **Which renderer and which video model are the
 user's choices**, asked with AskUserQuestion before the first previz render and before any
 video call and recorded in `PRODUCTION.previz` and `PRODUCTION.videoModel`
 (production-mode.md §Two more questions); every shot's `previz.renderer` and `video.model`
@@ -236,7 +238,9 @@ trade: exact camera and timing from the clip, a close first frame from the still
 - **One flat colour per actor, everything else grey.** `blender_scene_build` proxies take
   `color`. The prompt then binds "the red model in Video 1" to a character image, the way
   the vendor's own example does. Simple primitives beat detailed models for the reference.
-- **No face anywhere in the inputs.** 2.x moderation rejects real human faces in reference
+- **No face anywhere in the inputs.** A previz cut on the API lane is a 2.x cut, so a source
+  still with a real face cannot be generated there at all — take the face out of the still
+  (turned away, small in frame, illustrative) or use the host lane. 2.x moderation rejects real human faces in reference
   images and videos; the mannequin has none, and the still and the sheets must not either.
 
 ### 6.2 What the storyboard stores
@@ -252,7 +256,7 @@ video: {
   previz: {
     renderer: "blender",                 // or "threejs" (§6.5)
     clip: "previz/s4.mp4", blend: "previz/s4.blend",
-    firstFrame: "previz/s4-f0001.png",   // frame 1 — the composition the still is edited from (§6.6)
+    firstFrame: "previz/s4-f0001.png",   // frame 1, rendered clean (stamp:false) — the composition the still is edited from (§6.6)
     sha256: "<64 hex>", fps: 24, seconds: 5,
     camera: { movement: "arc shot" },    // the move the clip performs — must equal visual.camera.movement
     handoff: "reference_video",          // implied on the API lane; frame_and_prompt on a host tool (§6.7)
@@ -361,9 +365,10 @@ shasum -a 256 storyboard/previz/s4.mp4
 ```
 
 `--previz` renders one clip for the whole cut at 24 fps with no grain and none of the slide
-rules (the page has one reveal group whatever the narration count); a 5 s spec captures 121
-frames (t = 0 … 5 s inclusive), which the vendor takes as it takes a Blender render. Measured
-2026-09-11: 1080×1920, 121 frames in 9 s on an M4. Record `renderer: "threejs"`. What this lane
+rules (the page has one reveal group whatever the narration count); a 5 s spec captures exactly
+120 frames (fps × seconds, t = 0 … 119/24 s), the length the Blender lane renders and the
+vendor bills. Measured 2026-09-11: 1080×1920, 121 frames in 9 s on an M4 before the count was
+pinned to fps × seconds. Record `renderer: "threejs"`. What this lane
 cannot do: a jointed body — a dance, a fall, a gesture whose count is the joke needs the Blender
 mannequin (§4–§5). Open `r0.png` and a late frame before storing the clip, the way §1 step 6
 opens the Blender stills.
@@ -371,7 +376,9 @@ opens the Blender stills.
 ### 6.6 The first frame becomes the still
 
 The source still of a previz cut is edited from the previz's first frame, not designed from the
-prompt alone: `spatial-prompts.js` puts `previz.firstFrame` first in `sourceImageArgs` and adds
+prompt alone. The frame is a **clean** still — `blender_render_previz` with `stamp:false` for the
+frame-1 PNG (the stamped stills are for your own read; a frame number and lens burned into the
+corner would be kept as composition), and the three.js lane's `r0.png` is clean already: `spatial-prompts.js` puts `previz.firstFrame` first in `sourceImageArgs` and adds
 the composition lock to `sourcePrompt` — keep the camera, the framing and where every subject
 stands and how large it is, render every surface in the episode style. The image tool gets
 that frame as a reference (host `image_edit`, Codex `image_gen` with the frame shown first,

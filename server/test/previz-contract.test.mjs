@@ -27,6 +27,10 @@ test('keys interpolate linearly by frame and clamp outside their range, like the
   assert.deepEqual(C.sampleCamera(s, 400).position, [2, -2, 1.4]);
   assert.equal(C.sampleActor(s.actors[0], 60.5).rotationZDeg, 45);
   assert.deepEqual(C.sampleActor(s.actors[1], 50), { position: [0, 1.5, 0], rotationZDeg: 0 });
+  // Keys may be written out of order; the sample sorts them by frame.
+  const u = spec(); u.camera.keys = [u.camera.keys[1], u.camera.keys[0], { frame: 60, position: [5, 5, 5], target: [0, 0, 1] }];
+  assert.deepEqual(C.sampleCamera(u, 60).position, [5, 5, 5]);
+  assert.deepEqual(C.sampleCamera(u, 30).position.map(x => +x.toFixed(6)), [2.457627, 0.423729, 3.169492]);
   // The page's local time → the 1-based frame: t = 0 is frame 1, the last frame is fps × seconds.
   assert.equal(C.frameAt(s, 0), 1); assert.equal(C.frameAt(s, 1000), 25); assert.equal(C.frameAt(s, 99999), 120);
 });

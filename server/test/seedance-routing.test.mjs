@@ -135,7 +135,9 @@ test('a previz on the host lane is not a Seedance field, and on the Seedance rou
   const previz = { renderer: 'blender', clip: 'previz/s4.mp4', firstFrame: 'previz/s4-f0001.png', sha256: 'a'.repeat(64), fps: 24, seconds: 5, camera: { movement: 'arc shot' } };
   const host = { type: 'cover', duration: 5, visual: { bg: 'images/scene-4.png', video: { engine: 'host', prompt: 'x', previz: { ...previz, handoff: 'frame_and_prompt' } } } };
   assert.deepEqual(scenePlan(host), { kind: 'motion', engine: 'host' });
-  assert.throws(() => scenePlan({ ...host, visual: { ...host.visual, video: { ...host.visual.video, previz } } }), /only applies to Seedance/);
+  // The lane implies the handoff (render-routing previzHandoff), so an omitted handoff passes here too (review H2).
+  assert.deepEqual(scenePlan({ ...host, visual: { ...host.visual, video: { engine: 'host', prompt: 'x', previz } } }), { kind: 'motion', engine: 'host' });
+  assert.throws(() => scenePlan({ ...host, visual: { ...host.visual, video: { ...host.visual.video, previz: { ...previz, handoff: 'reference_video' } } } }), /only applies to Seedance/);
   const api = { type: 'cover', duration: 5, visual: { bg: 'images/scene-4.png', video: { engine: 'seedance', modelPurpose: 'previz', modelReason: 'r',
     realFaceInput: false, referenceImagePaths: ['images/scene-4.png'], prompt: 'x', previz: { ...previz, handoff: 'frame_and_prompt' } } } };
   assert.throws(() => scenePlan(api), /must be reference_video/);
