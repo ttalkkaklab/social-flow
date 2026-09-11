@@ -199,8 +199,7 @@ Do not lock every figure. Do not write scenes. The question map here is **what w
 know to offer three honest directions** — what people ask, what's actually true, which
 explanations compete, what it touches in the viewer's life now — **3–5 rows**, not the full 5–8.
 
-1. **Write that map before the first search** (`research.md` §Questions). Each row ends
-   answered by claim #N or written off.
+1. **Write that map before the first search** (`research.md` §Questions). Each row ends answered by claim #N or written off.
 2. **Search per question, not per topic, from more than one direction** (the tool guidance
    below). Two or more searches from different tools or types per question, **ten or more**
    logged in all — not three wordings of two lookups. Counter-evidence belongs after the pick.
@@ -339,8 +338,7 @@ pick an arc** — hook → drip → cta (scenes-schema §playback order).
   `datago_search` (data.go.kr). One official origin satisfies the cross-check. Collection,
   attribution, and the data-as-of-date trap: the **datago skill**.
 - Time-sensitive values (prices, tax rates, deadlines, effective dates) need **two or more
-  independent sources**. Failed claims stay out — don't invent figures and don't shrink a
-  range to its upper bound.
+  independent sources**. Failed claims stay out — don't invent figures and don't shrink a range to its upper bound.
 - Record in `research.md` in the `references/storyboard-template.md` structure. Channels
   that skip research (creative, everyday life) skip this whole step — and then the copy
   review's "no basis" P0 is switched off for that channel.
@@ -453,8 +451,7 @@ Core rules:
   - **YouTube long-form 16:9**: **28–70 shots · 8–15 min** (20 min absolute cap) +
     **5–10 chapters** (3 or more in the filmed lane). The chapter contract is
     `references/scenes-schema.md` §chapter — write only the `chapter` string on the scene
-    and the builder makes timestamps from measured times. The first chapter goes on the
-    cover so it opens at 0:00.
+    and the builder makes timestamps from measured times. The first chapter goes on the cover so it opens at 0:00.
   When channel Analytics measurements exist, they outrank generic benchmarks — go by
   **stayed to watch, engaged views, and subscribers gained per video**. Pick length and
   format from the episodes that produced engaged views and subscriptions, not raw views.
@@ -511,8 +508,7 @@ Core rules:
   Filmed scenes get `visual.clip` (filename), `shot` (what's visible), and `action` (what
   you do), and the filename follows the **`footage/s<scene number>-<slug>.mp4`** convention
   set by the storyboard — the user doesn't pick names. Whether the live voice carries the
-  sound or narration covers it is decided here too (live voice means `narration: []`). The
-  full text is scenes-schema §filmed scenes.
+  sound or narration covers it is decided here too (live voice means `narration: []`). The full text is scenes-schema §filmed scenes.
 - **Choose generated video only where continuous motion carries the sentence.** An event, a place or an action beat whose meaning is the motion itself is a
   **motion background or a b-roll clip with nothing drawn on it** (`visual.video`, §5 slot
   rules) with `visual.why` written; the beats that lose nothing as a photograph stay stills
@@ -540,8 +536,7 @@ Core rules:
   the cover opens a loop on the moment it went wrong and never says how it ended, hooking is
   the setup, the body builds the conflict, the turn is the moment someone saw it differently,
   and the result is the payoff, **the first place the answer appears**. Write a `beat` on each
-  shot. **Inside the long-form skeleton, the body's beats follow the structure the user picked
-  in §2.5** (scenario-craft §11).
+  shot. **Inside the long-form skeleton, the body's beats follow the structure the user picked in §2.5** (scenario-craft §11).
 - **Underneath the beats, run the twelve craft rules** (`references/scenario-craft.md`). After
   drafting, walk the scenes top to bottom and speak the connective at every seam — each one
   reads "그래서" or "그런데", never "그리고" (an and-then seam is a scene to merge, cut, or
@@ -550,8 +545,7 @@ Core rules:
   technique the episode rides: a story `turn` planted early and fair-play, fear put on the
   table with its clock plus a doable answer (suspense over surprise, Witte's efficacy rule),
   every curiosity loop opened mid-episode paired at open time with the scene that pays it
-  (loops beyond the main `hookForm`: short informational 0, short narrative 1 at most,
-  long-form 2–4 — the
+  (loops beyond the main `hookForm`: short informational 0, short narrative 1 at most, long-form 2–4 — the
   pairs go into `SB_DOC.craft.loops` in §6, where storyboard.html draws the ledger and marks
   the unpaid ones), the body paying its answer in installments so each
   body scene opens the next question as it closes one (seam gaps stay off that ledger),
@@ -603,8 +597,7 @@ Core rules:
   `gap` · `payoff` · `identify` · `number` · `secret` (scenes-schema §the six hook forms) — and
   make the title and segment ① actually take that shape, then **keep it** to the shot that pays — the last drip
   (short) or the result (long-form) on a withholding form, the cover itself on `payoff`. All six are open on a short. storyboard.html is
-  tables, frames and badges, not drawn panels — the form of the storyboard is irrelevant, its
-  function is to force these four jobs.
+  tables, frames and badges, not drawn panels — the form of the storyboard is irrelevant, its function is to force these four jobs.
 - **The hold job is won in the drip shots, not at the entrance** (measured on our own channel,
   n=4 — retention report, 2026-08-26). Retention ranked our four Shorts in exactly
   the order views ranked them (52% → 38% → 26% → 19%, 1,367 views down to 453), and the
@@ -614,8 +607,7 @@ Core rules:
   underperforms, **rework the drips before touching the opening** — every drip except the last
   closes one gap and opens the next in the same breath (`references/scenario-craft.md` §5), and
   a scene that only finishes an explanation is where the curve bends. Cutting shorter isn't
-  the fix either: what wins is a flat curve, so trim the stretches that sag and let a held
-  90 seconds run.
+  the fix either: what wins is a flat curve, so trim the stretches that sag and let a held 90 seconds run.
 - **On a short the shots after the cover are drip, then CTA.** n ≥ 1 drip shots. Each
   non-final drip pays one piece and opens the next gap; under a gap cover the last drip completes the answer, under a `spoiler` cover it is where the stated result has been made to hold up;
   the last narrated shot is `beat:"cta"`, with an optional ask after the answer and a **required** `shot.share`. An ask stays optional; a forwardable thing does not — an ask requests behaviour from the viewer, while a forwardable thing is one sentence, figure or verdict they can pass on as-is. Asking to be shared is an ask, not a trigger. Do not write `beat:"hooking"`.
@@ -632,11 +624,9 @@ Core rules:
   the cover's first frame is the finished screen or the working result, and the cover's
   glance and the result scene's unfolding point at the same artifact. **On a story arc the
   opposite holds** — the first frame is the moment it went wrong, close, and the ending stays
-  out of the cover, the setup, the build and the turn; the cta's frame is what points back at
-  the cover.
+  out of the cover, the setup, the build and the turn; the cta's frame is what points back at the cover.
 - **One result per episode**: one video solves one problem or produces one change. Install,
-  setup, and demo don't all go in one episode. Push the leftover steps to the next episode
-  and finish only this result.
+  setup, and demo don't all go in one episode. Push the leftover steps to the next episode and finish only this result.
 - **Design subscription conversion as the next value**: for topics suited to builds and
   serials, don't scatter standalone one-offs — bundle them into a series that advances the
   same artifact. The closing CTA isn't "please subscribe" but a concrete promise of **what

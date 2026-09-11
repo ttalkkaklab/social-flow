@@ -683,6 +683,23 @@ the entry (or delete the file) to turn the tools back on. A per-tool env overrid
 can turn one JSON-disabled tool back on for that session. Values split on commas
 or whitespace; a bare `*` matches every tool.
 
+### Optional: the ttalkkakstory portal mirror
+
+The storyboard, produce and publish skills mirror an episode's state to the ttalkkakstory
+portal **when its MCP server is registered in your own Claude Code settings** — the plugin
+does not ship it, because the server lives in the portal repository and its path differs per
+machine. Register it once (user scope) and set three variables:
+
+```json
+{ "mcpServers": { "ttalkkakstory": {
+    "command": "node", "args": ["<portal repo>/mcp/src/index.mjs"],
+    "env": { "TTALKKAKSTORY_API_URL": "https://…", "TTALKKAKSTORY_WORKSPACE": "<slug>", "TTALKKAKSTORY_API_KEY": "<key>" } } } }
+```
+
+With the `mcp__ttalkkakstory__*` tools present, approval calls `storyboard_save` on the
+episode directory, produce calls it again and sets `produced`, publish sets `published`. Without
+them the skills say so in one line and carry on — the portal is a mirror, not a gate.
+
 ## Documentation (docs/)
 
 Manuals are bilingual — Korean pages with English siblings (`*.en.html`).

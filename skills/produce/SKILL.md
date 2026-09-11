@@ -30,8 +30,7 @@ Read [story-quality.md](../storyboard/references/story-quality.md) and run `node
 1. **No distorting facts** — narration and captions only recompose facts already in
    scenes.js. Don't collapse a range to its upper bound, and don't invent numbers.
 2. **No copy-paste crossposting** — "share the facts, never the sentences."
-   Redesign the register, the endings, and the information density for each platform
-   (the platform-guide playbook).
+   Redesign the register, the endings, and the information density for each platform (the platform-guide playbook).
 3. **Plain language** — screen text, narration, subtitles, captions, all of it. It has to
    land heard by ear alone. **The screen doesn't restate what the audio just said**
    (user directive 2026-08-14) — an empty `title` or `bullets` in scenes.js is not a
@@ -40,13 +39,10 @@ Read [story-quality.md](../storyboard/references/story-quality.md) and run `node
 4. **Korean with no AI tells** — apply platform-guide `references/korean-style.md` to every
    visible sentence. `check-style.py` makes the call, and an S1 blocks publishing.
 5. **Generated video follows the selected mode** — full-video may explain physical mechanisms and spatial changes. No staged documentary reenactments, no
-   real people, no national symbols, no staged news screens. Cards (static text) are
-   code-rendered only.
+   real people, no national symbols, no staged news screens. Cards (static text) are code-rendered only.
 6. **Branding belongs in the outro** — no logo or badge in the body (a brand eating the first 3
-   seconds is a skip signal). Under `shortform_outro: off` the episode carries no logo at all: the
-   avatar and the handle do that job.
-7. **The TTS voice is fixed** — don't change a single character of profile.md §2's
-   voiceName and stylePrompt.
+   seconds is a skip signal). Under `shortform_outro: off` the episode carries no logo at all: the avatar and the handle do that job.
+7. **The TTS voice is fixed** — don't change a single character of profile.md §2's voiceName and stylePrompt.
 8. **Generated video comes from an image** — don't use `veo_text2video`. The order is always
    approved image provider → keep the PNG in `storyboard/images/` → the selected image-to-video engine.
    With `PRODUCTION.imageProvider:"host"` (Codex, Grok) the still comes from the host `image_gen`, and with `videoProvider:"host"` (Grok) the clip comes from the host `image_to_video` — the plugin's API tools are the fallback the user is asked about, never a silent one (still-generation §1, video-model-selection §The host video tool comes first).
