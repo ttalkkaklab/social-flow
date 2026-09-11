@@ -204,6 +204,8 @@ SUB_PHRASE_MV=${SUB_PHRASE_MV:-680}    # phrase-mode bottom margin — the line'
 SUB_PHRASE_OUT=${SUB_PHRASE_OUT:-4}    # phrase-mode outline — 5 reads heavy at 92; the reference's edge is thin
 SUB_PHRASE_ML=${SUB_PHRASE_ML:-64}     # phrase-mode side margins — the Sub style's 250/250 leaves 580px, which wraps a 12-character 92px line into two (measured with libass)
 SUB_PHRASE_MR=${SUB_PHRASE_MR:-64}
+SUB_ACCENT=${SUB_ACCENT:-}             # word/phrase mode: RRGGBB hex — a year (1592년 · 16세기) and every SUB_ACCENT_WORDS name take this colour, the rest of the line stays white (history-short grammar); empty = off
+SUB_ACCENT_WORDS=${SUB_ACCENT_WORDS:-} # space-separated names to colour with SUB_ACCENT ("이순신 원균")
 case "$SUB_MODE" in
   word)   WSTYLE=Word;   PHRASE_ARG="" ;;
   phrase) WSTYLE=Phrase; PHRASE_ARG="--phrase $SUB_PHRASE_MAX" ;;
@@ -970,7 +972,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
                   || awk -v cs="$CS" -v p="$CPRE" -v b="${BARR[$j]}" 'BEGIN{printf "%.3f", cs+p+b}')
           else SPE=$(awk -v cs="$CS" -v p="$CPRE" -v l="$L" 'BEGIN{printf "%.3f", cs+p+l}'); fi
           AOFF=$(awk -v cs="$CS" -v p="$CPRE" 'BEGIN{printf "%.3f", cs+p}')
-          python3 "$HERE/word-cues.py" "$ST" "$EN" "$SPS" "$SPE" "$SUB_WORD_MIN" "$TXT" ${ALIGNJ:+--align "$ALIGNJ" --offset "$AOFF" --tts "${TARR[$j]}"} $PHRASE_ARG |
+          python3 "$HERE/word-cues.py" "$ST" "$EN" "$SPS" "$SPE" "$SUB_WORD_MIN" "$TXT" ${ALIGNJ:+--align "$ALIGNJ" --offset "$AOFF" --tts "${TARR[$j]}"} $PHRASE_ARG ${SUB_ACCENT:+--accent "$SUB_ACCENT" --accent-words "$SUB_ACCENT_WORDS"} |
             while IFS=$'\t' read -r WS WE WT; do
               case "$WS" in \#*) say "· card $IDX seg $j words: ${WS#\# }"; continue;; esac
               printf 'Dialogue: 0,%s,%s,%s,,0,0,0,,%s\n' "$(asstime "$WS")" "$(asstime "$WE")" "$WSTYLE" "$WT" >> work/subs.body
@@ -998,7 +1000,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
         EN=$(awk -v cs="$CS" -v e="$FE" -v d="$D" 'BEGIN{if(e>d)e=d; printf "%.3f", cs+e}')
         awk -v s="$ST" -v e="$EN" 'BEGIN{exit !(e>s)}' || continue
         if [ "$SUB_MODE" = "word" ] || [ "$SUB_MODE" = "phrase" ]; then
-          python3 "$HERE/word-cues.py" "$ST" "$EN" "$ST" "$EN" "$SUB_WORD_MIN" "$FT" $PHRASE_ARG |
+          python3 "$HERE/word-cues.py" "$ST" "$EN" "$ST" "$EN" "$SUB_WORD_MIN" "$FT" $PHRASE_ARG ${SUB_ACCENT:+--accent "$SUB_ACCENT" --accent-words "$SUB_ACCENT_WORDS"} |
             while IFS=$'\t' read -r WS WE WT; do
               case "$WS" in \#*) continue;; esac
               printf 'Dialogue: 0,%s,%s,%s,,0,0,0,,%s\n' "$(asstime "$WS")" "$(asstime "$WE")" "$WSTYLE" "$WT" >> work/subs.body

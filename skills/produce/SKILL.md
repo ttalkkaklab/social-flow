@@ -833,7 +833,7 @@ not the lane. `subs.srt` keeps whole sentences either way (the publish tracks st
 readable); only the burn-in changes. The Word style is `SUB_WORD_SIZE` (84 — Pretendard
 draws a Hangul glyph at ~0.71× the size) and `SUB_WORD_MV` (640, the 65% line); the `Sub`
 style and its format-lint mirrors are untouched. Default stays `sentence` — a channel
-switches with `SUB_MODE=word` on the build line, same as `ATEMPO_MIN=1`.
+switches with `SUB_MODE=word` on the build line, same as `ATEMPO_MIN=1`. `SUB_ACCENT=RRGGBB` with `SUB_ACCENT_WORDS="<name> <aliases>"` colours the year (`1592년` · `16세기` · a dated day) and the named person in word and phrase mode and leaves every other word white — the history-short subtitle grammar of storyboard's [person-short.md](../storyboard/references/person-short.md); the SRT stays plain.
 
 **Phrase cues — `SUB_MODE=phrase`.** One line of **3~6 어절** at a time, no second line, on
 the same aligner as word mode: `word-cues.py --phrase 12` joins consecutive words while the
