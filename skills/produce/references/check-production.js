@@ -50,7 +50,7 @@ function accepted(win, index, storyboard, review) {
   return review && review.planDigest === shotDigest(win, index) &&
     review.sourceSha256 === hashFile(storyboard, scene.visual.bg) &&
     (!framePlan(scene).end || review.endSha256 === hashFile(storyboard, framePlan(scene).end)) &&
-    (!previz || (review.previzSha256 === previz.sha256 && review.previzSha256 === hashFile(storyboard, previz.clip))) &&
+    (!previz || previz.sha256 === hashFile(storyboard, previz.clip)) &&
     review.videoSha256 === hashFile(storyboard, scene.visual.video.clip);
 }
 function motionReviewErrors(scene, review) {

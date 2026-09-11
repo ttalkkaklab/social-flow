@@ -152,10 +152,13 @@ test('a previz cut rides the reference route as Video 1 and bills input + output
   assert.throws(() => scenePlan({ ...shot, visual: { ...shot.visual, video: { ...shot.visual.video, lastImagePath: 'images/scene-4-end.png' } } }), /no end frame/);
   assert.throws(() => scenePlan({ ...shot, visual: { ...shot.visual, video: { ...shot.visual.video, modelPurpose: 'reference' } } }), /modelPurpose:"previz"/);
   assert.throws(() => scenePlan({ ...shot, visual: { ...shot.visual, video: { ...shot.visual.video, previz: { ...previz, fps: 23.976 } } } }), /24–60/);
-  // A fixed voice alongside escalates to 2.5, whose with-video rows are priced too.
-  const voiced = scenePlan({ type: 'quote', duration: 6, visual: { bg: 'images/scene-4.png', clip: { ...base, prompt: 'x',
-    referenceAudioPaths: ['voice.wav'], previz: { ...previz, seconds: 6 } } } });
-  assert.equal(voiced.model, 'dreamina-seedance-2-5-260628');
-  assert.equal(voiced.priceKey, 'seedance.2-5-video.1080p');
-  assert.equal(voiced.billedSeconds, 12);
+  // More than nine reference images escalates to 2.5, whose with-video rows are priced too.
+  const many = scenePlan({ ...shot, visual: { ...shot.visual, video: { ...shot.visual.video,
+    referenceImagePaths: ['images/scene-4.png', ...Array(10).fill('characters/porter/body.png')] } } });
+  assert.equal(many.model, 'dreamina-seedance-2-5-260628');
+  assert.equal(many.priceKey, 'seedance.2-5-video.1080p');
+  assert.equal(many.billedSeconds, 10);
+  // A previz belongs to a motion background only — the checkers and the approval page read visual.video.previz.
+  assert.throws(() => scenePlan({ type: 'quote', duration: 6, visual: { bg: 'images/scene-4.png', clip: { ...base, prompt: 'x',
+    previz: { ...previz, seconds: 6 } } } }), /motion-background/);
 });

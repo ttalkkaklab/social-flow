@@ -1672,7 +1672,7 @@ Returns: a text block with the saved .mp4 file path, reference image, video and 
                     type: 'array',
                     items: { type: 'string' },
                     maxItems: 10,
-                    description: 'Already-public https URLs of reference videos (or asset://<id> library assets), numbered after referenceVideoPaths. Same limits as referenceVideoPaths; not probed locally.',
+                    description: 'Already-public https URLs of reference videos (or asset://<id> library assets), numbered after referenceVideoPaths. Same limits as referenceVideoPaths, but a URL clip is not probed here — its length and frame size are checked only by the vendor, and its seconds still count against the model total and the bill.',
                 },
                 referenceAudioPaths: {
                     type: 'array',

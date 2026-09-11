@@ -68,7 +68,7 @@ async function assertReachable(url: string, attempts: number, waitMs: number): P
     } catch (error) {
       last = error instanceof Error ? error.message : String(error);
     }
-    await new Promise((resolve) => setTimeout(resolve, waitMs));
+    if (i < attempts - 1) await new Promise((resolve) => setTimeout(resolve, waitMs));
   }
   throw new Error(`public URL not reachable: ${url} (${last})`);
 }
@@ -114,7 +114,13 @@ export function serveLocally(filePaths: string[]): Promise<{ server: http.Server
       res.writeHead(404).end();
       return;
     }
-    const size = fs.statSync(file).size;
+    let size = 0;
+    try {
+      size = fs.statSync(file).size;
+    } catch {
+      res.writeHead(404).end(); // the file went away mid-task — a 404, not a crash of the whole server
+      return;
+    }
     const type = MIME[path.extname(file).toLowerCase()] || 'application/octet-stream';
     const range = /^bytes=(\d+)-(\d*)$/.exec(req.headers.range || '');
     let start = 0;
@@ -137,7 +143,7 @@ export function serveLocally(filePaths: string[]): Promise<{ server: http.Server
       res.end();
       return;
     }
-    fs.createReadStream(file, { start, end }).pipe(res);
+    fs.createReadStream(file, { start, end }).on('error', () => res.destroy()).pipe(res);
   });
   return new Promise((resolve, reject) => {
     server.once('error', reject);
@@ -156,20 +162,39 @@ function closeServer(server: http.Server): Promise<void> {
   });
 }
 
+// Tunnels still open when this process dies would outlive it as live hostnames pointing at a
+// dead port — so every child is tracked and killed on exit.
+const liveTunnels = new Set<ChildProcess>();
+let exitHookInstalled = false;
+function killTunnelsOnExit(): void {
+  if (exitHookInstalled) return;
+  exitHookInstalled = true;
+  const killAll = () => { for (const child of liveTunnels) if (child.exitCode === null) child.kill('SIGTERM'); };
+  process.once('exit', killAll);
+  for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) {
+    process.once(signal, () => { killAll(); process.exit(); });
+  }
+}
+
 /** Route 2 — a cloudflared quick tunnel in front of the loopback server. */
 export async function publishViaTunnel(filePaths: string[], cloudflared = 'cloudflared'): Promise<PublishedFiles> {
   const { server, port, routes } = await serveLocally(filePaths);
   let child: ChildProcess | null = null;
   const close = async () => {
-    if (child && child.exitCode === null) child.kill('SIGTERM');
+    if (child) {
+      liveTunnels.delete(child);
+      if (child.exitCode === null) child.kill('SIGTERM');
+    }
     child = null;
     await closeServer(server);
   };
+  killTunnelsOnExit();
   try {
     const origin = await new Promise<string>((resolve, reject) => {
       child = spawn(cloudflared, ['tunnel', '--url', `http://127.0.0.1:${port}`, '--no-autoupdate'], {
         stdio: ['ignore', 'pipe', 'pipe'],
       });
+      liveTunnels.add(child);
       let log = '';
       const timer = setTimeout(() => reject(new Error(`cloudflared gave no quick-tunnel URL within 60s\n${log.slice(-600)}`)), 60_000);
       const onLine = (chunk: Buffer) => {

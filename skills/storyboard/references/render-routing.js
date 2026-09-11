@@ -41,7 +41,7 @@
   if(!draft&&!/^[a-f0-9]{64}$/.test(p.sha256||''))bad('sha256 must identify the rendered previz bytes');
   if(!Number.isInteger(p.seconds)||p.seconds<2)bad('seconds must be a whole number — the cut length the clip was rendered at');
   if(!Number.isFinite(p.fps)||p.fps<24||p.fps>60)bad('fps must be 24–60 (24 for frame-for-frame QA)');
-  if(video.engine!=='seedance')bad('the previz travels on the Seedance reference route — set engine:"seedance"');
+  if((video.engine||v.engine)!=='seedance')bad('the previz travels on the Seedance reference route — set engine:"seedance"');
   if(video.modelPurpose!=='previz')bad('set modelPurpose:"previz"');
   const refs=video.referenceImagePaths;
   if(!Array.isArray(refs)||!refs.length||refs[0]!==v.bg)bad('referenceImagePaths[0] must be the source still (visual.bg) — "Image 1 is the first frame"');

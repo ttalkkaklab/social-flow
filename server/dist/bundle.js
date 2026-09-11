@@ -76376,7 +76376,7 @@ async function assertReachable(url, attempts, waitMs) {
     } catch (error2) {
       last = error2 instanceof Error ? error2.message : String(error2);
     }
-    await new Promise((resolve5) => setTimeout(resolve5, waitMs));
+    if (i2 < attempts - 1) await new Promise((resolve5) => setTimeout(resolve5, waitMs));
   }
   throw new Error(`public URL not reachable: ${url} (${last})`);
 }
@@ -76414,7 +76414,13 @@ function serveLocally(filePaths) {
       res.writeHead(404).end();
       return;
     }
-    const size = fs4.statSync(file).size;
+    let size = 0;
+    try {
+      size = fs4.statSync(file).size;
+    } catch {
+      res.writeHead(404).end();
+      return;
+    }
     const type = MIME[path3.extname(file).toLowerCase()] || "application/octet-stream";
     const range = /^bytes=(\d+)-(\d*)$/.exec(req.headers.range || "");
     let start = 0;
@@ -76437,7 +76443,7 @@ function serveLocally(filePaths) {
       res.end();
       return;
     }
-    fs4.createReadStream(file, { start, end }).pipe(res);
+    fs4.createReadStream(file, { start, end }).on("error", () => res.destroy()).pipe(res);
   });
   return new Promise((resolve5, reject) => {
     server2.once("error", reject);
@@ -76454,19 +76460,40 @@ function closeServer(server2) {
     server2.close(() => resolve5());
   });
 }
+var liveTunnels = /* @__PURE__ */ new Set();
+var exitHookInstalled = false;
+function killTunnelsOnExit() {
+  if (exitHookInstalled) return;
+  exitHookInstalled = true;
+  const killAll = () => {
+    for (const child of liveTunnels) if (child.exitCode === null) child.kill("SIGTERM");
+  };
+  process.once("exit", killAll);
+  for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"]) {
+    process.once(signal, () => {
+      killAll();
+      process.exit();
+    });
+  }
+}
 async function publishViaTunnel(filePaths, cloudflared = "cloudflared") {
   const { server: server2, port, routes } = await serveLocally(filePaths);
   let child = null;
   const close = async () => {
-    if (child && child.exitCode === null) child.kill("SIGTERM");
+    if (child) {
+      liveTunnels.delete(child);
+      if (child.exitCode === null) child.kill("SIGTERM");
+    }
     child = null;
     await closeServer(server2);
   };
+  killTunnelsOnExit();
   try {
     const origin = await new Promise((resolve5, reject) => {
       child = spawn(cloudflared, ["tunnel", "--url", `http://127.0.0.1:${port}`, "--no-autoupdate"], {
         stdio: ["ignore", "pipe", "pipe"]
       });
+      liveTunnels.add(child);
       let log = "";
       const timer = setTimeout(() => reject(new Error(`cloudflared gave no quick-tunnel URL within 60s
 ${log.slice(-600)}`)), 6e4);
@@ -83289,7 +83316,7 @@ Returns: a text block with the saved .mp4 file path, reference image, video and 
           type: "array",
           items: { type: "string" },
           maxItems: 10,
-          description: "Already-public https URLs of reference videos (or asset://<id> library assets), numbered after referenceVideoPaths. Same limits as referenceVideoPaths; not probed locally."
+          description: "Already-public https URLs of reference videos (or asset://<id> library assets), numbered after referenceVideoPaths. Same limits as referenceVideoPaths, but a URL clip is not probed here \u2014 its length and frame size are checked only by the vendor, and its seconds still count against the model total and the bill."
         },
         referenceAudioPaths: {
           type: "array",

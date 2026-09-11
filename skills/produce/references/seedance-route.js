@@ -71,6 +71,7 @@ function scenePlan(scene) {
   // with a reference video, so the still's composition is a reference, not a lock.
   const previz = settings.previz;
   if (previz !== undefined && purpose !== 'previz') throw new Error('visual.video.previz needs modelPurpose:"previz"');
+  if (purpose === 'previz' && kind !== 'motion') throw new Error('the previz route is a motion-background (visual.video) slot; b-roll and speech clips do not carry a previz');
   if (purpose === 'previz') {
     if (!previz || typeof previz !== 'object' || Array.isArray(previz)) throw new Error('modelPurpose previz needs visual.video.previz { clip, sha256, fps, seconds }');
     if (typeof previz.clip !== 'string' || !/\.(mp4|mov)$/i.test(previz.clip.trim()) || /^[a-z][a-z0-9+.-]*:/i.test(previz.clip))

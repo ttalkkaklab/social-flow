@@ -398,7 +398,7 @@ means generating something nobody approved.
   there you generate 8 and trim. Handing a model more seconds than the idea holds is how the
   middle of a clip goes dead — it fills the time it is given.
 
-- **`visual.video.previz` — the Blender clip.** Pass the `generation` object's `referenceVideoPaths` through to `seedance_reference` unchanged (the clip is hash-bound to the approval; `check-production.js` refuses a re-rendered one), and check the result against the previz — a contact sheet at 0/25/50/75/100 % and an edge overlay — before accepting it ([blender-previz.md](../storyboard/references/blender-previz.md) §6.4).
+- **`visual.video.previz` — the Blender clip.** Pass the `generation` object's `referenceVideoPaths` to `seedance_reference` resolved from the storyboard directory like `referenceImagePaths` — never a re-rendered or substituted clip (its bytes are hash-bound to the approval; `check-production.js` refuses a mismatch), and check the result against the previz — a contact sheet at 0/25/50/75/100 % and an edge overlay — before accepting it ([blender-previz.md](../storyboard/references/blender-previz.md) §6.4).
 
 **Use the Seedance `generation` arguments from `cost-preview.js --json`; resolve errors and re-estimate retries before spending. Which engine, prompt, and per-slot recipe** —
 [video-generation.md](references/video-generation.md). It carries the face → sound → grid
