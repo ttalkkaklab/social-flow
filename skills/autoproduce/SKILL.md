@@ -132,7 +132,7 @@ without evidence, and the publish, queue, and QA harnesses all read these files.
 data/<channel>/episodes/<topic-slug>/
 ├── storyboard/
 │   ├── research.md      # sources, check dates, verification status — for automated authoring this is the only audit trail
-│   ├── candidates/      # d1.md · d2.md · d3.md — three scored scenarios (gate 6a)
+│   ├── candidates/      # d1.md · d2.md · d3.md — three candidate scenarios, scored once in scenario mode (gate 6a)
 │   ├── scenario.md      # the winner, copied after the pick
 │   ├── scenes.js        # SoT
 │   ├── storyboard.md    # status, auto_produced, queue markers in the frontmatter
