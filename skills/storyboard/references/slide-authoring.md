@@ -256,8 +256,7 @@ If the beat genuinely needs an action that isn't in the seven, that is a change 
 inside one slide. A slide that invents its own motion renders differently on the next re-render,
 which is the whole reason the vocabulary is closed.
 
-When that's done you're waiting — once the user's `footage/` and `voice/` files arrive, produce
-uses the per-group clips as the segment visuals (produce §3.6).
+When that's done the slide is ready for produce §3.6, which renders it into its segment clip.
 
 ## Data charts
 

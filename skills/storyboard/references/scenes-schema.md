@@ -82,8 +82,8 @@ question is optional. A concrete payoff must precede any ask. An ask stays optio
 forwardable thing does not — an ask requests behaviour from the viewer, while a forwardable
 thing is one sentence, figure or verdict they can pass on as-is. Asking to be shared is an ask,
 not a trigger. On a short the forwardable thing is written as `shot.share` on the `beat:"cta"`
-shot and `check-scenes.js` fails a board without it. These rules override older act-stage or
-comment-question requirements below.
+shot and `check-scenes.js` fails a board without it. (Older act-stage and
+comment-question requirements are gone; an ask is optional everywhere.)
 
 This block is written in the story pass before a shot gets a camera or a prompt. It makes the
 episode compressible to one question, one answer, and one thing the viewer should retain:
@@ -473,7 +473,7 @@ The four drop-off jobs map onto those three beats:
 | Job | Short-form beat | What it has to do | What kills it |
 |---|---|---|---|
 | **stop** | `hook` | 0–3 s: big title, a strong first frame, movement already in it — the cover's treatment comes from `shot.render` like any other cut (§cover), a gap the viewer can feel or a result worth staying for. Inside the first second the title and the figure are legible and the first subtitle cue is on screen | a first frame the thumb slides past; nothing legible in the first second; a first subtitle cue that arrives after 1.0 s |
-| **hold** | `drip` (every shot except the last drip) | pay one piece, open the next — the viewer is never done wondering. Every cut a still under its camera move or an HTML motion slide, one cut of generated video at most (`visual.why`) | a drip that only explains; under a gap cover, dumping the whole answer on drip 1; a still that stands frozen |
+| **hold** | `drip` (every shot except the last drip) | pay one piece, open the next — the viewer is never done wondering. Every cut chosen by purpose (`shot.render`) — a still under its camera move, an HTML motion slide, or generated video where the movement is the content, inside the channel's generated-video ceiling | a drip that only explains; under a gap cover, dumping the whole answer on drip 1; a still that stands frozen |
 | **satisfy** | last `drip` | `COMPREHENSION.answer` is complete by here — under a gap cover this is the first place it lands, under a `spoiler` cover it is where the stated result has been made to hold up | a hook the drips can't keep; ending on explanation with no complete answer |
 | **close** | `cta` | after the answer, an earned closing line, one forwardable thing named in `shot.share`, and an optional relevant ask — the last sentence and the last frame designed together | an unpaid promise replaced with a poll or teaser; a close nobody would screenshot or quote; ending on the shared outro alone (which an outro-off channel cannot do at all) |
 
@@ -1955,10 +1955,10 @@ either way (absolute rule 10); this is about words that live inside the picture.
   format supplies the default, and `generated_video_max` in the channel profile may override
   it. Count b-roll slots + motion-background scenes together; quote speech clips do not count.
   Going over the effective cap gets a red badge from the `storyboard.html` check strip.
-- **points only** — the cover keeps its code-rendered still (produce absolute rule 10) and takes
-  video as an opening b-roll. For quote, `clip` plays that role.
-  **The one exception is an explicit per-episode user directive** (2026-08-15, the Ttalkkak Lab
-  Seedance episode — "impact at the start"). Even then the body of absolute rule 10 stands —
+- **On any scene the cut plan routes to video** — since 2026-09-06 the cover goes through the
+  same `shot.render` choice as every other cut (§cover), and a channel's `hook_video` may require
+  it; before that (2026-08-15) a video cover needed a per-episode user directive. For quote,
+  `clip` plays that role. The body of absolute rule 10 stands —
   **the text is still a code-rendered overlay** and generated video isn't trusted with text.
   Two contracts come attached when using a video cover: **anchor the text at the top** (there's
   no guarantee the center stays empty when the subject moves — the template does this
@@ -2473,8 +2473,8 @@ stand in for a designed frame.
 `"editorial"` means **HTML is the frame**. It composes archival documents, dates, maps, source
 labels, type, lines, masks, and evidence into one screen. Use it when the viewer must compare two
 claims, follow cause and effect, understand a mechanism, read a timeline, cross a transition, or
-feel the verdict land. A short informational episode uses 1–3 editorial frames. Give them one
-shared `motif`; vary the composition and let the motif provide continuity. Two to four atomic
+feel the verdict land. A short informational episode uses as many editorial frames as its cuts need (no fixed
+count — CLAUDE.md §Choose each cut by purpose). Give them one shared `motif`; vary the composition and let the motif provide continuity. Two to four atomic
 moves may happen across the scene, but only one primary read changes at a time.
 
 An editorial frame is not a text treatment for a photo. When it uses a local scan, photo, or
@@ -2562,9 +2562,9 @@ What replaces it:
   the generated picture alone, the burned subtitle the only type on it. No mark, no label, no
   callout, no matte.
 
-The clip helpers (`h.footage` · `h.matte` · `h.mark.*` on a clip ground), `footage-frames.sh`,
-`make-matte.py` and `footage-lane.md` stay in the tree as history and are not called by the
-flow. `h.mark.*` with `pen:true` is still the pen stroke on a studio slide (slide-design.md
+The clip helpers (`h.footage` · `h.matte` · `h.mark.*` on a clip ground) stay in the template
+as history and are not called by the flow; `footage-lane.md`, `footage-frames.sh` and
+`make-matte.py` (produce) were removed with the lane (git history keeps them). `h.mark.*` with `pen:true` is still the pen stroke on a studio slide (slide-design.md
 §6.2).
 
 ### Motion slides — a slide whose numbers move (`visual.slide.motion: true`)

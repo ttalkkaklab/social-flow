@@ -315,10 +315,10 @@ Rules:
 `slide-reviewer` scores a rendered slide (the `--sheet` frames) additively out of 100,
 points only with frame-file evidence. PASS at **score ≥ 95 and p0 = 0**.
 
-**One rubric, three kinds and three diagram treatments.** The P0 list and the four axes below
-apply to every authored screen — diagram, kinetic type, and character act alike
-(scenes-schema §the authored-screen lane). §6.1 adds the editorial-frame test, §6.2 the footage
-marks; §7 and §8 add
+**One rubric, four kinds and two diagram treatments.** The P0 list and the four axes below
+apply to every authored screen — diagram, kinetic type, character act and camera cut alike
+(scenes-schema §the authored-screen lane). §6.1 adds the editorial-frame test, §6.2 the retired
+footage marks; §7 and §8 add
 the P0s that only their kind can commit and say what the axes look at there. Nothing is
 subtracted for a kind: a kinetic screen is still judged on palette restraint, and a character
 screen still has to put its number on screen legibly.

@@ -522,7 +522,7 @@ const openPage = async () => {
     for (const c of short)
       warn.push(`group ${c.rg} ${c.cls} ${c.src} holds ${(c.media / 1000).toFixed(1)}s but its segment runs ` +
                 `${(c.want / 1000).toFixed(1)}s — the last ${((c.want - c.media) / 1000).toFixed(1)}s freeze on the clip's ` +
-                `final frame; generate the clip longer (footage-lane.md §shot length)`);
+                `final frame; generate the clip longer than the segment`);
   }
   const groups = await evalJS("window.__groups()");
   const N = groups.length - 1;
@@ -597,8 +597,8 @@ const openPage = async () => {
     if (isFootage) await w.evalJS(footageVdurJS(JSON.stringify(segMap && segsApplied ? segMap : {})));
   }
   const rows = new Array(todo.length);
-  // The seam. Group k's f0000 is by design the picture at the end of group k−1 (footage-lane.md:
-  // the cut lands on f0001), and seeking group k to 0 in a tab that never ran group k−1 paints that
+  // The seam. Group k's f0000 is by design the picture at the end of group k−1 (the retired footage lane
+  // cut on f0001), and seeking group k to 0 in a tab that never ran group k−1 paints that
   // same picture with the mark edges off by a few pixels — measured on ep209 s10 as 3 px in one
   // tab layout and 44 px (max 20/255) in another, the old renderer included, the video frame
   // identical either way. So group k's f0000 is not captured; it is the end frame group k−1

@@ -53,7 +53,7 @@ file, and both write their score and read count into `scenes.js` at approval.
 ```
 data/<channel>/episodes/<topic slug>/storyboard/
 ├── research.md      # evidence, sources, cross-check log (skipped on channels that skip research)
-├── candidates/      # d1.md · d2.md · d3.md — the three scored scenarios (§2.2); kept after the pick
+├── candidates/      # d1.md · d2.md · d3.md — the three candidate scenarios (§2.2; scored only on the unattended path); kept after the pick
 ├── scenario.md      # the winner, copied from candidates/ after the pick; consumed by §4
 ├── storyboard.md    # the human-readable storyboard — shot tables + embedded images
 ├── storyboard.html  # review render — loads scenes.js directly and draws it (template-based, §6)
@@ -189,7 +189,7 @@ a path (`mkdir -p data/<channel>/episodes/<topic slug>/storyboard`); §3 still r
 episode-state before scenes.
 
 **§2.1 first research, then the three messages and one topic cut from each** → **§2.2 three
-scored scenarios, then one pick** → **§2.3 additional research** on the chosen direction (the
+candidate scenarios, then one pick** → **§2.3 additional research** on the chosen direction (the
 exit). Tool choice, ingest, and the skip-research exception sit under all of them, at the end
 of this section.
 
@@ -1255,7 +1255,7 @@ plan and the contract `check-slide.js` already read out of scenes.js. Same for t
 what goes on the screen is each shot's `bgPrompt` and its engine, not a picture.
 **Show the motion contract too** — measured true-motion shots against the required count, the
 longest still run in shots and seconds, the allowed motion kinds, and the generated-video cap;
-on a short, the hook's moving form and, if a second generated cut exists, its `visual.why`.
+on a short, every generated cut's `shot.render.reason` (and `visual.why` where it is written).
 The numbers come from the profile-backed `window.MOTION_POLICY`; a motion finding from
 `check-scenes.js` blocks this approval screen rather than becoming an unresolved reviewer note.
 **Carry the review results here too** — the narration read-through's final score and how
@@ -1322,7 +1322,7 @@ reviewer findings and your own board notes together.
   own, still have to reach the §7 screen in writing.
 - **Don't answer a read-through finding with the picture.** "It's on screen" is the failure §4.4
   exists to catch; the fix is a spoken sentence. Self-check from the extract, not from scenes.js.
-- **Don't open scenes.js while still searching** — research is two passes with a scored pick
+- **Don't open scenes.js while still searching** — research is two passes with the pick
   in between (§2.1 first research → §2.2 three candidates and the pick → §2.3 additional
   research, then the sufficiency check). Don't start the second pass before the pick. Don't
   offer three wordings of the same question, or three pages with the same primary engine, as
