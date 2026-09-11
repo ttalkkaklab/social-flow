@@ -426,6 +426,19 @@
   .shot-angle.angle-dutch, .shot-angle.angle-low, .shot-angle.angle-high, .shot-angle.angle-overhead { color: var(--accent-ink); }
   .shot-size.unknown { color: var(--warn-ink, var(--accent-ink)); border-style: dashed; }
   .shot-why { font-size: 0.8em; color: var(--muted); margin-left: 0.4em; }
+  .shot-size { display: inline-flex; align-items: center; gap: 5px; cursor: help; }
+  /* Shot-size pictogram — a square frame around a small figure, cut where that size cuts a person */
+  .size-ico {
+    width: 22px; height: 22px; flex: none; border-radius: 5px; overflow: hidden;
+    background: var(--sunk); border: 1px solid var(--hair); color: var(--muted);
+  }
+  .size-key {
+    display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s3);
+    margin: var(--s2) 0 0; font-size: var(--t-micro); color: var(--muted);
+  }
+  .size-key .kt { color: var(--faint); font-weight: 700; letter-spacing: .06em; margin-right: var(--s1); }
+  .size-key .k { display: inline-flex; align-items: center; gap: 5px; cursor: help; }
+  .size-key .size-ico { width: 26px; height: 26px; }
   .shot-meta .shot-feel { margin: 0; flex-basis: 100%; }
   .shot-feel.miss b { color: var(--warn-ink, var(--accent-ink)); }
   .shot-info {
@@ -1059,10 +1072,29 @@ window.SB_DOC = {
       // ── vocabulary read off scenes.js keys ──
       fmt: { "shorts-9x16": "Short-form 9:16", "youtube-long-16x9": "YouTube long-form 16:9" },
       size: { els: "extreme long", ls: "long / wide", ws: "wide", fs: "full body",
-              mfs: "above the knee", ms: "above the waist", mcu: "above the chest", cu: "face",
-              choker: "above the chin", ecu: "eyes only", insert: "object only",
+              mfs: "mid-shin up", ms: "mid-thigh up", mcu: "mid-chest up", cu: "face",
+              choker: "eyes and mouth", ecu: "eyes only", insert: "object only",
               two: "two together", three: "three together", ots: "over the shoulder",
               pov: "their eyes", back: "from behind", cutaway: "looking away", reaction: "reaction" },
+      sizeKey: "shot size",
+      sizeHint: { els: "a person is a dot — the place is the subject; alone reads as lonely, a crowd reads as scale",
+                  ls: "whole body with room — where this is, how many, how far apart (the establishing shot)",
+                  ws: "same as ls",
+                  fs: "crown to toes — the whole body acting: dance, fight, walk",
+                  mfs: "cut at mid-shin — two people and the distance between them",
+                  ms: "cut at mid-thigh — upper body, hands explaining, the conversation default",
+                  mcu: "cut at mid-chest — talking to camera; hook, anchor, interview",
+                  cu: "the face fills the frame, crown cropped — the one line; one per scene",
+                  choker: "eyes and mouth only — the peak of tension; once or twice an episode",
+                  ecu: "eyes only, fingertips only — the detail at the peak",
+                  insert: "a thing, a hand, a screen, no face — one picture instead of three lines",
+                  two: "two people in one frame (cut at mid-shin)",
+                  three: "three in one frame — shows the group, not the place",
+                  ots: "over a shoulder — the near shoulder in front, the other face (mcu)",
+                  pov: "what that person sees — write the distance in shot.why",
+                  back: "from behind, no face — write the distance in shot.why",
+                  cutaway: "one cut of something outside the people",
+                  reaction: "the listener's face" },
       angle: { eye: "eye level", high: "looking down", low: "looking up",
                overhead: "overhead", dutch: "tilted" },
       type: { cover: "cover", points: "body", quote: "quote", broll: "b-roll", outro: "outro" },
@@ -1315,10 +1347,29 @@ window.SB_DOC = {
 
       // ── vocabulary read off scenes.js keys ──
       fmt: { "shorts-9x16": "세로 쇼트폼 9:16", "youtube-long-16x9": "YouTube 롱폼 16:9" },
-      size: { els: "아주 먼", ls: "먼 / 넓은", ws: "넓은", fs: "전신", mfs: "무릎 위", ms: "허리 위",
-              mcu: "가슴 위", cu: "얼굴", choker: "턱 위", ecu: "눈만", insert: "물건만",
+      size: { els: "아주 먼", ls: "먼 / 넓은", ws: "넓은", fs: "전신", mfs: "정강이 위", ms: "허벅지 위",
+              mcu: "가슴 위", cu: "얼굴", choker: "눈과 입", ecu: "눈만", insert: "물건만",
               two: "둘이 함께", three: "셋이 함께", ots: "어깨 너머", pov: "그 사람 눈", back: "뒤에서",
               cutaway: "딴 데 보기", reaction: "반응" },
+      sizeKey: "샷 사이즈",
+      sizeHint: { els: "사람이 점 — 공간이 주인공, 혼자면 고독·여럿이면 규모",
+                  ls: "전신에 여유 — 어디인지·몇 명인지·얼마나 떨어졌는지 (설정샷)",
+                  ws: "ls 와 같다",
+                  fs: "머리끝부터 발끝까지 — 몸 전체 동작, 춤·격투·걸음",
+                  mfs: "정강이 중간에서 자른다 — 두 사람과 그 사이 거리",
+                  ms: "허벅지 중간에서 자른다 — 상반신과 손짓, 대화 기본값",
+                  mcu: "가슴 중간에서 자른다 — 카메라 보고 말하기, 훅·앵커·인터뷰",
+                  cu: "얼굴이 화면을 채운다, 정수리는 잘림 — 그 한 마디, 씬당 하나",
+                  choker: "눈과 입만 — 긴장의 정점, 회차에 한두 번",
+                  ecu: "눈만·손끝만 — 정점의 디테일",
+                  insert: "물건·손·화면만, 얼굴 없음 — 그림 하나가 대사 세 줄을 대신한다",
+                  two: "둘을 한 프레임에 (정강이 중간에서 자른다)",
+                  three: "셋을 한 프레임에 — 무리는 보이지만 장소는 못 깐다",
+                  ots: "어깨 너머 — 앞사람 어깨가 앞에, 상대 얼굴은 mcu",
+                  pov: "그 사람이 본 것 — 거리는 shot.why 에 적는다",
+                  back: "뒤에서, 얼굴 없이 — 거리는 shot.why 에 적는다",
+                  cutaway: "인물 밖의 것을 한 컷",
+                  reaction: "듣는 쪽 얼굴" },
       angle: { eye: "눈높이", high: "내려다봄", low: "올려다봄", overhead: "머리 위", dutch: "기울임" },
       type: { cover: "커버", points: "본문", quote: "인용", broll: "삽입 영상", outro: "아웃트로" },
       pic: { still: "정지 그림", "ai-video": "AI 영상", recording: "녹화분",
@@ -1709,6 +1760,76 @@ window.SB_DOC = {
     if (s.type === "cover") return T.overlay.reveal;
     if (s.type === "quote") return T.overlay.signature;
     return T.overlay.staging;
+  }
+  /* Shot-size pictograms (directing-grammar §2 · §2.1). One 32×32 frame and a small figure drawn
+     100 units tall — head 2–33, body 33–67, legs 62–98 — scaled so the frame's bottom edge lands
+     where that size cuts a person (mid-shin · mid-thigh · mid-chest, never a joint). Anything
+     outside the viewBox is simply not drawn, so the frame does the cropping. */
+  var SIZE_ICON = (function () {
+    var C = 'fill="currentColor"', W = 'fill="var(--card)"';
+    function person(cx, top, h, o) {
+      o = o || {};
+      var k = h / 100;
+      var g = '<g transform="translate(' + (cx - 50 * k) + ' ' + top + ') scale(' + k + ')">';
+      g += '<rect x="34" y="33" width="32" height="34" rx="11" ' + C + '/>';
+      if (o.arms !== false)
+        g += '<rect x="24" y="36" width="9" height="24" rx="4.5" ' + C + '/><rect x="67" y="36" width="9" height="24" rx="4.5" ' + C + '/>';
+      g += '<rect x="37" y="62" width="11" height="36" rx="5" ' + C + '/><rect x="52" y="62" width="11" height="36" rx="5" ' + C + '/>';
+      g += '<circle cx="50" cy="17.5" r="15.5" ' + C + '/>';
+      if (o.face !== "none") {
+        var r = o.face === "wow" ? 3 : 2.2;
+        g += '<circle cx="44" cy="16" r="' + r + '" ' + W + '/><circle cx="56" cy="16" r="' + r + '" ' + W + '/>';
+        g += o.face === "wow" ? '<circle cx="50" cy="24.5" r="2.8" ' + W + '/>'
+          : '<path d="M45.5 22q4.5 4 9 0" fill="none" stroke="var(--card)" stroke-width="2" stroke-linecap="round"/>';
+      }
+      return g + "</g>";
+    }
+    var ground = '<path d="M0 27.5h32" stroke="currentColor" stroke-width="1.2" opacity=".45"/>';
+    var D = {
+      els: '<circle cx="25" cy="8" r="3" ' + C + ' opacity=".5"/>' +
+           '<path d="M0 27 L9 16 L15 22 L22 14 L32 26 Z" ' + C + ' opacity=".28"/>' + ground +
+           '<circle cx="15.5" cy="24.2" r="1.4" ' + C + '/><rect x="14.7" y="25.2" width="1.6" height="2.8" ' + C + '/>',
+      ls: '<path d="M0 27 L7 20 L14 26 L20 18 L32 27 Z" ' + C + ' opacity=".18"/>' + ground + person(16, 12, 16, { arms: false }),
+      fs: person(16, 1.5, 29),
+      mfs: person(16, 1, 35),
+      ms: person(16, 0.5, 40),
+      mcu: person(16, 1, 55),
+      cu: person(16, -3, 105),
+      choker: person(16, -12, 140),
+      ecu: '<ellipse cx="9" cy="17" rx="6.5" ry="6" ' + C + '/><ellipse cx="23" cy="17" rx="6.5" ry="6" ' + C + '/>' +
+           '<circle cx="9.8" cy="17.6" r="2.6" ' + W + '/><circle cx="23.8" cy="17.6" r="2.6" ' + W + '/>' +
+           '<path d="M3 8q6 -3.5 12 0M17 8q6 -3.5 12 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+      insert: '<rect x="7" y="11" width="14" height="13" rx="3" ' + C + '/>' +
+              '<path d="M21 14h2.5a3.2 3.2 0 0 1 0 6.4H21" fill="none" stroke="currentColor" stroke-width="2"/>' +
+              '<path d="M11 8.5v-3M14.5 8.5v-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" opacity=".5"/>',
+      two: person(9.5, 2, 38, { arms: false }) + person(22.5, 2, 38, { arms: false }),
+      three: ground + person(6, 8, 21, { arms: false }) + person(16, 6, 23, { arms: false }) + person(26, 8, 21, { arms: false }),
+      ots: '<g opacity=".6">' + person(21, 3, 60, { arms: false }) + "</g>" +
+           '<circle cx="6" cy="14" r="9.5" ' + C + '/><rect x="-8" y="22" width="30" height="20" rx="9" ' + C + '/>',
+      pov: '<path d="M2.5 16Q16 3 29.5 16Q16 29 2.5 16Z" ' + C + '/><circle cx="16" cy="16" r="5.5" ' + W + '/><circle cx="16" cy="16" r="2.8" ' + C + '/>',
+      back: '<rect x="2" y="23" width="28" height="18" rx="9" ' + C + '/><circle cx="16" cy="13" r="10" ' + C + '/>' +
+            '<path d="M13 9.5q3 -2.5 6 0" fill="none" stroke="var(--card)" stroke-width="1.6" stroke-linecap="round" opacity=".7"/>',
+      cutaway: '<path d="M10 20h12l-1.5 9h-9Z" ' + C + '/><path d="M16 20V9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
+               '<ellipse cx="11" cy="12.5" rx="5.2" ry="2.7" transform="rotate(-35 11 12.5)" ' + C + '/>' +
+               '<ellipse cx="21" cy="12.5" rx="5.2" ry="2.7" transform="rotate(35 21 12.5)" ' + C + '/>',
+      reaction: person(16, 1, 55, { face: "wow" }) +
+                '<path d="M25.5 6.5l2.5-3.5M29 10l3-1.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>'
+    };
+    D.ws = D.ls;
+    return D;
+  })();
+  function sizeIcon(size) {
+    var d = SIZE_ICON[size];
+    return d ? '<svg class="size-ico" viewBox="0 0 32 32" aria-hidden="true">' + d + "</svg>" : "";
+  }
+  function sizeTitle(size) { return size + " — " + (T.sizeHint[size] || ""); }
+  function sizeKey() {
+    var order = ["els", "ls", "fs", "mfs", "ms", "mcu", "cu", "choker", "ecu", "insert",
+                 "two", "three", "ots", "pov", "back", "cutaway", "reaction"];
+    return '<div class="size-key"><span class="kt">' + esc(T.sizeKey) + "</span>" +
+      order.map(function (k) {
+        return '<span class="k" title="' + esc(sizeTitle(k)) + '">' + sizeIcon(k) + esc(T.size[k] || k) + "</span>";
+      }).join("") + "</div>";
   }
   function grammarOf(s, i) {
     var sp = (s.shot && s.shot.space) || {};
@@ -3427,6 +3548,7 @@ window.SB_DOC = {
        '<label><input type="checkbox" id="tg-subs" checked> ' + esc(T.toggleSubs) + "</label>" +
        '<span class="legend">' + esc(T.legend) + "</span>" +
        '<span style="margin-left:auto">' + esc(T.previewNote) + "</span></div>";
+  h += sizeKey();
 
   var shotGroups = [];
   SCENES.forEach(function (s, i) {
@@ -3471,7 +3593,8 @@ window.SB_DOC = {
     var pic = pictureOf(s), ov = overlayOf(s);
     h += '<article class="scene"><div class="scene-head">';
     h += '<span class="scene-no">' + esc(T.shotCap(no)) + " · " + esc(T.type[s.type] || s.type) + "</span>";
-    if (g.size) h += '<span class="shot-size' + (T.size[g.size] ? "" : " unknown") + '">' + esc(T.size[g.size] || (g.size + " ?")) + "</span>";
+    if (g.size) h += '<span class="shot-size' + (T.size[g.size] ? "" : " unknown") + '" title="' + esc(sizeTitle(g.size)) + '">' +
+                     sizeIcon(g.size) + esc(T.size[g.size] || (g.size + " ?")) + "</span>";
     if (g.angle && T.angle[g.angle]) h += '<span class="shot-angle angle-' + esc(g.angle) + '">' + esc(T.angle[g.angle]) + "</span>";
     if (g.why) h += '<span class="shot-why" title="shot.why">' + esc(g.why) + "</span>";
     // A shot with no title (screen text only when needed — scenes-schema) builds its header from badges alone
