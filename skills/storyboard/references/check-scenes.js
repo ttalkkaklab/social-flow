@@ -1083,6 +1083,13 @@ function check(win, fmt, opts) {
       if (!seg || typeof seg !== 'object') { bad(where, `narration[${j}] is not an object`); return; }
       if (!seg.tts) machine(where, `narration[${j}] has no tts — the engine reads that field`);
       if (!seg.sub) warn(where, `narration[${j}] has no sub — the subtitle falls back to tts spelling`);
+      // A Korean tts line spells numbers and loanwords the way they sound (schema §narration):
+      // the engine reads "1900년" and "GPU" on its own terms, the builder counts them as 4 and 3
+      // characters against 4 and 3 spoken syllables, and the pronunciation is left to chance.
+      // Bracketed acting tags ([whispers], [laughs]) are ElevenLabs directions, not spoken text — skipped.
+      const spokenTts = typeof seg.tts === 'string' ? seg.tts.replace(/\[[^\]]*\]/g, '') : '';
+      if (/[가-힣]/.test(spokenTts) && /[0-9A-Za-z]/.test(spokenTts))
+        warn(where, `narration[${j}].tts has digits or Latin letters (${spokenTts.match(/[0-9A-Za-z]+/g).join(', ')}) — write them as spoken Hangul; the sub field keeps the display spelling`);
     });
 
     // b-roll's own contract — the parts that break the splice rather than look wrong.
@@ -1595,6 +1602,12 @@ function selftest() {
   // narration
   ok('a narration segment with no tts is a violation',
      has(bads(run([cover, Object.assign({}, goodShot, { narration: [{ sub: '가' }] })])), /no tts/));
+  ok('digits or Latin letters in a Korean tts line are warned',
+     has(warns(run([cover, Object.assign({}, goodShot, { narration: [{ tts: '1900년에 GPU를 썼어요', sub: '1900년에 GPU를 썼어요' }] })])), /digits or Latin letters \(1900, GPU\)/));
+  ok('an ElevenLabs acting tag in a Korean tts line is not flagged as Latin',
+     !has(warns(run([cover, Object.assign({}, goodShot, { narration: [{ tts: '[whispers] 천구백년에 발견됐어요', sub: '1900년에 발견됐어요' }] })])), /digits or Latin/));
+  ok('a Korean tts line spelled as spoken passes',
+     !has(warns(run([cover, Object.assign({}, goodShot, { narration: [{ tts: '천구백년에 지피유를 썼어요', sub: '1900년에 GPU를 썼어요' }] })])), /digits or Latin/));
 
   // b-roll
   const broll = { type: 'broll', after: 0, duration: 4, narration: [],

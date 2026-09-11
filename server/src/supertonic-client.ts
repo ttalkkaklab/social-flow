@@ -73,6 +73,14 @@ export const DEFAULT_SUPERTONIC_LANGUAGE: SupertonicLanguage = 'ko';
 export const DEFAULT_SUPERTONIC_SPEED = 1.05;
 export const DEFAULT_SUPERTONIC_STEPS = 8;
 
+/**
+ * Speed ceiling. `speed` is not a time stretch — the model synthesizes at that pace, and from
+ * 1.35 it drops syllables (measured 2026-08-26/29: "사전만 한 돌덩어리" → "사전만 돌덩어리",
+ * "이 표준은" → "유주는"; at 1.20 and below every take transcribed back exactly). A faster
+ * delivery is the produce speed pass (profile "playback speed"), which keeps every word.
+ */
+export const MAX_SUPERTONIC_SPEED = 1.2;
+
 /** Fixed output spec — Gemini TTS is 24kHz, so mixing the two in one video breaks concatenation. */
 export const SUPERTONIC_SAMPLE_RATE = 44_100;
 
@@ -106,7 +114,12 @@ export const supertonicGenerateSchema = z.object({
     .max(MAX_SUPERTONIC_INPUT_CHARS, `Text exceeds ${MAX_SUPERTONIC_INPUT_CHARS} characters; split the script by scene`),
   voice: z.enum(SUPERTONIC_VOICE_NAMES).optional().default(DEFAULT_SUPERTONIC_VOICE),
   lang: z.enum(SUPERTONIC_LANGUAGES).optional().default(DEFAULT_SUPERTONIC_LANGUAGE),
-  speed: z.number().min(0.7).max(2.0).optional().default(DEFAULT_SUPERTONIC_SPEED),
+  speed: z
+    .number()
+    .min(0.7)
+    .max(MAX_SUPERTONIC_SPEED, `speed above ${MAX_SUPERTONIC_SPEED} drops syllables; synthesize at 1.2 or below and use the playback speed pass for a faster cut`)
+    .optional()
+    .default(DEFAULT_SUPERTONIC_SPEED),
   steps: z.number().int().min(1).max(100).optional().default(DEFAULT_SUPERTONIC_STEPS),
   outputPath: z.string().optional(),
   filename: bareFilenameSchema('audio').optional(),
