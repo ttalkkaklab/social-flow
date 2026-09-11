@@ -179,7 +179,7 @@ Only for the cinematic-miniature style, load the bundled [style guide and image 
 and each `videoDesign`, including the subject-motion contract and timed action states in full-video.md, fill the four `visual.camera` slots under its §Camera dynamics (a move the viewer can see, static on at most one shot in three, wide on at most half, `cameraFixed` only under static), then use [spatial-prompts.js](references/spatial-prompts.js), which assembles both prompts and runs the Seedance prompt gate. This branch
 supersedes hybrid's shot cap, mandatory HTML explanation and person-required source clauses.
 Keep facts, narration reviews and the no-marks-over-video rule. Copy `production-mode.js`
-with the HTML template, render-routing.js and structure-contract.js; `cost-preview.js --sbdoc` supplies both prices.
+with the HTML template, render-routing.js, structure-contract.js and style-samples.js; `cost-preview.js --sbdoc` supplies both prices.
 
 ### 2. Research and fact-checking (follows profile §5 policy)
 
@@ -1124,7 +1124,7 @@ files. Only a TTS episode carries filmed scenes alone — there the generated sc
 nothing for the user to do, and including them blurs what has to be done.
 
 **storyboard.html (the review render)** — copy `references/storyboard-html-template.html` into
-storyboard/, copy `references/render-routing.js`, `references/production-mode.js` and `references/structure-contract.js` beside it, and fill in **only the `<title>` and the `✎ SB_DOC` block**. Its labels follow the
+storyboard/, copy `references/render-routing.js`, `references/production-mode.js`, `references/structure-contract.js` and `references/style-samples.js` (the sample picture of every visual style the header card shows) beside it, and fill in **only the `<title>` and the `✎ SB_DOC` block**. Its labels follow the
 reader's language (`?lang=en` · `?lang=ko`, or the picker at the end of the section menu); the
 episode's own copy stays in the language scenes.js is written in, so nothing here needs setting. Never write scene data
 (title, lines, bullets, shot, duration, THEME) into the HTML — the document loads the SoT

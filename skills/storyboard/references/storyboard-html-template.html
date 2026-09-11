@@ -129,7 +129,20 @@
     display: flex; align-items: center; gap: var(--s4); margin: var(--s4) 0 0;
     padding: var(--s3) var(--s4); border-radius: 12px; background: var(--sunk); cursor: default;
   }
+  .style-card { flex-wrap: wrap; }
   .style-card .size-ico { width: 56px; height: 56px; border-radius: 22.5%; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3), 0 2px 5px rgba(0, 0, 0, .18); }
+  /* The sample picture (style-samples.js): the same reading-at-a-window scene rendered in every
+     preset, so the look is seen, not named. The pictogram sits in its corner as the family mark. */
+  .style-card .pic { position: relative; flex: none; width: 128px; height: 128px; border-radius: 14px; overflow: hidden; box-shadow: 0 1px 3px rgba(0, 0, 0, .18); }
+  .style-card .pic img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .style-card .pic .size-ico { position: absolute; right: 6px; bottom: 6px; width: 28px; height: 28px; border-radius: 24%; }
+  .style-all { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: var(--s3) var(--s2); margin-top: var(--s2); padding-top: var(--s3); border-top: 1px solid var(--hair); }
+  .style-all .kt { flex-basis: 100%; font-size: var(--t-micro); color: var(--faint); font-weight: 700; letter-spacing: .06em; }
+  .style-all .k { width: 68px; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 10px; line-height: 1.2; color: var(--muted); text-align: center; word-break: keep-all; cursor: default; }
+  .style-all .k img { width: 64px; height: 64px; object-fit: cover; border-radius: 10px; opacity: .8; }
+  .style-all .k.on { color: var(--text); font-weight: 700; }
+  .style-all .k.on img { opacity: 1; outline: 2px solid var(--accent); outline-offset: 2px; }
+  .toolbar .style-chip img { width: 32px; height: 32px; border-radius: 23%; object-fit: cover; flex: none; }
   .style-card .st { min-width: 0; flex: 1; }
   .style-card .st b { display: block; font-size: var(--t-body); font-weight: 700; color: var(--text); word-break: keep-all; }
   .style-card .st b small { font-size: var(--t-micro); font-weight: 600; color: var(--faint); margin-left: 8px; letter-spacing: .06em; }
@@ -963,6 +976,7 @@
 <script src="./scenes.js"></script>
 <script src="./render-routing.js"></script>
 <script src="./production-mode.js"></script>
+<script src="./style-samples.js"></script>
 <script src="./structure-contract.js"></script>
 <script>
 /* ✎ SB_DOC BEGIN — fill in this block only (editorial metadata that is not in scenes.js).
@@ -1143,6 +1157,7 @@ window.SB_DOC = {
       sizeKey: "shot size",
       renderKey: "render route",
       styleHead: "visual style",
+      styleAll: "the other presets, same scene",
       styleBy: { user: "chosen in HITL", standing: "standing plan" },
       styleName: { "cinematic-miniature": "Cinematic miniature diorama", photoreal: "Photoreal live action", webtoon: "Webtoon",
                    claymation: "Claymation", "paper-cutout": "Paper cut-out diorama", "ink-wash": "Ink wash",
@@ -1463,6 +1478,7 @@ window.SB_DOC = {
       sizeKey: "샷 사이즈",
       renderKey: "렌더 방식",
       styleHead: "화풍",
+      styleAll: "다른 화풍은 이렇게 (같은 장면)",
       styleBy: { user: "HITL 선택", standing: "상시 계획" },
       styleName: { "cinematic-miniature": "시네마틱 미니어처 디오라마", photoreal: "완전 실사풍", webtoon: "웹툰풍",
                    claymation: "클레이 스톱모션", "paper-cutout": "종이 컷아웃 디오라마", "ink-wash": "수묵화",
@@ -2026,24 +2042,39 @@ window.SB_DOC = {
     var st = window.PRODUCTION && window.PRODUCTION.style;
     return st && st.preset ? st : null;
   }
+  var STYLE_ORDER = ["cinematic-miniature", "photoreal", "webtoon", "claymation", "paper-cutout", "ink-wash", "toon-3d", "arcade-2d"];
+  function styleSample(preset) {
+    var S = window.STYLE_SAMPLES;
+    return S && typeof S[preset] === "string" ? S[preset] : "";
+  }
   function styleCard() {
     var st = styleOf(); if (!st) return "";
     var known = !!T.styleName[st.preset];
     var ref = typeof st.reference === "string" ? st.reference.trim() : "";
     var refImg = /\.(png|jpe?g|webp|gif)(\?.*)?$/i.test(ref);
     var by = st.selection && T.styleBy[st.selection.kind];
-    return '<div class="style-card' + (known ? "" : " unknown") + '" data-tip="' + esc(styleTitle(st.preset)) + '">' +
-      (styleIcon(st.preset) || '<span class="size-ico s-look"></span>') +
-      '<div class="st"><b>' + esc(T.styleHead) + " · " + esc(T.styleName[st.preset] || (st.preset + " ?")) +
+    var sample = styleSample(st.preset);
+    var pic = sample
+      ? '<span class="pic"><img src="' + sample + '" alt="">' + styleIcon(st.preset) + "</span>"
+      : (styleIcon(st.preset) || '<span class="size-ico s-look"></span>');
+    var all = window.STYLE_SAMPLES ? '<div class="style-all"><span class="kt">' + esc(T.styleAll) + "</span>" +
+      STYLE_ORDER.map(function (p) {
+        return '<span class="k' + (p === st.preset ? " on" : "") + '" data-tip="' + esc(styleTitle(p)) + '"><img src="' + styleSample(p) + '" alt=""><span>' +
+               esc(T.styleName[p] || p) + "</span></span>";
+      }).join("") + "</div>" : "";
+    return '<div class="style-card' + (known ? "" : " unknown") + '">' + pic +
+      '<div class="st" data-tip="' + esc(styleTitle(st.preset)) + '"><b>' + esc(T.styleHead) + " · " + esc(T.styleName[st.preset] || (st.preset + " ?")) +
       (by ? "<small>" + esc(by) + "</small>" : "") + "</b>" +
       (T.styleDesc[st.preset] ? "<span>" + esc(T.styleDesc[st.preset]) + "</span>" : "") +
       '<span class="kk">' + esc(st.preset) + (ref && !refImg ? " · " + esc(ref) : "") + "</span></div>" +
-      (refImg ? '<img src="' + esc(ref) + '" alt="" onerror="this.remove()">' : "") + "</div>";
+      (refImg ? '<img src="' + esc(ref) + '" alt="" onerror="this.remove()">' : "") + all + "</div>";
   }
   function styleChip() {
     var st = styleOf(); if (!st) return "";
+    var sample = styleSample(st.preset);
     return '<span class="shot-size style-chip' + (T.styleName[st.preset] ? "" : " unknown") + '" data-tip="' + esc(styleTitle(st.preset)) + '">' +
-      styleIcon(st.preset) + '<span class="sz"><b>' + esc(T.styleName[st.preset] || (st.preset + " ?")) + "</b></span></span>";
+      (sample ? '<img src="' + sample + '" alt="">' : styleIcon(st.preset)) +
+      '<span class="sz"><b>' + esc(T.styleName[st.preset] || (st.preset + " ?")) + "</b></span></span>";
   }
   var RENDER_FAMILY = { generated_video: "video", recording: "video", still_camera: "photo",
                         character_html: "html", object_html: "html", data_graph: "html", editorial_html: "html", slide: "html",
