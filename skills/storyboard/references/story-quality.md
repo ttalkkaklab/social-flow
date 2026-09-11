@@ -94,6 +94,7 @@ window.STORY = {
   endingReason: "How the ending resolves or reinterprets the opening",
   cta: "none", // none | question | action | next
   // Otherwise add ask: {shot, group, quote}, ctaReason: "why the ask belongs"
+  // person: {name, aliases: []} — a one-person history short; adds the person-short.md checks
   beats: [
     {shot: 1, change: "What the viewer now anticipates", necessity: "What removal loses"}
     // Exactly one row for EVERY narrated shot, including the close.
@@ -105,7 +106,10 @@ This field guide is not a passing fixture. Replace all placeholders and cover ev
 shot. The checker verifies structure and references, not the truth or quality of the reasoning.
 `payoff` may point at the opening group itself, but only on a board whose cover states the
 result — `hookType:"spoiler"` or `hookForm:"payoff"`. Any other cover pays after it promises,
-the payoff never plays before the opening, and `ending` still comes last.
+the payoff never plays before the opening, and `ending` still comes last. A board that
+declares `person` is a person short — the opening names nobody and carries no year, the
+cover does not state the result, one sentence a shot, and the close follows the blow
+([person-short.md](person-short.md)).
 
 For mixed live-voice recordings, keep `narration: []` to avoid double audio. Supply review-only
 `STORY.transcripts: [{shot: 2, source: "footage/s2-demo.mp4", groups:

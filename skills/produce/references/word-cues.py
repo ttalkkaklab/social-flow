@@ -31,6 +31,12 @@ short runs (measured 2026-09-02: 65 cues in 114 s, 4.4 words per cue, 1.75 s cad
 word times still come from ① or ②; only the grouping changes, so a phrase lands on its
 first word's onset.
 
+`--accent RRGGBB` colours the words that carry a date or a name — a year (1592년 · 16세기 ·
+1950-06-25), or any word listed in `--accent-words` ("이순신 원균") — with an inline ASS
+override; everything else stays the style's white. This is the history-short subtitle
+grammar (docs/research/2026-09-10-history-shorts-storytelling): the whole line stays big and
+plain, and only the year and the name change colour.
+
 Either way the first cue is pulled back to the cue start and the last one held to the cue
 end, so the outer edges match the sentence cue the SRT keeps, and a cue that would run
 under <min-cue> is glued to the next word ("대체 왜" as one cue) — the reference short does
@@ -38,7 +44,39 @@ the same, which is why its cue count is 1.23 words, not 1.
 """
 import difflib
 import json
+import re
 import sys
+
+# Same rule as story-contract.js: a four-digit number before 년 is always a year; a three-digit one is a year
+# unless a span marker (째·동안·넘게…) or a particle and a finite past span verb (흘렀·넘었…) follows.
+DATE = re.compile(r"(^|[^\d])(\d{4}\s*년|\d{3}\s*년(?!째|\s*(동안|넘게|만에|간|이상|가까이|가량|남짓)|(이|을|를|은|는|만|이나)\s*(흘렀|넘었|버텼|견뎠|기다렸|이어졌)))|\d+\s*세기|\d{4}\s*[-–.]\s*\d{1,2}")
+
+
+def accent_flags(words, names):
+    """Which display words carry a date or a name — judged on the whole sentence, so the span
+    marker after "300년" ("동안") is seen even though it is the next word."""
+    joined = " ".join(words)
+    starts, pos = [], 0
+    for w in words:
+        starts.append(pos)
+        pos += len(w) + 1
+    flags = [any(n and n in w for n in names) for w in words]
+    for m in DATE.finditer(joined):
+        for i, st in enumerate(starts):
+            if st <= m.start() < st + len(words[i]) or st < m.end() <= st + len(words[i]):
+                flags[i] = True
+    return flags
+
+
+def accent(text: str, colour: str, flags, offset: int) -> str:
+    """Wrap the flagged words of a cue in an ASS colour override (&HBBGGRR); offset is the
+    cue's first word index in the sentence."""
+    rr, gg, bb = colour[0:2], colour[2:4], colour[4:6]
+    tag = "{\\c&H" + (bb + gg + rr).upper() + "&}"
+    out = []
+    for k, w in enumerate(text.split(" ")):
+        out.append(tag + w + "{\\r}" if flags[offset + k] else w)
+    return " ".join(out)
 
 
 def weight(word: str) -> float:
@@ -121,7 +159,8 @@ def main() -> None:
     align = offset = None
     tts = ""
     phrase_max = 0
-    for flag in ("--align", "--offset", "--tts", "--phrase"):
+    accent_colour, accent_words = "", []
+    for flag in ("--align", "--offset", "--tts", "--phrase", "--accent", "--accent-words"):
         if flag in args:
             i = args.index(flag)
             val = args[i + 1]
@@ -132,10 +171,16 @@ def main() -> None:
                 offset = float(val)
             elif flag == "--phrase":
                 phrase_max = int(val)
+            elif flag == "--accent":
+                accent_colour = val.lstrip("#")
+                if not re.fullmatch(r"[0-9A-Fa-f]{6}", accent_colour):
+                    sys.exit("word-cues.py: --accent wants RRGGBB hex")
+            elif flag == "--accent-words":
+                accent_words = val.split()
             else:
                 tts = val
     if len(args) != 6:
-        sys.exit("usage: word-cues.py <cue-start> <cue-end> <speech-start> <speech-end> <min-cue> <sentence> [--align json --offset sec] [--tts spoken] [--phrase maxchars]")
+        sys.exit("usage: word-cues.py <cue-start> <cue-end> <speech-start> <speech-end> <min-cue> <sentence> [--align json --offset sec] [--tts spoken] [--phrase maxchars] [--accent RRGGBB] [--accent-words 'name name']")
     cue_s, cue_e, sp_s, sp_e, min_cue = (float(x) for x in args[:5])
     words = args[5].split()
     if not words:
@@ -195,8 +240,13 @@ def main() -> None:
                 grouped.append([s, e, w])
         merged = grouped
         note += f" · phrase ≤{phrase_max}"
+    flags = accent_flags(words, accent_words) if accent_colour else None
+    at = 0
     for s, e, w in merged:
-        print(f"{s:.3f}\t{e:.3f}\t{w}")
+        print(f"{s:.3f}\t{e:.3f}\t{accent(w, accent_colour, flags, at) if accent_colour else w}")
+        at += w.count(" ") + 1
+    if accent_colour:
+        note += f" · accent #{accent_colour}"
     print(f"# {note}")
 
 

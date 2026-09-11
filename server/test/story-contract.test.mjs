@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -187,4 +187,70 @@ test('imported original speech uses trimmed-file times and binds the story revie
  s.visual.reuse.sha256='b'.repeat(64);assert.match(checkStory(w).join(),/stale|hash/);
  w.STORY.review.hash=storyHash(w);w.STORY.transcripts[0].groups[0].end=6;
  assert.match(checkStory(w).join(),/ordered timed speech/);
+});
+
+// person-short.md — one person, one turn, a cut per sentence, an opening inside the event.
+test('a person short opens without the name or a year, one sentence a shot, closing after the turn', () => {
+  const w = fixture(); w.STORY.person = { name: 'Kim', aliases: ['Mr. Kim'] };
+  w.STORY.review.hash = storyHash(w);
+  assert.deepEqual(checkStory(w), []);
+  const person = (mutate) => { const x = fixture(); x.STORY.person = { name: 'Kim', aliases: ['Mr. Kim'] }; mutate(x); x.STORY.review.hash = storyHash(x); return checkStory(x).join(' '); };
+  assert.match(person(x => { x.SCENES[0].narration[0].tts = 'Mr. Kim asks why the box moves.'; x.STORY.opening.quote = 'Mr. Kim asks why'; }), /names the person/);
+  assert.match(person(x => { x.SCENES[0].narration[0].sub = '1592년 the box moved.'; x.STORY.opening.quote = 'Why is the box moving?'; }), /carries a year/);
+  assert.match(person(x => { x.SCENES[0].narration[0].tts = 'In the 16세기 a box moved.'; x.STORY.opening.quote = 'Why is the box moving?'; }), /carries a year/);
+  assert.match(person(x => { x.SCENES[0].hookType = 'spoiler'; }), /first cut is a scene/);
+  assert.match(person(x => { x.STORY.payoff = ref(4); }), /cannot share a group/);
+  assert.match(person(x => { x.SCENES[1].narration.push({ tts: 'A second sentence.', sub: 'A second sentence.' }); }), /shot 2 speaks 2 sentences/);
+  assert.match(person(x => { x.STORY.person = { name: '' }; }), /requires a name/);
+  assert.match(person(x => { x.STORY.person = { name: 'Kim', aliases: 'Mr. Kim' }; }), /requires a name/);
+  // A number that is not a date passes — "40개" is a count and "40년 동안" a span, not a year.
+  assert.equal(person(x => { x.SCENES[0].narration[0].tts = '40개 boxes are moving.'; x.STORY.opening.quote = '40개 boxes are moving'; }), '');
+  assert.equal(person(x => { x.SCENES[0].narration[0].tts = '40년 동안 the box moved.'; x.STORY.opening.quote = '40년 동안 the box'; }), '');
+  // A one-character alias would match half the language; two sentences in one group is one shot too many.
+  assert.match(person(x => { x.STORY.person = { name: 'Kim', aliases: ['이'] }; }), /at least two characters/);
+  assert.match(person(x => { x.SCENES[1].narration[0].tts = 'The table shakes. It shakes again.'; }), /packs two sentences/);
+  assert.equal(person(x => { x.SCENES[1].narration[0].tts = 'The table shakes 3.5 times.'; }), '');
+  // A number-led cover is the result in a costume; a span or an age is scene texture, not a date.
+  assert.match(person(x => { x.SCENES[0].hookForm = 'number'; }), /hookForm:"number"/);
+  const opens = (line) => (x) => { x.SCENES[0].narration[0] = { tts: line, sub: line }; x.STORY.opening.quote = line; };
+  // Spans: a marker, or a particle and a finite past span verb — three digits only.
+  for (const span of ['성벽이 300년째 그 자리에 서 있어요.', '500년 동안 아무도 열지 않은 문이에요.', '100년 넘게 버틴 성벽이 있어요.',
+                      '그 뒤로 500년이 흘렀어요.', '족히 500년은 흘렀어요.', '지은 지 100년이 넘었어요.', '300년만 버텼어요, 이 성벽은.',
+                      '500년가량 잠겨 있던 문이에요.', '300년 남짓 버틴 성벽이에요.'])
+    assert.equal(person(opens(span)), '', span);
+  // Years: four digits always; three digits with 되다, 지나다, or an attributive verb before a noun.
+  for (const year of ['1592년이 지나 봄이 왔어요.', '1592년 지난 뒤였어요.', '1592년 된 거예요.', '드디어 1592년이 됐어요.',
+                      '1592년 넘은 성벽이었어요.', '1592년이 흘렀어요.', '1000년 동안 닫힌 문이에요.',
+                      '문이 닫힌 지 100년이 지났어요.', '100년 묵은 성벽 앞이에요.', '918년 넘은 탑이었어요.', '300년을 버틴 성벽이에요.'])
+    assert.match(person(opens(year)), /carries a year/, year);
+  assert.match(person(opens('1592년 옥포 앞바다에 배가 떠 있어요.')), /carries a year/);
+  assert.match(person(opens('16세기 어느 항구에 배가 떠 있어요.')), /carries a year/);
+  // A particle alone does not make a span — the verb does.
+  for (const year of ['1592년이 밝았어요.', '드디어 1592년이 시작됐어요.', '역사는 1592년을 기억해요.', '그 해 1592년을 잊지 못했어요.',
+                      '그렇게 1592년이 된 거예요.', '새해가 밝아 1592년이 된 순간이었어요.'])
+    assert.match(person(opens(year)), /carries a year/, year);
+  // An ellipsis pause, an embedded question and a quoted question with its attribution are one
+  // sentence; a ? closes a sentence only after a polite finite ending (요·죠·니까).
+  const says = (line) => (x) => { x.SCENES[1].narration[0] = { tts: line, sub: line }; };
+  for (const one of ['설마… 진짜일까 싶었어요.', '대체 무슨 일이야? 하고 그가 중얼거렸어요.', '그게 사실일까? 궁금했어요.',
+                     '그가 살아있을까? 싶었어요.', '설마 진짜일까? 싶어서 다시 봤어요.', '불이야! 하고 그가 소리쳤어요.',
+                     '대체 무슨 일일까요? 하고 그가 중얼거렸어요.', '그게 사실일까요? 궁금했어요.', '만수는 왜요? 하고 되물었어요.',
+                     '배가 진짜 왔을까요? 하고 다들 물었어요.', '그는 "괜찮아요?" 하고 물었어요.', '괜찮아? 물었어요.', '정말요? 되물었죠.', '불이야! 소리 질렀어요.'])
+    assert.equal(person(says(one)), '', one);
+  for (const two of ['무슨 일이었을까요? 아무도 몰랐어요.', '정말이죠? 아무도 안 믿었어요.', '왜 그랬을까요?! 아무도 몰라요.',
+                     '무슨 일이야? 아무도 몰랐어요.', '정말 갈 거니? 걱정했어요.', '아까 왜 그랬어? 나중에 물었죠.'])
+    assert.match(person(says(two)), /packs two sentences/, two);
+});
+test('the person-short fixture passes the draft gate and fails once the name moves into the opening', () => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'person-short-'));
+  try {
+    const src = path.join(root, 'person-short-fixture.js');
+    const run = (file, ...args) => spawnSync(process.execPath, [path.join(root, 'check-story.js'), file, ...args], { encoding: 'utf8' });
+    assert.equal(run(src, '--draft').status, 0, run(src, '--draft').stdout);
+    assert.equal(run(src, '--text').stdout.trim().split('\n').length, 9);
+    const broken = path.join(dir, 'scenes.js');
+    writeFileSync(broken, readFileSync(src, 'utf8').replace(/한 남자가 성냥/g, '박만수가 성냥'));
+    const out = run(broken, '--draft');
+    assert.equal(out.status, 1); assert.match(out.stdout, /names the person/);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
 });

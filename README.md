@@ -92,6 +92,10 @@ progression, payoff and grounding. `check-story.js` and full `check-scenes.js` b
 or stale reviews before production; a numeric score cannot waive failure. Existing boards
 need a contract and review before rebuilding, without silently rewriting approved narration.
 These checks enforce the workflow, not a promised audience retention rate.
+A one-person history short declares `STORY.person` and follows
+[person-short.md](skills/storyboard/references/person-short.md): the opening names nobody and
+carries no year, the body is cause → block → one blow, the close is one scene after the blow,
+the picture changes with every sentence, and the subtitle colours only the year and the name.
 
 The video pipeline (safe zones, reveal sync, subtitle contracts) and the SNS publishing
 client carry over from an earlier in-house plugin where they were verified in
