@@ -53,7 +53,7 @@ Under Codex or Grok the host `image_gen` replaces both image rows, and under Gro
 
 | Layer | What's used | Notes |
 |---|---|---|
-| Cover background | `gpt_image_text2img` quality **`high`**, 1088x1920, 1 image | Photorealistic human scene (default: a Korean woman) — the cover frame becomes the thumbnail as-is (absolute rule 12) and is the source of the hook motion background; on escalated episodes it doubles as the b-roll source |
+| Cover background | `gpt_image_text2img` quality **`high`**, 1088x1920, 1 image | Photoreal scene in the episode's visual-style preset, a person only when the shot needs one (rule 11) — the cover frame becomes the thumbnail as-is (absolute rule 12) and is the source of the hook motion background; on escalated episodes it doubles as the b-roll source |
 | Optional selected video hook | `seedance_img2video` silent 1080p, the cover PNG as the source, the cover's `duration` (4–8 s) — **about $0.35 at 6 s** | Only when `shot.render` selects video or the channel explicitly enables `hook_video`. The builder keeps only the video track, so narration and the code-rendered title stay. Without `ARK_API_KEY` the slot falls back to `veo_img2video` lite 1080p, 8 s billed — $0.64 |
 | Points backgrounds | `image_local_generate` (local Z-Image) 1088x1920, **2–4 images** — **$0** | The photo is the star (absolute rule 14) — captions use only the top band so the photo shows in full. Change the shot when the content axis changes. Only machines without mflux fall back to `gpt_image_text2img` quality `low` ($0.007/image) |
 | Motion (body) | ffmpeg Ken Burns still lane (eased zoom · focus · pan · punch · drift, 4%/s capped at 1.075) + HTML motion slides | The builder already does this — one still per cut, at most 8 s on one still. Use the chosen per-cut route; there is no required number of generated clips |
@@ -165,16 +165,15 @@ judgment**.
 - **`veo_reference` (character speech clips) · `veo_extension`** — the lite
   tier doesn't support them at all, and character acting is footage a human
   should look at.
-- **`seedance_*` (the second video engine)** — the unattended loop's
-  escalation slot is the opening b-roll, and that segment **uses the clip's
-  own audio** under produce absolute rule 9. Put the cheaper silent engine
-  there and 4 seconds go quiet — a swap that hurts the result, not the wallet.
-  The spot where Seedance wins with nothing lost is motion backgrounds that
-  throw the audio away (`visual.video`), and the unattended path doesn't use
-  that slot. The prices sit in `prices.tsv`'s `seedance.*` rows, so when a
-  human uses that slot in a storyboard the tally works as-is. The decision
-  table's source of truth is
-  `skills/produce/references/video-model-selection.md`.
+- **`seedance_*` beyond the hook slot** — the one Seedance call the unattended
+  loop makes is the silent hook motion background, and only when the cut plan
+  or an explicit `hook_video` selects it (§The economy tier). The escalation
+  slot is the opening b-roll, and that segment **uses the clip's own audio**
+  under produce absolute rule 9 — put the cheaper silent engine there and 4
+  seconds go quiet, a swap that hurts the result, not the wallet. The prices
+  sit in `prices.tsv`'s `seedance.*` rows, so when a human uses Seedance
+  elsewhere in a storyboard the tally works as-is. The decision table's source
+  of truth is `skills/produce/references/video-model-selection.md`.
 - **`suno_*` (sung full songs and loop beds)** — about $0.06 and 2–3 minutes
   per call, and vocals fight the narration. The unattended path stays on the
   30-second `music_generate_clip` instrumental. An episode where the song is
@@ -189,8 +188,9 @@ judgment**.
   backgrounds (negative directives block it, and all screen text is
   code-rendered). Only on a P0 finding that a background is smeared,
   regenerate once at `medium` for that episode alone, and **re-run the cap
-  verdict before regenerating** — economy baseline is already ~$0.27, so a
-  medium regeneration (+$0.05) busts the default $0.30 cap. On exit 2, don't
+  verdict before regenerating** — a medium
+  regeneration (+$0.05) sits inside the $1.00 template cap but busts a plan
+  still at the old $0.30. On exit 2, don't
   regenerate; report that P0 to a human as unresolved.
   (The cover background is already high, so it never escalates.)
 
@@ -232,7 +232,7 @@ cap-busting regeneration passes.
 
 ```bash
 REF=${CLAUDE_PLUGIN_ROOT}/skills/autoproduce/references
-$REF/cost-report.sh .work/cost-estimate.tsv --cap 0.30; echo "cost_exit=$?"
+$REF/cost-report.sh .work/cost-estimate.tsv --cap 1.00; echo "cost_exit=$?"
 ```
 
 Read `cost_exit` literally — 0 within / 1 **verdict unavailable** / 2 over the

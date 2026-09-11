@@ -40,7 +40,7 @@ allowance, $0 — a quota is not a price). Two CLIs, two mechanics:
   character panels go face first, then body). Both return the saved file's absolute path; copy
   it to `storyboard/images/scene-<n>.png`. Hangul rendering is unmeasured on this tool: make a
   text-bearing frame once, read the glyphs, and only a broken read moves that frame to
-  `gpt_image_text2img` — with the ledger line and one sentence in `build-report.md`.
+  `gpt_image_text2img` — with the ledger line and one sentence in `build-report.txt`.
 
 A host call that fails, or a tool that is missing, is put to the user before any separately
 billed API call — a fallback nobody approved is money nobody approved.
@@ -73,8 +73,9 @@ launches the app, so a down `:11234` fails closed. On a machine without mflux,
 (quality `"low"`) for that episode only, and say so in the completion report.
 
 **Backgrounds that become video sources** — a scene with b-roll attached, a motion-background
-scene — are photorealistic people on gpt high, never the local engine. Blurry or peopleless,
-and those 8 seconds look like a still frame.
+scene — are made on gpt high or the host image tool, never the local engine, with something
+in frame for the clip to move (rule 11 — a person only when the shot needs one). Blurry or
+static, and those 8 seconds look like a still frame.
 
 ## 2. Making the calls
 
@@ -103,7 +104,7 @@ CH=$(python3 ${CLAUDE_PLUGIN_ROOT}/skills/channel/references/resolve-asset.py "$
 ```
 
 Never merge the panels into one sheet before passing them
-([video-model-selection.md](video-model-selection.md) §6). This is the same set the video
+([video-model-selection.md](video-model-selection.md) §The character panels). This is the same set the video
 engines get in §3, and using it here is what keeps the character the same person from the
 still to the clip.
 

@@ -182,5 +182,5 @@ ffmpeg -y -i cover-motion.mp4 -filter_complex \
   works around it with file polling + kill.
 - **Subtitle side margins are symmetric** — asymmetric margins push center-aligned subtitles off
   the screen center.
-- **Phone-mode review with `resize_page` alone (no `emulate`) captures only a narrow strip** —
-  viewport "390x844x3,mobile,touch" is mandatory.
+- **Phone-mode review needs a real mobile viewport** — capture at 390x844 @3x (produce §8's
+  headless capture); a desktop-width capture shows only a narrow strip.

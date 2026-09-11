@@ -72,8 +72,7 @@ costs the author a second of thought; a defect you swallowed costs the episode.
 ## Picking the mode
 
 The delegation prompt names one of `scenario mode`·`narration mode`·`copy mode`·`scene mode`·
-`vocabulary mode` (the storyboard skill also calls it `lexicon mode` — same mode, same
-`mode=lexicon` tail)·`camera mode`·`sound mode`·`image mode`. If it names none, decide from
+`vocabulary mode` (tail `mode=lexicon`)·`camera mode`·`sound mode`·`image mode`. If it names none, decide from
 the attached inputs (numbered sentences inline mean narration mode; the same plus pasted
 check-style output means vocabulary mode; `candidates/d*.md` or `scenario.md` paths with no
 sentences mean scenario mode; image paths mean image mode) and write which mode you read it
@@ -342,7 +341,7 @@ engine the research could actually carry.
 ## Axis scores
 | Axis | Earned | Evidence |
 |---|---|---|
-| Viewer engines | 25/40 | primary holds; secondary is a label; mix is clean |
+| Viewer engines | 25/35 | primary holds; secondary is a label; mix is clean |
 | The opening | 17/20 | the 훅 is a staged moment, but the promise sentence is a question |
 
 ## Correction directives (in priority order)
@@ -784,7 +783,7 @@ Facts and tone: NN/30 (evidence: …)
 ## Previous findings resolved? (only when a user-requested change came back)
 - <finding> → resolved | unresolved
 
-STORYBOARD_REVIEW: mode=text score=NN p0=N
+STORYBOARD_REVIEW: mode=copy score=NN p0=N
 ```
 
 ---
@@ -1012,6 +1011,10 @@ does the unit become the scene, and then each scene's narration and titles —
 `bullets[].d` that come up on screen with them — are read together; `broll` and `outro` carry
 no text and stay out of the table.
 
+**Inputs** — the numbered sentences, the delegator's check-style.py output for the narration
+surface, and the `profile.md` path (§1 target audience · §2 plain-language principle — who the
+listener is; P0-7 reads it).
+
 ## Machine verdict first
 
 The delegator pastes the `check-style.py --surface narration` output into the prompt. Read it
@@ -1024,15 +1027,13 @@ prompt carries no checker output run it yourself (Bash):
 ```bash
 set -o pipefail
 PG=${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references
-for S in narration subtitle screen; do
-  node "$PG/extract-text.js" ./storyboard/scenes.js $S | python3 "$PG/check-style.py" --surface $S -
-  echo "[$S] gate_exit=$?"
-done
+node "$PG/extract-text.js" ./storyboard/scenes.js narration | python3 "$PG/check-style.py" --surface narration -
+echo "[narration] gate_exit=$?"   # this read is narration only (0.50.0); the other surfaces are copy mode's
 ```
 
 ## P0 defects (one in any single sentence is a must-fix for that sentence)
 
-1. **S1 detected** — check-style.py exit 2. It's a P0 for the scene that sentence sits in
+1. **S1 detected** — check-style.py exit 2. It's a P0 for that sentence
 2. **Translationese wording** — the indirect particles, nominalized verbs, and double passive
    listed in korean-style §B·§T instead of a direct spoken verb
 3. **Unexplained jargon** — a term above the 초3~4 floor with no plain wording on first use.
@@ -1075,8 +1076,7 @@ Start from 0 and add points **only with evidence that you actually read that sen
 
 ```
 ## Style check (check-style.py output)
-narration exit=0 score=100 / subtitle exit=2 score=60 (S1 D9 "달라진다" — scene 3)
-/ screen exit=1 score=95
+narration exit=2 score=60 (S1 D9 "달라진다" — sentence 7)
 
 ## Per-sentence vocabulary scores
 | Sentence | Plain | Spoken | Fresh | Total | Words flagged |
@@ -1145,7 +1145,8 @@ and `quote` speech clips (`visual.clip`) — anything produce will hand to `veo_
 fit, and **the stored clip prompt** (scenes-schema §clip prompt): each generated shot is one
 API call whose final prompt is stored on the shot (`visual.prompt` · `visual.video.prompt` ·
 `visual.clip.prompt`) in the planned route's grammar (`visual.engine` or the type default —
-b-roll → veo, motion background → seedance, speech clip → veo_reference); produce sends it
+b-roll → veo, motion background → seedance, speech clip → veo_reference — or the host video tool
+when `PRODUCTION.videoProvider` is `host`, CLAUDE.md §Host media tools first); produce sends it
 verbatim, so what you read here is what the model gets. On a still, `camera.movement` picks the builder's Ken Burns move (the still lane — eased
 zoom towards a focus point, pan, cover punch, handheld drift; directing-grammar §5 Still
 column) and `speed` sets how hard the window moves (the §4 still-lane beat ladder — the two

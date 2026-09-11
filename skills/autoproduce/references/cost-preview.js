@@ -224,7 +224,7 @@ function videoSlots(scenes) {
     if (sl && sl.treatment === 'footage' && Array.isArray(sl.shots)) {
       sl.shots.forEach((sh, j) => {
         const shot = sh || {};
-        if (shot.reuse) return;   // a reuse shot copies an existing clip (footage-lane.md §3) — no call, no slot
+        if (shot.reuse) return;   // a reuse shot copies an existing clip (scenes-schema §Existing generated clip input) — no call, no slot
         const engine = routeEngine(shot.engine || v.engine, 'seedance');
         slots.push({ shot: shotNo, kind: 'footage', engine, duration: Number(shot.duration) || 0,
                      label: 'footage clip g' + (shot.group || j + 1) });
@@ -374,7 +374,7 @@ function usd(n) { return '$' + n.toFixed(2); }
    check-scenes.js carries in its motion policy) caps what one episode may spend on
    generated video: b-roll, motion backgrounds, quote clips and footage shots, billed and
    projected together. Stills, TTS and music are outside it. Over the budget the verdict
-   is `!!` and exit 1 — storyboard §5 fits the board first (footage-lane.md §3 has the
+   is `!!` and exit 1 — storyboard §5 fits the board first (scenes-schema §Channel true-motion policy has the
    ladder) and asks the user only for a number that fits. */
 const VIDEO_BUDGET_DEFAULT_USD = 10;
 const VIDEO_FAMILIES = ['seedance', 'veo'];
@@ -425,7 +425,7 @@ function budgetVerdict(spentItems, forecastTotal, budgetUsd) {
   return { budgetUsd, spent, forecast: forecastTotal, committed, over,
            line: budgetUsd === null ? null
              : (over ? '!! ' : '   ') + 'video budget ' + usd(committed) + ' committed of ' + usd(budgetUsd) +
-               (over ? ' — over by ' + usd(committed - budgetUsd) + '; fit the board before generating (footage-lane.md §3)'
+               (over ? ' — over by ' + usd(committed - budgetUsd) + '; fit the board before generating (storyboard §5)'
                      : ' (' + usd(budgetUsd - committed) + ' headroom for regenerations)') };
 }
 

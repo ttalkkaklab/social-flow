@@ -157,9 +157,7 @@ Resolution of previous findings (only when there was a previous round): <finding
 GROWTH_POST_REVIEW: draft=N score=NN p0=N verdict=PASS|FAIL
 ```
 
-Verdict rule: **PASS when score ≥95 and p0=0**, otherwise FAIL (the user
-lowered the passing line from 95 to 90 on 2026-08-12 and reverted it to 95 on
-2026-08-13). The tail line is machine-parsed by the delegator — don't change
+Verdict rule: **PASS when score ≥95 and p0=0**, otherwise FAIL. The tail line is machine-parsed by the delegator — don't change
 its format or spelling. Downgrade findings you aren't sure about from P0 to fix
 directives, except suspected AI-tell structure (P0-8) and answering past the
 point (P0-7), which always go to P0 — those two are the defects that kill an

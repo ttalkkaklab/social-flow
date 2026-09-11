@@ -18,10 +18,10 @@ this file starts after the engine has to be chosen.
 
 There are two API engines (`veo_*` · `seedance_*`) and they're good at
 different things — and one route above both: under Grok the CLI's own `image_to_video`
-takes every clip (`engine:"host"`, [video-model-selection.md](references/video-model-selection.md)
+takes every clip (`engine:"host"`, [video-model-selection.md](video-model-selection.md)
 §The host video tool comes first), so this section applies where `PRODUCTION.videoProvider`
 is `"api"`. The decision table's source of truth is
-[video-model-selection.md](references/video-model-selection.md), and the order is
+[video-model-selection.md](video-model-selection.md), and the order is
 **face → sound → grid**. Since the route is deterministic from facts the storyboard already
 wrote (who is in the source, whether the slot uses its sound, the duration), **the storyboard
 records the planned route** — `visual.engine`, or the type default (b-roll → veo, motion
@@ -30,7 +30,7 @@ route's grammar. This section is how you **validate** the route against those fa
 re-decide it. The one live deviation is a missing `ARK_API_KEY` sending a Seedance-routed
 motion background to Veo — the stored prompt survives that as written (no timecodes on a
 Seedance route, and the positive-locks tail is harmless prose to Veo; the stored `negative`
-list moves into the `negativePrompt` argument) — and the deviation goes in `build-report.md`.
+list moves into the `negativePrompt` argument) — and the deviation goes in `build-report.txt`.
 A route that fails validation (a real face on a 2.x model, a 13-second Veo scene) is a
 storyboard defect: send it back.
 
@@ -96,8 +96,8 @@ face clauses intact — the two engines don't block each other.
 
 Once the engine is picked, this is how to
 write the sentences. The basis is the two vendors' official docs, written up in
-[the prompt grammar research](../../docs/research/2026-08-15-veo-seedance-prompting/index.html)
-and [the camera technique research](../../docs/research/2026-08-15-ai-video-camera-technique/index.html).
+[the prompt grammar research](../../../docs/research/2026-08-15-veo-seedance-prompting/index.html)
+and [the camera technique research](../../../docs/research/2026-08-15-ai-video-camera-technique/index.html).
 **The source of truth for the camera items is `references/video-model-selection.md` §Camera**;
 only the summary is here.
 
@@ -120,7 +120,7 @@ only the summary is here.
   don't use it for a shot that moves closer.
 - **The move comes from the shot's declared feel, and it supports the feel rather than
   carrying it** — the storyboard picked it from the feel → technique table
-  (`../storyboard/references/directing-grammar.md` §4–§5), so don't swap it here for one that
+  (`../../storyboard/references/directing-grammar.md` §4–§5), so don't swap it here for one that
   "feels more cinematic". The empirical work never showed that moving closer changes what a
   viewer feels on its own (p=.84); what a move raised was immersion, at an opening or a
   transition. Tone is set by the background, the art direction, the size and the angle.
@@ -141,7 +141,7 @@ only the summary is here.
   advice is 2.0-only — the reason is our contract, scenes-schema §camera). The storyboard
   doesn't know the engine, so this is where that condition is enforced: when §3 routes a
   two-move shot off 1.5 Pro (Veo, Seedance 2.x), keep the first move only and write the drop
-  in `build-report.md`.
+  in `build-report.txt`.
 - **Don't put seconds in a Seedance prompt** — the scene's `duration` sets the length and the
   edit does the cutting. The vendor notice covers 2.0 (2.5 responds to whole seconds) and
   nothing is confirmed for the default model 1.5 Pro — this rule rests on our pipeline, not
@@ -158,10 +158,10 @@ only the summary is here.
 
 ## Per-slot recipes
 
-The cover background is in produce §3 (it is generated on every episode). These three
-are generated only when the episode has that kind of slot.
+The cover still is made in produce §1.5 (still-generation.md) when the episode has a
+generated cover. These three are generated only when the episode has that kind of slot.
 
-- **b-roll (the `broll` scenes in scenes.js — max 2 slots per episode)**: animate each slot's
+- **b-roll (the `broll` scenes in scenes.js — the channel's `generated_video_max` is the ceiling, produce rule 12)**: animate each slot's
   `visual.src` PNG with `veo_img2video` (`aspectRatio: "9:16"` · `resolution: "1080p"` ·
   `durationSeconds: 8` · **`veo-3.1-lite-generate-preview`**). The case for lite: in the blind
   arena the Elo gap across Veo's three tiers is under 20 with overlapping confidence intervals
@@ -195,7 +195,8 @@ are generated only when the episode has that kind of slot.
   - **Make the two slots from their own sources** — run the same PNG twice with only the
     motion changed and the same scene shows up twice, leaving the video circling in place.
     The second slot's source is the background of the scene it attaches to, and that image
-    has to be a photoreal person made with gpt_image high (absolute rules 11·12).
+    has to be a gpt_image high (or host-tool) still with something for the clip to move
+    (absolute rules 11·12 — a person only when the shot needs one).
   - **Don't use a palindrome loop** — forward plus reverse plays the sound backwards
     (absolute rule 9 makes this stretch use the video's audio).
   - This stretch doesn't go in the manifest; it gets **spliced in after the build** (end of
@@ -218,8 +219,8 @@ are generated only when the episode has that kind of slot.
   refuses it before capture and the server refuses the Korean one at the call. The clip's
   sound goes unused in the build (§6's assembly lays down the video track only), so the audio
   instruction is optional. The plan gate (absolute rule 13) comes back in the same delegation
-  as the b-roll. **Make exactly what the storyboard has** — 2 combined with the b-roll is the
-  ceiling (scenes-schema §Motion background is the source of truth).
+  as the b-roll. **Make exactly what the storyboard has** — the channel's `generated_video_max`, b-roll
+  included, is the ceiling (scenes-schema §Channel true-motion policy).
 - **quote speaking clip** (when planned): `veo_reference` (the speaker's panel set — `face.png`
   then `body.png`, 3 images max; 9:16, 720p,
   `veo-3.1-fast-generate-preview` — lite doesn't support reference images, so fast is the

@@ -855,7 +855,7 @@ python3 $PG/check-style.py --surface narration .work/text-narration.txt; echo "g
 ```
 
 1. **Delegate to the storyboard-reviewer agent (Agent) in "vocabulary mode"** with the
-   numbered sentence list (the `subtitle` extract, as in §4.4), the checker's output above
+   numbered sentence list (the same `check-story.js --text` list §4.4 handed over), the checker's output above
    pasted verbatim, and the `profile.md` path (§1 target audience · §2 plain-language
    principle — who the listener is). Read the tail
    `STORYBOARD_REVIEW: mode=lexicon score=NN p0=N worst=<sentence number>` — `score` is the

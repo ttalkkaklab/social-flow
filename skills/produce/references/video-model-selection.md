@@ -16,9 +16,8 @@ of truth for unit prices.
 
 Reference date 2026-08-15. The Seedance side was verified by opening the official BytePlus
 ModelArk docs directly, with the write-up in `docs/api-reference/seedance.html`. The Veo prices
-come from the repo's existing reference (`docs/api-reference/gemini-veo.html`, 2026-07-29) and
-are unverified grade, so cross-engine cost comparisons are trustworthy to the order of
-magnitude, not to the multiplier.
+were confirmed on the Gemini API pricing page the same day (§Price comparison), so the
+cross-engine multipliers below stand.
 
 ---
 
@@ -76,7 +75,7 @@ Quality is unmeasured through the CLI tool. The one published reading (Artificia
 image-to-video arena, read 2026-08-16) put grok-imagine-video-1.5 above Veo 3.1 and below
 Seedance 2.0; nothing in this repo has generated a clip through the tool yet, so the first host
 episode reads its clips at full playback like any other and writes what it saw in
-`build-report.md`.
+`build-report.txt`.
 
 ## The four selection rules — decide in this order
 
@@ -115,7 +114,7 @@ Keep ordinary hooks and motion backgrounds on **1.5 Pro, 1080p, silent**. Select
 only when complex interaction or a sequence of actions is essential to the cut, or when
 reference images are required. Select 2.5 for a fixed reference voice or more than nine
 reference images. A higher version alone is not a reason to escalate. Explanation still
-belongs on HTML motion slides, and the short-form cap stays hook plus one additional cut.
+belongs on HTML motion slides, and the short-form ceiling stays the channel's `generated_video_max`.
 
 Store the selection fields beside the prompt: `visual.video` for motion backgrounds,
 `visual` for b-roll, `visual.clip` for speaking clips. The shared resolver is
@@ -177,7 +176,7 @@ before calling. Reference/voice requirements cannot be dropped just to fit the c
 | Consistent person video from a **real person's photo** | `veo_reference` — Seedance 2.x rejects live-action faces *(untested)* |
 | **Character/product** consistency from several photos | `seedance_reference` · 2.5 (up to 30 images) — Veo is 3 images, fixed 8s |
 | Transfer a **sketch/toon style** by reference | `seedance_reference` — Veo 3.1 doesn't support `referenceType: "style"` |
-| A character must **speak in its fixed voice** inside a generated clip | `seedance_reference` · `dreamina-seedance-2-5-260628` · `referenceAudioPaths: [characters/<id>/voice.wav]` · `generateAudio: true` — Veo takes no audio reference. Imitation, not cloning: describe the voice in words too (§6) |
+| A character must **speak in its fixed voice** inside a generated clip | `seedance_reference` · `dreamina-seedance-2-5-260628` · `referenceAudioPaths: [characters/<id>/voice.wav]` · `generateAudio: true` — Veo takes no audio reference. Imitation, not cloning: describe the voice in words too (§The character panels) |
 | The source image contains a **child** | The Veo image→video lane is blocked (underage block) — the Seedance 1.x side is unverified |
 | A length **other than 4/6/8s** | `seedance_*` — takes 2–30s in 1s steps |
 | **21:9 / 4:3 / 1:1 / 3:4** frame | `seedance_*` — Veo only has 16:9 and 9:16 |
@@ -206,7 +205,7 @@ throw away. This is the slot where you win with no downside.
 |---|---|---|
 | b-roll slot | Yes (absolute rule 9) | Veo — or Seedance with `generateAudio: true` |
 | Motion background `visual.video` | Discarded | **Seedance silent** |
-| Cover | Generated audio discarded | Silent 1.5 Pro motion background; code-rendered title |
+| Cover | Generated audio discarded | A still with a camera move by default; a silent 1.5 Pro motion background only where the cut plan or `hook_video` selects video; code-rendered title |
 
 ---
 
@@ -252,7 +251,7 @@ when two conditions stack. Go to **1080p** and Veo starts billing 8s; **turn aud
 only Seedance halves its price. Where both apply — 1080p, 4s, silent — the ratio becomes
 2.8–3.4×.
 
-Against `veo-3.1-fast`, which autonomous authoring uses, the gap is wider (0.96 vs 0.23,
+Against `veo-3.1-fast` (the human-selected tier — autonomous authoring uses lite) the gap is wider (0.96 vs 0.23,
 4.2×). `veo-3.1-generate-preview` (standard) is $3.20 for 1080p 8s — a different order of
 magnitude.
 
@@ -353,7 +352,7 @@ prices, §Price comparison above is the source of truth.
 
 **1. Live-action faces — 2.x won't take them as input.**
 The Dreamina Seedance 2.5/2.0 family rejects reference images and videos containing real
-human faces. This pipeline's cover backgrounds are live-action person PNGs (autoproduce
+human faces. This pipeline's photoreal cover backgrounds are live-action-style PNGs (produce
 absolute rule 12), so anything sent to Seedance goes to **1.5 pro or 1.0 pro only**. That's
 why the default model is 1.5 pro. Send it to 2.x and the whole episode stalls. The Veo side
 accepts adult faces (`veo_img2video`, verified) so it doesn't hit this trap — but faces that

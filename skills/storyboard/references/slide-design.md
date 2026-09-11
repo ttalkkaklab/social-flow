@@ -2,7 +2,7 @@
 
 The source of truth for how a **motion slide** looks and moves. `motion-slide-template.html`
 carries these rules as CSS tokens and helpers, `check-slide.js` machine-checks the
-determinism half, and `slide-reviewer` scores a rendered slide against §5 — the rubric
+determinism half, and `slide-reviewer` scores a rendered slide against §6 — the rubric
 lives here so the template, the author and the reviewer read one document. Every
 `visual.slide` is a motion slide. There is no still-slide path.
 

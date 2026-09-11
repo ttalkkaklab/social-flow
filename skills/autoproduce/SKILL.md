@@ -25,6 +25,7 @@ allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Age
   "mcp__social-flow__tts_generate_checked", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue",
   "mcp__social-flow__tts_list_voices", "mcp__social-flow__mlx_tts_generate",
   "mcp__social-flow__veo_img2video",
+  "mcp__social-flow__seedance_img2video",
   "mcp__social-flow__music_generate_clip", "mcp__social-flow__mlx_music_generate"]
 ---
 
@@ -48,7 +49,7 @@ judges when no human is present** and **which model to use**.
 
 The pipeline's safety used to hang on three HITL gates (the narration approval at storyboard
 §4.6, the storyboard approval at §7, the publish approval). Unattended mode puts **the machine verdicts** in
-their place (the slide verdict applies only when the episode has slide scenes). If even
+their place. If even
 one fails, the video still gets made but **does not enter the queue** (`queue_*: hold`)
 — meaning it won't publish until a human looks at it.
 
@@ -374,8 +375,8 @@ The rules automated authoring breaks most often:
   takeaway, no cross-scene branch in a short informational episode, and every unfamiliar term
   paired with its exact same-shot plain wording. A scene whose `shot.info` reaches neither the
   answer nor the takeaway is removed.
-- A short informational episode plans 1–3 moving diagram slides with
-  `treatment:"editorial"`. Each carries a `role` (`evidence` · `relationship` · `mechanism` ·
+- A short informational episode plans its moving diagram slides (no fixed count — CLAUDE.md
+  §Choose each cut by purpose) with `treatment:"editorial"`. Each carries a `role` (`evidence` · `relationship` · `mechanism` ·
   `timeline` · `statistic` · `transition` · `verdict`) and one repeated episode-wide `motif`. A photo-backed
   moving diagram uses `treatment:"photo-action"` and changes the photographed subject or
   evidence itself; moving a rectangle, caption, glow, or whole photo does not qualify.
@@ -390,8 +391,8 @@ The rules automated authoring breaks most often:
   CLAUDE.md §Nothing is drawn over video). `check-scenes.js` rejects it, so a `scenes.js`
   that carries one stops at the contract check; rewrite the beat as an editorial slide (an
   explanation) or a motion background with nothing drawn on it (an event, a place).
-  A principle frame sits ink actors (`slide.arts` · `h.fig`) and draws hairline relations
-  (`h.stem` · `h.bus` · `h.chamber` · `h.ring` · `h.press`). Named states may skip arts.
+  A principle frame sits 3D actors (`slide.arts` · `h.fig`, produce §3.6's material) and draws
+  relation lines (`h.stem` · `h.bus` · `h.chamber` · `h.ring` · `h.press`). Named states may skip arts.
   Shape primitives require arts, generated at §6.6.
 
 - Cover title **within 16 characters + topic word required**. All stimulus and
@@ -519,7 +520,7 @@ python3 $PG/check-style.py --surface narration .work/text-narration.txt; echo "g
 ```
 
 **Delegate to the storyboard-reviewer agent (Agent) in "vocabulary mode"** with the
-numbered sentence list (the `subtitle` extract, as in §3.5), the checker's output above
+numbered sentence list (the same `check-story.js --text` list §3.5 handed over), the checker's output above
 pasted verbatim, and the `profile.md` path (§1 target audience · §2 plain-language principle
 — who the listener is). Read the tail
 `STORYBOARD_REVIEW: mode=lexicon score=NN p0=N worst=<sentence number>` — `score` is the
@@ -613,9 +614,10 @@ the price.
   `videoProvider:"host"` — the cap check then sees only what the API lanes still bill. The
   gpt/local/seedance/veo lines below are the Claude Code path.
 - **Backgrounds — 1 cover + 2–4 points** — `size: "1088x1920"`.
-  - **Cover background = `gpt_image_text2img` `quality: "high"`, a
-    photorealistic human scene** (generated people only; default a Korean
-    woman — per profile §3's target. Absolute rules 11·12) — the cover frame
+  - **Cover background = `gpt_image_text2img` `quality: "high"`** (the host
+    image tool first under Codex/Grok) — a person only when the shot needs
+    one, and then profile §3's target, never a demographic default (absolute
+    rules 11·12; the visual-style preset overrides the photo default) — the cover frame
     becomes cover.jpg (the thumbnail) as-is. Make the topic legible at a
     glance; use `seen from behind, face turned away` instead of
     `face not visible`. On escalated episodes this PNG doubles as the veo
@@ -636,9 +638,9 @@ the price.
     `storyboard/images/scene-<n>.png`. Each image takes minutes — no problem on
     the unattended path, but avoid running alongside the video render. On a
     machine without mflux, the tool fails with install guidance — fall back to
-    `gpt_image_text2img` (`quality: "low"`) for that episode only, and the
-    **3-image cap for Gemini-TTS channels** comes back into force (4 images
-    busts the default $0.30 cap — cost-tiers).
+    `gpt_image_text2img` (`quality: "low"`, $0.007 an image) for that episode only —
+    inside the $1.00 template cap; a plan still at the old $0.30 needs the cap
+    verdict re-run first (cost-tiers §The cap).
   - **Check the plan yourself before generating** — produce absolute rule 13's list:
     no still life as a source, no real person, the target person on a target channel,
     no text expected from the engine, the exclusions written, a duration the cut earns,
@@ -751,11 +753,12 @@ glyphs, a bright lower third that will drown the subtitles.
 For every `visual.slide` scene, follow storyboard
 `references/slide-authoring.md` before narration:
 
-1. If `slide.arts` is set, generate each plate into `slides/assets/` first — flat ink
-   illustration of the actor, paper fill on ink, no background, no readable text, no
-   photorealism, local png. Log the call. Sit a principle actor with `h.fig`. Then author
-   the HTML from the matching template. A principle frame is a `.cast` of actors plus
-   hairlines (`h.stem` · `h.bus` · `h.chamber`). Editorial diagrams use the declared `role`
+1. If `slide.arts` is set, generate each plate into `slides/assets/` first — the same
+   recipe as produce §3.6: tactile 3D illustration or photoreal 3D object, soft studio light,
+   consistent material and camera, transparent background, no readable text (the host image
+   tool under Codex/Grok, else `image_local_generate`). Log the call. Sit a principle actor
+   with `h.fig`. Then author the HTML from the matching template. A principle frame is a
+   `.cast` of actors plus relation lines (`h.stem` · `h.bus` · `h.chamber`). Editorial diagrams use the declared `role`
    and `motif`; they compose the whole frame rather than placing callouts over an unchanged photo.
    With `slide.object`, bake the sheet first (`bake-object.py` with the scene's keys · frames,
    `rendered-object.md` §3; `bake-blender.py` with the recipe and `--segs` for `renderer:"blender"`,
@@ -845,8 +848,8 @@ picks the spliced set on its own when a splice ran:
 
 The factor comes from `.work/format.env`, which `build-reel.sh` and `speedup.sh`
 both source. Write it when §6's build step writes the file (produce §1) — nothing
-else in this skill does, and without the line a channel that put `1.0` in
-profile.md §2 to ship at its recorded pace goes out at 1.2 with nobody watching.
+else in this skill does, and without the line a channel that chose a factor in
+profile.md §2 ships at speedup.sh's default 1.0 with nobody watching.
 
 ```bash
 grep -qF '${SPEED:=' .work/format.env \
@@ -872,7 +875,7 @@ content reviewer with the frame.
 cp .work/reel-fast.mp4 output/video/video.mp4
 cp .work/reel-sub-fast.mp4 output/video/video-sub.mp4
 cp .work/subs-fast.srt output/video/subs.srt
-cp .work/cover.jpg .work/build-report.txt output/video/
+cp .work/cover.jpg .work/build-report.txt .work/delivery-proof.json output/video/   # publish checks the files against the proof (produce §9)
 [ -f .work/chapters-fast.txt ] && cp .work/chapters-fast.txt output/video/chapters.txt
 ```
 

@@ -162,7 +162,7 @@ The episode's share trigger is settled on the board — `check-scenes.js` fails 
 9. **Slot-contract violation** — 3 or more b-roll scenes, or two slots with the
    same `after` (cap: 2 per episode — scenes-schema §broll) / two slots using
    the same source PNG so the same shot appears twice / the scene a body b-roll
-   attaches to has a locally-generated background (veo input must be gpt_image high)
+   attaches to has a locally-generated background (veo input is a gpt_image high or host-tool still, never local Z-Image — produce rule 12)
 10. **Minor in frame** — the source/reference plan includes a person who looks
    like a child or teenager. Photo or illustration alike, Veo's image lane
    blocks it (Support code 17301594) and Seedance 1.x is unconfirmed — this is
@@ -320,7 +320,8 @@ you still can't find it, report every surface as "unverified" (never as all-S1
     states the result changes nothing here** — the video may now open on the
     answer, and these three surfaces still may not name it.
 11. **Experience not verified or not delivered**: the required final-playback report is
-    missing, an essential motion/listening check is unverified, the main promise has no
+    missing, the STORY review evidence (`check-story.js`) is missing or stale, an essential
+    motion/listening check is unverified, the main promise has no
     payoff, or an essential reveal/sound is missing or unintelligible in the final edit.
     Name the missing evidence or cite the observed scene and time. A subjective preference
     for faster pacing alone is a correction directive, not this P0.
