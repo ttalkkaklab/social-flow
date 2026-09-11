@@ -1313,8 +1313,7 @@ length, platforms) together with the cost summary, and point the user at
 `/social-flow:publish`. If the portal MCP is registered (`mcp__ttalkkakstory__*`, README
 §Optional), call `storyboard_save` once more with the episode directory's absolute path (the
 board may have moved since approval — regenerated prompts, slide plans) and then
-`episode_set_status` with `status: "produced"` and the `episodeId` the save returned (the same
-uuid as `portal_episode` in `storyboard.md`'s frontmatter). Tools absent: one line, move on.
+`episode_set_status` with `status: "produced"` and the `episodeId` the save returned; that is `portal_episode` in `storyboard.md`'s frontmatter while the title is unchanged — a retitled board comes back as a new record, so overwrite `portal_episode`/`portal_url` with the save result before setting the status. Tools absent: one line, move on.
 A call that errors: report the message in one line, retry a 409 once, and finish the report
 and the `status: produced` file update regardless — the portal is a mirror, not a gate.
 
