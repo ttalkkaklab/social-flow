@@ -70,6 +70,36 @@ test('a short vendor pause becomes the fixed pause and speech samples are untouc
   assert.ok(Math.abs(out.sentences[0].start - SPACING_DEFAULTS.lead) < 0.002);
 });
 
+test('the cut never lands on the next sentence\'s first letter, and a no-gap take keeps the last letter whole', () => {
+  // natural gap 0.05 s < tail 0.12 s: the cut sits head (0.03 s) before the next letter, so every sample
+  // of the next sentence is copied verbatim (no fade-in touches it).
+  const take = fakeTake(0.05);
+  const before = parseWav(take.wav);
+  const out = respace(take.wav, take.alignment, SENTENCES, { pause: 0.5, playbackSpeed: 1 });
+  const after = parseWav(out.wav);
+  const located = locateSegments(take.alignment, SENTENCES);
+  for (const k of [1, 2]) {
+    const src = Math.round(located[k].start * SR), dst = Math.round(out.sentences[k].start * SR);
+    for (let i = 0; i < Math.round(0.15 * SR); i++) assert.equal(after.pcm.readInt16LE((dst + i) * 2), before.pcm.readInt16LE((src + i) * 2), `sentence ${k + 1} sample ${i} changed`);
+  }
+  // natural gap 0: the cut is on the last letter, the end time stays before the inserted silence, and the gap reads as the pause
+  const tight = fakeTake(0);
+  const o2 = respace(tight.wav, tight.alignment, SENTENCES, { pause: 0.5, playbackSpeed: 1 });
+  assert.ok(Math.abs((o2.sentences[1].start - o2.sentences[0].end) - 0.5) < 0.002, `${o2.sentences[1].start - o2.sentences[0].end}`);
+  const l2 = locateSegments(tight.alignment, SENTENCES);
+  assert.ok(Math.abs((o2.sentences[0].end - o2.sentences[0].start) - (l2[0].end - l2[0].start)) < 0.002, 'the first sentence did not grow');
+});
+
+test('an acting tag echoed into the alignment is skipped, not read as spoken text', () => {
+  const take = fakeTake(0.1);
+  const tagged = { characters: [...'[whispers] ', ...take.alignment.characters], character_start_times_seconds: [...Array(11).fill(0), ...take.alignment.character_start_times_seconds], character_end_times_seconds: [...Array(11).fill(0), ...take.alignment.character_end_times_seconds] };
+  const located = locateSegments(tagged, SENTENCES);
+  assert.equal(located.length, 3);
+  assert.equal(located[0].start, take.alignment.character_start_times_seconds[0]);
+  const trailing = { characters: [...take.alignment.characters, ...' [sighs]'], character_start_times_seconds: [...take.alignment.character_start_times_seconds, ...Array(8).fill(9)], character_end_times_seconds: [...take.alignment.character_end_times_seconds, ...Array(8).fill(9)] };
+  assert.equal(locateSegments(trailing, SENTENCES).length, 3);
+});
+
 test('a take that already pauses long enough is left alone between those sentences', () => {
   const take = fakeTake(0.7);
   const out = respace(take.wav, take.alignment, SENTENCES, { pause: 0.5, playbackSpeed: 1 });
@@ -113,6 +143,9 @@ test('the checked ElevenLabs take is re-spaced before it is hashed, and a retake
   // the sidecar describes the shipped WAV, and the proof hash is that WAV's
   const side = JSON.parse(readFileSync(sentencesPathFor(file), 'utf8'));
   assert.deepEqual(side.boundaries, proof.attempts[1].spacing.boundaries);
+  assert.equal(side.audioSha256, proof.audioSha256);
+  assert.equal(result.spacing, 'applied');
+
   assert.equal(side.sentences.length, 3);
   const align = JSON.parse(readFileSync(path.join(pcmDir, 'c0.alignment.json'), 'utf8'));
   assert.ok(align.vendor_alignment && align.respaced.policy === 'sentence-spacing-v1');
@@ -124,9 +157,22 @@ test('the checked ElevenLabs take is re-spaced before it is hashed, and a retake
   // the builder's snap script agrees with the sidecar against the silences the re-spaced take produces
   const silences = side.boundaries.map(b => `${(b - 0.5).toFixed(3)} ${(b + 0.02).toFixed(3)} 0.520`).join('\n') + '\n1.000 1.300 0.300\n';
   const silFile = path.join(work, 'silin0.txt'); writeFileSync(silFile, silences);
-  const snap = spawnSync('python3', [path.resolve('../skills/produce/references/snap-boundaries.py'), sentencesPathFor(file), silFile, '3'], { encoding: 'utf8' });
+  const snapScript = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../../skills/produce/references/snap-boundaries.py');
+  const snap = spawnSync('python3', [snapScript, sentencesPathFor(file), silFile, '3', '--wav', file], { encoding: 'utf8' });
   assert.equal(snap.status, 0, snap.stderr);
   assert.deepEqual(snap.stdout.trim().split(' ').map(Number), side.boundaries.map(b => Number((b + 0.02).toFixed(3))));
+  // a sidecar left from another take of the same filename is refused, not snapped
+  const shipped = readFileSync(file);
+  writeFileSync(file, fakeTake(0.3).wav);
+  const stale = spawnSync('python3', [snapScript, sentencesPathFor(file), silFile, '3', '--wav', file], { encoding: 'utf8' });
+  assert.equal(stale.status, 1); assert.match(stale.stderr, /another take/);
+  writeFileSync(file, shipped);
+  // a changed pause is a changed take: the old PASS is not reused
+  const again = await generateCheckedSpeech(request, deps);
+  assert.equal(again.reused, true);
+  const wider = await generateCheckedSpeech({ ...request, sentencePause: 0.8 }, deps);
+  assert.notEqual(wider.reused, true);
+  assert.equal(JSON.parse(readFileSync(sentencesPathFor(file), 'utf8')).pause, 0.8);
 });
 
 test('a take without an alignment is kept and the reason recorded, so nothing is lost', async t => {

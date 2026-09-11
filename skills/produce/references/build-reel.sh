@@ -604,7 +604,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
     # pause in the card (a comma can out-pause a period: 0.3–1.2s measured on ep401/ep411).
     SIDE="$SRC.sentences.json"; HB=""
     if [ "$NSIL" -ge $((M-1)) ] && [ -f "$SIDE" ]; then
-      HB=$(python3 "$HERE/snap-boundaries.py" "$SIDE" "work/silin$IDX.txt" "$M" --tempo "$F" 2>"work/snap$IDX.txt" || true)
+      HB=$(python3 "$HERE/snap-boundaries.py" "$SIDE" "work/silin$IDX.txt" "$M" --tempo "$F" --wav "$SRC" 2>"work/snap$IDX.txt" || true)
       [ -z "$HB" ] && { say "⚠ card $IDX sentence sidecar did not match the detected pauses ($(head -1 "work/snap$IDX.txt")) — using the longest pauses instead."; WARN=1; }
     fi
     if [ -n "$HB" ]; then

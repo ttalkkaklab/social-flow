@@ -47,7 +47,12 @@ spoken text.
 
 Add `segments` on every scene: the scene's `narration[].tts` sentences in order (joined, they
 read as `expectedText`). Add `playbackSpeed` when profile §2 sets a playback speed. Both feed
-the sentence spacing below; on engines without an alignment they are recorded and nothing else.
+the sentence spacing below; on an engine without an alignment the take records
+`spacing: { skipped: "engine has no alignment" }` and nothing else happens. On the ElevenLabs
+lane they are part of the settings a PASS binds to, so changing `sentencePause`, `segments` or
+`playbackSpeed` regenerates the take (the vendor audio is overwritten in place; there is no
+offline re-spacing). The same binding means an ElevenLabs take checked before 0.74.0 is
+regenerated once on its next call — its proof predates the timestamps and spacing settings.
 
 ## Sentence spacing (ElevenLabs)
 

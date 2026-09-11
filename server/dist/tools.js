@@ -2366,7 +2366,7 @@ Requires ffmpeg and GEMINI_API_KEY even for local synthesis. Two paid audio-revi
                     } },
                 segments: { type: 'array', minItems: 1, maxItems: 80, items: { type: 'string', minLength: 1, maxLength: 1000 }, description: 'The scene\'s narration[].tts sentences in order (joined they read as expectedText). ElevenLabs takes get a fixed pause at each segment boundary — the boundary the builder\'s reveals and subtitle cues use. Without it, pauses go after sentence-final punctuation.' },
                 sentencePause: { type: 'number', minimum: 0.25, maximum: 1.5, default: 0.5, description: 'Silence between sentences in the take\'s own timeline, seconds. The builder detects pauses from 0.16s and fits a 0.35s reveal fade inside one.' },
-                playbackSpeed: { type: 'number', minimum: 0.5, maximum: 2, default: 1, description: 'The channel\'s playback factor from profile §2 (speedup.sh). A pause grows past sentencePause only where that sentence\'s subtitle cue would otherwise read faster than 6.0 chars/s after the speed-up.' },
+                playbackSpeed: { type: 'number', minimum: 0.5, maximum: 3, default: 1, description: 'The channel\'s playback factor from profile §2 (speedup.sh). A pause grows past sentencePause only where that sentence\'s subtitle cue would otherwise read faster than 6.0 chars/s after the speed-up.' },
             },
             required: ['generator', 'generation', 'expectedText', 'language', 'delivery', 'outputPath', 'filename'],
         },

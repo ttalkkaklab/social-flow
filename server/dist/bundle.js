@@ -78862,6 +78862,13 @@ function locateSegments(alignment, segments) {
     let first = -1, last = -1;
     for (const letter of letters) {
       while (i2 < chars.length && chars[i2] !== letter) {
+        if (chars[i2] === "[") {
+          const close = chars.indexOf("]", i2);
+          if (close > i2) {
+            i2 = close + 1;
+            continue;
+          }
+        }
         if (isLetter(chars[i2])) throw new Error(`Segment ${n + 1} (${segment.slice(0, 20)}\u2026) does not follow the take's text at character ${i2}`);
         i2++;
       }
@@ -78872,7 +78879,16 @@ function locateSegments(alignment, segments) {
     }
     out.push({ text: segment, chars: letters.length, first, last, start: starts[first], end: ends[last] });
   }
-  for (let j = i2; j < chars.length; j++) if (isLetter(chars[j])) throw new Error("The take speaks more text than the segments cover");
+  for (let j = i2; j < chars.length; j++) {
+    if (chars[j] === "[") {
+      const close = chars.indexOf("]", j);
+      if (close > j) {
+        j = close;
+        continue;
+      }
+    }
+    if (isLetter(chars[j])) throw new Error("The take speaks more text than the segments cover");
+  }
   return out;
 }
 function planGaps(segments, options) {
@@ -78893,6 +78909,7 @@ function respace(wavBuffer, alignment, segments, options) {
   const fadeN = Math.max(1, Math.round(SPACING_DEFAULTS.fade * sampleRate));
   const pieces = [];
   const cuts = [];
+  const fade = SPACING_DEFAULTS.fade;
   const slice = (fromSample, toSampleExclusive, fadeIn, fadeOut) => {
     const out = Buffer.from(pcm.subarray(fromSample * 2, toSampleExclusive * 2));
     const n = out.length / 2;
@@ -78907,6 +78924,7 @@ function respace(wavBuffer, alignment, segments, options) {
   const s0 = Math.max(0, located[0].start - head);
   pieces.push(silence(lead));
   let cursor = toSample(s0);
+  let fadeInNext = true;
   const inserted = [];
   for (let k = 0; k < located.length - 1; k++) {
     const natural = located[k + 1].start - located[k].end;
@@ -78915,29 +78933,30 @@ function respace(wavBuffer, alignment, segments, options) {
       inserted.push(0);
       continue;
     }
-    const cutAt = located[k].end + Math.min(tail, natural);
+    const cutAt = Math.max(located[k].end, Math.min(located[k].end + tail, located[k + 1].start - head));
     const add = target - natural;
     const cutSample = toSample(cutAt);
-    pieces.push(slice(cursor, cutSample, true, true));
+    pieces.push(slice(cursor, cutSample, fadeInNext, true));
     pieces.push(silence(add));
     cuts.push({ atInput: cutAt, insertedSeconds: add });
     inserted.push(add);
     cursor = cutSample;
+    fadeInNext = located[k + 1].start - cutAt >= fade;
   }
-  pieces.push(slice(cursor, total, true, false));
+  pieces.push(slice(cursor, total, fadeInNext, false));
   const outPcm = Buffer.concat(pieces);
   const duration3 = outPcm.length / 2 / sampleRate;
-  const shift = (t2) => {
+  const shift = (t2, isEnd = false) => {
     let o = lead - s0;
-    for (const c of cuts) if (t2 >= c.atInput - 1e-6) o += c.insertedSeconds;
+    for (const c of cuts) if (isEnd ? t2 > c.atInput + 1e-6 : t2 >= c.atInput - 1e-6) o += c.insertedSeconds;
     return Math.max(0, Math.round((t2 + o) * 1e3) / 1e3);
   };
   const shifted = {
     characters: [...alignment.characters],
-    character_start_times_seconds: alignment.character_start_times_seconds.map(shift),
-    character_end_times_seconds: alignment.character_end_times_seconds.map(shift)
+    character_start_times_seconds: alignment.character_start_times_seconds.map((t2) => shift(t2)),
+    character_end_times_seconds: alignment.character_end_times_seconds.map((t2) => shift(t2, true))
   };
-  const sentences = located.map((s2) => ({ text: s2.text, chars: s2.chars, start: shift(s2.start), end: shift(s2.end) }));
+  const sentences = located.map((s2) => ({ text: s2.text, chars: s2.chars, start: shift(s2.start), end: shift(s2.end, true) }));
   return {
     wav: pcmToWav(outPcm, sampleRate, 1),
     alignment: shifted,
@@ -78969,7 +78988,7 @@ var checkedSpeechSchema = external_exports.object({
   /** The scene's narration[].tts sentences in order — where the fixed pauses go (ElevenLabs takes). */
   segments: external_exports.array(external_exports.string().trim().min(1).max(1e3)).min(1).max(80).optional(),
   sentencePause: external_exports.number().min(0.25).max(1.5).default(0.5),
-  playbackSpeed: external_exports.number().min(0.5).max(2).default(1)
+  playbackSpeed: external_exports.number().min(0.5).max(3).default(1)
 }).strict().superRefine((value, ctx) => {
   if (value.segments && normalizeSpeech(value.segments.join(" ")) !== normalizeSpeech(value.expectedText)) {
     ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["segments"], message: "segments joined must read exactly as expectedText" });
@@ -79057,6 +79076,15 @@ var REVIEW_JSON_SCHEMA = {
   }
 };
 async function listen(file, request) {
+  let laidInPauses = null;
+  try {
+    if (existsSync6(sentencesPathFor(file))) {
+      const side = JSON.parse(readFileSync5(sentencesPathFor(file), "utf8"));
+      if (Array.isArray(side.boundaries)) laidInPauses = { lead: Number(side.lead) || 0, boundaries: side.boundaries };
+    }
+  } catch {
+    laidInPauses = null;
+  }
   const { GoogleGenAI: GoogleGenAI3 } = await Promise.resolve().then(() => (init_node(), node_exports));
   const client = new GoogleGenAI3({ apiKey: requireGeminiKey(), httpOptions: { apiVersion: REVIEW_API_VERSION, timeout: 18e4 } });
   const audio = readFileSync5(file);
@@ -79101,7 +79129,7 @@ async function listen(file, request) {
     "blind-transcription"
   ));
   const review = reviewSchema.parse(await call(
-    `Audit the full audio against this data: ${JSON.stringify({ expectedText: request.expectedText, language: request.language, delivery: request.delivery, blindTranscript: blind.transcript })}.
+    `Audit the full audio against this data: ${JSON.stringify({ expectedText: request.expectedText, language: request.language, delivery: request.delivery, blindTranscript: blind.transcript, ...laidInPauses ? { laidInPauses } : {} })}.${laidInPauses ? " laidInPauses lists the seconds where fixed digital silence was laid in between sentences on purpose; those pauses and the quiet lead are not pacing defects or audible joins." : ""}
 Score 0\u2013100: accuracy (all words, quantities, names, endings, no omissions or additions), pronunciation (native phonemes, liaison, stress), naturalness (human phrasing, breath, pacing, intonation appropriate to delivery), clarity (no noise, clipping, metallic artifacts, audible joins or unstable voice).
 100 means no audible defect; 95 is professional delivery with no correction needed; 90 means a noticeable defect needs a retake; below 80 is distracting. Do not inflate scores because the script is plausible. Check every word, especially names/numbers and final syllables. Do not silently correct a wrong word using the script. List every defect with actual start/end seconds, heard/expected wording and a concrete correction. complete is true only if the whole audio was heard. Give confidence 0\u20131 and specific listening evidence even on a pass.`,
     REVIEW_JSON_SCHEMA,
@@ -79170,6 +79198,7 @@ function prepareGeneration(request) {
 var sentencesPathFor = (wav) => wav + ".sentences.json";
 function applySentenceSpacing(output, request) {
   const alignmentPath = output.replace(/\.wav$/i, "") + ".alignment.json";
+  rmSync2(sentencesPathFor(output), { force: true });
   if (!existsSync6(alignmentPath)) return { skipped: "no alignment sidecar beside the take" };
   try {
     const sidecar = JSON.parse(readFileSync5(alignmentPath, "utf8"));
@@ -79180,7 +79209,7 @@ function applySentenceSpacing(output, request) {
     writeFileSync5(output, result.wav);
     const meta = { policy: SPACING_POLICY, pause: request.sentencePause, playbackSpeed: request.playbackSpeed, lead: result.lead, gaps: result.gaps, inserted: result.inserted, boundaries: result.boundaries, duration: result.duration, segmentsFrom: request.segments ? "request" : "sentence-final punctuation" };
     writeFileSync5(alignmentPath, JSON.stringify({ ...sidecar, alignment: result.alignment, vendor_alignment: sidecar.vendor_alignment ?? sidecar.alignment, respaced: meta }, null, 2));
-    writeFileSync5(sentencesPathFor(output), JSON.stringify({ version: 1, ...meta, audio: path7.basename(output), sentences: result.sentences }, null, 2) + "\n");
+    writeFileSync5(sentencesPathFor(output), JSON.stringify({ version: 1, ...meta, audio: path7.basename(output), audioSha256: sha256(result.wav), sentences: result.sentences }, null, 2) + "\n");
     return meta;
   } catch (error2) {
     return { skipped: error2 instanceof Error ? error2.message : String(error2) };
@@ -79205,13 +79234,14 @@ async function generateCheckedSpeech(input, dependencies) {
     await exec("ffmpeg", ["-version"], { timeout: 1e4 });
   }, generate: prepared.run, measure: measureSignal, listen };
   const attempts = [];
+  const settings = prepared.spacing ? { ...prepared.args, spacing: { segments: request.segments ?? null, sentencePause: request.sentencePause, playbackSpeed: request.playbackSpeed } } : prepared.args;
   const base = {
     version: 1,
     policy: QUALITY_POLICY,
     expectedText: request.expectedText,
     textSha256: sha256(normalizeSpeech(request.expectedText)),
     generator: request.generator,
-    settingsSha256: sha256(JSON.stringify(prepared.args)),
+    settingsSha256: sha256(JSON.stringify(settings)),
     model: REVIEW_MODEL,
     language: request.language,
     delivery: request.delivery
@@ -79283,6 +79313,10 @@ async function generateCheckedSpeech(input, dependencies) {
         }
         if (!generated.success || path7.resolve(generated.audioPath || generated.path || "") !== output) throw new Error(generated.error || "Generator did not return the requested audio path");
         if (prepared.spacing) take.spacing = applySentenceSpacing(output, request);
+        else {
+          rmSync2(sentencesPathFor(output), { force: true });
+          take.spacing = { skipped: "engine has no alignment" };
+        }
         take.audioSha256 = sha256(readFileSync5(output));
         save("unverified");
       }
@@ -79297,8 +79331,10 @@ async function generateCheckedSpeech(input, dependencies) {
       }
       if (audioSha256 !== sha256(readFileSync5(output))) throw new Error("Audio changed during review");
       Object.assign(take, { pending: false, audioSha256, signal, ...listened ? { model: REVIEW_MODEL, ...listened } : {}, cer: listened ? characterErrorRate(request.expectedText, listened.transcript) : null, failures });
-      if (!failures.length) return save("pass", { audioSha256 });
-      save("retry", { audioSha256 });
+      const spacingState = take.spacing;
+      const spacing = !prepared.spacing ? "not applicable" : spacingState?.skipped ? "skipped: " + String(spacingState.skipped) : "applied";
+      if (!failures.length) return save("pass", { audioSha256, spacing });
+      save("retry", { audioSha256, spacing });
     }
     return save("fail", { error: "Speech did not pass within the attempt limit. Hold production; inspect the per-attempt issues. Do not reset the retry budget or change the voice to bypass review." });
   } catch (error2) {
@@ -84200,7 +84236,7 @@ Requires ffmpeg and GEMINI_API_KEY even for local synthesis. Two paid audio-revi
         } },
         segments: { type: "array", minItems: 1, maxItems: 80, items: { type: "string", minLength: 1, maxLength: 1e3 }, description: "The scene's narration[].tts sentences in order (joined they read as expectedText). ElevenLabs takes get a fixed pause at each segment boundary \u2014 the boundary the builder's reveals and subtitle cues use. Without it, pauses go after sentence-final punctuation." },
         sentencePause: { type: "number", minimum: 0.25, maximum: 1.5, default: 0.5, description: "Silence between sentences in the take's own timeline, seconds. The builder detects pauses from 0.16s and fits a 0.35s reveal fade inside one." },
-        playbackSpeed: { type: "number", minimum: 0.5, maximum: 2, default: 1, description: "The channel's playback factor from profile \xA72 (speedup.sh). A pause grows past sentencePause only where that sentence's subtitle cue would otherwise read faster than 6.0 chars/s after the speed-up." }
+        playbackSpeed: { type: "number", minimum: 0.5, maximum: 3, default: 1, description: "The channel's playback factor from profile \xA72 (speedup.sh). A pause grows past sentencePause only where that sentence's subtitle cue would otherwise read faster than 6.0 chars/s after the speed-up." }
       },
       required: ["generator", "generation", "expectedText", "language", "delivery", "outputPath", "filename"]
     }

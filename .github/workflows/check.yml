@@ -46,6 +46,7 @@ jobs:
 
       # the scene contract, the clip-prompt grammar the assemblers share, cost forecasting and copy meta
       - run: node skills/storyboard/references/check-scenes.js --selftest
+      - run: python3 skills/produce/references/snap-boundaries.py --selftest
       - run: node skills/storyboard/references/assemble-bg-prompt.js --selftest
       - run: node skills/autoproduce/references/cost-preview.js --selftest
       - run: node skills/platform-guide/references/check-meta.js --selftest

@@ -102,6 +102,8 @@ export function locateSegments(alignment: Alignment, segments: string[]): Locate
     let first = -1, last = -1;
     for (const letter of letters) {
       while (i < chars.length && chars[i] !== letter) {
+        // An acting tag the vendor echoed into the alignment ("[whispers]") is not spoken text: skip it whole.
+        if (chars[i] === '[') { const close = chars.indexOf(']', i); if (close > i) { i = close + 1; continue; } }
         if (isLetter(chars[i])) throw new Error(`Segment ${n + 1} (${segment.slice(0, 20)}…) does not follow the take's text at character ${i}`);
         i++;
       }
@@ -111,7 +113,10 @@ export function locateSegments(alignment: Alignment, segments: string[]): Locate
     }
     out.push({ text: segment, chars: letters.length, first, last, start: starts[first], end: ends[last] });
   }
-  for (let j = i; j < chars.length; j++) if (isLetter(chars[j])) throw new Error('The take speaks more text than the segments cover');
+  for (let j = i; j < chars.length; j++) {
+    if (chars[j] === '[') { const close = chars.indexOf(']', j); if (close > j) { j = close; continue; } }
+    if (isLetter(chars[j])) throw new Error('The take speaks more text than the segments cover');
+  }
   return out;
 }
 
@@ -156,6 +161,7 @@ export function respace(wavBuffer: Buffer, alignment: Alignment, segments: strin
 
   const pieces: Buffer[] = [];
   const cuts: { atInput: number; insertedSeconds: number }[] = [];
+  const fade = SPACING_DEFAULTS.fade;
   const slice = (fromSample: number, toSampleExclusive: number, fadeIn: boolean, fadeOut: boolean): Buffer => {
     const out = Buffer.from(pcm.subarray(fromSample * 2, toSampleExclusive * 2));
     const n = out.length / 2;
@@ -169,37 +175,45 @@ export function respace(wavBuffer: Buffer, alignment: Alignment, segments: strin
   const s0 = Math.max(0, located[0].start - head);
   pieces.push(silence(lead));
   let cursor = toSample(s0);
+  // The first slice starts inside the lead's quiet; a later slice starts where the previous cut fell.
+  let fadeInNext = true;
   const inserted: number[] = [];
   for (let k = 0; k < located.length - 1; k++) {
     const natural = located[k + 1].start - located[k].end;
     const target = gaps[k];
     if (natural >= target) { inserted.push(0); continue; }
-    const cutAt = located[k].end + Math.min(tail, natural);
+    // Cut after the word's release but never inside the next sentence's onset: the aligner
+    // marks a letter late, so `head` of the natural gap stays in front of it. A gap shorter
+    // than `head` keeps all of it (the cut sits on this sentence's last letter).
+    const cutAt = Math.max(located[k].end, Math.min(located[k].end + tail, located[k + 1].start - head));
     const add = target - natural;
     const cutSample = toSample(cutAt);
-    // Every slice starts after silence and this one ends before it: fade both edges of the cut.
-    pieces.push(slice(cursor, cutSample, true, true));
+    // This slice ends before inserted silence: fade its tail. Its head was decided at the previous cut.
+    pieces.push(slice(cursor, cutSample, fadeInNext, true));
     pieces.push(silence(add));
     cuts.push({ atInput: cutAt, insertedSeconds: add });
     inserted.push(add);
     cursor = cutSample;
+    // The next slice may fade in only where the fade would land on the natural gap, never on a letter.
+    fadeInNext = located[k + 1].start - cutAt >= fade;
   }
-  pieces.push(slice(cursor, total, true, false));
+  pieces.push(slice(cursor, total, fadeInNext, false));
   const outPcm = Buffer.concat(pieces);
   const duration = outPcm.length / 2 / sampleRate;
 
-  const shift = (t: number): number => {
+  // A start time on the cut belongs after the inserted silence (the next sentence's first letter);
+  // an end time on the cut belongs before it (this sentence's last letter, when the gap was shorter than head).
+  const shift = (t: number, isEnd = false): number => {
     let o = lead - s0;
-    // A cut placed exactly on the next sentence's first letter belongs before that letter.
-    for (const c of cuts) if (t >= c.atInput - 1e-6) o += c.insertedSeconds;
+    for (const c of cuts) if (isEnd ? t > c.atInput + 1e-6 : t >= c.atInput - 1e-6) o += c.insertedSeconds;
     return Math.max(0, Math.round((t + o) * 1000) / 1000);
   };
   const shifted: Alignment = {
     characters: [...alignment.characters],
-    character_start_times_seconds: alignment.character_start_times_seconds.map(shift),
-    character_end_times_seconds: alignment.character_end_times_seconds.map(shift),
+    character_start_times_seconds: alignment.character_start_times_seconds.map(t => shift(t)),
+    character_end_times_seconds: alignment.character_end_times_seconds.map(t => shift(t, true)),
   };
-  const sentences = located.map(s => ({ text: s.text, chars: s.chars, start: shift(s.start), end: shift(s.end) }));
+  const sentences = located.map(s => ({ text: s.text, chars: s.chars, start: shift(s.start), end: shift(s.end, true) }));
   return {
     wav: pcmToWav(outPcm, sampleRate, 1),
     alignment: shifted,

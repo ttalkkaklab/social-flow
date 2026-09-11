@@ -89,8 +89,7 @@ Read [story-quality.md](../storyboard/references/story-quality.md) and run `node
    does two jobs. For an opening b-roll (`after: 0`) that file is the cover background. For
    a body b-roll it's that points scene's background, and **that one image gets made with
    `gpt_image_text2img` (high) rather than local Z-Image** — it's veo's input, so a blurry
-   source makes a blurry video, and with no person in it the model finds nothing to move
-   (rule 11).
+   source makes a blurry video, and with no person in it the model finds nothing to move (rule 11).
    **Generated-video slots follow the approved channel motion policy.** Count b-roll and
    motion-background scenes (`visual.video`) together. The format default is 2, and **on a
    short both are optional**. Each selected cut writes `visual.why` because continuous motion
@@ -1337,6 +1336,7 @@ length, platforms) together with the cost summary, and point the user at
 - **`references/splice-clip.sh`** — post-build clip insertion (b-roll up to 2 slots · series stinger). Takes several `<clip> <T>` pairs and splices them in **a single run** (split it into two calls and the first splice is erased), handles clean and burned-in separately, shifts each subtitle cue by the sum of the measured lengths of the insertions before it, and checks for cues straddling T and for matching lengths
 - **`references/capture-frames.sh` / `capture-reveals.sh`** — headless capture (state count derived automatically)
 - **`references/render-motion-slide.mjs`** — motion-slide renderer (§3.6): one clip per reveal group, headless Chrome over the DevTools pipe with no npm dependency, every frame seeked to an exact time so a re-render is byte-identical; `--sheet` writes the frames the §3.6 sheet read looks at. It renders **every authored screen** — diagram, kinetic type, character act — since all it asks a page for is the seek contract
+- **`references/snap-boundaries.py`** — the checked take's sentence sidecar snapped to the detected pauses, bound to the WAV's hash (build-reel §4)
 - **`references/reveal-timing.py`** — reveal timing derived backwards from the narration's pauses
 - **`references/frame-persona-clip.py`** — unifies speaking-clip framing + palindrome
 - **`references/reel-qa.html`** — the phone-mode QA harness (IG/YT UI mockups · crop reproduction · safe-zone guides)
