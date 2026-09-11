@@ -1811,15 +1811,6 @@ window.SB_DOC = {
   }
   function pictureOf(s) { return (s.visual && s.visual.picture) || inferredPicture(s); }
   function overlayOf(s) { return (s.visual && s.visual.overlay) || inferredOverlay(s); }
-  function overlayLabel(s) {
-    if (overlayOf(s) === "none") return T.overlay.none;
-    var narr = s.narration || [];
-    if (narr.some(function (n) { return /^card:/.test(n.imgPrompt || ""); })) return T.overlay.typing;
-    if (s.type === "points" && (s.bullets || []).length) return T.overlay.caption;
-    if (s.type === "cover") return T.overlay.reveal;
-    if (s.type === "quote") return T.overlay.signature;
-    return T.overlay.staging;
-  }
   /* Shot-size pictograms (directing-grammar §2 · §2.1). One 32×32 frame and a small figure drawn
      100 units tall — head 2–33, body 33–67, legs 62–98 — scaled so the frame's bottom edge lands
      where that size cuts a person (mid-shin · mid-thigh · mid-chest, never a joint). Anything
@@ -3702,7 +3693,6 @@ window.SB_DOC = {
     // When one scene holds several shots, they attach to that scene's first shot only.
     var sceneKey = g.scene, firstOfScene = item === grp.items[0];
     var narr = s.narration || [];
-    var pic = pictureOf(s), ov = overlayOf(s);
     h += '<article class="scene"><div class="scene-head">';
     h += '<span class="scene-no">' + esc(T.shotCap(no)) + " · " + esc(T.type[s.type] || s.type) + "</span>";
     // Shot grammar — size tile, angle and render tile — sits on its own row under the head so
@@ -3738,9 +3728,9 @@ window.SB_DOC = {
     });
     h += '<span class="scene-checks">' + sceneChips[i] + "</span></div>";
     if (gram) h += '<div class="shot-grammar">' + gram + "</div>";
+    // The picture and overlay badges are gone from here — the render tile above says what
+    // moves, and the overlay reads off the frame itself.
     h += '<div class="shot-meta"><span class="craft">' +
-         '<span class="vtag' + (pic === "ai-video" ? " gen" : "") + '">' + esc(T.pic[pic] || pic) + "</span>" +
-         '<span class="vtag' + (ov === "html" ? " html" : "") + '">' + esc(overlayLabel(s)) + "</span>" +
          charsOf(s).map(function (id) {
            return '<span class="char-tag">' + esc(castName(id)) + "</span>"; }).join("") + "</span>" +
          (s.type === "outro" ? "" :
