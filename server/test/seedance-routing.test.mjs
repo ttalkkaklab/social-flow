@@ -20,6 +20,7 @@ test('planning model constraints match the server', () => {
     assert.deepEqual(spec.duration, [...api.duration]);
     assert.deepEqual(spec.resolutions, [...api.resolutions]);
     assert.equal(spec.images, api.referenceImages ? api.referenceImages[1] : 0);
+    assert.equal(spec.videos, api.referenceVideos ? api.referenceVideos.maxClips : 0);
     assert.equal(spec.audio, api.audio);
   }
 });
@@ -128,4 +129,36 @@ test('Seedance settings on a Veo slot are refused instead of silently skipped', 
   assert.throws(() => scenePlan({ type: 'quote', duration: 6, visual: { clip: {
     modelPurpose: 'fixed-voice', referenceAudioPaths: ['voice.wav'] } } }),
     /only applies to Seedance/);
+});
+
+test('a previz cut rides the reference route as Video 1 and bills input + output seconds', () => {
+  const previz = { clip: 'previz/s4.mp4', sha256: 'a'.repeat(64), fps: 24, seconds: 5 };
+  const base = { engine: 'seedance', modelPurpose: 'previz', modelReason: 'The orbit must end on the sentence',
+    realFaceInput: false, referenceImagePaths: ['images/scene-4.png', 'characters/porter/body.png'], previz };
+  const shot = { type: 'cover', duration: 5, visual: { bg: 'images/scene-4.png', video: { prompt: 'x', ...base } } };
+  const plan = scenePlan(shot);
+  assert.equal(plan.tool, 'seedance_reference');
+  assert.equal(plan.model, 'dreamina-seedance-2-0-260128');
+  assert.deepEqual(plan.referenceVideoPaths, ['previz/s4.mp4']);
+  assert.equal(plan.priceKey, 'seedance.2-0-video.1080p');
+  assert.equal(plan.billedSeconds, 10);
+  assert.equal(priceOf('seedance_reference', { model: plan.model, resolution: plan.resolution, durationSeconds: plan.durationSeconds,
+    referenceVideoUrls: ['https://host/previz.mp4'] }).key, plan.priceKey);
+  // The clip is rendered at the billed length — a 4.2 s cut bills 5 s, so a 5 s previz fits and a 4 s one is refused.
+  assert.equal(scenePlan({ ...shot, duration: 4.2 }).billedSeconds, 10);
+  assert.throws(() => scenePlan({ ...shot, visual: { ...shot.visual, video: { ...shot.visual.video, previz: { ...previz, seconds: 4 } } } }), /must equal the billed length/);
+  // Image 1 is the source still; the reference lane carries no end frame; the field needs its purpose.
+  assert.throws(() => scenePlan({ ...shot, visual: { ...shot.visual, video: { ...shot.visual.video, referenceImagePaths: ['characters/porter/body.png'] } } }), /referenceImagePaths\[0\]/);
+  assert.throws(() => scenePlan({ ...shot, visual: { ...shot.visual, video: { ...shot.visual.video, lastImagePath: 'images/scene-4-end.png' } } }), /no end frame/);
+  assert.throws(() => scenePlan({ ...shot, visual: { ...shot.visual, video: { ...shot.visual.video, modelPurpose: 'reference' } } }), /modelPurpose:"previz"/);
+  assert.throws(() => scenePlan({ ...shot, visual: { ...shot.visual, video: { ...shot.visual.video, previz: { ...previz, fps: 23.976 } } } }), /24–60/);
+  // More than nine reference images escalates to 2.5, whose with-video rows are priced too.
+  const many = scenePlan({ ...shot, visual: { ...shot.visual, video: { ...shot.visual.video,
+    referenceImagePaths: ['images/scene-4.png', ...Array(10).fill('characters/porter/body.png')] } } });
+  assert.equal(many.model, 'dreamina-seedance-2-5-260628');
+  assert.equal(many.priceKey, 'seedance.2-5-video.1080p');
+  assert.equal(many.billedSeconds, 10);
+  // A previz belongs to a motion background only — the checkers and the approval page read visual.video.previz.
+  assert.throws(() => scenePlan({ type: 'quote', duration: 6, visual: { bg: 'images/scene-4.png', clip: { ...base, prompt: 'x',
+    previz: { ...previz, seconds: 6 } } } }), /motion-background/);
 });

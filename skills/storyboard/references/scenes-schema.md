@@ -10,6 +10,7 @@ consumes after storyboard approval. `video-template.html` loads it with
 - [Comprehension contract — `window.COMPREHENSION`](#comprehension-contract-windowcomprehension)
 - [Format — `window.FORMAT`](#format-windowformat)
 - [Grammar units and production layers](#grammar-units-and-production-layers)
+- [Structure — `window.STRUCTURE` (sequences and scenes)](#structure-windowstructure-sequences-and-scenes)
 - [Playback order — format picks the skeleton](#playback-order-format-picks-the-skeleton)
 - [Production mode — `window.PRODUCTION`](#production-mode-windowproduction)
   - [Episode visual style selection](#episode-visual-style-selection)
@@ -180,19 +181,275 @@ One short is a book, a sequence is a paragraph, a scene is a sentence, a shot is
 
 | Unit | Meaning | In this file |
 |---|---|---|
-| Sequence | Scenes bound by one purpose. "This stretch" | `sequence` — written only when purposes diverge. Omitted when the episode has one |
-| Scene | One place, one event in one continuous stretch of time. The head is `S#1. inside the café / day` | `scene` + `sceneSlug`. A new number when place or time changes |
+| Sequence | Scenes bound by one purpose. "This stretch" | a `STRUCTURE.sequences[]` object — `{ id, title, purpose, question, payoff, scenes }` (§structure). The shot label `sequence` is derived from it, and only when the board has two or more |
+| Scene | One place, one event in one continuous stretch of time. The head is `S#1. inside the café / day` | a `STRUCTURE.scenes[]` object — `{ no, place, time, event, charge, turn, out }` (§structure). Each shot points at it with `scene`; `sceneSlug` is derived. A new number when place or time changes, or when the value turned and a second event starts — an explanation screen is a shot of the story scene it explains |
 | Shot (a "cut" on set) | One unbroken chunk from recording ON to OFF | **one `SCENES[]` entry**. `type` is the role (cover/points/…), not a grammar unit |
 | Reveal | The moment on-screen text appears within the same shot | `narration` segments and bullets. Not a shot — the scene-frame row label is "reveal" |
-| Take | A retry of the same shot | Shooting script and generation rounds. Not an entry in this array |
-| Coverage | Material from filming one scene at several sizes | Shots sharing a `scene` number. When `shot.info` overlaps, one of them is enough |
+| Take | A retry of the same shot | Not an entry in this array. Generation rounds live in `PRODUCTION.maxAttempts` and `.work/cost-tally.tsv`; a filmed shot's retries are the last take in the file (shot-script-template) |
+| Coverage | Material from filming one scene at several sizes | Shots sharing a `scene` number — two sizes per scene (a wide — `els`·`ls`·`ws`·`fs`·`mfs` — and a close), no repeated `shot.info`, one `space.line`; a scene that opens close still owes an `ls`/`els` (`mfs`/`two` for two people) next, which `fs` does not pay. `structure-contract.js` warns past those |
 
-A short is usually one sequence. Scenes divide only when place or time breaks. Shots go **one
-per new piece of information** — 4–6 shots in a dialogue scene is standard, but for a short
-informational piece the floor is 2 shots at different sizes per scene (wide + close).
+A short is usually one sequence. A scene breaks when the place changes, the time breaks, or the
+value has turned and a second event begins — never for a slide, a chart or a new subject
+(§structure, the cut test). Shots go **one per new piece of information** — 4–6 shots in a
+dialogue scene is standard, and the floor everywhere, cover and CTA scenes included, is 2 shots
+at two sizes per scene (a wide + a close).
 
 `type` (cover/points/quote/broll/outro) is the kind of screen. The **playback role** is `beat`.
 It's orthogonal to the grammar axis.
+
+## Structure — `window.STRUCTURE` (sequences and scenes)
+
+The two units above the shot are objects, not labels. `SCENES[]` stays flat because produce
+reads it by index; the hierarchy sits beside it, and `storyboard_apply` writes the two derived
+shot labels (`sceneSlug`, `sequence`) from it on every save. The rules are in
+`structure-contract.js`, run by `check-scenes.js`, `storyboard_check` and the approval page.
+
+```js
+window.STRUCTURE = {
+  version: "structure-v1",
+  sequences: [{
+    id: "q1",
+    title: "버즈 실사용기",                 // the heading the approval page draws
+    purpose: "혼자 하던 일을 셋에게 나눈 리더가 셋을 한 팀으로 만든다",   // one purpose, written as the tension it carries
+    question: "29명이 왜 3명이 됐나",       // the question this stretch holds open (optional)
+    payoff: 5,                             // the scene where its answer completes — a later scene, never the first
+    scenes: [1, 2, 3, 4, 5, 6]             // scene numbers in playback order
+  }],
+  scenes: [{
+    no: 1,
+    place: "로봇들의 사무실", time: "낮",     // one place, one continuous stretch of time — the slugline
+    event: "리더가 셋을 소집한다",           // the one thing that happens — one subject, one verb
+    charge: { open: "-", close: "+" },     // the value at the open and at the close
+    turn: "혼자 감당하던 일이 셋으로 갈라진다",   // what flipped, in other words than the event
+    out: "그런데 셋이 같은 기억을 갖고 있을까요"  // the last sentence the scene's last shot says, verbatim
+  }]
+};
+```
+
+### Where the line falls — the cut test
+
+Six boards written from an earlier draft of this section all cut in the same wrong places
+(2026-09-10, seven scenarios, adversarial review): a diagram became a place, a topic change
+became a scene, a scene became one shot, `out` became a note nobody hears. These rules are the
+answer to each.
+
+1. **A scene breaks for three reasons and no other.** The place changes, the time breaks, or
+   the value has turned and a second event begins in the same place. A new slide, a new chart,
+   a new subject, a new tip on a list, a new number, a new shot — none of these is a scene.
+   Two scenes back to back on the same slugline are one scene unless `event` and `turn` show the
+   second turn. `place` is the place a shot actually shows — 거실, not 집 안: an umbrella that
+   covers other scenes' places cannot tell whether the place changed.
+2. **An explanation screen is a shot inside the scene of the story it explains.** A
+   `data_graph`, `object_html`, `editorial_html` or slide shot points at the scene whose event
+   it explains — the graph of ground temperature belongs to the scene whose lines say the
+   temperature, the cost bar to the counter scene — and `place` stays the story's place. Never write a `place` like "땅속 단면
+   도해", "스튜디오 타임라인 그래픽" or "설명 스튜디오". A stretch that is only explanation (a
+   long-form sequence on where a rule came from) is anchored to a real place its facts live in —
+   the label on the shelf, the lab bench, the counter, the archive — and its diagrams are shots
+   of that scene. That anchor is for a stretch with no story place of its own; it is never a
+   licence to carve a sub-place out of the story's place ("마당 땅속" under "마당") — a place is
+   what a picture shot shows, and a diagram shows none. A studio is a place only when the whole board lives there (a hosted explainer
+   with no location at all): then `place: "스튜디오", time: "지금"` once, scenes break by rule
+   1's third reason only, and the years the narration walks through are the content of a
+   scene, not its `time`. Spanning two scenes means shots of both scenes say a part of the
+   fact; a fact only one scene's lines say belongs to that scene. When the diagram's last
+   value lives in another scene's year or place, the diagram is a shot of that scene. A fact
+   that explains no scene's event gets the scene where it was made (the two weeks of vacuuming
+   the battery bar measures), or goes — a neighbour shot that only reads the diagram's numbers
+   back does not give it a place, it is a repeat. The checker reads the diagram's info first
+   against the scene's event, turn and place — that gate has to pass on its own — and only then
+   against the other shots' lines, never against the diagram's own line; a screen whose facts
+   touch neither the event nor the turn belongs to another scene however the neighbours
+   phrase their lines.
+3. **A repeated action is one scene, and `time` may be a span.** "밤마다 글자를 그린다" over
+   three winters, "2주 동안 써 본다" — one event, one turn, one scene, `time: "1443년 겨울, 밤마다"`
+   or `"2주 동안"`. It becomes two scenes when a second event with its own turn starts (the
+   morning the memorial arrives). `time` is the depicted time; a retrospective voice-over
+   ("2주 써 보니…") does not move it. A span needs a shot that draws it — a montage, three
+   tries, a date card; when no shot shows the repetition, the shots are one moment and belong
+   to that moment's scene. A scene cut for a time break shows the time in its first shot's
+   `space.layout` (a lamp, a dark window, a clock) — and a scene whose time says time has
+   passed ("2주 후") shows that too (a date card, dust, a changed object); a transition effect
+   or a retrospective line is not evidence of time.
+4. **One place, many turns — cut at the turns.** A 40-second comedy in one pantry is not one
+   scene: warning ignored (open −, close −−), button pressed and water sprayed (− → +, the
+   laugh), towel and the line (+ → ++). Three scenes on one slugline, each with its own event
+   and turn, and the shots grouped under them. A scene that holds every shot of the episode has
+   no cut points, and the board has no rhythm. A scene that carries explanation shots is no
+   exception: when the explanation lands, the value has turned, and a new action starts, the
+   scene ends there. On a two-scene board whose answer is complete in the first scene, the fix
+   is to cut the first scene at its turn, not to push `payoff` to the second. When the press
+   and its result are split into two scenes, the second scene's `open` is the sign of its own
+   first shot's feel; when the whole descent already sits in the previous scene, that was one
+   scene. On a comedy the value a scene measures is the laugh: the water-jet scene closes on +
+   because the viewer laughs, and its last shot's feel says so (웃음 — 결국 사달이 났다) even
+   though the line says "뜨거워요".
+5. **`event` is one subject and one verb, something that happens on screen.** 리더가 셋을
+   소집한다 · 최만리가 상소를 올린다 · 딸깍맨이 버튼을 누른다. Not what the viewer learns
+   ("원리가 드러난다", "…라는 걸 알게 된다", "…을 설명한다", "…을 확인한다", "…을 비교한다") and not two actions chained with
+   -고 · -며 · -다가 · -아서/-어서 (개봉해 손잡이를 쥐고 밀어본다 is three) — the second action is
+   the next scene when the value turned there, a shot of this scene when it did not. On a list
+   scene the event is the first action that opens it (화자가 물을 따른다), not the sum of
+   its items — a count (세 가지·다섯 가지) never sits in an event; the other items are shots. A
+   confrontation is one event when one party acts and the other's reply drives the turn — the
+   turn is the value that reply moves, never the reply itself.
+6. **`turn` names the value that flipped, in other words than the event, written as 앞 → 뒤.**
+   모른다 → 안다, 불안 → 안심, 혼자 → 셋, 의심 → 확신. One subject's value on one axis — read
+   the poles as X → not-X; 감춘 밤 → 완성한 밤 is two axes, a speaker change (최만리의 의심,
+   세종의 뜻) is not a flip, and the first pole of a scene that repeats its event (경고 → 무시
+   under "로봇이 말린다") is the event again. A prose turn ("의심이 확신으로 바뀐다", "고집을
+   꺾지 않는다") cannot be checked pole by pole, so the checker asks for the arrow. The first
+   pole lives in the scene's opening shots and the second in its closing shots — a turn found
+   the other way round is read backwards. Two poles of the same sign (안도 → 통쾌, 허탈함 →
+   의아함) are a deepening, not a turn, and a number is not a pole (의아함 → 10원). A scene
+   whose charge deepens (`+` → `++`) still names a turn on some axis that flipped inside it
+   (아직 못 믿는다 → 눈으로 봤다); when nothing flipped, the scene is the previous scene's
+   shots. On a list every tip honestly runs lack → relief; there the swings differ in size,
+   not direction (`-` → `+`, `-` → `++`, `+` → `++`), the biggest relief where the payoff lands — never a `+` open pasted on a scene whose first line says the lack, which is P0-5
+   and worse than a metronome. The feel
+   lexicon the checker reads is a convenience, not a vocabulary: a feeling it does not know
+   (고통, 설움) gets no verdict and no warning, so write the story's word, never the lexicon's. A turn that repeats the event with a number filled in, or ends on "드러난다·밝혀진다",
+   has not said what changed. Both poles are said by this scene's own lines, in the words the
+   lines use (그냥 찬 흙 → 온도를 지키는 흙, not 심드렁함 → 감탄) — the `feel` column echoes a
+   pole, it does not replace it; a pole that flipped in the previous scene is not this scene's
+   turn, a turn no line speaks is a turn the viewer never gets, and two feel heads copied into
+   the turn are not a turn. A first pole the opening line denies as it names it ("그냥 숫자가
+   아니라…") was never the open. Write each pole in the inflected form the line actually uses
+   (몰라요 → 알아요, not 모른다 → 안다 under a line that says 몰라요) — the checker matches
+   characters, not stems. The examples here are shapes, not a word list: 안전 → 위험 is as good
+   as 안전 → 사고 when the line says 위험해요. The poles sit in the lines before the out, never
+   in the out itself — the out is the bridge, and a pole shoved into it pushes the real line
+   ("으악!") out of its place. `charge.open` is the value the scene's first
+   shot says and feels, never the reverse of the last scene's close written to make a swing;
+   On a confrontation the turn is the value the reply changes, not the reply itself (안전 →
+   사고, not 말릴 수 있다 → 못 말린다 under "로봇이 말린다").
+   `charge.close` is the value the last shot says and feels — a scene that ends on the harm
+   ("몸이 말라 있거든요") has closed on −, whatever the card says. The `out` is the bridge and
+   is not read for the close: the close is the last shot's `feel` and the lines before its
+   out, so a scene may close on + and still go out on a question.
+7. **`out` is spoken.** It is the last sentence of the scene's last shot, written here verbatim,
+   the line that forces a 그런데 or 그래서 into the next scene (scenario-craft §13). Not a
+   planning note, not a summary the narration then says differently. Write it first, then
+   write the shot that ends on it. The out does not count as the shot's one new thing (rule 10)
+   — it is the bridge into the next scene, and a short shot that says only the out is often
+   the cleanest way to carry it. On a list the out still calls the next item — a scene that
+   opens on "두 번째는" was not called; end the previous scene on the line that makes the next
+   number necessary. In the CTA scene the answer and the hand-back are two shots — the answer
+   shot is a `drip`, the hand-back shot is the `beat:"cta"` shot, it carries `share`, and a shot
+   may sit between them; when `share` and the last out are different sentences, the share is
+   said by the shot that carries it and the out by the last. The last scene's `out` is the
+   hand-back to the cover — the line the episode ends on (scenario-craft §5, §7); it may echo
+   the cover, and that spoken echo is exempt from rule 10's repeat, while the hand-back shot's
+   `info` still names what this shot adds (the changed meaning), not the cover's. A callback —
+   a character repeating an earlier shot's info so that the repetition is itself the event
+   ("청소 모드라고 말씀드렸잖아요") — is a line of the scene whose event or turn it carries, not
+   a repeat. `COMPREHENSION.takeaway` is a line a shot says, as a rule
+   in the last scene — a takeaway no shot says is a note.
+8. **`question` is the one the sequence's later scenes pay, and a shot asks it out loud.** A
+   question only the structure holds is not open — the viewer never hears it. Out loud means a
+   line is a question — "…까요", "…나요", "얼마나 다를까 싶어서" — not the statement paraphrased;
+   it need not be the question verbatim, and reciting it word for word in the cover is not
+   better than raising it. A question that asks two things ("왜 눈을 상하면서 몰래 지었을까요")
+   is two questions, and the sequence pays one — the other half is another sequence's question
+   or a shot's info. The line that opens the question sits in a scene before the payoff; a
+   question the last shot throws to the viewer ("여러분 사무실에도 이런 버튼 있나요") is
+   `shot.share`, not the sequence question. On a short the one sequence's question is the
+   episode's — `COMPREHENSION.question` in the same words or nearly. On long-form the episode's
+   question belongs to the sequence whose scene completes its answer, in the same words; the
+   sequences before it hold branch questions (`COMPREHENSION.branches`), and the cover asks the
+   episode's question out loud even though its payoff is sequences away. A question the first
+   scene answers on arrival is the cover's hook, not the sequence's.
+   `payoff` is the scene where the answer completes — on a list, the scene of the last item;
+   on a story, the scene where the flip lands, even when the historical date comes later. When
+   those two readings point at different scenes, `payoff` is the scene where the sentence of
+   `COMPREHENSION.answer` completes, and the scenes after it are aftermath. A short's one
+   sequence usually shares its question with `COMPREHENSION.question` and pays it in the scene
+   before the CTA or in the CTA's own scene.
+9. **Scenes and shots scale with the running time.** A 45–75 s short has 2–4 scenes; a
+   10-minute long-form 8–15. Every scene has at least two shots at two sizes — one wide
+   (`els·ls·fs·mfs`) that sets the place and one close (`mcu·cu·choker·ecu·insert`) that pays
+   the moment — and the cover's scene and the CTA's scene are not exempt: the cover is the
+   close of its scene, the next shot sets the place, and the CTA returns to the cover's frame
+   inside the last scene — returns to its framing, the size and composition, not its place;
+   a CTA that goes back to the cover's place is a new scene with its own number, place and
+   time. The wide and the close are picture shots of the scene: an explanation screen's `size`
+   frames the drawing and fills neither slot. A scene may open on a close and pay it back with
+   the wide in the next shot — that is not a breach of establish-then-close. A scene that is
+   one shot is a shot label, not a scene. When places outnumber the band, the band wins: room
+   moves inside one stretch of time are shot moves, and `place` is the room the stretch's first
+   picture shot shows (부엌) — never a name invented to cover the rooms (집 안, 자취방, 부엌 겸
+   거실); rule 1's umbrella ban outranks the band, and the other rooms are shot moves under
+   that slugline. That absorption is for when the band forces it: with a scene slot still
+   free, a room the action moves to is its own scene.
+   The CTA is a shot of the last scene when it only receives or shows the consequence of that
+   scene's event; when its subject performs a new action of their own (writing, leaving,
+   refusing — a citizen writes for the first time after the king promulgates), that is the
+   last scene and the promulgation is the scene before it. Write the scenes — place, time, event, turn, out —
+   before any shot exists, then group the shots.
+10. **A shot says one new thing.** The unit is the information, not the sentence: a shot may
+    speak several segments, but if they do not rewrite as one `shot.info` line, it is two
+    shots. When a line addresses two things (an answer to the other character and a question
+    to the viewer; a fact and its term explained; a freezing point and a fermentation rate),
+    that is two shots. A term and its meaning are one info when the term is what the shot
+    adds (소비기한은 먹어도 안전한 기한이다) — `COMPREHENSION.terms[].firstShot` explains the
+    term in that shot; a fact plus a term plus its meaning is two shots. The cover's sentences
+    are infos too — a second cover sentence that names
+    what the first one hid has spent the hook, and a cover that says the next shot's fact
+    leaves that shot nothing to add. `shot.info` is the one thing this shot adds, and the
+    shot's own lines say it — when the picture carries it (a visual gag, the water jet) write
+    the info with the cover's "연출 —" prefix; a `shot.info` any other shot already gave, or a
+    line that says again what an earlier shot's info gave, is a repeat, whatever the scene
+    (the checker's repeat is the same words or a 0.6 character-bigram overlap). On an
+    explanation screen `size` is the framing of the drawn subject (`ls` the whole mechanism,
+    `cu` the detail, `insert` a bare chart) and `shot.space` is skipped; every generated or
+    filmed picture shot writes `shot.space`. The values a chart will draw live in
+    `visual.slide.data` (§4b); the 4a `shot.info` is the one thing the line says. A measured
+    value the viewer must read is `infoType:"statistic"` on an HTML screen, never video.
+    `render.purpose:"share"` is a composition chart and has nothing to do with `shot.share`.
+    `space.line` — any scene with two people, or a person and what they look at or handle, in
+    frame together across two or more shots, writes it on the first shot that has them and
+    keeps it; a single insert is exempt, and a shot facing the camera is not a gaze.
+
+| Field | Why it exists |
+|---|---|
+| `sequence.title` | The heading of this stretch, not the episode title — every scene it binds has to sit under it; a title that names the first scene's place and time ("세종이 밤마다 서재에서 한 일") does not cover the court and the courtyard |
+| `sequence.purpose` | Frank Daniel's sequence approach: a sequence is a mini-movie with its own tension and resolution. One purpose binds its scenes, written as the tension it carries ("셋을 한 팀으로 만든다"), not as a delivery ("…을 순서대로 보여 준다"), with one main verb ("반대를 딛고 세상에 낸다" is two — the 딛고 is a scene); when the purpose changes the sequence does. A sequence has two or more scenes — a single scene is a scene of its neighbour's sequence. A short is one sequence; a story short may be two; long-form 2–5. A chapter is a label for the time bar and is not a sequence; sequences and chapters need not coincide |
+| `sequence.question` · `payoff` | The curiosity ledger (scenario-craft §5) at sequence size — the question the stretch holds open and the later scene that completes its answer (rule 8) |
+| `scene.place` · `time` | The slugline. Breaks only on rule 1's three reasons; a slide, a diagram, a chart or a new subject is not a new place (rule 2), a repeated action is one scene and `time` may be a span (rule 3) |
+| `scene.event` | One subject, one verb, on screen (rule 5). Two events in one place and time are two scenes only when the value turned between them (rule 4) |
+| `scene.charge` · `turn` | McKee: a scene whose value is the same at both ends is a nonevent (scenario-craft §2). `open` is `+` or `-`; `close` may flip (`-` → `+`), swing big (`-` → `++`), or deepen into the same pole (`+` → `++`, `-` → `--`). Equal values warn; every scene turning the same way is a metronome. `turn` names the value that flipped (rule 6) |
+| `scene.out` | The spoken cut line (rule 7) — the last sentence of the scene's last shot, verbatim; on the last scene, the hand-back to the cover |
+
+What the rules block (`structure-contract.js`): a shot whose `scene` the structure does not
+define, a scene in no sequence or in two, a stale `sceneSlug` or `sequence` label, a scene
+whose shots are split by another scene (a return later is a new number), shots that play the
+scenes in a different order than the sequences list them, a charge value outside `+ - ++ --`. What they warn,
+by rule: (1) a `place` that names a picture or is an umbrella, two scenes back to back on one
+slugline whose events or turns do not differ, a studio `place` beside real places; (2) an
+explanation screen whose info shares nothing with its scene's event, turn or lines; (3) a span
+spoken under a one-moment `time`, a span `time` no shot draws, a time-only cut whose first
+layout shows no time; (4) a feel that flips twice inside a scene of three or more shots, a
+whole episode in one scene; (5) an `event` that says what the viewer learns, chains two
+actions, or is drawn by no shot; (6) a `turn` with no →, a turn that repeats the event or ends
+on an awareness verb, a pole no line or feel carries, a pole carried only by the wrong half of
+the scene, an `open` against the first shot's feel, a `close` against the last shot's feel or
+its lines before the out, the nonevent, a metronome (every scene on one swing, or two thirds
+of four or more); (7) an `out` the last shot does not say, does not end on, or does not match
+word for word, a last scene with no `out`, a scene that opens on a list number, a takeaway no
+shot says, a cta `share` its shot does not say, an info that repeats its scene's out; (8) a
+question with no payoff, a question no line asks or no line asks as a question, a question
+first heard in the payoff scene, a question that asks two things or is not the episode's, a
+`payoff` on the sequence's first scene, a payoff scene whose lines do not say the answer, a
+purpose that summarises, repeats the question or chains two actions; (9) a one-scene sequence,
+a one-shot scene, a scene whose picture shots have no wide or no close, a scene with one
+picture shot beside explanation screens, three close-ups in one scene, five or more scenes in
+a short, fewer than eight on a long-form; (10) a repeated or near-repeated `shot.info` anywhere
+on the board, an info an earlier shot already said out loud, a line that says again an earlier
+info, an info that shares nothing with its own lines and is not staged ("연출 —"), an info that
+ends on a delivery verb, a question and a statement in one shot, a measured value on a
+generated_video shot, a `space.line` that changes inside a scene, a scene with a gaze or two
+peopled picture shots and no `space.line`, and three shots in a row on one `feel`. A board
+with no `STRUCTURE` warns only, so older episodes still build.
 
 ## Playback order — format picks the skeleton
 
@@ -407,15 +664,16 @@ and `camera-slide-template.html`; its image and effect parameters come from scen
 | `transition` | required after the first shot | the boundary **before this shot**, chosen from what happened between the two shots. `"jcut"` is the continuity cut (the sound leads); `"cut"` is a smash; `"dissolve"` · `"dip"` · `"dip:white"` · `"iris"` · `"blur"` · `"zoom"` · `"push:<dir>"` · `"whip:<dir>"` each say what moved. See §scene transition |
 | `beat` | optional on long-form, required on a short | short: `hook` \| `drip` \| `cta`. long-form: `hook` \| `hooking` \| `result` \| `body` \| `turn` \| `cta` (`turn` on the story arc only). See §playback order above |
 | `arc` | long-form cover only | `answer-first` (default) \| `story` — which playback order a long-form episode walks. Ignored on a short. See §playback order above |
-| `shot` | recommended | `{ feel, size, angle, info, infoType, share, shareType, space }` — below. `feel` and `infoType` are written **before** `size`·`angle`·`space`·`camera` are chosen (directing-grammar §5) |
+| `shot` | recommended | `{ feel, size, angle, why, info, infoType, share, shareType, space }` — below. `feel` and `infoType` are written **before** `size`·`angle`·`space`·`camera` are chosen (directing-grammar §5) |
 | `sound` | optional | `{ cue, drop, sfx }` — what the audience hears under this shot (§music cues). Narrated shots only (`cover`, `points`, `quote`); `broll` and `outro` aren't cards, so there is nothing for a cue to key to |
 
 ```js
 shot: {
   feel: "relief — it really is that short",  // what the audience should FEEL here — written first, the dials follow
-  size: "mcu",                             // els · ls · fs · mfs · ms · mcu · cu · choker · ecu · insert
+  size: "mcu",                             // els · ls · fs · mfs · ms · mcu · cu · choker · ecu · insert — from what `info` shows (§2.1) and what `feel` needs (§5)
                                            // + compositions two · three · ots · pov · back · cutaway · reaction (ws = legacy ls)
   angle: "eye",                            // eye (default) · high · low · overhead · dutch — against the SUBJECT's eyes
+  why: "",                                 // optional — one line when size or angle leaves the §2.1/§5 row, or a composition tag needs its distance ("back at ms")
   info: "that the install is one command", // one line on what this shot newly TELLS the audience
   infoType: "other",                       // other · timeline · statistic · principle
   share: "install is one command",         // the one sentence, figure or verdict a viewer forwards as-is
@@ -462,7 +720,10 @@ shot: {
   shot. The size words, the angle words and the space block go into `bgPrompt` too, since the
   still is where they get drawn — `assemble-bg-prompt.js` writes that prefix (directing-grammar
   §3.5). The vocabulary, the cut lines (never at a joint), the distances and the sound that
-  matches each size are `directing-grammar.md` §2–§3.
+  matches each size are `directing-grammar.md` §2–§3. The size is read twice — against what
+  `info` has to show (§2.1: place and head count want a wide, the one line wants the face, the
+  thing itself wants an insert) and against the feel row — and `check-scenes.js` fails a
+  narrated shot with no `size` after the story pass.
 - If `info` matches another shot in the same scene, that shot can be dropped. That's what
   coverage design is.
 - When you open on a close-up, pay back "where are we" with a wide or medium in the next shot.
@@ -1536,7 +1797,16 @@ the tail at the scene boundary.
 `referenceAudioPaths`, relative to this storyboard directory or absolute. A source still
 alone stays on image-to-video. The full contract is produce `video-model-selection.md`
 §Seedance per-cut selection. Check-scenes validates it and cost-preview returns the exact
-resolved generation settings. Example of an eligible action hook:
+resolved generation settings.
+
+**Previz-guided cut** — `modelPurpose: "previz"` with `previz: { clip, sha256, fps, seconds,
+blend }`: a Blender previz rendered at the billed length (whole seconds, 24 fps, clean mp4,
+one flat colour per actor) rides the reference route as `Video 1`, and
+`referenceImagePaths[0]` must be the source still (`Image 1 is the first frame`); no end
+frame, since the reference lane cannot carry `last_frame`. The prompt binds both and closes
+the clay read with `Do not reference its visual content`. The vendor bills the previz seconds
+alongside the output seconds. Contract and prompt skeleton: `blender-previz.md` §6.
+Example of an eligible action hook:
 
 ```js
 video: {

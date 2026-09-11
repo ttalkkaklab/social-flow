@@ -12,6 +12,7 @@ import * as sns from './sns-client.js';
 import * as supertonic from './supertonic-client.js';
 import * as zimage from './zimage-client.js';
 import * as blender from './blender-bridge.js';
+import * as storyboard from './storyboard.js';
 import * as mlx from './mlx-serve-client.js';
 import * as tts from './tts-client.js';
 import { checkedSpeechSchema, generateCheckedSpeech } from './tts-quality.js';
@@ -890,8 +891,11 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
     const refAudioInfo = result.referenceAudios?.length
       ? `\nReference Audio (${result.referenceAudios.length}):\n  - ${result.referenceAudios.join('\n  - ')}`
       : '';
+    const refVideoInfo = result.referenceVideos?.length
+      ? `\nReference Videos (${result.referenceVideos.length}, ${result.referenceVideoSeconds ?? '?'}s billed as input${result.referenceVideoRoute ? `, served by ${result.referenceVideoRoute}` : ''}):\n  - ${result.referenceVideos.join('\n  - ')}`
+      : '';
     return text(
-      `Video generated with references successfully!\n\nOutput: ${result.videoPath}${refImagesInfo}${refAudioInfo}\n${seedanceMeta(result)}\nPrompt: ${result.prompt}`,
+      `Video generated with references successfully!\n\nOutput: ${result.videoPath}${refImagesInfo}${refVideoInfo}${refAudioInfo}\n${seedanceMeta(result)}\nPrompt: ${result.prompt}`,
     );
   },
 
@@ -1339,5 +1343,22 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   threads_search: async (args) => {
     const input = parseArgs(threadsSearchSchema, args);
     return fromApi(await sns.threadsKeywordSearch(input));
+  },
+  // ── Storyboard ──
+  storyboard_read: async (args) => {
+    storyboard.contract();  // a missing structure-contract.js reports itself here, before the argument schema does
+    const a = parseArgs(storyboard.storyboardReadSchema, args);
+    const { win } = storyboard.readBoard(a.path);
+    return text(JSON.stringify(storyboard.contract().outline(win, a.level), null, 2));
+  },
+  storyboard_apply: async (args) => {
+    storyboard.contract();
+    const r = storyboard.applyStoryboard(parseArgs(storyboard.storyboardApplySchema, args));
+    return text(storyboard.renderApply(r), r.findings.some((f) => f.level === 'bad'));
+  },
+  storyboard_check: async (args) => {
+    storyboard.contract();
+    const r = storyboard.checkStoryboard(parseArgs(storyboard.storyboardCheckSchema, args));
+    return text(storyboard.renderCheck(r), r.violations > 0);
   },
 };

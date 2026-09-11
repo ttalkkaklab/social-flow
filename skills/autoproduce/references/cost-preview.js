@@ -265,7 +265,7 @@ function costFingerprint(scenes) {
     else if (s.type === "quote" && v.clip && typeof v.clip === "object") slot = ["quote", (v.clip.engine || v.engine) === "seedance" ? "seedance" : "veo", Number(s.duration) || 8];
     if (slot) {
       var config = Object.assign({}, v, slot[0] === "motion" ? v.video : slot[0] === "quote" ? v.clip : {});
-      var fields = ["model", "modelPurpose", "modelReason", "resolution", "generateAudio", "realFaceInput", "referenceImagePaths", "referenceAudioPaths"];
+      var fields = ["model", "modelPurpose", "modelReason", "resolution", "generateAudio", "realFaceInput", "referenceImagePaths", "referenceAudioPaths", "previz"];
       var settings = fields.map(function (key) { return config[key] === undefined ? null : config[key]; });
       parts.push((i + 1) + ":" + slot.join("/") + ":" + encodeURIComponent(JSON.stringify(settings)));
     }
@@ -286,7 +286,7 @@ function costFingerprint(scenes) {
 function forecastRows(slots) {
   return slots.map((slot) => {
     const plan = slot.plan;
-    const route = plan ? { key: plan.priceKey, fixedSeconds: plan.durationSeconds,
+    const route = plan ? { key: plan.priceKey, fixedSeconds: plan.billedSeconds || plan.durationSeconds,
       why: plan.tool + ' · ' + plan.model + ' · ' + plan.reason } : ROUTES[slot.kind + '/' + slot.engine];
     const qty = route.fixedQty !== undefined ? route.fixedQty
       : route.fixedSeconds !== undefined ? route.fixedSeconds : slot.duration;
