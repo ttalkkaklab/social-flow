@@ -30,8 +30,7 @@ Read [story-quality.md](../storyboard/references/story-quality.md) and run `node
 1. **No distorting facts** — narration and captions only recompose facts already in
    scenes.js. Don't collapse a range to its upper bound, and don't invent numbers.
 2. **No copy-paste crossposting** — "share the facts, never the sentences."
-   Redesign the register, the endings, and the information density for each platform
-   (the platform-guide playbook).
+   Redesign the register, the endings, and the information density for each platform (the platform-guide playbook).
 3. **Plain language** — screen text, narration, subtitles, captions, all of it. It has to
    land heard by ear alone. **The screen doesn't restate what the audio just said**
    (user directive 2026-08-14) — an empty `title` or `bullets` in scenes.js is not a
@@ -40,21 +39,17 @@ Read [story-quality.md](../storyboard/references/story-quality.md) and run `node
 4. **Korean with no AI tells** — apply platform-guide `references/korean-style.md` to every
    visible sentence. `check-style.py` makes the call, and an S1 blocks publishing.
 5. **Generated video follows the selected mode** — full-video may explain physical mechanisms and spatial changes. No staged documentary reenactments, no
-   real people, no national symbols, no staged news screens. Cards (static text) are
-   code-rendered only.
+   real people, no national symbols, no staged news screens. Cards (static text) are code-rendered only.
 6. **Branding belongs in the outro** — no logo or badge in the body (a brand eating the first 3
-   seconds is a skip signal). Under `shortform_outro: off` the episode carries no logo at all: the
-   avatar and the handle do that job.
-7. **The TTS voice is fixed** — don't change a single character of profile.md §2's
-   voiceName and stylePrompt.
+   seconds is a skip signal). Under `shortform_outro: off` the episode carries no logo at all: the avatar and the handle do that job.
+7. **The TTS voice is fixed** — don't change a single character of profile.md §2's voiceName and stylePrompt.
 8. **Generated video comes from an image** — don't use `veo_text2video`. The order is always
    approved image provider → keep the PNG in `storyboard/images/` → the selected image-to-video engine.
    With `PRODUCTION.imageProvider:"host"` (Codex, Grok) the still comes from the host `image_gen`, and with `videoProvider:"host"` (Grok) the clip comes from the host `image_to_video` — the plugin's API tools are the fallback the user is asked about, never a silent one (still-generation §1, video-model-selection §The host video tool comes first).
    The image is the reference point for reproducing a shot: if the video isn't right,
    rerun it off the same PNG with only the motion prompt changed. Video made straight from
    text gives a different scene every time even from the same prompt, so there's nothing
-   to go back to. **Never delete `storyboard/images/*.png`** — delete them and that episode
-   can't be rebuilt.
+   to go back to. **Never delete `storyboard/images/*.png`** — delete them and that episode can't be rebuilt.
 9. **Don't lay narration over a stretch where generated video plays** — that stretch uses
    **the sound the clip came with**. Put TTS on top and the two sounds fight, and the
    synthetic voice flattens the generated clip's sense of space. That scene is
@@ -82,15 +77,13 @@ Read [story-quality.md](../storyboard/references/story-quality.md) and run `node
    requires the publishing disclosure (`containsSyntheticMedia: true` on YouTube).
 12. **Don't throw the cover background PNG (the meta image) together** — the cover frame
    becomes `cover.jpg` (the YouTube thumbnail and the first screen of the IG and FB videos)
-   as-is. No still lifes or abstract backgrounds unrelated to the topic — the default is one
-   of two:
+   as-is. No still lifes or abstract backgrounds unrelated to the topic — the default is one of two:
    **a photoreal scene with a person that shows the topic at a glance** (the person contract
    from rule 11, unchanged), or **the topic itself** (the result screen or product screenshot
    the episode is about — for dev and tool channels, where the evidence is a screen rather
    than a person. "Expertise shows in evidence, not in claims", 2026-08-15).
    Either way make it at `quality: "high"`, and if channel profile §3 sets a different art
-   style, that wins. The text is still code-rendered (rule 10) — this rule is about the
-   background picture.
+   style, that wins. The text is still code-rendered (rule 10) — this rule is about the background picture.
    **A b-roll source is the same file as the background of the scene it attaches to
    (`after`)** — the photo the previous scene showed as a still starts moving, so one image
    does two jobs. For an opening b-roll (`after: 0`) that file is the cover background. For
@@ -688,7 +681,11 @@ A raw TTS call has no quality proof and cannot enter assembly.
 
 One checked call per scene — the profile registry as it stands, and the script is the full text
 of that scene's narration segments' `tts` sentences joined with periods. `.work/pcm/c<n>.wav`.
-Don't split a scene into several calls by sentence (the voice varies between calls).
+Don't split a scene into several calls by sentence (the voice varies between calls). Pass the
+same `tts` sentences as `segments`, and the profile's playback speed as `playbackSpeed` when
+§2 sets one: on an ElevenLabs take the wrapper lays a fixed pause at each segment boundary and
+writes `c<n>.wav.sentences.json`, which the builder snaps its reveals and cues to
+(`references/tts-quality.md` §Sentence spacing).
 
 **profile §2 decides the engine.** A new channel's narration default is `tts_local_generate`
 (Supertonic, local) — no key, no quota, and 0 cost however many times you rerun the episode,
@@ -696,7 +693,9 @@ so regenerating is free. Only lines that need a style instruction, meaning shots
 emotion has to be acted, go to `tts_generate` (Gemini). The local side has no stylePrompt.
 A profile with `engine: elevenlabs` calls `tts_elevenlabs_generate` with the profile's
 voiceId · model · stability (and seed, if pinned) and leaves `outputFormat` at its default
-`wav_24000` — mono 24kHz WAV, the same spec as Gemini, so the builder reads it as-is.
+`wav_24000` — mono 24kHz WAV, the same spec as Gemini, so the builder reads it as-is. The
+checked wrapper adds `timestamps` itself and moves a pinned seed by one on each retake (the
+same seed returns the same bytes); don't pass `previousText`/`nextText` — the scene is one call.
 **Never pass an mp3_* outputFormat for narration**: build-reel.sh reads any non-RIFF audio
 file as raw PCM and that card becomes noise. A scene with three or more speakers goes to
 `tts_elevenlabs_dialogue` in one call (no per-speaker stitching, no 0.75s gaps). Audio tags
@@ -1336,6 +1335,7 @@ length, platforms) together with the cost summary, and point the user at
 - **`references/splice-clip.sh`** — post-build clip insertion (b-roll up to 2 slots · series stinger). Takes several `<clip> <T>` pairs and splices them in **a single run** (split it into two calls and the first splice is erased), handles clean and burned-in separately, shifts each subtitle cue by the sum of the measured lengths of the insertions before it, and checks for cues straddling T and for matching lengths
 - **`references/capture-frames.sh` / `capture-reveals.sh`** — headless capture (state count derived automatically)
 - **`references/render-motion-slide.mjs`** — motion-slide renderer (§3.6): one clip per reveal group, headless Chrome over the DevTools pipe with no npm dependency, every frame seeked to an exact time so a re-render is byte-identical; `--sheet` writes the frames the §3.6 sheet read looks at. It renders **every authored screen** — diagram, kinetic type, character act — since all it asks a page for is the seek contract
+- **`references/snap-boundaries.py`** — the checked take's sentence sidecar snapped to the detected pauses, bound to the WAV's hash (build-reel §4)
 - **`references/reveal-timing.py`** — reveal timing derived backwards from the narration's pauses
 - **`references/frame-persona-clip.py`** — unifies speaking-clip framing + palindrome
 - **`references/reel-qa.html`** — the phone-mode QA harness (IG/YT UI mockups · crop reproduction · safe-zone guides)

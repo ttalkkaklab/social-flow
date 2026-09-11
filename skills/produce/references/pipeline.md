@@ -47,7 +47,7 @@ bottom 570px     burned-in subtitle band (y 1380–1560) + IG caption / YT chann
 ## What build-reel.sh does (in order)
 
 Silence trim → loudnorm -16 → measured speech rate (warning band only — the voice is not time-stretched; `ATEMPO_MIN`/`ATEMPO_MAX` default to 1.0 since 2026-09-11)
-→ sentence-boundary detection (silencedetect — character-count proportional fallback on failure) → card
+→ sentence-boundary detection (silencedetect, snapped to the checked take's `<wav>.sentences.json` when the TTS tool wrote one — the M−1 longest pauses without a sidecar, character-count proportional fallback on failure) → card
 duration rounded up to whole frames + sample-accurate audio padding (**zero drift**) → reveal transition
 timing (reveal-timing.py) → visual chain (video + alpha overlay composite → reveal xfade) → Ken Burns
 zoompan (4%/s on stills, capped at 1.075) → concat → BGM sidechain ducking → subtitle files (`subs.srt` for publishing ·
@@ -94,6 +94,8 @@ falls back silently and no short video loops or freezes to fill its window.
 | `missing reveal state: r<k>` | **Do not proceed** — capture the missing state and split that segment into `A\|B` sub-reveals, then rebuild |
 | `last reveal state unused` | **Do not proceed** — the last bullet/source never appears in the video. If `no reveals.tsv` shows, this check is off (capture-reveals.sh wasn't used) |
 | `REGEN recommended` (speech rate outside [3.2/factor, 6.2/factor] — [3.2, 6.2] at the 1.0 default · clipped ending) | Recheck that card through the checked speech gate within its remaining attempt allowance, then rebuild. If exhausted, hold and correct the script through the existing approval rules |
+| `boundary sidecar N/K` | OK — the boundaries are the pauses the checked TTS tool laid in (`<wav>.sentences.json`), snapped to the detected silences |
+| `⚠ … sentence sidecar did not match the detected pauses` | OK to continue — the build used the longest pauses instead. Check that card's reveals in playback; a recurring mismatch means the WAV was edited after the checked tool wrote its sidecar |
 | `boundary proportional fallback` | OK to continue — if it recurs, fix the script's sentence boundaries (periods) |
 | `segment window under 0.9s` | Merge the short sentence with a neighbor |
 | `min gap between reveals <0.40s` | Trim bullets or lengthen the sentence |
