@@ -428,7 +428,7 @@
   .shot-why { font-size: 0.8em; color: var(--muted); margin-left: 0.4em; }
   .shot-grammar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s3); margin: var(--s2) 0 0; }
   .shot-size { display: inline-flex; align-items: center; gap: 8px; cursor: help; border: 0; padding: 0; letter-spacing: 0; }
-  .shot-size .size-ico { width: 30px; height: 30px; border-radius: 23%; }
+  .shot-size .size-ico { width: 32px; height: 32px; border-radius: 23%; }
   .shot-size .sz { display: flex; flex-direction: column; line-height: 1.15; }
   .shot-size .sz b { font-size: var(--t-cap); font-weight: 700; color: var(--text); }
   .shot-size .sz small { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9.5px; color: var(--faint); letter-spacing: .04em; }
@@ -452,6 +452,7 @@
   .size-ico.r-html { background: linear-gradient(160deg, #34d399, #0d7f6b); }
   .size-ico.r-photo { background: linear-gradient(160deg, #60a5fa, #3730a3); }
   .size-ico.r-asset { background: linear-gradient(160deg, #a1a1aa, #52525b); }
+  .size-ico.a-cam { background: linear-gradient(160deg, #8b9cff, #3b3f9e); }
   .size-key {
     display: grid; grid-template-columns: repeat(auto-fill, minmax(66px, 1fr)); gap: var(--s3) var(--s1);
     margin: var(--s3) 0 0; padding: var(--s3) var(--s4); border-radius: 12px; background: var(--sunk);
@@ -1108,6 +1109,12 @@ window.SB_DOC = {
               pov: "POV", back: "back shot", cutaway: "cutaway", reaction: "reaction shot" },
       sizeKey: "shot size",
       renderKey: "render route",
+      angleKey: "camera angle",
+      angleHint: { eye: "camera at the subject's eye height — neutral, how people meet",
+                   high: "camera above, looking down — smaller, weaker, watched",
+                   low: "camera below, looking up — bigger, stronger, threatening",
+                   overhead: "straight down from above — a map of the scene, no face",
+                   dutch: "the horizon tilted — unease, something is off" },
       render: { still_camera: "still + camera move", character_html: "3D character HTML", object_html: "3D object HTML",
                 data_graph: "data graph HTML", editorial_html: "quote · verdict HTML", generated_video: "AI video",
                 recording: "recording", asset: "shared asset", slide: "HTML slide" },
@@ -1399,6 +1406,12 @@ window.SB_DOC = {
               pov: "POV", back: "back shot", cutaway: "cutaway", reaction: "reaction shot" },
       sizeKey: "샷 사이즈",
       renderKey: "렌더 방식",
+      angleKey: "카메라 앵글",
+      angleHint: { eye: "카메라가 인물 눈높이 — 중립, 사람이 마주 보는 높이",
+                   high: "위에서 내려다본다 — 작아 보이고 약해 보이고 감시당하는 느낌",
+                   low: "아래에서 올려다본다 — 커 보이고 세 보이고 위협적",
+                   overhead: "바로 위에서 수직으로 — 장면의 지도, 얼굴은 없다",
+                   dutch: "수평선을 기울인다 — 불안, 뭔가 어긋났다" },
       render: { still_camera: "사진 카메라 무빙", character_html: "3D 캐릭터 HTML", object_html: "3D 사물 HTML",
                 data_graph: "그래프 HTML", editorial_html: "인용·결론 HTML", generated_video: "AI 영상",
                 recording: "녹화분", asset: "공용 소재", slide: "HTML 슬라이드" },
@@ -1868,8 +1881,31 @@ window.SB_DOC = {
                 '<path d="M25.5 6.5l2.5-3.5M29 10l3-1.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>'
     };
     D.ws = D.ls;
-    return D;
+    /* Camera angles — a small camera, an arrow for where it looks, and the subject */
+    function cam(x, y) {
+      return '<rect x="' + x + '" y="' + y + '" width="9" height="6.5" rx="1.6" ' + C + '/>' +
+             '<rect x="' + (x + 2.5) + '" y="' + (y - 1.6) + '" width="4" height="2" rx=".8" ' + C + '/>' +
+             '<circle cx="' + (x + 4.5) + '" cy="' + (y + 3.25) + '" r="1.7" ' + W + '/>';
+    }
+    function arrow(x1, y1, x2, y2) {
+      var dx = x2 - x1, dy = y2 - y1, l = Math.sqrt(dx * dx + dy * dy), ux = dx / l, uy = dy / l;
+      var hx = x2 - ux * 2.6, hy = y2 - uy * 2.6, px = -uy * 2, py = ux * 2;
+      return '<path d="M' + x1 + ' ' + y1 + 'L' + x2 + ' ' + y2 + 'M' + (hx + px) + ' ' + (hy + py) + 'L' + x2 + ' ' + y2 + 'L' + (hx - px) + ' ' + (hy - py) + '" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" fill="none"/>';
+    }
+    var A = {
+      eye: cam(3, 12.5) + arrow(13.5, 15.75, 18.5, 15.75) + person(24.5, 5, 26, { arms: false }),
+      high: cam(3, 4.5) + arrow(12.5, 10.5, 17.5, 16) + person(24.5, 8, 24, { arms: false }),
+      low: cam(3, 23.5) + arrow(12.5, 23, 17.5, 17.5) + person(24.5, 2.5, 26, { arms: false }),
+      overhead: cam(11.5, 3.5) + arrow(16, 11.5, 16, 15) +
+                '<ellipse cx="16" cy="24.5" rx="8.5" ry="4.5" ' + C + '/><circle cx="16" cy="23" r="3.2" ' + W + '/>',
+      dutch: '<g transform="rotate(-16 16 16)"><rect x="5" y="8.5" width="22" height="15" rx="2.2" stroke="currentColor" stroke-width="2" fill="none"/>' +
+             '<path d="M8 18.5h16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" opacity=".7"/></g>' +
+             person(16, 9, 18, { arms: false })
+    };
+    return { sizes: D, angles: A };
   })();
+  var ANGLE_ICON = SIZE_ICON.angles;
+  SIZE_ICON = SIZE_ICON.sizes;
   var SIZE_FAMILY = { els: "wide", ls: "wide", ws: "wide", fs: "body", mfs: "body", ms: "body",
                       mcu: "face", cu: "face", choker: "face", ecu: "face", insert: "thing",
                       two: "group", three: "group", ots: "group", pov: "view", back: "view", cutaway: "view", reaction: "view" };
@@ -1878,6 +1914,11 @@ window.SB_DOC = {
     return d ? '<svg class="size-ico f-' + SIZE_FAMILY[size] + '" viewBox="0 0 32 32" aria-hidden="true">' + d + "</svg>" : "";
   }
   function sizeTitle(size) { return (T.size[size] || size) + " — " + (T.sizeHint[size] || ""); }
+  function angleIcon(a) {
+    var d = ANGLE_ICON[a];
+    return d ? '<svg class="size-ico a-cam" viewBox="0 0 32 32" aria-hidden="true">' + d + "</svg>" : "";
+  }
+  function angleTitle(a) { return (T.angle[a] || a) + " — " + (T.angleHint[a] || ""); }
   /* Render-route pictograms — what makes the picture move: an AI clip, an HTML animation,
      or a camera over a photo. Same 32×32 tile as the size icons. */
   var RENDER_ICON = (function () {
@@ -1914,7 +1955,7 @@ window.SB_DOC = {
     var d = RENDER_ICON[mode];
     return d ? '<svg class="size-ico r-' + RENDER_FAMILY[mode] + '" viewBox="0 0 32 32" aria-hidden="true">' + d + "</svg>" : "";
   }
-  function renderTitle(mode) { return mode + " — " + (T.renderHint[mode] || ""); }
+  function renderTitle(mode) { return (T.render[mode] || mode) + " — " + (T.renderHint[mode] || ""); }
   /* The route of a shot: shot.render.mode when declared, else what the picture inference says */
   function renderModeOf(s, g) {
     if (g.render && g.render.mode) return g.render.mode;
@@ -1928,6 +1969,10 @@ window.SB_DOC = {
     return '<div class="size-key"><span class="kt">' + esc(T.sizeKey) + "</span>" +
       order.map(function (k) {
         return '<span class="k" title="' + esc(sizeTitle(k)) + '">' + sizeIcon(k) + '<span>' + esc(T.size[k] || k) + "</span></span>";
+      }).join("") + "</div>" +
+      '<div class="size-key"><span class="kt">' + esc(T.angleKey) + "</span>" +
+      ["eye", "high", "low", "overhead", "dutch"].map(function (k) {
+        return '<span class="k" title="' + esc(angleTitle(k)) + '">' + angleIcon(k) + '<span>' + esc(T.angle[k] || k) + "</span></span>";
       }).join("") + "</div>" +
       '<div class="size-key routes"><span class="kt">' + esc(T.renderKey) + "</span>" +
       routes.map(function (k) {
@@ -3696,15 +3741,19 @@ window.SB_DOC = {
     h += '<article class="scene"><div class="scene-head">';
     h += '<span class="scene-no">' + esc(T.shotCap(no)) + " · " + esc(T.type[s.type] || s.type) + "</span>";
     // Shot grammar — size tile, angle and render tile — sits on its own row under the head so
-    // the head keeps the number, title and beat tags. shot.why and render.reason are tooltips
-    // on their tiles, so the row stays one glance wide.
+    // the head keeps the number, title and beat tags. Icons only: the term, its meaning and
+    // this shot's why / render.reason are the tile's tooltip; the legend above names every icon.
     var gram = "";
-    if (g.size) gram += '<span class="shot-size' + (T.size[g.size] ? "" : " unknown") + '" title="' + esc(sizeTitle(g.size) + (g.why ? "\n\n" + g.why : "")) + '">' +
-                        sizeIcon(g.size) + '<span class="sz"><b>' + esc(T.size[g.size] || (g.size + " ?")) + "</b></span></span>";
-    if (g.angle && T.angle[g.angle]) gram += '<span class="shot-angle angle-' + esc(g.angle) + '">' + esc(T.angle[g.angle]) + "</span>";
+    function tile(icon, label, tip, unknown) {
+      return '<span class="shot-size' + (unknown ? " unknown" : "") + '" title="' + esc(tip) + '">' +
+             (icon || '<span class="sz"><b>' + esc(label) + "</b></span>") + "</span>";
+    }
+    if (g.size) gram += tile(sizeIcon(g.size), T.size[g.size] || (g.size + " ?"),
+                             sizeTitle(g.size) + (g.why ? "\n\n" + g.why : ""), !T.size[g.size]);
+    if (g.angle) gram += tile(angleIcon(g.angle), T.angle[g.angle] || (g.angle + " ?"), angleTitle(g.angle), !T.angle[g.angle]);
     var rmode = renderModeOf(s, g);
-    if (rmode) gram += '<span class="shot-size' + (T.render[rmode] ? "" : " unknown") + '" title="' + esc(renderTitle(rmode) + (g.render && g.render.reason ? "\n\n" + g.render.reason : "")) + '">' +
-                       renderIcon(rmode) + '<span class="sz"><b>' + esc(T.render[rmode] || (rmode + " ?")) + "</b><small>" + esc(rmode) + "</small></span></span>";
+    if (rmode) gram += tile(renderIcon(rmode), T.render[rmode] || (rmode + " ?"),
+                            renderTitle(rmode) + (g.render && g.render.reason ? "\n\n" + g.render.reason : ""), !T.render[rmode]);
     // A shot with no title (screen text only when needed — scenes-schema) builds its header from badges alone
     var headTitle = s.title || (s.type === "quote" ? s.text : "");
     if (headTitle) h += '<span class="scene-title">' + mark(headTitle) + "</span>";
