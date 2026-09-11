@@ -62,14 +62,19 @@ reveals and subtitle cues landed late. The checked tool therefore fetches every
 `tts_elevenlabs_generate` take with timestamps and, before it measures or reviews anything,
 lays the pauses in from the take's own character alignment:
 
-- one fixed `sentencePause` (default 0.5 s) of digital silence at each segment boundary,
-  cut from the short natural gap 0.12 s after the sentence's last letter — a take that already
-  pauses longer than that is left alone there;
+- one fixed `sentencePause` (default 0.5 s) of digital silence at each segment boundary. The
+  cut sits inside the natural gap: up to 0.12 s after the sentence's last letter but never
+  closer than 0.03 s to the next sentence's first letter (the aligner marks onsets late), and on
+  a gap shorter than 0.03 s it sits on the last letter itself — a take that already pauses
+  longer than the target is left alone there;
 - the pause grows past `sentencePause`, up to 1.0 s, only where that sentence's subtitle cue
   would otherwise read faster than 6.0 chars/s after `playbackSpeed` (cue = sentence start to
   next sentence start; the ship gate is 6.2);
 - a fixed 0.14 s lead before the first word (the builder keeps 0.10 s, so every card opens
-  the same way), a 12 ms fade on either side of each cut, and not one speech sample changed.
+  the same way) and a 12 ms fade on each side of a cut, taken only where it falls on the natural
+  gap — a fade-in never touches the next sentence's first letter, and only when a gap is
+  shorter than 0.03 s does the fade-out shade the last 12 ms of the previous word. Otherwise
+  every speech sample is copied as generated.
 
 It writes `<wav>.sentences.json` — each sentence's start and end in the shipped WAV — and
 rewrites `.alignment.json` to that timeline (`vendor_alignment` keeps the original, `respaced`

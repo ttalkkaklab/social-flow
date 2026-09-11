@@ -78848,6 +78848,13 @@ function parseWav(buffer) {
   throw new Error("WAV has no data chunk");
 }
 var isLetter = (c) => /[\p{L}\p{N}]/u.test(c);
+function tagClose(chars, open2) {
+  for (let k = open2 + 1; k < chars.length && k <= open2 + 40; k++) {
+    if (chars[k] === "]") return k;
+    if (/[.?!…\[]/.test(chars[k])) return -1;
+  }
+  return -1;
+}
 function splitSentences(text2) {
   return text2.split(/(?<=[.?!…]+)\s+/u).map((s2) => s2.trim()).filter(Boolean);
 }
@@ -78863,7 +78870,7 @@ function locateSegments(alignment, segments) {
     for (const letter of letters) {
       while (i2 < chars.length && chars[i2] !== letter) {
         if (chars[i2] === "[") {
-          const close = chars.indexOf("]", i2);
+          const close = tagClose(chars, i2);
           if (close > i2) {
             i2 = close + 1;
             continue;
@@ -78881,7 +78888,7 @@ function locateSegments(alignment, segments) {
   }
   for (let j = i2; j < chars.length; j++) {
     if (chars[j] === "[") {
-      const close = chars.indexOf("]", j);
+      const close = tagClose(chars, j);
       if (close > j) {
         j = close;
         continue;
@@ -79267,7 +79274,16 @@ async function generateCheckedSpeech(input, dependencies) {
           last.failures = [...Array.isArray(last.failures) ? last.failures : [], "Rejected during final listening: " + request.rejectTake.reason];
         }
         if (!request.rejectTake && old.model === REVIEW_MODEL && old.status === "pass" && last?.pending === false && Array.isArray(last.failures) && !last.failures.length && typeof last.transcript === "string" && existsSync6(output) && old.audioSha256 === sha256(readFileSync5(output)) && last.audioSha256 === old.audioSha256 && !signalFailures(last.signal, request.expectedText).length && !reviewFailures(request.expectedText, String(last.transcript), reviewSchema.parse(last.review), last.signal.duration).length) {
-          return { success: true, status: "pass", audioPath: output, proofPath: proofFile, attempts: attempts.length, reused: true };
+          const lastSpacing = last.spacing;
+          return {
+            success: true,
+            status: "pass",
+            audioPath: output,
+            proofPath: proofFile,
+            attempts: attempts.length,
+            reused: true,
+            spacing: !prepared.spacing ? "not applicable" : lastSpacing?.skipped ? "skipped: " + String(lastSpacing.skipped) : "applied"
+          };
         }
         if (!request.rejectTake && old.model !== REVIEW_MODEL && old.status === "pass" && last && existsSync6(output) && last.audioSha256 === sha256(readFileSync5(output))) {
           last.previousReviews = [
@@ -84215,7 +84231,7 @@ Returns: a text block with the mp4 path, still paths (and any requested still ou
     annotations: HINT.generate,
     description: `Generate one scene with the pinned TTS engine, review the actual WAV, and regenerate failed takes up to maxAttempts (1\u20133, including the first take).
 Use for every generated narration scene in produce/autoproduce. Pass the existing generator's arguments in generation, the complete spoken expectedText (phonetic spelling; no acting tags or speaker labels), language, and the profile's intended delivery. Voice and generation settings stay unchanged across attempts; a pinned seed advances by one per retake, because the same seed returns the same bytes. An entire scene is one call; never split it into sentence calls.
-On tts_elevenlabs_generate the take is fetched with timestamps and its sentences are re-spaced before review: a fixed sentencePause of digital silence between sentences (stretched up to 1.0s where a subtitle cue would read faster than 6.0 chars/s after playbackSpeed), a 0.14s lead, speech samples untouched. Pass segments (the scene's narration[].tts list) so the pauses land on the builder's segment boundaries; the wrapper writes <wav>.sentences.json and shifts the .alignment.json to the shipped audio.
+On tts_elevenlabs_generate the take is fetched with timestamps and its sentences are re-spaced before review: a fixed sentencePause of digital silence between sentences (stretched up to 1.0s where a subtitle cue would read faster than 6.0 chars/s after playbackSpeed), a 0.14s lead, speech samples copied as generated (the 12 ms fades stay on the natural gap). Pass segments (the scene's narration[].tts list) so the pauses land on the builder's segment boundaries; the wrapper writes <wav>.sentences.json and shifts the .alignment.json to the shipped audio.
 Checks signal/duration, a blind transcript (CER <=2%), then ${REVIEW_MODEL} listening scores: accuracy >=98, pronunciation/naturalness/clarity >=95, confidence >=0.9, no audible defects. Returns a hash-bound .wav.quality.json proof required by the builder. Missing keys, unavailable reviewer, malformed responses or exhausted attempts block production. Scores are operational thresholds, not a guarantee of human judgement.
 Requires ffmpeg and GEMINI_API_KEY even for local synthesis. Two paid audio-review calls per acoustically valid take, plus the selected generator's costs. Record the retry-inclusive allowance before calling; review tokens are logged as unpriced until reconciled with provider billing. Do not call again to reset an exhausted attempt budget. Do not use for recordings or native clip speech; retain their final listening QA. Do not change engines/voices or lower thresholds to obtain PASS.`,
     inputSchema: {

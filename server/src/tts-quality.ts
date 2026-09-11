@@ -256,7 +256,9 @@ export async function generateCheckedSpeech(input: CheckedSpeechRequest, depende
         }
         if (!request.rejectTake && old.model === REVIEW_MODEL && old.status === 'pass' && last?.pending === false && Array.isArray(last.failures) && !last.failures.length && typeof last.transcript === 'string' && existsSync(output) && old.audioSha256 === sha256(readFileSync(output)) && last.audioSha256 === old.audioSha256 &&
           !signalFailures(last.signal as Signal, request.expectedText).length && !reviewFailures(request.expectedText, String(last.transcript), reviewSchema.parse(last.review), (last.signal as Signal).duration).length) {
-          return { success: true, status: 'pass', audioPath: output, proofPath: proofFile, attempts: attempts.length, reused: true };
+          const lastSpacing = last.spacing as Record<string, unknown> | undefined;
+          return { success: true, status: 'pass', audioPath: output, proofPath: proofFile, attempts: attempts.length, reused: true,
+            spacing: !prepared.spacing ? 'not applicable' : lastSpacing?.skipped ? 'skipped: ' + String(lastSpacing.skipped) : 'applied' };
         }
         if (!request.rejectTake && old.model !== REVIEW_MODEL && old.status === 'pass' && last &&
           existsSync(output) && last.audioSha256 === sha256(readFileSync(output))) {

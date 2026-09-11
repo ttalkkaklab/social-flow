@@ -7,7 +7,9 @@
  * alignment (per-character seconds) says exactly where every sentence ends and the next one
  * starts, so this module cuts the short natural gap and lays digital silence in its place:
  * one fixed pause between sentences, a fixed lead before the first word, and a sidecar the
- * builder reads to pick the right pause without guessing. Not one speech sample is touched.
+ * builder reads to pick the right pause without guessing. Speech samples are copied as generated;
+ * the only edits are the 12 ms fades at a cut, which stay on the natural gap (a gap shorter
+ * than `head` puts the cut on the last letter, so its final 12 ms are faded out).
  */
 import { pcmToWav } from './media-utils.js';
 
@@ -68,6 +70,14 @@ export function parseWav(buffer: Buffer): ParsedWav {
 }
 
 const isLetter = (c: string): boolean => /[\p{L}\p{N}]/u.test(c);
+/** The closing bracket of an acting tag at `open`, or -1: a tag is short and holds no sentence-final punctuation. */
+function tagClose(chars: string[], open: number): number {
+  for (let k = open + 1; k < chars.length && k <= open + 40; k++) {
+    if (chars[k] === ']') return k;
+    if (/[.?!…\[]/.test(chars[k])) return -1;
+  }
+  return -1;
+}
 
 /** Sentences of a script: split after sentence-final punctuation, the punctuation staying with its sentence. */
 export function splitSentences(text: string): string[] {
@@ -103,7 +113,7 @@ export function locateSegments(alignment: Alignment, segments: string[]): Locate
     for (const letter of letters) {
       while (i < chars.length && chars[i] !== letter) {
         // An acting tag the vendor echoed into the alignment ("[whispers]") is not spoken text: skip it whole.
-        if (chars[i] === '[') { const close = chars.indexOf(']', i); if (close > i) { i = close + 1; continue; } }
+        if (chars[i] === '[') { const close = tagClose(chars, i); if (close > i) { i = close + 1; continue; } }
         if (isLetter(chars[i])) throw new Error(`Segment ${n + 1} (${segment.slice(0, 20)}…) does not follow the take's text at character ${i}`);
         i++;
       }
@@ -114,7 +124,7 @@ export function locateSegments(alignment: Alignment, segments: string[]): Locate
     out.push({ text: segment, chars: letters.length, first, last, start: starts[first], end: ends[last] });
   }
   for (let j = i; j < chars.length; j++) {
-    if (chars[j] === '[') { const close = chars.indexOf(']', j); if (close > j) { j = close; continue; } }
+    if (chars[j] === '[') { const close = tagClose(chars, j); if (close > j) { j = close; continue; } }
     if (isLetter(chars[j])) throw new Error('The take speaks more text than the segments cover');
   }
   return out;
