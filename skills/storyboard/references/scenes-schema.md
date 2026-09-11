@@ -615,8 +615,8 @@ never a `videoDesign.camera` sentence, and `spatial-prompts.js` assembles the mo
 from them through the same recipe and prompt gate as every other clip. Keep real
 infoType/purpose, data evidence and narration. The source PNG, stored motion prompt and
 optional `visual.frames.end` drive the same spatial action. Runtime output path is
-`visual.video.clip`. Use explicit 1080p and audio false; only burned subtitles overlay the
-video. The selected style replaces the generic photo rule. A verified recording or shared
+`visual.video.clip`. Use the resolution `PRODUCTION.videoModel` records (720p on the 2.0
+fast/mini grades, 1080p otherwise) and audio false; only burned subtitles overlay the video. The selected style replaces the generic photo rule. A verified recording or shared
 outro retains its source. Full-video quality evidence is in `.work/video-review.json`, tied to
 the actual source and clip hashes, checked before the build.
 
@@ -1830,13 +1830,19 @@ alone stays on image-to-video. The full contract is produce `video-model-selecti
 §Seedance per-cut selection. Check-scenes validates it and cost-preview returns the exact
 resolved generation settings.
 
-**Previz-guided cut** — `modelPurpose: "previz"` with `previz: { clip, sha256, fps, seconds,
-blend }`: a Blender previz rendered at the billed length (whole seconds, 24 fps, clean mp4,
-one flat colour per actor) rides the reference route as `Video 1`, and
-`referenceImagePaths[0]` must be the source still (`Image 1 is the first frame`); no end
-frame, since the reference lane cannot carry `last_frame`. The prompt binds both and closes
-the clay read with `Do not reference its visual content`. The vendor bills the previz seconds
-alongside the output seconds. Contract and prompt skeleton: `blender-previz.md` §6.
+**The previz — on every generated cut** (user directive 2026-09-11) — `previz: { renderer,
+clip, firstFrame, sha256, fps, seconds, camera: { movement }, handoff?, actors?, blend? }`: a
+Blender (`renderer:"blender"`) or three.js (`"threejs"`) previz rendered at the billed length
+(whole seconds, 24 fps, clean mp4, one flat colour per actor). `camera.movement` is the move the
+clip performs and must equal `visual.camera.movement`; `firstFrame` is frame 1, the composition
+the source still is edited from. On the Seedance route (`modelPurpose: "previz"`,
+`handoff: "reference_video"`) the clip rides as `Video 1` and `referenceImagePaths[0]` must be
+the source still (`Image 1 is the first frame`); no end frame, since the reference lane cannot
+carry `last_frame`; the prompt binds both and closes the clay read with `Do not reference its
+visual content`, and the vendor bills the previz seconds alongside the output seconds. On
+`engine: "host"` the handoff is `frame_and_prompt` — the still and the prompt carry the previz.
+`check-scenes.js` refuses a `generated_video` cut with a `visual.video` slot and no previz
+(deferred in `--draft`); b-roll and speech clips ride the Veo sound lane and carry none. Contract, both renderers and the prompt skeleton: `blender-previz.md` §6.
 Example of an eligible action hook:
 
 ```js

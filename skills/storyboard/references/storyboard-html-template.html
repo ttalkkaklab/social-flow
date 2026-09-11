@@ -1304,7 +1304,7 @@ window.SB_DOC = {
       prodScope: "Video API cost only. Images, narration, editing and tax are excluded; the mode not selected is an estimate under stated assumptions.",
       prodTerms: function (rate, cap, attempts) { return "Assumed KRW/USD: " + rate + ". Approved video budget: $" + cap + ". Total attempts per clip: " + attempts + "."; },
       prodRows: "Model, resolution and cost per shot", prodShot: "Shot ", withAudio: "with audio", silent: "silent",
-      framePending: "Image pending", frameStart: "Start frame", frameEnd: "End frame", framePreviz: "Previz · Video 1 (camera and timing)",
+      framePending: "Image pending", frameStart: "Start frame", frameEnd: "End frame", framePreviz: "Previz · Video 1 (camera and timing)", framePrevizFirst: "Previz frame 1 (the still's composition)",
       frameChange: "Subject change", frameEndState: "End state: ",
 
       // ── header meta ──
@@ -1619,7 +1619,7 @@ window.SB_DOC = {
       prodScope: "영상 API 비용만 계산합니다. 이미지·음성·편집·세금은 제외하며 선택하지 않은 방식은 가정에 따른 추산입니다.",
       prodTerms: function (rate, cap, attempts) { return "원화 환산 가정: 1달러=" + rate + "원. 승인 예산: $" + cap + ". 장면당 총 시도 한도: " + attempts + "회."; },
       prodRows: "장면별 모델·해상도·생성비", prodShot: "장면 ", withAudio: "음성 포함", silent: "무음",
-      framePending: "이미지 생성 예정", frameStart: "시작 프레임", frameEnd: "끝 프레임", framePreviz: "프리비즈 · Video 1 (카메라·타이밍)",
+      framePending: "이미지 생성 예정", frameStart: "시작 프레임", frameEnd: "끝 프레임", framePreviz: "프리비즈 · Video 1 (카메라·타이밍)", framePrevizFirst: "프리비즈 1번 프레임 (스틸의 구도)",
       frameChange: "피사체 변화", frameEndState: "끝 상태: ",
 
       // ── header meta ──
@@ -4074,7 +4074,10 @@ window.SB_DOC = {
           if (previz) inputs += '<figure><figcaption>' + esc(T.framePreviz) + '</figcaption>' + (previz.clip
             ? '<video src="' + esc(previz.clip) + '" muted loop controls playsinline preload="metadata"></video>'
             : '<div class="pending-frame">' + esc(T.framePending) + '</div>') +
-            '<div class="frame-reason">' + esc((previz.seconds || '?') + 's · ' + (previz.fps || '?') + ' fps · sha256 ' + String(previz.sha256 || '').slice(0, 12)) + '</div></figure>';
+            '<div class="frame-reason">' + esc((previz.renderer || '?') + ' · ' + (previz.seconds || '?') + 's · ' + (previz.fps || '?') + ' fps · ' +
+              (previz.camera && previz.camera.movement ? previz.camera.movement + ' · ' : '') + 'sha256 ' + String(previz.sha256 || '').slice(0, 12)) + '</div></figure>';
+          // Frame 1 of the previz is the composition the source still was edited from (blender-previz.md §6.6).
+          if (previz) inputs += frameInput(previz.firstFrame || '', T.framePrevizFirst);
           var motionPlan = s.shot && s.shot.videoDesign && s.shot.videoDesign.motion;
           if (motionPlan) {
             inputs += '<div class="frame-reason"><strong>' + esc(T.frameChange) + '</strong><br>' + esc(motionPlan.visibleChange || '') +

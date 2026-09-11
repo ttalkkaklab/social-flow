@@ -2096,6 +2096,26 @@ function selftest() {
        tree.sequences.length === 2 && tree.sequences[1].scenes[0].shots[0].no === 2 && tree.sequences[1].scenes[0].slug === '부엌 / 밤');
   }
 
+  // ── every generated_video cut pre-renders in 3D first (blender-previz.md §6, user directive 2026-09-11) ──
+  const previzRecord = { renderer: 'blender', clip: 'previz/s2.mp4', firstFrame: 'previz/s2-f0001.png', sha256: 'b'.repeat(64),
+    fps: 24, seconds: 6, camera: { movement: 'dolly in' } };
+  const videoCut = (video) => Object.assign({}, goodShot, {
+    shot: Object.assign({}, goodShot.shot, { render: { mode: 'generated_video', purpose: 'live_action', reason: 'the wind is the sentence',
+      motionEssential: true, action: 'cloth lifts', whyNotStill: 'the change is continuous' } }),
+    visual: { bg: 'images/scene-2.png', why: 'continuous motion', audio: 'wind',
+      camera: { movement: 'dolly in', speed: 'slow', framing: 'medium', end: 'the gate' }, video } });
+  ok('a generated_video cut without a previz is a violation after the draft',
+     has(bads(run([cover, videoCut({ prompt: SEEDANCE_PROMPT }), goodShot, ctaShot])), /pre-renders its camera and blocking in 3D/));
+  ok('the previz waits for the camera pass (--draft)',
+     !has(bads(run([cover, videoCut({ prompt: SEEDANCE_PROMPT }), goodShot, ctaShot], null, { draft: true })), /pre-renders/));
+  ok('a previz on the host lane needs handoff frame_and_prompt and nothing Seedance asks for',
+     !has(bads(run([cover, videoCut({ engine: 'host', prompt: SEEDANCE_PROMPT, previz: Object.assign({}, previzRecord, { handoff: 'frame_and_prompt' }) }), goodShot, ctaShot])), /previz/) &&
+     has(bads(run([cover, videoCut({ engine: 'host', prompt: SEEDANCE_PROMPT, previz: Object.assign({}, previzRecord, { handoff: 'reference_video' }) }), goodShot, ctaShot])), /takes no reference clip/));
+  ok('a previz whose move contradicts the camera slot is a violation',
+     has(bads(run([cover, videoCut({ engine: 'host', prompt: SEEDANCE_PROMPT, previz: Object.assign({}, previzRecord, { camera: { movement: 'arc shot' } }) }), goodShot, ctaShot])), /contradicts visual\.camera\.movement/));
+  ok('a previz without a renderer or a first frame is a violation',
+     has(bads(run([cover, videoCut({ engine: 'host', prompt: SEEDANCE_PROMPT, previz: Object.assign({}, previzRecord, { renderer: 'maya', firstFrame: undefined }) }), goodShot, ctaShot])), /renderer must be blender/));
+
   // ── the story pass (--draft) ──
   // A 4a skeleton: beats, feels, narration sentences, the two hook fields, and the close's
   // share trigger. No tts spelling, no camera slots, no stored prompt — the fields 4b writes.
