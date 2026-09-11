@@ -433,8 +433,6 @@
   .shot-size .sz b { font-size: var(--t-cap); font-weight: 700; color: var(--text); }
   .shot-size .sz small { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9.5px; color: var(--faint); letter-spacing: .04em; }
   .shot-size.unknown .sz b { color: var(--warn-ink, var(--accent-ink)); }
-  .shot-grammar .shot-why { margin-left: 0; }
-  @media (max-width: 600px) { .shot-grammar .shot-why { flex-basis: 100%; } }
   /* Shot-size pictogram — an app-icon tile: a gradient squircle per size family and a white
      figure cut where that size cuts a person. The tile's rounded box does the cropping. */
   .size-ico {
@@ -1122,7 +1120,6 @@ window.SB_DOC = {
                     recording: "a recording — screen capture or footage the channel already has",
                     asset: "shared asset — the channel's outro or intro clip",
                     slide: "HTML slide — route not declared in shot.render" },
-      renderWhy: "why this route",
       sizeHint: { els: "very far · a person is a dot — the place is the subject; alone reads as lonely, a crowd reads as scale",
                   ls: "far, wide · whole body with room — where this is, how many, how far apart (the establishing shot)",
                   ws: "same as the long shot",
@@ -1414,7 +1411,6 @@ window.SB_DOC = {
                     recording: "녹화분 — 화면 녹화나 채널이 이미 가진 영상",
                     asset: "공용 소재 — 채널 아웃트로·인트로 클립",
                     slide: "HTML 슬라이드 — shot.render 에 방식이 안 적혀 있다" },
-      renderWhy: "이 방식인 이유",
       sizeHint: { els: "완전 풀, 아주 먼 · 사람이 점 — 공간이 주인공, 혼자면 고독·여럿이면 규모",
                   ls: "와이드, 먼 · 전신에 여유 — 어디인지·몇 명인지·얼마나 떨어졌는지 (설정샷)",
                   ws: "롱숏과 같다",
@@ -3709,16 +3705,16 @@ window.SB_DOC = {
     var pic = pictureOf(s), ov = overlayOf(s);
     h += '<article class="scene"><div class="scene-head">';
     h += '<span class="scene-no">' + esc(T.shotCap(no)) + " · " + esc(T.type[s.type] || s.type) + "</span>";
-    // Shot grammar — size tile, angle and why — sits on its own row under the head so the
-    // head keeps the number, title and beat tags and the row wraps cleanly on a phone.
+    // Shot grammar — size tile, angle and render tile — sits on its own row under the head so
+    // the head keeps the number, title and beat tags. shot.why and render.reason are tooltips
+    // on their tiles, so the row stays one glance wide.
     var gram = "";
-    if (g.size) gram += '<span class="shot-size' + (T.size[g.size] ? "" : " unknown") + '" title="' + esc(sizeTitle(g.size)) + '">' +
+    if (g.size) gram += '<span class="shot-size' + (T.size[g.size] ? "" : " unknown") + '" title="' + esc(sizeTitle(g.size) + (g.why ? "\n\n" + g.why : "")) + '">' +
                         sizeIcon(g.size) + '<span class="sz"><b>' + esc(T.size[g.size] || (g.size + " ?")) + "</b></span></span>";
     if (g.angle && T.angle[g.angle]) gram += '<span class="shot-angle angle-' + esc(g.angle) + '">' + esc(T.angle[g.angle]) + "</span>";
     var rmode = renderModeOf(s, g);
-    if (rmode) gram += '<span class="shot-size' + (T.render[rmode] ? "" : " unknown") + '" title="' + esc(renderTitle(rmode)) + '">' +
+    if (rmode) gram += '<span class="shot-size' + (T.render[rmode] ? "" : " unknown") + '" title="' + esc(renderTitle(rmode) + (g.render && g.render.reason ? "\n\n" + g.render.reason : "")) + '">' +
                        renderIcon(rmode) + '<span class="sz"><b>' + esc(T.render[rmode] || (rmode + " ?")) + "</b><small>" + esc(rmode) + "</small></span></span>";
-    if (g.why) gram += '<span class="shot-why" title="shot.why">' + esc(g.why) + "</span>";
     // A shot with no title (screen text only when needed — scenes-schema) builds its header from badges alone
     var headTitle = s.title || (s.type === "quote" ? s.text : "");
     if (headTitle) h += '<span class="scene-title">' + mark(headTitle) + "</span>";
@@ -3751,7 +3747,6 @@ window.SB_DOC = {
            '<span class="shot-info shot-feel' + (g.feel ? "" : " miss") + '"><b>' + esc(T.feelLabel) + "</b>" +
            esc(g.feel || T.feelMissing) + "</span>") +
          (g.info ? '<span class="shot-info"><b>' + esc(T.infoLabel) + "</b>" + esc(g.info) + "</span>" : "") +
-         (g.render && g.render.reason ? '<span class="shot-info"><b>' + esc(T.renderWhy) + "</b>" + esc(g.render.reason) + "</span>" : "") +
          (g.infoType ? '<span class="shot-info"><b>' + esc(T.infoTypeLabel) + "</b>" + esc(g.infoType) + "</span>" : "") +
          (g.share ? '<span class="shot-info"><b>' + esc(T.shareLabel) + "</b>" + esc(g.share) + "</span>" : "") +
          (g.shareType ? '<span class="shot-info"><b>' + esc(T.shareTypeLabel) + "</b>" + esc(g.shareType) + "</span>" : "") +
