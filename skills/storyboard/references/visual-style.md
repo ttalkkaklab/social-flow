@@ -103,6 +103,12 @@ painted-looking photo in ink-wash or a soft airbrushed figure without outlines i
 mismatch; remake it. A metadata
 pass is not a visual review.
 
+The storyboard page reads `PRODUCTION.style.preset` and draws the choice at the top: the preset's
+sample picture from `style-samples.js` (one reading-at-a-window scene rendered in every preset,
+so the reader sees the look rather than its name), the plain-language line above, the selection
+record and a strip of the other presets in the same scene. Copy `style-samples.js` beside the
+storyboard with `production-mode.js`; without it the page falls back to a pictogram.
+
 Write the chosen style's name and rendering rules in the storyboard HTML's `SB_DOC`
 description. When the style changes, review the affected images, start/end pairs and video
 prompts again and refresh the quote. Do not present earlier output as the new style's output.

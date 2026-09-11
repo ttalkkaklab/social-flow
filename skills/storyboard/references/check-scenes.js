@@ -728,11 +728,46 @@ function check(win, fmt, opts) {
     catch (e) { bad('edit plan', e.message); }
   }
 
+  /* Establish, then close (directing-grammar §2 · §6 rule 2). A scene that opens close — the
+     mcu hook, a cu, an insert — owes the place, the head count and the distance to the next
+     picture shot; fs and ms show a body, not a place, and an HTML explanation screen pays
+     nothing. A warning: the reviewer weighs a written reason. */
+  {
+    const CLOSE_OPEN = ['mcu', 'cu', 'choker', 'ecu', 'insert'];
+    const PAYS = ['els', 'ls', 'ws', 'mfs', 'two'];
+    const EXPLAIN = ['data_graph', 'editorial_html', 'object_html', 'character_html'];
+    const isScreen = (s) => s.shot && s.shot.render && EXPLAIN.indexOf(s.shot.render.mode) !== -1;
+    const byScene = new Map();
+    scenes.forEach((s, i) => {
+      if (s.type === 'outro' || isScreen(s)) return;
+      const key = s.scene == null ? 'shot ' + (i + 1) : String(s.scene);
+      if (!byScene.has(key)) byScene.set(key, []);
+      byScene.get(key).push({ s, i });
+    });
+    // A scene returning to a place an earlier scene already laid out with a wide carries no debt —
+    // the viewer still holds the room (directing-grammar §6 rule 2). The place is sceneSlug's first half,
+    // whitespace removed the way structure-contract.js keys places.
+    const placeOf = (s) => String(s.sceneSlug || '').split('/')[0].replace(/\s+/g, '');
+    const seenWide = new Set();
+    byScene.forEach((rows, key) => {
+      const first = rows[0].s.shot && rows[0].s.shot.size, second = rows[1] && rows[1].s.shot && rows[1].s.shot.size;
+      const place = placeOf(rows[0].s);
+      const known = place && seenWide.has(place);
+      if (CLOSE_OPEN.indexOf(first) !== -1 && rows[1] && second && PAYS.indexOf(second) === -1 && !known)
+        warn('shot ' + (rows[1].i + 1), `scene ${key} opens on ${first} and the next picture shot is ${second} — the close opening owes an ls/els (mfs/two for two people) that says where this is; fs and ms show a body, not a place (directing-grammar §6 rule 2)`);
+      if (place && rows.some((r) => PAYS.indexOf(r.s.shot && r.s.shot.size) !== -1)) seenWide.add(place);
+    });
+  }
+
   /* Consecutive stills of the same size and angle in one scene read as a jump cut
-     (30-degree / two-step-size rule). Filmed cards are the vlog exception. */
+     (30-degree / two-step-size rule). Filmed cards are the vlog exception, and so is an
+     HTML explanation screen (shot.render.mode) — the whole picture changes there. */
+  const isExplainScreen = (s) => s.shot && s.shot.render &&
+    ['data_graph', 'editorial_html', 'object_html', 'character_html'].indexOf(s.shot.render.mode) !== -1;
   for (let i = 1; i < scenes.length; i++) {
     const prev = scenes[i - 1], cur = scenes[i];
     if (!isStillCard(prev) || !isStillCard(cur)) continue;
+    if (isExplainScreen(prev) || isExplainScreen(cur)) continue;
     if (prev.scene === undefined || prev.scene !== cur.scene) continue;
     const pr = SIZE_RANK[prev.shot && prev.shot.size];
     const cr = SIZE_RANK[cur.shot && cur.shot.size];
@@ -903,6 +938,9 @@ function check(win, fmt, opts) {
       bad(where, `beat "${s.beat}" is outside ${BEATS.join(' · ')}`);
     if (shot.size && SIZES.indexOf(shot.size) === -1)
       bad(where, `shot.size "${shot.size}" is not a size word (directing-grammar §size)`);
+    /* The frame cuts the subject somewhere on every shot. A 4b field, so a draft defers. */
+    if (s.type !== 'outro' && !shot.size)
+      machine(where, 'no shot.size — pick where the frame cuts the subject from what shot.info has to show (directing-grammar §2.1)');
     if (shot.angle && ANGLES.indexOf(shot.angle) === -1)
       bad(where, `shot.angle "${shot.angle}" is not an angle word (directing-grammar §angle)`);
     if (s.type !== 'outro' && !shot.feel)
@@ -1237,6 +1275,10 @@ function selftest() {
      }) })), /window\.COMPREHENSION\.terms/));
   ok('a narrated shot without shot.info is a violation',
      has(bads(run([cover, Object.assign({}, goodShot, { shot: { feel: 'x', size: 'mcu', angle: 'eye', infoType: 'other' } })])), /no shot\.info/));
+  ok('a shot without shot.size is a violation after the story pass, later in --draft',
+     has(bads(run([cover, Object.assign({}, goodShot, { shot: { feel: 'x', angle: 'eye', info: '정보', infoType: 'other' } })])), /no shot\.size/) &&
+     run([cover, Object.assign({}, goodShot, { shot: { feel: 'x', angle: 'eye', info: '정보', infoType: 'other' } })], null, { draft: true })
+       .some((f) => f.level === 'later' && /no shot\.size/.test(f.what)));
   ok('a narrated shot without shot.infoType is a violation',
      has(bads(run([cover, Object.assign({}, goodShot, { shot: { feel: 'x', size: 'mcu', angle: 'eye', info: '정보' } })])), /no shot\.infoType/));
   ok('an informational short no longer needs an editorial HTML frame (plates are optional since 2026-09-03)',
@@ -1608,6 +1650,27 @@ function selftest() {
   ok('a dissolve inside one scene is flagged',
      has(run([cover, Object.assign({}, goodShot, { scene: 2 }),
               dz({ transition: 'dissolve', scene: 2 })]), /same place and time/));
+  ok('an explanation screen after a still of the same size is not a jump cut',
+     !run([cover,
+           Object.assign({}, goodShot, { scene: 2, shot: { feel: 'a', size: 'ls', angle: 'eye', info: 'one', infoType: 'other' } }),
+           Object.assign({}, goodShot, { scene: 2, shot: { feel: 'b', size: 'ls', angle: 'eye', info: 'two', infoType: 'statistic', render: { mode: 'data_graph', purpose: 'compare', reason: 'x' } } })])
+       .some((f) => /jump cut/.test(f.what)));
+  ok('a scene opening on the mcu hook followed by an insert owes its wide',
+     run([Object.assign({}, cover, { scene: 1 }), Object.assign({}, goodShot, { scene: 1, shot: { feel: 'a', size: 'insert', angle: 'eye', info: 'one', infoType: 'other' } }),
+          Object.assign({}, goodShot, { scene: 2, shot: { feel: 'b', size: 'ls', angle: 'eye', info: 'two', infoType: 'other' } }), ctaShot])
+       .some((f) => f.level === 'warn' && /close opening owes/.test(f.what) && f.where === 'shot 2'));
+  ok('a scene returning to a place an earlier scene laid out with a wide owes nothing',
+     !run([Object.assign({}, cover, { scene: 1, sceneSlug: '마당 / 아침' }),
+           Object.assign({}, goodShot, { scene: 1, sceneSlug: '마당 / 아침', shot: { feel: 'a', size: 'ls', angle: 'eye', info: 'one', infoType: 'other' } }),
+           Object.assign({}, goodShot, { scene: 2, sceneSlug: '마당 / 낮', shot: { feel: 'b', size: 'insert', angle: 'eye', info: 'two', infoType: 'other' } }),
+           Object.assign({}, goodShot, { scene: 2, sceneSlug: '마당 / 낮', shot: { feel: 'c', size: 'mcu', angle: 'eye', info: 'three', infoType: 'other' } }), ctaShot])
+       .some((f) => /close opening owes/.test(f.what)));
+  ok('an ls after the mcu hook pays the debt, and an explanation screen between them is skipped',
+     !run([Object.assign({}, cover, { scene: 1 }),
+           Object.assign({}, goodShot, { scene: 1, shot: { feel: 'a', size: 'insert', angle: 'eye', info: 'one', infoType: 'other', render: { mode: 'data_graph', purpose: 'compare', reason: 'x' } } }),
+           Object.assign({}, goodShot, { scene: 1, shot: { feel: 'b', size: 'ls', angle: 'eye', info: 'two', infoType: 'other' } }),
+           Object.assign({}, goodShot, { scene: 1, shot: { feel: 'c', size: 'insert', angle: 'eye', info: 'three', infoType: 'other' } }), ctaShot])
+       .some((f) => /close opening owes/.test(f.what)));
   ok('same size and angle on consecutive stills in one scene is flagged',
      has(run([cover,
               Object.assign({}, goodShot, { scene: 2, shot: { feel: 'a', size: 'ms', angle: 'eye', info: 'one', infoType: 'other' } }),
