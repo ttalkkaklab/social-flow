@@ -3,6 +3,17 @@
   'use strict';
   const text = value => typeof value === 'string' && !!value.trim();
   const MODES = { hybrid: '혼합 제작', full_video: '전체 영상' };
+  // Two HITL choices every episode with generated video records (user directive 2026-09-11):
+  // which 3D renderer draws the mandatory previz, and which video model the clips are made on.
+  const PREVIZ_RENDERERS = { blender: '블렌더 브릿지 — 관절 마네킹, 모션 캡처', threejs: 'three.js 페이지 — 헤드리스 크롬, 관절 없음' };
+  // Seedance models that take the previz as a reference video, with the resolutions the price table prices.
+  const VIDEO_MODELS = {
+    'dreamina-seedance-2-0-260128': { label: 'Seedance 2.0', resolutions: ['1080p'] },
+    'dreamina-seedance-2-0-fast-260128': { label: 'Seedance 2.0 fast', resolutions: ['720p'] },
+    'dreamina-seedance-2-0-mini-260615': { label: 'Seedance 2.0 mini', resolutions: ['720p'] },
+    'dreamina-seedance-2-5-260628': { label: 'Seedance 2.5', resolutions: ['720p', '1080p'] }
+  };
+  const selectionRecorded = sel => sel && ['user', 'standing'].includes(sel.kind) && text(sel.reference);
   // The four slots every generated shot stores (scenes-schema §camera); spatial-prompts.js
   // assembles the motion prompt's camera span from them, so nothing else describes the camera.
   const CAMERA_SLOTS = ['movement', 'speed', 'framing', 'end'];
@@ -158,6 +169,19 @@
     (win.SCENES || []).forEach((s, i) => {
       if (eligible(s) && !reused(s) && s.visual?.video) cameraErrors(s).forEach(e => errors.push('shot ' + (i + 1) + ': ' + e));
     });
+    // A generated cut exists → the previz renderer and the video model were put to the user
+    // (blender-previz.md §6, production-mode.md §When to ask). Nothing renders or bills before that.
+    const generatedCuts = (win.SCENES || []).filter(s => eligible(s) && !reused(s) && s.visual?.video && s.shot?.render?.mode === 'generated_video');
+    if (generatedCuts.length) {
+      if (!PREVIZ_RENDERERS[p.previz?.renderer]) errors.push('Ask which 3D previz renderer draws the generated cuts and record it in PRODUCTION.previz.renderer (blender | threejs)');
+      else if (!selectionRecorded(p.previz.selection)) errors.push('Record the actual previz renderer HITL choice in PRODUCTION.previz.selection');
+      const vm = p.videoModel;
+      if (p.videoProvider === 'host') {
+        if (vm && vm.model !== 'host') errors.push('PRODUCTION.videoModel.model must be host under videoProvider host');
+      } else if (!vm || !VIDEO_MODELS[vm.model]) errors.push('Ask which video model makes the generated cuts and record it in PRODUCTION.videoModel (' + Object.keys(VIDEO_MODELS).join(' | ') + ')');
+      else if (!VIDEO_MODELS[vm.model].resolutions.includes(vm.resolution)) errors.push('PRODUCTION.videoModel.resolution must be one of ' + VIDEO_MODELS[vm.model].resolutions.join(', ') + ' for ' + vm.model);
+      if (vm && !selectionRecorded(vm.selection)) errors.push('Record the actual video model HITL choice in PRODUCTION.videoModel.selection');
+    }
     if (!full(p)) {
       const count = (win.SCENES || []).filter(s => eligible(s) &&
         (s.visual?.video || s.type === 'broll' || (s.type === 'quote' && typeof s.visual?.clip === 'object'))).length;
@@ -237,7 +261,7 @@
     return { ...base, videoBudgetUsd: production.videoBudgetUsd,
       generatedVideoMax: full(production) ? scenes.filter(eligible).length : Math.min(base.generatedVideoMax ?? 2, 2) };
   }
-  const api = { STYLES, MODES, CAMERA_SLOTS, packPresets, ALL_LOOKS, eligible, reused, reuseErrors, full, signature, check, policy, motionErrors, missingCameraSlots, cameraErrors, staticCamera, finalState };
+  const api = { STYLES, MODES, CAMERA_SLOTS, PREVIZ_RENDERERS, VIDEO_MODELS, packPresets, ALL_LOOKS, eligible, reused, reuseErrors, full, signature, check, policy, motionErrors, missingCameraSlots, cameraErrors, staticCamera, finalState };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.PRODUCTION_MODE = api;
 })(typeof window === 'object' ? window : globalThis);

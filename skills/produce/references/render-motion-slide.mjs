@@ -5,7 +5,12 @@
  *
  *   node render-motion-slide.mjs <storyboard/slides/sN-slug.html> --out <dir> [--fps 30]
  *        [--jobs 4] [--sheet] [--png-only] [--group k] [--frame k:ms] [--keep-frames]
- *        [--segs auto|k:ms,...] [--grain 0..30]
+ *        [--segs auto|k:ms,...] [--grain 0..30] [--previz]
+ *
+ * --previz renders a three.js previz page (storyboard previz-template.html, blender-previz.md §6.5):
+ *   one clip for the whole cut at 24 fps, no grain, and none of the slide rules — the page has one
+ *   group whatever the narration count, and its length is the cut's billed length, not an entrance.
+ *   r1.mp4 is the previz clip and r0.png its first frame.
  *
  * --grain adds film grain at the mp4 encode (default 6 — luma-only static noise, ffmpeg's
  *   noise filter with a fixed seed, so the same frames still encode to the same bytes). Grain
@@ -106,7 +111,7 @@ const require = createRequire(import.meta.url);
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const { FORMATS, DEFAULT_FORMAT } = require(path.join(HERE, "../../platform-guide/references/formats.js"));
 
-const USAGE = "usage: render-motion-slide.mjs <slides/sN-slug.html> --out <dir> [--fps 30] [--jobs 4] [--sheet] [--png-only] [--group k] [--frame k:ms] [--keep-frames] [--segs auto|k:ms,...] [--grain 0..30]";
+const USAGE = "usage: render-motion-slide.mjs <slides/sN-slug.html> --out <dir> [--fps 30] [--jobs 4] [--sheet] [--png-only] [--group k] [--frame k:ms] [--keep-frames] [--segs auto|k:ms,...] [--grain 0..30] [--previz]";
 const usage = msg => { console.error("✗ " + msg + "\n" + USAGE); process.exit(2); };
 const CDP_TIMEOUT_MS = 30000;
 
@@ -115,8 +120,8 @@ const argv = process.argv.slice(2);
 // jobs = tabs capturing at once. Capture is mostly PNG encoding, so each takes a core — stop at
 // half the cores and never above 4; past that only Chrome's memory grows, not throughput.
 const opt = { fps: 30, jobs: Math.max(1, Math.min(4, Math.floor((os.cpus().length || 4) / 2))),
-  sheet: false, pngOnly: false, group: null, frame: null, keep: false, out: null, segs: null, grain: 6 };
-const pos = [];
+  sheet: false, pngOnly: false, group: null, frame: null, keep: false, out: null, segs: null, grain: 6, previz: false };
+const pos = [], given = new Set();
 const intArg = (v, name, lo, hi) => {
   const n = Number(v);
   if (!Number.isInteger(n) || n < lo || n > hi) usage(`--${name} wants an integer ${lo}..${hi}, got "${v}"`);
@@ -124,7 +129,9 @@ const intArg = (v, name, lo, hi) => {
 };
 for (let i = 0; i < argv.length; i++) {
   const a = argv[i];
+  if (a.startsWith("--")) given.add(a);
   if (a === "--out") opt.out = argv[++i];
+  else if (a === "--previz") opt.previz = true;
   else if (a === "--fps") opt.fps = intArg(argv[++i], "fps", 1, 120);
   else if (a === "--jobs") opt.jobs = intArg(argv[++i], "jobs", 1, 16);
   else if (a === "--sheet") opt.sheet = true;
@@ -146,6 +153,13 @@ for (let i = 0; i < argv.length; i++) {
 }
 const HTML = pos[0];
 if (!HTML || !opt.out) usage("a slide file and --out are required");
+if (opt.previz) {
+  // A previz is frame-for-frame QA material: 24 fps so frame n of the clip is frame n of the result,
+  // and no grain — the vendor reads a clean clay render (blender-previz.md §6.1).
+  if (!given.has("--fps")) opt.fps = 24;
+  if (!given.has("--grain")) opt.grain = 0;
+  if (opt.segs) usage("--previz renders one clip for the whole cut; --segs does not apply");
+}
 const htmlAbs = path.resolve(HTML);
 if (!fs.existsSync(htmlAbs)) usage("slide not found: " + htmlAbs);
 const OUT = path.resolve(opt.out);
@@ -529,7 +543,8 @@ const openPage = async () => {
   if (N < 1) return die("no reveal groups — every moving element needs data-rg ≥ 1");
   for (let k = 1; k <= N; k++)
     if (groups[k].dur <= meta.hold) return die(`group ${k} has no motion (only the ${meta.hold}ms hold) — a spoken segment would get a still clip. Either move something in group ${k} or renumber the groups`);
-  if (segCount != null && N < segCount) return die(`${N} reveal groups but ${segCount} narration segments in scenes.js shot ${shotNo} — segment ${N + 1} would have no clip. Add groups (segment k → group k)`);
+  if (opt.previz && N !== 1) return die(`a previz page has exactly one reveal group (the whole cut); this page has ${N}`);
+  if (!opt.previz && segCount != null && N < segCount) return die(`${N} reveal groups but ${segCount} narration segments in scenes.js shot ${shotNo} — segment ${N + 1} would have no clip. Add groups (segment k → group k)`);
   // Entrance cap = 2.6s of motion + the template's hold tail (slide-design.md §motion) — a narration
   // segment shorter than the clip cuts to the next clip's rest frame mid-motion, and that jump is
   // visible. With --segs the cap moves to the segment itself, and the opposite defect gets teeth:
@@ -541,11 +556,11 @@ const openPage = async () => {
         warn.push(`group ${g.rg} clip is ${g.dur}ms — over its ${seg}ms segment; the cut to the next clip lands mid-motion`);
       else if (seg - g.dur > seg * 0.4)
         warn.push(`group ${g.rg} moves ${(g.dur / 1000).toFixed(1)}s of its ${(seg / 1000).toFixed(1)}s segment — the tail freezes ${((seg - g.dur) / 1000).toFixed(1)}s; mark a .sv sustain element (slide-design.md §5) or accept the freeze`);
-    } else if (!isFootage && g.dur > 2600 + meta.hold) {
+    } else if (!isFootage && !opt.previz && g.dur > 2600 + meta.hold) {
       warn.push(`group ${g.rg} clip is ${g.dur}ms — over the cap (2.6s motion + ${meta.hold}ms hold, slide-design.md §motion); a shorter segment cuts it mid-motion`);
     }
   }
-  if (segCount != null && N > segCount) warn.push(`${N} reveal groups vs ${segCount} narration segments — fine only if produce §3.6 writes A|B sub-reveals for the extra clips`);
+  if (!opt.previz && segCount != null && N > segCount) warn.push(`${N} reveal groups vs ${segCount} narration segments — fine only if produce §3.6 writes A|B sub-reveals for the extra clips`);
   if (opt.group != null && opt.group > N) return die(`--group ${opt.group} but the slide has ${N} groups`);
   if (opt.frame && opt.frame.g > N) return die(`--frame group ${opt.frame.g} but the slide has ${N} groups`);
 
@@ -683,7 +698,7 @@ const openPage = async () => {
   await seek(groups[N].dur, N);
   // A footage slide has no zone composition to measure — the clip fills the frame and the marks sit
   // where the picture puts them (slide-design.md §6.2), so the number is reported as null.
-  const zoneFill = isFootage ? null : await evalJS(`(() => {
+  const zoneFill = isFootage || opt.previz ? null : await evalJS(`(() => {
     const cs = getComputedStyle(document.documentElement);
     const px = v => parseFloat(cs.getPropertyValue(v)) || 0;
     const W = px("--w"), H = px("--h"), zx = px("--zone-x"), zt = px("--zone-top"), zb = px("--zone-bottom");

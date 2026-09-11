@@ -63,6 +63,43 @@ that choice. Selecting a choice that explicitly includes that cap authorizes it;
 the same question again. Do not silently alter the channel profile, resolution or model.
 If approval is missing, wait. A timeout, silence or a cheaper estimate is not a choice.
 
+### Two more questions on every episode with generated video (user directive 2026-09-11)
+
+Every generated cut is pre-rendered in 3D and the render rides the video model as a reference
+clip (blender-previz.md §6), so two more choices are the user's, and `production-mode.js`
+refuses a board with generated cuts that has not recorded them.
+
+**Before any Blender or three.js render — which renderer.** Ask once per episode, before the
+first previz call (`capability_status` says whether Blender is installed; recommend that):
+
+> 생성 컷의 카메라·배치를 3D 로 먼저 잡습니다. 어느 렌더러로 만들까요?
+> - 블렌더 (Recommended when installed) — 관절 마네킹으로 몸 동작까지 잡고 모션 캡처를 얹을 수 있습니다. Blender 4.2+ 가 이 기계에 있어야 합니다.
+> - three.js — 헤드리스 크롬 페이지로 카메라와 배치만 잡습니다. 설치가 필요 없고 컷당 10초 안팎이며 관절은 없습니다.
+
+Persist as `PRODUCTION.previz = { renderer, selection }`; every shot's `visual.video.previz.renderer`
+must equal it.
+
+**Before any video call — which model.** Ask before the §7 board approval (the quote is
+bound to the model) and again at produce entry when an older board has no record. Print the
+table with real numbers first:
+
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/skills/produce/references/video-model-options.js storyboard/
+```
+
+> 생성 컷 [N]개를 어느 모델로 만들까요? 프리비즈 참조 영상은 Seedance 2.x 만 받고 입력 초까지 과금합니다. 아래는 이 보드 전체의 영상 생성비이고 재시도를 포함한 예상치입니다.
+> - Seedance 2.0 1080p — 가장 또렷합니다. 최초 [금액], [횟수]회 시도 [범위]. [예산 초과 여부]
+> - Seedance 2.0 fast 720p — 값과 속도 사이. 최초 [금액], [횟수]회 시도 [범위].
+> - Seedance 2.0 mini 720p — 가장 쌉니다. 최초 [금액], [횟수]회 시도 [범위].
+> - Seedance 2.5 1080p — 참조 영상 30초·이미지 30장까지, 고정 목소리가 필요할 때. 최초 [금액], [횟수]회 시도 [범위].
+> 원화는 1달러=[환율]원으로 가정했습니다. 이미지·내레이션·편집·세금은 별도입니다.
+
+Persist as `PRODUCTION.videoModel = { model, resolution, selection }` and write the same
+`model` and `resolution` on every generated cut's `visual.video`; `render-routing.js` refuses a
+shot whose model differs from the chosen one. Under `videoProvider:'host'` the tool is the
+model, so the record is `{ model: 'host' }` or absent. A different answer later is a new quote
+and a new approval.
+
 ## Persist the decision
 
 Write `window.PRODUCTION` in scenes.js. It is independent of `window.MOTION_POLICY`, which
@@ -90,6 +127,10 @@ window.PRODUCTION = {
   maxAttempts: 3,                     // total per shot, first attempt included
   videoBudgetUsd: 15,                 // example ONLY: use the cap actually approved
   comparison: { model: 'seedance-1-5-pro-251215', resolution: '1080p', hybridShots: [1, 2] },
+  previz: { renderer: 'blender',        // blender | threejs — asked before the first previz render
+    selection: { kind: 'user', reference: 'ACTUAL_RENDERER_CHOICE' } },
+  videoModel: { model: 'dreamina-seedance-2-0-260128', resolution: '1080p',   // asked before any video call, with video-model-options.js
+    selection: { kind: 'user', reference: 'ACTUAL_MODEL_CHOICE' } },
   style: {
     preset: 'cinematic-miniature',
     selection: { kind: 'user', reference: 'ACTUAL_STYLE_CHOICE' },

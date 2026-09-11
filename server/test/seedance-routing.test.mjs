@@ -131,8 +131,18 @@ test('Seedance settings on a Veo slot are refused instead of silently skipped', 
     /only applies to Seedance/);
 });
 
+test('a previz on the host lane is not a Seedance field, and on the Seedance route it must travel as Video 1', () => {
+  const previz = { renderer: 'blender', clip: 'previz/s4.mp4', firstFrame: 'previz/s4-f0001.png', sha256: 'a'.repeat(64), fps: 24, seconds: 5, camera: { movement: 'arc shot' } };
+  const host = { type: 'cover', duration: 5, visual: { bg: 'images/scene-4.png', video: { engine: 'host', prompt: 'x', previz: { ...previz, handoff: 'frame_and_prompt' } } } };
+  assert.deepEqual(scenePlan(host), { kind: 'motion', engine: 'host' });
+  assert.throws(() => scenePlan({ ...host, visual: { ...host.visual, video: { ...host.visual.video, previz } } }), /only applies to Seedance/);
+  const api = { type: 'cover', duration: 5, visual: { bg: 'images/scene-4.png', video: { engine: 'seedance', modelPurpose: 'previz', modelReason: 'r',
+    realFaceInput: false, referenceImagePaths: ['images/scene-4.png'], prompt: 'x', previz: { ...previz, handoff: 'frame_and_prompt' } } } };
+  assert.throws(() => scenePlan(api), /must be reference_video/);
+});
+
 test('a previz cut rides the reference route as Video 1 and bills input + output seconds', () => {
-  const previz = { clip: 'previz/s4.mp4', sha256: 'a'.repeat(64), fps: 24, seconds: 5 };
+  const previz = { renderer: 'blender', clip: 'previz/s4.mp4', firstFrame: 'previz/s4-f0001.png', sha256: 'a'.repeat(64), fps: 24, seconds: 5, camera: { movement: 'arc shot' } };
   const base = { engine: 'seedance', modelPurpose: 'previz', modelReason: 'The orbit must end on the sentence',
     realFaceInput: false, referenceImagePaths: ['images/scene-4.png', 'characters/porter/body.png'], previz };
   const shot = { type: 'cover', duration: 5, visual: { bg: 'images/scene-4.png', video: { prompt: 'x', ...base } } };

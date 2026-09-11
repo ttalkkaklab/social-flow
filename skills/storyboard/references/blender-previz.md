@@ -1,4 +1,16 @@
-# Blender previz — camera, blocking and body timing as numbers, through the bridge tools
+# 3D previz — camera, blocking and body timing as numbers, before any video call
+
+**Every `generated_video` cut is pre-rendered in 3D first** (user directive 2026-09-11): a
+Blender previz through the bridge tools below, or a three.js previz through
+`previz-template.html` (§6.5) where Blender is not installed. `check-scenes.js` refuses a
+generated cut without `visual.video.previz`, and the video model receives the render — as the
+reference clip on Seedance 2.x, or as the composition of the still and the numbers in the
+prompt on a host video tool that takes no clip (§6.7). Imported clips (`visual.reuse`), stock
+footage, recordings and the outro carry none. **Which renderer and which video model are the
+user's choices**, asked with AskUserQuestion before the first previz render and before any
+video call and recorded in `PRODUCTION.previz` and `PRODUCTION.videoModel`
+(production-mode.md §Two more questions); every shot's `previz.renderer` and `video.model`
+must match them.
 
 Seven MCP tools drive the Blender installed on this machine the way the Higgsfield Bridge
 drives it for ChatGPT, without a relay, an add-on or a GUI: `blender_scene_read`,
@@ -25,6 +37,9 @@ goes up, when the knee bends, how far the lean goes.
 - [4. Posing a person by channel](#4-posing-a-person-by-channel)
 - [5. Motion capture onto the mannequin](#5-motion-capture-onto-the-mannequin)
 - [6. Hand-off to generation — the previz is Video 1](#6-hand-off-to-generation)
+  - [6.5 The three.js previz](#65-the-threejs-previz)
+  - [6.6 The first frame becomes the still](#66-the-first-frame-becomes-the-still)
+  - [6.7 A host video tool that takes no clip](#67-a-host-video-tool-that-takes-no-clip)
 - [7. Traps](#7-traps)
 
 ## 1. Conversation shape
@@ -206,7 +221,10 @@ trade: exact camera and timing from the clip, a close first frame from the still
 - **Whole seconds, equal to the billed length.** The cut's `duration` rounds up to the
   model's floor (2.0: 4–15 s); render exactly that many seconds — `frameEnd = fps × seconds`
   — and the route refuses a mismatch. Practitioners keep a previz-guided move to 3–8 s and
-  one camera move per shot.
+  one camera move per shot. One idea per move: the camera moves or the subject moves, both
+  only when the cut needs both — a 12 s clip with a dolly, a walk and a pan made the model pick
+  a random part each take, a 6 s dolly alone landed every time
+  (docs/research/2026-09-11-previz-mandatory §7.5–7.6).
 - **24 fps.** The vendor takes 24–60 and outputs 24; rendering at 24 makes frame n of the
   previz frame n of the result, which is what the QA overlay compares. Set it in
   `blender_scene_build` (`fps: 24`).
@@ -231,14 +249,25 @@ video: {
   modelReason: "The camera orbits the cart while the load shifts — timing has to land on the sentence",
   realFaceInput: false, resolution: "1080p",
   referenceImagePaths: ["images/scene-4.png", "../../assets/characters/porter/body.png"],  // [0] is visual.bg
-  previz: { clip: "previz/s4.mp4", blend: "previz/s4.blend", sha256: "<64 hex>", fps: 24, seconds: 5 },
+  previz: {
+    renderer: "blender",                 // or "threejs" (§6.5)
+    clip: "previz/s4.mp4", blend: "previz/s4.blend",
+    firstFrame: "previz/s4-f0001.png",   // frame 1 — the composition the still is edited from (§6.6)
+    sha256: "<64 hex>", fps: 24, seconds: 5,
+    camera: { movement: "arc shot" },    // the move the clip performs — must equal visual.camera.movement
+    handoff: "reference_video",          // implied on the API lane; frame_and_prompt on a host tool (§6.7)
+    actors: [{ color: "red", is: "the porter", image: 2 }]   // optional — the colour bindings §6.3 writes
+  },
   prompt: "…"   // §6.3
 }
 ```
 
-`check-scenes.js` rejects the record when the clip is not a local mp4, the hash is missing,
-the seconds are not whole, the fps is outside 24–60, `referenceImagePaths[0]` is not the
-source still, an end frame is declared, or the prompt lacks the bindings in §6.3.
+`check-scenes.js` rejects the record when the renderer is not `blender` or `threejs`, the clip
+is not a local mp4, the first frame is not a local png, the hash is missing, the seconds are not
+whole, the fps is outside 24–60, `camera.movement` is absent or differs from
+`visual.camera.movement`, `referenceImagePaths[0]` is not the source still, an end frame is
+declared, or the prompt lacks the bindings in §6.3 — and it rejects a `generated_video` cut with
+a `visual.video` slot and no `previz` at all (the draft pass defers this to the camera pass).
 `seedance-route.js` routes it to `seedance_reference` on 2.0 (2.5 when a fixed voice or more
 than nine images ride along) and prices it on the `…-video` rows: the vendor bills **input
 plus output seconds**, at a lower per-token rate, so a 5 s cut with a 5 s previz bills 10 s
@@ -270,6 +299,15 @@ Written from the vendor's clay-model template, in this order:
 On 2.0 write shot labels, never timestamps; 2.5 takes integer-second timestamps and Korean.
 The two negative sentences in 2–3 are the vendor's exact wording and are the only exclusions
 the prompt gate lets through on this route; anything else goes into the positive lock.
+`spatial-prompts.js` writes 1–4 itself from `previz.actors` when the cut is on the reference
+route, ahead of the camera span, so a full-video board never types them by hand.
+
+**The text must not fight the clip.** The camera span in the prompt is written from the four
+`visual.camera` slots, and the clip performs `previz.camera.movement`; the checker refuses the
+two disagreeing, because a prompt that says `static camera` under a clip that pushes in
+produces a shake, not a choice. Keep the style adjectives few — past three, the model drops the
+movement for the look — and when a retake drifts, change one thing at a time so the cause is
+known (docs/research/2026-09-11-blender-to-video-ai-handoff).
 
 ### 6.4 The call and the check
 
@@ -286,6 +324,70 @@ late beat. When timing slips on the reference route, the tighter lock is 2.5's e
 (`omni_reference_task_type: edit`, aspect and length locked to the input clip) — not wired
 here yet, and its prompt must replace every grey surface, since edit keeps what it is not
 told to change.
+
+### 6.5 The three.js previz
+
+The same plan renders without Blender: `previz-template.html` is a page on `previz-runtime.js`
+(three.js, flat Lambert shading, a grey floor, one flat colour per actor, no shadows, no
+gizmos) that the slide renderer captures frame by frame. The spec keeps Blender's coordinates
+— metres, Z up, a proxy faces -Y — so numbers move between the two renderers unchanged
+(`previz-contract.js`, which also holds the checks and the interpolation):
+
+```js
+window.PREVIZ = {
+  fps: 24, seconds: 5, width: 1080, height: 1920,
+  camera: { lensMm: 35, keys: [{ frame: 1, position: [0, -4.5, 1.4], target: [0, 0, 1] },
+                               { frame: 120, position: [1.6, -2.6, 1.2], target: [0.2, 0, 1] }] },
+  actors: [{ name: 'subject', kind: 'person', color: '#d0342c', height: 1.7,
+             keys: [{ frame: 1, position: [0, 0, 0] }, { frame: 120, position: [0.3, 0.6, 0], rotationZDeg: 25 }] },
+           { name: 'gate', kind: 'box', size: [2.4, 0.3, 2.6], keys: [{ frame: 1, position: [0, 1.5, 0] }] }]
+};
+```
+
+Proxies: `person` (height — a mannequin of legs, trunk, arms and head, unjointed), `box`
+(size), `cylinder` (radius, height), `sphere` (radius), `car` (optional size). Keys are LINEAR by
+frame and clamp outside their range; a key's position is the proxy's floor point; frame 1 is
+t = 0 and the last frame is fps × seconds. The lens is a 36 mm sensor on the longer side, as in
+Blender.
+
+```bash
+cp $SB/previz-template.html storyboard/previz/s4-previz.html     # $SB = the plugin's storyboard/references
+cp $SB/previz-contract.js $SB/previz-runtime.js storyboard/previz/
+node ${CLAUDE_PLUGIN_ROOT}/skills/produce/references/render-motion-slide.mjs \
+  storyboard/previz/s4-previz.html --out storyboard/previz/s4 --previz
+cp storyboard/previz/s4/r1.mp4 storyboard/previz/s4.mp4
+cp storyboard/previz/s4/r0.png storyboard/previz/s4-f0001.png
+shasum -a 256 storyboard/previz/s4.mp4
+```
+
+`--previz` renders one clip for the whole cut at 24 fps with no grain and none of the slide
+rules (the page has one reveal group whatever the narration count); a 5 s spec captures 121
+frames (t = 0 … 5 s inclusive), which the vendor takes as it takes a Blender render. Measured
+2026-09-11: 1080×1920, 121 frames in 9 s on an M4. Record `renderer: "threejs"`. What this lane
+cannot do: a jointed body — a dance, a fall, a gesture whose count is the joke needs the Blender
+mannequin (§4–§5). Open `r0.png` and a late frame before storing the clip, the way §1 step 6
+opens the Blender stills.
+
+### 6.6 The first frame becomes the still
+
+The source still of a previz cut is edited from the previz's first frame, not designed from the
+prompt alone: `spatial-prompts.js` puts `previz.firstFrame` first in `sourceImageArgs` and adds
+the composition lock to `sourcePrompt` — keep the camera, the framing and where every subject
+stands and how large it is, render every surface in the episode style. The image tool gets
+that frame as a reference (host `image_edit`, Codex `image_gen` with the frame shown first,
+`gpt_image_img2img` on the API lane; produce still-generation.md §1), so the composition the
+clip starts on is the composition the still has, and "Image 1 is the first frame" is close to
+true rather than hoped for. The approval page shows the frame beside the clip.
+
+### 6.7 A host video tool that takes no clip
+
+Under `PRODUCTION.videoProvider:"host"` the slot is `engine:"host"` and the host tool takes a
+still and a prompt, no reference video. The previz is still rendered and stored — the directive
+has no exception — with `handoff:"frame_and_prompt"` (implied on that lane): the still is edited
+from `firstFrame` (§6.6), the prompt's camera span is the previz's move (the checker holds
+`camera.movement` equal to the slot), and the playback review compares the result with the
+previz the same way (§6.4). None of the Seedance fields apply on that lane, and the route does
+not bill previz seconds there.
 
 ## 7. Traps
 

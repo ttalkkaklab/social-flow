@@ -1807,13 +1807,19 @@ alone stays on image-to-video. The full contract is produce `video-model-selecti
 §Seedance per-cut selection. Check-scenes validates it and cost-preview returns the exact
 resolved generation settings.
 
-**Previz-guided cut** — `modelPurpose: "previz"` with `previz: { clip, sha256, fps, seconds,
-blend }`: a Blender previz rendered at the billed length (whole seconds, 24 fps, clean mp4,
-one flat colour per actor) rides the reference route as `Video 1`, and
-`referenceImagePaths[0]` must be the source still (`Image 1 is the first frame`); no end
-frame, since the reference lane cannot carry `last_frame`. The prompt binds both and closes
-the clay read with `Do not reference its visual content`. The vendor bills the previz seconds
-alongside the output seconds. Contract and prompt skeleton: `blender-previz.md` §6.
+**The previz — on every generated cut** (user directive 2026-09-11) — `previz: { renderer,
+clip, firstFrame, sha256, fps, seconds, camera: { movement }, handoff?, actors?, blend? }`: a
+Blender (`renderer:"blender"`) or three.js (`"threejs"`) previz rendered at the billed length
+(whole seconds, 24 fps, clean mp4, one flat colour per actor). `camera.movement` is the move the
+clip performs and must equal `visual.camera.movement`; `firstFrame` is frame 1, the composition
+the source still is edited from. On the Seedance route (`modelPurpose: "previz"`,
+`handoff: "reference_video"`) the clip rides as `Video 1` and `referenceImagePaths[0]` must be
+the source still (`Image 1 is the first frame`); no end frame, since the reference lane cannot
+carry `last_frame`; the prompt binds both and closes the clay read with `Do not reference its
+visual content`, and the vendor bills the previz seconds alongside the output seconds. On
+`engine: "host"` the handoff is `frame_and_prompt` — the still and the prompt carry the previz.
+`check-scenes.js` refuses a `generated_video` cut with a `visual.video` slot and no previz
+(deferred in `--draft`). Contract, both renderers and the prompt skeleton: `blender-previz.md` §6.
 Example of an eligible action hook:
 
 ```js

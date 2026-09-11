@@ -41,7 +41,20 @@ function lockText(d, style, treatment) {
     clause(d.continuity), 'Architecture and terrain keep stable geometry throughout', 'The look holds: ' + clause(treatment),
     'The episode camera language holds: ' + clause(style.camera)].join('. ');
 }
-function assemble(win, index) {
+/* The previz binding (blender-previz.md §6.3): on the reference route the motion prompt opens on the
+   vendor's clay-model template — the still is the first frame, the clip is the only reference for
+   camera and blocking, its look is not to be copied — and names which coloured model is which
+   character. clipAssemble puts this in the scene slot, ahead of the camera span. */
+function previzPreamble(p) {
+  const bindings = (p.actors || []).map(a => 'The ' + clause(a.color) + ' model in Video 1 is ' + clause(a.is) + (a.image ? ' from Image ' + a.image : '') + '.');
+  return ['Image 1 is the first frame.',
+    'Use Video 1, a 3D clay-model previz, as the only reference for camera movement, shot rhythm, shot-size changes, subject positions, motion trajectory and blocking; strictly keep its camera path, pacing and order of actions.',
+    'Do not reference its visual content.', ...bindings].join(' ');
+}
+/* The source still of a previz cut is edited from the previz's first frame, so the composition the
+   clip starts on is the composition the still has (blender-previz.md §6.6). */
+const PREVIZ_SOURCE_LOCK = 'Composition lock: the attached previz frame (frame 1 of the 3D previz) fixes the camera, the framing, and where every subject stands and how large it is in frame; keep that composition exactly and render every surface, figure and light in the episode style described here.';
+function assemble(win, index, dir) {
   if (!['hybrid', 'full_video'].includes(win.PRODUCTION?.mode)) throw new Error('Choose a production mode before assembling prompts');
   const scene = win.SCENES[index], d = scene?.shot?.videoDesign, style = win.PRODUCTION.style, v = scene?.visual;
   if (!d || !style || !LOOKS[d.look]) throw new Error('Choose style and videoDesign before assembling prompts');
@@ -69,9 +82,12 @@ function assemble(win, index) {
   const pack = d.look === 'archive' || !packPresets.includes(preset) ? null : resolveStylePack({
     id: style.referencePack, role: v.styleRole || 'environment' });
   const spoken = (scene.narration || []).map(n => n.tts || n.sub || '').join(' ');
+  const previz = v.video && v.video.previz && typeof v.video.previz === 'object' ? v.video.previz : null;
+  const previzFrame = previz && typeof previz.firstFrame === 'string' ? (dir ? path.resolve(dir, previz.firstFrame) : previz.firstFrame) : null;
   const source = [canvas + ', edge-to-edge composition.',
     'Narrated meaning this picture must convey: ' + spoken,
     'Opening state: ' + d.before,
+    ...(previzFrame ? [PREVIZ_SOURCE_LOCK] : []),
     'The image must make the narrated subject and action understandable; a beautiful but unrelated scene fails.',
     ...(pack ? ['Use the attached image for STYLE ONLY. Design a new scene for the narration.', ...Object.values(pack.rules)] : []),
     treatment, style.world,
@@ -83,7 +99,9 @@ function assemble(win, index) {
   const lock = lockText(d, style, treatment);
   let motionPrompt = null;
   if (!missingSlots.length) {
+    const onReferenceRoute = previz && (v.video.engine || v.engine || 'seedance') !== 'host' && (previz.handoff || 'reference_video') === 'reference_video';
     const clip = PROMPT.clipAssemble({ engine: 'seedance', camera, motion: motionText(d), locks: lock,
+      ...(onReferenceRoute ? { scene: previzPreamble(previz) } : {}),
       audio: 'silent; narration is supplied separately' });
     const problems = [...clip.hits.map(h => `"${h.match}" (${h.why})`), ...clip.negHits.map(h => `negative directive "${h}"`),
       ...clip.timeHits, ...clip.hanHits.map(h => `Korean "${h}"`), ...(clip.lockMissing ? ['no consistency lock'] : [])];
@@ -94,18 +112,21 @@ function assemble(win, index) {
   return { sourcePrompt: source, stylePreset: preset,
     styleBinding: pack?.binding || null,
     styleGuidePath: pack?.guidePath || null,
-    sourceReferenceImages: pack?.referenceImagePaths || [],
-    sourceImageArgs: pack ? { referenced_image_paths: pack.referenceImagePaths } : {},
+    sourceReferenceImages: [...(previzFrame ? [previzFrame] : []), ...(pack?.referenceImagePaths || [])],
+    // The previz frame goes first: it is the composition the still is edited from, the pack image the look.
+    sourceImageArgs: previzFrame || pack ? { referenced_image_paths: [...(previzFrame ? [previzFrame] : []), ...(pack?.referenceImagePaths || [])] } : {},
+    previzFirstFrame: previzFrame,
     endFramePrompt: 'Edit the supplied opening image into this final state: ' + after + '\n' + treatment + '\n' + lock +
       '\nPreserve lighting. Follow the planned camera endpoint: ' + (camera.end || camera.framing),
     motionPrompt };
 }
-module.exports = { assemble, LOOKS, beatsInWords };
+module.exports = { assemble, LOOKS, beatsInWords, previzPreamble, PREVIZ_SOURCE_LOCK };
 if (require.main === module) {
   try {
     const args = process.argv.slice(2), target = args[0], n = Number(args[args.indexOf('--shot') + 1]);
     if (!target || !args.includes('--shot') || !Number.isInteger(n) || n < 1) throw new Error('usage: spatial-prompts.js <storyboard dir|scenes.js> --shot N');
-    const win = readScenes(fs.statSync(target).isDirectory() ? path.join(target, 'scenes.js') : target);
-    console.log(JSON.stringify(assemble(win, n - 1), null, 2));
+    const scenesPath = fs.statSync(target).isDirectory() ? path.join(target, 'scenes.js') : target;
+    const win = readScenes(scenesPath);
+    console.log(JSON.stringify(assemble(win, n - 1, path.dirname(path.resolve(scenesPath))), null, 2));
   } catch (e) { console.error('spatial-prompts: ' + e.message); process.exitCode = 1; }
 }

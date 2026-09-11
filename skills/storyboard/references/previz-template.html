@@ -1,0 +1,73 @@
+<!doctype html>
+<!--
+  previz-template.html — the three.js previz page (blender-previz.md §6.5).
+
+  Copy to storyboard/previz/sN-previz.html beside previz-runtime.js and previz-contract.js
+  (copy both from the plugin's storyboard/references/), fill window.PREVIZ, then render:
+
+    node ${CLAUDE_PLUGIN_ROOT}/skills/produce/references/render-motion-slide.mjs \
+      storyboard/previz/sN-previz.html --out storyboard/previz/sN --previz
+
+  --previz renders at 24 fps with no grain and one clip for the whole cut. The renderer writes
+  sN/r1.mp4 (the previz clip — copy to previz/sN.mp4) and sN/r0.png (frame 1 — copy to
+  previz/sN-f0001.png, the composition the source still is edited from). Record clip, firstFrame,
+  sha256 (shasum -a 256), fps, seconds and renderer:"threejs" in visual.video.previz.
+
+  The page exposes the seek API the renderer drives (__ready · __seek · __groups · __size ·
+  __meta): one reveal group, whose local time is the cut's time, so frame n of the clip is the
+  spec's frame n. Nothing here runs on the wall clock.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>previz</title>
+<style>
+  html, body { margin: 0; background: #5a5f66; }
+  #stage { position: relative; overflow: hidden; }
+  #stage canvas { display: block; }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<script src="./previz-contract.js"></script>
+<script src="./previz-runtime.js"></script>
+<script>
+  // ✎ PREVIZ — Blender coordinates: metres, Z up, a proxy faces -Y. Keys are LINEAR by frame.
+  window.PREVIZ = {
+    fps: 24, seconds: 5, width: 1080, height: 1920,
+    camera: { lensMm: 35, keys: [
+      { frame: 1,   position: [0.0, -4.5, 1.4], target: [0.0, 0.0, 1.0] },
+      { frame: 120, position: [1.6, -2.6, 1.2], target: [0.2, 0.0, 1.0] }
+    ] },
+    actors: [
+      { name: 'subject', kind: 'person', color: '#d0342c', height: 1.7, keys: [
+        { frame: 1,   position: [0.0, 0.0, 0.0], rotationZDeg: 0 },
+        { frame: 120, position: [0.3, 0.6, 0.0], rotationZDeg: 25 }
+      ] },
+      { name: 'gate', kind: 'box', size: [2.4, 0.3, 2.6], keys: [{ frame: 1, position: [0.0, 1.5, 0.0] }] }
+    ]
+  };
+</script>
+<script>
+  (function () {
+    var spec = window.PREVIZ, stage = document.getElementById('stage'), view = null, ready = null;
+    stage.style.width = spec.width + 'px';
+    stage.style.height = spec.height + 'px';
+    var mountOnce = function () {
+      if (!ready) ready = Promise.resolve().then(function () { view = window.PREVIZ_RUNTIME.mount(stage, spec); });
+      return ready;
+    };
+    window.__ready = function () { return mountOnce(); };
+    window.__seek = function (tMs, g) {
+      if (!view) throw new Error('__ready() first');
+      view.draw(g < 1 ? 0 : Math.min(Math.max(tMs, 0), view.durationMs));
+      return Promise.resolve();
+    };
+    window.__groups = function () { return [{ rg: 0, dur: 0 }, { rg: 1, dur: spec.seconds * 1000 }]; };
+    window.__size = function () { return { w: spec.width, h: spec.height }; };
+    window.__meta = function () { return { hold: 0, stray: 0, infinite: 0, broken: [] }; };
+    mountOnce().catch(function (e) { document.title = 'previz error: ' + e.message; throw e; });
+  })();
+</script>
+</body>
+</html>

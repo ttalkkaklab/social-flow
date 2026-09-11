@@ -17,6 +17,9 @@ const { scenePlan } = require('../../skills/produce/references/seedance-route.js
 function fixture(n = 3) {
   const win = { FORMAT: 'shorts-9x16', PRODUCTION: { mode: 'full_video', imageProvider: 'host',
     maxAttempts: 3, videoBudgetUsd: 15,
+    // The two HITL choices every generated cut needs (user directive 2026-09-11).
+    previz: { renderer: 'threejs', selection: { kind: 'user', reference: 'User chose the three.js previz (no Blender on this machine).' } },
+    videoModel: { model: 'dreamina-seedance-2-0-260128', resolution: '1080p', selection: { kind: 'user', reference: 'User chose Seedance 2.0 at 1080p with the displayed table.' } },
     style: { preset: 'spatial-explainer', reference: 'https://www.youtube.com/shorts/LQZjvQ5W2ck',
       world: 'A granite valley with a river.', materials: 'Matte concrete and granite.', palette: 'Grey, green and blue.',
       lighting: 'Soft daylight with contact shadows.', camera: 'Elevated spatial reveals.' } }, SCENES: [] };
@@ -77,9 +80,28 @@ test('quotes both modes with billed seconds, retry range and API rates, excludin
   win.PRODUCTION.comparison = { resolution: '480p' };
   assert.throws(() => quote(win), /has no price/);
 });
+// Every generated cut carries its 3D previz (blender-previz.md §6, user directive 2026-09-11): the
+// Seedance fields of the reference route, the record, and the motion prompt the assembler writes
+// from it — the same board once its previz is rendered.
+function withPreviz(win, i, over = {}) {
+  const scene = win.SCENES[i];
+  // The shot carries the model the user chose (the fixture pinned 1.5 Pro, which takes no reference video).
+  Object.assign(scene.visual.video, { model: win.PRODUCTION.videoModel.model, resolution: win.PRODUCTION.videoModel.resolution, modelPurpose: 'previz', modelReason: 'the previz carries the camera', realFaceInput: false,
+    referenceImagePaths: [scene.visual.bg], previz: { renderer: 'threejs', clip: `previz/s${i + 1}.mp4`, firstFrame: `previz/s${i + 1}-f0001.png`,
+      sha256: 'c'.repeat(64), fps: 24, seconds: 5, camera: { movement: scene.visual.camera.movement },
+      actors: [{ color: 'red', is: 'the buildings', image: 2 }], ...over } });
+  const prompts = assemble(win, i, '/board');
+  scene.visual.bgPrompt = prompts.sourcePrompt; scene.visual.video.prompt = prompts.motionPrompt;
+  return prompts;
+}
 test('hybrid and full video retain distinct semantic and policy rules', () => {
   const win = fixture(), scene = win.SCENES[0];
   assert.deepEqual(mode.check(win, { requireApproval: true }), []);
+  // The bare fixture has no previz yet: that is the one thing the full check refuses.
+  assert.deepEqual(checkScene(scene, { production: win.PRODUCTION }).map(m => m.replace(/ — .*/, '')),
+    ['shot.render: every generated_video cut pre-renders its camera and blocking in 3D first']);
+  assert.deepEqual(checkScene(scene, { production: win.PRODUCTION, draft: true }), []);
+  withPreviz(win, 0);
   assert.deepEqual(checkScene(scene, { production: win.PRODUCTION }), []);
   assert.match(checkScene(scene).join(), /requires object_html/);
   const base = { generatedVideoMax: 2, videoBudgetUsd: 10, minTrueMotion: 1, allowedKinds: ['ai-video'] };
@@ -420,6 +442,67 @@ test('generation output existence never discounts a new generation or its retrie
  assert.deepEqual(quote(w),before);
  assert.equal(before.options.hybrid.firstPassUsd,.29);assert.equal(before.options.hybrid.retryHighUsd,.87);
 }));
+test('a previz cut gets the clay-model preamble, the composition lock and the first frame as the first still reference', () => {
+  const win = fixture(), prompts = withPreviz(win, 1), scene = win.SCENES[1];
+  assert.match(prompts.motionPrompt, /^Image 1 is the first frame\. Use Video 1, a 3D clay-model previz, as the only reference for camera movement.*Do not reference its visual content\. The red model in Video 1 is the buildings from Image 2\. Low wide view of the valley, slow dolly in, ending on The open stream\./);
+  assert.match(prompts.sourcePrompt, /Composition lock: the attached previz frame/);
+  assert.equal(prompts.previzFirstFrame, path.resolve('/board', 'previz/s2-f0001.png'));
+  // The frame comes first (the composition), the miniature pack image second (the look).
+  assert.equal(prompts.sourceImageArgs.referenced_image_paths[0], prompts.previzFirstFrame);
+  assert.match(prompts.sourceImageArgs.referenced_image_paths[1], /tactile-miniature-v1/);
+  assert.deepEqual(checkScene(scene, { production: win.PRODUCTION }), []);
+  const plan = scenePlan(scene);
+  assert.equal(plan.tool, 'seedance_reference'); assert.equal(plan.priceKey, 'seedance.2-0-video.1080p'); assert.equal(plan.billedSeconds, 10);
+  scene.visual.video.model = 'seedance-1-5-pro-251215';
+  assert.throws(() => scenePlan(scene), /takes no reference video — a previz cut is a Seedance 2\.x cut/);
+  assert.match(checkScene(scene, { production: win.PRODUCTION }).join(), /not the one the user chose for this episode \(PRODUCTION\.videoModel/);
+  scene.visual.video.model = win.PRODUCTION.videoModel.model;
+  scene.visual.video.previz.renderer = 'blender';
+  assert.match(checkScene(scene, { production: win.PRODUCTION }).join(), /not the one the user chose for this episode \(PRODUCTION\.previz/);
+  scene.visual.video.previz.renderer = 'threejs';
+  // The host lane: no Seedance fields, the still and the prompt carry the previz, and the preamble is not written.
+  const host = fixture(); host.SCENES[2].visual.video = { engine: 'host', previz: { renderer: 'threejs', clip: 'previz/s3.mp4', firstFrame: 'previz/s3-f0001.png',
+    sha256: 'd'.repeat(64), fps: 24, seconds: 5, camera: { movement: 'truck right' }, handoff: 'frame_and_prompt' } };
+  const hp = assemble(host, 2, '/board'); host.SCENES[2].visual.video.prompt = hp.motionPrompt;
+  assert.doesNotMatch(hp.motionPrompt, /Video 1/);
+  assert.match(hp.sourcePrompt, /Composition lock/);
+  assert.deepEqual(checkScene(host.SCENES[2], { production: host.PRODUCTION }), []);
+  assert.deepEqual(scenePlan(host.SCENES[2]), { kind: 'motion', engine: 'host' });
+  // A camera slot that contradicts the clip is refused.
+  withPreviz(win, 2, { camera: { movement: 'arc shot' } });
+  assert.match(checkScene(win.SCENES[2], { production: win.PRODUCTION }).join(), /contradicts visual\.camera\.movement/);
+});
+test('the previz renderer and the video model are HITL choices recorded before any render or call', () => {
+  const win = fixture();
+  assert.deepEqual(mode.check(win, { requireApproval: true }), []);
+  const without = key => { const w = fixture(); delete w.PRODUCTION[key]; return mode.check(w).join(); };
+  assert.match(without('previz'), /Ask which 3D previz renderer/);
+  assert.match(without('videoModel'), /Ask which video model/);
+  const w = fixture(); delete w.PRODUCTION.previz.selection; assert.match(mode.check(w).join(), /previz renderer HITL choice/);
+  w.PRODUCTION.previz = { renderer: 'maya', selection: { kind: 'user', reference: 'x' } }; assert.match(mode.check(w).join(), /Ask which 3D previz renderer/);
+  const r = fixture(); r.PRODUCTION.videoModel.resolution = '480p'; assert.match(mode.check(r).join(), /resolution must be one of 1080p/);
+  r.PRODUCTION.videoModel = { model: 'seedance-1-5-pro-251215', resolution: '1080p', selection: { kind: 'user', reference: 'x' } };
+  assert.match(mode.check(r).join(), /Ask which video model/);
+  // The draft pass has no generated cuts settled yet; a board with no generated cut never asks.
+  assert.doesNotMatch(mode.check(without.call(null, 'previz') && fixture(), { draft: true }).join(), /Ask which/);
+  const still = fixture(); delete still.PRODUCTION.previz; delete still.PRODUCTION.videoModel;
+  for (const s of still.SCENES) { s.shot.render.mode = 'still_camera'; delete s.visual.video; }
+  assert.doesNotMatch(mode.check(still).join(), /Ask which/);
+  // The host lane: the tool is the model, so the record says host or stays absent.
+  const host = fixture(); host.PRODUCTION.videoProvider = 'host'; delete host.PRODUCTION.videoModel;
+  assert.doesNotMatch(mode.check(host).join(), /Ask which|videoModel/);
+  host.PRODUCTION.videoModel = { model: 'dreamina-seedance-2-0-260128', resolution: '1080p', selection: { kind: 'user', reference: 'x' } };
+  assert.match(mode.check(host).join(), /must be host under videoProvider host/);
+  // The options table quotes the same board once per model, with the numbers the approval will bind.
+  const { options, text } = require('../../skills/produce/references/video-model-options.js');
+  const table = options(fixture());
+  assert.equal(table.cuts, 3);
+  const rows = Object.fromEntries(table.rows.map(x => [x.model + '@' + x.resolution, x]));
+  assert.ok(rows['dreamina-seedance-2-0-260128@1080p'].firstPassUsd > rows['dreamina-seedance-2-0-mini-260615@720p'].firstPassUsd);
+  assert.equal(rows['dreamina-seedance-2-0-260128@1080p'].firstPassUsd, +(3 * 10 * 0.228).toFixed(2));
+  assert.match(text(table), /Seedance 2\.0 mini 720p/);
+  assert.match(text(options(host)), /videoProvider host/);
+});
 test('the assembled motion prompt clears the Seedance prompt gate that check-scenes.js runs', () => {
   const PROMPT = require('../../skills/storyboard/references/assemble-bg-prompt.js');
   const win = fixture(), p = assemble(win, 0).motionPrompt;

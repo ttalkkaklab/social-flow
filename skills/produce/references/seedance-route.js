@@ -54,7 +54,10 @@ function scenePlan(scene) {
   const engine = settings.engine || (kind === 'motion' ? 'seedance' : 'veo');
   if (!['seedance', 'veo', 'host'].includes(engine)) throw new Error('unknown video engine: ' + engine);
   if (engine !== 'seedance') {
-    const named = SEEDANCE_KEYS.filter((k) => settings[k] !== undefined);
+    // A host video tool takes no reference clip, so a previz on that lane shapes the still and the
+    // prompt instead (handoff frame_and_prompt, render-routing checkPreviz) and is not a Seedance field.
+    const named = SEEDANCE_KEYS.filter((k) => settings[k] !== undefined &&
+      !(k === 'previz' && engine === 'host' && settings.previz && settings.previz.handoff === 'frame_and_prompt'));
     if (named.length)
       throw new Error(named.join(', ') + ' only applies to Seedance — set engine:"seedance" or drop the setting');
     return { kind, engine };
@@ -78,6 +81,7 @@ function scenePlan(scene) {
     if (!previz || typeof previz !== 'object' || Array.isArray(previz)) throw new Error('modelPurpose previz needs visual.video.previz { clip, sha256, fps, seconds }');
     if (typeof previz.clip !== 'string' || !/\.(mp4|mov)$/i.test(previz.clip.trim()) || /^[a-z][a-z0-9+.-]*:/i.test(previz.clip))
       throw new Error('previz.clip must be a local mp4/mov path (the blender_render_previz output)');
+    if (previz.handoff !== undefined && previz.handoff !== 'reference_video') throw new Error('on the Seedance route the previz travels as Video 1 — previz.handoff must be reference_video');
     if (!Number.isInteger(previz.seconds) || previz.seconds < 2) throw new Error('previz.seconds must be a whole number of seconds (2 or more)');
     if (!Number.isFinite(previz.fps) || previz.fps < 24 || previz.fps > 60) throw new Error('previz.fps must be 24–60 (render at 24 for frame-for-frame QA)');
     if (!references.length || references[0] !== (v.bg || '')) throw new Error('previz route: referenceImagePaths[0] must be the source still (visual.bg) — "Image 1 is the first frame"');
@@ -92,6 +96,8 @@ function scenePlan(scene) {
   if (!spec) throw new Error('unknown Seedance model: ' + model);
   if (model !== DEFAULT_MODEL && !String(settings.modelReason || '').trim())
     throw new Error('modelReason is required for a Seedance model override or escalation');
+  if (purpose === 'previz' && !spec.videos)
+    throw new Error(model + ' takes no reference video — a previz cut is a Seedance 2.x cut; drop the pinned model (2.0 is chosen) or name a 2.x model');
   if (spec.images && settings.realFaceInput !== false)
     throw new Error('Seedance 2.x requires realFaceInput:false after inspecting all source/reference images; photoreal faces use 1.5 or Veo');
   if (needsReference && !spec.images) throw new Error(model + ' does not accept reference images/audio');
