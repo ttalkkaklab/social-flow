@@ -183,8 +183,8 @@ are. `check-scenes.js` fails a narrated shot with no
 | What `info` has to show | Size | Why this size and not the next |
 |---|---|---|
 | where we are, what time, how many people, how far apart | `ls` — `els` when the place itself is the subject | the establishing job; a closer size loses the place, the head count or the distance |
-| how big this is — a crowd, a fleet, a hall | `els` with many subjects (`high`/`overhead` helps) | the tiny figure reads as scale only because there are many; the same figure alone reads as lonely |
-| alone · nowhere to run · the world is big | `els`, one figure, no human voice | Mad Max's cliff — the smallness says the sentence, so don't narrate it on top |
+| how big this is — a crowd, a fleet, a hall | `els` with many subjects (`high`/`overhead` helps) | the tiny figures read as scale only because there are many **and they fill the frame**; the same figure alone reads as lonely. Count whatever the viewer counts — people, ships, roofs. A handful swallowed by the space (thirteen ships in a foggy strait, a horizon of enemy sails behind them) belongs to the next row, not this one, and `shot.why` says so |
+| alone · nowhere to run · the world is big | `els`, one figure (or a few lost in the space), no human voice | Mad Max's cliff — the smallness says the sentence, so don't narrate it on top |
 | what the body does — a walk, a dance, a fight, a costume, a gesture that needs the whole body | `fs` | head to toe with no slack; `ms` cuts the action off, `ls` shrinks it |
 | two people and the room between them | `mfs` or `two` | both bodies with a little room — the distance between them is the information |
 | three or more people — a crew, a boat, a table | `ls` first, then `ms` on the hands or `cu` on the one face | the head count and who stands where come before any gesture; `three` at `mfs`/`ms` shows the group, not the place, and pays no establishing debt |
@@ -192,7 +192,7 @@ are. `check-scenes.js` fails a narrated shot with no
 | what someone explains with their hands · a person and the thing they handle | `ms` — only when the face is in the frame | face, hands and context together — the dialogue default. If the screen shows only the hands and the thing (no face), it is an `insert`, however much the hands are "explaining" |
 | a person telling me — a talking head, an interview, the hook cut | `mcu` | face and hands together for the last time; the news and interview size, at `eye` |
 | the one line that matters · the face that saw it | `cu` (one per scene) | "look at this now" — the command; a wider size spreads the attention. The whole face is in, crown lightly cropped — a helmet or a hat cropping the top does not make it a `choker` |
-| the peak — one tear, one word, one trembling hand | `choker` / `ecu` (once or twice per episode) | the detail is the whole information — eyes only, mouth only, fingertips; when the whole face is still in the frame it is a `cu`. `ecu` is a face or a hand — a tight detail of an object is still an `insert` |
+| the peak — one tear, one word, one trembling hand — the moment the episode has been building to (the towel coming off the dyed hair, the order finally given, the heel leaving the floor) | `choker` / `ecu` (once or twice per episode — and an episode that never uses them has usually left its peak at `cu`) | the detail is the whole information — eyes only, mouth only, fingertips; when the whole face is still in the frame it is a `cu`. `ecu` is a face or a hand — a tight detail of an object is still an `insert` |
 | the thing itself — a screen, a hand, a document, an object that replaces three lines, at any tightness | `insert` | no face; the object's own sound |
 | an HTML slide — a rendered object, a chart, a text plate | `insert` when one object or one figure fills the stage (still one object when it changes through stages — a bean losing its gas, a hair losing its melanin); `ls` for a chart, a timeline or a layout — anything that compares or orders two or more values or things (two bars are a comparison, so `ls`; a mechanism whose parts are being compared — a big chainring against a small sprocket — is a comparison too) | the subject on the stage is sized the way a person would be, and `angle` is written `eye` (the field has no blank value); there is no room to hear, so the sound rule doesn't apply — the narration and the slide's bed |
 
@@ -200,7 +200,10 @@ The mismatches this table catches: `cu`/`ecu`/`insert` on a shot whose info is t
 head count (the viewer never learns where they are); `ls`/`els` on the one line that has to land
 on a face (the command is whispered from across the street); `ms` on a walk or a fight (the body
 is cut mid-action); `mcu` on a detail the hand is holding (the object is too small to read); a
-tiny figure meant as scale with nobody else in the frame.
+tiny figure meant as scale with nobody else in the frame; a wide shot whose sound line says the
+lines are clear (at `ls`/`els` the space is in front and the people in the picture are far — only
+the narrator's voice-over, which is not in the picture, stays clean); a composition tag whose
+distance names one size and describes another (`back` "at `fs`" cut at mid-shin is `mfs`).
 
 ---
 
