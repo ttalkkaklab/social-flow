@@ -11,7 +11,8 @@ Workbench previz well under a minute.
 The point of a previz is what a prompt cannot hold. "Low angle beside the wheel" is 15° to
 one model and 30° to another; a storyboard has two axes and no depth. A previz says the
 camera is at (1.5, -2.5, 0.6), looks at (0.3, -0.3, 1.2), 35 mm, and gets there by frame 72
-— and a video model that takes a reference clip follows those numbers instead of guessing.
+— and a video model that takes a reference clip follows those numbers instead of guessing —
+Seedance 2.x does, through `seedance_reference`'s `referenceVideoPaths` (§6).
 Since 0.66.0 a person in the previz is a jointed mannequin, so a cut whose content is the
 body — a dance, a fall, a gesture — carries its timing the same way: which count the arm
 goes up, when the knee bends, how far the lean goes.
@@ -23,7 +24,7 @@ goes up, when the knee bends, how far the lean goes.
 - [3. What each tool does](#3-what-each-tool-does)
 - [4. Posing a person by channel](#4-posing-a-person-by-channel)
 - [5. Motion capture onto the mannequin](#5-motion-capture-onto-the-mannequin)
-- [6. Hand-off to generation — three channels](#6-hand-off-to-generation--three-channels)
+- [6. Hand-off to generation — the previz is Video 1](#6-hand-off-to-generation)
 - [7. Traps](#7-traps)
 
 ## 1. Conversation shape
@@ -45,7 +46,8 @@ goes up, when the knee bends, how far the lean goes.
    plain channels for accents and short beats (§4). Both report where the hands, feet and
    head ended up, so the next call can be a correction in numbers.
 6. **Render and look.** `blender_render_previz` writes an H.264 mp4 plus first, middle and
-   last frame PNGs with the frame number, camera and lens stamped in the corner. Open the
+   last frame PNGs; the stills carry the frame number, camera and lens stamped in the corner
+   and the mp4 stays clean, because the mp4 is what generation receives (§6). Open the
    stills. Then iterate.
 
 Iterate in numbers, never in adverbs. "More dynamic" means nothing to a coordinate; "camera
@@ -175,28 +177,115 @@ What the mannequin loses: fingers, the face, the twist of a limb about its own l
 cylinder has none to show), and a source hand or foot whose end site has no length (that
 bone holds its rest pose relative to the parent — the reply lists it under unmatched).
 
-## 6. Hand-off to generation — three channels
+## 6. Hand-off to generation
 
-A reference clip does not hand a video model the camera alone. It hands over every motion
-in the clip — a proxy with straight arms and locked knees came back as a person with
-straight arms and locked knees, which is why people were not animated here before 0.66.0.
-With a jointed mannequin the body's timing travels too, and it travels as it is: natural
-when it came from a capture, mechanical when it was hand-keyed in eight poses. So the
-information is still split three ways, and nothing is asked of a channel that cannot carry it:
+The previz clip goes to the video model as a reference video. Seedance 2.x takes one
+(`role: reference_video`), and its 2.5 prompt guide documents exactly this use under the
+name **3D clay-model reference**: a coarse, textureless render supplies camera movement, shot
+rhythm, subject trajectory and blocking, and the model renders it in the target look. The
+plugin wires it as `seedance_reference` → `referenceVideoPaths`; Veo 3.1 takes no video
+input, and Seedance 1.x takes none either, so a previz-guided cut is a 2.x cut.
+
+What travels on which channel is still split, and nothing is asked of a channel that cannot
+carry it:
 
 | channel | carries |
 |---|---|
-| **previz clip** (this lane) | camera path, lens, timing, where each subject stands and how large it is in frame, what passes what, in which order — and, for a person, the body's timing: the count the arm goes up, the knee bend, the lean |
-| **image sheets** (`referenceImagePaths`) | face, clothing, props, the place, every look-related fact |
-| **prompt** | the acting the mannequin cannot show: what the hand touches, where the eyes go, the expression, the weight in the landing |
+| **previz clip** (`Video 1`) | camera path, lens, timing, where each subject stands and how large it is in frame, what passes what, in which order — and, for a person, the body's timing |
+| **source still** (`Image 1`) | the composition in the chosen visual style — "Image 1 is the first frame" |
+| **character sheets** (`Image 2…`) | face, clothing, props, every look-related fact |
+| **prompt** | the acting the mannequin cannot show, the environment, materials and lighting, and which coloured model is which character |
 
-The plan for a generated cut therefore names the previz as its camera and timing source,
-the sheets as its look source, and writes the acting as sentences. Whether the previz clip
-travels to the model as a reference video depends on the route — Seedance 2.x reference
-mode takes video references; Veo's reference lane takes images only — and the storyboard
-contract carries no video-reference field yet, so until it does the previz is the author's
-own instrument: it fixes the numbers the prompt and the camera sentence are then written
-from.
+One vendor rule shapes the whole hand-off: first-frame mode and the reference lane are
+**mutually exclusive**, so a previz cut cannot also pin `first_frame`. The still rides as a
+reference image instead, which the vendor says lands "similar, not identical". That is the
+trade: exact camera and timing from the clip, a close first frame from the still.
+
+### 6.1 Rendering the clip for the model
+
+- **Whole seconds, equal to the billed length.** The cut's `duration` rounds up to the
+  model's floor (2.0: 4–15 s); render exactly that many seconds — `frameEnd = fps × seconds`
+  — and the route refuses a mismatch. Practitioners keep a previz-guided move to 3–8 s and
+  one camera move per shot.
+- **24 fps.** The vendor takes 24–60 and outputs 24; rendering at 24 makes frame n of the
+  previz frame n of the result, which is what the QA overlay compares. Set it in
+  `blender_scene_build` (`fps: 24`).
+- **Format resolution.** 1080×1920 or 1920×1080 pass the vendor's pixel window
+  (407,696–8,295,044 a frame); so does 720×1280.
+- **Workbench, no stamp on the clip, no gizmos.** The mp4 is never stamped (only the stills
+  are); nothing else may be in frame either — no grid, camera cone, trajectory line or
+  coordinate axis. The vendor lists those as distractions.
+- **One flat colour per actor, everything else grey.** `blender_scene_build` proxies take
+  `color`. The prompt then binds "the red model in Video 1" to a character image, the way
+  the vendor's own example does. Simple primitives beat detailed models for the reference.
+- **No face anywhere in the inputs.** 2.x moderation rejects real human faces in reference
+  images and videos; the mannequin has none, and the still and the sheets must not either.
+
+### 6.2 What the storyboard stores
+
+On the motion-background record (scenes-schema §motion background):
+
+```js
+video: {
+  engine: "seedance", modelPurpose: "previz",
+  modelReason: "The camera orbits the cart while the load shifts — timing has to land on the sentence",
+  realFaceInput: false, resolution: "1080p",
+  referenceImagePaths: ["images/scene-4.png", "../../assets/characters/porter/body.png"],  // [0] is visual.bg
+  previz: { clip: "previz/s4.mp4", blend: "previz/s4.blend", sha256: "<64 hex>", fps: 24, seconds: 5 },
+  prompt: "…"   // §6.3
+}
+```
+
+`check-scenes.js` rejects the record when the clip is not a local mp4, the hash is missing,
+the seconds are not whole, the fps is outside 24–60, `referenceImagePaths[0]` is not the
+source still, an end frame is declared, or the prompt lacks the bindings in §6.3.
+`seedance-route.js` routes it to `seedance_reference` on 2.0 (2.5 when a fixed voice or more
+than nine images ride along) and prices it on the `…-video` rows: the vendor bills **input
+plus output seconds**, at a lower per-token rate, so a 5 s cut with a 5 s previz bills 10 s
+(2.0 1080p ≈ $2.28, against $1.87 without the clip). The approval page shows the previz next
+to the source still, and the hash is part of the approved quote — re-rendering the previz
+after approval means approving again.
+
+### 6.3 The prompt
+
+Written from the vendor's clay-model template, in this order:
+
+1. `Image 1 is the first frame.`
+2. `Use Video 1, a 3D clay-model previz, as the only reference for camera movement, shot
+   rhythm, shot-size changes, subject positions, motion trajectory and blocking; strictly
+   keep its camera path, pacing and order of actions.`
+3. `Do not reference its visual content.` (The clay replacement goes into the positive
+   lock in 7: every surface is rendered in the episode's style and the figures are the
+   characters from the images — a "no grey clay, no mannequins" tail is an exclusion the
+   prompt gate rejects.)
+4. The colour bindings: `The red model in Video 1 is the porter from Image 2.`
+5. The scene, materials, lighting and the episode's visual style, written in full — the
+   clip carries no look, so an unmentioned surface is the model's guess.
+6. The acting in general terms (what the hand touches, where the eyes go, the weight in the
+   landing). When the mannequin's motion is hand-keyed and stiff, say the clip supplies
+   *camera and positions* and describe the performance in words.
+7. The usual close: one of each character in frame, no subtitles, no logo, and the
+   consistency lock every Seedance prompt ends on.
+
+On 2.0 write shot labels, never timestamps; 2.5 takes integer-second timestamps and Korean.
+The two negative sentences in 2–3 are the vendor's exact wording and are the only exclusions
+the prompt gate lets through on this route; anything else goes into the positive lock.
+
+### 6.4 The call and the check
+
+`seedance_reference` takes the clip as `referenceVideoPaths`, probes it with ffprobe (length,
+fps, pixels) before anything is published, then serves it to the vendor — through
+`MEDIA_UPLOAD_URL` when the operator has media hosting, otherwise through a cloudflared quick
+tunnel for the life of the task — and releases it when the task settles. The vendor takes
+video by public URL only; base64 is refused.
+
+Every 2.x take is a fresh draw (no seed), so check the result against the previz before
+accepting it: a contact sheet of both clips at 0, 25, 50, 75 and 100 %, and an edge overlay
+of the result on the previz silhouettes, catches a drifted camera, a missing actor or a
+late beat. When timing slips on the reference route, the tighter lock is 2.5's edit task type
+(`omni_reference_task_type: edit`, aspect and length locked to the input clip) — not wired
+here yet, and its prompt must replace every grey surface, since edit keeps what it is not
+told to change.
 
 ## 7. Traps
 

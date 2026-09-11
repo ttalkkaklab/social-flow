@@ -116,7 +116,7 @@ generated clip paths so saving the result does not invalidate approval. Narratio
 prompts, style, video model/settings, duration, budget and the price table are bound to the quote.
 If they change, update the quote and secure approval for the revised plan before more generation.
 
-Copy `production-mode.js` with `render-routing.js` into storyboard/. Run
+Copy `production-mode.js` with `render-routing.js` and `style-samples.js` into storyboard/. Run
 `cost-preview.js storyboard/ --sbdoc` and put its full cost block into `SB_DOC`; the approval
 page shows both choices, retries and the selected cap, and flags a stale comparison.
 The page displays a proposal; selection is recorded by the host's HITL, not a pretend HTML button.

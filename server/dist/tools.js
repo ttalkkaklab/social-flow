@@ -1646,8 +1646,9 @@ Do NOT pass reference images containing real human faces — the 2.x models reje
 References carry the artistic STYLE through along with the subject. That is the feature when you want a sketch or toon look transferred — this is the only style-transfer lane in the plugin, since Veo 3.1 dropped style references — and a defect when you only wanted the layout: a storyboard frame passed here returns its drawing style, not its composition. For composition use seedance_img2video with sourceImagePath + lastImagePath.
 Do NOT feed a three-view or multi-view character sheet. ByteDance's own docs advise against it twice: the model reads the separate angles as separate people, which worsens identity drift and produces duplicate characters in one frame. Send a headshot (face only, neutral expression, minimal shoulders and background) plus one full-body shot instead — the docs call those two sufficient. Order is weight: put the asset that must be matched most precisely first in the array.
 Reference AUDIO gives a character a fixed voice. Pass the clip in referenceAudioPaths with generateAudio: true and bind it in the prompt the way the 2.5 guide does — "Images 1-2 are Character 1 and correspond to Audio 1; Image 3 is Character 2 and speaks with the voice of Audio 2" (@Image N and @Audio N are each list's own order). Route this to dreamina-seedance-2-5-260628: only its guide documents the per-character mapping and only it takes audio-only input; the 2.0 series takes at most 3 clips and needs an image alongside. A channel character's fixed voice sample lives at data/<channel>/assets/characters/<id>/voice.wav. Veo has no audio reference at all.
+Reference VIDEO hands over camera movement, blocking and motion timing — the Blender previz lane (blender_render_previz → referenceVideoPaths). The vendor's own "3D clay-model reference" recipe: a grey primitive render, each actor its own flat colour, no stamp or gizmos, 24 fps, a whole number of seconds equal to durationSeconds; the styled source still goes first in referenceImagePaths ("Image 1 is the first frame" — first_frame cannot be mixed with a reference video); the prompt names "Video 1" as the ONLY reference for camera, shot rhythm, subject trajectory and blocking, maps each coloured model to its Image, and says "Do not reference its visual content". The vendor takes video by public URL only, so a local file is published for the life of the task — through MEDIA_UPLOAD_URL when set, else a cloudflared quick tunnel — and released afterwards. Input seconds are billed alongside output seconds at a lower per-token rate.
 
-Returns: a text block with the saved .mp4 file path, reference image and audio lists, model, ratio, resolution, duration, and the billed completion token count.`,
+Returns: a text block with the saved .mp4 file path, reference image, video and audio lists, model, ratio, resolution, duration, and the billed completion token count.`,
         inputSchema: {
             type: 'object',
             properties: {
@@ -1660,6 +1661,18 @@ Returns: a text block with the saved .mp4 file path, reference image and audio l
                     items: { type: 'string' },
                     maxItems: 30,
                     description: 'Absolute paths to reference images guiding subject appearance — up to 30 for dreamina-seedance-2-5-260628, up to 9 for the 2.0 series. Must not contain real human faces. May be left out only on dreamina-seedance-2-5-260628 when referenceAudioPaths carries the reference; the 2.0 series needs at least one image.',
+                },
+                referenceVideoPaths: {
+                    type: 'array',
+                    items: { type: 'string' },
+                    maxItems: 10,
+                    description: 'Absolute paths to local reference videos — the Blender previz lane (blender_render_previz output as the vendor\'s clay-model reference) — mp4 or mov (H.264/H.265), 200MB each at most, 24–60 fps, 407,696–8,295,044 pixels a frame (720×1280 and 1080×1920 both pass). dreamina-seedance-2-5-260628 takes up to 10 clips of 2–30s (30s total); the 2.0 series up to 3 clips of 2–15s (15s total). Checked with ffprobe before anything is published or billed. Each file is served to the vendor through MEDIA_UPLOAD_URL (+ MEDIA_UPLOAD_API_KEY) when set, otherwise through a cloudflared quick tunnel for the life of the task. @Video N in the prompt is the Nth entry here (referenceVideoUrls continue the numbering after these). No real human faces — the same moderation as images.',
+                },
+                referenceVideoUrls: {
+                    type: 'array',
+                    items: { type: 'string' },
+                    maxItems: 10,
+                    description: 'Already-public https URLs of reference videos (or asset://<id> library assets), numbered after referenceVideoPaths. Same limits as referenceVideoPaths, but a URL clip is not probed here — its length and frame size are checked only by the vendor, and its seconds still count against the model total and the bill.',
                 },
                 referenceAudioPaths: {
                     type: 'array',
@@ -2254,7 +2267,7 @@ Returns: the scene summary; the person's rig line shows the baked frame range, a
         name: 'blender_render_previz',
         title: 'Render a previz clip (bridge)',
         annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-        description: `Render a .blend previz **on this machine** to an H.264 mp4 plus first, middle and last frame PNGs (or the frames you list), with the frame number, camera and lens stamped in the corner. workbench (default) is flat studio light with cavity shading and outlines — grey figures read against a grey floor, well under a second a frame; eevee renders the scene's light and materials for a previz that also has to say something about mood, a few seconds a frame. Silent — no audio track.
+        description: `Render a .blend previz **on this machine** to an H.264 mp4 plus first, middle and last frame PNGs (or the frames you list). The mp4 is always clean — it is what seedance_reference takes as referenceVideoPaths — and the stills carry the frame number, camera and lens stamped in the corner (stamp:false for clean stills). workbench (default) is flat studio light with cavity shading and outlines — grey figures read against a grey floor, well under a second a frame; eevee renders the scene's light and materials for a previz that also has to say something about mood, a few seconds a frame. Silent — no audio track.
 
 Use after blender_camera_set to look at the move — open the stills, then iterate the camera in numbers — and at the end of a previz session to produce the clip the cut's camera and blocking are planned from. Resolution, fps and frame range default to the scene's (set by blender_scene_build); pass frameStart/frameEnd to render a slice. Output goes to outputPath or <blend dir>/previz/.
 Do NOT treat the previz as a deliverable frame — nothing in it is final appearance; it is a camera and blocking plan. Do NOT pad or loop a failed render — the tool reports failure and writes no mp4.
@@ -2291,7 +2304,7 @@ Returns: a text block with the mp4 path, still paths (and any requested still ou
                 stamp: {
                     type: 'boolean',
                     default: true,
-                    description: 'Burn frame number, camera name and lens into the corner (default true) — what makes a still reviewable.',
+                    description: 'Burn frame number, camera name and lens into the corner of the PNG stills (default true) — what makes a still reviewable. The mp4 is never stamped, so it can go straight to seedance_reference.',
                 },
                 samples: { type: 'number', default: 16, description: 'eevee only: render samples (default 16).' },
                 timeoutSeconds: {
@@ -3719,6 +3732,84 @@ Returns: integer credit balance.`,
                 channel: SNS_CHANNEL_PROPERTY,
             },
             required: ['query'],
+        },
+    },
+    // ── Storyboard — sequence → scene → shot (skills/storyboard/references/structure-contract.js) ──
+    {
+        name: 'storyboard_read',
+        title: 'Read a storyboard as sequences → scenes → shots',
+        annotations: HINT.local,
+        description: `Read an episode's scenes.js and return it as a tree: sequences (purpose · question · payoff) → scenes (place · time · event · charge · turn · out) → shots (feel · info · size · angle · render · narration). Reads the file only; no API call.
+
+Use it before editing an existing board, and after storyboard_apply to see the board the way the approval page groups it. level=outline is enough to plan a change; level=full carries every raw shot object (large — one shot is ~40 fields).
+Do NOT use it to validate — storyboard_check runs the contract. A board with no window.STRUCTURE comes back with every shot under unplacedShots; write the structure with storyboard_apply.
+
+Returns: JSON — { version, format, shots, sequences[…scenes[…shots]], unplacedShots, splicedShots (broll · outro) }.`,
+        inputSchema: {
+            type: 'object',
+            properties: {
+                path: { type: 'string', description: 'The storyboard directory (data/<channel>/episodes/<topic>/storyboard/) or its scenes.js' },
+                level: { type: 'string', enum: ['outline', 'scenes', 'shots', 'full'], description: 'outline = sequences with scene numbers · scenes = scene cards with shot numbers · shots (default) = every shot summarised under its scene · full = raw shot objects too' },
+            },
+            required: ['path'],
+        },
+    },
+    {
+        name: 'storyboard_apply',
+        title: 'Write or patch a storyboard with validation',
+        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+        description: `Write a storyboard's scenes.js from a sequence → scene → shot model, or patch part of it, in one call. Every shot is validated against the grammar vocabularies (type · beat · size · angle · infoType · shareType · render.mode · transition), the structure against its rules (one place and time per scene, a charge that turns, every scene in exactly one sequence, shots grouped by scene in sequence order, two sizes per scene), and the derived shot labels (sceneSlug · sequence) are written from the structure. Nothing is written when a violation is found — the findings come back instead. Warnings are written and reported.
+
+Use it to author a new board (set = { structure, shots }) after the narration is approved (storyboard §4), and to change one thing later (scenes / sequences / shots by key, insertShots, removeShots, globals for FORMAT · THEME · COMPREHENSION · STORY · PRODUCTION · MUSIC). One call carries the whole change — do not write scenes.js by hand and do not call this once per shot. dryRun:true validates without writing.
+Do NOT pass a shot's visual plan through a summary — pass the object scenes-schema.md defines (visual · shot.space · visual.camera · visual.video …); unknown keys on a shot pass through untouched. Editing an approved board drops its \`// approved:\` line; it is approved again at the HITL gate.
+
+Scene: { no, place, time, event, charge: { open: "+"|"-", close: "+"|"-"|"++"|"--" }, turn, out? }. Sequence: { id, title, purpose, question?, payoff?, scenes: [no…] }. The reasons for each field are in scenes-schema.md §structure.
+
+Returns: the file written or not, counts, and findings (! violation · warning).`,
+        inputSchema: {
+            type: 'object',
+            properties: {
+                path: { type: 'string', description: 'The storyboard directory (scenes.js is created there when missing) or its scenes.js' },
+                set: {
+                    type: 'object',
+                    description: 'Replace the whole board — how a new board is written',
+                    properties: {
+                        structure: { type: 'object', description: '{ version: "structure-v1", sequences: [...], scenes: [...] }' },
+                        shots: { type: 'array', items: { type: 'object', description: 'The scenes-schema.md shot object' }, description: 'Every shot in playback order — the scenes-schema.md shot object; each playback shot carries `scene`' },
+                    },
+                    required: ['structure', 'shots'],
+                },
+                structure: { type: 'object', description: 'Replace window.STRUCTURE only' },
+                sequences: { type: 'array', items: { type: 'object', description: '{ id, title, purpose, question?, payoff?, scenes }' }, description: 'Upsert sequences by id' },
+                scenes: { type: 'array', items: { type: 'object', description: '{ no, place, time, event, charge, turn, out? }' }, description: 'Upsert scenes by no' },
+                shots: { type: 'array', items: { type: 'object', description: 'One positional upsert', properties: { no: { type: 'number', description: '1-based position' }, shot: { type: 'object', description: 'The scenes-schema.md shot object' } }, required: ['no', 'shot'] }, description: 'Upsert shots by 1-based position; no = length + 1 appends' },
+                insertShots: { type: 'array', items: { type: 'object', description: 'One insert', properties: { after: { type: 'number', description: '1-based position to insert after; 0 = at the start' }, shots: { type: 'array', items: { type: 'object', description: 'The scenes-schema.md shot object' }, description: 'Shots to insert, in order' } }, required: ['after', 'shots'] }, description: 'Insert shots after a 1-based position (0 = at the start)' },
+                removeShots: { type: 'array', items: { type: 'number', description: '1-based position' }, description: '1-based positions to drop (resolved before inserts)' },
+                removeScenes: { type: 'array', items: { type: 'number', description: 'Scene number' }, description: 'Scene numbers to drop from STRUCTURE.scenes and from every sequence' },
+                removeSequences: { type: 'array', items: { type: 'string', description: 'Sequence id' }, description: 'Sequence ids to drop' },
+                globals: { type: 'object', description: 'Other window.* blocks to set — FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, VOICE, MOTION_POLICY' },
+                dryRun: { type: 'boolean', description: 'Validate and report, write nothing' },
+            },
+            required: ['path'],
+        },
+    },
+    {
+        name: 'storyboard_check',
+        title: 'Check a storyboard against its contract',
+        annotations: HINT.local,
+        description: `Run the sequence → scene → shot rules and the full scenes.js contract (check-scenes.js: vocabularies, beat order, camera slots, motion policy, production mode) on a board and return every finding. Reads the file and runs a local script; no API call.
+
+Use it after storyboard_apply and before delegating a reviewer or generating anything — the same command the storyboard skill runs by hand (\`node check-scenes.js storyboard/\`). draft:true is the story pass (§4a): machine-layer absences are deferred and counted, vocabularies and beat order still fail.
+Do NOT treat a pass as visual quality — frame overflow, hero-stat width and speech rate are measured on the rendered canvas in storyboard.html's check strip.
+
+Returns: counts (violations · warnings · deferred) and two lists — structure findings, then shot-contract findings — each line "! where what" (violation) or "· where what" (warning).`,
+        inputSchema: {
+            type: 'object',
+            properties: {
+                path: { type: 'string', description: 'The storyboard directory or its scenes.js' },
+                draft: { type: 'boolean', description: 'The story pass (storyboard §4a) — machine-layer absences deferred' },
+            },
+            required: ['path'],
         },
     },
 ];

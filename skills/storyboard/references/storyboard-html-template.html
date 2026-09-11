@@ -121,6 +121,37 @@
     background: var(--accent); margin-right: 6px; vertical-align: 1px;
   }
 
+  /* Episode visual style (visual-style.md) — the HITL choice drawn once, at the top, so the
+     reader knows what every generated picture below looks like before opening a shot. The
+     card is the pictogram, the preset's plain-language line and, when the choice named a
+     picture, that picture; the rendering rules live in the tooltip. */
+  .style-card {
+    display: flex; align-items: center; gap: var(--s4); margin: var(--s4) 0 0;
+    padding: var(--s3) var(--s4); border-radius: 12px; background: var(--sunk); cursor: default;
+  }
+  .style-card { flex-wrap: wrap; }
+  .style-card .size-ico { width: 56px; height: 56px; border-radius: 22.5%; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3), 0 2px 5px rgba(0, 0, 0, .18); }
+  /* The sample picture (style-samples.js): the same reading-at-a-window scene rendered in every
+     preset, so the look is seen, not named. The pictogram sits in its corner as the family mark. */
+  .style-card .pic { position: relative; flex: none; width: 128px; height: 128px; border-radius: 14px; overflow: hidden; box-shadow: 0 1px 3px rgba(0, 0, 0, .18); }
+  .style-card .pic img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .style-card .pic .size-ico { position: absolute; right: 6px; bottom: 6px; width: 28px; height: 28px; border-radius: 24%; }
+  .style-all { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: var(--s3) var(--s2); margin-top: var(--s2); padding-top: var(--s3); border-top: 1px solid var(--hair); }
+  .style-all .kt { flex-basis: 100%; font-size: var(--t-micro); color: var(--faint); font-weight: 700; letter-spacing: .06em; }
+  .style-all .k { width: 68px; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 10px; line-height: 1.2; color: var(--muted); text-align: center; word-break: keep-all; cursor: default; }
+  .style-all .k img { width: 64px; height: 64px; object-fit: cover; border-radius: 10px; opacity: .8; }
+  .style-all .k.on { color: var(--text); font-weight: 700; }
+  .style-all .k.on img { opacity: 1; outline: 2px solid var(--accent); outline-offset: 2px; }
+  .toolbar .style-chip img { width: 32px; height: 32px; border-radius: 23%; object-fit: cover; flex: none; }
+  .style-card .st { min-width: 0; flex: 1; }
+  .style-card .st b { display: block; font-size: var(--t-body); font-weight: 700; color: var(--text); word-break: keep-all; }
+  .style-card .st b small { font-size: var(--t-micro); font-weight: 600; color: var(--faint); margin-left: 8px; letter-spacing: .06em; }
+  .style-card .st span { display: block; font-size: var(--t-aux); color: var(--muted); line-height: 1.5; word-break: keep-all; margin-top: 2px; }
+  .style-card .st .kk { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9.5px; color: var(--faint); }
+  .style-card img { width: 56px; height: 56px; object-fit: cover; border-radius: 12px; flex: none; }
+  .style-card.unknown .st b { color: var(--warn-ink, var(--accent-ink)); }
+  .toolbar .style-chip { margin-left: var(--s2); }
+
   .meta-grid {
     display: grid; grid-template-columns: 92px 1fr; gap: var(--s2) var(--s4);
     margin: var(--s5) 0 0; font-size: var(--t-body); align-items: baseline;
@@ -307,6 +338,8 @@
     font-size: var(--t-aux); font-weight: 700; letter-spacing: .08em;
     color: var(--accent-ink); margin: var(--s6) 0 var(--s3);
   }
+  .seq-head .seq-purpose { font-weight: 400; letter-spacing: 0; color: var(--faint); }
+  .scene-band-head .scene-turn { font-size: var(--t-aux); font-weight: 400; letter-spacing: 0; color: var(--faint); flex-basis: 100%; }
   .scene-band {
     margin: var(--s5) 0; padding: var(--s4);
     border: 1px solid var(--line); border-radius: 14px;
@@ -375,6 +408,8 @@
   .frame-inputs figure { margin: 0; min-width: 0; }
   .frame-inputs img { width: 100%; aspect-ratio: 9 / 16; object-fit: contain; background: var(--sunk); border-radius: 8px; display: block; }
   .frame-inputs.wide img { aspect-ratio: 16 / 9; }
+  .frame-inputs video { width: 100%; aspect-ratio: 9 / 16; object-fit: contain; background: var(--sunk); border-radius: 8px; display: block; }
+  .frame-inputs.wide video { aspect-ratio: 16 / 9; }
   .frame-inputs figcaption { font-size: var(--t-aux); font-weight: 600; margin-bottom: 8px; }
   .frame-inputs .pending-frame { aspect-ratio: 9 / 16; display:grid; place-items:center; padding:12px; background:var(--sunk); border:1px dashed var(--line); color:var(--muted); }
   .frame-inputs .frame-reason { grid-column:1/-1; font-size:var(--t-aux); color:var(--muted); }
@@ -416,13 +451,72 @@
     background: color-mix(in srgb, var(--accent) 8%, transparent);
     border-color: color-mix(in srgb, var(--accent) 24%, transparent);
   }
-  .shot-size, .shot-angle {
+  .shot-angle {
     font-size: var(--t-micro); font-weight: 700; letter-spacing: .06em;
     color: var(--muted); border: 1px solid var(--hair); border-radius: 4px;
     padding: 2px 7px;
   }
   .shot-angle.angle-dutch, .shot-angle.angle-low, .shot-angle.angle-high, .shot-angle.angle-overhead { color: var(--accent-ink); }
-  .shot-size.unknown { color: var(--warn-ink, var(--accent-ink)); border-style: dashed; }
+  .shot-why { font-size: 0.8em; color: var(--muted); margin-left: 0.4em; }
+  .shot-grammar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s3); margin: var(--s2) 0 0; }
+  .shot-size { display: inline-flex; align-items: center; gap: 8px; cursor: default; border: 0; padding: 0; letter-spacing: 0; }
+  .shot-size .size-ico { width: 32px; height: 32px; border-radius: 23%; }
+  .shot-size .sz { display: flex; flex-direction: column; line-height: 1.15; }
+  .shot-size .sz b { font-size: var(--t-cap); font-weight: 700; color: var(--text); }
+  .shot-size .sz small { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9.5px; color: var(--faint); letter-spacing: .04em; }
+  .shot-size.unknown .sz b { color: var(--warn-ink, var(--accent-ink)); }
+  /* Pictogram tiles — one rule for every icon on the page: a soft gradient squircle per family
+     and a white line glyph, 2px, round caps, no faces, no dark accents. A filled shape marks only
+     the small solids (the camera dot, a lens, a figure far away). */
+  .size-ico {
+    width: 22px; height: 22px; flex: none; border-radius: 24%; overflow: hidden; color: #fff;
+    fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+    background: linear-gradient(150deg, #a8a8ae, #6a6a72);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25), 0 1px 2px rgba(0, 0, 0, .16);
+  }
+  .size-ico .ico-fill { fill: currentColor; stroke: none; }
+  .size-ico .ico-dim { opacity: .55; }
+  .size-ico.f-wide { background: linear-gradient(150deg, #5eb4ff, #2d6fe6); }
+  .size-ico.f-body { background: linear-gradient(150deg, #43d17d, #1a9a55); }
+  .size-ico.f-face { background: linear-gradient(150deg, #ff9a62, #ef4a6e); }
+  .size-ico.f-thing { background: linear-gradient(150deg, #ffc94d, #f08a12); }
+  .size-ico.f-group { background: linear-gradient(150deg, #b48cff, #6f4fe0); }
+  .size-ico.f-view { background: linear-gradient(150deg, #4fd6c9, #148fa3); }
+  /* Render-route tiles (render-routing.md) — three families the eye must tell apart at a glance:
+     generated video, an HTML animation, a photo with a camera move. */
+  .size-ico.r-video { background: linear-gradient(150deg, #ff7aa8, #d1286c); }
+  .size-ico.r-html { background: linear-gradient(150deg, #3fd1a0, #128a6c); }
+  .size-ico.r-photo { background: linear-gradient(150deg, #6d7ea3, #33405e); }
+  .size-ico.r-asset { background: linear-gradient(150deg, #b0b0b8, #6e6e78); }
+  .size-ico.a-cam { background: linear-gradient(150deg, #8e9dff, #4a50c9); }
+  .size-ico.s-look { background: linear-gradient(150deg, #e2ad6b, #9a5a2c); }
+  .size-key {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(66px, 1fr)); gap: var(--s3) var(--s1);
+    margin: var(--s3) 0 0; padding: var(--s3) var(--s4); border-radius: 12px; background: var(--sunk);
+  }
+  .size-key .kt {
+    grid-column: 1 / -1; margin: 0; font-size: var(--t-micro); color: var(--faint);
+    font-weight: 700; letter-spacing: .06em;
+  }
+  .size-key .k {
+    display: flex; flex-direction: column; align-items: center; gap: 5px;
+    font-size: 10.5px; line-height: 1.2; text-align: center; color: var(--muted); cursor: default; word-break: keep-all;
+  }
+  .size-key .k .kk { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9.5px; color: var(--faint); }
+  .size-key .size-ico { width: 38px; height: 38px; border-radius: 22.5%; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3), 0 2px 4px rgba(0, 0, 0, .18); }
+  /* Route keys are long snake_case words — wider cells, and the key may break mid-word */
+  .size-key.routes { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
+  .size-key.routes .k .kk { overflow-wrap: anywhere; }
+  /* Instant tooltip for the icon tiles (data-tip) — the browser's own title tip waits a second
+     and folds the line breaks, so a small box follows the pointer instead. */
+  .tipbox {
+    position: fixed; z-index: 50; max-width: 320px; padding: 8px 11px; border-radius: 9px;
+    background: var(--text); color: var(--bg); font-size: 12.5px; line-height: 1.5;
+    white-space: pre-line; word-break: keep-all; pointer-events: none;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, .22); opacity: 0; transition: opacity .08s;
+  }
+  .tipbox.on { opacity: 1; }
+  .tipbox b { display: block; font-weight: 700; margin-bottom: 2px; }
   .shot-meta .shot-feel { margin: 0; flex-basis: 100%; }
   .shot-feel.miss b { color: var(--warn-ink, var(--accent-ink)); }
   .shot-info {
@@ -883,6 +977,8 @@
 <script src="./scenes.js"></script>
 <script src="./render-routing.js"></script>
 <script src="./production-mode.js"></script>
+<script src="./style-samples.js"></script>
+<script src="./structure-contract.js"></script>
 <script>
 /* ✎ SB_DOC BEGIN — fill in this block only (editorial metadata that is not in scenes.js).
    Scene titles, dialogue, bullets, shot and duration are never written here — scenes.js is the SoT. */
@@ -1054,16 +1150,76 @@ window.SB_DOC = {
 
       // ── vocabulary read off scenes.js keys ──
       fmt: { "shorts-9x16": "Short-form 9:16", "youtube-long-16x9": "YouTube long-form 16:9" },
-      size: { els: "extreme long", ls: "long / wide", ws: "wide", fs: "full body",
-              mfs: "above the knee", ms: "above the waist", mcu: "above the chest", cu: "face",
-              choker: "above the chin", ecu: "eyes only", insert: "object only",
-              two: "two together", three: "three together", ots: "over the shoulder",
-              pov: "their eyes", back: "from behind", cutaway: "looking away", reaction: "reaction" },
+      size: { els: "extreme long shot", ls: "long shot", ws: "wide shot", fs: "full shot",
+              mfs: "medium full shot", ms: "medium shot", mcu: "medium close-up", cu: "close-up",
+              choker: "choker", ecu: "extreme close-up", insert: "insert",
+              two: "two shot", three: "three shot", ots: "over the shoulder",
+              pov: "POV", back: "back shot", cutaway: "cutaway", reaction: "reaction shot" },
+      sizeKey: "shot size",
+      renderKey: "render route",
+      styleHead: "visual style",
+      styleAll: "the other presets, same scene",
+      styleBy: { user: "chosen in HITL", standing: "standing plan" },
+      styleName: { "cinematic-miniature": "Cinematic miniature diorama", photoreal: "Photoreal live action", webtoon: "Webtoon",
+                   claymation: "Claymation", "paper-cutout": "Paper cut-out diorama", "ink-wash": "Ink wash",
+                   "toon-3d": "3D cartoon character", "arcade-2d": "Arcade game frame", "spatial-explainer": "Spatial explainer (miniature)" },
+      styleDesc: { "cinematic-miniature": "A small model set shot through a macro lens. Suits cutaway explanations of buildings, terrain and devices, and stories where the space matters.",
+                   photoreal: "Real actors and places, as a camera would film them. Suits stories built on faces and mood.",
+                   webtoon: "Crisp lines and cel shading, the way a Korean webtoon is drawn. Suits character-led episodes with a lot of dialogue.",
+                   claymation: "Plasticine puppet animation with thumbprints and a handmade feel. Suits warm, cute explanations and young viewers; motion stays small and slow.",
+                   "paper-cutout": "Cut paper stood up in layers like a shadow theatre. Suits maps, battles and history scenes with depth; faces carry little expression.",
+                   "ink-wash": "Ink on rice paper, East Asian painting. Suits East Asian history; motion is only slow things like mist, water and wind.",
+                   "toon-3d": "Feature-animation style 3D characters with big eyes and round proportions. Suits channels where a character explains and faces must read.",
+                   "arcade-2d": "A 1990s arcade action game frame: bold outlines, saturated paint, layered backdrops. Suits myths, hero tales and face-offs where people stand large; no health bars or HUD.",
+                   "spatial-explainer": "The miniature look driven by the spatial-explainer reference: consistent cutaway sets, stable geography, deliberate camera moves." },
+      styleHint: { "cinematic-miniature": "handcrafted matte surfaces, articulated miniature figures, one scale and soft contact shadows; the tactile-miniature-v1 reference pack is attached",
+                   photoreal: "life-size proportions, real skin, cloth and lenses, real locations; miniature references and any reference pack are removed",
+                   webtoon: "clean contour lines, one line weight and face proportion, cel shading, drawn backgrounds — skin and cloth are drawn too",
+                   claymation: "sculpted plasticine on a built set, thumbprints, chunky forms, the same warm set light on every cut; large fast gestures break the frame-by-frame feel",
+                   "paper-cutout": "flat cut-paper shapes in separated layers with shadows between them; people enter as a still with a camera move and the layers do the parallax",
+                   "ink-wash": "brushed ink lines and washes, empty space, one accent colour; generated video holds only slow environment motion — fast subject motion breaks the ink lines",
+                   "toon-3d": "rounded stylised 3D characters, clean shaders, the approved character image referenced on every cut; no studio or living artist is named in a prompt",
+                   "arcade-2d": "large painted sprites with bold outlines in front of parallax layers; the camera is static or pans sideways, never orbits; the HUD is never in the picture",
+                   "spatial-explainer": "the miniature pack with the spatial-explainer branch: cutaway sets, stable geography, deliberate camera moves and visible physical change" },
+      angleKey: "camera angle",
+      angleHint: { eye: "camera at the subject's eye height — neutral, how people meet",
+                   high: "camera above, looking down — smaller, weaker, watched",
+                   low: "camera below, looking up — bigger, stronger, threatening",
+                   overhead: "straight down from above — a map of the scene, no face",
+                   dutch: "the horizon tilted — unease, something is off" },
+      render: { still_camera: "still + camera move", character_html: "3D character HTML", object_html: "3D object HTML",
+                data_graph: "data graph HTML", editorial_html: "quote · verdict HTML", generated_video: "AI video",
+                recording: "recording", asset: "shared asset", slide: "HTML slide" },
+      renderHint: { still_camera: "a photo — the only motion is the camera (push, pull, rack focus)",
+                    character_html: "HTML animation — a 3D doll acts the task on the studio stage",
+                    object_html: "HTML animation — a 3D object moves the way the sentence says",
+                    data_graph: "HTML animation — bars, lines and shares count while the sentence runs",
+                    editorial_html: "HTML animation — a short quotation or verdict in type",
+                    generated_video: "AI-generated video — real continuous motion, paid per clip",
+                    recording: "a recording — screen capture or footage the channel already has",
+                    asset: "shared asset — the channel's outro or intro clip",
+                    slide: "HTML slide — route not declared in shot.render" },
+      sizeHint: { els: "very far · a person is a dot — the place is the subject; alone reads as lonely, a crowd reads as scale",
+                  ls: "far, wide · whole body with room — where this is, how many, how far apart (the establishing shot)",
+                  ws: "same as the long shot",
+                  fs: "full body · crown to toes — the whole body acting: dance, fight, walk",
+                  mfs: "knee shot, cowboy · cut at mid-shin — two people and the distance between them",
+                  ms: "cut at mid-thigh · upper body, hands explaining, the conversation default",
+                  mcu: "bust shot · cut at mid-chest — talking to camera; hook, anchor, interview",
+                  cu: "the face fills the frame, crown cropped — the one line; one per scene",
+                  choker: "eyes and mouth only — the peak of tension; once or twice an episode",
+                  ecu: "eyes only, fingertips only — the detail at the peak",
+                  insert: "a thing, a hand, a screen, no face — one picture instead of three lines",
+                  two: "two people in one frame (cut at mid-shin)",
+                  three: "three in one frame — shows the group, not the place",
+                  ots: "over a shoulder — the near shoulder in front, the other face (mcu)",
+                  pov: "point of view · what that person sees — write the distance in shot.why",
+                  back: "from behind, no face — write the distance in shot.why",
+                  cutaway: "looking away · one cut of something outside the people",
+                  reaction: "the listener's face" },
       angle: { eye: "eye level", high: "looking down", low: "looking up",
                overhead: "overhead", dutch: "tilted" },
       type: { cover: "cover", points: "body", quote: "quote", broll: "b-roll", outro: "outro" },
-      pic: { still: "still picture", "ai-video": "AI video", recording: "recording",
-             asset: "shared asset", slide: "HTML slide" },
       beat: { hook: "cover", hooking: "hooking", drip: "curiosity stage", result: "result", body: "body",
               turn: "turn", cta: "what next" },
       joinIs: function (v) { return "join · " + v; },
@@ -1092,9 +1248,7 @@ window.SB_DOC = {
         return "shot " + n + "'s sequence heading reads as a turn (전환/반전) — the turning point " +
                "belongs to the story arc; write arc:\"story\" on the cover or rename the heading"; },
 
-      // ── overlay and reveal labels ──
-      overlay: { none: "no text", typing: "HTML typing", caption: "HTML captions",
-                 reveal: "HTML reveal", signature: "HTML signature", staging: "HTML staging" },
+      // ── reveal labels ──
       reveal: { recOverlay: "overlay + first subtitle", title: "title", stat: "hero stat",
                 promptCard: "prompt card", titleSource: "title · source", swapArt: "swap the art",
                 signatureOverlay: "signature overlay", signature: "signature", quote: "quote",
@@ -1149,7 +1303,7 @@ window.SB_DOC = {
       prodScope: "Video API cost only. Images, narration, editing and tax are excluded; the mode not selected is an estimate under stated assumptions.",
       prodTerms: function (rate, cap, attempts) { return "Assumed KRW/USD: " + rate + ". Approved video budget: $" + cap + ". Total attempts per clip: " + attempts + "."; },
       prodRows: "Model, resolution and cost per shot", prodShot: "Shot ", withAudio: "with audio", silent: "silent",
-      framePending: "Image pending", frameStart: "Start frame", frameEnd: "End frame",
+      framePending: "Image pending", frameStart: "Start frame", frameEnd: "End frame", framePreviz: "Previz · Video 1 (camera and timing)",
       frameChange: "Subject change", frameEndState: "End state: ",
 
       // ── header meta ──
@@ -1311,14 +1465,77 @@ window.SB_DOC = {
 
       // ── vocabulary read off scenes.js keys ──
       fmt: { "shorts-9x16": "세로 쇼트폼 9:16", "youtube-long-16x9": "YouTube 롱폼 16:9" },
-      size: { els: "아주 먼", ls: "먼 / 넓은", ws: "넓은", fs: "전신", mfs: "무릎 위", ms: "허리 위",
-              mcu: "가슴 위", cu: "얼굴", choker: "턱 위", ecu: "눈만", insert: "물건만",
-              two: "둘이 함께", three: "셋이 함께", ots: "어깨 너머", pov: "그 사람 눈", back: "뒤에서",
-              cutaway: "딴 데 보기", reaction: "반응" },
+      // Shot-size terms stay in English in the Korean UI too — the trade words are what the
+      // reader is meant to pick up; the Korean gloss lives in sizeHint (the tooltip).
+      size: { els: "extreme long shot", ls: "long shot", ws: "wide shot", fs: "full shot",
+              mfs: "medium full shot", ms: "medium shot", mcu: "medium close-up", cu: "close-up",
+              choker: "choker", ecu: "extreme close-up", insert: "insert",
+              two: "two shot", three: "three shot", ots: "over the shoulder",
+              pov: "POV", back: "back shot", cutaway: "cutaway", reaction: "reaction shot" },
+      sizeKey: "샷 사이즈",
+      renderKey: "렌더 방식",
+      styleHead: "화풍",
+      styleAll: "다른 화풍은 이렇게 (같은 장면)",
+      styleBy: { user: "HITL 선택", standing: "상시 계획" },
+      styleName: { "cinematic-miniature": "시네마틱 미니어처 디오라마", photoreal: "완전 실사풍", webtoon: "웹툰풍",
+                   claymation: "클레이 스톱모션", "paper-cutout": "종이 컷아웃 디오라마", "ink-wash": "수묵화",
+                   "toon-3d": "3D 카툰 캐릭터", "arcade-2d": "아케이드 게임 화면", "spatial-explainer": "공간 설명 (미니어처)" },
+      styleDesc: { "cinematic-miniature": "작은 모형 세트를 매크로 렌즈로 찍은 듯한 화면입니다. 건물·지형·장치를 잘라 보여 주는 설명, 공간이 중요한 이야기에 맞습니다.",
+                   photoreal: "실제 배우와 장소를 카메라로 찍은 듯한 화면입니다. 사람의 표정과 분위기가 핵심인 이야기에 맞습니다.",
+                   webtoon: "네이버 웹툰처럼 또렷한 선과 셀 채색으로 그린 화면입니다. 캐릭터가 이끄는 이야기, 대사가 많은 편에 맞습니다.",
+                   claymation: "찰흙 인형 애니메이션입니다. 지문 자국과 손맛이 있어 따뜻하고 귀여운 설명, 어린 시청자에게 맞습니다. 동작은 작고 느리게 갑니다.",
+                   "paper-cutout": "오려 낸 종이를 겹쳐 세운 그림자극 무대입니다. 지도·전투·역사 장면의 깊이감에 맞고 얼굴 표정은 약합니다.",
+                   "ink-wash": "화선지에 먹으로 그린 동양화입니다. 동양 역사물에 맞고 움직임은 안개·물·바람처럼 느린 것만 씁니다.",
+                   "toon-3d": "극장 애니메이션처럼 큰 눈과 둥근 비례의 3D 캐릭터입니다. 캐릭터가 직접 설명하는 채널, 표정이 잘 읽혀야 하는 편에 맞습니다.",
+                   "arcade-2d": "90년대 오락실 액션 게임처럼 굵은 윤곽선과 진한 채색으로 그린 캐릭터가 겹겹이 세운 배경 앞에 서는 화면입니다. 신화·영웅담·대결 구도에 맞고 체력바 같은 게임 인터페이스는 안 그립니다.",
+                   "spatial-explainer": "공간 설명 참조 영상 문법을 따르는 미니어처 화면입니다. 일관된 단면 세트, 고정된 지형, 의도한 카메라 이동으로 갑니다." },
+      styleHint: { "cinematic-miniature": "손으로 만든 무광 표면, 관절 있는 미니어처 인형, 한 축척과 부드러운 접지 그림자. tactile-miniature-v1 참조 팩을 붙입니다",
+                   photoreal: "실물 크기 비례, 실제 피부·천·렌즈, 실제 장소. 미니어처 참조와 참조 팩은 뺍니다",
+                   webtoon: "또렷한 윤곽선, 일정한 선 굵기와 얼굴 비례, 셀 채색, 그린 배경 — 피부와 옷도 그림으로 그립니다",
+                   claymation: "세트 위 찰흙 인형, 지문 자국, 뭉툭한 비례, 컷마다 같은 따뜻한 세트 조명. 크고 빠른 동작은 한 컷씩 찍은 느낌을 깹니다",
+                   "paper-cutout": "층층이 세운 납작한 종이 조각과 층 사이 그림자. 인물은 정지 화면에 카메라 이동으로 들이고 깊이감은 층의 시차로 냅니다",
+                   "ink-wash": "먹선과 번짐, 여백, 강조색 하나. 생성 영상은 안개·물·바람 같은 느린 환경 움직임만 — 빠른 피사체 움직임은 먹선을 깹니다",
+                   "toon-3d": "둥근 3D 캐릭터와 깔끔한 셰이더, 컷마다 승인된 캐릭터 이미지를 참조. 스튜디오나 작가 이름은 프롬프트에 안 씁니다",
+                   "arcade-2d": "굵은 윤곽선의 큰 스프라이트가 시차 배경 앞에 서는 무대. 카메라는 고정이거나 옆으로만 팬, HUD 는 화면에 없습니다",
+                   "spatial-explainer": "미니어처 팩에 공간 설명 갈래: 단면 세트, 고정된 지형, 의도한 카메라 이동과 눈에 보이는 물리 변화" },
+      angleKey: "카메라 앵글",
+      angleHint: { eye: "카메라가 인물 눈높이 — 중립, 사람이 마주 보는 높이",
+                   high: "위에서 내려다본다 — 작아 보이고 약해 보이고 감시당하는 느낌",
+                   low: "아래에서 올려다본다 — 커 보이고 세 보이고 위협적",
+                   overhead: "바로 위에서 수직으로 — 장면의 지도, 얼굴은 없다",
+                   dutch: "수평선을 기울인다 — 불안, 뭔가 어긋났다" },
+      render: { still_camera: "사진 카메라 무빙", character_html: "3D 캐릭터 HTML", object_html: "3D 사물 HTML",
+                data_graph: "그래프 HTML", editorial_html: "인용·결론 HTML", generated_video: "AI 영상",
+                recording: "녹화분", asset: "공용 소재", slide: "HTML 슬라이드" },
+      renderHint: { still_camera: "사진 한 장 — 움직이는 건 카메라뿐 (푸시·풀·초점 이동)",
+                    character_html: "HTML 애니메이션 — 3D 인형이 스튜디오 판 위에서 동작을 연기한다",
+                    object_html: "HTML 애니메이션 — 3D 사물이 문장이 말하는 대로 움직인다",
+                    data_graph: "HTML 애니메이션 — 막대·선·비율이 문장 동안 값을 센다",
+                    editorial_html: "HTML 애니메이션 — 짧은 인용이나 결론을 글자로",
+                    generated_video: "AI 생성 영상 — 진짜 연속 동작, 클립마다 비용",
+                    recording: "녹화분 — 화면 녹화나 채널이 이미 가진 영상",
+                    asset: "공용 소재 — 채널 아웃트로·인트로 클립",
+                    slide: "HTML 슬라이드 — shot.render 에 방식이 안 적혀 있다" },
+      sizeHint: { els: "완전 풀, 아주 먼 · 사람이 점 — 공간이 주인공, 혼자면 고독·여럿이면 규모",
+                  ls: "와이드, 먼 · 전신에 여유 — 어디인지·몇 명인지·얼마나 떨어졌는지 (설정샷)",
+                  ws: "롱숏과 같다",
+                  fs: "전신 · 머리끝부터 발끝까지 — 몸 전체 동작, 춤·격투·걸음",
+                  mfs: "니숏, 카우보이숏 · 정강이 중간에서 자른다 — 두 사람과 그 사이 거리",
+                  ms: "허벅지 중간에서 자른다 — 상반신과 손짓, 대화 기본값",
+                  mcu: "바스트숏 · 가슴 중간에서 자른다 — 카메라 보고 말하기, 훅·앵커·인터뷰",
+                  cu: "얼굴이 화면을 채운다, 정수리는 잘림 — 그 한 마디, 씬당 하나",
+                  choker: "눈과 입만 — 긴장의 정점, 회차에 한두 번",
+                  ecu: "눈만·손끝만 — 정점의 디테일",
+                  insert: "물건·손·화면만, 얼굴 없음 — 그림 하나가 대사 세 줄을 대신한다",
+                  two: "둘을 한 프레임에 (정강이 중간에서 자른다)",
+                  three: "셋을 한 프레임에 — 무리는 보이지만 장소는 못 깐다",
+                  ots: "어깨 너머 — 앞사람 어깨가 앞에, 상대 얼굴은 미디엄 클로즈업",
+                  pov: "시점숏 · 그 사람이 본 것 — 거리는 shot.why 에 적는다",
+                  back: "뒤에서, 얼굴 없이 — 거리는 shot.why 에 적는다",
+                  cutaway: "딴 데 보기 · 인물 밖의 것을 한 컷",
+                  reaction: "듣는 쪽 얼굴" },
       angle: { eye: "눈높이", high: "내려다봄", low: "올려다봄", overhead: "머리 위", dutch: "기울임" },
       type: { cover: "커버", points: "본문", quote: "인용", broll: "삽입 영상", outro: "아웃트로" },
-      pic: { still: "정지 그림", "ai-video": "AI 영상", recording: "녹화분",
-             asset: "공용 소재", slide: "HTML 슬라이드" },
       beat: { hook: "커버", hooking: "후킹", drip: "호기심 풀기", result: "결과", body: "본문", turn: "전환", cta: "다음 안내" },
       joinIs: function (v) { return "이음 · " + v; },
       arc: { "answer-first": "결론 먼저", story: "이야기" },
@@ -1344,9 +1561,7 @@ window.SB_DOC = {
         return "샷 " + n + "의 시퀀스 제목이 전환으로 읽혀요(전환/반전) — 전환점은 이야기 전개에 속해요. " +
                "커버에 arc:\"story\" 를 적거나 제목을 바꿔 주세요"; },
 
-      // ── overlay and reveal labels ──
-      overlay: { none: "글자 없음", typing: "HTML 타이핑", caption: "HTML 자막",
-                 reveal: "HTML 공개", signature: "HTML 서명", staging: "HTML 연출" },
+      // ── reveal labels ──
       reveal: { recOverlay: "오버레이 + 첫 자막", title: "제목", stat: "숫자",
                 promptCard: "프롬프트 카드", titleSource: "제목 · 출처", swapArt: "삽화 교체",
                 signatureOverlay: "서명 오버레이", signature: "서명", quote: "인용문",
@@ -1401,7 +1616,7 @@ window.SB_DOC = {
       prodScope: "영상 API 비용만 계산합니다. 이미지·음성·편집·세금은 제외하며 선택하지 않은 방식은 가정에 따른 추산입니다.",
       prodTerms: function (rate, cap, attempts) { return "원화 환산 가정: 1달러=" + rate + "원. 승인 예산: $" + cap + ". 장면당 총 시도 한도: " + attempts + "회."; },
       prodRows: "장면별 모델·해상도·생성비", prodShot: "장면 ", withAudio: "음성 포함", silent: "무음",
-      framePending: "이미지 생성 예정", frameStart: "시작 프레임", frameEnd: "끝 프레임",
+      framePending: "이미지 생성 예정", frameStart: "시작 프레임", frameEnd: "끝 프레임", framePreviz: "프리비즈 · Video 1 (카메라·타이밍)",
       frameChange: "피사체 변화", frameEndState: "끝 상태: ",
 
       // ── header meta ──
@@ -1697,14 +1912,193 @@ window.SB_DOC = {
   }
   function pictureOf(s) { return (s.visual && s.visual.picture) || inferredPicture(s); }
   function overlayOf(s) { return (s.visual && s.visual.overlay) || inferredOverlay(s); }
-  function overlayLabel(s) {
-    if (overlayOf(s) === "none") return T.overlay.none;
-    var narr = s.narration || [];
-    if (narr.some(function (n) { return /^card:/.test(n.imgPrompt || ""); })) return T.overlay.typing;
-    if (s.type === "points" && (s.bullets || []).length) return T.overlay.caption;
-    if (s.type === "cover") return T.overlay.reveal;
-    if (s.type === "quote") return T.overlay.signature;
-    return T.overlay.staging;
+  /* Shot-size pictograms (directing-grammar §2 · §2.1). One 32×32 frame and a line figure drawn
+     100 units tall — head 3–27, torso 34–72, legs 72–98 — scaled so the frame's bottom edge lands
+     where that size cuts a person (mid-shin · mid-thigh · mid-chest, never a joint). Anything
+     outside the viewBox is simply not drawn, so the frame does the cropping. The stroke stays 2px
+     at every scale (vector-effect), so a far figure and a near one share one line weight. */
+  var SIZE_ICON = (function () {
+    var V = ' vector-effect="non-scaling-stroke"';
+    function person(cx, top, h, o) {
+      o = o || {};
+      var k = h / 100;
+      var g = '<g' + (o.dim ? ' class="ico-dim"' : "") + ' transform="translate(' + (cx - 50 * k) + ' ' + top + ') scale(' + k + ')">';
+      g += '<circle cx="50" cy="15" r="12"' + V + '/>';
+      g += '<path d="M31 72V46q0-12 19-12t19 12v26z"' + V + '/>';
+      if (o.arms === "up") g += '<path d="M31 46l-11-11M69 46l11-11"' + V + '/>';
+      if (o.legs !== false) g += '<path d="M40 72v26M60 72v26"' + V + '/>';
+      return g + "</g>";
+    }
+    function dot(x, y, r) { return '<circle cx="' + x + '" cy="' + y + '" r="' + (r || 2.4) + '" class="ico-fill"/>'; }
+    var ground = '<path d="M4 27.5h24" class="ico-dim"/>';
+    var D = {
+      els: '<path d="M3 22h26"/><circle cx="23" cy="9" r="3"/>' + dot(10, 17.6, 1.4) + '<path d="M10 19.2V22"/>',
+      ls: ground + person(16, 9.5, 18),
+      fs: person(16, 2, 28),
+      mfs: person(16, 1, 36),
+      ms: person(16, 0, 40),
+      mcu: person(16, 1, 56),
+      cu: person(16, 4, 68),
+      choker: '<circle cx="10.5" cy="13" r="2.6"/><circle cx="21.5" cy="13" r="2.6"/><path d="M11.5 21q4.5 4 9 0"/>',
+      ecu: '<path d="M-2 16q18-14 36 0q-18 14-36 0z"/><circle cx="16" cy="16" r="5.5"/>' + dot(16, 16, 2.2),
+      insert: '<path d="M8 12h14v8a5 5 0 0 1-5 5h-4a5 5 0 0 1-5-5z"/><path d="M22 14h2.5a3 3 0 0 1 0 6H22"/>' +
+              '<path d="M12 8.5V6M17 8.5V5.5" class="ico-dim"/>',
+      two: person(8.5, 0, 36) + person(23.5, 0, 36),
+      three: '<path d="M3 28h26" class="ico-dim"/>' + person(6, 8, 20) + person(16, 6, 22) + person(26, 8, 20),
+      ots: person(23, 3, 38, { dim: true }) + '<circle cx="6.5" cy="25.5" r="8"/>',
+      pov: '<path d="M5 11V8a3 3 0 0 1 3-3h3M21 5h3a3 3 0 0 1 3 3v3M27 21v3a3 3 0 0 1-3 3h-3M11 27H8a3 3 0 0 1-3-3v-3"/>' + dot(16, 16, 2.2),
+      back: '<circle cx="16" cy="11" r="7"/><path d="M2 32q0-12 14-12t14 12"/>',
+      cutaway: '<path d="M10 20h12l-1.5 9h-9z"/><path d="M16 20V9"/>' +
+               '<path d="M16 14q-6-1-7-7 6 1 7 7zM16 11q6-1 7-7-6 1-7 7z"/>',
+      reaction: person(16, 3, 56) + '<path d="M26.5 4.5v6"/>' + dot(26.5, 14, 1.4)
+    };
+    D.ws = D.ls;
+    /* Camera angles — a filled dot is the camera, the arrow is where it looks, the figure is the subject */
+    function arrow(x1, y1, x2, y2) {
+      var dx = x2 - x1, dy = y2 - y1, l = Math.sqrt(dx * dx + dy * dy), ux = dx / l, uy = dy / l;
+      var hx = x2 - ux * 2.8, hy = y2 - uy * 2.8, px = -uy * 2.2, py = ux * 2.2;
+      function f(n) { return Math.round(n * 100) / 100; }
+      return '<path d="M' + x1 + ' ' + y1 + 'L' + x2 + ' ' + y2 + 'M' + f(hx + px) + ' ' + f(hy + py) + 'L' + x2 + ' ' + y2 + 'L' + f(hx - px) + ' ' + f(hy - py) + '"/>';
+    }
+    var A = {
+      eye: dot(6, 9.5) + arrow(9.5, 9.5, 16, 9.5) + person(23.5, 4, 36),
+      high: dot(6, 4.5) + arrow(9, 6.2, 17, 10.5) + person(23.5, 8, 30),
+      low: dot(6, 27.5) + arrow(8.5, 25.5, 17.5, 12.5) + person(23.5, 2, 36),
+      overhead: dot(16, 5) + arrow(16, 8.5, 16, 14.5) + '<ellipse cx="16" cy="24" rx="10" ry="5.5"/><circle cx="16" cy="24" r="3.4"/>',
+      dutch: '<g transform="rotate(-14 16 16)"><rect x="4.5" y="8" width="23" height="16" rx="2.5"/>' + person(16, 10, 18, { legs: false }) + "</g>"
+    };
+    return { sizes: D, angles: A, person: person, dot: dot };
+  })();
+  var ANGLE_ICON = SIZE_ICON.angles;
+  var ICON_PERSON = SIZE_ICON.person, ICON_DOT = SIZE_ICON.dot;
+  SIZE_ICON = SIZE_ICON.sizes;
+  var SIZE_FAMILY = { els: "wide", ls: "wide", ws: "wide", fs: "body", mfs: "body", ms: "body",
+                      mcu: "face", cu: "face", choker: "face", ecu: "face", insert: "thing",
+                      two: "group", three: "group", ots: "group", pov: "view", back: "view", cutaway: "view", reaction: "view" };
+  function sizeIcon(size) {
+    var d = SIZE_ICON[size];
+    return d ? '<svg class="size-ico f-' + SIZE_FAMILY[size] + '" viewBox="0 0 32 32" aria-hidden="true">' + d + "</svg>" : "";
+  }
+  function sizeTitle(size) { return (T.size[size] || size) + " — " + (T.sizeHint[size] || ""); }
+  function angleIcon(a) {
+    var d = ANGLE_ICON[a];
+    return d ? '<svg class="size-ico a-cam" viewBox="0 0 32 32" aria-hidden="true">' + d + "</svg>" : "";
+  }
+  function angleTitle(a) { return (T.angle[a] || a) + " — " + (T.angleHint[a] || ""); }
+  /* Render-route pictograms — what makes the picture move: an AI clip, an HTML animation,
+     or a camera over a photo. Same tile and the same 2px line as the size icons. */
+  var RENDER_ICON = {
+    generated_video: '<rect x="4.5" y="9" width="16" height="14" rx="3"/><path d="M20.5 14l7-3.5v11l-7-3.5"/>' +
+                     '<path d="M10.5 13v6l5-3z"/><path d="M25.5 2.5l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z" class="ico-fill"/>',
+    still_camera: '<rect x="5" y="6" width="22" height="16" rx="3"/><circle cx="11.5" cy="11" r="1.8"/>' +
+                  '<path d="M8 20l5-5 4 4 3-3 4 4"/>' +
+                  '<path d="M8.5 27.5h15M8.5 27.5l2.3-2.3M8.5 27.5l2.3 2.3M23.5 27.5l-2.3-2.3M23.5 27.5l-2.3 2.3"/>',
+    character_html: ICON_PERSON(16, 2, 52, { arms: "up" }),
+    object_html: '<path d="M16 5l10 5.5v11L16 27 6 21.5v-11z"/><path d="M6 10.5l10 5.5 10-5.5M16 16v11"/>',
+    data_graph: '<rect x="5" y="17" width="5" height="9" rx="1.5"/><rect x="13.5" y="9" width="5" height="17" rx="1.5"/>' +
+                '<rect x="22" y="13" width="5" height="13" rx="1.5"/>',
+    editorial_html: '<path d="M6 7v18"/><path d="M11 10h15M11 16h15M11 22h9"/>',
+    recording: '<circle cx="16" cy="16" r="9"/>' + ICON_DOT(16, 16, 3.8),
+    asset: '<path d="M16 5.5l11 5.5-11 5.5L5 11z"/><path d="M5 16.5l11 5.5 11-5.5M5 21.5L16 27l11-5.5"/>',
+    slide: '<rect x="5" y="6" width="22" height="15" rx="3"/><path d="M16 21v6M11.5 27h9"/>'
+  };
+  /* Visual-style pictograms (visual-style.md) — the episode's HITL look, one glyph per preset on
+     the same tile and 2px line: a model house on a plate, a clapperboard, a speech bubble, a
+     clay figure with thumbprints, paper layers, a brush over a mountain stroke, a big-eyed
+     head, a joystick. */
+  var STYLE_ICON = {
+    "cinematic-miniature": '<path d="M3 21l13 6 13-6-13-6z"/><path d="M10 20v-7l6-4.5 6 4.5v7"/><path d="M16 20v-4"/>',
+    photoreal: '<rect x="5" y="12" width="22" height="13" rx="2"/><path d="M5 12V8.5a1.5 1.5 0 0 1 1.5-1.5h19A1.5 1.5 0 0 1 27 8.5V12"/>' +
+               '<path d="M10.5 7l-2.5 5M16.5 7L14 12M22.5 7L20 12"/>',
+    webtoon: '<path d="M7 6h18a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-9l-5 5v-5H7a3 3 0 0 1-3-3V9a3 3 0 0 1 3-3z"/>' +
+             '<path d="M9.5 11.5h13M9.5 16h8" class="ico-dim"/>',
+    claymation: '<circle cx="16" cy="9.5" r="5"/><path d="M8 27c0-8 3-11 8-11s8 3 8 11z"/>' +
+                '<path d="M13 22q3-3 6 0M12 25.5q4-4 8 0" class="ico-dim"/>',
+    "paper-cutout": '<circle cx="22" cy="9" r="3.5" class="ico-dim"/><path d="M3 17q6-7 12-1t14-2" class="ico-dim"/>' +
+                    '<path d="M3 22q7-7 13-1t13-1"/><path d="M3 27.5q6-6 12-1t14-1"/>',
+    "ink-wash": '<path d="M27 4L18 13"/><path d="M18 13l-4 1.4 1.4-4z" class="ico-fill"/>' +
+                '<path d="M4 26q5-10 9-6t6-3 9 8"/>',
+    "toon-3d": '<circle cx="16" cy="16" r="11"/><circle cx="11.5" cy="15" r="2.6" class="ico-fill"/><circle cx="20.5" cy="15" r="2.6" class="ico-fill"/>' +
+               '<path d="M12 21q4 3 8 0"/>',
+    "arcade-2d": '<rect x="5" y="20" width="22" height="7" rx="2.5"/><path d="M12 20v-8.5"/><circle cx="12" cy="8" r="3.5"/>' +
+                 '<circle cx="21" cy="15.5" r="2.4" class="ico-fill"/>'
+  };
+  STYLE_ICON["spatial-explainer"] = STYLE_ICON["cinematic-miniature"];
+  function styleIcon(preset) {
+    var d = STYLE_ICON[preset];
+    return d ? '<svg class="size-ico s-look" viewBox="0 0 32 32" aria-hidden="true">' + d + "</svg>" : "";
+  }
+  function styleTitle(preset) { return (T.styleName[preset] || preset) + " — " + (T.styleHint[preset] || ""); }
+  /* The style is one choice for the whole episode, so it is drawn twice: the header card and a
+     chip beside the shot legend, so the reader scrolling the shots still has it in view. */
+  function styleOf() {
+    var st = window.PRODUCTION && window.PRODUCTION.style;
+    return st && st.preset ? st : null;
+  }
+  var STYLE_ORDER = ["cinematic-miniature", "photoreal", "webtoon", "claymation", "paper-cutout", "ink-wash", "toon-3d", "arcade-2d"];
+  function styleSample(preset) {
+    var S = window.STYLE_SAMPLES;
+    return S && typeof S[preset] === "string" ? S[preset] : "";
+  }
+  function styleCard() {
+    var st = styleOf(); if (!st) return "";
+    var known = !!T.styleName[st.preset];
+    var ref = typeof st.reference === "string" ? st.reference.trim() : "";
+    var refImg = /\.(png|jpe?g|webp|gif)(\?.*)?$/i.test(ref);
+    var by = st.selection && T.styleBy[st.selection.kind];
+    var sample = styleSample(st.preset);
+    var pic = sample
+      ? '<span class="pic"><img src="' + sample + '" alt="">' + styleIcon(st.preset) + "</span>"
+      : (styleIcon(st.preset) || '<span class="size-ico s-look"></span>');
+    var all = window.STYLE_SAMPLES ? '<div class="style-all"><span class="kt">' + esc(T.styleAll) + "</span>" +
+      STYLE_ORDER.map(function (p) {
+        return '<span class="k' + (p === st.preset ? " on" : "") + '" data-tip="' + esc(styleTitle(p)) + '"><img src="' + styleSample(p) + '" alt=""><span>' +
+               esc(T.styleName[p] || p) + "</span></span>";
+      }).join("") + "</div>" : "";
+    return '<div class="style-card' + (known ? "" : " unknown") + '">' + pic +
+      '<div class="st" data-tip="' + esc(styleTitle(st.preset)) + '"><b>' + esc(T.styleHead) + " · " + esc(T.styleName[st.preset] || (st.preset + " ?")) +
+      (by ? "<small>" + esc(by) + "</small>" : "") + "</b>" +
+      (T.styleDesc[st.preset] ? "<span>" + esc(T.styleDesc[st.preset]) + "</span>" : "") +
+      '<span class="kk">' + esc(st.preset) + (ref && !refImg ? " · " + esc(ref) : "") + "</span></div>" +
+      (refImg ? '<img src="' + esc(ref) + '" alt="" onerror="this.remove()">' : "") + all + "</div>";
+  }
+  function styleChip() {
+    var st = styleOf(); if (!st) return "";
+    var sample = styleSample(st.preset);
+    return '<span class="shot-size style-chip' + (T.styleName[st.preset] ? "" : " unknown") + '" data-tip="' + esc(styleTitle(st.preset)) + '">' +
+      (sample ? '<img src="' + sample + '" alt="">' : styleIcon(st.preset)) +
+      '<span class="sz"><b>' + esc(T.styleName[st.preset] || (st.preset + " ?")) + "</b></span></span>";
+  }
+  var RENDER_FAMILY = { generated_video: "video", recording: "video", still_camera: "photo",
+                        character_html: "html", object_html: "html", data_graph: "html", editorial_html: "html", slide: "html",
+                        asset: "asset" };
+  function renderIcon(mode) {
+    var d = RENDER_ICON[mode];
+    return d ? '<svg class="size-ico r-' + RENDER_FAMILY[mode] + '" viewBox="0 0 32 32" aria-hidden="true">' + d + "</svg>" : "";
+  }
+  function renderTitle(mode) { return (T.render[mode] || mode) + " — " + (T.renderHint[mode] || ""); }
+  /* The route of a shot: shot.render.mode when declared, else what the picture inference says */
+  function renderModeOf(s, g) {
+    if (g.render && g.render.mode) return g.render.mode;
+    var pic = pictureOf(s);
+    return pic === "ai-video" ? "generated_video" : pic === "still" ? "still_camera" : pic;
+  }
+  function sizeKey() {
+    var order = ["els", "ls", "fs", "mfs", "ms", "mcu", "cu", "choker", "ecu", "insert",
+                 "two", "three", "ots", "pov", "back", "cutaway", "reaction"];
+    var routes = ["generated_video", "still_camera", "character_html", "object_html", "data_graph", "editorial_html", "recording", "asset"];
+    return '<div class="size-key"><span class="kt">' + esc(T.sizeKey) + "</span>" +
+      order.map(function (k) {
+        return '<span class="k" data-tip="' + esc(sizeTitle(k)) + '">' + sizeIcon(k) + '<span>' + esc(T.size[k] || k) + "</span></span>";
+      }).join("") + "</div>" +
+      '<div class="size-key"><span class="kt">' + esc(T.angleKey) + "</span>" +
+      ["eye", "high", "low", "overhead", "dutch"].map(function (k) {
+        return '<span class="k" data-tip="' + esc(angleTitle(k)) + '">' + angleIcon(k) + '<span>' + esc(T.angle[k] || k) + "</span></span>";
+      }).join("") + "</div>" +
+      '<div class="size-key routes"><span class="kt">' + esc(T.renderKey) + "</span>" +
+      routes.map(function (k) {
+        return '<span class="k" data-tip="' + esc(renderTitle(k)) + '">' + renderIcon(k) + '<span>' + esc(T.render[k] || k) + '</span><span class="kk">' + esc(k) + "</span></span>";
+      }).join("") + "</div>";
   }
   function grammarOf(s, i) {
     var sp = (s.shot && s.shot.space) || {};
@@ -1714,6 +2108,7 @@ window.SB_DOC = {
       sequence: s.sequence || "",
       size: (s.shot && s.shot.size) || "",
       angle: (s.shot && s.shot.angle) || "",
+      why: (s.shot && s.shot.why) || "",
       feel: (s.shot && s.shot.feel) || "",
       info: (s.shot && s.shot.info) || "",
       infoType: (s.shot && s.shot.infoType) || "",
@@ -1854,7 +2249,7 @@ window.SB_DOC = {
       else if (s.type === "quote" && v.clip && typeof v.clip === "object") slot = ["quote", (v.clip.engine || v.engine) === "seedance" ? "seedance" : "veo", Number(s.duration) || 8];
       if (slot) {
         var config = Object.assign({}, v, slot[0] === "motion" ? v.video : slot[0] === "quote" ? v.clip : {});
-        var fields = ["model", "modelPurpose", "modelReason", "resolution", "generateAudio", "realFaceInput", "referenceImagePaths", "referenceAudioPaths"];
+        var fields = ["model", "modelPurpose", "modelReason", "resolution", "generateAudio", "realFaceInput", "referenceImagePaths", "referenceAudioPaths", "previz"];
         var settings = fields.map(function (key) { return config[key] === undefined ? null : config[key]; });
         parts.push((i + 1) + ":" + slot.join("/") + ":" + encodeURIComponent(JSON.stringify(settings)));
       }
@@ -2405,6 +2800,11 @@ window.SB_DOC = {
   var policyVideoMax = MP.generatedVideoMax !== null && MP.generatedVideoMax !== undefined &&
                        Number.isFinite(Number(MP.generatedVideoMax))
     ? Number(MP.generatedVideoMax) : FMT.videoMax;
+  // The sequence → scene → shot rules, the same ones storyboard_apply and check-scenes.js run.
+  if (window.STRUCTURE !== undefined && window.STRUCTURE_CONTRACT)
+    window.STRUCTURE_CONTRACT.check(window).forEach(function (f) { flag(f.level === "bad" ? "bad" : "warn", f.where, f.what); });
+  else if (window.STRUCTURE !== undefined)
+    flag("bad", "structure", "Missing structure-contract.js — copy it beside scenes.js; without it the sequence → scene → shot rules are not checked");
   if (window.PRODUCTION) {
     if (!window.PRODUCTION_MODE) flag("bad", T.where.production, "Missing production-mode.js");
     else {
@@ -2557,6 +2957,9 @@ window.SB_DOC = {
       var g = grammarOf(s, i);
       (byScene[g.scene] || (byScene[g.scene] = [])).push({ s: s, i: i, g: g });
     });
+    var CLOSE_OPEN = { mcu: 1, cu: 1, choker: 1, ecu: 1, insert: 1 }, PAYS = { els: 1, ls: 1, ws: 1, mfs: 1, two: 1 };
+    var EXPLAIN_MODES = { data_graph: 1, editorial_html: 1, object_html: 1, character_html: 1 };
+    var seenWide = {};
     Object.keys(byScene).forEach(function (sc) {
       var rows = byScene[sc], seenInfo = {};
       rows.forEach(function (row) {
@@ -2567,11 +2970,17 @@ window.SB_DOC = {
                " carry the same new information — one of them is enough");
         else seenInfo[info] = row.i;
       });
-      // Establish, then close (directing-grammar §6) — a close-up opening (cu · choker · ecu) pays
-      // its debt with any non-close size on the next shot: ls/ws, fs, mfs, ms, mcu, two, ots …
-      var first = rows[0];
-      if (first && CLOSE_SIZES[first.g.size] && rows[1] && rows[1].g.size && CLOSE_SIZES[rows[1].g.size])
-        flag("warn", "S#" + sc, "opening on a close-up owes the viewer a wider next shot that says where this is (directing-grammar §6)");
+      // Establish, then close (directing-grammar §6 rule 2) — a scene opening close (the mcu hook,
+      // cu · choker · ecu, an insert) pays its debt on the next picture shot with an ls/els (mfs/two
+      // for two people); fs and ms show a body, not a place. Mirrors check-scenes.js: an HTML
+      // explanation screen is not a picture shot, and a scene returning to a place an earlier
+      // scene laid out with a wide carries no debt (the place is sceneSlug's first half).
+      var pics = rows.filter(function (r) { return !(r.g.render && EXPLAIN_MODES[r.g.render.mode]); });
+      var first = pics[0], second = pics[1];
+      var place = String((first && first.g.slug) || "").split("/")[0].replace(/\s+/g, "");
+      if (first && CLOSE_OPEN[first.g.size] && second && second.g.size && !PAYS[second.g.size] && !(place && seenWide[place]))
+        flag("warn", "S#" + sc, "opening on " + first.g.size + " owes the viewer an ls/els next (mfs/two for two people) that says where this is — fs and ms show a body, not a place (directing-grammar §6 rule 2)");
+      if (place && pics.some(function (r) { return PAYS[r.g.size]; })) seenWide[place] = 1;
     });
   }
   // b-roll slots — two slots in the same position leave the insert order undecided (scenes-schema §broll)
@@ -2803,7 +3212,7 @@ window.SB_DOC = {
      (a sound absence is a description: "no music, no speech"). Edit directives about cutting are
      allowed whichever negation word carries them — the cut line §positive locks prescribes reads
      "Sequence of cuts, no timecodes — … the camera does not cut on its own." */
-  var NEG_OK = /^(cut|cuts|camera cuts|timecode|timecodes|timecode splits)\b/;
+  var NEG_OK = /^(cut|cuts|camera cuts|timecode|timecodes|timecode splits|reference its visual|reference the visual|change the shot|add new shots|alter the subject)\b/;
   var NEG_RE = /\b(no|not|avoid|avoids|never|don't|dont|doesn't|won't)\b[ \t]*([a-z' \t-]{0,24})/gi;
   /* On a seedance route the vendor's 2.0 guide templates directive negatives for the artifact
      classes only (subtitles·text·logo·watermark, 2.5 adds bgm) — those pass there. Same
@@ -2928,6 +3337,9 @@ window.SB_DOC = {
     if (!g.feel) {
       feelGaps++;
       flag("warn", T.shotCap(i + 1), "shot.feel not written — say what the audience should feel here before choosing the size, the angle and the camera (directing-grammar §5)");
+    }
+    if (!g.size) {
+      flag("warn", T.shotCap(i + 1), "shot.size not written — where does the frame cut the subject? Pick it from what shot.info has to show (directing-grammar §2.1)");
     }
     if (g.size && !T.size[g.size]) {
       sizeUnknown++;
@@ -3237,6 +3649,7 @@ window.SB_DOC = {
        })()) : "") +
        badge(orderOk ? "ok" : (orderBad ? "bad" : "warn"), ORDER_TXT) + "</div>";
 
+  h += styleCard();
   h += '<dl class="meta-grid">';
   if (DOC.keyMessage) h += "<dt>" + esc(T.keyMessage) + "</dt><dd>" + mark(DOC.keyMessage) + "</dd>";
   if (DOC.hook) h += "<dt>" + esc(T.coverHook) + "</dt><dd>" + mark(DOC.hook) + "</dd>";
@@ -3410,8 +3823,9 @@ window.SB_DOC = {
   h += '<div class="toolbar">' +
        '<label><input type="checkbox" id="tg-safe"> ' + esc(T.toggleSafe) + "</label>" +
        '<label><input type="checkbox" id="tg-subs" checked> ' + esc(T.toggleSubs) + "</label>" +
-       '<span class="legend">' + esc(T.legend) + "</span>" +
+       '<span class="legend">' + esc(T.legend) + "</span>" + styleChip() +
        '<span style="margin-left:auto">' + esc(T.previewNote) + "</span></div>";
+  h += sizeKey();
 
   var shotGroups = [];
   SCENES.forEach(function (s, i) {
@@ -3422,25 +3836,53 @@ window.SB_DOC = {
   });
 
   var carryNoted = false, prevSeq = "";
+  /* window.STRUCTURE (scenes-schema §structure) — the sequence's purpose under its heading and
+     the scene's event and turn under the band head. Boards without it draw the labels alone. */
+  var ST = window.STRUCTURE || {};
+  // A hand-edited scenes.js can hold null entries — the check strip reports them; the list still draws.
+  var stScenes = Array.isArray(ST.scenes) ? ST.scenes.filter(function (x) { return x && typeof x === "object"; }) : [];
+  var stSeqs = Array.isArray(ST.sequences) ? ST.sequences.filter(function (q) { return q && typeof q === "object"; }) : [];
+  var stScene = function (no) { return stScenes.filter(function (x) { return x.no === no; })[0]; };
+  var seqHead = function (title, q) {
+    return '<div class="seq-head">' + esc(T.sequence(title)) +
+      (q && q.purpose ? '<span class="seq-purpose"> — ' + esc(q.purpose) +
+        (q.question ? ' · ' + esc(q.question) + (q.payoff ? ' → S#' + esc(String(q.payoff)) : '') : '') + "</span>" : '') + "</div>";
+  };
+  if (stSeqs.length === 1 && !shotGroups.some(function (g) { return g.sequence; }))
+    h += seqHead(stSeqs[0].title, stSeqs[0]);
   shotGroups.forEach(function (grp) {
     if (grp.sequence && grp.sequence !== prevSeq) {
-      h += '<div class="seq-head">' + esc(T.sequence(grp.sequence)) + "</div>";
+      h += seqHead(grp.sequence, stSeqs.filter(function (q) { return q.title === grp.sequence; })[0]);
       prevSeq = grp.sequence;
     }
-    if (hasSceneField)
+    if (hasSceneField) {
+      var sc = stScene(grp.scene);
       h += '<section class="scene-band"><div class="scene-band-head"><span class="sn">S#' +
-           esc(String(grp.scene)) + "</span><span>" + esc(grp.slug || T.sceneNamed(grp.scene)) + "</span></div>";
+           esc(String(grp.scene)) + "</span><span>" + esc(grp.slug || T.sceneNamed(grp.scene)) + "</span>" +
+           (sc ? '<span class="scene-turn">' + esc(sc.event || "") + (sc.charge && sc.charge.open !== undefined && sc.charge.close !== undefined ? ' · ' + esc(String(sc.charge.open) + " → " + String(sc.charge.close)) : "") + ', ' + esc(sc.turn || "") + "</span>" : "") + "</div>";
+    }
     grp.items.forEach(function (item) {
     var s = item.s, i = item.i, g = item.g, no = i + 1;
     // sceneNotes · audioNotes · privacy are keyed by scene number, not shot number.
     // When one scene holds several shots, they attach to that scene's first shot only.
     var sceneKey = g.scene, firstOfScene = item === grp.items[0];
     var narr = s.narration || [];
-    var pic = pictureOf(s), ov = overlayOf(s);
     h += '<article class="scene"><div class="scene-head">';
     h += '<span class="scene-no">' + esc(T.shotCap(no)) + " · " + esc(T.type[s.type] || s.type) + "</span>";
-    if (g.size) h += '<span class="shot-size' + (T.size[g.size] ? "" : " unknown") + '">' + esc(T.size[g.size] || (g.size + " ?")) + "</span>";
-    if (g.angle && T.angle[g.angle]) h += '<span class="shot-angle angle-' + esc(g.angle) + '">' + esc(T.angle[g.angle]) + "</span>";
+    // Shot grammar — size tile, angle and render tile — sits on its own row under the head so
+    // the head keeps the number, title and beat tags. Icons only: the term, its meaning and
+    // this shot's why / render.reason are the tile's tooltip; the legend above names every icon.
+    var gram = "";
+    function tile(icon, label, tip, unknown) {
+      return '<span class="shot-size' + (unknown ? " unknown" : "") + '" data-tip="' + esc(tip) + '">' +
+             (icon || '<span class="sz"><b>' + esc(label) + "</b></span>") + "</span>";
+    }
+    if (g.size) gram += tile(sizeIcon(g.size), T.size[g.size] || (g.size + " ?"),
+                             sizeTitle(g.size) + (g.why ? "\n\n" + g.why : ""), !T.size[g.size]);
+    if (g.angle) gram += tile(angleIcon(g.angle), T.angle[g.angle] || (g.angle + " ?"), angleTitle(g.angle), !T.angle[g.angle]);
+    var rmode = renderModeOf(s, g);
+    if (rmode) gram += tile(renderIcon(rmode), T.render[rmode] || (rmode + " ?"),
+                            renderTitle(rmode) + (g.render && g.render.reason ? "\n\n" + g.render.reason : ""), !T.render[rmode]);
     // A shot with no title (screen text only when needed — scenes-schema) builds its header from badges alone
     var headTitle = s.title || (s.type === "quote" ? s.text : "");
     if (headTitle) h += '<span class="scene-title">' + mark(headTitle) + "</span>";
@@ -3463,16 +3905,16 @@ window.SB_DOC = {
       h += '<span class="scene-beat beat-promise' + (t.cls ? " " + t.cls : "") + '">' + esc(t.text) + "</span>";
     });
     h += '<span class="scene-checks">' + sceneChips[i] + "</span></div>";
+    if (gram) h += '<div class="shot-grammar">' + gram + "</div>";
+    // The picture and overlay badges are gone from here — the render tile above says what
+    // moves, and the overlay reads off the frame itself.
     h += '<div class="shot-meta"><span class="craft">' +
-         '<span class="vtag' + (pic === "ai-video" ? " gen" : "") + '">' + esc(T.pic[pic] || pic) + "</span>" +
-         '<span class="vtag' + (ov === "html" ? " html" : "") + '">' + esc(overlayLabel(s)) + "</span>" +
          charsOf(s).map(function (id) {
            return '<span class="char-tag">' + esc(castName(id)) + "</span>"; }).join("") + "</span>" +
          (s.type === "outro" ? "" :
            '<span class="shot-info shot-feel' + (g.feel ? "" : " miss") + '"><b>' + esc(T.feelLabel) + "</b>" +
            esc(g.feel || T.feelMissing) + "</span>") +
          (g.info ? '<span class="shot-info"><b>' + esc(T.infoLabel) + "</b>" + esc(g.info) + "</span>" : "") +
-         (g.render ? '<span class="shot-info"><b>' + esc(window.RENDER_ROUTING ? window.RENDER_ROUTING.LABELS[g.render.mode] || g.render.mode : g.render.mode) + "</b>" + esc(g.render.reason || "") + "</span>" : "") +
          (g.infoType ? '<span class="shot-info"><b>' + esc(T.infoTypeLabel) + "</b>" + esc(g.infoType) + "</span>" : "") +
          (g.share ? '<span class="shot-info"><b>' + esc(T.shareLabel) + "</b>" + esc(g.share) + "</span>" : "") +
          (g.shareType ? '<span class="shot-info"><b>' + esc(T.shareTypeLabel) + "</b>" + esc(g.shareType) + "</span>" : "") +
@@ -3584,7 +4026,8 @@ window.SB_DOC = {
           lines = '<div class="cut-carry">speech clip — the actor speaks, so there is no TTS narration</div>';
         if (lines) cell += '<div class="cut-sec">' + esc(T.audioSec) + "</div>" + lines;
 
-        var explicitFrames = vis.frames || vis.video && vis.video.lastImagePath || vis.imagePair;
+        var previz = vis.video && vis.video.previz;
+        var explicitFrames = vis.frames || vis.video && vis.video.lastImagePath || vis.imagePair || previz;
         if (explicitFrames && k === 0) {
           var fp = window.RENDER_ROUTING.framePlan(s);
           var frameInput = function (src, label) {
@@ -3592,9 +4035,15 @@ window.SB_DOC = {
               ? '<a href="' + esc(src) + '" target="_blank" rel="noopener"><img src="' + esc(src) + '" alt="' + esc(label) + '" loading="lazy"></a>'
               : '<div class="pending-frame">' + esc(T.framePending) + '</div>') + '</figure>';
           };
-          var pair = fp.mode === 'first_last';
+          var pair = fp.mode === 'first_last' || !!previz;
           var inputs = frameInput(fp.start, T.frameStart);
-          if (pair) inputs += frameInput(fp.end, T.frameEnd);
+          if (fp.mode === 'first_last') inputs += frameInput(fp.end, T.frameEnd);
+          // The previz clip sits beside the still: the approver sees the camera and timing the
+          // vendor will receive as Video 1, and its hash is part of the approved quote.
+          if (previz) inputs += '<figure><figcaption>' + esc(T.framePreviz) + '</figcaption>' + (previz.clip
+            ? '<video src="' + esc(previz.clip) + '" muted loop controls playsinline preload="metadata"></video>'
+            : '<div class="pending-frame">' + esc(T.framePending) + '</div>') +
+            '<div class="frame-reason">' + esc((previz.seconds || '?') + 's · ' + (previz.fps || '?') + ' fps · sha256 ' + String(previz.sha256 || '').slice(0, 12)) + '</div></figure>';
           var motionPlan = s.shot && s.shot.videoDesign && s.shot.videoDesign.motion;
           if (motionPlan) {
             inputs += '<div class="frame-reason"><strong>' + esc(T.frameChange) + '</strong><br>' + esc(motionPlan.visibleChange || '') +
@@ -3829,6 +4278,30 @@ window.SB_DOC = {
        '<a href="./research.md">research.md</a> · <a href="./scenes.js">scenes.js</a></footer>';
 
   app.innerHTML = h;
+
+  /* Icon tooltips — first line bold (the term), the rest as written. The server tests render
+     this script in a vm with a stub document that has no event API, so bail out there. */
+  (function () {
+    if (typeof document.addEventListener !== "function") return;
+    var box = document.createElement("div"); box.className = "tipbox"; document.body.appendChild(box);
+    var cur = null;
+    function show(el) {
+      var tip = el.getAttribute("data-tip") || ""; if (!tip) return;
+      var nl = tip.indexOf(" — ");
+      box.innerHTML = nl > 0 ? "<b>" + esc(tip.slice(0, nl)) + "</b>" + esc(tip.slice(nl + 3)) : esc(tip);
+      var r = el.getBoundingClientRect(), pad = 8;
+      box.style.left = "0px"; box.style.top = "0px"; box.classList.add("on");
+      var w = box.offsetWidth, hgt = box.offsetHeight;
+      var x = Math.max(pad, Math.min(r.left, window.innerWidth - w - pad));
+      var y = r.bottom + 6; if (y + hgt > window.innerHeight - pad) y = r.top - hgt - 6;
+      box.style.left = x + "px"; box.style.top = y + "px"; cur = el;
+    }
+    function hide() { box.classList.remove("on"); cur = null; }
+    document.addEventListener("mouseover", function (e) { var el = e.target.closest && e.target.closest("[data-tip]"); if (el && el !== cur) show(el); });
+    document.addEventListener("mouseout", function (e) { var el = e.target.closest && e.target.closest("[data-tip]"); if (el && el === cur && !el.contains(e.relatedTarget)) hide(); });
+    document.addEventListener("click", function (e) { var el = e.target.closest && e.target.closest("[data-tip]"); if (!el) { if (cur) hide(); } else if (el === cur) hide(); else show(el); });
+    window.addEventListener("scroll", function () { if (cur) hide(); }, true);
+  })();
 
   /* Filling the check strip — nothing is missed only once every violation has been registered */
   auditSealed = true;

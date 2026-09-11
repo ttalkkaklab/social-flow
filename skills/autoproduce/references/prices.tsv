@@ -71,6 +71,15 @@ seedance.2-0-mini.720p	second	0.076	derived	dreamina-seedance-2-0-mini-260615 �
 seedance.2-0-fast.720p	second	0.120	derived	dreamina-seedance-2-0-fast-260128 — rejects photoreal face input · $30 balance gate
 seedance.2-0.1080p	second	0.374	derived	dreamina-seedance-2-0-260128 — 9 reference images · 4K capable
 seedance.2-5.720p	second	0.231	derived	dreamina-seedance-2-5-260628 — 30 reference images · up to 30s
+# With a reference video attached (the previz lane) the vendor bills input + output seconds at a lower
+# with-video token rate (pricing page 1544106, 2026-09-11): 2.0 1080p 4.7/M · 2.5 720p 6.4/M · 2.5 1080p 7.0/M ·
+# 2.0 fast 720p 3.3/M · 2.0 mini 720p 2.1/M — × (w×h×24/1024 tokens a second: 48,600 at 1080p · 21,600 at 720p).
+# The quantity on these keys is output seconds + previz seconds.
+seedance.2-0-video.1080p	second	0.228	derived	dreamina-seedance-2-0-260128 + reference video — input and output seconds both billed
+seedance.2-5-video.720p	second	0.138	derived	dreamina-seedance-2-5-260628 + reference video
+seedance.2-5-video.1080p	second	0.340	derived	dreamina-seedance-2-5-260628 + reference video — list price
+seedance.2-0-fast-video.720p	second	0.071	derived	dreamina-seedance-2-0-fast-260128 + reference video
+seedance.2-0-mini-video.720p	second	0.045	derived	dreamina-seedance-2-0-mini-260615 + reference video
 
 # ── Speech ───────────────────────────────────────────────────────────────
 # Gemini bills in audio tokens (25/second), not characters. The values below take 1M characters
