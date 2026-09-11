@@ -481,7 +481,7 @@ was using. The convention's source of truth is
 ```bash
 printf 'image.gpt-image-2.high\t1\tproduce: cover background regenerated\n'          >> .work/cost-tally.tsv
 printf 'veo.lite.1080p\t8\tproduce: b-roll a1 — generated 8s, used 4s\n'             >> .work/cost-tally.tsv
-printf 'seedance.1-5-pro-silent.1080p\t5\tproduce: motion background i3 (completion_tokens 102960)\n' >> .work/cost-tally.tsv
+printf 'seedance.2-0-video.1080p\t10\tproduce: motion background i3 — 5s cut + 5s previz (completion_tokens 486000)\n' >> .work/cost-tally.tsv
 printf 'music.lyria-realtime\t90\tproduce: BGM cue "base" 90s — unit price unconfirmed\n' >> .work/cost-tally.tsv
 # one line per cue in window.MUSIC — a three-cue episode is three calls, not one
 printf 'music.suno-generate\t1\tproduce: Suno full song, 1 call (2 tracks)\n'        >> .work/cost-tally.tsv

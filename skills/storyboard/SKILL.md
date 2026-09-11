@@ -1057,7 +1057,7 @@ Two generated forms count against the slot cap together:
 - **Motion background (`visual.video`)** — the scene itself as video. The scene's still becomes
   a parameter for a video laid under the background, and **narration, captions, and subtitles
   stay**. Use it where the movement itself is the content. `duration` inside one clip (veo 8s ·
-  the default seedance 1.5 pro 4–12s, server-validated) · points only · not combined with
+  seedance 2.x 4–15s on the previz route, 1.5 pro 4–12s on a slot without a previz, server-validated) · points only · not combined with
   per-line illustrations. Store the assembled prompt in `visual.video.prompt` (§clip prompt —
   `--clip --engine seedance --locks "…"`). Three rules hold on that route and the assembler
   exits 1 on each: the body is **English** (Korean only inside a dialogue quote), it **never
@@ -1092,7 +1092,7 @@ this says why. The convention is
 
 ```bash
 mkdir -p .work
-printf 'storyboard	engine_selection	motion background shot 3	seedance-1-5-pro-silent	silent slot, builder discards audio; rejected veo.lite (pays 8s for a 4s cut)\n' >> .work/decisions.tsv
+printf 'storyboard	engine_selection	motion background shot 3	seedance-2-0-video	previz cut on the reference route (PRODUCTION.videoModel), silent slot; rejected veo.lite (no clip input, pays 8s for a 4s cut)\n' >> .work/decisions.tsv
 printf 'storyboard	image_engine	points backgrounds	image_local_generate	no text in frame, $0; rejected gpt high (cost, not needed here)\n' >> .work/decisions.tsv
 ```
 

@@ -65,8 +65,11 @@ storyboard defect: send it back.
   video track only and **throws the clip's sound away**. There's no reason to pay Veo prices
   for sound you'll discard, and Veo only makes 1080p at 8 seconds while Seedance makes
   exactly the seconds you ask for and charges for exactly that.
-  `seedance_img2video` (`resolution: "1080p"` · `durationSeconds` = the length that scene
-  actually uses, clamped to the model floor · default model `seedance-1-5-pro-251215` · `generateAudio: false`).
+  `seedance_reference` (the cut's previz as `referenceVideoPaths`, the still as `Image 1`,
+  `durationSeconds` = the length that scene actually uses, clamped to the model floor · the 2.x
+  grade and resolution in `PRODUCTION.videoModel` · `generateAudio: false`) — every generated
+  motion background is a previz cut (storyboard blender-previz.md §6), and `seedance_img2video`
+  on `seedance-1-5-pro-251215` is only for a slot that carries no previz.
   For complex-motion, reference, or fixed-voice cuts, apply video-model-selection §Seedance
   per-cut selection and use the resolved forecast generation arguments; never reset an
   escalated model to the ordinary-hook default.
@@ -205,9 +208,10 @@ generated cover. These three are generated only when the episode has that kind o
 - **Motion background (scenes.js's `visual.video` — inside the combined generated-video
   ceiling)**: animate that scene's `visual.bg` PNG and save it as
   **`.work/motion/motion-i<scene index>.mp4`**.
-  **This is Seedance's slot** (the video engine split above) — `seedance_img2video`
-  (`resolution: "1080p"` · `durationSeconds` = the length that scene uses ·
-  `seedance-1-5-pro-251215` · `generateAudio: false`). Without `ARK_API_KEY`, make it with
+  **This is Seedance's slot** (the video engine split above) — `seedance_reference` with the
+  cut's previz (`durationSeconds` = the length that scene uses · the grade in
+  `PRODUCTION.videoModel` · `generateAudio: false`; `seedance_img2video` on 1.5 Pro only for a
+  slot without a previz). Without `ARK_API_KEY`, make it with
   `veo_img2video` (`aspectRatio: "9:16"` · `resolution: "1080p"` · `durationSeconds: 8` ·
   `veo-3.1-lite-generate-preview`). Use `visual.video.prompt` verbatim as the prompt — the
   stored final clip prompt (camera span, subject motion, the consistency lock, the audio

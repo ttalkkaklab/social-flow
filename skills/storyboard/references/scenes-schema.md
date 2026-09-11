@@ -1717,8 +1717,8 @@ span pins the beat you will keep inside the head you will keep.
 names the failure directly: chaining several distinct events into one short prompt comes back
 *"muddled or incomplete"*. The scene was cut to one beat at design time; the call keeps that
 cut. `duration` fits the routed engine's server-validated
-range — veo 4/6/8s (1080p/4K and the reference lane 8s only), the default seedance 1.5 pro
-4–12s (`server/src/seedance-client.ts` is the binding table). A scene that needs more is a
+range — veo 4/6/8s (1080p/4K and the reference lane 8s only), seedance 2.x 4–15s on the
+previz route and 1.5 pro 4–12s on a slot without a previz (`server/src/seedance-client.ts` is the binding table). A scene that needs more is a
 storyboard defect: trim the narration, split the scene, or route to a model that takes it —
 never plan a looping clip. A Seedance scene with **internal cuts** may write them as
 `Shot 1: … Shot 2: …` inside the one call — the form is vendor-exemplified on 1.5 pro
@@ -1811,8 +1811,8 @@ so `durationSeconds` is the used length. Veo is the exception — its reference 
 so there the extra seconds get made and produce trims them (§broll).
 
 The existing caps stand: a motion background stays inside one clip's length — the routed
-engine's **server-validated** range, veo 8s fixed, the default seedance 1.5 pro **4–12s**
-(the old 15s figure was Seedance 2.0's; `server/src/seedance-client.ts` holds the per-model
+engine's **server-validated** range, veo 8s fixed, seedance 2.x **4–15s** on the previz route
+and 1.5 pro **4–12s** on a slot without a previz (`server/src/seedance-client.ts` holds the per-model
 table, and the check strip warns past the route's cap. The real risk is a clip shorter than
 its scene, which shows the loop's seam) — and a b-roll's used length is 4s by default. The
 1.5 pro floor cuts the other way too: a scene under 4s still requests 4 and the build cuts
@@ -1862,7 +1862,7 @@ an action on 1.5 or a compatible Veo route instead.
 {
   type: "points",
   bullets: [ … ], footnote: "",
-  duration: 8,                        // one playthrough of the clip covers the scene — veo 8s, seedance 1.5 pro 4–12s
+  duration: 8,                        // one playthrough of the clip covers the scene — veo 8s, seedance 2.x 4–15s (previz route)
   narration: [ {tts, sub}, … ],       // kept — unlike b-roll, only the background moves while you talk
   visual: {
     picture: "ai-video", overlay: "html",

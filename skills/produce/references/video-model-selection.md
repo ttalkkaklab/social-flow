@@ -110,10 +110,13 @@ cheap or feature-rich, run the same prompt on both once that episode and decide.
 
 ## Seedance per-cut selection
 
-Keep ordinary hooks and motion backgrounds on **1.5 Pro, 1080p, silent**. Select 2.0
-only when complex interaction or a sequence of actions is essential to the cut, or when
-reference images are required. Select 2.5 for a fixed reference voice or more than nine
-reference images. A higher version alone is not a reason to escalate. Explanation still
+Every generated motion background (`visual.video` on a `generated_video` cut) is a previz cut
+on the API lane (user directive 2026-09-11, storyboard blender-previz.md §6): the 3D previz
+rides as a reference video, which only 2.x takes, so the model is the grade the user chose in
+`PRODUCTION.videoModel` — 2.0 at 1080p, 2.0 fast or mini at 720p, or 2.5 — asked with
+`video-model-options.js`'s cost table before any call. 1.5 Pro, silent, stays the choice only
+for slots that carry no previz (a b-roll or speech clip that lands on Seedance). Select 2.5
+over 2.0 for a fixed reference voice or more than nine reference images. Explanation still
 belongs on HTML motion slides, and the short-form ceiling stays the channel's `generated_video_max`.
 
 Store the selection fields beside the prompt: `visual.video` for motion backgrounds,
@@ -165,7 +168,7 @@ before calling. Reference/voice requirements cannot be dropped just to fit the c
 | Situation | Use |
 |---|---|
 | **The CLI you run in ships a video tool** (Grok) | `image_to_video` / `reference_to_video` — `engine:"host"`, $0 on the allowance, 720p ceiling (§The host video tool comes first). The rows below are the API lane: `videoProvider:"api"`, or a cut that wrote why the host tool cannot serve it |
-| **Motion background** (`visual.video` — a slot where the builder discards the sound) | `seedance_img2video` · `seedance-1-5-pro-251215` · 1080p · `generateAudio: false` — a price-first choice. On quality alone, Veo lite wins 59:41 (§Quality) |
+| **Motion background** (`visual.video` — a slot where the builder discards the sound) | `seedance_reference` · the 2.x grade in `PRODUCTION.videoModel` · `generateAudio: false` · the cut's previz as `referenceVideoPaths` (§Seedance per-cut selection; the row below). 1.5 Pro image-to-video is only for a slot without a previz |
 | **b-roll slot** (produce absolute rule 9 uses the clip's own sound) | `veo_img2video` — a silent clip leaves that segment mute |
 | Source background contains an **adult live-action person** | On a motion-background cut this cannot be generated on the API lane at all — every such cut is a 2.x previz cut and 2.x rejects face input; take the face out of the still or use the host lane. Veo (`veo_img2video`) and 1.x remain for the b-roll/speech slots that carry no previz |
 | You must **reproduce the composition** of a source picture | First/last frames (`sourceImagePath`+`lastImagePath`), not reference images — both engines. References carry look and style, not composition |
@@ -205,7 +208,7 @@ throw away. This is the slot where you win with no downside.
 |---|---|---|
 | b-roll slot | Yes (absolute rule 9) | Veo — or Seedance with `generateAudio: true` |
 | Motion background `visual.video` | Discarded | **Seedance silent** |
-| Cover | Generated audio discarded | A still with a camera move by default; a silent 1.5 Pro motion background only where the cut plan or `hook_video` selects video; code-rendered title |
+| Cover | Generated audio discarded | A still with a camera move by default; a silent previz-guided 2.x motion background only where the cut plan or `hook_video` selects video; code-rendered title |
 
 ---
 
@@ -352,9 +355,10 @@ prices, §Price comparison above is the source of truth.
 
 **1. Live-action faces — 2.x won't take them as input.**
 The Dreamina Seedance 2.5/2.0 family rejects reference images and videos containing real
-human faces. This pipeline's photoreal cover backgrounds are live-action-style PNGs (produce
-absolute rule 12), so anything sent to Seedance goes to **1.5 pro or 1.0 pro only**. That's
-why the default model is 1.5 pro. Send it to 2.x and the whole episode stalls. The Veo side
+human faces. Since every generated motion background is a 2.x previz cut (§Seedance per-cut
+selection), a photoreal still with a real face cannot feed one on the API lane at all: keep the
+face out of the still (turned away, small, illustrative) or use the host lane. Only a slot
+without a previz can still go to **1.5 pro or 1.0 pro** with a face. The Veo side
 accepts adult faces (`veo_img2video`, verified) so it doesn't hit this trap — but faces that
 look underage are blocked on Veo's image lane, and cuts with no visible face (back view,
 silhouette) are accepted by every model.
