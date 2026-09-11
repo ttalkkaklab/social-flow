@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>메시지는 이름을 지워도 남는 한 문장 — 숏폼에서 뜻을 건네는 법 (2026-09-11)</title>
+<style>
+  :root{
+    --paper:#f5f6fa; --ink:#10131f; --muted:#5a6280; --rule:#d8dce8; --card:#ffffff;
+    --accent:#2f5fe0; --good:#1f8a5b; --bad:#b8433d; --code:#eef0f7;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#0b1020; --ink:#e8ebf5; --muted:#98a0bb; --rule:#232a44; --card:#121831;
+      --accent:#7ea2ff; --good:#4fc48d; --bad:#f08c86; --code:#161d38;
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#0b1020; --ink:#e8ebf5; --muted:#98a0bb; --rule:#232a44; --card:#121831;
+    --accent:#7ea2ff; --good:#4fc48d; --bad:#f08c86; --code:#161d38;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);
+    font-family:"Pretendard Variable","Pretendard","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+    font-size:16px;line-height:1.75;-webkit-font-smoothing:antialiased}
+  a{color:var(--accent);text-decoration:none;border-bottom:1px solid color-mix(in srgb,var(--accent) 40%,transparent)}
+  .wrap{max-width:1040px;margin:0 auto;padding:56px 24px 96px}
+  .eyebrow{font-family:Menlo,monospace;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+  h1,h2,h3{font-weight:800;letter-spacing:-.02em;text-wrap:balance;margin:0}
+  h1{font-size:clamp(32px,5vw,46px);line-height:1.15;margin-top:10px}
+  h2{font-size:24px;line-height:1.3;margin-top:64px;padding-top:20px;border-top:1px solid var(--rule)}
+  p{margin:14px 0;max-width:70ch}
+  ul{padding-left:20px;max-width:72ch} li{margin:8px 0}
+  code{font-family:Menlo,monospace;font-size:.88em;background:var(--code);padding:1px 6px;border-radius:5px}
+  .lede{font-size:18px;max-width:66ch} .lede b{font-weight:600;color:var(--accent)}
+  table{border-collapse:collapse;width:100%;font-size:14px;margin:18px 0}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--rule);vertical-align:top}
+  th{font-weight:600;color:var(--muted);font-size:12.5px;letter-spacing:.04em}
+  .tablewrap{overflow-x:auto}
+  .bad{color:var(--bad)} .good{color:var(--good)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="eyebrow">social-flow · research · 2026-09-11</div>
+<h1>메시지는 이름을 지워도 남는 한 문장</h1>
+<p class="lede">인물 편 김만덕 보드가 검사기를 다 통과하고도 「만덕이 청한 건 상이 아니라 나라 법의 예외였다」를 메시지 자리에 달고 나왔다. 그건 메시지가 아니라 사실 두 개다. 왜 그렇게 나왔는지 플러그인을 뜯어 보고, 각본·과학 커뮤니케이션·지식채널e·숏폼 실측에서 <b>좋은 메시지가 무엇이고 어떻게 건네는지</b>를 모아 규칙과 검사기로 옮겼다.</p>
+
+<h2>왜 사실이 메시지 자리에 들어갔나</h2>
+<ul>
+<li><b>정의가 「무슨 일이 있었나」를 허용했다.</b> scenario-stage §The message는 메시지를 「이해하거나 다시 생각하거나 할 수 있게 되는 것」이라 하면서 같은 문단에서 「주제·무슨 일이 있었는지·왜 오늘 중요한지를 이름 붙인다」고 썼다. 「무슨 일이 있었는지」가 들어가는 순간 사실 문장이 정의를 통과한다.</li>
+<li><b>「왜 오늘」이 판정 밖 열로 빠졌다.</b> research.md §Messages의 <code>Why today</code> 열을 check-research.js가 일부러 읽지 않는다(멀쩡한 행이 떨어져서 뺐다는 주석). so-what이 그 열에 갇히고 후보 페이지나 scenes.js로 옮겨지지 않는다.</li>
+<li><b>검사기가 형식만 봤다.</b> 메시지 행이 셋인지, W#를 인용하는지, 「알 수 없다」로 끝나지 않는지가 전부였다. 이 단계엔 리뷰어도 없다(스킬 본문: 이 단계의 심판은 사용자다).</li>
+<li><b>파이프라인 모양이 재진술을 유도했다.</b> 와우 = 믿는 것 → 실제로는, 메시지 = 그 와우의 so-what. 「실제로는」 반쪽이 이미 문장이라 그걸 다시 쓰는 게 가장 쉬운 길이다. 김만덕 편에서 W1 실제로는 · M1 · d1 「전할 한 문장」 · SB_DOC.keyMessage 넷이 사실상 같은 문장이었다.</li>
+<li><b>인물 편 계약이 마무리에서 뜻을 빼라고 했다.</b> person-short.md는 「마무리는 그림, 교훈 아님」, scenario-stage는 「takeaway는 메시지에서 자른다」. 부딪히는 자리에서 그림 쪽을 택해 takeaway와 thesis에 「못 건너던 바다를 건넌 여자가 열린 문으로 걸어 나가요」가 들어갔다. 그림이지 뜻이 아니다.</li>
+</ul>
+
+<h2>좋은 메시지는 어떤 모양인가</h2>
+<p>작법서 셋이 같은 말을 한다. 에그리(<i>The Art of Dramatic Writing</i>)는 극의 전제를 「A는 B로 이어진다」로 쓰라 한다 — 「맹목적 믿음은 파멸로 이어진다」(리어왕). 맥키(<i>Story</i>)는 「가치 + 원인」이라 부른다 — 「정의가 이긴다, 주인공이 범인보다 영리할 때」(셜록 홈즈). 히스 형제(<i>Made to Stick</i>)는 군대의 「지휘관 의도」를 빌려 「다른 걸 다 못 해도 이것 하나는」이라는 질문으로 핵심을 뽑으라 한다. 셋 다 <b>문장에 고유명사가 없다.</b> 「만덕이 청한 건 법의 예외였다」는 만덕을 빼면 사라진다.</p>
+<div class="tablewrap"><table>
+<tr><th>시험</th><th>무엇을 보나</th><th class="bad">떨어지는 문장</th><th class="good">서는 문장</th></tr>
+<tr><td>이름 지우기</td><td>사람·장소·물건을 빼도 문장이 서는가</td><td>만덕이 부탁한 건 법의 예외였다</td><td>겸손해 보이는 부탁의 크기는 그 뒤에 어떤 법이 서 있는지로 잰다</td></tr>
+<tr><td>내일</td><td>시청자가 내일 무엇을 다르게 보거나 하는가 — 열이 아니라 문장 안에</td><td>…알면 이 사람이 다르게 보인다(감상)</td><td>상은 주는 쪽이 정하지만 소원은 받는 쪽이 정한다</td></tr>
+<tr><td>와우 분리</td><td>와우의 「실제로는」 반쪽과 같은 문장인가</td><td>W1 실제로는 ≈ M1 ≈ keyMessage</td><td>실제로는: 법이 있었다 / 메시지: 작은 부탁이 큰 이유는 그 뒤에 법이 서 있어서다</td></tr>
+</table></div>
+<p>픽사 22규칙 14번(「왜 이 이야기를 꼭 해야 하나, 어떤 믿음이 타고 있나」)은 작가 쪽 시험이다. 답이 메시지고, 없으면 사실 나열이다. 단편영화 원칙 「구체적일수록 보편적」이 특정 인물의 세부와 보편 사이의 다리고, 메시지는 그 다리 끝의 문장이다.</p>
+
+<h2>어떻게 건네나</h2>
+<ul>
+<li><b>지식채널e — 반전 뒤 마지막 한 줄.</b> 5분, 나레이션 없이 흰 자막과 영상으로 20년. KCI 논문(강현구, 「지식채널e의 경쟁력, 자막의 서사전략」)은 「숨은 비밀을 정보의 누출과 인식을 최대한 배제한 채 놀람을 통해 제시」하는 반전 서사를 핵심 기법으로 꼽고, 경쟁력을 「자막의 서사적 완결성」에 둔다. 10주년 특집 제목이 「마지막 문장」이었다. 초대 연출 김진혁의 KOCCA 강의는 구성안을 절정에 핵심을 먼저 놓고 역산해서 짜라 한다 — 우리 흐름과 같고, 차이는 절정 뒤에 뜻을 담은 마지막 줄이 있다는 것 하나다.</li>
+<li><b>Save the Cat의 theme stated — 남의 입으로 먼저 흘린다.</b> 5분 안에 주인공이 아닌 제3자가 주제를 한마디 하고 주인공은 무시한다. 설교로 안 들리는 이유는 남의 입에서 나오고 그 자리에서는 틀린 말처럼 들리기 때문이다. 김만덕 편 7번 「겸손한 소원이라고들 하는데」가 딱 그 자리다. 보드에는 <code>STORY.themeStated</code>(선택).</li>
+<li><b>스토리 스파인의 잃어버린 마지막 칸 「그날 이후로」.</b> 사건이 끝난 뒤 세계가 어떻게 달라졌는지가 뜻이 서는 자리다. 인물 편 「그림 한 장으로 닫는다」의 그 그림이 「그날 이후로」 프레임이고, 그 위에 메시지 한 줄이 얹힌다.</li>
+<li><b>올슨의 ABT(그리고·그런데·그래서).</b> 「그래서」가 사건이면 연대기, 「그래서」가 뜻이면 이야기다. 김만덕 대사는 9번 뒤 「그래서」가 궁·금강산·절이라는 사건뿐이었다.</li>
+<li><b>교훈과 주제는 다르다.</b> 픽사 단편으로 주제를 가르치는 교사들의 공통 문제가 학생이 주제 대신 교훈(「괴롭히지 말자」)을 쓰는 것이다. 메시지는 평서문이다 — 「~하자·~해야 한다·~하세요」는 검사기가 거른다.</li>
+<li><b>숏폼 실측은 자리를 정한다.</b> 2026년 쇼츠 유지율 자료들은 완주율이 전부고 마지막 프레임이 루프로 이어져야 한다고 한다. 메시지 문장은 마지막 3~5초 한 줄, 그 앞에 페이오프.</li>
+</ul>
+
+<h2>플러그인에 옮긴 것</h2>
+<ul>
+<li><code>scenario-stage.md</code> §The message — 정의를 「이름을 지워도 서는 문장, A는 B로 이어진다, 현재형·숫자 없음·이름 없음」으로 다시 썼다. 시험 셋. 마무리 = 「그날 이후로」 그림 + 메시지 한 줄. 훅·전개 #1에 theme stated 자리. 템플릿 마무리 블록 세 줄.</li>
+<li><code>check-research.js</code> — Message 셀이 과거형으로 끝나면(냈다·했어요·였습니다), 아라비아 숫자를 품으면, 방향 행 Hero 열의 첫 낱말(김만덕 → 만덕도)을 품으면 위반. 셀프테스트 9건 추가. 김만덕 연구 로그는 세 메시지가 전부 걸린다.</li>
+<li><code>story-contract.js</code> — <code>STORY.thesis</code>가 과거형·숫자·명령형이면 위반, 인물 편이면 이름을 품어도 위반, 페이오프 이후 어느 발화 그룹도 그 문장을 말하지 않으면 위반, 페이오프 문장과 같으면 위반. <code>STORY.themeStated</code>(선택)는 페이오프 앞에 있어야 한다. 테스트 2건, 픽스처 갱신.</li>
+<li><code>storyboard-reviewer.md</code> — 통독 모드 P0-13(마지막이 뜻을 안 건넨다: 반전 재진술·그림 묘사), 「이름을 지워도 남는 문장」 출력 줄, 엔딩 축 4점을 메시지에. 시나리오 모드 P0-17(Message 줄이 사실이다).</li>
+<li><code>story-quality.md</code> 2·3단계, <code>person-short.md</code> 마무리 항목, <code>scenes-schema.md</code> takeaway, storyboard SKILL §2.1·§4a·§4.6, 템플릿 keyMessage 자리표시자.</li>
+<li>같은 편에서 걸렸던 헛경고 넷도 같이 고쳤다: 풀 영상 보드의 <code>overlay:"none"</code> 컷마다 경고(영상 위엔 아무것도 안 그리므로 기본값이 none), static 카메라의 빈 speed 슬롯 경고, 인물 편 커버 약속이 마지막 drip이 아니라 <code>STORY.payoff</code>에서 갚히는 것, 한 컷 한 문장 보드의 두 컷 씬에서 턴의 둘째 극이 out에만 있다는 구조 경고.</li>
+</ul>
+
+<h2>검사기가 못 보는 것</h2>
+<p>현재형·숫자·이름·들리는지까지는 기계가 잡는다. 그 문장이 뜻인지 그림 묘사인지는 못 잡는다 — 「못 건너던 바다를 건넌 여자가 열린 문으로 걸어 나가요」는 현재형이고 이름이 없고 12번에서 들린다. 이건 연구 단계의 Message 셀 검사(거기서 과거형 사실이 걸린다)와 통독 리뷰어의 P0-13이 본다. 좋은 메시지 자체는 사람이 고른다.</p>
+
+<h2>출처</h2>
+<ul>
+<li>Lajos Egri, <i>The Art of Dramatic Writing</i> — 전제 「A는 B로 이어진다」. <a href="https://neiloseman.com/the-art-of-dramatic-writing-by-lajos-egri/">요약(Neil Oseman)</a> · <a href="https://thestickingplace.com/assets/Art-of-Dramatic-Writing-Lajos-Egri.pdf">원문 PDF</a></li>
+<li>Robert McKee, <i>Story</i> — 통제 아이디어 = 가치 + 원인. <a href="https://www.shortform.com/blog/what-is-a-controlling-idea/">Shortform</a> · <a href="http://stavroshalvatzis.com/story-design/controlling-idea">Halvatzis</a></li>
+<li>Chip &amp; Dan Heath, <i>Made to Stick</i> — 지휘관 의도. <a href="https://www.samuelthomasdavies.com/commanders-intent/">요약</a> · <a href="https://engineerguy.com/white-papers/made-to-stick.htm">engineerguy</a></li>
+<li>Randy Olson, ABT. <a href="https://ncse.ngo/and-therefore-randy-olson-and-art-science-storytelling-part-1">NCSE</a> · <a href="https://www.sesync.org/resources/communications-toolkit-and-therefore-statement">SESYNC</a></li>
+<li>강현구, 「지식채널e의 경쟁력, 자막의 서사전략」. <a href="https://www.kci.go.kr/kciportal/ci/sereArticleSearch/ciSereArtiView.kci?sereArticleSearchBean.artiId=ART001473744">KCI</a> · <a href="https://www.khan.co.kr/article/201509032140285">경향신문 10주년 기사</a> · <a href="https://edu.kocca.kr/edu/onlineEdu/openLecture/view.do?pSeq=855&amp;menuNo=500085">KOCCA 김진혁 강의</a></li>
+<li>Save the Cat — Theme Stated. <a href="https://savethecat.com/about-the-beats/save-the-cat-podcats-your-theme-stated">savethecat.com</a> · <a href="https://www.flyingwrestler.com/2023/08/theme-stated/">Erik Bork</a></li>
+<li>픽사 22규칙 · 스토리 스파인(Kenn Adams). <a href="https://www.danielscrivner.com/pixar-22-rules-of-storytelling-and-7-sentences-to-build-stronger-stories/">Daniel Scrivner</a> · <a href="https://www.openculture.com/2013/03/pixars_22_rules_of_good_storytelling.html">Open Culture</a></li>
+<li>「구체적일수록 보편적」. <a href="https://writersinthestormblog.com/2020/11/how-specifics-make-your-stories-universal/">Writers in the Storm</a> · 주제 대 교훈: <a href="https://www.bespokeclassroom.com/blog/2017/4/23/6-pixar-short-films-to-use-in-secondary-ela/">Bespoke ELA</a></li>
+<li>쇼츠 유지율 2026. <a href="https://www.shortimize.com/blog/youtube-shorts-retention-rate">Shortimize</a> · <a href="https://aibrify.com/blog/youtube-shorts-retention-curve-playbook">Aibrify</a></li>
+<li>유튜브 역사 콘텐츠 스토리텔링 논문. <a href="https://www.kci.go.kr/kciportal/landing/article.kci?arti_id=ART002863960">KCI</a></li>
+<li>사고 기록: pundago ep410 김만덕(2026-09-11) — research.md M1~M3, candidates/d1.md, scenes.js STORY.thesis. 저장소 밖(<code>data/</code>).</li>
+</ul>
+</div>
+</body>
+</html>

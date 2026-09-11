@@ -281,6 +281,14 @@ score the engines axis at 0 and raise P0-10.
     that lands in a different item than `wow_lands` names, or lands below the curve's maximum,
     is a directive (move the landing, raise the sign), not this P0.
 
+17. **The Message line is a fact, not a message.** The **Message.** sentence under the title
+    fails the name-erasure test (take the person, place and thing out and nothing is left), is
+    told in the past tense, carries a figure, or is the wow's 실제로는 half in other words —
+    "만덕이 청한 건 상이 아니라 법의 예외였고 임금이 그 문을 열었다". A message is *what leads
+    to what*, true with the names gone (scenario-stage §The message). Quote the line and the
+    실제로는 half beside it; say what sentence would survive the erasure, in the page's own
+    material, without writing the page's wording for it.
+
 **A thin item is not a P0 by itself.** A 전개 #3 with two cases where three would carry
 better, or a 전개 #2 of one sentence, costs points on the structure axis and earns a
 directive; it is P0-13 only when the item cannot do its job at all.
@@ -300,7 +308,7 @@ for engines the beats actually run, with a file:line or a quoted beat as evidenc
 | The opening | 20 | cold open on the strongest moment or evidence, a promise sentence the profile §1 target audience would want kept, a first line that names a loss before it asks, the primary engine landing in that opening, and the staging placed half a step off what the viewer would have guessed — familiar material with one property moved, never a premise that has to be explained before it lands (§13) |
 | The structure is honoured | 15 | the 주제 delivers the page's message and names what the evidence establishes; seven headings with necessary developments: evidence, choices, consequences or changed understanding; no compulsory modern cases; optional CTA explicitly justified or absent |
 | The feel curve | 10 | emotional progression justified by events and audience expectations, the minimum before the landing and the maximum on it, with room for a quiet discovery or release; intensity labels alone earn no points |
-| Items and ending | 10 | the promise is paid with specific content and the ending makes its meaning understandable; an optional ask follows the answer and belongs to this episode; a no-CTA ending can earn all points, an ending that leaves nothing a viewer could repeat cannot |
+| Items and ending | 10 | the promise is paid with specific content and the 마무리 is the 「그날 이후로」 picture with the Message line over it — a sentence true with the names gone, not the reversal again; an optional ask follows the answer and belongs to this episode; a no-CTA ending can earn all points, an ending that leaves nothing a viewer could repeat cannot |
 
 A page that honours structure, opening, curve and ending with **no working engine** tops out
 around 60. That is intentional — it cannot clear 95, and the directives should name which
@@ -473,6 +481,13 @@ picture was going to show, and you will fill the gap for the author without noti
    person short speaks one name, everyone else is a role. The close is a summary, a moral or
    a list of what happened afterwards instead of one picture after the blow. On a disputed
    record, only one side is spoken, or the dispute is decided instead of shown.
+13. **The close hands over no meaning.** After the whole read, the sentence you would keep with
+   the names gone is either nothing, the reversal said again, or a description of what the last
+   picture shows ("열린 문으로 걸어 나가요"). The message is a sentence that stays true without
+   the person, the place or the figure — *what leads to what* — and it has to be heard, once,
+   at or after the payoff (scenario-stage §The message; `STORY.thesis`). Write the sentence you
+   kept and the one STORY declares, side by side. A close that is the picture plus that line is
+   not this defect; a quiet ending with no ask never is.
 
 ## Axis scores (additive out of 100, no points without evidence)
 
@@ -482,7 +497,7 @@ picture was going to show, and you will fill the gap for the author without noti
 | The chain holds | 25 | causal continuity and spoken antecedents without help from the picture (15); early partial payment, new evidence or consequences in each development, and a concrete reason to hear the next beat (10). Cite the first stalled span; clarity alone earns at most 15 here |
 | The content is complete | 20 | the situation or mechanism is understandable (8); necessary evidence and choices are spoken (6); consequences and limits support the conclusion (6); modern cases are optional |
 | Terms and names | 15 | every unfamiliar term explained where it first appears, at the 초3~4 floor (8); every out-of-scale figure — P0-8's four kinds, not years or percentages — spoken with something beside it (4); no proper name the listener carries for nothing (3) |
-| The ending | 15 | the promised answer or decisive action is delivered (8); its connection to the opening and specific meaning is intelligible (4); one sentence of the close stands on its own as something to forward — a fact, a verdict, a line, a checklist (3); an optional CTA cannot substitute for any of the three |
+| The ending | 15 | the promised answer or decisive action is delivered (8); the message is heard — a sentence that stays true with the names gone, matching `STORY.thesis`, not the reversal again and not the picture described (4); one sentence of the close stands on its own as something to forward — a fact, a verdict, a line, a checklist (3); an optional CTA cannot substitute for any of the three |
 
 An ask stays optional; a forwardable thing does not — an ask requests behaviour from the
 viewer, while a forwardable thing is one sentence, figure or verdict they can pass on as-is.
@@ -496,6 +511,7 @@ Asking to be shared is an ask, not a trigger.
 - What happened or works: <…> · Why it matters here: <…>
 - Evidence or cases used: <…> · Ending and optional ask: <…>
 - The line I would forward: <the sentence as spoken, or "none">
+- The sentence that stays true with the names gone: <what the episode means, or "none — I can say what happened, not what it means">
 - Could not tell: <…>
 
 ## Required story evidence (complete after the blind read)

@@ -39,6 +39,7 @@ consumes after storyboard approval. `video-template.html` loads it with
   - [outro — a brand close with a next value (reference only)](#outro-a-brand-close-with-a-next-value-reference-only)
   - [chapter — long-form chapters (`youtube-long-16x9` only)](#chapter-long-form-chapters-youtube-long-16x9-only)
   - [Filmed scenes — clips the user shot themselves (`visual.source: "recording"`)](#filmed-scenes-clips-the-user-shot-themselves-visualsource-recording)
+  - [Stock material — free clips and photographs from outside (`visual.source: "stock"`)](#stock-material-free-clips-and-photographs-from-outside-visualsource-stock)
   - [Screencast splice — one recorded screen inside an ordinary episode (`visual.source: "screencast"`)](#screencast-splice-one-recorded-screen-inside-an-ordinary-episode-visualsource-screencast)
   - [The authored-screen lane — three kinds under one key (`visual.slide.kind`)](#the-authored-screen-lane-three-kinds-under-one-key-visualslidekind)
   - [Slide scenes — a screen where text and shapes are the subject (`visual.slide`)](#slide-scenes-a-screen-where-text-and-shapes-are-the-subject-visualslide)
@@ -105,8 +106,9 @@ window.COMPREHENSION = {
 ```
 
 - `question` is the governing viewer question. `answer` closes it. `takeaway` is the synthesis,
-  not the answer repeated with different wording. In short-form their non-space character caps
-  are 35, 60, and 45.
+  not the answer repeated with different wording — the forwardable line, cut from the message
+  (`STORY.thesis`, scenario-stage §The message), never the closing picture described. In
+  short-form their non-space character caps are 35, 60, and 45.
 - `branches` lists only questions held across a cut. A question paid inside the same shot is a
   seam and stays out of this array. A short informational episode gets no cross-scene branch;
   it follows the governing question only. A short narrative may carry one. Long-form may carry
@@ -596,6 +598,9 @@ modes with video-only first-pass/retry costs and the explicit cap before assets.
 only the hybrid renderer and generated-count restrictions below. `MOTION_POLICY` remains the
 channel snapshot. Actual approval binds the quote fingerprint; changing inputs requires a new
 quote. `check-production.js` blocks missing/stale approval and over-budget calls.
+`imageProvider` and `videoProvider` (`host` | `api`) record which lane generates — `host` where
+the CLI running the skill ships the tool (`image_gen` on Codex and Grok, `image_to_video` on
+Grok), otherwise `api`; an absent field reads as `api` (production-mode.md).
 
 `shot.videoDesign` in full_video carries `look`, `worldId`, `motion`, `before`, `action`,
 `continuity` and `reject`, plus `after` as the final state; on a `subject_action` shot the last
@@ -818,7 +823,8 @@ visual: {
                                      // written in veo vocabulary — push and orbit appear 0 times in the canonical docs
   video: null,                       // points only: the motion-background shot marker (§motion background) — omitted for stills
   clip: null,                        // quote only: the speech clip plan (below)
-  source: null,                      // "recording" (§filmed scenes) | "screencast" (§screencast splice) — where the picture was recorded
+  source: null,                      // "recording" (§filmed scenes) | "screencast" (§screencast splice) | "stock" (§stock material) — where the picture came from
+  license: null,                     // stock only — the license record every outside file carries (§stock material)
   slide: null,                       // authored screen — { file, kind, treatment, role, motif, plan, labels, motion, acts }
   action: null,                      // visible subject action — required when the channel motion policy says so
   character: null,                   // who is on screen (§character reference) — "<id>" | ["<id>", …] | null
@@ -834,6 +840,7 @@ title and figure in HTML over a still photo is the default. Don't merge the two 
 | `still` | Still photo or illustration. The builder always adds a Ken Burns move — a frozen still is refused at build | `visual.bg` present, no `video` or `clip` |
 | `ai-video` | Generated video — motion background, b-roll, speech clip | `type==="broll"`, or `visual.video`, or `visual.clip` |
 | `recording` | **A clip the user filmed themselves** (§filmed scenes), or one window of a screen recording spliced into an otherwise generated episode (§screencast splice) | `visual.source==="recording"` \| `"screencast"` |
+| `stock` | **A free stock or archive clip** the storyboard found and produce downloads (§stock material). A stock photograph is a `still` with `visual.source==="stock"` | `visual.source==="stock"` with `visual.clip` |
 | `asset` | A pre-made shared mp4 | `type==="outro"` |
 | `slide` | **An HTML screen we authored** — a text-and-shape diagram, words landing one per sentence, or a figure reacting (`slide.kind`, §the authored-screen lane). Every slide is a motion slide (`slide.motion: true`), both formats | `visual.slide` present |
 
@@ -844,7 +851,7 @@ rate) too. The renderer, the check badges, and the reviewer all look per scene.
 
 | `overlay` | Over the screen | When |
 |---|---|---|
-| `none` | No text overlay. Just the video itself | b-roll, the shared outro, slide scenes (the slide draws its own text) |
+| `none` | No text overlay. Just the video itself | b-roll, the shared outro, slide scenes (the slide draws its own text), and the default of every video cut — nothing is drawn over video (CLAUDE.md 2026-09-05); a video cut that writes `html` gets no warning, produce decides what it stages |
 
 Left unwritten, storyboard.html infers from the clues above. When the written value disagrees
 with the structure, the check strip catches it — `picture:"ai-video"` with no `video`, `clip`,
@@ -1620,7 +1627,8 @@ What to write depends on whether the clip's own sound survives the build:
 
 ```js
 engine: "seedance",                  // the planned route — written only when it departs the type default
-                                     // (broll → veo, motion background → seedance, quote → veo_reference)
+                                     // (broll → veo, motion background → seedance, quote → veo_reference);
+                                     // "host" under PRODUCTION.videoProvider:"host" — the CLI's own image_to_video (Grok)
 prompt: "chest-up on the subject, very slow dolly in, ending on subject centred at mid-frame. steam curling off the cup. Audio: quiet room tone, no music, no speech.",
 negative: "text, subtitles, black bars"   // veo text/img lanes only — nouns for the negativePrompt argument, never the body
                                      // (the reference lane rejects the argument — 400, measured; there exclusions become positive description)
@@ -2206,6 +2214,85 @@ Long-form is 16:9. A portrait clip gets center-cropped, losing most of the frame
 stops with `STRICT_DIM=1` **before the first ffmpeg** (the landscape preset's default). This fact
 is written at the top of `script.md`'s filming rules — learning it after filming everything means
 filming again.
+
+### Stock material — free clips and photographs from outside (`visual.source: "stock"`)
+
+Some cuts are better real than generated: the street as it was in 1961, a rocket actually
+leaving the pad, a market at dawn that exists. Free stock sites and public archives hold that
+footage under licenses that allow a monetized, edited cut, and a supplied file costs nothing
+to generate. The sources, their terms and the traps are surveyed in
+[docs/research/2026-09-07-free-stock-sources](../../../docs/research/2026-09-07-free-stock-sources/index.html);
+`stock_search` covers Pexels, Pixabay, the NASA library and Wikimedia Commons and returns the
+license record below with every item. Korean public material (공공누리 제1유형 on e뮤지엄,
+e영상역사관, 포토코리아; 공유마당's expired and donated works) is found by hand from that survey
+and recorded the same way.
+
+```js
+{
+  type: "points", beat: "drip", duration: 6,
+  shot: { feel: "…", size: "ws", angle: "eye", info: "the street really looked like this", infoType: "other",
+    render: { mode: "stock_video", purpose: "archive",
+      reason: "the actual 1950 street is the sentence; a generated one would be a guess",
+      action: "trams cross the square while pedestrians pass" } },
+  narration: [{ tts: "…", sub: "…" }],
+  visual: {
+    source: "stock",
+    clip: "footage/s4-commons-12345.mp4",   // produce downloads into this name; WebM is transcoded first
+    in: 3.5,                                // optional — trim start inside the source, seconds
+    license: {
+      provider: "commons", url: "https://commons.wikimedia.org/wiki/File:…",
+      license: "Public domain", licenseUrl: "https://commons.wikimedia.org/wiki/Commons:Licensing",
+      author: "Lt. Robert L. Strickland, US Army", attributionRequired: false,
+      commercial: true, modify: true, retrievedAt: "2026-09-07"
+    }
+  }
+}
+```
+
+| Field | Required | What |
+|---|---|---|
+| `source` | ✅ | `"stock"` — this one field marks an outside file, clip or photograph |
+| `clip` | ✅ before production | `footage/s<shot>-<provider>-<id>.<ext>` — the storyboard sets the name, produce downloads into it. A stock **photograph** uses `bg: "images/stock/s<shot>-<provider>-<id>.jpg"` instead, on a `still_camera` cut, with no `bgPrompt` |
+| `in` | optional | Trim start in seconds inside the source; the cut runs from there for the card's length |
+| `license` | ✅ | The record below, pasted from `stock_search` or written from the source page |
+
+The license record — `render-routing.js checkLicense` reads it on every `source: "stock"` cut:
+
+| Key | What |
+|---|---|
+| `provider` | `pexels` · `pixabay` · `nasa` · `commons` · `kogl` (공공누리) · `gongu` (공유마당) · another short id |
+| `url` | The item page where the license is shown |
+| `license` · `licenseUrl` | The license by name and a link to its text — `Pexels License`, `CC0`, `CC BY 4.0`, `공공누리 제1유형` |
+| `commercial` · `modify` | Both `true`, or the cut is refused: a monetized short is commercial use, and trimming, grading and subtitles are modifications |
+| `shareAlike` | Never `true` — share-alike terms would spread to the edited cut |
+| `attributionRequired` · `attribution` | `true` with the credit text when the license asks for it (CC BY, 공공누리, Videvo attribution); `false` on Pexels, Pixabay, CC0 and US government works, where a credit is still welcome |
+| `author` · `authorUrl` | Who made it — goes into the credit |
+| `retrievedAt` | The download date, ISO — the terms that applied when the file was taken |
+| `note` | Provider caveats the tool attaches (no insignia, brands in frame, WebM) — read, not enforced |
+
+Rules that follow from the route:
+
+- **A stock clip is a supplied file, not a generated slot.** It sits outside
+  `generated_video_max`, bills nothing, and does not free a slot for one more generated cut
+  either. On a short it satisfies the hook rule the way a recording does.
+- **Its audio is discarded.** TTS, subtitles and BGM run over it as over a motion background.
+  A clip whose own sound is the point is the user's recording, not a stock cut.
+- **Nothing is drawn over it** — the rule above every other rule. The burned subtitle is the
+  only type on it.
+- **Credits go into the platform text.** Every `attributionRequired: true` record is listed
+  under a 출처 line at the end of the YouTube description and of the Instagram and Facebook
+  captions; produce §6 collects them. Pexels, Pixabay and government works get the same line
+  when a name is known — it costs one line.
+- **People, logos and brands in frame are a separate question** on every provider: no
+  endorsement implied, no identifiable person shown in a bad light, no brand in a commercial
+  context, no NASA insignia or current astronaut. The license frees the copyright and nothing
+  else.
+- **Share-alike and non-commercial material never enters**, however good the clip: our cuts are
+  trimmed, graded, sped up and subtitled, which is an adaptation. `stock_search` drops those
+  files before they reach the board.
+- **A stock photograph** takes the still-camera route: `render.mode: "still_camera"`,
+  `visual.bg` under `images/stock/`, the same `license`, no `bgPrompt`; produce copies it
+  instead of generating. In `full_video` it may be the source image of a generated cut.
 
 ### Screencast splice — one recorded screen inside an ordinary episode (`visual.source: "screencast"`)
 
@@ -2852,6 +2939,9 @@ strip says no violations.
 - [ ] **`window.MOTION_POLICY` matches the profile frontmatter** when the channel declares one.
       The true-motion ratio, allowed kinds, longest still run, action requirement, and generated
       video cap all pass `check-scenes.js`. Ken Burns and caption swaps do not count
+- [ ] Every `visual.source: "stock"` cut carries `visual.license` (commercial and modify true, the
+      credit text when `attributionRequired`) and, before production, its file under `footage/` or
+      `images/stock/`; a stock clip is not counted as a generated slot
 - [ ] Generated video (`broll` + `visual.video` combined) stays inside the format default or the
       profile's explicit `generated_video_max` override (§motion background) · the rule-13
       plan check done

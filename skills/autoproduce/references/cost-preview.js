@@ -102,6 +102,26 @@ const ROUTES = {
     key: 'veo.fast.1080p', fixedSeconds: 8,
     why: 'veo_reference · fast (lite has no reference images) · pinned to 8s'
   },
+  /* The host lane (owner directive 2026-09-07): under Grok the CLI's own image_to_video takes
+     the clip on the subscription allowance, so the row bills the requested seconds at $0 — the
+     slot still shows on the approval page as a generated shot, with its 720p ceiling. A speech
+     clip goes through reference_to_video, which takes 6 or 10 seconds; the forecast books 10. */
+  'broll/host': {
+    key: 'video.host',
+    why: 'host image_to_video — the CLI\'s own video tool on the subscription allowance · 720p ceiling'
+  },
+  'motion/host': {
+    key: 'video.host',
+    why: 'host image_to_video · silent use — the builder keeps only the video track · 720p ceiling'
+  },
+  'quote/host': {
+    key: 'video.host', fixedSeconds: 10,
+    why: 'host reference_to_video · 6 or 10 s, the forecast books 10 · a preset voice, 720p ceiling'
+  },
+  'footage/host': {
+    key: 'video.host',
+    why: 'host image_to_video — a footage slide clip on the CLI\'s own tool · 720p ceiling'
+  },
   /* A footage slide (scenes-schema §footage treatment) carries one generated clip per reveal
      group. The builder keeps only the video track, so the silent Seedance route applies — and
      it bills the seconds each shot asks for. These shots are outside generatedVideoMax; the
@@ -136,8 +156,18 @@ const ROUTES = {
   'art/local': {
     key: 'image.local', fixedQty: 1,
     why: 'image_local_generate — a slide art plate, $0'
+  },
+  'art/host': {
+    key: 'image.host', fixedQty: 1,
+    why: 'host image_gen — a slide art plate on the CLI\'s own tool, $0'
   }
 };
+
+/** The route a named engine resolves to: `host` is the CLI's own video tool (owner directive
+    2026-09-07), the two API names pass through, anything else is the slot's type default. */
+function routeEngine(named, fallback) {
+  return named === 'host' || named === 'veo' || named === 'seedance' ? named : fallback;
+}
 
 /**
  * Reads scenes.js by evaluating it in a vm sandbox — the same precedent
@@ -171,21 +201,23 @@ function videoSlots(scenes) {
     const v = s.visual || {};
     const shotNo = i + 1;
     if (v.reuse !== undefined) { scenePlan(s); return; } // Validated import, no paid slot.
-    if (s.type === 'outro' || (!v.video && (['recording', 'screencast'].includes(v.source) || v.picture === 'recording'))) return;
+    // A supplied file (a recording, or a free stock clip with its license record) bills nothing.
+    if (s.type === 'outro' || (!v.video && (['recording', 'screencast'].includes(v.source) || v.picture === 'recording' ||
+        (v.source === 'stock' && typeof v.clip === 'string')))) return;
     const plan = scenePlan(s);
     if (plan && plan.engine === 'seedance') {
       slots.push({ shot: shotNo, kind: plan.kind, engine: plan.engine, duration: Number(s.duration),
         plan, label: plan.kind === 'motion' ? 'motion background' : plan.kind === 'quote' ? 'speech clip' : 'b-roll' });
     } else if (s.type === 'broll') {
-      const engine = v.engine === 'seedance' ? 'seedance' : 'veo';
+      const engine = routeEngine(v.engine, 'veo');
       slots.push({ shot: shotNo, kind: 'broll', engine, duration: Number(s.duration) || 0,
                    label: 'b-roll after scene ' + (s.after === undefined ? '?' : s.after) });
     } else if (v.video) {
-      const engine = (v.video.engine || v.engine) === 'veo' ? 'veo' : 'seedance';
+      const engine = routeEngine(v.video.engine || v.engine, 'seedance');
       slots.push({ shot: shotNo, kind: 'motion', engine, duration: Number(s.duration) || 0,
                    label: 'motion background' });
     } else if (s.type === 'quote' && v.clip && typeof v.clip === 'object') {
-      slots.push({ shot: shotNo, kind: 'quote', engine: 'veo', duration: 8,
+      slots.push({ shot: shotNo, kind: 'quote', engine: routeEngine(v.clip.engine || v.engine, 'veo'), duration: 8,
                    label: 'speech clip' + (s.speaker ? ' · ' + s.speaker : '') });
     }
     const sl = v.slide;
@@ -193,7 +225,7 @@ function videoSlots(scenes) {
       sl.shots.forEach((sh, j) => {
         const shot = sh || {};
         if (shot.reuse) return;   // a reuse shot copies an existing clip (footage-lane.md §3) — no call, no slot
-        const engine = (shot.engine || v.engine) === 'veo' ? 'veo' : 'seedance';
+        const engine = routeEngine(shot.engine || v.engine, 'seedance');
         slots.push({ shot: shotNo, kind: 'footage', engine, duration: Number(shot.duration) || 0,
                      label: 'footage clip g' + (shot.group || j + 1) });
       });
@@ -242,7 +274,7 @@ function stillSlots(scenes, imageProvider) {
     const sl = v.slide;
     if (sl && Array.isArray(sl.arts)) {
       sl.arts.forEach((art, j) => {
-        slots.push({ shot: shotNo, kind: 'art', engine: 'local', duration: 0,
+        slots.push({ shot: shotNo, kind: 'art', engine: imageProvider === 'host' ? 'host' : 'local', duration: 0,
                      label: 'slide art ' + ((art && art.file) || j + 1) });
       });
     }
@@ -260,9 +292,10 @@ function costFingerprint(scenes) {
     var s = scenes[i] || {}, v = s.visual || {};
     if (v.reuse !== undefined) parts.push((i + 1) + ":reuse:" + encodeURIComponent(JSON.stringify(v.reuse)));
     var slot = null;
-    if (s.type === "broll") slot = ["broll", v.engine === "seedance" ? "seedance" : "veo", Number(s.duration) || 0];
-    else if (v.video) slot = ["motion", (v.video.engine || v.engine) === "veo" ? "veo" : "seedance", Number(s.duration) || 0];
-    else if (s.type === "quote" && v.clip && typeof v.clip === "object") slot = ["quote", (v.clip.engine || v.engine) === "seedance" ? "seedance" : "veo", Number(s.duration) || 8];
+    var route = function (named, fallback) { return named === "host" || named === "veo" || named === "seedance" ? named : fallback; };
+    if (s.type === "broll") slot = ["broll", route(v.engine, "veo"), Number(s.duration) || 0];
+    else if (v.video) slot = ["motion", route(v.video.engine || v.engine, "seedance"), Number(s.duration) || 0];
+    else if (s.type === "quote" && v.clip && typeof v.clip === "object") slot = ["quote", route(v.clip.engine || v.engine, "veo"), Number(s.duration) || 8];
     if (slot) {
       var config = Object.assign({}, v, slot[0] === "motion" ? v.video : slot[0] === "quote" ? v.clip : {});
       var fields = ["model", "modelPurpose", "modelReason", "resolution", "generateAudio", "realFaceInput", "referenceImagePaths", "referenceAudioPaths", "previz"];
@@ -274,7 +307,7 @@ function costFingerprint(scenes) {
       for (var j = 0; j < sl.shots.length; j++) {
         var sh = sl.shots[j] || {};
         if (sh.reuse) continue;
-        parts.push((i + 1) + "g" + (sh.group || j + 1) + ":footage/" + ((sh.engine || v.engine) === "veo" ? "veo" : "seedance") + "/" + (Number(sh.duration) || 0));
+        parts.push((i + 1) + "g" + (sh.group || j + 1) + ":footage/" + route(sh.engine || v.engine, "seedance") + "/" + (Number(sh.duration) || 0));
       }
     }
   }
@@ -441,6 +474,29 @@ function selftest() {
     shots: [{ group: 1, clip: 'slides/footage/s1-g1.mp4', duration: 5 }, { group: 2, clip: 'slides/footage/s1-g2.mp4', duration: 4, engine: 'veo' }] } } }]);
   ok('footage shots are detected one per clip', footage.length === 2 && footage[0].kind === 'footage' && footage[0].engine === 'seedance' && footage[1].engine === 'veo');
   ok('a 5s footage clip on Seedance is forecast at 5 seconds', forecastRows([footage[0]])[0].qty === 5);
+
+  // The host lane (2026-09-07): the CLI's own video tool bills nothing and still shows as a slot.
+  ['broll/host', 'motion/host', 'quote/host', 'footage/host', 'art/host']
+    .forEach((r) => ok('route ' + r + ' has a price key', !!(ROUTES[r] && ROUTES[r].key)));
+  const hostScenes = [
+    { type: 'points', duration: 6, visual: { video: { engine: 'host', prompt: 'x' } } },
+    { type: 'quote', visual: { clip: { prompt: 'x', engine: 'host' } } },
+    { type: 'broll', after: 0, duration: 4, visual: { engine: 'host' } }
+  ];
+  const hostSlots = videoSlots(hostScenes);
+  ok('engine:"host" resolves to the host route on every slot kind',
+     hostSlots.length === 3 && hostSlots.every((x) => x.engine === 'host'));
+  const hostRows = forecastRows(hostSlots);
+  ok('a host motion background is forecast at the requested seconds on video.host',
+     hostRows[0].key === 'video.host' && hostRows[0].qty === 6);
+  ok('a host speech clip books 10 seconds', hostRows[1].qty === 10);
+  ok('a host b-roll bills its used length, not Veo\'s 8', hostRows[2].qty === 4);
+  ok('switching a slot to the host engine changes the fingerprint',
+     costFingerprint(hostScenes) !== costFingerprint(sample) && /1:motion\/host\/6/.test(costFingerprint(hostScenes)));
+  const hostStills = stillSlots([{ type: 'cover', visual: { bgPrompt: 'p' } },
+    { type: 'points', visual: { slide: { kind: 'principle', arts: [{ file: 'a.png' }] } } }], 'host');
+  ok('imageProvider:host sends stills and slide arts to image.host',
+     hostStills.length === 2 && forecastRows(hostStills).every((r) => r.key === 'image.host' && r.qty === 1));
 
   // the per-episode video budget (2026-09-03)
   const spentItems = [{ key: 'seedance.1-5-pro-silent.1080p', subtotalUsd: 2.09 }, { key: 'image.gpt-image-2.high', subtotalUsd: 0.44 },

@@ -118,5 +118,10 @@ music.mlx	second	0.000	official	mlx_music_generate — MLX Core / mlx-serve on-d
 video.mlx	second	0.000	official	mlx_video_generate — MLX Core on-device. Quantity is numFrames / 24 (LTX is 24 fps)
 3d.mlx	mesh	0.000	official	mlx_3d_generate — MLX Core on-device. Pipeline has no GLB consumer; still logged so the tally is complete
 
+# ── Host media tools (the CLI's own image_gen / image_to_video) ──────────
+# Same $0 ledger pattern: the subscription allowance pays, a quota is not a price, and a missing
+# key would still kill the report. image.host sits with the images above. Owner directive 2026-09-07.
+video.host	second	0.000	derived	Host-provided video generation (Grok image_to_video · reference_to_video) uses the subscription allowance; no separate API charge. Quota limits are not priced here. 720p ceiling
+
 # Seedance escalation — conservative list price; no expiring promotions (verified 2026-09-05).
 seedance.2-5.1080p	second	0.569	derived	dreamina-seedance-2-5-260628 — reference/voice escalation; list price

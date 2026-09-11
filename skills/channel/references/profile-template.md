@@ -10,7 +10,7 @@ slug: <kebab-slug>
 status: active            # active | archived
 created: <YYYY-MM-DD>
 motion_min_true: off      # off | majority | 0.00~1.00
-motion_allowed_kinds: ai-video,recording,motion-slide
+motion_allowed_kinds: ai-video,recording,stock-video,motion-slide
 motion_max_consecutive_stills: off
 motion_max_still_seconds: off
 motion_require_action: false
@@ -78,6 +78,7 @@ scenes sets it to `majority` or a ratio, then narrows `motion_allowed_kinds` as 
 
 - `ai-video` — b-roll, motion backgrounds, and video clips
 - `recording` — filmed shots and screencast splices
+- `stock-video` — a free stock or archive clip with its license record (`visual.source: "stock"`)
 - `motion-slide` — authored slides with `slide.motion: true`
 
 `motion_require_action: true` also requires `visual.action` on every qualifying shot. Camera

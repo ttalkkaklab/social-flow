@@ -236,9 +236,9 @@ as a sequence:
 1. Run `check-scenes.js storyboard/`, then
    `node ${CLAUDE_PLUGIN_ROOT}/skills/produce/references/check-production.js storyboard/ --selection`.
    Missing/stale approval or an estimate above the approved cap blocks all assets.
-2. Generate and inspect source images at high quality. With `imageProvider:'host'`, use the
-   product-provided image tool and its included allowance. If unavailable, ask before any
-   separately billed image API. Keep originals under storyboard/images/. Inspect silhouette,
+2. Generate and inspect source images at high quality. With `imageProvider:'host'` (Codex,
+   Grok — the storyboard's detection), use the CLI's own `image_gen` / `image_edit` on its
+   allowance. If unavailable, ask before any separately billed image API. Keep originals under storyboard/images/. Inspect silhouette,
    topology, scale, materials and continuity before spending on motion.
 3. Generate narration before final video calls to measure the required playback duration.
    Fit it within the approved shot duration and provider limit. If it needs a longer shot,
@@ -247,7 +247,9 @@ as a sequence:
    `node ${CLAUDE_PLUGIN_ROOT}/skills/produce/references/check-production.js storyboard/ --before-call N`.
    Pass the exact `generation` arguments from `cost-preview.js --json`, resolved local
    `imagePath`, optional `lastImagePath`, and stored prompt to `mcp__social-flow__seedance_img2video`.
-   The baseline is Seedance 1.5 Pro, explicit 1080p, `generateAudio:false`. Keep spoken narration
+   Under `videoProvider:'host'` the call is the host `image_to_video` instead (source image,
+   stored prompt, `duration`, 720p) and the ledger row is `video.host` for the requested seconds.
+   On the API lane the baseline is Seedance 1.5 Pro, explicit 1080p, `generateAudio:false`. Keep spoken narration
    on the channel voice. An upgrade requires a priced plan and approval; never silently escalate.
 5. Keep every attempt; set `visual.video.clip` to the chosen file. Append actual billed usage
    to `.work/cost-tally.tsv` immediately, including billed rejects:

@@ -13,15 +13,39 @@ then only from the fields — never by editing the stored string by hand.
 ## Contents
 
 - [1. Which engine, and why](#1-which-engine-and-why)
+  - [The host image tool comes first](#the-host-image-tool-comes-first-owner-directive-2026-09-07)
+  - [The API table](#the-api-table-claude-code-or-imageproviderapi)
 - [2. Making the calls](#2-making-the-calls)
 - [3. The image check](#3-the-image-check)
 - [4. The ledger](#4-the-ledger)
 
 ## 1. Which engine, and why
 
-`PRODUCTION.imageProvider:"host"` overrides the API table below: use the product-provided
-image tool with the approved stored prompt, log `image.host`, and ask before switching to a
-separately billed provider if that capability is unavailable.
+### The host image tool comes first (owner directive 2026-09-07)
+
+The storyboard wrote `PRODUCTION.imageProvider` from the tool list of the CLI it ran in
+(storyboard §1): `"host"` where the CLI ships `image_gen` — Codex, Grok — and `"api"` on Claude
+Code or where the user chose the API lane for the episode. Under `"host"` the table below is
+not consulted: every still, start and end frame and slide art goes to the host tool with the
+approved `bgPrompt` resent verbatim, and the ledger line is `image.host` (subscription
+allowance, $0 — a quota is not a price). Two CLIs, two mechanics:
+
+- **Codex** — the built-in `image_gen` tool (OpenAI's image model, no `OPENAI_API_KEY`; the
+  API-side gpt-image renders Korean, and the first text frame here still gets its glyphs read
+  like on Grok). It saves under `$CODEX_HOME/generated_images/`; copy the picked file to
+  `storyboard/images/scene-<n>.png`. A reference call (character panels, an end frame edited
+  from the start frame) first shows the source with `view_image`, then edits it.
+- **Grok** — `image_gen` with `aspect_ratio` from the format (`9:16` shorts, `16:9` long-form)
+  and `image_edit` for anything with a reference image (`image` takes an absolute path; the
+  character panels go face first, then body). Both return the saved file's absolute path; copy
+  it to `storyboard/images/scene-<n>.png`. Hangul rendering is unmeasured on this tool: make a
+  text-bearing frame once, read the glyphs, and only a broken read moves that frame to
+  `gpt_image_text2img` — with the ledger line and one sentence in `build-report.md`.
+
+A host call that fails, or a tool that is missing, is put to the user before any separately
+billed API call — a fallback nobody approved is money nobody approved.
+
+### The API table (Claude Code, or `imageProvider:"api"`)
 
 The episode style chosen in [visual-style.md](../../storyboard/references/visual-style.md)
 overrides the generic photo defaults below for every new still, start and end frame, in
@@ -132,6 +156,7 @@ regenerations. The convention is
 printf 'image.gpt-image-2.high\t1\tproduce: cover background scene-1\n' >> .work/cost-tally.tsv
 printf 'image.local\t3\tproduce: points backgrounds scene-2~4\n'        >> .work/cost-tally.tsv
 printf 'image.gpt-image-2.high\t1\tproduce: §1.5 remake scene-1\n'      >> .work/cost-tally.tsv
+printf 'image.host\t5\tproduce: cover + points on the host image_gen\n'   >> .work/cost-tally.tsv   # Codex · Grok
 ```
 
 Log local images too — the unit price is 0 so the total doesn't move, but the report showing
