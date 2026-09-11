@@ -77,3 +77,29 @@ test('shared camera template passes the production HTML contract',()=>{
  assert.equal(r.status,0,r.stdout+r.stderr);
  }finally{rmSync(dir,{recursive:true,force:true})}
 });
+
+test('a previz clip is bound by hash, rendered at whole seconds, and named in the prompt',()=>{
+ const {checkPreviz}=require(path.join(ref,'render-routing.js'));
+ const good=()=>{const v=video();v.duration=5;v.visual.bg='images/scene-1.png';Object.assign(v.visual.video,{modelPurpose:'previz',modelReason:'The orbit lands on the sentence',realFaceInput:false,
+  referenceImagePaths:['images/scene-1.png','characters/porter/body.png'],previz:{clip:'previz/s1.mp4',sha256:'b'.repeat(64),fps:24,seconds:5},
+  prompt:'Image 1 is the first frame. Use Video 1, a 3D clay-model previz, as the only reference for camera movement, shot rhythm, subject trajectory and blocking; strictly keep its camera path and pacing. Do not reference its visual content. The red model in Video 1 is the porter from Image 2. A stone courtyard at dusk. The porter stays consistent with Image 2.'});return v};
+ assert.deepEqual(checkScene(good()),[]);
+ assert.deepEqual(checkPreviz(video()),[]);
+ const edits=[
+  [s=>{s.visual.video.previz.clip='https://x/s1.mp4'},/local mp4/],
+  [s=>{delete s.visual.video.previz.sha256},/sha256/],
+  [s=>{s.visual.video.previz.seconds=4.5},/whole number/],
+  [s=>{s.visual.video.previz.fps=30.5;s.visual.video.previz.fps=61},/24–60/],
+  [s=>{s.visual.video.modelPurpose='reference'},/modelPurpose:"previz"/],
+  [s=>{s.visual.video.referenceImagePaths=['characters/porter/body.png']},/referenceImagePaths\[0\]/],
+  [s=>{s.visual.video.lastImagePath='images/scene-1-end.png'},/no end frame/],
+  [s=>{s.visual.video.prompt=s.visual.video.prompt.replace('Video 1, a','the clip, a').replace('in Video 1','in the clip')},/"Video 1"/],
+  [s=>{s.visual.video.prompt=s.visual.video.prompt.replace('Image 1 is the first frame. ','')},/first frame/],
+  [s=>{s.visual.video.prompt=s.visual.video.prompt.replace('Do not reference its visual content. ','')},/visual content/],
+  [s=>{s.shot.render.mode='still_camera'},/generated_video cut/],
+ ];
+ for(const [edit,pattern] of edits){const s=good();edit(s);assert.match(checkPreviz(s).join(),pattern)}
+ // A draft has no hash and no prompt yet; the shape rules still hold.
+ const d=good();delete d.visual.video.previz.sha256;d.visual.video.prompt='';assert.deepEqual(checkPreviz(d,{draft:true}),[]);
+ d.visual.video.previz.seconds=0;assert.match(checkPreviz(d,{draft:true}).join(),/whole number/);
+});

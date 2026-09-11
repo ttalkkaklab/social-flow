@@ -789,7 +789,10 @@ export const ROUTES = {
         const refAudioInfo = result.referenceAudios?.length
             ? `\nReference Audio (${result.referenceAudios.length}):\n  - ${result.referenceAudios.join('\n  - ')}`
             : '';
-        return text(`Video generated with references successfully!\n\nOutput: ${result.videoPath}${refImagesInfo}${refAudioInfo}\n${seedanceMeta(result)}\nPrompt: ${result.prompt}`);
+        const refVideoInfo = result.referenceVideos?.length
+            ? `\nReference Videos (${result.referenceVideos.length}, ${result.referenceVideoSeconds ?? '?'}s billed as input${result.referenceVideoRoute ? `, served by ${result.referenceVideoRoute}` : ''}):\n  - ${result.referenceVideos.join('\n  - ')}`
+            : '';
+        return text(`Video generated with references successfully!\n\nOutput: ${result.videoPath}${refImagesInfo}${refVideoInfo}${refAudioInfo}\n${seedanceMeta(result)}\nPrompt: ${result.prompt}`);
     },
     // ── speech synthesis (Gemini TTS) — saves the wav locally, returns path + meta text ──
     // Returns the script length, not the full text — echoing a 16k-char script back

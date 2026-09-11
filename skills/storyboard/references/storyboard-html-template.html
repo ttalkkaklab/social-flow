@@ -377,6 +377,8 @@
   .frame-inputs figure { margin: 0; min-width: 0; }
   .frame-inputs img { width: 100%; aspect-ratio: 9 / 16; object-fit: contain; background: var(--sunk); border-radius: 8px; display: block; }
   .frame-inputs.wide img { aspect-ratio: 16 / 9; }
+  .frame-inputs video { width: 100%; aspect-ratio: 9 / 16; object-fit: contain; background: var(--sunk); border-radius: 8px; display: block; }
+  .frame-inputs.wide video { aspect-ratio: 16 / 9; }
   .frame-inputs figcaption { font-size: var(--t-aux); font-weight: 600; margin-bottom: 8px; }
   .frame-inputs .pending-frame { aspect-ratio: 9 / 16; display:grid; place-items:center; padding:12px; background:var(--sunk); border:1px dashed var(--line); color:var(--muted); }
   .frame-inputs .frame-reason { grid-column:1/-1; font-size:var(--t-aux); color:var(--muted); }
@@ -1152,7 +1154,7 @@ window.SB_DOC = {
       prodScope: "Video API cost only. Images, narration, editing and tax are excluded; the mode not selected is an estimate under stated assumptions.",
       prodTerms: function (rate, cap, attempts) { return "Assumed KRW/USD: " + rate + ". Approved video budget: $" + cap + ". Total attempts per clip: " + attempts + "."; },
       prodRows: "Model, resolution and cost per shot", prodShot: "Shot ", withAudio: "with audio", silent: "silent",
-      framePending: "Image pending", frameStart: "Start frame", frameEnd: "End frame",
+      framePending: "Image pending", frameStart: "Start frame", frameEnd: "End frame", framePreviz: "Previz · Video 1 (camera and timing)",
       frameChange: "Subject change", frameEndState: "End state: ",
 
       // ── header meta ──
@@ -1404,7 +1406,7 @@ window.SB_DOC = {
       prodScope: "영상 API 비용만 계산합니다. 이미지·음성·편집·세금은 제외하며 선택하지 않은 방식은 가정에 따른 추산입니다.",
       prodTerms: function (rate, cap, attempts) { return "원화 환산 가정: 1달러=" + rate + "원. 승인 예산: $" + cap + ". 장면당 총 시도 한도: " + attempts + "회."; },
       prodRows: "장면별 모델·해상도·생성비", prodShot: "장면 ", withAudio: "음성 포함", silent: "무음",
-      framePending: "이미지 생성 예정", frameStart: "시작 프레임", frameEnd: "끝 프레임",
+      framePending: "이미지 생성 예정", frameStart: "시작 프레임", frameEnd: "끝 프레임", framePreviz: "프리비즈 · Video 1 (카메라·타이밍)",
       frameChange: "피사체 변화", frameEndState: "끝 상태: ",
 
       // ── header meta ──
@@ -1857,7 +1859,7 @@ window.SB_DOC = {
       else if (s.type === "quote" && v.clip && typeof v.clip === "object") slot = ["quote", (v.clip.engine || v.engine) === "seedance" ? "seedance" : "veo", Number(s.duration) || 8];
       if (slot) {
         var config = Object.assign({}, v, slot[0] === "motion" ? v.video : slot[0] === "quote" ? v.clip : {});
-        var fields = ["model", "modelPurpose", "modelReason", "resolution", "generateAudio", "realFaceInput", "referenceImagePaths", "referenceAudioPaths"];
+        var fields = ["model", "modelPurpose", "modelReason", "resolution", "generateAudio", "realFaceInput", "referenceImagePaths", "referenceAudioPaths", "previz"];
         var settings = fields.map(function (key) { return config[key] === undefined ? null : config[key]; });
         parts.push((i + 1) + ":" + slot.join("/") + ":" + encodeURIComponent(JSON.stringify(settings)));
       }
@@ -2811,7 +2813,7 @@ window.SB_DOC = {
      (a sound absence is a description: "no music, no speech"). Edit directives about cutting are
      allowed whichever negation word carries them — the cut line §positive locks prescribes reads
      "Sequence of cuts, no timecodes — … the camera does not cut on its own." */
-  var NEG_OK = /^(cut|cuts|camera cuts|timecode|timecodes|timecode splits)\b/;
+  var NEG_OK = /^(cut|cuts|camera cuts|timecode|timecodes|timecode splits|reference its visual|reference the visual|change the shot|add new shots|alter the subject)\b/;
   var NEG_RE = /\b(no|not|avoid|avoids|never|don't|dont|doesn't|won't)\b[ \t]*([a-z' \t-]{0,24})/gi;
   /* On a seedance route the vendor's 2.0 guide templates directive negatives for the artifact
      classes only (subtitles·text·logo·watermark, 2.5 adds bgm) — those pass there. Same
@@ -3609,7 +3611,8 @@ window.SB_DOC = {
           lines = '<div class="cut-carry">speech clip — the actor speaks, so there is no TTS narration</div>';
         if (lines) cell += '<div class="cut-sec">' + esc(T.audioSec) + "</div>" + lines;
 
-        var explicitFrames = vis.frames || vis.video && vis.video.lastImagePath || vis.imagePair;
+        var previz = vis.video && vis.video.previz;
+        var explicitFrames = vis.frames || vis.video && vis.video.lastImagePath || vis.imagePair || previz;
         if (explicitFrames && k === 0) {
           var fp = window.RENDER_ROUTING.framePlan(s);
           var frameInput = function (src, label) {
@@ -3617,9 +3620,15 @@ window.SB_DOC = {
               ? '<a href="' + esc(src) + '" target="_blank" rel="noopener"><img src="' + esc(src) + '" alt="' + esc(label) + '" loading="lazy"></a>'
               : '<div class="pending-frame">' + esc(T.framePending) + '</div>') + '</figure>';
           };
-          var pair = fp.mode === 'first_last';
+          var pair = fp.mode === 'first_last' || !!previz;
           var inputs = frameInput(fp.start, T.frameStart);
-          if (pair) inputs += frameInput(fp.end, T.frameEnd);
+          if (fp.mode === 'first_last') inputs += frameInput(fp.end, T.frameEnd);
+          // The previz clip sits beside the still: the approver sees the camera and timing the
+          // vendor will receive as Video 1, and its hash is part of the approved quote.
+          if (previz) inputs += '<figure><figcaption>' + esc(T.framePreviz) + '</figcaption>' + (previz.clip
+            ? '<video src="' + esc(previz.clip) + '" muted loop controls playsinline preload="metadata"></video>'
+            : '<div class="pending-frame">' + esc(T.framePending) + '</div>') +
+            '<div class="frame-reason">' + esc((previz.seconds || '?') + 's · ' + (previz.fps || '?') + ' fps · sha256 ' + String(previz.sha256 || '').slice(0, 12)) + '</div></figure>';
           var motionPlan = s.shot && s.shot.videoDesign && s.shot.videoDesign.motion;
           if (motionPlan) {
             inputs += '<div class="frame-reason"><strong>' + esc(T.frameChange) + '</strong><br>' + esc(motionPlan.visibleChange || '') +

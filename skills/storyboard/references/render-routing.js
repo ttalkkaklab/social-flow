@@ -28,9 +28,36 @@
   }
   return errors;
  }
+ /* The previz lane (blender-previz.md §6): a Blender clip rendered at the cut length rides the
+    Seedance reference route as Video 1, the source still as Image 1. The clip's bytes are bound
+    by hash so the approved camera and timing are what the vendor receives. */
+ function checkPreviz(scene,{draft=false}={}){
+  const v=scene.visual||{},video=v.video,p=video&&video.previz,errors=[];
+  if(p===undefined)return errors;
+  const bad=s=>errors.push('visual.video.previz: '+s);
+  if(!p||typeof p!=='object'||Array.isArray(p)){bad('must be the previz clip record { clip, sha256, fps, seconds }');return errors;}
+  if(scene.shot?.render?.mode!=='generated_video')bad('a previz only belongs to a generated_video cut');
+  if(!text(p.clip)||!/\.(mp4|mov)$/i.test(p.clip)||/^[a-z][a-z0-9+.-]*:/i.test(p.clip))bad('clip must be a local mp4/mov path — the blender_render_previz output');
+  if(!draft&&!/^[a-f0-9]{64}$/.test(p.sha256||''))bad('sha256 must identify the rendered previz bytes');
+  if(!Number.isInteger(p.seconds)||p.seconds<2)bad('seconds must be a whole number — the cut length the clip was rendered at');
+  if(!Number.isFinite(p.fps)||p.fps<24||p.fps>60)bad('fps must be 24–60 (24 for frame-for-frame QA)');
+  if(video.engine!=='seedance')bad('the previz travels on the Seedance reference route — set engine:"seedance"');
+  if(video.modelPurpose!=='previz')bad('set modelPurpose:"previz"');
+  const refs=video.referenceImagePaths;
+  if(!Array.isArray(refs)||!refs.length||refs[0]!==v.bg)bad('referenceImagePaths[0] must be the source still (visual.bg) — "Image 1 is the first frame"');
+  if(framePlan(scene).end)bad('no end frame — the reference route cannot carry last_frame');
+  if(!draft){
+   const prompt=String(video.prompt||'');
+   if(!/\bvideo\s*1\b/i.test(prompt))bad('the prompt binds the clip as "Video 1" (2.5: "@Video 1")');
+   if(!/\bimage\s*1\b.{0,40}first frame|first frame.{0,40}\bimage\s*1\b/i.test(prompt))bad('the prompt says "Image 1 is the first frame"');
+   if(!/camera (movement|path|motion)|blocking|trajectory/i.test(prompt))bad('the prompt says what Video 1 supplies — camera movement, shot rhythm, subject trajectory, blocking');
+   if(!/(do not|don't|never) reference (its|the) visual content/i.test(prompt))bad('the prompt closes the clay read with "Do not reference its visual content"');
+  }
+  return errors;
+ }
  function checkScene(scene,{draft=false,production=null}={}){
   if(exempt(scene))return [];
-  const r=scene.shot?.render,v=scene.visual||{},errors=checkFrames(scene,{draft}),bad=s=>errors.push('shot.render: '+s);
+  const r=scene.shot?.render,v=scene.visual||{},errors=checkFrames(scene,{draft}).concat(checkPreviz(scene,{draft})),bad=s=>errors.push('shot.render: '+s);
   if(!r||typeof r!=='object')return errors.concat(['shot.render: choose a supported mode and record purpose and reason before assets']);
   const fullVideo=production?.mode==='full_video';
   const expected=fullVideo?'generated_video':recommend(r.purpose);
@@ -201,7 +228,7 @@ if(r.mode==='data_graph'||(fullVideo&&CHARTS[r.purpose])){
   if((!long&&textCount>2)||(long&&total>0&&textSeconds/total>0.2))errors.push('text-led slides dominate: at most 2 per short, or 20% of generated duration in long-form; use source images, acted processes or actual charts where the content calls for them');
   return errors;
  }
- const api={PURPOSES,LABELS,CHARTS,recommend,exempt,framePlan,checkFrames,checkScene,checkData,checkMap,checkEpisode};
+ const api={PURPOSES,LABELS,CHARTS,recommend,exempt,framePlan,checkFrames,checkPreviz,checkScene,checkData,checkMap,checkEpisode};
 
  if(typeof module==='object'&&module.exports)module.exports=api;else root.RENDER_ROUTING=api;
 })(typeof window==='object'?window:globalThis);
