@@ -122,7 +122,8 @@ const ROUTES = {
     key: 'video.host',
     why: 'host image_to_video — a footage slide clip on the CLI\'s own tool · 720p ceiling'
   },
-  /* A footage slide (scenes-schema §footage treatment) carries one generated clip per reveal
+  /* A footage slide (scenes-schema §footage treatment — retired 2026-09-05, priced only so an
+     archived board's forecast still adds up) carries one generated clip per reveal
      group. The builder keeps only the video track, so the silent Seedance route applies — and
      it bills the seconds each shot asks for. These shots are outside generatedVideoMax; the
      forecast is where their spend becomes visible, and storyboard §5's gate is where it is approved. */

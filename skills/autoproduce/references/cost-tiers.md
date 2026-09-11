@@ -200,8 +200,9 @@ The plan's `max_cost_per_video` (template default **$1.00** since 2026-09-05;
 plans written earlier carry $0.30) is the per-episode cap. With the cover
 background at high (absolute rule 12) the economy baseline is ~$0.27–0.29;
 a channel that switched `hook_video` on adds the hook clip (~$0.61 seedance ·
-~$0.90 veo lite). $1.00 **passes either baseline and blocks every veo escalation** — a lite·1080p·8s escalation adds
-$0.64, about $1.25–1.54 per episode, so the cap has to rise to **$1.60 or
+~$0.90 veo lite). $1.00 **passes either baseline**. A lite·1080p·8s escalation adds $0.64: with `hook_video`
+off that lands at ~$0.91–0.93, inside $1.00, so the default cap allows one lite escalation;
+with `hook_video` on it lands at $1.25–1.54, so that cap has to rise to **$1.60 or
 more** to let it through (before 2026-08-15 escalation was fast at $1.23 with
 a $1.30 cap — the three tiers' quality differences fell inside the confidence
 interval in blind-arena testing, so we dropped to the cheapest tier.

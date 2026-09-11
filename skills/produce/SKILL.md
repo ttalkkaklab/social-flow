@@ -96,8 +96,8 @@ Read [story-quality.md](../storyboard/references/story-quality.md) and run `node
    does two jobs. For an opening b-roll (`after: 0`) that file is the cover background. For
    a body b-roll it's that points scene's background, and **that one image gets made with
    `gpt_image_text2img` (high) or the host image tool rather than local Z-Image** — it's veo's input, so a blurry
-   source makes a blurry video, and with no person in it the model finds nothing to move
-   (rule 11).
+   source makes a blurry video, and with nothing in it for the clip to move the model invents
+   motion (rule 11).
    **Generated-video slots follow the approved channel motion policy.** Count b-roll and
    motion-background scenes (`visual.video`) together. The format default is 2, and **on a
    short both are optional**. Each selected cut writes `visual.why` because continuous motion

@@ -477,7 +477,7 @@
 
   <h3>상한과의 관계</h3>
 
-  <p>성장 플랜의 <code>max_cost_per_video</code> 기본값은 <strong>$1.00</strong> 이다(2026-09-05 전에 쓴 플랜은 $0.30 을 그대로 갖고 있다). 커버가 high 로 고정돼 있으므로 이 값은 <strong>경제 티어만 통과시키고 Veo 승급은 전부 막는다.</strong> 승급을 허용하려면 사용자가 플랜에서 상한을 <strong>$1.00 이상</strong>으로 올려야 한다. 자율 루프는 상한을 스스로 올리지 않는다 — 승급 조건이 참인 동안에도 경제 티어로 만들고 완료 보고에 그 사실을 적는다.</p>
+  <p>성장 플랜의 <code>max_cost_per_video</code> 기본값은 <strong>$1.00</strong> 이다(2026-09-05 전에 쓴 플랜은 $0.30 을 그대로 갖고 있다). hook_video 가 꺼진 채널(기본)에서는 이 값이 <strong>경제 티어와 lite 승급 1회($0.91~0.93)까지 통과시킨다.</strong> 훅 영상을 켠 채널은 승급이 $1.25~1.54 라 상한을 <strong>$1.60 이상</strong>으로 올려야 한다. 자율 루프는 상한을 스스로 올리지 않는다 — 승급 조건이 참인 동안에도 경제 티어로 만들고 완료 보고에 그 사실을 적는다.</p>
 
   <h3>mflux 를 안 깐 기계</h3>
 
@@ -488,12 +488,12 @@
     <thead><tr><th>나레이션 엔진</th><th class="num">low 2장</th><th class="num">low 3장</th><th class="num">low 4장</th></tr></thead>
     <tbody>
       <tr><td>로컬</td><td class="num">$0.274</td><td class="num">$0.281</td><td class="num">$0.288</td></tr>
-      <tr><td>Gemini (400자)</td><td class="num">$0.289</td><td class="num">$0.296</td><td class="num"><strong>$0.303</strong> — 상한 초과</td></tr>
+      <tr><td>Gemini (400자)</td><td class="num">$0.289</td><td class="num">$0.296</td><td class="num"><strong>$0.303</strong> — 옛 $0.30 플랜만 초과</td></tr>
     </tbody>
   </table>
   </div>
 
-  <p>Gemini 채널이 low 4장을 쓰면 기본 상한 $0.30 을 넘긴다. 그 경우 <strong>최대 3장</strong>까지만 쓴다. mflux 가 있으면 이미지 장수는 비용 문제가 아니게 되므로 화면 리듬만 보고 2~4장에서 고른다.</p>
+  <p>Gemini 채널이 low 4장을 써도 기본 상한 $1.00 안이다(2026-09-05 전 플랜의 $0.30 은 넘기므로 그 경우만 <strong>최대 3장</strong>). mflux 가 있으면 이미지 장수는 비용 문제가 아니게 되므로 화면 리듬만 보고 2~4장에서 고른다.</p>
 </section>
 
 <!-- ══════════ 9 ══════════ -->
@@ -709,7 +709,7 @@ music.lyria-clip	1	produce: BGM 30초</code></pre>
   <h3>집계기 — 종료 코드를 곧이곧대로 읽는다</h3>
 
 <pre><code>REF=${CLAUDE_PLUGIN_ROOT}/skills/autoproduce/references
-$REF/cost-report.sh .work/cost-estimate.tsv --cap 0.30; echo "cost_exit=$?"</code></pre>
+$REF/cost-report.sh .work/cost-estimate.tsv --cap 1.00; echo "cost_exit=$?"</code></pre>
 
   <div class="table-scroll">
   <table>
@@ -738,7 +738,7 @@ $REF/cost-report.sh .work/cost-estimate.tsv --cap 0.30; echo "cost_exit=$?"</cod
   <table>
     <thead><tr><th>설정</th><th>기본값</th><th>무엇을 막나</th></tr></thead>
     <tbody>
-      <tr><td><code>max_cost_per_video</code></td><td class="num">$0.30</td><td>회차 하나 — 경제 티어만 통과, Veo 승급은 차단</td></tr>
+      <tr><td><code>max_cost_per_video</code></td><td class="num">$1.00</td><td>회차 하나 — 경제 티어와 lite 승급 1회(훅 영상 off) 통과; 2026-09-05 전 플랜은 $0.30</td></tr>
       <tr><td><code>daily_cost_cap</code></td><td class="num">$0.60</td><td>하루 채널 전체 누적</td></tr>
       <tr><td><code>weekly_cap</code></td><td class="num">$2.00</td><td>한 주 채널 전체 누적</td></tr>
     </tbody>

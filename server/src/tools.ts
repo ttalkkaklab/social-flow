@@ -96,15 +96,15 @@ import {
 } from './mlx-serve-client.js';
 
 /**
- * Tool surface definitions (61 tools) — 6 research + 5 open-data +
- * 27 generation (5 image + 8 video + 6 speech + 7 music + 1 mesh) +
- * 5 per-platform publishing + 3 inbound comments + 1 account check +
- * 5 growth lookups (Threads insights/keyword search · YouTube insights ·
- * Instagram insights · recent-content feedback — the insights trio is for the
- * grow-* skills only; content_feedback covers both video platforms and writes
- * an HTML report) + 1 capability_status + 1 STT + 1 music-options + 1 suno credits.
- * The six mlx_* tools wrap MLX Core / mlx-serve on loopback; they are not a
- * second MCP server. 52 of those list without SNS tokens.
+ * Tool surface definitions (77 tools) — 9 research (incl. stock_search) + 5 open-data +
+ * 37 generation (5 image + 12 video + 9 voice + 1 STT + 9 music + 1 mesh) +
+ * 6 per-platform publishing + 3 inbound comments + 5 growth lookups (Threads
+ * insights/keyword search · YouTube insights · Instagram insights · recent-content
+ * feedback — the insights trio is for the grow-* skills only; content_feedback covers
+ * both video platforms and writes an HTML report) + 2 checks (sns_account_check ·
+ * capability_status) + 7 blender previz + 3 storyboard. The six mlx_* tools wrap
+ * MLX Core / mlx-serve on loopback; they are not a second MCP server. 68 of those
+ * list without SNS tokens (README §MCP tools is the per-tool table).
  *
  * Publish tool descriptions embed the HITL contract — this server has no
  * review gate, so a call is an immediately public post, and the descriptions

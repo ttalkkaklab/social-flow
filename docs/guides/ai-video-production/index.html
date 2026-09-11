@@ -70,8 +70,8 @@
   <strong>2026-08-16 갱신 — 그 사이 바뀐 것 셋.</strong> 본문은 8월 11일 조사 그대로 두고, 코드가 달라진 자리만 여기에 모았다.
   <ul style="margin:10px 0 0">
     <li><strong>영상 엔진이 둘이 됐다.</strong> Seedance(<code>seedance_*</code>)가 붙어 2~30초를 1초 단위로 만든다 — 아래 §2 의 "8초 격자"는 이제 Veo 한쪽의 제약이다. 어느 쪽을 언제 쓰는지는 <a href="../../../skills/produce/references/video-model-selection.md">video-model-selection.md</a> 가 정본이다.</li>
-    <li><strong><code>negativePrompt</code> 가 생겼다.</strong> §7 표에 "없다"고 적힌 그 필드가 Veo 툴 4종 전부에 들어왔다. §3 의 부정 프롬프트 규칙을 이제 그대로 쓸 수 있다.</li>
-    <li><strong>편당 비용이 숫자로 잡혔다.</strong> §9 가 "검증을 통과한 값이 하나도 없다"고 적은 그 구멍은 <code>skills/autoproduce/references/prices.tsv</code> 와 <code>cost-tiers.md</code> 가 메웠다. 자동 저작의 기본인 경제 티어는 Veo 를 한 번도 부르지 않고 편당 <strong>약 $0.26~0.29</strong>(상한 $0.30)다.</li>
+    <li><strong><code>negativePrompt</code> 가 생겼다.</strong> §7 표에 "없다"고 적힌 그 필드가 <code>veo_text2video</code> · <code>veo_img2video</code> 에 들어왔다(reference · extension 은 API 가 거부해 0.73.0 에서 뺐다). §3 의 부정 프롬프트 규칙을 이제 그대로 쓸 수 있다.</li>
+    <li><strong>편당 비용이 숫자로 잡혔다.</strong> §9 가 "검증을 통과한 값이 하나도 없다"고 적은 그 구멍은 <code>skills/autoproduce/references/prices.tsv</code> 와 <code>cost-tiers.md</code> 가 메웠다. 자동 저작의 기본인 경제 티어는 Veo 를 한 번도 부르지 않고 편당 <strong>약 $0.27~0.29</strong>(플랜 상한 기본 $1.00)다.</li>
   </ul>
 </div>
 

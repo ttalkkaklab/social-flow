@@ -2391,7 +2391,7 @@ shot, baked into clips by seek-rendering, checked by `check-slide.js`, and judge
 | `"diagram"` (the default when absent) | text and shapes — structure, comparison, steps, a flow of numbers | §slide scenes · §motion slides |
 | `"kinetic"` | the words themselves — one phrase landing per sentence | §kinetic type |
 | `"character"` | a cast enacts the sentence — a figure reacts, officers surround, documents reveal | §character act |
-| `"camera"` | a still moved by the shared camera runtime — a `still_camera` cut's handoff (render-routing.md) | §still-camera cuts |
+| `"camera"` | a still moved by the shared camera runtime — a `still_camera` cut's handoff | render-routing.md §Routes · §Connecting to the builder |
 
 Everything else is shared and does not change per kind: the file naming
 (`slides/s<shot number>-<slug>.html`), reveal groups 1:1 with narration segments, the state rule,

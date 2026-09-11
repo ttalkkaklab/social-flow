@@ -81,8 +81,8 @@
  *   frame at t (canvas/SVG — the path for rotation, traces, anything keyframes can't express),
  *   and <video data-rg data-vfrom data-vdur> seeked by currentTime. All four are functions of
  *   (g, t) alone, which is what makes a re-render draw the same picture.
- *   A footage slide (scenes.js visual.slide.treatment:"footage", slide-design.md §6.2) is that
- *   fourth path as the ground: one generated clip per group under drawn marks. The renderer
+ *   A footage slide (scenes.js visual.slide.treatment:"footage" — retired 2026-09-05, nothing is
+ *   drawn over video; kept only so archived episodes re-render) is that fourth path as the ground: one generated clip per group under drawn marks. The renderer
  *   reads the treatment from scenes.js, sets each clip's data-vdur to its segment length (never
  *   past what the file holds — a seek beyond the end shows the last frame), and drops the
  *   zone-fill and 2.6s-entrance warnings, which describe a plate composition, not a shot. WebGL works too — Chrome
@@ -178,7 +178,7 @@ if (scene?.visual?.slide?.quality != null || scene?.visual?.slide?.treatment ===
 const semanticBeats = scene && scene.visual && scene.visual.slide && Array.isArray(scene.visual.slide.motionBeats)
   ? scene.visual.slide.motionBeats.filter(b => b && Number.isInteger(Number(b.group)) && b.primitive)
   : [];
-// treatment:"footage" — generated clips are the ground (slide-design.md §6.2). The renderer learns it
+// treatment:"footage" (retired 2026-09-05; archived episodes only) — generated clips are the ground. The renderer learns it
 // from scenes.js so the SEEK-RUNTIME block stays byte-identical across the three templates.
 const treatment = scene && scene.visual && scene.visual.slide ? String(scene.visual.slide.treatment || "") : "";
 const isFootage = treatment === "footage";

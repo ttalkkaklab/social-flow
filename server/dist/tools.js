@@ -10,15 +10,15 @@ import { BLENDER_INTERPOLATIONS, BLENDER_PREVIZ_ENGINES, BLENDER_PROXY_KINDS, BL
 import { DEFAULT_SUNO_MODEL, SUNO_MODELS, SUNO_PERSONA_MODELS, SUNO_SOUND_KEYS, SUNO_VOCAL_GENDERS, } from './suno-client.js';
 import { DEFAULT_MLX_IMAGE_SIZE, DEFAULT_MLX_MUSIC_SECONDS, DEFAULT_MLX_VIDEO_FRAMES, DEFAULT_MLX_VIDEO_HEIGHT, DEFAULT_MLX_VIDEO_WIDTH, MAX_MLX_IMAGE_DIMENSION, MAX_MLX_IMAGE_REFS, MAX_MLX_MUSIC_SECONDS, MAX_MLX_TTS_CHARS, MAX_MLX_VIDEO_DIMENSION, MAX_MLX_VIDEO_FRAMES, MAX_VIDEO_RGB_BYTES, MIN_MLX_IMAGE_DIMENSION, MIN_MLX_MUSIC_SECONDS, MIN_MLX_VIDEO_DIMENSION, MIN_MLX_VIDEO_FRAMES, MLX_IMAGE_DIMENSION_STEP, MLX_VIDEO_DIMENSION_STEP, MLX_VIDEO_FPS, } from './mlx-serve-client.js';
 /**
- * Tool surface definitions (61 tools) — 6 research + 5 open-data +
- * 27 generation (5 image + 8 video + 6 speech + 7 music + 1 mesh) +
- * 5 per-platform publishing + 3 inbound comments + 1 account check +
- * 5 growth lookups (Threads insights/keyword search · YouTube insights ·
- * Instagram insights · recent-content feedback — the insights trio is for the
- * grow-* skills only; content_feedback covers both video platforms and writes
- * an HTML report) + 1 capability_status + 1 STT + 1 music-options + 1 suno credits.
- * The six mlx_* tools wrap MLX Core / mlx-serve on loopback; they are not a
- * second MCP server. 52 of those list without SNS tokens.
+ * Tool surface definitions (77 tools) — 9 research (incl. stock_search) + 5 open-data +
+ * 37 generation (5 image + 12 video + 9 voice + 1 STT + 9 music + 1 mesh) +
+ * 6 per-platform publishing + 3 inbound comments + 5 growth lookups (Threads
+ * insights/keyword search · YouTube insights · Instagram insights · recent-content
+ * feedback — the insights trio is for the grow-* skills only; content_feedback covers
+ * both video platforms and writes an HTML report) + 2 checks (sns_account_check ·
+ * capability_status) + 7 blender previz + 3 storyboard. The six mlx_* tools wrap
+ * MLX Core / mlx-serve on loopback; they are not a second MCP server. 68 of those
+ * list without SNS tokens (README §MCP tools is the per-tool table).
  *
  * Publish tool descriptions embed the HITL contract — this server has no
  * review gate, so a call is an immediately public post, and the descriptions
