@@ -4,7 +4,7 @@
  const clamp=x=>Math.max(0,Math.min(1,x)),ease=x=>{x=clamp(x);return x*x*x*(x*(x*6-15)+10)},mix=(a,b,t)=>a+(b-a)*t;
  function state(spec,seconds){
   const q=clamp(seconds/spec.duration),u=ease(q),kind=spec.template;
-  let zoom=1+.10*u,fx=.45,fy=.4;
+  let zoom=1+.10*u,fx=.45,fy=.4;   // the default is `push` — a plain eased zoom-in
   if(kind==='pull'){zoom=mix(1.34,1,u);fx=spec.focusTo?.[0]??.35;fy=spec.focusTo?.[1]??.38}
   if(kind==='pan'){zoom=1.13;fx=mix(.26,.61,u);fy=mix(.65,.45,u)}
   if(kind==='focus-in'){zoom=1.04+.055*u;fx=spec.focusTo[0];fy=spec.focusTo[1]}

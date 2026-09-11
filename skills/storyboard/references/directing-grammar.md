@@ -417,9 +417,12 @@ subject instead of the frame's middle — motion that directs attention is the w
 the practice), a **handheld drift** (a few pixels of never-repeating wobble — the still
 counterpart of the `handheld` row above), and **hold** (a fixed scale — only as the base
 under a `drift` or a `pan`: a still never sits frozen under the voice, and the build refuses
-a bare hold on a still). The storyboard writes the same `visual.camera.movement` words it already knows —
-`dolly in`, `dolly out`, `handheld`, `truck` — and produce translates them into this lane
-(produce SKILL §6 has the mapping and the knob names).
+a bare hold on a still). A board that declares `shot.render` does not reach this lane on its stills: every
+`still_camera` cut carries `shot.render.camera` (effect · target · reason) and is rendered
+through the shared camera HTML runtime above (render-routing.js requires `visual.slide.kind:
+"camera"`), which hands produce a clip. The `visual.camera.movement` words — `dolly in`,
+`dolly out`, `handheld`, `truck` — are the legacy vocabulary produce still translates into
+this lane for cards that reach the builder as images (produce SKILL §6 has the mapping).
 
 Two disciplines carry over unchanged. The move supports the declared feel — it never carries
 it (the evidence base for stills is practitioner practice, not measurement, so claim even

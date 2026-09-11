@@ -56,7 +56,9 @@ their source and stay outside this classification.
 | Continuous action that carries the meaning | `live_action` | `generated_video` | Cloth in the wind, or a person's movement, when that movement is the point. |
 | Real footage of the actual place, era or event | `archive` (this route only); `live_action`, `atmosphere` and `place` may take it instead of their default | `stock_video` | A 1950 newsreel of the street; a real launch from the NASA library; a real market at dawn from Pexels. The license record travels with the cut (scenes-schema §stock material). |
 
-Stills also record `camera.effect`, `target` and `reason`. Focus-in suits introducing a
+Stills also record `camera.effect`, `target` and `reason` — eight effects: `focus-in` ·
+`rack-focus` · `approach` · `pull` · `pan` · `push` (the plain slow zoom-in, still-camera.js's
+default) · `reveal` · `parallax`. Focus-in suits introducing a
 person, approach suits stressing a clue, rack focus a shift of attention, pull a place. Do
 not repeat one effect on every cut. Foreground reveals and depth parallax need prepared
 layers. Asset conditions are in [illustrated-scenes.md](illustrated-scenes.md).

@@ -48,7 +48,7 @@
   const HOOK_TYPES = ['fear', 'empathy', 'curiosity', 'spoiler'];
   const HOOK_FORMS = ['paradox', 'gap', 'payoff', 'identify', 'number', 'secret'];
   const ARCS = ['answer-first', 'story'];
-  const RENDER_MODES = ['still_camera', 'character_html', 'object_html', 'data_graph', 'generated_video', 'editorial_html'];
+  const RENDER_MODES = ['still_camera', 'character_html', 'object_html', 'data_graph', 'generated_video', 'editorial_html', 'stock_video'];
   const TRANSITION_RE = /^(jcut|cut|dissolve|dip|dip:white|iris|blur|zoom|push:(l2r|r2l|u2d|d2u)|whip:(l2r|r2l|u2d|d2u))$/;
   /* Shots that sit in the playback line and belong to a scene. broll is spliced by `after`
      and the outro is the shared asset — neither is a shot in a scene. */

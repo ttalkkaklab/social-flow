@@ -103,7 +103,8 @@ rubric the reviewer applies.
    - A diagram with `treatment:"editorial"` sits on the **studio ground** by default
      (slide-design.md §1): a cyclorama plate, slab material on every tag, band and plate, a cast
      shadow under the type, the stage alone drifting 1% a group. Nothing to call — `h.stage("flat")`
-     is the way back to the plain plate. Marks use `h.mark.arrow` with a small tangent-following head. Call
+     is the plain plate for a `camera` or `kinetic` screen only; on an editorial diagram
+     `check-slide.js` rejects it (the studio ground is required). Marks use `h.mark.arrow` with a small tangent-following head. Call
      `h.stage(…)` before any `h.mark.*` — the mark layer reads the studio class when it is made.
    - New physical subjects use the mesh lane in [mesh-objects.md](mesh-objects.md). The same recipe
      can bake into a path-traced sheet with `renderer:"blender"` ([blender-objects.md](blender-objects.md));

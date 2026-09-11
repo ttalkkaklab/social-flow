@@ -13,7 +13,7 @@ description: >
   checkers and the author's own read. Plans each promise, visual change and sound event.
   Nothing is generated here. Produce builds the approved board; autoproduce runs unattended.
 argument-hint: "<channel> <topic or topic hint>"
-allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "Agent", "AskUserQuestion", "WebSearch", "WebFetch", "mcp__social-flow__capability_status", "mcp__social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__social-flow__serp_image_search", "mcp__social-flow__stock_search", "mcp__social-flow__datago_search", "mcp__social-flow__datago_detail", "mcp__social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch", "mcp__social-flow__datago_api_call", "mcp__social-flow__suno_generate_lyrics"]
+allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "Agent", "AskUserQuestion", "WebSearch", "WebFetch", "mcp__social-flow__capability_status", "mcp__social-flow__storyboard_apply", "mcp__social-flow__storyboard_check", "mcp__social-flow__storyboard_read", "mcp__social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__social-flow__serp_image_search", "mcp__social-flow__stock_search", "mcp__social-flow__datago_search", "mcp__social-flow__datago_detail", "mcp__social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch", "mcp__social-flow__datago_api_call", "mcp__social-flow__suno_generate_lyrics"]
 ---
 
 # Storyboard authoring — data/[channel]/episodes/[topic]/storyboard/
@@ -447,7 +447,7 @@ Core rules:
     understand (180s is the absolute cap, and it is not a channel field).
     Choose each cut, including the hook, with [render-routing.md](references/render-routing.md).
     Write `shot.render` before assets: still camera, character HTML, object HTML, data graph,
-    or generated video. The default video cap of 2 is a ceiling, not a target. `hook_video`
+    generated video, editorial HTML (quote/verdict) or stock video. The default video cap of 2 is a ceiling, not a target. `hook_video`
     defaults off; an explicit channel override remains a constraint. Every paid video cut
     explains why continuous motion is essential. Keep the static-ground and budget checks.
   - **YouTube long-form 16:9**: **28–70 shots · 8–15 min** (20 min absolute cap) +
@@ -459,7 +459,7 @@ Core rules:
   **stayed to watch, engaged views, and subscribers gained per video**. Pick length and
   format from the episodes that produced engaged views and subscriptions, not raw views.
 - **Meet the channel's true-motion floor before calling a still "enough."** Only
-  `window.MOTION_POLICY.allowedKinds` counts: `ai-video`, `recording`, or `motion-slide`.
+  `window.MOTION_POLICY.allowedKinds` counts: `ai-video`, `recording`, `stock-video` or `motion-slide`.
   Ken Burns, camera instructions, caption changes and still swaps do not. With `requireAction`,
   each qualifying shot writes the visible subject change in `visual.action`; the full checker
   blocks a weak ratio, an overlong still, or too many still shots in a row.
@@ -691,10 +691,10 @@ Core rules:
   slots (`movement` · `speed` · `framing` · `end`) filled on b-roll, motion-background scenes,
   and quote speech clips. The clip prompt is assembled out of them here and stored; leave `end`
   empty and the ending nobody reviewed is exactly the last second that drifts.
-  `movement: "static"` is a decision, not a blank. On stills the block is optional —
-  write it when the still should move with intent: `movement` picks the builder's Ken Burns
-  move (eased zoom towards a focus point, pan, cover punch, handheld drift — the feel each
-  serves is directing-grammar §5's Still column). The vocabulary rules (vendor words, one move,
+  `movement: "static"` is a decision, not a blank. On a `still_camera` cut the move is
+  `shot.render.camera` (effect · target · reason, render-routing.md) through the camera HTML
+  runtime; this block is optional there, its `movement` the legacy Ken Burns vocabulary for a
+  card that reaches the builder as an image (the feel: directing-grammar §5's Still column). The vocabulary rules (vendor words, one move,
   no seconds, no exclusions) are `references/scenes-schema.md` §camera, and the move itself
   comes from the shot's `feel` (directing-grammar §4–§5) — it supports the feel, it doesn't
   carry it alone, and `framing` restates the shot's size and angle in the engine's words.

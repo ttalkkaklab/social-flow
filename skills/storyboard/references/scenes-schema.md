@@ -650,19 +650,35 @@ unless an existing `lastImagePath` supplies a second frame.
 
 Every generated cut declares `shot.render` using [render-routing.md](render-routing.md).
 The supported modes are `still_camera`, `character_html`, `object_html`, `data_graph`,
-`generated_video`, and the limited `editorial_html` quote/verdict route.
+`generated_video`, the limited `editorial_html` quote/verdict route, and `stock_video` (a free
+stock or archive clip with its `visual.license` record, §stock material).
 [visual-direction.md](visual-direction.md) defines repetition and text-duration limits;
 [chart-design.md](chart-design.md) defines data, focus beats and the shared chart renderer. The purpose and reason are required before assets; `infoType` remains
 the explanation category, while `render.mode` names the actual production route.
+
+What `render-routing.js` reads on `shot.render` (draft checks meaning; the full check also
+wants the handoff):
+
+| Field | Required | Description |
+|---|---|---|
+| `mode` | ✅ | one of the seven routes above |
+| `purpose` | ✅ | `portrait` · `atmosphere` · `place` · `detail` · `human_process` · `mechanism` · `physical_state` · `comparison` · `trend` · `share` · `distribution` · `geographic` · `timeline` · `live_action` · `evidence_quote` · `verdict` · `archive` — each has a default route (render-routing.md §Routes) |
+| `reason` | ✅ | why this treatment conveys the cut; one generic reason repeated across the episode fails visual-direction |
+| `camera` | ✅ on `still_camera` | `{effect, target, reason}` — `effect` one of `focus-in` · `rack-focus` · `approach` · `pull` · `pan` · `push` · `reveal` · `parallax`; `focusTo` (and `focusFrom` for rack-focus) as normalized `[x, y, rx, ry]` from the actual image; `layersPlan` and, before production, `layers` for reveal/parallax |
+| `action` | ✅ on `character_html` · `object_html` · `generated_video` · `stock_video` | the visible subject change, before and after |
+| `actors` | ✅ on `character_html`, forbidden on `object_html` | who performs the action |
+| `motionEssential` · `whyNotStill` | ✅ on `generated_video` in hybrid | `true` plus why a still or controlled HTML action is not enough |
+| `evidence` | ✅ on `evidence_quote` | `{source, quote}` — the exact quoted line |
+| `data` | ✅ on `data_graph` | `{title, source, unit, chart, values[], baseline, total}` per [chart-design.md](chart-design.md) — labelled finite values, baseline 0 on length/area charts, shares summing to `total` |
 Existing recordings and the shared outro preserve their source. Camera HTML uses `kind:"camera"`
 and `camera-slide-template.html`; its image and effect parameters come from scenes.js.
 
 | Field | Required | Description |
 |---|---|---|
-| `type` | ✅ | `cover` \| `points` \| `quote` \| `broll` \| `outro` — the role |
+| `type` | ✅ | `cover` \| `points` \| `quote` \| `broll` \| `outro` — the role (`hooking` is also accepted as a type, but write `beat: "hooking"` on a `points`/`quote` shot instead, §hooking) |
 | `narration` | ✅ (except `broll`, `outro`) | Segment array `[{tts, sub}, ...]` — one sentence = one segment = one reveal |
 | `visual` | ✅ | The visual plan object (below) |
-| `duration` | recommended | Target seconds — narration characters / 4.5, capped at 13s. A generated-video shot takes its length from what the cut is for instead (§cut length) |
+| `duration` | recommended | Target seconds — narration characters / the format's `pacing.rate` (4.5 by default; `check-scenes.js` estimates a missing duration as characters / rate + 0.85), 13s is planning guidance. The builder lays the card at the engine's own pace (5.3–6.4 chars/s measured on Supertonic 1.05, produce §7.5), so this is an estimate, not the audio length. A generated-video shot takes its length from what the cut is for instead (§cut length) |
 | `scene` | recommended | Grammar scene number. Same value for the same place and time. Without it the renderer assumes one scene per entry |
 | `sceneSlug` | recommended when `scene` is set | `"place / time"` — e.g. `"salon chair / day"` |
 | `sequence` | optional | Sequence name. Only when one episode has two purposes |
@@ -677,7 +693,7 @@ shot: {
   feel: "relief — it really is that short",  // what the audience should FEEL here — written first, the dials follow
   size: "mcu",                             // els · ls · fs · mfs · ms · mcu · cu · choker · ecu · insert — from what `info` shows (§2.1) and what `feel` needs (§5)
                                            // + compositions two · three · ots · pov · back · cutaway · reaction (ws = legacy ls)
-  angle: "eye",                            // eye (default) · high · low · overhead · dutch — against the SUBJECT's eyes
+  angle: "eye",                            // eye (default) · high · low · overhead · dutch · ground · over — against the SUBJECT's eyes
   why: "",                                 // optional — one line when size or angle leaves the §2.1/§5 row, or a composition tag needs its distance ("back at ms")
   info: "that the install is one command", // one line on what this shot newly TELLS the audience
   infoType: "other",                       // other · timeline · statistic · principle
@@ -868,7 +884,7 @@ and copies it into `scenes.js` so the browser approval page can check it too:
 ```js
 window.MOTION_POLICY = {
   minTrueMotion: "majority",                 // majority | ratio from 0 to 1
-  allowedKinds: ["ai-video", "recording"],  // ai-video | recording | motion-slide
+  allowedKinds: ["ai-video", "recording"],  // ai-video | recording | stock-video | motion-slide
   maxConsecutiveStills: 1,
   maxStillSeconds: 4,
   requireAction: true,
@@ -1452,8 +1468,10 @@ camera: {
 ```
 
 **Required on every shot that becomes a generated video** — `broll`, a motion-background scene
-(`visual.video`), and a `quote` speech clip (`visual.clip`). Optional on a still, where
-`movement` picks the builder's Ken Burns move — the still lane fakes the camera by driving a
+(`visual.video`), and a `quote` speech clip (`visual.clip`). Optional on a still — a
+`still_camera` cut is moved by `shot.render.camera` through the camera HTML runtime
+(render-routing.md), and `movement` here is the legacy Ken Burns vocabulary for a card that
+reaches the builder as an image — the still lane fakes the camera by driving a
 crop window (eased zoom towards the subject, pan with an optional zoom drift, a punch on the
 cover, handheld drift), and the same vocabulary applies: `dolly in`/`zoom in` reads as a slow
 push towards the subject, `dolly out` as a pull-out, `handheld` as drift, `truck` as a pan
@@ -2508,6 +2526,11 @@ slide: {
   file: "slides/s4-announcement-reversal.html",
   kind: "diagram", motion: true, treatment: "editorial",
   role: "relationship", motif: "radio signal line",
+  quality: "object-state-v1",
+  subject: { kind: "type", changes: [
+    { group: 1, driver: "type", before: "empty stage",           after: "the July 8 statement standing" },
+    { group: 2, driver: "type", before: "one statement",         after: "a signal line reaching the reversal" },
+    { group: 3, driver: "type", before: "two dates apart",       after: "both dates locked in one contrast" } ] },
   plan: "① the July 8 statement enters · ② a signal line crosses to the reversal · ③ both dates lock into one contrast",
   labels: ["1947년 7월 8일", "비행 원반", "날씨 기구"]
 }
@@ -2567,6 +2590,11 @@ motion costs comprehension. So the lane is deliberately narrow — beats, not am
       file: "slides/s5-gear-count.html",
       kind: "diagram", motion: true, treatment: "editorial",
       role: "statistic", motif: "measurement rail",
+      quality: "object-state-v1",              // slide-quality.js — every editorial diagram carries it
+      subject: { kind: "data", changes: [       // one before/after per narration group
+        { group: 1, driver: "value",    before: "0",        after: "27" },
+        { group: 2, driver: "relation", before: "27 alone", after: "27 against 30 at 81%" },
+        { group: 3, driver: "relation", before: "two bars", after: "three bars, 37 full, source shown" } ] },
       // what moves on which sentence — §7 approval reads this line
       plan: "① 27 counts up as the hero number · ② the 30 bar grows to 81% · ③ the 37 bar grows to full and the source line enters",
       motionBeats: [
