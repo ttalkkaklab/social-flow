@@ -10,11 +10,14 @@ slug: <kebab-slug>
 status: active            # active | archived
 created: <YYYY-MM-DD>
 motion_min_true: off      # off | majority | 0.00~1.00
-motion_allowed_kinds: ai-video,recording,motion-slide
+motion_allowed_kinds: ai-video,recording,stock-video,motion-slide
 motion_max_consecutive_stills: off
 motion_max_still_seconds: off
 motion_require_action: false
 generated_video_max: 2
+shortform_outro: on       # on | off (absent = on)
+# length_min_seconds: 35  # optional — narrows the short-form band for this channel
+# length_max_seconds: 75  # leave both out and the preset band applies (35–120s on shorts)
 ---
 
 # <channel display name>
@@ -40,14 +43,17 @@ generated_video_max: 2
     6.3x real time); use `gemini` only when acted emotion is the channel's identity, and
     `elevenlabs` when the channel needs a specific cloned or Voice Library voice, inline
     audio-tag acting (eleven_v3), or scenes with three or more speakers (paid — about 2.6x Gemini)
-  - With local → voice: `<F1~F5 | M1~M5>` · lang: `ko` · speed: `<0.7~2.0, default 1.05>`
+  - With local → voice: `<F1~F5 | M1~M5>` · lang: `ko` · speed: `<0.7~1.2, default 1.05>` —
+    above 1.2 the model drops syllables (measured), so a faster cut comes from the playback speed below
   - With gemini → voiceName: `<Gemini voice name>` ·
     stylePrompt: `<the English style direction — reused without changing a character>`
   - With elevenlabs → voiceId: `<the 20-character voice_id, not the display name>` ·
     model: `<eleven_multilingual_v2 | eleven_v3 | eleven_flash_v2_5>` ·
     stability: `<0–1; on eleven_v3 one of 0.0 / 0.5 / 1.0>` · seed: `<optional integer — once set, never changes>` ·
     outputFormat stays `wav_24000` (the builder needs RIFF; mp3 is not narration input)
-  - Target speaking rate: <characters/sec, default 4.5>
+  - Target speaking rate: <characters/sec, default 4.5> — the cards.tsv column; since 2026-09-11 the
+    build ignores it unless `ATEMPO_MIN`/`ATEMPO_MAX` are set. The build's REGEN warning uses the
+    ship gate's band [3.2, 6.2] ÷ playback factor, not this value
 - **Playback speed (the post-build pace pass)**: `<0.5~3.0, default 1.0>` — produce §7.5 applies
   this factor to the finished feature while the outro stays at 1.0x. It **multiplies with the TTS
   `speed` above**, so choose it against the final subtitle timeline, not by habit. The pass blocks
@@ -75,6 +81,7 @@ scenes sets it to `majority` or a ratio, then narrows `motion_allowed_kinds` as 
 
 - `ai-video` — b-roll, motion backgrounds, and video clips
 - `recording` — filmed shots and screencast splices
+- `stock-video` — a free stock or archive clip with its license record (`visual.source: "stock"`)
 - `motion-slide` — authored slides with `slide.motion: true`
 
 `motion_require_action: true` also requires `visual.action` on every qualifying shot. Camera
@@ -82,6 +89,12 @@ movement, Ken Burns, caption swaps, and still-image changes never count as true 
 `generated_video_max` overrides the format default only for this channel; the storyboard still
 shows the projected cost before approval. `motion_max_consecutive_stills` and
 `motion_max_still_seconds` stop long static runs even when the episode clears the ratio.
+`length_min_seconds` and `length_max_seconds` narrow the short-form length band for this
+channel — `check-scenes.js` and the approval strip then measure the episode against your
+band instead of the preset's, and warn outside it. Leave them out and the preset band
+applies (short-form 35–120s, of which 35–75s is the recommendation), so a profile written
+before the keys existed keeps today's band and needs no migration. Neither key moves the
+180s platform cap, which is the one length that fails rather than warns.
 
 The THEME contract of video-template.html — it goes into scenes.js as-is:
 
@@ -144,9 +157,16 @@ The THEME contract of video-template.html — it goes into scenes.js as-is:
   `<slug>-sonic-logo.wav` (the sonic logo — shared across all videos) — generate with /social-flow:intro.
   The default use is **splicing after the main video** (a brand close — a fixed asset made once).
   **Never placed in front of a short-form main video** (the first-3-seconds hook principle — the uses are in intro-playbook.md §1)
+- **Short-form outro**: `shortform_outro` in the front matter — `on` (the default when the
+  key is absent, and today's behaviour: the shared outro is spliced after the CTA) or `off`
+  (the short ends on the CTA's last frame). A profile written before the key existed keeps
+  the outro, so no channel under `data/` has to be edited. Short-form only — long-form always
+  splices `outro-16x9.mp4`.
 - **Wording**: <the brand closing script — e.g. "이런 정보, 매주 올라옵니다. 팔로우하고 이어서 보세요." ("More like this every week. Follow and keep watching.")>
-- **Asset path**: `data/<slug>/assets/outro/default.mp4` — if missing, generate it on
-  the first produce run with build-outro.sh and save it here (don't regenerate per topic).
+- **Asset path**: `data/<slug>/assets/outro/default.mp4` — with `shortform_outro: on`, if it's
+  missing, generate it on the first produce run with build-outro.sh and save it here (don't
+  regenerate per topic). With `off` a short-form-only channel needs no file at all, and a file
+  already on disk is kept, not deleted.
   When the wording differs per platform, keep `outro/youtube.mp4` and `outro/instagram.mp4`
   and put the ids in the catalog. resolve-asset also finds the old `assets/outro.mp4`.
 - **Catalog**: `data/<slug>/assets/catalog.md` — the kind+id table for shared assets.
@@ -184,7 +204,7 @@ the tools trust.
 | approachable practitioner | Achird | Korean, hands-on field practitioner. Friendly, direct, practical, moderate pace. |
 | weighty senior | Sadaltager | Korean, authoritative senior advisor. Knowledgeable, deliberate, calm weight, moderate pace. |
 
-- stylePrompt is **standardized on "moderate pace"** — the build's atempo normalization owns the speed decision.
+- stylePrompt is **standardized on "moderate pace"** — the pace is chosen once here and the build ships it as read; nothing time-stretches the voice inside the build.
 - The full voice list is available via `mcp__social-flow__tts_list_voices`.
 
 ## Local TTS voices (Supertonic)

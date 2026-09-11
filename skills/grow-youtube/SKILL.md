@@ -1,12 +1,13 @@
 ---
 name: grow-youtube
 description: >
-  Runs one autonomous YouTube Shorts growth tick — reply, measure, refill, publish. Use
-  when the user asks to "유튜브 키워", "쇼츠 성장 루프", "유튜브 성장 틱", "grow the YouTube channel", or
-  wants the growth loop running. One tick replies to inbox comments (golden hour first),
-  snapshots channel and video analytics, refills the publish queue by authoring a new
-  short end to end through autoproduce when it runs dry, and publishes queue-marked videos
-  in the plan's slots — all inside the standing authorization in
+  Runs one autonomous YouTube Shorts growth tick — reply, measure, refill, publish, then
+  watch what spreads. Use when the user asks to "유튜브 키워", "쇼츠 성장 루프", "유튜브 성장 틱",
+  "grow the YouTube channel", or wants the growth loop running. One tick replies to inbox
+  comments (golden hour first), snapshots channel and video analytics, refills the publish
+  queue by authoring a new short end to end through autoproduce when it runs dry, publishes
+  queue-marked videos in the plan's slots, and samples a fresh video's live view counter to
+  see whether it is breaking out — all inside the standing authorization in
   data/[channel]/growth/youtube/growth-plan.md. Recur with /loop [interval]
   /social-flow:grow-youtube [channel]. First run needs the init argument.
 argument-hint: "<channel> [init|tick|status]"
@@ -40,8 +41,9 @@ plan = standing authorization · tick ≠ publish · idempotent state). State pa
 are scoped under `growth/youtube/`.
 
 ```
-/social-flow:grow-youtube <channel> init      # once — fix the plan (HITL)
-/loop 1h /social-flow:grow-youtube <channel>  # hourly autonomous loop
+/social-flow:grow-youtube <channel> init       # once — fix the plan (HITL)
+/loop 1h /social-flow:grow-youtube <channel>   # resting cadence
+/loop 15m /social-flow:grow-youtube <channel>  # while a fresh video is under watch (§2b)
 ```
 
 **One difference from Threads sets this skill's structure** — a Short is a video.
@@ -56,8 +58,15 @@ loop. There are two ways to fill it.
   Topics, subject scope, and the per-episode cost cap are all written in the
   plan, and only episodes that pass the machine gates enter the queue.
 
-**Hourly is enough** — slot publishing and comment replies both live fine at
-that resolution, and authoring only happens when the queue is empty anyway.
+**Hourly is the resting cadence** — slot publishing and comment replies both
+live fine at that resolution, and authoring only happens when the queue is
+empty anyway. **The velocity watch is the one thing that hourly can't hold.**
+The tick samples a video's view counter only as often as the tick runs, so a
+watch left on `/loop 1h` produces hourly readings and the first-hour shape —
+the part that says whether this one is going anywhere — never gets recorded.
+While `state.watching` holds a video, run the loop at 15 or 30 minutes, then
+put it back. What that costs in quota is under §Error handling — the watch adds
+almost nothing; the inbox is what scales with the interval.
 
 `references/growth-playbook.md` is the source of truth for tactics (always load
 before writing). That document carries **only claims that passed verification**,
@@ -100,6 +109,23 @@ and circulating folklore that was rejected sits in its own do-not-cite list.
    inbox replies are uncapped.
 7. **Every tool call sets `channel: <channel-slug>`** — channel tokens only, no
    default-token fallback (prevents posting to the wrong account).
+8. **Don't edit a video while it's spreading** — while a videoId sits in
+   `state.watching`, none of its metadata changes: no `youtube_update` on
+   title, description, tags or privacy, no thumbnail re-upload, no caption
+   re-upload. The certain cost is measurement — change the title mid-window and
+   the later samples belong to a different video than the earlier ones, so the
+   candidate rule compares two things. Whether an edit also resets the promotion
+   itself is creator lore nobody has verified; that it can't be ruled out is
+   reason enough to wait a few hours. Fixes wait until the window closes, and a
+   factual error is the only exception — that one goes to the user first. **The
+   Shorts vertical frame is not an edit** — it's publish work that was never
+   finished (§3), so a deferred frame picker still runs inside the window.
+9. **One push, one video** — external traffic goes to at most one breakout
+   candidate at a time, and only to a platform whose own `growth-plan.md` is
+   approved **and** carries the cross-platform push clause. This loop never
+   publishes on another platform itself. It writes the candidate to the
+   channel-shared handoff and that platform's own loop decides whether to
+   write a post (§2b).
 
 ## Deliberately not done
 
@@ -113,6 +139,11 @@ and circulating folklore that was rejected sits in its own do-not-cite list.
   different). Spam gets reported only and handled in Studio.
 - **Auto-setting Related video.** The Data API has no such field — a human sets
   it in Studio after publishing, and the loop goes only as far as reminding (§3).
+- **Spreading a breakout by hand.** No self-promotion in other channels'
+  comment sections, no reply-bait, and no putting the same push copy on two
+  platforms — automatic cross-posting is banned plugin-wide (platform-guide
+  §Core principles 1), so a push post is written for the one platform it goes
+  out on. This loop's whole part in a push is naming the candidate.
 
 ## File layout (all local — data/ is not committed)
 
@@ -123,12 +154,19 @@ data/<channel slug>/growth/
 │   ├── state.json       # state carried across ticks (the basis for double-publish prevention)
 │   └── growth-log.md    # one line per tick + metric deltas (observation ledger)
 ├── autoproduce.json     # channel-shared — authoring budget and history (shared with the Instagram loop)
-└── .autoproduce.lock/   # channel-shared lock — keeps the two loops from authoring at once
+├── .autoproduce.lock/   # channel-shared lock — keeps the two loops from authoring at once
+└── breakout.json        # channel-shared — the breakout candidate this loop hands to the Threads loop
 ```
 
-**The last two are channel-shared** (not split per platform). One video goes out
-to both platforms, so budget and lock must be channel-level too — count per
+**The last three are channel-shared** (not split per platform). One video goes
+out to both platforms, so budget and lock must be channel-level too — count per
 platform and the caps leak double; lock per platform and the lock stops nothing.
+`breakout.json` is channel-shared for the same reason: the YouTube tick writes
+the candidate and the Threads tick reads it, so it can't live under
+`growth/youtube/`. **Only this loop writes it** — the Threads loop reads it and
+records its push in its own `growth/threads/state.json`, so no second lock is
+needed the way autoproduce.json needs one. To report pushes, read that file;
+never write it.
 
 The template and state schema are in `references/growth-plan-template.md`.
 
@@ -165,6 +203,21 @@ The template and state schema are in `references/growth-plan-template.md`.
    so every episode carries a voice cost (about $0.015 per 400 characters on
    Gemini, $0.04 on ElevenLabs). Switching to the zero-cost local engine means
    editing profile §2, and the narrator's voice will change."*
+
+   **The breakout watch and the push are asked together, and separately from
+   the rest** — the watch only observes, but the push spends a second
+   platform's authorization. Ask: the sampling interval
+   (`velocity_watch_minutes`, default 30; 0 turns the watch off), how long a
+   window stays open (default 6 hours), how many earlier watched episodes have
+   to sit on the ledger before any verdict is allowed (default 5), the margin
+   over that baseline that makes a candidate (default twice the median at the
+   same age), which platforms may be pushed (offer only platforms whose
+   `growth-plan.md` is approved — no platform at all is a fine answer). How many
+   pushes a candidate gets is not asked: it is one post per target, and that
+   target's loop never posts about the same video twice. Two things get said out
+   loud here: the watch needs the `/loop` interval shortened for as long as a
+   window is open, and a named push target still publishes nothing until that
+   platform's own plan gains its push clause.
 4. Write `growth-plan.md` from the template, **show the full text and get
    explicit approval**, then save with `status: approved`. Always state:
    *"This plan is the standing authorization — the loop publishes videos stamped
@@ -173,7 +226,11 @@ The template and state schema are in `references/growth-plan-template.md`.
    by editing the plan."* If autoproduce is on, add one line: *"When the queue
    runs dry, the loop picks a topic and builds a video itself, and if it passes
    machine verification it publishes before a human sees it. It stays within
-   N episodes/day and $X per episode."*
+   N episodes/day and $X per episode."* If a push target was named, add one
+   more: *"When a fresh video's view count runs ahead of this channel's own
+   recent episodes, the loop writes it down as a breakout candidate, and the
+   <platform> loop publishes one post pointing at it with no per-post
+   approval — once you've added the push clause to that platform's plan."*
 5. Initialize `state.json`, write the growth-log.md header.
 
 ## tick — autonomous cycle (default mode)
@@ -220,6 +277,15 @@ outage. Compare 7-day windows against each other. If the subscriber count is
 hidden (`subscriberCountHidden`) it's a rounded value — don't use it for delta
 judgment; read only the view and watch metrics.
 
+**The lag covers half the response, not all of it.** Everything Analytics
+serves — the channel `metrics` block, each video's `period` block,
+`averageViewPercentage`, `engagedViews`, `shares` — runs 2–3 days behind and
+has day granularity at best. Two blocks come from the Data API's public
+counters with no lag: each video's `lifetime` (`views` · `likes` ·
+`comments`) and the channel `account`, where `subscriberCount` lives. So the
+subscriber delta above is a live read and the view trend a lagged one; §2b
+samples live `lifetime` too. Never compare a live number with a lagged one.
+
 From the per-video metrics, read **the type of the top-reach videos** (subject,
 length, format) and `averageViewPercentage` into the next plan — without this
 learning loop, automation repeats the same video. If views are low but early
@@ -233,9 +299,68 @@ The swipe-away rate (Studio's "How many chose to view") isn't in the API —
 judge hooks by `averageViewPercentage`, and when the swipe metric is needed,
 suggest checking Studio.
 
+### 2b. Velocity watch (only while a video is under watch)
+
+Skip this stage whole when `state.watching` is empty or the plan's
+`velocity_watch_minutes` is 0.
+
+**It costs no extra call.** §2 already fetched the videos array, so a sample is
+just a read of the watched videoId's entry in that same response: take
+`lifetime.views`, `lifetime.likes`, `lifetime.comments`, stamp the current
+time, and append the four scalars to that watch entry's `samples` (the whole
+response never goes into state — absolute rule 5). Keep `videoLimit` at 10 or
+higher so a video published a few uploads ago is still in the list.
+
+**If the response carries `videosError`, write no sample.** An empty videos
+array can mean the lookup failed, and a zero written into the ledger is worse
+than a gap — the candidate rule medians over these numbers later.
+
+**What can and can't be watched.** `lifetime` is a cached public counter: it
+coarsens, and on a fresh low-count video it can sit still for a stretch. A flat
+reading is not evidence of a dead video. So no verdict comes from one sample —
+a rise has to hold across two in a row. And **share velocity does not exist
+here**: `shares` is an Analytics metric, 2–3 days behind, so nothing in the
+first hours can be judged on sharing. Don't substitute another number for it
+and don't call likes a proxy for it.
+
+**Breakout candidate — the rule, and why it has no absolute number.** A watched
+video is a candidate when all three hold:
+
+1. **A baseline exists** — at least the plan's baseline count (default 5) of
+   earlier watched episodes have a growth-log reading at about the same age
+   (within one sampling interval).
+2. **It is ahead of that baseline** — its views at that age are at or above the
+   plan's margin (default twice) the median of those readings.
+3. **The lead held** — two consecutive samples, not one jump off a counter that
+   had been frozen.
+
+Under the baseline count there is **no verdict** — sample, log, and say
+"calibrating" in the report. That period is the point: this channel's own
+ledger is the only source for what "ahead" means here, and no published number
+exists to borrow (playbook §Velocity and the one-video push). Nothing about
+this is machine-checked.
+
+**On a candidate**, append it to `data/<channel>/growth/breakout.json` —
+`{ videoId, topic, permalink, publishedAt, declaredAt, samples: [...], pushTargets: [...] }`,
+where `pushTargets` copies the plan's push targets and is empty when the plan
+names none. Empty targets still get written: the record is the point. Then
+report it, and leave the pushing to the target platform's own loop (absolute
+rule 9).
+
+**When the window closes** (the plan's window length past `publishedAt`), drop
+the entry from `state.watching` and write one closing line into growth-log with
+the final reading and the verdict. Absolute rule 8's edit freeze lifts at the
+same moment, so anything held for it goes into the tick report.
+
 ### 2.5 Queue refill — autoproduce (only when the plan turned it on)
 
 If the plan isn't `autoproduce.enabled: true`, skip this stage whole.
+
+**A watch also holds authoring.** While `state.watching` has an open window,
+author nothing — an autoproduce run takes minutes to tens of minutes and eats
+the next sample or two, which is exactly the stretch the candidate rule needs.
+The queue-empty line will then repeat in every tick of the window; that's
+expected, not a problem to fix. Authoring resumes when the window closes.
 
 **Build only when the queue runs dry.** Author only when the count of
 unpublished `queue: ready` topics is below the plan's `autoproduce.min_queue`
@@ -291,6 +416,13 @@ Scan the queue only when today has a slot whose **time already passed · within
 Slots more than 3 hours past are skipped (prevents the accident where a loop
 that was off all day dumps the morning slot at night).
 
+**An open watch does not hold a slot.** Only authoring pauses (§2.5), and for a
+timing reason rather than a distribution one: each Short is evaluated on its own
+and upload frequency is not a ranking input (playbook §Principle), so a second
+video published during a watch takes nothing away from the one being watched.
+Holding slots would also strand them — a slot pushed past the 3-hour rule is
+gone for the day.
+
 Queue candidates are the `data/<channel>/episodes/*/storyboard/storyboard.md`
 whose frontmatter `status` is `produced` **or** `published` with `queue: ready`,
 and whose topic isn't in `state.publishedTopics`. If several, the one with the
@@ -344,6 +476,20 @@ in the tick report (the most common cause is a token missing the
   hold reason into growth-log and the tick report for a human (the frame picker
   is unstable for ~5 minutes after upload, so deferring to the next tick is
   fine).
+- **Open the velocity watch** — append
+  `{ videoId, topic, publishedAt, samples: [], verdict: null }` to
+  `state.watching`, `publishedAt` off our own clock (`youtube_publish` returns
+  the videoId and the permalink but no publish time). Take t0 here rather than
+  at the next tick, with one extra
+  `youtube_insights(channel, days: 7, videoLimit: 3)` — §2's response was
+  fetched before this upload existed, so the video isn't in it. If the upload
+  hasn't reached the uploads playlist yet, leave `samples` empty and let the
+  next tick take the first reading; a zero written now would sit in the ledger
+  as a real number (§2b). Skip the bullet whole when the plan's
+  `velocity_watch_minutes` is 0. From this point the video's metadata is frozen
+  (absolute rule 8) — the vertical frame above is the one thing still allowed
+  to finish. Put in the report that the watch wants a shorter `/loop` interval
+  for as long as the window is open.
 
 On failure, don't record filledSlots and **don't retry within this tick**
 either (the next tick retries the same slot). Write the failure reason in
@@ -354,8 +500,11 @@ re-upload — report the warning only.
 
 Save `state.json` (update lastTickAt) → append one tick-summary line to
 growth-log.md → one report line to the user:
-`[tick hh:mm] replies n · authored n($x, tier) · published n(slot) · subscribers ±n · Related pending n`.
-A tick with no actions logs "observation only" — quiet ticks are normal.
+`[tick hh:mm] replies n · authored n($x, tier) · published n(slot) · subscribers ±n · Related pending n · watch <videoId> +N/30m · candidate yes|no|calibrating · pushed n`.
+The watch fields only appear while a window is open, and `pushed` is read out
+of the Threads loop's state (this loop never writes it). A tick with no actions
+logs "observation only" — quiet ticks are normal, and a tick that only took a
+sample is one of them.
 
 ## status — state report
 
@@ -367,6 +516,12 @@ If autoproduce is on, also report from `autoproduce.json`: today's and this
 week's spend against the caps, the topic-pool level, and the topics stuck at
 `queue: hold` — hold never publishes until a human looks, so without this
 reminder they're forgotten.
+Report the watch side too: open watches with their elapsed time and last
+reading, candidates in `breakout.json` that no push has picked up, and the
+pushes of the last 7 days with their platform (read from the target loop's
+state). An open watch nobody drains is forgotten state, same as a `queue: hold`.
+Leave `videoLimit` at its default of 10 here — don't lower it, or a watched video that
+has slipped down the uploads list drops out of the response.
 
 ## Error handling (the loop keeps running)
 
@@ -376,7 +531,14 @@ reminder they're forgotten.
   alone.
 - **Quota exceeded** — Data API 10,000 units/day; uploads have a separate
   bucket (100/day). The inbox spends units proportional to video count (1–2
-  per video), so lower `postLimit` and resume.
+  per video), so lower `postLimit` and resume. **The watch itself is nearly
+  free** — §2b reads the response §2 already paid for, and that call costs 3
+  units (channels.list → playlistItems.list → videos.list), so four times an
+  hour stays under 300 units a day; the t0 read in §3 adds 3 more per publish.
+  What a shortened interval multiplies is the inbox, which scales with video
+  count. At a large `postLimit` that quadrupling is what runs the budget out —
+  lower `postLimit` for the length of the window rather than dropping §1, since
+  golden-hour replies outrank the watch.
 - **Comments-disabled video** → 403 is normal and arrives only as
   `commentsError` (ignore).
 - **Token expired or revoked** → all publishing is blocked, so recommend

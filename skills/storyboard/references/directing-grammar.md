@@ -19,7 +19,9 @@ you which of the four dials to turn; written down after, it only explains what y
 **And in short-form the dials serve the drop-off curve, not the look of the panels.** The
 variable the storyboard manages is stop · hold · satisfy · act (scenes-schema §playback order)
 — on a short: the hook that stops the thumb, the drips that hold by paying curiosity in
-stages, the last drip that satisfies, the spoken CTA. On long-form: the first frame that
+stages, the beat that satisfies (the last drip when the answer is held, the cover itself when
+the episode states its result and the drips then earn it), and the act — the spoken CTA plus
+the one line a viewer can pass on. On long-form: the first frame that
 stops the thumb, the hooking that holds it, the result that pays the promise (on a story
 arc, the payoff after the turn). A size or an angle is picked because it makes the viewer feel what that beat needs,
 and a "cinematic" choice that doesn't serve the beat is a choice against the episode.
@@ -44,6 +46,7 @@ above (the `[study]` rows).
 
 - [1. Four dials, four fields — never merged](#1-four-dials-four-fields-never-merged)
 - [2. Size — the audience's distance](#2-size-the-audiences-distance)
+  - [2.1 What the shot has to show → the size that shows it](#21-what-the-shot-has-to-show-→-the-size-that-shows-it)
 - [3. Angle — the seat you give the audience](#3-angle-the-seat-you-give-the-audience)
 - [3.5 Frame space — what is where, and which way it faces](#35-frame-space-what-is-where-and-which-way-it-faces)
 - [4. Move — what the camera does while the shot runs (generated video)](#4-move-what-the-camera-does-while-the-shot-runs-generated-video)
@@ -83,11 +86,21 @@ The measure is one thing: how much of the frame's height the person takes `[cour
 the audience an observer, close makes them a participant. Wide shots carry information (where,
 how many, how far apart); close shots carry feeling. Both jobs sit on the same dial.
 
+The camera does not tell the audience where they are — a viewer knows only what is on the
+screen `[course]`. That is why a wide shot's job is delivering information, and why skipping
+the establishing shot loses three things at once: the place (a home, an office, a hospital),
+the head count (a third voice later reads as an annoyance, not a surprise), and the distance
+between people — and with it the temperature of their lines. One yardstick for the whole
+ladder: the size is how far the audience stands from the person. `els` is a city seen from a
+plane window, `ls` is recognising someone across the street, `fs` is sharing a lift with them,
+`ms` is across a meeting table, `mcu` is across a coffee table, `cu` is the moment before they
+cry when nothing else is visible, and `ecu` is when only the eyes are remembered.
+
 | `shot.size` | Name (on set) | Frame bottom / what's in | What it tells or makes the audience feel | Default use | Phone distance (standing adult) | Sound that matches |
 |---|---|---|---|---|---|---|
-| `els` | extreme long shot (완전 풀) | person under 1/10 of the height — the place is the subject | alone · powerless · the world is big · **or** scale when the frame holds many people | openings, endings, "nobody here" | 20 m or more | space (wind, traffic, echo) loud; no human voice needed |
-| `ls` | long shot · wide (와이드) | full body with room above and below, ~½ the height | where we are, how many, how far apart — the **establishing** job | the first shot of a scene; situation explanation | 5–6 m — walk, don't zoom | space forward; lines may be faint |
-| `fs` | full shot (풀숏) | head to toe, almost no slack, ~90 % of the height | the whole body's action — walk, gesture, costume | action and movement starts here | ~3 m | balanced |
+| `els` | extreme long shot (완전 풀) | person under 1/10 of the height (a dot) — the place is the subject | alone · powerless · the world is big · **or** scale when the frame holds many people | openings, endings, "nobody here" | 20 m or more | space (wind, traffic, echo) loud; no human voice needed |
+| `ls` | long shot · wide (와이드) | full body with room above and below, 40–60 % of the height | where we are, how many, how far apart — the **establishing** job | the first shot of a scene; situation explanation | 5–6 m — walk, don't zoom | space forward; lines may be faint |
+| `fs` | full shot (풀숏) | head to toe, almost no slack, 85–95 % of the height | the whole body's action — walk, gesture, costume | action and movement starts here | ~3 m | balanced |
 | `mfs` | medium full · knee shot (니숏, "cowboy") | bottom at **mid-shin** | two people talking, body plus a bit of room | two-person dialogue | — | balanced |
 | `ms` | medium shot (미디엄) | bottom at **mid-thigh** — never the waist | relation, gesture with context — the dialogue default. When in doubt, start here | dialogue, explanation with hands | — | lines clean, space behind |
 | `mcu` | medium close-up · bust shot (바스트) | bottom at **mid-chest** | face and hands together — the last size that shows both | news, interview, **talking-head speech, the hook cut** | — | voice clean, space well back |
@@ -100,7 +113,17 @@ Compositions that ride on top of the size — write them in `shot.size` when the
 distance does: `two` (two-shot), `three` (three-shot), `ots` (over the shoulder), `pov` (the
 character's eyes — hands enter the lower frame, no face), `back` (from behind — the face withheld),
 `cutaway` (away from the action to something in the scene), `reaction` (the face that saw it).
-`ws` is the legacy key for `ls` and still renders.
+`ws` is the legacy key for `ls` and still renders. `two` and `three` sit at `mfs` (cut at mid-shin, never the knee — both
+bodies and the room between them) unless `shot.why` says why they close to `ms`; `ots` sits at
+`mcu`; `pov`, `back`, `cutaway` and `reaction` say where the camera looks, not how far — write the distance beside them ("`back`, at `ms`") in the shot's reason or
+`framing`, or the script prints no distance for that shot. `shot.size` itself holds one key and
+nothing else — `"two"`, never `"two (mfs)"`; the checker reads the key.
+
+Two names from the set that are roles, not sizes — write the size and let `shot.info` carry
+the role: an **establishing shot** (설정샷, "에스타 하나 따놔") is the first shot of a scene that
+says where, when and how many at once, usually `ls` or `els`; a **master shot** (마스터샷) is the
+whole scene's action held in one wide from start to end, the floor the edit is built on — a
+filmed-scene term, the coverage note the shooting script prints (§7).
 
 Rules that come with the dial `[course]`:
 
@@ -112,8 +135,11 @@ Rules that come with the dial `[course]`:
   ~85 mm full-frame is the convention.
 - **Establish, then go close.** Lay the place and the head count with a long shot, then move in.
   Once the audience carries the room in their head, close shots can follow each other without
-  anyone getting lost. If you open on a close-up anyway, **pay the debt in the next shot** — a
-  wide or a medium that says where we are.
+  anyone getting lost. If you open close anyway — a `cu`, and just as much an `mcu` talking-head
+  hook or an `insert` — **pay the debt in the next picture shot** with an `ls` or `els` that
+  shows the place, the head count and the distance (`mfs`/`two` pays it when the scene is two
+  people and the room between them is the information). `fs` and `ms` do not pay it: they show
+  a body, not a place. An HTML explanation screen is not a picture shot and pays nothing.
 - **The close-up is a command, and a command repeated stops being heard.** One close-up (`cu`, `choker` or `ecu`) per scene
   on the one line that matters; `choker`/`ecu` once or twice in the whole episode. A run of faces
   is a run with no emphasis at all. `[study]` agrees in shape — close-up frequency is an inverted
@@ -127,13 +153,57 @@ Rules that come with the dial `[course]`:
   generated clips the §cut length rows and this ratio both bind; on a filmed shot only the ratio
   does — a filmed scene has no cap (scenes-schema §filmed scenes), so its wide is judged against
   the close beside it, not against the table; a narrated still keeps the speech math
-  (characters ÷ 4.5).
+  (characters ÷ 4.5). On a narrated still the builder plays the audio, not `duration`, so the
+  ratio is written into the lines: the wide carries the longer sentence, or two, and the close
+  carries the short line. A nine-character sentence on the establishing shot beside a long line
+  on the face is fixed by moving a sentence between the two shots, not by editing `duration`.
+  A silent establishing shot — no line, added to pay the debt — holds at least 1.5× the close
+  beside it: two seconds of a room is a flash, not a place. An `insert` or `ecu` never runs
+  under 3 s either — a short line doesn't shorten the hold, the still holds after the line.
+  Check the ratio after the speech math, as the last step of the size pass, on every pair of
+  neighbours from the first shot to the last, not only the pairs you set by hand.
 - **Sound follows the size.** Wide → space loud and lines distant; close → lines and breath
   forward. A wide shot with studio-clean dialogue reads as fake without the viewer knowing why;
   a close-up with distant sound reads as "something's off". Write it into `visual.audio` on
   generated shots and let the builder's mix follow on filmed ones.
 - **Don't fake a wide by zooming out in a small room** — the frame size is right and the space
   goes flat. If you can't step back, stop at `fs`.
+
+### 2.1 What the shot has to show → the size that shows it
+
+§5 picks the size from the feel; this table picks it from `shot.info` — the wide job (where ·
+how many · how far) and the close job (the face · the detail) are decided by what the viewer
+has to see, not by taste `[course]`. Read the two together: on the first shot of a scene the
+info wins (establish, then close); on the line that matters the feel wins; leaving either
+default means writing why on the shot — `shot.why`, one line. A scene that opens on the `mcu` hook still owes its
+wide — the `ls` comes before the first `insert`, or the viewer never learns where the hands
+are. `check-scenes.js` fails any shot but the outro with no
+`shot.size` after the story pass; the reviewer's camera mode reads the fit.
+
+| What `info` has to show | Size | Why this size and not the next |
+|---|---|---|
+| where we are, what time, how many people, how far apart | `ls` — `els` when the place itself is the subject | the establishing job; a closer size loses the place, the head count or the distance |
+| how big this is — a crowd, a fleet, a hall | `els` with many subjects (`high`/`overhead` helps) | the tiny figures read as scale only because there are many **and they fill the frame**; the same figure alone reads as lonely. Count whatever the viewer counts — people, ships, roofs. A handful swallowed by the space (thirteen ships in a foggy strait, a horizon of enemy sails behind them) belongs to the next row, not this one, and `shot.why` says so |
+| alone · nowhere to run · the world is big | `els`, one figure (or a few lost in the space), no human voice | Mad Max's cliff — the smallness says the sentence, so don't narrate it on top |
+| what the body does — a walk, a dance, a fight, a costume, a gesture that needs the whole body | `fs` | head to toe with no slack; `ms` cuts the action off, `ls` shrinks it |
+| two people and the room between them | `mfs` or `two` | both bodies with a little room — the distance between them is the information |
+| three or more people — a crew, a boat, a table | `ls` first, then `ms` on the hands or `cu` on the one face | the head count and who stands where come before any gesture; `three` at `mfs`/`ms` shows the group, not the place, and pays no establishing debt |
+| two things, two places or two states side by side in a live shot — a fridge and a shelf, before and after | `ls` (a wide of the two, nobody's face) | the comparison is the information; an `insert` shows one of them and loses the other |
+| what someone explains with their hands · a person and the thing they handle | `ms` — only when the face is in the frame | face, hands and context together — the dialogue default. If the screen shows only the hands and the thing (no face), it is an `insert`, however much the hands are "explaining" |
+| a person telling me — a talking head, an interview, the hook cut | `mcu` | face and hands together for the last time; the news and interview size, at `eye` |
+| the one line that matters · the face that saw it | `cu` (one per scene) | "look at this now" — the command; a wider size spreads the attention. The whole face is in, crown lightly cropped — a helmet or a hat cropping the top does not make it a `choker` |
+| the peak — one tear, one word, one trembling hand — the moment the episode has been building to (the towel coming off the dyed hair, the order finally given, the heel leaving the floor) | `choker` / `ecu` (once or twice per episode — and an episode that never uses them has usually left its peak at `cu`) | the detail is the whole information — eyes only, mouth only, fingertips; when the whole face is still in the frame it is a `cu`. `ecu` is a face or a hand — a tight detail of an object is still an `insert` |
+| the thing itself — a screen, a hand, a document, an object that replaces three lines, at any tightness | `insert` | no face; the object's own sound |
+| an HTML slide — a rendered object, a chart, a text plate | `insert` when one object or one figure fills the stage (still one object when it changes through stages — a bean losing its gas, a hair losing its melanin); `ls` for a chart, a timeline or a layout — anything that compares or orders two or more values or things (two bars are a comparison, so `ls`; a mechanism whose parts are being compared — a big chainring against a small sprocket — is a comparison too) | the subject on the stage is sized the way a person would be, and `angle` is written `eye` (the field has no blank value); there is no room to hear, so the sound rule doesn't apply — the narration and the slide's bed |
+
+The mismatches this table catches: `cu`/`ecu`/`insert` on a shot whose info is the place or the
+head count (the viewer never learns where they are); `ls`/`els` on the one line that has to land
+on a face (the command is whispered from across the street); `ms` on a walk or a fight (the body
+is cut mid-action); `mcu` on a detail the hand is holding (the object is too small to read); a
+tiny figure meant as scale with nobody else in the frame; a wide shot whose sound line says the
+lines are clear (at `ls`/`els` the space is in front and the people in the picture are far — only
+the narrator's voice-over, which is not in the picture, stays clean); a composition tag whose
+distance names one size and describes another (`back` "at `fs`" cut at mid-shin is `mfs`).
 
 ---
 
@@ -428,13 +498,18 @@ what the audience is supposed to get.
 `[course]` unless marked.
 
 1. **One shot, one new piece of information** (`shot.info`). Two shots in a scene saying the
-   same thing — one can go. 4–6 shots in a dialogue scene; a 35–75 s informational short has a
+   same thing — one can go. 4–6 shots in a dialogue scene; a short informational piece has a
    floor of two sizes per scene (wide + close). The check that catches a fake: cover the `info`
    lines and read only the sizes, angles and moves down the scene. If every setup shows the
    same thing from the same distance, the scene is one viewpoint chopped into decorative cuts,
    and no wording in `info` will fix it.
-2. **Establish, then close.** Long shot first, then in. A close-up opening pays its debt in the
-   next shot. A run of close shots with no wide keeps the audience tense and lost at once.
+2. **Establish, then close.** Long shot first, then in. A close opening — `cu`, the `mcu`
+   talking-head hook, an `insert` — pays its debt in the next picture shot with an `ls`/`els`
+   (`mfs`/`two` for two people and the room between them); `fs` and `ms` do not pay it, and an
+   HTML explanation screen is not a picture shot. A scene that returns to a place this episode
+   has already established carries no debt — the viewer still holds the room; only a new place,
+   or a break long enough to change it, owes a wide. A run of close shots with no wide keeps the
+   audience tense and lost at once.
 3. **The close-up is rationed** — one close-up (`cu`·`choker`·`ecu`) per scene, `choker`/`ecu` once or twice per
    episode. Everything emphasised is nothing emphasised. `[course]` — the `[study]` inverted U
    agrees only in shape; its peak of three was measured on a long film, not on a 35–75 s short,
@@ -542,17 +617,18 @@ below are what the script's standing notes carry `[course]`.
 | Value | Written in | Read by |
 |---|---|---|
 | `shot.feel` | every shot | storyboard.html (the feel line · missing-feel warning), script.md (the `느낌` line), reviewer camera mode (does the technique serve it), image mode (does the picture show it) |
-| `shot.size` | every shot | storyboard.html badge · script.md (the `사이즈·앵글` line — size with its distance — and the `소리` line that follows the size) · `bgPrompt` (the size words) · `visual.camera.framing` on generated shots · reviewer camera mode (rationing, establish-then-close) |
+| `shot.size` | every shot (`check-scenes.js` fails any shot but the outro without one after the story pass) | storyboard.html badge · script.md (the `사이즈·앵글` line — size with its distance — and the `소리` line that follows the size) · `bgPrompt` (the size words) · `visual.camera.framing` on generated shots · reviewer camera mode (does the size show what `info` needs — §2.1 — plus rationing and establish-then-close) |
+| `shot.why` | when `size`/`angle` leave their row, or a composition tag needs its distance | storyboard.html (beside the badges) · reviewer camera mode (a written reason is a departure, not a finding) |
 | `shot.angle` | every shot (default `eye`) | storyboard.html badge · script.md (the same `사이즈·앵글` line — angle with the eye-height baseline) · `bgPrompt` ("eye level" / "seen from above" / "low angle") · reviewer camera mode (angle as change, dutch fee, hook at eye level) |
 | `shot.space` | generated stills (filmed shots when two people, or a person and what they look at, share the scene) | `assemble-bg-prompt.js` (the spatial prefix of `bgPrompt`) · storyboard.html (the space line · missing-layout warning) · script.md (the `자리` line) · reviewer camera mode (banned language, missing layout/facing) · image mode (does the PNG match layout and facing) |
 | `visual.camera` | generated shots | produce (assembles the prompt, adds nothing) · reviewer camera mode (slots, vendor words, one move, `end`) |
 | `duration` | generated clips · filmed shots | generated clips: the cut-length table (scenes-schema §cut length) + wide ≥ 1.5× close · filmed shots: the ratio only (no cap) |
 | `visual.audio` | generated shots | produce · reviewer sound mode (sound follows size) |
 
-The check strip in `storyboard.html` warns on: a shot with no `shot.feel`, a `shot.size` or
-`shot.angle` outside the vocabulary, more than one `cu`/`choker`/`ecu` in one scene, more than
-two `choker`/`ecu` in the episode, more than one `dutch` in the episode, a close-up opening
-(`cu`/`choker`/`ecu`) followed by another close size instead of a wider shot, a generated still
+The check strip in `storyboard.html` warns on: a shot with no `shot.feel` or no `shot.size`, a
+`shot.size` or `shot.angle` outside the vocabulary, more than one `cu`/`choker`/`ecu` in one scene, more than
+two `choker`/`ecu` in the episode, more than one `dutch` in the episode, a scene opening close
+(`mcu`/`cu`/`choker`/`ecu`/`insert`) whose next picture shot is not an `ls`/`els` (or `mfs`/`two`), a generated still
 with no `shot.space.layout` (an `insert`/`ecu` that fills the frame with one object is exempt),
 a space block written with no `frame` or with a `frame` that is not `camera`, a person on
 screen with no `shot.space.facing` (a `pov` is exempt — hands, no face), two people in a scene

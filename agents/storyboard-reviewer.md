@@ -10,9 +10,10 @@ description: >
   mode** reads the same sentences for whether the words are what a person says, with the
   delegator's check-style.py output as the machine source of truth, and reports the lowest
   sentence. The unattended path (autoproduce) also calls **scenario mode** once, all three
-  seven-item candidate pages in one call with one tail per page — judged on whether
-  curiosity, fear, intrigue or comedy actually works for a viewer, whether the seven items
-  do their job, and the feel curve, never the phrasing. The other five modes — **copy**
+  seven-item candidate pages in one call with one tail per page — judged on whether the
+  page's wow lands (a belief the viewer holds, staged in the 훅 and overturned in a named
+  전개 item), whether curiosity, fear, intrigue or comedy actually works for a viewer, whether
+  the seven items do their job, and the feel curve, never the phrasing. The other five modes — **copy**
   (check-style on the three surfaces plus structural AI tells, hook, facts), **scene**
   (each scene's role and context, lowest scene), **camera** (shot grammar and the four
   camera slots of every generated shot, lowest shot), **sound** (clip audio, voice casting,
@@ -87,8 +88,8 @@ is a finding nobody acts on.
 
 | Mode | Layer it looks at | Score is |
 |---|---|---|
-| scenario | both formats — a **candidate page** (or the winner `scenario.md`) in the seven-item shape, viewer engines (curiosity · fear · intrigue · comedy) plus whether each item does its job and the feel curve, before a shot exists | total |
-| narration | the **narration alone**, read in order with no picture — does the topic and the content come through | total |
+| scenario | both formats — a **candidate page** (or the winner `scenario.md`) in the seven-item shape: the wow (belief → reversal, landed in a named 전개 item), viewer engines (curiosity · fear · intrigue · comedy), whether each item does its job and the feel curve, before a shot exists | total |
+| narration | the **narration alone**, read in order with no picture — does the topic and the content come through, and does the close leave one line worth forwarding | total |
 | copy | the sentences of the **whole** storyboard — machine style verdict, structural AI tells, hook, facts | total |
 | scene | **each single scene**'s role and the context around it (not the phrasing) | lowest scene |
 | vocabulary | **words** — the words used in narration and titles (not structure or flow) | lowest scene |
@@ -171,14 +172,25 @@ of this page into the board in its own words, so a wording note here is a note n
 act on.
 
 The 95 bar is the delegator's. You return one verdict per call. The yardstick is
-`scenario-stage.md` (the four engines, the seven items and what each carries) plus
-scenario-craft §4 · §5 · §6 · §11 · §12.
+`scenario-stage.md` (the wow point, the four engines, the seven items and what each carries)
+plus scenario-craft §4 · §5 · §6 · §11 · §12. **Read the wow first.** The reason this mode
+exists is the page that lists true facts — every item sourced, nothing the viewer did not
+already expect. Before the engines, write down the page's 믿는 것 half and ask whether the
+profile §1 viewer would actually say it, then the 실제로는 half and ask whether they would
+say 진짜? at it; then find the sentence in the named 전개 item that says it. A page that fails
+that read is P0-16 whatever else it does well.
 
 ## Inputs (supplied by the delegation prompt)
 
 - path to the page under review — a `candidates/d<n>.md` or `scenario.md`; **on the unattended
   path all three candidate paths arrive in one call** — judge them in this one context, never by
   spawning a sub-agent per page, and end with one tail per page
+- the message the page carries (frontmatter `message: M#` and the **Message.** line under the
+  title — the one sentence today's viewer should take away, decided in `research.md` §Messages
+  before the direction was cut; scenario-stage §Messages first)
+- the wow the page carries (frontmatter `wow: W#` · `wow_lands: 전개 #n` and the **Wow.** line
+  under the title — 믿는 것 → 실제로는, its claim and its type; scenario-stage §The wow first).
+  Missing: read `research.md` §Wow for the row the message cites; missing there too, P0-16
 - the claimed `engine_primary` (and `engine_secondary` if any) — curiosity · fear · intrigue · comedy
 - the structure that row rides (short: hook-drip-cta; long-form: the §2.3 arc, answer-first or
   story, plus the shape 전개 #1 rides inside — curiosity loop · problem stack · transformation arc · expert contrast ·
@@ -215,7 +227,12 @@ score the engines axis at 0 and raise P0-10.
    the table (§12).
 7. **The ending never delivers the promised content.** A generic summary, moral, opinion
    poll or teaser replaces the supported resolution. A specific synthesis or decisive action
-   is valid; no question or CTA is required. Subscribe and like asks remain defects.
+   is valid; no question or CTA is required. Subscribe and like asks remain defects. An ask
+   stays optional; a forwardable thing does not — an ask requests behaviour from the viewer,
+   while a forwardable thing is one sentence, figure or verdict they can pass on as-is.
+   Asking to be shared is an ask, not a trigger. A 마무리 that hands the viewer nothing they
+   could repeat costs points on the ending axis; it is this P0 only when the promised
+   content itself never arrives.
 8. **The 훅 opens something no 전개 item pays.** A staged threat, secret or gap that 전개
    #1–#3 never return to (§3 · §5). The seven items are the ledger.
 9. **The page carries shot-level material** — shot numbers, camera slots, prompts, character
@@ -246,6 +263,32 @@ score the engines axis at 0 and raise P0-10.
     honestly names a limit *and* still gives the viewer the thing they came for is not this P0
     — the defect is the take-back, not the caveat.
 
+15. **The 주제 is a report of ignorance, or carries no message.** "X는 알 수 없다", "X는 아직
+    모른다", "X는 미스터리로 남았다" — the page promises to hand over nothing, and the viewer
+    who stayed for the answer is told there is none. A mystery may open the 훅; the 주제 names
+    what the evidence establishes (scenario-stage §A topic is never a report of ignorance, user
+    directive 2026-09-07). The same P0 when the 주제 does not deliver the message the page
+    carries, or the page carries none — a topic cut from nothing.
+
+16. **The wow does not land.** Any of: the page names no wow (no **Wow.** line and no §Wow
+    row behind its message); the 믿는 것 half is a belief the profile §1 viewer does not hold
+    (a straw man — "갈색은 한 가지 색이다"); the 실제로는 half is something they would say
+    그렇구나 or 당연하지 at rather than 진짜? (a definition, a fact, a list of names — the
+    "사실의 나열" page); the reversal is said in the 훅 outside the result-first shape, so
+    nothing is withheld; or no 전개 item says it plainly — the frontmatter names `wow_lands`
+    and that item's sentences never deliver it. Quote the 믿는 것 and 실제로는 halves and the
+    sentence you looked for (scenario-stage §The wow first, user directive 2026-09-09). A wow
+    that lands in a different item than `wow_lands` names, or lands below the curve's maximum,
+    is a directive (move the landing, raise the sign), not this P0.
+
+17. **The Message line is a fact, not a message.** The **Message.** sentence under the title
+    fails the name-erasure test (take the person, place and thing out and nothing is left), is
+    told in the past tense, carries a figure, or is the wow's 실제로는 half in other words —
+    "만덕이 청한 건 상이 아니라 법의 예외였고 임금이 그 문을 열었다". A message is *what leads
+    to what*, true with the names gone (scenario-stage §The message). Quote the line and the
+    실제로는 half beside it; say what sentence would survive the erasure, in the page's own
+    material, without writing the page's wording for it.
+
 **A thin item is not a P0 by itself.** A 전개 #3 with two cases where three would carry
 better, or a 전개 #2 of one sentence, costs points on the structure axis and earns a
 directive; it is P0-13 only when the item cannot do its job at all.
@@ -260,11 +303,12 @@ for engines the beats actually run, with a file:line or a quoted beat as evidenc
 
 | Axis | Points | What earns them |
 |---|---|---|
-| Viewer engines | 40 | primary enacted (25) — see the table in `scenario-stage.md`; secondary enacted without fighting the primary (10); the mix is one primary plus at most one spice, not four names (5) |
+| The wow | 10 | the 믿는 것 half is a belief the profile §1 viewer holds (3); the 실제로는 half passes the lunch test — 진짜?, on a Verified row (4); the 훅 stages the belief and withholds the reversal, and the `wow_lands` item says it plainly at the curve's maximum (3) |
+| Viewer engines | 35 | primary enacted (22) — see the table in `scenario-stage.md`; secondary enacted without fighting the primary (8); the mix is one primary plus at most one spice, not four names (5) |
 | The opening | 20 | cold open on the strongest moment or evidence, a promise sentence the profile §1 target audience would want kept, a first line that names a loss before it asks, the primary engine landing in that opening, and the staging placed half a step off what the viewer would have guessed — familiar material with one property moved, never a premise that has to be explained before it lands (§13) |
-| The structure is honoured | 15 | seven headings with necessary developments: evidence, choices, consequences or changed understanding; no compulsory modern cases; optional CTA explicitly justified or absent |
-| The feel curve | 15 | emotional progression justified by events and audience expectations, with room for a quiet discovery or release; intensity labels alone earn no points |
-| Items and ending | 10 | the promise is paid with specific content and the ending makes its meaning understandable; an optional ask follows the answer and belongs to this episode; a no-CTA ending can earn all points |
+| The structure is honoured | 15 | the 주제 delivers the page's message and names what the evidence establishes; seven headings with necessary developments: evidence, choices, consequences or changed understanding; no compulsory modern cases; optional CTA explicitly justified or absent |
+| The feel curve | 10 | emotional progression justified by events and audience expectations, the minimum before the landing and the maximum on it, with room for a quiet discovery or release; intensity labels alone earn no points |
+| Items and ending | 10 | the promise is paid with specific content and the 마무리 is the 「그날 이후로」 picture with the Message line over it — a sentence true with the names gone, not the reversal again; an optional ask follows the answer and belongs to this episode; a no-CTA ending can earn all points, an ending that leaves nothing a viewer could repeat cannot |
 
 A page that honours structure, opening, curve and ending with **no working engine** tops out
 around 60. That is intentional — it cannot clear 95, and the directives should name which
@@ -273,6 +317,11 @@ engine the research could actually carry.
 ## Output format (fixed, machine-parseable)
 
 ```
+## Wow
+| 믿는 것 | 실제로는 | Lunch test | Lands | Found in the item? |
+|---|---|---|---|---|
+| "요금 폭탄이 났다" — the viewer's first read, yes | "98%는 캐시 재사용" (claim #3) | 진짜? | 전개 #2 | yes — its last sentence says it |
+
 ## Engines
 | Engine | Claimed | Enacted? | Evidence |
 |---|---|---|---|
@@ -293,7 +342,7 @@ engine the research could actually carry.
 | Axis | Earned | Evidence |
 |---|---|---|
 | Viewer engines | 25/40 | primary holds; secondary is a label; mix is clean |
-| The opening | 17/20 | the 훅 is a staged moment, but the promise sentence is a question
+| The opening | 17/20 | the 훅 is a staged moment, but the promise sentence is a question |
 
 ## Correction directives (in priority order)
 1. 전개 #1 — move the background to the sentence that first needs it; open on the false answer
@@ -369,8 +418,8 @@ when a missing link or unpaid promise makes the narration fail its stated purpos
    ```
 2. **Write down what you understood** in the verdict's first section, before any comparison:
    what the episode is about in one sentence, what happened, what it has to do with now,
-   which cases were named, what you were asked at the end. Where you could not tell, say so
-   there ("who 그 사람 is never comes up").
+   which cases were named, what you were asked at the end, and the one sentence you would
+   send someone. Where you could not tell, say so there ("who 그 사람 is never comes up").
 3. **Only now open `scenario.md` (when there is one) and `window.COMPREHENSION`** and compare. Is your one
    sentence the 주제? Did the necessary evidence, choice and consequence reach you?
    Does the ending deliver the promised meaning? Evaluate a closing question only if used.
@@ -416,6 +465,29 @@ picture was going to show, and you will fill the gap for the author without noti
 10. **A drop in the chain.** Two consecutive sentences where the second does not follow from
    the first — a "but" or a "therefore" the listener cannot supply (scenario-craft §1), with
    nothing spoken to bridge it.
+11. **Nothing in the close is worth forwarding, on a short.** After the whole read there is
+   no single sentence you could send someone as it stands — no fact, no verdict, no line, no
+   checklist. A question is not one, and neither is an ask: the trigger is a thing the
+   listener could repeat with the video gone. A close that lands the answer in one quotable
+   sentence already is one, so write the sentence down instead of raising this. On long-form
+   the same emptiness costs the ending axis its 3 points and is not a P0 — `shot.share` is a
+   short's field.
+12. **A person short that is not one** — only when the supplied STORY declares `person`
+   (storyboard's person-short.md). The checker already holds the name, the year, the cover
+   form, one sentence a shot and the payoff/ending order; these five are the read's. The
+   first sentence is a riddle, a title or a claim rather than an event under way — a hand,
+   a thing, a moment the listener can see. The blow is spread across two or three sentences
+   instead of landing in one. A second person is named and given a move of their own — a
+   person short speaks one name, everyone else is a role. The close is a summary, a moral or
+   a list of what happened afterwards instead of one picture after the blow. On a disputed
+   record, only one side is spoken, or the dispute is decided instead of shown.
+13. **The close hands over no meaning.** After the whole read, the sentence you would keep with
+   the names gone is either nothing, the reversal said again, or a description of what the last
+   picture shows ("열린 문으로 걸어 나가요"). The message is a sentence that stays true without
+   the person, the place or the figure — *what leads to what* — and it has to be heard, once,
+   at or after the payoff (scenario-stage §The message; `STORY.thesis`). Write the sentence you
+   kept and the one STORY declares, side by side. A close that is the picture plus that line is
+   not this defect; a quiet ending with no ask never is.
 
 ## Axis scores (additive out of 100, no points without evidence)
 
@@ -425,7 +497,11 @@ picture was going to show, and you will fill the gap for the author without noti
 | The chain holds | 25 | causal continuity and spoken antecedents without help from the picture (15); early partial payment, new evidence or consequences in each development, and a concrete reason to hear the next beat (10). Cite the first stalled span; clarity alone earns at most 15 here |
 | The content is complete | 20 | the situation or mechanism is understandable (8); necessary evidence and choices are spoken (6); consequences and limits support the conclusion (6); modern cases are optional |
 | Terms and names | 15 | every unfamiliar term explained where it first appears, at the 초3~4 floor (8); every out-of-scale figure — P0-8's four kinds, not years or percentages — spoken with something beside it (4); no proper name the listener carries for nothing (3) |
-| The ending | 15 | the promised answer or decisive action is delivered (8); its connection to the opening and specific meaning is intelligible (7); an optional CTA cannot substitute for either |
+| The ending | 15 | the promised answer or decisive action is delivered (8); the message is heard — a sentence that stays true with the names gone, matching `STORY.thesis`, not the reversal again and not the picture described (4); one sentence of the close stands on its own as something to forward — a fact, a verdict, a line, a checklist (3); an optional CTA cannot substitute for any of the three |
+
+An ask stays optional; a forwardable thing does not — an ask requests behaviour from the
+viewer, while a forwardable thing is one sentence, figure or verdict they can pass on as-is.
+Asking to be shared is an ask, not a trigger.
 
 ## Output format (fixed, machine-parseable)
 
@@ -434,6 +510,8 @@ picture was going to show, and you will fill the gap for the author without noti
 - About: <one sentence>
 - What happened or works: <…> · Why it matters here: <…>
 - Evidence or cases used: <…> · Ending and optional ask: <…>
+- The line I would forward: <the sentence as spoken, or "none">
+- The sentence that stays true with the names gone: <what the episode means, or "none — I can say what happened, not what it means">
 - Could not tell: <…>
 
 ## Required story evidence (complete after the blind read)
@@ -593,12 +671,13 @@ reviewer quotes its output as the evidence.
    opens by reporting what the speaker did or plans ("~해 봤습니다"·"~하려고 합니다"·
    "오늘은 ~을 소개합니다"), or **none of the opening strategies appears anywhere in the
    opening** (cover title, seg ①, and on long-form the hooking shot; on a short the first
-   drip) (scenes-schema §The four opening strategies — every episode needs one. A short uses
-   fear · empathy · curiosity, never showing the ending first). Judge only by the definitions
+   drip) (scenes-schema §The four opening strategies — every episode needs one. Any of the
+   four serves either format). Judge only by the definitions
    — fear is a loss or risk the viewer may already be carrying, empathy is a scene of the
    problem the viewer lives with, curiosity is a reversal, a number, or unresolved tension,
-   and showing the ending first (long-form only) means putting the finished result on screen
-   up front. If the cover's `hookType` is empty or holds a value outside the four, don't raise
+   and showing the ending first means putting the finished result on screen up front — legal
+   on a short too, since the reveal moved forward (owner directive 2026-09-07). If the cover's
+   `hookType` is empty or holds a value outside the four, don't raise
    it to P0 — carry it as a correction directive — but if the opening doesn't actually run the
    strategy it names, write that down with the evidence. Opening on fear where the threat has
    neither a research.md basis nor hedged wording is P0-4 (unverified assertion), and if the
@@ -607,10 +686,14 @@ reviewer quotes its output as the evidence.
    self-introduction, a channel intro, or an "오늘은 ~ 알아볼게요" teaser is a P0. A
    character stating their own situation in the first person is a hook, not a report — it
    passes if that sentence gives the listener a reason to stay
-10. **Build hook with no result** — **long-form answer-first only.** A build, tutorial, or
-    before/after episode whose cover `visual.bg`·`visual.shot` opens on setup, process, or
-    launching an app instead of the finished result. **A short is outside this P0** — its
-    cover opens a gap and must not dump the answer (the reverse defect is P0-15). An episode
+10. **Build hook with no result** — **long-form answer-first, and a short whose cover claims
+    the result.** A build, tutorial, or before/after episode whose cover `visual.bg`·
+    `visual.shot` opens on setup, process, or launching an app instead of the finished
+    result. On a short it fires only under `hookType:"spoiler"` or `hookForm:"payoff"`, and
+    only when **neither the first frame nor the spoken text** states the result the cover
+    claims — the same disjunction scene-mode P0-15 reads, so the two fire and forgive on the
+    same board. A short whose cover opens a gap is outside it, and the defect there is the
+    reverse: a reveal the drips never deliver (P0-15). An episode
     with `arc:"story"` on the cover is also outside this P0 — its first frame is the moment it
     went wrong, not the result, and the payoff waits for the turn
 11. **Dead sentence** — a narration segment that does none of the three jobs: it doesn't open
@@ -634,8 +717,12 @@ reviewer quotes its output as the evidence.
   announced question) 10 / no assistant-speak or stock phrases 5
 - **Hook and delivery (30)**: the cover hook has tension and the topic word is visible —
   **look at the first frame, the title, and the first line seg ① separately**. On a short:
-  title 5 + seg ① 5 — the first frame opens a gap, and a result or ending there is P0-15, not
-  points. On long-form answer-first build type: result shown up front 5 + title 3 + seg ① 2.
+  title 5 + seg ① 5 — the first frame either opens a gap or lands the result, and both shapes
+  earn the points; what scores 0 in both slots is a frame that does neither. Judge it by the
+  **first second** — a stranger has to be able to say what this is about from the frame and
+  the opening words alone, with three seconds the outside limit rather than the target. The
+  frame has no points of its own; it is scored through those two slots.
+  On long-form answer-first build type: result shown up front 5 + title 3 + seg ① 2.
   On long-form non-build and every `arc:"story"` episode: title 5 + seg ① 5 — on a story arc
   the first frame is the moment, and a result or ending in the first frame or in seg ① closes
   the loop at 0 s: seg ① scores 2 or less unless the cover wrote why. Award the
@@ -646,23 +733,28 @@ reviewer quotes its output as the evidence.
   first) **and takes the shape written in `hookForm`** (paradox · gap · payoff · identify ·
   number · secret — scenes-schema §the six hook forms; a missing `hookForm` is a directive
   to label it, a form that doesn't serve the stimulus is a directive to change one of the
-  two, and a form the last drip (short) or the result (long-form) never pays — a gap never
-  closed, a secret never revealed, a number never counted out — docks the drip / hooking
-  axis as the early-exit trap) — if the title's
+  two, and a form nothing pays — a gap never closed, a secret never revealed, a number never
+  counted out — docks the drip / hooking axis as the early-exit trap, and on a short a
+  promise no drip pays is P0-15. The pay sits in the last drip on a short and in the result on
+  long-form, except under `hookForm:"payoff"`, where the cover pays the result itself and the
+  drips owe the account behind it) — if the title's
   provocation and seg ①'s provocation point at different things,
   dock the title slot too (the catch is broken) / plain language — a first-time listener
   keeps up 10 / **hold 5** — on a short: the shots after the cover are `beat:"drip"`, each
-  non-final drip pays one piece and opens the next gap, the last drip completes the answer
-  (0 if there's no drip; 2 or less if a drip only explains, or if the cover dumped the
-  answer). On long-form: the shot after the cover is `beat:"hooking"`, it hooks the same
-  thing the cover threw with the viewer as the subject, and it doesn't unpack the answer
+  non-final drip pays one piece and opens the next gap, the last drip completes the answer —
+  or, under a cover that already stated the result, the account behind it (0 if there's no
+  drip; 2 or less if a drip only explains, or if a result-first cover's drips never say how or
+  why it happened). On long-form: the shot after the cover is `beat:"hooking"`, it hooks the
+  same thing the cover threw with the viewer as the subject, and it doesn't unpack the answer
   (scenes-schema §hooking. 0 if there's no hooking shot; 2 or less if it hooks material
   other than the cover's or gives the answer away up front — on a story arc a body or turn
   beat that names the payoff is the same 2 or less. 2 or less if an episode that opened on
   fear never answers that threat) / the scenes run through to one result for the episode,
   and on a short they walk hook → drip → cta; on long-form answer-first the result comes
   before the content; on a story arc the answer first appears in the result, the turn sits
-  right before it, and the cta's frame points back at the cover 5
+  right before it, and the cta's frame points back at the cover. On a short the `cta` shot
+  also carries `shot.share` and speaks it, so the episode ends holding one thing a viewer
+  could pass on as it stands — an ask in that slot is not one 5
 - **Facts and tone (30)**: faithful against research.md (ranges and as-of dates preserved)
   15 / matches profile §2 tone and §1 target audience 10 / screen text agrees with the narration 5
 
@@ -726,8 +818,9 @@ as-is (1-based).
 
 If the `scene`·`shot`·`visual.picture`·`visual.overlay` fields are there, look at these too.
 Skip the production-layer and coverage checks when an older file doesn't have them. The semantic
-route is not optional on a newly authored file: `check-scenes.js` requires `shot.infoType`, and
-the reviewer still checks whether the declared type tells the truth.
+route is not optional on a newly authored file: `check-scenes.js` requires `shot.infoType`,
+and on a short's `beat:"cta"` shot it requires `shot.share`. The reviewer still checks
+whether the declared type tells the truth and whether the declared trigger is really said.
 
 - **Production layer** — whether the screen body (`picture`: still photo / AI video /
   recording / shared asset) and the treatment over it (`overlay`: HTML / none) match the
@@ -753,10 +846,10 @@ the reviewer still checks whether the declared type tells the truth.
 
 | Type | What that scene has to do |
 |---|---|
-| cover | On a short, open a gap — say **what the story is about and why to watch** within three seconds, and do **not** dump `COMPREHENSION.answer`. On long-form answer-first (build type), show the finished result at a glance in the first second. On a story arc (`arc:"story"`), show the moment it went wrong and keep the ending out of the frame and out of seg ①. Hook the why with whichever opening strategy the `hookType` names (a short: fear · empathy · curiosity; long-form may also show the ending first) — it only does its job when the title and seg ① actually carry that provocation (scenes-schema §The four opening strategies). No method explanation here |
-| drip (`beat:"drip"`, short-form only) | Every middle shot on a short. Each shot except the last pays one piece of the answer and opens the next gap in the same breath (scenario-craft §5). The last drip is the first place the answer is complete. A drip that only explains, or that dumps the whole answer on the first drip, has no hold job |
+| cover | On a short, say **what the story is about and why to watch** inside the first second — the frame and the opening words together, with three seconds the outside limit. Opening on a gap and opening on the result are both legal: a gap cover keeps `COMPREHENSION.answer` for the drips, a `hookType:"spoiler"` / `hookForm:"payoff"` cover states it and the drips owe the account behind it. On long-form answer-first (build type), show the finished result at a glance in the first second. On a story arc (`arc:"story"`), show the moment it went wrong and keep the ending out of the frame and out of seg ①. Hook the why with whichever opening strategy the `hookType` names (any of the four, on either format) — it only does its job when the title and seg ① actually carry that provocation (scenes-schema §The four opening strategies). No method explanation here |
+| drip (`beat:"drip"`, short-form only) | Every middle shot on a short. Each shot except the last pays one piece of the answer and opens the next gap in the same breath (scenario-craft §5). Under a gap cover the last drip is the first place the answer is complete; under a cover that already stated the result, the last drip completes the account behind it. A drip that only explains, or that dumps the whole answer on the first drip, has no hold job |
 | hooking (`beat:"hooking"`, long-form only) | The shot right after the cover — it catches what the cover threw (the chosen opening strategy) unchanged (same subject, same promise) and hooks the viewer's problem, loss, or gain with the viewer as the subject, without unpacking the answer, the method, or the finished result. On a story arc it is the setup — the protagonist and the original goal as subject, the ending still withheld. Don't fill it with greetings, introductions, or teasers (scenes-schema §hooking). On a short this beat is a P0 |
-| points | One message per screen. On a short `beat:"drip"` is the curiosity stage and `beat:"cta"` is the last narrated shot. On long-form `beat:"result"` unfolds the finished thing; `beat:"body"` says only how that result was made. On a story arc `beat:"body"` builds the conflict without naming the payoff, `beat:"turn"` is the single highest-tension screen, sits right before the payoff, **and is planted** — its clue sits in the setup or an early build shot as true information read wrong (misdirection); a turn resting on hidden or false information is a cheat, and a deliberate plant no later scene pays is an unpaid promise (scenario-craft §3). On the same arc the body holds before it bursts — a rising series of holds in `shot.feel`, the release an action rather than the emotion (scenario-craft §8) — the turn is a double hit — the situation flips and the plant re-reads in that shot, the outcome still withheld for the result (§9) — and the premise is shown working once rather than told: a hooking segment or `quote` whose only job is explaining how the world works is the explainer tell (§10). All three are correction directives on a story arc, not P0s, and none applies on answer-first. On long-form `beat:"result"` is the first place the answer is on screen. The caption doesn't repeat the title |
+| points | One message per screen. On a short `beat:"drip"` is the curiosity stage and `beat:"cta"` is the last narrated shot — it hands over the forwardable thing named in `shot.share` and says it out loud. On long-form `beat:"result"` unfolds the finished thing; `beat:"body"` says only how that result was made. On a story arc `beat:"body"` builds the conflict without naming the payoff, `beat:"turn"` is the single highest-tension screen, sits right before the payoff, **and is planted** — its clue sits in the setup or an early build shot as true information read wrong (misdirection); a turn resting on hidden or false information is a cheat, and a deliberate plant no later scene pays is an unpaid promise (scenario-craft §3). On the same arc the body holds before it bursts — a rising series of holds in `shot.feel`, the release an action rather than the emotion (scenario-craft §8) — the turn is a double hit — the situation flips and the plant re-reads in that shot, the outcome still withheld for the result (§9) — and the premise is shown working once rather than told: a hooking segment or `quote` whose only job is explaining how the world works is the explainer tell (§10). All three are correction directives on a story arc, not P0s, and none applies on answer-first. On long-form `beat:"result"` is the first place the answer is on screen. The caption doesn't repeat the title |
 | quote | Something that would actually come out of that person's mouth. The role label is honest (no hiding that it's AI) |
 | broll | 4–8 wordless seconds that give the story a comma or switch scenes |
 
@@ -794,8 +887,8 @@ the reviewer still checks whether the declared type tells the truth.
     hooking shot, or move the existing result scene forward (scenes-schema §Playback order).
     A story arc (`arc:"story"` on the cover) puts the build before the payoff by design — there
     the defect is the reverse: a result shot sitting ahead of the body or the turn. **A short
-    is outside this P0** — its order is hook → drip → cta, and dumping the answer on the cover
-    is P0-15
+    is outside this P0** — its order is hook → drip → cta whether or not the cover states the
+    result; a cover that promises a reveal no drip delivers is P0-15
 12. **No hooking shot (long-form) / a hooking shot (short)** — on long-form, the shot after
     the cover (excluding an opening b-roll) isn't `beat:"hooking"`, or there's no hooking
     shot at all. Info types are no exception. Even with a hooking shot, hooking material
@@ -823,15 +916,27 @@ the reviewer still checks whether the declared type tells the truth.
     `check-scenes.js` blocks the estimate; here read the plan and say which sentences share
     one picture. A generated cut with no `visual.why`, or one whose reason does not say why a
     still or an HTML action is insufficient, is the same defect
-15. **Hook dumps the answer on a short** — the cover's title, hero stat, or spoken text
-    contains `COMPREHENSION.answer`, or the cover uses `hookType:"spoiler"` / `hookForm:"payoff"`.
-    The last drip is the first place the answer is complete
+15. **Cover promises a reveal the body never delivers, on a short** — the cover opens a gap
+    no drip closes, or it declares `hookType:"spoiler"` / `hookForm:"payoff"` and neither the
+    frame nor the spoken text states the result it claims, or it states the result and no drip
+    accounts for it. **A cover may say the answer** — the reveal moved forward (owner directive
+    2026-09-07), so `hookType:"spoiler"` and `hookForm:"payoff"` are legal here and
+    `COMPREHENSION.answer` on the cover is not a defect by itself. What is a defect is the
+    promise nothing pays
 16. **No drip, or no spoken CTA, on a short** — fewer than one `beat:"drip"` shot, or the last
     narrated shot is not `beat:"cta"`, or that CTA has empty narration. A shared outro asset
-    is not the spoken close
+    is not the spoken close, and on a channel that turned the short-form outro off nothing
+    follows the CTA at all — its last sentence and last frame are the whole last impression
 17. **A non-final drip that only explains** — a drip other than the last that pays a piece
     and opens no next gap, or that dumps the rest of the answer. The hold job is "pay one,
     open the next" (scenario-craft §5). The last drip is allowed to complete the answer
+18. **No forwardable thing on the `cta` shot, on a short** — `shot.share` is missing, or what
+    it names never reaches the shot: no fact, verdict, line or checklist a viewer could send
+    someone as it stands. An ask ("구독", "공유해 주세요") is not one. `check-scenes.js` fails
+    a missing or too-short `shot.share`; yours is the one that is filled in and empty of
+    content, or that names a sentence the narration never says. `shot.shareType`
+    (fact · verdict · line · checklist · none) is optional — a type that doesn't match the
+    trigger is a correction directive to relabel it, not this P0
 
 ## Per-scene axes (additive out of 100 — scored separately for each scene)
 
@@ -1013,8 +1118,10 @@ dial fixed after generation costs the clip, and on a filmed shot it costs a refi
 ## Scope
 
 In scope, **on every shot**: the shot grammar — is `shot.feel` written, is it a feeling rather
-than a restated `info` or a request for a move ("cinematic", "dynamic"), and do `shot.size` and
-`shot.angle` serve it against the directing-grammar §5 row; on a generated still, is `shot.space`
+than a restated `info` or a request for a move ("cinematic", "dynamic"), do `shot.size` and
+`shot.angle` serve it against the directing-grammar §5 row, and does the size show what
+`shot.info` needs against the §2.1 table (place and head count want a wide, the one line wants
+the face, the thing itself wants an insert); on a generated still, is `shot.space`
 written in the camera frame with a visible-result `facing` and a `layout` that names sides
 (directing-grammar §3.5); the rationing and sequencing across shots (one close-up — `cu`·`choker`·`ecu` — per scene, `choker`/`ecu` once or twice per episode, one `dutch` per episode with
 its reason written, a close-up opening paid back in the next shot, the hook cut and speech clips
@@ -1115,12 +1222,17 @@ finding; a silent departure is.
   a camera move, whole-photo zoom or pan, caption change, still swap, or ambient drift. The field
   has to say what the subject or evidence visibly does; a motion slide also names that change in
   its `plan` against the narration groups.
+- **P0-14 the size contradicts the info** — `cu`/`ecu`/`insert` on a shot whose `info` is the
+  place, the head count or the distance between people; `ls`/`els` on the one line that has to
+  land on a face; `ms` on a walk, a dance or a fight; a lone figure at `els` meant as scale —
+  with no reason written on the shot (directing-grammar §2.1). A written reason is a departure,
+  not a P0.
 
 ## Per-shot axes (additive out of 100 — scored separately for each shot)
 
 | Axis | Points | What earns them | Applies to |
 |---|---|---|---|
-| Feel written and served | 30 | `shot.feel` is a feeling (not a restated `info`, not "cinematic"/"dynamic"); `size` and `angle` match the directing-grammar §5 row for it, or a reason for leaving the row is written on the shot; the hook cut and speech clips sit at `eye`; on a generated still, `shot.space` is in the camera frame with `layout` and (when a person is on screen) `facing` as the visible result, no banned language | every shot |
+| Feel written and served | 30 | `shot.feel` is a feeling (not a restated `info`, not "cinematic"/"dynamic"); `size` and `angle` match the directing-grammar §5 row for it, or a reason for leaving the row is written on the shot; the size also shows what `info` needs (§2.1 — the establishing shot of a scene wide, the line that matters on the face, the object as an insert); the hook cut and speech clips sit at `eye`; on a generated still, `shot.space` is in the camera frame with `layout` and (when a person is on screen) `facing` as the visible result, no banned language | every shot |
 | Rationing and sequencing | 10 | this shot doesn't break the across-shot rules — a second close-up (`cu`·`choker`·`ecu`) in the scene, a third `choker`/`ecu` in the episode, a second `dutch` or one without its reason, a close-up opening not paid back by the next shot, a wide under 1.5× the close beside it, a later shot of the scene that flips `space.line` without a legal 180° crossing written (directing-grammar §6 rule 11), a shot after the first with no `transition`, a `jcut` where time, place or attention moved between the two shots, a join that says something other than what happened between them (the ordered table in scenes-schema §scene transition), consecutive stills of the same size and angle in one scene (directing-grammar §6 rule 16) | every shot |
 | Slots complete, in the engine's own words, one move chosen from the feel | 30 | four slots filled, vendor vocabulary, one move, and the move sits in the §4–§5 rows for that feel (a `dolly in` on "loss" or a `dolly out` on "realisation" contradicts it); the stored clip prompt exists, says what the slots say, and keeps the route's timing grammar | generated shots |
 | Length fits the purpose | 15 | matches the §cut length table and the feel row, it is the length that will be used, and it sits inside the routed engine's server grid (veo 4/6/8 · 1.5 pro 4–12s) | generated shots |
@@ -1142,7 +1254,9 @@ feel left to ride on the move while size and angle stayed at their defaults.
 
 **A missing `shot.feel` on an older file is not a P0** — score the first axis 0 on that shot,
 write the directive, and move on; a missing field is a gap the author fills, not a reason to
-halt. The same goes for a `shot.size` value outside the vocabulary (legacy `ws` reads as `ls`).
+halt. The same goes for a `shot.size` value outside the vocabulary (legacy `ws` reads as `ls`),
+and for a missing `shot.size` — the first axis scores 0 on that shot and the directive names
+the §2.1 row.
 
 Start from 0 and add points only with evidence you read that shot's `shot` block, and on a
 generated shot its slots and its `duration`.

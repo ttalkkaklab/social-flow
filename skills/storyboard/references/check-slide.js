@@ -83,9 +83,10 @@ const MSG = {
   castMissing: "여러 배우가 사건을 연기하는 act 객체에는 visual.slide.cast 가 필요하다",
   castId: id => `캐릭터 연기 act의 actor/target "${id}" 가 visual.slide.cast 에 없다`,
   objectFile: "slide.object 에 file 이 없다 — slides/assets/s<샷>-<slug>.png (bake-object.py --out)",
+  objectSheet: "slide.object 에 sheet 가 없다 — slides/assets/s<샷>-<slug>.png (bake-blender.py --out, blender-objects.md)",
   objectExt: f => `slide.object 시트 "${f}" 는 png 가 아니다 — webp 는 움직이는 파일과 확장자로 못 가른다`,
-  objectMissing: f => `구운 시트가 없다 — ${f} (bake-object.py 로 먼저 굽는다, rendered-object.md)`,
-  objectSidecar: f => `사이드카가 없다 — ${f} (bake-object.py 가 시트 옆에 쓴다)`,
+  objectMissing: (f, tool = "bake-object.py") => `구운 시트가 없다 — ${f} (${tool} 로 먼저 굽는다, ${tool === "bake-object.py" ? "rendered-object.md" : "blender-objects.md"})`,
+  objectSidecar: (f, tool = "bake-object.py") => `사이드카가 없다 — ${f} (${tool} 가 시트 옆에 쓴다)`,
   objectSidecarBad: (f, e) => `사이드카를 읽지 못했다 — ${f}: ${e}`,
   objectInclude: f => `슬라이드가 사이드카를 안 읽는다 — scenes.js 다음에 <script src="${f}"></script>`,
   objectUnused: "slide.object 가 있는데 render 가 h.object(rg, id) 를 부르지 않는다 — 물체가 화면에 없다",
@@ -286,18 +287,25 @@ function checkDir(dir, only, opts) {
     if (slide && slide.object && slide.object.renderer === 'mesh') {
       require('./mesh-preflight.js').checkMesh(dir, scene, code).forEach(message => fail(base, message));
     }
+    // renderer:"blender" (blender-objects.md) — the mesh recipe is checked like the mesh lane's, and
+    // the baked sheet plays through the sheet contract below; the sidecar must come from that recipe.
+    const blender = Boolean(slide && slide.object && slide.object.renderer === 'blender');
+    if (blender) {
+      require('./mesh-preflight.js').checkRecipeFiles(dir, scene).forEach(message => fail(base, message));
+    }
     if (slide && slide.object && slide.object.renderer !== 'mesh') {
       const ob = slide.object;
-      const f = String(ob.file || "");
-      if (!f) fail(base, MSG.objectFile);
+      const tool = blender ? "bake-blender.py" : "bake-object.py";
+      const f = String((blender ? ob.sheet : ob.file) || "");
+      if (!f) fail(base, blender ? MSG.objectSheet : MSG.objectFile);
       else {
         const id = path.basename(f).replace(/\.png$/i, "");
         if (!/\.png$/i.test(f)) fail(base, MSG.objectExt(f));
-        if (!fs.existsSync(path.join(dir, f))) fail(base, MSG.objectMissing(f));
+        if (!fs.existsSync(path.join(dir, f))) fail(base, MSG.objectMissing(f, tool));
         const side = f.replace(/\.png$/i, ".js");
         const sideAbs = path.resolve(dir, side);   // require 는 상대 경로를 모듈 이름으로 본다 — 절대 경로로
         let meta = null;
-        if (!fs.existsSync(sideAbs)) fail(base, MSG.objectSidecar(side));
+        if (!fs.existsSync(sideAbs)) fail(base, MSG.objectSidecar(side, tool));
         else {
           const tail = side.replace(/^slides\//, "");
           if (!new RegExp("<script[^>]*\\bsrc\\s*=\\s*[\"']" + tail.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "[\"']").test(code))
@@ -308,21 +316,38 @@ function checkDir(dir, only, opts) {
           global.window = keep;
           if (!meta) fail(base, MSG.objectSidecarBad(side, "window.SLIDE_OBJECTS[\"" + id + "\"] 가 없다"));
           if (meta && slide.quality === 'object-state-v1') {
-            for (const key of ['shape', 'keys', 'frames']) {
-              if (meta[key] !== ob[key]) fail(base, `object sidecar ${key} differs from scenes.js; rebake the sheet`);
+            if (blender) {
+              if (meta.renderer !== 'blender') fail(base, 'object sidecar was not written by bake-blender.py; rebake the sheet');
+              for (const key of ['engine', 'samples', 'fps']) {
+                if (meta[key] !== ob[key]) fail(base, `object sidecar ${key} differs from scenes.js; rebake the sheet`);
+              }
+              const recipeRel = String(ob.file || '').replace(/^slides\//, '');
+              const recipeAbs = path.resolve(dir, String(ob.file || ''));
+              if (meta.recipe !== recipeRel) fail(base, 'object sidecar recipe differs from scenes.js; rebake the sheet');
+              else if (fs.existsSync(recipeAbs) &&
+                       meta.recipeSha256 !== require('crypto').createHash('sha256').update(fs.readFileSync(recipeAbs)).digest('hex'))
+                fail(base, 'mesh recipe changed after the bake; rebake the sheet');
+              const segments = (scene.narration || []).length;
+              const groups = Object.keys(meta.ranges || {}).length;
+              if (segments && groups !== segments)
+                fail(base, `object sidecar has ${groups} frame groups for ${segments} narration segments; rebake with --segs`);
+            } else {
+              for (const key of ['shape', 'keys', 'frames']) {
+                if (meta[key] !== ob[key]) fail(base, `object sidecar ${key} differs from scenes.js; rebake the sheet`);
+              }
+              let startFrame = 0;
+              const expectedRanges = {};
+              for (const token of String(ob.frames || '').split(/\s+/).filter(Boolean)) {
+                const match = /^(\d+):(\d+)$/.exec(token);
+                if (!match) continue;
+                const endFrame = startFrame + Number(match[2]);
+                expectedRanges[match[1]] = [startFrame, endFrame]; startFrame = endFrame;
+              }
+              if (JSON.stringify(meta.ranges) !== JSON.stringify(expectedRanges))
+                fail(base, 'object sidecar ranges differ from the planned frame groups');
             }
             const expectedFile = f.replace(/^slides\//, '');
             if (meta.file !== expectedFile) fail(base, 'object sidecar file differs from scenes.js');
-            let startFrame = 0;
-            const expectedRanges = {};
-            for (const token of String(ob.frames || '').split(/\s+/).filter(Boolean)) {
-              const match = /^(\d+):(\d+)$/.exec(token);
-              if (!match) continue;
-              const endFrame = startFrame + Number(match[2]);
-              expectedRanges[match[1]] = [startFrame, endFrame]; startFrame = endFrame;
-            }
-            if (JSON.stringify(meta.ranges) !== JSON.stringify(expectedRanges))
-              fail(base, 'object sidecar ranges differ from the planned frame groups');
             try {
               require('./object-sheet.js').checkObjectSheet(meta, path.join(dir, f));
             } catch (error) {
@@ -525,6 +550,10 @@ function selftest() {
       { type: "points", title: "구운 물체", narration: [{ tts: "하나" }, { tts: "둘" }],
         visual: { slide: { file: "slides/s23-object.html", motion: true, treatment: "editorial", role: "statistic", motif: "disc", labels: ["물체"],
           object: { file: "slides/assets/s23-obj.png", shape: "disc", keys: "0,16,0 0,16,45 0,16,241", frames: "1:5 2:5", plan: "x" } } } },
+      { type: "points", title: "블렌더 물체", narration: [{ tts: "하나" }, { tts: "둘" }],
+        visual: { slide: { file: "slides/s24-blender.html", motion: true, treatment: "editorial", role: "mechanism", motif: "cart", labels: ["물체"],
+          object: { renderer: "blender", file: "slides/assets/s24-cart.json", sheet: "slides/assets/s24-cart.png",
+                    style: "illustration3d", engine: "cycles", samples: 64, fps: 30, plan: "x" } } } },
     ];
     // Supply valid quality plans so each legacy fixture isolates its original rule.
     window.SCENES.forEach(s => {
@@ -536,6 +565,21 @@ function selftest() {
     });`);
   const SIDECAR = 'window.SLIDE_OBJECTS = Object.assign(window.SLIDE_OBJECTS || {}, {"s23-obj": {"file": "assets/s23-obj.png", "shape": "disc", "keys":"0,16,0 0,16,45 0,16,241", "frames":"1:5 2:5", "cell": [630, 600], "cols": 9, "n": 11, "ranges": {"1": [0, 5], "2": [5, 10]}, "ink": [49, 15, 629, 521]}});';
   const objectPNG = require('./object-sheet-fixture.js').makeSheet([630, 600], 9, 11);
+  // The Blender lane's fixtures: the recipe the mesh contract accepts, the sheet the bake would write,
+  // and a sidecar whose recipe hash matches — every mismatch case below mutates one field of this.
+  const BLENDER_RECIPE = JSON.stringify({ version: 1, style: "illustration3d",
+    camera: { position: [3, 2, 5], target: [0, 0, 0], fov: 35 },
+    nodes: [{ id: "hinge" }, { id: "lid", parent: "hinge", geometry: { type: "roundedBox", size: [2, .2, 1] } }],
+    states: [{ pose: { hinge: { rotation: [0, 0, 0] } } }, { pose: { hinge: { rotation: [0, 0, 70] } } },
+             { pose: { hinge: { rotation: [0, 0, 20] } } }],
+    groups: [{ group: 1, durationMs: 3000, ease: "smoother" }, { group: 2, durationMs: 3000, ease: "smoother" }] });
+  const BLENDER_SHA = require('crypto').createHash('sha256').update(BLENDER_RECIPE).digest('hex');
+  const blenderSidecar = (over = {}) => 'window.SLIDE_OBJECTS = Object.assign(window.SLIDE_OBJECTS || {}, ' +
+    JSON.stringify({ "s24-cart": Object.assign({ file: "assets/s24-cart.png", renderer: "blender",
+      recipe: "assets/s24-cart.json", recipeSha256: BLENDER_SHA, engine: "cycles", samples: 64, fps: 30,
+      segs: { "1": 3000, "2": 3000 }, cell: [630, 600], cols: 9, n: 11,
+      ranges: { "1": [0, 5], "2": [5, 10] }, ink: [49, 15, 629, 521] }, over) }) + ');';
+  const BLENDER_SLIDE = `const SLIDE_SHOT = 24; window.__seek = 1; <script src="assets/s24-cart.js"></script> function renderSlide(S, h) { return h.object(1, "s24-cart", { x: 97, y: 0, slot: true }); }`;
   const cases = [
     ["s1-static.html", `const SLIDE_SHOT = 1; const a = "정지 라벨";`, [MSG.mustMotion]],
     ["s1-static.html", `const SLIDE_SHOT = 1; <style>.x{animation:rise 1s}</style>`, [MSG.mustMotion]],
@@ -680,6 +724,12 @@ function selftest() {
       [MSG.objectId("disc", "s23-obj")]],
     ["s23-object.html", `const SLIDE_SHOT = 23; window.__seek = 1; function renderSlide(S, h) { return h.object(1, "s23-obj", { x: 97, y: 0 }); }`,
       [MSG.objectMissing("slides/assets/s23-obj.png"), MSG.objectSidecar("slides/assets/s23-obj.js")], "missing-asset"],
+    // 블렌더로 구운 물체 — 레시피는 메시 계약대로 읽고, 시트는 사이드카가 그 베이크의 것임을 증명해야 한다
+    ["s24-blender.html", BLENDER_SLIDE, []],
+    ["s24-blender.html", BLENDER_SLIDE, ["object sidecar was not written by bake-blender.py; rebake the sheet"], "sidecar-renderer"],
+    ["s24-blender.html", BLENDER_SLIDE, ["mesh recipe changed after the bake; rebake the sheet"], "sidecar-sha"],
+    ["s24-blender.html", BLENDER_SLIDE, ["object sidecar samples differs from scenes.js; rebake the sheet"], "sidecar-samples"],
+    ["s24-blender.html", BLENDER_SLIDE, ["object sidecar has 1 frame groups for 2 narration segments; rebake with --segs"], "sidecar-groups"],
     // 재질 — 템플릿 머리의 html.studio 규칙은 통과하고, 저작 영역과 머리의 다른 규칙은 막는다
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>html.studio .band{box-shadow:0 2px 0 #000} html.studio .stage{text-shadow:0 1px 0 #000} html.studio .marks .mk{filter:drop-shadow(0 1px 1px #000)}</style> function renderSlide(S, h) { return h.count(1, 3); }`, []],
     ["s2-motion.html", `const SLIDE_SHOT = 2; window.__seek = 1; <style>html.studio .band{box-shadow:0 2px 0 #000} .card{box-shadow:0 8px 20px #000}</style> function renderSlide(S, h) { return h.count(1, 3); }`, [MSG.generatedStyle]],
@@ -702,10 +752,19 @@ function selftest() {
     wipeSlides();
     const need = { "s15-arts.html": ["assets/s15-stamp.png"], "s18-fig.html": ["assets/s18-person.png"],
       "s20-footage.html": ["footage/s20-g1.mp4", "footage/s20-g2.mp4"],
-      "s23-object.html": ["assets/s23-obj.png", "assets/s23-obj.js"] }[name] || [];
+      "s23-object.html": ["assets/s23-obj.png", "assets/s23-obj.js"],
+      "s24-blender.html": ["assets/s24-cart.png", "assets/s24-cart.js", "assets/s24-cart.json"] }[name] || [];
     if (flag !== "missing-asset") for (const f of need) {
       fs.mkdirSync(path.dirname(path.join(slides, f)), { recursive: true });
-      fs.writeFileSync(path.join(slides, f), f.endsWith(".js") ? SIDECAR : f === 'assets/s23-obj.png' ? objectPNG : "x");
+      let body;
+      if (f === 'assets/s24-cart.json') {
+        body = flag === 'sidecar-sha' ? BLENDER_RECIPE.replace('"fov":35', '"fov":36') : BLENDER_RECIPE;
+      } else if (f === 'assets/s24-cart.js') {
+        body = blenderSidecar(flag === 'sidecar-renderer' ? { renderer: 'sheet' }
+          : flag === 'sidecar-samples' ? { samples: 32 }
+          : flag === 'sidecar-groups' ? { ranges: { "1": [0, 10] }, n: 11 } : {});
+      } else body = f.endsWith(".js") ? SIDECAR : (f === 'assets/s23-obj.png' || f === 'assets/s24-cart.png') ? objectPNG : "x";
+      fs.writeFileSync(path.join(slides, f), body);
     }
     fs.writeFileSync(path.join(slides, name), body);
     const got = [];

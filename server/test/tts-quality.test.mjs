@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { spawnSync } from 'node:child_process';
-import { checkedSpeechSchema, prepareGeneration, generateCheckedSpeech, characterErrorRate, normalizeSpeech, reviewFailures, signalFailures, measureSignal } from '../dist/tts-quality.js';
+import { REVIEW_MODEL, checkedSpeechSchema, prepareGeneration, generateCheckedSpeech, characterErrorRate, normalizeSpeech, reviewFailures, signalFailures, measureSignal } from '../dist/tts-quality.js';
 import { pcmToWav } from '../dist/media-utils.js';
 import { TOOLS } from '../dist/tools.js';
 import { ROUTES } from '../dist/handlers.js';
@@ -121,5 +121,85 @@ test('the builder-side CER and normalizer never drift from the server-side pair'
   for(const [a,b] of pairs){
     assert.equal(checker.cer(a,b),characterErrorRate(a,b),JSON.stringify([a,b]));
     assert.equal(checker.normalize(a),normalizeSpeech(a),JSON.stringify(a));
+  }
+});
+
+test('reviewer change resumes a pending WAV and keeps prior failed takes',async t=>{
+  const f=setup(t);let calls=0;
+  f.deps.listen=async()=>{if(++calls===1)return {transcript:script,review:{...good(),clarity:70}};throw new Error('404 reviewer unavailable');};
+  assert.equal((await generateCheckedSpeech(f.request,f.deps)).status,'unverified');
+  const old=f.proof();old.model='retired-reviewer';for(const take of old.attempts)delete take.model;
+  writeFileSync(f.file+'.quality.json',JSON.stringify(old));
+  const wav=readFileSync(f.file);
+  f.deps.listen=async()=>({transcript:script,review:good()});
+  assert.equal((await generateCheckedSpeech(f.request,f.deps)).status,'pass');
+  assert.equal(f.count(),2);assert.deepEqual(readFileSync(f.file),wav);
+  assert.equal(f.proof().attempts.length,2);
+  assert.equal(f.proof().attempts[0].model,'retired-reviewer');
+  assert.ok(f.proof().attempts[0].failures.length);
+  assert.equal(f.proof().attempts[1].model,REVIEW_MODEL);
+});
+test('reviewer change rechecks a PASS without synthesis and never resets exhausted failures',async t=>{
+  const f=setup(t);await generateCheckedSpeech(f.request,f.deps);
+  let old=f.proof();old.model='retired-reviewer';delete old.attempts[0].model;
+  writeFileSync(f.file+'.quality.json',JSON.stringify(old));
+  let reviews=0;f.deps.listen=async()=>{reviews++;return {transcript:script,review:good()};};
+  assert.equal((await generateCheckedSpeech(f.request,f.deps)).status,'pass');
+  assert.equal(reviews,1);assert.equal(f.count(),1);
+  assert.equal(f.proof().attempts[0].previousReviews[0].model,'retired-reviewer');
+  const g=setup(t);g.deps.listen=async()=>({transcript:script,review:{...good(),clarity:70}});
+  await generateCheckedSpeech(g.request,g.deps);
+  old=g.proof();old.model='retired-reviewer';writeFileSync(g.file+'.quality.json',JSON.stringify(old));
+  assert.equal((await generateCheckedSpeech(g.request,g.deps)).status,'fail');assert.equal(g.count(),3);
+});
+test('review model environment uses a trimmed override or the default',()=>{
+  for(const [value,expected] of [['  audio-review-model  ','audio-review-model'],['  ','gemini-3.8-flash']]){
+    const result=spawnSync(process.execPath,['--input-type=module','-e',"import {REVIEW_MODEL} from './dist/tts-quality.js';console.log(REVIEW_MODEL)"],
+      {cwd:path.resolve(import.meta.dirname,'..'),env:{...process.env,SOCIAL_FLOW_TTS_REVIEW_MODEL:value},encoding:'utf8'});
+    assert.equal(result.status,0,result.stderr);assert.equal(result.stdout.trim(),expected);
+  }
+});
+
+test('failed replacement review never attributes old scores to the new reviewer',async t=>{
+  const f=setup(t);await generateCheckedSpeech(f.request,f.deps);
+  const old=f.proof();old.model='retired-reviewer';old.attempts[0].model='retired-reviewer';
+  writeFileSync(f.file+'.quality.json',JSON.stringify(old));
+  f.deps.listen=async()=>{throw new Error('404 reviewer unavailable');};
+  for(let retry=0;retry<2;retry++){
+    assert.equal((await generateCheckedSpeech(f.request,f.deps)).status,'unverified');
+    const take=f.proof().attempts[0];
+    assert.equal(take.pending,true);assert.equal(take.model,'retired-reviewer');
+    for(const key of ['transcript','review','failures','signal','cer'])assert.equal(Object.hasOwn(take,key),false,key);
+    assert.equal(take.previousReviews.length,1);
+    assert.equal(take.previousReviews[0].model,'retired-reviewer');
+    assert.deepEqual(take.previousReviews[0].review,old.attempts[0].review);
+    assert.equal(f.count(),1);assert.throws(()=>checker.verifyProof(f.file,script),/PASS/);
+  }
+  f.deps.listen=async()=>({transcript:script,review:good()});
+  assert.equal((await generateCheckedSpeech(f.request,f.deps)).status,'pass');
+  assert.equal(f.proof().attempts[0].model,REVIEW_MODEL);assert.equal(f.count(),1);
+});
+
+test('review API version override and blank default reach only the review requests',async t=>{
+  const f=setup(t);await f.deps.generate();
+  for(const [value,expected] of [['  v1beta  ','v1beta'],['  ','v1']]){
+    const child=`
+      import {listen, REVIEW_API_VERSION} from './dist/tts-quality.js';
+      const urls=[];
+      globalThis.fetch=async(input)=>{
+        urls.push(String(input.url ?? input));
+        const result=urls.length===1?{transcript:${JSON.stringify(script)}}:${JSON.stringify(good())};
+        return new Response(JSON.stringify({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify(result)}]}}]}),{status:200,headers:{'Content-Type':'application/json'}});
+      };
+      await listen(${JSON.stringify(f.file)},${JSON.stringify(f.request)});
+      console.log(JSON.stringify({version:REVIEW_API_VERSION,urls}));
+    `;
+    const result=spawnSync(process.execPath,['--input-type=module','-e',child],{
+      cwd:path.resolve(import.meta.dirname,'..'),encoding:'utf8',
+      env:{...process.env,GEMINI_API_KEY:'test-only',GOOGLE_API_KEY:'',GOOGLE_GENAI_USE_VERTEXAI:'false',SOCIAL_FLOW_TTS_REVIEW_API_VERSION:value},
+    });
+    assert.equal(result.status,0,result.stderr);
+    const actual=JSON.parse(result.stdout);assert.equal(actual.version,expected);assert.equal(actual.urls.length,2);
+    for(const url of actual.urls)assert.equal(new URL(url).pathname.split('/')[1],expected);
   }
 });

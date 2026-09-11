@@ -38,6 +38,20 @@ for SRC in footage/*.mp4 footage/*.mov footage/*.m4v; do
 done
 ```
 
+- **Stock clips take the same lane, with two differences.** A `visual.source: "stock"` cut names
+  a file under `footage/` that does not exist yet: download `files[0].url` from the storyboard's
+  `stock_search` record (or the page in `visual.license.url`) into that exact name first, then
+  normalize it with the loop above — a Commons WebM goes through the same ffmpeg call. Its
+  sound is dropped, so skip the PCM pull and let TTS, subtitles and BGM run over it as over a
+  motion background; `visual.in` is the trim start inside the source. Keep the download
+  command and date in `.work/decisions.tsv` beside the license record: the terms that applied
+  on the day you fetched the file are the ones you can prove later.
+
+  ```bash
+  curl -L --fail -o footage/s4-commons-12345.webm "<files[0].url>"
+  ffmpeg -y -v error -ss "${IN:-0}" -i footage/s4-commons-12345.webm -an \
+    -r 30 -vsync cfr -c:v libx264 -preset medium -crf 18 -pix_fmt yuv420p .work/footage/s4-commons-12345.mov
+  ```
 - **Check first** — does every `visual.clip` on the filmed scenes in scenes.js exist. If even
   one is missing, **stop there** and tell the user which file is empty. Go on without it and
   you get a video with that scene missing, and you find out later.
@@ -86,6 +100,10 @@ ffmpeg -i .work/pcm/s<shot number>.wav -af silencedetect=n=-35dB:d=0.25 -f null 
 node $REF/render-motion-slide.mjs storyboard/slides/s<shot number>-<slug>.html \
   --out .work/motion/slide-s<shot number> --segs 1:3160,2:2840,3:4210
 ```
+
+A slide whose `slide.object` is `renderer:"blender"` is rebaked with the same measured values
+first — `bake-blender.py --recipe … --out … --segs 1:3160,2:2840` (storyboard
+`references/blender-objects.md` §4) — so its frames match the capture rate, then rendered as above.
 
 `--segs` keys are **groups**, not segments. On an A|B sub-reveal slide (more groups than
 segments) `auto` steps aside with a warning — split the segment's measured window at the
@@ -141,10 +159,10 @@ done
 - Card contract (§6): audio = that wav, on the **normal lane** — do not set `sync=1`.
   Trimming, loudnorm, and sentence-boundary detection are all wanted here (the boundaries
   drive the reveal transitions), and with no mouth on screen there's no sync constraint.
-- **Run the build with `ATEMPO_MIN=1 ATEMPO_MAX=1`** — don't apply machine speed
-  correction to a human voice (provisional, 2026-08-18, measured on the first live-voice
-  build). A speaking-rate REGEN recommendation is not a regeneration target here — that
-  shot needs a re-record or a script change.
+- **No machine speed correction on a human voice** — the build's default since 2026-09-11
+  (`ATEMPO_MIN`/`ATEMPO_MAX` 1.0; before that this lane set them on the build line). A
+  speaking-rate REGEN recommendation is not a regeneration target here — that shot needs a
+  re-record or a script change.
 - If noise at the head of a recording slips under the trim threshold (-50dB) and comes out
   as dead air, trim that one card by hand — also measured on the first episode.
 

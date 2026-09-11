@@ -6,6 +6,8 @@
 #
 # Usage: build-reel.sh <workdir>
 #   <workdir>/cards.tsv : idx <TAB> narration-audio-path <TAB> target-rate(chars/sec) <TAB> zoom(in|out|auto|none|punch|hold) [<TAB> opts]
+#                         target-rate stays a required column but has no effect unless ATEMPO_MIN/ATEMPO_MAX
+#                         are set on the build line — by default the voice is never time-stretched (see below).
 #                         in/out/auto zoom over the whole card by the card's span: span= when written,
 #                         else KB_RATE × card seconds capped at KB_ZMAX (the baked text stays in the zone).
 #                         zoom=none skips Ken Burns — for footage that already moves, like filmed clips.
@@ -82,8 +84,9 @@
 #                         A sound heard only during that seg, plus BGM gating. The audio file can be
 #                         wav or mp4 (a video contributes its own sound); it can be empty with just
 #                         bgm set to off. Times are keyed to the visual's appearance, not sentence boundaries
-#   <workdir>/outro.mp4 : (optional) shared outro — joined with a black fade when present
-#                         (total length = feature + outro)
+#   <workdir>/outro.mp4 : (optional) shared outro — joined with a black fade when OUTRO=1 (the
+#                         default) and the file is here (total length = feature + outro). OUTRO=0
+#                         muxes the feature alone; OUTRO=1 with no file stops the build
 #   <workdir>/fonts/    : (optional) subtitle fonts ttf/otf — libass can't read woff2
 # Output: <workdir>/reel.mp4 (clean master without subtitles — for platforms that take a separate subtitle file)
 #         <workdir>/reel-sub.mp4 (burned-in copy — for platforms with no subtitle-file path, skipped when BURN=0)
@@ -109,7 +112,7 @@ STORYBOARD=$(node -e 'console.log(require("path").resolve(process.argv[1]))' "${
 node "$HERE/verify-build-plan.js" "$WORKDIR" "$STORYBOARD"
 cd "$WORKDIR"
 node "$HERE/check-production.js" "$STORYBOARD" --workdir "$PWD" --ready --manifest --json > production-preflight.json
-FULL_VIDEO_SHOTS=$(node -e 'const p=require(process.argv[1]); console.log((p.generatedShots || []).join(" "))' "$PWD/production-preflight.json")
+REUSED_VIDEO_SHOTS=$(node -e 'const p=require(process.argv[1]); console.log((p.reusedShots || []).join(" "))' "$PWD/production-preflight.json")
 
 # Format preset — the `: "${VAR:=value}"` block written by format-resolve.js.
 # It must be read **before** the inline defaults for precedence to hold: caller env → format.env → inline.
@@ -123,7 +126,16 @@ SPF=$((48000 / FPS))               # audio samples per frame
 MIN_DUR=${MIN_DUR:-0.0}            # optional explicit minimum; short cuts stay short by default
 MAX_DUR=${MAX_DUR:-13.0}           # warn when exceeded (signal to shorten the script)
 RATE_TOL=${RATE_TOL:-0.05}
-ATEMPO_MIN=${ATEMPO_MIN:-0.88}; ATEMPO_MAX=${ATEMPO_MAX:-1.18}
+# Per-card tempo correction is off by default (2026-09-11). The engine at its profile speed already
+# runs at 5.3–6.4 chars/s (Supertonic 1.05, 12 takes measured), so a 4.5 target pinned every card to
+# the 0.88 floor — the whole episode dragged 12% slower — and cards with longer pauses swung the
+# other way, up to 1.18. Adjacent cards differed by 30%. Stacking that stretch under speedup.sh's
+# pass ran WSOLA twice and blurred consonants (사전 → 사점 in ASR). The voice ships at the engine's
+# own pace; pick the pace once, at the engine. Set both bounds to opt back in for one build.
+# The REGEN advisory below still measures the engine's own pace against [3.2, 6.2]/SPEED — the same
+# band the ship gate (check-final-speech-rate.py) enforces — so a card that trips it is a pace to fix at
+# the engine or in the script, not something this build corrects.
+ATEMPO_MIN=${ATEMPO_MIN:-1.0}; ATEMPO_MAX=${ATEMPO_MAX:-1.0}
 # The playback factor speedup.sh will apply after this build (produce §7.5). produce §1 appends the
 # channel's factor to .work/format.env, which both scripts source, so the build and the pass agree.
 # Sourced above; the inline default matches speedup.sh's for a hand-run build with no format.env.
@@ -181,6 +193,10 @@ SUB=${SUB:-1}                      # 1=generate subtitle data (subs.srt·subs.as
 BURN=${BURN:-1}                    # 1=also produce burned-in reel-sub.mp4, 0=clean master only
 SUB_FONT=${SUB_FONT:-Pretendard}   # fontconfig fallback when fonts/ has no ttf
 OUTRO_ASSET=${OUTRO_ASSET:-outro.mp4}   # outro to join — a different file per format
+OUTRO=${OUTRO:-1}                  # 1=join the outro (default), 0=the channel's shortform_outro is off
+# profile.md spells the choice `on`/`off`; the flag is the number. Anything else would fall to
+# the off path and drop the outro without saying so.
+case "$OUTRO" in 0|1) ;; *) echo "✗ OUTRO=$OUTRO — the flag is 1 or 0, not profile.md's shortform_outro on/off wording" >&2; exit 1;; esac
 STRICT_DIM=${STRICT_DIM:-0}        # 1=exit 1 on asset dimension mismatch, 0=one warning line
 URL_FMT=${URL_FMT:-}               # format parameter appended to capture URLs (empty for portrait)
 SUB_SIZE=${SUB_SIZE:-58}           # ASS Fontsize
@@ -199,6 +215,8 @@ SUB_PHRASE_MV=${SUB_PHRASE_MV:-680}    # phrase-mode bottom margin — the line'
 SUB_PHRASE_OUT=${SUB_PHRASE_OUT:-4}    # phrase-mode outline — 5 reads heavy at 92; the reference's edge is thin
 SUB_PHRASE_ML=${SUB_PHRASE_ML:-64}     # phrase-mode side margins — the Sub style's 250/250 leaves 580px, which wraps a 12-character 92px line into two (measured with libass)
 SUB_PHRASE_MR=${SUB_PHRASE_MR:-64}
+SUB_ACCENT=${SUB_ACCENT:-}             # word/phrase mode: RRGGBB hex — a year (1592년 · 16세기) and every SUB_ACCENT_WORDS name take this colour, the rest of the line stays white (history-short grammar); empty = off
+SUB_ACCENT_WORDS=${SUB_ACCENT_WORDS:-} # space-separated names to colour with SUB_ACCENT ("이순신 원균")
 case "$SUB_MODE" in
   word)   WSTYLE=Word;   PHRASE_ARG="" ;;
   phrase) WSTYLE=Phrase; PHRASE_ARG="--phrase $SUB_PHRASE_MAX" ;;
@@ -306,7 +324,15 @@ assert_orient() {  # <path> <role> — orientation only
   fi
 }
 
-[ -f "$OUTRO_ASSET" ] && assert_exact "$OUTRO_ASSET" "outro"
+# Every outro branch below asks this one question — the channel's flag **and** the copied file.
+# OUTRO=1 with nothing to join is a broken workdir, not an outro-off episode, and it stops here:
+# left to fall through it prints the same "no outro" line as the deliberate case, which is the
+# silent drop the 2026-08-19 gates were written for.
+outro_on() { [ "$OUTRO" = 1 ] && [ -f "$OUTRO_ASSET" ]; }
+if [ "$OUTRO" = 1 ]; then
+  [ -f "$OUTRO_ASSET" ] || { say "✗ OUTRO=1 but $OUTRO_ASSET isn't in the workdir — copy it (produce §6), or set OUTRO=0 in format.env when the channel ships without one"; exit 1; }
+  assert_exact "$OUTRO_ASSET" "outro"
+fi
 # segs.tsv column-3 parsing — the **same rules** as the build loop (| split · strip @ prefix · cut after ::).
 # Written differently, the set the precheck sees diverges from the set the build reads.
 while IFS=$'\t' read -r _ _ VIS _; do
@@ -539,7 +565,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
     WARN=1
   fi
 
-  # ── 3) Speech-rate normalization atempo (same as v2)
+  # ── 3) Speech-rate normalization atempo — F stays 1.0000 at the default bounds (see ATEMPO_MIN)
   if [ "$MUTE" -eq 1 ]; then F=1.0000
   else F=$(awk -v t="$TARGET" -v r="$R0" -v tol="$RATE_TOL" -v mn="$ATEMPO_MIN" -v mx="$ATEMPO_MAX" \
       'BEGIN{f=t/r; if (f>1-tol && f<1+tol) f=1; if (f<mn) f=mn; if (f>mx) f=mx; printf "%.4f", f}'); fi
@@ -685,6 +711,10 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
           NEED=$(awk -v s="$SOURCE_IN" -v e="$END_D" -v o="$OFFSET" -v start="${FOFF[$j]}" 'BEGIN{printf "%.6f", s+e-start+o}')
           awk -v actual="$BDUR" -v needed="$NEED" 'BEGIN{exit !(actual+0.00001>=needed)}' \
             || { say "card $IDX: source needs ${NEED}s including live handle; has ${BDUR}s. Choose an earlier edit.in, shorten/replan the cut, or regenerate. No freeze or loop substitution."; exit 1; }
+          case " $REUSED_VIDEO_SHOTS " in *" $IDX "*)
+            awk -v actual="$BDUR" -v needed="$D" -v start="$SOURCE_IN" -v render="$RENDER_D" 'BEGIN{d=actual-needed; if(d<0)d=-d; exit !(d<=0.05 && start==0 && render==needed)}' \
+              || { say "Reused card $IDX duration differs or requests trimming/live handles; use the complete imported clip with no source offset or outgoing handle."; exit 1; } ;;
+          esac
           INS+=(-ss "$SS" -t "$T" -i "$BASE")
         ;;
       *) INS+=(-loop 1 -framerate "$FPS" -t "$T" -i "$BASE") ;;
@@ -953,7 +983,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
                   || awk -v cs="$CS" -v p="$CPRE" -v b="${BARR[$j]}" 'BEGIN{printf "%.3f", cs+p+b}')
           else SPE=$(awk -v cs="$CS" -v p="$CPRE" -v l="$L" 'BEGIN{printf "%.3f", cs+p+l}'); fi
           AOFF=$(awk -v cs="$CS" -v p="$CPRE" 'BEGIN{printf "%.3f", cs+p}')
-          python3 "$HERE/word-cues.py" "$ST" "$EN" "$SPS" "$SPE" "$SUB_WORD_MIN" "$TXT" ${ALIGNJ:+--align "$ALIGNJ" --offset "$AOFF" --tts "${TARR[$j]}"} $PHRASE_ARG |
+          python3 "$HERE/word-cues.py" "$ST" "$EN" "$SPS" "$SPE" "$SUB_WORD_MIN" "$TXT" ${ALIGNJ:+--align "$ALIGNJ" --offset "$AOFF" --tts "${TARR[$j]}"} $PHRASE_ARG ${SUB_ACCENT:+--accent "$SUB_ACCENT" --accent-words "$SUB_ACCENT_WORDS"} |
             while IFS=$'\t' read -r WS WE WT; do
               case "$WS" in \#*) say "· card $IDX seg $j words: ${WS#\# }"; continue;; esac
               printf 'Dialogue: 0,%s,%s,%s,,0,0,0,,%s\n' "$(asstime "$WS")" "$(asstime "$WE")" "$WSTYLE" "$WT" >> work/subs.body
@@ -981,7 +1011,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
         EN=$(awk -v cs="$CS" -v e="$FE" -v d="$D" 'BEGIN{if(e>d)e=d; printf "%.3f", cs+e}')
         awk -v s="$ST" -v e="$EN" 'BEGIN{exit !(e>s)}' || continue
         if [ "$SUB_MODE" = "word" ] || [ "$SUB_MODE" = "phrase" ]; then
-          python3 "$HERE/word-cues.py" "$ST" "$EN" "$ST" "$EN" "$SUB_WORD_MIN" "$FT" $PHRASE_ARG |
+          python3 "$HERE/word-cues.py" "$ST" "$EN" "$ST" "$EN" "$SUB_WORD_MIN" "$FT" $PHRASE_ARG ${SUB_ACCENT:+--accent "$SUB_ACCENT" --accent-words "$SUB_ACCENT_WORDS"} |
             while IFS=$'\t' read -r WS WE WT; do
               case "$WS" in \#*) continue;; esac
               printf 'Dialogue: 0,%s,%s,%s,,0,0,0,,%s\n' "$(asstime "$WS")" "$(asstime "$WE")" "$WSTYLE" "$WT" >> work/subs.body
@@ -1213,7 +1243,7 @@ ENC=("${VENC[@]}" "${AENC[@]}" -movflags +faststart)
 # frozen black, and under -fps_mode passthrough those 19 frames vanish outright. Encoding
 # the two pieces separately and stream-copying them together leaves no filter at the seam.
 AUDSRC="work/mix.wav"; VDUR="$VT"; FO=""
-if [ -f "$OUTRO_ASSET" ]; then
+if outro_on; then
   OD=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$OUTRO_ASSET")
   FO=$(awk -v t="$VT" -v x="$XFADE" 'BEGIN{printf "%.6f", t-x}')
   VDUR=$(awk -v t="$VT" -v o="$OD" 'BEGIN{printf "%.6f", t+o}')
@@ -1227,14 +1257,14 @@ if [ -f "$OUTRO_ASSET" ]; then
 fi
 
 # The faded outro is identical for the clean and burned-in renders, so build it once.
-if [ -f "$OUTRO_ASSET" ]; then
+if outro_on; then
   ffmpeg -y -v error -i "$OUTRO_ASSET" \
     -vf "fade=t=in:st=0:d=$XFADE,setsar=1,format=yuv420p" -an "${VENC[@]}" work/outro-fade.mp4
 fi
 
 render() {                          # $1=output file  $2=subtitle filter (empty string = no burn-in)
   local OUT="$1" SF="${2:-}"
-  if [ -f "$OUTRO_ASSET" ]; then
+  if outro_on; then
     # Subtitles ride the feature only — the outro carries none, so SF goes on the feature.
     # Both pieces get the same VENC so the concat demuxer can stream-copy them.
     ffmpeg -y -v error -i work/video.mp4 \
@@ -1253,8 +1283,8 @@ render() {                          # $1=output file  $2=subtitle filter (empty 
 }
 
 render reel.mp4 ""
-if [ -f "$OUTRO_ASSET" ]; then say "── outro splice: black fade ${XFADE}s @ ${FO}s → total ${VDUR}s"
-else say "── no outro: muxing the main part alone"; fi
+if outro_on; then say "── outro splice: black fade ${XFADE}s @ ${FO}s → total ${VDUR}s"
+else say "── no outro (OUTRO=0, the channel ships without one): muxing the main part alone"; fi
 
 rm -f reel-sub.mp4
 if [ "$BURN" = "1" ] && [ -n "$SUBFILTER" ]; then
@@ -1283,6 +1313,8 @@ say "── reel.mp4: video ${RV}s / audio ${RA}s / loudness ${LUFS} / faststart
 #         got truncated.
 #      ③ Audio packets sharing one timestamp (normal spacing 1024/48000 = 0.0213s) make
 #         players run the rest of the sound ahead of the picture.
+DURWHY="the feature got cut"
+outro_on && DURWHY="the outro splice dropped or the feature got cut"
 ptspile() {   # $1=file → number of audio packets spaced abnormally close
   ffprobe -v error -select_streams a:0 -show_packets -of csv=p=0 \
     -show_entries packet=pts_time "$1" \
@@ -1295,7 +1327,7 @@ avgate() {    # $1=file $2=role
   awk -v a="$V" -v b="$A" 'BEGIN{d=a-b; if(d<0)d=-d; exit !(d<=0.05)}' \
     || { say "✗ $ROLE: video ${V}s ≠ audio ${A}s — one of the two got cut"; exit 1; }
   awk -v a="$V" -v b="$VDUR" 'BEGIN{d=a-b; if(d<0)d=-d; exit !(d<=0.1)}' \
-    || { say "✗ $ROLE: duration ${V}s ≠ expected ${VDUR}s — the outro splice dropped or the feature got cut"; exit 1; }
+    || { say "✗ $ROLE: duration ${V}s ≠ expected ${VDUR}s — ${DURWHY}"; exit 1; }
   P=$(ptspile "$F")
   [ "$P" -eq 0 ] \
     || { say "✗ $ROLE: ${P} audio packets share one timestamp — the sound will run ahead of the picture"; exit 1; }
@@ -1304,7 +1336,7 @@ avgate() {    # $1=file $2=role
   #       whole fade window, which keeps every count right while the logo hard-cuts in out
   #       of a frozen black (measured 2026-08-19). Sample brightness across the window and
   #       require it to move.
-  if [ -f "$OUTRO_ASSET" ]; then
+  if outro_on; then
     local SPREAD
     SPREAD=$(ffmpeg -v info -nostats -ss "$FO" -t "$(awk -v x="$XFADE" 'BEGIN{printf "%.3f", x*3}')" \
         -i "$F" -vf "signalstats,metadata=print:key=lavfi.signalstats.YAVG" -f null - 2>&1 \

@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>블렌더 산출물을 영상 AI 에 넘기는 세 갈래 (2026-09-11)</title>
+<style>
+  :root{
+    --paper:#f5f6fa; --ink:#10131f; --muted:#5a6280; --rule:#d8dce8; --card:#ffffff;
+    --accent:#2f5fe0; --good:#1f8a5b; --warn:#a8680c; --bad:#b8433d; --code:#eef0f7;
+    --lane1:#2f5fe0; --lane2:#1f8a5b; --lane3:#a8680c; --clay:#9aa0ad;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#0b1020; --ink:#e8ebf5; --muted:#98a0bb; --rule:#232a44; --card:#121831;
+      --accent:#7ea2ff; --good:#4fc48d; --warn:#e6b35a; --bad:#f08c86; --code:#161d38;
+      --lane1:#7ea2ff; --lane2:#4fc48d; --lane3:#e6b35a; --clay:#6b7386;
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#0b1020; --ink:#e8ebf5; --muted:#98a0bb; --rule:#232a44; --card:#121831;
+    --accent:#7ea2ff; --good:#4fc48d; --warn:#e6b35a; --bad:#f08c86; --code:#161d38;
+    --lane1:#7ea2ff; --lane2:#4fc48d; --lane3:#e6b35a; --clay:#6b7386;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);
+    font-family:"Pretendard Variable","Pretendard","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+    font-size:16px;line-height:1.75;-webkit-font-smoothing:antialiased}
+  a{color:var(--accent);text-decoration:none;border-bottom:1px solid color-mix(in srgb,var(--accent) 40%,transparent)}
+  .wrap{max-width:1040px;margin:0 auto;padding:56px 24px 96px}
+  .eyebrow{font-family:Menlo,monospace;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+  h1,h2,h3{font-weight:800;letter-spacing:-.02em;text-wrap:balance;margin:0}
+  h1{font-size:clamp(32px,5vw,46px);line-height:1.15;margin-top:10px}
+  h2{font-size:24px;line-height:1.3;margin-top:64px;padding-top:20px;border-top:1px solid var(--rule)}
+  h3{font-size:17px;margin-top:28px}
+  p{margin:14px 0;max-width:70ch}
+  ul{padding-left:20px;max-width:72ch} li{margin:8px 0}
+  code{font-family:Menlo,monospace;font-size:.88em;background:var(--code);padding:1px 6px;border-radius:5px}
+  .lede{font-size:18px;max-width:66ch} .lede b{font-weight:600;color:var(--accent)}
+  table{border-collapse:collapse;width:100%;font-size:14px;margin:18px 0}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--rule);vertical-align:top}
+  th{font-weight:600;color:var(--muted);font-size:12.5px;letter-spacing:.04em}
+  td b{font-weight:700}
+  .muted{color:var(--muted);font-weight:400;font-size:12px;display:block}
+  .tbl{overflow-x:auto}
+  .grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;margin-top:32px} @media (max-width:760px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--rule);border-radius:10px;padding:18px 20px}
+  .stat{font-size:34px;font-weight:800;letter-spacing:-.03em;line-height:1} .stat small{font-size:13px;font-weight:500;color:var(--muted);display:block;margin-top:8px;line-height:1.5}
+  .tag{display:inline-block;font-size:12px;font-weight:600;padding:1px 8px;border-radius:999px;border:1px solid currentColor;white-space:nowrap}
+  .tag.good{color:var(--good)} .tag.warn{color:var(--warn)} .tag.bad{color:var(--bad)}
+  .note{background:var(--card);border:1px solid var(--rule);border-left:3px solid var(--accent);border-radius:8px;padding:14px 18px;margin:22px 0;max-width:72ch}
+  .note p{margin:6px 0}
+  .src li{font-size:14px;margin:4px 0}
+  figure{margin:24px 0;background:var(--card);border:1px solid var(--rule);border-radius:10px;padding:18px 20px;overflow-x:auto}
+  figcaption{font-size:13px;color:var(--muted);margin-top:10px;line-height:1.5}
+  svg{display:block;max-width:100%;height:auto;font-family:inherit}
+  svg text{fill:var(--ink)} svg .m{fill:var(--muted)} svg .mono{font-family:Menlo,monospace}
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:22px 0}
+  @media (max-width:640px){.steps{grid-template-columns:1fr 1fr}}
+  .step{background:var(--card);border:1px solid var(--rule);border-radius:10px;padding:14px 14px 12px;position:relative;font-size:13.5px;line-height:1.5}
+  .step .k{font-family:Menlo,monospace;font-size:11px;color:var(--accent);letter-spacing:.08em}
+  .step b{display:block;font-size:14px;margin:4px 0 6px}
+  .step .f{font-family:Menlo,monospace;font-size:11.5px;color:var(--muted);display:block;margin-top:6px;overflow-wrap:anywhere}
+  .prompt{background:var(--code);border-radius:10px;padding:16px 18px;font-family:Menlo,monospace;font-size:13px;line-height:1.7;margin:18px 0;max-width:none}
+  .prompt span{display:block;padding:2px 10px;border-left:3px solid var(--rule);margin:3px 0}
+  .prompt .p1{border-color:var(--lane1)} .prompt .p2{border-color:var(--clay)} .prompt .p3{border-color:var(--lane3)} .prompt .p4{border-color:var(--lane2)}
+  .prompt i{font-style:normal;color:var(--muted);font-size:11.5px;display:block}
+  .rules{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:18px 0} @media (max-width:700px){.rules{grid-template-columns:1fr}}
+  .rules .card h3{margin-top:0;font-size:15px} .rules ul{padding-left:18px;margin:8px 0 0} .rules li{font-size:14.5px;margin:6px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">social-flow · 워크플로 조사 · 2026-09-11 · 기준 Seedance 2.x 참조 영상 레인(0.68.0)</div>
+  <h1>블렌더 산출물을 영상 AI 에 넘기는 세 갈래</h1>
+  <p class="lede">블렌더에서 만든 카메라와 배치를 영상 생성 모델에 넘기는 방식은 2026년 기준 세 갈래다. 이 플러그인이 택한 <b>회색 클레이 참조 영상</b> 방식이 Seedance 계열의 표준 실무이고 렌더·프롬프트·길이 규칙도 벤더 문서와 실무 가이드가 말하는 것과 일치한다. 빠진 건 둘이다. 프롬프트 게이트에 "클립과 싸우는 텍스트" 규칙이 없고 프레임 단위로 잠그는 <b>컨트롤 패스</b> 레인이 없다.</p>
+
+  <div class="grid">
+    <div class="card"><div class="stat">3갈래<small>참조 영상 · 컨트롤 패스 · 모션 컨트롤. 마지막 하나는 카메라 프리비즈 용도가 아니다</small></div></div>
+    <div class="card"><div class="stat">3~5초<small>한 컷에 카메라 무브 하나. 긴 경로는 여러 생성으로 쪼갠다 (Toonkit · Magic Hour)</small></div></div>
+    <div class="card"><div class="stat">3편 15초 → 10편 30초<small>참조 영상 한도. Seedance 2.0 → 2.5. Kling 모션 컨트롤은 한 편 3~30초</small></div></div>
+  </div>
+
+  <h2>1. 세 갈래</h2>
+  <p>같은 블렌더 씬에서 무엇을 뽑아 어느 모델에 주느냐로 갈래가 정해진다. 회색 블록아웃 mp4 를 그대로 주는 방식, depth·pose 같은 패스 영상을 주는 방식, 사람 동작 영상을 주는 방식이다.</p>
+
+  <figure>
+    <svg viewBox="0 0 960 330" width="960" height="330" role="img" aria-label="블렌더 씬에서 세 갈래로 갈라지는 전달 경로">
+      <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--muted)"/></marker></defs>
+      <rect x="20" y="120" width="170" height="90" rx="12" fill="var(--code)" stroke="var(--rule)"/>
+      <text x="105" y="158" text-anchor="middle" font-size="16" font-weight="700">블렌더 씬</text>
+      <text x="105" y="182" text-anchor="middle" font-size="12" class="m">카메라 키 · 프록시 · 마네킹</text>
+
+      <path d="M190 150 C 260 150, 250 60, 320 60" fill="none" stroke="var(--lane1)" stroke-width="2.5" marker-end="url(#ah)"/>
+      <path d="M190 165 L 320 165" fill="none" stroke="var(--lane2)" stroke-width="2.5" marker-end="url(#ah)"/>
+      <path d="M190 180 C 260 180, 250 270, 320 270" fill="none" stroke="var(--lane3)" stroke-width="2.5" marker-end="url(#ah)"/>
+
+      <g>
+        <rect x="325" y="25" width="250" height="70" rx="10" fill="var(--card)" stroke="var(--lane1)" stroke-width="1.5"/>
+        <text x="340" y="50" font-size="14" font-weight="700">① 참조 영상 (클레이 모델)</text>
+        <text x="340" y="72" font-size="12" class="m">무텍스처 회색 mp4 + 첫 프레임 스틸</text>
+        <rect x="325" y="130" width="250" height="70" rx="10" fill="var(--card)" stroke="var(--lane2)" stroke-width="1.5"/>
+        <text x="340" y="155" font-size="14" font-weight="700">② 컨트롤 패스</text>
+        <text x="340" y="177" font-size="12" class="m">depth · canny · openpose · normal 영상</text>
+        <rect x="325" y="235" width="250" height="70" rx="10" fill="var(--card)" stroke="var(--lane3)" stroke-width="1.5"/>
+        <text x="340" y="260" font-size="14" font-weight="700">③ 모션 컨트롤</text>
+        <text x="340" y="282" font-size="12" class="m">사람 동작 영상 (카메라 고정)</text>
+      </g>
+
+      <path d="M575 60 L 640 60" stroke="var(--lane1)" stroke-width="2.5" marker-end="url(#ah)"/>
+      <path d="M575 165 L 640 165" stroke="var(--lane2)" stroke-width="2.5" marker-end="url(#ah)"/>
+      <path d="M575 270 L 640 270" stroke="var(--lane3)" stroke-width="2.5" marker-end="url(#ah)"/>
+
+      <g font-size="13">
+        <rect x="645" y="30" width="295" height="60" rx="10" fill="var(--code)" stroke="var(--rule)"/>
+        <text x="660" y="53" font-weight="700">Seedance 2.0 / 2.5 · Kling O3</text>
+        <text x="660" y="74" class="m" font-size="12">카메라·타이밍·배치를 받고 외형은 텍스트가 채움</text>
+        <rect x="645" y="135" width="295" height="60" rx="10" fill="var(--code)" stroke="var(--rule)"/>
+        <text x="660" y="158" font-weight="700">Wan 2.1 Fun · Wan 2.2 VACE (ComfyUI)</text>
+        <text x="660" y="179" class="m" font-size="12">프레임 단위로 구조를 잠금 · 로컬 · 무료</text>
+        <rect x="645" y="240" width="295" height="60" rx="10" fill="var(--code)" stroke="var(--rule)"/>
+        <text x="660" y="263" font-weight="700">Kling 2.6 / 3.0 Motion Control</text>
+        <text x="660" y="284" class="m" font-size="12">몸 동작만 옮김 · 카메라는 텍스트로만</text>
+      </g>
+    </svg>
+    <figcaption>①이 이 플러그인의 0.68.0 레인이다. ②는 미배선. ③은 참조 영상에 카메라 이동과 컷을 금지하므로 카메라를 설계하려고 만든 프리비즈와는 반대 계약이다.</figcaption>
+  </figure>
+
+  <div class="tbl"><table>
+    <thead><tr><th>갈래</th><th>블렌더가 넘기는 것</th><th>모델이 가져가는 것</th><th>맞는 용도</th><th>대가</th></tr></thead>
+    <tbody>
+      <tr><td><b>① 참조 영상</b><span class="muted">Seedance 2.x · Kling O3</span></td><td>회색 블록아웃 mp4, 배우별 단색 하나, 첫 프레임 스틸</td><td>카메라 경로 · 샷 리듬 · 피사체 궤적 · 배치</td><td>카메라와 타이밍을 정하고 외형은 AI 에 맡길 때</td><td>매 생성이 새 확률 추첨이라 결과가 근사치. 입력+출력 초로 과금</td></tr>
+      <tr><td><b>② 컨트롤 패스</b><span class="muted">Wan Fun ControlNet · VACE</span></td><td>depth · canny · openpose · normal 패스 영상 (EEVEE 또는 Workbench)</td><td>프레임마다 구조 · 실루엣 · 뼈대</td><td>프레임 단위 정밀도가 필요할 때</td><td>ComfyUI 로컬 구성. 종횡비·fps 일치, 프레임 수 4n+1</td></tr>
+      <tr><td><b>③ 모션 컨트롤</b><span class="muted">Kling 2.6 / 3.0</span></td><td>사람 동작 영상 (전신 노출, 한 테이크, 카메라 고정)</td><td>몸 동작 · 표정 · 타이밍</td><td>캐릭터 이미지에 동작을 입힐 때</td><td>카메라 이동·컷 금지, 실제 사람 권장. 프리비즈 용도 아님</td></tr>
+    </tbody>
+  </table></div>
+
+  <h2>2. 참조 영상 방식의 규칙</h2>
+  <p>벤더 문서(Seedance 2.5 프롬프트 가이드의 "3D clay-model reference")와 실무 가이드 여덟 편이 같은 말을 한다. 렌더는 덜 만들수록 좋고 참조마다 역할을 문장으로 못 박고 텍스트가 클립과 싸우면 안 된다.</p>
+
+  <div class="rules">
+    <div class="card"><h3>렌더</h3><ul>
+      <li>디테일을 뺀다. Flick 은 캐릭터 자리에 큐브만 세워도 공간 안무가 전달된다고 하고 Mixar 는 완성 렌더보다 회색 박스가 모델을 더 잘 이끈다고 쓴다. 텍스처·조명이 없어야 모델이 궤적과 프레이밍만 읽는다.</li>
+      <li>기즈모·아마추어·그리드·카메라 콘·UI 가 프레임에 보이면 안 된다. 벤더가 방해 요소로 명시한다.</li>
+      <li>24fps. 출력이 24fps 라 프리비즈 n 번 프레임이 결과 n 번 프레임이 된다. 종횡비와 fps 는 파이프라인과 같게 둔다.</li>
+      <li>배우마다 단색 하나, 나머지는 회색. 프롬프트가 "Video 1 의 빨간 모델은 Image 2 의 짐꾼" 식으로 묶는다.</li>
+      <li>입력 어디에도 실제 얼굴이 없어야 한다. 2.x 는 참조 이미지·영상의 실제 얼굴을 거절한다.</li>
+    </ul></div>
+    <div class="card"><h3>길이와 구성</h3><ul>
+      <li>한 컷에 카메라 무브 하나, 3~5초. 긴 경로는 생성을 쪼갠다 (Toonkit).</li>
+      <li>움직임이 있는 초만 남기고 자른다. 참조는 적을수록 좋고 하나가 한 가지 일만 한다 (AVB · Cliprise).</li>
+      <li>좋은 참조를 줘도 2~4회 재생성은 기본으로 잡는다 (Magic Hour).</li>
+      <li>다음 씬은 앞 씬 마지막 프레임을 참조로 이어 붙인다 (Toonkit).</li>
+      <li>첫 프레임은 블렌더 1번 프레임을 이미지 모델로 "구도 100% 유지" 조건으로 리스타일해서 Image 1 로 쓴다 (Flick). 첫 프레임 잠금 모드와 참조 레인은 같이 못 쓰므로 스틸은 "비슷하게" 만 잡힌다.</li>
+    </ul></div>
+    <div class="card"><h3>프롬프트</h3><ul>
+      <li>참조마다 역할을 문장으로 못 박는다. 안 적고 올리면 모델이 회색 텍스처와 블록 형태까지 베낀다. Cliprise 는 이걸 첫 생성을 망치는 가장 큰 원인으로 꼽는다.</li>
+      <li>영상 참조는 외형 보존에 쓰지 않는다. 얼굴·의상·소품은 이미지 참조의 일이다.</li>
+      <li>도형이 뭔지 이름 붙인다. "가운데 원기둥은 로봇이다" (Toonkit).</li>
+      <li>재질·조명·환경은 전부 텍스트가 채운다. 클립에 룩이 없어서 안 쓴 표면은 모델의 추측이 된다.</li>
+    </ul></div>
+    <div class="card"><h3>드리프트를 부르는 텍스트</h3><ul>
+      <li>클립이 푸시인하는데 "static camera" 라고 쓰면 화면이 흔들린다. 클립을 고치거나 무브를 받아들인다.</li>
+      <li>스타일 형용사가 셋을 넘으면 모델이 움직임을 버리고 룩을 택한다.</li>
+      <li>끝 박자가 밀리면 "마지막 포즈를 0.5초 홀드" 같은 페이스 앵커를 넣는다.</li>
+      <li>고칠 때는 한 번에 한 가지만 바꾼다. 무엇이 드리프트를 만들었는지 알 수 있는 유일한 방법이다 (Magic Hour).</li>
+    </ul></div>
+  </div>
+
+  <h3>프롬프트 뼈대</h3>
+  <p>벤더 클레이 모델 템플릿 순서다. 부정문 둘은 벤더의 원문 그대로이고 그 밖의 배제는 긍정문으로 바꿔 쓴다.</p>
+  <div class="prompt">
+    <span class="p1">Image 1 is the first frame.<i>스틸의 역할</i></span>
+    <span class="p2">Use Video 1, a 3D clay-model previz, as the only reference for camera movement, shot rhythm, shot-size changes, subject positions, motion trajectory and blocking; strictly keep its camera path, pacing and order of actions.<i>클립의 역할. 카메라와 타이밍만</i></span>
+    <span class="p2">Do not reference its visual content.<i>회색 클레이를 베끼지 말라는 벤더 문장</i></span>
+    <span class="p3">The red model in Video 1 is the porter from Image 2.<i>색 → 캐릭터 이미지 바인딩</i></span>
+    <span class="p4">(장면 · 재질 · 조명 · 화풍을 전부 적는다)<i>클립에 없는 룩은 여기서만 정해진다</i></span>
+    <span class="p4">(마네킹이 못 보여 준 연기: 손이 닿는 곳, 시선, 착지의 무게)<i>동작은 말로</i></span>
+    <span class="p1">(캐릭터마다 한 명, 자막·로고 없음, 일관성 잠금)<i>Seedance 프롬프트 공통 마무리</i></span>
+  </div>
+
+  <h2>3. 컨트롤 패스 방식의 규칙</h2>
+  <p>ComfyUI 에서 Wan 2.1 Fun ControlNet 이나 Wan 2.2 VACE 에 블렌더 패스를 그대로 꽂는다. 블렌더 쪽 표준 리그는 toyxyz 의 "Character bones that look like OpenPose" 로, 한 번 렌더에 depth·canny·pose·normal 을 다 뽑는다. Mixar 는 beauty·clay·depth 세 패스를 한 세트로 렌더한다.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>패스</th><th>잠그는 것</th><th>쓰는 자리</th></tr></thead>
+    <tbody>
+      <tr><td><b>depth</b></td><td>레이아웃과 카메라 이동</td><td>공간과 카메라를 정확히 따라야 하는 컷</td></tr>
+      <tr><td><b>openpose</b></td><td>캐릭터 자세와 연기 타이밍</td><td>사람 동작이 문장을 설명하는 컷</td></tr>
+      <tr><td><b>canny</b></td><td>실루엣과 건축선</td><td>형태는 지키고 화풍은 열어 두는 컷</td></tr>
+    </tbody>
+  </table></div>
+  <ul>
+    <li>블렌더와 워크플로의 종횡비·fps 를 같게 둔다. 어긋나면 리샘플링이 끼어든다.</li>
+    <li>프레임 수는 4n+1 로 맞춘다. 안 맞으면 꼬리에 아티팩트가 생긴다.</li>
+    <li>참조가 여럿일 때 지나치게 구체적인 프롬프트는 참조와 싸운다.</li>
+    <li>가이던스 강도나 샘플러를 바꿀 때마다 앞뒤 10프레임을 검사한다.</li>
+  </ul>
+
+  <h2>4. 모션 컨트롤이 프리비즈와 안 맞는 이유</h2>
+  <p>Kling 공식 가이드의 참조 영상 조건이다. 실제 사람을 권하고("양식화된 인간형 비율도 인식될 수 있다" 정도), 전신과 머리가 가려지지 않아야 하고 한 테이크에 카메라 이동과 컷이 없어야 한다. 길이는 3~30초, 짧은 변 340px 이상. 카메라는 텍스트로만 받는다. 카메라를 설계하려고 만든 블렌더 클립을 넣으면 정확히 금지 항목에 걸린다. 동작이 빠르거나 복잡하면 추출이 실패하거나 출력이 짧아지고 크레딧은 돌려주지 않는다.</p>
+
+  <h2>5. 한도 한눈에</h2>
+  <figure>
+    <svg viewBox="0 0 900 260" width="900" height="260" role="img" aria-label="모델별 참조 영상 편수와 합계 초">
+      <g font-size="13">
+        <text x="0" y="30" font-weight="700">참조 영상 편수</text>
+        <text x="0" y="62">Seedance 2.0</text><rect x="150" y="48" width="90" height="20" rx="4" fill="var(--lane1)"/><text x="248" y="63" class="mono" font-size="12">3편</text>
+        <text x="0" y="92">Seedance 2.5</text><rect x="150" y="78" width="300" height="20" rx="4" fill="var(--lane1)"/><text x="458" y="93" class="mono" font-size="12">10편</text>
+        <text x="0" y="122">Kling 모션 컨트롤</text><rect x="150" y="108" width="30" height="20" rx="4" fill="var(--lane3)"/><text x="188" y="123" class="mono" font-size="12">1편</text>
+
+        <text x="0" y="170" font-weight="700">참조 영상 합계 초</text>
+        <text x="0" y="202">Seedance 2.0</text><rect x="150" y="188" width="165" height="20" rx="4" fill="var(--lane1)"/><text x="323" y="203" class="mono" font-size="12">15초 (편당 2~15)</text>
+        <text x="0" y="232">Seedance 2.5</text><rect x="150" y="218" width="330" height="20" rx="4" fill="var(--lane1)"/><text x="488" y="233" class="mono" font-size="12">30초 (편당 2~30)</text>
+      </g>
+      <g font-size="12" class="m">
+        <text x="640" y="62">이미지는 2.0 최대 9장 · 2.5 최대 30장</text>
+        <text x="640" y="92">Kling 은 한 편 3~30초, 출력이 입력 길이를 따름</text>
+        <text x="640" y="202">과금은 입력+출력 초</text>
+        <text x="640" y="232">5초 컷 + 5초 프리비즈 = 10초 (2.0 1080p ≈ $2.28)</text>
+      </g>
+    </svg>
+    <figcaption>Seedance 2.x 는 벤더 API 문서 기준. 컨트롤 패스 방식은 편수 한도가 아니라 프레임 수 규칙(4n+1)이 잣대다. 실무 가이드는 한도와 무관하게 3~5초 한 무브를 권한다.</figcaption>
+  </figure>
+
+  <h2>6. 이 플러그인과 대조</h2>
+  <p>0.68.0 레인이 블렌더 클립을 Seedance 에 넘기는 순서다. 계약 문서는 <code>skills/storyboard/references/blender-previz.md</code> §6 이고 요청 조립은 <code>server/src/seedance-client.ts</code> 다.</p>
+  <div class="steps">
+    <div class="step"><span class="k">01</span><b>블렌더 렌더</b>Workbench, 무스탬프, 24fps, 과금 길이와 같은 정수 초<span class="f">blender_render_previz</span></div>
+    <div class="step"><span class="k">02</span><b>스토리보드 기록</b>클립 해시·fps·초를 적고 Image 1 = 소스 스틸<span class="f">visual.video.previz</span></div>
+    <div class="step"><span class="k">03</span><b>검사</b>정수 초·fps 24~60·end frame 없음·프롬프트 바인딩 문장<span class="f">check-scenes.js · seedance-route.js</span></div>
+    <div class="step"><span class="k">04</span><b>공개 URL</b>미디어 호스팅 또는 cloudflared 퀵 터널. 바깥에서 fetch 확인<span class="f">media-publish.ts</span></div>
+    <div class="step"><span class="k">05</span><b>요청 조립</b>이미지 → 영상 → 오디오 순. role reference_video<span class="f">seedance_reference</span></div>
+    <div class="step"><span class="k">06</span><b>대조 검수</b>콘택트 시트 0/25/50/75/100% + 에지 오버레이<span class="f">produce §401</span></div>
+  </div>
+
+  <div class="tbl"><table>
+    <thead><tr><th>실무 규칙</th><th>플러그인</th><th>상태</th></tr></thead>
+    <tbody>
+      <tr><td>무텍스처 회색 클레이, 단순 프리미티브</td><td>Workbench 프록시, 배우별 <code>color</code></td><td><span class="tag good">일치</span></td></tr>
+      <tr><td>기즈모·스탬프·UI 없음</td><td>mp4 는 무스탬프, 스탬프는 스틸에만</td><td><span class="tag good">일치</span></td></tr>
+      <tr><td>24fps, 정수 초, 과금 길이와 동일</td><td><code>previz.seconds</code> 가 과금 길이와 다르면 라우트가 거절</td><td><span class="tag good">일치</span></td></tr>
+      <tr><td>Image 1 = 첫 프레임, 참조 레인과 first_frame 배타</td><td><code>referenceImagePaths[0]</code> 은 소스 스틸, end frame 금지</td><td><span class="tag good">일치</span></td></tr>
+      <tr><td>참조 역할 문장 + 색 바인딩</td><td>프롬프트 게이트가 §6.3 문장을 요구</td><td><span class="tag good">일치</span></td></tr>
+      <tr><td>실제 얼굴 없음</td><td><code>realFaceInput:false</code> 필수</td><td><span class="tag good">일치</span></td></tr>
+      <tr><td>결과를 프리비즈와 프레임 대조</td><td>콘택트 시트 + 에지 오버레이</td><td><span class="tag good">일치</span></td></tr>
+      <tr><td>클립과 모순되는 카메라 지시 금지, 스타일 형용사 3개 이하</td><td>프롬프트 게이트에 없음</td><td><span class="tag warn">빠짐</span></td></tr>
+      <tr><td>프레임 단위 잠금이 필요한 컷은 컨트롤 패스</td><td>depth·pose → Wan VACE 레인 없음</td><td><span class="tag warn">빠짐</span></td></tr>
+      <tr><td>2~4회 재생성을 예산에 반영</td><td>재시도 포함 비용을 HITL 에 제시</td><td><span class="tag good">일치</span></td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="note">
+    <p><b>남은 확인.</b> 실제 생성 1회 실측이 아직 없다. 퀵 터널 도달과 해시 대조까지만 확인했다. 위 규칙이 우리 결과에서 그대로 통하는지는 720p 2.0 으로 한 번 뽑아(약 $0.93) 콘택트 시트를 봐야 안다.</p>
+    <p><b>다음 후보.</b> 빠진 둘 가운데 프롬프트 게이트 규칙은 <code>check-scenes.js</code> 한 곳이면 끝난다. 컨트롤 패스 레인은 ComfyUI 로컬 구성이 먼저라 별도 조사가 필요하다.</p>
+  </div>
+
+  <h2>출처</h2>
+  <ul class="src">
+    <li><a href="https://flick.art/blog/blender-ai-filmmaking">Blender for AI Filmmaking: The 2026 Guide</a> · Flick. 큐브 대역, 첫 프레임 리스타일, 두 참조에 정보 몰기</li>
+    <li><a href="https://toonkit.io/en/models/seedance-blender">Blender + Seedance, design your AI video camera in 3D</a> · Toonkit. 3~5초 한 무브, 도형 이름 붙이기, 마지막 프레임 이어 붙이기</li>
+    <li><a href="https://www.mixar.app/blog/seedance-2-5">Seedance 2.5 in Blender</a> · Mixar. beauty·clay·depth 세 패스, 회색 박스가 완성 렌더보다 낫다</li>
+    <li><a href="https://seed.bytedance.com/en/blog/one-take-creation-flexible-referencing-introducing-seedance-2-5">Seedance 2.5, One-take Creation, Flexible Referencing</a> · ByteDance Seed. 클레이 렌더 참조의 공식 설명</li>
+    <li><a href="https://docs.byteplus.com/en/docs/ModelArk/2607689">Dreamina Seedance 2.5 prompt guide</a> · BytePlus ModelArk. 3D clay-model reference 템플릿 (페이지가 스크립트 렌더라 본문은 브라우저로 확인)</li>
+    <li><a href="https://aivideobootcamp.com/blog/seedance-2-5-complete-guide-2026/">Seedance 2.5 Ultimate Guide</a> · AVB. "@video1 as camera movement reference only", 기즈모 금지, 24fps</li>
+    <li><a href="https://www.cliprise.app/learn/guides/model-guides/seedance-2-0-prompts">Seedance 2.0 Prompts: Templates + Rules</a> · Cliprise. 역할 미선언이 첫 생성을 망친다, 영상 참조는 외형에 쓰지 않는다</li>
+    <li><a href="https://magichour.ai/blog/how-to-use-seedance-20">How to Use Seedance 2.0 Without Drift</a> · Magic Hour. 한 번에 한 가지만 바꾸기, 3편 15초</li>
+    <li><a href="https://seedance25.tools/prompt-guide">Seedance 2.5 Prompt Guide</a> · seedance25.tools. 블록아웃 프롬프트 패턴</li>
+    <li><a href="https://x.com/JSFILMZ0412/status/2093663876692754713">Blender previs workflow for Seedance 2.5</a> · JSFILMZ (X). Higgsfield MCP 로 그레이박스 → 1080p 플레이블라스트 → 모션 참조</li>
+    <li><a href="https://explainx.ai/blog/higgsfield-blender-mcp-ai-blockout-august-2026">Higgsfield Blender MCP</a> · explainx.ai. 블록아웃 ≠ 에셋, 롱폼 미검증</li>
+    <li><a href="https://tesseract.academy/from-blender-to-ai-video-a-faster-creative-workflow/">From Blender to AI Video</a> · Tesseract Academy. 블록아웃은 움직임 가이드지 외형 가이드가 아니다</li>
+    <li><a href="https://www.runcomfy.com/comfyui-workflows/blender-to-comfyui-ai-renderer-2-0-workflow-cinematic-video-output">Blender to ComfyUI AI Renderer 2.0</a> · RunComfy. 패스별 강점, 4n+1, 앞뒤 10프레임 검사</li>
+    <li><a href="https://www.runcomfy.com/comfyui-workflows/wan-2-1-fun-controlnet-ai-video-generation-with-depth-canny-openpose-control">Wan 2.1 Fun ControlNet</a> · RunComfy</li>
+    <li><a href="https://toyxyz.gumroad.com/l/ciojz">Character bones that look like OpenPose for Blender</a> · toyxyz</li>
+    <li><a href="https://kling.ai/quickstart/motion-control-user-guide">Kling Motion Control User Guide</a> · Kling AI. 실제 사람 권장, 카메라 이동·컷 금지, 3~30초, 340px</li>
+    <li><a href="https://www.rundiffusion.com/kling-2-6-motion-control-total-motion-transfer">Kling 2.6 Motion Control</a> · RunDiffusion</li>
+    <li><a href="https://www.capcut.com/ideas/seedance-2-0-for-blender">Seedance 2.0 for Blender</a> · CapCut</li>
+  </ul>
+</div>
+</body>
+</html>

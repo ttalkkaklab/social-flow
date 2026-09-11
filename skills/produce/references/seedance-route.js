@@ -2,16 +2,16 @@
 
 // Planning constraints mirror the server table; seedance-routing.test.mjs checks drift.
 const MODELS = {
-  'seedance-1-5-pro-251215': { family: '1-5-pro', duration: [4, 12], resolutions: ['480p', '720p', '1080p'], images: 0, audio: true },
-  'dreamina-seedance-2-0-260128': { family: '2-0', duration: [4, 15], resolutions: ['480p', '720p', '1080p', '4k'], images: 9, audio: true },
-  'dreamina-seedance-2-5-260628': { family: '2-5', duration: [4, 30], resolutions: ['480p', '720p', '1080p'], images: 30, audio: true },
-  'dreamina-seedance-2-0-fast-260128': { family: '2-0-fast', duration: [4, 15], resolutions: ['480p', '720p'], images: 9, audio: true },
-  'dreamina-seedance-2-0-mini-260615': { family: '2-0-mini', duration: [4, 15], resolutions: ['480p', '720p'], images: 9, audio: true },
-  'seedance-1-0-pro-250528': { family: '1-0-pro', duration: [2, 12], resolutions: ['480p', '720p', '1080p'], images: 0, audio: false },
-  'seedance-1-0-pro-fast-251015': { family: '1-0-pro-fast', duration: [2, 12], resolutions: ['480p', '720p', '1080p'], images: 0, audio: false }
+  'seedance-1-5-pro-251215': { family: '1-5-pro', duration: [4, 12], resolutions: ['480p', '720p', '1080p'], images: 0, videos: 0, audio: true },
+  'dreamina-seedance-2-0-260128': { family: '2-0', duration: [4, 15], resolutions: ['480p', '720p', '1080p', '4k'], images: 9, videos: 3, audio: true },
+  'dreamina-seedance-2-5-260628': { family: '2-5', duration: [4, 30], resolutions: ['480p', '720p', '1080p'], images: 30, videos: 10, audio: true },
+  'dreamina-seedance-2-0-fast-260128': { family: '2-0-fast', duration: [4, 15], resolutions: ['480p', '720p'], images: 9, videos: 3, audio: true },
+  'dreamina-seedance-2-0-mini-260615': { family: '2-0-mini', duration: [4, 15], resolutions: ['480p', '720p'], images: 9, videos: 3, audio: true },
+  'seedance-1-0-pro-250528': { family: '1-0-pro', duration: [2, 12], resolutions: ['480p', '720p', '1080p'], images: 0, videos: 0, audio: false },
+  'seedance-1-0-pro-fast-251015': { family: '1-0-pro-fast', duration: [2, 12], resolutions: ['480p', '720p', '1080p'], images: 0, videos: 0, audio: false }
 };
 const DEFAULT_MODEL = 'seedance-1-5-pro-251215';
-const { checkFrames, framePlan } = require('../../storyboard/references/render-routing.js');
+const { checkFrames, framePlan, previzHandoff } = require('../../storyboard/references/render-routing.js');
 
 // A model may render a resolution the price table has no row for. Forecasting silently drops
 // such a shot, so the plan is rejected here instead. Mirrors autoproduce/references/prices.tsv;
@@ -22,14 +22,23 @@ const PRICED = new Set([
   'seedance.1-5-pro-audio.1080p', 'seedance.1-0-pro.1080p',
   'seedance.2-0-mini.720p', 'seedance.2-0-fast.720p',
   'seedance.2-0.1080p', 'seedance.2-5.720p', 'seedance.2-5.1080p',
+  // with a reference video (the previz lane): input + output seconds at the with-video rate
+  'seedance.2-0-video.1080p', 'seedance.2-5-video.720p', 'seedance.2-5-video.1080p',
+  'seedance.2-0-fast-video.720p', 'seedance.2-0-mini-video.720p',
 ]);
 
 // Seedance-only settings on a slot that defaults to Veo would skip every check below.
-const SEEDANCE_KEYS = ['model', 'modelPurpose', 'modelReason', 'referenceImagePaths', 'referenceAudioPaths'];
+const SEEDANCE_KEYS = ['model', 'modelPurpose', 'modelReason', 'referenceImagePaths', 'referenceAudioPaths', 'previz'];
 
 /** Resolve a planned shot before either forecasting or calling the generation tool. */
 function scenePlan(scene) {
   const v = scene.visual || {};
+  const mode = require('../../storyboard/references/production-mode.js');
+  if (mode.reused(scene)) {
+    const errors = mode.reuseErrors(scene);
+    if (errors.length) throw new Error(errors.join('; '));
+    return null; // Imported media never produces API arguments.
+  }
   // A filmed shot carries none of these shapes, so it falls out with kind null on its own.
   // `visual.video.clip` is produce's output record and does not make the shot supplied.
   const kind = scene.type === 'broll' ? 'broll' : v.video ? 'motion'
@@ -40,16 +49,21 @@ function scenePlan(scene) {
   if (frameErrors.length) throw new Error(frameErrors.join('; '));
   const endFrame = framePlan(scene).end;
   if (endFrame) settings.lastImagePath = endFrame;
+  // `host` is the CLI's own video tool (Grok image_to_video — owner directive 2026-09-07); it takes
+  // the same source and prompt as Veo and none of the Seedance planning fields.
   const engine = settings.engine || (kind === 'motion' ? 'seedance' : 'veo');
-  if (!['seedance', 'veo'].includes(engine)) throw new Error('unknown video engine: ' + engine);
+  if (!['seedance', 'veo', 'host'].includes(engine)) throw new Error('unknown video engine: ' + engine);
   if (engine !== 'seedance') {
-    const named = SEEDANCE_KEYS.filter((k) => settings[k] !== undefined);
+    // A host video tool takes no reference clip, so a previz on that lane shapes the still and the
+    // prompt instead (handoff frame_and_prompt, render-routing checkPreviz) and is not a Seedance field.
+    const named = SEEDANCE_KEYS.filter((k) => settings[k] !== undefined &&
+      !(k === 'previz' && engine === 'host' && previzHandoff(scene) === 'frame_and_prompt'));
     if (named.length)
       throw new Error(named.join(', ') + ' only applies to Seedance — set engine:"seedance" or drop the setting');
     return { kind, engine };
   }
   const purpose = settings.modelPurpose || 'standard';
-  if (!['standard', 'complex-motion', 'reference', 'fixed-voice'].includes(purpose))
+  if (!['standard', 'complex-motion', 'reference', 'fixed-voice', 'previz'].includes(purpose))
     throw new Error('unknown modelPurpose: ' + purpose);
   const references = settings.referenceImagePaths || [];
   const voices = settings.referenceAudioPaths || [];
@@ -57,8 +71,26 @@ function scenePlan(scene) {
     if (!Array.isArray(values) || values.some(x => typeof x !== 'string' || !x.trim()))
       throw new Error(name + ' must be an array of nonempty paths');
   }
+  // The previz lane (storyboard blender-previz.md §6): the Blender clip is Video 1, the source
+  // still is Image 1, and the two travel on the reference route — first_frame cannot be mixed
+  // with a reference video, so the still's composition is a reference, not a lock.
+  const previz = settings.previz;
+  if (previz !== undefined && purpose !== 'previz') throw new Error('visual.video.previz needs modelPurpose:"previz"');
+  if (purpose === 'previz' && kind !== 'motion') throw new Error('the previz route is a motion-background (visual.video) slot; b-roll and speech clips do not carry a previz');
+  if (purpose === 'previz') {
+    if (!previz || typeof previz !== 'object' || Array.isArray(previz)) throw new Error('modelPurpose previz needs visual.video.previz { clip, sha256, fps, seconds }');
+    // Same shape rule as render-routing checkPreviz: storyboard-relative, no scheme, no absolute path, no .. segment.
+    if (typeof previz.clip !== 'string' || !/\.(mp4|mov)$/i.test(previz.clip.trim()) || /^[a-z][a-z0-9+.-]*:/i.test(previz.clip) ||
+        /^[\/\\]/.test(previz.clip) || /(^|[\/\\])\.\.([\/\\]|$)/.test(previz.clip))
+      throw new Error('previz.clip must be a storyboard-relative mp4/mov path (no scheme, no absolute path, no ..) — the rendered previz');
+    if (previz.handoff !== undefined && previz.handoff !== 'reference_video') throw new Error('on the Seedance route the previz travels as Video 1 — previz.handoff must be reference_video');
+    if (!Number.isInteger(previz.seconds) || previz.seconds < 2) throw new Error('previz.seconds must be a whole number of seconds (2 or more)');
+    if (!Number.isFinite(previz.fps) || previz.fps < 24 || previz.fps > 60) throw new Error('previz.fps must be 24–60 (render at 24 for frame-for-frame QA)');
+    if (!references.length || references[0] !== (v.bg || '')) throw new Error('previz route: referenceImagePaths[0] must be the source still (visual.bg) — "Image 1 is the first frame"');
+    if (settings.lastImagePath !== undefined) throw new Error('previz route takes no end frame — the reference route cannot carry last_frame');
+  }
   const needsVoice = purpose === 'fixed-voice' || voices.length > 0;
-  const needsReference = purpose === 'reference' || references.length > 0 || needsVoice;
+  const needsReference = purpose === 'reference' || purpose === 'previz' || references.length > 0 || needsVoice;
   const suggested = needsVoice || references.length > 9 ? 'dreamina-seedance-2-5-260628'
     : needsReference || purpose === 'complex-motion' ? 'dreamina-seedance-2-0-260128' : DEFAULT_MODEL;
   const model = settings.model || suggested;
@@ -66,6 +98,8 @@ function scenePlan(scene) {
   if (!spec) throw new Error('unknown Seedance model: ' + model);
   if (model !== DEFAULT_MODEL && !String(settings.modelReason || '').trim())
     throw new Error('modelReason is required for a Seedance model override or escalation');
+  if (purpose === 'previz' && !spec.videos)
+    throw new Error(model + ' takes no reference video — a previz cut is a Seedance 2.x cut; drop the pinned model (2.0 is chosen) or name a 2.x model');
   if (spec.images && settings.realFaceInput !== false)
     throw new Error('Seedance 2.x requires realFaceInput:false after inspecting all source/reference images; photoreal faces use 1.5 or Veo');
   if (needsReference && !spec.images) throw new Error(model + ' does not accept reference images/audio');
@@ -86,7 +120,11 @@ function scenePlan(scene) {
   if (!Number.isFinite(used) || used <= 0) throw new Error('Seedance scene needs a positive duration');
   const durationSeconds = Math.max(spec.duration[0], Math.ceil(used));
   if (durationSeconds > spec.duration[1]) throw new Error(model + ' takes at most ' + spec.duration[1] + ' seconds; shorten or split the scene');
-  const family = spec.family === '1-5-pro' ? spec.family + (generateAudio ? '-audio' : '-silent') : spec.family;
+  if (purpose === 'previz') {
+    if (!spec.videos) throw new Error(model + ' does not accept a reference video');
+    if (previz.seconds !== durationSeconds) throw new Error('previz.seconds (' + previz.seconds + ') must equal the billed length ' + durationSeconds + 's — render the previz at the cut length');
+  }
+  const family = (spec.family === '1-5-pro' ? spec.family + (generateAudio ? '-audio' : '-silent') : spec.family) + (purpose === 'previz' ? '-video' : '');
   const priceKey = 'seedance.' + family + '.' + resolution;
   if (!PRICED.has(priceKey)) {
     const priced = [...PRICED].filter((k) => k.startsWith('seedance.' + family + '.'))
@@ -98,6 +136,8 @@ function scenePlan(scene) {
     tool: needsReference ? 'seedance_reference' : 'seedance_img2video',
     referenceImagePaths: references, referenceAudioPaths: voices,
     ...(settings.lastImagePath ? { lastImagePath: settings.lastImagePath } : {}),
+    // The vendor bills input + output seconds when a video is attached.
+    ...(purpose === 'previz' ? { referenceVideoPaths: [previz.clip], billedSeconds: durationSeconds + previz.seconds } : {}),
     priceKey,
     reason: settings.modelReason || 'ordinary motion — Seedance 1.5 Pro' };
 }

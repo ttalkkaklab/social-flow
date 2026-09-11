@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>역사 쇼츠 채널 일곱의 이야기 전개와 화면 문법 (2026-09-10)</title>
+<style>
+  :root{
+    --paper:#f5f6fa; --ink:#10131f; --muted:#5a6280; --rule:#d8dce8; --card:#ffffff;
+    --accent:#2f5fe0; --good:#1f8a5b; --bad:#b8433d; --code:#eef0f7;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#0b1020; --ink:#e8ebf5; --muted:#98a0bb; --rule:#232a44; --card:#121831;
+      --accent:#7ea2ff; --good:#4fc48d; --bad:#f08c86; --code:#161d38;
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#0b1020; --ink:#e8ebf5; --muted:#98a0bb; --rule:#232a44; --card:#121831;
+    --accent:#7ea2ff; --good:#4fc48d; --bad:#f08c86; --code:#161d38;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);
+    font-family:"Pretendard Variable","Pretendard","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+    font-size:16px;line-height:1.75;-webkit-font-smoothing:antialiased}
+  a{color:var(--accent);text-decoration:none;border-bottom:1px solid color-mix(in srgb,var(--accent) 40%,transparent)}
+  .wrap{max-width:1040px;margin:0 auto;padding:56px 24px 96px}
+  .eyebrow{font-family:Menlo,monospace;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+  h1,h2,h3{font-weight:800;letter-spacing:-.02em;text-wrap:balance;margin:0}
+  h1{font-size:clamp(32px,5vw,46px);line-height:1.15;margin-top:10px}
+  h2{font-size:24px;line-height:1.3;margin-top:64px;padding-top:20px;border-top:1px solid var(--rule)}
+  p{margin:14px 0;max-width:70ch}
+  ul{padding-left:20px;max-width:72ch} li{margin:8px 0}
+  code{font-family:Menlo,monospace;font-size:.88em;background:var(--code);padding:1px 6px;border-radius:5px}
+  .lede{font-size:18px;max-width:66ch} .lede b{font-weight:600;color:var(--accent)}
+  table{border-collapse:collapse;width:100%;font-size:14px;margin:18px 0}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--rule);vertical-align:top}
+  th{font-weight:600;color:var(--muted);font-size:12.5px;letter-spacing:.04em}
+  .tablewrap{overflow-x:auto}
+  .sub{display:block;position:relative;max-width:360px;aspect-ratio:9/16;margin:18px 0;border-radius:14px;
+    background:linear-gradient(180deg,#2b2620,#0e0c0a);overflow:hidden}
+  .sub span{position:absolute;left:0;right:0;top:63%;text-align:center;font-weight:800;font-size:34px;color:#fff;
+    text-shadow:0 0 6px #281810,0 2px 3px #000}
+  .sub span b{color:#D5B071}
+  .sub small{position:absolute;left:14px;top:12px;color:#d8d0c0;font-size:12px;font-family:Menlo,monospace}
+</style>
+</head>
+<body>
+<div class="wrap">
+<p class="eyebrow">social-flow · research · 2026-09-10</p>
+<h1>역사 쇼츠 채널 일곱의 이야기 전개와 화면 문법</h1>
+<p class="lede">유튜브 쇼츠 다섯, 틱톡 둘. 주제는 제각각인데 <b>여는 법, 뒤집는 법, 닫는 법</b>과 <b>문장마다 바뀌는 화면</b>은 같았다. 그 공통 문법을 플러그인에 "인물 편"이라는 이름으로 넣었다. 정본은 <code>skills/storyboard/references/person-short.md</code>와 <code>story-contract.js</code>의 <code>STORY.person</code> 검사고 이 문서는 그 근거다.</p>
+
+<h2>본 채널</h2>
+<div class="tablewrap">
+<table>
+<tr><th>채널</th><th>어디</th><th>구독·팔로워</th><th>대표 편 조회</th></tr>
+<tr><td>Zack D. Films</td><td>유튜브 쇼츠</td><td>2,840만</td><td>타이타닉 생존자가 올림픽 메달 2,867만</td></tr>
+<tr><td>Simple History</td><td>유튜브 쇼츠</td><td>511만</td><td>가짜 병사로 저격수 속이기 2,309만</td></tr>
+<tr><td>MrBallen Shorts</td><td>유튜브 쇼츠</td><td>321만</td><td>람리 섬 병사 37.5만</td></tr>
+<tr><td>History Matters</td><td>유튜브 쇼츠</td><td>192만</td><td>나폴레옹은 왜 엘바로 234만</td></tr>
+<tr><td>Daily Dose Of History Facts</td><td>유튜브 쇼츠</td><td>2.9만</td><td>에펠탑 밑 조종사 46.8만</td></tr>
+<tr><td>The History Gossip</td><td>틱톡</td><td>64.7만</td><td>앤 볼린 동전 1,000만</td></tr>
+<tr><td>60SecondHistories_</td><td>틱톡</td><td>65.7만</td><td>고대의 불 120만</td></tr>
+</table>
+</div>
+<p>구독자 2.9만 채널의 대표 편이 46.8만을 찍은 게 눈에 띈다. 채널 크기보다 편 하나의 구조가 조회를 만든다는 쪽으로 읽힌다. 다만 숫자는 대표 편 하나씩이고 완주율 같은 리텐션 지표는 어느 채널도 공개하지 않는다.</p>
+
+<h2>이야기 푸는 법</h2>
+<ul>
+<li><b>첫 3초는 사건 한 장면이다.</b> 답을 먼저 주지 않고 이름도 연도도 소개하지 않는다. 밧줄을 잡은 손, 읽다 만 편지, 안 나가는 총처럼 일이 벌어지는 한가운데서 시작한다. 제목이 답을 말하는 채널도 첫 컷은 질문으로 둔다.</li>
+<li><b>한 편에 사람 하나, 반전 하나.</b> 원인 → 막힘 → 한 방 순서로 30~60초. 이름이 불리는 사람은 한 명이고 나머지는 "선장", "동생" 같은 역할로만 나온다.</li>
+<li><b>끝은 한 장면.</b> 요약도 교훈도 없이 그림 하나와 문장 하나로 닫는다. 기록이 갈리는 이야기는 마지막에 "사람들은 이걸 두고 싸운다"로 닫고 어느 쪽이 맞는지 정하지 않는다.</li>
+</ul>
+
+<h2>화면 만드는 법</h2>
+<ul>
+<li>그림, 옛날 사진, 짧은 재현 영상을 섞고 컷은 문장마다 바꾼다. 한 문장이 끝나면 화면이 바뀐다.</li>
+<li>자막은 아래쪽에 큰 글씨로 지금 말하는 단어만. 연도와 이름만 색이 다르다.</li>
+<li>목소리는 옆에서 들려주는 말투다. 음악은 낮게 깔고 반전에서 끊거나 커진다.</li>
+</ul>
+<div class="sub"><small>SUB_MODE=word · SUB_ACCENT=D5B071</small><span><b>1592년</b> 옥포에서</span></div>
+
+<h2>플러그인에 넣은 것</h2>
+<p>대부분은 이미 있던 규칙을 더 세게 잡은 것이다. 새로 생긴 건 선언 하나와 자막 색 하나다.</p>
+<div class="tablewrap">
+<table>
+<tr><th>채널에서 본 것</th><th>플러그인에서는</th><th>새로 넣었나</th></tr>
+<tr><td>첫 3초는 사건 한 장면, 이름·연도 없이</td><td><code>STORY.person</code>을 선언하면 첫 문장에 이름·별칭·연도가 있으면 검사기가 막고 <code>hookType:"spoiler"</code>·<code>hookForm:"payoff"</code>·<code>hookForm:"number"</code> 커버도 막는다. "300년째"·"500년 동안"·"500년이 흘렀어요" 같은 기간은 통과하고 네 자리 숫자는 늘 연도로 본다. scenario-craft §11 콜드 오픈에서 날짜까지 뺀 형태</td><td>검사 신설</td></tr>
+<tr><td>사람 하나, 반전 하나 (원인 → 막힘 → 한 방)</td><td>전개 #1·#2·#3에 그대로 얹는다. 한 방은 <code>STORY.payoff</code> 샷이고 거기에 <code>sound.drop</code>(scenario-craft §7·§9)</td><td>문서만</td></tr>
+<tr><td>끝은 한 장면, 갈리는 기록은 갈림을 보여 줌</td><td><code>STORY.ending</code>이 <code>payoff</code>와 다른 그룹이어야 한다. 갈리는 기록은 <code>cta:"question"</code>과 <code>shot.share</code> 한 문장</td><td>검사 신설</td></tr>
+<tr><td>컷은 문장마다</td><td>인물 편은 샷당 나레이션 그룹 하나. 둘이면 검사기가 막는다</td><td>검사 신설</td></tr>
+<tr><td>그림·사진·재현 영상 섞기</td><td>render-routing 그대로. 사진·그림·지도는 <code>still_camera</code>, 한 방 컷만 <code>generated_video</code>. 무료 소스는 <a href="../2026-09-07-free-stock-sources/index.html">09-07 조사</a></td><td>문서만</td></tr>
+<tr><td>자막은 지금 단어만, 연도·이름만 색</td><td><code>SUB_MODE=word</code>는 있었고 <code>SUB_ACCENT=RRGGBB</code>·<code>SUB_ACCENT_WORDS</code>를 더했다. 연도(1592년·16세기·날짜)는 자동, 이름은 목록으로. SRT는 그대로 흰 글자</td><td>기능 신설</td></tr>
+<tr><td>옆에서 들려주는 말투</td><td>korean-style D9 구어 종결 규칙 그대로</td><td>이미 있음</td></tr>
+<tr><td>음악은 낮게, 반전에서 끊김</td><td><code>sound.drop:true</code>를 한 방 샷에</td><td>이미 있음</td></tr>
+</table>
+</div>
+<p>바뀐 파일: <code>skills/storyboard/references/person-short.md</code>(신설) · <code>story-contract.js</code> + <code>server/test/story-contract.test.mjs</code> · <code>scenario-craft.md</code> §14 · <code>story-quality.md</code> · storyboard·produce <code>SKILL.md</code> 한 줄씩 · <code>word-cues.py</code> · <code>build-reel.sh</code> · README.</p>
+
+<h2>가져오지 않은 것</h2>
+<ul>
+<li>가십 채널의 거친 말. 조회를 만드는 말투지만 check-style과 채널 존댓말 설정이 막는 자리다. 속도만 가져오고 입은 안 가져온다.</li>
+<li>첫 화면에 이름·연도·주장을 다 적는 틀. 우리 제목 규칙(결과는 영상 안에, platform-playbook §2)과 정면으로 부딪힌다. 첫 프레임은 장면이다.</li>
+</ul>
+
+<h2>근거의 한계</h2>
+<p>일곱 채널의 대표 편을 보고 정리한 관찰이지 측정이 아니라서 완주율이나 평균 시청 시간처럼 이 문법이 실제로 사람을 붙잡아 두는지 말해 줄 숫자는 어느 채널도 공개하지 않았고 우리 채널에서 이 문법으로 찍어 본 편도 아직 없다. 검사기는 모양만 잡는다. 첫 문장이 정말 장면인지, 한 방이 정말 한 번인지, 갈리는 기록에서 두 쪽이 다 화면에 있는지는 나레이션 통독(storyboard §4.4)이 본다.</p>
+
+<h2>출처</h2>
+<ul>
+<li>사용자 작업 채널 조사, 2026-09-10. 위 표의 채널·구독자·대표 편 조회.</li>
+<li><a href="../2026-08-25-scenario-craft/index.html">scenario-craft 조사</a> §7·§9·§11. 이 문법이 더 세게 잡는 세 규칙.</li>
+<li><a href="../2026-08-29-one-world-word-cue/index.html">어절 자막 조사</a>. <code>SUB_MODE=word</code>의 실측 근거.</li>
+</ul>
+</div>
+</body>
+</html>

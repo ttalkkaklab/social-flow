@@ -51,8 +51,11 @@ Before assets, HITL offers **hybrid** (1–2 generated clips plus HTML/still-cam
 **full_video** (every new scene is generated video) with first-pass and retry-inclusive video
 costs, model, resolution, audio setting, explicit budget cap and exclusions. Persist the choice
 in `window.PRODUCTION` and bind approval to the final cost quote. Resume an unchanged approval.
-Before storyboard authoring, ask for cinematic-miniature, photoreal live action, or webtoon
-and apply that choice to every new source/end image and video prompt in either mode.
+Before storyboard authoring, ask for one of the visual-style presets — cinematic-miniature,
+photoreal live action, webtoon, claymation, paper-cutout, ink-wash, toon-3d (added 2026-09-08
+from the Shorts style survey) or arcade-2d (added 2026-09-09, a hand-painted 1990s arcade game
+frame with no HUD) — and apply that choice to every new source/end image and video prompt in
+either mode.
 Follow `skills/storyboard/references/visual-style.md`; production mode never chooses the art style.
 For cinematic-miniature only, full_video follows the spatial-explainer reference `LQZjvQ5W2ck`: consistent miniature/cutaway/
 realistic materials, stable geography, deliberate camera moves and visible physical changes.
@@ -119,7 +122,8 @@ This outranks every other rule in the plugin, the skills and the reference docs.
 This replaces the older mandatory-video hook and fixed editorial-cut quotas.
 Use `skills/storyboard/references/render-routing.md` before choosing any assets.
 Every generated cut declares `shot.render.mode`, `purpose` and `reason`:
-`still_camera`, `character_html`, `object_html`, `data_graph`, `generated_video`, or `editorial_html`.
+`still_camera`, `character_html`, `object_html`, `data_graph`, `generated_video`, `editorial_html`,
+or `stock_video` (a free stock or archive clip with its `visual.license` record, 2026-09-07).
 People mentioned in narration do not automatically need 3D characters; incidental numbers
 in a mechanism do not automatically need a graph. Choose the information the viewer needs.
 
@@ -143,6 +147,41 @@ Choose photographs, acted 3D processes, object mechanisms and charts from the st
 Data graphs follow `skills/storyboard/references/chart-design.md` and the shared SVG renderer.
 No unsupported route, substituted number card or separate PRELUDE may reach assembly.
 The builder reruns source-plan checks and records its version and input hashes before encoding.
+
+## Host media tools first (user directive, 2026-09-07)
+
+When the CLI running a skill ships its own media generation, that tool comes before the
+plugin's API lanes. Codex and Grok expose `image_gen` (Grok also `image_edit`), so every
+generated still, slide art, candidate logo, intro keyframe and growth-post image goes there
+first; Grok exposes `image_to_video` and `reference_to_video`, so every generated clip goes
+there first. Claude Code has neither, so the API table applies unchanged there. The storyboard
+records the detection in `window.PRODUCTION.imageProvider` and `videoProvider` (`host` | `api`);
+an explicit `api` written for the episode wins, and the fallback from a failed host call is
+asked for, never silent. Host output is logged as `image.host` / `video.host` at $0 with the
+allowance noted. The contract is `skills/produce/references/still-generation.md` §1 and
+`skills/produce/references/video-model-selection.md` §The host video tool comes first.
+
+## AI video cuts are pre-rendered in 3D first (user directive, 2026-09-11)
+
+Every `generated_video` cut renders its camera and blocking in 3D before any video call — a
+Blender previz through the `blender_*` bridge, or a three.js previz through
+`skills/storyboard/references/previz-template.html` — at the cut's billed length, 24 fps, grey
+proxies with one flat colour per actor and nothing else in frame. The render is stored as
+`visual.video.previz` (`renderer`, `clip`, `firstFrame`, `sha256`, `fps`, `seconds`,
+`camera.movement`) and `check-scenes.js` refuses a generated cut without it. The previz gives
+the video model its camera, timing and blocking: on the API lane it rides Seedance 2.x as the
+reference video (`Video 1`) with the source still as `Image 1`; on a host video tool that takes
+no clip it shapes the still and the prompt instead (`handoff:"frame_and_prompt"`). The source
+still is edited from the previz's first frame, so the composition the clip starts on is the
+composition the still has. The previz's move and the shot's `visual.camera.movement` must agree;
+a prompt that fights the clip drifts. Imported clips (`visual.reuse`), stock footage, recordings
+and the outro carry none, and neither do b-roll and speech clips on the Veo sound lane (no clip
+input there; the reference route is the motion-background route). Two of the choices are the user's, asked with AskUserQuestion and
+recorded before anything renders or bills: **which renderer** (Blender or three.js) before the
+first previz render — `PRODUCTION.previz` — and **which video model** (the Seedance 2.x grades,
+with `video-model-options.js`'s cost table) before any video call — `PRODUCTION.videoModel`;
+`production-mode.js` refuses a board with generated cuts that lacks either record. Contract:
+`skills/storyboard/references/blender-previz.md` §6 and `production-mode.md` §When to ask.
 
 ## Branch strategy
 

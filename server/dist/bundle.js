@@ -48,9 +48,9 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 
-// node_modules/ajv/dist/compile/codegen/code.js
+// ../../../server/node_modules/ajv/dist/compile/codegen/code.js
 var require_code = __commonJS({
-  "node_modules/ajv/dist/compile/codegen/code.js"(exports) {
+  "../../../server/node_modules/ajv/dist/compile/codegen/code.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.regexpCode = exports.getEsmExportName = exports.getProperty = exports.safeStringify = exports.stringify = exports.strConcat = exports.addCodeArg = exports.str = exports._ = exports.nil = exports._Code = exports.Name = exports.IDENTIFIER = exports._CodeOrName = void 0;
@@ -116,7 +116,7 @@ var require_code = __commonJS({
     }
     exports._ = _;
     var plus = new _Code("+");
-    function str7(strs, ...args) {
+    function str8(strs, ...args) {
       const expr = [safeStringify(strs[0])];
       let i2 = 0;
       while (i2 < args.length) {
@@ -127,7 +127,7 @@ var require_code = __commonJS({
       optimize(expr);
       return new _Code(expr);
     }
-    exports.str = str7;
+    exports.str = str8;
     function addCodeArg(code, arg) {
       if (arg instanceof _Code)
         code.push(...arg._items);
@@ -170,7 +170,7 @@ var require_code = __commonJS({
       return;
     }
     function strConcat(c1, c2) {
-      return c2.emptyStr() ? c1 : c1.emptyStr() ? c2 : str7`${c1}${c2}`;
+      return c2.emptyStr() ? c1 : c1.emptyStr() ? c2 : str8`${c1}${c2}`;
     }
     exports.strConcat = strConcat;
     function interpolate(x2) {
@@ -202,9 +202,9 @@ var require_code = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/codegen/scope.js
+// ../../../server/node_modules/ajv/dist/compile/codegen/scope.js
 var require_scope = __commonJS({
-  "node_modules/ajv/dist/compile/codegen/scope.js"(exports) {
+  "../../../server/node_modules/ajv/dist/compile/codegen/scope.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ValueScope = exports.ValueScopeName = exports.Scope = exports.varKinds = exports.UsedValueState = void 0;
@@ -347,9 +347,9 @@ var require_scope = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/codegen/index.js
+// ../../../server/node_modules/ajv/dist/compile/codegen/index.js
 var require_codegen = __commonJS({
-  "node_modules/ajv/dist/compile/codegen/index.js"(exports) {
+  "../../../server/node_modules/ajv/dist/compile/codegen/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.or = exports.and = exports.not = exports.CodeGen = exports.operators = exports.varKinds = exports.ValueScopeName = exports.ValueScope = exports.Scope = exports.Name = exports.regexpCode = exports.stringify = exports.getProperty = exports.nil = exports.strConcat = exports.str = exports._ = void 0;
@@ -425,11 +425,11 @@ var require_codegen = __commonJS({
         const rhs = this.rhs === void 0 ? "" : ` = ${this.rhs}`;
         return `${varKind} ${this.name}${rhs};` + _n;
       }
-      optimizeNames(names, constants) {
+      optimizeNames(names, constants2) {
         if (!names[this.name.str])
           return;
         if (this.rhs)
-          this.rhs = optimizeExpr(this.rhs, names, constants);
+          this.rhs = optimizeExpr(this.rhs, names, constants2);
         return this;
       }
       get names() {
@@ -446,10 +446,10 @@ var require_codegen = __commonJS({
       render({ _n }) {
         return `${this.lhs} = ${this.rhs};` + _n;
       }
-      optimizeNames(names, constants) {
+      optimizeNames(names, constants2) {
         if (this.lhs instanceof code_1.Name && !names[this.lhs.str] && !this.sideEffects)
           return;
-        this.rhs = optimizeExpr(this.rhs, names, constants);
+        this.rhs = optimizeExpr(this.rhs, names, constants2);
         return this;
       }
       get names() {
@@ -510,8 +510,8 @@ var require_codegen = __commonJS({
       optimizeNodes() {
         return `${this.code}` ? this : void 0;
       }
-      optimizeNames(names, constants) {
-        this.code = optimizeExpr(this.code, names, constants);
+      optimizeNames(names, constants2) {
+        this.code = optimizeExpr(this.code, names, constants2);
         return this;
       }
       get names() {
@@ -540,12 +540,12 @@ var require_codegen = __commonJS({
         }
         return nodes.length > 0 ? this : void 0;
       }
-      optimizeNames(names, constants) {
+      optimizeNames(names, constants2) {
         const { nodes } = this;
         let i2 = nodes.length;
         while (i2--) {
           const n = nodes[i2];
-          if (n.optimizeNames(names, constants))
+          if (n.optimizeNames(names, constants2))
             continue;
           subtractNames(names, n.names);
           nodes.splice(i2, 1);
@@ -598,12 +598,12 @@ var require_codegen = __commonJS({
           return void 0;
         return this;
       }
-      optimizeNames(names, constants) {
+      optimizeNames(names, constants2) {
         var _a4;
-        this.else = (_a4 = this.else) === null || _a4 === void 0 ? void 0 : _a4.optimizeNames(names, constants);
-        if (!(super.optimizeNames(names, constants) || this.else))
+        this.else = (_a4 = this.else) === null || _a4 === void 0 ? void 0 : _a4.optimizeNames(names, constants2);
+        if (!(super.optimizeNames(names, constants2) || this.else))
           return;
-        this.condition = optimizeExpr(this.condition, names, constants);
+        this.condition = optimizeExpr(this.condition, names, constants2);
         return this;
       }
       get names() {
@@ -626,10 +626,10 @@ var require_codegen = __commonJS({
       render(opts) {
         return `for(${this.iteration})` + super.render(opts);
       }
-      optimizeNames(names, constants) {
-        if (!super.optimizeNames(names, constants))
+      optimizeNames(names, constants2) {
+        if (!super.optimizeNames(names, constants2))
           return;
-        this.iteration = optimizeExpr(this.iteration, names, constants);
+        this.iteration = optimizeExpr(this.iteration, names, constants2);
         return this;
       }
       get names() {
@@ -665,10 +665,10 @@ var require_codegen = __commonJS({
       render(opts) {
         return `for(${this.varKind} ${this.name} ${this.loop} ${this.iterable})` + super.render(opts);
       }
-      optimizeNames(names, constants) {
-        if (!super.optimizeNames(names, constants))
+      optimizeNames(names, constants2) {
+        if (!super.optimizeNames(names, constants2))
           return;
-        this.iterable = optimizeExpr(this.iterable, names, constants);
+        this.iterable = optimizeExpr(this.iterable, names, constants2);
         return this;
       }
       get names() {
@@ -710,11 +710,11 @@ var require_codegen = __commonJS({
         (_b = this.finally) === null || _b === void 0 ? void 0 : _b.optimizeNodes();
         return this;
       }
-      optimizeNames(names, constants) {
+      optimizeNames(names, constants2) {
         var _a4, _b;
-        super.optimizeNames(names, constants);
-        (_a4 = this.catch) === null || _a4 === void 0 ? void 0 : _a4.optimizeNames(names, constants);
-        (_b = this.finally) === null || _b === void 0 ? void 0 : _b.optimizeNames(names, constants);
+        super.optimizeNames(names, constants2);
+        (_a4 = this.catch) === null || _a4 === void 0 ? void 0 : _a4.optimizeNames(names, constants2);
+        (_b = this.finally) === null || _b === void 0 ? void 0 : _b.optimizeNames(names, constants2);
         return this;
       }
       get names() {
@@ -1015,7 +1015,7 @@ var require_codegen = __commonJS({
     function addExprNames(names, from) {
       return from instanceof code_1._CodeOrName ? addNames(names, from.names) : names;
     }
-    function optimizeExpr(expr, names, constants) {
+    function optimizeExpr(expr, names, constants2) {
       if (expr instanceof code_1.Name)
         return replaceName(expr);
       if (!canOptimize(expr))
@@ -1030,14 +1030,14 @@ var require_codegen = __commonJS({
         return items;
       }, []));
       function replaceName(n) {
-        const c = constants[n.str];
+        const c = constants2[n.str];
         if (c === void 0 || names[n.str] !== 1)
           return n;
         delete names[n.str];
         return c;
       }
       function canOptimize(e2) {
-        return e2 instanceof code_1._Code && e2._items.some((c) => c instanceof code_1.Name && names[c.str] === 1 && constants[c.str] !== void 0);
+        return e2 instanceof code_1._Code && e2._items.some((c) => c instanceof code_1.Name && names[c.str] === 1 && constants2[c.str] !== void 0);
       }
     }
     function subtractNames(names, from) {
@@ -1067,9 +1067,9 @@ var require_codegen = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/util.js
+// ../../../server/node_modules/ajv/dist/compile/util.js
 var require_util = __commonJS({
-  "node_modules/ajv/dist/compile/util.js"(exports) {
+  "../../../server/node_modules/ajv/dist/compile/util.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.checkStrictMode = exports.getErrorPath = exports.Type = exports.useFunc = exports.setEvaluated = exports.evaluatedPropsToName = exports.mergeEvaluated = exports.eachItem = exports.unescapeJsonPointer = exports.escapeJsonPointer = exports.escapeFragment = exports.unescapeFragment = exports.schemaRefOrVal = exports.schemaHasRulesButRef = exports.schemaHasRules = exports.checkUnknownRules = exports.alwaysValidSchema = exports.toHash = void 0;
@@ -1132,22 +1132,22 @@ var require_util = __commonJS({
       return (0, codegen_1._)`${topSchemaRef}${schemaPath}${(0, codegen_1.getProperty)(keyword)}`;
     }
     exports.schemaRefOrVal = schemaRefOrVal;
-    function unescapeFragment(str7) {
-      return unescapeJsonPointer(decodeURIComponent(str7));
+    function unescapeFragment(str8) {
+      return unescapeJsonPointer(decodeURIComponent(str8));
     }
     exports.unescapeFragment = unescapeFragment;
-    function escapeFragment(str7) {
-      return encodeURIComponent(escapeJsonPointer(str7));
+    function escapeFragment(str8) {
+      return encodeURIComponent(escapeJsonPointer(str8));
     }
     exports.escapeFragment = escapeFragment;
-    function escapeJsonPointer(str7) {
-      if (typeof str7 == "number")
-        return `${str7}`;
-      return str7.replace(/~/g, "~0").replace(/\//g, "~1");
+    function escapeJsonPointer(str8) {
+      if (typeof str8 == "number")
+        return `${str8}`;
+      return str8.replace(/~/g, "~0").replace(/\//g, "~1");
     }
     exports.escapeJsonPointer = escapeJsonPointer;
-    function unescapeJsonPointer(str7) {
-      return str7.replace(/~1/g, "/").replace(/~0/g, "~");
+    function unescapeJsonPointer(str8) {
+      return str8.replace(/~1/g, "/").replace(/~0/g, "~");
     }
     exports.unescapeJsonPointer = unescapeJsonPointer;
     function eachItem(xs, f3) {
@@ -1234,9 +1234,9 @@ var require_util = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/names.js
+// ../../../server/node_modules/ajv/dist/compile/names.js
 var require_names = __commonJS({
-  "node_modules/ajv/dist/compile/names.js"(exports) {
+  "../../../server/node_modules/ajv/dist/compile/names.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -1273,9 +1273,9 @@ var require_names = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/errors.js
+// ../../../server/node_modules/ajv/dist/compile/errors.js
 var require_errors = __commonJS({
-  "node_modules/ajv/dist/compile/errors.js"(exports) {
+  "../../../server/node_modules/ajv/dist/compile/errors.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.extendErrors = exports.resetErrorsCount = exports.reportExtraError = exports.reportError = exports.keyword$DataError = exports.keywordError = void 0;
@@ -1395,9 +1395,9 @@ var require_errors = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/validate/boolSchema.js
+// ../../../server/node_modules/ajv/dist/compile/validate/boolSchema.js
 var require_boolSchema = __commonJS({
-  "node_modules/ajv/dist/compile/validate/boolSchema.js"(exports) {
+  "../../../server/node_modules/ajv/dist/compile/validate/boolSchema.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.boolOrEmptySchema = exports.topBoolOrEmptySchema = void 0;
@@ -1446,9 +1446,9 @@ var require_boolSchema = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/rules.js
+// ../../../server/node_modules/ajv/dist/compile/rules.js
 var require_rules = __commonJS({
-  "node_modules/ajv/dist/compile/rules.js"(exports) {
+  "../../../server/node_modules/ajv/dist/compile/rules.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getRules = exports.isJSONType = void 0;
@@ -1477,9 +1477,9 @@ var require_rules = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/validate/applicability.js
+// ../../../server/node_modules/ajv/dist/compile/validate/applicability.js
 var require_applicability = __commonJS({
-  "node_modules/ajv/dist/compile/validate/applicability.js"(exports) {
+  "../../../server/node_modules/ajv/dist/compile/validate/applicability.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.shouldUseRule = exports.shouldUseGroup = exports.schemaHasRulesForType = void 0;
@@ -1500,9 +1500,9 @@ var require_applicability = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/validate/dataType.js
+// ../../../server/node_modules/ajv/dist/compile/validate/dataType.js
 var require_dataType = __commonJS({
-  "node_modules/ajv/dist/compile/validate/dataType.js"(exports) {
+  "../../../server/node_modules/ajv/dist/compile/validate/dataType.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.reportTypeError = exports.checkDataTypes = exports.checkDataType = exports.coerceAndCheckDataType = exports.getJSONTypes = exports.getSchemaTypes = exports.DataType = void 0;
@@ -1684,9 +1684,9 @@ var require_dataType = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/validate/defaults.js
+// ../../../server/node_modules/ajv/dist/compile/validate/defaults.js
 var require_defaults = __commonJS({
-  "node_modules/ajv/dist/compile/validate/defaults.js"(exports) {
+  "../../../server/node_modules/ajv/dist/compile/validate/defaults.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.assignDefaults = void 0;
@@ -1721,9 +1721,9 @@ var require_defaults = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/code.js
+// ../../../server/node_modules/ajv/dist/vocabularies/code.js
 var require_code2 = __commonJS({
-  "node_modules/ajv/dist/vocabularies/code.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/code.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateUnion = exports.validateArray = exports.usePattern = exports.callValidateCode = exports.schemaProperties = exports.allSchemaProperties = exports.noPropertyInData = exports.propertyInData = exports.isOwnProperty = exports.hasPropFunc = exports.reportMissingProp = exports.checkMissingProp = exports.checkReportMissingProp = void 0;
@@ -1854,9 +1854,9 @@ var require_code2 = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/validate/keyword.js
+// ../../../server/node_modules/ajv/dist/compile/validate/keyword.js
 var require_keyword = __commonJS({
-  "node_modules/ajv/dist/compile/validate/keyword.js"(exports) {
+  "../../../server/node_modules/ajv/dist/compile/validate/keyword.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateKeywordUsage = exports.validSchemaType = exports.funcKeywordCode = exports.macroKeywordCode = void 0;
@@ -1972,9 +1972,9 @@ var require_keyword = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/validate/subschema.js
+// ../../../server/node_modules/ajv/dist/compile/validate/subschema.js
 var require_subschema = __commonJS({
-  "node_modules/ajv/dist/compile/validate/subschema.js"(exports) {
+  "../../../server/node_modules/ajv/dist/compile/validate/subschema.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.extendSubschemaMode = exports.extendSubschemaData = exports.getSubschema = void 0;
@@ -2055,9 +2055,9 @@ var require_subschema = __commonJS({
   }
 });
 
-// node_modules/fast-deep-equal/index.js
+// ../../../server/node_modules/fast-deep-equal/index.js
 var require_fast_deep_equal = __commonJS({
-  "node_modules/fast-deep-equal/index.js"(exports, module) {
+  "../../../server/node_modules/fast-deep-equal/index.js"(exports, module) {
     "use strict";
     module.exports = function equal(a, b) {
       if (a === b) return true;
@@ -2090,9 +2090,9 @@ var require_fast_deep_equal = __commonJS({
   }
 });
 
-// node_modules/json-schema-traverse/index.js
+// ../../../server/node_modules/json-schema-traverse/index.js
 var require_json_schema_traverse = __commonJS({
-  "node_modules/json-schema-traverse/index.js"(exports, module) {
+  "../../../server/node_modules/json-schema-traverse/index.js"(exports, module) {
     "use strict";
     var traverse = module.exports = function(schema, opts, cb) {
       if (typeof opts == "function") {
@@ -2172,15 +2172,15 @@ var require_json_schema_traverse = __commonJS({
         post(schema, jsonPtr, rootSchema, parentJsonPtr, parentKeyword, parentSchema, keyIndex);
       }
     }
-    function escapeJsonPtr(str7) {
-      return str7.replace(/~/g, "~0").replace(/\//g, "~1");
+    function escapeJsonPtr(str8) {
+      return str8.replace(/~/g, "~0").replace(/\//g, "~1");
     }
   }
 });
 
-// node_modules/ajv/dist/compile/resolve.js
+// ../../../server/node_modules/ajv/dist/compile/resolve.js
 var require_resolve = __commonJS({
-  "node_modules/ajv/dist/compile/resolve.js"(exports) {
+  "../../../server/node_modules/ajv/dist/compile/resolve.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getSchemaRefs = exports.resolveUrl = exports.normalizeId = exports._getFullPath = exports.getFullPath = exports.inlineRef = void 0;
@@ -2334,9 +2334,9 @@ var require_resolve = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/validate/index.js
+// ../../../server/node_modules/ajv/dist/compile/validate/index.js
 var require_validate = __commonJS({
-  "node_modules/ajv/dist/compile/validate/index.js"(exports) {
+  "../../../server/node_modules/ajv/dist/compile/validate/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getData = exports.KeywordCxt = exports.validateFunctionCode = void 0;
@@ -2842,9 +2842,9 @@ var require_validate = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/runtime/validation_error.js
+// ../../../server/node_modules/ajv/dist/runtime/validation_error.js
 var require_validation_error = __commonJS({
-  "node_modules/ajv/dist/runtime/validation_error.js"(exports) {
+  "../../../server/node_modules/ajv/dist/runtime/validation_error.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var ValidationError = class extends Error {
@@ -2858,9 +2858,9 @@ var require_validation_error = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/ref_error.js
+// ../../../server/node_modules/ajv/dist/compile/ref_error.js
 var require_ref_error = __commonJS({
-  "node_modules/ajv/dist/compile/ref_error.js"(exports) {
+  "../../../server/node_modules/ajv/dist/compile/ref_error.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var resolve_1 = require_resolve();
@@ -2875,9 +2875,9 @@ var require_ref_error = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/index.js
+// ../../../server/node_modules/ajv/dist/compile/index.js
 var require_compile = __commonJS({
-  "node_modules/ajv/dist/compile/index.js"(exports) {
+  "../../../server/node_modules/ajv/dist/compile/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.resolveSchema = exports.getCompilingSchema = exports.resolveRef = exports.compileSchema = exports.SchemaEnv = void 0;
@@ -2999,7 +2999,7 @@ var require_compile = __commonJS({
       const schOrFunc = root.refs[ref];
       if (schOrFunc)
         return schOrFunc;
-      let _sch = resolve3.call(this, root, ref);
+      let _sch = resolve5.call(this, root, ref);
       if (_sch === void 0) {
         const schema = (_a4 = root.localRefs) === null || _a4 === void 0 ? void 0 : _a4[ref];
         const { schemaId } = this.opts;
@@ -3026,7 +3026,7 @@ var require_compile = __commonJS({
     function sameSchemaEnv(s1, s2) {
       return s1.schema === s2.schema && s1.root === s2.root && s1.baseId === s2.baseId;
     }
-    function resolve3(root, ref) {
+    function resolve5(root, ref) {
       let sch;
       while (typeof (sch = this.refs[ref]) == "string")
         ref = sch;
@@ -3099,9 +3099,9 @@ var require_compile = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/refs/data.json
+// ../../../server/node_modules/ajv/dist/refs/data.json
 var require_data = __commonJS({
-  "node_modules/ajv/dist/refs/data.json"(exports, module) {
+  "../../../server/node_modules/ajv/dist/refs/data.json"(exports, module) {
     module.exports = {
       $id: "https://raw.githubusercontent.com/ajv-validator/ajv/master/lib/refs/data.json#",
       description: "Meta-schema for $data reference (JSON AnySchema extension proposal)",
@@ -3118,9 +3118,9 @@ var require_data = __commonJS({
   }
 });
 
-// node_modules/fast-uri/lib/utils.js
+// ../../../server/node_modules/fast-uri/lib/utils.js
 var require_utils = __commonJS({
-  "node_modules/fast-uri/lib/utils.js"(exports, module) {
+  "../../../server/node_modules/fast-uri/lib/utils.js"(exports, module) {
     "use strict";
     var isUUID = RegExp.prototype.test.bind(/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/iu);
     var isIPv4 = RegExp.prototype.test.bind(/^(?:(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]\d|\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]\d|\d)$/u);
@@ -3237,15 +3237,15 @@ var require_utils = __commonJS({
         return { host, isIPV6: false };
       }
     }
-    function findToken(str7, token) {
+    function findToken(str8, token) {
       let ind = 0;
-      for (let i2 = 0; i2 < str7.length; i2++) {
-        if (str7[i2] === token) ind++;
+      for (let i2 = 0; i2 < str8.length; i2++) {
+        if (str8[i2] === token) ind++;
       }
       return ind;
     }
-    function removeDotSegments(path10) {
-      let input = path10;
+    function removeDotSegments(path11) {
+      let input = path11;
       const output = [];
       let nextSlash = -1;
       let len = 0;
@@ -3431,9 +3431,9 @@ var require_utils = __commonJS({
   }
 });
 
-// node_modules/fast-uri/lib/schemes.js
+// ../../../server/node_modules/fast-uri/lib/schemes.js
 var require_schemes = __commonJS({
-  "node_modules/fast-uri/lib/schemes.js"(exports, module) {
+  "../../../server/node_modules/fast-uri/lib/schemes.js"(exports, module) {
     "use strict";
     var { isUUID } = require_utils();
     var URN_REG = /([\da-z][\d\-a-z]{0,31}):((?:[\w!$'()*+,\-.:;=@]|%[\da-f]{2})+)/iu;
@@ -3497,8 +3497,8 @@ var require_schemes = __commonJS({
         wsComponent.secure = void 0;
       }
       if (wsComponent.resourceName) {
-        const [path10, query] = wsComponent.resourceName.split("?");
-        wsComponent.path = path10 && path10 !== "/" ? path10 : void 0;
+        const [path11, query] = wsComponent.resourceName.split("?");
+        wsComponent.path = path11 && path11 !== "/" ? path11 : void 0;
         wsComponent.query = query;
         wsComponent.resourceName = void 0;
       }
@@ -3557,7 +3557,7 @@ var require_schemes = __commonJS({
       urnComponent.nss = (uuidComponent.uuid || "").toLowerCase();
       return urnComponent;
     }
-    var http3 = (
+    var http4 = (
       /** @type {SchemeHandler} */
       {
         scheme: "http",
@@ -3570,7 +3570,7 @@ var require_schemes = __commonJS({
       /** @type {SchemeHandler} */
       {
         scheme: "https",
-        domainHost: http3.domainHost,
+        domainHost: http4.domainHost,
         parse: httpParse,
         serialize: httpSerialize
       }
@@ -3614,7 +3614,7 @@ var require_schemes = __commonJS({
     var SCHEMES = (
       /** @type {Record<SchemeName, SchemeHandler>} */
       {
-        http: http3,
+        http: http4,
         https: https2,
         ws,
         wss,
@@ -3641,9 +3641,9 @@ var require_schemes = __commonJS({
   }
 });
 
-// node_modules/fast-uri/index.js
+// ../../../server/node_modules/fast-uri/index.js
 var require_fast_uri = __commonJS({
-  "node_modules/fast-uri/index.js"(exports, module) {
+  "../../../server/node_modules/fast-uri/index.js"(exports, module) {
     "use strict";
     var { normalizeIPv6, removeDotSegments, recomposeAuthority, normalizePercentEncoding, normalizePathEncoding, escapePreservingEscapes, reescapeHostDelimiters, isIPv4, nonSimpleDomain } = require_utils();
     var { SCHEMES, getSchemeHandler } = require_schemes();
@@ -3657,7 +3657,7 @@ var require_fast_uri = __commonJS({
       }
       return uri;
     }
-    function resolve3(baseURI, relativeURI, options) {
+    function resolve5(baseURI, relativeURI, options) {
       const schemelessOptions = options ? Object.assign({ scheme: "null" }, options) : { scheme: "null" };
       const { parsed: baseParsed, malformedAuthorityOrPort: baseMalformed } = parseWithStatus(baseURI, schemelessOptions);
       const { parsed: relativeParsed, malformedAuthorityOrPort: relativeMalformed } = parseWithStatus(relativeURI, schemelessOptions);
@@ -3941,7 +3941,7 @@ var require_fast_uri = __commonJS({
     var fastUri = {
       SCHEMES,
       normalize,
-      resolve: resolve3,
+      resolve: resolve5,
       resolveComponent,
       equal,
       serialize,
@@ -3953,9 +3953,9 @@ var require_fast_uri = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/runtime/uri.js
+// ../../../server/node_modules/ajv/dist/runtime/uri.js
 var require_uri = __commonJS({
-  "node_modules/ajv/dist/runtime/uri.js"(exports) {
+  "../../../server/node_modules/ajv/dist/runtime/uri.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var uri = require_fast_uri();
@@ -3964,9 +3964,9 @@ var require_uri = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/core.js
+// ../../../server/node_modules/ajv/dist/core.js
 var require_core = __commonJS({
-  "node_modules/ajv/dist/core.js"(exports) {
+  "../../../server/node_modules/ajv/dist/core.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.CodeGen = exports.Name = exports.nil = exports.stringify = exports.str = exports._ = exports.KeywordCxt = void 0;
@@ -4003,7 +4003,7 @@ var require_core = __commonJS({
     var util_1 = require_util();
     var $dataRefSchema = require_data();
     var uri_1 = require_uri();
-    var defaultRegExp = (str7, flags) => new RegExp(str7, flags);
+    var defaultRegExp = (str8, flags) => new RegExp(str8, flags);
     defaultRegExp.code = "new RegExp";
     var META_IGNORE_OPTIONS = ["removeAdditional", "useDefaults", "coerceTypes"];
     var EXT_SCOPE_NAMES = /* @__PURE__ */ new Set([
@@ -4575,9 +4575,9 @@ var require_core = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/core/id.js
+// ../../../server/node_modules/ajv/dist/vocabularies/core/id.js
 var require_id = __commonJS({
-  "node_modules/ajv/dist/vocabularies/core/id.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/core/id.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var def = {
@@ -4590,9 +4590,9 @@ var require_id = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/core/ref.js
+// ../../../server/node_modules/ajv/dist/vocabularies/core/ref.js
 var require_ref = __commonJS({
-  "node_modules/ajv/dist/vocabularies/core/ref.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/core/ref.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.callRef = exports.getValidate = void 0;
@@ -4712,9 +4712,9 @@ var require_ref = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/core/index.js
+// ../../../server/node_modules/ajv/dist/vocabularies/core/index.js
 var require_core2 = __commonJS({
-  "node_modules/ajv/dist/vocabularies/core/index.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/core/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var id_1 = require_id();
@@ -4733,9 +4733,9 @@ var require_core2 = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/limitNumber.js
+// ../../../server/node_modules/ajv/dist/vocabularies/validation/limitNumber.js
 var require_limitNumber = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/limitNumber.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/validation/limitNumber.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -4765,9 +4765,9 @@ var require_limitNumber = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/multipleOf.js
+// ../../../server/node_modules/ajv/dist/vocabularies/validation/multipleOf.js
 var require_multipleOf = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/multipleOf.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/validation/multipleOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -4793,21 +4793,21 @@ var require_multipleOf = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/runtime/ucs2length.js
+// ../../../server/node_modules/ajv/dist/runtime/ucs2length.js
 var require_ucs2length = __commonJS({
-  "node_modules/ajv/dist/runtime/ucs2length.js"(exports) {
+  "../../../server/node_modules/ajv/dist/runtime/ucs2length.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    function ucs2length(str7) {
-      const len = str7.length;
+    function ucs2length(str8) {
+      const len = str8.length;
       let length = 0;
       let pos = 0;
       let value;
       while (pos < len) {
         length++;
-        value = str7.charCodeAt(pos++);
+        value = str8.charCodeAt(pos++);
         if (value >= 55296 && value <= 56319 && pos < len) {
-          value = str7.charCodeAt(pos);
+          value = str8.charCodeAt(pos);
           if ((value & 64512) === 56320)
             pos++;
         }
@@ -4819,9 +4819,9 @@ var require_ucs2length = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/limitLength.js
+// ../../../server/node_modules/ajv/dist/vocabularies/validation/limitLength.js
 var require_limitLength = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/limitLength.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/validation/limitLength.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -4851,9 +4851,9 @@ var require_limitLength = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/pattern.js
+// ../../../server/node_modules/ajv/dist/vocabularies/validation/pattern.js
 var require_pattern = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/pattern.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/validation/pattern.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -4888,9 +4888,9 @@ var require_pattern = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/limitProperties.js
+// ../../../server/node_modules/ajv/dist/vocabularies/validation/limitProperties.js
 var require_limitProperties = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/limitProperties.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/validation/limitProperties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -4917,9 +4917,9 @@ var require_limitProperties = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/required.js
+// ../../../server/node_modules/ajv/dist/vocabularies/validation/required.js
 var require_required = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/required.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/validation/required.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -4999,9 +4999,9 @@ var require_required = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/limitItems.js
+// ../../../server/node_modules/ajv/dist/vocabularies/validation/limitItems.js
 var require_limitItems = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/limitItems.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/validation/limitItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5028,9 +5028,9 @@ var require_limitItems = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/runtime/equal.js
+// ../../../server/node_modules/ajv/dist/runtime/equal.js
 var require_equal = __commonJS({
-  "node_modules/ajv/dist/runtime/equal.js"(exports) {
+  "../../../server/node_modules/ajv/dist/runtime/equal.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var equal = require_fast_deep_equal();
@@ -5039,9 +5039,9 @@ var require_equal = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/uniqueItems.js
+// ../../../server/node_modules/ajv/dist/vocabularies/validation/uniqueItems.js
 var require_uniqueItems = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/uniqueItems.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/validation/uniqueItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var dataType_1 = require_dataType();
@@ -5106,9 +5106,9 @@ var require_uniqueItems = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/const.js
+// ../../../server/node_modules/ajv/dist/vocabularies/validation/const.js
 var require_const = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/const.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/validation/const.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5135,9 +5135,9 @@ var require_const = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/enum.js
+// ../../../server/node_modules/ajv/dist/vocabularies/validation/enum.js
 var require_enum = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/enum.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/validation/enum.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5184,9 +5184,9 @@ var require_enum = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/index.js
+// ../../../server/node_modules/ajv/dist/vocabularies/validation/index.js
 var require_validation = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/index.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/validation/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var limitNumber_1 = require_limitNumber();
@@ -5222,9 +5222,9 @@ var require_validation = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/additionalItems.js
+// ../../../server/node_modules/ajv/dist/vocabularies/applicator/additionalItems.js
 var require_additionalItems = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/additionalItems.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/applicator/additionalItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateAdditionalItems = void 0;
@@ -5275,9 +5275,9 @@ var require_additionalItems = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/items.js
+// ../../../server/node_modules/ajv/dist/vocabularies/applicator/items.js
 var require_items = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/items.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/applicator/items.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateTuple = void 0;
@@ -5332,9 +5332,9 @@ var require_items = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/prefixItems.js
+// ../../../server/node_modules/ajv/dist/vocabularies/applicator/prefixItems.js
 var require_prefixItems = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/prefixItems.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/applicator/prefixItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var items_1 = require_items();
@@ -5349,9 +5349,9 @@ var require_prefixItems = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/items2020.js
+// ../../../server/node_modules/ajv/dist/vocabularies/applicator/items2020.js
 var require_items2020 = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/items2020.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/applicator/items2020.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5384,9 +5384,9 @@ var require_items2020 = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/contains.js
+// ../../../server/node_modules/ajv/dist/vocabularies/applicator/contains.js
 var require_contains = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/contains.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/applicator/contains.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5478,9 +5478,9 @@ var require_contains = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/dependencies.js
+// ../../../server/node_modules/ajv/dist/vocabularies/applicator/dependencies.js
 var require_dependencies = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/dependencies.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/applicator/dependencies.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateSchemaDeps = exports.validatePropertyDeps = exports.error = void 0;
@@ -5572,9 +5572,9 @@ var require_dependencies = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/propertyNames.js
+// ../../../server/node_modules/ajv/dist/vocabularies/applicator/propertyNames.js
 var require_propertyNames = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/propertyNames.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/applicator/propertyNames.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5615,9 +5615,9 @@ var require_propertyNames = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js
+// ../../../server/node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js
 var require_additionalProperties = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -5721,9 +5721,9 @@ var require_additionalProperties = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/properties.js
+// ../../../server/node_modules/ajv/dist/vocabularies/applicator/properties.js
 var require_properties = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/properties.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/applicator/properties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var validate_1 = require_validate();
@@ -5779,9 +5779,9 @@ var require_properties = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/patternProperties.js
+// ../../../server/node_modules/ajv/dist/vocabularies/applicator/patternProperties.js
 var require_patternProperties = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/patternProperties.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/applicator/patternProperties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -5853,9 +5853,9 @@ var require_patternProperties = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/not.js
+// ../../../server/node_modules/ajv/dist/vocabularies/applicator/not.js
 var require_not = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/not.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/applicator/not.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var util_1 = require_util();
@@ -5884,9 +5884,9 @@ var require_not = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/anyOf.js
+// ../../../server/node_modules/ajv/dist/vocabularies/applicator/anyOf.js
 var require_anyOf = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/anyOf.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/applicator/anyOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -5901,9 +5901,9 @@ var require_anyOf = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/oneOf.js
+// ../../../server/node_modules/ajv/dist/vocabularies/applicator/oneOf.js
 var require_oneOf = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/oneOf.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/applicator/oneOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5959,9 +5959,9 @@ var require_oneOf = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/allOf.js
+// ../../../server/node_modules/ajv/dist/vocabularies/applicator/allOf.js
 var require_allOf = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/allOf.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/applicator/allOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var util_1 = require_util();
@@ -5986,9 +5986,9 @@ var require_allOf = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/if.js
+// ../../../server/node_modules/ajv/dist/vocabularies/applicator/if.js
 var require_if = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/if.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/applicator/if.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -6055,9 +6055,9 @@ var require_if = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/thenElse.js
+// ../../../server/node_modules/ajv/dist/vocabularies/applicator/thenElse.js
 var require_thenElse = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/thenElse.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/applicator/thenElse.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var util_1 = require_util();
@@ -6073,9 +6073,9 @@ var require_thenElse = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/index.js
+// ../../../server/node_modules/ajv/dist/vocabularies/applicator/index.js
 var require_applicator = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/index.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/applicator/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var additionalItems_1 = require_additionalItems();
@@ -6121,9 +6121,9 @@ var require_applicator = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/format/format.js
+// ../../../server/node_modules/ajv/dist/vocabularies/format/format.js
 var require_format = __commonJS({
-  "node_modules/ajv/dist/vocabularies/format/format.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/format/format.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -6190,11 +6190,11 @@ var require_format = __commonJS({
           }
           function getFormat(fmtDef) {
             const code = fmtDef instanceof RegExp ? (0, codegen_1.regexpCode)(fmtDef) : opts.code.formats ? (0, codegen_1._)`${opts.code.formats}${(0, codegen_1.getProperty)(schema)}` : void 0;
-            const fmt2 = gen.scopeValue("formats", { key: schema, ref: fmtDef, code });
+            const fmt3 = gen.scopeValue("formats", { key: schema, ref: fmtDef, code });
             if (typeof fmtDef == "object" && !(fmtDef instanceof RegExp)) {
-              return [fmtDef.type || "string", fmtDef.validate, (0, codegen_1._)`${fmt2}.validate`];
+              return [fmtDef.type || "string", fmtDef.validate, (0, codegen_1._)`${fmt3}.validate`];
             }
-            return ["string", fmtDef, fmt2];
+            return ["string", fmtDef, fmt3];
           }
           function validCondition() {
             if (typeof formatDef == "object" && !(formatDef instanceof RegExp) && formatDef.async) {
@@ -6211,9 +6211,9 @@ var require_format = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/format/index.js
+// ../../../server/node_modules/ajv/dist/vocabularies/format/index.js
 var require_format2 = __commonJS({
-  "node_modules/ajv/dist/vocabularies/format/index.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/format/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var format_1 = require_format();
@@ -6222,9 +6222,9 @@ var require_format2 = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/metadata.js
+// ../../../server/node_modules/ajv/dist/vocabularies/metadata.js
 var require_metadata = __commonJS({
-  "node_modules/ajv/dist/vocabularies/metadata.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/metadata.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.contentVocabulary = exports.metadataVocabulary = void 0;
@@ -6245,9 +6245,9 @@ var require_metadata = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/draft7.js
+// ../../../server/node_modules/ajv/dist/vocabularies/draft7.js
 var require_draft7 = __commonJS({
-  "node_modules/ajv/dist/vocabularies/draft7.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/draft7.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var core_1 = require_core2();
@@ -6267,9 +6267,9 @@ var require_draft7 = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/discriminator/types.js
+// ../../../server/node_modules/ajv/dist/vocabularies/discriminator/types.js
 var require_types = __commonJS({
-  "node_modules/ajv/dist/vocabularies/discriminator/types.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/discriminator/types.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.DiscrError = void 0;
@@ -6281,9 +6281,9 @@ var require_types = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/discriminator/index.js
+// ../../../server/node_modules/ajv/dist/vocabularies/discriminator/index.js
 var require_discriminator = __commonJS({
-  "node_modules/ajv/dist/vocabularies/discriminator/index.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/discriminator/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -6386,9 +6386,9 @@ var require_discriminator = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/refs/json-schema-draft-07.json
+// ../../../server/node_modules/ajv/dist/refs/json-schema-draft-07.json
 var require_json_schema_draft_07 = __commonJS({
-  "node_modules/ajv/dist/refs/json-schema-draft-07.json"(exports, module) {
+  "../../../server/node_modules/ajv/dist/refs/json-schema-draft-07.json"(exports, module) {
     module.exports = {
       $schema: "http://json-schema.org/draft-07/schema#",
       $id: "http://json-schema.org/draft-07/schema#",
@@ -6543,9 +6543,9 @@ var require_json_schema_draft_07 = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/ajv.js
+// ../../../server/node_modules/ajv/dist/ajv.js
 var require_ajv = __commonJS({
-  "node_modules/ajv/dist/ajv.js"(exports, module) {
+  "../../../server/node_modules/ajv/dist/ajv.js"(exports, module) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.MissingRefError = exports.ValidationError = exports.CodeGen = exports.Name = exports.nil = exports.stringify = exports.str = exports._ = exports.KeywordCxt = exports.Ajv = void 0;
@@ -6613,9 +6613,9 @@ var require_ajv = __commonJS({
   }
 });
 
-// node_modules/ajv-formats/dist/formats.js
+// ../../../server/node_modules/ajv-formats/dist/formats.js
 var require_formats = __commonJS({
-  "node_modules/ajv-formats/dist/formats.js"(exports) {
+  "../../../server/node_modules/ajv-formats/dist/formats.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.formatNames = exports.fastFormats = exports.fullFormats = void 0;
@@ -6690,8 +6690,8 @@ var require_formats = __commonJS({
     }
     var DATE = /^(\d\d\d\d)-(\d\d)-(\d\d)$/;
     var DAYS = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-    function date3(str7) {
-      const matches = DATE.exec(str7);
+    function date3(str8) {
+      const matches = DATE.exec(str8);
       if (!matches)
         return false;
       const year = +matches[1];
@@ -6710,8 +6710,8 @@ var require_formats = __commonJS({
     }
     var TIME = /^(\d\d):(\d\d):(\d\d(?:\.\d+)?)(z|([+-])(\d\d)(?::?(\d\d))?)?$/i;
     function getTime(strictTimeZone) {
-      return function time3(str7) {
-        const matches = TIME.exec(str7);
+      return function time3(str8) {
+        const matches = TIME.exec(str8);
         if (!matches)
           return false;
         const hr = +matches[1];
@@ -6757,8 +6757,8 @@ var require_formats = __commonJS({
     var DATE_TIME_SEPARATOR = /t|\s/i;
     function getDateTime(strictTimeZone) {
       const time3 = getTime(strictTimeZone);
-      return function date_time(str7) {
-        const dateTime = str7.split(DATE_TIME_SEPARATOR);
+      return function date_time(str8) {
+        const dateTime = str8.split(DATE_TIME_SEPARATOR);
         return dateTime.length === 2 && date3(dateTime[0]) && time3(dateTime[1]);
       };
     }
@@ -6783,13 +6783,13 @@ var require_formats = __commonJS({
     }
     var NOT_URI_FRAGMENT = /\/|:/;
     var URI = /^(?:[a-z][a-z0-9+\-.]*:)(?:\/?\/(?:(?:[a-z0-9\-._~!$&'()*+,;=:]|%[0-9a-f]{2})*@)?(?:\[(?:(?:(?:(?:[0-9a-f]{1,4}:){6}|::(?:[0-9a-f]{1,4}:){5}|(?:[0-9a-f]{1,4})?::(?:[0-9a-f]{1,4}:){4}|(?:(?:[0-9a-f]{1,4}:){0,1}[0-9a-f]{1,4})?::(?:[0-9a-f]{1,4}:){3}|(?:(?:[0-9a-f]{1,4}:){0,2}[0-9a-f]{1,4})?::(?:[0-9a-f]{1,4}:){2}|(?:(?:[0-9a-f]{1,4}:){0,3}[0-9a-f]{1,4})?::[0-9a-f]{1,4}:|(?:(?:[0-9a-f]{1,4}:){0,4}[0-9a-f]{1,4})?::)(?:[0-9a-f]{1,4}:[0-9a-f]{1,4}|(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?))|(?:(?:[0-9a-f]{1,4}:){0,5}[0-9a-f]{1,4})?::[0-9a-f]{1,4}|(?:(?:[0-9a-f]{1,4}:){0,6}[0-9a-f]{1,4})?::)|[Vv][0-9a-f]+\.[a-z0-9\-._~!$&'()*+,;=:]+)\]|(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)|(?:[a-z0-9\-._~!$&'()*+,;=]|%[0-9a-f]{2})*)(?::\d*)?(?:\/(?:[a-z0-9\-._~!$&'()*+,;=:@]|%[0-9a-f]{2})*)*|\/(?:(?:[a-z0-9\-._~!$&'()*+,;=:@]|%[0-9a-f]{2})+(?:\/(?:[a-z0-9\-._~!$&'()*+,;=:@]|%[0-9a-f]{2})*)*)?|(?:[a-z0-9\-._~!$&'()*+,;=:@]|%[0-9a-f]{2})+(?:\/(?:[a-z0-9\-._~!$&'()*+,;=:@]|%[0-9a-f]{2})*)*)(?:\?(?:[a-z0-9\-._~!$&'()*+,;=:@/?]|%[0-9a-f]{2})*)?(?:#(?:[a-z0-9\-._~!$&'()*+,;=:@/?]|%[0-9a-f]{2})*)?$/i;
-    function uri(str7) {
-      return NOT_URI_FRAGMENT.test(str7) && URI.test(str7);
+    function uri(str8) {
+      return NOT_URI_FRAGMENT.test(str8) && URI.test(str8);
     }
     var BYTE = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/gm;
-    function byte(str7) {
+    function byte(str8) {
       BYTE.lastIndex = 0;
-      return BYTE.test(str7);
+      return BYTE.test(str8);
     }
     var MIN_INT32 = -(2 ** 31);
     var MAX_INT32 = 2 ** 31 - 1;
@@ -6803,11 +6803,11 @@ var require_formats = __commonJS({
       return true;
     }
     var Z_ANCHOR = /[^\\]\\Z/;
-    function regex(str7) {
-      if (Z_ANCHOR.test(str7))
+    function regex(str8) {
+      if (Z_ANCHOR.test(str8))
         return false;
       try {
-        new RegExp(str7);
+        new RegExp(str8);
         return true;
       } catch (e2) {
         return false;
@@ -6816,9 +6816,9 @@ var require_formats = __commonJS({
   }
 });
 
-// node_modules/ajv-formats/dist/limit.js
+// ../../../server/node_modules/ajv-formats/dist/limit.js
 var require_limit = __commonJS({
-  "node_modules/ajv-formats/dist/limit.js"(exports) {
+  "../../../server/node_modules/ajv-formats/dist/limit.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.formatLimitDefinition = void 0;
@@ -6856,8 +6856,8 @@ var require_limit = __commonJS({
             ref: self2.formats,
             code: opts.code.formats
           });
-          const fmt2 = gen.const("fmt", (0, codegen_1._)`${fmts}[${fCxt.schemaCode}]`);
-          cxt.fail$data((0, codegen_1.or)((0, codegen_1._)`typeof ${fmt2} != "object"`, (0, codegen_1._)`${fmt2} instanceof RegExp`, (0, codegen_1._)`typeof ${fmt2}.compare != "function"`, compareCode(fmt2)));
+          const fmt3 = gen.const("fmt", (0, codegen_1._)`${fmts}[${fCxt.schemaCode}]`);
+          cxt.fail$data((0, codegen_1.or)((0, codegen_1._)`typeof ${fmt3} != "object"`, (0, codegen_1._)`${fmt3} instanceof RegExp`, (0, codegen_1._)`typeof ${fmt3}.compare != "function"`, compareCode(fmt3)));
         }
         function validateFormat() {
           const format = fCxt.schema;
@@ -6867,15 +6867,15 @@ var require_limit = __commonJS({
           if (typeof fmtDef != "object" || fmtDef instanceof RegExp || typeof fmtDef.compare != "function") {
             throw new Error(`"${keyword}": format "${format}" does not define "compare" function`);
           }
-          const fmt2 = gen.scopeValue("formats", {
+          const fmt3 = gen.scopeValue("formats", {
             key: format,
             ref: fmtDef,
             code: opts.code.formats ? (0, codegen_1._)`${opts.code.formats}${(0, codegen_1.getProperty)(format)}` : void 0
           });
-          cxt.fail$data(compareCode(fmt2));
+          cxt.fail$data(compareCode(fmt3));
         }
-        function compareCode(fmt2) {
-          return (0, codegen_1._)`${fmt2}.compare(${data}, ${schemaCode}) ${KWDs[keyword].fail} 0`;
+        function compareCode(fmt3) {
+          return (0, codegen_1._)`${fmt3}.compare(${data}, ${schemaCode}) ${KWDs[keyword].fail} 0`;
         }
       },
       dependencies: ["format"]
@@ -6888,9 +6888,9 @@ var require_limit = __commonJS({
   }
 });
 
-// node_modules/ajv-formats/dist/index.js
+// ../../../server/node_modules/ajv-formats/dist/index.js
 var require_dist = __commonJS({
-  "node_modules/ajv-formats/dist/index.js"(exports, module) {
+  "../../../server/node_modules/ajv-formats/dist/index.js"(exports, module) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var formats_1 = require_formats();
@@ -6917,12 +6917,12 @@ var require_dist = __commonJS({
         throw new Error(`Unknown format "${name}"`);
       return f3;
     };
-    function addFormats(ajv, list, fs8, exportName) {
+    function addFormats(ajv, list, fs9, exportName) {
       var _a4;
       var _b;
       (_a4 = (_b = ajv.opts.code).formats) !== null && _a4 !== void 0 ? _a4 : _b.formats = (0, codegen_1._)`require("ajv-formats/dist/formats").${exportName}`;
       for (const f3 of list)
-        ajv.addFormat(f3, fs8[f3]);
+        ajv.addFormat(f3, fs9[f3]);
     }
     module.exports = exports = formatsPlugin;
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -6930,9 +6930,9 @@ var require_dist = __commonJS({
   }
 });
 
-// node_modules/retry/lib/retry_operation.js
+// ../../../server/node_modules/retry/lib/retry_operation.js
 var require_retry_operation = __commonJS({
-  "node_modules/retry/lib/retry_operation.js"(exports, module) {
+  "../../../server/node_modules/retry/lib/retry_operation.js"(exports, module) {
     function RetryOperation(timeouts, options) {
       if (typeof options === "boolean") {
         options = { forever: options };
@@ -7065,9 +7065,9 @@ var require_retry_operation = __commonJS({
   }
 });
 
-// node_modules/retry/lib/retry.js
+// ../../../server/node_modules/retry/lib/retry.js
 var require_retry = __commonJS({
-  "node_modules/retry/lib/retry.js"(exports) {
+  "../../../server/node_modules/retry/lib/retry.js"(exports) {
     var RetryOperation = require_retry_operation();
     exports.operation = function(options) {
       var timeouts = exports.timeouts(options);
@@ -7151,16 +7151,16 @@ var require_retry = __commonJS({
   }
 });
 
-// node_modules/retry/index.js
+// ../../../server/node_modules/retry/index.js
 var require_retry2 = __commonJS({
-  "node_modules/retry/index.js"(exports, module) {
+  "../../../server/node_modules/retry/index.js"(exports, module) {
     module.exports = require_retry();
   }
 });
 
-// node_modules/p-retry/index.js
+// ../../../server/node_modules/p-retry/index.js
 var require_p_retry = __commonJS({
-  "node_modules/p-retry/index.js"(exports, module) {
+  "../../../server/node_modules/p-retry/index.js"(exports, module) {
     "use strict";
     var retry2 = require_retry2();
     var networkErrorMsgs = [
@@ -7194,7 +7194,7 @@ var require_p_retry = __commonJS({
       return error2;
     };
     var isNetworkError = (errorMessage) => networkErrorMsgs.includes(errorMessage);
-    var pRetry2 = (input, options) => new Promise((resolve3, reject) => {
+    var pRetry2 = (input, options) => new Promise((resolve5, reject) => {
       options = {
         onFailedAttempt: () => {
         },
@@ -7204,7 +7204,7 @@ var require_p_retry = __commonJS({
       const operation = retry2.operation(options);
       operation.attempt(async (attemptNumber) => {
         try {
-          resolve3(await input(attemptNumber));
+          resolve5(await input(attemptNumber));
         } catch (error2) {
           if (!(error2 instanceof Error)) {
             reject(new TypeError(`Non-error was thrown: "${error2}". You should only throw errors.`));
@@ -7237,9 +7237,9 @@ var require_p_retry = __commonJS({
   }
 });
 
-// node_modules/extend/index.js
+// ../../../server/node_modules/extend/index.js
 var require_extend = __commonJS({
-  "node_modules/extend/index.js"(exports, module) {
+  "../../../server/node_modules/extend/index.js"(exports, module) {
     "use strict";
     var hasOwn3 = Object.prototype.hasOwnProperty;
     var toStr = Object.prototype.toString;
@@ -7328,9 +7328,9 @@ var require_extend = __commonJS({
   }
 });
 
-// node_modules/gaxios/package.json
+// ../../../server/node_modules/gaxios/package.json
 var require_package = __commonJS({
-  "node_modules/gaxios/package.json"(exports, module) {
+  "../../../server/node_modules/gaxios/package.json"(exports, module) {
     module.exports = {
       name: "gaxios",
       version: "7.3.0",
@@ -7439,18 +7439,18 @@ var require_package = __commonJS({
   }
 });
 
-// node_modules/gaxios/build/cjs/src/util.cjs
+// ../../../server/node_modules/gaxios/build/cjs/src/util.cjs
 var require_util2 = __commonJS({
-  "node_modules/gaxios/build/cjs/src/util.cjs"(exports, module) {
+  "../../../server/node_modules/gaxios/build/cjs/src/util.cjs"(exports, module) {
     "use strict";
     var pkg = require_package();
     module.exports = { pkg };
   }
 });
 
-// node_modules/gaxios/build/cjs/src/common.js
+// ../../../server/node_modules/gaxios/build/cjs/src/common.js
 var require_common = __commonJS({
-  "node_modules/gaxios/build/cjs/src/common.js"(exports) {
+  "../../../server/node_modules/gaxios/build/cjs/src/common.js"(exports) {
     "use strict";
     var __importDefault = exports && exports.__importDefault || function(mod) {
       return mod && mod.__esModule ? mod : { "default": mod };
@@ -7690,9 +7690,9 @@ var require_common = __commonJS({
   }
 });
 
-// node_modules/gaxios/build/cjs/src/retry.js
+// ../../../server/node_modules/gaxios/build/cjs/src/retry.js
 var require_retry3 = __commonJS({
-  "node_modules/gaxios/build/cjs/src/retry.js"(exports) {
+  "../../../server/node_modules/gaxios/build/cjs/src/retry.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getRetryConfig = getRetryConfig;
@@ -7738,8 +7738,8 @@ var require_retry3 = __commonJS({
       }
       const delay2 = getNextRetryDelay(config3);
       err4.config.retryConfig.currentRetryAttempt += 1;
-      const backoff = config3.retryBackoff ? config3.retryBackoff(err4, delay2) : new Promise((resolve3) => {
-        setTimeout(resolve3, delay2);
+      const backoff = config3.retryBackoff ? config3.retryBackoff(err4, delay2) : new Promise((resolve5) => {
+        setTimeout(resolve5, delay2);
       });
       if (config3.onRetryAttempt) {
         await config3.onRetryAttempt(err4);
@@ -7795,9 +7795,9 @@ var require_retry3 = __commonJS({
   }
 });
 
-// node_modules/gaxios/build/cjs/src/interceptor.js
+// ../../../server/node_modules/gaxios/build/cjs/src/interceptor.js
 var require_interceptor = __commonJS({
-  "node_modules/gaxios/build/cjs/src/interceptor.js"(exports) {
+  "../../../server/node_modules/gaxios/build/cjs/src/interceptor.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.GaxiosInterceptorManager = void 0;
@@ -7807,9 +7807,9 @@ var require_interceptor = __commonJS({
   }
 });
 
-// node_modules/ms/index.js
+// ../../../server/node_modules/ms/index.js
 var require_ms = __commonJS({
-  "node_modules/ms/index.js"(exports, module) {
+  "../../../server/node_modules/ms/index.js"(exports, module) {
     var s2 = 1e3;
     var m2 = s2 * 60;
     var h2 = m2 * 60;
@@ -7828,13 +7828,13 @@ var require_ms = __commonJS({
         "val is not a non-empty string or a valid number. val=" + JSON.stringify(val)
       );
     };
-    function parse3(str7) {
-      str7 = String(str7);
-      if (str7.length > 100) {
+    function parse3(str8) {
+      str8 = String(str8);
+      if (str8.length > 100) {
         return;
       }
       var match2 = /^(-?(?:\d+)?\.?\d+) *(milliseconds?|msecs?|ms|seconds?|secs?|s|minutes?|mins?|m|hours?|hrs?|h|days?|d|weeks?|w|years?|yrs?|y)?$/i.exec(
-        str7
+        str8
       );
       if (!match2) {
         return;
@@ -7923,9 +7923,9 @@ var require_ms = __commonJS({
   }
 });
 
-// node_modules/debug/src/common.js
+// ../../../server/node_modules/debug/src/common.js
 var require_common2 = __commonJS({
-  "node_modules/debug/src/common.js"(exports, module) {
+  "../../../server/node_modules/debug/src/common.js"(exports, module) {
     function setup(env2) {
       createDebug.debug = createDebug;
       createDebug.default = createDebug;
@@ -8100,9 +8100,9 @@ var require_common2 = __commonJS({
   }
 });
 
-// node_modules/debug/src/browser.js
+// ../../../server/node_modules/debug/src/browser.js
 var require_browser = __commonJS({
-  "node_modules/debug/src/browser.js"(exports, module) {
+  "../../../server/node_modules/debug/src/browser.js"(exports, module) {
     exports.formatArgs = formatArgs;
     exports.save = save;
     exports.load = load;
@@ -8270,9 +8270,9 @@ var require_browser = __commonJS({
   }
 });
 
-// node_modules/debug/src/node.js
+// ../../../server/node_modules/debug/src/node.js
 var require_node = __commonJS({
-  "node_modules/debug/src/node.js"(exports, module) {
+  "../../../server/node_modules/debug/src/node.js"(exports, module) {
     var tty = __require("tty");
     var util2 = __require("util");
     exports.init = init;
@@ -8435,7 +8435,7 @@ var require_node = __commonJS({
     var { formatters: formatters2 } = module.exports;
     formatters2.o = function(v) {
       this.inspectOpts.colors = this.useColors;
-      return util2.inspect(v, this.inspectOpts).split("\n").map((str7) => str7.trim()).join(" ");
+      return util2.inspect(v, this.inspectOpts).split("\n").map((str8) => str8.trim()).join(" ");
     };
     formatters2.O = function(v) {
       this.inspectOpts.colors = this.useColors;
@@ -8444,9 +8444,9 @@ var require_node = __commonJS({
   }
 });
 
-// node_modules/debug/src/index.js
+// ../../../server/node_modules/debug/src/index.js
 var require_src = __commonJS({
-  "node_modules/debug/src/index.js"(exports, module) {
+  "../../../server/node_modules/debug/src/index.js"(exports, module) {
     if (typeof process === "undefined" || process.type === "renderer" || process.browser === true || process.__nwjs) {
       module.exports = require_browser();
     } else {
@@ -8455,9 +8455,9 @@ var require_src = __commonJS({
   }
 });
 
-// node_modules/agent-base/dist/helpers.js
+// ../../../server/node_modules/agent-base/dist/helpers.js
 var require_helpers = __commonJS({
-  "node_modules/agent-base/dist/helpers.js"(exports) {
+  "../../../server/node_modules/agent-base/dist/helpers.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m2, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -8488,7 +8488,7 @@ var require_helpers = __commonJS({
     };
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.req = exports.json = exports.toBuffer = void 0;
-    var http3 = __importStar(__require("http"));
+    var http4 = __importStar(__require("http"));
     var https2 = __importStar(__require("https"));
     async function toBuffer(stream) {
       let length = 0;
@@ -8502,21 +8502,21 @@ var require_helpers = __commonJS({
     exports.toBuffer = toBuffer;
     async function json2(stream) {
       const buf = await toBuffer(stream);
-      const str7 = buf.toString("utf8");
+      const str8 = buf.toString("utf8");
       try {
-        return JSON.parse(str7);
+        return JSON.parse(str8);
       } catch (_err) {
         const err4 = _err;
-        err4.message += ` (input: ${str7})`;
+        err4.message += ` (input: ${str8})`;
         throw err4;
       }
     }
     exports.json = json2;
     function req(url, opts = {}) {
       const href = typeof url === "string" ? url : url.href;
-      const req2 = (href.startsWith("https:") ? https2 : http3).request(url, opts);
-      const promise = new Promise((resolve3, reject) => {
-        req2.once("response", resolve3).once("error", reject).end();
+      const req2 = (href.startsWith("https:") ? https2 : http4).request(url, opts);
+      const promise = new Promise((resolve5, reject) => {
+        req2.once("response", resolve5).once("error", reject).end();
       });
       req2.then = promise.then.bind(promise);
       return req2;
@@ -8525,9 +8525,9 @@ var require_helpers = __commonJS({
   }
 });
 
-// node_modules/agent-base/dist/index.js
+// ../../../server/node_modules/agent-base/dist/index.js
 var require_dist2 = __commonJS({
-  "node_modules/agent-base/dist/index.js"(exports) {
+  "../../../server/node_modules/agent-base/dist/index.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m2, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -8562,11 +8562,11 @@ var require_dist2 = __commonJS({
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Agent = void 0;
     var net = __importStar(__require("net"));
-    var http3 = __importStar(__require("http"));
+    var http4 = __importStar(__require("http"));
     var https_1 = __require("https");
     __exportStar(require_helpers(), exports);
     var INTERNAL = /* @__PURE__ */ Symbol("AgentBaseInternalState");
-    var Agent = class extends http3.Agent {
+    var Agent = class extends http4.Agent {
       constructor(opts) {
         super(opts);
         this[INTERNAL] = {};
@@ -8638,7 +8638,7 @@ var require_dist2 = __commonJS({
         const fakeSocket = this.incrementSockets(name);
         Promise.resolve().then(() => this.connect(req, connectOpts)).then((socket) => {
           this.decrementSockets(name, fakeSocket);
-          if (socket instanceof http3.Agent) {
+          if (socket instanceof http4.Agent) {
             try {
               return socket.addRequest(req, connectOpts);
             } catch (err4) {
@@ -8681,9 +8681,9 @@ var require_dist2 = __commonJS({
   }
 });
 
-// node_modules/https-proxy-agent/dist/parse-proxy-response.js
+// ../../../server/node_modules/https-proxy-agent/dist/parse-proxy-response.js
 var require_parse_proxy_response = __commonJS({
-  "node_modules/https-proxy-agent/dist/parse-proxy-response.js"(exports) {
+  "../../../server/node_modules/https-proxy-agent/dist/parse-proxy-response.js"(exports) {
     "use strict";
     var __importDefault = exports && exports.__importDefault || function(mod) {
       return mod && mod.__esModule ? mod : { "default": mod };
@@ -8693,7 +8693,7 @@ var require_parse_proxy_response = __commonJS({
     var debug_1 = __importDefault(require_src());
     var debug = (0, debug_1.default)("https-proxy-agent:parse-proxy-response");
     function parseProxyResponse(socket) {
-      return new Promise((resolve3, reject) => {
+      return new Promise((resolve5, reject) => {
         let buffersLength = 0;
         const buffers = [];
         function read2() {
@@ -8759,7 +8759,7 @@ var require_parse_proxy_response = __commonJS({
           }
           debug("got proxy server response: %o %o", firstLine, headers);
           cleanup();
-          resolve3({
+          resolve5({
             connect: {
               statusCode,
               statusText,
@@ -8777,9 +8777,9 @@ var require_parse_proxy_response = __commonJS({
   }
 });
 
-// node_modules/https-proxy-agent/dist/index.js
+// ../../../server/node_modules/https-proxy-agent/dist/index.js
 var require_dist3 = __commonJS({
-  "node_modules/https-proxy-agent/dist/index.js"(exports) {
+  "../../../server/node_modules/https-proxy-agent/dist/index.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m2, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -8927,7 +8927,7 @@ var require_dist3 = __commonJS({
   }
 });
 
-// node_modules/data-uri-to-buffer/dist/index.js
+// ../../../server/node_modules/data-uri-to-buffer/dist/index.js
 function dataUriToBuffer(uri) {
   if (!/^data:/i.test(uri)) {
     throw new TypeError('`uri` does not appear to be a Data URI (must begin with "data:")');
@@ -8966,14 +8966,14 @@ function dataUriToBuffer(uri) {
 }
 var dist_default;
 var init_dist = __esm({
-  "node_modules/data-uri-to-buffer/dist/index.js"() {
+  "../../../server/node_modules/data-uri-to-buffer/dist/index.js"() {
     dist_default = dataUriToBuffer;
   }
 });
 
-// node_modules/web-streams-polyfill/dist/ponyfill.es2018.js
+// ../../../server/node_modules/web-streams-polyfill/dist/ponyfill.es2018.js
 var require_ponyfill_es2018 = __commonJS({
-  "node_modules/web-streams-polyfill/dist/ponyfill.es2018.js"(exports, module) {
+  "../../../server/node_modules/web-streams-polyfill/dist/ponyfill.es2018.js"(exports, module) {
     (function(global2, factory) {
       typeof exports === "object" && typeof module !== "undefined" ? factory(exports) : typeof define === "function" && define.amd ? define(["exports"], factory) : (global2 = typeof globalThis !== "undefined" ? globalThis : global2 || self, factory(global2.WebStreamsPolyfill = {}));
     })(exports, (function(exports2) {
@@ -9001,7 +9001,7 @@ var require_ponyfill_es2018 = __commonJS({
         return new originalPromise(executor);
       }
       function promiseResolvedWith(value) {
-        return newPromise((resolve3) => resolve3(value));
+        return newPromise((resolve5) => resolve5(value));
       }
       function promiseRejectedWith(reason) {
         return originalPromiseReject(reason);
@@ -9033,15 +9033,15 @@ var require_ponyfill_es2018 = __commonJS({
         }
         return _queueMicrotask(callback);
       };
-      function reflectCall(F2, V, args) {
+      function reflectCall(F2, V2, args) {
         if (typeof F2 !== "function") {
           throw new TypeError("Argument is not a function");
         }
-        return Function.prototype.apply.call(F2, V, args);
+        return Function.prototype.apply.call(F2, V2, args);
       }
-      function promiseCall(F2, V, args) {
+      function promiseCall(F2, V2, args) {
         try {
-          return promiseResolvedWith(reflectCall(F2, V, args));
+          return promiseResolvedWith(reflectCall(F2, V2, args));
         } catch (value) {
           return promiseRejectedWith(value);
         }
@@ -9171,8 +9171,8 @@ var require_ponyfill_es2018 = __commonJS({
         return new TypeError("Cannot " + name + " a stream using a released reader");
       }
       function defaultReaderClosedPromiseInitialize(reader) {
-        reader._closedPromise = newPromise((resolve3, reject) => {
-          reader._closedPromise_resolve = resolve3;
+        reader._closedPromise = newPromise((resolve5, reject) => {
+          reader._closedPromise_resolve = resolve5;
           reader._closedPromise_reject = reject;
         });
       }
@@ -9346,8 +9346,8 @@ var require_ponyfill_es2018 = __commonJS({
           }
           let resolvePromise;
           let rejectPromise;
-          const promise = newPromise((resolve3, reject) => {
-            resolvePromise = resolve3;
+          const promise = newPromise((resolve5, reject) => {
+            resolvePromise = resolve5;
             rejectPromise = reject;
           });
           const readRequest = {
@@ -9452,8 +9452,8 @@ var require_ponyfill_es2018 = __commonJS({
           const reader = this._reader;
           let resolvePromise;
           let rejectPromise;
-          const promise = newPromise((resolve3, reject) => {
-            resolvePromise = resolve3;
+          const promise = newPromise((resolve5, reject) => {
+            resolvePromise = resolve5;
             rejectPromise = reject;
           });
           const readRequest = {
@@ -10472,8 +10472,8 @@ var require_ponyfill_es2018 = __commonJS({
           }
           let resolvePromise;
           let rejectPromise;
-          const promise = newPromise((resolve3, reject) => {
-            resolvePromise = resolve3;
+          const promise = newPromise((resolve5, reject) => {
+            resolvePromise = resolve5;
             rejectPromise = reject;
           });
           const readIntoRequest = {
@@ -10785,10 +10785,10 @@ var require_ponyfill_es2018 = __commonJS({
           wasAlreadyErroring = true;
           reason = void 0;
         }
-        const promise = newPromise((resolve3, reject) => {
+        const promise = newPromise((resolve5, reject) => {
           stream._pendingAbortRequest = {
             _promise: void 0,
-            _resolve: resolve3,
+            _resolve: resolve5,
             _reject: reject,
             _reason: reason,
             _wasAlreadyErroring: wasAlreadyErroring
@@ -10805,9 +10805,9 @@ var require_ponyfill_es2018 = __commonJS({
         if (state === "closed" || state === "errored") {
           return promiseRejectedWith(new TypeError(`The stream (in ${state} state) is not in the writable state and cannot be closed`));
         }
-        const promise = newPromise((resolve3, reject) => {
+        const promise = newPromise((resolve5, reject) => {
           const closeRequest = {
-            _resolve: resolve3,
+            _resolve: resolve5,
             _reject: reject
           };
           stream._closeRequest = closeRequest;
@@ -10820,9 +10820,9 @@ var require_ponyfill_es2018 = __commonJS({
         return promise;
       }
       function WritableStreamAddWriteRequest(stream) {
-        const promise = newPromise((resolve3, reject) => {
+        const promise = newPromise((resolve5, reject) => {
           const writeRequest = {
-            _resolve: resolve3,
+            _resolve: resolve5,
             _reject: reject
           };
           stream._writeRequests.push(writeRequest);
@@ -11438,8 +11438,8 @@ var require_ponyfill_es2018 = __commonJS({
         return new TypeError("Cannot " + name + " a stream using a released writer");
       }
       function defaultWriterClosedPromiseInitialize(writer) {
-        writer._closedPromise = newPromise((resolve3, reject) => {
-          writer._closedPromise_resolve = resolve3;
+        writer._closedPromise = newPromise((resolve5, reject) => {
+          writer._closedPromise_resolve = resolve5;
           writer._closedPromise_reject = reject;
           writer._closedPromiseState = "pending";
         });
@@ -11475,8 +11475,8 @@ var require_ponyfill_es2018 = __commonJS({
         writer._closedPromiseState = "resolved";
       }
       function defaultWriterReadyPromiseInitialize(writer) {
-        writer._readyPromise = newPromise((resolve3, reject) => {
-          writer._readyPromise_resolve = resolve3;
+        writer._readyPromise = newPromise((resolve5, reject) => {
+          writer._readyPromise_resolve = resolve5;
           writer._readyPromise_reject = reject;
         });
         writer._readyPromiseState = "pending";
@@ -11563,7 +11563,7 @@ var require_ponyfill_es2018 = __commonJS({
         source._disturbed = true;
         let shuttingDown = false;
         let currentWrite = promiseResolvedWith(void 0);
-        return newPromise((resolve3, reject) => {
+        return newPromise((resolve5, reject) => {
           let abortAlgorithm;
           if (signal !== void 0) {
             abortAlgorithm = () => {
@@ -11708,7 +11708,7 @@ var require_ponyfill_es2018 = __commonJS({
             if (isError) {
               reject(error2);
             } else {
-              resolve3(void 0);
+              resolve5(void 0);
             }
             return null;
           }
@@ -11989,8 +11989,8 @@ var require_ponyfill_es2018 = __commonJS({
         let branch1;
         let branch2;
         let resolveCancelPromise;
-        const cancelPromise = newPromise((resolve3) => {
-          resolveCancelPromise = resolve3;
+        const cancelPromise = newPromise((resolve5) => {
+          resolveCancelPromise = resolve5;
         });
         function pullAlgorithm() {
           if (reading) {
@@ -12081,8 +12081,8 @@ var require_ponyfill_es2018 = __commonJS({
         let branch1;
         let branch2;
         let resolveCancelPromise;
-        const cancelPromise = newPromise((resolve3) => {
-          resolveCancelPromise = resolve3;
+        const cancelPromise = newPromise((resolve5) => {
+          resolveCancelPromise = resolve5;
         });
         function forwardReaderError(thisReader) {
           uponRejection(thisReader._closedPromise, (r2) => {
@@ -12862,8 +12862,8 @@ var require_ponyfill_es2018 = __commonJS({
           const writableHighWaterMark = ExtractHighWaterMark(writableStrategy, 1);
           const writableSizeAlgorithm = ExtractSizeAlgorithm(writableStrategy);
           let startPromise_resolve;
-          const startPromise = newPromise((resolve3) => {
-            startPromise_resolve = resolve3;
+          const startPromise = newPromise((resolve5) => {
+            startPromise_resolve = resolve5;
           });
           InitializeTransformStream(this, startPromise, writableHighWaterMark, writableSizeAlgorithm, readableHighWaterMark, readableSizeAlgorithm);
           SetUpTransformStreamDefaultControllerFromTransformer(this, transformer);
@@ -12956,8 +12956,8 @@ var require_ponyfill_es2018 = __commonJS({
         if (stream._backpressureChangePromise !== void 0) {
           stream._backpressureChangePromise_resolve();
         }
-        stream._backpressureChangePromise = newPromise((resolve3) => {
-          stream._backpressureChangePromise_resolve = resolve3;
+        stream._backpressureChangePromise = newPromise((resolve5) => {
+          stream._backpressureChangePromise_resolve = resolve5;
         });
         stream._backpressure = backpressure;
       }
@@ -13125,8 +13125,8 @@ var require_ponyfill_es2018 = __commonJS({
           return controller._finishPromise;
         }
         const readable = stream._readable;
-        controller._finishPromise = newPromise((resolve3, reject) => {
-          controller._finishPromise_resolve = resolve3;
+        controller._finishPromise = newPromise((resolve5, reject) => {
+          controller._finishPromise_resolve = resolve5;
           controller._finishPromise_reject = reject;
         });
         const cancelPromise = controller._cancelAlgorithm(reason);
@@ -13152,8 +13152,8 @@ var require_ponyfill_es2018 = __commonJS({
           return controller._finishPromise;
         }
         const readable = stream._readable;
-        controller._finishPromise = newPromise((resolve3, reject) => {
-          controller._finishPromise_resolve = resolve3;
+        controller._finishPromise = newPromise((resolve5, reject) => {
+          controller._finishPromise_resolve = resolve5;
           controller._finishPromise_reject = reject;
         });
         const flushPromise = controller._flushAlgorithm();
@@ -13183,8 +13183,8 @@ var require_ponyfill_es2018 = __commonJS({
           return controller._finishPromise;
         }
         const writable = stream._writable;
-        controller._finishPromise = newPromise((resolve3, reject) => {
-          controller._finishPromise_resolve = resolve3;
+        controller._finishPromise = newPromise((resolve5, reject) => {
+          controller._finishPromise_resolve = resolve5;
           controller._finishPromise_reject = reject;
         });
         const cancelPromise = controller._cancelAlgorithm(reason);
@@ -13246,9 +13246,9 @@ var require_ponyfill_es2018 = __commonJS({
   }
 });
 
-// node_modules/fetch-blob/streams.cjs
+// ../../../server/node_modules/fetch-blob/streams.cjs
 var require_streams = __commonJS({
-  "node_modules/fetch-blob/streams.cjs"() {
+  "../../../server/node_modules/fetch-blob/streams.cjs"() {
     var POOL_SIZE2 = 65536;
     if (!globalThis.ReadableStream) {
       try {
@@ -13292,7 +13292,7 @@ var require_streams = __commonJS({
   }
 });
 
-// node_modules/fetch-blob/index.js
+// ../../../server/node_modules/fetch-blob/index.js
 async function* toIterator(parts, clone3 = true) {
   for (const part of parts) {
     if ("stream" in part) {
@@ -13329,7 +13329,7 @@ async function* toIterator(parts, clone3 = true) {
 }
 var import_streams, POOL_SIZE, _Blob, Blob3, fetch_blob_default;
 var init_fetch_blob = __esm({
-  "node_modules/fetch-blob/index.js"() {
+  "../../../server/node_modules/fetch-blob/index.js"() {
     import_streams = __toESM(require_streams(), 1);
     POOL_SIZE = 65536;
     _Blob = class Blob2 {
@@ -13398,12 +13398,12 @@ var init_fetch_blob = __esm({
        */
       async text() {
         const decoder = new TextDecoder();
-        let str7 = "";
+        let str8 = "";
         for await (const part of toIterator(this.#parts, false)) {
-          str7 += decoder.decode(part, { stream: true });
+          str8 += decoder.decode(part, { stream: true });
         }
-        str7 += decoder.decode();
-        return str7;
+        str8 += decoder.decode();
+        return str8;
       }
       /**
        * The arrayBuffer() method in the Blob interface returns a
@@ -13496,10 +13496,10 @@ var init_fetch_blob = __esm({
   }
 });
 
-// node_modules/fetch-blob/file.js
+// ../../../server/node_modules/fetch-blob/file.js
 var _File, File3, file_default;
 var init_file = __esm({
-  "node_modules/fetch-blob/file.js"() {
+  "../../../server/node_modules/fetch-blob/file.js"() {
     init_fetch_blob();
     _File = class File2 extends fetch_blob_default {
       #lastModified = 0;
@@ -13540,7 +13540,7 @@ var init_file = __esm({
   }
 });
 
-// node_modules/formdata-polyfill/esm.min.js
+// ../../../server/node_modules/formdata-polyfill/esm.min.js
 function formDataToBlob(F2, B = fetch_blob_default) {
   var b = `${r()}${r()}`.replace(/\./g, "").slice(-28).padStart(32, "-"), c = [], p = `--${b}\r
 Content-Disposition: form-data; name="`;
@@ -13556,7 +13556,7 @@ Content-Type: ${v.type || "application/octet-stream"}\r
 }
 var t, i, h, r, m, f, e, x, FormData2;
 var init_esm_min = __esm({
-  "node_modules/formdata-polyfill/esm.min.js"() {
+  "../../../server/node_modules/formdata-polyfill/esm.min.js"() {
     init_fetch_blob();
     init_file();
     ({ toStringTag: t, iterator: i, hasInstance: h } = Symbol);
@@ -13637,10 +13637,10 @@ var init_esm_min = __esm({
   }
 });
 
-// node_modules/node-fetch/src/errors/base.js
+// ../../../server/node_modules/node-fetch/src/errors/base.js
 var FetchBaseError;
 var init_base = __esm({
-  "node_modules/node-fetch/src/errors/base.js"() {
+  "../../../server/node_modules/node-fetch/src/errors/base.js"() {
     FetchBaseError = class extends Error {
       constructor(message, type) {
         super(message);
@@ -13657,10 +13657,10 @@ var init_base = __esm({
   }
 });
 
-// node_modules/node-fetch/src/errors/fetch-error.js
+// ../../../server/node_modules/node-fetch/src/errors/fetch-error.js
 var FetchError;
 var init_fetch_error = __esm({
-  "node_modules/node-fetch/src/errors/fetch-error.js"() {
+  "../../../server/node_modules/node-fetch/src/errors/fetch-error.js"() {
     init_base();
     FetchError = class extends FetchBaseError {
       /**
@@ -13679,10 +13679,10 @@ var init_fetch_error = __esm({
   }
 });
 
-// node_modules/node-fetch/src/utils/is.js
+// ../../../server/node_modules/node-fetch/src/utils/is.js
 var NAME, isURLSearchParameters, isBlob, isAbortSignal, isDomainOrSubdomain, isSameProtocol;
 var init_is = __esm({
-  "node_modules/node-fetch/src/utils/is.js"() {
+  "../../../server/node_modules/node-fetch/src/utils/is.js"() {
     NAME = Symbol.toStringTag;
     isURLSearchParameters = (object3) => {
       return typeof object3 === "object" && typeof object3.append === "function" && typeof object3.delete === "function" && typeof object3.get === "function" && typeof object3.getAll === "function" && typeof object3.has === "function" && typeof object3.set === "function" && typeof object3.sort === "function" && object3[NAME] === "URLSearchParams";
@@ -13706,9 +13706,9 @@ var init_is = __esm({
   }
 });
 
-// node_modules/node-domexception/index.js
+// ../../../server/node_modules/node-domexception/index.js
 var require_node_domexception = __commonJS({
-  "node_modules/node-domexception/index.js"(exports, module) {
+  "../../../server/node_modules/node-domexception/index.js"(exports, module) {
     if (!globalThis.DOMException) {
       try {
         const { MessageChannel } = __require("worker_threads"), port = new MessageChannel().port1, ab = new ArrayBuffer();
@@ -13721,32 +13721,32 @@ var require_node_domexception = __commonJS({
   }
 });
 
-// node_modules/fetch-blob/from.js
-import { statSync, createReadStream, promises as fs2 } from "node:fs";
+// ../../../server/node_modules/fetch-blob/from.js
+import { statSync as statSync2, createReadStream, promises as fs2 } from "node:fs";
 import { basename } from "node:path";
 var import_node_domexception, stat, blobFromSync, blobFrom, fileFrom, fileFromSync, fromBlob, fromFile, BlobDataItem;
 var init_from = __esm({
-  "node_modules/fetch-blob/from.js"() {
+  "../../../server/node_modules/fetch-blob/from.js"() {
     import_node_domexception = __toESM(require_node_domexception(), 1);
     init_file();
     init_fetch_blob();
     ({ stat } = fs2);
-    blobFromSync = (path10, type) => fromBlob(statSync(path10), path10, type);
-    blobFrom = (path10, type) => stat(path10).then((stat4) => fromBlob(stat4, path10, type));
-    fileFrom = (path10, type) => stat(path10).then((stat4) => fromFile(stat4, path10, type));
-    fileFromSync = (path10, type) => fromFile(statSync(path10), path10, type);
-    fromBlob = (stat4, path10, type = "") => new fetch_blob_default([new BlobDataItem({
-      path: path10,
+    blobFromSync = (path11, type) => fromBlob(statSync2(path11), path11, type);
+    blobFrom = (path11, type) => stat(path11).then((stat4) => fromBlob(stat4, path11, type));
+    fileFrom = (path11, type) => stat(path11).then((stat4) => fromFile(stat4, path11, type));
+    fileFromSync = (path11, type) => fromFile(statSync2(path11), path11, type);
+    fromBlob = (stat4, path11, type = "") => new fetch_blob_default([new BlobDataItem({
+      path: path11,
       size: stat4.size,
       lastModified: stat4.mtimeMs,
       start: 0
     })], { type });
-    fromFile = (stat4, path10, type = "") => new file_default([new BlobDataItem({
-      path: path10,
+    fromFile = (stat4, path11, type = "") => new file_default([new BlobDataItem({
+      path: path11,
       size: stat4.size,
       lastModified: stat4.mtimeMs,
       start: 0
-    })], basename(path10), { type, lastModified: stat4.mtimeMs });
+    })], basename(path11), { type, lastModified: stat4.mtimeMs });
     BlobDataItem = class _BlobDataItem {
       #path;
       #start;
@@ -13785,7 +13785,7 @@ var init_from = __esm({
   }
 });
 
-// node_modules/node-fetch/src/utils/multipart-parser.js
+// ../../../server/node_modules/node-fetch/src/utils/multipart-parser.js
 var multipart_parser_exports = {};
 __export(multipart_parser_exports, {
   toFormData: () => toFormData
@@ -13879,7 +13879,7 @@ async function toFormData(Body2, ct) {
 }
 var s, S, f2, F, LF, CR, SPACE, HYPHEN, COLON, A, Z, lower, noop, MultipartParser;
 var init_multipart_parser = __esm({
-  "node_modules/node-fetch/src/utils/multipart-parser.js"() {
+  "../../../server/node_modules/node-fetch/src/utils/multipart-parser.js"() {
     init_from();
     init_esm_min();
     s = 0;
@@ -14147,7 +14147,7 @@ var init_multipart_parser = __esm({
   }
 });
 
-// node_modules/node-fetch/src/body.js
+// ../../../server/node_modules/node-fetch/src/body.js
 import Stream, { PassThrough } from "node:stream";
 import { types, deprecate, promisify } from "node:util";
 import { Buffer as Buffer2 } from "node:buffer";
@@ -14197,7 +14197,7 @@ async function consumeBody(data) {
 }
 var pipeline, INTERNALS, Body, clone2, getNonSpecFormDataBoundary, extractContentType, getTotalBytes, writeToStream;
 var init_body = __esm({
-  "node_modules/node-fetch/src/body.js"() {
+  "../../../server/node_modules/node-fetch/src/body.js"() {
     init_fetch_blob();
     init_esm_min();
     init_fetch_error();
@@ -14405,7 +14405,7 @@ var init_body = __esm({
   }
 });
 
-// node_modules/node-fetch/src/headers.js
+// ../../../server/node_modules/node-fetch/src/headers.js
 import { types as types2 } from "node:util";
 import http from "node:http";
 function fromRawHeaders(headers = []) {
@@ -14428,7 +14428,7 @@ function fromRawHeaders(headers = []) {
 }
 var validateHeaderName, validateHeaderValue, Headers2;
 var init_headers = __esm({
-  "node_modules/node-fetch/src/headers.js"() {
+  "../../../server/node_modules/node-fetch/src/headers.js"() {
     validateHeaderName = typeof http.validateHeaderName === "function" ? http.validateHeaderName : (name) => {
       if (!/^[\^`\-\w!#$%&'*+.|~]+$/.test(name)) {
         const error2 = new TypeError(`Header name must be a valid HTTP token [${name}]`);
@@ -14596,10 +14596,10 @@ var init_headers = __esm({
   }
 });
 
-// node_modules/node-fetch/src/utils/is-redirect.js
+// ../../../server/node_modules/node-fetch/src/utils/is-redirect.js
 var redirectStatus, isRedirect;
 var init_is_redirect = __esm({
-  "node_modules/node-fetch/src/utils/is-redirect.js"() {
+  "../../../server/node_modules/node-fetch/src/utils/is-redirect.js"() {
     redirectStatus = /* @__PURE__ */ new Set([301, 302, 303, 307, 308]);
     isRedirect = (code) => {
       return redirectStatus.has(code);
@@ -14607,10 +14607,10 @@ var init_is_redirect = __esm({
   }
 });
 
-// node_modules/node-fetch/src/response.js
+// ../../../server/node_modules/node-fetch/src/response.js
 var INTERNALS2, Response2;
 var init_response = __esm({
-  "node_modules/node-fetch/src/response.js"() {
+  "../../../server/node_modules/node-fetch/src/response.js"() {
     init_headers();
     init_body();
     init_is_redirect();
@@ -14733,10 +14733,10 @@ var init_response = __esm({
   }
 });
 
-// node_modules/node-fetch/src/utils/get-search.js
+// ../../../server/node_modules/node-fetch/src/utils/get-search.js
 var getSearch;
 var init_get_search = __esm({
-  "node_modules/node-fetch/src/utils/get-search.js"() {
+  "../../../server/node_modules/node-fetch/src/utils/get-search.js"() {
     getSearch = (parsedURL) => {
       if (parsedURL.search) {
         return parsedURL.search;
@@ -14748,7 +14748,7 @@ var init_get_search = __esm({
   }
 });
 
-// node_modules/node-fetch/src/utils/referrer.js
+// ../../../server/node_modules/node-fetch/src/utils/referrer.js
 import { isIP } from "node:net";
 function stripURLForUseAsAReferrer(url, originOnly = false) {
   if (url == null) {
@@ -14877,7 +14877,7 @@ function parseReferrerPolicyFromHeader(headers) {
 }
 var ReferrerPolicy, DEFAULT_REFERRER_POLICY;
 var init_referrer = __esm({
-  "node_modules/node-fetch/src/utils/referrer.js"() {
+  "../../../server/node_modules/node-fetch/src/utils/referrer.js"() {
     ReferrerPolicy = /* @__PURE__ */ new Set([
       "",
       "no-referrer",
@@ -14893,12 +14893,12 @@ var init_referrer = __esm({
   }
 });
 
-// node_modules/node-fetch/src/request.js
+// ../../../server/node_modules/node-fetch/src/request.js
 import { format as formatUrl } from "node:url";
 import { deprecate as deprecate2 } from "node:util";
 var INTERNALS3, isRequest, doBadDataWarn, Request2, getNodeRequestOptions;
 var init_request = __esm({
-  "node_modules/node-fetch/src/request.js"() {
+  "../../../server/node_modules/node-fetch/src/request.js"() {
     init_headers();
     init_body();
     init_is();
@@ -15098,10 +15098,10 @@ var init_request = __esm({
   }
 });
 
-// node_modules/node-fetch/src/errors/abort-error.js
+// ../../../server/node_modules/node-fetch/src/errors/abort-error.js
 var AbortError;
 var init_abort_error = __esm({
-  "node_modules/node-fetch/src/errors/abort-error.js"() {
+  "../../../server/node_modules/node-fetch/src/errors/abort-error.js"() {
     init_base();
     AbortError = class extends FetchBaseError {
       constructor(message, type = "aborted") {
@@ -15111,7 +15111,7 @@ var init_abort_error = __esm({
   }
 });
 
-// node_modules/node-fetch/src/index.js
+// ../../../server/node_modules/node-fetch/src/index.js
 var src_exports = {};
 __export(src_exports, {
   AbortError: () => AbortError,
@@ -15135,7 +15135,7 @@ import zlib from "node:zlib";
 import Stream2, { PassThrough as PassThrough2, pipeline as pump } from "node:stream";
 import { Buffer as Buffer3 } from "node:buffer";
 async function fetch2(url, options_) {
-  return new Promise((resolve3, reject) => {
+  return new Promise((resolve5, reject) => {
     const request = new Request2(url, options_);
     const { parsedURL, options } = getNodeRequestOptions(request);
     if (!supportedSchemas.has(parsedURL.protocol)) {
@@ -15144,7 +15144,7 @@ async function fetch2(url, options_) {
     if (parsedURL.protocol === "data:") {
       const data = dist_default(request.url);
       const response2 = new Response2(data, { headers: { "Content-Type": data.typeFull } });
-      resolve3(response2);
+      resolve5(response2);
       return;
     }
     const send = (parsedURL.protocol === "https:" ? https : http2).request;
@@ -15266,7 +15266,7 @@ async function fetch2(url, options_) {
             if (responseReferrerPolicy) {
               requestOptions.referrerPolicy = responseReferrerPolicy;
             }
-            resolve3(fetch2(new Request2(locationURL, requestOptions)));
+            resolve5(fetch2(new Request2(locationURL, requestOptions)));
             finalize();
             return;
           }
@@ -15299,7 +15299,7 @@ async function fetch2(url, options_) {
       const codings = headers.get("Content-Encoding");
       if (!request.compress || request.method === "HEAD" || codings === null || response_.statusCode === 204 || response_.statusCode === 304) {
         response = new Response2(body, responseOptions);
-        resolve3(response);
+        resolve5(response);
         return;
       }
       const zlibOptions = {
@@ -15313,7 +15313,7 @@ async function fetch2(url, options_) {
           }
         });
         response = new Response2(body, responseOptions);
-        resolve3(response);
+        resolve5(response);
         return;
       }
       if (codings === "deflate" || codings === "x-deflate") {
@@ -15337,12 +15337,12 @@ async function fetch2(url, options_) {
             });
           }
           response = new Response2(body, responseOptions);
-          resolve3(response);
+          resolve5(response);
         });
         raw.once("end", () => {
           if (!response) {
             response = new Response2(body, responseOptions);
-            resolve3(response);
+            resolve5(response);
           }
         });
         return;
@@ -15354,11 +15354,11 @@ async function fetch2(url, options_) {
           }
         });
         response = new Response2(body, responseOptions);
-        resolve3(response);
+        resolve5(response);
         return;
       }
       response = new Response2(body, responseOptions);
-      resolve3(response);
+      resolve5(response);
     });
     writeToStream(request_, request).catch(reject);
   });
@@ -15397,7 +15397,7 @@ function fixResponseChunkedTransferBadEnding(request, errorCallback) {
 }
 var supportedSchemas;
 var init_src = __esm({
-  "node_modules/node-fetch/src/index.js"() {
+  "../../../server/node_modules/node-fetch/src/index.js"() {
     init_dist();
     init_body();
     init_response();
@@ -15414,9 +15414,9 @@ var init_src = __esm({
   }
 });
 
-// node_modules/gaxios/build/cjs/src/gaxios.js
+// ../../../server/node_modules/gaxios/build/cjs/src/gaxios.js
 var require_gaxios = __commonJS({
-  "node_modules/gaxios/build/cjs/src/gaxios.js"(exports) {
+  "../../../server/node_modules/gaxios/build/cjs/src/gaxios.js"(exports) {
     "use strict";
     var __importDefault = exports && exports.__importDefault || function(mod) {
       return mod && mod.__esModule ? mod : { "default": mod };
@@ -15888,9 +15888,9 @@ Content-Type: ${partContentType}\r
   }
 });
 
-// node_modules/gaxios/build/cjs/src/index.js
+// ../../../server/node_modules/gaxios/build/cjs/src/index.js
 var require_src2 = __commonJS({
-  "node_modules/gaxios/build/cjs/src/index.js"(exports) {
+  "../../../server/node_modules/gaxios/build/cjs/src/index.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m2, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -15927,9 +15927,9 @@ var require_src2 = __commonJS({
   }
 });
 
-// node_modules/bignumber.js/bignumber.js
+// ../../../server/node_modules/bignumber.js/bignumber.js
 var require_bignumber = __commonJS({
-  "node_modules/bignumber.js/bignumber.js"(exports, module) {
+  "../../../server/node_modules/bignumber.js/bignumber.js"(exports, module) {
     (function(globalObject) {
       "use strict";
       var BigNumber, isNumeric = /^-?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i, mathceil = Math.ceil, mathfloor = Math.floor, bignumberError = "[BigNumber Error] ", tooManyDigits = bignumberError + "Number primitive has more than 15 significant digits: ", BASE = 1e14, LOG_BASE = 14, MAX_SAFE_INTEGER = 9007199254740991, POWS_TEN = [1, 10, 100, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11, 1e12, 1e13], SQRT_BASE = 1e7, MAX = 1e9;
@@ -15946,7 +15946,7 @@ var require_bignumber = __commonJS({
           suffix: ""
         }, ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyz", alphabetHasNormalDecimalDigits = true;
         function BigNumber2(v, b) {
-          var alphabet, c, caseChanged, e2, i2, isNum, len, str7, x2 = this;
+          var alphabet, c, caseChanged, e2, i2, isNum, len, str8, x2 = this;
           if (!(x2 instanceof BigNumber2)) return new BigNumber2(v, b);
           if (b == null) {
             if (v && v._isBigNumber === true) {
@@ -15973,18 +15973,18 @@ var require_bignumber = __commonJS({
                 }
                 return;
               }
-              str7 = String(v);
+              str8 = String(v);
             } else {
-              if (!isNumeric.test(str7 = String(v))) return parseNumeric(x2, str7, isNum);
-              x2.s = str7.charCodeAt(0) == 45 ? (str7 = str7.slice(1), -1) : 1;
+              if (!isNumeric.test(str8 = String(v))) return parseNumeric(x2, str8, isNum);
+              x2.s = str8.charCodeAt(0) == 45 ? (str8 = str8.slice(1), -1) : 1;
             }
-            if ((e2 = str7.indexOf(".")) > -1) str7 = str7.replace(".", "");
-            if ((i2 = str7.search(/e/i)) > 0) {
+            if ((e2 = str8.indexOf(".")) > -1) str8 = str8.replace(".", "");
+            if ((i2 = str8.search(/e/i)) > 0) {
               if (e2 < 0) e2 = i2;
-              e2 += +str7.slice(i2 + 1);
-              str7 = str7.substring(0, i2);
+              e2 += +str8.slice(i2 + 1);
+              str8 = str8.substring(0, i2);
             } else if (e2 < 0) {
-              e2 = str7.length;
+              e2 = str8.length;
             }
           } else {
             intCheck(b, 2, ALPHABET.length, "Base");
@@ -15992,27 +15992,27 @@ var require_bignumber = __commonJS({
               x2 = new BigNumber2(v);
               return round(x2, DECIMAL_PLACES + x2.e + 1, ROUNDING_MODE);
             }
-            str7 = String(v);
+            str8 = String(v);
             if (isNum = typeof v == "number") {
-              if (v * 0 != 0) return parseNumeric(x2, str7, isNum, b);
-              x2.s = 1 / v < 0 ? (str7 = str7.slice(1), -1) : 1;
-              if (BigNumber2.DEBUG && str7.replace(/^0\.0*|\./, "").length > 15) {
+              if (v * 0 != 0) return parseNumeric(x2, str8, isNum, b);
+              x2.s = 1 / v < 0 ? (str8 = str8.slice(1), -1) : 1;
+              if (BigNumber2.DEBUG && str8.replace(/^0\.0*|\./, "").length > 15) {
                 throw Error(tooManyDigits + v);
               }
             } else {
-              x2.s = str7.charCodeAt(0) === 45 ? (str7 = str7.slice(1), -1) : 1;
+              x2.s = str8.charCodeAt(0) === 45 ? (str8 = str8.slice(1), -1) : 1;
             }
             alphabet = ALPHABET.slice(0, b);
             e2 = i2 = 0;
-            for (len = str7.length; i2 < len; i2++) {
-              if (alphabet.indexOf(c = str7.charAt(i2)) < 0) {
+            for (len = str8.length; i2 < len; i2++) {
+              if (alphabet.indexOf(c = str8.charAt(i2)) < 0) {
                 if (c == ".") {
                   if (i2 > e2) {
                     e2 = len;
                     continue;
                   }
                 } else if (!caseChanged) {
-                  if (str7 == str7.toUpperCase() && (str7 = str7.toLowerCase()) || str7 == str7.toLowerCase() && (str7 = str7.toUpperCase())) {
+                  if (str8 == str8.toUpperCase() && (str8 = str8.toLowerCase()) || str8 == str8.toLowerCase() && (str8 = str8.toUpperCase())) {
                     caseChanged = true;
                     i2 = -1;
                     e2 = 0;
@@ -16023,13 +16023,13 @@ var require_bignumber = __commonJS({
               }
             }
             isNum = false;
-            str7 = convertBase(str7, b, 10, x2.s);
-            if ((e2 = str7.indexOf(".")) > -1) str7 = str7.replace(".", "");
-            else e2 = str7.length;
+            str8 = convertBase(str8, b, 10, x2.s);
+            if ((e2 = str8.indexOf(".")) > -1) str8 = str8.replace(".", "");
+            else e2 = str8.length;
           }
-          for (i2 = 0; str7.charCodeAt(i2) === 48; i2++) ;
-          for (len = str7.length; str7.charCodeAt(--len) === 48; ) ;
-          if (str7 = str7.slice(i2, ++len)) {
+          for (i2 = 0; str8.charCodeAt(i2) === 48; i2++) ;
+          for (len = str8.length; str8.charCodeAt(--len) === 48; ) ;
+          if (str8 = str8.slice(i2, ++len)) {
             len -= i2;
             if (isNum && BigNumber2.DEBUG && len > 15 && (v > MAX_SAFE_INTEGER || v !== mathfloor(v))) {
               throw Error(tooManyDigits + x2.s * v);
@@ -16044,16 +16044,16 @@ var require_bignumber = __commonJS({
               i2 = (e2 + 1) % LOG_BASE;
               if (e2 < 0) i2 += LOG_BASE;
               if (i2 < len) {
-                if (i2) x2.c.push(+str7.slice(0, i2));
+                if (i2) x2.c.push(+str8.slice(0, i2));
                 for (len -= LOG_BASE; i2 < len; ) {
-                  x2.c.push(+str7.slice(i2, i2 += LOG_BASE));
+                  x2.c.push(+str8.slice(i2, i2 += LOG_BASE));
                 }
-                i2 = LOG_BASE - (str7 = str7.slice(i2)).length;
+                i2 = LOG_BASE - (str8 = str8.slice(i2)).length;
               } else {
                 i2 -= len;
               }
-              for (; i2--; str7 += "0") ;
-              x2.c.push(+str7);
+              for (; i2--; str8 += "0") ;
+              x2.c.push(+str8);
             }
           } else {
             x2.c = [x2.e = 0];
@@ -16276,11 +16276,11 @@ var require_bignumber = __commonJS({
         };
         convertBase = /* @__PURE__ */ (function() {
           var decimal = "0123456789";
-          function toBaseOut(str7, baseIn, baseOut, alphabet) {
-            var j, arr = [0], arrL, i2 = 0, len = str7.length;
+          function toBaseOut(str8, baseIn, baseOut, alphabet) {
+            var j, arr = [0], arrL, i2 = 0, len = str8.length;
             for (; i2 < len; ) {
               for (arrL = arr.length; arrL--; arr[arrL] *= baseIn) ;
-              arr[0] += alphabet.indexOf(str7.charAt(i2++));
+              arr[0] += alphabet.indexOf(str8.charAt(i2++));
               for (j = 0; j < arr.length; j++) {
                 if (arr[j] > baseOut - 1) {
                   if (arr[j + 1] == null) arr[j + 1] = 0;
@@ -16291,14 +16291,14 @@ var require_bignumber = __commonJS({
             }
             return arr.reverse();
           }
-          return function(str7, baseIn, baseOut, sign, callerIsToString) {
-            var alphabet, d, e2, k, r2, x2, xc, y, i2 = str7.indexOf("."), dp = DECIMAL_PLACES, rm = ROUNDING_MODE;
+          return function(str8, baseIn, baseOut, sign, callerIsToString) {
+            var alphabet, d, e2, k, r2, x2, xc, y, i2 = str8.indexOf("."), dp = DECIMAL_PLACES, rm = ROUNDING_MODE;
             if (i2 >= 0) {
               k = POW_PRECISION;
               POW_PRECISION = 0;
-              str7 = str7.replace(".", "");
+              str8 = str8.replace(".", "");
               y = new BigNumber2(baseIn);
-              x2 = y.pow(str7.length - i2);
+              x2 = y.pow(str8.length - i2);
               POW_PRECISION = k;
               y.c = toBaseOut(
                 toFixedPoint(coeffToString(x2.c), x2.e, "0"),
@@ -16308,7 +16308,7 @@ var require_bignumber = __commonJS({
               );
               y.e = y.c.length;
             }
-            xc = toBaseOut(str7, baseIn, baseOut, callerIsToString ? (alphabet = ALPHABET, decimal) : (alphabet = decimal, ALPHABET));
+            xc = toBaseOut(str8, baseIn, baseOut, callerIsToString ? (alphabet = ALPHABET, decimal) : (alphabet = decimal, ALPHABET));
             e2 = k = xc.length;
             for (; xc[--k] == 0; xc.pop()) ;
             if (!xc[0]) return alphabet.charAt(0);
@@ -16329,7 +16329,7 @@ var require_bignumber = __commonJS({
             r2 = r2 || d < 0 || xc[d + 1] != null;
             r2 = rm < 4 ? (i2 != null || r2) && (rm == 0 || rm == (x2.s < 0 ? 3 : 2)) : i2 > k || i2 == k && (rm == 4 || r2 || rm == 6 && xc[d - 1] & 1 || rm == (x2.s < 0 ? 8 : 7));
             if (d < 1 || !xc[0]) {
-              str7 = r2 ? toFixedPoint(alphabet.charAt(1), -dp, alphabet.charAt(0)) : alphabet.charAt(0);
+              str8 = r2 ? toFixedPoint(alphabet.charAt(1), -dp, alphabet.charAt(0)) : alphabet.charAt(0);
             } else {
               xc.length = d;
               if (r2) {
@@ -16342,10 +16342,10 @@ var require_bignumber = __commonJS({
                 }
               }
               for (k = xc.length; !xc[--k]; ) ;
-              for (i2 = 0, str7 = ""; i2 <= k; str7 += alphabet.charAt(xc[i2++])) ;
-              str7 = toFixedPoint(str7, e2, alphabet.charAt(0));
+              for (i2 = 0, str8 = ""; i2 <= k; str8 += alphabet.charAt(xc[i2++])) ;
+              str8 = toFixedPoint(str8, e2, alphabet.charAt(0));
             }
-            return str7;
+            return str8;
           };
         })();
         div = /* @__PURE__ */ (function() {
@@ -16491,38 +16491,38 @@ var require_bignumber = __commonJS({
           };
         })();
         function format(n, i2, rm, id) {
-          var c0, e2, ne, len, str7;
+          var c0, e2, ne, len, str8;
           if (rm == null) rm = ROUNDING_MODE;
           else intCheck(rm, 0, 8);
           if (!n.c) return n.toString();
           c0 = n.c[0];
           ne = n.e;
           if (i2 == null) {
-            str7 = coeffToString(n.c);
-            str7 = id == 1 || id == 2 && (ne <= TO_EXP_NEG || ne >= TO_EXP_POS) ? toExponential(str7, ne) : toFixedPoint(str7, ne, "0");
+            str8 = coeffToString(n.c);
+            str8 = id == 1 || id == 2 && (ne <= TO_EXP_NEG || ne >= TO_EXP_POS) ? toExponential(str8, ne) : toFixedPoint(str8, ne, "0");
           } else {
             n = round(new BigNumber2(n), i2, rm);
             e2 = n.e;
-            str7 = coeffToString(n.c);
-            len = str7.length;
+            str8 = coeffToString(n.c);
+            len = str8.length;
             if (id == 1 || id == 2 && (i2 <= e2 || e2 <= TO_EXP_NEG)) {
-              for (; len < i2; str7 += "0", len++) ;
-              str7 = toExponential(str7, e2);
+              for (; len < i2; str8 += "0", len++) ;
+              str8 = toExponential(str8, e2);
             } else {
               i2 -= ne + (id === 2 && e2 > ne);
-              str7 = toFixedPoint(str7, e2, "0");
+              str8 = toFixedPoint(str8, e2, "0");
               if (e2 + 1 > len) {
-                if (--i2 > 0) for (str7 += "."; i2--; str7 += "0") ;
+                if (--i2 > 0) for (str8 += "."; i2--; str8 += "0") ;
               } else {
                 i2 += e2 - len;
                 if (i2 > 0) {
-                  if (e2 + 1 == len) str7 += ".";
-                  for (; i2--; str7 += "0") ;
+                  if (e2 + 1 == len) str8 += ".";
+                  for (; i2--; str8 += "0") ;
                 }
               }
             }
           }
-          return n.s < 0 && c0 ? "-" + str7 : str7;
+          return n.s < 0 && c0 ? "-" + str8 : str8;
         }
         function maxOrMin(args, n) {
           var k, y, i2 = 1, x2 = new BigNumber2(args[0]);
@@ -16550,8 +16550,8 @@ var require_bignumber = __commonJS({
         }
         parseNumeric = /* @__PURE__ */ (function() {
           var basePrefix = /^(-?)0([xbo])(?=\w[\w.]*$)/i, dotAfter = /^([^.]+)\.$/, dotBefore = /^\.([^.]+)$/, isInfinityOrNaN = /^-?(Infinity|NaN)$/, whitespaceOrPlus = /^\s*\+(?=[\w.])|^\s+|\s+$/g;
-          return function(x2, str7, isNum, b) {
-            var base, s2 = isNum ? str7 : str7.replace(whitespaceOrPlus, "");
+          return function(x2, str8, isNum, b) {
+            var base, s2 = isNum ? str8 : str8.replace(whitespaceOrPlus, "");
             if (isInfinityOrNaN.test(s2)) {
               x2.s = isNaN(s2) ? null : s2 < 0 ? -1 : 1;
             } else {
@@ -16564,10 +16564,10 @@ var require_bignumber = __commonJS({
                   base = b;
                   s2 = s2.replace(dotAfter, "$1").replace(dotBefore, "0.$1");
                 }
-                if (str7 != s2) return new BigNumber2(s2, base);
+                if (str8 != s2) return new BigNumber2(s2, base);
               }
               if (BigNumber2.DEBUG) {
-                throw Error(bignumberError + "Not a" + (b ? " base " + b : "") + " number: " + str7);
+                throw Error(bignumberError + "Not a" + (b ? " base " + b : "") + " number: " + str8);
               }
               x2.s = null;
             }
@@ -16661,11 +16661,11 @@ var require_bignumber = __commonJS({
           return x2;
         }
         function valueOf(n) {
-          var str7, e2 = n.e;
+          var str8, e2 = n.e;
           if (e2 === null) return n.toString();
-          str7 = coeffToString(n.c);
-          str7 = e2 <= TO_EXP_NEG || e2 >= TO_EXP_POS ? toExponential(str7, e2) : toFixedPoint(str7, e2, "0");
-          return n.s < 0 ? "-" + str7 : str7;
+          str8 = coeffToString(n.c);
+          str8 = e2 <= TO_EXP_NEG || e2 >= TO_EXP_POS ? toExponential(str8, e2) : toFixedPoint(str8, e2, "0");
+          return n.s < 0 ? "-" + str8 : str8;
         }
         P.absoluteValue = P.abs = function() {
           var x2 = new BigNumber2(this);
@@ -17086,7 +17086,7 @@ var require_bignumber = __commonJS({
           return format(this, dp, rm);
         };
         P.toFormat = function(dp, rm, format2) {
-          var str7, x2 = this;
+          var str8, x2 = this;
           if (format2 == null) {
             if (dp != null && rm && typeof rm == "object") {
               format2 = rm;
@@ -17100,9 +17100,9 @@ var require_bignumber = __commonJS({
           } else if (typeof format2 != "object") {
             throw Error(bignumberError + "Argument not an object: " + format2);
           }
-          str7 = x2.toFixed(dp, rm);
+          str8 = x2.toFixed(dp, rm);
           if (x2.c) {
-            var i2, arr = str7.split("."), g1 = +format2.groupSize, g2 = +format2.secondaryGroupSize, groupSeparator = format2.groupSeparator || "", intPart = arr[0], fractionPart = arr[1], isNeg = x2.s < 0, intDigits = isNeg ? intPart.slice(1) : intPart, len = intDigits.length;
+            var i2, arr = str8.split("."), g1 = +format2.groupSize, g2 = +format2.secondaryGroupSize, groupSeparator = format2.groupSeparator || "", intPart = arr[0], fractionPart = arr[1], isNeg = x2.s < 0, intDigits = isNeg ? intPart.slice(1) : intPart, len = intDigits.length;
             if (g2) {
               i2 = g1;
               g1 = g2;
@@ -17116,12 +17116,12 @@ var require_bignumber = __commonJS({
               if (g2 > 0) intPart += groupSeparator + intDigits.slice(i2);
               if (isNeg) intPart = "-" + intPart;
             }
-            str7 = fractionPart ? intPart + (format2.decimalSeparator || "") + ((g2 = +format2.fractionGroupSize) ? fractionPart.replace(
+            str8 = fractionPart ? intPart + (format2.decimalSeparator || "") + ((g2 = +format2.fractionGroupSize) ? fractionPart.replace(
               new RegExp("\\d{" + g2 + "}\\B", "g"),
               "$&" + (format2.fractionGroupSeparator || "")
             ) : fractionPart) : intPart;
           }
-          return (format2.prefix || "") + str7 + (format2.suffix || "");
+          return (format2.prefix || "") + str8 + (format2.suffix || "");
         };
         P.toFraction = function(md) {
           var d, d0, d1, d2, e2, exp, n, n0, n1, q, r2, s2, x2 = this, xc = x2.c;
@@ -17173,27 +17173,27 @@ var require_bignumber = __commonJS({
           return format(this, sd, rm, 2);
         };
         P.toString = function(b) {
-          var str7, n = this, s2 = n.s, e2 = n.e;
+          var str8, n = this, s2 = n.s, e2 = n.e;
           if (e2 === null) {
             if (s2) {
-              str7 = "Infinity";
-              if (s2 < 0) str7 = "-" + str7;
+              str8 = "Infinity";
+              if (s2 < 0) str8 = "-" + str8;
             } else {
-              str7 = "NaN";
+              str8 = "NaN";
             }
           } else {
             if (b == null) {
-              str7 = e2 <= TO_EXP_NEG || e2 >= TO_EXP_POS ? toExponential(coeffToString(n.c), e2) : toFixedPoint(coeffToString(n.c), e2, "0");
+              str8 = e2 <= TO_EXP_NEG || e2 >= TO_EXP_POS ? toExponential(coeffToString(n.c), e2) : toFixedPoint(coeffToString(n.c), e2, "0");
             } else if (b === 10 && alphabetHasNormalDecimalDigits) {
               n = round(new BigNumber2(n), DECIMAL_PLACES + e2 + 1, ROUNDING_MODE);
-              str7 = toFixedPoint(coeffToString(n.c), n.e, "0");
+              str8 = toFixedPoint(coeffToString(n.c), n.e, "0");
             } else {
               intCheck(b, 2, ALPHABET.length, "Base");
-              str7 = convertBase(toFixedPoint(coeffToString(n.c), e2, "0"), 10, b, s2, true);
+              str8 = convertBase(toFixedPoint(coeffToString(n.c), e2, "0"), 10, b, s2, true);
             }
-            if (s2 < 0 && n.c[0]) str7 = "-" + str7;
+            if (s2 < 0 && n.c[0]) str8 = "-" + str8;
           }
-          return str7;
+          return str8;
         };
         P.valueOf = P.toJSON = function() {
           return valueOf(this);
@@ -17241,24 +17241,24 @@ var require_bignumber = __commonJS({
         var k = n.c.length - 1;
         return bitFloor(n.e / LOG_BASE) == k && n.c[k] % 2 != 0;
       }
-      function toExponential(str7, e2) {
-        return (str7.length > 1 ? str7.charAt(0) + "." + str7.slice(1) : str7) + (e2 < 0 ? "e" : "e+") + e2;
+      function toExponential(str8, e2) {
+        return (str8.length > 1 ? str8.charAt(0) + "." + str8.slice(1) : str8) + (e2 < 0 ? "e" : "e+") + e2;
       }
-      function toFixedPoint(str7, e2, z) {
+      function toFixedPoint(str8, e2, z) {
         var len, zs;
         if (e2 < 0) {
           for (zs = z + "."; ++e2; zs += z) ;
-          str7 = zs + str7;
+          str8 = zs + str8;
         } else {
-          len = str7.length;
+          len = str8.length;
           if (++e2 > len) {
             for (zs = z, e2 -= len; --e2; zs += z) ;
-            str7 += zs;
+            str8 += zs;
           } else if (e2 < len) {
-            str7 = str7.slice(0, e2) + "." + str7.slice(e2);
+            str8 = str8.slice(0, e2) + "." + str8.slice(e2);
           }
         }
-        return str7;
+        return str8;
       }
       BigNumber = clone3();
       BigNumber["default"] = BigNumber.BigNumber = BigNumber;
@@ -17278,9 +17278,9 @@ var require_bignumber = __commonJS({
   }
 });
 
-// node_modules/json-bigint/lib/stringify.js
+// ../../../server/node_modules/json-bigint/lib/stringify.js
 var require_stringify = __commonJS({
-  "node_modules/json-bigint/lib/stringify.js"(exports, module) {
+  "../../../server/node_modules/json-bigint/lib/stringify.js"(exports, module) {
     var BigNumber = require_bignumber();
     var JSON2 = module.exports;
     (function() {
@@ -17305,7 +17305,7 @@ var require_stringify = __commonJS({
           return typeof c === "string" ? c : "\\u" + ("0000" + a.charCodeAt(0).toString(16)).slice(-4);
         }) + '"' : '"' + string3 + '"';
       }
-      function str7(key, holder) {
+      function str8(key, holder) {
         var i2, k, v, length, mind = gap, partial2, value = holder[key], isBigNumber = value != null && (value instanceof BigNumber || BigNumber.isBigNumber(value));
         if (value && typeof value === "object" && typeof value.toJSON === "function") {
           value = value.toJSON(key);
@@ -17337,7 +17337,7 @@ var require_stringify = __commonJS({
             if (Object.prototype.toString.apply(value) === "[object Array]") {
               length = value.length;
               for (i2 = 0; i2 < length; i2 += 1) {
-                partial2[i2] = str7(i2, value) || "null";
+                partial2[i2] = str8(i2, value) || "null";
               }
               v = partial2.length === 0 ? "[]" : gap ? "[\n" + gap + partial2.join(",\n" + gap) + "\n" + mind + "]" : "[" + partial2.join(",") + "]";
               gap = mind;
@@ -17348,7 +17348,7 @@ var require_stringify = __commonJS({
               for (i2 = 0; i2 < length; i2 += 1) {
                 if (typeof rep[i2] === "string") {
                   k = rep[i2];
-                  v = str7(k, value);
+                  v = str8(k, value);
                   if (v) {
                     partial2.push(quote(k) + (gap ? ": " : ":") + v);
                   }
@@ -17356,7 +17356,7 @@ var require_stringify = __commonJS({
               }
             } else {
               Object.keys(value).forEach(function(k2) {
-                var v2 = str7(k2, value);
+                var v2 = str8(k2, value);
                 if (v2) {
                   partial2.push(quote(k2) + (gap ? ": " : ":") + v2);
                 }
@@ -17383,16 +17383,16 @@ var require_stringify = __commonJS({
           if (replacer && typeof replacer !== "function" && (typeof replacer !== "object" || typeof replacer.length !== "number")) {
             throw new Error("JSON.stringify");
           }
-          return str7("", { "": value });
+          return str8("", { "": value });
         };
       }
     })();
   }
 });
 
-// node_modules/json-bigint/lib/parse.js
+// ../../../server/node_modules/json-bigint/lib/parse.js
 var require_parse = __commonJS({
-  "node_modules/json-bigint/lib/parse.js"(exports, module) {
+  "../../../server/node_modules/json-bigint/lib/parse.js"(exports, module) {
     var BigNumber = null;
     var suspectProtoRx = /(?:_|\\u005[Ff])(?:_|\\u005[Ff])(?:p|\\u0070)(?:r|\\u0072)(?:o|\\u006[Ff])(?:t|\\u0074)(?:o|\\u006[Ff])(?:_|\\u005[Ff])(?:_|\\u005[Ff])/;
     var suspectConstructorRx = /(?:c|\\u0063)(?:o|\\u006[Ff])(?:n|\\u006[Ee])(?:s|\\u0073)(?:t|\\u0074)(?:r|\\u0072)(?:u|\\u0075)(?:c|\\u0063)(?:t|\\u0074)(?:o|\\u006[Ff])(?:r|\\u0072)/;
@@ -17671,9 +17671,9 @@ var require_parse = __commonJS({
   }
 });
 
-// node_modules/json-bigint/index.js
+// ../../../server/node_modules/json-bigint/index.js
 var require_json_bigint = __commonJS({
-  "node_modules/json-bigint/index.js"(exports, module) {
+  "../../../server/node_modules/json-bigint/index.js"(exports, module) {
     var json_stringify = require_stringify().stringify;
     var json_parse = require_parse();
     module.exports = function(options) {
@@ -17687,9 +17687,9 @@ var require_json_bigint = __commonJS({
   }
 });
 
-// node_modules/gcp-metadata/build/src/gcp-residency.js
+// ../../../server/node_modules/gcp-metadata/build/src/gcp-residency.js
 var require_gcp_residency = __commonJS({
-  "node_modules/gcp-metadata/build/src/gcp-residency.js"(exports) {
+  "../../../server/node_modules/gcp-metadata/build/src/gcp-residency.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.GCE_LINUX_BIOS_PATHS = void 0;
@@ -17742,9 +17742,9 @@ var require_gcp_residency = __commonJS({
   }
 });
 
-// node_modules/google-logging-utils/build/src/colours.js
+// ../../../server/node_modules/google-logging-utils/build/src/colours.js
 var require_colours = __commonJS({
-  "node_modules/google-logging-utils/build/src/colours.js"(exports) {
+  "../../../server/node_modules/google-logging-utils/build/src/colours.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Colours = void 0;
@@ -17803,9 +17803,9 @@ var require_colours = __commonJS({
   }
 });
 
-// node_modules/google-logging-utils/build/src/logging-utils.js
+// ../../../server/node_modules/google-logging-utils/build/src/logging-utils.js
 var require_logging_utils = __commonJS({
-  "node_modules/google-logging-utils/build/src/logging-utils.js"(exports) {
+  "../../../server/node_modules/google-logging-utils/build/src/logging-utils.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m2, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -18092,9 +18092,9 @@ var require_logging_utils = __commonJS({
   }
 });
 
-// node_modules/google-logging-utils/build/src/index.js
+// ../../../server/node_modules/google-logging-utils/build/src/index.js
 var require_src3 = __commonJS({
-  "node_modules/google-logging-utils/build/src/index.js"(exports) {
+  "../../../server/node_modules/google-logging-utils/build/src/index.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m2, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -18117,9 +18117,9 @@ var require_src3 = __commonJS({
   }
 });
 
-// node_modules/gcp-metadata/build/src/index.js
+// ../../../server/node_modules/gcp-metadata/build/src/index.js
 var require_src4 = __commonJS({
-  "node_modules/gcp-metadata/build/src/index.js"(exports) {
+  "../../../server/node_modules/gcp-metadata/build/src/index.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m2, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -18373,9 +18373,9 @@ var require_src4 = __commonJS({
   }
 });
 
-// node_modules/base64-js/index.js
+// ../../../server/node_modules/base64-js/index.js
 var require_base64_js = __commonJS({
-  "node_modules/base64-js/index.js"(exports) {
+  "../../../server/node_modules/base64-js/index.js"(exports) {
     "use strict";
     exports.byteLength = byteLength;
     exports.toByteArray = toByteArray;
@@ -18437,8 +18437,8 @@ var require_base64_js = __commonJS({
       }
       return arr;
     }
-    function tripletToBase64(num4) {
-      return lookup[num4 >> 18 & 63] + lookup[num4 >> 12 & 63] + lookup[num4 >> 6 & 63] + lookup[num4 & 63];
+    function tripletToBase64(num5) {
+      return lookup[num5 >> 18 & 63] + lookup[num5 >> 12 & 63] + lookup[num5 >> 6 & 63] + lookup[num5 & 63];
     }
     function encodeChunk(uint8, start, end) {
       var tmp;
@@ -18474,9 +18474,9 @@ var require_base64_js = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/crypto/shared.js
+// ../../../server/node_modules/google-auth-library/build/src/crypto/shared.js
 var require_shared = __commonJS({
-  "node_modules/google-auth-library/build/src/crypto/shared.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/crypto/shared.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.fromArrayBufferToHex = fromArrayBufferToHex;
@@ -18489,9 +18489,9 @@ var require_shared = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/crypto/browser/crypto.js
+// ../../../server/node_modules/google-auth-library/build/src/crypto/browser/crypto.js
 var require_crypto = __commonJS({
-  "node_modules/google-auth-library/build/src/crypto/browser/crypto.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/crypto/browser/crypto.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.BrowserCrypto = void 0;
@@ -18503,8 +18503,8 @@ var require_crypto = __commonJS({
           throw new Error("SubtleCrypto not found. Make sure it's an https:// website.");
         }
       }
-      async sha256DigestBase64(str7) {
-        const inputBuffer = new TextEncoder().encode(str7);
+      async sha256DigestBase64(str8) {
+        const inputBuffer = new TextEncoder().encode(str8);
         const outputBuffer = await window.crypto.subtle.digest("SHA-256", inputBuffer);
         return base64js.fromByteArray(new Uint8Array(outputBuffer));
       }
@@ -18556,8 +18556,8 @@ var require_crypto = __commonJS({
        * @return A promise that resolves with the SHA-256 hash of the provided
        *   string in hexadecimal encoding.
        */
-      async sha256DigestHex(str7) {
-        const inputBuffer = new TextEncoder().encode(str7);
+      async sha256DigestHex(str8) {
+        const inputBuffer = new TextEncoder().encode(str8);
         const outputBuffer = await window.crypto.subtle.digest("SHA-256", inputBuffer);
         return (0, shared_1.fromArrayBufferToHex)(outputBuffer);
       }
@@ -18585,16 +18585,16 @@ var require_crypto = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/crypto/node/crypto.js
+// ../../../server/node_modules/google-auth-library/build/src/crypto/node/crypto.js
 var require_crypto2 = __commonJS({
-  "node_modules/google-auth-library/build/src/crypto/node/crypto.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/crypto/node/crypto.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.NodeCrypto = void 0;
     var crypto2 = __require("crypto");
     var NodeCrypto = class {
-      async sha256DigestBase64(str7) {
-        return crypto2.createHash("sha256").update(str7).digest("base64");
+      async sha256DigestBase64(str8) {
+        return crypto2.createHash("sha256").update(str8).digest("base64");
       }
       randomBytesBase64(count) {
         return crypto2.randomBytes(count).toString("base64");
@@ -18623,8 +18623,8 @@ var require_crypto2 = __commonJS({
        * @return A promise that resolves with the SHA-256 hash of the provided
        *   string in hexadecimal encoding.
        */
-      async sha256DigestHex(str7) {
-        return crypto2.createHash("sha256").update(str7).digest("hex");
+      async sha256DigestHex(str8) {
+        return crypto2.createHash("sha256").update(str8).digest("hex");
       }
       /**
        * Computes the HMAC hash of a message using the provided crypto key and the
@@ -18654,9 +18654,9 @@ var require_crypto2 = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/crypto/crypto.js
+// ../../../server/node_modules/google-auth-library/build/src/crypto/crypto.js
 var require_crypto3 = __commonJS({
-  "node_modules/google-auth-library/build/src/crypto/crypto.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/crypto/crypto.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m2, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -18692,9 +18692,9 @@ var require_crypto3 = __commonJS({
   }
 });
 
-// node_modules/safe-buffer/index.js
+// ../../../server/node_modules/safe-buffer/index.js
 var require_safe_buffer = __commonJS({
-  "node_modules/safe-buffer/index.js"(exports, module) {
+  "../../../server/node_modules/safe-buffer/index.js"(exports, module) {
     var buffer = __require("buffer");
     var Buffer4 = buffer.Buffer;
     function copyProps(src, dst) {
@@ -18750,9 +18750,9 @@ var require_safe_buffer = __commonJS({
   }
 });
 
-// node_modules/ecdsa-sig-formatter/src/param-bytes-for-alg.js
+// ../../../server/node_modules/ecdsa-sig-formatter/src/param-bytes-for-alg.js
 var require_param_bytes_for_alg = __commonJS({
-  "node_modules/ecdsa-sig-formatter/src/param-bytes-for-alg.js"(exports, module) {
+  "../../../server/node_modules/ecdsa-sig-formatter/src/param-bytes-for-alg.js"(exports, module) {
     "use strict";
     function getParamSize(keySize) {
       var result = (keySize / 8 | 0) + (keySize % 8 === 0 ? 0 : 1);
@@ -18774,9 +18774,9 @@ var require_param_bytes_for_alg = __commonJS({
   }
 });
 
-// node_modules/ecdsa-sig-formatter/src/ecdsa-sig-formatter.js
+// ../../../server/node_modules/ecdsa-sig-formatter/src/ecdsa-sig-formatter.js
 var require_ecdsa_sig_formatter = __commonJS({
-  "node_modules/ecdsa-sig-formatter/src/ecdsa-sig-formatter.js"(exports, module) {
+  "../../../server/node_modules/ecdsa-sig-formatter/src/ecdsa-sig-formatter.js"(exports, module) {
     "use strict";
     var Buffer4 = require_safe_buffer().Buffer;
     var getParamBytesForAlg = require_param_bytes_for_alg();
@@ -18914,9 +18914,9 @@ var require_ecdsa_sig_formatter = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/util.js
+// ../../../server/node_modules/google-auth-library/build/src/util.js
 var require_util3 = __commonJS({
-  "node_modules/google-auth-library/build/src/util.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/util.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.LRUCache = void 0;
@@ -18925,13 +18925,13 @@ var require_util3 = __commonJS({
     exports.removeUndefinedValuesInObject = removeUndefinedValuesInObject;
     exports.isValidFile = isValidFile;
     exports.getWellKnownCertificateConfigFileLocation = getWellKnownCertificateConfigFileLocation;
-    var fs8 = __require("fs");
-    var os = __require("os");
-    var path10 = __require("path");
+    var fs9 = __require("fs");
+    var os2 = __require("os");
+    var path11 = __require("path");
     var WELL_KNOWN_CERTIFICATE_CONFIG_FILE = "certificate_config.json";
     var CLOUDSDK_CONFIG_DIRECTORY = "gcloud";
-    function snakeToCamel(str7) {
-      return str7.replace(/([_][^_])/g, (match2) => match2.slice(1).toUpperCase());
+    function snakeToCamel(str8) {
+      return str8.replace(/([_][^_])/g, (match2) => match2.slice(1).toUpperCase());
     }
     function originalOrCamelOptions(obj) {
       function get(key) {
@@ -19013,25 +19013,25 @@ var require_util3 = __commonJS({
     }
     async function isValidFile(filePath) {
       try {
-        const stats = await fs8.promises.lstat(filePath);
+        const stats = await fs9.promises.lstat(filePath);
         return stats.isFile();
       } catch (e2) {
         return false;
       }
     }
     function getWellKnownCertificateConfigFileLocation() {
-      const configDir = process.env.CLOUDSDK_CONFIG || (_isWindows() ? path10.join(process.env.APPDATA || "", CLOUDSDK_CONFIG_DIRECTORY) : path10.join(process.env.HOME || "", ".config", CLOUDSDK_CONFIG_DIRECTORY));
-      return path10.join(configDir, WELL_KNOWN_CERTIFICATE_CONFIG_FILE);
+      const configDir = process.env.CLOUDSDK_CONFIG || (_isWindows() ? path11.join(process.env.APPDATA || "", CLOUDSDK_CONFIG_DIRECTORY) : path11.join(process.env.HOME || "", ".config", CLOUDSDK_CONFIG_DIRECTORY));
+      return path11.join(configDir, WELL_KNOWN_CERTIFICATE_CONFIG_FILE);
     }
     function _isWindows() {
-      return os.platform().startsWith("win");
+      return os2.platform().startsWith("win");
     }
   }
 });
 
-// node_modules/google-auth-library/package.json
+// ../../../server/node_modules/google-auth-library/package.json
 var require_package2 = __commonJS({
-  "node_modules/google-auth-library/package.json"(exports, module) {
+  "../../../server/node_modules/google-auth-library/package.json"(exports, module) {
     module.exports = {
       name: "google-auth-library",
       version: "10.9.1",
@@ -19125,9 +19125,9 @@ var require_package2 = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/shared.cjs
+// ../../../server/node_modules/google-auth-library/build/src/shared.cjs
 var require_shared2 = __commonJS({
-  "node_modules/google-auth-library/build/src/shared.cjs"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/shared.cjs"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.USER_AGENT = exports.PRODUCT_NAME = exports.pkg = void 0;
@@ -19135,14 +19135,14 @@ var require_shared2 = __commonJS({
     exports.pkg = pkg;
     var PRODUCT_NAME = "google-api-nodejs-client";
     exports.PRODUCT_NAME = PRODUCT_NAME;
-    var USER_AGENT = `${PRODUCT_NAME}/${pkg.version}`;
-    exports.USER_AGENT = USER_AGENT;
+    var USER_AGENT2 = `${PRODUCT_NAME}/${pkg.version}`;
+    exports.USER_AGENT = USER_AGENT2;
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/authclient.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/authclient.js
 var require_authclient = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/authclient.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/authclient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.AuthClient = exports.DEFAULT_EAGER_REFRESH_THRESHOLD_MILLIS = exports.DEFAULT_UNIVERSE = void 0;
@@ -19375,9 +19375,9 @@ var require_authclient = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/loginticket.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/loginticket.js
 var require_loginticket = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/loginticket.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/loginticket.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.LoginTicket = void 0;
@@ -19427,9 +19427,9 @@ var require_loginticket = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/oauth2client.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/oauth2client.js
 var require_oauth2client = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/oauth2client.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/oauth2client.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.OAuth2Client = exports.ClientAuthentication = exports.CertificateFormat = exports.CodeChallengeMethod = void 0;
@@ -20108,9 +20108,9 @@ var require_oauth2client = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/computeclient.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/computeclient.js
 var require_computeclient = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/computeclient.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/computeclient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Compute = void 0;
@@ -20200,9 +20200,9 @@ var require_computeclient = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/idtokenclient.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/idtokenclient.js
 var require_idtokenclient = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/idtokenclient.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/idtokenclient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.IdTokenClient = void 0;
@@ -20246,9 +20246,9 @@ var require_idtokenclient = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/envDetect.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/envDetect.js
 var require_envDetect = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/envDetect.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/envDetect.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.GCPEnv = void 0;
@@ -20323,9 +20323,9 @@ var require_envDetect = __commonJS({
   }
 });
 
-// node_modules/jws/lib/data-stream.js
+// ../../../server/node_modules/jws/lib/data-stream.js
 var require_data_stream = __commonJS({
-  "node_modules/jws/lib/data-stream.js"(exports, module) {
+  "../../../server/node_modules/jws/lib/data-stream.js"(exports, module) {
     var Buffer4 = require_safe_buffer().Buffer;
     var Stream5 = __require("stream");
     var util2 = __require("util");
@@ -20371,9 +20371,9 @@ var require_data_stream = __commonJS({
   }
 });
 
-// node_modules/buffer-equal-constant-time/index.js
+// ../../../server/node_modules/buffer-equal-constant-time/index.js
 var require_buffer_equal_constant_time = __commonJS({
-  "node_modules/buffer-equal-constant-time/index.js"(exports, module) {
+  "../../../server/node_modules/buffer-equal-constant-time/index.js"(exports, module) {
     "use strict";
     var Buffer4 = __require("buffer").Buffer;
     var SlowBuffer = __require("buffer").SlowBuffer;
@@ -20405,9 +20405,9 @@ var require_buffer_equal_constant_time = __commonJS({
   }
 });
 
-// node_modules/jwa/index.js
+// ../../../server/node_modules/jwa/index.js
 var require_jwa = __commonJS({
-  "node_modules/jwa/index.js"(exports, module) {
+  "../../../server/node_modules/jwa/index.js"(exports, module) {
     var Buffer4 = require_safe_buffer().Buffer;
     var crypto2 = __require("crypto");
     var formatEcdsa = require_ecdsa_sig_formatter();
@@ -20629,9 +20629,9 @@ var require_jwa = __commonJS({
   }
 });
 
-// node_modules/jws/lib/tostring.js
+// ../../../server/node_modules/jws/lib/tostring.js
 var require_tostring = __commonJS({
-  "node_modules/jws/lib/tostring.js"(exports, module) {
+  "../../../server/node_modules/jws/lib/tostring.js"(exports, module) {
     var Buffer4 = __require("buffer").Buffer;
     module.exports = function toString(obj) {
       if (typeof obj === "string")
@@ -20643,9 +20643,9 @@ var require_tostring = __commonJS({
   }
 });
 
-// node_modules/jws/lib/sign-stream.js
+// ../../../server/node_modules/jws/lib/sign-stream.js
 var require_sign_stream = __commonJS({
-  "node_modules/jws/lib/sign-stream.js"(exports, module) {
+  "../../../server/node_modules/jws/lib/sign-stream.js"(exports, module) {
     var Buffer4 = require_safe_buffer().Buffer;
     var DataStream = require_data_stream();
     var jwa = require_jwa();
@@ -20718,9 +20718,9 @@ var require_sign_stream = __commonJS({
   }
 });
 
-// node_modules/jws/lib/verify-stream.js
+// ../../../server/node_modules/jws/lib/verify-stream.js
 var require_verify_stream = __commonJS({
-  "node_modules/jws/lib/verify-stream.js"(exports, module) {
+  "../../../server/node_modules/jws/lib/verify-stream.js"(exports, module) {
     var Buffer4 = require_safe_buffer().Buffer;
     var DataStream = require_data_stream();
     var jwa = require_jwa();
@@ -20833,9 +20833,9 @@ var require_verify_stream = __commonJS({
   }
 });
 
-// node_modules/jws/index.js
+// ../../../server/node_modules/jws/index.js
 var require_jws = __commonJS({
-  "node_modules/jws/index.js"(exports) {
+  "../../../server/node_modules/jws/index.js"(exports) {
     var SignStream = require_sign_stream();
     var VerifyStream = require_verify_stream();
     var ALGORITHMS = [
@@ -20866,9 +20866,9 @@ var require_jws = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/gtoken/jwsSign.js
+// ../../../server/node_modules/google-auth-library/build/src/gtoken/jwsSign.js
 var require_jwsSign = __commonJS({
-  "node_modules/google-auth-library/build/src/gtoken/jwsSign.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/gtoken/jwsSign.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.buildPayloadForJwsSign = buildPayloadForJwsSign;
@@ -20900,9 +20900,9 @@ var require_jwsSign = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/gtoken/getToken.js
+// ../../../server/node_modules/google-auth-library/build/src/gtoken/getToken.js
 var require_getToken = __commonJS({
-  "node_modules/google-auth-library/build/src/gtoken/getToken.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/gtoken/getToken.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getToken = getToken;
@@ -20944,9 +20944,9 @@ var require_getToken = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/gtoken/errorWithCode.js
+// ../../../server/node_modules/google-auth-library/build/src/gtoken/errorWithCode.js
 var require_errorWithCode = __commonJS({
-  "node_modules/google-auth-library/build/src/gtoken/errorWithCode.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/gtoken/errorWithCode.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ErrorWithCode = void 0;
@@ -20961,17 +20961,17 @@ var require_errorWithCode = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/gtoken/getCredentials.js
+// ../../../server/node_modules/google-auth-library/build/src/gtoken/getCredentials.js
 var require_getCredentials = __commonJS({
-  "node_modules/google-auth-library/build/src/gtoken/getCredentials.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/gtoken/getCredentials.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getCredentials = getCredentials;
-    var path10 = __require("path");
-    var fs8 = __require("fs");
+    var path11 = __require("path");
+    var fs9 = __require("fs");
     var util_1 = __require("util");
     var errorWithCode_1 = require_errorWithCode();
-    var readFile2 = fs8.readFile ? (0, util_1.promisify)(fs8.readFile) : async () => {
+    var readFile2 = fs9.readFile ? (0, util_1.promisify)(fs9.readFile) : async () => {
       throw new errorWithCode_1.ErrorWithCode("use key rather than keyFile.", "MISSING_CREDENTIALS");
     };
     var ExtensionFiles;
@@ -21039,7 +21039,7 @@ var require_getCredentials = __commonJS({
        * @returns An instance of a class that implements ICredentialsProvider.
        */
       static create(keyFilePath) {
-        const keyFileExtension = path10.extname(keyFilePath);
+        const keyFileExtension = path11.extname(keyFilePath);
         switch (keyFileExtension) {
           case ExtensionFiles.JSON:
             return new JsonCredentialsProvider(keyFilePath);
@@ -21062,9 +21062,9 @@ var require_getCredentials = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/gtoken/tokenHandler.js
+// ../../../server/node_modules/google-auth-library/build/src/gtoken/tokenHandler.js
 var require_tokenHandler = __commonJS({
-  "node_modules/google-auth-library/build/src/gtoken/tokenHandler.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/gtoken/tokenHandler.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.TokenHandler = void 0;
@@ -21153,9 +21153,9 @@ var require_tokenHandler = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/gtoken/revokeToken.js
+// ../../../server/node_modules/google-auth-library/build/src/gtoken/revokeToken.js
 var require_revokeToken = __commonJS({
-  "node_modules/google-auth-library/build/src/gtoken/revokeToken.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/gtoken/revokeToken.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.revokeToken = revokeToken;
@@ -21171,9 +21171,9 @@ var require_revokeToken = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/gtoken/googleToken.js
+// ../../../server/node_modules/google-auth-library/build/src/gtoken/googleToken.js
 var require_googleToken = __commonJS({
-  "node_modules/google-auth-library/build/src/gtoken/googleToken.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/gtoken/googleToken.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.GoogleToken = void 0;
@@ -21277,9 +21277,9 @@ var require_googleToken = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/jwtaccess.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/jwtaccess.js
 var require_jwtaccess = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/jwtaccess.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/jwtaccess.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.JWTAccess = void 0;
@@ -21426,7 +21426,7 @@ var require_jwtaccess = __commonJS({
         }
       }
       fromStreamAsync(inputStream) {
-        return new Promise((resolve3, reject) => {
+        return new Promise((resolve5, reject) => {
           if (!inputStream) {
             reject(new Error("Must pass in a stream containing the service account auth settings."));
           }
@@ -21435,7 +21435,7 @@ var require_jwtaccess = __commonJS({
             try {
               const data = JSON.parse(s2);
               this.fromJSON(data);
-              resolve3();
+              resolve5();
             } catch (err4) {
               reject(err4);
             }
@@ -21447,9 +21447,9 @@ var require_jwtaccess = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/jwtclient.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/jwtclient.js
 var require_jwtclient = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/jwtclient.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/jwtclient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.JWT = void 0;
@@ -21674,7 +21674,7 @@ var require_jwtclient = __commonJS({
         }
       }
       fromStreamAsync(inputStream) {
-        return new Promise((resolve3, reject) => {
+        return new Promise((resolve5, reject) => {
           if (!inputStream) {
             throw new Error("Must pass in a stream containing the service account auth settings.");
           }
@@ -21683,7 +21683,7 @@ var require_jwtclient = __commonJS({
             try {
               const data = JSON.parse(s2);
               this.fromJSON(data);
-              resolve3();
+              resolve5();
             } catch (e2) {
               reject(e2);
             }
@@ -21719,9 +21719,9 @@ var require_jwtclient = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/refreshclient.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/refreshclient.js
 var require_refreshclient = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/refreshclient.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/refreshclient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.UserRefreshClient = exports.USER_REFRESH_ACCOUNT_TYPE = void 0;
@@ -21816,7 +21816,7 @@ var require_refreshclient = __commonJS({
         }
       }
       async fromStreamAsync(inputStream) {
-        return new Promise((resolve3, reject) => {
+        return new Promise((resolve5, reject) => {
           if (!inputStream) {
             return reject(new Error("Must pass in a stream containing the user refresh token."));
           }
@@ -21825,7 +21825,7 @@ var require_refreshclient = __commonJS({
             try {
               const data = JSON.parse(s2);
               this.fromJSON(data);
-              return resolve3();
+              return resolve5();
             } catch (err4) {
               return reject(err4);
             }
@@ -21847,9 +21847,9 @@ var require_refreshclient = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/impersonated.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/impersonated.js
 var require_impersonated = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/impersonated.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/impersonated.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Impersonated = exports.IMPERSONATED_ACCOUNT_TYPE = void 0;
@@ -22026,9 +22026,9 @@ var require_impersonated = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/oauth2common.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/oauth2common.js
 var require_oauth2common = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/oauth2common.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/oauth2common.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.OAuthClientAuthHandler = void 0;
@@ -22174,9 +22174,9 @@ var require_oauth2common = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/stscredentials.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/stscredentials.js
 var require_stscredentials = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/stscredentials.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/stscredentials.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.StsCredentials = void 0;
@@ -22262,9 +22262,9 @@ var require_stscredentials = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/baseexternalclient.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/baseexternalclient.js
 var require_baseexternalclient = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/baseexternalclient.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/baseexternalclient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.BaseExternalAccountClient = exports.CLOUD_RESOURCE_MANAGER = exports.EXTERNAL_ACCOUNT_TYPE = exports.EXPIRATION_TIME_OFFSET = void 0;
@@ -22641,19 +22641,19 @@ var require_baseexternalclient = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/filesubjecttokensupplier.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/filesubjecttokensupplier.js
 var require_filesubjecttokensupplier = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/filesubjecttokensupplier.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/filesubjecttokensupplier.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.FileSubjectTokenSupplier = void 0;
     var util_1 = __require("util");
-    var fs8 = __require("fs");
-    var readFile2 = (0, util_1.promisify)(fs8.readFile ?? (() => {
+    var fs9 = __require("fs");
+    var readFile2 = (0, util_1.promisify)(fs9.readFile ?? (() => {
     }));
-    var realpath = (0, util_1.promisify)(fs8.realpath ?? (() => {
+    var realpath = (0, util_1.promisify)(fs9.realpath ?? (() => {
     }));
-    var lstat = (0, util_1.promisify)(fs8.lstat ?? (() => {
+    var lstat = (0, util_1.promisify)(fs9.lstat ?? (() => {
     }));
     var FileSubjectTokenSupplier = class {
       filePath;
@@ -22706,9 +22706,9 @@ var require_filesubjecttokensupplier = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/urlsubjecttokensupplier.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/urlsubjecttokensupplier.js
 var require_urlsubjecttokensupplier = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/urlsubjecttokensupplier.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/urlsubjecttokensupplier.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.UrlSubjectTokenSupplier = void 0;
@@ -22764,14 +22764,14 @@ var require_urlsubjecttokensupplier = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/certificatesubjecttokensupplier.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/certificatesubjecttokensupplier.js
 var require_certificatesubjecttokensupplier = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/certificatesubjecttokensupplier.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/certificatesubjecttokensupplier.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.CertificateSubjectTokenSupplier = exports.InvalidConfigurationError = exports.CertificateSourceUnavailableError = exports.CERTIFICATE_CONFIGURATION_ENV_VARIABLE = void 0;
     var util_1 = require_util3();
-    var fs8 = __require("fs");
+    var fs9 = __require("fs");
     var crypto_1 = __require("crypto");
     var https2 = __require("https");
     exports.CERTIFICATE_CONFIGURATION_ENV_VARIABLE = "GOOGLE_API_CERTIFICATE_CONFIG";
@@ -22865,7 +22865,7 @@ var require_certificatesubjecttokensupplier = __commonJS({
         const configPath = this.certificateConfigPath;
         let fileContents;
         try {
-          fileContents = await fs8.promises.readFile(configPath, "utf8");
+          fileContents = await fs9.promises.readFile(configPath, "utf8");
         } catch (err4) {
           throw new CertificateSourceUnavailableError(`Failed to read certificate config file at: ${configPath}`);
         }
@@ -22890,14 +22890,14 @@ var require_certificatesubjecttokensupplier = __commonJS({
       async #getKeyAndCert(certPath, keyPath) {
         let cert, key;
         try {
-          cert = await fs8.promises.readFile(certPath);
+          cert = await fs9.promises.readFile(certPath);
           new crypto_1.X509Certificate(cert);
         } catch (err4) {
           const message = err4 instanceof Error ? err4.message : String(err4);
           throw new CertificateSourceUnavailableError(`Failed to read certificate file at ${certPath}: ${message}`);
         }
         try {
-          key = await fs8.promises.readFile(keyPath);
+          key = await fs9.promises.readFile(keyPath);
           (0, crypto_1.createPrivateKey)(key);
         } catch (err4) {
           const message = err4 instanceof Error ? err4.message : String(err4);
@@ -22916,7 +22916,7 @@ var require_certificatesubjecttokensupplier = __commonJS({
           return JSON.stringify([leafCert.raw.toString("base64")]);
         }
         try {
-          const chainPems = await fs8.promises.readFile(this.trustChainPath, "utf8");
+          const chainPems = await fs9.promises.readFile(this.trustChainPath, "utf8");
           const pemBlocks = chainPems.match(/-----BEGIN CERTIFICATE-----[^-]+-----END CERTIFICATE-----/g) ?? [];
           const chainCerts = pemBlocks.map((pem, index) => {
             try {
@@ -22948,9 +22948,9 @@ var require_certificatesubjecttokensupplier = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/identitypoolclient.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/identitypoolclient.js
 var require_identitypoolclient = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/identitypoolclient.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/identitypoolclient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.IdentityPoolClient = void 0;
@@ -23060,9 +23060,9 @@ var require_identitypoolclient = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/awsrequestsigner.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/awsrequestsigner.js
 var require_awsrequestsigner = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/awsrequestsigner.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/awsrequestsigner.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.AwsRequestSigner = void 0;
@@ -23210,9 +23210,9 @@ ${credentialScope}
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/defaultawssecuritycredentialssupplier.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/defaultawssecuritycredentialssupplier.js
 var require_defaultawssecuritycredentialssupplier = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/defaultawssecuritycredentialssupplier.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/defaultawssecuritycredentialssupplier.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.DefaultAwsSecurityCredentialsSupplier = void 0;
@@ -23365,9 +23365,9 @@ var require_defaultawssecuritycredentialssupplier = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/awsclient.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/awsclient.js
 var require_awsclient = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/awsclient.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/awsclient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.AwsClient = void 0;
@@ -23479,9 +23479,9 @@ var require_awsclient = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/executable-response.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/executable-response.js
 var require_executable_response = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/executable-response.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/executable-response.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.InvalidSubjectTokenError = exports.InvalidMessageFieldError = exports.InvalidCodeFieldError = exports.InvalidTokenTypeFieldError = exports.InvalidExpirationTimeFieldError = exports.InvalidSuccessFieldError = exports.InvalidVersionFieldError = exports.ExecutableResponseError = exports.ExecutableResponse = void 0;
@@ -23610,15 +23610,15 @@ var require_executable_response = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/pluggable-auth-handler.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/pluggable-auth-handler.js
 var require_pluggable_auth_handler = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/pluggable-auth-handler.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/pluggable-auth-handler.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.PluggableAuthHandler = exports.ExecutableError = void 0;
     var executable_response_1 = require_executable_response();
     var childProcess = __require("child_process");
-    var fs8 = __require("fs");
+    var fs9 = __require("fs");
     var ExecutableError = class extends Error {
       /**
        * The exit code returned by the executable.
@@ -23658,7 +23658,7 @@ var require_pluggable_auth_handler = __commonJS({
        * @return A promise that resolves with the executable response.
        */
       retrieveResponseFromExecutable(envMap) {
-        return new Promise((resolve3, reject) => {
+        return new Promise((resolve5, reject) => {
           const child = childProcess.spawn(this.commandComponents[0], this.commandComponents.slice(1), {
             env: { ...process.env, ...Object.fromEntries(envMap) }
           });
@@ -23680,7 +23680,7 @@ var require_pluggable_auth_handler = __commonJS({
               try {
                 const responseJson = JSON.parse(output);
                 const response = new executable_response_1.ExecutableResponse(responseJson);
-                return resolve3(response);
+                return resolve5(response);
               } catch (error2) {
                 if (error2 instanceof executable_response_1.ExecutableResponseError) {
                   return reject(error2);
@@ -23703,14 +23703,14 @@ var require_pluggable_auth_handler = __commonJS({
         }
         let filePath;
         try {
-          filePath = await fs8.promises.realpath(this.outputFile);
+          filePath = await fs9.promises.realpath(this.outputFile);
         } catch {
           return void 0;
         }
-        if (!(await fs8.promises.lstat(filePath)).isFile()) {
+        if (!(await fs9.promises.lstat(filePath)).isFile()) {
           return void 0;
         }
-        const responseString = await fs8.promises.readFile(filePath, {
+        const responseString = await fs9.promises.readFile(filePath, {
           encoding: "utf8"
         });
         if (responseString === "") {
@@ -23751,9 +23751,9 @@ var require_pluggable_auth_handler = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/pluggable-auth-client.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/pluggable-auth-client.js
 var require_pluggable_auth_client = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/pluggable-auth-client.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/pluggable-auth-client.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.PluggableAuthClient = exports.ExecutableError = void 0;
@@ -23878,9 +23878,9 @@ var require_pluggable_auth_client = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/externalclient.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/externalclient.js
 var require_externalclient = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/externalclient.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/externalclient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ExternalAccountClient = void 0;
@@ -23927,9 +23927,9 @@ var require_externalclient = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/externalAccountAuthorizedUserClient.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/externalAccountAuthorizedUserClient.js
 var require_externalAccountAuthorizedUserClient = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/externalAccountAuthorizedUserClient.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/externalAccountAuthorizedUserClient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ExternalAccountAuthorizedUserClient = exports.EXTERNAL_ACCOUNT_AUTHORIZED_USER_TYPE = void 0;
@@ -24114,14 +24114,14 @@ var require_externalAccountAuthorizedUserClient = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/gdchclient.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/gdchclient.js
 var require_gdchclient = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/gdchclient.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/gdchclient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.GdchClient = exports.GDCH_SERVICE_ACCOUNT_TYPE = void 0;
     var crypto2 = __require("crypto");
-    var fs8 = __require("fs");
+    var fs9 = __require("fs");
     var https2 = __require("https");
     var oauth2client_1 = require_oauth2client();
     var DEFAULT_LIFETIME_IN_SECONDS = 3600;
@@ -24344,7 +24344,7 @@ var require_gdchclient = __commonJS({
         const currentPath = this.caCertPath;
         this.caAgentPromise = (async () => {
           try {
-            const ca = await fs8.promises.readFile(currentPath);
+            const ca = await fs9.promises.readFile(currentPath);
             return new https2.Agent({ ca });
           } catch (err4) {
             if (this.cachedCaCertPath === currentPath) {
@@ -24388,8 +24388,8 @@ var require_gdchclient = __commonJS({
       [/* @__PURE__ */ Symbol.for("nodejs.util.inspect.custom")]() {
         return this.toJSON();
       }
-      base64UrlEncode(str7) {
-        const buffer = typeof str7 === "string" ? Buffer.from(str7) : str7;
+      base64UrlEncode(str8) {
+        const buffer = typeof str8 === "string" ? Buffer.from(str8) : str8;
         return buffer.toString("base64url");
       }
     };
@@ -24397,18 +24397,18 @@ var require_gdchclient = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/googleauth.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/googleauth.js
 var require_googleauth = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/googleauth.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/googleauth.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.GoogleAuth = exports.GoogleAuthExceptionMessages = void 0;
     var child_process_1 = __require("child_process");
-    var fs8 = __require("fs");
+    var fs9 = __require("fs");
     var gaxios_1 = require_src2();
     var gcpMetadata = require_src4();
-    var os = __require("os");
-    var path10 = __require("path");
+    var os2 = __require("os");
+    var path11 = __require("path");
     var crypto_1 = require_crypto3();
     var computeclient_1 = require_computeclient();
     var idtokenclient_1 = require_idtokenclient();
@@ -24693,20 +24693,20 @@ var require_googleauth = __commonJS({
         if (!configDir) {
           if (this._isWindows()) {
             if (process.env["APPDATA"]) {
-              configDir = path10.join(process.env["APPDATA"], "gcloud");
+              configDir = path11.join(process.env["APPDATA"], "gcloud");
             }
           } else {
             const home = process.env["HOME"];
             if (home) {
-              configDir = path10.join(home, ".config", "gcloud");
+              configDir = path11.join(home, ".config", "gcloud");
             }
           }
         }
         if (!configDir) {
           return null;
         }
-        const location = path10.join(configDir, "application_default_credentials.json");
-        if (!fs8.existsSync(location)) {
+        const location = path11.join(configDir, "application_default_credentials.json");
+        if (!fs9.existsSync(location)) {
           return null;
         }
         const client = await this._getApplicationCredentialsFromFilePath(location, options);
@@ -24723,8 +24723,8 @@ var require_googleauth = __commonJS({
           throw new Error("The file path is invalid.");
         }
         try {
-          filePath = fs8.realpathSync(filePath);
-          if (!fs8.lstatSync(filePath).isFile()) {
+          filePath = fs9.realpathSync(filePath);
+          if (!fs9.lstatSync(filePath).isFile()) {
             throw new Error();
           }
         } catch (err4) {
@@ -24733,7 +24733,7 @@ var require_googleauth = __commonJS({
           }
           throw err4;
         }
-        const readStream = fs8.createReadStream(filePath);
+        const readStream = fs9.createReadStream(filePath);
         return this.fromStream(readStream, options);
       }
       /**
@@ -24872,7 +24872,7 @@ var require_googleauth = __commonJS({
         }
       }
       fromStreamAsync(inputStream, options) {
-        return new Promise((resolve3, reject) => {
+        return new Promise((resolve5, reject) => {
           if (!inputStream) {
             throw new Error("Must pass in a stream containing the Google auth settings.");
           }
@@ -24882,7 +24882,7 @@ var require_googleauth = __commonJS({
               try {
                 const data = JSON.parse(chunks.join(""));
                 const r2 = this._cacheClientFromJSON(data, options);
-                return resolve3(r2);
+                return resolve5(r2);
               } catch (err4) {
                 if (!this.keyFilename)
                   throw err4;
@@ -24892,7 +24892,7 @@ var require_googleauth = __commonJS({
                 });
                 this.cachedCredential = client;
                 this.setGapicJWTValues(client);
-                return resolve3(client);
+                return resolve5(client);
               }
             } catch (err4) {
               return reject(err4);
@@ -24916,7 +24916,7 @@ var require_googleauth = __commonJS({
        * @api private
        */
       _isWindows() {
-        const sys = os.platform();
+        const sys = os2.platform();
         if (sys && sys.length >= 3) {
           if (sys.substring(0, 3).toLowerCase() === "win") {
             return true;
@@ -24928,17 +24928,17 @@ var require_googleauth = __commonJS({
        * Run the Google Cloud SDK command that prints the default project ID
        */
       async getDefaultServiceProjectId() {
-        return new Promise((resolve3) => {
+        return new Promise((resolve5) => {
           (0, child_process_1.exec)("gcloud config config-helper --format json", (err4, stdout) => {
             if (!err4 && stdout) {
               try {
                 const projectId = JSON.parse(stdout).configuration.properties.core.project;
-                resolve3(projectId);
+                resolve5(projectId);
                 return;
               } catch (e2) {
               }
             }
-            resolve3(null);
+            resolve5(null);
           });
         });
       }
@@ -25060,8 +25060,8 @@ var require_googleauth = __commonJS({
         if (this.jsonContent) {
           return this._cacheClientFromJSON(this.jsonContent, this.clientOptions);
         } else if (this.keyFilename) {
-          const filePath = path10.resolve(this.keyFilename);
-          const stream = fs8.createReadStream(filePath);
+          const filePath = path11.resolve(this.keyFilename);
+          const stream = fs9.createReadStream(filePath);
           return await this.fromStreamAsync(stream, this.clientOptions);
         } else if (this.apiKey) {
           const client = await this.fromAPIKey(this.apiKey, this.clientOptions);
@@ -25205,9 +25205,9 @@ var require_googleauth = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/iam.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/iam.js
 var require_iam = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/iam.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/iam.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.IAMAuth = void 0;
@@ -25241,9 +25241,9 @@ var require_iam = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/downscopedclient.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/downscopedclient.js
 var require_downscopedclient = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/downscopedclient.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/downscopedclient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.DownscopedClient = exports.EXPIRATION_TIME_OFFSET = exports.MAX_ACCESS_BOUNDARY_RULES_COUNT = void 0;
@@ -25426,9 +25426,9 @@ var require_downscopedclient = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/passthrough.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/passthrough.js
 var require_passthrough = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/passthrough.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/passthrough.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.PassThroughClient = void 0;
@@ -25471,9 +25471,9 @@ var require_passthrough = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/index.js
+// ../../../server/node_modules/google-auth-library/build/src/index.js
 var require_src5 = __commonJS({
-  "node_modules/google-auth-library/build/src/index.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/index.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m2, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -25607,9 +25607,9 @@ var require_src5 = __commonJS({
   }
 });
 
-// node_modules/ws/lib/constants.js
+// ../../../server/node_modules/ws/lib/constants.js
 var require_constants = __commonJS({
-  "node_modules/ws/lib/constants.js"(exports, module) {
+  "../../../server/node_modules/ws/lib/constants.js"(exports, module) {
     "use strict";
     var BINARY_TYPES = ["nodebuffer", "arraybuffer", "fragments"];
     var hasBlob = typeof Blob !== "undefined";
@@ -25630,9 +25630,9 @@ var require_constants = __commonJS({
   }
 });
 
-// node_modules/ws/lib/buffer-util.js
+// ../../../server/node_modules/ws/lib/buffer-util.js
 var require_buffer_util = __commonJS({
-  "node_modules/ws/lib/buffer-util.js"(exports, module) {
+  "../../../server/node_modules/ws/lib/buffer-util.js"(exports, module) {
     "use strict";
     var { EMPTY_BUFFER } = require_constants();
     var FastBuffer = Buffer[Symbol.species];
@@ -25705,9 +25705,9 @@ var require_buffer_util = __commonJS({
   }
 });
 
-// node_modules/ws/lib/limiter.js
+// ../../../server/node_modules/ws/lib/limiter.js
 var require_limiter = __commonJS({
-  "node_modules/ws/lib/limiter.js"(exports, module) {
+  "../../../server/node_modules/ws/lib/limiter.js"(exports, module) {
     "use strict";
     var kDone = /* @__PURE__ */ Symbol("kDone");
     var kRun = /* @__PURE__ */ Symbol("kRun");
@@ -25755,9 +25755,9 @@ var require_limiter = __commonJS({
   }
 });
 
-// node_modules/ws/lib/permessage-deflate.js
+// ../../../server/node_modules/ws/lib/permessage-deflate.js
 var require_permessage_deflate = __commonJS({
-  "node_modules/ws/lib/permessage-deflate.js"(exports, module) {
+  "../../../server/node_modules/ws/lib/permessage-deflate.js"(exports, module) {
     "use strict";
     var zlib2 = __require("zlib");
     var bufferUtil = require_buffer_util();
@@ -25948,26 +25948,26 @@ var require_permessage_deflate = __commonJS({
             value = value[0];
             if (key === "client_max_window_bits") {
               if (value !== true) {
-                const num4 = +value;
-                if (!Number.isInteger(num4) || num4 < 8 || num4 > 15) {
+                const num5 = +value;
+                if (!Number.isInteger(num5) || num5 < 8 || num5 > 15) {
                   throw new TypeError(
                     `Invalid value for parameter "${key}": ${value}`
                   );
                 }
-                value = num4;
+                value = num5;
               } else if (!this._isServer) {
                 throw new TypeError(
                   `Invalid value for parameter "${key}": ${value}`
                 );
               }
             } else if (key === "server_max_window_bits") {
-              const num4 = +value;
-              if (!Number.isInteger(num4) || num4 < 8 || num4 > 15) {
+              const num5 = +value;
+              if (!Number.isInteger(num5) || num5 < 8 || num5 > 15) {
                 throw new TypeError(
                   `Invalid value for parameter "${key}": ${value}`
                 );
               }
-              value = num4;
+              value = num5;
             } else if (key === "client_no_context_takeover" || key === "server_no_context_takeover") {
               if (value !== true) {
                 throw new TypeError(
@@ -26138,9 +26138,9 @@ var require_permessage_deflate = __commonJS({
   }
 });
 
-// node_modules/ws/lib/validation.js
+// ../../../server/node_modules/ws/lib/validation.js
 var require_validation2 = __commonJS({
-  "node_modules/ws/lib/validation.js"(exports, module) {
+  "../../../server/node_modules/ws/lib/validation.js"(exports, module) {
     "use strict";
     var { isUtf8 } = __require("buffer");
     var { hasBlob } = require_constants();
@@ -26339,9 +26339,9 @@ var require_validation2 = __commonJS({
   }
 });
 
-// node_modules/ws/lib/receiver.js
+// ../../../server/node_modules/ws/lib/receiver.js
 var require_receiver = __commonJS({
-  "node_modules/ws/lib/receiver.js"(exports, module) {
+  "../../../server/node_modules/ws/lib/receiver.js"(exports, module) {
     "use strict";
     var { Writable } = __require("stream");
     var PerMessageDeflate2 = require_permessage_deflate();
@@ -26681,8 +26681,8 @@ var require_receiver = __commonJS({
           return;
         }
         const buf = this.consume(8);
-        const num4 = buf.readUInt32BE(0);
-        if (num4 > Math.pow(2, 53 - 32) - 1) {
+        const num5 = buf.readUInt32BE(0);
+        if (num5 > Math.pow(2, 53 - 32) - 1) {
           const error2 = this.createError(
             RangeError,
             "Unsupported WebSocket frame: payload length > 2^53 - 1",
@@ -26693,7 +26693,7 @@ var require_receiver = __commonJS({
           cb(error2);
           return;
         }
-        this._payloadLength = num4 * Math.pow(2, 32) + buf.readUInt32BE(4);
+        this._payloadLength = num5 * Math.pow(2, 32) + buf.readUInt32BE(4);
         this.haveLength(cb);
       }
       /**
@@ -26962,9 +26962,9 @@ var require_receiver = __commonJS({
   }
 });
 
-// node_modules/ws/lib/sender.js
+// ../../../server/node_modules/ws/lib/sender.js
 var require_sender = __commonJS({
-  "node_modules/ws/lib/sender.js"(exports, module) {
+  "../../../server/node_modules/ws/lib/sender.js"(exports, module) {
     "use strict";
     var { Duplex } = __require("stream");
     var { randomFillSync } = __require("crypto");
@@ -27455,9 +27455,9 @@ var require_sender = __commonJS({
   }
 });
 
-// node_modules/ws/lib/event-target.js
+// ../../../server/node_modules/ws/lib/event-target.js
 var require_event_target = __commonJS({
-  "node_modules/ws/lib/event-target.js"(exports, module) {
+  "../../../server/node_modules/ws/lib/event-target.js"(exports, module) {
     "use strict";
     var { kForOnEventAttribute, kListener } = require_constants();
     var kCode = /* @__PURE__ */ Symbol("kCode");
@@ -27684,9 +27684,9 @@ var require_event_target = __commonJS({
   }
 });
 
-// node_modules/ws/lib/extension.js
+// ../../../server/node_modules/ws/lib/extension.js
 var require_extension = __commonJS({
-  "node_modules/ws/lib/extension.js"(exports, module) {
+  "../../../server/node_modules/ws/lib/extension.js"(exports, module) {
     "use strict";
     var { tokenChars } = require_validation2();
     function push(dest, name, elem) {
@@ -27837,16 +27837,16 @@ var require_extension = __commonJS({
   }
 });
 
-// node_modules/ws/lib/websocket.js
+// ../../../server/node_modules/ws/lib/websocket.js
 var require_websocket = __commonJS({
-  "node_modules/ws/lib/websocket.js"(exports, module) {
+  "../../../server/node_modules/ws/lib/websocket.js"(exports, module) {
     "use strict";
     var EventEmitter = __require("events");
     var https2 = __require("https");
-    var http3 = __require("http");
+    var http4 = __require("http");
     var net = __require("net");
     var tls = __require("tls");
-    var { randomBytes, createHash: createHash3 } = __require("crypto");
+    var { randomBytes: randomBytes2, createHash: createHash3 } = __require("crypto");
     var { Duplex, Readable: Readable2 } = __require("stream");
     var { URL: URL2 } = __require("url");
     var PerMessageDeflate2 = require_permessage_deflate();
@@ -28384,8 +28384,8 @@ var require_websocket = __commonJS({
         }
       }
       const defaultPort = isSecure ? 443 : 80;
-      const key = randomBytes(16).toString("base64");
-      const request = isSecure ? https2.request : http3.request;
+      const key = randomBytes2(16).toString("base64");
+      const request = isSecure ? https2.request : http4.request;
       const protocolSet = /* @__PURE__ */ new Set();
       let perMessageDeflate;
       opts.createConnection = opts.createConnection || (isSecure ? tlsConnect : netConnect);
@@ -28733,9 +28733,9 @@ var require_websocket = __commonJS({
   }
 });
 
-// node_modules/ws/lib/stream.js
+// ../../../server/node_modules/ws/lib/stream.js
 var require_stream = __commonJS({
-  "node_modules/ws/lib/stream.js"(exports, module) {
+  "../../../server/node_modules/ws/lib/stream.js"(exports, module) {
     "use strict";
     var WebSocket2 = require_websocket();
     var { Duplex } = __require("stream");
@@ -28831,9 +28831,9 @@ var require_stream = __commonJS({
   }
 });
 
-// node_modules/ws/lib/subprotocol.js
+// ../../../server/node_modules/ws/lib/subprotocol.js
 var require_subprotocol = __commonJS({
-  "node_modules/ws/lib/subprotocol.js"(exports, module) {
+  "../../../server/node_modules/ws/lib/subprotocol.js"(exports, module) {
     "use strict";
     var { tokenChars } = require_validation2();
     function parse3(header) {
@@ -28876,12 +28876,12 @@ var require_subprotocol = __commonJS({
   }
 });
 
-// node_modules/ws/lib/websocket-server.js
+// ../../../server/node_modules/ws/lib/websocket-server.js
 var require_websocket_server = __commonJS({
-  "node_modules/ws/lib/websocket-server.js"(exports, module) {
+  "../../../server/node_modules/ws/lib/websocket-server.js"(exports, module) {
     "use strict";
     var EventEmitter = __require("events");
-    var http3 = __require("http");
+    var http4 = __require("http");
     var { Duplex } = __require("stream");
     var { createHash: createHash3 } = __require("crypto");
     var extension2 = require_extension();
@@ -28962,8 +28962,8 @@ var require_websocket_server = __commonJS({
           );
         }
         if (options.port != null) {
-          this._server = http3.createServer((req, res) => {
-            const body = http3.STATUS_CODES[426];
+          this._server = http4.createServer((req, res) => {
+            const body = http4.STATUS_CODES[426];
             res.writeHead(426, {
               "Content-Length": body.length,
               "Content-Type": "text/plain"
@@ -29252,7 +29252,7 @@ var require_websocket_server = __commonJS({
       this.destroy();
     }
     function abortHandshake(socket, code, message, headers) {
-      message = message || http3.STATUS_CODES[code];
+      message = message || http4.STATUS_CODES[code];
       headers = {
         Connection: "close",
         "Content-Type": "text/html",
@@ -29261,7 +29261,7 @@ var require_websocket_server = __commonJS({
       };
       socket.once("finish", socket.destroy);
       socket.end(
-        `HTTP/1.1 ${code} ${http3.STATUS_CODES[code]}\r
+        `HTTP/1.1 ${code} ${http4.STATUS_CODES[code]}\r
 ` + Object.keys(headers).map((h2) => `${h2}: ${headers[h2]}`).join("\r\n") + "\r\n\r\n" + message
       );
     }
@@ -29277,10 +29277,10 @@ var require_websocket_server = __commonJS({
   }
 });
 
-// node_modules/ws/wrapper.mjs
+// ../../../server/node_modules/ws/wrapper.mjs
 var import_stream, import_extension, import_permessage_deflate, import_receiver, import_sender, import_subprotocol, import_websocket, import_websocket_server;
 var init_wrapper = __esm({
-  "node_modules/ws/wrapper.mjs"() {
+  "../../../server/node_modules/ws/wrapper.mjs"() {
     import_stream = __toESM(require_stream(), 1);
     import_extension = __toESM(require_extension(), 1);
     import_permessage_deflate = __toESM(require_permessage_deflate(), 1);
@@ -29292,7 +29292,7 @@ var init_wrapper = __esm({
   }
 });
 
-// node_modules/@google/genai/dist/node/index.mjs
+// ../../../server/node_modules/@google/genai/dist/node/index.mjs
 var node_exports = {};
 __export(node_exports, {
   ActivityHandling: () => ActivityHandling,
@@ -32939,14 +32939,14 @@ function __asyncValues(o) {
   }, i2);
   function verb(n) {
     i2[n] = o[n] && function(v) {
-      return new Promise(function(resolve3, reject) {
-        v = o[n](v), settle(resolve3, reject, v.done, v.value);
+      return new Promise(function(resolve5, reject) {
+        v = o[n](v), settle(resolve5, reject, v.done, v.value);
       });
     };
   }
-  function settle(resolve3, reject, d, v) {
+  function settle(resolve5, reject, d, v) {
     Promise.resolve(v).then(function(v2) {
-      resolve3({ value: v2, done: d });
+      resolve5({ value: v2, done: d });
     }, reject);
   }
 }
@@ -39420,11 +39420,11 @@ function ERR(error2) {
 function bytesToBase64(u8arr) {
   return btoa(String.fromCodePoint(...u8arr));
 }
-function stringToBytes(str7) {
-  return new TextEncoder().encode(str7);
+function stringToBytes(str8) {
+  return new TextEncoder().encode(str8);
 }
-function stringToBase64(str7) {
-  return bytesToBase64(stringToBytes(str7));
+function stringToBase64(str8) {
+  return bytesToBase64(stringToBytes(str8));
 }
 function pathToFunc(pathPattern, options) {
   const paramRE = /\{([a-zA-Z0-9_][a-zA-Z0-9_-]*?)\}/g;
@@ -39880,7 +39880,7 @@ function retryIntervalFromResponse(res) {
   return 0;
 }
 async function delay(delay2) {
-  return new Promise((resolve3) => setTimeout(resolve3, delay2));
+  return new Promise((resolve5) => setTimeout(resolve5, delay2));
 }
 async function logRequest(logger, req) {
   if (!logger) {
@@ -40315,7 +40315,7 @@ async function $do$q(client, body, api_version, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path10 = pathToFunc("/{api_version}/agents")(pathParams);
+  const path11 = pathToFunc("/{api_version}/agents")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -40346,7 +40346,7 @@ async function $do$q(client, body, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path10,
+    path: path11,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -40390,7 +40390,7 @@ async function $do$p(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path10 = pathToFunc("/{api_version}/agents/{id}")(pathParams);
+  const path11 = pathToFunc("/{api_version}/agents/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -40420,7 +40420,7 @@ async function $do$p(client, id, api_version, options) {
     security: requestSecurity,
     method: "DELETE",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path10,
+    path: path11,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -40464,7 +40464,7 @@ async function $do$o(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path10 = pathToFunc("/{api_version}/agents/{id}")(pathParams);
+  const path11 = pathToFunc("/{api_version}/agents/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -40494,7 +40494,7 @@ async function $do$o(client, id, api_version, options) {
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path10,
+    path: path11,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -40536,7 +40536,7 @@ async function $do$n(client, api_version, page_size, page_token, parent, options
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload === null || payload === void 0 ? void 0 : payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path10 = pathToFunc("/{api_version}/agents")(pathParams);
+  const path11 = pathToFunc("/{api_version}/agents")(pathParams);
   const query = encodeFormQuery({
     "page_size": payload === null || payload === void 0 ? void 0 : payload.page_size,
     "page_token": payload === null || payload === void 0 ? void 0 : payload.page_token,
@@ -40571,7 +40571,7 @@ async function $do$n(client, api_version, page_size, page_token, parent, options
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path10,
+    path: path11,
     headers,
     query,
     body,
@@ -40612,7 +40612,7 @@ async function $do$m(client, body, api_version, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path10 = pathToFunc("/{api_version}/environments")(pathParams);
+  const path11 = pathToFunc("/{api_version}/environments")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -40643,7 +40643,7 @@ async function $do$m(client, body, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path10,
+    path: path11,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -40687,7 +40687,7 @@ async function $do$l(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path10 = pathToFunc("/{api_version}/environments/{id}")(pathParams);
+  const path11 = pathToFunc("/{api_version}/environments/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -40717,7 +40717,7 @@ async function $do$l(client, id, api_version, options) {
     security: requestSecurity,
     method: "DELETE",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path10,
+    path: path11,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -40761,7 +40761,7 @@ async function $do$k(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path10 = pathToFunc("/{api_version}/environments/{id}")(pathParams);
+  const path11 = pathToFunc("/{api_version}/environments/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -40791,7 +40791,7 @@ async function $do$k(client, id, api_version, options) {
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path10,
+    path: path11,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -40832,7 +40832,7 @@ async function $do$j(client, api_version, page_size, page_token, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload === null || payload === void 0 ? void 0 : payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path10 = pathToFunc("/{api_version}/environments")(pathParams);
+  const path11 = pathToFunc("/{api_version}/environments")(pathParams);
   const query = encodeFormQuery({
     "page_size": payload === null || payload === void 0 ? void 0 : payload.page_size,
     "page_token": payload === null || payload === void 0 ? void 0 : payload.page_token
@@ -40866,7 +40866,7 @@ async function $do$j(client, api_version, page_size, page_token, options) {
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path10,
+    path: path11,
     headers,
     query,
     body,
@@ -40893,14 +40893,14 @@ async function $do$j(client, api_version, page_size, page_token, options) {
   }
   return [result, { status: "complete", request: req, response }];
 }
-function environmentsFilesList(client, environment, path10, api_version, page_size, page_token, recursive, options) {
-  return new APIPromise($do$i(client, environment, path10, api_version, page_size, page_token, recursive, options));
+function environmentsFilesList(client, environment, path11, api_version, page_size, page_token, recursive, options) {
+  return new APIPromise($do$i(client, environment, path11, api_version, page_size, page_token, recursive, options));
 }
-async function $do$i(client, environment, path10, api_version, page_size, page_token, recursive, options) {
+async function $do$i(client, environment, path11, api_version, page_size, page_token, recursive, options) {
   var _a4, _b, _c;
   const input = {
     environment,
-    path: path10,
+    path: path11,
     api_version,
     page_size,
     page_token,
@@ -40999,7 +40999,7 @@ async function $do$h(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path10 = pathToFunc("/{api_version}/interactions/{id}/cancel")(pathParams);
+  const path11 = pathToFunc("/{api_version}/interactions/{id}/cancel")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -41029,7 +41029,7 @@ async function $do$h(client, id, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path10,
+    path: path11,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -41072,7 +41072,7 @@ async function $do$g(client, body, api_version, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path10 = pathToFunc("/{api_version}/interactions")(pathParams);
+  const path11 = pathToFunc("/{api_version}/interactions")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: ((_b = input === null || input === void 0 ? void 0 : input.body) === null || _b === void 0 ? void 0 : _b.stream) ? "text/event-stream" : "application/json"
@@ -41103,7 +41103,7 @@ async function $do$g(client, body, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path10,
+    path: path11,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -41153,7 +41153,7 @@ async function $do$f(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path10 = pathToFunc("/{api_version}/interactions/{id}")(pathParams);
+  const path11 = pathToFunc("/{api_version}/interactions/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -41183,7 +41183,7 @@ async function $do$f(client, id, api_version, options) {
     security: requestSecurity,
     method: "DELETE",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path10,
+    path: path11,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -41233,7 +41233,7 @@ async function $do$e(client, id, api_version, include_input, last_event_id, stre
       charEncoding: "percent"
     })
   };
-  const path10 = pathToFunc("/{api_version}/interactions/{id}")(pathParams);
+  const path11 = pathToFunc("/{api_version}/interactions/{id}")(pathParams);
   const query = encodeFormQuery({
     "include_input": payload.include_input,
     "last_event_id": payload.last_event_id,
@@ -41268,7 +41268,7 @@ async function $do$e(client, id, api_version, include_input, last_event_id, stre
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path10,
+    path: path11,
     headers,
     query,
     body,
@@ -41315,7 +41315,7 @@ async function $do$d(client, body, api_version, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path10 = pathToFunc("/{api_version}/triggers")(pathParams);
+  const path11 = pathToFunc("/{api_version}/triggers")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -41346,7 +41346,7 @@ async function $do$d(client, body, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path10,
+    path: path11,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -41390,7 +41390,7 @@ async function $do$c(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path10 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
+  const path11 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -41420,7 +41420,7 @@ async function $do$c(client, id, api_version, options) {
     security: requestSecurity,
     method: "DELETE",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path10,
+    path: path11,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -41464,7 +41464,7 @@ async function $do$b(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path10 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
+  const path11 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -41494,7 +41494,7 @@ async function $do$b(client, id, api_version, options) {
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path10,
+    path: path11,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -41540,7 +41540,7 @@ async function $do$a(client, trigger_id, api_version, page_size, page_token, opt
       charEncoding: "percent"
     })
   };
-  const path10 = pathToFunc("/{api_version}/triggers/{trigger_id}/executions")(pathParams);
+  const path11 = pathToFunc("/{api_version}/triggers/{trigger_id}/executions")(pathParams);
   const query = encodeFormQuery({
     "page_size": payload.page_size,
     "page_token": payload.page_token
@@ -41574,7 +41574,7 @@ async function $do$a(client, trigger_id, api_version, page_size, page_token, opt
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path10,
+    path: path11,
     headers,
     query,
     body,
@@ -41617,7 +41617,7 @@ async function $do$9(client, api_version, filter, page_size, page_token, options
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload === null || payload === void 0 ? void 0 : payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path10 = pathToFunc("/{api_version}/triggers")(pathParams);
+  const path11 = pathToFunc("/{api_version}/triggers")(pathParams);
   const query = encodeFormQuery({
     "filter": payload === null || payload === void 0 ? void 0 : payload.filter,
     "page_size": payload === null || payload === void 0 ? void 0 : payload.page_size,
@@ -41652,7 +41652,7 @@ async function $do$9(client, api_version, filter, page_size, page_token, options
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path10,
+    path: path11,
     headers,
     query,
     body,
@@ -41697,7 +41697,7 @@ async function $do$8(client, trigger_id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path10 = pathToFunc("/{api_version}/triggers/{trigger_id}/executions")(pathParams);
+  const path11 = pathToFunc("/{api_version}/triggers/{trigger_id}/executions")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -41727,7 +41727,7 @@ async function $do$8(client, trigger_id, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path10,
+    path: path11,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -41772,7 +41772,7 @@ async function $do$7(client, id, body, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path10 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
+  const path11 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -41803,7 +41803,7 @@ async function $do$7(client, id, body, api_version, options) {
     security: requestSecurity,
     method: "PATCH",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path10,
+    path: path11,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -41843,7 +41843,7 @@ async function $do$6(client, body, api_version, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path10 = pathToFunc("/{api_version}/webhooks")(pathParams);
+  const path11 = pathToFunc("/{api_version}/webhooks")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -41874,7 +41874,7 @@ async function $do$6(client, body, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path10,
+    path: path11,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -41918,7 +41918,7 @@ async function $do$5(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path10 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
+  const path11 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -41948,7 +41948,7 @@ async function $do$5(client, id, api_version, options) {
     security: requestSecurity,
     method: "DELETE",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path10,
+    path: path11,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -41992,7 +41992,7 @@ async function $do$4(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path10 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
+  const path11 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -42022,7 +42022,7 @@ async function $do$4(client, id, api_version, options) {
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path10,
+    path: path11,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -42063,7 +42063,7 @@ async function $do$3(client, api_version, page_size, page_token, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload === null || payload === void 0 ? void 0 : payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path10 = pathToFunc("/{api_version}/webhooks")(pathParams);
+  const path11 = pathToFunc("/{api_version}/webhooks")(pathParams);
   const query = encodeFormQuery({
     "page_size": payload === null || payload === void 0 ? void 0 : payload.page_size,
     "page_token": payload === null || payload === void 0 ? void 0 : payload.page_token
@@ -42097,7 +42097,7 @@ async function $do$3(client, api_version, page_size, page_token, options) {
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path10,
+    path: path11,
     headers,
     query,
     body,
@@ -42143,7 +42143,7 @@ async function $do$2(client, id, api_version, body, options) {
       charEncoding: "percent"
     })
   };
-  const path10 = pathToFunc("/{api_version}/webhooks/{id}:ping")(pathParams);
+  const path11 = pathToFunc("/{api_version}/webhooks/{id}:ping")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -42174,7 +42174,7 @@ async function $do$2(client, id, api_version, body, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path10,
+    path: path11,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -42219,7 +42219,7 @@ async function $do$1(client, id, api_version, body, options) {
       charEncoding: "percent"
     })
   };
-  const path10 = pathToFunc("/{api_version}/webhooks/{id}:rotateSigningSecret")(pathParams);
+  const path11 = pathToFunc("/{api_version}/webhooks/{id}:rotateSigningSecret")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -42250,7 +42250,7 @@ async function $do$1(client, id, api_version, body, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path10,
+    path: path11,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -42296,7 +42296,7 @@ async function $do(client, id, api_version, update_mask, body, options) {
       charEncoding: "percent"
     })
   };
-  const path10 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
+  const path11 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
   const query = encodeFormQuery({
     "update_mask": payload.update_mask
   });
@@ -42330,7 +42330,7 @@ async function $do(client, id, api_version, update_mask, body, options) {
     security: requestSecurity,
     method: "PATCH",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path10,
+    path: path11,
     headers,
     query,
     body: body$,
@@ -44140,11 +44140,11 @@ function getEnv(env2) {
   var _a4, _b, _c;
   return (_c = (_b = (_a4 = process === null || process === void 0 ? void 0 : process.env) === null || _a4 === void 0 ? void 0 : _a4[env2]) === null || _b === void 0 ? void 0 : _b.trim()) !== null && _c !== void 0 ? _c : void 0;
 }
-function stringToBoolean(str7) {
-  if (str7 === void 0) {
+function stringToBoolean(str8) {
+  if (str8 === void 0) {
     return false;
   }
-  return str7.toLowerCase() === "true";
+  return str8.toLowerCase() === "true";
 }
 function getApiKeyFromEnv() {
   const envGoogleApiKey = getEnv("GOOGLE_API_KEY");
@@ -44156,7 +44156,7 @@ function getApiKeyFromEnv() {
 }
 var import_p_retry, import_google_auth_library, _defaultBaseGeminiUrl, _defaultBaseVertexUrl, BaseModule, Outcome, Language, FunctionResponseScheduling, Type, AuthType, HttpElementLocation, ApiSpec, Environment, SafetyPolicy, PhishBlockThreshold, Behavior, DynamicRetrievalConfigMode, ThinkingLevel, PersonGeneration, ProminentPeople, HarmCategory, HarmBlockMethod, HarmBlockThreshold, FunctionCallingConfigMode, FinishReason, HarmProbability, HarmSeverity, UrlRetrievalStatus, BlockedReason, TrafficType, MediaModality, ModelStage, MediaResolution, Modality, Delivery, AspectRatio, ImageSize, TuningMode, AdapterSize, ResponseParseType, MatchOperation, ReinforcementTuningThinkingLevel, JobState, TuningJobState, AggregationMetric, PairwiseChoice, VideoOrientation, TuningSpeed, TuningTask, DocumentState, ServiceTier, MediaProcessing, PartMediaResolutionLevel, ToolType, ResourceScope, FeatureSelectionPreference, EmbeddingApiType, SafetyFilterLevel, ImagePromptLanguage, MaskReferenceMode, ControlReferenceType, SubjectReferenceType, EditMode, SegmentMode, VideoGenerationReferenceType, VideoGenerationMaskMode, VideoCompressionQuality, ImageResizeMode, TuningMethod, FileState, FileSource, TurnCompleteReason, InteractionStatus, VadSignalType, VoiceActivityType, StartSensitivity, EndSensitivity, ActivityHandling, TurnCoverage, AudioTranscriptionConfigMode, Scale, MusicGenerationMode, LiveMusicPlaybackControl, ToolResponse, FunctionResponseFileData, FunctionResponseBlob, FunctionResponsePart, FunctionResponse, HttpResponse, GenerateContentResponsePromptFeedback, GenerateContentResponseUsageMetadata, GenerateContentResponse, EmbedContentResponse, GenerateImagesResponse, EditImageResponse, UpscaleImageResponse, RecontextImageResponse, SegmentImageResponse, ListModelsResponse, DeleteModelResponse, AudioResponseFormat, ImageResponseFormat, TextResponseFormat, VideoResponseFormat, ResponseFormat, CountTokensResponse, ComputeTokensResponse, GenerateVideosResponse, GenerateVideosOperation, ReinforcementTuningParseResponseConfig, ReinforcementTuningAutoraterScorerParsedResponseConversionScorer, EvaluateDatasetResponse, ListTuningJobsResponse, CancelTuningJobResponse, ValidateRewardResponse, DeleteCachedContentResponse, ListCachedContentsResponse, ListDocumentsResponse, ListFileSearchStoresResponse, UploadToFileSearchStoreResumableResponse, ImportFileResponse, ImportFileOperation, ListFilesResponse, CreateFileResponse, DeleteFileResponse, RegisterFilesResponse, InlinedResponse, SingleEmbedContentResponse, InlinedEmbedContentResponse, ListBatchJobsResponse, ReplayResponse, RawReferenceImage, MaskReferenceImage, ControlReferenceImage, StyleReferenceImage, SubjectReferenceImage, ContentReferenceImage, LiveServerMessage, LiveClientToolResponse, LiveSendToolResponseParameters, LiveMusicServerMessage, UploadToFileSearchStoreResponse, UploadToFileSearchStoreOperation, PagedItem, Pager, Batches, Caches, Chats, Chat, ApiError, Files$1, CONTENT_TYPE_HEADER, SERVER_TIMEOUT_HEADER, USER_AGENT_HEADER, GOOGLE_API_CLIENT_HEADER, SDK_VERSION, LIBRARY_LABEL, VERTEX_AI_API_DEFAULT_VERSION, GOOGLE_AI_API_DEFAULT_VERSION, MULTI_REGIONAL_LOCATIONS, DEFAULT_RETRY_ATTEMPTS, DEFAULT_RETRY_INITIAL_DELAY, DEFAULT_RETRY_MAX_DELAY, DEFAULT_RETRY_EXP_BASE, DEFAULT_RETRY_JITTER, DEFAULT_RETRY_HTTP_STATUS_CODES, ApiClient, MCP_LABEL, hasMcpToolUsageFromMcpToTool, McpCallableTool, LiveMusic, LiveMusicSession, FUNCTION_RESPONSE_REQUIRES_ID, Live, defaultLiveSendClientContentParamerters, Session, DEFAULT_MAX_REMOTE_CALLS, Models, Operations, Tokens, Documents, FileSearchStores, envMemo, GoogleGenAISecurityProvider, GoogleGenAIAuthHook, HTTPClientError, UnexpectedClientError, InvalidRequestError, RequestAbortedError, RequestTimeoutError, ConnectionError, GoogleGenAiError, GeminiNextGenAPIClientError, APIError, APIUserAbortError, APIConnectionError, APIConnectionTimeoutError, BadRequestError, AuthenticationError, PermissionDeniedError, NotFoundError, ConflictError, UnprocessableEntityError, RateLimitError, InternalServerError, SDKHooks, hasOwn, ServerList, SDK_METADATA, encodeForm, encodeSimple, encodeFormQuery, DEFAULT_FETCHER, HTTPClient, mediaParamSeparator, codeRangeRE$1, defaultBackoff, PermanentError, TemporaryError, codeRangeRE, gt, webWorkerLike, isBrowserLike, ClientSDK, jsonLikeContentTypeRE, jsonlLikeContentTypeRE, GoogleGenAiDefaultError, Stream3, CR2, LF2, BOUNDARIES, MAX_BOUNDARY_LEN, DEFAULT_CONTENT_TYPES, headerValRE, SecurityErrorCode, SecurityError, _a, APIPromise, Agents, Files2, Environments, CancelInteractionByIdServerError, CancelInteractionByIdClientError, CreateInteractionServerError, CreateInteractionClientError, DeleteInteractionServerError, DeleteInteractionClientError, GetInteractionByIdServerError, GetInteractionByIdClientError, Interactions, Triggers, Webhooks, GoogleGenAI$1, LEGACY_LYRIA_MODELS, GeminiNextGenInteractions, GeminiNextGenAgents, GeminiNextGenWebhooks, GeminiNextGenTriggers, GeminiNextGenEnvironmentFiles, GeminiNextGenEnvironments, GOOGLE_API_KEY_HEADER, REQUIRED_VERTEX_AI_SCOPE, NodeAuth, NodeDownloader, NodeWebSocketFactory, NodeWebSocket, Tunings, MAX_CHUNK_SIZE, MAX_RETRY_COUNT, INITIAL_RETRY_DELAY_MS, DELAY_MULTIPLIER, X_GOOG_UPLOAD_STATUS_HEADER_FIELD, NodeUploader, NodeFiles, LANGUAGE_LABEL_PREFIX, GoogleGenAI2;
 var init_node = __esm({
-  "node_modules/@google/genai/dist/node/index.mjs"() {
+  "../../../server/node_modules/@google/genai/dist/node/index.mjs"() {
     import_p_retry = __toESM(require_p_retry(), 1);
     import_google_auth_library = __toESM(require_src5(), 1);
     init_wrapper();
@@ -45450,7 +45450,7 @@ var init_node = __esm({
           params
         );
         const urlParams = body["_url"];
-        const path10 = formatMap("{model}:batchGenerateContent", urlParams);
+        const path11 = formatMap("{model}:batchGenerateContent", urlParams);
         const batch = body["batch"];
         const inputConfig = batch["inputConfig"];
         const requestsWrapper = inputConfig["requests"];
@@ -45471,7 +45471,7 @@ var init_node = __esm({
         delete body["config"];
         delete body["_url"];
         delete body["_query"];
-        return { path: path10, body };
+        return { path: path11, body };
       }
       // Helper function to get the first GCS URI
       getGcsUri(src) {
@@ -45527,16 +45527,16 @@ var init_node = __esm({
       async createInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path10 = "";
+        let path11 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = createBatchJobParametersToVertex(this.apiClient, params);
-          path10 = formatMap("batchPredictionJobs", body["_url"]);
+          path11 = formatMap("batchPredictionJobs", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -45551,12 +45551,12 @@ var init_node = __esm({
           });
         } else {
           const body = createBatchJobParametersToMldev(this.apiClient, params);
-          path10 = formatMap("{model}:batchGenerateContent", body["_url"]);
+          path11 = formatMap("{model}:batchGenerateContent", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -45581,18 +45581,18 @@ var init_node = __esm({
       async createEmbeddingsInternal(params) {
         var _a4, _b;
         let response;
-        let path10 = "";
+        let path11 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = createEmbeddingsBatchJobParametersToMldev(this.apiClient, params);
-          path10 = formatMap("{model}:asyncBatchEmbedContent", body["_url"]);
+          path11 = formatMap("{model}:asyncBatchEmbedContent", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -45621,16 +45621,16 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path10 = "";
+        let path11 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = getBatchJobParametersToVertex(this.apiClient, params);
-          path10 = formatMap("batchPredictionJobs/{name}", body["_url"]);
+          path11 = formatMap("batchPredictionJobs/{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -45645,12 +45645,12 @@ var init_node = __esm({
           });
         } else {
           const body = getBatchJobParametersToMldev(this.apiClient, params);
-          path10 = formatMap("batches/{name}", body["_url"]);
+          path11 = formatMap("batches/{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -45678,16 +45678,16 @@ var init_node = __esm({
        */
       async cancel(params) {
         var _a4, _b, _c, _d;
-        let path10 = "";
+        let path11 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = cancelBatchJobParametersToVertex(this.apiClient, params);
-          path10 = formatMap("batchPredictionJobs/{name}:cancel", body["_url"]);
+          path11 = formatMap("batchPredictionJobs/{name}:cancel", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           await this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -45696,12 +45696,12 @@ var init_node = __esm({
           });
         } else {
           const body = cancelBatchJobParametersToMldev(this.apiClient, params);
-          path10 = formatMap("batches/{name}:cancel", body["_url"]);
+          path11 = formatMap("batches/{name}:cancel", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           await this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -45713,16 +45713,16 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path10 = "";
+        let path11 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = listBatchJobsParametersToVertex(params);
-          path10 = formatMap("batchPredictionJobs", body["_url"]);
+          path11 = formatMap("batchPredictionJobs", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -45745,12 +45745,12 @@ var init_node = __esm({
           });
         } else {
           const body = listBatchJobsParametersToMldev(params);
-          path10 = formatMap("batches", body["_url"]);
+          path11 = formatMap("batches", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -45787,16 +45787,16 @@ var init_node = __esm({
       async delete(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path10 = "";
+        let path11 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = deleteBatchJobParametersToVertex(this.apiClient, params);
-          path10 = formatMap("batchPredictionJobs/{name}", body["_url"]);
+          path11 = formatMap("batchPredictionJobs/{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -45817,12 +45817,12 @@ var init_node = __esm({
           });
         } else {
           const body = deleteBatchJobParametersToMldev(this.apiClient, params);
-          path10 = formatMap("batches/{name}", body["_url"]);
+          path11 = formatMap("batches/{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -45881,16 +45881,16 @@ var init_node = __esm({
       async create(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path10 = "";
+        let path11 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = createCachedContentParametersToVertex(this.apiClient, params);
-          path10 = formatMap("cachedContents", body["_url"]);
+          path11 = formatMap("cachedContents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -45904,12 +45904,12 @@ var init_node = __esm({
           });
         } else {
           const body = createCachedContentParametersToMldev(this.apiClient, params);
-          path10 = formatMap("cachedContents", body["_url"]);
+          path11 = formatMap("cachedContents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -45937,16 +45937,16 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path10 = "";
+        let path11 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = getCachedContentParametersToVertex(this.apiClient, params);
-          path10 = formatMap("{name}", body["_url"]);
+          path11 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -45960,12 +45960,12 @@ var init_node = __esm({
           });
         } else {
           const body = getCachedContentParametersToMldev(this.apiClient, params);
-          path10 = formatMap("{name}", body["_url"]);
+          path11 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -45993,16 +45993,16 @@ var init_node = __esm({
       async delete(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path10 = "";
+        let path11 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = deleteCachedContentParametersToVertex(this.apiClient, params);
-          path10 = formatMap("{name}", body["_url"]);
+          path11 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -46025,12 +46025,12 @@ var init_node = __esm({
           });
         } else {
           const body = deleteCachedContentParametersToMldev(this.apiClient, params);
-          path10 = formatMap("{name}", body["_url"]);
+          path11 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -46070,16 +46070,16 @@ var init_node = __esm({
       async update(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path10 = "";
+        let path11 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = updateCachedContentParametersToVertex(this.apiClient, params);
-          path10 = formatMap("{name}", body["_url"]);
+          path11 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "PATCH",
@@ -46093,12 +46093,12 @@ var init_node = __esm({
           });
         } else {
           const body = updateCachedContentParametersToMldev(this.apiClient, params);
-          path10 = formatMap("{name}", body["_url"]);
+          path11 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "PATCH",
@@ -46115,16 +46115,16 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path10 = "";
+        let path11 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = listCachedContentsParametersToVertex(params);
-          path10 = formatMap("cachedContents", body["_url"]);
+          path11 = formatMap("cachedContents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -46147,12 +46147,12 @@ var init_node = __esm({
           });
         } else {
           const body = listCachedContentsParametersToMldev(params);
-          path10 = formatMap("cachedContents", body["_url"]);
+          path11 = formatMap("cachedContents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -46483,18 +46483,18 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b;
         let response;
-        let path10 = "";
+        let path11 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = listFilesParametersToMldev(params);
-          path10 = formatMap("files", body["_url"]);
+          path11 = formatMap("files", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -46520,18 +46520,18 @@ var init_node = __esm({
       async createInternal(params) {
         var _a4, _b;
         let response;
-        let path10 = "";
+        let path11 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = createFileParametersToMldev(params);
-          path10 = formatMap("upload/v1beta/files", body["_url"]);
+          path11 = formatMap("upload/v1beta/files", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -46566,18 +46566,18 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b;
         let response;
-        let path10 = "";
+        let path11 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = getFileParametersToMldev(params);
-          path10 = formatMap("files/{file}", body["_url"]);
+          path11 = formatMap("files/{file}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -46607,18 +46607,18 @@ var init_node = __esm({
       async delete(params) {
         var _a4, _b;
         let response;
-        let path10 = "";
+        let path11 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = deleteFileParametersToMldev(params);
-          path10 = formatMap("files/{file}", body["_url"]);
+          path11 = formatMap("files/{file}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -46644,18 +46644,18 @@ var init_node = __esm({
       async registerFilesInternal(params) {
         var _a4, _b;
         let response;
-        let path10 = "";
+        let path11 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = internalRegisterFilesParametersToMldev(params);
-          path10 = formatMap("files:register", body["_url"]);
+          path11 = formatMap("files:register", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -46811,13 +46811,13 @@ var init_node = __esm({
           throw new Error("HTTP options are not correctly set.");
         }
       }
-      constructUrl(path10, httpOptions, prependProjectLocation) {
+      constructUrl(path11, httpOptions, prependProjectLocation) {
         const urlElement = [this.getRequestUrlInternal(httpOptions)];
         if (prependProjectLocation) {
           urlElement.push(this.getBaseResourcePath());
         }
-        if (path10 !== "") {
-          urlElement.push(path10);
+        if (path11 !== "") {
+          urlElement.push(path11);
         }
         const url = new URL(`${urlElement.join("/")}`);
         return url;
@@ -47110,8 +47110,8 @@ var init_node = __esm({
           file: fileToUpload
         };
         const fileName = this.getFileName(file);
-        const path10 = formatMap("upload/v1beta/files", body["_url"]);
-        const uploadUrl = await this.fetchUploadUrl(path10, fileToUpload.sizeBytes, fileToUpload.mimeType, fileName, body, config3 === null || config3 === void 0 ? void 0 : config3.httpOptions);
+        const path11 = formatMap("upload/v1beta/files", body["_url"]);
+        const uploadUrl = await this.fetchUploadUrl(path11, fileToUpload.sizeBytes, fileToUpload.mimeType, fileName, body, config3 === null || config3 === void 0 ? void 0 : config3.httpOptions);
         return uploader.upload(file, uploadUrl, this);
       }
       /**
@@ -47135,13 +47135,13 @@ var init_node = __esm({
         if (mimeType === void 0 || mimeType === "") {
           throw new Error("Can not determine mimeType. Please provide mimeType in the config.");
         }
-        const path10 = `upload/v1beta/${fileSearchStoreName}:uploadToFileSearchStore`;
+        const path11 = `upload/v1beta/${fileSearchStoreName}:uploadToFileSearchStore`;
         const fileName = this.getFileName(file);
         const body = {};
         if (config3 != null) {
           uploadToFileSearchStoreConfigToMldev(config3, body);
         }
-        const uploadUrl = await this.fetchUploadUrl(path10, sizeBytes, mimeType, fileName, body, config3 === null || config3 === void 0 ? void 0 : config3.httpOptions);
+        const uploadUrl = await this.fetchUploadUrl(path11, sizeBytes, mimeType, fileName, body, config3 === null || config3 === void 0 ? void 0 : config3.httpOptions);
         return uploader.uploadToFileSearchStore(file, uploadUrl, this);
       }
       /**
@@ -47154,7 +47154,7 @@ var init_node = __esm({
         const downloader = this.clientOptions.downloader;
         await downloader.download(params, this);
       }
-      async fetchUploadUrl(path10, sizeBytes, mimeType, fileName, body, configHttpOptions) {
+      async fetchUploadUrl(path11, sizeBytes, mimeType, fileName, body, configHttpOptions) {
         var _a4;
         let httpOptions = {};
         if (configHttpOptions) {
@@ -47167,7 +47167,7 @@ var init_node = __esm({
           };
         }
         const httpResponse = await this.request({
-          path: path10,
+          path: path11,
           body: JSON.stringify(body),
           httpMethod: "POST",
           httpOptions
@@ -47323,8 +47323,8 @@ var init_node = __esm({
         const url = `${websocketBaseUrl}/ws/google.ai.generativelanguage.${apiVersion}.GenerativeService.BidiGenerateMusic?key=${apiKey}`;
         let onopenResolve = () => {
         };
-        const onopenPromise = new Promise((resolve3) => {
-          onopenResolve = resolve3;
+        const onopenPromise = new Promise((resolve5) => {
+          onopenResolve = resolve5;
         });
         const callbacks = params.callbacks;
         const onopenAwaitedCallback = function() {
@@ -47530,8 +47530,8 @@ var init_node = __esm({
         }
         let onopenResolve = () => {
         };
-        const onopenPromise = new Promise((resolve3) => {
-          onopenResolve = resolve3;
+        const onopenPromise = new Promise((resolve5) => {
+          onopenResolve = resolve5;
         });
         const callbacks = params.callbacks;
         const onopenAwaitedCallback = function() {
@@ -47544,8 +47544,8 @@ var init_node = __esm({
         const messageQueue = [];
         let setupCompleteResolve = () => {
         };
-        const setupCompletePromise = new Promise((resolve3) => {
-          setupCompleteResolve = resolve3;
+        const setupCompletePromise = new Promise((resolve5) => {
+          setupCompleteResolve = resolve5;
         });
         const websocketCallbacks = {
           onopen: onopenAwaitedCallback,
@@ -48181,16 +48181,16 @@ var init_node = __esm({
       async generateContentInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path10 = "";
+        let path11 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = generateContentParametersToVertex(this.apiClient, params);
-          path10 = formatMap("{model}:generateContent", body["_url"]);
+          path11 = formatMap("{model}:generateContent", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48213,12 +48213,12 @@ var init_node = __esm({
           });
         } else {
           const body = generateContentParametersToMldev(this.apiClient, params);
-          path10 = formatMap("{model}:generateContent", body["_url"]);
+          path11 = formatMap("{model}:generateContent", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48244,17 +48244,17 @@ var init_node = __esm({
       async generateContentStreamInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path10 = "";
+        let path11 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = generateContentParametersToVertex(this.apiClient, params);
-          path10 = formatMap("{model}:streamGenerateContent?alt=sse", body["_url"]);
+          path11 = formatMap("{model}:streamGenerateContent?alt=sse", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           const apiClient = this.apiClient;
           response = apiClient.requestStream({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48290,13 +48290,13 @@ var init_node = __esm({
           });
         } else {
           const body = generateContentParametersToMldev(this.apiClient, params);
-          path10 = formatMap("{model}:streamGenerateContent?alt=sse", body["_url"]);
+          path11 = formatMap("{model}:streamGenerateContent?alt=sse", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           const apiClient = this.apiClient;
           response = apiClient.requestStream({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48356,17 +48356,17 @@ var init_node = __esm({
       async embedContentInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path10 = "";
+        let path11 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = embedContentParametersPrivateToVertex(this.apiClient, params, params);
           const endpointUrl = tIsVertexEmbedContentModel(params.model) ? "{model}:embedContent" : "{model}:predict";
-          path10 = formatMap(endpointUrl, body["_url"]);
+          path11 = formatMap(endpointUrl, body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48389,12 +48389,12 @@ var init_node = __esm({
           });
         } else {
           const body = embedContentParametersPrivateToMldev(this.apiClient, params);
-          path10 = formatMap("{model}:batchEmbedContents", body["_url"]);
+          path11 = formatMap("{model}:batchEmbedContents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48423,16 +48423,16 @@ var init_node = __esm({
       async generateImagesInternal(params) {
         var _a4, _b;
         let response;
-        let path10 = "";
+        let path11 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = generateImagesParametersToVertex(this.apiClient, params);
-          path10 = formatMap("{model}:predict", body["_url"]);
+          path11 = formatMap("{model}:predict", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48463,16 +48463,16 @@ var init_node = __esm({
       async editImageInternal(params) {
         var _a4, _b;
         let response;
-        let path10 = "";
+        let path11 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = editImageParametersInternalToVertex(this.apiClient, params);
-          path10 = formatMap("{model}:predict", body["_url"]);
+          path11 = formatMap("{model}:predict", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48503,16 +48503,16 @@ var init_node = __esm({
       async upscaleImageInternal(params) {
         var _a4, _b;
         let response;
-        let path10 = "";
+        let path11 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = upscaleImageAPIParametersInternalToVertex(this.apiClient, params);
-          path10 = formatMap("{model}:predict", body["_url"]);
+          path11 = formatMap("{model}:predict", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48564,16 +48564,16 @@ var init_node = __esm({
       async recontextImage(params) {
         var _a4, _b;
         let response;
-        let path10 = "";
+        let path11 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = recontextImageParametersToVertex(this.apiClient, params);
-          path10 = formatMap("{model}:predict", body["_url"]);
+          path11 = formatMap("{model}:predict", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48615,16 +48615,16 @@ var init_node = __esm({
       async segmentImage(params) {
         var _a4, _b;
         let response;
-        let path10 = "";
+        let path11 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = segmentImageParametersToVertex(this.apiClient, params);
-          path10 = formatMap("{model}:predict", body["_url"]);
+          path11 = formatMap("{model}:predict", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48654,16 +48654,16 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path10 = "";
+        let path11 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = getModelParametersToVertex(this.apiClient, params);
-          path10 = formatMap("{name}", body["_url"]);
+          path11 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -48678,12 +48678,12 @@ var init_node = __esm({
           });
         } else {
           const body = getModelParametersToMldev(this.apiClient, params);
-          path10 = formatMap("{name}", body["_url"]);
+          path11 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -48701,16 +48701,16 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path10 = "";
+        let path11 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = listModelsParametersToVertex(this.apiClient, params);
-          path10 = formatMap("{models_url}", body["_url"]);
+          path11 = formatMap("{models_url}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -48733,12 +48733,12 @@ var init_node = __esm({
           });
         } else {
           const body = listModelsParametersToMldev(this.apiClient, params);
-          path10 = formatMap("{models_url}", body["_url"]);
+          path11 = formatMap("{models_url}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -48781,16 +48781,16 @@ var init_node = __esm({
       async update(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path10 = "";
+        let path11 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = updateModelParametersToVertex(this.apiClient, params);
-          path10 = formatMap("{model}", body["_url"]);
+          path11 = formatMap("{model}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "PATCH",
@@ -48805,12 +48805,12 @@ var init_node = __esm({
           });
         } else {
           const body = updateModelParametersToMldev(this.apiClient, params);
-          path10 = formatMap("{name}", body["_url"]);
+          path11 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "PATCH",
@@ -48839,16 +48839,16 @@ var init_node = __esm({
       async delete(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path10 = "";
+        let path11 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = deleteModelParametersToVertex(this.apiClient, params);
-          path10 = formatMap("{name}", body["_url"]);
+          path11 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -48871,12 +48871,12 @@ var init_node = __esm({
           });
         } else {
           const body = deleteModelParametersToMldev(this.apiClient, params);
-          path10 = formatMap("{name}", body["_url"]);
+          path11 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -48918,16 +48918,16 @@ var init_node = __esm({
       async countTokens(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path10 = "";
+        let path11 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = countTokensParametersToVertex(this.apiClient, params);
-          path10 = formatMap("{model}:countTokens", body["_url"]);
+          path11 = formatMap("{model}:countTokens", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48950,12 +48950,12 @@ var init_node = __esm({
           });
         } else {
           const body = countTokensParametersToMldev(this.apiClient, params);
-          path10 = formatMap("{model}:countTokens", body["_url"]);
+          path11 = formatMap("{model}:countTokens", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48999,16 +48999,16 @@ var init_node = __esm({
       async computeTokens(params) {
         var _a4, _b;
         let response;
-        let path10 = "";
+        let path11 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = computeTokensParametersToVertex(this.apiClient, params);
-          path10 = formatMap("{model}:computeTokens", body["_url"]);
+          path11 = formatMap("{model}:computeTokens", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -49039,16 +49039,16 @@ var init_node = __esm({
       async generateVideosInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path10 = "";
+        let path11 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = generateVideosParametersToVertex(this.apiClient, params);
-          path10 = formatMap("{model}:predictLongRunning", body["_url"]);
+          path11 = formatMap("{model}:predictLongRunning", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -49065,12 +49065,12 @@ var init_node = __esm({
           });
         } else {
           const body = generateVideosParametersToMldev(this.apiClient, params);
-          path10 = formatMap("{model}:predictLongRunning", body["_url"]);
+          path11 = formatMap("{model}:predictLongRunning", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -49175,16 +49175,16 @@ var init_node = __esm({
       async getVideosOperationInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path10 = "";
+        let path11 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = getOperationParametersToVertex(params);
-          path10 = formatMap("{operationName}", body["_url"]);
+          path11 = formatMap("{operationName}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -49196,12 +49196,12 @@ var init_node = __esm({
           return response;
         } else {
           const body = getOperationParametersToMldev(params);
-          path10 = formatMap("{operationName}", body["_url"]);
+          path11 = formatMap("{operationName}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -49216,16 +49216,16 @@ var init_node = __esm({
       async fetchPredictVideosOperationInternal(params) {
         var _a4, _b;
         let response;
-        let path10 = "";
+        let path11 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = fetchPredictOperationParametersToVertex(params);
-          path10 = formatMap("{resourceName}:fetchPredictOperation", body["_url"]);
+          path11 = formatMap("{resourceName}:fetchPredictOperation", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -49331,20 +49331,20 @@ var init_node = __esm({
       async create(params) {
         var _a4, _b;
         let response;
-        let path10 = "";
+        let path11 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("The client.tokens.create method is only supported by the Gemini Developer API.");
         } else {
           const body = createAuthTokenParametersToMldev(this.apiClient, params);
-          path10 = formatMap("auth_tokens", body["_url"]);
+          path11 = formatMap("auth_tokens", body["_url"]);
           queryParams = body["_query"];
           delete body["config"];
           delete body["_url"];
           delete body["_query"];
           const transformedBody = convertBidiSetupToTokenSetup(body, params.config);
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(transformedBody),
             httpMethod: "POST",
@@ -49376,18 +49376,18 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b;
         let response;
-        let path10 = "";
+        let path11 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = getDocumentParametersToMldev(params);
-          path10 = formatMap("{name}", body["_url"]);
+          path11 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -49408,18 +49408,18 @@ var init_node = __esm({
        */
       async delete(params) {
         var _a4, _b;
-        let path10 = "";
+        let path11 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = deleteDocumentParametersToMldev(params);
-          path10 = formatMap("{name}", body["_url"]);
+          path11 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           await this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -49431,18 +49431,18 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b;
         let response;
-        let path10 = "";
+        let path11 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = listDocumentsParametersToMldev(params);
-          path10 = formatMap("{parent}/documents", body["_url"]);
+          path11 = formatMap("{parent}/documents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -49559,18 +49559,18 @@ var init_node = __esm({
       async create(params) {
         var _a4, _b;
         let response;
-        let path10 = "";
+        let path11 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = createFileSearchStoreParametersToMldev(this.apiClient, params);
-          path10 = formatMap("fileSearchStores", body["_url"]);
+          path11 = formatMap("fileSearchStores", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -49593,18 +49593,18 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b;
         let response;
-        let path10 = "";
+        let path11 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = getFileSearchStoreParametersToMldev(params);
-          path10 = formatMap("{name}", body["_url"]);
+          path11 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -49625,18 +49625,18 @@ var init_node = __esm({
        */
       async delete(params) {
         var _a4, _b;
-        let path10 = "";
+        let path11 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = deleteFileSearchStoreParametersToMldev(params);
-          path10 = formatMap("{name}", body["_url"]);
+          path11 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           await this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -49648,18 +49648,18 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b;
         let response;
-        let path10 = "";
+        let path11 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = listFileSearchStoresParametersToMldev(params);
-          path10 = formatMap("fileSearchStores", body["_url"]);
+          path11 = formatMap("fileSearchStores", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -49679,18 +49679,18 @@ var init_node = __esm({
       async uploadToFileSearchStoreInternal(params) {
         var _a4, _b;
         let response;
-        let path10 = "";
+        let path11 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = uploadToFileSearchStoreParametersToMldev(params);
-          path10 = formatMap("upload/v1beta/{file_search_store_name}:uploadToFileSearchStore", body["_url"]);
+          path11 = formatMap("upload/v1beta/{file_search_store_name}:uploadToFileSearchStore", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -49718,18 +49718,18 @@ var init_node = __esm({
       async importFile(params) {
         var _a4, _b;
         let response;
-        let path10 = "";
+        let path11 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = importFileParametersToMldev(params);
-          path10 = formatMap("{file_search_store_name}:importFile", body["_url"]);
+          path11 = formatMap("{file_search_store_name}:importFile", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -50173,16 +50173,16 @@ var init_node = __esm({
       }
       _createRequest(context, conf, options) {
         var _a4, _b, _c, _d, _e;
-        const { method, path: path10, query, headers: opHeaders, security } = conf;
+        const { method, path: path11, query, headers: opHeaders, security } = conf;
         const base = (_a4 = conf.baseURL) !== null && _a4 !== void 0 ? _a4 : this._baseURL;
         if (!base) {
           return ERR(new InvalidRequestError("No base URL provided for operation"));
         }
         const baseURL = new URL(base);
         let reqURL;
-        if (path10) {
+        if (path11) {
           baseURL.pathname = baseURL.pathname.replace(/\/+$/, "") + "/";
-          reqURL = new URL(path10, baseURL);
+          reqURL = new URL(path11, baseURL);
           if (!reqURL.search && baseURL.search) {
             reqURL.search = baseURL.search;
           }
@@ -50594,8 +50594,8 @@ var init_node = __esm({
       /**
        * Retrieves file metadata or directory contents from an environment's snapshot. To download file contents directly, pass ?alt=media or use the files.download helper.
        */
-      list(environment, path10, params, options) {
-        return unwrapAsAPIPromise(environmentsFilesList(this, environment, path10, params === null || params === void 0 ? void 0 : params.api_version, params === null || params === void 0 ? void 0 : params.page_size, params === null || params === void 0 ? void 0 : params.page_token, params === null || params === void 0 ? void 0 : params.recursive, options));
+      list(environment, path11, params, options) {
+        return unwrapAsAPIPromise(environmentsFilesList(this, environment, path11, params === null || params === void 0 ? void 0 : params.api_version, params === null || params === void 0 ? void 0 : params.page_size, params === null || params === void 0 ? void 0 : params.page_token, params === null || params === void 0 ? void 0 : params.recursive, options));
       }
     };
     Environments = class extends ClientSDK {
@@ -51003,8 +51003,8 @@ var init_node = __esm({
         this.resolveClient = resolveClient;
       }
       async list(params, options) {
-        const { environment, path: path10, page_size, page_token, recursive, api_version } = params;
-        return unwrapWithSdkHttpResponse(environmentsFilesList(this.resolveClient(api_version), environment, path10, api_version, page_size, page_token, recursive, toGoogleGenAIRequestOptions(options)));
+        const { environment, path: path11, page_size, page_token, recursive, api_version } = params;
+        return unwrapWithSdkHttpResponse(environmentsFilesList(this.resolveClient(api_version), environment, path11, api_version, page_size, page_token, recursive, toGoogleGenAIRequestOptions(options)));
       }
     };
     GeminiNextGenEnvironments = class {
@@ -51179,16 +51179,16 @@ var init_node = __esm({
       async getInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path10 = "";
+        let path11 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = getTuningJobParametersToVertex(params);
-          path10 = formatMap("{name}", body["_url"]);
+          path11 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -51209,12 +51209,12 @@ var init_node = __esm({
           });
         } else {
           const body = getTuningJobParametersToMldev(params);
-          path10 = formatMap("{name}", body["_url"]);
+          path11 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -51238,16 +51238,16 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b;
         let response;
-        let path10 = "";
+        let path11 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = listTuningJobsParametersToVertex(params);
-          path10 = formatMap("tuningJobs", body["_url"]);
+          path11 = formatMap("tuningJobs", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -51286,16 +51286,16 @@ var init_node = __esm({
       async cancel(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path10 = "";
+        let path11 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = cancelTuningJobParametersToVertex(params);
-          path10 = formatMap("{name}:cancel", body["_url"]);
+          path11 = formatMap("{name}:cancel", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -51318,12 +51318,12 @@ var init_node = __esm({
           });
         } else {
           const body = cancelTuningJobParametersToMldev(params);
-          path10 = formatMap("{name}:cancel", body["_url"]);
+          path11 = formatMap("{name}:cancel", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -51349,16 +51349,16 @@ var init_node = __esm({
       async tuneInternal(params) {
         var _a4, _b;
         let response;
-        let path10 = "";
+        let path11 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = createTuningJobParametersPrivateToVertex(params, params);
-          path10 = formatMap("tuningJobs", body["_url"]);
+          path11 = formatMap("tuningJobs", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -51384,18 +51384,18 @@ var init_node = __esm({
       async tuneMldevInternal(params) {
         var _a4, _b;
         let response;
-        let path10 = "";
+        let path11 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = createTuningJobParametersPrivateToMldev(params);
-          path10 = formatMap("tunedModels", body["_url"]);
+          path11 = formatMap("tunedModels", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -51419,16 +51419,16 @@ var init_node = __esm({
       async validateReward(params) {
         var _a4, _b;
         let response;
-        let path10 = "";
+        let path11 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = validateRewardParametersToVertex(params);
-          path10 = formatMap("{parent}/tuningJobs:validateReinforcementTuningReward", body["_url"]);
+          path11 = formatMap("{parent}/tuningJobs:validateReinforcementTuningReward", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path10,
+            path: path11,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -51819,7 +51819,7 @@ var init_node = __esm({
   }
 });
 
-// node_modules/openai/internal/tslib.mjs
+// ../../../server/node_modules/openai/internal/tslib.mjs
 function __classPrivateFieldSet(receiver, state, value, kind, f3) {
   if (kind === "m")
     throw new TypeError("Private method is not writable");
@@ -51837,14 +51837,14 @@ function __classPrivateFieldGet(receiver, state, kind, f3) {
   return kind === "m" ? f3 : kind === "a" ? f3.call(receiver) : f3 ? f3.value : state.get(receiver);
 }
 var init_tslib = __esm({
-  "node_modules/openai/internal/tslib.mjs"() {
+  "../../../server/node_modules/openai/internal/tslib.mjs"() {
   }
 });
 
-// node_modules/openai/internal/utils/uuid.mjs
+// ../../../server/node_modules/openai/internal/utils/uuid.mjs
 var uuid4;
 var init_uuid = __esm({
-  "node_modules/openai/internal/utils/uuid.mjs"() {
+  "../../../server/node_modules/openai/internal/utils/uuid.mjs"() {
     uuid4 = function() {
       const { crypto: crypto2 } = globalThis;
       if (crypto2?.randomUUID) {
@@ -51858,7 +51858,7 @@ var init_uuid = __esm({
   }
 });
 
-// node_modules/openai/internal/errors.mjs
+// ../../../server/node_modules/openai/internal/errors.mjs
 function isAbortError2(err4) {
   return typeof err4 === "object" && err4 !== null && // Spec-compliant fetch implementations
   ("name" in err4 && err4.name === "AbortError" || // Expo fetch
@@ -51866,7 +51866,7 @@ function isAbortError2(err4) {
 }
 var castToError;
 var init_errors = __esm({
-  "node_modules/openai/internal/errors.mjs"() {
+  "../../../server/node_modules/openai/internal/errors.mjs"() {
     castToError = (err4) => {
       if (err4 instanceof Error)
         return err4;
@@ -51894,10 +51894,10 @@ var init_errors = __esm({
   }
 });
 
-// node_modules/openai/core/error.mjs
+// ../../../server/node_modules/openai/core/error.mjs
 var OpenAIError, APIError2, APIUserAbortError2, APIConnectionError2, APIConnectionTimeoutError2, BadRequestError2, AuthenticationError2, PermissionDeniedError2, NotFoundError2, ConflictError2, UnprocessableEntityError2, RateLimitError2, InternalServerError2, LengthFinishReasonError, ContentFilterFinishReasonError, InvalidWebhookSignatureError, OAuthError, SubjectTokenProviderError;
 var init_error = __esm({
-  "node_modules/openai/core/error.mjs"() {
+  "../../../server/node_modules/openai/core/error.mjs"() {
     init_errors();
     OpenAIError = class extends Error {
     };
@@ -52034,7 +52034,7 @@ var init_error = __esm({
   }
 });
 
-// node_modules/openai/internal/utils/values.mjs
+// ../../../server/node_modules/openai/internal/utils/values.mjs
 function maybeObj(x2) {
   if (typeof x2 !== "object") {
     return {};
@@ -52056,7 +52056,7 @@ function isObj(obj) {
 }
 var startsWithSchemeRegexp, isAbsoluteURL, isArray, isReadonlyArray, validatePositiveInteger, safeJSON;
 var init_values = __esm({
-  "node_modules/openai/internal/utils/values.mjs"() {
+  "../../../server/node_modules/openai/internal/utils/values.mjs"() {
     init_error();
     startsWithSchemeRegexp = /^[a-z][a-z0-9+.-]*:/i;
     isAbsoluteURL = (url) => {
@@ -52083,23 +52083,23 @@ var init_values = __esm({
   }
 });
 
-// node_modules/openai/internal/utils/sleep.mjs
+// ../../../server/node_modules/openai/internal/utils/sleep.mjs
 var sleep5;
 var init_sleep = __esm({
-  "node_modules/openai/internal/utils/sleep.mjs"() {
-    sleep5 = (ms) => new Promise((resolve3) => setTimeout(resolve3, ms));
+  "../../../server/node_modules/openai/internal/utils/sleep.mjs"() {
+    sleep5 = (ms) => new Promise((resolve5) => setTimeout(resolve5, ms));
   }
 });
 
-// node_modules/openai/version.mjs
+// ../../../server/node_modules/openai/version.mjs
 var VERSION;
 var init_version = __esm({
-  "node_modules/openai/version.mjs"() {
+  "../../../server/node_modules/openai/version.mjs"() {
     VERSION = "6.49.0";
   }
 });
 
-// node_modules/openai/internal/detect-platform.mjs
+// ../../../server/node_modules/openai/internal/detect-platform.mjs
 function getDetectedPlatform() {
   if (typeof Deno !== "undefined" && Deno.build != null) {
     return "deno";
@@ -52137,7 +52137,7 @@ function getBrowserInfo() {
 }
 var isRunningInBrowser, getPlatformProperties, normalizeArch, normalizePlatform, _platformHeaders, getPlatformHeaders;
 var init_detect_platform = __esm({
-  "node_modules/openai/internal/detect-platform.mjs"() {
+  "../../../server/node_modules/openai/internal/detect-platform.mjs"() {
     init_version();
     isRunningInBrowser = () => {
       return (
@@ -52238,7 +52238,7 @@ var init_detect_platform = __esm({
   }
 });
 
-// node_modules/openai/internal/shims.mjs
+// ../../../server/node_modules/openai/internal/shims.mjs
 function getDefaultFetch() {
   if (typeof fetch !== "undefined") {
     return fetch;
@@ -52310,14 +52310,14 @@ async function CancelReadableStream(stream) {
   await cancelPromise;
 }
 var init_shims = __esm({
-  "node_modules/openai/internal/shims.mjs"() {
+  "../../../server/node_modules/openai/internal/shims.mjs"() {
   }
 });
 
-// node_modules/openai/internal/request-options.mjs
+// ../../../server/node_modules/openai/internal/request-options.mjs
 var FallbackEncoder;
 var init_request_options = __esm({
-  "node_modules/openai/internal/request-options.mjs"() {
+  "../../../server/node_modules/openai/internal/request-options.mjs"() {
     FallbackEncoder = ({ headers, body }) => {
       return {
         bodyHeaders: {
@@ -52329,10 +52329,10 @@ var init_request_options = __esm({
   }
 });
 
-// node_modules/openai/internal/qs/formats.mjs
+// ../../../server/node_modules/openai/internal/qs/formats.mjs
 var default_format, default_formatter, formatters, RFC1738;
 var init_formats = __esm({
-  "node_modules/openai/internal/qs/formats.mjs"() {
+  "../../../server/node_modules/openai/internal/qs/formats.mjs"() {
     default_format = "RFC3986";
     default_formatter = (v) => String(v);
     formatters = {
@@ -52343,7 +52343,7 @@ var init_formats = __esm({
   }
 });
 
-// node_modules/openai/internal/qs/utils.mjs
+// ../../../server/node_modules/openai/internal/qs/utils.mjs
 function is_buffer(obj) {
   if (!obj || typeof obj !== "object") {
     return false;
@@ -52362,7 +52362,7 @@ function maybe_map(val, fn) {
 }
 var has, hex_table, limit, encode;
 var init_utils = __esm({
-  "node_modules/openai/internal/qs/utils.mjs"() {
+  "../../../server/node_modules/openai/internal/qs/utils.mjs"() {
     init_formats();
     init_values();
     has = (obj, key) => (has = Object.hasOwn ?? Function.prototype.call.bind(Object.prototype.hasOwnProperty), has(obj, key));
@@ -52374,15 +52374,15 @@ var init_utils = __esm({
       return array2;
     })();
     limit = 1024;
-    encode = (str7, _defaultEncoder, charset, _kind, format) => {
-      if (str7.length === 0) {
-        return str7;
+    encode = (str8, _defaultEncoder, charset, _kind, format) => {
+      if (str8.length === 0) {
+        return str8;
       }
-      let string3 = str7;
-      if (typeof str7 === "symbol") {
-        string3 = Symbol.prototype.toString.call(str7);
-      } else if (typeof str7 !== "string") {
-        string3 = String(str7);
+      let string3 = str8;
+      if (typeof str8 === "symbol") {
+        string3 = Symbol.prototype.toString.call(str8);
+      } else if (typeof str8 !== "string") {
+        string3 = String(str8);
       }
       if (charset === "iso-8859-1") {
         return escape(string3).replace(/%u[0-9a-f]{4}/gi, function($0) {
@@ -52429,7 +52429,7 @@ var init_utils = __esm({
   }
 });
 
-// node_modules/openai/internal/qs/stringify.mjs
+// ../../../server/node_modules/openai/internal/qs/stringify.mjs
 function is_non_nullish_primitive(v) {
   return typeof v === "string" || typeof v === "number" || typeof v === "boolean" || typeof v === "symbol" || typeof v === "bigint";
 }
@@ -52669,7 +52669,7 @@ function stringify(object3, opts = {}) {
 }
 var array_prefix_generators, push_to_array, toISOString, defaults, sentinel;
 var init_stringify = __esm({
-  "node_modules/openai/internal/qs/stringify.mjs"() {
+  "../../../server/node_modules/openai/internal/qs/stringify.mjs"() {
     init_utils();
     init_formats();
     init_values();
@@ -52714,17 +52714,17 @@ var init_stringify = __esm({
   }
 });
 
-// node_modules/openai/internal/utils/query.mjs
+// ../../../server/node_modules/openai/internal/utils/query.mjs
 function stringifyQuery(query) {
   return stringify(query, { arrayFormat: "brackets" });
 }
 var init_query = __esm({
-  "node_modules/openai/internal/utils/query.mjs"() {
+  "../../../server/node_modules/openai/internal/utils/query.mjs"() {
     init_stringify();
   }
 });
 
-// node_modules/openai/internal/utils/bytes.mjs
+// ../../../server/node_modules/openai/internal/utils/bytes.mjs
 function concatBytes(buffers) {
   let length = 0;
   for (const buffer of buffers) {
@@ -52738,9 +52738,9 @@ function concatBytes(buffers) {
   }
   return output;
 }
-function encodeUTF8(str7) {
+function encodeUTF8(str8) {
   let encoder;
-  return (encodeUTF8_ ?? (encoder = new globalThis.TextEncoder(), encodeUTF8_ = encoder.encode.bind(encoder)))(str7);
+  return (encodeUTF8_ ?? (encoder = new globalThis.TextEncoder(), encodeUTF8_ = encoder.encode.bind(encoder)))(str8);
 }
 function decodeUTF8(bytes) {
   let decoder;
@@ -52748,11 +52748,11 @@ function decodeUTF8(bytes) {
 }
 var encodeUTF8_, decodeUTF8_;
 var init_bytes = __esm({
-  "node_modules/openai/internal/utils/bytes.mjs"() {
+  "../../../server/node_modules/openai/internal/utils/bytes.mjs"() {
   }
 });
 
-// node_modules/openai/internal/decoders/line.mjs
+// ../../../server/node_modules/openai/internal/decoders/line.mjs
 function findNewlineIndex(buffer, startIndex) {
   const newline = 10;
   const carriage = 13;
@@ -52784,7 +52784,7 @@ function findDoubleNewlineIndex(buffer) {
 }
 var _LineDecoder_buffer, _LineDecoder_carriageReturnIndex, LineDecoder;
 var init_line = __esm({
-  "node_modules/openai/internal/decoders/line.mjs"() {
+  "../../../server/node_modules/openai/internal/decoders/line.mjs"() {
     init_tslib();
     init_bytes();
     LineDecoder = class {
@@ -52834,7 +52834,7 @@ var init_line = __esm({
   }
 });
 
-// node_modules/openai/internal/utils/log.mjs
+// ../../../server/node_modules/openai/internal/utils/log.mjs
 function noop2() {
 }
 function makeLogFn(fnLevel, logger, logLevel) {
@@ -52865,7 +52865,7 @@ function loggerFor(client) {
 }
 var levelNumbers, parseLogLevel, noopLogger, cachedLoggers, formatRequestDetails;
 var init_log = __esm({
-  "node_modules/openai/internal/utils/log.mjs"() {
+  "../../../server/node_modules/openai/internal/utils/log.mjs"() {
     init_values();
     levelNumbers = {
       off: 0,
@@ -52913,7 +52913,7 @@ var init_log = __esm({
   }
 });
 
-// node_modules/openai/core/streaming.mjs
+// ../../../server/node_modules/openai/core/streaming.mjs
 async function* _iterSSEMessages(response, controller) {
   if (!response.body) {
     controller.abort();
@@ -52959,16 +52959,16 @@ async function* iterSSEChunks(iterator) {
     yield data;
   }
 }
-function partition(str7, delimiter2) {
-  const index = str7.indexOf(delimiter2);
+function partition(str8, delimiter2) {
+  const index = str8.indexOf(delimiter2);
   if (index !== -1) {
-    return [str7.substring(0, index), delimiter2, str7.substring(index + delimiter2.length)];
+    return [str8.substring(0, index), delimiter2, str8.substring(index + delimiter2.length)];
   }
-  return [str7, "", ""];
+  return [str8, "", ""];
 }
 var _Stream_client, Stream4, SSEDecoder;
 var init_streaming = __esm({
-  "node_modules/openai/core/streaming.mjs"() {
+  "../../../server/node_modules/openai/core/streaming.mjs"() {
     init_tslib();
     init_error();
     init_shims();
@@ -53216,7 +53216,7 @@ var init_streaming = __esm({
   }
 });
 
-// node_modules/openai/internal/parse.mjs
+// ../../../server/node_modules/openai/internal/parse.mjs
 async function defaultParseResponse(client, props) {
   const { response, requestLogID, retryOfRequestLogID, startTime } = props;
   const body = await (async () => {
@@ -53266,22 +53266,22 @@ function addRequestID(value, response) {
   });
 }
 var init_parse = __esm({
-  "node_modules/openai/internal/parse.mjs"() {
+  "../../../server/node_modules/openai/internal/parse.mjs"() {
     init_streaming();
     init_log();
   }
 });
 
-// node_modules/openai/core/api-promise.mjs
+// ../../../server/node_modules/openai/core/api-promise.mjs
 var _APIPromise_client, APIPromise2;
 var init_api_promise = __esm({
-  "node_modules/openai/core/api-promise.mjs"() {
+  "../../../server/node_modules/openai/core/api-promise.mjs"() {
     init_tslib();
     init_parse();
     APIPromise2 = class _APIPromise extends Promise {
       constructor(client, responsePromise, parseResponse2 = defaultParseResponse) {
-        super((resolve3) => {
-          resolve3(null);
+        super((resolve5) => {
+          resolve5(null);
         });
         this.responsePromise = responsePromise;
         this.parseResponse = parseResponse2;
@@ -53341,10 +53341,10 @@ var init_api_promise = __esm({
   }
 });
 
-// node_modules/openai/core/pagination.mjs
+// ../../../server/node_modules/openai/core/pagination.mjs
 var _AbstractPage_client, AbstractPage, PagePromise, Page, CursorPage, ConversationCursorPage, NextCursorPage;
 var init_pagination = __esm({
-  "node_modules/openai/core/pagination.mjs"() {
+  "../../../server/node_modules/openai/core/pagination.mjs"() {
     init_tslib();
     init_error();
     init_parse();
@@ -53511,10 +53511,10 @@ var init_pagination = __esm({
   }
 });
 
-// node_modules/openai/auth/workload-identity-auth.mjs
+// ../../../server/node_modules/openai/auth/workload-identity-auth.mjs
 var SUBJECT_TOKEN_TYPES, TOKEN_EXCHANGE_GRANT_TYPE, WorkloadIdentityAuth;
 var init_workload_identity_auth = __esm({
-  "node_modules/openai/auth/workload-identity-auth.mjs"() {
+  "../../../server/node_modules/openai/auth/workload-identity-auth.mjs"() {
     init_shims();
     init_error();
     SUBJECT_TOKEN_TYPES = {
@@ -53610,7 +53610,7 @@ var init_workload_identity_auth = __esm({
   }
 });
 
-// node_modules/openai/internal/headers.mjs
+// ../../../server/node_modules/openai/internal/headers.mjs
 function* iterateHeaders(headers) {
   if (!headers)
     return;
@@ -53651,7 +53651,7 @@ function* iterateHeaders(headers) {
 }
 var brand_privateNullableHeaders, httpTokenHeaderName, buildHeaders;
 var init_headers2 = __esm({
-  "node_modules/openai/internal/headers.mjs"() {
+  "../../../server/node_modules/openai/internal/headers.mjs"() {
     init_values();
     brand_privateNullableHeaders = /* @__PURE__ */ Symbol("brand.privateNullableHeaders");
     httpTokenHeaderName = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/;
@@ -53683,7 +53683,7 @@ var init_headers2 = __esm({
   }
 });
 
-// node_modules/openai/internal/uploads.mjs
+// ../../../server/node_modules/openai/internal/uploads.mjs
 function toStreamingFile(data, name, options) {
   if (!name) {
     throw new TypeError("toStreamingFile requires a non-empty file name");
@@ -53824,7 +53824,7 @@ function escapeHeaderValue(value) {
 }
 var brand_privateStreamingFile, checkFileSupport, isAsyncIterable, maybeMultipartFormRequestOptions, multipartFormRequestOptions, supportsFormDataMap, createForm, isNamedBlob, isReadableStream, isStreamingFile, isUploadable, hasStreamingUploadableValue, hasUploadableValue, createStreamingFormRequestOptions, addFormValue;
 var init_uploads = __esm({
-  "node_modules/openai/internal/uploads.mjs"() {
+  "../../../server/node_modules/openai/internal/uploads.mjs"() {
     init_headers2();
     init_shims();
     init_bytes();
@@ -53924,7 +53924,7 @@ var init_uploads = __esm({
   }
 });
 
-// node_modules/openai/internal/to-file.mjs
+// ../../../server/node_modules/openai/internal/to-file.mjs
 async function toFile(value, name, options) {
   checkFileSupport();
   value = await value;
@@ -53974,7 +53974,7 @@ function propsForError(value) {
 }
 var isBlobLike, isFileLike, isResponseLike;
 var init_to_file = __esm({
-  "node_modules/openai/internal/to-file.mjs"() {
+  "../../../server/node_modules/openai/internal/to-file.mjs"() {
     init_uploads();
     init_uploads();
     isBlobLike = (value) => value != null && typeof value === "object" && typeof value.size === "number" && typeof value.type === "string" && typeof value.text === "function" && typeof value.slice === "function" && typeof value.arrayBuffer === "function";
@@ -53983,18 +53983,18 @@ var init_to_file = __esm({
   }
 });
 
-// node_modules/openai/core/uploads.mjs
+// ../../../server/node_modules/openai/core/uploads.mjs
 var init_uploads2 = __esm({
-  "node_modules/openai/core/uploads.mjs"() {
+  "../../../server/node_modules/openai/core/uploads.mjs"() {
     init_uploads();
     init_to_file();
   }
 });
 
-// node_modules/openai/core/resource.mjs
+// ../../../server/node_modules/openai/core/resource.mjs
 var APIResource;
 var init_resource = __esm({
-  "node_modules/openai/core/resource.mjs"() {
+  "../../../server/node_modules/openai/core/resource.mjs"() {
     APIResource = class {
       constructor(client) {
         this._client = client;
@@ -54003,21 +54003,21 @@ var init_resource = __esm({
   }
 });
 
-// node_modules/openai/internal/utils/path.mjs
-function encodeURIPath(str7) {
-  return str7.replace(/[^A-Za-z0-9\-._~!$&'()*+,;=:@]+/g, encodeURIComponent);
+// ../../../server/node_modules/openai/internal/utils/path.mjs
+function encodeURIPath(str8) {
+  return str8.replace(/[^A-Za-z0-9\-._~!$&'()*+,;=:@]+/g, encodeURIComponent);
 }
-var EMPTY, createPathTagFunction, path8;
+var EMPTY, createPathTagFunction, path9;
 var init_path = __esm({
-  "node_modules/openai/internal/utils/path.mjs"() {
+  "../../../server/node_modules/openai/internal/utils/path.mjs"() {
     init_error();
     EMPTY = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.create(null));
-    createPathTagFunction = (pathEncoder = encodeURIPath) => function path10(statics, ...params) {
+    createPathTagFunction = (pathEncoder = encodeURIPath) => function path11(statics, ...params) {
       if (statics.length === 1)
         return statics[0];
       let postPath = false;
       const invalidSegments = [];
-      const path11 = statics.reduce((previousValue, currentValue, index) => {
+      const path12 = statics.reduce((previousValue, currentValue, index) => {
         if (/[?#]/.test(currentValue)) {
           postPath = true;
         }
@@ -54034,7 +54034,7 @@ var init_path = __esm({
         }
         return previousValue + currentValue + (index === params.length ? "" : encoded);
       }, "");
-      const pathOnly = path11.split(/[?#]/, 1)[0];
+      const pathOnly = path12.split(/[?#]/, 1)[0];
       const invalidSegmentPattern = /(?<=^|\/)(?:\.|%2e){1,2}(?=\/|$)/gi;
       let match2;
       while ((match2 = invalidSegmentPattern.exec(pathOnly)) !== null) {
@@ -54055,19 +54055,19 @@ var init_path = __esm({
         }, "");
         throw new OpenAIError(`Path parameters result in path with invalid segments:
 ${invalidSegments.map((e2) => e2.error).join("\n")}
-${path11}
+${path12}
 ${underline}`);
       }
-      return path11;
+      return path12;
     };
-    path8 = /* @__PURE__ */ createPathTagFunction(encodeURIPath);
+    path9 = /* @__PURE__ */ createPathTagFunction(encodeURIPath);
   }
 });
 
-// node_modules/openai/resources/chat/completions/messages.mjs
+// ../../../server/node_modules/openai/resources/chat/completions/messages.mjs
 var Messages;
 var init_messages = __esm({
-  "node_modules/openai/resources/chat/completions/messages.mjs"() {
+  "../../../server/node_modules/openai/resources/chat/completions/messages.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -54087,20 +54087,20 @@ var init_messages = __esm({
        * ```
        */
       list(completionID, query = {}, options) {
-        return this._client.getAPIList(path8`/chat/completions/${completionID}/messages`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path9`/chat/completions/${completionID}/messages`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
       }
     };
   }
 });
 
-// node_modules/openai/error.mjs
+// ../../../server/node_modules/openai/error.mjs
 var init_error2 = __esm({
-  "node_modules/openai/error.mjs"() {
+  "../../../server/node_modules/openai/error.mjs"() {
     init_error();
   }
 });
 
-// node_modules/openai/lib/parser.mjs
+// ../../../server/node_modules/openai/lib/parser.mjs
 function isChatCompletionFunctionTool(tool) {
   return tool !== void 0 && "function" in tool && tool.function !== void 0;
 }
@@ -54207,15 +54207,15 @@ function validateInputTools(tools) {
   }
 }
 var init_parser = __esm({
-  "node_modules/openai/lib/parser.mjs"() {
+  "../../../server/node_modules/openai/lib/parser.mjs"() {
     init_error2();
   }
 });
 
-// node_modules/openai/lib/chatCompletionUtils.mjs
+// ../../../server/node_modules/openai/lib/chatCompletionUtils.mjs
 var isAssistantMessage, isToolMessage;
 var init_chatCompletionUtils = __esm({
-  "node_modules/openai/lib/chatCompletionUtils.mjs"() {
+  "../../../server/node_modules/openai/lib/chatCompletionUtils.mjs"() {
     isAssistantMessage = (message) => {
       return message?.role === "assistant";
     };
@@ -54225,10 +54225,10 @@ var init_chatCompletionUtils = __esm({
   }
 });
 
-// node_modules/openai/lib/EventStream.mjs
+// ../../../server/node_modules/openai/lib/EventStream.mjs
 var _EventStream_instances, _EventStream_connectedPromise, _EventStream_resolveConnectedPromise, _EventStream_rejectConnectedPromise, _EventStream_endPromise, _EventStream_resolveEndPromise, _EventStream_rejectEndPromise, _EventStream_listeners, _EventStream_abortListeners, _EventStream_ended, _EventStream_errored, _EventStream_aborted, _EventStream_catchingPromiseCreated, _EventStream_removeAbortListeners, _EventStream_handleError, EventStream;
 var init_EventStream = __esm({
-  "node_modules/openai/lib/EventStream.mjs"() {
+  "../../../server/node_modules/openai/lib/EventStream.mjs"() {
     init_tslib();
     init_error2();
     EventStream = class {
@@ -54251,12 +54251,12 @@ var init_EventStream = __esm({
         _EventStream_errored.set(this, false);
         _EventStream_aborted.set(this, false);
         _EventStream_catchingPromiseCreated.set(this, false);
-        __classPrivateFieldSet(this, _EventStream_connectedPromise, new Promise((resolve3, reject) => {
-          __classPrivateFieldSet(this, _EventStream_resolveConnectedPromise, resolve3, "f");
+        __classPrivateFieldSet(this, _EventStream_connectedPromise, new Promise((resolve5, reject) => {
+          __classPrivateFieldSet(this, _EventStream_resolveConnectedPromise, resolve5, "f");
           __classPrivateFieldSet(this, _EventStream_rejectConnectedPromise, reject, "f");
         }), "f");
-        __classPrivateFieldSet(this, _EventStream_endPromise, new Promise((resolve3, reject) => {
-          __classPrivateFieldSet(this, _EventStream_resolveEndPromise, resolve3, "f");
+        __classPrivateFieldSet(this, _EventStream_endPromise, new Promise((resolve5, reject) => {
+          __classPrivateFieldSet(this, _EventStream_resolveEndPromise, resolve5, "f");
           __classPrivateFieldSet(this, _EventStream_rejectEndPromise, reject, "f");
         }), "f");
         __classPrivateFieldGet(this, _EventStream_connectedPromise, "f").catch(() => {
@@ -54356,11 +54356,11 @@ var init_EventStream = __esm({
        *   const message = await stream.emitted('message') // rejects if the stream errors
        */
       emitted(event) {
-        return new Promise((resolve3, reject) => {
+        return new Promise((resolve5, reject) => {
           __classPrivateFieldSet(this, _EventStream_catchingPromiseCreated, true, "f");
           if (event !== "error")
             this.once("error", reject);
-          this.once(event, resolve3);
+          this.once(event, resolve5);
         });
       }
       /**
@@ -54443,8 +54443,8 @@ var init_EventStream = __esm({
             }
             if (ended)
               return Promise.resolve(doneResult());
-            return new Promise((resolve3, reject) => {
-              readQueue.push({ resolve: resolve3, reject });
+            return new Promise((resolve5, reject) => {
+              readQueue.push({ resolve: resolve5, reject });
             });
           },
           return: () => {
@@ -54526,16 +54526,16 @@ var init_EventStream = __esm({
   }
 });
 
-// node_modules/openai/lib/RunnableFunction.mjs
+// ../../../server/node_modules/openai/lib/RunnableFunction.mjs
 function isRunnableFunctionWithParse(fn) {
   return typeof fn.parse === "function";
 }
 var init_RunnableFunction = __esm({
-  "node_modules/openai/lib/RunnableFunction.mjs"() {
+  "../../../server/node_modules/openai/lib/RunnableFunction.mjs"() {
   }
 });
 
-// node_modules/openai/lib/AbstractChatCompletionRunner.mjs
+// ../../../server/node_modules/openai/lib/AbstractChatCompletionRunner.mjs
 function normalizeToolCallIds(chatCompletion) {
   for (const choice of chatCompletion.choices) {
     for (const toolCall of choice.message.tool_calls ?? []) {
@@ -54585,7 +54585,7 @@ function toRequestMessage(message) {
 }
 var _AbstractChatCompletionRunner_instances, _AbstractChatCompletionRunner_getFinalContent, _AbstractChatCompletionRunner_getFinalMessage, _AbstractChatCompletionRunner_getFinalFunctionToolCall, _AbstractChatCompletionRunner_getFinalFunctionToolCallResult, _AbstractChatCompletionRunner_calculateTotalUsage, _AbstractChatCompletionRunner_validateParams, _AbstractChatCompletionRunner_stringifyFunctionCallResult, DEFAULT_MAX_CHAT_COMPLETIONS, AbstractChatCompletionRunner;
 var init_AbstractChatCompletionRunner = __esm({
-  "node_modules/openai/lib/AbstractChatCompletionRunner.mjs"() {
+  "../../../server/node_modules/openai/lib/AbstractChatCompletionRunner.mjs"() {
     init_tslib();
     init_error2();
     init_uuid();
@@ -54882,10 +54882,10 @@ var init_AbstractChatCompletionRunner = __esm({
   }
 });
 
-// node_modules/openai/lib/ChatCompletionRunner.mjs
+// ../../../server/node_modules/openai/lib/ChatCompletionRunner.mjs
 var ChatCompletionRunner;
 var init_ChatCompletionRunner = __esm({
-  "node_modules/openai/lib/ChatCompletionRunner.mjs"() {
+  "../../../server/node_modules/openai/lib/ChatCompletionRunner.mjs"() {
     init_AbstractChatCompletionRunner();
     init_chatCompletionUtils();
     ChatCompletionRunner = class _ChatCompletionRunner extends AbstractChatCompletionRunner {
@@ -54908,7 +54908,7 @@ var init_ChatCompletionRunner = __esm({
   }
 });
 
-// node_modules/openai/_vendor/partial-json-parser/parser.mjs
+// ../../../server/node_modules/openai/_vendor/partial-json-parser/parser.mjs
 function parseJSON(jsonString, allowPartial = Allow.ALL) {
   if (typeof jsonString !== "string") {
     throw new TypeError(`expecting str, got ${typeof jsonString}`);
@@ -54920,7 +54920,7 @@ function parseJSON(jsonString, allowPartial = Allow.ALL) {
 }
 var STR, NUM, ARR, OBJ, NULL, BOOL, NAN, INFINITY, MINUS_INFINITY, INF, SPECIAL, ATOM, COLLECTION, ALL, Allow, PartialJSON, MalformedJSON, _parseJSON, partialParse;
 var init_parser2 = __esm({
-  "node_modules/openai/_vendor/partial-json-parser/parser.mjs"() {
+  "../../../server/node_modules/openai/_vendor/partial-json-parser/parser.mjs"() {
     STR = 1;
     NUM = 2;
     ARR = 4;
@@ -55125,14 +55125,14 @@ var init_parser2 = __esm({
   }
 });
 
-// node_modules/openai/streaming.mjs
+// ../../../server/node_modules/openai/streaming.mjs
 var init_streaming2 = __esm({
-  "node_modules/openai/streaming.mjs"() {
+  "../../../server/node_modules/openai/streaming.mjs"() {
     init_streaming();
   }
 });
 
-// node_modules/openai/lib/ChatCompletionStream.mjs
+// ../../../server/node_modules/openai/lib/ChatCompletionStream.mjs
 function makeChatCompletionReadableStreamMessageChunk(chunk2, message, toolCallIds) {
   const payload = {
     type: "message",
@@ -55259,7 +55259,7 @@ function assertNever2(_x) {
 }
 var _ChatCompletionStream_instances, _ChatCompletionStream_params, _ChatCompletionStream_audioDoneChoiceIndexes, _ChatCompletionStream_choiceEventStates, _ChatCompletionStream_currentChatCompletionSnapshot, _ChatCompletionStream_beginRequest, _ChatCompletionStream_getChoiceEventState, _ChatCompletionStream_addChunk, _ChatCompletionStream_emitToolCallDoneEvent, _ChatCompletionStream_emitContentDoneEvents, _ChatCompletionStream_endRequest, _ChatCompletionStream_getAutoParseableResponseFormat, _ChatCompletionStream_accumulateChatCompletion, CHAT_COMPLETION_READABLE_STREAM_MESSAGE_PREFIX, ChatCompletionStream;
 var init_ChatCompletionStream = __esm({
-  "node_modules/openai/lib/ChatCompletionStream.mjs"() {
+  "../../../server/node_modules/openai/lib/ChatCompletionStream.mjs"() {
     init_tslib();
     init_parser2();
     init_error2();
@@ -55662,7 +55662,7 @@ var init_ChatCompletionStream = __esm({
               if (done) {
                 return { value: void 0, done: true };
               }
-              return new Promise((resolve3, reject) => readQueue.push({ resolve: resolve3, reject })).then((chunk3) => chunk3 ? { value: chunk3, done: false } : { value: void 0, done: true });
+              return new Promise((resolve5, reject) => readQueue.push({ resolve: resolve5, reject })).then((chunk3) => chunk3 ? { value: chunk3, done: false } : { value: void 0, done: true });
             }
             const chunk2 = pushQueue.shift();
             return { value: chunk2, done: false };
@@ -55681,10 +55681,10 @@ var init_ChatCompletionStream = __esm({
   }
 });
 
-// node_modules/openai/lib/ChatCompletionStreamingRunner.mjs
+// ../../../server/node_modules/openai/lib/ChatCompletionStreamingRunner.mjs
 var ChatCompletionStreamingRunner;
 var init_ChatCompletionStreamingRunner = __esm({
-  "node_modules/openai/lib/ChatCompletionStreamingRunner.mjs"() {
+  "../../../server/node_modules/openai/lib/ChatCompletionStreamingRunner.mjs"() {
     init_ChatCompletionStream();
     init_error2();
     init_streaming2();
@@ -55752,7 +55752,7 @@ var init_ChatCompletionStreamingRunner = __esm({
               if (done) {
                 return { value: void 0, done: true };
               }
-              return new Promise((resolve3, reject) => readQueue.push({ resolve: resolve3, reject })).then((event2) => event2 ? { value: event2, done: false } : { value: void 0, done: true });
+              return new Promise((resolve5, reject) => readQueue.push({ resolve: resolve5, reject })).then((event2) => event2 ? { value: event2, done: false } : { value: void 0, done: true });
             }
             const event = pushQueue.shift();
             if (!event) {
@@ -55784,10 +55784,10 @@ var init_ChatCompletionStreamingRunner = __esm({
   }
 });
 
-// node_modules/openai/resources/chat/completions/completions.mjs
+// ../../../server/node_modules/openai/resources/chat/completions/completions.mjs
 var Completions;
 var init_completions = __esm({
-  "node_modules/openai/resources/chat/completions/completions.mjs"() {
+  "../../../server/node_modules/openai/resources/chat/completions/completions.mjs"() {
     init_resource();
     init_messages();
     init_messages();
@@ -55825,7 +55825,7 @@ var init_completions = __esm({
        * ```
        */
       retrieve(completionID, options) {
-        return this._client.get(path8`/chat/completions/${completionID}`, {
+        return this._client.get(path9`/chat/completions/${completionID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -55844,7 +55844,7 @@ var init_completions = __esm({
        * ```
        */
       update(completionID, body, options) {
-        return this._client.post(path8`/chat/completions/${completionID}`, {
+        return this._client.post(path9`/chat/completions/${completionID}`, {
           body,
           ...options,
           __security: { bearerAuth: true }
@@ -55880,7 +55880,7 @@ var init_completions = __esm({
        * ```
        */
       delete(completionID, options) {
-        return this._client.delete(path8`/chat/completions/${completionID}`, {
+        return this._client.delete(path9`/chat/completions/${completionID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -55912,10 +55912,10 @@ var init_completions = __esm({
   }
 });
 
-// node_modules/openai/resources/chat/chat.mjs
+// ../../../server/node_modules/openai/resources/chat/chat.mjs
 var Chat2;
 var init_chat = __esm({
-  "node_modules/openai/resources/chat/chat.mjs"() {
+  "../../../server/node_modules/openai/resources/chat/chat.mjs"() {
     init_resource();
     init_completions();
     init_completions();
@@ -55929,33 +55929,33 @@ var init_chat = __esm({
   }
 });
 
-// node_modules/openai/resources/chat/completions/index.mjs
+// ../../../server/node_modules/openai/resources/chat/completions/index.mjs
 var init_completions2 = __esm({
-  "node_modules/openai/resources/chat/completions/index.mjs"() {
+  "../../../server/node_modules/openai/resources/chat/completions/index.mjs"() {
     init_completions();
     init_completions();
     init_messages();
   }
 });
 
-// node_modules/openai/resources/chat/index.mjs
+// ../../../server/node_modules/openai/resources/chat/index.mjs
 var init_chat2 = __esm({
-  "node_modules/openai/resources/chat/index.mjs"() {
+  "../../../server/node_modules/openai/resources/chat/index.mjs"() {
     init_chat();
     init_completions2();
   }
 });
 
-// node_modules/openai/resources/shared.mjs
+// ../../../server/node_modules/openai/resources/shared.mjs
 var init_shared = __esm({
-  "node_modules/openai/resources/shared.mjs"() {
+  "../../../server/node_modules/openai/resources/shared.mjs"() {
   }
 });
 
-// node_modules/openai/resources/admin/organization/admin-api-keys.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/admin-api-keys.mjs
 var AdminAPIKeys;
 var init_admin_api_keys = __esm({
-  "node_modules/openai/resources/admin/organization/admin-api-keys.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/admin-api-keys.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -55990,7 +55990,7 @@ var init_admin_api_keys = __esm({
        * ```
        */
       retrieve(keyID, options) {
-        return this._client.get(path8`/organization/admin_api_keys/${keyID}`, {
+        return this._client.get(path9`/organization/admin_api_keys/${keyID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56025,7 +56025,7 @@ var init_admin_api_keys = __esm({
        * ```
        */
       delete(keyID, options) {
-        return this._client.delete(path8`/organization/admin_api_keys/${keyID}`, {
+        return this._client.delete(path9`/organization/admin_api_keys/${keyID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56034,10 +56034,10 @@ var init_admin_api_keys = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/audit-logs.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/audit-logs.mjs
 var AuditLogs;
 var init_audit_logs = __esm({
-  "node_modules/openai/resources/admin/organization/audit-logs.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/audit-logs.mjs"() {
     init_resource();
     init_pagination();
     AuditLogs = class extends APIResource {
@@ -56063,10 +56063,10 @@ var init_audit_logs = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/certificates.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/certificates.mjs
 var Certificates;
 var init_certificates = __esm({
-  "node_modules/openai/resources/admin/organization/certificates.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/certificates.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -56106,7 +56106,7 @@ var init_certificates = __esm({
        * ```
        */
       retrieve(certificateID, query = {}, options) {
-        return this._client.get(path8`/organization/certificates/${certificateID}`, {
+        return this._client.get(path9`/organization/certificates/${certificateID}`, {
           query,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -56124,7 +56124,7 @@ var init_certificates = __esm({
        * ```
        */
       update(certificateID, body, options) {
-        return this._client.post(path8`/organization/certificates/${certificateID}`, {
+        return this._client.post(path9`/organization/certificates/${certificateID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -56158,7 +56158,7 @@ var init_certificates = __esm({
        * ```
        */
       delete(certificateID, options) {
-        return this._client.delete(path8`/organization/certificates/${certificateID}`, {
+        return this._client.delete(path9`/organization/certificates/${certificateID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56208,10 +56208,10 @@ var init_certificates = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/data-retention.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/data-retention.mjs
 var DataRetention;
 var init_data_retention = __esm({
-  "node_modules/openai/resources/admin/organization/data-retention.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/data-retention.mjs"() {
     init_resource();
     DataRetention = class extends APIResource {
       /**
@@ -56251,10 +56251,10 @@ var init_data_retention = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/invites.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/invites.mjs
 var Invites;
 var init_invites = __esm({
-  "node_modules/openai/resources/admin/organization/invites.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/invites.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -56291,7 +56291,7 @@ var init_invites = __esm({
        * ```
        */
       retrieve(inviteID, options) {
-        return this._client.get(path8`/organization/invites/${inviteID}`, {
+        return this._client.get(path9`/organization/invites/${inviteID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56326,7 +56326,7 @@ var init_invites = __esm({
        * ```
        */
       delete(inviteID, options) {
-        return this._client.delete(path8`/organization/invites/${inviteID}`, {
+        return this._client.delete(path9`/organization/invites/${inviteID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56335,10 +56335,10 @@ var init_invites = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/roles.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/roles.mjs
 var Roles;
 var init_roles = __esm({
-  "node_modules/openai/resources/admin/organization/roles.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/roles.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -56372,7 +56372,7 @@ var init_roles = __esm({
        * ```
        */
       retrieve(roleID, options) {
-        return this._client.get(path8`/organization/roles/${roleID}`, {
+        return this._client.get(path9`/organization/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56388,7 +56388,7 @@ var init_roles = __esm({
        * ```
        */
       update(roleID, body, options) {
-        return this._client.post(path8`/organization/roles/${roleID}`, {
+        return this._client.post(path9`/organization/roles/${roleID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -56423,7 +56423,7 @@ var init_roles = __esm({
        * ```
        */
       delete(roleID, options) {
-        return this._client.delete(path8`/organization/roles/${roleID}`, {
+        return this._client.delete(path9`/organization/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56432,10 +56432,10 @@ var init_roles = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/spend-alerts.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/spend-alerts.mjs
 var SpendAlerts;
 var init_spend_alerts = __esm({
-  "node_modules/openai/resources/admin/organization/spend-alerts.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/spend-alerts.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -56476,7 +56476,7 @@ var init_spend_alerts = __esm({
        * ```
        */
       retrieve(alertID, options) {
-        return this._client.get(path8`/organization/spend_alerts/${alertID}`, {
+        return this._client.get(path9`/organization/spend_alerts/${alertID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56502,7 +56502,7 @@ var init_spend_alerts = __esm({
        * ```
        */
       update(alertID, body, options) {
-        return this._client.post(path8`/organization/spend_alerts/${alertID}`, {
+        return this._client.post(path9`/organization/spend_alerts/${alertID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -56534,7 +56534,7 @@ var init_spend_alerts = __esm({
        * ```
        */
       delete(alertID, options) {
-        return this._client.delete(path8`/organization/spend_alerts/${alertID}`, {
+        return this._client.delete(path9`/organization/spend_alerts/${alertID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56543,10 +56543,10 @@ var init_spend_alerts = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/spend-limit.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/spend-limit.mjs
 var SpendLimit;
 var init_spend_limit = __esm({
-  "node_modules/openai/resources/admin/organization/spend-limit.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/spend-limit.mjs"() {
     init_resource();
     SpendLimit = class extends APIResource {
       /**
@@ -56603,10 +56603,10 @@ var init_spend_limit = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/usage.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/usage.mjs
 var Usage;
 var init_usage = __esm({
-  "node_modules/openai/resources/admin/organization/usage.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/usage.mjs"() {
     init_resource();
     Usage = class extends APIResource {
       /**
@@ -56811,10 +56811,10 @@ var init_usage = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/groups/roles.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/groups/roles.mjs
 var Roles2;
 var init_roles2 = __esm({
-  "node_modules/openai/resources/admin/organization/groups/roles.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/groups/roles.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -56832,7 +56832,7 @@ var init_roles2 = __esm({
        * ```
        */
       create(groupID, body, options) {
-        return this._client.post(path8`/organization/groups/${groupID}/roles`, {
+        return this._client.post(path9`/organization/groups/${groupID}/roles`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -56852,7 +56852,7 @@ var init_roles2 = __esm({
        */
       retrieve(roleID, params, options) {
         const { group_id } = params;
-        return this._client.get(path8`/organization/groups/${group_id}/roles/${roleID}`, {
+        return this._client.get(path9`/organization/groups/${group_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56871,7 +56871,7 @@ var init_roles2 = __esm({
        * ```
        */
       list(groupID, query = {}, options) {
-        return this._client.getAPIList(path8`/organization/groups/${groupID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path9`/organization/groups/${groupID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Unassigns an organization role from a group within the organization.
@@ -56887,7 +56887,7 @@ var init_roles2 = __esm({
        */
       delete(roleID, params, options) {
         const { group_id } = params;
-        return this._client.delete(path8`/organization/groups/${group_id}/roles/${roleID}`, {
+        return this._client.delete(path9`/organization/groups/${group_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56896,10 +56896,10 @@ var init_roles2 = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/groups/users.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/groups/users.mjs
 var Users;
 var init_users = __esm({
-  "node_modules/openai/resources/admin/organization/groups/users.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/groups/users.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -56917,7 +56917,7 @@ var init_users = __esm({
        * ```
        */
       create(groupID, body, options) {
-        return this._client.post(path8`/organization/groups/${groupID}/users`, {
+        return this._client.post(path9`/organization/groups/${groupID}/users`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -56937,7 +56937,7 @@ var init_users = __esm({
        */
       retrieve(userID, params, options) {
         const { group_id } = params;
-        return this._client.get(path8`/organization/groups/${group_id}/users/${userID}`, {
+        return this._client.get(path9`/organization/groups/${group_id}/users/${userID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56956,7 +56956,7 @@ var init_users = __esm({
        * ```
        */
       list(groupID, query = {}, options) {
-        return this._client.getAPIList(path8`/organization/groups/${groupID}/users`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path9`/organization/groups/${groupID}/users`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Removes a user from a group.
@@ -56972,7 +56972,7 @@ var init_users = __esm({
        */
       delete(userID, params, options) {
         const { group_id } = params;
-        return this._client.delete(path8`/organization/groups/${group_id}/users/${userID}`, {
+        return this._client.delete(path9`/organization/groups/${group_id}/users/${userID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56981,10 +56981,10 @@ var init_users = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/groups/groups.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/groups/groups.mjs
 var Groups;
 var init_groups = __esm({
-  "node_modules/openai/resources/admin/organization/groups/groups.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/groups/groups.mjs"() {
     init_resource();
     init_roles2();
     init_roles2();
@@ -57027,7 +57027,7 @@ var init_groups = __esm({
        * ```
        */
       retrieve(groupID, options) {
-        return this._client.get(path8`/organization/groups/${groupID}`, {
+        return this._client.get(path9`/organization/groups/${groupID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57044,7 +57044,7 @@ var init_groups = __esm({
        * ```
        */
       update(groupID, body, options) {
-        return this._client.post(path8`/organization/groups/${groupID}`, {
+        return this._client.post(path9`/organization/groups/${groupID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57079,7 +57079,7 @@ var init_groups = __esm({
        * ```
        */
       delete(groupID, options) {
-        return this._client.delete(path8`/organization/groups/${groupID}`, {
+        return this._client.delete(path9`/organization/groups/${groupID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57090,10 +57090,10 @@ var init_groups = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/projects/api-keys.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/projects/api-keys.mjs
 var APIKeys;
 var init_api_keys = __esm({
-  "node_modules/openai/resources/admin/organization/projects/api-keys.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/projects/api-keys.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -57112,7 +57112,7 @@ var init_api_keys = __esm({
        */
       retrieve(apiKeyID, params, options) {
         const { project_id } = params;
-        return this._client.get(path8`/organization/projects/${project_id}/api_keys/${apiKeyID}`, {
+        return this._client.get(path9`/organization/projects/${project_id}/api_keys/${apiKeyID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57131,7 +57131,7 @@ var init_api_keys = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path8`/organization/projects/${projectID}/api_keys`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path9`/organization/projects/${projectID}/api_keys`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Deletes an API key from the project.
@@ -57150,7 +57150,7 @@ var init_api_keys = __esm({
        */
       delete(apiKeyID, params, options) {
         const { project_id } = params;
-        return this._client.delete(path8`/organization/projects/${project_id}/api_keys/${apiKeyID}`, {
+        return this._client.delete(path9`/organization/projects/${project_id}/api_keys/${apiKeyID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57159,10 +57159,10 @@ var init_api_keys = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/projects/certificates.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/projects/certificates.mjs
 var Certificates2;
 var init_certificates2 = __esm({
-  "node_modules/openai/resources/admin/organization/projects/certificates.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/projects/certificates.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -57181,7 +57181,7 @@ var init_certificates2 = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path8`/organization/projects/${projectID}/certificates`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path9`/organization/projects/${projectID}/certificates`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Activate certificates at the project level.
@@ -57200,7 +57200,7 @@ var init_certificates2 = __esm({
        * ```
        */
       activate(projectID, body, options) {
-        return this._client.getAPIList(path8`/organization/projects/${projectID}/certificates/activate`, Page, { body, method: "post", ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path9`/organization/projects/${projectID}/certificates/activate`, Page, { body, method: "post", ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Deactivate certificates at the project level. You can atomically and
@@ -57218,16 +57218,16 @@ var init_certificates2 = __esm({
        * ```
        */
       deactivate(projectID, body, options) {
-        return this._client.getAPIList(path8`/organization/projects/${projectID}/certificates/deactivate`, Page, { body, method: "post", ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path9`/organization/projects/${projectID}/certificates/deactivate`, Page, { body, method: "post", ...options, __security: { adminAPIKeyAuth: true } });
       }
     };
   }
 });
 
-// node_modules/openai/resources/admin/organization/projects/data-retention.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/projects/data-retention.mjs
 var DataRetention2;
 var init_data_retention2 = __esm({
-  "node_modules/openai/resources/admin/organization/projects/data-retention.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/projects/data-retention.mjs"() {
     init_resource();
     init_path();
     DataRetention2 = class extends APIResource {
@@ -57243,7 +57243,7 @@ var init_data_retention2 = __esm({
        * ```
        */
       retrieve(projectID, options) {
-        return this._client.get(path8`/organization/projects/${projectID}/data_retention`, {
+        return this._client.get(path9`/organization/projects/${projectID}/data_retention`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57261,7 +57261,7 @@ var init_data_retention2 = __esm({
        * ```
        */
       update(projectID, body, options) {
-        return this._client.post(path8`/organization/projects/${projectID}/data_retention`, {
+        return this._client.post(path9`/organization/projects/${projectID}/data_retention`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57271,10 +57271,10 @@ var init_data_retention2 = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/projects/hosted-tool-permissions.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/projects/hosted-tool-permissions.mjs
 var HostedToolPermissions;
 var init_hosted_tool_permissions = __esm({
-  "node_modules/openai/resources/admin/organization/projects/hosted-tool-permissions.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/projects/hosted-tool-permissions.mjs"() {
     init_resource();
     init_path();
     HostedToolPermissions = class extends APIResource {
@@ -57290,7 +57290,7 @@ var init_hosted_tool_permissions = __esm({
        * ```
        */
       retrieve(projectID, options) {
-        return this._client.get(path8`/organization/projects/${projectID}/hosted_tool_permissions`, {
+        return this._client.get(path9`/organization/projects/${projectID}/hosted_tool_permissions`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57307,7 +57307,7 @@ var init_hosted_tool_permissions = __esm({
        * ```
        */
       update(projectID, body, options) {
-        return this._client.post(path8`/organization/projects/${projectID}/hosted_tool_permissions`, {
+        return this._client.post(path9`/organization/projects/${projectID}/hosted_tool_permissions`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57317,10 +57317,10 @@ var init_hosted_tool_permissions = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/projects/model-permissions.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/projects/model-permissions.mjs
 var ModelPermissions;
 var init_model_permissions = __esm({
-  "node_modules/openai/resources/admin/organization/projects/model-permissions.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/projects/model-permissions.mjs"() {
     init_resource();
     init_path();
     ModelPermissions = class extends APIResource {
@@ -57336,7 +57336,7 @@ var init_model_permissions = __esm({
        * ```
        */
       retrieve(projectID, options) {
-        return this._client.get(path8`/organization/projects/${projectID}/model_permissions`, {
+        return this._client.get(path9`/organization/projects/${projectID}/model_permissions`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57354,7 +57354,7 @@ var init_model_permissions = __esm({
        * ```
        */
       update(projectID, body, options) {
-        return this._client.post(path8`/organization/projects/${projectID}/model_permissions`, {
+        return this._client.post(path9`/organization/projects/${projectID}/model_permissions`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57372,7 +57372,7 @@ var init_model_permissions = __esm({
        * ```
        */
       delete(projectID, options) {
-        return this._client.delete(path8`/organization/projects/${projectID}/model_permissions`, {
+        return this._client.delete(path9`/organization/projects/${projectID}/model_permissions`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57381,10 +57381,10 @@ var init_model_permissions = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/projects/rate-limits.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/projects/rate-limits.mjs
 var RateLimits;
 var init_rate_limits = __esm({
-  "node_modules/openai/resources/admin/organization/projects/rate-limits.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/projects/rate-limits.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -57403,7 +57403,7 @@ var init_rate_limits = __esm({
        * ```
        */
       listRateLimits(projectID, query = {}, options) {
-        return this._client.getAPIList(path8`/organization/projects/${projectID}/rate_limits`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path9`/organization/projects/${projectID}/rate_limits`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Updates a project rate limit.
@@ -57419,7 +57419,7 @@ var init_rate_limits = __esm({
        */
       updateRateLimit(rateLimitID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path8`/organization/projects/${project_id}/rate_limits/${rateLimitID}`, {
+        return this._client.post(path9`/organization/projects/${project_id}/rate_limits/${rateLimitID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57429,10 +57429,10 @@ var init_rate_limits = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/projects/roles.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/projects/roles.mjs
 var Roles3;
 var init_roles3 = __esm({
-  "node_modules/openai/resources/admin/organization/projects/roles.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/projects/roles.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -57450,7 +57450,7 @@ var init_roles3 = __esm({
        * ```
        */
       create(projectID, body, options) {
-        return this._client.post(path8`/projects/${projectID}/roles`, {
+        return this._client.post(path9`/projects/${projectID}/roles`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57470,7 +57470,7 @@ var init_roles3 = __esm({
        */
       retrieve(roleID, params, options) {
         const { project_id } = params;
-        return this._client.get(path8`/projects/${project_id}/roles/${roleID}`, {
+        return this._client.get(path9`/projects/${project_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57489,7 +57489,7 @@ var init_roles3 = __esm({
        */
       update(roleID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path8`/projects/${project_id}/roles/${roleID}`, {
+        return this._client.post(path9`/projects/${project_id}/roles/${roleID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57509,7 +57509,7 @@ var init_roles3 = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path8`/projects/${projectID}/roles`, NextCursorPage, {
+        return this._client.getAPIList(path9`/projects/${projectID}/roles`, NextCursorPage, {
           query,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57529,7 +57529,7 @@ var init_roles3 = __esm({
        */
       delete(roleID, params, options) {
         const { project_id } = params;
-        return this._client.delete(path8`/projects/${project_id}/roles/${roleID}`, {
+        return this._client.delete(path9`/projects/${project_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57538,10 +57538,10 @@ var init_roles3 = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/projects/spend-alerts.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/projects/spend-alerts.mjs
 var SpendAlerts2;
 var init_spend_alerts2 = __esm({
-  "node_modules/openai/resources/admin/organization/projects/spend-alerts.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/projects/spend-alerts.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -57567,7 +57567,7 @@ var init_spend_alerts2 = __esm({
        * ```
        */
       create(projectID, body, options) {
-        return this._client.post(path8`/organization/projects/${projectID}/spend_alerts`, {
+        return this._client.post(path9`/organization/projects/${projectID}/spend_alerts`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57587,7 +57587,7 @@ var init_spend_alerts2 = __esm({
        */
       retrieve(alertID, params, options) {
         const { project_id } = params;
-        return this._client.get(path8`/organization/projects/${project_id}/spend_alerts/${alertID}`, {
+        return this._client.get(path9`/organization/projects/${project_id}/spend_alerts/${alertID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57615,7 +57615,7 @@ var init_spend_alerts2 = __esm({
        */
       update(alertID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path8`/organization/projects/${project_id}/spend_alerts/${alertID}`, {
+        return this._client.post(path9`/organization/projects/${project_id}/spend_alerts/${alertID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57635,7 +57635,7 @@ var init_spend_alerts2 = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path8`/organization/projects/${projectID}/spend_alerts`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path9`/organization/projects/${projectID}/spend_alerts`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Deletes a project spend alert.
@@ -57651,7 +57651,7 @@ var init_spend_alerts2 = __esm({
        */
       delete(alertID, params, options) {
         const { project_id } = params;
-        return this._client.delete(path8`/organization/projects/${project_id}/spend_alerts/${alertID}`, {
+        return this._client.delete(path9`/organization/projects/${project_id}/spend_alerts/${alertID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57660,10 +57660,10 @@ var init_spend_alerts2 = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/projects/spend-limit.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/projects/spend-limit.mjs
 var SpendLimit2;
 var init_spend_limit2 = __esm({
-  "node_modules/openai/resources/admin/organization/projects/spend-limit.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/projects/spend-limit.mjs"() {
     init_resource();
     init_path();
     SpendLimit2 = class extends APIResource {
@@ -57679,7 +57679,7 @@ var init_spend_limit2 = __esm({
        * ```
        */
       retrieve(projectID, options) {
-        return this._client.get(path8`/organization/projects/${projectID}/spend_limit`, {
+        return this._client.get(path9`/organization/projects/${projectID}/spend_limit`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57701,7 +57701,7 @@ var init_spend_limit2 = __esm({
        * ```
        */
       update(projectID, body, options) {
-        return this._client.post(path8`/organization/projects/${projectID}/spend_limit`, {
+        return this._client.post(path9`/organization/projects/${projectID}/spend_limit`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57719,7 +57719,7 @@ var init_spend_limit2 = __esm({
        * ```
        */
       delete(projectID, options) {
-        return this._client.delete(path8`/organization/projects/${projectID}/spend_limit`, {
+        return this._client.delete(path9`/organization/projects/${projectID}/spend_limit`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57728,10 +57728,10 @@ var init_spend_limit2 = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/projects/groups/roles.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/projects/groups/roles.mjs
 var Roles4;
 var init_roles4 = __esm({
-  "node_modules/openai/resources/admin/organization/projects/groups/roles.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/projects/groups/roles.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -57750,7 +57750,7 @@ var init_roles4 = __esm({
        */
       create(groupID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path8`/projects/${project_id}/groups/${groupID}/roles`, {
+        return this._client.post(path9`/projects/${project_id}/groups/${groupID}/roles`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57770,7 +57770,7 @@ var init_roles4 = __esm({
        */
       retrieve(roleID, params, options) {
         const { project_id, group_id } = params;
-        return this._client.get(path8`/projects/${project_id}/groups/${group_id}/roles/${roleID}`, {
+        return this._client.get(path9`/projects/${project_id}/groups/${group_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57791,7 +57791,7 @@ var init_roles4 = __esm({
        */
       list(groupID, params, options) {
         const { project_id, ...query } = params;
-        return this._client.getAPIList(path8`/projects/${project_id}/groups/${groupID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path9`/projects/${project_id}/groups/${groupID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Unassigns a project role from a group within a project.
@@ -57807,7 +57807,7 @@ var init_roles4 = __esm({
        */
       delete(roleID, params, options) {
         const { project_id, group_id } = params;
-        return this._client.delete(path8`/projects/${project_id}/groups/${group_id}/roles/${roleID}`, {
+        return this._client.delete(path9`/projects/${project_id}/groups/${group_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57816,10 +57816,10 @@ var init_roles4 = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/projects/groups/groups.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/projects/groups/groups.mjs
 var Groups2;
 var init_groups2 = __esm({
-  "node_modules/openai/resources/admin/organization/projects/groups/groups.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/projects/groups/groups.mjs"() {
     init_resource();
     init_roles4();
     init_roles4();
@@ -57843,7 +57843,7 @@ var init_groups2 = __esm({
        * ```
        */
       create(projectID, body, options) {
-        return this._client.post(path8`/organization/projects/${projectID}/groups`, {
+        return this._client.post(path9`/organization/projects/${projectID}/groups`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57863,7 +57863,7 @@ var init_groups2 = __esm({
        */
       retrieve(groupID, params, options) {
         const { project_id, ...query } = params;
-        return this._client.get(path8`/organization/projects/${project_id}/groups/${groupID}`, {
+        return this._client.get(path9`/organization/projects/${project_id}/groups/${groupID}`, {
           query,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57883,7 +57883,7 @@ var init_groups2 = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path8`/organization/projects/${projectID}/groups`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path9`/organization/projects/${projectID}/groups`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Revokes a group's access to a project.
@@ -57899,7 +57899,7 @@ var init_groups2 = __esm({
        */
       delete(groupID, params, options) {
         const { project_id } = params;
-        return this._client.delete(path8`/organization/projects/${project_id}/groups/${groupID}`, {
+        return this._client.delete(path9`/organization/projects/${project_id}/groups/${groupID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57909,10 +57909,10 @@ var init_groups2 = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/projects/service-accounts/api-keys.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/projects/service-accounts/api-keys.mjs
 var APIKeys2;
 var init_api_keys2 = __esm({
-  "node_modules/openai/resources/admin/organization/projects/service-accounts/api-keys.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/projects/service-accounts/api-keys.mjs"() {
     init_resource();
     init_path();
     APIKeys2 = class extends APIResource {
@@ -57930,16 +57930,16 @@ var init_api_keys2 = __esm({
        */
       create(serviceAccountID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path8`/organization/projects/${project_id}/service_accounts/${serviceAccountID}/api_keys`, { body, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.post(path9`/organization/projects/${project_id}/service_accounts/${serviceAccountID}/api_keys`, { body, ...options, __security: { adminAPIKeyAuth: true } });
       }
     };
   }
 });
 
-// node_modules/openai/resources/admin/organization/projects/service-accounts/service-accounts.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/projects/service-accounts/service-accounts.mjs
 var ServiceAccounts;
 var init_service_accounts = __esm({
-  "node_modules/openai/resources/admin/organization/projects/service-accounts/service-accounts.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/projects/service-accounts/service-accounts.mjs"() {
     init_resource();
     init_api_keys2();
     init_api_keys2();
@@ -57964,7 +57964,7 @@ var init_service_accounts = __esm({
        * ```
        */
       create(projectID, body, options) {
-        return this._client.post(path8`/organization/projects/${projectID}/service_accounts`, {
+        return this._client.post(path9`/organization/projects/${projectID}/service_accounts`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57984,7 +57984,7 @@ var init_service_accounts = __esm({
        */
       retrieve(serviceAccountID, params, options) {
         const { project_id } = params;
-        return this._client.get(path8`/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, {
+        return this._client.get(path9`/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58003,7 +58003,7 @@ var init_service_accounts = __esm({
        */
       update(serviceAccountID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path8`/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, { body, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.post(path9`/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, { body, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Returns a list of service accounts in the project.
@@ -58019,7 +58019,7 @@ var init_service_accounts = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path8`/organization/projects/${projectID}/service_accounts`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path9`/organization/projects/${projectID}/service_accounts`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Deletes a service account from the project.
@@ -58038,17 +58038,17 @@ var init_service_accounts = __esm({
        */
       delete(serviceAccountID, params, options) {
         const { project_id } = params;
-        return this._client.delete(path8`/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, { ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.delete(path9`/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, { ...options, __security: { adminAPIKeyAuth: true } });
       }
     };
     ServiceAccounts.APIKeys = APIKeys2;
   }
 });
 
-// node_modules/openai/resources/admin/organization/projects/users/roles.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/projects/users/roles.mjs
 var Roles5;
 var init_roles5 = __esm({
-  "node_modules/openai/resources/admin/organization/projects/users/roles.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/projects/users/roles.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -58067,7 +58067,7 @@ var init_roles5 = __esm({
        */
       create(userID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path8`/projects/${project_id}/users/${userID}/roles`, {
+        return this._client.post(path9`/projects/${project_id}/users/${userID}/roles`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -58087,7 +58087,7 @@ var init_roles5 = __esm({
        */
       retrieve(roleID, params, options) {
         const { project_id, user_id } = params;
-        return this._client.get(path8`/projects/${project_id}/users/${user_id}/roles/${roleID}`, {
+        return this._client.get(path9`/projects/${project_id}/users/${user_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58108,7 +58108,7 @@ var init_roles5 = __esm({
        */
       list(userID, params, options) {
         const { project_id, ...query } = params;
-        return this._client.getAPIList(path8`/projects/${project_id}/users/${userID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path9`/projects/${project_id}/users/${userID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Unassigns a project role from a user within a project.
@@ -58124,7 +58124,7 @@ var init_roles5 = __esm({
        */
       delete(roleID, params, options) {
         const { project_id, user_id } = params;
-        return this._client.delete(path8`/projects/${project_id}/users/${user_id}/roles/${roleID}`, {
+        return this._client.delete(path9`/projects/${project_id}/users/${user_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58133,10 +58133,10 @@ var init_roles5 = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/projects/users/users.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/projects/users/users.mjs
 var Users2;
 var init_users2 = __esm({
-  "node_modules/openai/resources/admin/organization/projects/users/users.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/projects/users/users.mjs"() {
     init_resource();
     init_roles5();
     init_roles5();
@@ -58161,7 +58161,7 @@ var init_users2 = __esm({
        * ```
        */
       create(projectID, body, options) {
-        return this._client.post(path8`/organization/projects/${projectID}/users`, {
+        return this._client.post(path9`/organization/projects/${projectID}/users`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -58181,7 +58181,7 @@ var init_users2 = __esm({
        */
       retrieve(userID, params, options) {
         const { project_id } = params;
-        return this._client.get(path8`/organization/projects/${project_id}/users/${userID}`, {
+        return this._client.get(path9`/organization/projects/${project_id}/users/${userID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58200,7 +58200,7 @@ var init_users2 = __esm({
        */
       update(userID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path8`/organization/projects/${project_id}/users/${userID}`, {
+        return this._client.post(path9`/organization/projects/${project_id}/users/${userID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -58220,7 +58220,7 @@ var init_users2 = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path8`/organization/projects/${projectID}/users`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path9`/organization/projects/${projectID}/users`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Deletes a user from the project.
@@ -58239,7 +58239,7 @@ var init_users2 = __esm({
        */
       delete(userID, params, options) {
         const { project_id } = params;
-        return this._client.delete(path8`/organization/projects/${project_id}/users/${userID}`, {
+        return this._client.delete(path9`/organization/projects/${project_id}/users/${userID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58249,10 +58249,10 @@ var init_users2 = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/projects/projects.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/projects/projects.mjs
 var Projects;
 var init_projects = __esm({
-  "node_modules/openai/resources/admin/organization/projects/projects.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/projects/projects.mjs"() {
     init_resource();
     init_api_keys();
     init_api_keys();
@@ -58327,7 +58327,7 @@ var init_projects = __esm({
        * ```
        */
       retrieve(projectID, options) {
-        return this._client.get(path8`/organization/projects/${projectID}`, {
+        return this._client.get(path9`/organization/projects/${projectID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58344,7 +58344,7 @@ var init_projects = __esm({
        * ```
        */
       update(projectID, body, options) {
-        return this._client.post(path8`/organization/projects/${projectID}`, {
+        return this._client.post(path9`/organization/projects/${projectID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -58381,7 +58381,7 @@ var init_projects = __esm({
        * ```
        */
       archive(projectID, options) {
-        return this._client.post(path8`/organization/projects/${projectID}/archive`, {
+        return this._client.post(path9`/organization/projects/${projectID}/archive`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58402,10 +58402,10 @@ var init_projects = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/users/roles.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/users/roles.mjs
 var Roles6;
 var init_roles6 = __esm({
-  "node_modules/openai/resources/admin/organization/users/roles.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/users/roles.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -58423,7 +58423,7 @@ var init_roles6 = __esm({
        * ```
        */
       create(userID, body, options) {
-        return this._client.post(path8`/organization/users/${userID}/roles`, {
+        return this._client.post(path9`/organization/users/${userID}/roles`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -58443,7 +58443,7 @@ var init_roles6 = __esm({
        */
       retrieve(roleID, params, options) {
         const { user_id } = params;
-        return this._client.get(path8`/organization/users/${user_id}/roles/${roleID}`, {
+        return this._client.get(path9`/organization/users/${user_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58462,7 +58462,7 @@ var init_roles6 = __esm({
        * ```
        */
       list(userID, query = {}, options) {
-        return this._client.getAPIList(path8`/organization/users/${userID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path9`/organization/users/${userID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Unassigns an organization role from a user within the organization.
@@ -58478,7 +58478,7 @@ var init_roles6 = __esm({
        */
       delete(roleID, params, options) {
         const { user_id } = params;
-        return this._client.delete(path8`/organization/users/${user_id}/roles/${roleID}`, {
+        return this._client.delete(path9`/organization/users/${user_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58487,10 +58487,10 @@ var init_roles6 = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/users/users.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/users/users.mjs
 var Users3;
 var init_users3 = __esm({
-  "node_modules/openai/resources/admin/organization/users/users.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/users/users.mjs"() {
     init_resource();
     init_roles6();
     init_roles6();
@@ -58511,7 +58511,7 @@ var init_users3 = __esm({
        * ```
        */
       retrieve(userID, options) {
-        return this._client.get(path8`/organization/users/${userID}`, {
+        return this._client.get(path9`/organization/users/${userID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58526,7 +58526,7 @@ var init_users3 = __esm({
        * ```
        */
       update(userID, body, options) {
-        return this._client.post(path8`/organization/users/${userID}`, {
+        return this._client.post(path9`/organization/users/${userID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -58561,7 +58561,7 @@ var init_users3 = __esm({
        * ```
        */
       delete(userID, options) {
-        return this._client.delete(path8`/organization/users/${userID}`, {
+        return this._client.delete(path9`/organization/users/${userID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58571,10 +58571,10 @@ var init_users3 = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/organization.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/organization.mjs
 var Organization;
 var init_organization = __esm({
-  "node_modules/openai/resources/admin/organization/organization.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/organization.mjs"() {
     init_resource();
     init_admin_api_keys();
     init_admin_api_keys();
@@ -58632,10 +58632,10 @@ var init_organization = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/admin.mjs
+// ../../../server/node_modules/openai/resources/admin/admin.mjs
 var Admin;
 var init_admin = __esm({
-  "node_modules/openai/resources/admin/admin.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/admin.mjs"() {
     init_resource();
     init_organization();
     init_organization();
@@ -58649,10 +58649,10 @@ var init_admin = __esm({
   }
 });
 
-// node_modules/openai/resources/audio/speech.mjs
+// ../../../server/node_modules/openai/resources/audio/speech.mjs
 var Speech;
 var init_speech = __esm({
-  "node_modules/openai/resources/audio/speech.mjs"() {
+  "../../../server/node_modules/openai/resources/audio/speech.mjs"() {
     init_resource();
     init_headers2();
     Speech = class extends APIResource {
@@ -58686,10 +58686,10 @@ var init_speech = __esm({
   }
 });
 
-// node_modules/openai/resources/audio/transcriptions.mjs
+// ../../../server/node_modules/openai/resources/audio/transcriptions.mjs
 var Transcriptions;
 var init_transcriptions = __esm({
-  "node_modules/openai/resources/audio/transcriptions.mjs"() {
+  "../../../server/node_modules/openai/resources/audio/transcriptions.mjs"() {
     init_resource();
     init_uploads();
     Transcriptions = class extends APIResource {
@@ -58706,10 +58706,10 @@ var init_transcriptions = __esm({
   }
 });
 
-// node_modules/openai/resources/audio/translations.mjs
+// ../../../server/node_modules/openai/resources/audio/translations.mjs
 var Translations;
 var init_translations = __esm({
-  "node_modules/openai/resources/audio/translations.mjs"() {
+  "../../../server/node_modules/openai/resources/audio/translations.mjs"() {
     init_resource();
     init_uploads();
     Translations = class extends APIResource {
@@ -58720,10 +58720,10 @@ var init_translations = __esm({
   }
 });
 
-// node_modules/openai/resources/audio/audio.mjs
+// ../../../server/node_modules/openai/resources/audio/audio.mjs
 var Audio;
 var init_audio = __esm({
-  "node_modules/openai/resources/audio/audio.mjs"() {
+  "../../../server/node_modules/openai/resources/audio/audio.mjs"() {
     init_resource();
     init_speech();
     init_speech();
@@ -58745,10 +58745,10 @@ var init_audio = __esm({
   }
 });
 
-// node_modules/openai/resources/batches.mjs
+// ../../../server/node_modules/openai/resources/batches.mjs
 var Batches2;
 var init_batches = __esm({
-  "node_modules/openai/resources/batches.mjs"() {
+  "../../../server/node_modules/openai/resources/batches.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -58763,7 +58763,7 @@ var init_batches = __esm({
        * Retrieves a batch.
        */
       retrieve(batchID, options) {
-        return this._client.get(path8`/batches/${batchID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path9`/batches/${batchID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * List your organization's batches.
@@ -58781,7 +58781,7 @@ var init_batches = __esm({
        * (if any) available in the output file.
        */
       cancel(batchID, options) {
-        return this._client.post(path8`/batches/${batchID}/cancel`, {
+        return this._client.post(path9`/batches/${batchID}/cancel`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -58790,10 +58790,10 @@ var init_batches = __esm({
   }
 });
 
-// node_modules/openai/resources/beta/assistants.mjs
+// ../../../server/node_modules/openai/resources/beta/assistants.mjs
 var Assistants;
 var init_assistants = __esm({
-  "node_modules/openai/resources/beta/assistants.mjs"() {
+  "../../../server/node_modules/openai/resources/beta/assistants.mjs"() {
     init_resource();
     init_pagination();
     init_headers2();
@@ -58818,7 +58818,7 @@ var init_assistants = __esm({
        * @deprecated
        */
       retrieve(assistantID, options) {
-        return this._client.get(path8`/assistants/${assistantID}`, {
+        return this._client.get(path9`/assistants/${assistantID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -58830,7 +58830,7 @@ var init_assistants = __esm({
        * @deprecated
        */
       update(assistantID, body, options) {
-        return this._client.post(path8`/assistants/${assistantID}`, {
+        return this._client.post(path9`/assistants/${assistantID}`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -58856,7 +58856,7 @@ var init_assistants = __esm({
        * @deprecated
        */
       delete(assistantID, options) {
-        return this._client.delete(path8`/assistants/${assistantID}`, {
+        return this._client.delete(path9`/assistants/${assistantID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -58866,10 +58866,10 @@ var init_assistants = __esm({
   }
 });
 
-// node_modules/openai/resources/beta/realtime/sessions.mjs
+// ../../../server/node_modules/openai/resources/beta/realtime/sessions.mjs
 var Sessions;
 var init_sessions = __esm({
-  "node_modules/openai/resources/beta/realtime/sessions.mjs"() {
+  "../../../server/node_modules/openai/resources/beta/realtime/sessions.mjs"() {
     init_resource();
     init_headers2();
     Sessions = class extends APIResource {
@@ -58900,10 +58900,10 @@ var init_sessions = __esm({
   }
 });
 
-// node_modules/openai/resources/beta/realtime/transcription-sessions.mjs
+// ../../../server/node_modules/openai/resources/beta/realtime/transcription-sessions.mjs
 var TranscriptionSessions;
 var init_transcription_sessions = __esm({
-  "node_modules/openai/resources/beta/realtime/transcription-sessions.mjs"() {
+  "../../../server/node_modules/openai/resources/beta/realtime/transcription-sessions.mjs"() {
     init_resource();
     init_headers2();
     TranscriptionSessions = class extends APIResource {
@@ -58934,10 +58934,10 @@ var init_transcription_sessions = __esm({
   }
 });
 
-// node_modules/openai/resources/beta/realtime/realtime.mjs
+// ../../../server/node_modules/openai/resources/beta/realtime/realtime.mjs
 var Realtime;
 var init_realtime = __esm({
-  "node_modules/openai/resources/beta/realtime/realtime.mjs"() {
+  "../../../server/node_modules/openai/resources/beta/realtime/realtime.mjs"() {
     init_resource();
     init_sessions();
     init_sessions();
@@ -58955,10 +58955,10 @@ var init_realtime = __esm({
   }
 });
 
-// node_modules/openai/resources/beta/chatkit/sessions.mjs
+// ../../../server/node_modules/openai/resources/beta/chatkit/sessions.mjs
 var Sessions2;
 var init_sessions2 = __esm({
-  "node_modules/openai/resources/beta/chatkit/sessions.mjs"() {
+  "../../../server/node_modules/openai/resources/beta/chatkit/sessions.mjs"() {
     init_resource();
     init_headers2();
     init_path();
@@ -58995,7 +58995,7 @@ var init_sessions2 = __esm({
        * ```
        */
       cancel(sessionID, options) {
-        return this._client.post(path8`/chatkit/sessions/${sessionID}/cancel`, {
+        return this._client.post(path9`/chatkit/sessions/${sessionID}/cancel`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "chatkit_beta=v1" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -59005,10 +59005,10 @@ var init_sessions2 = __esm({
   }
 });
 
-// node_modules/openai/resources/beta/chatkit/threads.mjs
+// ../../../server/node_modules/openai/resources/beta/chatkit/threads.mjs
 var Threads;
 var init_threads = __esm({
-  "node_modules/openai/resources/beta/chatkit/threads.mjs"() {
+  "../../../server/node_modules/openai/resources/beta/chatkit/threads.mjs"() {
     init_resource();
     init_pagination();
     init_headers2();
@@ -59024,7 +59024,7 @@ var init_threads = __esm({
        * ```
        */
       retrieve(threadID, options) {
-        return this._client.get(path8`/chatkit/threads/${threadID}`, {
+        return this._client.get(path9`/chatkit/threads/${threadID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "chatkit_beta=v1" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -59060,7 +59060,7 @@ var init_threads = __esm({
        * ```
        */
       delete(threadID, options) {
-        return this._client.delete(path8`/chatkit/threads/${threadID}`, {
+        return this._client.delete(path9`/chatkit/threads/${threadID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "chatkit_beta=v1" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -59080,7 +59080,7 @@ var init_threads = __esm({
        * ```
        */
       listItems(threadID, query = {}, options) {
-        return this._client.getAPIList(path8`/chatkit/threads/${threadID}/items`, ConversationCursorPage, {
+        return this._client.getAPIList(path9`/chatkit/threads/${threadID}/items`, ConversationCursorPage, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "chatkit_beta=v1" }, options?.headers]),
@@ -59091,10 +59091,10 @@ var init_threads = __esm({
   }
 });
 
-// node_modules/openai/resources/beta/chatkit/chatkit.mjs
+// ../../../server/node_modules/openai/resources/beta/chatkit/chatkit.mjs
 var ChatKit;
 var init_chatkit = __esm({
-  "node_modules/openai/resources/beta/chatkit/chatkit.mjs"() {
+  "../../../server/node_modules/openai/resources/beta/chatkit/chatkit.mjs"() {
     init_resource();
     init_sessions2();
     init_sessions2();
@@ -59112,10 +59112,10 @@ var init_chatkit = __esm({
   }
 });
 
-// node_modules/openai/resources/beta/responses/input-items.mjs
+// ../../../server/node_modules/openai/resources/beta/responses/input-items.mjs
 var InputItems;
 var init_input_items = __esm({
-  "node_modules/openai/resources/beta/responses/input-items.mjs"() {
+  "../../../server/node_modules/openai/resources/beta/responses/input-items.mjs"() {
     init_resource();
     init_pagination();
     init_headers2();
@@ -59136,7 +59136,7 @@ var init_input_items = __esm({
        */
       list(responseID, params = {}, options) {
         const { betas, ...query } = params ?? {};
-        return this._client.getAPIList(path8`/responses/${responseID}/input_items?beta=true`, CursorPage, {
+        return this._client.getAPIList(path9`/responses/${responseID}/input_items?beta=true`, CursorPage, {
           query,
           ...options,
           headers: buildHeaders([
@@ -59150,10 +59150,10 @@ var init_input_items = __esm({
   }
 });
 
-// node_modules/openai/resources/beta/responses/input-tokens.mjs
+// ../../../server/node_modules/openai/resources/beta/responses/input-tokens.mjs
 var InputTokens;
 var init_input_tokens = __esm({
-  "node_modules/openai/resources/beta/responses/input-tokens.mjs"() {
+  "../../../server/node_modules/openai/resources/beta/responses/input-tokens.mjs"() {
     init_resource();
     init_headers2();
     InputTokens = class extends APIResource {
@@ -59185,10 +59185,10 @@ var init_input_tokens = __esm({
   }
 });
 
-// node_modules/openai/resources/beta/responses/responses.mjs
+// ../../../server/node_modules/openai/resources/beta/responses/responses.mjs
 var Responses;
 var init_responses = __esm({
-  "node_modules/openai/resources/beta/responses/responses.mjs"() {
+  "../../../server/node_modules/openai/resources/beta/responses/responses.mjs"() {
     init_resource();
     init_input_items();
     init_input_items();
@@ -59217,7 +59217,7 @@ var init_responses = __esm({
       }
       retrieve(responseID, params = {}, options) {
         const { betas, ...query } = params ?? {};
-        return this._client.get(path8`/responses/${responseID}?beta=true`, {
+        return this._client.get(path9`/responses/${responseID}?beta=true`, {
           query,
           ...options,
           headers: buildHeaders([
@@ -59240,7 +59240,7 @@ var init_responses = __esm({
        */
       delete(responseID, params = {}, options) {
         const { betas } = params ?? {};
-        return this._client.delete(path8`/responses/${responseID}?beta=true`, {
+        return this._client.delete(path9`/responses/${responseID}?beta=true`, {
           ...options,
           headers: buildHeaders([
             { Accept: "*/*", ...betas?.toString() != null ? { "openai-beta": betas?.toString() } : void 0 },
@@ -59263,7 +59263,7 @@ var init_responses = __esm({
        */
       cancel(responseID, params = {}, options) {
         const { betas } = params ?? {};
-        return this._client.post(path8`/responses/${responseID}/cancel?beta=true`, {
+        return this._client.post(path9`/responses/${responseID}/cancel?beta=true`, {
           ...options,
           headers: buildHeaders([
             { ...betas?.toString() != null ? { "openai-beta": betas?.toString() } : void 0 },
@@ -59306,10 +59306,10 @@ var init_responses = __esm({
   }
 });
 
-// node_modules/openai/resources/beta/threads/messages.mjs
+// ../../../server/node_modules/openai/resources/beta/threads/messages.mjs
 var Messages2;
 var init_messages2 = __esm({
-  "node_modules/openai/resources/beta/threads/messages.mjs"() {
+  "../../../server/node_modules/openai/resources/beta/threads/messages.mjs"() {
     init_resource();
     init_pagination();
     init_headers2();
@@ -59321,7 +59321,7 @@ var init_messages2 = __esm({
        * @deprecated The Assistants API is deprecated in favor of the Responses API
        */
       create(threadID, body, options) {
-        return this._client.post(path8`/threads/${threadID}/messages`, {
+        return this._client.post(path9`/threads/${threadID}/messages`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -59335,7 +59335,7 @@ var init_messages2 = __esm({
        */
       retrieve(messageID, params, options) {
         const { thread_id } = params;
-        return this._client.get(path8`/threads/${thread_id}/messages/${messageID}`, {
+        return this._client.get(path9`/threads/${thread_id}/messages/${messageID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -59348,7 +59348,7 @@ var init_messages2 = __esm({
        */
       update(messageID, params, options) {
         const { thread_id, ...body } = params;
-        return this._client.post(path8`/threads/${thread_id}/messages/${messageID}`, {
+        return this._client.post(path9`/threads/${thread_id}/messages/${messageID}`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -59361,7 +59361,7 @@ var init_messages2 = __esm({
        * @deprecated The Assistants API is deprecated in favor of the Responses API
        */
       list(threadID, query = {}, options) {
-        return this._client.getAPIList(path8`/threads/${threadID}/messages`, CursorPage, {
+        return this._client.getAPIList(path9`/threads/${threadID}/messages`, CursorPage, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -59375,7 +59375,7 @@ var init_messages2 = __esm({
        */
       delete(messageID, params, options) {
         const { thread_id } = params;
-        return this._client.delete(path8`/threads/${thread_id}/messages/${messageID}`, {
+        return this._client.delete(path9`/threads/${thread_id}/messages/${messageID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -59385,10 +59385,10 @@ var init_messages2 = __esm({
   }
 });
 
-// node_modules/openai/resources/beta/threads/runs/steps.mjs
+// ../../../server/node_modules/openai/resources/beta/threads/runs/steps.mjs
 var Steps;
 var init_steps = __esm({
-  "node_modules/openai/resources/beta/threads/runs/steps.mjs"() {
+  "../../../server/node_modules/openai/resources/beta/threads/runs/steps.mjs"() {
     init_resource();
     init_pagination();
     init_headers2();
@@ -59401,7 +59401,7 @@ var init_steps = __esm({
        */
       retrieve(stepID, params, options) {
         const { thread_id, run_id, ...query } = params;
-        return this._client.get(path8`/threads/${thread_id}/runs/${run_id}/steps/${stepID}`, {
+        return this._client.get(path9`/threads/${thread_id}/runs/${run_id}/steps/${stepID}`, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -59415,7 +59415,7 @@ var init_steps = __esm({
        */
       list(runID, params, options) {
         const { thread_id, ...query } = params;
-        return this._client.getAPIList(path8`/threads/${thread_id}/runs/${runID}/steps`, CursorPage, {
+        return this._client.getAPIList(path9`/threads/${thread_id}/runs/${runID}/steps`, CursorPage, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -59426,10 +59426,10 @@ var init_steps = __esm({
   }
 });
 
-// node_modules/openai/internal/utils/base64.mjs
+// ../../../server/node_modules/openai/internal/utils/base64.mjs
 var toFloat32Array;
 var init_base64 = __esm({
-  "node_modules/openai/internal/utils/base64.mjs"() {
+  "../../../server/node_modules/openai/internal/utils/base64.mjs"() {
     init_error();
     init_bytes();
     toFloat32Array = (base64Str) => {
@@ -59449,10 +59449,10 @@ var init_base64 = __esm({
   }
 });
 
-// node_modules/openai/internal/utils/env.mjs
+// ../../../server/node_modules/openai/internal/utils/env.mjs
 var readEnv;
 var init_env = __esm({
-  "node_modules/openai/internal/utils/env.mjs"() {
+  "../../../server/node_modules/openai/internal/utils/env.mjs"() {
     readEnv = (env2) => {
       if (typeof globalThis.process !== "undefined") {
         return globalThis.process.env?.[env2]?.trim() || void 0;
@@ -59465,9 +59465,9 @@ var init_env = __esm({
   }
 });
 
-// node_modules/openai/internal/utils.mjs
+// ../../../server/node_modules/openai/internal/utils.mjs
 var init_utils2 = __esm({
-  "node_modules/openai/internal/utils.mjs"() {
+  "../../../server/node_modules/openai/internal/utils.mjs"() {
     init_values();
     init_base64();
     init_env();
@@ -59478,12 +59478,12 @@ var init_utils2 = __esm({
   }
 });
 
-// node_modules/openai/lib/AssistantStream.mjs
+// ../../../server/node_modules/openai/lib/AssistantStream.mjs
 function assertNever3(_x) {
 }
 var _AssistantStream_instances, _a2, _AssistantStream_events, _AssistantStream_runStepSnapshots, _AssistantStream_messageSnapshots, _AssistantStream_messageSnapshot, _AssistantStream_finalRun, _AssistantStream_currentContentIndex, _AssistantStream_currentContent, _AssistantStream_currentToolCallIndex, _AssistantStream_currentToolCall, _AssistantStream_currentEvent, _AssistantStream_currentRunSnapshot, _AssistantStream_currentRunStepSnapshot, _AssistantStream_addEvent, _AssistantStream_endRequest, _AssistantStream_handleMessage, _AssistantStream_handleRunStep, _AssistantStream_handleEvent, _AssistantStream_accumulateRunStep, _AssistantStream_accumulateMessage, _AssistantStream_accumulateContent, _AssistantStream_handleRun, AssistantStream;
 var init_AssistantStream = __esm({
-  "node_modules/openai/lib/AssistantStream.mjs"() {
+  "../../../server/node_modules/openai/lib/AssistantStream.mjs"() {
     init_tslib();
     init_streaming2();
     init_error2();
@@ -59546,7 +59546,7 @@ var init_AssistantStream = __esm({
               if (done) {
                 return { value: void 0, done: true };
               }
-              return new Promise((resolve3, reject) => readQueue.push({ resolve: resolve3, reject })).then((chunk3) => chunk3 ? { value: chunk3, done: false } : { value: void 0, done: true });
+              return new Promise((resolve5, reject) => readQueue.push({ resolve: resolve5, reject })).then((chunk3) => chunk3 ? { value: chunk3, done: false } : { value: void 0, done: true });
             }
             const chunk2 = pushQueue.shift();
             return { value: chunk2, done: false };
@@ -59985,10 +59985,10 @@ var init_AssistantStream = __esm({
   }
 });
 
-// node_modules/openai/resources/beta/threads/runs/runs.mjs
+// ../../../server/node_modules/openai/resources/beta/threads/runs/runs.mjs
 var Runs;
 var init_runs = __esm({
-  "node_modules/openai/resources/beta/threads/runs/runs.mjs"() {
+  "../../../server/node_modules/openai/resources/beta/threads/runs/runs.mjs"() {
     init_resource();
     init_steps();
     init_steps();
@@ -60004,7 +60004,7 @@ var init_runs = __esm({
       }
       create(threadID, params, options) {
         const { include, ...body } = params;
-        return this._client.post(path8`/threads/${threadID}/runs`, {
+        return this._client.post(path9`/threads/${threadID}/runs`, {
           query: { include },
           body,
           ...options,
@@ -60021,7 +60021,7 @@ var init_runs = __esm({
        */
       retrieve(runID, params, options) {
         const { thread_id } = params;
-        return this._client.get(path8`/threads/${thread_id}/runs/${runID}`, {
+        return this._client.get(path9`/threads/${thread_id}/runs/${runID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -60034,7 +60034,7 @@ var init_runs = __esm({
        */
       update(runID, params, options) {
         const { thread_id, ...body } = params;
-        return this._client.post(path8`/threads/${thread_id}/runs/${runID}`, {
+        return this._client.post(path9`/threads/${thread_id}/runs/${runID}`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -60047,7 +60047,7 @@ var init_runs = __esm({
        * @deprecated The Assistants API is deprecated in favor of the Responses API
        */
       list(threadID, query = {}, options) {
-        return this._client.getAPIList(path8`/threads/${threadID}/runs`, CursorPage, {
+        return this._client.getAPIList(path9`/threads/${threadID}/runs`, CursorPage, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -60061,7 +60061,7 @@ var init_runs = __esm({
        */
       cancel(runID, params, options) {
         const { thread_id } = params;
-        return this._client.post(path8`/threads/${thread_id}/runs/${runID}/cancel`, {
+        return this._client.post(path9`/threads/${thread_id}/runs/${runID}/cancel`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -60140,7 +60140,7 @@ var init_runs = __esm({
       }
       submitToolOutputs(runID, params, options) {
         const { thread_id, ...body } = params;
-        return this._client.post(path8`/threads/${thread_id}/runs/${runID}/submit_tool_outputs`, {
+        return this._client.post(path9`/threads/${thread_id}/runs/${runID}/submit_tool_outputs`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -60171,10 +60171,10 @@ var init_runs = __esm({
   }
 });
 
-// node_modules/openai/resources/beta/threads/threads.mjs
+// ../../../server/node_modules/openai/resources/beta/threads/threads.mjs
 var Threads2;
 var init_threads2 = __esm({
-  "node_modules/openai/resources/beta/threads/threads.mjs"() {
+  "../../../server/node_modules/openai/resources/beta/threads/threads.mjs"() {
     init_resource();
     init_messages2();
     init_messages2();
@@ -60208,7 +60208,7 @@ var init_threads2 = __esm({
        * @deprecated The Assistants API is deprecated in favor of the Responses API
        */
       retrieve(threadID, options) {
-        return this._client.get(path8`/threads/${threadID}`, {
+        return this._client.get(path9`/threads/${threadID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -60220,7 +60220,7 @@ var init_threads2 = __esm({
        * @deprecated The Assistants API is deprecated in favor of the Responses API
        */
       update(threadID, body, options) {
-        return this._client.post(path8`/threads/${threadID}`, {
+        return this._client.post(path9`/threads/${threadID}`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -60233,7 +60233,7 @@ var init_threads2 = __esm({
        * @deprecated The Assistants API is deprecated in favor of the Responses API
        */
       delete(threadID, options) {
-        return this._client.delete(path8`/threads/${threadID}`, {
+        return this._client.delete(path9`/threads/${threadID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -60270,10 +60270,10 @@ var init_threads2 = __esm({
   }
 });
 
-// node_modules/openai/resources/beta/beta.mjs
+// ../../../server/node_modules/openai/resources/beta/beta.mjs
 var Beta;
 var init_beta = __esm({
-  "node_modules/openai/resources/beta/beta.mjs"() {
+  "../../../server/node_modules/openai/resources/beta/beta.mjs"() {
     init_resource();
     init_assistants();
     init_assistants();
@@ -60303,10 +60303,10 @@ var init_beta = __esm({
   }
 });
 
-// node_modules/openai/resources/completions.mjs
+// ../../../server/node_modules/openai/resources/completions.mjs
 var Completions2;
 var init_completions3 = __esm({
-  "node_modules/openai/resources/completions.mjs"() {
+  "../../../server/node_modules/openai/resources/completions.mjs"() {
     init_resource();
     Completions2 = class extends APIResource {
       create(body, options) {
@@ -60321,10 +60321,10 @@ var init_completions3 = __esm({
   }
 });
 
-// node_modules/openai/resources/containers/files/content.mjs
+// ../../../server/node_modules/openai/resources/containers/files/content.mjs
 var Content;
 var init_content = __esm({
-  "node_modules/openai/resources/containers/files/content.mjs"() {
+  "../../../server/node_modules/openai/resources/containers/files/content.mjs"() {
     init_resource();
     init_headers2();
     init_path();
@@ -60334,7 +60334,7 @@ var init_content = __esm({
        */
       retrieve(fileID, params, options) {
         const { container_id } = params;
-        return this._client.get(path8`/containers/${container_id}/files/${fileID}/content`, {
+        return this._client.get(path9`/containers/${container_id}/files/${fileID}/content`, {
           ...options,
           headers: buildHeaders([{ Accept: "application/binary" }, options?.headers]),
           __security: { bearerAuth: true },
@@ -60345,10 +60345,10 @@ var init_content = __esm({
   }
 });
 
-// node_modules/openai/resources/containers/files/files.mjs
+// ../../../server/node_modules/openai/resources/containers/files/files.mjs
 var Files3;
 var init_files = __esm({
-  "node_modules/openai/resources/containers/files/files.mjs"() {
+  "../../../server/node_modules/openai/resources/containers/files/files.mjs"() {
     init_resource();
     init_content();
     init_content();
@@ -60368,14 +60368,14 @@ var init_files = __esm({
        * a JSON request with a file ID.
        */
       create(containerID, body, options) {
-        return this._client.post(path8`/containers/${containerID}/files`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
+        return this._client.post(path9`/containers/${containerID}/files`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
       }
       /**
        * Retrieve Container File
        */
       retrieve(fileID, params, options) {
         const { container_id } = params;
-        return this._client.get(path8`/containers/${container_id}/files/${fileID}`, {
+        return this._client.get(path9`/containers/${container_id}/files/${fileID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60384,7 +60384,7 @@ var init_files = __esm({
        * List Container files
        */
       list(containerID, query = {}, options) {
-        return this._client.getAPIList(path8`/containers/${containerID}/files`, CursorPage, {
+        return this._client.getAPIList(path9`/containers/${containerID}/files`, CursorPage, {
           query,
           ...options,
           __security: { bearerAuth: true }
@@ -60395,7 +60395,7 @@ var init_files = __esm({
        */
       delete(fileID, params, options) {
         const { container_id } = params;
-        return this._client.delete(path8`/containers/${container_id}/files/${fileID}`, {
+        return this._client.delete(path9`/containers/${container_id}/files/${fileID}`, {
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -60406,10 +60406,10 @@ var init_files = __esm({
   }
 });
 
-// node_modules/openai/resources/containers/containers.mjs
+// ../../../server/node_modules/openai/resources/containers/containers.mjs
 var Containers;
 var init_containers = __esm({
-  "node_modules/openai/resources/containers/containers.mjs"() {
+  "../../../server/node_modules/openai/resources/containers/containers.mjs"() {
     init_resource();
     init_files();
     init_files();
@@ -60431,7 +60431,7 @@ var init_containers = __esm({
        * Retrieve Container
        */
       retrieve(containerID, options) {
-        return this._client.get(path8`/containers/${containerID}`, {
+        return this._client.get(path9`/containers/${containerID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60450,7 +60450,7 @@ var init_containers = __esm({
        * Delete Container
        */
       delete(containerID, options) {
-        return this._client.delete(path8`/containers/${containerID}`, {
+        return this._client.delete(path9`/containers/${containerID}`, {
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -60461,10 +60461,10 @@ var init_containers = __esm({
   }
 });
 
-// node_modules/openai/resources/conversations/items.mjs
+// ../../../server/node_modules/openai/resources/conversations/items.mjs
 var Items;
 var init_items = __esm({
-  "node_modules/openai/resources/conversations/items.mjs"() {
+  "../../../server/node_modules/openai/resources/conversations/items.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -60474,7 +60474,7 @@ var init_items = __esm({
        */
       create(conversationID, params, options) {
         const { include, ...body } = params;
-        return this._client.post(path8`/conversations/${conversationID}/items`, {
+        return this._client.post(path9`/conversations/${conversationID}/items`, {
           query: { include },
           body,
           ...options,
@@ -60486,7 +60486,7 @@ var init_items = __esm({
        */
       retrieve(itemID, params, options) {
         const { conversation_id, ...query } = params;
-        return this._client.get(path8`/conversations/${conversation_id}/items/${itemID}`, {
+        return this._client.get(path9`/conversations/${conversation_id}/items/${itemID}`, {
           query,
           ...options,
           __security: { bearerAuth: true }
@@ -60496,14 +60496,14 @@ var init_items = __esm({
        * List all items for a conversation with the given ID.
        */
       list(conversationID, query = {}, options) {
-        return this._client.getAPIList(path8`/conversations/${conversationID}/items`, ConversationCursorPage, { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path9`/conversations/${conversationID}/items`, ConversationCursorPage, { query, ...options, __security: { bearerAuth: true } });
       }
       /**
        * Delete an item from a conversation with the given IDs.
        */
       delete(itemID, params, options) {
         const { conversation_id } = params;
-        return this._client.delete(path8`/conversations/${conversation_id}/items/${itemID}`, {
+        return this._client.delete(path9`/conversations/${conversation_id}/items/${itemID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60512,10 +60512,10 @@ var init_items = __esm({
   }
 });
 
-// node_modules/openai/resources/conversations/conversations.mjs
+// ../../../server/node_modules/openai/resources/conversations/conversations.mjs
 var Conversations;
 var init_conversations = __esm({
-  "node_modules/openai/resources/conversations/conversations.mjs"() {
+  "../../../server/node_modules/openai/resources/conversations/conversations.mjs"() {
     init_resource();
     init_items();
     init_items();
@@ -60535,7 +60535,7 @@ var init_conversations = __esm({
        * Get a conversation
        */
       retrieve(conversationID, options) {
-        return this._client.get(path8`/conversations/${conversationID}`, {
+        return this._client.get(path9`/conversations/${conversationID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60544,7 +60544,7 @@ var init_conversations = __esm({
        * Update a conversation
        */
       update(conversationID, body, options) {
-        return this._client.post(path8`/conversations/${conversationID}`, {
+        return this._client.post(path9`/conversations/${conversationID}`, {
           body,
           ...options,
           __security: { bearerAuth: true }
@@ -60554,7 +60554,7 @@ var init_conversations = __esm({
        * Delete a conversation. Items in the conversation will not be deleted.
        */
       delete(conversationID, options) {
-        return this._client.delete(path8`/conversations/${conversationID}`, {
+        return this._client.delete(path9`/conversations/${conversationID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60564,10 +60564,10 @@ var init_conversations = __esm({
   }
 });
 
-// node_modules/openai/resources/embeddings.mjs
+// ../../../server/node_modules/openai/resources/embeddings.mjs
 var Embeddings;
 var init_embeddings = __esm({
-  "node_modules/openai/resources/embeddings.mjs"() {
+  "../../../server/node_modules/openai/resources/embeddings.mjs"() {
     init_resource();
     init_utils2();
     Embeddings = class extends APIResource {
@@ -60615,10 +60615,10 @@ var init_embeddings = __esm({
   }
 });
 
-// node_modules/openai/resources/evals/runs/output-items.mjs
+// ../../../server/node_modules/openai/resources/evals/runs/output-items.mjs
 var OutputItems;
 var init_output_items = __esm({
-  "node_modules/openai/resources/evals/runs/output-items.mjs"() {
+  "../../../server/node_modules/openai/resources/evals/runs/output-items.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -60628,7 +60628,7 @@ var init_output_items = __esm({
        */
       retrieve(outputItemID, params, options) {
         const { eval_id, run_id } = params;
-        return this._client.get(path8`/evals/${eval_id}/runs/${run_id}/output_items/${outputItemID}`, {
+        return this._client.get(path9`/evals/${eval_id}/runs/${run_id}/output_items/${outputItemID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60638,16 +60638,16 @@ var init_output_items = __esm({
        */
       list(runID, params, options) {
         const { eval_id, ...query } = params;
-        return this._client.getAPIList(path8`/evals/${eval_id}/runs/${runID}/output_items`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path9`/evals/${eval_id}/runs/${runID}/output_items`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
       }
     };
   }
 });
 
-// node_modules/openai/resources/evals/runs/runs.mjs
+// ../../../server/node_modules/openai/resources/evals/runs/runs.mjs
 var Runs2;
 var init_runs2 = __esm({
-  "node_modules/openai/resources/evals/runs/runs.mjs"() {
+  "../../../server/node_modules/openai/resources/evals/runs/runs.mjs"() {
     init_resource();
     init_output_items();
     init_output_items();
@@ -60664,7 +60664,7 @@ var init_runs2 = __esm({
        * schema specified in the config of the evaluation.
        */
       create(evalID, body, options) {
-        return this._client.post(path8`/evals/${evalID}/runs`, {
+        return this._client.post(path9`/evals/${evalID}/runs`, {
           body,
           ...options,
           __security: { bearerAuth: true }
@@ -60675,7 +60675,7 @@ var init_runs2 = __esm({
        */
       retrieve(runID, params, options) {
         const { eval_id } = params;
-        return this._client.get(path8`/evals/${eval_id}/runs/${runID}`, {
+        return this._client.get(path9`/evals/${eval_id}/runs/${runID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60684,7 +60684,7 @@ var init_runs2 = __esm({
        * Get a list of runs for an evaluation.
        */
       list(evalID, query = {}, options) {
-        return this._client.getAPIList(path8`/evals/${evalID}/runs`, CursorPage, {
+        return this._client.getAPIList(path9`/evals/${evalID}/runs`, CursorPage, {
           query,
           ...options,
           __security: { bearerAuth: true }
@@ -60695,7 +60695,7 @@ var init_runs2 = __esm({
        */
       delete(runID, params, options) {
         const { eval_id } = params;
-        return this._client.delete(path8`/evals/${eval_id}/runs/${runID}`, {
+        return this._client.delete(path9`/evals/${eval_id}/runs/${runID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60705,7 +60705,7 @@ var init_runs2 = __esm({
        */
       cancel(runID, params, options) {
         const { eval_id } = params;
-        return this._client.post(path8`/evals/${eval_id}/runs/${runID}`, {
+        return this._client.post(path9`/evals/${eval_id}/runs/${runID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60715,10 +60715,10 @@ var init_runs2 = __esm({
   }
 });
 
-// node_modules/openai/resources/evals/evals.mjs
+// ../../../server/node_modules/openai/resources/evals/evals.mjs
 var Evals;
 var init_evals = __esm({
-  "node_modules/openai/resources/evals/evals.mjs"() {
+  "../../../server/node_modules/openai/resources/evals/evals.mjs"() {
     init_resource();
     init_runs2();
     init_runs2();
@@ -60744,13 +60744,13 @@ var init_evals = __esm({
        * Get an evaluation by ID.
        */
       retrieve(evalID, options) {
-        return this._client.get(path8`/evals/${evalID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path9`/evals/${evalID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * Update certain properties of an evaluation.
        */
       update(evalID, body, options) {
-        return this._client.post(path8`/evals/${evalID}`, { body, ...options, __security: { bearerAuth: true } });
+        return this._client.post(path9`/evals/${evalID}`, { body, ...options, __security: { bearerAuth: true } });
       }
       /**
        * List evaluations for a project.
@@ -60766,17 +60766,17 @@ var init_evals = __esm({
        * Delete an evaluation.
        */
       delete(evalID, options) {
-        return this._client.delete(path8`/evals/${evalID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.delete(path9`/evals/${evalID}`, { ...options, __security: { bearerAuth: true } });
       }
     };
     Evals.Runs = Runs2;
   }
 });
 
-// node_modules/openai/resources/files.mjs
+// ../../../server/node_modules/openai/resources/files.mjs
 var Files4;
 var init_files2 = __esm({
-  "node_modules/openai/resources/files.mjs"() {
+  "../../../server/node_modules/openai/resources/files.mjs"() {
     init_resource();
     init_pagination();
     init_headers2();
@@ -60821,7 +60821,7 @@ var init_files2 = __esm({
        * Returns information about a specific file.
        */
       retrieve(fileID, options) {
-        return this._client.get(path8`/files/${fileID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path9`/files/${fileID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * Returns a list of files.
@@ -60837,13 +60837,13 @@ var init_files2 = __esm({
        * Delete a file and remove it from all vector stores.
        */
       delete(fileID, options) {
-        return this._client.delete(path8`/files/${fileID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.delete(path9`/files/${fileID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * Returns the contents of the specified file.
        */
       content(fileID, options) {
-        return this._client.get(path8`/files/${fileID}/content`, {
+        return this._client.get(path9`/files/${fileID}/content`, {
           ...options,
           headers: buildHeaders([{ Accept: "application/binary" }, options?.headers]),
           __security: { bearerAuth: true },
@@ -60872,20 +60872,20 @@ var init_files2 = __esm({
   }
 });
 
-// node_modules/openai/resources/fine-tuning/methods.mjs
+// ../../../server/node_modules/openai/resources/fine-tuning/methods.mjs
 var Methods;
 var init_methods = __esm({
-  "node_modules/openai/resources/fine-tuning/methods.mjs"() {
+  "../../../server/node_modules/openai/resources/fine-tuning/methods.mjs"() {
     init_resource();
     Methods = class extends APIResource {
     };
   }
 });
 
-// node_modules/openai/resources/fine-tuning/alpha/graders.mjs
+// ../../../server/node_modules/openai/resources/fine-tuning/alpha/graders.mjs
 var Graders;
 var init_graders = __esm({
-  "node_modules/openai/resources/fine-tuning/alpha/graders.mjs"() {
+  "../../../server/node_modules/openai/resources/fine-tuning/alpha/graders.mjs"() {
     init_resource();
     Graders = class extends APIResource {
       /**
@@ -60940,10 +60940,10 @@ var init_graders = __esm({
   }
 });
 
-// node_modules/openai/resources/fine-tuning/alpha/alpha.mjs
+// ../../../server/node_modules/openai/resources/fine-tuning/alpha/alpha.mjs
 var Alpha;
 var init_alpha = __esm({
-  "node_modules/openai/resources/fine-tuning/alpha/alpha.mjs"() {
+  "../../../server/node_modules/openai/resources/fine-tuning/alpha/alpha.mjs"() {
     init_resource();
     init_graders();
     init_graders();
@@ -60957,10 +60957,10 @@ var init_alpha = __esm({
   }
 });
 
-// node_modules/openai/resources/fine-tuning/checkpoints/permissions.mjs
+// ../../../server/node_modules/openai/resources/fine-tuning/checkpoints/permissions.mjs
 var Permissions;
 var init_permissions = __esm({
-  "node_modules/openai/resources/fine-tuning/checkpoints/permissions.mjs"() {
+  "../../../server/node_modules/openai/resources/fine-tuning/checkpoints/permissions.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -60983,7 +60983,7 @@ var init_permissions = __esm({
        * ```
        */
       create(fineTunedModelCheckpoint, body, options) {
-        return this._client.getAPIList(path8`/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, Page, { body, method: "post", ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path9`/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, Page, { body, method: "post", ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * **NOTE:** This endpoint requires an [admin API key](../admin-api-keys).
@@ -60994,7 +60994,7 @@ var init_permissions = __esm({
        * @deprecated Retrieve is deprecated. Please swap to the paginated list method instead.
        */
       retrieve(fineTunedModelCheckpoint, query = {}, options) {
-        return this._client.get(path8`/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, {
+        return this._client.get(path9`/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, {
           query,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -61017,7 +61017,7 @@ var init_permissions = __esm({
        * ```
        */
       list(fineTunedModelCheckpoint, query = {}, options) {
-        return this._client.getAPIList(path8`/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path9`/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * **NOTE:** This endpoint requires an [admin API key](../admin-api-keys).
@@ -61039,16 +61039,16 @@ var init_permissions = __esm({
        */
       delete(permissionID, params, options) {
         const { fine_tuned_model_checkpoint } = params;
-        return this._client.delete(path8`/fine_tuning/checkpoints/${fine_tuned_model_checkpoint}/permissions/${permissionID}`, { ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.delete(path9`/fine_tuning/checkpoints/${fine_tuned_model_checkpoint}/permissions/${permissionID}`, { ...options, __security: { adminAPIKeyAuth: true } });
       }
     };
   }
 });
 
-// node_modules/openai/resources/fine-tuning/checkpoints/checkpoints.mjs
+// ../../../server/node_modules/openai/resources/fine-tuning/checkpoints/checkpoints.mjs
 var Checkpoints;
 var init_checkpoints = __esm({
-  "node_modules/openai/resources/fine-tuning/checkpoints/checkpoints.mjs"() {
+  "../../../server/node_modules/openai/resources/fine-tuning/checkpoints/checkpoints.mjs"() {
     init_resource();
     init_permissions();
     init_permissions();
@@ -61062,10 +61062,10 @@ var init_checkpoints = __esm({
   }
 });
 
-// node_modules/openai/resources/fine-tuning/jobs/checkpoints.mjs
+// ../../../server/node_modules/openai/resources/fine-tuning/jobs/checkpoints.mjs
 var Checkpoints2;
 var init_checkpoints2 = __esm({
-  "node_modules/openai/resources/fine-tuning/jobs/checkpoints.mjs"() {
+  "../../../server/node_modules/openai/resources/fine-tuning/jobs/checkpoints.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -61084,16 +61084,16 @@ var init_checkpoints2 = __esm({
        * ```
        */
       list(fineTuningJobID, query = {}, options) {
-        return this._client.getAPIList(path8`/fine_tuning/jobs/${fineTuningJobID}/checkpoints`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path9`/fine_tuning/jobs/${fineTuningJobID}/checkpoints`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
       }
     };
   }
 });
 
-// node_modules/openai/resources/fine-tuning/jobs/jobs.mjs
+// ../../../server/node_modules/openai/resources/fine-tuning/jobs/jobs.mjs
 var Jobs;
 var init_jobs = __esm({
-  "node_modules/openai/resources/fine-tuning/jobs/jobs.mjs"() {
+  "../../../server/node_modules/openai/resources/fine-tuning/jobs/jobs.mjs"() {
     init_resource();
     init_checkpoints2();
     init_checkpoints2();
@@ -61137,7 +61137,7 @@ var init_jobs = __esm({
        * ```
        */
       retrieve(fineTuningJobID, options) {
-        return this._client.get(path8`/fine_tuning/jobs/${fineTuningJobID}`, {
+        return this._client.get(path9`/fine_tuning/jobs/${fineTuningJobID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -61171,7 +61171,7 @@ var init_jobs = __esm({
        * ```
        */
       cancel(fineTuningJobID, options) {
-        return this._client.post(path8`/fine_tuning/jobs/${fineTuningJobID}/cancel`, {
+        return this._client.post(path9`/fine_tuning/jobs/${fineTuningJobID}/cancel`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -61190,7 +61190,7 @@ var init_jobs = __esm({
        * ```
        */
       listEvents(fineTuningJobID, query = {}, options) {
-        return this._client.getAPIList(path8`/fine_tuning/jobs/${fineTuningJobID}/events`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path9`/fine_tuning/jobs/${fineTuningJobID}/events`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
       }
       /**
        * Pause a fine-tune job.
@@ -61203,7 +61203,7 @@ var init_jobs = __esm({
        * ```
        */
       pause(fineTuningJobID, options) {
-        return this._client.post(path8`/fine_tuning/jobs/${fineTuningJobID}/pause`, {
+        return this._client.post(path9`/fine_tuning/jobs/${fineTuningJobID}/pause`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -61219,7 +61219,7 @@ var init_jobs = __esm({
        * ```
        */
       resume(fineTuningJobID, options) {
-        return this._client.post(path8`/fine_tuning/jobs/${fineTuningJobID}/resume`, {
+        return this._client.post(path9`/fine_tuning/jobs/${fineTuningJobID}/resume`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -61229,10 +61229,10 @@ var init_jobs = __esm({
   }
 });
 
-// node_modules/openai/resources/fine-tuning/fine-tuning.mjs
+// ../../../server/node_modules/openai/resources/fine-tuning/fine-tuning.mjs
 var FineTuning;
 var init_fine_tuning = __esm({
-  "node_modules/openai/resources/fine-tuning/fine-tuning.mjs"() {
+  "../../../server/node_modules/openai/resources/fine-tuning/fine-tuning.mjs"() {
     init_resource();
     init_methods();
     init_methods();
@@ -61258,20 +61258,20 @@ var init_fine_tuning = __esm({
   }
 });
 
-// node_modules/openai/resources/graders/grader-models.mjs
+// ../../../server/node_modules/openai/resources/graders/grader-models.mjs
 var GraderModels;
 var init_grader_models = __esm({
-  "node_modules/openai/resources/graders/grader-models.mjs"() {
+  "../../../server/node_modules/openai/resources/graders/grader-models.mjs"() {
     init_resource();
     GraderModels = class extends APIResource {
     };
   }
 });
 
-// node_modules/openai/resources/graders/graders.mjs
+// ../../../server/node_modules/openai/resources/graders/graders.mjs
 var Graders2;
 var init_graders2 = __esm({
-  "node_modules/openai/resources/graders/graders.mjs"() {
+  "../../../server/node_modules/openai/resources/graders/graders.mjs"() {
     init_resource();
     init_grader_models();
     init_grader_models();
@@ -61285,10 +61285,10 @@ var init_graders2 = __esm({
   }
 });
 
-// node_modules/openai/resources/images.mjs
+// ../../../server/node_modules/openai/resources/images.mjs
 var Images;
 var init_images = __esm({
-  "node_modules/openai/resources/images.mjs"() {
+  "../../../server/node_modules/openai/resources/images.mjs"() {
     init_resource();
     init_uploads();
     Images = class extends APIResource {
@@ -61320,10 +61320,10 @@ var init_images = __esm({
   }
 });
 
-// node_modules/openai/resources/models.mjs
+// ../../../server/node_modules/openai/resources/models.mjs
 var Models2;
 var init_models = __esm({
-  "node_modules/openai/resources/models.mjs"() {
+  "../../../server/node_modules/openai/resources/models.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -61333,7 +61333,7 @@ var init_models = __esm({
        * the owner and permissioning.
        */
       retrieve(model, options) {
-        return this._client.get(path8`/models/${model}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path9`/models/${model}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * Lists the currently available models, and provides basic information about each
@@ -61347,16 +61347,16 @@ var init_models = __esm({
        * delete a model.
        */
       delete(model, options) {
-        return this._client.delete(path8`/models/${model}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.delete(path9`/models/${model}`, { ...options, __security: { bearerAuth: true } });
       }
     };
   }
 });
 
-// node_modules/openai/resources/moderations.mjs
+// ../../../server/node_modules/openai/resources/moderations.mjs
 var Moderations;
 var init_moderations = __esm({
-  "node_modules/openai/resources/moderations.mjs"() {
+  "../../../server/node_modules/openai/resources/moderations.mjs"() {
     init_resource();
     Moderations = class extends APIResource {
       /**
@@ -61370,10 +61370,10 @@ var init_moderations = __esm({
   }
 });
 
-// node_modules/openai/resources/realtime/calls.mjs
+// ../../../server/node_modules/openai/resources/realtime/calls.mjs
 var Calls;
 var init_calls = __esm({
-  "node_modules/openai/resources/realtime/calls.mjs"() {
+  "../../../server/node_modules/openai/resources/realtime/calls.mjs"() {
     init_resource();
     init_headers2();
     init_path();
@@ -61390,7 +61390,7 @@ var init_calls = __esm({
        * ```
        */
       accept(callID, body, options) {
-        return this._client.post(path8`/realtime/calls/${callID}/accept`, {
+        return this._client.post(path9`/realtime/calls/${callID}/accept`, {
           body,
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
@@ -61406,7 +61406,7 @@ var init_calls = __esm({
        * ```
        */
       hangup(callID, options) {
-        return this._client.post(path8`/realtime/calls/${callID}/hangup`, {
+        return this._client.post(path9`/realtime/calls/${callID}/hangup`, {
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -61423,7 +61423,7 @@ var init_calls = __esm({
        * ```
        */
       refer(callID, body, options) {
-        return this._client.post(path8`/realtime/calls/${callID}/refer`, {
+        return this._client.post(path9`/realtime/calls/${callID}/refer`, {
           body,
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
@@ -61439,7 +61439,7 @@ var init_calls = __esm({
        * ```
        */
       reject(callID, body = {}, options) {
-        return this._client.post(path8`/realtime/calls/${callID}/reject`, {
+        return this._client.post(path9`/realtime/calls/${callID}/reject`, {
           body,
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
@@ -61450,10 +61450,10 @@ var init_calls = __esm({
   }
 });
 
-// node_modules/openai/resources/realtime/client-secrets.mjs
+// ../../../server/node_modules/openai/resources/realtime/client-secrets.mjs
 var ClientSecrets;
 var init_client_secrets = __esm({
-  "node_modules/openai/resources/realtime/client-secrets.mjs"() {
+  "../../../server/node_modules/openai/resources/realtime/client-secrets.mjs"() {
     init_resource();
     ClientSecrets = class extends APIResource {
       /**
@@ -61490,10 +61490,10 @@ var init_client_secrets = __esm({
   }
 });
 
-// node_modules/openai/resources/realtime/realtime.mjs
+// ../../../server/node_modules/openai/resources/realtime/realtime.mjs
 var Realtime2;
 var init_realtime2 = __esm({
-  "node_modules/openai/resources/realtime/realtime.mjs"() {
+  "../../../server/node_modules/openai/resources/realtime/realtime.mjs"() {
     init_resource();
     init_calls();
     init_calls();
@@ -61511,7 +61511,7 @@ var init_realtime2 = __esm({
   }
 });
 
-// node_modules/openai/lib/ResponsesParser.mjs
+// ../../../server/node_modules/openai/lib/ResponsesParser.mjs
 function maybeParseResponse(response, params) {
   if (!params || !hasAutoParseableInput2(params)) {
     const parsed = {
@@ -61637,13 +61637,13 @@ function addOutputText(rsp) {
   rsp.output_text = texts.join("");
 }
 var init_ResponsesParser = __esm({
-  "node_modules/openai/lib/ResponsesParser.mjs"() {
+  "../../../server/node_modules/openai/lib/ResponsesParser.mjs"() {
     init_error2();
     init_parser();
   }
 });
 
-// node_modules/openai/lib/responses/ResponseAccumulator.mjs
+// ../../../server/node_modules/openai/lib/responses/ResponseAccumulator.mjs
 function accumulateResponse(event, snapshot) {
   if (!snapshot) {
     if (event.type !== "response.created") {
@@ -62032,19 +62032,19 @@ function assertNever4(value) {
   throw new OpenAIError(`Unhandled response stream event: ${JSON.stringify(value)}`);
 }
 var init_ResponseAccumulator = __esm({
-  "node_modules/openai/lib/responses/ResponseAccumulator.mjs"() {
+  "../../../server/node_modules/openai/lib/responses/ResponseAccumulator.mjs"() {
     init_error2();
     init_ResponsesParser();
   }
 });
 
-// node_modules/openai/lib/responses/ResponseStream.mjs
+// ../../../server/node_modules/openai/lib/responses/ResponseStream.mjs
 function finalizeResponse(snapshot, params) {
   return maybeParseResponse(snapshot, params);
 }
 var _ResponseStream_instances, _ResponseStream_params, _ResponseStream_currentResponseSnapshot, _ResponseStream_finalResponse, _ResponseStream_beginRequest, _ResponseStream_addEvent, _ResponseStream_endRequest, ResponseStream;
 var init_ResponseStream = __esm({
-  "node_modules/openai/lib/responses/ResponseStream.mjs"() {
+  "../../../server/node_modules/openai/lib/responses/ResponseStream.mjs"() {
     init_tslib();
     init_error2();
     init_EventStream();
@@ -62210,7 +62210,7 @@ var init_ResponseStream = __esm({
               if (done) {
                 return { value: void 0, done: true };
               }
-              return new Promise((resolve3, reject) => readQueue.push({ resolve: resolve3, reject })).then((event2) => event2 ? { value: event2, done: false } : { value: void 0, done: true });
+              return new Promise((resolve5, reject) => readQueue.push({ resolve: resolve5, reject })).then((event2) => event2 ? { value: event2, done: false } : { value: void 0, done: true });
             }
             const event = pushQueue.shift();
             return { value: event, done: false };
@@ -62236,10 +62236,10 @@ var init_ResponseStream = __esm({
   }
 });
 
-// node_modules/openai/resources/responses/input-items.mjs
+// ../../../server/node_modules/openai/resources/responses/input-items.mjs
 var InputItems2;
 var init_input_items2 = __esm({
-  "node_modules/openai/resources/responses/input-items.mjs"() {
+  "../../../server/node_modules/openai/resources/responses/input-items.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -62258,16 +62258,16 @@ var init_input_items2 = __esm({
        * ```
        */
       list(responseID, query = {}, options) {
-        return this._client.getAPIList(path8`/responses/${responseID}/input_items`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path9`/responses/${responseID}/input_items`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
       }
     };
   }
 });
 
-// node_modules/openai/resources/responses/input-tokens.mjs
+// ../../../server/node_modules/openai/resources/responses/input-tokens.mjs
 var InputTokens2;
 var init_input_tokens2 = __esm({
-  "node_modules/openai/resources/responses/input-tokens.mjs"() {
+  "../../../server/node_modules/openai/resources/responses/input-tokens.mjs"() {
     init_resource();
     InputTokens2 = class extends APIResource {
       /**
@@ -62292,10 +62292,10 @@ var init_input_tokens2 = __esm({
   }
 });
 
-// node_modules/openai/resources/responses/responses.mjs
+// ../../../server/node_modules/openai/resources/responses/responses.mjs
 var Responses2;
 var init_responses2 = __esm({
-  "node_modules/openai/resources/responses/responses.mjs"() {
+  "../../../server/node_modules/openai/resources/responses/responses.mjs"() {
     init_ResponsesParser();
     init_ResponseStream();
     init_resource();
@@ -62325,7 +62325,7 @@ var init_responses2 = __esm({
         });
       }
       retrieve(responseID, query = {}, options) {
-        return this._client.get(path8`/responses/${responseID}`, {
+        return this._client.get(path9`/responses/${responseID}`, {
           query,
           ...options,
           stream: query?.stream ?? false,
@@ -62348,7 +62348,7 @@ var init_responses2 = __esm({
        * ```
        */
       delete(responseID, options) {
-        return this._client.delete(path8`/responses/${responseID}`, {
+        return this._client.delete(path9`/responses/${responseID}`, {
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -62376,7 +62376,7 @@ var init_responses2 = __esm({
        * ```
        */
       cancel(responseID, options) {
-        return this._client.post(path8`/responses/${responseID}/cancel`, {
+        return this._client.post(path9`/responses/${responseID}/cancel`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -62405,10 +62405,10 @@ var init_responses2 = __esm({
   }
 });
 
-// node_modules/openai/resources/skills/content.mjs
+// ../../../server/node_modules/openai/resources/skills/content.mjs
 var Content2;
 var init_content2 = __esm({
-  "node_modules/openai/resources/skills/content.mjs"() {
+  "../../../server/node_modules/openai/resources/skills/content.mjs"() {
     init_resource();
     init_headers2();
     init_path();
@@ -62417,7 +62417,7 @@ var init_content2 = __esm({
        * Download a skill zip bundle by its ID.
        */
       retrieve(skillID, options) {
-        return this._client.get(path8`/skills/${skillID}/content`, {
+        return this._client.get(path9`/skills/${skillID}/content`, {
           ...options,
           headers: buildHeaders([{ Accept: "application/binary" }, options?.headers]),
           __security: { bearerAuth: true },
@@ -62428,10 +62428,10 @@ var init_content2 = __esm({
   }
 });
 
-// node_modules/openai/resources/skills/versions/content.mjs
+// ../../../server/node_modules/openai/resources/skills/versions/content.mjs
 var Content3;
 var init_content3 = __esm({
-  "node_modules/openai/resources/skills/versions/content.mjs"() {
+  "../../../server/node_modules/openai/resources/skills/versions/content.mjs"() {
     init_resource();
     init_headers2();
     init_path();
@@ -62441,7 +62441,7 @@ var init_content3 = __esm({
        */
       retrieve(version2, params, options) {
         const { skill_id } = params;
-        return this._client.get(path8`/skills/${skill_id}/versions/${version2}/content`, {
+        return this._client.get(path9`/skills/${skill_id}/versions/${version2}/content`, {
           ...options,
           headers: buildHeaders([{ Accept: "application/binary" }, options?.headers]),
           __security: { bearerAuth: true },
@@ -62452,10 +62452,10 @@ var init_content3 = __esm({
   }
 });
 
-// node_modules/openai/resources/skills/versions/versions.mjs
+// ../../../server/node_modules/openai/resources/skills/versions/versions.mjs
 var Versions;
 var init_versions = __esm({
-  "node_modules/openai/resources/skills/versions/versions.mjs"() {
+  "../../../server/node_modules/openai/resources/skills/versions/versions.mjs"() {
     init_resource();
     init_content3();
     init_content3();
@@ -62471,14 +62471,14 @@ var init_versions = __esm({
        * Create a new immutable skill version.
        */
       create(skillID, body = {}, options) {
-        return this._client.post(path8`/skills/${skillID}/versions`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
+        return this._client.post(path9`/skills/${skillID}/versions`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
       }
       /**
        * Get a specific skill version.
        */
       retrieve(version2, params, options) {
         const { skill_id } = params;
-        return this._client.get(path8`/skills/${skill_id}/versions/${version2}`, {
+        return this._client.get(path9`/skills/${skill_id}/versions/${version2}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -62487,7 +62487,7 @@ var init_versions = __esm({
        * List skill versions for a skill.
        */
       list(skillID, query = {}, options) {
-        return this._client.getAPIList(path8`/skills/${skillID}/versions`, CursorPage, {
+        return this._client.getAPIList(path9`/skills/${skillID}/versions`, CursorPage, {
           query,
           ...options,
           __security: { bearerAuth: true }
@@ -62498,7 +62498,7 @@ var init_versions = __esm({
        */
       delete(version2, params, options) {
         const { skill_id } = params;
-        return this._client.delete(path8`/skills/${skill_id}/versions/${version2}`, {
+        return this._client.delete(path9`/skills/${skill_id}/versions/${version2}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -62508,10 +62508,10 @@ var init_versions = __esm({
   }
 });
 
-// node_modules/openai/resources/skills/skills.mjs
+// ../../../server/node_modules/openai/resources/skills/skills.mjs
 var Skills;
 var init_skills = __esm({
-  "node_modules/openai/resources/skills/skills.mjs"() {
+  "../../../server/node_modules/openai/resources/skills/skills.mjs"() {
     init_resource();
     init_content2();
     init_content2();
@@ -62536,13 +62536,13 @@ var init_skills = __esm({
        * Get a skill by its ID.
        */
       retrieve(skillID, options) {
-        return this._client.get(path8`/skills/${skillID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path9`/skills/${skillID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * Update the default version pointer for a skill.
        */
       update(skillID, body, options) {
-        return this._client.post(path8`/skills/${skillID}`, {
+        return this._client.post(path9`/skills/${skillID}`, {
           body,
           ...options,
           __security: { bearerAuth: true }
@@ -62562,7 +62562,7 @@ var init_skills = __esm({
        * Delete a skill by its ID.
        */
       delete(skillID, options) {
-        return this._client.delete(path8`/skills/${skillID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.delete(path9`/skills/${skillID}`, { ...options, __security: { bearerAuth: true } });
       }
     };
     Skills.Content = Content2;
@@ -62570,10 +62570,10 @@ var init_skills = __esm({
   }
 });
 
-// node_modules/openai/resources/uploads/parts.mjs
+// ../../../server/node_modules/openai/resources/uploads/parts.mjs
 var Parts;
 var init_parts = __esm({
-  "node_modules/openai/resources/uploads/parts.mjs"() {
+  "../../../server/node_modules/openai/resources/uploads/parts.mjs"() {
     init_resource();
     init_uploads();
     init_path();
@@ -62592,16 +62592,16 @@ var init_parts = __esm({
        * [complete the Upload](https://platform.openai.com/docs/api-reference/uploads/complete).
        */
       create(uploadID, body, options) {
-        return this._client.post(path8`/uploads/${uploadID}/parts`, multipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
+        return this._client.post(path9`/uploads/${uploadID}/parts`, multipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
       }
     };
   }
 });
 
-// node_modules/openai/resources/uploads/uploads.mjs
+// ../../../server/node_modules/openai/resources/uploads/uploads.mjs
 var Uploads;
 var init_uploads3 = __esm({
-  "node_modules/openai/resources/uploads/uploads.mjs"() {
+  "../../../server/node_modules/openai/resources/uploads/uploads.mjs"() {
     init_resource();
     init_parts();
     init_parts();
@@ -62643,7 +62643,7 @@ var init_uploads3 = __esm({
        * Returns the Upload object with status `cancelled`.
        */
       cancel(uploadID, options) {
-        return this._client.post(path8`/uploads/${uploadID}/cancel`, {
+        return this._client.post(path9`/uploads/${uploadID}/cancel`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -62666,7 +62666,7 @@ var init_uploads3 = __esm({
        * object.
        */
       complete(uploadID, body, options) {
-        return this._client.post(path8`/uploads/${uploadID}/complete`, {
+        return this._client.post(path9`/uploads/${uploadID}/complete`, {
           body,
           ...options,
           __security: { bearerAuth: true }
@@ -62677,10 +62677,10 @@ var init_uploads3 = __esm({
   }
 });
 
-// node_modules/openai/lib/Util.mjs
+// ../../../server/node_modules/openai/lib/Util.mjs
 var allSettledWithThrow;
 var init_Util = __esm({
-  "node_modules/openai/lib/Util.mjs"() {
+  "../../../server/node_modules/openai/lib/Util.mjs"() {
     allSettledWithThrow = async (promises2) => {
       const results = await Promise.allSettled(promises2);
       const rejected = results.filter((result) => result.status === "rejected");
@@ -62701,10 +62701,10 @@ var init_Util = __esm({
   }
 });
 
-// node_modules/openai/resources/vector-stores/file-batches.mjs
+// ../../../server/node_modules/openai/resources/vector-stores/file-batches.mjs
 var FileBatches;
 var init_file_batches = __esm({
-  "node_modules/openai/resources/vector-stores/file-batches.mjs"() {
+  "../../../server/node_modules/openai/resources/vector-stores/file-batches.mjs"() {
     init_resource();
     init_pagination();
     init_headers2();
@@ -62716,7 +62716,7 @@ var init_file_batches = __esm({
        * Create a vector store file batch.
        */
       create(vectorStoreID, body, options) {
-        return this._client.post(path8`/vector_stores/${vectorStoreID}/file_batches`, {
+        return this._client.post(path9`/vector_stores/${vectorStoreID}/file_batches`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -62728,7 +62728,7 @@ var init_file_batches = __esm({
        */
       retrieve(batchID, params, options) {
         const { vector_store_id } = params;
-        return this._client.get(path8`/vector_stores/${vector_store_id}/file_batches/${batchID}`, {
+        return this._client.get(path9`/vector_stores/${vector_store_id}/file_batches/${batchID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -62740,7 +62740,7 @@ var init_file_batches = __esm({
        */
       cancel(batchID, params, options) {
         const { vector_store_id } = params;
-        return this._client.post(path8`/vector_stores/${vector_store_id}/file_batches/${batchID}/cancel`, {
+        return this._client.post(path9`/vector_stores/${vector_store_id}/file_batches/${batchID}/cancel`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -62758,7 +62758,7 @@ var init_file_batches = __esm({
        */
       listFiles(batchID, params, options) {
         const { vector_store_id, ...query } = params;
-        return this._client.getAPIList(path8`/vector_stores/${vector_store_id}/file_batches/${batchID}/files`, CursorPage, {
+        return this._client.getAPIList(path9`/vector_stores/${vector_store_id}/file_batches/${batchID}/files`, CursorPage, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -62837,10 +62837,10 @@ var init_file_batches = __esm({
   }
 });
 
-// node_modules/openai/resources/vector-stores/files.mjs
+// ../../../server/node_modules/openai/resources/vector-stores/files.mjs
 var Files5;
 var init_files3 = __esm({
-  "node_modules/openai/resources/vector-stores/files.mjs"() {
+  "../../../server/node_modules/openai/resources/vector-stores/files.mjs"() {
     init_resource();
     init_pagination();
     init_headers2();
@@ -62853,7 +62853,7 @@ var init_files3 = __esm({
        * [vector store](https://platform.openai.com/docs/api-reference/vector-stores/object).
        */
       create(vectorStoreID, body, options) {
-        return this._client.post(path8`/vector_stores/${vectorStoreID}/files`, {
+        return this._client.post(path9`/vector_stores/${vectorStoreID}/files`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -62865,7 +62865,7 @@ var init_files3 = __esm({
        */
       retrieve(fileID, params, options) {
         const { vector_store_id } = params;
-        return this._client.get(path8`/vector_stores/${vector_store_id}/files/${fileID}`, {
+        return this._client.get(path9`/vector_stores/${vector_store_id}/files/${fileID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -62876,7 +62876,7 @@ var init_files3 = __esm({
        */
       update(fileID, params, options) {
         const { vector_store_id, ...body } = params;
-        return this._client.post(path8`/vector_stores/${vector_store_id}/files/${fileID}`, {
+        return this._client.post(path9`/vector_stores/${vector_store_id}/files/${fileID}`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -62887,7 +62887,7 @@ var init_files3 = __esm({
        * Returns a list of vector store files.
        */
       list(vectorStoreID, query = {}, options) {
-        return this._client.getAPIList(path8`/vector_stores/${vectorStoreID}/files`, CursorPage, {
+        return this._client.getAPIList(path9`/vector_stores/${vectorStoreID}/files`, CursorPage, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -62902,7 +62902,7 @@ var init_files3 = __esm({
        */
       delete(fileID, params, options) {
         const { vector_store_id } = params;
-        return this._client.delete(path8`/vector_stores/${vector_store_id}/files/${fileID}`, {
+        return this._client.delete(path9`/vector_stores/${vector_store_id}/files/${fileID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -62978,7 +62978,7 @@ var init_files3 = __esm({
        */
       content(fileID, params, options) {
         const { vector_store_id } = params;
-        return this._client.getAPIList(path8`/vector_stores/${vector_store_id}/files/${fileID}/content`, Page, {
+        return this._client.getAPIList(path9`/vector_stores/${vector_store_id}/files/${fileID}/content`, Page, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -62988,10 +62988,10 @@ var init_files3 = __esm({
   }
 });
 
-// node_modules/openai/resources/vector-stores/vector-stores.mjs
+// ../../../server/node_modules/openai/resources/vector-stores/vector-stores.mjs
 var VectorStores;
 var init_vector_stores = __esm({
-  "node_modules/openai/resources/vector-stores/vector-stores.mjs"() {
+  "../../../server/node_modules/openai/resources/vector-stores/vector-stores.mjs"() {
     init_resource();
     init_file_batches();
     init_file_batches();
@@ -63021,7 +63021,7 @@ var init_vector_stores = __esm({
        * Retrieves a vector store.
        */
       retrieve(vectorStoreID, options) {
-        return this._client.get(path8`/vector_stores/${vectorStoreID}`, {
+        return this._client.get(path9`/vector_stores/${vectorStoreID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -63031,7 +63031,7 @@ var init_vector_stores = __esm({
        * Modifies a vector store.
        */
       update(vectorStoreID, body, options) {
-        return this._client.post(path8`/vector_stores/${vectorStoreID}`, {
+        return this._client.post(path9`/vector_stores/${vectorStoreID}`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -63053,7 +63053,7 @@ var init_vector_stores = __esm({
        * Delete a vector store.
        */
       delete(vectorStoreID, options) {
-        return this._client.delete(path8`/vector_stores/${vectorStoreID}`, {
+        return this._client.delete(path9`/vector_stores/${vectorStoreID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -63064,7 +63064,7 @@ var init_vector_stores = __esm({
        * filter.
        */
       search(vectorStoreID, body, options) {
-        return this._client.getAPIList(path8`/vector_stores/${vectorStoreID}/search`, Page, {
+        return this._client.getAPIList(path9`/vector_stores/${vectorStoreID}/search`, Page, {
           body,
           method: "post",
           ...options,
@@ -63078,10 +63078,10 @@ var init_vector_stores = __esm({
   }
 });
 
-// node_modules/openai/resources/videos.mjs
+// ../../../server/node_modules/openai/resources/videos.mjs
 var Videos;
 var init_videos = __esm({
-  "node_modules/openai/resources/videos.mjs"() {
+  "../../../server/node_modules/openai/resources/videos.mjs"() {
     init_resource();
     init_pagination();
     init_headers2();
@@ -63098,7 +63098,7 @@ var init_videos = __esm({
        * Fetch the latest metadata for a generated video.
        */
       retrieve(videoID, options) {
-        return this._client.get(path8`/videos/${videoID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path9`/videos/${videoID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * List recently generated videos for the current project.
@@ -63114,7 +63114,7 @@ var init_videos = __esm({
        * Permanently delete a completed or failed video and its stored assets.
        */
       delete(videoID, options) {
-        return this._client.delete(path8`/videos/${videoID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.delete(path9`/videos/${videoID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * Create a character from an uploaded video.
@@ -63128,7 +63128,7 @@ var init_videos = __esm({
        * Streams the rendered video content for the specified video job.
        */
       downloadContent(videoID, query = {}, options) {
-        return this._client.get(path8`/videos/${videoID}/content`, {
+        return this._client.get(path9`/videos/${videoID}/content`, {
           query,
           ...options,
           headers: buildHeaders([{ Accept: "application/binary" }, options?.headers]),
@@ -63153,7 +63153,7 @@ var init_videos = __esm({
        * Fetch a character.
        */
       getCharacter(characterID, options) {
-        return this._client.get(path8`/videos/characters/${characterID}`, {
+        return this._client.get(path9`/videos/characters/${characterID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -63162,16 +63162,16 @@ var init_videos = __esm({
        * Create a remix of a completed video using a refreshed prompt.
        */
       remix(videoID, body, options) {
-        return this._client.post(path8`/videos/${videoID}/remix`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
+        return this._client.post(path9`/videos/${videoID}/remix`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
       }
     };
   }
 });
 
-// node_modules/openai/resources/webhooks/webhooks.mjs
+// ../../../server/node_modules/openai/resources/webhooks/webhooks.mjs
 var _Webhooks_instances, _Webhooks_validateSecret, _Webhooks_getRequiredHeader, Webhooks2;
 var init_webhooks = __esm({
-  "node_modules/openai/resources/webhooks/webhooks.mjs"() {
+  "../../../server/node_modules/openai/resources/webhooks/webhooks.mjs"() {
     init_tslib();
     init_error2();
     init_resource();
@@ -63253,23 +63253,23 @@ var init_webhooks = __esm({
   }
 });
 
-// node_modules/openai/resources/webhooks/index.mjs
+// ../../../server/node_modules/openai/resources/webhooks/index.mjs
 var init_webhooks2 = __esm({
-  "node_modules/openai/resources/webhooks/index.mjs"() {
+  "../../../server/node_modules/openai/resources/webhooks/index.mjs"() {
     init_webhooks();
   }
 });
 
-// node_modules/openai/resources/webhooks.mjs
+// ../../../server/node_modules/openai/resources/webhooks.mjs
 var init_webhooks3 = __esm({
-  "node_modules/openai/resources/webhooks.mjs"() {
+  "../../../server/node_modules/openai/resources/webhooks.mjs"() {
     init_webhooks2();
   }
 });
 
-// node_modules/openai/resources/index.mjs
+// ../../../server/node_modules/openai/resources/index.mjs
 var init_resources = __esm({
-  "node_modules/openai/resources/index.mjs"() {
+  "../../../server/node_modules/openai/resources/index.mjs"() {
     init_chat2();
     init_shared();
     init_admin();
@@ -63297,7 +63297,7 @@ var init_resources = __esm({
   }
 });
 
-// node_modules/openai/internal/provider.mjs
+// ../../../server/node_modules/openai/internal/provider.mjs
 function configureProvider(provider) {
   const definition = providerDefinitions.get(provider);
   if (!definition) {
@@ -63307,7 +63307,7 @@ function configureProvider(provider) {
 }
 var providerDefinitionsKey, providerGlobal, existingProviderDefinitions, providerDefinitions;
 var init_provider = __esm({
-  "node_modules/openai/internal/provider.mjs"() {
+  "../../../server/node_modules/openai/internal/provider.mjs"() {
     providerDefinitionsKey = /* @__PURE__ */ Symbol.for("openai.node.providerDefinitions.v1");
     providerGlobal = globalThis;
     existingProviderDefinitions = providerGlobal[providerDefinitionsKey];
@@ -63318,7 +63318,7 @@ var init_provider = __esm({
   }
 });
 
-// node_modules/openai/client.mjs
+// ../../../server/node_modules/openai/client.mjs
 function getConnectionErrorMessage(error2) {
   if (isUndiciDispatcherVersionMismatchError(error2)) {
     return `Connection error. This may be caused by passing an undici dispatcher, such as ProxyAgent, that is incompatible with the fetch implementation. If you are using undici's ProxyAgent, pass the fetch implementation from the same undici package: import { fetch, ProxyAgent } from 'undici'; new OpenAI({ fetch, fetchOptions: { dispatcher: new ProxyAgent(...) } });`;
@@ -63338,7 +63338,7 @@ function isUndiciDispatcherVersionMismatchError(error2) {
 }
 var _OpenAI_instances, _a3, _OpenAI_encoder, _OpenAI_baseURLOverridden, WORKLOAD_IDENTITY_API_KEY_PLACEHOLDER, OpenAI;
 var init_client = __esm({
-  "node_modules/openai/client.mjs"() {
+  "../../../server/node_modules/openai/client.mjs"() {
     init_tslib();
     init_uuid();
     init_values();
@@ -63610,9 +63610,9 @@ var init_client = __esm({
         this.apiKey = token;
         return true;
       }
-      buildURL(path10, query, defaultBaseURL) {
+      buildURL(path11, query, defaultBaseURL) {
         const baseURL = !__classPrivateFieldGet(this, _OpenAI_instances, "m", _OpenAI_baseURLOverridden).call(this) && defaultBaseURL || this.baseURL;
-        const url = isAbsoluteURL(path10) ? new URL(path10) : new URL(baseURL + (baseURL.endsWith("/") && path10.startsWith("/") ? path10.slice(1) : path10));
+        const url = isAbsoluteURL(path11) ? new URL(path11) : new URL(baseURL + (baseURL.endsWith("/") && path11.startsWith("/") ? path11.slice(1) : path11));
         const defaultQuery = this.defaultQuery();
         const pathQuery = Object.fromEntries(url.searchParams);
         if (!isEmptyObj(defaultQuery) || !isEmptyObj(pathQuery)) {
@@ -63642,24 +63642,24 @@ var init_client = __esm({
        */
       async prepareRequest(request, { url, options }) {
       }
-      get(path10, opts) {
-        return this.methodRequest("get", path10, opts);
+      get(path11, opts) {
+        return this.methodRequest("get", path11, opts);
       }
-      post(path10, opts) {
-        return this.methodRequest("post", path10, opts);
+      post(path11, opts) {
+        return this.methodRequest("post", path11, opts);
       }
-      patch(path10, opts) {
-        return this.methodRequest("patch", path10, opts);
+      patch(path11, opts) {
+        return this.methodRequest("patch", path11, opts);
       }
-      put(path10, opts) {
-        return this.methodRequest("put", path10, opts);
+      put(path11, opts) {
+        return this.methodRequest("put", path11, opts);
       }
-      delete(path10, opts) {
-        return this.methodRequest("delete", path10, opts);
+      delete(path11, opts) {
+        return this.methodRequest("delete", path11, opts);
       }
-      methodRequest(method, path10, opts) {
+      methodRequest(method, path11, opts) {
         return this.request(Promise.resolve(opts).then((opts2) => {
-          return { method, path: path10, ...opts2 };
+          return { method, path: path11, ...opts2 };
         }));
       }
       request(options, remainingRetries = null) {
@@ -63784,8 +63784,8 @@ var init_client = __esm({
         }));
         return { response, options, controller, requestLogID, retryOfRequestLogID, startTime };
       }
-      getAPIList(path10, Page2, opts) {
-        return this.requestAPIList(Page2, opts && "then" in opts ? opts.then((opts2) => ({ method: "get", path: path10, ...opts2 })) : { method: "get", path: path10, ...opts });
+      getAPIList(path11, Page2, opts) {
+        return this.requestAPIList(Page2, opts && "then" in opts ? opts.then((opts2) => ({ method: "get", path: path11, ...opts2 })) : { method: "get", path: path11, ...opts });
       }
       requestAPIList(Page2, options) {
         const request = this.makeRequest(options, null, void 0);
@@ -63879,8 +63879,8 @@ var init_client = __esm({
       }
       async buildRequest(inputOptions, { retryCount = 0 } = {}) {
         const options = { ...inputOptions };
-        const { method, path: path10, query, defaultBaseURL } = options;
-        const url = this.buildURL(path10, query, defaultBaseURL);
+        const { method, path: path11, query, defaultBaseURL } = options;
+        const url = this.buildURL(path11, query, defaultBaseURL);
         if ("timeout" in options)
           validatePositiveInteger("timeout", options.timeout);
         options.timeout = options.timeout ?? this.timeout;
@@ -64019,10 +64019,10 @@ var init_client = __esm({
   }
 });
 
-// node_modules/openai/azure.mjs
+// ../../../server/node_modules/openai/azure.mjs
 var AzureOpenAI, _deployments_endpoints;
 var init_azure = __esm({
-  "node_modules/openai/azure.mjs"() {
+  "../../../server/node_modules/openai/azure.mjs"() {
     init_headers2();
     init_error2();
     init_utils2();
@@ -64120,7 +64120,7 @@ var init_azure = __esm({
   }
 });
 
-// node_modules/openai/bedrock.mjs
+// ../../../server/node_modules/openai/bedrock.mjs
 function deriveBedrockBaseURL(awsRegion) {
   const region = awsRegion?.trim();
   if (!region) {
@@ -64154,7 +64154,7 @@ function restoreBedrockStreamOutputText(responses) {
 }
 var BedrockOpenAI;
 var init_bedrock = __esm({
-  "node_modules/openai/bedrock.mjs"() {
+  "../../../server/node_modules/openai/bedrock.mjs"() {
     init_error2();
     init_client();
     init_headers2();
@@ -64221,7 +64221,7 @@ var init_bedrock = __esm({
   }
 });
 
-// node_modules/openai/index.mjs
+// ../../../server/node_modules/openai/index.mjs
 var openai_exports = {};
 __export(openai_exports, {
   APIConnectionError: () => APIConnectionError2,
@@ -64250,7 +64250,7 @@ __export(openai_exports, {
   toStreamingFile: () => toStreamingFile
 });
 var init_openai = __esm({
-  "node_modules/openai/index.mjs"() {
+  "../../../server/node_modules/openai/index.mjs"() {
     init_client();
     init_uploads2();
     init_api_promise();
@@ -64262,7 +64262,7 @@ var init_openai = __esm({
   }
 });
 
-// node_modules/zod/v3/external.js
+// ../../../server/node_modules/zod/v3/external.js
 var external_exports = {};
 __export(external_exports, {
   BRAND: () => BRAND,
@@ -64374,7 +64374,7 @@ __export(external_exports, {
   void: () => voidType
 });
 
-// node_modules/zod/v3/helpers/util.js
+// ../../../server/node_modules/zod/v3/helpers/util.js
 var util;
 (function(util2) {
   util2.assertEqual = (_) => {
@@ -64508,7 +64508,7 @@ var getParsedType = (data) => {
   }
 };
 
-// node_modules/zod/v3/ZodError.js
+// ../../../server/node_modules/zod/v3/ZodError.js
 var ZodIssueCode = util.arrayToEnum([
   "invalid_type",
   "invalid_literal",
@@ -64626,7 +64626,7 @@ ZodError.create = (issues) => {
   return error2;
 };
 
-// node_modules/zod/v3/locales/en.js
+// ../../../server/node_modules/zod/v3/locales/en.js
 var errorMap = (issue2, _ctx) => {
   let message;
   switch (issue2.code) {
@@ -64729,7 +64729,7 @@ var errorMap = (issue2, _ctx) => {
 };
 var en_default = errorMap;
 
-// node_modules/zod/v3/errors.js
+// ../../../server/node_modules/zod/v3/errors.js
 var overrideErrorMap = en_default;
 function setErrorMap(map) {
   overrideErrorMap = map;
@@ -64738,10 +64738,10 @@ function getErrorMap() {
   return overrideErrorMap;
 }
 
-// node_modules/zod/v3/helpers/parseUtil.js
+// ../../../server/node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path10, errorMaps, issueData } = params;
-  const fullPath = [...path10, ...issueData.path || []];
+  const { data, path: path11, errorMaps, issueData } = params;
+  const fullPath = [...path11, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -64848,20 +64848,20 @@ var isDirty = (x2) => x2.status === "dirty";
 var isValid = (x2) => x2.status === "valid";
 var isAsync = (x2) => typeof Promise !== "undefined" && x2 instanceof Promise;
 
-// node_modules/zod/v3/helpers/errorUtil.js
+// ../../../server/node_modules/zod/v3/helpers/errorUtil.js
 var errorUtil;
 (function(errorUtil2) {
   errorUtil2.errToObj = (message) => typeof message === "string" ? { message } : message || {};
   errorUtil2.toString = (message) => typeof message === "string" ? message : message?.message;
 })(errorUtil || (errorUtil = {}));
 
-// node_modules/zod/v3/types.js
+// ../../../server/node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path10, key) {
+  constructor(parent, value, path11, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path10;
+    this._path = path11;
     this._key = key;
   }
   get path() {
@@ -68303,7 +68303,7 @@ var coerce = {
 };
 var NEVER = INVALID;
 
-// node_modules/zod/v4/core/core.js
+// ../../../server/node_modules/zod/v4/core/core.js
 var NEVER2 = Object.freeze({
   status: "aborted"
 });
@@ -68362,7 +68362,7 @@ function config(newConfig) {
   return globalConfig;
 }
 
-// node_modules/zod/v4/core/util.js
+// ../../../server/node_modules/zod/v4/core/util.js
 var util_exports = {};
 __export(util_exports, {
   BIGINT_FORMAT_RANGES: () => BIGINT_FORMAT_RANGES,
@@ -68498,10 +68498,10 @@ function assignProp(target, prop, value) {
     configurable: true
   });
 }
-function getElementAtPath(obj, path10) {
-  if (!path10)
+function getElementAtPath(obj, path11) {
+  if (!path11)
     return obj;
-  return path10.reduce((acc, key) => acc?.[key], obj);
+  return path11.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -68516,14 +68516,14 @@ function promiseAllObject(promisesObj) {
 }
 function randomString(length = 10) {
   const chars = "abcdefghijklmnopqrstuvwxyz";
-  let str7 = "";
+  let str8 = "";
   for (let i2 = 0; i2 < length; i2++) {
-    str7 += chars[Math.floor(Math.random() * chars.length)];
+    str8 += chars[Math.floor(Math.random() * chars.length)];
   }
-  return str7;
+  return str8;
 }
-function esc(str7) {
-  return JSON.stringify(str7);
+function esc(str8) {
+  return JSON.stringify(str8);
 }
 var captureStackTrace = Error.captureStackTrace ? Error.captureStackTrace : (..._args) => {
 };
@@ -68611,8 +68611,8 @@ var getParsedType2 = (data) => {
 };
 var propertyKeyTypes = /* @__PURE__ */ new Set(["string", "number", "symbol"]);
 var primitiveTypes = /* @__PURE__ */ new Set(["string", "number", "bigint", "boolean", "symbol", "undefined"]);
-function escapeRegex(str7) {
-  return str7.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+function escapeRegex(str8) {
+  return str8.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 function clone(inst, def, params) {
   const cl = new inst._zod.constr(def ?? inst._zod.def);
@@ -68821,11 +68821,11 @@ function aborted(x2, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path10, issues) {
+function prefixIssues(path11, issues) {
   return issues.map((iss) => {
     var _a4;
     (_a4 = iss).path ?? (_a4.path = []);
-    iss.path.unshift(path10);
+    iss.path.unshift(path11);
     return iss;
   });
 }
@@ -68883,7 +68883,7 @@ var Class = class {
   }
 };
 
-// node_modules/zod/v4/core/errors.js
+// ../../../server/node_modules/zod/v4/core/errors.js
 var initializer = (inst, def) => {
   inst.name = "$ZodError";
   Object.defineProperty(inst, "_zod", {
@@ -68958,7 +68958,7 @@ function formatError(error2, _mapper) {
   return fieldErrors;
 }
 
-// node_modules/zod/v4/core/parse.js
+// ../../../server/node_modules/zod/v4/core/parse.js
 var _parse = (_Err) => (schema, value, _ctx, _params) => {
   const ctx = _ctx ? Object.assign(_ctx, { async: false }) : { async: false };
   const result = schema._zod.run({ value, issues: [] }, ctx);
@@ -69008,7 +69008,7 @@ var _safeParseAsync = (_Err) => async (schema, value, _ctx) => {
 };
 var safeParseAsync = /* @__PURE__ */ _safeParseAsync($ZodRealError);
 
-// node_modules/zod/v4/core/regexes.js
+// ../../../server/node_modules/zod/v4/core/regexes.js
 var cuid = /^[cC][^\s-]{8,}$/;
 var cuid2 = /^[0-9a-z]+$/;
 var ulid = /^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$/;
@@ -69066,7 +69066,7 @@ var _null = /null/i;
 var lowercase = /^[^A-Z]*$/;
 var uppercase = /^[^a-z]*$/;
 
-// node_modules/zod/v4/core/checks.js
+// ../../../server/node_modules/zod/v4/core/checks.js
 var $ZodCheck = /* @__PURE__ */ $constructor("$ZodCheck", (inst, def) => {
   var _a4;
   inst._zod ?? (inst._zod = {});
@@ -69451,7 +69451,7 @@ var $ZodCheckOverwrite = /* @__PURE__ */ $constructor("$ZodCheckOverwrite", (ins
   };
 });
 
-// node_modules/zod/v4/core/doc.js
+// ../../../server/node_modules/zod/v4/core/doc.js
 var Doc = class {
   constructor(args = []) {
     this.content = [];
@@ -69487,14 +69487,14 @@ var Doc = class {
   }
 };
 
-// node_modules/zod/v4/core/versions.js
+// ../../../server/node_modules/zod/v4/core/versions.js
 var version = {
   major: 4,
   minor: 0,
   patch: 0
 };
 
-// node_modules/zod/v4/core/schemas.js
+// ../../../server/node_modules/zod/v4/core/schemas.js
 var $ZodType = /* @__PURE__ */ $constructor("$ZodType", (inst, def) => {
   var _a4;
   inst ?? (inst = {});
@@ -70732,7 +70732,7 @@ function handleRefineResult(result, payload, input, inst) {
   }
 }
 
-// node_modules/zod/v4/locales/en.js
+// ../../../server/node_modules/zod/v4/locales/en.js
 var parsedType = (data) => {
   const t2 = typeof data;
   switch (t2) {
@@ -70850,7 +70850,7 @@ function en_default2() {
   };
 }
 
-// node_modules/zod/v4/core/registries.js
+// ../../../server/node_modules/zod/v4/core/registries.js
 var $ZodRegistry = class {
   constructor() {
     this._map = /* @__PURE__ */ new Map();
@@ -70898,7 +70898,7 @@ function registry() {
 }
 var globalRegistry = /* @__PURE__ */ registry();
 
-// node_modules/zod/v4/core/api.js
+// ../../../server/node_modules/zod/v4/core/api.js
 function _string(Class2, params) {
   return new Class2({
     type: "string",
@@ -71337,7 +71337,7 @@ function _refine(Class2, fn, _params) {
   return schema;
 }
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-compat.js
+// ../../../server/node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-compat.js
 function isZ4Schema(s2) {
   const schema = s2;
   return !!schema._zod;
@@ -71400,7 +71400,7 @@ function getLiteralValue(schema) {
   return void 0;
 }
 
-// node_modules/zod/v4/classic/iso.js
+// ../../../server/node_modules/zod/v4/classic/iso.js
 var iso_exports = {};
 __export(iso_exports, {
   ZodISODate: () => ZodISODate,
@@ -71441,7 +71441,7 @@ function duration2(params) {
   return _isoDuration(ZodISODuration, params);
 }
 
-// node_modules/zod/v4/classic/errors.js
+// ../../../server/node_modules/zod/v4/classic/errors.js
 var initializer2 = (inst, issues) => {
   $ZodError.init(inst, issues);
   inst.name = "ZodError";
@@ -71475,13 +71475,13 @@ var ZodRealError = $constructor("ZodError", initializer2, {
   Parent: Error
 });
 
-// node_modules/zod/v4/classic/parse.js
+// ../../../server/node_modules/zod/v4/classic/parse.js
 var parse2 = /* @__PURE__ */ _parse(ZodRealError);
 var parseAsync2 = /* @__PURE__ */ _parseAsync(ZodRealError);
 var safeParse3 = /* @__PURE__ */ _safeParse(ZodRealError);
 var safeParseAsync2 = /* @__PURE__ */ _safeParseAsync(ZodRealError);
 
-// node_modules/zod/v4/classic/schemas.js
+// ../../../server/node_modules/zod/v4/classic/schemas.js
 var ZodType2 = /* @__PURE__ */ $constructor("ZodType", (inst, def) => {
   $ZodType.init(inst, def);
   inst.def = def;
@@ -72092,10 +72092,10 @@ function preprocess(fn, schema) {
   return pipe(transform(fn), schema);
 }
 
-// node_modules/zod/v4/classic/external.js
+// ../../../server/node_modules/zod/v4/classic/external.js
 config(en_default2());
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/types.js
+// ../../../server/node_modules/@modelcontextprotocol/sdk/dist/esm/types.js
 var LATEST_PROTOCOL_VERSION = "2025-11-25";
 var SUPPORTED_PROTOCOL_VERSIONS = [LATEST_PROTOCOL_VERSION, "2025-06-18", "2025-03-26", "2024-11-05", "2024-10-07"];
 var RELATED_TASK_META_KEY = "io.modelcontextprotocol/related-task";
@@ -73614,15 +73614,15 @@ var UrlElicitationRequiredError = class extends McpError {
   }
 };
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/interfaces.js
+// ../../../server/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/interfaces.js
 function isTerminal(status) {
   return status === "completed" || status === "failed" || status === "cancelled";
 }
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/string.js
+// ../../../server/node_modules/zod-to-json-schema/dist/esm/parsers/string.js
 var ALPHA_NUMERIC = new Set("ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvxyz0123456789");
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-json-schema-compat.js
+// ../../../server/node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-json-schema-compat.js
 function getMethodLiteral(schema) {
   const shape = getObjectShape(schema);
   const methodSchema = shape?.method;
@@ -73643,7 +73643,7 @@ function parseWithCompat(schema, data) {
   return result.data;
 }
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/shared/protocol.js
+// ../../../server/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/protocol.js
 var DEFAULT_REQUEST_TIMEOUT_MSEC = 6e4;
 var Protocol = class {
   constructor(_options) {
@@ -74143,7 +74143,7 @@ var Protocol = class {
           return;
         }
         const pollInterval = task2.pollInterval ?? this._options?.defaultTaskPollInterval ?? 1e3;
-        await new Promise((resolve3) => setTimeout(resolve3, pollInterval));
+        await new Promise((resolve5) => setTimeout(resolve5, pollInterval));
         options?.signal?.throwIfAborted();
       }
     } catch (error2) {
@@ -74160,7 +74160,7 @@ var Protocol = class {
    */
   request(request, resultSchema, options) {
     const { relatedRequestId, resumptionToken, onresumptiontoken, task, relatedTask } = options ?? {};
-    return new Promise((resolve3, reject) => {
+    return new Promise((resolve5, reject) => {
       const earlyReject = (error2) => {
         reject(error2);
       };
@@ -74238,7 +74238,7 @@ var Protocol = class {
           if (!parseResult.success) {
             reject(parseResult.error);
           } else {
-            resolve3(parseResult.data);
+            resolve5(parseResult.data);
           }
         } catch (error2) {
           reject(error2);
@@ -74499,12 +74499,12 @@ var Protocol = class {
       }
     } catch {
     }
-    return new Promise((resolve3, reject) => {
+    return new Promise((resolve5, reject) => {
       if (signal.aborted) {
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
         return;
       }
-      const timeoutId = setTimeout(resolve3, interval);
+      const timeoutId = setTimeout(resolve5, interval);
       signal.addEventListener("abort", () => {
         clearTimeout(timeoutId);
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
@@ -74597,7 +74597,7 @@ function mergeCapabilities(base, additional) {
   return result;
 }
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/validation/ajv-provider.js
+// ../../../server/node_modules/@modelcontextprotocol/sdk/dist/esm/validation/ajv-provider.js
 var import_ajv = __toESM(require_ajv(), 1);
 var import_ajv_formats = __toESM(require_dist(), 1);
 function createDefaultAjvInstance() {
@@ -74665,7 +74665,7 @@ var AjvJsonSchemaValidator = class {
   }
 };
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/server.js
+// ../../../server/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/server.js
 var ExperimentalServerTasks = class {
   constructor(_server) {
     this._server = _server;
@@ -74878,7 +74878,7 @@ var ExperimentalServerTasks = class {
   }
 };
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/helpers.js
+// ../../../server/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/helpers.js
 function assertToolsCallTaskCapability(requests, method, entityName) {
   if (!requests) {
     throw new Error(`${entityName} does not support task creation (required for ${method})`);
@@ -74913,7 +74913,7 @@ function assertClientRequestTaskCapability(requests, method, entityName) {
   }
 }
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/server/index.js
+// ../../../server/node_modules/@modelcontextprotocol/sdk/dist/esm/server/index.js
 var Server = class extends Protocol {
   /**
    * Initializes this server with the given name and version information.
@@ -75284,10 +75284,10 @@ var Server = class extends Protocol {
   }
 };
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js
+// ../../../server/node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js
 import process2 from "node:process";
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/shared/stdio.js
+// ../../../server/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/stdio.js
 var STDIO_DEFAULT_MAX_BUFFER_SIZE = 10 * 1024 * 1024;
 var ReadBuffer = class {
   constructor(options) {
@@ -75324,7 +75324,7 @@ function serializeMessage(message) {
   return JSON.stringify(message) + "\n";
 }
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js
+// ../../../server/node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js
 var StdioServerTransport = class {
   constructor(_stdin = process2.stdin, _stdout = process2.stdout, options) {
     this._stdin = _stdin;
@@ -75380,19 +75380,19 @@ var StdioServerTransport = class {
     this.onclose?.();
   }
   send(message) {
-    return new Promise((resolve3) => {
+    return new Promise((resolve5) => {
       const json2 = serializeMessage(message);
       if (this._stdout.write(json2)) {
-        resolve3();
+        resolve5();
       } else {
-        this._stdout.once("drain", resolve3);
+        this._stdout.once("drain", resolve5);
       }
     });
   }
 };
 
 // src/config.ts
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { accessSync, constants, existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { delimiter, join } from "node:path";
 var config2 = {
@@ -75403,6 +75403,10 @@ var config2 = {
   naverClientSecret: process.env.NAVER_CLIENT_SECRET || "",
   /** data.go.kr auth key (required by datago_file_fetch/datago_api_call — search/detail/download need no auth) */
   dataGoKrApiKey: process.env.DATA_GO_KR_API_KEY || "",
+  /** Pexels API key (optional — stock_search skips Pexels without it) — https://www.pexels.com/api/ */
+  pexelsApiKey: process.env.PEXELS_API_KEY || "",
+  /** Pixabay API key (optional — stock_search skips Pixabay without it) — https://pixabay.com/api/docs/ */
+  pixabayApiKey: process.env.PIXABAY_API_KEY || "",
   /** Gemini API key (shared requirement of the veo_ and omni_ video, tts_* speech, and music_* music tools) — https://aistudio.google.com/apikey */
   geminiApiKey: process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "",
   /** OpenAI API key (required by the gpt_image_* image generation tools) — https://platform.openai.com/api-keys */
@@ -75454,6 +75458,29 @@ function mlxServeApiKey() {
 }
 function binOnPath(name) {
   return (process.env.PATH || "").split(delimiter).some((dir) => dir && existsSync(join(dir, name)));
+}
+function blenderBin() {
+  const runnable = (p) => {
+    try {
+      accessSync(p, constants.X_OK);
+      return statSync(p).isFile();
+    } catch {
+      return false;
+    }
+  };
+  const onPath = (process.env.PATH || "").split(delimiter).map((dir) => dir ? join(dir, "blender") : "").find((p) => p && runnable(p)) || "";
+  const candidates = [
+    process.env.BLENDER || "",
+    "/Applications/Blender.app/Contents/MacOS/Blender",
+    join(homedir(), "Applications", "Blender.app", "Contents", "MacOS", "Blender"),
+    onPath,
+    "/opt/homebrew/bin/blender",
+    "/usr/local/bin/blender",
+    "/usr/bin/blender",
+    "/snap/bin/blender"
+  ];
+  for (const c of candidates) if (c && runnable(c)) return c;
+  return "";
 }
 function mlxServeConfigured() {
   if (mlxServeUrl() !== DEFAULT_MLX_SERVE_URL) return true;
@@ -76105,7 +76132,7 @@ async function generateAdvanced(request) {
     const timeoutMs = targetDuration * 1e3 + REALTIME_TIMEOUT_MARGIN_MS;
     while (state.received < targetBytes && Date.now() - startTime < timeoutMs) {
       if (state.error) throw state.error;
-      await new Promise((resolve3) => setTimeout(resolve3, REALTIME_POLL_INTERVAL_MS));
+      await new Promise((resolve5) => setTimeout(resolve5, REALTIME_POLL_INTERVAL_MS));
     }
     state.done = true;
     closeQuietly(session);
@@ -76188,6 +76215,7 @@ var SUPERTONIC_LANGUAGES = [
 var DEFAULT_SUPERTONIC_LANGUAGE = "ko";
 var DEFAULT_SUPERTONIC_SPEED = 1.05;
 var DEFAULT_SUPERTONIC_STEPS = 8;
+var MAX_SUPERTONIC_SPEED = 1.2;
 var SUPERTONIC_SAMPLE_RATE = 44100;
 var MAX_SUPERTONIC_INPUT_CHARS = 16e3;
 function timeoutFor(textLength) {
@@ -76197,7 +76225,7 @@ var supertonicGenerateSchema = external_exports.object({
   text: external_exports.string().min(1, "Text is required").max(MAX_SUPERTONIC_INPUT_CHARS, `Text exceeds ${MAX_SUPERTONIC_INPUT_CHARS} characters; split the script by scene`),
   voice: external_exports.enum(SUPERTONIC_VOICE_NAMES).optional().default(DEFAULT_SUPERTONIC_VOICE),
   lang: external_exports.enum(SUPERTONIC_LANGUAGES).optional().default(DEFAULT_SUPERTONIC_LANGUAGE),
-  speed: external_exports.number().min(0.7).max(2).optional().default(DEFAULT_SUPERTONIC_SPEED),
+  speed: external_exports.number().min(0.7).max(MAX_SUPERTONIC_SPEED, `speed above ${MAX_SUPERTONIC_SPEED} drops syllables; synthesize at 1.2 or below and use the playback speed pass for a faster cut`).optional().default(DEFAULT_SUPERTONIC_SPEED),
   steps: external_exports.number().int().min(1).max(100).optional().default(DEFAULT_SUPERTONIC_STEPS),
   outputPath: external_exports.string().optional(),
   filename: bareFilenameSchema("audio").optional()
@@ -76259,7 +76287,7 @@ async function generateLocalSpeech(request) {
   );
   let stdout;
   try {
-    stdout = await new Promise((resolve3, reject) => {
+    stdout = await new Promise((resolve5, reject) => {
       execFile(
         python,
         ["-c", SYNTH_SNIPPET, payload],
@@ -76275,7 +76303,7 @@ async function generateLocalSpeech(request) {
 ${errOut.trim()}`.trim())));
             return;
           }
-          resolve3(out);
+          resolve5(out);
         }
       );
     });
@@ -76312,8 +76340,210 @@ ${stdout.slice(0, 500)}` };
 
 // src/seedance-client.ts
 import { execFile as execFile2 } from "node:child_process";
+import * as fs5 from "node:fs";
+import * as path4 from "node:path";
+
+// src/media-publish.ts
+import { spawn } from "node:child_process";
+import { randomBytes } from "node:crypto";
 import * as fs4 from "node:fs";
+import * as http3 from "node:http";
 import * as path3 from "node:path";
+var MIME = {
+  ".mp4": "video/mp4",
+  ".mov": "video/quicktime",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".webp": "image/webp",
+  ".wav": "audio/wav",
+  ".mp3": "audio/mpeg"
+};
+function uploadConfig() {
+  const endpoint = process.env.MEDIA_UPLOAD_URL || process.env.MELEON_MEDIA_URL || "";
+  const key = process.env.MEDIA_UPLOAD_API_KEY || process.env.MELEON_MEDIA_API_KEY || "";
+  if (!endpoint || !key) return null;
+  const seconds = Number(process.env.MEDIA_UPLOAD_TIMEOUT || process.env.MELEON_UPLOAD_TIMEOUT || 300);
+  return { endpoint, key, timeoutMs: (Number.isFinite(seconds) && seconds > 0 ? seconds : 300) * 1e3 };
+}
+async function assertReachable(url, attempts, waitMs) {
+  let last = "";
+  for (let i2 = 0; i2 < attempts; i2 += 1) {
+    try {
+      const head = await fetch(url, { method: "HEAD", signal: AbortSignal.timeout(15e3) });
+      if (head.ok) return;
+      const get = await fetch(url, { headers: { Range: "bytes=0-0" }, signal: AbortSignal.timeout(15e3) });
+      if (get.ok) {
+        await get.body?.cancel();
+        return;
+      }
+      last = `HTTP ${get.status}`;
+    } catch (error2) {
+      last = error2 instanceof Error ? error2.message : String(error2);
+    }
+    if (i2 < attempts - 1) await new Promise((resolve5) => setTimeout(resolve5, waitMs));
+  }
+  throw new Error(`public URL not reachable: ${url} (${last})`);
+}
+async function publishViaUpload(filePaths, config3) {
+  const urls = [];
+  for (const filePath of filePaths) {
+    const response = await fetch(config3.endpoint, {
+      method: "POST",
+      headers: { "x-api-key": config3.key, "Content-Type": MIME[path3.extname(filePath).toLowerCase()] || "application/octet-stream" },
+      body: fs4.readFileSync(filePath),
+      signal: AbortSignal.timeout(config3.timeoutMs)
+    });
+    const body = await response.text();
+    if (response.status !== 201) {
+      throw new Error(`media hosting refused ${path3.basename(filePath)}: HTTP ${response.status} \u2014 ${body.slice(0, 300)}`);
+    }
+    let url = "";
+    try {
+      url = String(JSON.parse(body).data?.url || "");
+    } catch {
+    }
+    if (!/^https?:\/\//.test(url)) throw new Error(`media hosting answered 201 without data.url \u2014 ${body.slice(0, 300)}`);
+    await assertReachable(url, 3, 2e3);
+    urls.push(url);
+  }
+  return { urls, how: "upload", close: async () => void 0 };
+}
+function serveLocally(filePaths) {
+  const token = randomBytes(16).toString("hex");
+  const routes = filePaths.map((p, i2) => `/${token}/${i2}/${encodeURIComponent(path3.basename(p))}`);
+  const byRoute = new Map(routes.map((r2, i2) => [r2, filePaths[i2]]));
+  const server2 = http3.createServer((req, res) => {
+    const file = byRoute.get((req.url || "").split("?")[0]);
+    if (!file || req.method !== "GET" && req.method !== "HEAD") {
+      res.writeHead(404).end();
+      return;
+    }
+    let size = 0;
+    try {
+      size = fs4.statSync(file).size;
+    } catch {
+      res.writeHead(404).end();
+      return;
+    }
+    const type = MIME[path3.extname(file).toLowerCase()] || "application/octet-stream";
+    const range = /^bytes=(\d+)-(\d*)$/.exec(req.headers.range || "");
+    let start = 0;
+    let end = size - 1;
+    if (range) {
+      start = Number(range[1]);
+      end = range[2] ? Math.min(Number(range[2]), size - 1) : end;
+    }
+    if (start > end || start >= size) {
+      res.writeHead(416, { "Content-Range": `bytes */${size}` }).end();
+      return;
+    }
+    res.writeHead(range ? 206 : 200, {
+      "Content-Type": type,
+      "Content-Length": end - start + 1,
+      "Accept-Ranges": "bytes",
+      ...range ? { "Content-Range": `bytes ${start}-${end}/${size}` } : {}
+    });
+    if (req.method === "HEAD") {
+      res.end();
+      return;
+    }
+    fs4.createReadStream(file, { start, end }).on("error", () => res.destroy()).pipe(res);
+  });
+  return new Promise((resolve5, reject) => {
+    server2.once("error", reject);
+    server2.listen(0, "127.0.0.1", () => {
+      const address = server2.address();
+      const port = typeof address === "object" && address ? address.port : 0;
+      resolve5({ server: server2, port, routes });
+    });
+  });
+}
+function closeServer(server2) {
+  return new Promise((resolve5) => {
+    server2.closeAllConnections?.();
+    server2.close(() => resolve5());
+  });
+}
+var liveTunnels = /* @__PURE__ */ new Set();
+var exitHookInstalled = false;
+function killTunnelsOnExit() {
+  if (exitHookInstalled) return;
+  exitHookInstalled = true;
+  const killAll = () => {
+    for (const child of liveTunnels) if (child.exitCode === null) child.kill("SIGTERM");
+  };
+  process.once("exit", killAll);
+  for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"]) {
+    if (process.listenerCount(signal) > 0) continue;
+    process.once(signal, () => {
+      killAll();
+      process.kill(process.pid, signal);
+    });
+  }
+}
+async function publishViaTunnel(filePaths, cloudflared = "cloudflared") {
+  const { server: server2, port, routes } = await serveLocally(filePaths);
+  let child = null;
+  const close = async () => {
+    if (child) {
+      liveTunnels.delete(child);
+      if (child.exitCode === null) child.kill("SIGTERM");
+    }
+    child = null;
+    await closeServer(server2);
+  };
+  killTunnelsOnExit();
+  try {
+    const origin = await new Promise((resolve5, reject) => {
+      child = spawn(cloudflared, ["tunnel", "--url", `http://127.0.0.1:${port}`, "--no-autoupdate"], {
+        stdio: ["ignore", "pipe", "pipe"]
+      });
+      liveTunnels.add(child);
+      let log = "";
+      const timer = setTimeout(() => reject(new Error(`cloudflared gave no quick-tunnel URL within 60s
+${log.slice(-600)}`)), 6e4);
+      const onLine = (chunk2) => {
+        log += chunk2.toString();
+        const m2 = /https:\/\/[a-z0-9-]+\.trycloudflare\.com/.exec(log);
+        if (m2) {
+          clearTimeout(timer);
+          resolve5(m2[0]);
+        }
+      };
+      child.stdout?.on("data", onLine);
+      child.stderr?.on("data", onLine);
+      child.once("error", (error2) => {
+        clearTimeout(timer);
+        reject(new Error(`could not start cloudflared (${error2.message}) \u2014 install it (brew install cloudflared) or set MEDIA_UPLOAD_URL`));
+      });
+      child.once("exit", (code) => {
+        clearTimeout(timer);
+        reject(new Error(`cloudflared exited with code ${code} before the tunnel came up
+${log.slice(-600)}`));
+      });
+    });
+    const urls = routes.map((r2) => origin + r2);
+    await new Promise((resolve5) => setTimeout(resolve5, 5e3));
+    for (const url of urls) await assertReachable(url, 30, 3e3);
+    console.error(`[media-publish] quick tunnel ${origin} serving ${filePaths.length} file(s)`);
+    return { urls, how: "tunnel", close };
+  } catch (error2) {
+    await close();
+    throw error2;
+  }
+}
+async function publishFiles(filePaths) {
+  if (filePaths.length === 0) return { urls: [], how: "upload", close: async () => void 0 };
+  for (const filePath of filePaths) {
+    if (!fs4.existsSync(filePath)) throw new Error(`file to publish not found: ${filePath}`);
+  }
+  const upload = uploadConfig();
+  if (upload) return publishViaUpload(filePaths, upload);
+  return publishViaTunnel(filePaths);
+}
+
+// src/seedance-client.ts
 var VALID_SEEDANCE_RESOLUTIONS = ["480p", "720p", "1080p", "4k"];
 var VALID_SEEDANCE_RATIOS = ["16:9", "9:16", "4:3", "3:4", "1:1", "21:9", "adaptive"];
 var SEEDANCE_MODEL_SPECS = {
@@ -76325,6 +76555,7 @@ var SEEDANCE_MODEL_SPECS = {
     lastFrame: true,
     referenceImages: [1, 30],
     referenceAudio: { maxClips: 10, clipSeconds: [2, 30], totalSeconds: 30, audioOnly: true },
+    referenceVideos: { maxClips: 10, clipSeconds: [2, 30], totalSeconds: 30 },
     audio: true,
     seed: false,
     realFaceInput: false,
@@ -76336,6 +76567,7 @@ var SEEDANCE_MODEL_SPECS = {
     lastFrame: true,
     referenceImages: [1, 9],
     referenceAudio: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15, audioOnly: false },
+    referenceVideos: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15 },
     audio: true,
     seed: false,
     realFaceInput: false,
@@ -76347,6 +76579,7 @@ var SEEDANCE_MODEL_SPECS = {
     lastFrame: true,
     referenceImages: [1, 9],
     referenceAudio: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15, audioOnly: false },
+    referenceVideos: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15 },
     audio: true,
     seed: false,
     realFaceInput: false,
@@ -76358,6 +76591,7 @@ var SEEDANCE_MODEL_SPECS = {
     lastFrame: true,
     referenceImages: [1, 9],
     referenceAudio: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15, audioOnly: false },
+    referenceVideos: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15 },
     audio: true,
     seed: false,
     realFaceInput: false,
@@ -76369,6 +76603,7 @@ var SEEDANCE_MODEL_SPECS = {
     lastFrame: true,
     referenceImages: false,
     referenceAudio: false,
+    referenceVideos: false,
     audio: true,
     seed: true,
     realFaceInput: true,
@@ -76380,6 +76615,7 @@ var SEEDANCE_MODEL_SPECS = {
     lastFrame: true,
     referenceImages: false,
     referenceAudio: false,
+    referenceVideos: false,
     audio: false,
     seed: true,
     realFaceInput: true,
@@ -76391,6 +76627,7 @@ var SEEDANCE_MODEL_SPECS = {
     lastFrame: false,
     referenceImages: false,
     referenceAudio: false,
+    referenceVideos: false,
     audio: false,
     seed: true,
     realFaceInput: true,
@@ -76414,7 +76651,11 @@ var MAX_POLLS = 90;
 var MAX_INPUT_IMAGE_BYTES = 30 * 1024 * 1024;
 var MAX_REQUEST_BYTES = 64 * 1024 * 1024;
 var MAX_INPUT_AUDIO_BYTES = 15 * 1024 * 1024;
+var MAX_INPUT_VIDEO_BYTES = 200 * 1024 * 1024;
+var SEEDANCE_REFERENCE_VIDEO_FPS = [24, 60];
+var SEEDANCE_REFERENCE_VIDEO_PIXELS = [407696, 8295044];
 var SEEDANCE_REFERENCE_AUDIO_EXTENSIONS = [".wav", ".mp3"];
+var SEEDANCE_REFERENCE_VIDEO_EXTENSIONS = [".mp4", ".mov"];
 var commonFields = {
   prompt: external_exports.string().min(1, "Prompt is required"),
   model: external_exports.enum(VALID_SEEDANCE_MODELS).optional().default(DEFAULT_SEEDANCE_MODEL),
@@ -76511,6 +76752,8 @@ var seedanceReferenceSchema = external_exports.object({
   model: external_exports.enum(SEEDANCE_REFERENCE_MODELS).optional().default(DEFAULT_SEEDANCE_REFERENCE_MODEL),
   referenceImagePaths: external_exports.array(external_exports.string()).optional().default([]),
   referenceAudioPaths: external_exports.array(external_exports.string()).optional().default([]),
+  referenceVideoPaths: external_exports.array(external_exports.string()).optional().default([]),
+  referenceVideoUrls: external_exports.array(external_exports.string().url()).optional().default([]),
   ratio: external_exports.enum(VALID_SEEDANCE_RATIOS).optional().default("adaptive")
 }).superRefine((data, ctx) => {
   validateCommon(data, ctx);
@@ -76531,13 +76774,45 @@ var seedanceReferenceSchema = external_exports.object({
       message: `${data.model} allows at most ${maxImages} reference images (requested: ${data.referenceImagePaths.length}).`
     });
   }
-  if (data.referenceImagePaths.length === 0 && data.referenceAudioPaths.length === 0) {
+  const videoCount = data.referenceVideoPaths.length + data.referenceVideoUrls.length;
+  if (data.referenceImagePaths.length === 0 && data.referenceAudioPaths.length === 0 && videoCount === 0) {
     ctx.addIssue({
       code: external_exports.ZodIssueCode.custom,
       path: ["referenceImagePaths"],
-      message: "At least one reference is required \u2014 referenceImagePaths, referenceAudioPaths, or both."
+      message: "At least one reference is required \u2014 referenceImagePaths, referenceAudioPaths, referenceVideoPaths/Urls, or a mix."
     });
     return;
+  }
+  if (videoCount > 0) {
+    const video = spec.referenceVideos;
+    if (video === false) {
+      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["referenceVideoPaths"], message: `${data.model} does not take reference video.` });
+      return;
+    }
+    if (videoCount > video.maxClips) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["referenceVideoPaths"],
+        message: `${data.model} allows at most ${video.maxClips} reference videos (requested: ${videoCount}).`
+      });
+    }
+    for (const filePath of data.referenceVideoPaths) {
+      const ext = path4.extname(filePath).toLowerCase();
+      if (!SEEDANCE_REFERENCE_VIDEO_EXTENSIONS.includes(ext)) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: ["referenceVideoPaths"],
+          message: `Reference video must be mp4 or mov (got "${ext}" in ${path4.basename(filePath)}).`
+        });
+      }
+    }
+    if (!/\bvideo\s*1\b/i.test(data.prompt)) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["prompt"],
+        message: 'A reference video is bound in the prompt by index \u2014 write "Video 1" (2.5: "@Video 1") and say what it supplies (camera movement, blocking, motion timing) and what it must not (its visual content).'
+      });
+    }
   }
   if (data.referenceAudioPaths.length === 0) return;
   const audio = spec.referenceAudio;
@@ -76564,12 +76839,12 @@ var seedanceReferenceSchema = external_exports.object({
     });
   }
   for (const filePath of data.referenceAudioPaths) {
-    const ext = path3.extname(filePath).toLowerCase();
+    const ext = path4.extname(filePath).toLowerCase();
     if (!SEEDANCE_REFERENCE_AUDIO_EXTENSIONS.includes(ext)) {
       ctx.addIssue({
         code: external_exports.ZodIssueCode.custom,
         path: ["referenceAudioPaths"],
-        message: `Reference audio must be wav or mp3 (got "${ext}" in ${path3.basename(filePath)}).`
+        message: `Reference audio must be wav or mp3 (got "${ext}" in ${path4.basename(filePath)}).`
       });
     }
   }
@@ -76582,7 +76857,7 @@ var seedanceReferenceSchema = external_exports.object({
   }
 });
 function sleep2(ms) {
-  return new Promise((resolve3) => setTimeout(resolve3, ms));
+  return new Promise((resolve5) => setTimeout(resolve5, ms));
 }
 function describeHttpError(status, body) {
   try {
@@ -76633,27 +76908,27 @@ async function awaitVideoAndSave(apiKey, taskId, outputPath, filename) {
     if (!download.ok) {
       return { error: `Failed to download video: HTTP ${download.status} (URL is valid for 24 hours)` };
     }
-    fs4.writeFileSync(fullPath, Buffer.from(await download.arrayBuffer()));
+    fs5.writeFileSync(fullPath, Buffer.from(await download.arrayBuffer()));
     console.error(`[Seedance] Video saved to: ${fullPath}`);
     return { videoPath: fullPath, task };
   }
   return { error: `Video generation timed out (${MAX_POLLS * POLL_INTERVAL_MS / 6e4} minutes). Task ${taskId} may still be running \u2014 check the ModelArk console.` };
 }
 function readImageDataUri(filePath) {
-  const stats = fs4.statSync(filePath);
+  const stats = fs5.statSync(filePath);
   if (stats.size > MAX_INPUT_IMAGE_BYTES) {
     throw new Error(
-      `Input image too large: ${path3.basename(filePath)} (${(stats.size / 1024 / 1024).toFixed(1)}MB, limit 30MB)`
+      `Input image too large: ${path4.basename(filePath)} (${(stats.size / 1024 / 1024).toFixed(1)}MB, limit 30MB)`
     );
   }
-  const buffer = fs4.readFileSync(filePath);
+  const buffer = fs5.readFileSync(filePath);
   return `data:${mimeFromExtension(filePath, "image")};base64,${buffer.toString("base64")}`;
 }
 function loadImages(filePaths) {
   const uris = [];
   for (const filePath of filePaths) {
     validateFilePath(filePath, { allowedExtensions: ALLOWED_EXTENSIONS.image });
-    if (!fs4.existsSync(filePath)) throw new Error(`Image not found: ${filePath}`);
+    if (!fs5.existsSync(filePath)) throw new Error(`Image not found: ${filePath}`);
     uris.push(readImageDataUri(filePath));
   }
   assertRequestBudget(uris);
@@ -76668,30 +76943,88 @@ function assertRequestBudget(uris) {
   }
 }
 function audioMimeFromExtension(filePath) {
-  return path3.extname(filePath).toLowerCase() === ".mp3" ? "audio/mp3" : "audio/wav";
+  return path4.extname(filePath).toLowerCase() === ".mp3" ? "audio/mp3" : "audio/wav";
 }
 function loadReferenceAudio(filePaths) {
   return filePaths.map((filePath) => {
     validateFilePath(filePath, { allowedExtensions: SEEDANCE_REFERENCE_AUDIO_EXTENSIONS });
-    if (!fs4.existsSync(filePath)) throw new Error(`Reference audio not found: ${filePath}`);
-    const stats = fs4.statSync(filePath);
+    if (!fs5.existsSync(filePath)) throw new Error(`Reference audio not found: ${filePath}`);
+    const stats = fs5.statSync(filePath);
     if (stats.size > MAX_INPUT_AUDIO_BYTES) {
       throw new Error(
-        `Reference audio too large: ${path3.basename(filePath)} (${(stats.size / 1024 / 1024).toFixed(1)}MB, limit 15MB)`
+        `Reference audio too large: ${path4.basename(filePath)} (${(stats.size / 1024 / 1024).toFixed(1)}MB, limit 15MB)`
       );
     }
-    return `data:${audioMimeFromExtension(filePath)};base64,${fs4.readFileSync(filePath).toString("base64")}`;
+    return `data:${audioMimeFromExtension(filePath)};base64,${fs5.readFileSync(filePath).toString("base64")}`;
   });
 }
+function probeVideo(filePath) {
+  return new Promise((resolve5) => {
+    execFile2(
+      "ffprobe",
+      ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height,r_frame_rate:format=duration", "-of", "json", filePath],
+      { timeout: 15e3 },
+      (error2, out) => {
+        if (error2) return resolve5(null);
+        try {
+          const parsed = JSON.parse(String(out));
+          const stream = parsed.streams?.[0];
+          const [num5, den] = String(stream?.r_frame_rate || "").split("/").map(Number);
+          const fps = num5 && den ? num5 / den : NaN;
+          const seconds = Number.parseFloat(String(parsed.format?.duration ?? ""));
+          if (!stream?.width || !stream?.height || !Number.isFinite(fps) || !Number.isFinite(seconds) || seconds <= 0) return resolve5(null);
+          resolve5({ seconds, fps, width: stream.width, height: stream.height });
+        } catch {
+          resolve5(null);
+        }
+      }
+    );
+  });
+}
+async function checkReferenceVideos(filePaths, spec, model) {
+  const [minSeconds, maxSeconds] = spec.clipSeconds;
+  const [minFps, maxFps] = SEEDANCE_REFERENCE_VIDEO_FPS;
+  const [minPixels, maxPixels] = SEEDANCE_REFERENCE_VIDEO_PIXELS;
+  let total = 0;
+  for (const filePath of filePaths) {
+    validateFilePath(filePath, { allowedExtensions: SEEDANCE_REFERENCE_VIDEO_EXTENSIONS });
+    if (!fs5.existsSync(filePath)) throw new Error(`Reference video not found: ${filePath}`);
+    const name = path4.basename(filePath);
+    const stats = fs5.statSync(filePath);
+    if (stats.size > MAX_INPUT_VIDEO_BYTES) {
+      throw new Error(`Reference video too large: ${name} (${(stats.size / 1024 / 1024).toFixed(1)}MB, limit 200MB)`);
+    }
+    const facts = await probeVideo(filePath);
+    if (!facts) {
+      console.error(`[Seedance] ffprobe unavailable \u2014 skipping the frame checks for ${name} (${model}: ${minSeconds}~${maxSeconds}s per clip, ${minFps}~${maxFps} fps)`);
+      continue;
+    }
+    if (facts.seconds < minSeconds || facts.seconds > maxSeconds) {
+      throw new Error(`Reference video ${name} is ${facts.seconds.toFixed(1)}s \u2014 ${model} accepts ${minSeconds}~${maxSeconds}s per clip.`);
+    }
+    if (facts.fps < minFps - 0.01 || facts.fps > maxFps + 0.01) {
+      throw new Error(`Reference video ${name} is ${facts.fps.toFixed(3)} fps \u2014 the vendor takes ${minFps}~${maxFps} fps (render the previz at 24 or 30).`);
+    }
+    const pixels = facts.width * facts.height;
+    if (pixels < minPixels || pixels > maxPixels) {
+      throw new Error(`Reference video ${name} is ${facts.width}\xD7${facts.height} (${pixels} px) \u2014 the vendor takes ${minPixels}~${maxPixels} pixels a frame.`);
+    }
+    total += facts.seconds;
+  }
+  if (total > spec.totalSeconds) {
+    throw new Error(`Reference videos total ${total.toFixed(1)}s \u2014 ${model} allows ${spec.totalSeconds}s across all clips.`);
+  }
+  return total;
+}
 function probeAudioSeconds(filePath) {
-  return new Promise((resolve3) => {
+  return new Promise((resolve5) => {
     execFile2(
       "ffprobe",
       ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", filePath],
       { timeout: 15e3 },
       (error2, out) => {
         const seconds = Number.parseFloat(String(out ?? "").trim());
-        resolve3(!error2 && Number.isFinite(seconds) && seconds > 0 ? seconds : null);
+        resolve5(!error2 && Number.isFinite(seconds) && seconds > 0 ? seconds : null);
       }
     );
   });
@@ -76703,13 +77036,13 @@ async function checkReferenceAudioDurations(filePaths, spec, model) {
     const seconds = await probeAudioSeconds(filePath);
     if (seconds === null) {
       console.error(
-        `[Seedance] ffprobe unavailable \u2014 skipping the duration check for ${path3.basename(filePath)} (${model}: ${minSeconds}~${maxSeconds}s per clip, ${spec.totalSeconds}s total)`
+        `[Seedance] ffprobe unavailable \u2014 skipping the duration check for ${path4.basename(filePath)} (${model}: ${minSeconds}~${maxSeconds}s per clip, ${spec.totalSeconds}s total)`
       );
       continue;
     }
     if (seconds < minSeconds || seconds > maxSeconds) {
       throw new Error(
-        `Reference audio ${path3.basename(filePath)} is ${seconds.toFixed(1)}s \u2014 ${model} accepts ${minSeconds}~${maxSeconds}s per clip.`
+        `Reference audio ${path4.basename(filePath)} is ${seconds.toFixed(1)}s \u2014 ${model} accepts ${minSeconds}~${maxSeconds}s per clip.`
       );
     }
     total += seconds;
@@ -76812,26 +77145,51 @@ async function generateWithReferences(request) {
     if (audioUris.length > 0 && spec.referenceAudio !== false) {
       await checkReferenceAudioDurations(request.referenceAudioPaths, spec.referenceAudio, request.model);
     }
-    const parts = [
-      ...imageUris.map((url) => ({ type: "image_url", image_url: { url }, role: "reference_image" })),
-      ...audioUris.map((url) => ({ type: "audio_url", audio_url: { url }, role: "reference_audio" }))
-    ];
-    console.error(`[Seedance] Starting reference-to-video generation... (model: ${request.model})`);
-    if (imageUris.length > 0) console.error(`[Seedance] Reference images: ${request.referenceImagePaths.join(", ")}`);
-    if (audioUris.length > 0) console.error(`[Seedance] Reference audio: ${request.referenceAudioPaths.join(", ")}`);
-    const taskId = await createTask(apiKey, buildBody(request, parts));
-    const saved = await awaitVideoAndSave(
-      apiKey,
-      taskId,
-      request.outputPath || process.cwd(),
-      request.filename || `video_ref_${Date.now()}.mp4`
-    );
-    if ("error" in saved) return { success: false, error: saved.error, taskId };
-    return {
-      ...toResponse(request, saved.videoPath, saved.task, taskId),
-      referenceImages: request.referenceImagePaths,
-      referenceAudios: request.referenceAudioPaths
-    };
+    let referenceVideoSeconds = 0;
+    if (request.referenceVideoPaths.length > 0 && spec.referenceVideos !== false) {
+      referenceVideoSeconds = await checkReferenceVideos(request.referenceVideoPaths, spec.referenceVideos, request.model);
+    }
+    if (request.referenceVideoUrls.length > 0 && spec.referenceVideos !== false) {
+      const assumed = request.referenceVideoUrls.length * request.durationSeconds;
+      if (referenceVideoSeconds + assumed > spec.referenceVideos.totalSeconds) {
+        throw new Error(
+          `Reference videos total at least ${(referenceVideoSeconds + assumed).toFixed(1)}s (URL clips counted at ${request.durationSeconds}s each) \u2014 ${request.model} allows ${spec.referenceVideos.totalSeconds}s across all clips.`
+        );
+      }
+    }
+    const published = await publishFiles(request.referenceVideoPaths);
+    try {
+      const videoUrls = [...published.urls, ...request.referenceVideoUrls];
+      const parts = [
+        ...imageUris.map((url) => ({ type: "image_url", image_url: { url }, role: "reference_image" })),
+        ...videoUrls.map((url) => ({ type: "video_url", video_url: { url }, role: "reference_video" })),
+        ...audioUris.map((url) => ({ type: "audio_url", audio_url: { url }, role: "reference_audio" }))
+      ];
+      console.error(`[Seedance] Starting reference-to-video generation... (model: ${request.model})`);
+      if (imageUris.length > 0) console.error(`[Seedance] Reference images: ${request.referenceImagePaths.join(", ")}`);
+      if (videoUrls.length > 0) console.error(`[Seedance] Reference videos: ${[...request.referenceVideoPaths, ...request.referenceVideoUrls].join(", ")}`);
+      if (audioUris.length > 0) console.error(`[Seedance] Reference audio: ${request.referenceAudioPaths.join(", ")}`);
+      const taskId = await createTask(apiKey, buildBody(request, parts));
+      const saved = await awaitVideoAndSave(
+        apiKey,
+        taskId,
+        request.outputPath || process.cwd(),
+        request.filename || `video_ref_${Date.now()}.mp4`
+      );
+      if ("error" in saved) return { success: false, error: saved.error, taskId };
+      return {
+        ...toResponse(request, saved.videoPath, saved.task, taskId),
+        referenceImages: request.referenceImagePaths,
+        referenceAudios: request.referenceAudioPaths,
+        ...videoUrls.length > 0 ? {
+          referenceVideos: [...request.referenceVideoPaths, ...request.referenceVideoUrls],
+          referenceVideoSeconds,
+          ...published.urls.length > 0 ? { referenceVideoRoute: published.how } : {}
+        } : {}
+      };
+    } finally {
+      await published.close();
+    }
   } catch (error2) {
     return toFailure(error2);
   }
@@ -76971,7 +77329,7 @@ async function synthesizeWithRetry(model, contentText, speechConfig, temperature
     } catch (error2) {
       lastError = error2;
       if (attempt < MAX_ATTEMPTS - 1) {
-        await new Promise((resolve3) => setTimeout(resolve3, RETRY_BASE_DELAY_MS * (attempt + 1)));
+        await new Promise((resolve5) => setTimeout(resolve5, RETRY_BASE_DELAY_MS * (attempt + 1)));
       }
     }
   }
@@ -77045,13 +77403,13 @@ async function generateDialogue(request) {
 // src/tts-quality.ts
 import { execFile as execFile4 } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
-import { closeSync, existsSync as existsSync5, mkdirSync as mkdirSync3, openSync, readFileSync as readFileSync4, renameSync, rmSync as rmSync2, writeFileSync as writeFileSync5 } from "node:fs";
-import path6 from "node:path";
+import { closeSync, existsSync as existsSync6, mkdirSync as mkdirSync3, openSync, readFileSync as readFileSync5, renameSync, rmSync as rmSync2, writeFileSync as writeFileSync5 } from "node:fs";
+import path7 from "node:path";
 import { promisify as promisify2 } from "node:util";
 
 // src/elevenlabs-client.ts
-import * as fs5 from "node:fs";
-import * as path4 from "node:path";
+import * as fs6 from "node:fs";
+import * as path5 from "node:path";
 var ELEVENLABS_MODELS = [
   "eleven_multilingual_v2",
   // vendor default for convert — stable, 10k chars, $0.10/1K chars
@@ -77118,7 +77476,7 @@ function extensionForFormat(format) {
 function checkFilenameMatchesFormat(value, ctx) {
   if (!value.filename) return;
   const expected = extensionForFormat(value.outputFormat);
-  if (path4.extname(value.filename).toLowerCase() !== expected) {
+  if (path5.extname(value.filename).toLowerCase() !== expected) {
     ctx.addIssue({
       code: external_exports.ZodIssueCode.custom,
       path: ["filename"],
@@ -77247,7 +77605,7 @@ function isRetryable(httpStatus) {
   return httpStatus === 429 || httpStatus >= 500;
 }
 function sleep3(ms) {
-  return new Promise((resolve3) => setTimeout(resolve3, ms));
+  return new Promise((resolve5) => setTimeout(resolve5, ms));
 }
 function timeoutFor2(textLength) {
   return Math.min(5 * 6e4, 6e4 + textLength * 40);
@@ -77301,7 +77659,7 @@ function wavDurationSeconds(buffer) {
   return void 0;
 }
 function alignmentPathFor(audioPath) {
-  const ext = path4.extname(audioPath);
+  const ext = path5.extname(audioPath);
   return `${audioPath.slice(0, audioPath.length - ext.length)}.alignment.json`;
 }
 function saveTimestamped(body, outputDir, filename, extra) {
@@ -77309,12 +77667,12 @@ function saveTimestamped(body, outputDir, filename, extra) {
   const audio = Buffer.from(body.audio_base64, "base64");
   const audioPath = saveAudioFile(outputDir, filename, audio);
   const alignmentPath = alignmentPathFor(audioPath);
-  fs5.writeFileSync(
+  fs6.writeFileSync(
     alignmentPath,
     JSON.stringify(
       {
         ...extra,
-        audio: path4.basename(audioPath),
+        audio: path5.basename(audioPath),
         alignment: body.alignment ?? null,
         normalized_alignment: body.normalized_alignment ?? null,
         ...body.voice_segments ? { voice_segments: body.voice_segments } : {}
@@ -77369,7 +77727,7 @@ async function generateElevenLabsSpeech(request) {
         voice_id: request.voiceId,
         text: request.text
       });
-      console.error(`[ElevenLabs] Audio saved to: ${saved.audioPath} (+ ${path4.basename(saved.alignmentPath)})`);
+      console.error(`[ElevenLabs] Audio saved to: ${saved.audioPath} (+ ${path5.basename(saved.alignmentPath)})`);
       return {
         success: true,
         audioPath: saved.audioPath,
@@ -77427,7 +77785,7 @@ async function generateElevenLabsDialogue(request) {
         model: ELEVENLABS_DIALOGUE_MODEL,
         inputs: request.inputs.map((line) => ({ voice_id: line.voiceId, text: line.text }))
       });
-      console.error(`[ElevenLabs] Dialogue saved to: ${saved.audioPath} (+ ${path4.basename(saved.alignmentPath)})`);
+      console.error(`[ElevenLabs] Dialogue saved to: ${saved.audioPath} (+ ${path5.basename(saved.alignmentPath)})`);
       return {
         success: true,
         audioPath: saved.audioPath,
@@ -77502,7 +77860,7 @@ async function listElevenLabsVoices(request) {
 
 // src/mlx-serve-client.ts
 import { execFile as execFile3 } from "node:child_process";
-import { existsSync as existsSync3, mkdtempSync, readFileSync as readFileSync3, rmSync, writeFileSync as writeFileSync4 } from "node:fs";
+import { existsSync as existsSync4, mkdtempSync, readFileSync as readFileSync4, rmSync, writeFileSync as writeFileSync4 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join as join3 } from "node:path";
 
@@ -77727,9 +78085,9 @@ function pickModel(models, capability) {
   return models.find((m2) => m2.state === "ready" && has3(m2)) ?? models.find(has3);
 }
 function fileToBase64(filePath) {
-  if (!existsSync3(filePath)) return { ok: false, error: `File not found: ${filePath}` };
+  if (!existsSync4(filePath)) return { ok: false, error: `File not found: ${filePath}` };
   try {
-    return { ok: true, b64: readFileSync3(filePath).toString("base64") };
+    return { ok: true, b64: readFileSync4(filePath).toString("base64") };
   } catch (error2) {
     return { ok: false, error: error2 instanceof Error ? error2.message : String(error2) };
   }
@@ -77780,7 +78138,7 @@ async function loadModel(id) {
     if (!listed.ok) return listed;
     const found = listed.models?.find((m2) => m2.id === id);
     if (found?.state === "ready") return { ok: true };
-    await new Promise((resolve3) => setTimeout(resolve3, 2e3));
+    await new Promise((resolve5) => setTimeout(resolve5, 2e3));
   }
   return { ok: false, error: `Timed out waiting for model "${id}" to become ready.` };
 }
@@ -77905,7 +78263,7 @@ async function muxRgbToMp4(opts) {
     );
     if (opts.audio) args.push("-c:a", "aac", "-shortest");
     args.push(opts.outFile);
-    await new Promise((resolve3, reject) => {
+    await new Promise((resolve5, reject) => {
       execFile3("ffmpeg", args, { timeout: 12e4, maxBuffer: 2 * 1024 * 1024 }, (error2, _out, errOut) => {
         if (error2) {
           const code = error2.code;
@@ -77917,10 +78275,10 @@ async function muxRgbToMp4(opts) {
 ${String(errOut).slice(-500)}` : ""}`));
           return;
         }
-        resolve3();
+        resolve5();
       });
     });
-    if (!existsSync3(opts.outFile)) return { ok: false, error: "ffmpeg exited 0 but the mp4 was not written" };
+    if (!existsSync4(opts.outFile)) return { ok: false, error: "ffmpeg exited 0 but the mp4 was not written" };
     return { ok: true };
   } catch (error2) {
     return { ok: false, error: error2 instanceof Error ? error2.message : String(error2) };
@@ -77986,8 +78344,8 @@ async function editMlxImage(request) {
   const src = fileToBase64(request.imagePath);
   if (!src.ok) return { success: false, error: src.error };
   const refs = [];
-  for (const path10 of request.refImagePaths ?? []) {
-    const ref = fileToBase64(path10);
+  for (const path11 of request.refImagePaths ?? []) {
+    const ref = fileToBase64(path11);
     if (!ref.ok) return { success: false, error: ref.error };
     refs.push(ref.b64);
   }
@@ -78213,9 +78571,10 @@ async function generateMlx3d(request) {
 }
 
 // src/usage-ledger.ts
-import { appendFileSync, existsSync as existsSync4, mkdirSync as mkdirSync2 } from "node:fs";
-import path5 from "node:path";
-var EPISODE_MARKER = path5.join("storyboard", "scenes.js");
+import { execFileSync } from "node:child_process";
+import { appendFileSync, existsSync as existsSync5, mkdirSync as mkdirSync2 } from "node:fs";
+import path6 from "node:path";
+var EPISODE_MARKER = path6.join("storyboard", "scenes.js");
 var MAX_WALK_UP = 6;
 function episodePathArg(args) {
   for (const name of ["outputPath", "savePath"]) {
@@ -78228,17 +78587,17 @@ function findEpisodeDir(outputPath) {
   if (!outputPath || typeof outputPath !== "string") return null;
   let dir;
   try {
-    dir = path5.resolve(outputPath);
+    dir = path6.resolve(outputPath);
   } catch {
     return null;
   }
   for (let i2 = 0; i2 <= MAX_WALK_UP; i2++) {
     try {
-      if (existsSync4(path5.join(dir, EPISODE_MARKER))) return dir;
+      if (existsSync5(path6.join(dir, EPISODE_MARKER))) return dir;
     } catch {
       return null;
     }
-    const parent = path5.dirname(dir);
+    const parent = path6.dirname(dir);
     if (parent === dir) return null;
     dir = parent;
   }
@@ -78247,8 +78606,8 @@ function findEpisodeDir(outputPath) {
 function recordUsage(outputPath, event) {
   const episodeDir = findEpisodeDir(outputPath);
   if (!episodeDir) return null;
-  const workDir = path5.join(episodeDir, ".work");
-  const file = path5.join(workDir, "events.jsonl");
+  const workDir = path6.join(episodeDir, ".work");
+  const file = path6.join(workDir, "events.jsonl");
   try {
     mkdirSync2(workDir, { recursive: true });
     appendFileSync(file, JSON.stringify(event) + "\n", { encoding: "utf8", flag: "a" });
@@ -78296,7 +78655,14 @@ var PRICED_VIDEO_KEYS = /* @__PURE__ */ new Set([
   "seedance.2-0-fast.720p",
   "seedance.2-0.1080p",
   "seedance.2-5.720p",
-  "seedance.2-5.1080p"
+  "seedance.2-5.1080p",
+  // A request that carries a reference video (the previz lane) bills input + output seconds
+  // at the vendor's lower with-video token rate — its own rows.
+  "seedance.2-0-video.1080p",
+  "seedance.2-5-video.720p",
+  "seedance.2-5-video.1080p",
+  "seedance.2-0-fast-video.720p",
+  "seedance.2-0-mini-video.720p"
 ]);
 var ELEVENLABS_KEY = {
   eleven_multilingual_v2: "tts.elevenlabs",
@@ -78305,6 +78671,19 @@ var ELEVENLABS_KEY = {
   eleven_flash_v2_5: "tts.elevenlabs-flash",
   eleven_turbo_v2_5: "tts.elevenlabs-flash"
 };
+function probeSeconds(file) {
+  try {
+    const out = execFileSync("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file], {
+      encoding: "utf8",
+      timeout: 15e3,
+      stdio: ["ignore", "pipe", "ignore"]
+    });
+    const seconds = Number.parseFloat(out.trim());
+    return Number.isFinite(seconds) && seconds > 0 ? Math.round(seconds * 1e3) / 1e3 : null;
+  } catch {
+    return null;
+  }
+}
 var num = (v, fallback) => typeof v === "number" && Number.isFinite(v) ? v : fallback;
 var str = (v, fallback) => typeof v === "string" && v ? v : fallback;
 function priceOf(tool, args) {
@@ -78337,11 +78716,28 @@ function priceOf(tool, args) {
     const model = str(args.model, "seedance-1-5-pro-251215");
     const resolution = str(args.resolution, "720p");
     const seconds = num(args.durationSeconds, 5);
-    const family = model === "seedance-1-5-pro-251215" ? `1-5-pro-${args.generateAudio === true ? "audio" : "silent"}` : SEEDANCE_FAMILY[model];
-    if (!family) return { key: null, quantity: seconds, note: `unmapped seedance model: ${model}` };
+    const base = model === "seedance-1-5-pro-251215" ? `1-5-pro-${args.generateAudio === true ? "audio" : "silent"}` : SEEDANCE_FAMILY[model];
+    if (!base) return { key: null, quantity: seconds, note: `unmapped seedance model: ${model}` };
+    const videos = [
+      ...Array.isArray(args.referenceVideoPaths) ? args.referenceVideoPaths : [],
+      ...Array.isArray(args.referenceVideoUrls) ? args.referenceVideoUrls : []
+    ].filter((v) => typeof v === "string");
+    const family = videos.length ? `${base}-video` : base;
     const key = `seedance.${family}.${resolution}`;
     if (!PRICED_VIDEO_KEYS.has(key)) return { key: null, quantity: seconds, note: `no price row for ${key}` };
-    return { key, quantity: seconds };
+    if (!videos.length) return { key, quantity: seconds };
+    let input = 0;
+    const unread = [];
+    for (const video of videos) {
+      const probed = /^[a-z][a-z0-9+.-]*:/i.test(video) ? null : probeSeconds(video);
+      if (probed === null) unread.push(video);
+      input += probed ?? seconds;
+    }
+    return {
+      key,
+      quantity: seconds + input,
+      note: `output ${seconds}s + reference video ${input}s${unread.length ? ` (${unread.length} clip(s) assumed ${seconds}s \u2014 not probed)` : ""}`
+    };
   }
   if (tool.startsWith("gpt_image_")) {
     const quality = str(args.quality, "medium");
@@ -78418,7 +78814,8 @@ function isBillableTool(tool) {
 // src/tts-quality.ts
 var exec = promisify2(execFile4);
 var QUALITY_POLICY = "speech-quality-v1";
-var REVIEW_MODEL = "gemini-2.5-pro";
+var REVIEW_API_VERSION = process.env.SOCIAL_FLOW_TTS_REVIEW_API_VERSION?.trim() || "v1";
+var REVIEW_MODEL = process.env.SOCIAL_FLOW_TTS_REVIEW_MODEL?.trim() || "gemini-3.8-flash";
 var GENERATORS = ["tts_generate", "tts_multi_speaker", "tts_local_generate", "tts_elevenlabs_generate", "tts_elevenlabs_dialogue", "mlx_tts_generate"];
 var checkedSpeechSchema = external_exports.object({
   generator: external_exports.enum(GENERATORS),
@@ -78514,8 +78911,8 @@ var REVIEW_JSON_SCHEMA = {
 };
 async function listen(file, request) {
   const { GoogleGenAI: GoogleGenAI3 } = await Promise.resolve().then(() => (init_node(), node_exports));
-  const client = new GoogleGenAI3({ apiKey: requireGeminiKey(), httpOptions: { timeout: 18e4 } });
-  const audio = readFileSync4(file);
+  const client = new GoogleGenAI3({ apiKey: requireGeminiKey(), httpOptions: { apiVersion: REVIEW_API_VERSION, timeout: 18e4 } });
+  const audio = readFileSync5(file);
   if (audio.length > 14 * 1024 * 1024 || audio.subarray(0, 4).toString() !== "RIFF") throw new Error("Review requires a WAV smaller than 14 MiB");
   const audioPart = { inlineData: { mimeType: "audio/wav", data: audio.toString("base64") } };
   async function call(prompt, schema, stage) {
@@ -78622,8 +79019,8 @@ function prepareGeneration(request) {
 async function generateCheckedSpeech(input, dependencies) {
   const request = checkedSpeechSchema.parse(input);
   const prepared = prepareGeneration(request);
-  const output = path6.resolve(request.outputPath, request.filename), proofFile = output + ".quality.json";
-  mkdirSync3(path6.dirname(output), { recursive: true });
+  const output = path7.resolve(request.outputPath, request.filename), proofFile = output + ".quality.json";
+  mkdirSync3(path7.dirname(output), { recursive: true });
   const lockFile = proofFile + ".lock";
   let lock;
   try {
@@ -78657,20 +79054,28 @@ async function generateCheckedSpeech(input, dependencies) {
     return { success: status === "pass", status, audioPath: output, proofPath: proofFile, attempts: attempts.length, ...extra };
   }
   try {
-    if (existsSync5(proofFile)) {
-      const old = JSON.parse(readFileSync4(proofFile, "utf8"));
-      if (Object.entries(base).every(([key, value]) => old[key] === value)) {
+    if (existsSync6(proofFile)) {
+      const old = JSON.parse(readFileSync5(proofFile, "utf8"));
+      if (Object.entries(base).every(([key, value]) => key === "model" || old[key] === value)) {
         if (!Array.isArray(old.attempts) || old.attempts.length > 3) throw new Error("Invalid attempt history");
-        attempts.push(...old.attempts);
+        attempts.push(...old.attempts.map((take) => ({ ...take, model: take.model ?? old.model })));
         const last = attempts.at(-1);
         if (request.rejectTake) {
-          if (!last || last.audioSha256 !== request.rejectTake.audioSha256 || !existsSync5(output) || sha256(readFileSync4(output)) !== request.rejectTake.audioSha256) throw new Error("The rejected take is not the current audio; inspect the current file before requesting another retake");
+          if (!last || last.audioSha256 !== request.rejectTake.audioSha256 || !existsSync6(output) || sha256(readFileSync5(output)) !== request.rejectTake.audioSha256) throw new Error("The rejected take is not the current audio; inspect the current file before requesting another retake");
           last.authorRejection = request.rejectTake.reason;
           last.pending = false;
           last.failures = [...Array.isArray(last.failures) ? last.failures : [], "Rejected during final listening: " + request.rejectTake.reason];
         }
-        if (!request.rejectTake && old.status === "pass" && last?.pending === false && Array.isArray(last.failures) && !last.failures.length && typeof last.transcript === "string" && existsSync5(output) && old.audioSha256 === sha256(readFileSync4(output)) && last.audioSha256 === old.audioSha256 && !signalFailures(last.signal, request.expectedText).length && !reviewFailures(request.expectedText, String(last.transcript), reviewSchema.parse(last.review), last.signal.duration).length) {
+        if (!request.rejectTake && old.model === REVIEW_MODEL && old.status === "pass" && last?.pending === false && Array.isArray(last.failures) && !last.failures.length && typeof last.transcript === "string" && existsSync6(output) && old.audioSha256 === sha256(readFileSync5(output)) && last.audioSha256 === old.audioSha256 && !signalFailures(last.signal, request.expectedText).length && !reviewFailures(request.expectedText, String(last.transcript), reviewSchema.parse(last.review), last.signal.duration).length) {
           return { success: true, status: "pass", audioPath: output, proofPath: proofFile, attempts: attempts.length, reused: true };
+        }
+        if (!request.rejectTake && old.model !== REVIEW_MODEL && old.status === "pass" && last && existsSync6(output) && last.audioSha256 === sha256(readFileSync5(output))) {
+          last.previousReviews = [
+            ...Array.isArray(last.previousReviews) ? last.previousReviews : [],
+            { model: last.model, transcript: last.transcript, review: last.review, failures: last.failures, signal: last.signal, cer: last.cer }
+          ];
+          for (const key of ["transcript", "review", "failures", "signal", "cer"]) delete last[key];
+          last.pending = true;
         }
       }
     }
@@ -78679,7 +79084,7 @@ async function generateCheckedSpeech(input, dependencies) {
     await deps.preflight();
     while (true) {
       let take = attempts.at(-1);
-      const resumeReview = take?.pending === true && typeof take.audioSha256 === "string" && existsSync5(output) && take.audioSha256 === sha256(readFileSync4(output));
+      const resumeReview = take?.pending === true && typeof take.audioSha256 === "string" && existsSync6(output) && take.audioSha256 === sha256(readFileSync5(output));
       if (!resumeReview) {
         if (attempts.length >= request.maxAttempts) break;
         const attempt = attempts.length + 1;
@@ -78703,8 +79108,8 @@ async function generateCheckedSpeech(input, dependencies) {
             detail: { ...generated?.requestId ? { requestId: generated.requestId } : {} }
           });
         }
-        if (!generated.success || path6.resolve(generated.audioPath || generated.path || "") !== output) throw new Error(generated.error || "Generator did not return the requested audio path");
-        take.audioSha256 = sha256(readFileSync4(output));
+        if (!generated.success || path7.resolve(generated.audioPath || generated.path || "") !== output) throw new Error(generated.error || "Generator did not return the requested audio path");
+        take.audioSha256 = sha256(readFileSync5(output));
         save("unverified");
       }
       const audioSha256 = take.audioSha256;
@@ -78716,8 +79121,8 @@ async function generateCheckedSpeech(input, dependencies) {
         listened.review = reviewSchema.parse(listened.review);
         failures = reviewFailures(request.expectedText, listened.transcript, listened.review, signal.duration);
       }
-      if (audioSha256 !== sha256(readFileSync4(output))) throw new Error("Audio changed during review");
-      Object.assign(take, { pending: false, audioSha256, signal, ...listened, cer: listened ? characterErrorRate(request.expectedText, listened.transcript) : null, failures });
+      if (audioSha256 !== sha256(readFileSync5(output))) throw new Error("Audio changed during review");
+      Object.assign(take, { pending: false, audioSha256, signal, ...listened ? { model: REVIEW_MODEL, ...listened } : {}, cer: listened ? characterErrorRate(request.expectedText, listened.transcript) : null, failures });
       if (!failures.length) return save("pass", { audioSha256 });
       save("retry", { audioSha256 });
     }
@@ -78732,7 +79137,7 @@ async function generateCheckedSpeech(input, dependencies) {
 
 // src/zimage-client.ts
 import { execFile as execFile5 } from "node:child_process";
-import { existsSync as existsSync6 } from "node:fs";
+import { existsSync as existsSync7 } from "node:fs";
 import { homedir as homedir2 } from "node:os";
 import { join as join4 } from "node:path";
 var DEFAULT_ZIMAGE_STEPS = 9;
@@ -78774,7 +79179,7 @@ var zimageGenerateSchema = external_exports.object({
 });
 async function generateLocalImage(request) {
   const bin = mfluxZImageBin();
-  if (!existsSync6(bin)) {
+  if (!existsSync7(bin)) {
     return { success: false, error: installHint2(`mflux binary not found: "${bin}"`) };
   }
   const outFile = resolveOutputFile(
@@ -78797,7 +79202,7 @@ async function generateLocalImage(request) {
     outFile
   ];
   if (request.seed !== void 0) cliArgs.push("--seed", String(request.seed));
-  const firstCall = !existsSync6(weightCacheDir());
+  const firstCall = !existsSync7(weightCacheDir());
   if (firstCall) {
     console.error("[Z-Image] First call \u2014 downloading ~31GB of weights to the huggingface cache first. This can take a long time.");
   }
@@ -78806,7 +79211,7 @@ async function generateLocalImage(request) {
   );
   const startedAt = Date.now();
   try {
-    await new Promise((resolve3, reject) => {
+    await new Promise((resolve5, reject) => {
       execFile5(
         bin,
         cliArgs,
@@ -78828,7 +79233,7 @@ async function generateLocalImage(request) {
 ${tail}` : ""}`));
             return;
           }
-          resolve3();
+          resolve5();
         }
       );
     });
@@ -78837,7 +79242,7 @@ ${tail}` : ""}`));
     console.error(`[Z-Image] Error: ${message.split("\n")[0]}`);
     return { success: false, error: message };
   }
-  if (!existsSync6(outFile)) {
+  if (!existsSync7(outFile)) {
     return {
       success: false,
       error: `mflux exited without producing the output file: ${outFile}`
@@ -78859,9 +79264,9 @@ ${tail}` : ""}`));
 
 // src/qwen3-asr-client.ts
 import { execFile as execFile6 } from "node:child_process";
-import { existsSync as existsSync7, mkdirSync as mkdirSync4, mkdtempSync as mkdtempSync2, readFileSync as readFileSync5, renameSync as renameSync2, rmSync as rmSync3 } from "node:fs";
+import { existsSync as existsSync8, mkdirSync as mkdirSync4, mkdtempSync as mkdtempSync2, readFileSync as readFileSync6, renameSync as renameSync2, rmSync as rmSync3 } from "node:fs";
 import { homedir as homedir3 } from "node:os";
-import { basename as basename5, extname as extname4, join as join5 } from "node:path";
+import { basename as basename6, extname as extname5, join as join5 } from "node:path";
 var QWEN3_ASR_MODELS = ["Qwen/Qwen3-ASR-1.7B", "Qwen/Qwen3-ASR-0.6B"];
 var DEFAULT_QWEN3_ASR_MODEL = "Qwen/Qwen3-ASR-1.7B";
 var QWEN3_ASR_LANGUAGES = [
@@ -78977,7 +79382,7 @@ If installed elsewhere, point QWEN3_ASR_BIN at the executable (e.g. QWEN3_ASR_BI
 The first call downloads ~3.4GB of Qwen3-ASR-1.7B weights (plus the ForcedAligner) to ~/.cache/huggingface. Until it is installed, ingest uses the whisper.cpp fallback.`;
 }
 var qwen3AsrTranscribeSchema = external_exports.object({
-  audioPath: external_exports.string().min(1, "audioPath is required").refine((p) => !p.includes(".."), { message: 'audioPath must not contain ".."' }).refine((p) => AUDIO_INPUT_EXTENSIONS.includes(extname4(p).toLowerCase()), {
+  audioPath: external_exports.string().min(1, "audioPath is required").refine((p) => !p.includes(".."), { message: 'audioPath must not contain ".."' }).refine((p) => AUDIO_INPUT_EXTENSIONS.includes(extname5(p).toLowerCase()), {
     message: `audioPath extension must be one of: ${AUDIO_INPUT_EXTENSIONS.join(", ")}`
   }),
   language: external_exports.string().optional().default(DEFAULT_QWEN3_ASR_LANGUAGE).transform((value) => canonicalizeLanguage(value)),
@@ -78988,7 +79393,7 @@ var qwen3AsrTranscribeSchema = external_exports.object({
   filename: bareFilenameSchema("json").optional()
 });
 function probeDurationSeconds(audioPath) {
-  return new Promise((resolve3) => {
+  return new Promise((resolve5) => {
     execFile6(
       "ffprobe",
       ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", audioPath],
@@ -78996,10 +79401,10 @@ function probeDurationSeconds(audioPath) {
       (error2, out) => {
         const seconds = Number.parseFloat((out || "").trim());
         if (error2 || !Number.isFinite(seconds) || seconds <= 0) {
-          resolve3(60);
+          resolve5(60);
           return;
         }
-        resolve3(seconds);
+        resolve5(seconds);
       }
     );
   });
@@ -79016,10 +79421,10 @@ function normalizeSegments(data) {
 }
 async function transcribeLocal(request) {
   const bin = qwen3AsrBin();
-  if (!existsSync7(bin)) {
+  if (!existsSync8(bin)) {
     return { success: false, error: installHint3(`mlx-qwen3-asr binary not found: "${bin}"`) };
   }
-  if (!existsSync7(request.audioPath)) {
+  if (!existsSync8(request.audioPath)) {
     return { success: false, error: `Audio file not found: ${request.audioPath}` };
   }
   const outFile = resolveOutputFile(
@@ -79030,7 +79435,7 @@ async function transcribeLocal(request) {
   const outDir = request.outputPath || process.cwd();
   mkdirSync4(outDir, { recursive: true });
   const scratchDir = mkdtempSync2(join5(outDir, ".qwen3-asr-"));
-  const firstCall = !existsSync7(weightCacheDir2(request.model)) || request.timestamps && !existsSync7(alignerCacheDir());
+  const firstCall = !existsSync8(weightCacheDir2(request.model)) || request.timestamps && !existsSync8(alignerCacheDir());
   if (firstCall) {
     console.error(
       "[Qwen3-ASR] First call \u2014 downloading ~3.4GB of weights (plus ForcedAligner if timestamps) to the huggingface cache. This can take a while."
@@ -79056,7 +79461,7 @@ async function transcribeLocal(request) {
   );
   const startedAt = Date.now();
   try {
-    await new Promise((resolve3, reject) => {
+    await new Promise((resolve5, reject) => {
       execFile6(
         bin,
         cliArgs,
@@ -79076,7 +79481,7 @@ async function transcribeLocal(request) {
 ${tail}` : ""}`));
             return;
           }
-          resolve3();
+          resolve5();
         }
       );
     });
@@ -79086,14 +79491,14 @@ ${tail}` : ""}`));
     console.error(`[Qwen3-ASR] Error: ${message.split("\n")[0]}`);
     return { success: false, error: message };
   }
-  const cliJsonPath = join5(scratchDir, `${basename5(request.audioPath, extname4(request.audioPath))}.json`);
-  if (!existsSync7(cliJsonPath)) {
+  const cliJsonPath = join5(scratchDir, `${basename6(request.audioPath, extname5(request.audioPath))}.json`);
+  if (!existsSync8(cliJsonPath)) {
     rmSync3(scratchDir, { recursive: true, force: true });
     return { success: false, error: `mlx-qwen3-asr exited without producing JSON (looked for ${cliJsonPath})` };
   }
   let parsed;
   try {
-    parsed = parseCliJson(readFileSync5(cliJsonPath, "utf8"));
+    parsed = parseCliJson(readFileSync6(cliJsonPath, "utf8"));
   } catch (error2) {
     rmSync3(scratchDir, { recursive: true, force: true });
     const message = error2 instanceof Error ? error2.message : String(error2);
@@ -79116,9 +79521,1827 @@ ${tail}` : ""}`));
   };
 }
 
+// src/blender-bridge.ts
+import { execFile as execFile7 } from "node:child_process";
+import { existsSync as existsSync9, mkdtempSync as mkdtempSync3, readFileSync as readFileSync7, rmSync as rmSync4, writeFileSync as writeFileSync6 } from "node:fs";
+import { tmpdir as tmpdir2 } from "node:os";
+import { dirname as dirname2, extname as extname6, join as join6, resolve as resolve2 } from "node:path";
+var BLENDER_PROXY_KINDS = ["person", "dog", "car", "box", "cylinder", "sphere"];
+var BLENDER_INTERPOLATIONS = ["LINEAR", "BEZIER", "CONSTANT"];
+var BLENDER_PREVIZ_ENGINES = ["workbench", "eevee"];
+var DEFAULT_PREVIZ_ENGINE = "workbench";
+var DEFAULT_PREVIZ_WIDTH = 1080;
+var DEFAULT_PREVIZ_HEIGHT = 1920;
+var DEFAULT_PREVIZ_FILENAME = "previz.mp4";
+var DEFAULT_SCENE_FPS = 30;
+var DEFAULT_FRAME_START = 1;
+var DEFAULT_FRAME_END = 150;
+var MAX_PREVIZ_FRAMES = 3e3;
+var MAX_BLENDER_NAME = 63;
+var BLENDER_RIG_BONES = [
+  "hips",
+  "spine",
+  "chest",
+  "neck",
+  "head",
+  "shoulder.L",
+  "upper_arm.L",
+  "forearm.L",
+  "hand.L",
+  "shoulder.R",
+  "upper_arm.R",
+  "forearm.R",
+  "hand.R",
+  "thigh.L",
+  "shin.L",
+  "foot.L",
+  "thigh.R",
+  "shin.R",
+  "foot.R"
+];
+var BLENDER_POSE_GROUPS = ["hips", "torso", "head", "armL", "armR", "legL", "legR"];
+var BLENDER_MOTION_FORMATS = [".bvh", ".fbx"];
+var BLENDER_ROOT_MOTIONS = ["inplace", "full"];
+var vec3 = external_exports.tuple([external_exports.number(), external_exports.number(), external_exports.number()]);
+var frameNumber = external_exports.number().int().min(0).max(1e6);
+var blenderName = external_exports.string().min(1).refine((n) => Buffer.byteLength(n, "utf8") <= MAX_BLENDER_NAME, { message: `a Blender object name is at most ${MAX_BLENDER_NAME} bytes of UTF-8` }).refine((n) => !n.includes("/") && !n.includes("\\"), { message: "a Blender object name cannot contain path separators" });
+var evenPixels = (min) => external_exports.number().int().min(min).max(4096).multipleOf(2, "must be an even number of pixels (H.264)");
+var hexColor = external_exports.string().regex(/^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, "color must be a hex triplet such as #4a90d9");
+var blendPath = external_exports.string().min(1, "blendPath is required").refine((p) => !p.includes(".."), { message: 'blendPath must not contain ".."' }).refine((p) => extname6(p).toLowerCase() === ".blend", { message: "blendPath must end in .blend" }).transform((p) => resolve2(p));
+var blenderSceneReadSchema = external_exports.object({ blendPath });
+var proxySchema = external_exports.object({
+  name: blenderName,
+  kind: external_exports.enum(BLENDER_PROXY_KINDS),
+  location: vec3.optional().default([0, 0, 0]),
+  rotationZDeg: external_exports.number().optional().default(0),
+  height: external_exports.number().positive().max(100).optional(),
+  radius: external_exports.number().positive().max(100).optional(),
+  size: vec3.optional(),
+  color: hexColor.optional()
+});
+var importSchema = external_exports.object({
+  glbPath: external_exports.string().min(1).refine((p) => !p.includes(".."), { message: 'glbPath must not contain ".."' }).refine((p) => [".glb", ".gltf"].includes(extname6(p).toLowerCase()), { message: "glbPath must end in .glb or .gltf" }).transform((p) => resolve2(p)),
+  name: blenderName,
+  location: vec3.optional().default([0, 0, 0]),
+  rotationDeg: vec3.optional().default([0, 0, 0]),
+  scale: external_exports.number().positive().optional().default(1)
+});
+var blenderSceneBuildSchema = external_exports.object({
+  blendPath,
+  reset: external_exports.boolean().optional().default(true),
+  force: external_exports.boolean().optional().default(false),
+  fps: external_exports.number().int().min(1).max(120).optional(),
+  frameStart: frameNumber.optional(),
+  frameEnd: frameNumber.optional(),
+  width: evenPixels(64).optional(),
+  height: evenPixels(64).optional(),
+  floor: external_exports.boolean().optional().default(true),
+  floorSize: external_exports.number().positive().max(1e4).optional().default(40),
+  proxies: external_exports.array(proxySchema).max(100).optional().default([]),
+  imports: external_exports.array(importSchema).max(50).optional().default([])
+}).superRefine((data, ctx) => {
+  if (data.frameStart !== void 0 && data.frameEnd !== void 0 && data.frameEnd < data.frameStart) {
+    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["frameEnd"], message: "frameEnd must not be before frameStart" });
+  }
+  const names = [...data.proxies.map((p) => p.name), ...data.imports.map((i2) => i2.name)];
+  const dupes = names.filter((n, i2) => names.indexOf(n) !== i2);
+  if (dupes.length > 0) {
+    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["proxies"], message: `object names must be unique \u2014 repeated: ${[...new Set(dupes)].join(", ")}` });
+  }
+  for (const [i2, p] of data.proxies.entries()) {
+    if (p.kind === "box" && p.size === void 0) {
+      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["proxies", i2, "size"], message: "a box proxy needs size [x, y, z] in metres" });
+    }
+  }
+});
+var cameraKeySchema = external_exports.object({
+  frame: frameNumber.optional(),
+  location: vec3,
+  target: vec3.optional(),
+  rotationDeg: vec3.optional(),
+  lensMm: external_exports.number().min(1).max(1e3).optional()
+});
+var blenderCameraSetSchema = external_exports.object({
+  blendPath,
+  name: blenderName.optional().default("Camera"),
+  lensMm: external_exports.number().min(1).max(1e3).optional(),
+  fovDeg: external_exports.number().min(1).max(179).optional(),
+  keys: external_exports.array(cameraKeySchema).min(1).max(500),
+  interpolation: external_exports.enum(BLENDER_INTERPOLATIONS).optional().default("LINEAR"),
+  clearExisting: external_exports.boolean().optional().default(true)
+}).superRefine((data, ctx) => {
+  if (data.lensMm !== void 0 && data.fovDeg !== void 0) {
+    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["fovDeg"], message: "give lensMm or fovDeg, not both" });
+  }
+  const frames = /* @__PURE__ */ new Set();
+  for (const [i2, k] of data.keys.entries()) {
+    const hasTarget = k.target !== void 0;
+    const hasRotation = k.rotationDeg !== void 0;
+    if (hasTarget === hasRotation) {
+      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["keys", i2], message: "each key needs exactly one of target (a point the camera looks at) or rotationDeg" });
+    }
+    if (hasTarget && k.target.every((v, j) => v === k.location[j])) {
+      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["keys", i2, "target"], message: "target must differ from location" });
+    }
+    if (data.keys.length > 1 && k.frame === void 0) {
+      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["keys", i2, "frame"], message: "with more than one key, every key needs a frame" });
+    }
+    if (k.frame !== void 0) {
+      if (frames.has(k.frame)) ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["keys", i2, "frame"], message: `frame ${k.frame} is keyed twice` });
+      frames.add(k.frame);
+    }
+  }
+});
+var objectKeySchema = external_exports.object({
+  frame: frameNumber,
+  location: vec3.optional(),
+  rotationDeg: vec3.optional(),
+  scale: external_exports.union([external_exports.number().positive(), vec3]).optional()
+});
+var blenderObjectAnimateSchema = external_exports.object({
+  blendPath,
+  object: blenderName,
+  keys: external_exports.array(objectKeySchema).min(1).max(1e3),
+  interpolation: external_exports.enum(BLENDER_INTERPOLATIONS).optional().default("LINEAR"),
+  clearExisting: external_exports.boolean().optional().default(true)
+}).superRefine((data, ctx) => {
+  const frames = /* @__PURE__ */ new Set();
+  for (const [i2, k] of data.keys.entries()) {
+    if (k.location === void 0 && k.rotationDeg === void 0 && k.scale === void 0) {
+      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["keys", i2], message: "a key needs at least one of location, rotationDeg, scale" });
+    }
+    if (frames.has(k.frame)) ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["keys", i2, "frame"], message: `frame ${k.frame} is keyed twice` });
+    frames.add(k.frame);
+  }
+});
+var poseDeg = external_exports.number().min(-360).max(360);
+var armPoseSchema = external_exports.object({ raise: poseDeg.optional(), side: poseDeg.optional(), twist: poseDeg.optional(), elbow: poseDeg.optional() }).strict();
+var legPoseSchema = external_exports.object({ raise: poseDeg.optional(), side: poseDeg.optional(), knee: poseDeg.optional(), ankle: poseDeg.optional() }).strict();
+var torsoPoseSchema = external_exports.object({ bow: poseDeg.optional(), lean: poseDeg.optional(), turn: poseDeg.optional() }).strict();
+var headPoseSchema = external_exports.object({ nod: poseDeg.optional(), tilt: poseDeg.optional(), turn: poseDeg.optional() }).strict();
+var hipsPoseSchema = external_exports.object({ offset: vec3.optional(), bow: poseDeg.optional(), lean: poseDeg.optional(), turn: poseDeg.optional() }).strict();
+var poseSchema = external_exports.object({
+  hips: hipsPoseSchema.optional(),
+  torso: torsoPoseSchema.optional(),
+  head: headPoseSchema.optional(),
+  armL: armPoseSchema.optional(),
+  armR: armPoseSchema.optional(),
+  legL: legPoseSchema.optional(),
+  legR: legPoseSchema.optional(),
+  bones: external_exports.record(external_exports.enum(BLENDER_RIG_BONES), vec3).optional()
+}).strict();
+var poseKeyEntrySchema = external_exports.object({ frame: frameNumber, pose: poseSchema });
+var blenderPoseKeySchema = external_exports.object({
+  blendPath,
+  object: blenderName,
+  keys: external_exports.array(poseKeyEntrySchema).min(1).max(1e3),
+  interpolation: external_exports.enum(BLENDER_INTERPOLATIONS).optional().default("BEZIER"),
+  clearExisting: external_exports.boolean().optional().default(true),
+  ease: external_exports.number().int().min(0).max(120).optional().default(6)
+}).superRefine((data, ctx) => {
+  const frames = /* @__PURE__ */ new Set();
+  for (const [i2, k] of data.keys.entries()) {
+    if (Object.values(k.pose).every((v) => v === void 0)) {
+      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["keys", i2, "pose"], message: `a pose needs at least one of ${BLENDER_POSE_GROUPS.join(", ")} or bones` });
+    }
+    if (frames.has(k.frame)) ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["keys", i2, "frame"], message: `frame ${k.frame} is keyed twice` });
+    frames.add(k.frame);
+  }
+});
+var motionPath = external_exports.string().min(1, "motionPath is required").refine((p) => !p.includes(".."), { message: 'motionPath must not contain ".."' }).refine((p) => BLENDER_MOTION_FORMATS.includes(extname6(p).toLowerCase()), { message: `motionPath must end in ${BLENDER_MOTION_FORMATS.join(" or ")}` }).transform((p) => resolve2(p));
+var blenderMotionImportSchema = external_exports.object({
+  blendPath,
+  object: blenderName,
+  motionPath,
+  frameStart: frameNumber.optional(),
+  fromSeconds: external_exports.number().min(0).max(36e3).optional().default(0),
+  toSeconds: external_exports.number().positive().max(36e3).optional(),
+  speed: external_exports.number().min(0.1).max(10).optional().default(1),
+  loop: external_exports.boolean().optional().default(false),
+  rootMotion: external_exports.enum(BLENDER_ROOT_MOTIONS).optional().default("inplace"),
+  boneMap: external_exports.record(external_exports.enum(BLENDER_RIG_BONES), external_exports.string().min(1).max(255)).optional(),
+  clearExisting: external_exports.boolean().optional().default(true)
+}).superRefine((data, ctx) => {
+  if (data.toSeconds !== void 0 && data.toSeconds <= data.fromSeconds) {
+    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["toSeconds"], message: "toSeconds must be after fromSeconds" });
+  }
+});
+var blenderRenderPrevizSchema = external_exports.object({
+  blendPath,
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").optional().default(DEFAULT_PREVIZ_FILENAME),
+  engine: external_exports.enum(BLENDER_PREVIZ_ENGINES).optional().default(DEFAULT_PREVIZ_ENGINE),
+  width: evenPixels(64).optional(),
+  height: evenPixels(64).optional(),
+  fps: external_exports.number().int().min(1).max(120).optional(),
+  frameStart: frameNumber.optional(),
+  frameEnd: frameNumber.optional(),
+  stills: external_exports.array(frameNumber).max(24).optional(),
+  stamp: external_exports.boolean().optional().default(true),
+  samples: external_exports.number().int().min(1).max(256).optional().default(16),
+  timeoutSeconds: external_exports.number().int().min(30).max(3600).optional()
+}).superRefine((data, ctx) => {
+  if (data.frameStart !== void 0 && data.frameEnd !== void 0) {
+    if (data.frameEnd < data.frameStart) {
+      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["frameEnd"], message: "frameEnd must not be before frameStart" });
+    } else if (data.frameEnd - data.frameStart + 1 > MAX_PREVIZ_FRAMES) {
+      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["frameEnd"], message: `a previz is at most ${MAX_PREVIZ_FRAMES} frames` });
+    }
+  }
+  if (extname6(data.filename).toLowerCase() !== ".mp4") {
+    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["filename"], message: "the previz clip is written as .mp4 (H.264)" });
+  }
+});
+var fmt = (v) => `(${v.map((x2) => Number.isInteger(x2) ? String(x2) : x2.toFixed(2)).join(", ")})`;
+function describeKeys(keys) {
+  if (keys.length === 0) return "";
+  if (keys.length > 12) return `keys ${keys[0]}\u2013${keys[keys.length - 1]} (${keys.length})`;
+  return `keys [${keys.join(", ")}]`;
+}
+function describeTails(tails) {
+  if (!tails) return "";
+  return Object.entries(tails).map(([bone, p]) => `${bone} ${fmt(p)}`).join(" \xB7 ");
+}
+function describeScene(scene) {
+  const lines = [];
+  lines.push(`Blender ${scene.blender} \xB7 ${scene.blendPath}`);
+  lines.push(`Frames ${scene.frame.start}\u2013${scene.frame.end} @ ${scene.frame.fps} fps \xB7 ${scene.resolution[0]}\xD7${scene.resolution[1]}`);
+  if (scene.camera) {
+    const c = scene.camera;
+    lines.push(
+      `Camera: ${c.name} at ${fmt(c.location)} rot ${fmt(c.rotationDeg)} \xB7 ${c.lensMm} mm \xB7 fov ${c.fovDeg}\xB0 \xB7 keys [${c.keyframes.join(", ")}]`
+    );
+  } else {
+    lines.push("Camera: none \u2014 run blender_camera_set before rendering");
+  }
+  if (scene.cameras.length > 1) lines.push(`Cameras in file: ${scene.cameras.join(", ")}`);
+  const shown = scene.objects.slice(0, 200);
+  lines.push(`Objects (${scene.objects.length}):`);
+  for (const o of shown) {
+    const keys = o.keyframes.length ? ` ${describeKeys(o.keyframes)}` : "";
+    const parent = o.parent ? ` \u2190 ${o.parent}` : "";
+    const bones = o.bones !== void 0 ? `, ${o.bones} bones` : "";
+    lines.push(`  ${o.name} (${o.type}${bones}${parent}) at ${fmt(o.location)} rot ${fmt(o.rotationDeg)} dims ${fmt(o.dimensions)}${keys}`);
+  }
+  if (scene.objects.length > shown.length) lines.push(`  \u2026 ${scene.objects.length - shown.length} more`);
+  return lines.join("\n");
+}
+function installHint4(detail) {
+  return `${detail}
+
+The Blender bridge needs Blender 4.2 or newer on this machine:
+  brew install --cask blender        (macOS)
+or point BLENDER at the executable (BLENDER=/Applications/Blender.app/Contents/MacOS/Blender).
+capability_status lists it under 3d_generation once it resolves.`;
+}
+function previzTimeoutMs(frames, engine) {
+  const perFrame = engine === "eevee" ? 4e3 : 1e3;
+  return Math.min(60 * 6e4, 12e4 + Math.max(frames, 1) * perFrame);
+}
+var EDIT_TIMEOUT_MS = 18e4;
+var MOTION_TIMEOUT_MS = 6e5;
+var fileLocks = /* @__PURE__ */ new Map();
+async function withFileLock(key, fn) {
+  const previous = fileLocks.get(key) ?? Promise.resolve();
+  let release = () => {
+  };
+  const mine = new Promise((r2) => {
+    release = r2;
+  });
+  const chained = previous.then(() => mine);
+  fileLocks.set(key, chained);
+  await previous;
+  try {
+    return await fn();
+  } finally {
+    release();
+    if (fileLocks.get(key) === chained) fileLocks.delete(key);
+  }
+}
+function runBridge(job, timeoutMs) {
+  return withFileLock(job.blendPath, () => runBridgeUnlocked(job, timeoutMs));
+}
+async function runBridgeUnlocked(job, timeoutMs) {
+  const blender = blenderBin();
+  if (!blender) return { success: false, error: installHint4("Blender was not found on this machine.") };
+  const dir = mkdtempSync3(join6(tmpdir2(), "blender-bridge-"));
+  const script = join6(dir, "bridge.py");
+  const jobPath = join6(dir, "job.json");
+  const resultPath = join6(dir, "result.json");
+  writeFileSync6(script, BRIDGE_PY, "utf-8");
+  writeFileSync6(jobPath, JSON.stringify({ ...job, resultPath }), "utf-8");
+  try {
+    const run = await new Promise((resolveRun) => {
+      execFile7(
+        blender,
+        ["--background", "--factory-startup", "--python", script, "--", jobPath],
+        { timeout: timeoutMs, maxBuffer: 32 * 1024 * 1024, env: { ...process.env, PYTHONIOENCODING: "utf-8" } },
+        (error2, stdout, stderr) => {
+          const lines = `${stdout}
+${stderr}`.split("\n").filter((l) => l.trim().length > 0);
+          const err4 = error2;
+          resolveRun({
+            code: err4 ? typeof err4.code === "number" ? err4.code : null : 0,
+            timedOut: Boolean(err4 && (err4.killed || err4.signal === "SIGTERM")),
+            tail: lines.slice(-30).join("\n")
+          });
+        }
+      );
+    });
+    if (existsSync9(resultPath)) {
+      const raw = JSON.parse(readFileSync7(resultPath, "utf-8"));
+      if (raw.ok) return { success: true, result: raw.result };
+      return { success: false, error: `${raw.error ?? "Blender reported an error"}${raw.trace ? `
+${raw.trace}` : ""}` };
+    }
+    if (run.timedOut) {
+      return { success: false, error: `Blender did not finish within ${Math.round(timeoutMs / 1e3)}s \u2014 shorten the frame range, lower the resolution, or raise timeoutSeconds.` };
+    }
+    return { success: false, error: `Blender exited with code ${run.code ?? "unknown"} before writing a result:
+${run.tail}` };
+  } finally {
+    rmSync4(dir, { recursive: true, force: true });
+  }
+}
+async function readScene(request) {
+  if (!existsSync9(request.blendPath)) {
+    return { success: false, error: `blend file not found: ${request.blendPath} \u2014 blender_scene_build creates one.` };
+  }
+  const r2 = await runBridge({ op: "read", blendPath: request.blendPath }, EDIT_TIMEOUT_MS);
+  return r2.success ? { success: true, scene: r2.result } : r2;
+}
+async function buildScene(request) {
+  for (const imp of request.imports) {
+    if (!existsSync9(imp.glbPath)) return { success: false, error: `GLB not found: ${imp.glbPath}` };
+  }
+  if (!request.reset && !existsSync9(request.blendPath)) {
+    return { success: false, error: `reset is false but ${request.blendPath} does not exist yet \u2014 set reset to true to create it.` };
+  }
+  const r2 = await runBridge({ op: "build", ...request }, EDIT_TIMEOUT_MS);
+  return r2.success ? { success: true, scene: r2.result } : r2;
+}
+async function setCamera(request) {
+  if (!existsSync9(request.blendPath)) {
+    return { success: false, error: `blend file not found: ${request.blendPath} \u2014 blender_scene_build creates one.` };
+  }
+  const r2 = await runBridge({ op: "camera", ...request }, EDIT_TIMEOUT_MS);
+  return r2.success ? { success: true, scene: r2.result } : r2;
+}
+async function animateObject(request) {
+  if (!existsSync9(request.blendPath)) {
+    return { success: false, error: `blend file not found: ${request.blendPath} \u2014 blender_scene_build creates one.` };
+  }
+  const r2 = await runBridge({ op: "animate", ...request }, EDIT_TIMEOUT_MS);
+  return r2.success ? { success: true, scene: r2.result } : r2;
+}
+async function poseKey(request) {
+  if (!existsSync9(request.blendPath)) {
+    return { success: false, error: `blend file not found: ${request.blendPath} \u2014 blender_scene_build creates one.` };
+  }
+  const r2 = await runBridge({ op: "pose", ...request }, EDIT_TIMEOUT_MS);
+  return r2.success ? { success: true, scene: r2.result } : r2;
+}
+async function importMotion(request) {
+  if (!existsSync9(request.blendPath)) {
+    return { success: false, error: `blend file not found: ${request.blendPath} \u2014 blender_scene_build creates one.` };
+  }
+  if (!existsSync9(request.motionPath)) return { success: false, error: `motion file not found: ${request.motionPath}` };
+  const r2 = await runBridge({ op: "motion", ...request, maxFrames: MAX_PREVIZ_FRAMES }, MOTION_TIMEOUT_MS);
+  return r2.success ? { success: true, scene: r2.result } : r2;
+}
+async function renderPreviz(request) {
+  if (!existsSync9(request.blendPath)) {
+    return { success: false, error: `blend file not found: ${request.blendPath} \u2014 blender_scene_build creates one.` };
+  }
+  const outputDir = request.outputPath ? resolve2(request.outputPath) : join6(dirname2(request.blendPath), "previz");
+  const videoPath = resolveOutputFile(outputDir, request.filename, "video");
+  const framesForTimeout = request.frameStart !== void 0 && request.frameEnd !== void 0 ? request.frameEnd - request.frameStart + 1 : MAX_PREVIZ_FRAMES;
+  const timeoutMs = request.timeoutSeconds ? request.timeoutSeconds * 1e3 : previzTimeoutMs(framesForTimeout, request.engine);
+  const { timeoutSeconds: _t, outputPath: _o, filename: _f, ...rest } = request;
+  const r2 = await runBridge(
+    { op: "render", ...rest, videoPath, maxFrames: MAX_PREVIZ_FRAMES },
+    timeoutMs
+  );
+  if (!r2.success) return r2;
+  return { success: true, ...r2.result, engine: request.engine };
+}
+var BRIDGE_PY = String.raw`
+# social-flow Blender bridge (inner side) — one job per process, see blender-bridge.ts.
+import json, math, os, re, sys, time, traceback
+import bpy
+import bmesh
+from mathutils import Euler, Matrix, Vector
+
+PROXY_GRAY = (0.55, 0.55, 0.58, 1.0)
+FLOOR_GRAY = (0.32, 0.32, 0.33, 1.0)
+WORLD_GRAY = (0.82, 0.82, 0.84)
+MARKER = "social_flow_previz"          # scene custom property: this .blend was made by blender_scene_build
+MIN_VERSION = (4, 2)
+# 4.2–4.5 call the engine BLENDER_EEVEE_NEXT; 5.0 renamed it back
+EEVEE = "BLENDER_EEVEE" if bpy.app.version >= (5, 0) else "BLENDER_EEVEE_NEXT"
+DEFAULTS = {"fps": 30, "frameStart": 1, "frameEnd": 150, "width": 1080, "height": 1920}
+RIG_SUFFIX = ".rig"
+BODY_SUFFIX = ".body"
+UP = Vector((0.0, 0.0, 1.0))
+DOWN = Vector((0.0, 0.0, -1.0))
+FORWARD = Vector((0.0, -1.0, 0.0))     # every figure faces -Y; its left hand is at +X
+
+# The person rig, parents first. Head and tail are fractions of the figure's height in the
+# armature's own space (feet at z = 0); the left side is listed and the right is mirrored.
+RIG_LEFT = [
+    ("hips", None, (0.0, 0.0, 0.50), (0.0, 0.0, 0.56)),
+    ("spine", "hips", (0.0, 0.0, 0.56), (0.0, 0.0, 0.70)),
+    ("chest", "spine", (0.0, 0.0, 0.70), (0.0, 0.0, 0.84)),
+    ("neck", "chest", (0.0, 0.0, 0.84), (0.0, 0.0, 0.88)),
+    ("head", "neck", (0.0, 0.0, 0.88), (0.0, 0.0, 1.00)),
+    ("shoulder.L", "chest", (0.03, 0.0, 0.82), (0.12, 0.0, 0.82)),
+    ("upper_arm.L", "shoulder.L", (0.12, 0.0, 0.82), (0.12, 0.0, 0.64)),
+    ("forearm.L", "upper_arm.L", (0.12, 0.0, 0.64), (0.12, 0.0, 0.48)),
+    ("hand.L", "forearm.L", (0.12, 0.0, 0.48), (0.12, 0.0, 0.40)),
+    ("thigh.L", "hips", (0.055, 0.0, 0.50), (0.055, 0.0, 0.27)),
+    ("shin.L", "thigh.L", (0.055, 0.0, 0.27), (0.055, 0.0, 0.05)),
+    ("foot.L", "shin.L", (0.055, 0.0, 0.05), (0.055, -0.10, 0.01)),
+]
+AXIAL = ("hips", "spine", "chest", "neck", "head")
+LANDMARKS = ("hand.L", "hand.R", "foot.L", "foot.R", "head")
+
+# The mannequin: a rigid piece per bone, joint balls on the parent bone so the child turns
+# around them. (bone, kind, size, centre) with sizes and centres as fractions of height.
+BODY_LEFT = [
+    ("hips", "cyl", (0.095, 0.10), (0.0, 0.0, 0.55)),
+    ("spine", "cyl", (0.085, 0.12), (0.0, 0.0, 0.63)),
+    ("chest", "cyl", (0.105, 0.14), (0.0, 0.0, 0.77)),
+    ("neck", "cyl", (0.028, 0.05), (0.0, 0.0, 0.86)),
+    ("head", "ball", (0.07,), (0.0, 0.0, 0.93)),
+    ("head", "box", (0.03, 0.03, 0.03), (0.0, -0.07, 0.93)),          # nose: the front marker
+    ("shoulder.L", "ball", (0.038,), (0.12, 0.0, 0.82)),
+    ("upper_arm.L", "cyl", (0.03, 0.15), (0.12, 0.0, 0.73)),
+    ("upper_arm.L", "ball", (0.032,), (0.12, 0.0, 0.64)),              # elbow
+    ("forearm.L", "cyl", (0.026, 0.13), (0.12, 0.0, 0.56)),
+    ("hand.L", "box", (0.035, 0.02, 0.08), (0.12, 0.0, 0.44)),
+    ("hips", "ball", (0.05,), (0.055, 0.0, 0.50)),                    # hip joint
+    ("thigh.L", "cyl", (0.05, 0.19), (0.055, 0.0, 0.385)),
+    ("thigh.L", "ball", (0.045,), (0.055, 0.0, 0.27)),                # knee
+    ("shin.L", "cyl", (0.04, 0.18), (0.055, 0.0, 0.16)),
+    ("foot.L", "box", (0.06, 0.15, 0.04), (0.055, -0.04, 0.02)),
+]
+
+
+def right_of(name):
+    return name[:-2] + ".R" if name.endswith(".L") else name
+
+
+def mirror_x(p):
+    return (-p[0], p[1], p[2])
+
+
+RIG_BONES = []
+for _name, _parent, _head, _tail in RIG_LEFT:
+    RIG_BONES.append((_name, _parent, _head, _tail))
+    if _name.endswith(".L"):
+        RIG_BONES.append((right_of(_name), right_of(_parent), mirror_x(_head), mirror_x(_tail)))
+
+BODY_PARTS = []
+for _bone, _kind, _size, _centre in BODY_LEFT:
+    BODY_PARTS.append((_bone, _kind, _size, _centre))
+    # a side bone's piece and the hip joint ball (bone "hips", off centre) both get a mirror
+    if _bone.endswith(".L") or _centre[0] != 0.0:
+        BODY_PARTS.append((right_of(_bone), _kind, _size, mirror_x(_centre)))
+
+# Source-rig vocabularies for the retarget: normalised token strings (lower case, separators
+# and a "left/right" token removed) → canonical bone. Order matters — the first match wins.
+SYNONYMS = [
+    ("hips", ("hips", "hip", "pelvis")),
+    ("neck", ("neck", "neck1", "neck01")),
+    ("head", ("head",)),
+    ("shoulder", ("clavicle", "collar", "shoulder")),
+    ("upper_arm", ("upperarm", "uparm", "arm", "humerus")),
+    ("forearm", ("forearm", "lowerarm", "elbow", "radius")),
+    # the joint names come first: an SMPL rig has both L_Wrist (the joint) and L_Hand (the fingers)
+    ("hand", ("wrist", "hand")),
+    ("thigh", ("upleg", "upperleg", "thigh", "femur", "hip")),
+    ("shin", ("leg", "lowerleg", "shin", "calf", "knee", "tibia")),
+    ("foot", ("ankle", "foot")),
+]
+SPINE_RE = re.compile(r"^(spine\d*|lowerback|chest|upperback|torso|abdomen)$")
+NOISE_TOKENS = {"joint", "bone", "bip", "bip01", "bip001", "mixamorig", "def", "org", "mch", "b", "jnt"}
+SIDE_TOKENS = {"l": "L", "left": "L", "r": "R", "right": "R", "lft": "L", "rgt": "R"}
+
+
+def job_path():
+    argv = sys.argv
+    if "--" not in argv:
+        raise RuntimeError("job path missing after --")
+    return argv[argv.index("--") + 1]
+
+
+def r3(v, n=4):
+    return [round(float(x), n) for x in v]
+
+
+def deg3(e):
+    return [round(math.degrees(x), 3) for x in e]
+
+
+def rad3(v):
+    return [math.radians(float(x)) for x in v]
+
+
+def open_blend(path):
+    if not os.path.isfile(path):
+        raise RuntimeError("blend file not found: %s (blender_scene_build creates one)" % path)
+    bpy.ops.wm.open_mainfile(filepath=path, load_ui=False)
+
+
+def save_blend(path):
+    os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+    bpy.ops.wm.save_as_mainfile(filepath=path, compress=True)
+
+
+# ── animation helpers (slotted actions in 4.4+, legacy fcurves before) ─────
+
+def fcurves_of(idblock):
+    ad = idblock.animation_data
+    if not ad or not ad.action:
+        return []
+    act = ad.action
+    # 4.4+: an action holds one slot per animated ID (a camera object and its camera data
+    # share one action), so read only this ID's channelbag or the object's keys leak into
+    # the data's report. Older Blender has one flat fcurve list.
+    try:
+        slot = ad.action_slot
+        out = []
+        if slot is not None:
+            for layer in act.layers:
+                for strip in layer.strips:
+                    bag = strip.channelbag(slot)
+                    if bag is not None:
+                        out.extend(bag.fcurves)
+        return out
+    except (AttributeError, TypeError):
+        pass
+    try:
+        return list(act.fcurves)
+    except AttributeError:
+        return []
+
+
+def key_frames(idblock):
+    frames = set()
+    for fc in fcurves_of(idblock):
+        for kp in fc.keyframe_points:
+            frames.add(int(round(kp.co[0])))
+    return sorted(frames)
+
+
+def set_interpolation(idblock, mode):
+    for fc in fcurves_of(idblock):
+        for kp in fc.keyframe_points:
+            kp.interpolation = mode
+
+
+def extend_frame_range(sc, frames):
+    if not frames:
+        return
+    sc.frame_start = min(sc.frame_start, min(frames))
+    sc.frame_end = max(sc.frame_end, max(frames))
+
+
+# ── scene summary ──────────────────────────────────────────────────────────
+
+def summary(path):
+    sc = bpy.context.scene
+    objs = []
+    for o in bpy.data.objects:
+        info = {
+            "name": o.name,
+            "type": o.type,
+            "location": r3(o.matrix_world.translation),
+            "rotationDeg": deg3(o.matrix_world.to_euler("XYZ")),
+            "scale": r3(o.scale),
+            "dimensions": r3(o.dimensions),
+            "parent": o.parent.name if o.parent else None,
+            "keyframes": key_frames(o),
+        }
+        if o.type == "ARMATURE":
+            info["bones"] = len(o.data.bones)
+        objs.append(info)
+    cam = sc.camera
+    cam_info = None
+    if cam is not None:
+        d = cam.data
+        cam_info = {
+            "name": cam.name,
+            "location": r3(cam.matrix_world.translation),
+            "rotationDeg": deg3(cam.matrix_world.to_euler("XYZ")),
+            "lensMm": round(d.lens, 3),
+            "fovDeg": round(math.degrees(d.angle), 3),
+            "sensorFit": d.sensor_fit,
+            "clip": [round(d.clip_start, 4), round(d.clip_end, 2)],
+            "keyframes": sorted(set(key_frames(cam)) | set(key_frames(d))),
+        }
+    return {
+        "blender": bpy.app.version_string,
+        "blendPath": path,
+        "frame": {"start": sc.frame_start, "end": sc.frame_end, "fps": sc.render.fps},
+        "resolution": [sc.render.resolution_x, sc.render.resolution_y],
+        "camera": cam_info,
+        "cameras": [o.name for o in bpy.data.objects if o.type == "CAMERA"],
+        "objects": objs,
+    }
+
+
+# ── materials and primitives ───────────────────────────────────────────────
+
+def srgb_to_linear(c):
+    return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+
+
+def hex_rgba(h, default):
+    if not h:
+        return default
+    h = h.lstrip("#")
+    if len(h) == 3:
+        h = "".join(c * 2 for c in h)
+    r, g, b = (int(h[i:i + 2], 16) / 255.0 for i in (0, 2, 4))
+    return (srgb_to_linear(r), srgb_to_linear(g), srgb_to_linear(b), 1.0)
+
+
+def material(name, rgba):
+    m = bpy.data.materials.get(name)
+    if m is None:
+        m = bpy.data.materials.new(name)
+        m.use_nodes = True
+    m.diffuse_color = rgba
+    bsdf = m.node_tree.nodes.get("Principled BSDF") if m.node_tree else None
+    if bsdf is not None:
+        bsdf.inputs["Base Color"].default_value = rgba
+        bsdf.inputs["Roughness"].default_value = 0.6
+    return m
+
+
+def finish(o, name, mat, parent):
+    o.name = name
+    if o.data is not None:
+        o.data.name = name
+        if hasattr(o.data, "materials"):
+            o.data.materials.append(mat)
+    o.parent = parent
+    return o
+
+
+def cyl(name, radius, depth, location, mat, parent, rotation=(0.0, 0.0, 0.0)):
+    bpy.ops.mesh.primitive_cylinder_add(radius=radius, depth=depth, location=location, rotation=rotation, vertices=24)
+    return finish(bpy.context.object, name, mat, parent)
+
+
+def ball(name, radius, location, mat, parent):
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=radius, location=location, segments=24, ring_count=12)
+    o = finish(bpy.context.object, name, mat, parent)
+    try:
+        bpy.ops.object.shade_smooth()
+    except Exception:
+        pass
+    return o
+
+
+def box(name, size, location, mat, parent):
+    bpy.ops.mesh.primitive_cube_add(size=1.0, location=location)
+    o = finish(bpy.context.object, name, mat, parent)
+    o.scale = (size[0], size[1], size[2])
+    return o
+
+
+def empty(name, display_size=0.25):
+    root = bpy.data.objects.new(name, None)
+    root.empty_display_type = "PLAIN_AXES"
+    root.empty_display_size = display_size
+    bpy.context.scene.collection.objects.link(root)
+    return root
+
+
+# Every proxy faces -Y (Blender's front view looks along +Y), so a nose block marks the front.
+# A person is an armature (name.rig) under the root empty and one mannequin mesh (name.body)
+# deformed by it: each rigid piece is weighted 100 % to one bone, so the figure bends at the
+# joints and nowhere else — a wooden drawing mannequin, not a skinned character.
+def person_rig(name, h, root):
+    arm = bpy.data.armatures.new(name + RIG_SUFFIX)
+    rig = bpy.data.objects.new(name + RIG_SUFFIX, arm)
+    bpy.context.scene.collection.objects.link(rig)
+    rig.parent = root
+    arm.display_type = "OCTAHEDRAL"
+    bpy.context.view_layer.objects.active = rig
+    bpy.ops.object.mode_set(mode="EDIT")
+    for bname, parent, head, tail in RIG_BONES:
+        eb = arm.edit_bones.new(bname)
+        eb.head = Vector(head) * h
+        eb.tail = Vector(tail) * h
+        d = (eb.tail - eb.head).normalized()
+        # roll only decides how the bone is drawn in Blender's own UI — poses here are
+        # figure-axis rotations converted per bone, so any perpendicular reference will do
+        eb.align_roll(UP if abs(d.y) > 0.5 else FORWARD)
+        if parent:
+            eb.parent = arm.edit_bones[parent]
+    bpy.ops.object.mode_set(mode="OBJECT")
+    for pb in rig.pose.bones:
+        pb.rotation_mode = "QUATERNION"
+    return rig
+
+
+def person_body(name, h, mat, rig):
+    me = bpy.data.meshes.new(name + BODY_SUFFIX)
+    body = bpy.data.objects.new(name + BODY_SUFFIX, me)
+    bpy.context.scene.collection.objects.link(body)
+    groups = {}
+    for b in rig.data.bones:
+        groups[b.name] = body.vertex_groups.new(name=b.name).index
+    bm = bmesh.new()
+    deform = bm.verts.layers.deform.verify()
+    for bone, kind, size, centre in BODY_PARTS:
+        at = Matrix.Translation(Vector(centre) * h)
+        if kind == "cyl":
+            made = bmesh.ops.create_cone(bm, cap_ends=True, cap_tris=False, segments=20,
+                                         radius1=size[0] * h, radius2=size[0] * h, depth=size[1] * h, matrix=at)
+        elif kind == "ball":
+            made = bmesh.ops.create_uvsphere(bm, u_segments=20, v_segments=10, radius=size[0] * h, matrix=at)
+        else:
+            made = bmesh.ops.create_cube(bm, size=1.0, matrix=at @ Matrix.Diagonal((size[0] * h, size[1] * h, size[2] * h, 1.0)))
+        gi = groups[bone]
+        faces = set()
+        for v in made["verts"]:
+            v[deform][gi] = 1.0
+            if kind == "ball":
+                faces.update(v.link_faces)
+        for f in faces:
+            f.smooth = True
+    bm.to_mesh(me)
+    bm.free()
+    me.materials.append(mat)
+    body.parent = rig
+    mod = body.modifiers.new("Armature", "ARMATURE")
+    mod.object = rig
+    return body
+
+
+# ── posing: figure-axis rotations → bone-local quaternions ─────────────────
+
+def rot(axis, deg):
+    return Matrix.Rotation(math.radians(float(deg)), 3, axis)
+
+
+def rot_zyx(turn, lean, bow):
+    # bow about X first, then lean about Y, then turn about Z — all in the figure's frame
+    return rot("Z", turn) @ rot("Y", lean) @ rot("X", bow)
+
+
+def aim_from_down(direction):
+    # the smallest rotation that takes a hanging limb (0, 0, -1) to the direction
+    d = Vector(direction)
+    if d.length < 1e-9:
+        return Matrix.Identity(3)
+    d.normalize()
+    if (d + DOWN).length < 1e-6:
+        return rot("X", 180)      # straight up: go the forward way round
+    return DOWN.rotation_difference(d).to_matrix()
+
+
+def limb_world(ch, sx):
+    # raise: forward and up (90 = horizontal in front, 180 = straight up); side: out from the
+    # body (90 = horizontal to the side); sx is +1 for the figure's left, -1 for its right
+    a = math.radians(float(ch.get("raise", 0) or 0))
+    s = math.radians(float(ch.get("side", 0) or 0))
+    d = Vector((sx * math.sin(s), -math.sin(a), -math.cos(a) * math.cos(s)))
+    w = aim_from_down(d)
+    t = float(ch.get("twist", 0) or 0)
+    if t and d.length > 1e-9:
+        w = Matrix.Rotation(math.radians(t * sx), 3, d.normalized()) @ w
+    return w
+
+
+def pose_to_bones(pose):
+    # → [(bone, world rotation 3x3 in the figure frame, hips offset or None)]
+    out = []
+    hp = pose.get("hips")
+    if hp is not None:
+        off = hp.get("offset") or (0.0, 0.0, 0.0)
+        out.append(("hips", rot_zyx(hp.get("turn", 0) or 0, hp.get("lean", 0) or 0, hp.get("bow", 0) or 0), [float(x) for x in off]))
+    t = pose.get("torso")
+    if t is not None:
+        half = rot_zyx((t.get("turn", 0) or 0) / 2.0, (t.get("lean", 0) or 0) / 2.0, (t.get("bow", 0) or 0) / 2.0)
+        out.append(("spine", half, None))
+        out.append(("chest", half, None))
+    hd = pose.get("head")
+    if hd is not None:
+        half = rot_zyx((hd.get("turn", 0) or 0) / 2.0, (hd.get("tilt", 0) or 0) / 2.0, (hd.get("nod", 0) or 0) / 2.0)
+        out.append(("neck", half, None))
+        out.append(("head", half, None))
+    for side, sx in (("L", 1.0), ("R", -1.0)):
+        arm = pose.get("arm" + side)
+        if arm is not None:
+            out.append(("upper_arm." + side, limb_world(arm, sx), None))
+            out.append(("forearm." + side, rot("X", -float(arm.get("elbow", 0) or 0)), None))
+        leg = pose.get("leg" + side)
+        if leg is not None:
+            out.append(("thigh." + side, limb_world(leg, sx), None))
+            out.append(("shin." + side, rot("X", float(leg.get("knee", 0) or 0)), None))
+            out.append(("foot." + side, rot("X", float(leg.get("ankle", 0) or 0)), None))
+    for bname, e in (pose.get("bones") or {}).items():
+        out.append((bname, rot_zyx(e[2], e[1], e[0]), None))
+    return out
+
+
+def find_rig(name):
+    o = bpy.data.objects.get(name)
+    if o is None:
+        names = ", ".join(sorted(x.name for x in bpy.data.objects if x.parent is None))
+        raise RuntimeError("no object named %s — top-level objects: %s" % (name, names))
+    if o.type == "ARMATURE":
+        return (o.parent or o), o
+    for c in o.children:
+        if c.type == "ARMATURE":
+            return o, c
+    raise RuntimeError("%s has no rig — only person proxies are jointed; blender_object_animate moves other things whole" % name)
+
+
+def set_bone_rotation(rig, bname, world, prev):
+    # local = rest^-1 · world · rest, so a rotation stated in the figure's axes lands on the bone
+    b = rig.data.bones.get(bname)
+    if b is None:
+        raise RuntimeError("the rig has no bone %s — bones: %s" % (bname, ", ".join(x.name for x in rig.data.bones)))
+    rest = b.matrix_local.to_3x3()
+    q = (rest.inverted() @ world @ rest).to_quaternion()
+    pq = prev.get(bname)
+    if pq is not None and pq.dot(q) < 0:
+        q.negate()
+    prev[bname] = q.copy()
+    pb = rig.pose.bones[bname]
+    pb.rotation_quaternion = q
+    return pb
+
+
+def landmark_tails(rig, frame):
+    bpy.context.scene.frame_set(int(frame))
+    out = {}
+    for bname in LANDMARKS:
+        pb = rig.pose.bones.get(bname)
+        if pb is not None:
+            out[bname] = r3(rig.matrix_world @ pb.tail, 3)
+    return out
+
+
+def reset_pose(rig):
+    # animation_data_clear only detaches the action; the pose values themselves are saved in
+    # the file, so without this a bone this call does not key keeps the last call's pose
+    for pb in rig.pose.bones:
+        pb.rotation_quaternion = (1.0, 0.0, 0.0, 0.0)
+        pb.rotation_euler = (0.0, 0.0, 0.0)
+        pb.location = (0.0, 0.0, 0.0)
+        pb.scale = (1.0, 1.0, 1.0)
+
+
+def bone_fcurves(rig, bname):
+    prefix = 'pose.bones["%s"].' % bname
+    return [fc for fc in fcurves_of(rig) if fc.data_path.startswith(prefix)]
+
+
+def clear_window(rig, bname, frame, ease, keep):
+    # a key layered on a baked clip would change one frame only (the clip has a key on every
+    # neighbour), so drop this bone's existing keys strictly inside (frame - ease, frame + ease) —
+    # the interpolation then runs from the clip into the new pose and back out to the clip
+    if ease <= 0:
+        return
+    for fc in bone_fcurves(rig, bname):
+        while True:
+            hit = None
+            for kp in fc.keyframe_points:
+                x = kp.co[0]
+                if frame - ease < x < frame + ease and abs(x - frame) > 1e-6 and int(round(x)) not in keep:
+                    hit = kp
+                    break
+            if hit is None:
+                break
+            fc.keyframe_points.remove(hit)
+
+
+def set_interpolation_at(rig, per_bone, mode):
+    # per_bone: {bone: set of frames} — only those keys change, the clip's others keep theirs
+    for b, fs in per_bone.items():
+        for fc in bone_fcurves(rig, b):
+            for kp in fc.keyframe_points:
+                if int(round(kp.co[0])) in fs:
+                    kp.interpolation = mode
+
+
+def last_key_before(rig, bname, frame):
+    best = None
+    for fc in bone_fcurves(rig, bname):
+        for kp in fc.keyframe_points:
+            x = kp.co[0]
+            if x < frame - 1e-6 and (best is None or x > best):
+                best = x
+    return int(round(best)) if best is not None else None
+
+
+def op_pose(job):
+    sc = bpy.context.scene
+    root, rig = find_rig(job["object"])
+    layered = not job["clearExisting"]
+    ease = int(job["ease"]) if job.get("ease") is not None else 6
+    prev = {}
+    if not layered:
+        rig.animation_data_clear()
+        reset_pose(rig)
+    frames = [int(k["frame"]) for k in job["keys"]]
+    # which frames this call keys on each bone — a window must keep a bone's own keys, not
+    # another bone's, and only those keys (plus the clip key each window opens from) take
+    # this call's interpolation
+    per_bone = {}
+    for k in job["keys"]:
+        for bname, _world, _offset in pose_to_bones(k["pose"]):
+            per_bone.setdefault(bname, set()).add(int(k["frame"]))
+    interp = {b: set(fs) for b, fs in per_bone.items()}
+    touched = set()
+    for k in job["keys"]:
+        f = int(k["frame"])
+        bones = pose_to_bones(k["pose"])
+        clip_hips = None
+        if layered:
+            # continue from what the clip or the earlier keys hold at this frame, and open a
+            # window around it so the new pose is reached and left, not spiked
+            sc.frame_set(f)
+            for pb in rig.pose.bones:
+                prev[pb.name] = pb.rotation_quaternion.copy()
+            hp = rig.pose.bones["hips"]
+            clip_hips = (hp.rotation_quaternion.copy(), hp.location.copy())
+            for bname, _world, _offset in bones:
+                clear_window(rig, bname, f, ease, per_bone[bname])
+                left = last_key_before(rig, bname, f)
+                if left is not None:
+                    interp[bname].add(left)
+        for bname, world, offset in bones:
+            rest = rig.data.bones[bname].matrix_local.to_3x3() if bname in rig.data.bones else None
+            if layered and bname == "hips" and rest is not None:
+                # on a clip the pelvis is a delta: the clip's own turn and floor height stay
+                # and the channels move it from there, or the feet leave the floor
+                q = (rest.inverted() @ world @ rest).to_quaternion() @ clip_hips[0]
+                pq = prev.get("hips")
+                if pq is not None and pq.dot(q) < 0:
+                    q.negate()
+                prev["hips"] = q.copy()
+                pb = rig.pose.bones["hips"]
+                pb.rotation_quaternion = q
+                pb.keyframe_insert(data_path="rotation_quaternion", frame=f, group="hips")
+                if offset is not None:
+                    pb.location = clip_hips[1] + rest.inverted() @ Vector(offset)
+                    pb.keyframe_insert(data_path="location", frame=f, group="hips")
+                touched.add("hips")
+                continue
+            pb = set_bone_rotation(rig, bname, world, prev)
+            pb.keyframe_insert(data_path="rotation_quaternion", frame=f, group=bname)
+            if offset is not None:
+                pb.location = rest.inverted() @ Vector(offset)
+                pb.keyframe_insert(data_path="location", frame=f, group=bname)
+            touched.add(bname)
+    if layered:
+        set_interpolation_at(rig, interp, job["interpolation"])
+    else:
+        set_interpolation(rig, job["interpolation"])
+    extend_frame_range(sc, frames)
+    tails = landmark_tails(rig, max(frames))
+    sc.frame_current = sc.frame_start
+    return {"object": root.name, "rig": rig.name, "keyframes": sorted(set(frames)), "bones": sorted(touched), "tails": tails}
+
+
+# ── motion capture retarget ────────────────────────────────────────────────
+
+def tokens_of(name):
+    # "mixamorig:LeftForeArm" → ("L", "forearm"); "UpperLeg_R" → ("R", "upperleg"); "Chest" → (None, "chest")
+    s = name.split(":")[-1]
+    s = re.sub(r"^([LR])([A-Z][a-z])", r"\1 \2", s)          # LHip → L Hip
+    s = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", s)             # camelCase → words
+    parts = [t for t in re.split(r"[^A-Za-z0-9]+", s.lower()) if t]
+    side = None
+    body = []
+    for t in parts:
+        if t in SIDE_TOKENS and side is None:
+            side = SIDE_TOKENS[t]
+        elif t in NOISE_TOKENS:
+            continue
+        else:
+            body.append(t)
+    return side, "".join(body)
+
+
+def bone_depth(src, name):
+    b = src.data.bones.get(name)
+    d = 0
+    while b is not None and b.parent is not None:
+        b = b.parent
+        d += 1
+    return d
+
+
+def match_bones(src, override):
+    # canonical → source bone name. Side bones need a side token; the axial chain must have
+    # none; a bone whose name ends in end/nub/top/tip is a leaf marker, not a joint.
+    found = {}
+    scored = []
+    for b in src.data.bones:
+        side, body = tokens_of(b.name)
+        if not body or body.endswith(("end", "nub", "top", "tip")):
+            continue
+        scored.append((b.name, side, body))
+    for canon, words in SYNONYMS:
+        sided = canon not in AXIAL
+        for w in words:
+            for n, side, body in scored:
+                if body != w or (sided and side is None) or (not sided and side is not None):
+                    continue
+                key = canon + "." + side if sided else canon
+                found.setdefault(key, n)
+    # the spine chain, root first. Rigify has no hips bone — its root "spine" is the pelvis —
+    # and runs the chain up through the neck and head (spine.004–006), so the chest is the
+    # deepest spine-family bone an arm hangs from and what sits above it is neck and head.
+    spines = sorted([n for n, side, body in scored if side is None and SPINE_RE.match(body)], key=lambda n: bone_depth(src, n))
+    if spines and "hips" not in found:
+        found["hips"] = spines[0]
+        spines = spines[1:]
+
+    def ancestors(n):
+        b = src.data.bones.get(n)
+        out = []
+        while b is not None and b.parent is not None:
+            b = b.parent
+            out.append(b.name)
+        return out
+    arm_roots = [found[k] for k in ("shoulder.L", "shoulder.R", "upper_arm.L", "upper_arm.R") if k in found]
+    chest = None
+    for n in reversed(spines):
+        if any(n in ancestors(a) for a in arm_roots):
+            chest = n
+            break
+    if spines:
+        found.setdefault("spine", spines[0])
+        if chest is not None and chest != found["spine"]:
+            found.setdefault("chest", chest)
+        elif chest is None and len(spines) > 1:
+            found.setdefault("chest", spines[-1])
+        if chest is not None:
+            above = [n for n in spines if bone_depth(src, n) > bone_depth(src, chest)]
+            if above:
+                found.setdefault("neck", above[0])
+                if len(above) > 1:
+                    found.setdefault("head", above[-1])
+    # SMPL-style names call the upper arm "Shoulder" and the clavicle "Collar"
+    used = set(found.values())
+    for side in ("L", "R"):
+        if "upper_arm." + side not in found:
+            for n, s, body in scored:
+                if s == side and body == "shoulder" and n not in used:
+                    found["upper_arm." + side] = n
+                    used.add(n)
+                    break
+    for canon, n in (override or {}).items():
+        found[canon] = n
+    return found
+
+
+def frame_from(up, side):
+    # a 3x3 with columns (side, up, forward) — the axial bones' rest frame, so it is the pose
+    y = Vector(up)
+    if y.length < 1e-9:
+        y = UP.copy()
+    y.normalize()
+    x = Vector(side) - Vector(side).dot(y) * y
+    if x.length < 1e-6:
+        x = UP.cross(y) if abs(y.dot(UP)) < 0.99 else Vector((1.0, 0.0, 0.0))
+    x.normalize()
+    z = x.cross(y)
+    m = Matrix((x, y, z))
+    m.transpose()
+    return m
+
+
+def joint_positions(src, S, mapping, Y):
+    # world heads (joints) of the mapped source bones and, where the bone has length, tails —
+    # turned by the facing correction Y
+    heads = {}
+    tails = {}
+    for c, m in mapping.items():
+        pb = src.pose.bones[m]
+        heads[c] = Y @ (S @ pb.head)
+        if (pb.tail - pb.head).length > 1e-6:
+            tails[c] = Y @ (S @ pb.tail)
+    return heads, tails
+
+
+def pose_targets(J, T):
+    # → {bone: 3x3 pose rotation in the figure frame}. The axial chain gets a full frame (up
+    # from the joint above, side from the hip or shoulder line); a limb bone gets the smallest
+    # turn of its rest direction onto the joint-to-joint direction.
+    def diff(a, b):
+        if a in J and b in J and (J[b] - J[a]).length > 1e-6:
+            return J[b] - J[a]
+        return None
+    side_hips = diff("thigh.R", "thigh.L")
+    side_chest = diff("shoulder.R", "shoulder.L") or diff("upper_arm.R", "upper_arm.L")
+    if side_hips is None and side_chest is None:
+        side_hips = Vector((1.0, 0.0, 0.0))
+    sides = {
+        "hips": side_hips or side_chest,
+        "spine": (side_hips + side_chest) if (side_hips is not None and side_chest is not None) else (side_hips or side_chest),
+        "chest": side_chest or side_hips,
+        "neck": side_chest or side_hips,
+        "head": side_chest or side_hips,
+    }
+    out = {}
+    dirs = {}
+    for i, c in enumerate(AXIAL):
+        if c not in J:
+            continue
+        above = None
+        for n in AXIAL[i + 1:]:
+            if n in J:
+                above = n
+                break
+        if above is not None:
+            up = J[above] - J[c]
+        elif c in T:
+            up = T[c] - J[c]
+        else:
+            below = None
+            for n in reversed(AXIAL[:i]):
+                if n in J:
+                    below = n
+                    break
+            up = (J[c] - J[below]) if below is not None else UP.copy()
+        out[c] = frame_from(up, sides[c])
+    for side in ("L", "R"):
+        for a, b in (("shoulder", "upper_arm"), ("upper_arm", "forearm"), ("forearm", "hand"), ("thigh", "shin"), ("shin", "foot")):
+            d = diff(a + "." + side, b + "." + side)
+            if d is not None:
+                dirs[a + "." + side] = d
+        for end in ("hand", "foot"):
+            c = end + "." + side
+            if c in J and c in T:
+                dirs[c] = T[c] - J[c]
+    return out, dirs
+
+
+def op_motion(job):
+    sc = bpy.context.scene
+    root, rig = find_rig(job["object"])
+    path = job["motionPath"]
+    fps = float(sc.render.fps)
+    before_objects = set(o.name for o in bpy.data.objects)
+    before_actions = set(a.name for a in bpy.data.actions)
+    before_arms = set(a.name for a in bpy.data.armatures)
+    before_meshes = set(m.name for m in bpy.data.meshes)
+    frame_before = (sc.frame_start, sc.frame_end)
+    fps_before = (sc.render.fps, sc.render.fps_base)
+    ext = os.path.splitext(path)[1].lower()
+    if ext == ".bvh":
+        # the importer retimes the file's frame time to the scene fps and starts at frame 1
+        bpy.ops.import_anim.bvh(filepath=path, target="ARMATURE", global_scale=1.0, frame_start=1, use_fps_scale=True,
+                                update_scene_fps=False, update_scene_duration=False, use_cyclic=False,
+                                rotate_mode="NATIVE", axis_forward="-Z", axis_up="Y")
+    else:
+        bpy.ops.import_scene.fbx(filepath=path, use_anim=True, anim_offset=1.0, ignore_leaf_bones=False,
+                                 automatic_bone_orientation=False, global_scale=1.0)
+    # the FBX importer sets the scene's fps to the file's and keys at that rate; the BVH importer
+    # (use_fps_scale) keys at the scene's. Read the rate the keys are in, then give the scene its own back.
+    src_fps = float(sc.render.fps) / float(sc.render.fps_base or 1.0)
+    sc.render.fps, sc.render.fps_base = fps_before
+    sc.frame_start, sc.frame_end = frame_before
+    rate = src_fps / fps            # source frames per scene frame
+    keep_actions = set()
+
+    def cleanup():
+        for o in list(bpy.data.objects):
+            if o.name not in before_objects:
+                bpy.data.objects.remove(o, do_unlink=True)
+        for a in list(bpy.data.actions):
+            if a.name not in before_actions and a.name not in keep_actions:
+                bpy.data.actions.remove(a)
+        for a in list(bpy.data.armatures):
+            if a.name not in before_arms and a.users == 0:
+                bpy.data.armatures.remove(a)
+        for m in list(bpy.data.meshes):
+            if m.name not in before_meshes and m.users == 0:
+                bpy.data.meshes.remove(m)
+
+    try:
+        sources = [o for o in bpy.data.objects if o.name not in before_objects and o.type == "ARMATURE"
+                   and o.animation_data is not None and o.animation_data.action is not None]
+        if not sources:
+            raise RuntimeError("no animated armature in %s — the file needs a skeleton with keyframes (BVH, or an FBX with animation)" % path)
+        src = sources[0]
+        act = src.animation_data.action
+        first, last = act.frame_range
+        first = int(math.floor(first))
+        last = int(math.ceil(last))
+        src_seconds = (last - first + 1) / src_fps
+        src_names = [b.name for b in src.data.bones]
+        mapping = match_bones(src, job.get("boneMap"))
+        for canon, n in list(mapping.items()):
+            if n not in src.data.bones:
+                raise RuntimeError("boneMap names %s for %s, but the file has no such bone — bones: %s" % (n, canon, ", ".join(src_names)))
+        if "hips" not in mapping:
+            raise RuntimeError("no hips/pelvis bone recognised in %s — pass boneMap (bones: %s)" % (path, ", ".join(src_names)))
+
+        # slice and timing, in source frames (at src_fps)
+        f0 = first + float(job.get("fromSeconds") or 0) * src_fps
+        f1 = min(float(last), first + float(job["toSeconds"]) * src_fps) if job.get("toSeconds") is not None else float(last)
+        if f0 > float(last):
+            raise RuntimeError("fromSeconds %.2f is past the end of the clip (%.2f s)" % (float(job.get("fromSeconds") or 0), src_seconds))
+        if f1 < f0:
+            raise RuntimeError("the slice is empty — toSeconds must be after fromSeconds")
+        speed = float(job["speed"])
+        start = int(job["frameStart"]) if job.get("frameStart") is not None else sc.frame_start
+        span = (f1 - f0) / (speed * rate)       # in scene frames
+        end = max(sc.frame_end, start) if job["loop"] else start + int(math.floor(span))
+        n = end - start + 1
+        if n > int(job["maxFrames"]):
+            raise RuntimeError("%d frames to bake; a previz is at most %d — pass fromSeconds/toSeconds or speed" % (n, int(job["maxFrames"])))
+
+        S = src.matrix_world.copy()
+        rest_ours = {b.name: b.matrix_local.copy() for b in rig.data.bones}
+
+        # the first frame decides the facing correction and the scale
+        sc.frame_set(int(f0), subframe=f0 - int(f0))
+        J0, T0 = joint_positions(src, S, mapping, Matrix.Identity(3))
+        yaw = 0.0
+        for lc, rc in (("thigh.L", "thigh.R"), ("shoulder.L", "shoulder.R"), ("upper_arm.L", "upper_arm.R")):
+            if lc in J0 and rc in J0:
+                side = J0[lc] - J0[rc]
+                fwd = side.cross(UP)
+                if fwd.length > 1e-6:
+                    yaw = math.atan2(FORWARD.y, FORWARD.x) - math.atan2(fwd.y, fwd.x)
+                break
+        Y = Matrix.Rotation(yaw, 3, "Z")
+
+        # scale by leg length (pose-independent), else by the trunk
+        def our_len(c):
+            b = rig.data.bones[c]
+            return (b.tail_local - b.head_local).length
+        ratio = None
+        for side in ("L", "R"):
+            t, s, f = "thigh." + side, "shin." + side, "foot." + side
+            if t in J0 and s in J0 and f in J0:
+                theirs = (J0[s] - J0[t]).length + (J0[f] - J0[s]).length
+                if theirs > 1e-6:
+                    ratio = (our_len(t) + our_len(s)) / theirs
+                    break
+        if ratio is None:
+            chain = [c for c in AXIAL if c in J0]
+            theirs = sum((J0[chain[i + 1]] - J0[chain[i]]).length for i in range(len(chain) - 1))
+            ours = sum(our_len(c) for c in chain[:-1]) if len(chain) > 1 else 0.0
+            if theirs < 1e-6 or ours < 1e-6:
+                raise RuntimeError("cannot scale %s to the figure — neither a leg nor a trunk chain was matched (bones: %s)" % (path, ", ".join(src_names)))
+            ratio = ours / theirs
+        hips0 = Y @ J0["hips"]
+
+        # the floor is the lowest the feet get in the slice, so the figure stands on z = 0 and a
+        # crouch at the first frame does not sink the whole clip
+        def lowest(J, T):
+            zs = [J[c].z for c in ("foot.L", "foot.R", "shin.L", "shin.R") if c in J] + [T[c].z for c in ("foot.L", "foot.R") if c in T]
+            return min(zs) if zs else None
+        floor_src = None
+        probe = f0
+        while probe <= f1:
+            sc.frame_set(int(math.floor(probe)), subframe=probe - math.floor(probe))
+            z = lowest(*joint_positions(src, S, mapping, Y))
+            if z is not None and (floor_src is None or z < floor_src):
+                floor_src = z
+            probe += max(1.0, (f1 - f0) / 120.0)
+        hips_rest_z = rest_ours["hips"].translation.z
+
+        if job["clearExisting"]:
+            rig.animation_data_clear()
+            reset_pose(rig)
+        order = [b.name for b in rig.data.bones]        # armature order is parents first
+        prev = {}
+        keyed = set()
+        hips_rest = rest_ours["hips"].to_3x3()
+        rest_dir = {c: (rest_ours[c].to_3x3() @ Vector((0.0, 1.0, 0.0))).normalized() for c in order}
+        for t in range(start, end + 1):
+            fsrc = f0 + (t - start) * speed * rate
+            if job["loop"] and f1 > f0:
+                fsrc = f0 + math.fmod(fsrc - f0, f1 - f0)
+            fsrc = min(fsrc, f1)
+            sc.frame_set(int(math.floor(fsrc)), subframe=fsrc - math.floor(fsrc))
+            J, T = joint_positions(src, S, mapping, Y)
+            frames3, dirs = pose_targets(J, T)
+            posed = {}
+            for c in order:
+                Rb = rest_ours[c].to_3x3()
+                parent = rig.data.bones[c].parent
+                if c in frames3:
+                    Pt = frames3[c]
+                elif c in dirs:
+                    Pt = rest_dir[c].rotation_difference(dirs[c].normalized()).to_matrix() @ Rb
+                elif parent is not None:
+                    Pt = posed[parent.name] @ rest_ours[parent.name].to_3x3().inverted() @ Rb
+                else:
+                    Pt = Rb
+                posed[c] = Pt
+                if c not in frames3 and c not in dirs:
+                    continue
+                if parent is not None:
+                    local = (posed[parent.name] @ rest_ours[parent.name].to_3x3().inverted() @ Rb).inverted() @ Pt
+                else:
+                    local = Rb.inverted() @ Pt
+                q = local.to_quaternion()
+                pq = prev.get(c)
+                if pq is not None and pq.dot(q) < 0:
+                    q.negate()
+                prev[c] = q.copy()
+                pb = rig.pose.bones[c]
+                pb.rotation_quaternion = q
+                pb.keyframe_insert(data_path="rotation_quaternion", frame=t, group=c)
+                keyed.add(c)
+            d = (J["hips"] - hips0) * ratio
+            if floor_src is not None:
+                d.z = (J["hips"].z - floor_src) * ratio - hips_rest_z
+            if job["rootMotion"] == "inplace":
+                d.x = 0.0
+                d.y = 0.0
+            pb = rig.pose.bones["hips"]
+            pb.location = hips_rest.inverted() @ d
+            pb.keyframe_insert(data_path="location", frame=t, group="hips")
+        if rig.animation_data is not None and rig.animation_data.action is not None:
+            keep_actions.add(rig.animation_data.action.name)
+        set_interpolation(rig, "LINEAR")
+        extend_frame_range(sc, [start, end])
+        unmapped = [c for c in order if c not in keyed]
+        info = {
+            "source": path,
+            "sourceBones": len(src_names),
+            "sourceSeconds": round(src_seconds, 3),
+            "sourceFps": round(src_fps, 3),
+            "fromSeconds": round((f0 - first) / src_fps, 3),
+            "toSeconds": round((f1 - first) / src_fps, 3),
+            "speed": speed,
+            "loop": bool(job["loop"]),
+            "rootMotion": job["rootMotion"],
+            "mapped": dict(sorted((c, mapping[c]) for c in mapping if c in keyed)),
+            "unmapped": unmapped,
+            "frames": n,
+            "heightRatio": round(ratio, 5),
+            "yawDeg": round(math.degrees(yaw), 2),
+        }
+    finally:
+        cleanup()
+    tails = landmark_tails(rig, start)
+    tails_end = landmark_tails(rig, end)
+    sc.frame_current = sc.frame_start
+    return {"object": root.name, "rig": rig.name, "keyframes": [start, end], "bones": sorted(keyed), "tails": tails, "tailsEnd": tails_end, "motion": info}
+
+
+def dog_parts(p, h, mat, root):
+    box(p + ".body", (0.45 * h, 1.0 * h, 0.45 * h), (0, 0, 0.60 * h), mat, root)
+    for side, x in (("L", -0.15), ("R", 0.15)):
+        for end, y in (("front", -0.32), ("back", 0.32)):
+            cyl(p + ".leg." + end + side, 0.06 * h, 0.40 * h, (x * h, y * h, 0.20 * h), mat, root)
+    ball(p + ".head", 0.20 * h, (0, -0.62 * h, 0.72 * h), mat, root)
+    box(p + ".nose", (0.10 * h, 0.12 * h, 0.08 * h), (0, -0.82 * h, 0.70 * h), mat, root)
+
+
+def car_parts(p, mat, root):
+    dark = material("proxy-tyre", (0.08, 0.08, 0.08, 1.0))
+    box(p + ".body", (1.8, 4.4, 0.6), (0, 0, 0.55), mat, root)
+    box(p + ".cabin", (1.6, 2.2, 0.5), (0, 0.2, 1.10), mat, root)
+    for side, x in (("L", -0.85), ("R", 0.85)):
+        for end, y in (("front", -1.4), ("back", 1.4)):
+            cyl(p + ".wheel." + end + side, 0.33, 0.22, (x, y, 0.33), dark, root, rotation=(0.0, math.pi / 2, 0.0))
+
+
+def make_proxy(spec):
+    name = spec["name"]
+    if bpy.data.objects.get(name) is not None:
+        raise RuntimeError("an object named %s already exists in this scene" % name)
+    kind = spec["kind"]
+    mat = material("proxy-" + name, hex_rgba(spec.get("color"), PROXY_GRAY))
+    root = empty(name)
+    if kind == "person":
+        h = float(spec.get("height") or 1.75)
+        person_body(name, h, mat, person_rig(name, h, root))
+    elif kind == "dog":
+        dog_parts(name, float(spec.get("height") or 0.55), mat, root)
+    elif kind == "car":
+        car_parts(name, mat, root)
+        size = spec.get("size")
+        if size:
+            root.scale = (size[0] / 1.8, size[1] / 4.4, size[2] / 1.45)
+    elif kind == "box":
+        size = spec["size"]
+        box(name + ".mesh", size, (0, 0, size[2] / 2.0), mat, root)
+    elif kind == "cylinder":
+        radius = float(spec.get("radius") or 0.5)
+        height = float(spec.get("height") or 1.0)
+        cyl(name + ".mesh", radius, height, (0, 0, height / 2.0), mat, root)
+    elif kind == "sphere":
+        radius = float(spec.get("radius") or 0.5)
+        ball(name + ".mesh", radius, (0, 0, radius), mat, root)
+    else:
+        raise RuntimeError("unknown proxy kind %s" % kind)
+    root.location = Vector([float(x) for x in spec.get("location", (0, 0, 0))])
+    root.rotation_euler = Euler((0.0, 0.0, math.radians(float(spec.get("rotationZDeg", 0)))), "XYZ")
+    return root
+
+
+def import_glb(imp):
+    name = imp["name"]
+    if bpy.data.objects.get(name) is not None:
+        raise RuntimeError("an object named %s already exists in this scene" % name)
+    before = set(o.name for o in bpy.data.objects)
+    bpy.ops.import_scene.gltf(filepath=imp["glbPath"])
+    new = [o for o in bpy.data.objects if o.name not in before]
+    if not new:
+        raise RuntimeError("nothing was imported from %s" % imp["glbPath"])
+    root = empty(name, 0.5)
+    for o in new:
+        if o.parent is None or o.parent.name in before:
+            o.parent = root
+    root.location = Vector([float(x) for x in imp["location"]])
+    root.rotation_euler = Euler(rad3(imp["rotationDeg"]), "XYZ")
+    s = float(imp["scale"])
+    root.scale = (s, s, s)
+    return {"name": name, "objects": len(new)}
+
+
+def ensure_world(sc):
+    if sc.world is None:
+        sc.world = bpy.data.worlds.get("World") or bpy.data.worlds.new("World")
+    sc.world.color = WORLD_GRAY
+    if sc.world.use_nodes and sc.world.node_tree:
+        bg = sc.world.node_tree.nodes.get("Background")
+        if bg is not None:
+            bg.inputs[0].default_value = (WORLD_GRAY[0], WORLD_GRAY[1], WORLD_GRAY[2], 1.0)
+            bg.inputs[1].default_value = 1.0
+
+
+# ── operations ─────────────────────────────────────────────────────────────
+
+def op_build(job):
+    path = job["blendPath"]
+    exists = os.path.isfile(path)
+    fresh = job["reset"] or not exists
+    if job["reset"] and exists and not job.get("force"):
+        # refuse to wipe a .blend this lane did not make — a hand-authored file is not previz scratch
+        open_blend(path)
+        if not bpy.context.scene.get(MARKER):
+            raise RuntimeError("%s was not made by blender_scene_build — refusing to overwrite it; pass force:true to replace it, or reset:false to add to it" % path)
+    if fresh:
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+    else:
+        open_blend(path)
+    sc = bpy.context.scene
+    sc[MARKER] = 1
+    sc.unit_settings.system = "METRIC"
+    sc.unit_settings.length_unit = "METERS"
+    sc.unit_settings.scale_length = 1.0
+
+    def given(key):
+        return job.get(key) is not None
+
+    def value(key):
+        return job[key] if given(key) else DEFAULTS[key]
+
+    # a fresh scene takes the defaults; an extended one keeps its values unless the caller names new ones
+    if fresh or given("fps"):
+        sc.render.fps = int(value("fps"))
+        sc.render.fps_base = 1.0
+    if fresh or given("frameStart"):
+        sc.frame_start = int(value("frameStart"))
+    if fresh or given("frameEnd"):
+        sc.frame_end = int(value("frameEnd"))
+    if sc.frame_end < sc.frame_start:
+        raise RuntimeError("frameEnd %d is before frameStart %d" % (sc.frame_end, sc.frame_start))
+    sc.frame_current = sc.frame_start
+    if fresh or given("width"):
+        sc.render.resolution_x = int(value("width"))
+    if fresh or given("height"):
+        sc.render.resolution_y = int(value("height"))
+    sc.render.resolution_percentage = 100
+    ensure_world(sc)
+    if job["floor"] and bpy.data.objects.get("Floor") is None:
+        bpy.ops.mesh.primitive_plane_add(size=float(job["floorSize"]), location=(0, 0, 0))
+        finish(bpy.context.object, "Floor", material("floor", FLOOR_GRAY), None)
+    if not any(o.type == "LIGHT" for o in bpy.data.objects):
+        sun = bpy.data.objects.new("Sun", bpy.data.lights.new("Sun", "SUN"))
+        sun.data.energy = 3.0
+        sun.data.angle = math.radians(5)
+        sun.rotation_euler = Euler((math.radians(50), math.radians(10), math.radians(35)), "XYZ")
+        sc.collection.objects.link(sun)
+    built = []
+    for imp in job["imports"]:
+        built.append(import_glb(imp))
+    for spec in job["proxies"]:
+        make_proxy(spec)
+        built.append({"name": spec["name"], "kind": spec["kind"]})
+    save_blend(path)
+    res = summary(path)
+    res["built"] = built
+    return res
+
+
+def look_at_quat(location, target):
+    d = Vector(target) - Vector(location)
+    if d.length < 1e-9:
+        d = Vector((0.0, 1.0, 0.0))
+    return d.to_track_quat("-Z", "Y")
+
+
+def op_camera(job):
+    sc = bpy.context.scene
+    name = job["name"]
+    cam = bpy.data.objects.get(name)
+    if cam is not None and cam.type != "CAMERA":
+        raise RuntimeError("%s exists but is a %s, not a camera" % (name, cam.type))
+    if cam is None:
+        cam = bpy.data.objects.new(name, bpy.data.cameras.new(name))
+        sc.collection.objects.link(cam)
+    sc.camera = cam
+    d = cam.data
+    d.sensor_fit = "AUTO"
+    d.clip_start = 0.05
+    d.clip_end = 2000.0
+    if job.get("lensMm") is not None:
+        d.lens = float(job["lensMm"])
+    elif job.get("fovDeg") is not None:
+        d.angle = math.radians(float(job["fovDeg"]))
+    prev_q = None
+    if job["clearExisting"]:
+        cam.animation_data_clear()
+        d.animation_data_clear()
+    else:
+        # continue the hemisphere from the last existing key, or the first new key may take the long way round
+        existing = key_frames(cam)
+        if existing:
+            sc.frame_set(max(existing))
+            # the stored key, sign and all — a matrix-derived quaternion is sign-normalised and
+            # could sit on the opposite hemisphere from a key this lane negated for continuity
+            prev_q = cam.rotation_quaternion.copy() if cam.rotation_mode == "QUATERNION" else cam.matrix_basis.to_quaternion()
+    cam.rotation_mode = "QUATERNION"
+    keys = job["keys"]
+    static = len(keys) == 1 and keys[0].get("frame") is None
+    # a zoom needs the lens keyed at every pose, or the one lens key holds for the whole move
+    zoom = any(k.get("lensMm") is not None for k in keys)
+    frames = []
+    for k in keys:
+        loc = Vector([float(x) for x in k["location"]])
+        if k.get("target") is not None:
+            q = look_at_quat(loc, [float(x) for x in k["target"]])
+        else:
+            q = Euler(rad3(k["rotationDeg"]), "XYZ").to_quaternion()
+        # keep the quaternion on the same hemisphere as the previous key, or the
+        # interpolation takes the long way round between two nearly equal poses
+        if prev_q is not None and prev_q.dot(q) < 0:
+            q.negate()
+        prev_q = q.copy()
+        cam.location = loc
+        cam.rotation_quaternion = q
+        if k.get("lensMm") is not None:
+            d.lens = float(k["lensMm"])
+        if not static:
+            f = int(k["frame"])
+            frames.append(f)
+            cam.keyframe_insert(data_path="location", frame=f)
+            cam.keyframe_insert(data_path="rotation_quaternion", frame=f)
+            if zoom:
+                d.keyframe_insert(data_path="lens", frame=f)
+    if not static:
+        set_interpolation(cam, job["interpolation"])
+        set_interpolation(d, job["interpolation"])
+        extend_frame_range(sc, frames)
+    sc.frame_current = sc.frame_start
+    return {"camera": cam.name, "keyframes": sorted(frames)}
+
+
+def op_animate(job):
+    sc = bpy.context.scene
+    o = bpy.data.objects.get(job["object"])
+    if o is None:
+        names = ", ".join(sorted(x.name for x in bpy.data.objects if x.parent is None))
+        raise RuntimeError("no object named %s — top-level objects: %s" % (job["object"], names))
+    if job["clearExisting"]:
+        o.animation_data_clear()
+    o.rotation_mode = "XYZ"
+    frames = []
+    for k in job["keys"]:
+        f = int(k["frame"])
+        frames.append(f)
+        if k.get("location") is not None:
+            o.location = Vector([float(x) for x in k["location"]])
+            o.keyframe_insert(data_path="location", frame=f)
+        if k.get("rotationDeg") is not None:
+            o.rotation_euler = Euler(rad3(k["rotationDeg"]), "XYZ")
+            o.keyframe_insert(data_path="rotation_euler", frame=f)
+        if k.get("scale") is not None:
+            s = k["scale"]
+            o.scale = (float(s), float(s), float(s)) if not isinstance(s, list) else tuple(float(x) for x in s)
+            o.keyframe_insert(data_path="scale", frame=f)
+    set_interpolation(o, job["interpolation"])
+    extend_frame_range(sc, frames)
+    sc.frame_current = sc.frame_start
+    return {"object": o.name, "keyframes": sorted(frames)}
+
+
+def configure_stamp(sc, on, height):
+    r = sc.render
+    r.use_stamp = bool(on)
+    if not on:
+        return
+    for attr in ("use_stamp_date", "use_stamp_time", "use_stamp_render_time", "use_stamp_filename",
+                 "use_stamp_scene", "use_stamp_memory", "use_stamp_hostname", "use_stamp_marker",
+                 "use_stamp_sequencer_strip", "use_stamp_note", "use_stamp_frame_range"):
+        if hasattr(r, attr):
+            setattr(r, attr, False)
+    r.use_stamp_frame = True
+    r.use_stamp_camera = True
+    r.use_stamp_lens = True
+    r.use_stamp_labels = True
+    r.stamp_font_size = max(12, int(height) // 45)
+    r.stamp_foreground = (1.0, 1.0, 1.0, 1.0)
+    r.stamp_background = (0.0, 0.0, 0.0, 0.5)
+
+
+def op_render(job):
+    sc = bpy.context.scene
+    if sc.camera is None:
+        raise RuntimeError("the scene has no active camera — run blender_camera_set first")
+    engine = job["engine"]
+    if job.get("width") is not None:
+        sc.render.resolution_x = int(job["width"])
+    if job.get("height") is not None:
+        sc.render.resolution_y = int(job["height"])
+    sc.render.resolution_percentage = 100
+    if job.get("fps") is not None:
+        sc.render.fps = int(job["fps"])
+        sc.render.fps_base = 1.0
+    start = int(job["frameStart"]) if job.get("frameStart") is not None else sc.frame_start
+    end = int(job["frameEnd"]) if job.get("frameEnd") is not None else sc.frame_end
+    if end < start:
+        raise RuntimeError("frameEnd %d is before frameStart %d" % (end, start))
+    n = end - start + 1
+    if n > int(job["maxFrames"]):
+        raise RuntimeError("%d frames asked for; a previz is at most %d — split the cut or pass frameStart/frameEnd" % (n, int(job["maxFrames"])))
+    sc.frame_start = start
+    sc.frame_end = end
+    ensure_world(sc)
+    sc.render.film_transparent = False
+    if engine == "eevee":
+        sc.render.engine = EEVEE
+        sc.eevee.taa_render_samples = int(job["samples"])
+    else:
+        sc.render.engine = "BLENDER_WORKBENCH"
+        sh = sc.display.shading
+        sh.light = "STUDIO"
+        sh.color_type = "MATERIAL"
+        sh.show_cavity = True
+        sh.show_object_outline = True
+        sh.show_shadows = True
+        sh.shadow_intensity = 0.4
+        sh.show_specular_highlight = True
+        try:
+            sh.background_type = "WORLD"
+        except Exception:
+            pass
+        sc.display.render_aa = "8"
+    # The mp4 is the hand-off (a reference video for generation) and stays clean; the stamp
+    # goes on the stills only, where a person reads it.
+    configure_stamp(sc, False, sc.render.resolution_y)
+
+    video_path = job["videoPath"]
+    out_dir = os.path.dirname(video_path)
+    os.makedirs(out_dir, exist_ok=True)
+    stem = os.path.splitext(os.path.basename(video_path))[0]
+    # sweep before starting: a killed render leaves its private-prefix file, and a failed one
+    # must not leave last time's mp4 and stills where they read as this time's result. Only
+    # this stem's files — another .blend rendering into the same folder keeps its own.
+    private = ".previz-%s-" % stem
+    for stale in os.listdir(out_dir):
+        if stale.startswith(private) or stale == os.path.basename(video_path) or (stale.startswith(stem + "-f") and stale.endswith(".png")):
+            os.remove(os.path.join(out_dir, stale))
+    ims = sc.render.image_settings
+    if hasattr(ims, "media_type"):      # 5.0+; 4.x picks video from file_format alone
+        ims.media_type = "VIDEO"
+    ims.file_format = "FFMPEG"
+    ims.color_mode = "RGB"
+    ff = sc.render.ffmpeg
+    ff.format = "MPEG4"
+    ff.codec = "H264"
+    ff.constant_rate_factor = "MEDIUM"
+    ff.ffmpeg_preset = "GOOD"
+    ff.gopsize = max(1, min(int(sc.render.fps), 30))
+    ff.audio_codec = "NONE"
+    # Blender appends the frame range to a video file name, so render to a private prefix
+    # and move the one file it writes to the name the caller asked for.
+    prefix = os.path.join(out_dir, private + "%d-" % os.getpid())
+    sc.render.filepath = prefix
+    t0 = time.time()
+    bpy.ops.render.render(animation=True)
+    written = sorted(f for f in os.listdir(out_dir) if f.startswith(os.path.basename(prefix)))
+    if not written:
+        raise RuntimeError("Blender rendered but wrote no video under %s" % out_dir)
+    os.replace(os.path.join(out_dir, written[-1]), video_path)
+    for extra in written[:-1]:
+        os.remove(os.path.join(out_dir, extra))
+
+    stills = job.get("stills")
+    if stills is None:
+        mid = start + (end - start) // 2
+        stills = sorted(set([start, mid, end]))
+    still_paths = []
+    skipped = []
+    if hasattr(ims, "media_type"):
+        ims.media_type = "IMAGE"
+    ims.file_format = "PNG"
+    ims.color_mode = "RGB"
+    configure_stamp(sc, job["stamp"], sc.render.resolution_y)
+    for f in stills:
+        f = int(f)
+        if f < start or f > end:
+            skipped.append(f)
+            continue
+        sc.frame_set(f)
+        p = os.path.join(out_dir, "%s-f%04d.png" % (stem, f))
+        sc.render.filepath = p
+        bpy.ops.render.render(write_still=True)
+        still_paths.append(p)
+    elapsed = time.time() - t0
+    return {
+        "videoPath": video_path,
+        "stillPaths": still_paths,
+        "skippedStills": skipped,
+        "width": sc.render.resolution_x,
+        "height": sc.render.resolution_y,
+        "fps": sc.render.fps,
+        "frameStart": start,
+        "frameEnd": end,
+        "frames": n,
+        "seconds": round(n / float(sc.render.fps), 3),
+        "elapsedSeconds": round(elapsed, 2),
+    }
+
+
+def main():
+    job = json.load(open(job_path(), encoding="utf-8"))
+    out = {"ok": False, "error": "no operation ran"}
+    try:
+        if bpy.app.version < MIN_VERSION:
+            raise RuntimeError("Blender %s is older than %d.%d — the bridge needs 4.2 or newer (brew upgrade --cask blender)"
+                               % (bpy.app.version_string, MIN_VERSION[0], MIN_VERSION[1]))
+        op = job["op"]
+        path = job["blendPath"]
+        if op == "read":
+            open_blend(path)
+            res = summary(path)
+        elif op == "build":
+            res = op_build(job)
+        elif op == "camera":
+            open_blend(path)
+            info = op_camera(job)
+            save_blend(path)
+            res = summary(path)
+            res["applied"] = info
+        elif op == "animate":
+            open_blend(path)
+            info = op_animate(job)
+            save_blend(path)
+            res = summary(path)
+            res["applied"] = info
+        elif op == "pose":
+            open_blend(path)
+            info = op_pose(job)
+            save_blend(path)
+            res = summary(path)
+            res["applied"] = info
+        elif op == "motion":
+            open_blend(path)
+            info = op_motion(job)
+            save_blend(path)
+            res = summary(path)
+            res["applied"] = info
+        elif op == "render":
+            open_blend(path)
+            res = op_render(job)
+        else:
+            raise RuntimeError("unknown op %s" % op)
+        out = {"ok": True, "result": res}
+    except Exception as e:
+        out = {"ok": False, "error": str(e), "trace": traceback.format_exc()[-2500:]}
+    with open(job["resultPath"], "w", encoding="utf-8") as fh:
+        json.dump(out, fh)
+
+
+main()
+`;
+
 // src/suno-client.ts
 import { spawnSync } from "node:child_process";
-import * as path7 from "node:path";
+import * as path8 from "node:path";
 var SUNO_MODELS = ["V4", "V4_5", "V4_5PLUS", "V4_5ALL", "V5", "V5_5"];
 var DEFAULT_SUNO_MODEL = "V5";
 var SUNO_SOUND_MODEL = "V5";
@@ -79195,7 +81418,7 @@ var sunoLyricsSchema = external_exports.object({
   prompt: external_exports.string().min(1).max(200)
 });
 function sleep4(ms) {
-  return new Promise((resolve3) => setTimeout(resolve3, ms));
+  return new Promise((resolve5) => setTimeout(resolve5, ms));
 }
 function describeSunoError(code, msg, httpStatus) {
   const text2 = (msg || "").trim() || "(no message)";
@@ -79313,7 +81536,7 @@ function stemFromFilename(filename) {
   return filename.replace(/\.[^.]+$/, "");
 }
 function extOf(filename) {
-  return path7.extname(filename).toLowerCase();
+  return path8.extname(filename).toLowerCase();
 }
 function transcodeToWav(src, dest) {
   const result = spawnSync(
@@ -79344,7 +81567,7 @@ async function saveTracks(parsed, outputDir, filename, pickTrack) {
     const mp3Path = saveAudioFile(outputDir, mp3Name, buffer);
     let audioPath = mp3Path;
     if (isPick && wantWav) {
-      const wavPath = path7.join(path7.dirname(mp3Path), primaryName);
+      const wavPath = path8.join(path8.dirname(mp3Path), primaryName);
       transcodeToWav(mp3Path, wavPath);
       audioPath = wavPath;
     }
@@ -79902,7 +82125,7 @@ var YOUTUBE_INSIGHTS_OUTPUT = {
     revenueError: { type: "string", description: "Reason when only the revenue lookup failed (other metrics are fine)" },
     videos: {
       type: "array",
-      description: "Per recent upload: { videoId, permalink, title, publishedAt, duration, durationSeconds, lifetime: { views, likes, comments }, period: window metrics } \u2014 durationSeconds \u2264180 marks a Shorts candidate (the API cannot tell whether it is portrait); period is null when no data exists",
+      description: "Per recent upload: { videoId, permalink, title, publishedAt, duration, durationSeconds, lifetime: { views, likes, comments }, period: window metrics } \u2014 durationSeconds \u2264180 marks a Shorts candidate (the API cannot tell whether it is portrait); period is null when no data exists. lifetime is the public Data API counter and updates without the Analytics lag; period, and the shares inside it, is the lagged Analytics window \u2014 a fresh upload only moves in lifetime",
       items: { type: "object" }
     },
     videosError: {
@@ -79923,11 +82146,11 @@ var CONTENT_FEEDBACK_OUTPUT = {
     htmlPath: { description: "Path of the HTML written. null when neither channel nor outputPath was given" },
     youtube: {
       type: "object",
-      description: "{ available, error?, account, cohort, items[], notes[] } \u2014 items carries, per recent video, hook (% getting past the opening), retain (average % watched), angle (views low while hook/retention held up), and problem/hypothesis/next-episode notes"
+      description: "{ available, error?, account, cohort, items[], notes[] } \u2014 items carries, per recent video, hook (% getting past the opening), retain (average % watched), shareRate (shares against engagedViews, the views past the opening, since YouTube reports no reach), angle (views low while hook/retention held up), and problem/hypothesis/next-episode notes"
     },
     instagram: {
       type: "object",
-      description: "{ available, error?, account, cohort, items[], notes[] } \u2014 for reels: skip (3-second drop-off %), watch (seconds), shareRate; otherwise pending"
+      description: "{ available, error?, account, cohort, items[], notes[] } \u2014 for reels: skip (3-second drop-off %), watch (seconds), shareRate (shares against reach); otherwise pending"
     }
   },
   required: ["generatedAt", "limit", "days", "youtube", "instagram"]
@@ -80127,6 +82350,31 @@ var TOOLS = [
           description: "Dominant color \u2014 trans=transparent background (logo/overlay material)"
         },
         safe: { type: "boolean", description: "Adult-content filter (default true=on)" }
+      },
+      required: ["query"]
+    }
+  },
+  {
+    name: "stock_search",
+    title: "Free stock search (Pexels \xB7 Pixabay \xB7 NASA \xB7 Commons)",
+    annotations: HINT.read,
+    description: 'Free, commercially usable photos and clips for a cut that needs the real thing \u2014 an actual place, era, event or live action \u2014 at zero generation cost. Searches Pexels and Pixabay (PEXELS_API_KEY / PIXABAY_API_KEY; a missing key skips that provider with a note), the NASA Image and Video Library and Wikimedia Commons (no key). Every item returns a ready `visual.license` block (provider, page url, license name and url, commercial/modify flags, attribution text, retrievedAt) \u2014 store it verbatim on the `visual.source: "stock"` cut; check-scenes.js refuses a stock cut without it. Commons results are filtered to public domain, CC0 and plain CC BY (share-alike, non-commercial and no-derivatives files are dropped and counted) because an edited, monetized cut cannot carry those terms. This tool does not download: fetch `files[0].url` with curl into storyboard/footage/ (video, as footage/s<n>-<provider>-<id>.mp4) or storyboard/images/stock/ (photo); Commons video is WebM and needs an ffmpeg transcode. People, logos and brands in frame stay a separate rights question on every provider; NASA insignia and identifiable current astronauts are excluded from commercial use. English keywords work best on Pexels, Pixabay and NASA. Read-only; Pexels allows 200 requests/hour, Pixabay 100/minute.',
+    inputSchema: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: 'Search terms \u2014 a concrete subject in English ("1960s street tram", "rice paddy aerial"); Pixabay reads the first 100 characters' },
+        media: { type: "string", enum: ["video", "photo"], description: "video (default) for a stock_video cut \xB7 photo for a still_camera source image" },
+        providers: {
+          type: "array",
+          items: { type: "string", enum: ["pexels", "pixabay", "nasa", "commons"] },
+          description: "Which providers to ask (default all four). NASA for space, earth science and aviation history; Commons for archival and historical files"
+        },
+        orientation: { type: "string", enum: ["portrait", "landscape", "square", "any"], description: "portrait for a 9:16 short, landscape for 16:9 long-form (default any). Applied after the call; NASA reports no dimensions" },
+        limit: { type: "number", description: "Items per provider (default 8, max 30; NASA pages 10 at a time)" },
+        minWidth: { type: "number", description: "Minimum pixel width \u2014 1080 for a portrait short, 1920 for landscape" },
+        minDuration: { type: "number", description: "Video only \u2014 shortest clip in seconds to keep" },
+        maxDuration: { type: "number", description: "Video only \u2014 longest clip in seconds to keep (long archive reels are trimmed with visual.in)" },
+        locale: { type: "string", description: "Pexels locale (ko-KR, en-US) or a Pixabay two-letter lang; Commons and NASA ignore it" }
       },
       required: ["query"]
     }
@@ -81081,8 +83329,9 @@ Do NOT pass reference images containing real human faces \u2014 the 2.x models r
 References carry the artistic STYLE through along with the subject. That is the feature when you want a sketch or toon look transferred \u2014 this is the only style-transfer lane in the plugin, since Veo 3.1 dropped style references \u2014 and a defect when you only wanted the layout: a storyboard frame passed here returns its drawing style, not its composition. For composition use seedance_img2video with sourceImagePath + lastImagePath.
 Do NOT feed a three-view or multi-view character sheet. ByteDance's own docs advise against it twice: the model reads the separate angles as separate people, which worsens identity drift and produces duplicate characters in one frame. Send a headshot (face only, neutral expression, minimal shoulders and background) plus one full-body shot instead \u2014 the docs call those two sufficient. Order is weight: put the asset that must be matched most precisely first in the array.
 Reference AUDIO gives a character a fixed voice. Pass the clip in referenceAudioPaths with generateAudio: true and bind it in the prompt the way the 2.5 guide does \u2014 "Images 1-2 are Character 1 and correspond to Audio 1; Image 3 is Character 2 and speaks with the voice of Audio 2" (@Image N and @Audio N are each list's own order). Route this to dreamina-seedance-2-5-260628: only its guide documents the per-character mapping and only it takes audio-only input; the 2.0 series takes at most 3 clips and needs an image alongside. A channel character's fixed voice sample lives at data/<channel>/assets/characters/<id>/voice.wav. Veo has no audio reference at all.
+Reference VIDEO hands over camera movement, blocking and motion timing \u2014 the Blender previz lane (blender_render_previz \u2192 referenceVideoPaths). The vendor's own "3D clay-model reference" recipe: a grey primitive render, each actor its own flat colour, no stamp or gizmos, 24 fps, a whole number of seconds equal to durationSeconds; the styled source still goes first in referenceImagePaths ("Image 1 is the first frame" \u2014 first_frame cannot be mixed with a reference video); the prompt names "Video 1" as the ONLY reference for camera, shot rhythm, subject trajectory and blocking, maps each coloured model to its Image, and says "Do not reference its visual content". The vendor takes video by public URL only, so a local file is published for the life of the task \u2014 through MEDIA_UPLOAD_URL when set, else a cloudflared quick tunnel \u2014 and released afterwards. Input seconds are billed alongside output seconds at a lower per-token rate.
 
-Returns: a text block with the saved .mp4 file path, reference image and audio lists, model, ratio, resolution, duration, and the billed completion token count.`,
+Returns: a text block with the saved .mp4 file path, reference image, video and audio lists, model, ratio, resolution, duration, and the billed completion token count.`,
     inputSchema: {
       type: "object",
       properties: {
@@ -81095,6 +83344,18 @@ Returns: a text block with the saved .mp4 file path, reference image and audio l
           items: { type: "string" },
           maxItems: 30,
           description: "Absolute paths to reference images guiding subject appearance \u2014 up to 30 for dreamina-seedance-2-5-260628, up to 9 for the 2.0 series. Must not contain real human faces. May be left out only on dreamina-seedance-2-5-260628 when referenceAudioPaths carries the reference; the 2.0 series needs at least one image."
+        },
+        referenceVideoPaths: {
+          type: "array",
+          items: { type: "string" },
+          maxItems: 10,
+          description: "Absolute paths to local reference videos \u2014 the Blender previz lane (blender_render_previz output as the vendor's clay-model reference) \u2014 mp4 or mov (H.264/H.265), 200MB each at most, 24\u201360 fps, 407,696\u20138,295,044 pixels a frame (720\xD71280 and 1080\xD71920 both pass). dreamina-seedance-2-5-260628 takes up to 10 clips of 2\u201330s (30s total); the 2.0 series up to 3 clips of 2\u201315s (15s total). Checked with ffprobe before anything is published or billed. Each file is served to the vendor through MEDIA_UPLOAD_URL (+ MEDIA_UPLOAD_API_KEY) when set, otherwise through a cloudflared quick tunnel for the life of the task. @Video N in the prompt is the Nth entry here (referenceVideoUrls continue the numbering after these). No real human faces \u2014 the same moderation as images."
+        },
+        referenceVideoUrls: {
+          type: "array",
+          items: { type: "string" },
+          maxItems: 10,
+          description: "Already-public https URLs of reference videos (or asset://<id> library assets), numbered after referenceVideoPaths. Same limits as referenceVideoPaths, but a URL clip is not probed here \u2014 its length and frame size are checked only by the vendor, and its seconds still count against the model total and the bill."
         },
         referenceAudioPaths: {
           type: "array",
@@ -81249,6 +83510,492 @@ Returns: a text block with the saved .glb path and model.`,
         }
       },
       required: ["imagePath"]
+    }
+  },
+  // ── Blender bridge — previz camera and blocking on the local Blender (blender-previz.md) ──
+  {
+    name: "blender_scene_read",
+    title: "Read a Blender scene (bridge)",
+    annotations: HINT.local,
+    description: `Read a .blend file **on this machine** and report what is in it \u2014 every object with world position, rotation, size, parent and keyframes, the active camera with lens, field of view and keyframes, the frame range and fps. Opens Blender headless for about a second; changes nothing.
+
+Use as the first call of any previz session ("connect and read the scene, do not modify it yet"), and after any edit you did not make yourself, before blender_camera_set, blender_object_animate, blender_pose_key or blender_motion_import name an object. The other six blender_* tools return the same summary after they save, so a read right after one of them is redundant. A person proxy shows as its root, its <name>.rig armature (19 bones) and its <name>.body mannequin mesh.
+Do NOT use to inspect a GLB or an image \u2014 it reads .blend files only. Do NOT guess object names from memory when this can list them.
+Requires Blender 4.2+ (brew install --cask blender, or BLENDER=<executable>); capability_status lists it under 3d_generation.
+
+Returns: a text block with the Blender version, frame range, resolution, the active camera and one line per object.`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        blendPath: { type: "string", description: 'Absolute path to the .blend file (must end in .blend, no "..").' }
+      },
+      required: ["blendPath"]
+    }
+  },
+  {
+    name: "blender_scene_build",
+    title: "Build a Blender previz set (bridge)",
+    // Overwrites only the previz .blend it owns (reset:true) — a local scratch file, so it is a
+    // generate-class tool, not a HITL one like the publishers.
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    description: `Create (or extend) a .blend previz set **on this machine**: metric units, the cut's frame range and fps, the format's resolution, a floor, a sun, a jointed grey mannequin per person (a 19-bone armature \u2014 hips, spine, chest, neck, head, and shoulder, upper arm, forearm, hand, thigh, shin, foot per side \u2014 under a mesh that bends at those joints), grey proxies for animals, primitive stand-ins for objects, and GLB imports placed by location, rotation and scale. Saves the file and returns the scene summary.
+
+Use once per cut before framing \u2014 the previz lane of skills/storyboard/references/blender-previz.md \u2014 with one proxy per subject that must be in frame: person and dog take a height, box a size, cylinder and sphere a radius, car an optional size. Proxies face -Y, a person's own left is +X; rotationZDeg turns them. A person's body is posed by blender_pose_key or driven by a motion-capture clip through blender_motion_import; its root moves with blender_object_animate. A GLB from mesh-objects.md or mlx_3d_generate goes through imports. reset:true (default) starts from an empty scene and **overwrites the file**; reset:false opens the existing file and adds to it, keeping the camera and its keys.
+Do NOT model appearance here \u2014 proxies are grey blocking, and face, clothing and props belong to the image sheets. Do NOT use the .blend as a rendered asset \u2014 it is a camera, blocking and body-timing plan.
+Requires Blender 4.2+; the glTF importer is built in.
+
+Returns: the same summary as blender_scene_read plus the list of what was built.`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        blendPath: { type: "string", description: 'Absolute path of the .blend to create or extend (ends in .blend, no "..").' },
+        reset: {
+          type: "boolean",
+          default: true,
+          description: "true (default) starts from an empty scene and replaces blendPath \u2014 only a file this tool made; a .blend from anywhere else is refused unless force is true. false opens the existing file and adds proxies/imports to it, keeping the camera, keys, fps, frame range and resolution."
+        },
+        force: {
+          type: "boolean",
+          default: false,
+          description: "With reset:true, also replace a .blend that blender_scene_build did not make (default false \u2014 a hand-authored file is never wiped by accident)."
+        },
+        fps: {
+          type: "number",
+          description: `Frames per second of the cut (1\u2013120). A fresh scene defaults to ${DEFAULT_SCENE_FPS}; with reset:false an omitted value keeps the file's.`
+        },
+        frameStart: { type: "number", description: `First frame. A fresh scene defaults to ${DEFAULT_FRAME_START}; with reset:false an omitted value keeps the file's.` },
+        frameEnd: {
+          type: "number",
+          description: `Last frame. A fresh scene defaults to ${DEFAULT_FRAME_END} (5 s at 30 fps); with reset:false an omitted value keeps the file's. Camera and object keys past it extend the range.`
+        },
+        width: { type: "number", description: `Render width in px (even). A fresh scene defaults to ${DEFAULT_PREVIZ_WIDTH}; with reset:false an omitted value keeps the file's.` },
+        height: {
+          type: "number",
+          description: `Render height in px (even). A fresh scene defaults to ${DEFAULT_PREVIZ_HEIGHT} (9:16; pass 1920\xD71080 for long-form); with reset:false an omitted value keeps the file's.`
+        },
+        floor: { type: "boolean", default: true, description: "Add a grey ground plane at z = 0 (default true)." },
+        floorSize: { type: "number", default: 40, description: "Side of the floor plane in metres (default 40)." },
+        proxies: {
+          type: "array",
+          maxItems: 100,
+          description: "Grey stand-ins, one per subject that must be in frame.",
+          items: {
+            type: "object",
+            required: ["name", "kind"],
+            properties: {
+              name: { type: "string", description: "Unique object name (\u226463 chars) \u2014 the name blender_object_animate and the read-back use." },
+              kind: {
+                type: "string",
+                enum: [...BLENDER_PROXY_KINDS],
+                description: "person (blocking figure with head, torso, limbs and a nose block marking the front), dog, car, box, cylinder, sphere. Every kind faces -Y."
+              },
+              location: {
+                type: "array",
+                items: { type: "number" },
+                minItems: 3,
+                maxItems: 3,
+                description: "[x, y, z] in metres of the proxy's base point (feet, wheels, bottom face) \u2014 default [0, 0, 0]."
+              },
+              rotationZDeg: { type: "number", description: "Turn about Z in degrees (default 0 = facing -Y)." },
+              height: {
+                type: "number",
+                description: "person / dog / cylinder: total height in metres (person default 1.75, dog 0.55, cylinder 1)."
+              },
+              radius: { type: "number", description: "cylinder / sphere: radius in metres (default 0.5)." },
+              size: {
+                type: "array",
+                items: { type: "number" },
+                minItems: 3,
+                maxItems: 3,
+                description: "box: [x, y, z] size in metres (required); car: optional size scaling the 1.8 \xD7 4.4 \xD7 1.45 m default."
+              },
+              color: { type: "string", description: "Optional hex colour (#d0342c) to tell proxies apart \u2014 default grey." }
+            }
+          }
+        },
+        imports: {
+          type: "array",
+          maxItems: 50,
+          description: "GLB/glTF files to place \u2014 a mesh-objects.md recipe export or an mlx_3d_generate result.",
+          items: {
+            type: "object",
+            required: ["glbPath", "name"],
+            properties: {
+              glbPath: { type: "string", description: 'Absolute path to the .glb/.gltf (no "..").' },
+              name: { type: "string", description: "Unique name of the empty that parents the imported objects \u2014 move or animate this name." },
+              location: {
+                type: "array",
+                items: { type: "number" },
+                minItems: 3,
+                maxItems: 3,
+                description: "[x, y, z] in metres (default [0, 0, 0])."
+              },
+              rotationDeg: {
+                type: "array",
+                items: { type: "number" },
+                minItems: 3,
+                maxItems: 3,
+                description: "Euler XYZ in degrees (default [0, 0, 0])."
+              },
+              scale: { type: "number", description: "Uniform scale (default 1)." }
+            }
+          }
+        }
+      },
+      required: ["blendPath"]
+    }
+  },
+  {
+    name: "blender_camera_set",
+    title: "Set or animate the previz camera (bridge)",
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    description: `Place the camera of a .blend previz **on this machine** as numbers \u2014 a location in metres, a target point it looks at (or an explicit rotation), a lens in mm or a field of view \u2014 and key it over frames for a move. Creates the camera if it is missing, makes it the active camera, saves, and returns the scene summary with the camera's keyframes.
+
+Use for every framing decision in a previz: one key with no frame is a locked-off shot; two or more keys with frames are a dolly, arc, crane or push, interpolated LINEAR by default (constant speed reads as intent; BEZIER eases; CONSTANT cuts). Iterate in numbers \u2014 "height 1.2 m", "start at (-3, -3, 1), end at (3, -3, 1)", "24 mm" \u2014 each round is one call and costs nothing. Keys past the scene's frame range extend it. clearExisting (default true) replaces the previous move; false layers new keys onto it.
+Do NOT describe a camera in adverbs and hope \u2014 pass coordinates. Do NOT pass both lensMm and fovDeg, or both target and rotationDeg on one key. Do NOT use this for objects \u2014 that is blender_object_animate. A lensMm on any key turns the move into a zoom: every key then records its lens.
+Coordinates are Blender's: metres, Z up, +Y away from the front view; proxies face -Y, so a camera at negative Y sees their front. Calls on the same .blend run one at a time inside the server (parallel calls on one file are queued, not lost); different files run side by side.
+
+Returns: the scene summary \u2014 the camera line shows location, rotation, lens, fov and keyframes.`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        blendPath: { type: "string", description: 'Absolute path to the .blend file (must end in .blend, no "..").' },
+        name: { type: "string", default: "Camera", description: 'Camera object name (default "Camera"); created if missing, made the active camera.' },
+        lensMm: {
+          type: "number",
+          description: "Focal length in mm on a 36 mm sensor \u2014 24 wide, 35 normal, 50\u201385 tight. Alternative to fovDeg."
+        },
+        fovDeg: { type: "number", description: "Field of view in degrees across the frame's longer side. Alternative to lensMm." },
+        keys: {
+          type: "array",
+          minItems: 1,
+          maxItems: 500,
+          description: "Camera poses. One key without a frame is a locked-off shot; several keys (each with a frame) are a move.",
+          items: {
+            type: "object",
+            required: ["location"],
+            properties: {
+              frame: { type: "number", description: "Frame number of this pose. Omit only when this is the single key of a static shot." },
+              location: {
+                type: "array",
+                items: { type: "number" },
+                minItems: 3,
+                maxItems: 3,
+                description: "Camera position [x, y, z] in metres."
+              },
+              target: {
+                type: "array",
+                items: { type: "number" },
+                minItems: 3,
+                maxItems: 3,
+                description: "Point the camera looks at [x, y, z] in metres \u2014 the usual way to aim it. Exactly one of target or rotationDeg."
+              },
+              rotationDeg: {
+                type: "array",
+                items: { type: "number" },
+                minItems: 3,
+                maxItems: 3,
+                description: "Explicit Blender Euler XYZ rotation in degrees ([90, 0, 0] looks along +Y). Exactly one of target or rotationDeg."
+              },
+              lensMm: { type: "number", description: "Focal length at this key, for a zoom; omit to keep the camera's lens." }
+            }
+          }
+        },
+        interpolation: {
+          type: "string",
+          enum: [...BLENDER_INTERPOLATIONS],
+          default: "LINEAR",
+          description: "Between keys: LINEAR (default, constant speed), BEZIER (ease in and out), CONSTANT (cut)."
+        },
+        clearExisting: {
+          type: "boolean",
+          default: true,
+          description: "Replace the camera's previous keys (default true); false adds these keys on top."
+        }
+      },
+      required: ["blendPath", "keys"]
+    }
+  },
+  {
+    name: "blender_object_animate",
+    title: "Animate a previz object (bridge)",
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    description: `Key an object of a .blend previz **on this machine** \u2014 location in metres, rotation in degrees (Euler XYZ, spins past 360 allowed), scale \u2014 over frames: the thrown can, the paper plane's path, the car crossing the bridge. Saves and returns the scene summary with the object's keyframes.
+
+Use for things that move through space \u2014 vehicles, props, projectiles \u2014 and for a person's path across the set (a walk, a formation change: key the person's root, the body keeps its pose or motion on top), so the previz clip carries their timing and path. Name the object exactly as blender_scene_read lists it (a proxy's root is its name, "can", not "can.mesh"; a person's root is "dancer", not "dancer.rig"). Interpolation is LINEAR by default; keys past the frame range extend it; clearExisting (default true) replaces the object's previous keys.
+Do NOT bend a person's limbs with this \u2014 this moves the whole figure; joints are blender_pose_key (poses in plain channels) or blender_motion_import (a motion-capture clip). Do NOT move the camera with this \u2014 that is blender_camera_set. Calls on the same .blend run one at a time inside the server; different files run side by side.
+
+Returns: the scene summary; the object's line shows its keyframes.`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        blendPath: { type: "string", description: 'Absolute path to the .blend file (must end in .blend, no "..").' },
+        object: { type: "string", description: `Exact object name from blender_scene_read \u2014 a proxy's root ("can"), not its mesh ("can.mesh").` },
+        keys: {
+          type: "array",
+          minItems: 1,
+          maxItems: 1e3,
+          description: "Poses over time; each needs a frame and at least one of location, rotationDeg, scale.",
+          items: {
+            type: "object",
+            required: ["frame"],
+            properties: {
+              frame: { type: "number", description: "Frame number of this pose." },
+              location: {
+                type: "array",
+                items: { type: "number" },
+                minItems: 3,
+                maxItems: 3,
+                description: "[x, y, z] in metres."
+              },
+              rotationDeg: {
+                type: "array",
+                items: { type: "number" },
+                minItems: 3,
+                maxItems: 3,
+                description: "Euler XYZ in degrees; values past 360 spin the object."
+              },
+              scale: {
+                description: "Uniform scale as a number, or [x, y, z].",
+                anyOf: [{ type: "number" }, { type: "array", items: { type: "number" }, minItems: 3, maxItems: 3 }]
+              }
+            }
+          }
+        },
+        interpolation: {
+          type: "string",
+          enum: [...BLENDER_INTERPOLATIONS],
+          default: "LINEAR",
+          description: "Between keys: LINEAR (default, constant speed), BEZIER (ease in and out), CONSTANT (cut)."
+        },
+        clearExisting: {
+          type: "boolean",
+          default: true,
+          description: "Replace the object's previous keys (default true); false adds these keys on top."
+        }
+      },
+      required: ["blendPath", "object", "keys"]
+    }
+  },
+  {
+    name: "blender_pose_key",
+    title: "Pose a previz person (bridge)",
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    description: `Key the body of a person proxy in a .blend previz **on this machine** \u2014 poses over frames in plain channels, degrees in the figure's own frame: arms (raise, side, twist, elbow), legs (raise, side, knee, ankle), torso (bow, lean, turn), head (nod, tilt, turn) and hips (offset in metres, turn, bow, lean). The mannequin bends at its 19 joints; between keys the pose eases (BEZIER by default). Saves and returns the scene summary plus where the hands, feet and head ended up.
+
+Use for acted beats the cut is about \u2014 a point, a wave, a bow, a crouch and jump, a dance count \u2014 when no motion-capture clip fits (blender_motion_import is the natural-motion path). A group that is present keys every bone it covers with omitted channels at 0 (the rest pose: arms hanging, standing straight); a group that is absent leaves those bones alone at that frame. raise 90 puts a limb horizontal in front, side 90 horizontal out to the side, elbow/knee 0\u2013150 bend the joint; bow/nod + lean forward, lean/tilt + go to the figure's left, turn + turns to the figure's left; hips.offset [0, 0, -0.2] drops the pelvis 20 cm (a crouch, with knees and thighs bent to match). The raw bones map takes any rig bone as [x, y, z] degrees about the figure's X (side), Y (front-back) and Z (up) axes. Keys more than about 120\xB0 apart need an intermediate key or the joint may swing the other way round.
+Do NOT pose with this what a clip can carry \u2014 a full dance by hand is hundreds of keys and reads mechanical; import a clip and hand-key only the accents with clearExisting false (each accent takes over \xB1ease frames of the clip, default 6, so it is reached and left rather than spiked). Do NOT move the figure across the floor with this \u2014 that is blender_object_animate on the person's root. Do NOT name the rig or the body \u2014 name the person proxy.
+
+Returns: the scene summary; the person's rig line shows its keyframes, and a landmark line gives hand.L, hand.R, foot.L, foot.R and head positions in world metres at the last keyed frame.`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        blendPath: { type: "string", description: 'Absolute path to the .blend file (must end in .blend, no "..").' },
+        object: { type: "string", description: `The person proxy's name as blender_scene_build created it ("dancer" \u2014 not "dancer.rig").` },
+        keys: {
+          type: "array",
+          minItems: 1,
+          maxItems: 1e3,
+          description: "Poses over time; each needs a frame and a pose with at least one group.",
+          items: {
+            type: "object",
+            required: ["frame", "pose"],
+            properties: {
+              frame: { type: "number", description: "Frame number of this pose." },
+              pose: {
+                type: "object",
+                description: "Body channels in degrees in the figure's own frame; a present group keys all of its bones (omitted channels are 0).",
+                properties: {
+                  hips: {
+                    type: "object",
+                    description: "The pelvis \u2014 every other bone follows it.",
+                    properties: {
+                      offset: { type: "array", items: { type: "number" }, minItems: 3, maxItems: 3, description: "[x, y, z] metres from the rest position: -z crouches, \xB1x sways." },
+                      turn: { type: "number", description: "Degrees about the up axis, + turns the pelvis to the figure's left." },
+                      bow: { type: "number", description: "Degrees about the side axis, + tips the pelvis forward." },
+                      lean: { type: "number", description: "Degrees about the front-back axis, + tips it to the figure's left." }
+                    }
+                  },
+                  torso: {
+                    type: "object",
+                    description: "Spine and chest together (the bend is split between them).",
+                    properties: {
+                      bow: { type: "number", description: "+ bends forward, - arches back." },
+                      lean: { type: "number", description: "+ leans to the figure's left." },
+                      turn: { type: "number", description: "+ twists the torso to the figure's left." }
+                    }
+                  },
+                  head: {
+                    type: "object",
+                    description: "Neck and head together.",
+                    properties: {
+                      nod: { type: "number", description: "+ looks down, - looks up." },
+                      tilt: { type: "number", description: "+ tilts the head to the figure's left shoulder." },
+                      turn: { type: "number", description: "+ looks to the figure's left." }
+                    }
+                  },
+                  armL: {
+                    type: "object",
+                    description: "The figure's left arm (at +X).",
+                    properties: {
+                      raise: { type: "number", description: "Forward and up: 90 horizontal in front, 180 straight up." },
+                      side: { type: "number", description: "Out to the side: 90 horizontal (a T), 180 straight up." },
+                      twist: { type: "number", description: "About the arm's own length, + turns the palm forward." },
+                      elbow: { type: "number", description: "Bend 0\u2013150; the forearm folds toward the front of the upper arm." }
+                    }
+                  },
+                  armR: {
+                    type: "object",
+                    description: "The figure's right arm (at -X), same channels mirrored.",
+                    properties: {
+                      raise: { type: "number", description: "Forward and up: 90 horizontal in front, 180 straight up." },
+                      side: { type: "number", description: "Out to the side: 90 horizontal (a T), 180 straight up." },
+                      twist: { type: "number", description: "About the arm's own length, + turns the palm forward." },
+                      elbow: { type: "number", description: "Bend 0\u2013150; the forearm folds toward the front of the upper arm." }
+                    }
+                  },
+                  legL: {
+                    type: "object",
+                    description: "The figure's left leg.",
+                    properties: {
+                      raise: { type: "number", description: "Thigh forward: 90 horizontal (a high kick or a seat)." },
+                      side: { type: "number", description: "Thigh out to the side." },
+                      knee: { type: "number", description: "Bend 0\u2013150; the shin folds back." },
+                      ankle: { type: "number", description: "+ points the toes, - flexes the foot up." }
+                    }
+                  },
+                  legR: {
+                    type: "object",
+                    description: "The figure's right leg, same channels mirrored.",
+                    properties: {
+                      raise: { type: "number", description: "Thigh forward: 90 horizontal (a high kick or a seat)." },
+                      side: { type: "number", description: "Thigh out to the side." },
+                      knee: { type: "number", description: "Bend 0\u2013150; the shin folds back." },
+                      ankle: { type: "number", description: "+ points the toes, - flexes the foot up." }
+                    }
+                  },
+                  bones: {
+                    type: "object",
+                    description: `Raw override per rig bone \u2014 [x, y, z] degrees about the figure's side, front-back and up axes, applied after the groups. Bones: ${BLENDER_RIG_BONES.join(", ")}.`,
+                    additionalProperties: { type: "array", items: { type: "number" }, minItems: 3, maxItems: 3, description: "[x, y, z] degrees." }
+                  }
+                }
+              }
+            }
+          }
+        },
+        interpolation: {
+          type: "string",
+          enum: [...BLENDER_INTERPOLATIONS],
+          default: "BEZIER",
+          description: "Between keys: BEZIER (default, eases in and out \u2014 how a body moves), LINEAR (constant speed), CONSTANT (snap)."
+        },
+        clearExisting: {
+          type: "boolean",
+          default: true,
+          description: "Replace the person's previous body keys, including an imported motion, and put every bone back at rest (default true); false layers these keys on top of what is there \u2014 each keyed bone's older keys within \xB1ease frames of the new key are dropped, so the pose is eased into and out of instead of spiking for one frame, and the hips group becomes a delta on the clip's own pelvis (its turn and floor height stay)."
+        },
+        ease: {
+          type: "number",
+          default: 6,
+          description: "With clearExisting false: half-width in frames of the window a layered key takes over from the existing keys (default 6, 0 keeps every neighbour and changes that frame alone)."
+        }
+      },
+      required: ["blendPath", "object", "keys"]
+    }
+  },
+  {
+    name: "blender_motion_import",
+    title: "Retarget motion capture onto a previz person (bridge)",
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    description: `Drive a person proxy in a .blend previz **on this machine** with a motion-capture clip \u2014 a BVH or an FBX with animation \u2014 retargeted onto the mannequin's 19 bones: bones are matched by name across the usual vocabularies (Biovision/CMU/Mixamo LeftUpLeg\xB7LeftLeg, Unreal thigh_l\xB7calf_l, Bandai UpperLeg_L\xB7LowerLeg_L, Rigify thigh.L, SMPL L_Hip\xB7L_Knee), the clip is scaled to the figure's leg length, turned so the actor faces -Y at the first frame, and baked to one key per frame. Saves and returns the scene summary plus the bone match.
+
+Use when the cut's content is the body \u2014 a dance, a fight, a fall, a walk cycle \u2014 and a clip of it exists: free BVH libraries (CMU, Bandai Namco Research dataset-1 under CC BY-NC 4.0, Mixamo FBX after a browser download) or a capture of your own. fromSeconds/toSeconds cut a slice, frameStart places it in the cut, speed retimes it, loop repeats it to the scene's last frame, rootMotion "inplace" (default) keeps the figure where its root stands (the formation is yours through blender_object_animate) while "full" keeps the actor's travel. A source bone the vocabulary misses is named in boneMap; unmatched bones hold their rest pose relative to the parent.
+Do NOT expect appearance from this \u2014 it is timing and limb positions on a grey mannequin. Do NOT stack it with blender_pose_key on the same frames unless clearExisting is false on purpose. Do NOT pass files of other kinds \u2014 .bvh and .fbx only, and the file must hold an animated skeleton.
+Requires Blender 4.2+; the BVH and FBX importers are built in. At most ${MAX_PREVIZ_FRAMES} frames per import.
+
+Returns: the scene summary; the person's rig line shows the baked frame range, a motion line names the source, its length, the slice and speed, which canonical bone took which source bone and which found none, the scale ratio and the facing correction, and a landmark line gives hand, foot and head positions at the first baked frame.`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        blendPath: { type: "string", description: 'Absolute path to the .blend file (must end in .blend, no "..").' },
+        object: { type: "string", description: `The person proxy's name as blender_scene_build created it ("dancer" \u2014 not "dancer.rig").` },
+        motionPath: { type: "string", description: 'Absolute path to the motion-capture file \u2014 .bvh or .fbx with an animated skeleton (no "..").' },
+        frameStart: { type: "number", description: "Scene frame where the slice's first frame lands (default: the scene's first frame)." },
+        fromSeconds: { type: "number", default: 0, description: "Start of the slice inside the clip, seconds from its beginning (default 0)." },
+        toSeconds: { type: "number", description: "End of the slice inside the clip, seconds (default: the whole clip)." },
+        speed: { type: "number", default: 1, description: "Playback speed, 0.1\u201310 (default 1 = as captured; 1.2 plays it 20 % faster)." },
+        loop: { type: "boolean", default: false, description: "Repeat the slice until the scene's last frame (default false: the slice plays once and the frame range grows to fit it)." },
+        rootMotion: {
+          type: "string",
+          enum: [...BLENDER_ROOT_MOTIONS],
+          default: "inplace",
+          description: "inplace (default): the pelvis keeps its floor position and only rises and falls \u2014 the figure's root decides where it stands. full: the actor's travel across the floor is kept."
+        },
+        boneMap: {
+          type: "object",
+          description: `Override or complete the name match: canonical rig bone \u2192 source bone name. Canonical bones: ${BLENDER_RIG_BONES.join(", ")}.`,
+          additionalProperties: { type: "string", description: "Exact source bone name in the clip." }
+        },
+        clearExisting: {
+          type: "boolean",
+          default: true,
+          description: "Replace the person's previous body keys (default true); false layers the clip on top of hand-made keys."
+        }
+      },
+      required: ["blendPath", "object", "motionPath"]
+    }
+  },
+  {
+    name: "blender_render_previz",
+    title: "Render a previz clip (bridge)",
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    description: `Render a .blend previz **on this machine** to an H.264 mp4 plus first, middle and last frame PNGs (or the frames you list). The mp4 is always clean \u2014 it is what seedance_reference takes as referenceVideoPaths \u2014 and the stills carry the frame number, camera and lens stamped in the corner (stamp:false for clean stills). workbench (default) is flat studio light with cavity shading and outlines \u2014 grey figures read against a grey floor, well under a second a frame; eevee renders the scene's light and materials for a previz that also has to say something about mood, a few seconds a frame. Silent \u2014 no audio track.
+
+Use after blender_camera_set to look at the move \u2014 open the stills, then iterate the camera in numbers \u2014 and at the end of a previz session to produce the clip the cut's camera and blocking are planned from. Resolution, fps and frame range default to the scene's (set by blender_scene_build); pass frameStart/frameEnd to render a slice. Output goes to outputPath or <blend dir>/previz/.
+Do NOT treat the previz as a deliverable frame \u2014 nothing in it is final appearance; it is a camera and blocking plan. Do NOT pad or loop a failed render \u2014 the tool reports failure and writes no mp4.
+Requires Blender 4.2+; the mp4 is written by Blender's own FFmpeg, so no ffmpeg on PATH is needed.
+
+Returns: a text block with the mp4 path, still paths (and any requested still outside the range, which is skipped and named), engine, resolution, fps, frame range, seconds and render time.`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        blendPath: { type: "string", description: 'Absolute path to the .blend file (must end in .blend, no "..").' },
+        outputPath: { type: "string", description: "Directory for the mp4 and stills (default: <blend dir>/previz)." },
+        filename: {
+          type: "string",
+          default: DEFAULT_PREVIZ_FILENAME,
+          description: `Bare mp4 file name (default ${DEFAULT_PREVIZ_FILENAME}); stills are named <stem>-fNNNN.png beside it.`
+        },
+        engine: {
+          type: "string",
+          enum: [...BLENDER_PREVIZ_ENGINES],
+          default: DEFAULT_PREVIZ_ENGINE,
+          description: "workbench (default): flat studio light, cavity, outlines, fastest. eevee: scene light and materials, a few seconds a frame."
+        },
+        width: { type: "number", description: "Override render width in px, even (default: the scene's)." },
+        height: { type: "number", description: "Override render height in px, even (default: the scene's)." },
+        fps: { type: "number", description: "Override frames per second (default: the scene's)." },
+        frameStart: { type: "number", description: "First frame to render (default: the scene's)." },
+        frameEnd: { type: "number", description: `Last frame to render (default: the scene's). At most ${MAX_PREVIZ_FRAMES} frames per render.` },
+        stills: {
+          type: "array",
+          maxItems: 24,
+          items: { type: "number" },
+          description: "Frames to also save as PNG (default: first, middle, last)."
+        },
+        stamp: {
+          type: "boolean",
+          default: true,
+          description: "Burn frame number, camera name and lens into the corner of the PNG stills (default true) \u2014 what makes a still reviewable. Render the frame-1 still that becomes visual.video.previz.firstFrame with stamp:false (blender-previz.md \xA76.6): the image tool keeps whatever is in that frame as composition. The mp4 is never stamped, so it can go straight to seedance_reference."
+        },
+        samples: { type: "number", default: 16, description: "eevee only: render samples (default 16)." },
+        timeoutSeconds: {
+          type: "number",
+          description: "Override the render time limit in seconds (default grows with the frame count: 120 s + 1 s per frame on workbench, 4 s on eevee)."
+        }
+      },
+      required: ["blendPath"]
     }
   },
   // ── Speech synthesis (Google Gemini TTS — ported from the fect-mcp tts module) ─────────
@@ -81408,9 +84155,9 @@ Returns: a text block with the saved .wav path, voice, language, audio duration,
         },
         speed: {
           type: "number",
-          description: `Speech speed 0.7\u20132.0 (default: ${DEFAULT_SUPERTONIC_SPEED}). Keep it identical across every cut of one video.`,
+          description: `Speech speed 0.7\u2013${MAX_SUPERTONIC_SPEED} (default: ${DEFAULT_SUPERTONIC_SPEED}). Keep it identical across every cut of one video. Above 1.2 the model drops syllables (measured), so a faster delivery comes from the produce playback speed pass, not from this value.`,
           minimum: 0.7,
-          maximum: 2,
+          maximum: MAX_SUPERTONIC_SPEED,
           default: DEFAULT_SUPERTONIC_SPEED
         },
         steps: {
@@ -82373,7 +85120,7 @@ Returns: integer credit balance.`,
     title: "YouTube performance insights",
     annotations: HINT.read,
     outputSchema: YOUTUBE_INSIGHTS_OUTPUT,
-    description: `YouTube performance insights \u2014 returns channel stats (subscribers, total views), window metrics (views, engagedViews, average view duration, average view percentage, subscriber gain/loss), and per-recent-upload metrics in one call (read-only, no side effects). The grow-youtube loop snapshots this every tick to judge tick-over-tick change and which video types are landing \u2014 storing and comparing is the caller's job in data/<channel>/growth/youtube/. **Two scopes required**: youtube.readonly for channel/video lookups, yt-analytics.readonly for window metrics. Tokens issued with publish-only youtube.upload have neither, so a reissue is needed; when missing, the error carries reissue guidance. Revenue metrics (includeRevenue) additionally need yt-analytics-monetary.readonly, and even if that fails the other metrics still arrive. **Analytics data runs 2-3 days behind**, so empty-looking values for yesterday/today are normal \u2014 set days to 7+ to see a trend. The swipe-away rate used for Shorts hook verdicts (Studio's "How many chose to view") has no corresponding Analytics API metric and cannot be fetched here \u2014 substitute averageViewPercentage and check the swipe metric manually in Studio.`,
+    description: `YouTube performance insights \u2014 returns channel stats (subscribers, total views), window metrics (views, engagedViews, average view duration, average view percentage, subscriber gain/loss), and per-recent-upload metrics in one call (read-only, no side effects). The grow-youtube loop snapshots this every tick to judge tick-over-tick change and which video types are landing \u2014 storing and comparing is the caller's job in data/<channel>/growth/youtube/. **Two scopes required**: youtube.readonly for channel/video lookups, yt-analytics.readonly for window metrics. Tokens issued with publish-only youtube.upload have neither, so a reissue is needed; when missing, the error carries reissue guidance. Revenue metrics (includeRevenue) additionally need yt-analytics-monetary.readonly, and even if that fails the other metrics still arrive. **Analytics data runs 2-3 days behind**, so empty-looking values for yesterday/today are normal \u2014 set days to 7+ to see a trend. Two blocks sit outside that lag: the per-video lifetime block (Data API video statistics) and the channel-level account block (Data API channels.list statistics) both move in near real time, while period \u2014 shares and averageViewPercentage included \u2014 follows the lag. The swipe-away rate used for Shorts hook verdicts (Studio's "How many chose to view") has no corresponding Analytics API metric and cannot be fetched here \u2014 substitute averageViewPercentage and check the swipe metric manually in Studio.`,
     inputSchema: {
       type: "object",
       properties: {
@@ -82484,7 +85231,7 @@ Returns: integer credit balance.`,
     title: "Recent-content feedback report",
     annotations: HINT.generate,
     outputSchema: CONTENT_FEEDBACK_OUTPUT,
-    description: "Recent-content feedback \u2014 pulls the latest N posts (default 5) from YouTube and Instagram, scores them per platform, and writes a chart-heavy HTML report (tables, funnels, bars) locally (nothing goes public). YouTube looks at opening pass-through (engagedViews/views) and average view percentage; Instagram reels at 3-second drop-off (reels_skip_rate), average watch, and shares vs reach. Levers (hook, retention, share, angle) are picked against this batch's median, not absolute thresholds. On YouTube, views low while pass-through and retention sit at or above the median means angle \u2014 open the next episode's title with the felt problem, not the method or tool. Platforms without tokens just skip their section. **Default HTML path** data/<channel>/growth/review-recent.html \u2014 changeable via outputPath. Analytics lags 2-3 days, so days defaults to 28. The review-recent skill calls this tool and then opens the report.",
+    description: "Recent-content feedback \u2014 pulls the latest N posts (default 5) from YouTube and Instagram, scores them per platform, and writes a chart-heavy HTML report (tables, funnels, bars) locally (nothing goes public). YouTube looks at opening pass-through (engagedViews/views), average view percentage, and shares against engagedViews (the views past the opening); Instagram reels at 3-second drop-off (reels_skip_rate), average watch, and shares vs reach. YouTube reports no reach, so the two share rates sit on different denominators and are read within a platform, not across. Levers (hook, retention, share, angle) are picked against this batch's median, not absolute thresholds. On YouTube, views low while pass-through and retention sit at or above the median means angle \u2014 open the next episode's title with the felt problem, not the method or tool. Platforms without tokens just skip their section. **Default HTML path** data/<channel>/growth/review-recent.html \u2014 changeable via outputPath. Analytics lags 2-3 days, so days defaults to 28. The review-recent skill calls this tool and then opens the report.",
     inputSchema: {
       type: "object",
       properties: {
@@ -82671,6 +85418,84 @@ Returns: integer credit balance.`,
       },
       required: ["query"]
     }
+  },
+  // ── Storyboard — sequence → scene → shot (skills/storyboard/references/structure-contract.js) ──
+  {
+    name: "storyboard_read",
+    title: "Read a storyboard as sequences \u2192 scenes \u2192 shots",
+    annotations: HINT.local,
+    description: `Read an episode's scenes.js and return it as a tree: sequences (purpose \xB7 question \xB7 payoff) \u2192 scenes (place \xB7 time \xB7 event \xB7 charge \xB7 turn \xB7 out) \u2192 shots (feel \xB7 info \xB7 size \xB7 angle \xB7 render \xB7 narration). Reads the file only; no API call.
+
+Use it before editing an existing board, and after storyboard_apply to see the board the way the approval page groups it. level=outline is enough to plan a change; level=full carries every raw shot object (large \u2014 one shot is ~40 fields).
+Do NOT use it to validate \u2014 storyboard_check runs the contract. A board with no window.STRUCTURE comes back with every shot under unplacedShots; write the structure with storyboard_apply.
+
+Returns: JSON \u2014 { version, format, shots, sequences[\u2026scenes[\u2026shots]], unplacedShots, splicedShots (broll \xB7 outro) }.`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        path: { type: "string", description: "The storyboard directory (data/<channel>/episodes/<topic>/storyboard/) or its scenes.js" },
+        level: { type: "string", enum: ["outline", "scenes", "shots", "full"], description: "outline = sequences with scene numbers \xB7 scenes = scene cards with shot numbers \xB7 shots (default) = every shot summarised under its scene \xB7 full = raw shot objects too" }
+      },
+      required: ["path"]
+    }
+  },
+  {
+    name: "storyboard_apply",
+    title: "Write or patch a storyboard with validation",
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    description: `Write a storyboard's scenes.js from a sequence \u2192 scene \u2192 shot model, or patch part of it, in one call. Every shot is validated against the grammar vocabularies (type \xB7 beat \xB7 size \xB7 angle \xB7 infoType \xB7 shareType \xB7 render.mode \xB7 transition), the structure against its rules (one place and time per scene, a charge that turns, every scene in exactly one sequence, shots grouped by scene in sequence order, two sizes per scene), and the derived shot labels (sceneSlug \xB7 sequence) are written from the structure. Nothing is written when a violation is found \u2014 the findings come back instead. Warnings are written and reported.
+
+Use it to author a new board (set = { structure, shots }) after the narration is approved (storyboard \xA74), and to change one thing later (scenes / sequences / shots by key, insertShots, removeShots, globals for FORMAT \xB7 THEME \xB7 COMPREHENSION \xB7 STORY \xB7 PRODUCTION \xB7 MUSIC). One call carries the whole change \u2014 do not write scenes.js by hand and do not call this once per shot. dryRun:true validates without writing.
+Do NOT pass a shot's visual plan through a summary \u2014 pass the object scenes-schema.md defines (visual \xB7 shot.space \xB7 visual.camera \xB7 visual.video \u2026); unknown keys on a shot pass through untouched. Editing an approved board drops its \`// approved:\` line; it is approved again at the HITL gate.
+
+Scene: { no, place, time, event, charge: { open: "+"|"-", close: "+"|"-"|"++"|"--" }, turn, out? }. Sequence: { id, title, purpose, question?, payoff?, scenes: [no\u2026] }. The reasons for each field are in scenes-schema.md \xA7structure.
+
+Returns: the file written or not, counts, and findings (! violation \xB7 warning).`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        path: { type: "string", description: "The storyboard directory (scenes.js is created there when missing) or its scenes.js" },
+        set: {
+          type: "object",
+          description: "Replace the whole board \u2014 how a new board is written",
+          properties: {
+            structure: { type: "object", description: '{ version: "structure-v1", sequences: [...], scenes: [...] }' },
+            shots: { type: "array", items: { type: "object", description: "The scenes-schema.md shot object" }, description: "Every shot in playback order \u2014 the scenes-schema.md shot object; each playback shot carries `scene`" }
+          },
+          required: ["structure", "shots"]
+        },
+        structure: { type: "object", description: "Replace window.STRUCTURE only" },
+        sequences: { type: "array", items: { type: "object", description: "{ id, title, purpose, question?, payoff?, scenes }" }, description: "Upsert sequences by id" },
+        scenes: { type: "array", items: { type: "object", description: "{ no, place, time, event, charge, turn, out? }" }, description: "Upsert scenes by no" },
+        shots: { type: "array", items: { type: "object", description: "One positional upsert", properties: { no: { type: "number", description: "1-based position" }, shot: { type: "object", description: "The scenes-schema.md shot object" } }, required: ["no", "shot"] }, description: "Upsert shots by 1-based position; no = length + 1 appends" },
+        insertShots: { type: "array", items: { type: "object", description: "One insert", properties: { after: { type: "number", description: "1-based position to insert after; 0 = at the start" }, shots: { type: "array", items: { type: "object", description: "The scenes-schema.md shot object" }, description: "Shots to insert, in order" } }, required: ["after", "shots"] }, description: "Insert shots after a 1-based position (0 = at the start)" },
+        removeShots: { type: "array", items: { type: "number", description: "1-based position" }, description: "1-based positions to drop (resolved before inserts)" },
+        removeScenes: { type: "array", items: { type: "number", description: "Scene number" }, description: "Scene numbers to drop from STRUCTURE.scenes and from every sequence" },
+        removeSequences: { type: "array", items: { type: "string", description: "Sequence id" }, description: "Sequence ids to drop" },
+        globals: { type: "object", description: "Other window.* blocks to set \u2014 FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, VOICE, MOTION_POLICY" },
+        dryRun: { type: "boolean", description: "Validate and report, write nothing" }
+      },
+      required: ["path"]
+    }
+  },
+  {
+    name: "storyboard_check",
+    title: "Check a storyboard against its contract",
+    annotations: HINT.local,
+    description: `Run the sequence \u2192 scene \u2192 shot rules and the full scenes.js contract (check-scenes.js: vocabularies, beat order, camera slots, motion policy, production mode) on a board and return every finding. Reads the file and runs a local script; no API call.
+
+Use it after storyboard_apply and before delegating a reviewer or generating anything \u2014 the same command the storyboard skill runs by hand (\`node check-scenes.js storyboard/\`). draft:true is the story pass (\xA74a): machine-layer absences are deferred and counted, vocabularies and beat order still fail.
+Do NOT treat a pass as visual quality \u2014 frame overflow, hero-stat width and speech rate are measured on the rendered canvas in storyboard.html's check strip.
+
+Returns: counts (violations \xB7 warnings \xB7 deferred) and two lists \u2014 structure findings, then shot-contract findings \u2014 each line "! where what" (violation) or "\xB7 where what" (warning).`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        path: { type: "string", description: "The storyboard directory or its scenes.js" },
+        draft: { type: "boolean", description: "The story pass (storyboard \xA74a) \u2014 machine-layer absences deferred" }
+      },
+      required: ["path"]
+    }
   }
 ];
 var SNS_PLATFORM_BY_TOOL = {
@@ -82687,9 +85512,9 @@ var SNS_PLATFORM_BY_TOOL = {
 
 // src/datago-client.ts
 import { mkdir, writeFile as writeFile2 } from "node:fs/promises";
-import { existsSync as existsSync8 } from "node:fs";
-import { tmpdir as tmpdir2 } from "node:os";
-import { join as join7 } from "node:path";
+import { existsSync as existsSync10 } from "node:fs";
+import { tmpdir as tmpdir3 } from "node:os";
+import { join as join8 } from "node:path";
 var PORTAL_BASE = "https://www.data.go.kr";
 var ODCLOUD_BASE = "https://api.odcloud.kr/api";
 var OPENAPI_BASE = "https://apis.data.go.kr";
@@ -82928,14 +85753,14 @@ async function downloadFile2(input) {
   const cd = fileRes.headers.get("content-disposition") ?? "";
   const rawName = cd.match(/filename\*?=(?:UTF-8''|")?([^";]+)/i)?.[1] ?? `datago-${input.publicDataPk}.bin`;
   const filename = sanitizeFilename(fixHeaderEncoding(rawName.replace(/"/g, "")));
-  const saveDir = input.saveDir ?? join7(tmpdir2(), "social-flow-datago");
+  const saveDir = input.saveDir ?? join8(tmpdir3(), "social-flow-datago");
   await mkdir(saveDir, { recursive: true });
-  let savedPath = join7(saveDir, filename);
-  for (let i2 = 1; existsSync8(savedPath); i2++) {
+  let savedPath = join8(saveDir, filename);
+  for (let i2 = 1; existsSync10(savedPath); i2++) {
     if (i2 >= 100) {
       return err(`there are already 100+ files with the same name in ${saveDir} \u2014 clean up saveDir or point at a different directory.`);
     }
-    savedPath = join7(saveDir, filename.replace(/(\.[^.]*)?$/, `-${i2}$1`));
+    savedPath = join8(saveDir, filename.replace(/(\.[^.]*)?$/, `-${i2}$1`));
   }
   await writeFile2(savedPath, buf);
   const preview = decodePreview(buf.subarray(0, 4096));
@@ -83012,9 +85837,9 @@ var OPENAPI_CODE_HELP = {
 };
 async function callOpenApi(input) {
   const key = requireDataGoKrKey();
-  const path10 = input.path.replace(/^\/+/, "");
-  if (path10.includes("..") || path10.includes("://")) return err("path only accepts a route under apis.data.go.kr (e.g. 1360000/VilageFcstInfoService_2.0/getUltraSrtNcst)");
-  const url = `${OPENAPI_BASE}/${path10}${buildQuery({ ...input.params, serviceKey: key })}`;
+  const path11 = input.path.replace(/^\/+/, "");
+  if (path11.includes("..") || path11.includes("://")) return err("path only accepts a route under apis.data.go.kr (e.g. 1360000/VilageFcstInfoService_2.0/getUltraSrtNcst)");
+  const url = `${OPENAPI_BASE}/${path11}${buildQuery({ ...input.params, serviceKey: key })}`;
   const res = await requestRaw("get", url, { "User-Agent": BROWSER_UA });
   const body = res.body;
   if (/^\s*Unauthorized\s*$/i.test(body)) return err(`apis.data.go.kr: ${OPENAPI_AUTH_HELP}`);
@@ -83939,25 +86764,351 @@ async function fetchGoogleOrganic(input) {
   return { hits };
 }
 
+// src/stock-client.ts
+var STOCK_PROVIDERS = ["pexels", "pixabay", "nasa", "commons"];
+var STOCK_MEDIA = ["video", "photo"];
+var STOCK_ORIENTATIONS = ["portrait", "landscape", "square", "any"];
+var STOCK_MAX_LIMIT = 30;
+var NASA_MAX = 10;
+var USER_AGENT = "social-flow-mcp (https://github.com/ttalkkaklab/social-flow)";
+var today = () => (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+var num3 = (v) => typeof v === "number" && Number.isFinite(v) ? v : void 0;
+var str5 = (v) => typeof v === "string" && v.trim() ? v.trim() : void 0;
+var stripTags2 = (v) => str5(String(v ?? "").replace(/<[^>]*>/g, "").replace(/\s+/g, " "));
+function compact4(obj) {
+  const out = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value === void 0 || value === null || value === "") continue;
+    if (Array.isArray(value) && value.length === 0) continue;
+    out[key] = value;
+  }
+  return out;
+}
+function maskKey3(text2) {
+  return text2.replace(/([?&](?:key|api_key)=)[^&\s"')]+/g, "$1***");
+}
+async function getJson(url, headers = {}) {
+  const res = await requestRaw("get", url, headers);
+  if (!res.ok) throw new Error(maskKey3(`HTTP ${res.status}: ${res.body.slice(0, 200)}`));
+  try {
+    return JSON.parse(res.body);
+  } catch {
+    throw new Error(maskKey3(`non-JSON response from ${url}`));
+  }
+}
+function orientationOf(width, height) {
+  if (!width || !height) return void 0;
+  if (Math.abs(width - height) / Math.max(width, height) < 0.05) return "square";
+  return height > width ? "portrait" : "landscape";
+}
+function keep(item, input) {
+  const wanted = input.orientation && input.orientation !== "any" ? input.orientation : void 0;
+  const actual = orientationOf(item.width, item.height);
+  if (wanted && actual && actual !== wanted) return false;
+  if (input.minWidth && item.width && item.width < input.minWidth) return false;
+  if (item.media === "video" && item.duration !== void 0) {
+    if (input.minDuration !== void 0 && item.duration < input.minDuration) return false;
+    if (input.maxDuration !== void 0 && item.duration > input.maxDuration) return false;
+  }
+  return true;
+}
+var PEXELS_LICENSE = {
+  license: "Pexels License",
+  licenseUrl: "https://www.pexels.com/license/",
+  note: "No credit required. Do not imply endorsement by the people or brands shown, do not show identifiable people in a bad light, no standalone redistribution."
+};
+async function pexels(input, media, limit2) {
+  const key = config2.pexelsApiKey;
+  if (!key) return { items: [], note: "skipped \u2014 PEXELS_API_KEY is not set (https://www.pexels.com/api/)" };
+  const orientation = input.orientation && input.orientation !== "any" ? input.orientation : void 0;
+  const base = media === "video" ? "https://api.pexels.com/videos/search" : "https://api.pexels.com/v1/search";
+  const json2 = await getJson(
+    base + buildQuery({ query: input.query, orientation, per_page: Math.min(80, limit2 * 2), locale: input.locale }),
+    { Authorization: key }
+  );
+  const rows = (media === "video" ? json2.videos : json2.photos) ?? [];
+  const items = rows.map((r2) => {
+    const author = str5(r2.user?.name) ?? str5(r2.photographer);
+    const authorUrl = str5(r2.user?.url) ?? str5(r2.photographer_url);
+    const files = media === "video" ? (r2.video_files ?? []).filter((f3) => !f3.file_type || /mp4/i.test(String(f3.file_type))).map((f3) => compact4({ url: String(f3.link), width: num3(f3.width), height: num3(f3.height), label: str5(f3.quality), mime: str5(f3.file_type) })).sort((a, b) => (b.height ?? 0) - (a.height ?? 0)) : [
+      { url: String(r2.src?.original), width: num3(r2.width), height: num3(r2.height), label: "original", mime: "image/jpeg" },
+      { url: String(r2.src?.large2x), label: "large2x (1880w)", mime: "image/jpeg" }
+    ].filter((f3) => f3.url && f3.url !== "undefined");
+    return compact4({
+      provider: "pexels",
+      id: String(r2.id),
+      media,
+      title: str5(r2.alt),
+      pageUrl: String(r2.url),
+      author,
+      width: num3(r2.width),
+      height: num3(r2.height),
+      duration: num3(r2.duration),
+      thumbnail: str5(r2.image) ?? str5(r2.src?.medium),
+      files,
+      license: compact4({
+        provider: "pexels",
+        url: String(r2.url),
+        ...PEXELS_LICENSE,
+        author,
+        authorUrl,
+        attributionRequired: false,
+        attribution: `${media === "video" ? "Video" : "Photo"} by ${author ?? "a Pexels contributor"} on Pexels`,
+        commercial: true,
+        modify: true,
+        retrievedAt: today()
+      })
+    });
+  });
+  return { items };
+}
+var PIXABAY_LICENSE = {
+  license: "Pixabay Content License",
+  licenseUrl: "https://pixabay.com/service/license-summary/",
+  note: "No credit required. Content showing trademarks, logos or brands may not be used commercially in relation to goods and services; no standalone redistribution. AI-generated items are mixed in \u2014 read the page before using one on a factual channel."
+};
+async function pixabay(input, media, limit2) {
+  const key = config2.pixabayApiKey;
+  if (!key) return { items: [], note: "skipped \u2014 PIXABAY_API_KEY is not set (https://pixabay.com/api/docs/)" };
+  const orientation = input.orientation === "portrait" ? "vertical" : input.orientation === "landscape" ? "horizontal" : void 0;
+  const lang = input.locale && /^[a-z]{2}$/i.test(input.locale) ? input.locale.toLowerCase() : void 0;
+  const params = {
+    key,
+    q: input.query.slice(0, 100),
+    per_page: Math.max(3, Math.min(200, limit2 * 2)),
+    safesearch: true,
+    lang,
+    ...media === "video" ? { video_type: "film" } : { image_type: "photo", orientation, min_width: input.minWidth }
+  };
+  const base = media === "video" ? "https://pixabay.com/api/videos/" : "https://pixabay.com/api/";
+  const json2 = await getJson(base + buildQuery(params));
+  const items = (json2.hits ?? []).map((r2) => {
+    const author = str5(r2.user);
+    let files, width, height, thumbnail;
+    if (media === "video") {
+      const v = r2.videos ?? {};
+      files = ["large", "medium", "small", "tiny"].filter((k) => str5(v[k]?.url)).map((k) => compact4({ url: String(v[k].url), width: num3(v[k].width), height: num3(v[k].height), label: k, mime: "video/mp4" }));
+      width = files[0]?.width;
+      height = files[0]?.height;
+      thumbnail = str5(v.medium?.thumbnail) ?? str5(v.small?.thumbnail);
+    } else {
+      files = [
+        r2.imageURL && { url: String(r2.imageURL), width: num3(r2.imageWidth), height: num3(r2.imageHeight), label: "original", mime: "image/jpeg" },
+        r2.fullHDURL && { url: String(r2.fullHDURL), label: "fullHD (1920w)", mime: "image/jpeg" },
+        r2.largeImageURL && { url: String(r2.largeImageURL), label: "large (1280w)", mime: "image/jpeg" }
+      ].filter(Boolean);
+      width = num3(r2.imageWidth);
+      height = num3(r2.imageHeight);
+      thumbnail = str5(r2.previewURL);
+    }
+    return compact4({
+      provider: "pixabay",
+      id: String(r2.id),
+      media,
+      title: str5(r2.tags),
+      pageUrl: String(r2.pageURL),
+      author,
+      width,
+      height,
+      duration: num3(r2.duration),
+      thumbnail,
+      files,
+      license: compact4({
+        provider: "pixabay",
+        url: String(r2.pageURL),
+        ...PIXABAY_LICENSE,
+        author,
+        attributionRequired: false,
+        attribution: `${author ?? "a Pixabay contributor"} via Pixabay`,
+        commercial: true,
+        modify: true,
+        retrievedAt: today()
+      })
+    });
+  });
+  return { items };
+}
+var NASA_LICENSE = {
+  license: "NASA media usage guidelines (US government work, not subject to copyright)",
+  licenseUrl: "https://www.nasa.gov/nasa-brand-center/images-and-media/",
+  note: "Credit NASA. Not usable: the NASA insignia and logotype, names or likenesses of current astronauts and employees on commercial products, anything implying NASA endorsement, and third-party material NASA uses with permission \u2014 read the description for embedded third-party credits."
+};
+async function nasa(input, media, limit2) {
+  const page = Math.min(NASA_MAX, limit2);
+  const search = await getJson("https://images-api.nasa.gov/search" + buildQuery({ q: input.query, media_type: media === "video" ? "video" : "image", page_size: page }));
+  const rows = (search.collection?.items ?? []).slice(0, page);
+  const manifests = await Promise.all(rows.map(async (r2) => {
+    const id = str5(r2.data?.[0]?.nasa_id);
+    if (!id) return [];
+    try {
+      const m2 = await getJson(`https://images-api.nasa.gov/asset/${encodeURIComponent(id)}`);
+      return (m2.collection?.items ?? []).map((x2) => String(x2.href));
+    } catch {
+      return [];
+    }
+  }));
+  const items = rows.map((r2, i2) => {
+    const d = r2.data?.[0] ?? {};
+    const id = str5(d.nasa_id);
+    if (!id) return null;
+    const hrefs = manifests[i2].map((h2) => h2.replace(/^http:\/\//, "https://"));
+    const rank = (h2) => /~orig\./.test(h2) ? 0 : /~large\./.test(h2) ? 1 : /~medium\./.test(h2) ? 2 : /~small\./.test(h2) ? 3 : 9;
+    const wanted = media === "video" ? /\.mp4$/i : /\.(jpe?g|png|tiff?)$/i;
+    const files = hrefs.filter((h2) => wanted.test(h2) && !/~thumb|~preview|~mobile|_\d\.jpg$/i.test(h2)).sort((a, b) => rank(a) - rank(b)).map((h2) => ({ url: h2, label: (h2.match(/~([a-z]+)\.[a-z0-9]+$/i) ?? [])[1] ?? "file", mime: media === "video" ? "video/mp4" : "image/jpeg" }));
+    const center = str5(d.center);
+    const thumb = (r2.links ?? []).map((l) => str5(l.href)).find(Boolean);
+    return compact4({
+      provider: "nasa",
+      id,
+      media,
+      title: str5(d.title),
+      pageUrl: `https://images.nasa.gov/details/${encodeURIComponent(id)}`,
+      author: center ? `NASA/${center}` : "NASA",
+      thumbnail: thumb,
+      files,
+      license: compact4({
+        provider: "nasa",
+        url: `https://images.nasa.gov/details/${encodeURIComponent(id)}`,
+        ...NASA_LICENSE,
+        author: center ? `NASA/${center}` : "NASA",
+        attributionRequired: false,
+        attribution: center ? `NASA/${center}` : "NASA",
+        commercial: true,
+        modify: true,
+        retrievedAt: today()
+      })
+    });
+  }).filter((x2) => !!x2);
+  return { items, note: limit2 > NASA_MAX ? `NASA pages ${NASA_MAX} at a time (one manifest request per item); no dimensions are reported, so orientation and minWidth are not applied here` : "NASA reports no dimensions, so orientation and minWidth are not applied here" };
+}
+function commonsLicenseAllowed(code, shortName) {
+  const c = (code ?? "").toLowerCase().trim();
+  if (/-(sa|nc|nd)(-|$)/.test(c)) return false;
+  if (/^(pd|pd-[a-z0-9-]+|cc0|cc-zero)$/.test(c)) return true;
+  if (/^cc-by(-\d+(\.\d+)?)?(-[a-z]{2,3})?$/.test(c)) return true;
+  if (!c) {
+    const s2 = (shortName ?? "").toLowerCase();
+    return /public domain|cc0/.test(s2) && !/share ?alike|non ?commercial|no ?deriv/.test(s2);
+  }
+  return false;
+}
+async function commons(input, media, limit2) {
+  const url = "https://commons.wikimedia.org/w/api.php" + buildQuery({
+    action: "query",
+    format: "json",
+    formatversion: 2,
+    generator: "search",
+    gsrnamespace: 6,
+    gsrlimit: Math.min(50, limit2 * 2),
+    gsrsearch: `${media === "video" ? "filetype:video" : "filetype:bitmap"} ${input.query}`,
+    prop: "imageinfo",
+    iiprop: "url|size|mime|extmetadata",
+    iiurlwidth: 1280,
+    iiextmetadatafilter: "LicenseShortName|License|LicenseUrl|Artist|Credit|Attribution|AttributionRequired|UsageTerms|ImageDescription"
+  });
+  const json2 = await getJson(url, { "User-Agent": USER_AGENT });
+  let dropped = 0;
+  const items = [];
+  for (const p of json2.query?.pages ?? []) {
+    const ii = p.imageinfo?.[0] ?? {};
+    const meta = ii.extmetadata ?? {};
+    const m2 = (k) => stripTags2(meta[k]?.value);
+    const mime = str5(ii.mime) ?? "";
+    if (media === "video" ? !mime.startsWith("video/") : !/^image\/(jpeg|png|tiff|webp)$/.test(mime)) continue;
+    if (!commonsLicenseAllowed(m2("License"), m2("LicenseShortName"))) {
+      dropped++;
+      continue;
+    }
+    const pageUrl = str5(ii.descriptionurl) ?? `https://commons.wikimedia.org/wiki/${encodeURIComponent(String(p.title))}`;
+    const author = m2("Artist");
+    const attributionRequired = String(meta.AttributionRequired?.value ?? "").toLowerCase() === "true";
+    const attribution = m2("Attribution") ?? author;
+    const license = m2("LicenseShortName") ?? m2("UsageTerms") ?? "Public domain";
+    const files = [{ url: String(ii.url), width: num3(ii.width), height: num3(ii.height), label: "original", mime }];
+    if (media === "photo" && str5(ii.thumburl)) files.push({ url: String(ii.thumburl), width: num3(ii.thumbwidth), height: num3(ii.thumbheight), label: "scaled (1280w)", mime });
+    items.push(compact4({
+      provider: "commons",
+      id: String(p.pageid),
+      media,
+      title: String(p.title).replace(/^File:/, ""),
+      pageUrl,
+      author,
+      width: num3(ii.width),
+      height: num3(ii.height),
+      duration: num3(ii.duration) === void 0 ? void 0 : Math.round(ii.duration * 100) / 100,
+      thumbnail: str5(ii.thumburl),
+      files,
+      license: compact4({
+        provider: "commons",
+        url: pageUrl,
+        license,
+        licenseUrl: m2("LicenseUrl") ?? "https://commons.wikimedia.org/wiki/Commons:Licensing",
+        author,
+        attributionRequired,
+        attribution: attributionRequired ? `${attribution ?? "see file page"}, ${license}, via Wikimedia Commons` : void 0,
+        commercial: true,
+        modify: true,
+        retrievedAt: today(),
+        note: (media === "video" ? "WebM/Ogg only \u2014 transcode with ffmpeg before the builder. " : "") + "Personality rights, trademarks and freedom of panorama are separate from the file license; the file page is the source of truth."
+      })
+    }));
+  }
+  return { items, note: dropped ? `${dropped} file(s) dropped: share-alike, non-commercial or no-derivatives licenses are not usable on an edited, monetized cut` : void 0 };
+}
+var RUNNERS = {
+  pexels,
+  pixabay,
+  nasa,
+  commons
+};
+async function stockSearch(input) {
+  const media = input.media ?? "video";
+  const limit2 = Math.min(STOCK_MAX_LIMIT, Math.max(1, input.limit ?? 8));
+  const providers = input.providers?.length ? input.providers : [...STOCK_PROVIDERS];
+  const outcomes = await Promise.all(providers.map(async (name) => {
+    try {
+      const out = await RUNNERS[name](input, media, limit2);
+      const items2 = out.items.filter((item) => keep(item, input)).slice(0, limit2);
+      return { name, items: items2, note: out.note, failed: false };
+    } catch (error2) {
+      return { name, items: [], note: `failed \u2014 ${error2 instanceof Error ? error2.message : String(error2)}`, failed: true };
+    }
+  }));
+  const items = outcomes.flatMap((o) => o.items);
+  const summary = Object.fromEntries(outcomes.map((o) => [o.name, compact4({ count: o.items.length, note: o.note })]));
+  const allFailed = outcomes.every((o) => o.failed || o.items.length === 0 && /^skipped/.test(o.note ?? ""));
+  return {
+    text: JSON.stringify(compact4({
+      query: input.query,
+      media,
+      orientation: input.orientation ?? "any",
+      providers: summary,
+      note: items.length ? "Every item carries the visual.license block to store on the cut; download files[0] with curl into storyboard/footage/ (video) or storyboard/images/stock/ (photo). People, logos and brands in frame stay a separate rights question on every provider." : 'No usable results. Try English keywords, orientation "any", another media type, or the manual archives in docs/research/2026-09-07-free-stock-sources/index.html.',
+      items
+    }), null, 1),
+    isError: allFailed && items.length === 0
+  };
+}
+
 // src/sns-client.ts
 import { createHash as createHash2, randomUUID as randomUUID2 } from "node:crypto";
 import {
-  existsSync as existsSync9,
+  existsSync as existsSync11,
   mkdirSync as nodeMkdirSync,
   readFileSync as nodeReadFileSync,
   rmSync as nodeRmSync,
   writeFileSync as nodeWriteFileSync
 } from "node:fs";
 import { open as nodeOpen, readFile, stat as stat3 } from "node:fs/promises";
-import { basename as basename6, dirname as dirname3, extname as extname6, join as join8 } from "node:path";
+import { basename as basename7, dirname as dirname4, extname as extname8, join as join9 } from "node:path";
 function enabledPlatforms() {
   const channelDirs = listChannelDirs();
   return SNS_PLATFORMS.filter(
-    (platform) => existsSync9(snsCredentialFile(platform)) || channelDirs.some((dir) => dir.platforms.includes(platform))
+    (platform) => existsSync11(snsCredentialFile(platform)) || channelDirs.some((dir) => dir.platforms.includes(platform))
   );
 }
 function availablePlatformsFor(channel) {
-  return SNS_PLATFORMS.filter((platform) => existsSync9(snsCredentialFile(platform, channel)));
+  return SNS_PLATFORMS.filter((platform) => existsSync11(snsCredentialFile(platform, channel)));
 }
 var GRAPH_VERSION = "v23.0";
 var THREADS_BASE = "https://graph.threads.net/v1.0";
@@ -83965,7 +87116,7 @@ var IG_BASE = `https://graph.instagram.com/${GRAPH_VERSION}`;
 var FB_BASE = `https://graph.facebook.com/${GRAPH_VERSION}`;
 var DEFAULT_POLL_INTERVAL_MS = 2e3;
 var DEFAULT_POLL_MAX_TRIES = 60;
-var sleep6 = (ms) => new Promise((resolve3) => setTimeout(resolve3, ms));
+var sleep6 = (ms) => new Promise((resolve5) => setTimeout(resolve5, ms));
 function fail2(status, message) {
   return { ok: false, status, body: message };
 }
@@ -84098,7 +87249,7 @@ async function threadsInsights(input) {
   const me = await fetchMe(THREADS_BASE, token, "id,username");
   if (!me.ok) return me;
   const account = parseJson(me.body) ?? {};
-  const uid = str5(account.id);
+  const uid = str6(account.id);
   if (!uid) return fail2(502, `Threads /me returned no id: ${me.body}`);
   const days = input.days ?? 7;
   const nowSec = Math.floor(Date.now() / 1e3);
@@ -84119,14 +87270,14 @@ async function threadsInsights(input) {
   if (!followers.ok) return withScopeHint(followers, "threads_manage_insights");
   const userMetrics = {};
   for (const item of [...rawList(ranged.body), ...rawList(followers.body)]) {
-    const name = str5(item.name);
+    const name = str6(item.name);
     if (!name) continue;
     const totalValue = item.total_value?.value;
     if (totalValue !== void 0) {
       userMetrics[name] = totalValue;
     } else if (Array.isArray(item.values)) {
       const daily = item.values.map((v) => ({
-        date: str5(v.end_time).slice(0, 10),
+        date: str6(v.end_time).slice(0, 10),
         value: numOrNull(v.value) ?? 0
       }));
       userMetrics[name] = { total: daily.reduce((sum, v) => sum + v.value, 0), daily };
@@ -84145,7 +87296,7 @@ async function threadsInsights(input) {
     const roots = rawList(list.body).filter((item) => item.is_reply !== true).slice(0, postLimit);
     posts = await Promise.all(
       roots.map(async (item) => {
-        const postId = str5(item.id);
+        const postId = str6(item.id);
         const ins = await graphRequest("get", `${THREADS_BASE}/${postId}/insights`, {
           metric: THREADS_MEDIA_METRICS,
           access_token: token
@@ -84154,14 +87305,14 @@ async function threadsInsights(input) {
         if (ins.ok) {
           for (const m2 of rawList(ins.body)) {
             const values = m2.values;
-            metrics[str5(m2.name)] = numOrNull(values?.[0]?.value ?? m2.total_value?.value);
+            metrics[str6(m2.name)] = numOrNull(values?.[0]?.value ?? m2.total_value?.value);
           }
         }
         return {
           postId,
-          permalink: item.permalink ? str5(item.permalink) : null,
-          excerpt: excerpt(str5(item.text)),
-          timestamp: item.timestamp ? str5(item.timestamp) : null,
+          permalink: item.permalink ? str6(item.permalink) : null,
+          excerpt: excerpt(str6(item.text)),
+          timestamp: item.timestamp ? str6(item.timestamp) : null,
           metrics: ins.ok ? metrics : null,
           ...ins.ok ? {} : { metricsError: `HTTP ${ins.status}: ${ins.body.slice(0, 200)}` }
         };
@@ -84170,7 +87321,7 @@ async function threadsInsights(input) {
   }
   return okJson({
     channel: input.channel ?? null,
-    account: { id: uid, username: str5(account.username) },
+    account: { id: uid, username: str6(account.username) },
     period: { since: new Date(since * 1e3).toISOString(), until: new Date(nowSec * 1e3).toISOString(), days },
     user: userMetrics,
     posts
@@ -84191,13 +87342,13 @@ async function threadsKeywordSearch(input) {
   });
   if (!res.ok) return withScopeHint(res, "threads_keyword_search");
   const results = rawList(res.body).map((item) => {
-    const timestamp = item.timestamp ? str5(item.timestamp) : null;
+    const timestamp = item.timestamp ? str6(item.timestamp) : null;
     return {
-      postId: str5(item.id),
-      username: str5(item.username),
-      text: str5(item.text),
-      mediaType: str5(item.media_type) || null,
-      permalink: item.permalink ? str5(item.permalink) : null,
+      postId: str6(item.id),
+      username: str6(item.username),
+      text: str6(item.text),
+      mediaType: str6(item.media_type) || null,
+      permalink: item.permalink ? str6(item.permalink) : null,
       timestamp,
       ageMinutes: minutesSince(timestamp, now),
       isReply: item.is_reply === true,
@@ -84297,7 +87448,7 @@ async function instagramInsights(input) {
   );
   if (!me.ok) return me;
   const profile = parseJson(me.body) ?? {};
-  const uid = str5(profile.id);
+  const uid = str6(profile.id);
   if (!uid) return fail2(502, `Instagram /me returned no id: ${me.body}`);
   const days = input.days ?? 7;
   const nowSec = Math.floor(Date.now() / 1e3);
@@ -84313,7 +87464,7 @@ async function instagramInsights(input) {
   if (!ranged.ok) return withScopeHint(ranged, "instagram_business_manage_insights");
   const userMetrics = {};
   for (const item of rawList(ranged.body)) {
-    const name = str5(item.name);
+    const name = str6(item.name);
     if (!name) continue;
     userMetrics[name] = numOrNull(item.total_value?.value);
   }
@@ -84328,8 +87479,8 @@ async function instagramInsights(input) {
     if (!list.ok) return list;
     media = await Promise.all(
       rawList(list.body).map(async (item) => {
-        const mediaId = str5(item.id);
-        const productType = str5(item.media_product_type) || null;
+        const mediaId = str6(item.id);
+        const productType = str6(item.media_product_type) || null;
         const surfaceMetrics = productType === "REELS" ? IG_REELS_METRICS : productType === "FEED" ? IG_FEED_METRICS : "";
         const ins = await graphRequest("get", `${IG_BASE}/${mediaId}/insights`, {
           metric: surfaceMetrics ? `${IG_MEDIA_METRICS},${surfaceMetrics}` : IG_MEDIA_METRICS,
@@ -84339,16 +87490,16 @@ async function instagramInsights(input) {
         if (ins.ok) {
           for (const m2 of rawList(ins.body)) {
             const values = m2.values;
-            metrics[str5(m2.name)] = numOrNull(values?.[0]?.value ?? m2.total_value?.value);
+            metrics[str6(m2.name)] = numOrNull(values?.[0]?.value ?? m2.total_value?.value);
           }
         }
         return {
           mediaId,
-          mediaType: str5(item.media_type) || null,
+          mediaType: str6(item.media_type) || null,
           mediaProductType: productType,
-          permalink: item.permalink ? str5(item.permalink) : null,
-          excerpt: excerpt(str5(item.caption)),
-          timestamp: item.timestamp ? str5(item.timestamp) : null,
+          permalink: item.permalink ? str6(item.permalink) : null,
+          excerpt: excerpt(str6(item.caption)),
+          timestamp: item.timestamp ? str6(item.timestamp) : null,
           metrics: ins.ok ? metrics : null,
           ...ins.ok ? {} : { metricsError: `HTTP ${ins.status}: ${ins.body.slice(0, 200)}` }
         };
@@ -84359,8 +87510,8 @@ async function instagramInsights(input) {
     channel: input.channel ?? null,
     account: {
       id: uid,
-      username: str5(profile.username),
-      accountType: str5(profile.account_type) || null,
+      username: str6(profile.username),
+      accountType: str6(profile.account_type) || null,
       followersCount: numOrNull(profile.followers_count),
       followsCount: numOrNull(profile.follows_count),
       mediaCount: numOrNull(profile.media_count)
@@ -84527,19 +87678,19 @@ var YT_THUMB_MIME_BY_EXT = {
 var YT_THUMB_MAX_BYTES = 2 * 1024 * 1024;
 var CAPTION_MAX_BYTES_YT = 100 * 1024 * 1024;
 var CAPTION_MAX_BYTES_FB = 200 * 1024;
-async function readCaptionFile(path10, maxBytes) {
-  if (extname6(path10).toLowerCase() !== ".srt") {
-    return { error: fail2(400, `Caption file must be .srt (SubRip): ${path10}`) };
+async function readCaptionFile(path11, maxBytes) {
+  if (extname8(path11).toLowerCase() !== ".srt") {
+    return { error: fail2(400, `Caption file must be .srt (SubRip): ${path11}`) };
   }
   let bytes;
   try {
-    bytes = await readFile(path10);
+    bytes = await readFile(path11);
   } catch (error2) {
     return { error: fail2(400, `Cannot read caption file: ${error2 instanceof Error ? error2.message : String(error2)}`) };
   }
-  if (bytes.byteLength === 0) return { error: fail2(400, `Caption file is empty: ${path10}`) };
+  if (bytes.byteLength === 0) return { error: fail2(400, `Caption file is empty: ${path11}`) };
   if (bytes.byteLength > maxBytes) {
-    return { error: fail2(400, `Caption file exceeds ${maxBytes} bytes: ${path10} (${bytes.byteLength} bytes)`) };
+    return { error: fail2(400, `Caption file exceeds ${maxBytes} bytes: ${path11} (${bytes.byteLength} bytes)`) };
   }
   return { bytes };
 }
@@ -84641,7 +87792,7 @@ function parseResumeOffset(range) {
 }
 function sessionStateFile(filePath) {
   const key = createHash2("sha256").update(filePath).digest("hex").slice(0, 16);
-  return join8(snsTokenDir, ".yt-upload", `${key}.json`);
+  return join9(snsTokenDir, ".yt-upload", `${key}.json`);
 }
 function readState(filePath) {
   try {
@@ -84660,7 +87811,7 @@ function writeState(filePath, s2) {
       nodeRmSync(p, { force: true });
       return;
     }
-    nodeMkdirSync(dirname3(p), { recursive: true });
+    nodeMkdirSync(dirname4(p), { recursive: true });
     nodeWriteFileSync(p, JSON.stringify(s2), "utf8");
   } catch {
   }
@@ -84741,7 +87892,7 @@ async function queryResumeOffset(sessionUrl, total, mimeType) {
   }
 }
 async function publishYoutube(input) {
-  const mimeType = YT_VIDEO_MIME_BY_EXT[extname6(input.videoFilePath).toLowerCase()];
+  const mimeType = YT_VIDEO_MIME_BY_EXT[extname8(input.videoFilePath).toLowerCase()];
   if (!mimeType) return fail2(400, `Unsupported video extension: ${input.videoFilePath} (.mp4/.mov)`);
   let videoSize;
   let videoMtimeMs;
@@ -84756,7 +87907,7 @@ async function publishYoutube(input) {
   }
   let thumb;
   if (input.thumbnailFilePath) {
-    const thumbMime = YT_THUMB_MIME_BY_EXT[extname6(input.thumbnailFilePath).toLowerCase()];
+    const thumbMime = YT_THUMB_MIME_BY_EXT[extname8(input.thumbnailFilePath).toLowerCase()];
     if (!thumbMime) {
       return fail2(400, `Unsupported thumbnail extension: ${input.thumbnailFilePath} (.jpg/.jpeg/.png)`);
     }
@@ -84857,7 +88008,7 @@ async function publishYoutube(input) {
             platform: "YOUTUBE",
             videoId: doneId,
             permalink: `https://www.youtube.com/watch?v=${doneId}`,
-            fileName: basename6(input.videoFilePath),
+            fileName: basename7(input.videoFilePath),
             resumed: true,
             note: `This file is already up from the upload started at ${new Date(sessionStartedAt).toISOString()}. It was not re-uploaded.`
           });
@@ -84889,7 +88040,7 @@ async function publishYoutube(input) {
       platform: "YOUTUBE",
       videoId,
       permalink: `https://www.youtube.com/watch?v=${videoId}`,
-      fileName: basename6(input.videoFilePath),
+      fileName: basename7(input.videoFilePath),
       ...thumb ? { thumbnailSet: !thumbnailWarning } : {},
       ...thumbnailWarning ? { thumbnailWarning } : {},
       ...captionTracks.length > 0 ? { captionSet: !captionWarning, captionLanguages: captionTracks.map((t2) => t2.language) } : {},
@@ -85024,7 +88175,7 @@ async function youtubeInsights(input) {
   const channelItem = parseJson(mine.body)?.items?.[0];
   if (!channelItem) return fail2(502, `YouTube channels.list returned no channel: ${mine.body}`);
   const stats = channelItem.statistics ?? {};
-  const uploadsPlaylist = str5(
+  const uploadsPlaylist = str6(
     channelItem.contentDetails?.relatedPlaylists?.uploads
   );
   const analytics = await youtubeRequest(
@@ -85061,7 +88212,7 @@ async function youtubeInsights(input) {
     if (!list.ok) videoErrors.push(`playlistItems HTTP ${list.status}: ${list.body.slice(0, 200)}`);
     if (list.ok) {
       const items = parseJson(list.body)?.items ?? [];
-      const ids = items.map((item) => str5(item.contentDetails?.videoId)).filter(Boolean);
+      const ids = items.map((item) => str6(item.contentDetails?.videoId)).filter(Boolean);
       const [detail, perVideo] = await Promise.all([
         ids.length ? youtubeRequest("get", `${YT_DATA_BASE}/videos`, { part: "snippet,statistics,contentDetails", id: ids.join(",") }, token) : Promise.resolve(okJson({ items: [] })),
         ids.length ? youtubeRequest(
@@ -85083,22 +88234,24 @@ async function youtubeInsights(input) {
       if (!perVideo.ok) videoErrors.push(`per-video Analytics HTTP ${perVideo.status}: ${perVideo.body.slice(0, 200)} (period will be null)`);
       const detailById = /* @__PURE__ */ new Map();
       for (const item of parseJson(detail.body)?.items ?? []) {
-        detailById.set(str5(item.id), item);
+        detailById.set(str6(item.id), item);
       }
       const metricsById = perVideo.ok ? ytReportRowsByKey(perVideo.body) : /* @__PURE__ */ new Map();
       videos = ids.map((videoId) => {
         const item = detailById.get(videoId);
         const snippet = item?.snippet ?? {};
         const videoStats = item?.statistics ?? {};
-        const duration3 = str5(item?.contentDetails?.duration);
+        const duration3 = str6(item?.contentDetails?.duration);
         return {
           videoId,
           permalink: `https://www.youtube.com/watch?v=${videoId}`,
-          title: excerpt(str5(snippet.title), 100),
-          publishedAt: snippet.publishedAt ? str5(snippet.publishedAt) : null,
+          title: excerpt(str6(snippet.title), 100),
+          publishedAt: snippet.publishedAt ? str6(snippet.publishedAt) : null,
           duration: duration3 || null,
           // Seconds pulled from the ISO8601 duration, used to tell whether it's a Short (portrait, 3 minutes or less)
           durationSeconds: ytDurationSeconds(duration3),
+          // The two halves come from different services: lifetime is the public Data API counter and
+          // updates live, period is the Analytics window and runs 2-3 days behind (shares included)
           lifetime: {
             views: Number(videoStats.viewCount ?? 0),
             likes: Number(videoStats.likeCount ?? 0),
@@ -85112,8 +88265,8 @@ async function youtubeInsights(input) {
   return okJson({
     channel: input.channel ?? null,
     account: {
-      channelId: str5(channelItem.id),
-      title: str5(channelItem.snippet?.title),
+      channelId: str6(channelItem.id),
+      title: str6(channelItem.snippet?.title),
       subscriberCount: Number(stats.subscriberCount ?? 0),
       viewCount: Number(stats.viewCount ?? 0),
       videoCount: Number(stats.videoCount ?? 0),
@@ -85136,7 +88289,7 @@ function ytReportRow(body) {
   if (!row) return {};
   const out = {};
   headers.forEach((header, index) => {
-    const name = str5(header.name);
+    const name = str6(header.name);
     if (name) out[name] = Number(row[index] ?? 0);
   });
   return out;
@@ -85147,12 +88300,12 @@ function ytReportRowsByKey(body) {
   const rows = parsed?.rows ?? [];
   const out = /* @__PURE__ */ new Map();
   for (const row of rows) {
-    const key = str5(row[0]);
+    const key = str6(row[0]);
     if (!key) continue;
     const metrics = {};
     headers.forEach((header, index) => {
       if (index === 0) return;
-      const name = str5(header.name);
+      const name = str6(header.name);
       if (name) metrics[name] = Number(row[index] ?? 0);
     });
     out.set(key, metrics);
@@ -85170,7 +88323,7 @@ var rawList = (body) => {
   const data = parseJson(body)?.data;
   return Array.isArray(data) ? data : [];
 };
-var str5 = (value) => value === void 0 || value === null ? "" : String(value);
+var str6 = (value) => value === void 0 || value === null ? "" : String(value);
 var numOrNull = (value) => typeof value === "number" ? value : null;
 var excerpt = (text2, max = 140) => text2.length > max ? `${text2.slice(0, max)}\u2026` : text2;
 function minutesSince(timestamp, now) {
@@ -85184,7 +88337,7 @@ async function inboxThreads(input, now, channel) {
   const me = await fetchMe(THREADS_BASE, token, "id,username");
   if (!me.ok) return { error: me };
   const account = parseJson(me.body) ?? {};
-  const uid = str5(account.id);
+  const uid = str6(account.id);
   if (!uid) return { error: fail2(502, `Threads /me returned no id: ${me.body}`) };
   const list = await graphRequest("get", `${THREADS_BASE}/${uid}/threads`, {
     fields: "id,text,timestamp,permalink,is_reply",
@@ -85194,14 +88347,14 @@ async function inboxThreads(input, now, channel) {
   if (!list.ok) return { account, error: list };
   const posts = [];
   for (const item of rawList(list.body).filter((item2) => item2.is_reply !== true)) {
-    const postId = str5(item.id);
+    const postId = str6(item.id);
     if (!postId) continue;
     const post = {
       platform: "THREADS",
       postId,
-      permalink: item.permalink ? str5(item.permalink) : null,
-      excerpt: excerpt(str5(item.text)),
-      timestamp: item.timestamp ? str5(item.timestamp) : null,
+      permalink: item.permalink ? str6(item.permalink) : null,
+      excerpt: excerpt(str6(item.text)),
+      timestamp: item.timestamp ? str6(item.timestamp) : null,
       comments: []
     };
     const conv = await graphRequest("get", `${THREADS_BASE}/${postId}/conversation`, {
@@ -85220,29 +88373,29 @@ async function inboxThreads(input, now, channel) {
     const answered = /* @__PURE__ */ new Set();
     for (const reply of replies) {
       if (reply.is_reply_owned_by_me !== true) continue;
-      const parent = str5(reply.replied_to?.id);
+      const parent = str6(reply.replied_to?.id);
       if (parent) answered.add(parent);
     }
     for (const reply of replies) {
-      const commentId = str5(reply.id);
+      const commentId = str6(reply.id);
       if (!commentId) continue;
-      const timestamp = reply.timestamp ? str5(reply.timestamp) : null;
-      const parentId = str5(reply.replied_to?.id);
+      const timestamp = reply.timestamp ? str6(reply.timestamp) : null;
+      const parentId = str6(reply.replied_to?.id);
       post.comments.push({
         platform: "THREADS",
         postId,
         commentId,
         parentCommentId: parentId && parentId !== postId ? parentId : null,
-        author: str5(reply.username),
+        author: str6(reply.username),
         isOwn: reply.is_reply_owned_by_me === true,
         answeredByUs: answered.has(commentId),
-        text: str5(reply.text),
+        text: str6(reply.text),
         timestamp,
         ageMinutes: minutesSince(timestamp, now),
         likeCount: null,
         // Threads replies have no public like-count field
-        hidden: str5(reply.hide_status) === "HIDDEN",
-        permalink: reply.permalink ? str5(reply.permalink) : null
+        hidden: str6(reply.hide_status) === "HIDDEN",
+        permalink: reply.permalink ? str6(reply.permalink) : null
       });
     }
     posts.push(post);
@@ -85255,8 +88408,8 @@ async function inboxInstagram(input, now, channel) {
   const me = await fetchMe(IG_BASE, token, "id,username");
   if (!me.ok) return { error: me };
   const account = parseJson(me.body) ?? {};
-  const uid = str5(account.id);
-  const ourName = str5(account.username);
+  const uid = str6(account.id);
+  const ourName = str6(account.username);
   if (!uid) return { error: fail2(502, `Instagram /me returned no id: ${me.body}`) };
   const list = await graphRequest("get", `${IG_BASE}/${uid}/media`, {
     fields: "id,permalink,caption,timestamp,comments_count",
@@ -85266,14 +88419,14 @@ async function inboxInstagram(input, now, channel) {
   if (!list.ok) return { account, error: list };
   const posts = [];
   for (const item of rawList(list.body)) {
-    const postId = str5(item.id);
+    const postId = str6(item.id);
     if (!postId) continue;
     const post = {
       platform: "INSTAGRAM",
       postId,
-      permalink: item.permalink ? str5(item.permalink) : null,
-      excerpt: excerpt(str5(item.caption)),
-      timestamp: item.timestamp ? str5(item.timestamp) : null,
+      permalink: item.permalink ? str6(item.permalink) : null,
+      excerpt: excerpt(str6(item.caption)),
+      timestamp: item.timestamp ? str6(item.timestamp) : null,
       comments: []
     };
     if (numOrNull(item.comments_count) === 0) {
@@ -85291,14 +88444,14 @@ async function inboxInstagram(input, now, channel) {
       continue;
     }
     for (const top of rawList(comments.body)) {
-      const topId = str5(top.id);
+      const topId = str6(top.id);
       if (!topId) continue;
       const nested = Array.isArray(top.replies?.data) ? top.replies.data : [];
       const push = (node, parentCommentId) => {
-        const commentId = str5(node.id);
+        const commentId = str6(node.id);
         if (!commentId) return;
-        const timestamp = node.timestamp ? str5(node.timestamp) : null;
-        const author = str5(node.username);
+        const timestamp = node.timestamp ? str6(node.timestamp) : null;
+        const author = str6(node.username);
         post.comments.push({
           platform: "INSTAGRAM",
           postId,
@@ -85307,8 +88460,8 @@ async function inboxInstagram(input, now, channel) {
           author,
           isOwn: !!ourName && author === ourName,
           // On IG replies also hang off the top-level comment, so one of ours among the children means it's handled
-          answeredByUs: parentCommentId === null && nested.some((reply) => !!ourName && str5(reply.username) === ourName),
-          text: str5(node.text),
+          answeredByUs: parentCommentId === null && nested.some((reply) => !!ourName && str6(reply.username) === ourName),
+          text: str6(node.text),
           timestamp,
           ageMinutes: minutesSince(timestamp, now),
           likeCount: numOrNull(node.like_count),
@@ -85330,7 +88483,7 @@ async function inboxFacebook(input, now, channel) {
   const me = await fetchMe(FB_BASE, token, "id,name");
   if (!me.ok) return { error: me };
   const account = parseJson(me.body) ?? {};
-  const pageId = str5(account.id);
+  const pageId = str6(account.id);
   if (!pageId) return { error: fail2(502, `Facebook /me returned no id: ${me.body}`) };
   const list = await graphRequest("get", `${FB_BASE}/${pageId}/posts`, {
     fields: "id,message,created_time,permalink_url",
@@ -85340,14 +88493,14 @@ async function inboxFacebook(input, now, channel) {
   if (!list.ok) return { account, error: list };
   const posts = [];
   for (const item of rawList(list.body)) {
-    const postId = str5(item.id);
+    const postId = str6(item.id);
     if (!postId) continue;
     const post = {
       platform: "FACEBOOK",
       postId,
-      permalink: item.permalink_url ? str5(item.permalink_url) : null,
-      excerpt: excerpt(str5(item.message)),
-      timestamp: item.created_time ? str5(item.created_time) : null,
+      permalink: item.permalink_url ? str6(item.permalink_url) : null,
+      excerpt: excerpt(str6(item.message)),
+      timestamp: item.created_time ? str6(item.created_time) : null,
       comments: []
     };
     const comments = await graphRequest("get", `${FB_BASE}/${postId}/comments`, {
@@ -85366,29 +88519,29 @@ async function inboxFacebook(input, now, channel) {
     const rows = rawList(comments.body);
     const answered = /* @__PURE__ */ new Set();
     for (const row of rows) {
-      if (str5(row.from?.id) !== pageId) continue;
-      const parent = str5(row.parent?.id);
+      if (str6(row.from?.id) !== pageId) continue;
+      const parent = str6(row.parent?.id);
       if (parent) answered.add(parent);
     }
     for (const row of rows) {
-      const commentId = str5(row.id);
+      const commentId = str6(row.id);
       if (!commentId) continue;
-      const timestamp = row.created_time ? str5(row.created_time) : null;
+      const timestamp = row.created_time ? str6(row.created_time) : null;
       const from = row.from;
       post.comments.push({
         platform: "FACEBOOK",
         postId,
         commentId,
-        parentCommentId: str5(row.parent?.id) || null,
-        author: str5(from?.name) || str5(from?.id),
-        isOwn: str5(from?.id) === pageId,
+        parentCommentId: str6(row.parent?.id) || null,
+        author: str6(from?.name) || str6(from?.id),
+        isOwn: str6(from?.id) === pageId,
         answeredByUs: answered.has(commentId),
-        text: str5(row.message),
+        text: str6(row.message),
         timestamp,
         ageMinutes: minutesSince(timestamp, now),
         likeCount: numOrNull(row.like_count),
         hidden: row.is_hidden === true,
-        permalink: row.permalink_url ? str5(row.permalink_url) : null
+        permalink: row.permalink_url ? str6(row.permalink_url) : null
       });
     }
     posts.push(post);
@@ -85409,9 +88562,9 @@ async function inboxYoutube(input, now, channel) {
   if (!mine.ok) return { error: withYoutubeScopeHint(mine, "youtube.readonly (or youtube)") };
   const channelItem = parseJson(mine.body)?.items?.[0];
   if (!channelItem) return { error: fail2(502, `YouTube channels.list returned no channel: ${mine.body}`) };
-  const myChannelId = str5(channelItem.id);
-  const account = { id: myChannelId, title: str5(channelItem.snippet?.title) };
-  const uploads = str5(
+  const myChannelId = str6(channelItem.id);
+  const account = { id: myChannelId, title: str6(channelItem.snippet?.title) };
+  const uploads = str6(
     channelItem.contentDetails?.relatedPlaylists?.uploads
   );
   if (!uploads) return { account, error: fail2(502, "YouTube channel has no uploads playlist") };
@@ -85424,15 +88577,15 @@ async function inboxYoutube(input, now, channel) {
   if (!list.ok) return { account, error: list };
   const posts = [];
   for (const entry of parseJson(list.body)?.items ?? []) {
-    const videoId = str5(entry.contentDetails?.videoId);
+    const videoId = str6(entry.contentDetails?.videoId);
     if (!videoId) continue;
     const snippet = entry.snippet ?? {};
     const post = {
       platform: "YOUTUBE",
       postId: videoId,
       permalink: `https://www.youtube.com/watch?v=${videoId}`,
-      excerpt: excerpt(str5(snippet.title)),
-      timestamp: snippet.publishedAt ? str5(snippet.publishedAt) : null,
+      excerpt: excerpt(str6(snippet.title)),
+      timestamp: snippet.publishedAt ? str6(snippet.publishedAt) : null,
       comments: []
     };
     const threads = await youtubeRequest(
@@ -85455,7 +88608,7 @@ async function inboxYoutube(input, now, channel) {
     for (const thread of parseJson(threads.body)?.items ?? []) {
       const threadSnippet = thread.snippet ?? {};
       const top = threadSnippet.topLevelComment ?? {};
-      const topId = str5(top.id);
+      const topId = str6(top.id);
       if (!topId) continue;
       const totalReplies = Number(threadSnippet.totalReplyCount ?? 0);
       let replies = thread.replies?.comments ?? [];
@@ -85475,30 +88628,30 @@ async function inboxYoutube(input, now, channel) {
           post.commentsError = [post.commentsError, `replies HTTP ${full.status}: ${full.body.slice(0, 120)}`].filter(Boolean).join(" \xB7 ");
         }
       }
-      const authorChannelId = (comment) => str5(comment.snippet?.authorChannelId?.value);
+      const authorChannelId = (comment) => str6(comment.snippet?.authorChannelId?.value);
       const publishedMs = (comment) => {
-        const parsed = Date.parse(str5(comment.snippet?.publishedAt));
+        const parsed = Date.parse(str6(comment.snippet?.publishedAt));
         return Number.isNaN(parsed) ? 0 : parsed;
       };
       const myLastReplyMs = replies.filter((reply) => authorChannelId(reply) === myChannelId).reduce((max, reply) => Math.max(max, publishedMs(reply)), 0);
       const push = (comment, parentCommentId) => {
-        const commentId = str5(comment.id);
+        const commentId = str6(comment.id);
         if (!commentId) return;
         const commentSnippet = comment.snippet ?? {};
-        const timestamp = commentSnippet.publishedAt ? str5(commentSnippet.publishedAt) : null;
+        const timestamp = commentSnippet.publishedAt ? str6(commentSnippet.publishedAt) : null;
         post.comments.push({
           platform: "YOUTUBE",
           postId: videoId,
           commentId,
           parentCommentId,
-          author: str5(commentSnippet.authorDisplayName),
+          author: str6(commentSnippet.authorDisplayName),
           isOwn: authorChannelId(comment) === myChannelId,
           // With an incomplete reply list there's no basis for claiming "not answered yet" —
           // our reply may just be cut off, so treat it as handled and drop it from the
           // default filter. A missed comment gets caught next tick; erring the other way
           // sends a duplicate reply out in public.
           answeredByUs: repliesIncomplete || myLastReplyMs > 0 && publishedMs(comment) <= myLastReplyMs,
-          text: str5(commentSnippet.textOriginal || commentSnippet.textDisplay),
+          text: str6(commentSnippet.textOriginal || commentSnippet.textDisplay),
           timestamp,
           ageMinutes: minutesSince(timestamp, now),
           likeCount: numOrNull(commentSnippet.likeCount),
@@ -85625,7 +88778,7 @@ async function replyToComment(input) {
     access_token: token
   });
   if (!create.ok) return create;
-  const replyId = str5(parseJson(create.body)?.id);
+  const replyId = str6(parseJson(create.body)?.id);
   if (!replyId) return fail2(502, `Instagram reply returned no id: ${create.body}`);
   return okJson({ platform: "INSTAGRAM", replyId, permalink: null });
 }
@@ -85643,7 +88796,7 @@ async function replyYoutubeComment(input) {
   if (!lookup.ok) return withYoutubeScopeHint(lookup, "youtube.force-ssl");
   const found = parseJson(lookup.body)?.items?.[0];
   if (!found) return fail2(404, `YouTube comment not found: ${input.commentId}`);
-  const parentId = str5(found.snippet?.parentId) || input.commentId;
+  const parentId = str6(found.snippet?.parentId) || input.commentId;
   const created = await youtubeRequest(
     "post",
     `${YT_DATA_BASE}/comments`,
@@ -85652,7 +88805,7 @@ async function replyYoutubeComment(input) {
     { snippet: { parentId, textOriginal: input.message } }
   );
   if (!created.ok) return withYoutubeScopeHint(created, "youtube.force-ssl");
-  const replyId = str5(parseJson(created.body)?.id);
+  const replyId = str6(parseJson(created.body)?.id);
   if (!replyId) return fail2(502, `YouTube comment insert returned no id: ${created.body}`);
   return okJson({
     platform: "YOUTUBE",
@@ -85771,8 +88924,356 @@ async function checkAccounts(channel) {
   return { ok: true, status: 200, body: JSON.stringify(body, null, 2) };
 }
 
+// src/storyboard.ts
+import { execFileSync as execFileSync2 } from "node:child_process";
+import { existsSync as existsSync12, readFileSync as readFileSync8, renameSync as renameSync3, statSync as statSync5, unlinkSync, writeFileSync as writeFileSync7 } from "node:fs";
+import * as nodeModule from "node:module";
+import { basename as basename8, dirname as dirname5, join as join10, resolve as resolve3 } from "node:path";
+import { fileURLToPath } from "node:url";
+import vm from "node:vm";
+var PLUGIN_ROOT = resolve3(dirname5(fileURLToPath(import.meta.url)), "..", "..");
+var REFERENCES_DIR = join10(PLUGIN_ROOT, "skills", "storyboard", "references");
+var CONTRACT_FILE = join10(REFERENCES_DIR, "structure-contract.js");
+var CHECK_SCENES_FILE = join10(REFERENCES_DIR, "check-scenes.js");
+var loadFromHere = nodeModule.createRequire(import.meta.url);
+var contractCache;
+function contract() {
+  if (!contractCache) contractCache = loadFromHere(CONTRACT_FILE);
+  return contractCache;
+}
+var tuple = (list) => external_exports.enum(list);
+var MISSING = ["__contract-missing__"];
+function vocabAtLoad() {
+  try {
+    return contract().VOCAB;
+  } catch {
+    return {
+      SIZES: MISSING,
+      ANGLES: MISSING,
+      BEATS: MISSING,
+      TYPES: MISSING,
+      INFO_TYPES: MISSING,
+      SHARE_TYPES: MISSING,
+      HOOK_TYPES: MISSING,
+      HOOK_FORMS: MISSING,
+      ARCS: MISSING,
+      RENDER_MODES: MISSING,
+      CHARGES_OPEN: MISSING,
+      CHARGES_CLOSE: MISSING,
+      TRANSITION_RE: /^$/
+    };
+  }
+}
+var V = vocabAtLoad();
+var nonEmpty = external_exports.string().trim().min(1);
+var STRUCTURE_VERSION = (() => {
+  try {
+    return contract().VERSION;
+  } catch {
+    return "structure-v1";
+  }
+})();
+var sceneSchema = external_exports.object({
+  no: external_exports.number().int().positive().describe("Scene number \u2014 the value shots point at with `scene`"),
+  place: nonEmpty.describe("One place \u2014 the slugline location"),
+  time: nonEmpty.describe("One continuous stretch of time \u2014 \uB0AE \xB7 \uBC24 \xB7 \uC0C8\uBCBD \xB7 10\uB144 \uB4A4"),
+  event: nonEmpty.describe("The one thing that happens in this scene"),
+  charge: external_exports.object({
+    open: tuple(V.CHARGES_OPEN).describe('Value at the open: "+" or "-"'),
+    close: tuple(V.CHARGES_CLOSE).describe('Value at the close: "+", "-", or deeper into the same pole "++" / "--"')
+  }),
+  turn: nonEmpty.describe("What flipped between the open and the close"),
+  out: nonEmpty.optional().describe("The sentence the scene goes out on \u2014 the one that forces a \uADF8\uB7F0\uB370 or \uADF8\uB798\uC11C into the next scene")
+}).strict();
+var sequenceSchema = external_exports.object({
+  id: nonEmpty.describe('Stable id, e.g. "q1"'),
+  title: nonEmpty.describe("The heading the approval page draws"),
+  purpose: nonEmpty.describe("The one purpose that binds these scenes \u2014 two purposes are two sequences"),
+  question: nonEmpty.optional().describe("The dramatic question this stretch opens"),
+  payoff: external_exports.number().int().positive().optional().describe("The scene number that answers the question"),
+  scenes: external_exports.array(external_exports.number().int().positive()).min(1).describe("Scene numbers in playback order")
+}).strict();
+var structureSchema = external_exports.object({
+  version: external_exports.literal(STRUCTURE_VERSION),
+  sequences: external_exports.array(sequenceSchema).min(1),
+  scenes: external_exports.array(sceneSchema).min(1)
+}).strict();
+var shotSchema = external_exports.object({
+  type: tuple(V.TYPES),
+  title: external_exports.string().optional(),
+  narration: external_exports.array(external_exports.object({ tts: external_exports.string(), sub: external_exports.string().optional() }).passthrough()).optional(),
+  visual: external_exports.record(external_exports.unknown()).optional(),
+  duration: external_exports.number().positive().optional(),
+  scene: external_exports.number().int().positive().optional(),
+  sceneSlug: external_exports.string().optional(),
+  sequence: external_exports.string().optional(),
+  transition: external_exports.string().regex(V.TRANSITION_RE, "not a join from scenes-schema \xA7scene transition").optional(),
+  beat: tuple(V.BEATS).optional(),
+  arc: tuple(V.ARCS).optional(),
+  hookType: tuple(V.HOOK_TYPES).optional(),
+  hookForm: tuple(V.HOOK_FORMS).optional(),
+  chapter: external_exports.string().optional(),
+  after: external_exports.number().int().positive().optional(),
+  shot: external_exports.object({
+    feel: external_exports.string().optional(),
+    size: tuple(V.SIZES).optional(),
+    angle: tuple(V.ANGLES).optional(),
+    why: external_exports.string().optional(),
+    info: external_exports.string().optional(),
+    infoType: tuple(V.INFO_TYPES).optional(),
+    share: external_exports.string().optional(),
+    shareType: tuple(V.SHARE_TYPES).optional(),
+    space: external_exports.record(external_exports.unknown()).optional(),
+    render: external_exports.object({ mode: tuple(V.RENDER_MODES), purpose: external_exports.string().optional(), reason: external_exports.string().optional() }).passthrough().optional()
+  }).passthrough().optional(),
+  sound: external_exports.record(external_exports.unknown()).optional()
+}).passthrough();
+var readLevelSchema = external_exports.enum(["outline", "scenes", "shots", "full"]);
+var storyboardReadSchema = external_exports.object({
+  path: external_exports.string().min(1).describe("The storyboard directory, or its scenes.js"),
+  level: readLevelSchema.default("shots").describe("outline = sequences with scene numbers \xB7 scenes = scene cards with shot numbers \xB7 shots = every shot summarised under its scene \xB7 full = the raw shot objects too")
+});
+var storyboardCheckSchema = external_exports.object({
+  path: external_exports.string().min(1).describe("The storyboard directory, or its scenes.js"),
+  draft: external_exports.boolean().default(false).describe("The story pass (storyboard \xA74a) \u2014 machine-layer absences are deferred, not violations")
+});
+var globalsSchema = external_exports.record(external_exports.string().regex(/^[A-Z][A-Z0-9_]*$/, "a window.* global is UPPER_CASE"), external_exports.unknown());
+var storyboardApplySchema = external_exports.object({
+  path: external_exports.string().min(1).describe("The storyboard directory (scenes.js is created there when missing), or its scenes.js"),
+  set: external_exports.object({ structure: structureSchema, shots: external_exports.array(shotSchema).min(1) }).optional().describe("Replace the whole board \u2014 the structure and every shot. The way a new board is written"),
+  structure: structureSchema.optional().describe("Replace window.STRUCTURE only"),
+  sequences: external_exports.array(sequenceSchema).optional().describe("Upsert sequences by id"),
+  scenes: external_exports.array(sceneSchema).optional().describe("Upsert scenes by no"),
+  shots: external_exports.array(external_exports.object({ no: external_exports.number().int().positive(), shot: shotSchema })).optional().describe("Upsert shots by 1-based position; no = length + 1 appends"),
+  insertShots: external_exports.array(external_exports.object({ after: external_exports.number().int().min(0), shots: external_exports.array(shotSchema).min(1) })).optional().describe("Insert shots after a 1-based position (0 = at the start). Later positions shift"),
+  removeShots: external_exports.array(external_exports.number().int().positive()).optional().describe("1-based positions to drop, resolved before the insert"),
+  removeScenes: external_exports.array(external_exports.number().int().positive()).optional(),
+  removeSequences: external_exports.array(external_exports.string()).optional(),
+  globals: globalsSchema.optional().describe("Set other window.* blocks \u2014 FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, VOICE, MOTION_POLICY"),
+  dryRun: external_exports.boolean().default(false).describe("Validate and report, write nothing")
+});
+function scenesPath(target) {
+  const abs = resolve3(target);
+  if (basename8(abs) === "scenes.js") return abs;
+  return join10(abs, "scenes.js");
+}
+function readBoard(target) {
+  const file = scenesPath(target);
+  if (!existsSync12(file)) throw new Error(`no scenes.js at ${file}`);
+  if (!statSync5(file).isFile()) throw new Error(`${file} is not a file`);
+  const src = readFileSync8(file, "utf8");
+  const header = [];
+  for (const line of src.split("\n")) {
+    if (/^\s*\/\//.test(line)) header.push(line.trim());
+    else if (line.trim()) break;
+  }
+  const win = {};
+  const sandbox = { window: win, console: { log() {
+  }, warn() {
+  }, error() {
+  } } };
+  sandbox.globalThis = sandbox;
+  try {
+    vm.runInNewContext(src, sandbox, { filename: file, timeout: 5e3 });
+  } catch (e2) {
+    throw new Error(`failed to evaluate ${file}: ${e2.message}`);
+  }
+  if (!Array.isArray(win.SCENES)) throw new Error(`${file} has no window.SCENES array`);
+  return { file, header, win };
+}
+var GLOBAL_ORDER = ["FORMAT", "VOICE", "THEME", "COMPREHENSION", "STORY", "PRODUCTION", "MOTION_POLICY", "MUSIC", "STRUCTURE", "SCENES"];
+function serializeBoard(win, header = []) {
+  const keys = Object.keys(win).filter((k) => win[k] !== void 0);
+  keys.sort((a, b) => {
+    const ia = GLOBAL_ORDER.indexOf(a), ib = GLOBAL_ORDER.indexOf(b);
+    if (ia !== -1 || ib !== -1) return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+    return a.localeCompare(b);
+  });
+  const lines = header.filter((h2) => !/^\/\/\s*approved:/.test(h2));
+  if (lines.length) lines.push("");
+  for (const k of keys) lines.push(`window.${k} = ${JSON.stringify(win[k], null, 2)};`);
+  return lines.join("\n") + "\n";
+}
+function upsertBy(list, items, key) {
+  const out = list.slice();
+  for (const item of items) {
+    const i2 = out.findIndex((x2) => x2[key] === item[key]);
+    if (i2 === -1) out.push(item);
+    else out[i2] = item;
+  }
+  return out;
+}
+function validateShots(shots) {
+  const out = [];
+  shots.forEach((s2, i2) => {
+    const parsed = shotSchema.safeParse(s2);
+    if (parsed.success) return;
+    for (const issue2 of parsed.error.issues) out.push({ level: "bad", where: `shot ${i2 + 1}`, what: `${issue2.path.join(".") || "(root)"}: ${issue2.message}` });
+  });
+  return out;
+}
+function validateStructure(structure) {
+  const parsed = structureSchema.safeParse(structure);
+  if (parsed.success) return [];
+  return parsed.error.issues.map((issue2) => ({ level: "bad", where: "structure", what: `${issue2.path.join(".") || "(root)"}: ${issue2.message}` }));
+}
+function applyPatch(win, patch) {
+  const next = { ...win };
+  if (patch.globals) for (const [k, v] of Object.entries(patch.globals)) {
+    if (k === "SCENES" || k === "STRUCTURE") throw new Error(`set ${k} through the dedicated fields, not globals`);
+    next[k] = v;
+  }
+  if (patch.set) {
+    next.STRUCTURE = patch.set.structure;
+    next.SCENES = patch.set.shots.slice();
+  }
+  if (patch.structure) next.STRUCTURE = patch.structure;
+  const st = next.STRUCTURE ?? { version: STRUCTURE_VERSION, sequences: [], scenes: [] };
+  if (!Array.isArray(st.sequences) || !Array.isArray(st.scenes) || st.scenes.some((sc) => !sc || typeof sc !== "object") || st.sequences.some((q) => !q || typeof q !== "object" || !Array.isArray(q.scenes)))
+    return { win: next, findings: [{ level: "bad", where: "structure", what: "STRUCTURE.sequences and STRUCTURE.scenes are arrays of objects \u2014 this board was hand-edited into a shape the tools cannot patch; rewrite it with `set`" }], synced: 0 };
+  let sequences = st.sequences.slice();
+  let scenes = st.scenes.slice();
+  if (patch.sequences) sequences = upsertBy(sequences, patch.sequences, "id");
+  if (patch.scenes) scenes = upsertBy(scenes, patch.scenes, "no");
+  if (patch.removeScenes) {
+    const drop = new Set(patch.removeScenes);
+    scenes = scenes.filter((sc) => !drop.has(sc.no));
+    sequences = sequences.map((q) => ({ ...q, scenes: q.scenes.filter((no) => !drop.has(no)) }));
+  }
+  if (patch.removeSequences) {
+    const drop = new Set(patch.removeSequences);
+    sequences = sequences.filter((q) => !drop.has(q.id));
+  }
+  if (patch.sequences || patch.scenes || patch.removeScenes || patch.removeSequences || next.STRUCTURE)
+    next.STRUCTURE = { version: st.version ?? STRUCTURE_VERSION, sequences, scenes };
+  let shots = Array.isArray(next.SCENES) ? next.SCENES.slice() : [];
+  if (patch.shots) for (const { no, shot } of patch.shots.slice().sort((a, b) => a.no - b.no)) {
+    if (no > shots.length + 1) throw new Error(`shot ${no}: the board has ${shots.length} shots \u2014 no = ${shots.length + 1} appends`);
+    shots[no - 1] = shot;
+  }
+  if (patch.removeShots) {
+    const drop = new Set(patch.removeShots);
+    for (const no of drop) if (no > shots.length) throw new Error(`removeShots: there is no shot ${no}`);
+    shots = shots.filter((_, i2) => !drop.has(i2 + 1));
+  }
+  if (patch.insertShots) {
+    const inserts = patch.insertShots.slice().sort((a, b) => b.after - a.after);
+    for (const { after, shots: add } of inserts) {
+      if (after > shots.length) throw new Error(`insertShots: after ${after} is past the last shot (${shots.length})`);
+      shots.splice(after, 0, ...add);
+    }
+  }
+  next.SCENES = shots.map((shot) => ({ ...shot }));
+  const findings = [];
+  if (!shots.length) findings.push({ level: "bad", where: "board", what: "the board has no shots" });
+  if (next.STRUCTURE === void 0) findings.push({ level: "bad", where: "structure", what: "no window.STRUCTURE \u2014 write the sequences and scenes (set, structure, sequences + scenes)" });
+  else findings.push(...validateStructure(next.STRUCTURE));
+  findings.push(...validateShots(shots));
+  let synced = 0;
+  if (!findings.some((f3) => f3.level === "bad")) {
+    synced = contract().sync(next);
+    findings.push(...contract().check(next));
+  }
+  return { win: next, findings, synced };
+}
+function applyStoryboard(args) {
+  const file = scenesPath(args.path);
+  const exists = existsSync12(file);
+  let header = [];
+  let win = {};
+  if (exists) ({ header, win } = readBoard(file));
+  else if (!args.set) throw new Error(`no scenes.js at ${file} \u2014 a new board is written with \`set\` (structure + shots)`);
+  else if (!existsSync12(dirname5(file))) throw new Error(`directory does not exist: ${dirname5(file)}`);
+  const { win: next, findings, synced } = applyPatch(win, args);
+  const bad = findings.some((f3) => f3.level === "bad");
+  const st = next.STRUCTURE;
+  const result = {
+    file,
+    written: false,
+    created: !exists,
+    approvalDropped: header.some((h2) => /^\/\/\s*approved:/.test(h2)),
+    shots: (next.SCENES ?? []).length,
+    scenes: st ? st.scenes.length : 0,
+    sequences: st ? st.sequences.length : 0,
+    synced,
+    findings
+  };
+  if (bad || args.dryRun) return result;
+  const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
+  try {
+    writeFileSync7(tmp, serializeBoard(next, header), "utf8");
+    renameSync3(tmp, file);
+  } catch (err4) {
+    try {
+      unlinkSync(tmp);
+    } catch {
+    }
+    throw err4;
+  }
+  result.written = true;
+  return result;
+}
+function checkStoryboard(args) {
+  const { file, win } = readBoard(args.path);
+  const structure = contract().check(win);
+  const argv = [CHECK_SCENES_FILE, file, "--json"];
+  if (args.draft) argv.push("--draft");
+  let raw = "";
+  try {
+    raw = execFileSync2(process.execPath, argv, { encoding: "utf8", timeout: 6e4, stdio: ["ignore", "pipe", "pipe"] });
+  } catch (e2) {
+    const err4 = e2;
+    raw = err4.stdout || "";
+    if (!raw.trim()) throw new Error(`check-scenes.js failed: ${(err4.stderr || err4.message).trim()}`);
+  }
+  let parsed = {};
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error(`check-scenes.js returned no JSON: ${raw.slice(0, 400)}`);
+  }
+  const dup = new Set(structure.map((f3) => f3.level + "\0" + f3.where + "\0" + f3.what));
+  const rest = (parsed.findings ?? []).filter((f3) => !dup.has(f3.level + "\0" + f3.where + "\0" + f3.what));
+  const all = structure.concat(rest);
+  return {
+    file,
+    format: parsed.format ?? String(win.FORMAT ?? "shorts-9x16"),
+    shots: (win.SCENES ?? []).length,
+    draft: args.draft,
+    structure,
+    contract: rest,
+    violations: all.filter((f3) => f3.level === "bad").length,
+    warnings: all.filter((f3) => f3.level === "warn").length,
+    deferred: all.filter((f3) => f3.level === "later").length
+  };
+}
+function renderFindings(findings) {
+  if (!findings.length) return "  (none)";
+  const mark = { bad: "!", warn: "\xB7", later: "\u2026" };
+  return findings.map((f3) => `  ${mark[f3.level]} ${f3.where.padEnd(12)} ${f3.what}`).join("\n");
+}
+function renderApply(r2) {
+  const bad = r2.findings.filter((f3) => f3.level === "bad");
+  const head = r2.written ? `${r2.created ? "Created" : "Wrote"} ${r2.file}` : bad.length ? `NOT written \u2014 ${bad.length} violation(s) in ${r2.file}` : `Dry run \u2014 ${r2.file} untouched`;
+  const lines = [head, `  ${r2.sequences} sequence(s) \xB7 ${r2.scenes} scene(s) \xB7 ${r2.shots} shot(s) \xB7 ${r2.synced} shot label(s) synced from the structure`];
+  if (r2.approvalDropped && r2.written) lines.push("  the `// approved:` line was dropped \u2014 an edited board is approved again at the HITL gate");
+  lines.push("Findings:", renderFindings(r2.findings));
+  return lines.join("\n");
+}
+function renderCheck(r2) {
+  const lines = [
+    `scenes.js contract \u2014 ${r2.format} \xB7 ${r2.shots} shots${r2.draft ? " \xB7 story pass (--draft)" : ""}`,
+    `  ${r2.violations} violation(s), ${r2.warnings} to look at${r2.draft ? `, ${r2.deferred} deferred to \xA74b` : ""}`,
+    "Structure (sequences \u2192 scenes \u2192 shots):",
+    renderFindings(r2.structure),
+    "Shot contract (check-scenes.js):",
+    renderFindings(r2.contract)
+  ];
+  return lines.join("\n");
+}
+
 // src/omni-client.ts
-import * as fs6 from "node:fs";
+import * as fs7 from "node:fs";
 var OMNI_MODEL = "gemini-omni-1.1-flash";
 var VALID_OMNI_ASPECT_RATIOS = ["16:9", "9:16"];
 var VALID_OMNI_RESOLUTIONS = ["360p", "720p", "1080p", "4k"];
@@ -85824,10 +89325,10 @@ function requireOneSource(data, ctx) {
 var omniExtendSchema = external_exports.object({ ...continuationFields, durationSeconds: durationSchema2 }).superRefine(requireOneSource);
 var omniEditSchema = external_exports.object(continuationFields).superRefine(requireOneSource);
 function sleep7(ms) {
-  return new Promise((resolve3) => setTimeout(resolve3, ms));
+  return new Promise((resolve5) => setTimeout(resolve5, ms));
 }
 function readInlineFile(filePath, kind) {
-  const data = fs6.readFileSync(filePath).toString("base64");
+  const data = fs7.readFileSync(filePath).toString("base64");
   return { type: kind, data, mime_type: mimeFromExtension(filePath, kind) };
 }
 async function downloadVideo(apiKey, videoUri) {
@@ -85863,7 +89364,7 @@ async function runInteraction(params, outputPath, filename, label) {
     }
     const videoUri = current.output_video?.uri;
     if (!videoUri) return { error: "Interaction completed without a video output" };
-    fs6.writeFileSync(fullPath, await downloadVideo(apiKey, videoUri));
+    fs7.writeFileSync(fullPath, await downloadVideo(apiKey, videoUri));
     console.error(`[Omni] Video saved to: ${fullPath}`);
     return { videoPath: fullPath, interactionId };
   }
@@ -86041,7 +89542,7 @@ async function editVideo(request) {
 }
 
 // src/video-client.ts
-import * as fs7 from "node:fs";
+import * as fs8 from "node:fs";
 var VALID_VIDEO_MODELS = [
   "veo-3.1-generate-preview",
   // top quality (default) — 720p $0.40/s
@@ -86140,7 +89641,7 @@ var referenceVideoSchema = external_exports.object({
 var HANDLE_SUFFIX = ".veo.json";
 function writeVideoHandle(videoPath, handle) {
   try {
-    fs7.writeFileSync(`${videoPath}${HANDLE_SUFFIX}`, `${JSON.stringify(handle, null, 2)}
+    fs8.writeFileSync(`${videoPath}${HANDLE_SUFFIX}`, `${JSON.stringify(handle, null, 2)}
 `);
   } catch (error2) {
     console.error(`[Veo] Could not write the extension handle: ${error2 instanceof Error ? error2.message : String(error2)}`);
@@ -86148,7 +89649,7 @@ function writeVideoHandle(videoPath, handle) {
 }
 function readVideoHandle(videoPath) {
   try {
-    const parsed = JSON.parse(fs7.readFileSync(`${videoPath}${HANDLE_SUFFIX}`, "utf8"));
+    const parsed = JSON.parse(fs8.readFileSync(`${videoPath}${HANDLE_SUFFIX}`, "utf8"));
     return typeof parsed?.uri === "string" && parsed.uri.startsWith(FILES_URI_PREFIX) ? parsed : void 0;
   } catch {
     return void 0;
@@ -86172,7 +89673,7 @@ async function downloadVideo2(apiKey, videoUri) {
   return Buffer.from(arrayBuffer);
 }
 function sleep8(ms) {
-  return new Promise((resolve3) => setTimeout(resolve3, ms));
+  return new Promise((resolve5) => setTimeout(resolve5, ms));
 }
 async function awaitVideoAndSave2(apiKey, operationName, outputPath, filename, label) {
   let pollCount = 0;
@@ -86200,7 +89701,7 @@ async function awaitVideoAndSave2(apiKey, operationName, outputPath, filename, l
     }
     const fullPath = resolveOutputFile(outputPath, filename, "video");
     const videoBuffer = await downloadVideo2(apiKey, videoUri);
-    fs7.writeFileSync(fullPath, videoBuffer);
+    fs8.writeFileSync(fullPath, videoBuffer);
     writeVideoHandle(fullPath, {
       uri: videoUri,
       operation: operationName,
@@ -86212,7 +89713,7 @@ async function awaitVideoAndSave2(apiKey, operationName, outputPath, filename, l
   return { error: "Video generation timed out (10 minutes)" };
 }
 function readInlineImage(filePath) {
-  const buffer = fs7.readFileSync(filePath);
+  const buffer = fs8.readFileSync(filePath);
   return { imageBytes: buffer.toString("base64"), mimeType: mimeFromExtension(filePath, "image") };
 }
 async function generateFromText4(request) {
@@ -86263,12 +89764,12 @@ async function generateFromImage4(request) {
   const durationSeconds = request.durationSeconds ?? DEFAULT_DURATION_SECONDS;
   try {
     validateFilePath(request.sourceImagePath, { allowedExtensions: ALLOWED_EXTENSIONS.image });
-    if (!fs7.existsSync(request.sourceImagePath)) {
+    if (!fs8.existsSync(request.sourceImagePath)) {
       return { success: false, error: `Source image not found: ${request.sourceImagePath}` };
     }
     if (request.lastImagePath) {
       validateFilePath(request.lastImagePath, { allowedExtensions: ALLOWED_EXTENSIONS.image });
-      if (!fs7.existsSync(request.lastImagePath)) {
+      if (!fs8.existsSync(request.lastImagePath)) {
         return { success: false, error: `Last frame image not found: ${request.lastImagePath}` };
       }
     }
@@ -86324,7 +89825,7 @@ async function extendVideo2(request) {
   const model = request.model || DEFAULT_VIDEO_MODEL;
   try {
     validateFilePath(request.sourceVideoPath, { allowedExtensions: ALLOWED_EXTENSIONS.video });
-    if (!fs7.existsSync(request.sourceVideoPath)) {
+    if (!fs8.existsSync(request.sourceVideoPath)) {
       return { success: false, error: `Source video not found: ${request.sourceVideoPath}` };
     }
     const handle = readVideoHandle(request.sourceVideoPath);
@@ -86398,7 +89899,7 @@ async function generateWithReferences2(request) {
   try {
     for (const imagePath of request.referenceImagePaths) {
       validateFilePath(imagePath, { allowedExtensions: ALLOWED_EXTENSIONS.image });
-      if (!fs7.existsSync(imagePath)) {
+      if (!fs8.existsSync(imagePath)) {
         return { success: false, error: `Reference image not found: ${imagePath}` };
       }
     }
@@ -86449,14 +89950,14 @@ async function generateWithReferences2(request) {
 }
 
 // src/content-feedback.ts
-import { mkdirSync as mkdirSync5, writeFileSync as writeFileSync8 } from "node:fs";
-import { dirname as dirname4, isAbsolute, join as join9, resolve as resolve2 } from "node:path";
+import { mkdirSync as mkdirSync5, writeFileSync as writeFileSync10 } from "node:fs";
+import { dirname as dirname6, isAbsolute, join as join11, resolve as resolve4 } from "node:path";
 
 // src/content-feedback-html.ts
 function escapeHtml(value) {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
-function fmt(value, digits = 0, suffix = "") {
+function fmt2(value, digits = 0, suffix = "") {
   if (value == null || !Number.isFinite(value)) return "\u2014";
   return `${value.toFixed(digits)}${suffix}`;
 }
@@ -86565,21 +90066,22 @@ function platformSection(section, title, accent) {
     </section>`;
   }
   const tones = countTones(section.items);
-  const accountLine = section.platform === "YOUTUBE" ? `Subscribers ${fmt(numish(section.account?.subscriberCount))} \xB7 Videos ${fmt(numish(section.account?.videoCount))}` : `Followers ${fmt(numish(section.account?.followersCount))} \xB7 Media ${fmt(numish(section.account?.mediaCount))}`;
+  const accountLine = section.platform === "YOUTUBE" ? `Subscribers ${fmt2(numish(section.account?.subscriberCount))} \xB7 Videos ${fmt2(numish(section.account?.videoCount))}` : `Followers ${fmt2(numish(section.account?.followersCount))} \xB7 Media ${fmt2(numish(section.account?.mediaCount))}`;
   const funnelHtml = section.platform === "YOUTUBE" ? funnel(
     [
-      { k: "Views", v: fmt(section.cohort.views, 0), hint: "not a quality signal" },
-      { k: "Opening pass", v: fmt(section.cohort.hook, 0, "%"), hint: "engaged / views" },
-      { k: "Retention", v: fmt(section.cohort.retain, 0, "%"), hint: "average view percentage" },
-      { k: "Subs (channel)", v: fmt(section.cohort.channelSubRate, 2, "%"), hint: "no per-episode number" }
+      { k: "Views", v: fmt2(section.cohort.views, 0), hint: "not a quality signal" },
+      { k: "Opening pass", v: fmt2(section.cohort.hook, 0, "%"), hint: "engaged / views" },
+      { k: "Retention", v: fmt2(section.cohort.retain, 0, "%"), hint: "average view percentage" },
+      { k: "Shares", v: fmt2(section.cohort.shareRate, 2, "%"), hint: "against engaged views" },
+      { k: "Subs (channel)", v: fmt2(section.cohort.channelSubRate, 2, "%"), hint: "no per-episode number" }
     ],
     accent
   ) : funnel(
     [
-      { k: "Reach", v: fmt(section.cohort.reach, 0), hint: "the non-follower audition" },
+      { k: "Reach", v: fmt2(section.cohort.reach, 0), hint: "the non-follower audition" },
       { k: "3s stay", v: section.cohort.skip == null ? "\u2014" : `${(100 - section.cohort.skip).toFixed(0)}%`, hint: "the inverse of drop-off" },
-      { k: "Watch", v: fmt(section.cohort.watch, 1, "s"), hint: "compare within the same length band" },
-      { k: "Shares", v: fmt(section.cohort.shareRate, 2, "%"), hint: "against reach" }
+      { k: "Watch", v: fmt2(section.cohort.watch, 1, "s"), hint: "compare within the same length band" },
+      { k: "Shares", v: fmt2(section.cohort.shareRate, 2, "%"), hint: "against reach" }
     ],
     accent
   );
@@ -86588,12 +90090,12 @@ function platformSection(section, title, accent) {
     if (section.platform === "YOUTUBE") {
       return itemCard(
         item,
-        metricCell("Views", fmt(item.metrics.views), vsClass(item.vsCohort.views)) + metricCell("Opening pass", fmt(item.metrics.hook, 0, "%"), vsClass(item.vsCohort.hook)) + metricCell("Retention", fmt(item.metrics.retain, 0, "%"), vsClass(item.vsCohort.retain))
+        metricCell("Views", fmt2(item.metrics.views), vsClass(item.vsCohort.views)) + metricCell("Opening pass", fmt2(item.metrics.hook, 0, "%"), vsClass(item.vsCohort.hook)) + metricCell("Retention", fmt2(item.metrics.retain, 0, "%"), vsClass(item.vsCohort.retain)) + metricCell("Share rate", fmt2(item.metrics.shareRate, 2, "%"), vsClass(item.vsCohort.shareRate))
       );
     }
     return itemCard(
       item,
-      metricCell("Reach", fmt(item.metrics.reach), "") + metricCell("3s drop-off", fmt(item.metrics.skip, 0, "%"), vsClass(item.vsCohort.skip)) + metricCell("Watch", fmt(item.metrics.watch, 1, "s"), vsClass(item.vsCohort.watch)) + metricCell("Share rate", fmt(item.metrics.shareRate, 2, "%"), vsClass(item.vsCohort.shareRate))
+      metricCell("Reach", fmt2(item.metrics.reach), "") + metricCell("3s drop-off", fmt2(item.metrics.skip, 0, "%"), vsClass(item.vsCohort.skip)) + metricCell("Watch", fmt2(item.metrics.watch, 1, "s"), vsClass(item.vsCohort.watch)) + metricCell("Share rate", fmt2(item.metrics.shareRate, 2, "%"), vsClass(item.vsCohort.shareRate))
     );
   }).join("");
   return `<section id="${id}" class="plat">
@@ -86685,7 +90187,7 @@ nav.jump a {
 .plat-head h2 { font-size: 26px; letter-spacing: -.02em; }
 .acct { color: var(--mute); font-size: 13px; margin-top: 4px; font-variant-numeric: tabular-nums; }
 .block-label { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--mute); margin: 22px 0 10px; }
-.funnel { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; list-style: none; }
+.funnel { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 18px; list-style: none; }
 .fn-step { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 14px 12px; position: relative; }
 .fn-step:not(:last-child)::after {
   content: ""; position: absolute; right: -14px; top: 50%; width: 10px; height: 10px;
@@ -86824,7 +90326,7 @@ function parseObject(body) {
     return null;
   }
 }
-function num3(value) {
+function num4(value) {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value === "string" && value.trim() !== "") {
     const n = Number(value);
@@ -86836,29 +90338,38 @@ function analyzeYoutubeVideos(videos, account, channelMetrics) {
   const notes = [
     "Shorts swipe-away drop-off is not in the API. Opening pass is read as the engagedViews/views ratio.",
     "Per-episode subscriber conversion is not stable in the video report, so only the channel-window number is recorded.",
+    "YouTube reports no reach, so the share rate here is shares against engagedViews \u2014 the views that got past the opening. Instagram divides by reach, so read each rate inside its own platform.",
     "When only views are low and opening pass and retention are at or above the median, the lever is angle. Do not clone that format \u2014 open the next episode title with the problem."
   ];
   const rows = videos.map((video) => {
     const period = video.period ?? null;
     const lifetime = video.lifetime ?? {};
-    const views = num3(period?.views) ?? num3(lifetime.views);
-    const engaged = num3(period?.engagedViews);
+    const views = num4(period?.views) ?? num4(lifetime.views);
+    const engaged = num4(period?.engagedViews);
     const hook = views && views > 0 && engaged != null ? engaged / views * 100 : null;
-    const retain = num3(period?.averageViewPercentage);
-    return { video, period, views, hook, retain };
+    const retain = num4(period?.averageViewPercentage);
+    const shares = num4(period?.shares);
+    const shareRate = engaged && engaged > 0 && shares != null ? shares / engaged * 100 : null;
+    return { video, period, views, hook, retain, shares, shareRate };
   });
+  const shareMid = median(rows.map((r2) => r2.shareRate).filter((n) => n != null));
+  if (shareMid === 0)
+    notes.push("Half or more of these episodes reported no shares, so the batch median is 0 and there is nothing to read a share rate against. The share lever is off for this batch.");
+  else if (shareMid == null)
+    notes.push("No share numbers came back for these episodes, so the share lever is off for this batch.");
   const cohort = {
     hook: median(rows.map((r2) => r2.hook).filter((n) => n != null)),
     retain: median(rows.map((r2) => r2.retain).filter((n) => n != null)),
     views: median(rows.map((r2) => r2.views).filter((n) => n != null)),
+    shareRate: shareMid === 0 ? null : shareMid,
     channelSubRate: (() => {
-      const gained = num3(channelMetrics?.subscribersGained);
-      const views = num3(channelMetrics?.views);
+      const gained = num4(channelMetrics?.subscribersGained);
+      const views = num4(channelMetrics?.views);
       if (gained == null || views == null || views <= 0) return null;
       return gained / views * 100;
     })()
   };
-  const items = rows.map(({ video, period, views, hook, retain }) => {
+  const items = rows.map(({ video, period, views, hook, retain, shares, shareRate }) => {
     const steps = [];
     if (!period) {
       steps.push({
@@ -86884,6 +90395,14 @@ function analyzeYoutubeVideos(videos, account, channelMetrics) {
           next: "keep a single claim and tighten the gap between cuts"
         });
       }
+      if (shareRate != null && cohort.shareRate != null && shareRate < cohort.shareRate * SHARE_GAP) {
+        steps.push({
+          lever: "share",
+          problem: `shares against engaged views ${shareRate.toFixed(2)}% \u2014 below the ${cohort.shareRate.toFixed(2)}% median`,
+          hypothesis: "there is no single line worth passing on (a twist, a number, a checklist)",
+          next: "put a sentence someone would forward as-is on one screen"
+        });
+      }
       const hookOk = hook != null && cohort.hook != null && hook >= cohort.hook * GAP;
       const retainOk = retain != null && cohort.retain != null && retain >= cohort.retain * GAP;
       const viewsLow = views != null && cohort.views != null && views < cohort.views * GAP;
@@ -86906,13 +90425,16 @@ function analyzeYoutubeVideos(videos, account, channelMetrics) {
         views,
         hook,
         retain,
-        likes: num3(period?.likes) ?? num3(video.lifetime?.likes),
-        comments: num3(period?.comments) ?? num3(video.lifetime?.comments)
+        shares,
+        shareRate,
+        likes: num4(period?.likes) ?? num4(video.lifetime?.likes),
+        comments: num4(period?.comments) ?? num4(video.lifetime?.comments)
       },
       vsCohort: {
         hook: vsMedian(hook, cohort.hook, true),
         retain: vsMedian(retain, cohort.retain, true),
-        views: vsMedian(views, cohort.views, true)
+        views: vsMedian(views, cohort.views, true),
+        shareRate: vsMedian(shareRate, cohort.shareRate, true)
       },
       steps
     };
@@ -86931,10 +90453,10 @@ function analyzeInstagramMedia(media, limit2) {
   const picked = reels.length > 0 ? reels : media.slice(0, limit2);
   const rows = picked.map((item) => {
     const metrics = item.metrics ?? null;
-    const skip = asPercent(num3(metrics?.reels_skip_rate));
-    const watch = watchSeconds(num3(metrics?.ig_reels_avg_watch_time));
-    const reach = num3(metrics?.reach);
-    const shares = num3(metrics?.shares);
+    const skip = asPercent(num4(metrics?.reels_skip_rate));
+    const watch = watchSeconds(num4(metrics?.ig_reels_avg_watch_time));
+    const reach = num4(metrics?.reach);
+    const shares = num4(metrics?.shares);
     const shareRate = reach && reach > 0 && shares != null ? shares / reach * 100 : null;
     return { item, metrics, skip, watch, reach, shares, shareRate };
   });
@@ -86995,13 +90517,13 @@ function analyzeInstagramMedia(media, limit2) {
       publishedAt: item.timestamp ? String(item.timestamp) : null,
       tone: worstTone(steps),
       metrics: {
-        views: num3(metrics?.views),
+        views: num4(metrics?.views),
         reach,
         skip,
         watch,
         shares,
         shareRate,
-        likes: num3(metrics?.likes)
+        likes: num4(metrics?.likes)
       },
       vsCohort: {
         skip: vsMedian(skip, cohort.skip, false),
@@ -87014,14 +90536,14 @@ function analyzeInstagramMedia(media, limit2) {
   return { items, cohort, notes };
 }
 function defaultHtmlPath(channel) {
-  return join9(process.cwd(), "data", channel, "growth", "review-recent.html");
+  return join11(process.cwd(), "data", channel, "growth", "review-recent.html");
 }
 function resolveHtmlPath(channel, outputPath) {
   if (outputPath) {
     if (outputPath.includes("..")) {
       throw new Error(`Path traversal detected: ${outputPath}`);
     }
-    const resolved = isAbsolute(outputPath) ? outputPath : resolve2(process.cwd(), outputPath);
+    const resolved = isAbsolute(outputPath) ? outputPath : resolve4(process.cwd(), outputPath);
     if (!resolved.toLowerCase().endsWith(".html")) {
       throw new Error(`outputPath must end in .html: ${outputPath}`);
     }
@@ -87060,8 +90582,8 @@ async function contentFeedback(input) {
     instagram
   };
   if (htmlPath) {
-    mkdirSync5(dirname4(htmlPath), { recursive: true });
-    writeFileSync8(htmlPath, renderFeedbackHtml(report), "utf8");
+    mkdirSync5(dirname6(htmlPath), { recursive: true });
+    writeFileSync10(htmlPath, renderFeedbackHtml(report), "utf8");
   }
   return { ok: true, status: 200, body: JSON.stringify(report) };
 }
@@ -87109,7 +90631,7 @@ function sectionFromInstagram(res, limit2) {
   const account = parsed?.account ?? null;
   const user = parsed?.user ?? {};
   const analyzed = analyzeInstagramMedia(media, limit2);
-  const profileViews = num3(user.profile_views);
+  const profileViews = num4(user.profile_views);
   if (profileViews != null) analyzed.cohort.profileViews = profileViews;
   return {
     platform: "INSTAGRAM",
@@ -87147,10 +90669,10 @@ function parseJson2(body) {
     return null;
   }
 }
-function str6(value) {
+function str7(value) {
   return typeof value === "string" ? value : value == null ? "" : String(value);
 }
-function maskKey3(text2) {
+function maskKey4(text2) {
   return text2.replace(/key=[^&\s"']+/g, "key=***");
 }
 function median2(values) {
@@ -87291,9 +90813,9 @@ function isShortEnough(seconds, duration3) {
   if (seconds == null) return true;
   return seconds <= 180;
 }
-async function youtubeGet(path10, params, auth) {
+async function youtubeGet(path11, params, auth) {
   const query = auth.kind === "key" ? { ...params, key: auth.key } : params;
-  const url = `${YT_DATA_BASE2}/${path10}${buildQuery(query)}`;
+  const url = `${YT_DATA_BASE2}/${path11}${buildQuery(query)}`;
   try {
     const res = await fetch(url, {
       method: "GET",
@@ -87302,10 +90824,10 @@ async function youtubeGet(path10, params, auth) {
     });
     const text2 = await res.text();
     if (res.ok) return { ok: true, status: res.status, body: text2 };
-    return { ok: false, status: res.status, body: maskKey3(text2) };
+    return { ok: false, status: res.status, body: maskKey4(text2) };
   } catch (error2) {
     const message = error2 instanceof Error ? error2.message : String(error2);
-    return fail3(502, `YouTube Data API call failed (${path10}): ${maskKey3(message)}`);
+    return fail3(502, `YouTube Data API call failed (${path11}): ${maskKey4(message)}`);
   }
 }
 function chunk(items, size) {
@@ -87333,7 +90855,7 @@ async function ownChannelId(auth) {
   if (auth.kind !== "bearer") return void 0;
   const res = await youtubeGet("channels", { part: "id", mine: "true" }, auth);
   if (!res.ok) return void 0;
-  const id = str6((parseJson2(res.body)?.items?.[0] ?? {}).id);
+  const id = str7((parseJson2(res.body)?.items?.[0] ?? {}).id);
   return id || void 0;
 }
 async function searchChannels(queries, auth, opts) {
@@ -87361,9 +90883,9 @@ async function searchChannels(queries, auth, opts) {
     }
     for (const item of parseJson2(res.body)?.items ?? []) {
       const snippet = item.snippet ?? {};
-      const channelId = str6(snippet.channelId);
+      const channelId = str7(snippet.channelId);
       if (!channelId) continue;
-      hits.push({ channelId, channelTitle: str6(snippet.channelTitle) });
+      hits.push({ channelId, channelTitle: str7(snippet.channelTitle) });
     }
   }
   return { hits, units, errors };
@@ -87385,15 +90907,15 @@ async function loadChannelUploads(channelIds, auth, videosPerChannel) {
       continue;
     }
     for (const item of parseJson2(res.body)?.items ?? []) {
-      const channelId = str6(item.id);
+      const channelId = str7(item.id);
       const snippet = item.snippet ?? {};
       const stats = item.statistics ?? {};
-      const uploads = str6(
+      const uploads = str7(
         item.contentDetails?.relatedPlaylists?.uploads
       );
       const hidden = stats.hiddenSubscriberCount === true || stats.hiddenSubscriberCount === "true";
       byChannel.set(channelId, {
-        title: str6(snippet.title),
+        title: str7(snippet.title),
         subscriberCount: hidden ? null : Number(stats.subscriberCount ?? 0),
         uploads: []
       });
@@ -87421,7 +90943,7 @@ async function loadChannelUploads(channelIds, auth, videosPerChannel) {
         return;
       }
       for (const item of parseJson2(res.body)?.items ?? []) {
-        const videoId = str6(item.contentDetails?.videoId);
+        const videoId = str7(item.contentDetails?.videoId);
         if (!videoId) continue;
         videoIds.push(videoId);
         ownerByVideo.set(videoId, channelId);
@@ -87440,21 +90962,21 @@ async function loadChannelUploads(channelIds, auth, videosPerChannel) {
       continue;
     }
     for (const item of parseJson2(res.body)?.items ?? []) {
-      const videoId = str6(item.id);
-      const channelId = ownerByVideo.get(videoId) ?? str6(item.snippet?.channelId);
+      const videoId = str7(item.id);
+      const channelId = ownerByVideo.get(videoId) ?? str7(item.snippet?.channelId);
       const bucket = byChannel.get(channelId);
       if (!bucket) continue;
       const snippet = item.snippet ?? {};
       const stats = item.statistics ?? {};
-      const tags = Array.isArray(snippet.tags) ? snippet.tags.map((t2) => str6(t2)).filter(Boolean) : [];
+      const tags = Array.isArray(snippet.tags) ? snippet.tags.map((t2) => str7(t2)).filter(Boolean) : [];
       bucket.uploads.push({
         videoId,
-        title: str6(snippet.title),
+        title: str7(snippet.title),
         channelId,
-        channelTitle: bucket.title || str6(snippet.channelTitle),
+        channelTitle: bucket.title || str7(snippet.channelTitle),
         views: Number(stats.viewCount ?? 0),
-        publishedAt: snippet.publishedAt ? str6(snippet.publishedAt) : null,
-        durationSeconds: parseIsoDurationSeconds(str6(item.contentDetails?.duration)),
+        publishedAt: snippet.publishedAt ? str7(snippet.publishedAt) : null,
+        durationSeconds: parseIsoDurationSeconds(str7(item.contentDetails?.duration)),
         commentCount: Number(stats.commentCount ?? 0),
         tags
       });
@@ -87480,7 +91002,7 @@ async function loadCommentGaps(outliers, auth) {
     const gaps = [];
     for (const item of parseJson2(res.body)?.items ?? []) {
       const top = item.snippet?.topLevelComment?.snippet;
-      const text2 = str6(top?.textDisplay || top?.textOriginal).replace(/\s+/g, " ").trim();
+      const text2 = str7(top?.textDisplay || top?.textOriginal).replace(/\s+/g, " ").trim();
       if (!text2 || !looksLikeQuestion(text2)) continue;
       if (gaps.length >= 3) break;
       gaps.push(text2.slice(0, 140));
@@ -88103,13 +91625,14 @@ ${errors.join("\n")}`);
 }
 
 // src/capability-status.ts
-import { existsSync as existsSync11 } from "node:fs";
-import path9 from "node:path";
+import { existsSync as existsSync14 } from "node:fs";
+import path10 from "node:path";
+import os from "node:os";
 var has2 = (v) => Boolean(v && v.length > 0);
 var binOk = (p) => {
   try {
-    if (p.includes(path9.sep)) return existsSync11(p);
-    return (process.env.PATH || "").split(path9.delimiter).some((dir) => dir && existsSync11(path9.join(dir, p)));
+    if (p.includes(path10.sep)) return existsSync14(p);
+    return (process.env.PATH || "").split(path10.delimiter).some((dir) => dir && existsSync14(path10.join(dir, p)));
   } catch {
     return false;
   }
@@ -88230,6 +91753,12 @@ function capabilityStatus() {
           configured: mlx,
           needs: "MLX Core.app or mlx-serve on PATH",
           note: "mlx_3d_generate \u2014 writes GLB; HTML mesh slides consume embedded models (mesh-objects.md)"
+        },
+        {
+          provider: "blender (local, Cycles)",
+          configured: Boolean(blenderBin()),
+          needs: "Blender 4.2+ (brew install --cask blender) or BLENDER=<executable>",
+          note: `blender_scene_read \xB7 blender_scene_build \xB7 blender_camera_set \xB7 blender_object_animate \xB7 blender_pose_key \xB7 blender_motion_import \xB7 blender_render_previz \u2014 the previz bridge (blender-previz.md): camera, blocking and body timing as numbers \u2014 jointed person mannequins posed by channel or driven by BVH/FBX motion capture \u2014 rendered headless with no add-on or GUI. bake-blender.py \u2014 bakes a mesh recipe into a frame sheet with path-traced light and shadows (blender-objects.md). This machine has ${os.cpus().length} cores and ${Math.round(os.totalmem() / 1e9)} GB; run --capacity for the GPU backend and which object lane suits it, then --probe on the recipe for minutes per cut`
         }
       ]
     },
@@ -88241,6 +91770,35 @@ function capabilityStatus() {
           configured: binOk(qwen3AsrBin()),
           needs: "mlx-qwen3-asr on this machine",
           note: "stt_local_transcribe \u2014 the ingest skill reads recordings with it"
+        }
+      ]
+    },
+    {
+      capability: "stock_footage",
+      providers: [
+        {
+          provider: "pexels",
+          configured: has2(config2.pexelsApiKey),
+          needs: "PEXELS_API_KEY",
+          note: "stock_search \u2014 free photos and clips under the Pexels License, 200/hour"
+        },
+        {
+          provider: "pixabay",
+          configured: has2(config2.pixabayApiKey),
+          needs: "PIXABAY_API_KEY",
+          note: "stock_search \u2014 free photos and clips under the Pixabay Content License, 100/minute"
+        },
+        {
+          provider: "nasa",
+          configured: true,
+          needs: "no key",
+          note: "stock_search \u2014 images-api.nasa.gov, US government works (insignia and current astronauts excluded)"
+        },
+        {
+          provider: "wikimedia commons",
+          configured: true,
+          needs: "no key",
+          note: "stock_search \u2014 public domain, CC0 and CC BY files only; video arrives as WebM"
         }
       ]
     },
@@ -88437,6 +91995,17 @@ var serpImageSchema = external_exports.object({
   color: external_exports.enum(["bw", "trans", "red", "orange", "yellow", "green", "teal", "blue", "purple", "pink", "white", "gray", "black", "brown"]).optional(),
   safe: external_exports.boolean().optional()
 });
+var stockSearchSchema = external_exports.object({
+  query: searchQuery,
+  media: external_exports.enum(STOCK_MEDIA).optional(),
+  providers: external_exports.array(external_exports.enum(STOCK_PROVIDERS)).min(1).optional(),
+  orientation: external_exports.enum(STOCK_ORIENTATIONS).optional(),
+  limit: external_exports.number().int().min(1).max(STOCK_MAX_LIMIT).optional(),
+  minWidth: external_exports.number().int().min(1).optional(),
+  minDuration: external_exports.number().min(0).optional(),
+  maxDuration: external_exports.number().min(0).optional(),
+  locale: langCode
+});
 var serpTrendingSchema = external_exports.object({
   geo: countryCode,
   hours: external_exports.union([external_exports.literal(4), external_exports.literal(24), external_exports.literal(48), external_exports.literal(168)]).optional(),
@@ -88528,7 +92097,7 @@ var instagramPublishSchema = external_exports.object({
   videoUrl: external_exports.string().url().optional(),
   channel: channelSlugSchema
 }).superRefine((v, ctx) => {
-  const issue2 = (path10, message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: [path10], message });
+  const issue2 = (path11, message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: [path11], message });
   if (!v.imageUrls && !v.videoUrl) issue2("imageUrls", "INSTAGRAM requires imageUrls (1-10) or videoUrl (reel)");
   if (v.imageUrls && v.videoUrl) issue2("videoUrl", "imageUrls and videoUrl are mutually exclusive");
   if (v.videoUrl && !isVideoUrl(v.videoUrl)) issue2("videoUrl", "videoUrl must be a .mp4/.mov URL");
@@ -88548,7 +92117,7 @@ var facebookPublishSchema = external_exports.object({
   linkUrl: external_exports.string().url().optional(),
   channel: channelSlugSchema
 }).superRefine((v, ctx) => {
-  const issue2 = (path10, message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: [path10], message });
+  const issue2 = (path11, message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: [path11], message });
   if (v.imageUrls && v.videoUrl) issue2("videoUrl", "imageUrls and videoUrl are mutually exclusive");
   if (v.videoUrl && !isVideoUrl(v.videoUrl)) issue2("videoUrl", "videoUrl must be a .mp4/.mov URL");
   if (v.linkUrl && (v.imageUrls || v.videoUrl)) issue2("linkUrl", "linkUrl is for text-only posts (no media)");
@@ -88721,6 +92290,10 @@ var ROUTES = {
   },
   serp_trending_now: async (args) => {
     const result = await trendingNow(parseArgs(serpTrendingSchema, args));
+    return text(result.text, result.isError);
+  },
+  stock_search: async (args) => {
+    const result = await stockSearch(parseArgs(stockSearchSchema, args));
     return text(result.text, result.isError);
   },
   naver_search: async (args) => {
@@ -89094,10 +92667,13 @@ Reference Images (${result.referenceImages.length}):
     const refAudioInfo = result.referenceAudios?.length ? `
 Reference Audio (${result.referenceAudios.length}):
   - ${result.referenceAudios.join("\n  - ")}` : "";
+    const refVideoInfo = result.referenceVideos?.length ? `
+Reference Videos (${result.referenceVideos.length}, ${result.referenceVideoSeconds ?? "?"}s billed as input${result.referenceVideoRoute ? `, served by ${result.referenceVideoRoute}` : ""}):
+  - ${result.referenceVideos.join("\n  - ")}` : "";
     return text(
       `Video generated with references successfully!
 
-Output: ${result.videoPath}${refImagesInfo}${refAudioInfo}
+Output: ${result.videoPath}${refImagesInfo}${refVideoInfo}${refAudioInfo}
 ${seedanceMeta(result)}
 Prompt: ${result.prompt}`
     );
@@ -89264,6 +92840,93 @@ Elapsed: ${result.elapsedSeconds}s
 
 Transcript:
 ${preview}`
+    );
+  },
+  // ── Blender bridge — previz camera and blocking on the local Blender (no key, no network) ──
+  blender_scene_read: async (args) => {
+    const r2 = await readScene(parseArgs(blenderSceneReadSchema, args));
+    if (!r2.success) return text(`Blender scene read failed: ${r2.error}`, true);
+    return text(`Blender scene read (nothing changed).
+
+${describeScene(r2.scene)}`);
+  },
+  blender_scene_build: async (args) => {
+    const request = parseArgs(blenderSceneBuildSchema, args);
+    const r2 = await buildScene(request);
+    if (!r2.success) return text(`Blender scene build failed: ${r2.error}`, true);
+    const built = (r2.scene.built ?? []).map((b) => b.kind ? `${b.name} (${b.kind})` : `${b.name} (glb, ${b.objects} objects)`);
+    return text(
+      `Blender previz set ${request.reset ? "built" : "extended"} \u2014 ${built.length} added${built.length ? `: ${built.join(", ")}` : ""}.
+Next: blender_camera_set to frame it, then blender_render_previz to look.
+
+${describeScene(r2.scene)}`
+    );
+  },
+  blender_camera_set: async (args) => {
+    const r2 = await setCamera(parseArgs(blenderCameraSetSchema, args));
+    if (!r2.success) return text(`Blender camera set failed: ${r2.error}`, true);
+    const keys = r2.scene.applied?.keyframes ?? [];
+    return text(
+      `Camera "${r2.scene.applied?.camera ?? "Camera"}" ${keys.length ? `keyed at frames [${keys.join(", ")}]` : "set as a static shot"}.
+Next: blender_render_previz and open the stills; iterate in numbers.
+
+${describeScene(r2.scene)}`
+    );
+  },
+  blender_object_animate: async (args) => {
+    const r2 = await animateObject(parseArgs(blenderObjectAnimateSchema, args));
+    if (!r2.success) return text(`Blender object animate failed: ${r2.error}`, true);
+    const keys = r2.scene.applied?.keyframes ?? [];
+    return text(`Object "${r2.scene.applied?.object}" keyed at frames [${keys.join(", ")}].
+
+${describeScene(r2.scene)}`);
+  },
+  blender_pose_key: async (args) => {
+    const r2 = await poseKey(parseArgs(blenderPoseKeySchema, args));
+    if (!r2.success) return text(`Blender pose key failed: ${r2.error}`, true);
+    const a = r2.scene.applied;
+    const keys = a?.keyframes ?? [];
+    return text(
+      `Person "${a?.object}" posed \u2014 ${describeKeys(keys)} on ${a?.bones?.length ?? 0} bones (${(a?.bones ?? []).join(", ")}).
+At frame ${keys[keys.length - 1]}: ${describeTails(a?.tails)}
+Next: blender_render_previz and open the stills; the landmark line above says where the hands and feet are, so iterate in numbers.
+
+${describeScene(r2.scene)}`
+    );
+  },
+  blender_motion_import: async (args) => {
+    const r2 = await importMotion(parseArgs(blenderMotionImportSchema, args));
+    if (!r2.success) return text(`Blender motion import failed: ${r2.error}`, true);
+    const a = r2.scene.applied;
+    const m2 = a?.motion;
+    const [first, last] = a?.keyframes ?? [0, 0];
+    const mapped = Object.entries(m2?.mapped ?? {}).map(([c, s2]) => `${c} \u2190 ${s2}`);
+    return text(
+      `Motion retargeted onto "${a?.object}" (${a?.rig}) \u2014 scene frames ${first}\u2013${last} (${m2?.frames} keys, one per frame).
+Source: ${m2?.source} \xB7 ${m2?.sourceBones} bones \xB7 ${m2?.sourceSeconds}s @ ${m2?.sourceFps} fps; slice ${m2?.fromSeconds}\u2013${m2?.toSeconds}s at speed ${m2?.speed}${m2?.loop ? ", looped" : ""} \xB7 root motion ${m2?.rootMotion} \xB7 scale \xD7${m2?.heightRatio} \xB7 facing turned ${m2?.yawDeg}\xB0
+Matched ${mapped.length}/${BLENDER_RIG_BONES.length} bones: ${mapped.join(", ")}
+${m2?.unmapped?.length ? `Unmatched (hold rest relative to parent): ${m2.unmapped.join(", ")}
+` : ""}At frame ${first}: ${describeTails(a?.tails)}
+At frame ${last}: ${describeTails(a?.tailsEnd)}
+Next: blender_render_previz to watch it; blender_object_animate on the root for the path across the floor.
+
+${describeScene(r2.scene)}`
+    );
+  },
+  blender_render_previz: async (args) => {
+    const r2 = await renderPreviz(parseArgs(blenderRenderPrevizSchema, args));
+    if (!r2.success) return text(`Blender previz render failed: ${r2.error}`, true);
+    const skipped = r2.skippedStills.length ? `
+Skipped stills (outside frames ${r2.frameStart}\u2013${r2.frameEnd}): ${r2.skippedStills.join(", ")}` : "";
+    return text(
+      `Previz rendered.
+
+File: ${r2.videoPath}
+Stills: ${r2.stillPaths.join(", ") || "(none)"}${skipped}
+Engine: ${r2.engine} \xB7 ${r2.width}\xD7${r2.height} @ ${r2.fps} fps \xB7 frames ${r2.frameStart}\u2013${r2.frameEnd} (${r2.frames} = ${r2.seconds}s)
+Render time: ${r2.elapsedSeconds}s
+
+Open the stills before judging the move \u2014 the stamp shows frame, camera and lens. The clip is a camera and blocking plan, not appearance.`
     );
   },
   // ── music generation (Lyria) — 30s batch clip / streaming with an exact duration ──
@@ -89528,12 +93191,29 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
   threads_search: async (args) => {
     const input = parseArgs(threadsSearchSchema, args);
     return fromApi(await threadsKeywordSearch(input));
+  },
+  // ── Storyboard ──
+  storyboard_read: async (args) => {
+    contract();
+    const a = parseArgs(storyboardReadSchema, args);
+    const { win } = readBoard(a.path);
+    return text(JSON.stringify(contract().outline(win, a.level), null, 2));
+  },
+  storyboard_apply: async (args) => {
+    contract();
+    const r2 = applyStoryboard(parseArgs(storyboardApplySchema, args));
+    return text(renderApply(r2), r2.findings.some((f3) => f3.level === "bad"));
+  },
+  storyboard_check: async (args) => {
+    contract();
+    const r2 = checkStoryboard(parseArgs(storyboardCheckSchema, args));
+    return text(renderCheck(r2), r2.violations > 0);
   }
 };
 
 // src/index.ts
 var server = new Server(
-  { name: "social-flow", version: "0.60.0" },
+  { name: "social-flow", version: "0.73.0" },
   { capabilities: { tools: {} } }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {

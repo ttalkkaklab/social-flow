@@ -6,6 +6,7 @@ import {
   DEFAULT_SUPERTONIC_STEPS,
   DEFAULT_SUPERTONIC_VOICE,
   MAX_SUPERTONIC_INPUT_CHARS,
+  MAX_SUPERTONIC_SPEED,
   SUPERTONIC_LANGUAGES,
   SUPERTONIC_VOICE_NAMES,
 } from './supertonic-client.js';
@@ -50,6 +51,21 @@ import {
   QWEN3_ASR_LANGUAGES,
   QWEN3_ASR_MODELS,
 } from './qwen3-asr-client.js';
+import {
+  BLENDER_INTERPOLATIONS,
+  BLENDER_PREVIZ_ENGINES,
+  BLENDER_PROXY_KINDS,
+  BLENDER_RIG_BONES,
+  BLENDER_ROOT_MOTIONS,
+  DEFAULT_FRAME_END,
+  DEFAULT_FRAME_START,
+  DEFAULT_PREVIZ_ENGINE,
+  DEFAULT_PREVIZ_FILENAME,
+  DEFAULT_PREVIZ_HEIGHT,
+  DEFAULT_PREVIZ_WIDTH,
+  DEFAULT_SCENE_FPS,
+  MAX_PREVIZ_FRAMES,
+} from './blender-bridge.js';
 import {
   DEFAULT_SUNO_MODEL,
   SUNO_MODELS,
@@ -622,7 +638,7 @@ const YOUTUBE_INSIGHTS_OUTPUT: OutputSchema = {
     videos: {
       type: 'array',
       description:
-        'Per recent upload: { videoId, permalink, title, publishedAt, duration, durationSeconds, lifetime: { views, likes, comments }, period: window metrics } — durationSeconds ≤180 marks a Shorts candidate (the API cannot tell whether it is portrait); period is null when no data exists',
+        'Per recent upload: { videoId, permalink, title, publishedAt, duration, durationSeconds, lifetime: { views, likes, comments }, period: window metrics } — durationSeconds ≤180 marks a Shorts candidate (the API cannot tell whether it is portrait); period is null when no data exists. lifetime is the public Data API counter and updates without the Analytics lag; period, and the shares inside it, is the lagged Analytics window — a fresh upload only moves in lifetime',
       items: { type: 'object' },
     },
     videosError: {
@@ -646,12 +662,12 @@ const CONTENT_FEEDBACK_OUTPUT: OutputSchema = {
     youtube: {
       type: 'object',
       description:
-        '{ available, error?, account, cohort, items[], notes[] } — items carries, per recent video, hook (% getting past the opening), retain (average % watched), angle (views low while hook/retention held up), and problem/hypothesis/next-episode notes',
+        '{ available, error?, account, cohort, items[], notes[] } — items carries, per recent video, hook (% getting past the opening), retain (average % watched), shareRate (shares against engagedViews, the views past the opening, since YouTube reports no reach), angle (views low while hook/retention held up), and problem/hypothesis/next-episode notes',
     },
     instagram: {
       type: 'object',
       description:
-        '{ available, error?, account, cohort, items[], notes[] } — for reels: skip (3-second drop-off %), watch (seconds), shareRate; otherwise pending',
+        '{ available, error?, account, cohort, items[], notes[] } — for reels: skip (3-second drop-off %), watch (seconds), shareRate (shares against reach); otherwise pending',
     },
   },
   required: ['generatedAt', 'limit', 'days', 'youtube', 'instagram'],
@@ -864,6 +880,32 @@ export const TOOLS: Tool[] = [
           description: 'Dominant color — trans=transparent background (logo/overlay material)',
         },
         safe: { type: 'boolean', description: 'Adult-content filter (default true=on)' },
+      },
+      required: ['query'],
+    },
+  },
+  {
+    name: 'stock_search',
+    title: 'Free stock search (Pexels · Pixabay · NASA · Commons)',
+    annotations: HINT.read,
+    description:
+      'Free, commercially usable photos and clips for a cut that needs the real thing — an actual place, era, event or live action — at zero generation cost. Searches Pexels and Pixabay (PEXELS_API_KEY / PIXABAY_API_KEY; a missing key skips that provider with a note), the NASA Image and Video Library and Wikimedia Commons (no key). Every item returns a ready `visual.license` block (provider, page url, license name and url, commercial/modify flags, attribution text, retrievedAt) — store it verbatim on the `visual.source: "stock"` cut; check-scenes.js refuses a stock cut without it. Commons results are filtered to public domain, CC0 and plain CC BY (share-alike, non-commercial and no-derivatives files are dropped and counted) because an edited, monetized cut cannot carry those terms. This tool does not download: fetch `files[0].url` with curl into storyboard/footage/ (video, as footage/s<n>-<provider>-<id>.mp4) or storyboard/images/stock/ (photo); Commons video is WebM and needs an ffmpeg transcode. People, logos and brands in frame stay a separate rights question on every provider; NASA insignia and identifiable current astronauts are excluded from commercial use. English keywords work best on Pexels, Pixabay and NASA. Read-only; Pexels allows 200 requests/hour, Pixabay 100/minute.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'Search terms — a concrete subject in English ("1960s street tram", "rice paddy aerial"); Pixabay reads the first 100 characters' },
+        media: { type: 'string', enum: ['video', 'photo'], description: 'video (default) for a stock_video cut · photo for a still_camera source image' },
+        providers: {
+          type: 'array',
+          items: { type: 'string', enum: ['pexels', 'pixabay', 'nasa', 'commons'] },
+          description: 'Which providers to ask (default all four). NASA for space, earth science and aviation history; Commons for archival and historical files',
+        },
+        orientation: { type: 'string', enum: ['portrait', 'landscape', 'square', 'any'], description: 'portrait for a 9:16 short, landscape for 16:9 long-form (default any). Applied after the call; NASA reports no dimensions' },
+        limit: { type: 'number', description: 'Items per provider (default 8, max 30; NASA pages 10 at a time)' },
+        minWidth: { type: 'number', description: 'Minimum pixel width — 1080 for a portrait short, 1920 for landscape' },
+        minDuration: { type: 'number', description: 'Video only — shortest clip in seconds to keep' },
+        maxDuration: { type: 'number', description: 'Video only — longest clip in seconds to keep (long archive reels are trimmed with visual.in)' },
+        locale: { type: 'string', description: 'Pexels locale (ko-KR, en-US) or a Pixabay two-letter lang; Commons and NASA ignore it' },
       },
       required: ['query'],
     },
@@ -1839,8 +1881,9 @@ Do NOT pass reference images containing real human faces — the 2.x models reje
 References carry the artistic STYLE through along with the subject. That is the feature when you want a sketch or toon look transferred — this is the only style-transfer lane in the plugin, since Veo 3.1 dropped style references — and a defect when you only wanted the layout: a storyboard frame passed here returns its drawing style, not its composition. For composition use seedance_img2video with sourceImagePath + lastImagePath.
 Do NOT feed a three-view or multi-view character sheet. ByteDance's own docs advise against it twice: the model reads the separate angles as separate people, which worsens identity drift and produces duplicate characters in one frame. Send a headshot (face only, neutral expression, minimal shoulders and background) plus one full-body shot instead — the docs call those two sufficient. Order is weight: put the asset that must be matched most precisely first in the array.
 Reference AUDIO gives a character a fixed voice. Pass the clip in referenceAudioPaths with generateAudio: true and bind it in the prompt the way the 2.5 guide does — "Images 1-2 are Character 1 and correspond to Audio 1; Image 3 is Character 2 and speaks with the voice of Audio 2" (@Image N and @Audio N are each list's own order). Route this to dreamina-seedance-2-5-260628: only its guide documents the per-character mapping and only it takes audio-only input; the 2.0 series takes at most 3 clips and needs an image alongside. A channel character's fixed voice sample lives at data/<channel>/assets/characters/<id>/voice.wav. Veo has no audio reference at all.
+Reference VIDEO hands over camera movement, blocking and motion timing — the Blender previz lane (blender_render_previz → referenceVideoPaths). The vendor's own "3D clay-model reference" recipe: a grey primitive render, each actor its own flat colour, no stamp or gizmos, 24 fps, a whole number of seconds equal to durationSeconds; the styled source still goes first in referenceImagePaths ("Image 1 is the first frame" — first_frame cannot be mixed with a reference video); the prompt names "Video 1" as the ONLY reference for camera, shot rhythm, subject trajectory and blocking, maps each coloured model to its Image, and says "Do not reference its visual content". The vendor takes video by public URL only, so a local file is published for the life of the task — through MEDIA_UPLOAD_URL when set, else a cloudflared quick tunnel — and released afterwards. Input seconds are billed alongside output seconds at a lower per-token rate.
 
-Returns: a text block with the saved .mp4 file path, reference image and audio lists, model, ratio, resolution, duration, and the billed completion token count.`,
+Returns: a text block with the saved .mp4 file path, reference image, video and audio lists, model, ratio, resolution, duration, and the billed completion token count.`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -1853,6 +1896,18 @@ Returns: a text block with the saved .mp4 file path, reference image and audio l
           items: { type: 'string' },
           maxItems: 30,
           description: 'Absolute paths to reference images guiding subject appearance — up to 30 for dreamina-seedance-2-5-260628, up to 9 for the 2.0 series. Must not contain real human faces. May be left out only on dreamina-seedance-2-5-260628 when referenceAudioPaths carries the reference; the 2.0 series needs at least one image.',
+        },
+        referenceVideoPaths: {
+          type: 'array',
+          items: { type: 'string' },
+          maxItems: 10,
+          description: 'Absolute paths to local reference videos — the Blender previz lane (blender_render_previz output as the vendor\'s clay-model reference) — mp4 or mov (H.264/H.265), 200MB each at most, 24–60 fps, 407,696–8,295,044 pixels a frame (720×1280 and 1080×1920 both pass). dreamina-seedance-2-5-260628 takes up to 10 clips of 2–30s (30s total); the 2.0 series up to 3 clips of 2–15s (15s total). Checked with ffprobe before anything is published or billed. Each file is served to the vendor through MEDIA_UPLOAD_URL (+ MEDIA_UPLOAD_API_KEY) when set, otherwise through a cloudflared quick tunnel for the life of the task. @Video N in the prompt is the Nth entry here (referenceVideoUrls continue the numbering after these). No real human faces — the same moderation as images.',
+        },
+        referenceVideoUrls: {
+          type: 'array',
+          items: { type: 'string' },
+          maxItems: 10,
+          description: 'Already-public https URLs of reference videos (or asset://<id> library assets), numbered after referenceVideoPaths. Same limits as referenceVideoPaths, but a URL clip is not probed here — its length and frame size are checked only by the vendor, and its seconds still count against the model total and the bill.',
         },
         referenceAudioPaths: {
           type: 'array',
@@ -2007,6 +2062,500 @@ Returns: a text block with the saved .glb path and model.`,
         },
       },
       required: ['imagePath'],
+    },
+  },
+
+  // ── Blender bridge — previz camera and blocking on the local Blender (blender-previz.md) ──
+  {
+    name: 'blender_scene_read',
+    title: 'Read a Blender scene (bridge)',
+    annotations: HINT.local,
+    description: `Read a .blend file **on this machine** and report what is in it — every object with world position, rotation, size, parent and keyframes, the active camera with lens, field of view and keyframes, the frame range and fps. Opens Blender headless for about a second; changes nothing.
+
+Use as the first call of any previz session ("connect and read the scene, do not modify it yet"), and after any edit you did not make yourself, before blender_camera_set, blender_object_animate, blender_pose_key or blender_motion_import name an object. The other six blender_* tools return the same summary after they save, so a read right after one of them is redundant. A person proxy shows as its root, its <name>.rig armature (19 bones) and its <name>.body mannequin mesh.
+Do NOT use to inspect a GLB or an image — it reads .blend files only. Do NOT guess object names from memory when this can list them.
+Requires Blender 4.2+ (brew install --cask blender, or BLENDER=<executable>); capability_status lists it under 3d_generation.
+
+Returns: a text block with the Blender version, frame range, resolution, the active camera and one line per object.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        blendPath: { type: 'string', description: 'Absolute path to the .blend file (must end in .blend, no "..").' },
+      },
+      required: ['blendPath'],
+    },
+  },
+
+  {
+    name: 'blender_scene_build',
+    title: 'Build a Blender previz set (bridge)',
+    // Overwrites only the previz .blend it owns (reset:true) — a local scratch file, so it is a
+    // generate-class tool, not a HITL one like the publishers.
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    description: `Create (or extend) a .blend previz set **on this machine**: metric units, the cut's frame range and fps, the format's resolution, a floor, a sun, a jointed grey mannequin per person (a 19-bone armature — hips, spine, chest, neck, head, and shoulder, upper arm, forearm, hand, thigh, shin, foot per side — under a mesh that bends at those joints), grey proxies for animals, primitive stand-ins for objects, and GLB imports placed by location, rotation and scale. Saves the file and returns the scene summary.
+
+Use once per cut before framing — the previz lane of skills/storyboard/references/blender-previz.md — with one proxy per subject that must be in frame: person and dog take a height, box a size, cylinder and sphere a radius, car an optional size. Proxies face -Y, a person's own left is +X; rotationZDeg turns them. A person's body is posed by blender_pose_key or driven by a motion-capture clip through blender_motion_import; its root moves with blender_object_animate. A GLB from mesh-objects.md or mlx_3d_generate goes through imports. reset:true (default) starts from an empty scene and **overwrites the file**; reset:false opens the existing file and adds to it, keeping the camera and its keys.
+Do NOT model appearance here — proxies are grey blocking, and face, clothing and props belong to the image sheets. Do NOT use the .blend as a rendered asset — it is a camera, blocking and body-timing plan.
+Requires Blender 4.2+; the glTF importer is built in.
+
+Returns: the same summary as blender_scene_read plus the list of what was built.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        blendPath: { type: 'string', description: 'Absolute path of the .blend to create or extend (ends in .blend, no "..").' },
+        reset: {
+          type: 'boolean',
+          default: true,
+          description:
+            'true (default) starts from an empty scene and replaces blendPath — only a file this tool made; a .blend from anywhere else is refused unless force is true. false opens the existing file and adds proxies/imports to it, keeping the camera, keys, fps, frame range and resolution.',
+        },
+        force: {
+          type: 'boolean',
+          default: false,
+          description: 'With reset:true, also replace a .blend that blender_scene_build did not make (default false — a hand-authored file is never wiped by accident).',
+        },
+        fps: {
+          type: 'number',
+          description: `Frames per second of the cut (1–120). A fresh scene defaults to ${DEFAULT_SCENE_FPS}; with reset:false an omitted value keeps the file's.`,
+        },
+        frameStart: { type: 'number', description: `First frame. A fresh scene defaults to ${DEFAULT_FRAME_START}; with reset:false an omitted value keeps the file's.` },
+        frameEnd: {
+          type: 'number',
+          description: `Last frame. A fresh scene defaults to ${DEFAULT_FRAME_END} (5 s at 30 fps); with reset:false an omitted value keeps the file's. Camera and object keys past it extend the range.`,
+        },
+        width: { type: 'number', description: `Render width in px (even). A fresh scene defaults to ${DEFAULT_PREVIZ_WIDTH}; with reset:false an omitted value keeps the file's.` },
+        height: {
+          type: 'number',
+          description: `Render height in px (even). A fresh scene defaults to ${DEFAULT_PREVIZ_HEIGHT} (9:16; pass 1920×1080 for long-form); with reset:false an omitted value keeps the file's.`,
+        },
+        floor: { type: 'boolean', default: true, description: 'Add a grey ground plane at z = 0 (default true).' },
+        floorSize: { type: 'number', default: 40, description: 'Side of the floor plane in metres (default 40).' },
+        proxies: {
+          type: 'array',
+          maxItems: 100,
+          description: 'Grey stand-ins, one per subject that must be in frame.',
+          items: {
+            type: 'object',
+            required: ['name', 'kind'],
+            properties: {
+              name: { type: 'string', description: 'Unique object name (≤63 chars) — the name blender_object_animate and the read-back use.' },
+              kind: {
+                type: 'string',
+                enum: [...BLENDER_PROXY_KINDS],
+                description: 'person (blocking figure with head, torso, limbs and a nose block marking the front), dog, car, box, cylinder, sphere. Every kind faces -Y.',
+              },
+              location: {
+                type: 'array',
+                items: { type: 'number' },
+                minItems: 3,
+                maxItems: 3,
+                description: "[x, y, z] in metres of the proxy's base point (feet, wheels, bottom face) — default [0, 0, 0].",
+              },
+              rotationZDeg: { type: 'number', description: 'Turn about Z in degrees (default 0 = facing -Y).' },
+              height: {
+                type: 'number',
+                description: 'person / dog / cylinder: total height in metres (person default 1.75, dog 0.55, cylinder 1).',
+              },
+              radius: { type: 'number', description: 'cylinder / sphere: radius in metres (default 0.5).' },
+              size: {
+                type: 'array',
+                items: { type: 'number' },
+                minItems: 3,
+                maxItems: 3,
+                description: 'box: [x, y, z] size in metres (required); car: optional size scaling the 1.8 × 4.4 × 1.45 m default.',
+              },
+              color: { type: 'string', description: 'Optional hex colour (#d0342c) to tell proxies apart — default grey.' },
+            },
+          },
+        },
+        imports: {
+          type: 'array',
+          maxItems: 50,
+          description: 'GLB/glTF files to place — a mesh-objects.md recipe export or an mlx_3d_generate result.',
+          items: {
+            type: 'object',
+            required: ['glbPath', 'name'],
+            properties: {
+              glbPath: { type: 'string', description: 'Absolute path to the .glb/.gltf (no "..").' },
+              name: { type: 'string', description: 'Unique name of the empty that parents the imported objects — move or animate this name.' },
+              location: {
+                type: 'array',
+                items: { type: 'number' },
+                minItems: 3,
+                maxItems: 3,
+                description: '[x, y, z] in metres (default [0, 0, 0]).',
+              },
+              rotationDeg: {
+                type: 'array',
+                items: { type: 'number' },
+                minItems: 3,
+                maxItems: 3,
+                description: 'Euler XYZ in degrees (default [0, 0, 0]).',
+              },
+              scale: { type: 'number', description: 'Uniform scale (default 1).' },
+            },
+          },
+        },
+      },
+      required: ['blendPath'],
+    },
+  },
+
+  {
+    name: 'blender_camera_set',
+    title: 'Set or animate the previz camera (bridge)',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    description: `Place the camera of a .blend previz **on this machine** as numbers — a location in metres, a target point it looks at (or an explicit rotation), a lens in mm or a field of view — and key it over frames for a move. Creates the camera if it is missing, makes it the active camera, saves, and returns the scene summary with the camera's keyframes.
+
+Use for every framing decision in a previz: one key with no frame is a locked-off shot; two or more keys with frames are a dolly, arc, crane or push, interpolated LINEAR by default (constant speed reads as intent; BEZIER eases; CONSTANT cuts). Iterate in numbers — "height 1.2 m", "start at (-3, -3, 1), end at (3, -3, 1)", "24 mm" — each round is one call and costs nothing. Keys past the scene's frame range extend it. clearExisting (default true) replaces the previous move; false layers new keys onto it.
+Do NOT describe a camera in adverbs and hope — pass coordinates. Do NOT pass both lensMm and fovDeg, or both target and rotationDeg on one key. Do NOT use this for objects — that is blender_object_animate. A lensMm on any key turns the move into a zoom: every key then records its lens.
+Coordinates are Blender's: metres, Z up, +Y away from the front view; proxies face -Y, so a camera at negative Y sees their front. Calls on the same .blend run one at a time inside the server (parallel calls on one file are queued, not lost); different files run side by side.
+
+Returns: the scene summary — the camera line shows location, rotation, lens, fov and keyframes.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        blendPath: { type: 'string', description: 'Absolute path to the .blend file (must end in .blend, no "..").' },
+        name: { type: 'string', default: 'Camera', description: 'Camera object name (default "Camera"); created if missing, made the active camera.' },
+        lensMm: {
+          type: 'number',
+          description: 'Focal length in mm on a 36 mm sensor — 24 wide, 35 normal, 50–85 tight. Alternative to fovDeg.',
+        },
+        fovDeg: { type: 'number', description: "Field of view in degrees across the frame's longer side. Alternative to lensMm." },
+        keys: {
+          type: 'array',
+          minItems: 1,
+          maxItems: 500,
+          description: 'Camera poses. One key without a frame is a locked-off shot; several keys (each with a frame) are a move.',
+          items: {
+            type: 'object',
+            required: ['location'],
+            properties: {
+              frame: { type: 'number', description: 'Frame number of this pose. Omit only when this is the single key of a static shot.' },
+              location: {
+                type: 'array',
+                items: { type: 'number' },
+                minItems: 3,
+                maxItems: 3,
+                description: 'Camera position [x, y, z] in metres.',
+              },
+              target: {
+                type: 'array',
+                items: { type: 'number' },
+                minItems: 3,
+                maxItems: 3,
+                description: 'Point the camera looks at [x, y, z] in metres — the usual way to aim it. Exactly one of target or rotationDeg.',
+              },
+              rotationDeg: {
+                type: 'array',
+                items: { type: 'number' },
+                minItems: 3,
+                maxItems: 3,
+                description: 'Explicit Blender Euler XYZ rotation in degrees ([90, 0, 0] looks along +Y). Exactly one of target or rotationDeg.',
+              },
+              lensMm: { type: 'number', description: "Focal length at this key, for a zoom; omit to keep the camera's lens." },
+            },
+          },
+        },
+        interpolation: {
+          type: 'string',
+          enum: [...BLENDER_INTERPOLATIONS],
+          default: 'LINEAR',
+          description: 'Between keys: LINEAR (default, constant speed), BEZIER (ease in and out), CONSTANT (cut).',
+        },
+        clearExisting: {
+          type: 'boolean',
+          default: true,
+          description: "Replace the camera's previous keys (default true); false adds these keys on top.",
+        },
+      },
+      required: ['blendPath', 'keys'],
+    },
+  },
+
+  {
+    name: 'blender_object_animate',
+    title: 'Animate a previz object (bridge)',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    description: `Key an object of a .blend previz **on this machine** — location in metres, rotation in degrees (Euler XYZ, spins past 360 allowed), scale — over frames: the thrown can, the paper plane's path, the car crossing the bridge. Saves and returns the scene summary with the object's keyframes.
+
+Use for things that move through space — vehicles, props, projectiles — and for a person's path across the set (a walk, a formation change: key the person's root, the body keeps its pose or motion on top), so the previz clip carries their timing and path. Name the object exactly as blender_scene_read lists it (a proxy's root is its name, "can", not "can.mesh"; a person's root is "dancer", not "dancer.rig"). Interpolation is LINEAR by default; keys past the frame range extend it; clearExisting (default true) replaces the object's previous keys.
+Do NOT bend a person's limbs with this — this moves the whole figure; joints are blender_pose_key (poses in plain channels) or blender_motion_import (a motion-capture clip). Do NOT move the camera with this — that is blender_camera_set. Calls on the same .blend run one at a time inside the server; different files run side by side.
+
+Returns: the scene summary; the object's line shows its keyframes.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        blendPath: { type: 'string', description: 'Absolute path to the .blend file (must end in .blend, no "..").' },
+        object: { type: 'string', description: 'Exact object name from blender_scene_read — a proxy\'s root ("can"), not its mesh ("can.mesh").' },
+        keys: {
+          type: 'array',
+          minItems: 1,
+          maxItems: 1000,
+          description: 'Poses over time; each needs a frame and at least one of location, rotationDeg, scale.',
+          items: {
+            type: 'object',
+            required: ['frame'],
+            properties: {
+              frame: { type: 'number', description: 'Frame number of this pose.' },
+              location: {
+                type: 'array',
+                items: { type: 'number' },
+                minItems: 3,
+                maxItems: 3,
+                description: '[x, y, z] in metres.',
+              },
+              rotationDeg: {
+                type: 'array',
+                items: { type: 'number' },
+                minItems: 3,
+                maxItems: 3,
+                description: 'Euler XYZ in degrees; values past 360 spin the object.',
+              },
+              scale: {
+                description: 'Uniform scale as a number, or [x, y, z].',
+                anyOf: [{ type: 'number' }, { type: 'array', items: { type: 'number' }, minItems: 3, maxItems: 3 }],
+              },
+            },
+          },
+        },
+        interpolation: {
+          type: 'string',
+          enum: [...BLENDER_INTERPOLATIONS],
+          default: 'LINEAR',
+          description: 'Between keys: LINEAR (default, constant speed), BEZIER (ease in and out), CONSTANT (cut).',
+        },
+        clearExisting: {
+          type: 'boolean',
+          default: true,
+          description: "Replace the object's previous keys (default true); false adds these keys on top.",
+        },
+      },
+      required: ['blendPath', 'object', 'keys'],
+    },
+  },
+
+  {
+    name: 'blender_pose_key',
+    title: 'Pose a previz person (bridge)',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    description: `Key the body of a person proxy in a .blend previz **on this machine** — poses over frames in plain channels, degrees in the figure's own frame: arms (raise, side, twist, elbow), legs (raise, side, knee, ankle), torso (bow, lean, turn), head (nod, tilt, turn) and hips (offset in metres, turn, bow, lean). The mannequin bends at its 19 joints; between keys the pose eases (BEZIER by default). Saves and returns the scene summary plus where the hands, feet and head ended up.
+
+Use for acted beats the cut is about — a point, a wave, a bow, a crouch and jump, a dance count — when no motion-capture clip fits (blender_motion_import is the natural-motion path). A group that is present keys every bone it covers with omitted channels at 0 (the rest pose: arms hanging, standing straight); a group that is absent leaves those bones alone at that frame. raise 90 puts a limb horizontal in front, side 90 horizontal out to the side, elbow/knee 0–150 bend the joint; bow/nod + lean forward, lean/tilt + go to the figure's left, turn + turns to the figure's left; hips.offset [0, 0, -0.2] drops the pelvis 20 cm (a crouch, with knees and thighs bent to match). The raw bones map takes any rig bone as [x, y, z] degrees about the figure's X (side), Y (front-back) and Z (up) axes. Keys more than about 120° apart need an intermediate key or the joint may swing the other way round.
+Do NOT pose with this what a clip can carry — a full dance by hand is hundreds of keys and reads mechanical; import a clip and hand-key only the accents with clearExisting false (each accent takes over ±ease frames of the clip, default 6, so it is reached and left rather than spiked). Do NOT move the figure across the floor with this — that is blender_object_animate on the person's root. Do NOT name the rig or the body — name the person proxy.
+
+Returns: the scene summary; the person's rig line shows its keyframes, and a landmark line gives hand.L, hand.R, foot.L, foot.R and head positions in world metres at the last keyed frame.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        blendPath: { type: 'string', description: 'Absolute path to the .blend file (must end in .blend, no "..").' },
+        object: { type: 'string', description: 'The person proxy\'s name as blender_scene_build created it ("dancer" — not "dancer.rig").' },
+        keys: {
+          type: 'array',
+          minItems: 1,
+          maxItems: 1000,
+          description: 'Poses over time; each needs a frame and a pose with at least one group.',
+          items: {
+            type: 'object',
+            required: ['frame', 'pose'],
+            properties: {
+              frame: { type: 'number', description: 'Frame number of this pose.' },
+              pose: {
+                type: 'object',
+                description: 'Body channels in degrees in the figure\'s own frame; a present group keys all of its bones (omitted channels are 0).',
+                properties: {
+                  hips: {
+                    type: 'object',
+                    description: 'The pelvis — every other bone follows it.',
+                    properties: {
+                      offset: { type: 'array', items: { type: 'number' }, minItems: 3, maxItems: 3, description: '[x, y, z] metres from the rest position: -z crouches, ±x sways.' },
+                      turn: { type: 'number', description: 'Degrees about the up axis, + turns the pelvis to the figure\'s left.' },
+                      bow: { type: 'number', description: 'Degrees about the side axis, + tips the pelvis forward.' },
+                      lean: { type: 'number', description: 'Degrees about the front-back axis, + tips it to the figure\'s left.' },
+                    },
+                  },
+                  torso: {
+                    type: 'object',
+                    description: 'Spine and chest together (the bend is split between them).',
+                    properties: {
+                      bow: { type: 'number', description: '+ bends forward, - arches back.' },
+                      lean: { type: 'number', description: '+ leans to the figure\'s left.' },
+                      turn: { type: 'number', description: '+ twists the torso to the figure\'s left.' },
+                    },
+                  },
+                  head: {
+                    type: 'object',
+                    description: 'Neck and head together.',
+                    properties: {
+                      nod: { type: 'number', description: '+ looks down, - looks up.' },
+                      tilt: { type: 'number', description: '+ tilts the head to the figure\'s left shoulder.' },
+                      turn: { type: 'number', description: '+ looks to the figure\'s left.' },
+                    },
+                  },
+                  armL: {
+                    type: 'object',
+                    description: 'The figure\'s left arm (at +X).',
+                    properties: {
+                      raise: { type: 'number', description: 'Forward and up: 90 horizontal in front, 180 straight up.' },
+                      side: { type: 'number', description: 'Out to the side: 90 horizontal (a T), 180 straight up.' },
+                      twist: { type: 'number', description: 'About the arm\'s own length, + turns the palm forward.' },
+                      elbow: { type: 'number', description: 'Bend 0–150; the forearm folds toward the front of the upper arm.' },
+                    },
+                  },
+                  armR: {
+                    type: 'object',
+                    description: 'The figure\'s right arm (at -X), same channels mirrored.',
+                    properties: {
+                      raise: { type: 'number', description: 'Forward and up: 90 horizontal in front, 180 straight up.' },
+                      side: { type: 'number', description: 'Out to the side: 90 horizontal (a T), 180 straight up.' },
+                      twist: { type: 'number', description: 'About the arm\'s own length, + turns the palm forward.' },
+                      elbow: { type: 'number', description: 'Bend 0–150; the forearm folds toward the front of the upper arm.' },
+                    },
+                  },
+                  legL: {
+                    type: 'object',
+                    description: 'The figure\'s left leg.',
+                    properties: {
+                      raise: { type: 'number', description: 'Thigh forward: 90 horizontal (a high kick or a seat).' },
+                      side: { type: 'number', description: 'Thigh out to the side.' },
+                      knee: { type: 'number', description: 'Bend 0–150; the shin folds back.' },
+                      ankle: { type: 'number', description: '+ points the toes, - flexes the foot up.' },
+                    },
+                  },
+                  legR: {
+                    type: 'object',
+                    description: 'The figure\'s right leg, same channels mirrored.',
+                    properties: {
+                      raise: { type: 'number', description: 'Thigh forward: 90 horizontal (a high kick or a seat).' },
+                      side: { type: 'number', description: 'Thigh out to the side.' },
+                      knee: { type: 'number', description: 'Bend 0–150; the shin folds back.' },
+                      ankle: { type: 'number', description: '+ points the toes, - flexes the foot up.' },
+                    },
+                  },
+                  bones: {
+                    type: 'object',
+                    description: `Raw override per rig bone — [x, y, z] degrees about the figure's side, front-back and up axes, applied after the groups. Bones: ${BLENDER_RIG_BONES.join(', ')}.`,
+                    additionalProperties: { type: 'array', items: { type: 'number' }, minItems: 3, maxItems: 3, description: '[x, y, z] degrees.' },
+                  },
+                },
+              },
+            },
+          },
+        },
+        interpolation: {
+          type: 'string',
+          enum: [...BLENDER_INTERPOLATIONS],
+          default: 'BEZIER',
+          description: 'Between keys: BEZIER (default, eases in and out — how a body moves), LINEAR (constant speed), CONSTANT (snap).',
+        },
+        clearExisting: {
+          type: 'boolean',
+          default: true,
+          description: "Replace the person's previous body keys, including an imported motion, and put every bone back at rest (default true); false layers these keys on top of what is there — each keyed bone's older keys within ±ease frames of the new key are dropped, so the pose is eased into and out of instead of spiking for one frame, and the hips group becomes a delta on the clip's own pelvis (its turn and floor height stay).",
+        },
+        ease: {
+          type: 'number',
+          default: 6,
+          description: 'With clearExisting false: half-width in frames of the window a layered key takes over from the existing keys (default 6, 0 keeps every neighbour and changes that frame alone).',
+        },
+      },
+      required: ['blendPath', 'object', 'keys'],
+    },
+  },
+
+  {
+    name: 'blender_motion_import',
+    title: 'Retarget motion capture onto a previz person (bridge)',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    description: `Drive a person proxy in a .blend previz **on this machine** with a motion-capture clip — a BVH or an FBX with animation — retargeted onto the mannequin's 19 bones: bones are matched by name across the usual vocabularies (Biovision/CMU/Mixamo LeftUpLeg·LeftLeg, Unreal thigh_l·calf_l, Bandai UpperLeg_L·LowerLeg_L, Rigify thigh.L, SMPL L_Hip·L_Knee), the clip is scaled to the figure's leg length, turned so the actor faces -Y at the first frame, and baked to one key per frame. Saves and returns the scene summary plus the bone match.
+
+Use when the cut's content is the body — a dance, a fight, a fall, a walk cycle — and a clip of it exists: free BVH libraries (CMU, Bandai Namco Research dataset-1 under CC BY-NC 4.0, Mixamo FBX after a browser download) or a capture of your own. fromSeconds/toSeconds cut a slice, frameStart places it in the cut, speed retimes it, loop repeats it to the scene's last frame, rootMotion "inplace" (default) keeps the figure where its root stands (the formation is yours through blender_object_animate) while "full" keeps the actor's travel. A source bone the vocabulary misses is named in boneMap; unmatched bones hold their rest pose relative to the parent.
+Do NOT expect appearance from this — it is timing and limb positions on a grey mannequin. Do NOT stack it with blender_pose_key on the same frames unless clearExisting is false on purpose. Do NOT pass files of other kinds — .bvh and .fbx only, and the file must hold an animated skeleton.
+Requires Blender 4.2+; the BVH and FBX importers are built in. At most ${MAX_PREVIZ_FRAMES} frames per import.
+
+Returns: the scene summary; the person's rig line shows the baked frame range, a motion line names the source, its length, the slice and speed, which canonical bone took which source bone and which found none, the scale ratio and the facing correction, and a landmark line gives hand, foot and head positions at the first baked frame.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        blendPath: { type: 'string', description: 'Absolute path to the .blend file (must end in .blend, no "..").' },
+        object: { type: 'string', description: 'The person proxy\'s name as blender_scene_build created it ("dancer" — not "dancer.rig").' },
+        motionPath: { type: 'string', description: 'Absolute path to the motion-capture file — .bvh or .fbx with an animated skeleton (no "..").' },
+        frameStart: { type: 'number', description: "Scene frame where the slice's first frame lands (default: the scene's first frame)." },
+        fromSeconds: { type: 'number', default: 0, description: 'Start of the slice inside the clip, seconds from its beginning (default 0).' },
+        toSeconds: { type: 'number', description: 'End of the slice inside the clip, seconds (default: the whole clip).' },
+        speed: { type: 'number', default: 1, description: 'Playback speed, 0.1–10 (default 1 = as captured; 1.2 plays it 20 % faster).' },
+        loop: { type: 'boolean', default: false, description: 'Repeat the slice until the scene\'s last frame (default false: the slice plays once and the frame range grows to fit it).' },
+        rootMotion: {
+          type: 'string',
+          enum: [...BLENDER_ROOT_MOTIONS],
+          default: 'inplace',
+          description: 'inplace (default): the pelvis keeps its floor position and only rises and falls — the figure\'s root decides where it stands. full: the actor\'s travel across the floor is kept.',
+        },
+        boneMap: {
+          type: 'object',
+          description: `Override or complete the name match: canonical rig bone → source bone name. Canonical bones: ${BLENDER_RIG_BONES.join(', ')}.`,
+          additionalProperties: { type: 'string', description: 'Exact source bone name in the clip.' },
+        },
+        clearExisting: {
+          type: 'boolean',
+          default: true,
+          description: "Replace the person's previous body keys (default true); false layers the clip on top of hand-made keys.",
+        },
+      },
+      required: ['blendPath', 'object', 'motionPath'],
+    },
+  },
+
+  {
+    name: 'blender_render_previz',
+    title: 'Render a previz clip (bridge)',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    description: `Render a .blend previz **on this machine** to an H.264 mp4 plus first, middle and last frame PNGs (or the frames you list). The mp4 is always clean — it is what seedance_reference takes as referenceVideoPaths — and the stills carry the frame number, camera and lens stamped in the corner (stamp:false for clean stills). workbench (default) is flat studio light with cavity shading and outlines — grey figures read against a grey floor, well under a second a frame; eevee renders the scene's light and materials for a previz that also has to say something about mood, a few seconds a frame. Silent — no audio track.
+
+Use after blender_camera_set to look at the move — open the stills, then iterate the camera in numbers — and at the end of a previz session to produce the clip the cut's camera and blocking are planned from. Resolution, fps and frame range default to the scene's (set by blender_scene_build); pass frameStart/frameEnd to render a slice. Output goes to outputPath or <blend dir>/previz/.
+Do NOT treat the previz as a deliverable frame — nothing in it is final appearance; it is a camera and blocking plan. Do NOT pad or loop a failed render — the tool reports failure and writes no mp4.
+Requires Blender 4.2+; the mp4 is written by Blender's own FFmpeg, so no ffmpeg on PATH is needed.
+
+Returns: a text block with the mp4 path, still paths (and any requested still outside the range, which is skipped and named), engine, resolution, fps, frame range, seconds and render time.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        blendPath: { type: 'string', description: 'Absolute path to the .blend file (must end in .blend, no "..").' },
+        outputPath: { type: 'string', description: 'Directory for the mp4 and stills (default: <blend dir>/previz).' },
+        filename: {
+          type: 'string',
+          default: DEFAULT_PREVIZ_FILENAME,
+          description: `Bare mp4 file name (default ${DEFAULT_PREVIZ_FILENAME}); stills are named <stem>-fNNNN.png beside it.`,
+        },
+        engine: {
+          type: 'string',
+          enum: [...BLENDER_PREVIZ_ENGINES],
+          default: DEFAULT_PREVIZ_ENGINE,
+          description: 'workbench (default): flat studio light, cavity, outlines, fastest. eevee: scene light and materials, a few seconds a frame.',
+        },
+        width: { type: 'number', description: "Override render width in px, even (default: the scene's)." },
+        height: { type: 'number', description: "Override render height in px, even (default: the scene's)." },
+        fps: { type: 'number', description: "Override frames per second (default: the scene's)." },
+        frameStart: { type: 'number', description: "First frame to render (default: the scene's)." },
+        frameEnd: { type: 'number', description: `Last frame to render (default: the scene's). At most ${MAX_PREVIZ_FRAMES} frames per render.` },
+        stills: {
+          type: 'array',
+          maxItems: 24,
+          items: { type: 'number' },
+          description: 'Frames to also save as PNG (default: first, middle, last).',
+        },
+        stamp: {
+          type: 'boolean',
+          default: true,
+          description: 'Burn frame number, camera name and lens into the corner of the PNG stills (default true) — what makes a still reviewable. Render the frame-1 still that becomes visual.video.previz.firstFrame with stamp:false (blender-previz.md §6.6): the image tool keeps whatever is in that frame as composition. The mp4 is never stamped, so it can go straight to seedance_reference.',
+        },
+        samples: { type: 'number', default: 16, description: 'eevee only: render samples (default 16).' },
+        timeoutSeconds: {
+          type: 'number',
+          description: 'Override the render time limit in seconds (default grows with the frame count: 120 s + 1 s per frame on workbench, 4 s on eevee).',
+        },
+      },
+      required: ['blendPath'],
     },
   },
 
@@ -2165,9 +2714,9 @@ Returns: a text block with the saved .wav path, voice, language, audio duration,
         },
         speed: {
           type: 'number',
-          description: `Speech speed 0.7–2.0 (default: ${DEFAULT_SUPERTONIC_SPEED}). Keep it identical across every cut of one video.`,
+          description: `Speech speed 0.7–${MAX_SUPERTONIC_SPEED} (default: ${DEFAULT_SUPERTONIC_SPEED}). Keep it identical across every cut of one video. Above 1.2 the model drops syllables (measured), so a faster delivery comes from the produce playback speed pass, not from this value.`,
           minimum: 0.7,
-          maximum: 2.0,
+          maximum: MAX_SUPERTONIC_SPEED,
           default: DEFAULT_SUPERTONIC_SPEED,
         },
         steps: {
@@ -3160,7 +3709,7 @@ Returns: integer credit balance.`,
     annotations: HINT.read,
     outputSchema: YOUTUBE_INSIGHTS_OUTPUT,
     description:
-      'YouTube performance insights — returns channel stats (subscribers, total views), window metrics (views, engagedViews, average view duration, average view percentage, subscriber gain/loss), and per-recent-upload metrics in one call (read-only, no side effects). The grow-youtube loop snapshots this every tick to judge tick-over-tick change and which video types are landing — storing and comparing is the caller\'s job in data/<channel>/growth/youtube/. **Two scopes required**: youtube.readonly for channel/video lookups, yt-analytics.readonly for window metrics. Tokens issued with publish-only youtube.upload have neither, so a reissue is needed; when missing, the error carries reissue guidance. Revenue metrics (includeRevenue) additionally need yt-analytics-monetary.readonly, and even if that fails the other metrics still arrive. **Analytics data runs 2-3 days behind**, so empty-looking values for yesterday/today are normal — set days to 7+ to see a trend. The swipe-away rate used for Shorts hook verdicts (Studio\'s "How many chose to view") has no corresponding Analytics API metric and cannot be fetched here — substitute averageViewPercentage and check the swipe metric manually in Studio.',
+      'YouTube performance insights — returns channel stats (subscribers, total views), window metrics (views, engagedViews, average view duration, average view percentage, subscriber gain/loss), and per-recent-upload metrics in one call (read-only, no side effects). The grow-youtube loop snapshots this every tick to judge tick-over-tick change and which video types are landing — storing and comparing is the caller\'s job in data/<channel>/growth/youtube/. **Two scopes required**: youtube.readonly for channel/video lookups, yt-analytics.readonly for window metrics. Tokens issued with publish-only youtube.upload have neither, so a reissue is needed; when missing, the error carries reissue guidance. Revenue metrics (includeRevenue) additionally need yt-analytics-monetary.readonly, and even if that fails the other metrics still arrive. **Analytics data runs 2-3 days behind**, so empty-looking values for yesterday/today are normal — set days to 7+ to see a trend. Two blocks sit outside that lag: the per-video lifetime block (Data API video statistics) and the channel-level account block (Data API channels.list statistics) both move in near real time, while period — shares and averageViewPercentage included — follows the lag. The swipe-away rate used for Shorts hook verdicts (Studio\'s "How many chose to view") has no corresponding Analytics API metric and cannot be fetched here — substitute averageViewPercentage and check the swipe metric manually in Studio.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -3279,7 +3828,7 @@ Returns: integer credit balance.`,
     annotations: HINT.generate,
     outputSchema: CONTENT_FEEDBACK_OUTPUT,
     description:
-      'Recent-content feedback — pulls the latest N posts (default 5) from YouTube and Instagram, scores them per platform, and writes a chart-heavy HTML report (tables, funnels, bars) locally (nothing goes public). YouTube looks at opening pass-through (engagedViews/views) and average view percentage; Instagram reels at 3-second drop-off (reels_skip_rate), average watch, and shares vs reach. Levers (hook, retention, share, angle) are picked against this batch\'s median, not absolute thresholds. On YouTube, views low while pass-through and retention sit at or above the median means angle — open the next episode\'s title with the felt problem, not the method or tool. Platforms without tokens just skip their section. **Default HTML path** data/<channel>/growth/review-recent.html — changeable via outputPath. Analytics lags 2-3 days, so days defaults to 28. The review-recent skill calls this tool and then opens the report.',
+      'Recent-content feedback — pulls the latest N posts (default 5) from YouTube and Instagram, scores them per platform, and writes a chart-heavy HTML report (tables, funnels, bars) locally (nothing goes public). YouTube looks at opening pass-through (engagedViews/views), average view percentage, and shares against engagedViews (the views past the opening); Instagram reels at 3-second drop-off (reels_skip_rate), average watch, and shares vs reach. YouTube reports no reach, so the two share rates sit on different denominators and are read within a platform, not across. Levers (hook, retention, share, angle) are picked against this batch\'s median, not absolute thresholds. On YouTube, views low while pass-through and retention sit at or above the median means angle — open the next episode\'s title with the felt problem, not the method or tool. Platforms without tokens just skip their section. **Default HTML path** data/<channel>/growth/review-recent.html — changeable via outputPath. Analytics lags 2-3 days, so days defaults to 28. The review-recent skill calls this tool and then opens the report.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -3473,6 +4022,84 @@ Returns: integer credit balance.`,
         channel: SNS_CHANNEL_PROPERTY,
       },
       required: ['query'],
+    },
+  },
+  // ── Storyboard — sequence → scene → shot (skills/storyboard/references/structure-contract.js) ──
+  {
+    name: 'storyboard_read',
+    title: 'Read a storyboard as sequences → scenes → shots',
+    annotations: HINT.local,
+    description: `Read an episode's scenes.js and return it as a tree: sequences (purpose · question · payoff) → scenes (place · time · event · charge · turn · out) → shots (feel · info · size · angle · render · narration). Reads the file only; no API call.
+
+Use it before editing an existing board, and after storyboard_apply to see the board the way the approval page groups it. level=outline is enough to plan a change; level=full carries every raw shot object (large — one shot is ~40 fields).
+Do NOT use it to validate — storyboard_check runs the contract. A board with no window.STRUCTURE comes back with every shot under unplacedShots; write the structure with storyboard_apply.
+
+Returns: JSON — { version, format, shots, sequences[…scenes[…shots]], unplacedShots, splicedShots (broll · outro) }.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        path: { type: 'string', description: 'The storyboard directory (data/<channel>/episodes/<topic>/storyboard/) or its scenes.js' },
+        level: { type: 'string', enum: ['outline', 'scenes', 'shots', 'full'], description: 'outline = sequences with scene numbers · scenes = scene cards with shot numbers · shots (default) = every shot summarised under its scene · full = raw shot objects too' },
+      },
+      required: ['path'],
+    },
+  },
+  {
+    name: 'storyboard_apply',
+    title: 'Write or patch a storyboard with validation',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    description: `Write a storyboard's scenes.js from a sequence → scene → shot model, or patch part of it, in one call. Every shot is validated against the grammar vocabularies (type · beat · size · angle · infoType · shareType · render.mode · transition), the structure against its rules (one place and time per scene, a charge that turns, every scene in exactly one sequence, shots grouped by scene in sequence order, two sizes per scene), and the derived shot labels (sceneSlug · sequence) are written from the structure. Nothing is written when a violation is found — the findings come back instead. Warnings are written and reported.
+
+Use it to author a new board (set = { structure, shots }) after the narration is approved (storyboard §4), and to change one thing later (scenes / sequences / shots by key, insertShots, removeShots, globals for FORMAT · THEME · COMPREHENSION · STORY · PRODUCTION · MUSIC). One call carries the whole change — do not write scenes.js by hand and do not call this once per shot. dryRun:true validates without writing.
+Do NOT pass a shot's visual plan through a summary — pass the object scenes-schema.md defines (visual · shot.space · visual.camera · visual.video …); unknown keys on a shot pass through untouched. Editing an approved board drops its \`// approved:\` line; it is approved again at the HITL gate.
+
+Scene: { no, place, time, event, charge: { open: "+"|"-", close: "+"|"-"|"++"|"--" }, turn, out? }. Sequence: { id, title, purpose, question?, payoff?, scenes: [no…] }. The reasons for each field are in scenes-schema.md §structure.
+
+Returns: the file written or not, counts, and findings (! violation · warning).`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        path: { type: 'string', description: 'The storyboard directory (scenes.js is created there when missing) or its scenes.js' },
+        set: {
+          type: 'object',
+          description: 'Replace the whole board — how a new board is written',
+          properties: {
+            structure: { type: 'object', description: '{ version: "structure-v1", sequences: [...], scenes: [...] }' },
+            shots: { type: 'array', items: { type: 'object', description: 'The scenes-schema.md shot object' }, description: 'Every shot in playback order — the scenes-schema.md shot object; each playback shot carries `scene`' },
+          },
+          required: ['structure', 'shots'],
+        },
+        structure: { type: 'object', description: 'Replace window.STRUCTURE only' },
+        sequences: { type: 'array', items: { type: 'object', description: '{ id, title, purpose, question?, payoff?, scenes }' }, description: 'Upsert sequences by id' },
+        scenes: { type: 'array', items: { type: 'object', description: '{ no, place, time, event, charge, turn, out? }' }, description: 'Upsert scenes by no' },
+        shots: { type: 'array', items: { type: 'object', description: 'One positional upsert', properties: { no: { type: 'number', description: '1-based position' }, shot: { type: 'object', description: 'The scenes-schema.md shot object' } }, required: ['no', 'shot'] }, description: 'Upsert shots by 1-based position; no = length + 1 appends' },
+        insertShots: { type: 'array', items: { type: 'object', description: 'One insert', properties: { after: { type: 'number', description: '1-based position to insert after; 0 = at the start' }, shots: { type: 'array', items: { type: 'object', description: 'The scenes-schema.md shot object' }, description: 'Shots to insert, in order' } }, required: ['after', 'shots'] }, description: 'Insert shots after a 1-based position (0 = at the start)' },
+        removeShots: { type: 'array', items: { type: 'number', description: '1-based position' }, description: '1-based positions to drop (resolved before inserts)' },
+        removeScenes: { type: 'array', items: { type: 'number', description: 'Scene number' }, description: 'Scene numbers to drop from STRUCTURE.scenes and from every sequence' },
+        removeSequences: { type: 'array', items: { type: 'string', description: 'Sequence id' }, description: 'Sequence ids to drop' },
+        globals: { type: 'object', description: 'Other window.* blocks to set — FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, VOICE, MOTION_POLICY' },
+        dryRun: { type: 'boolean', description: 'Validate and report, write nothing' },
+      },
+      required: ['path'],
+    },
+  },
+  {
+    name: 'storyboard_check',
+    title: 'Check a storyboard against its contract',
+    annotations: HINT.local,
+    description: `Run the sequence → scene → shot rules and the full scenes.js contract (check-scenes.js: vocabularies, beat order, camera slots, motion policy, production mode) on a board and return every finding. Reads the file and runs a local script; no API call.
+
+Use it after storyboard_apply and before delegating a reviewer or generating anything — the same command the storyboard skill runs by hand (\`node check-scenes.js storyboard/\`). draft:true is the story pass (§4a): machine-layer absences are deferred and counted, vocabularies and beat order still fail.
+Do NOT treat a pass as visual quality — frame overflow, hero-stat width and speech rate are measured on the rendered canvas in storyboard.html's check strip.
+
+Returns: counts (violations · warnings · deferred) and two lists — structure findings, then shot-contract findings — each line "! where what" (violation) or "· where what" (warning).`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        path: { type: 'string', description: 'The storyboard directory or its scenes.js' },
+        draft: { type: 'boolean', description: 'The story pass (storyboard §4a) — machine-layer absences deferred' },
+      },
+      required: ['path'],
     },
   },
 ];

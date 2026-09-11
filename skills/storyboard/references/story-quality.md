@@ -4,7 +4,11 @@ Apply this contract to every model and authoring route, including skip-research 
 recordings, test episodes and revisions. Read it before candidates or narration. It overrides
 older requirements for a closing question, modern parallels, high-arousal emotions or a twist.
 Keep existing beat identifiers and production limits: `beat:"cta"` is the closing beat,
-not a requirement to ask the viewer for something.
+not a requirement to ask the viewer for something. An ask stays optional; a forwardable thing
+does not — an ask requests behaviour from the viewer, while a forwardable thing is one sentence,
+figure or verdict they can pass on as-is. Asking to be shared is an ask, not a trigger. On a
+short that forwardable thing is `shot.share` on the closing shot, and `check-scenes.js` fails a
+board without it.
 
 ## Contents
 
@@ -19,21 +23,41 @@ not a requirement to ask the viewer for something.
    action, reported speech, uncertainty and interpretation. Never bend facts to fit a moral.
    A real person's unrecorded thoughts or dialogue are not fictional staging.
 2. Write what this audience will understand, reconsider or be able to do in one concrete
-   sentence. A topic label, emotion label or "cooperation matters" is insufficient. Name
-   the subject, what happened or works, and why this relationship matters here.
+   sentence that stays true with the episode's names gone — *what leads to what*, a value and
+   its cause, in the present tense, with no figure and no name (scenario-stage §The message:
+   the name-erasure test, the tomorrow test, the wow-separation test). A topic label, an
+   emotion label, "cooperation matters" or a report of what happened is insufficient: "임금은
+   그 법에 예외를 냈다" is the reversal, not the message. Write three of these for the viewer
+   living now before any direction row (`research.md` §Messages, scenario-stage §Messages
+   first); each direction is one message's topic. Before the
+   messages, write the wow points — what the viewer walks in believing against what the
+   evidence shows, the gap a viewer would say 진짜? at (`research.md` §Wow, scenario-stage
+   §The wow first); each message is the so-what of one. A sentence that
+   says the thing cannot be known is not a message — the episode would have nothing to hand over.
 3. Choose the evidence, action, demonstration or punchline that delivers that content.
-   Design the ending before polishing the opening. A resolution, demonstrated limit or
-   completed joke can be an ending; no universal moral or verbatim thesis announcement is needed.
+   Design the ending before polishing the opening: the close is the 「그날 이후로」 picture —
+   where the world stands after the reversal — and over it the message line, heard once, at or
+   after the payoff (`STORY.thesis`; the checker requires a spoken group to carry it). A
+   resolution, demonstrated limit or completed joke can be that picture; a moral (~하자 ·
+   ~해야 한다) is not the line, and neither is the reversal said again or the picture described.
 4. Create an opening whose question this ending can answer. Compare three content angles,
-   not three adjectives. Pay a useful piece early. Suspense-led shorts defer the whole answer;
-   answer-first long-form may show it early and sustain attention with evidence, method or limits.
+   not three adjectives. Pay a useful piece early. Suspense-led shorts defer the whole answer.
+   A short may also state its result in the first seconds (`hookType:"spoiler"`); attention then
+   rests on the evidence, the how and the consequence, the same way answer-first long-form
+   sustains it. Choose the lane from the material, and say in `STORY.endingReason` what the
+   ending does once the result is already known.
 5. Work backward to the indispensable developments. For each scene, name the new evidence,
    changed expectation, harder choice, consequence or earned release. Ask what becomes
    incomprehensible or unearned if it disappears. Cut repetition and decorative context.
    A reaction or pause can be necessary: explain what the viewer needs time to process.
 6. Default to no CTA. If an ask helps, put it after the promise is paid and connect it to
    the actual choice or useful next action. A generic poll or next-episode teaser cannot
-   substitute for this episode's answer. Never force every sentence into a cliffhanger.
+   substitute for this episode's answer. Never force every sentence into a cliffhanger. An ask
+   stays optional; a forwardable thing does not — an ask requests behaviour from the viewer,
+   while a forwardable thing is one sentence, figure or verdict they can pass on as-is. Asking
+   to be shared is an ask, not a trigger. On a short, name that forwardable thing in the
+   closing shot's `shot.share`, whether or not the episode ends with an ask; on long-form the
+   act beat already asks for it and no checker demands the field.
 
 Keep the seven candidate headings. Under 주제 write the specific content and its evidence
 basis, separating interpretation. Use 전개 #1–#3 for necessary developments; modern parallels
@@ -68,7 +92,8 @@ to substantiate the decision. Do not maintain another copy of the script.
 window.STORY = {
   version: "story-v1", kind: "evidence", // evidence | fiction
   viewerNeed: "The specific reason this audience cares",
-  thesis: "A concrete claim consistent with COMPREHENSION.takeaway",
+  thesis: "The message — research.md M# in the narration's words: present tense, no figure, no name; heard at or after the payoff",
+  // themeStated: {shot, group, quote} — optional: the belief spoken early in someone else's mouth, before the payoff
   basis: "Research file/row references; distinguish fact from interpretation",
   opening: {shot: 1, group: 1, quote: "actual opening words"},
   payoff: {shot: 4, group: 1, quote: "actual answer or decisive action"},
@@ -76,6 +101,7 @@ window.STORY = {
   endingReason: "How the ending resolves or reinterprets the opening",
   cta: "none", // none | question | action | next
   // Otherwise add ask: {shot, group, quote}, ctaReason: "why the ask belongs"
+  // person: {name, aliases: []} — a one-person history short; adds the person-short.md checks
   beats: [
     {shot: 1, change: "What the viewer now anticipates", necessity: "What removal loses"}
     // Exactly one row for EVERY narrated shot, including the close.
@@ -85,6 +111,15 @@ window.STORY = {
 
 This field guide is not a passing fixture. Replace all placeholders and cover every narrated
 shot. The checker verifies structure and references, not the truth or quality of the reasoning.
+`payoff` may point at the opening group itself, but only on a board whose cover states the
+result — `hookType:"spoiler"` or `hookForm:"payoff"`. Any other cover pays after it promises,
+the payoff never plays before the opening, and `ending` still comes last. `thesis` is the
+message the viewer carries out: told in the present, no figure, no command, not the payoff
+line, and heard by a spoken group at or after the payoff — as a rule the closing picture's one
+sentence (scenario-stage §The message). A board that
+declares `person` is a person short — the opening names nobody and carries no year, the
+cover does not state the result, one sentence a shot, and the close follows the blow
+([person-short.md](person-short.md)).
 
 For mixed live-voice recordings, keep `narration: []` to avoid double audio. Supply review-only
 `STORY.transcripts: [{shot: 2, source: "footage/s2-demo.mp4", groups:
@@ -130,7 +165,9 @@ Record the review in `STORY.review` after the read:
 
 Run `node check-story.js storyboard/` after recording the read. Full `check-scenes.js`
 also requires this evidence before production. The hash covers narration, subtitles, screen
-copy, order, beats, comprehension and story decisions, not review or camera/audio settings.
+copy, the closing shot's `shot.share`, order, beats, comprehension and story decisions, not
+review or camera/audio settings — rewriting the forwardable thing after the read invalidates
+the review the same way rewriting a sentence does.
 Vocabulary edits invalidate it: recheck the affected meaning and the whole causal chain,
 record the fresh read, then update the hash. Never refresh only the hash to silence a failure.
 

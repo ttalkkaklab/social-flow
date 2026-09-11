@@ -5,7 +5,7 @@
  * time**, not at startup — the publish tools must work without a search key, and
  * vice versa.
  */
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { accessSync, constants, existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { delimiter, join } from 'node:path';
 export const config = {
@@ -16,6 +16,10 @@ export const config = {
     naverClientSecret: process.env.NAVER_CLIENT_SECRET || '',
     /** data.go.kr auth key (required by datago_file_fetch/datago_api_call — search/detail/download need no auth) */
     dataGoKrApiKey: process.env.DATA_GO_KR_API_KEY || '',
+    /** Pexels API key (optional — stock_search skips Pexels without it) — https://www.pexels.com/api/ */
+    pexelsApiKey: process.env.PEXELS_API_KEY || '',
+    /** Pixabay API key (optional — stock_search skips Pixabay without it) — https://pixabay.com/api/docs/ */
+    pixabayApiKey: process.env.PIXABAY_API_KEY || '',
     /** Gemini API key (shared requirement of the veo_ and omni_ video, tts_* speech, and music_* music tools) — https://aistudio.google.com/apikey */
     geminiApiKey: process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '',
     /** OpenAI API key (required by the gpt_image_* image generation tools) — https://platform.openai.com/api-keys */
@@ -112,6 +116,40 @@ export function mlxServeApiKey() {
 }
 function binOnPath(name) {
     return (process.env.PATH || '').split(delimiter).some((dir) => dir && existsSync(join(dir, name)));
+}
+/**
+ * The Blender executable bake-blender.py will spawn, or '' when none resolves — BLENDER first,
+ * then the macOS app bundle, then a `blender` on PATH, then the usual Linux prefixes, each of which
+ * must be executable. Same order and same test as the script's find_blender, so capability_status
+ * and the bake never disagree about which binary they mean.
+ */
+export function blenderBin() {
+    // A directory carries the execute bit on unix, so accessSync alone would accept
+    // BLENDER=/Applications/Blender.app — the app bundle, not the binary inside it.
+    const runnable = (p) => {
+        try {
+            accessSync(p, constants.X_OK);
+            return statSync(p).isFile();
+        }
+        catch {
+            return false;
+        }
+    };
+    // Same order as bake-blender.py's find_blender, including the PATH lookup's position: reporting a
+    // binary the bake would not pick — or one it cannot execute — makes capability_status lie.
+    const onPath = (process.env.PATH || '').split(delimiter)
+        .map((dir) => (dir ? join(dir, 'blender') : '')).find((p) => p && runnable(p)) || '';
+    const candidates = [
+        process.env.BLENDER || '',
+        '/Applications/Blender.app/Contents/MacOS/Blender',
+        join(homedir(), 'Applications', 'Blender.app', 'Contents', 'MacOS', 'Blender'),
+        onPath,
+        '/opt/homebrew/bin/blender', '/usr/local/bin/blender', '/usr/bin/blender', '/snap/bin/blender',
+    ];
+    for (const c of candidates)
+        if (c && runnable(c))
+            return c;
+    return '';
 }
 /**
  * Configuration only — does not probe /health. True when MLX Core.app is

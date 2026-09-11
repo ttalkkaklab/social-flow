@@ -1,4 +1,4 @@
-# Scenario craft — thirteen rules that run underneath the beats
+# Scenario craft — fourteen rules that run underneath the beats
 
 The beat skeleton (`scenes-schema.md` §playback order) says **where** scenes go. Short-form
 is three beats, always: hook → drip (1–n) → cta. Long-form still walks two arcs. This file
@@ -52,6 +52,7 @@ episode, and it says in what order to write it and how far off the obvious to pl
 - [11. The storyline is an investigation, not a diary](#11-the-storyline-is-an-investigation-not-a-diary)
 - [12. The arc goes down before it comes up — catharsis is release that was paid for](#12-the-arc-goes-down-before-it-comes-up-catharsis-is-release-that-was-paid-for)
 - [13. Cut points first, then half a step](#13-cut-points-first-then-half-a-step)
+- [14. The person short — one person, one turn, a cut per sentence](#14-the-person-short-one-person-one-turn-a-cut-per-sentence)
 - [Sources](#sources)
 
 ## 1. The connective test — every cut is a "but" or a "therefore"
@@ -193,6 +194,13 @@ curiosity — the hook has to sit close enough that the answer feels reachable. 
   the §7 screen reads them). An unclosed loop is the
   "stopped, then left" penalty plus trust damage on the next episode (§six hook forms holds this for the main
   hook; this extends it to every loop opened mid-episode).
+- **A cover that states the answer still owes a loop.** When the cover pays the main gap in
+  its first sentence (`hookType:"spoiler"`), the loop the drips run on is the second question
+  the result raises — how it happened, who paid for it, what it changes for the viewer — and
+  it opens on the cover too, in the same breath as the result. The pair goes into
+  `SB_DOC.craft.loops` the same way; the payer is the drip that closes that second question,
+  not the cover. A cover that pays its only loop and opens nothing is what the ledger is for:
+  nothing is owed, so nothing holds the viewer to the next shot.
 - **The drips (short) / the body (long-form) pay the answer in installments** (measured on our own channel, n=4 —
   retention report, 2026-08-26). Four episodes ranked by retention came out in exactly the
   order their view counts did (52% → 38% → 26% → 19%, a 3× spread in views), and the curve
@@ -207,6 +215,8 @@ curiosity — the hook has to sit close enough that the answer feels reachable. 
   makes it surprising, or put the consequence ahead of the mechanism. **Seam gaps stay off
   the ledger** — the next scene pays them by construction, so the bookkeeping above still
   counts only loops left hanging, one named payer per open loop and not one per sentence.
+  What this measured is the body, not the cover: a short that states its result up front is
+  under the same rule, and each drip still has to open the next gap while it closes one.
   Grade: measured, but on four episodes with the body-drop pattern confirmed from a single
   curve; the report's own §6 asks for re-verification on the next episodes.
 - **The hand-over happens inside the sentence** (own-channel production guide, 2026-08 —
@@ -236,7 +246,11 @@ curiosity — the hook has to sit close enough that the answer feels reachable. 
   replays — measured AVD above clip length on looping Shorts. The story arc's "cta frame
   points back at the cover" is the visual half of this; writing the cta's final narration
   segment so it hands back to the cover's first line is the audio half. Optional, one
-  episode in a while — a forced loop reads as a trick.
+  episode in a while — a forced loop reads as a trick. It stops being occasional on a channel
+  running `shortform_outro: off`: with no outro card the cta's own frame is the last thing on
+  screen, and it either hands back to the cover or the video just stops. Design the return
+  there — the same object in the same framing, and a last sentence the cover's first line
+  answers on the second pass. It is still a return, not a repeat (§7 signature line).
 
 ## 6. The laugh is a broken pattern — comedy at sentence length
 
@@ -271,10 +285,17 @@ frame, so the end is where they are won or thrown away.
   already point there. Answer-first episodes carry it at the result's before/after moment.
   If the `shot.feel` chart (§2) has no clear maximum, the episode is flat and nothing
   marks it in memory.
-- **The end is a designed beat, not a fade.** The act job's outward loop (scenes-schema
+- **The end is a designed beat, not a drift.** The act job's outward loop (scenes-schema
   §playback order, act row) is what "strongest last beat" means in practice — a question
-  the comments will argue over beats a summary of what was just said. Closing softly
-  costs both handles at once: nothing to remember the episode by, nothing to do about it.
+  the comments will argue over beats a summary of what was just said. Plan the other act
+  too: the one thing a viewer would forward as-is, a fact, a verdict, a line or a short
+  checklist that survives being retold with none of the video attached. Commenting and
+  sending are different acts and a question does not produce the second one, so the close
+  carries both, and the forwardable one is written into the closing shot's `shot.share`.
+  Closing softly costs both handles at once: nothing to remember the episode by, nothing
+  to do about it. What follows that last frame is the channel's setting — with
+  `shortform_outro: on` the outro card comes after it, with the toggle off the cta frame
+  ends the file — so write the beat for the ending the episode actually gets.
 - The two don't substitute: an episode with a great peak and a trailing end gets
   remembered but not acted on; a strong CTA after a flat body has nothing to convert.
 - **The music goes out at the peak, not up.** Breaking Bad's crawl-space scene — the scream
@@ -348,7 +369,7 @@ author knows it or not. Craft canon (*Poetics*).
   isn't what anyone was making). §1's connective at those three seams should read "그런데" — a
   quarter mark that reads "그래서" is a turn that didn't turn.
 - **The lecture's fold of the three-act into five minutes**, kept here as a reading aid — the
-  proportions the schema sets for our 35–75 s story arc (setup under a fifth, turn around
+  proportions the schema sets for our short story arc (setup under a fifth, turn around
   two-thirds, payoff the last quarter) stay the source of truth. 0–5 %: the unjust situation,
   no line. 5–15 %: who the protagonist is and what they want, no explaining line. 15–30 %:
   the clue objects as two-second inserts. 30–55 %: the antagonist provokes, the protagonist
@@ -408,14 +429,18 @@ Four rules hold whatever shape gets picked:
   — the failure on screen, the number that shouldn't be possible — never the start of the
   timeline. Every tier of the sourcing agrees: the leaked MrBeast handbook calls the first
   minute the biggest exit and puts the wow element inside it (field practice), YouTube's own
-  playbook tells how-to content to open on the finished result (platform official, **long-form
-  how-to only**), and Harris front-loads the visual anchors (field practice). **A short never
-  opens on the finished result** — the cover is a gap, and the last drip is the first place
-  the answer is complete (scenes-schema §playback order).
+  playbook tells how-to content to open on the finished result (platform official), and
+  Harris front-loads the visual anchors (field practice). **A short decides where its answer
+  first lands, and the two shapes are both legal.** Hold it and the cover is a gap with the
+  last drip the first place the answer is complete (scenes-schema §playback order); state it
+  on the cover and the drips owe the reason, the cost and the limit instead. Holding is the
+  default and keeps a reveal to finish on; open on the result when the result itself is the
+  surprise and the reason is worth the rest of the runtime.
 - **The promise sentence.** Inside the opening the viewer hears, in one sentence, what they
   will know or be able to do by the end. Curiosity alone underdelivers for informational
   content — the promise is the title and thumbnail's claim said out loud, and the episode is
-  then judged on keeping it.
+  then judged on keeping it. Continuity applies to the stimulus, not to the outcome — playbook
+  §2 governs the title and description whatever the cover's hookType is.
 - **The false-answer beat.** When the material has an answer most viewers would guess first,
   the body's first beat sets that answer up and takes it apart with evidence. Presenting only
   the correct explanation leaves viewers **more confident in what they already believed**
@@ -499,6 +524,9 @@ stayed at one level, an end that summarized.
   result. A callback can make the opening mean something different on replay. Default to
   no CTA; if a relevant question or action helps, place it after the payoff. Do not require
   two closing lines or a memory poll. Subscribe and like asks stay banned.
+  An ask stays optional; a forwardable thing does not — an ask requests behaviour from the viewer,
+  while a forwardable thing is one sentence, figure or verdict they can pass on as-is. Asking to be
+  shared is an ask, not a trigger.
 - **Write the hook and the last line first.** 윤수영 (first-generation short-form writer):
   two or three lines of hook and ending, then everything in between — and what makes a scene
   land is 의외성, not description (field practice). The v4→v5 rewrite was exactly this: the
@@ -528,8 +556,9 @@ Checks the pass runs (§10's spirit):
 - The feel chart in storyboard.md carries a sign per shot; the minimum precedes `craft.burst`,
   the maximum sits on the turn or the result.
 - The cover's first spoken sentence names a loss or a stake before it names a question.
-- The 마무리 pays the promise with specific content. CTA is optional and follows the answer.
-  No line in the episode contains a subscribe or like ask.
+- The 마무리 pays the promise with specific content and names the one thing a viewer would
+  forward. CTA is optional and follows the answer. No line in the episode contains a
+  subscribe or like ask, and the forwardable line is never an ask to send it on.
 - Every feel is earned by a development. Quiet discovery, sadness and a pause can work;
   intensity labels do not compensate for a scene without a purpose.
 
@@ -628,6 +657,19 @@ Checks the pass runs (§10's spirit):
   only a sentence.
 - No shot needs its narration to explain what its picture is.
 - The 마무리 takes nothing back from what the body charged the viewer for.
+
+## 14. The person short — one person, one turn, a cut per sentence
+
+A shape, not a new rule: the seven history shorts channels surveyed on 2026-09-10 hold §7,
+§9 and §11 more strictly than the ordinary board does, and the whole shape fits in one
+declaration. The first sentence is a scene already under way — no name, no year, no result
+(§11's cold open with the date removed). The body is 원인 → 막힘 → 한 방, one person and one
+stroke (§9's double hit on the payoff shot, `sound.drop` on it — §7). The close is one
+picture after the blow, and when the record is disputed the last line shows the dispute
+instead of picking a side. The screen changes with every sentence, and the subtitle colours
+only the year and the name. `STORY.person` declares it and `check-story.js` holds the shape:
+[person-short.md](person-short.md). Field practice — observed on top episodes, no
+retention measurement behind it.
 
 ## Sources
 

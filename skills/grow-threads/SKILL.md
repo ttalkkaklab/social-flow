@@ -61,7 +61,10 @@ account. Tactics and style rules live in `references/growth-playbook.md`
    is missing or its frontmatter isn't `status: approved`, call no publish tool.
    Point the user to init. The plan is the standing authorization — if a post
    outside the plan's scope (topic pool, keywords, tone) is needed, don't do it
-   autonomously; ask the user for a plan update.
+   autonomously; ask the user for a plan update. A breakout push handed over by
+   the channel's YouTube loop sits outside that scope as well: it becomes
+   publishable only once the plan says `push_allowed: true` and carries the
+   §Cross-platform push section that explains it.
 2. **No engagement begging** — "좋아요 눌러" (hit like), "댓글 YES" (comment
    YES), "팔로우하면 알려드려요" (follow and I'll let you know) are patterns
    Meta has explicitly said it suppresses. Don't join seuhari swap rooms
@@ -100,6 +103,13 @@ data/<channel slug>/growth/threads/
 Why `posts.md` exists separately: batch homogenization only shows when **the
 published drafts sit in one place**. growth-log is one summary line per tick so
 no copy survives there, and `threads_insights` gives metrics only.
+
+One file outside this directory matters: `data/<channel>/growth/breakout.json`.
+The YouTube loop writes a breakout candidate there and this loop reads it in §4
+— channel-shared for the same reason `autoproduce.json` is, since both loops
+are talking about one video. **Read only.** The push gets recorded in this
+loop's own `state.json`, so neither loop writes the other's file and no lock is
+needed.
 
 The template and the state schema are in `references/growth-plan-template.md`.
 
@@ -304,8 +314,9 @@ hosting to get one.
    gate). The same applies when the upload fails with 404 (no endpoint) or 503
    (server key unset) — write one line in growth-log and proceed without the
    image.
-2. **Generate** — use `image_local_generate` (local Z-Image — the default,
-   zero cost). Reflect the profile's §THEME colors and channel tone in the
+2. **Generate** — under Codex or Grok use the host `image_gen` (subscription
+   allowance, `image.host`); on Claude Code use `image_local_generate` (local
+   Z-Image — the default, zero cost). Reflect the profile's §THEME colors and channel tone in the
    prompt, and **put no text inside the image** — Korean glyph rendering
    breaks easily (local measurement: "딸깍연구소" → "달닥연구소") and broken
    glyphs are an AI tell all by themselves. The body copy does the talking;
@@ -430,6 +441,37 @@ measured cases of skipping big-reach posts (a keyboard app at 7,232 exposures
 
 ### 4. New post authoring (judgment-based — slots are a rhythm guide)
 
+**Before the ordinary judgment, check the breakout handoff.** If
+`data/<channel>/growth/breakout.json` holds a candidate that names `threads` in
+its `pushTargets`, that `state.pushes` has no entry for, and the plan's
+`push_allowed` is true (§Cross-platform push) — that candidate is this tick's
+material. Write a post that stands on its own about what the episode found
+(playbook §New-post style: 1–3 lines, hook not spent, question ending) and let
+the video hang off it. **A post whose whole content is "go watch this" doesn't
+go out** — that's the engagement-begging shape absolute rule 2 names, and it
+reads as an ad to everyone scrolling past. The link follows the plan's §Link
+policy and its target is the YouTube watch URL, not the IG permalink the
+episode fallback uses (playbook §Principles, the links bullet). The gate runs
+as it does on any other post, and so does the golden-hour hold below. On
+publish, record `{ videoId, postId, at }` in `state.pushes` plus one line in
+growth-log. One push per candidate — never a second post about the same video
+in a later tick.
+
+**What the gate does and doesn't cover here.** It catches the ask:
+"공유해 주세요" is engagement begging with or without a candidate behind it
+(growth-post-reviewer P0-2 names the push and exempts nothing). It doesn't
+catch a link on the post surface — that P0 is scoped to search replies. So the
+judgment about whether this post earns its link is yours, before the draft ever
+reaches the gate.
+
+If any condition is missing — no candidate, `threads` not among the targets, or
+`push_allowed` false or absent — leave it alone and go on to the ordinary
+judgment. **The plan is what most often blocks it**: one written before that
+section has a topic pool that says nothing about our own episodes, so pushing
+under it would publish outside the pool (absolute rule 1). Report the waiting
+candidate and ask the user for a plan update; don't push first and explain
+afterwards.
+
 **When there's something to say, write — any time.** The gate on a new post is
 the material, not the clock — first judge, from the topic pool × step-2
 learning, whether there is "something this channel is worth hearing on right
@@ -509,7 +551,9 @@ overlap is conspicuous, revisit the topic pool first.
 
 Summarize from state.json + the last 20 lines of growth-log.md + one
 `threads_insights` call: follower trend, posts and engagements over the last
-7 days, top 3 posts by reach, next slot. No publishing.
+7 days, top 3 posts by reach, next slot, and any breakout candidate sitting in
+`breakout.json` that hasn't been pushed — with the reason it hasn't, since a
+missing plan clause is a question for the user. No publishing.
 
 ## Error handling (the loop keeps running)
 

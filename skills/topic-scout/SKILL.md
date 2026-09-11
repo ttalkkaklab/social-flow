@@ -92,9 +92,22 @@ produces it.
    When the user asks only "what's hot right now" with no channel, answer with one
    `mcp__social-flow__serp_trending_now` call (`geo: KR`, `hours: 24`) and don't create files.
 4. **Overlap with existing topics** — read the `data/<slug>/episodes/*/` directory names
-   and storyboard titles, and mark phrases already covered as `yes` in the
-   Already-used column of the md topic-phrase table. The tool doesn't throw those
-   results away — they can become follow-up episodes.
+   and storyboard titles, and mark phrases already covered as `yes` in the Mark column
+   of the md topic-phrase table. The tool doesn't throw those results away — they can
+   become follow-up episodes.
+4b. **Banned subjects** — read the channel's banned lists and mark every phrase that
+   matches as `banned` in the same column. Three sources, in this order:
+   - profile §2 **Banned** — the subjects and expressions the channel doesn't touch.
+     This one decides topic eligibility.
+   - profile §3 **Banned subjects** — what must not show up in a generated picture.
+     A phrase we could only illustrate with one of these is banned as a topic too.
+   - the growth plans at `data/<slug>/growth/*/growth-plan.md`, where they exist —
+     `## Forbidden subjects` in the youtube and instagram plans, `## Banned topics` in
+     the threads one. Those headings are scoped to publishing; we apply them at scout
+     time too, since a phrase we can't publish isn't a topic.
+   This runs before step 6 so a banned phrase never reaches the pick list. Don't push
+   the banned words back into the step-2 seeds — neither tool takes a negative query,
+   so the only place this works is on the phrases that came back.
 5. **Report** — fill the `references/report-template.md` slots into
    `data/<slug>/growth/keywords/market-keywords.md`. In the same folder put
    `market-keywords.json` (the raw tool response) and a `market-keywords-YYYYMMDD.md`
@@ -120,7 +133,10 @@ produces it.
    `report.css` and the script hold the token and node grammar (single blue · viewBox
    width 700 · no red in the figures · no left accent border).
 6. **Pick** — show the top 8 with AskUserQuestion and let the user choose which phrases
-   to use (multi-select). Don't mix the SNS phrases into the same list — label them
+   to use (multi-select). Take the eight off the ranking with the `banned` rows already
+   removed, not off the raw score order — a banned phrase is dropped from the list, not
+   shown greyed out. An option in AskUserQuestion is an offer, and offering a banned
+   subject is the failure. Don't mix the SNS phrases into the same list — label them
    "what SNS is talking about" and add only two or three separately. Putting a
    YouTube-validated topic and a mention list on the same line makes the user read
    them as equally weighted. Write the chosen phrases into the md's `## Chosen topics`,
@@ -157,6 +173,12 @@ the YouTube section (and the reverse — the report goes out even when one side 
   that gap.
 - Mark phrases outside the channel topic area as `skip` in the md topic-phrase table.
   Leave them in if the user wants. The HTML family strip reads that column.
+- Mark a phrase the channel bans as `banned` in the same column. There's no "leave it
+  in if the user wants" here — off the topic axis is a judgement call, a ban isn't. It
+  moves only when the user edits profile §2/§3 or the growth plan, and that edit comes
+  first. A `banned` mark beats a pick: the script keeps the phrase out of the cards, the
+  family strip and the chosen-topics box, and prints it under "Off limits for this
+  channel" so the drop stays visible.
 - This skill doesn't approve growth plans or queue markers. It observes and lists.
 - It doesn't call publish tools.
 - Don't put a 5x on 10 views up as a topic — the tool's `minViews` default of 1000 is

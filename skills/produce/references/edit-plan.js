@@ -53,6 +53,10 @@ function compile(scenes, text) {
     }
     if (p.enter==='black'||p.enter==='white') prev.exit=p.enter;
   });
+  plan.forEach((p,k)=>{
+    if (shots[k].s.visual?.reuse !== undefined && (p.in !== 0 || p.handle !== 0))
+      throw new Error('Reused clips cannot use edit.in or outgoing live handles; supply the complete trimmed file and use cut or dip after it');
+  });
   const resolved=plan.map((p,k)=>{
     const expected={enter:p.enter,exit:p.exit,join:p.join,handle:p.handle,in:p.in,pre:p.pre,post:p.post};
     for (const [key,value] of Object.entries(expected)) {

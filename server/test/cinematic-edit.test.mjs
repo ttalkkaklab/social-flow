@@ -36,7 +36,7 @@ const builder=readFileSync(path.join(root,'skills/produce/references/build-reel.
 const render=builder.slice(builder.indexOf('  INS=(); FILT=""; NIN=0'),builder.indexOf('  # ── 7.5)'));
 const common=`set -euo pipefail
 say(){ echo "$1"; }
-W=160; H=90; FPS=30; FULL_VIDEO_SHOTS='0 1'; MV=1; FOFF=(0); FDUR=(0.35)
+W=160; H=90; FPS=30; FULL_VIDEO_SHOTS='0 1'; REUSED_VIDEO_SHOTS=''; MV=1; FOFF=(0); FDUR=(0.35)
 SPANSET=1; SPAN=0.035; ZOOM_SPAN=0.035; PAN=''; EASE=linear; KB_EASE=linear
 DRIFT=0; FX=0.5; FY=0.5; ZDIR=none; N=1; ZB=240:135; SCENE_FADE=0.3
 WHIP_BLUR=9; ZOOM_THRU=0.3; PREVEXIT=''; EXITM=''; PUSH_DIR=''; WARN=0
@@ -88,6 +88,14 @@ test('live outgoing frames continue across J-cut; every transition preserves fra
   assert.equal(Number(probe(path.join(dir,'work/handle0.mp4')).nb_read_frames),8);
   r=runRender(dir,'IDX=0; FVIS=(a.mp4); HANDLE_FRAMES=12; RENDER_FRAMES=72; RENDER_D=2.4; SOURCE_IN=1');
   assert.notEqual(r.status,0);assert.match(r.stdout,/including live handle/);
+  r=runRender(dir,"IDX=0; FVIS=(a.mp4); REUSED_VIDEO_SHOTS='0'; HANDLE_FRAMES=0; RENDER_FRAMES=90; RENDER_D=3; FRAMES=90; D=3; D1=3");
+  assert.equal(r.status,0,r.stdout+r.stderr);
+  assert.equal(Number(probe(path.join(dir,'work/v0.mp4')).nb_read_frames),90);
+  for(const change of ['SOURCE_IN=0','SOURCE_IN=0.2','HANDLE_FRAMES=12; RENDER_FRAMES=72; RENDER_D=2.4']){
+   r=runRender(dir,"IDX=0; FVIS=(a.mp4); REUSED_VIDEO_SHOTS='0'; HANDLE_FRAMES=0; RENDER_FRAMES=60; RENDER_D=2; "+change);
+   assert.notEqual(r.status,0);assert.match(r.stdout,/Reused card/);
+  }
+
  }finally{rmSync(dir,{recursive:true,force:true});}
 });
 

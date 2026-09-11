@@ -9,13 +9,15 @@ style rules there are enforced by a checker.
 ## Tool lanes — one lane each, no fallbacks
 
 These are the lanes the skills are allowed to name. A skill's `allowed-tools` may
-list the plugin's own server and nothing else.
+list the plugin's own server and nothing else; a host CLI's native media tools are not MCP
+tools and never appear there.
 
 | Job | Lane | Not allowed |
 |---|---|---|
 | Driving a browser | `ego lite` (`ego-browser`, a tool of the user's machine) | claude-in-chrome, chrome-devtools MCP, any other browser automation |
 | Rendering or screenshotting a page | headless Chrome via `skills/produce/references/capture-frames.sh` | browser MCP servers |
-| Images, video, voice, music, search | `mcp__social-flow__*` — the server this plugin ships | any external MCP server |
+| Images and video where the host CLI ships its own media tools (Codex `image_gen`; Grok `image_gen` · `image_edit` · `image_to_video` · `reference_to_video`) | the host tool first (user directive 2026-09-07); the plugin server only as a fallback the user asked for | any external MCP server |
+| Images, video, voice, music, search otherwise | `mcp__social-flow__*` — the server this plugin ships | any external MCP server |
 | Reading an image | the `Read` tool, which takes images natively | vision MCP servers |
 
 **ego lite has no fallback.** It is macOS-only. Where it is missing, the skill says

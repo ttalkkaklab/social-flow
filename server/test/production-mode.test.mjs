@@ -17,6 +17,9 @@ const { scenePlan } = require('../../skills/produce/references/seedance-route.js
 function fixture(n = 3) {
   const win = { FORMAT: 'shorts-9x16', PRODUCTION: { mode: 'full_video', imageProvider: 'host',
     maxAttempts: 3, videoBudgetUsd: 15,
+    // The two HITL choices every generated cut needs (user directive 2026-09-11).
+    previz: { renderer: 'threejs', selection: { kind: 'user', reference: 'User chose the three.js previz (no Blender on this machine).' } },
+    videoModel: { model: 'dreamina-seedance-2-0-260128', resolution: '1080p', selection: { kind: 'user', reference: 'User chose Seedance 2.0 at 1080p with the displayed table.' } },
     style: { preset: 'spatial-explainer', reference: 'https://www.youtube.com/shorts/LQZjvQ5W2ck',
       world: 'A granite valley with a river.', materials: 'Matte concrete and granite.', palette: 'Grey, green and blue.',
       lighting: 'Soft daylight with contact shadows.', camera: 'Elevated spatial reveals.' } }, SCENES: [] };
@@ -28,8 +31,9 @@ function fixture(n = 3) {
       look: 'miniature', worldId: 'valley', before: 'Buildings enclose the stream.', action: 'Buildings rise vertically.',
       continuity: 'The river and mountain retain their original shape.', reject: 'Reject unstable buildings and changing trees.' } },
     visual: { why: 'Physical removal exposes the stream.', action: 'The buildings rise.', bg: `images/scene-${i + 1}.png`,
+      // One static set-up in three: the camera moves on two of every three full-video shots.
       camera: { framing: ['Elevated three-quarter view', 'Low wide view of the valley', 'Close view of the stream bed'][i % 3],
-        movement: 'static', speed: 'steady', end: 'The open stream' },
+        movement: ['static', 'dolly in', 'truck right'][i % 3], speed: i % 3 ? 'slow' : 'steady', end: 'The open stream' },
       video: { engine: 'seedance', model: 'seedance-1-5-pro-251215', resolution: '1080p', generateAudio: false } } }));
   for (let i = 0; i < n; i++) {
     const prompts = assemble(win, i); win.SCENES[i].visual.bgPrompt = prompts.sourcePrompt;
@@ -40,6 +44,22 @@ function fixture(n = 3) {
 }
 function approve(win) { win.PRODUCTION.approval = { kind: 'user', at: '2026-09-06T12:00:00+09:00',
   reference: 'User selected full video with the displayed budget.', quoteFingerprint: quote(win).quoteFingerprint }; }
+// A deterministic moving clip — a window panning over a testsrc2 field — validates media
+// contracts and clears the measured-motion gate; it is not claimed as a visual-quality sample.
+function movingClip(file, { seconds = 5, frozenHead = 0 } = {}) {
+  const pan = "crop=540:960:x='(iw-540)*(0.5+0.5*sin(t*2))':y='(ih-960)*(0.5+0.5*cos(t*2))',scale=1080:1920";
+  const filters = ['-vf', frozenHead ? `${pan},tpad=start_duration=${frozenHead}:start_mode=clone` : pan];
+  const render = spawnSync('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i', `testsrc2=s=1080x1920:r=24:d=${seconds}`, ...filters,
+    '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', file], { encoding: 'utf8' });
+  assert.equal(render.status, 0, render.stderr);
+  return file;
+}
+function stillClip(file, seconds = 5) {
+  const render = spawnSync('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i', `color=c=gray:s=1080x1920:r=24:d=${seconds}`,
+    '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', file], { encoding: 'utf8' });
+  assert.equal(render.status, 0, render.stderr);
+  return file;
+}
 function withBoard(fn) {
   const dir = mkdtempSync(path.join(tmpdir(), 'sf-production-')), board = path.join(dir, 'storyboard'), work = path.join(dir, '.work');
   mkdirSync(path.join(board, 'images'), { recursive: true }); mkdirSync(work);
@@ -60,9 +80,28 @@ test('quotes both modes with billed seconds, retry range and API rates, excludin
   win.PRODUCTION.comparison = { resolution: '480p' };
   assert.throws(() => quote(win), /has no price/);
 });
+// Every generated cut carries its 3D previz (blender-previz.md §6, user directive 2026-09-11): the
+// Seedance fields of the reference route, the record, and the motion prompt the assembler writes
+// from it — the same board once its previz is rendered.
+function withPreviz(win, i, over = {}) {
+  const scene = win.SCENES[i];
+  // The shot carries the model the user chose (the fixture pinned 1.5 Pro, which takes no reference video).
+  Object.assign(scene.visual.video, { model: win.PRODUCTION.videoModel.model, resolution: win.PRODUCTION.videoModel.resolution, modelPurpose: 'previz', modelReason: 'the previz carries the camera', realFaceInput: false,
+    referenceImagePaths: [scene.visual.bg], previz: { renderer: 'threejs', clip: `previz/s${i + 1}.mp4`, firstFrame: `previz/s${i + 1}-f0001.png`,
+      sha256: 'c'.repeat(64), fps: 24, seconds: 5, camera: { movement: scene.visual.camera.movement },
+      actors: [{ color: 'red', is: 'the buildings', image: 2 }], ...over } });
+  const prompts = assemble(win, i, '/board');
+  scene.visual.bgPrompt = prompts.sourcePrompt; scene.visual.video.prompt = prompts.motionPrompt;
+  return prompts;
+}
 test('hybrid and full video retain distinct semantic and policy rules', () => {
   const win = fixture(), scene = win.SCENES[0];
   assert.deepEqual(mode.check(win, { requireApproval: true }), []);
+  // The bare fixture has no previz yet: that is the one thing the full check refuses.
+  assert.deepEqual(checkScene(scene, { production: win.PRODUCTION }).map(m => m.replace(/ — .*/, '')),
+    ['shot.render: every generated_video cut pre-renders its camera and blocking in 3D first']);
+  assert.deepEqual(checkScene(scene, { production: win.PRODUCTION, draft: true }), []);
+  withPreviz(win, 0);
   assert.deepEqual(checkScene(scene, { production: win.PRODUCTION }), []);
   assert.match(checkScene(scene).join(), /requires object_html/);
   const base = { generatedVideoMax: 2, videoBudgetUsd: 10, minTrueMotion: 1, allowedKinds: ['ai-video'] };
@@ -123,10 +162,7 @@ test('retry-inclusive budget, per-shot attempt limit and actual spend block new 
   assert.match(check(board, { beforeCall: 2 }).errors.join(), /Actual video spend/);
 }));
 test('actual media and review hashes gate the full-video manifest', () => withBoard(({ board, work, save }) => {
-  const win = fixture(1), video = path.join(work, 'accepted.mp4');
-  // A deterministic synthetic clip tests media validation; it is not claimed as a visual-quality sample.
-  const render = spawnSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'color=c=gray:s=1080x1920:r=1:d=5', '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', video], { encoding: 'utf8' });
-  assert.equal(render.status, 0, render.stderr);
+  const win = fixture(1), video = movingClip(path.join(work, 'accepted.mp4'));
   writeFileSync(path.join(board, 'images/scene-1.png'), 'fixture source bytes');
   win.SCENES[0].visual.video.clip = '.work/accepted.mp4'; save(win);
   assert.match(check(board, { ready: true }).errors.join(), /review is required/);
@@ -143,6 +179,61 @@ test('actual media and review hashes gate the full-video manifest', () => withBo
   assert.match(check(board, { manifest: true }).errors.join(), /without overlays/);
   writeFileSync(path.join(board, 'images/scene-1.png'), 'changed source');
   assert.match(check(board, { ready: true }).errors.join(), /review is stale/);
+  // The clip's own bytes are measured: a frozen picture never enters the timeline even with a clean review.
+  writeFileSync(path.join(board, 'images/scene-1.png'), 'fixture source bytes');
+  stillClip(video); review.videoSha256 = digest(readFileSync(video)); review.sourceSha256 = hashFile(board, win.SCENES[0].visual.bg);
+  writeFileSync(path.join(work, 'video-review.json'), JSON.stringify({ shots: [review] }));
+  const still = check(board, { ready: true }).errors.join();
+  assert.match(still, /reads as a still/); assert.match(still, /too little motion/);
+  assert.ok(JSON.parse(readFileSync(path.join(work, 'motion-metrics.json'), 'utf8'))[review.videoSha256].frozenShare > .9);
+}));
+test('measured motion gates the in-point and the generated length against the card', () => withBoard(({ board, work, save }) => {
+  const { motionGateErrors, motionMetrics } = require('../../skills/produce/references/check-production.js');
+  const win = fixture(1), s = win.SCENES[0];
+  const late = movingClip(path.join(work, 'late.mp4'), { seconds: 5, frozenHead: 1.5 });
+  const m = motionMetrics(work, late, digest(readFileSync(late)));
+  assert.ok(m.onsetSeconds >= 1.25 && m.onsetSeconds <= 2, JSON.stringify(m));
+  assert.match(motionGateErrors(s, m, 6.5).join(), /visible motion starts at .* edit\.in is 0/);
+  s.edit = { in: 1.5 }; assert.deepEqual(motionGateErrors(s, m, 6.5), []);
+  const long = movingClip(path.join(work, 'long.mp4'), { seconds: 10 });
+  const lm = motionMetrics(work, long, digest(readFileSync(long)));
+  delete s.edit; assert.match(motionGateErrors(s, lm, 10).join(), /never reaches the screen/);
+  s.edit = { in: 4 }; assert.deepEqual(motionGateErrors(s, lm, 10), []);
+  assert.deepEqual(motionGateErrors(s, lm, 5), []);
+}));
+test('measure-motion summarises samples into frozen share, longest still run and onset', () => {
+  const motion = require('../../skills/produce/references/measure-motion.js');
+  const frames = [...Array(8).fill(.4), ...Array(8).fill(3), ...Array(4).fill(.9)].map((diff, i) => ({ time: i / 4, diff }));
+  const s = motion.summarize(frames);
+  assert.deepEqual(s, { samples: 20, seconds: 5, mean: 1.54, frozenShare: .6, longestStillSeconds: 2, onsetSeconds: 2 });
+  assert.match(motion.findings(s, 'video').join(), /60% of the samples/);
+  assert.deepEqual(motion.findings({ ...s, frozenShare: .2, mean: 2.5, longestStillSeconds: 1 }, 'video'), []);
+  assert.deepEqual(motion.findings(s, 'card', { stillLimit: 8 }), []);
+  assert.match(motion.findings({ ...s, frozenShare: .7 }, 'card', { stillLimit: 8 }).join(), /reads as a still/);
+  assert.match(motion.findings({ ...s, frozenShare: .5, longestStillSeconds: 9 }, 'card', { stillLimit: 8 }).join(), /stands still for 9s/);
+  assert.equal(motion.plateStillLimit({ max_static_ground_seconds: 'off' }), 8);
+  assert.equal(motion.plateStillLimit({ max_static_ground_seconds: 11 }), 8);
+  assert.equal(motion.plateStillLimit({ maxStaticGroundSeconds: 4 }), 4);
+  assert.equal(motion.plateStillLimit(undefined), 8);
+});
+test('the assembled reel is measured card by card: a still-like slide fails, a still card is not gated', () => withBoard(({ work }) => {
+  const { cardMotion } = require('../../skills/produce/references/verify-assembled.js');
+  const moving = movingClip(path.join(work, 'a.mp4'), { seconds: 4 }), still = stillClip(path.join(work, 'b.mp4'), 4);
+  mkdirSync(path.join(work, 'work'));
+  const concat = spawnSync('ffmpeg', ['-v', 'error', '-y', '-i', moving, '-i', still, '-filter_complex', '[0:v][1:v]concat=n=2:v=1:a=0,fps=30[v]', '-map', '[v]',
+    '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', path.join(work, 'reel.mp4')], { encoding: 'utf8' });
+  assert.equal(concat.status, 0, concat.stderr);
+  writeFileSync(path.join(work, 'work/edit-timeline.tsv'), '0\t0\t120\tcut\t0\t0\t0\n1\t120\t120\tcut\t0\t0\t0\n');
+  const scenes = [{ visual: { video: { clip: 'a.mp4' } } }, { visual: { slide: { kind: 'diagram', motion: true, file: 'slides/s2.html' } } }];
+  assert.throws(() => cardMotion(work, scenes, { max_static_ground_seconds: 'off' }), /card 1: .*repeat the previous picture/);
+  scenes[1] = { visual: { bg: 'images/still.png', camera: { movement: 'dolly in' } } };
+  const result = cardMotion(work, scenes, { max_static_ground_seconds: 'off' });
+  assert.equal(result.plateStillLimit, 8);
+  assert.deepEqual(result.cards.map(c => c.kind), ['video', 'still']);
+  assert.ok(result.cards[0].frozenShare < .1 && result.cards[1].frozenShare > .9);
+  scenes[0] = { visual: { slide: { kind: 'camera', motion: true, file: 'slides/s1.html' } } };
+  scenes[1] = { visual: { video: { clip: 'b.mp4' } } };
+  assert.throws(() => cardMotion(work, scenes, {}), /card 1: .*stands still/);
 }));
 test('browser and CLI share signatures and the template loads a cost comparison', () => {
   const sandbox = { window: {} };
@@ -226,6 +317,214 @@ test('travelling end images follow the camera endpoint without forcing a fixed v
  const p=assemble(w,0);assert.match(p.endFramePrompt,/closer view beside the river/);assert.doesNotMatch(p.endFramePrompt,/Keep the same camera position/);
 });
 
+// Offline media validates the import contract, not the visual quality of generated footage.
+function reuseFixture(video) {
+ const w=fixture(4); w.PRODUCTION={mode:'hybrid',videoBudgetUsd:0,maxAttempts:2};
+ const lines=['Why is the box moving?','The table shakes.','A fan moves the table.','Check the table before the box.'];
+ const ref=shot=>({shot,group:1,quote:lines[shot-1]});
+ w.COMPREHENSION={mode:'narrative',question:'Why does the box move?',answer:'A fan moves the table.',takeaway:'Check the support.',branches:[],terms:[]};
+ w.SCENES.forEach((s,i)=>{
+  s.transition='cut';s.beat=['hook','drip','drip','cta'][i];s.narration=[{tts:lines[i],sub:lines[i]}];
+  s.shot={...s.shot,feel:'curious',size:'mcu',angle:'eye',info:lines[i],infoType:'other',render:{mode:'generated_video',purpose:'live_action',motionEssential:true,
+   reason:['Observe the box drift.','Follow the shaking support.','Reveal the fan contact.','Trace the cause back.'][i],action:'The box slides.',whyNotStill:'The changing position shows the motion.'}};
+  // A short's close carries the forwardable thing; the ask stays optional, the trigger does not.
+  if(s.beat==='cta'){s.shot.share=lines[i];s.shot.shareType='checklist';}
+  s.shot.videoDesign={motion:{kind:'subject_action',subject:'Box',visibleChange:'The box slides across the table.',beats:[{at:0,state:'Box at the left.'},{at:4,state:'Box at the right.'}]}};
+  s.visual={picture:'ai-video',overlay:'none',why:'Movement is the evidence.',action:'The box slides.',reuse:{clip:video,sha256:digest(readFileSync(video)),sourceEpisode:'archived-episode-7 (provenance only)',sourceRange:{start:10,end:15}}};
+ });
+ w.SCENES[0].hookType='curiosity';w.SCENES[0].hookForm='gap';
+ w.STORY={version:'story-v1',kind:'fiction',viewerNeed:'Solve the moving-box puzzle',thesis:'Check the table before the box.',basis:'An explicitly fictional demonstration',opening:ref(1),payoff:ref(3),ending:ref(4),endingReason:'Return to the initial mistaken attribution',cta:'none',beats:[1,2,3,4].map(shot=>({shot,change:`New clue ${shot}`,necessity:`Required step ${shot}`}))};
+ w.STORY.review={hash:require('../../skills/storyboard/references/story-contract.js').storyHash(w),verdict:'pass',unresolved:[],...Object.fromEntries(['meaning','progression','payoff','grounding'].map(k=>[k,{reason:`${k} evidence in fictional premise`,refs:[ref(3)]}]))};
+ approve(w);return w;
+}
+test('explicit imports pass scene and production gates at zero generation cost, but never a new API call',()=>withBoard(({board,work,save})=>{
+ const video=movingClip(path.join(work,'import.mp4'));
+ const w=reuseFixture(video);save(w);
+ const run=spawnSync(process.execPath,[path.join(root,'skills/storyboard/references/check-scenes.js'),board,'--json'],{encoding:'utf8'});
+ assert.notEqual(run.status,0,run.stdout+run.stderr);
+ assert.match(run.stdout+run.stderr,/4 generated-video slots[\s\S]*cap at 2/);
+ const p=check(board,{requireSelection:true});assert.deepEqual(p.errors,[]);
+ assert.equal(p.quote.options.hybrid.clips,0);assert.equal(p.quote.options.hybrid.reusedClips,4);
+ assert.equal(p.quote.options.hybrid.firstPassUsd,0);assert.equal(p.quote.options.hybrid.retryHighUsd,0);assert.equal(p.quote.options.hybrid.provisional,false);
+ assert.deepEqual(p.reusedShots,[0,1,2,3]);assert.deepEqual(p.generatedShots,[]);
+ assert.equal(scenePlan(w.SCENES[0]),null);
+ assert.match(check(board,{beforeCall:1}).errors.join(),/cannot be selected/);
+ assert.match(check(board,{ready:true}).errors.join(),/review is required/);
+ const reviews=w.SCENES.map((s,i)=>({shot:i+1,planDigest:shotDigest(w,i),videoSha256:s.visual.reuse.sha256,reviewer:'Synthetic contract fixture; not a quality approval',at:'2026-09-07T00:00:00Z',playback:true,seeks:[.1,2.5,4.8],defects:[],motionEvidence:{...s.shot.videoDesign.motion,cameraOnly:false,observedChange:'The box moves from left to right.'},...Object.fromEntries(['composition','materials','continuity','action','camera','referenceMatch'].map(k=>[k,'Synthetic contract evidence for '+k]))}));
+ const saveReviews=()=>writeFileSync(path.join(work,'video-review.json'),JSON.stringify({shots:reviews}));saveReviews();
+ writeFileSync(path.join(work,'cards.tsv'),w.SCENES.map((s,i)=>`${i}\tvoice.wav\t5\tnone\n`).join(''));
+ writeFileSync(path.join(work,'segs.tsv'),w.SCENES.map((s,i)=>`${i}\t0\t${video}\t${s.narration[0].tts}\t${s.narration[0].sub}\n`).join(''));
+ assert.deepEqual(check(board,{ready:true,manifest:true}).errors,[]);
+ const {verifyManifest}=require('../../skills/produce/references/verify-build-plan.js');
+ assert.equal(Object.keys(verifyManifest(work,board,w.SCENES,w.FORMAT)).length,1);
+ const manifest=readFileSync(path.join(work,'segs.tsv'),'utf8');
+ writeFileSync(path.join(work,'segs.tsv'),manifest.replace(video,video+'::overlay.png'));
+ assert.match(check(board,{manifest:true}).errors.join(),/without overlays/);
+ assert.throws(()=>verifyManifest(work,board,w.SCENES,w.FORMAT),/differs from the declared/);
+ writeFileSync(path.join(work,'segs.tsv'),manifest);
+ const low=path.join(work,'low.mp4');
+ assert.equal(spawnSync('ffmpeg',['-v','error','-f','lavfi','-i','color=c=gray:s=320x240:r=1:d=5','-c:v','libx264','-preset','ultrafast',low],{encoding:'utf8'}).status,0);
+ const lowScene=structuredClone(w.SCENES[0]);lowScene.visual.reuse.clip=low;lowScene.visual.reuse.sha256=digest(readFileSync(low));
+ const {validateReuseAsset}=require('../../skills/produce/references/check-production.js');
+ assert.throws(()=>validateReuseAsset(board,lowScene,w.FORMAT),/1080p/);
+ lowScene.visual.reuse.clip=path.join(work,'missing.mp4');assert.throws(()=>validateReuseAsset(board,lowScene,w.FORMAT),/ENOENT/);
+ reviews[0].playback=false;saveReviews();assert.match(check(board,{ready:true}).errors.join(),/full playback/);reviews[0].playback=true;
+ reviews[0].videoSha256='0'.repeat(64);saveReviews();assert.match(check(board,{ready:true}).errors.join(),/review is stale/);
+ const mixed=structuredClone(w);
+ mixed.SCENES.slice(1).forEach((s,i)=>{
+  s.shot.render={mode:'still_camera',purpose:'portrait',reason:['Inspect the support.','Identify the fan.','Recall the object.'][i],camera:{effect:'push',target:'subject',reason:'Make the subject clear.'}};
+  s.visual={bg:'images/portrait.png',camera:{movement:'dolly in'},slide:{kind:'camera',motion:true,file:`slides/body-${i}.html`}};
+ });
+ mixed.STORY.review.hash=require('../../skills/storyboard/references/story-contract.js').storyHash(mixed);approve(mixed);save(mixed);
+ const single=spawnSync(process.execPath,[path.join(root,'skills/storyboard/references/check-scenes.js'),board,'--json'],{encoding:'utf8'});
+ assert.equal(single.status,0,single.stdout+single.stderr);
+ assert.deepEqual(check(board,{requireSelection:true}).errors,[]);
+ assert.equal(quote(mixed).options.hybrid.reusedClips,1);assert.equal(quote(mixed).options.hybrid.firstPassUsd,0);
+ mixed.SCENES[1]=fixture(1).SCENES[0];mixed.SCENES[1].shot.render={mode:'generated_video',purpose:'live_action',motionEssential:true,reason:'Watch the buildings rise.',action:'Buildings rise.',whyNotStill:'The removal is continuous.'};
+ assert.equal(quote(mixed).options.hybrid.clips,1);assert.equal(quote(mixed).options.hybrid.firstPassUsd,.29);assert.equal(quote(mixed).options.hybrid.retryHighUsd,.58);
+ assert.equal(quote(mixed).options.hybrid.rows[0].shot,2);
+ save(w);
+ const s=w.SCENES[0],original=structuredClone(s);
+ for (const field of ['bgPrompt','bg']) {
+  const invalid=structuredClone(w);invalid.PRODUCTION.imageProvider='gpt';
+  invalid.SCENES[0].visual[field]=field==='bgPrompt'?'Generate a background.':'images/background.png';
+  save(invalid);
+  assert.match(check(board).errors.join(),/cannot also declare/);
+  assert.throws(()=>scenePlan(invalid.SCENES[0]),/cannot also declare/);
+  assert.throws(()=>quote(invalid),/cannot also declare/);
+ }
+ save(w);
+ s.visual.video={clip:video};save(w);assert.match(check(board).errors.join(),/cannot also declare/);assert.throws(()=>scenePlan(s),/cannot also declare/);assert.throws(()=>quote(w),/cannot also declare/);
+ w.SCENES[0]=structuredClone(original);w.SCENES[0].visual.reuse.sha256='0'.repeat(64);approve(w);save(w);assert.match(check(board).errors.join(),/SHA-256 differs/);
+ w.SCENES[0]=structuredClone(original);w.SCENES[0].duration=4;w.SCENES[0].visual.reuse.sourceRange.end=14;approve(w);save(w);assert.match(check(board).errors.join(),/duration differs/);
+ w.SCENES[0]=structuredClone(original);w.SCENES[0].visual.reuse.sourceEpisode='relocated provenance';save(w);assert.match(check(board).errors.join(),/quote is stale/);
+ for(const invalid of [null,{clip:'https://example.com/a.mp4'}, {...original.visual.reuse,sourceRange:{start:NaN,end:5}}]){
+  w.SCENES[0]=structuredClone(original);w.SCENES[0].visual.reuse=invalid;assert.ok(mode.check(w).length);
+ }
+ for(const x of w.SCENES)delete x.visual.reuse;
+ assert.match(mode.check(w).join(),/hybrid needs/);
+}));
+
+/* The second cover shape. A short may state the result on the cover: `hookType:"spoiler"` with
+   `hookForm:"payoff"`, the cover speaking COMPREHENSION.answer, and the payoff landing on the
+   opening group. Only the cover keeps its imported clip so the board stays under the video cap.
+   A legal spoiler cover relaxes nothing on the metadata side — the title and the description
+   stay under platform-playbook §2, which check-meta.js enforces on its own. */
+function spoilerFixture(video) {
+ const w=reuseFixture(video);
+ const lines=['A fan moves the table.','The table shakes under the box.','The fan sits at the table edge.','Check the table before the box.'];
+ const ref=shot=>({shot,group:1,quote:lines[shot-1]});
+ w.SCENES.forEach((s,i)=>{s.narration=[{tts:lines[i],sub:lines[i]}];s.shot.info=lines[i];});
+ w.SCENES[0].hookType='spoiler';w.SCENES[0].hookForm='payoff';
+ w.SCENES[3].shot.share=lines[3];w.SCENES[3].shot.shareType='checklist';
+ w.SCENES.slice(1).forEach((s,i)=>{
+  s.shot.render={mode:'still_camera',purpose:'portrait',reason:['Hold on the shaking table.','Find the fan.','Return to the table.'][i],camera:{effect:'push',target:'subject',reason:'Make the subject clear.'}};
+  s.visual={bg:'images/portrait.png',camera:{movement:'dolly in'},slide:{kind:'camera',motion:true,file:`slides/body-${i}.html`}};
+ });
+ Object.assign(w.STORY,{opening:ref(1),payoff:ref(1),ending:ref(4),endingReason:'End on the check the answer implies'});
+ w.STORY.review={hash:require('../../skills/storyboard/references/story-contract.js').storyHash(w),verdict:'pass',unresolved:[],...Object.fromEntries(['meaning','progression','payoff','grounding'].map(k=>[k,{reason:`${k} evidence in fictional premise`,refs:[ref(1)]}]))};
+ approve(w);return w;
+}
+test('a spoiler cover states the answer and the close still has to be forwardable',()=>withBoard(({board,work,save})=>{
+ const video=movingClip(path.join(work,'import.mp4'));
+ const gate=()=>spawnSync(process.execPath,[path.join(root,'skills/storyboard/references/check-scenes.js'),board,'--json'],{encoding:'utf8'});
+ const w=spoilerFixture(video);save(w);
+ const pass=gate();assert.equal(pass.status,0,pass.stdout+pass.stderr);
+ assert.deepEqual(check(board,{requireSelection:true}).errors,[]);
+ delete w.SCENES[3].shot.share;save(w);
+ const missing=gate();
+ assert.notEqual(missing.status,0);
+ assert.match(missing.stdout+missing.stderr,/share trigger/);
+}));
+test('generation output existence never discounts a new generation or its retries',()=>withBoard(({work})=>{
+ const w=fixture(1);w.PRODUCTION.mode='hybrid';const before=quote(w);
+ const video=path.join(work,'existing.mp4');writeFileSync(video,'already exists');w.SCENES[0].visual.video.clip=video;
+ assert.deepEqual(quote(w),before);
+ assert.equal(before.options.hybrid.firstPassUsd,.29);assert.equal(before.options.hybrid.retryHighUsd,.87);
+}));
+test('a previz cut gets the clay-model preamble, the composition lock and the first frame as the first still reference', () => {
+  const win = fixture(), prompts = withPreviz(win, 1), scene = win.SCENES[1];
+  assert.match(prompts.motionPrompt, /^Image 1 is the first frame\. Use Video 1, a 3D clay-model previz, as the only reference for camera movement.*Do not reference its visual content\. The red model in Video 1 is the buildings from Image 2\. Low wide view of the valley, slow dolly in, ending on The open stream\./);
+  assert.match(prompts.sourcePrompt, /Composition lock: the first attached image is frame 1 of the 3D previz/);
+  assert.equal(prompts.previzFirstFrame, path.resolve('/board', 'previz/s2-f0001.png'));
+  // The frame comes first (the composition), the miniature pack image second (the look).
+  assert.equal(prompts.sourceImageArgs.referenced_image_paths[0], prompts.previzFirstFrame);
+  assert.match(prompts.sourceImageArgs.referenced_image_paths[1], /tactile-miniature-v1/);
+  assert.deepEqual(checkScene(scene, { production: win.PRODUCTION }), []);
+  const plan = scenePlan(scene);
+  assert.equal(plan.tool, 'seedance_reference'); assert.equal(plan.priceKey, 'seedance.2-0-video.1080p'); assert.equal(plan.billedSeconds, 10);
+  scene.visual.video.model = 'seedance-1-5-pro-251215';
+  assert.throws(() => scenePlan(scene), /takes no reference video — a previz cut is a Seedance 2\.x cut/);
+  assert.match(checkScene(scene, { production: win.PRODUCTION }).join(), /not the one the user chose for this episode \(PRODUCTION\.videoModel/);
+  scene.visual.video.model = win.PRODUCTION.videoModel.model;
+  scene.visual.video.previz.renderer = 'blender';
+  assert.match(checkScene(scene, { production: win.PRODUCTION }).join(), /not the one the user chose for this episode \(PRODUCTION\.previz/);
+  scene.visual.video.previz.renderer = 'threejs';
+  // The host lane: no Seedance fields, the still and the prompt carry the previz, and the preamble is not written.
+  const host = fixture(); host.SCENES[2].visual.video = { engine: 'host', previz: { renderer: 'threejs', clip: 'previz/s3.mp4', firstFrame: 'previz/s3-f0001.png',
+    sha256: 'd'.repeat(64), fps: 24, seconds: 5, camera: { movement: 'truck right' }, handoff: 'frame_and_prompt' } };
+  const hp = assemble(host, 2, '/board'); host.SCENES[2].visual.video.prompt = hp.motionPrompt;
+  assert.doesNotMatch(hp.motionPrompt, /Video 1/);
+  assert.match(hp.sourcePrompt, /Composition lock/);
+  assert.deepEqual(checkScene(host.SCENES[2], { production: host.PRODUCTION }), []);
+  assert.deepEqual(scenePlan(host.SCENES[2]), { kind: 'motion', engine: 'host' });
+  // A camera slot that contradicts the clip is refused.
+  withPreviz(win, 2, { camera: { movement: 'arc shot' } });
+  assert.match(checkScene(win.SCENES[2], { production: win.PRODUCTION }).join(), /contradicts visual\.camera\.movement/);
+});
+test('the previz renderer and the video model are HITL choices recorded before any render or call', () => {
+  const win = fixture();
+  assert.deepEqual(mode.check(win, { requireApproval: true }), []);
+  const without = key => { const w = fixture(); delete w.PRODUCTION[key]; return mode.check(w).join(); };
+  assert.match(without('previz'), /Ask which 3D previz renderer/);
+  assert.match(without('videoModel'), /Ask which video model/);
+  const w = fixture(); delete w.PRODUCTION.previz.selection; assert.match(mode.check(w).join(), /previz renderer HITL choice/);
+  w.PRODUCTION.previz = { renderer: 'maya', selection: { kind: 'user', reference: 'x' } }; assert.match(mode.check(w).join(), /Ask which 3D previz renderer/);
+  const r = fixture(); r.PRODUCTION.videoModel.resolution = '480p'; assert.match(mode.check(r).join(), /resolution must be one of 1080p/);
+  r.PRODUCTION.videoModel = { model: 'seedance-1-5-pro-251215', resolution: '1080p', selection: { kind: 'user', reference: 'x' } };
+  assert.match(mode.check(r).join(), /Ask which video model/);
+  // The draft pass has no generated cuts settled yet; a board with no generated cut never asks.
+  assert.doesNotMatch(mode.check(without.call(null, 'previz') && fixture(), { draft: true }).join(), /Ask which/);
+  const still = fixture(); delete still.PRODUCTION.previz; delete still.PRODUCTION.videoModel;
+  for (const s of still.SCENES) { s.shot.render.mode = 'still_camera'; delete s.visual.video; }
+  assert.doesNotMatch(mode.check(still).join(), /Ask which/);
+  // The host lane: the tool is the model, so the record says host or stays absent.
+  const host = fixture(); host.PRODUCTION.videoProvider = 'host'; delete host.PRODUCTION.videoModel;
+  assert.doesNotMatch(mode.check(host).join(), /Ask which|videoModel/);
+  host.PRODUCTION.videoModel = { model: 'dreamina-seedance-2-0-260128', resolution: '1080p', selection: { kind: 'user', reference: 'x' } };
+  assert.match(mode.check(host).join(), /must be host under videoProvider host/);
+  // A 720p grade the table offers must pass the full-video checks on the shots that carry it (review H1).
+  const mini = fixture(); mini.PRODUCTION.videoModel = { model: 'dreamina-seedance-2-0-mini-260615', resolution: '720p', selection: { kind: 'user', reference: 'User chose 2.0 mini at 720p.' } };
+  for (let i = 0; i < mini.SCENES.length; i++) { const v = mini.SCENES[i].visual.video; v.resolution = '720p'; }
+  assert.deepEqual(mode.check(mini, { requireApproval: true }).filter(m => /resolution|1080p/.test(m)), []);
+  mini.SCENES[0].visual.video.model = mini.PRODUCTION.videoModel.model; mini.SCENES[0].visual.video.resolution = '720p';
+  Object.assign(mini.SCENES[0].visual.video, { modelPurpose: 'previz', modelReason: 'r', realFaceInput: false, referenceImagePaths: [mini.SCENES[0].visual.bg],
+    previz: { renderer: 'threejs', clip: 'previz/s1.mp4', firstFrame: 'previz/s1-f0001.png', sha256: 'e'.repeat(64), fps: 24, seconds: 5, camera: { movement: 'static' } } });
+  mini.SCENES[0].visual.video.prompt = assemble(mini, 0, '/board').motionPrompt;
+  assert.deepEqual(checkScene(mini.SCENES[0], { production: mini.PRODUCTION }), []);
+  assert.equal(scenePlan(mini.SCENES[0]).priceKey, 'seedance.2-0-mini-video.720p');
+  // Every model the table offers has a with-video price row on the route (drift guard).
+  const { PRICED } = require('../../skills/produce/references/seedance-route.js');
+  for (const [m, spec] of Object.entries(mode.VIDEO_MODELS)) for (const res of spec.resolutions)
+    assert.ok(PRICED.has('seedance.' + m.replace(/^dreamina-seedance-|-\d{6}$/g, '').replace(/^(\d)-(\d)/, '$1-$2') + '-video.' + res) ||
+      [...PRICED].some(k => k.endsWith('-video.' + res) && k.includes(m.includes('mini') ? 'mini' : m.includes('fast') ? 'fast' : m.includes('2-5') ? '2-5' : '2-0.') ), m + ' ' + res);
+  // The options table quotes the same board once per model, with the numbers the approval will bind.
+  const { options, text } = require('../../skills/produce/references/video-model-options.js');
+  const table = options(fixture());
+  assert.equal(table.cuts, 3);
+  const rows = Object.fromEntries(table.rows.map(x => [x.model + '@' + x.resolution, x]));
+  assert.ok(rows['dreamina-seedance-2-0-260128@1080p'].firstPassUsd > rows['dreamina-seedance-2-0-mini-260615@720p'].firstPassUsd);
+  assert.equal(rows['dreamina-seedance-2-0-260128@1080p'].firstPassUsd, +(3 * 10 * 0.228).toFixed(2));
+  assert.match(text(table), /Seedance 2\.0 mini 720p/);
+  assert.match(text(options(host)), /videoProvider host/);
+  // No mode yet → a clear error, not a TypeError; a hybrid board with no cut yet is marked provisional (review M7).
+  const noMode = fixture(); delete noMode.PRODUCTION.mode;
+  assert.throws(() => options(noMode), /Choose hybrid or full_video first/);
+  const hybrid = fixture(); hybrid.PRODUCTION.mode = 'hybrid'; hybrid.PRODUCTION.comparison = { model: 'seedance-1-5-pro-251215', resolution: '1080p', hybridShots: [1, 2] };
+  for (const s of hybrid.SCENES) { s.shot.render.mode = 'still_camera'; delete s.visual.video; }
+  const ht = options(hybrid); assert.equal(ht.cuts, 0);
+  assert.ok(ht.rows.every(r => r.error || r.provisional === true), JSON.stringify(ht.rows[0]));
+});
 test('the assembled motion prompt clears the Seedance prompt gate that check-scenes.js runs', () => {
   const PROMPT = require('../../skills/storyboard/references/assemble-bg-prompt.js');
   const win = fixture(), p = assemble(win, 0).motionPrompt;
@@ -260,10 +559,38 @@ test('one camera contract: the four visual.camera slots, never videoDesign.camer
 });
 test('three identical set-ups in a row fail full video; a changed framing passes', () => {
   const win = fixture();
-  win.SCENES.forEach(s => { s.visual.camera.framing = 'Elevated three-quarter view'; });
+  win.SCENES.forEach(s => { Object.assign(s.visual.camera, { framing: 'Elevated three-quarter view', movement: 'dolly in', speed: 'slow' }); });
   assert.match(mode.check(win).join(), /shots 1, 2, 3: the same framing and camera move/);
   win.SCENES[1].visual.camera.framing = 'Low wide view';
   assert.doesNotMatch(mode.check(win).join(), /three times in a row/);
+});
+test('the camera carries a full-video episode: visible moves, no provider lock under a move, static and wide in the minority', () => {
+  const win = fixture(6);
+  assert.deepEqual(mode.check(win), []);
+  const s = win.SCENES[1];
+  for (const span of [['dolly in', 'very slow'], ['gentle optical focus toward the woman', 'slow'], ['dolly in', 'barely perceptible'], ['hold composition with light variation', 'slow']]) {
+    Object.assign(s.visual.camera, { movement: span[0], speed: span[1] });
+    assert.match(mode.check(win).join(), /shot 2: visual\.camera asks for a move the viewer cannot see/, span.join(' '));
+  }
+  Object.assign(s.visual.camera, { movement: 'dolly in', speed: 'slow' });
+  s.visual.video.cameraFixed = true;
+  assert.match(mode.check(win).join(), /shot 2: visual\.video\.cameraFixed locks the provider camera/);
+  s.visual.camera.movement = 'static'; delete s.visual.camera.speed;
+  assert.doesNotMatch(mode.check(win).join(), /cameraFixed/);
+  // Shots 1 and 2 are now both static: two in a row, and 3 of 6 exceeds one in three.
+  assert.match(mode.check(win).join(), /shots 1, 2: two static cameras in a row/);
+  assert.match(mode.check(win).join(), /3 of 6 shots hold a static camera/);
+  Object.assign(s.visual.camera, { movement: 'arc shot', speed: 'steady' }); delete s.visual.video.cameraFixed;
+  assert.deepEqual(mode.check(win), []);
+  // Shot 5 is already 'Low wide view'; three more wide framings make four of six.
+  win.SCENES.slice(0, 3).forEach(x => { x.visual.camera.framing = 'wide shot with small full-body figures'; });
+  assert.match(mode.check(win).join(), /4 of 6 shots are framed wide/);
+  win.SCENES[2].visual.camera.framing = 'medium shot from behind';
+  assert.deepEqual(mode.check(win), []);
+  // Hybrid keeps the per-shot camera rules on its generated clips.
+  win.PRODUCTION.mode = 'hybrid'; win.SCENES.splice(2);
+  win.SCENES[1].visual.camera.speed = 'imperceptibly slow';
+  assert.match(mode.check(win).join(), /shot 2: visual\.camera asks for a move the viewer cannot see/);
 });
 
 test('a static camera leaves speed empty, and the final state is written once', () => {
@@ -292,4 +619,43 @@ test('a shot look outside the selected preset fails the full check, not only the
   assert.match(mode.check(win).join(), /conflicts with the selected episode style/);
   win.SCENES.forEach(s => { s.shot.videoDesign.look = 'realistic'; });
   assert.deepEqual(mode.check(win), []);
+});
+test('the arcade-2d preset is prompt-only, carries the arcade look and keeps the HUD out of the picture', () => {
+  const { LOOKS } = require('../../skills/storyboard/references/spatial-prompts.js');
+  assert.deepEqual(mode.STYLES['arcade-2d'].looks, ['arcade']);
+  assert.ok(mode.ALL_LOOKS.includes('arcade') && LOOKS.arcade);
+  assert.ok(!mode.packPresets.includes('arcade-2d'));
+  const win = fixture();
+  win.PRODUCTION.style.preset = 'arcade-2d';
+  win.PRODUCTION.style.selection = { kind: 'user', reference: 'User chose arcade-2d for this episode.' };
+  assert.match(mode.check(win).join(), /conflicts with the selected episode style/);
+  win.SCENES.forEach(s => { s.shot.videoDesign.look = 'arcade'; });
+  assert.deepEqual(mode.check(win), []);
+  const out = assemble(win, 0);
+  assert.match(out.sourcePrompt, /Hand-painted 1990s arcade game art/);
+  assert.match(out.motionPrompt, /The look holds: Hand-painted 1990s arcade game art/);
+  assert.doesNotMatch(mode.STYLES['arcade-2d'].prompt, /HUD|health bar|lettering|portrait/i);
+  assert.deepEqual(out.sourceReferenceImages, []);
+});
+
+test('imported clips preserve the whole file through the cinematic edit compiler',()=>{
+ const {preview}=require('../../skills/produce/references/edit-plan.js');
+ const scenes=[{type:'cover',transition:'cut',visual:{reuse:{clip:'old.mp4'}}},{type:'points',transition:'cut'}];
+ assert.equal(preview(scenes)[0].in,0);assert.equal(preview(scenes)[0].handle,0);
+ scenes[0].edit={in:1};assert.throws(()=>preview(scenes),/Reused clips cannot/);
+ delete scenes[0].edit;scenes[1].transition='dissolve';assert.throws(()=>preview(scenes),/Reused clips cannot/);
+ scenes[1].transition='dip';assert.equal(preview(scenes)[0].handle,0);
+ delete scenes[0].visual;scenes[1].transition='dissolve';assert.equal(preview(scenes)[0].handle,.4);
+});
+
+test('a supplied stock clip is outside the generated set; a stock photograph may still source a generated cut', () => {
+  const license = { provider: 'pexels', url: 'https://www.pexels.com/video/1', license: 'Pexels License', licenseUrl: 'https://www.pexels.com/license/',
+    attributionRequired: false, commercial: true, modify: true, retrievedAt: '2026-09-07' };
+  const clip = { type: 'points', duration: 6, visual: { source: 'stock', clip: 'footage/s2-pexels-1.mp4', license } };
+  const photo = { type: 'points', duration: 6, visual: { source: 'stock', bg: 'images/stock/s3-met-1.jpg', license, video: { engine: 'seedance' } } };
+  assert.equal(mode.eligible(clip), false);
+  assert.equal(mode.eligible(photo), true);
+  const sig = mode.signature({ SCENES: [photo, clip], PRODUCTION: { mode: 'hybrid' } });
+  assert.match(sig, /"license"/, 'the approval fingerprint covers the license record');
+  assert.equal(mode.policy({ generatedVideoMax: 2 }, { mode: 'full_video', videoBudgetUsd: 1 }, [clip, photo]).generatedVideoMax, 1);
 });

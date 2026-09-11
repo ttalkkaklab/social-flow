@@ -32,17 +32,6 @@
         "MFLUX_ZIMAGE_BIN",
         "QWEN3_ASR_BIN"
       ]
-    },
-    "ttalkkakstory": {
-      "command": "node",
-      "args": [
-        "${TTALKKAKSTORY_MCP_PATH:-/Volumes/data/repository/zeans/ttalkkakstory/ttalkkakstory-portal/mcp/src/index.mjs}"
-      ],
-      "env": {
-        "TTALKKAKSTORY_API_URL": "${TTALKKAKSTORY_API_URL:-}",
-        "TTALKKAKSTORY_WORKSPACE": "${TTALKKAKSTORY_WORKSPACE:-}",
-        "TTALKKAKSTORY_API_KEY": "${TTALKKAKSTORY_API_KEY:-}"
-      }
     }
   }
 }

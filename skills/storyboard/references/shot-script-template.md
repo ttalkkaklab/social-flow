@@ -57,17 +57,28 @@ This document is the source of truth for the structure that render has to produc
   **only kicker + title** in the top block (the cover adds stat/statLabel); long-form filmed
   scenes get the title, one caption, and the source in the **lower third at the bottom left**.
   Either way, one caption at a time.
-- **On a short the first frame is a gap, not the finished result.** Recording order is
-  **hook → drip (1–n) → cta**: open the question, pay it in stages, then one spoken
-  outward act. Do not start with the finished screen already up. Match each shot to its
-  scenes.js `beat` (`hook`·`drip`·`cta`).
+- **On a short the first frame is decided before you roll.** Recording order is
+  **hook → drip (1–n) → cta**, and the board says which of two shapes the cover took. A held
+  answer opens on the gap, pays it in stages, and does not start with the finished screen
+  already up. A stated answer opens on the result and spends the drips earning it — why it is
+  true, what it cost, where it breaks. The board's `hookType` tells you which take to film;
+  don't decide it at the camera.
+- **The first second is filmed, not edited.** A live-voice shot (`sync: true`) goes on the sync
+  lane, which takes the recording as it is — no pre-roll, no silence trim, no speed correction
+  (scenes-schema §filmed scenes). Whatever dead air the take starts with ships. So on the cover the
+  picture is legible and already moving on frame one and the first word lands inside the first
+  second: no held frame, no breath, no walking into position before the line. A cover take that
+  opens on a beat of nothing gets refilmed, not fixed in the edit.
+- The last shot is the `cta`: one spoken outward act, plus the sentence the board marked as
+  `shot.share` — the line a viewer could pass on. Match each shot to its scenes.js `beat`
+  (`hook`·`drip`·`cta`).
 - On long-form answer-first, build and tutorial shoots start **with the finished screen already up in the
   first frame**; the cover's first sentence says, within 3 seconds, what benefit or change that
   result brings. On a story arc the first frame is the moment it went wrong, and the ending is
   not on camera until the payoff.
 - **The first sentence opens on one of the four opening strategies** — fear, empathy, curiosity,
-  or showing the ending (scenes-schema §the four opening strategies). **A short does not show
-  the ending.** Which one is written in the
+  or showing the ending (scenes-schema §the four opening strategies). All four are open on a
+  short. Which one is written in the
   scenes.js cover `hookType`, and since the shooting script is the surface where the user says
   that sentence out loud, it carries the same stimulus verbatim. Sentences starting with
   "~해 봤습니다" or "오늘은 ~ 보여 드릴게요" don't go in the script — finding out after recording
@@ -93,7 +104,7 @@ topic: <topic slug>
 mode: screencast          # screencast = whole-episode shoot | mixed = long-form mixed lane
 format: youtube-long-16x9 # or shorts-9x16
 scenes: <shots to film> / <shots in total>
-target: 8–15 min          # 35–75s for short-form
+target: 8–15 min          # the channel's band for short-form (unset, the preset's 35–120s stands, of which 35–75s is the recommendation)
 generated: <YYYY-MM-DD>
 ---
 
@@ -156,6 +167,12 @@ generated: <YYYY-MM-DD>
   cut at a joint, eye level means the subject's eyes, the 180° line when two people are on
   screen, 30°/two sizes/cut on action when re-filming the same subject, one mic position per
   sitting. The source of truth is `directing-grammar.md` §2–§3, §3.5 and §7; the renderer prints them.
+- **On a short, the cta shot's forwardable line is one of its 대사 sentences.** The board's
+  `shot.share` names which one — the sentence, figure or verdict a viewer can pass on as-is —
+  so it is said exactly as scripted, under the same rule as the figures and proper nouns. It
+  has to survive being repeated with none of the video attached, and it is never a request to
+  send it on. On long-form the field is optional, so film it the same way when the board wrote
+  one and skip this note when it didn't.
 - Match the shot heading's title and target length to scenes.js (they're the alignment
   reference).
 - **Line number = narration segment order** — don't write new sentences, carry them over from

@@ -8,9 +8,12 @@ import * as suno from './suno-client.js';
 import * as naver from './naver-client.js';
 import * as seedance from './seedance-client.js';
 import * as serp from './serp-client.js';
+import * as stock from './stock-client.js';
 import * as sns from './sns-client.js';
 import * as supertonic from './supertonic-client.js';
 import * as zimage from './zimage-client.js';
+import * as blender from './blender-bridge.js';
+import * as storyboard from './storyboard.js';
 import * as mlx from './mlx-serve-client.js';
 import * as tts from './tts-client.js';
 import { checkedSpeechSchema, generateCheckedSpeech } from './tts-quality.js';
@@ -238,6 +241,18 @@ const serpImageSchema = z.object({
     .enum(['bw', 'trans', 'red', 'orange', 'yellow', 'green', 'teal', 'blue', 'purple', 'pink', 'white', 'gray', 'black', 'brown'])
     .optional(),
   safe: z.boolean().optional(),
+});
+
+const stockSearchSchema = z.object({
+  query: searchQuery,
+  media: z.enum(stock.STOCK_MEDIA).optional(),
+  providers: z.array(z.enum(stock.STOCK_PROVIDERS)).min(1).optional(),
+  orientation: z.enum(stock.STOCK_ORIENTATIONS).optional(),
+  limit: z.number().int().min(1).max(stock.STOCK_MAX_LIMIT).optional(),
+  minWidth: z.number().int().min(1).optional(),
+  minDuration: z.number().min(0).optional(),
+  maxDuration: z.number().min(0).optional(),
+  locale: langCode,
 });
 
 const serpTrendingSchema = z.object({
@@ -652,6 +667,10 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
     const result = await serp.trendingNow(parseArgs(serpTrendingSchema, args));
     return text(result.text, result.isError);
   },
+  stock_search: async (args) => {
+    const result = await stock.stockSearch(parseArgs(stockSearchSchema, args));
+    return text(result.text, result.isError);
+  },
   naver_search: async (args) => {
     const result = await naver.naverSearch(parseArgs(naverSearchSchema, args) as naver.NaverSearchInput);
     return text(result.text, result.isError);
@@ -889,8 +908,11 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
     const refAudioInfo = result.referenceAudios?.length
       ? `\nReference Audio (${result.referenceAudios.length}):\n  - ${result.referenceAudios.join('\n  - ')}`
       : '';
+    const refVideoInfo = result.referenceVideos?.length
+      ? `\nReference Videos (${result.referenceVideos.length}, ${result.referenceVideoSeconds ?? '?'}s billed as input${result.referenceVideoRoute ? `, served by ${result.referenceVideoRoute}` : ''}):\n  - ${result.referenceVideos.join('\n  - ')}`
+      : '';
     return text(
-      `Video generated with references successfully!\n\nOutput: ${result.videoPath}${refImagesInfo}${refAudioInfo}\n${seedanceMeta(result)}\nPrompt: ${result.prompt}`,
+      `Video generated with references successfully!\n\nOutput: ${result.videoPath}${refImagesInfo}${refVideoInfo}${refAudioInfo}\n${seedanceMeta(result)}\nPrompt: ${result.prompt}`,
     );
   },
 
@@ -1028,6 +1050,82 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
         `Model: ${result.model}\nLanguage: ${result.language}\n` +
         `Segments: ${result.segments?.length ?? 0}\n` +
         `Elapsed: ${result.elapsedSeconds}s\n\nTranscript:\n${preview}`,
+    );
+  },
+
+  // ── Blender bridge — previz camera and blocking on the local Blender (no key, no network) ──
+  blender_scene_read: async (args) => {
+    const r = await blender.readScene(parseArgs(blender.blenderSceneReadSchema, args));
+    if (!r.success) return text(`Blender scene read failed: ${r.error}`, true);
+    return text(`Blender scene read (nothing changed).\n\n${blender.describeScene(r.scene)}`);
+  },
+
+  blender_scene_build: async (args) => {
+    const request = parseArgs(blender.blenderSceneBuildSchema, args);
+    const r = await blender.buildScene(request);
+    if (!r.success) return text(`Blender scene build failed: ${r.error}`, true);
+    const built = (r.scene.built ?? []).map((b) => (b.kind ? `${b.name} (${b.kind})` : `${b.name} (glb, ${b.objects} objects)`));
+    return text(
+      `Blender previz set ${request.reset ? 'built' : 'extended'} — ${built.length} added${built.length ? `: ${built.join(', ')}` : ''}.\n` +
+        `Next: blender_camera_set to frame it, then blender_render_previz to look.\n\n${blender.describeScene(r.scene)}`,
+    );
+  },
+
+  blender_camera_set: async (args) => {
+    const r = await blender.setCamera(parseArgs(blender.blenderCameraSetSchema, args));
+    if (!r.success) return text(`Blender camera set failed: ${r.error}`, true);
+    const keys = r.scene.applied?.keyframes ?? [];
+    return text(
+      `Camera "${r.scene.applied?.camera ?? 'Camera'}" ${keys.length ? `keyed at frames [${keys.join(', ')}]` : 'set as a static shot'}.\n` +
+        `Next: blender_render_previz and open the stills; iterate in numbers.\n\n${blender.describeScene(r.scene)}`,
+    );
+  },
+
+  blender_object_animate: async (args) => {
+    const r = await blender.animateObject(parseArgs(blender.blenderObjectAnimateSchema, args));
+    if (!r.success) return text(`Blender object animate failed: ${r.error}`, true);
+    const keys = r.scene.applied?.keyframes ?? [];
+    return text(`Object "${r.scene.applied?.object}" keyed at frames [${keys.join(', ')}].\n\n${blender.describeScene(r.scene)}`);
+  },
+
+  blender_pose_key: async (args) => {
+    const r = await blender.poseKey(parseArgs(blender.blenderPoseKeySchema, args));
+    if (!r.success) return text(`Blender pose key failed: ${r.error}`, true);
+    const a = r.scene.applied;
+    const keys = a?.keyframes ?? [];
+    return text(
+      `Person "${a?.object}" posed — ${blender.describeKeys(keys)} on ${a?.bones?.length ?? 0} bones (${(a?.bones ?? []).join(', ')}).\n` +
+        `At frame ${keys[keys.length - 1]}: ${blender.describeTails(a?.tails)}\n` +
+        `Next: blender_render_previz and open the stills; the landmark line above says where the hands and feet are, so iterate in numbers.\n\n${blender.describeScene(r.scene)}`,
+    );
+  },
+
+  blender_motion_import: async (args) => {
+    const r = await blender.importMotion(parseArgs(blender.blenderMotionImportSchema, args));
+    if (!r.success) return text(`Blender motion import failed: ${r.error}`, true);
+    const a = r.scene.applied;
+    const m = a?.motion;
+    const [first, last] = a?.keyframes ?? [0, 0];
+    const mapped = Object.entries(m?.mapped ?? {}).map(([c, s]) => `${c} ← ${s}`);
+    return text(
+      `Motion retargeted onto "${a?.object}" (${a?.rig}) — scene frames ${first}–${last} (${m?.frames} keys, one per frame).\n` +
+        `Source: ${m?.source} · ${m?.sourceBones} bones · ${m?.sourceSeconds}s @ ${m?.sourceFps} fps; slice ${m?.fromSeconds}–${m?.toSeconds}s at speed ${m?.speed}${m?.loop ? ', looped' : ''} · root motion ${m?.rootMotion} · scale ×${m?.heightRatio} · facing turned ${m?.yawDeg}°\n` +
+        `Matched ${mapped.length}/${blender.BLENDER_RIG_BONES.length} bones: ${mapped.join(', ')}\n` +
+        `${m?.unmapped?.length ? `Unmatched (hold rest relative to parent): ${m.unmapped.join(', ')}\n` : ''}` +
+        `At frame ${first}: ${blender.describeTails(a?.tails)}\nAt frame ${last}: ${blender.describeTails(a?.tailsEnd)}\n` +
+        `Next: blender_render_previz to watch it; blender_object_animate on the root for the path across the floor.\n\n${blender.describeScene(r.scene)}`,
+    );
+  },
+
+  blender_render_previz: async (args) => {
+    const r = await blender.renderPreviz(parseArgs(blender.blenderRenderPrevizSchema, args));
+    if (!r.success) return text(`Blender previz render failed: ${r.error}`, true);
+    const skipped = r.skippedStills.length ? `\nSkipped stills (outside frames ${r.frameStart}–${r.frameEnd}): ${r.skippedStills.join(', ')}` : '';
+    return text(
+      `Previz rendered.\n\nFile: ${r.videoPath}\nStills: ${r.stillPaths.join(', ') || '(none)'}${skipped}\n` +
+        `Engine: ${r.engine} · ${r.width}×${r.height} @ ${r.fps} fps · frames ${r.frameStart}–${r.frameEnd} (${r.frames} = ${r.seconds}s)\n` +
+        `Render time: ${r.elapsedSeconds}s\n\n` +
+        `Open the stills before judging the move — the stamp shows frame, camera and lens. The clip is a camera and blocking plan, not appearance.`,
     );
   },
 
@@ -1262,5 +1360,22 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   threads_search: async (args) => {
     const input = parseArgs(threadsSearchSchema, args);
     return fromApi(await sns.threadsKeywordSearch(input));
+  },
+  // ── Storyboard ──
+  storyboard_read: async (args) => {
+    storyboard.contract();  // a missing structure-contract.js reports itself here, before the argument schema does
+    const a = parseArgs(storyboard.storyboardReadSchema, args);
+    const { win } = storyboard.readBoard(a.path);
+    return text(JSON.stringify(storyboard.contract().outline(win, a.level), null, 2));
+  },
+  storyboard_apply: async (args) => {
+    storyboard.contract();
+    const r = storyboard.applyStoryboard(parseArgs(storyboard.storyboardApplySchema, args));
+    return text(storyboard.renderApply(r), r.findings.some((f) => f.level === 'bad'));
+  },
+  storyboard_check: async (args) => {
+    storyboard.contract();
+    const r = storyboard.checkStoryboard(parseArgs(storyboard.storyboardCheckSchema, args));
+    return text(storyboard.renderCheck(r), r.violations > 0);
   },
 };

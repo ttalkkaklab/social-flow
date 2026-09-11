@@ -23,8 +23,20 @@ Sources at the end.
 **Never put a brand intro in front of short-form content.** 50–60% of viewer
 drop-off happens within the first 3 seconds, and logo animations or channel
 title cards push the hook back and cut retention directly. In short-form,
-branding is carried by style consistency (theme colors, subtitle tone) and the
-outro.
+branding is carried by style consistency (theme colors, subtitle tone) and by
+the outro on channels that keep one — the outro-off case is at the end of this
+section.
+
+**The first second is the same rule drawn tighter.** The hook is on screen and
+audible at 0, and the opening second goes to nothing else — not a fade up from
+black, not a name plate. Keep the two grades apart: the 50–60% drop-off above is
+a blog estimate and stays one, while the first-second standard is our own
+operating decision (owner brief, 2026-09-07) whose only outside support is
+author advice — grow-youtube's growth playbook §Hook and length carries "Make
+the first second strong, treat the intro like a thumbnail" and marks it advice,
+not a measured result. Produce measures it after the build: it reports where
+the first subtitle cue starts and warns — never fails — when that lands past
+1.0s.
 
 Legitimate uses of the intro assets:
 
@@ -32,7 +44,7 @@ Legitimate uses of the intro assets:
 |---|---|---|
 | Channel trailer, profile intro video | master | YouTube channel page, pinned intro video |
 | Series opener (spliced into the opening) | stinger ≤2.5s | placed after the hook — never before it |
-| Ending brand moment | stinger | spliced before outro.mp4 (same encoding contract) |
+| Ending brand moment | stinger | spliced before outro.mp4 (same encoding contract) — only where the outro is on |
 | Live / premiere waiting screen | master loop | — |
 
 **Use the same intro and the same sonic logo every time** — consistent
@@ -42,7 +54,32 @@ consistently branded channels more). Don't regenerate per topic.
 **Default use (user-confirmed 2026-07-29)**: a brand closing **spliced after**
 the main video — it's a build-once fixed asset, so voice and sound stay
 intact, and it shares the encoding contract with build-reel/build-outro, so
-xfade splicing just works.
+xfade splicing just works. That confirmation still stands, and it describes
+every channel that leaves the short-form outro on — which is every channel that
+hasn't written `shortform_outro: off` in profile.md, since an absent key means
+`on`.
+
+**When a channel turns the short-form outro off** (`shortform_outro: off`), the
+build carries `OUTRO=0` in `.work/format.env` and the last content frame is the
+last frame of the short. Four things follow for the intro assets:
+
+- **The ending brand moment loses its slot.** The stinger goes before
+  outro.mp4; with no outro there is nothing to go before, so that row of the
+  table above is off for the channel's shorts. It still applies to that
+  channel's long-form and to any short built after the key flips back.
+- **Don't move the branding to the front to compensate.** A shorter ending buys
+  no room at the start. The first-second and first-3-seconds rules at the top of
+  this section don't loosen, and a sting ahead of the hook is the one placement
+  that costs retention every time.
+- **Inside the video, style carries the brand alone** — theme colors and
+  subtitle tone, with produce's ban on a logo or badge in the body unchanged.
+  The named brand moment moves to where the master already works: the profile
+  intro video, the channel trailer, the pinned intro on the channel page.
+- **Keep the assets built and locked.** Nothing about master, stinger, lockup or
+  the sonic logo changes — `shortform_outro` is a per-channel switch a channel
+  can flip back between episodes, and the ≤2.5s cut, the shared encoding
+  contract and the -14 LUFS / TP -1.0 target are what let the stinger splice on
+  the day it does.
 
 ## 2. Length & timing contract
 
@@ -232,6 +269,7 @@ output — the lockup is always the HTML-capture composite.
 - [Renderforest — How Long Should a YouTube Intro Be](https://www.renderforest.com/blog/how-long-should-youtube-intro-be) · [Intro Video Length by Platform](https://www.renderforest.com/blog/intro-video-length-by-platform) — length standards (1–5s, 3–5s safe default); Shorts exclude traditional intros
 - [Renderforest — AI Logo Animation Prompts](https://www.renderforest.com/blog/ai-logo-animation-prompts) — the L.O.G.O. formula, single motion, final-frame match rule
 - [Wheelhaus Media — All about logo stings](https://www.wheelhaus.media/blog/all-about-logo-stings) · [Motion Array — Logo Stings](https://motionarray.com/learn/video-effects/logo-stings/) — logo sting 5–10s cap, mobile optimization, sound as a Sonic ID
-- [OpusClip — Ideal YouTube Shorts Length & Format](https://www.opus.pro/blog/ideal-youtube-shorts-length-format-retention) · [Virvid — First 3 Seconds](https://virvid.ai/blog/first-3-seconds-hook-faceless-shorts-2026) — 50–60% drop-off in the first 3 seconds; branding via style
+- [OpusClip — Ideal YouTube Shorts Length & Format](https://www.opus.pro/blog/ideal-youtube-shorts-length-format-retention) · [Virvid — First 3 Seconds](https://virvid.ai/blog/first-3-seconds-hook-faceless-shorts-2026) — 50–60% drop-off in the first 3 seconds; branding via style. Blog grade
+- The first-second standard in §1 doesn't come from those two — it's an owner decision (brief, 2026-09-07), and the nearest outside support is `skills/grow-youtube/references/growth-playbook.md` §Hook and length, which carries "Make the first second strong" as author advice rather than a measured result
 - [InfluenceFlow — YouTube Channel Branding 2026](https://influenceflow.io/resources/youtube-channel-branding-best-practices-complete-2026-guide-for-creators/) — consistent-branding trust (78%)
 - [Voices — Sonic Logos Master Class](https://www.voices.com/blog/sonic-logos/) · [ZillionDesigns — Sonic Logos](https://www.zilliondesigns.com/blog/sonic-logo-and-the-sound-in-branding/) — sound logos 2–5s, reflecting brand attributes

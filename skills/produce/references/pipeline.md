@@ -46,12 +46,12 @@ bottom 570px     burned-in subtitle band (y 1380–1560) + IG caption / YT chann
 
 ## What build-reel.sh does (in order)
 
-Silence trim → loudnorm -16 → measured speech rate + atempo normalization (outside ±5%, clamped 0.88–1.18)
+Silence trim → loudnorm -16 → measured speech rate (warning band only — the voice is not time-stretched; `ATEMPO_MIN`/`ATEMPO_MAX` default to 1.0 since 2026-09-11)
 → sentence-boundary detection (silencedetect — character-count proportional fallback on failure) → card
 duration rounded up to whole frames + sample-accurate audio padding (**zero drift**) → reveal transition
 timing (reveal-timing.py) → visual chain (video + alpha overlay composite → reveal xfade) → Ken Burns
 zoompan (4%/s on stills, capped at 1.075) → concat → BGM sidechain ducking → subtitle files (`subs.srt` for publishing ·
-`subs.ass` for burn-in) → outro xfade 0.6s splice → loudnorm -14 final encode (H.264 High 4.1, faststart)
+`subs.ass` for burn-in) → outro splice through black (only when the channel's outro is on) → loudnorm -14 final encode (H.264 High 4.1, faststart)
 → cover still extraction (`COVER_TS`, and the frame it pulls now comes out of a moving still —
 a 5s punch cover sits at scale 1.062 at 3.2s, so the thumbnail is that bit tighter).
 
@@ -97,14 +97,20 @@ falls back silently and no short video loops or freezes to fill its window.
 | `boundary proportional fallback` | OK to continue — if it recurs, fix the script's sentence boundaries (periods) |
 | `segment window under 0.9s` | Merge the short sentence with a neighbor |
 | `min gap between reveals <0.40s` | Trim bullets or lengthen the sentence |
-| `duration > 13s` (card) | Shorten the script and regenerate that card's TTS. Hitting the atempo ceiling (1.18) is also a shorten signal |
+| `duration > 13s` (card) | Shorten the script and regenerate that card's TTS |
 | `separation <N> LU is under the <floor> LU floor` | **Do not proceed** — the build exits 1; the bed is competing with the voice. Lower the bed (`BGM_SEP`), swap in a quieter cue, or fix a narration track that came in hot, then rebuild |
 | `separation <N> LU is no wider than the <N> LU resting distance` | The ducking never fired — the voice key went silent or the bed reached the mix around it. Rebuild after fixing; continue only if the voice is audibly clear over the music |
 | `── voice-to-bed separation <N> LU` (no mark) | OK — at or above the 4 LU floor and wider than the resting distance |
-| Total length | 35–75s recommended, up to 120s, 180s cap (main + outro − 0.6s) — **measured on the final pace pass's output** |
+| Total length | the channel's band (`length_min_seconds`/`length_max_seconds`); unset, the preset's 35–120s stands, of which 35–75s is the recommendation, and 180s is the platform's own cap. Expect main + outro here (build-screencast.sh overlaps its xfade, so main + outro − 0.6s on that lane) and main alone with `OUTRO=0` — **measured on the final pace pass's output** |
+| `── no outro (OUTRO=0, …)` | Expected on a **short** from a channel whose `shortform_outro` is off. On long-form the toggle doesn't apply and the outro always splices, so there — or on a short whose channel keeps its outro — **do not proceed**: `OUTRO` in `.work/format.env` contradicts the channel, so fix the flag and rebuild |
+| `✗ OUTRO=1 but <asset> isn't in the workdir` | **Do not proceed** — the build stops there. Copy the outro under `format.env`'s `OUTRO_ASSET` name (produce §6), or set `OUTRO=0` when the channel ships without one |
+| `✗ OUTRO=0 but the build spliced an outro` | **Do not proceed** — the speed pass stops there. The flag was changed after the build, so the outro is sitting inside the feature and would be sped up with it. Rebuild under the flag you want |
+| `✗ OUTRO=1 but the build joined no outro` | **Do not proceed** — the speed pass stops there. The flag was changed after the build, so the tail boundary would be cut out of the feature and its last seconds shipped unsped. Rebuild under the flag you want |
+| `⚠ first cue at …s — past the 1.0s mark` | The opening second carries no words. Not a build failure: look at `.work/qa/first-frame.png`, and if the frame is bare too, bring the cover's first sentence forward and rebuild |
+| `── first cue …s` (no mark) | OK — the first subtitle is up inside the first second, and the t=0 still is in `.work/qa/` |
 | No `── speedup x…` line | **Do not proceed** — the required speed pass (produce §7.5) never ran, and `output/` would get the un-sped build. Run `speedup.sh .work` and copy the `-fast` set |
 | No `PASS final speech rate` line, or a `final speech rate` failure | **Do not proceed** — the shipped subtitle timeline was not checked or exceeds 6.2 characters/s. Lower the profile factor or shorten the dense line, rerun the pass, and use only the new `-fast` set |
-| `reel-fast.mp4 is …s but …s was expected` | **Do not proceed** — the speed pass exits 1; the filter didn't take. Check that `outro.mp4` in the workdir is the same file the build spliced |
+| `reel-fast.mp4 is …s but …s was expected` | **Do not proceed** — the speed pass exits 1; the filter didn't take. Check that the `outro.mp4` in the workdir is the same file the build spliced — a flag the build and the pass disagree on is caught earlier, by the `✗ OUTRO=…` lines above |
 | `apart after the speed-up — YouTube drops chapters under 10s` | Long-form only. Merge the chapters that landed under 10s apart and rebuild — YouTube drops the entire list, not just that entry |
 
 ## Three TTS failure modes and responses (Gemini TTS, field-tested)
@@ -123,8 +129,11 @@ Unavailable review holds production. After any audio replacement, obtain a new p
    unverified, not an instruction to spend three more takes.
 
 The three axes of voice consistency: ① fixed stylePrompt/voiceName ② loudnorm per-segment
-normalization ③ atempo speech-rate normalization. Output may be raw PCM (24kHz/s16/mono) — the
-build auto-detects via the RIFF magic. temperature 0.4.
+normalization ③ one pace chosen at the engine and kept on every cut — the build no longer
+stretches cards toward a chars/s target (measured 2026-09-11: the engine ran 5.3–6.4 chars/s
+against a 4.5 target, so every card sat at the 0.88 floor and adjacent cards differed by up to
+30%). Output may be raw PCM (24kHz/s16/mono) — the build auto-detects via the RIFF magic.
+temperature 0.4.
 
 ## Palindrome loop (8s clip → 16s)
 

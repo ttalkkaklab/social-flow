@@ -6,6 +6,11 @@ const object = x => x !== null && typeof x === 'object' && !Array.isArray(x);
 const text = x => typeof x === 'string' && x.trim().length > 0;
 const canonical = x => Array.isArray(x) ? x.map(canonical) : object(x)
   ? Object.fromEntries(Object.keys(x).sort().map(k => [k, canonical(x[k])])) : x;
+// The shape of a message — the same two regexes check-research.js reads the M# cell with.
+// A final predicate in the past tense tells what happened; a hortative or imperative ending
+// tells the viewer what to do. A thesis does neither: it states what leads to what.
+const PAST_FINAL = /(았|었|였|했|왔|갔|봤|됐|냈|셨|잤|샀|썼|줬|놨|뒀|했었|았었|었었)(?:다|어요|어|습니다|죠|네요|거든요|대요|답니다|지요|잖아요|던\s*것이다|던\s*거다|던\s*겁니다|던\s*거예요)\s*$/;
+const MORAL_FINAL = /(?:하자|합시다|말자|맙시다|세요|십시오|해야\s*(?:한다|해요|합니다|해|돼요|됩니다|된다)|[아어해마]라)\s*$/;
 
 function storySpeech(win) {
   const scenes = Array.isArray(win.SCENES) ? win.SCENES : [];
@@ -32,8 +37,12 @@ function storyHash(win) {
     type: s.type, beat: s.beat, arc: s.arc, after: s.after,
     title: s.title, stat: s.stat, bullets: s.bullets,
     narration: s.narration, info: s.shot?.info,
+    // The forwardable thing is an editorial decision the reviewer reads, so rewriting it after
+    // the read has to invalidate the review the same way rewriting narration does.
+    share: s.shot?.share,
     // Slide copy is burned on screen, so rewriting it changes the episode the reviewer read.
     slideLabels: s.visual?.slide?.labels, slideSubject: s.visual?.slide?.subject,
+    ...(s.visual?.reuse !== undefined ? { reuse: s.visual.reuse } : {}),
     recording: s.visual?.source === 'recording' ? s.visual.clip : undefined
   }));
   return crypto.createHash('sha256').update(JSON.stringify(canonical({
@@ -55,15 +64,15 @@ function checkStory(win, { requireReview = true } = {}) {
   (Array.isArray(story.transcripts) ? story.transcripts : []).forEach((t, i) => {
     const s = scenes[t?.shot - 1];
     if (!object(t) || !Number.isInteger(t.shot) || !s || s.type === 'outro' ||
-        s.visual?.source !== 'recording' || !text(t.source) || t.source !== s.visual.clip ||
+        (s.visual?.source !== 'recording' && !s.visual?.reuse) || !text(t.source) || t.source !== (s.visual?.reuse?.clip || s.visual.clip) ||
         (Array.isArray(s.narration) && s.narration.length) || live.has(t.shot) ||
         !Array.isArray(t.groups) || !t.groups.length) {
-      fail(`STORY.transcripts[${i}] requires a unique live-voice recording shot, matching clip and groups`); return;
+      fail(`STORY.transcripts[${i}] requires a unique live-voice recording or reused shot, matching clip and groups`); return;
     }
     let end = 0;
     t.groups.forEach(g => {
       if (!object(g) || !text(g.text) || !Number.isFinite(g.start) || !Number.isFinite(g.end) ||
-          g.start < end || g.end <= g.start) fail(`STORY.transcripts[${i}] requires ordered timed speech`);
+          g.start < end || g.end <= g.start || (s.visual?.reuse && g.end > s.duration)) fail(`STORY.transcripts[${i}] requires ordered timed speech`);
       if (object(g)) end = g.end;
     });
     live.set(t.shot, t.groups.map(g => ({ tts: g?.text, sub: g?.text })));
@@ -95,9 +104,111 @@ function checkStory(win, { requireReview = true } = {}) {
   const position = a => speech.findIndex(x => x.shot === a[0] && x.group === a[1]);
   const before = (a, b) => position(a) < position(b);
   if (opening && position(opening) !== 0) fail('STORY.opening must reference the first spoken group');
-  if (opening && payoff && !before(opening, payoff)) fail('STORY.payoff must follow the opening');
+  // A cover that states the result opens and pays its own loop in one group (owner directive,
+  // the twist moves forward), so the payoff may land on the opening group itself — the same
+  // exception storyboard.html grants the promise ledger, keyed off the same two fields. Any
+  // other board still pays its promise after it makes it, and none may pay before.
+  const revealCover = scenes.find(s => object(s) && s.type === 'cover');
+  const coverReveal = !!revealCover &&
+    (revealCover.hookType === 'spoiler' || revealCover.hookForm === 'payoff');
+  if (opening && payoff) {
+    if (position(payoff) < position(opening)) fail('STORY.payoff cannot precede the opening');
+    else if (position(payoff) === position(opening) && !coverReveal)
+      fail('STORY.payoff must follow the opening — only a cover that states the result ' +
+           '(hookType:"spoiler" or hookForm:"payoff") pays in the opening group');
+  }
   if (ending && position(ending) !== speech.length - 1) fail('STORY.ending must reference the last spoken group');
   if (payoff && ending && before(ending, payoff)) fail('STORY.ending cannot precede the payoff');
+  // The thesis is the message the viewer carries out of the episode — the research.md M#
+  // sentence in the narration's words (scenario-stage §The message). It is a sentence that
+  // stays true with the names gone, so it is told in the present, carries no figure, and does
+  // not command; it is heard once, at or after the payoff, over the closing picture (the
+  // 「그날 이후로」 frame — story-quality §Design step 3); and it is not the payoff line, which is
+  // the reversal itself. The 2026-09-11 김만덕 board carried a fact in this field and a picture
+  // in the takeaway, and the narration read passed both — a listener could repeat what
+  // happened and not what it meant. Meaning stays the reviewer's; the shape is checked here.
+  if (text(story.thesis)) {
+    const thesis = story.thesis.trim();
+    const core = thesis.replace(/[\s.。!?…」"'”’)]+$/g, '');
+    const past = core.match(PAST_FINAL);
+    if (past) fail(`STORY.thesis is told in the past tense ("…${past[0].trim()}") — a fact about this episode; the message is a present-tense sentence that stays true with the names gone`);
+    if (/\d/.test(core)) fail('STORY.thesis carries a figure — a figure is a fact for the body; the thesis is what it means');
+    const moral = core.match(MORAL_FINAL);
+    if (moral) fail(`STORY.thesis commands ("…${moral[0].trim()}") — a moral tells the viewer what to do; a thesis states what leads to what`);
+    if (payoff && speech.length) {
+      const norm = v => String(v || '').replace(/[\s\p{P}]+/gu, '');
+      const want = norm(thesis);
+      const heard = speech.filter((x, i) => i >= position(payoff) &&
+        [x.n?.tts, x.n?.sub].some(v => text(v) && norm(v).includes(want)));
+      if (!heard.length)
+        fail('STORY.thesis is heard by no spoken group at or after the payoff — the message is a sentence the viewer hears over the closing picture, not a note');
+      const payoffLine = norm(story.payoff.quote);
+      if (want && payoffLine && (want.includes(payoffLine) || payoffLine.includes(want)))
+        fail('STORY.thesis restates the payoff line — the payoff is the reversal, the thesis is what it means once the names are gone');
+    }
+  }
+  // Optional: the belief spoken early in someone else's mouth, so the close overturns a
+  // sentence the viewer heard (Save the Cat's theme stated; scenario-stage §The message).
+  if (story.themeStated !== undefined) {
+    const stated = ref(story.themeStated, 'STORY.themeStated');
+    if (stated && payoff && !before(stated, payoff)) fail('STORY.themeStated must be spoken before the payoff');
+  }
+  // The person short (person-short.md): one person, one turn, a cut per sentence, and an
+  // opening that lands inside the event — no name, no year, no result — before anyone is
+  // introduced. Declared by STORY.person; every other board skips this block.
+  if (story.person !== undefined) {
+    const person = story.person;
+    const names = object(person) ? [person.name, ...(Array.isArray(person.aliases) ? person.aliases : [])] : [];
+    if (!object(person) || !text(person.name) ||
+        (person.aliases !== undefined && !(Array.isArray(person.aliases) && person.aliases.every(text)))) {
+      fail('STORY.person requires a name and optional aliases (person-short.md)');
+    } else if (names.some(v => v.trim().length < 2)) {
+      // A one-character alias ("이") is inside half the sentences in the language, so the
+      // opening check would refuse every board — a name has to be at least two characters.
+      fail('STORY.person names and aliases need at least two characters');
+    } else {
+      const first = speech[0]?.n;
+      const said = [first?.tts, first?.sub].filter(v => text(v));
+      if (said.some(v => names.some(name => v.includes(name.trim()))))
+        fail('STORY.person: the opening sentence names the person — open inside the event, introduce nobody');
+      // The name-erasure test (scenario-stage §The message): a thesis that names the person
+      // is a sentence about this person only, and the viewer has nothing to carry out.
+      if (text(story.thesis) && names.some(name => story.thesis.includes(name.trim())))
+        fail('STORY.person: the thesis names the person — erase the name and the message has to still stand');
+      // A calendar year, a century or a dated day (year-month-day, so "1200.5킬로" is a decimal, not a date).
+      // Four digits before 년 are always a year — an age
+      // past 999 years is spelled out (천 년). Three digits are a year unless a span marker follows
+      // ("300년째" · "500년 동안" · "100년 넘게") or a particle and a finite past span verb that cannot
+      // take a year as its subject ("500년이 흘렀어요" · "100년이 넘었어요"). Attributive forms are
+      // not exempt: "918년 넘은 탑" and "100년 묵은 성벽" read the same to a regex as a year with a
+      // verb after it, so an age before a noun is written "100년 넘게 버틴 성벽" or "100년째".
+      const YEAR = /(^|[^\d])(\d{4}\s*년|\d{3}\s*년(?!째|\s*(동안|넘게|만에|간|이상|가까이|가량|남짓)|(이|을|를|은|는|만|이나)\s*(흘렀|넘었|버텼|견뎠|기다렸|이어졌)))|\d+\s*세기|\d{4}\s*[-–.]\s*\d{1,2}\s*[-–.]\s*\d{1,2}(?!\d)/;
+      if (said.some(v => YEAR.test(v)))
+        fail('STORY.person: the opening sentence carries a year — the date comes after the scene');
+      if (coverReveal || revealCover?.hookForm === 'number')
+        fail('STORY.person: the first cut is a scene, not the result — no hookType:"spoiler", hookForm:"payoff" or hookForm:"number"');
+      if (payoff && ending && position(payoff) === position(ending))
+        fail('STORY.person: the closing scene comes after the turn — payoff and ending cannot share a group');
+      // The shared outro and a b-roll slot are not the person's cuts (storySpeech skips them too).
+      scenes.forEach((s, i) => {
+        if (s.type === 'outro' || s.type === 'broll') return;
+        const groups = Array.isArray(s.narration) ? s.narration.filter(n => text(n?.tts) || text(n?.sub)) : [];
+        if (groups.length > 1)
+          fail(`STORY.person: shot ${i + 1} speaks ${groups.length} sentences — the picture changes every sentence, one group per shot`);
+        // Two sentences packed into one group is the same defect wearing one label. A sentence
+        // closes on a period followed by a space or the end — not after a digit (3.5 · "1950. 6. 25.")
+        // nor the last dot of an ASCII ellipsis ("설마...") nor a capital-letter abbreviation ("B.C.") — or on ? / ! — unless
+        // the mark ends an embedded question ("사실일까? 궁금했어요", -까·-는지·-을지·-는가) or is
+        // followed by its attribution ("무슨 일이야? 하고 중얼거렸다"), a bare reporting verb
+        // ("괜찮아? 물었어요") or the thought it sits in ("사실일까요? 궁금했어요" · 싶다). An ellipsis
+        // pause ("설마… 진짜일까") never closes.
+        // "무슨 일이야? 아무도 몰랐어요" is two sentences and two pictures, whatever the register.
+        const sentences = v => (v.match(/(?<![\d.A-Z])\.(?=\s|$)|(?<!까|는지|을지|는가|던가)[?!]+(?=\s|$)(?!\s*((하고|라고|이라고|라며|하며|라는|이라는)(\s|$)|싶|궁금|물었|물어|되물|중얼|소리\s?쳤|소리\s?치|소리\s?질렀|소리\s?지르|외쳤|외치|말했|말하|되뇌))/g) || []).length;
+        if (groups.some(n => Math.max(sentences(n.tts || ''), sentences(n.sub || '')) > 1))
+          fail(`STORY.person: shot ${i + 1} packs two sentences into one group — split the shot`);
+      });
+    }
+  }
   if (story.cta !== 'none') {
     const ask = ref(story.ask, 'STORY.ask');
     if (ask && payoff && !before(payoff, ask)) fail('STORY.ask must follow the paid promise');

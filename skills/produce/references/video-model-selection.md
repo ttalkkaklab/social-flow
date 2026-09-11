@@ -24,6 +24,7 @@ magnitude, not to the multiplier.
 
 ## Contents
 
+- [The host video tool comes first](#the-host-video-tool-comes-first)
 - [The four selection rules — decide in this order](#the-four-selection-rules-decide-in-this-order)
 - [One-line decisions](#one-line-decisions)
 - [The one axis that splits them — does the segment use its sound?](#the-one-axis-that-splits-them-does-the-segment-use-its-sound)
@@ -41,6 +42,41 @@ magnitude, not to the multiplier.
 - [Camera — this section is the source of truth for engine vocabulary and routing](#camera-this-section-is-the-source-of-truth-for-engine-vocabulary-and-routing)
 - [What Seedance can't do](#what-seedance-cant-do)
 - [Key setup](#key-setup)
+
+## The host video tool comes first
+
+**Rule 0 (owner directive 2026-09-07).** When the CLI running produce ships its own video
+tool, that tool is the default route for every generated clip, and the four rules below choose
+between the API engines only where the episode wrote `videoProvider:"api"` or the cut wrote a
+reason the host tool cannot serve. Today that CLI is **Grok**: `image_to_video` (one source
+image, `duration` 1–15 s, `resolution` 480p or 720p, the aspect follows the source image) and
+`reference_to_video` (several reference images, `duration` 6 or 10 s, preset `voices` for a
+speaking subject). Codex and Claude Code ship no video tool, so `videoProvider` is `"api"` there.
+
+What the route means in the plan:
+
+- The storyboard writes `engine:"host"` on the slot (`visual.engine` for b-roll,
+  `visual.video.engine` for a motion background, `visual.clip.engine` for a speech clip) and
+  the forecast bills `video.host` at $0 for the requested seconds — the subscription allowance
+  pays, so the episode budget only counts what the API engines still bill.
+- The clip comes back at 720p at most; the builder's b-roll and background inputs take any
+  resolution and scale onto the 1080p canvas, and the approval page shows the ceiling beside
+  the slot. A cut that needs 1080p pixels, 4K, a local-file extension or a Seedance
+  asset-library character writes that reason and takes the API engine.
+- One clip is one call, the same source PNG and the same stored prompt as any other engine.
+  The prompt reads as plain English with no timecodes and no negative directives (no
+  `negativePrompt` argument is known on this tool); exclusions go in as positive description,
+  the way the Seedance lock does it. A speech clip on `reference_to_video` names a preset
+  voice; the channel's fixed voice still comes from TTS.
+- Zero-data-retention accounts get no video tools at all (the CLI says so at the call); that
+  is an `"api"` episode the user chooses, not a silent switch.
+- A host call that fails is put to the user before any billed API call.
+
+Quality is unmeasured through the CLI tool. The one published reading (Artificial Analysis
+image-to-video arena, read 2026-08-16) put grok-imagine-video-1.5 above Veo 3.1 and below
+Seedance 2.0; nothing in this repo has generated a clip through the tool yet, so the first host
+episode reads its clips at full playback like any other and writes what it saw in
+`build-report.md`.
 
 ## The four selection rules — decide in this order
 
@@ -88,11 +124,12 @@ Store the selection fields beside the prompt: `visual.video` for motion backgrou
 | Field | Contract |
 |---|---|
 | `engine` | `seedance` for this route; b-roll and speaking clips otherwise default to Veo |
-| `modelPurpose` | `standard` (default), `complex-motion`, `reference`, or `fixed-voice` |
+| `modelPurpose` | `standard` (default), `complex-motion`, `reference`, `fixed-voice`, or `previz` (the 3D previz clip as `Video 1` — storyboard `blender-previz.md` §6; every generated_video cut on the Seedance route) |
 | `modelReason` | Concrete action or reference requirement; required for every model other than 1.5 Pro |
 | `realFaceInput` | Set after inspecting all source/reference images. 2.x requires `false`; a generated photoreal face counts as a face too |
 | `referenceImagePaths` | Planned character/product panel paths, in prompt reference order; one source frame is not a reference set |
 | `referenceAudioPaths` | Planned fixed-voice samples; forces the 2.5 speaking/b-roll route |
+| `previz` | `{ renderer, clip, firstFrame, sha256, fps, seconds, camera: { movement }, handoff?, actors?, blend? }` with `modelPurpose:"previz"` — the clip rendered at the billed length, `referenceImagePaths[0]` the source still, no end frame; billed as input + output seconds on the `…-video` price rows. On `engine:"host"` the same record carries `handoff:"frame_and_prompt"` and none of the Seedance fields |
 | `model` | Optional exact model ID; omit to use the purpose-based selection. An explicit override must pass the same capability checks |
 | `resolution` | Defaults to `1080p`; do not choose a 720p-only tier for a 1080p episode |
 
@@ -108,7 +145,8 @@ paths in the API call. Resolve relative reference paths from the storyboard dire
 Add the stored prompt and source/output paths. Do not send planning fields such as
 `modelPurpose`, `modelReason`, `realFaceInput`, `priceKey`, or `kind` as tool arguments.
 `seedance_img2video` takes the existing source still; `seedance_reference` takes the
-resolved reference paths. Bind image/audio indices in the stored prompt before approval.
+resolved reference paths, and on a previz cut `referenceVideoPaths` too. Bind image/video/audio
+indices in the stored prompt before approval.
 
 The forecast bills the model's minimum duration and rounds fractional used seconds up;
 a 3-second 1.5 scene therefore pays for 4 seconds. It rejects overlong scenes. Changing
@@ -127,10 +165,12 @@ before calling. Reference/voice requirements cannot be dropped just to fit the c
 
 | Situation | Use |
 |---|---|
+| **The CLI you run in ships a video tool** (Grok) | `image_to_video` / `reference_to_video` — `engine:"host"`, $0 on the allowance, 720p ceiling (§The host video tool comes first). The rows below are the API lane: `videoProvider:"api"`, or a cut that wrote why the host tool cannot serve it |
 | **Motion background** (`visual.video` — a slot where the builder discards the sound) | `seedance_img2video` · `seedance-1-5-pro-251215` · 1080p · `generateAudio: false` — a price-first choice. On quality alone, Veo lite wins 59:41 (§Quality) |
 | **b-roll slot** (produce absolute rule 9 uses the clip's own sound) | `veo_img2video` — a silent clip leaves that segment mute |
-| Source background contains an **adult live-action person** | Veo (`veo_img2video`, verified pass) or Seedance 1.5 pro/1.0 pro — **only 2.x rejects face input** |
+| Source background contains an **adult live-action person** | On a motion-background cut this cannot be generated on the API lane at all — every such cut is a 2.x previz cut and 2.x rejects face input; take the face out of the still or use the host lane. Veo (`veo_img2video`) and 1.x remain for the b-roll/speech slots that carry no previz |
 | You must **reproduce the composition** of a source picture | First/last frames (`sourceImagePath`+`lastImagePath`), not reference images — both engines. References carry look and style, not composition |
+| **Any generated_video cut** — every one carries a 3D previz (user directive 2026-09-11) | `seedance_reference` · 2.x · the Blender or three.js previz as `referenceVideoPaths` (`modelPurpose:"previz"`, `handoff:"reference_video"`), the source still as `Image 1` — the vendor's clay-model reference; input plus output seconds billed. Veo and 1.x take no video input, so a previz cut on the API lane is a 2.x cut; on the host lane the previz shapes the still and the prompt instead (`handoff:"frame_and_prompt"`, storyboard blender-previz.md §6.7) |
 | **Register a character once and keep calling it** | Only the Seedance asset library (`asset://`) — Veo has no registry; it's base64 inline per request |
 | **A cut with dialogue/sound effects** | `veo_text2video` / `veo_img2video` — Veo's audio is better |
 | **Extending** an existing Veo clip | `veo_extension` — Seedance has no counterpart tool |
@@ -743,11 +783,9 @@ angles — eye level vs high is only a trend (p=.082). This is a default guide, 
 ## What Seedance can't do
 
 - **Extend or edit local video.** ModelArk's video input takes public URLs and asset IDs
-  only, no base64. Our pipeline's mp4s are local files, so they can't go in as-is. That's why
-  there is no `seedance_extension` tool, and extension belongs to `veo_extension`.
-  (To use 2.x video reference/edit/extension you'd first upload to public hosting —
-  `skills/grow-threads/references/upload-media.sh` is that slot. Not exposed as a tool for now.)
-- **Audio reference.** 2.x's reference audio isn't on the tool surface yet.
+  only, no base64. `seedance_reference` publishes a local reference video for the life of the
+  task (`MEDIA_UPLOAD_URL` hosting, else a cloudflared quick tunnel — `media-publish.ts`), but
+  2.5's edit and extend task types are not wired, so extension still belongs to `veo_extension`.
 - **Korean prompts.** Official support is 2.5 only. Write English for the other models.
 
 ---

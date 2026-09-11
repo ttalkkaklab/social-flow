@@ -30,7 +30,12 @@ write `shot.render`.
    object HTML scene.
 4. Does the continuous action itself have to be seen, more than explained? Write why a still
    is not enough and consider generated video: complex expressions, cloth, a crowd in motion.
-5. Is the point who a person is, a mood, a place or a clue? Use a still with a camera move
+5. Does real footage of it exist — the actual place, the actual era, the actual event? A free
+   stock or archive clip beats a generated one when reality is the point, and costs nothing.
+   Run `stock_search`, keep an item only when its license record says commercial and modify,
+   and route the cut as `stock_video`. A stock photograph feeds a still-camera cut the same
+   way: `visual.bg` under `images/stock/` plus `visual.license`, no `bgPrompt`.
+6. Is the point who a person is, a mood, a place or a clue? Use a still with a camera move
    that fits the purpose.
 
 When two things are the point at once, split the cut. When one is supporting information,
@@ -49,6 +54,7 @@ their source and stay outside this classification.
 | Quantities and time order | `comparison`, `trend`, `share`, `distribution`, `geographic`, `timeline` | `data_graph` | Sales compared, change over time, composition. A timeline uses dates. |
 | A short quotation or verdict | `evidence_quote`, `verdict` | `editorial_html` | A quotation with its source; a verdict in a few words. |
 | Continuous action that carries the meaning | `live_action` | `generated_video` | Cloth in the wind, or a person's movement, when that movement is the point. |
+| Real footage of the actual place, era or event | `archive` (this route only); `live_action`, `atmosphere` and `place` may take it instead of their default | `stock_video` | A 1950 newsreel of the street; a real launch from the NASA library; a real market at dawn from Pexels. The license record travels with the cut (scenes-schema §stock material). |
 
 Stills also record `camera.effect`, `target` and `reason`. Focus-in suits introducing a
 person, approach suits stressing a clue, rack focus a shift of attention, pull a place. Do
@@ -83,7 +89,11 @@ seconds; `motionBeats` cannot get around that. `evidence_quote` records
 
 Every generated cut needs `mode`, `purpose` and `reason`; recordings and the shared outro are
 exempt. Characters need `actors` and `action`; objects need `action`. Generated video also
-needs `motionEssential:true`, `action` and `whyNotStill`. Quantities need
+needs `motionEssential:true`, `action` and `whyNotStill`. A stock clip needs `action` (what
+the viewer sees happen), `visual.source: "stock"` and the `visual.license` record — provider,
+url, license, licenseUrl, `commercial` and `modify` both true, `attributionRequired` with the
+credit text when true, `retrievedAt`; share-alike and non-commercial records are refused, and
+before production the file has to sit under `footage/` as `visual.clip`. Quantities need
 `data:{chart,source,unit,values:[{label,value}],baseline}`; a timeline uses `date` instead of
 `value`, and a share adds the whole as `total`. The label each sentence emphasizes goes in
 `data.beats`. Chart choice and the shared SVG template follow [chart-design.md](chart-design.md);
@@ -105,7 +115,8 @@ the sentence, so compare the narration with the reasons once more before approva
 | `object_html` | The same mesh path, without characters the explanation does not need. |
 | `data_graph` | `subject.kind:"data"` moves values and relations. A graph is never a decorative 3D object. |
 | `editorial_html` | `kind:"diagram"`, `motion:true`, `treatment:"editorial"`, `subject.kind:"type"` for a short quotation or verdict. |
-| `generated_video` | `visual.video` or a video cut, with the reason in `visual.why`. The existing engine, cost and reference-image rules apply. |
+| `generated_video` | `visual.video` or a video cut, with the reason in `visual.why`, and its 3D previz in `visual.video.previz` (§Every generated video cut is previz-guided). The existing engine, cost and reference-image rules apply; under `PRODUCTION.videoProvider:"host"` the slot is `engine:"host"` (the CLI's own `image_to_video`) and the previz shapes the still and the prompt. |
+| `stock_video` | `visual.source: "stock"` and `visual.clip` under `footage/` — the same supplied-file lane as a recording. Produce downloads and normalizes it, drops its audio and trims from `visual.in`; TTS, subtitles and BGM run over it, nothing is drawn on it. It bills nothing and sits outside the generated-video cap. |
 
 Camera HTML copies [camera-slide-template.html](camera-slide-template.html) and changes only
 `SLIDE_SHOT` to the cut number; copy [still-camera.js](still-camera.js) into `slides/assets/`.
@@ -127,7 +138,8 @@ composition, a histogram for a distribution. Record the source, the unit and the
 chart that compares by length starts at zero. Never invent a missing value or bend the data
 to suit an animation.
 
-The generated-video count is a ceiling. The first cut goes through the same choice;
+The generated-video count is a ceiling. A stock clip is not a generated slot: it neither
+counts against the cap nor frees a slot for one more generated cut. The first cut goes through the same choice;
 `hook_video` is off by default. When a channel switched it on explicitly, design an opening
 that needs continuous action while keeping that constraint. Every generated-video cut needs a
 reason a still or a controllable HTML action would not do. Do not add an unrelated
@@ -141,6 +153,23 @@ When geographic distribution is the point, use `geographic` with `map`: rates an
 as per-region colour, counts as circle area. Boundaries and coordinates need a source. A
 region with no data is hatched, which is different from zero. Each format's data contract and
 examples are in [chart-design.md](chart-design.md).
+
+## Every generated video cut is previz-guided
+
+Every `generated_video` cut with a `visual.video` slot pre-renders its camera and blocking in
+3D first (user directive 2026-09-11) — a Blender previz through the `blender_*` bridge or a
+three.js previz through `previz-template.html` — rendered at the cut's billed length, 24 fps,
+and stored as `visual.video.previz` with `renderer`, `clip`, `firstFrame`, `sha256`, `fps`,
+`seconds` and `camera.movement`. `checkScene` refuses the cut without it after the draft pass;
+`checkPreviz` refuses a renderer other than `blender`/`threejs`, a clip that is not a local mp4
+rendered at whole seconds and 24–60 fps, a first frame that is not a local png, a missing hash,
+a `camera.movement` that differs from `visual.camera.movement`, and — on the Seedance route
+(`handoff:"reference_video"`, `modelPurpose:"previz"`) — a `referenceImagePaths[0]` that is not
+the source still, an end frame, or a prompt that does not bind `Video 1` and `Image 1` and
+close the clay read with "Do not reference its visual content". On `engine:"host"` the handoff
+is `frame_and_prompt`: the still is edited from the first frame and the prompt carries the
+move. Imported clips (`visual.reuse`) carry none. The contract, both renderers, the first-frame
+still and the prompt skeleton are in [blender-previz.md](blender-previz.md) §6.
 
 ## Start and end frame planning
 

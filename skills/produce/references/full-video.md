@@ -38,6 +38,11 @@ and `production-mode.js` rejects a shot whose look is outside its preset.
 | `cinematic-miniature` | `miniature`, `architectural` | the bundled `tactile-miniature-v1` pack, one image per `visual.styleRole` |
 | `photoreal` | `realistic` | approved character images from this episode; no pack |
 | `webtoon` | `webtoon` | approved character images from this episode; no pack |
+| `claymation` | `clay` | approved character images from this episode; no pack |
+| `paper-cutout` | `papercut` | approved character images from this episode; no pack |
+| `ink-wash` | `inkwash` | approved character images from this episode; no pack |
+| `toon-3d` | `toon3d` | approved character images from this episode; no pack |
+| `arcade-2d` | `arcade` | approved character images from this episode; no pack |
 | any preset | `archive` | the supplied source itself; no generated appearance reference |
 
 `style.reference` records where the look comes from: a URL for the miniature reference, a
@@ -90,8 +95,11 @@ its generator. These are authored reconstruction instructions, not recovered pro
   Numeric comparisons still require source values and the actual count or proportion; if a
   generator cannot draw that accurately, stop and propose a revised cut or mode.
 
-The `realistic` look (photoreal) and the `webtoon` look follow the same world-bible and
-one-action rules, with the treatment text `production-mode.js` holds for their preset.
+The `realistic` look (photoreal), the `webtoon` look and the five prompt-only looks (`clay`,
+`papercut`, `inkwash`, `toon3d`, `arcade`) follow the same world-bible and one-action rules, with the
+treatment text `production-mode.js` holds for their preset. Ink-wash and claymation clips hold
+only slow motion (visual-style.md); plan the acted cut as a still with a camera move when the
+action is large. Arcade clips keep a static or sideways-panning camera and no HUD (visual-style.md).
 
 ## Shot plan and prompts
 
@@ -129,6 +137,15 @@ visual: {
   action: 'The blocks lift clear of the stream.'
 }
 ```
+
+**Every shot is pre-rendered in 3D before its prompt is written** (user directive 2026-09-11,
+[blender-previz.md](../../storyboard/references/blender-previz.md) §6): a Blender or three.js
+previz at the billed length, 24 fps, stored as `visual.video.previz` with the move it performs
+in `previz.camera.movement` — the four `visual.camera` slots are then written to match it, the
+still is edited from its first frame (§6.6), and on the API lane the shot is a Seedance 2.x
+reference cut (`modelPurpose:"previz"`, the clip as `Video 1`; the vendor bills input plus
+output seconds, `cost-preview.js` prices it on the `…-video` rows). `check-scenes.js` refuses a
+generated cut without the previz once the camera pass is written.
 
 One camera contract per shot: the four `visual.camera` slots, in vendor vocabulary; on a
 static camera `speed` stays empty and the span reads `static camera`. `videoDesign.camera` is
@@ -202,14 +219,38 @@ as a sequence:
 - Let the cut land on the subject: end a reveal on the thing the next sentence names, so the
   first frame of the next shot answers the last frame of this one.
 
+### Camera dynamics
+
+`production-mode.js` holds these on the four camera slots of every generated shot; ep402
+(2026-09-06) and ep411 (2026-09-09) broke each one and read as slideshows.
+
+- **A move the viewer can see.** `movement` and `speed` never carry `very slow`, `subtle`,
+  `gentle`, `tiny`, `slight`, `barely`, `restrained`, `quiet`, `hold composition` or
+  `breathing only`. A move written to be invisible is a still with extra steps. Write `slow`,
+  `steady` or `fast` with a vendor move — `dolly in`, `truck right`, `arc shot`, `pedestal up`,
+  `crane down` — or choose `static` on purpose.
+- **Static is the minority.** At most one shot in three holds a static camera, never two in a
+  row. The subject action carries a static shot; the other two carry the viewer.
+- **Wide is the minority.** At most half the shots are framed wide. Small full-body figures
+  on a wide stage move a few pixels on a phone; bring the other half to medium or close, where
+  a gesture fills the frame.
+- **No provider lock under a written move.** `visual.video.cameraFixed:true` is only legal with
+  `movement: static`; ep402 shot 12 asked for an optical push and locked the camera at once.
+- **Generate at the card length.** The beats end inside `scene.duration`; a 10-second clip for
+  a 5-second card spreads the action past the cut. `check-production.js --ready` refuses a clip
+  more than three seconds longer than its card unless `edit.in` skips into the action.
+
 ## Generation and cost
 
 1. Run `check-scenes.js storyboard/`, then
    `node ${CLAUDE_PLUGIN_ROOT}/skills/produce/references/check-production.js storyboard/ --selection`.
    Missing/stale approval or an estimate above the approved cap blocks all assets.
-2. Generate and inspect source images at high quality. With `imageProvider:'host'`, use the
-   product-provided image tool and its included allowance. If unavailable, ask before any
-   separately billed image API. Keep originals under storyboard/images/. Inspect silhouette,
+2. Generate and inspect source images at high quality. With `imageProvider:'host'` (Codex,
+   Grok — the storyboard's detection), use the CLI's own `image_gen` / `image_edit` on its
+   allowance. If unavailable, ask before any separately billed image API. Every still is edited
+   from the shot's previz first frame — `spatial-prompts.js` puts `previz.firstFrame` first in
+   `sourceImageArgs` with the composition lock in `sourcePrompt` (blender-previz.md §6.6) — so
+   the composition the clip starts on is the composition the still has. Keep originals under storyboard/images/. Inspect silhouette,
    topology, scale, materials and continuity before spending on motion.
 3. Generate narration before final video calls to measure the required playback duration.
    Fit it within the approved shot duration and provider limit. If it needs a longer shot,
@@ -218,7 +259,13 @@ as a sequence:
    `node ${CLAUDE_PLUGIN_ROOT}/skills/produce/references/check-production.js storyboard/ --before-call N`.
    Pass the exact `generation` arguments from `cost-preview.js --json`, resolved local
    `imagePath`, optional `lastImagePath`, and stored prompt to `mcp__social-flow__seedance_img2video`.
-   The baseline is Seedance 1.5 Pro, explicit 1080p, `generateAudio:false`. Keep spoken narration
+   Under `videoProvider:'host'` the call is the host `image_to_video` instead (source image,
+   stored prompt, `duration`, 720p) and the ledger row is `video.host` for the requested seconds.
+   On the API lane a previz cut is `seedance_reference` on the model the user chose
+   (`PRODUCTION.videoModel` — 2.0 at 1080p, 2.0 fast or mini at 720p, or 2.5; asked with
+   `video-model-options.js`'s table before any call) with the clip as `referenceVideoPaths`,
+   `generateAudio:false`; 1.5 Pro takes no reference video and is only the baseline for a slot
+   that carries no previz. Keep spoken narration
    on the channel voice. An upgrade requires a priced plan and approval; never silently escalate.
 5. Keep every attempt; set `visual.video.clip` to the chosen file. Append actual billed usage
    to `.work/cost-tally.tsv` immediately, including billed rejects:
@@ -283,6 +330,22 @@ defects, media resolution and duration. It cannot judge aesthetics: the reviewer
 rubbery buildings, popping objects, sliding terrain, action discontinuity, muddy materials,
 or a shot that misses the reference style even when its metadata passes.
 
+### Measured motion
+
+The review says a person saw the subject move; `measure-motion.js` says how much of the clip
+moves. `check-production.js --ready` measures every accepted clip (cached by SHA-256 in
+`.work/motion-metrics.json`) and refuses one that stands still longer than 2 seconds, repeats
+the previous picture on more than half its samples, or averages under 1.8 on the proxy scale.
+ep402's frozen clips measured 0.85–1.16 with every sample a repeat; ep411's quietest accepted
+clips measured 2.15–2.8. The same pass reads where visible motion starts: when the action
+begins after the first second and `edit.in` is still 0, set `edit.in` to the onset
+([cinematic-edit.md](cinematic-edit.md)) or regenerate. A failed measurement is a failed clip;
+regenerate it with a visible subject action or camera move.
+
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/skills/produce/references/measure-motion.js .work/video/s07-attempt-1.mp4
+```
+
 ## Build handoff
 
 Run `check-production.js storyboard/ --ready` before capture/build. Generate no HTML scene
@@ -295,7 +358,10 @@ reserve its handle before quoting generation, and use the common builder for del
 Do not blanket-assign `cut` or replace the builder with an episode-specific concatenation script. Keep narration and burned subtitles; clear on-screen `title`, `bullets`, `stat` and
 `footnote`, storing thumbnail/title copy in platform metadata instead.
 
-`build-reel.sh` reruns the approved-quote, review and manifest gates. The normal build report,
+`build-reel.sh` reruns the approved-quote, review and manifest gates, and `verify-assembled.js`
+measures every card of the assembled reel with the same proxy: a clip card that reads as a
+still, or an authored slide that repeats its picture on most samples or holds one plate past
+the channel plate limit (ceiling 8 seconds), stops the build. The normal build report,
 speed pass, phone QA and content review still run. Watch the final edit for timing and subject
 continuity; an individually accepted clip can still cut badly with its neighbours. A failed
 quality check holds the deliverable and queue. Report actual video spend separately from the
@@ -309,3 +375,5 @@ in each new video's ledger memo. The quote binds this identifier. The retry gate
 revision's attempts per shot; all historical rows still count toward the episode dollar cap.
 Do not change the revision to bypass a failed shot's retry limit. A new revision requires a
 real revised plan and its approval. Keep historical rows and their original shot numbers intact.
+
+Existing generated inputs use [visual.reuse](../../storyboard/references/scenes-schema.md#existing-generated-clip-input-visualreuse). Skip generation steps for those shots and keep their imported-file playback review. Do not create a source image or call a video API for an imported input.

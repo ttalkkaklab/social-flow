@@ -10,7 +10,12 @@ const {recommend,checkScene,checkEpisode}=require(path.join(ref,'render-routing.
 const still=()=>({type:'points',duration:8,narration:[{tts:'A portrait.',sub:'A portrait.'}],shot:{infoType:'other',render:{mode:'still_camera',purpose:'portrait',reason:'Introduce the inventor.',camera:{effect:'push',target:'face',reason:'Make the identity clear.'}}},visual:{bg:'images/portrait.png',camera:{movement:'dolly in'},slide:{kind:'camera',motion:true,file:'slides/s1-camera.html'}}});
 const physical=(character=false)=>({type:'points',duration:8,shot:{infoType:'principle',render:{mode:character?'character_html':'object_html',purpose:character?'human_process':'mechanism',reason:'Show the causal action.',action:character?'The worker lifts the load onto the cart.':'The valve opens and admits water.',...(character?{actors:['worker']}:{})}},visual:{slide:{kind:'diagram',motion:true,treatment:'editorial',subject:{kind:'object'},object:{renderer:'mesh'}}}});
 const graph=()=>({type:'points',duration:8,narration:[{tts:'Compare the two values.'}],shot:{infoType:'statistic',render:{mode:'data_graph',purpose:'comparison',reason:'Compare measured counts.',data:{title:'Measured counts',source:'research.md#counts',unit:'units',chart:'bar',baseline:0,beats:[{group:1,focus:['B'],insight:'B is twice A.'}],values:[{label:'A',value:16},{label:'B',value:32}]}}},visual:{slide:{kind:'diagram',motion:true,treatment:'editorial',subject:{kind:'data'},chartRenderer:'svg-v1'}}});
-const video=()=>({type:'cover',shot:{infoType:'other',render:{mode:'generated_video',purpose:'live_action',reason:'The flowing fabric carries the mood.',motionEssential:true,action:'Wind lifts the fabric while the actor turns.',whyNotStill:'The changing silhouette requires continuous natural motion.'}},visual:{video:{engine:'seedance'},why:'Continuous cloth and body motion.'}});
+// Every generated_video cut carries its 3D previz (blender-previz.md §6, user directive 2026-09-11).
+const previzRecord=()=>({renderer:'blender',clip:'previz/s1.mp4',firstFrame:'previz/s1-f0001.png',sha256:'b'.repeat(64),fps:24,seconds:5,camera:{movement:'arc shot'}});
+const PREVIZ_PROMPT='Image 1 is the first frame. Use Video 1, a 3D clay-model previz, as the only reference for camera movement, shot rhythm, subject trajectory and blocking; strictly keep its camera path and pacing. Do not reference its visual content. The red model in Video 1 is the porter from Image 2. A stone courtyard at dusk. The porter stays consistent with Image 2.';
+const video=()=>({type:'cover',duration:5,shot:{infoType:'other',render:{mode:'generated_video',purpose:'live_action',reason:'The flowing fabric carries the mood.',motionEssential:true,action:'Wind lifts the fabric while the actor turns.',whyNotStill:'The changing silhouette requires continuous natural motion.'}},
+ visual:{bg:'images/scene-1.png',camera:{movement:'arc shot',speed:'slow',framing:'medium',end:'the gate'},why:'Continuous cloth and body motion.',
+  video:{engine:'seedance',modelPurpose:'previz',modelReason:'The orbit lands on the sentence',realFaceInput:false,referenceImagePaths:['images/scene-1.png','characters/porter/body.png'],previz:previzRecord(),prompt:PREVIZ_PROMPT}}});
 test('the five visual routes have valid independent production handoffs',()=>{
  for(const scene of [still(),physical(true),physical(),graph(),video()])assert.deepEqual(checkScene(scene),[]);
 });
@@ -76,4 +81,92 @@ test('shared camera template passes the production HTML contract',()=>{
  const r=spawnSync(process.execPath,[path.join(ref,'check-slide.js'),dir,'--require-all'],{encoding:'utf8'});
  assert.equal(r.status,0,r.stdout+r.stderr);
  }finally{rmSync(dir,{recursive:true,force:true})}
+});
+
+test('every generated_video cut pre-renders in 3D: a missing previz is refused after the draft',()=>{
+ const s=video();delete s.visual.video.previz;delete s.visual.video.modelPurpose;delete s.visual.video.referenceImagePaths;s.visual.video.prompt='A courtyard at dusk. The porter stays consistent with the input frame.';
+ assert.match(checkScene(s).join(),/pre-renders its camera and blocking in 3D/);
+ assert.doesNotMatch(checkScene(s,{draft:true}).join(),/pre-renders/);
+ // An imported clip (visual.reuse) is not generated here and carries no previz.
+ const r=video();delete r.visual.video.previz;r.visual.reuse={};assert.doesNotMatch(checkScene(r).join(),/pre-renders/);
+});
+test('a previz on the host video lane shapes the still and the prompt, never a Video 1 the tool cannot take',()=>{
+ const {checkPreviz,previzHandoff}=require(path.join(ref,'render-routing.js'));
+ const h=video();h.visual.video={engine:'host',prompt:'A courtyard at dusk.',previz:{...previzRecord(),handoff:'frame_and_prompt'}};
+ assert.equal(previzHandoff(h),'frame_and_prompt');
+ assert.deepEqual(checkPreviz(h),[]);
+ h.visual.video.previz.handoff='reference_video';assert.match(checkPreviz(h).join(),/takes no reference clip/);
+ delete h.visual.video.previz.handoff;assert.deepEqual(checkPreviz(h),[]);   // the lane implies the handoff
+ const a=video();a.visual.video.previz.handoff='frame_and_prompt';assert.match(checkPreviz(a).join(),/Video 1 — handoff:"reference_video"/);
+ assert.equal(previzHandoff(video()),'reference_video');
+});
+test('a previz clip is bound by hash, rendered at whole seconds, and named in the prompt',()=>{
+ const {checkPreviz}=require(path.join(ref,'render-routing.js'));
+ const good=video;
+ assert.deepEqual(checkScene(good()),[]);
+ assert.deepEqual(checkPreviz(video()),[]);
+ const edits=[
+  [s=>{s.visual.video.previz.renderer='maya'},/renderer must be blender/],
+  [s=>{delete s.visual.video.previz.renderer},/renderer must be blender/],
+  [s=>{delete s.visual.video.previz.firstFrame},/firstFrame/],
+  [s=>{s.visual.video.previz.firstFrame='previz/s1.jpg'},/firstFrame/],
+  [s=>{delete s.visual.video.previz.camera},/camera\.movement records/],
+  [s=>{s.visual.video.previz.camera.movement='dolly in'},/contradicts visual\.camera\.movement/],
+  [s=>{s.visual.video.previz.handoff='mail'},/handoff must be/],
+  [s=>{s.visual.video.previz.clip='https://x/s1.mp4'},/mp4\/mov path/],
+  [s=>{s.visual.video.previz.clip='/Users/x/s1.mp4'},/no absolute path/],
+  [s=>{s.visual.video.previz.clip='../other/s1.mp4'},/no \.\./],
+  [s=>{s.visual.video.previz.firstFrame='previz/../../secret.png'},/no \.\./],
+  [s=>{delete s.visual.video.previz.sha256},/sha256/],
+  [s=>{s.visual.video.previz.seconds=4.5},/whole number/],
+  [s=>{s.visual.video.previz.fps=61},/24–60/],
+  [s=>{s.visual.video.previz.fps=23.976},/24–60/],
+  [s=>{s.visual.video.modelPurpose='reference'},/modelPurpose:"previz"/],
+  [s=>{s.visual.video.referenceImagePaths=['characters/porter/body.png']},/referenceImagePaths\[0\]/],
+  [s=>{s.visual.video.lastImagePath='images/scene-1-end.png'},/no end frame/],
+  [s=>{s.visual.video.prompt=s.visual.video.prompt.replace('Video 1, a','the clip, a').replace('in Video 1','in the clip')},/"Video 1"/],
+  [s=>{s.visual.video.prompt=s.visual.video.prompt.replace('Image 1 is the first frame. ','')},/first frame/],
+  [s=>{s.visual.video.prompt=s.visual.video.prompt.replace('Do not reference its visual content. ','')},/visual content/],
+  [s=>{s.shot.render.mode='still_camera'},/generated_video cut/],
+ ];
+ for(const [edit,pattern] of edits){const s=good();edit(s);assert.match(checkPreviz(s).join(),pattern)}
+ // A draft has no hash and no prompt yet; the shape rules still hold.
+ const d=good();delete d.visual.video.previz.sha256;d.visual.video.prompt='';assert.deepEqual(checkPreviz(d,{draft:true}),[]);
+ d.visual.video.previz.seconds=0;assert.match(checkPreviz(d,{draft:true}).join(),/whole number/);
+ // The camera slot may spell the move with different spacing or case; a different move is the defect.
+ const c=good();c.visual.camera.movement=' Arc  Shot ';assert.deepEqual(checkPreviz(c),[]);
+ const t=good();t.visual.video.previz.renderer='threejs';assert.deepEqual(checkPreviz(t),[]);
+});
+// ── free stock material (scenes-schema §stock material) ──
+const routing=require(path.join(ref,'render-routing.js'));
+const stockLicense=()=>({provider:'nasa',url:'https://images.nasa.gov/details/A11',license:'NASA media usage guidelines',licenseUrl:'https://www.nasa.gov/nasa-brand-center/images-and-media/',attributionRequired:false,commercial:true,modify:true,retrievedAt:'2026-09-07'});
+const stockVideo=(purpose='archive')=>({type:'points',duration:6,narration:[{tts:'The launch.'}],shot:{infoType:'other',render:{mode:'stock_video',purpose,reason:'The actual 1969 launch is the sentence.',action:'The rocket clears the tower.'}},visual:{source:'stock',clip:'footage/s3-nasa-a11.mp4',license:stockLicense()}});
+test('a stock clip is a route of its own: archive only, live_action/atmosphere/place as an alternative',()=>{
+ assert.deepEqual(routing.modesFor('archive'),['stock_video']);
+ assert.deepEqual(routing.modesFor('live_action'),['generated_video','stock_video']);
+ assert.deepEqual(routing.modesFor('place'),['still_camera','stock_video']);
+ assert.deepEqual(routing.modesFor('portrait'),['still_camera']);
+ assert.deepEqual(checkScene(stockVideo()),[]);
+ assert.deepEqual(checkScene(stockVideo('live_action')),[]);
+ assert.match(checkScene(stockVideo('portrait')).join('\n'),/portrait requires still_camera/);
+ assert.match(checkScene({...stockVideo(),visual:{source:'stock',license:stockLicense()}}).join('\n'),/visual\.clip under footage/);
+ assert.deepEqual(checkScene({...stockVideo(),visual:{source:'stock',license:stockLicense()}},{draft:true}),[]);
+});
+test('full_video keeps a supplied stock clip and still refuses other substitutions',()=>{
+ assert.deepEqual(checkScene(stockVideo(),{production:{mode:'full_video'}}),[]);
+ assert.match(checkScene(still(),{production:{mode:'full_video'}}).join('\n'),/requires generated_video/);
+});
+test('the license record is checked on every stock source, photo or clip',()=>{
+ const lic=stockLicense();
+ assert.deepEqual(routing.checkLicense({license:lic}),[]);
+ for(const [key,value,re] of [['commercial',false,/commercial must be true/],['modify',false,/modify must be true/],['shareAlike',true,/share-alike/],['url','not a url',/url must be/],['retrievedAt','yesterday',/retrievedAt/],['attributionRequired','yes',/attributionRequired/]])
+  assert.match(routing.checkLicense({license:{...lic,[key]:value}}).join('\n'),re,key);
+ assert.match(routing.checkLicense({license:{...lic,attributionRequired:true}}).join('\n'),/attribution text/);
+ assert.deepEqual(routing.checkLicense({license:{...lic,attributionRequired:true,attribution:'NASA/KSC'}}),[]);
+ const photo=still();photo.visual.source='stock';photo.visual.license=lic;
+ assert.deepEqual(checkScene(photo),[]);
+ photo.visual.bgPrompt='a generated prompt';
+ assert.match(checkScene(photo).join('\n'),/drop bgPrompt/);
+ delete photo.visual.license;
+ assert.match(checkScene(photo).join('\n'),/visual\.license/);
 });

@@ -21,7 +21,8 @@ Platform-wide style and publishing rules live in
 - [Mass repetitive production — this pipeline's second risk (researched 2026-08-15)](#mass-repetitive-production-this-pipelines-second-risk-researched-2026-08-15)
 - [Funnel — where to send Shorts viewers](#funnel-where-to-send-shorts-viewers)
 - [§Replies (inbox handling)](#replies-inbox-handling)
-- [Observed metrics (weekly 4)](#observed-metrics-weekly-4)
+- [Observed metrics (weekly 5)](#observed-metrics-weekly-5)
+- [Velocity and the one-video push](#velocity-and-the-one-video-push)
 - [Do not cite — folklore rejected in verification](#do-not-cite-folklore-rejected-in-verification)
 - [Verification failures — what we have to admit we don't know](#verification-failures-what-we-have-to-admit-we-dont-know)
 
@@ -155,11 +156,19 @@ yourself.
 - A YouTube reply lands on the top-level comment thread — you're not answering
   one nested comment; the whole conversation reads it. Keep that in mind.
 
-## Observed metrics (weekly 4)
+## Observed metrics (weekly 5)
 
 engagedViews (views that got past the opening) · averageViewPercentage ·
-subscriber delta · per-video view distribution. Likes are a lagging indicator
-and don't change decisions. Read the subject, length, and format of the
+subscriber delta · per-video view distribution · shares. Likes are a lagging
+indicator and don't change decisions. **Shares are the exception among the
+response metrics** — a forward is the only response that carries the video to
+someone the recommendation never picked, and `youtube_insights` has returned
+the per-video number all along. Read it weekly against `engagedViews` on the
+same episodes — the views that got past the opening, the closest stand-in for
+reach on a platform that reports none — and only weekly: shares come from
+Analytics and lag 2–3 days like everything else that service serves, so no
+same-day rule can key on them.
+Read the subject, length, and format of the
 top-reach videos into the next plan — without this learning, the loop just
 clones the same video. If only views are low while early pass-through and
 retention sit at or above the median of the recent N episodes, don't copy that
@@ -173,7 +182,7 @@ definition, and it now counts **plays started or replayed with no minimum
 watch-time requirement** (confirmed 2026-08-15). A play swiped past still
 counts as a view, so "views went up" alone doesn't mean the video was good.
 This makes it even clearer why engagedViews and averageViewPercentage are the
-judgment axes among the four.
+judgment axes among the five.
 
 **A view ceiling is a promotion verdict, not the size of the demand.** Shorts
 expose in steps — every upload goes to a small seed pool first, and its response
@@ -209,6 +218,47 @@ holding alone.
 
 Analytics lags 2–3 days. An empty yesterday is not an outage; compare 7-day
 windows against each other.
+
+## Velocity and the one-video push
+
+**[official]** Shorts expose in steps, and the seed-pool account above is
+YouTube's own. What the loop can watch of that while it happens is one number:
+the public view counter in each video's `lifetime` block, served by the Data
+API with no Analytics lag. The Analytics half of the same response —
+`averageViewPercentage`, `engagedViews`, `shares` — is 2–3 days behind at day
+granularity, so the retention side of the promotion verdict isn't available on
+the day at all.
+
+**[unverified]** That a first-hour view curve predicts the promotion. Nothing
+public establishes it, and this channel has no measurement of it yet. Being the
+only signal available at that timescale is a weaker claim than being a
+predictor, and the watch is written as the weaker one: the loop records
+readings against video age and declares nothing until the channel's own ledger
+has enough episodes to say what "ahead of normal" looks like here. That number
+then goes in the plan. Importing a threshold from a blog would be the same
+move the do-not-cite list exists to block.
+
+**Two properties of the counter, both worth holding on to.** It is cached and
+coarsened, so a flat reading on a fresh video decides nothing — a rise has to
+hold across two samples before it counts. And it counts plays with no minimum
+watch time (see above), so a fast counter says the video is being served, not
+that it is good. The retention read two days later is what turns it into a
+verdict; velocity alone never enters the next plan.
+
+**Why one video and not the whole slate.** **[official]** Each Short is
+evaluated on its own and upload frequency is not a ranking input (§Principle),
+so publishing more is not the lever, and holding a slot back does nothing for a
+video that is already moving. Outside traffic can only add to one video's early
+response while its seed pool is still deciding — spread evenly it disappears
+into the noise. **[unverified]** The size of that effect — the same blank as
+Related video (§Funnel), and only the channel's own A/B can fill it.
+
+**What a push is.** One post, on one platform, authored for that platform,
+pointing at one video. It carries its own material and lets the video hang off
+it — a post whose whole content is "go watch this" is the engagement-begging
+shape Meta suppresses (grow-threads absolute rule 2), and it gives the reader
+nothing either. It goes out only where that platform's own growth plan
+authorizes it.
 
 ## Do not cite — folklore rejected in verification
 

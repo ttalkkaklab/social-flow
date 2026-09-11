@@ -24,6 +24,13 @@ the character/object action, or the chart beat; do not create another parallel m
   appearance matters. Do not use this route to summarize every sentence on a slide.
 - Choose `generated_video` only when the continuous action carries the meaning. Put the
   opening inside `SCENES`, with its actual duration and source; `PRELUDE` is rejected.
+- Real footage of the actual place, era or event may take `stock_video` — a free stock or
+  archive clip with its license record (scenes-schema §stock material) — where a generated or
+  drawn version would be a guess. Ask `stock_search` first for `archive`, `live_action`,
+  `atmosphere` and `place` cuts; the survey in
+  [docs/research/2026-09-07-free-stock-sources](../../../docs/research/2026-09-07-free-stock-sources/index.html)
+  lists the sources the tool does not reach. A stock clip carries no marks, its own sound is
+  dropped, and it never stands in for a mechanism or a chart.
 
 No fixed photo/3D/video quota applies. A data episode may use several appropriate charts and
 a mechanism episode may stay in one 3D environment. Continuity needs evolving evidence,

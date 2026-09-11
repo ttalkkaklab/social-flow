@@ -83,11 +83,24 @@ reruns source-plan and slide checks before encoding and records the plugin versi
 
 Story approval uses an [evidence-backed contract](skills/storyboard/references/story-quality.md):
 choose supported content and an earned ending before polishing the hook. CTA is optional.
+An ask stays optional; a forwardable thing does not — an ask requests behaviour from the viewer,
+while a forwardable thing is one sentence, figure or verdict they can pass on as-is. Asking to be
+shared is an ask, not a trigger. On a short that forwardable thing is `shot.share` on the closing
+shot, and `check-scenes.js` fails a board without it.
 Every spoken scene needs a purpose, and the narration review cites actual lines for meaning,
 progression, payoff and grounding. `check-story.js` and full `check-scenes.js` block missing
 or stale reviews before production; a numeric score cannot waive failure. Existing boards
 need a contract and review before rebuilding, without silently rewriting approved narration.
 These checks enforce the workflow, not a promised audience retention rate.
+A one-person history short declares `STORY.person` and follows
+[person-short.md](skills/storyboard/references/person-short.md): the opening names nobody and
+carries no year, the body is cause → block → one blow, the close is one scene after the blow,
+the picture changes with every sentence, and the subtitle colours only the year and the name.
+A message is a sentence that stays true with the episode's names gone — *what leads to what*,
+present tense, no figure, no name ([scenario-stage.md](skills/storyboard/references/scenario-stage.md)
+§The message): `check-research.js` refuses a past-tense, numbered or hero-named Message cell,
+and `check-story.js` requires `STORY.thesis` to be that sentence, heard over the closing picture
+at or after the payoff — not the reversal again, not a moral, not the picture described.
 
 The video pipeline (safe zones, reveal sync, subtitle contracts) and the SNS publishing
 client carry over from an earlier in-house plugin where they were verified in
@@ -139,6 +152,10 @@ publishable episodes. Improve reusable plugin templates and rebuild; do not hand
 - `uv tool install --python 3.12 "mlx-qwen3-asr[aligner]"` — for `stt_local_transcribe`
   and ingest's Korean STT. The first call downloads ~3.4GB of Qwen3-ASR-1.7B weights
   into `~/.cache/huggingface`. Installed elsewhere, point `QWEN3_ASR_BIN` at it
+- Blender 4.2+ (`brew install --cask blender`, or `BLENDER=<executable>`) — for the seven
+  `blender_*` previz tools (camera, blocking and body timing as numbers, rendered headless) and for
+  `bake-blender.py`'s Cycles object sheets. No add-on, no GUI session, no account. Without it the
+  mandatory previz renders in three.js through headless Chrome (`previz-template.html`)
 - whisper.cpp (`brew install whisper-cpp`) + `~/.cache/whisper-cpp/ggml-large-v3-turbo.bin`
   — the ingest STT fallback when mlx-qwen3-asr is missing. Recording mode needs
   **Screen Recording and Microphone** permission for your terminal app
@@ -175,9 +192,13 @@ optional, and they're what turns the tool from a video maker into an operator.**
   `grow-youtube`, `grow-instagram`) take over day-to-day operation on `/loop` —
   replying to comments, watching insights, joining keyword conversations, refilling
   the publish queue, and posting inside the standing authorization you approved once
-  at `init`. Insight tools (`threads_insights`, `youtube_insights`,
-  `instagram_insights`, `content_feedback`) start reporting real numbers, and
-  `review-recent` can score your last five episodes against your own medians.
+  at `init`. A just-published YouTube video also gets a velocity watch: the tick samples
+  its live view counter every `velocity_watch_minutes` (default 30), and a video running
+  ahead of the channel's own recent episodes at the same age goes into a channel-shared
+  handoff that the Threads loop can spend one push post on. Insight tools
+  (`threads_insights`, `youtube_insights`, `instagram_insights`, `content_feedback`)
+  start reporting real numbers, and `review-recent` can score your last five
+  episodes against your own medians.
 - **Skip them** and everything up to and including production still works. Research,
   storyboard, image generation, narration, the build — `produce` writes the finished
   9:16 or 16:9 video plus per-platform text into
@@ -208,8 +229,8 @@ the whole projection rather than a bill that has already partly arrived.
 
 | Capability | Free / on-device | Paid | Costs money unless… |
 |---|---|---|---|
-| **Images** | `image_local_generate` — Z-Image Turbo via mflux, $0. Optional: `mlx_image_*` when MLX Core is running | `gpt_image_*` — OpenAI, per image by quality | …you accept no text in the frame. Local generation breaks Korean glyphs apart, so covers and any text-bearing frame have to go to the paid path. Default stays Z-Image |
-| **Video** | deterministic HTML motion slides rendered locally with headless Chrome. Optional: `mlx_video_generate` (24fps, RAM-capped) | Veo 3.1 (Gemini) per second · Seedance (ModelArk) per second | …you use the HTML motion lane. A channel can prohibit stills and still spend zero on generated video; Ken Burns does not count as true motion. mlx_video is not the default and is not on the Veo/Seedance face-policy table |
+| **Images** | `image_local_generate` — Z-Image Turbo via mflux, $0. Optional: `mlx_image_*` when MLX Core is running. Under Codex or Grok the CLI's own `image_gen` comes first, on the subscription allowance | `gpt_image_*` — OpenAI, per image by quality | …you accept no text in the frame. Local generation breaks Korean glyphs apart, so covers and any text-bearing frame have to go to the paid path. Default stays Z-Image on Claude Code and the host tool on Codex and Grok |
+| **Video** | deterministic HTML motion slides rendered locally with headless Chrome. Optional: `mlx_video_generate` (24fps, RAM-capped). Under Grok the CLI's own `image_to_video` comes first (1–15 s, 720p ceiling, subscription allowance) | Veo 3.1 (Gemini) per second · Seedance (ModelArk) per second | …you use the HTML motion lane or the Grok host lane. A channel can prohibit stills and still spend zero on generated video; Ken Burns does not count as true motion. mlx_video is not the default and is not on the Veo/Seedance face-policy table |
 | **Speech (TTS)** | `tts_local_generate` — Supertonic 3, $0 synthesis. Optional: `mlx_tts_generate` | `tts_generate` / `tts_multi_speaker` — Gemini, per 1,000 chars. Every generated scene also pays the Gemini audio review inside `tts_generate_checked` (two calls per take) | …the scene is your own recording. Local synthesis is free, but the builder only accepts narration with a current review proof, and the review is a paid Gemini call even for local voices. The local engine has no style or emotion control. mlx_tts is never a silent fallback for profile §2 |
 | **Transcription (STT)** | `stt_local_transcribe` — Qwen3-ASR via mlx, $0 (whisper.cpp fallback) | none | never — there is no paid STT path here |
 | **Music (BGM)** | `mlx_music_generate` when MLX Core is running | Lyria clip via Gemini (the default) | …you ship without BGM, or you have MLX Core up with a music model |
@@ -288,6 +309,15 @@ ln -sfn /path/to/social-flow ~/.buzz/packs/com.ttalkkaklab.social-flow
 
 API keys travel the same way as under Claude — shell environment variables.
 
+**Host media tools come first there.** Codex and Grok ship their own `image_gen`, and Grok
+ships `image_to_video`; a skill running under those CLIs sends every generated still to the
+host image tool and, under Grok, every generated clip to the host video tool, on the
+subscription allowance and with `image.host` / `video.host` ledger lines at $0. The plugin's
+own image and video tools become the fallback the user is asked about. Claude Code has no such
+tools, so the engine tables above are unchanged there. The storyboard records the detection in
+`window.PRODUCTION.imageProvider` and `videoProvider`; write `api` in either to opt an episode
+out. The Grok video tool tops out at 720p, and the builder scales that onto the 1080p canvas.
+
 Work products accumulate under `data/` relative to the session cwd, so the convenient
 setup is to start Claude Code in the directory where you want your content and add
 the plugin with the flag above.
@@ -308,13 +338,13 @@ editorial checks; completion-rate improvements require audience measurements.
 /social-flow:intro my-channel              # 1.3 (optional) channel intro — 4 concepts HITL → 4s veo render → 90-point convergence (spliced after the episode as a closer)
 /social-flow:setup-threads my-channel      # 1.4 (optional) SNS account setup + API tokens — browser HITL, ego lite first, Chrome fallback (per platform: setup-instagram · setup-youtube)
 /social-flow:ingest my-channel record      # 1.5 (optional) screen+voice recording → timeline — an alternative research source
-/social-flow:storyboard my-channel "July FX swings"   # 2. research → 3 seven-item scenarios [scored to 95] → pick → more research → scenes [narration read alone, to 95] → [narration approval] → storyboard → [approval] · nothing generated
+/social-flow:storyboard my-channel "July FX swings"   # 2. research → wow points → 3 messages for today's viewer → 3 seven-item scenarios (one topic each, shown with their wow) → pick → more research → scenes [narration read alone, to 95] → [narration approval] → storyboard → [approval] · nothing generated
 /social-flow:produce my-channel 20260729-fx           # 3. video + per-platform text
 /social-flow:publish my-channel 20260729-fx           # 4. [approval] → publish → record permalinks
 /social-flow:grow-threads my-channel init             # 5. (optional) Threads growth plan [approval — standing authorization]
-/loop 30m /social-flow:grow-threads my-channel        #    then an autonomous growth tick every 30m (inbox replies · insights · keyword conversations · judgment-based posting — 95-point gate)
+/loop 30m /social-flow:grow-threads my-channel        #    then an autonomous growth tick every 30m (inbox replies · insights · keyword conversations · judgment-based posting · one push post for a handed-over breakout — 95-point gate)
 /social-flow:grow-youtube my-channel init             # 5-b. (optional) YouTube growth plan [approval — standing authorization]
-/loop 1h /social-flow:grow-youtube my-channel         #     then an hourly tick (comment replies · metrics · queue refill authoring · queue publishing)
+/loop 1h /social-flow:grow-youtube my-channel         #     then a tick every hour at rest (comment replies · metrics · queue refill authoring · queue publishing · velocity watch → breakout handoff), 15–30m while a watch is open
 /social-flow:grow-instagram my-channel init           # 5-c. (optional) Instagram growth plan [approval — standing authorization]
 /loop 1h /social-flow:grow-instagram my-channel       #     then an hourly tick (comment replies · skip-rate watch · queue refill authoring · queue publishing)
 /social-flow:topic-scout my-channel                   # 1.6 topics the market has already validated — md source of truth + chart HTML
@@ -333,11 +363,12 @@ them the pipeline ends at `produce` with the finished video and per-platform tex
 **One topic string straight to a finished video** (steps 2–3 with no human approval):
 
 ```
-/social-flow:autoproduce my-channel "July FX swings"   # research → 3 seven-item scenarios [one batched read] → pick → more research → scenes.js [narration read alone to 95, then its words to 95] → images → TTS → build → output
+/social-flow:autoproduce my-channel "July FX swings"   # research → wow points → 3 messages → 3 seven-item scenarios [one batched read] → pick → more research → scenes.js [narration read alone to 95, then its words to 95] → images → TTS → build → output
 ```
 
 The machine gates stand where the approval gates were — fact verification (3+
-cross-verified claims), three seven-item scenario candidates judged in one batched read
+cross-verified claims, three or more wow points and three messages, one topic cut from each), three seven-item
+scenario candidates judged in one batched read
 (curiosity · fear · intrigue · comedy), the narration read on its own and looped to 95 twice
 (the chain, then the words — three reads each, the sentences handed inline), the copy style
 checker and the contract checkers, build report (drift 0), one content-reviewer read at 95
@@ -417,7 +448,7 @@ social-flow/
 ├── .plugin/plugin.json          # Buzz persona pack (Open Plugin Spec)
 ├── personas/                    # Buzz pack persona (pipeline.persona.md)
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 66 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 77 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
 │       ├── tools.ts             # tool definitions (research 8 + open data 5 + generation 18 + publish 6 + comments 3 + check 1 + growth insights 5)
@@ -450,17 +481,17 @@ social-flow/
 │   │   └── references/          #   setup-playbook.md (loopback listener · production-stage 7-day expiry trap · Chrome lane map)
 │   ├── datago/                  # /social-flow:datago — open-data research → collection → seed records
 │   ├── ingest/                  # /social-flow:ingest — screen recording (+voice) → timeline (recording control · STT · scene boundaries · keyframes)
-│   ├── storyboard/              # /social-flow:storyboard — research → 3 seven-item scenarios → pick → more research → narration → narration read-through looped to 95 → vocabulary looped to 95 (both inline, ≤3 reads) → [narration approval] → the board (author's read + check-scenes.js) → the image and clip plan → [approval]. No generation call — produce makes the stills, slides and clips
-│   │   └── references/          #   scenes-schema.md · directing-grammar.md · motion-slide-template.html (studio ground · slab material · rendered object) · slide-design.md (look · motion tokens · the slide-reviewer rubric) · check-slide.js · footage-lane.md (retired 2026-09-05 — nothing is drawn over video) · footage-frames.sh · rendered-object.md + bake-object.py (an SDF-raymarched object baked to a frame sheet, numpy + Pillow, ₩0 an episode)
+│   ├── storyboard/              # /social-flow:storyboard — research → wow points (what the viewer believes → what the evidence shows) → 3 messages for today's viewer → 3 seven-item scenarios (one topic each, never "X는 알 수 없다", each shown with its wow) → pick → more research → narration → narration read-through looped to 95 → vocabulary looped to 95 (both inline, ≤3 reads) → [narration approval] → the board (author's read + check-scenes.js) → the image and clip plan → [approval]. No generation call — produce makes the stills, slides and clips
+│   │   └── references/          #   scenes-schema.md (§structure — sequences · scenes · shots) · structure-contract.js (the rules storyboard_apply · check-scenes.js · storyboard.html share) · directing-grammar.md · motion-slide-template.html (studio ground · slab material · rendered object) · slide-design.md (look · motion tokens · the slide-reviewer rubric) · check-slide.js · footage-lane.md (retired 2026-09-05 — nothing is drawn over video) · footage-frames.sh · rendered-object.md + bake-object.py (an SDF-raymarched object baked to a frame sheet, numpy + Pillow, ₩0 an episode) · blender-objects.md + bake-blender.py (the mesh recipe path-traced by Blender Cycles into the same sheet — real cast shadow, minutes of local GPU per cut, `--probe` forecasts them)
 │   ├── produce/                 # /social-flow:produce — stills (§1.5) → clips → slides (§3.6) → video build + per-platform text
 │   │   └── references/          #   build-reel.sh (SUB_MODE sentence · word · phrase) · speedup.sh (required final pace pass, 1.0 default, ≤6.2 chars/s) · bgm-bed.sh · bgm-scoring.md · video-template.html · render-motion-slide.mjs (motion slide → one clip per reveal group, no npm dependency) · make-matte.py (subject matte → VP9-alpha webm, needs rembg) · QA harness
-│   ├── autoproduce/             # /social-flow:autoproduce — one topic through research → 3 seven-item scenarios [scored to 95 on curiosity · fear · intrigue · comedy, auto-pick unattended] → more research → authoring [narration read alone, to 95] → video (human gates replaced by the machine gates, economy tier default)
+│   ├── autoproduce/             # /social-flow:autoproduce — one topic through research → wow points → 3 messages → 3 seven-item scenarios [scored to 95 on the wow and curiosity · fear · intrigue · comedy, auto-pick unattended] → more research → authoring [narration read alone, to 95] → video (human gates replaced by the machine gates, economy tier default)
 │   │   └── references/          #   cost-tiers.md (model ladder · promotion rules) · prices.tsv (price SoT) · cost-report.sh
 │   │                            #   cost-tally.md (per-episode cost ledger convention — shared by storyboard/produce)
 │   ├── publish/                 # /social-flow:publish — HITL approval, then platform publishing
 │   ├── grow-threads/            # /social-flow:grow-threads — one autonomous Threads growth tick (init plan = standing authorization, repeat via /loop — growth skills are per-platform)
 │   │   └── references/          #   growth-playbook.md (tactics SoT) · growth-plan-template.md (plan/state schema)
-│   ├── grow-youtube/            # /social-flow:grow-youtube — one autonomous YouTube growth tick (comment replies · metrics · queue refill authoring · queue publishing — only items marked queue: ready by a human or by auto-authoring)
+│   ├── grow-youtube/            # /social-flow:grow-youtube — one autonomous YouTube growth tick (comment replies · metrics · queue refill authoring · queue publishing · velocity watch → breakout handoff — only items marked queue: ready by a human or by auto-authoring)
 │   │   └── references/          #   growth-playbook.md (evidence-grade notation SoT) · growth-plan-template.md
 │   ├── grow-instagram/          # /social-flow:grow-instagram — one autonomous Instagram growth tick (comment replies · skip/watch metrics · queue refill authoring · queue publishing — Reels go out only with queue_instagram: ready + a public URL)
 │   │   └── references/          #   growth-playbook.md (two gates · disqualification SoT) · growth-plan-template.md
@@ -479,14 +510,14 @@ social-flow/
 └── data/                        # content data root (see data/README.md)
 ```
 
-## MCP tool surface (66 tools)
+## MCP tool surface (77 tools)
 
-**`tools/list` does not show all 66.** The nine publish/insights tools
+**`tools/list` does not show all 77.** The nine publish/insights tools
 (`threads_publish` · `instagram_publish` · `facebook_publish` · `facebook_comment` ·
 `youtube_publish` · `threads_insights` · `instagram_insights` · `youtube_insights` ·
 `threads_search`) are exposed **only for platforms whose credential file exists** —
 evaluated at list time, so adding a token makes them appear without restarting the
-server. With no tokens at all you'll count 57. Hidden tools still have live handlers:
+server. With no tokens at all you'll count 65. Hidden tools still have live handlers:
 calling one directly returns a missing-token error rather than failing silently.
 `content_feedback`, `youtube_topic_scout`, and `sns_issue_scout` sit outside the
 platform gate and stay listed without tokens — the YouTube scout needs
@@ -500,14 +531,15 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | Research | `sns_issue_scout` | SerpApi Google search with `site:threads.com` · `site:x.com` · `site:instagram.com`, collecting recent posts and counting topic phrases that recur across posts and platforms (+ Google trending searches). **A mention list with no engagement counts** — don't mix it into the same table as YouTube multipliers. Threads keyword search only returns your own posts before advanced access, and the Instagram Login API has no public search, so this is the only no-account path that sees all three at once |
 | Research | `naver_search` | Naver Open API (25,000 calls/day free — first choice for Korean). 8 types: news·blog·web·cafe·kin (Knowledge-iN)·image·encyc·local |
 | Research | `serp_web_search` / `serp_news_search` / `serp_naver_search` / `serp_image_search` / `serp_trending_now` | SerpApi (250 free/month — precision + international). naver takes where=web·news·image·video + a period filter, image takes license/size/aspect filters, trending_now returns per-country Google trending searches (4/24/48/168-hour windows, approximate volume and growth) |
+| Research | `stock_search` | Free stock photos and clips — Pexels · Pixabay (`PEXELS_API_KEY` / `PIXABAY_API_KEY`) · NASA Image and Video Library · Wikimedia Commons (no key). Every item returns the `visual.license` block a `visual.source: "stock"` cut stores; Commons is filtered to public domain, CC0 and CC BY. The survey behind it, with license quotes and the Korean public-domain sources: [free stock sources](docs/research/2026-09-07-free-stock-sources/index.html) (Korean) |
 | Open data | `datago_search` / `datago_detail` / `datago_file_download` | data.go.kr (no auth — search·detail·raw file) |
 | Open data | `datago_file_fetch` / `datago_api_call` | odcloud · apis.data.go.kr (auth key + **per-API usage application** required) |
-| Image generation | `image_local_generate` | Z-Image Turbo on-device via mflux (**no API key, no network, no billing — the default path**. Needs Apple Silicon + `uv tool install --python 3.12 mflux`; first call downloads 31GB of weights. No text inside images — Korean jamo break up) |
+| Image generation | `image_local_generate` | Z-Image Turbo on-device via mflux (**no API key, no network, no billing — the default path on Claude Code**; under Codex and Grok the CLI's own `image_gen` comes first. Needs Apple Silicon + `uv tool install --python 3.12 mflux`; first call downloads 31GB of weights. No text inside images — Korean jamo break up) |
 | Image generation | `mlx_image_generate` / `mlx_image_edit` | MLX Core / mlx-serve on loopback (**no vendor bill**. Optional lane — default stays Z-Image. Hangul still goes to gpt_image. Fail closed if :11234 is down; this plugin never launches the app. `brew install --cask mlx-core`) |
 | Image generation | `gpt_image_text2img` / `gpt_image_img2img` | OpenAI GPT Image (OPENAI_API_KEY — **the text-and-quality path**: text rendering, arbitrary WIDTHxHEIGHT, up to 16 reference images, mask inpainting) |
 | Video generation | `veo_text2video` / `veo_img2video` / `veo_extension` / `veo_reference` | Veo 3.1 (GEMINI_API_KEY — 720p–4k, 4/6/8s grid; **native audio, local-file extension, and live-person reference** are this engine's edge) |
 | Video generation | `omni_text2video` / `omni_img2video` / `omni_extend` / `omni_edit` | Gemini Omni 1.1 Flash (GEMINI_API_KEY, Interactions API — 360p–4k, **any whole 3–10s**, and the only lane that **edits a clip by instruction** or extends a local mp4 to a 40s cumulative cap. **Billed flat ~$1.01 per call** — measured against the spend counter, not per second as the pricing page reads — so a 3s draft costs more than a full 8s veo-3.1-lite shot; worth it at the full 10s or for the edit lane, never for a short cut. No reference-image or negative-prompt field, and its person policy is unmeasured — photoreal faces stay on `veo_img2video`) |
-| Video generation | `seedance_text2video` / `seedance_img2video` / `seedance_reference` | Seedance (ARK_API_KEY, BytePlus ModelArk — 480p–4k, **2–30s in 1-second steps** billed for what you request, 7 aspect ratios, up to 30 reference images plus reference audio — a character's fixed voice (`referenceAudioPaths`, 2.x). Audio can be turned off, so silent cuts are cheap — $0.23 for 1080p 4s vs $0.64 on Veo lite. Ordinary hooks use 1.5 Pro; eligible complex action and reference cuts use 2.0, fixed voice or over nine reference images use 2.5. The storyboard records the reason and forecasts that model's cost. Which engine when: [decision table](skills/produce/references/video-model-selection.md)) |
+| Video generation | `seedance_text2video` / `seedance_img2video` / `seedance_reference` | Seedance (ARK_API_KEY, BytePlus ModelArk — 480p–4k, **2–30s in 1-second steps** billed for what you request, 7 aspect ratios, up to 30 reference images plus reference audio — a character's fixed voice (`referenceAudioPaths`, 2.x) — plus reference video (`referenceVideoPaths`, 2.x): the 3D previz as `Video 1`, the vendor's clay-model reference — every generated cut pre-renders in Blender or three.js first (user directive 2026-09-11), so the camera path and timing land as planned; a local clip is served through `MEDIA_UPLOAD_URL` or a cloudflared quick tunnel for the life of the task. Audio can be turned off, so silent cuts are cheap — $0.23 for 1080p 4s vs $0.64 on Veo lite. Ordinary hooks use 1.5 Pro; eligible complex action and reference cuts use 2.0, fixed voice or over nine reference images use 2.5. The storyboard records the reason and forecasts that model's cost. Which engine when: [decision table](skills/produce/references/video-model-selection.md)) |
 | Video generation | `mlx_video_generate` | MLX Core / mlx-serve (24fps rgb8 muxed to mp4 with ffmpeg. Default 768×1280, RAM-capped at 800MB decoded RGB. Not the default path and not on the Veo/Seedance face-policy table) |
 | Checked narration | `tts_generate_checked` | Generates with the pinned engine and reviews the actual WAV: blind transcript, pronunciation, naturalness and clarity. Up to three takes; current hash-bound PASS required for assembly. Requires Gemini API review even for local TTS; see [speech quality gate](skills/produce/references/tts-quality.md). |
 | Voice generation | `tts_generate` / `tts_multi_speaker` / `tts_list_voices` | Gemini TTS (GEMINI_API_KEY — 30 voices, automatic language detection, saves mono 24kHz wav) |
@@ -519,14 +551,16 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | Music generation | `suno_generate` / `suno_generate_sound` / `suno_generate_lyrics` / `suno_credits` | sunoapi.org third-party REST (not an official Suno Inc. API). Sung full songs (2 tracks, 2–8 min) · loopable beds with BPM/key · lyrics only · remaining credits. `SUNO_API_KEY`. Autoproduce does not call these |
 | Music generation | `mlx_music_generate` | MLX Core / mlx-serve (WAV. Default instrumental. Optional bed; default BGM stays Lyria) |
 | 3D | `mlx_3d_generate` | MLX Core / mlx-serve (GLB from an image, consumed by the offline HTML mesh slide lane) |
+| 3D previz | `blender_scene_read` / `blender_scene_build` / `blender_camera_set` / `blender_object_animate` / `blender_pose_key` / `blender_motion_import` / `blender_render_previz` | **Mandatory before every generated video cut** (user directive 2026-09-11) — the same plan renders in three.js through `previz-template.html` + `previz-runtime.js` when Blender is not installed. The local Blender, headless (**no API key, no network, no add-on, no GUI** — needs Blender 4.2+). Reads a .blend; builds a set of grey proxies — a person is a jointed mannequin on a 19-bone rig — plus dog·car·box·cylinder·sphere and GLB imports at the cut's frame range and resolution; places and keys the camera by location, look-at target and lens in metres, degrees and mm; keys objects and people's roots through space; poses a person by channel (raise, elbow, knee, bow …) or retargets a BVH/FBX motion-capture clip onto it, scaled, faced and floored; renders a clean H.264 previz plus stamped stills in Workbench or Eevee. Camera, blocking and body timing as numbers, iterated for free before any paid generation, then handed to `seedance_reference` as the reference video — the hand-off (previz → camera and timing, still → first frame, sheets → look, prompt → acting) is in [blender-previz.md](skills/storyboard/references/blender-previz.md) §6 |
 | Publish | `threads_publish` / `instagram_publish` / `facebook_publish` / `facebook_comment` / `youtube_publish` / `youtube_update` | Direct platform API calls — **exposed only for platforms with a credential file** (`youtube_update` edits title/description/tags/visibility of an already-uploaded video) |
 | Comment inbox | `sns_comment_inbox` / `sns_comment_reply` / `sns_comment_moderate` | Cross-platform normalized inbox · replies · hiding (no deletes). Inbox and replies cover all 4 platforms; hiding excludes YouTube (its API only offers held-for-review, which means something else) |
+| Storyboard | `storyboard_read` / `storyboard_apply` / `storyboard_check` | The episode board as sequences → scenes → shots (`window.STRUCTURE` beside the flat `SCENES` produce reads). `read` returns the tree at four levels; `apply` writes a new board or patches sequences, scenes and shots by key in one call, validates every shot against the grammar vocabularies and the structure against its rules (one place and time per scene, a charge that turns, every scene in one sequence, shots grouped by scene in sequence order, two sizes per scene) and refuses to write past a violation; `check` runs those rules plus the full `check-scenes.js` contract. Local files only — the rules live in [structure-contract.js](skills/storyboard/references/structure-contract.js), shared with the checker and the approval page |
 | Capability | `capability_status` | What this machine has configured, grouped by capability with an "N of M" count, plus the env var that would unlock each missing provider. Call it before planning anything that spends money — otherwise a missing key only surfaces when the call fails, after the plan was built around it. Reports configuration, not reachability |
 | Check | `sns_account_check` | Batch /me check across tokens (token values never shown) |
 | Growth insights | `threads_insights` / `threads_search` | Threads insights (account/post metrics) + public keyword search — for grow-threads (`threads_manage_insights` · `threads_keyword_search` scopes) |
-| Growth insights | `youtube_insights` | Channel stats + Analytics period metrics (views · engagedViews · average view ratio · subscriber delta) + per-video metrics — for grow-youtube (`youtube.readonly` · `yt-analytics.readonly` scopes; data lags 2–3 days) |
+| Growth insights | `youtube_insights` | Channel stats + Analytics period metrics (views · engagedViews · average view ratio · shares · subscriber delta) + per-video metrics — for grow-youtube (`youtube.readonly` · `yt-analytics.readonly` scopes). **The 2–3 day lag covers half the response.** Everything Analytics serves — the channel window, each video's `period` block, `shares`, `averageViewPercentage` — runs 2–3 days behind at day granularity, so sharing cannot be read in the first hours. Each video's `lifetime` block (views · likes · comments) is the Data API's public counter and carries no lag; that is what the velocity watch samples. It is a cached counter that can sit still on a fresh video, so one low reading is not a verdict — the threshold comes from the channel's own growth-log, not from a number written here |
 | Growth insights | `instagram_insights` | Account period metrics (reach · views · profile visits · saves) + per-media metrics — Reels alone carry `reels_skip_rate` and `ig_reels_avg_watch_time` (hook/retention verdicts). For grow-instagram (`instagram_business_manage_insights` scope; follower count comes from the profile field) |
-| Growth insights | `content_feedback` | Scores the last N episodes (default 5) against channel medians, split YouTube/Instagram, and writes a funnel/bar HTML to `data/<channel>/growth/review-recent.html`. Platforms without tokens just lose their section |
+| Growth insights | `content_feedback` | Scores the last N episodes (default 5) against channel medians, split YouTube/Instagram, and writes a funnel/bar HTML to `data/<channel>/growth/review-recent.html`. Share rate is one of the compared axes on both platforms, but the two are not the same number — YouTube divides shares by views because Analytics gives it no reach, Instagram divides by reach — so a rate is read within its own platform. Platforms without tokens just lose their section |
 
 Search tools (`*_search`) share argument names — **`query` · `limit` · `page`**.
 Whatever the backend API calls them (`q`, `display`, `num`, `start`), the server does
@@ -602,6 +636,8 @@ explicit error and everything else works.
 |---|---|---|---|
 | `NAVER_CLIENT_ID` / `NAVER_CLIENT_SECRET` | naver_search | — | Naver Open API (developers.naver.com) |
 | `SERPAPI_API_KEY` | serp_* | — | SerpApi key |
+| `PEXELS_API_KEY` | stock_search (Pexels) | — | Pexels API key (pexels.com/api — free, 200 requests/hour; NASA and Wikimedia Commons need no key) |
+| `PIXABAY_API_KEY` | stock_search (Pixabay) | — | Pixabay API key (pixabay.com/api/docs — free, 100 requests/minute) |
 | `DATA_GO_KR_API_KEY` | datago_file_fetch · api_call | — | data.go.kr auth key (My Page on data.go.kr — beyond the key, each API needs a **per-API usage application**. Search/detail/download work without a key) |
 | `OPENAI_API_KEY` | gpt_image_* | — | OpenAI API key (platform.openai.com/api-keys — image generation) |
 | `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) | veo_* · omni_* · tts_generate · tts_multi_speaker · music_* | — | Gemini API key (aistudio.google.com/apikey — video, voice, and music generation. `tts_local_generate` works without it) |

@@ -80,6 +80,10 @@ const FOOTAGE_RETIRED = 'treatment:"footage" is retired (user directive 2026-09-
   'an event or a place is a motion background or a b-roll with nothing drawn on it';
 const EDITORIAL_ROLES = ['evidence', 'relationship', 'mechanism', 'timeline', 'statistic', 'transition', 'verdict'];
 const INFO_TYPES = ['other', 'timeline', 'statistic', 'principle'];
+/* What shape the forwardable thing takes (scenes-schema.md §playback order, the `cta` beat row).
+   `shot.share` is the sentence, figure or verdict a viewer would pass on as-is; `shot.shareType`
+   labels it the way `shot.infoType` labels `shot.info`. `none` says the shot carries no trigger. */
+const SHARE_TYPES = ['fact', 'verdict', 'line', 'checklist', 'none'];
 const INFO_ROLE = { timeline: 'timeline', statistic: 'statistic', principle: 'mechanism' };
 // object-move — a baked object arrives, turns or recedes (rendered-object.md · h.object); the sentence's
 // value can be the object itself on any of the three types, so it is allowed on all of them.
@@ -119,7 +123,8 @@ function isStillCard(scene) {
   const v = (scene && scene.visual) || {};
   if (scene && (scene.type === 'broll' || scene.type === 'outro')) return false;
   if (v.source === 'recording' || v.source === 'screencast' || v.picture === 'recording') return false;
-  if ((v.slide && v.slide.kind !== 'camera') || v.video || v.clip) return false;
+  if (v.source === 'stock' && v.clip) return false;
+  if ((v.slide && v.slide.kind !== 'camera') || v.video || v.clip || v.reuse !== undefined) return false;
   return true;
 }
 
@@ -160,11 +165,13 @@ function formatOf(scenesPath) {
   }
 }
 
-const MOTION_KINDS = ['ai-video', 'recording', 'motion-slide'];
+const LONG_FORMAT = 'youtube-long-16x9';
+const MOTION_KINDS = ['ai-video', 'recording', 'stock-video', 'motion-slide'];
 const MOTION_PROFILE_KEYS = [
   'motion_min_true', 'motion_allowed_kinds', 'motion_max_consecutive_stills',
   'motion_max_still_seconds', 'motion_require_action', 'generated_video_max',
   'max_static_ground_seconds', 'html_plate_max', 'video_budget_usd', 'hook_video',
+  'length_min_seconds', 'length_max_seconds',
 ];
 // Plugin-wide defaults (owner directives 2026-09-03 "the viewer has to feel a video" and
 // 2026-09-05 "the hook is video, one more cut at most, the rest is a moving still or an HTML
@@ -230,8 +237,15 @@ function numberOrDefault(v, dflt, errors, field, integer) {
   return optionalNumber(v, errors, field, integer);
 }
 
-function normalizeMotionPolicy(raw, defaultVideoMax, source) {
+/* `pacing` is the format preset's pacing block. The length band's default is format-derived —
+   it is the only policy value this file must not carry a number for — so it arrives as an
+   argument instead of a module constant. `isShort` says which band that is; an omitted flag
+   reads as short-form, the way an omitted `window.FORMAT` does. */
+function normalizeMotionPolicy(raw, defaultVideoMax, source, pacing, isShort) {
   const errors = [];
+  const band = pacing || {};
+  const shortForm = isShort !== false;
+  const bandDefault = (v) => (Number.isFinite(Number(v)) ? Number(v) : null);
   const profileShape = raw && MOTION_PROFILE_KEYS.some((k) => raw[k] !== undefined);
   const sceneShape = !!raw && !profileShape;
   const pick = (profileKey, sceneKey) => profileShape ? raw[profileKey] : sceneShape ? raw[sceneKey] : undefined;
@@ -275,6 +289,28 @@ function normalizeMotionPolicy(raw, defaultVideoMax, source) {
   const videoBudgetUsd = numberOrDefault(
     scalar(pick('video_budget_usd', 'videoBudgetUsd')), VIDEO_BUDGET_DEFAULT_USD,
     errors, 'video_budget_usd/videoBudgetUsd', false);
+  /* The channel may narrow the recommended length band on short-form; the format's hard cap is
+     not a channel field and stays with the preset. An absent key takes the preset's own band.
+     Long-form never reads the pair, so a channel that narrows one end only does not get its
+     other end filled from the 8–15 min preset and cross-checked against a shorts number.
+     Every other policy key switches off with `off`, but there is no episode without a length,
+     so `off` here is a mistake worth naming instead of quietly handing the preset back — the
+     doc side is scenes-schema §Channel true-motion policy. */
+  const bandNumber = (v, dflt, field) => {
+    if (v === 'off' || v === 'none') {
+      errors.push(`${field} does not take off — write a number, or drop the key to keep the preset's band`);
+      return dflt;
+    }
+    return numberOrDefault(v, dflt, errors, field, false);
+  };
+  const lengthMin = shortForm ? bandNumber(
+    scalar(pick('length_min_seconds', 'lengthMin')), bandDefault(band.totalMin),
+    'length_min_seconds/lengthMin') : null;
+  const lengthMax = shortForm ? bandNumber(
+    scalar(pick('length_max_seconds', 'lengthMax')), bandDefault(band.totalMax),
+    'length_max_seconds/lengthMax') : null;
+  if (lengthMin !== null && lengthMax !== null && lengthMin > lengthMax)
+    errors.push('length_min_seconds/lengthMin is above length_max_seconds/lengthMax');
   const hookRaw = scalar(pick('hook_video', 'hookVideo'));
   const hookVideo = hookRaw === 'off' || hookRaw === 'none' ? false
     : hookRaw === 'on' ? true
@@ -285,7 +321,7 @@ function normalizeMotionPolicy(raw, defaultVideoMax, source) {
     minTrueMotion, allowedKinds: [...new Set(allowedKinds)].sort(), maxConsecutiveStills,
     maxStillSeconds, requireAction,
     generatedVideoMax: videoOverride === null ? defaultVideoMax : videoOverride,
-    maxStaticGroundSeconds, htmlPlateMax, videoBudgetUsd, hookVideo,
+    maxStaticGroundSeconds, htmlPlateMax, videoBudgetUsd, hookVideo, lengthMin, lengthMax,
   };
 }
 
@@ -301,6 +337,8 @@ function policyComparable(p) {
     htmlPlateMax: p.htmlPlateMax,
     videoBudgetUsd: p.videoBudgetUsd,
     hookVideo: p.hookVideo,
+    lengthMin: p.lengthMin,
+    lengthMax: p.lengthMax,
   });
 }
 
@@ -322,17 +360,20 @@ function generatedVideo(scene) {
   const v = (scene && scene.visual) || {};
   // The shape decides, not the lane marker: a filmed shot carries none of these, so a shot
   // that has both is a malformed board the cap and the camera-slot rules still have to reject.
-  return !!(scene && (scene.type === 'broll' || v.video ||
+  return !!(scene && (scene.type === 'broll' || v.video || v.reuse !== undefined ||
                       (scene.type === 'quote' && v.clip && typeof v.clip === 'object')));
 }
 
 function motionKind(scene) {
   const v = (scene && scene.visual) || {};
+  // A free stock or archive clip (scenes-schema §stock material) is a supplied moving file:
+  // real motion the engine never billed for. A stock photo has no clip and stays a still.
+  if (v.source === 'stock' && typeof v.clip === 'string') return 'stock-video';
   if (v.source === 'recording' || v.source === 'screencast' || v.picture === 'recording')
     return 'recording';
   // The ground decides the kind: a motion background or clip under a motion-slide overlay
   // (the cover's code-rendered title over `visual.video`) is video, not a plate.
-  if (scene && (scene.type === 'broll' || v.video || v.clip)) return 'ai-video';
+  if (scene && (scene.type === 'broll' || v.video || v.clip || v.reuse !== undefined)) return 'ai-video';
   if (v.slide && v.slide.kind !== 'camera' && v.slide.motion === true) return 'motion-slide';
   return null;
 }
@@ -343,7 +384,7 @@ function motionKind(scene) {
 function engineOf(scene) {
   const v = (scene && scene.visual) || {};
   const named = (v.video && v.video.engine) || (v.clip && v.clip.engine) || v.engine;
-  if (named === 'veo' || named === 'seedance') return named;
+  if (named === 'veo' || named === 'seedance' || named === 'host') return named;   // host: the CLI's own video tool
   if (scene && (scene.type === 'broll' || scene.type === 'quote')) return 'veo';
   return 'seedance';
 }
@@ -410,17 +451,45 @@ function check(win, fmt, opts) {
     ? Math.floor(Number(fmt.video.generatedSecondsMax) / 8) : 2;
   const productionMode = require('./production-mode.js');
   productionMode.check(win, { draft }).forEach(message => bad('production mode', message));
-  const motionPolicy = productionMode.policy((opts && opts.policy) || normalizeMotionPolicy(null, formatVideoMax, 'default'), win.PRODUCTION, scenes);
+  /* Sequence → scene → shot (structure-contract.js) — the same rules storyboard_apply refuses
+     to write past. A board with no window.STRUCTURE only warns here: old boards still build. */
+  require('./structure-contract.js').check(win).forEach(f => (f.level === 'bad' ? bad : warn)(f.where, f.what));
+  const isShort = fmt.format !== LONG_FORMAT;
+  const motionPolicy = productionMode.policy((opts && opts.policy) || normalizeMotionPolicy(null, formatVideoMax, 'default', pacing, isShort), win.PRODUCTION, scenes);
   const main = scenes.filter((s) => s.type !== 'broll' && s.type !== 'outro');
   const cover = scenes.find((s) => s.type === 'cover');
-  const isShort = fmt.format !== 'youtube-long-16x9';
 
   // ── Episode level ──
   if (!cover) bad('episode', 'no cover shot — every episode opens on one');
-  if (pacing.shotMin && main.length < pacing.shotMin)
-    warn('episode', `${main.length} main shots — the ${fmt.label} band is ${pacing.shotMin}~${pacing.shotMax}`);
-  if (pacing.shotMax && main.length > pacing.shotMax)
-    warn('episode', `${main.length} main shots — the ${fmt.label} band is ${pacing.shotMin}~${pacing.shotMax}`);
+  /* The preset spells the shot band `sceneCountMin`/`sceneCountMax` (formats.js §3.2), which is
+     also what the approval page's strip reads. This check asked for `shotMin`/`shotMax` — keys
+     no preset has ever emitted — so it never fired until 2026-09-07. */
+  if (pacing.sceneCountMin && main.length < pacing.sceneCountMin)
+    warn('episode', `${main.length} main shots — the ${fmt.label} band is ${pacing.sceneCountMin}~${pacing.sceneCountMax}`);
+  if (pacing.sceneCountMax && main.length > pacing.sceneCountMax)
+    warn('episode', `${main.length} main shots — the ${fmt.label} band is ${pacing.sceneCountMin}~${pacing.sceneCountMax}`);
+
+  /* Total length against the channel's band, with the preset's underneath it (`length_min_seconds`
+     / `length_max_seconds`, scenes-schema §Channel true-motion policy). The two keys narrow the
+     short-form band only — long-form does not read them at all and keeps the preset's own band,
+     so a dual-format channel that tightens its shorts does not drag its long-form boards down.
+     storyboard.html's length strip runs this same ladder over the same scenes — everything but
+     the outro asset, b-roll included, because a b-roll plays — so the page and this file give one
+     verdict. The hard cap belongs to the platform, not to any channel. A board with no durations
+     yet is left to the per-scene `no duration` warning rather than told its total is 0. */
+  const played = scenes.filter((s) => s.type !== 'outro')
+    .reduce((a, s) => a + (Number(s.duration) > 0 ? Number(s.duration) : 0), 0);
+  const bandFloor = isShort && Number.isFinite(motionPolicy.lengthMin) ? motionPolicy.lengthMin : pacing.totalMin;
+  const bandCeil = isShort && Number.isFinite(motionPolicy.lengthMax) ? motionPolicy.lengthMax : pacing.totalMax;
+  const lenTxt = (v) => `${Math.round(v * 10) / 10}s`;
+  if (played > 0 && Number.isFinite(pacing.totalHard) && played > pacing.totalHard)
+    bad('episode', `main body ${lenTxt(played)} — past the cap of ${lenTxt(pacing.totalHard)}`);
+  else if (played > 0 && Number.isFinite(bandFloor) && Number.isFinite(bandCeil) &&
+           (played < bandFloor || played > bandCeil))
+    warn('episode', `main body ${lenTxt(played)} — outside the ` +
+                    `${bandFloor !== pacing.totalMin || bandCeil !== pacing.totalMax ? 'channel band' : 'default'} ` +
+                    `${lenTxt(bandFloor)}~${lenTxt(bandCeil)} (going over needs a design reason; ` +
+                    `cap ${lenTxt(pacing.totalHard)})`);
 
   /* ── Comprehension contract ──
      The promise ledger in storyboard.html is useful to a person but invisible to this CLI.
@@ -519,22 +588,23 @@ function check(win, fmt, opts) {
                     story         cover → hooking → body → turn → result → cta
      A short that writes hooking/result/body/turn is a defect, not an alias. An outro asset
      is the CTA on long-form only; a short needs a spoken `beat:"cta"` as the last narrated
-     shot. storyboard.html's check strip carries the same rule. */
-  if (isShort && cover) {
-    if (cover.hookType === 'spoiler')
-      bad('cover', 'hookType "spoiler" dumps the ending on a short — use fear · empathy · curiosity; ' +
-                  'the last drip is where the answer completes');
-    if (cover.hookForm === 'payoff')
-      bad('cover', 'hookForm "payoff" dumps the result on a short — use paradox · gap · identify · number · secret');
-  }
+     shot. storyboard.html's check strip carries the same rule.
 
-  if (isShort && cover && comp && typeof comp === 'object' && !Array.isArray(comp)) {
+     A short-form cover may state the result. `hookType:"spoiler"` and `hookForm:"payoff"` are
+     legal on every format (owner directive, the twist reveal moves forward), so the answer-dump
+     check below runs on gap covers only — a result-first cover is expected to speak the answer,
+     and `payoff` puts the result at 0 s the same way `spoiler` does (§the four opening
+     strategies), so both fields excuse it here and in storyboard.html's promise ledger. The
+     title and the description are a separate surface and stay under platform-playbook §2. */
+  if (isShort && cover && cover.hookType !== 'spoiler' && cover.hookForm !== 'payoff' &&
+      comp && typeof comp === 'object' && !Array.isArray(comp)) {
     const ans = compactText(comp.answer);
     if (ans.length >= 8) {
       const hookSpoken = compactText([cover.title, cover.stat, spokenText(cover)].join(' '));
       if (hookSpoken.indexOf(ans) !== -1)
-        bad('cover', 'the hook dumps COMPREHENSION.answer — on a short the cover opens a gap, ' +
-                    'and the last drip is the first place the answer is complete');
+        bad('cover', 'the hook dumps COMPREHENSION.answer while hookType is not "spoiler" — a gap cover ' +
+                    'opens the question and the last drip completes the answer; declare hookType:"spoiler" ' +
+                    'to reveal on the cover');
     }
   }
 
@@ -551,6 +621,12 @@ function check(win, fmt, opts) {
                       '(an outro asset is not the spoken close)');
       else if (!spokenText(scenes[last.i - 1]).trim())
         bad('episode', 'a short ends on a spoken CTA — the last narrated shot has no narration');
+      /* An ask stays optional; a forwardable thing does not — an ask requests behaviour from the
+         viewer, while a forwardable thing is one sentence, figure or verdict they can pass on
+         as-is. Asking to be shared is an ask, not a trigger. */
+      else if (compactLength(((scenes[last.i - 1] || {}).shot || {}).share) < 8)
+        bad('episode', 'the close has no share trigger — write shot.share on the beat:"cta" shot: ' +
+                      'the one sentence, figure or verdict a viewer would forward as-is');
       const dripCount = mainBeats.filter((s) => s.beat === 'drip').length;
       if (dripCount < 1)
         bad('episode', 'a short has no drip beat — after the hook, 1–n shots pay curiosity in stages ' +
@@ -656,11 +732,46 @@ function check(win, fmt, opts) {
     catch (e) { bad('edit plan', e.message); }
   }
 
+  /* Establish, then close (directing-grammar §2 · §6 rule 2). A scene that opens close — the
+     mcu hook, a cu, an insert — owes the place, the head count and the distance to the next
+     picture shot; fs and ms show a body, not a place, and an HTML explanation screen pays
+     nothing. A warning: the reviewer weighs a written reason. */
+  {
+    const CLOSE_OPEN = ['mcu', 'cu', 'choker', 'ecu', 'insert'];
+    const PAYS = ['els', 'ls', 'ws', 'mfs', 'two'];
+    const EXPLAIN = ['data_graph', 'editorial_html', 'object_html', 'character_html'];
+    const isScreen = (s) => s.shot && s.shot.render && EXPLAIN.indexOf(s.shot.render.mode) !== -1;
+    const byScene = new Map();
+    scenes.forEach((s, i) => {
+      if (s.type === 'outro' || isScreen(s)) return;
+      const key = s.scene == null ? 'shot ' + (i + 1) : String(s.scene);
+      if (!byScene.has(key)) byScene.set(key, []);
+      byScene.get(key).push({ s, i });
+    });
+    // A scene returning to a place an earlier scene already laid out with a wide carries no debt —
+    // the viewer still holds the room (directing-grammar §6 rule 2). The place is sceneSlug's first half,
+    // whitespace removed the way structure-contract.js keys places.
+    const placeOf = (s) => String(s.sceneSlug || '').split('/')[0].replace(/\s+/g, '');
+    const seenWide = new Set();
+    byScene.forEach((rows, key) => {
+      const first = rows[0].s.shot && rows[0].s.shot.size, second = rows[1] && rows[1].s.shot && rows[1].s.shot.size;
+      const place = placeOf(rows[0].s);
+      const known = place && seenWide.has(place);
+      if (CLOSE_OPEN.indexOf(first) !== -1 && rows[1] && second && PAYS.indexOf(second) === -1 && !known)
+        warn('shot ' + (rows[1].i + 1), `scene ${key} opens on ${first} and the next picture shot is ${second} — the close opening owes an ls/els (mfs/two for two people) that says where this is; fs and ms show a body, not a place (directing-grammar §6 rule 2)`);
+      if (place && rows.some((r) => PAYS.indexOf(r.s.shot && r.s.shot.size) !== -1)) seenWide.add(place);
+    });
+  }
+
   /* Consecutive stills of the same size and angle in one scene read as a jump cut
-     (30-degree / two-step-size rule). Filmed cards are the vlog exception. */
+     (30-degree / two-step-size rule). Filmed cards are the vlog exception, and so is an
+     HTML explanation screen (shot.render.mode) — the whole picture changes there. */
+  const isExplainScreen = (s) => s.shot && s.shot.render &&
+    ['data_graph', 'editorial_html', 'object_html', 'character_html'].indexOf(s.shot.render.mode) !== -1;
   for (let i = 1; i < scenes.length; i++) {
     const prev = scenes[i - 1], cur = scenes[i];
     if (!isStillCard(prev) || !isStillCard(cur)) continue;
+    if (isExplainScreen(prev) || isExplainScreen(cur)) continue;
     if (prev.scene === undefined || prev.scene !== cur.scene) continue;
     const pr = SIZE_RANK[prev.shot && prev.shot.size];
     const cr = SIZE_RANK[cur.shot && cur.shot.size];
@@ -672,7 +783,7 @@ function check(win, fmt, opts) {
   }
 
   // The format owns the default cap; an explicit channel motion policy may raise or lower it.
-  // A supplied clip is a file that already exists, so it is not a slot the engine bills for.
+  // This is a screen-policy cap: imported generated clips count even when they cost $0.
   const videoSlots = scenes.filter((s) => generatedVideo(s));
   // Long-form counts b-roll and motion backgrounds only (§checklist); a short pays for every
   // generated cut, speech clips included, which the hook rule below enforces.
@@ -690,10 +801,10 @@ function check(win, fmt, opts) {
      camera move or an HTML motion slide. The machine layer is written in §4b, so a draft defers. */
   if (isShort && cover && motionPolicy.hookVideo) {
     const coverKind = motionKind(cover);
-    if (coverKind !== 'ai-video' && coverKind !== 'recording')
+    if (coverKind !== 'ai-video' && coverKind !== 'recording' && coverKind !== 'stock-video')
       machine('shot 1', 'the hook is a still — on a short the cover is video: a motion background under the ' +
-                        'code-rendered title (visual.video, the cover still as the source), or a recording ' +
-                        '(visual.source — hook_video off in the profile switches this rule off)');
+                        'code-rendered title (visual.video, the cover still as the source), a recording or a ' +
+                        'free stock clip (visual.source — hook_video off in the profile switches this rule off)');
   }
   if (isShort && motionPolicy.hookVideo) {
     const body = videoSlots.filter((s) => s !== cover);
@@ -789,7 +900,7 @@ function check(win, fmt, opts) {
     playbackShots(scenes).forEach((x) => {
       const scene = x.scene;
       const kind = motionKind(scene);
-      if (kind === 'ai-video' || kind === 'recording') return;
+      if (kind === 'ai-video' || kind === 'recording' || kind === 'stock-video') return;
       const segs = Array.isArray(scene.narration) ? scene.narration.length : 0;
       const stillPerLine = segs > 1 && scene.narration.every((seg) => seg && seg.img);
       const beatPerGroup = segs > 1 && beatsCoverGroups(scene);
@@ -831,6 +942,9 @@ function check(win, fmt, opts) {
       bad(where, `beat "${s.beat}" is outside ${BEATS.join(' · ')}`);
     if (shot.size && SIZES.indexOf(shot.size) === -1)
       bad(where, `shot.size "${shot.size}" is not a size word (directing-grammar §size)`);
+    /* The frame cuts the subject somewhere on every shot. A 4b field, so a draft defers. */
+    if (s.type !== 'outro' && !shot.size)
+      machine(where, 'no shot.size — pick where the frame cuts the subject from what shot.info has to show (directing-grammar §2.1)');
     if (shot.angle && ANGLES.indexOf(shot.angle) === -1)
       bad(where, `shot.angle "${shot.angle}" is not an angle word (directing-grammar §angle)`);
     if (s.type !== 'outro' && !shot.feel)
@@ -843,6 +957,10 @@ function check(win, fmt, opts) {
       else if (INFO_TYPES.indexOf(shot.infoType) === -1)
         bad(where, `shot.infoType "${shot.infoType}" is outside ${INFO_TYPES.join(' · ')}`);
     }
+    /* The forwardable thing. Required on a short's close (checked once at episode level), free
+       to appear anywhere else; the label is optional and only has to come from the vocabulary. */
+    if (String(shot.shareType || '').trim() && SHARE_TYPES.indexOf(shot.shareType) === -1)
+      bad(where, `shot.shareType "${shot.shareType}" is outside ${SHARE_TYPES.join(' · ')}`);
 
     const slide = v.slide;
     require('./slide-quality.js').checkQuality(slide, (s.narration || []).length)
@@ -965,6 +1083,13 @@ function check(win, fmt, opts) {
       if (!seg || typeof seg !== 'object') { bad(where, `narration[${j}] is not an object`); return; }
       if (!seg.tts) machine(where, `narration[${j}] has no tts — the engine reads that field`);
       if (!seg.sub) warn(where, `narration[${j}] has no sub — the subtitle falls back to tts spelling`);
+      // A Korean tts line spells numbers and loanwords the way they sound (schema §narration):
+      // the engine reads "1900년" and "GPU" on its own terms, the builder counts them as 4 and 3
+      // characters against 4 and 3 spoken syllables, and the pronunciation is left to chance.
+      // Bracketed acting tags ([whispers], [laughs]) are ElevenLabs directions, not spoken text — skipped.
+      const spokenTts = typeof seg.tts === 'string' ? seg.tts.replace(/\[[^\]]*\]/g, '') : '';
+      if (/[가-힣]/.test(spokenTts) && /[0-9A-Za-z]/.test(spokenTts))
+        warn(where, `narration[${j}].tts has digits or Latin letters (${spokenTts.match(/[0-9A-Za-z]+/g).join(', ')}) — write them as spoken Hangul; the sub field keeps the display spelling`);
     });
 
     // b-roll's own contract — the parts that break the splice rather than look wrong.
@@ -986,13 +1111,15 @@ function check(win, fmt, opts) {
 
     // Every shot that becomes a generated video leaves the storyboard with its prompt stored
     // and its four camera slots filled — the storyboard is where that is still free to fix.
-    if (generatedVideo(s)) {
+    if (generatedVideo(s) && v.reuse === undefined) {
       try { scenePlan(s); } catch (e) { machine(where, e.message); }
       // The slot rule lives in production-mode.js (shared with the approval page): a static
       // camera has no speed to state, so that one slot may stay empty (§camera).
       productionMode.missingCameraSlots(v.camera).forEach((slot) => {
         machine(where, `visual.camera.${slot} is empty — a generated shot leaves here with all four filled (speed may stay empty on a static camera)`);
       });
+      // A move the viewer cannot see, or a provider camera lock under a written move (production-mode.js).
+      productionMode.cameraErrors(s).forEach((e) => machine(where, e));
       const prompt = v.prompt || (v.video && v.video.prompt) ||
                      (v.clip && typeof v.clip === 'object' && v.clip.prompt);
       if (!prompt) machine(where, 'no stored clip prompt — produce sends this verbatim (scenes-schema §clip prompt)');
@@ -1041,7 +1168,7 @@ function check(win, fmt, opts) {
         const ob = v.slide.object;
         const at = `${where} slide.object`;
         if (!ob || typeof ob !== 'object' || Array.isArray(ob)) machine(at, 'is not an object — { file, shape, keys, frames, plan }');
-        else if (ob.renderer !== 'mesh') {
+        else if (ob.renderer !== 'mesh' && ob.renderer !== 'blender') {   // mesh · blender fields are slide-quality.js's
           if (!ob.file) machine(at, 'has no file');
           else if (!OBJECT_FILE.test(ob.file)) machine(at, `file "${ob.file}" is not slides/assets/s<shot>-<slug>.png`);
           if (!ob.shape) machine(at, 'has no shape — bake-object.py --shape (disc)');
@@ -1085,10 +1212,15 @@ function selftest() {
     process.stdout.write((cond ? 'ok   ' : 'FAIL ') + name + '\n');
     if (!cond) failed++;
   };
-  const fmt = { format: 'shorts-9x16', label: 'test', pacing: { sceneMin: 4, sceneMax: 13, shotMin: 4, shotMax: 7 },
+  // The preset keys, spelled the way formats.js spells them — a fixture that invents key names
+  // certifies dead code (that is how the shot band went five months without firing).
+  const fmt = { format: 'shorts-9x16', label: 'test',
+                pacing: { sceneMin: 4, sceneMax: 13, totalMin: 35, totalMax: 120, totalHard: 180,
+                          sceneCountMin: 4, sceneCountMax: 7 },
                 video: { generatedSecondsMax: 16 } };
   const fmtLong = { format: 'youtube-long-16x9', label: 'test long',
-                    pacing: { sceneMin: 6, sceneMax: 20, shotMin: 28, shotMax: 70 },
+                    pacing: { sceneMin: 6, sceneMax: 20, totalMin: 480, totalMax: 900, totalHard: 1200,
+                              sceneCountMin: 28, sceneCountMax: 70 },
                     video: { generatedSecondsMax: 40 } };
   // Legacy fixtures predate the static-ground and plate rules (2026-09-03); they run with the
   // two switched off and the dedicated tests further down pin them.
@@ -1111,7 +1243,10 @@ function selftest() {
     shot: { feel: 'relief', size: 'mcu', angle: 'eye', info: '한 가지 정보', infoType: 'other' },
     narration: [{ tts: '가', sub: '가' }], visual: {}
   };
-  const ctaShot = Object.assign({}, goodShot, { beat: 'cta' });
+  const ctaShot = Object.assign({}, goodShot, {
+    beat: 'cta',
+    shot: Object.assign({}, goodShot.shot, { share: '하루 한 번이면 충분해요', shareType: 'line' }),
+  });
   const cover = { type: 'cover', duration: 5, beat: 'hook',
                   hookType: 'curiosity', hookForm: 'gap',
                   shot: { feel: 'x', size: 'mcu', angle: 'eye', info: '질문', infoType: 'other' },
@@ -1151,6 +1286,10 @@ function selftest() {
      }) })), /window\.COMPREHENSION\.terms/));
   ok('a narrated shot without shot.info is a violation',
      has(bads(run([cover, Object.assign({}, goodShot, { shot: { feel: 'x', size: 'mcu', angle: 'eye', infoType: 'other' } })])), /no shot\.info/));
+  ok('a shot without shot.size is a violation after the story pass, later in --draft',
+     has(bads(run([cover, Object.assign({}, goodShot, { shot: { feel: 'x', angle: 'eye', info: '정보', infoType: 'other' } })])), /no shot\.size/) &&
+     run([cover, Object.assign({}, goodShot, { shot: { feel: 'x', angle: 'eye', info: '정보', infoType: 'other' } })], null, { draft: true })
+       .some((f) => f.level === 'later' && /no shot\.size/.test(f.what)));
   ok('a narrated shot without shot.infoType is a violation',
      has(bads(run([cover, Object.assign({}, goodShot, { shot: { feel: 'x', size: 'mcu', angle: 'eye', info: '정보' } })])), /no shot\.infoType/));
   ok('an informational short no longer needs an editorial HTML frame (plates are optional since 2026-09-03)',
@@ -1236,6 +1375,61 @@ function selftest() {
   ok('hook_video on reads as true (the wording storyboard/SKILL.md uses)',
      normalizeMotionPolicy({ hook_video: 'on' }, 2, 'fixture').hookVideo === true &&
      normalizeMotionPolicy({ hook_video: 'on' }, 2, 'fixture').errors.length === 0);
+
+  // ── channel length band (owner directive 2026-09-07) ──
+  ok('an absent length key takes the format band, not off',
+     normalizeMotionPolicy({ hook_video: 'off' }, 2, 'fixture', fmt.pacing).lengthMin === 35 &&
+     normalizeMotionPolicy({ hook_video: 'off' }, 2, 'fixture', fmt.pacing).lengthMax === 120 &&
+     normalizeMotionPolicy(null, 2, 'fixture', fmtLong.pacing).lengthMax === 900);
+  ok('a channel may narrow the band from either end',
+     normalizeMotionPolicy({ length_min_seconds: 40, length_max_seconds: 75 }, 2, 'fixture', fmt.pacing).lengthMin === 40 &&
+     normalizeMotionPolicy({ length_min_seconds: 40, length_max_seconds: 75 }, 2, 'fixture', fmt.pacing).lengthMax === 75 &&
+     normalizeMotionPolicy({ lengthMax: 75 }, 2, 'fixture', fmt.pacing).lengthMin === 35);
+  ok('a band whose floor is above its ceiling is an error',
+     normalizeMotionPolicy({ length_min_seconds: 90, length_max_seconds: 60 }, 2, 'fixture', fmt.pacing)
+       .errors.some((e) => /length_min_seconds/.test(e)));
+  ok('the band does not switch off — every other key does, this one names the mistake',
+     normalizeMotionPolicy({ length_max_seconds: 'off' }, 2, 'fixture', fmt.pacing)
+       .errors.some((e) => /length_max_seconds\/lengthMax does not take off/.test(e)) &&
+     normalizeMotionPolicy({ length_min_seconds: 'none' }, 2, 'fixture', fmt.pacing)
+       .errors.some((e) => /length_min_seconds\/lengthMin does not take off/.test(e)) &&
+     normalizeMotionPolicy({ length_max_seconds: 'off' }, 2, 'fixture', fmt.pacing).lengthMax === 120);
+  /* A dual-format channel narrows its shorts and nothing else. Reading one key here and
+     filling the other from the 8~15 min preset used to cross-check 480 against 75 and fail
+     the long-form board on a profile error it had no business reading. */
+  ok('long-form reads neither band key, so one end alone stays out of its preset',
+     normalizeMotionPolicy({ length_min_seconds: 45 }, 2, 'fixture', fmtLong.pacing, false).lengthMin === null &&
+     normalizeMotionPolicy({ length_min_seconds: 45 }, 2, 'fixture', fmtLong.pacing, false).lengthMax === null &&
+     normalizeMotionPolicy({ length_max_seconds: 75 }, 2, 'fixture', fmtLong.pacing, false).errors.length === 0);
+  ok('a length-only profile counts as declaring a policy',
+     MOTION_PROFILE_KEYS.indexOf('length_min_seconds') !== -1 &&
+     MOTION_PROFILE_KEYS.indexOf('length_max_seconds') !== -1);
+  /* The band is a verdict on the finished board, not just a parsed key — storyboard.html said so
+     from the start and this file said nothing until 2026-09-07. */
+  const timed = (n, d) => Array.from({ length: n }, (_, i) => Object.assign({}, i === 0 ? cover : i === n - 1 ? ctaShot : goodShot, { duration: d }));
+  const bandPolicy = (raw) => normalizeMotionPolicy(raw, 2, 'fixture', fmt.pacing);
+  const atLevel = (findings, level) => findings.filter((f) => f.level === level);
+  ok('a short inside the band says nothing about its length',
+     !has(run(timed(6, 8), null, { policy: bandPolicy({ hook_video: 'off' }) }), /main body/));
+  ok('a short under the band is a warning, not a violation',
+     has(atLevel(run(timed(4, 5), null, { policy: bandPolicy({ hook_video: 'off' }) }), 'warn'), /main body 20s — outside the default 35s~120s/) &&
+     !has(bads(run(timed(4, 5), null, { policy: bandPolicy({ hook_video: 'off' }) })), /main body/));
+  ok('a channel that narrows the band is the one quoted back',
+     has(atLevel(run(timed(10, 8), null, { policy: bandPolicy({ length_max_seconds: 50 }) }), 'warn'), /main body 80s — outside the channel band 35s~50s/));
+  ok('past the 180s hard cap is a violation, and no channel key moves it',
+     has(bads(run(timed(24, 8), null, { policy: bandPolicy({ length_max_seconds: 300 }) })), /main body 192s — past the cap of 180s/));
+  ok('the channel band is short-form only — long-form is measured against its own preset',
+     !has(runLong(timed(31, 20), null, { policy: bandPolicy({ length_max_seconds: 75 }) }), /main body/) &&
+     has(atLevel(runLong(timed(20, 20), null, { policy: bandPolicy({ length_max_seconds: 75 }) }), 'warn'),
+         /main body 400s — outside the default 480s~900s/));
+  ok('a board with no durations yet is left to the per-scene warning',
+     !has(run(timed(4, 0).map((s) => { const c = Object.assign({}, s); delete c.duration; return c; }),
+              null, { policy: bandPolicy({ hook_video: 'off' }) }), /main body/));
+  ok('the band is part of the profile↔scenes comparison',
+     policyComparable(normalizeMotionPolicy({ length_max_seconds: 75 }, 2, 'profile', fmt.pacing)) !==
+     policyComparable(normalizeMotionPolicy({ lengthMax: 90 }, 2, 'scenes', fmt.pacing)) &&
+     policyComparable(normalizeMotionPolicy({ length_max_seconds: 75 }, 2, 'profile', fmt.pacing)) ===
+     policyComparable(normalizeMotionPolicy({ lengthMax: 75 }, 2, 'scenes', fmt.pacing)));
   ok('a still under its camera move holds one cut (8 s)',
      !has(bads(run([videoScene, goodShot, videoScene], null, { policy: groundPolicy })), /one picture stays/));
   ok('a still that holds one picture past one cut is rejected',
@@ -1337,6 +1531,43 @@ function selftest() {
   ok('long-form counts b-roll and motion backgrounds only, as the checklist says',
      !has(bads(runLong([cover, quoteClip, quoteClip, quoteClip, quoteClip, quoteClip, quoteClip, goodShot])),
           /generated-video slots/));
+
+  // ── free stock material (scenes-schema §stock material) — a supplied clip with its license record ──
+  const stockLicense = { provider: 'pexels', url: 'https://www.pexels.com/video/1', license: 'Pexels License',
+    licenseUrl: 'https://www.pexels.com/license/', author: 'A. Filmer', attributionRequired: false,
+    commercial: true, modify: true, retrievedAt: '2026-09-07' };
+  const stockScene = Object.assign({}, goodShot, {
+    shot: Object.assign({}, goodShot.shot, { render: { mode: 'stock_video', purpose: 'archive',
+      reason: 'the actual 1961 street is the sentence', action: 'trams cross the square' } }),
+    visual: { source: 'stock', clip: 'footage/s2-pexels-1.mp4', license: stockLicense } });
+  ok('a stock clip with its license passes',
+     !has(bads(run([videoCover, stockScene, ctaShot], null, { policy: hookPolicy })), /shot 2/));
+  ok('a stock clip is not a generated slot and needs no visual.why',
+     !has(bads(run([videoCover, stockScene, stockScene, ctaShot], null, { policy: hookPolicy })), /generated cuts after the hook|no visual\.why|generated-video slots/));
+  ok('a stock cover is a hook',
+     !has(bads(run([Object.assign({}, cover, { shot: Object.assign({}, cover.shot, { render: stockScene.shot.render }),
+       visual: stockScene.visual }), goodShot, ctaShot], null, { policy: hookPolicy })), /the hook is a still/));
+  ok('a stock clip does not run the static-ground clock',
+     !has(bads(run([videoScene, Object.assign({}, stockScene, { duration: 12 }), videoScene], null, { policy: groundPolicy })), /one picture stays/));
+  ok('a stock clip without its license record is rejected',
+     has(bads(run([videoCover, Object.assign({}, stockScene, { visual: { source: 'stock', clip: 'footage/s2-pexels-1.mp4' } }), ctaShot],
+                  null, { policy: hookPolicy })), /visual\.license/));
+  ok('a non-commercial or share-alike license is rejected',
+     has(bads(run([videoCover, Object.assign({}, stockScene, { visual: Object.assign({}, stockScene.visual,
+       { license: Object.assign({}, stockLicense, { commercial: false }) }) }), ctaShot], null, { policy: hookPolicy })), /commercial must be true/) &&
+     has(bads(run([videoCover, Object.assign({}, stockScene, { visual: Object.assign({}, stockScene.visual,
+       { license: Object.assign({}, stockLicense, { shareAlike: true }) }) }), ctaShot], null, { policy: hookPolicy })), /share-alike/));
+  ok('a credit-required license without attribution text is rejected',
+     has(bads(run([videoCover, Object.assign({}, stockScene, { visual: Object.assign({}, stockScene.visual,
+       { license: Object.assign({}, stockLicense, { attributionRequired: true }) }) }), ctaShot], null, { policy: hookPolicy })), /attribution text/));
+  ok('a stock clip waits for its file only outside --draft',
+     !has(bads(run([videoCover, Object.assign({}, stockScene, { visual: { source: 'stock', license: stockLicense } }), ctaShot],
+                   null, { policy: hookPolicy, draft: true })), /visual\.clip/) &&
+     has(bads(run([videoCover, Object.assign({}, stockScene, { visual: { source: 'stock', license: stockLicense } }), ctaShot],
+                  null, { policy: hookPolicy })), /visual\.clip under footage/));
+  ok('a portrait purpose cannot take the stock route',
+     has(bads(run([videoCover, Object.assign({}, stockScene, { shot: Object.assign({}, stockScene.shot,
+       { render: Object.assign({}, stockScene.shot.render, { purpose: 'portrait' }) }) }), ctaShot], null, { policy: hookPolicy })), /requires still_camera/));
   const statFootage = Object.assign({}, footageScene({ slide: { labels: ['34개'] } }), {
     shot: Object.assign({}, goodShot.shot, { infoType: 'statistic' }) });
   ok('a statistic beat on footage is rejected even with labels',
@@ -1371,6 +1602,12 @@ function selftest() {
   // narration
   ok('a narration segment with no tts is a violation',
      has(bads(run([cover, Object.assign({}, goodShot, { narration: [{ sub: '가' }] })])), /no tts/));
+  ok('digits or Latin letters in a Korean tts line are warned',
+     has(warns(run([cover, Object.assign({}, goodShot, { narration: [{ tts: '1900년에 GPU를 썼어요', sub: '1900년에 GPU를 썼어요' }] })])), /digits or Latin letters \(1900, GPU\)/));
+  ok('an ElevenLabs acting tag in a Korean tts line is not flagged as Latin',
+     !has(warns(run([cover, Object.assign({}, goodShot, { narration: [{ tts: '[whispers] 천구백년에 발견됐어요', sub: '1900년에 발견됐어요' }] })])), /digits or Latin/));
+  ok('a Korean tts line spelled as spoken passes',
+     !has(warns(run([cover, Object.assign({}, goodShot, { narration: [{ tts: '천구백년에 지피유를 썼어요', sub: '1900년에 GPU를 썼어요' }] })])), /digits or Latin/));
 
   // b-roll
   const broll = { type: 'broll', after: 0, duration: 4, narration: [],
@@ -1467,6 +1704,27 @@ function selftest() {
   ok('a dissolve inside one scene is flagged',
      has(run([cover, Object.assign({}, goodShot, { scene: 2 }),
               dz({ transition: 'dissolve', scene: 2 })]), /same place and time/));
+  ok('an explanation screen after a still of the same size is not a jump cut',
+     !run([cover,
+           Object.assign({}, goodShot, { scene: 2, shot: { feel: 'a', size: 'ls', angle: 'eye', info: 'one', infoType: 'other' } }),
+           Object.assign({}, goodShot, { scene: 2, shot: { feel: 'b', size: 'ls', angle: 'eye', info: 'two', infoType: 'statistic', render: { mode: 'data_graph', purpose: 'compare', reason: 'x' } } })])
+       .some((f) => /jump cut/.test(f.what)));
+  ok('a scene opening on the mcu hook followed by an insert owes its wide',
+     run([Object.assign({}, cover, { scene: 1 }), Object.assign({}, goodShot, { scene: 1, shot: { feel: 'a', size: 'insert', angle: 'eye', info: 'one', infoType: 'other' } }),
+          Object.assign({}, goodShot, { scene: 2, shot: { feel: 'b', size: 'ls', angle: 'eye', info: 'two', infoType: 'other' } }), ctaShot])
+       .some((f) => f.level === 'warn' && /close opening owes/.test(f.what) && f.where === 'shot 2'));
+  ok('a scene returning to a place an earlier scene laid out with a wide owes nothing',
+     !run([Object.assign({}, cover, { scene: 1, sceneSlug: '마당 / 아침' }),
+           Object.assign({}, goodShot, { scene: 1, sceneSlug: '마당 / 아침', shot: { feel: 'a', size: 'ls', angle: 'eye', info: 'one', infoType: 'other' } }),
+           Object.assign({}, goodShot, { scene: 2, sceneSlug: '마당 / 낮', shot: { feel: 'b', size: 'insert', angle: 'eye', info: 'two', infoType: 'other' } }),
+           Object.assign({}, goodShot, { scene: 2, sceneSlug: '마당 / 낮', shot: { feel: 'c', size: 'mcu', angle: 'eye', info: 'three', infoType: 'other' } }), ctaShot])
+       .some((f) => /close opening owes/.test(f.what)));
+  ok('an ls after the mcu hook pays the debt, and an explanation screen between them is skipped',
+     !run([Object.assign({}, cover, { scene: 1 }),
+           Object.assign({}, goodShot, { scene: 1, shot: { feel: 'a', size: 'insert', angle: 'eye', info: 'one', infoType: 'other', render: { mode: 'data_graph', purpose: 'compare', reason: 'x' } } }),
+           Object.assign({}, goodShot, { scene: 1, shot: { feel: 'b', size: 'ls', angle: 'eye', info: 'two', infoType: 'other' } }),
+           Object.assign({}, goodShot, { scene: 1, shot: { feel: 'c', size: 'insert', angle: 'eye', info: 'three', infoType: 'other' } }), ctaShot])
+       .some((f) => /close opening owes/.test(f.what)));
   ok('same size and angle on consecutive stills in one scene is flagged',
      has(run([cover,
               Object.assign({}, goodShot, { scene: 2, shot: { feel: 'a', size: 'ms', angle: 'eye', info: 'one', infoType: 'other' } }),
@@ -1486,13 +1744,22 @@ function selftest() {
      has(bads(run([cover, goodShot, goodShot, goodShot])), /spoken CTA/));
   ok('an outro is not the spoken CTA on a short',
      has(bads(run([cover, goodShot, goodShot, { type: 'outro', visual: {} }])), /spoken CTA/));
-  ok('spoiler is forbidden on a short',
-     has(bads(run([Object.assign({}, cover, { hookType: 'spoiler' }), goodShot, goodShot, ctaShot])),
-         /hookType "spoiler"/));
-  ok('payoff is forbidden on a short',
-     has(bads(run([Object.assign({}, cover, { hookForm: 'payoff' }), goodShot, goodShot, ctaShot])),
-         /hookForm "payoff"/));
-  ok('a short cover that speaks the answer is a violation',
+  // The twist reveal moves forward (owner directive) — a short-form cover may state the result.
+  ok('spoiler is legal on a short',
+     bads(run([Object.assign({}, cover, { hookType: 'spoiler' }), goodShot, goodShot, ctaShot])).length === 0);
+  ok('payoff is legal on a short',
+     bads(run([Object.assign({}, cover, { hookForm: 'payoff' }), goodShot, goodShot, ctaShot])).length === 0);
+  ok('a spoiler cover may speak the answer',
+     !has(bads(run([Object.assign({}, cover, {
+       hookType: 'spoiler', hookForm: 'payoff',
+       narration: [{ tts: '한 가지가 달라졌어요.', sub: '한 가지가 달라졌어요.' }]
+     }), goodShot, goodShot, ctaShot])), /dumps COMPREHENSION\.answer/));
+  ok('a payoff cover that never declares spoiler may speak the answer too',
+     !has(bads(run([Object.assign({}, cover, {
+       hookForm: 'payoff',
+       narration: [{ tts: '한 가지가 달라졌어요.', sub: '한 가지가 달라졌어요.' }]
+     }), goodShot, goodShot, ctaShot])), /dumps COMPREHENSION\.answer/));
+  ok('a gap cover that speaks the answer is still a violation',
      has(bads(run([Object.assign({}, cover, {
        narration: [{ tts: '한 가지가 달라졌어요.', sub: '한 가지가 달라졌어요.' }]
      }), goodShot, goodShot, ctaShot])), /dumps COMPREHENSION\.answer/));
@@ -1515,6 +1782,23 @@ function selftest() {
      has(bads(run([cover, beat('turn'), goodShot, ctaShot])), /belongs to long-form/));
   ok('a short with one drip is enough',
      bads(run([cover, goodShot, ctaShot])).length === 0);
+
+  // ── the forwardable thing ──
+  const noShareCta = Object.assign({}, ctaShot, { shot: Object.assign({}, goodShot.shot) });
+  ok('a short whose close has no share trigger is a violation',
+     has(bads(run([cover, goodShot, goodShot, noShareCta])), /share trigger/));
+  ok('a share trigger under 8 letters is a violation',
+     has(bads(run([cover, goodShot, goodShot, Object.assign({}, ctaShot, {
+       shot: Object.assign({}, ctaShot.shot, { share: '좋아요!' }) })])), /share trigger/));
+  ok('long-form does not demand a share trigger on the close',
+     !has(bads(runLong([longCover, beat('hooking'), beat('result'), beat('body'), beat('cta')])),
+          /share trigger/));
+  ok('an invented shareType is a violation',
+     has(bads(run([cover, goodShot, goodShot, Object.assign({}, ctaShot, {
+       shot: Object.assign({}, ctaShot.shot, { shareType: 'forward' }) })])), /shot\.shareType "forward"/));
+  ok('every shareType word passes',
+     SHARE_TYPES.every((t) => !has(bads(run([cover, goodShot, goodShot, Object.assign({}, ctaShot, {
+       shot: Object.assign({}, ctaShot.shot, { shareType: t }) })])), /shot\.shareType/)));
 
   ok('a well-ordered answer-first episode passes', bads(runLong(afOK)).length === 0);
   ok('body before result on answer-first is a violation',
@@ -1601,11 +1885,242 @@ function selftest() {
      !has(bads(run([cover, Object.assign({}, goodShot, { sound: { cue: 'base' } }), ctaShot], { MUSIC: { base: {} } })),
           /not in window\.MUSIC/));
 
+  // ── sequence → scene → shot (structure-contract.js) ──
+  {
+    const sc = require('./structure-contract.js');
+    ok('the structure vocabularies match this file\'s', SIZES.join() === sc.VOCAB.SIZES.join() &&
+       ANGLES.join() === sc.VOCAB.ANGLES.join() && BEATS.join() === sc.VOCAB.BEATS.join() &&
+       TYPES.join() === sc.VOCAB.TYPES.join() && INFO_TYPES.join() === sc.VOCAB.INFO_TYPES.join() &&
+       SHARE_TYPES.join() === sc.VOCAB.SHARE_TYPES.join() && HOOK_TYPES.join() === sc.VOCAB.HOOK_TYPES.join() &&
+       HOOK_FORMS.join() === sc.VOCAB.HOOK_FORMS.join() && ARCS.join() === sc.VOCAB.ARCS.join() &&
+       TRANSITIONS.every(t => sc.VOCAB.TRANSITION_RE.test(t)) && sc.VOCAB.TRANSITION_RE.test('push:l2r') &&
+       !sc.VOCAB.TRANSITION_RE.test('push:left'));
+    const scene = (no, extra) => Object.assign({ no, place: '작업실', time: '낮', event: '한 사건', charge: { open: '-', close: '+' }, turn: 'x → relief' }, extra || {});
+    const structure = (scenes, sequences) => ({ version: 'structure-v1', scenes, sequences: sequences ||
+      [{ id: 'q1', title: '한 대목', purpose: '한 목적', scenes: scenes.map(x => x.no) }] });
+    const at = (shot, no, extra) => Object.assign({}, shot, { scene: no }, extra || {});
+    const wide = { shot: Object.assign({}, goodShot.shot, { size: 'ls', info: '다른 정보' }) };
+    const board = [at(cover, 1), at(goodShot, 1, wide), at(goodShot, 2), at(ctaShot, 2, wide)];
+    ok('a board with no STRUCTURE only warns',
+       has(run(board), /no window\.STRUCTURE/) && !bads(run(board)).some(f => /STRUCTURE/.test(f.what)));
+    const clean = [scene(1, { out: '가' }), scene(2, { place: '부엌', out: '가' })];
+    ok('a structured board passes',
+       !has(run(board, { STRUCTURE: structure(clean) }), /structure|scene \d|sequence/i));
+    ok('a place that names a picture warns',
+       has(run(board, { STRUCTURE: structure([clean[0], scene(2, { place: '땅속 단면 도해', out: '가' })]) }), /names a picture/));
+    ok('two scenes back to back on one slugline warn',
+       has(run(board, { STRUCTURE: structure([scene(1), scene(2)]) }), /same slugline/));
+    ok('an event that says what the viewer learns warns',
+       has(run(board, { STRUCTURE: structure([scene(1, { event: '땅속 온도의 원리가 드러난다' }), clean[1]]) }), /what the viewer learns/));
+    ok('an event that chains two actions warns',
+       has(run(board, { STRUCTURE: structure([scene(1, { event: '딸깍맨이 경고를 무시하고 버튼을 눌러 물을 맞는다' }), clean[1]]) }), /chains two actions/));
+    ok('a turn that repeats the event warns',
+       has(run(board, { STRUCTURE: structure([scene(1, { event: '광고 시간과 실제 시간이 다르다는 걸 안다', turn: '광고 시간과 실제 시간이 다르다는 걸 알게 된다' }), clean[1]]) }), /turn repeats event/));
+    ok('an out the last shot does not say warns',
+       has(run(board, { STRUCTURE: structure([scene(1, { out: '아무도 안 하는 말' }), clean[1]]) }), /is not said in the scene's last shot/));
+    ok('a last scene with no out warns',
+       has(run(board, { STRUCTURE: structure([clean[0], scene(2, { place: '부엌' })]) }), /last scene has no out/));
+    ok('a payoff on the sequence\'s first scene warns',
+       has(run(board, { STRUCTURE: structure(clean, [{ id: 'q1', title: 't', purpose: 'p', question: '왜?', payoff: 1, scenes: [1, 2] }]) }), /the sequence's first/));
+    const five = [at(cover, 1), at(goodShot, 1, wide), at(goodShot, 2), at(goodShot, 2, wide), at(ctaShot, 3, wide)];
+    const three = [scene(1, { out: '가' }), scene(2, { place: '부엌', out: '가' }), scene(3, { place: '마당', out: '가' })];
+    ok('every scene turning the same way is a metronome warning', has(run(five, { STRUCTURE: structure(three) }), /metronome/));
+    ok('a one-shot scene warns', has(run(five, { STRUCTURE: structure(three) }), /one shot — coverage/));
+    ok('a studio place beside real places warns',
+       has(run(board, { STRUCTURE: structure([clean[0], scene(2, { place: '설명 스튜디오', out: '가' })]) }), /is a studio while other scenes/));
+    ok('a one-scene sequence beside others warns',
+       has(run(board, { STRUCTURE: structure(clean, [{ id: 'q1', title: '앞', purpose: 'p', scenes: [1] }, { id: 'q2', title: '뒤', purpose: 'p', scenes: [2] }]) }), /one scene — a sequence/));
+    ok('a question no narration asks warns',
+       has(run(board, { STRUCTURE: structure(clean, [{ id: 'q1', title: 't', purpose: 'p', question: '왜 아무도 몰랐을까요', payoff: 2, scenes: [1, 2] }]) }), /is not asked/));
+    ok('an out said before the shot\'s last sentence warns',
+       has(run([at(cover, 1), at(goodShot, 1, Object.assign({ narration: [{ tts: '가' }, { tts: '나' }] }, wide)), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /goes on after it/));
+    ok('a whole episode in one scene warns',
+       has(run([at(cover, 1), at(goodShot, 1, wide), at(goodShot, 1, { shot: Object.assign({}, goodShot.shot, { info: '둘' }) }), at(goodShot, 1, { shot: Object.assign({}, goodShot.shot, { size: 'ls', info: '셋' }) }), at(ctaShot, 1, wide)], { STRUCTURE: structure([scene(1, { out: '가' })]) }), /no cut point/));
+    ok('a scene with no wide warns',
+       has(run([at(cover, 1), at(goodShot, 1, { shot: Object.assign({}, goodShot.shot, { size: 'cu', info: '둘' }) }), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /no wide/));
+    ok('a shot whose scene the structure does not define fails',
+       has(bads(run(board, { STRUCTURE: structure([scene(1)]) })), /scene 2 is not in STRUCTURE/));
+    ok('a scene in no sequence fails',
+       has(bads(run(board, { STRUCTURE: structure([scene(1), scene(2)], [{ id: 'q1', title: 't', purpose: 'p', scenes: [1] }]) })), /belongs to no sequence/));
+    ok('the same charge at both ends is a nonevent warning',
+       has(run(board, { STRUCTURE: structure([scene(1, { charge: { open: '+', close: '+' } }), scene(2)]) }), /nonevent/));
+    ok('deepening into the same pole is a turn', !has(run(board, { STRUCTURE: structure([scene(1, { charge: { open: '-', close: '--' } }), scene(2)]) }), /nonevent|deepens/));
+    ok('"++" on a "-" open is a big swing, not a violation', !has(bads(run(board, { STRUCTURE: structure([scene(1, { charge: { open: '-', close: '++' }, out: '가' }), clean[1]]) })), /charge/));
+    ok('a scene split by another scene fails',
+       has(bads(run([at(cover, 1), at(goodShot, 2, wide), at(goodShot, 1, wide), at(ctaShot, 2)], { STRUCTURE: structure([scene(1), scene(2)]) })), /split by another scene/));
+    ok('shots that play the sequences out of order fail',
+       has(bads(run(board, { STRUCTURE: structure([scene(1), scene(2)], [{ id: 'q1', title: 't', purpose: 'p', scenes: [2, 1] }]) })), /one order/));
+    ok('a stale sceneSlug fails',
+       has(bads(run([at(cover, 1, { sceneSlug: '다른 곳 / 밤' })].concat(board.slice(1)), { STRUCTURE: structure([scene(1), scene(2)]) })), /sceneSlug .* differs/));
+    ok('one size across a scene is a coverage warning',
+       has(run([at(cover, 1), at(goodShot, 1), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure([scene(1), scene(2)]) }), /coverage is two sizes/));
+    ok('a repeated shot.info anywhere on the board is a coverage warning',
+       has(run([at(cover, 1), at(goodShot, 1, { shot: Object.assign({}, goodShot.shot, { size: 'ls', info: '질문' }) }), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure([scene(1), scene(2)]) }), /shot\.info says what shot/));
+    ok('a near-duplicate shot.info warns too',
+       has(run([at(cover, 1, { shot: Object.assign({}, cover.shot, { info: '땅속 온도는 겨울에도 거의 변하지 않는다' }) }), at(goodShot, 1, Object.assign({}, wide, { shot: Object.assign({}, wide.shot, { info: '겨울에도 땅속 온도는 거의 변하지 않아요' }) })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /says what shot 1/));
+    ok('a purpose that repeats the question warns',
+       has(run(board, { STRUCTURE: structure(clean, [{ id: 'q1', title: 't', purpose: '김치가 왜 안 얼었는지 알아낸다', question: '김치가 왜 안 얼었을까', payoff: 2, scenes: [1, 2] }]) }), /purpose repeats question|says what the viewer learns/));
+    ok('a payoff scene another scene out-answers warns',
+       has(run([at(cover, 1, { narration: [{ tts: '한 가지가 달라졌어요' }] }), at(goodShot, 1, wide), at(goodShot, 2), at(ctaShot, 2, wide)],
+               { STRUCTURE: structure(clean, [{ id: 'q1', title: 't', purpose: '한 목적', question: '왜?', payoff: 2, scenes: [1, 2] }]) }), /scene 1's lines say the answer/));
+    ok('a turn pole no line carries warns',
+       has(run(board, { STRUCTURE: structure([scene(1, { turn: '모른다 → 안다', out: '가' }), clean[1]]) }), /turn's "모른다" is in no line/));
+    ok('a charge.open against the first feel warns',
+       has(run([at(cover, 1, { shot: Object.assign({}, cover.shot, { feel: '안심 — 다 알았다' }) }), at(goodShot, 1, wide), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /charge\.open "-" but the first shot's feel/));
+    ok('a feel that flips twice inside one scene warns',
+       has(run([at(cover, 1, { shot: Object.assign({}, cover.shot, { feel: '불안' }) }), at(goodShot, 1, Object.assign({}, wide, { shot: Object.assign({}, wide.shot, { feel: '안심' }) })), at(goodShot, 1, { shot: Object.assign({}, goodShot.shot, { feel: '걱정', info: '셋' }) }), at(goodShot, 1, { shot: Object.assign({}, goodShot.shot, { feel: '안도', info: '넷', size: 'ls' }) }), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /flips sign \d+ times/));
+    ok('a span in the lines under a one-moment time warns',
+       has(run([at(cover, 1, { narration: [{ tts: '겨울 내내 묻어 뒀어요' }] }), at(goodShot, 1, wide), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /lines speak of a span/));
+    ok('an out that is not the last segment word for word warns',
+       has(run([at(cover, 1), at(goodShot, 1, Object.assign({ narration: [{ tts: '지금 가' }] }, wide)), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /word for word/));
+    ok('a turn written without → warns',
+       has(run(board, { STRUCTURE: structure([scene(1, { turn: '의심이 확신으로 바뀐다', out: '가' }), clean[1]]) }), /has no →/));
+    ok('a question that asks two things warns',
+       has(run(board, { STRUCTURE: structure(clean, [{ id: 'q1', title: 't', purpose: '한 목적', question: '세종은 왜 눈을 상하면서 몰래 글자를 지었을까', payoff: 2, scenes: [1, 2] }]) }), /asks two things/));
+    ok('a purpose that chains two actions warns',
+       has(run(board, { STRUCTURE: structure(clean, [{ id: 'q1', title: 't', purpose: '홀로 글자를 만든 세종이 반대를 딛고 그 글자를 세상에 낸다', scenes: [1, 2] }]) }), /purpose chains two actions/));
+    ok('a shot.info an earlier shot already said out loud warns',
+       has(run([at(cover, 1, { narration: [{ tts: '오늘 한 가지가 달라졌어요' }] }), at(goodShot, 1, Object.assign({}, wide, { shot: Object.assign({}, wide.shot, { info: '오늘 한 가지가 달라졌다' }) })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /repeats what shot 1 already said out loud/));
+    ok('a gaze at something with no space.line in the scene warns',
+       has(run([at(cover, 1, { shot: Object.assign({}, cover.shot, { space: { frame: 'x', layout: '단상 앞 인물들' } }) }), at(goodShot, 1, Object.assign({}, wide, { shot: Object.assign({}, wide.shot, { space: { frame: 'x', layout: '인물들', facing: '인물들은 단상을 향해 서 있음' } }) })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /writes space\.line/) &&
+       !has(run([at(cover, 1), at(goodShot, 1, Object.assign({}, wide, { shot: Object.assign({}, wide.shot, { space: { frame: 'x', layout: 'y', facing: '인물이 카메라를 정면으로 바라봄' } }) })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /writes space\.line/));
+    ok('a takeaway no shot says warns on a full board',
+       has(run([at(cover, 1), at(goodShot, 1, wide), at(goodShot, 1, { shot: Object.assign({}, goodShot.shot, { info: '셋' }) }), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /takeaway .* is said by no shot/) &&
+       !has(run([at(cover, 1, { narration: [{ tts: '한 가지만 기억하면 돼요' }] }), at(goodShot, 1, wide), at(goodShot, 1, { shot: Object.assign({}, goodShot.shot, { info: '셋' }) }), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /takeaway .* is said by no shot/));
+    ok('a charge.close against the last feel warns',
+       has(run([at(cover, 1), at(goodShot, 1, Object.assign({}, wide, { shot: Object.assign({}, wide.shot, { feel: '답답함' }) })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /charge\.close "\+" but the last shot's feel/));
+    ok('a feel that flips twice inside a three-shot scene warns',
+       has(run([at(cover, 1, { shot: Object.assign({}, cover.shot, { feel: '불안' }) }), at(goodShot, 1, Object.assign({}, wide, { shot: Object.assign({}, wide.shot, { feel: '안심' }) })), at(goodShot, 1, { shot: Object.assign({}, goodShot.shot, { feel: '걱정', info: '셋' }) }), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /flips sign 2 times across 3 shots/));
+    ok('an event chained with a bare -고 or -다가 warns',
+       has(run(board, { STRUCTURE: structure([scene(1, { event: '청소기를 개봉해 손잡이를 쥐고 카펫 위를 한 번 밀어본다', out: '가' }), clean[1]]) }), /chains two actions/) &&
+       has(run(board, { STRUCTURE: structure([scene(1, { event: '먼지통을 열다가 버튼을 두 번 눌러 먼지를 손에 묻힌다', out: '가' }), clean[1]]) }), /chains two actions/));
+    ok('a span time no shot draws warns',
+       has(run(board, { STRUCTURE: structure([scene(1, { time: '2주 동안', out: '가' }), clean[1]]) }), /is a span but no shot draws it/) &&
+       !has(run([at(cover, 1, { narration: [{ tts: '2주 내내 청소할 때마다 꺼졌어요' }] }), at(goodShot, 1, wide), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure([scene(1, { time: '2주 동안', out: '가' }), clean[1]]) }), /is a span but no shot draws it/));
+    ok('an umbrella place warns',
+       has(run(board, { STRUCTURE: structure([scene(1, { place: '집 안', out: '가' }), clean[1]]) }), /is an umbrella, not a slugline/));
+    ok('two picture shots with a person and no space.line warn',
+       has(run([at(cover, 1, { shot: Object.assign({}, cover.shot, { space: { frame: 'x', layout: '사람이 손잡이를 쥔 손이 중앙' } }) }), at(goodShot, 1, Object.assign({}, wide, { shot: Object.assign({}, wide.shot, { space: { frame: 'x', layout: '사람이 왼쪽에서 청소기를 민다' } }) })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /picture shots with a person and no space\.line/));
+    ok('a sequence whose lines never ask warns, an embedded 까 싶어서 passes',
+       has(run([at(cover, 1, { narration: [{ tts: '아침이 편해지는 다섯 가지 습관이에요' }] }), at(goodShot, 1, wide), at(goodShot, 2), at(ctaShot, 2, wide)],
+               { STRUCTURE: structure(clean, [{ id: 'q1', title: 't', purpose: '한 목적', question: '아침이 편해지는 습관', payoff: 2, scenes: [1, 2] }]) }), /no line in this sequence is a question/) &&
+       !has(run([at(cover, 1, { narration: [{ tts: '아침이 편해지는 습관이 뭘까 싶어서 써 봤어요' }] }), at(goodShot, 1, wide), at(goodShot, 2), at(ctaShot, 2, wide)],
+               { STRUCTURE: structure(clean, [{ id: 'q1', title: 't', purpose: '한 목적', question: '아침이 편해지는 습관', payoff: 2, scenes: [1, 2] }]) }), /no line in this sequence is a question/));
+    ok('four scenes on one swing but for one is a metronome',
+       has(run([at(cover, 1), at(goodShot, 1, wide), at(goodShot, 2), at(goodShot, 3, wide), at(goodShot, 4), at(ctaShot, 4, wide)], { STRUCTURE: structure([clean[0], clean[1], scene(3, { place: '마당', charge: { open: '+', close: '-' }, out: '가' }), scene(4, { place: '골목', out: '가' })]) }), /3 of 4 scenes turn/));
+    ok('a scene that opens on a list number warns',
+       has(run([at(cover, 1), at(goodShot, 1, wide), at(goodShot, 2, { narration: [{ tts: '두 번째는 환기예요' }] }), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /a list number is not a 그런데/));
+    ok('five scenes in a short warn',
+       has(run([at(cover, 1), at(goodShot, 1, wide), at(goodShot, 2), at(goodShot, 3, wide), at(goodShot, 4), at(goodShot, 5, wide), at(ctaShot, 5)], { STRUCTURE: structure([clean[0], clean[1], scene(3, { place: '마당', out: '가' }), scene(4, { place: '골목', charge: { open: '+', close: '-' }, out: '가' }), scene(5, { place: '역', out: '가' })]) }), /5 scenes in \d+s/));
+    ok('a line that says again an earlier shot.info warns',
+       has(run([at(cover, 1, { shot: Object.assign({}, cover.shot, { info: '라면 한 봉지가 10원이었다' }) }), at(goodShot, 1, Object.assign({}, wide, { narration: [{ tts: '라면 한 봉지가 10원이었어요' }] })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /says again what shot 1's info/));
+    ok('a question first heard in the payoff scene warns',
+       has(run([at(cover, 1), at(goodShot, 1, wide), at(goodShot, 2, { narration: [{ tts: '왜 그럴까요' }] }), at(ctaShot, 2, wide)],
+               { STRUCTURE: structure(clean, [{ id: 'q1', title: 't', purpose: '한 목적', question: '왜 그럴까요', payoff: 2, scenes: [1, 2] }]) }), /first heard in scene 2, the payoff/));
+    ok('a sequence question far from COMPREHENSION.question warns',
+       has(run([at(cover, 1, { narration: [{ tts: '사무실에도 이런 버튼 있나요' }] }), at(goodShot, 1, wide), at(goodShot, 2), at(ctaShot, 2, wide)],
+               { STRUCTURE: structure(clean, [{ id: 'q1', title: 't', purpose: '한 목적', question: '사무실에도 이런 버튼 있나요', payoff: 2, scenes: [1, 2] }]) }), /is not COMPREHENSION\.question/));
+    ok('two scenes on one slugline with different events and turns do not warn',
+       !has(run(board, { STRUCTURE: structure([scene(1, { event: '로봇이 딸깍맨을 말린다', turn: '경고 → 무시', out: '가' }), scene(2, { event: '딸깍맨이 버튼을 누른다', turn: '초조 → 웃음', out: '가' })]) }), /same slugline/));
+    ok('an explanation screen does not fill the wide slot',
+       has(run([at(cover, 1), at(goodShot, 1, Object.assign({}, wide, { shot: Object.assign({}, wide.shot, { render: { mode: 'editorial_html', purpose: 'verdict', reason: 'r' } }) })), at(goodShot, 1, { shot: Object.assign({}, goodShot.shot, { info: '셋' }) }), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /no wide .* an explanation screen's ls is not the wide/));
+    ok('a turn read backwards warns',
+       has(run([at(cover, 1, { shot: Object.assign({}, cover.shot, { feel: 'relief' }) }), at(goodShot, 1, Object.assign({}, wide, { shot: Object.assign({}, wide.shot, { feel: 'x' }) })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure([scene(1, { turn: 'x → relief', out: '가' }), clean[1]]) }), /carried only by the later shots/));
+    ok('a gaze on an object with no person is not a gaze',
+       !has(run([at(cover, 1), at(goodShot, 1, Object.assign({}, wide, { shot: Object.assign({}, wide.shot, { space: { frame: 'x', layout: '청소기 헤드가 중앙', facing: '헤드가 문 쪽을 향해 놓임' } }) })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /writes space\.line/));
+    ok('a close against the last shot\'s lines before the out warns',
+       has(run([at(cover, 1), at(goodShot, 1, Object.assign({}, wide, { narration: [{ tts: '마음의 짐이 더 무겁게 쌓여요' }, { tts: '가' }] })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /lines before the out read -/));
+    ok('a time-only cut whose first layout shows no time warns',
+       has(run([at(cover, 1), at(goodShot, 1, wide), at(goodShot, 2, { shot: Object.assign({}, goodShot.shot, { space: { frame: 'x', layout: '인물이 옷장 앞에 선다' } }) }), at(ctaShot, 2, wide)], { STRUCTURE: structure([clean[0], scene(2, { time: '전날 밤', out: '가' })]) }), /shows no time/) &&
+       !has(run([at(cover, 1), at(goodShot, 1, wide), at(goodShot, 2, { shot: Object.assign({}, goodShot.shot, { space: { frame: 'x', layout: '스탠드 불빛 아래 인물이 옷장 앞에 선다' } }) }), at(ctaShot, 2, wide)], { STRUCTURE: structure([clean[0], scene(2, { time: '전날 밤', out: '가' })]) }), /shows no time/));
+    ok('an event no layout or line shows warns',
+       has(run([at(cover, 1, { shot: Object.assign({}, cover.shot, { space: { frame: 'x', layout: '여자가 냉장고 문을 닫는다' } }) }), at(goodShot, 1, wide), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure([scene(1, { event: '남자가 온도조절판을 매만진다', out: '가' }), clean[1]]) }), /is drawn by no shot/));
+    ok('a question and a statement in one shot warn',
+       has(run([at(cover, 1), at(goodShot, 1, Object.assign({}, wide, { narration: [{ tts: '이게 정말 손해일까요' }, { tts: '최저임금도 올랐거든요' }] })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /a question to the viewer and a statement in one shot/));
+    ok('an info that shares nothing with its own lines warns unless staged',
+       has(run([at(cover, 1), at(goodShot, 1, Object.assign({}, wide, { narration: [{ tts: '안 돼요' }], shot: Object.assign({}, wide.shot, { info: '그가 결국 버튼을 누른다는 것' }) })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /shares almost nothing with the shot's own lines/) &&
+       !has(run([at(cover, 1), at(goodShot, 1, Object.assign({}, wide, { narration: [{ tts: '안 돼요' }], shot: Object.assign({}, wide.shot, { info: '연출 — 그가 결국 버튼을 누른다' }) })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /shares almost nothing/));
+    ok('an info that ends on a delivery verb warns',
+       has(run([at(cover, 1), at(goodShot, 1, Object.assign({}, wide, { shot: Object.assign({}, wide.shot, { info: '가 라는 여운으로 마무리한다' }) })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /ends on a delivery verb/));
+    ok('a share the cta shot does not say warns',
+       has(run([at(cover, 1), at(goodShot, 1, wide), at(goodShot, 2), at(ctaShot, 2, Object.assign({}, wide, { shot: Object.assign({}, ctaShot.shot, { size: 'ls', info: '다른 정보', share: '전혀 다른 문장이에요' }) }))], { STRUCTURE: structure(clean) }), /is not a line this shot says/));
+    ok('a long-form board with few scenes warns',
+       has(run([at(cover, 1), at(goodShot, 1, wide)].concat(Array.from({ length: 8 }, (_, i) => at(goodShot, i < 4 ? 1 : 2, { shot: Object.assign({}, goodShot.shot, { info: '정보 ' + i }) }))).concat([at(ctaShot, 2, wide)]), { STRUCTURE: structure(clean), FORMAT: 'youtube-long-16x9' }), /scenes on a long-form board/));
+    ok('a long-form board with one sequence warns',
+       has(run([at(cover, 1), at(goodShot, 1, wide)].concat(Array.from({ length: 8 }, (_, i) => at(goodShot, i < 4 ? 1 : 2, { shot: Object.assign({}, goodShot.shot, { info: '정보 ' + i }) }))).concat([at(ctaShot, 2, wide)]), { STRUCTURE: structure(clean), FORMAT: 'youtube-long-16x9' }), /one sequence on a long-form board/));
+    ok('an open against the first shot\'s lines warns',
+       has(run([at(cover, 1, { narration: [{ tts: '든든하고 편안한 아침이에요' }] }), at(goodShot, 1, wide), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /first shot's lines read \+/));
+    ok('a clock time is still one moment',
+       has(run([at(cover, 1, { narration: [{ tts: '겨울 내내 묻어 뒀어요' }] }), at(goodShot, 1, wide), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure([scene(1, { time: '새벽 2시', out: '가' }), clean[1]]) }), /lines speak of a span/));
+    ok('a turn that lives only in the feel column warns',
+       has(run([at(cover, 1, { shot: Object.assign({}, cover.shot, { feel: '불안 — 아직 모른다' }) }), at(goodShot, 1, Object.assign({}, wide, { shot: Object.assign({}, wide.shot, { feel: '안심 — 이제 안다' }) })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure([scene(1, { turn: '불안 → 안심', out: '가' }), clean[1]]) }), /lives only in the feel column/));
+    ok('a first pole denied in the first line warns',
+       has(run([at(cover, 1, { narration: [{ tts: '그냥 숫자가 아니라 지혜예요' }] }), at(goodShot, 1, Object.assign({}, wide, { narration: [{ tts: '지혜가 담긴 값이에요' }] })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure([scene(1, { turn: '그냥 숫자 → 지혜가 담긴 값', out: '가' }), clean[1]]) }), /appears only denied or as a what-if/));
+    ok('an explanation screen unrelated to its scene warns even when a neighbour reads it back',
+       has(run([at(cover, 1, { narration: [{ tts: '배터리는 38분 갔어요' }] }), at(goodShot, 1, Object.assign({}, wide, { shot: Object.assign({}, wide.shot, { info: '배터리가 광고 60분 대신 38분 간다', render: { mode: 'data_graph', purpose: 'comparison', reason: 'r' } }) })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure([scene(1, { event: '화자가 먼지통을 비운다', turn: '답답 → 후련', out: '가' }), clean[1]]) }), /shares nothing with scene 1's event, turn or place/));
+    ok('a hand-back shot whose staged info is a gesture warns',
+       has(run([at(cover, 1), at(goodShot, 1, wide), at(goodShot, 2), at(ctaShot, 2, Object.assign({}, wide, { shot: Object.assign({}, ctaShot.shot, { size: 'ls', info: '연출 — 세종이 옅게 미소 짓는다' }) }))], { STRUCTURE: structure(clean) }), /is a gesture or a framing note/));
+    ok('a purpose that binds two objects with 와/과 warns',
+       has(run(board, { STRUCTURE: structure(clean, [{ id: 'q1', title: 't', purpose: '구할 방법과 점주의 심정을 세운다', scenes: [1, 2] }]) }), /binds two objects/));
+    ok('a wide size on a close layout warns',
+       has(run([at(cover, 1), at(goodShot, 1, Object.assign({}, wide, { shot: Object.assign({}, wide.shot, { space: { frame: 'x', layout: '정산기 앞에 선 점주의 상반신' } }) })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /is a close view/));
+    ok('a first line that repeats the previous out warns',
+       has(run([at(cover, 1), at(goodShot, 1, Object.assign({}, wide, { narration: [{ tts: '이 도시락 다 버려질까요' }] })), at(goodShot, 2, { narration: [{ tts: '이 도시락 다 버려질까요' }] }), at(ctaShot, 2, wide)], { STRUCTURE: structure([scene(1, { out: '이 도시락 다 버려질까요' }), clean[1]]) }), /repeats scene 1's out/));
+    ok('an episode question no sequence holds warns on a two-sequence board',
+       has(run([at(cover, 1), at(goodShot, 1, wide), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean, [{ id: 'q1', title: 't', purpose: '한 목적', question: '왜 버릴까요', scenes: [1] }, { id: 'q2', title: 'u', purpose: '다른 목적', question: '누가 살까요', scenes: [2] }]) }), /is held by no sequence/));
+    ok('a hook word the cover info names and no later shot returns to warns',
+       has(run([at(cover, 1, { narration: [{ tts: '무선청소기 배터리가 광고랑 달라요' }], shot: Object.assign({}, cover.shot, { info: '배터리 스펙과 실사용이 다르다는 것' }) }), at(goodShot, 1, wide), at(goodShot, 1, { shot: Object.assign({}, goodShot.shot, { info: '셋' }) }), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /the hook names "배터리"/));
+    ok('a line late in the scene when the first peopled shot has none warns',
+       has(run([at(cover, 1, { shot: Object.assign({}, cover.shot, { space: { frame: 'x', layout: '사람이 먼지통을 든다' } }) }), at(goodShot, 1, Object.assign({}, wide, { shot: Object.assign({}, wide.shot, { space: { frame: 'x', layout: '사람이 버튼을 누른다', line: '화자 왼쪽' } }) })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /written on a later shot but not on shot 1/));
+    ok('both poles in one line warn',
+       has(run([at(cover, 1, { narration: [{ tts: '뭘 놓쳤는지 몰라도 다 알아요' }] }), at(goodShot, 1, wide), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure([scene(1, { turn: '몰라요 → 알아요', out: '가' }), clean[1]]) }), /sit in one line/));
+    ok('an event spoken but drawn by no layout warns',
+       has(run([at(cover, 1, { narration: [{ tts: '화자가 2주 동안 배터리를 60분씩 써 봤어요' }], shot: Object.assign({}, cover.shot, { space: { frame: 'x', layout: '거실 소파와 창문' } }) }), at(goodShot, 1, Object.assign({}, wide, { shot: Object.assign({}, wide.shot, { space: { frame: 'x', layout: '창가의 화분' } }) })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure([scene(1, { event: '화자가 2주 동안 배터리를 60분씩 써 본다', out: '가' }), clean[1]]) }), /no picture layout of the scene draws it/));
+    ok('a delivery verb hidden under …는 것 warns',
+       has(run([at(cover, 1), at(goodShot, 1, Object.assign({}, wide, { narration: [{ tts: '뭘 놓고 가는지 몰라서 찜찜해요' }], shot: Object.assign({}, wide.shot, { info: '나가기 전 마지막으로 소지품을 확인한다는 것' }) })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /hides a delivery verb/));
+    ok('a staged info that restates the line warns',
+       has(run([at(cover, 1), at(goodShot, 1, Object.assign({}, wide, { narration: [{ tts: '마감 직전부터 반값에 파는 할인 앱을 쓰는 가게가 늘고 있어요' }], shot: Object.assign({}, wide.shot, { info: '연출 — 손님이 폰을 보는 사이 마감 직전부터 반값에 파는 할인 앱을 쓰는 가게가 늘고 있다' }) })), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /goes on to state what the line says/));
+    ok('a branch whose open shot does not ask warns',
+       has(run([at(cover, 1), at(goodShot, 1, wide), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean), COMPREHENSION: Object.assign({}, comprehension, { branches: [{ question: '정말 몸에 해로운 걸까요', open: 2, pay: 4 }] }) }), /open says shot 2 but that shot's lines do not ask/));
+    ok('a question with no payoff scene is a warning',
+       has(run(board, { STRUCTURE: structure([scene(1), scene(2)], [{ id: 'q1', title: 't', purpose: 'p', question: '왜?', scenes: [1, 2] }]) }), /no payoff scene/));
+    ok('three shots on one feel is a flat-stretch warning',
+       has(run([at(cover, 1, { shot: Object.assign({}, cover.shot, { feel: 'same' }) }), at(goodShot, 1, { shot: Object.assign({}, goodShot.shot, { size: 'ls', feel: 'same' }) }), at(goodShot, 2, { shot: Object.assign({}, goodShot.shot, { feel: 'same' }) }), at(ctaShot, 2, wide)], { STRUCTURE: structure([scene(1), scene(2)]) }), /flat stretch/));
+    const w = { SCENES: [at(cover, 1), at(goodShot, 2)], STRUCTURE: structure([scene(1), scene(2, { place: '부엌', time: '밤' })],
+                [{ id: 'q1', title: '앞', purpose: 'p', scenes: [1] }, { id: 'q2', title: '뒤', purpose: 'p', scenes: [2] }]) };
+    ok('sync writes the slug and, with two sequences, the sequence title',
+       sc.sync(w) === 2 && w.SCENES[1].sceneSlug === '부엌 / 밤' && w.SCENES[1].sequence === '뒤' && w.SCENES[0].sequence === '앞');
+    const tree = sc.outline(w, 'shots');
+    ok('outline nests shots under scenes under sequences',
+       tree.sequences.length === 2 && tree.sequences[1].scenes[0].shots[0].no === 2 && tree.sequences[1].scenes[0].slug === '부엌 / 밤');
+  }
+
+  // ── every generated_video cut pre-renders in 3D first (blender-previz.md §6, user directive 2026-09-11) ──
+  const previzRecord = { renderer: 'blender', clip: 'previz/s2.mp4', firstFrame: 'previz/s2-f0001.png', sha256: 'b'.repeat(64),
+    fps: 24, seconds: 6, camera: { movement: 'dolly in' } };
+  const videoCut = (video) => Object.assign({}, goodShot, {
+    shot: Object.assign({}, goodShot.shot, { render: { mode: 'generated_video', purpose: 'live_action', reason: 'the wind is the sentence',
+      motionEssential: true, action: 'cloth lifts', whyNotStill: 'the change is continuous' } }),
+    visual: { bg: 'images/scene-2.png', why: 'continuous motion', audio: 'wind',
+      camera: { movement: 'dolly in', speed: 'slow', framing: 'medium', end: 'the gate' }, video } });
+  ok('a generated_video cut without a previz is a violation after the draft',
+     has(bads(run([cover, videoCut({ prompt: SEEDANCE_PROMPT }), goodShot, ctaShot])), /pre-renders its camera and blocking in 3D/));
+  ok('the previz waits for the camera pass (--draft)',
+     !has(bads(run([cover, videoCut({ prompt: SEEDANCE_PROMPT }), goodShot, ctaShot], null, { draft: true })), /pre-renders/));
+  ok('a previz on the host lane needs handoff frame_and_prompt and nothing Seedance asks for',
+     !has(bads(run([cover, videoCut({ engine: 'host', prompt: SEEDANCE_PROMPT, previz: Object.assign({}, previzRecord, { handoff: 'frame_and_prompt' }) }), goodShot, ctaShot])), /previz/) &&
+     has(bads(run([cover, videoCut({ engine: 'host', prompt: SEEDANCE_PROMPT, previz: Object.assign({}, previzRecord, { handoff: 'reference_video' }) }), goodShot, ctaShot])), /takes no reference clip/));
+  ok('a previz whose move contradicts the camera slot is a violation',
+     has(bads(run([cover, videoCut({ engine: 'host', prompt: SEEDANCE_PROMPT, previz: Object.assign({}, previzRecord, { camera: { movement: 'arc shot' } }) }), goodShot, ctaShot])), /contradicts visual\.camera\.movement/));
+  ok('a previz without a renderer or a first frame is a violation',
+     has(bads(run([cover, videoCut({ engine: 'host', prompt: SEEDANCE_PROMPT, previz: Object.assign({}, previzRecord, { renderer: 'maya', firstFrame: undefined }) }), goodShot, ctaShot])), /renderer must be blender/));
+
   // ── the story pass (--draft) ──
-  // A 4a skeleton: beats, feels, narration sentences, the two hook fields. No tts spelling,
-  // no camera slots, no stored prompt — the fields 4b writes.
+  // A 4a skeleton: beats, feels, narration sentences, the two hook fields, and the close's
+  // share trigger. No tts spelling, no camera slots, no stored prompt — the fields 4b writes.
   const skel = (b) => ({ type: b === 'hook' ? 'cover' : 'points', beat: b,
-                         shot: { feel: 'x', size: 'mcu', angle: 'eye', info: '한 가지 정보', infoType: 'other' },
+                         shot: Object.assign({ feel: 'x', size: 'mcu', angle: 'eye', info: '한 가지 정보', infoType: 'other' },
+                                             b === 'cta' ? { share: '하루 한 번이면 충분해요' } : {}),
                          narration: [{ sub: '가' }], visual: {} });   // no transition either — 4b writes it
   const skelCover = Object.assign(skel('hook'), { hookType: 'fear', hookForm: 'gap' });
   const skeleton = [skelCover, skel('drip'), skel('drip'), skel('cta')];
@@ -1628,10 +2143,13 @@ function selftest() {
      has(bads(run([skelCover, Object.assign(skel('drip'), { shot: { feel: 'x', size: 'closeup' } }),
                    skel('drip'), skel('cta')], null, { draft: true })), /size "closeup"/));
 
-  // Bands come from the preset, never from this file.
+  // Bands come from the preset, never from this file. The channel length band arrives as
+  // normalizeMotionPolicy's `pacing` argument for the same reason, so a literal 35 or 120
+  // written as a default here has to be caught — the header at the top of the file promises it.
   const src = fs.readFileSync(__filename, 'utf8');
   ok('no length band is hardcoded here',
-     !/sceneMin\s*[:=]\s*\d/.test(src.replace(/pacing:\s*\{[^}]*\}/g, '')));
+     !/(sceneMin|sceneMax|sceneCountMin|sceneCountMax|totalMin|totalMax|totalHard)\s*[:=]\s*\d/
+       .test(src.replace(/pacing:\s*\{[^}]*\}/g, '')));
 
   // ── a still never sits frozen (2026-09-03) ──
   const frozenStill = Object.assign({}, goodShot, {
@@ -1651,6 +2169,13 @@ function selftest() {
        goodShot, ctaShot])), /never sits frozen/));
   ok('the frozen-still check waits for the camera pass (--draft)',
      !has(bads(run([cover, frozenStill, goodShot, ctaShot], null, { draft: true })), /never sits frozen/));
+
+  // ── the host video tool is a route of its own (2026-09-07) ──
+  ok('engine:"host" resolves to the host route, not the type default',
+     engineOf({ type: 'points', visual: { video: { engine: 'host' } } }) === 'host' &&
+     engineOf({ type: 'broll', visual: { engine: 'host' } }) === 'host');
+  ok('a host clip prompt is not held to the Seedance grammar',
+     seedancePromptFindings('she turns to the window', 'host').length === 0);
 
   if (failed) { process.stderr.write(failed + ' check(s) failed\n'); process.exit(1); }
   process.stdout.write('check-scenes selftest OK\n');
@@ -1673,11 +2198,12 @@ function main() {
   const profilePath = findProfile(scenesPath);
   const profileRaw = profilePath ? frontmatter(profilePath) : {};
   const profileHasPolicy = MOTION_PROFILE_KEYS.some((k) => profileRaw[k] !== undefined);
+  const isShort = fmt.format !== LONG_FORMAT;
   const profilePolicy = normalizeMotionPolicy(profileHasPolicy ? profileRaw : null, formatVideoMax,
-                                               profilePath || 'format default');
-  const scenePolicy = normalizeMotionPolicy(win.MOTION_POLICY || null, formatVideoMax, 'window.MOTION_POLICY');
+                                               profilePath || 'format default', fmt.pacing, isShort);
+  const scenePolicy = normalizeMotionPolicy(win.MOTION_POLICY || null, formatVideoMax, 'window.MOTION_POLICY', fmt.pacing, isShort);
   const effectivePolicy = profileHasPolicy ? profilePolicy
-    : normalizeMotionPolicy(null, formatVideoMax, 'format default');
+    : normalizeMotionPolicy(null, formatVideoMax, 'format default', fmt.pacing, isShort);
   const findings = check(win, fmt, { draft, policy: effectivePolicy, requireRenderPlan: true });
   require('./render-routing.js').checkEpisode(win).forEach(what =>
     findings.push({ level: 'bad', where: 'visual direction', what }));

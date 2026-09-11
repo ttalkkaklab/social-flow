@@ -82,6 +82,11 @@ reused in two or more episodes; single-episode artifacts go in the topic's `.wor
    template's `off` defaults only when the channel made no motion promise. Ken Burns, caption
    changes and swapping still images never count as true motion.
 
+   **Two more front-matter choices sit next to it.** `shortform_outro` is `on` unless the
+   channel deliberately ends its shorts on the CTA's last frame, and `length_min_seconds` /
+   `length_max_seconds` narrow the short-form band. Leave the length keys out unless the
+   channel has a reason to hold a tighter band — omitted, the format's own band applies.
+
    **Channel copy (description·bio) is outgoing copy** — the setup skills upload
    this text as the platform bio verbatim. After writing it, run the style gate
    (check-style `--surface screen`), then delegate to the growth-post-reviewer
@@ -131,6 +136,13 @@ reused in two or more episodes; single-episode artifacts go in the topic's `.wor
 2. Edit only the fields the user specifies — in particular, **warn on TTS voice
    and THEME color changes**: they clash with the tone of already-published
    videos, and the channel-shared outro (`assets/outro/`) must be rebuilt too.
+   **Warn on `shortform_outro` and the length band for a different reason** — they change
+   what gets made from here on. Flipping `shortform_outro` to `off` drops the spliced tail
+   from every future short (the outro file stays on disk; it just stops being used), and
+   narrowing `length_min_seconds` / `length_max_seconds` moves what the length check
+   measures against, so a board that drew no flag last week comes back flagged today
+   (`check-scenes.js` and the approval strip warn outside the band; only the 180s platform
+   cap fails). Neither touches an episode that is already built.
    If the channel copy (description·bio) changed, pass the same gate as add
    step 5 again (check-style + growth-post-reviewer `standalone` ≥95·p0=0).
 3. Report before/after as a table.

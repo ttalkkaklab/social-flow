@@ -1,12 +1,34 @@
 /* One semantic routing contract for planning, the approval page and production. */
 (function(root){
  'use strict';
- const PURPOSES={portrait:'still_camera',atmosphere:'still_camera',place:'still_camera',detail:'still_camera',human_process:'character_html',mechanism:'object_html',physical_state:'object_html',comparison:'data_graph',trend:'data_graph',share:'data_graph',distribution:'data_graph',geographic:'data_graph',timeline:'data_graph',live_action:'generated_video',evidence_quote:'editorial_html',verdict:'editorial_html'};
- const LABELS={still_camera:'정지 이미지 · 카메라 무빙',character_html:'3D 캐릭터 · HTML',object_html:'3D 사물 · HTML',data_graph:'수치·그래프 · HTML',generated_video:'영상 생성',editorial_html:'짧은 인용·결론 · HTML'};
+ const PURPOSES={portrait:'still_camera',atmosphere:'still_camera',place:'still_camera',detail:'still_camera',human_process:'character_html',mechanism:'object_html',physical_state:'object_html',comparison:'data_graph',trend:'data_graph',share:'data_graph',distribution:'data_graph',geographic:'data_graph',timeline:'data_graph',live_action:'generated_video',evidence_quote:'editorial_html',verdict:'editorial_html',archive:'stock_video'};
+ // A purpose's default route comes first; free real footage may stand in where the actual place, era or action carries the cut (render-routing.md §Routes).
+ const ALTERNATIVES={live_action:['stock_video'],atmosphere:['stock_video'],place:['stock_video']};
+ const LABELS={still_camera:'정지 이미지 · 카메라 무빙',character_html:'3D 캐릭터 · HTML',object_html:'3D 사물 · HTML',data_graph:'수치·그래프 · HTML',generated_video:'영상 생성',editorial_html:'짧은 인용·결론 · HTML',stock_video:'외부 영상 · 무료 소재'};
  const CHARTS={comparison:['bar','dot'],trend:['line'],share:['stacked-bar','donut','pie'],distribution:['histogram'],geographic:['map'],timeline:['timeline']};
  const text=x=>typeof x==='string'&&!!x.trim();
- function exempt(scene){return scene.type==='outro'||(!scene.visual?.video&&(['recording','screencast'].includes(scene.visual?.source)||scene.visual?.picture==='recording'))}
+ function exempt(scene){return scene.type==='outro'||(scene.visual?.reuse===undefined&&!scene.visual?.video&&(['recording','screencast'].includes(scene.visual?.source)||scene.visual?.picture==='recording'))}
  function recommend(purpose){return PURPOSES[purpose]||null}
+ function modesFor(purpose){const d=PURPOSES[purpose];return d?[d].concat(ALTERNATIVES[purpose]||[]):[]}
+ const httpUrl=s=>typeof s==='string'&&/^https?:\/\/\S+$/.test(s);
+ /* visual.license — the record every supplied stock file carries (scenes-schema §stock material). A monetized cut
+    exercises commercial use and modification, so both must be true; share-alike is refused because the edited cut
+    would inherit its terms. */
+ function checkLicense(v){
+  const l=v&&v.license,errors=[],bad=s=>errors.push('visual.license: '+s);
+  if(!l||typeof l!=='object')return ['visual.license: a stock file records provider, url, license, licenseUrl, commercial, modify, attributionRequired and retrievedAt'];
+  if(!text(l.provider))bad('provider is required (pexels, pixabay, nasa, commons, kogl, …)');
+  if(!httpUrl(l.url))bad('url must be the item page where the license is shown');
+  if(!text(l.license))bad('license must name the license (Pexels License, CC0, CC BY 4.0, 공공누리 제1유형, …)');
+  if(!httpUrl(l.licenseUrl))bad('licenseUrl must link the license text');
+  if(l.commercial!==true)bad('commercial must be true — a monetized short is commercial use');
+  if(l.modify!==true)bad('modify must be true — trimming, grading and subtitles are modifications');
+  if(l.shareAlike===true)bad('share-alike material spreads its terms to the edited cut; use public domain, CC0, CC BY or a platform license');
+  if(typeof l.attributionRequired!=='boolean')bad('attributionRequired must be true or false');
+  if(l.attributionRequired===true&&!text(l.attribution))bad('attribution text is required when the license asks for credit');
+  if(!Number.isFinite(Date.parse(l.retrievedAt)))bad('retrievedAt must be the download date (ISO)');
+  return errors;
+ }
  function framePlan(scene){
   const v=scene.visual||{}, f=v.frames||{}, end=f.end||v.video?.lastImagePath||v.lastImagePath||v.imagePair?.end||'';
   return {mode:f.mode||(end?'first_last':'first'),start:v.bg||v.src||v.imagePair?.start||'',end,reason:f.reason||'',endState:f.endState||''};
@@ -28,16 +50,79 @@
   }
   return errors;
  }
+ /* The previz lane (blender-previz.md §6). Every generated_video cut pre-renders its camera and
+    blocking in 3D first (user directive 2026-09-11): a Blender or three.js clip rendered at the cut
+    length rides the Seedance reference route as Video 1 with the source still as Image 1, or — on a
+    host video tool that takes no clip — shapes the still (edited from the previz's first frame) and
+    the prompt. The clip's bytes are bound by hash so the approved camera and timing are what the
+    vendor receives, and the clip and the camera slot must agree: a prompt that fights the clip drifts. */
+ const PREVIZ_RENDERERS=['blender','threejs'];
+ const PREVIZ_HANDOFFS=['reference_video','frame_and_prompt'];
+ // A storyboard-relative file: no scheme, no absolute path, no .. segment — the clip is served to the vendor and hashed from here.
+ const localFile=(s,ext)=>text(s)&&ext.test(s)&&!/^[a-z][a-z0-9+.-]*:/i.test(s)&&!/^[\/\\]/.test(s)&&!/(^|[\/\\])\.\.([\/\\]|$)/.test(s);
+ function previzHandoff(scene){
+  const v=scene.visual||{},video=v.video||{},p=video.previz||{};
+  const engine=video.engine||v.engine||'seedance';
+  return p.handoff||(engine==='host'?'frame_and_prompt':'reference_video');
+ }
+ function checkPreviz(scene,{draft=false,production=null}={}){
+  const v=scene.visual||{},video=v.video,p=video&&video.previz,errors=[];
+  if(p===undefined)return errors;
+  const bad=s=>errors.push('visual.video.previz: '+s);
+  if(!p||typeof p!=='object'||Array.isArray(p)){bad('must be the previz record { renderer, clip, firstFrame, sha256, fps, seconds, camera }');return errors;}
+  if(scene.shot?.render?.mode!=='generated_video')bad('a previz only belongs to a generated_video cut');
+  if(!PREVIZ_RENDERERS.includes(p.renderer))bad('renderer must be blender (the blender_* bridge) or threejs (previz-template.html)');
+  else if(production?.previz?.renderer&&p.renderer!==production.previz.renderer)bad('renderer "'+p.renderer+'" is not the one the user chose for this episode (PRODUCTION.previz.renderer "'+production.previz.renderer+'")');
+  if(!localFile(p.clip,/\.(mp4|mov)$/i))bad('clip must be a storyboard-relative mp4/mov path (no scheme, no absolute path, no ..) — the rendered previz');
+  if(!localFile(p.firstFrame,/\.png$/i))bad('firstFrame must be the storyboard-relative png of frame 1 (no scheme, no absolute path, no ..) — the composition the source still is edited from');
+  if(!draft&&!/^[a-f0-9]{64}$/.test(p.sha256||''))bad('sha256 must identify the rendered previz bytes');
+  if(!Number.isInteger(p.seconds)||p.seconds<2)bad('seconds must be a whole number — the cut length the clip was rendered at');
+  if(!Number.isFinite(p.fps)||p.fps<24||p.fps>60)bad('fps must be 24–60 (24 for frame-for-frame QA)');
+  const move=s=>String(s||'').trim().toLowerCase().replace(/\s+/g,' ');
+  if(!text(p.camera?.movement))bad('camera.movement records the move the clip performs, in the vocabulary of visual.camera.movement');
+  else if(text(v.camera?.movement)&&move(v.camera.movement)!==move(p.camera.movement))bad('camera.movement "'+p.camera.movement+'" contradicts visual.camera.movement "'+v.camera.movement+'" — the prompt is written from the slot and would fight the clip; change the clip or the slot');
+  const engine=video.engine||v.engine||'seedance',handoff=previzHandoff(scene);
+  if(!PREVIZ_HANDOFFS.includes(handoff))bad('handoff must be reference_video (Seedance 2.x, the clip as Video 1) or frame_and_prompt (a host video tool that takes no clip)');
+  if(engine==='host'){
+   if(handoff!=='frame_and_prompt')bad('the host video tool takes no reference clip — handoff:"frame_and_prompt": the still is edited from firstFrame and the prompt carries the previz camera');
+   return errors;
+  }
+  if(handoff!=='reference_video')bad('on the API lane the clip travels as Video 1 — handoff:"reference_video"');
+  if(engine!=='seedance')bad('the previz travels on the Seedance reference route — set engine:"seedance"');
+  const chosen=production?.videoModel;
+  if(chosen&&chosen.model&&chosen.model!=='host'){
+   if(!text(video.model))bad('write the video model the user chose on the shot — model:"'+chosen.model+'"');
+   else if(video.model!==chosen.model)bad('model "'+video.model+'" is not the one the user chose for this episode (PRODUCTION.videoModel.model "'+chosen.model+'")');
+   if(text(chosen.resolution)&&text(video.resolution)&&video.resolution!==chosen.resolution)bad('resolution "'+video.resolution+'" is not the chosen '+chosen.resolution);
+  }
+  if(video.modelPurpose!=='previz')bad('set modelPurpose:"previz"');
+  const refs=video.referenceImagePaths;
+  if(!Array.isArray(refs)||!refs.length||refs[0]!==v.bg)bad('referenceImagePaths[0] must be the source still (visual.bg) — "Image 1 is the first frame"');
+  if(framePlan(scene).end)bad('no end frame — the reference route cannot carry last_frame');
+  if(!draft){
+   const prompt=String(video.prompt||'');
+   if(!/\bvideo\s*1\b/i.test(prompt))bad('the prompt binds the clip as "Video 1" (2.5: "@Video 1")');
+   if(!/\bimage\s*1\b.{0,40}first frame|first frame.{0,40}\bimage\s*1\b/i.test(prompt))bad('the prompt says "Image 1 is the first frame"');
+   if(!/camera (movement|path|motion)|blocking|trajectory/i.test(prompt))bad('the prompt says what Video 1 supplies — camera movement, shot rhythm, subject trajectory, blocking');
+   if(!/(do not|don't|never) reference (its|the) visual content/i.test(prompt))bad('the prompt closes the clay read with "Do not reference its visual content"');
+  }
+  return errors;
+ }
  function checkScene(scene,{draft=false,production=null}={}){
   if(exempt(scene))return [];
-  const r=scene.shot?.render,v=scene.visual||{},errors=checkFrames(scene,{draft}),bad=s=>errors.push('shot.render: '+s);
+  const r=scene.shot?.render,v=scene.visual||{},errors=checkFrames(scene,{draft}).concat(checkPreviz(scene,{draft,production})),bad=s=>errors.push('shot.render: '+s);
+  if(v.source==='stock'){
+   checkLicense(v).forEach(m=>errors.push(m));
+   if(text(v.bgPrompt))errors.push('visual.bgPrompt: a stock photo is a supplied file, not a generated one; drop bgPrompt');
+  }
   if(!r||typeof r!=='object')return errors.concat(['shot.render: choose a supported mode and record purpose and reason before assets']);
   const fullVideo=production?.mode==='full_video';
-  const expected=fullVideo?'generated_video':recommend(r.purpose);
-  if(!recommend(r.purpose))bad('unknown purpose; use '+Object.keys(PURPOSES).join(', '));
+  const options=modesFor(r.purpose);
+  if(!options.length)bad('unknown purpose; use '+Object.keys(PURPOSES).join(', '));
 
   if(!LABELS[r.mode])bad('unknown mode; use '+Object.keys(LABELS).join(', '));
-  else if(expected&&expected!==r.mode)bad(r.purpose+' requires '+expected+', not '+r.mode);
+  else if(fullVideo&&r.mode!=='stock_video'){if(r.mode!=='generated_video')bad(r.purpose+' requires generated_video, not '+r.mode)}
+  else if(options.length&&!options.includes(r.mode))bad(r.purpose+' requires '+options.join(' or ')+', not '+r.mode);
   if(!text(r.reason))bad('reason must explain why this treatment conveys the cut');
   const info=scene.shot?.infoType;
   if(info==='statistic'&&!['comparison','trend','share','distribution','geographic'].includes(r.purpose))bad('statistic needs a quantitative purpose');
@@ -61,6 +146,15 @@
    if(fullVideo){if(!text(r.action))bad('full video needs a visible action or a spatial camera reveal');}
    else if(r.motionEssential!==true||!text(r.whyNotStill)||!text(r.action))bad('generated video needs essential continuous motion, action and whyNotStill');
   }
+  if(r.mode==='stock_video'){
+   if(!text(r.action))bad('stock video needs action: what the viewer sees happen in the clip');
+   if(v.source!=='stock')bad('stock video needs visual.source "stock" with its license record');
+   if(v.in!==undefined&&!(Number.isFinite(v.in)&&v.in>=0))bad('visual.in must be the trim start in seconds');
+   if(!draft){
+    if(!/^footage\/[A-Za-z0-9._-]+\.(mp4|mov|m4v|webm)$/.test(String(v.clip||'')))bad('stock video needs visual.clip under footage/ (mp4, mov, m4v or webm) before production');
+    if(v.video||v.slide||scene.type==='broll')bad('stock video is a supplied file; it cannot also be a generated or slide handoff');
+   }
+  }
   if(r.mode==='editorial_html'){
    if(info!=='other')bad('an editorial quote/verdict uses infoType other');
    if(!Number.isFinite(scene.duration)||scene.duration<=0||scene.duration>8)bad('a text-led quote/verdict must last at most 8 seconds');
@@ -80,7 +174,7 @@ if(r.mode==='data_graph'||(fullVideo&&CHARTS[r.purpose])){
   }
   // Draft validates meaning; production also validates the selected renderer's handoff.
   if(!draft){
-   const slide=v.slide,generated=!!v.video||scene.type==='broll'||(scene.type==='quote'&&!!v.clip);
+   const slide=v.slide,generated=v.reuse!==undefined||!!v.video||scene.type==='broll'||(scene.type==='quote'&&!!v.clip);
    if(r.mode==='still_camera'){
     if(!Number.isFinite(scene.duration)||scene.duration<=0)bad('still camera needs a finite positive duration');
     if(!text(v.bg))bad('still camera needs its source image');
@@ -95,6 +189,7 @@ if(r.mode==='data_graph'||(fullVideo&&CHARTS[r.purpose])){
     if(['character_html','object_html'].includes(r.mode)&&(slide?.subject?.kind!=='object'||slide?.object?.renderer!=='mesh'))bad('physical explanation needs a real mesh object subject');
    }
    if(r.mode==='generated_video'&&(!generated||slide||!text(v.why)))bad('generated video needs a video handoff and visual.why, including the opening cut');
+   if(r.mode==='generated_video'&&v.video&&v.reuse===undefined&&v.video.previz===undefined)bad('every generated_video cut pre-renders its camera and blocking in 3D first — render a Blender or three.js previz at the cut length and store visual.video.previz (blender-previz.md §6, user directive 2026-09-11; b-roll and speech clips on the Veo sound lane are the documented exception)');
    if(r.mode==='editorial_html'&&(generated||!slide||slide.kind!=='diagram'||slide.motion!==true||slide.treatment!=='editorial'||slide.subject?.kind!=='type'||slide.object))bad('editorial quote/verdict needs a text subject on an editorial motion diagram');
    if(r.mode==='data_graph'&&slide?.chartRenderer!=='svg-v1')bad('data graphs require chartRenderer svg-v1 and the shared chart template');
   }
@@ -201,7 +296,7 @@ if(r.mode==='data_graph'||(fullVideo&&CHARTS[r.purpose])){
   if((!long&&textCount>2)||(long&&total>0&&textSeconds/total>0.2))errors.push('text-led slides dominate: at most 2 per short, or 20% of generated duration in long-form; use source images, acted processes or actual charts where the content calls for them');
   return errors;
  }
- const api={PURPOSES,LABELS,CHARTS,recommend,exempt,framePlan,checkFrames,checkScene,checkData,checkMap,checkEpisode};
+ const api={PURPOSES,ALTERNATIVES,LABELS,CHARTS,PREVIZ_RENDERERS,PREVIZ_HANDOFFS,recommend,modesFor,checkLicense,exempt,framePlan,checkFrames,checkPreviz,previzHandoff,checkScene,checkData,checkMap,checkEpisode};
 
  if(typeof module==='object'&&module.exports)module.exports=api;else root.RENDER_ROUTING=api;
 })(typeof window==='object'?window:globalThis);
