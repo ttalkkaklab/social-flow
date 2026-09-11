@@ -65,7 +65,7 @@
      close-opening debt in check-scenes.js and the approval page is stricter and fs does not pay it. */
   const WIDE = ['els', 'ls', 'ws', 'fs', 'mfs'];
   const CLOSE = ['mcu', 'cu', 'choker', 'ecu', 'insert'];
-  const SIZE_RANK = { els: 0, ls: 1, ws: 1, fs: 2, mfs: 3, ms: 4, mcu: 5, cu: 6, choker: 7, ecu: 8, insert: 9 };
+  const SIZE_RANK = { els: 0, ls: 1, ws: 1, fs: 2, mfs: 3, ms: 4, mcu: 5, cu: 6, choker: 7, ecu: 8, insert: 8 };
   /* A place that names a picture — the scene is where the story is, the diagram is one of its shots. */
   const SCREEN_RE = /도해|그래픽|슬라이드|차트|그래프|도표|인포그래픽|diagram|slide|chart|graph|infographic/i;
   /* Predicates that say what the viewer learns, not what happens. */
@@ -472,17 +472,18 @@
       const locked = xs.map(x => ({ x, line: x.s.shot && x.s.shot.space && x.s.shot.space.line }))
         .filter(row => text(row.line)).map(row => ({ x: row.x, line: compact(row.line) }));
       if (locked.length >= 2) {
-        let previous = locked[0].line;
+        let previous = locked[0].line, previousNo = locked[0].x.no;
         locked.slice(1).forEach(({ x, line }) => {
           const crossing = x.s.shot && x.s.shot.lineCrossing;
           if (line === previous) {
+            previousNo = x.no;
             if (crossing !== undefined)
               bad('shot ' + x.no, 'shot.lineCrossing is set but space.line did not change — record it on the first shot from the new side');
             return;
           }
           if (!crossing || typeof crossing !== 'object') {
             cameraRule('shot ' + x.no, `space.line changes from "${previous}" to "${line}" — declare shot.lineCrossing with camera_move, subject_move, neutral or intentional`);
-            previous = line;
+            previous = line; previousNo = x.no;
             return;
           }
           if (LINE_CROSSING_METHODS.indexOf(crossing.method) === -1)
@@ -493,13 +494,13 @@
             bad('shot ' + x.no, 'shot.lineCrossing.reason says what makes the new side legible');
           if (crossing.method === 'neutral') {
             const bridge = xs.find(y => y.no === crossing.bridgeShot);
-            if (!Number.isInteger(crossing.bridgeShot) || !bridge || bridge.no >= x.no || !(bridge.s.shot && bridge.s.shot.lineNeutral === true))
-              bad('shot ' + x.no, 'a neutral crossing names an earlier bridgeShot whose shot.lineNeutral is true');
+            if (!Number.isInteger(crossing.bridgeShot) || !bridge || bridge.no >= x.no || bridge.no <= previousNo || !(bridge.s.shot && bridge.s.shot.lineNeutral === true))
+              bad('shot ' + x.no, `a neutral crossing names a bridgeShot between the last shot on the old side (${previousNo}) and this shot, with shot.lineNeutral true`);
           } else if (crossing.bridgeShot !== undefined) {
             bad('shot ' + x.no, 'bridgeShot belongs only to a neutral crossing');
           }
           if (crossing.method === 'intentional') intentionalCrossings.push(x.no);
-          previous = line;
+          previous = line; previousNo = x.no;
         });
       }
       xs.forEach(x => {
@@ -519,7 +520,11 @@
         const prev = xs[i - 1];
         const prevRank = SIZE_RANK[prev.s.shot && prev.s.shot.size];
         const rank = SIZE_RANK[x.s.shot && x.s.shot.size];
-        if (prevRank !== undefined && rank !== undefined && Math.abs(prevRank - rank) >= 2) return;
+        // The rule re-films the same subject (directing-grammar §7): two/three/ots/pov/back/
+        // cutaway/reaction change the subject, and a declared crossing is its own escape.
+        if (prevRank === undefined || rank === undefined) return;
+        if (Math.abs(prevRank - rank) >= 2) return;
+        if (x.s.shot && x.s.shot.lineCrossing) return;
         const a = prev.s.shot && prev.s.shot.coverage;
         const b = x.s.shot && x.s.shot.coverage;
         if (b && text(b.action)) return;

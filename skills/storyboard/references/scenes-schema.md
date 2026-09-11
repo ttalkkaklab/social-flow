@@ -1611,15 +1611,19 @@ the PNG already holds the floor plan.
 
 `shot.lineCrossing` belongs on the first shot from a new side of an existing axis. It is
 `{ method, from, to, reason }`, where `method` is `camera_move`, `subject_move`, `neutral`, or
-`intentional`. A `neutral` crossing also names `bridgeShot`; that earlier shot has
-`lineNeutral: true` and no `space.line`. The checker compares `from` and `to` with the locked
-lines, so a bare flip cannot pass. Deliberate crossings are capped at two in one episode.
+`intentional`. A `neutral` crossing also names `bridgeShot`; that shot sits in the same scene
+between the last shot on the old side and this one, has `lineNeutral: true` and no `space.line`.
+The checker compares `from` and `to` with the locked lines, so a bare flip cannot pass.
+Deliberate crossings are capped at two in one episode.
 
 `shot.coverage.azimuth` is the horizontal bearing from 0 to 180 degrees inside the selected side
 of the axis. It is not `shot.angle`, which only records camera height. Two adjacent picture shots
 in one scene that change size by fewer than two ranks need azimuths at least 30 degrees apart, or
-the incoming shot names `coverage.action` for the visible action that hides the cut. The full
-check blocks a missing or insufficient record; the story-pass check defers it until camera work.
+the incoming shot names `coverage.action` for the visible action that hides the cut. The rule
+re-films one subject: `two`·`three`·`ots`·`pov`·`back`·`cutaway`·`reaction` have no rank and are
+outside it, and a shot that declares `lineCrossing` is its own escape. The full check blocks a
+missing or insufficient record; the story pass (`draft` on `storyboard_apply` and
+`storyboard_check`) defers it until camera work.
 
 produce runs fine on an old `scenes.js` without `space`. The check strip warns; camera mode
 scores the gap; image mode compares the PNG to `layout` and `facing` when they are written.

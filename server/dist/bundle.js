@@ -89283,6 +89283,7 @@ var storyboardCheckSchema = external_exports.object({
 var globalsSchema = external_exports.record(external_exports.string().regex(/^[A-Z][A-Z0-9_]*$/, "a window.* global is UPPER_CASE"), external_exports.unknown());
 var storyboardApplySchema = external_exports.object({
   path: external_exports.string().min(1).describe("The storyboard directory (scenes.js is created there when missing), or its scenes.js"),
+  draft: external_exports.boolean().default(false).describe("The story pass (storyboard \xA74a) \u2014 camera-continuity records (lineCrossing, coverage) are deferred, not violations"),
   set: external_exports.object({ structure: structureSchema, shots: external_exports.array(shotSchema).min(1) }).optional().describe("Replace the whole board \u2014 the structure and every shot. The way a new board is written"),
   structure: structureSchema.optional().describe("Replace window.STRUCTURE only"),
   sequences: external_exports.array(sequenceSchema).optional().describe("Upsert sequences by id"),
@@ -89415,7 +89416,7 @@ function applyPatch(win, patch) {
   let synced = 0;
   if (!findings.some((f3) => f3.level === "bad")) {
     synced = contract().sync(next);
-    findings.push(...contract().check(next));
+    findings.push(...contract().check(next, { draft: patch.draft }));
   }
   return { win: next, findings, synced };
 }
@@ -89458,7 +89459,7 @@ function applyStoryboard(args) {
 }
 function checkStoryboard(args) {
   const { file, win } = readBoard(args.path);
-  const structure = contract().check(win);
+  const structure = contract().check(win, { draft: args.draft });
   const argv = [CHECK_SCENES_FILE, file, "--json"];
   if (args.draft) argv.push("--draft");
   let raw = "";

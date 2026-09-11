@@ -161,6 +161,7 @@ export const storyboardCheckSchema = z.object({
 const globalsSchema = z.record(z.string().regex(/^[A-Z][A-Z0-9_]*$/, 'a window.* global is UPPER_CASE'), z.unknown());
 export const storyboardApplySchema = z.object({
     path: z.string().min(1).describe('The storyboard directory (scenes.js is created there when missing), or its scenes.js'),
+    draft: z.boolean().default(false).describe('The story pass (storyboard §4a) — camera-continuity records (lineCrossing, coverage) are deferred, not violations'),
     set: z.object({ structure: structureSchema, shots: z.array(shotSchema).min(1) }).optional()
         .describe('Replace the whole board — the structure and every shot. The way a new board is written'),
     structure: structureSchema.optional().describe('Replace window.STRUCTURE only'),
@@ -328,7 +329,7 @@ export function applyPatch(win, patch) {
     let synced = 0;
     if (!findings.some((f) => f.level === 'bad')) {
         synced = contract().sync(next);
-        findings.push(...contract().check(next));
+        findings.push(...contract().check(next, { draft: patch.draft }));
     }
     return { win: next, findings, synced };
 }
@@ -373,7 +374,7 @@ export function applyStoryboard(args) {
 /** storyboard_check — the structure rules here plus the full scenes.js contract from check-scenes.js. */
 export function checkStoryboard(args) {
     const { file, win } = readBoard(args.path);
-    const structure = contract().check(win);
+    const structure = contract().check(win, { draft: args.draft });
     const argv = [CHECK_SCENES_FILE, file, '--json'];
     if (args.draft)
         argv.push('--draft');

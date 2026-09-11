@@ -23,7 +23,9 @@ Do not reinterpret an approval of a topic as approval of full-video spend.
 - **훅만 영상** (`hook_only`) — only the opening hook is generated video; use HTML/still-camera scenes for other new cuts.
 
 Count cuts, not duration; round the minimum up. Exclude imported `visual.reuse` clips,
-user recordings, supplied stock clips and the shared outro from the denominator.
+user recordings, supplied stock clips and the shared outro from the denominator; b-roll is
+spliced by `after`, not a cut, so it sits on neither side of the ratio (it still fills a
+generated slot, and hook-only allows the hook plus imported clips only).
 The hook is the first `hooking` scene on long form, otherwise the `cover`, otherwise the first
 new cut. If that hook is a supplied clip, resolve its source with the user before choosing
 hook-only; do not silently generate a different cut. Existing `hybrid` approvals may resume,

@@ -687,7 +687,16 @@ test('percentage minima round up by new cut count and hook-only rejects extra vi
   cuts[1].visual.video = {};
   assert.match(mode.coverageErrors(win).join(), /only the opening hook/);
   assert.equal(mode.policy({ generatedVideoMax: 2 }, { mode: 'video_50', videoBudgetUsd: 10 }, cuts).generatedVideoMax, 8);
-  assert.equal(mode.policy({}, win.PRODUCTION, cuts).generatedVideoMax, 1);
+  // hook_only: the hook plus the one imported clip pushed above — reuse is outside the ratio but still a slot.
+  assert.equal(mode.policy({}, win.PRODUCTION, cuts).generatedVideoMax, 2);
+  assert.equal(mode.policy({}, win.PRODUCTION, cuts.filter(s => s.visual?.reuse === undefined)).generatedVideoMax, 1);
+  // b-roll is spliced by `after`, not a cut: it counts on neither side of the ratio.
+  const broll = { type: 'broll', duration: 4, visual: { video: { engine: 'host' } } };
+  assert.equal(mode.newCut(broll), false);
+  win.PRODUCTION.mode = 'video_30';
+  const before = mode.coverageErrors(win).join();
+  win.SCENES.push(broll, broll);
+  assert.equal(mode.coverageErrors(win).join(), before);
 });
 
 test('long-form hook-only comparison quotes hooking rather than cover', () => {

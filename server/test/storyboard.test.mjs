@@ -216,6 +216,22 @@ describe('checkStoryboard', () => {
     // The contract half still speaks: this fixture has no STORY / PRODUCTION / render modes.
     assert.ok(r.contract.length > 0);
   });
+  it('the story pass defers the camera-continuity records in apply and check alike', () => {
+    // Two same-size adjacent picture shots with no coverage — the 30° rule applies in the full check only.
+    const shots = board();
+    shots[1].shot.size = 'mcu';
+    const dir = tmp();
+    const full = applyStoryboard(storyboardApplySchema.parse({ path: dir, set: { structure: structure([scene(1), scene(2)]), shots }, globals: { FORMAT: 'shorts-9x16', COMPREHENSION: comprehension }, dryRun: true }));
+    assert.ok(full.findings.some((f) => f.level === 'bad' && /adjacent picture cut/.test(f.what)), JSON.stringify(full.findings));
+    const draft = applyStoryboard(storyboardApplySchema.parse({ path: dir, draft: true, set: { structure: structure([scene(1), scene(2)]), shots }, globals: { FORMAT: 'shorts-9x16', COMPREHENSION: comprehension } }));
+    assert.ok(!draft.findings.some((f) => f.level === 'bad'), JSON.stringify(draft.findings));
+    assert.ok(draft.findings.some((f) => f.level === 'later' && /adjacent picture cut/.test(f.what)));
+    const r = checkStoryboard({ path: dir, draft: true });
+    assert.ok(!r.structure.some((f) => f.level === 'bad'), JSON.stringify(r.structure));
+    assert.ok(r.structure.some((f) => f.level === 'later' && /adjacent picture cut/.test(f.what)));
+    // No duplicate: the deferred finding lands once, not as bad in one list and later in the other.
+    assert.ok(!r.contract.some((f) => /adjacent picture cut/.test(f.what)), JSON.stringify(r.contract));
+  });
 });
 
 describe('tool surface', () => {

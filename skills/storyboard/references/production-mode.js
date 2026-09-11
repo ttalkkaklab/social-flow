@@ -5,9 +5,11 @@
   const CHOICES = ['full_video', 'video_50', 'video_30', 'hook_only'];
   const MODES = { full_video: '100% 이상', video_50: '50% 이상', video_30: '30% 이상', hook_only: '훅만 영상', hybrid: '혼합 제작 (기존 승인)' };
   const RATIOS = { full_video: 1, video_50: .5, video_30: .3 };
-  const newCut = scene => eligible(scene) && !reused(scene);
-  const generated = scene => !!scene.visual?.video || scene.type === 'broll' || (scene.type === 'quote' && typeof scene.visual?.clip === 'object');
-  function hookScene(scenes) { return scenes.find(s => s.type === 'hooking') || scenes.find(s => s.type === 'cover') || scenes.find(newCut); }
+  // A cut is a shot in the playback line; b-roll is spliced by `after` and is not a cut, so it
+  // sits outside the ratio on both sides (it still counts toward the generated-slot cap).
+  const newCut = scene => eligible(scene) && !reused(scene) && scene.type !== 'broll';
+  const generated = scene => !!scene.visual?.video || (scene.type === 'quote' && typeof scene.visual?.clip === 'object');
+  function hookScene(scenes) { return scenes.find(s => s.type === 'hooking' || s.beat === 'hooking') || scenes.find(s => s.type === 'cover') || scenes.find(newCut); }
   function coverageErrors(win) {
     const key = win.PRODUCTION?.mode, scenes = win.SCENES || [], cuts = scenes.filter(newCut);
     if (key === 'hook_only') {
@@ -278,7 +280,8 @@
     // voice, format, factual evidence and publishing gates intact.
     if (!production || !MODES[production.mode]) return base;
     return { ...base, videoBudgetUsd: production.videoBudgetUsd,
-      generatedVideoMax: production.mode === 'hook_only' ? 1 : RATIOS[production.mode] ? scenes.filter(eligible).length : Math.min(base.generatedVideoMax ?? 2, 2) };
+      // hook_only: the hook plus every imported clip — reuse is outside the count but still a slot.
+      generatedVideoMax: production.mode === 'hook_only' ? 1 + scenes.filter(reused).length : RATIOS[production.mode] ? scenes.filter(eligible).length : Math.min(base.generatedVideoMax ?? 2, 2) };
   }
   const api = { STYLES, MODES, CHOICES, RATIOS, newCut, generated, hookScene, coverageErrors, CAMERA_SLOTS, PREVIZ_RENDERERS, VIDEO_MODELS, packPresets, ALL_LOOKS, eligible, reused, reuseErrors, full, signature, check, policy, motionErrors, missingCameraSlots, cameraErrors, staticCamera, finalState };
   if (typeof module === 'object' && module.exports) module.exports = api;
