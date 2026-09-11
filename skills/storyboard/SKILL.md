@@ -338,8 +338,7 @@ pick an arc** — hook → drip → cta (scenes-schema §playback order).
   `datago_search` (data.go.kr). One official origin satisfies the cross-check. Collection,
   attribution, and the data-as-of-date trap: the **datago skill**.
 - Time-sensitive values (prices, tax rates, deadlines, effective dates) need **two or more
-  independent sources**. Failed claims stay out — don't invent figures and don't shrink a
-  range to its upper bound.
+  independent sources**. Failed claims stay out — don't invent figures and don't shrink a range to its upper bound.
 - Record in `research.md` in the `references/storyboard-template.md` structure. Channels
   that skip research (creative, everyday life) skip this whole step — and then the copy
   review's "no basis" P0 is switched off for that channel.
@@ -452,8 +451,7 @@ Core rules:
   - **YouTube long-form 16:9**: **28–70 shots · 8–15 min** (20 min absolute cap) +
     **5–10 chapters** (3 or more in the filmed lane). The chapter contract is
     `references/scenes-schema.md` §chapter — write only the `chapter` string on the scene
-    and the builder makes timestamps from measured times. The first chapter goes on the
-    cover so it opens at 0:00.
+    and the builder makes timestamps from measured times. The first chapter goes on the cover so it opens at 0:00.
   When channel Analytics measurements exist, they outrank generic benchmarks — go by
   **stayed to watch, engaged views, and subscribers gained per video**. Pick length and
   format from the episodes that produced engaged views and subscriptions, not raw views.
@@ -510,8 +508,7 @@ Core rules:
   Filmed scenes get `visual.clip` (filename), `shot` (what's visible), and `action` (what
   you do), and the filename follows the **`footage/s<scene number>-<slug>.mp4`** convention
   set by the storyboard — the user doesn't pick names. Whether the live voice carries the
-  sound or narration covers it is decided here too (live voice means `narration: []`). The
-  full text is scenes-schema §filmed scenes.
+  sound or narration covers it is decided here too (live voice means `narration: []`). The full text is scenes-schema §filmed scenes.
 - **Choose generated video only where continuous motion carries the sentence.** An event, a place or an action beat whose meaning is the motion itself is a
   **motion background or a b-roll clip with nothing drawn on it** (`visual.video`, §5 slot
   rules) with `visual.why` written; the beats that lose nothing as a photograph stay stills
@@ -523,8 +520,7 @@ Core rules:
   moves, drifting dust, flashing accents and animated subtitles still fail either contract.
 - **Long-form spreads one result across chapters over one episode; it isn't several
   short-form episodes stitched together.** A different topic per chapter makes a playlist,
-  not an episode. Long-form walks cover → hooking → … with the arc picking the rest; the
-  "body" is split into chapters and runs longer.
+  not an episode. Long-form walks cover → hooking → … with the arc picking the rest; the "body" is split into chapters and runs longer.
 - **Playback order follows the format, then (on long-form) the cover's `arc`.** The source of
   truth is scenes-schema §playback order. **A short is always hook → drip (1–n) → cta.** Write
   `beat:"hook"` on the cover, `beat:"drip"` on every middle shot, `beat:"cta"` on the last
@@ -539,8 +535,7 @@ Core rules:
   the cover opens a loop on the moment it went wrong and never says how it ended, hooking is
   the setup, the body builds the conflict, the turn is the moment someone saw it differently,
   and the result is the payoff, **the first place the answer appears**. Write a `beat` on each
-  shot. **Inside the long-form skeleton, the body's beats follow the structure the user picked
-  in §2.5** (scenario-craft §11).
+  shot. **Inside the long-form skeleton, the body's beats follow the structure the user picked in §2.5** (scenario-craft §11).
 - **Underneath the beats, run the fourteen craft rules** (`references/scenario-craft.md`). After
   drafting, walk the scenes top to bottom and speak the connective at every seam — each one
   reads "그래서" or "그런데", never "그리고" (an and-then seam is a scene to merge, cut, or
@@ -549,8 +544,7 @@ Core rules:
   technique the episode rides: a story `turn` planted early and fair-play, fear put on the
   table with its clock plus a doable answer (suspense over surprise, Witte's efficacy rule),
   every curiosity loop opened mid-episode paired at open time with the scene that pays it
-  (loops beyond the main `hookForm`: short informational 0, short narrative 1 at most,
-  long-form 2–4 — the
+  (loops beyond the main `hookForm`: short informational 0, short narrative 1 at most, long-form 2–4 — the
   pairs go into `SB_DOC.craft.loops` in §6, where storyboard.html draws the ledger and marks
   the unpaid ones), the body paying its answer in installments so each
   body scene opens the next question as it closes one (seam gaps stay off that ledger),
@@ -602,8 +596,7 @@ Core rules:
   `gap` · `payoff` · `identify` · `number` · `secret` (scenes-schema §the six hook forms) — and
   make the title and segment ① actually take that shape, then **keep it** to the shot that pays — the last drip
   (short) or the result (long-form) on a withholding form, the cover itself on `payoff`. All six are open on a short. storyboard.html is
-  tables, frames and badges, not drawn panels — the form of the storyboard is irrelevant, its
-  function is to force these four jobs.
+  tables, frames and badges, not drawn panels — the form of the storyboard is irrelevant, its function is to force these four jobs.
 - **The hold job is won in the drip shots, not at the entrance** (measured on our own channel,
   n=4 — retention report, 2026-08-26). Retention ranked our four Shorts in exactly
   the order views ranked them (52% → 38% → 26% → 19%, 1,367 views down to 453), and the
@@ -613,8 +606,7 @@ Core rules:
   underperforms, **rework the drips before touching the opening** — every drip except the last
   closes one gap and opens the next in the same breath (`references/scenario-craft.md` §5), and
   a scene that only finishes an explanation is where the curve bends. Cutting shorter isn't
-  the fix either: what wins is a flat curve, so trim the stretches that sag and let a held
-  90 seconds run.
+  the fix either: what wins is a flat curve, so trim the stretches that sag and let a held 90 seconds run.
 - **On a short the shots after the cover are drip, then CTA.** n ≥ 1 drip shots. Each
   non-final drip pays one piece and opens the next gap; under a gap cover the last drip completes the answer, under a `spoiler` cover it is where the stated result has been made to hold up;
   the last narrated shot is `beat:"cta"`, with an optional ask after the answer and a **required** `shot.share`. An ask stays optional; a forwardable thing does not — an ask requests behaviour from the viewer, while a forwardable thing is one sentence, figure or verdict they can pass on as-is. Asking to be shared is an ask, not a trigger. Do not write `beat:"hooking"`.
@@ -631,11 +623,9 @@ Core rules:
   the cover's first frame is the finished screen or the working result, and the cover's
   glance and the result scene's unfolding point at the same artifact. **On a story arc the
   opposite holds** — the first frame is the moment it went wrong, close, and the ending stays
-  out of the cover, the setup, the build and the turn; the cta's frame is what points back at
-  the cover.
+  out of the cover, the setup, the build and the turn; the cta's frame is what points back at the cover.
 - **One result per episode**: one video solves one problem or produces one change. Install,
-  setup, and demo don't all go in one episode. Push the leftover steps to the next episode
-  and finish only this result.
+  setup, and demo don't all go in one episode. Push the leftover steps to the next episode and finish only this result.
 - **Design subscription conversion as the next value**: for topics suited to builds and
   serials, don't scatter standalone one-offs — bundle them into a series that advances the
   same artifact. The closing CTA isn't "please subscribe" but a concrete promise of **what
@@ -671,8 +661,7 @@ Core rules:
 - **Plain-language principle (profile §2), written for a 초3~4 listener** — on-screen text
   and narration alike. The floor is korean-style §Eye level: the words a 만 9~10세 viewer
   already has (NIKL vocabulary grading, grade 3). Unpacking the terms at the deck-authoring
-  stage is what makes the narration plain too. Four moves do the work, and the checker sees
-  only the first:
+  stage is what makes the narration plain too. Four moves do the work, and the checker sees only the first:
   - **Swap the document-register word.** 여부·기입하다·소요된다·초래하다 all have an
     everyday twin, and E1~E3 reject them. **Register is untouched** — profile §2's 존댓말
     stays 존댓말, and talking down to a child ("~했어요~ 그쵸?") is its own defect.
@@ -713,8 +702,7 @@ Core rules:
   reference, write each entry as `{ id, scope }`** — one clause per reference saying what it
   governs and where it may appear ("controls the helmet and body only", "appears only in the last
   second, and its face never transfers"). Unscoped references leak into each other, and the check
-  strip warns on a multi-reference clip with no scope anywhere (scenes-schema §character
-  reference).
+  strip warns on a multi-reference clip with no scope anywhere (scenes-schema §character reference).
 - **Select Seedance per cut** using produce `references/video-model-selection.md` §Seedance
   per-cut selection. Every motion background is a previz cut on the 2.x grade in
   `PRODUCTION.videoModel` (§1.7); 1.5 Pro serves only a b-roll or speech slot that landed on
@@ -742,8 +730,7 @@ Core rules:
   4-second idea buys 4 seconds of invention (§cut length). Narration-carrying scenes keep the
   speech math — characters / 4.5 — **and on a motion background that math has to land inside
   the route's one-call cap** (seedance 15s on the 2.0 grades and 30s on 2.5, veo 8s): a 16-second
-  narration over a 15-second clip is a loop seam nobody planned, so trim the narration or
-  split the scene.
+  narration over a 15-second clip is a loop seam nobody planned, so trim the narration or split the scene.
 - **Write what the episode sounds like, not only what it looks like.** Every shot that becomes a
   generated video gets `visual.audio` — one sentence on what that clip sounds like, ending in
   `no music, no speech` unless speech is the point. Leave it out and the engine invents a
@@ -856,14 +843,12 @@ python3 $PG/check-style.py --surface narration .work/text-narration.txt; echo "g
 
 1. **Delegate to the storyboard-reviewer agent (Agent) in "vocabulary mode"** with the
    numbered sentence list (the same `check-story.js --text` list §4.4 handed over), the checker's output above
-   pasted verbatim, and the `profile.md` path (§1 target audience · §2 plain-language
-   principle — who the listener is). Read the tail
+   pasted verbatim, and the `profile.md` path (§1 target audience · §2 plain-language principle — who the listener is). Read the tail
    `STORYBOARD_REVIEW: mode=lexicon score=NN p0=N worst=<sentence number>` — `score` is the
    lowest sentence's score.
 2. **Swap only the words that were flagged**, in `scenes.js`.
    - **Don't rewrite sentences** — a swap that spreads into a rewrite changes the chain §4.4
-     read. Where a single word won't do, change that one sentence and re-read it against the
-     chain yourself.
+     read. Where a single word won't do, change that one sentence and re-read it against the chain yourself.
    - **Only subtract.** Planting a metaphor or stock phrase that wasn't there while erasing a
      hard word is a new AI tell.
    - Don't touch figures, proper nouns, or `tts` phonetic spellings.
@@ -930,8 +915,7 @@ once, in this order, before §5:
   the last narrated shot is the CTA and carries its `shot.share`); on long-form the result comes
   before the body on answer-first and after the turn on a story arc. A scene the video still
   stands without is merged or dropped; recalculate the duration without padding the other
-  scenes. Respect format minimums with useful material before approval. Reorder beats rather than rewriting sentences (scenario-craft.md is
-  the yardstick).
+  scenes. Respect format minimums with useful material before approval. Reorder beats rather than rewriting sentences (scenario-craft.md is the yardstick).
 - **Per shot, does the camera serve the feel** — the size and the angle against the
   directing-grammar §5 row for that feel, `shot.space` in visible-result language (no camera
   inference, no metric — directing-grammar §3.5), the rationing and sequencing of §6, and on
@@ -943,8 +927,7 @@ once, in this order, before §5:
 - **The sound** — `visual.audio` written on every generated video shot, voice casting against
   profile §2 (never three speakers in one scene), `tts` spellings for digits and swallowed
   endings (「에이트」), every `sound.cue` naming a cue that exists, the drop spent on the line the
-  episode is about. What has no scenes.js field (the mix, the generation call, the engine) goes
-  into the §7 note under "hand to produce".
+  episode is about. What has no scenes.js field (the mix, the generation call, the engine) goes into the §7 note under "hand to produce".
 
 Write what you changed and what you chose not to change into the §7 hand-off note — the
 approval screen is where a defect on the board gets its human look.
@@ -1286,6 +1269,23 @@ Once approved, write two lines at the top of scenes.js — `// approved: <YYYY-M
 `/social-flow:produce <channel> <topic>`, so you can trace later which score of narration
 produced which performance. `unresolved` is how many findings went to the user unfixed,
 reviewer findings and your own board notes together.
+
+**Then put the approved board on the portal (when the portal MCP is registered).** If the
+`mcp__ttalkkakstory__*` tools are available (the server is registered in the user's own Claude
+Code settings, README §Optional: the ttalkkakstory portal mirror — never in the plugin's
+`.mcp.json`), first set `status: approved` in `storyboard.md`'s frontmatter (the portal copies
+that field; an earlier save shows `draft`), then call `storyboard_save` with `episodeDir` as
+the **absolute** path of `data/<channel>/episodes/<topic>` right after the two approval lines
+are written. It uploads `scenes.js` (the shots verbatim, the `window.*` blocks as episode meta),
+`storyboard.md`, `research.md`, `script.md` and `storyboard.html`, and returns `pageUrl`,
+`episodeId` and `storyboardId` — show the URL on the wrap-up line and write `portal_episode:
+<episodeId>` and `portal_url: <pageUrl>` into `storyboard.md`'s frontmatter, which is how
+produce and publish address the same record later. The portal matches a storyboard by its
+title, so a re-save after a change request updates the same episode only while the title (or
+the `storyboardTitle` you passed) stays the same; a retitled board is a new record. If the
+tools are not there, say so in one line and move on; if a call errors (missing variables, 401,
+a 409 asking for a retry), report the message in one line, retry a 409 once, and never hold
+the approval on it — the portal is a mirror, not a gate.
 
 **If there are filmed scenes**, the hand-off after approval is recording. It differs by lane.
 

@@ -471,7 +471,12 @@ write the reason into the publish log.
   (rule 11) — write what they asked for and why under the episode's row, and the next
   episode carries the fix. Comment replies are the exception; they're the post-publish
   work, and the copy check above covers them.
-- Update `storyboard.md` to `status: published`.
+- Update `storyboard.md` to `status: published`. If the portal MCP is registered
+  (`mcp__ttalkkakstory__*`, README §Optional), call `episode_set_status` with
+  `status: "published"` and the `episodeId` in `storyboard.md`'s `portal_episode` frontmatter
+  (written at approval); without that field, `storyboard_save` on the episode directory's
+  absolute path returns it. Tools absent: one line, move on. A call that errors: report the
+  message in one line, retry a 409 once, and never hold the final report on it.
 - If you used a temporary tunnel, verify the teardown per §1, then give the final
   report as a platform/permalink table.
 

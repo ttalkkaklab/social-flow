@@ -89,8 +89,7 @@ Read [story-quality.md](../storyboard/references/story-quality.md) and run `node
    does two jobs. For an opening b-roll (`after: 0`) that file is the cover background. For
    a body b-roll it's that points scene's background, and **that one image gets made with
    `gpt_image_text2img` (high) or the host image tool rather than local Z-Image** — it's veo's input, so a blurry
-   source makes a blurry video, and with nothing in it for the clip to move the model invents
-   motion (rule 11).
+   source makes a blurry video, and with nothing in it for the clip to move the model invents motion (rule 11).
    **Generated-video slots follow the approved channel motion policy.** Count b-roll and
    motion-background scenes (`visual.video`) together. The format default is 2, and **on a
    short both are optional**. Each selected cut writes `visual.why` because continuous motion
@@ -112,8 +111,7 @@ Read [story-quality.md](../storyboard/references/story-quality.md) and run `node
    target channel, no text expected from the engine, the exclusions written, a duration the
    cut earns, no minor in frame, the engine the route names. The content-reviewer plan-mode
    read of 0.49 is no longer part of the flow (six million tokens a call, measured); it
-   stays available when the user asks for it. A plan that fails a point gets fixed before
-   the call — don't burn veo money on a bad source.
+   stays available when the user asks for it. A plan that fails a point gets fixed before the call — don't burn veo money on a bad source.
 14. **The photo is the lead on screen — no slide (PPT) look.** Scene text lives inside the
    top and bottom bands only: points uses the top block (title + **one caption at a time** +
    source), cover uses the bottom block, and the bottom subtitles say what the narration
@@ -127,8 +125,7 @@ Read [story-quality.md](../storyboard/references/story-quality.md) and run `node
    On a channel whose motion policy forbids stills, the photo is source material rather than
    the finished screen: place it full-frame in `visual.slide.motion:true` and animate the
    subject or evidence named by `visual.action`. A whole-photo zoom or pan is still Ken Burns
-   and does not qualify. `check-scenes.js` blocks the build before capture when this contract
-   is not met.
+   and does not qualify. `check-scenes.js` blocks the build before capture when this contract is not met.
 15. **Every episode runs the final pace pass — the pass is not optional.** After the build (and
    after any clip splice) `references/speedup.sh` writes the one deliverable set and checks the
    speech rate on its retimed subtitles. The default factor is **1.0x**, which preserves the pace of the finished build. A channel may set
@@ -168,8 +165,7 @@ Read [story-quality.md](../storyboard/references/story-quality.md) and run `node
   backgrounds, no reveals; the voice is the user's own). The artifact names (reel.mp4 ·
   reel-sub.mp4 · subs.srt · cover.jpg · build-report.txt) are the same, so §7.5–10 (the speed
   pass, phone QA, platform text, quality gate) run unchanged — **a shooting edit ships sped up
-  too**, and `speedup.sh` reads the xfade join that builder makes on its own. Use
-  screencast-pipeline.md's gate table.
+  too**, and `speedup.sh` reads the xfade join that builder makes on its own. Use screencast-pipeline.md's gate table.
 
   **`alignment.json` + landscape doesn't work.** `build-screencast.sh`'s band constants
   (BAND_MAX_H 900 · BAND_CY 880 · BAND_MIN_Y 460) and its background compositing are
@@ -1314,7 +1310,12 @@ Report every `fallback` and each `engine_selection` or `voice_selection` marked 
 
 On a pass, update storyboard.md to `status: produced`, present the artifact table (paths,
 length, platforms) together with the cost summary, and point the user at
-`/social-flow:publish`.
+`/social-flow:publish`. If the portal MCP is registered (`mcp__ttalkkakstory__*`, README
+§Optional), call `storyboard_save` once more with the episode directory's absolute path (the
+board may have moved since approval — regenerated prompts, slide plans) and then
+`episode_set_status` with `status: "produced"` and the `episodeId` the save returned; that is `portal_episode` in `storyboard.md`'s frontmatter while the title is unchanged — a retitled board comes back as a new record, so overwrite `portal_episode`/`portal_url` with the save result before setting the status. Tools absent: one line, move on.
+A call that errors: report the message in one line, retry a 409 once, and finish the report
+and the `status: produced` file update regardless — the portal is a mirror, not a gate.
 
 ## Additional Resources
 
