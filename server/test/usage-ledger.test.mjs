@@ -286,6 +286,7 @@ test('only generation tools are recorded', () => {
     assert.ok(isBillableTool(t), `${t} should be billable`);
   }
   for (const t of ['naver_search', 'threads_publish', 'youtube_insights', 'datago_search',
+                   'tts_list_voices', 'tts_elevenlabs_voices', 'music_list_options',
                    'stt_local_transcribe', 'content_feedback']) {
     assert.ok(!isBillableTool(t), `${t} should not be billable`);
   }
