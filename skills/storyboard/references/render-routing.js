@@ -1,12 +1,34 @@
 /* One semantic routing contract for planning, the approval page and production. */
 (function(root){
  'use strict';
- const PURPOSES={portrait:'still_camera',atmosphere:'still_camera',place:'still_camera',detail:'still_camera',human_process:'character_html',mechanism:'object_html',physical_state:'object_html',comparison:'data_graph',trend:'data_graph',share:'data_graph',distribution:'data_graph',geographic:'data_graph',timeline:'data_graph',live_action:'generated_video',evidence_quote:'editorial_html',verdict:'editorial_html'};
- const LABELS={still_camera:'정지 이미지 · 카메라 무빙',character_html:'3D 캐릭터 · HTML',object_html:'3D 사물 · HTML',data_graph:'수치·그래프 · HTML',generated_video:'영상 생성',editorial_html:'짧은 인용·결론 · HTML'};
+ const PURPOSES={portrait:'still_camera',atmosphere:'still_camera',place:'still_camera',detail:'still_camera',human_process:'character_html',mechanism:'object_html',physical_state:'object_html',comparison:'data_graph',trend:'data_graph',share:'data_graph',distribution:'data_graph',geographic:'data_graph',timeline:'data_graph',live_action:'generated_video',evidence_quote:'editorial_html',verdict:'editorial_html',archive:'stock_video'};
+ // A purpose's default route comes first; free real footage may stand in where the actual place, era or action carries the cut (render-routing.md §Routes).
+ const ALTERNATIVES={live_action:['stock_video'],atmosphere:['stock_video'],place:['stock_video']};
+ const LABELS={still_camera:'정지 이미지 · 카메라 무빙',character_html:'3D 캐릭터 · HTML',object_html:'3D 사물 · HTML',data_graph:'수치·그래프 · HTML',generated_video:'영상 생성',editorial_html:'짧은 인용·결론 · HTML',stock_video:'외부 영상 · 무료 소재'};
  const CHARTS={comparison:['bar','dot'],trend:['line'],share:['stacked-bar','donut','pie'],distribution:['histogram'],geographic:['map'],timeline:['timeline']};
  const text=x=>typeof x==='string'&&!!x.trim();
  function exempt(scene){return scene.type==='outro'||(scene.visual?.reuse===undefined&&!scene.visual?.video&&(['recording','screencast'].includes(scene.visual?.source)||scene.visual?.picture==='recording'))}
  function recommend(purpose){return PURPOSES[purpose]||null}
+ function modesFor(purpose){const d=PURPOSES[purpose];return d?[d].concat(ALTERNATIVES[purpose]||[]):[]}
+ const httpUrl=s=>typeof s==='string'&&/^https?:\/\/\S+$/.test(s);
+ /* visual.license — the record every supplied stock file carries (scenes-schema §stock material). A monetized cut
+    exercises commercial use and modification, so both must be true; share-alike is refused because the edited cut
+    would inherit its terms. */
+ function checkLicense(v){
+  const l=v&&v.license,errors=[],bad=s=>errors.push('visual.license: '+s);
+  if(!l||typeof l!=='object')return ['visual.license: a stock file records provider, url, license, licenseUrl, commercial, modify, attributionRequired and retrievedAt'];
+  if(!text(l.provider))bad('provider is required (pexels, pixabay, nasa, commons, kogl, …)');
+  if(!httpUrl(l.url))bad('url must be the item page where the license is shown');
+  if(!text(l.license))bad('license must name the license (Pexels License, CC0, CC BY 4.0, 공공누리 제1유형, …)');
+  if(!httpUrl(l.licenseUrl))bad('licenseUrl must link the license text');
+  if(l.commercial!==true)bad('commercial must be true — a monetized short is commercial use');
+  if(l.modify!==true)bad('modify must be true — trimming, grading and subtitles are modifications');
+  if(l.shareAlike===true)bad('share-alike material spreads its terms to the edited cut; use public domain, CC0, CC BY or a platform license');
+  if(typeof l.attributionRequired!=='boolean')bad('attributionRequired must be true or false');
+  if(l.attributionRequired===true&&!text(l.attribution))bad('attribution text is required when the license asks for credit');
+  if(!Number.isFinite(Date.parse(l.retrievedAt)))bad('retrievedAt must be the download date (ISO)');
+  return errors;
+ }
  function framePlan(scene){
   const v=scene.visual||{}, f=v.frames||{}, end=f.end||v.video?.lastImagePath||v.lastImagePath||v.imagePair?.end||'';
   return {mode:f.mode||(end?'first_last':'first'),start:v.bg||v.src||v.imagePair?.start||'',end,reason:f.reason||'',endState:f.endState||''};
@@ -58,13 +80,18 @@
  function checkScene(scene,{draft=false,production=null}={}){
   if(exempt(scene))return [];
   const r=scene.shot?.render,v=scene.visual||{},errors=checkFrames(scene,{draft}).concat(checkPreviz(scene,{draft})),bad=s=>errors.push('shot.render: '+s);
+  if(v.source==='stock'){
+   checkLicense(v).forEach(m=>errors.push(m));
+   if(text(v.bgPrompt))errors.push('visual.bgPrompt: a stock photo is a supplied file, not a generated one; drop bgPrompt');
+  }
   if(!r||typeof r!=='object')return errors.concat(['shot.render: choose a supported mode and record purpose and reason before assets']);
   const fullVideo=production?.mode==='full_video';
-  const expected=fullVideo?'generated_video':recommend(r.purpose);
-  if(!recommend(r.purpose))bad('unknown purpose; use '+Object.keys(PURPOSES).join(', '));
+  const options=modesFor(r.purpose);
+  if(!options.length)bad('unknown purpose; use '+Object.keys(PURPOSES).join(', '));
 
   if(!LABELS[r.mode])bad('unknown mode; use '+Object.keys(LABELS).join(', '));
-  else if(expected&&expected!==r.mode)bad(r.purpose+' requires '+expected+', not '+r.mode);
+  else if(fullVideo&&r.mode!=='stock_video'){if(r.mode!=='generated_video')bad(r.purpose+' requires generated_video, not '+r.mode)}
+  else if(options.length&&!options.includes(r.mode))bad(r.purpose+' requires '+options.join(' or ')+', not '+r.mode);
   if(!text(r.reason))bad('reason must explain why this treatment conveys the cut');
   const info=scene.shot?.infoType;
   if(info==='statistic'&&!['comparison','trend','share','distribution','geographic'].includes(r.purpose))bad('statistic needs a quantitative purpose');
@@ -87,6 +114,15 @@
   if(r.mode==='generated_video'){
    if(fullVideo){if(!text(r.action))bad('full video needs a visible action or a spatial camera reveal');}
    else if(r.motionEssential!==true||!text(r.whyNotStill)||!text(r.action))bad('generated video needs essential continuous motion, action and whyNotStill');
+  }
+  if(r.mode==='stock_video'){
+   if(!text(r.action))bad('stock video needs action: what the viewer sees happen in the clip');
+   if(v.source!=='stock')bad('stock video needs visual.source "stock" with its license record');
+   if(v.in!==undefined&&!(Number.isFinite(v.in)&&v.in>=0))bad('visual.in must be the trim start in seconds');
+   if(!draft){
+    if(!/^footage\/[A-Za-z0-9._-]+\.(mp4|mov|m4v|webm)$/.test(String(v.clip||'')))bad('stock video needs visual.clip under footage/ (mp4, mov, m4v or webm) before production');
+    if(v.video||v.slide||scene.type==='broll')bad('stock video is a supplied file; it cannot also be a generated or slide handoff');
+   }
   }
   if(r.mode==='editorial_html'){
    if(info!=='other')bad('an editorial quote/verdict uses infoType other');
@@ -228,7 +264,7 @@ if(r.mode==='data_graph'||(fullVideo&&CHARTS[r.purpose])){
   if((!long&&textCount>2)||(long&&total>0&&textSeconds/total>0.2))errors.push('text-led slides dominate: at most 2 per short, or 20% of generated duration in long-form; use source images, acted processes or actual charts where the content calls for them');
   return errors;
  }
- const api={PURPOSES,LABELS,CHARTS,recommend,exempt,framePlan,checkFrames,checkPreviz,checkScene,checkData,checkMap,checkEpisode};
+ const api={PURPOSES,ALTERNATIVES,LABELS,CHARTS,recommend,modesFor,checkLicense,exempt,framePlan,checkFrames,checkPreviz,checkScene,checkData,checkMap,checkEpisode};
 
  if(typeof module==='object'&&module.exports)module.exports=api;else root.RENDER_ROUTING=api;
 })(typeof window==='object'?window:globalThis);

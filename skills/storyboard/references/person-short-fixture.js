@@ -1,7 +1,8 @@
 /* Person-short fixture for the story contract. explicitly fictional, never an episode asset.
    It exists so the shape in person-short.md is something the checker has actually passed:
    an opening inside the event (no name, no year), 원인 → 막힘 → 한 방, one sentence a shot,
-   a closing picture after the blow, and a disputed record shown in the last line.
+   a closing picture after the blow that carries the message (present tense, no name, no
+   figure — heard after the blow), and a disputed record shown in the last line.
    Run: node check-story.js person-short-fixture.js --draft */
 window.COMPREHENSION = {
   question: "폭풍 밤에 기름이 없는 등대가 어떻게 배를 돌려세웠나",
@@ -11,7 +12,7 @@ window.COMPREHENSION = {
 window.STORY = {
   version: "story-v1", kind: "fiction",
   viewerNeed: "한 사람이 가진 것을 다 태워서 남을 살리는 순간을 보고 싶다",
-  thesis: "가진 것을 다 태운 불빛 한 번이 배 한 척을 돌렸다",
+  thesis: "배 한 척을 돌리는 불빛은 집 한 채 값이에요",
   basis: "허구. 등대지기 박만수와 섬은 지어낸 인물과 장소다",
   person: { name: "박만수", aliases: ["만수"] },
   opening: { shot: 1, group: 1, quote: "불이 꺼진 등대 꼭대기에서 한 남자가 성냥 한 갑을 세고 있어요" },
@@ -28,7 +29,7 @@ window.STORY = {
     { shot: 5, change: "배가 이미 암초 길로 들어온다. 막힘이 목숨이 된다", necessity: "걸린 것" },
     { shot: 6, change: "집을 뜯어 태운다. 한 방", necessity: "이 편의 사건" },
     { shot: 7, change: "배가 돌아섰다. 한 방의 결과", necessity: "한 방이 통했는지" },
-    { shot: 8, change: "문짝 없는 집 한 채. 닫는 그림", necessity: "한 방의 값" },
+    { shot: 8, change: "문짝 없는 집 한 채, 그리고 그 값이 무엇이었는지. 닫는 그림과 메시지", necessity: "한 방의 값 — 이름을 지워도 남는 한 문장" },
     { shot: 9, change: "그 배가 있었는지 마을 절반이 다르게 말한다. 갈리는 기록", necessity: "기록이 두 갈래라는 사실 자체가 마지막 정보" }
   ]
 };
@@ -44,7 +45,7 @@ window.SCENES = [
   { type: "points", beat: "drip", sound: { drop: true },
     narration: line("만수는 집에 있던 이불이랑 문짝을 다 뜯어 등탑 위에서 태웠어요.") },
   { type: "points", beat: "drip", narration: line("그 불빛이 배를 돌려세운 게 새벽 두 시였대요.") },
-  { type: "points", beat: "drip", narration: line("다음 날 아침 등대 옆에는 문짝 없는 집 한 채만 서 있었어요.") },
+  { type: "points", beat: "drip", narration: line("다음 날 아침 등대 옆엔 문짝 없는 집 한 채, 배 한 척을 돌리는 불빛은 집 한 채 값이에요.") },
   { type: "points", beat: "cta", shot: { share: "등대지기가 자기 집을 태워 배를 돌렸는데, 그 배가 있었는지는 마을 절반이 다르게 말한다" },
     narration: line("그 배가 정말 있었는지는 지금도 마을 사람 절반이 다르게 말해요.") }
 ];

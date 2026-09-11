@@ -24,6 +24,7 @@ magnitude, not to the multiplier.
 
 ## Contents
 
+- [The host video tool comes first](#the-host-video-tool-comes-first)
 - [The four selection rules — decide in this order](#the-four-selection-rules-decide-in-this-order)
 - [One-line decisions](#one-line-decisions)
 - [The one axis that splits them — does the segment use its sound?](#the-one-axis-that-splits-them-does-the-segment-use-its-sound)
@@ -41,6 +42,41 @@ magnitude, not to the multiplier.
 - [Camera — this section is the source of truth for engine vocabulary and routing](#camera-this-section-is-the-source-of-truth-for-engine-vocabulary-and-routing)
 - [What Seedance can't do](#what-seedance-cant-do)
 - [Key setup](#key-setup)
+
+## The host video tool comes first
+
+**Rule 0 (owner directive 2026-09-07).** When the CLI running produce ships its own video
+tool, that tool is the default route for every generated clip, and the four rules below choose
+between the API engines only where the episode wrote `videoProvider:"api"` or the cut wrote a
+reason the host tool cannot serve. Today that CLI is **Grok**: `image_to_video` (one source
+image, `duration` 1–15 s, `resolution` 480p or 720p, the aspect follows the source image) and
+`reference_to_video` (several reference images, `duration` 6 or 10 s, preset `voices` for a
+speaking subject). Codex and Claude Code ship no video tool, so `videoProvider` is `"api"` there.
+
+What the route means in the plan:
+
+- The storyboard writes `engine:"host"` on the slot (`visual.engine` for b-roll,
+  `visual.video.engine` for a motion background, `visual.clip.engine` for a speech clip) and
+  the forecast bills `video.host` at $0 for the requested seconds — the subscription allowance
+  pays, so the episode budget only counts what the API engines still bill.
+- The clip comes back at 720p at most; the builder's b-roll and background inputs take any
+  resolution and scale onto the 1080p canvas, and the approval page shows the ceiling beside
+  the slot. A cut that needs 1080p pixels, 4K, a local-file extension or a Seedance
+  asset-library character writes that reason and takes the API engine.
+- One clip is one call, the same source PNG and the same stored prompt as any other engine.
+  The prompt reads as plain English with no timecodes and no negative directives (no
+  `negativePrompt` argument is known on this tool); exclusions go in as positive description,
+  the way the Seedance lock does it. A speech clip on `reference_to_video` names a preset
+  voice; the channel's fixed voice still comes from TTS.
+- Zero-data-retention accounts get no video tools at all (the CLI says so at the call); that
+  is an `"api"` episode the user chooses, not a silent switch.
+- A host call that fails is put to the user before any billed API call.
+
+Quality is unmeasured through the CLI tool. The one published reading (Artificial Analysis
+image-to-video arena, read 2026-08-16) put grok-imagine-video-1.5 above Veo 3.1 and below
+Seedance 2.0; nothing in this repo has generated a clip through the tool yet, so the first host
+episode reads its clips at full playback like any other and writes what it saw in
+`build-report.md`.
 
 ## The four selection rules — decide in this order
 
@@ -129,6 +165,7 @@ before calling. Reference/voice requirements cannot be dropped just to fit the c
 
 | Situation | Use |
 |---|---|
+| **The CLI you run in ships a video tool** (Grok) | `image_to_video` / `reference_to_video` — `engine:"host"`, $0 on the allowance, 720p ceiling (§The host video tool comes first). The rows below are the API lane: `videoProvider:"api"`, or a cut that wrote why the host tool cannot serve it |
 | **Motion background** (`visual.video` — a slot where the builder discards the sound) | `seedance_img2video` · `seedance-1-5-pro-251215` · 1080p · `generateAudio: false` — a price-first choice. On quality alone, Veo lite wins 59:41 (§Quality) |
 | **b-roll slot** (produce absolute rule 9 uses the clip's own sound) | `veo_img2video` — a silent clip leaves that segment mute |
 | Source background contains an **adult live-action person** | Veo (`veo_img2video`, verified pass) or Seedance 1.5 pro/1.0 pro — **only 2.x rejects face input** |

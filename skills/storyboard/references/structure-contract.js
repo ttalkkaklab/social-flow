@@ -506,7 +506,9 @@
               warn(where, `pole "${pole}" is a line lifted from a shot, not a value — a pole is the value in a few words (경고 무시 · 사고 확인), and two characters' lines pasted as poles are a speaker change, not a flip (rule 6)`);
           });
         }
-        if (poles.length === 2 && sc && text(sc.out)) {
+        // A two-shot scene on a one-sentence-a-shot board has no line between the opening line
+        // and the out, so the second pole can only sit in the out — the rule needs a third line.
+        if (poles.length === 2 && sc && text(sc.out) && xs.length > 2) {
           const stem2 = v => { const b = bare(v); return b.length >= 5 ? b.slice(0, -2) : b.length >= 3 ? b.slice(0, -1) : b; };
           const notOut = xs.map(spokenOfShot).filter(text).map(bare).map(b => b.replace(bare(sc.out), ''));
           if (stem2(poles[1]) && bare(sc.out).indexOf(stem2(poles[1])) !== -1 && !notOut.some(b => b.indexOf(stem2(poles[1])) !== -1))

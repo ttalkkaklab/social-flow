@@ -43,10 +43,16 @@ sets `length_max_seconds: 60` in its profile so the band matches the shape, and
   `sound.drop: true` on it (§7: the music goes out at the peak). One name is spoken in the
   episode; everyone else is a role — "the captain", "his brother". A second named person
   with their own arc is a second episode — the reviewer's read holds this one (§5).
-- **Close on one scene.** 마무리 is one picture and one sentence after the blow — where the
-  person was the next morning, what was found in the pocket, the door that stayed shut.
-  Not a summary, not a moral, not a list of what happened afterwards. `STORY.ending` is a
-  different group from `STORY.payoff`. When the record is disputed — two chronicles, a
+- **Close on one scene, and say the message over it.** 마무리 is one picture and one sentence
+  after the blow — where the person was the next morning, what was found in the pocket, the
+  door that stayed shut — and the sentence over that picture is the message: `STORY.thesis`,
+  the research.md M# line in the narration's words, true with the person's name gone (scenario-
+  stage §The message). Not a summary, not a moral, not a list of what happened afterwards, not
+  the blow said again, and not the picture described in words — the picture does that. The
+  2026-09-11 김만덕 board closed on "못 건너던 바다를 건넌 여자가 열린 문으로 걸어 나가요", which is
+  the picture and the payoff again, and the viewer left with nothing to carry. `STORY.ending`
+  is a different group from `STORY.payoff`; the checker also requires the thesis to be heard at
+  or after the payoff and refuses one that names the person. When the record is disputed — two chronicles, a
   legend against a ledger — the last sentence says so and shows the two sides in one line:
   "기록 두 개가 서로 다르게 적어 놨거든요". That is the natural `cta: "question"`, and
   `shot.share` carries the disputed point in one forwardable sentence; a certain record
@@ -130,7 +136,8 @@ one a shot, opening on a hand counting matches and closing on a house with no do
 the shape, not a script; its sentences are not to be reused.
 
 What stays a human read: whether the opening is actually a scene and not a riddle, whether
-the blow is one stroke and not three, whether the close is a picture and not a moral,
+the blow is one stroke and not three, whether the close is a picture with the message over it
+and not a moral, the blow again or the picture described,
 whether a second person gets a name and an arc of their own, and — on a disputed record —
 whether both sides are on the screen and neither is invented. The narration read-through
 (storyboard §4.4) judges those — storyboard-reviewer's narration mode P0-12 lists the five,

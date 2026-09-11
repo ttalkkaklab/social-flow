@@ -128,8 +128,9 @@ candidates together and pick).
 
 If the concept is scene-led (a mini scene with props, a dark studio, etc.),
 generate the first frame with `gpt_image_img2img` (logo master as reference,
-1080×1920) (an exception to the local-first default path — reference editing
-doesn't exist in image_local_generate) — the pre-entrance state or a
+1080×1920; under Codex `image_gen` after `view_image` on the master, under Grok
+`image_edit` with the master as `image`) (an exception to the local-first default
+path — reference editing doesn't exist in image_local_generate) — the pre-entrance state or a
 silhouette, with the profile negative prompt + text exclusion, saved as
 `.work/open-frame.png`. Skip it for front-facing character-entrance concepts.
 
@@ -139,6 +140,9 @@ The body of the intro is **always made with a video-generation tool** — never
 substituted by HTML captures and ffmpeg assembly alone (cards and text are
 only the §7 finishing overlays).
 
+- **Under Grok the host `image_to_video` makes it** — `char-card.png` as the source,
+  `duration` 4, 720p, `video.host` in the ledger; the veo lines below are the API lane
+  (owner directive 2026-09-07).
 - **Default (4-second standard — user-confirmed)**: `veo_img2video` —
   `sourceImagePath` = **`char-card.png`** (first frame = final pose card),
   aspectRatio `9:16`, resolution `720p`, durationSeconds **`4`**, model
