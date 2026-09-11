@@ -834,7 +834,7 @@ not the lane. `subs.srt` keeps whole sentences either way (the publish tracks st
 readable); only the burn-in changes. The Word style is `SUB_WORD_SIZE` (84 — Pretendard
 draws a Hangul glyph at ~0.71× the size) and `SUB_WORD_MV` (640, the 65% line); the `Sub`
 style and its format-lint mirrors are untouched. Default stays `sentence` — a channel
-switches with `SUB_MODE=word` on the build line, same as `ATEMPO_MIN=1`. `SUB_ACCENT=RRGGBB` with `SUB_ACCENT_WORDS="<name> <aliases>"` colours the year (`1592년` · `16세기` · a dated day) and the named person in word and phrase mode and leaves every other word white — the history-short subtitle grammar of storyboard's [person-short.md](../storyboard/references/person-short.md); the SRT stays plain.
+switches with `SUB_MODE=word` on the build line. `SUB_ACCENT=RRGGBB` with `SUB_ACCENT_WORDS="<name> <aliases>"` colours the year (`1592년` · `16세기` · a dated day) and the named person in word and phrase mode and leaves every other word white — the history-short subtitle grammar of storyboard's [person-short.md](../storyboard/references/person-short.md); the SRT stays plain.
 
 **Phrase cues — `SUB_MODE=phrase`.** One line of **3~6 어절** at a time, no second line, on
 the same aligner as word mode: `word-cues.py --phrase 12` joins consecutive words while the
@@ -1084,7 +1084,8 @@ time and rebuild (or re-extract the still with ffmpeg).
 
 The final pace pass exists so every source — narration, generated clips, filmed clips, subtitles,
 and chapters — follows one timeline after the build and any splice. It always runs even at 1.0x.
-The builder has already normalized card speech; this pass must not undo that work.
+The builder has trimmed and loudness-normalized card speech at the engine's own pace; this pass
+is the only tempo change the voice goes through.
 
 ```bash
 $REF/speedup.sh .work        # → .work/reel-fast.mp4 · reel-sub-fast.mp4 · subs-fast.srt · chapters-fast.txt
@@ -1105,13 +1106,14 @@ $REF/speedup.sh .work 1.6    # a channel-specific rate — profile.md §2 decide
   subtitles, so a card written at `r` ships at `r × factor`. `build-reel.sh` divides its whole
   `[3.2, 6.2]` band by the same `SPEED` and warns outside it — **[3.2, 6.2] at the 1.0x default**. Read that
   band as an early warning, not the gate itself: the builder counts the TTS script over the
-  un-normalized card audio, while the gate counts the subtitle text over cue time after the pass,
+  trimmed card audio, while the gate counts the subtitle text over cue time after the pass,
   so the two numbers differ by design. Its chapter minimum becomes `10 × factor` so a boundary still
-  clears 10s on the shipped file. Two consequences worth knowing before picking a factor:
-  above about **1.38** the default 4.5 characters/s target can't reach the gate at all (4.5 × 1.38 =
-  6.2), so a faster channel has to lower its target speaking rate with it. And the shooting lane has
-  no normalization of any kind — at a channel-selected 1.2x, a take at the 5~6 characters/s
-  standard reaches 6.0~7.2 and can exceed the gate. The default 1.0x preserves that take's pace.
+  clears 10s on the shipped file. The build does not stretch a card toward the target rate
+  (`ATEMPO_MIN`/`ATEMPO_MAX` default to 1.0 since 2026-09-11 — a card ships at the pace the
+  engine read it), so this pass is the only tempo change the voice goes through, and the factor
+  has to clear the gate on the engine's own pace: a local take at 1.05 runs 5.3–6.4 characters/s
+  (measured), so 1.2x already puts it at 6.4–7.7 and over 6.2. Pick the pace at the engine
+  (`speed` ≤ 1.2) and leave this at 1.0 unless the channel's subtitles measured under the gate.
 - **`profile.md` §2 owns the rate.** Read the channel's speed line before running the pass; with
   no line, 1.0. A profile TTS `speed` multiplies into this, so the final SRT is checked after
   both choices have taken effect.
