@@ -426,8 +426,15 @@
   .shot-angle.angle-dutch, .shot-angle.angle-low, .shot-angle.angle-high, .shot-angle.angle-overhead { color: var(--accent-ink); }
   .shot-size.unknown { color: var(--warn-ink, var(--accent-ink)); border-style: dashed; }
   .shot-why { font-size: 0.8em; color: var(--muted); margin-left: 0.4em; }
-  .shot-size { display: inline-flex; align-items: center; gap: 6px; cursor: help; border-color: transparent; padding-left: 0; }
-  .shot-size.unknown { border-color: var(--warn-ink, var(--accent-ink)); padding-left: 7px; }
+  .shot-grammar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s3); margin: var(--s2) 0 0; }
+  .shot-size { display: inline-flex; align-items: center; gap: 8px; cursor: help; border: 0; padding: 0; letter-spacing: 0; }
+  .shot-size .size-ico { width: 30px; height: 30px; border-radius: 23%; }
+  .shot-size .sz { display: flex; flex-direction: column; line-height: 1.15; }
+  .shot-size .sz b { font-size: var(--t-cap); font-weight: 700; color: var(--text); }
+  .shot-size .sz small { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9.5px; color: var(--faint); letter-spacing: .04em; }
+  .shot-size.unknown .sz b { color: var(--warn-ink, var(--accent-ink)); }
+  .shot-grammar .shot-why { margin-left: 0; }
+  @media (max-width: 600px) { .shot-grammar .shot-why { flex-basis: 100%; } }
   /* Shot-size pictogram — an app-icon tile: a gradient squircle per size family and a white
      figure cut where that size cuts a person. The tile's rounded box does the cropping. */
   .size-ico {
@@ -442,7 +449,7 @@
   .size-ico.f-group { background: linear-gradient(160deg, #c46dff, #5e5ce6); }
   .size-ico.f-view { background: linear-gradient(160deg, #40d6d0, #0a84a5); }
   .size-key {
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: var(--s3) var(--s1);
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(66px, 1fr)); gap: var(--s3) var(--s1);
     margin: var(--s3) 0 0; padding: var(--s3) var(--s4); border-radius: 12px; background: var(--sunk);
   }
   .size-key .kt {
@@ -451,7 +458,7 @@
   }
   .size-key .k {
     display: flex; flex-direction: column; align-items: center; gap: 5px;
-    font-size: 10.5px; line-height: 1.2; text-align: center; color: var(--muted); cursor: help;
+    font-size: 10.5px; line-height: 1.2; text-align: center; color: var(--muted); cursor: help; word-break: keep-all;
   }
   .size-key .k .kk { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9.5px; color: var(--faint); }
   .size-key .size-ico { width: 38px; height: 38px; border-radius: 22.5%; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3), 0 2px 4px rgba(0, 0, 0, .18); }
@@ -1087,19 +1094,19 @@ window.SB_DOC = {
 
       // ── vocabulary read off scenes.js keys ──
       fmt: { "shorts-9x16": "Short-form 9:16", "youtube-long-16x9": "YouTube long-form 16:9" },
-      size: { els: "extreme long", ls: "long / wide", ws: "wide", fs: "full body",
-              mfs: "mid-shin up", ms: "mid-thigh up", mcu: "mid-chest up", cu: "face",
-              choker: "eyes and mouth", ecu: "eyes only", insert: "object only",
-              two: "two together", three: "three together", ots: "over the shoulder",
-              pov: "their eyes", back: "from behind", cutaway: "looking away", reaction: "reaction" },
+      size: { els: "extreme long shot", ls: "long shot", ws: "wide shot", fs: "full shot",
+              mfs: "medium full shot", ms: "medium shot", mcu: "medium close-up", cu: "close-up",
+              choker: "choker", ecu: "extreme close-up", insert: "insert",
+              two: "two shot", three: "three shot", ots: "over the shoulder",
+              pov: "POV", back: "back shot", cutaway: "cutaway", reaction: "reaction shot" },
       sizeKey: "shot size",
-      sizeHint: { els: "a person is a dot — the place is the subject; alone reads as lonely, a crowd reads as scale",
-                  ls: "whole body with room — where this is, how many, how far apart (the establishing shot)",
-                  ws: "same as ls",
-                  fs: "crown to toes — the whole body acting: dance, fight, walk",
-                  mfs: "cut at mid-shin — two people and the distance between them",
-                  ms: "cut at mid-thigh — upper body, hands explaining, the conversation default",
-                  mcu: "cut at mid-chest — talking to camera; hook, anchor, interview",
+      sizeHint: { els: "very far · a person is a dot — the place is the subject; alone reads as lonely, a crowd reads as scale",
+                  ls: "far, wide · whole body with room — where this is, how many, how far apart (the establishing shot)",
+                  ws: "same as the long shot",
+                  fs: "full body · crown to toes — the whole body acting: dance, fight, walk",
+                  mfs: "knee shot, cowboy · cut at mid-shin — two people and the distance between them",
+                  ms: "cut at mid-thigh · upper body, hands explaining, the conversation default",
+                  mcu: "bust shot · cut at mid-chest — talking to camera; hook, anchor, interview",
                   cu: "the face fills the frame, crown cropped — the one line; one per scene",
                   choker: "eyes and mouth only — the peak of tension; once or twice an episode",
                   ecu: "eyes only, fingertips only — the detail at the peak",
@@ -1107,9 +1114,9 @@ window.SB_DOC = {
                   two: "two people in one frame (cut at mid-shin)",
                   three: "three in one frame — shows the group, not the place",
                   ots: "over a shoulder — the near shoulder in front, the other face (mcu)",
-                  pov: "what that person sees — write the distance in shot.why",
+                  pov: "point of view · what that person sees — write the distance in shot.why",
                   back: "from behind, no face — write the distance in shot.why",
-                  cutaway: "one cut of something outside the people",
+                  cutaway: "looking away · one cut of something outside the people",
                   reaction: "the listener's face" },
       angle: { eye: "eye level", high: "looking down", low: "looking up",
                overhead: "overhead", dutch: "tilted" },
@@ -1363,28 +1370,28 @@ window.SB_DOC = {
 
       // ── vocabulary read off scenes.js keys ──
       fmt: { "shorts-9x16": "세로 쇼트폼 9:16", "youtube-long-16x9": "YouTube 롱폼 16:9" },
-      size: { els: "아주 먼", ls: "먼 / 넓은", ws: "넓은", fs: "전신", mfs: "정강이 위", ms: "허벅지 위",
-              mcu: "가슴 위", cu: "얼굴", choker: "눈과 입", ecu: "눈만", insert: "물건만",
-              two: "둘이 함께", three: "셋이 함께", ots: "어깨 너머", pov: "그 사람 눈", back: "뒤에서",
-              cutaway: "딴 데 보기", reaction: "반응" },
+      size: { els: "익스트림 롱숏", ls: "롱숏", ws: "와이드숏", fs: "풀숏", mfs: "미디엄 풀숏", ms: "미디엄숏",
+              mcu: "미디엄 클로즈업", cu: "클로즈업", choker: "초커", ecu: "익스트림 클로즈업", insert: "인서트",
+              two: "투숏", three: "쓰리숏", ots: "오버 더 숄더", pov: "POV", back: "백숏",
+              cutaway: "컷어웨이", reaction: "리액션숏" },
       sizeKey: "샷 사이즈",
-      sizeHint: { els: "사람이 점 — 공간이 주인공, 혼자면 고독·여럿이면 규모",
-                  ls: "전신에 여유 — 어디인지·몇 명인지·얼마나 떨어졌는지 (설정샷)",
-                  ws: "ls 와 같다",
-                  fs: "머리끝부터 발끝까지 — 몸 전체 동작, 춤·격투·걸음",
-                  mfs: "정강이 중간에서 자른다 — 두 사람과 그 사이 거리",
+      sizeHint: { els: "완전 풀, 아주 먼 · 사람이 점 — 공간이 주인공, 혼자면 고독·여럿이면 규모",
+                  ls: "와이드, 먼 · 전신에 여유 — 어디인지·몇 명인지·얼마나 떨어졌는지 (설정샷)",
+                  ws: "롱숏과 같다",
+                  fs: "전신 · 머리끝부터 발끝까지 — 몸 전체 동작, 춤·격투·걸음",
+                  mfs: "니숏, 카우보이숏 · 정강이 중간에서 자른다 — 두 사람과 그 사이 거리",
                   ms: "허벅지 중간에서 자른다 — 상반신과 손짓, 대화 기본값",
-                  mcu: "가슴 중간에서 자른다 — 카메라 보고 말하기, 훅·앵커·인터뷰",
+                  mcu: "바스트숏 · 가슴 중간에서 자른다 — 카메라 보고 말하기, 훅·앵커·인터뷰",
                   cu: "얼굴이 화면을 채운다, 정수리는 잘림 — 그 한 마디, 씬당 하나",
                   choker: "눈과 입만 — 긴장의 정점, 회차에 한두 번",
                   ecu: "눈만·손끝만 — 정점의 디테일",
                   insert: "물건·손·화면만, 얼굴 없음 — 그림 하나가 대사 세 줄을 대신한다",
                   two: "둘을 한 프레임에 (정강이 중간에서 자른다)",
                   three: "셋을 한 프레임에 — 무리는 보이지만 장소는 못 깐다",
-                  ots: "어깨 너머 — 앞사람 어깨가 앞에, 상대 얼굴은 mcu",
-                  pov: "그 사람이 본 것 — 거리는 shot.why 에 적는다",
+                  ots: "어깨 너머 — 앞사람 어깨가 앞에, 상대 얼굴은 미디엄 클로즈업",
+                  pov: "시점숏 · 그 사람이 본 것 — 거리는 shot.why 에 적는다",
                   back: "뒤에서, 얼굴 없이 — 거리는 shot.why 에 적는다",
-                  cutaway: "인물 밖의 것을 한 컷",
+                  cutaway: "딴 데 보기 · 인물 밖의 것을 한 컷",
                   reaction: "듣는 쪽 얼굴" },
       angle: { eye: "눈높이", high: "내려다봄", low: "올려다봄", overhead: "머리 위", dutch: "기울임" },
       type: { cover: "커버", points: "본문", quote: "인용", broll: "삽입 영상", outro: "아웃트로" },
@@ -3614,10 +3621,13 @@ window.SB_DOC = {
     var pic = pictureOf(s), ov = overlayOf(s);
     h += '<article class="scene"><div class="scene-head">';
     h += '<span class="scene-no">' + esc(T.shotCap(no)) + " · " + esc(T.type[s.type] || s.type) + "</span>";
-    if (g.size) h += '<span class="shot-size' + (T.size[g.size] ? "" : " unknown") + '" title="' + esc(sizeTitle(g.size)) + '">' +
-                     sizeIcon(g.size) + esc(T.size[g.size] || (g.size + " ?")) + "</span>";
-    if (g.angle && T.angle[g.angle]) h += '<span class="shot-angle angle-' + esc(g.angle) + '">' + esc(T.angle[g.angle]) + "</span>";
-    if (g.why) h += '<span class="shot-why" title="shot.why">' + esc(g.why) + "</span>";
+    // Shot grammar — size tile, angle and why — sits on its own row under the head so the
+    // head keeps the number, title and beat tags and the row wraps cleanly on a phone.
+    var gram = "";
+    if (g.size) gram += '<span class="shot-size' + (T.size[g.size] ? "" : " unknown") + '" title="' + esc(sizeTitle(g.size)) + '">' +
+                        sizeIcon(g.size) + '<span class="sz"><b>' + esc(T.size[g.size] || (g.size + " ?")) + "</b><small>" + esc(g.size) + "</small></span></span>";
+    if (g.angle && T.angle[g.angle]) gram += '<span class="shot-angle angle-' + esc(g.angle) + '">' + esc(T.angle[g.angle]) + "</span>";
+    if (g.why) gram += '<span class="shot-why" title="shot.why">' + esc(g.why) + "</span>";
     // A shot with no title (screen text only when needed — scenes-schema) builds its header from badges alone
     var headTitle = s.title || (s.type === "quote" ? s.text : "");
     if (headTitle) h += '<span class="scene-title">' + mark(headTitle) + "</span>";
@@ -3640,6 +3650,7 @@ window.SB_DOC = {
       h += '<span class="scene-beat beat-promise' + (t.cls ? " " + t.cls : "") + '">' + esc(t.text) + "</span>";
     });
     h += '<span class="scene-checks">' + sceneChips[i] + "</span></div>";
+    if (gram) h += '<div class="shot-grammar">' + gram + "</div>";
     h += '<div class="shot-meta"><span class="craft">' +
          '<span class="vtag' + (pic === "ai-video" ? " gen" : "") + '">' + esc(T.pic[pic] || pic) + "</span>" +
          '<span class="vtag' + (ov === "html" ? " html" : "") + '">' + esc(overlayLabel(s)) + "</span>" +
