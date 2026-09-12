@@ -20,9 +20,9 @@ content-reviewer agent all take this skill's playbook as their baseline.
 1. **"Share the facts, never the sentences"** — even with the same material,
    redesign the speaker, register, sentence endings, and information density for
    each platform. Automatic cross-posting is banned.
-2. **Plain language** — viewers are non-experts. No unexplained jargon, no
-   translationese, no over-compressed sentences with the subject dropped. If a
-   term is unavoidable, lead with the plain word and gloss the term in
+2. **Plain language** — use the channel audience's knowledge and voice; default to adult non-specialists. No unexplained jargon, no
+   translationese, no over-compressed sentences with the subject dropped. If a necessary
+   term is unfamiliar to that audience, lead with the plain word and gloss the term in
    parentheses on first appearance only.
 3. **The first encounter is everything** — the first line on Threads, the first
    125 characters of an IG caption, the YT title+thumbnail, the first second and

@@ -344,9 +344,9 @@ items have to run it.
 
 **Run the word check on each page before delegating** — the same one storyboard §2.2 runs:
 `check-style.py --surface narration --json candidates/d<n>.md`, reading **only the findings
-whose id starts with E**. These sentences become the narration, so the 초3~4 floor
-(korean-style §Eye level) binds the page too; a candidate written in adult prose hands §3.6 a
-rewrite instead of a swap. The rest of the verdict is noise on a page of headings and notes.
+whose id starts with E**. These sentences become narration: match the audience and voice
+(korean-style §Eye level). E findings are suggestions; keep natural adult expressions
+and precise terms. A match alone never requires a rewrite. The rest of the verdict is noise on a page of headings and notes.
 
 **Delegate all three `candidates/d<n>.md` to the storyboard-reviewer agent (Agent) in
 "scenario mode" in one call** — the three candidate paths, `research.md`, `profile.md`,
@@ -514,11 +514,11 @@ Read the tail `STORYBOARD_REVIEW: mode=narration score=NN p0=N`.
 
 ### 3.6 Vocabulary gate (gate 6c — storyboard-reviewer vocabulary mode)
 
-Same sentences, one layer down — **are the words what a person says, and would a ten-year-old
-know them** (korean-style §Eye level — the 초3~4 floor). The style checker catches only the
+Same sentences, one layer down — **are these the words this audience would use and understand**
+(korean-style §Eye level; no universal age target). The style checker catches only the
 forms written into its rules, so a hard word it has no entry for passes with exit 0; this read
-covers that layer. A word with an everyday twin is swapped here; a word the episode is *about*
-needs its plain wording spoken beside it, which is a sentence — that one goes back to §3.5. It runs on the narration only, before a title or caption exists, so
+covers that layer. Keep natural adult wording and precise terms. Replace awkward wording only when meaning
+and voice survive. A necessary term unfamiliar to this audience needs its explanation, which is a sentence — that one goes back to §3.5. It runs on the narration only, before a title or caption exists, so
 a swap here changes nothing a picture depends on.
 
 ```bash

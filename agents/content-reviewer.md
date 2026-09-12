@@ -291,10 +291,10 @@ you still can't find it, report every surface as "unverified" (never as all-S1
    P0 here is not the link's presence but a link with no casual-register post
    before it, more than one link, or a cover image attached alongside
 5. **Copy-pasted sentences** — the same sentence on two platforms (compare mechanically with grep)
-6. **Unexplained jargon / over-compression** — plain-language violations (a term
-   with no parenthetical gloss at first mention). The floor is a 만 9~10세 reader
-   (korean-style §Eye level): a word above it either gets its plain wording in the
-   same breath or gets swapped for the everyday twin the checker names (E1~E3)
+6. **Unexplained jargon / over-compression** — a necessary term unfamiliar to the audience
+   has no useful explanation on first use. Judge familiarity by the actual channel audience
+   (korean-style §Eye level), not an age ceiling. Keep natural adult terms. E1~E3
+   are context-review suggestions with no score penalty, never P0 by themselves
 7. **AI disguise** — staging character speech or generated footage to look like
    a real person or real news coverage
 8. **AI tell (S1 remaining)** — a surface where `check-style.py` exited 2.
