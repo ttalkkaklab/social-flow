@@ -40,13 +40,36 @@ Example for a profile that specifies Supertonic F1 (replace these values with th
 `generator` accepts `tts_generate`, `tts_multi_speaker`, `tts_local_generate`,
 `tts_elevenlabs_generate`, `tts_elevenlabs_dialogue` or `mlx_tts_generate`.
 Outer `outputPath` and `filename` control all attempts. Voice, model, style, speed and
-temperature stay unchanged. A pinned ElevenLabs seed advances by one on each retake — the same
-seed returns the same bytes, so a retake at the pinned seed would be the rejected take again;
-each attempt records the seed it used. The expected text must match the generator's entire
-spoken text.
+temperature stay unchanged. Keep one seed for the whole episode, including retakes. Vendor
+seed determinism is best-effort, not a promise of identical audio. If a rejected WAV repeats,
+the wrapper stops without paying for another listening review. Correct the pronunciation or
+update delivery settings for the entire episode; do not rotate seeds per scene.
+
+For ElevenLabs, pass `episode: {texts, index, seed}`: complete scene texts in playback order,
+the current scene's zero-based index, and the episode seed. The wrapper derives `previousText`
+and `nextText` from this list. The builder rejects missing context, reordered text, seed drift
+and changed voice settings. `eleven_v3` does not support text context; the wrapper omits those
+vendor fields while preserving the episode manifest and seed. Generate a complete scene in
+one call and rely on final assembled listening to detect drift across v3 scenes. Do not
+silently switch the approved model.
+
+Set the desired rate with `generation.speed` (0.7–1.2). For ElevenLabs use `playbackSpeed: 1`,
+`SPEED=1`, `ATEMPO_MIN=1` and `ATEMPO_MAX=1`. Both assembly and the speed pass reject digital
+tempo changes on ElevenLabs narration. Measure the resulting duration and fit the picture to
+it. Do not stack an engine speed with a second playback multiplier. Preserve the profile's
+stability setting unless a listening test justifies an episode-wide change; a higher value
+is not a guaranteed naturalness improvement.
+
+Create name rules with `tts_elevenlabs_dictionary`, then pin the returned ID and version in
+`generation.pronunciationDictionaryLocators` (at most three dictionaries). Korean uses alias
+rules on multilingual_v2; non-English IPA requires v3. Include the spelling with its attached
+particle or ending when needed and test the actual sentence. Keep names intact in the approved script: no inserted spaces, removed names or changed
+facts to satisfy ASR. A dictionary is a pronunciation hint, not proof that the voice read it
+correctly. Test the full sentence and its neighbors. Numbers may use their intended spoken
+Hangul form while the visible subtitle retains digits.
 
 Add `segments` on every scene: the scene's `narration[].tts` sentences in order (joined, they
-read as `expectedText`). Add `playbackSpeed` when profile §2 sets a playback speed. Both feed
+read as `expectedText`). Use `playbackSpeed: 1` for ElevenLabs; other engines keep their approved playback setting. Both feed
 the sentence spacing below; on an engine without an alignment the take records
 `spacing: { skipped: "engine has no alignment" }` and nothing else happens. On the ElevenLabs
 lane they are part of the settings a PASS binds to, so changing `sentencePause`, `segments` or
@@ -160,3 +183,21 @@ with `rejectTake: {audioSha256, reason}`. Use the current WAV hash and a concret
 defect. This invalidates that take's PASS and uses only its remaining attempts. Then
 rebuild and recheck the edited span and its joins. An unverified final listening check holds
 publishing readiness regardless of the source speech scores.
+
+
+### Final assembled speech
+
+After `speedup.sh` writes the final media, it calls the bundled `tts_review_final` implementation
+on `reel-fast.mp4`. The reviewer hears every join and the final mix, with a separate continuity
+score for pitch, timbre, emotion, rate and breath across sentences. Inserted silence is judged
+critically too. Accuracy must reach 98 and every other axis, including continuity, must reach
+95, with no reported defect. Review errors hold delivery; an unchanged final PASS is reused. An unchanged failed audio
+candidate cannot obtain another score through punctuation, direction or container edits.
+The final proof binds to the complete media bytes and full spoken script, and travels inside
+`delivery-proof.json`. A scene-level PASS cannot replace it. Replacing the final media or script
+invalidates the final proof. Include the two paid final-review calls in the production allowance.
+
+For a standalone listening test call `tts_review_final` with `mediaPath`, `expectedText`,
+`language` and `delivery`. The full-audio review accepts at most 30 minutes and 12,000
+script characters, with a lossless FLAC review payload smaller than 14 MiB. Longer narration holds for a chapter review workflow; it never receives a
+short-form PASS from a partial listen.

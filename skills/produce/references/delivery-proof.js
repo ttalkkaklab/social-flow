@@ -24,9 +24,18 @@ function record(work,speed){
     }
     provenance={kind:'screencast',editSha256:hash(edit),scenesSha256:fs.existsSync(board)?hash(board):null};
   }
+  const board=path.resolve(work,'../storyboard/scenes.js');
+  let finalSpeech;
+  if(fs.existsSync(board)){
+    const gate=require('./check-final-tts.js'),n=gate.narration(board);
+    if(n.generated){
+      const media=path.join(work,'reel-fast.mp4');
+      finalSpeech=gate.verify(media,n.text);
+    }
+  }
   const outputs=Object.fromEntries(pairs.map(([src,dst])=>[dst,fs.existsSync(path.join(work,src))?hash(path.join(work,src)):null]));
   if(!outputs['video.mp4']||!outputs['subs.srt'])throw new Error('Delivery needs the checked video and subtitle set');
-  fs.writeFileSync(path.join(work,'delivery-proof.json'),JSON.stringify({version:1,speed,...provenance,outputs},null,2)+'\n');
+  fs.writeFileSync(path.join(work,'delivery-proof.json'),JSON.stringify({version:1,speed,...provenance,outputs,requiresFinalSpeech:!!finalSpeech,...(finalSpeech?{finalSpeech}:{})},null,2)+'\n');
 }
 function check(episode){
   try{
@@ -38,6 +47,16 @@ function check(episode){
       if(!Object.hasOwn(proof.outputs,dst)||(fs.existsSync(f)?hash(f):null)!==proof.outputs[dst])throw new Error('output changed: '+dst);
     }
     const board=path.join(episode,'storyboard/scenes.js');
+    if(proof.kind==='storyboard'&&!fs.existsSync(board))throw new Error('storyboard missing after delivery review');
+    if(proof.requiresFinalSpeech&&!proof.finalSpeech)throw new Error('required final speech evidence missing');
+    if(fs.existsSync(board)){
+      const gate=require('./check-final-tts.js'),n=gate.narration(board);
+      if(n.generated||proof.requiresFinalSpeech){
+        if(!proof.finalSpeech||proof.finalSpeech.mediaSha256!==proof.outputs['video.mp4'])throw new Error('missing final speech proof');
+        // Validate embedded evidence with the same verifier without creating output artifacts.
+        gate.verifyReport(proof.finalSpeech,path.join(out,'video.mp4'),n.text);
+      }
+    }
     if(fs.existsSync(board)&&hash(board)!==proof.scenesSha256)throw new Error('storyboard changed after assembly');
     return null;
   }catch(e){return 'Delivery has no current assembly proof: '+e.message+'; rebuild through build-reel.sh and speedup.sh, then copy delivery-proof.json with the final files';}
