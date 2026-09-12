@@ -2,7 +2,25 @@
 (function (root) {
   'use strict';
   const text = value => typeof value === 'string' && !!value.trim();
-  const MODES = { hybrid: '혼합 제작', full_video: '전체 영상' };
+  const CHOICES = ['full_video', 'video_50', 'video_30', 'hook_only'];
+  const MODES = { full_video: '100% 이상', video_50: '50% 이상', video_30: '30% 이상', hook_only: '훅만 영상', hybrid: '혼합 제작 (기존 승인)' };
+  const RATIOS = { full_video: 1, video_50: .5, video_30: .3 };
+  // A cut is a shot in the playback line; b-roll is spliced by `after` and is not a cut, so it
+  // sits outside the ratio on both sides (it still counts toward the generated-slot cap).
+  const newCut = scene => eligible(scene) && !reused(scene) && scene.type !== 'broll';
+  const generated = scene => !!scene.visual?.video || (scene.type === 'quote' && typeof scene.visual?.clip === 'object');
+  function hookScene(scenes) { return scenes.find(s => s.type === 'hooking' || s.beat === 'hooking') || scenes.find(s => s.type === 'cover') || scenes.find(newCut); }
+  function coverageErrors(win) {
+    const key = win.PRODUCTION?.mode, scenes = win.SCENES || [], cuts = scenes.filter(newCut);
+    if (key === 'hook_only') {
+      const hook = hookScene(scenes);
+      return hook && newCut(hook) && generated(hook) && cuts.filter(generated).length === 1
+        ? [] : ['hook_only requires only the opening hook cut to be generated video'];
+    }
+    if (!RATIOS[key]) return [];
+    const minimum = Math.ceil(cuts.length * RATIOS[key]);
+    return cuts.filter(generated).length >= minimum ? [] : [key + ' requires at least ' + minimum + ' of ' + cuts.length + ' new cuts as generated video'];
+  }
   // Two HITL choices every episode with generated video records (user directive 2026-09-11):
   // which 3D renderer draws the mandatory previz, and which video model the clips are made on.
   const PREVIZ_RENDERERS = { blender: '블렌더 브릿지 — 관절 마네킹, 모션 캡처', threejs: 'three.js 페이지 — 헤드리스 크롬, 관절 없음' };
@@ -147,8 +165,8 @@
   function check(win, { requireSelection = false, requireApproval = false, draft = false } = {}) {
     const p = win.PRODUCTION, errors = Array.from(win.SCENES || []).flatMap((s, i) => reuseErrors(s).map(e => `shot ${i + 1}: ${e}`));
     if (!p) return requireSelection || (win.SCENES || []).some(reused)
-      ? errors.concat(['Choose hybrid or full_video with a cost comparison before generation']) : errors;
-    if (!MODES[p.mode]) errors.push('PRODUCTION.mode must be hybrid or full_video');
+      ? errors.concat(['Choose a production mode with a four-option cost comparison before generation']) : errors;
+    if (!MODES[p.mode]) errors.push('PRODUCTION.mode must be full_video, video_50, video_30 or hook_only (hybrid is legacy)');
     // host = the CLI's own media tool (image_gen on Codex and Grok, image_to_video on Grok); absent reads as api.
     for (const key of ['imageProvider', 'videoProvider'])
       if (p[key] !== undefined && !['host', 'api'].includes(p[key])) errors.push('PRODUCTION.' + key + ' must be host or api');
@@ -182,6 +200,7 @@
       else if (!VIDEO_MODELS[vm.model].resolutions.includes(vm.resolution)) errors.push('PRODUCTION.videoModel.resolution must be one of ' + VIDEO_MODELS[vm.model].resolutions.join(', ') + ' for ' + vm.model);
       if (vm && vm.model !== 'host' && !selectionRecorded(vm.selection)) errors.push('Record the actual video model HITL choice in PRODUCTION.videoModel.selection');
     }
+    errors.push(...coverageErrors(win));
     if (!full(p)) {
       const count = (win.SCENES || []).filter(s => eligible(s) &&
         (s.visual?.video || s.type === 'broll' || (s.type === 'quote' && typeof s.visual?.clip === 'object'))).length;
@@ -261,9 +280,10 @@
     // voice, format, factual evidence and publishing gates intact.
     if (!production || !MODES[production.mode]) return base;
     return { ...base, videoBudgetUsd: production.videoBudgetUsd,
-      generatedVideoMax: full(production) ? scenes.filter(eligible).length : Math.min(base.generatedVideoMax ?? 2, 2) };
+      // hook_only: the hook plus every imported clip — reuse is outside the count but still a slot.
+      generatedVideoMax: production.mode === 'hook_only' ? 1 + scenes.filter(reused).length : RATIOS[production.mode] ? scenes.filter(eligible).length : Math.min(base.generatedVideoMax ?? 2, 2) };
   }
-  const api = { STYLES, MODES, CAMERA_SLOTS, PREVIZ_RENDERERS, VIDEO_MODELS, packPresets, ALL_LOOKS, eligible, reused, reuseErrors, full, signature, check, policy, motionErrors, missingCameraSlots, cameraErrors, staticCamera, finalState };
+  const api = { STYLES, MODES, CHOICES, RATIOS, newCut, generated, hookScene, coverageErrors, CAMERA_SLOTS, PREVIZ_RENDERERS, VIDEO_MODELS, packPresets, ALL_LOOKS, eligible, reused, reuseErrors, full, signature, check, policy, motionErrors, missingCameraSlots, cameraErrors, staticCamera, finalState };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.PRODUCTION_MODE = api;
 })(typeof window === 'object' ? window : globalThis);

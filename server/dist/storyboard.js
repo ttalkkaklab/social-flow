@@ -99,6 +99,17 @@ export const structureSchema = z
     scenes: z.array(sceneSchema).min(1),
 })
     .strict();
+const coverageSchema = z.object({
+    azimuth: z.number().finite().min(0).max(180).optional().describe('Horizontal camera bearing, 0–180° inside the selected side of the axis'),
+    action: z.string().trim().min(1).optional().describe('Visible action that carries this cut when no 30° or two-step change is used'),
+}).strict().refine((value) => value.azimuth !== undefined || value.action !== undefined, 'coverage names an azimuth or the action that carries the cut');
+const lineCrossingSchema = z.object({
+    method: z.enum(['camera_move', 'subject_move', 'neutral', 'intentional']),
+    from: nonEmpty.describe('The previous space.line value'),
+    to: nonEmpty.describe('The new space.line value'),
+    reason: nonEmpty.describe('What the viewer sees that makes the new side legible'),
+    bridgeShot: z.number().int().positive().optional().describe('Earlier neutral shot number; required only for method "neutral"'),
+}).strict();
 /** The grammar half of a shot is exact; the visual plan and the machine layer pass through (scenes-schema.md owns them). */
 export const shotSchema = z
     .object({
@@ -128,6 +139,9 @@ export const shotSchema = z
         share: z.string().optional(),
         shareType: tuple(V.SHARE_TYPES).optional(),
         space: z.record(z.unknown()).optional(),
+        coverage: coverageSchema.optional(),
+        lineNeutral: z.literal(true).optional(),
+        lineCrossing: lineCrossingSchema.optional(),
         render: z.object({ mode: tuple(V.RENDER_MODES), purpose: z.string().optional(), reason: z.string().optional() }).passthrough().optional(),
     })
         .passthrough()
@@ -147,6 +161,7 @@ export const storyboardCheckSchema = z.object({
 const globalsSchema = z.record(z.string().regex(/^[A-Z][A-Z0-9_]*$/, 'a window.* global is UPPER_CASE'), z.unknown());
 export const storyboardApplySchema = z.object({
     path: z.string().min(1).describe('The storyboard directory (scenes.js is created there when missing), or its scenes.js'),
+    draft: z.boolean().default(false).describe('The story pass (storyboard §4a) — camera-continuity records (lineCrossing, coverage) are deferred, not violations'),
     set: z.object({ structure: structureSchema, shots: z.array(shotSchema).min(1) }).optional()
         .describe('Replace the whole board — the structure and every shot. The way a new board is written'),
     structure: structureSchema.optional().describe('Replace window.STRUCTURE only'),
@@ -314,7 +329,7 @@ export function applyPatch(win, patch) {
     let synced = 0;
     if (!findings.some((f) => f.level === 'bad')) {
         synced = contract().sync(next);
-        findings.push(...contract().check(next));
+        findings.push(...contract().check(next, { draft: patch.draft }));
     }
     return { win: next, findings, synced };
 }
@@ -359,7 +374,7 @@ export function applyStoryboard(args) {
 /** storyboard_check — the structure rules here plus the full scenes.js contract from check-scenes.js. */
 export function checkStoryboard(args) {
     const { file, win } = readBoard(args.path);
-    const structure = contract().check(win);
+    const structure = contract().check(win, { draft: args.draft });
     const argv = [CHECK_SCENES_FILE, file, '--json'];
     if (args.draft)
         argv.push('--draft');

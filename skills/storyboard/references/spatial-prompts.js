@@ -2,7 +2,7 @@
 'use strict';
 const fs = require('fs'), path = require('path');
 const { readScenes } = require('../../autoproduce/references/cost-preview.js');
-const { full, STYLES, packPresets, motionErrors, missingCameraSlots, finalState } = require('./production-mode.js');
+const { full, MODES, STYLES, packPresets, motionErrors, missingCameraSlots, finalState } = require('./production-mode.js');
 const { resolveStylePack } = require('./style-pack.js');
 const PROMPT = require('./assemble-bg-prompt.js');
 const LOOKS = {
@@ -55,7 +55,7 @@ function previzPreamble(p) {
    clip starts on is the composition the still has (blender-previz.md §6.6). */
 const PREVIZ_SOURCE_LOCK = 'Composition lock: the first attached image is frame 1 of the 3D previz, rendered clean (no stamp, no gizmo); it fixes the camera, the framing, and where every subject stands and how large it is in frame; keep that composition exactly and render every surface, figure and light in the episode style described here.';
 function assemble(win, index, dir) {
-  if (!['hybrid', 'full_video'].includes(win.PRODUCTION?.mode)) throw new Error('Choose a production mode before assembling prompts');
+  if (!MODES[win.PRODUCTION?.mode]) throw new Error('Choose a production mode before assembling prompts');
   const scene = win.SCENES[index], d = scene?.shot?.videoDesign, style = win.PRODUCTION.style, v = scene?.visual;
   if (!d || !style || !LOOKS[d.look]) throw new Error('Choose style and videoDesign before assembling prompts');
   if (!v || typeof v !== 'object') throw new Error('Missing visual');

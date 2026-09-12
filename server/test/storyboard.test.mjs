@@ -70,6 +70,10 @@ describe('storyboard schemas', () => {
     assert.ok(!shotSchema.safeParse({ ...board()[1], beat: 'middle' }).success);
     const extra = shotSchema.safeParse({ ...board()[1], visual: { video: { engine: 'veo' } }, edit: { reason: 'x' } });
     assert.ok(extra.success && extra.data.edit.reason === 'x');
+    assert.ok(shotSchema.safeParse({ ...board()[1], shot: { ...board()[1].shot, coverage: { azimuth: 35 } } }).success);
+    assert.ok(shotSchema.safeParse({ ...board()[1], shot: { ...board()[1].shot, lineCrossing: { method: 'camera_move', from: 'A left, B right', to: 'B left, A right', reason: '카메라가 선을 지나간다' } } }).success);
+    assert.ok(!shotSchema.safeParse({ ...board()[1], shot: { ...board()[1].shot, coverage: { azimuth: 181 } } }).success);
+    assert.ok(!shotSchema.safeParse({ ...board()[1], shot: { ...board()[1].shot, lineCrossing: { method: 'teleport', from: 'A', to: 'B', reason: 'x' } } }).success);
   });
   it('the vocabularies come from structure-contract.js, the file check-scenes.js pins', () => {
     assert.ok(existsSync(CONTRACT_FILE));
@@ -211,6 +215,22 @@ describe('checkStoryboard', () => {
     assert.ok(!r.structure.some((f) => f.level === 'bad'), JSON.stringify(r.structure));
     // The contract half still speaks: this fixture has no STORY / PRODUCTION / render modes.
     assert.ok(r.contract.length > 0);
+  });
+  it('the story pass defers the camera-continuity records in apply and check alike', () => {
+    // Two same-size adjacent picture shots with no coverage — the 30° rule applies in the full check only.
+    const shots = board();
+    shots[1].shot.size = 'mcu';
+    const dir = tmp();
+    const full = applyStoryboard(storyboardApplySchema.parse({ path: dir, set: { structure: structure([scene(1), scene(2)]), shots }, globals: { FORMAT: 'shorts-9x16', COMPREHENSION: comprehension }, dryRun: true }));
+    assert.ok(full.findings.some((f) => f.level === 'bad' && /adjacent picture cut/.test(f.what)), JSON.stringify(full.findings));
+    const draft = applyStoryboard(storyboardApplySchema.parse({ path: dir, draft: true, set: { structure: structure([scene(1), scene(2)]), shots }, globals: { FORMAT: 'shorts-9x16', COMPREHENSION: comprehension } }));
+    assert.ok(!draft.findings.some((f) => f.level === 'bad'), JSON.stringify(draft.findings));
+    assert.ok(draft.findings.some((f) => f.level === 'later' && /adjacent picture cut/.test(f.what)));
+    const r = checkStoryboard({ path: dir, draft: true });
+    assert.ok(!r.structure.some((f) => f.level === 'bad'), JSON.stringify(r.structure));
+    assert.ok(r.structure.some((f) => f.level === 'later' && /adjacent picture cut/.test(f.what)));
+    // No duplicate: the deferred finding lands once, not as bad in one list and later in the other.
+    assert.ok(!r.contract.some((f) => /adjacent picture cut/.test(f.what)), JSON.stringify(r.contract));
   });
 });
 

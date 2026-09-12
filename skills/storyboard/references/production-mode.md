@@ -11,16 +11,28 @@
 
 First follow [visual-style.md](visual-style.md): ask for the visual style before storyboard authoring.
 Style and production mode are independent choices. Apply the selected style to every new image.
-After capability and format checks, before visual planning or paid assets, present **both**
+After capability and format checks, before visual planning or paid assets, present **all four**
 choices in one HITL question. Format (9:16/16:9), filming and production mode are separate axes.
 An explicit choice already made for this episode is authorization; reuse it on resume.
 An old approved board with no choice gets this gate at produce entry, before generation.
 Do not reinterpret an approval of a topic as approval of full-video spend.
 
-- **hybrid** (혼합 제작) — one or two generated clips mixed with HTML explanation slides and
-  still-camera images.
-- **full_video** (전체 영상) — every new scene is a generated clip in the chosen style, which
-  raises generation cost.
+- **100% 이상** (`full_video`) — every new cut is generated video (100% is the maximum).
+- **50% 이상** (`video_50`) — at least half of new cuts are generated video.
+- **30% 이상** (`video_30`) — at least 30% of new cuts are generated video.
+- **훅만 영상** (`hook_only`) — only the opening hook is generated video; use HTML/still-camera scenes for other new cuts.
+
+Count cuts, not duration; round the minimum up. Exclude imported `visual.reuse` clips,
+user recordings, supplied stock clips and the shared outro from the denominator; b-roll is
+spliced by `after`, not a cut, so it sits on neither side of the ratio (it still fills a
+generated slot, and hook-only allows the hook plus imported clips only).
+The hook is the first `hooking` scene on long form, otherwise the `cover`, otherwise the first
+new cut. If that hook is a supplied clip, resolve its source with the user before choosing
+hook-only; do not silently generate a different cut. Existing `hybrid` approvals may resume,
+but never offer hybrid in a new question. Percentage choices override the old two-clip cap;
+hook-only overrides the optional-hook default. Keep the episode budget and the no-marks rule.
+Partial modes retain purpose-based routing; write enough suitable continuous-action cuts to
+meet the chosen minimum. Do not silently lower the ratio to fit an incompatible storyboard.
 
 Run the read-only calculator for the intended length before shots exist:
 
@@ -54,8 +66,10 @@ with one plain sentence on what it makes and what that costs in practice, before
 (user directive, 2026-09-08):
 
 > 어떤 방식으로 만들까요? 아래 금액은 영상 생성비이며 재시도를 포함한 예상치입니다.
-> - 혼합 제작 — 생성 영상 1~2개에 HTML 설명 슬라이드와 카메라 무빙 정지컷을 섞습니다. 값이 싸고 결과가 안정적입니다. [영상 수·모델·해상도·음성 여부]. 최초 [금액], 평균 [횟수]회 시도 [범위]. 영상 예산 상한 [금액].
-> - 전체 영상 — 새 장면을 전부 생성 영상으로 만듭니다. 움직임이 풍부한 대신 비용과 재시도가 늘어납니다. [영상 수·모델·해상도·음성 여부]. 최초 [금액], 평균 [횟수]회 시도 [범위]. 영상 예산 상한 [금액].
+> - 100% 이상 — 새 컷을 전부 생성 영상으로 만듭니다. 네 옵션 중 생성할 컷이 가장 많습니다. [영상 수·모델·해상도·음성 여부]. 최초 [금액], [횟수]회 시도 [범위]. 영상 예산 상한 [금액].
+> - 50% 이상 — 새 컷의 절반 이상을 생성 영상으로 만들고 나머지는 HTML·정지컷으로 구성합니다. [영상 수·모델·해상도·음성 여부]. 최초 [금액], [횟수]회 시도 [범위]. 영상 예산 상한 [금액].
+> - 30% 이상 — 새 컷의 30% 이상을 생성 영상으로 만들고 나머지는 HTML·정지컷으로 구성합니다. [영상 수·모델·해상도·음성 여부]. 최초 [금액], [횟수]회 시도 [범위]. 영상 예산 상한 [금액].
+> - 훅만 영상 — 첫 훅 컷만 생성 영상으로 만들고 나머지 새 컷은 HTML·정지컷으로 구성합니다. [영상 수·모델·해상도·음성 여부]. 최초 [금액], [횟수]회 시도 [범위]. 영상 예산 상한 [금액].
 > 원화는 1달러=[환율]원으로 가정했습니다. 이미지·내레이션·편집·세금은 별도입니다.
 
 If the full-video estimate exceeds the channel cap, show the required episode-only cap in
@@ -104,7 +118,8 @@ and a new approval.
 
 Write `window.PRODUCTION` in scenes.js. It is independent of `window.MOTION_POLICY`, which
 remains an exact channel snapshot. `production-mode.js` applies only the selected shot cap and
-approved episode video budget on top; other channel constraints still apply. `hybrid` caps
+approved episode video budget on top; other channel constraints still apply. `video_50` and `video_30` allow up to all new cuts and enforce their minimum counts;
+`hook_only` allows exactly the opening hook. Legacy `hybrid` caps
 generated shots at two (or a lower explicit channel cap). Plan 1–2 new clips, or zero new
 clips with at least one explicit `visual.reuse` input. Zero of both is rejected. See the
 [reuse contract](scenes-schema.md#existing-generated-clip-input-visualreuse) for file checks,
@@ -115,18 +130,18 @@ video, including explanations. Existing user recordings and the shared outro ret
 `host` when the CLI running the skill ships the tool — `image_gen` on Codex and Grok,
 `image_to_video` on Grok — and `api` on Claude Code or where the user chose the plugin's API
 engines for this episode. The host lanes bill nothing here (`image.host` and `video.host` rows
-at $0), so under `videoProvider:'host'` both quotes come out at $0 and the approval shows the
+at $0), so under `videoProvider:'host'` all four quotes come out at $0 and the approval shows the
 720p ceiling where a price would be. An absent field reads as `api`, which is how boards from
 before 2026-09-07 keep their quotes.
 
 ```js
 window.PRODUCTION = {
-  mode: 'full_video',                 // hybrid | full_video
+  mode: 'full_video',                 // full_video | video_50 | video_30 | hook_only; hybrid only for existing approvals
   imageProvider: 'host',              // host | api — host where the CLI ships image_gen (Codex, Grok)
   videoProvider: 'host',              // host | api — host where the CLI ships image_to_video (Grok)
   maxAttempts: 3,                     // total per shot, first attempt included
   videoBudgetUsd: 15,                 // example ONLY: use the cap actually approved
-  comparison: { model: 'seedance-1-5-pro-251215', resolution: '1080p', hybridShots: [1, 2] },
+  comparison: { model: 'seedance-1-5-pro-251215', resolution: '1080p' },
   previz: { renderer: 'blender',        // blender | threejs — asked before the first previz render
     selection: { kind: 'user', reference: 'ACTUAL_RENDERER_CHOICE' } },
   videoModel: { model: 'dreamina-seedance-2-0-260128', resolution: '1080p',   // asked before any video call, with video-model-options.js
@@ -151,7 +166,7 @@ window.PRODUCTION = {
 };
 ```
 
-Both modes keep the selected `style`; hybrid keeps purpose-based render routing.
+All four choices keep the selected `style`; hybrid keeps purpose-based render routing.
 For full_video, follow `full-video.md` in the produce skill and use the stored style across
 every shot. Each generated shot's camera is the four `visual.camera` slots; `videoDesign`
 holds the subject plan only, and `spatial-prompts.js` assembles the motion prompt from both.
@@ -170,7 +185,7 @@ If they change, update the quote and secure approval for the revised plan before
 
 Copy `production-mode.js` with `render-routing.js` and `style-samples.js` into storyboard/. Run
 `cost-preview.js storyboard/ --sbdoc` and put its full cost block into `SB_DOC`; the approval
-page shows both choices, retries and the selected cap, and flags a stale comparison.
+page shows all four choices, retries and the selected cap, and flags a stale comparison.
 The page displays a proposal; selection is recorded by the host's HITL, not a pretend HTML button.
 
 ## Autonomous callers

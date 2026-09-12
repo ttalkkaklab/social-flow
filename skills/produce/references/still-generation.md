@@ -58,7 +58,7 @@ alone and a previz that starts elsewhere hand the video model two different firs
 
 The episode style chosen in [visual-style.md](../../storyboard/references/visual-style.md)
 overrides the generic photo defaults below for every new still, start and end frame, in
-hybrid and full_video alike. The miniature pack is attached only for cinematic-miniature;
+every production mode. The miniature pack is attached only for cinematic-miniature;
 every other preset uses its own treatment and approved character references. In
 full_video use the approved look and world bible; physical subjects need no decorative person.
 

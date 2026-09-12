@@ -23,7 +23,7 @@ function previzCuts(win) {
 /* One quote per model: the board with every previz cut routed to that model and resolution. */
 function options(win, { krwPerUsd = 1400 } = {}) {
   const cuts = previzCuts(win), rows = [];
-  if (!mode.MODES[win.PRODUCTION?.mode]) throw new Error('Choose hybrid or full_video first (PRODUCTION.mode is missing)');
+  if (!mode.MODES[win.PRODUCTION?.mode]) throw new Error('Choose full_video, video_50, video_30 or hook_only first (PRODUCTION.mode is missing)');
   if (win.PRODUCTION.videoProvider === 'host') return { host: true, cuts: cuts.length, rows: [] };
   for (const [model, spec] of Object.entries(mode.VIDEO_MODELS)) {
     for (const resolution of spec.resolutions) {

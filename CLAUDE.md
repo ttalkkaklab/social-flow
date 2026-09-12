@@ -47,10 +47,13 @@ tense, and imperatives (`남겼어`·`남겨 둬`).
 
 ## Episode production choice (user directive, 2026-09-06)
 
-Before assets, HITL offers **hybrid** (1–2 generated clips plus HTML/still-camera scenes) or
-**full_video** (every new scene is generated video) with first-pass and retry-inclusive video
+Before assets, HITL offers **100% 이상** (`full_video`), **50% 이상** (`video_50`),
+**30% 이상** (`video_30`) or **훅만 영상** (`hook_only`) with first-pass and retry-inclusive video
 costs, model, resolution, audio setting, explicit budget cap and exclusions. Persist the choice
-in `window.PRODUCTION` and bind approval to the final cost quote. Resume an unchanged approval.
+in `window.PRODUCTION`. Ratios count new cuts, rounded up; exclude reused clips, supplied
+recordings/stock clips and the shared outro. Hook-only generates the opening hook alone.
+Explicit episode choices override the old 1–2 clip cap and optional-hook default. Keep
+`hybrid` only for existing approvals. Bind approval to the final cost quote. Resume an unchanged approval.
 Before storyboard authoring, ask for one of the visual-style presets — cinematic-miniature,
 photoreal live action, webtoon, claymation, paper-cutout, ink-wash, toon-3d (added 2026-09-08
 from the Shorts style survey) or arcade-2d (added 2026-09-09, a hand-painted 1990s arcade game
