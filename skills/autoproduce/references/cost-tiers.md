@@ -104,6 +104,10 @@ e.g. "very slow dolly in, nearly static camera, subtle particle drift.
      Audio: quiet room tone, no music, no speech."
 ```
 
+Existing 720p clips follow the `visual.reuse` source contract. New Seedance or host
+clips follow the selected model resolution. The Veo 1080p preference below applies
+only to new Veo b-roll requests; missing old metadata never requires regeneration.
+
 Billing is on **generated length (8s)** — using only 4 doesn't cut the cost.
 Cutting it would mean dropping to 720p (4s and 6s generation allowed), which
 the 1080×1920 body would need upscaled, so it isn't used (user decision

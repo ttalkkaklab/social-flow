@@ -34,10 +34,11 @@ function motionMetrics(work, file, sha256) {
 // The review says a person saw the subject move; the measurement says how much of the clip
 // actually moves. Both hold before a clip enters the timeline (full-video.md §Measured motion).
 function motionGateErrors(scene, metrics, clipSeconds) {
-  const errors = motion.findings(metrics, 'video').map(f => 'measured motion: ' + f + '; regenerate with a visible subject action or camera move');
+  const remedy = mode.reused(scene) ? 'select and review an existing clip with visible motion; re-trim the source and update its import record if needed' : 'revise the action or camera move within the approved generation budget';
+  const errors = motion.findings(metrics, 'video').map(f => 'measured motion: ' + f + '; ' + remedy);
   const inPoint = Number(scene.edit?.in) || 0;
   if (metrics.onsetSeconds !== null && metrics.onsetSeconds > 1 && inPoint + .5 < metrics.onsetSeconds)
-    errors.push(`visible motion starts at ${metrics.onsetSeconds}s but edit.in is ${inPoint}; start the card at the action (edit.in) or regenerate`);
+    errors.push(`visible motion starts at ${metrics.onsetSeconds}s but edit.in is ${inPoint}; ${mode.reused(scene) ? remedy : "start the card at the action (edit.in) or revise the shot"}`);
   if (!mode.reused(scene) && Number.isFinite(clipSeconds) && clipSeconds > scene.duration + inPoint + 3.05)
     errors.push(`clip runs ${clipSeconds.toFixed(1)}s for a ${scene.duration}s card; the planned final beat never reaches the screen — generate at the card length or set edit.in to the action`);
   return errors;
@@ -65,6 +66,17 @@ function motionReviewErrors(scene, review) {
   }
   return errors;
 }
+// Source pixels and output canvas are separate: assembly scales accepted sources.
+function resolutionErrors(scene, stream, format) {
+  const resolution = mode.reused(scene) ? '720p' : (scene.visual?.video?.resolution || '1080p');
+  const short = resolution === '720p' ? 720 : 1080, long = short * 16 / 9;
+  const wide = format === 'youtube-long-16x9';
+  const width = wide ? long : short, height = wide ? short : long;
+  if (!stream || !Number.isFinite(stream.width) || !Number.isFinite(stream.height) ||
+      stream.width < width || stream.height < height)
+    return [`clip is below the ${resolution} source minimum (${width}x${height}); inspect the source or choose another existing clip before considering generation`];
+  return [];
+}
 // The imported file is already cut; the source range is provenance, never an edit instruction.
 function validateReuseAsset(storyboard, scene, format) {
   const errors = mode.reuseErrors(scene);
@@ -74,9 +86,9 @@ function validateReuseAsset(storyboard, scene, format) {
   const probe = spawnSync('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries',
     'stream=width,height:format=duration', '-of', 'json', assetPath(storyboard, videoFile(scene))], { encoding: 'utf8' });
   if (probe.status !== 0) throw new Error('ffprobe could not read the reused video');
-  const media = JSON.parse(probe.stdout), stream = media.streams?.[0], wide = format === 'youtube-long-16x9';
-  if (!stream || stream.width < (wide ? 1920 : 1080) || stream.height < (wide ? 1080 : 1920))
-    throw new Error('reused clip is below the approved 1080p canvas');
+  const media = JSON.parse(probe.stdout), stream = media.streams?.[0];
+  const dimensions = resolutionErrors(scene, stream, format);
+  if (dimensions.length) throw new Error(dimensions.join('; '));
   const seconds = Number(media.format?.duration), range = scene.visual.reuse.sourceRange;
   if (!Number.isFinite(seconds) || Math.abs(seconds - (range.end - range.start)) > .05)
     throw new Error('reused clip duration differs from sourceRange; import an already trimmed clip (0.05s tolerance)');
@@ -132,15 +144,14 @@ function check(storyboard, { requireSelection = false, ready = false, beforeCall
       if (!mode.reused(scene) && !(mode.full(p) && mode.eligible(scene))) return;
       const prefix = 'shot ' + (index + 1) + ': ', bad = msg => errors.push(prefix + msg);
       const matches = (reviews.shots || []).filter(r => r.shot === index + 1), review = matches[0];
-      if (matches.length !== 1) { bad('one current video review is required'); return; }
+      if (matches.length !== 1) { bad('one current video review is required; inspect this existing clip and record the review without generating a replacement'); return; }
       try {
         if (!accepted(win, index, storyboard, review)) bad('review is stale; inspect the current image, clip and shot plan');
         const probe = spawnSync('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries',
           'stream=width,height:format=duration', '-of', 'json', assetPath(storyboard, videoFile(scene))], { encoding: 'utf8' });
         if (probe.status !== 0) throw new Error('ffprobe could not read the video');
         const media = JSON.parse(probe.stdout), stream = media.streams?.[0];
-        const wide = win.FORMAT === 'youtube-long-16x9';
-        if (!stream || stream.width < (wide ? 1920 : 1080) || stream.height < (wide ? 1080 : 1920)) bad('clip is below the approved 1080p canvas');
+        resolutionErrors(scene, stream, win.FORMAT).forEach(bad);
         if (!(Number(media.format?.duration) + .05 >= scene.duration)) bad('clip is shorter than the shot; never loop, reverse or freeze-pad');
         motionGateErrors(scene, motionMetrics(work, assetPath(storyboard, videoFile(scene)), hashFile(storyboard, videoFile(scene))), Number(media.format?.duration)).forEach(bad);
         if (review.playback !== true || !review.reviewer || !Number.isFinite(Date.parse(review.at))) bad('record full playback inspection, reviewer and time');
@@ -171,7 +182,7 @@ function check(storyboard, { requireSelection = false, ready = false, beforeCall
   }
   return { active: true, mode: p.mode, generatedShots, reusedShots, plainVideoShots, errors, quote: current };
 }
-module.exports = { check, shotDigest, hashFile, assetPath, motionReviewErrors, motionGateErrors, motionMetrics, videoFile, validateReuseAsset };
+module.exports = { resolutionErrors, check, shotDigest, hashFile, assetPath, motionReviewErrors, motionGateErrors, motionMetrics, videoFile, validateReuseAsset };
 if (require.main === module) {
   try {
     const args = process.argv.slice(2), target = args[0];

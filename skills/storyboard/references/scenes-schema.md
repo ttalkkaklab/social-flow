@@ -3104,8 +3104,35 @@ directory need not exist. `sourceRange` is also provenance: the checker cannot p
 original frames were selected. It checks that `end - start` equals `scene.duration`
 (within 0.001 seconds) and the supplied file duration (within 0.05 seconds, allowing one
 24fps frame of container rounding). A larger mismatch is an error. No automatic trimming,
-looping or freeze padding occurs. Supply MP4, MOV, M4V or WebM with at least the format's
-1080p canvas. Absolute local paths work; `.work/` resolves from the episode directory.
+looping or freeze padding occurs. Supply MP4, MOV, M4V or WebM with at least a
+720×1280 portrait or 1280×720 landscape source. Assembly scales it to the format's
+1080p output canvas; scaling does not add source detail. Both selection and ready checks
+use this source minimum, regardless of the clip's age. Absolute local paths work; `.work/` resolves from the episode directory.
+
+### Importing existing files without old metadata
+
+Missing import metadata or review records call for local inspection, not regeneration.
+Keep the actual source dimensions visible in the episode notes. Use the read-only helper:
+
+```bash
+node skills/produce/references/inspect-reuse.js /path/to/trimmed.mp4 'channel/episodes/original' 0
+```
+
+Supply the known original start time as the last argument. For a whole original file it
+is 0. The helper prints the measured duration and dimensions, SHA-256, and a `reuse`
+record. Copy `reuse` to `visual.reuse` and set `scene.duration` to the measured duration;
+remove conflicting generation fields. If the original episode is unavailable, describe
+that provenance honestly. Recover unknown trim offsets from the source or use the whole
+original file; do not invent offsets. Hash the final trimmed bytes, not a different copy.
+
+Play the imported clip and record a current review against the new shot plan. The helper
+does not fabricate playback evidence. Missing old source images, prompts or previz files
+do not require rebuilding the old generation. Keep hash, duration, motion and playback
+checks; repair missing records from the existing media. A 720p source is eligible without
+an age-based exception or paid regeneration. Inspect clarity at the output size during
+review. If it fails, try another existing clip or a local trim before proposing a new
+paid generation, which needs the user's explicit authorization. Reuse-only video generation
+costs stay at $0; metadata repair is not a generation request.
 
 Reuse keeps the current screen policy: `shot.render.mode:'generated_video'`,
 `purpose:'live_action'`, `motionEssential:true`, `action`, `whyNotStill`, `visual.why`,
