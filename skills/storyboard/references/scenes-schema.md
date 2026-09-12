@@ -118,14 +118,16 @@ window.COMPREHENSION = {
   seam and stays out of this array. A short informational episode gets no cross-scene branch;
   it follows the governing question only. A short narrative may carry one. Long-form may carry
   up to four.
-- `terms` lists every unfamiliar name or technical term that survives into narration. Short-form
+- `terms` lists every name or technical term unfamiliar to the channel audience that survives into narration. Short-form
   gets at most three. `plain` is the exact easy wording spoken in the same `firstShot`, before or
   beside the term. If a name changes neither the answer nor the takeaway, cut the name instead of
   adding it here.
-  - **`plain` is itself written at the 초3~4 floor** (korean-style §Eye level) — a gloss that
-    needs its own gloss explains nothing. "레이더 신호를 되돌리는 금속 구조물" trades one hard
-    word for two; "레이더 신호를 튕겨 내는 쇠판" is the same fact a ten-year-old already has.
-    The checker reads `plain` as narration like any other sentence, because it *is* spoken.
+  - **`plain` explains the term in this audience's language** (korean-style §Eye level).
+    Keep its exact meaning. An explanation that requires another unfamiliar concept may
+    need revision, but adult vocabulary is not a defect. Never change "금속 구조물" to
+    "쇠판" without evidence that the object is an iron plate; the latter adds material and
+    shape claims. The checker reads `plain` as narration because it is spoken.
+
   - **A figure nobody can picture gets the same treatment as a term** — 1조 원, 20제곱킬로미터,
     0.3초. It is not declared here (this array holds words), but the comparison is spoken in the
     same shot: put it beside the figure, and never round the figure to make the comparison

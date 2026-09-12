@@ -59,17 +59,14 @@ shortform_outro: on       # on | off (absent = on)
   for the episode, recorded under produce's `references/tts-speed.md` contract. Assembly
   and the outro always preserve 1.0x. Final subtitle speech must stay under 6.2 characters/s.
 
-- **Plain-language principle**: no unexplained jargon, no literal translationese, no
-  over-compressed subjectless sentences. When a term is genuinely needed, lead with
-  the plain word and put the term in parentheses on first appearance only. (Screen
-  text, narration, subtitles, and captions — all of it.)
-  **The floor is a 초3~4 listener — 만 9~10세** (korean-style §Eye level; NIKL vocabulary
-  grading, grade 3). It is a plugin-wide floor, not a per-channel setting, and it holds
-  whatever the channel's audience is: an adult never loses anything by hearing the plain
-  word. It binds vocabulary only — the register above stays exactly as written, and
-  talking down to a child is its own defect. The checker holds one part of it (E1~E3,
-  document and news register); the rest is the author's and the reviewer's read, sentence
-  by sentence.
+- **Plain-language principle**: use §1's audience knowledge, §2's voice and supplied
+  writing samples. Default to adult non-specialists if unspecified. Preserve ordinary
+  adult vocabulary and precise terminology. Explain terms unfamiliar to this audience
+  on first use; keep familiar terms without redundant glosses. Avoid translationese,
+  inflated claims and missing subjects. No universal school-grade limit applies.
+  E1~E3 are contextual suggestions, never automatic replacements or P0 defects.
+  An explicitly child-focused channel follows its actual audience.
+
 - **Banned**: <expressions and subjects this channel doesn't touch>
 
 ## 3. Visual theme
