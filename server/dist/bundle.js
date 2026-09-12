@@ -85702,7 +85702,8 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
         removeScenes: { type: "array", items: { type: "number", description: "Scene number" }, description: "Scene numbers to drop from STRUCTURE.scenes and from every sequence" },
         removeSequences: { type: "array", items: { type: "string", description: "Sequence id" }, description: "Sequence ids to drop" },
         globals: { type: "object", description: "Other window.* blocks to set \u2014 FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, VOICE, MOTION_POLICY" },
-        dryRun: { type: "boolean", description: "Validate and report, write nothing" }
+        dryRun: { type: "boolean", description: "Validate and report, write nothing" },
+        draft: { type: "boolean", description: "The story pass (storyboard \xA74a): camera-continuity records \u2014 shot.lineCrossing, shot.coverage \u2014 are deferred (later), not violations; leave it off in \xA74b" }
       },
       required: ["path"]
     }

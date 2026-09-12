@@ -404,7 +404,7 @@ Per shot, write `title`, `shot.feel`, `shot.size` (from what `info` has to show 
 **Write it in two passes.** **4a — story**: `window.COMPREHENSION` · `beat` · `shot.feel` ·
 `shot.info` · `shot.infoType` · `shot.share`/`shot.shareType` · `narration` · `arc` · `hookType`/`hookForm` · `title` and the
 approved scenario's three verbatim lines only, so shots stay cheap to cut; the cover's `shot.info` says the 훅 is staged
-("연출 — 전개 #1 이 사실을 댄다"). 4a is done when §4.4 and §4.5 clear. **4b — machine**, after §4.5: everything else. scenario-craft §12 measures it.
+("연출 — 전개 #1 이 사실을 댄다"). 4a is done when §4.4 and §4.5 clear — write it with `draft: true` on `storyboard_apply`, which defers the camera-continuity records (`lineCrossing`, `coverage`) to 4b. **4b — machine**, after §4.5: everything else, written without `draft`. scenario-craft §12 measures it.
 Core rules:
 - **Compress the episode before polishing its sentences.** `window.COMPREHENSION` names one question,
   answer, takeaway, cross-scene branches, and unfamiliar terms. `STORY.thesis` is the scenario's **Message.** line in the narration's words, and the closing picture's sentence says it — heard once, at or after the payoff, present tense, no figure, no name (scenario-stage §The message; `check-story.js` refuses a thesis no group speaks, the payoff line again, or a moral). Where the belief was put in someone's mouth early, point `STORY.themeStated` at that line. A short informational episode has

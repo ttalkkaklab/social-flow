@@ -1757,6 +1757,10 @@ function selftest() {
   ok('a one-step change without an escape route and a 25 degree move are violations',
      has(bads(run([cover, Object.assign({}, axis('A left, B right', 0), { shot: Object.assign({}, axis('A left, B right', 0).shot, { coverage: undefined }) }), Object.assign({}, axis('A left, B right', 0), { shot: Object.assign({}, axis('A left, B right', 0).shot, { size: 'mcu', coverage: undefined }) }), ctaShot], { STRUCTURE: axisStructure })), /adjacent picture cut/) &&
      has(bads(run([cover, axis('A left, B right', 0), axis('A left, B right', 25), ctaShot], { STRUCTURE: axisStructure })), /camera azimuth changes 25/));
+  ok('a crossing on a shot with no line, or on the first line, is a finding and not an escape',
+     has(bads(run([cover, Object.assign({}, axis('A left, B right', 0), { shot: Object.assign({}, axis('A left, B right', 0).shot, { space: { frame: 'camera', layout: 'A와 B', facing: '서로 마주 본다' }, coverage: undefined }) }),
+                   Object.assign({}, axis('A left, B right', 0), { shot: Object.assign({}, axis('A left, B right', 0).shot, { space: { frame: 'camera', layout: 'A와 B', facing: '서로 마주 본다' }, coverage: undefined, lineCrossing: { foo: 1 } }) }), ctaShot], { STRUCTURE: axisStructure })), /needs space\.line on the same shot/) &&
+     has(bads(run([cover, axis('A left, B right', 0, { lineCrossing: { method: 'intentional', from: 'x', to: 'A left, B right', reason: 'r' } }), axis('A left, B right', 40), ctaShot], { STRUCTURE: axisStructure })), /first shot with a line/));
   ok('camera-continuity records wait for the story pass to end',
      !has(bads(run([cover, axis('A left, B right', 0), axis('B left, A right', 40), ctaShot], { STRUCTURE: axisStructure }, { draft: true })), /space\.line changes|adjacent picture cut/) &&
      has(run([cover, axis('A left, B right', 0), axis('B left, A right', 40), ctaShot], { STRUCTURE: axisStructure }, { draft: true }), /space\.line changes/));

@@ -1577,7 +1577,7 @@ space: {
   frame:  "camera",
   layout: "person on the left third, kitchen door on the right",
   facing: "person faces camera-right, three-quarter view",
-  line:   "A left, B right",
+  line:   "B left, A right",
   light:  "key from camera-left"
 },
 coverage: { azimuth: 35 },

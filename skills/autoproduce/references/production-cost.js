@@ -48,9 +48,12 @@ function quote(win, { krwPerUsd = 1400 } = {}) {
   for (const key of [...mode.CHOICES, ...(p.mode === 'hybrid' ? ['hybrid'] : [])]) {
     const provisional = key !== p.mode || (!reusedClips && !inputs.some(s => s.visual?.video || s.type === 'broll'));
     const hookIndex = inputs.indexOf(mode.hookScene(win.SCENES || []));
+    // Ratios run over cuts (production-mode.js newCut); b-roll is outside the ratio but billed all the same.
+    const cutIndexes = inputs.map((s, i) => (s.type === 'broll' ? -1 : i)).filter(i => i >= 0);
+    const brollIndexes = inputs.map((s, i) => (s.type === 'broll' ? i : -1)).filter(i => i >= 0);
     const planned = key === 'hybrid' ? candidate.filter((_, i) => selectedHybrid.includes(i + 1))
       : key === 'hook_only' ? candidate.filter((_, i) => i === hookIndex)
-      : candidate.slice(0, Math.ceil(candidate.length * mode.RATIOS[key]));
+      : cutIndexes.slice(0, Math.ceil(cutIndexes.length * mode.RATIOS[key])).concat(brollIndexes).map(i => candidate[i]);
     const scenes = provisional ? planned : win.SCENES;
     const estimate = pricedRows(scenes);
     options[key] = { label: mode.MODES[key], provisional, clips: estimate.rows.length,

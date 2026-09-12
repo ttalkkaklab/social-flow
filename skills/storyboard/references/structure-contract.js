@@ -471,14 +471,19 @@
       const lines = xs.map(x => x.s.shot && x.s.shot.space && x.s.shot.space.line).filter(text).map(compact);
       const locked = xs.map(x => ({ x, line: x.s.shot && x.s.shot.space && x.s.shot.space.line }))
         .filter(row => text(row.line)).map(row => ({ x: row.x, line: compact(row.line) }));
+      // A crossing the loop below has judged sound — the only kind that excuses the 30° rule.
+      const validCrossings = new Set();
+      const crossed = new Set();
       if (locked.length >= 2) {
         let previous = locked[0].line, previousNo = locked[0].x.no;
         locked.slice(1).forEach(({ x, line }) => {
           const crossing = x.s.shot && x.s.shot.lineCrossing;
           if (line === previous) {
             previousNo = x.no;
-            if (crossing !== undefined)
+            if (crossing !== undefined) {
+              crossed.add(x.no);
               bad('shot ' + x.no, 'shot.lineCrossing is set but space.line did not change — record it on the first shot from the new side');
+            }
             return;
           }
           if (!crossing || typeof crossing !== 'object') {
@@ -486,6 +491,8 @@
             previous = line; previousNo = x.no;
             return;
           }
+          crossed.add(x.no);
+          const faults = out.length;
           if (LINE_CROSSING_METHODS.indexOf(crossing.method) === -1)
             bad('shot ' + x.no, 'shot.lineCrossing.method is camera_move, subject_move, neutral or intentional');
           if (compact(crossing.from) !== previous || compact(crossing.to) !== line)
@@ -500,9 +507,18 @@
             bad('shot ' + x.no, 'bridgeShot belongs only to a neutral crossing');
           }
           if (crossing.method === 'intentional') intentionalCrossings.push(x.no);
+          if (out.length === faults) validCrossings.add(x.no);
           previous = line; previousNo = x.no;
         });
       }
+      // A crossing on a shot the loop never reached — no line of its own, or the scene's first
+      // line — has nothing to cross from and is a finding, never an escape.
+      xs.forEach(x => {
+        if (!(x.s.shot && x.s.shot.lineCrossing !== undefined) || crossed.has(x.no)) return;
+        bad('shot ' + x.no, text(x.s.shot.space && x.s.shot.space.line)
+          ? 'shot.lineCrossing on the first shot with a line — there is no earlier side to cross from'
+          : 'shot.lineCrossing needs space.line on the same shot — it names the side this shot is on');
+      });
       xs.forEach(x => {
         const neutral = x.s.shot && x.s.shot.lineNeutral;
         if (neutral !== undefined && neutral !== true)
@@ -524,7 +540,7 @@
         // cutaway/reaction change the subject, and a declared crossing is its own escape.
         if (prevRank === undefined || rank === undefined) return;
         if (Math.abs(prevRank - rank) >= 2) return;
-        if (x.s.shot && x.s.shot.lineCrossing) return;
+        if (validCrossings.has(x.no)) return;
         const a = prev.s.shot && prev.s.shot.coverage;
         const b = x.s.shot && x.s.shot.coverage;
         if (b && text(b.action)) return;

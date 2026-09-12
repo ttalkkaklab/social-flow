@@ -699,6 +699,17 @@ test('percentage minima round up by new cut count and hook-only rejects extra vi
   assert.equal(mode.coverageErrors(win).join(), before);
 });
 
+test('the quote runs the ratio over cuts and bills b-roll outside it', () => {
+  const scenes = [{ type: 'cover', duration: 4, visual: {} }];
+  for (let i = 0; i < 8; i++) scenes.push({ type: 'points', duration: 5, visual: {} });
+  scenes.push({ type: 'broll', duration: 4, visual: {} }, { type: 'broll', duration: 4, visual: {} });
+  const q = quote({ SCENES: scenes, PRODUCTION: { videoProvider: 'host' } });
+  assert.equal(q.options.video_50.clips, 5 + 2);   // ceil(9 × .5) cuts + both b-rolls
+  assert.equal(q.options.video_30.clips, 3 + 2);
+  assert.equal(q.options.full_video.clips, 9 + 2);
+  assert.equal(q.options.hook_only.clips, 1);
+});
+
 test('long-form hook-only comparison quotes hooking rather than cover', () => {
   const win = { SCENES: [{ type: 'cover', duration: 4, visual: {} }, { type: 'hooking', duration: 8, visual: {} }], PRODUCTION: { videoProvider: 'host' } };
   const q = quote(win);
