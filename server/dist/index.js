@@ -8,11 +8,13 @@ import { SNS_PLATFORM_BY_TOOL, TOOLS } from './tools.js';
 import { ROUTES } from './handlers.js';
 import { enabledPlatforms } from './sns-client.js';
 import { episodePathArg, isBillableTool, priceOf, recordUsage } from './usage-ledger.js';
+import { readFileSync as readFinalRequest } from 'node:fs';
+import { reviewFinalSpeech } from './tts-final-quality.js';
 // The server version carried in the initialize response — the plugin release, same value as
 // package.json's version and the four plugin manifests (skill-lint.js checks that they agree).
 // If the two drift, the version clients see stops matching the actual package, so bump this
 // line together with package.json (the contract test checks that the two agree).
-const server = new Server({ name: 'social-flow', version: '0.77.0' }, { capabilities: { tools: {} } });
+const server = new Server({ name: 'social-flow', version: '0.77.1' }, { capabilities: { tools: {} } });
 // Per-platform publish tools are exposed only for platforms that have a credential file
 // (default tokens ∪ channel directories) — this is evaluated per request, so adding a token
 // file takes effect without a server restart. Every handler stays registered, so calling a
@@ -113,6 +115,15 @@ const gracefulShutdown = async () => {
 process.once('SIGINT', gracefulShutdown);
 process.once('SIGTERM', gracefulShutdown);
 async function main() {
+    if (process.argv[2] === '--review-final') {
+        const gate = resolveToolGate('tts_review_final', { jsonPatterns: disabledToolPatterns(), jsonFile: disabledToolsFile });
+        if (!gate.enabled)
+            throw new Error(`Final speech review is disabled: ${gate.reason}`);
+        const result = await reviewFinalSpeech(JSON.parse(readFinalRequest(process.argv[3], 'utf8')));
+        console.log(JSON.stringify(result, null, 2));
+        process.exitCode = result.success === true ? 0 : 1;
+        return;
+    }
     const transport = new StdioServerTransport();
     await server.connect(transport);
     // stdout is reserved for the MCP protocol — logs go to stderr only

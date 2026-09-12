@@ -47,6 +47,10 @@ cd "$WORK"
 [ -f format.env ] && . ./format.env
 
 SPEED=${2:-${SPEED:-1.0}}
+node - "$HERE" "$SPEED" "${ATEMPO_MIN:-1}" "${ATEMPO_MAX:-1}" <<'JS'
+const [here,speed,min,max]=process.argv.slice(2);
+require(here+'/check-tts-quality.js').checkTempo(process.cwd(),speed,min,max);
+JS
 FPS=${FPS:-30}
 OUTRO_ASSET=${OUTRO_ASSET:-outro.mp4}
 OUTRO=${OUTRO:-1}                   # 1=the build joined an outro (default), 0=the channel ships without one
@@ -139,6 +143,7 @@ if awk -v f="$SPEED" 'BEGIN{exit !(f == 1)}'; then
   check_final_rate
   check_first_cue
   say "── speedup x1.00: passed through at the recorded pace ($VIN → reel-fast.mp4)"
+  node "$HERE/check-final-tts.js" .
   node "$HERE/delivery-proof.js" . "$SPEED"
   exit 0
 fi
@@ -271,4 +276,5 @@ if [ "$OUTRO" = 1 ]; then PARTS="feature ${B}s at speed, ${TAIL}s outro tail at 
 else PARTS="the whole ${B}s at speed, no outro tail (OUTRO=0)"; fi
 say "── speedup x$(awk -v f="$SPEED" 'BEGIN{printf "%.2f", f}') ($VIN): ${TOT}s → ${RV}s (${PARTS})"
 
+node "$HERE/check-final-tts.js" .
 node "$HERE/delivery-proof.js" . "$SPEED"

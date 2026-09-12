@@ -2340,11 +2340,34 @@ Returns: a text block with the mp4 path, still paths (and any requested still ou
     },
     // ── Speech synthesis (Google Gemini TTS — ported from the fect-mcp tts module) ─────────
     {
+        name: 'tts_review_final', title: 'Review assembled speech', annotations: HINT.generate,
+        description: 'Listen to the actual final WAV or video, including all sentence transitions and the music mix. Requires accuracy >=98 and pronunciation, naturalness, clarity and continuity >=95, with no defects. Writes a hash-bound .speech-quality.json proof. Two paid Gemini review calls; no synthesis. Review outages hold delivery. Supply the complete spoken text including native clip speech. Supports up to 30 minutes and 12,000 script characters, with a lossless FLAC review payload under 14 MiB. Longer media holds for chapter review.',
+        inputSchema: { type: 'object', additionalProperties: false, properties: {
+                mediaPath: { type: 'string', description: 'Absolute path of the final media that ships.' },
+                expectedText: { description: 'Complete spoken text, including speech in clips and the outro.', type: 'string', minLength: 1, maxLength: 12000 },
+                language: { description: 'Spoken language, for example Korean.', type: 'string', minLength: 2, maxLength: 80 },
+                delivery: { description: 'Intended delivery and continuity across the whole episode.', type: 'string', minLength: 1, maxLength: 2000 },
+            }, required: ['mediaPath', 'expectedText', 'language', 'delivery'] },
+    },
+    {
+        name: 'tts_elevenlabs_dictionary', title: 'Create pronunciation dictionary', annotations: HINT.generate,
+        description: 'Create a versioned ElevenLabs pronunciation dictionary. multilingual_v2 uses aliases; non-English IPA requires eleven_v3. Use for Korean proper names without inserting spaces or deleting the name from the script. Returns pronunciationDictionaryId and versionId to pin in generation.pronunciationDictionaryLocators. Keep aliases faithful to the approved pronunciation; verify actual audio. Requires ElevenLabs dictionary write permission; never changes the voice or existing dictionaries.',
+        inputSchema: { type: 'object', additionalProperties: false, properties: {
+                name: { description: 'Descriptive name of the new dictionary.', type: 'string', minLength: 1, maxLength: 200 },
+                rules: { description: 'Approved source spelling and intended spoken aliases.', type: 'array', minItems: 1, maxItems: 100, items: { type: 'object', additionalProperties: false, properties: {
+                            stringToReplace: { description: 'Source name as written in the narration.', type: 'string', minLength: 1, maxLength: 200 }, alias: { description: 'Intended pronunciation in Hangul for an alias rule.', type: 'string', minLength: 1, maxLength: 200 },
+                            type: { description: 'Rule kind; alias by default. Non-English phonemes require v3.', type: 'string', enum: ['alias', 'phoneme'], default: 'alias' },
+                            phoneme: { description: 'Phonetic notation for a phoneme rule.', type: 'string', minLength: 1, maxLength: 200 },
+                            alphabet: { description: 'Alphabet of the phoneme rule.', type: 'string', enum: ['ipa', 'cmu-arpabet'] },
+                        }, required: ['stringToReplace'] } },
+            }, required: ['name', 'rules'] },
+    },
+    {
         name: 'tts_generate_checked',
         title: 'Generate and review narration',
         annotations: HINT.generate,
         description: `Generate one scene with the pinned TTS engine, review the actual WAV, and regenerate failed takes up to maxAttempts (1–3, including the first take).
-Use for every generated narration scene in produce/autoproduce. Pass the existing generator's arguments in generation, the complete spoken expectedText (phonetic spelling; no acting tags or speaker labels), language, and the profile's intended delivery. Voice and generation settings stay unchanged across attempts; a pinned seed advances by one per retake, because the same seed returns the same bytes. An entire scene is one call; never split it into sentence calls.
+Use for every generated narration scene in produce/autoproduce. Pass the existing generator's arguments in generation, the complete spoken expectedText (phonetic spelling; no acting tags or speaker labels), language, and the profile's intended delivery. Voice and generation settings stay unchanged across attempts; the episode seed stays fixed on every retake (vendor determinism is best-effort). An entire scene is one call; never split it into sentence calls.
 On tts_elevenlabs_generate the take is fetched with timestamps and its sentences are re-spaced before review: a fixed sentencePause of digital silence between sentences (stretched up to 1.0s where a subtitle cue would read faster than 6.0 chars/s after playbackSpeed), a 0.14s lead, speech samples copied as generated (the 12 ms fades stay on the natural gap). Pass segments (the scene's narration[].tts list) so the pauses land on the builder's segment boundaries; the wrapper writes <wav>.sentences.json and shifts the .alignment.json to the shipped audio.
 Checks signal/duration, a blind transcript (CER <=2%), then ${REVIEW_MODEL} listening scores: accuracy >=98, pronunciation/naturalness/clarity >=95, confidence >=0.9, no audible defects. Returns a hash-bound .wav.quality.json proof required by the builder. Missing keys, unavailable reviewer, malformed responses or exhausted attempts block production. Scores are operational thresholds, not a guarantee of human judgement.
 Requires ffmpeg and GEMINI_API_KEY even for local synthesis. Two paid audio-review calls per acoustically valid take, plus the selected generator's costs. Record the retry-inclusive allowance before calling; review tokens are logged as unpriced until reconciled with provider billing. Do not call again to reset an exhausted attempt budget. Do not use for recordings or native clip speech; retain their final listening QA. Do not change engines/voices or lower thresholds to obtain PASS.`,
@@ -2362,9 +2385,13 @@ Requires ffmpeg and GEMINI_API_KEY even for local synthesis. Two paid audio-revi
                 rejectTake: { type: 'object', additionalProperties: false, required: ['audioSha256', 'reason'], description: 'When final listening finds a defect in a previously checked take, reject that exact WAV and use only remaining attempts. Never waives any check.', properties: {
                         audioSha256: { type: 'string', pattern: '^[a-f0-9]{64}$', description: 'SHA-256 of the current checked WAV, as recorded in its quality proof.' }, reason: { type: 'string', minLength: 10, maxLength: 1000, description: 'Actual time, word or sound defect observed during listening.' },
                     } },
+                episode: { type: 'object', additionalProperties: false, description: 'Required for ElevenLabs assembly. Ordered complete scene texts, current index and one fixed seed. Derives previousText/nextText on supported models; v3 omits them and relies on final listening for scene continuity.', properties: {
+                        texts: { description: 'Complete scene texts in playback order.', type: 'array', minItems: 1, maxItems: 80, items: { type: 'string', minLength: 1, maxLength: 4000 } },
+                        index: { description: 'Index of this scene in texts, starting at zero.', type: 'integer', minimum: 0 }, seed: { description: 'One seed fixed across the episode and all retakes.', type: 'integer', minimum: 0, maximum: 4294967295 },
+                    }, required: ['texts', 'index', 'seed'] },
                 segments: { type: 'array', minItems: 1, maxItems: 80, items: { type: 'string', minLength: 1, maxLength: 1000 }, description: 'The scene\'s narration[].tts sentences in order (joined they read as expectedText). ElevenLabs takes get a fixed pause at each segment boundary — the boundary the builder\'s reveals and subtitle cues use. Without it, pauses go after sentence-final punctuation.' },
                 sentencePause: { type: 'number', minimum: 0.25, maximum: 1.5, default: 0.5, description: 'Silence between sentences in the take\'s own timeline, seconds. The builder detects pauses from 0.16s and fits a 0.35s reveal fade inside one.' },
-                playbackSpeed: { type: 'number', minimum: 0.5, maximum: 3, default: 1, description: 'The channel\'s playback factor from profile §2 (speedup.sh). A pause grows past sentencePause only where that sentence\'s subtitle cue would otherwise read faster than 6.0 chars/s after the speed-up.' },
+                playbackSpeed: { type: 'number', minimum: 0.5, maximum: 3, default: 1, description: 'ElevenLabs requires 1: use generation.speed for the requested rate and keep assembly at 1. Other engines use the approved profile playback factor; this controls subtitle pause sizing.' },
             },
             required: ['generator', 'generation', 'expectedText', 'language', 'delivery', 'outputPath', 'filename'],
         },
@@ -2632,6 +2659,9 @@ Returns: a text block with the saved audio path (WAV by default — the builder 
                     description: 'Boost similarity to the original speaker (vendor default true). Adds a little latency. multilingual_v2 only — ignored on eleven_v3 and flash_v2_5.',
                 },
                 seed: ELEVENLABS_SEED_PROPERTY,
+                pronunciationDictionaryLocators: { type: 'array', minItems: 1, maxItems: 3, description: 'Pinned dictionary IDs and versions from tts_elevenlabs_dictionary. Applied in order.', items: {
+                        type: 'object', additionalProperties: false, properties: { pronunciationDictionaryId: { description: 'Dictionary ID returned by the create tool.', type: 'string', minLength: 1 }, versionId: { description: 'Pinned dictionary version ID.', type: 'string', minLength: 1 } }, required: ['pronunciationDictionaryId', 'versionId'],
+                    } },
                 previousText: {
                     type: 'string',
                     description: 'The sentence(s) spoken right before this text in the finished audio — not synthesized, only used so the take continues the neighbor\'s tone. Use when re-rendering one cut of a scene. Not accepted by eleven_v3 (the vendor returns 400; the schema rejects it first).',

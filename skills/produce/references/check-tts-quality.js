@@ -41,17 +41,41 @@ function check(work, board) {
   const expected=win.SCENES.map((s,i)=>({s,i})).filter(({s})=>!['broll','outro'].includes(s.type));
   if(JSON.stringify(rows.map(r=>r[0]))!==JSON.stringify(expected.map(({i})=>String(i))))throw new Error('card order differs from SCENES');
   const media={};
+  const speech=require('../../storyboard/references/story-contract.js').storySpeech(win);
+  const spoken=[...new Set(speech.map(g=>g.shot))].map(shot=>({i:shot-1,text:speech.filter(g=>g.shot===shot).map(g=>g.n.tts||g.n.sub).join('. ')}));
+  const texts=spoken.map(s=>s.text);
+  let episodeSettings;
+
   for(const [k,{s,i}] of expected.entries()) {
     const file=path.resolve(work,rows[k][1]);
     // Retain provenance for live/silent sources too. An arbitrary sync=1 does not waive TTS QA.
     media[file]=hash(fs.readFileSync(file));
     const text=(s.narration||[]).map(n=>n.tts||'').join('. ');
-    const live=win.VOICE==='user'||s.visual?.source==='recording'||(s.visual?.source==='screencast'&&s.visual?.sync===true);
+    const live=win.VOICE==='user'||(s.visual?.source==='recording'&&!normalize(text))||(s.visual?.source==='screencast'&&s.visual?.sync===true);
     if(live||!normalize(text))continue;
-    try {Object.assign(media,verifyProof(file,text));}
+    try {
+      Object.assign(media,verifyProof(file,text));
+      const proof=JSON.parse(fs.readFileSync(file+'.quality.json','utf8'));
+      if(proof.generator==='tts_elevenlabs_generate') {
+        const e=proof.episode;
+        if(!e||e.index!==spoken.findIndex(v=>v.i===i)||JSON.stringify(e.texts.map(normalize))!==JSON.stringify(texts.map(normalize)))throw new Error('ElevenLabs requires complete ordered episode context');
+        if(!proof.voiceSettings||proof.voiceSettings.seed!==e.seed||proof.attempts.some(t=>t.seed!==e.seed))throw new Error('ElevenLabs episode seed drift');
+        const settings=JSON.stringify(proof.voiceSettings);
+        if(episodeSettings&&episodeSettings!==settings)throw new Error('ElevenLabs voice/settings changed between scenes');
+        episodeSettings=settings;
+      }
+    }
     catch(e){throw new Error(`card ${i}: ${e.message}; generate with tts_generate_checked before assembly`);}
   }
   return media;
 }
-module.exports={check,verifyProof,normalize,cer};
+function checkTempo(work,speed,min=1,max=1) {
+  const cards=path.join(work,'cards.tsv');if(!fs.existsSync(cards))return;
+  const generated=fs.readFileSync(cards,'utf8').split(/\r?\n/).filter(l=>l.trim()&&!l.startsWith('#')).some(l=>{
+    const p=path.resolve(work,l.split('\t')[1])+'.quality.json';
+    return fs.existsSync(p)&&JSON.parse(fs.readFileSync(p,'utf8')).generator==='tts_elevenlabs_generate';
+  });
+  if(generated&&[speed,min,max].some(n=>Number(n)!==1))throw new Error('ElevenLabs narration forbids post-synthesis tempo changes; set SPEED=1 and ATEMPO_MIN=ATEMPO_MAX=1, use generation.speed');
+}
+module.exports={check,verifyProof,normalize,cer,checkTempo};
 if(require.main===module){try{check(process.argv[2],process.argv[3]||path.resolve(process.argv[2],'../storyboard'));console.log('PASS all generated narration: current audio, transcript and listening review');}catch(e){console.error('TTS quality: '+e.message);process.exitCode=1;}}

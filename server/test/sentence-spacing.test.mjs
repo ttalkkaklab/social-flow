@@ -120,26 +120,26 @@ test('a playback factor widens only the pause a fast cue needs, and never past t
   assert.ok(fast[0] > 0.5 && fast[0] <= 1.0);
 });
 
-test('the checked ElevenLabs take is re-spaced before it is hashed, and a retake moves the seed', async t => {
+test('the checked ElevenLabs take is re-spaced before it is hashed, and a retake preserves the episode seed', async t => {
   const dir = mkdtempSync(path.join(tmpdir(), 'spacing-'));
   t.after(() => rmSync(dir, { recursive: true, force: true }));
   const work = path.join(dir, '.work'), pcmDir = path.join(work, 'pcm');
   const request = checkedSpeechSchema.parse({ generator: 'tts_elevenlabs_generate', generation: { text: TEXT, voiceId: 'vsc8TcxQ3sXV07imIA0f', model: 'eleven_multilingual_v2', seed: 210836 },
-    expectedText: TEXT, segments: SENTENCES, playbackSpeed: 1.2, language: 'Korean', delivery: 'Calm.', outputPath: pcmDir, filename: 'c0.wav' });
+    expectedText: TEXT, episode: {texts:[TEXT],index:0,seed:210836}, segments: SENTENCES, playbackSpeed: 1, language: 'Korean', delivery: 'Calm.', outputPath: pcmDir, filename: 'c0.wav' });
   const prepared = prepareGeneration(request);
   assert.equal(prepared.spacing, true); assert.equal(prepared.seed, 210836); assert.equal(prepared.args.timestamps, true);
   const file = path.join(pcmDir, 'c0.wav');
   const seeds = [];
   const deps = { preflight: async () => {}, measure: async () => ({ duration: 3, rmsDb: -18, clippedFraction: 0 }),
-    generate: async (o) => { seeds.push(o?.seed); const take = fakeTake(0.05); writeFileSync(file, take.wav); writeFileSync(path.join(pcmDir, 'c0.alignment.json'), JSON.stringify({ engine: 'elevenlabs', alignment: take.alignment, normalized_alignment: null })); return { success: true, audioPath: file }; },
+    generate: async (o) => { seeds.push(o?.seed); const take = fakeTake(seeds.length === 1 ? 0.05 : 0.06); writeFileSync(file, take.wav); writeFileSync(path.join(pcmDir, 'c0.alignment.json'), JSON.stringify({ engine: 'elevenlabs', alignment: take.alignment, normalized_alignment: null })); return { success: true, audioPath: file }; },
     listen: async () => ({ transcript: TEXT, review: { accuracy: seeds.length === 1 ? 90 : 100, pronunciation: 98, naturalness: 97, clarity: 99, confidence: 0.98, complete: true, evidence: 'Every word and final syllable is clear, with smooth phrase breaks and no audible artifacts.', issues: [] } }) };
   const result = await generateCheckedSpeech(request, deps);
   assert.equal(result.success, true, JSON.stringify(result));
-  assert.deepEqual(seeds, [undefined, 210837]);
+  assert.deepEqual(seeds, [210836, 210836]);
   const proof = JSON.parse(readFileSync(file + '.quality.json', 'utf8'));
-  assert.deepEqual(proof.attempts.map(a => a.seed), [210836, 210837]);
+  assert.deepEqual(proof.attempts.map(a => a.seed), [210836, 210836]);
   assert.equal(proof.attempts[1].spacing.boundaries.length, 2);
-  assert.equal(proof.attempts[1].spacing.playbackSpeed, 1.2);
+  assert.equal(proof.attempts[1].spacing.playbackSpeed, 1);
   // the sidecar describes the shipped WAV, and the proof hash is that WAV's
   const side = JSON.parse(readFileSync(sentencesPathFor(file), 'utf8'));
   assert.deepEqual(side.boundaries, proof.attempts[1].spacing.boundaries);

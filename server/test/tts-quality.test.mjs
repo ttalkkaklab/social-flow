@@ -91,7 +91,7 @@ test('builder rejects missing evidence, altered WAV/text, lowered scores and syn
 });
 test('real recordings and silence keep audio provenance without a synthesis proof',t=>{
   const f=setup(t);writeFileSync(f.file,'recorded');
-  for(const scene of [{type:'points',visual:{source:'recording'},narration:[{tts:script}]},{type:'points',visual:{source:'screencast',sync:true},narration:[{tts:script}]},{type:'points',narration:[]}]){
+  for(const scene of [{type:'points',visual:{source:'recording'},narration:[]},{type:'points',visual:{source:'screencast',sync:true},narration:[{tts:script}]},{type:'points',narration:[]}]){
     writeFileSync(path.join(f.dir,'storyboard/scenes.js'),`window.SCENES=${JSON.stringify([scene])};`);
     assert.ok(checker.check(path.join(f.dir,'.work'),path.join(f.dir,'storyboard'))[f.file]);
   }
