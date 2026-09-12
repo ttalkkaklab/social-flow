@@ -71,13 +71,15 @@ When unsure, start with Threads — lightest, cheapest to fail.
 
 ### Plain-language principle (all platforms · all surfaces)
 
+Use the channel audience's knowledge and voice (korean-style §Eye level), with no
+universal school-grade target. Preserve natural adult wording and exact terms.
 No unexplained jargon, no translationese, no over-compressed sentences missing
 their subject. Field-tested replacements: "기준환율" → "뉴스 값('기준환율')"
 (lead with "the number on the news", keep the term in parentheses) · "은행 매도"
 → "은행 창구 값 — 내가 달러를 살 때 실제로 내는 값" (the bank-counter rate —
 what I actually pay when buying dollars) · "달러로 받으면 유리하고" → "달러로
 받는 **월급은** 늘고" (subject restored: the **salary** paid in dollars grows).
-If a term is unavoidable, lead with the plain word and gloss the term in
+If a necessary term is unfamiliar to that audience, lead with the plain word and gloss the term in
 parentheses on first appearance only.
 
 ### The result stays inside the video (title · description · IG caption)

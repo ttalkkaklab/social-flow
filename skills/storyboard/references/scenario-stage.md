@@ -281,11 +281,10 @@ the first read), `round: 0`. Each item is a
 paragraph (전개 #3 is a numbered list of its cases); on long-form the 전개 paragraphs run
 longer, they do not multiply.
 
-**Write the page in the words the narration will use.** These sentences are not a pitch to
-an adult reader — the 주제 line and the 훅 are what §4 turns into spoken narration, so a page
-written in essay Korean hands the vocabulary read a rewrite instead of a swap. The floor is
-korean-style §Eye level: a 만 9~10세 viewer follows the 주제 sentence with nothing else on
-screen. A term the episode is about (계엄, 파운드리) comes in with its plain wording beside it
+**Write the page in the words the narration will use.** The 주제 line and 훅 become spoken narration. Use the profile's audience knowledge
+and voice (korean-style §Eye level), keeping natural adult words and precise terminology.
+The audience should follow the 주제 sentence without an unseen explanation. A necessary
+term unfamiliar to that audience comes with a brief accurate explanation
 on the page too, because that is where `COMPREHENSION.terms` is decided later. Check the words on each page before showing it — storyboard §2.2's command, which reads only
 the E findings out of `check-style.py --surface narration --json candidates/d<n>.md`. The
 other rules belong to the spoken sentences at §4.5, not to a page of headings and notes.
@@ -377,7 +376,7 @@ event itself; inventing a modern connection to prolong it is not a solution.
 
 | # | Item | What goes in it |
 |---|---|---|
-| 1 | **주제** | The subject cut from the page's message — what this episode is about and the question it answers, one sentence in the viewer's words at the 초3~4 floor (korean-style §Eye level). Not a topic label ("로즈웰 사건"), and never a report of ignorance ("무엇이 떨어졌는지는 아직 모른다") — the sentence names what the evidence establishes ("군은 왜 발표를 바꿨을까 — 설명이 바뀌면 사람들이 무엇을 믿게 되는지"). `COMPREHENSION.question` is cut from this line; `takeaway` from the message (§Messages first). |
+| 1 | **주제** | The subject cut from the page's message — what this episode is about and the question it answers, one sentence in the actual audience's natural vocabulary (korean-style §Eye level). Not a topic label ("로즈웰 사건"), and never a report of ignorance ("무엇이 떨어졌는지는 아직 모른다") — the sentence names what the evidence establishes ("군은 왜 발표를 바꿨을까 — 설명이 바뀌면 사람들이 무엇을 믿게 되는지"). `COMPREHENSION.question` is cut from this line; `takeaway` from the message (§Messages first). |
 | 2 | **훅** | A dramatised scene that pulls the viewer in — a person at that moment, a "만약 그날 …" the viewer can picture — and it puts the viewer inside the wow's 믿는 것 half (§The wow first: the type's third column says what to stage). Its first spoken sentence names what is at stake before anything is asked; it ends on the promise — what the viewer will know by the end — and withholds the 실제로는 half unless the page is the result-first shape. It may invent a scene. It may not invent a fact (below). Where the belief can be put in someone else's mouth — "겸손한 소원이라고들 하는데" — do it here or in 전개 #1: a stated belief the close overturns is heard as a turn, an unstated one as a lecture (Save the Cat's *theme stated*; `STORY.themeStated` on the board, optional). |
 | 3 | **전개 #1** | What actually happened — the real event behind the hook, told as an account (who · when · what), every fact on a `research.md` row. Where the research holds an answer most viewers would guess first, this item opens on it and takes it apart (scenario-craft §11) — the 믿는 것 half spoken and taken seriously before it goes. |
 | 4 | **전개 #2** | The next necessary evidence, choice or consequence that changes understanding. A modern bridge is optional. On answer-first this supplies the early result and names its subject directly. |

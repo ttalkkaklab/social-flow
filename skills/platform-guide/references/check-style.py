@@ -482,59 +482,31 @@ PATTERNS: list[Pattern] = [
                 r"|알림\s*설정|많은\s*관심\s*부탁)"), 0,
      "Get to the point. The outro handles channel identity"),
 
-    # --- Eye level E ---------------------------------------------------------
-    # The floor these three rules hold is the National Institute of Korean Language's
-    # vocabulary grading (2022년 국어 기초 어휘 선정 및 어휘 등급화 연구, 표 6): grade 1
-    # is the pre-school vocabulary (age 4~6, 5,000 words cumulative), grade 2 is 초1~2
-    # (age 7~8, 7,500), grade 3 is 초3~4 (age 9~10, 13,000). **The target is grade 3** —
-    # what a 9~10-year-old already has without being taught. Above it a word isn't
-    # banned; it has to arrive with the plain wording beside it
-    # (`window.COMPREHENSION.terms`, scenes-schema).
-    #
-    # **Why these are lists and not a readability score.** KReaD and the other Korean
-    # readability indices score a text against a graded 28,000~40,000-word lexicon, and
-    # both halves are out of reach here: matching a graded lexicon needs a morphological
-    # analyzer (this checker is stdlib-only, and Korean eojeol carry particles and
-    # inflection), and the lists themselves are licensed. What survives that constraint
-    # is the direction the grading agrees on anyway — the words that have an everyday
-    # replacement. So E is curated, small, and says what to write instead.
-    #
-    # **E1·E2 reject, E3 warns.** E1 and E2 are document-register words with a plain
-    # equivalent in every context they appear in, and 0 false positives over the 44-episode
-    # narration library (measured 2026-09-04, 31,494 chars: zero hits — outgoing narration
-    # is already clean, so these are a floor, not a cleanup). E3 words are ones a news
-    # anchor says naturally, so context can carry them and the verdict is a warning.
-    #
-    # Every entry is anchored at an eojeol start `(?<![가-힣])` and most also pin the
-    # ending — without it "이야기" ate 야기, "내용이" ate 용이, "저해상도" ate 저해, and
-    # "이상이" ate 상이 (all four measured on the library before the guards went in).
-    # **첨부 is deliberately absent from E2.** "자료를 첨부했습니다" is how people talk about
-    # mail attachments, and it sits in the existing false-positive fixture for the T rules —
-    # adding it turned that fixture red. A word that everyday speech already owns is not a
-    # form-register word, whatever its origin.
-    # **명일 came out of E1 the same way** — the library's "스물아홉 명일 땐" (the counter 명
-    # plus the copula) was the only shape it matched in 132 surface checks, and a word
-    # nobody writes any more is not worth a false positive on a number.
-    ("E1", "S1", "form-register noun above the 3rd-grade floor",
+    # --- Eye level E: audience-aware vocabulary suggestions ------------------
+    # A regex cannot judge register, precision or audience knowledge. Keep matches
+    # visible as S3 suggestions but exclude E1~E3 from score deductions. They never
+    # establish AI authorship or require a replacement. Other rules still apply.
+
+    ("E1", "S3", "context review: vocabulary suggestion",
      re.compile(r"(?<![가-힣])(소정의|익일|익월|금번|잔여|유무|여부|추후|필히"
                 r"|하기(?=와\s*같))"), 0,
-     "Say it the way a 10-year-old would — 여부 → ~인지 아닌지 · 익일 → 다음 날 · "
+     "Review in context; keep precise or natural usage. Optional: 여부 → ~인지 아닌지 · 익일 → 다음 날 · "
      "소정의 → 정해진 · 잔여 → 남은"),
     # `TAIL` is the conjugation the Sino-Korean stem takes when it works as a verb or an
     # adjective — 하/되 plus their inflections. Pinning it is what keeps the stems from
     # eating ordinary nouns that merely start with the same two syllables.
-    ("E2", "S1", "form-register verb above the 3rd-grade floor",
+    ("E2", "S3", "context review: vocabulary suggestion",
      re.compile(r"(?<![가-힣])(기입|기재|지참|구비|회신|송부|수령|이행|준수|경유|산정"
                 r"|감안|제고|강구|시정|누락|미비|위배|부과|징수|납부|환급|감면|반려"
                 r"|소요)(?=하|한|할|합|해|했|함|되|된|될|됩|돼|됐|시)"), 0,
-     "Use the everyday verb — 기입하다 → 적다 · 지참하다 → 가져오다 · 소요된다 → 걸린다 · "
+     "Review in context; keep precise or natural usage. Optional: 기입하다 → 적다 · 지참하다 → 가져오다 · 소요된다 → 걸린다 · "
      "납부하다 → 내다"),
-    ("E3", "S2", "news-register Sino-Korean word above the 3rd-grade floor",
+    ("E3", "S3", "context review: vocabulary suggestion",
      re.compile(r"(?<![가-힣])((초래|야기|수반|저해|촉진|증진|확충|개시|직면|봉착|표명"
                 r"|언급|지칭|상회|하회|촉발|기인|전락|상존|도모|모색|용이|미미|지대|전무"
                 r"|현저)(?=하|한|할|합|해|했|함|되|된|될|됩|돼|됐|시|히)"
                 r"|불가피|상당수|막대(?=한\s|하다|합))"), 0,
-     "Use the plain verb — 초래하다 → 불러오다 · 언급하다 → 말하다 · 용이하다 → 쉽다 · "
+     "Review in context; keep precise or natural usage. Optional: 초래하다 → 불러오다 · 언급하다 → 말하다 · 용이하다 → 쉽다 · "
      "직면하다 → 마주하다"),
 ]
 
@@ -948,7 +920,8 @@ def analyze(text: str, surface: str, doc: bool = False) -> dict:
 
     score = 100
     for f in live:
-        score -= PENALTY[f["severity"]]
+        if f["id"] not in {"E1", "E2", "E3"}:
+            score -= PENALTY[f["severity"]]
     for m in metrics:
         # Length deviations are penalized by ratio — charging one deviant sentence and
         # all-deviant the same 3 points passes schema violations (measured: a single
@@ -967,8 +940,8 @@ def analyze(text: str, surface: str, doc: bool = False) -> dict:
     # (measured). So the fact that an exemption applied is itself raised to a human:
     # exit 0 is floored to 1 (warn), riding publish §1's existing rule ("exit 1 goes
     # verbatim into the approval prompt"). 1 isn't a block, so legitimate quotes proceed
-    # to publishing.
-    if quoted and exit_code == 0:
+    # to publishing. E-only suggestions need no exemption and do not raise this floor.
+    if any(f["id"] not in {"E1", "E2", "E3"} for f in quoted) and exit_code == 0:
         exit_code = 1
 
     return {
@@ -1029,7 +1002,7 @@ def render(r: dict) -> str:
         lines.append("[findings] none")
     if quoted:
         lines.append("")
-        lines.append(f"[quote exemptions: {len(quoted)} — excluded from score, verdict floors at WARN]")
+        lines.append(f"[quoted findings: {len(quoted)} — excluded from score; non-E findings floor verdict at WARN]")
         for f in quoted:
             lines.append(f"  ({f['severity']} {f['id']}) L{f['line']} {f['label']} — {f['excerpt']}")
         lines.append("  If it relays someone else's words, don't fix it. If we wrote it, drop the quotes and fix it.")
@@ -1479,14 +1452,24 @@ SELFTEST = [
      "해냈을 리 없다는 것\n결과는 정반대\n", (), ("D10", "D10b")),
 
     # --- eye level E --------------------------------------------------------
-    # Document register on a surface a child is listening to.
-    ("E1·E2 form register is rejected", "narration", 2,
+    # Register candidates remain visible without forcing vocabulary changes.
+    ("E1·E2 vocabulary suggestions do not reject", "narration", 0,
      "서류에 이름을 기입해 주세요.\n제출 여부를 먼저 봅니다.\n"
-     "요금은 익일 납부하면 됩니다.\n남은 잔여 좌석은 셋입니다.\n", ("E1", "E2")),
-    # E3 warns instead of rejecting — three of them is what it takes to drop under 85.
-    ("E3 news register warns", "narration", 1,
+     "요금은 익일 납부하면 됩니다.\n남은 잔여 좌석은 셋입니다.\n", ("E1", "E2"), (), 100),
+    # E3 remains visible without a vocabulary-only warning verdict.
+    ("E3 vocabulary suggestions do not penalize", "narration", 0,
      "이 조치가 혼란을 초래했어요.\n전문가도 위험을 언급했어요.\n"
-     "고치기가 용이하지 않아요.\n", ("E3",)),
+     "고치기가 용이하지 않아요.\n", ("E3",), (), 100),
+    ("quoted vocabulary suggestions stay advisory", "screen", 0,
+     '출처: 안내문\n"세금을 납부했어요."', ("E2",), (), 100),
+    ("quoted unrelated defects still warn", "screen", 1,
+     '출처: 안내문\n"납부에 대해 설명합니다."', ("T1",), (), 100),
+    ("adult financial wording remains usable", "screen", 0,
+     "세금을 납부했어요. 신청 여부를 확인하세요. 환급 신청과 대출 한도.\n"
+     "요금을 납부하고 자료를 기입하고 환급하고 수령합니다.\n",
+     ("E1", "E2"), (), 100),
+    ("E suggestions do not disable unrelated blockers", "narration", 2,
+     "세금을 납부했습니다. 납부에 대해 설명합니다.\n", ("E2", "T1")),
     # The eojeol-start guard and the pinned endings, as fixtures. Every one of these
     # was a real false positive before the guards: 이야기→야기, 내용이→용이,
     # 저해상도→저해, 막대기→막대, 수령(나무 나이)→수령, 경유(연료)→경유.
@@ -1499,7 +1482,7 @@ SELFTEST = [
 
 
 def selftest() -> int:
-    """A fixture is (name, surface, expected exit, body[, required IDs[, banned IDs]]).
+    """A fixture is (name, surface, expected exit, body[, required IDs[, banned IDs[, score]]]).
 
     The 5th item is the **set of IDs that must be detected**. When only exit codes were
     checked, S2/S3 rules couldn't be pinned by fixtures — one hit docks only 7 or 2
@@ -1522,10 +1505,12 @@ def selftest() -> int:
         got_ids = {f["id"] for f in got["findings"]}
         missing = want_ids - got_ids
         leaked = deny_ids & got_ids
-        ok = got["exit_code"] == want and not missing and not leaked
+        score_ok = len(case) < 7 or got["score"] == case[6]
+        ok = got["exit_code"] == want and not missing and not leaked and score_ok
         failed += 0 if ok else 1
         ids = ",".join(sorted(got_ids)) or "-"
         note = f" missing={','.join(sorted(missing))}" if missing else ""
+        note += f" expected-score={case[6]}" if not score_ok else ""
         note += f" false-positive={','.join(sorted(leaked))}" if leaked else ""
         print(f"[{'PASS' if ok else 'FAIL'}] {name} ({surface}) "
               f"exit={got['exit_code']} expected={want} score={got['score']} found={ids}{note}")
