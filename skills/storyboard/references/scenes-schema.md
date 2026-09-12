@@ -1621,7 +1621,7 @@ of the axis. It is not `shot.angle`, which only records camera height. Two adjac
 in one scene that change size by fewer than two ranks need azimuths at least 30 degrees apart, or
 the incoming shot names `coverage.action` for the visible action that hides the cut. The rule
 re-films one subject: `two`·`three`·`ots`·`pov`·`back`·`cutaway`·`reaction` have no rank and are
-outside it, and a shot that declares `lineCrossing` is its own escape. The full check blocks a
+outside it, and a shot whose `lineCrossing` passes its checks is its own escape. The full check blocks a
 missing or insufficient record; the story pass (`draft` on `storyboard_apply` and
 `storyboard_check`) defers it until camera work.
 

@@ -487,6 +487,7 @@
             return;
           }
           if (!crossing || typeof crossing !== 'object') {
+            if (crossing !== undefined) { crossed.add(x.no); bad('shot ' + x.no, 'shot.lineCrossing is an object { method, from, to, reason }'); }
             cameraRule('shot ' + x.no, `space.line changes from "${previous}" to "${line}" — declare shot.lineCrossing with camera_move, subject_move, neutral or intentional`);
             previous = line; previousNo = x.no;
             return;
