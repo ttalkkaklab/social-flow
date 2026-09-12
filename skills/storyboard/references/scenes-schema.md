@@ -1422,7 +1422,10 @@ boundary where a visible join is forbidden: a join that fits its boundary is nev
 many, and one that does not fit is wrong at any count. The first shot has nothing in front of
 it, so it takes `"dip"` (it opens out of black), `"cut"`, or nothing.
 
-**Ask the questions in this order and write the first that is true.** One home;
+**For a new scene with a changed place or time, prefer `dip`: fade the previous
+picture to black, then fade in the next picture. Use another effect when the story
+calls for it, and keep same-scene cuts chosen by action and continuity.**
+The table below explains those choices. One home;
 directing-grammar §6 rule 16 points here. What the audience sees is what the builder draws
 (`../produce/references/build-reel.sh` §7.4).
 
@@ -1435,13 +1438,13 @@ directing-grammar §6 rule 16 points here. What the audience sees is what the bu
 | a memory, a hypothetical, someone losing the thread | `"blur"` | the old shot smears sideways and melts (0.40 s) |
 | a chapter / act break, a jump the story treats as a distance | `"dip"` / `"dip:white"` | through black (or white) — a beat of nothing, 0.3 s down and 0.3 s up. White is a flash |
 | a list, a comparison, "meanwhile" — siblings, not a before and after | `"push:<l2r\|r2l\|u2d\|d2u>"` | the old shot slides off and uncovers the new one (0.32 s) |
-| time passed, or the place changed, and the two pictures belong to one world | `"dissolve"` | the new shot melts up **through** the old one for 0.40 s |
+| time passed or the place changed, and the pictures should blend without black | `"dissolve"` | the new shot melts up **through** the old one for 0.40 s |
 | the same place and the same moment — two shots of one scene, size or angle changed | `"jcut"` | a cut with the sound leading: the next line starts on the continuing outgoing footage (0.24 s), then the picture cuts |
 
 `jcut` is the last row on purpose. It is the right join only when nothing moved between the two
 shots except the camera; on every other boundary something did move — time, place, attention,
 the story's distance — and the join says which. Two shots of one room a moment apart are a
-`jcut`; the same room after lunch is a `dissolve`; the same room in a flashback is a `blur`.
+`jcut`; the same room after lunch can use `dip` (or `dissolve` to blend without black); the same room in a flashback is a `blur`.
 
 `dissolve` and `blur` are the same length and the same material, and they say different
 things: a dissolve means the two pictures belong to one world, a blur means someone's
