@@ -3,6 +3,7 @@
 // A report is valid only for the current scene text and exact source WAV.
 const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm');
 const { createHash } = require('node:crypto');
+const { authorizeSpeed } = require('./tts-speed-policy.js');
 const hash = value => createHash('sha256').update(value).digest('hex');
 const normalize = text => text.normalize('NFKC').toLowerCase().replace(/[\p{P}\p{Z}\s]/gu, '');
 function cer(expected, heard) {
@@ -56,6 +57,11 @@ function check(work, board) {
     try {
       Object.assign(media,verifyProof(file,text));
       const proof=JSON.parse(fs.readFileSync(file+'.quality.json','utf8'));
+      if (!Number.isFinite(proof.generationSpeed) || !Number.isFinite(proof.playbackSpeed)) throw new Error('missing recorded TTS speed; regenerate at 1.0 or with an explicit user request');
+      const generationSpeed = proof.generationSpeed;
+      const approval = authorizeSpeed(work, 'generation', generationSpeed);
+      if (approval && JSON.stringify(approval) !== JSON.stringify(proof.speedAuthorization?.generation)) throw new Error('TTS speed request changed after audio review; regenerate with the current explicit request');
+      authorizeSpeed(work, 'final', proof.playbackSpeed ?? 1);
       if(proof.generator==='tts_elevenlabs_generate') {
         const e=proof.episode;
         if(!e||e.index!==spoken.findIndex(v=>v.i===i)||JSON.stringify(e.texts.map(normalize))!==JSON.stringify(texts.map(normalize)))throw new Error('ElevenLabs requires complete ordered episode context');
@@ -70,6 +76,8 @@ function check(work, board) {
   return media;
 }
 function checkTempo(work,speed,min=1,max=1) {
+  if ([min,max].some(n => Number(n) !== 1)) throw new Error('Per-card tempo changes are forbidden; assembly is fixed at 1.0');
+  authorizeSpeed(work, 'final', Number(speed));
   const cards=path.join(work,'cards.tsv');if(!fs.existsSync(cards))return;
   const generated=fs.readFileSync(cards,'utf8').split(/\r?\n/).filter(l=>l.trim()&&!l.startsWith('#')).some(l=>{
     const p=path.resolve(work,l.split('\t')[1])+'.quality.json';

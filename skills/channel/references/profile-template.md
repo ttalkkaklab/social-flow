@@ -43,7 +43,7 @@ shortform_outro: on       # on | off (absent = on)
     6.3x real time); use `gemini` only when acted emotion is the channel's identity, and
     `elevenlabs` when the channel needs a specific cloned or Voice Library voice, inline
     audio-tag acting (eleven_v3), or scenes with three or more speakers (paid — about 2.6x Gemini)
-  - With local → voice: `<F1~F5 | M1~M5>` · lang: `ko` · speed: `<0.7~1.2, default 1.05>` —
+  - With local → voice: `<F1~F5 | M1~M5>` · lang: `ko` · speed: `<0.7~1.2, default 1.0>` —
     above 1.2 the model drops syllables (measured), so a faster cut comes from the playback speed below
   - With gemini → voiceName: `<Gemini voice name>` ·
     stylePrompt: `<the English style direction — reused without changing a character>`
@@ -51,15 +51,14 @@ shortform_outro: on       # on | off (absent = on)
     model: `<eleven_multilingual_v2 | eleven_v3 | eleven_flash_v2_5>` ·
     stability: `<0–1; on eleven_v3 one of 0.0 / 0.5 / 1.0>` · seed: `<optional integer — once set, never changes>` ·
     outputFormat stays `wav_24000` (the builder needs RIFF; mp3 is not narration input)
-  - Target speaking rate: <characters/sec, default 4.5> — the cards.tsv column; since 2026-09-11 the
-    build ignores it unless `ATEMPO_MIN`/`ATEMPO_MAX` are set. The build's REGEN warning uses the
+  - Target speaking rate: <characters/sec, default 4.5> — the cards.tsv column; the build always
+    preserves 1.0x and ignores this target and legacy `ATEMPO_MIN`/`ATEMPO_MAX` settings. The build's REGEN warning uses the
     ship gate's band [3.2, 6.2] ÷ playback factor, not this value
-- **Playback speed (the post-build pace pass)**: `<0.5~3.0, default 1.0>` — produce §7.5 applies
-  this factor to the finished feature while the outro stays at 1.0x. It **multiplies with the TTS
-  `speed` above**, so choose it against the final subtitle timeline, not by habit. The pass blocks
-  delivery above 6.2 spoken characters/s overall or on a substantive cue, which means a card may
-  carry only `6.2 / factor` on the pre-pass timeline — 6.2 at the 1.0 default. The default `1.0`
-  preserves the finished build's pace.
+- **Playback speed (the post-build pace pass)**: `1.0` — a profile value cannot authorize
+  changing TTS speed. Non-1 synthesis or final playback requires an explicit user request
+  for the episode, recorded under produce's `references/tts-speed.md` contract. Assembly
+  and the outro always preserve 1.0x. Final subtitle speech must stay under 6.2 characters/s.
+
 - **Plain-language principle**: no unexplained jargon, no literal translationese, no
   over-compressed subjectless sentences. When a term is genuinely needed, lead with
   the plain word and put the term in parentheses on first appearance only. (Screen

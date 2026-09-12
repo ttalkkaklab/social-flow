@@ -1,3 +1,4 @@
+import { authorizeSpeed } from '../../skills/produce/references/tts-speed-policy.js';
 /**
  * Supertonic 3 on-device TTS client — invokes a local Python runtime as a subprocess.
  *
@@ -62,7 +63,7 @@ export const SUPERTONIC_LANGUAGES = [
 ];
 export const DEFAULT_SUPERTONIC_LANGUAGE = 'ko';
 /** Upstream defaults (config.py) — changing them here makes the tone diverge from CLI-produced audio. */
-export const DEFAULT_SUPERTONIC_SPEED = 1.05;
+export const DEFAULT_SUPERTONIC_SPEED = 1.0;
 export const DEFAULT_SUPERTONIC_STEPS = 8;
 /**
  * Speed ceiling. `speed` is not a time stretch — the model synthesizes at that pace, and from
@@ -163,6 +164,7 @@ function installHint(detail) {
 // ── Synthesis ────────────────────────────────────────────────────
 /** Single-speaker local synthesis — narration, voiceover */
 export async function generateLocalSpeech(request) {
+    authorizeSpeed(request.outputPath || process.cwd(), 'generation', request.speed ?? 1);
     const python = supertonicPython();
     const outFile = resolveOutputFile(request.outputPath || process.cwd(), request.filename || `supertonic_${Date.now()}.wav`, 'audio');
     const payload = JSON.stringify({
