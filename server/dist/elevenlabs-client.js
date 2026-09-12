@@ -163,6 +163,9 @@ export const elevenLabsGenerateSchema = z
     languageCode: languageCodeSchema,
     ...voiceSettingsFields,
     seed: seedSchema,
+    pronunciationDictionaryLocators: z.array(z.object({
+        pronunciationDictionaryId: z.string().trim().min(1), versionId: z.string().trim().min(1),
+    }).strict()).min(1).max(3).optional(),
     previousText: z.string().optional(),
     nextText: z.string().optional(),
     applyTextNormalization: normalizationSchema,
@@ -427,6 +430,7 @@ export async function generateElevenLabsSpeech(request) {
             ...(request.languageCode ? { language_code: request.languageCode } : {}),
             ...(voiceSettingsFrom(request) ? { voice_settings: voiceSettingsFrom(request) } : {}),
             ...(request.seed !== undefined ? { seed: request.seed } : {}),
+            ...(request.pronunciationDictionaryLocators ? { pronunciation_dictionary_locators: request.pronunciationDictionaryLocators.map(d => ({ pronunciation_dictionary_id: d.pronunciationDictionaryId, version_id: d.versionId })) } : {}),
             ...(request.previousText ? { previous_text: request.previousText } : {}),
             ...(request.nextText ? { next_text: request.nextText } : {}),
             ...(request.applyTextNormalization ? { apply_text_normalization: request.applyTextNormalization } : {}),
@@ -581,4 +585,26 @@ export async function listElevenLabsVoices(request) {
         console.error(`[ElevenLabs] Error: ${message.split('\n')[0]}`);
         return { success: false, error: message };
     }
+}
+/** Keep source names intact; multilingual_v2 uses aliases, v3 also supports non-English IPA. */
+export const elevenLabsDictionarySchema = z.object({
+    name: z.string().trim().min(1).max(200),
+    rules: z.array(z.object({
+        stringToReplace: z.string().trim().min(1).max(200),
+        type: z.enum(['alias', 'phoneme']).default('alias'),
+        alias: z.string().trim().min(1).max(200).optional(),
+        phoneme: z.string().trim().min(1).max(200).optional(),
+        alphabet: z.enum(['ipa', 'cmu-arpabet']).optional(),
+    }).strict().superRefine((r, ctx) => {
+        if (r.type === 'alias' ? (!r.alias || r.phoneme || r.alphabet) : (!r.phoneme || !r.alphabet || r.alias))
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Alias rules require alias only; phoneme rules require phoneme and alphabet only' });
+    })).min(1).max(100),
+}).strict();
+export async function createElevenLabsDictionary(input) {
+    const request = elevenLabsDictionarySchema.parse(input);
+    const response = await elevenFetch('/v1/pronunciation-dictionaries/add-from-rules', {
+        method: 'POST', body: JSON.stringify({ name: request.name, rules: request.rules.map(r => ({ type: r.type, string_to_replace: r.stringToReplace, ...(r.type === 'alias' ? { alias: r.alias } : { phoneme: r.phoneme, alphabet: r.alphabet }) })) }),
+    }, 30000);
+    const result = z.object({ id: z.string().min(1), version_id: z.string().min(1) }).parse(await response.json());
+    return { pronunciationDictionaryId: result.id, versionId: result.version_id };
 }
