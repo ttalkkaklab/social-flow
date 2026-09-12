@@ -159,6 +159,14 @@ export const storyboardCheckSchema = z.object({
     draft: z.boolean().default(false).describe('The story pass (storyboard §4a) — machine-layer absences are deferred, not violations'),
 });
 const globalsSchema = z.record(z.string().regex(/^[A-Z][A-Z0-9_]*$/, 'a window.* global is UPPER_CASE'), z.unknown());
+export const transitionPatchSchema = z.object({
+    no: z.number().int().positive().describe('Incoming shot number, 1-based, after removals and inserts'),
+    transition: z.enum(['cut', 'dip', 'dip:white', 'jcut', 'dissolve', 'iris', 'blur', 'zoom',
+        'push:l2r', 'push:r2l', 'push:u2d', 'push:d2u', 'whip:l2r', 'whip:r2l', 'whip:u2d', 'whip:d2u']),
+    transitionSeconds: z.number().finite().min(.08).max(.8).optional(),
+    reason: nonEmpty,
+    continuity: nonEmpty.optional(),
+}).strict().refine(v => !['cut', 'dip', 'dip:white'].includes(v.transition) || v.transitionSeconds === undefined, 'cut and dip do not accept transitionSeconds; dip fades each side for up to 0.30 seconds');
 export const storyboardApplySchema = z.object({
     path: z.string().min(1).describe('The storyboard directory (scenes.js is created there when missing), or its scenes.js'),
     draft: z.boolean().default(false).describe('The story pass (storyboard §4a) — camera-continuity records (lineCrossing, coverage) are deferred, not violations'),
@@ -171,6 +179,7 @@ export const storyboardApplySchema = z.object({
         .describe('Upsert shots by 1-based position; no = length + 1 appends'),
     insertShots: z.array(z.object({ after: z.number().int().min(0), shots: z.array(shotSchema).min(1) })).optional()
         .describe('Insert shots after a 1-based position (0 = at the start). Later positions shift'),
+    transitions: z.array(transitionPatchSchema).min(1).optional().describe('Change only incoming transitions; dip fades through black. Keeps narration and visuals intact'),
     removeShots: z.array(z.number().int().positive()).optional().describe('1-based positions to drop, resolved before the insert'),
     removeScenes: z.array(z.number().int().positive()).optional(),
     removeSequences: z.array(z.string()).optional(),
@@ -316,6 +325,39 @@ export function applyPatch(win, patch) {
                 throw new Error(`insertShots: after ${after} is past the last shot (${shots.length})`);
             shots.splice(after, 0, ...add);
         }
+    }
+    const transitionTargets = new Set();
+    for (const change of patch.transitions ?? []) {
+        const source = shots[change.no - 1];
+        if (!source)
+            throw new Error(`transitions: there is no shot ${change.no}`);
+        if (transitionTargets.has(change.no))
+            throw new Error(`transitions: duplicate shot ${change.no}`);
+        transitionTargets.add(change.no);
+        if (['broll', 'outro'].includes(source.type))
+            throw new Error('Spliced shots use their own assembly transition');
+        const moving = !['cut', 'dip', 'dip:white'].includes(change.transition);
+        if (moving && !shots.slice(0, change.no - 1).some(s => !['broll', 'outro'].includes(s.type)))
+            throw new Error('First shot cannot carry a previous picture');
+        if (moving) {
+            const previous = shots[change.no - 2];
+            if (!previous || ['broll', 'outro'].includes(previous.type))
+                throw new Error('A moving carry cannot bridge an inserted recording; choose cut or dip');
+            if (previous.visual?.reuse !== undefined)
+                throw new Error('Reused clips cannot supply outgoing live handles; choose cut or dip');
+            if (previous.visual?.sync === true || source.visual?.sync === true)
+                throw new Error('Sync footage requires cut or dip, not a moving carry');
+        }
+        const edit = { ...(source.edit ?? {}), reason: change.reason };
+        if (!moving || source.transition !== change.transition)
+            delete edit.transitionSeconds;
+        if (change.transitionSeconds !== undefined)
+            edit.transitionSeconds = change.transitionSeconds;
+        if (change.continuity !== undefined)
+            edit.continuity = change.continuity;
+        if (moving && Number(edit.pre ?? 0) !== 0)
+            throw new Error('Moving transitions require edit.pre=0; update the shot timing first');
+        shots[change.no - 1] = { ...source, transition: change.transition, edit };
     }
     next.SCENES = shots.map((shot) => ({ ...shot })); // sync() writes sceneSlug/sequence — never into the caller's objects
     const findings = [];

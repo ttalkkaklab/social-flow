@@ -580,10 +580,10 @@ what the audience is supposed to get.
     `visual.video` slots — the storyboard says which cards want one and the user decides
     how many.
 16. **Every boundary is a join, chosen from what happened between the two shots.** `[course]`
-    Write `transition` on every shot after the first, from the ordered table in scenes-schema
+    Write `transition` on every shot after the first, from the table in scenes-schema
     §scene transition (one home — do not copy the table here): `jcut` when the two shots are
-    one continuous moment, `dissolve` when time or place moved inside one world, `dip` at a
-    distance the story treats as a break, `push` for siblings, `iris` for a find, `blur` for
+    one continuous moment; prefer `dip` when a new scene changes place or time. Use
+    `dissolve` when the pictures should blend without black, `push` for siblings, `iris` for a find, `blur` for
     a memory, `zoom` for going in, `whip` for a swerve, `cut` for a smash. Every carry is a
     split edit — the sound leads and the picture never changes in silence. Consecutive stills
     in one scene change size by two steps, change `coverage.azimuth` by 30° or more, or put the
