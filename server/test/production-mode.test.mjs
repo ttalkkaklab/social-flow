@@ -341,7 +341,20 @@ function reuseFixture(video) {
  approve(w);return w;
 }
 test('explicit imports pass scene and production gates at zero generation cost, but never a new API call',()=>withBoard(({board,work,save})=>{
- const video=movingClip(path.join(work,'import.mp4'));
+ const originalVideo=movingClip(path.join(work,'original.mp4'));
+ const video=path.join(work,'import.mp4');
+ assert.equal(spawnSync('ffmpeg',['-v','error','-i',originalVideo,'-vf','scale=720:1280','-c:v','libx264','-preset','ultrafast',video],{encoding:'utf8'}).status,0);
+ const {inspectReuse}=require('../../skills/produce/references/inspect-reuse.js');
+ const imported=inspectReuse(video,'original episode',10);
+ assert.deepEqual(imported.sourceDimensions,{width:720,height:1280});
+ assert.equal(imported.reuse.sha256,digest(readFileSync(video)));
+ assert.equal(imported.reuse.sourceRange.end,10+imported.duration);
+ assert.equal(imported.reuse.sourceRange.start,10);
+ assert.equal(imported.reuse.sourceEpisode,'original episode');
+ assert.equal(imported.reuse.clip,video);
+ assert.ok(Math.abs(imported.duration-5)<.05);
+ assert.equal(imported.playback,undefined);
+ assert.throws(()=>inspectReuse(video,'original episode',NaN),/do not guess/);
  const w=reuseFixture(video);save(w);
  const run=spawnSync(process.execPath,[path.join(root,'skills/storyboard/references/check-scenes.js'),board,'--json'],{encoding:'utf8'});
  assert.notEqual(run.status,0,run.stdout+run.stderr);
@@ -369,7 +382,7 @@ test('explicit imports pass scene and production gates at zero generation cost, 
  assert.equal(spawnSync('ffmpeg',['-v','error','-f','lavfi','-i','color=c=gray:s=320x240:r=1:d=5','-c:v','libx264','-preset','ultrafast',low],{encoding:'utf8'}).status,0);
  const lowScene=structuredClone(w.SCENES[0]);lowScene.visual.reuse.clip=low;lowScene.visual.reuse.sha256=digest(readFileSync(low));
  const {validateReuseAsset}=require('../../skills/produce/references/check-production.js');
- assert.throws(()=>validateReuseAsset(board,lowScene,w.FORMAT),/1080p/);
+ assert.throws(()=>validateReuseAsset(board,lowScene,w.FORMAT),/720p source minimum/);
  lowScene.visual.reuse.clip=path.join(work,'missing.mp4');assert.throws(()=>validateReuseAsset(board,lowScene,w.FORMAT),/ENOENT/);
  reviews[0].playback=false;saveReviews();assert.match(check(board,{ready:true}).errors.join(),/full playback/);reviews[0].playback=true;
  reviews[0].videoSha256='0'.repeat(64);saveReviews();assert.match(check(board,{ready:true}).errors.join(),/review is stale/);
@@ -429,7 +442,9 @@ function spoilerFixture(video) {
  approve(w);return w;
 }
 test('a spoiler cover states the answer and the close still has to be forwardable',()=>withBoard(({board,work,save})=>{
- const video=movingClip(path.join(work,'import.mp4'));
+ const originalVideo=movingClip(path.join(work,'original.mp4'));
+ const video=path.join(work,'import.mp4');
+ assert.equal(spawnSync('ffmpeg',['-v','error','-i',originalVideo,'-vf','scale=720:1280','-c:v','libx264','-preset','ultrafast',video],{encoding:'utf8'}).status,0);
  const gate=()=>spawnSync(process.execPath,[path.join(root,'skills/storyboard/references/check-scenes.js'),board,'--json'],{encoding:'utf8'});
  const w=spoilerFixture(video);save(w);
  const pass=gate();assert.equal(pass.status,0,pass.stdout+pass.stderr);
@@ -729,3 +744,19 @@ test('partial production choices can assemble generated-cut prompts and model qu
     assert.equal(quote(win).options[key].clips, 1);
   }
 });
+
+ test('source resolution follows reuse policy or the selected generation resolution, in either orientation',()=>{
+  const {resolutionErrors}=require('../../skills/produce/references/check-production.js');
+  for(const wide of [false,true]){
+   const format=wide?'youtube-long-16x9':'shorts-9x16';
+   const hd=wide?{width:1280,height:720}:{width:720,height:1280};
+   const imported={visual:{reuse:{}}};
+   assert.deepEqual(resolutionErrors(imported,hd,format),[]);
+   assert.ok(resolutionErrors(imported,{width:hd.height,height:hd.width},format).length);
+   assert.ok(resolutionErrors(imported,{width:hd.width-1,height:hd.height},format).length);
+   assert.ok(resolutionErrors(imported,{},format).length);
+   assert.ok(resolutionErrors(imported,null,format).length);
+   assert.deepEqual(resolutionErrors({visual:{video:{resolution:'720p'}}},hd,format),[]);
+   assert.match(resolutionErrors({visual:{video:{resolution:'1080p'}}},hd,format).join(),/1080p/);
+  }
+ });

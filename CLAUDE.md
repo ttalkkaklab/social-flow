@@ -69,6 +69,16 @@ Quality is reviewed against source images and actual clip playback, with asset-b
 a metadata pass alone is not proof of visual quality. Never hide a failed clip with a still,
 HTML fallback, looping or freeze padding. The builder validates the approved video manifest.
 
+## Existing video reuse (user directive, 2026-09-12)
+
+Existing clips at 720×1280 portrait or 1280×720 landscape are eligible for reuse.
+The final 1080p canvas is an output size, not a minimum for imported source files.
+Measure hashes and duration locally and inspect playback to fill missing import records;
+never invent provenance or reviews. Follow the `visual.reuse` contract in scenes-schema.md.
+A missing legacy record or a 720p source does not authorize paid regeneration. Prefer
+existing clips and local edits; a reuse-only episode has $0 new video generation cost.
+New generations follow the explicitly selected model resolution, including 720p.
+
 ## Nothing is drawn over video — explanation is an HTML slide (user directive, 2026-09-05)
 
 This outranks every other rule in the plugin, the skills and the reference docs.
