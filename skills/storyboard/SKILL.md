@@ -427,14 +427,14 @@ Core rules:
   Across shots establish then go close, use one `cu` per scene, `choker`/`ecu` once or twice per
   episode, and one reasoned `dutch`; keep hooks and speech at `eye`, and hold a wide ≥1.5× a close
   (directing-grammar §6). The same fields steer filmed-shot distance, eye height and 180° line (§7).
-- **Decide each join after the scenes are settled (4b).** Every shot after the first gets a
-  `edit.reason` and `edit.continuity` for each new boundary, following
-  [cinematic-edit.md](../produce/references/cinematic-edit.md). Match source composition and
-  action direction across neighbours, select the source in-point and reserve live outgoing
-  handles in the generated clip duration before the cost quote. Then write
-  `transition`, chosen from what happened between the two shots in the ordered table of
-  scenes-schema §scene transition — `jcut` only when nothing but the camera moved, `cut` only
-  for a smash. `check-scenes` fails a boundary with none.
+- **Decide each join after the scenes are settled (4b).** Write `transition`,
+  `edit.reason` and `edit.continuity` for every new boundary, following
+  [cinematic-edit.md](../produce/references/cinematic-edit.md). Prefer `dip` (fade through
+  black) when a new scene changes place or time. Choose same-scene joins by action.
+  Match composition and action across neighbours, select the source in-point and reserve
+  live outgoing handles before the cost quote. `storyboard_apply.transitions` patches
+  effects without replacing shots. The approval page shows the choice below each shot.
+  `check-scenes` fails a boundary with no transition; scenes-schema explains each effect.
 - **Composition — the format picked in §1.5 sets the band.** The source of truth for the
   constants is `formats.js`, and the `storyboard.html` check strip measures against those
   values for you — with the channel's own band on top of the short-form preset.

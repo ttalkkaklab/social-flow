@@ -40,7 +40,10 @@ Actual playback and frame reviews are tied to source/clip hashes, and the builde
 selected files and refuses loops or freeze padding. These checks enforce review, not a
 guarantee that a generator matches the reference on its first attempt.
 
-Assembly compiles each storyboard transition into the production timeline. Moving transitions
+Assembly compiles each storyboard transition into the production timeline.
+`storyboard_apply.transitions` changes selected incoming effects without replacing shots.
+For scene changes in place or time, prefer `dip` (fade through black); the storyboard
+displays the effect, timing and reason below each shot. Moving transitions
 use unseen outgoing video frames, with explicit source trims and narration margins. Missing
 handles or conflicting card options block the build. The checked master includes boundary
 frame verification and short playback excerpts for continuity review; see the

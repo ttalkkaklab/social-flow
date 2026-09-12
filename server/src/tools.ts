@@ -4082,7 +4082,7 @@ Returns: JSON — { version, format, shots, sequences[…scenes[…shots]], unpl
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     description: `Write a storyboard's scenes.js from a sequence → scene → shot model, or patch part of it, in one call. Every shot is validated against the grammar vocabularies (type · beat · size · angle · infoType · shareType · render.mode · transition), the structure against its rules (one place and time per scene, a charge that turns, every scene in exactly one sequence, shots grouped by scene in sequence order, two sizes per scene), and the derived shot labels (sceneSlug · sequence) are written from the structure. Nothing is written when a violation is found — the findings come back instead. Warnings are written and reported.
 
-Use it to author a new board (set = { structure, shots }) after the narration is approved (storyboard §4), and to change one thing later (scenes / sequences / shots by key, insertShots, removeShots, globals for FORMAT · THEME · COMPREHENSION · STORY · PRODUCTION · MUSIC). One call carries the whole change — do not write scenes.js by hand and do not call this once per shot. dryRun:true validates without writing.
+Use it to author a new board (set = { structure, shots }) after the narration is approved (storyboard §4), and to change one thing later (scenes / sequences / shots by key, insertShots, removeShots, globals for FORMAT · THEME · COMPREHENSION · STORY · PRODUCTION · MUSIC). Use transitions to change only the effect before selected shots without replacing their narration or visuals. dip fades out to black and fades the next scene in; prefer it for changes of place or time unless a specific cut calls for another effect. One call carries the whole change — do not write scenes.js by hand and do not call this once per shot. dryRun:true validates without writing.
 Do NOT pass a shot's visual plan through a summary — pass the object scenes-schema.md defines (visual · shot.space · visual.camera · visual.video …); unknown keys on a shot pass through untouched. Editing an approved board drops its \`// approved:\` line; it is approved again at the HITL gate.
 
 Scene: { no, place, time, event, charge: { open: "+"|"-", close: "+"|"-"|"++"|"--" }, turn, out? }. Sequence: { id, title, purpose, question?, payoff?, scenes: [no…] }. The reasons for each field are in scenes-schema.md §structure.
@@ -4106,6 +4106,17 @@ Returns: the file written or not, counts, and findings (! violation · warning).
         scenes: { type: 'array', items: { type: 'object', description: '{ no, place, time, event, charge, turn, out? }' }, description: 'Upsert scenes by no' },
         shots: { type: 'array', items: { type: 'object', description: 'One positional upsert', properties: { no: { type: 'number', description: '1-based position' }, shot: { type: 'object', description: 'The scenes-schema.md shot object' } }, required: ['no', 'shot'] }, description: 'Upsert shots by 1-based position; no = length + 1 appends' },
         insertShots: { type: 'array', items: { type: 'object', description: 'One insert', properties: { after: { type: 'number', description: '1-based position to insert after; 0 = at the start' }, shots: { type: 'array', items: { type: 'object', description: 'The scenes-schema.md shot object' }, description: 'Shots to insert, in order' } }, required: ['after', 'shots'] }, description: 'Insert shots after a 1-based position (0 = at the start)' },
+        transitions: {
+          type: 'array', minItems: 1,
+          description: 'Patch incoming transitions only, by final shot position after inserts/removals. Prefer dip for a gradual fade through black when place or time changes. Same-scene shots keep their chosen join. Example: [{no:3,transition:"dip",reason:"The next scene begins at night"}].',
+          items: { type: 'object', additionalProperties: false, properties: {
+            no: { type: 'integer', minimum: 1, description: 'Incoming shot, 1-based' },
+            transition: { type: 'string', enum: ['cut','dip','dip:white','jcut','dissolve','iris','blur','zoom','push:l2r','push:r2l','push:u2d','push:d2u','whip:l2r','whip:r2l','whip:u2d','whip:d2u'], description: 'dip = previous picture fades to black, then this picture fades in (up to 0.30s each). dissolve blends pictures without black. jcut leads with sound, then cuts.' },
+            transitionSeconds: { type: 'number', minimum: 0.08, maximum: 0.8, description: 'Moving joins only; omit for cut, dip and dip:white' },
+            reason: { type: 'string', minLength: 1, description: 'Why this boundary uses this effect' },
+            continuity: { type: 'string', minLength: 1, description: 'What connects the two pictures' },
+          }, required: ['no', 'transition', 'reason'] },
+        },
         removeShots: { type: 'array', items: { type: 'number', description: '1-based position' }, description: '1-based positions to drop (resolved before inserts)' },
         removeScenes: { type: 'array', items: { type: 'number', description: 'Scene number' }, description: 'Scene numbers to drop from STRUCTURE.scenes and from every sequence' },
         removeSequences: { type: 'array', items: { type: 'string', description: 'Sequence id' }, description: 'Sequence ids to drop' },

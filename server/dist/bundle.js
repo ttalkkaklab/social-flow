@@ -85774,7 +85774,7 @@ Returns: JSON \u2014 { version, format, shots, sequences[\u2026scenes[\u2026shot
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     description: `Write a storyboard's scenes.js from a sequence \u2192 scene \u2192 shot model, or patch part of it, in one call. Every shot is validated against the grammar vocabularies (type \xB7 beat \xB7 size \xB7 angle \xB7 infoType \xB7 shareType \xB7 render.mode \xB7 transition), the structure against its rules (one place and time per scene, a charge that turns, every scene in exactly one sequence, shots grouped by scene in sequence order, two sizes per scene), and the derived shot labels (sceneSlug \xB7 sequence) are written from the structure. Nothing is written when a violation is found \u2014 the findings come back instead. Warnings are written and reported.
 
-Use it to author a new board (set = { structure, shots }) after the narration is approved (storyboard \xA74), and to change one thing later (scenes / sequences / shots by key, insertShots, removeShots, globals for FORMAT \xB7 THEME \xB7 COMPREHENSION \xB7 STORY \xB7 PRODUCTION \xB7 MUSIC). One call carries the whole change \u2014 do not write scenes.js by hand and do not call this once per shot. dryRun:true validates without writing.
+Use it to author a new board (set = { structure, shots }) after the narration is approved (storyboard \xA74), and to change one thing later (scenes / sequences / shots by key, insertShots, removeShots, globals for FORMAT \xB7 THEME \xB7 COMPREHENSION \xB7 STORY \xB7 PRODUCTION \xB7 MUSIC). Use transitions to change only the effect before selected shots without replacing their narration or visuals. dip fades out to black and fades the next scene in; prefer it for changes of place or time unless a specific cut calls for another effect. One call carries the whole change \u2014 do not write scenes.js by hand and do not call this once per shot. dryRun:true validates without writing.
 Do NOT pass a shot's visual plan through a summary \u2014 pass the object scenes-schema.md defines (visual \xB7 shot.space \xB7 visual.camera \xB7 visual.video \u2026); unknown keys on a shot pass through untouched. Editing an approved board drops its \`// approved:\` line; it is approved again at the HITL gate.
 
 Scene: { no, place, time, event, charge: { open: "+"|"-", close: "+"|"-"|"++"|"--" }, turn, out? }. Sequence: { id, title, purpose, question?, payoff?, scenes: [no\u2026] }. The reasons for each field are in scenes-schema.md \xA7structure.
@@ -85798,6 +85798,18 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
         scenes: { type: "array", items: { type: "object", description: "{ no, place, time, event, charge, turn, out? }" }, description: "Upsert scenes by no" },
         shots: { type: "array", items: { type: "object", description: "One positional upsert", properties: { no: { type: "number", description: "1-based position" }, shot: { type: "object", description: "The scenes-schema.md shot object" } }, required: ["no", "shot"] }, description: "Upsert shots by 1-based position; no = length + 1 appends" },
         insertShots: { type: "array", items: { type: "object", description: "One insert", properties: { after: { type: "number", description: "1-based position to insert after; 0 = at the start" }, shots: { type: "array", items: { type: "object", description: "The scenes-schema.md shot object" }, description: "Shots to insert, in order" } }, required: ["after", "shots"] }, description: "Insert shots after a 1-based position (0 = at the start)" },
+        transitions: {
+          type: "array",
+          minItems: 1,
+          description: 'Patch incoming transitions only, by final shot position after inserts/removals. Prefer dip for a gradual fade through black when place or time changes. Same-scene shots keep their chosen join. Example: [{no:3,transition:"dip",reason:"The next scene begins at night"}].',
+          items: { type: "object", additionalProperties: false, properties: {
+            no: { type: "integer", minimum: 1, description: "Incoming shot, 1-based" },
+            transition: { type: "string", enum: ["cut", "dip", "dip:white", "jcut", "dissolve", "iris", "blur", "zoom", "push:l2r", "push:r2l", "push:u2d", "push:d2u", "whip:l2r", "whip:r2l", "whip:u2d", "whip:d2u"], description: "dip = previous picture fades to black, then this picture fades in (up to 0.30s each). dissolve blends pictures without black. jcut leads with sound, then cuts." },
+            transitionSeconds: { type: "number", minimum: 0.08, maximum: 0.8, description: "Moving joins only; omit for cut, dip and dip:white" },
+            reason: { type: "string", minLength: 1, description: "Why this boundary uses this effect" },
+            continuity: { type: "string", minLength: 1, description: "What connects the two pictures" }
+          }, required: ["no", "transition", "reason"] }
+        },
         removeShots: { type: "array", items: { type: "number", description: "1-based position" }, description: "1-based positions to drop (resolved before inserts)" },
         removeScenes: { type: "array", items: { type: "number", description: "Scene number" }, description: "Scene numbers to drop from STRUCTURE.scenes and from every sequence" },
         removeSequences: { type: "array", items: { type: "string", description: "Sequence id" }, description: "Sequence ids to drop" },
@@ -89382,6 +89394,33 @@ var storyboardCheckSchema = external_exports.object({
   draft: external_exports.boolean().default(false).describe("The story pass (storyboard \xA74a) \u2014 machine-layer absences are deferred, not violations")
 });
 var globalsSchema = external_exports.record(external_exports.string().regex(/^[A-Z][A-Z0-9_]*$/, "a window.* global is UPPER_CASE"), external_exports.unknown());
+var transitionPatchSchema = external_exports.object({
+  no: external_exports.number().int().positive().describe("Incoming shot number, 1-based, after removals and inserts"),
+  transition: external_exports.enum([
+    "cut",
+    "dip",
+    "dip:white",
+    "jcut",
+    "dissolve",
+    "iris",
+    "blur",
+    "zoom",
+    "push:l2r",
+    "push:r2l",
+    "push:u2d",
+    "push:d2u",
+    "whip:l2r",
+    "whip:r2l",
+    "whip:u2d",
+    "whip:d2u"
+  ]),
+  transitionSeconds: external_exports.number().finite().min(0.08).max(0.8).optional(),
+  reason: nonEmpty,
+  continuity: nonEmpty.optional()
+}).strict().refine(
+  (v) => !["cut", "dip", "dip:white"].includes(v.transition) || v.transitionSeconds === void 0,
+  "cut and dip do not accept transitionSeconds; dip fades each side for up to 0.30 seconds"
+);
 var storyboardApplySchema = external_exports.object({
   path: external_exports.string().min(1).describe("The storyboard directory (scenes.js is created there when missing), or its scenes.js"),
   draft: external_exports.boolean().default(false).describe("The story pass (storyboard \xA74a) \u2014 camera-continuity records (lineCrossing, coverage) are deferred, not violations"),
@@ -89391,6 +89430,7 @@ var storyboardApplySchema = external_exports.object({
   scenes: external_exports.array(sceneSchema).optional().describe("Upsert scenes by no"),
   shots: external_exports.array(external_exports.object({ no: external_exports.number().int().positive(), shot: shotSchema })).optional().describe("Upsert shots by 1-based position; no = length + 1 appends"),
   insertShots: external_exports.array(external_exports.object({ after: external_exports.number().int().min(0), shots: external_exports.array(shotSchema).min(1) })).optional().describe("Insert shots after a 1-based position (0 = at the start). Later positions shift"),
+  transitions: external_exports.array(transitionPatchSchema).min(1).optional().describe("Change only incoming transitions; dip fades through black. Keeps narration and visuals intact"),
   removeShots: external_exports.array(external_exports.number().int().positive()).optional().describe("1-based positions to drop, resolved before the insert"),
   removeScenes: external_exports.array(external_exports.number().int().positive()).optional(),
   removeSequences: external_exports.array(external_exports.string()).optional(),
@@ -89507,6 +89547,32 @@ function applyPatch(win, patch) {
       if (after > shots.length) throw new Error(`insertShots: after ${after} is past the last shot (${shots.length})`);
       shots.splice(after, 0, ...add);
     }
+  }
+  const transitionTargets = /* @__PURE__ */ new Set();
+  for (const change of patch.transitions ?? []) {
+    const source = shots[change.no - 1];
+    if (!source) throw new Error(`transitions: there is no shot ${change.no}`);
+    if (transitionTargets.has(change.no)) throw new Error(`transitions: duplicate shot ${change.no}`);
+    transitionTargets.add(change.no);
+    if (["broll", "outro"].includes(source.type)) throw new Error("Spliced shots use their own assembly transition");
+    const moving = !["cut", "dip", "dip:white"].includes(change.transition);
+    if (moving && !shots.slice(0, change.no - 1).some((s2) => !["broll", "outro"].includes(s2.type)))
+      throw new Error("First shot cannot carry a previous picture");
+    if (moving) {
+      const previous = shots[change.no - 2];
+      if (!previous || ["broll", "outro"].includes(previous.type))
+        throw new Error("A moving carry cannot bridge an inserted recording; choose cut or dip");
+      if (previous.visual?.reuse !== void 0)
+        throw new Error("Reused clips cannot supply outgoing live handles; choose cut or dip");
+      if (previous.visual?.sync === true || source.visual?.sync === true)
+        throw new Error("Sync footage requires cut or dip, not a moving carry");
+    }
+    const edit = { ...source.edit ?? {}, reason: change.reason };
+    if (!moving || source.transition !== change.transition) delete edit.transitionSeconds;
+    if (change.transitionSeconds !== void 0) edit.transitionSeconds = change.transitionSeconds;
+    if (change.continuity !== void 0) edit.continuity = change.continuity;
+    if (moving && Number(edit.pre ?? 0) !== 0) throw new Error("Moving transitions require edit.pre=0; update the shot timing first");
+    shots[change.no - 1] = { ...source, transition: change.transition, edit };
   }
   next.SCENES = shots.map((shot) => ({ ...shot }));
   const findings = [];
@@ -93648,7 +93714,7 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
 // src/index.ts
 import { readFileSync as readFinalRequest } from "node:fs";
 var server = new Server(
-  { name: "social-flow", version: "0.77.1" },
+  { name: "social-flow", version: "0.77.2" },
   { capabilities: { tools: {} } }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {
