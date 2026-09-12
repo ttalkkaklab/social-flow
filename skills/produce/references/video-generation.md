@@ -180,6 +180,11 @@ generated cover. These three are generated only when the episode has that kind o
   **Make exactly what the storyboard has** — skip a planned slot and an approved scene
   quietly disappears; add a slot that isn't there and you've broken the contract and wasted
   money.
+
+  Existing 720p clips follow the `visual.reuse` source contract. New Seedance or host
+  clips follow the selected model resolution. The Veo 1080p preference below applies
+  only to new Veo b-roll requests; missing old metadata never requires regeneration.
+
   - **Generate 8 seconds, use what you need** — on Veo the API only allows 8 seconds at 1080p.
     The body is 1080×1920, so don't generate at 720p and upscale (user decision 2026-08-11 — if
     you need an upscale, just use 1080p). The length actually used is the storyboard broll

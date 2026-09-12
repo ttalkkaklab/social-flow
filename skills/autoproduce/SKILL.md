@@ -694,6 +694,11 @@ the price.
   (Support code 17301594) — the plan gate catches it first as P0-10, but if
   generation drops into no-response, remake the person as an adult and retry
   that episode.
+
+  Existing 720p clips follow the `visual.reuse` source contract. New Seedance or host
+  clips follow the selected model resolution. The Veo 1080p preference below applies
+  only to new Veo b-roll requests; missing old metadata never requires regeneration.
+
   **Generate 8 seconds (1080p is 8-second-only); use only the broll scene's
   `duration` (default 4s)** — per produce §6's trim+mix conventions, cut from
   the head of the original and keep the original. No upscaling (the body is
