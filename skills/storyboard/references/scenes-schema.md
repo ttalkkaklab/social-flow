@@ -596,9 +596,11 @@ sequence: "풀기 1"                 // sequence head. Used with beat, the docum
 
 ## Production mode — `window.PRODUCTION`
 
-Use [production-mode.md](production-mode.md) for the HITL choice and machine fields. Show both
-modes with video-only first-pass/retry costs and the explicit cap before assets. `hybrid` uses
-1–2 videos plus purpose-routed HTML/still-camera scenes. `full_video` uses every new scene as
+Use [production-mode.md](production-mode.md) for the HITL choice and machine fields. Show all four
+choices (100% 이상, 50% 이상, 30% 이상, 훅만 영상) with video-only first-pass/retry costs
+and the explicit cap before assets. `video_50` and `video_30` enforce minimum shares of new
+cuts rounded up; `hook_only` generates only the opening hook. Other new cuts use purpose-routed
+HTML/still-camera scenes. Existing `hybrid` approvals retain their 1–2 clip rule. `full_video` uses every new scene as
 `visual.video` and the selected episode style, including physical explanations; this replaces
 only the hybrid renderer and generated-count restrictions below. `MOTION_POLICY` remains the
 channel snapshot. Actual approval binds the quote fingerprint; changing inputs requires a new
@@ -1575,9 +1577,11 @@ space: {
   frame:  "camera",
   layout: "person on the left third, kitchen door on the right",
   facing: "person faces camera-right, three-quarter view",
-  line:   "A left, B right",
+  line:   "B left, A right",
   light:  "key from camera-left"
-}
+},
+coverage: { azimuth: 35 },
+lineCrossing: { method: "neutral", from: "A left, B right", to: "B left, A right", reason: "head-on shot resets the screen direction", bridgeShot: 4 }
 ```
 
 **Required on every shot that becomes a generated still** — cover and points backgrounds, and
@@ -1602,6 +1606,24 @@ the PNG already holds the floor plan.
 | `facing` | a person is on screen (an oriented object — a car, a desk — may take one too) | the visible result (`faces camera-right`, `seen from behind`, `the car faces left of frame`). Never `left view of` |
 | `line` | two people, or a person and what they look at, share the `scene` number | the 180° sentence, kept true on every shot of that scene |
 | `light` | optional | key direction in the same camera frame (`key from camera-left`) |
+
+### Axis crossings and 30° coverage
+
+`shot.lineCrossing` belongs on the first shot from a new side of an existing axis. It is
+`{ method, from, to, reason }`, where `method` is `camera_move`, `subject_move`, `neutral`, or
+`intentional`. A `neutral` crossing also names `bridgeShot`; that shot sits in the same scene
+between the last shot on the old side and this one, has `lineNeutral: true` and no `space.line`.
+The checker compares `from` and `to` with the locked lines, so a bare flip cannot pass.
+Deliberate crossings are capped at two in one episode.
+
+`shot.coverage.azimuth` is the horizontal bearing from 0 to 180 degrees inside the selected side
+of the axis. It is not `shot.angle`, which only records camera height. Two adjacent picture shots
+in one scene that change size by fewer than two ranks need azimuths at least 30 degrees apart, or
+the incoming shot names `coverage.action` for the visible action that hides the cut. The rule
+re-films one subject: `two`·`three`·`ots`·`pov`·`back`·`cutaway`·`reaction` have no rank and are
+outside it, and a shot whose `lineCrossing` passes its checks is its own escape. The full check blocks a
+missing or insufficient record; the story pass (`draft` on `storyboard_apply` and
+`storyboard_check`) defers it until camera work.
 
 produce runs fine on an old `scenes.js` without `space`. The check strip warns; camera mode
 scores the gap; image mode compares the PNG to `layout` and `facing` when they are written.
@@ -2919,6 +2941,10 @@ strip says no violations.
       by `assemble-bg-prompt.js` (directing-grammar §3.5 · §frame space). No `left view of`, no
       allocentric "from X's right", no metres in the space slots. Image→video motion prompts
       do not re-describe sides, facing, or lighting
+- [ ] **Every 180° line change has `shot.lineCrossing`** with matching `from` and `to`. A neutral
+      bridge has `lineNeutral: true` and `bridgeShot`; deliberate crossings are no more than two
+- [ ] **Every risky adjacent picture cut states its 30° escape route**: two size ranks, two
+      `coverage.azimuth` values at least 30° apart, or `coverage.action` on the incoming shot
 - [ ] **A still whose subject is the place is framed three-quarter** (two walls visible), and a
       scene that moves to a new place or time names its palette in three colours rather than a
       mood word (directing-grammar §3.5). A shot that follows a hard cut, a flashback, or the

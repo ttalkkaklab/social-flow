@@ -269,7 +269,8 @@ space: {
   facing: "person faces camera-right, three-quarter view",
   line:   "A left, B right",                                 // 180° lock — two people, or a person and what they look at
   light:  "key from camera-left"                             // optional
-}
+},
+coverage: { azimuth: 35 }                                    // 30° bearing inside the chosen side of the axis
 ```
 
 **The reference frame is the camera, always.** "Left" means left of the picture. Models handle
@@ -324,7 +325,10 @@ Rules:
   `seen from behind, face turned away` (the cover's person-contract wording). `left view of`
   and `front view of` are camera-inference and fail the assembler.
 - **`line` is the 180° sentence.** Required when two people (or a person and what they look at)
-  share the scene; omitted on a single-subject shot.
+  share the scene; omitted on a single-subject shot. The first shot from a new side writes
+  `lineCrossing`: `camera_move`, `subject_move`, `neutral`, or `intentional`. A neutral bridge
+  shot carries `lineNeutral: true` and the crossing names its shot number. The checker blocks an
+  unexplained line change.
 - **`light` is optional** and uses the same camera frame (`key from camera-left`, shadow
   falling right). Directional light is one of the few spatial cues the still actually keeps.
 - **A room is drawn from three-quarters** `[course]`. Ask for a place head-on and the model has
@@ -532,6 +536,8 @@ what the audience is supposed to get.
 11. **A scene keeps its `space.line`.** Two people (or a person and what they look at) lock
     "A left, B right" on the first shot of the scene; later shots of the same `scene` number
     keep that sentence unless a legal 180° crossing is written on the shot (§7 · §3.5).
+    The crossing record says which move the viewer sees. A changed sentence without that record
+    does not pass.
 12. **A story arc moves the size with the tension** (scenes-schema §playback order — cover →
     hooking → body → turn → result). Close on the moment for the cover; wide for the setup,
     which also pays the close-up's debt (rule 2); tightening through the build; the tightest
@@ -580,8 +586,9 @@ what the audience is supposed to get.
     distance the story treats as a break, `push` for siblings, `iris` for a find, `blur` for
     a memory, `zoom` for going in, `whip` for a swerve, `cut` for a smash. Every carry is a
     split edit — the sound leads and the picture never changes in silence. Consecutive stills
-    in one scene change size by two steps or the angle (the 30° rule in §7); a join never
-    stands in for a picture match.
+    in one scene change size by two steps, change `coverage.azimuth` by 30° or more, or put the
+    visible action in the incoming shot's `coverage.action`. `angle` is camera height, so eye
+    level to high angle does not satisfy the 30° rule. A join never stands in for a picture match.
 
 ---
 
@@ -606,8 +613,9 @@ below are what the script's standing notes carry `[course]`.
   has the better light" is the mistake that produces two monologues instead of a dialogue — stay
   on the side and move closer or turn instead.
 - **Re-filming the same subject: change the angle by 30° or more, or the size by two steps,
-  or cut on an action** — a half-step move is the worst of both and the cut jumps. Decisively
-  different, or not different at all. (The screencast lane is the exception by design: a person
+  or cut on an action** — write the horizontal move as `coverage.azimuth` in the chosen 0–180°
+  half of the axis. When the cut rides an action, write it in `coverage.action`. A half-step move
+  is the worst of both and the cut jumps. Decisively different, or not different at all. (The screencast lane is the exception by design: a person
   talking to camera while the screen rolls is the vlog contract — the flow of speech, not the
   continuity of the frame, governs, so the silence cuts there don't read as jumps.)
 - **Sound follows size** — a wide shot may have the room; a close-up needs the voice clean.
