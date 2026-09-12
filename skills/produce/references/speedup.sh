@@ -47,9 +47,9 @@ cd "$WORK"
 [ -f format.env ] && . ./format.env
 
 SPEED=${2:-${SPEED:-1.0}}
-node - "$HERE" "$SPEED" "${ATEMPO_MIN:-1}" "${ATEMPO_MAX:-1}" <<'JS'
-const [here,speed,min,max]=process.argv.slice(2);
-require(here+'/check-tts-quality.js').checkTempo(process.cwd(),speed,min,max);
+node - "$HERE" "$SPEED" <<'JS'
+const [here,speed]=process.argv.slice(2);
+require(here+'/check-tts-quality.js').checkTempo(process.cwd(),speed);
 JS
 FPS=${FPS:-30}
 OUTRO_ASSET=${OUTRO_ASSET:-outro.mp4}

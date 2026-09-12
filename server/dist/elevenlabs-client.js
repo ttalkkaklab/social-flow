@@ -1,3 +1,4 @@
+import { authorizeSpeed } from '../../skills/produce/references/tts-speed-policy.js';
 /**
  * ElevenLabs speech client — REST (`xi-api-key`), plain fetch.
  *
@@ -420,6 +421,7 @@ function voiceSettingsFrom(request) {
 // ── The 3 calls ──────────────────────────────────────────────────
 /** Single-voice synthesis — POST /v1/text-to-speech/{voice_id}[/with-timestamps] */
 export async function generateElevenLabsSpeech(request) {
+    authorizeSpeed(request.outputPath || process.cwd(), 'generation', request.speed ?? 1);
     const outputDir = request.outputPath || process.cwd();
     const filename = request.filename || `elevenlabs_${Date.now()}${extensionForFormat(request.outputFormat)}`;
     try {

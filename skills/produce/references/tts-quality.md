@@ -53,8 +53,9 @@ vendor fields while preserving the episode manifest and seed. Generate a complet
 one call and rely on final assembled listening to detect drift across v3 scenes. Do not
 silently switch the approved model.
 
-Set the desired rate with `generation.speed` (0.7–1.2). For ElevenLabs use `playbackSpeed: 1`,
-`SPEED=1`, `ATEMPO_MIN=1` and `ATEMPO_MAX=1`. Both assembly and the speed pass reject digital
+Default `generation.speed` to 1.0. A different rate requires the explicit user request
+record in [tts-speed.md](tts-speed.md); a profile value is not approval. For ElevenLabs use `playbackSpeed: 1`,
+`SPEED=1`. Assembly always preserves 1.0x and ignores legacy tempo bounds. The speed pass rejects digital
 tempo changes on ElevenLabs narration. Measure the resulting duration and fit the picture to
 it. Do not stack an engine speed with a second playback multiplier. Preserve the profile's
 stability setting unless a listening test justifies an episode-wide change; a higher value
