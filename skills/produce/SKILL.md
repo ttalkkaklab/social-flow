@@ -3,7 +3,7 @@ name: produce
 description: >
   Builds the video and the per-platform text from an already-approved storyboard. Use when the user asks to "영상 만들어", "콘텐츠 제작", "produce the video", "플랫폼별 콘텐츠 만들어", or right after a storyboard is approved. Turns the approved scenes.js under data/[channel]/episodes/[topic]/storyboard/ into a narrated 9:16 video at 1080x1920/30fps — generated backgrounds, TTS narration, BGM with ducking, kinetic subtitles, brand outro — plus the Threads, Instagram, Facebook and YouTube text under the episode's output/, checked on a phone viewport before publishing. Where recording/alignment.json exists it cuts the user's own screen recording instead of generating scenes. Boundary — storyboard plans and stops for approval, produce starts after it, autoproduce runs both unattended.
 argument-hint: "<channel> <topic> [platformCSV|auto]"
-allowed-tools: ["Bash", "Read", "Write", "Edit", "Glob", "AskUserQuestion", "Agent", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_generate_checked", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue", "mcp__social-flow__tts_list_voices", "mcp__social-flow__music_generate", "mcp__social-flow__music_generate_clip", "mcp__social-flow__music_generate_advanced", "mcp__social-flow__stock_search", "mcp__social-flow__suno_generate", "mcp__social-flow__suno_generate_sound", "mcp__social-flow__suno_generate_lyrics", "mcp__social-flow__suno_credits", "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__gpt_image_img2img", "mcp__social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__social-flow__seedance_img2video", "mcp__social-flow__seedance_reference", "mcp__social-flow__mlx_image_generate", "mcp__social-flow__mlx_image_edit", "mcp__social-flow__mlx_tts_generate", "mcp__social-flow__mlx_music_generate", "mcp__social-flow__mlx_video_generate", "mcp__social-flow__mlx_3d_generate"]
+allowed-tools: ["Bash", "Read", "Write", "Edit", "Glob", "AskUserQuestion", "Agent", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_generate_checked", "mcp__social-flow__tts_review_final", "mcp__social-flow__tts_elevenlabs_dictionary", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue", "mcp__social-flow__tts_list_voices", "mcp__social-flow__music_generate", "mcp__social-flow__music_generate_clip", "mcp__social-flow__music_generate_advanced", "mcp__social-flow__stock_search", "mcp__social-flow__suno_generate", "mcp__social-flow__suno_generate_sound", "mcp__social-flow__suno_generate_lyrics", "mcp__social-flow__suno_credits", "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__gpt_image_img2img", "mcp__social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__social-flow__seedance_img2video", "mcp__social-flow__seedance_reference", "mcp__social-flow__mlx_image_generate", "mcp__social-flow__mlx_image_edit", "mcp__social-flow__mlx_tts_generate", "mcp__social-flow__mlx_music_generate", "mcp__social-flow__mlx_video_generate", "mcp__social-flow__mlx_3d_generate"]
 ---
 # Per-platform content production — data/[channel]/episodes/[topic]/output/
 Turn the approved storyboard (`storyboard/scenes.js`) into a narrated video and per-platform text.
@@ -186,14 +186,14 @@ Read [story-quality.md](../storyboard/references/story-quality.md) and run `node
   ```bash
   PG=${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references
   node $PG/format-resolve.js storyboard/scenes.js --sh > .work/format.env
-  # profile.md §2's Playback speed — no line there, 1.0. Written once here because both
-  # build-reel.sh and speedup.sh source this file, so the build's caps and the shipped
+  # ElevenLabs: use 1 here and the profile rate as generation.speed. Other engines use
+  # profile §2 playback speed (default 1). Both builders source this file so the shipped
   # factor can't drift apart. `:=` takes the first assignment, so appending a second line
   # would silently keep the old value — the guard makes a rerun after a profile edit fail
   # loudly instead of quietly.
   grep -qF '${SPEED:=' .work/format.env \
     && echo "format.env already carries SPEED — edit that line instead of appending" \
-    || echo ": \"\${SPEED:=<the factor from profile.md §2>}\"" >> .work/format.env
+    || echo ": \"\${SPEED:=<1 for ElevenLabs; otherwise the playback factor from profile.md §2>}\"" >> .work/format.env
   # profile.md's `shortform_outro` — absent or `on` writes 1, `off` writes 0, substituted the way
   # the SPEED line wants a factor; **the key is short-form only**, so a `youtube-long-16x9` episode
   # writes 1 whatever the profile says (long-form always splices outro-16x9.mp4). **The flag decides
@@ -672,16 +672,14 @@ leaves it out of step with the video (scenes.js is the single source). When fixi
 numbers and proper nouns alone and work on the grain of the sentence.
 
 Use `tts_generate_checked` for every generated scene; read `references/tts-quality.md` first.
-The engine-specific calls below describe the wrapper's `generator` and `generation` arguments.
-A raw TTS call has no quality proof and cannot enter assembly.
+The calls below describe `generator` and `generation`; raw TTS has no assembly proof.
 
 One checked call per scene — the profile registry as it stands, and the script is the full text
 of that scene's narration segments' `tts` sentences joined with periods. `.work/pcm/c<n>.wav`.
 Don't split a scene into several calls by sentence (the voice varies between calls). Pass the
-same `tts` sentences as `segments`, and the profile's playback speed as `playbackSpeed` when
-§2 sets one: on an ElevenLabs take the wrapper lays a fixed pause at each segment boundary and
-writes `c<n>.wav.sentences.json`, which the builder snaps its reveals and cues to
-(`references/tts-quality.md` §Sentence spacing).
+same `tts` sentences as `segments`. ElevenLabs uses `playbackSpeed: 1` and sets the requested
+rate in `generation.speed`; other engines keep the profile's playback setting: on an ElevenLabs take the wrapper lays a fixed pause at each segment boundary and
+writes `c<n>.wav.sentences.json` for reveal/cue timing (`references/tts-quality.md` §Sentence spacing).
 
 **profile §2 decides the engine.** A new channel's narration default is `tts_local_generate`
 (Supertonic, local) — no key, no quota, and 0 cost however many times you rerun the episode,
@@ -690,8 +688,11 @@ emotion has to be acted, go to `tts_generate` (Gemini). The local side has no st
 A profile with `engine: elevenlabs` calls `tts_elevenlabs_generate` with the profile's
 voiceId · model · stability (and seed, if pinned) and leaves `outputFormat` at its default
 `wav_24000` — mono 24kHz WAV, the same spec as Gemini, so the builder reads it as-is. The
-checked wrapper adds `timestamps` itself and moves a pinned seed by one on each retake (the
-same seed returns the same bytes); don't pass `previousText`/`nextText` — the scene is one call.
+checked wrapper adds `timestamps` and preserves one episode seed on every retake. Pass
+`episode: {texts, index, seed}` so it derives the neighboring scene text automatically.
+For v3, the wrapper omits unsupported text context; final listening checks the scene joins.
+Set `SPEED=1` and `ATEMPO_MIN=ATEMPO_MAX=1`; control rate with `generation.speed` (0.7–1.2).
+Keep names intact and pin pronunciation dictionaries; see `references/tts-quality.md`.
 **Never pass an mp3_* outputFormat for narration**: build-reel.sh reads any non-RIFF audio
 file as raw PCM and that card becomes noise. A scene with three or more speakers goes to
 `tts_elevenlabs_dialogue` in one call (no per-speaker stitching, no 0.75s gaps). Audio tags

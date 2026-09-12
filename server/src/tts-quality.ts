@@ -32,9 +32,19 @@ export const checkedSpeechSchema = z.object({
   rejectTake: z.object({ audioSha256: z.string().regex(/^[a-f0-9]{64}$/), reason: z.string().trim().min(10).max(1000) }).strict().optional(),
   /** The scene's narration[].tts sentences in order — where the fixed pauses go (ElevenLabs takes). */
   segments: z.array(z.string().trim().min(1).max(1000)).min(1).max(80).optional(),
+  episode: z.object({
+    texts: z.array(z.string().trim().min(1).max(4000)).min(1).max(80),
+    index: z.number().int().nonnegative(), seed: z.number().int().min(0).max(4_294_967_295),
+  }).strict().optional(),
   sentencePause: z.number().min(0.25).max(1.5).default(0.5),
   playbackSpeed: z.number().min(0.5).max(3).default(1),
 }).strict().superRefine((value, ctx) => {
+  if (value.episode && (value.episode.index >= value.episode.texts.length || normalizeSpeech(value.episode.texts[value.episode.index]) !== normalizeSpeech(value.expectedText))) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['episode'], message: 'episode.index must select the complete expectedText' });
+  }
+  if (value.generator === 'tts_elevenlabs_generate' && value.playbackSpeed !== 1) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['playbackSpeed'], message: 'Use generation.speed (0.7–1.2) at synthesis; ElevenLabs narration must ship at playbackSpeed 1' });
+  }
   if (value.segments && normalizeSpeech(value.segments.join(' ')) !== normalizeSpeech(value.expectedText)) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['segments'], message: 'segments joined must read exactly as expectedText' });
   }
@@ -43,6 +53,8 @@ export type CheckedSpeechRequest = z.infer<typeof checkedSpeechSchema>;
 const score = z.number().finite().min(0).max(100);
 export const reviewSchema = z.object({
   accuracy: score, pronunciation: score, naturalness: score, clarity: score,
+  continuity: score.optional(),
+  continuityEvidence: z.string().trim().min(20).max(4000).optional(),
   confidence: z.number().finite().min(0).max(1),
   complete: z.boolean(),
   evidence: z.string().trim().min(20).max(4000),
@@ -70,8 +82,8 @@ export function characterErrorRate(expected: string, heard: string): number {
 }
 
 export interface Signal { duration: number; rmsDb: number; clippedFraction: number }
-export async function measureSignal(file: string): Promise<Signal> {
-  const { stdout } = await exec('ffmpeg', ['-v', 'error', '-i', file, '-map', '0:a:0', '-ac', '1', '-ar', '24000', '-f', 'f32le', 'pipe:1'], { encoding: 'buffer', maxBuffer: 12 * 1024 * 1024, timeout: 60000 });
+export async function measureSignal(file: string, maxSeconds = 120): Promise<Signal> {
+  const { stdout } = await exec('ffmpeg', ['-v', 'error', '-i', file, '-map', '0:a:0', '-ac', '1', '-ar', '24000', '-f', 'f32le', 'pipe:1'], { encoding: 'buffer', maxBuffer: Math.ceil(maxSeconds * 24000 * 4 + 1024), timeout: 60000 });
   const n = stdout.length / 4;
   if (!Number.isInteger(n) || n === 0) throw new Error('Empty or invalid audio');
   let sum = 0, clipped = 0;
@@ -82,10 +94,10 @@ export async function measureSignal(file: string): Promise<Signal> {
   }
   return { duration: n / 24000, rmsDb: 20 * Math.log10(Math.max(1e-12, Math.sqrt(sum / n))), clippedFraction: clipped / n };
 }
-export function signalFailures(signal: Signal, expected: string): string[] {
+export function signalFailures(signal: Signal, expected: string, maxSeconds = 120): string[] {
   const failures = [];
   if (![signal.duration, signal.rmsDb, signal.clippedFraction].every(Number.isFinite)) return ['Invalid signal measurement'];
-  if (signal.duration < 0.25 || signal.duration > Math.max(2, [...normalizeSpeech(expected)].length / 4.5 * 2) || signal.duration > 120) failures.push('Abnormal duration');
+  if (signal.duration < 0.25 || signal.duration > Math.max(2, [...normalizeSpeech(expected)].length / 4.5 * 2) || signal.duration > maxSeconds) failures.push('Abnormal duration');
   if (signal.rmsDb < -45) failures.push('Silent or nearly silent audio');
   if (signal.clippedFraction > 0.001) failures.push('Digital clipping');
   return failures;
@@ -115,15 +127,16 @@ const REVIEW_JSON_SCHEMA = {
   },
 };
 
-export async function listen(file: string, request: CheckedSpeechRequest): Promise<{ transcript: string; review: Review }> {
+export async function listen(file: string, request: CheckedSpeechRequest, episodeReview = false): Promise<{ transcript: string; review: Review }> {
   // The sentence sidecar (applySentenceSpacing) says where silence was laid in on purpose.
   let laidInPauses: { lead: number; boundaries: number[] } | null = null;
   try { if (existsSync(sentencesPathFor(file))) { const side = JSON.parse(readFileSync(sentencesPathFor(file), 'utf8')); if (Array.isArray(side.boundaries)) laidInPauses = { lead: Number(side.lead) || 0, boundaries: side.boundaries }; } } catch { laidInPauses = null; }
   const { GoogleGenAI } = await import('@google/genai');
   const client = new GoogleGenAI({ apiKey: requireGeminiKey(), httpOptions: { apiVersion: REVIEW_API_VERSION, timeout: 180000 } });
   const audio = readFileSync(file);
-  if (audio.length > 14 * 1024 * 1024 || audio.subarray(0, 4).toString() !== 'RIFF') throw new Error('Review requires a WAV smaller than 14 MiB');
-  const audioPart = { inlineData: { mimeType: 'audio/wav', data: audio.toString('base64') } };
+  const flac = episodeReview && audio.subarray(0, 4).toString() === 'fLaC';
+  if (audio.length > 14 * 1024 * 1024 || (!flac && audio.subarray(0, 4).toString() !== 'RIFF')) throw new Error('Review requires WAV (or final FLAC) smaller than 14 MiB');
+  const audioPart = { inlineData: { mimeType: flac ? 'audio/flac' : 'audio/wav', data: audio.toString('base64') } };
   async function call(prompt: string, schema: Record<string, unknown>, stage: string): Promise<unknown> {
     const started = Date.now(); let ok = false, usage: Record<string, number> = {};
     try {
@@ -145,9 +158,10 @@ export async function listen(file: string, request: CheckedSpeechRequest): Promi
     `Transcribe every audible spoken word verbatim in ${JSON.stringify(request.language)}. No correction, summary or guesses. Preserve repetitions, mistakes and unfinished words. Write numbers and abbreviations as the words actually spoken (for Korean use Hangul spoken forms, not digits). Exclude speaker labels.`,
     { type: 'object', properties: { transcript: { type: 'string' } }, required: ['transcript'] }, 'blind-transcription'));
   const review = reviewSchema.parse(await call(
-    `Audit the full audio against this data: ${JSON.stringify({ expectedText: request.expectedText, language: request.language, delivery: request.delivery, blindTranscript: blind.transcript, ...(laidInPauses ? { laidInPauses } : {}) })}.${laidInPauses ? ' laidInPauses lists the seconds where fixed digital silence was laid in between sentences on purpose; those pauses and the quiet lead are not pacing defects or audible joins.' : ''}
+    `Audit the full audio against this data: ${JSON.stringify({ expectedText: request.expectedText, language: request.language, delivery: request.delivery, blindTranscript: blind.transcript, ...(laidInPauses ? { laidInPauses } : {}) })}.${laidInPauses ? ' laidInPauses marks inserted silence. Judge those pauses critically too: reject choppy rhythm, clipped breaths, unnatural gaps or fades even if intentional.' : ''}
+${episodeReview ? 'This is the assembled episode, not an isolated sentence. Compare every adjacent sentence and scene for pitch, timbre, emotion, loudness, speaking rate, breaths and pauses. Score continuity 0–100 separately and describe specific transitions with timestamps in continuityEvidence. A repeated fresh-start tone or mismatched mood requires a retake, even if each sentence sounds good alone.' : ''}
 Score 0–100: accuracy (all words, quantities, names, endings, no omissions or additions), pronunciation (native phonemes, liaison, stress), naturalness (human phrasing, breath, pacing, intonation appropriate to delivery), clarity (no noise, clipping, metallic artifacts, audible joins or unstable voice).
-100 means no audible defect; 95 is professional delivery with no correction needed; 90 means a noticeable defect needs a retake; below 80 is distracting. Do not inflate scores because the script is plausible. Check every word, especially names/numbers and final syllables. Do not silently correct a wrong word using the script. List every defect with actual start/end seconds, heard/expected wording and a concrete correction. complete is true only if the whole audio was heard. Give confidence 0–1 and specific listening evidence even on a pass.`, REVIEW_JSON_SCHEMA, 'listening-review'));
+100 means no audible defect; 95 is professional delivery with no correction needed; 90 means a noticeable defect needs a retake; below 80 is distracting. Do not inflate scores because the script is plausible. Check every word, especially names/numbers and final syllables. Do not silently correct a wrong word using the script. List every defect with actual start/end seconds, heard/expected wording and a concrete correction. complete is true only if the whole audio was heard. Give confidence 0–1 and specific listening evidence even on a pass.`, episodeReview ? { ...REVIEW_JSON_SCHEMA, required: [...REVIEW_JSON_SCHEMA.required, 'continuity', 'continuityEvidence'], properties: { ...REVIEW_JSON_SCHEMA.properties, continuity: { type: 'number' }, continuityEvidence: { type: 'string' } } } : REVIEW_JSON_SCHEMA, episodeReview ? 'episode-listening-review' : 'listening-review'));
   return { transcript: blind.transcript, review };
 }
 
@@ -158,12 +172,22 @@ export interface PreparedGeneration {
   run: (overrides?: TakeOverrides) => Promise<GenerationResult>;
   /** The take comes with a character alignment and gets its sentence pauses laid in. */
   spacing: boolean;
-  /** A pinned seed returns the identical file, so a retake advances it by one (recorded per attempt). */
+  /** Keep the episode seed across retakes; vendor determinism is best-effort. */
   seed?: number;
 }
 /** Parse before spending anything; nested args cannot override the output or change voices between retries. */
 export function prepareGeneration(request: CheckedSpeechRequest): PreparedGeneration {
-  const args = { ...request.generation, outputPath: request.outputPath, filename: request.filename };
+  const args: Record<string, unknown> = { ...request.generation, outputPath: request.outputPath, filename: request.filename };
+  if (request.generator === 'tts_elevenlabs_generate' && request.episode) {
+    const { texts, index, seed } = request.episode;
+    if (args.seed !== undefined && args.seed !== seed) throw new Error('generation.seed must match the episode seed');
+    const previousText = texts.slice(0, index).join(' '), nextText = texts.slice(index + 1).join(' ');
+    for (const [key, value] of Object.entries({ previousText, nextText })) {
+      if (args[key] !== undefined && args[key] !== value) throw new Error(`${key} must match the episode text order`);
+      if (value && args.model !== 'eleven_v3') args[key] = value; else delete args[key];
+    }
+    args.seed = seed;
+  }
   let spoken: string, parsed: Record<string, unknown>, run: (o?: TakeOverrides) => Promise<GenerationResult>, spacing = false, seed: number | undefined;
   switch (request.generator) {
     case 'tts_generate': { const p = gemini.ttsGenerateSchema.parse(args); parsed = p; spoken = p.text; run = () => gemini.generateSpeech(p); break; }
@@ -231,9 +255,9 @@ export async function generateCheckedSpeech(input: CheckedSpeechRequest, depende
   }, generate: prepared.run, measure: measureSignal, listen };
   const attempts: Record<string, unknown>[] = [];
   // On a spacing lane the pauses are part of the shipped audio, so their inputs are part of the settings a PASS binds to.
-  const settings = prepared.spacing ? { ...prepared.args, spacing: { segments: request.segments ?? null, sentencePause: request.sentencePause, playbackSpeed: request.playbackSpeed } } : prepared.args;
+  const settings = prepared.spacing ? { ...prepared.args, episode: request.episode ?? null, spacing: { segments: request.segments ?? null, sentencePause: request.sentencePause, playbackSpeed: request.playbackSpeed } } : prepared.args;
   const base = { version: 1, policy: QUALITY_POLICY, expectedText: request.expectedText, textSha256: sha256(normalizeSpeech(request.expectedText)), generator: request.generator,
-    settingsSha256: sha256(JSON.stringify(settings)), model: REVIEW_MODEL, language: request.language, delivery: request.delivery };
+    settingsSha256: sha256(JSON.stringify(settings)), ...(request.episode ? { episode: request.episode } : {}), ...(request.generator === 'tts_elevenlabs_generate' ? { voiceSettings: Object.fromEntries(Object.entries(prepared.args).filter(([k]) => !['text','previousText','nextText','outputPath','filename','timestamps'].includes(k))) } : {}), model: REVIEW_MODEL, language: request.language, delivery: request.delivery };
   function save(status: string, extra: Record<string, unknown> = {}): Record<string, unknown> {
     const report = { ...base, status, attempts, checkedAt: new Date().toISOString(), ...extra };
     const temporary = proofFile + '.' + randomUUID() + '.tmp';
@@ -244,10 +268,11 @@ export async function generateCheckedSpeech(input: CheckedSpeechRequest, depende
     if (existsSync(proofFile)) {
       const old = JSON.parse(readFileSync(proofFile, 'utf8'));
       // Reviewer changes must not reset paid synthesis attempts or discard a pending WAV.
-      if (Object.entries(base).every(([key, value]) => key === 'model' || old[key] === value)) {
+      if (Object.entries(base).every(([key, value]) => key === 'model' || JSON.stringify(old[key]) === JSON.stringify(value))) {
         if (!Array.isArray(old.attempts) || old.attempts.length > 3) throw new Error('Invalid attempt history');
         attempts.push(...old.attempts.map((take: Record<string, unknown>) => ({ ...take, model: take.model ?? old.model })));
         const last = attempts.at(-1);
+        if (last?.duplicateOf) return save('fail', { error: 'Identical rejected audio already stopped this request; correct the episode pronunciation or delivery plan' });
         if (request.rejectTake) {
           if (!last || last.audioSha256 !== request.rejectTake.audioSha256 || !existsSync(output) || sha256(readFileSync(output)) !== request.rejectTake.audioSha256) throw new Error('The rejected take is not the current audio; inspect the current file before requesting another retake');
           last.authorRejection = request.rejectTake.reason;
@@ -283,8 +308,8 @@ export async function generateCheckedSpeech(input: CheckedSpeechRequest, depende
         take = { attempt, pending: true };
         attempts.push(take); save('unverified');
         const started = Date.now(); let generated: GenerationResult | undefined;
-        // Same voice, model and settings on every take; only the dice move, or a pinned seed would hand back the same bytes.
-        const overrides: TakeOverrides = prepared.seed !== undefined && attempt > 1 ? { seed: (prepared.seed + attempt - 1) % 4_294_967_296 } : {};
+        // Retakes preserve the episode seed and delivery settings.
+        const overrides: TakeOverrides = prepared.seed !== undefined ? { seed: prepared.seed } : {};
         if (overrides.seed !== undefined) take.seed = overrides.seed; else if (prepared.seed !== undefined) take.seed = prepared.seed;
         try { generated = await deps.generate(overrides); }
         finally {
@@ -297,6 +322,11 @@ export async function generateCheckedSpeech(input: CheckedSpeechRequest, depende
         if (prepared.spacing) take.spacing = applySentenceSpacing(output, request);
         else { rmSync(sentencesPathFor(output), { force: true }); take.spacing = { skipped: 'engine has no alignment' }; }
         take.audioSha256 = sha256(readFileSync(output)); save('unverified');
+        const duplicate = attempts.slice(0, -1).find(a => a.audioSha256 === take!.audioSha256 && a.pending === false && Array.isArray(a.failures) && a.failures.length);
+        if (duplicate) {
+          Object.assign(take, { pending: false, duplicateOf: duplicate.attempt, failures: ['Identical rejected audio; change the pronunciation or episode-wide delivery plan before another synthesis'] });
+          return save('fail', { audioSha256: take.audioSha256, error: 'Generator repeated a rejected WAV; stopped without another paid listening review' });
+        }
       }
       const audioSha256 = take!.audioSha256 as string;
       const signal = await deps.measure(output);

@@ -140,6 +140,10 @@ ATEMPO_MIN=${ATEMPO_MIN:-1.0}; ATEMPO_MAX=${ATEMPO_MAX:-1.0}
 # channel's factor to .work/format.env, which both scripts source, so the build and the pass agree.
 # Sourced above; the inline default matches speedup.sh's for a hand-run build with no format.env.
 SPEED=${SPEED:-1.0}
+node - "$HERE" "$SPEED" "${ATEMPO_MIN:-1}" "${ATEMPO_MAX:-1}" <<'JS'
+const [here,speed,min,max]=process.argv.slice(2);
+require(here+'/check-tts-quality.js').checkTempo(process.cwd(),speed,min,max);
+JS
 # Validate before deriving. A command substitution that exits non-zero takes the whole assignment
 # down under `set -e`, so a guard placed after it never runs — the build would die with no reason.
 awk -v f="$SPEED" 'BEGIN{exit !(f >= 0.5 && f <= 3.0)}' \

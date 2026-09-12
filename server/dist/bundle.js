@@ -48,9 +48,9 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 
-// ../../../server/node_modules/ajv/dist/compile/codegen/code.js
+// node_modules/ajv/dist/compile/codegen/code.js
 var require_code = __commonJS({
-  "../../../server/node_modules/ajv/dist/compile/codegen/code.js"(exports) {
+  "node_modules/ajv/dist/compile/codegen/code.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.regexpCode = exports.getEsmExportName = exports.getProperty = exports.safeStringify = exports.stringify = exports.strConcat = exports.addCodeArg = exports.str = exports._ = exports.nil = exports._Code = exports.Name = exports.IDENTIFIER = exports._CodeOrName = void 0;
@@ -202,9 +202,9 @@ var require_code = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/compile/codegen/scope.js
+// node_modules/ajv/dist/compile/codegen/scope.js
 var require_scope = __commonJS({
-  "../../../server/node_modules/ajv/dist/compile/codegen/scope.js"(exports) {
+  "node_modules/ajv/dist/compile/codegen/scope.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ValueScope = exports.ValueScopeName = exports.Scope = exports.varKinds = exports.UsedValueState = void 0;
@@ -347,9 +347,9 @@ var require_scope = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/compile/codegen/index.js
+// node_modules/ajv/dist/compile/codegen/index.js
 var require_codegen = __commonJS({
-  "../../../server/node_modules/ajv/dist/compile/codegen/index.js"(exports) {
+  "node_modules/ajv/dist/compile/codegen/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.or = exports.and = exports.not = exports.CodeGen = exports.operators = exports.varKinds = exports.ValueScopeName = exports.ValueScope = exports.Scope = exports.Name = exports.regexpCode = exports.stringify = exports.getProperty = exports.nil = exports.strConcat = exports.str = exports._ = void 0;
@@ -1067,9 +1067,9 @@ var require_codegen = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/compile/util.js
+// node_modules/ajv/dist/compile/util.js
 var require_util = __commonJS({
-  "../../../server/node_modules/ajv/dist/compile/util.js"(exports) {
+  "node_modules/ajv/dist/compile/util.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.checkStrictMode = exports.getErrorPath = exports.Type = exports.useFunc = exports.setEvaluated = exports.evaluatedPropsToName = exports.mergeEvaluated = exports.eachItem = exports.unescapeJsonPointer = exports.escapeJsonPointer = exports.escapeFragment = exports.unescapeFragment = exports.schemaRefOrVal = exports.schemaHasRulesButRef = exports.schemaHasRules = exports.checkUnknownRules = exports.alwaysValidSchema = exports.toHash = void 0;
@@ -1234,9 +1234,9 @@ var require_util = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/compile/names.js
+// node_modules/ajv/dist/compile/names.js
 var require_names = __commonJS({
-  "../../../server/node_modules/ajv/dist/compile/names.js"(exports) {
+  "node_modules/ajv/dist/compile/names.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -1273,9 +1273,9 @@ var require_names = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/compile/errors.js
+// node_modules/ajv/dist/compile/errors.js
 var require_errors = __commonJS({
-  "../../../server/node_modules/ajv/dist/compile/errors.js"(exports) {
+  "node_modules/ajv/dist/compile/errors.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.extendErrors = exports.resetErrorsCount = exports.reportExtraError = exports.reportError = exports.keyword$DataError = exports.keywordError = void 0;
@@ -1395,9 +1395,9 @@ var require_errors = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/compile/validate/boolSchema.js
+// node_modules/ajv/dist/compile/validate/boolSchema.js
 var require_boolSchema = __commonJS({
-  "../../../server/node_modules/ajv/dist/compile/validate/boolSchema.js"(exports) {
+  "node_modules/ajv/dist/compile/validate/boolSchema.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.boolOrEmptySchema = exports.topBoolOrEmptySchema = void 0;
@@ -1446,9 +1446,9 @@ var require_boolSchema = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/compile/rules.js
+// node_modules/ajv/dist/compile/rules.js
 var require_rules = __commonJS({
-  "../../../server/node_modules/ajv/dist/compile/rules.js"(exports) {
+  "node_modules/ajv/dist/compile/rules.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getRules = exports.isJSONType = void 0;
@@ -1477,9 +1477,9 @@ var require_rules = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/compile/validate/applicability.js
+// node_modules/ajv/dist/compile/validate/applicability.js
 var require_applicability = __commonJS({
-  "../../../server/node_modules/ajv/dist/compile/validate/applicability.js"(exports) {
+  "node_modules/ajv/dist/compile/validate/applicability.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.shouldUseRule = exports.shouldUseGroup = exports.schemaHasRulesForType = void 0;
@@ -1500,9 +1500,9 @@ var require_applicability = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/compile/validate/dataType.js
+// node_modules/ajv/dist/compile/validate/dataType.js
 var require_dataType = __commonJS({
-  "../../../server/node_modules/ajv/dist/compile/validate/dataType.js"(exports) {
+  "node_modules/ajv/dist/compile/validate/dataType.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.reportTypeError = exports.checkDataTypes = exports.checkDataType = exports.coerceAndCheckDataType = exports.getJSONTypes = exports.getSchemaTypes = exports.DataType = void 0;
@@ -1684,9 +1684,9 @@ var require_dataType = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/compile/validate/defaults.js
+// node_modules/ajv/dist/compile/validate/defaults.js
 var require_defaults = __commonJS({
-  "../../../server/node_modules/ajv/dist/compile/validate/defaults.js"(exports) {
+  "node_modules/ajv/dist/compile/validate/defaults.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.assignDefaults = void 0;
@@ -1721,9 +1721,9 @@ var require_defaults = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/vocabularies/code.js
+// node_modules/ajv/dist/vocabularies/code.js
 var require_code2 = __commonJS({
-  "../../../server/node_modules/ajv/dist/vocabularies/code.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/code.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateUnion = exports.validateArray = exports.usePattern = exports.callValidateCode = exports.schemaProperties = exports.allSchemaProperties = exports.noPropertyInData = exports.propertyInData = exports.isOwnProperty = exports.hasPropFunc = exports.reportMissingProp = exports.checkMissingProp = exports.checkReportMissingProp = void 0;
@@ -1854,9 +1854,9 @@ var require_code2 = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/compile/validate/keyword.js
+// node_modules/ajv/dist/compile/validate/keyword.js
 var require_keyword = __commonJS({
-  "../../../server/node_modules/ajv/dist/compile/validate/keyword.js"(exports) {
+  "node_modules/ajv/dist/compile/validate/keyword.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateKeywordUsage = exports.validSchemaType = exports.funcKeywordCode = exports.macroKeywordCode = void 0;
@@ -1972,9 +1972,9 @@ var require_keyword = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/compile/validate/subschema.js
+// node_modules/ajv/dist/compile/validate/subschema.js
 var require_subschema = __commonJS({
-  "../../../server/node_modules/ajv/dist/compile/validate/subschema.js"(exports) {
+  "node_modules/ajv/dist/compile/validate/subschema.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.extendSubschemaMode = exports.extendSubschemaData = exports.getSubschema = void 0;
@@ -2055,9 +2055,9 @@ var require_subschema = __commonJS({
   }
 });
 
-// ../../../server/node_modules/fast-deep-equal/index.js
+// node_modules/fast-deep-equal/index.js
 var require_fast_deep_equal = __commonJS({
-  "../../../server/node_modules/fast-deep-equal/index.js"(exports, module) {
+  "node_modules/fast-deep-equal/index.js"(exports, module) {
     "use strict";
     module.exports = function equal(a, b) {
       if (a === b) return true;
@@ -2090,9 +2090,9 @@ var require_fast_deep_equal = __commonJS({
   }
 });
 
-// ../../../server/node_modules/json-schema-traverse/index.js
+// node_modules/json-schema-traverse/index.js
 var require_json_schema_traverse = __commonJS({
-  "../../../server/node_modules/json-schema-traverse/index.js"(exports, module) {
+  "node_modules/json-schema-traverse/index.js"(exports, module) {
     "use strict";
     var traverse = module.exports = function(schema, opts, cb) {
       if (typeof opts == "function") {
@@ -2178,9 +2178,9 @@ var require_json_schema_traverse = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/compile/resolve.js
+// node_modules/ajv/dist/compile/resolve.js
 var require_resolve = __commonJS({
-  "../../../server/node_modules/ajv/dist/compile/resolve.js"(exports) {
+  "node_modules/ajv/dist/compile/resolve.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getSchemaRefs = exports.resolveUrl = exports.normalizeId = exports._getFullPath = exports.getFullPath = exports.inlineRef = void 0;
@@ -2334,9 +2334,9 @@ var require_resolve = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/compile/validate/index.js
+// node_modules/ajv/dist/compile/validate/index.js
 var require_validate = __commonJS({
-  "../../../server/node_modules/ajv/dist/compile/validate/index.js"(exports) {
+  "node_modules/ajv/dist/compile/validate/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getData = exports.KeywordCxt = exports.validateFunctionCode = void 0;
@@ -2842,9 +2842,9 @@ var require_validate = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/runtime/validation_error.js
+// node_modules/ajv/dist/runtime/validation_error.js
 var require_validation_error = __commonJS({
-  "../../../server/node_modules/ajv/dist/runtime/validation_error.js"(exports) {
+  "node_modules/ajv/dist/runtime/validation_error.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var ValidationError = class extends Error {
@@ -2858,9 +2858,9 @@ var require_validation_error = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/compile/ref_error.js
+// node_modules/ajv/dist/compile/ref_error.js
 var require_ref_error = __commonJS({
-  "../../../server/node_modules/ajv/dist/compile/ref_error.js"(exports) {
+  "node_modules/ajv/dist/compile/ref_error.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var resolve_1 = require_resolve();
@@ -2875,9 +2875,9 @@ var require_ref_error = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/compile/index.js
+// node_modules/ajv/dist/compile/index.js
 var require_compile = __commonJS({
-  "../../../server/node_modules/ajv/dist/compile/index.js"(exports) {
+  "node_modules/ajv/dist/compile/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.resolveSchema = exports.getCompilingSchema = exports.resolveRef = exports.compileSchema = exports.SchemaEnv = void 0;
@@ -3099,9 +3099,9 @@ var require_compile = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/refs/data.json
+// node_modules/ajv/dist/refs/data.json
 var require_data = __commonJS({
-  "../../../server/node_modules/ajv/dist/refs/data.json"(exports, module) {
+  "node_modules/ajv/dist/refs/data.json"(exports, module) {
     module.exports = {
       $id: "https://raw.githubusercontent.com/ajv-validator/ajv/master/lib/refs/data.json#",
       description: "Meta-schema for $data reference (JSON AnySchema extension proposal)",
@@ -3118,9 +3118,9 @@ var require_data = __commonJS({
   }
 });
 
-// ../../../server/node_modules/fast-uri/lib/utils.js
+// node_modules/fast-uri/lib/utils.js
 var require_utils = __commonJS({
-  "../../../server/node_modules/fast-uri/lib/utils.js"(exports, module) {
+  "node_modules/fast-uri/lib/utils.js"(exports, module) {
     "use strict";
     var isUUID = RegExp.prototype.test.bind(/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/iu);
     var isIPv4 = RegExp.prototype.test.bind(/^(?:(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]\d|\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]\d|\d)$/u);
@@ -3244,8 +3244,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path11) {
-      let input = path11;
+    function removeDotSegments(path12) {
+      let input = path12;
       const output = [];
       let nextSlash = -1;
       let len = 0;
@@ -3431,9 +3431,9 @@ var require_utils = __commonJS({
   }
 });
 
-// ../../../server/node_modules/fast-uri/lib/schemes.js
+// node_modules/fast-uri/lib/schemes.js
 var require_schemes = __commonJS({
-  "../../../server/node_modules/fast-uri/lib/schemes.js"(exports, module) {
+  "node_modules/fast-uri/lib/schemes.js"(exports, module) {
     "use strict";
     var { isUUID } = require_utils();
     var URN_REG = /([\da-z][\d\-a-z]{0,31}):((?:[\w!$'()*+,\-.:;=@]|%[\da-f]{2})+)/iu;
@@ -3497,8 +3497,8 @@ var require_schemes = __commonJS({
         wsComponent.secure = void 0;
       }
       if (wsComponent.resourceName) {
-        const [path11, query] = wsComponent.resourceName.split("?");
-        wsComponent.path = path11 && path11 !== "/" ? path11 : void 0;
+        const [path12, query] = wsComponent.resourceName.split("?");
+        wsComponent.path = path12 && path12 !== "/" ? path12 : void 0;
         wsComponent.query = query;
         wsComponent.resourceName = void 0;
       }
@@ -3641,9 +3641,9 @@ var require_schemes = __commonJS({
   }
 });
 
-// ../../../server/node_modules/fast-uri/index.js
+// node_modules/fast-uri/index.js
 var require_fast_uri = __commonJS({
-  "../../../server/node_modules/fast-uri/index.js"(exports, module) {
+  "node_modules/fast-uri/index.js"(exports, module) {
     "use strict";
     var { normalizeIPv6, removeDotSegments, recomposeAuthority, normalizePercentEncoding, normalizePathEncoding, escapePreservingEscapes, reescapeHostDelimiters, isIPv4, nonSimpleDomain } = require_utils();
     var { SCHEMES, getSchemeHandler } = require_schemes();
@@ -3953,9 +3953,9 @@ var require_fast_uri = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/runtime/uri.js
+// node_modules/ajv/dist/runtime/uri.js
 var require_uri = __commonJS({
-  "../../../server/node_modules/ajv/dist/runtime/uri.js"(exports) {
+  "node_modules/ajv/dist/runtime/uri.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var uri = require_fast_uri();
@@ -3964,9 +3964,9 @@ var require_uri = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/core.js
+// node_modules/ajv/dist/core.js
 var require_core = __commonJS({
-  "../../../server/node_modules/ajv/dist/core.js"(exports) {
+  "node_modules/ajv/dist/core.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.CodeGen = exports.Name = exports.nil = exports.stringify = exports.str = exports._ = exports.KeywordCxt = void 0;
@@ -4575,9 +4575,9 @@ var require_core = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/vocabularies/core/id.js
+// node_modules/ajv/dist/vocabularies/core/id.js
 var require_id = __commonJS({
-  "../../../server/node_modules/ajv/dist/vocabularies/core/id.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/core/id.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var def = {
@@ -4590,9 +4590,9 @@ var require_id = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/vocabularies/core/ref.js
+// node_modules/ajv/dist/vocabularies/core/ref.js
 var require_ref = __commonJS({
-  "../../../server/node_modules/ajv/dist/vocabularies/core/ref.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/core/ref.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.callRef = exports.getValidate = void 0;
@@ -4712,9 +4712,9 @@ var require_ref = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/vocabularies/core/index.js
+// node_modules/ajv/dist/vocabularies/core/index.js
 var require_core2 = __commonJS({
-  "../../../server/node_modules/ajv/dist/vocabularies/core/index.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/core/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var id_1 = require_id();
@@ -4733,9 +4733,9 @@ var require_core2 = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/vocabularies/validation/limitNumber.js
+// node_modules/ajv/dist/vocabularies/validation/limitNumber.js
 var require_limitNumber = __commonJS({
-  "../../../server/node_modules/ajv/dist/vocabularies/validation/limitNumber.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/validation/limitNumber.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -4765,9 +4765,9 @@ var require_limitNumber = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/vocabularies/validation/multipleOf.js
+// node_modules/ajv/dist/vocabularies/validation/multipleOf.js
 var require_multipleOf = __commonJS({
-  "../../../server/node_modules/ajv/dist/vocabularies/validation/multipleOf.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/validation/multipleOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -4793,9 +4793,9 @@ var require_multipleOf = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/runtime/ucs2length.js
+// node_modules/ajv/dist/runtime/ucs2length.js
 var require_ucs2length = __commonJS({
-  "../../../server/node_modules/ajv/dist/runtime/ucs2length.js"(exports) {
+  "node_modules/ajv/dist/runtime/ucs2length.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     function ucs2length(str8) {
@@ -4819,9 +4819,9 @@ var require_ucs2length = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/vocabularies/validation/limitLength.js
+// node_modules/ajv/dist/vocabularies/validation/limitLength.js
 var require_limitLength = __commonJS({
-  "../../../server/node_modules/ajv/dist/vocabularies/validation/limitLength.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/validation/limitLength.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -4851,9 +4851,9 @@ var require_limitLength = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/vocabularies/validation/pattern.js
+// node_modules/ajv/dist/vocabularies/validation/pattern.js
 var require_pattern = __commonJS({
-  "../../../server/node_modules/ajv/dist/vocabularies/validation/pattern.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/validation/pattern.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -4888,9 +4888,9 @@ var require_pattern = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/vocabularies/validation/limitProperties.js
+// node_modules/ajv/dist/vocabularies/validation/limitProperties.js
 var require_limitProperties = __commonJS({
-  "../../../server/node_modules/ajv/dist/vocabularies/validation/limitProperties.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/validation/limitProperties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -4917,9 +4917,9 @@ var require_limitProperties = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/vocabularies/validation/required.js
+// node_modules/ajv/dist/vocabularies/validation/required.js
 var require_required = __commonJS({
-  "../../../server/node_modules/ajv/dist/vocabularies/validation/required.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/validation/required.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -4999,9 +4999,9 @@ var require_required = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/vocabularies/validation/limitItems.js
+// node_modules/ajv/dist/vocabularies/validation/limitItems.js
 var require_limitItems = __commonJS({
-  "../../../server/node_modules/ajv/dist/vocabularies/validation/limitItems.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/validation/limitItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5028,9 +5028,9 @@ var require_limitItems = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/runtime/equal.js
+// node_modules/ajv/dist/runtime/equal.js
 var require_equal = __commonJS({
-  "../../../server/node_modules/ajv/dist/runtime/equal.js"(exports) {
+  "node_modules/ajv/dist/runtime/equal.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var equal = require_fast_deep_equal();
@@ -5039,9 +5039,9 @@ var require_equal = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/vocabularies/validation/uniqueItems.js
+// node_modules/ajv/dist/vocabularies/validation/uniqueItems.js
 var require_uniqueItems = __commonJS({
-  "../../../server/node_modules/ajv/dist/vocabularies/validation/uniqueItems.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/validation/uniqueItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var dataType_1 = require_dataType();
@@ -5106,9 +5106,9 @@ var require_uniqueItems = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/vocabularies/validation/const.js
+// node_modules/ajv/dist/vocabularies/validation/const.js
 var require_const = __commonJS({
-  "../../../server/node_modules/ajv/dist/vocabularies/validation/const.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/validation/const.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5135,9 +5135,9 @@ var require_const = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/vocabularies/validation/enum.js
+// node_modules/ajv/dist/vocabularies/validation/enum.js
 var require_enum = __commonJS({
-  "../../../server/node_modules/ajv/dist/vocabularies/validation/enum.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/validation/enum.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5184,9 +5184,9 @@ var require_enum = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/vocabularies/validation/index.js
+// node_modules/ajv/dist/vocabularies/validation/index.js
 var require_validation = __commonJS({
-  "../../../server/node_modules/ajv/dist/vocabularies/validation/index.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/validation/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var limitNumber_1 = require_limitNumber();
@@ -5222,9 +5222,9 @@ var require_validation = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/vocabularies/applicator/additionalItems.js
+// node_modules/ajv/dist/vocabularies/applicator/additionalItems.js
 var require_additionalItems = __commonJS({
-  "../../../server/node_modules/ajv/dist/vocabularies/applicator/additionalItems.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/additionalItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateAdditionalItems = void 0;
@@ -5275,9 +5275,9 @@ var require_additionalItems = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/vocabularies/applicator/items.js
+// node_modules/ajv/dist/vocabularies/applicator/items.js
 var require_items = __commonJS({
-  "../../../server/node_modules/ajv/dist/vocabularies/applicator/items.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/items.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateTuple = void 0;
@@ -5332,9 +5332,9 @@ var require_items = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/vocabularies/applicator/prefixItems.js
+// node_modules/ajv/dist/vocabularies/applicator/prefixItems.js
 var require_prefixItems = __commonJS({
-  "../../../server/node_modules/ajv/dist/vocabularies/applicator/prefixItems.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/prefixItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var items_1 = require_items();
@@ -5349,9 +5349,9 @@ var require_prefixItems = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/vocabularies/applicator/items2020.js
+// node_modules/ajv/dist/vocabularies/applicator/items2020.js
 var require_items2020 = __commonJS({
-  "../../../server/node_modules/ajv/dist/vocabularies/applicator/items2020.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/items2020.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5384,9 +5384,9 @@ var require_items2020 = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/vocabularies/applicator/contains.js
+// node_modules/ajv/dist/vocabularies/applicator/contains.js
 var require_contains = __commonJS({
-  "../../../server/node_modules/ajv/dist/vocabularies/applicator/contains.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/contains.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5478,9 +5478,9 @@ var require_contains = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/vocabularies/applicator/dependencies.js
+// node_modules/ajv/dist/vocabularies/applicator/dependencies.js
 var require_dependencies = __commonJS({
-  "../../../server/node_modules/ajv/dist/vocabularies/applicator/dependencies.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/dependencies.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateSchemaDeps = exports.validatePropertyDeps = exports.error = void 0;
@@ -5572,9 +5572,9 @@ var require_dependencies = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/vocabularies/applicator/propertyNames.js
+// node_modules/ajv/dist/vocabularies/applicator/propertyNames.js
 var require_propertyNames = __commonJS({
-  "../../../server/node_modules/ajv/dist/vocabularies/applicator/propertyNames.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/propertyNames.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5615,9 +5615,9 @@ var require_propertyNames = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js
+// node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js
 var require_additionalProperties = __commonJS({
-  "../../../server/node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -5721,9 +5721,9 @@ var require_additionalProperties = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/vocabularies/applicator/properties.js
+// node_modules/ajv/dist/vocabularies/applicator/properties.js
 var require_properties = __commonJS({
-  "../../../server/node_modules/ajv/dist/vocabularies/applicator/properties.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/properties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var validate_1 = require_validate();
@@ -5779,9 +5779,9 @@ var require_properties = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/vocabularies/applicator/patternProperties.js
+// node_modules/ajv/dist/vocabularies/applicator/patternProperties.js
 var require_patternProperties = __commonJS({
-  "../../../server/node_modules/ajv/dist/vocabularies/applicator/patternProperties.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/patternProperties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -5853,9 +5853,9 @@ var require_patternProperties = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/vocabularies/applicator/not.js
+// node_modules/ajv/dist/vocabularies/applicator/not.js
 var require_not = __commonJS({
-  "../../../server/node_modules/ajv/dist/vocabularies/applicator/not.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/not.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var util_1 = require_util();
@@ -5884,9 +5884,9 @@ var require_not = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/vocabularies/applicator/anyOf.js
+// node_modules/ajv/dist/vocabularies/applicator/anyOf.js
 var require_anyOf = __commonJS({
-  "../../../server/node_modules/ajv/dist/vocabularies/applicator/anyOf.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/anyOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -5901,9 +5901,9 @@ var require_anyOf = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/vocabularies/applicator/oneOf.js
+// node_modules/ajv/dist/vocabularies/applicator/oneOf.js
 var require_oneOf = __commonJS({
-  "../../../server/node_modules/ajv/dist/vocabularies/applicator/oneOf.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/oneOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5959,9 +5959,9 @@ var require_oneOf = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/vocabularies/applicator/allOf.js
+// node_modules/ajv/dist/vocabularies/applicator/allOf.js
 var require_allOf = __commonJS({
-  "../../../server/node_modules/ajv/dist/vocabularies/applicator/allOf.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/allOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var util_1 = require_util();
@@ -5986,9 +5986,9 @@ var require_allOf = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/vocabularies/applicator/if.js
+// node_modules/ajv/dist/vocabularies/applicator/if.js
 var require_if = __commonJS({
-  "../../../server/node_modules/ajv/dist/vocabularies/applicator/if.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/if.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -6055,9 +6055,9 @@ var require_if = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/vocabularies/applicator/thenElse.js
+// node_modules/ajv/dist/vocabularies/applicator/thenElse.js
 var require_thenElse = __commonJS({
-  "../../../server/node_modules/ajv/dist/vocabularies/applicator/thenElse.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/thenElse.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var util_1 = require_util();
@@ -6073,9 +6073,9 @@ var require_thenElse = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/vocabularies/applicator/index.js
+// node_modules/ajv/dist/vocabularies/applicator/index.js
 var require_applicator = __commonJS({
-  "../../../server/node_modules/ajv/dist/vocabularies/applicator/index.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/applicator/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var additionalItems_1 = require_additionalItems();
@@ -6121,9 +6121,9 @@ var require_applicator = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/vocabularies/format/format.js
+// node_modules/ajv/dist/vocabularies/format/format.js
 var require_format = __commonJS({
-  "../../../server/node_modules/ajv/dist/vocabularies/format/format.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/format/format.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -6211,9 +6211,9 @@ var require_format = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/vocabularies/format/index.js
+// node_modules/ajv/dist/vocabularies/format/index.js
 var require_format2 = __commonJS({
-  "../../../server/node_modules/ajv/dist/vocabularies/format/index.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/format/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var format_1 = require_format();
@@ -6222,9 +6222,9 @@ var require_format2 = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/vocabularies/metadata.js
+// node_modules/ajv/dist/vocabularies/metadata.js
 var require_metadata = __commonJS({
-  "../../../server/node_modules/ajv/dist/vocabularies/metadata.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/metadata.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.contentVocabulary = exports.metadataVocabulary = void 0;
@@ -6245,9 +6245,9 @@ var require_metadata = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/vocabularies/draft7.js
+// node_modules/ajv/dist/vocabularies/draft7.js
 var require_draft7 = __commonJS({
-  "../../../server/node_modules/ajv/dist/vocabularies/draft7.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/draft7.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var core_1 = require_core2();
@@ -6267,9 +6267,9 @@ var require_draft7 = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/vocabularies/discriminator/types.js
+// node_modules/ajv/dist/vocabularies/discriminator/types.js
 var require_types = __commonJS({
-  "../../../server/node_modules/ajv/dist/vocabularies/discriminator/types.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/discriminator/types.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.DiscrError = void 0;
@@ -6281,9 +6281,9 @@ var require_types = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/vocabularies/discriminator/index.js
+// node_modules/ajv/dist/vocabularies/discriminator/index.js
 var require_discriminator = __commonJS({
-  "../../../server/node_modules/ajv/dist/vocabularies/discriminator/index.js"(exports) {
+  "node_modules/ajv/dist/vocabularies/discriminator/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -6386,9 +6386,9 @@ var require_discriminator = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/refs/json-schema-draft-07.json
+// node_modules/ajv/dist/refs/json-schema-draft-07.json
 var require_json_schema_draft_07 = __commonJS({
-  "../../../server/node_modules/ajv/dist/refs/json-schema-draft-07.json"(exports, module) {
+  "node_modules/ajv/dist/refs/json-schema-draft-07.json"(exports, module) {
     module.exports = {
       $schema: "http://json-schema.org/draft-07/schema#",
       $id: "http://json-schema.org/draft-07/schema#",
@@ -6543,9 +6543,9 @@ var require_json_schema_draft_07 = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv/dist/ajv.js
+// node_modules/ajv/dist/ajv.js
 var require_ajv = __commonJS({
-  "../../../server/node_modules/ajv/dist/ajv.js"(exports, module) {
+  "node_modules/ajv/dist/ajv.js"(exports, module) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.MissingRefError = exports.ValidationError = exports.CodeGen = exports.Name = exports.nil = exports.stringify = exports.str = exports._ = exports.KeywordCxt = exports.Ajv = void 0;
@@ -6613,9 +6613,9 @@ var require_ajv = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv-formats/dist/formats.js
+// node_modules/ajv-formats/dist/formats.js
 var require_formats = __commonJS({
-  "../../../server/node_modules/ajv-formats/dist/formats.js"(exports) {
+  "node_modules/ajv-formats/dist/formats.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.formatNames = exports.fastFormats = exports.fullFormats = void 0;
@@ -6816,9 +6816,9 @@ var require_formats = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv-formats/dist/limit.js
+// node_modules/ajv-formats/dist/limit.js
 var require_limit = __commonJS({
-  "../../../server/node_modules/ajv-formats/dist/limit.js"(exports) {
+  "node_modules/ajv-formats/dist/limit.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.formatLimitDefinition = void 0;
@@ -6888,9 +6888,9 @@ var require_limit = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ajv-formats/dist/index.js
+// node_modules/ajv-formats/dist/index.js
 var require_dist = __commonJS({
-  "../../../server/node_modules/ajv-formats/dist/index.js"(exports, module) {
+  "node_modules/ajv-formats/dist/index.js"(exports, module) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var formats_1 = require_formats();
@@ -6930,9 +6930,9 @@ var require_dist = __commonJS({
   }
 });
 
-// ../../../server/node_modules/retry/lib/retry_operation.js
+// node_modules/retry/lib/retry_operation.js
 var require_retry_operation = __commonJS({
-  "../../../server/node_modules/retry/lib/retry_operation.js"(exports, module) {
+  "node_modules/retry/lib/retry_operation.js"(exports, module) {
     function RetryOperation(timeouts, options) {
       if (typeof options === "boolean") {
         options = { forever: options };
@@ -7065,9 +7065,9 @@ var require_retry_operation = __commonJS({
   }
 });
 
-// ../../../server/node_modules/retry/lib/retry.js
+// node_modules/retry/lib/retry.js
 var require_retry = __commonJS({
-  "../../../server/node_modules/retry/lib/retry.js"(exports) {
+  "node_modules/retry/lib/retry.js"(exports) {
     var RetryOperation = require_retry_operation();
     exports.operation = function(options) {
       var timeouts = exports.timeouts(options);
@@ -7151,16 +7151,16 @@ var require_retry = __commonJS({
   }
 });
 
-// ../../../server/node_modules/retry/index.js
+// node_modules/retry/index.js
 var require_retry2 = __commonJS({
-  "../../../server/node_modules/retry/index.js"(exports, module) {
+  "node_modules/retry/index.js"(exports, module) {
     module.exports = require_retry();
   }
 });
 
-// ../../../server/node_modules/p-retry/index.js
+// node_modules/p-retry/index.js
 var require_p_retry = __commonJS({
-  "../../../server/node_modules/p-retry/index.js"(exports, module) {
+  "node_modules/p-retry/index.js"(exports, module) {
     "use strict";
     var retry2 = require_retry2();
     var networkErrorMsgs = [
@@ -7237,9 +7237,9 @@ var require_p_retry = __commonJS({
   }
 });
 
-// ../../../server/node_modules/extend/index.js
+// node_modules/extend/index.js
 var require_extend = __commonJS({
-  "../../../server/node_modules/extend/index.js"(exports, module) {
+  "node_modules/extend/index.js"(exports, module) {
     "use strict";
     var hasOwn3 = Object.prototype.hasOwnProperty;
     var toStr = Object.prototype.toString;
@@ -7328,9 +7328,9 @@ var require_extend = __commonJS({
   }
 });
 
-// ../../../server/node_modules/gaxios/package.json
+// node_modules/gaxios/package.json
 var require_package = __commonJS({
-  "../../../server/node_modules/gaxios/package.json"(exports, module) {
+  "node_modules/gaxios/package.json"(exports, module) {
     module.exports = {
       name: "gaxios",
       version: "7.3.0",
@@ -7439,18 +7439,18 @@ var require_package = __commonJS({
   }
 });
 
-// ../../../server/node_modules/gaxios/build/cjs/src/util.cjs
+// node_modules/gaxios/build/cjs/src/util.cjs
 var require_util2 = __commonJS({
-  "../../../server/node_modules/gaxios/build/cjs/src/util.cjs"(exports, module) {
+  "node_modules/gaxios/build/cjs/src/util.cjs"(exports, module) {
     "use strict";
     var pkg = require_package();
     module.exports = { pkg };
   }
 });
 
-// ../../../server/node_modules/gaxios/build/cjs/src/common.js
+// node_modules/gaxios/build/cjs/src/common.js
 var require_common = __commonJS({
-  "../../../server/node_modules/gaxios/build/cjs/src/common.js"(exports) {
+  "node_modules/gaxios/build/cjs/src/common.js"(exports) {
     "use strict";
     var __importDefault = exports && exports.__importDefault || function(mod) {
       return mod && mod.__esModule ? mod : { "default": mod };
@@ -7690,9 +7690,9 @@ var require_common = __commonJS({
   }
 });
 
-// ../../../server/node_modules/gaxios/build/cjs/src/retry.js
+// node_modules/gaxios/build/cjs/src/retry.js
 var require_retry3 = __commonJS({
-  "../../../server/node_modules/gaxios/build/cjs/src/retry.js"(exports) {
+  "node_modules/gaxios/build/cjs/src/retry.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getRetryConfig = getRetryConfig;
@@ -7795,9 +7795,9 @@ var require_retry3 = __commonJS({
   }
 });
 
-// ../../../server/node_modules/gaxios/build/cjs/src/interceptor.js
+// node_modules/gaxios/build/cjs/src/interceptor.js
 var require_interceptor = __commonJS({
-  "../../../server/node_modules/gaxios/build/cjs/src/interceptor.js"(exports) {
+  "node_modules/gaxios/build/cjs/src/interceptor.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.GaxiosInterceptorManager = void 0;
@@ -7807,9 +7807,9 @@ var require_interceptor = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ms/index.js
+// node_modules/ms/index.js
 var require_ms = __commonJS({
-  "../../../server/node_modules/ms/index.js"(exports, module) {
+  "node_modules/ms/index.js"(exports, module) {
     var s2 = 1e3;
     var m2 = s2 * 60;
     var h2 = m2 * 60;
@@ -7923,9 +7923,9 @@ var require_ms = __commonJS({
   }
 });
 
-// ../../../server/node_modules/debug/src/common.js
+// node_modules/debug/src/common.js
 var require_common2 = __commonJS({
-  "../../../server/node_modules/debug/src/common.js"(exports, module) {
+  "node_modules/debug/src/common.js"(exports, module) {
     function setup(env2) {
       createDebug.debug = createDebug;
       createDebug.default = createDebug;
@@ -8100,9 +8100,9 @@ var require_common2 = __commonJS({
   }
 });
 
-// ../../../server/node_modules/debug/src/browser.js
+// node_modules/debug/src/browser.js
 var require_browser = __commonJS({
-  "../../../server/node_modules/debug/src/browser.js"(exports, module) {
+  "node_modules/debug/src/browser.js"(exports, module) {
     exports.formatArgs = formatArgs;
     exports.save = save;
     exports.load = load;
@@ -8270,9 +8270,9 @@ var require_browser = __commonJS({
   }
 });
 
-// ../../../server/node_modules/debug/src/node.js
+// node_modules/debug/src/node.js
 var require_node = __commonJS({
-  "../../../server/node_modules/debug/src/node.js"(exports, module) {
+  "node_modules/debug/src/node.js"(exports, module) {
     var tty = __require("tty");
     var util2 = __require("util");
     exports.init = init;
@@ -8444,9 +8444,9 @@ var require_node = __commonJS({
   }
 });
 
-// ../../../server/node_modules/debug/src/index.js
+// node_modules/debug/src/index.js
 var require_src = __commonJS({
-  "../../../server/node_modules/debug/src/index.js"(exports, module) {
+  "node_modules/debug/src/index.js"(exports, module) {
     if (typeof process === "undefined" || process.type === "renderer" || process.browser === true || process.__nwjs) {
       module.exports = require_browser();
     } else {
@@ -8455,9 +8455,9 @@ var require_src = __commonJS({
   }
 });
 
-// ../../../server/node_modules/agent-base/dist/helpers.js
+// node_modules/agent-base/dist/helpers.js
 var require_helpers = __commonJS({
-  "../../../server/node_modules/agent-base/dist/helpers.js"(exports) {
+  "node_modules/agent-base/dist/helpers.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m2, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -8525,9 +8525,9 @@ var require_helpers = __commonJS({
   }
 });
 
-// ../../../server/node_modules/agent-base/dist/index.js
+// node_modules/agent-base/dist/index.js
 var require_dist2 = __commonJS({
-  "../../../server/node_modules/agent-base/dist/index.js"(exports) {
+  "node_modules/agent-base/dist/index.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m2, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -8681,9 +8681,9 @@ var require_dist2 = __commonJS({
   }
 });
 
-// ../../../server/node_modules/https-proxy-agent/dist/parse-proxy-response.js
+// node_modules/https-proxy-agent/dist/parse-proxy-response.js
 var require_parse_proxy_response = __commonJS({
-  "../../../server/node_modules/https-proxy-agent/dist/parse-proxy-response.js"(exports) {
+  "node_modules/https-proxy-agent/dist/parse-proxy-response.js"(exports) {
     "use strict";
     var __importDefault = exports && exports.__importDefault || function(mod) {
       return mod && mod.__esModule ? mod : { "default": mod };
@@ -8777,9 +8777,9 @@ var require_parse_proxy_response = __commonJS({
   }
 });
 
-// ../../../server/node_modules/https-proxy-agent/dist/index.js
+// node_modules/https-proxy-agent/dist/index.js
 var require_dist3 = __commonJS({
-  "../../../server/node_modules/https-proxy-agent/dist/index.js"(exports) {
+  "node_modules/https-proxy-agent/dist/index.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m2, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -8927,7 +8927,7 @@ var require_dist3 = __commonJS({
   }
 });
 
-// ../../../server/node_modules/data-uri-to-buffer/dist/index.js
+// node_modules/data-uri-to-buffer/dist/index.js
 function dataUriToBuffer(uri) {
   if (!/^data:/i.test(uri)) {
     throw new TypeError('`uri` does not appear to be a Data URI (must begin with "data:")');
@@ -8966,14 +8966,14 @@ function dataUriToBuffer(uri) {
 }
 var dist_default;
 var init_dist = __esm({
-  "../../../server/node_modules/data-uri-to-buffer/dist/index.js"() {
+  "node_modules/data-uri-to-buffer/dist/index.js"() {
     dist_default = dataUriToBuffer;
   }
 });
 
-// ../../../server/node_modules/web-streams-polyfill/dist/ponyfill.es2018.js
+// node_modules/web-streams-polyfill/dist/ponyfill.es2018.js
 var require_ponyfill_es2018 = __commonJS({
-  "../../../server/node_modules/web-streams-polyfill/dist/ponyfill.es2018.js"(exports, module) {
+  "node_modules/web-streams-polyfill/dist/ponyfill.es2018.js"(exports, module) {
     (function(global2, factory) {
       typeof exports === "object" && typeof module !== "undefined" ? factory(exports) : typeof define === "function" && define.amd ? define(["exports"], factory) : (global2 = typeof globalThis !== "undefined" ? globalThis : global2 || self, factory(global2.WebStreamsPolyfill = {}));
     })(exports, (function(exports2) {
@@ -13246,9 +13246,9 @@ var require_ponyfill_es2018 = __commonJS({
   }
 });
 
-// ../../../server/node_modules/fetch-blob/streams.cjs
+// node_modules/fetch-blob/streams.cjs
 var require_streams = __commonJS({
-  "../../../server/node_modules/fetch-blob/streams.cjs"() {
+  "node_modules/fetch-blob/streams.cjs"() {
     var POOL_SIZE2 = 65536;
     if (!globalThis.ReadableStream) {
       try {
@@ -13292,7 +13292,7 @@ var require_streams = __commonJS({
   }
 });
 
-// ../../../server/node_modules/fetch-blob/index.js
+// node_modules/fetch-blob/index.js
 async function* toIterator(parts, clone3 = true) {
   for (const part of parts) {
     if ("stream" in part) {
@@ -13329,7 +13329,7 @@ async function* toIterator(parts, clone3 = true) {
 }
 var import_streams, POOL_SIZE, _Blob, Blob3, fetch_blob_default;
 var init_fetch_blob = __esm({
-  "../../../server/node_modules/fetch-blob/index.js"() {
+  "node_modules/fetch-blob/index.js"() {
     import_streams = __toESM(require_streams(), 1);
     POOL_SIZE = 65536;
     _Blob = class Blob2 {
@@ -13496,10 +13496,10 @@ var init_fetch_blob = __esm({
   }
 });
 
-// ../../../server/node_modules/fetch-blob/file.js
+// node_modules/fetch-blob/file.js
 var _File, File3, file_default;
 var init_file = __esm({
-  "../../../server/node_modules/fetch-blob/file.js"() {
+  "node_modules/fetch-blob/file.js"() {
     init_fetch_blob();
     _File = class File2 extends fetch_blob_default {
       #lastModified = 0;
@@ -13540,7 +13540,7 @@ var init_file = __esm({
   }
 });
 
-// ../../../server/node_modules/formdata-polyfill/esm.min.js
+// node_modules/formdata-polyfill/esm.min.js
 function formDataToBlob(F2, B = fetch_blob_default) {
   var b = `${r()}${r()}`.replace(/\./g, "").slice(-28).padStart(32, "-"), c = [], p = `--${b}\r
 Content-Disposition: form-data; name="`;
@@ -13556,7 +13556,7 @@ Content-Type: ${v.type || "application/octet-stream"}\r
 }
 var t, i, h, r, m, f, e, x, FormData2;
 var init_esm_min = __esm({
-  "../../../server/node_modules/formdata-polyfill/esm.min.js"() {
+  "node_modules/formdata-polyfill/esm.min.js"() {
     init_fetch_blob();
     init_file();
     ({ toStringTag: t, iterator: i, hasInstance: h } = Symbol);
@@ -13637,10 +13637,10 @@ var init_esm_min = __esm({
   }
 });
 
-// ../../../server/node_modules/node-fetch/src/errors/base.js
+// node_modules/node-fetch/src/errors/base.js
 var FetchBaseError;
 var init_base = __esm({
-  "../../../server/node_modules/node-fetch/src/errors/base.js"() {
+  "node_modules/node-fetch/src/errors/base.js"() {
     FetchBaseError = class extends Error {
       constructor(message, type) {
         super(message);
@@ -13657,10 +13657,10 @@ var init_base = __esm({
   }
 });
 
-// ../../../server/node_modules/node-fetch/src/errors/fetch-error.js
+// node_modules/node-fetch/src/errors/fetch-error.js
 var FetchError;
 var init_fetch_error = __esm({
-  "../../../server/node_modules/node-fetch/src/errors/fetch-error.js"() {
+  "node_modules/node-fetch/src/errors/fetch-error.js"() {
     init_base();
     FetchError = class extends FetchBaseError {
       /**
@@ -13679,10 +13679,10 @@ var init_fetch_error = __esm({
   }
 });
 
-// ../../../server/node_modules/node-fetch/src/utils/is.js
+// node_modules/node-fetch/src/utils/is.js
 var NAME, isURLSearchParameters, isBlob, isAbortSignal, isDomainOrSubdomain, isSameProtocol;
 var init_is = __esm({
-  "../../../server/node_modules/node-fetch/src/utils/is.js"() {
+  "node_modules/node-fetch/src/utils/is.js"() {
     NAME = Symbol.toStringTag;
     isURLSearchParameters = (object3) => {
       return typeof object3 === "object" && typeof object3.append === "function" && typeof object3.delete === "function" && typeof object3.get === "function" && typeof object3.getAll === "function" && typeof object3.has === "function" && typeof object3.set === "function" && typeof object3.sort === "function" && object3[NAME] === "URLSearchParams";
@@ -13706,9 +13706,9 @@ var init_is = __esm({
   }
 });
 
-// ../../../server/node_modules/node-domexception/index.js
+// node_modules/node-domexception/index.js
 var require_node_domexception = __commonJS({
-  "../../../server/node_modules/node-domexception/index.js"(exports, module) {
+  "node_modules/node-domexception/index.js"(exports, module) {
     if (!globalThis.DOMException) {
       try {
         const { MessageChannel } = __require("worker_threads"), port = new MessageChannel().port1, ab = new ArrayBuffer();
@@ -13721,32 +13721,32 @@ var require_node_domexception = __commonJS({
   }
 });
 
-// ../../../server/node_modules/fetch-blob/from.js
+// node_modules/fetch-blob/from.js
 import { statSync as statSync2, createReadStream, promises as fs2 } from "node:fs";
 import { basename } from "node:path";
 var import_node_domexception, stat, blobFromSync, blobFrom, fileFrom, fileFromSync, fromBlob, fromFile, BlobDataItem;
 var init_from = __esm({
-  "../../../server/node_modules/fetch-blob/from.js"() {
+  "node_modules/fetch-blob/from.js"() {
     import_node_domexception = __toESM(require_node_domexception(), 1);
     init_file();
     init_fetch_blob();
     ({ stat } = fs2);
-    blobFromSync = (path11, type) => fromBlob(statSync2(path11), path11, type);
-    blobFrom = (path11, type) => stat(path11).then((stat4) => fromBlob(stat4, path11, type));
-    fileFrom = (path11, type) => stat(path11).then((stat4) => fromFile(stat4, path11, type));
-    fileFromSync = (path11, type) => fromFile(statSync2(path11), path11, type);
-    fromBlob = (stat4, path11, type = "") => new fetch_blob_default([new BlobDataItem({
-      path: path11,
+    blobFromSync = (path12, type) => fromBlob(statSync2(path12), path12, type);
+    blobFrom = (path12, type) => stat(path12).then((stat4) => fromBlob(stat4, path12, type));
+    fileFrom = (path12, type) => stat(path12).then((stat4) => fromFile(stat4, path12, type));
+    fileFromSync = (path12, type) => fromFile(statSync2(path12), path12, type);
+    fromBlob = (stat4, path12, type = "") => new fetch_blob_default([new BlobDataItem({
+      path: path12,
       size: stat4.size,
       lastModified: stat4.mtimeMs,
       start: 0
     })], { type });
-    fromFile = (stat4, path11, type = "") => new file_default([new BlobDataItem({
-      path: path11,
+    fromFile = (stat4, path12, type = "") => new file_default([new BlobDataItem({
+      path: path12,
       size: stat4.size,
       lastModified: stat4.mtimeMs,
       start: 0
-    })], basename(path11), { type, lastModified: stat4.mtimeMs });
+    })], basename(path12), { type, lastModified: stat4.mtimeMs });
     BlobDataItem = class _BlobDataItem {
       #path;
       #start;
@@ -13785,7 +13785,7 @@ var init_from = __esm({
   }
 });
 
-// ../../../server/node_modules/node-fetch/src/utils/multipart-parser.js
+// node_modules/node-fetch/src/utils/multipart-parser.js
 var multipart_parser_exports = {};
 __export(multipart_parser_exports, {
   toFormData: () => toFormData
@@ -13879,7 +13879,7 @@ async function toFormData(Body2, ct) {
 }
 var s, S, f2, F, LF, CR, SPACE, HYPHEN, COLON, A, Z, lower, noop, MultipartParser;
 var init_multipart_parser = __esm({
-  "../../../server/node_modules/node-fetch/src/utils/multipart-parser.js"() {
+  "node_modules/node-fetch/src/utils/multipart-parser.js"() {
     init_from();
     init_esm_min();
     s = 0;
@@ -14147,7 +14147,7 @@ var init_multipart_parser = __esm({
   }
 });
 
-// ../../../server/node_modules/node-fetch/src/body.js
+// node_modules/node-fetch/src/body.js
 import Stream, { PassThrough } from "node:stream";
 import { types, deprecate, promisify } from "node:util";
 import { Buffer as Buffer2 } from "node:buffer";
@@ -14197,7 +14197,7 @@ async function consumeBody(data) {
 }
 var pipeline, INTERNALS, Body, clone2, getNonSpecFormDataBoundary, extractContentType, getTotalBytes, writeToStream;
 var init_body = __esm({
-  "../../../server/node_modules/node-fetch/src/body.js"() {
+  "node_modules/node-fetch/src/body.js"() {
     init_fetch_blob();
     init_esm_min();
     init_fetch_error();
@@ -14405,7 +14405,7 @@ var init_body = __esm({
   }
 });
 
-// ../../../server/node_modules/node-fetch/src/headers.js
+// node_modules/node-fetch/src/headers.js
 import { types as types2 } from "node:util";
 import http from "node:http";
 function fromRawHeaders(headers = []) {
@@ -14428,7 +14428,7 @@ function fromRawHeaders(headers = []) {
 }
 var validateHeaderName, validateHeaderValue, Headers2;
 var init_headers = __esm({
-  "../../../server/node_modules/node-fetch/src/headers.js"() {
+  "node_modules/node-fetch/src/headers.js"() {
     validateHeaderName = typeof http.validateHeaderName === "function" ? http.validateHeaderName : (name) => {
       if (!/^[\^`\-\w!#$%&'*+.|~]+$/.test(name)) {
         const error2 = new TypeError(`Header name must be a valid HTTP token [${name}]`);
@@ -14596,10 +14596,10 @@ var init_headers = __esm({
   }
 });
 
-// ../../../server/node_modules/node-fetch/src/utils/is-redirect.js
+// node_modules/node-fetch/src/utils/is-redirect.js
 var redirectStatus, isRedirect;
 var init_is_redirect = __esm({
-  "../../../server/node_modules/node-fetch/src/utils/is-redirect.js"() {
+  "node_modules/node-fetch/src/utils/is-redirect.js"() {
     redirectStatus = /* @__PURE__ */ new Set([301, 302, 303, 307, 308]);
     isRedirect = (code) => {
       return redirectStatus.has(code);
@@ -14607,10 +14607,10 @@ var init_is_redirect = __esm({
   }
 });
 
-// ../../../server/node_modules/node-fetch/src/response.js
+// node_modules/node-fetch/src/response.js
 var INTERNALS2, Response2;
 var init_response = __esm({
-  "../../../server/node_modules/node-fetch/src/response.js"() {
+  "node_modules/node-fetch/src/response.js"() {
     init_headers();
     init_body();
     init_is_redirect();
@@ -14733,10 +14733,10 @@ var init_response = __esm({
   }
 });
 
-// ../../../server/node_modules/node-fetch/src/utils/get-search.js
+// node_modules/node-fetch/src/utils/get-search.js
 var getSearch;
 var init_get_search = __esm({
-  "../../../server/node_modules/node-fetch/src/utils/get-search.js"() {
+  "node_modules/node-fetch/src/utils/get-search.js"() {
     getSearch = (parsedURL) => {
       if (parsedURL.search) {
         return parsedURL.search;
@@ -14748,7 +14748,7 @@ var init_get_search = __esm({
   }
 });
 
-// ../../../server/node_modules/node-fetch/src/utils/referrer.js
+// node_modules/node-fetch/src/utils/referrer.js
 import { isIP } from "node:net";
 function stripURLForUseAsAReferrer(url, originOnly = false) {
   if (url == null) {
@@ -14877,7 +14877,7 @@ function parseReferrerPolicyFromHeader(headers) {
 }
 var ReferrerPolicy, DEFAULT_REFERRER_POLICY;
 var init_referrer = __esm({
-  "../../../server/node_modules/node-fetch/src/utils/referrer.js"() {
+  "node_modules/node-fetch/src/utils/referrer.js"() {
     ReferrerPolicy = /* @__PURE__ */ new Set([
       "",
       "no-referrer",
@@ -14893,12 +14893,12 @@ var init_referrer = __esm({
   }
 });
 
-// ../../../server/node_modules/node-fetch/src/request.js
+// node_modules/node-fetch/src/request.js
 import { format as formatUrl } from "node:url";
 import { deprecate as deprecate2 } from "node:util";
 var INTERNALS3, isRequest, doBadDataWarn, Request2, getNodeRequestOptions;
 var init_request = __esm({
-  "../../../server/node_modules/node-fetch/src/request.js"() {
+  "node_modules/node-fetch/src/request.js"() {
     init_headers();
     init_body();
     init_is();
@@ -15098,10 +15098,10 @@ var init_request = __esm({
   }
 });
 
-// ../../../server/node_modules/node-fetch/src/errors/abort-error.js
+// node_modules/node-fetch/src/errors/abort-error.js
 var AbortError;
 var init_abort_error = __esm({
-  "../../../server/node_modules/node-fetch/src/errors/abort-error.js"() {
+  "node_modules/node-fetch/src/errors/abort-error.js"() {
     init_base();
     AbortError = class extends FetchBaseError {
       constructor(message, type = "aborted") {
@@ -15111,7 +15111,7 @@ var init_abort_error = __esm({
   }
 });
 
-// ../../../server/node_modules/node-fetch/src/index.js
+// node_modules/node-fetch/src/index.js
 var src_exports = {};
 __export(src_exports, {
   AbortError: () => AbortError,
@@ -15397,7 +15397,7 @@ function fixResponseChunkedTransferBadEnding(request, errorCallback) {
 }
 var supportedSchemas;
 var init_src = __esm({
-  "../../../server/node_modules/node-fetch/src/index.js"() {
+  "node_modules/node-fetch/src/index.js"() {
     init_dist();
     init_body();
     init_response();
@@ -15414,9 +15414,9 @@ var init_src = __esm({
   }
 });
 
-// ../../../server/node_modules/gaxios/build/cjs/src/gaxios.js
+// node_modules/gaxios/build/cjs/src/gaxios.js
 var require_gaxios = __commonJS({
-  "../../../server/node_modules/gaxios/build/cjs/src/gaxios.js"(exports) {
+  "node_modules/gaxios/build/cjs/src/gaxios.js"(exports) {
     "use strict";
     var __importDefault = exports && exports.__importDefault || function(mod) {
       return mod && mod.__esModule ? mod : { "default": mod };
@@ -15888,9 +15888,9 @@ Content-Type: ${partContentType}\r
   }
 });
 
-// ../../../server/node_modules/gaxios/build/cjs/src/index.js
+// node_modules/gaxios/build/cjs/src/index.js
 var require_src2 = __commonJS({
-  "../../../server/node_modules/gaxios/build/cjs/src/index.js"(exports) {
+  "node_modules/gaxios/build/cjs/src/index.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m2, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -15927,9 +15927,9 @@ var require_src2 = __commonJS({
   }
 });
 
-// ../../../server/node_modules/bignumber.js/bignumber.js
+// node_modules/bignumber.js/bignumber.js
 var require_bignumber = __commonJS({
-  "../../../server/node_modules/bignumber.js/bignumber.js"(exports, module) {
+  "node_modules/bignumber.js/bignumber.js"(exports, module) {
     (function(globalObject) {
       "use strict";
       var BigNumber, isNumeric = /^-?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i, mathceil = Math.ceil, mathfloor = Math.floor, bignumberError = "[BigNumber Error] ", tooManyDigits = bignumberError + "Number primitive has more than 15 significant digits: ", BASE = 1e14, LOG_BASE = 14, MAX_SAFE_INTEGER = 9007199254740991, POWS_TEN = [1, 10, 100, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11, 1e12, 1e13], SQRT_BASE = 1e7, MAX = 1e9;
@@ -17278,9 +17278,9 @@ var require_bignumber = __commonJS({
   }
 });
 
-// ../../../server/node_modules/json-bigint/lib/stringify.js
+// node_modules/json-bigint/lib/stringify.js
 var require_stringify = __commonJS({
-  "../../../server/node_modules/json-bigint/lib/stringify.js"(exports, module) {
+  "node_modules/json-bigint/lib/stringify.js"(exports, module) {
     var BigNumber = require_bignumber();
     var JSON2 = module.exports;
     (function() {
@@ -17390,9 +17390,9 @@ var require_stringify = __commonJS({
   }
 });
 
-// ../../../server/node_modules/json-bigint/lib/parse.js
+// node_modules/json-bigint/lib/parse.js
 var require_parse = __commonJS({
-  "../../../server/node_modules/json-bigint/lib/parse.js"(exports, module) {
+  "node_modules/json-bigint/lib/parse.js"(exports, module) {
     var BigNumber = null;
     var suspectProtoRx = /(?:_|\\u005[Ff])(?:_|\\u005[Ff])(?:p|\\u0070)(?:r|\\u0072)(?:o|\\u006[Ff])(?:t|\\u0074)(?:o|\\u006[Ff])(?:_|\\u005[Ff])(?:_|\\u005[Ff])/;
     var suspectConstructorRx = /(?:c|\\u0063)(?:o|\\u006[Ff])(?:n|\\u006[Ee])(?:s|\\u0073)(?:t|\\u0074)(?:r|\\u0072)(?:u|\\u0075)(?:c|\\u0063)(?:t|\\u0074)(?:o|\\u006[Ff])(?:r|\\u0072)/;
@@ -17671,9 +17671,9 @@ var require_parse = __commonJS({
   }
 });
 
-// ../../../server/node_modules/json-bigint/index.js
+// node_modules/json-bigint/index.js
 var require_json_bigint = __commonJS({
-  "../../../server/node_modules/json-bigint/index.js"(exports, module) {
+  "node_modules/json-bigint/index.js"(exports, module) {
     var json_stringify = require_stringify().stringify;
     var json_parse = require_parse();
     module.exports = function(options) {
@@ -17687,9 +17687,9 @@ var require_json_bigint = __commonJS({
   }
 });
 
-// ../../../server/node_modules/gcp-metadata/build/src/gcp-residency.js
+// node_modules/gcp-metadata/build/src/gcp-residency.js
 var require_gcp_residency = __commonJS({
-  "../../../server/node_modules/gcp-metadata/build/src/gcp-residency.js"(exports) {
+  "node_modules/gcp-metadata/build/src/gcp-residency.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.GCE_LINUX_BIOS_PATHS = void 0;
@@ -17742,9 +17742,9 @@ var require_gcp_residency = __commonJS({
   }
 });
 
-// ../../../server/node_modules/google-logging-utils/build/src/colours.js
+// node_modules/google-logging-utils/build/src/colours.js
 var require_colours = __commonJS({
-  "../../../server/node_modules/google-logging-utils/build/src/colours.js"(exports) {
+  "node_modules/google-logging-utils/build/src/colours.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Colours = void 0;
@@ -17803,9 +17803,9 @@ var require_colours = __commonJS({
   }
 });
 
-// ../../../server/node_modules/google-logging-utils/build/src/logging-utils.js
+// node_modules/google-logging-utils/build/src/logging-utils.js
 var require_logging_utils = __commonJS({
-  "../../../server/node_modules/google-logging-utils/build/src/logging-utils.js"(exports) {
+  "node_modules/google-logging-utils/build/src/logging-utils.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m2, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -18092,9 +18092,9 @@ var require_logging_utils = __commonJS({
   }
 });
 
-// ../../../server/node_modules/google-logging-utils/build/src/index.js
+// node_modules/google-logging-utils/build/src/index.js
 var require_src3 = __commonJS({
-  "../../../server/node_modules/google-logging-utils/build/src/index.js"(exports) {
+  "node_modules/google-logging-utils/build/src/index.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m2, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -18117,9 +18117,9 @@ var require_src3 = __commonJS({
   }
 });
 
-// ../../../server/node_modules/gcp-metadata/build/src/index.js
+// node_modules/gcp-metadata/build/src/index.js
 var require_src4 = __commonJS({
-  "../../../server/node_modules/gcp-metadata/build/src/index.js"(exports) {
+  "node_modules/gcp-metadata/build/src/index.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m2, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -18373,9 +18373,9 @@ var require_src4 = __commonJS({
   }
 });
 
-// ../../../server/node_modules/base64-js/index.js
+// node_modules/base64-js/index.js
 var require_base64_js = __commonJS({
-  "../../../server/node_modules/base64-js/index.js"(exports) {
+  "node_modules/base64-js/index.js"(exports) {
     "use strict";
     exports.byteLength = byteLength;
     exports.toByteArray = toByteArray;
@@ -18474,9 +18474,9 @@ var require_base64_js = __commonJS({
   }
 });
 
-// ../../../server/node_modules/google-auth-library/build/src/crypto/shared.js
+// node_modules/google-auth-library/build/src/crypto/shared.js
 var require_shared = __commonJS({
-  "../../../server/node_modules/google-auth-library/build/src/crypto/shared.js"(exports) {
+  "node_modules/google-auth-library/build/src/crypto/shared.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.fromArrayBufferToHex = fromArrayBufferToHex;
@@ -18489,9 +18489,9 @@ var require_shared = __commonJS({
   }
 });
 
-// ../../../server/node_modules/google-auth-library/build/src/crypto/browser/crypto.js
+// node_modules/google-auth-library/build/src/crypto/browser/crypto.js
 var require_crypto = __commonJS({
-  "../../../server/node_modules/google-auth-library/build/src/crypto/browser/crypto.js"(exports) {
+  "node_modules/google-auth-library/build/src/crypto/browser/crypto.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.BrowserCrypto = void 0;
@@ -18585,9 +18585,9 @@ var require_crypto = __commonJS({
   }
 });
 
-// ../../../server/node_modules/google-auth-library/build/src/crypto/node/crypto.js
+// node_modules/google-auth-library/build/src/crypto/node/crypto.js
 var require_crypto2 = __commonJS({
-  "../../../server/node_modules/google-auth-library/build/src/crypto/node/crypto.js"(exports) {
+  "node_modules/google-auth-library/build/src/crypto/node/crypto.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.NodeCrypto = void 0;
@@ -18654,9 +18654,9 @@ var require_crypto2 = __commonJS({
   }
 });
 
-// ../../../server/node_modules/google-auth-library/build/src/crypto/crypto.js
+// node_modules/google-auth-library/build/src/crypto/crypto.js
 var require_crypto3 = __commonJS({
-  "../../../server/node_modules/google-auth-library/build/src/crypto/crypto.js"(exports) {
+  "node_modules/google-auth-library/build/src/crypto/crypto.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m2, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -18692,9 +18692,9 @@ var require_crypto3 = __commonJS({
   }
 });
 
-// ../../../server/node_modules/safe-buffer/index.js
+// node_modules/safe-buffer/index.js
 var require_safe_buffer = __commonJS({
-  "../../../server/node_modules/safe-buffer/index.js"(exports, module) {
+  "node_modules/safe-buffer/index.js"(exports, module) {
     var buffer = __require("buffer");
     var Buffer4 = buffer.Buffer;
     function copyProps(src, dst) {
@@ -18750,9 +18750,9 @@ var require_safe_buffer = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ecdsa-sig-formatter/src/param-bytes-for-alg.js
+// node_modules/ecdsa-sig-formatter/src/param-bytes-for-alg.js
 var require_param_bytes_for_alg = __commonJS({
-  "../../../server/node_modules/ecdsa-sig-formatter/src/param-bytes-for-alg.js"(exports, module) {
+  "node_modules/ecdsa-sig-formatter/src/param-bytes-for-alg.js"(exports, module) {
     "use strict";
     function getParamSize(keySize) {
       var result = (keySize / 8 | 0) + (keySize % 8 === 0 ? 0 : 1);
@@ -18774,9 +18774,9 @@ var require_param_bytes_for_alg = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ecdsa-sig-formatter/src/ecdsa-sig-formatter.js
+// node_modules/ecdsa-sig-formatter/src/ecdsa-sig-formatter.js
 var require_ecdsa_sig_formatter = __commonJS({
-  "../../../server/node_modules/ecdsa-sig-formatter/src/ecdsa-sig-formatter.js"(exports, module) {
+  "node_modules/ecdsa-sig-formatter/src/ecdsa-sig-formatter.js"(exports, module) {
     "use strict";
     var Buffer4 = require_safe_buffer().Buffer;
     var getParamBytesForAlg = require_param_bytes_for_alg();
@@ -18914,9 +18914,9 @@ var require_ecdsa_sig_formatter = __commonJS({
   }
 });
 
-// ../../../server/node_modules/google-auth-library/build/src/util.js
+// node_modules/google-auth-library/build/src/util.js
 var require_util3 = __commonJS({
-  "../../../server/node_modules/google-auth-library/build/src/util.js"(exports) {
+  "node_modules/google-auth-library/build/src/util.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.LRUCache = void 0;
@@ -18927,7 +18927,7 @@ var require_util3 = __commonJS({
     exports.getWellKnownCertificateConfigFileLocation = getWellKnownCertificateConfigFileLocation;
     var fs9 = __require("fs");
     var os2 = __require("os");
-    var path11 = __require("path");
+    var path12 = __require("path");
     var WELL_KNOWN_CERTIFICATE_CONFIG_FILE = "certificate_config.json";
     var CLOUDSDK_CONFIG_DIRECTORY = "gcloud";
     function snakeToCamel(str8) {
@@ -19020,8 +19020,8 @@ var require_util3 = __commonJS({
       }
     }
     function getWellKnownCertificateConfigFileLocation() {
-      const configDir = process.env.CLOUDSDK_CONFIG || (_isWindows() ? path11.join(process.env.APPDATA || "", CLOUDSDK_CONFIG_DIRECTORY) : path11.join(process.env.HOME || "", ".config", CLOUDSDK_CONFIG_DIRECTORY));
-      return path11.join(configDir, WELL_KNOWN_CERTIFICATE_CONFIG_FILE);
+      const configDir = process.env.CLOUDSDK_CONFIG || (_isWindows() ? path12.join(process.env.APPDATA || "", CLOUDSDK_CONFIG_DIRECTORY) : path12.join(process.env.HOME || "", ".config", CLOUDSDK_CONFIG_DIRECTORY));
+      return path12.join(configDir, WELL_KNOWN_CERTIFICATE_CONFIG_FILE);
     }
     function _isWindows() {
       return os2.platform().startsWith("win");
@@ -19029,9 +19029,9 @@ var require_util3 = __commonJS({
   }
 });
 
-// ../../../server/node_modules/google-auth-library/package.json
+// node_modules/google-auth-library/package.json
 var require_package2 = __commonJS({
-  "../../../server/node_modules/google-auth-library/package.json"(exports, module) {
+  "node_modules/google-auth-library/package.json"(exports, module) {
     module.exports = {
       name: "google-auth-library",
       version: "10.9.1",
@@ -19125,9 +19125,9 @@ var require_package2 = __commonJS({
   }
 });
 
-// ../../../server/node_modules/google-auth-library/build/src/shared.cjs
+// node_modules/google-auth-library/build/src/shared.cjs
 var require_shared2 = __commonJS({
-  "../../../server/node_modules/google-auth-library/build/src/shared.cjs"(exports) {
+  "node_modules/google-auth-library/build/src/shared.cjs"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.USER_AGENT = exports.PRODUCT_NAME = exports.pkg = void 0;
@@ -19140,9 +19140,9 @@ var require_shared2 = __commonJS({
   }
 });
 
-// ../../../server/node_modules/google-auth-library/build/src/auth/authclient.js
+// node_modules/google-auth-library/build/src/auth/authclient.js
 var require_authclient = __commonJS({
-  "../../../server/node_modules/google-auth-library/build/src/auth/authclient.js"(exports) {
+  "node_modules/google-auth-library/build/src/auth/authclient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.AuthClient = exports.DEFAULT_EAGER_REFRESH_THRESHOLD_MILLIS = exports.DEFAULT_UNIVERSE = void 0;
@@ -19375,9 +19375,9 @@ var require_authclient = __commonJS({
   }
 });
 
-// ../../../server/node_modules/google-auth-library/build/src/auth/loginticket.js
+// node_modules/google-auth-library/build/src/auth/loginticket.js
 var require_loginticket = __commonJS({
-  "../../../server/node_modules/google-auth-library/build/src/auth/loginticket.js"(exports) {
+  "node_modules/google-auth-library/build/src/auth/loginticket.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.LoginTicket = void 0;
@@ -19427,9 +19427,9 @@ var require_loginticket = __commonJS({
   }
 });
 
-// ../../../server/node_modules/google-auth-library/build/src/auth/oauth2client.js
+// node_modules/google-auth-library/build/src/auth/oauth2client.js
 var require_oauth2client = __commonJS({
-  "../../../server/node_modules/google-auth-library/build/src/auth/oauth2client.js"(exports) {
+  "node_modules/google-auth-library/build/src/auth/oauth2client.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.OAuth2Client = exports.ClientAuthentication = exports.CertificateFormat = exports.CodeChallengeMethod = void 0;
@@ -20108,9 +20108,9 @@ var require_oauth2client = __commonJS({
   }
 });
 
-// ../../../server/node_modules/google-auth-library/build/src/auth/computeclient.js
+// node_modules/google-auth-library/build/src/auth/computeclient.js
 var require_computeclient = __commonJS({
-  "../../../server/node_modules/google-auth-library/build/src/auth/computeclient.js"(exports) {
+  "node_modules/google-auth-library/build/src/auth/computeclient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Compute = void 0;
@@ -20200,9 +20200,9 @@ var require_computeclient = __commonJS({
   }
 });
 
-// ../../../server/node_modules/google-auth-library/build/src/auth/idtokenclient.js
+// node_modules/google-auth-library/build/src/auth/idtokenclient.js
 var require_idtokenclient = __commonJS({
-  "../../../server/node_modules/google-auth-library/build/src/auth/idtokenclient.js"(exports) {
+  "node_modules/google-auth-library/build/src/auth/idtokenclient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.IdTokenClient = void 0;
@@ -20246,9 +20246,9 @@ var require_idtokenclient = __commonJS({
   }
 });
 
-// ../../../server/node_modules/google-auth-library/build/src/auth/envDetect.js
+// node_modules/google-auth-library/build/src/auth/envDetect.js
 var require_envDetect = __commonJS({
-  "../../../server/node_modules/google-auth-library/build/src/auth/envDetect.js"(exports) {
+  "node_modules/google-auth-library/build/src/auth/envDetect.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.GCPEnv = void 0;
@@ -20323,9 +20323,9 @@ var require_envDetect = __commonJS({
   }
 });
 
-// ../../../server/node_modules/jws/lib/data-stream.js
+// node_modules/jws/lib/data-stream.js
 var require_data_stream = __commonJS({
-  "../../../server/node_modules/jws/lib/data-stream.js"(exports, module) {
+  "node_modules/jws/lib/data-stream.js"(exports, module) {
     var Buffer4 = require_safe_buffer().Buffer;
     var Stream5 = __require("stream");
     var util2 = __require("util");
@@ -20371,9 +20371,9 @@ var require_data_stream = __commonJS({
   }
 });
 
-// ../../../server/node_modules/buffer-equal-constant-time/index.js
+// node_modules/buffer-equal-constant-time/index.js
 var require_buffer_equal_constant_time = __commonJS({
-  "../../../server/node_modules/buffer-equal-constant-time/index.js"(exports, module) {
+  "node_modules/buffer-equal-constant-time/index.js"(exports, module) {
     "use strict";
     var Buffer4 = __require("buffer").Buffer;
     var SlowBuffer = __require("buffer").SlowBuffer;
@@ -20405,9 +20405,9 @@ var require_buffer_equal_constant_time = __commonJS({
   }
 });
 
-// ../../../server/node_modules/jwa/index.js
+// node_modules/jwa/index.js
 var require_jwa = __commonJS({
-  "../../../server/node_modules/jwa/index.js"(exports, module) {
+  "node_modules/jwa/index.js"(exports, module) {
     var Buffer4 = require_safe_buffer().Buffer;
     var crypto2 = __require("crypto");
     var formatEcdsa = require_ecdsa_sig_formatter();
@@ -20629,9 +20629,9 @@ var require_jwa = __commonJS({
   }
 });
 
-// ../../../server/node_modules/jws/lib/tostring.js
+// node_modules/jws/lib/tostring.js
 var require_tostring = __commonJS({
-  "../../../server/node_modules/jws/lib/tostring.js"(exports, module) {
+  "node_modules/jws/lib/tostring.js"(exports, module) {
     var Buffer4 = __require("buffer").Buffer;
     module.exports = function toString(obj) {
       if (typeof obj === "string")
@@ -20643,9 +20643,9 @@ var require_tostring = __commonJS({
   }
 });
 
-// ../../../server/node_modules/jws/lib/sign-stream.js
+// node_modules/jws/lib/sign-stream.js
 var require_sign_stream = __commonJS({
-  "../../../server/node_modules/jws/lib/sign-stream.js"(exports, module) {
+  "node_modules/jws/lib/sign-stream.js"(exports, module) {
     var Buffer4 = require_safe_buffer().Buffer;
     var DataStream = require_data_stream();
     var jwa = require_jwa();
@@ -20718,9 +20718,9 @@ var require_sign_stream = __commonJS({
   }
 });
 
-// ../../../server/node_modules/jws/lib/verify-stream.js
+// node_modules/jws/lib/verify-stream.js
 var require_verify_stream = __commonJS({
-  "../../../server/node_modules/jws/lib/verify-stream.js"(exports, module) {
+  "node_modules/jws/lib/verify-stream.js"(exports, module) {
     var Buffer4 = require_safe_buffer().Buffer;
     var DataStream = require_data_stream();
     var jwa = require_jwa();
@@ -20833,9 +20833,9 @@ var require_verify_stream = __commonJS({
   }
 });
 
-// ../../../server/node_modules/jws/index.js
+// node_modules/jws/index.js
 var require_jws = __commonJS({
-  "../../../server/node_modules/jws/index.js"(exports) {
+  "node_modules/jws/index.js"(exports) {
     var SignStream = require_sign_stream();
     var VerifyStream = require_verify_stream();
     var ALGORITHMS = [
@@ -20866,9 +20866,9 @@ var require_jws = __commonJS({
   }
 });
 
-// ../../../server/node_modules/google-auth-library/build/src/gtoken/jwsSign.js
+// node_modules/google-auth-library/build/src/gtoken/jwsSign.js
 var require_jwsSign = __commonJS({
-  "../../../server/node_modules/google-auth-library/build/src/gtoken/jwsSign.js"(exports) {
+  "node_modules/google-auth-library/build/src/gtoken/jwsSign.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.buildPayloadForJwsSign = buildPayloadForJwsSign;
@@ -20900,9 +20900,9 @@ var require_jwsSign = __commonJS({
   }
 });
 
-// ../../../server/node_modules/google-auth-library/build/src/gtoken/getToken.js
+// node_modules/google-auth-library/build/src/gtoken/getToken.js
 var require_getToken = __commonJS({
-  "../../../server/node_modules/google-auth-library/build/src/gtoken/getToken.js"(exports) {
+  "node_modules/google-auth-library/build/src/gtoken/getToken.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getToken = getToken;
@@ -20944,9 +20944,9 @@ var require_getToken = __commonJS({
   }
 });
 
-// ../../../server/node_modules/google-auth-library/build/src/gtoken/errorWithCode.js
+// node_modules/google-auth-library/build/src/gtoken/errorWithCode.js
 var require_errorWithCode = __commonJS({
-  "../../../server/node_modules/google-auth-library/build/src/gtoken/errorWithCode.js"(exports) {
+  "node_modules/google-auth-library/build/src/gtoken/errorWithCode.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ErrorWithCode = void 0;
@@ -20961,13 +20961,13 @@ var require_errorWithCode = __commonJS({
   }
 });
 
-// ../../../server/node_modules/google-auth-library/build/src/gtoken/getCredentials.js
+// node_modules/google-auth-library/build/src/gtoken/getCredentials.js
 var require_getCredentials = __commonJS({
-  "../../../server/node_modules/google-auth-library/build/src/gtoken/getCredentials.js"(exports) {
+  "node_modules/google-auth-library/build/src/gtoken/getCredentials.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getCredentials = getCredentials;
-    var path11 = __require("path");
+    var path12 = __require("path");
     var fs9 = __require("fs");
     var util_1 = __require("util");
     var errorWithCode_1 = require_errorWithCode();
@@ -21039,7 +21039,7 @@ var require_getCredentials = __commonJS({
        * @returns An instance of a class that implements ICredentialsProvider.
        */
       static create(keyFilePath) {
-        const keyFileExtension = path11.extname(keyFilePath);
+        const keyFileExtension = path12.extname(keyFilePath);
         switch (keyFileExtension) {
           case ExtensionFiles.JSON:
             return new JsonCredentialsProvider(keyFilePath);
@@ -21062,9 +21062,9 @@ var require_getCredentials = __commonJS({
   }
 });
 
-// ../../../server/node_modules/google-auth-library/build/src/gtoken/tokenHandler.js
+// node_modules/google-auth-library/build/src/gtoken/tokenHandler.js
 var require_tokenHandler = __commonJS({
-  "../../../server/node_modules/google-auth-library/build/src/gtoken/tokenHandler.js"(exports) {
+  "node_modules/google-auth-library/build/src/gtoken/tokenHandler.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.TokenHandler = void 0;
@@ -21153,9 +21153,9 @@ var require_tokenHandler = __commonJS({
   }
 });
 
-// ../../../server/node_modules/google-auth-library/build/src/gtoken/revokeToken.js
+// node_modules/google-auth-library/build/src/gtoken/revokeToken.js
 var require_revokeToken = __commonJS({
-  "../../../server/node_modules/google-auth-library/build/src/gtoken/revokeToken.js"(exports) {
+  "node_modules/google-auth-library/build/src/gtoken/revokeToken.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.revokeToken = revokeToken;
@@ -21171,9 +21171,9 @@ var require_revokeToken = __commonJS({
   }
 });
 
-// ../../../server/node_modules/google-auth-library/build/src/gtoken/googleToken.js
+// node_modules/google-auth-library/build/src/gtoken/googleToken.js
 var require_googleToken = __commonJS({
-  "../../../server/node_modules/google-auth-library/build/src/gtoken/googleToken.js"(exports) {
+  "node_modules/google-auth-library/build/src/gtoken/googleToken.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.GoogleToken = void 0;
@@ -21277,9 +21277,9 @@ var require_googleToken = __commonJS({
   }
 });
 
-// ../../../server/node_modules/google-auth-library/build/src/auth/jwtaccess.js
+// node_modules/google-auth-library/build/src/auth/jwtaccess.js
 var require_jwtaccess = __commonJS({
-  "../../../server/node_modules/google-auth-library/build/src/auth/jwtaccess.js"(exports) {
+  "node_modules/google-auth-library/build/src/auth/jwtaccess.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.JWTAccess = void 0;
@@ -21447,9 +21447,9 @@ var require_jwtaccess = __commonJS({
   }
 });
 
-// ../../../server/node_modules/google-auth-library/build/src/auth/jwtclient.js
+// node_modules/google-auth-library/build/src/auth/jwtclient.js
 var require_jwtclient = __commonJS({
-  "../../../server/node_modules/google-auth-library/build/src/auth/jwtclient.js"(exports) {
+  "node_modules/google-auth-library/build/src/auth/jwtclient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.JWT = void 0;
@@ -21719,9 +21719,9 @@ var require_jwtclient = __commonJS({
   }
 });
 
-// ../../../server/node_modules/google-auth-library/build/src/auth/refreshclient.js
+// node_modules/google-auth-library/build/src/auth/refreshclient.js
 var require_refreshclient = __commonJS({
-  "../../../server/node_modules/google-auth-library/build/src/auth/refreshclient.js"(exports) {
+  "node_modules/google-auth-library/build/src/auth/refreshclient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.UserRefreshClient = exports.USER_REFRESH_ACCOUNT_TYPE = void 0;
@@ -21847,9 +21847,9 @@ var require_refreshclient = __commonJS({
   }
 });
 
-// ../../../server/node_modules/google-auth-library/build/src/auth/impersonated.js
+// node_modules/google-auth-library/build/src/auth/impersonated.js
 var require_impersonated = __commonJS({
-  "../../../server/node_modules/google-auth-library/build/src/auth/impersonated.js"(exports) {
+  "node_modules/google-auth-library/build/src/auth/impersonated.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Impersonated = exports.IMPERSONATED_ACCOUNT_TYPE = void 0;
@@ -22026,9 +22026,9 @@ var require_impersonated = __commonJS({
   }
 });
 
-// ../../../server/node_modules/google-auth-library/build/src/auth/oauth2common.js
+// node_modules/google-auth-library/build/src/auth/oauth2common.js
 var require_oauth2common = __commonJS({
-  "../../../server/node_modules/google-auth-library/build/src/auth/oauth2common.js"(exports) {
+  "node_modules/google-auth-library/build/src/auth/oauth2common.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.OAuthClientAuthHandler = void 0;
@@ -22174,9 +22174,9 @@ var require_oauth2common = __commonJS({
   }
 });
 
-// ../../../server/node_modules/google-auth-library/build/src/auth/stscredentials.js
+// node_modules/google-auth-library/build/src/auth/stscredentials.js
 var require_stscredentials = __commonJS({
-  "../../../server/node_modules/google-auth-library/build/src/auth/stscredentials.js"(exports) {
+  "node_modules/google-auth-library/build/src/auth/stscredentials.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.StsCredentials = void 0;
@@ -22262,9 +22262,9 @@ var require_stscredentials = __commonJS({
   }
 });
 
-// ../../../server/node_modules/google-auth-library/build/src/auth/baseexternalclient.js
+// node_modules/google-auth-library/build/src/auth/baseexternalclient.js
 var require_baseexternalclient = __commonJS({
-  "../../../server/node_modules/google-auth-library/build/src/auth/baseexternalclient.js"(exports) {
+  "node_modules/google-auth-library/build/src/auth/baseexternalclient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.BaseExternalAccountClient = exports.CLOUD_RESOURCE_MANAGER = exports.EXTERNAL_ACCOUNT_TYPE = exports.EXPIRATION_TIME_OFFSET = void 0;
@@ -22641,9 +22641,9 @@ var require_baseexternalclient = __commonJS({
   }
 });
 
-// ../../../server/node_modules/google-auth-library/build/src/auth/filesubjecttokensupplier.js
+// node_modules/google-auth-library/build/src/auth/filesubjecttokensupplier.js
 var require_filesubjecttokensupplier = __commonJS({
-  "../../../server/node_modules/google-auth-library/build/src/auth/filesubjecttokensupplier.js"(exports) {
+  "node_modules/google-auth-library/build/src/auth/filesubjecttokensupplier.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.FileSubjectTokenSupplier = void 0;
@@ -22706,9 +22706,9 @@ var require_filesubjecttokensupplier = __commonJS({
   }
 });
 
-// ../../../server/node_modules/google-auth-library/build/src/auth/urlsubjecttokensupplier.js
+// node_modules/google-auth-library/build/src/auth/urlsubjecttokensupplier.js
 var require_urlsubjecttokensupplier = __commonJS({
-  "../../../server/node_modules/google-auth-library/build/src/auth/urlsubjecttokensupplier.js"(exports) {
+  "node_modules/google-auth-library/build/src/auth/urlsubjecttokensupplier.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.UrlSubjectTokenSupplier = void 0;
@@ -22764,9 +22764,9 @@ var require_urlsubjecttokensupplier = __commonJS({
   }
 });
 
-// ../../../server/node_modules/google-auth-library/build/src/auth/certificatesubjecttokensupplier.js
+// node_modules/google-auth-library/build/src/auth/certificatesubjecttokensupplier.js
 var require_certificatesubjecttokensupplier = __commonJS({
-  "../../../server/node_modules/google-auth-library/build/src/auth/certificatesubjecttokensupplier.js"(exports) {
+  "node_modules/google-auth-library/build/src/auth/certificatesubjecttokensupplier.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.CertificateSubjectTokenSupplier = exports.InvalidConfigurationError = exports.CertificateSourceUnavailableError = exports.CERTIFICATE_CONFIGURATION_ENV_VARIABLE = void 0;
@@ -22948,9 +22948,9 @@ var require_certificatesubjecttokensupplier = __commonJS({
   }
 });
 
-// ../../../server/node_modules/google-auth-library/build/src/auth/identitypoolclient.js
+// node_modules/google-auth-library/build/src/auth/identitypoolclient.js
 var require_identitypoolclient = __commonJS({
-  "../../../server/node_modules/google-auth-library/build/src/auth/identitypoolclient.js"(exports) {
+  "node_modules/google-auth-library/build/src/auth/identitypoolclient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.IdentityPoolClient = void 0;
@@ -23060,9 +23060,9 @@ var require_identitypoolclient = __commonJS({
   }
 });
 
-// ../../../server/node_modules/google-auth-library/build/src/auth/awsrequestsigner.js
+// node_modules/google-auth-library/build/src/auth/awsrequestsigner.js
 var require_awsrequestsigner = __commonJS({
-  "../../../server/node_modules/google-auth-library/build/src/auth/awsrequestsigner.js"(exports) {
+  "node_modules/google-auth-library/build/src/auth/awsrequestsigner.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.AwsRequestSigner = void 0;
@@ -23210,9 +23210,9 @@ ${credentialScope}
   }
 });
 
-// ../../../server/node_modules/google-auth-library/build/src/auth/defaultawssecuritycredentialssupplier.js
+// node_modules/google-auth-library/build/src/auth/defaultawssecuritycredentialssupplier.js
 var require_defaultawssecuritycredentialssupplier = __commonJS({
-  "../../../server/node_modules/google-auth-library/build/src/auth/defaultawssecuritycredentialssupplier.js"(exports) {
+  "node_modules/google-auth-library/build/src/auth/defaultawssecuritycredentialssupplier.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.DefaultAwsSecurityCredentialsSupplier = void 0;
@@ -23365,9 +23365,9 @@ var require_defaultawssecuritycredentialssupplier = __commonJS({
   }
 });
 
-// ../../../server/node_modules/google-auth-library/build/src/auth/awsclient.js
+// node_modules/google-auth-library/build/src/auth/awsclient.js
 var require_awsclient = __commonJS({
-  "../../../server/node_modules/google-auth-library/build/src/auth/awsclient.js"(exports) {
+  "node_modules/google-auth-library/build/src/auth/awsclient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.AwsClient = void 0;
@@ -23479,9 +23479,9 @@ var require_awsclient = __commonJS({
   }
 });
 
-// ../../../server/node_modules/google-auth-library/build/src/auth/executable-response.js
+// node_modules/google-auth-library/build/src/auth/executable-response.js
 var require_executable_response = __commonJS({
-  "../../../server/node_modules/google-auth-library/build/src/auth/executable-response.js"(exports) {
+  "node_modules/google-auth-library/build/src/auth/executable-response.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.InvalidSubjectTokenError = exports.InvalidMessageFieldError = exports.InvalidCodeFieldError = exports.InvalidTokenTypeFieldError = exports.InvalidExpirationTimeFieldError = exports.InvalidSuccessFieldError = exports.InvalidVersionFieldError = exports.ExecutableResponseError = exports.ExecutableResponse = void 0;
@@ -23610,9 +23610,9 @@ var require_executable_response = __commonJS({
   }
 });
 
-// ../../../server/node_modules/google-auth-library/build/src/auth/pluggable-auth-handler.js
+// node_modules/google-auth-library/build/src/auth/pluggable-auth-handler.js
 var require_pluggable_auth_handler = __commonJS({
-  "../../../server/node_modules/google-auth-library/build/src/auth/pluggable-auth-handler.js"(exports) {
+  "node_modules/google-auth-library/build/src/auth/pluggable-auth-handler.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.PluggableAuthHandler = exports.ExecutableError = void 0;
@@ -23751,9 +23751,9 @@ var require_pluggable_auth_handler = __commonJS({
   }
 });
 
-// ../../../server/node_modules/google-auth-library/build/src/auth/pluggable-auth-client.js
+// node_modules/google-auth-library/build/src/auth/pluggable-auth-client.js
 var require_pluggable_auth_client = __commonJS({
-  "../../../server/node_modules/google-auth-library/build/src/auth/pluggable-auth-client.js"(exports) {
+  "node_modules/google-auth-library/build/src/auth/pluggable-auth-client.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.PluggableAuthClient = exports.ExecutableError = void 0;
@@ -23878,9 +23878,9 @@ var require_pluggable_auth_client = __commonJS({
   }
 });
 
-// ../../../server/node_modules/google-auth-library/build/src/auth/externalclient.js
+// node_modules/google-auth-library/build/src/auth/externalclient.js
 var require_externalclient = __commonJS({
-  "../../../server/node_modules/google-auth-library/build/src/auth/externalclient.js"(exports) {
+  "node_modules/google-auth-library/build/src/auth/externalclient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ExternalAccountClient = void 0;
@@ -23927,9 +23927,9 @@ var require_externalclient = __commonJS({
   }
 });
 
-// ../../../server/node_modules/google-auth-library/build/src/auth/externalAccountAuthorizedUserClient.js
+// node_modules/google-auth-library/build/src/auth/externalAccountAuthorizedUserClient.js
 var require_externalAccountAuthorizedUserClient = __commonJS({
-  "../../../server/node_modules/google-auth-library/build/src/auth/externalAccountAuthorizedUserClient.js"(exports) {
+  "node_modules/google-auth-library/build/src/auth/externalAccountAuthorizedUserClient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ExternalAccountAuthorizedUserClient = exports.EXTERNAL_ACCOUNT_AUTHORIZED_USER_TYPE = void 0;
@@ -24114,9 +24114,9 @@ var require_externalAccountAuthorizedUserClient = __commonJS({
   }
 });
 
-// ../../../server/node_modules/google-auth-library/build/src/auth/gdchclient.js
+// node_modules/google-auth-library/build/src/auth/gdchclient.js
 var require_gdchclient = __commonJS({
-  "../../../server/node_modules/google-auth-library/build/src/auth/gdchclient.js"(exports) {
+  "node_modules/google-auth-library/build/src/auth/gdchclient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.GdchClient = exports.GDCH_SERVICE_ACCOUNT_TYPE = void 0;
@@ -24397,9 +24397,9 @@ var require_gdchclient = __commonJS({
   }
 });
 
-// ../../../server/node_modules/google-auth-library/build/src/auth/googleauth.js
+// node_modules/google-auth-library/build/src/auth/googleauth.js
 var require_googleauth = __commonJS({
-  "../../../server/node_modules/google-auth-library/build/src/auth/googleauth.js"(exports) {
+  "node_modules/google-auth-library/build/src/auth/googleauth.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.GoogleAuth = exports.GoogleAuthExceptionMessages = void 0;
@@ -24408,7 +24408,7 @@ var require_googleauth = __commonJS({
     var gaxios_1 = require_src2();
     var gcpMetadata = require_src4();
     var os2 = __require("os");
-    var path11 = __require("path");
+    var path12 = __require("path");
     var crypto_1 = require_crypto3();
     var computeclient_1 = require_computeclient();
     var idtokenclient_1 = require_idtokenclient();
@@ -24693,19 +24693,19 @@ var require_googleauth = __commonJS({
         if (!configDir) {
           if (this._isWindows()) {
             if (process.env["APPDATA"]) {
-              configDir = path11.join(process.env["APPDATA"], "gcloud");
+              configDir = path12.join(process.env["APPDATA"], "gcloud");
             }
           } else {
             const home = process.env["HOME"];
             if (home) {
-              configDir = path11.join(home, ".config", "gcloud");
+              configDir = path12.join(home, ".config", "gcloud");
             }
           }
         }
         if (!configDir) {
           return null;
         }
-        const location = path11.join(configDir, "application_default_credentials.json");
+        const location = path12.join(configDir, "application_default_credentials.json");
         if (!fs9.existsSync(location)) {
           return null;
         }
@@ -25060,7 +25060,7 @@ var require_googleauth = __commonJS({
         if (this.jsonContent) {
           return this._cacheClientFromJSON(this.jsonContent, this.clientOptions);
         } else if (this.keyFilename) {
-          const filePath = path11.resolve(this.keyFilename);
+          const filePath = path12.resolve(this.keyFilename);
           const stream = fs9.createReadStream(filePath);
           return await this.fromStreamAsync(stream, this.clientOptions);
         } else if (this.apiKey) {
@@ -25205,9 +25205,9 @@ var require_googleauth = __commonJS({
   }
 });
 
-// ../../../server/node_modules/google-auth-library/build/src/auth/iam.js
+// node_modules/google-auth-library/build/src/auth/iam.js
 var require_iam = __commonJS({
-  "../../../server/node_modules/google-auth-library/build/src/auth/iam.js"(exports) {
+  "node_modules/google-auth-library/build/src/auth/iam.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.IAMAuth = void 0;
@@ -25241,9 +25241,9 @@ var require_iam = __commonJS({
   }
 });
 
-// ../../../server/node_modules/google-auth-library/build/src/auth/downscopedclient.js
+// node_modules/google-auth-library/build/src/auth/downscopedclient.js
 var require_downscopedclient = __commonJS({
-  "../../../server/node_modules/google-auth-library/build/src/auth/downscopedclient.js"(exports) {
+  "node_modules/google-auth-library/build/src/auth/downscopedclient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.DownscopedClient = exports.EXPIRATION_TIME_OFFSET = exports.MAX_ACCESS_BOUNDARY_RULES_COUNT = void 0;
@@ -25426,9 +25426,9 @@ var require_downscopedclient = __commonJS({
   }
 });
 
-// ../../../server/node_modules/google-auth-library/build/src/auth/passthrough.js
+// node_modules/google-auth-library/build/src/auth/passthrough.js
 var require_passthrough = __commonJS({
-  "../../../server/node_modules/google-auth-library/build/src/auth/passthrough.js"(exports) {
+  "node_modules/google-auth-library/build/src/auth/passthrough.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.PassThroughClient = void 0;
@@ -25471,9 +25471,9 @@ var require_passthrough = __commonJS({
   }
 });
 
-// ../../../server/node_modules/google-auth-library/build/src/index.js
+// node_modules/google-auth-library/build/src/index.js
 var require_src5 = __commonJS({
-  "../../../server/node_modules/google-auth-library/build/src/index.js"(exports) {
+  "node_modules/google-auth-library/build/src/index.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m2, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -25607,9 +25607,9 @@ var require_src5 = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ws/lib/constants.js
+// node_modules/ws/lib/constants.js
 var require_constants = __commonJS({
-  "../../../server/node_modules/ws/lib/constants.js"(exports, module) {
+  "node_modules/ws/lib/constants.js"(exports, module) {
     "use strict";
     var BINARY_TYPES = ["nodebuffer", "arraybuffer", "fragments"];
     var hasBlob = typeof Blob !== "undefined";
@@ -25630,9 +25630,9 @@ var require_constants = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ws/lib/buffer-util.js
+// node_modules/ws/lib/buffer-util.js
 var require_buffer_util = __commonJS({
-  "../../../server/node_modules/ws/lib/buffer-util.js"(exports, module) {
+  "node_modules/ws/lib/buffer-util.js"(exports, module) {
     "use strict";
     var { EMPTY_BUFFER } = require_constants();
     var FastBuffer = Buffer[Symbol.species];
@@ -25705,9 +25705,9 @@ var require_buffer_util = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ws/lib/limiter.js
+// node_modules/ws/lib/limiter.js
 var require_limiter = __commonJS({
-  "../../../server/node_modules/ws/lib/limiter.js"(exports, module) {
+  "node_modules/ws/lib/limiter.js"(exports, module) {
     "use strict";
     var kDone = /* @__PURE__ */ Symbol("kDone");
     var kRun = /* @__PURE__ */ Symbol("kRun");
@@ -25755,9 +25755,9 @@ var require_limiter = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ws/lib/permessage-deflate.js
+// node_modules/ws/lib/permessage-deflate.js
 var require_permessage_deflate = __commonJS({
-  "../../../server/node_modules/ws/lib/permessage-deflate.js"(exports, module) {
+  "node_modules/ws/lib/permessage-deflate.js"(exports, module) {
     "use strict";
     var zlib2 = __require("zlib");
     var bufferUtil = require_buffer_util();
@@ -26138,9 +26138,9 @@ var require_permessage_deflate = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ws/lib/validation.js
+// node_modules/ws/lib/validation.js
 var require_validation2 = __commonJS({
-  "../../../server/node_modules/ws/lib/validation.js"(exports, module) {
+  "node_modules/ws/lib/validation.js"(exports, module) {
     "use strict";
     var { isUtf8 } = __require("buffer");
     var { hasBlob } = require_constants();
@@ -26339,9 +26339,9 @@ var require_validation2 = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ws/lib/receiver.js
+// node_modules/ws/lib/receiver.js
 var require_receiver = __commonJS({
-  "../../../server/node_modules/ws/lib/receiver.js"(exports, module) {
+  "node_modules/ws/lib/receiver.js"(exports, module) {
     "use strict";
     var { Writable } = __require("stream");
     var PerMessageDeflate2 = require_permessage_deflate();
@@ -26962,9 +26962,9 @@ var require_receiver = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ws/lib/sender.js
+// node_modules/ws/lib/sender.js
 var require_sender = __commonJS({
-  "../../../server/node_modules/ws/lib/sender.js"(exports, module) {
+  "node_modules/ws/lib/sender.js"(exports, module) {
     "use strict";
     var { Duplex } = __require("stream");
     var { randomFillSync } = __require("crypto");
@@ -27455,9 +27455,9 @@ var require_sender = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ws/lib/event-target.js
+// node_modules/ws/lib/event-target.js
 var require_event_target = __commonJS({
-  "../../../server/node_modules/ws/lib/event-target.js"(exports, module) {
+  "node_modules/ws/lib/event-target.js"(exports, module) {
     "use strict";
     var { kForOnEventAttribute, kListener } = require_constants();
     var kCode = /* @__PURE__ */ Symbol("kCode");
@@ -27684,9 +27684,9 @@ var require_event_target = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ws/lib/extension.js
+// node_modules/ws/lib/extension.js
 var require_extension = __commonJS({
-  "../../../server/node_modules/ws/lib/extension.js"(exports, module) {
+  "node_modules/ws/lib/extension.js"(exports, module) {
     "use strict";
     var { tokenChars } = require_validation2();
     function push(dest, name, elem) {
@@ -27837,9 +27837,9 @@ var require_extension = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ws/lib/websocket.js
+// node_modules/ws/lib/websocket.js
 var require_websocket = __commonJS({
-  "../../../server/node_modules/ws/lib/websocket.js"(exports, module) {
+  "node_modules/ws/lib/websocket.js"(exports, module) {
     "use strict";
     var EventEmitter = __require("events");
     var https2 = __require("https");
@@ -28733,9 +28733,9 @@ var require_websocket = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ws/lib/stream.js
+// node_modules/ws/lib/stream.js
 var require_stream = __commonJS({
-  "../../../server/node_modules/ws/lib/stream.js"(exports, module) {
+  "node_modules/ws/lib/stream.js"(exports, module) {
     "use strict";
     var WebSocket2 = require_websocket();
     var { Duplex } = __require("stream");
@@ -28831,9 +28831,9 @@ var require_stream = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ws/lib/subprotocol.js
+// node_modules/ws/lib/subprotocol.js
 var require_subprotocol = __commonJS({
-  "../../../server/node_modules/ws/lib/subprotocol.js"(exports, module) {
+  "node_modules/ws/lib/subprotocol.js"(exports, module) {
     "use strict";
     var { tokenChars } = require_validation2();
     function parse3(header) {
@@ -28876,9 +28876,9 @@ var require_subprotocol = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ws/lib/websocket-server.js
+// node_modules/ws/lib/websocket-server.js
 var require_websocket_server = __commonJS({
-  "../../../server/node_modules/ws/lib/websocket-server.js"(exports, module) {
+  "node_modules/ws/lib/websocket-server.js"(exports, module) {
     "use strict";
     var EventEmitter = __require("events");
     var http4 = __require("http");
@@ -29277,10 +29277,10 @@ var require_websocket_server = __commonJS({
   }
 });
 
-// ../../../server/node_modules/ws/wrapper.mjs
+// node_modules/ws/wrapper.mjs
 var import_stream, import_extension, import_permessage_deflate, import_receiver, import_sender, import_subprotocol, import_websocket, import_websocket_server;
 var init_wrapper = __esm({
-  "../../../server/node_modules/ws/wrapper.mjs"() {
+  "node_modules/ws/wrapper.mjs"() {
     import_stream = __toESM(require_stream(), 1);
     import_extension = __toESM(require_extension(), 1);
     import_permessage_deflate = __toESM(require_permessage_deflate(), 1);
@@ -29292,7 +29292,7 @@ var init_wrapper = __esm({
   }
 });
 
-// ../../../server/node_modules/@google/genai/dist/node/index.mjs
+// node_modules/@google/genai/dist/node/index.mjs
 var node_exports = {};
 __export(node_exports, {
   ActivityHandling: () => ActivityHandling,
@@ -40315,7 +40315,7 @@ async function $do$q(client, body, api_version, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path11 = pathToFunc("/{api_version}/agents")(pathParams);
+  const path12 = pathToFunc("/{api_version}/agents")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -40346,7 +40346,7 @@ async function $do$q(client, body, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path11,
+    path: path12,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -40390,7 +40390,7 @@ async function $do$p(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path11 = pathToFunc("/{api_version}/agents/{id}")(pathParams);
+  const path12 = pathToFunc("/{api_version}/agents/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -40420,7 +40420,7 @@ async function $do$p(client, id, api_version, options) {
     security: requestSecurity,
     method: "DELETE",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path11,
+    path: path12,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -40464,7 +40464,7 @@ async function $do$o(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path11 = pathToFunc("/{api_version}/agents/{id}")(pathParams);
+  const path12 = pathToFunc("/{api_version}/agents/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -40494,7 +40494,7 @@ async function $do$o(client, id, api_version, options) {
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path11,
+    path: path12,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -40536,7 +40536,7 @@ async function $do$n(client, api_version, page_size, page_token, parent, options
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload === null || payload === void 0 ? void 0 : payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path11 = pathToFunc("/{api_version}/agents")(pathParams);
+  const path12 = pathToFunc("/{api_version}/agents")(pathParams);
   const query = encodeFormQuery({
     "page_size": payload === null || payload === void 0 ? void 0 : payload.page_size,
     "page_token": payload === null || payload === void 0 ? void 0 : payload.page_token,
@@ -40571,7 +40571,7 @@ async function $do$n(client, api_version, page_size, page_token, parent, options
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path11,
+    path: path12,
     headers,
     query,
     body,
@@ -40612,7 +40612,7 @@ async function $do$m(client, body, api_version, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path11 = pathToFunc("/{api_version}/environments")(pathParams);
+  const path12 = pathToFunc("/{api_version}/environments")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -40643,7 +40643,7 @@ async function $do$m(client, body, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path11,
+    path: path12,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -40687,7 +40687,7 @@ async function $do$l(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path11 = pathToFunc("/{api_version}/environments/{id}")(pathParams);
+  const path12 = pathToFunc("/{api_version}/environments/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -40717,7 +40717,7 @@ async function $do$l(client, id, api_version, options) {
     security: requestSecurity,
     method: "DELETE",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path11,
+    path: path12,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -40761,7 +40761,7 @@ async function $do$k(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path11 = pathToFunc("/{api_version}/environments/{id}")(pathParams);
+  const path12 = pathToFunc("/{api_version}/environments/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -40791,7 +40791,7 @@ async function $do$k(client, id, api_version, options) {
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path11,
+    path: path12,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -40832,7 +40832,7 @@ async function $do$j(client, api_version, page_size, page_token, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload === null || payload === void 0 ? void 0 : payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path11 = pathToFunc("/{api_version}/environments")(pathParams);
+  const path12 = pathToFunc("/{api_version}/environments")(pathParams);
   const query = encodeFormQuery({
     "page_size": payload === null || payload === void 0 ? void 0 : payload.page_size,
     "page_token": payload === null || payload === void 0 ? void 0 : payload.page_token
@@ -40866,7 +40866,7 @@ async function $do$j(client, api_version, page_size, page_token, options) {
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path11,
+    path: path12,
     headers,
     query,
     body,
@@ -40893,14 +40893,14 @@ async function $do$j(client, api_version, page_size, page_token, options) {
   }
   return [result, { status: "complete", request: req, response }];
 }
-function environmentsFilesList(client, environment, path11, api_version, page_size, page_token, recursive, options) {
-  return new APIPromise($do$i(client, environment, path11, api_version, page_size, page_token, recursive, options));
+function environmentsFilesList(client, environment, path12, api_version, page_size, page_token, recursive, options) {
+  return new APIPromise($do$i(client, environment, path12, api_version, page_size, page_token, recursive, options));
 }
-async function $do$i(client, environment, path11, api_version, page_size, page_token, recursive, options) {
+async function $do$i(client, environment, path12, api_version, page_size, page_token, recursive, options) {
   var _a4, _b, _c;
   const input = {
     environment,
-    path: path11,
+    path: path12,
     api_version,
     page_size,
     page_token,
@@ -40999,7 +40999,7 @@ async function $do$h(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path11 = pathToFunc("/{api_version}/interactions/{id}/cancel")(pathParams);
+  const path12 = pathToFunc("/{api_version}/interactions/{id}/cancel")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -41029,7 +41029,7 @@ async function $do$h(client, id, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path11,
+    path: path12,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -41072,7 +41072,7 @@ async function $do$g(client, body, api_version, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path11 = pathToFunc("/{api_version}/interactions")(pathParams);
+  const path12 = pathToFunc("/{api_version}/interactions")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: ((_b = input === null || input === void 0 ? void 0 : input.body) === null || _b === void 0 ? void 0 : _b.stream) ? "text/event-stream" : "application/json"
@@ -41103,7 +41103,7 @@ async function $do$g(client, body, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path11,
+    path: path12,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -41153,7 +41153,7 @@ async function $do$f(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path11 = pathToFunc("/{api_version}/interactions/{id}")(pathParams);
+  const path12 = pathToFunc("/{api_version}/interactions/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -41183,7 +41183,7 @@ async function $do$f(client, id, api_version, options) {
     security: requestSecurity,
     method: "DELETE",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path11,
+    path: path12,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -41233,7 +41233,7 @@ async function $do$e(client, id, api_version, include_input, last_event_id, stre
       charEncoding: "percent"
     })
   };
-  const path11 = pathToFunc("/{api_version}/interactions/{id}")(pathParams);
+  const path12 = pathToFunc("/{api_version}/interactions/{id}")(pathParams);
   const query = encodeFormQuery({
     "include_input": payload.include_input,
     "last_event_id": payload.last_event_id,
@@ -41268,7 +41268,7 @@ async function $do$e(client, id, api_version, include_input, last_event_id, stre
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path11,
+    path: path12,
     headers,
     query,
     body,
@@ -41315,7 +41315,7 @@ async function $do$d(client, body, api_version, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path11 = pathToFunc("/{api_version}/triggers")(pathParams);
+  const path12 = pathToFunc("/{api_version}/triggers")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -41346,7 +41346,7 @@ async function $do$d(client, body, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path11,
+    path: path12,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -41390,7 +41390,7 @@ async function $do$c(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path11 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
+  const path12 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -41420,7 +41420,7 @@ async function $do$c(client, id, api_version, options) {
     security: requestSecurity,
     method: "DELETE",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path11,
+    path: path12,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -41464,7 +41464,7 @@ async function $do$b(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path11 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
+  const path12 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -41494,7 +41494,7 @@ async function $do$b(client, id, api_version, options) {
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path11,
+    path: path12,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -41540,7 +41540,7 @@ async function $do$a(client, trigger_id, api_version, page_size, page_token, opt
       charEncoding: "percent"
     })
   };
-  const path11 = pathToFunc("/{api_version}/triggers/{trigger_id}/executions")(pathParams);
+  const path12 = pathToFunc("/{api_version}/triggers/{trigger_id}/executions")(pathParams);
   const query = encodeFormQuery({
     "page_size": payload.page_size,
     "page_token": payload.page_token
@@ -41574,7 +41574,7 @@ async function $do$a(client, trigger_id, api_version, page_size, page_token, opt
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path11,
+    path: path12,
     headers,
     query,
     body,
@@ -41617,7 +41617,7 @@ async function $do$9(client, api_version, filter, page_size, page_token, options
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload === null || payload === void 0 ? void 0 : payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path11 = pathToFunc("/{api_version}/triggers")(pathParams);
+  const path12 = pathToFunc("/{api_version}/triggers")(pathParams);
   const query = encodeFormQuery({
     "filter": payload === null || payload === void 0 ? void 0 : payload.filter,
     "page_size": payload === null || payload === void 0 ? void 0 : payload.page_size,
@@ -41652,7 +41652,7 @@ async function $do$9(client, api_version, filter, page_size, page_token, options
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path11,
+    path: path12,
     headers,
     query,
     body,
@@ -41697,7 +41697,7 @@ async function $do$8(client, trigger_id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path11 = pathToFunc("/{api_version}/triggers/{trigger_id}/executions")(pathParams);
+  const path12 = pathToFunc("/{api_version}/triggers/{trigger_id}/executions")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -41727,7 +41727,7 @@ async function $do$8(client, trigger_id, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path11,
+    path: path12,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -41772,7 +41772,7 @@ async function $do$7(client, id, body, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path11 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
+  const path12 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -41803,7 +41803,7 @@ async function $do$7(client, id, body, api_version, options) {
     security: requestSecurity,
     method: "PATCH",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path11,
+    path: path12,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -41843,7 +41843,7 @@ async function $do$6(client, body, api_version, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path11 = pathToFunc("/{api_version}/webhooks")(pathParams);
+  const path12 = pathToFunc("/{api_version}/webhooks")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -41874,7 +41874,7 @@ async function $do$6(client, body, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path11,
+    path: path12,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -41918,7 +41918,7 @@ async function $do$5(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path11 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
+  const path12 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -41948,7 +41948,7 @@ async function $do$5(client, id, api_version, options) {
     security: requestSecurity,
     method: "DELETE",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path11,
+    path: path12,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -41992,7 +41992,7 @@ async function $do$4(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path11 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
+  const path12 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -42022,7 +42022,7 @@ async function $do$4(client, id, api_version, options) {
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path11,
+    path: path12,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -42063,7 +42063,7 @@ async function $do$3(client, api_version, page_size, page_token, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload === null || payload === void 0 ? void 0 : payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path11 = pathToFunc("/{api_version}/webhooks")(pathParams);
+  const path12 = pathToFunc("/{api_version}/webhooks")(pathParams);
   const query = encodeFormQuery({
     "page_size": payload === null || payload === void 0 ? void 0 : payload.page_size,
     "page_token": payload === null || payload === void 0 ? void 0 : payload.page_token
@@ -42097,7 +42097,7 @@ async function $do$3(client, api_version, page_size, page_token, options) {
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path11,
+    path: path12,
     headers,
     query,
     body,
@@ -42143,7 +42143,7 @@ async function $do$2(client, id, api_version, body, options) {
       charEncoding: "percent"
     })
   };
-  const path11 = pathToFunc("/{api_version}/webhooks/{id}:ping")(pathParams);
+  const path12 = pathToFunc("/{api_version}/webhooks/{id}:ping")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -42174,7 +42174,7 @@ async function $do$2(client, id, api_version, body, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path11,
+    path: path12,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -42219,7 +42219,7 @@ async function $do$1(client, id, api_version, body, options) {
       charEncoding: "percent"
     })
   };
-  const path11 = pathToFunc("/{api_version}/webhooks/{id}:rotateSigningSecret")(pathParams);
+  const path12 = pathToFunc("/{api_version}/webhooks/{id}:rotateSigningSecret")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -42250,7 +42250,7 @@ async function $do$1(client, id, api_version, body, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path11,
+    path: path12,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -42296,7 +42296,7 @@ async function $do(client, id, api_version, update_mask, body, options) {
       charEncoding: "percent"
     })
   };
-  const path11 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
+  const path12 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
   const query = encodeFormQuery({
     "update_mask": payload.update_mask
   });
@@ -42330,7 +42330,7 @@ async function $do(client, id, api_version, update_mask, body, options) {
     security: requestSecurity,
     method: "PATCH",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path11,
+    path: path12,
     headers,
     query,
     body: body$,
@@ -44156,7 +44156,7 @@ function getApiKeyFromEnv() {
 }
 var import_p_retry, import_google_auth_library, _defaultBaseGeminiUrl, _defaultBaseVertexUrl, BaseModule, Outcome, Language, FunctionResponseScheduling, Type, AuthType, HttpElementLocation, ApiSpec, Environment, SafetyPolicy, PhishBlockThreshold, Behavior, DynamicRetrievalConfigMode, ThinkingLevel, PersonGeneration, ProminentPeople, HarmCategory, HarmBlockMethod, HarmBlockThreshold, FunctionCallingConfigMode, FinishReason, HarmProbability, HarmSeverity, UrlRetrievalStatus, BlockedReason, TrafficType, MediaModality, ModelStage, MediaResolution, Modality, Delivery, AspectRatio, ImageSize, TuningMode, AdapterSize, ResponseParseType, MatchOperation, ReinforcementTuningThinkingLevel, JobState, TuningJobState, AggregationMetric, PairwiseChoice, VideoOrientation, TuningSpeed, TuningTask, DocumentState, ServiceTier, MediaProcessing, PartMediaResolutionLevel, ToolType, ResourceScope, FeatureSelectionPreference, EmbeddingApiType, SafetyFilterLevel, ImagePromptLanguage, MaskReferenceMode, ControlReferenceType, SubjectReferenceType, EditMode, SegmentMode, VideoGenerationReferenceType, VideoGenerationMaskMode, VideoCompressionQuality, ImageResizeMode, TuningMethod, FileState, FileSource, TurnCompleteReason, InteractionStatus, VadSignalType, VoiceActivityType, StartSensitivity, EndSensitivity, ActivityHandling, TurnCoverage, AudioTranscriptionConfigMode, Scale, MusicGenerationMode, LiveMusicPlaybackControl, ToolResponse, FunctionResponseFileData, FunctionResponseBlob, FunctionResponsePart, FunctionResponse, HttpResponse, GenerateContentResponsePromptFeedback, GenerateContentResponseUsageMetadata, GenerateContentResponse, EmbedContentResponse, GenerateImagesResponse, EditImageResponse, UpscaleImageResponse, RecontextImageResponse, SegmentImageResponse, ListModelsResponse, DeleteModelResponse, AudioResponseFormat, ImageResponseFormat, TextResponseFormat, VideoResponseFormat, ResponseFormat, CountTokensResponse, ComputeTokensResponse, GenerateVideosResponse, GenerateVideosOperation, ReinforcementTuningParseResponseConfig, ReinforcementTuningAutoraterScorerParsedResponseConversionScorer, EvaluateDatasetResponse, ListTuningJobsResponse, CancelTuningJobResponse, ValidateRewardResponse, DeleteCachedContentResponse, ListCachedContentsResponse, ListDocumentsResponse, ListFileSearchStoresResponse, UploadToFileSearchStoreResumableResponse, ImportFileResponse, ImportFileOperation, ListFilesResponse, CreateFileResponse, DeleteFileResponse, RegisterFilesResponse, InlinedResponse, SingleEmbedContentResponse, InlinedEmbedContentResponse, ListBatchJobsResponse, ReplayResponse, RawReferenceImage, MaskReferenceImage, ControlReferenceImage, StyleReferenceImage, SubjectReferenceImage, ContentReferenceImage, LiveServerMessage, LiveClientToolResponse, LiveSendToolResponseParameters, LiveMusicServerMessage, UploadToFileSearchStoreResponse, UploadToFileSearchStoreOperation, PagedItem, Pager, Batches, Caches, Chats, Chat, ApiError, Files$1, CONTENT_TYPE_HEADER, SERVER_TIMEOUT_HEADER, USER_AGENT_HEADER, GOOGLE_API_CLIENT_HEADER, SDK_VERSION, LIBRARY_LABEL, VERTEX_AI_API_DEFAULT_VERSION, GOOGLE_AI_API_DEFAULT_VERSION, MULTI_REGIONAL_LOCATIONS, DEFAULT_RETRY_ATTEMPTS, DEFAULT_RETRY_INITIAL_DELAY, DEFAULT_RETRY_MAX_DELAY, DEFAULT_RETRY_EXP_BASE, DEFAULT_RETRY_JITTER, DEFAULT_RETRY_HTTP_STATUS_CODES, ApiClient, MCP_LABEL, hasMcpToolUsageFromMcpToTool, McpCallableTool, LiveMusic, LiveMusicSession, FUNCTION_RESPONSE_REQUIRES_ID, Live, defaultLiveSendClientContentParamerters, Session, DEFAULT_MAX_REMOTE_CALLS, Models, Operations, Tokens, Documents, FileSearchStores, envMemo, GoogleGenAISecurityProvider, GoogleGenAIAuthHook, HTTPClientError, UnexpectedClientError, InvalidRequestError, RequestAbortedError, RequestTimeoutError, ConnectionError, GoogleGenAiError, GeminiNextGenAPIClientError, APIError, APIUserAbortError, APIConnectionError, APIConnectionTimeoutError, BadRequestError, AuthenticationError, PermissionDeniedError, NotFoundError, ConflictError, UnprocessableEntityError, RateLimitError, InternalServerError, SDKHooks, hasOwn, ServerList, SDK_METADATA, encodeForm, encodeSimple, encodeFormQuery, DEFAULT_FETCHER, HTTPClient, mediaParamSeparator, codeRangeRE$1, defaultBackoff, PermanentError, TemporaryError, codeRangeRE, gt, webWorkerLike, isBrowserLike, ClientSDK, jsonLikeContentTypeRE, jsonlLikeContentTypeRE, GoogleGenAiDefaultError, Stream3, CR2, LF2, BOUNDARIES, MAX_BOUNDARY_LEN, DEFAULT_CONTENT_TYPES, headerValRE, SecurityErrorCode, SecurityError, _a, APIPromise, Agents, Files2, Environments, CancelInteractionByIdServerError, CancelInteractionByIdClientError, CreateInteractionServerError, CreateInteractionClientError, DeleteInteractionServerError, DeleteInteractionClientError, GetInteractionByIdServerError, GetInteractionByIdClientError, Interactions, Triggers, Webhooks, GoogleGenAI$1, LEGACY_LYRIA_MODELS, GeminiNextGenInteractions, GeminiNextGenAgents, GeminiNextGenWebhooks, GeminiNextGenTriggers, GeminiNextGenEnvironmentFiles, GeminiNextGenEnvironments, GOOGLE_API_KEY_HEADER, REQUIRED_VERTEX_AI_SCOPE, NodeAuth, NodeDownloader, NodeWebSocketFactory, NodeWebSocket, Tunings, MAX_CHUNK_SIZE, MAX_RETRY_COUNT, INITIAL_RETRY_DELAY_MS, DELAY_MULTIPLIER, X_GOOG_UPLOAD_STATUS_HEADER_FIELD, NodeUploader, NodeFiles, LANGUAGE_LABEL_PREFIX, GoogleGenAI2;
 var init_node = __esm({
-  "../../../server/node_modules/@google/genai/dist/node/index.mjs"() {
+  "node_modules/@google/genai/dist/node/index.mjs"() {
     import_p_retry = __toESM(require_p_retry(), 1);
     import_google_auth_library = __toESM(require_src5(), 1);
     init_wrapper();
@@ -45450,7 +45450,7 @@ var init_node = __esm({
           params
         );
         const urlParams = body["_url"];
-        const path11 = formatMap("{model}:batchGenerateContent", urlParams);
+        const path12 = formatMap("{model}:batchGenerateContent", urlParams);
         const batch = body["batch"];
         const inputConfig = batch["inputConfig"];
         const requestsWrapper = inputConfig["requests"];
@@ -45471,7 +45471,7 @@ var init_node = __esm({
         delete body["config"];
         delete body["_url"];
         delete body["_query"];
-        return { path: path11, body };
+        return { path: path12, body };
       }
       // Helper function to get the first GCS URI
       getGcsUri(src) {
@@ -45527,16 +45527,16 @@ var init_node = __esm({
       async createInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path11 = "";
+        let path12 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = createBatchJobParametersToVertex(this.apiClient, params);
-          path11 = formatMap("batchPredictionJobs", body["_url"]);
+          path12 = formatMap("batchPredictionJobs", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -45551,12 +45551,12 @@ var init_node = __esm({
           });
         } else {
           const body = createBatchJobParametersToMldev(this.apiClient, params);
-          path11 = formatMap("{model}:batchGenerateContent", body["_url"]);
+          path12 = formatMap("{model}:batchGenerateContent", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -45581,18 +45581,18 @@ var init_node = __esm({
       async createEmbeddingsInternal(params) {
         var _a4, _b;
         let response;
-        let path11 = "";
+        let path12 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = createEmbeddingsBatchJobParametersToMldev(this.apiClient, params);
-          path11 = formatMap("{model}:asyncBatchEmbedContent", body["_url"]);
+          path12 = formatMap("{model}:asyncBatchEmbedContent", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -45621,16 +45621,16 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path11 = "";
+        let path12 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = getBatchJobParametersToVertex(this.apiClient, params);
-          path11 = formatMap("batchPredictionJobs/{name}", body["_url"]);
+          path12 = formatMap("batchPredictionJobs/{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -45645,12 +45645,12 @@ var init_node = __esm({
           });
         } else {
           const body = getBatchJobParametersToMldev(this.apiClient, params);
-          path11 = formatMap("batches/{name}", body["_url"]);
+          path12 = formatMap("batches/{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -45678,16 +45678,16 @@ var init_node = __esm({
        */
       async cancel(params) {
         var _a4, _b, _c, _d;
-        let path11 = "";
+        let path12 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = cancelBatchJobParametersToVertex(this.apiClient, params);
-          path11 = formatMap("batchPredictionJobs/{name}:cancel", body["_url"]);
+          path12 = formatMap("batchPredictionJobs/{name}:cancel", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           await this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -45696,12 +45696,12 @@ var init_node = __esm({
           });
         } else {
           const body = cancelBatchJobParametersToMldev(this.apiClient, params);
-          path11 = formatMap("batches/{name}:cancel", body["_url"]);
+          path12 = formatMap("batches/{name}:cancel", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           await this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -45713,16 +45713,16 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path11 = "";
+        let path12 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = listBatchJobsParametersToVertex(params);
-          path11 = formatMap("batchPredictionJobs", body["_url"]);
+          path12 = formatMap("batchPredictionJobs", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -45745,12 +45745,12 @@ var init_node = __esm({
           });
         } else {
           const body = listBatchJobsParametersToMldev(params);
-          path11 = formatMap("batches", body["_url"]);
+          path12 = formatMap("batches", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -45787,16 +45787,16 @@ var init_node = __esm({
       async delete(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path11 = "";
+        let path12 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = deleteBatchJobParametersToVertex(this.apiClient, params);
-          path11 = formatMap("batchPredictionJobs/{name}", body["_url"]);
+          path12 = formatMap("batchPredictionJobs/{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -45817,12 +45817,12 @@ var init_node = __esm({
           });
         } else {
           const body = deleteBatchJobParametersToMldev(this.apiClient, params);
-          path11 = formatMap("batches/{name}", body["_url"]);
+          path12 = formatMap("batches/{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -45881,16 +45881,16 @@ var init_node = __esm({
       async create(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path11 = "";
+        let path12 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = createCachedContentParametersToVertex(this.apiClient, params);
-          path11 = formatMap("cachedContents", body["_url"]);
+          path12 = formatMap("cachedContents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -45904,12 +45904,12 @@ var init_node = __esm({
           });
         } else {
           const body = createCachedContentParametersToMldev(this.apiClient, params);
-          path11 = formatMap("cachedContents", body["_url"]);
+          path12 = formatMap("cachedContents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -45937,16 +45937,16 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path11 = "";
+        let path12 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = getCachedContentParametersToVertex(this.apiClient, params);
-          path11 = formatMap("{name}", body["_url"]);
+          path12 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -45960,12 +45960,12 @@ var init_node = __esm({
           });
         } else {
           const body = getCachedContentParametersToMldev(this.apiClient, params);
-          path11 = formatMap("{name}", body["_url"]);
+          path12 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -45993,16 +45993,16 @@ var init_node = __esm({
       async delete(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path11 = "";
+        let path12 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = deleteCachedContentParametersToVertex(this.apiClient, params);
-          path11 = formatMap("{name}", body["_url"]);
+          path12 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -46025,12 +46025,12 @@ var init_node = __esm({
           });
         } else {
           const body = deleteCachedContentParametersToMldev(this.apiClient, params);
-          path11 = formatMap("{name}", body["_url"]);
+          path12 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -46070,16 +46070,16 @@ var init_node = __esm({
       async update(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path11 = "";
+        let path12 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = updateCachedContentParametersToVertex(this.apiClient, params);
-          path11 = formatMap("{name}", body["_url"]);
+          path12 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "PATCH",
@@ -46093,12 +46093,12 @@ var init_node = __esm({
           });
         } else {
           const body = updateCachedContentParametersToMldev(this.apiClient, params);
-          path11 = formatMap("{name}", body["_url"]);
+          path12 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "PATCH",
@@ -46115,16 +46115,16 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path11 = "";
+        let path12 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = listCachedContentsParametersToVertex(params);
-          path11 = formatMap("cachedContents", body["_url"]);
+          path12 = formatMap("cachedContents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -46147,12 +46147,12 @@ var init_node = __esm({
           });
         } else {
           const body = listCachedContentsParametersToMldev(params);
-          path11 = formatMap("cachedContents", body["_url"]);
+          path12 = formatMap("cachedContents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -46483,18 +46483,18 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b;
         let response;
-        let path11 = "";
+        let path12 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = listFilesParametersToMldev(params);
-          path11 = formatMap("files", body["_url"]);
+          path12 = formatMap("files", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -46520,18 +46520,18 @@ var init_node = __esm({
       async createInternal(params) {
         var _a4, _b;
         let response;
-        let path11 = "";
+        let path12 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = createFileParametersToMldev(params);
-          path11 = formatMap("upload/v1beta/files", body["_url"]);
+          path12 = formatMap("upload/v1beta/files", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -46566,18 +46566,18 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b;
         let response;
-        let path11 = "";
+        let path12 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = getFileParametersToMldev(params);
-          path11 = formatMap("files/{file}", body["_url"]);
+          path12 = formatMap("files/{file}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -46607,18 +46607,18 @@ var init_node = __esm({
       async delete(params) {
         var _a4, _b;
         let response;
-        let path11 = "";
+        let path12 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = deleteFileParametersToMldev(params);
-          path11 = formatMap("files/{file}", body["_url"]);
+          path12 = formatMap("files/{file}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -46644,18 +46644,18 @@ var init_node = __esm({
       async registerFilesInternal(params) {
         var _a4, _b;
         let response;
-        let path11 = "";
+        let path12 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = internalRegisterFilesParametersToMldev(params);
-          path11 = formatMap("files:register", body["_url"]);
+          path12 = formatMap("files:register", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -46811,13 +46811,13 @@ var init_node = __esm({
           throw new Error("HTTP options are not correctly set.");
         }
       }
-      constructUrl(path11, httpOptions, prependProjectLocation) {
+      constructUrl(path12, httpOptions, prependProjectLocation) {
         const urlElement = [this.getRequestUrlInternal(httpOptions)];
         if (prependProjectLocation) {
           urlElement.push(this.getBaseResourcePath());
         }
-        if (path11 !== "") {
-          urlElement.push(path11);
+        if (path12 !== "") {
+          urlElement.push(path12);
         }
         const url = new URL(`${urlElement.join("/")}`);
         return url;
@@ -47110,8 +47110,8 @@ var init_node = __esm({
           file: fileToUpload
         };
         const fileName = this.getFileName(file);
-        const path11 = formatMap("upload/v1beta/files", body["_url"]);
-        const uploadUrl = await this.fetchUploadUrl(path11, fileToUpload.sizeBytes, fileToUpload.mimeType, fileName, body, config3 === null || config3 === void 0 ? void 0 : config3.httpOptions);
+        const path12 = formatMap("upload/v1beta/files", body["_url"]);
+        const uploadUrl = await this.fetchUploadUrl(path12, fileToUpload.sizeBytes, fileToUpload.mimeType, fileName, body, config3 === null || config3 === void 0 ? void 0 : config3.httpOptions);
         return uploader.upload(file, uploadUrl, this);
       }
       /**
@@ -47135,13 +47135,13 @@ var init_node = __esm({
         if (mimeType === void 0 || mimeType === "") {
           throw new Error("Can not determine mimeType. Please provide mimeType in the config.");
         }
-        const path11 = `upload/v1beta/${fileSearchStoreName}:uploadToFileSearchStore`;
+        const path12 = `upload/v1beta/${fileSearchStoreName}:uploadToFileSearchStore`;
         const fileName = this.getFileName(file);
         const body = {};
         if (config3 != null) {
           uploadToFileSearchStoreConfigToMldev(config3, body);
         }
-        const uploadUrl = await this.fetchUploadUrl(path11, sizeBytes, mimeType, fileName, body, config3 === null || config3 === void 0 ? void 0 : config3.httpOptions);
+        const uploadUrl = await this.fetchUploadUrl(path12, sizeBytes, mimeType, fileName, body, config3 === null || config3 === void 0 ? void 0 : config3.httpOptions);
         return uploader.uploadToFileSearchStore(file, uploadUrl, this);
       }
       /**
@@ -47154,7 +47154,7 @@ var init_node = __esm({
         const downloader = this.clientOptions.downloader;
         await downloader.download(params, this);
       }
-      async fetchUploadUrl(path11, sizeBytes, mimeType, fileName, body, configHttpOptions) {
+      async fetchUploadUrl(path12, sizeBytes, mimeType, fileName, body, configHttpOptions) {
         var _a4;
         let httpOptions = {};
         if (configHttpOptions) {
@@ -47167,7 +47167,7 @@ var init_node = __esm({
           };
         }
         const httpResponse = await this.request({
-          path: path11,
+          path: path12,
           body: JSON.stringify(body),
           httpMethod: "POST",
           httpOptions
@@ -48181,16 +48181,16 @@ var init_node = __esm({
       async generateContentInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path11 = "";
+        let path12 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = generateContentParametersToVertex(this.apiClient, params);
-          path11 = formatMap("{model}:generateContent", body["_url"]);
+          path12 = formatMap("{model}:generateContent", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48213,12 +48213,12 @@ var init_node = __esm({
           });
         } else {
           const body = generateContentParametersToMldev(this.apiClient, params);
-          path11 = formatMap("{model}:generateContent", body["_url"]);
+          path12 = formatMap("{model}:generateContent", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48244,17 +48244,17 @@ var init_node = __esm({
       async generateContentStreamInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path11 = "";
+        let path12 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = generateContentParametersToVertex(this.apiClient, params);
-          path11 = formatMap("{model}:streamGenerateContent?alt=sse", body["_url"]);
+          path12 = formatMap("{model}:streamGenerateContent?alt=sse", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           const apiClient = this.apiClient;
           response = apiClient.requestStream({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48290,13 +48290,13 @@ var init_node = __esm({
           });
         } else {
           const body = generateContentParametersToMldev(this.apiClient, params);
-          path11 = formatMap("{model}:streamGenerateContent?alt=sse", body["_url"]);
+          path12 = formatMap("{model}:streamGenerateContent?alt=sse", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           const apiClient = this.apiClient;
           response = apiClient.requestStream({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48356,17 +48356,17 @@ var init_node = __esm({
       async embedContentInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path11 = "";
+        let path12 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = embedContentParametersPrivateToVertex(this.apiClient, params, params);
           const endpointUrl = tIsVertexEmbedContentModel(params.model) ? "{model}:embedContent" : "{model}:predict";
-          path11 = formatMap(endpointUrl, body["_url"]);
+          path12 = formatMap(endpointUrl, body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48389,12 +48389,12 @@ var init_node = __esm({
           });
         } else {
           const body = embedContentParametersPrivateToMldev(this.apiClient, params);
-          path11 = formatMap("{model}:batchEmbedContents", body["_url"]);
+          path12 = formatMap("{model}:batchEmbedContents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48423,16 +48423,16 @@ var init_node = __esm({
       async generateImagesInternal(params) {
         var _a4, _b;
         let response;
-        let path11 = "";
+        let path12 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = generateImagesParametersToVertex(this.apiClient, params);
-          path11 = formatMap("{model}:predict", body["_url"]);
+          path12 = formatMap("{model}:predict", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48463,16 +48463,16 @@ var init_node = __esm({
       async editImageInternal(params) {
         var _a4, _b;
         let response;
-        let path11 = "";
+        let path12 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = editImageParametersInternalToVertex(this.apiClient, params);
-          path11 = formatMap("{model}:predict", body["_url"]);
+          path12 = formatMap("{model}:predict", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48503,16 +48503,16 @@ var init_node = __esm({
       async upscaleImageInternal(params) {
         var _a4, _b;
         let response;
-        let path11 = "";
+        let path12 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = upscaleImageAPIParametersInternalToVertex(this.apiClient, params);
-          path11 = formatMap("{model}:predict", body["_url"]);
+          path12 = formatMap("{model}:predict", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48564,16 +48564,16 @@ var init_node = __esm({
       async recontextImage(params) {
         var _a4, _b;
         let response;
-        let path11 = "";
+        let path12 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = recontextImageParametersToVertex(this.apiClient, params);
-          path11 = formatMap("{model}:predict", body["_url"]);
+          path12 = formatMap("{model}:predict", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48615,16 +48615,16 @@ var init_node = __esm({
       async segmentImage(params) {
         var _a4, _b;
         let response;
-        let path11 = "";
+        let path12 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = segmentImageParametersToVertex(this.apiClient, params);
-          path11 = formatMap("{model}:predict", body["_url"]);
+          path12 = formatMap("{model}:predict", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48654,16 +48654,16 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path11 = "";
+        let path12 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = getModelParametersToVertex(this.apiClient, params);
-          path11 = formatMap("{name}", body["_url"]);
+          path12 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -48678,12 +48678,12 @@ var init_node = __esm({
           });
         } else {
           const body = getModelParametersToMldev(this.apiClient, params);
-          path11 = formatMap("{name}", body["_url"]);
+          path12 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -48701,16 +48701,16 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path11 = "";
+        let path12 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = listModelsParametersToVertex(this.apiClient, params);
-          path11 = formatMap("{models_url}", body["_url"]);
+          path12 = formatMap("{models_url}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -48733,12 +48733,12 @@ var init_node = __esm({
           });
         } else {
           const body = listModelsParametersToMldev(this.apiClient, params);
-          path11 = formatMap("{models_url}", body["_url"]);
+          path12 = formatMap("{models_url}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -48781,16 +48781,16 @@ var init_node = __esm({
       async update(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path11 = "";
+        let path12 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = updateModelParametersToVertex(this.apiClient, params);
-          path11 = formatMap("{model}", body["_url"]);
+          path12 = formatMap("{model}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "PATCH",
@@ -48805,12 +48805,12 @@ var init_node = __esm({
           });
         } else {
           const body = updateModelParametersToMldev(this.apiClient, params);
-          path11 = formatMap("{name}", body["_url"]);
+          path12 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "PATCH",
@@ -48839,16 +48839,16 @@ var init_node = __esm({
       async delete(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path11 = "";
+        let path12 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = deleteModelParametersToVertex(this.apiClient, params);
-          path11 = formatMap("{name}", body["_url"]);
+          path12 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -48871,12 +48871,12 @@ var init_node = __esm({
           });
         } else {
           const body = deleteModelParametersToMldev(this.apiClient, params);
-          path11 = formatMap("{name}", body["_url"]);
+          path12 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -48918,16 +48918,16 @@ var init_node = __esm({
       async countTokens(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path11 = "";
+        let path12 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = countTokensParametersToVertex(this.apiClient, params);
-          path11 = formatMap("{model}:countTokens", body["_url"]);
+          path12 = formatMap("{model}:countTokens", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48950,12 +48950,12 @@ var init_node = __esm({
           });
         } else {
           const body = countTokensParametersToMldev(this.apiClient, params);
-          path11 = formatMap("{model}:countTokens", body["_url"]);
+          path12 = formatMap("{model}:countTokens", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48999,16 +48999,16 @@ var init_node = __esm({
       async computeTokens(params) {
         var _a4, _b;
         let response;
-        let path11 = "";
+        let path12 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = computeTokensParametersToVertex(this.apiClient, params);
-          path11 = formatMap("{model}:computeTokens", body["_url"]);
+          path12 = formatMap("{model}:computeTokens", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -49039,16 +49039,16 @@ var init_node = __esm({
       async generateVideosInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path11 = "";
+        let path12 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = generateVideosParametersToVertex(this.apiClient, params);
-          path11 = formatMap("{model}:predictLongRunning", body["_url"]);
+          path12 = formatMap("{model}:predictLongRunning", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -49065,12 +49065,12 @@ var init_node = __esm({
           });
         } else {
           const body = generateVideosParametersToMldev(this.apiClient, params);
-          path11 = formatMap("{model}:predictLongRunning", body["_url"]);
+          path12 = formatMap("{model}:predictLongRunning", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -49175,16 +49175,16 @@ var init_node = __esm({
       async getVideosOperationInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path11 = "";
+        let path12 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = getOperationParametersToVertex(params);
-          path11 = formatMap("{operationName}", body["_url"]);
+          path12 = formatMap("{operationName}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -49196,12 +49196,12 @@ var init_node = __esm({
           return response;
         } else {
           const body = getOperationParametersToMldev(params);
-          path11 = formatMap("{operationName}", body["_url"]);
+          path12 = formatMap("{operationName}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -49216,16 +49216,16 @@ var init_node = __esm({
       async fetchPredictVideosOperationInternal(params) {
         var _a4, _b;
         let response;
-        let path11 = "";
+        let path12 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = fetchPredictOperationParametersToVertex(params);
-          path11 = formatMap("{resourceName}:fetchPredictOperation", body["_url"]);
+          path12 = formatMap("{resourceName}:fetchPredictOperation", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -49331,20 +49331,20 @@ var init_node = __esm({
       async create(params) {
         var _a4, _b;
         let response;
-        let path11 = "";
+        let path12 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("The client.tokens.create method is only supported by the Gemini Developer API.");
         } else {
           const body = createAuthTokenParametersToMldev(this.apiClient, params);
-          path11 = formatMap("auth_tokens", body["_url"]);
+          path12 = formatMap("auth_tokens", body["_url"]);
           queryParams = body["_query"];
           delete body["config"];
           delete body["_url"];
           delete body["_query"];
           const transformedBody = convertBidiSetupToTokenSetup(body, params.config);
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(transformedBody),
             httpMethod: "POST",
@@ -49376,18 +49376,18 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b;
         let response;
-        let path11 = "";
+        let path12 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = getDocumentParametersToMldev(params);
-          path11 = formatMap("{name}", body["_url"]);
+          path12 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -49408,18 +49408,18 @@ var init_node = __esm({
        */
       async delete(params) {
         var _a4, _b;
-        let path11 = "";
+        let path12 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = deleteDocumentParametersToMldev(params);
-          path11 = formatMap("{name}", body["_url"]);
+          path12 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           await this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -49431,18 +49431,18 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b;
         let response;
-        let path11 = "";
+        let path12 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = listDocumentsParametersToMldev(params);
-          path11 = formatMap("{parent}/documents", body["_url"]);
+          path12 = formatMap("{parent}/documents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -49559,18 +49559,18 @@ var init_node = __esm({
       async create(params) {
         var _a4, _b;
         let response;
-        let path11 = "";
+        let path12 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = createFileSearchStoreParametersToMldev(this.apiClient, params);
-          path11 = formatMap("fileSearchStores", body["_url"]);
+          path12 = formatMap("fileSearchStores", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -49593,18 +49593,18 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b;
         let response;
-        let path11 = "";
+        let path12 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = getFileSearchStoreParametersToMldev(params);
-          path11 = formatMap("{name}", body["_url"]);
+          path12 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -49625,18 +49625,18 @@ var init_node = __esm({
        */
       async delete(params) {
         var _a4, _b;
-        let path11 = "";
+        let path12 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = deleteFileSearchStoreParametersToMldev(params);
-          path11 = formatMap("{name}", body["_url"]);
+          path12 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           await this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -49648,18 +49648,18 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b;
         let response;
-        let path11 = "";
+        let path12 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = listFileSearchStoresParametersToMldev(params);
-          path11 = formatMap("fileSearchStores", body["_url"]);
+          path12 = formatMap("fileSearchStores", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -49679,18 +49679,18 @@ var init_node = __esm({
       async uploadToFileSearchStoreInternal(params) {
         var _a4, _b;
         let response;
-        let path11 = "";
+        let path12 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = uploadToFileSearchStoreParametersToMldev(params);
-          path11 = formatMap("upload/v1beta/{file_search_store_name}:uploadToFileSearchStore", body["_url"]);
+          path12 = formatMap("upload/v1beta/{file_search_store_name}:uploadToFileSearchStore", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -49718,18 +49718,18 @@ var init_node = __esm({
       async importFile(params) {
         var _a4, _b;
         let response;
-        let path11 = "";
+        let path12 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = importFileParametersToMldev(params);
-          path11 = formatMap("{file_search_store_name}:importFile", body["_url"]);
+          path12 = formatMap("{file_search_store_name}:importFile", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -50173,16 +50173,16 @@ var init_node = __esm({
       }
       _createRequest(context, conf, options) {
         var _a4, _b, _c, _d, _e;
-        const { method, path: path11, query, headers: opHeaders, security } = conf;
+        const { method, path: path12, query, headers: opHeaders, security } = conf;
         const base = (_a4 = conf.baseURL) !== null && _a4 !== void 0 ? _a4 : this._baseURL;
         if (!base) {
           return ERR(new InvalidRequestError("No base URL provided for operation"));
         }
         const baseURL = new URL(base);
         let reqURL;
-        if (path11) {
+        if (path12) {
           baseURL.pathname = baseURL.pathname.replace(/\/+$/, "") + "/";
-          reqURL = new URL(path11, baseURL);
+          reqURL = new URL(path12, baseURL);
           if (!reqURL.search && baseURL.search) {
             reqURL.search = baseURL.search;
           }
@@ -50594,8 +50594,8 @@ var init_node = __esm({
       /**
        * Retrieves file metadata or directory contents from an environment's snapshot. To download file contents directly, pass ?alt=media or use the files.download helper.
        */
-      list(environment, path11, params, options) {
-        return unwrapAsAPIPromise(environmentsFilesList(this, environment, path11, params === null || params === void 0 ? void 0 : params.api_version, params === null || params === void 0 ? void 0 : params.page_size, params === null || params === void 0 ? void 0 : params.page_token, params === null || params === void 0 ? void 0 : params.recursive, options));
+      list(environment, path12, params, options) {
+        return unwrapAsAPIPromise(environmentsFilesList(this, environment, path12, params === null || params === void 0 ? void 0 : params.api_version, params === null || params === void 0 ? void 0 : params.page_size, params === null || params === void 0 ? void 0 : params.page_token, params === null || params === void 0 ? void 0 : params.recursive, options));
       }
     };
     Environments = class extends ClientSDK {
@@ -51003,8 +51003,8 @@ var init_node = __esm({
         this.resolveClient = resolveClient;
       }
       async list(params, options) {
-        const { environment, path: path11, page_size, page_token, recursive, api_version } = params;
-        return unwrapWithSdkHttpResponse(environmentsFilesList(this.resolveClient(api_version), environment, path11, api_version, page_size, page_token, recursive, toGoogleGenAIRequestOptions(options)));
+        const { environment, path: path12, page_size, page_token, recursive, api_version } = params;
+        return unwrapWithSdkHttpResponse(environmentsFilesList(this.resolveClient(api_version), environment, path12, api_version, page_size, page_token, recursive, toGoogleGenAIRequestOptions(options)));
       }
     };
     GeminiNextGenEnvironments = class {
@@ -51179,16 +51179,16 @@ var init_node = __esm({
       async getInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path11 = "";
+        let path12 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = getTuningJobParametersToVertex(params);
-          path11 = formatMap("{name}", body["_url"]);
+          path12 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -51209,12 +51209,12 @@ var init_node = __esm({
           });
         } else {
           const body = getTuningJobParametersToMldev(params);
-          path11 = formatMap("{name}", body["_url"]);
+          path12 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -51238,16 +51238,16 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b;
         let response;
-        let path11 = "";
+        let path12 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = listTuningJobsParametersToVertex(params);
-          path11 = formatMap("tuningJobs", body["_url"]);
+          path12 = formatMap("tuningJobs", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -51286,16 +51286,16 @@ var init_node = __esm({
       async cancel(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path11 = "";
+        let path12 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = cancelTuningJobParametersToVertex(params);
-          path11 = formatMap("{name}:cancel", body["_url"]);
+          path12 = formatMap("{name}:cancel", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -51318,12 +51318,12 @@ var init_node = __esm({
           });
         } else {
           const body = cancelTuningJobParametersToMldev(params);
-          path11 = formatMap("{name}:cancel", body["_url"]);
+          path12 = formatMap("{name}:cancel", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -51349,16 +51349,16 @@ var init_node = __esm({
       async tuneInternal(params) {
         var _a4, _b;
         let response;
-        let path11 = "";
+        let path12 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = createTuningJobParametersPrivateToVertex(params, params);
-          path11 = formatMap("tuningJobs", body["_url"]);
+          path12 = formatMap("tuningJobs", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -51384,18 +51384,18 @@ var init_node = __esm({
       async tuneMldevInternal(params) {
         var _a4, _b;
         let response;
-        let path11 = "";
+        let path12 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = createTuningJobParametersPrivateToMldev(params);
-          path11 = formatMap("tunedModels", body["_url"]);
+          path12 = formatMap("tunedModels", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -51419,16 +51419,16 @@ var init_node = __esm({
       async validateReward(params) {
         var _a4, _b;
         let response;
-        let path11 = "";
+        let path12 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = validateRewardParametersToVertex(params);
-          path11 = formatMap("{parent}/tuningJobs:validateReinforcementTuningReward", body["_url"]);
+          path12 = formatMap("{parent}/tuningJobs:validateReinforcementTuningReward", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path11,
+            path: path12,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -51819,7 +51819,7 @@ var init_node = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/internal/tslib.mjs
+// node_modules/openai/internal/tslib.mjs
 function __classPrivateFieldSet(receiver, state, value, kind, f3) {
   if (kind === "m")
     throw new TypeError("Private method is not writable");
@@ -51837,14 +51837,14 @@ function __classPrivateFieldGet(receiver, state, kind, f3) {
   return kind === "m" ? f3 : kind === "a" ? f3.call(receiver) : f3 ? f3.value : state.get(receiver);
 }
 var init_tslib = __esm({
-  "../../../server/node_modules/openai/internal/tslib.mjs"() {
+  "node_modules/openai/internal/tslib.mjs"() {
   }
 });
 
-// ../../../server/node_modules/openai/internal/utils/uuid.mjs
+// node_modules/openai/internal/utils/uuid.mjs
 var uuid4;
 var init_uuid = __esm({
-  "../../../server/node_modules/openai/internal/utils/uuid.mjs"() {
+  "node_modules/openai/internal/utils/uuid.mjs"() {
     uuid4 = function() {
       const { crypto: crypto2 } = globalThis;
       if (crypto2?.randomUUID) {
@@ -51858,7 +51858,7 @@ var init_uuid = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/internal/errors.mjs
+// node_modules/openai/internal/errors.mjs
 function isAbortError2(err4) {
   return typeof err4 === "object" && err4 !== null && // Spec-compliant fetch implementations
   ("name" in err4 && err4.name === "AbortError" || // Expo fetch
@@ -51866,7 +51866,7 @@ function isAbortError2(err4) {
 }
 var castToError;
 var init_errors = __esm({
-  "../../../server/node_modules/openai/internal/errors.mjs"() {
+  "node_modules/openai/internal/errors.mjs"() {
     castToError = (err4) => {
       if (err4 instanceof Error)
         return err4;
@@ -51894,10 +51894,10 @@ var init_errors = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/core/error.mjs
+// node_modules/openai/core/error.mjs
 var OpenAIError, APIError2, APIUserAbortError2, APIConnectionError2, APIConnectionTimeoutError2, BadRequestError2, AuthenticationError2, PermissionDeniedError2, NotFoundError2, ConflictError2, UnprocessableEntityError2, RateLimitError2, InternalServerError2, LengthFinishReasonError, ContentFilterFinishReasonError, InvalidWebhookSignatureError, OAuthError, SubjectTokenProviderError;
 var init_error = __esm({
-  "../../../server/node_modules/openai/core/error.mjs"() {
+  "node_modules/openai/core/error.mjs"() {
     init_errors();
     OpenAIError = class extends Error {
     };
@@ -52034,7 +52034,7 @@ var init_error = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/internal/utils/values.mjs
+// node_modules/openai/internal/utils/values.mjs
 function maybeObj(x2) {
   if (typeof x2 !== "object") {
     return {};
@@ -52056,7 +52056,7 @@ function isObj(obj) {
 }
 var startsWithSchemeRegexp, isAbsoluteURL, isArray, isReadonlyArray, validatePositiveInteger, safeJSON;
 var init_values = __esm({
-  "../../../server/node_modules/openai/internal/utils/values.mjs"() {
+  "node_modules/openai/internal/utils/values.mjs"() {
     init_error();
     startsWithSchemeRegexp = /^[a-z][a-z0-9+.-]*:/i;
     isAbsoluteURL = (url) => {
@@ -52083,23 +52083,23 @@ var init_values = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/internal/utils/sleep.mjs
+// node_modules/openai/internal/utils/sleep.mjs
 var sleep5;
 var init_sleep = __esm({
-  "../../../server/node_modules/openai/internal/utils/sleep.mjs"() {
+  "node_modules/openai/internal/utils/sleep.mjs"() {
     sleep5 = (ms) => new Promise((resolve5) => setTimeout(resolve5, ms));
   }
 });
 
-// ../../../server/node_modules/openai/version.mjs
+// node_modules/openai/version.mjs
 var VERSION;
 var init_version = __esm({
-  "../../../server/node_modules/openai/version.mjs"() {
+  "node_modules/openai/version.mjs"() {
     VERSION = "6.49.0";
   }
 });
 
-// ../../../server/node_modules/openai/internal/detect-platform.mjs
+// node_modules/openai/internal/detect-platform.mjs
 function getDetectedPlatform() {
   if (typeof Deno !== "undefined" && Deno.build != null) {
     return "deno";
@@ -52137,7 +52137,7 @@ function getBrowserInfo() {
 }
 var isRunningInBrowser, getPlatformProperties, normalizeArch, normalizePlatform, _platformHeaders, getPlatformHeaders;
 var init_detect_platform = __esm({
-  "../../../server/node_modules/openai/internal/detect-platform.mjs"() {
+  "node_modules/openai/internal/detect-platform.mjs"() {
     init_version();
     isRunningInBrowser = () => {
       return (
@@ -52238,7 +52238,7 @@ var init_detect_platform = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/internal/shims.mjs
+// node_modules/openai/internal/shims.mjs
 function getDefaultFetch() {
   if (typeof fetch !== "undefined") {
     return fetch;
@@ -52310,14 +52310,14 @@ async function CancelReadableStream(stream) {
   await cancelPromise;
 }
 var init_shims = __esm({
-  "../../../server/node_modules/openai/internal/shims.mjs"() {
+  "node_modules/openai/internal/shims.mjs"() {
   }
 });
 
-// ../../../server/node_modules/openai/internal/request-options.mjs
+// node_modules/openai/internal/request-options.mjs
 var FallbackEncoder;
 var init_request_options = __esm({
-  "../../../server/node_modules/openai/internal/request-options.mjs"() {
+  "node_modules/openai/internal/request-options.mjs"() {
     FallbackEncoder = ({ headers, body }) => {
       return {
         bodyHeaders: {
@@ -52329,10 +52329,10 @@ var init_request_options = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/internal/qs/formats.mjs
+// node_modules/openai/internal/qs/formats.mjs
 var default_format, default_formatter, formatters, RFC1738;
 var init_formats = __esm({
-  "../../../server/node_modules/openai/internal/qs/formats.mjs"() {
+  "node_modules/openai/internal/qs/formats.mjs"() {
     default_format = "RFC3986";
     default_formatter = (v) => String(v);
     formatters = {
@@ -52343,7 +52343,7 @@ var init_formats = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/internal/qs/utils.mjs
+// node_modules/openai/internal/qs/utils.mjs
 function is_buffer(obj) {
   if (!obj || typeof obj !== "object") {
     return false;
@@ -52362,7 +52362,7 @@ function maybe_map(val, fn) {
 }
 var has, hex_table, limit, encode;
 var init_utils = __esm({
-  "../../../server/node_modules/openai/internal/qs/utils.mjs"() {
+  "node_modules/openai/internal/qs/utils.mjs"() {
     init_formats();
     init_values();
     has = (obj, key) => (has = Object.hasOwn ?? Function.prototype.call.bind(Object.prototype.hasOwnProperty), has(obj, key));
@@ -52429,7 +52429,7 @@ var init_utils = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/internal/qs/stringify.mjs
+// node_modules/openai/internal/qs/stringify.mjs
 function is_non_nullish_primitive(v) {
   return typeof v === "string" || typeof v === "number" || typeof v === "boolean" || typeof v === "symbol" || typeof v === "bigint";
 }
@@ -52669,7 +52669,7 @@ function stringify(object3, opts = {}) {
 }
 var array_prefix_generators, push_to_array, toISOString, defaults, sentinel;
 var init_stringify = __esm({
-  "../../../server/node_modules/openai/internal/qs/stringify.mjs"() {
+  "node_modules/openai/internal/qs/stringify.mjs"() {
     init_utils();
     init_formats();
     init_values();
@@ -52714,17 +52714,17 @@ var init_stringify = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/internal/utils/query.mjs
+// node_modules/openai/internal/utils/query.mjs
 function stringifyQuery(query) {
   return stringify(query, { arrayFormat: "brackets" });
 }
 var init_query = __esm({
-  "../../../server/node_modules/openai/internal/utils/query.mjs"() {
+  "node_modules/openai/internal/utils/query.mjs"() {
     init_stringify();
   }
 });
 
-// ../../../server/node_modules/openai/internal/utils/bytes.mjs
+// node_modules/openai/internal/utils/bytes.mjs
 function concatBytes(buffers) {
   let length = 0;
   for (const buffer of buffers) {
@@ -52748,11 +52748,11 @@ function decodeUTF8(bytes) {
 }
 var encodeUTF8_, decodeUTF8_;
 var init_bytes = __esm({
-  "../../../server/node_modules/openai/internal/utils/bytes.mjs"() {
+  "node_modules/openai/internal/utils/bytes.mjs"() {
   }
 });
 
-// ../../../server/node_modules/openai/internal/decoders/line.mjs
+// node_modules/openai/internal/decoders/line.mjs
 function findNewlineIndex(buffer, startIndex) {
   const newline = 10;
   const carriage = 13;
@@ -52784,7 +52784,7 @@ function findDoubleNewlineIndex(buffer) {
 }
 var _LineDecoder_buffer, _LineDecoder_carriageReturnIndex, LineDecoder;
 var init_line = __esm({
-  "../../../server/node_modules/openai/internal/decoders/line.mjs"() {
+  "node_modules/openai/internal/decoders/line.mjs"() {
     init_tslib();
     init_bytes();
     LineDecoder = class {
@@ -52834,7 +52834,7 @@ var init_line = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/internal/utils/log.mjs
+// node_modules/openai/internal/utils/log.mjs
 function noop2() {
 }
 function makeLogFn(fnLevel, logger, logLevel) {
@@ -52865,7 +52865,7 @@ function loggerFor(client) {
 }
 var levelNumbers, parseLogLevel, noopLogger, cachedLoggers, formatRequestDetails;
 var init_log = __esm({
-  "../../../server/node_modules/openai/internal/utils/log.mjs"() {
+  "node_modules/openai/internal/utils/log.mjs"() {
     init_values();
     levelNumbers = {
       off: 0,
@@ -52913,7 +52913,7 @@ var init_log = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/core/streaming.mjs
+// node_modules/openai/core/streaming.mjs
 async function* _iterSSEMessages(response, controller) {
   if (!response.body) {
     controller.abort();
@@ -52968,7 +52968,7 @@ function partition(str8, delimiter2) {
 }
 var _Stream_client, Stream4, SSEDecoder;
 var init_streaming = __esm({
-  "../../../server/node_modules/openai/core/streaming.mjs"() {
+  "node_modules/openai/core/streaming.mjs"() {
     init_tslib();
     init_error();
     init_shims();
@@ -53216,7 +53216,7 @@ var init_streaming = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/internal/parse.mjs
+// node_modules/openai/internal/parse.mjs
 async function defaultParseResponse(client, props) {
   const { response, requestLogID, retryOfRequestLogID, startTime } = props;
   const body = await (async () => {
@@ -53266,16 +53266,16 @@ function addRequestID(value, response) {
   });
 }
 var init_parse = __esm({
-  "../../../server/node_modules/openai/internal/parse.mjs"() {
+  "node_modules/openai/internal/parse.mjs"() {
     init_streaming();
     init_log();
   }
 });
 
-// ../../../server/node_modules/openai/core/api-promise.mjs
+// node_modules/openai/core/api-promise.mjs
 var _APIPromise_client, APIPromise2;
 var init_api_promise = __esm({
-  "../../../server/node_modules/openai/core/api-promise.mjs"() {
+  "node_modules/openai/core/api-promise.mjs"() {
     init_tslib();
     init_parse();
     APIPromise2 = class _APIPromise extends Promise {
@@ -53341,10 +53341,10 @@ var init_api_promise = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/core/pagination.mjs
+// node_modules/openai/core/pagination.mjs
 var _AbstractPage_client, AbstractPage, PagePromise, Page, CursorPage, ConversationCursorPage, NextCursorPage;
 var init_pagination = __esm({
-  "../../../server/node_modules/openai/core/pagination.mjs"() {
+  "node_modules/openai/core/pagination.mjs"() {
     init_tslib();
     init_error();
     init_parse();
@@ -53511,10 +53511,10 @@ var init_pagination = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/auth/workload-identity-auth.mjs
+// node_modules/openai/auth/workload-identity-auth.mjs
 var SUBJECT_TOKEN_TYPES, TOKEN_EXCHANGE_GRANT_TYPE, WorkloadIdentityAuth;
 var init_workload_identity_auth = __esm({
-  "../../../server/node_modules/openai/auth/workload-identity-auth.mjs"() {
+  "node_modules/openai/auth/workload-identity-auth.mjs"() {
     init_shims();
     init_error();
     SUBJECT_TOKEN_TYPES = {
@@ -53610,7 +53610,7 @@ var init_workload_identity_auth = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/internal/headers.mjs
+// node_modules/openai/internal/headers.mjs
 function* iterateHeaders(headers) {
   if (!headers)
     return;
@@ -53651,7 +53651,7 @@ function* iterateHeaders(headers) {
 }
 var brand_privateNullableHeaders, httpTokenHeaderName, buildHeaders;
 var init_headers2 = __esm({
-  "../../../server/node_modules/openai/internal/headers.mjs"() {
+  "node_modules/openai/internal/headers.mjs"() {
     init_values();
     brand_privateNullableHeaders = /* @__PURE__ */ Symbol("brand.privateNullableHeaders");
     httpTokenHeaderName = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/;
@@ -53683,7 +53683,7 @@ var init_headers2 = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/internal/uploads.mjs
+// node_modules/openai/internal/uploads.mjs
 function toStreamingFile(data, name, options) {
   if (!name) {
     throw new TypeError("toStreamingFile requires a non-empty file name");
@@ -53824,7 +53824,7 @@ function escapeHeaderValue(value) {
 }
 var brand_privateStreamingFile, checkFileSupport, isAsyncIterable, maybeMultipartFormRequestOptions, multipartFormRequestOptions, supportsFormDataMap, createForm, isNamedBlob, isReadableStream, isStreamingFile, isUploadable, hasStreamingUploadableValue, hasUploadableValue, createStreamingFormRequestOptions, addFormValue;
 var init_uploads = __esm({
-  "../../../server/node_modules/openai/internal/uploads.mjs"() {
+  "node_modules/openai/internal/uploads.mjs"() {
     init_headers2();
     init_shims();
     init_bytes();
@@ -53924,7 +53924,7 @@ var init_uploads = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/internal/to-file.mjs
+// node_modules/openai/internal/to-file.mjs
 async function toFile(value, name, options) {
   checkFileSupport();
   value = await value;
@@ -53974,7 +53974,7 @@ function propsForError(value) {
 }
 var isBlobLike, isFileLike, isResponseLike;
 var init_to_file = __esm({
-  "../../../server/node_modules/openai/internal/to-file.mjs"() {
+  "node_modules/openai/internal/to-file.mjs"() {
     init_uploads();
     init_uploads();
     isBlobLike = (value) => value != null && typeof value === "object" && typeof value.size === "number" && typeof value.type === "string" && typeof value.text === "function" && typeof value.slice === "function" && typeof value.arrayBuffer === "function";
@@ -53983,18 +53983,18 @@ var init_to_file = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/core/uploads.mjs
+// node_modules/openai/core/uploads.mjs
 var init_uploads2 = __esm({
-  "../../../server/node_modules/openai/core/uploads.mjs"() {
+  "node_modules/openai/core/uploads.mjs"() {
     init_uploads();
     init_to_file();
   }
 });
 
-// ../../../server/node_modules/openai/core/resource.mjs
+// node_modules/openai/core/resource.mjs
 var APIResource;
 var init_resource = __esm({
-  "../../../server/node_modules/openai/core/resource.mjs"() {
+  "node_modules/openai/core/resource.mjs"() {
     APIResource = class {
       constructor(client) {
         this._client = client;
@@ -54003,21 +54003,21 @@ var init_resource = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/internal/utils/path.mjs
+// node_modules/openai/internal/utils/path.mjs
 function encodeURIPath(str8) {
   return str8.replace(/[^A-Za-z0-9\-._~!$&'()*+,;=:@]+/g, encodeURIComponent);
 }
 var EMPTY, createPathTagFunction, path9;
 var init_path = __esm({
-  "../../../server/node_modules/openai/internal/utils/path.mjs"() {
+  "node_modules/openai/internal/utils/path.mjs"() {
     init_error();
     EMPTY = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.create(null));
-    createPathTagFunction = (pathEncoder = encodeURIPath) => function path11(statics, ...params) {
+    createPathTagFunction = (pathEncoder = encodeURIPath) => function path12(statics, ...params) {
       if (statics.length === 1)
         return statics[0];
       let postPath = false;
       const invalidSegments = [];
-      const path12 = statics.reduce((previousValue, currentValue, index) => {
+      const path13 = statics.reduce((previousValue, currentValue, index) => {
         if (/[?#]/.test(currentValue)) {
           postPath = true;
         }
@@ -54034,7 +54034,7 @@ var init_path = __esm({
         }
         return previousValue + currentValue + (index === params.length ? "" : encoded);
       }, "");
-      const pathOnly = path12.split(/[?#]/, 1)[0];
+      const pathOnly = path13.split(/[?#]/, 1)[0];
       const invalidSegmentPattern = /(?<=^|\/)(?:\.|%2e){1,2}(?=\/|$)/gi;
       let match2;
       while ((match2 = invalidSegmentPattern.exec(pathOnly)) !== null) {
@@ -54055,19 +54055,19 @@ var init_path = __esm({
         }, "");
         throw new OpenAIError(`Path parameters result in path with invalid segments:
 ${invalidSegments.map((e2) => e2.error).join("\n")}
-${path12}
+${path13}
 ${underline}`);
       }
-      return path12;
+      return path13;
     };
     path9 = /* @__PURE__ */ createPathTagFunction(encodeURIPath);
   }
 });
 
-// ../../../server/node_modules/openai/resources/chat/completions/messages.mjs
+// node_modules/openai/resources/chat/completions/messages.mjs
 var Messages;
 var init_messages = __esm({
-  "../../../server/node_modules/openai/resources/chat/completions/messages.mjs"() {
+  "node_modules/openai/resources/chat/completions/messages.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -54093,14 +54093,14 @@ var init_messages = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/error.mjs
+// node_modules/openai/error.mjs
 var init_error2 = __esm({
-  "../../../server/node_modules/openai/error.mjs"() {
+  "node_modules/openai/error.mjs"() {
     init_error();
   }
 });
 
-// ../../../server/node_modules/openai/lib/parser.mjs
+// node_modules/openai/lib/parser.mjs
 function isChatCompletionFunctionTool(tool) {
   return tool !== void 0 && "function" in tool && tool.function !== void 0;
 }
@@ -54207,15 +54207,15 @@ function validateInputTools(tools) {
   }
 }
 var init_parser = __esm({
-  "../../../server/node_modules/openai/lib/parser.mjs"() {
+  "node_modules/openai/lib/parser.mjs"() {
     init_error2();
   }
 });
 
-// ../../../server/node_modules/openai/lib/chatCompletionUtils.mjs
+// node_modules/openai/lib/chatCompletionUtils.mjs
 var isAssistantMessage, isToolMessage;
 var init_chatCompletionUtils = __esm({
-  "../../../server/node_modules/openai/lib/chatCompletionUtils.mjs"() {
+  "node_modules/openai/lib/chatCompletionUtils.mjs"() {
     isAssistantMessage = (message) => {
       return message?.role === "assistant";
     };
@@ -54225,10 +54225,10 @@ var init_chatCompletionUtils = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/lib/EventStream.mjs
+// node_modules/openai/lib/EventStream.mjs
 var _EventStream_instances, _EventStream_connectedPromise, _EventStream_resolveConnectedPromise, _EventStream_rejectConnectedPromise, _EventStream_endPromise, _EventStream_resolveEndPromise, _EventStream_rejectEndPromise, _EventStream_listeners, _EventStream_abortListeners, _EventStream_ended, _EventStream_errored, _EventStream_aborted, _EventStream_catchingPromiseCreated, _EventStream_removeAbortListeners, _EventStream_handleError, EventStream;
 var init_EventStream = __esm({
-  "../../../server/node_modules/openai/lib/EventStream.mjs"() {
+  "node_modules/openai/lib/EventStream.mjs"() {
     init_tslib();
     init_error2();
     EventStream = class {
@@ -54526,16 +54526,16 @@ var init_EventStream = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/lib/RunnableFunction.mjs
+// node_modules/openai/lib/RunnableFunction.mjs
 function isRunnableFunctionWithParse(fn) {
   return typeof fn.parse === "function";
 }
 var init_RunnableFunction = __esm({
-  "../../../server/node_modules/openai/lib/RunnableFunction.mjs"() {
+  "node_modules/openai/lib/RunnableFunction.mjs"() {
   }
 });
 
-// ../../../server/node_modules/openai/lib/AbstractChatCompletionRunner.mjs
+// node_modules/openai/lib/AbstractChatCompletionRunner.mjs
 function normalizeToolCallIds(chatCompletion) {
   for (const choice of chatCompletion.choices) {
     for (const toolCall of choice.message.tool_calls ?? []) {
@@ -54585,7 +54585,7 @@ function toRequestMessage(message) {
 }
 var _AbstractChatCompletionRunner_instances, _AbstractChatCompletionRunner_getFinalContent, _AbstractChatCompletionRunner_getFinalMessage, _AbstractChatCompletionRunner_getFinalFunctionToolCall, _AbstractChatCompletionRunner_getFinalFunctionToolCallResult, _AbstractChatCompletionRunner_calculateTotalUsage, _AbstractChatCompletionRunner_validateParams, _AbstractChatCompletionRunner_stringifyFunctionCallResult, DEFAULT_MAX_CHAT_COMPLETIONS, AbstractChatCompletionRunner;
 var init_AbstractChatCompletionRunner = __esm({
-  "../../../server/node_modules/openai/lib/AbstractChatCompletionRunner.mjs"() {
+  "node_modules/openai/lib/AbstractChatCompletionRunner.mjs"() {
     init_tslib();
     init_error2();
     init_uuid();
@@ -54882,10 +54882,10 @@ var init_AbstractChatCompletionRunner = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/lib/ChatCompletionRunner.mjs
+// node_modules/openai/lib/ChatCompletionRunner.mjs
 var ChatCompletionRunner;
 var init_ChatCompletionRunner = __esm({
-  "../../../server/node_modules/openai/lib/ChatCompletionRunner.mjs"() {
+  "node_modules/openai/lib/ChatCompletionRunner.mjs"() {
     init_AbstractChatCompletionRunner();
     init_chatCompletionUtils();
     ChatCompletionRunner = class _ChatCompletionRunner extends AbstractChatCompletionRunner {
@@ -54908,7 +54908,7 @@ var init_ChatCompletionRunner = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/_vendor/partial-json-parser/parser.mjs
+// node_modules/openai/_vendor/partial-json-parser/parser.mjs
 function parseJSON(jsonString, allowPartial = Allow.ALL) {
   if (typeof jsonString !== "string") {
     throw new TypeError(`expecting str, got ${typeof jsonString}`);
@@ -54920,7 +54920,7 @@ function parseJSON(jsonString, allowPartial = Allow.ALL) {
 }
 var STR, NUM, ARR, OBJ, NULL, BOOL, NAN, INFINITY, MINUS_INFINITY, INF, SPECIAL, ATOM, COLLECTION, ALL, Allow, PartialJSON, MalformedJSON, _parseJSON, partialParse;
 var init_parser2 = __esm({
-  "../../../server/node_modules/openai/_vendor/partial-json-parser/parser.mjs"() {
+  "node_modules/openai/_vendor/partial-json-parser/parser.mjs"() {
     STR = 1;
     NUM = 2;
     ARR = 4;
@@ -55125,14 +55125,14 @@ var init_parser2 = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/streaming.mjs
+// node_modules/openai/streaming.mjs
 var init_streaming2 = __esm({
-  "../../../server/node_modules/openai/streaming.mjs"() {
+  "node_modules/openai/streaming.mjs"() {
     init_streaming();
   }
 });
 
-// ../../../server/node_modules/openai/lib/ChatCompletionStream.mjs
+// node_modules/openai/lib/ChatCompletionStream.mjs
 function makeChatCompletionReadableStreamMessageChunk(chunk2, message, toolCallIds) {
   const payload = {
     type: "message",
@@ -55259,7 +55259,7 @@ function assertNever2(_x) {
 }
 var _ChatCompletionStream_instances, _ChatCompletionStream_params, _ChatCompletionStream_audioDoneChoiceIndexes, _ChatCompletionStream_choiceEventStates, _ChatCompletionStream_currentChatCompletionSnapshot, _ChatCompletionStream_beginRequest, _ChatCompletionStream_getChoiceEventState, _ChatCompletionStream_addChunk, _ChatCompletionStream_emitToolCallDoneEvent, _ChatCompletionStream_emitContentDoneEvents, _ChatCompletionStream_endRequest, _ChatCompletionStream_getAutoParseableResponseFormat, _ChatCompletionStream_accumulateChatCompletion, CHAT_COMPLETION_READABLE_STREAM_MESSAGE_PREFIX, ChatCompletionStream;
 var init_ChatCompletionStream = __esm({
-  "../../../server/node_modules/openai/lib/ChatCompletionStream.mjs"() {
+  "node_modules/openai/lib/ChatCompletionStream.mjs"() {
     init_tslib();
     init_parser2();
     init_error2();
@@ -55681,10 +55681,10 @@ var init_ChatCompletionStream = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/lib/ChatCompletionStreamingRunner.mjs
+// node_modules/openai/lib/ChatCompletionStreamingRunner.mjs
 var ChatCompletionStreamingRunner;
 var init_ChatCompletionStreamingRunner = __esm({
-  "../../../server/node_modules/openai/lib/ChatCompletionStreamingRunner.mjs"() {
+  "node_modules/openai/lib/ChatCompletionStreamingRunner.mjs"() {
     init_ChatCompletionStream();
     init_error2();
     init_streaming2();
@@ -55784,10 +55784,10 @@ var init_ChatCompletionStreamingRunner = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/chat/completions/completions.mjs
+// node_modules/openai/resources/chat/completions/completions.mjs
 var Completions;
 var init_completions = __esm({
-  "../../../server/node_modules/openai/resources/chat/completions/completions.mjs"() {
+  "node_modules/openai/resources/chat/completions/completions.mjs"() {
     init_resource();
     init_messages();
     init_messages();
@@ -55912,10 +55912,10 @@ var init_completions = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/chat/chat.mjs
+// node_modules/openai/resources/chat/chat.mjs
 var Chat2;
 var init_chat = __esm({
-  "../../../server/node_modules/openai/resources/chat/chat.mjs"() {
+  "node_modules/openai/resources/chat/chat.mjs"() {
     init_resource();
     init_completions();
     init_completions();
@@ -55929,33 +55929,33 @@ var init_chat = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/chat/completions/index.mjs
+// node_modules/openai/resources/chat/completions/index.mjs
 var init_completions2 = __esm({
-  "../../../server/node_modules/openai/resources/chat/completions/index.mjs"() {
+  "node_modules/openai/resources/chat/completions/index.mjs"() {
     init_completions();
     init_completions();
     init_messages();
   }
 });
 
-// ../../../server/node_modules/openai/resources/chat/index.mjs
+// node_modules/openai/resources/chat/index.mjs
 var init_chat2 = __esm({
-  "../../../server/node_modules/openai/resources/chat/index.mjs"() {
+  "node_modules/openai/resources/chat/index.mjs"() {
     init_chat();
     init_completions2();
   }
 });
 
-// ../../../server/node_modules/openai/resources/shared.mjs
+// node_modules/openai/resources/shared.mjs
 var init_shared = __esm({
-  "../../../server/node_modules/openai/resources/shared.mjs"() {
+  "node_modules/openai/resources/shared.mjs"() {
   }
 });
 
-// ../../../server/node_modules/openai/resources/admin/organization/admin-api-keys.mjs
+// node_modules/openai/resources/admin/organization/admin-api-keys.mjs
 var AdminAPIKeys;
 var init_admin_api_keys = __esm({
-  "../../../server/node_modules/openai/resources/admin/organization/admin-api-keys.mjs"() {
+  "node_modules/openai/resources/admin/organization/admin-api-keys.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -56034,10 +56034,10 @@ var init_admin_api_keys = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/admin/organization/audit-logs.mjs
+// node_modules/openai/resources/admin/organization/audit-logs.mjs
 var AuditLogs;
 var init_audit_logs = __esm({
-  "../../../server/node_modules/openai/resources/admin/organization/audit-logs.mjs"() {
+  "node_modules/openai/resources/admin/organization/audit-logs.mjs"() {
     init_resource();
     init_pagination();
     AuditLogs = class extends APIResource {
@@ -56063,10 +56063,10 @@ var init_audit_logs = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/admin/organization/certificates.mjs
+// node_modules/openai/resources/admin/organization/certificates.mjs
 var Certificates;
 var init_certificates = __esm({
-  "../../../server/node_modules/openai/resources/admin/organization/certificates.mjs"() {
+  "node_modules/openai/resources/admin/organization/certificates.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -56208,10 +56208,10 @@ var init_certificates = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/admin/organization/data-retention.mjs
+// node_modules/openai/resources/admin/organization/data-retention.mjs
 var DataRetention;
 var init_data_retention = __esm({
-  "../../../server/node_modules/openai/resources/admin/organization/data-retention.mjs"() {
+  "node_modules/openai/resources/admin/organization/data-retention.mjs"() {
     init_resource();
     DataRetention = class extends APIResource {
       /**
@@ -56251,10 +56251,10 @@ var init_data_retention = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/admin/organization/invites.mjs
+// node_modules/openai/resources/admin/organization/invites.mjs
 var Invites;
 var init_invites = __esm({
-  "../../../server/node_modules/openai/resources/admin/organization/invites.mjs"() {
+  "node_modules/openai/resources/admin/organization/invites.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -56335,10 +56335,10 @@ var init_invites = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/admin/organization/roles.mjs
+// node_modules/openai/resources/admin/organization/roles.mjs
 var Roles;
 var init_roles = __esm({
-  "../../../server/node_modules/openai/resources/admin/organization/roles.mjs"() {
+  "node_modules/openai/resources/admin/organization/roles.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -56432,10 +56432,10 @@ var init_roles = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/admin/organization/spend-alerts.mjs
+// node_modules/openai/resources/admin/organization/spend-alerts.mjs
 var SpendAlerts;
 var init_spend_alerts = __esm({
-  "../../../server/node_modules/openai/resources/admin/organization/spend-alerts.mjs"() {
+  "node_modules/openai/resources/admin/organization/spend-alerts.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -56543,10 +56543,10 @@ var init_spend_alerts = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/admin/organization/spend-limit.mjs
+// node_modules/openai/resources/admin/organization/spend-limit.mjs
 var SpendLimit;
 var init_spend_limit = __esm({
-  "../../../server/node_modules/openai/resources/admin/organization/spend-limit.mjs"() {
+  "node_modules/openai/resources/admin/organization/spend-limit.mjs"() {
     init_resource();
     SpendLimit = class extends APIResource {
       /**
@@ -56603,10 +56603,10 @@ var init_spend_limit = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/admin/organization/usage.mjs
+// node_modules/openai/resources/admin/organization/usage.mjs
 var Usage;
 var init_usage = __esm({
-  "../../../server/node_modules/openai/resources/admin/organization/usage.mjs"() {
+  "node_modules/openai/resources/admin/organization/usage.mjs"() {
     init_resource();
     Usage = class extends APIResource {
       /**
@@ -56811,10 +56811,10 @@ var init_usage = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/admin/organization/groups/roles.mjs
+// node_modules/openai/resources/admin/organization/groups/roles.mjs
 var Roles2;
 var init_roles2 = __esm({
-  "../../../server/node_modules/openai/resources/admin/organization/groups/roles.mjs"() {
+  "node_modules/openai/resources/admin/organization/groups/roles.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -56896,10 +56896,10 @@ var init_roles2 = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/admin/organization/groups/users.mjs
+// node_modules/openai/resources/admin/organization/groups/users.mjs
 var Users;
 var init_users = __esm({
-  "../../../server/node_modules/openai/resources/admin/organization/groups/users.mjs"() {
+  "node_modules/openai/resources/admin/organization/groups/users.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -56981,10 +56981,10 @@ var init_users = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/admin/organization/groups/groups.mjs
+// node_modules/openai/resources/admin/organization/groups/groups.mjs
 var Groups;
 var init_groups = __esm({
-  "../../../server/node_modules/openai/resources/admin/organization/groups/groups.mjs"() {
+  "node_modules/openai/resources/admin/organization/groups/groups.mjs"() {
     init_resource();
     init_roles2();
     init_roles2();
@@ -57090,10 +57090,10 @@ var init_groups = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/admin/organization/projects/api-keys.mjs
+// node_modules/openai/resources/admin/organization/projects/api-keys.mjs
 var APIKeys;
 var init_api_keys = __esm({
-  "../../../server/node_modules/openai/resources/admin/organization/projects/api-keys.mjs"() {
+  "node_modules/openai/resources/admin/organization/projects/api-keys.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -57159,10 +57159,10 @@ var init_api_keys = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/admin/organization/projects/certificates.mjs
+// node_modules/openai/resources/admin/organization/projects/certificates.mjs
 var Certificates2;
 var init_certificates2 = __esm({
-  "../../../server/node_modules/openai/resources/admin/organization/projects/certificates.mjs"() {
+  "node_modules/openai/resources/admin/organization/projects/certificates.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -57224,10 +57224,10 @@ var init_certificates2 = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/admin/organization/projects/data-retention.mjs
+// node_modules/openai/resources/admin/organization/projects/data-retention.mjs
 var DataRetention2;
 var init_data_retention2 = __esm({
-  "../../../server/node_modules/openai/resources/admin/organization/projects/data-retention.mjs"() {
+  "node_modules/openai/resources/admin/organization/projects/data-retention.mjs"() {
     init_resource();
     init_path();
     DataRetention2 = class extends APIResource {
@@ -57271,10 +57271,10 @@ var init_data_retention2 = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/admin/organization/projects/hosted-tool-permissions.mjs
+// node_modules/openai/resources/admin/organization/projects/hosted-tool-permissions.mjs
 var HostedToolPermissions;
 var init_hosted_tool_permissions = __esm({
-  "../../../server/node_modules/openai/resources/admin/organization/projects/hosted-tool-permissions.mjs"() {
+  "node_modules/openai/resources/admin/organization/projects/hosted-tool-permissions.mjs"() {
     init_resource();
     init_path();
     HostedToolPermissions = class extends APIResource {
@@ -57317,10 +57317,10 @@ var init_hosted_tool_permissions = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/admin/organization/projects/model-permissions.mjs
+// node_modules/openai/resources/admin/organization/projects/model-permissions.mjs
 var ModelPermissions;
 var init_model_permissions = __esm({
-  "../../../server/node_modules/openai/resources/admin/organization/projects/model-permissions.mjs"() {
+  "node_modules/openai/resources/admin/organization/projects/model-permissions.mjs"() {
     init_resource();
     init_path();
     ModelPermissions = class extends APIResource {
@@ -57381,10 +57381,10 @@ var init_model_permissions = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/admin/organization/projects/rate-limits.mjs
+// node_modules/openai/resources/admin/organization/projects/rate-limits.mjs
 var RateLimits;
 var init_rate_limits = __esm({
-  "../../../server/node_modules/openai/resources/admin/organization/projects/rate-limits.mjs"() {
+  "node_modules/openai/resources/admin/organization/projects/rate-limits.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -57429,10 +57429,10 @@ var init_rate_limits = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/admin/organization/projects/roles.mjs
+// node_modules/openai/resources/admin/organization/projects/roles.mjs
 var Roles3;
 var init_roles3 = __esm({
-  "../../../server/node_modules/openai/resources/admin/organization/projects/roles.mjs"() {
+  "node_modules/openai/resources/admin/organization/projects/roles.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -57538,10 +57538,10 @@ var init_roles3 = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/admin/organization/projects/spend-alerts.mjs
+// node_modules/openai/resources/admin/organization/projects/spend-alerts.mjs
 var SpendAlerts2;
 var init_spend_alerts2 = __esm({
-  "../../../server/node_modules/openai/resources/admin/organization/projects/spend-alerts.mjs"() {
+  "node_modules/openai/resources/admin/organization/projects/spend-alerts.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -57660,10 +57660,10 @@ var init_spend_alerts2 = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/admin/organization/projects/spend-limit.mjs
+// node_modules/openai/resources/admin/organization/projects/spend-limit.mjs
 var SpendLimit2;
 var init_spend_limit2 = __esm({
-  "../../../server/node_modules/openai/resources/admin/organization/projects/spend-limit.mjs"() {
+  "node_modules/openai/resources/admin/organization/projects/spend-limit.mjs"() {
     init_resource();
     init_path();
     SpendLimit2 = class extends APIResource {
@@ -57728,10 +57728,10 @@ var init_spend_limit2 = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/admin/organization/projects/groups/roles.mjs
+// node_modules/openai/resources/admin/organization/projects/groups/roles.mjs
 var Roles4;
 var init_roles4 = __esm({
-  "../../../server/node_modules/openai/resources/admin/organization/projects/groups/roles.mjs"() {
+  "node_modules/openai/resources/admin/organization/projects/groups/roles.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -57816,10 +57816,10 @@ var init_roles4 = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/admin/organization/projects/groups/groups.mjs
+// node_modules/openai/resources/admin/organization/projects/groups/groups.mjs
 var Groups2;
 var init_groups2 = __esm({
-  "../../../server/node_modules/openai/resources/admin/organization/projects/groups/groups.mjs"() {
+  "node_modules/openai/resources/admin/organization/projects/groups/groups.mjs"() {
     init_resource();
     init_roles4();
     init_roles4();
@@ -57909,10 +57909,10 @@ var init_groups2 = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/admin/organization/projects/service-accounts/api-keys.mjs
+// node_modules/openai/resources/admin/organization/projects/service-accounts/api-keys.mjs
 var APIKeys2;
 var init_api_keys2 = __esm({
-  "../../../server/node_modules/openai/resources/admin/organization/projects/service-accounts/api-keys.mjs"() {
+  "node_modules/openai/resources/admin/organization/projects/service-accounts/api-keys.mjs"() {
     init_resource();
     init_path();
     APIKeys2 = class extends APIResource {
@@ -57936,10 +57936,10 @@ var init_api_keys2 = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/admin/organization/projects/service-accounts/service-accounts.mjs
+// node_modules/openai/resources/admin/organization/projects/service-accounts/service-accounts.mjs
 var ServiceAccounts;
 var init_service_accounts = __esm({
-  "../../../server/node_modules/openai/resources/admin/organization/projects/service-accounts/service-accounts.mjs"() {
+  "node_modules/openai/resources/admin/organization/projects/service-accounts/service-accounts.mjs"() {
     init_resource();
     init_api_keys2();
     init_api_keys2();
@@ -58045,10 +58045,10 @@ var init_service_accounts = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/admin/organization/projects/users/roles.mjs
+// node_modules/openai/resources/admin/organization/projects/users/roles.mjs
 var Roles5;
 var init_roles5 = __esm({
-  "../../../server/node_modules/openai/resources/admin/organization/projects/users/roles.mjs"() {
+  "node_modules/openai/resources/admin/organization/projects/users/roles.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -58133,10 +58133,10 @@ var init_roles5 = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/admin/organization/projects/users/users.mjs
+// node_modules/openai/resources/admin/organization/projects/users/users.mjs
 var Users2;
 var init_users2 = __esm({
-  "../../../server/node_modules/openai/resources/admin/organization/projects/users/users.mjs"() {
+  "node_modules/openai/resources/admin/organization/projects/users/users.mjs"() {
     init_resource();
     init_roles5();
     init_roles5();
@@ -58249,10 +58249,10 @@ var init_users2 = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/admin/organization/projects/projects.mjs
+// node_modules/openai/resources/admin/organization/projects/projects.mjs
 var Projects;
 var init_projects = __esm({
-  "../../../server/node_modules/openai/resources/admin/organization/projects/projects.mjs"() {
+  "node_modules/openai/resources/admin/organization/projects/projects.mjs"() {
     init_resource();
     init_api_keys();
     init_api_keys();
@@ -58402,10 +58402,10 @@ var init_projects = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/admin/organization/users/roles.mjs
+// node_modules/openai/resources/admin/organization/users/roles.mjs
 var Roles6;
 var init_roles6 = __esm({
-  "../../../server/node_modules/openai/resources/admin/organization/users/roles.mjs"() {
+  "node_modules/openai/resources/admin/organization/users/roles.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -58487,10 +58487,10 @@ var init_roles6 = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/admin/organization/users/users.mjs
+// node_modules/openai/resources/admin/organization/users/users.mjs
 var Users3;
 var init_users3 = __esm({
-  "../../../server/node_modules/openai/resources/admin/organization/users/users.mjs"() {
+  "node_modules/openai/resources/admin/organization/users/users.mjs"() {
     init_resource();
     init_roles6();
     init_roles6();
@@ -58571,10 +58571,10 @@ var init_users3 = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/admin/organization/organization.mjs
+// node_modules/openai/resources/admin/organization/organization.mjs
 var Organization;
 var init_organization = __esm({
-  "../../../server/node_modules/openai/resources/admin/organization/organization.mjs"() {
+  "node_modules/openai/resources/admin/organization/organization.mjs"() {
     init_resource();
     init_admin_api_keys();
     init_admin_api_keys();
@@ -58632,10 +58632,10 @@ var init_organization = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/admin/admin.mjs
+// node_modules/openai/resources/admin/admin.mjs
 var Admin;
 var init_admin = __esm({
-  "../../../server/node_modules/openai/resources/admin/admin.mjs"() {
+  "node_modules/openai/resources/admin/admin.mjs"() {
     init_resource();
     init_organization();
     init_organization();
@@ -58649,10 +58649,10 @@ var init_admin = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/audio/speech.mjs
+// node_modules/openai/resources/audio/speech.mjs
 var Speech;
 var init_speech = __esm({
-  "../../../server/node_modules/openai/resources/audio/speech.mjs"() {
+  "node_modules/openai/resources/audio/speech.mjs"() {
     init_resource();
     init_headers2();
     Speech = class extends APIResource {
@@ -58686,10 +58686,10 @@ var init_speech = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/audio/transcriptions.mjs
+// node_modules/openai/resources/audio/transcriptions.mjs
 var Transcriptions;
 var init_transcriptions = __esm({
-  "../../../server/node_modules/openai/resources/audio/transcriptions.mjs"() {
+  "node_modules/openai/resources/audio/transcriptions.mjs"() {
     init_resource();
     init_uploads();
     Transcriptions = class extends APIResource {
@@ -58706,10 +58706,10 @@ var init_transcriptions = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/audio/translations.mjs
+// node_modules/openai/resources/audio/translations.mjs
 var Translations;
 var init_translations = __esm({
-  "../../../server/node_modules/openai/resources/audio/translations.mjs"() {
+  "node_modules/openai/resources/audio/translations.mjs"() {
     init_resource();
     init_uploads();
     Translations = class extends APIResource {
@@ -58720,10 +58720,10 @@ var init_translations = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/audio/audio.mjs
+// node_modules/openai/resources/audio/audio.mjs
 var Audio;
 var init_audio = __esm({
-  "../../../server/node_modules/openai/resources/audio/audio.mjs"() {
+  "node_modules/openai/resources/audio/audio.mjs"() {
     init_resource();
     init_speech();
     init_speech();
@@ -58745,10 +58745,10 @@ var init_audio = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/batches.mjs
+// node_modules/openai/resources/batches.mjs
 var Batches2;
 var init_batches = __esm({
-  "../../../server/node_modules/openai/resources/batches.mjs"() {
+  "node_modules/openai/resources/batches.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -58790,10 +58790,10 @@ var init_batches = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/beta/assistants.mjs
+// node_modules/openai/resources/beta/assistants.mjs
 var Assistants;
 var init_assistants = __esm({
-  "../../../server/node_modules/openai/resources/beta/assistants.mjs"() {
+  "node_modules/openai/resources/beta/assistants.mjs"() {
     init_resource();
     init_pagination();
     init_headers2();
@@ -58866,10 +58866,10 @@ var init_assistants = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/beta/realtime/sessions.mjs
+// node_modules/openai/resources/beta/realtime/sessions.mjs
 var Sessions;
 var init_sessions = __esm({
-  "../../../server/node_modules/openai/resources/beta/realtime/sessions.mjs"() {
+  "node_modules/openai/resources/beta/realtime/sessions.mjs"() {
     init_resource();
     init_headers2();
     Sessions = class extends APIResource {
@@ -58900,10 +58900,10 @@ var init_sessions = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/beta/realtime/transcription-sessions.mjs
+// node_modules/openai/resources/beta/realtime/transcription-sessions.mjs
 var TranscriptionSessions;
 var init_transcription_sessions = __esm({
-  "../../../server/node_modules/openai/resources/beta/realtime/transcription-sessions.mjs"() {
+  "node_modules/openai/resources/beta/realtime/transcription-sessions.mjs"() {
     init_resource();
     init_headers2();
     TranscriptionSessions = class extends APIResource {
@@ -58934,10 +58934,10 @@ var init_transcription_sessions = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/beta/realtime/realtime.mjs
+// node_modules/openai/resources/beta/realtime/realtime.mjs
 var Realtime;
 var init_realtime = __esm({
-  "../../../server/node_modules/openai/resources/beta/realtime/realtime.mjs"() {
+  "node_modules/openai/resources/beta/realtime/realtime.mjs"() {
     init_resource();
     init_sessions();
     init_sessions();
@@ -58955,10 +58955,10 @@ var init_realtime = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/beta/chatkit/sessions.mjs
+// node_modules/openai/resources/beta/chatkit/sessions.mjs
 var Sessions2;
 var init_sessions2 = __esm({
-  "../../../server/node_modules/openai/resources/beta/chatkit/sessions.mjs"() {
+  "node_modules/openai/resources/beta/chatkit/sessions.mjs"() {
     init_resource();
     init_headers2();
     init_path();
@@ -59005,10 +59005,10 @@ var init_sessions2 = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/beta/chatkit/threads.mjs
+// node_modules/openai/resources/beta/chatkit/threads.mjs
 var Threads;
 var init_threads = __esm({
-  "../../../server/node_modules/openai/resources/beta/chatkit/threads.mjs"() {
+  "node_modules/openai/resources/beta/chatkit/threads.mjs"() {
     init_resource();
     init_pagination();
     init_headers2();
@@ -59091,10 +59091,10 @@ var init_threads = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/beta/chatkit/chatkit.mjs
+// node_modules/openai/resources/beta/chatkit/chatkit.mjs
 var ChatKit;
 var init_chatkit = __esm({
-  "../../../server/node_modules/openai/resources/beta/chatkit/chatkit.mjs"() {
+  "node_modules/openai/resources/beta/chatkit/chatkit.mjs"() {
     init_resource();
     init_sessions2();
     init_sessions2();
@@ -59112,10 +59112,10 @@ var init_chatkit = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/beta/responses/input-items.mjs
+// node_modules/openai/resources/beta/responses/input-items.mjs
 var InputItems;
 var init_input_items = __esm({
-  "../../../server/node_modules/openai/resources/beta/responses/input-items.mjs"() {
+  "node_modules/openai/resources/beta/responses/input-items.mjs"() {
     init_resource();
     init_pagination();
     init_headers2();
@@ -59150,10 +59150,10 @@ var init_input_items = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/beta/responses/input-tokens.mjs
+// node_modules/openai/resources/beta/responses/input-tokens.mjs
 var InputTokens;
 var init_input_tokens = __esm({
-  "../../../server/node_modules/openai/resources/beta/responses/input-tokens.mjs"() {
+  "node_modules/openai/resources/beta/responses/input-tokens.mjs"() {
     init_resource();
     init_headers2();
     InputTokens = class extends APIResource {
@@ -59185,10 +59185,10 @@ var init_input_tokens = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/beta/responses/responses.mjs
+// node_modules/openai/resources/beta/responses/responses.mjs
 var Responses;
 var init_responses = __esm({
-  "../../../server/node_modules/openai/resources/beta/responses/responses.mjs"() {
+  "node_modules/openai/resources/beta/responses/responses.mjs"() {
     init_resource();
     init_input_items();
     init_input_items();
@@ -59306,10 +59306,10 @@ var init_responses = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/beta/threads/messages.mjs
+// node_modules/openai/resources/beta/threads/messages.mjs
 var Messages2;
 var init_messages2 = __esm({
-  "../../../server/node_modules/openai/resources/beta/threads/messages.mjs"() {
+  "node_modules/openai/resources/beta/threads/messages.mjs"() {
     init_resource();
     init_pagination();
     init_headers2();
@@ -59385,10 +59385,10 @@ var init_messages2 = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/beta/threads/runs/steps.mjs
+// node_modules/openai/resources/beta/threads/runs/steps.mjs
 var Steps;
 var init_steps = __esm({
-  "../../../server/node_modules/openai/resources/beta/threads/runs/steps.mjs"() {
+  "node_modules/openai/resources/beta/threads/runs/steps.mjs"() {
     init_resource();
     init_pagination();
     init_headers2();
@@ -59426,10 +59426,10 @@ var init_steps = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/internal/utils/base64.mjs
+// node_modules/openai/internal/utils/base64.mjs
 var toFloat32Array;
 var init_base64 = __esm({
-  "../../../server/node_modules/openai/internal/utils/base64.mjs"() {
+  "node_modules/openai/internal/utils/base64.mjs"() {
     init_error();
     init_bytes();
     toFloat32Array = (base64Str) => {
@@ -59449,10 +59449,10 @@ var init_base64 = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/internal/utils/env.mjs
+// node_modules/openai/internal/utils/env.mjs
 var readEnv;
 var init_env = __esm({
-  "../../../server/node_modules/openai/internal/utils/env.mjs"() {
+  "node_modules/openai/internal/utils/env.mjs"() {
     readEnv = (env2) => {
       if (typeof globalThis.process !== "undefined") {
         return globalThis.process.env?.[env2]?.trim() || void 0;
@@ -59465,9 +59465,9 @@ var init_env = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/internal/utils.mjs
+// node_modules/openai/internal/utils.mjs
 var init_utils2 = __esm({
-  "../../../server/node_modules/openai/internal/utils.mjs"() {
+  "node_modules/openai/internal/utils.mjs"() {
     init_values();
     init_base64();
     init_env();
@@ -59478,12 +59478,12 @@ var init_utils2 = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/lib/AssistantStream.mjs
+// node_modules/openai/lib/AssistantStream.mjs
 function assertNever3(_x) {
 }
 var _AssistantStream_instances, _a2, _AssistantStream_events, _AssistantStream_runStepSnapshots, _AssistantStream_messageSnapshots, _AssistantStream_messageSnapshot, _AssistantStream_finalRun, _AssistantStream_currentContentIndex, _AssistantStream_currentContent, _AssistantStream_currentToolCallIndex, _AssistantStream_currentToolCall, _AssistantStream_currentEvent, _AssistantStream_currentRunSnapshot, _AssistantStream_currentRunStepSnapshot, _AssistantStream_addEvent, _AssistantStream_endRequest, _AssistantStream_handleMessage, _AssistantStream_handleRunStep, _AssistantStream_handleEvent, _AssistantStream_accumulateRunStep, _AssistantStream_accumulateMessage, _AssistantStream_accumulateContent, _AssistantStream_handleRun, AssistantStream;
 var init_AssistantStream = __esm({
-  "../../../server/node_modules/openai/lib/AssistantStream.mjs"() {
+  "node_modules/openai/lib/AssistantStream.mjs"() {
     init_tslib();
     init_streaming2();
     init_error2();
@@ -59985,10 +59985,10 @@ var init_AssistantStream = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/beta/threads/runs/runs.mjs
+// node_modules/openai/resources/beta/threads/runs/runs.mjs
 var Runs;
 var init_runs = __esm({
-  "../../../server/node_modules/openai/resources/beta/threads/runs/runs.mjs"() {
+  "node_modules/openai/resources/beta/threads/runs/runs.mjs"() {
     init_resource();
     init_steps();
     init_steps();
@@ -60171,10 +60171,10 @@ var init_runs = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/beta/threads/threads.mjs
+// node_modules/openai/resources/beta/threads/threads.mjs
 var Threads2;
 var init_threads2 = __esm({
-  "../../../server/node_modules/openai/resources/beta/threads/threads.mjs"() {
+  "node_modules/openai/resources/beta/threads/threads.mjs"() {
     init_resource();
     init_messages2();
     init_messages2();
@@ -60270,10 +60270,10 @@ var init_threads2 = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/beta/beta.mjs
+// node_modules/openai/resources/beta/beta.mjs
 var Beta;
 var init_beta = __esm({
-  "../../../server/node_modules/openai/resources/beta/beta.mjs"() {
+  "node_modules/openai/resources/beta/beta.mjs"() {
     init_resource();
     init_assistants();
     init_assistants();
@@ -60303,10 +60303,10 @@ var init_beta = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/completions.mjs
+// node_modules/openai/resources/completions.mjs
 var Completions2;
 var init_completions3 = __esm({
-  "../../../server/node_modules/openai/resources/completions.mjs"() {
+  "node_modules/openai/resources/completions.mjs"() {
     init_resource();
     Completions2 = class extends APIResource {
       create(body, options) {
@@ -60321,10 +60321,10 @@ var init_completions3 = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/containers/files/content.mjs
+// node_modules/openai/resources/containers/files/content.mjs
 var Content;
 var init_content = __esm({
-  "../../../server/node_modules/openai/resources/containers/files/content.mjs"() {
+  "node_modules/openai/resources/containers/files/content.mjs"() {
     init_resource();
     init_headers2();
     init_path();
@@ -60345,10 +60345,10 @@ var init_content = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/containers/files/files.mjs
+// node_modules/openai/resources/containers/files/files.mjs
 var Files3;
 var init_files = __esm({
-  "../../../server/node_modules/openai/resources/containers/files/files.mjs"() {
+  "node_modules/openai/resources/containers/files/files.mjs"() {
     init_resource();
     init_content();
     init_content();
@@ -60406,10 +60406,10 @@ var init_files = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/containers/containers.mjs
+// node_modules/openai/resources/containers/containers.mjs
 var Containers;
 var init_containers = __esm({
-  "../../../server/node_modules/openai/resources/containers/containers.mjs"() {
+  "node_modules/openai/resources/containers/containers.mjs"() {
     init_resource();
     init_files();
     init_files();
@@ -60461,10 +60461,10 @@ var init_containers = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/conversations/items.mjs
+// node_modules/openai/resources/conversations/items.mjs
 var Items;
 var init_items = __esm({
-  "../../../server/node_modules/openai/resources/conversations/items.mjs"() {
+  "node_modules/openai/resources/conversations/items.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -60512,10 +60512,10 @@ var init_items = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/conversations/conversations.mjs
+// node_modules/openai/resources/conversations/conversations.mjs
 var Conversations;
 var init_conversations = __esm({
-  "../../../server/node_modules/openai/resources/conversations/conversations.mjs"() {
+  "node_modules/openai/resources/conversations/conversations.mjs"() {
     init_resource();
     init_items();
     init_items();
@@ -60564,10 +60564,10 @@ var init_conversations = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/embeddings.mjs
+// node_modules/openai/resources/embeddings.mjs
 var Embeddings;
 var init_embeddings = __esm({
-  "../../../server/node_modules/openai/resources/embeddings.mjs"() {
+  "node_modules/openai/resources/embeddings.mjs"() {
     init_resource();
     init_utils2();
     Embeddings = class extends APIResource {
@@ -60615,10 +60615,10 @@ var init_embeddings = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/evals/runs/output-items.mjs
+// node_modules/openai/resources/evals/runs/output-items.mjs
 var OutputItems;
 var init_output_items = __esm({
-  "../../../server/node_modules/openai/resources/evals/runs/output-items.mjs"() {
+  "node_modules/openai/resources/evals/runs/output-items.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -60644,10 +60644,10 @@ var init_output_items = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/evals/runs/runs.mjs
+// node_modules/openai/resources/evals/runs/runs.mjs
 var Runs2;
 var init_runs2 = __esm({
-  "../../../server/node_modules/openai/resources/evals/runs/runs.mjs"() {
+  "node_modules/openai/resources/evals/runs/runs.mjs"() {
     init_resource();
     init_output_items();
     init_output_items();
@@ -60715,10 +60715,10 @@ var init_runs2 = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/evals/evals.mjs
+// node_modules/openai/resources/evals/evals.mjs
 var Evals;
 var init_evals = __esm({
-  "../../../server/node_modules/openai/resources/evals/evals.mjs"() {
+  "node_modules/openai/resources/evals/evals.mjs"() {
     init_resource();
     init_runs2();
     init_runs2();
@@ -60773,10 +60773,10 @@ var init_evals = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/files.mjs
+// node_modules/openai/resources/files.mjs
 var Files4;
 var init_files2 = __esm({
-  "../../../server/node_modules/openai/resources/files.mjs"() {
+  "node_modules/openai/resources/files.mjs"() {
     init_resource();
     init_pagination();
     init_headers2();
@@ -60872,20 +60872,20 @@ var init_files2 = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/fine-tuning/methods.mjs
+// node_modules/openai/resources/fine-tuning/methods.mjs
 var Methods;
 var init_methods = __esm({
-  "../../../server/node_modules/openai/resources/fine-tuning/methods.mjs"() {
+  "node_modules/openai/resources/fine-tuning/methods.mjs"() {
     init_resource();
     Methods = class extends APIResource {
     };
   }
 });
 
-// ../../../server/node_modules/openai/resources/fine-tuning/alpha/graders.mjs
+// node_modules/openai/resources/fine-tuning/alpha/graders.mjs
 var Graders;
 var init_graders = __esm({
-  "../../../server/node_modules/openai/resources/fine-tuning/alpha/graders.mjs"() {
+  "node_modules/openai/resources/fine-tuning/alpha/graders.mjs"() {
     init_resource();
     Graders = class extends APIResource {
       /**
@@ -60940,10 +60940,10 @@ var init_graders = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/fine-tuning/alpha/alpha.mjs
+// node_modules/openai/resources/fine-tuning/alpha/alpha.mjs
 var Alpha;
 var init_alpha = __esm({
-  "../../../server/node_modules/openai/resources/fine-tuning/alpha/alpha.mjs"() {
+  "node_modules/openai/resources/fine-tuning/alpha/alpha.mjs"() {
     init_resource();
     init_graders();
     init_graders();
@@ -60957,10 +60957,10 @@ var init_alpha = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/fine-tuning/checkpoints/permissions.mjs
+// node_modules/openai/resources/fine-tuning/checkpoints/permissions.mjs
 var Permissions;
 var init_permissions = __esm({
-  "../../../server/node_modules/openai/resources/fine-tuning/checkpoints/permissions.mjs"() {
+  "node_modules/openai/resources/fine-tuning/checkpoints/permissions.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -61045,10 +61045,10 @@ var init_permissions = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/fine-tuning/checkpoints/checkpoints.mjs
+// node_modules/openai/resources/fine-tuning/checkpoints/checkpoints.mjs
 var Checkpoints;
 var init_checkpoints = __esm({
-  "../../../server/node_modules/openai/resources/fine-tuning/checkpoints/checkpoints.mjs"() {
+  "node_modules/openai/resources/fine-tuning/checkpoints/checkpoints.mjs"() {
     init_resource();
     init_permissions();
     init_permissions();
@@ -61062,10 +61062,10 @@ var init_checkpoints = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/fine-tuning/jobs/checkpoints.mjs
+// node_modules/openai/resources/fine-tuning/jobs/checkpoints.mjs
 var Checkpoints2;
 var init_checkpoints2 = __esm({
-  "../../../server/node_modules/openai/resources/fine-tuning/jobs/checkpoints.mjs"() {
+  "node_modules/openai/resources/fine-tuning/jobs/checkpoints.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -61090,10 +61090,10 @@ var init_checkpoints2 = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/fine-tuning/jobs/jobs.mjs
+// node_modules/openai/resources/fine-tuning/jobs/jobs.mjs
 var Jobs;
 var init_jobs = __esm({
-  "../../../server/node_modules/openai/resources/fine-tuning/jobs/jobs.mjs"() {
+  "node_modules/openai/resources/fine-tuning/jobs/jobs.mjs"() {
     init_resource();
     init_checkpoints2();
     init_checkpoints2();
@@ -61229,10 +61229,10 @@ var init_jobs = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/fine-tuning/fine-tuning.mjs
+// node_modules/openai/resources/fine-tuning/fine-tuning.mjs
 var FineTuning;
 var init_fine_tuning = __esm({
-  "../../../server/node_modules/openai/resources/fine-tuning/fine-tuning.mjs"() {
+  "node_modules/openai/resources/fine-tuning/fine-tuning.mjs"() {
     init_resource();
     init_methods();
     init_methods();
@@ -61258,20 +61258,20 @@ var init_fine_tuning = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/graders/grader-models.mjs
+// node_modules/openai/resources/graders/grader-models.mjs
 var GraderModels;
 var init_grader_models = __esm({
-  "../../../server/node_modules/openai/resources/graders/grader-models.mjs"() {
+  "node_modules/openai/resources/graders/grader-models.mjs"() {
     init_resource();
     GraderModels = class extends APIResource {
     };
   }
 });
 
-// ../../../server/node_modules/openai/resources/graders/graders.mjs
+// node_modules/openai/resources/graders/graders.mjs
 var Graders2;
 var init_graders2 = __esm({
-  "../../../server/node_modules/openai/resources/graders/graders.mjs"() {
+  "node_modules/openai/resources/graders/graders.mjs"() {
     init_resource();
     init_grader_models();
     init_grader_models();
@@ -61285,10 +61285,10 @@ var init_graders2 = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/images.mjs
+// node_modules/openai/resources/images.mjs
 var Images;
 var init_images = __esm({
-  "../../../server/node_modules/openai/resources/images.mjs"() {
+  "node_modules/openai/resources/images.mjs"() {
     init_resource();
     init_uploads();
     Images = class extends APIResource {
@@ -61320,10 +61320,10 @@ var init_images = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/models.mjs
+// node_modules/openai/resources/models.mjs
 var Models2;
 var init_models = __esm({
-  "../../../server/node_modules/openai/resources/models.mjs"() {
+  "node_modules/openai/resources/models.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -61353,10 +61353,10 @@ var init_models = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/moderations.mjs
+// node_modules/openai/resources/moderations.mjs
 var Moderations;
 var init_moderations = __esm({
-  "../../../server/node_modules/openai/resources/moderations.mjs"() {
+  "node_modules/openai/resources/moderations.mjs"() {
     init_resource();
     Moderations = class extends APIResource {
       /**
@@ -61370,10 +61370,10 @@ var init_moderations = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/realtime/calls.mjs
+// node_modules/openai/resources/realtime/calls.mjs
 var Calls;
 var init_calls = __esm({
-  "../../../server/node_modules/openai/resources/realtime/calls.mjs"() {
+  "node_modules/openai/resources/realtime/calls.mjs"() {
     init_resource();
     init_headers2();
     init_path();
@@ -61450,10 +61450,10 @@ var init_calls = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/realtime/client-secrets.mjs
+// node_modules/openai/resources/realtime/client-secrets.mjs
 var ClientSecrets;
 var init_client_secrets = __esm({
-  "../../../server/node_modules/openai/resources/realtime/client-secrets.mjs"() {
+  "node_modules/openai/resources/realtime/client-secrets.mjs"() {
     init_resource();
     ClientSecrets = class extends APIResource {
       /**
@@ -61490,10 +61490,10 @@ var init_client_secrets = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/realtime/realtime.mjs
+// node_modules/openai/resources/realtime/realtime.mjs
 var Realtime2;
 var init_realtime2 = __esm({
-  "../../../server/node_modules/openai/resources/realtime/realtime.mjs"() {
+  "node_modules/openai/resources/realtime/realtime.mjs"() {
     init_resource();
     init_calls();
     init_calls();
@@ -61511,7 +61511,7 @@ var init_realtime2 = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/lib/ResponsesParser.mjs
+// node_modules/openai/lib/ResponsesParser.mjs
 function maybeParseResponse(response, params) {
   if (!params || !hasAutoParseableInput2(params)) {
     const parsed = {
@@ -61637,13 +61637,13 @@ function addOutputText(rsp) {
   rsp.output_text = texts.join("");
 }
 var init_ResponsesParser = __esm({
-  "../../../server/node_modules/openai/lib/ResponsesParser.mjs"() {
+  "node_modules/openai/lib/ResponsesParser.mjs"() {
     init_error2();
     init_parser();
   }
 });
 
-// ../../../server/node_modules/openai/lib/responses/ResponseAccumulator.mjs
+// node_modules/openai/lib/responses/ResponseAccumulator.mjs
 function accumulateResponse(event, snapshot) {
   if (!snapshot) {
     if (event.type !== "response.created") {
@@ -62032,19 +62032,19 @@ function assertNever4(value) {
   throw new OpenAIError(`Unhandled response stream event: ${JSON.stringify(value)}`);
 }
 var init_ResponseAccumulator = __esm({
-  "../../../server/node_modules/openai/lib/responses/ResponseAccumulator.mjs"() {
+  "node_modules/openai/lib/responses/ResponseAccumulator.mjs"() {
     init_error2();
     init_ResponsesParser();
   }
 });
 
-// ../../../server/node_modules/openai/lib/responses/ResponseStream.mjs
+// node_modules/openai/lib/responses/ResponseStream.mjs
 function finalizeResponse(snapshot, params) {
   return maybeParseResponse(snapshot, params);
 }
 var _ResponseStream_instances, _ResponseStream_params, _ResponseStream_currentResponseSnapshot, _ResponseStream_finalResponse, _ResponseStream_beginRequest, _ResponseStream_addEvent, _ResponseStream_endRequest, ResponseStream;
 var init_ResponseStream = __esm({
-  "../../../server/node_modules/openai/lib/responses/ResponseStream.mjs"() {
+  "node_modules/openai/lib/responses/ResponseStream.mjs"() {
     init_tslib();
     init_error2();
     init_EventStream();
@@ -62236,10 +62236,10 @@ var init_ResponseStream = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/responses/input-items.mjs
+// node_modules/openai/resources/responses/input-items.mjs
 var InputItems2;
 var init_input_items2 = __esm({
-  "../../../server/node_modules/openai/resources/responses/input-items.mjs"() {
+  "node_modules/openai/resources/responses/input-items.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -62264,10 +62264,10 @@ var init_input_items2 = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/responses/input-tokens.mjs
+// node_modules/openai/resources/responses/input-tokens.mjs
 var InputTokens2;
 var init_input_tokens2 = __esm({
-  "../../../server/node_modules/openai/resources/responses/input-tokens.mjs"() {
+  "node_modules/openai/resources/responses/input-tokens.mjs"() {
     init_resource();
     InputTokens2 = class extends APIResource {
       /**
@@ -62292,10 +62292,10 @@ var init_input_tokens2 = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/responses/responses.mjs
+// node_modules/openai/resources/responses/responses.mjs
 var Responses2;
 var init_responses2 = __esm({
-  "../../../server/node_modules/openai/resources/responses/responses.mjs"() {
+  "node_modules/openai/resources/responses/responses.mjs"() {
     init_ResponsesParser();
     init_ResponseStream();
     init_resource();
@@ -62405,10 +62405,10 @@ var init_responses2 = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/skills/content.mjs
+// node_modules/openai/resources/skills/content.mjs
 var Content2;
 var init_content2 = __esm({
-  "../../../server/node_modules/openai/resources/skills/content.mjs"() {
+  "node_modules/openai/resources/skills/content.mjs"() {
     init_resource();
     init_headers2();
     init_path();
@@ -62428,10 +62428,10 @@ var init_content2 = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/skills/versions/content.mjs
+// node_modules/openai/resources/skills/versions/content.mjs
 var Content3;
 var init_content3 = __esm({
-  "../../../server/node_modules/openai/resources/skills/versions/content.mjs"() {
+  "node_modules/openai/resources/skills/versions/content.mjs"() {
     init_resource();
     init_headers2();
     init_path();
@@ -62452,10 +62452,10 @@ var init_content3 = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/skills/versions/versions.mjs
+// node_modules/openai/resources/skills/versions/versions.mjs
 var Versions;
 var init_versions = __esm({
-  "../../../server/node_modules/openai/resources/skills/versions/versions.mjs"() {
+  "node_modules/openai/resources/skills/versions/versions.mjs"() {
     init_resource();
     init_content3();
     init_content3();
@@ -62508,10 +62508,10 @@ var init_versions = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/skills/skills.mjs
+// node_modules/openai/resources/skills/skills.mjs
 var Skills;
 var init_skills = __esm({
-  "../../../server/node_modules/openai/resources/skills/skills.mjs"() {
+  "node_modules/openai/resources/skills/skills.mjs"() {
     init_resource();
     init_content2();
     init_content2();
@@ -62570,10 +62570,10 @@ var init_skills = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/uploads/parts.mjs
+// node_modules/openai/resources/uploads/parts.mjs
 var Parts;
 var init_parts = __esm({
-  "../../../server/node_modules/openai/resources/uploads/parts.mjs"() {
+  "node_modules/openai/resources/uploads/parts.mjs"() {
     init_resource();
     init_uploads();
     init_path();
@@ -62598,10 +62598,10 @@ var init_parts = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/uploads/uploads.mjs
+// node_modules/openai/resources/uploads/uploads.mjs
 var Uploads;
 var init_uploads3 = __esm({
-  "../../../server/node_modules/openai/resources/uploads/uploads.mjs"() {
+  "node_modules/openai/resources/uploads/uploads.mjs"() {
     init_resource();
     init_parts();
     init_parts();
@@ -62677,10 +62677,10 @@ var init_uploads3 = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/lib/Util.mjs
+// node_modules/openai/lib/Util.mjs
 var allSettledWithThrow;
 var init_Util = __esm({
-  "../../../server/node_modules/openai/lib/Util.mjs"() {
+  "node_modules/openai/lib/Util.mjs"() {
     allSettledWithThrow = async (promises2) => {
       const results = await Promise.allSettled(promises2);
       const rejected = results.filter((result) => result.status === "rejected");
@@ -62701,10 +62701,10 @@ var init_Util = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/vector-stores/file-batches.mjs
+// node_modules/openai/resources/vector-stores/file-batches.mjs
 var FileBatches;
 var init_file_batches = __esm({
-  "../../../server/node_modules/openai/resources/vector-stores/file-batches.mjs"() {
+  "node_modules/openai/resources/vector-stores/file-batches.mjs"() {
     init_resource();
     init_pagination();
     init_headers2();
@@ -62837,10 +62837,10 @@ var init_file_batches = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/vector-stores/files.mjs
+// node_modules/openai/resources/vector-stores/files.mjs
 var Files5;
 var init_files3 = __esm({
-  "../../../server/node_modules/openai/resources/vector-stores/files.mjs"() {
+  "node_modules/openai/resources/vector-stores/files.mjs"() {
     init_resource();
     init_pagination();
     init_headers2();
@@ -62988,10 +62988,10 @@ var init_files3 = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/vector-stores/vector-stores.mjs
+// node_modules/openai/resources/vector-stores/vector-stores.mjs
 var VectorStores;
 var init_vector_stores = __esm({
-  "../../../server/node_modules/openai/resources/vector-stores/vector-stores.mjs"() {
+  "node_modules/openai/resources/vector-stores/vector-stores.mjs"() {
     init_resource();
     init_file_batches();
     init_file_batches();
@@ -63078,10 +63078,10 @@ var init_vector_stores = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/videos.mjs
+// node_modules/openai/resources/videos.mjs
 var Videos;
 var init_videos = __esm({
-  "../../../server/node_modules/openai/resources/videos.mjs"() {
+  "node_modules/openai/resources/videos.mjs"() {
     init_resource();
     init_pagination();
     init_headers2();
@@ -63168,10 +63168,10 @@ var init_videos = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/webhooks/webhooks.mjs
+// node_modules/openai/resources/webhooks/webhooks.mjs
 var _Webhooks_instances, _Webhooks_validateSecret, _Webhooks_getRequiredHeader, Webhooks2;
 var init_webhooks = __esm({
-  "../../../server/node_modules/openai/resources/webhooks/webhooks.mjs"() {
+  "node_modules/openai/resources/webhooks/webhooks.mjs"() {
     init_tslib();
     init_error2();
     init_resource();
@@ -63253,23 +63253,23 @@ var init_webhooks = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/resources/webhooks/index.mjs
+// node_modules/openai/resources/webhooks/index.mjs
 var init_webhooks2 = __esm({
-  "../../../server/node_modules/openai/resources/webhooks/index.mjs"() {
+  "node_modules/openai/resources/webhooks/index.mjs"() {
     init_webhooks();
   }
 });
 
-// ../../../server/node_modules/openai/resources/webhooks.mjs
+// node_modules/openai/resources/webhooks.mjs
 var init_webhooks3 = __esm({
-  "../../../server/node_modules/openai/resources/webhooks.mjs"() {
+  "node_modules/openai/resources/webhooks.mjs"() {
     init_webhooks2();
   }
 });
 
-// ../../../server/node_modules/openai/resources/index.mjs
+// node_modules/openai/resources/index.mjs
 var init_resources = __esm({
-  "../../../server/node_modules/openai/resources/index.mjs"() {
+  "node_modules/openai/resources/index.mjs"() {
     init_chat2();
     init_shared();
     init_admin();
@@ -63297,7 +63297,7 @@ var init_resources = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/internal/provider.mjs
+// node_modules/openai/internal/provider.mjs
 function configureProvider(provider) {
   const definition = providerDefinitions.get(provider);
   if (!definition) {
@@ -63307,7 +63307,7 @@ function configureProvider(provider) {
 }
 var providerDefinitionsKey, providerGlobal, existingProviderDefinitions, providerDefinitions;
 var init_provider = __esm({
-  "../../../server/node_modules/openai/internal/provider.mjs"() {
+  "node_modules/openai/internal/provider.mjs"() {
     providerDefinitionsKey = /* @__PURE__ */ Symbol.for("openai.node.providerDefinitions.v1");
     providerGlobal = globalThis;
     existingProviderDefinitions = providerGlobal[providerDefinitionsKey];
@@ -63318,7 +63318,7 @@ var init_provider = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/client.mjs
+// node_modules/openai/client.mjs
 function getConnectionErrorMessage(error2) {
   if (isUndiciDispatcherVersionMismatchError(error2)) {
     return `Connection error. This may be caused by passing an undici dispatcher, such as ProxyAgent, that is incompatible with the fetch implementation. If you are using undici's ProxyAgent, pass the fetch implementation from the same undici package: import { fetch, ProxyAgent } from 'undici'; new OpenAI({ fetch, fetchOptions: { dispatcher: new ProxyAgent(...) } });`;
@@ -63338,7 +63338,7 @@ function isUndiciDispatcherVersionMismatchError(error2) {
 }
 var _OpenAI_instances, _a3, _OpenAI_encoder, _OpenAI_baseURLOverridden, WORKLOAD_IDENTITY_API_KEY_PLACEHOLDER, OpenAI;
 var init_client = __esm({
-  "../../../server/node_modules/openai/client.mjs"() {
+  "node_modules/openai/client.mjs"() {
     init_tslib();
     init_uuid();
     init_values();
@@ -63610,9 +63610,9 @@ var init_client = __esm({
         this.apiKey = token;
         return true;
       }
-      buildURL(path11, query, defaultBaseURL) {
+      buildURL(path12, query, defaultBaseURL) {
         const baseURL = !__classPrivateFieldGet(this, _OpenAI_instances, "m", _OpenAI_baseURLOverridden).call(this) && defaultBaseURL || this.baseURL;
-        const url = isAbsoluteURL(path11) ? new URL(path11) : new URL(baseURL + (baseURL.endsWith("/") && path11.startsWith("/") ? path11.slice(1) : path11));
+        const url = isAbsoluteURL(path12) ? new URL(path12) : new URL(baseURL + (baseURL.endsWith("/") && path12.startsWith("/") ? path12.slice(1) : path12));
         const defaultQuery = this.defaultQuery();
         const pathQuery = Object.fromEntries(url.searchParams);
         if (!isEmptyObj(defaultQuery) || !isEmptyObj(pathQuery)) {
@@ -63642,24 +63642,24 @@ var init_client = __esm({
        */
       async prepareRequest(request, { url, options }) {
       }
-      get(path11, opts) {
-        return this.methodRequest("get", path11, opts);
+      get(path12, opts) {
+        return this.methodRequest("get", path12, opts);
       }
-      post(path11, opts) {
-        return this.methodRequest("post", path11, opts);
+      post(path12, opts) {
+        return this.methodRequest("post", path12, opts);
       }
-      patch(path11, opts) {
-        return this.methodRequest("patch", path11, opts);
+      patch(path12, opts) {
+        return this.methodRequest("patch", path12, opts);
       }
-      put(path11, opts) {
-        return this.methodRequest("put", path11, opts);
+      put(path12, opts) {
+        return this.methodRequest("put", path12, opts);
       }
-      delete(path11, opts) {
-        return this.methodRequest("delete", path11, opts);
+      delete(path12, opts) {
+        return this.methodRequest("delete", path12, opts);
       }
-      methodRequest(method, path11, opts) {
+      methodRequest(method, path12, opts) {
         return this.request(Promise.resolve(opts).then((opts2) => {
-          return { method, path: path11, ...opts2 };
+          return { method, path: path12, ...opts2 };
         }));
       }
       request(options, remainingRetries = null) {
@@ -63784,8 +63784,8 @@ var init_client = __esm({
         }));
         return { response, options, controller, requestLogID, retryOfRequestLogID, startTime };
       }
-      getAPIList(path11, Page2, opts) {
-        return this.requestAPIList(Page2, opts && "then" in opts ? opts.then((opts2) => ({ method: "get", path: path11, ...opts2 })) : { method: "get", path: path11, ...opts });
+      getAPIList(path12, Page2, opts) {
+        return this.requestAPIList(Page2, opts && "then" in opts ? opts.then((opts2) => ({ method: "get", path: path12, ...opts2 })) : { method: "get", path: path12, ...opts });
       }
       requestAPIList(Page2, options) {
         const request = this.makeRequest(options, null, void 0);
@@ -63879,8 +63879,8 @@ var init_client = __esm({
       }
       async buildRequest(inputOptions, { retryCount = 0 } = {}) {
         const options = { ...inputOptions };
-        const { method, path: path11, query, defaultBaseURL } = options;
-        const url = this.buildURL(path11, query, defaultBaseURL);
+        const { method, path: path12, query, defaultBaseURL } = options;
+        const url = this.buildURL(path12, query, defaultBaseURL);
         if ("timeout" in options)
           validatePositiveInteger("timeout", options.timeout);
         options.timeout = options.timeout ?? this.timeout;
@@ -64019,10 +64019,10 @@ var init_client = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/azure.mjs
+// node_modules/openai/azure.mjs
 var AzureOpenAI, _deployments_endpoints;
 var init_azure = __esm({
-  "../../../server/node_modules/openai/azure.mjs"() {
+  "node_modules/openai/azure.mjs"() {
     init_headers2();
     init_error2();
     init_utils2();
@@ -64120,7 +64120,7 @@ var init_azure = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/bedrock.mjs
+// node_modules/openai/bedrock.mjs
 function deriveBedrockBaseURL(awsRegion) {
   const region = awsRegion?.trim();
   if (!region) {
@@ -64154,7 +64154,7 @@ function restoreBedrockStreamOutputText(responses) {
 }
 var BedrockOpenAI;
 var init_bedrock = __esm({
-  "../../../server/node_modules/openai/bedrock.mjs"() {
+  "node_modules/openai/bedrock.mjs"() {
     init_error2();
     init_client();
     init_headers2();
@@ -64221,7 +64221,7 @@ var init_bedrock = __esm({
   }
 });
 
-// ../../../server/node_modules/openai/index.mjs
+// node_modules/openai/index.mjs
 var openai_exports = {};
 __export(openai_exports, {
   APIConnectionError: () => APIConnectionError2,
@@ -64250,7 +64250,7 @@ __export(openai_exports, {
   toStreamingFile: () => toStreamingFile
 });
 var init_openai = __esm({
-  "../../../server/node_modules/openai/index.mjs"() {
+  "node_modules/openai/index.mjs"() {
     init_client();
     init_uploads2();
     init_api_promise();
@@ -64262,7 +64262,7 @@ var init_openai = __esm({
   }
 });
 
-// ../../../server/node_modules/zod/v3/external.js
+// node_modules/zod/v3/external.js
 var external_exports = {};
 __export(external_exports, {
   BRAND: () => BRAND,
@@ -64374,7 +64374,7 @@ __export(external_exports, {
   void: () => voidType
 });
 
-// ../../../server/node_modules/zod/v3/helpers/util.js
+// node_modules/zod/v3/helpers/util.js
 var util;
 (function(util2) {
   util2.assertEqual = (_) => {
@@ -64508,7 +64508,7 @@ var getParsedType = (data) => {
   }
 };
 
-// ../../../server/node_modules/zod/v3/ZodError.js
+// node_modules/zod/v3/ZodError.js
 var ZodIssueCode = util.arrayToEnum([
   "invalid_type",
   "invalid_literal",
@@ -64626,7 +64626,7 @@ ZodError.create = (issues) => {
   return error2;
 };
 
-// ../../../server/node_modules/zod/v3/locales/en.js
+// node_modules/zod/v3/locales/en.js
 var errorMap = (issue2, _ctx) => {
   let message;
   switch (issue2.code) {
@@ -64729,7 +64729,7 @@ var errorMap = (issue2, _ctx) => {
 };
 var en_default = errorMap;
 
-// ../../../server/node_modules/zod/v3/errors.js
+// node_modules/zod/v3/errors.js
 var overrideErrorMap = en_default;
 function setErrorMap(map) {
   overrideErrorMap = map;
@@ -64738,10 +64738,10 @@ function getErrorMap() {
   return overrideErrorMap;
 }
 
-// ../../../server/node_modules/zod/v3/helpers/parseUtil.js
+// node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path11, errorMaps, issueData } = params;
-  const fullPath = [...path11, ...issueData.path || []];
+  const { data, path: path12, errorMaps, issueData } = params;
+  const fullPath = [...path12, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -64848,20 +64848,20 @@ var isDirty = (x2) => x2.status === "dirty";
 var isValid = (x2) => x2.status === "valid";
 var isAsync = (x2) => typeof Promise !== "undefined" && x2 instanceof Promise;
 
-// ../../../server/node_modules/zod/v3/helpers/errorUtil.js
+// node_modules/zod/v3/helpers/errorUtil.js
 var errorUtil;
 (function(errorUtil2) {
   errorUtil2.errToObj = (message) => typeof message === "string" ? { message } : message || {};
   errorUtil2.toString = (message) => typeof message === "string" ? message : message?.message;
 })(errorUtil || (errorUtil = {}));
 
-// ../../../server/node_modules/zod/v3/types.js
+// node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path11, key) {
+  constructor(parent, value, path12, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path11;
+    this._path = path12;
     this._key = key;
   }
   get path() {
@@ -68303,7 +68303,7 @@ var coerce = {
 };
 var NEVER = INVALID;
 
-// ../../../server/node_modules/zod/v4/core/core.js
+// node_modules/zod/v4/core/core.js
 var NEVER2 = Object.freeze({
   status: "aborted"
 });
@@ -68362,7 +68362,7 @@ function config(newConfig) {
   return globalConfig;
 }
 
-// ../../../server/node_modules/zod/v4/core/util.js
+// node_modules/zod/v4/core/util.js
 var util_exports = {};
 __export(util_exports, {
   BIGINT_FORMAT_RANGES: () => BIGINT_FORMAT_RANGES,
@@ -68498,10 +68498,10 @@ function assignProp(target, prop, value) {
     configurable: true
   });
 }
-function getElementAtPath(obj, path11) {
-  if (!path11)
+function getElementAtPath(obj, path12) {
+  if (!path12)
     return obj;
-  return path11.reduce((acc, key) => acc?.[key], obj);
+  return path12.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -68821,11 +68821,11 @@ function aborted(x2, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path11, issues) {
+function prefixIssues(path12, issues) {
   return issues.map((iss) => {
     var _a4;
     (_a4 = iss).path ?? (_a4.path = []);
-    iss.path.unshift(path11);
+    iss.path.unshift(path12);
     return iss;
   });
 }
@@ -68883,7 +68883,7 @@ var Class = class {
   }
 };
 
-// ../../../server/node_modules/zod/v4/core/errors.js
+// node_modules/zod/v4/core/errors.js
 var initializer = (inst, def) => {
   inst.name = "$ZodError";
   Object.defineProperty(inst, "_zod", {
@@ -68958,7 +68958,7 @@ function formatError(error2, _mapper) {
   return fieldErrors;
 }
 
-// ../../../server/node_modules/zod/v4/core/parse.js
+// node_modules/zod/v4/core/parse.js
 var _parse = (_Err) => (schema, value, _ctx, _params) => {
   const ctx = _ctx ? Object.assign(_ctx, { async: false }) : { async: false };
   const result = schema._zod.run({ value, issues: [] }, ctx);
@@ -69008,7 +69008,7 @@ var _safeParseAsync = (_Err) => async (schema, value, _ctx) => {
 };
 var safeParseAsync = /* @__PURE__ */ _safeParseAsync($ZodRealError);
 
-// ../../../server/node_modules/zod/v4/core/regexes.js
+// node_modules/zod/v4/core/regexes.js
 var cuid = /^[cC][^\s-]{8,}$/;
 var cuid2 = /^[0-9a-z]+$/;
 var ulid = /^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$/;
@@ -69066,7 +69066,7 @@ var _null = /null/i;
 var lowercase = /^[^A-Z]*$/;
 var uppercase = /^[^a-z]*$/;
 
-// ../../../server/node_modules/zod/v4/core/checks.js
+// node_modules/zod/v4/core/checks.js
 var $ZodCheck = /* @__PURE__ */ $constructor("$ZodCheck", (inst, def) => {
   var _a4;
   inst._zod ?? (inst._zod = {});
@@ -69451,7 +69451,7 @@ var $ZodCheckOverwrite = /* @__PURE__ */ $constructor("$ZodCheckOverwrite", (ins
   };
 });
 
-// ../../../server/node_modules/zod/v4/core/doc.js
+// node_modules/zod/v4/core/doc.js
 var Doc = class {
   constructor(args = []) {
     this.content = [];
@@ -69487,14 +69487,14 @@ var Doc = class {
   }
 };
 
-// ../../../server/node_modules/zod/v4/core/versions.js
+// node_modules/zod/v4/core/versions.js
 var version = {
   major: 4,
   minor: 0,
   patch: 0
 };
 
-// ../../../server/node_modules/zod/v4/core/schemas.js
+// node_modules/zod/v4/core/schemas.js
 var $ZodType = /* @__PURE__ */ $constructor("$ZodType", (inst, def) => {
   var _a4;
   inst ?? (inst = {});
@@ -70732,7 +70732,7 @@ function handleRefineResult(result, payload, input, inst) {
   }
 }
 
-// ../../../server/node_modules/zod/v4/locales/en.js
+// node_modules/zod/v4/locales/en.js
 var parsedType = (data) => {
   const t2 = typeof data;
   switch (t2) {
@@ -70850,7 +70850,7 @@ function en_default2() {
   };
 }
 
-// ../../../server/node_modules/zod/v4/core/registries.js
+// node_modules/zod/v4/core/registries.js
 var $ZodRegistry = class {
   constructor() {
     this._map = /* @__PURE__ */ new Map();
@@ -70898,7 +70898,7 @@ function registry() {
 }
 var globalRegistry = /* @__PURE__ */ registry();
 
-// ../../../server/node_modules/zod/v4/core/api.js
+// node_modules/zod/v4/core/api.js
 function _string(Class2, params) {
   return new Class2({
     type: "string",
@@ -71337,7 +71337,7 @@ function _refine(Class2, fn, _params) {
   return schema;
 }
 
-// ../../../server/node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-compat.js
+// node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-compat.js
 function isZ4Schema(s2) {
   const schema = s2;
   return !!schema._zod;
@@ -71400,7 +71400,7 @@ function getLiteralValue(schema) {
   return void 0;
 }
 
-// ../../../server/node_modules/zod/v4/classic/iso.js
+// node_modules/zod/v4/classic/iso.js
 var iso_exports = {};
 __export(iso_exports, {
   ZodISODate: () => ZodISODate,
@@ -71441,7 +71441,7 @@ function duration2(params) {
   return _isoDuration(ZodISODuration, params);
 }
 
-// ../../../server/node_modules/zod/v4/classic/errors.js
+// node_modules/zod/v4/classic/errors.js
 var initializer2 = (inst, issues) => {
   $ZodError.init(inst, issues);
   inst.name = "ZodError";
@@ -71475,13 +71475,13 @@ var ZodRealError = $constructor("ZodError", initializer2, {
   Parent: Error
 });
 
-// ../../../server/node_modules/zod/v4/classic/parse.js
+// node_modules/zod/v4/classic/parse.js
 var parse2 = /* @__PURE__ */ _parse(ZodRealError);
 var parseAsync2 = /* @__PURE__ */ _parseAsync(ZodRealError);
 var safeParse3 = /* @__PURE__ */ _safeParse(ZodRealError);
 var safeParseAsync2 = /* @__PURE__ */ _safeParseAsync(ZodRealError);
 
-// ../../../server/node_modules/zod/v4/classic/schemas.js
+// node_modules/zod/v4/classic/schemas.js
 var ZodType2 = /* @__PURE__ */ $constructor("ZodType", (inst, def) => {
   $ZodType.init(inst, def);
   inst.def = def;
@@ -72092,10 +72092,10 @@ function preprocess(fn, schema) {
   return pipe(transform(fn), schema);
 }
 
-// ../../../server/node_modules/zod/v4/classic/external.js
+// node_modules/zod/v4/classic/external.js
 config(en_default2());
 
-// ../../../server/node_modules/@modelcontextprotocol/sdk/dist/esm/types.js
+// node_modules/@modelcontextprotocol/sdk/dist/esm/types.js
 var LATEST_PROTOCOL_VERSION = "2025-11-25";
 var SUPPORTED_PROTOCOL_VERSIONS = [LATEST_PROTOCOL_VERSION, "2025-06-18", "2025-03-26", "2024-11-05", "2024-10-07"];
 var RELATED_TASK_META_KEY = "io.modelcontextprotocol/related-task";
@@ -73614,15 +73614,15 @@ var UrlElicitationRequiredError = class extends McpError {
   }
 };
 
-// ../../../server/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/interfaces.js
+// node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/interfaces.js
 function isTerminal(status) {
   return status === "completed" || status === "failed" || status === "cancelled";
 }
 
-// ../../../server/node_modules/zod-to-json-schema/dist/esm/parsers/string.js
+// node_modules/zod-to-json-schema/dist/esm/parsers/string.js
 var ALPHA_NUMERIC = new Set("ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvxyz0123456789");
 
-// ../../../server/node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-json-schema-compat.js
+// node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-json-schema-compat.js
 function getMethodLiteral(schema) {
   const shape = getObjectShape(schema);
   const methodSchema = shape?.method;
@@ -73643,7 +73643,7 @@ function parseWithCompat(schema, data) {
   return result.data;
 }
 
-// ../../../server/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/protocol.js
+// node_modules/@modelcontextprotocol/sdk/dist/esm/shared/protocol.js
 var DEFAULT_REQUEST_TIMEOUT_MSEC = 6e4;
 var Protocol = class {
   constructor(_options) {
@@ -74597,7 +74597,7 @@ function mergeCapabilities(base, additional) {
   return result;
 }
 
-// ../../../server/node_modules/@modelcontextprotocol/sdk/dist/esm/validation/ajv-provider.js
+// node_modules/@modelcontextprotocol/sdk/dist/esm/validation/ajv-provider.js
 var import_ajv = __toESM(require_ajv(), 1);
 var import_ajv_formats = __toESM(require_dist(), 1);
 function createDefaultAjvInstance() {
@@ -74665,7 +74665,7 @@ var AjvJsonSchemaValidator = class {
   }
 };
 
-// ../../../server/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/server.js
+// node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/server.js
 var ExperimentalServerTasks = class {
   constructor(_server) {
     this._server = _server;
@@ -74878,7 +74878,7 @@ var ExperimentalServerTasks = class {
   }
 };
 
-// ../../../server/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/helpers.js
+// node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/helpers.js
 function assertToolsCallTaskCapability(requests, method, entityName) {
   if (!requests) {
     throw new Error(`${entityName} does not support task creation (required for ${method})`);
@@ -74913,7 +74913,7 @@ function assertClientRequestTaskCapability(requests, method, entityName) {
   }
 }
 
-// ../../../server/node_modules/@modelcontextprotocol/sdk/dist/esm/server/index.js
+// node_modules/@modelcontextprotocol/sdk/dist/esm/server/index.js
 var Server = class extends Protocol {
   /**
    * Initializes this server with the given name and version information.
@@ -75284,10 +75284,10 @@ var Server = class extends Protocol {
   }
 };
 
-// ../../../server/node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js
+// node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js
 import process2 from "node:process";
 
-// ../../../server/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/stdio.js
+// node_modules/@modelcontextprotocol/sdk/dist/esm/shared/stdio.js
 var STDIO_DEFAULT_MAX_BUFFER_SIZE = 10 * 1024 * 1024;
 var ReadBuffer = class {
   constructor(options) {
@@ -75324,7 +75324,7 @@ function serializeMessage(message) {
   return JSON.stringify(message) + "\n";
 }
 
-// ../../../server/node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js
+// node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js
 var StdioServerTransport = class {
   constructor(_stdin = process2.stdin, _stdout = process2.stdout, options) {
     this._stdin = _stdin;
@@ -77491,6 +77491,10 @@ var elevenLabsGenerateSchema = external_exports.object({
   languageCode: languageCodeSchema,
   ...voiceSettingsFields,
   seed: seedSchema,
+  pronunciationDictionaryLocators: external_exports.array(external_exports.object({
+    pronunciationDictionaryId: external_exports.string().trim().min(1),
+    versionId: external_exports.string().trim().min(1)
+  }).strict()).min(1).max(3).optional(),
   previousText: external_exports.string().optional(),
   nextText: external_exports.string().optional(),
   applyTextNormalization: normalizationSchema,
@@ -77713,6 +77717,7 @@ async function generateElevenLabsSpeech(request) {
       ...request.languageCode ? { language_code: request.languageCode } : {},
       ...voiceSettingsFrom(request) ? { voice_settings: voiceSettingsFrom(request) } : {},
       ...request.seed !== void 0 ? { seed: request.seed } : {},
+      ...request.pronunciationDictionaryLocators ? { pronunciation_dictionary_locators: request.pronunciationDictionaryLocators.map((d) => ({ pronunciation_dictionary_id: d.pronunciationDictionaryId, version_id: d.versionId })) } : {},
       ...request.previousText ? { previous_text: request.previousText } : {},
       ...request.nextText ? { next_text: request.nextText } : {},
       ...request.applyTextNormalization ? { apply_text_normalization: request.applyTextNormalization } : {}
@@ -77856,6 +77861,28 @@ async function listElevenLabsVoices(request) {
     console.error(`[ElevenLabs] Error: ${message.split("\n")[0]}`);
     return { success: false, error: message };
   }
+}
+var elevenLabsDictionarySchema = external_exports.object({
+  name: external_exports.string().trim().min(1).max(200),
+  rules: external_exports.array(external_exports.object({
+    stringToReplace: external_exports.string().trim().min(1).max(200),
+    type: external_exports.enum(["alias", "phoneme"]).default("alias"),
+    alias: external_exports.string().trim().min(1).max(200).optional(),
+    phoneme: external_exports.string().trim().min(1).max(200).optional(),
+    alphabet: external_exports.enum(["ipa", "cmu-arpabet"]).optional()
+  }).strict().superRefine((r2, ctx) => {
+    if (r2.type === "alias" ? !r2.alias || r2.phoneme || r2.alphabet : !r2.phoneme || !r2.alphabet || r2.alias)
+      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message: "Alias rules require alias only; phoneme rules require phoneme and alphabet only" });
+  })).min(1).max(100)
+}).strict();
+async function createElevenLabsDictionary(input) {
+  const request = elevenLabsDictionarySchema.parse(input);
+  const response = await elevenFetch("/v1/pronunciation-dictionaries/add-from-rules", {
+    method: "POST",
+    body: JSON.stringify({ name: request.name, rules: request.rules.map((r2) => ({ type: r2.type, string_to_replace: r2.stringToReplace, ...r2.type === "alias" ? { alias: r2.alias } : { phoneme: r2.phoneme, alphabet: r2.alphabet } })) })
+  }, 3e4);
+  const result = external_exports.object({ id: external_exports.string().min(1), version_id: external_exports.string().min(1) }).parse(await response.json());
+  return { pronunciationDictionaryId: result.id, versionId: result.version_id };
 }
 
 // src/mlx-serve-client.ts
@@ -78344,8 +78371,8 @@ async function editMlxImage(request) {
   const src = fileToBase64(request.imagePath);
   if (!src.ok) return { success: false, error: src.error };
   const refs = [];
-  for (const path11 of request.refImagePaths ?? []) {
-    const ref = fileToBase64(path11);
+  for (const path12 of request.refImagePaths ?? []) {
+    const ref = fileToBase64(path12);
     if (!ref.ok) return { success: false, error: ref.error };
     refs.push(ref.b64);
   }
@@ -78995,9 +79022,20 @@ var checkedSpeechSchema = external_exports.object({
   rejectTake: external_exports.object({ audioSha256: external_exports.string().regex(/^[a-f0-9]{64}$/), reason: external_exports.string().trim().min(10).max(1e3) }).strict().optional(),
   /** The scene's narration[].tts sentences in order — where the fixed pauses go (ElevenLabs takes). */
   segments: external_exports.array(external_exports.string().trim().min(1).max(1e3)).min(1).max(80).optional(),
+  episode: external_exports.object({
+    texts: external_exports.array(external_exports.string().trim().min(1).max(4e3)).min(1).max(80),
+    index: external_exports.number().int().nonnegative(),
+    seed: external_exports.number().int().min(0).max(4294967295)
+  }).strict().optional(),
   sentencePause: external_exports.number().min(0.25).max(1.5).default(0.5),
   playbackSpeed: external_exports.number().min(0.5).max(3).default(1)
 }).strict().superRefine((value, ctx) => {
+  if (value.episode && (value.episode.index >= value.episode.texts.length || normalizeSpeech(value.episode.texts[value.episode.index]) !== normalizeSpeech(value.expectedText))) {
+    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["episode"], message: "episode.index must select the complete expectedText" });
+  }
+  if (value.generator === "tts_elevenlabs_generate" && value.playbackSpeed !== 1) {
+    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["playbackSpeed"], message: "Use generation.speed (0.7\u20131.2) at synthesis; ElevenLabs narration must ship at playbackSpeed 1" });
+  }
   if (value.segments && normalizeSpeech(value.segments.join(" ")) !== normalizeSpeech(value.expectedText)) {
     ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["segments"], message: "segments joined must read exactly as expectedText" });
   }
@@ -79008,6 +79046,8 @@ var reviewSchema = external_exports.object({
   pronunciation: score,
   naturalness: score,
   clarity: score,
+  continuity: score.optional(),
+  continuityEvidence: external_exports.string().trim().min(20).max(4e3).optional(),
   confidence: external_exports.number().finite().min(0).max(1),
   complete: external_exports.boolean(),
   evidence: external_exports.string().trim().min(20).max(4e3),
@@ -79034,8 +79074,8 @@ function characterErrorRate(expected, heard) {
   }
   return prev[b.length] / a.length;
 }
-async function measureSignal(file) {
-  const { stdout } = await exec("ffmpeg", ["-v", "error", "-i", file, "-map", "0:a:0", "-ac", "1", "-ar", "24000", "-f", "f32le", "pipe:1"], { encoding: "buffer", maxBuffer: 12 * 1024 * 1024, timeout: 6e4 });
+async function measureSignal(file, maxSeconds = 120) {
+  const { stdout } = await exec("ffmpeg", ["-v", "error", "-i", file, "-map", "0:a:0", "-ac", "1", "-ar", "24000", "-f", "f32le", "pipe:1"], { encoding: "buffer", maxBuffer: Math.ceil(maxSeconds * 24e3 * 4 + 1024), timeout: 6e4 });
   const n = stdout.length / 4;
   if (!Number.isInteger(n) || n === 0) throw new Error("Empty or invalid audio");
   let sum = 0, clipped = 0;
@@ -79047,10 +79087,10 @@ async function measureSignal(file) {
   }
   return { duration: n / 24e3, rmsDb: 20 * Math.log10(Math.max(1e-12, Math.sqrt(sum / n))), clippedFraction: clipped / n };
 }
-function signalFailures(signal, expected) {
+function signalFailures(signal, expected, maxSeconds = 120) {
   const failures = [];
   if (![signal.duration, signal.rmsDb, signal.clippedFraction].every(Number.isFinite)) return ["Invalid signal measurement"];
-  if (signal.duration < 0.25 || signal.duration > Math.max(2, [...normalizeSpeech(expected)].length / 4.5 * 2) || signal.duration > 120) failures.push("Abnormal duration");
+  if (signal.duration < 0.25 || signal.duration > Math.max(2, [...normalizeSpeech(expected)].length / 4.5 * 2) || signal.duration > maxSeconds) failures.push("Abnormal duration");
   if (signal.rmsDb < -45) failures.push("Silent or nearly silent audio");
   if (signal.clippedFraction > 1e-3) failures.push("Digital clipping");
   return failures;
@@ -79083,7 +79123,7 @@ var REVIEW_JSON_SCHEMA = {
     } } }
   }
 };
-async function listen(file, request) {
+async function listen(file, request, episodeReview = false) {
   let laidInPauses = null;
   try {
     if (existsSync6(sentencesPathFor(file))) {
@@ -79096,8 +79136,9 @@ async function listen(file, request) {
   const { GoogleGenAI: GoogleGenAI3 } = await Promise.resolve().then(() => (init_node(), node_exports));
   const client = new GoogleGenAI3({ apiKey: requireGeminiKey(), httpOptions: { apiVersion: REVIEW_API_VERSION, timeout: 18e4 } });
   const audio = readFileSync5(file);
-  if (audio.length > 14 * 1024 * 1024 || audio.subarray(0, 4).toString() !== "RIFF") throw new Error("Review requires a WAV smaller than 14 MiB");
-  const audioPart = { inlineData: { mimeType: "audio/wav", data: audio.toString("base64") } };
+  const flac = episodeReview && audio.subarray(0, 4).toString() === "fLaC";
+  if (audio.length > 14 * 1024 * 1024 || !flac && audio.subarray(0, 4).toString() !== "RIFF") throw new Error("Review requires WAV (or final FLAC) smaller than 14 MiB");
+  const audioPart = { inlineData: { mimeType: flac ? "audio/flac" : "audio/wav", data: audio.toString("base64") } };
   async function call(prompt, schema, stage) {
     const started = Date.now();
     let ok = false, usage = {};
@@ -79137,16 +79178,28 @@ async function listen(file, request) {
     "blind-transcription"
   ));
   const review = reviewSchema.parse(await call(
-    `Audit the full audio against this data: ${JSON.stringify({ expectedText: request.expectedText, language: request.language, delivery: request.delivery, blindTranscript: blind.transcript, ...laidInPauses ? { laidInPauses } : {} })}.${laidInPauses ? " laidInPauses lists the seconds where fixed digital silence was laid in between sentences on purpose; those pauses and the quiet lead are not pacing defects or audible joins." : ""}
+    `Audit the full audio against this data: ${JSON.stringify({ expectedText: request.expectedText, language: request.language, delivery: request.delivery, blindTranscript: blind.transcript, ...laidInPauses ? { laidInPauses } : {} })}.${laidInPauses ? " laidInPauses marks inserted silence. Judge those pauses critically too: reject choppy rhythm, clipped breaths, unnatural gaps or fades even if intentional." : ""}
+${episodeReview ? "This is the assembled episode, not an isolated sentence. Compare every adjacent sentence and scene for pitch, timbre, emotion, loudness, speaking rate, breaths and pauses. Score continuity 0\u2013100 separately and describe specific transitions with timestamps in continuityEvidence. A repeated fresh-start tone or mismatched mood requires a retake, even if each sentence sounds good alone." : ""}
 Score 0\u2013100: accuracy (all words, quantities, names, endings, no omissions or additions), pronunciation (native phonemes, liaison, stress), naturalness (human phrasing, breath, pacing, intonation appropriate to delivery), clarity (no noise, clipping, metallic artifacts, audible joins or unstable voice).
 100 means no audible defect; 95 is professional delivery with no correction needed; 90 means a noticeable defect needs a retake; below 80 is distracting. Do not inflate scores because the script is plausible. Check every word, especially names/numbers and final syllables. Do not silently correct a wrong word using the script. List every defect with actual start/end seconds, heard/expected wording and a concrete correction. complete is true only if the whole audio was heard. Give confidence 0\u20131 and specific listening evidence even on a pass.`,
-    REVIEW_JSON_SCHEMA,
-    "listening-review"
+    episodeReview ? { ...REVIEW_JSON_SCHEMA, required: [...REVIEW_JSON_SCHEMA.required, "continuity", "continuityEvidence"], properties: { ...REVIEW_JSON_SCHEMA.properties, continuity: { type: "number" }, continuityEvidence: { type: "string" } } } : REVIEW_JSON_SCHEMA,
+    episodeReview ? "episode-listening-review" : "listening-review"
   ));
   return { transcript: blind.transcript, review };
 }
 function prepareGeneration(request) {
   const args = { ...request.generation, outputPath: request.outputPath, filename: request.filename };
+  if (request.generator === "tts_elevenlabs_generate" && request.episode) {
+    const { texts, index, seed: seed2 } = request.episode;
+    if (args.seed !== void 0 && args.seed !== seed2) throw new Error("generation.seed must match the episode seed");
+    const previousText = texts.slice(0, index).join(" "), nextText = texts.slice(index + 1).join(" ");
+    for (const [key, value] of Object.entries({ previousText, nextText })) {
+      if (args[key] !== void 0 && args[key] !== value) throw new Error(`${key} must match the episode text order`);
+      if (value && args.model !== "eleven_v3") args[key] = value;
+      else delete args[key];
+    }
+    args.seed = seed2;
+  }
   let spoken, parsed, run, spacing = false, seed;
   switch (request.generator) {
     case "tts_generate": {
@@ -79242,7 +79295,7 @@ async function generateCheckedSpeech(input, dependencies) {
     await exec("ffmpeg", ["-version"], { timeout: 1e4 });
   }, generate: prepared.run, measure: measureSignal, listen };
   const attempts = [];
-  const settings = prepared.spacing ? { ...prepared.args, spacing: { segments: request.segments ?? null, sentencePause: request.sentencePause, playbackSpeed: request.playbackSpeed } } : prepared.args;
+  const settings = prepared.spacing ? { ...prepared.args, episode: request.episode ?? null, spacing: { segments: request.segments ?? null, sentencePause: request.sentencePause, playbackSpeed: request.playbackSpeed } } : prepared.args;
   const base = {
     version: 1,
     policy: QUALITY_POLICY,
@@ -79250,6 +79303,8 @@ async function generateCheckedSpeech(input, dependencies) {
     textSha256: sha256(normalizeSpeech(request.expectedText)),
     generator: request.generator,
     settingsSha256: sha256(JSON.stringify(settings)),
+    ...request.episode ? { episode: request.episode } : {},
+    ...request.generator === "tts_elevenlabs_generate" ? { voiceSettings: Object.fromEntries(Object.entries(prepared.args).filter(([k]) => !["text", "previousText", "nextText", "outputPath", "filename", "timestamps"].includes(k))) } : {},
     model: REVIEW_MODEL,
     language: request.language,
     delivery: request.delivery
@@ -79264,10 +79319,11 @@ async function generateCheckedSpeech(input, dependencies) {
   try {
     if (existsSync6(proofFile)) {
       const old = JSON.parse(readFileSync5(proofFile, "utf8"));
-      if (Object.entries(base).every(([key, value]) => key === "model" || old[key] === value)) {
+      if (Object.entries(base).every(([key, value]) => key === "model" || JSON.stringify(old[key]) === JSON.stringify(value))) {
         if (!Array.isArray(old.attempts) || old.attempts.length > 3) throw new Error("Invalid attempt history");
         attempts.push(...old.attempts.map((take) => ({ ...take, model: take.model ?? old.model })));
         const last = attempts.at(-1);
+        if (last?.duplicateOf) return save("fail", { error: "Identical rejected audio already stopped this request; correct the episode pronunciation or delivery plan" });
         if (request.rejectTake) {
           if (!last || last.audioSha256 !== request.rejectTake.audioSha256 || !existsSync6(output) || sha256(readFileSync5(output)) !== request.rejectTake.audioSha256) throw new Error("The rejected take is not the current audio; inspect the current file before requesting another retake");
           last.authorRejection = request.rejectTake.reason;
@@ -79310,7 +79366,7 @@ async function generateCheckedSpeech(input, dependencies) {
         save("unverified");
         const started = Date.now();
         let generated;
-        const overrides = prepared.seed !== void 0 && attempt > 1 ? { seed: (prepared.seed + attempt - 1) % 4294967296 } : {};
+        const overrides = prepared.seed !== void 0 ? { seed: prepared.seed } : {};
         if (overrides.seed !== void 0) take.seed = overrides.seed;
         else if (prepared.seed !== void 0) take.seed = prepared.seed;
         try {
@@ -79336,6 +79392,11 @@ async function generateCheckedSpeech(input, dependencies) {
         }
         take.audioSha256 = sha256(readFileSync5(output));
         save("unverified");
+        const duplicate = attempts.slice(0, -1).find((a) => a.audioSha256 === take.audioSha256 && a.pending === false && Array.isArray(a.failures) && a.failures.length);
+        if (duplicate) {
+          Object.assign(take, { pending: false, duplicateOf: duplicate.attempt, failures: ["Identical rejected audio; change the pronunciation or episode-wide delivery plan before another synthesis"] });
+          return save("fail", { audioSha256: take.audioSha256, error: "Generator repeated a rejected WAV; stopped without another paid listening review" });
+        }
       }
       const audioSha256 = take.audioSha256;
       const signal = await deps.measure(output);
@@ -84225,11 +84286,39 @@ Returns: a text block with the mp4 path, still paths (and any requested still ou
   },
   // ── Speech synthesis (Google Gemini TTS — ported from the fect-mcp tts module) ─────────
   {
+    name: "tts_review_final",
+    title: "Review assembled speech",
+    annotations: HINT.generate,
+    description: "Listen to the actual final WAV or video, including all sentence transitions and the music mix. Requires accuracy >=98 and pronunciation, naturalness, clarity and continuity >=95, with no defects. Writes a hash-bound .speech-quality.json proof. Two paid Gemini review calls; no synthesis. Review outages hold delivery. Supply the complete spoken text including native clip speech. Supports up to 30 minutes and 12,000 script characters, with a lossless FLAC review payload under 14 MiB. Longer media holds for chapter review.",
+    inputSchema: { type: "object", additionalProperties: false, properties: {
+      mediaPath: { type: "string", description: "Absolute path of the final media that ships." },
+      expectedText: { description: "Complete spoken text, including speech in clips and the outro.", type: "string", minLength: 1, maxLength: 12e3 },
+      language: { description: "Spoken language, for example Korean.", type: "string", minLength: 2, maxLength: 80 },
+      delivery: { description: "Intended delivery and continuity across the whole episode.", type: "string", minLength: 1, maxLength: 2e3 }
+    }, required: ["mediaPath", "expectedText", "language", "delivery"] }
+  },
+  {
+    name: "tts_elevenlabs_dictionary",
+    title: "Create pronunciation dictionary",
+    annotations: HINT.generate,
+    description: "Create a versioned ElevenLabs pronunciation dictionary. multilingual_v2 uses aliases; non-English IPA requires eleven_v3. Use for Korean proper names without inserting spaces or deleting the name from the script. Returns pronunciationDictionaryId and versionId to pin in generation.pronunciationDictionaryLocators. Keep aliases faithful to the approved pronunciation; verify actual audio. Requires ElevenLabs dictionary write permission; never changes the voice or existing dictionaries.",
+    inputSchema: { type: "object", additionalProperties: false, properties: {
+      name: { description: "Descriptive name of the new dictionary.", type: "string", minLength: 1, maxLength: 200 },
+      rules: { description: "Approved source spelling and intended spoken aliases.", type: "array", minItems: 1, maxItems: 100, items: { type: "object", additionalProperties: false, properties: {
+        stringToReplace: { description: "Source name as written in the narration.", type: "string", minLength: 1, maxLength: 200 },
+        alias: { description: "Intended pronunciation in Hangul for an alias rule.", type: "string", minLength: 1, maxLength: 200 },
+        type: { description: "Rule kind; alias by default. Non-English phonemes require v3.", type: "string", enum: ["alias", "phoneme"], default: "alias" },
+        phoneme: { description: "Phonetic notation for a phoneme rule.", type: "string", minLength: 1, maxLength: 200 },
+        alphabet: { description: "Alphabet of the phoneme rule.", type: "string", enum: ["ipa", "cmu-arpabet"] }
+      }, required: ["stringToReplace"] } }
+    }, required: ["name", "rules"] }
+  },
+  {
     name: "tts_generate_checked",
     title: "Generate and review narration",
     annotations: HINT.generate,
     description: `Generate one scene with the pinned TTS engine, review the actual WAV, and regenerate failed takes up to maxAttempts (1\u20133, including the first take).
-Use for every generated narration scene in produce/autoproduce. Pass the existing generator's arguments in generation, the complete spoken expectedText (phonetic spelling; no acting tags or speaker labels), language, and the profile's intended delivery. Voice and generation settings stay unchanged across attempts; a pinned seed advances by one per retake, because the same seed returns the same bytes. An entire scene is one call; never split it into sentence calls.
+Use for every generated narration scene in produce/autoproduce. Pass the existing generator's arguments in generation, the complete spoken expectedText (phonetic spelling; no acting tags or speaker labels), language, and the profile's intended delivery. Voice and generation settings stay unchanged across attempts; the episode seed stays fixed on every retake (vendor determinism is best-effort). An entire scene is one call; never split it into sentence calls.
 On tts_elevenlabs_generate the take is fetched with timestamps and its sentences are re-spaced before review: a fixed sentencePause of digital silence between sentences (stretched up to 1.0s where a subtitle cue would read faster than 6.0 chars/s after playbackSpeed), a 0.14s lead, speech samples copied as generated (the 12 ms fades stay on the natural gap). Pass segments (the scene's narration[].tts list) so the pauses land on the builder's segment boundaries; the wrapper writes <wav>.sentences.json and shifts the .alignment.json to the shipped audio.
 Checks signal/duration, a blind transcript (CER <=2%), then ${REVIEW_MODEL} listening scores: accuracy >=98, pronunciation/naturalness/clarity >=95, confidence >=0.9, no audible defects. Returns a hash-bound .wav.quality.json proof required by the builder. Missing keys, unavailable reviewer, malformed responses or exhausted attempts block production. Scores are operational thresholds, not a guarantee of human judgement.
 Requires ffmpeg and GEMINI_API_KEY even for local synthesis. Two paid audio-review calls per acoustically valid take, plus the selected generator's costs. Record the retry-inclusive allowance before calling; review tokens are logged as unpriced until reconciled with provider billing. Do not call again to reset an exhausted attempt budget. Do not use for recordings or native clip speech; retain their final listening QA. Do not change engines/voices or lower thresholds to obtain PASS.`,
@@ -84249,9 +84338,14 @@ Requires ffmpeg and GEMINI_API_KEY even for local synthesis. Two paid audio-revi
           audioSha256: { type: "string", pattern: "^[a-f0-9]{64}$", description: "SHA-256 of the current checked WAV, as recorded in its quality proof." },
           reason: { type: "string", minLength: 10, maxLength: 1e3, description: "Actual time, word or sound defect observed during listening." }
         } },
+        episode: { type: "object", additionalProperties: false, description: "Required for ElevenLabs assembly. Ordered complete scene texts, current index and one fixed seed. Derives previousText/nextText on supported models; v3 omits them and relies on final listening for scene continuity.", properties: {
+          texts: { description: "Complete scene texts in playback order.", type: "array", minItems: 1, maxItems: 80, items: { type: "string", minLength: 1, maxLength: 4e3 } },
+          index: { description: "Index of this scene in texts, starting at zero.", type: "integer", minimum: 0 },
+          seed: { description: "One seed fixed across the episode and all retakes.", type: "integer", minimum: 0, maximum: 4294967295 }
+        }, required: ["texts", "index", "seed"] },
         segments: { type: "array", minItems: 1, maxItems: 80, items: { type: "string", minLength: 1, maxLength: 1e3 }, description: "The scene's narration[].tts sentences in order (joined they read as expectedText). ElevenLabs takes get a fixed pause at each segment boundary \u2014 the boundary the builder's reveals and subtitle cues use. Without it, pauses go after sentence-final punctuation." },
         sentencePause: { type: "number", minimum: 0.25, maximum: 1.5, default: 0.5, description: "Silence between sentences in the take's own timeline, seconds. The builder detects pauses from 0.16s and fits a 0.35s reveal fade inside one." },
-        playbackSpeed: { type: "number", minimum: 0.5, maximum: 3, default: 1, description: "The channel's playback factor from profile \xA72 (speedup.sh). A pause grows past sentencePause only where that sentence's subtitle cue would otherwise read faster than 6.0 chars/s after the speed-up." }
+        playbackSpeed: { type: "number", minimum: 0.5, maximum: 3, default: 1, description: "ElevenLabs requires 1: use generation.speed for the requested rate and keep assembly at 1. Other engines use the approved profile playback factor; this controls subtitle pause sizing." }
       },
       required: ["generator", "generation", "expectedText", "language", "delivery", "outputPath", "filename"]
     }
@@ -84519,6 +84613,12 @@ Returns: a text block with the saved audio path (WAV by default \u2014 the build
           description: "Boost similarity to the original speaker (vendor default true). Adds a little latency. multilingual_v2 only \u2014 ignored on eleven_v3 and flash_v2_5."
         },
         seed: ELEVENLABS_SEED_PROPERTY,
+        pronunciationDictionaryLocators: { type: "array", minItems: 1, maxItems: 3, description: "Pinned dictionary IDs and versions from tts_elevenlabs_dictionary. Applied in order.", items: {
+          type: "object",
+          additionalProperties: false,
+          properties: { pronunciationDictionaryId: { description: "Dictionary ID returned by the create tool.", type: "string", minLength: 1 }, versionId: { description: "Pinned dictionary version ID.", type: "string", minLength: 1 } },
+          required: ["pronunciationDictionaryId", "versionId"]
+        } },
         previousText: {
           type: "string",
           description: "The sentence(s) spoken right before this text in the finished audio \u2014 not synthesized, only used so the take continues the neighbor's tone. Use when re-rendering one cut of a scene. Not accepted by eleven_v3 (the vendor returns 400; the schema rejects it first)."
@@ -86067,9 +86167,9 @@ var OPENAPI_CODE_HELP = {
 };
 async function callOpenApi(input) {
   const key = requireDataGoKrKey();
-  const path11 = input.path.replace(/^\/+/, "");
-  if (path11.includes("..") || path11.includes("://")) return err("path only accepts a route under apis.data.go.kr (e.g. 1360000/VilageFcstInfoService_2.0/getUltraSrtNcst)");
-  const url = `${OPENAPI_BASE}/${path11}${buildQuery({ ...input.params, serviceKey: key })}`;
+  const path12 = input.path.replace(/^\/+/, "");
+  if (path12.includes("..") || path12.includes("://")) return err("path only accepts a route under apis.data.go.kr (e.g. 1360000/VilageFcstInfoService_2.0/getUltraSrtNcst)");
+  const url = `${OPENAPI_BASE}/${path12}${buildQuery({ ...input.params, serviceKey: key })}`;
   const res = await requestRaw("get", url, { "User-Agent": BROWSER_UA });
   const body = res.body;
   if (/^\s*Unauthorized\s*$/i.test(body)) return err(`apis.data.go.kr: ${OPENAPI_AUTH_HELP}`);
@@ -87908,19 +88008,19 @@ var YT_THUMB_MIME_BY_EXT = {
 var YT_THUMB_MAX_BYTES = 2 * 1024 * 1024;
 var CAPTION_MAX_BYTES_YT = 100 * 1024 * 1024;
 var CAPTION_MAX_BYTES_FB = 200 * 1024;
-async function readCaptionFile(path11, maxBytes) {
-  if (extname8(path11).toLowerCase() !== ".srt") {
-    return { error: fail2(400, `Caption file must be .srt (SubRip): ${path11}`) };
+async function readCaptionFile(path12, maxBytes) {
+  if (extname8(path12).toLowerCase() !== ".srt") {
+    return { error: fail2(400, `Caption file must be .srt (SubRip): ${path12}`) };
   }
   let bytes;
   try {
-    bytes = await readFile(path11);
+    bytes = await readFile(path12);
   } catch (error2) {
     return { error: fail2(400, `Cannot read caption file: ${error2 instanceof Error ? error2.message : String(error2)}`) };
   }
-  if (bytes.byteLength === 0) return { error: fail2(400, `Caption file is empty: ${path11}`) };
+  if (bytes.byteLength === 0) return { error: fail2(400, `Caption file is empty: ${path12}`) };
   if (bytes.byteLength > maxBytes) {
-    return { error: fail2(400, `Caption file exceeds ${maxBytes} bytes: ${path11} (${bytes.byteLength} bytes)`) };
+    return { error: fail2(400, `Caption file exceeds ${maxBytes} bytes: ${path12} (${bytes.byteLength} bytes)`) };
   }
   return { bytes };
 }
@@ -89517,6 +89617,80 @@ function renderCheck(r2) {
   return lines.join("\n");
 }
 
+// src/tts-final-quality.ts
+import { execFile as execFile8 } from "node:child_process";
+import { existsSync as existsSync13, mkdtempSync as mkdtempSync4, readFileSync as readFileSync9, rmSync as rmSync5, writeFileSync as writeFileSync8, renameSync as renameSync4, openSync as openSync2, closeSync as closeSync2 } from "node:fs";
+import { tmpdir as tmpdir4 } from "node:os";
+import path10 from "node:path";
+import { promisify as promisify3 } from "node:util";
+var exec2 = promisify3(execFile8);
+var finalSpeechSchema = external_exports.object({
+  mediaPath: external_exports.string().min(1),
+  expectedText: external_exports.string().trim().min(1).max(12e3),
+  language: external_exports.string().trim().min(2).max(80),
+  delivery: external_exports.string().trim().min(1).max(2e3)
+}).strict();
+async function reviewFinalSpeech(input) {
+  const request = finalSpeechSchema.parse(input), media = path10.resolve(request.mediaPath);
+  const proofPath = media + ".speech-quality.json", lockPath = proofPath + ".lock";
+  let lock;
+  try {
+    lock = openSync2(lockPath, "wx");
+  } catch {
+    return { success: false, status: "unverified", error: "Final speech review is already locked" };
+  }
+  const temp = mkdtempSync4(path10.join(tmpdir4(), "speech-final-"));
+  let base = { version: 1, policy: "final-speech-v1", model: REVIEW_MODEL, ...request, mediaPath: media };
+  function save(status, extra) {
+    const result = { ...base, status, checkedAt: (/* @__PURE__ */ new Date()).toISOString(), ...extra };
+    const staging = path10.join(temp, "proof.json");
+    writeFileSync8(staging, JSON.stringify(result, null, 2) + "\n");
+    writeFileSync8(proofPath + ".tmp", readFileSync9(staging));
+    renameSync4(proofPath + ".tmp", proofPath);
+    return { success: status === "pass", status, proofPath, ...extra };
+  }
+  try {
+    base = { ...base, mediaSha256: sha256(readFileSync9(media)), textSha256: sha256(normalizeSpeech(request.expectedText)) };
+    const wav = path10.join(temp, "final.flac");
+    await exec2("ffmpeg", ["-y", "-v", "error", "-i", media, "-map", "0:a:0", "-map_metadata", "-1", "-ac", "1", "-ar", "24000", "-c:a", "flac", wav], { timeout: 6e4 });
+    base.audioSha256 = sha256(readFileSync9(wav));
+    if (sha256(readFileSync9(media)) !== base.mediaSha256) throw new Error("Final media changed during decoding");
+    if (existsSync13(proofPath)) {
+      const old = JSON.parse(readFileSync9(proofPath, "utf8"));
+      const same = Object.entries(base).every(([k, v]) => ["mediaSha256", "expectedText"].includes(k) || old[k] === v);
+      if (old.audioSha256 === base.audioSha256 && old.textSha256 === base.textSha256 && old.status === "fail") return save("fail", { reused: true, signal: old.signal, transcript: old.transcript, failures: old.failures, review: old.review, error: "This exact final audio already failed; fix the audio before another listening review" });
+      if (same && old.status === "pass") {
+        const review = reviewSchema.parse(old.review);
+        if (!signalFailures(old.signal, request.expectedText, 1800).length && !reviewFailures(request.expectedText, old.transcript, review, old.signal.duration).length && (review.continuity ?? 0) >= 95 && review.continuityEvidence) return save("pass", { reused: true, signal: old.signal, transcript: old.transcript, review, failures: [] });
+      }
+    }
+    save("unverified", {});
+    const signal = await measureSignal(wav, 1800);
+    const failures = signalFailures(signal, request.expectedText, 1800);
+    if (failures.length) return save("fail", { signal, failures });
+    const reviewRequest = { ...checkedSpeechSchema.parse({
+      generator: "tts_local_generate",
+      generation: {},
+      expectedText: request.expectedText.slice(0, 4e3),
+      language: request.language,
+      delivery: request.delivery,
+      outputPath: path10.dirname(media),
+      filename: "final.wav"
+    }), expectedText: request.expectedText };
+    const result = await listen(wav, reviewRequest, true);
+    failures.push(...reviewFailures(request.expectedText, result.transcript, result.review, signal.duration));
+    if ((result.review.continuity ?? 0) < 95 || !result.review.continuityEvidence) failures.push("Episode continuity below 95 or missing listening evidence");
+    if (sha256(readFileSync9(media)) !== base.mediaSha256) throw new Error("Final media changed during listening");
+    return save(failures.length ? "fail" : "pass", { signal, ...result, failures });
+  } catch (error2) {
+    return save("unverified", { error: error2 instanceof Error ? error2.message : String(error2) });
+  } finally {
+    rmSync5(temp, { recursive: true, force: true });
+    closeSync2(lock);
+    rmSync5(lockPath, { force: true });
+  }
+}
+
 // src/omni-client.ts
 import * as fs7 from "node:fs";
 var OMNI_MODEL = "gemini-omni-1.1-flash";
@@ -90202,7 +90376,7 @@ async function generateWithReferences2(request) {
 }
 
 // src/content-feedback.ts
-import { mkdirSync as mkdirSync5, writeFileSync as writeFileSync10 } from "node:fs";
+import { mkdirSync as mkdirSync5, writeFileSync as writeFileSync11 } from "node:fs";
 import { dirname as dirname6, isAbsolute, join as join11, resolve as resolve4 } from "node:path";
 
 // src/content-feedback-html.ts
@@ -90835,7 +91009,7 @@ async function contentFeedback(input) {
   };
   if (htmlPath) {
     mkdirSync5(dirname6(htmlPath), { recursive: true });
-    writeFileSync10(htmlPath, renderFeedbackHtml(report), "utf8");
+    writeFileSync11(htmlPath, renderFeedbackHtml(report), "utf8");
   }
   return { ok: true, status: 200, body: JSON.stringify(report) };
 }
@@ -91065,9 +91239,9 @@ function isShortEnough(seconds, duration3) {
   if (seconds == null) return true;
   return seconds <= 180;
 }
-async function youtubeGet(path11, params, auth) {
+async function youtubeGet(path12, params, auth) {
   const query = auth.kind === "key" ? { ...params, key: auth.key } : params;
-  const url = `${YT_DATA_BASE2}/${path11}${buildQuery(query)}`;
+  const url = `${YT_DATA_BASE2}/${path12}${buildQuery(query)}`;
   try {
     const res = await fetch(url, {
       method: "GET",
@@ -91079,7 +91253,7 @@ async function youtubeGet(path11, params, auth) {
     return { ok: false, status: res.status, body: maskKey4(text2) };
   } catch (error2) {
     const message = error2 instanceof Error ? error2.message : String(error2);
-    return fail3(502, `YouTube Data API call failed (${path11}): ${maskKey4(message)}`);
+    return fail3(502, `YouTube Data API call failed (${path12}): ${maskKey4(message)}`);
   }
 }
 function chunk(items, size) {
@@ -91877,14 +92051,14 @@ ${errors.join("\n")}`);
 }
 
 // src/capability-status.ts
-import { existsSync as existsSync14 } from "node:fs";
-import path10 from "node:path";
+import { existsSync as existsSync15 } from "node:fs";
+import path11 from "node:path";
 import os from "node:os";
 var has2 = (v) => Boolean(v && v.length > 0);
 var binOk = (p) => {
   try {
-    if (p.includes(path10.sep)) return existsSync14(p);
-    return (process.env.PATH || "").split(path10.delimiter).some((dir) => dir && existsSync14(path10.join(dir, p)));
+    if (p.includes(path11.sep)) return existsSync15(p);
+    return (process.env.PATH || "").split(path11.delimiter).some((dir) => dir && existsSync15(path11.join(dir, p)));
   } catch {
     return false;
   }
@@ -92349,7 +92523,7 @@ var instagramPublishSchema = external_exports.object({
   videoUrl: external_exports.string().url().optional(),
   channel: channelSlugSchema
 }).superRefine((v, ctx) => {
-  const issue2 = (path11, message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: [path11], message });
+  const issue2 = (path12, message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: [path12], message });
   if (!v.imageUrls && !v.videoUrl) issue2("imageUrls", "INSTAGRAM requires imageUrls (1-10) or videoUrl (reel)");
   if (v.imageUrls && v.videoUrl) issue2("videoUrl", "imageUrls and videoUrl are mutually exclusive");
   if (v.videoUrl && !isVideoUrl(v.videoUrl)) issue2("videoUrl", "videoUrl must be a .mp4/.mov URL");
@@ -92369,7 +92543,7 @@ var facebookPublishSchema = external_exports.object({
   linkUrl: external_exports.string().url().optional(),
   channel: channelSlugSchema
 }).superRefine((v, ctx) => {
-  const issue2 = (path11, message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: [path11], message });
+  const issue2 = (path12, message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: [path12], message });
   if (v.imageUrls && v.videoUrl) issue2("videoUrl", "imageUrls and videoUrl are mutually exclusive");
   if (v.videoUrl && !isVideoUrl(v.videoUrl)) issue2("videoUrl", "videoUrl must be a .mp4/.mov URL");
   if (v.linkUrl && (v.imageUrls || v.videoUrl)) issue2("linkUrl", "linkUrl is for text-only posts (no media)");
@@ -92934,6 +93108,14 @@ Prompt: ${result.prompt}`
   // Returns the script length, not the full text — echoing a 16k-char script back
   // just burns the caller's context, and it's a string they already sent, so it
   // carries no information.
+  tts_review_final: async (args) => {
+    const result = await reviewFinalSpeech(parseArgs(finalSpeechSchema, args));
+    return text(JSON.stringify(result, null, 2), result.success !== true);
+  },
+  tts_elevenlabs_dictionary: async (args) => {
+    const result = await createElevenLabsDictionary(parseArgs(elevenLabsDictionarySchema, args));
+    return text(JSON.stringify(result, null, 2));
+  },
   tts_generate_checked: async (args) => {
     const result = await generateCheckedSpeech(parseArgs(checkedSpeechSchema, args));
     return text(JSON.stringify(result, null, 2), result.success !== true);
@@ -93464,8 +93646,9 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
 };
 
 // src/index.ts
+import { readFileSync as readFinalRequest } from "node:fs";
 var server = new Server(
-  { name: "social-flow", version: "0.77.0" },
+  { name: "social-flow", version: "0.77.1" },
   { capabilities: { tools: {} } }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {
@@ -93545,6 +93728,14 @@ var gracefulShutdown = async () => {
 process.once("SIGINT", gracefulShutdown);
 process.once("SIGTERM", gracefulShutdown);
 async function main() {
+  if (process.argv[2] === "--review-final") {
+    const gate = resolveToolGate("tts_review_final", { jsonPatterns: disabledToolPatterns(), jsonFile: disabledToolsFile });
+    if (!gate.enabled) throw new Error(`Final speech review is disabled: ${gate.reason}`);
+    const result = await reviewFinalSpeech(JSON.parse(readFinalRequest(process.argv[3], "utf8")));
+    console.log(JSON.stringify(result, null, 2));
+    process.exitCode = result.success === true ? 0 : 1;
+    return;
+  }
   const transport = new StdioServerTransport();
   await server.connect(transport);
   console.error("social-flow MCP server started");
