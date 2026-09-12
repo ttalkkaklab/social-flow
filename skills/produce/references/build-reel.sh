@@ -6,8 +6,8 @@
 #
 # Usage: build-reel.sh <workdir>
 #   <workdir>/cards.tsv : idx <TAB> narration-audio-path <TAB> target-rate(chars/sec) <TAB> zoom(in|out|auto|none|punch|hold) [<TAB> opts]
-#                         target-rate stays a required column but has no effect unless ATEMPO_MIN/ATEMPO_MAX
-#                         are set on the build line — by default the voice is never time-stretched (see below).
+#                         target-rate stays a required column for compatibility; assembly always
+#                         preserves narration at 1.0x, regardless of target rate or legacy tempo bounds.
 #                         in/out/auto zoom over the whole card by the card's span: span= when written,
 #                         else KB_RATE × card seconds capped at KB_ZMAX (the baked text stays in the zone).
 #                         zoom=none skips Ken Burns — for footage that already moves, like filmed clips.
@@ -125,24 +125,15 @@ SPF=$((48000 / FPS))               # audio samples per frame
 # Narration margins come from each compiled source edit (pre=0, post=0.12 by default).
 MIN_DUR=${MIN_DUR:-0.0}            # optional explicit minimum; short cuts stay short by default
 MAX_DUR=${MAX_DUR:-13.0}           # warn when exceeded (signal to shorten the script)
-RATE_TOL=${RATE_TOL:-0.05}
-# Per-card tempo correction is off by default (2026-09-11). The engine at its profile speed already
-# runs at 5.3–6.4 chars/s (Supertonic 1.05, 12 takes measured), so a 4.5 target pinned every card to
-# the 0.88 floor — the whole episode dragged 12% slower — and cards with longer pauses swung the
-# other way, up to 1.18. Adjacent cards differed by 30%. Stacking that stretch under speedup.sh's
-# pass ran WSOLA twice and blurred consonants (사전 → 사점 in ASR). The voice ships at the engine's
-# own pace; pick the pace once, at the engine. Set both bounds to opt back in for one build.
-# The REGEN advisory below still measures the engine's own pace against [3.2, 6.2]/SPEED — the same
-# band the ship gate (check-final-speech-rate.py) enforces — so a card that trips it is a pace to fix at
-# the engine or in the script, not something this build corrects.
-ATEMPO_MIN=${ATEMPO_MIN:-1.0}; ATEMPO_MAX=${ATEMPO_MAX:-1.0}
+# Assembly preserves every card at 1.0x. Legacy ATEMPO_MIN/ATEMPO_MAX and target-rate
+# settings have no effect. Speech-rate warnings ask for a new take or a script edit.
 # The playback factor speedup.sh will apply after this build (produce §7.5). produce §1 appends the
-# channel's factor to .work/format.env, which both scripts source, so the build and the pass agree.
+# explicitly requested factor (otherwise 1.0) to .work/format.env, which both scripts source, so the build and the pass agree.
 # Sourced above; the inline default matches speedup.sh's for a hand-run build with no format.env.
 SPEED=${SPEED:-1.0}
-node - "$HERE" "$SPEED" "${ATEMPO_MIN:-1}" "${ATEMPO_MAX:-1}" <<'JS'
-const [here,speed,min,max]=process.argv.slice(2);
-require(here+'/check-tts-quality.js').checkTempo(process.cwd(),speed,min,max);
+node - "$HERE" "$SPEED" <<'JS'
+const [here,speed]=process.argv.slice(2);
+require(here+'/check-tts-quality.js').checkTempo(process.cwd(),speed);
 JS
 # Validate before deriving. A command substitution that exits non-zero takes the whole assignment
 # down under `set -e`, so a guard placed after it never runs — the build would die with no reason.
@@ -569,12 +560,9 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
     WARN=1
   fi
 
-  # ── 3) Speech-rate normalization atempo — F stays 1.0000 at the default bounds (see ATEMPO_MIN)
-  if [ "$MUTE" -eq 1 ]; then F=1.0000
-  else F=$(awk -v t="$TARGET" -v r="$R0" -v tol="$RATE_TOL" -v mn="$ATEMPO_MIN" -v mx="$ATEMPO_MAX" \
-      'BEGIN{f=t/r; if (f>1-tol && f<1+tol) f=1; if (f<mn) f=mn; if (f>mx) f=mx; printf "%.4f", f}'); fi
-  if [ "$F" = "1.0000" ]; then cp "work/t$IDX.wav" "work/s$IDX.wav"
-  else ffmpeg -y -v error -i "work/t$IDX.wav" -af "atempo=$F" "work/s$IDX.wav"; fi
+  # ── 3) Preserve narration tempo at 1.0x, including forced-alignment timing.
+  F=1.0000
+  cp "work/t$IDX.wav" "work/s$IDX.wav"
   L=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "work/s$IDX.wav")
   R=$(awk -v c="$C" -v l="$L" 'BEGIN{printf "%.2f", (c>0)? c/l : 0}')
 

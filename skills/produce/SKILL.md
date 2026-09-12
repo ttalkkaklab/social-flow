@@ -186,14 +186,11 @@ Read [story-quality.md](../storyboard/references/story-quality.md) and run `node
   ```bash
   PG=${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references
   node $PG/format-resolve.js storyboard/scenes.js --sh > .work/format.env
-  # ElevenLabs: use 1 here and the profile rate as generation.speed. Other engines use
-  # profile §2 playback speed (default 1). Both builders source this file so the shipped
-  # factor can't drift apart. `:=` takes the first assignment, so appending a second line
-  # would silently keep the old value — the guard makes a rerun after a profile edit fail
-  # loudly instead of quietly.
+  # Speed defaults to 1. A non-1 factor requires the explicit user request record
+  # described in references/tts-speed.md; a channel profile is not approval.
   grep -qF '${SPEED:=' .work/format.env \
     && echo "format.env already carries SPEED — edit that line instead of appending" \
-    || echo ": \"\${SPEED:=<1 for ElevenLabs; otherwise the playback factor from profile.md §2>}\"" >> .work/format.env
+    || echo ": \"\${SPEED:=1}\"" >> .work/format.env
   # profile.md's `shortform_outro` — absent or `on` writes 1, `off` writes 0, substituted the way
   # the SPEED line wants a factor; **the key is short-form only**, so a `youtube-long-16x9` episode
   # writes 1 whatever the profile says (long-form always splices outro-16x9.mp4). **The flag decides
@@ -677,8 +674,9 @@ The calls below describe `generator` and `generation`; raw TTS has no assembly p
 One checked call per scene — the profile registry as it stands, and the script is the full text
 of that scene's narration segments' `tts` sentences joined with periods. `.work/pcm/c<n>.wav`.
 Don't split a scene into several calls by sentence (the voice varies between calls). Pass the
-same `tts` sentences as `segments`. ElevenLabs uses `playbackSpeed: 1` and sets the requested
-rate in `generation.speed`; other engines keep the profile's playback setting: on an ElevenLabs take the wrapper lays a fixed pause at each segment boundary and
+same `tts` sentences as `segments`. Default `generation.speed` and `playbackSpeed` to 1.0;
+non-1 values require the episode's explicit user request under `references/tts-speed.md`.
+On an ElevenLabs take the wrapper lays a fixed pause at each segment boundary and
 writes `c<n>.wav.sentences.json` for reveal/cue timing (`references/tts-quality.md` §Sentence spacing).
 
 **profile §2 decides the engine.** A new channel's narration default is `tts_local_generate`
@@ -691,7 +689,7 @@ voiceId · model · stability (and seed, if pinned) and leaves `outputFormat` at
 checked wrapper adds `timestamps` and preserves one episode seed on every retake. Pass
 `episode: {texts, index, seed}` so it derives the neighboring scene text automatically.
 For v3, the wrapper omits unsupported text context; final listening checks the scene joins.
-Set `SPEED=1` and `ATEMPO_MIN=ATEMPO_MAX=1`; control rate with `generation.speed` (0.7–1.2).
+Set `SPEED=1` and `generation.speed=1`. Any non-1 synthesis rate requires the explicit human request in [tts-speed.md](references/tts-speed.md). Assembly always preserves 1.0x.
 Keep names intact and pin pronunciation dictionaries; see `references/tts-quality.md`.
 **Never pass an mp3_* outputFormat for narration**: build-reel.sh reads any non-RIFF audio
 file as raw PCM and that card becomes noise. A scene with three or more speakers goes to
@@ -1074,6 +1072,10 @@ time and rebuild (or re-extract the still with ffmpeg).
 
 ### 7.5 Speed pass (required — every episode)
 
+**Human request gate:** follow [tts-speed.md](references/tts-speed.md) for synthesis,
+saved narration and final playback. Default to 1.0 even when the profile says otherwise.
+Never invent approval or change speed to satisfy a duration or quality target.
+
 The final pace pass exists so every source — narration, generated clips, filmed clips, subtitles,
 and chapters — follows one timeline after the build and any splice. It always runs even at 1.0x.
 The builder has trimmed and loudness-normalized card speech at the engine's own pace; this pass
@@ -1081,10 +1083,10 @@ is the only tempo change the voice goes through.
 
 ```bash
 $REF/speedup.sh .work        # → .work/reel-fast.mp4 · reel-sub-fast.mp4 · subs-fast.srt · chapters-fast.txt
-$REF/speedup.sh .work 1.2    # a channel-specific rate — profile.md §2 decides, not the moment (§7.5: the gate is 6.2 chars/s on the engine's own pace)
+$REF/speedup.sh .work 1.2    # only with an explicit user request for final x1.2 in .work/speed-authorization.json
 ```
 
-- **The default is 1.0x.** A profile may choose another factor for the whole feature — narration,
+- **The default is 1.0x.** An explicit user request may choose another factor for the whole feature — narration,
   cards, filmed clips, b-roll, and BGM — but the final subtitle-rate gate still decides whether
   it can ship. At `1.0`, the pass copies the build through under the `-fast` names.
 - **The outro stays at 1.0x.** It's a brand asset with its own cut and sonic logo, so the pass finds
@@ -1101,22 +1103,20 @@ $REF/speedup.sh .work 1.2    # a channel-specific rate — profile.md §2 decide
   trimmed card audio, while the gate counts the subtitle text over cue time after the pass,
   so the two numbers differ by design. Its chapter minimum becomes `10 × factor` so a boundary still
   clears 10s on the shipped file. The build does not stretch a card toward the target rate
-  (`ATEMPO_MIN`/`ATEMPO_MAX` default to 1.0 since 2026-09-11 — a card ships at the pace the
-  engine read it), so this pass is the only tempo change the voice goes through, and the factor
-  has to clear the gate on the engine's own pace: a local take at 1.05 runs 5.3–6.4 characters/s
-  (measured), so 1.2x already puts it at 6.4–7.7 and over 6.2. Pick the pace at the engine
-  (`speed` ≤ 1.2) and leave this at 1.0 unless the channel's subtitles measured under the gate.
-- **`profile.md` §2 owns the rate.** Read the channel's speed line before running the pass; with
-  no line, 1.0. A profile TTS `speed` multiplies into this, so the final SRT is checked after
-  both choices have taken effect.
+  (assembly is fixed at 1.0x and ignores legacy `ATEMPO_MIN`/`ATEMPO_MAX` settings), so this pass is the only tempo change the voice goes through, and the factor
+  has to clear the gate on the engine's own pace. If the rate fails, shorten the script
+  or report the failure; never change speed without the user's explicit request.
+- **A profile alone does not authorize speed changes.** Both synthesis and final playback
+  stay at 1.0 without the matching episode request record. When both are authorized,
+  their factors multiply and the final SRT must pass the rate check.
 - The pass appends its own line to `build-report.txt` (`── speedup x1.00: passed through …` at the
-  default; a channel-selected 1.2x prints `── speedup x1.20 (reel.mp4): 62.0s → 52.2s (feature …)`),
+  default; a user-requested 1.2x prints `── speedup x1.20 (reel.mp4): 62.0s → 52.2s (feature …)`),
   reports the shipped timeline's opening cue (`── first cue …s`, a ⚠ past 1.0s) with the t=0 still in
   `.work/qa/first-frame.png`, and exits 1 when the measured length doesn't match feature/factor +
   tail or `check-final-speech-rate.py` finds more than 6.2 characters/s. **No marker line or
   final-rate PASS line means the episode is not ready to publish** (pipeline.md gate table).
 - **Length contracts are read after the pass.** The channel's band — unset, the preset's 35–120s — describes the shipped file.
-- With chapters, watch for the `⚠ … under 10s` line in `build-report.txt` — at a channel-selected 1.2x a boundary
+- With chapters, watch for the `⚠ … under 10s` line in `build-report.txt` — at a user-requested 1.2x a boundary
   that was 10s apart comes out 8.3s and YouTube drops the whole chapter list. `build-reel.sh` now
   demands `10 × factor` up front, so this only fires on a build made before that. Merge those
   chapters and rebuild.
@@ -1332,7 +1332,7 @@ and the `status: produced` file update regardless — the portal is a mirror, no
 - **`references/bgm-bed.sh`** — renders the music bed the mix lays under the voice: every cue measured and gained to one distance under the narration, a short cue crossfaded onto itself instead of butt-joined, cue changes crossfaded. Called by both builders and by the b-roll premix
 - **`references/bgm-scoring.md`** — where the bed's numbers come from, which of them are published listening tests and which are our own practice, and the widely-quoted figures that failed verification
 - **`references/build-outro.sh`** — generates the channel's shared outro
-- **`references/speedup.sh`** — the required final pace pass (§7.5). Uses the channel's factor (1.0 default) while leaving the outro at 1.0x, retimes `subs.srt` and `chapters.txt`, verifies the measured length, and blocks a final speech rate over 6.2 characters/s. Reads the pre-pass set and writes `-fast` names, so it never stacks
+- **`references/speedup.sh`** — the required final pace pass (§7.5). Uses 1.0 unless the episode has an explicit user request for another factor while leaving the outro at 1.0x, retimes `subs.srt` and `chapters.txt`, verifies the measured length, and blocks a final speech rate over 6.2 characters/s. Reads the pre-pass set and writes `-fast` names, so it never stacks
 - **`references/check-final-speech-rate.py`** — measures Unicode letters and numbers on `subs-fast.srt`; catches a whole-video speed factor that made otherwise valid cards too dense to follow
 - **`references/splice-clip.sh`** — post-build clip insertion (b-roll up to 2 slots · series stinger). Takes several `<clip> <T>` pairs and splices them in **a single run** (split it into two calls and the first splice is erased), handles clean and burned-in separately, shifts each subtitle cue by the sum of the measured lengths of the insertions before it, and checks for cues straddling T and for matching lengths
 - **`references/capture-frames.sh` / `capture-reveals.sh`** — headless capture (state count derived automatically)

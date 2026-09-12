@@ -51819,6 +51819,32 @@ var init_node = __esm({
   }
 });
 
+// ../skills/produce/references/tts-speed-policy.js
+var require_tts_speed_policy = __commonJS({
+  "../skills/produce/references/tts-speed-policy.js"(exports, module) {
+    "use strict";
+    var fs9 = __require("node:fs");
+    var path12 = __require("node:path");
+    function authorizeSpeed4(work, scope, factor) {
+      if (!["generation", "final"].includes(scope) || !Number.isFinite(factor) || factor < 0.5 || factor > 3) {
+        throw new Error("Invalid TTS speed scope or factor");
+      }
+      if (factor === 1) return null;
+      const file = path12.resolve(work, "speed-authorization.json");
+      let record2;
+      try {
+        record2 = JSON.parse(fs9.readFileSync(file, "utf8"));
+      } catch {
+        throw new Error(`TTS speed changes require an explicit user request: ${file}; use 1.0 otherwise`);
+      }
+      const approval = record2?.version === 1 && Array.isArray(record2.requests) && record2.requests.find((a) => a?.source === "explicit-user-request" && a.scope === scope && a.factor === factor && typeof a.request === "string" && a.request.trim().length >= 10 && typeof a.requestedAt === "string" && Number.isFinite(Date.parse(a.requestedAt)));
+      if (!approval) throw new Error(`TTS speed changes require an explicit user request for ${scope} x${factor}; channel profiles and automatic pace corrections are not approval`);
+      return { source: approval.source, scope, factor, request: approval.request, requestedAt: approval.requestedAt };
+    }
+    module.exports = { authorizeSpeed: authorizeSpeed4 };
+  }
+});
+
 // node_modules/openai/internal/tslib.mjs
 function __classPrivateFieldSet(receiver, state, value, kind, f3) {
   if (kind === "m")
@@ -76175,6 +76201,7 @@ function closeQuietly(session) {
 }
 
 // src/supertonic-client.ts
+var import_tts_speed_policy = __toESM(require_tts_speed_policy(), 1);
 import { execFile } from "node:child_process";
 var SUPERTONIC_VOICE_NAMES = ["F1", "F2", "F3", "F4", "F5", "M1", "M2", "M3", "M4", "M5"];
 var DEFAULT_SUPERTONIC_VOICE = "M1";
@@ -76213,7 +76240,7 @@ var SUPERTONIC_LANGUAGES = [
   "na"
 ];
 var DEFAULT_SUPERTONIC_LANGUAGE = "ko";
-var DEFAULT_SUPERTONIC_SPEED = 1.05;
+var DEFAULT_SUPERTONIC_SPEED = 1;
 var DEFAULT_SUPERTONIC_STEPS = 8;
 var MAX_SUPERTONIC_SPEED = 1.2;
 var SUPERTONIC_SAMPLE_RATE = 44100;
@@ -76268,6 +76295,7 @@ The first call downloads 385MB of weights to ~/.cache/supertonic3 (about 24s).
 Until it's installed, use tts_generate (Gemini TTS) \u2014 that one only needs an API key.`;
 }
 async function generateLocalSpeech(request) {
+  (0, import_tts_speed_policy.authorizeSpeed)(request.outputPath || process.cwd(), "generation", request.speed ?? 1);
   const python = supertonicPython();
   const outFile = resolveOutputFile(
     request.outputPath || process.cwd(),
@@ -77401,6 +77429,7 @@ async function generateDialogue(request) {
 }
 
 // src/tts-quality.ts
+var import_tts_speed_policy3 = __toESM(require_tts_speed_policy(), 1);
 import { execFile as execFile4 } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { closeSync, existsSync as existsSync6, mkdirSync as mkdirSync3, openSync, readFileSync as readFileSync5, renameSync, rmSync as rmSync2, writeFileSync as writeFileSync5 } from "node:fs";
@@ -77408,6 +77437,7 @@ import path7 from "node:path";
 import { promisify as promisify2 } from "node:util";
 
 // src/elevenlabs-client.ts
+var import_tts_speed_policy2 = __toESM(require_tts_speed_policy(), 1);
 import * as fs6 from "node:fs";
 import * as path5 from "node:path";
 var ELEVENLABS_MODELS = [
@@ -77705,6 +77735,7 @@ function voiceSettingsFrom(request) {
   return Object.keys(settings).length ? settings : void 0;
 }
 async function generateElevenLabsSpeech(request) {
+  (0, import_tts_speed_policy2.authorizeSpeed)(request.outputPath || process.cwd(), "generation", request.speed ?? 1);
   const outputDir = request.outputPath || process.cwd();
   const filename = request.filename || `elevenlabs_${Date.now()}${extensionForFormat(request.outputFormat)}`;
   try {
@@ -79258,6 +79289,7 @@ function prepareGeneration(request) {
 }
 var sentencesPathFor = (wav) => wav + ".sentences.json";
 function applySentenceSpacing(output, request) {
+  (0, import_tts_speed_policy3.authorizeSpeed)(request.outputPath, "final", request.playbackSpeed);
   const alignmentPath = output.replace(/\.wav$/i, "") + ".alignment.json";
   rmSync2(sentencesPathFor(output), { force: true });
   if (!existsSync6(alignmentPath)) return { skipped: "no alignment sidecar beside the take" };
@@ -79279,6 +79311,10 @@ function applySentenceSpacing(output, request) {
 async function generateCheckedSpeech(input, dependencies) {
   const request = checkedSpeechSchema.parse(input);
   const prepared = prepareGeneration(request);
+  const speedAuthorization = {
+    generation: (0, import_tts_speed_policy3.authorizeSpeed)(request.outputPath, "generation", Number(prepared.args.speed ?? 1)),
+    final: (0, import_tts_speed_policy3.authorizeSpeed)(request.outputPath, "final", request.playbackSpeed)
+  };
   const output = path7.resolve(request.outputPath, request.filename), proofFile = output + ".quality.json";
   mkdirSync3(path7.dirname(output), { recursive: true });
   const lockFile = proofFile + ".lock";
@@ -79299,6 +79335,9 @@ async function generateCheckedSpeech(input, dependencies) {
   const base = {
     version: 1,
     policy: QUALITY_POLICY,
+    speedAuthorization,
+    generationSpeed: Number(prepared.args.speed ?? 1),
+    playbackSpeed: request.playbackSpeed,
     expectedText: request.expectedText,
     textSha256: sha256(normalizeSpeech(request.expectedText)),
     generator: request.generator,
@@ -84345,7 +84384,7 @@ Requires ffmpeg and GEMINI_API_KEY even for local synthesis. Two paid audio-revi
         }, required: ["texts", "index", "seed"] },
         segments: { type: "array", minItems: 1, maxItems: 80, items: { type: "string", minLength: 1, maxLength: 1e3 }, description: "The scene's narration[].tts sentences in order (joined they read as expectedText). ElevenLabs takes get a fixed pause at each segment boundary \u2014 the boundary the builder's reveals and subtitle cues use. Without it, pauses go after sentence-final punctuation." },
         sentencePause: { type: "number", minimum: 0.25, maximum: 1.5, default: 0.5, description: "Silence between sentences in the take's own timeline, seconds. The builder detects pauses from 0.16s and fits a 0.35s reveal fade inside one." },
-        playbackSpeed: { type: "number", minimum: 0.5, maximum: 3, default: 1, description: "ElevenLabs requires 1: use generation.speed for the requested rate and keep assembly at 1. Other engines use the approved profile playback factor; this controls subtitle pause sizing." }
+        playbackSpeed: { type: "number", minimum: 0.5, maximum: 3, default: 1, description: "ElevenLabs requires 1: use generation.speed for the requested rate and keep assembly at 1. Other engines require an explicit user request in outputPath/speed-authorization.json for any non-1 factor; this controls subtitle pause sizing." }
       },
       required: ["generator", "generation", "expectedText", "language", "delivery", "outputPath", "filename"]
     }
@@ -84478,7 +84517,7 @@ Returns: a text block with the saved .wav path, voice, language, audio duration,
         },
         speed: {
           type: "number",
-          description: `Speech speed 0.7\u2013${MAX_SUPERTONIC_SPEED} (default: ${DEFAULT_SUPERTONIC_SPEED}). Keep it identical across every cut of one video. Above 1.2 the model drops syllables (measured), so a faster delivery comes from the produce playback speed pass, not from this value.`,
+          description: `Speech speed 0.7\u2013${MAX_SUPERTONIC_SPEED} (default: ${DEFAULT_SUPERTONIC_SPEED}). Non-1 requires an explicit user request in outputPath/speed-authorization.json (generation scope and exact factor); a channel profile alone is not approval. Keep it identical across every cut of one video. Above 1.2 the model drops syllables (measured), so a faster delivery comes from the produce playback speed pass, not from this value.`,
           minimum: 0.7,
           maximum: MAX_SUPERTONIC_SPEED,
           default: DEFAULT_SUPERTONIC_SPEED
@@ -84604,7 +84643,7 @@ Returns: a text block with the saved audio path (WAV by default \u2014 the build
         },
         speed: {
           type: "number",
-          description: "Speaking rate 0.7\u20131.2 (vendor default 1.0). Keep it identical across every cut of one video.",
+          description: "Speaking rate 0.7\u20131.2 (default 1.0). Non-1 requires an explicit user request in outputPath/speed-authorization.json (generation scope and exact factor); a channel profile alone is not approval. Keep it identical across every cut.",
           minimum: 0.7,
           maximum: 1.2
         },
@@ -93714,7 +93753,7 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
 // src/index.ts
 import { readFileSync as readFinalRequest } from "node:fs";
 var server = new Server(
-  { name: "social-flow", version: "0.77.2" },
+  { name: "social-flow", version: "0.77.3" },
   { capabilities: { tools: {} } }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {
