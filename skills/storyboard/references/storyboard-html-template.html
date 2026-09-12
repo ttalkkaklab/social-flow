@@ -1365,7 +1365,14 @@ window.SB_DOC = {
       promptMotion: "Movement prompt", promptSpeechClip: "Speech-clip prompt",
       promptBg: "Background prompt", metaSlide: "Slide", promptSlidePlan: "Slide plan",
       privacyNote: "Avoiding private detail — ",
-      transitionLabel: "Transition",
+      transitionLabel: "Transition effect · into this shot",
+      transitionNames: { cut: "Straight cut", dip: "Fade through black", "dip:white": "Fade through white", jcut: "Sound leads, then picture cuts", dissolve: "Cross dissolve", iris: "Circle reveal", blur: "Blur dissolve", zoom: "Zoom fade", push: "Slide reveal", whip: "Whip pan" },
+      transitionMissing: "Not selected",
+      transitionOpening: "Opening",
+      transitionDip: "Previous picture fades out, then this picture fades in · up to 0.30s each (short shots use shorter fades)",
+      transitionDipOpening: "Opening fades in · up to 0.30s",
+      transitionReason: "Reason",
+      transitionContinuity: "Continuity",
 
       // ── promise ledger ──
       promisesHead: "Promise ledger",
@@ -1680,7 +1687,14 @@ window.SB_DOC = {
       promptMotion: "움직임 프롬프트", promptSpeechClip: "말하는 클립 프롬프트",
       promptBg: "배경 프롬프트", metaSlide: "슬라이드", promptSlidePlan: "슬라이드 구성",
       privacyNote: "사생활 피하기 — ",
-      transitionLabel: "전환",
+      transitionLabel: "전환 효과 · 이 샷으로 들어올 때",
+      transitionNames: { cut: "바로 전환", dip: "검정 페이드", "dip:white": "흰색 페이드", jcut: "다음 목소리 먼저, 화면은 뒤에 전환", dissolve: "화면 겹치며 전환", iris: "원이 열리며 전환", blur: "흐려지며 전환", zoom: "확대하며 전환", push: "밀어내며 전환", whip: "빠르게 휘돌며 전환" },
+      transitionMissing: "미지정",
+      transitionOpening: "첫 화면",
+      transitionDip: "이전 화면이 서서히 사라진 뒤 현재 화면이 나타남 · 각 최대 0.30초 (짧은 샷에서는 단축)",
+      transitionDipOpening: "첫 화면이 서서히 나타남 · 최대 0.30초",
+      transitionReason: "선택 이유",
+      transitionContinuity: "두 화면의 연결",
 
       // ── promise ledger ──
       promisesHead: "약속 장부",
@@ -3918,8 +3932,6 @@ window.SB_DOC = {
     var beat = beatOf(s);
     if (beat && T.beat[beat])
       h += '<span class="scene-beat beat-' + beat + '">' + esc(T.beat[beat]) + "</span>";
-    if (s.transition)
-      h += '<span class="scene-beat beat-hooktype">' + esc(T.joinIs(s.transition)) + "</span>";
     // The cover shot also carries the opening-strategy name tag — the title and segment ① have to carry that pull
     if (s.type === "cover") {
       h += '<span class="scene-beat beat-hooktype">' + esc(T.hook[s.hookType] ||
@@ -4170,8 +4182,20 @@ window.SB_DOC = {
         ? '<details class="scenenotes"><summary>' + esc(T.designNotes(sn.length)) + "</summary>" + body + "</details>"
         : '<div class="scene-notes">' + body + "</div>";
     }
-    if (DOC.transitions && DOC.transitions[i])
-      h += '<div class="transition"><b>' + esc(T.transitionLabel) + "</b>" + mark(DOC.transitions[i]) + "</div>";
+    if (s.type !== "broll" && s.type !== "outro") {
+      var join = s.transition || (i === 0 ? "cut" : ""), joinKind = join.split(":")[0];
+      var joinEdit = s.edit || {}, joinDefaults = { jcut: .24, dissolve: .40, iris: .40, blur: .40, zoom: .32, push: .32, whip: .24 };
+      var joinName = T.transitionNames[join] || T.transitionNames[joinKind] || join || T.transitionMissing;
+      h += '<div class="transition" data-transition="' + esc(join) + '"><b>' + esc(T.transitionLabel) + '</b><strong>' + esc(joinName) + '</strong>';
+      if (joinKind === "dip") h += '<div>' + esc(i === 0 ? T.transitionDipOpening : T.transitionDip) + '</div>';
+      else if (joinDefaults[joinKind]) h += ' · ' + esc(String(joinEdit.transitionSeconds === undefined ? joinDefaults[joinKind] : joinEdit.transitionSeconds)) + 's';
+      else if (join === "cut") h += ' · 0s';
+      if (joinKind === "push" || joinKind === "whip") h += ' · ' + esc(join.split(":")[1] || "?");
+      if (joinEdit.reason) h += '<div><b>' + esc(T.transitionReason) + '</b>' + esc(joinEdit.reason) + '</div>';
+      if (joinEdit.continuity) h += '<div><b>' + esc(T.transitionContinuity) + '</b>' + esc(joinEdit.continuity) + '</div>';
+      if (DOC.transitions && DOC.transitions[i]) h += '<div>' + mark(DOC.transitions[i]) + '</div>';
+      h += '</div>';
+    }
     h += "</article>";
     });
     if (hasSceneField) h += "</section>";

@@ -8,11 +8,19 @@ previews and must not be copied into the delivery queue.
 ## Plan the connection before generating clips
 
 Choose each cut by the action and the audience's attention. A clean cut on an action,
-eyeline or matched composition is often the natural connection. A dissolve fits a passage
-of time or a gentler change of place. J-cut lets the next narration start while the previous
-picture continues moving. Reserve dip for a chapter break; whip, iris and zoom need a
+eyeline or matched composition is often the natural connection. For a new scene with a changed place or time, prefer `dip`: the previous picture
+fades to black, then the next picture fades in. Use a dissolve when the two pictures
+should blend without black. Keep same-scene cuts chosen by action and continuity. J-cut lets the next narration start while the previous
+picture continues moving. Dip also fits a chapter break; whip, iris and zoom need a
 specific narrative or camera motivation. Do not cycle effects or assign `cut` to every
 shot merely because production mode is full video.
+
+To patch effects without replacing shots, call `storyboard_apply` with
+`transitions: [{no: 3, transition: "dip", reason: "The next scene begins at night"}]`.
+`no` is the incoming shot's 1-based position after removals and inserts. This writes
+`transition` and `edit.reason` into the source plan; switching to dip removes an old
+moving-join duration. Dip uses up to 0.30 seconds on each side, not
+`edit.transitionSeconds`. The approval page displays the effect below each shot.
 
 For every new boundary, write `transition` and `edit.reason`. In `edit.continuity`, name
 what carries across the join: subject position, gaze, motion direction, framing, light,

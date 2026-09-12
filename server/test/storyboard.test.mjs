@@ -28,6 +28,7 @@ import {
 } from '../dist/storyboard.js';
 import { TOOLS } from '../dist/tools.js';
 import { ROUTES } from '../dist/handlers.js';
+import editPlan from '../../skills/produce/references/edit-plan.js';
 
 const dirs = [];
 const tmp = () => { const d = mkdtempSync(join(tmpdir(), 'sb-')); dirs.push(d); return d; };
@@ -84,6 +85,58 @@ describe('storyboard schemas', () => {
 });
 
 describe('applyPatch', () => {
+  it('patches only the incoming effect, clears stale duration and preserves source objects', () => {
+    const shots = board();
+    shots[2].edit = { transitionSeconds: .4, in: .2, post: .12, continuity: 'Same subject' };
+    const win = { STRUCTURE: structure([scene(1), scene(2)]), SCENES: shots };
+    const patch = storyboardApplySchema.parse({ path: 'x', transitions: [{ no: 3, transition: 'dip', reason: 'Night begins' }] });
+    const r = applyPatch(win, patch);
+    assert.equal(r.findings.filter(f => f.level === 'bad').length, 0);
+    assert.equal(r.win.SCENES[2].transition, 'dip');
+    assert.deepEqual(r.win.SCENES[2].edit, { in: .2, post: .12, continuity: 'Same subject', reason: 'Night begins' });
+    assert.deepEqual(r.win.SCENES[2].visual, shots[2].visual);
+    assert.deepEqual(r.win.SCENES[2].narration, shots[2].narration);
+    assert.equal(shots[2].transition, 'jcut');
+    assert.equal(shots[2].edit.transitionSeconds, .4);
+    const compiled = editPlan.compile(r.win.SCENES, r.win.SCENES.map((_, i) => `${i}\tvoice.wav\t0\tnone`).join('\n'));
+    assert.equal(compiled.plan[1].exit, 'black');
+    assert.equal(compiled.plan[2].enter, 'black');
+    assert.equal(compiled.plan[2].join, 0);
+
+  });
+  it('refuses moving joins across reused, inserted and sync footage before saving', () => {
+    const parse = transition => storyboardApplySchema.parse({ path: 'x', transitions: [{ no: 3, transition, reason: 'Scene changes' }] });
+    for (const fixture of ['reuse', 'broll', 'syncBefore', 'syncAfter']) {
+      const shots = board().map(s => ({ ...s, transition: 'cut' }));
+      if (fixture === 'reuse') shots[1].visual = { reuse: { clip: 'old.mp4' } };
+      if (fixture === 'broll') shots[1].type = 'broll';
+      if (fixture === 'syncBefore') shots[1].visual = { sync: true };
+      if (fixture === 'syncAfter') shots[2].visual = { sync: true };
+      const win = { STRUCTURE: structure([scene(1), scene(2)]), SCENES: shots };
+      assert.throws(() => applyPatch(win, parse('dissolve')), /carry|handles/, fixture);
+      assert.equal(shots[2].transition, 'cut', 'a rejected patch leaves the source intact');
+      if (fixture !== 'broll') {
+        const result = applyPatch(win, parse('dip'));
+        assert.equal(result.win.SCENES[2].transition, 'dip');
+        const plan = editPlan.preview(result.win.SCENES);
+        assert.equal(plan[1].exit, 'black');
+        assert.equal(plan[2].enter, 'black');
+      }
+    }
+  });
+  it('rejects ambiguous or invalid transition patches', () => {
+    const parse = transitions => storyboardApplySchema.parse({ path: 'x', transitions });
+    assert.throws(() => parse([{ no: 2, transition: 'dip', reason: 'Night', transitionSeconds: .4 }]));
+    assert.throws(() => parse([{ no: 2, transition: 'fade', reason: 'Night' }]));
+    const win = { STRUCTURE: structure([scene(1), scene(2)]), SCENES: board() };
+    assert.throws(() => applyPatch(win, parse([{ no: 99, transition: 'dip', reason: 'Night' }])));
+    assert.throws(() => applyPatch(win, parse([{ no: 1, transition: 'dissolve', reason: 'Night' }])));
+    const change = { no: 3, transition: 'dip', reason: 'Night' };
+    assert.throws(() => applyPatch(win, parse([change, change])));
+    const schema = TOOLS.find(t => t.name === 'storyboard_apply').inputSchema.properties.transitions;
+    assert.ok(schema.items.properties.transition.enum.includes('dip'));
+  });
+
   it('a full set validates, syncs the shot labels and reports no violation', () => {
     const r = applyPatch({}, storyboardApplySchema.parse({ path: 'x', set: { structure: structure([scene(1), scene(2, { place: '부엌', time: '밤' })]), shots: board() } }));
     assert.deepEqual(r.findings.filter((f) => f.level === 'bad'), []);
