@@ -446,16 +446,17 @@ picture was going to show, and you will fill the gap for the author without noti
    be intelligible; no modern parallel is required.
 6. **A case with no link.** A 전개 #3 case is named and what it has to do with the topic is
    never said.
-7. **A term used before or without its plain wording.** A name or technical term a **만 9~10세
-   listener** would not know (korean-style §Eye level — the plugin writes to the 초3~4 floor)
+7. **A term used before or without its plain wording.** A name or technical term the **actual channel audience**
+   would not know (korean-style §Eye level; use profile knowledge and voice)
    arrives with no explanation in the same shot — including a term the narration uses that
    `COMPREHENSION.terms` never declared. (The machine half — a declared `plain` actually being
-   spoken — is `check-scenes.js`'s; yours is the term nobody declared.) A gloss that needs its
-   own gloss ("금속 구조물") counts as no explanation.
-8. **A figure with nothing to put it beside.** A number whose *scale* sits outside everyday
-   experience — money in 조·억 (1조 원), area in 제곱킬로미터, time under a second (0.3초),
-   distance in 광년 — spoken with no comparison in the same shot or the next sentence. At ten
-   those are all just "big", and a comparison beside the figure is the fix; the figure itself
+   spoken — is `check-scenes.js`'s; yours is the term nobody declared.) A gloss the target
+   audience still cannot understand needs revision;
+   no adult word or E1~E3 match alone establishes this defect.
+8. **A figure whose scale the audience cannot interpret.** For money in 조·억, area in
+   제곱킬로미터, time under a second or distance in 광년, establish whether scale matters
+   to the claim and this audience needs context. Only then is a missing comparison a defect.
+   Add a verified comparison in the same shot or the next sentence; the figure itself
    is never rounded to make one land. **Years, percentages and head counts are not this
    defect** — 천구백구십 년대, 십오 퍼센트, 구만 명 land on their own, and pulling them in
    would fail nearly every episode (the library runs 29 year mentions and 15 percentages
@@ -496,7 +497,7 @@ picture was going to show, and you will fill the gap for the author without noti
 | The topic lands | 25 | your one sentence matches the 주제, or `COMPREHENSION.question` when there is no scenario.md (15); the takeaway you would repeat matches `COMPREHENSION.takeaway` (10) |
 | The chain holds | 25 | causal continuity and spoken antecedents without help from the picture (15); early partial payment, new evidence or consequences in each development, and a concrete reason to hear the next beat (10). Cite the first stalled span; clarity alone earns at most 15 here |
 | The content is complete | 20 | the situation or mechanism is understandable (8); necessary evidence and choices are spoken (6); consequences and limits support the conclusion (6); modern cases are optional |
-| Terms and names | 15 | every unfamiliar term explained where it first appears, at the 초3~4 floor (8); every out-of-scale figure — P0-8's four kinds, not years or percentages — spoken with something beside it (4); no proper name the listener carries for nothing (3) |
+| Terms and names | 15 | every unfamiliar term explained where it first appears, in the actual audience's vocabulary (8); figures have useful scale context where the audience needs it (P0-8) (4); no proper name the listener carries for nothing (3) |
 | The ending | 15 | the promised answer or decisive action is delivered (8); the message is heard — a sentence that stays true with the names gone, matching `STORY.thesis`, not the reversal again and not the picture described (4); one sentence of the close stands on its own as something to forward — a fact, a verdict, a line, a checklist (3); an optional CTA cannot substitute for any of the three |
 
 An ask stays optional; a forwardable thing does not — an ask requests behaviour from the
@@ -1036,7 +1037,7 @@ echo "[narration] gate_exit=$?"   # this read is narration only (0.50.0); the ot
 1. **S1 detected** — check-style.py exit 2. It's a P0 for that sentence
 2. **Translationese wording** — the indirect particles, nominalized verbs, and double passive
    listed in korean-style §T instead of a direct spoken verb
-3. **Unexplained jargon** — a term above the 초3~4 floor with no plain wording on first use.
+3. **Unexplained jargon** — a necessary term unfamiliar to the actual audience with no explanation on first use.
    If spelling it out reads awkwardly, doubt whether the term is needed at all
 4. **AI stock phrases** — stock openings, inflated implications, and empty modifiers from
    korean-style §D instead of the concrete point
@@ -1054,16 +1055,17 @@ echo "[narration] gate_exit=$?"   # this read is narration only (0.50.0); the ot
 
 ## Per-sentence axes (additive out of 100 — scored separately for each sentence; per scene on a full-board read)
 
-- **Plain language (35)**: the words sit inside the 초3~4 floor — korean-style §Eye level,
-  NIKL grade 3, what a 만 9~10세 viewer has without being taught 15 / jargon comes with an
-  explanation a ten-year-old could repeat 10 / no over-compression that cut the meaning away 10
+- **Plain language (35)**: vocabulary fits profile §1's knowledge, §2's voice and supplied
+  samples 15 / unfamiliar necessary terms have accurate, useful explanations 10 / meaning,
+  uncertainty and causal links survive concise wording 10.
 
-  **The test for a word is one question: would a ten-year-old use it, or at least know it
-  without being told?** 여부·기입하다·초래하다 fail it and have an everyday twin, so they are
-  swaps (E1~E3 — the checker output already names those). A word the episode is about
-  (계엄, 파운드리) fails it too but has no twin; that one is not a swap, and saying so is the
-  finding — it belongs to the story pass, with the plain wording spoken beside it. Don't order
-  it swapped into something vaguer.
+  **Read the whole sentence: would this audience say it, and does it mean the same thing?**
+  Keep natural adult words and exact technical terms. E1~E3 are advisory suggestions with
+  no score deduction or automatic P0. To request a change, quote the sentence, name the
+  audience or voice mismatch and propose an equally accurate alternative. A necessary
+  explanation belongs to the story pass; do not force it into a word swap. Do not use a
+  school grade, an AI-detector score or the presence of a formal word as evidence.
+
 - **Fits spoken speech (35)**: words that actually come out when you say it aloud 15 / no
   written-only vocabulary or report-style stative verbs 10 / the words are the ones a
   person mutters to themselves (the title too, on a full-board read) 10

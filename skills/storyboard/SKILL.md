@@ -255,12 +255,12 @@ for n in 1 2 3; do
 done
 ```
 
-**Read only the E findings here**, and fix each one where you wrote it. The rest of the
+**Read only the E findings here**, and assess each in its sentence; keep natural, precise uses. The rest of the
 verdict is noise at this stage — a candidate page is a plan with item headings and notes, not
 spoken sentences, so running the whole narration gate over it raises D8·C1·C2 on prose that
 was never going to be narrated (measured on the library's 12 candidate pages). The words are
-what this check is for: E1~E3 is the grade-3 floor (korean-style §Eye level), and a
-ten-year-old has to follow the 주제 sentence with nothing else on the screen. The other rules
+what this check is for: E1~E3 offer context-review suggestions (korean-style §Eye level); the profile's
+actual audience should follow the 주제 sentence without needing an unseen explanation. The other rules
 get their turn at §4.5, on the sentences that actually get spoken.
 
 **No reviewer here** — the user is the judge of this stage, and the narration reads at §4.4
@@ -658,22 +658,19 @@ Core rules:
   player separately with a clean master, so the player handles line breaks. Either way, cut
   clearly on periods (the TTS silence-boundary detector needs them). Two notations: `tts`
   is Korean phonetic spelling ("4,700만"→"사천칠백만"), `sub` keeps the original notation.
-- **Plain-language principle (profile §2), written for a 초3~4 listener** — on-screen text
-  and narration alike. The floor is korean-style §Eye level: the words a 만 9~10세 viewer
-  already has (NIKL vocabulary grading, grade 3). Unpacking the terms at the deck-authoring
-  stage is what makes the narration plain too. Four moves do the work, and the checker sees only the first:
-  - **Swap the document-register word.** 여부·기입하다·소요된다·초래하다 all have an
-    everyday twin, and E1~E3 reject them. **Register is untouched** — profile §2's 존댓말
-    stays 존댓말, and talking down to a child ("~했어요~ 그쵸?") is its own defect.
-  - **A hard name arrives with its plain wording spoken beside it**, in the same shot, and it
-    is declared in `window.COMPREHENSION.terms` (short-form caps at three). If the name
-    changes neither the answer nor the takeaway, cut the name instead of explaining it.
-  - **A number arrives with something to compare it to.** 1조 원, 20제곱킬로미터, 0.3초 mean
-    nothing at ten. Put the comparison in the same sentence or the next one ("교실 마흔 개
-    넓이"). The figure itself never moves — the comparison is added beside it, and rounding
-    a range to make it land is distortion (korean-style §Principles when fixing).
-  - **One sentence, one idea.** Short-form's 8~25 chars already forces it; on long-form
-    (12~40) two clauses stitched with ~는데/그리고 usually want to be two sentences.
+- **Natural language for the channel audience** (korean-style §Eye level) applies to
+  on-screen text and narration. Use profile §1's knowledge, §2's register and any writing
+  samples. Default to adult non-specialists; never impose a universal school grade.
+  - Keep familiar adult vocabulary and exact terms. E1~E3 are advisory S3 matches with
+    no score deduction; keep or replace them after reading the sentence. No match alone is P0.
+  - Explain a necessary term unfamiliar to this audience in the same first shot and declare
+    it in `window.COMPREHENSION.terms`. Do not over-explain familiar words or replace a
+    precise term with a vague phrase. Short-form's three-term cap still applies.
+  - Add a verified comparison when scale matters and the audience needs it. Keep the
+    original value, uncertainty and causal claim; do not invent properties for an analogy.
+  - Separate competing ideas when that helps comprehension. Keep natural rhythm and
+    the existing sentence-length limits; preserve the channel's 존댓말 or 반말.
+
 - THEME is copied verbatim from the profile §3 values.
 - **Every generated-video shot leaves here with its camera decided** — `visual.camera`'s four
   slots (`movement` · `speed` · `framing` · `end`) filled on b-roll, motion-background scenes,
@@ -818,20 +815,19 @@ re-read against the chain, not a fourth reviewer read.
 
 ### 4.5 Narration vocabulary (storyboard-reviewer vocabulary mode — loop to 95, cap 3)
 
-Same sentences, one layer down — **are the words what a person says**. Carrying the same
-meaning, "제출 기한이 도래합니다" and "이날까지 안 내면 늦어요" are different writing, and the
-place a viewer smells AI is usually the words. This runs on the narration only, before a
+Same sentences, one layer down — **are the words what a person says**. Prefer a direct action when meaning survives: "이름 기입 작업을 수행합니다"
+can become "이름을 적습니다". A formal word alone does not establish AI authorship. This runs on the narration only, before a
 title or caption exists, so a swap here changes nothing a picture depends on.
 
-What it looks at: words above the 초3~4 floor (korean-style §Eye level — E1~E3, and the
-hard word the checker has no list for), unexplained jargon, translationese
+What it looks at: wording that does not fit the audience or voice (korean-style §Eye level;
+E1~E3 only suggest a contextual review), unexplained jargon, translationese
 (`~를 통해`·`~에 있어서`·`수행합니다`), written-only vocabulary and report-style stative
 verbs (korean-style §D8, §D9), AI stock phrases, over-repetition of the same word, and words
 the profile §1 target doesn't use.
 
-**Two kinds of hard word, and only one of them belongs to this read.** A word with an
-everyday twin (여부 → ~인지 아닌지) is a swap, and it is fixed here. A word the episode is
-*about* (계엄, 역학조사) needs a sentence — the plain wording spoken beside it, or a
+**Keep, replace or explain in context.** Keep natural adult wording; replace awkward
+wording only when the alternative preserves meaning and voice. A necessary term unfamiliar
+to this audience (for example 계엄 or 역학조사) needs a sentence — the plain wording spoken beside it, or a
 comparison for a figure nobody can picture — and adding a sentence changes the chain §4.4
 read. **That one goes back to §4.4**, inside its own cap, and comes out declared in
 `COMPREHENSION.terms`. Don't fix it here by stretching a swap into a rewrite.
