@@ -1,3 +1,4 @@
+import { authorizeSpeed } from '../../skills/produce/references/tts-speed-policy.js';
 /** Scene-level speech review and bounded regeneration. No successful review, no usable output. */
 import { execFile } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
@@ -212,6 +213,7 @@ export const sentencesPathFor = (wav: string): string => wav + '.sentences.json'
  * is kept as generated and the reason recorded — the builder then falls back to silence detection.
  */
 export function applySentenceSpacing(output: string, request: CheckedSpeechRequest): Record<string, unknown> {
+  authorizeSpeed(request.outputPath, 'final', request.playbackSpeed);
   const alignmentPath = output.replace(/\.wav$/i, '') + '.alignment.json';
   // A sidecar from an earlier take must not describe this one: it is rewritten below or removed.
   rmSync(sentencesPathFor(output), { force: true });
@@ -242,6 +244,10 @@ export interface QualityDependencies {
 export async function generateCheckedSpeech(input: CheckedSpeechRequest, dependencies?: QualityDependencies): Promise<Record<string, unknown>> {
   const request = checkedSpeechSchema.parse(input);
   const prepared = prepareGeneration(request);
+  const speedAuthorization = {
+    generation: authorizeSpeed(request.outputPath, 'generation', Number(prepared.args.speed ?? 1)),
+    final: authorizeSpeed(request.outputPath, 'final', request.playbackSpeed),
+  };
   const output = path.resolve(request.outputPath, request.filename), proofFile = output + '.quality.json';
   mkdirSync(path.dirname(output), { recursive: true });
   const lockFile = proofFile + '.lock';
@@ -256,7 +262,7 @@ export async function generateCheckedSpeech(input: CheckedSpeechRequest, depende
   const attempts: Record<string, unknown>[] = [];
   // On a spacing lane the pauses are part of the shipped audio, so their inputs are part of the settings a PASS binds to.
   const settings = prepared.spacing ? { ...prepared.args, episode: request.episode ?? null, spacing: { segments: request.segments ?? null, sentencePause: request.sentencePause, playbackSpeed: request.playbackSpeed } } : prepared.args;
-  const base = { version: 1, policy: QUALITY_POLICY, expectedText: request.expectedText, textSha256: sha256(normalizeSpeech(request.expectedText)), generator: request.generator,
+  const base = { version: 1, policy: QUALITY_POLICY, speedAuthorization, generationSpeed: Number(prepared.args.speed ?? 1), playbackSpeed: request.playbackSpeed, expectedText: request.expectedText, textSha256: sha256(normalizeSpeech(request.expectedText)), generator: request.generator,
     settingsSha256: sha256(JSON.stringify(settings)), ...(request.episode ? { episode: request.episode } : {}), ...(request.generator === 'tts_elevenlabs_generate' ? { voiceSettings: Object.fromEntries(Object.entries(prepared.args).filter(([k]) => !['text','previousText','nextText','outputPath','filename','timestamps'].includes(k))) } : {}), model: REVIEW_MODEL, language: request.language, delivery: request.delivery };
   function save(status: string, extra: Record<string, unknown> = {}): Record<string, unknown> {
     const report = { ...base, status, attempts, checkedAt: new Date().toISOString(), ...extra };

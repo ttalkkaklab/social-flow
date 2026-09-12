@@ -46,7 +46,7 @@ bottom 570px     burned-in subtitle band (y 1380–1560) + IG caption / YT chann
 
 ## What build-reel.sh does (in order)
 
-Silence trim → loudnorm -16 → measured speech rate (warning band only — the voice is not time-stretched; `ATEMPO_MIN`/`ATEMPO_MAX` default to 1.0 since 2026-09-11)
+Silence trim → loudnorm -16 → measured speech rate (warning band only — the voice is not time-stretched; assembly is fixed at 1.0x; legacy `ATEMPO_MIN`/`ATEMPO_MAX` settings are ignored)
 → sentence-boundary detection (silencedetect, snapped to the checked take's `<wav>.sentences.json` when the TTS tool wrote one — the M−1 longest pauses without a sidecar, character-count proportional fallback on failure) → card
 duration rounded up to whole frames + sample-accurate audio padding (**zero drift**) → reveal transition
 timing (reveal-timing.py) → visual chain (video + alpha overlay composite → reveal xfade) → Ken Burns

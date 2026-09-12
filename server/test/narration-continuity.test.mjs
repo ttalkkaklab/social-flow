@@ -11,7 +11,8 @@ import {pcmToWav} from '../dist/media-utils.js';
 const require=createRequire(import.meta.url), checker=require('../../skills/produce/references/check-tts-quality.js'), finalChecker=require('../../skills/produce/references/check-final-tts.js');
 const texts=['오늘의 이야기를 시작합니다.','다음 문장도 같은 목소리로 읽어요.','이렇게 이야기를 마칩니다.'];
 function setup(t){const dir=mkdtempSync(path.join(tmpdir(),'continuity-'));t.after(()=>rmSync(dir,{recursive:true,force:true}));return dir;}
-function request(dir,index=1){return checkedSpeechSchema.parse({generator:'tts_elevenlabs_generate',generation:{text:texts[index],voiceId:'voice',model:'eleven_multilingual_v2',speed:1.2},expectedText:texts[index],language:'Korean',delivery:'Calm connected narration.',outputPath:dir,filename:`c${index}.wav`,episode:{texts,index,seed:210836}});}
+function approve(dir){writeFileSync(path.join(dir,'speed-authorization.json'),JSON.stringify({version:1,requests:[{source:'explicit-user-request',scope:'generation',factor:1.2,request:'Please synthesize this episode at 1.2x.',requestedAt:'2026-09-12T00:00:00Z'}]}));}
+function request(dir,index=1){approve(dir);return checkedSpeechSchema.parse({generator:'tts_elevenlabs_generate',generation:{text:texts[index],voiceId:'voice',model:'eleven_multilingual_v2',speed:1.2},expectedText:texts[index],language:'Korean',delivery:'Calm connected narration.',outputPath:dir,filename:`c${index}.wav`,episode:{texts,index,seed:210836}});}
 const good={accuracy:100,pronunciation:98,naturalness:98,clarity:98,continuity:98,continuityEvidence:'At 1.2 seconds the next sentence continues the same tone naturally.',confidence:0.98,complete:true,evidence:'The complete speech has clear endings and no clipped breaths or unnatural joins.',issues:[]};
 test('episode derives real preceding/following text and keeps native synthesis speed',t=>{
  const dir=setup(t);
@@ -39,7 +40,7 @@ test('identical rejected audio stops without another review, seed change or rese
 test('both tempo passes reject per-card normalization and doubled speed before encoding',t=>{
  const dir=setup(t),r=request(dir),file=path.join(dir,r.filename);writeFileSync(file+'.quality.json',JSON.stringify({generator:r.generator}));writeFileSync(path.join(dir,'cards.tsv'),`1\t${file}\t4.5\tin\n`);
  assert.doesNotThrow(()=>checker.checkTempo(dir,1,1,1));
- for(const args of [[1.2,1,1],[1,0.88,1.18],[NaN,1,1]])assert.throws(()=>checker.checkTempo(dir,...args),/tempo changes/);
+ for(const args of [[1.2,1,1],[1,0.88,1.18],[NaN,1,1]])assert.throws(()=>checker.checkTempo(dir,...args),/tempo changes|speed changes|Invalid TTS speed/);
  for(const name of ['build-reel.sh','speedup.sh'])assert.match(readFileSync(path.resolve(import.meta.dirname,'../../skills/produce/references',name),'utf8'),/checkTempo/);
 });
 test('real ffmpeg final audio review rejects continuity-only defects and binds actual media',t=>{
@@ -75,7 +76,7 @@ test('mixed generated, recording and b-roll speech uses actual playback order',t
  assert.deepEqual(finalChecker.narration(board),{generated:true,text:'첫 문장입니다.. 삽입된 말입니다.. 녹음한 목소리입니다.'});
 });
 test('dictionary and native speed/context reach the real HTTP serialization',t=>{
- const dir=setup(t);
+ const dir=setup(t);approve(dir);
  const child=`
  import {generateElevenLabsSpeech,elevenLabsGenerateSchema,createElevenLabsDictionary} from './dist/elevenlabs-client.js';
  import {pcmToWav} from './dist/media-utils.js';

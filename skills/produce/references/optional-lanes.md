@@ -160,7 +160,7 @@ done
   Trimming, loudnorm, and sentence-boundary detection are all wanted here (the boundaries
   drive the reveal transitions), and with no mouth on screen there's no sync constraint.
 - **No machine speed correction on a human voice** — the build's default since 2026-09-11
-  (`ATEMPO_MIN`/`ATEMPO_MAX` 1.0; before that this lane set them on the build line). A
+  (assembly is fixed at 1.0x; legacy `ATEMPO_MIN`/`ATEMPO_MAX` settings are ignored). A
   speaking-rate REGEN recommendation is not a regeneration target here — that shot needs a
   re-record or a script change.
 - If noise at the head of a recording slips under the trim threshold (-50dB) and comes out
