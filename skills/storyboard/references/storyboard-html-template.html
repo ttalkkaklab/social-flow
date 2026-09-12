@@ -1300,7 +1300,7 @@ window.SB_DOC = {
       // ── production mode (window.PRODUCTION) and frame inputs ──
       prodHead: "Production mode and video cost",
       prodMode: "Mode", prodClips: "Generated clips", prodFirst: "First pass", prodRetry: "With retries",
-      prodModes: { hybrid: "Hybrid", full_video: "Full video" },
+      prodModes: { hybrid: "Hybrid (legacy)", full_video: "100% or more", video_50: "50% or more", video_30: "30% or more", hook_only: "Hook only" },
       prodScope: "Video API cost only. Images, narration, editing and tax are excluded; the mode not selected is an estimate under stated assumptions.",
       prodTerms: function (rate, cap, attempts) { return "Assumed KRW/USD: " + rate + ". Approved video budget: $" + cap + ". Total attempts per clip: " + attempts + "."; },
       prodRows: "Model, resolution and cost per shot", prodShot: "Shot ", withAudio: "with audio", silent: "silent",
@@ -1615,7 +1615,7 @@ window.SB_DOC = {
       // ── production mode (window.PRODUCTION) and frame inputs ──
       prodHead: "제작 방식과 영상 생성비",
       prodMode: "방식", prodClips: "생성 영상", prodFirst: "최초 생성", prodRetry: "재시도 포함 예상",
-      prodModes: { hybrid: "혼합 제작", full_video: "전체 영상" },
+      prodModes: { hybrid: "혼합 제작 (기존 승인)", full_video: "100% 이상", video_50: "50% 이상", video_30: "30% 이상", hook_only: "훅만 영상" },
       prodScope: "영상 API 비용만 계산합니다. 이미지·음성·편집·세금은 제외하며 선택하지 않은 방식은 가정에 따른 추산입니다.",
       prodTerms: function (rate, cap, attempts) { return "원화 환산 가정: 1달러=" + rate + "원. 승인 예산: $" + cap + ". 장면당 총 시도 한도: " + attempts + "회."; },
       prodRows: "장면별 모델·해상도·생성비", prodShot: "장면 ", withAudio: "음성 포함", silent: "무음",
@@ -3731,7 +3731,7 @@ window.SB_DOC = {
       h += '<section class="cost" id="production-cost"><div class="cost-head">' + esc(T.prodHead) + '</div>';
       h += '<table><thead><tr><th>' + esc(T.prodMode) + '</th><th>' + esc(T.prodClips) + '</th><th>' + esc(T.prodFirst) +
         '</th><th>' + esc(T.prodRetry) + '</th></tr></thead><tbody>';
-      ['hybrid', 'full_video'].forEach(function (key) {
+      Object.keys(PCOST.options).forEach(function (key) {
         var o = PCOST.options[key];
         h += '<tr><td>' + esc(T.prodModes[key] || key) + (key === window.PRODUCTION.mode ? ' ✓' : '') +
           '</td><td>' + o.clips + ' / ' + o.generatedSeconds + 's</td><td>$' + o.firstPassUsd.toFixed(2) +

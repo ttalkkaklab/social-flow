@@ -148,6 +148,14 @@ const shotLine = s => {
     if (sp.light) bits.push(sp.light);
     out += `**자리**: 카메라 기준 — ${bits.join(" · ")}\n`;
   }
+  const coverage = sh.coverage || {};
+  if (Number.isFinite(coverage.azimuth)) out += `**수평 각도**: 이 편의 축에서 ${coverage.azimuth}°\n`;
+  if (coverage.action) out += `**동작에 붙일 컷**: ${coverage.action}\n`;
+  const crossing = sh.lineCrossing;
+  if (crossing) {
+    const method = { camera_move: "카메라가 화면 안에서 선을 넘는다", subject_move: "인물 이동으로 선이 바뀐다", neutral: "중립 샷을 거친다", intentional: "혼란을 의도한다" }[crossing.method] || crossing.method;
+    out += `**선 넘기**: ${method} · ${crossing.from} → ${crossing.to} · ${crossing.reason}${crossing.bridgeShot ? ` · 중립 샷 ${crossing.bridgeShot}` : ""}\n`;
+  }
   if (sd) out += `${sd}\n`;   // 소리는 자리 다음 — shot-script-template.md 의 블록 순서
   return out;
 };

@@ -84,7 +84,7 @@ Ask for one of the `STYLES` presets (cinematic-miniature, photoreal, webtoon, cl
 Unattended authoring needs an explicit standing style choice; otherwise wait for HITL.
 
 Read [production-mode.md](../storyboard/references/production-mode.md). Human invocations choose
-hybrid/full_video with estimated first-pass and retry-inclusive video cost before any assets.
+100% 이상 / 50% 이상 / 30% 이상 / 훅만 영상 with estimated first-pass and retry-inclusive video cost before any assets.
 Unattended calls use a written standing mode, cap and attempt limit; legacy standing plans
 retain hybrid, never silently full_video. A mode/budget conflict holds before spending.
 An explicitly authorized full_video episode follows [full-video.md](../produce/references/full-video.md)

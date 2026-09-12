@@ -12,8 +12,8 @@ A **channel** is one content brand you operate: one `data/` directory per channe
 tone, voice, theme, and publish targets pinned in `profile.md`. Publish targets:
 **Threads · Instagram (Reels) · Facebook Pages · YouTube (Shorts and long-form)**.
 
-Before production, a HITL choice shows **hybrid** (1–2 generated clips plus HTML slides and
-still-camera scenes) beside **full video** (every new scene generated as a clip), with model,
+Before production, HITL offers **100% 이상**, **50% 이상**, **30% 이상** and **훅만 영상**
+(100%, at least 50%, at least 30% of new cuts, or the opening hook only), with model,
 resolution, audio setting, first-pass and retry-inclusive video costs and an explicit budget cap.
 The read-only [cost comparison](skills/autoproduce/references/production-cost.js) uses the same
 API price table and routing as production, including minimum billed clip lengths. It labels KRW

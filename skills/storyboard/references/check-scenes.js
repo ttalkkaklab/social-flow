@@ -453,7 +453,11 @@ function check(win, fmt, opts) {
   productionMode.check(win, { draft }).forEach(message => bad('production mode', message));
   /* Sequence → scene → shot (structure-contract.js) — the same rules storyboard_apply refuses
      to write past. A board with no window.STRUCTURE only warns here: old boards still build. */
-  require('./structure-contract.js').check(win).forEach(f => (f.level === 'bad' ? bad : warn)(f.where, f.what));
+  require('./structure-contract.js').check(win, { draft }).forEach(f => {
+    if (f.level === 'bad') bad(f.where, f.what);
+    else if (f.level === 'later') machine(f.where, f.what);
+    else warn(f.where, f.what);
+  });
   const isShort = fmt.format !== LONG_FORMAT;
   const motionPolicy = productionMode.policy((opts && opts.policy) || normalizeMotionPolicy(null, formatVideoMax, 'default', pacing, isShort), win.PRODUCTION, scenes);
   const main = scenes.filter((s) => s.type !== 'broll' && s.type !== 'outro');
@@ -1731,6 +1735,35 @@ function selftest() {
               Object.assign({}, goodShot, { scene: 2, shot: { feel: 'a', size: 'ms', angle: 'eye', info: 'one', infoType: 'other' } }),
               Object.assign({}, goodShot, { scene: 2, shot: { feel: 'b', size: 'ms', angle: 'eye', info: 'two', infoType: 'other' } })]),
          /jump cut/));
+  const axis = (line, azimuth, extra) => Object.assign({}, goodShot, { scene: 2,
+    shot: Object.assign({}, goodShot.shot, { size: 'ms', info: 'axis ' + azimuth, space: { frame: 'camera', layout: 'A와 B', facing: '서로 마주 본다', line }, coverage: { azimuth } }, extra || {}) });
+  const axisStructure = { version: 'structure-v1', scenes: [
+    { no: 1, place: '방', time: '낮', event: 'A가 B를 본다', charge: { open: '-', close: '+' }, turn: '의심 → 안심', out: '가' },
+    { no: 2, place: '방', time: '낮', event: 'A와 B가 마주 선다', charge: { open: '-', close: '+' }, turn: '의심 → 안심', out: '가' }
+  ], sequences: [{ id: 'q1', title: '대화', purpose: '둘 사이의 긴장을 푼다', scenes: [1, 2] }] };
+  ok('an unexplained line flip is a violation',
+     has(bads(run([cover, axis('A left, B right', 0), axis('B left, A right', 40), ctaShot], { STRUCTURE: axisStructure })), /space\.line changes/));
+  ok('a declared camera crossing with matching sides passes',
+     !has(bads(run([cover, axis('A left, B right', 0), axis('B left, A right', 40, { lineCrossing: { method: 'camera_move', from: 'A left, B right', to: 'B left, A right', reason: '카메라가 화면 안에서 두 사람 사이를 지난다' } }), ctaShot], { STRUCTURE: axisStructure })), /lineCrossing|space\.line changes/));
+  ok('a neutral crossing needs its marked bridge shot',
+     has(bads(run([cover, axis('A left, B right', 0), Object.assign({}, goodShot, { scene: 2, shot: Object.assign({}, goodShot.shot, { size: 'ms', info: 'neutral', space: { frame: 'camera', layout: 'A와 B 정면', facing: '두 사람이 카메라를 정면으로 본다' }, lineNeutral: true, coverage: { action: 'A가 고개를 든다' } }) }), axis('B left, A right', 40, { lineCrossing: { method: 'neutral', from: 'A left, B right', to: 'B left, A right', reason: '정면 샷을 지나 새쪽으로 옮긴다', bridgeShot: 99 } }), ctaShot], { STRUCTURE: axisStructure })), /neutral crossing/));
+  const intentional = (from, to, azimuth) => axis(to, azimuth, { lineCrossing: { method: 'intentional', from, to, reason: '방향 감각이 흔들리게 만든다' } });
+  ok('three intentional crossings in one episode are a violation',
+     has(bads(run([cover, axis('A left, B right', 0), intentional('A left, B right', 'B left, A right', 40), intentional('B left, A right', 'A left, B right', 0), intentional('A left, B right', 'B left, A right', 40), ctaShot], { STRUCTURE: axisStructure })), /3 intentional 180° crossings/));
+  ok('a 30 degree bearing, an action cut and a two-step size change pass',
+     bads(run([cover, axis('A left, B right', 0), axis('A left, B right', 35), ctaShot], { STRUCTURE: axisStructure })).filter(f => /adjacent picture cut|camera azimuth/.test(f.what)).length === 0 &&
+     bads(run([cover, axis('A left, B right', 0), axis('A left, B right', 0, { coverage: { action: 'A가 잔을 든다' } }), ctaShot], { STRUCTURE: axisStructure })).filter(f => /adjacent picture cut|camera azimuth/.test(f.what)).length === 0 &&
+     bads(run([cover, Object.assign({}, axis('A left, B right', 0), { shot: Object.assign({}, axis('A left, B right', 0).shot, { size: 'ls', coverage: undefined }) }), Object.assign({}, axis('A left, B right', 0), { shot: Object.assign({}, axis('A left, B right', 0).shot, { size: 'mfs', coverage: undefined }) }), ctaShot], { STRUCTURE: axisStructure })).filter(f => /adjacent picture cut|camera azimuth/.test(f.what)).length === 0);
+  ok('a one-step change without an escape route and a 25 degree move are violations',
+     has(bads(run([cover, Object.assign({}, axis('A left, B right', 0), { shot: Object.assign({}, axis('A left, B right', 0).shot, { coverage: undefined }) }), Object.assign({}, axis('A left, B right', 0), { shot: Object.assign({}, axis('A left, B right', 0).shot, { size: 'mcu', coverage: undefined }) }), ctaShot], { STRUCTURE: axisStructure })), /adjacent picture cut/) &&
+     has(bads(run([cover, axis('A left, B right', 0), axis('A left, B right', 25), ctaShot], { STRUCTURE: axisStructure })), /camera azimuth changes 25/));
+  ok('a crossing on a shot with no line, or on the first line, is a finding and not an escape',
+     has(bads(run([cover, Object.assign({}, axis('A left, B right', 0), { shot: Object.assign({}, axis('A left, B right', 0).shot, { space: { frame: 'camera', layout: 'A와 B', facing: '서로 마주 본다' }, coverage: undefined }) }),
+                   Object.assign({}, axis('A left, B right', 0), { shot: Object.assign({}, axis('A left, B right', 0).shot, { space: { frame: 'camera', layout: 'A와 B', facing: '서로 마주 본다' }, coverage: undefined, lineCrossing: { foo: 1 } }) }), ctaShot], { STRUCTURE: axisStructure })), /needs space\.line on the same shot/) &&
+     has(bads(run([cover, axis('A left, B right', 0, { lineCrossing: { method: 'intentional', from: 'x', to: 'A left, B right', reason: 'r' } }), axis('A left, B right', 40), ctaShot], { STRUCTURE: axisStructure })), /first shot with a line/));
+  ok('camera-continuity records wait for the story pass to end',
+     !has(bads(run([cover, axis('A left, B right', 0), axis('B left, A right', 40), ctaShot], { STRUCTURE: axisStructure }, { draft: true })), /space\.line changes|adjacent picture cut/) &&
+     has(run([cover, axis('A left, B right', 0), axis('B left, A right', 40), ctaShot], { STRUCTURE: axisStructure }, { draft: true }), /space\.line changes/));
 
   // ── playback order ──
   const beat = (b, over) => Object.assign({}, goodShot, { beat: b }, over || {});

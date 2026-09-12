@@ -12,11 +12,12 @@
 
 ## Decision order
 
-Read the approved production mode in `window.PRODUCTION` first. `hybrid` follows the order
-below. `full_video` keeps each cut's real `purpose` and `infoType` and uses `generated_video`
+Read the approved production mode in `window.PRODUCTION` first. `video_50`, `video_30` and `hook_only` follow the order
+below while meeting the selected new-cut minimum or opening-hook-only constraint. Existing
+`hybrid` approvals retain their 1–2 clip cap. `full_video` keeps each cut's real `purpose` and `infoType` and uses `generated_video`
 for every new scene: the model's action and the camera move explain the cut, and
 `videoDesign` records the opening state, the action, the final state, continuity and the
-review criteria. Both modes' estimated generation cost and retry cost are shown in HITL
+review criteria. All four choices' estimated generation cost and retry cost are shown in HITL
 first; the cost and approval contract is [production-mode.md](production-mode.md).
 
 Read the narration and write down the one thing the viewer must learn from this cut. Do not

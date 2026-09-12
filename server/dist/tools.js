@@ -3816,6 +3816,7 @@ Returns: the file written or not, counts, and findings (! violation · warning).
                 removeSequences: { type: 'array', items: { type: 'string', description: 'Sequence id' }, description: 'Sequence ids to drop' },
                 globals: { type: 'object', description: 'Other window.* blocks to set — FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, VOICE, MOTION_POLICY' },
                 dryRun: { type: 'boolean', description: 'Validate and report, write nothing' },
+                draft: { type: 'boolean', description: 'The story pass (storyboard §4a): camera-continuity records — shot.lineCrossing, shot.coverage — are deferred (later), not violations; leave it off in §4b' },
             },
             required: ['path'],
         },
