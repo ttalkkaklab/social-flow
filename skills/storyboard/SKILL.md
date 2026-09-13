@@ -173,7 +173,7 @@ Read [production-mode.md](references/production-mode.md). Before visual planning
 100% 이상 (`full_video`), 50% 이상 (`video_50`), 30% 이상 (`video_30`) and 훅만 영상 (`hook_only`)
 with `production-cost.js` first-pass and retry-inclusive estimates, model, resolution, audio,
 clip counts, exchange-rate assumption, exclusions and the explicit episode budget cap.
-Persist the actual HITL answer in `window.PRODUCTION` beside the §1 `imageProvider`/`videoProvider` detection; no paid generation happens here. **Two more questions on every episode with generated cuts** (user directive 2026-09-11, production-mode.md §Two more questions): before the first previz render ask **which 3D renderer** — Blender or three.js — and persist `PRODUCTION.previz`; before the §7 approval ask **which video model** with `video-model-options.js`'s cost table and persist `PRODUCTION.videoModel`, writing the same model on every generated cut. `production-mode.js` refuses the board without both records.
+Persist the actual HITL answer in `window.PRODUCTION` beside the §1 `imageProvider`/`videoProvider` detection; no paid generation happens here. **Two more questions on every episode with generated cuts** (user directive 2026-09-11, production-mode.md §Two more questions): before the first previz render ask **which 3D renderer** — Blender or three.js — and persist `PRODUCTION.previz`; before the §7 approval ask **which video model** with `video-model-options.js`'s cost table and persist `PRODUCTION.videoModel` as the episode default or `model:"mixed"`, and write each cut's selected model and resolution. `production-mode.js` refuses the board without both records.
 At final board approval refresh the exact quote and bind its fingerprint to that approval.
 Only for the cinematic-miniature style, load the bundled [style guide and image pack](assets/styles/tactile-miniature-v1/STYLE.md); choose `visual.styleRole` by the narrated subject/action, not the shot number. The assembler emits real reference-image arguments and a portable style binding. Never use a reference's historical props as a substitute for the new topic. Read [full-video.md](../produce/references/full-video.md), write the spatial style
 and each `videoDesign`, including the subject-motion contract and timed action states in full-video.md, fill the four `visual.camera` slots under its §Camera dynamics (a move the viewer can see, static on at most one shot in three, wide on at most half, `cameraFixed` only under static), then use [spatial-prompts.js](references/spatial-prompts.js), which assembles both prompts and runs the Seedance prompt gate. This branch
@@ -704,9 +704,9 @@ Core rules:
   second, and its face never transfers"). Unscoped references leak into each other, and the check
   strip warns on a multi-reference clip with no scope anywhere (scenes-schema §character reference).
 - **Select Seedance per cut** using produce `references/video-model-selection.md` §Seedance
-  per-cut selection. Every motion background is a previz cut on the 2.x grade in
-  `PRODUCTION.videoModel` (§1.7); 1.5 Pro serves only a b-roll or speech slot that landed on
-  Seedance. Multiple character/product references: 2.0; fixed voice or over nine reference
+  per-cut selection. Each motion background chooses its model and resolution.
+  `PRODUCTION.videoModel` records the default or `model:"mixed"` (§1.7). Seedance 1.5 Pro
+  uses a `frame_and_prompt` previz; 2.x can receive the previz as a reference video. Multiple character/product references: 2.0; fixed voice or over nine reference
   images: 2.5. Record the purpose, reason, face eligibility and reference paths beside the
   prompt (scenes-schema §Motion background). Rebuild the cost preview after any change;
   its generation settings are the ones produce sends. Keep the episode video cap without filling unused slots.

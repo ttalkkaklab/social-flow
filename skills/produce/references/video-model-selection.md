@@ -157,8 +157,8 @@ price combinations block a budget verdict instead of using the 1.5 price. Foreca
 list prices, including 2.5 at 1080p, so expiring discounts cannot understate the budget.
 
 Keep upgrades inside the episode budget and existing approval scope. Unattended runs make
-a hook only on the growth plan's standing `video_model` (a 2.x grade; with none, no generated
-hook at all), and may pick a higher 2.x grade for the requirements above only when the full
+a hook only on the growth plan's standing `video_model` (a supported model; with none, no generated
+hook at all), and may pick a compatible model for the requirements above only when the full
 revised estimate fits the authorized cap. Do not make a paid A/B comparison by default.
 If a compatible 1.5 clip on a b-roll or speech slot repeatedly misses an essential action, a 2.0 retry is an escalation:
 record the failure and reason, retain the spent ledger, and recalculate the remaining budget
@@ -209,7 +209,7 @@ throw away. This is the slot where you win with no downside.
 |---|---|---|
 | b-roll slot | Yes (absolute rule 9) | Veo — or Seedance with `generateAudio: true` |
 | Motion background `visual.video` | Discarded | **Seedance silent** |
-| Cover | Generated audio discarded | A still with a camera move by default; a silent previz-guided 2.x motion background only where the cut plan or `hook_video` selects video; code-rendered title |
+| Cover | Generated audio discarded | A still with a camera move by default; a silent previz-guided motion background only where the cut plan or `hook_video` selects video; code-rendered title |
 
 ---
 
@@ -356,10 +356,9 @@ prices, §Price comparison above is the source of truth.
 
 **1. Live-action faces — 2.x won't take them as input.**
 The Dreamina Seedance 2.5/2.0 family rejects reference images and videos containing real
-human faces. Since every generated motion background is a 2.x previz cut (§Seedance per-cut
-selection), a photoreal still with a real face cannot feed one on the API lane at all: keep the
-face out of the still (turned away, small, illustrative) or use the host lane. Only a slot
-without a previz can still go to **1.5 pro or 1.0 pro** with a face. The Veo side
+human faces. A photoreal source with a real face can use **1.5 Pro** with a
+`frame_and_prompt` previz, or a compatible host tool (§Seedance per-cut selection).
+Do not route that source to a 2.x reference-video cut. The Veo side
 accepts adult faces (`veo_img2video`, verified) so it doesn't hit this trap — but faces that
 look underage are blocked on Veo's image lane, and cuts with no visible face (back view,
 silhouette) are accepted by every model.

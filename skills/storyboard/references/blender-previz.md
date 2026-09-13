@@ -11,8 +11,8 @@ clips (`visual.clip`): those are Veo sound-lane slots with no clip input, and th
 route is a motion-background (`visual.video`) route. **Which renderer and which video model are the
 user's choices**, asked with AskUserQuestion before the first previz render and before any
 video call and recorded in `PRODUCTION.previz` and `PRODUCTION.videoModel`
-(production-mode.md §Two more questions); every shot's `previz.renderer` and `video.model`
-must match them.
+(production-mode.md §Two more questions); every shot's `previz.renderer` must match the renderer choice.
+Each cut may select its own `video.model` and resolution under the recorded plan.
 
 Seven MCP tools drive the Blender installed on this machine the way the Higgsfield Bridge
 drives it for ChatGPT, without a relay, an add-on or a GUI: `blender_scene_read`,

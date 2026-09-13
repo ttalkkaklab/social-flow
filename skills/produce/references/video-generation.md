@@ -28,8 +28,8 @@ records the planned route** — `visual.engine`, or the type default (b-roll →
 background → seedance, speech clip → veo_reference) — and writes the stored prompt in that
 route's grammar. This section is how you **validate** the route against those facts, not
 re-decide it. There is no live deviation for a motion background any more: every generated
-motion background is a previz cut and the previz rides only Seedance 2.x (blender-previz.md
-§6), so a missing `ARK_API_KEY` means the cut waits for the key or moves to the host lane
+motion background is a previz cut: Seedance 1.x uses `frame_and_prompt` and 2.x can
+receive a reference video (blender-previz.md §6), so a missing `ARK_API_KEY` means the cut waits for the key or moves to the host lane
 (`videoProvider:"host"`) — never a Veo substitute, which takes no reference clip. A held cut
 goes in `build-report.txt` with the reason.
 A route that fails validation (a real face on a 2.x model, a 13-second Veo scene) is a
@@ -96,8 +96,8 @@ Two lines that hold whichever engine you pick belong here too.
 
 Without `ARK_API_KEY` the Seedance calls fail. A b-roll or speech slot can then be made on
 Veo, keeping ①'s face clauses intact — the two engines don't block each other — but a motion
-background cannot: it is a previz cut and only Seedance 2.x takes the reference clip, so it
-waits for the key or moves to the host lane.
+background stays on its selected Seedance 1.x or 2.x route and waits for the key or moves
+to the host lane under an explicit provider choice.
 
 ## Video prompt grammar — it differs by engine
 
