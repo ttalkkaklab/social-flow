@@ -93,7 +93,7 @@ const SIZE_WORDS = {
   two: "two-shot",
   three: "three-shot",
   ots: "over-the-shoulder",
-  pov: "point of view, hands enter the lower frame, no face",
+  pov: "point of view from the character eyes, no view of their face",
   back: "from behind, the back fills the frame",
   cutaway: "cutaway",
   reaction: "reaction close-up"
@@ -289,8 +289,12 @@ function spaceSentence(opts) {
   const line = (opts.line || "").trim();
   const light = (opts.light || "").trim();
   const bits = [];
+  const eye = require("./structure-contract.js").eyelineText(opts.eyeline);
   if (layout) bits.push(layout.replace(/^from the camera[,:]\s*/i, ""));
   if (facing) bits.push(facing);
+  if (eye && opts.eyeline.mode !== "none") bits.push(eye);
+  const composition = require("./structure-contract.js").compositionText(opts.composition);
+  if (composition) bits.push(composition);
   if (line) bits.push("keep " + line + " true in this frame");
   if (light) bits.push(light);
   return bits.length ? "From the camera: " + bits.join(". ") + "." : "";
@@ -347,6 +351,7 @@ function loadShot(file, index) {
     angle: sh.angle,
     layout: sp.layout,
     facing: sp.facing,
+    eyeline: sh.eyeline, composition: sh.composition,
     line: sp.line,
     light: sp.light,
     camera: v.camera || null,
@@ -647,7 +652,7 @@ function main(argv) {
       scene: opts.scene, motion: args.motion, locks: args.locks,
       audio: args.audio !== undefined ? args.audio : opts.audio,
       withSpace: !!args["with-space"],
-      layout: opts.layout, facing: opts.facing, line: opts.line, light: opts.light
+      layout: opts.layout, facing: opts.facing, line: opts.line, light: opts.light, eyeline: opts.eyeline, composition: opts.composition
     });
     if (r.missing.length)
       console.error("warning: visual.camera is missing " + r.missing.join(", ") +

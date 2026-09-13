@@ -1612,6 +1612,103 @@ the PNG already holds the floor plan.
 | `line` | two people, or a person and what they look at, share the `scene` number | the 180° sentence, kept true on every shot of that scene |
 | `light` | optional | key direction in the same camera frame (`key from camera-left`) |
 
+### Composition (`shot.composition`, L10)
+
+One structured property owns headroom, look room and lead room. MCP exposes the same
+schema on whole-board replacement, upsert and insert. The board derives a frame/grid icon;
+source prompts and the filming script use the same record. No extra MCP tool is needed.
+
+```js
+composition: {
+  mode: "standard", subject: "A", subjectKind: "face",
+  position: "left", eyeHeight: 0.33, headroom: "natural",
+  lookRoom: "right", movement: "stationary", leadRoom: "none"
+}
+```
+
+| Field | Values / requirement |
+|---|---|
+| `mode` | required: `standard`, `intentional`, `none` |
+| `subject`, `subjectKind` | required except none; stable ID and `face`, `body`, `object` |
+| `position` | required except none; `left`, `center`, `right` of the final frame |
+| `eyeHeight` | required for face; normalized 0..1 from top, upper third is advisory |
+| `headroom` | required for face; `generous`, `natural`, `tight`, `cropped`, `na` (no visible head only) |
+| `lookRoom` | required for face or lateral eyeline; `left`, `right`, `balanced`, `none` |
+| `movement` | required except none; subject travel `left`, `right`, `toward`, `away`, `stationary`; never camera motion |
+| `leadRoom` | required except none; `left`, `right`, `balanced`, `none` |
+| `reason` | required for intentional and none; none carries only mode and reason |
+
+**New authoring:** record composition for visible faces, oriented subjects and directional
+action. Mark unrelated cuts `none` with a reason or omit the property. Body and object cuts
+do not require eye height. A POV normally has no visible face. An ECU of eyes can use
+`headroom:"cropped"`; an object insert uses `subjectKind:"object"`.
+
+**Compatibility:** a scene with no composition records gets warnings on recognizable face,
+facing or gaze cuts. Once a scene uses composition, missing relevant records block full
+checks (draft defers them). Presence detection uses shot size, space.facing and eyeline;
+it cannot discover undeclared actors or action from pixels. Explicit invalid fields always fail.
+
+Standard lateral gaze must reserve lookRoom on the gaze side; lateral travel must reserve
+leadRoom on the travel side. These directions can differ. Intentional departures require a
+reason and skip those conventional direction checks. Eye height away from the upper third
+only warns; cropped crowns do not automatically fail. Principal subject IDs must agree with
+eyeline when it describes a visible subject. Use the same placement in space.layout; simple
+explicit subject-position conflicts warn, and the reviewer handles other prose descriptions.
+
+Safe zones inherit FORMAT and formats.js; do not copy a broadcast 5% margin into every shot.
+Review eyes, chin, captions and platform UI on the final crop, including motion endpoints.
+The icon reports the plan, never actual image or video approval. For image-to-video, inherit
+composition from the approved source image; do not append a competing layout description.
+
+### Eyeline (`shot.eyeline`, L07)
+
+One structured property owns the gaze plan. The approval icon, MCP schema, source-image
+prompt and shooting script read it; do not store a second icon or prompt-only gaze record.
+`space.layout` keeps screen placement and `space.facing` keeps body orientation. An actor
+can turn their eyes without turning their body. All directions use the camera frame.
+
+```js
+eyeline: {
+  mode: "exchange", subject: "A", target: "B",
+  horizontal: "right", vertical: "up", targetDistance: "near",
+  matchShot: 4, marker: "B's eye height, just beside the lens"
+}
+```
+
+**Required or optional:** new gaze sequences declare this property on every relevant cut.
+It is optional on unrelated landscapes, charts and objects. The presence of an `eyeline`
+record enables scene-level enforcement: a cut with `space.line`, `pov`, `ots` or `reaction`
+then requires it, except a neutral bridge or an object/data/editorial explanation. A
+movement-only axis can use `{ mode: "none", reason: "The axis follows the cart, no gaze" }`.
+An old scene with no eyeline records gets warnings, not an automatic migration. Explicit
+malformed records always fail. The story draft defers missing records and relational errors
+until camera planning; full checks block them. A warning is not evidence of visual approval.
+
+| Mode | Required in addition to mode | Meaning |
+|---|---|---|
+| `look` | subject, target, horizontal, vertical, targetDistance | actor looks at something |
+| `exchange` | look fields + matchShot | reciprocal actors; opposite left/right, up/down or level/level, matching target distance |
+| `shared` | look fields + matchShot | same target and horizontal direction; different heights can be valid |
+| `pov` | look fields + matchShot | links an earlier look by the POV owner at the same target |
+| `reaction` | look fields + matchShot | links an earlier POV by that owner at that target |
+| `lens` | subject | looks into the lens; optional horizontal must be center, optional target must be camera |
+| `withhold` / `intentional` | look fields + reason | delays the answer / deliberately breaks the gaze pattern |
+| `none` | reason only | no gaze relationship applies |
+
+`horizontal`: left / center / right. `vertical`: up / level / down.
+`targetDistance`: near / medium / far describes actor-to-target distance, never camera
+size. `subject` and `target` are stable actor/object identifiers, not display-side labels.
+`matchShot` is another 1-based playback shot in the same scene. Existing and upserted
+records use positions before insert/remove; inserted records use final positions. MCP
+remaps surviving references and refuses a removed target until its relation is updated in
+the same patch. Whole-board replacement uses its own final positions.
+
+`marker` is optional: for filmed shots name a visible mark at the absent partner's eye
+height. The script prints that instruction, or a generic eye-height marker instruction.
+A POV without a later linked reaction warns: retain it when the missing face is intentional.
+A POV does not require hands to be visible. Review gaze against the actual paired source
+images and boundary playback; metadata cannot measure pupils or prove target distance.
+
 ### Axis crossings and 30° coverage
 
 `shot.lineCrossing` belongs on the first shot from a new side of an existing axis. It is

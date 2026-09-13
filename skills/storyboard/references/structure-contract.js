@@ -116,6 +116,187 @@
   }
 
   /** Structural findings — [{ level: 'bad' | 'warn', where, what }]. */
+  // L07: one definition feeds MCP discovery, runtime validation and the board icons.
+  const EYELINE_SCHEMA = {
+    type: 'object', additionalProperties: false, required: ['mode'],
+    description: 'Screen-relative gaze, separate from body facing. Optional on unrelated cuts; required on gaze cuts in a scene that uses eyeline. Legacy omissions warn.',
+    allOf: [
+      { if: { properties: { mode: { enum: ['none', 'intentional', 'withhold'] } } }, then: { required: ['reason'] } },
+      { if: { properties: { mode: { enum: ['exchange', 'shared', 'look', 'pov', 'reaction', 'intentional', 'withhold'] } } }, then: { required: ['subject', 'target', 'horizontal', 'vertical', 'targetDistance'] } },
+      { if: { properties: { mode: { enum: ['exchange', 'shared', 'pov', 'reaction'] } } }, then: { required: ['matchShot'] } },
+      { if: { properties: { mode: { const: 'lens' } } }, then: { required: ['subject'] } }
+    ],
+    properties: {
+      mode: { type: 'string', description: 'Gaze relationship: exchange, shared target, look, POV, reaction, lens, withheld answer, intentional break or not applicable', enum: ['exchange', 'shared', 'look', 'pov', 'reaction', 'lens', 'withhold', 'intentional', 'none'] },
+      subject: { type: 'string', minLength: 1, description: 'Stable actor identifier; POV owner on a pov cut' },
+      target: { type: 'string', minLength: 1, description: 'Stable actor or object identifier being watched' },
+      horizontal: { type: 'string', description: 'Eye direction in the camera frame, not body orientation', enum: ['left', 'center', 'right'] },
+      vertical: { type: 'string', description: 'Eye direction relative to the target eye height', enum: ['up', 'level', 'down'] },
+      targetDistance: { type: 'string', enum: ['near', 'medium', 'far'], description: 'Actor-to-target distance, not camera shot size' },
+      matchShot: { type: 'integer', minimum: 1, description: 'Linked playback shot, 1-based, in the same scene; existing references remap on insert/remove' },
+      reason: { type: 'string', minLength: 1, description: 'Required for none, intentional and withhold; explain the choice' },
+      marker: { type: 'string', minLength: 1, description: 'Filmed cut: concrete target at the absent partner eye height' }
+    }
+  };
+  function validateEyeline(e) {
+    const errors = [];
+    if (!e || typeof e !== 'object' || Array.isArray(e)) return ['eyeline must be an object'];
+    Object.keys(e).forEach(k => {
+      const rule = Object.prototype.hasOwnProperty.call(EYELINE_SCHEMA.properties, k) ? EYELINE_SCHEMA.properties[k] : null, v = e[k];
+      if (!rule) { errors.push('unknown eyeline field: ' + k); return; }
+      if (rule.type === 'string' && (typeof v !== 'string' || !v.trim())) errors.push(k + ' must be nonempty text');
+      if (rule.enum && rule.enum.indexOf(v) < 0) errors.push(k + ' is outside the eyeline vocabulary');
+      if (rule.type === 'integer' && !posInt(v)) errors.push(k + ' must be a positive integer');
+    });
+    const required = new Set(EYELINE_SCHEMA.required);
+    EYELINE_SCHEMA.allOf.forEach(branch => {
+      const condition = branch.if.properties.mode;
+      if (condition.enum ? condition.enum.includes(e.mode) : condition.const === e.mode)
+        branch.then.required.forEach(k => required.add(k));
+    });
+    required.forEach(k => {
+      if (e[k] === undefined) errors.push(k + ' is required for ' + (e.mode || 'eyeline'));
+    });
+    if (e.mode === 'none' && Object.keys(e).some(k => !['mode', 'reason'].includes(k))) errors.push('none carries only mode and reason');
+    if (e.mode === 'lens' && ((e.horizontal && e.horizontal !== 'center') || (e.target && e.target !== 'camera'))) errors.push('lens looks at camera, horizontally centered');
+    return errors;
+  }
+  function eyelineNeeded(s) {
+    const sh = s && s.shot || {};
+    return !!(PLACED(s) && !sh.lineNeutral && !(sh.render && ['data_graph', 'editorial_html', 'object_html'].includes(sh.render.mode)) &&
+      (sh.space && text(sh.space.line) || ['pov', 'ots', 'reaction'].includes(sh.size)));
+  }
+  function checkEyelines(shots, draft) {
+    const out = [], add = (i, message, level) => out.push({ level: level || (draft ? 'later' : 'bad'), where: 'shot ' + (i + 1), what: 'shot.eyeline: ' + message });
+    shots.forEach((s, i) => {
+      if (!s) return;
+      const e = s.shot && s.shot.eyeline;
+      const enrolled = shots.some(x => x && x.scene === s.scene && x.shot && x.shot.eyeline);
+      if (e === undefined) {
+        if (eyelineNeeded(s)) add(i, 'record the gaze relation, or none with a reason for a movement-only axis', enrolled ? undefined : 'warn');
+        return;
+      }
+      const errors = validateEyeline(e);
+      errors.forEach(msg => add(i, msg, 'bad'));
+      if (errors.length || e.mode === 'none') return;
+      if (e.matchShot !== undefined) {
+        const other = shots[e.matchShot - 1], b = other && other.shot && other.shot.eyeline;
+        if (!other || e.matchShot === i + 1 || !s.scene || other.scene !== s.scene || !PLACED(other)) {
+          add(i, 'matchShot must name another playback shot in the same scene'); return;
+        }
+        if (['exchange', 'shared', 'pov', 'reaction'].includes(e.mode) && (!b || b.mode === 'none')) {
+          add(i, 'linked shot must declare its eyeline'); return;
+        }
+        if (!b || validateEyeline(b).length) return;
+        if (e.mode === 'exchange') {
+          const opposite = { left: 'right', right: 'left' }, vertical = { up: 'down', down: 'up', level: 'level' };
+          if (b.mode !== 'exchange' || b.subject !== e.target || b.target !== e.subject) add(i, 'exchange must link reciprocal actors');
+          if (b.horizontal !== opposite[e.horizontal] || b.vertical !== vertical[e.vertical]) add(i, 'exchange directions must oppose horizontally and correspond vertically');
+          if (b.targetDistance !== e.targetDistance) add(i, 'exchange target distances disagree');
+        }
+        if (e.mode === 'shared' && (b.mode !== 'shared' || b.target !== e.target || b.horizontal !== e.horizontal)) add(i, 'shared gaze must keep its target and horizontal direction');
+        if (e.mode === 'pov' && (!['look', 'exchange', 'shared', 'withhold', 'intentional'].includes(b.mode) || e.matchShot >= i + 1 || b.subject !== e.subject || b.target !== e.target)) add(i, 'POV links an earlier look by the same subject at the same target');
+        if (e.mode === 'reaction' && (e.matchShot >= i + 1 || b.mode !== 'pov' || b.subject !== e.subject || b.target !== e.target)) add(i, 'reaction links an earlier POV by the same subject at the same target');
+      }
+      if (e.mode === 'pov' && !shots.slice(i + 1).some(x => x && x.scene === s.scene && x.shot && x.shot.eyeline && x.shot.eyeline.mode === 'reaction' && x.shot.eyeline.matchShot === i + 1))
+        add(i, 'POV has no later reaction; review whether the missing face serves the scene', 'warn');
+    });
+    return out;
+  }
+  function eyelineText(e) {
+    if (!e || validateEyeline(e).length) return '';
+    if (e.mode === 'none') return 'No gaze relation: ' + e.reason;
+    if (e.mode === 'lens') return e.subject + ' looks directly into the camera lens';
+    const view = e.mode === 'pov' ? 'POV of ' + e.subject + ', looking at ' + e.target : e.subject + ' looks at ' + e.target;
+    return view + ', screen-' + e.horizontal + ', ' + e.vertical + ', target distance ' + e.targetDistance;
+  }
+
+  // L10: structured framing intent; actual pixels still need visual review.
+  const COMPOSITION_SCHEMA = {
+    type: 'object', additionalProperties: false, required: ['mode'],
+    description: 'L10 composition plan. Related cuts in a scene using this property require a plan; legacy omissions warn. Coordinates are relative to the final frame. Safe zones inherit FORMAT.',
+    properties: {
+      mode: { type: 'string', enum: ['standard', 'intentional', 'none'], description: 'Conventional framing, deliberate departure, or not applicable' },
+      subject: { type: 'string', minLength: 1, description: 'Stable identifier of the principal framed subject; use the eyeline subject when applicable' },
+      subjectKind: { type: 'string', enum: ['face', 'body', 'object'], description: 'Visible face, body without a readable face, or oriented object' },
+      position: { type: 'string', enum: ['left', 'center', 'right'], description: 'Principal subject position in the final camera frame' },
+      eyeHeight: { type: 'number', minimum: 0, maximum: 1, description: 'Visible eyes measured from top, normalized 0..1; one third is advice, not a mandatory value' },
+      headroom: { type: 'string', enum: ['generous', 'natural', 'tight', 'cropped', 'na'], description: 'Planned space above the crown; cropped is valid for close shots; na for no visible head' },
+      lookRoom: { type: 'string', enum: ['left', 'right', 'balanced', 'none'], description: 'Side reserved for gaze; balanced for frontal gaze, none when inapplicable' },
+      movement: { type: 'string', enum: ['left', 'right', 'toward', 'away', 'stationary'], description: 'Subject movement on screen, independent of gaze and camera movement' },
+      leadRoom: { type: 'string', enum: ['left', 'right', 'balanced', 'none'], description: 'Side reserved for subject travel; none for stationary subjects' },
+      reason: { type: 'string', minLength: 1, description: 'Required for intentional departures and not-applicable cuts' }
+    },
+    allOf: [
+      { if: { properties: { mode: { enum: ['standard', 'intentional'] } } }, then: { required: ['subject', 'subjectKind', 'position', 'movement', 'leadRoom'] } },
+      { if: { properties: { mode: { enum: ['intentional', 'none'] } } }, then: { required: ['reason'] } },
+      { if: { required: ['subjectKind'], properties: { subjectKind: { const: 'face' } } }, then: { required: ['eyeHeight', 'headroom', 'lookRoom'] } }
+    ]
+  };
+  function validateComposition(c) {
+    if (!c || typeof c !== 'object' || Array.isArray(c)) return ['composition must be an object'];
+    const errors = [], required = new Set(COMPOSITION_SCHEMA.required);
+    Object.keys(c).forEach(k => {
+      const r = Object.prototype.hasOwnProperty.call(COMPOSITION_SCHEMA.properties, k) && COMPOSITION_SCHEMA.properties[k], v = c[k];
+      if (!r) { errors.push('unknown composition field: ' + k); return; }
+      if (r.type === 'string' && (typeof v !== 'string' || !v.trim())) errors.push(k + ' must be nonempty text');
+      if (r.enum && !r.enum.includes(v)) errors.push(k + ' is outside the composition vocabulary');
+      if (r.type === 'number' && (typeof v !== 'number' || !Number.isFinite(v) || v < r.minimum || v > r.maximum)) errors.push(k + ' must be a finite number in 0..1');
+    });
+    COMPOSITION_SCHEMA.allOf.forEach(b => {
+      if (Object.entries(b.if.properties).every(([k, r]) => r.enum ? r.enum.includes(c[k]) : c[k] === r.const)) b.then.required.forEach(k => required.add(k));
+    });
+    required.forEach(k => { if (c[k] === undefined) errors.push(k + ' is required'); });
+    if (c.mode === 'none' && Object.keys(c).some(k => !['mode', 'reason'].includes(k))) errors.push('none carries only mode and reason');
+    if (c.subjectKind === 'face' && c.headroom === 'na') errors.push('visible face requires a headroom plan');
+    return errors;
+  }
+  function compositionNeeded(s) {
+    const sh = s && s.shot || {}, e = sh.eyeline;
+    if (!s || ['data_graph', 'editorial_html'].includes(sh.render && sh.render.mode)) return false;
+    return !!(e && !['none', 'pov'].includes(e.mode) || sh.space && text(sh.space.facing) || ['mcu', 'cu', 'choker', 'ots', 'reaction', 'two', 'three'].includes(sh.size));
+  }
+  function checkCompositions(shots, draft) {
+    const out = [];
+    shots.forEach((s, i) => {
+      if (!s) return;
+      const sh = s.shot || {}, c = sh.composition, e = sh.eyeline;
+      const add = (msg, level) => out.push({ level: level || (draft ? 'later' : 'bad'), where: 'shot ' + (i + 1), what: 'shot.composition: ' + msg });
+      if (c === undefined) {
+        if (compositionNeeded(s)) add('record framing intent or none with a reason', s.scene && shots.some(x => x && x.scene === s.scene && x.shot && x.shot.composition) ? undefined : 'warn');
+        return;
+      }
+      const errors = validateComposition(c);
+      errors.forEach(msg => add(msg, 'bad'));
+      if (errors.length || c.mode === 'none') return;
+      if (e && !['none', 'pov'].includes(e.mode) && e.subject && c.subject !== e.subject) add('principal subject differs from eyeline subject; align the identifiers');
+      if (c.mode === 'intentional') return;
+      if (e && !['none', 'pov'].includes(e.mode) && ['left', 'right'].includes(e.horizontal)) {
+        if (c.lookRoom !== e.horizontal) add('reserve lookRoom on the gaze side, or declare intentional with a reason');
+        if (c.position === e.horizontal) add('subject occupies the gaze-side edge; review actual look room', 'warn');
+      }
+      if (['left', 'right'].includes(c.movement) && c.leadRoom !== c.movement) add('reserve leadRoom in the travel direction, or declare intentional with a reason');
+      if (c.movement === 'stationary' && c.leadRoom !== 'none') add('stationary subject has leadRoom; review travel intent', 'warn');
+      if (c.eyeHeight !== undefined && Math.abs(c.eyeHeight - 1 / 3) > 0.15) add('eye height departs from the upper-third convention; review the image', 'warn');
+      // layout is prose: only explicit principal-subject phrases can be compared reliably.
+      const layout = sh.space && sh.space.layout;
+      if (typeof layout === 'string') {
+        const escaped = c.subject.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const match = layout.match(new RegExp('(?:^|[,;]\\s*)' + escaped + '\\s+(?:is\\s+)?on the (left|right)(?: third| side)?', 'i'));
+        if (match && match[1].toLowerCase() !== c.position) add('space.layout and composition.position disagree', 'warn');
+      }
+    });
+    return out;
+  }
+  function compositionText(c) {
+    if (!c || validateComposition(c).length || c.mode === 'none') return '';
+    return 'Frame ' + c.subject + ' at screen-' + c.position +
+      (c.eyeHeight !== undefined ? ', eyes ' + Math.round(c.eyeHeight * 100) + '% from top' : '') +
+      (c.headroom ? ', headroom ' + c.headroom : '') + (c.lookRoom ? ', look room ' + c.lookRoom : '') +
+      ', subject travel ' + c.movement + ', lead room ' + c.leadRoom +
+      (c.reason ? '; framing intent: ' + c.reason : '') + '. Keep key facial features clear of the format subtitle and platform UI safe zones';
+  }
+
   function check(win, opts) {
     const out = [];
     const bad = (where, what) => out.push({ level: 'bad', where, what });
@@ -124,6 +305,8 @@
     const cameraRule = opts && opts.draft ? later : bad;
     const shots = Array.isArray(win.SCENES) ? win.SCENES : [];
     const placed = shots.map((s, i) => ({ s, no: i + 1 })).filter(x => PLACED(x.s));
+    out.push(...checkEyelines(shots, opts && opts.draft));
+    out.push(...checkCompositions(shots, opts && opts.draft));
     const st = win.STRUCTURE;
 
     if (st === undefined) {
@@ -804,7 +987,7 @@
              sequences, unplacedShots: orphans, splicedShots: spliced };
   }
 
-  const api = { VERSION, VOCAB: { SIZES, ANGLES, TYPES, BEATS, INFO_TYPES, SHARE_TYPES, HOOK_TYPES, HOOK_FORMS, ARCS,
+  const api = { VERSION, COMPOSITION_SCHEMA, validateComposition, compositionNeeded, checkCompositions, compositionText, EYELINE_SCHEMA, validateEyeline, checkEyelines, eyelineNeeded, eyelineText, VOCAB: { SIZES, ANGLES, TYPES, BEATS, INFO_TYPES, SHARE_TYPES, HOOK_TYPES, HOOK_FORMS, ARCS,
                                   RENDER_MODES, CHARGES_OPEN, CHARGES_CLOSE, TRANSITION_RE },
                 check, sync, outline, slugOf, ownerOf };
   if (typeof module === 'object' && module.exports) module.exports = api;

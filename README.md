@@ -40,6 +40,11 @@ Actual playback and frame reviews are tied to source/clip hashes, and the builde
 selected files and refuses loops or freeze padding. These checks enforce review, not a
 guarantee that a generator matches the reference on its first attempt.
 
+Gaze planning uses one `shot.eyeline` record for the board eye/direction icon, MCP input,
+source-image prompt and filming script. New gaze sequences declare it on related cuts;
+unrelated cuts can omit it. Scenes using the property enforce required records and linked
+shot consistency; older scenes without it warn. See [eyeline contract](skills/storyboard/references/scenes-schema.md#eyeline-shoteyeline-l07).
+
 Assembly compiles each storyboard transition into the production timeline.
 `storyboard_apply.transitions` changes selected incoming effects without replacing shots.
 For scene changes in place or time, prefer `dip` (fade through black); the storyboard
