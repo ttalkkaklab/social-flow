@@ -1543,7 +1543,7 @@ The rules that applied to the old one-string camera line now apply per slot:
 
 - **Vendor vocabulary only** — `dolly in` not `push in`, `arc shot` not `orbit`. `push` appears 0
   times in the canonical Veo text, and a b-roll or speech slot lands on Veo (a motion
-  background is a previz cut on Seedance 2.x and has no Veo route, §motion background).
+  background is a previz cut on Seedance and has no Veo route, §motion background).
 - **`movement` holds one move.** Two is the ceiling on 1.5 Pro (a b-roll or speech slot that landed on Seedance), and the
   one-move-per-cut rule is Seedance 2.0's alone — write a second move only with a reason. On a
   deliberate long take (10s+) it is one, no exception.
@@ -1972,9 +1972,9 @@ the tail at the scene boundary.
 
 **Seedance model selection** — store `modelPurpose` (`standard`, `complex-motion`,
 `reference`, `fixed-voice`), `modelReason`, `realFaceInput`, optional exact `model`, and
-`resolution` beside the clip prompt. A motion background is always a previz cut on the 2.x
-grade in `PRODUCTION.videoModel` (§The previz below); 1.5 Pro at 1080p is the default only
-for a b-roll or speech slot that landed on Seedance. Reference panels select 2.0 (2.5 above
+`resolution` beside the clip prompt; `modelReason` is optional. A motion background carries
+a previz and chooses its model per cut. Seedance 1.x uses `frame_and_prompt`; 2.x can use
+`reference_video`. `PRODUCTION.videoModel` records the default or `model:"mixed"`. Reference panels select 2.0 (2.5 above
 nine images); fixed reference voice selects 2.5 on b-roll/speaking slots only. Reference paths are `referenceImagePaths` and
 `referenceAudioPaths`, relative to this storyboard directory or absolute. A source still
 alone stays on image-to-video. The full contract is produce `video-model-selection.md`
@@ -2022,7 +2022,7 @@ an action on 1.5 or a compatible Veo route instead.
     video: {
       prompt: "chest-up, very slow dolly in, ending on subject centred. hair swaying gently. Audio: quiet room tone, no music, no speech.",
                                            // the stored final clip prompt (§clip prompt) — camera span from visual.camera + subject motion + the audio sentence
-      negative: "",                        // unused on a motion background since the previz rides Seedance 2.x only (no Veo fallback); b-roll on veo fast/standard sends it as negativePrompt, lite never
+      negative: "",                        // unused on a motion background since the previz uses the selected Seedance model (no Veo fallback); b-roll on veo fast/standard sends it as negativePrompt, lite never
       clip: ".work/motion/motion-i2.mp4"   // produce output record — motion-i<scene index>.mp4
     },
     camera: { movement: "dolly in", speed: "very slow", framing: "chest-up", end: "subject centred" }
@@ -2051,12 +2051,12 @@ assembler builds it from the four `visual.camera` slots (§camera), which is exa
 the subject motion — what moves in the picture while the camera does its one thing — and the
 `visual.audio` sentence closes it. The reason an approaching move is written as `dolly in` is
 that **the same camera vocabulary serves a Veo call on a b-roll or speech slot** — a motion
-background itself never goes to Veo now, being a previz cut on Seedance 2.x — and the word
+background itself never goes to Veo now, using the selected Seedance model — and the word
 `push` appears 0 times in the canonical Veo text.
 Seedance's own vendor vocabulary is Chinese (`推`), so neither is confirmed in English, and
 `dolly in` satisfies both paths; a Seedance-shaped prompt would survive a Veo call as written
 (no timecodes by rule), though a motion background never makes one now — the previz rides
-Seedance 2.x only — and on a b-roll the stored `negative` list rides as `negativePrompt` on
+Seedance only — and on a b-roll the stored `negative` list rides as `negativePrompt` on
 fast/standard and is folded into the prompt body on lite, which refuses the argument. **The span isn't a format the vendor requires** — in the Seedance top-level formula
 the camera slot itself is `非必须`, and the "move amplitude" once written as a required slot
 failed re-verification against the original (2026-08-15 camera research). The reason for

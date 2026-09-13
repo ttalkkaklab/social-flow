@@ -5,6 +5,7 @@ const { readScenes } = require('../../autoproduce/references/cost-preview.js');
 const { full, MODES, STYLES, packPresets, motionErrors, missingCameraSlots, finalState } = require('./production-mode.js');
 const { resolveStylePack } = require('./style-pack.js');
 const PROMPT = require('./assemble-bg-prompt.js');
+const { previzHandoff } = require('./render-routing.js');
 const LOOKS = {
   miniature: 'An architectural exhibition miniature diorama with articulated objects, matte materials, soft contact shadows and restrained fine detail.',
   architectural: 'A precise architectural cutaway model with believable thickness, connected parts, legible spatial relationships and softly lit material surfaces.',
@@ -100,7 +101,7 @@ function assemble(win, index, dir) {
   const lock = lockText(d, style, treatment);
   let motionPrompt = null;
   if (!missingSlots.length) {
-    const onReferenceRoute = previz && (v.video.engine || v.engine || 'seedance') !== 'host' && (previz.handoff || 'reference_video') === 'reference_video';
+    const onReferenceRoute = previz && (v.video.engine || v.engine || 'seedance') !== 'host' && previzHandoff(scene) === 'reference_video';
     const clip = PROMPT.clipAssemble({ engine: 'seedance', camera, motion: motionText(d), locks: lock,
       ...(onReferenceRoute ? { scene: previzPreamble(previz) } : {}),
       audio: 'silent; narration is supplied separately' });

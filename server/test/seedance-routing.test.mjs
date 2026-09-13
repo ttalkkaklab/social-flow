@@ -34,7 +34,7 @@ test('ordinary hook stays silent 1.5; action selects 2.0; invalid escalations fa
   assert.equal(scenePlan(scene({}, 4.2)).durationSeconds, 5);
   assert.throws(() => scenePlan(scene({}, 13)), /at most 12/);
   assert.throws(() => scenePlan(scene({ ...action, realFaceInput: true })), /realFaceInput:false/);
-  assert.throws(() => scenePlan(scene({ modelPurpose: 'complex-motion', realFaceInput: false })), /modelReason/);
+  assert.equal(scenePlan(scene({ modelPurpose: 'complex-motion', realFaceInput: false })).model, 'dreamina-seedance-2-0-260128');
   assert.throws(() => scenePlan(scene({ ...action, model: 'dreamina-seedance-2-0-mini-260615' })), /1080p/);
 });
 
@@ -140,7 +140,7 @@ test('a previz on the host lane is not a Seedance field, and on the Seedance rou
   assert.throws(() => scenePlan({ ...host, visual: { ...host.visual, video: { ...host.visual.video, previz: { ...previz, handoff: 'reference_video' } } } }), /only applies to Seedance/);
   const api = { type: 'cover', duration: 5, visual: { bg: 'images/scene-4.png', video: { engine: 'seedance', modelPurpose: 'previz', modelReason: 'r',
     realFaceInput: false, referenceImagePaths: ['images/scene-4.png'], prompt: 'x', previz: { ...previz, handoff: 'frame_and_prompt' } } } };
-  assert.throws(() => scenePlan(api), /must be reference_video/);
+  assert.equal(scenePlan(api).referenceVideoPaths, undefined);
 });
 
 test('a previz cut rides the reference route as Video 1 and bills input + output seconds', () => {

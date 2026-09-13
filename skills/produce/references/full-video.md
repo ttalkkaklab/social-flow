@@ -261,11 +261,11 @@ as a sequence:
    `imagePath`, optional `lastImagePath`, and stored prompt to `mcp__social-flow__seedance_img2video`.
    Under `videoProvider:'host'` the call is the host `image_to_video` instead (source image,
    stored prompt, `duration`, 720p) and the ledger row is `video.host` for the requested seconds.
-   On the API lane a previz cut is `seedance_reference` on the model the user chose
-   (`PRODUCTION.videoModel` — 2.0 at 1080p, 2.0 fast or mini at 720p, or 2.5; asked with
-   `video-model-options.js`'s table before any call) with the clip as `referenceVideoPaths`,
-   `generateAudio:false`; 1.5 Pro takes no reference video and is only the baseline for a slot
-   that carries no previz. Keep spoken narration
+   On the API lane each cut records its selected model and resolution. A 2.x reference-video
+   cut uses `seedance_reference` with the previz clip as `referenceVideoPaths`; 1.5 Pro uses
+   `seedance_img2video` with a `frame_and_prompt` previz and no reference arrays. Either uses
+   `generateAudio:false`. `PRODUCTION.videoModel` records the default or `model:"mixed"`;
+   `video-model-options.js` prints comparison costs before calls. Keep spoken narration
    on the channel voice. An upgrade requires a priced plan and approval; never silently escalate.
 5. Keep every attempt; set `visual.video.clip` to the chosen file. Append actual billed usage
    to `.work/cost-tally.tsv` immediately, including billed rejects:
