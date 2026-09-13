@@ -683,6 +683,9 @@ Core rules:
   no seconds, no exclusions) are `references/scenes-schema.md` §camera, and the move itself
   comes from the shot's `feel` (directing-grammar §4–§5) — it supports the feel, it doesn't
   carry it alone, and `framing` restates the shot's size and angle in the engine's words.
+- **Composition uses `shot.composition`** (scenes-schema §Composition): plan visible faces and directional subjects, inherit FORMAT safe zones, and keep space.layout consistent. The frame icon shows the plan; intentional departures need a reason.
+- **Gaze sequences declare `shot.eyeline`** using scenes-schema §Eyeline: write the subject, target, screen direction, target distance and linked cut. The eye icon reads this record. Unrelated cuts can omit it; movement-only axes use `none` with a reason. New gaze scenes fill every relevant cut; legacy omissions warn.
+
 - **Every generated still leaves here with its floor plan decided** — `shot.space` filled
   (`frame: "camera"` · `layout` — empty only on an `insert`/`ecu` that fills the frame with one
   object · `facing` when a person is on screen · `line` when two people, or a person and what
