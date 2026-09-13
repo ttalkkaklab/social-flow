@@ -79,8 +79,8 @@ If approval is missing, wait. A timeout, silence or a cheaper estimate is not a 
 
 ### Two more questions on every episode with generated video (user directive 2026-09-11)
 
-Every generated cut is pre-rendered in 3D and the render rides the video model as a reference
-clip (blender-previz.md §6), so two more choices are the user's, and `production-mode.js`
+Every generated cut is pre-rendered in 3D. The render supplies a reference clip or the
+source frame and prompt (blender-previz.md §6). Two more choices are the user's, and `production-mode.js`
 refuses a board with generated cuts that has not recorded them.
 
 **Before any Blender or three.js render — which renderer.** Ask once per episode, before the
@@ -108,11 +108,19 @@ node ${CLAUDE_PLUGIN_ROOT}/skills/produce/references/video-model-options.js stor
 > - Seedance 2.5 1080p — 참조 영상 30초·이미지 30장까지, 고정 목소리가 필요할 때. 최초 [금액], [횟수]회 시도 [범위].
 > 원화는 1달러=[환율]원으로 가정했습니다. 이미지·내레이션·편집·세금은 별도입니다.
 
-Persist as `PRODUCTION.videoModel = { model, resolution, selection }` and write the same
-`model` and `resolution` on every generated cut's `visual.video`; `render-routing.js` refuses a
-shot whose model differs from the chosen one. Under `videoProvider:'host'` the tool is the
-model, so the record is `{ model: 'host' }` or absent. A different answer later is a new quote
-and a new approval.
+Persist `PRODUCTION.videoModel = { model, resolution, selection }` as an episode default,
+or use `model: 'mixed'` to describe a per-cut choice. Each cut's `visual.video.model` and
+`resolution` control its route and cost; they may differ across the episode. For example,
+the first three cuts may use Seedance 2.5 and the rest Seedance 1.5 Pro. The options table
+includes 1.5 Pro at 720p and 1080p. `modelReason` is optional.
+
+For 1.5, use `previz.handoff: 'frame_and_prompt'` (also inferred from a 1.x model), omit
+`referenceImagePaths` and `referenceAudioPaths`, and keep `visual.bg` as the start image.
+The previz still supplies the composition and camera prompt; its clip is not sent or billed.
+2.x can use `reference_video` as before. Actual model capabilities and price rows still apply.
+Under `videoProvider:'host'`, the record is `{ model: 'host' }` or absent.
+Changes to cut models or resolutions change the quote fingerprint; retain the budget and
+approval checks. A recorded choice covering the mixed plan needs no extra model-selection question.
 
 ## Persist the decision
 

@@ -11,8 +11,8 @@ clips (`visual.clip`): those are Veo sound-lane slots with no clip input, and th
 route is a motion-background (`visual.video`) route. **Which renderer and which video model are the
 user's choices**, asked with AskUserQuestion before the first previz render and before any
 video call and recorded in `PRODUCTION.previz` and `PRODUCTION.videoModel`
-(production-mode.md §Two more questions); every shot's `previz.renderer` and `video.model`
-must match them.
+(production-mode.md §Two more questions); every shot's `previz.renderer` must match the renderer choice.
+Each cut may select its own `video.model` and resolution under the recorded plan.
 
 Seven MCP tools drive the Blender installed on this machine the way the Higgsfield Bridge
 drives it for ChatGPT, without a relay, an add-on or a GUI: `blender_scene_read`,
@@ -201,7 +201,10 @@ The previz clip goes to the video model as a reference video. Seedance 2.x takes
 name **3D clay-model reference**: a coarse, textureless render supplies camera movement, shot
 rhythm, subject trajectory and blocking, and the model renders it in the target look. The
 plugin wires it as `seedance_reference` → `referenceVideoPaths`; Veo 3.1 takes no video
-input, and Seedance 1.x takes none either, so a previz-guided cut is a 2.x cut.
+input, and Seedance 1.x takes none either. For Seedance 1.x, use `frame_and_prompt`
+(inferred when handoff is omitted): the previz first frame supplies the source composition
+and its camera/blocking supplies the prompt. Do not attach reference image/audio arrays.
+The episode may mix 2.x reference-video cuts with 1.5 image-to-video cuts.
 
 What travels on which channel is still split, and nothing is asked of a channel that cannot
 carry it:
@@ -238,9 +241,9 @@ trade: exact camera and timing from the clip, a close first frame from the still
 - **One flat colour per actor, everything else grey.** `blender_scene_build` proxies take
   `color`. The prompt then binds "the red model in Video 1" to a character image, the way
   the vendor's own example does. Simple primitives beat detailed models for the reference.
-- **No face anywhere in the inputs.** A previz cut on the API lane is a 2.x cut, so a source
+- **No face anywhere in the inputs.** On the 2.x reference-video route, a source
   still with a real face cannot be generated there at all — take the face out of the still
-  (turned away, small in frame, illustrative) or use the host lane. 2.x moderation rejects real human faces in reference
+  (turned away, small in frame, illustrative) or use a compatible 1.5 or host route. 2.x moderation rejects real human faces in reference
   images and videos; the mannequin has none, and the still and the sheets must not either.
 
 ### 6.2 What the storyboard stores
