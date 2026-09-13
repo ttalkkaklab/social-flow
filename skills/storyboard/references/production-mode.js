@@ -24,8 +24,9 @@
   // Two HITL choices every episode with generated video records (user directive 2026-09-11):
   // which 3D renderer draws the mandatory previz, and which video model the clips are made on.
   const PREVIZ_RENDERERS = { blender: '블렌더 브릿지 — 관절 마네킹, 모션 캡처', threejs: 'three.js 페이지 — 헤드리스 크롬, 관절 없음' };
-  // Seedance models that take the previz as a reference video, with the resolutions the price table prices.
+  // Suggested models and priced resolutions; each cut may choose its own model and resolution.
   const VIDEO_MODELS = {
+    'seedance-1-5-pro-251215': { label: 'Seedance 1.5 Pro', resolutions: ['720p', '1080p'] },
     'dreamina-seedance-2-0-260128': { label: 'Seedance 2.0', resolutions: ['1080p'] },
     'dreamina-seedance-2-0-fast-260128': { label: 'Seedance 2.0 fast', resolutions: ['720p'] },
     'dreamina-seedance-2-0-mini-260615': { label: 'Seedance 2.0 mini', resolutions: ['720p'] },
@@ -196,8 +197,7 @@
       const vm = p.videoModel;
       if (p.videoProvider === 'host') {
         if (vm && vm.model !== 'host') errors.push('PRODUCTION.videoModel.model must be host under videoProvider host');
-      } else if (!vm || !VIDEO_MODELS[vm.model]) errors.push('Ask which video model makes the generated cuts and record it in PRODUCTION.videoModel (' + Object.keys(VIDEO_MODELS).join(' | ') + ')');
-      else if (!VIDEO_MODELS[vm.model].resolutions.includes(vm.resolution)) errors.push('PRODUCTION.videoModel.resolution must be one of ' + VIDEO_MODELS[vm.model].resolutions.join(', ') + ' for ' + vm.model);
+      } else if (!vm || !text(vm.model)) errors.push('Ask which video model makes the generated cuts and record it in PRODUCTION.videoModel (an episode default or mixed; each cut records its model and resolution)');
       if (vm && vm.model !== 'host' && !selectionRecorded(vm.selection)) errors.push('Record the actual video model HITL choice in PRODUCTION.videoModel.selection');
     }
     errors.push(...coverageErrors(win));
@@ -224,7 +224,7 @@
       // The host video tool (owner directive 2026-09-07) tops out at 720p and takes every full_video cut.
       const hostVideo = p.videoProvider === 'host';
       // The API lane renders at the resolution the user chose with the model (PRODUCTION.videoModel); 1080p before that record exists.
-      const wantRes = hostVideo ? '720p' : (p.videoModel?.resolution || '1080p');
+      const wantRes = hostVideo ? '720p' : (v.video?.resolution || p.videoModel?.resolution || '1080p');
       if (v.video?.resolution !== wantRes || v.video?.generateAudio !== false)
         bad(hostVideo ? 'the host video tool tops out at 720p; write resolution:"720p" and generateAudio:false with separate narration'
                       : 'write the chosen model\'s resolution (' + wantRes + ') and generateAudio:false with separate narration');

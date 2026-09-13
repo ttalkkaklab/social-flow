@@ -4,12 +4,9 @@
  *
  *   node video-model-options.js <storyboard dir|scenes.js> [--json]
  *
- * Every generated cut carries a 3D previz and rides Seedance 2.x as a reference-video cut
- * (blender-previz.md §6), so the model is a choice the user makes, not a default: the same
- * board costs ten times more on 2.0 at 1080p than on 1.5 Pro did, and 2.0 mini at 720p sits in
- * between. This prints one row per model the price table prices with a reference video —
- * first-pass and retry-inclusive USD for the whole board, computed by the same quote() the
- * approval binds — so the question is asked with real numbers. Read-only; calls no API.
+ * Prints whole-board comparison quotes for priced model/resolution suggestions, including
+ * 1.5 with a frame-and-prompt previz and 2.x with a reference-video previz. Actual episodes
+ * may mix models per cut; quote() binds that plan separately. Read-only; calls no API.
  */
 const fs = require('fs'), path = require('path');
 const { readScenes } = require('../../autoproduce/references/cost-preview.js');
@@ -35,6 +32,8 @@ function options(win, { krwPerUsd = 1400 } = {}) {
           referenceImagePaths: v.referenceImagePaths && v.referenceImagePaths.length ? v.referenceImagePaths : [clone.SCENES[i].visual.bg || 'images/scene-' + (i + 1) + '.png'] });
         if (!v.previz) v.previz = { renderer: clone.PRODUCTION.previz?.renderer || 'blender', clip: 'previz/s' + (i + 1) + '.mp4', firstFrame: 'previz/s' + (i + 1) + '-f0001.png',
           sha256: '0'.repeat(64), fps: 24, seconds: Math.max(4, Math.ceil(Number(clone.SCENES[i].duration) || 4)), camera: { movement: clone.SCENES[i].visual.camera?.movement || 'static' } };
+        v.previz.handoff = model.startsWith('seedance-1-') ? 'frame_and_prompt' : 'reference_video';
+        if (v.previz.handoff === 'frame_and_prompt') v.referenceImagePaths = [];
       }
       let q;
       try { q = quote(clone, { krwPerUsd }).options[clone.PRODUCTION.mode]; }
