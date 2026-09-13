@@ -63,7 +63,7 @@
  function previzHandoff(scene){
   const v=scene.visual||{},video=v.video||{},p=video.previz||{};
   const engine=video.engine||v.engine||'seedance';
-  return p.handoff||(engine==='host'?'frame_and_prompt':'reference_video');
+  return p.handoff||(engine==='host'||/^seedance-1-/.test(video.model||'')?'frame_and_prompt':'reference_video');
  }
  function checkPreviz(scene,{draft=false,production=null}={}){
   const v=scene.visual||{},video=v.video,p=video&&video.previz,errors=[];
@@ -87,14 +87,8 @@
    if(handoff!=='frame_and_prompt')bad('the host video tool takes no reference clip — handoff:"frame_and_prompt": the still is edited from firstFrame and the prompt carries the previz camera');
    return errors;
   }
-  if(handoff!=='reference_video')bad('on the API lane the clip travels as Video 1 — handoff:"reference_video"');
+  if(handoff==='frame_and_prompt')return errors;
   if(engine!=='seedance')bad('the previz travels on the Seedance reference route — set engine:"seedance"');
-  const chosen=production?.videoModel;
-  if(chosen&&chosen.model&&chosen.model!=='host'){
-   if(!text(video.model))bad('write the video model the user chose on the shot — model:"'+chosen.model+'"');
-   else if(video.model!==chosen.model)bad('model "'+video.model+'" is not the one the user chose for this episode (PRODUCTION.videoModel.model "'+chosen.model+'")');
-   if(text(chosen.resolution)&&text(video.resolution)&&video.resolution!==chosen.resolution)bad('resolution "'+video.resolution+'" is not the chosen '+chosen.resolution);
-  }
   if(video.modelPurpose!=='previz')bad('set modelPurpose:"previz"');
   const refs=video.referenceImagePaths;
   if(!Array.isArray(refs)||!refs.length||refs[0]!==v.bg)bad('referenceImagePaths[0] must be the source still (visual.bg) — "Image 1 is the first frame"');

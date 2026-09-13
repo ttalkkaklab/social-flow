@@ -221,3 +221,11 @@ plan cannot proceed to video with a missing end image or identical start/end pat
 source/end hashes with the playback review. Changing frame plans invalidates the cost approval.
 End frames guide endpoints; they do not prove that intermediate movement is physically correct.
 Do not convert a continuity failure into a passing review because both stills look good.
+
+## Per-cut model choices (2026-09-13)
+
+The episode model and resolution are defaults, not equality constraints on cuts.
+Seedance 1.x uses `previz.handoff: "frame_and_prompt"` (inferred from the model when absent).
+Its source still is edited from the previz first frame and the prompt carries camera/blocking;
+it sends no reference video. Omit reference image/audio arrays on 1.x.
+Seedance 2.x can continue to use `reference_video`. Keep previz asset and camera checks.

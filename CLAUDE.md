@@ -196,6 +196,14 @@ with `video-model-options.js`'s cost table) before any video call — `PRODUCTIO
 `production-mode.js` refuses a board with generated cuts that lacks either record. Contract:
 `skills/storyboard/references/blender-previz.md` §6 and `production-mode.md` §When to ask.
 
+## Per-cut video models (user directive, 2026-09-13)
+
+This replaces the episode-wide model lock and the 2.x-only previz rule above.
+Each cut chooses its model and resolution. `PRODUCTION.videoModel` is an episode default
+or `model: 'mixed'`, with the recorded choice covering the plan. Seedance 1.5 Pro is allowed.
+A 1.x previz uses `frame_and_prompt`; 2.x may send `reference_video`. Keep real API input
+constraints, cost quotes and approved budgets. `modelReason` is optional.
+
 ## Branch strategy
 
 ```

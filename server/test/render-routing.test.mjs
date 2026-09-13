@@ -97,7 +97,7 @@ test('a previz on the host video lane shapes the still and the prompt, never a V
  assert.deepEqual(checkPreviz(h),[]);
  h.visual.video.previz.handoff='reference_video';assert.match(checkPreviz(h).join(),/takes no reference clip/);
  delete h.visual.video.previz.handoff;assert.deepEqual(checkPreviz(h),[]);   // the lane implies the handoff
- const a=video();a.visual.video.previz.handoff='frame_and_prompt';assert.match(checkPreviz(a).join(),/Video 1 — handoff:"reference_video"/);
+ const a=video();a.visual.video.previz.handoff='frame_and_prompt';assert.deepEqual(checkPreviz(a),[]);
  assert.equal(previzHandoff(video()),'reference_video');
 });
 test('a previz clip is bound by hash, rendered at whole seconds, and named in the prompt',()=>{

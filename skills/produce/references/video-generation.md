@@ -68,9 +68,10 @@ storyboard defect: send it back.
   exactly the seconds you ask for and charges for exactly that.
   `seedance_reference` (the cut's previz as `referenceVideoPaths`, the still as `Image 1`,
   `durationSeconds` = the length that scene actually uses, clamped to the model floor · the 2.x
-  grade and resolution in `PRODUCTION.videoModel` · `generateAudio: false`) — every generated
+  grade and resolution on the individual cut · `generateAudio: false`) — every generated
   motion background is a previz cut (storyboard blender-previz.md §6), and `seedance_img2video`
-  on `seedance-1-5-pro-251215` is only for a slot that carries no previz.
+  on `seedance-1-5-pro-251215` uses a `frame_and_prompt` previz with no reference arrays.
+  Different cuts may use different models and resolutions.
   For complex-motion, reference, or fixed-voice cuts, apply video-model-selection §Seedance
   per-cut selection and use the resolved forecast generation arguments; never reset an
   escalated model to the ordinary-hook default.

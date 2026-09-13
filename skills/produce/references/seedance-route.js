@@ -75,6 +75,7 @@ function scenePlan(scene) {
   // still is Image 1, and the two travel on the reference route — first_frame cannot be mixed
   // with a reference video, so the still's composition is a reference, not a lock.
   const previz = settings.previz;
+  const referencePreviz = purpose === 'previz' && previzHandoff(scene) === 'reference_video';
   if (previz !== undefined && purpose !== 'previz') throw new Error('visual.video.previz needs modelPurpose:"previz"');
   if (purpose === 'previz' && kind !== 'motion') throw new Error('the previz route is a motion-background (visual.video) slot; b-roll and speech clips do not carry a previz');
   if (purpose === 'previz') {
@@ -83,23 +84,21 @@ function scenePlan(scene) {
     if (typeof previz.clip !== 'string' || !/\.(mp4|mov)$/i.test(previz.clip.trim()) || /^[a-z][a-z0-9+.-]*:/i.test(previz.clip) ||
         /^[\/\\]/.test(previz.clip) || /(^|[\/\\])\.\.([\/\\]|$)/.test(previz.clip))
       throw new Error('previz.clip must be a storyboard-relative mp4/mov path (no scheme, no absolute path, no ..) — the rendered previz');
-    if (previz.handoff !== undefined && previz.handoff !== 'reference_video') throw new Error('on the Seedance route the previz travels as Video 1 — previz.handoff must be reference_video');
+    if (!['reference_video', 'frame_and_prompt'].includes(previzHandoff(scene))) throw new Error('previz.handoff must be reference_video or frame_and_prompt');
     if (!Number.isInteger(previz.seconds) || previz.seconds < 2) throw new Error('previz.seconds must be a whole number of seconds (2 or more)');
     if (!Number.isFinite(previz.fps) || previz.fps < 24 || previz.fps > 60) throw new Error('previz.fps must be 24–60 (render at 24 for frame-for-frame QA)');
-    if (!references.length || references[0] !== (v.bg || '')) throw new Error('previz route: referenceImagePaths[0] must be the source still (visual.bg) — "Image 1 is the first frame"');
-    if (settings.lastImagePath !== undefined) throw new Error('previz route takes no end frame — the reference route cannot carry last_frame');
+    if (referencePreviz && (!references.length || references[0] !== (v.bg || ''))) throw new Error('previz route: referenceImagePaths[0] must be the source still (visual.bg) — "Image 1 is the first frame"');
+    if (referencePreviz && settings.lastImagePath !== undefined) throw new Error('previz route takes no end frame — the reference route cannot carry last_frame');
   }
   const needsVoice = purpose === 'fixed-voice' || voices.length > 0;
-  const needsReference = purpose === 'reference' || purpose === 'previz' || references.length > 0 || needsVoice;
+  const needsReference = purpose === 'reference' || referencePreviz || references.length > 0 || needsVoice;
   const suggested = needsVoice || references.length > 9 ? 'dreamina-seedance-2-5-260628'
     : needsReference || purpose === 'complex-motion' ? 'dreamina-seedance-2-0-260128' : DEFAULT_MODEL;
   const model = settings.model || suggested;
   const spec = MODELS[model];
   if (!spec) throw new Error('unknown Seedance model: ' + model);
-  if (model !== DEFAULT_MODEL && !String(settings.modelReason || '').trim())
-    throw new Error('modelReason is required for a Seedance model override or escalation');
-  if (purpose === 'previz' && !spec.videos)
-    throw new Error(model + ' takes no reference video — a previz cut is a Seedance 2.x cut; drop the pinned model (2.0 is chosen) or name a 2.x model');
+  if (referencePreviz && !spec.videos)
+    throw new Error(model + ' takes no reference video — use previz.handoff:"frame_and_prompt" and omit reference arrays, or choose a model with video input');
   if (spec.images && settings.realFaceInput !== false)
     throw new Error('Seedance 2.x requires realFaceInput:false after inspecting all source/reference images; photoreal faces use 1.5 or Veo');
   if (needsReference && !spec.images) throw new Error(model + ' does not accept reference images/audio');
@@ -121,10 +120,10 @@ function scenePlan(scene) {
   const durationSeconds = Math.max(spec.duration[0], Math.ceil(used));
   if (durationSeconds > spec.duration[1]) throw new Error(model + ' takes at most ' + spec.duration[1] + ' seconds; shorten or split the scene');
   if (purpose === 'previz') {
-    if (!spec.videos) throw new Error(model + ' does not accept a reference video');
+    if (referencePreviz && !spec.videos) throw new Error(model + ' does not accept a reference video');
     if (previz.seconds !== durationSeconds) throw new Error('previz.seconds (' + previz.seconds + ') must equal the billed length ' + durationSeconds + 's — render the previz at the cut length');
   }
-  const family = (spec.family === '1-5-pro' ? spec.family + (generateAudio ? '-audio' : '-silent') : spec.family) + (purpose === 'previz' ? '-video' : '');
+  const family = (spec.family === '1-5-pro' ? spec.family + (generateAudio ? '-audio' : '-silent') : spec.family) + (referencePreviz ? '-video' : '');
   const priceKey = 'seedance.' + family + '.' + resolution;
   if (!PRICED.has(priceKey)) {
     const priced = [...PRICED].filter((k) => k.startsWith('seedance.' + family + '.'))
@@ -137,9 +136,9 @@ function scenePlan(scene) {
     referenceImagePaths: references, referenceAudioPaths: voices,
     ...(settings.lastImagePath ? { lastImagePath: settings.lastImagePath } : {}),
     // The vendor bills input + output seconds when a video is attached.
-    ...(purpose === 'previz' ? { referenceVideoPaths: [previz.clip], billedSeconds: durationSeconds + previz.seconds } : {}),
+    ...(referencePreviz ? { referenceVideoPaths: [previz.clip], billedSeconds: durationSeconds + previz.seconds } : {}),
     priceKey,
-    reason: settings.modelReason || 'ordinary motion — Seedance 1.5 Pro' };
+    reason: settings.modelReason || model + ' / ' + purpose };
 }
 
 module.exports = { MODELS, DEFAULT_MODEL, PRICED, scenePlan };

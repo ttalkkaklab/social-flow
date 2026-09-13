@@ -110,14 +110,14 @@ cheap or feature-rich, run the same prompt on both once that episode and decide.
 
 ## Seedance per-cut selection
 
-Every generated motion background (`visual.video` on a `generated_video` cut) is a previz cut
-on the API lane (user directive 2026-09-11, storyboard blender-previz.md §6): the 3D previz
-rides as a reference video, which only 2.x takes, so the model is the grade the user chose in
-`PRODUCTION.videoModel` — 2.0 at 1080p, 2.0 fast or mini at 720p, or 2.5 — asked with
-`video-model-options.js`'s cost table before any call. 1.5 Pro, silent, stays the choice only
-for slots that carry no previz (a b-roll or speech clip that lands on Seedance). Select 2.5
-over 2.0 for a fixed reference voice or more than nine reference images. Explanation still
-belongs on HTML motion slides, and the short-form ceiling stays the channel's `generated_video_max`.
+Each generated cut may choose its own supported model and resolution (user directive
+2026-09-13). `PRODUCTION.videoModel` records the episode default or `model: 'mixed'`;
+it does not constrain every cut to one model. Seedance 1.5 Pro is available alongside 2.x.
+Every generated cut still has a 3D previz. For 1.5, use `frame_and_prompt`: edit the source
+still from the previz first frame and carry the camera and blocking in the prompt. Omit
+reference image/audio arrays; the ordinary image-to-video route takes `visual.bg`.
+For 2.x, `reference_video` sends the previz clip and bills input plus output seconds.
+Model input limits, supported resolutions, price rows and approved budgets still apply.
 
 Store the selection fields beside the prompt: `visual.video` for motion backgrounds,
 `visual` for b-roll, `visual.clip` for speaking clips. The shared resolver is
@@ -127,7 +127,7 @@ Store the selection fields beside the prompt: `visual.video` for motion backgrou
 |---|---|
 | `engine` | `seedance` for this route; b-roll and speaking clips otherwise default to Veo |
 | `modelPurpose` | `standard` (default), `complex-motion`, `reference`, `fixed-voice`, or `previz` (the 3D previz clip as `Video 1` — storyboard `blender-previz.md` §6; every generated_video cut on the Seedance route) |
-| `modelReason` | Concrete action or reference requirement; required for every model other than 1.5 Pro |
+| `modelReason` | Optional explanation of the action or reference requirement |
 | `realFaceInput` | Set after inspecting all source/reference images. 2.x requires `false`; a generated photoreal face counts as a face too |
 | `referenceImagePaths` | Planned character/product panel paths, in prompt reference order; one source frame is not a reference set |
 | `referenceAudioPaths` | Planned fixed-voice samples; forces the 2.5 speaking/b-roll route |
@@ -169,11 +169,11 @@ before calling. Reference/voice requirements cannot be dropped just to fit the c
 | Situation | Use |
 |---|---|
 | **The CLI you run in ships a video tool** (Grok) | `image_to_video` / `reference_to_video` — `engine:"host"`, $0 on the allowance, 720p ceiling (§The host video tool comes first). The rows below are the API lane: `videoProvider:"api"`, or a cut that wrote why the host tool cannot serve it |
-| **Motion background** (`visual.video` — a slot where the builder discards the sound) | `seedance_reference` · the 2.x grade in `PRODUCTION.videoModel` · `generateAudio: false` · the cut's previz as `referenceVideoPaths` (§Seedance per-cut selection; the row below). 1.5 Pro image-to-video is only for a slot without a previz |
+| **Motion background** (`visual.video` — a slot where the builder discards the sound) | `seedance_reference` · the 2.x model selected on the cut · `generateAudio: false` · the cut's previz as `referenceVideoPaths` (§Seedance per-cut selection; the row below). 1.5 Pro uses image-to-video with a `frame_and_prompt` previz |
 | **b-roll slot** (produce absolute rule 9 uses the clip's own sound) | `veo_img2video` — a silent clip leaves that segment mute |
-| Source background contains an **adult live-action person** | On a motion-background cut this cannot be generated on the API lane at all — every such cut is a 2.x previz cut and 2.x rejects face input; take the face out of the still or use the host lane. Veo (`veo_img2video`) and 1.x remain for the b-roll/speech slots that carry no previz |
+| Source background contains an **adult live-action person** | Use Seedance 1.5 Pro with a `frame_and_prompt` previz or a compatible host tool for a motion background. 2.x rejects face input. Veo (`veo_img2video`) can serve compatible b-roll/speech slots |
 | You must **reproduce the composition** of a source picture | First/last frames (`sourceImagePath`+`lastImagePath`), not reference images — both engines. References carry look and style, not composition |
-| **Any generated_video cut** — every one carries a 3D previz (user directive 2026-09-11) | `seedance_reference` · 2.x · the Blender or three.js previz as `referenceVideoPaths` (`modelPurpose:"previz"`, `handoff:"reference_video"`), the source still as `Image 1` — the vendor's clay-model reference; input plus output seconds billed. Veo and 1.x take no video input, so a previz cut on the API lane is a 2.x cut; on the host lane the previz shapes the still and the prompt instead (`handoff:"frame_and_prompt"`, storyboard blender-previz.md §6.7) |
+| **Any generated_video cut** — every one carries a 3D previz (user directive 2026-09-11) | `seedance_reference` · 2.x · the Blender or three.js previz as `referenceVideoPaths` (`modelPurpose:"previz"`, `handoff:"reference_video"`), the source still as `Image 1` — the vendor's clay-model reference; input plus output seconds billed. Seedance 1.x and host tools use the previz first frame and camera/blocking prompt instead of uploading its clip (`handoff:"frame_and_prompt"`, storyboard blender-previz.md §6.7) |
 | **Register a character once and keep calling it** | Only the Seedance asset library (`asset://`) — Veo has no registry; it's base64 inline per request |
 | **A cut with dialogue/sound effects** | `veo_text2video` / `veo_img2video` — Veo's audio is better |
 | **Extending** an existing Veo clip | `veo_extension` — Seedance has no counterpart tool |
