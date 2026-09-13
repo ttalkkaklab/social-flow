@@ -148,6 +148,16 @@ const shotLine = s => {
     if (sp.light) bits.push(sp.light);
     out += `**자리**: 카메라 기준 — ${bits.join(" · ")}\n`;
   }
+  if (sh.composition) {
+    const composition = require("./structure-contract.js").compositionText(sh.composition);
+    out += `**구도**: ${composition || sh.composition.reason || ""}\n`;
+  }
+  const eye = sh.eyeline;
+  if (eye) {
+    out += `**시선**: ${require("./structure-contract.js").eyelineText(eye)}${eye.matchShot ? ` · 연결 컷 ${eye.matchShot}` : ""}\n`;
+    if (eye.reason) out += `**시선 의도**: ${eye.reason}\n`;
+    if (eye.mode !== "none" && eye.mode !== "lens") out += `**시선 기준물**: ${eye.marker || "상대 눈높이에 표식을 두고 그 방향에서 상대 대사를 읽는다."}\n`;
+  }
   const coverage = sh.coverage || {};
   if (Number.isFinite(coverage.azimuth)) out += `**수평 각도**: 이 편의 축에서 ${coverage.azimuth}°\n`;
   if (coverage.action) out += `**동작에 붙일 컷**: ${coverage.action}\n`;

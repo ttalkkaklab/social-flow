@@ -47,6 +47,10 @@ export interface Finding {
 
 interface Contract {
   VERSION: string;
+  COMPOSITION_SCHEMA: Record<string, unknown>;
+  validateComposition(value: unknown): string[];
+  EYELINE_SCHEMA: Record<string, unknown>;
+  validateEyeline(value: unknown): string[];
   VOCAB: {
     SIZES: string[]; ANGLES: string[]; TYPES: string[]; BEATS: string[]; INFO_TYPES: string[];
     SHARE_TYPES: string[]; HOOK_TYPES: string[]; HOOK_FORMS: string[]; ARCS: string[];
@@ -138,6 +142,14 @@ const lineCrossingSchema = z.object({
 }).strict();
 
 /** The grammar half of a shot is exact; the visual plan and the machine layer pass through (scenes-schema.md owns them). */
+export const compositionSchema = z.record(z.unknown()).superRefine((value, ctx) => {
+  for (const message of contract().validateComposition(value)) ctx.addIssue({ code: z.ZodIssueCode.custom, message });
+});
+
+export const eyelineSchema = z.record(z.unknown()).superRefine((value, ctx) => {
+  for (const message of contract().validateEyeline(value)) ctx.addIssue({ code: z.ZodIssueCode.custom, message });
+});
+
 export const shotSchema = z
   .object({
     type: tuple(V.TYPES),
@@ -166,6 +178,8 @@ export const shotSchema = z
         share: z.string().optional(),
         shareType: tuple(V.SHARE_TYPES).optional(),
         space: z.record(z.unknown()).optional(),
+        eyeline: eyelineSchema.optional(),
+        composition: compositionSchema.optional(),
         coverage: coverageSchema.optional(),
         lineNeutral: z.literal(true).optional(),
         lineCrossing: lineCrossingSchema.optional(),
@@ -354,6 +368,7 @@ export function applyPatch(win: Board, patch: StoryboardApplyArgs): { win: Board
     if (no > shots.length + 1) throw new Error(`shot ${no}: the board has ${shots.length} shots — no = ${shots.length + 1} appends`);
     shots[no - 1] = shot;
   }
+  const beforeReorder = shots.slice();
   if (patch.removeShots) {
     const drop = new Set(patch.removeShots);
     for (const no of drop) if (no > shots.length) throw new Error(`removeShots: there is no shot ${no}`);
@@ -365,6 +380,19 @@ export function applyPatch(win: Board, patch: StoryboardApplyArgs): { win: Board
     for (const { after, shots: add } of inserts) {
       if (after > shots.length) throw new Error(`insertShots: after ${after} is past the last shot (${shots.length})`);
       shots.splice(after, 0, ...add);
+    }
+  }
+  // Existing references name pre-reorder shots. Inserted records use final positions.
+  const finalOrder = shots.slice();
+  for (const source of patch.removeShots || patch.insertShots ? finalOrder : []) {
+    if (!beforeReorder.includes(source)) continue;
+    const e = source.shot?.eyeline;
+    if (e && typeof e.matchShot === 'number') {
+      const target = beforeReorder[e.matchShot - 1];
+      const index = finalOrder.indexOf(target);
+      if (index < 0) throw new Error('eyeline.matchShot target was removed or missing; update the relation in the same patch');
+      const position = finalOrder.indexOf(source);
+      shots[position] = { ...source, shot: { ...source.shot, eyeline: { ...e, matchShot: index + 1 } } };
     }
   }
   const transitionTargets = new Set<number>();

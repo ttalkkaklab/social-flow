@@ -1232,6 +1232,13 @@ finding; a silent departure is.
   with no reason written on the shot (directing-grammar §2.1). A written reason is a departure,
   not a P0.
 
+For L07, read `shot.eyeline` and scenes-schema §Eyeline. Review linked cuts together:
+reciprocal actors, eye height, target distance, POV owner and reaction. A `none` or
+intentional exception must have a credible reason. The icon shows plan status only;
+image mode verifies actual eyes, not just body orientation. Missing legacy data is a
+warning. Apply the scene close-up ration with a written exception for a motivated
+shot/reverse-shot or POV/reaction sequence; do not penalize each reply as emphasis.
+
 ## Per-shot axes (additive out of 100 — scored separately for each shot)
 
 | Axis | Points | What earns them | Applies to |
@@ -1563,3 +1570,9 @@ vocabulary mode writing "reorder the scenes", makes the delegator fix the same s
 several loops, and what one loop fixed trips another. When a problem at another layer
 catches your eye, don't make it a P0 or a correction directive — write it as one line at the
 end of the verdict under **"hand to another mode"**.
+
+For L10, read `shot.composition` and scenes-schema §Composition. Compare the actual final
+crop to the declared headroom, eye height, gaze-side room and travel-side room. Check faces
+against captions and platform UI, including the first and last frames of moving shots.
+Review any space.layout conflict. Upper thirds are advice, and motivated tight or reversed
+room is valid with an intentional reason. A metadata pass never approves the footage.

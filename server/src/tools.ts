@@ -1,3 +1,4 @@
+import { contract as storyboardContract } from './storyboard.js';
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { MUSIC_GENERATION_MODES, MUSIC_SCALES } from './music-client.js';
 import {
@@ -764,6 +765,25 @@ const THREADS_SEARCH_OUTPUT: OutputSchema = {
     },
   },
   required: ['query', 'count', 'results'],
+};
+
+// Keep tool discovery available even when an install has lost its reference tree.
+const eyelineInput = (() => {
+  try { return storyboardContract().EYELINE_SCHEMA; }
+  catch { return { type: 'object', description: 'Eyeline contract unavailable: restore skills/storyboard/references/structure-contract.js' }; }
+})();
+const compositionInput = (() => {
+  try { return storyboardContract().COMPOSITION_SCHEMA; }
+  catch { return { type: 'object', description: 'Composition contract unavailable: restore skills/storyboard/references/structure-contract.js' }; }
+})();
+const storyboardShotInput = {
+  type: 'object', description: 'The scenes-schema.md shot object',
+  properties: {
+    shot: {
+      type: 'object', description: 'Shot grammar: framing, camera angle and optional or scene-required eyeline',
+      properties: { eyeline: eyelineInput, composition: compositionInput },
+    },
+  },
 };
 
 export const TOOLS: Tool[] = [
@@ -4097,15 +4117,15 @@ Returns: the file written or not, counts, and findings (! violation · warning).
           description: 'Replace the whole board — how a new board is written',
           properties: {
             structure: { type: 'object', description: '{ version: "structure-v1", sequences: [...], scenes: [...] }' },
-            shots: { type: 'array', items: { type: 'object', description: 'The scenes-schema.md shot object' }, description: 'Every shot in playback order — the scenes-schema.md shot object; each playback shot carries `scene`' },
+            shots: { type: 'array', items: storyboardShotInput, description: 'Every shot in playback order — the scenes-schema.md shot object; each playback shot carries `scene`' },
           },
           required: ['structure', 'shots'],
         },
         structure: { type: 'object', description: 'Replace window.STRUCTURE only' },
         sequences: { type: 'array', items: { type: 'object', description: '{ id, title, purpose, question?, payoff?, scenes }' }, description: 'Upsert sequences by id' },
         scenes: { type: 'array', items: { type: 'object', description: '{ no, place, time, event, charge, turn, out? }' }, description: 'Upsert scenes by no' },
-        shots: { type: 'array', items: { type: 'object', description: 'One positional upsert', properties: { no: { type: 'number', description: '1-based position' }, shot: { type: 'object', description: 'The scenes-schema.md shot object' } }, required: ['no', 'shot'] }, description: 'Upsert shots by 1-based position; no = length + 1 appends' },
-        insertShots: { type: 'array', items: { type: 'object', description: 'One insert', properties: { after: { type: 'number', description: '1-based position to insert after; 0 = at the start' }, shots: { type: 'array', items: { type: 'object', description: 'The scenes-schema.md shot object' }, description: 'Shots to insert, in order' } }, required: ['after', 'shots'] }, description: 'Insert shots after a 1-based position (0 = at the start)' },
+        shots: { type: 'array', items: { type: 'object', description: 'One positional upsert', properties: { no: { type: 'number', description: '1-based position' }, shot: storyboardShotInput }, required: ['no', 'shot'] }, description: 'Upsert shots by 1-based position; no = length + 1 appends' },
+        insertShots: { type: 'array', items: { type: 'object', description: 'One insert', properties: { after: { type: 'number', description: '1-based position to insert after; 0 = at the start' }, shots: { type: 'array', items: storyboardShotInput, description: 'Shots to insert, in order' } }, required: ['after', 'shots'] }, description: 'Insert shots after a 1-based position (0 = at the start)' },
         transitions: {
           type: 'array', minItems: 1,
           description: 'Patch incoming transitions only, by final shot position after inserts/removals. Prefer dip for a gradual fade through black when place or time changes. Same-scene shots keep their chosen join. Example: [{no:3,transition:"dip",reason:"The next scene begins at night"}].',
