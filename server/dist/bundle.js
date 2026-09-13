@@ -13722,8 +13722,8 @@ var require_node_domexception = __commonJS({
 });
 
 // node_modules/fetch-blob/from.js
-import { statSync as statSync2, createReadStream, promises as fs2 } from "node:fs";
-import { basename } from "node:path";
+import { statSync as statSync3, createReadStream, promises as fs2 } from "node:fs";
+import { basename as basename2 } from "node:path";
 var import_node_domexception, stat, blobFromSync, blobFrom, fileFrom, fileFromSync, fromBlob, fromFile, BlobDataItem;
 var init_from = __esm({
   "node_modules/fetch-blob/from.js"() {
@@ -13731,10 +13731,10 @@ var init_from = __esm({
     init_file();
     init_fetch_blob();
     ({ stat } = fs2);
-    blobFromSync = (path12, type) => fromBlob(statSync2(path12), path12, type);
+    blobFromSync = (path12, type) => fromBlob(statSync3(path12), path12, type);
     blobFrom = (path12, type) => stat(path12).then((stat4) => fromBlob(stat4, path12, type));
     fileFrom = (path12, type) => stat(path12).then((stat4) => fromFile(stat4, path12, type));
-    fileFromSync = (path12, type) => fromFile(statSync2(path12), path12, type);
+    fileFromSync = (path12, type) => fromFile(statSync3(path12), path12, type);
     fromBlob = (stat4, path12, type = "") => new fetch_blob_default([new BlobDataItem({
       path: path12,
       size: stat4.size,
@@ -13746,7 +13746,7 @@ var init_from = __esm({
       size: stat4.size,
       lastModified: stat4.mtimeMs,
       start: 0
-    })], basename(path12), { type, lastModified: stat4.mtimeMs });
+    })], basename2(path12), { type, lastModified: stat4.mtimeMs });
     BlobDataItem = class _BlobDataItem {
       #path;
       #start;
@@ -75790,6 +75790,444 @@ function describeToolGate(knownNames, env2 = process.env, jsonPatterns = []) {
   return `tool gate ${on.length} on / ${off} off (${bits.join("; ")})`;
 }
 
+// src/storyboard.ts
+import { execFileSync } from "node:child_process";
+import { existsSync as existsSync2, readFileSync as readFileSync2, renameSync, statSync as statSync2, unlinkSync, writeFileSync } from "node:fs";
+import * as nodeModule from "node:module";
+import { basename, dirname, join as join2, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import vm from "node:vm";
+var PLUGIN_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
+var REFERENCES_DIR = join2(PLUGIN_ROOT, "skills", "storyboard", "references");
+var CONTRACT_FILE = join2(REFERENCES_DIR, "structure-contract.js");
+var CHECK_SCENES_FILE = join2(REFERENCES_DIR, "check-scenes.js");
+var loadFromHere = nodeModule.createRequire(import.meta.url);
+var contractCache;
+function contract() {
+  if (!contractCache) contractCache = loadFromHere(CONTRACT_FILE);
+  return contractCache;
+}
+var tuple = (list) => external_exports.enum(list);
+var MISSING = ["__contract-missing__"];
+function vocabAtLoad() {
+  try {
+    return contract().VOCAB;
+  } catch {
+    return {
+      SIZES: MISSING,
+      ANGLES: MISSING,
+      BEATS: MISSING,
+      TYPES: MISSING,
+      INFO_TYPES: MISSING,
+      SHARE_TYPES: MISSING,
+      HOOK_TYPES: MISSING,
+      HOOK_FORMS: MISSING,
+      ARCS: MISSING,
+      RENDER_MODES: MISSING,
+      CHARGES_OPEN: MISSING,
+      CHARGES_CLOSE: MISSING,
+      TRANSITION_RE: /^$/
+    };
+  }
+}
+var V = vocabAtLoad();
+var nonEmpty = external_exports.string().trim().min(1);
+var STRUCTURE_VERSION = (() => {
+  try {
+    return contract().VERSION;
+  } catch {
+    return "structure-v1";
+  }
+})();
+var sceneSchema = external_exports.object({
+  no: external_exports.number().int().positive().describe("Scene number \u2014 the value shots point at with `scene`"),
+  place: nonEmpty.describe("One place \u2014 the slugline location"),
+  time: nonEmpty.describe("One continuous stretch of time \u2014 \uB0AE \xB7 \uBC24 \xB7 \uC0C8\uBCBD \xB7 10\uB144 \uB4A4"),
+  event: nonEmpty.describe("The one thing that happens in this scene"),
+  charge: external_exports.object({
+    open: tuple(V.CHARGES_OPEN).describe('Value at the open: "+" or "-"'),
+    close: tuple(V.CHARGES_CLOSE).describe('Value at the close: "+", "-", or deeper into the same pole "++" / "--"')
+  }),
+  turn: nonEmpty.describe("What flipped between the open and the close"),
+  out: nonEmpty.optional().describe("The sentence the scene goes out on \u2014 the one that forces a \uADF8\uB7F0\uB370 or \uADF8\uB798\uC11C into the next scene")
+}).strict();
+var sequenceSchema = external_exports.object({
+  id: nonEmpty.describe('Stable id, e.g. "q1"'),
+  title: nonEmpty.describe("The heading the approval page draws"),
+  purpose: nonEmpty.describe("The one purpose that binds these scenes \u2014 two purposes are two sequences"),
+  question: nonEmpty.optional().describe("The dramatic question this stretch opens"),
+  payoff: external_exports.number().int().positive().optional().describe("The scene number that answers the question"),
+  scenes: external_exports.array(external_exports.number().int().positive()).min(1).describe("Scene numbers in playback order")
+}).strict();
+var structureSchema = external_exports.object({
+  version: external_exports.literal(STRUCTURE_VERSION),
+  sequences: external_exports.array(sequenceSchema).min(1),
+  scenes: external_exports.array(sceneSchema).min(1)
+}).strict();
+var coverageSchema = external_exports.object({
+  azimuth: external_exports.number().finite().min(0).max(180).optional().describe("Horizontal camera bearing, 0\u2013180\xB0 inside the selected side of the axis"),
+  action: external_exports.string().trim().min(1).optional().describe("Visible action that carries this cut when no 30\xB0 or two-step change is used")
+}).strict().refine((value) => value.azimuth !== void 0 || value.action !== void 0, "coverage names an azimuth or the action that carries the cut");
+var lineCrossingSchema = external_exports.object({
+  method: external_exports.enum(["camera_move", "subject_move", "neutral", "intentional"]),
+  from: nonEmpty.describe("The previous space.line value"),
+  to: nonEmpty.describe("The new space.line value"),
+  reason: nonEmpty.describe("What the viewer sees that makes the new side legible"),
+  bridgeShot: external_exports.number().int().positive().optional().describe('Earlier neutral shot number; required only for method "neutral"')
+}).strict();
+var compositionSchema = external_exports.record(external_exports.unknown()).superRefine((value, ctx) => {
+  for (const message of contract().validateComposition(value)) ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+});
+var eyelineSchema = external_exports.record(external_exports.unknown()).superRefine((value, ctx) => {
+  for (const message of contract().validateEyeline(value)) ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+});
+var shotSchema = external_exports.object({
+  type: tuple(V.TYPES),
+  title: external_exports.string().optional(),
+  narration: external_exports.array(external_exports.object({ tts: external_exports.string(), sub: external_exports.string().optional() }).passthrough()).optional(),
+  visual: external_exports.record(external_exports.unknown()).optional(),
+  duration: external_exports.number().positive().optional(),
+  scene: external_exports.number().int().positive().optional(),
+  sceneSlug: external_exports.string().optional(),
+  sequence: external_exports.string().optional(),
+  transition: external_exports.string().regex(V.TRANSITION_RE, "not a join from scenes-schema \xA7scene transition").optional(),
+  beat: tuple(V.BEATS).optional(),
+  arc: tuple(V.ARCS).optional(),
+  hookType: tuple(V.HOOK_TYPES).optional(),
+  hookForm: tuple(V.HOOK_FORMS).optional(),
+  chapter: external_exports.string().optional(),
+  after: external_exports.number().int().positive().optional(),
+  shot: external_exports.object({
+    feel: external_exports.string().optional(),
+    size: tuple(V.SIZES).optional(),
+    angle: tuple(V.ANGLES).optional(),
+    why: external_exports.string().optional(),
+    info: external_exports.string().optional(),
+    infoType: tuple(V.INFO_TYPES).optional(),
+    share: external_exports.string().optional(),
+    shareType: tuple(V.SHARE_TYPES).optional(),
+    space: external_exports.record(external_exports.unknown()).optional(),
+    eyeline: eyelineSchema.optional(),
+    composition: compositionSchema.optional(),
+    coverage: coverageSchema.optional(),
+    lineNeutral: external_exports.literal(true).optional(),
+    lineCrossing: lineCrossingSchema.optional(),
+    render: external_exports.object({ mode: tuple(V.RENDER_MODES), purpose: external_exports.string().optional(), reason: external_exports.string().optional() }).passthrough().optional()
+  }).passthrough().optional(),
+  sound: external_exports.record(external_exports.unknown()).optional()
+}).passthrough();
+var readLevelSchema = external_exports.enum(["outline", "scenes", "shots", "full"]);
+var storyboardReadSchema = external_exports.object({
+  path: external_exports.string().min(1).describe("The storyboard directory, or its scenes.js"),
+  level: readLevelSchema.default("shots").describe("outline = sequences with scene numbers \xB7 scenes = scene cards with shot numbers \xB7 shots = every shot summarised under its scene \xB7 full = the raw shot objects too")
+});
+var storyboardCheckSchema = external_exports.object({
+  path: external_exports.string().min(1).describe("The storyboard directory, or its scenes.js"),
+  draft: external_exports.boolean().default(false).describe("The story pass (storyboard \xA74a) \u2014 machine-layer absences are deferred, not violations")
+});
+var globalsSchema = external_exports.record(external_exports.string().regex(/^[A-Z][A-Z0-9_]*$/, "a window.* global is UPPER_CASE"), external_exports.unknown());
+var transitionPatchSchema = external_exports.object({
+  no: external_exports.number().int().positive().describe("Incoming shot number, 1-based, after removals and inserts"),
+  transition: external_exports.enum([
+    "cut",
+    "dip",
+    "dip:white",
+    "jcut",
+    "dissolve",
+    "iris",
+    "blur",
+    "zoom",
+    "push:l2r",
+    "push:r2l",
+    "push:u2d",
+    "push:d2u",
+    "whip:l2r",
+    "whip:r2l",
+    "whip:u2d",
+    "whip:d2u"
+  ]),
+  transitionSeconds: external_exports.number().finite().min(0.08).max(0.8).optional(),
+  reason: nonEmpty,
+  continuity: nonEmpty.optional()
+}).strict().refine(
+  (v) => !["cut", "dip", "dip:white"].includes(v.transition) || v.transitionSeconds === void 0,
+  "cut and dip do not accept transitionSeconds; dip fades each side for up to 0.30 seconds"
+);
+var storyboardApplySchema = external_exports.object({
+  path: external_exports.string().min(1).describe("The storyboard directory (scenes.js is created there when missing), or its scenes.js"),
+  draft: external_exports.boolean().default(false).describe("The story pass (storyboard \xA74a) \u2014 camera-continuity records (lineCrossing, coverage) are deferred, not violations"),
+  set: external_exports.object({ structure: structureSchema, shots: external_exports.array(shotSchema).min(1) }).optional().describe("Replace the whole board \u2014 the structure and every shot. The way a new board is written"),
+  structure: structureSchema.optional().describe("Replace window.STRUCTURE only"),
+  sequences: external_exports.array(sequenceSchema).optional().describe("Upsert sequences by id"),
+  scenes: external_exports.array(sceneSchema).optional().describe("Upsert scenes by no"),
+  shots: external_exports.array(external_exports.object({ no: external_exports.number().int().positive(), shot: shotSchema })).optional().describe("Upsert shots by 1-based position; no = length + 1 appends"),
+  insertShots: external_exports.array(external_exports.object({ after: external_exports.number().int().min(0), shots: external_exports.array(shotSchema).min(1) })).optional().describe("Insert shots after a 1-based position (0 = at the start). Later positions shift"),
+  transitions: external_exports.array(transitionPatchSchema).min(1).optional().describe("Change only incoming transitions; dip fades through black. Keeps narration and visuals intact"),
+  removeShots: external_exports.array(external_exports.number().int().positive()).optional().describe("1-based positions to drop, resolved before the insert"),
+  removeScenes: external_exports.array(external_exports.number().int().positive()).optional(),
+  removeSequences: external_exports.array(external_exports.string()).optional(),
+  globals: globalsSchema.optional().describe("Set other window.* blocks \u2014 FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, VOICE, MOTION_POLICY"),
+  dryRun: external_exports.boolean().default(false).describe("Validate and report, write nothing")
+});
+function scenesPath(target) {
+  const abs = resolve(target);
+  if (basename(abs) === "scenes.js") return abs;
+  return join2(abs, "scenes.js");
+}
+function readBoard(target) {
+  const file = scenesPath(target);
+  if (!existsSync2(file)) throw new Error(`no scenes.js at ${file}`);
+  if (!statSync2(file).isFile()) throw new Error(`${file} is not a file`);
+  const src = readFileSync2(file, "utf8");
+  const header = [];
+  for (const line of src.split("\n")) {
+    if (/^\s*\/\//.test(line)) header.push(line.trim());
+    else if (line.trim()) break;
+  }
+  const win = {};
+  const sandbox = { window: win, console: { log() {
+  }, warn() {
+  }, error() {
+  } } };
+  sandbox.globalThis = sandbox;
+  try {
+    vm.runInNewContext(src, sandbox, { filename: file, timeout: 5e3 });
+  } catch (e2) {
+    throw new Error(`failed to evaluate ${file}: ${e2.message}`);
+  }
+  if (!Array.isArray(win.SCENES)) throw new Error(`${file} has no window.SCENES array`);
+  return { file, header, win };
+}
+var GLOBAL_ORDER = ["FORMAT", "VOICE", "THEME", "COMPREHENSION", "STORY", "PRODUCTION", "MOTION_POLICY", "MUSIC", "STRUCTURE", "SCENES"];
+function serializeBoard(win, header = []) {
+  const keys = Object.keys(win).filter((k) => win[k] !== void 0);
+  keys.sort((a, b) => {
+    const ia = GLOBAL_ORDER.indexOf(a), ib = GLOBAL_ORDER.indexOf(b);
+    if (ia !== -1 || ib !== -1) return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+    return a.localeCompare(b);
+  });
+  const lines = header.filter((h2) => !/^\/\/\s*approved:/.test(h2));
+  if (lines.length) lines.push("");
+  for (const k of keys) lines.push(`window.${k} = ${JSON.stringify(win[k], null, 2)};`);
+  return lines.join("\n") + "\n";
+}
+function upsertBy(list, items, key) {
+  const out = list.slice();
+  for (const item of items) {
+    const i2 = out.findIndex((x2) => x2[key] === item[key]);
+    if (i2 === -1) out.push(item);
+    else out[i2] = item;
+  }
+  return out;
+}
+function validateShots(shots) {
+  const out = [];
+  shots.forEach((s2, i2) => {
+    const parsed = shotSchema.safeParse(s2);
+    if (parsed.success) return;
+    for (const issue2 of parsed.error.issues) out.push({ level: "bad", where: `shot ${i2 + 1}`, what: `${issue2.path.join(".") || "(root)"}: ${issue2.message}` });
+  });
+  return out;
+}
+function validateStructure(structure) {
+  const parsed = structureSchema.safeParse(structure);
+  if (parsed.success) return [];
+  return parsed.error.issues.map((issue2) => ({ level: "bad", where: "structure", what: `${issue2.path.join(".") || "(root)"}: ${issue2.message}` }));
+}
+function applyPatch(win, patch) {
+  const next = { ...win };
+  if (patch.globals) for (const [k, v] of Object.entries(patch.globals)) {
+    if (k === "SCENES" || k === "STRUCTURE") throw new Error(`set ${k} through the dedicated fields, not globals`);
+    next[k] = v;
+  }
+  if (patch.set) {
+    next.STRUCTURE = patch.set.structure;
+    next.SCENES = patch.set.shots.slice();
+  }
+  if (patch.structure) next.STRUCTURE = patch.structure;
+  const st = next.STRUCTURE ?? { version: STRUCTURE_VERSION, sequences: [], scenes: [] };
+  if (!Array.isArray(st.sequences) || !Array.isArray(st.scenes) || st.scenes.some((sc) => !sc || typeof sc !== "object") || st.sequences.some((q) => !q || typeof q !== "object" || !Array.isArray(q.scenes)))
+    return { win: next, findings: [{ level: "bad", where: "structure", what: "STRUCTURE.sequences and STRUCTURE.scenes are arrays of objects \u2014 this board was hand-edited into a shape the tools cannot patch; rewrite it with `set`" }], synced: 0 };
+  let sequences = st.sequences.slice();
+  let scenes = st.scenes.slice();
+  if (patch.sequences) sequences = upsertBy(sequences, patch.sequences, "id");
+  if (patch.scenes) scenes = upsertBy(scenes, patch.scenes, "no");
+  if (patch.removeScenes) {
+    const drop = new Set(patch.removeScenes);
+    scenes = scenes.filter((sc) => !drop.has(sc.no));
+    sequences = sequences.map((q) => ({ ...q, scenes: q.scenes.filter((no) => !drop.has(no)) }));
+  }
+  if (patch.removeSequences) {
+    const drop = new Set(patch.removeSequences);
+    sequences = sequences.filter((q) => !drop.has(q.id));
+  }
+  if (patch.sequences || patch.scenes || patch.removeScenes || patch.removeSequences || next.STRUCTURE)
+    next.STRUCTURE = { version: st.version ?? STRUCTURE_VERSION, sequences, scenes };
+  let shots = Array.isArray(next.SCENES) ? next.SCENES.slice() : [];
+  if (patch.shots) for (const { no, shot } of patch.shots.slice().sort((a, b) => a.no - b.no)) {
+    if (no > shots.length + 1) throw new Error(`shot ${no}: the board has ${shots.length} shots \u2014 no = ${shots.length + 1} appends`);
+    shots[no - 1] = shot;
+  }
+  const beforeReorder = shots.slice();
+  if (patch.removeShots) {
+    const drop = new Set(patch.removeShots);
+    for (const no of drop) if (no > shots.length) throw new Error(`removeShots: there is no shot ${no}`);
+    shots = shots.filter((_, i2) => !drop.has(i2 + 1));
+  }
+  if (patch.insertShots) {
+    const inserts = patch.insertShots.slice().sort((a, b) => b.after - a.after);
+    for (const { after, shots: add } of inserts) {
+      if (after > shots.length) throw new Error(`insertShots: after ${after} is past the last shot (${shots.length})`);
+      shots.splice(after, 0, ...add);
+    }
+  }
+  const finalOrder = shots.slice();
+  for (const source of patch.removeShots || patch.insertShots ? finalOrder : []) {
+    if (!beforeReorder.includes(source)) continue;
+    const e2 = source.shot?.eyeline;
+    if (e2 && typeof e2.matchShot === "number") {
+      const target = beforeReorder[e2.matchShot - 1];
+      const index = finalOrder.indexOf(target);
+      if (index < 0) throw new Error("eyeline.matchShot target was removed or missing; update the relation in the same patch");
+      const position = finalOrder.indexOf(source);
+      shots[position] = { ...source, shot: { ...source.shot, eyeline: { ...e2, matchShot: index + 1 } } };
+    }
+  }
+  const transitionTargets = /* @__PURE__ */ new Set();
+  for (const change of patch.transitions ?? []) {
+    const source = shots[change.no - 1];
+    if (!source) throw new Error(`transitions: there is no shot ${change.no}`);
+    if (transitionTargets.has(change.no)) throw new Error(`transitions: duplicate shot ${change.no}`);
+    transitionTargets.add(change.no);
+    if (["broll", "outro"].includes(source.type)) throw new Error("Spliced shots use their own assembly transition");
+    const moving = !["cut", "dip", "dip:white"].includes(change.transition);
+    if (moving && !shots.slice(0, change.no - 1).some((s2) => !["broll", "outro"].includes(s2.type)))
+      throw new Error("First shot cannot carry a previous picture");
+    if (moving) {
+      const previous = shots[change.no - 2];
+      if (!previous || ["broll", "outro"].includes(previous.type))
+        throw new Error("A moving carry cannot bridge an inserted recording; choose cut or dip");
+      if (previous.visual?.reuse !== void 0)
+        throw new Error("Reused clips cannot supply outgoing live handles; choose cut or dip");
+      if (previous.visual?.sync === true || source.visual?.sync === true)
+        throw new Error("Sync footage requires cut or dip, not a moving carry");
+    }
+    const edit = { ...source.edit ?? {}, reason: change.reason };
+    if (!moving || source.transition !== change.transition) delete edit.transitionSeconds;
+    if (change.transitionSeconds !== void 0) edit.transitionSeconds = change.transitionSeconds;
+    if (change.continuity !== void 0) edit.continuity = change.continuity;
+    if (moving && Number(edit.pre ?? 0) !== 0) throw new Error("Moving transitions require edit.pre=0; update the shot timing first");
+    shots[change.no - 1] = { ...source, transition: change.transition, edit };
+  }
+  next.SCENES = shots.map((shot) => ({ ...shot }));
+  const findings = [];
+  if (!shots.length) findings.push({ level: "bad", where: "board", what: "the board has no shots" });
+  if (next.STRUCTURE === void 0) findings.push({ level: "bad", where: "structure", what: "no window.STRUCTURE \u2014 write the sequences and scenes (set, structure, sequences + scenes)" });
+  else findings.push(...validateStructure(next.STRUCTURE));
+  findings.push(...validateShots(shots));
+  let synced = 0;
+  if (!findings.some((f3) => f3.level === "bad")) {
+    synced = contract().sync(next);
+    findings.push(...contract().check(next, { draft: patch.draft }));
+  }
+  return { win: next, findings, synced };
+}
+function applyStoryboard(args) {
+  const file = scenesPath(args.path);
+  const exists = existsSync2(file);
+  let header = [];
+  let win = {};
+  if (exists) ({ header, win } = readBoard(file));
+  else if (!args.set) throw new Error(`no scenes.js at ${file} \u2014 a new board is written with \`set\` (structure + shots)`);
+  else if (!existsSync2(dirname(file))) throw new Error(`directory does not exist: ${dirname(file)}`);
+  const { win: next, findings, synced } = applyPatch(win, args);
+  const bad = findings.some((f3) => f3.level === "bad");
+  const st = next.STRUCTURE;
+  const result = {
+    file,
+    written: false,
+    created: !exists,
+    approvalDropped: header.some((h2) => /^\/\/\s*approved:/.test(h2)),
+    shots: (next.SCENES ?? []).length,
+    scenes: st ? st.scenes.length : 0,
+    sequences: st ? st.sequences.length : 0,
+    synced,
+    findings
+  };
+  if (bad || args.dryRun) return result;
+  const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
+  try {
+    writeFileSync(tmp, serializeBoard(next, header), "utf8");
+    renameSync(tmp, file);
+  } catch (err4) {
+    try {
+      unlinkSync(tmp);
+    } catch {
+    }
+    throw err4;
+  }
+  result.written = true;
+  return result;
+}
+function checkStoryboard(args) {
+  const { file, win } = readBoard(args.path);
+  const structure = contract().check(win, { draft: args.draft });
+  const argv = [CHECK_SCENES_FILE, file, "--json"];
+  if (args.draft) argv.push("--draft");
+  let raw = "";
+  try {
+    raw = execFileSync(process.execPath, argv, { encoding: "utf8", timeout: 6e4, stdio: ["ignore", "pipe", "pipe"] });
+  } catch (e2) {
+    const err4 = e2;
+    raw = err4.stdout || "";
+    if (!raw.trim()) throw new Error(`check-scenes.js failed: ${(err4.stderr || err4.message).trim()}`);
+  }
+  let parsed = {};
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error(`check-scenes.js returned no JSON: ${raw.slice(0, 400)}`);
+  }
+  const dup = new Set(structure.map((f3) => f3.level + "\0" + f3.where + "\0" + f3.what));
+  const rest = (parsed.findings ?? []).filter((f3) => !dup.has(f3.level + "\0" + f3.where + "\0" + f3.what));
+  const all = structure.concat(rest);
+  return {
+    file,
+    format: parsed.format ?? String(win.FORMAT ?? "shorts-9x16"),
+    shots: (win.SCENES ?? []).length,
+    draft: args.draft,
+    structure,
+    contract: rest,
+    violations: all.filter((f3) => f3.level === "bad").length,
+    warnings: all.filter((f3) => f3.level === "warn").length,
+    deferred: all.filter((f3) => f3.level === "later").length
+  };
+}
+function renderFindings(findings) {
+  if (!findings.length) return "  (none)";
+  const mark = { bad: "!", warn: "\xB7", later: "\u2026" };
+  return findings.map((f3) => `  ${mark[f3.level]} ${f3.where.padEnd(12)} ${f3.what}`).join("\n");
+}
+function renderApply(r2) {
+  const bad = r2.findings.filter((f3) => f3.level === "bad");
+  const head = r2.written ? `${r2.created ? "Created" : "Wrote"} ${r2.file}` : bad.length ? `NOT written \u2014 ${bad.length} violation(s) in ${r2.file}` : `Dry run \u2014 ${r2.file} untouched`;
+  const lines = [head, `  ${r2.sequences} sequence(s) \xB7 ${r2.scenes} scene(s) \xB7 ${r2.shots} shot(s) \xB7 ${r2.synced} shot label(s) synced from the structure`];
+  if (r2.approvalDropped && r2.written) lines.push("  the `// approved:` line was dropped \u2014 an edited board is approved again at the HITL gate");
+  lines.push("Findings:", renderFindings(r2.findings));
+  return lines.join("\n");
+}
+function renderCheck(r2) {
+  const lines = [
+    `scenes.js contract \u2014 ${r2.format} \xB7 ${r2.shots} shots${r2.draft ? " \xB7 story pass (--draft)" : ""}`,
+    `  ${r2.violations} violation(s), ${r2.warnings} to look at${r2.draft ? `, ${r2.deferred} deferred to \xA74b` : ""}`,
+    "Structure (sequences \u2192 scenes \u2192 shots):",
+    renderFindings(r2.structure),
+    "Shot contract (check-scenes.js):",
+    renderFindings(r2.contract)
+  ];
+  return lines.join("\n");
+}
+
 // src/media-utils.ts
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -77432,7 +77870,7 @@ async function generateDialogue(request) {
 var import_tts_speed_policy3 = __toESM(require_tts_speed_policy(), 1);
 import { execFile as execFile4 } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
-import { closeSync, existsSync as existsSync6, mkdirSync as mkdirSync3, openSync, readFileSync as readFileSync5, renameSync, rmSync as rmSync2, writeFileSync as writeFileSync5 } from "node:fs";
+import { closeSync, existsSync as existsSync7, mkdirSync as mkdirSync3, openSync, readFileSync as readFileSync6, renameSync as renameSync2, rmSync as rmSync2, writeFileSync as writeFileSync6 } from "node:fs";
 import path7 from "node:path";
 import { promisify as promisify2 } from "node:util";
 
@@ -77918,9 +78356,9 @@ async function createElevenLabsDictionary(input) {
 
 // src/mlx-serve-client.ts
 import { execFile as execFile3 } from "node:child_process";
-import { existsSync as existsSync4, mkdtempSync, readFileSync as readFileSync4, rmSync, writeFileSync as writeFileSync4 } from "node:fs";
+import { existsSync as existsSync5, mkdtempSync, readFileSync as readFileSync5, rmSync, writeFileSync as writeFileSync5 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join as join3 } from "node:path";
+import { join as join4 } from "node:path";
 
 // src/http.ts
 async function requestRaw(method, url, headers, body, timeoutMs) {
@@ -78143,9 +78581,9 @@ function pickModel(models, capability) {
   return models.find((m2) => m2.state === "ready" && has3(m2)) ?? models.find(has3);
 }
 function fileToBase64(filePath) {
-  if (!existsSync4(filePath)) return { ok: false, error: `File not found: ${filePath}` };
+  if (!existsSync5(filePath)) return { ok: false, error: `File not found: ${filePath}` };
   try {
-    return { ok: true, b64: readFileSync4(filePath).toString("base64") };
+    return { ok: true, b64: readFileSync5(filePath).toString("base64") };
   } catch (error2) {
     return { ok: false, error: error2 instanceof Error ? error2.message : String(error2) };
   }
@@ -78289,11 +78727,11 @@ function parseGlbResponse(body) {
   }
 }
 async function muxRgbToMp4(opts) {
-  const dir = mkdtempSync(join3(tmpdir(), "mlx-video-"));
-  const rgbPath = join3(dir, "frames.rgb");
-  const wavPath = join3(dir, "audio.wav");
+  const dir = mkdtempSync(join4(tmpdir(), "mlx-video-"));
+  const rgbPath = join4(dir, "frames.rgb");
+  const wavPath = join4(dir, "audio.wav");
   try {
-    writeFileSync4(rgbPath, opts.rgb);
+    writeFileSync5(rgbPath, opts.rgb);
     const args = [
       "-y",
       "-f",
@@ -78308,7 +78746,7 @@ async function muxRgbToMp4(opts) {
       rgbPath
     ];
     if (opts.audio) {
-      writeFileSync4(wavPath, pcmToWav(opts.audio.pcm, opts.audio.sampleRate, opts.audio.channels));
+      writeFileSync5(wavPath, pcmToWav(opts.audio.pcm, opts.audio.sampleRate, opts.audio.channels));
       args.push("-i", wavPath);
     }
     args.push(
@@ -78336,7 +78774,7 @@ ${String(errOut).slice(-500)}` : ""}`));
         resolve5();
       });
     });
-    if (!existsSync4(opts.outFile)) return { ok: false, error: "ffmpeg exited 0 but the mp4 was not written" };
+    if (!existsSync5(opts.outFile)) return { ok: false, error: "ffmpeg exited 0 but the mp4 was not written" };
     return { ok: true };
   } catch (error2) {
     return { ok: false, error: error2 instanceof Error ? error2.message : String(error2) };
@@ -78353,7 +78791,7 @@ async function postImage(body, outFile) {
   }
   const parsed = parseImageResponse(res.body);
   if ("error" in parsed) return { success: false, error: parsed.error };
-  writeFileSync4(outFile, Buffer.from(parsed.b64, "base64"));
+  writeFileSync5(outFile, Buffer.from(parsed.b64, "base64"));
   return {
     success: true,
     path: outFile,
@@ -78629,8 +79067,8 @@ async function generateMlx3d(request) {
 }
 
 // src/usage-ledger.ts
-import { execFileSync } from "node:child_process";
-import { appendFileSync, existsSync as existsSync5, mkdirSync as mkdirSync2 } from "node:fs";
+import { execFileSync as execFileSync2 } from "node:child_process";
+import { appendFileSync, existsSync as existsSync6, mkdirSync as mkdirSync2 } from "node:fs";
 import path6 from "node:path";
 var EPISODE_MARKER = path6.join("storyboard", "scenes.js");
 var MAX_WALK_UP = 6;
@@ -78651,7 +79089,7 @@ function findEpisodeDir(outputPath) {
   }
   for (let i2 = 0; i2 <= MAX_WALK_UP; i2++) {
     try {
-      if (existsSync5(path6.join(dir, EPISODE_MARKER))) return dir;
+      if (existsSync6(path6.join(dir, EPISODE_MARKER))) return dir;
     } catch {
       return null;
     }
@@ -78731,7 +79169,7 @@ var ELEVENLABS_KEY = {
 };
 function probeSeconds(file) {
   try {
-    const out = execFileSync("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file], {
+    const out = execFileSync2("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file], {
       encoding: "utf8",
       timeout: 15e3,
       stdio: ["ignore", "pipe", "ignore"]
@@ -79157,8 +79595,8 @@ var REVIEW_JSON_SCHEMA = {
 async function listen(file, request, episodeReview = false) {
   let laidInPauses = null;
   try {
-    if (existsSync6(sentencesPathFor(file))) {
-      const side = JSON.parse(readFileSync5(sentencesPathFor(file), "utf8"));
+    if (existsSync7(sentencesPathFor(file))) {
+      const side = JSON.parse(readFileSync6(sentencesPathFor(file), "utf8"));
       if (Array.isArray(side.boundaries)) laidInPauses = { lead: Number(side.lead) || 0, boundaries: side.boundaries };
     }
   } catch {
@@ -79166,7 +79604,7 @@ async function listen(file, request, episodeReview = false) {
   }
   const { GoogleGenAI: GoogleGenAI3 } = await Promise.resolve().then(() => (init_node(), node_exports));
   const client = new GoogleGenAI3({ apiKey: requireGeminiKey(), httpOptions: { apiVersion: REVIEW_API_VERSION, timeout: 18e4 } });
-  const audio = readFileSync5(file);
+  const audio = readFileSync6(file);
   const flac = episodeReview && audio.subarray(0, 4).toString() === "fLaC";
   if (audio.length > 14 * 1024 * 1024 || !flac && audio.subarray(0, 4).toString() !== "RIFF") throw new Error("Review requires WAV (or final FLAC) smaller than 14 MiB");
   const audioPart = { inlineData: { mimeType: flac ? "audio/flac" : "audio/wav", data: audio.toString("base64") } };
@@ -79292,17 +79730,17 @@ function applySentenceSpacing(output, request) {
   (0, import_tts_speed_policy3.authorizeSpeed)(request.outputPath, "final", request.playbackSpeed);
   const alignmentPath = output.replace(/\.wav$/i, "") + ".alignment.json";
   rmSync2(sentencesPathFor(output), { force: true });
-  if (!existsSync6(alignmentPath)) return { skipped: "no alignment sidecar beside the take" };
+  if (!existsSync7(alignmentPath)) return { skipped: "no alignment sidecar beside the take" };
   try {
-    const sidecar = JSON.parse(readFileSync5(alignmentPath, "utf8"));
+    const sidecar = JSON.parse(readFileSync6(alignmentPath, "utf8"));
     const alignment = sidecar.alignment;
     if (!alignment?.characters?.length) return { skipped: "alignment sidecar carries no characters" };
     const segments = request.segments ?? splitSentences(alignment.characters.join(""));
-    const result = respace(readFileSync5(output), alignment, segments, { pause: request.sentencePause, playbackSpeed: request.playbackSpeed });
-    writeFileSync5(output, result.wav);
+    const result = respace(readFileSync6(output), alignment, segments, { pause: request.sentencePause, playbackSpeed: request.playbackSpeed });
+    writeFileSync6(output, result.wav);
     const meta = { policy: SPACING_POLICY, pause: request.sentencePause, playbackSpeed: request.playbackSpeed, lead: result.lead, gaps: result.gaps, inserted: result.inserted, boundaries: result.boundaries, duration: result.duration, segmentsFrom: request.segments ? "request" : "sentence-final punctuation" };
-    writeFileSync5(alignmentPath, JSON.stringify({ ...sidecar, alignment: result.alignment, vendor_alignment: sidecar.vendor_alignment ?? sidecar.alignment, respaced: meta }, null, 2));
-    writeFileSync5(sentencesPathFor(output), JSON.stringify({ version: 1, ...meta, audio: path7.basename(output), audioSha256: sha256(result.wav), sentences: result.sentences }, null, 2) + "\n");
+    writeFileSync6(alignmentPath, JSON.stringify({ ...sidecar, alignment: result.alignment, vendor_alignment: sidecar.vendor_alignment ?? sidecar.alignment, respaced: meta }, null, 2));
+    writeFileSync6(sentencesPathFor(output), JSON.stringify({ version: 1, ...meta, audio: path7.basename(output), audioSha256: sha256(result.wav), sentences: result.sentences }, null, 2) + "\n");
     return meta;
   } catch (error2) {
     return { skipped: error2 instanceof Error ? error2.message : String(error2) };
@@ -79351,25 +79789,25 @@ async function generateCheckedSpeech(input, dependencies) {
   function save(status, extra = {}) {
     const report = { ...base, status, attempts, checkedAt: (/* @__PURE__ */ new Date()).toISOString(), ...extra };
     const temporary = proofFile + "." + randomUUID() + ".tmp";
-    writeFileSync5(temporary, JSON.stringify(report, null, 2) + "\n");
-    renameSync(temporary, proofFile);
+    writeFileSync6(temporary, JSON.stringify(report, null, 2) + "\n");
+    renameSync2(temporary, proofFile);
     return { success: status === "pass", status, audioPath: output, proofPath: proofFile, attempts: attempts.length, ...extra };
   }
   try {
-    if (existsSync6(proofFile)) {
-      const old = JSON.parse(readFileSync5(proofFile, "utf8"));
+    if (existsSync7(proofFile)) {
+      const old = JSON.parse(readFileSync6(proofFile, "utf8"));
       if (Object.entries(base).every(([key, value]) => key === "model" || JSON.stringify(old[key]) === JSON.stringify(value))) {
         if (!Array.isArray(old.attempts) || old.attempts.length > 3) throw new Error("Invalid attempt history");
         attempts.push(...old.attempts.map((take) => ({ ...take, model: take.model ?? old.model })));
         const last = attempts.at(-1);
         if (last?.duplicateOf) return save("fail", { error: "Identical rejected audio already stopped this request; correct the episode pronunciation or delivery plan" });
         if (request.rejectTake) {
-          if (!last || last.audioSha256 !== request.rejectTake.audioSha256 || !existsSync6(output) || sha256(readFileSync5(output)) !== request.rejectTake.audioSha256) throw new Error("The rejected take is not the current audio; inspect the current file before requesting another retake");
+          if (!last || last.audioSha256 !== request.rejectTake.audioSha256 || !existsSync7(output) || sha256(readFileSync6(output)) !== request.rejectTake.audioSha256) throw new Error("The rejected take is not the current audio; inspect the current file before requesting another retake");
           last.authorRejection = request.rejectTake.reason;
           last.pending = false;
           last.failures = [...Array.isArray(last.failures) ? last.failures : [], "Rejected during final listening: " + request.rejectTake.reason];
         }
-        if (!request.rejectTake && old.model === REVIEW_MODEL && old.status === "pass" && last?.pending === false && Array.isArray(last.failures) && !last.failures.length && typeof last.transcript === "string" && existsSync6(output) && old.audioSha256 === sha256(readFileSync5(output)) && last.audioSha256 === old.audioSha256 && !signalFailures(last.signal, request.expectedText).length && !reviewFailures(request.expectedText, String(last.transcript), reviewSchema.parse(last.review), last.signal.duration).length) {
+        if (!request.rejectTake && old.model === REVIEW_MODEL && old.status === "pass" && last?.pending === false && Array.isArray(last.failures) && !last.failures.length && typeof last.transcript === "string" && existsSync7(output) && old.audioSha256 === sha256(readFileSync6(output)) && last.audioSha256 === old.audioSha256 && !signalFailures(last.signal, request.expectedText).length && !reviewFailures(request.expectedText, String(last.transcript), reviewSchema.parse(last.review), last.signal.duration).length) {
           const lastSpacing = last.spacing;
           return {
             success: true,
@@ -79381,7 +79819,7 @@ async function generateCheckedSpeech(input, dependencies) {
             spacing: !prepared.spacing ? "not applicable" : lastSpacing?.skipped ? "skipped: " + String(lastSpacing.skipped) : "applied"
           };
         }
-        if (!request.rejectTake && old.model !== REVIEW_MODEL && old.status === "pass" && last && existsSync6(output) && last.audioSha256 === sha256(readFileSync5(output))) {
+        if (!request.rejectTake && old.model !== REVIEW_MODEL && old.status === "pass" && last && existsSync7(output) && last.audioSha256 === sha256(readFileSync6(output))) {
           last.previousReviews = [
             ...Array.isArray(last.previousReviews) ? last.previousReviews : [],
             { model: last.model, transcript: last.transcript, review: last.review, failures: last.failures, signal: last.signal, cer: last.cer }
@@ -79396,7 +79834,7 @@ async function generateCheckedSpeech(input, dependencies) {
     await deps.preflight();
     while (true) {
       let take = attempts.at(-1);
-      const resumeReview = take?.pending === true && typeof take.audioSha256 === "string" && existsSync6(output) && take.audioSha256 === sha256(readFileSync5(output));
+      const resumeReview = take?.pending === true && typeof take.audioSha256 === "string" && existsSync7(output) && take.audioSha256 === sha256(readFileSync6(output));
       if (!resumeReview) {
         if (attempts.length >= request.maxAttempts) break;
         const attempt = attempts.length + 1;
@@ -79429,7 +79867,7 @@ async function generateCheckedSpeech(input, dependencies) {
           rmSync2(sentencesPathFor(output), { force: true });
           take.spacing = { skipped: "engine has no alignment" };
         }
-        take.audioSha256 = sha256(readFileSync5(output));
+        take.audioSha256 = sha256(readFileSync6(output));
         save("unverified");
         const duplicate = attempts.slice(0, -1).find((a) => a.audioSha256 === take.audioSha256 && a.pending === false && Array.isArray(a.failures) && a.failures.length);
         if (duplicate) {
@@ -79446,7 +79884,7 @@ async function generateCheckedSpeech(input, dependencies) {
         listened.review = reviewSchema.parse(listened.review);
         failures = reviewFailures(request.expectedText, listened.transcript, listened.review, signal.duration);
       }
-      if (audioSha256 !== sha256(readFileSync5(output))) throw new Error("Audio changed during review");
+      if (audioSha256 !== sha256(readFileSync6(output))) throw new Error("Audio changed during review");
       Object.assign(take, { pending: false, audioSha256, signal, ...listened ? { model: REVIEW_MODEL, ...listened } : {}, cer: listened ? characterErrorRate(request.expectedText, listened.transcript) : null, failures });
       const spacingState = take.spacing;
       const spacing = !prepared.spacing ? "not applicable" : spacingState?.skipped ? "skipped: " + String(spacingState.skipped) : "applied";
@@ -79464,9 +79902,9 @@ async function generateCheckedSpeech(input, dependencies) {
 
 // src/zimage-client.ts
 import { execFile as execFile5 } from "node:child_process";
-import { existsSync as existsSync7 } from "node:fs";
+import { existsSync as existsSync8 } from "node:fs";
 import { homedir as homedir2 } from "node:os";
-import { join as join4 } from "node:path";
+import { join as join5 } from "node:path";
 var DEFAULT_ZIMAGE_STEPS = 9;
 var ZIMAGE_QUANTIZE_OPTIONS = [4, 6, 8];
 var DEFAULT_ZIMAGE_QUANTIZE = 8;
@@ -79481,8 +79919,8 @@ function zimageTimeoutMs(width, height, steps) {
   return Math.min(30 * 6e4, 12e4 + Math.ceil(steps * megapixels * 45e3));
 }
 function weightCacheDir() {
-  const hfHome = process.env.HF_HOME || join4(homedir2(), ".cache", "huggingface");
-  return join4(hfHome, "hub", "models--Tongyi-MAI--Z-Image-Turbo");
+  const hfHome = process.env.HF_HOME || join5(homedir2(), ".cache", "huggingface");
+  return join5(hfHome, "hub", "models--Tongyi-MAI--Z-Image-Turbo");
 }
 var WEIGHT_DOWNLOAD_ALLOWANCE_MS = 60 * 6e4;
 function installHint2(detail) {
@@ -79506,7 +79944,7 @@ var zimageGenerateSchema = external_exports.object({
 });
 async function generateLocalImage(request) {
   const bin = mfluxZImageBin();
-  if (!existsSync7(bin)) {
+  if (!existsSync8(bin)) {
     return { success: false, error: installHint2(`mflux binary not found: "${bin}"`) };
   }
   const outFile = resolveOutputFile(
@@ -79529,7 +79967,7 @@ async function generateLocalImage(request) {
     outFile
   ];
   if (request.seed !== void 0) cliArgs.push("--seed", String(request.seed));
-  const firstCall = !existsSync7(weightCacheDir());
+  const firstCall = !existsSync8(weightCacheDir());
   if (firstCall) {
     console.error("[Z-Image] First call \u2014 downloading ~31GB of weights to the huggingface cache first. This can take a long time.");
   }
@@ -79569,7 +80007,7 @@ ${tail}` : ""}`));
     console.error(`[Z-Image] Error: ${message.split("\n")[0]}`);
     return { success: false, error: message };
   }
-  if (!existsSync7(outFile)) {
+  if (!existsSync8(outFile)) {
     return {
       success: false,
       error: `mflux exited without producing the output file: ${outFile}`
@@ -79591,9 +80029,9 @@ ${tail}` : ""}`));
 
 // src/qwen3-asr-client.ts
 import { execFile as execFile6 } from "node:child_process";
-import { existsSync as existsSync8, mkdirSync as mkdirSync4, mkdtempSync as mkdtempSync2, readFileSync as readFileSync6, renameSync as renameSync2, rmSync as rmSync3 } from "node:fs";
+import { existsSync as existsSync9, mkdirSync as mkdirSync4, mkdtempSync as mkdtempSync2, readFileSync as readFileSync7, renameSync as renameSync3, rmSync as rmSync3 } from "node:fs";
 import { homedir as homedir3 } from "node:os";
-import { basename as basename6, extname as extname5, join as join5 } from "node:path";
+import { basename as basename7, extname as extname5, join as join6 } from "node:path";
 var QWEN3_ASR_MODELS = ["Qwen/Qwen3-ASR-1.7B", "Qwen/Qwen3-ASR-0.6B"];
 var DEFAULT_QWEN3_ASR_MODEL = "Qwen/Qwen3-ASR-1.7B";
 var QWEN3_ASR_LANGUAGES = [
@@ -79692,13 +80130,13 @@ function qwen3AsrTimeoutMs(audioSeconds) {
 }
 var WEIGHT_DOWNLOAD_ALLOWANCE_MS2 = 60 * 6e4;
 function weightCacheDir2(model) {
-  const hfHome = process.env.HF_HOME || join5(homedir3(), ".cache", "huggingface");
+  const hfHome = process.env.HF_HOME || join6(homedir3(), ".cache", "huggingface");
   const slug = model.replaceAll("/", "--");
-  return join5(hfHome, "hub", `models--${slug}`);
+  return join6(hfHome, "hub", `models--${slug}`);
 }
 function alignerCacheDir() {
-  const hfHome = process.env.HF_HOME || join5(homedir3(), ".cache", "huggingface");
-  return join5(hfHome, "hub", "models--Qwen--Qwen3-ForcedAligner-0.6B");
+  const hfHome = process.env.HF_HOME || join6(homedir3(), ".cache", "huggingface");
+  return join6(hfHome, "hub", "models--Qwen--Qwen3-ForcedAligner-0.6B");
 }
 function installHint3(detail) {
   return `${detail}
@@ -79748,10 +80186,10 @@ function normalizeSegments(data) {
 }
 async function transcribeLocal(request) {
   const bin = qwen3AsrBin();
-  if (!existsSync8(bin)) {
+  if (!existsSync9(bin)) {
     return { success: false, error: installHint3(`mlx-qwen3-asr binary not found: "${bin}"`) };
   }
-  if (!existsSync8(request.audioPath)) {
+  if (!existsSync9(request.audioPath)) {
     return { success: false, error: `Audio file not found: ${request.audioPath}` };
   }
   const outFile = resolveOutputFile(
@@ -79761,8 +80199,8 @@ async function transcribeLocal(request) {
   );
   const outDir = request.outputPath || process.cwd();
   mkdirSync4(outDir, { recursive: true });
-  const scratchDir = mkdtempSync2(join5(outDir, ".qwen3-asr-"));
-  const firstCall = !existsSync8(weightCacheDir2(request.model)) || request.timestamps && !existsSync8(alignerCacheDir());
+  const scratchDir = mkdtempSync2(join6(outDir, ".qwen3-asr-"));
+  const firstCall = !existsSync9(weightCacheDir2(request.model)) || request.timestamps && !existsSync9(alignerCacheDir());
   if (firstCall) {
     console.error(
       "[Qwen3-ASR] First call \u2014 downloading ~3.4GB of weights (plus ForcedAligner if timestamps) to the huggingface cache. This can take a while."
@@ -79818,20 +80256,20 @@ ${tail}` : ""}`));
     console.error(`[Qwen3-ASR] Error: ${message.split("\n")[0]}`);
     return { success: false, error: message };
   }
-  const cliJsonPath = join5(scratchDir, `${basename6(request.audioPath, extname5(request.audioPath))}.json`);
-  if (!existsSync8(cliJsonPath)) {
+  const cliJsonPath = join6(scratchDir, `${basename7(request.audioPath, extname5(request.audioPath))}.json`);
+  if (!existsSync9(cliJsonPath)) {
     rmSync3(scratchDir, { recursive: true, force: true });
     return { success: false, error: `mlx-qwen3-asr exited without producing JSON (looked for ${cliJsonPath})` };
   }
   let parsed;
   try {
-    parsed = parseCliJson(readFileSync6(cliJsonPath, "utf8"));
+    parsed = parseCliJson(readFileSync7(cliJsonPath, "utf8"));
   } catch (error2) {
     rmSync3(scratchDir, { recursive: true, force: true });
     const message = error2 instanceof Error ? error2.message : String(error2);
     return { success: false, error: `Failed to parse CLI JSON: ${message}` };
   }
-  renameSync2(cliJsonPath, outFile);
+  renameSync3(cliJsonPath, outFile);
   rmSync3(scratchDir, { recursive: true, force: true });
   const segments = normalizeSegments(parsed);
   const text2 = (parsed.text ?? segments.map((s2) => s2.text).join("")).trim();
@@ -79850,9 +80288,9 @@ ${tail}` : ""}`));
 
 // src/blender-bridge.ts
 import { execFile as execFile7 } from "node:child_process";
-import { existsSync as existsSync9, mkdtempSync as mkdtempSync3, readFileSync as readFileSync7, rmSync as rmSync4, writeFileSync as writeFileSync6 } from "node:fs";
+import { existsSync as existsSync10, mkdtempSync as mkdtempSync3, readFileSync as readFileSync8, rmSync as rmSync4, writeFileSync as writeFileSync7 } from "node:fs";
 import { tmpdir as tmpdir2 } from "node:os";
-import { dirname as dirname2, extname as extname6, join as join6, resolve as resolve2 } from "node:path";
+import { dirname as dirname3, extname as extname6, join as join7, resolve as resolve3 } from "node:path";
 var BLENDER_PROXY_KINDS = ["person", "dog", "car", "box", "cylinder", "sphere"];
 var BLENDER_INTERPOLATIONS = ["LINEAR", "BEZIER", "CONSTANT"];
 var BLENDER_PREVIZ_ENGINES = ["workbench", "eevee"];
@@ -79894,7 +80332,7 @@ var frameNumber = external_exports.number().int().min(0).max(1e6);
 var blenderName = external_exports.string().min(1).refine((n) => Buffer.byteLength(n, "utf8") <= MAX_BLENDER_NAME, { message: `a Blender object name is at most ${MAX_BLENDER_NAME} bytes of UTF-8` }).refine((n) => !n.includes("/") && !n.includes("\\"), { message: "a Blender object name cannot contain path separators" });
 var evenPixels = (min) => external_exports.number().int().min(min).max(4096).multipleOf(2, "must be an even number of pixels (H.264)");
 var hexColor = external_exports.string().regex(/^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, "color must be a hex triplet such as #4a90d9");
-var blendPath = external_exports.string().min(1, "blendPath is required").refine((p) => !p.includes(".."), { message: 'blendPath must not contain ".."' }).refine((p) => extname6(p).toLowerCase() === ".blend", { message: "blendPath must end in .blend" }).transform((p) => resolve2(p));
+var blendPath = external_exports.string().min(1, "blendPath is required").refine((p) => !p.includes(".."), { message: 'blendPath must not contain ".."' }).refine((p) => extname6(p).toLowerCase() === ".blend", { message: "blendPath must end in .blend" }).transform((p) => resolve3(p));
 var blenderSceneReadSchema = external_exports.object({ blendPath });
 var proxySchema = external_exports.object({
   name: blenderName,
@@ -79907,7 +80345,7 @@ var proxySchema = external_exports.object({
   color: hexColor.optional()
 });
 var importSchema = external_exports.object({
-  glbPath: external_exports.string().min(1).refine((p) => !p.includes(".."), { message: 'glbPath must not contain ".."' }).refine((p) => [".glb", ".gltf"].includes(extname6(p).toLowerCase()), { message: "glbPath must end in .glb or .gltf" }).transform((p) => resolve2(p)),
+  glbPath: external_exports.string().min(1).refine((p) => !p.includes(".."), { message: 'glbPath must not contain ".."' }).refine((p) => [".glb", ".gltf"].includes(extname6(p).toLowerCase()), { message: "glbPath must end in .glb or .gltf" }).transform((p) => resolve3(p)),
   name: blenderName,
   location: vec3.optional().default([0, 0, 0]),
   rotationDeg: vec3.optional().default([0, 0, 0]),
@@ -80035,7 +80473,7 @@ var blenderPoseKeySchema = external_exports.object({
     frames.add(k.frame);
   }
 });
-var motionPath = external_exports.string().min(1, "motionPath is required").refine((p) => !p.includes(".."), { message: 'motionPath must not contain ".."' }).refine((p) => BLENDER_MOTION_FORMATS.includes(extname6(p).toLowerCase()), { message: `motionPath must end in ${BLENDER_MOTION_FORMATS.join(" or ")}` }).transform((p) => resolve2(p));
+var motionPath = external_exports.string().min(1, "motionPath is required").refine((p) => !p.includes(".."), { message: 'motionPath must not contain ".."' }).refine((p) => BLENDER_MOTION_FORMATS.includes(extname6(p).toLowerCase()), { message: `motionPath must end in ${BLENDER_MOTION_FORMATS.join(" or ")}` }).transform((p) => resolve3(p));
 var blenderMotionImportSchema = external_exports.object({
   blendPath,
   object: blenderName,
@@ -80151,12 +80589,12 @@ function runBridge(job, timeoutMs) {
 async function runBridgeUnlocked(job, timeoutMs) {
   const blender = blenderBin();
   if (!blender) return { success: false, error: installHint4("Blender was not found on this machine.") };
-  const dir = mkdtempSync3(join6(tmpdir2(), "blender-bridge-"));
-  const script = join6(dir, "bridge.py");
-  const jobPath = join6(dir, "job.json");
-  const resultPath = join6(dir, "result.json");
-  writeFileSync6(script, BRIDGE_PY, "utf-8");
-  writeFileSync6(jobPath, JSON.stringify({ ...job, resultPath }), "utf-8");
+  const dir = mkdtempSync3(join7(tmpdir2(), "blender-bridge-"));
+  const script = join7(dir, "bridge.py");
+  const jobPath = join7(dir, "job.json");
+  const resultPath = join7(dir, "result.json");
+  writeFileSync7(script, BRIDGE_PY, "utf-8");
+  writeFileSync7(jobPath, JSON.stringify({ ...job, resultPath }), "utf-8");
   try {
     const run = await new Promise((resolveRun) => {
       execFile7(
@@ -80175,8 +80613,8 @@ ${stderr}`.split("\n").filter((l) => l.trim().length > 0);
         }
       );
     });
-    if (existsSync9(resultPath)) {
-      const raw = JSON.parse(readFileSync7(resultPath, "utf-8"));
+    if (existsSync10(resultPath)) {
+      const raw = JSON.parse(readFileSync8(resultPath, "utf-8"));
       if (raw.ok) return { success: true, result: raw.result };
       return { success: false, error: `${raw.error ?? "Blender reported an error"}${raw.trace ? `
 ${raw.trace}` : ""}` };
@@ -80191,7 +80629,7 @@ ${run.tail}` };
   }
 }
 async function readScene(request) {
-  if (!existsSync9(request.blendPath)) {
+  if (!existsSync10(request.blendPath)) {
     return { success: false, error: `blend file not found: ${request.blendPath} \u2014 blender_scene_build creates one.` };
   }
   const r2 = await runBridge({ op: "read", blendPath: request.blendPath }, EDIT_TIMEOUT_MS);
@@ -80199,48 +80637,48 @@ async function readScene(request) {
 }
 async function buildScene(request) {
   for (const imp of request.imports) {
-    if (!existsSync9(imp.glbPath)) return { success: false, error: `GLB not found: ${imp.glbPath}` };
+    if (!existsSync10(imp.glbPath)) return { success: false, error: `GLB not found: ${imp.glbPath}` };
   }
-  if (!request.reset && !existsSync9(request.blendPath)) {
+  if (!request.reset && !existsSync10(request.blendPath)) {
     return { success: false, error: `reset is false but ${request.blendPath} does not exist yet \u2014 set reset to true to create it.` };
   }
   const r2 = await runBridge({ op: "build", ...request }, EDIT_TIMEOUT_MS);
   return r2.success ? { success: true, scene: r2.result } : r2;
 }
 async function setCamera(request) {
-  if (!existsSync9(request.blendPath)) {
+  if (!existsSync10(request.blendPath)) {
     return { success: false, error: `blend file not found: ${request.blendPath} \u2014 blender_scene_build creates one.` };
   }
   const r2 = await runBridge({ op: "camera", ...request }, EDIT_TIMEOUT_MS);
   return r2.success ? { success: true, scene: r2.result } : r2;
 }
 async function animateObject(request) {
-  if (!existsSync9(request.blendPath)) {
+  if (!existsSync10(request.blendPath)) {
     return { success: false, error: `blend file not found: ${request.blendPath} \u2014 blender_scene_build creates one.` };
   }
   const r2 = await runBridge({ op: "animate", ...request }, EDIT_TIMEOUT_MS);
   return r2.success ? { success: true, scene: r2.result } : r2;
 }
 async function poseKey(request) {
-  if (!existsSync9(request.blendPath)) {
+  if (!existsSync10(request.blendPath)) {
     return { success: false, error: `blend file not found: ${request.blendPath} \u2014 blender_scene_build creates one.` };
   }
   const r2 = await runBridge({ op: "pose", ...request }, EDIT_TIMEOUT_MS);
   return r2.success ? { success: true, scene: r2.result } : r2;
 }
 async function importMotion(request) {
-  if (!existsSync9(request.blendPath)) {
+  if (!existsSync10(request.blendPath)) {
     return { success: false, error: `blend file not found: ${request.blendPath} \u2014 blender_scene_build creates one.` };
   }
-  if (!existsSync9(request.motionPath)) return { success: false, error: `motion file not found: ${request.motionPath}` };
+  if (!existsSync10(request.motionPath)) return { success: false, error: `motion file not found: ${request.motionPath}` };
   const r2 = await runBridge({ op: "motion", ...request, maxFrames: MAX_PREVIZ_FRAMES }, MOTION_TIMEOUT_MS);
   return r2.success ? { success: true, scene: r2.result } : r2;
 }
 async function renderPreviz(request) {
-  if (!existsSync9(request.blendPath)) {
+  if (!existsSync10(request.blendPath)) {
     return { success: false, error: `blend file not found: ${request.blendPath} \u2014 blender_scene_build creates one.` };
   }
-  const outputDir = request.outputPath ? resolve2(request.outputPath) : join6(dirname2(request.blendPath), "previz");
+  const outputDir = request.outputPath ? resolve3(request.outputPath) : join7(dirname3(request.blendPath), "previz");
   const videoPath = resolveOutputFile(outputDir, request.filename, "video");
   const framesForTimeout = request.frameStart !== void 0 && request.frameEnd !== void 0 ? request.frameEnd - request.frameStart + 1 : MAX_PREVIZ_FRAMES;
   const timeoutMs = request.timeoutSeconds ? request.timeoutSeconds * 1e3 : previzTimeoutMs(framesForTimeout, request.engine);
@@ -82563,6 +83001,31 @@ var THREADS_SEARCH_OUTPUT = {
     }
   },
   required: ["query", "count", "results"]
+};
+var eyelineInput = (() => {
+  try {
+    return contract().EYELINE_SCHEMA;
+  } catch {
+    return { type: "object", description: "Eyeline contract unavailable: restore skills/storyboard/references/structure-contract.js" };
+  }
+})();
+var compositionInput = (() => {
+  try {
+    return contract().COMPOSITION_SCHEMA;
+  } catch {
+    return { type: "object", description: "Composition contract unavailable: restore skills/storyboard/references/structure-contract.js" };
+  }
+})();
+var storyboardShotInput = {
+  type: "object",
+  description: "The scenes-schema.md shot object",
+  properties: {
+    shot: {
+      type: "object",
+      description: "Shot grammar: framing, camera angle and optional or scene-required eyeline",
+      properties: { eyeline: eyelineInput, composition: compositionInput }
+    }
+  }
 };
 var TOOLS = [
   // ── Research & fact-checking ──────────────────────────────────────────
@@ -85828,15 +86291,15 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
           description: "Replace the whole board \u2014 how a new board is written",
           properties: {
             structure: { type: "object", description: '{ version: "structure-v1", sequences: [...], scenes: [...] }' },
-            shots: { type: "array", items: { type: "object", description: "The scenes-schema.md shot object" }, description: "Every shot in playback order \u2014 the scenes-schema.md shot object; each playback shot carries `scene`" }
+            shots: { type: "array", items: storyboardShotInput, description: "Every shot in playback order \u2014 the scenes-schema.md shot object; each playback shot carries `scene`" }
           },
           required: ["structure", "shots"]
         },
         structure: { type: "object", description: "Replace window.STRUCTURE only" },
         sequences: { type: "array", items: { type: "object", description: "{ id, title, purpose, question?, payoff?, scenes }" }, description: "Upsert sequences by id" },
         scenes: { type: "array", items: { type: "object", description: "{ no, place, time, event, charge, turn, out? }" }, description: "Upsert scenes by no" },
-        shots: { type: "array", items: { type: "object", description: "One positional upsert", properties: { no: { type: "number", description: "1-based position" }, shot: { type: "object", description: "The scenes-schema.md shot object" } }, required: ["no", "shot"] }, description: "Upsert shots by 1-based position; no = length + 1 appends" },
-        insertShots: { type: "array", items: { type: "object", description: "One insert", properties: { after: { type: "number", description: "1-based position to insert after; 0 = at the start" }, shots: { type: "array", items: { type: "object", description: "The scenes-schema.md shot object" }, description: "Shots to insert, in order" } }, required: ["after", "shots"] }, description: "Insert shots after a 1-based position (0 = at the start)" },
+        shots: { type: "array", items: { type: "object", description: "One positional upsert", properties: { no: { type: "number", description: "1-based position" }, shot: storyboardShotInput }, required: ["no", "shot"] }, description: "Upsert shots by 1-based position; no = length + 1 appends" },
+        insertShots: { type: "array", items: { type: "object", description: "One insert", properties: { after: { type: "number", description: "1-based position to insert after; 0 = at the start" }, shots: { type: "array", items: storyboardShotInput, description: "Shots to insert, in order" } }, required: ["after", "shots"] }, description: "Insert shots after a 1-based position (0 = at the start)" },
         transitions: {
           type: "array",
           minItems: 1,
@@ -85893,9 +86356,9 @@ var SNS_PLATFORM_BY_TOOL = {
 
 // src/datago-client.ts
 import { mkdir, writeFile as writeFile2 } from "node:fs/promises";
-import { existsSync as existsSync10 } from "node:fs";
+import { existsSync as existsSync11 } from "node:fs";
 import { tmpdir as tmpdir3 } from "node:os";
-import { join as join8 } from "node:path";
+import { join as join9 } from "node:path";
 var PORTAL_BASE = "https://www.data.go.kr";
 var ODCLOUD_BASE = "https://api.odcloud.kr/api";
 var OPENAPI_BASE = "https://apis.data.go.kr";
@@ -86134,14 +86597,14 @@ async function downloadFile2(input) {
   const cd = fileRes.headers.get("content-disposition") ?? "";
   const rawName = cd.match(/filename\*?=(?:UTF-8''|")?([^";]+)/i)?.[1] ?? `datago-${input.publicDataPk}.bin`;
   const filename = sanitizeFilename(fixHeaderEncoding(rawName.replace(/"/g, "")));
-  const saveDir = input.saveDir ?? join8(tmpdir3(), "social-flow-datago");
+  const saveDir = input.saveDir ?? join9(tmpdir3(), "social-flow-datago");
   await mkdir(saveDir, { recursive: true });
-  let savedPath = join8(saveDir, filename);
-  for (let i2 = 1; existsSync10(savedPath); i2++) {
+  let savedPath = join9(saveDir, filename);
+  for (let i2 = 1; existsSync11(savedPath); i2++) {
     if (i2 >= 100) {
       return err(`there are already 100+ files with the same name in ${saveDir} \u2014 clean up saveDir or point at a different directory.`);
     }
-    savedPath = join8(saveDir, filename.replace(/(\.[^.]*)?$/, `-${i2}$1`));
+    savedPath = join9(saveDir, filename.replace(/(\.[^.]*)?$/, `-${i2}$1`));
   }
   await writeFile2(savedPath, buf);
   const preview = decodePreview(buf.subarray(0, 4096));
@@ -87474,22 +87937,22 @@ async function stockSearch(input) {
 // src/sns-client.ts
 import { createHash as createHash2, randomUUID as randomUUID2 } from "node:crypto";
 import {
-  existsSync as existsSync11,
+  existsSync as existsSync12,
   mkdirSync as nodeMkdirSync,
   readFileSync as nodeReadFileSync,
   rmSync as nodeRmSync,
   writeFileSync as nodeWriteFileSync
 } from "node:fs";
 import { open as nodeOpen, readFile, stat as stat3 } from "node:fs/promises";
-import { basename as basename7, dirname as dirname4, extname as extname8, join as join9 } from "node:path";
+import { basename as basename8, dirname as dirname5, extname as extname8, join as join10 } from "node:path";
 function enabledPlatforms() {
   const channelDirs = listChannelDirs();
   return SNS_PLATFORMS.filter(
-    (platform) => existsSync11(snsCredentialFile(platform)) || channelDirs.some((dir) => dir.platforms.includes(platform))
+    (platform) => existsSync12(snsCredentialFile(platform)) || channelDirs.some((dir) => dir.platforms.includes(platform))
   );
 }
 function availablePlatformsFor(channel) {
-  return SNS_PLATFORMS.filter((platform) => existsSync11(snsCredentialFile(platform, channel)));
+  return SNS_PLATFORMS.filter((platform) => existsSync12(snsCredentialFile(platform, channel)));
 }
 var GRAPH_VERSION = "v23.0";
 var THREADS_BASE = "https://graph.threads.net/v1.0";
@@ -88173,7 +88636,7 @@ function parseResumeOffset(range) {
 }
 function sessionStateFile(filePath) {
   const key = createHash2("sha256").update(filePath).digest("hex").slice(0, 16);
-  return join9(snsTokenDir, ".yt-upload", `${key}.json`);
+  return join10(snsTokenDir, ".yt-upload", `${key}.json`);
 }
 function readState(filePath) {
   try {
@@ -88192,7 +88655,7 @@ function writeState(filePath, s2) {
       nodeRmSync(p, { force: true });
       return;
     }
-    nodeMkdirSync(dirname4(p), { recursive: true });
+    nodeMkdirSync(dirname5(p), { recursive: true });
     nodeWriteFileSync(p, JSON.stringify(s2), "utf8");
   } catch {
   }
@@ -88389,7 +88852,7 @@ async function publishYoutube(input) {
             platform: "YOUTUBE",
             videoId: doneId,
             permalink: `https://www.youtube.com/watch?v=${doneId}`,
-            fileName: basename7(input.videoFilePath),
+            fileName: basename8(input.videoFilePath),
             resumed: true,
             note: `This file is already up from the upload started at ${new Date(sessionStartedAt).toISOString()}. It was not re-uploaded.`
           });
@@ -88421,7 +88884,7 @@ async function publishYoutube(input) {
       platform: "YOUTUBE",
       videoId,
       permalink: `https://www.youtube.com/watch?v=${videoId}`,
-      fileName: basename7(input.videoFilePath),
+      fileName: basename8(input.videoFilePath),
       ...thumb ? { thumbnailSet: !thumbnailWarning } : {},
       ...thumbnailWarning ? { thumbnailWarning } : {},
       ...captionTracks.length > 0 ? { captionSet: !captionWarning, captionLanguages: captionTracks.map((t2) => t2.language) } : {},
@@ -89303,423 +89766,6 @@ async function checkAccounts(channel) {
     defaultTokens: hasDefaults ? await checkPlatformSet() : "none \u2014 publishing without a channel (omitting the channel argument) is not possible. Pass channel to the publish tools."
   };
   return { ok: true, status: 200, body: JSON.stringify(body, null, 2) };
-}
-
-// src/storyboard.ts
-import { execFileSync as execFileSync2 } from "node:child_process";
-import { existsSync as existsSync12, readFileSync as readFileSync8, renameSync as renameSync3, statSync as statSync5, unlinkSync, writeFileSync as writeFileSync7 } from "node:fs";
-import * as nodeModule from "node:module";
-import { basename as basename8, dirname as dirname5, join as join10, resolve as resolve3 } from "node:path";
-import { fileURLToPath } from "node:url";
-import vm from "node:vm";
-var PLUGIN_ROOT = resolve3(dirname5(fileURLToPath(import.meta.url)), "..", "..");
-var REFERENCES_DIR = join10(PLUGIN_ROOT, "skills", "storyboard", "references");
-var CONTRACT_FILE = join10(REFERENCES_DIR, "structure-contract.js");
-var CHECK_SCENES_FILE = join10(REFERENCES_DIR, "check-scenes.js");
-var loadFromHere = nodeModule.createRequire(import.meta.url);
-var contractCache;
-function contract() {
-  if (!contractCache) contractCache = loadFromHere(CONTRACT_FILE);
-  return contractCache;
-}
-var tuple = (list) => external_exports.enum(list);
-var MISSING = ["__contract-missing__"];
-function vocabAtLoad() {
-  try {
-    return contract().VOCAB;
-  } catch {
-    return {
-      SIZES: MISSING,
-      ANGLES: MISSING,
-      BEATS: MISSING,
-      TYPES: MISSING,
-      INFO_TYPES: MISSING,
-      SHARE_TYPES: MISSING,
-      HOOK_TYPES: MISSING,
-      HOOK_FORMS: MISSING,
-      ARCS: MISSING,
-      RENDER_MODES: MISSING,
-      CHARGES_OPEN: MISSING,
-      CHARGES_CLOSE: MISSING,
-      TRANSITION_RE: /^$/
-    };
-  }
-}
-var V = vocabAtLoad();
-var nonEmpty = external_exports.string().trim().min(1);
-var STRUCTURE_VERSION = (() => {
-  try {
-    return contract().VERSION;
-  } catch {
-    return "structure-v1";
-  }
-})();
-var sceneSchema = external_exports.object({
-  no: external_exports.number().int().positive().describe("Scene number \u2014 the value shots point at with `scene`"),
-  place: nonEmpty.describe("One place \u2014 the slugline location"),
-  time: nonEmpty.describe("One continuous stretch of time \u2014 \uB0AE \xB7 \uBC24 \xB7 \uC0C8\uBCBD \xB7 10\uB144 \uB4A4"),
-  event: nonEmpty.describe("The one thing that happens in this scene"),
-  charge: external_exports.object({
-    open: tuple(V.CHARGES_OPEN).describe('Value at the open: "+" or "-"'),
-    close: tuple(V.CHARGES_CLOSE).describe('Value at the close: "+", "-", or deeper into the same pole "++" / "--"')
-  }),
-  turn: nonEmpty.describe("What flipped between the open and the close"),
-  out: nonEmpty.optional().describe("The sentence the scene goes out on \u2014 the one that forces a \uADF8\uB7F0\uB370 or \uADF8\uB798\uC11C into the next scene")
-}).strict();
-var sequenceSchema = external_exports.object({
-  id: nonEmpty.describe('Stable id, e.g. "q1"'),
-  title: nonEmpty.describe("The heading the approval page draws"),
-  purpose: nonEmpty.describe("The one purpose that binds these scenes \u2014 two purposes are two sequences"),
-  question: nonEmpty.optional().describe("The dramatic question this stretch opens"),
-  payoff: external_exports.number().int().positive().optional().describe("The scene number that answers the question"),
-  scenes: external_exports.array(external_exports.number().int().positive()).min(1).describe("Scene numbers in playback order")
-}).strict();
-var structureSchema = external_exports.object({
-  version: external_exports.literal(STRUCTURE_VERSION),
-  sequences: external_exports.array(sequenceSchema).min(1),
-  scenes: external_exports.array(sceneSchema).min(1)
-}).strict();
-var coverageSchema = external_exports.object({
-  azimuth: external_exports.number().finite().min(0).max(180).optional().describe("Horizontal camera bearing, 0\u2013180\xB0 inside the selected side of the axis"),
-  action: external_exports.string().trim().min(1).optional().describe("Visible action that carries this cut when no 30\xB0 or two-step change is used")
-}).strict().refine((value) => value.azimuth !== void 0 || value.action !== void 0, "coverage names an azimuth or the action that carries the cut");
-var lineCrossingSchema = external_exports.object({
-  method: external_exports.enum(["camera_move", "subject_move", "neutral", "intentional"]),
-  from: nonEmpty.describe("The previous space.line value"),
-  to: nonEmpty.describe("The new space.line value"),
-  reason: nonEmpty.describe("What the viewer sees that makes the new side legible"),
-  bridgeShot: external_exports.number().int().positive().optional().describe('Earlier neutral shot number; required only for method "neutral"')
-}).strict();
-var shotSchema = external_exports.object({
-  type: tuple(V.TYPES),
-  title: external_exports.string().optional(),
-  narration: external_exports.array(external_exports.object({ tts: external_exports.string(), sub: external_exports.string().optional() }).passthrough()).optional(),
-  visual: external_exports.record(external_exports.unknown()).optional(),
-  duration: external_exports.number().positive().optional(),
-  scene: external_exports.number().int().positive().optional(),
-  sceneSlug: external_exports.string().optional(),
-  sequence: external_exports.string().optional(),
-  transition: external_exports.string().regex(V.TRANSITION_RE, "not a join from scenes-schema \xA7scene transition").optional(),
-  beat: tuple(V.BEATS).optional(),
-  arc: tuple(V.ARCS).optional(),
-  hookType: tuple(V.HOOK_TYPES).optional(),
-  hookForm: tuple(V.HOOK_FORMS).optional(),
-  chapter: external_exports.string().optional(),
-  after: external_exports.number().int().positive().optional(),
-  shot: external_exports.object({
-    feel: external_exports.string().optional(),
-    size: tuple(V.SIZES).optional(),
-    angle: tuple(V.ANGLES).optional(),
-    why: external_exports.string().optional(),
-    info: external_exports.string().optional(),
-    infoType: tuple(V.INFO_TYPES).optional(),
-    share: external_exports.string().optional(),
-    shareType: tuple(V.SHARE_TYPES).optional(),
-    space: external_exports.record(external_exports.unknown()).optional(),
-    coverage: coverageSchema.optional(),
-    lineNeutral: external_exports.literal(true).optional(),
-    lineCrossing: lineCrossingSchema.optional(),
-    render: external_exports.object({ mode: tuple(V.RENDER_MODES), purpose: external_exports.string().optional(), reason: external_exports.string().optional() }).passthrough().optional()
-  }).passthrough().optional(),
-  sound: external_exports.record(external_exports.unknown()).optional()
-}).passthrough();
-var readLevelSchema = external_exports.enum(["outline", "scenes", "shots", "full"]);
-var storyboardReadSchema = external_exports.object({
-  path: external_exports.string().min(1).describe("The storyboard directory, or its scenes.js"),
-  level: readLevelSchema.default("shots").describe("outline = sequences with scene numbers \xB7 scenes = scene cards with shot numbers \xB7 shots = every shot summarised under its scene \xB7 full = the raw shot objects too")
-});
-var storyboardCheckSchema = external_exports.object({
-  path: external_exports.string().min(1).describe("The storyboard directory, or its scenes.js"),
-  draft: external_exports.boolean().default(false).describe("The story pass (storyboard \xA74a) \u2014 machine-layer absences are deferred, not violations")
-});
-var globalsSchema = external_exports.record(external_exports.string().regex(/^[A-Z][A-Z0-9_]*$/, "a window.* global is UPPER_CASE"), external_exports.unknown());
-var transitionPatchSchema = external_exports.object({
-  no: external_exports.number().int().positive().describe("Incoming shot number, 1-based, after removals and inserts"),
-  transition: external_exports.enum([
-    "cut",
-    "dip",
-    "dip:white",
-    "jcut",
-    "dissolve",
-    "iris",
-    "blur",
-    "zoom",
-    "push:l2r",
-    "push:r2l",
-    "push:u2d",
-    "push:d2u",
-    "whip:l2r",
-    "whip:r2l",
-    "whip:u2d",
-    "whip:d2u"
-  ]),
-  transitionSeconds: external_exports.number().finite().min(0.08).max(0.8).optional(),
-  reason: nonEmpty,
-  continuity: nonEmpty.optional()
-}).strict().refine(
-  (v) => !["cut", "dip", "dip:white"].includes(v.transition) || v.transitionSeconds === void 0,
-  "cut and dip do not accept transitionSeconds; dip fades each side for up to 0.30 seconds"
-);
-var storyboardApplySchema = external_exports.object({
-  path: external_exports.string().min(1).describe("The storyboard directory (scenes.js is created there when missing), or its scenes.js"),
-  draft: external_exports.boolean().default(false).describe("The story pass (storyboard \xA74a) \u2014 camera-continuity records (lineCrossing, coverage) are deferred, not violations"),
-  set: external_exports.object({ structure: structureSchema, shots: external_exports.array(shotSchema).min(1) }).optional().describe("Replace the whole board \u2014 the structure and every shot. The way a new board is written"),
-  structure: structureSchema.optional().describe("Replace window.STRUCTURE only"),
-  sequences: external_exports.array(sequenceSchema).optional().describe("Upsert sequences by id"),
-  scenes: external_exports.array(sceneSchema).optional().describe("Upsert scenes by no"),
-  shots: external_exports.array(external_exports.object({ no: external_exports.number().int().positive(), shot: shotSchema })).optional().describe("Upsert shots by 1-based position; no = length + 1 appends"),
-  insertShots: external_exports.array(external_exports.object({ after: external_exports.number().int().min(0), shots: external_exports.array(shotSchema).min(1) })).optional().describe("Insert shots after a 1-based position (0 = at the start). Later positions shift"),
-  transitions: external_exports.array(transitionPatchSchema).min(1).optional().describe("Change only incoming transitions; dip fades through black. Keeps narration and visuals intact"),
-  removeShots: external_exports.array(external_exports.number().int().positive()).optional().describe("1-based positions to drop, resolved before the insert"),
-  removeScenes: external_exports.array(external_exports.number().int().positive()).optional(),
-  removeSequences: external_exports.array(external_exports.string()).optional(),
-  globals: globalsSchema.optional().describe("Set other window.* blocks \u2014 FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, VOICE, MOTION_POLICY"),
-  dryRun: external_exports.boolean().default(false).describe("Validate and report, write nothing")
-});
-function scenesPath(target) {
-  const abs = resolve3(target);
-  if (basename8(abs) === "scenes.js") return abs;
-  return join10(abs, "scenes.js");
-}
-function readBoard(target) {
-  const file = scenesPath(target);
-  if (!existsSync12(file)) throw new Error(`no scenes.js at ${file}`);
-  if (!statSync5(file).isFile()) throw new Error(`${file} is not a file`);
-  const src = readFileSync8(file, "utf8");
-  const header = [];
-  for (const line of src.split("\n")) {
-    if (/^\s*\/\//.test(line)) header.push(line.trim());
-    else if (line.trim()) break;
-  }
-  const win = {};
-  const sandbox = { window: win, console: { log() {
-  }, warn() {
-  }, error() {
-  } } };
-  sandbox.globalThis = sandbox;
-  try {
-    vm.runInNewContext(src, sandbox, { filename: file, timeout: 5e3 });
-  } catch (e2) {
-    throw new Error(`failed to evaluate ${file}: ${e2.message}`);
-  }
-  if (!Array.isArray(win.SCENES)) throw new Error(`${file} has no window.SCENES array`);
-  return { file, header, win };
-}
-var GLOBAL_ORDER = ["FORMAT", "VOICE", "THEME", "COMPREHENSION", "STORY", "PRODUCTION", "MOTION_POLICY", "MUSIC", "STRUCTURE", "SCENES"];
-function serializeBoard(win, header = []) {
-  const keys = Object.keys(win).filter((k) => win[k] !== void 0);
-  keys.sort((a, b) => {
-    const ia = GLOBAL_ORDER.indexOf(a), ib = GLOBAL_ORDER.indexOf(b);
-    if (ia !== -1 || ib !== -1) return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
-    return a.localeCompare(b);
-  });
-  const lines = header.filter((h2) => !/^\/\/\s*approved:/.test(h2));
-  if (lines.length) lines.push("");
-  for (const k of keys) lines.push(`window.${k} = ${JSON.stringify(win[k], null, 2)};`);
-  return lines.join("\n") + "\n";
-}
-function upsertBy(list, items, key) {
-  const out = list.slice();
-  for (const item of items) {
-    const i2 = out.findIndex((x2) => x2[key] === item[key]);
-    if (i2 === -1) out.push(item);
-    else out[i2] = item;
-  }
-  return out;
-}
-function validateShots(shots) {
-  const out = [];
-  shots.forEach((s2, i2) => {
-    const parsed = shotSchema.safeParse(s2);
-    if (parsed.success) return;
-    for (const issue2 of parsed.error.issues) out.push({ level: "bad", where: `shot ${i2 + 1}`, what: `${issue2.path.join(".") || "(root)"}: ${issue2.message}` });
-  });
-  return out;
-}
-function validateStructure(structure) {
-  const parsed = structureSchema.safeParse(structure);
-  if (parsed.success) return [];
-  return parsed.error.issues.map((issue2) => ({ level: "bad", where: "structure", what: `${issue2.path.join(".") || "(root)"}: ${issue2.message}` }));
-}
-function applyPatch(win, patch) {
-  const next = { ...win };
-  if (patch.globals) for (const [k, v] of Object.entries(patch.globals)) {
-    if (k === "SCENES" || k === "STRUCTURE") throw new Error(`set ${k} through the dedicated fields, not globals`);
-    next[k] = v;
-  }
-  if (patch.set) {
-    next.STRUCTURE = patch.set.structure;
-    next.SCENES = patch.set.shots.slice();
-  }
-  if (patch.structure) next.STRUCTURE = patch.structure;
-  const st = next.STRUCTURE ?? { version: STRUCTURE_VERSION, sequences: [], scenes: [] };
-  if (!Array.isArray(st.sequences) || !Array.isArray(st.scenes) || st.scenes.some((sc) => !sc || typeof sc !== "object") || st.sequences.some((q) => !q || typeof q !== "object" || !Array.isArray(q.scenes)))
-    return { win: next, findings: [{ level: "bad", where: "structure", what: "STRUCTURE.sequences and STRUCTURE.scenes are arrays of objects \u2014 this board was hand-edited into a shape the tools cannot patch; rewrite it with `set`" }], synced: 0 };
-  let sequences = st.sequences.slice();
-  let scenes = st.scenes.slice();
-  if (patch.sequences) sequences = upsertBy(sequences, patch.sequences, "id");
-  if (patch.scenes) scenes = upsertBy(scenes, patch.scenes, "no");
-  if (patch.removeScenes) {
-    const drop = new Set(patch.removeScenes);
-    scenes = scenes.filter((sc) => !drop.has(sc.no));
-    sequences = sequences.map((q) => ({ ...q, scenes: q.scenes.filter((no) => !drop.has(no)) }));
-  }
-  if (patch.removeSequences) {
-    const drop = new Set(patch.removeSequences);
-    sequences = sequences.filter((q) => !drop.has(q.id));
-  }
-  if (patch.sequences || patch.scenes || patch.removeScenes || patch.removeSequences || next.STRUCTURE)
-    next.STRUCTURE = { version: st.version ?? STRUCTURE_VERSION, sequences, scenes };
-  let shots = Array.isArray(next.SCENES) ? next.SCENES.slice() : [];
-  if (patch.shots) for (const { no, shot } of patch.shots.slice().sort((a, b) => a.no - b.no)) {
-    if (no > shots.length + 1) throw new Error(`shot ${no}: the board has ${shots.length} shots \u2014 no = ${shots.length + 1} appends`);
-    shots[no - 1] = shot;
-  }
-  if (patch.removeShots) {
-    const drop = new Set(patch.removeShots);
-    for (const no of drop) if (no > shots.length) throw new Error(`removeShots: there is no shot ${no}`);
-    shots = shots.filter((_, i2) => !drop.has(i2 + 1));
-  }
-  if (patch.insertShots) {
-    const inserts = patch.insertShots.slice().sort((a, b) => b.after - a.after);
-    for (const { after, shots: add } of inserts) {
-      if (after > shots.length) throw new Error(`insertShots: after ${after} is past the last shot (${shots.length})`);
-      shots.splice(after, 0, ...add);
-    }
-  }
-  const transitionTargets = /* @__PURE__ */ new Set();
-  for (const change of patch.transitions ?? []) {
-    const source = shots[change.no - 1];
-    if (!source) throw new Error(`transitions: there is no shot ${change.no}`);
-    if (transitionTargets.has(change.no)) throw new Error(`transitions: duplicate shot ${change.no}`);
-    transitionTargets.add(change.no);
-    if (["broll", "outro"].includes(source.type)) throw new Error("Spliced shots use their own assembly transition");
-    const moving = !["cut", "dip", "dip:white"].includes(change.transition);
-    if (moving && !shots.slice(0, change.no - 1).some((s2) => !["broll", "outro"].includes(s2.type)))
-      throw new Error("First shot cannot carry a previous picture");
-    if (moving) {
-      const previous = shots[change.no - 2];
-      if (!previous || ["broll", "outro"].includes(previous.type))
-        throw new Error("A moving carry cannot bridge an inserted recording; choose cut or dip");
-      if (previous.visual?.reuse !== void 0)
-        throw new Error("Reused clips cannot supply outgoing live handles; choose cut or dip");
-      if (previous.visual?.sync === true || source.visual?.sync === true)
-        throw new Error("Sync footage requires cut or dip, not a moving carry");
-    }
-    const edit = { ...source.edit ?? {}, reason: change.reason };
-    if (!moving || source.transition !== change.transition) delete edit.transitionSeconds;
-    if (change.transitionSeconds !== void 0) edit.transitionSeconds = change.transitionSeconds;
-    if (change.continuity !== void 0) edit.continuity = change.continuity;
-    if (moving && Number(edit.pre ?? 0) !== 0) throw new Error("Moving transitions require edit.pre=0; update the shot timing first");
-    shots[change.no - 1] = { ...source, transition: change.transition, edit };
-  }
-  next.SCENES = shots.map((shot) => ({ ...shot }));
-  const findings = [];
-  if (!shots.length) findings.push({ level: "bad", where: "board", what: "the board has no shots" });
-  if (next.STRUCTURE === void 0) findings.push({ level: "bad", where: "structure", what: "no window.STRUCTURE \u2014 write the sequences and scenes (set, structure, sequences + scenes)" });
-  else findings.push(...validateStructure(next.STRUCTURE));
-  findings.push(...validateShots(shots));
-  let synced = 0;
-  if (!findings.some((f3) => f3.level === "bad")) {
-    synced = contract().sync(next);
-    findings.push(...contract().check(next, { draft: patch.draft }));
-  }
-  return { win: next, findings, synced };
-}
-function applyStoryboard(args) {
-  const file = scenesPath(args.path);
-  const exists = existsSync12(file);
-  let header = [];
-  let win = {};
-  if (exists) ({ header, win } = readBoard(file));
-  else if (!args.set) throw new Error(`no scenes.js at ${file} \u2014 a new board is written with \`set\` (structure + shots)`);
-  else if (!existsSync12(dirname5(file))) throw new Error(`directory does not exist: ${dirname5(file)}`);
-  const { win: next, findings, synced } = applyPatch(win, args);
-  const bad = findings.some((f3) => f3.level === "bad");
-  const st = next.STRUCTURE;
-  const result = {
-    file,
-    written: false,
-    created: !exists,
-    approvalDropped: header.some((h2) => /^\/\/\s*approved:/.test(h2)),
-    shots: (next.SCENES ?? []).length,
-    scenes: st ? st.scenes.length : 0,
-    sequences: st ? st.sequences.length : 0,
-    synced,
-    findings
-  };
-  if (bad || args.dryRun) return result;
-  const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
-  try {
-    writeFileSync7(tmp, serializeBoard(next, header), "utf8");
-    renameSync3(tmp, file);
-  } catch (err4) {
-    try {
-      unlinkSync(tmp);
-    } catch {
-    }
-    throw err4;
-  }
-  result.written = true;
-  return result;
-}
-function checkStoryboard(args) {
-  const { file, win } = readBoard(args.path);
-  const structure = contract().check(win, { draft: args.draft });
-  const argv = [CHECK_SCENES_FILE, file, "--json"];
-  if (args.draft) argv.push("--draft");
-  let raw = "";
-  try {
-    raw = execFileSync2(process.execPath, argv, { encoding: "utf8", timeout: 6e4, stdio: ["ignore", "pipe", "pipe"] });
-  } catch (e2) {
-    const err4 = e2;
-    raw = err4.stdout || "";
-    if (!raw.trim()) throw new Error(`check-scenes.js failed: ${(err4.stderr || err4.message).trim()}`);
-  }
-  let parsed = {};
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    throw new Error(`check-scenes.js returned no JSON: ${raw.slice(0, 400)}`);
-  }
-  const dup = new Set(structure.map((f3) => f3.level + "\0" + f3.where + "\0" + f3.what));
-  const rest = (parsed.findings ?? []).filter((f3) => !dup.has(f3.level + "\0" + f3.where + "\0" + f3.what));
-  const all = structure.concat(rest);
-  return {
-    file,
-    format: parsed.format ?? String(win.FORMAT ?? "shorts-9x16"),
-    shots: (win.SCENES ?? []).length,
-    draft: args.draft,
-    structure,
-    contract: rest,
-    violations: all.filter((f3) => f3.level === "bad").length,
-    warnings: all.filter((f3) => f3.level === "warn").length,
-    deferred: all.filter((f3) => f3.level === "later").length
-  };
-}
-function renderFindings(findings) {
-  if (!findings.length) return "  (none)";
-  const mark = { bad: "!", warn: "\xB7", later: "\u2026" };
-  return findings.map((f3) => `  ${mark[f3.level]} ${f3.where.padEnd(12)} ${f3.what}`).join("\n");
-}
-function renderApply(r2) {
-  const bad = r2.findings.filter((f3) => f3.level === "bad");
-  const head = r2.written ? `${r2.created ? "Created" : "Wrote"} ${r2.file}` : bad.length ? `NOT written \u2014 ${bad.length} violation(s) in ${r2.file}` : `Dry run \u2014 ${r2.file} untouched`;
-  const lines = [head, `  ${r2.sequences} sequence(s) \xB7 ${r2.scenes} scene(s) \xB7 ${r2.shots} shot(s) \xB7 ${r2.synced} shot label(s) synced from the structure`];
-  if (r2.approvalDropped && r2.written) lines.push("  the `// approved:` line was dropped \u2014 an edited board is approved again at the HITL gate");
-  lines.push("Findings:", renderFindings(r2.findings));
-  return lines.join("\n");
-}
-function renderCheck(r2) {
-  const lines = [
-    `scenes.js contract \u2014 ${r2.format} \xB7 ${r2.shots} shots${r2.draft ? " \xB7 story pass (--draft)" : ""}`,
-    `  ${r2.violations} violation(s), ${r2.warnings} to look at${r2.draft ? `, ${r2.deferred} deferred to \xA74b` : ""}`,
-    "Structure (sequences \u2192 scenes \u2192 shots):",
-    renderFindings(r2.structure),
-    "Shot contract (check-scenes.js):",
-    renderFindings(r2.contract)
-  ];
-  return lines.join("\n");
 }
 
 // src/tts-final-quality.ts
@@ -93753,7 +93799,7 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
 // src/index.ts
 import { readFileSync as readFinalRequest } from "node:fs";
 var server = new Server(
-  { name: "social-flow", version: "0.77.5" },
+  { name: "social-flow", version: "0.78.0" },
   { capabilities: { tools: {} } }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {

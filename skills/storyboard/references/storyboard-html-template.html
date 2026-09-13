@@ -3427,7 +3427,7 @@ window.SB_DOC = {
     if (!FILL_FRAME[size] && !sp.layout)
       flag("warn", T.shotCap(i + 1), "generated still with no shot.space.layout — name sides from the camera before the call (directing-grammar §3.5)");
     var personOn = personOnScreen(s, spaceTextOf(sp));
-    if (personOn && size !== "pov" && !sp.facing)   // a pov shows hands, not a face to turn
+    if (personOn && size !== "pov" && !sp.facing)   // a POV omits the viewpoint character face
       flag("warn", T.shotCap(i + 1), "a person is on screen with no shot.space.facing — write the visible result (\"faces camera-right\"), not \"left view of\"");
   });
 
@@ -3878,6 +3878,8 @@ window.SB_DOC = {
     else shotGroups.push({ scene: g.scene, slug: g.slug, sequence: g.sequence, items: [{ s: s, i: i, g: g }] });
   });
 
+  var compositionPlanFindings = window.STRUCTURE_CONTRACT ? window.STRUCTURE_CONTRACT.checkCompositions(SCENES, false) : [];
+  var eyelinePlanFindings = window.STRUCTURE_CONTRACT ? window.STRUCTURE_CONTRACT.checkEyelines(SCENES, false) : [];
   var carryNoted = false, prevSeq = "";
   /* window.STRUCTURE (scenes-schema §structure) — the sequence's purpose under its heading and
      the scene's event and turn under the band head. Boards without it draw the labels alone. */
@@ -3926,6 +3928,31 @@ window.SB_DOC = {
     var rmode = renderModeOf(s, g);
     if (rmode) gram += tile(renderIcon(rmode), T.render[rmode] || (rmode + " ?"),
                             renderTitle(rmode) + (g.render && g.render.reason ? "\n\n" + g.render.reason : ""), !T.render[rmode]);
+    var comp = s.shot && s.shot.composition, cc = window.STRUCTURE_CONTRACT;
+    if (comp || (cc && cc.compositionNeeded(s))) {
+      var compFindings = compositionPlanFindings.filter(function (f) { return f.where === 'shot ' + no; });
+      var compLabel = LANG === 'ko' ? '구도' : 'Composition';
+      var compTip = compLabel + ': ' + (comp ? comp.mode : (LANG === 'ko' ? '미설정' : 'not planned'));
+      if (comp && cc) compTip += '\n' + cc.compositionText(comp) + (comp.mode === 'none' ? '\n' + comp.reason : '');
+      compTip += LANG === 'ko' ? '\n계획 검사입니다. 실제 여백과 자막 겹침은 이미지·영상에서 확인합니다.' : '\nPlan check. Review actual room and subtitle overlap in the image and video.';
+      compFindings.forEach(function (f) { compTip += '\n' + f.what; });
+      var cx = comp && comp.position === 'left' ? 14 : comp && comp.position === 'right' ? 34 : 24;
+      var cy = comp && typeof comp.eyeHeight === 'number' ? Math.max(7, Math.min(24, 4 + comp.eyeHeight * 24)) : 12;
+      gram += '<span class="shot-size' + (compFindings.length || !comp ? ' unknown' : '') + '" tabindex="0" role="img" aria-label="' + esc(compTip) + '" data-tip="' + esc(compTip) + '"><svg viewBox="0 0 48 32" width="48" height="32" aria-hidden="true"><rect x="3" y="3" width="42" height="26" rx="2" fill="none" stroke="currentColor"/><path d="M17 3V29M31 3V29M3 12H45M3 20H45" stroke="currentColor" opacity=".25"/><circle cx="' + cx + '" cy="' + cy + '" r="3" fill="currentColor"/>' + (comp && comp.mode === 'none' ? '<path d="M6 26L42 6" stroke="currentColor"/>' : '') + '</svg></span>';
+    }
+    var eyeline = s.shot && s.shot.eyeline, ec = window.STRUCTURE_CONTRACT;
+    if (eyeline || (ec && ec.eyelineNeeded(s))) {
+      var eyeLabels = { exchange: '상호 응시', shared: '같은 대상', look: '대상 보기', pov: '주관 시점', reaction: '반응', lens: '렌즈 응시', withhold: '응답 지연', intentional: '의도적 어긋남', none: '시선 관계 없음' };
+      if (LANG !== 'ko') eyeLabels = { exchange: 'Reciprocal gaze', shared: 'Shared target', look: 'Look', pov: 'Point of view', reaction: 'Reaction', lens: 'Lens address', withhold: 'Withheld answer', intentional: 'Intentional break', none: 'No gaze relation' };
+      var mode = eyeline && eyeline.mode, label = eyeLabels[mode] || (LANG === 'ko' ? '시선 미설정' : 'Gaze not planned');
+      var dir = eyeline && eyeline.horizontal, vert = eyeline && eyeline.vertical;
+      var arrow = dir === 'left' ? (vert === 'up' ? '↖' : vert === 'down' ? '↙' : '←') : dir === 'right' ? (vert === 'up' ? '↗' : vert === 'down' ? '↘' : '→') : vert === 'up' ? '↑' : vert === 'down' ? '↓' : '⊙';
+      var suffix = mode === 'none' ? '—' : mode === 'withhold' ? '…' : mode === 'pov' ? 'POV' : arrow;
+      var eyeFindings = eyelinePlanFindings.filter(function (f) { return f.where === 'shot ' + no; });
+      var tip = label + (eyeline && ec ? '\n' + ec.eyelineText(eyeline) : '') + (eyeline && eyeline.matchShot ? (LANG === 'ko' ? '\n연결 컷 ' : '\nLinked shot ') + eyeline.matchShot : '') + (eyeline && eyeline.reason ? '\n' + eyeline.reason : '') + (eyeline && eyeline.marker ? (LANG === 'ko' ? '\n기준물: ' : '\nMarker: ') + eyeline.marker : '') + (LANG === 'ko' ? '\n계획 검사이며 실제 영상 검수 결과가 아닙니다.' : '\nPlan status, not footage approval.');
+      if (eyeFindings.length) tip += '\n' + eyeFindings.map(function (f) { return f.what; }).join('\n');
+      gram += '<span class="shot-size' + (eyeFindings.length || !eyeline ? ' unknown' : '') + '" tabindex="0" role="img" aria-label="' + esc(tip) + '" data-tip="' + esc(tip) + '"><svg viewBox="0 0 48 32" width="48" height="32" aria-hidden="true"><path d="M3 12 Q13 1 23 12 Q13 23 3 12Z" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="13" cy="12" r="3" fill="currentColor"/><text x="26" y="23" font-size="13" fill="currentColor">' + esc(suffix) + '</text></svg></span>';
+    }
     // A shot with no title (screen text only when needed — scenes-schema) builds its header from badges alone
     var headTitle = s.title || (s.type === "quote" ? s.text : "");
     if (headTitle) h += '<span class="scene-title">' + mark(headTitle) + "</span>";

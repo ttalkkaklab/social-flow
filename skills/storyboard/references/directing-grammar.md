@@ -34,7 +34,7 @@ engine's own documentation. A `[course]` rule is the craft consensus, not a meas
 tells you what most crews do, and it is the right default until a `[study]` row says otherwise.
 
 Sources: the film-directing daily course, lessons L01–L06 (shot units · shot sizes ① ② · camera
-angles · the 180° rule · the 30° rule, sent 2026-08-16 ~ 2026-08-21); "AI 영화 제작 가이드 —
+angles · the 180° rule · the 30° rule, sent 2026-08-16 ~ 2026-08-22); "AI 영화 제작 가이드 —
 AI 영상 퀄리티 3배 높여주는 8가지 비법" (AI Astra, YouTube `sHs0_iZJxHk`, 2026-08-21 — chapters
 카메라 개요 · 무브먼트 · 앵글 · 특수기법 · 프레이밍 · 듀레이션); Higgsfield Academy's
 movie-making track, 7 courses / 75 lessons (read 2026-08-24 — §9); the camera technique research
@@ -111,7 +111,7 @@ cry when nothing else is visible, and `ecu` is when only the eyes are remembered
 
 Compositions that ride on top of the size — write them in `shot.size` when they say more than the
 distance does: `two` (two-shot), `three` (three-shot), `ots` (over the shoulder), `pov` (the
-character's eyes — hands enter the lower frame, no face), `back` (from behind — the face withheld),
+character's eyes — view from the character eyes, no view of their face), `back` (from behind — the face withheld),
 `cutaway` (away from the action to something in the scene), `reaction` (the face that saw it).
 `ws` is the legacy key for `ls` and still renders. `two` and `three` sit at `mfs` (cut at mid-shin, never the knee — both
 bodies and the room between them) unless `shot.why` says why they close to `ms`; `ots` sits at
@@ -248,6 +248,21 @@ Rules `[course]` unless marked:
 
 ---
 
+## 3.4 Eyeline — connect the look to its answer (L07)
+
+Plan `shot.eyeline` using scenes-schema §Eyeline. Choose `exchange` for reciprocal dialogue,
+`shared` for people watching one target, and `look` → `pov` → `reaction` when the audience
+needs both what the actor sees and the face that responds. A POV can omit the reaction
+on purpose; immersion is not automatic. Hands are optional in a POV.
+
+Match left/right, eye height and actor-to-target distance separately from body facing and
+camera height. A child looks up at an adult who looks down. Before filming alone, put a
+marker at the partner's eye height and read the partner's lines from that direction.
+Review the two cuts together: the same screen direction may mean a shared target rather
+than reciprocal dialogue. Lens address and withholding the answer need deliberate choices;
+do not force them into the reciprocal-gaze rule. Scene geography also governs travel
+screen direction, which is not an eyeline and can use none with a reason.
+
 ## 3.5 Frame space — what is where, and which way it faces
 
 Size is how far the audience stands. Angle is the seat. **Space is the floor plan of the
@@ -379,7 +394,7 @@ move while the other dials stayed at their defaults.
 | height | `static` at `low` / `high` / `overhead` | see §3 — the angle does the work and the camera stays still | `static` is a decision, not an empty slot |
 | viewpoint | `handheld` | presence · unease · the documentary feel — and it cuts the AI look | micro-shake only; it reads real |
 | viewpoint | snorricam (camera fixed to the body) | a mind coming apart — the person locked, the world shaking | no vendor row — write `handheld` in `movement` and describe the body-locked frame in `framing` |
-| viewpoint | `pov` (in `framing`: hands enter the lower frame, no face) | inside the character | |
+| viewpoint | `pov` (in `framing`: view from the character eyes, no view of their face) | inside the character | |
 | viewpoint | rear / `back` (in `framing`: the back fills the frame, static) | withholding the face — the audience imagines the feeling | a held laugh, a quiet reaction |
 | distortion · focus | rack focus | hidden information revealed — the camera doesn't move, the focus crosses from front to back | 3–4 s, the insert length. No vendor row — `movement: static`, the focus shift goes in `framing`/`end` |
 | distortion · focus | `dutch` (in `shot.angle`, camera static) | something is wrong | see §3 — one per episode, reason written |
@@ -642,7 +657,7 @@ two `choker`/`ecu` in the episode, more than one `dutch` in the episode, a scene
 (`mcu`/`cu`/`choker`/`ecu`/`insert`) whose next picture shot is not an `ls`/`els` (or `mfs`/`two`), a generated still
 with no `shot.space.layout` (an `insert`/`ecu` that fills the frame with one object is exempt),
 a space block written with no `frame` or with a `frame` that is not `camera`, a person on
-screen with no `shot.space.facing` (a `pov` is exempt — hands, no face), two people in a scene
+screen with no `shot.space.facing` (a `pov` is exempt — no view of the viewpoint character’s face), two people in a scene
 with no `shot.space.line` (on a generated still, a filmed shot, or any shot that wrote a space
 block), and a space slot or `bgPrompt` that uses camera-inference, allocentric, or metric
 language. The language check reads every shot's space slots and `bgPrompt`; the frame check
@@ -653,14 +668,15 @@ Warnings, not blocks — the reviewer and the person at the approval step weigh 
 
 ## 9. Sources
 
-- Film-directing daily course, L01–L06 (2026-08-16 ~ 2026-08-21): L01 shot · scene · sequence
+- Film-directing daily course, L01–L07 (2026-08-16 ~ 2026-08-22): L01 shot · scene · sequence
   (one shot per new piece of information; a close-up opening pays the establishing debt);
   L02 ELS–FS (size = psychological distance; establishing; sound follows size; wide ≥ 1.5×
   close; phone distances); L03 MS–ECU (the close-up as a command and its ration; don't cut at
   joints; step back and use tele; insert replaces dialogue); L04 angles (the seat; information
   amount, not power; baseline = the subject's eyes; angle as change; the dutch fee); L05 the
   180° rule (the line, four legal crossings, "A left, B right"); L06 the 30° rule (jump cuts,
-  axial cut, cutting on action, the vlog contract).
+  axial cut, cutting on action, the vlog contract); L07 eyeline match (reciprocal gaze,
+  target eye height and distance, POV and reaction, offscreen markers).
 - AI Astra, "AI 영화 제작 가이드 — AI 영상 퀄리티 3배 높여주는 8가지 비법" (YouTube
   `sHs0_iZJxHk`, 2026-08-21): camera prompts in four slots (movement · speed · framing · end);
   camera apart from the scene description; 20 moves with the feel each serves, in five bundles
@@ -708,3 +724,15 @@ Warnings, not blocks — the reviewer and the person at the approval step weigh 
   mention order locks the layout — T2I homogenisation index 86.4 GPT-Image · 81.0 Nano Banana ·
   91.6 Qwen-Image on a 0–100 scale (|2p−100|), the first-mentioned entity tending left.
   `assemble-bg-prompt.js` is the machine form of those two findings.
+
+## L10 — Headroom, look room and lead room
+
+Use `shot.composition` (scenes-schema §Composition) for the framing plan. Headroom is space
+above the crown; look room is space in the gaze direction; lead room is space in the subject's
+travel direction. A subject looking back while running can need room on different sides.
+Eyes near the upper third and off-center placement are starting conventions, not numerical
+pass criteria. Wide shots can include environmental room, bust shots often use the upper
+third, and close-ups may crop the crown while preserving the chin. Detail shots can omit
+headroom when no head is visible. Record pressure, pursuit or deliberate imbalance as
+intentional with a reason. Safe zones come from the output format and platform UI, not a
+universal 5% inset. Check the actual final crop and moving-shot endpoints.
