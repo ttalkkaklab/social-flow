@@ -75807,6 +75807,13 @@ function contract() {
   if (!contractCache) contractCache = loadFromHere(CONTRACT_FILE);
   return contractCache;
 }
+function cameraContract() {
+  return loadFromHere(join2(REFERENCES_DIR, "production-mode.js"));
+}
+function renderPurposes() {
+  const routing = loadFromHere(join2(REFERENCES_DIR, "render-routing.js"));
+  return Object.keys(routing.PURPOSES);
+}
 var tuple = (list) => external_exports.enum(list);
 var MISSING = ["__contract-missing__"];
 function vocabAtLoad() {
@@ -75881,11 +75888,16 @@ var compositionSchema = external_exports.record(external_exports.unknown()).supe
 var eyelineSchema = external_exports.record(external_exports.unknown()).superRefine((value, ctx) => {
   for (const message of contract().validateEyeline(value)) ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
 });
+var cameraSchema = external_exports.record(external_exports.unknown()).superRefine((value, ctx) => {
+  for (const message of cameraContract().cameraInputErrors(value))
+    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+});
+var visualSchema = external_exports.object({ camera: cameraSchema.optional() }).passthrough();
 var shotSchema = external_exports.object({
   type: tuple(V.TYPES),
   title: external_exports.string().optional(),
   narration: external_exports.array(external_exports.object({ tts: external_exports.string(), sub: external_exports.string().optional() }).passthrough()).optional(),
-  visual: external_exports.record(external_exports.unknown()).optional(),
+  visual: visualSchema.optional(),
   duration: external_exports.number().positive().optional(),
   scene: external_exports.number().int().positive().optional(),
   sceneSlug: external_exports.string().optional(),
@@ -80380,6 +80392,7 @@ var blenderSceneBuildSchema = external_exports.object({
   }
 });
 var cameraKeySchema = external_exports.object({
+  rollDeg: external_exports.number().min(-35).max(35).optional(),
   frame: frameNumber.optional(),
   location: vec3,
   target: vec3.optional(),
@@ -80695,7 +80708,7 @@ var BRIDGE_PY = String.raw`
 import json, math, os, re, sys, time, traceback
 import bpy
 import bmesh
-from mathutils import Euler, Matrix, Vector
+from mathutils import Euler, Matrix, Vector, Quaternion
 
 PROXY_GRAY = (0.55, 0.55, 0.58, 1.0)
 FLOOR_GRAY = (0.32, 0.32, 0.33, 1.0)
@@ -81860,6 +81873,8 @@ def op_camera(job):
             q = look_at_quat(loc, [float(x) for x in k["target"]])
         else:
             q = Euler(rad3(k["rotationDeg"]), "XYZ").to_quaternion()
+        if k.get("rollDeg") is not None:
+            q = q @ Quaternion((0.0, 0.0, 1.0), math.radians(float(k["rollDeg"])))
         # keep the quaternion on the same hemisphere as the previous key, or the
         # interpolation takes the long way round between two nearly equal poses
         if prev_q is not None and prev_q.dot(q) < 0:
@@ -83016,14 +83031,104 @@ var compositionInput = (() => {
     return { type: "object", description: "Composition contract unavailable: restore skills/storyboard/references/structure-contract.js" };
   }
 })();
+var storyboardVocabulary = (() => {
+  try {
+    return contract().VOCAB;
+  } catch {
+    return null;
+  }
+})();
+var shotCameraInput = (() => {
+  try {
+    return cameraContract().CAMERA_INPUT_SCHEMA;
+  } catch {
+    return { type: "object", description: "Camera contract unavailable: restore skills/storyboard/references/production-mode.js" };
+  }
+})();
+var enumInput = (values, description) => ({ type: "string", ...values?.length ? { enum: values } : {}, description });
+var purposes = (() => {
+  try {
+    return renderPurposes();
+  } catch {
+    return [];
+  }
+})();
+var looks = (() => {
+  try {
+    return cameraContract().ALL_LOOKS;
+  } catch {
+    return [];
+  }
+})();
 var storyboardShotInput = {
   type: "object",
-  description: "The scenes-schema.md shot object",
+  additionalProperties: true,
+  required: ["type"],
+  description: "Complete scenes-schema.md playback shot. On upsert, supply the complete shot; fields are not deep-merged. Extra visual and machine fields are preserved.",
   properties: {
+    type: enumInput(storyboardVocabulary?.TYPES, "Playback role, distinct from shot.render.mode and the camera preset."),
+    scene: { type: "integer", minimum: 1, description: "Parent scene number in STRUCTURE." },
+    duration: { type: "number", exclusiveMinimum: 0, description: "Shot duration in seconds; model duration may round up." },
+    title: { type: "string", description: "Visible title where the shot treatment permits it." },
+    narration: { type: "array", description: "Approved speech and optional subtitle text, in order.", items: { type: "object", additionalProperties: true, required: ["tts"], properties: { tts: { type: "string", description: "Text to speak." }, sub: { type: "string", description: "Subtitle text; omit to use the speech text." } } } },
+    beat: enumInput(storyboardVocabulary?.BEATS, "Narrative beat in playback order."),
     shot: {
       type: "object",
-      description: "Shot grammar: framing, camera angle and optional or scene-required eyeline",
-      properties: { eyeline: eyelineInput, composition: compositionInput }
+      additionalProperties: true,
+      description: "Shot grammar and production route. Render mode chooses how to build the shot; visual.camera chooses how it is filmed.",
+      properties: {
+        size: enumInput(storyboardVocabulary?.SIZES, "Framing size."),
+        angle: enumInput(storyboardVocabulary?.ANGLES, "Camera angle."),
+        infoType: enumInput(storyboardVocabulary?.INFO_TYPES, "Information carried by the shot; must agree with its purpose."),
+        feel: { type: "string", description: "What the viewer should feel before choosing framing and movement." },
+        eyeline: eyelineInput,
+        composition: compositionInput,
+        render: {
+          type: "object",
+          additionalProperties: true,
+          required: ["mode"],
+          description: "Production route. A drone spatial reveal uses generated_video with purpose place or live_action, motionEssential:true and whyNotStill, including full_video.",
+          properties: {
+            mode: enumInput(storyboardVocabulary?.RENDER_MODES, "still_camera, generated_video, stock_video, or the supported HTML/data route. This is not the shot camera preset."),
+            purpose: enumInput(purposes, "Why this shot exists. Route compatibility is checked by storyboard_check."),
+            reason: { type: "string", description: "Why this route conveys the intended information." },
+            action: { type: "string", description: "Visible action or spatial reveal." },
+            motionEssential: { type: "boolean", description: "true when continuous movement is essential. Required true for drone-flythrough." },
+            whyNotStill: { type: "string", description: "What travel reveals that a still cannot. Required for drone-flythrough." }
+          }
+        },
+        videoDesign: {
+          type: "object",
+          additionalProperties: true,
+          description: "Visual plan. Drone flights keep a volumetric episode look and use a justified spatial_reveal; flat arcade/paper-cutout/ink-wash are incompatible.",
+          properties: {
+            look: enumInput(looks, "Shot look must match the approved episode style."),
+            worldId: { type: "string", description: "Stable identifier for the environment shared by related shots." },
+            before: { type: "string", description: "Visible opening state." },
+            action: { type: "string", description: "Visible action or spatial reveal." },
+            after: { type: "string", description: "Visible final state; may be supplied by the final subject-action beat instead." },
+            continuity: { type: "string", description: "Identity and geometry that stay consistent across the shot." },
+            reject: { type: "string", description: "Visible defects to look for during review." },
+            motion: { type: "object", additionalProperties: true, description: "Motion design; spatial_reveal describes a camera-led change in visible space.", properties: {
+              kind: enumInput(["subject_action", "spatial_reveal", "archive_hold"], "Drone flight uses spatial_reveal."),
+              subject: { type: "string", description: "The actor, object or location whose change is shown." },
+              visibleChange: { type: "string", description: "What changes visibly between the start and end." },
+              reason: { type: "string", description: "Why this motion is needed." }
+            } }
+          }
+        }
+      }
+    },
+    visual: {
+      type: "object",
+      additionalProperties: true,
+      description: "Visual assets and shot camera. Preserve existing video, frames, reuse and other fields when replacing a shot.",
+      properties: {
+        camera: shotCameraInput,
+        why: { type: "string", description: "Why the visual conveys the narration." },
+        bg: { type: "string", description: "Storyboard-relative source image path." },
+        video: { type: "object", additionalProperties: true, description: "Existing model, prompt, clip and previz handoff. Keep all fields; scenes-schema.md defines model and approval constraints." }
+      }
     }
   }
 };
@@ -84485,6 +84590,7 @@ Returns: the scene summary \u2014 the camera line shows location, rotation, lens
                 maxItems: 3,
                 description: "Explicit Blender Euler XYZ rotation in degrees ([90, 0, 0] looks along +Y). Exactly one of target or rotationDeg."
               },
+              rollDeg: { type: "number", minimum: -35, maximum: 35, description: "Local camera Z rotation in degrees after aiming; 0 keeps the horizon level. Used for FPV banking." },
               lensMm: { type: "number", description: "Focal length at this key, for a zoom; omit to keep the camera's lens." }
             }
           }
@@ -86277,6 +86383,7 @@ Returns: JSON \u2014 { version, format, shots, sequences[\u2026scenes[\u2026shot
     description: `Write a storyboard's scenes.js from a sequence \u2192 scene \u2192 shot model, or patch part of it, in one call. Every shot is validated against the grammar vocabularies (type \xB7 beat \xB7 size \xB7 angle \xB7 infoType \xB7 shareType \xB7 render.mode \xB7 transition), the structure against its rules (one place and time per scene, a charge that turns, every scene in exactly one sequence, shots grouped by scene in sequence order, two sizes per scene), and the derived shot labels (sceneSlug \xB7 sequence) are written from the structure. Nothing is written when a violation is found \u2014 the findings come back instead. Warnings are written and reported.
 
 Use it to author a new board (set = { structure, shots }) after the narration is approved (storyboard \xA74), and to change one thing later (scenes / sequences / shots by key, insertShots, removeShots, globals for FORMAT \xB7 THEME \xB7 COMPREHENSION \xB7 STORY \xB7 PRODUCTION \xB7 MUSIC). Use transitions to change only the effect before selected shots without replacing their narration or visuals. dip fades out to black and fades the next scene in; prefer it for changes of place or time unless a specific cut calls for another effect. One call carries the whole change \u2014 do not write scenes.js by hand and do not call this once per shot. dryRun:true validates without writing.
+Shot creation, upserts and inserts expose type, shot.render.mode, shot.videoDesign and visual.camera in the input schema. For a drone shot choose preset:"drone-flythrough", variant:"cinematic" or "fpv", and the trajectory. The preset does not change the episode style or select a paid model.
 Do NOT pass a shot's visual plan through a summary \u2014 pass the object scenes-schema.md defines (visual \xB7 shot.space \xB7 visual.camera \xB7 visual.video \u2026); unknown keys on a shot pass through untouched. Editing an approved board drops its \`// approved:\` line; it is approved again at the HITL gate.
 
 Scene: { no, place, time, event, charge: { open: "+"|"-", close: "+"|"-"|"++"|"--" }, turn, out? }. Sequence: { id, title, purpose, question?, payoff?, scenes: [no\u2026] }. The reasons for each field are in scenes-schema.md \xA7structure.
@@ -93799,7 +93906,7 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
 // src/index.ts
 import { readFileSync as readFinalRequest } from "node:fs";
 var server = new Server(
-  { name: "social-flow", version: "0.78.2" },
+  { name: "social-flow", version: "0.78.3" },
   { capabilities: { tools: {} } }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {

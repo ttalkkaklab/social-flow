@@ -229,3 +229,9 @@ Seedance 1.x uses `previz.handoff: "frame_and_prompt"` (inferred from the model 
 Its source still is edited from the previz first frame and the prompt carries camera/blocking;
 it sends no reference video. Omit reference image/audio arrays on 1.x.
 Seedance 2.x can continue to use `reference_video`. Keep previz asset and camera checks.
+
+## Drone spatial reveal
+
+A validated `drone-flythrough` camera permits `place` with `generated_video` when
+`motionEssential` and `whyNotStill` explain the spatial change. Ordinary place shots keep
+the still-camera default. Follow [drone-flythrough.md](drone-flythrough.md).

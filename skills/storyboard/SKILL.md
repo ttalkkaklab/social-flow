@@ -167,7 +167,7 @@ to choose one of the presets in `production-mode.js` `STYLES` — cinematic-mini
 webtoon, claymation, paper-cutout, ink-wash, toon-3d or arcade-2d.
 Wait for the actual choice, persist it for this episode, and apply it to every generated
 start/end storyboard image and subsequent video prompt, in every production mode.
-Reuse an explicit existing choice; do not infer a style from production mode.
+Reuse an explicit existing choice; do not infer a style from production mode. For shot-level drone flight, follow [drone-flythrough.md](references/drone-flythrough.md).
 
 Read [production-mode.md](references/production-mode.md). Before visual planning, present
 100% 이상 (`full_video`), 50% 이상 (`video_50`), 30% 이상 (`video_30`) and 훅만 영상 (`hook_only`)
