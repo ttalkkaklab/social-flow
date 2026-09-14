@@ -111,7 +111,8 @@ WORKDIR="${1:?usage: build-reel.sh <workdir>}"
 STORYBOARD=$(node -e 'console.log(require("path").resolve(process.argv[1]))' "${2:-$WORKDIR/../storyboard}")
 node "$HERE/verify-build-plan.js" "$WORKDIR" "$STORYBOARD"
 cd "$WORKDIR"
-node "$HERE/check-production.js" "$STORYBOARD" --workdir "$PWD" --ready --manifest --json > production-preflight.json
+VIDEO_WARNINGS_APPROVED=$(node -e 'console.log(require(process.argv[1]).videoGate.approved ? 1 : 0)' "$PWD/build-plan-check.json")
+# verify-build-plan.js writes production-preflight.json after the video warning/HITL check.
 REUSED_VIDEO_SHOTS=$(node -e 'const p=require(process.argv[1]); console.log((p.reusedShots || []).join(" "))' "$PWD/production-preflight.json")
 
 # Format preset — the `: "${VAR:=value}"` block written by format-resolve.js.
@@ -294,6 +295,7 @@ probe_canvas() {
 #   b-roll/background        scale=increase,crop  → orientation only. Any resolution accepted
 # Requiring exact match on b-roll makes healthy episodes warn — 720x1280 b-roll exists in practice.
 DIMBAD=0
+DIMWARN=0
 dim_of() {
   case "$1" in
     *.png|*.PNG) sips -g pixelWidth -g pixelHeight "$1" 2>/dev/null \
@@ -313,9 +315,9 @@ assert_orient() {  # <path> <role> — orientation only
   [ -n "$got" ] || { say "⚠ $2 $1: couldn't read dimensions"; DIMBAD=1; return; }
   w=${got%%x*}; h=${got##*x}
   if [ "$W" -gt "$H" ]; then [ "$w" -gt "$h" ] || {
-    say "⚠ $2 $1 is ${got} — portrait source on a landscape canvas. Center crop loses most of the frame"; DIMBAD=1; }
+    say "⚠ $2 $1 is ${got} — portrait source on a landscape canvas. Center crop loses most of the frame"; DIMWARN=1; }
   else [ "$w" -lt "$h" ] || {
-    say "⚠ $2 $1 is ${got} — landscape source on a portrait canvas. Center crop loses most of the frame"; DIMBAD=1; }
+    say "⚠ $2 $1 is ${got} — landscape source on a portrait canvas. Center crop loses most of the frame"; DIMWARN=1; }
   fi
 }
 
@@ -342,8 +344,8 @@ while IFS=$'\t' read -r _ _ VIS _; do
     [ -n "$POVL" ] && [ -f "$POVL" ] && assert_exact "$POVL" "overlay"
   done
 done < segs.tsv
-if [ "$DIMBAD" = 1 ]; then
-  if [ "$STRICT_DIM" = 1 ]; then
+if [ "$DIMBAD" = 1 ] || [ "$DIMWARN" = 1 ]; then
+  if [ "$STRICT_DIM" = 1 ] && { [ "$DIMBAD" = 1 ] || [ "${VIDEO_WARNINGS_APPROVED:-0}" != 1 ]; }; then
     say "✗ asset dimension mismatch — STRICT_DIM=1, stopping before the first ffmpeg"; exit 1
   fi
   WARN=1
@@ -716,7 +718,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
           awk -v actual="$BDUR" -v needed="$NEED" 'BEGIN{exit !(actual+0.00001>=needed)}' \
             || { say "card $IDX: source needs ${NEED}s including live handle; has ${BDUR}s. Choose an earlier edit.in, shorten/replan the cut, or regenerate. No freeze or loop substitution."; exit 1; }
           case " $REUSED_VIDEO_SHOTS " in *" $IDX "*)
-            awk -v actual="$BDUR" -v needed="$D" -v start="$SOURCE_IN" -v render="$RENDER_D" 'BEGIN{d=actual-needed; if(d<0)d=-d; exit !(d<=0.05 && start==0 && render==needed)}' \
+            [ "${VIDEO_WARNINGS_APPROVED:-0}" = 1 ] || awk -v actual="$BDUR" -v needed="$D" -v start="$SOURCE_IN" -v render="$RENDER_D" 'BEGIN{d=actual-needed; if(d<0)d=-d; exit !(d<=0.05 && start==0 && render==needed)}' \
               || { say "Reused card $IDX duration differs or requests trimming/live handles; use the complete imported clip with no source offset or outgoing handle."; exit 1; } ;;
           esac
           INS+=(-ss "$SS" -t "$T" -i "$BASE")
