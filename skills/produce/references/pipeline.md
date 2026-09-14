@@ -1,5 +1,8 @@
 # Video pipeline details — contracts, gates, pitfalls
 
+Assembly video-check failures follow [assembly-video-hitl.md](assembly-video-hitl.md): present warnings, obtain explicit user approval and assemble the approved inputs. This takes precedence over pre-assembly quality-block wording in this document.
+
+
 The composition contract around build-reel.sh, plus pitfalls verified in real builds.
 Inherited from the fect-persona make-reels pipeline (same script, same contract).
 
