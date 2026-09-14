@@ -64,6 +64,7 @@ export function mount(el, spec) {
     camera.position.fromArray(contract.toThree(cam.position));
     camera.up.set(0, 1, 0);
     camera.lookAt(target.fromArray(contract.toThree(cam.target)));
+    camera.rotateZ((cam.rollDeg || 0) * Math.PI / 180);
     for (const { a, node } of actors) {
       const s = contract.sampleActor(a, frame);
       node.position.fromArray(contract.toThree(s.position));

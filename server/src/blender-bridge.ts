@@ -163,6 +163,7 @@ export const blenderSceneBuildSchema = z
 export type BlenderSceneBuildRequest = z.infer<typeof blenderSceneBuildSchema>;
 
 const cameraKeySchema = z.object({
+  rollDeg: z.number().min(-35).max(35).optional(),
   frame: frameNumber.optional(),
   location: vec3,
   target: vec3.optional(),
@@ -656,7 +657,7 @@ export const BRIDGE_PY = String.raw`
 import json, math, os, re, sys, time, traceback
 import bpy
 import bmesh
-from mathutils import Euler, Matrix, Vector
+from mathutils import Euler, Matrix, Vector, Quaternion
 
 PROXY_GRAY = (0.55, 0.55, 0.58, 1.0)
 FLOOR_GRAY = (0.32, 0.32, 0.33, 1.0)
@@ -1821,6 +1822,8 @@ def op_camera(job):
             q = look_at_quat(loc, [float(x) for x in k["target"]])
         else:
             q = Euler(rad3(k["rotationDeg"]), "XYZ").to_quaternion()
+        if k.get("rollDeg") is not None:
+            q = q @ Quaternion((0.0, 0.0, 1.0), math.radians(float(k["rollDeg"])))
         # keep the quaternion on the same hemisphere as the previous key, or the
         # interpolation takes the long way round between two nearly equal poses
         if prev_q is not None and prev_q.dot(q) < 0:

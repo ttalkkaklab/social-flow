@@ -118,6 +118,8 @@ function scenePlan(scene) {
   const used = Number(scene.duration);
   if (!Number.isFinite(used) || used <= 0) throw new Error('Seedance scene needs a positive duration');
   const durationSeconds = Math.max(spec.duration[0], Math.ceil(used));
+  if (scene.visual?.camera?.preset === 'drone-flythrough' && scene.visual.camera.trajectory?.seconds !== durationSeconds)
+    throw new Error('drone trajectory.seconds must equal the resolved billed duration ' + durationSeconds);
   if (durationSeconds > spec.duration[1]) throw new Error(model + ' takes at most ' + spec.duration[1] + ' seconds; shorten or split the scene');
   if (purpose === 'previz') {
     if (referencePreviz && !spec.videos) throw new Error(model + ' does not accept a reference video');
