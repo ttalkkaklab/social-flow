@@ -1,5 +1,8 @@
 # Full video — every new scene as a generated clip
 
+Assembly video-check failures follow [assembly-video-hitl.md](assembly-video-hitl.md): present warnings, obtain explicit user approval and assemble the approved inputs. This takes precedence over pre-assembly quality-block wording in this document.
+
+
 ## Contents
 
 - [Entry and scope](#entry-and-scope)
