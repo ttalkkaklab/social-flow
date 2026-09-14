@@ -46,10 +46,167 @@
   // "slow dolly in" on wide miniature stages and read as stills on a phone. The camera slots
   // name a move the viewer can see, in vendor vocabulary: dolly in, truck right, arc shot,
   // pedestal up, at slow / steady / fast — or static, chosen, on at most a third of the shots.
+
+  // Shot camera presets are independent of the episode's material/illustration style.
+  const CAMERA_PRESETS = { 'drone-flythrough': { label: '드론 경로 비행', variants: { cinematic: '부드러운 항공 촬영', fpv: '기울어지는 FPV' } } };
+  const CAMERA_VECTOR_SCHEMA = { type: 'array', minItems: 3, maxItems: 3, items: { type: 'number' }, description: 'Local metres [X right, Y forward, Z up], not latitude/longitude.' };
+  // Shared with storyboard_apply's discovery schema. Ordinary cameras keep their existing fields.
+  const CAMERA_INPUT_SCHEMA = {
+    type: 'object', additionalProperties: true,
+    description: 'Shot camera, independent of the episode visual style. A drone trajectory is authored first; drone-previz.js derives movement, speed, framing and end. Copy those slots back before prompt assembly.',
+    properties: {
+      preset: { type: 'string', enum: Object.keys(CAMERA_PRESETS), description: 'Optional shot preset. Omit on ordinary camera shots; drone-flythrough is continuous travel through a 3D location.' },
+      variant: { type: 'string', enum: Object.keys(CAMERA_PRESETS['drone-flythrough'].variants), description: 'cinematic keeps the horizon level; fpv uses authored bank at bends. Required with drone-flythrough.' },
+      movement: { type: 'string', description: 'Camera movement. For drone shots copy the trajectory-derived value from drone-previz.js.' },
+      speed: { type: 'string', description: 'Movement pace; generated from the trajectory on drone shots.' },
+      framing: { type: 'string', description: 'Opening composition; generated from the trajectory on drone shots.' },
+      end: { type: 'string', description: 'Endpoint composition; generated from the trajectory on drone shots.' },
+      trajectory: {
+        type: 'object', additionalProperties: true,
+        description: 'Drone flight plan. Keys cover zero through seconds in increasing order; positions move and targets remain distinct and nonvertical. Render and inspect the interpolated path before generation.',
+        required: ['coordinateSpace', 'seconds', 'lensMm', 'keys'],
+        properties: {
+          coordinateSpace: { type: 'string', enum: ['local-meters'], description: 'Blender-compatible local coordinates, Z up.' },
+          seconds: { type: 'integer', minimum: 2, maximum: 30, description: 'Whole billed duration. Must match the selected model duration and the previz.' },
+          lensMm: { type: 'number', minimum: 12, maximum: 50, description: 'Fixed focal length for the flight, in millimetres.' },
+          keys: {
+            type: 'array', minItems: 2, maxItems: 32,
+            description: 'Ordered flight waypoints; first at=0, last at=seconds. Intermediate points do not imply stops.',
+            items: { type: 'object', additionalProperties: true, required: ['at', 'position', 'target', 'rollDeg', 'label'], properties: {
+              at: { type: 'number', minimum: 0, description: 'Seconds on the flight timeline; strictly increasing.' },
+              position: CAMERA_VECTOR_SCHEMA,
+              target: { ...CAMERA_VECTOR_SCHEMA, description: 'Point the camera looks toward, in local metres; aim ahead around the bend.' },
+              rollDeg: { type: 'number', minimum: -35, maximum: 35, description: 'Bank after aiming. cinematic requires 0 at every key; fpv allows −35 through 35 degrees.' },
+              label: { type: 'string', minLength: 1, description: 'English landmark label used in the generated camera prompt.' }
+            } }
+          },
+          proxies: {
+            type: 'array', minItems: 1, description: 'Landmarks and occluders for the previz. May be omitted while drafting, but required by drone-previz.js before rendering. Uses previz-contract.js.',
+            items: { type: 'object', additionalProperties: true, required: ['name', 'kind', 'keys'], properties: {
+              name: { type: 'string', pattern: '^[A-Za-z][A-Za-z0-9_-]{0,31}$', description: 'Unique proxy identifier.' },
+              kind: { type: 'string', enum: ['person','box','cylinder','sphere','car'], description: 'box needs size; person needs height; cylinder needs radius and height; sphere needs radius; car size is optional.' },
+              color: { type: 'string', pattern: '^#[0-9a-fA-F]{6}$', description: 'One flat colour per proxy; omit for grey.' },
+              size: { ...CAMERA_VECTOR_SCHEMA, items: { type: 'number', exclusiveMinimum: 0 }, description: 'Positive dimensions [width, depth, height] in metres.' },
+              height: { type: 'number', exclusiveMinimum: 0, description: 'Proxy height in metres.' },
+              radius: { type: 'number', exclusiveMinimum: 0, description: 'Cylinder or sphere radius in metres.' },
+              keys: { type: 'array', minItems: 1, description: 'Proxy poses at 1-based frames; a static landmark uses one key.', items: { type: 'object', additionalProperties: true, required: ['frame','position'], properties: {
+                frame: { type: 'integer', minimum: 1, description: '1-based previz frame at 24 fps; a static proxy uses frame 1.' },
+                position: CAMERA_VECTOR_SCHEMA, rotationZDeg: { type: 'number', description: 'Proxy rotation around world Z, in degrees.' }
+              } } }
+            } }
+          }
+        }
+      }
+    },
+    allOf: [
+      { if: { required: ['preset'], properties: { preset: { const: 'drone-flythrough' } } }, then: { required: ['variant','trajectory'] } },
+      { if: { required: ['variant'], properties: { variant: { const: 'cinematic' } } }, then: { properties: { trajectory: { properties: { keys: { items: { properties: { rollDeg: { const: 0 } } } } } } } } },
+      { if: { required: ['trajectory'] }, then: { required: ['preset'] } },
+      { if: { required: ['variant'] }, then: { required: ['preset'] } }
+    ]
+  };
+  function cameraInputErrors(camera) {
+    if (!camera || typeof camera !== 'object' || Array.isArray(camera)) return ['camera must be an object'];
+    const errors = [];
+    for (const slot of CAMERA_SLOTS) if (camera[slot] !== undefined && typeof camera[slot] !== 'string') errors.push(slot + ' must be text');
+    if (camera.preset !== undefined && !Object.keys(CAMERA_PRESETS).includes(camera.preset)) errors.push('unknown camera preset');
+    if (camera.variant !== undefined && !Object.keys(CAMERA_PRESETS['drone-flythrough'].variants).includes(camera.variant)) errors.push('unknown drone variant');
+    if ((camera.variant !== undefined || camera.trajectory !== undefined) && !isDrone(camera)) errors.push('variant and trajectory require preset drone-flythrough');
+    return errors.concat(droneErrors(camera));
+  }
+  const isDrone = camera => camera?.preset === 'drone-flythrough';
+  const vec3 = v => Array.isArray(v) && v.length === 3 && v.every(Number.isFinite);
+  function droneErrors(camera) {
+    if (!isDrone(camera)) return camera?.trajectory ? ['trajectory requires preset drone-flythrough'] : [];
+    const e = [], t = camera.trajectory;
+    if (!CAMERA_PRESETS['drone-flythrough'].variants[camera.variant]) e.push('drone variant must be cinematic or fpv');
+    if (!t || t.coordinateSpace !== 'local-meters') return e.concat('drone trajectory needs local-meters coordinates (Z up)');
+    if (!Number.isInteger(t.seconds) || t.seconds < 2 || t.seconds > 30) e.push('drone trajectory.seconds must be 2–30 whole billed seconds');
+    if (!Number.isFinite(t.lensMm) || t.lensMm < 12 || t.lensMm > 50) e.push('drone lensMm must be 12–50');
+    if (!Array.isArray(t.keys) || t.keys.length < 2 || t.keys.length > 32) return e.concat('drone trajectory needs 2–32 ordered keys');
+    t.keys.forEach((k, i) => {
+      if (!k || !Number.isFinite(k.at) || k.at < 0 || k.at > t.seconds || (i && k.at <= t.keys[i - 1]?.at)) e.push('drone key times must be finite, increasing and inside seconds');
+      if (!vec3(k?.position) || !vec3(k?.target)) e.push('drone key needs position and target [x,y,z]');
+      else {
+        if (k.position.every((v, j) => v === k.target[j])) e.push('drone target must differ from position');
+        if (Math.hypot(k.position[0]-k.target[0], k.position[1]-k.target[1]) < .01) e.push('drone target must not point vertically (unstable horizon)');
+        if (i && vec3(t.keys[i-1]?.position) && k.position.every((v,j) => v === t.keys[i-1].position[j])) e.push('drone consecutive positions must move');
+      }
+      if (!Number.isFinite(k?.rollDeg) || Math.abs(k.rollDeg) > (camera.variant === 'cinematic' ? 0 : 35)) e.push('drone rollDeg must be 0 for cinematic, or within ±35 for fpv');
+      if (!text(k?.label)) e.push('drone keys need English landmark labels for framing and prompts');
+    });
+    if (t.keys[0]?.at !== 0 || t.keys[t.keys.length-1]?.at !== t.seconds) e.push('drone keys must cover 0 through trajectory.seconds');
+    return e;
+  }
+  // Cubic Hermite interpolation with time-aware shared tangents: a waypoint is not a stop.
+  function droneSample(camera, at) {
+    const keys = camera.trajectory.keys;
+    let i = 0;
+    while (i < keys.length - 2 && at > keys[i+1].at) i++;
+    const a = keys[i], b = keys[i+1], dt = b.at-a.at, u = Math.max(0, Math.min(1, (at-a.at)/dt));
+    const tangent = (j, f, axis) => {
+      const lo = keys[Math.max(0,j-1)], hi = keys[Math.min(keys.length-1,j+1)];
+      return (hi[f][axis]-lo[f][axis])/(hi.at-lo.at);
+    };
+    const out = {};
+    for (const f of ['position','target']) out[f] = a[f].map((v,j) =>
+      (2*u**3-3*u*u+1)*v + (u**3-2*u*u+u)*dt*tangent(i,f,j) +
+      (-2*u**3+3*u*u)*b[f][j] + (u**3-u*u)*dt*tangent(i+1,f,j));
+    out.rollDeg = a.rollDeg + (b.rollDeg-a.rollDeg)*(u*u*(3-2*u));
+    return out;
+  }
+  function droneSlots(camera) {
+    const e = droneErrors(camera); if (e.length) throw new Error(e.join('; '));
+    const t=camera.trajectory, keys=t.keys, at=v=>v.map(n=>Number(n.toFixed(2))).join(', ');
+    return {
+      movement: 'drone fly-through following ' + keys.map(k=>k.label + ' at (' + at(k.position) + ') metres looking toward (' + at(k.target) + ') with bank ' + k.rollDeg + ' degrees').join(' then ') +
+        (camera.variant==='fpv' ? '; bank with the planned turns' : '; keep a level horizon'),
+      speed: 'steady forward travel with continuous waypoint transitions',
+      framing: 'Wide aerial view toward ' + keys[0].label + '; camera at (' + at(keys[0].position) + ') metres, looking at (' + at(keys[0].target) + '), ' + t.lensMm + ' mm lens',
+      end: 'Arrive at ' + keys[keys.length-1].label + '; camera at (' + at(keys[keys.length-1].position) + ') metres, looking at (' + at(keys[keys.length-1].target) + ')'
+    };
+  }
+  function droneBinding(camera) {
+    // Exact plan binding, not a claim that the rendered bytes contain this motion.
+    return JSON.stringify({ preset:camera.preset, variant:camera.variant, trajectory:camera.trajectory });
+  }
+  function droneCameraKeys(camera, fps=24) {
+    const e=droneErrors(camera); if(e.length) throw new Error(e.join('; '));
+    if (!Number.isInteger(fps) || fps<24 || fps>60) throw new Error('drone fps must be 24–60');
+    const last=camera.trajectory.seconds*fps, stride=Math.ceil(last/480), frames=[];
+    for(let frame=1;frame<last;frame+=stride) frames.push(frame);
+    frames.push(last);
+    return { lensMm:camera.trajectory.lensMm, keys:frames.map(frame=>{
+      const s=droneSample(camera,(frame-1)/(last-1)*camera.trajectory.seconds);
+      if (Math.hypot(s.position[0]-s.target[0],s.position[1]-s.target[1])<.01) throw new Error('drone spline crosses a vertical or coincident target; adjust waypoints');
+      return {frame,...s};
+    }) };
+  }
+  function droneSceneErrors(scene, {draft=false}={}) {
+    const c=scene.visual?.camera;
+    if (!isDrone(c)) return droneErrors(c);
+    const e=droneErrors(c), r=scene.shot?.render, d=scene.shot?.videoDesign;
+    if (r?.mode!=='generated_video' || !['place','live_action'].includes(r?.purpose)) e.push('drone-flythrough requires generated_video with purpose place or live_action');
+    if (r?.motionEssential!==true || !text(r?.whyNotStill)) e.push('drone-flythrough needs motionEssential and whyNotStill, including in full_video');
+    if (d?.motion?.kind!=='spatial_reveal' || !text(d.motion.visibleChange) || !text(d.motion.reason)) e.push('drone-flythrough needs a justified spatial_reveal with visibleChange');
+    if (['arcade','papercut','inkwash'].includes(d?.look)) e.push('drone-flythrough needs a volumetric look; flat arcade, paper-cutout and ink-wash are incompatible');
+    if (!e.length) {
+      const slots=droneSlots(c);
+      for(const k of CAMERA_SLOTS) if(c[k]!==slots[k]) e.push('drone visual.camera.'+k+' is stale; regenerate it from the trajectory');
+      if (!draft) {
+        const p=scene.visual?.video?.previz;
+        if (p?.camera?.trajectoryBinding!==droneBinding(c)) e.push('drone previz trajectoryBinding is missing or stale; rebuild the previz');
+        if (p?.seconds!==c.trajectory.seconds) e.push('drone previz seconds differ from trajectory.seconds');
+        if (Number.isFinite(scene.duration) && scene.duration>c.trajectory.seconds) e.push('drone clip is shorter than its scene');
+      }
+    }
+    return e;
+  }
+
   const NEUTERED = /\b(?:very|extremely|almost|ever so)\s+(?:slow|slight|small|subtle|gentle)|\b(?:barely|hardly|imperceptibl[ey]|subtle|subtly|tiny|minimal|micro|slight|slightly|gentle|gently|restrained|quiet)\b|\bhold(?:ing)?\s+(?:the\s+)?(?:composition|frame|shot)\b|\block(?:ed)?[- ]off\b|\bbreathing only\b/i;
   const WIDE = /\b(?:wide|establishing|extreme long|long shot|full[- ]body figures|small figures)\b/i;
   function cameraErrors(scene) {
-    const v = scene.visual || {}, camera = v.camera || {}, errors = [];
+    const v = scene.visual || {}, camera = v.camera || {}, errors = droneSceneErrors(scene);
     const span = [camera.movement, camera.speed].filter(text).join(' ');
     const hit = NEUTERED.exec(span);
     if (hit) errors.push(`visual.camera asks for a move the viewer cannot see ("${hit[0]}"); write a visible move at slow, steady or fast, or choose static`);
@@ -269,9 +426,10 @@
         if (k && staticCamera(s.visual?.camera) && staticCamera(generated[k - 1].s.visual?.camera))
           errors.push(`shots ${generated[k - 1].shot}, ${shot}: two static cameras in a row; move on one of them`);
       });
-      const wide = generated.filter(({ s }) => WIDE.test(String(s.visual?.camera?.framing || '')));
-      if (wide.length * 2 > generated.length)
-        errors.push(`${wide.length} of ${generated.length} shots are framed wide; small figures on a wide stage read as a still on a phone — bring at least half the shots to medium or close`);
+      const conventional = generated.filter(({s}) => !isDrone(s.visual?.camera) || droneSceneErrors(s).length);
+      const wide = conventional.filter(({ s }) => WIDE.test(String(s.visual?.camera?.framing || '')));
+      if (wide.length * 2 > conventional.length)
+        errors.push(`${wide.length} of ${conventional.length} shots are framed wide; small figures on a wide stage read as a still on a phone — bring at least half the shots to medium or close`);
     }
     return errors;
   }
@@ -283,7 +441,7 @@
       // hook_only: the hook plus every imported clip — reuse is outside the count but still a slot.
       generatedVideoMax: production.mode === 'hook_only' ? 1 + scenes.filter(reused).length : RATIOS[production.mode] ? scenes.filter(eligible).length : Math.min(base.generatedVideoMax ?? 2, 2) };
   }
-  const api = { STYLES, MODES, CHOICES, RATIOS, newCut, generated, hookScene, coverageErrors, CAMERA_SLOTS, PREVIZ_RENDERERS, VIDEO_MODELS, packPresets, ALL_LOOKS, eligible, reused, reuseErrors, full, signature, check, policy, motionErrors, missingCameraSlots, cameraErrors, staticCamera, finalState };
+  const api = { CAMERA_INPUT_SCHEMA, cameraInputErrors, CAMERA_PRESETS, isDrone, droneErrors, droneSample, droneSlots, droneBinding, droneCameraKeys, droneSceneErrors, STYLES, MODES, CHOICES, RATIOS, newCut, generated, hookScene, coverageErrors, CAMERA_SLOTS, PREVIZ_RENDERERS, VIDEO_MODELS, packPresets, ALL_LOOKS, eligible, reused, reuseErrors, full, signature, check, policy, motionErrors, missingCameraSlots, cameraErrors, staticCamera, finalState };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.PRODUCTION_MODE = api;
 })(typeof window === 'object' ? window : globalThis);

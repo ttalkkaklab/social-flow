@@ -310,3 +310,64 @@ describe('tool surface', () => {
     await assert.rejects(ROUTES.storyboard_apply({ path: dir, scene: [scene(1)] }), /unknown argument/);
   });
 });
+
+describe('shot camera MCP input', () => {
+  const drone = () => ({ preset: 'drone-flythrough', variant: 'fpv', trajectory: {
+    coordinateSpace: 'local-meters', seconds: 4, lensMm: 24,
+    keys: [
+      { at: 0, position: [0, -20, 8], target: [0, 0, 4], rollDeg: 0, label: 'the entrance' },
+      { at: 2, position: [8, -5, 7], target: [2, 10, 4], rollDeg: 20, label: 'the ridge' },
+      { at: 4, position: [0, 15, 6], target: [0, 25, 3], rollDeg: 0, label: 'the bridge' },
+    ],
+  } });
+  it('creation, upsert and insertion all advertise the production route and drone schema', () => {
+    const props = TOOLS.find(t => t.name === 'storyboard_apply').inputSchema.properties;
+    const shapes = [props.set.properties.shots.items, props.shots.items.properties.shot, props.insertShots.items.properties.shots.items];
+    for (const schema of shapes) {
+      assert.deepEqual(schema.properties.type.enum, contract().VOCAB.TYPES);
+      assert.deepEqual(schema.properties.shot.properties.render.properties.mode.enum, contract().VOCAB.RENDER_MODES);
+      assert.ok(schema.properties.shot.properties.render.properties.purpose.enum.includes('place'));
+      assert.ok(schema.properties.shot.properties.videoDesign.properties.motion.properties.kind.enum.includes('spatial_reveal'));
+      const camera = schema.properties.visual.properties.camera;
+      assert.deepEqual(camera.properties.preset.enum, ['drone-flythrough']);
+      assert.deepEqual(camera.properties.variant.enum, ['cinematic', 'fpv']);
+      assert.deepEqual(camera.properties.trajectory.properties.coordinateSpace.enum, ['local-meters']);
+      assert.deepEqual(camera.properties.trajectory.properties.keys.items.required, ['at', 'position', 'target', 'rollDeg', 'label']);
+      assert.deepEqual(camera.allOf[0].then.required, ['variant', 'trajectory']);
+      assert.equal(camera.allOf[1].then.properties.trajectory.properties.keys.items.properties.rollDeg.const, 0);
+      assert.equal(schema.additionalProperties, true);
+      assert.equal(schema.properties.visual.additionalProperties, true);
+    }
+    assert.deepEqual(shapes[0], shapes[1]); assert.deepEqual(shapes[1], shapes[2]);
+  });
+  it('accepts a camera draft before derived prompt slots and preserves visual handoff fields', () => {
+    const visual = { camera: drone(), video: { engine: 'seedance', previz: { camera: { trajectoryBinding: 'kept' } } }, custom: { keep: true } };
+    const parsed = shotSchema.parse({ ...board()[1], visual });
+    assert.deepEqual(parsed.visual, visual);
+    const win = { FORMAT: 'shorts-9x16', COMPREHENSION: comprehension, STRUCTURE: structure([scene(1), scene(2)]), SCENES: board() };
+    const result = applyPatch(win, storyboardApplySchema.parse({ path: '.', shots: [{ no: 2, shot: parsed }] }));
+    assert.ok(!result.findings.some(f => f.level === 'bad'), JSON.stringify(result.findings));
+    assert.deepEqual(result.win.SCENES[1].visual, visual);
+  });
+  it('rejects malformed cameras on the actual MCP request paths, without stripping other fields', () => {
+    for (const mutate of [
+      c => c.preset = 'unknown', c => delete c.preset, c => c.variant = 'unknown', c => delete c.trajectory,
+      c => c.trajectory.keys[1].at = 0, c => c.trajectory.keys[1].position = [1, 2],
+      c => c.trajectory.keys[1].rollDeg = 80, c => c.variant = 'cinematic',
+      c => c.trajectory.keys[1] = null, c => c.trajectory.seconds = 2.5,
+    ]) {
+      const c = drone(); mutate(c);
+      const s = { ...board()[1], visual: { camera: c } };
+      for (const patch of [
+        { shots: [{ no: 2, shot: s }] }, { insertShots: [{ after: 1, shots: [s] }] },
+        { set: { structure: structure([scene(1)]), shots: [s] } },
+      ]) assert.equal(storyboardApplySchema.safeParse({ path: '.', ...patch }).success, false);
+    }
+  });
+  it('ordinary cameras keep extra fields and do not require the drone preset', () => {
+    for (const visual of [{}, { camera: { movement: 'dolly in', speed: 'steady', framing: 'medium', end: 'the window', effect: 'push', custom: [1, 2] } }, { video: { engine: 'veo' } }])
+      assert.deepEqual(shotSchema.parse({ ...board()[1], visual }).visual, visual);
+    const c = drone(); c.variant = 'cinematic'; c.trajectory.keys.forEach(k => k.rollDeg = 0);
+    assert.ok(shotSchema.safeParse({ ...board()[1], visual: { camera: c } }).success);
+  });
+});

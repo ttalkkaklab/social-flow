@@ -120,3 +120,8 @@ Full-video character scenes use articulated action in every style. Preserve face
 materials while changing pose and position as planned. A miniature style reference supplies
 the look, not a frozen pose. Apply the subject-motion contract in
 [full-video.md](../../produce/references/full-video.md) before generating either frame.
+
+## Camera presets are separate
+
+A drone flight is a shot camera choice, not another episode look. Use
+[drone-flythrough.md](drone-flythrough.md) with a compatible volumetric style.

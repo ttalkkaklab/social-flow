@@ -37,6 +37,7 @@
       if (!pos(cam.lensMm) || cam.lensMm < 8 || cam.lensMm > 400) bad('camera.lensMm must be 8–400 (a 36 mm sensor on the longer side)');
       errors.push(...checkKeys(cam.keys, 'camera', (k) => {
         const e = [];
+        if (k.rollDeg !== undefined && (!Number.isFinite(k.rollDeg) || Math.abs(k.rollDeg)>35)) e.push('rollDeg must be within ±35');
         if (!vec(k.position)) e.push('position [x, y, z] in metres');
         if (!vec(k.target)) e.push('target [x, y, z] — the point the camera looks at');
         else if (vec(k.position) && k.position.every((v, i) => v === k.target[i])) e.push('target must differ from position');
@@ -104,8 +105,8 @@
     return out;
   }
   function sampleCamera(spec, frame) {
-    const s = sampleKeys(spec.camera.keys, frame, ['position', 'target']);
-    return { position: s.position, target: s.target, lensMm: spec.camera.lensMm };
+    const s = sampleKeys(spec.camera.keys.map(k=>Object.assign({rollDeg:0},k)), frame, ['position', 'target', 'rollDeg']);
+    return { position: s.position, target: s.target, rollDeg: s.rollDeg, lensMm: spec.camera.lensMm };
   }
   function sampleActor(actor, frame) {
     const s = sampleKeys(actor.keys.map((k) => Object.assign({ rotationZDeg: 0 }, k)), frame, ['position', 'rotationZDeg']);

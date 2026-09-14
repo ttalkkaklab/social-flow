@@ -3262,3 +3262,10 @@ imports; use cut or dip after an imported cut. New generated sources retain norm
 sound is needed, provide it explicitly as the card audio; video inputs do not implicitly
 mix their audio. `STORY.transcripts` may reference `reuse.clip` for verified original speech,
 with times relative to the trimmed file. Review the final sound and subtitle timing as usual.
+
+### Shot camera preset: drone fly-through
+
+`visual.camera.preset: "drone-flythrough"` adds a shot-level cinematic/FPV flight to the
+episode look. Its trajectory generates the four camera slots and both previz camera paths.
+Follow [drone-flythrough.md](drone-flythrough.md) for the schema, preparation command,
+plan binding and review. It is not a ninth episode style or a Google Earth importer.
