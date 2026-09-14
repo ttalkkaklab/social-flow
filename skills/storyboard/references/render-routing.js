@@ -1,6 +1,7 @@
 /* One semantic routing contract for planning, the approval page and production. */
 (function(root){
  'use strict';
+ const productionMode = () => typeof module === 'object' && module.exports ? require('./production-mode.js') : root.PRODUCTION_MODE;
  const PURPOSES={portrait:'still_camera',atmosphere:'still_camera',place:'still_camera',detail:'still_camera',human_process:'character_html',mechanism:'object_html',physical_state:'object_html',comparison:'data_graph',trend:'data_graph',share:'data_graph',distribution:'data_graph',geographic:'data_graph',timeline:'data_graph',live_action:'generated_video',evidence_quote:'editorial_html',verdict:'editorial_html',archive:'stock_video'};
  // A purpose's default route comes first; free real footage may stand in where the actual place, era or action carries the cut (render-routing.md §Routes).
  const ALTERNATIVES={live_action:['stock_video'],atmosphere:['stock_video'],place:['stock_video']};
@@ -110,13 +111,16 @@
    if(text(v.bgPrompt))errors.push('visual.bgPrompt: a stock photo is a supplied file, not a generated one; drop bgPrompt');
   }
   if(!r||typeof r!=='object')return errors.concat(['shot.render: choose a supported mode and record purpose and reason before assets']);
+  const pm=productionMode(), drone=pm?.isDrone(v.camera);
+  if (v.camera?.preset==='drone-flythrough' && !pm) bad('drone-flythrough requires production-mode.js');
+  if (pm) pm.droneSceneErrors(scene,{draft}).forEach(bad);
   const fullVideo=production?.mode==='full_video';
   const options=modesFor(r.purpose);
   if(!options.length)bad('unknown purpose; use '+Object.keys(PURPOSES).join(', '));
 
   if(!LABELS[r.mode])bad('unknown mode; use '+Object.keys(LABELS).join(', '));
   else if(fullVideo&&r.mode!=='stock_video'){if(r.mode!=='generated_video')bad(r.purpose+' requires generated_video, not '+r.mode)}
-  else if(options.length&&!options.includes(r.mode))bad(r.purpose+' requires '+options.join(' or ')+', not '+r.mode);
+  else if(options.length&&!options.includes(r.mode)&&!(drone&&r.purpose==='place'&&r.mode==='generated_video'))bad(r.purpose+' requires '+options.join(' or ')+', not '+r.mode);
   if(!text(r.reason))bad('reason must explain why this treatment conveys the cut');
   const info=scene.shot?.infoType;
   if(info==='statistic'&&!['comparison','trend','share','distribution','geographic'].includes(r.purpose))bad('statistic needs a quantitative purpose');

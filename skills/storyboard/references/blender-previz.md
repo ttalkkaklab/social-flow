@@ -429,3 +429,9 @@ not bill previz seconds there.
   version message rather than an API error.
 - **Do not hide a failed previz behind a still.** If the render fails, the tool says so;
   the mp4 is either the whole cut at the requested frame rate or absent.
+
+## Drone camera preparation
+
+[drone-flythrough.md](drone-flythrough.md) prepares one sampled path for both renderers.
+Blender camera keys accept optional `rollDeg` (−35 to 35) after target/rotation aiming;
+three.js camera keys accept the same bank. Omitted bank stays zero for existing scenes.

@@ -44,6 +44,13 @@ export function contract() {
         contractCache = loadFromHere(CONTRACT_FILE);
     return contractCache;
 }
+export function cameraContract() {
+    return loadFromHere(join(REFERENCES_DIR, 'production-mode.js'));
+}
+export function renderPurposes() {
+    const routing = loadFromHere(join(REFERENCES_DIR, 'render-routing.js'));
+    return Object.keys(routing.PURPOSES);
+}
 // ── Schemas ─────────────────────────────────────────────────────
 const tuple = (list) => z.enum(list);
 // The schemas are built at module load, so a missing contract file must not take the whole
@@ -119,12 +126,17 @@ export const eyelineSchema = z.record(z.unknown()).superRefine((value, ctx) => {
     for (const message of contract().validateEyeline(value))
         ctx.addIssue({ code: z.ZodIssueCode.custom, message });
 });
+export const cameraSchema = z.record(z.unknown()).superRefine((value, ctx) => {
+    for (const message of cameraContract().cameraInputErrors(value))
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message });
+});
+const visualSchema = z.object({ camera: cameraSchema.optional() }).passthrough();
 export const shotSchema = z
     .object({
     type: tuple(V.TYPES),
     title: z.string().optional(),
     narration: z.array(z.object({ tts: z.string(), sub: z.string().optional() }).passthrough()).optional(),
-    visual: z.record(z.unknown()).optional(),
+    visual: visualSchema.optional(),
     duration: z.number().positive().optional(),
     scene: z.number().int().positive().optional(),
     sceneSlug: z.string().optional(),

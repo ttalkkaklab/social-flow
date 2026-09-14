@@ -2,7 +2,7 @@
 'use strict';
 const fs = require('fs'), path = require('path');
 const { readScenes } = require('../../autoproduce/references/cost-preview.js');
-const { full, MODES, STYLES, packPresets, motionErrors, missingCameraSlots, finalState } = require('./production-mode.js');
+const { droneSceneErrors, isDrone, full, MODES, STYLES, packPresets, motionErrors, missingCameraSlots, finalState } = require('./production-mode.js');
 const { resolveStylePack } = require('./style-pack.js');
 const PROMPT = require('./assemble-bg-prompt.js');
 const { previzHandoff } = require('./render-routing.js');
@@ -61,6 +61,8 @@ function assemble(win, index, dir) {
   if (!d || !style || !LOOKS[d.look]) throw new Error('Choose style and videoDesign before assembling prompts');
   if (!v || typeof v !== 'object') throw new Error('Missing visual');
   if (d.camera !== undefined) throw new Error('videoDesign.camera is retired; the camera lives in the four visual.camera slots');
+  const droneProblems = droneSceneErrors(scene, {draft:true});
+  if (droneProblems.length) throw new Error(droneProblems.join('; '));
   const isVideo = full(win.PRODUCTION) || !!v.video;
   if (isVideo) {
     const errors = motionErrors(scene);
@@ -98,7 +100,7 @@ function assemble(win, index, dir) {
     'Camera composition: ' + camera.framing,
     'Spatial continuity: ' + d.continuity,
     'Keep the physical subject legible at phone size. The image contains only the scene; subtitles are added in editing.'].join('\n');
-  const lock = lockText(d, style, treatment);
+  const lock = lockText(d, style, treatment) + (isDrone(camera) ? '. The flight keeps continuous terrain parallax and stable landmarks; the picture stays a clean aerial view with scenery at every frame edge' : '');
   let motionPrompt = null;
   if (!missingSlots.length) {
     const onReferenceRoute = previz && (v.video.engine || v.engine || 'seedance') !== 'host' && previzHandoff(scene) === 'reference_video';

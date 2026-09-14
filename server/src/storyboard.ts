@@ -71,6 +71,20 @@ export function contract(): Contract {
   return contractCache;
 }
 
+/** Camera discovery and input validation use the same contract as the planner. */
+interface CameraContract {
+  CAMERA_INPUT_SCHEMA: Record<string, unknown>;
+  ALL_LOOKS: string[];
+  cameraInputErrors(value: unknown): string[];
+}
+export function cameraContract(): CameraContract {
+  return loadFromHere(join(REFERENCES_DIR, 'production-mode.js')) as CameraContract;
+}
+export function renderPurposes(): string[] {
+  const routing = loadFromHere(join(REFERENCES_DIR, 'render-routing.js')) as { PURPOSES: Record<string, string> };
+  return Object.keys(routing.PURPOSES);
+}
+
 // ── Schemas ─────────────────────────────────────────────────────
 
 const tuple = (list: string[]) => z.enum(list as [string, ...string[]]);
@@ -150,12 +164,18 @@ export const eyelineSchema = z.record(z.unknown()).superRefine((value, ctx) => {
   for (const message of contract().validateEyeline(value)) ctx.addIssue({ code: z.ZodIssueCode.custom, message });
 });
 
+export const cameraSchema = z.record(z.unknown()).superRefine((value, ctx) => {
+  for (const message of cameraContract().cameraInputErrors(value))
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message });
+});
+const visualSchema = z.object({ camera: cameraSchema.optional() }).passthrough();
+
 export const shotSchema = z
   .object({
     type: tuple(V.TYPES),
     title: z.string().optional(),
     narration: z.array(z.object({ tts: z.string(), sub: z.string().optional() }).passthrough()).optional(),
-    visual: z.record(z.unknown()).optional(),
+    visual: visualSchema.optional(),
     duration: z.number().positive().optional(),
     scene: z.number().int().positive().optional(),
     sceneSlug: z.string().optional(),

@@ -736,3 +736,9 @@ third, and close-ups may crop the crown while preserving the chin. Detail shots 
 headroom when no head is visible. Record pressure, pursuit or deliberate imbalance as
 intentional with a reason. Safe zones come from the output format and platform UI, not a
 universal 5% inset. Check the actual final crop and moving-shot endpoints.
+
+## Drone fly-through preset
+
+For a continuous flight that reveals spatial relationships, use the shot camera preset in
+[drone-flythrough.md](drone-flythrough.md). Choose cinematic (level horizon) or FPV (authored
+bank), then plan the route before the source image. Keep the episode material style.
