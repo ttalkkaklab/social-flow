@@ -94,6 +94,9 @@ test('live outgoing frames continue across J-cut; every transition preserves fra
   for(const change of ['SOURCE_IN=0','SOURCE_IN=0.2','HANDLE_FRAMES=12; RENDER_FRAMES=72; RENDER_D=2.4']){
    r=runRender(dir,"IDX=0; FVIS=(a.mp4); REUSED_VIDEO_SHOTS='0'; HANDLE_FRAMES=0; RENDER_FRAMES=60; RENDER_D=2; "+change);
    assert.notEqual(r.status,0);assert.match(r.stdout,/Reused card/);
+   r=runRender(dir,"IDX=0; FVIS=(a.mp4); REUSED_VIDEO_SHOTS='0'; VIDEO_WARNINGS_APPROVED=1; HANDLE_FRAMES=0; RENDER_FRAMES=60; RENDER_D=2; "+change);
+   assert.equal(r.status,0,r.stdout+r.stderr);
+   assert.equal(Number(probe(path.join(dir,'work/v0.mp4')).nb_read_frames),60);
   }
 
  }finally{rmSync(dir,{recursive:true,force:true});}
@@ -131,4 +134,22 @@ test('delivery gate rejects ad hoc exports, stale media and changed storyboards'
   assert.throws(()=>delivery.record(path.join(dir,'.work'),1),/common builder proof/);
   writeFileSync(path.join(dir,'.work/edit.json'),'{}');assert.throws(()=>delivery.record(path.join(dir,'.work'),1),/cannot waive/);
  }finally{rmSync(dir,{recursive:true,force:true});}
+});
+
+test('approved reuse edits compile while missing source frames still stop the renderer',()=>{
+ const s=[{visual:{reuse:{}},edit:{in:.2}},{transition:'dissolve'}];
+ assert.throws(()=>compile(s,cards),/Reused clips/);
+ const result=compile(s,cards,{videoWarningsApproved:true});
+ assert.equal(result.plan[0].in,.2);assert.equal(result.plan[0].handle,.4);
+});
+test('strict dimensions permit approved orientation changes but keep exact-input errors',()=>{
+ const dir=mkdtempSync(path.join(tmpdir(),'assembly-dimensions-'));
+ try{
+  const block=builder.slice(builder.indexOf('if [ "$DIMBAD" = 1 ]'),builder.indexOf('# A still never sits frozen'));
+  assert.ok(block.includes('VIDEO_WARNINGS_APPROVED'));
+  for(const [bad,warn,approved,pass] of [[0,1,0,false],[0,1,1,true],[1,0,1,false]]){
+   const r=spawnSync('bash',['-c',`set -euo pipefail; say(){ echo "$1"; }; DIMBAD=${bad}; DIMWARN=${warn}; VIDEO_WARNINGS_APPROVED=${approved}; STRICT_DIM=1; `+block],{cwd:dir,encoding:'utf8'});
+   assert.equal(r.status===0,pass,r.stdout+r.stderr);
+  }
+ }finally{rmSync(dir,{recursive:true,force:true})}
 });

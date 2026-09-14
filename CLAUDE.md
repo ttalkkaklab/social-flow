@@ -3,6 +3,16 @@
 Channel-based short-form/long-form content pipeline Claude Code plugin.
 [README.md](README.md) is the source of truth for structure, skills, and the MCP tool list.
 
+## Assembly video checks (user directive, 2026-09-14)
+
+Video and visual-plan findings at assembly are warnings subject to HITL, not an
+unconditional veto. Present the actual findings and follow
+`skills/produce/references/assembly-video-hitl.md`. Once the user approves those
+warnings for the current inputs, assemble immediately without fabricating PASS
+reviews or asking again. This exception supersedes pre-assembly quality gates
+elsewhere in this repository. Keep the approval and warnings in the build record.
+It authorizes neither additional spending nor publishing.
+
 ## Style ban — report-style stative verbs (user directive, 2026-08-12)
 
 Don't close sentences with Korean endings of the

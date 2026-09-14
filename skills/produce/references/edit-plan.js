@@ -19,7 +19,7 @@ function parseOptions(text) {
   }
   return out;
 }
-function compile(scenes, text) {
+function compile(scenes, text, {videoWarningsApproved=false}={}) {
   const rows = text.split(/\r?\n/).filter(l=>l.trim()&&!l.startsWith('#')).map(l=>l.split('\t'));
   const shots = scenes.map((s,i)=>({s,i})).filter(({s})=>!['broll','outro'].includes(s.type));
   if (rows.length !== shots.length || rows.some((r,k)=>r[0]!==String(shots[k].i))) throw new Error('Edit plan card order differs from SCENES');
@@ -54,7 +54,7 @@ function compile(scenes, text) {
     if (p.enter==='black'||p.enter==='white') prev.exit=p.enter;
   });
   plan.forEach((p,k)=>{
-    if (shots[k].s.visual?.reuse !== undefined && (p.in !== 0 || p.handle !== 0))
+    if (!videoWarningsApproved && shots[k].s.visual?.reuse !== undefined && (p.in !== 0 || p.handle !== 0))
       throw new Error('Reused clips cannot use edit.in or outgoing live handles; supply the complete trimmed file and use cut or dip after it');
   });
   const resolved=plan.map((p,k)=>{
@@ -68,9 +68,9 @@ function compile(scenes, text) {
   }).join('\n')+'\n';
   return {cards:resolved, plan:plan.map(({opts,...p})=>p)};
 }
-function write(work, scenes) {
+function write(work, scenes, options) {
   const source=fs.readFileSync(path.join(work,'cards.tsv'),'utf8');
-  const result=compile(scenes,source);
+  const result=compile(scenes,source,options);
   fs.writeFileSync(path.join(work,'cards.resolved.tsv'),result.cards);
   fs.writeFileSync(path.join(work,'edit-plan.json'),JSON.stringify({version:1, cardsSha256:createHash('sha256').update(result.cards).digest('hex'), shots:result.plan},null,2)+'\n');
   return result;
