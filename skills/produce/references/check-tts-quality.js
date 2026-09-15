@@ -66,7 +66,10 @@ function check(work, board) {
         const e=proof.episode;
         if(!e||e.index!==spoken.findIndex(v=>v.i===i)||JSON.stringify(e.texts.map(normalize))!==JSON.stringify(texts.map(normalize)))throw new Error('ElevenLabs requires complete ordered episode context');
         if(!proof.voiceSettings||proof.voiceSettings.seed!==e.seed||proof.attempts.some(t=>t.seed!==e.seed))throw new Error('ElevenLabs episode seed drift');
-        const settings=JSON.stringify(proof.voiceSettings);
+        // 발음 사전은 컷별로 다를 수 있다(tts-quality.md 65-68행: 컷마다 사전을 핀으로 박는 것이 정식 절차).
+        // 목소리 정체성이 아니므로 컷 간 동일성 비교에서 제외한다.
+        const {pronunciationDictionaryLocators, ...voiceIdentity} = proof.voiceSettings;
+        const settings = JSON.stringify(voiceIdentity);
         if(episodeSettings&&episodeSettings!==settings)throw new Error('ElevenLabs voice/settings changed between scenes');
         episodeSettings=settings;
       }
