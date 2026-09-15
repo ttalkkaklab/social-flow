@@ -92,7 +92,8 @@ function assemble(win, index, dir) {
   const cutType = scene.shot?.cutType;
   const castIds = characterIds(v.character);
   const cast = win.PRODUCTION.cast || {};
-  const activeCast = ['action', 'reaction', 'insert'].includes(cutType)
+  const appliesCutLook = d.look !== 'archive';
+  const activeCast = appliesCutLook && ['action', 'reaction', 'insert'].includes(cutType)
     ? castIds.map(id => ({ id, entry: cast[id] })).filter(({ entry }) => entry && typeof entry === 'object') : [];
   const pack = d.look === 'archive' || !packPresets.includes(preset) ? null : resolveStylePack({
     id: style.referencePack, role: v.styleRole || defaultStyleRole(cutType, castIds) });
@@ -102,14 +103,14 @@ function assemble(win, index, dir) {
   const castReferenceImages = activeCast.filter(({ entry }) => text(entry.name) && text(entry.image))
     .map(({ id, entry }) => ({ id, name: entry.name, path: dir ? path.resolve(dir, entry.image) : entry.image }));
   const sourceReferenceImages = [...(previzFrame ? [previzFrame] : []), ...(pack?.referenceImagePaths || []), ...castReferenceImages.map(ref => ref.path)];
-  const castPromptLines = castLines(cast, castIds, cutType);
+  const castPromptLines = appliesCutLook ? castLines(cast, castIds, cutType) : [];
   const castImageLines = castReferenceImages.map(ref => {
     const imageNumber = sourceReferenceImages.indexOf(ref.path) + 1;
     return `The attached image ${imageNumber} is the approved appearance of ${ref.name}; keep face, costume and build and take nothing else from it.`;
   });
   const castLocks = activeCast.filter(({ entry }) => text(entry.name) && text(entry.sheet))
     .map(({ entry }) => `${entry.name.trim()} keeps this exact appearance: ${entry.sheet}`);
-  const perCutTreatment = cutTreatment(preset, cutType);
+  const perCutTreatment = appliesCutLook ? cutTreatment(preset, cutType) : '';
   const world = style.worlds?.[d.worldId] ?? style.world;
   const source = [canvas + ', edge-to-edge composition.',
     'Narrated meaning this picture must convey: ' + spoken,

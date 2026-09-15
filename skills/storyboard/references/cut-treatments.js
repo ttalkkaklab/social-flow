@@ -44,16 +44,17 @@ const PRESET_NOTES = {
     document: 'A rendered prop book with clean shaders and soft rim light.'
   },
   'arcade-2d': {
-    document: 'A painted scroll item held up on the stage like a game item, without text.',
+    document: 'For this document cut, a painted scroll item is held up on the stage; the stage holds only the scroll item and its painted backdrop.',
     map: 'A painted stage-select overview with the route as painted terrain.',
-    reaction: 'Spectator sprites at the stage edge.'
+    reaction: 'Spectator sprites at the stage edge.',
+    scenery: 'A wide establishing stage fills the frame; any people read as small distant painted sprite silhouettes while layered parallax scenery carries the arcade look.'
   }
 };
 
 const APPEARANCE_WORDS = [
   'armor', 'armour', 'helmet', 'boots', 'robe', 'cloak', 'sleeve', 'sleeves',
   'beard', 'hair', 'uniform', 'costume', '갑옷', '투구', '부츠', '도포', '망토',
-  '소매', '수염', '머리', '제복', '복식'
+  '소매', '수염', '머리카락', '제복', '복식'
 ];
 
 function idsOf(ids) {

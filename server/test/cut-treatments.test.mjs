@@ -27,6 +27,8 @@ test('every preset and cut type resolves to positive prompt text', () => {
   }
   assert.equal(cutTreatment('spatial-explainer', 'document'), cutTreatment('cinematic-miniature', 'document'));
   assert.equal(cutTreatment('photoreal', 'unknown'), '');
+  assert.match(cutTreatment('arcade-2d', 'document'), /stage holds only the scroll item and its painted backdrop/);
+  assert.match(cutTreatment('arcade-2d', 'scenery'), /small distant painted sprite silhouettes/);
 });
 
 test('cast lines use the same sheet text on people cuts and omit it on empty cuts', () => {
@@ -50,4 +52,6 @@ test('default style roles follow cut content', () => {
   for (const cutType of ['document', 'map', 'scenery']) assert.equal(defaultStyleRole(cutType, []), 'environment');
   assert.ok(APPEARANCE_WORDS.includes('armor'));
   assert.ok(APPEARANCE_WORDS.includes('갑옷'));
+  assert.ok(APPEARANCE_WORDS.includes('머리카락'));
+  assert.ok(!APPEARANCE_WORDS.includes('머리'));
 });

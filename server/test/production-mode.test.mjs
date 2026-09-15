@@ -177,6 +177,12 @@ test('per-cut prompts inject cast locks, cast images and mapped worlds', () => {
 
   scene.shot.videoDesign.worldId = 'unmapped';
   assert.match(assemble(win, 0).sourcePrompt, /A granite valley with a river/);
+
+  scene.shot.cutType = 'action'; scene.shot.videoDesign.look = 'archive';
+  const archive = assemble(win, 0, '/board');
+  for (const key of ['sourcePrompt', 'endFramePrompt', 'motionPrompt'])
+    assert.doesNotMatch(archive[key], /Cut type action:|Cast —|approved appearance|exact appearance|Yi Sun-sin/);
+  assert.deepEqual(archive.castReferenceImages, []);
 });
 test('cast sheets and cut types affect validation and quote fingerprints', () => {
   const win = fixture(1), before = quote(win).quoteFingerprint;
