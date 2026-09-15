@@ -343,21 +343,21 @@
     if (STYLES[chosen] && !packPresets.includes(chosen) && p.style.referencePack)
       errors.push('Only cinematic-miniature carries the miniature reference pack; drop referencePack for ' + chosen);
     if (p.cast !== undefined) {
-      if (!p.cast || typeof p.cast !== 'object' || Array.isArray(p.cast)) errors.push('PRODUCTION.cast must be an object keyed by character id');
+      if (!p.cast || typeof p.cast !== 'object' || Array.isArray(p.cast)) errors.push('[cast-sheet] PRODUCTION.cast must be an object keyed by character id');
       else Object.entries(p.cast).forEach(([id, entry]) => {
         if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
-          errors.push('PRODUCTION.cast.' + id + ' must be an object with name and sheet');
+          errors.push('[cast-sheet] PRODUCTION.cast.' + id + ' must be an object with name and sheet');
           return;
         }
-        if (!text(entry.name)) errors.push('PRODUCTION.cast.' + id + '.name is required');
-        if (!text(entry.sheet)) errors.push('PRODUCTION.cast.' + id + '.sheet is required');
+        if (!text(entry.name)) errors.push('[cast-sheet] PRODUCTION.cast.' + id + '.name is required');
+        if (!text(entry.sheet)) errors.push('[cast-sheet] PRODUCTION.cast.' + id + '.sheet is required');
         if (entry.image !== undefined && (!text(entry.image) || /^[a-z][a-z0-9+.-]*:|^\/|^\\|(?:^|[\\/])\.\.(?:[\\/]|$)|[\t\r\n|]/i.test(entry.image)))
-          errors.push('PRODUCTION.cast.' + id + '.image must be a relative path beside scenes.js');
+          errors.push('[cast-sheet] PRODUCTION.cast.' + id + '.image must be a relative path beside scenes.js');
       });
     }
     (win.SCENES || []).forEach((scene, i) => {
       if (scene.shot?.cutType !== undefined && !CUT_TYPES.includes(scene.shot.cutType))
-        errors.push('shot ' + (i + 1) + ': shot.cutType must be one of ' + CUT_TYPES.join(', '));
+        errors.push('[cutType-unknown] shot ' + (i + 1) + ': shot.cutType must be one of ' + CUT_TYPES.join(', '));
     });
     if (draft) return errors; // Shot assets/designs are authored after the narration-only draft.
     (win.SCENES || []).forEach((s, i) => {
