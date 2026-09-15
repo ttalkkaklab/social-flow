@@ -33,6 +33,7 @@ test('cast lines use the same sheet text on people cuts and omit it on empty cut
   const sheet = 'An officer in his thirties, lean build, calm face; dark armor and red sleeves.';
   const cast = { yi: { name: 'Yi Sun-sin', sheet }, missing: { name: 'Missing sheet' } };
   assert.deepEqual(castLines(cast, ['yi'], 'action'), [`Cast — Yi Sun-sin: ${sheet}`]);
+  assert.deepEqual(castLines(cast, [{ id: 'yi', scope: 'controls the rider only' }], 'action'), [`Cast — Yi Sun-sin: ${sheet}`]);
   assert.deepEqual(castLines(cast, ['yi'], 'insert'), [
     'Only the hands, sleeves and boots of Yi Sun-sin are in frame.',
     `Cast — Yi Sun-sin: ${sheet}`

@@ -6,6 +6,7 @@ const { droneSceneErrors, isDrone, full, MODES, STYLES, packPresets, motionError
 const { resolveStylePack } = require('./style-pack.js');
 const PROMPT = require('./assemble-bg-prompt.js');
 const { previzHandoff } = require('./render-routing.js');
+const { cutTreatment, castLines, defaultStyleRole } = require('./cut-treatments.js');
 const LOOKS = {
   miniature: 'An architectural exhibition miniature diorama with articulated objects, matte materials, soft contact shadows and restrained fine detail.',
   architectural: 'A precise architectural cutaway model with believable thickness, connected parts, legible spatial relationships and softly lit material surfaces.',
@@ -37,10 +38,11 @@ function motionText(d) {
 /* The consistency lock is the only place an exclusion can go on Seedance, and the gate wants its
    holding verbs (stays · holds · keeps). The look and the episode camera language ride here so every
    clip of the episode is drawn with one lens and one material world. */
-function lockText(d, style, treatment) {
-  return ['The subject stays exactly consistent with the input frame: identity, facial features, clothing design, proportions and materials hold while pose, expression and position change as planned',
+function lockText(d, style, treatment, castLocks) {
+  const base = ['The subject stays exactly consistent with the input frame: identity, facial features, clothing design, proportions and materials hold while pose, expression and position change as planned',
     clause(d.continuity), 'Architecture and terrain keep stable geometry throughout', 'The look holds: ' + clause(treatment),
     'The episode camera language holds: ' + clause(style.camera)].join('. ');
+  return castLocks?.length ? base + '. ' + castLocks.join(' ') : base;
 }
 /* The previz binding (blender-previz.md §6.3): on the reference route the motion prompt opens on the
    vendor's clay-model template — the still is the first frame, the clip is the only reference for
@@ -55,6 +57,11 @@ function previzPreamble(p) {
 /* The source still of a previz cut is edited from the previz's first frame, so the composition the
    clip starts on is the composition the still has (blender-previz.md §6.6). */
 const PREVIZ_SOURCE_LOCK = 'Composition lock: the first attached image is frame 1 of the 3D previz, rendered clean (no stamp, no gizmo); it fixes the camera, the framing, and where every subject stands and how large it is in frame; keep that composition exactly and render every surface, figure and light in the episode style described here.';
+function characterIds(value) {
+  const values = Array.isArray(value) ? value : value ? [value] : [];
+  return [...new Set(values.map(entry => typeof entry === 'string' ? entry : entry?.id)
+    .filter(id => typeof id === 'string' && id.trim()))];
+}
 function assemble(win, index, dir) {
   if (!MODES[win.PRODUCTION?.mode]) throw new Error('Choose a production mode before assembling prompts');
   const scene = win.SCENES[index], d = scene?.shot?.videoDesign, style = win.PRODUCTION.style, v = scene?.visual;
@@ -82,11 +89,28 @@ function assemble(win, index, dir) {
   if (STYLES[preset] && !packPresets.includes(preset) && style.referencePack)
     throw new Error('Remove the miniature reference pack for this style');
   const treatment = d.look === 'archive' ? LOOKS.archive : (STYLES[preset]?.prompt || LOOKS[d.look]);
+  const cutType = scene.shot?.cutType;
+  const castIds = characterIds(v.character);
+  const cast = win.PRODUCTION.cast || {};
+  const activeCast = ['action', 'reaction', 'insert'].includes(cutType)
+    ? castIds.map(id => ({ id, entry: cast[id] })).filter(({ entry }) => entry && typeof entry === 'object') : [];
   const pack = d.look === 'archive' || !packPresets.includes(preset) ? null : resolveStylePack({
-    id: style.referencePack, role: v.styleRole || 'environment' });
+    id: style.referencePack, role: v.styleRole || defaultStyleRole(cutType, castIds) });
   const spoken = (scene.narration || []).map(n => n.tts || n.sub || '').join(' ');
   const previz = v.video && v.video.previz && typeof v.video.previz === 'object' ? v.video.previz : null;
   const previzFrame = previz && typeof previz.firstFrame === 'string' ? (dir ? path.resolve(dir, previz.firstFrame) : previz.firstFrame) : null;
+  const castReferenceImages = activeCast.filter(({ entry }) => text(entry.name) && text(entry.image))
+    .map(({ id, entry }) => ({ id, name: entry.name, path: dir ? path.resolve(dir, entry.image) : entry.image }));
+  const sourceReferenceImages = [...(previzFrame ? [previzFrame] : []), ...(pack?.referenceImagePaths || []), ...castReferenceImages.map(ref => ref.path)];
+  const castPromptLines = castLines(cast, castIds, cutType);
+  const castImageLines = castReferenceImages.map(ref => {
+    const imageNumber = sourceReferenceImages.indexOf(ref.path) + 1;
+    return `The attached image ${imageNumber} is the approved appearance of ${ref.name}; keep face, costume and build and take nothing else from it.`;
+  });
+  const castLocks = activeCast.filter(({ entry }) => text(entry.name) && text(entry.sheet))
+    .map(({ entry }) => `${entry.name.trim()} keeps this exact appearance: ${entry.sheet}`);
+  const perCutTreatment = cutTreatment(preset, cutType);
+  const world = style.worlds?.[d.worldId] ?? style.world;
   const source = [canvas + ', edge-to-edge composition.',
     'Narrated meaning this picture must convey: ' + spoken,
     'Opening state: ' + d.before,
@@ -94,13 +118,13 @@ function assemble(win, index, dir) {
     'The image must make the narrated subject and action understandable; a beautiful but unrelated scene fails.',
     ...(pack ? [previzFrame ? 'The first attached image is the previz frame: its composition is kept exactly. The second attached image is for STYLE ONLY.'
                             : 'Use the attached image for STYLE ONLY. Design a new scene for the narration.', ...Object.values(pack.rules)] : []),
-    treatment, style.world,
+    treatment, ...(perCutTreatment ? [perCutTreatment] : []), ...castPromptLines, ...castImageLines, world,
     'Materials: ' + style.materials, 'Palette: ' + style.palette, 'Lighting: ' + style.lighting,
     'Camera language: ' + style.camera,
     'Camera composition: ' + camera.framing,
     'Spatial continuity: ' + d.continuity,
     'Keep the physical subject legible at phone size. The image contains only the scene; subtitles are added in editing.'].join('\n');
-  const lock = lockText(d, style, treatment) + (isDrone(camera) ? '. The flight keeps continuous terrain parallax and stable landmarks; the picture stays a clean aerial view with scenery at every frame edge' : '');
+  const lock = lockText(d, style, treatment, castLocks) + (isDrone(camera) ? '. The flight keeps continuous terrain parallax and stable landmarks; the picture stays a clean aerial view with scenery at every frame edge' : '');
   let motionPrompt = null;
   if (!missingSlots.length) {
     const onReferenceRoute = previz && (v.video.engine || v.engine || 'seedance') !== 'host' && previzHandoff(scene) === 'reference_video';
@@ -113,12 +137,13 @@ function assemble(win, index, dir) {
       '. Rewrite videoDesign.action, motion.beats or continuity positively, in English, without seconds.');
     motionPrompt = clip.prompt;
   }
-  return { sourcePrompt: source, stylePreset: preset,
+  return { sourcePrompt: source, stylePreset: preset, cutType, castIds,
     styleBinding: pack?.binding || null,
     styleGuidePath: pack?.guidePath || null,
-    sourceReferenceImages: [...(previzFrame ? [previzFrame] : []), ...(pack?.referenceImagePaths || [])],
-    // The previz frame goes first: it is the composition the still is edited from, the pack image the look.
-    sourceImageArgs: previzFrame || pack ? { referenced_image_paths: [...(previzFrame ? [previzFrame] : []), ...(pack?.referenceImagePaths || [])] } : {},
+    castReferenceImages,
+    sourceReferenceImages,
+    // The previz frame goes first, followed by the pack image and the episode cast images.
+    sourceImageArgs: sourceReferenceImages.length ? { referenced_image_paths: sourceReferenceImages } : {},
     previzFirstFrame: previzFrame,
     endFramePrompt: 'Edit the supplied opening image into this final state: ' + after + '\n' + treatment + '\n' + lock +
       '\nPreserve lighting. Follow the planned camera endpoint: ' + (camera.end || camera.framing),

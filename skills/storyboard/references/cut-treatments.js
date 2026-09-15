@@ -57,8 +57,9 @@ const APPEARANCE_WORDS = [
 ];
 
 function idsOf(ids) {
-  if (Array.isArray(ids)) return ids.filter(id => typeof id === 'string' && id.trim());
-  return typeof ids === 'string' && ids.trim() ? [ids] : [];
+  const values = Array.isArray(ids) ? ids : ids ? [ids] : [];
+  return values.map(value => typeof value === 'string' ? value : value?.id)
+    .filter(id => typeof id === 'string' && id.trim());
 }
 
 function cutTreatment(preset, cutType) {
