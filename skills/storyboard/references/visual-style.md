@@ -39,6 +39,9 @@ style: {
   selection: { kind: 'user', reference: 'ACTUAL_USER_CHOICE' },
   reference: 'Korean webtoon illustration',   // where the look comes from: a URL or one line
   world: 'A period office with a consistent desk and doorway.',
+  worlds: {                                   // optional set-specific worlds, keyed by shot.videoDesign.worldId
+    archive: 'A records room with one paper window and dark wooden shelves.'
+  },
   materials: 'Drawn fabric and wood with clean cel shading.',
   palette: 'Muted ochre and blue.',
   lighting: 'Consistent illustrated window light.',
@@ -81,20 +84,38 @@ style: {
 - None of the five presets above attaches the miniature pack; each removes `referencePack`
   and any earlier `visual.stylePack` like photoreal and webtoon do.
 
-Each cut first settles the narration's actor, action and recipient and its start and end
-states; style does not stand in for content. Apply the chosen style to every new image,
-including hybrid's still-camera cuts. HTML explanation cuts share the palette and object
-treatment but keep text and figures readable. Actual archival photos and user recordings
-keep their original appearance.
+The episode keeps its preset, materials, palette, lighting and camera language constant. It
+may select a set-specific world from `style.worlds[shot.videoDesign.worldId]`; an absent key
+uses `style.world`. Characters defined in `PRODUCTION.cast` keep one English appearance
+sentence across every cut where they appear. Put face, build, costume and personal props in
+that sheet instead of repeating them in `videoDesign` or `shot.space`.
+
+Each generated image or video cut declares `shot.cutType`. This changes framing and subject
+treatment inside the selected preset:
+
+| `cutType` | Treatment | Episode cast sheet |
+|---|---|---|
+| `action` | full or medium figure with room for the action | included |
+| `reaction` | medium or medium-close view of the people watching | included |
+| `insert` | macro view of hands, feet or one prop, with the face outside frame | included, with the insert crop |
+| `document` | book, scroll, letter or ledger as a physical object | omitted |
+| `map` | overhead terrain, route and landmarks | omitted |
+| `scenery` | wide place, light or transition view | omitted |
+
+Settle the narration's actor, action and recipient and its start and end states before adding
+the style. Hybrid still-camera cuts use the same episode constants. HTML explanation cuts
+share the palette and object treatment but keep text and figures readable. Actual archival
+photos and user recordings keep their original appearance.
 
 All production modes can write image prompts with `spatial-prompts.js`. An image-only
 cut still provides `shot.videoDesign`'s look, before, action, after and continuity, plus
 `visual.camera.framing`; that metadata does not turn the cut into video. On a video shot with
 `subject_action` motion the last beat is the final state and `after` may be left out. Use the returned
 `sourcePrompt` for the actual image generation and link the result into the storyboard HTML.
-For miniature, attach the pack's reference image with the returned `sourceImageArgs`.
-Photoreal, webtoon and the five prompt-only presets make the first image from the preset
-description and reference the approved character image in later cuts.
+Pass the returned `sourceImageArgs` without reordering it. The helper puts the previz frame
+first, then the miniature pack image when used, then each `PRODUCTION.cast[id].image` selected
+by `visual.character`. A cast image is optional; its `sheet` is required. Document, map and
+scenery cuts receive no cast sheet or cast image.
 
 A cut that needs an end image edits the start image with `endFramePrompt`. Start and end keep
 the same style, people, costume and space. Video uses `motionPrompt`, which the helper

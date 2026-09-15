@@ -645,6 +645,42 @@ the pack ID/version, content digest and plugin-relative reference paths, all cov
 production plan signature. Do not store resolved machine-specific image paths in scenes.js.
 `look:"archive"` bypasses generated style references and preserves authentic source material.
 
+### Episode cast and per-cut treatment
+
+`PRODUCTION.cast` stores episode-specific character identity once:
+
+```js
+cast: {
+  yi: {
+    name: 'Yi Sun-sin',
+    sheet: 'A lean Joseon officer in his early thirties with a short dark beard, dark brown lamellar armor, red cotton sleeves and black leather boots.',
+    image: 'images/cast-yi.png' // optional, relative to scenes.js
+  }
+}
+```
+
+Write each `sheet` as one positive English appearance paragraph. Keep face, build, costume and
+personal props here. `check-scenes.js` rejects those details when they are copied into
+`videoDesign.before/action/after/continuity` or `shot.space.layout/facing`. A cast id matching
+the channel cast uses this episode entry first. The optional episode image also takes priority
+over channel panels.
+
+Every generated still or video cut that has `visual.bg` declares `shot.cutType` after the
+episode opts in through `PRODUCTION.cast` or any cut type:
+
+| Value | Picture treatment | Cast behavior |
+|---|---|---|
+| `action` | full or medium figure with action space | `visual.character` required when the episode has cast |
+| `reaction` | watchers in a medium or medium-close view | `visual.character` required when the episode has cast |
+| `insert` | hands, feet or one prop in macro framing | `visual.character` required; face stays outside frame |
+| `document` | written record as a physical object | cast omitted |
+| `map` | overhead terrain, route and landmarks | cast omitted |
+| `scenery` | wide place, light or transition view | cast omitted |
+
+The preset stays constant while `cutType` changes composition, lens emphasis and material
+detail. `style.worlds[videoDesign.worldId]` optionally selects a set-specific world sentence;
+the required `style.world` is the fallback.
+
 ### Conditional start/end images
 
 Use `visual.frames: {mode:"first"|"first_last", reason, endState?, end?}` for new generated
@@ -1761,10 +1797,13 @@ character, or when a location reference should control only the sky, the water, 
 **The check strip warns when a generated clip carries two or more references and none of them
 is scoped** — one reference alone has nothing to leak into.
 
-The id is the channel's shared character. `resolve-asset.py <channel dir> character <id>` turns it
-into `assets/characters/<id>/`, and the panels inside that directory are the reference set
-(`video-model-selection.md` §The character panels). The storyboard says **who is on screen**; which panels go into
-the call is produce's decision, because that depends on the framing.
+The id first resolves against `PRODUCTION.cast`. If that entry has `image`, use the episode
+image; if it has no image, resolve the same id from the channel panels. An id absent from the
+episode cast is a channel character and produces a warning because the checker cannot inspect
+the channel directory. `resolve-asset.py <channel dir> character <id>` turns a channel id into
+`assets/characters/<id>/`, and the panels inside that directory are the reference set
+(`video-model-selection.md` §The character panels). The storyboard says **who is on screen**;
+produce chooses any channel panels according to the framing.
 
 Writing it buys three things — produce attaches the reference images without re-reading the scene
 text, a veo ban attached to a character (a mouthless face: the model invents a mouth, measured 5
