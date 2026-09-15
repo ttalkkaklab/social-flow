@@ -78,13 +78,27 @@ lane they are part of the settings a PASS binds to, so changing `sentencePause`,
 offline re-spacing). The same binding means an ElevenLabs take checked before 0.74.0 is
 regenerated once on its next call — its proof predates the timestamps and spacing settings.
 
-## Sentence spacing (ElevenLabs)
+## Sentence spacing (every single-voice take)
 
 ElevenLabs reads sentences back to back — 0.04–0.19 s of quiet between them on pundago ep10
 (2026-08-31, the earlier voice) — so the builder's silence detection missed the boundary and
-reveals and subtitle cues landed late. The checked tool therefore fetches every
-`tts_elevenlabs_generate` take with timestamps and, before it measures or reviews anything,
-lays the pauses in from the take's own character alignment:
+reveals and subtitle cues landed late. Supertonic pauses 0.3–0.45 s between sentences but used
+to leave a 1.3 s hole wherever its 120-character chunking cut the scene (trailing pad + 0.3 s +
+leading pad, measured 2026-09-15). The checked tool therefore spaces every single-voice take
+before it measures or reviews anything, from a per-character alignment:
+
+- `tts_elevenlabs_generate` is fetched with timestamps and uses the vendor's own alignment;
+- `tts_local_generate`, `tts_generate` and `mlx_tts_generate` return audio only, so the wrapper
+  runs the local forced aligner (`mlx-qwen3-asr --timestamps`, the same install as
+  `stt_local_transcribe`) on the take and matches the script's letters to the words it heard by
+  edit distance — a misheard syllable keeps its neighbours' times, and a transcript matching
+  fewer than 80% of the script's letters is a skipped spacing with the reason, never a wrong
+  sidecar. `.alignment.json` records `engine: "asr-aligner"` and the transcript; a fresh take
+  is aligned again. Measured 2026-09-15 on a 6-sentence Supertonic M5 scene: 126/126 letters
+  matched, all five boundaries within 0.03 s of the pauses the builder detects, and the take
+  reviewed at accuracy 100 · naturalness 98.
+
+Then, for either source:
 
 - one fixed `sentencePause` (default 0.5 s) of digital silence at each segment boundary. The
   cut sits inside the natural gap: up to 0.12 s after the sentence's last letter but never
@@ -102,12 +116,27 @@ lays the pauses in from the take's own character alignment:
 
 It writes `<wav>.sentences.json` — each sentence's start and end in the shipped WAV — and
 rewrites `.alignment.json` to that timeline (`vendor_alignment` keeps the original, `respaced`
-the parameters). `build-reel.sh` snaps its sentence boundaries to that sidecar, so the reveal
-fades inside the pause that was actually laid in. The proof binds to the re-spaced audio; the
-review hears what ships. Measured 2026-09-11 on the pundago voice: a 0.50 s and a 0.39 s insert
-reviewed at accuracy 100 · pronunciation 100 · naturalness 98 · clarity 98 with no defect.
-A take with no usable alignment is kept as generated and `spacing.skipped` says why; the builder
-then falls back to silence detection as before.
+the parameters, `source` says `vendor` or `asr-aligner`). `build-reel.sh` snaps its sentence
+boundaries to that sidecar, so the reveal fades inside the pause that was actually laid in. The
+proof binds to the re-spaced audio; the review hears what ships. Measured 2026-09-11 on the
+pundago voice: a 0.50 s and a 0.39 s insert reviewed at accuracy 100 · pronunciation 100 ·
+naturalness 98 · clarity 98 with no defect. A take with no usable alignment is kept as
+generated and `spacing.skipped` says why; the builder then falls back to silence detection as
+before. The spacing settings are part of what a PASS binds to, so a Supertonic or Gemini take
+checked before 0.79.0 is regenerated once on its next call.
+
+### One call per breath, not per sentence
+
+The wrapper spaces sentences inside a take; it cannot join the voice across takes. Every call
+starts the voice over — pitch, pace and energy reset — and the builder then lines those
+restarts up at identical intervals, which is what reads as pasted-together narration.
+Measured 2026-09-15 on the pundago voice (`eleven_multilingual_v2`, same seed and settings):
+the same three sentences as three calls, assembled the builder's way, reviewed at continuity
+94 · naturalness 92; as one call, continuity 96 · naturalness 95. Keep sentences that belong
+to one breath in one scene as several segments — each segment still gets its own clip or
+reveal, and the sidecar gives the builder the boundary. Supertonic reads up to 120 Korean
+characters (300 otherwise) as one utterance; a longer scene is read in sentence groups joined
+by `chunkPause` (0.3 s) and then spaced like any other boundary.
 
 ## What passes
 

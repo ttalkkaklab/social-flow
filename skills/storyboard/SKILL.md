@@ -649,7 +649,10 @@ Core rules:
   throws the emotion or question and the sound answers politely
   (`references/scenes-schema.md` §title is a spoken hook).
 - **Narration = an array of segments (sentences)** — one sentence maps 1:1 to one reveal.
-  The character cap follows the format too (spaces and punctuation excluded).
+  The character cap follows the format too (spaces and punctuation excluded). A scene is
+  one voice call, so sentences that belong to one breath stay in one scene as several
+  segments — one sentence per scene makes the voice restart at every sentence (produce
+  measured it: continuity 94 for three calls against 96 for one call of the same three).
   - Short-form: cover ≤40 chars · points/quote ≤50 chars · 8–25 chars per sentence
   - Long-form: cover ≤70 chars · points/quote ≤90 chars · 12–40 chars per sentence
 

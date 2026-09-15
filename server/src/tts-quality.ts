@@ -15,6 +15,7 @@ import * as eleven from './elevenlabs-client.js';
 import * as mlx from './mlx-serve-client.js';
 import { priceOf, recordUsage } from './usage-ledger.js';
 import { SPACING_POLICY, respace, splitSentences, type Alignment } from './sentence-spacing.js';
+import { alignmentFromAsr } from './asr-alignment.js';
 
 const exec = promisify(execFile);
 export const QUALITY_POLICY = 'speech-quality-v1';
@@ -191,13 +192,14 @@ export function prepareGeneration(request: CheckedSpeechRequest): PreparedGenera
   }
   let spoken: string, parsed: Record<string, unknown>, run: (o?: TakeOverrides) => Promise<GenerationResult>, spacing = false, seed: number | undefined;
   switch (request.generator) {
-    case 'tts_generate': { const p = gemini.ttsGenerateSchema.parse(args); parsed = p; spoken = p.text; run = () => gemini.generateSpeech(p); break; }
+    // Single-voice engines without a vendor alignment get one from the local aligner (applySentenceSpacing), so their sentences are spaced like an ElevenLabs take.
+    case 'tts_generate': { const p = gemini.ttsGenerateSchema.parse(args); parsed = p; spoken = p.text; run = () => gemini.generateSpeech(p); spacing = true; break; }
     case 'tts_multi_speaker': { const p = gemini.ttsMultiSpeakerSchema.parse(args); parsed = p; spoken = p.script.split('\n').map(line => { const name = p.speakers.find(s => line.trimStart().startsWith(s.speakerName + ':')); return name ? line.trimStart().slice(name.speakerName.length + 1) : line; }).join(' '); run = () => gemini.generateDialogue(p); break; }
-    case 'tts_local_generate': { const p = local.supertonicGenerateSchema.parse(args); parsed = p; spoken = p.text; run = () => local.generateLocalSpeech(p); break; }
+    case 'tts_local_generate': { const p = local.supertonicGenerateSchema.parse(args); parsed = p; spoken = p.text; run = () => local.generateLocalSpeech(p); spacing = true; break; }
     // Timestamps cost nothing extra and are what the sentence spacing reads, so the checked lane always asks for them.
     case 'tts_elevenlabs_generate': { const p = eleven.elevenLabsGenerateSchema.parse({ ...args, timestamps: true }); parsed = p; spoken = p.text.replace(/\[[^\]]*\]/g, ''); run = (o) => eleven.generateElevenLabsSpeech({ ...p, ...(o?.seed !== undefined ? { seed: o.seed } : {}) }); spacing = true; seed = p.seed; break; }
     case 'tts_elevenlabs_dialogue': { const p = eleven.elevenLabsDialogueSchema.parse(args); parsed = p; spoken = p.inputs.map(i => i.text.replace(/\[[^\]]*\]/g, '')).join(' '); run = (o) => eleven.generateElevenLabsDialogue({ ...p, ...(o?.seed !== undefined ? { seed: o.seed } : {}) }); seed = p.seed; break; }
-    case 'mlx_tts_generate': { const p = mlx.mlxTtsGenerateSchema.parse(args); parsed = p; spoken = p.input; run = () => mlx.generateMlxTts(p); break; }
+    case 'mlx_tts_generate': { const p = mlx.mlxTtsGenerateSchema.parse(args); parsed = p; spoken = p.input; run = () => mlx.generateMlxTts(p); spacing = true; break; }
   }
   if (normalizeSpeech(spoken) !== normalizeSpeech(request.expectedText)) throw new Error('expectedText must match the complete spoken generation text; only punctuation, spacing, speaker labels and ElevenLabs acting tags may differ');
   if ('outputFormat' in parsed && !String(parsed.outputFormat).startsWith('wav_')) throw new Error('Checked narration requires WAV output');
@@ -207,25 +209,37 @@ export function prepareGeneration(request: CheckedSpeechRequest): PreparedGenera
 /** Sidecar beside the checked WAV: the sentence table the builder aligns reveals and cues to. */
 export const sentencesPathFor = (wav: string): string => wav + '.sentences.json';
 
+/** Builds a character alignment for a take whose engine returned none (the local forced aligner by default). */
+export type Aligner = (wav: string, text: string, language: string) => Promise<{ alignment: Alignment; matched: number; letters: number; transcript: string }>;
+
 /**
  * Lays the fixed sentence pauses into a fresh take and rewrites its alignment to match. Runs before
- * the take is hashed, so the proof binds to the audio that ships. A take without a usable alignment
- * is kept as generated and the reason recorded — the builder then falls back to silence detection.
+ * the take is hashed, so the proof binds to the audio that ships. A vendor alignment (ElevenLabs)
+ * is used as is; without one the aligner writes the sidecar first. A take that gets no usable
+ * alignment either way is kept as generated and the reason recorded — the builder then falls
+ * back to silence detection.
  */
-export function applySentenceSpacing(output: string, request: CheckedSpeechRequest): Record<string, unknown> {
+export async function applySentenceSpacing(output: string, request: CheckedSpeechRequest, align?: Aligner): Promise<Record<string, unknown>> {
   authorizeSpeed(request.outputPath, 'final', request.playbackSpeed);
   const alignmentPath = output.replace(/\.wav$/i, '') + '.alignment.json';
   // A sidecar from an earlier take must not describe this one: it is rewritten below or removed.
   rmSync(sentencesPathFor(output), { force: true });
-  if (!existsSync(alignmentPath)) return { skipped: 'no alignment sidecar beside the take' };
   try {
+    // An aligner sidecar describes the take it was measured on; a fresh take gets a fresh one.
+    if (existsSync(alignmentPath)) { try { if (JSON.parse(readFileSync(alignmentPath, 'utf8')).engine === 'asr-aligner') rmSync(alignmentPath, { force: true }); } catch { rmSync(alignmentPath, { force: true }); } }
+    if (!existsSync(alignmentPath)) {
+      if (!align) return { skipped: 'no alignment sidecar beside the take and no aligner' };
+      const aligned = await align(output, request.expectedText, request.language);
+      if (aligned.matched < aligned.letters * 0.8) throw new Error(`aligner matched ${aligned.matched}/${aligned.letters} script letters; transcript "${aligned.transcript.slice(0, 60)}"`);
+      writeFileSync(alignmentPath, JSON.stringify({ engine: 'asr-aligner', generator: request.generator, text: request.expectedText, transcript: aligned.transcript, matched: aligned.matched, letters: aligned.letters, alignment: aligned.alignment }, null, 2));
+    }
     const sidecar = JSON.parse(readFileSync(alignmentPath, 'utf8'));
     const alignment = sidecar.alignment as Alignment | null;
     if (!alignment?.characters?.length) return { skipped: 'alignment sidecar carries no characters' };
     const segments = request.segments ?? splitSentences(alignment.characters.join(''));
     const result = respace(readFileSync(output), alignment, segments, { pause: request.sentencePause, playbackSpeed: request.playbackSpeed });
     writeFileSync(output, result.wav);
-    const meta = { policy: SPACING_POLICY, pause: request.sentencePause, playbackSpeed: request.playbackSpeed, lead: result.lead, gaps: result.gaps, inserted: result.inserted, boundaries: result.boundaries, duration: result.duration, segmentsFrom: request.segments ? 'request' : 'sentence-final punctuation' };
+    const meta = { policy: SPACING_POLICY, source: sidecar.engine === 'asr-aligner' ? 'asr-aligner' : 'vendor', pause: request.sentencePause, playbackSpeed: request.playbackSpeed, lead: result.lead, gaps: result.gaps, inserted: result.inserted, boundaries: result.boundaries, duration: result.duration, segmentsFrom: request.segments ? 'request' : 'sentence-final punctuation' };
     writeFileSync(alignmentPath, JSON.stringify({ ...sidecar, alignment: result.alignment, vendor_alignment: sidecar.vendor_alignment ?? sidecar.alignment, respaced: meta }, null, 2));
     // The sidecar names the WAV bytes it describes; snap-boundaries.py refuses one that does not match.
     writeFileSync(sentencesPathFor(output), JSON.stringify({ version: 1, ...meta, audio: path.basename(output), audioSha256: sha256(result.wav), sentences: result.sentences }, null, 2) + '\n');
@@ -240,6 +254,8 @@ export interface QualityDependencies {
   generate: (overrides?: TakeOverrides) => Promise<GenerationResult>;
   measure: (file: string) => Promise<Signal>;
   listen: (file: string, request: CheckedSpeechRequest) => Promise<{ transcript: string; review: Review }>;
+  /** Alignment for engines without one; omitted in injected dependencies means the take is kept unspaced. */
+  align?: Aligner;
 }
 export async function generateCheckedSpeech(input: CheckedSpeechRequest, dependencies?: QualityDependencies): Promise<Record<string, unknown>> {
   const request = checkedSpeechSchema.parse(input);
@@ -258,7 +274,7 @@ export async function generateCheckedSpeech(input: CheckedSpeechRequest, depende
     const gate = resolveToolGate(request.generator, { jsonPatterns: disabledToolPatterns(), jsonFile: disabledToolsFile });
     if (!gate.enabled) throw new Error(`Selected generator is disabled: ${gate.reason}`);
     requireGeminiKey(); await exec('ffmpeg', ['-version'], { timeout: 10000 });
-  }, generate: prepared.run, measure: measureSignal, listen };
+  }, generate: prepared.run, measure: measureSignal, listen, align: alignmentFromAsr };
   const attempts: Record<string, unknown>[] = [];
   // On a spacing lane the pauses are part of the shipped audio, so their inputs are part of the settings a PASS binds to.
   const settings = prepared.spacing ? { ...prepared.args, episode: request.episode ?? null, spacing: { segments: request.segments ?? null, sentencePause: request.sentencePause, playbackSpeed: request.playbackSpeed } } : prepared.args;
@@ -325,7 +341,7 @@ export async function generateCheckedSpeech(input: CheckedSpeechRequest, depende
             note: `Checked speech attempt ${attempt}`, detail: { ...(generated?.requestId ? { requestId: generated.requestId } : {}) } });
         }
         if (!generated.success || path.resolve(generated.audioPath || generated.path || '') !== output) throw new Error(generated.error || 'Generator did not return the requested audio path');
-        if (prepared.spacing) take.spacing = applySentenceSpacing(output, request);
+        if (prepared.spacing) take.spacing = await applySentenceSpacing(output, request, deps.align);
         else { rmSync(sentencesPathFor(output), { force: true }); take.spacing = { skipped: 'engine has no alignment' }; }
         take.audioSha256 = sha256(readFileSync(output)); save('unverified');
         const duplicate = attempts.slice(0, -1).find(a => a.audioSha256 === take!.audioSha256 && a.pending === false && Array.isArray(a.failures) && a.failures.length);

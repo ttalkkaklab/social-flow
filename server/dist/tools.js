@@ -1,6 +1,6 @@
 import { cameraContract, renderPurposes, contract as storyboardContract } from './storyboard.js';
 import { MUSIC_GENERATION_MODES, MUSIC_SCALES } from './music-client.js';
-import { DEFAULT_SUPERTONIC_LANGUAGE, DEFAULT_SUPERTONIC_SPEED, DEFAULT_SUPERTONIC_STEPS, DEFAULT_SUPERTONIC_VOICE, MAX_SUPERTONIC_INPUT_CHARS, MAX_SUPERTONIC_SPEED, SUPERTONIC_LANGUAGES, SUPERTONIC_VOICE_NAMES, } from './supertonic-client.js';
+import { DEFAULT_SUPERTONIC_CHUNK_PAUSE, DEFAULT_SUPERTONIC_LANGUAGE, DEFAULT_SUPERTONIC_SPEED, DEFAULT_SUPERTONIC_STEPS, DEFAULT_SUPERTONIC_VOICE, MAX_SUPERTONIC_INPUT_CHARS, MAX_SUPERTONIC_SPEED, SUPERTONIC_LANGUAGES, SUPERTONIC_VOICE_NAMES, } from './supertonic-client.js';
 import { DEFAULT_SEEDANCE_DURATION, DEFAULT_SEEDANCE_MODEL, DEFAULT_SEEDANCE_REFERENCE_MODEL, DEFAULT_SEEDANCE_RESOLUTION, SEEDANCE_FPS, SEEDANCE_REFERENCE_MODELS, VALID_SEEDANCE_MODELS, VALID_SEEDANCE_RATIOS, VALID_SEEDANCE_RESOLUTIONS, } from './seedance-client.js';
 import { DEFAULT_TTS_MODEL, DEFAULT_TTS_TEMPERATURE, DEFAULT_VOICE, TTS_VOICE_NAMES, VALID_TTS_MODELS } from './tts-client.js';
 import { GENERATORS, REVIEW_MODEL } from './tts-quality.js';
@@ -2473,7 +2473,7 @@ Returns: a text block with the mp4 path, still paths (and any requested still ou
         annotations: HINT.generate,
         description: `Generate one scene with the pinned TTS engine, review the actual WAV, and regenerate failed takes up to maxAttempts (1–3, including the first take).
 Use for every generated narration scene in produce/autoproduce. Pass the existing generator's arguments in generation, the complete spoken expectedText (phonetic spelling; no acting tags or speaker labels), language, and the profile's intended delivery. Voice and generation settings stay unchanged across attempts; the episode seed stays fixed on every retake (vendor determinism is best-effort). An entire scene is one call; never split it into sentence calls.
-On tts_elevenlabs_generate the take is fetched with timestamps and its sentences are re-spaced before review: a fixed sentencePause of digital silence between sentences (stretched up to 1.0s where a subtitle cue would read faster than 6.0 chars/s after playbackSpeed), a 0.14s lead, speech samples copied as generated (the 12 ms fades stay on the natural gap). Pass segments (the scene's narration[].tts list) so the pauses land on the builder's segment boundaries; the wrapper writes <wav>.sentences.json and shifts the .alignment.json to the shipped audio.
+Every single-voice take has its sentences re-spaced before review: a fixed sentencePause of digital silence between sentences (stretched up to 1.0s where a subtitle cue would read faster than 6.0 chars/s after playbackSpeed), a 0.14s lead, speech samples copied as generated (the 12 ms fades stay on the natural gap). tts_elevenlabs_generate is fetched with timestamps and spaced from its own alignment; tts_local_generate, tts_generate and mlx_tts_generate are aligned by the local forced aligner (mlx-qwen3-asr --timestamps) first, so a multi-sentence scene on any engine ships with the same pauses. Pass segments (the scene's narration[].tts list) so the pauses land on the builder's segment boundaries; the wrapper writes <wav>.sentences.json and the .alignment.json for the shipped audio. Generate consecutive sentences in one call whenever they belong to one breath — the engine reads them as one utterance, where one call per sentence restarts the voice at every sentence.
 Checks signal/duration, a blind transcript (CER <=2%), then ${REVIEW_MODEL} listening scores: accuracy >=98, pronunciation/naturalness/clarity >=95, confidence >=0.9, no audible defects. Returns a hash-bound .wav.quality.json proof required by the builder. Missing keys, unavailable reviewer, malformed responses or exhausted attempts block production. Scores are operational thresholds, not a guarantee of human judgement.
 Requires ffmpeg and GEMINI_API_KEY even for local synthesis. Two paid audio-review calls per acoustically valid take, plus the selected generator's costs. Record the retry-inclusive allowance before calling; review tokens are logged as unpriced until reconciled with provider billing. Do not call again to reset an exhausted attempt budget. Do not use for recordings or native clip speech; retain their final listening QA. Do not change engines/voices or lower thresholds to obtain PASS.`,
         inputSchema: {
@@ -2494,7 +2494,7 @@ Requires ffmpeg and GEMINI_API_KEY even for local synthesis. Two paid audio-revi
                         texts: { description: 'Complete scene texts in playback order.', type: 'array', minItems: 1, maxItems: 80, items: { type: 'string', minLength: 1, maxLength: 4000 } },
                         index: { description: 'Index of this scene in texts, starting at zero.', type: 'integer', minimum: 0 }, seed: { description: 'One seed fixed across the episode and all retakes.', type: 'integer', minimum: 0, maximum: 4294967295 },
                     }, required: ['texts', 'index', 'seed'] },
-                segments: { type: 'array', minItems: 1, maxItems: 80, items: { type: 'string', minLength: 1, maxLength: 1000 }, description: 'The scene\'s narration[].tts sentences in order (joined they read as expectedText). ElevenLabs takes get a fixed pause at each segment boundary — the boundary the builder\'s reveals and subtitle cues use. Without it, pauses go after sentence-final punctuation.' },
+                segments: { type: 'array', minItems: 1, maxItems: 80, items: { type: 'string', minLength: 1, maxLength: 1000 }, description: 'The scene\'s narration[].tts sentences in order (joined they read as expectedText). Every single-voice take gets a fixed pause at each segment boundary — the boundary the builder\'s reveals and subtitle cues use. Without it, pauses go after sentence-final punctuation.' },
                 sentencePause: { type: 'number', minimum: 0.25, maximum: 1.5, default: 0.5, description: 'Silence between sentences in the take\'s own timeline, seconds. The builder detects pauses from 0.16s and fits a 0.35s reveal fade inside one.' },
                 playbackSpeed: { type: 'number', minimum: 0.5, maximum: 3, default: 1, description: 'ElevenLabs requires 1: use generation.speed for the requested rate and keep assembly at 1. Other engines require an explicit user request in outputPath/speed-authorization.json for any non-1 factor; this controls subtitle pause sizing.' },
             },
@@ -2623,7 +2623,7 @@ Returns: a text block with the saved .wav path, voice, language, audio duration,
                 },
                 lang: {
                     type: 'string',
-                    description: `Language code (default: "${DEFAULT_SUPERTONIC_LANGUAGE}"). Unlike tts_generate this is NOT auto-detected — set it, because the code also selects chunking (Korean uses shorter chunks). Use "na" only for text whose language is unsupported.`,
+                    description: `Language code (default: "${DEFAULT_SUPERTONIC_LANGUAGE}"). Unlike tts_generate this is NOT auto-detected — set it, because the code also sets the sentence-group cap (120 characters for Korean, 300 otherwise). Use "na" only for text whose language is unsupported.`,
                     enum: [...SUPERTONIC_LANGUAGES],
                     default: DEFAULT_SUPERTONIC_LANGUAGE,
                 },
@@ -2640,6 +2640,13 @@ Returns: a text block with the saved .wav path, voice, language, audio duration,
                     minimum: 1,
                     maximum: 100,
                     default: DEFAULT_SUPERTONIC_STEPS,
+                },
+                chunkPause: {
+                    type: 'number',
+                    description: `Silence between sentence groups, seconds (default: ${DEFAULT_SUPERTONIC_CHUNK_PAUSE}). Sentences are grouped up to the language cap and each group is read as one utterance; the model's own 0.4–0.5s of leading and trailing quiet is trimmed off every group, so a join is this pause plus a short margin — not the 1.3s hole the package's chunking left (measured 2026-09-15). The checked lane pads every sentence gap to its sentencePause afterwards.`,
+                    minimum: 0,
+                    maximum: 1.5,
+                    default: DEFAULT_SUPERTONIC_CHUNK_PAUSE,
                 },
                 outputPath: {
                     type: 'string',

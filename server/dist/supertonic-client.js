@@ -66,6 +66,12 @@ export const DEFAULT_SUPERTONIC_LANGUAGE = 'ko';
 export const DEFAULT_SUPERTONIC_SPEED = 1.0;
 export const DEFAULT_SUPERTONIC_STEPS = 8;
 /**
+ * Silence laid between sentence groups (the package's own figure). A group is the run of
+ * sentences the model reads as one utterance; the checked lane later pads every sentence
+ * gap to its `sentencePause`, so this only has to be short enough not to exceed that.
+ */
+export const DEFAULT_SUPERTONIC_CHUNK_PAUSE = 0.3;
+/**
  * Speed ceiling. `speed` is not a time stretch — the model synthesizes at that pace, and from
  * 1.35 it drops syllables (measured 2026-08-26/29: "사전만 한 돌덩어리" → "사전만 돌덩어리",
  * "이 표준은" → "유주는"; at 1.20 and below every take transcribed back exactly). A faster
@@ -108,6 +114,7 @@ export const supertonicGenerateSchema = z.object({
         .optional()
         .default(DEFAULT_SUPERTONIC_SPEED),
     steps: z.number().int().min(1).max(100).optional().default(DEFAULT_SUPERTONIC_STEPS),
+    chunkPause: z.number().min(0).max(1.5).optional().default(DEFAULT_SUPERTONIC_CHUNK_PAUSE),
     outputPath: z.string().optional(),
     filename: bareFilenameSchema('audio').optional(),
 });
@@ -124,7 +131,7 @@ export const supertonicGenerateSchema = z.object({
  * duration directly from the sample count to remove that trap.
  */
 const SYNTH_SNIPPET = `
-import json, sys, time
+import json, re, sys, time
 args = json.loads(sys.argv[1])
 try:
     import numpy as np
@@ -133,19 +140,51 @@ except ImportError as e:
     print(json.dumps({"ok": False, "kind": "missing_package", "error": str(e)}))
     sys.exit(0)
 
+SR = 44100
+# Sentence groups, not the package's paragraph chunks: the model reads one group as one
+# utterance (prosody flows across its sentences), and a group never exceeds the language's
+# chunk cap (120 chars for Korean, 300 otherwise — the package's own figures).
+def groups(text, cap):
+    sentences = [x for x in re.split(r"(?<=[.?!\\u2026])\\s+", text.strip()) if x]
+    out, cur = [], ""
+    for sent in sentences:
+        if cur and len(cur) + 1 + len(sent) > cap:
+            out.append(cur); cur = sent
+        else:
+            cur = (cur + " " + sent) if cur else sent
+    if cur: out.append(cur)
+    return out
+
+# The model pads every utterance with 0.4-0.5 s of silence on each side. Trimming to a short
+# margin makes the join a natural gap the checked lane can measure and pad, instead of a
+# 1.3 s hole (measured 2026-09-15: package join = trailing pad + 0.3 s + leading pad).
+def trim(wav, margin=0.08, floor=0.004):
+    loud = np.flatnonzero(np.abs(wav) > floor)
+    if loud.size == 0: return wav
+    a = max(0, int(loud[0]) - int(margin * SR)); b = min(wav.size, int(loud[-1]) + int(margin * SR))
+    return wav[a:b]
+
 t0 = time.time()
 try:
     tts = TTS(model="supertonic-3")
     style = tts.get_voice_style(args["voice"])
-    wav, _ = tts.synthesize(
-        args["text"], voice_style=style, lang=args["lang"],
-        speed=args["speed"], total_steps=args["steps"],
-    )
-    tts.save_audio(wav, args["out"])
-    samples = int(np.asarray(wav).reshape(-1).size)
+    lang = args["lang"]
+    cap = 120 if lang == "ko" else 300
+    pieces, spans, cursor = [], [], 0.0
+    gap = np.zeros(int(args["chunkPause"] * SR), dtype=np.float32)
+    for k, group in enumerate(groups(args["text"], cap)):
+        wav, _ = tts.model([group], style, args["steps"], args["speed"], lang)
+        piece = trim(np.asarray(wav, dtype=np.float32).reshape(-1))
+        if k: pieces.append(gap); cursor += gap.size / SR
+        pieces.append(piece)
+        spans.append({"text": group, "start": round(cursor, 3), "end": round(cursor + piece.size / SR, 3)})
+        cursor += piece.size / SR
+    out = np.concatenate(pieces).reshape(1, -1)
+    tts.save_audio(out, args["out"])
     print(json.dumps({
-        "ok": True, "samples": samples,
-        "duration": round(samples / 44100.0, 3),
+        "ok": True, "samples": int(out.size),
+        "duration": round(out.size / SR, 3),
+        "groups": spans,
         "elapsed": round(time.time() - t0, 2),
     }))
 except Exception as e:
@@ -173,6 +212,7 @@ export async function generateLocalSpeech(request) {
         lang: request.lang,
         speed: request.speed,
         steps: request.steps,
+        chunkPause: request.chunkPause,
         out: outFile,
     });
     console.error(`[Supertonic] Synthesizing locally... (voice: ${request.voice}, lang: ${request.lang}, ${request.text.length} chars)`);
@@ -225,6 +265,7 @@ export async function generateLocalSpeech(request) {
         lang: request.lang,
         durationSeconds: result.duration,
         sampleRate: SUPERTONIC_SAMPLE_RATE,
+        groups: result.groups,
         elapsedSeconds: result.elapsed,
     };
 }

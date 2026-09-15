@@ -676,8 +676,13 @@ of that scene's narration segments' `tts` sentences joined with periods. `.work/
 Don't split a scene into several calls by sentence (the voice varies between calls). Pass the
 same `tts` sentences as `segments`. Default `generation.speed` and `playbackSpeed` to 1.0;
 non-1 values require the episode's explicit user request under `references/tts-speed.md`.
-On an ElevenLabs take the wrapper lays a fixed pause at each segment boundary and
-writes `c<n>.wav.sentences.json` for reveal/cue timing (`references/tts-quality.md` §Sentence spacing).
+On every single-voice take the wrapper lays a fixed pause at each segment boundary and
+writes `c<n>.wav.sentences.json` for reveal/cue timing (`references/tts-quality.md` §Sentence spacing) —
+ElevenLabs from its own timestamps, Supertonic·Gemini·mlx from the local forced aligner.
+A scene of one sentence is one call, and one call restarts the voice: measured 2026-09-15 on the
+pundago voice, three sentences as three calls reviewed at continuity 94 · naturalness 92 against
+96 · 95 for the same three in one call. When consecutive sentences are one breath, keep them in
+one scene as several segments (each segment still gets its own clip or reveal).
 
 **profile §2 decides the engine.** A new channel's narration default is `tts_local_generate`
 (Supertonic, local) — no key, no quota, and 0 cost however many times you rerun the episode,
