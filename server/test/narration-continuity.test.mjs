@@ -68,6 +68,22 @@ test('real ffmpeg final audio review rejects continuity-only defects and binds a
  assert.throws(()=>finalChecker.verifyReport({...p,review:{...p.review,continuity:94}},file,texts[1]),/continuity/);
  assert.throws(()=>finalChecker.verifyReport({...p,review:{...p.review,continuityEvidence:''}},file,texts[1]),/evidence/);
  writeFileSync(file,Buffer.concat([readFileSync(file),Buffer.from('changed')]));assert.throws(()=>finalChecker.verify(file,texts[1]),/hash-bound/);
+ // a failed final verdict is a warning the user decides on; the approval binds to media, narration and findings
+ const work=path.dirname(file);
+ writeFileSync(file+'.speech-quality.json',JSON.stringify({...p,status:'fail',mediaSha256:sha256(readFileSync(file)),failures:['continuity below 95'],review:{...p.review,continuity:90}}));
+ assert.throws(()=>finalChecker.gate(work,file,texts[1]),/need HITL/);
+ const report=JSON.parse(readFileSync(path.join(work,'final-tts-warnings.json'),'utf8'));
+ assert.equal(report.status,'awaiting-user');assert.match(report.warnings[0],/continuity 90/);
+ assert.throws(()=>finalChecker.approve(work,''),/explicit user/);
+ finalChecker.approve(work,'User: 이 정도 이음매는 괜찮으니 진행');
+ const evidence=finalChecker.evidence(file,texts[1],work);
+ assert.equal(evidence.status,'fail');assert.equal(evidence.approvedWarnings.approval.kind,'user');
+ assert.doesNotThrow(()=>finalChecker.verifyEvidence(evidence,file,texts[1]));
+ assert.throws(()=>finalChecker.verifyEvidence(evidence,file,texts[0]),/other media, narration or findings/);
+ writeFileSync(file,Buffer.concat([readFileSync(file),Buffer.from('x')]));
+ assert.throws(()=>finalChecker.verifyEvidence(evidence,file,texts[1]),/other media, narration or findings/);
+ writeFileSync(file+'.speech-quality.json',JSON.stringify({...p,status:'unverified',error:'reviewer outage'}));
+ assert.throws(()=>finalChecker.gate(work,file,texts[1]),/unverified/);
 });
 
 test('mixed generated, recording and b-roll speech uses actual playback order',t=>{
@@ -96,7 +112,8 @@ test('TTS over recording backgrounds requires source and final speech review',t=
  const file=path.join(work,'recording.mp4');writeFileSync(file,'test media');writeFileSync(path.join(work,'cards.tsv'),`0\t${file}\t4.5\tin\n`);
  const scene={type:'points',visual:{source:'recording'},narration:[{tts:texts[0]}]};writeFileSync(path.join(board,'scenes.js'),`window.SCENES=${JSON.stringify([scene])};`);
  assert.equal(finalChecker.narration(path.join(board,'scenes.js')).generated,true);
- assert.throws(()=>checker.check(work,board),/generate with tts_generate_checked/);
+ assert.throws(()=>checker.check(work,board),/need HITL/);
+ assert.match(checker.lastReport(work).warnings[0],/no speech-quality proof/);
 });
 test('deleting the storyboard cannot waive final delivery evidence',t=>{
  const dir=setup(t),out=path.join(dir,'output/video');mkdirSync(out,{recursive:true});
@@ -118,6 +135,6 @@ test('assembly rejects missing context, changed order and voice drift despite so
  assert.doesNotThrow(()=>checker.check(work,board));
  const file=files[1]+'.quality.json',original=JSON.parse(readFileSync(file,'utf8'));
  for(const mutate of [p=>delete p.episode,p=>p.episode.texts.reverse(),p=>p.voiceSettings.speed=1.1,p=>p.attempts[0].seed++]){
-  const p=structuredClone(original);mutate(p);writeFileSync(file,JSON.stringify(p));assert.throws(()=>checker.check(work,board),/episode|settings/);
+  const p=structuredClone(original);mutate(p);writeFileSync(file,JSON.stringify(p));assert.throws(()=>checker.check(work,board),/need HITL/);assert.match(checker.lastReport(work).warnings[0],/episode|settings/);
  }
 });

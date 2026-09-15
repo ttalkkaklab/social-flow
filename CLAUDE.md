@@ -13,6 +13,17 @@ reviews or asking again. This exception supersedes pre-assembly quality gates
 elsewhere in this repository. Keep the approval and warnings in the build record.
 It authorizes neither additional spending nor publishing.
 
+## Speech checks (user directive, 2026-09-15)
+
+Narration findings — a scene take that failed `tts_generate_checked`, a final listening
+verdict below threshold — are warnings subject to HITL, not an unconditional veto. Present
+the actual findings (scores, defects with times, what was heard) and follow
+`skills/produce/references/tts-hitl.md`. Once the user approves those warnings for the
+current takes, assemble and deliver without fabricating PASS reviews or asking again. Keep
+the approval and warnings in the build record. It authorizes neither additional spending
+nor publishing; a missing WAV, a review that never ran and a speed record that does not match
+its request still stop.
+
 ## Style ban — report-style stative verbs (user directive, 2026-08-12)
 
 Don't close sentences with Korean endings of the

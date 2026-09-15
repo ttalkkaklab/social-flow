@@ -6,7 +6,7 @@ argument-hint: "<channel> <topic> [platformCSV|auto]"
 allowed-tools: ["Bash", "Read", "Write", "Edit", "Glob", "AskUserQuestion", "Agent", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_generate_checked", "mcp__social-flow__tts_review_final", "mcp__social-flow__tts_elevenlabs_dictionary", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue", "mcp__social-flow__tts_list_voices", "mcp__social-flow__music_generate", "mcp__social-flow__music_generate_clip", "mcp__social-flow__music_generate_advanced", "mcp__social-flow__stock_search", "mcp__social-flow__suno_generate", "mcp__social-flow__suno_generate_sound", "mcp__social-flow__suno_generate_lyrics", "mcp__social-flow__suno_credits", "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__gpt_image_img2img", "mcp__social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__social-flow__seedance_img2video", "mcp__social-flow__seedance_reference", "mcp__social-flow__mlx_image_generate", "mcp__social-flow__mlx_image_edit", "mcp__social-flow__mlx_tts_generate", "mcp__social-flow__mlx_music_generate", "mcp__social-flow__mlx_video_generate", "mcp__social-flow__mlx_3d_generate"]
 ---
 # Per-platform content production — data/[channel]/episodes/[topic]/output/
-Turn the approved storyboard (`storyboard/scenes.js`) into a narrated video and per-platform text. **Assembly video warnings use HITL:** follow [assembly-video-hitl.md](references/assembly-video-hitl.md). Show failed video/visual-plan checks to the user; their explicit approval permits assembly of the current inputs. This exception overrides pre-assembly quality holds below. Preserve warnings and resume without asking again.
+Turn the approved storyboard (`storyboard/scenes.js`) into a narrated video and per-platform text. **Assembly video warnings use HITL:** follow [assembly-video-hitl.md](references/assembly-video-hitl.md). Show failed video/visual-plan checks to the user; their explicit approval permits assembly of the current inputs. This exception overrides pre-assembly quality holds below. Preserve warnings and resume without asking again. **Speech warnings use HITL the same way:** follow [tts-hitl.md](references/tts-hitl.md). A failed scene take or final listening verdict is shown to the user with its scores and defects; their explicit approval permits assembly and delivery of the current takes.
 **scenes.js is the only data source** for screens, narration, subtitles and captions.
 ```
 data/<channel>/episodes/<topic>/
@@ -669,15 +669,22 @@ leaves it out of step with the video (scenes.js is the single source). When fixi
 numbers and proper nouns alone and work on the grain of the sentence.
 
 Use `tts_generate_checked` for every generated scene; read `references/tts-quality.md` first.
-The calls below describe `generator` and `generation`; raw TTS has no assembly proof.
+The calls below describe `generator` and `generation`; raw TTS has no assembly proof. A take
+that ends `fail` after its attempts is not the end of the episode: present its findings and
+follow `references/tts-hitl.md` — the user decides whether it ships.
 
 One checked call per scene — the profile registry as it stands, and the script is the full text
 of that scene's narration segments' `tts` sentences joined with periods. `.work/pcm/c<n>.wav`.
 Don't split a scene into several calls by sentence (the voice varies between calls). Pass the
 same `tts` sentences as `segments`. Default `generation.speed` and `playbackSpeed` to 1.0;
 non-1 values require the episode's explicit user request under `references/tts-speed.md`.
-On an ElevenLabs take the wrapper lays a fixed pause at each segment boundary and
-writes `c<n>.wav.sentences.json` for reveal/cue timing (`references/tts-quality.md` §Sentence spacing).
+On every single-voice take the wrapper lays a fixed pause at each segment boundary and
+writes `c<n>.wav.sentences.json` for reveal/cue timing (`references/tts-quality.md` §Sentence spacing) —
+ElevenLabs from its own timestamps, Supertonic·Gemini·mlx from the local forced aligner.
+A scene of one sentence is one call, and one call restarts the voice: measured 2026-09-15 on the
+pundago voice, three sentences as three calls reviewed at continuity 94 · naturalness 92 against
+96 · 95 for the same three in one call. When consecutive sentences are one breath, keep them in
+one scene as several segments (each segment still gets its own clip or reveal).
 
 **profile §2 decides the engine.** A new channel's narration default is `tts_local_generate`
 (Supertonic, local) — no key, no quota, and 0 cost however many times you rerun the episode,
@@ -1337,6 +1344,7 @@ and the `status: produced` file update regardless — the portal is a mirror, no
 - **`references/splice-clip.sh`** — post-build clip insertion (b-roll up to 2 slots · series stinger). Takes several `<clip> <T>` pairs and splices them in **a single run** (split it into two calls and the first splice is erased), handles clean and burned-in separately, shifts each subtitle cue by the sum of the measured lengths of the insertions before it, and checks for cues straddling T and for matching lengths
 - **`references/capture-frames.sh` / `capture-reveals.sh`** — headless capture (state count derived automatically)
 - **`references/render-motion-slide.mjs`** — motion-slide renderer (§3.6): one clip per reveal group, headless Chrome over the DevTools pipe with no npm dependency, every frame seeked to an exact time so a re-render is byte-identical; `--sheet` writes the frames the §3.6 sheet read looks at. It renders **every authored screen** — diagram, kinetic type, character act — since all it asks a page for is the seek contract
+- **`references/tts-hitl.md`** — speech findings as warnings: the `check-tts-quality.js` and `check-final-tts.js` reports, the `approve` commands and what an approval binds to
 - **`references/snap-boundaries.py`** — the checked take's sentence sidecar snapped to the detected pauses, bound to the WAV's hash (build-reel §4)
 - **`references/reveal-timing.py`** — reveal timing derived backwards from the narration's pauses
 - **`references/frame-persona-clip.py`** — unifies speaking-clip framing + palindrome

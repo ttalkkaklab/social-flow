@@ -64,7 +64,7 @@ function verify(work, board) {
   const mediaSha256={...verifyManifest(work,board,win.window.SCENES,win.window.FORMAT,{videoWarningsApproved:videoGate.approved}),...require('./check-tts-quality.js').check(work,board)};
   const hash = p=>createHash('sha256').update(fs.readFileSync(p)).digest('hex');
   const plugin = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../../.claude-plugin/plugin.json'),'utf8'));
-  fs.writeFileSync(path.join(work, 'build-plan-check.json'), JSON.stringify({videoGate,mediaSha256,version:plugin.version,storyboard:board,scenesSha256:hash(file),cardsSha256:hash(path.join(work,'cards.tsv')),segsSha256:hash(path.join(work,'segs.tsv')),resolvedCardsSha256:hash(path.join(work,'cards.resolved.tsv')),editPlanSha256:hash(path.join(work,'edit-plan.json')),checks:['check-scenes','check-slide','segment-inputs','edit-plan'],cards:expected},null,2)+'\n');
+  fs.writeFileSync(path.join(work, 'build-plan-check.json'), JSON.stringify({videoGate,ttsGate:require('./check-tts-quality.js').lastReport(work),mediaSha256,version:plugin.version,storyboard:board,scenesSha256:hash(file),cardsSha256:hash(path.join(work,'cards.tsv')),segsSha256:hash(path.join(work,'segs.tsv')),resolvedCardsSha256:hash(path.join(work,'cards.resolved.tsv')),editPlanSha256:hash(path.join(work,'edit-plan.json')),checks:['check-scenes','check-slide','segment-inputs','edit-plan'],cards:expected},null,2)+'\n');
 }
 if (require.main === module) {
   try {
