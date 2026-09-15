@@ -649,7 +649,10 @@ Core rules:
   throws the emotion or question and the sound answers politely
   (`references/scenes-schema.md` §title is a spoken hook).
 - **Narration = an array of segments (sentences)** — one sentence maps 1:1 to one reveal.
-  The character cap follows the format too (spaces and punctuation excluded).
+  The character cap follows the format too (spaces and punctuation excluded). A scene is
+  one voice call, so sentences that belong to one breath stay in one scene as several
+  segments — one sentence per scene makes the voice restart at every sentence (produce
+  measured it: continuity 94 for three calls against 96 for one call of the same three).
   - Short-form: cover ≤40 chars · points/quote ≤50 chars · 8–25 chars per sentence
   - Long-form: cover ≤70 chars · points/quote ≤90 chars · 12–40 chars per sentence
 
@@ -694,10 +697,11 @@ Core rules:
   motion prompt for image→video does **not** rewrite sides, facing, or lighting — the PNG
   already locked them. A quote speech clip has no still, so its prompt carries the shot's
   `From the camera: …` sentence (`assemble-bg-prompt.js --space-only`).
-- **Name whoever from the channel cast is on screen** in `visual.character` — one id, or an array
-  with the shot's subject first (order is reference weight). It is what lets produce attach the
-  character panels without re-reading the scene, and what resolves a character's veo ban per cut
-  instead of per episode. Ids come from the channel's `assets/catalog.md`
+- **Declare `shot.cutType` on every generated still and video cut** when the episode defines
+  `PRODUCTION.cast` or any cut type: `action`, `reaction`, `insert`, `document`, `map` or `scenery`.
+  Put each episode character's appearance once in `PRODUCTION.cast[id].sheet`, outside `videoDesign` and `shot.space`.
+- **Name whoever is on screen** in `visual.character`, with the subject first. A matching episode
+  cast id takes priority; other ids come from the channel's `assets/catalog.md`
   (`channel/references/resolve-asset.py --list <channel dir>`). **Where a generated clip hands over more than one
   reference, write each entry as `{ id, scope }`** — one clause per reference saying what it
   governs and where it may appear ("controls the helmet and body only", "appears only in the last

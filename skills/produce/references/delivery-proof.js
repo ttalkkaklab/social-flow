@@ -30,7 +30,7 @@ function record(work,speed){
     const gate=require('./check-final-tts.js'),n=gate.narration(board);
     if(n.generated){
       const media=path.join(work,'reel-fast.mp4');
-      finalSpeech=gate.verify(media,n.text);
+      finalSpeech=gate.evidence(media,n.text,work);
     }
   }
   const outputs=Object.fromEntries(pairs.map(([src,dst])=>[dst,fs.existsSync(path.join(work,src))?hash(path.join(work,src)):null]));
@@ -54,7 +54,7 @@ function check(episode){
       if(n.generated||proof.requiresFinalSpeech){
         if(!proof.finalSpeech||proof.finalSpeech.mediaSha256!==proof.outputs['video.mp4'])throw new Error('missing final speech proof');
         // Validate embedded evidence with the same verifier without creating output artifacts.
-        gate.verifyReport(proof.finalSpeech,path.join(out,'video.mp4'),n.text);
+        gate.verifyEvidence(proof.finalSpeech,path.join(out,'video.mp4'),n.text);
       }
     }
     if(fs.existsSync(board)&&hash(board)!==proof.scenesSha256)throw new Error('storyboard changed after assembly');

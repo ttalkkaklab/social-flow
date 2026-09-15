@@ -807,10 +807,11 @@ Exactly produce skill §5 and `../produce/references/tts-quality.md`: call
 `tts_generate_checked` once per scene with engine/voice pinned to profile §2 and all
 `tts` sentences joined with periods, the same sentences as `segments`, and the profile's
 playback speed as `playbackSpeed`. Keep the WAV and its `.quality.json` sidecar (plus
-`.sentences.json` on ElevenLabs) in `.work/pcm/`. It reviews actual speech and retries up
-to three takes at fixed settings (one episode seed stays fixed across retakes).
-Only a current PASS enters assembly. Failed, unavailable or exhausted review sets
-`queue_*: hold`; never reset attempts or substitute a raw unchecked take. Include paid
+`.sentences.json` on every single-voice engine) in `.work/pcm/`. It reviews actual speech
+and retries up to three takes at fixed settings (one episode seed stays fixed across retakes).
+A take that ends `fail` is a warning for the user (`../produce/references/tts-hitl.md`):
+unattended, write the findings and wait — the run does not approve its own warnings — and an
+unavailable review sets `queue_*: hold`; never reset attempts or substitute a raw unchecked take. Include paid
 Gemini audio review in the allowance even for local TTS; an older local-only budget is insufficient.
 
 If the local engine fails with "Python interpreter not found" /
