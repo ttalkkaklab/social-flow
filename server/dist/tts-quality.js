@@ -450,7 +450,7 @@ export async function generateCheckedSpeech(input, dependencies) {
                 return save('pass', { audioSha256, spacing });
             save('retry', { audioSha256, spacing });
         }
-        return save('fail', { error: 'Speech did not pass within the attempt limit. Hold production; inspect the per-attempt issues. Do not reset the retry budget or change the voice to bypass review.' });
+        return save('fail', { error: 'Speech did not pass within the attempt limit. Present the per-attempt issues to the user (tts-hitl.md): they can accept this take, fix first or stop. Do not reset the retry budget or change the voice to bypass review.' });
     }
     catch (error) {
         // Infrastructure/invalid review is not an acoustic failure: another paid synthesis will not fix it.

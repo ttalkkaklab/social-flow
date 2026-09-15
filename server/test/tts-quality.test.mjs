@@ -78,16 +78,36 @@ test('preflight failure spends no synthesis, malformed or changed-audio reviews 
   f.deps.listen=async()=>{writeFileSync(f.file,'replaced during review');return {transcript:script,review:good()};};
   assert.match((await generateCheckedSpeech(f.request,f.deps)).error,/changed during review/);
 });
-test('builder rejects missing evidence, altered WAV/text, lowered scores and sync bypass',async t=>{
+test('builder holds missing evidence, altered WAV/text, lowered scores and sync bypass for HITL',async t=>{
   const f=setup(t);await f.deps.generate();
-  assert.throws(()=>checker.check(path.join(f.dir,'.work'),path.join(f.dir,'storyboard')),/generate with tts_generate_checked/);
+  const work=path.join(f.dir,'.work'),board=path.join(f.dir,'storyboard');
+  assert.throws(()=>checker.check(work,board),/need HITL/);
+  assert.match(checker.lastReport(work).warnings[0],/no speech-quality proof/);
   await generateCheckedSpeech(f.request,f.deps);const proof=f.proof();
   assert.throws(()=>checker.verifyProof(f.file,'내일은 맑고 따뜻한 날입니다.'),/narration changed/);
   proof.attempts.at(-1).review.naturalness=80;writeFileSync(f.file+'.quality.json',JSON.stringify(proof));
   assert.throws(()=>checker.verifyProof(f.file,script),/naturalness/);
   writeFileSync(path.join(f.dir,'.work/cards.tsv'),`0\t${f.file}\t4.5\tnone\tsync=1\n`);
-  assert.throws(()=>checker.check(path.join(f.dir,'.work'),path.join(f.dir,'storyboard')),/naturalness/);
+  assert.throws(()=>checker.check(work,board),/need HITL/);
+  assert.match(checker.lastReport(work).warnings[0],/naturalness did not pass — proof status pass .* naturalness 80/);
   writeFileSync(f.file,'different');assert.throws(()=>checker.verifyProof(f.file,script),/audio changed/);
+});
+test('an explicit approval lets a failed take through once, bound to that WAV, proof and text',async t=>{
+  const f=setup(t);f.deps.listen=async()=>({transcript:script,review:{...good(),pronunciation:70}});
+  const work=path.join(f.dir,'.work'),board=path.join(f.dir,'storyboard');
+  assert.equal((await generateCheckedSpeech(f.request,f.deps)).status,'fail');
+  assert.throws(()=>checker.check(work,board),/need HITL/);
+  const report=checker.lastReport(work);
+  assert.equal(report.status,'awaiting-user');
+  assert.match(report.warnings[0],/card 0: missing current speech-quality-v1 PASS — proof status fail \| 3 attempt\(s\) \| accuracy 100 · pronunciation 70/);
+  assert.throws(()=>checker.approve(work,' '),/explicit user/);
+  checker.approve(work,'User: 이 발음은 괜찮으니 진행');
+  const media=checker.check(work,board);
+  assert.ok(media[f.file]&&media[f.file+'.quality.json'],'the failed proof still travels in the provenance');
+  assert.equal(checker.lastReport(work).status,'approved-with-warnings');
+  // a new take, a changed proof or changed narration needs a new answer
+  writeFileSync(f.file,pcmToWav(Buffer.alloc(48000,9),24000,1));
+  assert.throws(()=>checker.check(work,board),/need HITL/);
 });
 test('real recordings and silence keep audio provenance without a synthesis proof',t=>{
   const f=setup(t);writeFileSync(f.file,'recorded');
@@ -96,7 +116,7 @@ test('real recordings and silence keep audio provenance without a synthesis proo
     assert.ok(checker.check(path.join(f.dir,'.work'),path.join(f.dir,'storyboard'))[f.file]);
   }
   writeFileSync(path.join(f.dir,'storyboard/scenes.js'),`window.SCENES=[{type:'points',visual:{source:'screencast'},narration:[{tts:${JSON.stringify(script)}}]}];`);
-  assert.throws(()=>checker.check(path.join(f.dir,'.work'),path.join(f.dir,'storyboard')),/generate with tts_generate_checked/);
+  assert.throws(()=>checker.check(path.join(f.dir,'.work'),path.join(f.dir,'storyboard')),/need HITL/);
 });
 test('generation args bind the whole spoken text and preserve voice settings',t=>{
   const f=setup(t);const prepared=prepareGeneration(f.request);

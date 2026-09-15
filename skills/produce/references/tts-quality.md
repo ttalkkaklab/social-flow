@@ -169,9 +169,11 @@ It does not trigger another synthesis in that call. After fixing a review outage
 request reviews the saved candidate again. A valid review that rejects the take can then use
 the remaining generation attempts. A concurrent call for the same WAV is refused.
 
-On `fail` or `unverified`, stop production and set unattended queues to hold. Report the scene,
-failed words/times, scores and attempted corrections. Do not edit a proof, reset its history,
-change voices, lower thresholds or use a raw generation tool to bypass the gate. Correcting
+On `fail`, report the scene, failed words/times, scores and attempted corrections and ask the
+user — [tts-hitl.md](tts-hitl.md): the finding is a warning they can accept for the current
+take, fix first, or stop on. On `unverified` there is nothing to decide; fix the review and
+rerun. Do not edit a proof, reset its history, change voices, lower thresholds or use a raw
+generation tool to bypass the gate. Correcting
 the approved narration follows the existing storyboard approval rules, then generates and
 reviews the corrected scene. Infrastructure recovery does not require a script change.
 
@@ -202,7 +204,9 @@ cost report. Do not silently exceed the channel's overall budget.
 
 `c0.wav.quality.json` is bound to the exact WAV and normalized scene text. The source-plan
 checker records both file hashes. Replacing the WAV or changing the script invalidates PASS;
-an old hand-authored WAV must be regenerated through the checked tool. There is no skip flag.
+an old hand-authored WAV must be regenerated through the checked tool. There is no skip flag —
+a take without a current PASS is a warning the user decides on ([tts-hitl.md](tts-hitl.md)),
+bound to that WAV, proof and text.
 User recordings, native recorded speech and silent cards retain the existing playback QA.
 Setting `sync=1` on generated narration does not exempt it.
 
@@ -221,7 +225,8 @@ After `speedup.sh` writes the final media, it calls the bundled `tts_review_fina
 on `reel-fast.mp4`. The reviewer hears every join and the final mix, with a separate continuity
 score for pitch, timbre, emotion, rate and breath across sentences. Inserted silence is judged
 critically too. Accuracy must reach 98 and every other axis, including continuity, must reach
-95, with no reported defect. Review errors hold delivery; an unchanged final PASS is reused. An unchanged failed audio
+95, with no reported defect. A `fail` is a warning the user decides on ([tts-hitl.md](tts-hitl.md));
+review errors hold delivery; an unchanged final PASS is reused. An unchanged failed audio
 candidate cannot obtain another score through punctuation, direction or container edits.
 The final proof binds to the complete media bytes and full spoken script, and travels inside
 `delivery-proof.json`. A scene-level PASS cannot replace it. Replacing the final media or script
