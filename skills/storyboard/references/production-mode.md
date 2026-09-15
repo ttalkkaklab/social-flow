@@ -160,10 +160,18 @@ window.PRODUCTION = {
     referencePack: 'tactile-miniature-v1',    // cinematic-miniature only
     reference: 'https://www.youtube.com/shorts/LQZjvQ5W2ck',   // where the look comes from: a URL or one line
     world: 'A rocky urban valley, with a stable mountain silhouette and stream route.',
+    worlds: { archive: 'A records room with dark wooden shelves and one paper window.' },
     materials: 'Matte off-white concrete, detailed granite, restrained foliage.',
     palette: 'Warm grey, muted green, pale blue water.',
     lighting: 'Soft daylight with clear contact shadows and moderate depth of field.',
     camera: 'Purposeful slow reveals, consistent lens language and legible phone framing.'   // carried in every motion prompt
+  },
+  cast: {
+    guide: {
+      name: 'The guide',
+      sheet: 'An adult guide with a lean build, short dark hair, a charcoal field jacket and a canvas satchel.',
+      image: 'images/cast-guide.png' // optional, relative to scenes.js
+    }
   },
   approval: {
     kind: 'user',                     // standing only when its written authorization names this mode and cap
@@ -173,6 +181,14 @@ window.PRODUCTION = {
   }
 };
 ```
+
+`PRODUCTION.cast` is optional and keyed by the ids used in `visual.character`. Each entry has
+`name`, one positive English `sheet`, and an optional episode-relative `image`. The sheet is
+the only place to describe the character's appearance. A matching episode id takes priority
+over the channel cast. Once `PRODUCTION.cast` or any `shot.cutType` is present, generated
+still and video cuts with `visual.bg` declare one of `action`, `reaction`, `insert`, `document`,
+`map` or `scenery`. `style.worlds[shot.videoDesign.worldId]` may replace the default
+`style.world` for one set; unknown ids use the default and produce a warning.
 
 All four choices keep the selected `style`; hybrid keeps purpose-based render routing.
 For full_video, follow `full-video.md` in the produce skill and use the stored style across

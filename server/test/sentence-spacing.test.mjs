@@ -192,3 +192,38 @@ test('a take without an alignment is kept and the reason recorded, so nothing is
   assert.equal(existsSync(sentencesPathFor(file)), false);
   assert.equal(checkedSpeechSchema.safeParse({ ...request, segments: ['다른 문장이에요.'] }).success, false);
 });
+
+test('a local take is aligned by the injected aligner, spaced like a vendor take, and re-aligned on every fresh take', async t => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'spacing-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const pcmDir = path.join(dir, '.work/pcm');
+  const request = checkedSpeechSchema.parse({ generator: 'tts_local_generate', generation: { text: TEXT, voice: 'M5', lang: 'ko' },
+    expectedText: TEXT, segments: SENTENCES, language: 'Korean', delivery: 'Calm.', outputPath: pcmDir, filename: 'c0.wav' });
+  assert.equal(prepareGeneration(request).spacing, true);
+  const file = path.join(pcmDir, 'c0.wav');
+  let takes = 0; const aligned = [];
+  const deps = { preflight: async () => {}, measure: async () => ({ duration: 3, rmsDb: -18, clippedFraction: 0 }),
+    generate: async () => { takes++; writeFileSync(file, fakeTake(takes === 1 ? 0.05 : 0.06).wav); return { success: true, audioPath: file }; },
+    align: async (wav, text, language) => { aligned.push([wav, text, language]); const { alignment } = fakeTake(takes === 1 ? 0.05 : 0.06); return { alignment, matched: 20, letters: 20, transcript: text }; },
+    listen: async () => ({ transcript: TEXT, review: { accuracy: takes === 1 ? 90 : 100, pronunciation: 98, naturalness: 97, clarity: 99, confidence: 0.98, complete: true, evidence: 'Every word and final syllable is clear, with smooth phrase breaks and no audible artifacts.', issues: [] } }) };
+  const result = await generateCheckedSpeech(request, deps);
+  assert.equal(result.success, true, JSON.stringify(result));
+  assert.equal(result.spacing, 'applied');
+  assert.equal(aligned.length, 2, 'each fresh take is aligned on its own audio');
+  assert.deepEqual(aligned[0], [file, TEXT, 'Korean']);
+  const proof = JSON.parse(readFileSync(file + '.quality.json', 'utf8'));
+  assert.equal(proof.attempts[1].spacing.source, 'asr-aligner');
+  assert.equal(proof.attempts[1].spacing.boundaries.length, 2);
+  const side = JSON.parse(readFileSync(sentencesPathFor(file), 'utf8'));
+  assert.equal(side.audioSha256, proof.audioSha256);
+  assert.equal(JSON.parse(readFileSync(path.join(pcmDir, 'c0.alignment.json'), 'utf8')).engine, 'asr-aligner');
+  // a poorly matched transcript is a skipped spacing with the reason, never a wrong sidecar
+  const weak = { ...deps, align: async (wav, text) => ({ ...(await deps.align(wav, text, 'Korean')), matched: 5 }) };
+  const poor = await generateCheckedSpeech({ ...request, sentencePause: 0.6 }, weak);
+  assert.equal(poor.success, true); assert.match(poor.spacing, /skipped: aligner matched 5\/20/);
+  assert.equal(existsSync(sentencesPathFor(file)), false);
+  // no aligner in the dependencies keeps the take as generated
+  const { align: _drop, ...bare } = deps;
+  const kept = await generateCheckedSpeech({ ...request, sentencePause: 0.7 }, bare);
+  assert.match(kept.spacing, /no aligner/);
+});

@@ -15,6 +15,7 @@ import * as eleven from './elevenlabs-client.js';
 import * as mlx from './mlx-serve-client.js';
 import { priceOf, recordUsage } from './usage-ledger.js';
 import { SPACING_POLICY, respace, splitSentences } from './sentence-spacing.js';
+import { alignmentFromAsr } from './asr-alignment.js';
 const exec = promisify(execFile);
 export const QUALITY_POLICY = 'speech-quality-v1';
 export const REVIEW_API_VERSION = process.env.SOCIAL_FLOW_TTS_REVIEW_API_VERSION?.trim() || 'v1';
@@ -205,11 +206,13 @@ export function prepareGeneration(request) {
     }
     let spoken, parsed, run, spacing = false, seed;
     switch (request.generator) {
+        // Single-voice engines without a vendor alignment get one from the local aligner (applySentenceSpacing), so their sentences are spaced like an ElevenLabs take.
         case 'tts_generate': {
             const p = gemini.ttsGenerateSchema.parse(args);
             parsed = p;
             spoken = p.text;
             run = () => gemini.generateSpeech(p);
+            spacing = true;
             break;
         }
         case 'tts_multi_speaker': {
@@ -224,6 +227,7 @@ export function prepareGeneration(request) {
             parsed = p;
             spoken = p.text;
             run = () => local.generateLocalSpeech(p);
+            spacing = true;
             break;
         }
         // Timestamps cost nothing extra and are what the sentence spacing reads, so the checked lane always asks for them.
@@ -249,6 +253,7 @@ export function prepareGeneration(request) {
             parsed = p;
             spoken = p.input;
             run = () => mlx.generateMlxTts(p);
+            spacing = true;
             break;
         }
     }
@@ -262,17 +267,35 @@ export function prepareGeneration(request) {
 export const sentencesPathFor = (wav) => wav + '.sentences.json';
 /**
  * Lays the fixed sentence pauses into a fresh take and rewrites its alignment to match. Runs before
- * the take is hashed, so the proof binds to the audio that ships. A take without a usable alignment
- * is kept as generated and the reason recorded — the builder then falls back to silence detection.
+ * the take is hashed, so the proof binds to the audio that ships. A vendor alignment (ElevenLabs)
+ * is used as is; without one the aligner writes the sidecar first. A take that gets no usable
+ * alignment either way is kept as generated and the reason recorded — the builder then falls
+ * back to silence detection.
  */
-export function applySentenceSpacing(output, request) {
+export async function applySentenceSpacing(output, request, align) {
     authorizeSpeed(request.outputPath, 'final', request.playbackSpeed);
     const alignmentPath = output.replace(/\.wav$/i, '') + '.alignment.json';
     // A sidecar from an earlier take must not describe this one: it is rewritten below or removed.
     rmSync(sentencesPathFor(output), { force: true });
-    if (!existsSync(alignmentPath))
-        return { skipped: 'no alignment sidecar beside the take' };
     try {
+        // An aligner sidecar describes the take it was measured on; a fresh take gets a fresh one.
+        if (existsSync(alignmentPath)) {
+            try {
+                if (JSON.parse(readFileSync(alignmentPath, 'utf8')).engine === 'asr-aligner')
+                    rmSync(alignmentPath, { force: true });
+            }
+            catch {
+                rmSync(alignmentPath, { force: true });
+            }
+        }
+        if (!existsSync(alignmentPath)) {
+            if (!align)
+                return { skipped: 'no alignment sidecar beside the take and no aligner' };
+            const aligned = await align(output, request.expectedText, request.language);
+            if (aligned.matched < aligned.letters * 0.8)
+                throw new Error(`aligner matched ${aligned.matched}/${aligned.letters} script letters; transcript "${aligned.transcript.slice(0, 60)}"`);
+            writeFileSync(alignmentPath, JSON.stringify({ engine: 'asr-aligner', generator: request.generator, text: request.expectedText, transcript: aligned.transcript, matched: aligned.matched, letters: aligned.letters, alignment: aligned.alignment }, null, 2));
+        }
         const sidecar = JSON.parse(readFileSync(alignmentPath, 'utf8'));
         const alignment = sidecar.alignment;
         if (!alignment?.characters?.length)
@@ -280,7 +303,7 @@ export function applySentenceSpacing(output, request) {
         const segments = request.segments ?? splitSentences(alignment.characters.join(''));
         const result = respace(readFileSync(output), alignment, segments, { pause: request.sentencePause, playbackSpeed: request.playbackSpeed });
         writeFileSync(output, result.wav);
-        const meta = { policy: SPACING_POLICY, pause: request.sentencePause, playbackSpeed: request.playbackSpeed, lead: result.lead, gaps: result.gaps, inserted: result.inserted, boundaries: result.boundaries, duration: result.duration, segmentsFrom: request.segments ? 'request' : 'sentence-final punctuation' };
+        const meta = { policy: SPACING_POLICY, source: sidecar.engine === 'asr-aligner' ? 'asr-aligner' : 'vendor', pause: request.sentencePause, playbackSpeed: request.playbackSpeed, lead: result.lead, gaps: result.gaps, inserted: result.inserted, boundaries: result.boundaries, duration: result.duration, segmentsFrom: request.segments ? 'request' : 'sentence-final punctuation' };
         writeFileSync(alignmentPath, JSON.stringify({ ...sidecar, alignment: result.alignment, vendor_alignment: sidecar.vendor_alignment ?? sidecar.alignment, respaced: meta }, null, 2));
         // The sidecar names the WAV bytes it describes; snap-boundaries.py refuses one that does not match.
         writeFileSync(sentencesPathFor(output), JSON.stringify({ version: 1, ...meta, audio: path.basename(output), audioSha256: sha256(result.wav), sentences: result.sentences }, null, 2) + '\n');
@@ -313,7 +336,7 @@ export async function generateCheckedSpeech(input, dependencies) {
                 throw new Error(`Selected generator is disabled: ${gate.reason}`);
             requireGeminiKey();
             await exec('ffmpeg', ['-version'], { timeout: 10000 });
-        }, generate: prepared.run, measure: measureSignal, listen };
+        }, generate: prepared.run, measure: measureSignal, listen, align: alignmentFromAsr };
     const attempts = [];
     // On a spacing lane the pauses are part of the shipped audio, so their inputs are part of the settings a PASS binds to.
     const settings = prepared.spacing ? { ...prepared.args, episode: request.episode ?? null, spacing: { segments: request.segments ?? null, sentencePause: request.sentencePause, playbackSpeed: request.playbackSpeed } } : prepared.args;
@@ -396,7 +419,7 @@ export async function generateCheckedSpeech(input, dependencies) {
                 if (!generated.success || path.resolve(generated.audioPath || generated.path || '') !== output)
                     throw new Error(generated.error || 'Generator did not return the requested audio path');
                 if (prepared.spacing)
-                    take.spacing = applySentenceSpacing(output, request);
+                    take.spacing = await applySentenceSpacing(output, request, deps.align);
                 else {
                     rmSync(sentencesPathFor(output), { force: true });
                     take.spacing = { skipped: 'engine has no alignment' };
@@ -427,7 +450,7 @@ export async function generateCheckedSpeech(input, dependencies) {
                 return save('pass', { audioSha256, spacing });
             save('retry', { audioSha256, spacing });
         }
-        return save('fail', { error: 'Speech did not pass within the attempt limit. Hold production; inspect the per-attempt issues. Do not reset the retry budget or change the voice to bypass review.' });
+        return save('fail', { error: 'Speech did not pass within the attempt limit. Present the per-attempt issues to the user (tts-hitl.md): they can accept this take, fix first or stop. Do not reset the retry budget or change the voice to bypass review.' });
     }
     catch (error) {
         // Infrastructure/invalid review is not an acoustic failure: another paid synthesis will not fix it.

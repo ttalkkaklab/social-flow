@@ -54,16 +54,27 @@ bible the source prompt restates on every shot. `camera` is the episode's camera
 (lens, distance, pace); it rides inside every motion prompt's consistency lock, so all clips
 are drawn with one lens. Archival assets keep their source appearance.
 
+Keep those episode constants separate from the cut treatment. Every generated cut declares
+`shot.cutType`: `action`, `reaction`, `insert`, `document`, `map` or `scenery`.
+`spatial-prompts.js` combines the preset with that type, selects
+`PRODUCTION.style.worlds[shot.videoDesign.worldId]` when present, and otherwise uses
+`PRODUCTION.style.world`. Do not write character appearance in `videoDesign` or `shot.space`.
+Define it once in `PRODUCTION.cast[id].sheet` and list the people on screen in
+`visual.character`. Action, reaction and insert cuts receive the same sheet text in source,
+end-frame and motion locks. Document, map and scenery cuts receive no cast material.
+
 For cinematic-miniature, read [STYLE.md](../../storyboard/assets/styles/tactile-miniature-v1/STYLE.md),
 select `visual.styleRole` (environment, character, interaction, transport, reported_story)
 by the narrated subject, and store `PRODUCTION.style.referencePack: "tactile-miniature-v1"`.
 `spatial-prompts.js` resolves the installed pack and returns `sourceReferenceImages`,
 `sourceImageArgs`, `styleGuidePath` and `styleBinding` beside the prompts. Open the guide and
 the selected image, then pass `sourceImageArgs.referenced_image_paths` to the image tool with
-the prompt. Store `styleBinding` as `visual.stylePack` and regenerate the quote after storing
-it. Absolute image paths are invocation-only and are resolved again on each machine. Add an
-approved character reference when continuity needs it. End-image edits use the scene's
-generated start image, never the pack image as a replacement scene.
+the prompt. Keep the returned order: previz first, style pack second, then the episode cast
+images named by `visual.character`. When `PRODUCTION.cast[id].image` is absent, resolve that id
+from the channel panels. A matching episode cast id takes priority over the channel cast.
+Store `styleBinding` as `visual.stylePack` and regenerate the quote after storing it. Absolute
+image paths are invocation-only and are resolved again on each machine. End-image edits use
+the scene's generated start image, never the pack image as a replacement scene.
 
 Plan the spoken actor, action and recipient before applying the look. A style match cannot
 excuse an unrelated image. After each narration edit, re-read the affected plan and image;

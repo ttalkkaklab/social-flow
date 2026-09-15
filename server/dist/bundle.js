@@ -3244,8 +3244,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path12) {
-      let input = path12;
+    function removeDotSegments(path13) {
+      let input = path13;
       const output = [];
       let nextSlash = -1;
       let len = 0;
@@ -3497,8 +3497,8 @@ var require_schemes = __commonJS({
         wsComponent.secure = void 0;
       }
       if (wsComponent.resourceName) {
-        const [path12, query] = wsComponent.resourceName.split("?");
-        wsComponent.path = path12 && path12 !== "/" ? path12 : void 0;
+        const [path13, query] = wsComponent.resourceName.split("?");
+        wsComponent.path = path13 && path13 !== "/" ? path13 : void 0;
         wsComponent.query = query;
         wsComponent.resourceName = void 0;
       }
@@ -13731,22 +13731,22 @@ var init_from = __esm({
     init_file();
     init_fetch_blob();
     ({ stat } = fs2);
-    blobFromSync = (path12, type) => fromBlob(statSync3(path12), path12, type);
-    blobFrom = (path12, type) => stat(path12).then((stat4) => fromBlob(stat4, path12, type));
-    fileFrom = (path12, type) => stat(path12).then((stat4) => fromFile(stat4, path12, type));
-    fileFromSync = (path12, type) => fromFile(statSync3(path12), path12, type);
-    fromBlob = (stat4, path12, type = "") => new fetch_blob_default([new BlobDataItem({
-      path: path12,
+    blobFromSync = (path13, type) => fromBlob(statSync3(path13), path13, type);
+    blobFrom = (path13, type) => stat(path13).then((stat4) => fromBlob(stat4, path13, type));
+    fileFrom = (path13, type) => stat(path13).then((stat4) => fromFile(stat4, path13, type));
+    fileFromSync = (path13, type) => fromFile(statSync3(path13), path13, type);
+    fromBlob = (stat4, path13, type = "") => new fetch_blob_default([new BlobDataItem({
+      path: path13,
       size: stat4.size,
       lastModified: stat4.mtimeMs,
       start: 0
     })], { type });
-    fromFile = (stat4, path12, type = "") => new file_default([new BlobDataItem({
-      path: path12,
+    fromFile = (stat4, path13, type = "") => new file_default([new BlobDataItem({
+      path: path13,
       size: stat4.size,
       lastModified: stat4.mtimeMs,
       start: 0
-    })], basename2(path12), { type, lastModified: stat4.mtimeMs });
+    })], basename2(path13), { type, lastModified: stat4.mtimeMs });
     BlobDataItem = class _BlobDataItem {
       #path;
       #start;
@@ -18927,7 +18927,7 @@ var require_util3 = __commonJS({
     exports.getWellKnownCertificateConfigFileLocation = getWellKnownCertificateConfigFileLocation;
     var fs9 = __require("fs");
     var os2 = __require("os");
-    var path12 = __require("path");
+    var path13 = __require("path");
     var WELL_KNOWN_CERTIFICATE_CONFIG_FILE = "certificate_config.json";
     var CLOUDSDK_CONFIG_DIRECTORY = "gcloud";
     function snakeToCamel(str8) {
@@ -19020,8 +19020,8 @@ var require_util3 = __commonJS({
       }
     }
     function getWellKnownCertificateConfigFileLocation() {
-      const configDir = process.env.CLOUDSDK_CONFIG || (_isWindows() ? path12.join(process.env.APPDATA || "", CLOUDSDK_CONFIG_DIRECTORY) : path12.join(process.env.HOME || "", ".config", CLOUDSDK_CONFIG_DIRECTORY));
-      return path12.join(configDir, WELL_KNOWN_CERTIFICATE_CONFIG_FILE);
+      const configDir = process.env.CLOUDSDK_CONFIG || (_isWindows() ? path13.join(process.env.APPDATA || "", CLOUDSDK_CONFIG_DIRECTORY) : path13.join(process.env.HOME || "", ".config", CLOUDSDK_CONFIG_DIRECTORY));
+      return path13.join(configDir, WELL_KNOWN_CERTIFICATE_CONFIG_FILE);
     }
     function _isWindows() {
       return os2.platform().startsWith("win");
@@ -20967,7 +20967,7 @@ var require_getCredentials = __commonJS({
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getCredentials = getCredentials;
-    var path12 = __require("path");
+    var path13 = __require("path");
     var fs9 = __require("fs");
     var util_1 = __require("util");
     var errorWithCode_1 = require_errorWithCode();
@@ -21039,7 +21039,7 @@ var require_getCredentials = __commonJS({
        * @returns An instance of a class that implements ICredentialsProvider.
        */
       static create(keyFilePath) {
-        const keyFileExtension = path12.extname(keyFilePath);
+        const keyFileExtension = path13.extname(keyFilePath);
         switch (keyFileExtension) {
           case ExtensionFiles.JSON:
             return new JsonCredentialsProvider(keyFilePath);
@@ -24408,7 +24408,7 @@ var require_googleauth = __commonJS({
     var gaxios_1 = require_src2();
     var gcpMetadata = require_src4();
     var os2 = __require("os");
-    var path12 = __require("path");
+    var path13 = __require("path");
     var crypto_1 = require_crypto3();
     var computeclient_1 = require_computeclient();
     var idtokenclient_1 = require_idtokenclient();
@@ -24693,19 +24693,19 @@ var require_googleauth = __commonJS({
         if (!configDir) {
           if (this._isWindows()) {
             if (process.env["APPDATA"]) {
-              configDir = path12.join(process.env["APPDATA"], "gcloud");
+              configDir = path13.join(process.env["APPDATA"], "gcloud");
             }
           } else {
             const home = process.env["HOME"];
             if (home) {
-              configDir = path12.join(home, ".config", "gcloud");
+              configDir = path13.join(home, ".config", "gcloud");
             }
           }
         }
         if (!configDir) {
           return null;
         }
-        const location = path12.join(configDir, "application_default_credentials.json");
+        const location = path13.join(configDir, "application_default_credentials.json");
         if (!fs9.existsSync(location)) {
           return null;
         }
@@ -25060,7 +25060,7 @@ var require_googleauth = __commonJS({
         if (this.jsonContent) {
           return this._cacheClientFromJSON(this.jsonContent, this.clientOptions);
         } else if (this.keyFilename) {
-          const filePath = path12.resolve(this.keyFilename);
+          const filePath = path13.resolve(this.keyFilename);
           const stream = fs9.createReadStream(filePath);
           return await this.fromStreamAsync(stream, this.clientOptions);
         } else if (this.apiKey) {
@@ -40315,7 +40315,7 @@ async function $do$q(client, body, api_version, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path12 = pathToFunc("/{api_version}/agents")(pathParams);
+  const path13 = pathToFunc("/{api_version}/agents")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -40346,7 +40346,7 @@ async function $do$q(client, body, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path12,
+    path: path13,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -40390,7 +40390,7 @@ async function $do$p(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path12 = pathToFunc("/{api_version}/agents/{id}")(pathParams);
+  const path13 = pathToFunc("/{api_version}/agents/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -40420,7 +40420,7 @@ async function $do$p(client, id, api_version, options) {
     security: requestSecurity,
     method: "DELETE",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path12,
+    path: path13,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -40464,7 +40464,7 @@ async function $do$o(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path12 = pathToFunc("/{api_version}/agents/{id}")(pathParams);
+  const path13 = pathToFunc("/{api_version}/agents/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -40494,7 +40494,7 @@ async function $do$o(client, id, api_version, options) {
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path12,
+    path: path13,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -40536,7 +40536,7 @@ async function $do$n(client, api_version, page_size, page_token, parent, options
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload === null || payload === void 0 ? void 0 : payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path12 = pathToFunc("/{api_version}/agents")(pathParams);
+  const path13 = pathToFunc("/{api_version}/agents")(pathParams);
   const query = encodeFormQuery({
     "page_size": payload === null || payload === void 0 ? void 0 : payload.page_size,
     "page_token": payload === null || payload === void 0 ? void 0 : payload.page_token,
@@ -40571,7 +40571,7 @@ async function $do$n(client, api_version, page_size, page_token, parent, options
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path12,
+    path: path13,
     headers,
     query,
     body,
@@ -40612,7 +40612,7 @@ async function $do$m(client, body, api_version, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path12 = pathToFunc("/{api_version}/environments")(pathParams);
+  const path13 = pathToFunc("/{api_version}/environments")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -40643,7 +40643,7 @@ async function $do$m(client, body, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path12,
+    path: path13,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -40687,7 +40687,7 @@ async function $do$l(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path12 = pathToFunc("/{api_version}/environments/{id}")(pathParams);
+  const path13 = pathToFunc("/{api_version}/environments/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -40717,7 +40717,7 @@ async function $do$l(client, id, api_version, options) {
     security: requestSecurity,
     method: "DELETE",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path12,
+    path: path13,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -40761,7 +40761,7 @@ async function $do$k(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path12 = pathToFunc("/{api_version}/environments/{id}")(pathParams);
+  const path13 = pathToFunc("/{api_version}/environments/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -40791,7 +40791,7 @@ async function $do$k(client, id, api_version, options) {
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path12,
+    path: path13,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -40832,7 +40832,7 @@ async function $do$j(client, api_version, page_size, page_token, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload === null || payload === void 0 ? void 0 : payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path12 = pathToFunc("/{api_version}/environments")(pathParams);
+  const path13 = pathToFunc("/{api_version}/environments")(pathParams);
   const query = encodeFormQuery({
     "page_size": payload === null || payload === void 0 ? void 0 : payload.page_size,
     "page_token": payload === null || payload === void 0 ? void 0 : payload.page_token
@@ -40866,7 +40866,7 @@ async function $do$j(client, api_version, page_size, page_token, options) {
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path12,
+    path: path13,
     headers,
     query,
     body,
@@ -40893,14 +40893,14 @@ async function $do$j(client, api_version, page_size, page_token, options) {
   }
   return [result, { status: "complete", request: req, response }];
 }
-function environmentsFilesList(client, environment, path12, api_version, page_size, page_token, recursive, options) {
-  return new APIPromise($do$i(client, environment, path12, api_version, page_size, page_token, recursive, options));
+function environmentsFilesList(client, environment, path13, api_version, page_size, page_token, recursive, options) {
+  return new APIPromise($do$i(client, environment, path13, api_version, page_size, page_token, recursive, options));
 }
-async function $do$i(client, environment, path12, api_version, page_size, page_token, recursive, options) {
+async function $do$i(client, environment, path13, api_version, page_size, page_token, recursive, options) {
   var _a4, _b, _c;
   const input = {
     environment,
-    path: path12,
+    path: path13,
     api_version,
     page_size,
     page_token,
@@ -40999,7 +40999,7 @@ async function $do$h(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path12 = pathToFunc("/{api_version}/interactions/{id}/cancel")(pathParams);
+  const path13 = pathToFunc("/{api_version}/interactions/{id}/cancel")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -41029,7 +41029,7 @@ async function $do$h(client, id, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path12,
+    path: path13,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -41072,7 +41072,7 @@ async function $do$g(client, body, api_version, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path12 = pathToFunc("/{api_version}/interactions")(pathParams);
+  const path13 = pathToFunc("/{api_version}/interactions")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: ((_b = input === null || input === void 0 ? void 0 : input.body) === null || _b === void 0 ? void 0 : _b.stream) ? "text/event-stream" : "application/json"
@@ -41103,7 +41103,7 @@ async function $do$g(client, body, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path12,
+    path: path13,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -41153,7 +41153,7 @@ async function $do$f(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path12 = pathToFunc("/{api_version}/interactions/{id}")(pathParams);
+  const path13 = pathToFunc("/{api_version}/interactions/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -41183,7 +41183,7 @@ async function $do$f(client, id, api_version, options) {
     security: requestSecurity,
     method: "DELETE",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path12,
+    path: path13,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -41233,7 +41233,7 @@ async function $do$e(client, id, api_version, include_input, last_event_id, stre
       charEncoding: "percent"
     })
   };
-  const path12 = pathToFunc("/{api_version}/interactions/{id}")(pathParams);
+  const path13 = pathToFunc("/{api_version}/interactions/{id}")(pathParams);
   const query = encodeFormQuery({
     "include_input": payload.include_input,
     "last_event_id": payload.last_event_id,
@@ -41268,7 +41268,7 @@ async function $do$e(client, id, api_version, include_input, last_event_id, stre
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path12,
+    path: path13,
     headers,
     query,
     body,
@@ -41315,7 +41315,7 @@ async function $do$d(client, body, api_version, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path12 = pathToFunc("/{api_version}/triggers")(pathParams);
+  const path13 = pathToFunc("/{api_version}/triggers")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -41346,7 +41346,7 @@ async function $do$d(client, body, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path12,
+    path: path13,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -41390,7 +41390,7 @@ async function $do$c(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path12 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
+  const path13 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -41420,7 +41420,7 @@ async function $do$c(client, id, api_version, options) {
     security: requestSecurity,
     method: "DELETE",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path12,
+    path: path13,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -41464,7 +41464,7 @@ async function $do$b(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path12 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
+  const path13 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -41494,7 +41494,7 @@ async function $do$b(client, id, api_version, options) {
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path12,
+    path: path13,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -41540,7 +41540,7 @@ async function $do$a(client, trigger_id, api_version, page_size, page_token, opt
       charEncoding: "percent"
     })
   };
-  const path12 = pathToFunc("/{api_version}/triggers/{trigger_id}/executions")(pathParams);
+  const path13 = pathToFunc("/{api_version}/triggers/{trigger_id}/executions")(pathParams);
   const query = encodeFormQuery({
     "page_size": payload.page_size,
     "page_token": payload.page_token
@@ -41574,7 +41574,7 @@ async function $do$a(client, trigger_id, api_version, page_size, page_token, opt
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path12,
+    path: path13,
     headers,
     query,
     body,
@@ -41617,7 +41617,7 @@ async function $do$9(client, api_version, filter, page_size, page_token, options
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload === null || payload === void 0 ? void 0 : payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path12 = pathToFunc("/{api_version}/triggers")(pathParams);
+  const path13 = pathToFunc("/{api_version}/triggers")(pathParams);
   const query = encodeFormQuery({
     "filter": payload === null || payload === void 0 ? void 0 : payload.filter,
     "page_size": payload === null || payload === void 0 ? void 0 : payload.page_size,
@@ -41652,7 +41652,7 @@ async function $do$9(client, api_version, filter, page_size, page_token, options
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path12,
+    path: path13,
     headers,
     query,
     body,
@@ -41697,7 +41697,7 @@ async function $do$8(client, trigger_id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path12 = pathToFunc("/{api_version}/triggers/{trigger_id}/executions")(pathParams);
+  const path13 = pathToFunc("/{api_version}/triggers/{trigger_id}/executions")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -41727,7 +41727,7 @@ async function $do$8(client, trigger_id, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path12,
+    path: path13,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -41772,7 +41772,7 @@ async function $do$7(client, id, body, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path12 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
+  const path13 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -41803,7 +41803,7 @@ async function $do$7(client, id, body, api_version, options) {
     security: requestSecurity,
     method: "PATCH",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path12,
+    path: path13,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -41843,7 +41843,7 @@ async function $do$6(client, body, api_version, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path12 = pathToFunc("/{api_version}/webhooks")(pathParams);
+  const path13 = pathToFunc("/{api_version}/webhooks")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -41874,7 +41874,7 @@ async function $do$6(client, body, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path12,
+    path: path13,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -41918,7 +41918,7 @@ async function $do$5(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path12 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
+  const path13 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -41948,7 +41948,7 @@ async function $do$5(client, id, api_version, options) {
     security: requestSecurity,
     method: "DELETE",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path12,
+    path: path13,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -41992,7 +41992,7 @@ async function $do$4(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path12 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
+  const path13 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -42022,7 +42022,7 @@ async function $do$4(client, id, api_version, options) {
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path12,
+    path: path13,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -42063,7 +42063,7 @@ async function $do$3(client, api_version, page_size, page_token, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload === null || payload === void 0 ? void 0 : payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path12 = pathToFunc("/{api_version}/webhooks")(pathParams);
+  const path13 = pathToFunc("/{api_version}/webhooks")(pathParams);
   const query = encodeFormQuery({
     "page_size": payload === null || payload === void 0 ? void 0 : payload.page_size,
     "page_token": payload === null || payload === void 0 ? void 0 : payload.page_token
@@ -42097,7 +42097,7 @@ async function $do$3(client, api_version, page_size, page_token, options) {
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path12,
+    path: path13,
     headers,
     query,
     body,
@@ -42143,7 +42143,7 @@ async function $do$2(client, id, api_version, body, options) {
       charEncoding: "percent"
     })
   };
-  const path12 = pathToFunc("/{api_version}/webhooks/{id}:ping")(pathParams);
+  const path13 = pathToFunc("/{api_version}/webhooks/{id}:ping")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -42174,7 +42174,7 @@ async function $do$2(client, id, api_version, body, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path12,
+    path: path13,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -42219,7 +42219,7 @@ async function $do$1(client, id, api_version, body, options) {
       charEncoding: "percent"
     })
   };
-  const path12 = pathToFunc("/{api_version}/webhooks/{id}:rotateSigningSecret")(pathParams);
+  const path13 = pathToFunc("/{api_version}/webhooks/{id}:rotateSigningSecret")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -42250,7 +42250,7 @@ async function $do$1(client, id, api_version, body, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path12,
+    path: path13,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -42296,7 +42296,7 @@ async function $do(client, id, api_version, update_mask, body, options) {
       charEncoding: "percent"
     })
   };
-  const path12 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
+  const path13 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
   const query = encodeFormQuery({
     "update_mask": payload.update_mask
   });
@@ -42330,7 +42330,7 @@ async function $do(client, id, api_version, update_mask, body, options) {
     security: requestSecurity,
     method: "PATCH",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path12,
+    path: path13,
     headers,
     query,
     body: body$,
@@ -45450,7 +45450,7 @@ var init_node = __esm({
           params
         );
         const urlParams = body["_url"];
-        const path12 = formatMap("{model}:batchGenerateContent", urlParams);
+        const path13 = formatMap("{model}:batchGenerateContent", urlParams);
         const batch = body["batch"];
         const inputConfig = batch["inputConfig"];
         const requestsWrapper = inputConfig["requests"];
@@ -45471,7 +45471,7 @@ var init_node = __esm({
         delete body["config"];
         delete body["_url"];
         delete body["_query"];
-        return { path: path12, body };
+        return { path: path13, body };
       }
       // Helper function to get the first GCS URI
       getGcsUri(src) {
@@ -45527,16 +45527,16 @@ var init_node = __esm({
       async createInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path12 = "";
+        let path13 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = createBatchJobParametersToVertex(this.apiClient, params);
-          path12 = formatMap("batchPredictionJobs", body["_url"]);
+          path13 = formatMap("batchPredictionJobs", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -45551,12 +45551,12 @@ var init_node = __esm({
           });
         } else {
           const body = createBatchJobParametersToMldev(this.apiClient, params);
-          path12 = formatMap("{model}:batchGenerateContent", body["_url"]);
+          path13 = formatMap("{model}:batchGenerateContent", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -45581,18 +45581,18 @@ var init_node = __esm({
       async createEmbeddingsInternal(params) {
         var _a4, _b;
         let response;
-        let path12 = "";
+        let path13 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = createEmbeddingsBatchJobParametersToMldev(this.apiClient, params);
-          path12 = formatMap("{model}:asyncBatchEmbedContent", body["_url"]);
+          path13 = formatMap("{model}:asyncBatchEmbedContent", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -45621,16 +45621,16 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path12 = "";
+        let path13 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = getBatchJobParametersToVertex(this.apiClient, params);
-          path12 = formatMap("batchPredictionJobs/{name}", body["_url"]);
+          path13 = formatMap("batchPredictionJobs/{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -45645,12 +45645,12 @@ var init_node = __esm({
           });
         } else {
           const body = getBatchJobParametersToMldev(this.apiClient, params);
-          path12 = formatMap("batches/{name}", body["_url"]);
+          path13 = formatMap("batches/{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -45678,16 +45678,16 @@ var init_node = __esm({
        */
       async cancel(params) {
         var _a4, _b, _c, _d;
-        let path12 = "";
+        let path13 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = cancelBatchJobParametersToVertex(this.apiClient, params);
-          path12 = formatMap("batchPredictionJobs/{name}:cancel", body["_url"]);
+          path13 = formatMap("batchPredictionJobs/{name}:cancel", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           await this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -45696,12 +45696,12 @@ var init_node = __esm({
           });
         } else {
           const body = cancelBatchJobParametersToMldev(this.apiClient, params);
-          path12 = formatMap("batches/{name}:cancel", body["_url"]);
+          path13 = formatMap("batches/{name}:cancel", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           await this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -45713,16 +45713,16 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path12 = "";
+        let path13 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = listBatchJobsParametersToVertex(params);
-          path12 = formatMap("batchPredictionJobs", body["_url"]);
+          path13 = formatMap("batchPredictionJobs", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -45745,12 +45745,12 @@ var init_node = __esm({
           });
         } else {
           const body = listBatchJobsParametersToMldev(params);
-          path12 = formatMap("batches", body["_url"]);
+          path13 = formatMap("batches", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -45787,16 +45787,16 @@ var init_node = __esm({
       async delete(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path12 = "";
+        let path13 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = deleteBatchJobParametersToVertex(this.apiClient, params);
-          path12 = formatMap("batchPredictionJobs/{name}", body["_url"]);
+          path13 = formatMap("batchPredictionJobs/{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -45817,12 +45817,12 @@ var init_node = __esm({
           });
         } else {
           const body = deleteBatchJobParametersToMldev(this.apiClient, params);
-          path12 = formatMap("batches/{name}", body["_url"]);
+          path13 = formatMap("batches/{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -45881,16 +45881,16 @@ var init_node = __esm({
       async create(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path12 = "";
+        let path13 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = createCachedContentParametersToVertex(this.apiClient, params);
-          path12 = formatMap("cachedContents", body["_url"]);
+          path13 = formatMap("cachedContents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -45904,12 +45904,12 @@ var init_node = __esm({
           });
         } else {
           const body = createCachedContentParametersToMldev(this.apiClient, params);
-          path12 = formatMap("cachedContents", body["_url"]);
+          path13 = formatMap("cachedContents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -45937,16 +45937,16 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path12 = "";
+        let path13 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = getCachedContentParametersToVertex(this.apiClient, params);
-          path12 = formatMap("{name}", body["_url"]);
+          path13 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -45960,12 +45960,12 @@ var init_node = __esm({
           });
         } else {
           const body = getCachedContentParametersToMldev(this.apiClient, params);
-          path12 = formatMap("{name}", body["_url"]);
+          path13 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -45993,16 +45993,16 @@ var init_node = __esm({
       async delete(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path12 = "";
+        let path13 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = deleteCachedContentParametersToVertex(this.apiClient, params);
-          path12 = formatMap("{name}", body["_url"]);
+          path13 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -46025,12 +46025,12 @@ var init_node = __esm({
           });
         } else {
           const body = deleteCachedContentParametersToMldev(this.apiClient, params);
-          path12 = formatMap("{name}", body["_url"]);
+          path13 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -46070,16 +46070,16 @@ var init_node = __esm({
       async update(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path12 = "";
+        let path13 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = updateCachedContentParametersToVertex(this.apiClient, params);
-          path12 = formatMap("{name}", body["_url"]);
+          path13 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "PATCH",
@@ -46093,12 +46093,12 @@ var init_node = __esm({
           });
         } else {
           const body = updateCachedContentParametersToMldev(this.apiClient, params);
-          path12 = formatMap("{name}", body["_url"]);
+          path13 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "PATCH",
@@ -46115,16 +46115,16 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path12 = "";
+        let path13 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = listCachedContentsParametersToVertex(params);
-          path12 = formatMap("cachedContents", body["_url"]);
+          path13 = formatMap("cachedContents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -46147,12 +46147,12 @@ var init_node = __esm({
           });
         } else {
           const body = listCachedContentsParametersToMldev(params);
-          path12 = formatMap("cachedContents", body["_url"]);
+          path13 = formatMap("cachedContents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -46483,18 +46483,18 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b;
         let response;
-        let path12 = "";
+        let path13 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = listFilesParametersToMldev(params);
-          path12 = formatMap("files", body["_url"]);
+          path13 = formatMap("files", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -46520,18 +46520,18 @@ var init_node = __esm({
       async createInternal(params) {
         var _a4, _b;
         let response;
-        let path12 = "";
+        let path13 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = createFileParametersToMldev(params);
-          path12 = formatMap("upload/v1beta/files", body["_url"]);
+          path13 = formatMap("upload/v1beta/files", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -46566,18 +46566,18 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b;
         let response;
-        let path12 = "";
+        let path13 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = getFileParametersToMldev(params);
-          path12 = formatMap("files/{file}", body["_url"]);
+          path13 = formatMap("files/{file}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -46607,18 +46607,18 @@ var init_node = __esm({
       async delete(params) {
         var _a4, _b;
         let response;
-        let path12 = "";
+        let path13 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = deleteFileParametersToMldev(params);
-          path12 = formatMap("files/{file}", body["_url"]);
+          path13 = formatMap("files/{file}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -46644,18 +46644,18 @@ var init_node = __esm({
       async registerFilesInternal(params) {
         var _a4, _b;
         let response;
-        let path12 = "";
+        let path13 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = internalRegisterFilesParametersToMldev(params);
-          path12 = formatMap("files:register", body["_url"]);
+          path13 = formatMap("files:register", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -46811,13 +46811,13 @@ var init_node = __esm({
           throw new Error("HTTP options are not correctly set.");
         }
       }
-      constructUrl(path12, httpOptions, prependProjectLocation) {
+      constructUrl(path13, httpOptions, prependProjectLocation) {
         const urlElement = [this.getRequestUrlInternal(httpOptions)];
         if (prependProjectLocation) {
           urlElement.push(this.getBaseResourcePath());
         }
-        if (path12 !== "") {
-          urlElement.push(path12);
+        if (path13 !== "") {
+          urlElement.push(path13);
         }
         const url = new URL(`${urlElement.join("/")}`);
         return url;
@@ -47110,8 +47110,8 @@ var init_node = __esm({
           file: fileToUpload
         };
         const fileName = this.getFileName(file);
-        const path12 = formatMap("upload/v1beta/files", body["_url"]);
-        const uploadUrl = await this.fetchUploadUrl(path12, fileToUpload.sizeBytes, fileToUpload.mimeType, fileName, body, config3 === null || config3 === void 0 ? void 0 : config3.httpOptions);
+        const path13 = formatMap("upload/v1beta/files", body["_url"]);
+        const uploadUrl = await this.fetchUploadUrl(path13, fileToUpload.sizeBytes, fileToUpload.mimeType, fileName, body, config3 === null || config3 === void 0 ? void 0 : config3.httpOptions);
         return uploader.upload(file, uploadUrl, this);
       }
       /**
@@ -47135,13 +47135,13 @@ var init_node = __esm({
         if (mimeType === void 0 || mimeType === "") {
           throw new Error("Can not determine mimeType. Please provide mimeType in the config.");
         }
-        const path12 = `upload/v1beta/${fileSearchStoreName}:uploadToFileSearchStore`;
+        const path13 = `upload/v1beta/${fileSearchStoreName}:uploadToFileSearchStore`;
         const fileName = this.getFileName(file);
         const body = {};
         if (config3 != null) {
           uploadToFileSearchStoreConfigToMldev(config3, body);
         }
-        const uploadUrl = await this.fetchUploadUrl(path12, sizeBytes, mimeType, fileName, body, config3 === null || config3 === void 0 ? void 0 : config3.httpOptions);
+        const uploadUrl = await this.fetchUploadUrl(path13, sizeBytes, mimeType, fileName, body, config3 === null || config3 === void 0 ? void 0 : config3.httpOptions);
         return uploader.uploadToFileSearchStore(file, uploadUrl, this);
       }
       /**
@@ -47154,7 +47154,7 @@ var init_node = __esm({
         const downloader = this.clientOptions.downloader;
         await downloader.download(params, this);
       }
-      async fetchUploadUrl(path12, sizeBytes, mimeType, fileName, body, configHttpOptions) {
+      async fetchUploadUrl(path13, sizeBytes, mimeType, fileName, body, configHttpOptions) {
         var _a4;
         let httpOptions = {};
         if (configHttpOptions) {
@@ -47167,7 +47167,7 @@ var init_node = __esm({
           };
         }
         const httpResponse = await this.request({
-          path: path12,
+          path: path13,
           body: JSON.stringify(body),
           httpMethod: "POST",
           httpOptions
@@ -48181,16 +48181,16 @@ var init_node = __esm({
       async generateContentInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path12 = "";
+        let path13 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = generateContentParametersToVertex(this.apiClient, params);
-          path12 = formatMap("{model}:generateContent", body["_url"]);
+          path13 = formatMap("{model}:generateContent", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48213,12 +48213,12 @@ var init_node = __esm({
           });
         } else {
           const body = generateContentParametersToMldev(this.apiClient, params);
-          path12 = formatMap("{model}:generateContent", body["_url"]);
+          path13 = formatMap("{model}:generateContent", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48244,17 +48244,17 @@ var init_node = __esm({
       async generateContentStreamInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path12 = "";
+        let path13 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = generateContentParametersToVertex(this.apiClient, params);
-          path12 = formatMap("{model}:streamGenerateContent?alt=sse", body["_url"]);
+          path13 = formatMap("{model}:streamGenerateContent?alt=sse", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           const apiClient = this.apiClient;
           response = apiClient.requestStream({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48290,13 +48290,13 @@ var init_node = __esm({
           });
         } else {
           const body = generateContentParametersToMldev(this.apiClient, params);
-          path12 = formatMap("{model}:streamGenerateContent?alt=sse", body["_url"]);
+          path13 = formatMap("{model}:streamGenerateContent?alt=sse", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           const apiClient = this.apiClient;
           response = apiClient.requestStream({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48356,17 +48356,17 @@ var init_node = __esm({
       async embedContentInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path12 = "";
+        let path13 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = embedContentParametersPrivateToVertex(this.apiClient, params, params);
           const endpointUrl = tIsVertexEmbedContentModel(params.model) ? "{model}:embedContent" : "{model}:predict";
-          path12 = formatMap(endpointUrl, body["_url"]);
+          path13 = formatMap(endpointUrl, body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48389,12 +48389,12 @@ var init_node = __esm({
           });
         } else {
           const body = embedContentParametersPrivateToMldev(this.apiClient, params);
-          path12 = formatMap("{model}:batchEmbedContents", body["_url"]);
+          path13 = formatMap("{model}:batchEmbedContents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48423,16 +48423,16 @@ var init_node = __esm({
       async generateImagesInternal(params) {
         var _a4, _b;
         let response;
-        let path12 = "";
+        let path13 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = generateImagesParametersToVertex(this.apiClient, params);
-          path12 = formatMap("{model}:predict", body["_url"]);
+          path13 = formatMap("{model}:predict", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48463,16 +48463,16 @@ var init_node = __esm({
       async editImageInternal(params) {
         var _a4, _b;
         let response;
-        let path12 = "";
+        let path13 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = editImageParametersInternalToVertex(this.apiClient, params);
-          path12 = formatMap("{model}:predict", body["_url"]);
+          path13 = formatMap("{model}:predict", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48503,16 +48503,16 @@ var init_node = __esm({
       async upscaleImageInternal(params) {
         var _a4, _b;
         let response;
-        let path12 = "";
+        let path13 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = upscaleImageAPIParametersInternalToVertex(this.apiClient, params);
-          path12 = formatMap("{model}:predict", body["_url"]);
+          path13 = formatMap("{model}:predict", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48564,16 +48564,16 @@ var init_node = __esm({
       async recontextImage(params) {
         var _a4, _b;
         let response;
-        let path12 = "";
+        let path13 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = recontextImageParametersToVertex(this.apiClient, params);
-          path12 = formatMap("{model}:predict", body["_url"]);
+          path13 = formatMap("{model}:predict", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48615,16 +48615,16 @@ var init_node = __esm({
       async segmentImage(params) {
         var _a4, _b;
         let response;
-        let path12 = "";
+        let path13 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = segmentImageParametersToVertex(this.apiClient, params);
-          path12 = formatMap("{model}:predict", body["_url"]);
+          path13 = formatMap("{model}:predict", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48654,16 +48654,16 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path12 = "";
+        let path13 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = getModelParametersToVertex(this.apiClient, params);
-          path12 = formatMap("{name}", body["_url"]);
+          path13 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -48678,12 +48678,12 @@ var init_node = __esm({
           });
         } else {
           const body = getModelParametersToMldev(this.apiClient, params);
-          path12 = formatMap("{name}", body["_url"]);
+          path13 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -48701,16 +48701,16 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path12 = "";
+        let path13 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = listModelsParametersToVertex(this.apiClient, params);
-          path12 = formatMap("{models_url}", body["_url"]);
+          path13 = formatMap("{models_url}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -48733,12 +48733,12 @@ var init_node = __esm({
           });
         } else {
           const body = listModelsParametersToMldev(this.apiClient, params);
-          path12 = formatMap("{models_url}", body["_url"]);
+          path13 = formatMap("{models_url}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -48781,16 +48781,16 @@ var init_node = __esm({
       async update(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path12 = "";
+        let path13 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = updateModelParametersToVertex(this.apiClient, params);
-          path12 = formatMap("{model}", body["_url"]);
+          path13 = formatMap("{model}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "PATCH",
@@ -48805,12 +48805,12 @@ var init_node = __esm({
           });
         } else {
           const body = updateModelParametersToMldev(this.apiClient, params);
-          path12 = formatMap("{name}", body["_url"]);
+          path13 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "PATCH",
@@ -48839,16 +48839,16 @@ var init_node = __esm({
       async delete(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path12 = "";
+        let path13 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = deleteModelParametersToVertex(this.apiClient, params);
-          path12 = formatMap("{name}", body["_url"]);
+          path13 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -48871,12 +48871,12 @@ var init_node = __esm({
           });
         } else {
           const body = deleteModelParametersToMldev(this.apiClient, params);
-          path12 = formatMap("{name}", body["_url"]);
+          path13 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -48918,16 +48918,16 @@ var init_node = __esm({
       async countTokens(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path12 = "";
+        let path13 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = countTokensParametersToVertex(this.apiClient, params);
-          path12 = formatMap("{model}:countTokens", body["_url"]);
+          path13 = formatMap("{model}:countTokens", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48950,12 +48950,12 @@ var init_node = __esm({
           });
         } else {
           const body = countTokensParametersToMldev(this.apiClient, params);
-          path12 = formatMap("{model}:countTokens", body["_url"]);
+          path13 = formatMap("{model}:countTokens", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48999,16 +48999,16 @@ var init_node = __esm({
       async computeTokens(params) {
         var _a4, _b;
         let response;
-        let path12 = "";
+        let path13 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = computeTokensParametersToVertex(this.apiClient, params);
-          path12 = formatMap("{model}:computeTokens", body["_url"]);
+          path13 = formatMap("{model}:computeTokens", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -49039,16 +49039,16 @@ var init_node = __esm({
       async generateVideosInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path12 = "";
+        let path13 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = generateVideosParametersToVertex(this.apiClient, params);
-          path12 = formatMap("{model}:predictLongRunning", body["_url"]);
+          path13 = formatMap("{model}:predictLongRunning", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -49065,12 +49065,12 @@ var init_node = __esm({
           });
         } else {
           const body = generateVideosParametersToMldev(this.apiClient, params);
-          path12 = formatMap("{model}:predictLongRunning", body["_url"]);
+          path13 = formatMap("{model}:predictLongRunning", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -49175,16 +49175,16 @@ var init_node = __esm({
       async getVideosOperationInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path12 = "";
+        let path13 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = getOperationParametersToVertex(params);
-          path12 = formatMap("{operationName}", body["_url"]);
+          path13 = formatMap("{operationName}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -49196,12 +49196,12 @@ var init_node = __esm({
           return response;
         } else {
           const body = getOperationParametersToMldev(params);
-          path12 = formatMap("{operationName}", body["_url"]);
+          path13 = formatMap("{operationName}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -49216,16 +49216,16 @@ var init_node = __esm({
       async fetchPredictVideosOperationInternal(params) {
         var _a4, _b;
         let response;
-        let path12 = "";
+        let path13 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = fetchPredictOperationParametersToVertex(params);
-          path12 = formatMap("{resourceName}:fetchPredictOperation", body["_url"]);
+          path13 = formatMap("{resourceName}:fetchPredictOperation", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -49331,20 +49331,20 @@ var init_node = __esm({
       async create(params) {
         var _a4, _b;
         let response;
-        let path12 = "";
+        let path13 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("The client.tokens.create method is only supported by the Gemini Developer API.");
         } else {
           const body = createAuthTokenParametersToMldev(this.apiClient, params);
-          path12 = formatMap("auth_tokens", body["_url"]);
+          path13 = formatMap("auth_tokens", body["_url"]);
           queryParams = body["_query"];
           delete body["config"];
           delete body["_url"];
           delete body["_query"];
           const transformedBody = convertBidiSetupToTokenSetup(body, params.config);
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(transformedBody),
             httpMethod: "POST",
@@ -49376,18 +49376,18 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b;
         let response;
-        let path12 = "";
+        let path13 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = getDocumentParametersToMldev(params);
-          path12 = formatMap("{name}", body["_url"]);
+          path13 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -49408,18 +49408,18 @@ var init_node = __esm({
        */
       async delete(params) {
         var _a4, _b;
-        let path12 = "";
+        let path13 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = deleteDocumentParametersToMldev(params);
-          path12 = formatMap("{name}", body["_url"]);
+          path13 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           await this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -49431,18 +49431,18 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b;
         let response;
-        let path12 = "";
+        let path13 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = listDocumentsParametersToMldev(params);
-          path12 = formatMap("{parent}/documents", body["_url"]);
+          path13 = formatMap("{parent}/documents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -49559,18 +49559,18 @@ var init_node = __esm({
       async create(params) {
         var _a4, _b;
         let response;
-        let path12 = "";
+        let path13 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = createFileSearchStoreParametersToMldev(this.apiClient, params);
-          path12 = formatMap("fileSearchStores", body["_url"]);
+          path13 = formatMap("fileSearchStores", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -49593,18 +49593,18 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b;
         let response;
-        let path12 = "";
+        let path13 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = getFileSearchStoreParametersToMldev(params);
-          path12 = formatMap("{name}", body["_url"]);
+          path13 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -49625,18 +49625,18 @@ var init_node = __esm({
        */
       async delete(params) {
         var _a4, _b;
-        let path12 = "";
+        let path13 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = deleteFileSearchStoreParametersToMldev(params);
-          path12 = formatMap("{name}", body["_url"]);
+          path13 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           await this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -49648,18 +49648,18 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b;
         let response;
-        let path12 = "";
+        let path13 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = listFileSearchStoresParametersToMldev(params);
-          path12 = formatMap("fileSearchStores", body["_url"]);
+          path13 = formatMap("fileSearchStores", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -49679,18 +49679,18 @@ var init_node = __esm({
       async uploadToFileSearchStoreInternal(params) {
         var _a4, _b;
         let response;
-        let path12 = "";
+        let path13 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = uploadToFileSearchStoreParametersToMldev(params);
-          path12 = formatMap("upload/v1beta/{file_search_store_name}:uploadToFileSearchStore", body["_url"]);
+          path13 = formatMap("upload/v1beta/{file_search_store_name}:uploadToFileSearchStore", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -49718,18 +49718,18 @@ var init_node = __esm({
       async importFile(params) {
         var _a4, _b;
         let response;
-        let path12 = "";
+        let path13 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = importFileParametersToMldev(params);
-          path12 = formatMap("{file_search_store_name}:importFile", body["_url"]);
+          path13 = formatMap("{file_search_store_name}:importFile", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -50173,16 +50173,16 @@ var init_node = __esm({
       }
       _createRequest(context, conf, options) {
         var _a4, _b, _c, _d, _e;
-        const { method, path: path12, query, headers: opHeaders, security } = conf;
+        const { method, path: path13, query, headers: opHeaders, security } = conf;
         const base = (_a4 = conf.baseURL) !== null && _a4 !== void 0 ? _a4 : this._baseURL;
         if (!base) {
           return ERR(new InvalidRequestError("No base URL provided for operation"));
         }
         const baseURL = new URL(base);
         let reqURL;
-        if (path12) {
+        if (path13) {
           baseURL.pathname = baseURL.pathname.replace(/\/+$/, "") + "/";
-          reqURL = new URL(path12, baseURL);
+          reqURL = new URL(path13, baseURL);
           if (!reqURL.search && baseURL.search) {
             reqURL.search = baseURL.search;
           }
@@ -50594,8 +50594,8 @@ var init_node = __esm({
       /**
        * Retrieves file metadata or directory contents from an environment's snapshot. To download file contents directly, pass ?alt=media or use the files.download helper.
        */
-      list(environment, path12, params, options) {
-        return unwrapAsAPIPromise(environmentsFilesList(this, environment, path12, params === null || params === void 0 ? void 0 : params.api_version, params === null || params === void 0 ? void 0 : params.page_size, params === null || params === void 0 ? void 0 : params.page_token, params === null || params === void 0 ? void 0 : params.recursive, options));
+      list(environment, path13, params, options) {
+        return unwrapAsAPIPromise(environmentsFilesList(this, environment, path13, params === null || params === void 0 ? void 0 : params.api_version, params === null || params === void 0 ? void 0 : params.page_size, params === null || params === void 0 ? void 0 : params.page_token, params === null || params === void 0 ? void 0 : params.recursive, options));
       }
     };
     Environments = class extends ClientSDK {
@@ -51003,8 +51003,8 @@ var init_node = __esm({
         this.resolveClient = resolveClient;
       }
       async list(params, options) {
-        const { environment, path: path12, page_size, page_token, recursive, api_version } = params;
-        return unwrapWithSdkHttpResponse(environmentsFilesList(this.resolveClient(api_version), environment, path12, api_version, page_size, page_token, recursive, toGoogleGenAIRequestOptions(options)));
+        const { environment, path: path13, page_size, page_token, recursive, api_version } = params;
+        return unwrapWithSdkHttpResponse(environmentsFilesList(this.resolveClient(api_version), environment, path13, api_version, page_size, page_token, recursive, toGoogleGenAIRequestOptions(options)));
       }
     };
     GeminiNextGenEnvironments = class {
@@ -51179,16 +51179,16 @@ var init_node = __esm({
       async getInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path12 = "";
+        let path13 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = getTuningJobParametersToVertex(params);
-          path12 = formatMap("{name}", body["_url"]);
+          path13 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -51209,12 +51209,12 @@ var init_node = __esm({
           });
         } else {
           const body = getTuningJobParametersToMldev(params);
-          path12 = formatMap("{name}", body["_url"]);
+          path13 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -51238,16 +51238,16 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b;
         let response;
-        let path12 = "";
+        let path13 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = listTuningJobsParametersToVertex(params);
-          path12 = formatMap("tuningJobs", body["_url"]);
+          path13 = formatMap("tuningJobs", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -51286,16 +51286,16 @@ var init_node = __esm({
       async cancel(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path12 = "";
+        let path13 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = cancelTuningJobParametersToVertex(params);
-          path12 = formatMap("{name}:cancel", body["_url"]);
+          path13 = formatMap("{name}:cancel", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -51318,12 +51318,12 @@ var init_node = __esm({
           });
         } else {
           const body = cancelTuningJobParametersToMldev(params);
-          path12 = formatMap("{name}:cancel", body["_url"]);
+          path13 = formatMap("{name}:cancel", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -51349,16 +51349,16 @@ var init_node = __esm({
       async tuneInternal(params) {
         var _a4, _b;
         let response;
-        let path12 = "";
+        let path13 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = createTuningJobParametersPrivateToVertex(params, params);
-          path12 = formatMap("tuningJobs", body["_url"]);
+          path13 = formatMap("tuningJobs", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -51384,18 +51384,18 @@ var init_node = __esm({
       async tuneMldevInternal(params) {
         var _a4, _b;
         let response;
-        let path12 = "";
+        let path13 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = createTuningJobParametersPrivateToMldev(params);
-          path12 = formatMap("tunedModels", body["_url"]);
+          path13 = formatMap("tunedModels", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -51419,16 +51419,16 @@ var init_node = __esm({
       async validateReward(params) {
         var _a4, _b;
         let response;
-        let path12 = "";
+        let path13 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = validateRewardParametersToVertex(params);
-          path12 = formatMap("{parent}/tuningJobs:validateReinforcementTuningReward", body["_url"]);
+          path13 = formatMap("{parent}/tuningJobs:validateReinforcementTuningReward", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path12,
+            path: path13,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -51824,13 +51824,13 @@ var require_tts_speed_policy = __commonJS({
   "../skills/produce/references/tts-speed-policy.js"(exports, module) {
     "use strict";
     var fs9 = __require("node:fs");
-    var path12 = __require("node:path");
+    var path13 = __require("node:path");
     function authorizeSpeed4(work, scope, factor) {
       if (!["generation", "final"].includes(scope) || !Number.isFinite(factor) || factor < 0.5 || factor > 3) {
         throw new Error("Invalid TTS speed scope or factor");
       }
       if (factor === 1) return null;
-      const file = path12.resolve(work, "speed-authorization.json");
+      const file = path13.resolve(work, "speed-authorization.json");
       let record2;
       try {
         record2 = JSON.parse(fs9.readFileSync(file, "utf8"));
@@ -54033,17 +54033,17 @@ var init_resource = __esm({
 function encodeURIPath(str8) {
   return str8.replace(/[^A-Za-z0-9\-._~!$&'()*+,;=:@]+/g, encodeURIComponent);
 }
-var EMPTY, createPathTagFunction, path9;
+var EMPTY, createPathTagFunction, path10;
 var init_path = __esm({
   "node_modules/openai/internal/utils/path.mjs"() {
     init_error();
     EMPTY = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.create(null));
-    createPathTagFunction = (pathEncoder = encodeURIPath) => function path12(statics, ...params) {
+    createPathTagFunction = (pathEncoder = encodeURIPath) => function path13(statics, ...params) {
       if (statics.length === 1)
         return statics[0];
       let postPath = false;
       const invalidSegments = [];
-      const path13 = statics.reduce((previousValue, currentValue, index) => {
+      const path14 = statics.reduce((previousValue, currentValue, index) => {
         if (/[?#]/.test(currentValue)) {
           postPath = true;
         }
@@ -54060,7 +54060,7 @@ var init_path = __esm({
         }
         return previousValue + currentValue + (index === params.length ? "" : encoded);
       }, "");
-      const pathOnly = path13.split(/[?#]/, 1)[0];
+      const pathOnly = path14.split(/[?#]/, 1)[0];
       const invalidSegmentPattern = /(?<=^|\/)(?:\.|%2e){1,2}(?=\/|$)/gi;
       let match2;
       while ((match2 = invalidSegmentPattern.exec(pathOnly)) !== null) {
@@ -54081,12 +54081,12 @@ var init_path = __esm({
         }, "");
         throw new OpenAIError(`Path parameters result in path with invalid segments:
 ${invalidSegments.map((e2) => e2.error).join("\n")}
-${path13}
+${path14}
 ${underline}`);
       }
-      return path13;
+      return path14;
     };
-    path9 = /* @__PURE__ */ createPathTagFunction(encodeURIPath);
+    path10 = /* @__PURE__ */ createPathTagFunction(encodeURIPath);
   }
 });
 
@@ -54113,7 +54113,7 @@ var init_messages = __esm({
        * ```
        */
       list(completionID, query = {}, options) {
-        return this._client.getAPIList(path9`/chat/completions/${completionID}/messages`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path10`/chat/completions/${completionID}/messages`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
       }
     };
   }
@@ -55851,7 +55851,7 @@ var init_completions = __esm({
        * ```
        */
       retrieve(completionID, options) {
-        return this._client.get(path9`/chat/completions/${completionID}`, {
+        return this._client.get(path10`/chat/completions/${completionID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -55870,7 +55870,7 @@ var init_completions = __esm({
        * ```
        */
       update(completionID, body, options) {
-        return this._client.post(path9`/chat/completions/${completionID}`, {
+        return this._client.post(path10`/chat/completions/${completionID}`, {
           body,
           ...options,
           __security: { bearerAuth: true }
@@ -55906,7 +55906,7 @@ var init_completions = __esm({
        * ```
        */
       delete(completionID, options) {
-        return this._client.delete(path9`/chat/completions/${completionID}`, {
+        return this._client.delete(path10`/chat/completions/${completionID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -56016,7 +56016,7 @@ var init_admin_api_keys = __esm({
        * ```
        */
       retrieve(keyID, options) {
-        return this._client.get(path9`/organization/admin_api_keys/${keyID}`, {
+        return this._client.get(path10`/organization/admin_api_keys/${keyID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56051,7 +56051,7 @@ var init_admin_api_keys = __esm({
        * ```
        */
       delete(keyID, options) {
-        return this._client.delete(path9`/organization/admin_api_keys/${keyID}`, {
+        return this._client.delete(path10`/organization/admin_api_keys/${keyID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56132,7 +56132,7 @@ var init_certificates = __esm({
        * ```
        */
       retrieve(certificateID, query = {}, options) {
-        return this._client.get(path9`/organization/certificates/${certificateID}`, {
+        return this._client.get(path10`/organization/certificates/${certificateID}`, {
           query,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -56150,7 +56150,7 @@ var init_certificates = __esm({
        * ```
        */
       update(certificateID, body, options) {
-        return this._client.post(path9`/organization/certificates/${certificateID}`, {
+        return this._client.post(path10`/organization/certificates/${certificateID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -56184,7 +56184,7 @@ var init_certificates = __esm({
        * ```
        */
       delete(certificateID, options) {
-        return this._client.delete(path9`/organization/certificates/${certificateID}`, {
+        return this._client.delete(path10`/organization/certificates/${certificateID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56317,7 +56317,7 @@ var init_invites = __esm({
        * ```
        */
       retrieve(inviteID, options) {
-        return this._client.get(path9`/organization/invites/${inviteID}`, {
+        return this._client.get(path10`/organization/invites/${inviteID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56352,7 +56352,7 @@ var init_invites = __esm({
        * ```
        */
       delete(inviteID, options) {
-        return this._client.delete(path9`/organization/invites/${inviteID}`, {
+        return this._client.delete(path10`/organization/invites/${inviteID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56398,7 +56398,7 @@ var init_roles = __esm({
        * ```
        */
       retrieve(roleID, options) {
-        return this._client.get(path9`/organization/roles/${roleID}`, {
+        return this._client.get(path10`/organization/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56414,7 +56414,7 @@ var init_roles = __esm({
        * ```
        */
       update(roleID, body, options) {
-        return this._client.post(path9`/organization/roles/${roleID}`, {
+        return this._client.post(path10`/organization/roles/${roleID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -56449,7 +56449,7 @@ var init_roles = __esm({
        * ```
        */
       delete(roleID, options) {
-        return this._client.delete(path9`/organization/roles/${roleID}`, {
+        return this._client.delete(path10`/organization/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56502,7 +56502,7 @@ var init_spend_alerts = __esm({
        * ```
        */
       retrieve(alertID, options) {
-        return this._client.get(path9`/organization/spend_alerts/${alertID}`, {
+        return this._client.get(path10`/organization/spend_alerts/${alertID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56528,7 +56528,7 @@ var init_spend_alerts = __esm({
        * ```
        */
       update(alertID, body, options) {
-        return this._client.post(path9`/organization/spend_alerts/${alertID}`, {
+        return this._client.post(path10`/organization/spend_alerts/${alertID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -56560,7 +56560,7 @@ var init_spend_alerts = __esm({
        * ```
        */
       delete(alertID, options) {
-        return this._client.delete(path9`/organization/spend_alerts/${alertID}`, {
+        return this._client.delete(path10`/organization/spend_alerts/${alertID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56858,7 +56858,7 @@ var init_roles2 = __esm({
        * ```
        */
       create(groupID, body, options) {
-        return this._client.post(path9`/organization/groups/${groupID}/roles`, {
+        return this._client.post(path10`/organization/groups/${groupID}/roles`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -56878,7 +56878,7 @@ var init_roles2 = __esm({
        */
       retrieve(roleID, params, options) {
         const { group_id } = params;
-        return this._client.get(path9`/organization/groups/${group_id}/roles/${roleID}`, {
+        return this._client.get(path10`/organization/groups/${group_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56897,7 +56897,7 @@ var init_roles2 = __esm({
        * ```
        */
       list(groupID, query = {}, options) {
-        return this._client.getAPIList(path9`/organization/groups/${groupID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path10`/organization/groups/${groupID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Unassigns an organization role from a group within the organization.
@@ -56913,7 +56913,7 @@ var init_roles2 = __esm({
        */
       delete(roleID, params, options) {
         const { group_id } = params;
-        return this._client.delete(path9`/organization/groups/${group_id}/roles/${roleID}`, {
+        return this._client.delete(path10`/organization/groups/${group_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56943,7 +56943,7 @@ var init_users = __esm({
        * ```
        */
       create(groupID, body, options) {
-        return this._client.post(path9`/organization/groups/${groupID}/users`, {
+        return this._client.post(path10`/organization/groups/${groupID}/users`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -56963,7 +56963,7 @@ var init_users = __esm({
        */
       retrieve(userID, params, options) {
         const { group_id } = params;
-        return this._client.get(path9`/organization/groups/${group_id}/users/${userID}`, {
+        return this._client.get(path10`/organization/groups/${group_id}/users/${userID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56982,7 +56982,7 @@ var init_users = __esm({
        * ```
        */
       list(groupID, query = {}, options) {
-        return this._client.getAPIList(path9`/organization/groups/${groupID}/users`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path10`/organization/groups/${groupID}/users`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Removes a user from a group.
@@ -56998,7 +56998,7 @@ var init_users = __esm({
        */
       delete(userID, params, options) {
         const { group_id } = params;
-        return this._client.delete(path9`/organization/groups/${group_id}/users/${userID}`, {
+        return this._client.delete(path10`/organization/groups/${group_id}/users/${userID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57053,7 +57053,7 @@ var init_groups = __esm({
        * ```
        */
       retrieve(groupID, options) {
-        return this._client.get(path9`/organization/groups/${groupID}`, {
+        return this._client.get(path10`/organization/groups/${groupID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57070,7 +57070,7 @@ var init_groups = __esm({
        * ```
        */
       update(groupID, body, options) {
-        return this._client.post(path9`/organization/groups/${groupID}`, {
+        return this._client.post(path10`/organization/groups/${groupID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57105,7 +57105,7 @@ var init_groups = __esm({
        * ```
        */
       delete(groupID, options) {
-        return this._client.delete(path9`/organization/groups/${groupID}`, {
+        return this._client.delete(path10`/organization/groups/${groupID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57138,7 +57138,7 @@ var init_api_keys = __esm({
        */
       retrieve(apiKeyID, params, options) {
         const { project_id } = params;
-        return this._client.get(path9`/organization/projects/${project_id}/api_keys/${apiKeyID}`, {
+        return this._client.get(path10`/organization/projects/${project_id}/api_keys/${apiKeyID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57157,7 +57157,7 @@ var init_api_keys = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path9`/organization/projects/${projectID}/api_keys`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path10`/organization/projects/${projectID}/api_keys`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Deletes an API key from the project.
@@ -57176,7 +57176,7 @@ var init_api_keys = __esm({
        */
       delete(apiKeyID, params, options) {
         const { project_id } = params;
-        return this._client.delete(path9`/organization/projects/${project_id}/api_keys/${apiKeyID}`, {
+        return this._client.delete(path10`/organization/projects/${project_id}/api_keys/${apiKeyID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57207,7 +57207,7 @@ var init_certificates2 = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path9`/organization/projects/${projectID}/certificates`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path10`/organization/projects/${projectID}/certificates`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Activate certificates at the project level.
@@ -57226,7 +57226,7 @@ var init_certificates2 = __esm({
        * ```
        */
       activate(projectID, body, options) {
-        return this._client.getAPIList(path9`/organization/projects/${projectID}/certificates/activate`, Page, { body, method: "post", ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path10`/organization/projects/${projectID}/certificates/activate`, Page, { body, method: "post", ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Deactivate certificates at the project level. You can atomically and
@@ -57244,7 +57244,7 @@ var init_certificates2 = __esm({
        * ```
        */
       deactivate(projectID, body, options) {
-        return this._client.getAPIList(path9`/organization/projects/${projectID}/certificates/deactivate`, Page, { body, method: "post", ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path10`/organization/projects/${projectID}/certificates/deactivate`, Page, { body, method: "post", ...options, __security: { adminAPIKeyAuth: true } });
       }
     };
   }
@@ -57269,7 +57269,7 @@ var init_data_retention2 = __esm({
        * ```
        */
       retrieve(projectID, options) {
-        return this._client.get(path9`/organization/projects/${projectID}/data_retention`, {
+        return this._client.get(path10`/organization/projects/${projectID}/data_retention`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57287,7 +57287,7 @@ var init_data_retention2 = __esm({
        * ```
        */
       update(projectID, body, options) {
-        return this._client.post(path9`/organization/projects/${projectID}/data_retention`, {
+        return this._client.post(path10`/organization/projects/${projectID}/data_retention`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57316,7 +57316,7 @@ var init_hosted_tool_permissions = __esm({
        * ```
        */
       retrieve(projectID, options) {
-        return this._client.get(path9`/organization/projects/${projectID}/hosted_tool_permissions`, {
+        return this._client.get(path10`/organization/projects/${projectID}/hosted_tool_permissions`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57333,7 +57333,7 @@ var init_hosted_tool_permissions = __esm({
        * ```
        */
       update(projectID, body, options) {
-        return this._client.post(path9`/organization/projects/${projectID}/hosted_tool_permissions`, {
+        return this._client.post(path10`/organization/projects/${projectID}/hosted_tool_permissions`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57362,7 +57362,7 @@ var init_model_permissions = __esm({
        * ```
        */
       retrieve(projectID, options) {
-        return this._client.get(path9`/organization/projects/${projectID}/model_permissions`, {
+        return this._client.get(path10`/organization/projects/${projectID}/model_permissions`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57380,7 +57380,7 @@ var init_model_permissions = __esm({
        * ```
        */
       update(projectID, body, options) {
-        return this._client.post(path9`/organization/projects/${projectID}/model_permissions`, {
+        return this._client.post(path10`/organization/projects/${projectID}/model_permissions`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57398,7 +57398,7 @@ var init_model_permissions = __esm({
        * ```
        */
       delete(projectID, options) {
-        return this._client.delete(path9`/organization/projects/${projectID}/model_permissions`, {
+        return this._client.delete(path10`/organization/projects/${projectID}/model_permissions`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57429,7 +57429,7 @@ var init_rate_limits = __esm({
        * ```
        */
       listRateLimits(projectID, query = {}, options) {
-        return this._client.getAPIList(path9`/organization/projects/${projectID}/rate_limits`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path10`/organization/projects/${projectID}/rate_limits`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Updates a project rate limit.
@@ -57445,7 +57445,7 @@ var init_rate_limits = __esm({
        */
       updateRateLimit(rateLimitID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path9`/organization/projects/${project_id}/rate_limits/${rateLimitID}`, {
+        return this._client.post(path10`/organization/projects/${project_id}/rate_limits/${rateLimitID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57476,7 +57476,7 @@ var init_roles3 = __esm({
        * ```
        */
       create(projectID, body, options) {
-        return this._client.post(path9`/projects/${projectID}/roles`, {
+        return this._client.post(path10`/projects/${projectID}/roles`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57496,7 +57496,7 @@ var init_roles3 = __esm({
        */
       retrieve(roleID, params, options) {
         const { project_id } = params;
-        return this._client.get(path9`/projects/${project_id}/roles/${roleID}`, {
+        return this._client.get(path10`/projects/${project_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57515,7 +57515,7 @@ var init_roles3 = __esm({
        */
       update(roleID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path9`/projects/${project_id}/roles/${roleID}`, {
+        return this._client.post(path10`/projects/${project_id}/roles/${roleID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57535,7 +57535,7 @@ var init_roles3 = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path9`/projects/${projectID}/roles`, NextCursorPage, {
+        return this._client.getAPIList(path10`/projects/${projectID}/roles`, NextCursorPage, {
           query,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57555,7 +57555,7 @@ var init_roles3 = __esm({
        */
       delete(roleID, params, options) {
         const { project_id } = params;
-        return this._client.delete(path9`/projects/${project_id}/roles/${roleID}`, {
+        return this._client.delete(path10`/projects/${project_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57593,7 +57593,7 @@ var init_spend_alerts2 = __esm({
        * ```
        */
       create(projectID, body, options) {
-        return this._client.post(path9`/organization/projects/${projectID}/spend_alerts`, {
+        return this._client.post(path10`/organization/projects/${projectID}/spend_alerts`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57613,7 +57613,7 @@ var init_spend_alerts2 = __esm({
        */
       retrieve(alertID, params, options) {
         const { project_id } = params;
-        return this._client.get(path9`/organization/projects/${project_id}/spend_alerts/${alertID}`, {
+        return this._client.get(path10`/organization/projects/${project_id}/spend_alerts/${alertID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57641,7 +57641,7 @@ var init_spend_alerts2 = __esm({
        */
       update(alertID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path9`/organization/projects/${project_id}/spend_alerts/${alertID}`, {
+        return this._client.post(path10`/organization/projects/${project_id}/spend_alerts/${alertID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57661,7 +57661,7 @@ var init_spend_alerts2 = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path9`/organization/projects/${projectID}/spend_alerts`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path10`/organization/projects/${projectID}/spend_alerts`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Deletes a project spend alert.
@@ -57677,7 +57677,7 @@ var init_spend_alerts2 = __esm({
        */
       delete(alertID, params, options) {
         const { project_id } = params;
-        return this._client.delete(path9`/organization/projects/${project_id}/spend_alerts/${alertID}`, {
+        return this._client.delete(path10`/organization/projects/${project_id}/spend_alerts/${alertID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57705,7 +57705,7 @@ var init_spend_limit2 = __esm({
        * ```
        */
       retrieve(projectID, options) {
-        return this._client.get(path9`/organization/projects/${projectID}/spend_limit`, {
+        return this._client.get(path10`/organization/projects/${projectID}/spend_limit`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57727,7 +57727,7 @@ var init_spend_limit2 = __esm({
        * ```
        */
       update(projectID, body, options) {
-        return this._client.post(path9`/organization/projects/${projectID}/spend_limit`, {
+        return this._client.post(path10`/organization/projects/${projectID}/spend_limit`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57745,7 +57745,7 @@ var init_spend_limit2 = __esm({
        * ```
        */
       delete(projectID, options) {
-        return this._client.delete(path9`/organization/projects/${projectID}/spend_limit`, {
+        return this._client.delete(path10`/organization/projects/${projectID}/spend_limit`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57776,7 +57776,7 @@ var init_roles4 = __esm({
        */
       create(groupID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path9`/projects/${project_id}/groups/${groupID}/roles`, {
+        return this._client.post(path10`/projects/${project_id}/groups/${groupID}/roles`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57796,7 +57796,7 @@ var init_roles4 = __esm({
        */
       retrieve(roleID, params, options) {
         const { project_id, group_id } = params;
-        return this._client.get(path9`/projects/${project_id}/groups/${group_id}/roles/${roleID}`, {
+        return this._client.get(path10`/projects/${project_id}/groups/${group_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57817,7 +57817,7 @@ var init_roles4 = __esm({
        */
       list(groupID, params, options) {
         const { project_id, ...query } = params;
-        return this._client.getAPIList(path9`/projects/${project_id}/groups/${groupID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path10`/projects/${project_id}/groups/${groupID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Unassigns a project role from a group within a project.
@@ -57833,7 +57833,7 @@ var init_roles4 = __esm({
        */
       delete(roleID, params, options) {
         const { project_id, group_id } = params;
-        return this._client.delete(path9`/projects/${project_id}/groups/${group_id}/roles/${roleID}`, {
+        return this._client.delete(path10`/projects/${project_id}/groups/${group_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57869,7 +57869,7 @@ var init_groups2 = __esm({
        * ```
        */
       create(projectID, body, options) {
-        return this._client.post(path9`/organization/projects/${projectID}/groups`, {
+        return this._client.post(path10`/organization/projects/${projectID}/groups`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57889,7 +57889,7 @@ var init_groups2 = __esm({
        */
       retrieve(groupID, params, options) {
         const { project_id, ...query } = params;
-        return this._client.get(path9`/organization/projects/${project_id}/groups/${groupID}`, {
+        return this._client.get(path10`/organization/projects/${project_id}/groups/${groupID}`, {
           query,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57909,7 +57909,7 @@ var init_groups2 = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path9`/organization/projects/${projectID}/groups`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path10`/organization/projects/${projectID}/groups`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Revokes a group's access to a project.
@@ -57925,7 +57925,7 @@ var init_groups2 = __esm({
        */
       delete(groupID, params, options) {
         const { project_id } = params;
-        return this._client.delete(path9`/organization/projects/${project_id}/groups/${groupID}`, {
+        return this._client.delete(path10`/organization/projects/${project_id}/groups/${groupID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57956,7 +57956,7 @@ var init_api_keys2 = __esm({
        */
       create(serviceAccountID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path9`/organization/projects/${project_id}/service_accounts/${serviceAccountID}/api_keys`, { body, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.post(path10`/organization/projects/${project_id}/service_accounts/${serviceAccountID}/api_keys`, { body, ...options, __security: { adminAPIKeyAuth: true } });
       }
     };
   }
@@ -57990,7 +57990,7 @@ var init_service_accounts = __esm({
        * ```
        */
       create(projectID, body, options) {
-        return this._client.post(path9`/organization/projects/${projectID}/service_accounts`, {
+        return this._client.post(path10`/organization/projects/${projectID}/service_accounts`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -58010,7 +58010,7 @@ var init_service_accounts = __esm({
        */
       retrieve(serviceAccountID, params, options) {
         const { project_id } = params;
-        return this._client.get(path9`/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, {
+        return this._client.get(path10`/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58029,7 +58029,7 @@ var init_service_accounts = __esm({
        */
       update(serviceAccountID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path9`/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, { body, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.post(path10`/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, { body, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Returns a list of service accounts in the project.
@@ -58045,7 +58045,7 @@ var init_service_accounts = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path9`/organization/projects/${projectID}/service_accounts`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path10`/organization/projects/${projectID}/service_accounts`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Deletes a service account from the project.
@@ -58064,7 +58064,7 @@ var init_service_accounts = __esm({
        */
       delete(serviceAccountID, params, options) {
         const { project_id } = params;
-        return this._client.delete(path9`/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, { ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.delete(path10`/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, { ...options, __security: { adminAPIKeyAuth: true } });
       }
     };
     ServiceAccounts.APIKeys = APIKeys2;
@@ -58093,7 +58093,7 @@ var init_roles5 = __esm({
        */
       create(userID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path9`/projects/${project_id}/users/${userID}/roles`, {
+        return this._client.post(path10`/projects/${project_id}/users/${userID}/roles`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -58113,7 +58113,7 @@ var init_roles5 = __esm({
        */
       retrieve(roleID, params, options) {
         const { project_id, user_id } = params;
-        return this._client.get(path9`/projects/${project_id}/users/${user_id}/roles/${roleID}`, {
+        return this._client.get(path10`/projects/${project_id}/users/${user_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58134,7 +58134,7 @@ var init_roles5 = __esm({
        */
       list(userID, params, options) {
         const { project_id, ...query } = params;
-        return this._client.getAPIList(path9`/projects/${project_id}/users/${userID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path10`/projects/${project_id}/users/${userID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Unassigns a project role from a user within a project.
@@ -58150,7 +58150,7 @@ var init_roles5 = __esm({
        */
       delete(roleID, params, options) {
         const { project_id, user_id } = params;
-        return this._client.delete(path9`/projects/${project_id}/users/${user_id}/roles/${roleID}`, {
+        return this._client.delete(path10`/projects/${project_id}/users/${user_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58187,7 +58187,7 @@ var init_users2 = __esm({
        * ```
        */
       create(projectID, body, options) {
-        return this._client.post(path9`/organization/projects/${projectID}/users`, {
+        return this._client.post(path10`/organization/projects/${projectID}/users`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -58207,7 +58207,7 @@ var init_users2 = __esm({
        */
       retrieve(userID, params, options) {
         const { project_id } = params;
-        return this._client.get(path9`/organization/projects/${project_id}/users/${userID}`, {
+        return this._client.get(path10`/organization/projects/${project_id}/users/${userID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58226,7 +58226,7 @@ var init_users2 = __esm({
        */
       update(userID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path9`/organization/projects/${project_id}/users/${userID}`, {
+        return this._client.post(path10`/organization/projects/${project_id}/users/${userID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -58246,7 +58246,7 @@ var init_users2 = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path9`/organization/projects/${projectID}/users`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path10`/organization/projects/${projectID}/users`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Deletes a user from the project.
@@ -58265,7 +58265,7 @@ var init_users2 = __esm({
        */
       delete(userID, params, options) {
         const { project_id } = params;
-        return this._client.delete(path9`/organization/projects/${project_id}/users/${userID}`, {
+        return this._client.delete(path10`/organization/projects/${project_id}/users/${userID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58353,7 +58353,7 @@ var init_projects = __esm({
        * ```
        */
       retrieve(projectID, options) {
-        return this._client.get(path9`/organization/projects/${projectID}`, {
+        return this._client.get(path10`/organization/projects/${projectID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58370,7 +58370,7 @@ var init_projects = __esm({
        * ```
        */
       update(projectID, body, options) {
-        return this._client.post(path9`/organization/projects/${projectID}`, {
+        return this._client.post(path10`/organization/projects/${projectID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -58407,7 +58407,7 @@ var init_projects = __esm({
        * ```
        */
       archive(projectID, options) {
-        return this._client.post(path9`/organization/projects/${projectID}/archive`, {
+        return this._client.post(path10`/organization/projects/${projectID}/archive`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58449,7 +58449,7 @@ var init_roles6 = __esm({
        * ```
        */
       create(userID, body, options) {
-        return this._client.post(path9`/organization/users/${userID}/roles`, {
+        return this._client.post(path10`/organization/users/${userID}/roles`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -58469,7 +58469,7 @@ var init_roles6 = __esm({
        */
       retrieve(roleID, params, options) {
         const { user_id } = params;
-        return this._client.get(path9`/organization/users/${user_id}/roles/${roleID}`, {
+        return this._client.get(path10`/organization/users/${user_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58488,7 +58488,7 @@ var init_roles6 = __esm({
        * ```
        */
       list(userID, query = {}, options) {
-        return this._client.getAPIList(path9`/organization/users/${userID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path10`/organization/users/${userID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Unassigns an organization role from a user within the organization.
@@ -58504,7 +58504,7 @@ var init_roles6 = __esm({
        */
       delete(roleID, params, options) {
         const { user_id } = params;
-        return this._client.delete(path9`/organization/users/${user_id}/roles/${roleID}`, {
+        return this._client.delete(path10`/organization/users/${user_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58537,7 +58537,7 @@ var init_users3 = __esm({
        * ```
        */
       retrieve(userID, options) {
-        return this._client.get(path9`/organization/users/${userID}`, {
+        return this._client.get(path10`/organization/users/${userID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58552,7 +58552,7 @@ var init_users3 = __esm({
        * ```
        */
       update(userID, body, options) {
-        return this._client.post(path9`/organization/users/${userID}`, {
+        return this._client.post(path10`/organization/users/${userID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -58587,7 +58587,7 @@ var init_users3 = __esm({
        * ```
        */
       delete(userID, options) {
-        return this._client.delete(path9`/organization/users/${userID}`, {
+        return this._client.delete(path10`/organization/users/${userID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58789,7 +58789,7 @@ var init_batches = __esm({
        * Retrieves a batch.
        */
       retrieve(batchID, options) {
-        return this._client.get(path9`/batches/${batchID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path10`/batches/${batchID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * List your organization's batches.
@@ -58807,7 +58807,7 @@ var init_batches = __esm({
        * (if any) available in the output file.
        */
       cancel(batchID, options) {
-        return this._client.post(path9`/batches/${batchID}/cancel`, {
+        return this._client.post(path10`/batches/${batchID}/cancel`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -58844,7 +58844,7 @@ var init_assistants = __esm({
        * @deprecated
        */
       retrieve(assistantID, options) {
-        return this._client.get(path9`/assistants/${assistantID}`, {
+        return this._client.get(path10`/assistants/${assistantID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -58856,7 +58856,7 @@ var init_assistants = __esm({
        * @deprecated
        */
       update(assistantID, body, options) {
-        return this._client.post(path9`/assistants/${assistantID}`, {
+        return this._client.post(path10`/assistants/${assistantID}`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -58882,7 +58882,7 @@ var init_assistants = __esm({
        * @deprecated
        */
       delete(assistantID, options) {
-        return this._client.delete(path9`/assistants/${assistantID}`, {
+        return this._client.delete(path10`/assistants/${assistantID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -59021,7 +59021,7 @@ var init_sessions2 = __esm({
        * ```
        */
       cancel(sessionID, options) {
-        return this._client.post(path9`/chatkit/sessions/${sessionID}/cancel`, {
+        return this._client.post(path10`/chatkit/sessions/${sessionID}/cancel`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "chatkit_beta=v1" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -59050,7 +59050,7 @@ var init_threads = __esm({
        * ```
        */
       retrieve(threadID, options) {
-        return this._client.get(path9`/chatkit/threads/${threadID}`, {
+        return this._client.get(path10`/chatkit/threads/${threadID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "chatkit_beta=v1" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -59086,7 +59086,7 @@ var init_threads = __esm({
        * ```
        */
       delete(threadID, options) {
-        return this._client.delete(path9`/chatkit/threads/${threadID}`, {
+        return this._client.delete(path10`/chatkit/threads/${threadID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "chatkit_beta=v1" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -59106,7 +59106,7 @@ var init_threads = __esm({
        * ```
        */
       listItems(threadID, query = {}, options) {
-        return this._client.getAPIList(path9`/chatkit/threads/${threadID}/items`, ConversationCursorPage, {
+        return this._client.getAPIList(path10`/chatkit/threads/${threadID}/items`, ConversationCursorPage, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "chatkit_beta=v1" }, options?.headers]),
@@ -59162,7 +59162,7 @@ var init_input_items = __esm({
        */
       list(responseID, params = {}, options) {
         const { betas, ...query } = params ?? {};
-        return this._client.getAPIList(path9`/responses/${responseID}/input_items?beta=true`, CursorPage, {
+        return this._client.getAPIList(path10`/responses/${responseID}/input_items?beta=true`, CursorPage, {
           query,
           ...options,
           headers: buildHeaders([
@@ -59243,7 +59243,7 @@ var init_responses = __esm({
       }
       retrieve(responseID, params = {}, options) {
         const { betas, ...query } = params ?? {};
-        return this._client.get(path9`/responses/${responseID}?beta=true`, {
+        return this._client.get(path10`/responses/${responseID}?beta=true`, {
           query,
           ...options,
           headers: buildHeaders([
@@ -59266,7 +59266,7 @@ var init_responses = __esm({
        */
       delete(responseID, params = {}, options) {
         const { betas } = params ?? {};
-        return this._client.delete(path9`/responses/${responseID}?beta=true`, {
+        return this._client.delete(path10`/responses/${responseID}?beta=true`, {
           ...options,
           headers: buildHeaders([
             { Accept: "*/*", ...betas?.toString() != null ? { "openai-beta": betas?.toString() } : void 0 },
@@ -59289,7 +59289,7 @@ var init_responses = __esm({
        */
       cancel(responseID, params = {}, options) {
         const { betas } = params ?? {};
-        return this._client.post(path9`/responses/${responseID}/cancel?beta=true`, {
+        return this._client.post(path10`/responses/${responseID}/cancel?beta=true`, {
           ...options,
           headers: buildHeaders([
             { ...betas?.toString() != null ? { "openai-beta": betas?.toString() } : void 0 },
@@ -59347,7 +59347,7 @@ var init_messages2 = __esm({
        * @deprecated The Assistants API is deprecated in favor of the Responses API
        */
       create(threadID, body, options) {
-        return this._client.post(path9`/threads/${threadID}/messages`, {
+        return this._client.post(path10`/threads/${threadID}/messages`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -59361,7 +59361,7 @@ var init_messages2 = __esm({
        */
       retrieve(messageID, params, options) {
         const { thread_id } = params;
-        return this._client.get(path9`/threads/${thread_id}/messages/${messageID}`, {
+        return this._client.get(path10`/threads/${thread_id}/messages/${messageID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -59374,7 +59374,7 @@ var init_messages2 = __esm({
        */
       update(messageID, params, options) {
         const { thread_id, ...body } = params;
-        return this._client.post(path9`/threads/${thread_id}/messages/${messageID}`, {
+        return this._client.post(path10`/threads/${thread_id}/messages/${messageID}`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -59387,7 +59387,7 @@ var init_messages2 = __esm({
        * @deprecated The Assistants API is deprecated in favor of the Responses API
        */
       list(threadID, query = {}, options) {
-        return this._client.getAPIList(path9`/threads/${threadID}/messages`, CursorPage, {
+        return this._client.getAPIList(path10`/threads/${threadID}/messages`, CursorPage, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -59401,7 +59401,7 @@ var init_messages2 = __esm({
        */
       delete(messageID, params, options) {
         const { thread_id } = params;
-        return this._client.delete(path9`/threads/${thread_id}/messages/${messageID}`, {
+        return this._client.delete(path10`/threads/${thread_id}/messages/${messageID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -59427,7 +59427,7 @@ var init_steps = __esm({
        */
       retrieve(stepID, params, options) {
         const { thread_id, run_id, ...query } = params;
-        return this._client.get(path9`/threads/${thread_id}/runs/${run_id}/steps/${stepID}`, {
+        return this._client.get(path10`/threads/${thread_id}/runs/${run_id}/steps/${stepID}`, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -59441,7 +59441,7 @@ var init_steps = __esm({
        */
       list(runID, params, options) {
         const { thread_id, ...query } = params;
-        return this._client.getAPIList(path9`/threads/${thread_id}/runs/${runID}/steps`, CursorPage, {
+        return this._client.getAPIList(path10`/threads/${thread_id}/runs/${runID}/steps`, CursorPage, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -60030,7 +60030,7 @@ var init_runs = __esm({
       }
       create(threadID, params, options) {
         const { include, ...body } = params;
-        return this._client.post(path9`/threads/${threadID}/runs`, {
+        return this._client.post(path10`/threads/${threadID}/runs`, {
           query: { include },
           body,
           ...options,
@@ -60047,7 +60047,7 @@ var init_runs = __esm({
        */
       retrieve(runID, params, options) {
         const { thread_id } = params;
-        return this._client.get(path9`/threads/${thread_id}/runs/${runID}`, {
+        return this._client.get(path10`/threads/${thread_id}/runs/${runID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -60060,7 +60060,7 @@ var init_runs = __esm({
        */
       update(runID, params, options) {
         const { thread_id, ...body } = params;
-        return this._client.post(path9`/threads/${thread_id}/runs/${runID}`, {
+        return this._client.post(path10`/threads/${thread_id}/runs/${runID}`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -60073,7 +60073,7 @@ var init_runs = __esm({
        * @deprecated The Assistants API is deprecated in favor of the Responses API
        */
       list(threadID, query = {}, options) {
-        return this._client.getAPIList(path9`/threads/${threadID}/runs`, CursorPage, {
+        return this._client.getAPIList(path10`/threads/${threadID}/runs`, CursorPage, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -60087,7 +60087,7 @@ var init_runs = __esm({
        */
       cancel(runID, params, options) {
         const { thread_id } = params;
-        return this._client.post(path9`/threads/${thread_id}/runs/${runID}/cancel`, {
+        return this._client.post(path10`/threads/${thread_id}/runs/${runID}/cancel`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -60166,7 +60166,7 @@ var init_runs = __esm({
       }
       submitToolOutputs(runID, params, options) {
         const { thread_id, ...body } = params;
-        return this._client.post(path9`/threads/${thread_id}/runs/${runID}/submit_tool_outputs`, {
+        return this._client.post(path10`/threads/${thread_id}/runs/${runID}/submit_tool_outputs`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -60234,7 +60234,7 @@ var init_threads2 = __esm({
        * @deprecated The Assistants API is deprecated in favor of the Responses API
        */
       retrieve(threadID, options) {
-        return this._client.get(path9`/threads/${threadID}`, {
+        return this._client.get(path10`/threads/${threadID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -60246,7 +60246,7 @@ var init_threads2 = __esm({
        * @deprecated The Assistants API is deprecated in favor of the Responses API
        */
       update(threadID, body, options) {
-        return this._client.post(path9`/threads/${threadID}`, {
+        return this._client.post(path10`/threads/${threadID}`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -60259,7 +60259,7 @@ var init_threads2 = __esm({
        * @deprecated The Assistants API is deprecated in favor of the Responses API
        */
       delete(threadID, options) {
-        return this._client.delete(path9`/threads/${threadID}`, {
+        return this._client.delete(path10`/threads/${threadID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -60360,7 +60360,7 @@ var init_content = __esm({
        */
       retrieve(fileID, params, options) {
         const { container_id } = params;
-        return this._client.get(path9`/containers/${container_id}/files/${fileID}/content`, {
+        return this._client.get(path10`/containers/${container_id}/files/${fileID}/content`, {
           ...options,
           headers: buildHeaders([{ Accept: "application/binary" }, options?.headers]),
           __security: { bearerAuth: true },
@@ -60394,14 +60394,14 @@ var init_files = __esm({
        * a JSON request with a file ID.
        */
       create(containerID, body, options) {
-        return this._client.post(path9`/containers/${containerID}/files`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
+        return this._client.post(path10`/containers/${containerID}/files`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
       }
       /**
        * Retrieve Container File
        */
       retrieve(fileID, params, options) {
         const { container_id } = params;
-        return this._client.get(path9`/containers/${container_id}/files/${fileID}`, {
+        return this._client.get(path10`/containers/${container_id}/files/${fileID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60410,7 +60410,7 @@ var init_files = __esm({
        * List Container files
        */
       list(containerID, query = {}, options) {
-        return this._client.getAPIList(path9`/containers/${containerID}/files`, CursorPage, {
+        return this._client.getAPIList(path10`/containers/${containerID}/files`, CursorPage, {
           query,
           ...options,
           __security: { bearerAuth: true }
@@ -60421,7 +60421,7 @@ var init_files = __esm({
        */
       delete(fileID, params, options) {
         const { container_id } = params;
-        return this._client.delete(path9`/containers/${container_id}/files/${fileID}`, {
+        return this._client.delete(path10`/containers/${container_id}/files/${fileID}`, {
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -60457,7 +60457,7 @@ var init_containers = __esm({
        * Retrieve Container
        */
       retrieve(containerID, options) {
-        return this._client.get(path9`/containers/${containerID}`, {
+        return this._client.get(path10`/containers/${containerID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60476,7 +60476,7 @@ var init_containers = __esm({
        * Delete Container
        */
       delete(containerID, options) {
-        return this._client.delete(path9`/containers/${containerID}`, {
+        return this._client.delete(path10`/containers/${containerID}`, {
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -60500,7 +60500,7 @@ var init_items = __esm({
        */
       create(conversationID, params, options) {
         const { include, ...body } = params;
-        return this._client.post(path9`/conversations/${conversationID}/items`, {
+        return this._client.post(path10`/conversations/${conversationID}/items`, {
           query: { include },
           body,
           ...options,
@@ -60512,7 +60512,7 @@ var init_items = __esm({
        */
       retrieve(itemID, params, options) {
         const { conversation_id, ...query } = params;
-        return this._client.get(path9`/conversations/${conversation_id}/items/${itemID}`, {
+        return this._client.get(path10`/conversations/${conversation_id}/items/${itemID}`, {
           query,
           ...options,
           __security: { bearerAuth: true }
@@ -60522,14 +60522,14 @@ var init_items = __esm({
        * List all items for a conversation with the given ID.
        */
       list(conversationID, query = {}, options) {
-        return this._client.getAPIList(path9`/conversations/${conversationID}/items`, ConversationCursorPage, { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path10`/conversations/${conversationID}/items`, ConversationCursorPage, { query, ...options, __security: { bearerAuth: true } });
       }
       /**
        * Delete an item from a conversation with the given IDs.
        */
       delete(itemID, params, options) {
         const { conversation_id } = params;
-        return this._client.delete(path9`/conversations/${conversation_id}/items/${itemID}`, {
+        return this._client.delete(path10`/conversations/${conversation_id}/items/${itemID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60561,7 +60561,7 @@ var init_conversations = __esm({
        * Get a conversation
        */
       retrieve(conversationID, options) {
-        return this._client.get(path9`/conversations/${conversationID}`, {
+        return this._client.get(path10`/conversations/${conversationID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60570,7 +60570,7 @@ var init_conversations = __esm({
        * Update a conversation
        */
       update(conversationID, body, options) {
-        return this._client.post(path9`/conversations/${conversationID}`, {
+        return this._client.post(path10`/conversations/${conversationID}`, {
           body,
           ...options,
           __security: { bearerAuth: true }
@@ -60580,7 +60580,7 @@ var init_conversations = __esm({
        * Delete a conversation. Items in the conversation will not be deleted.
        */
       delete(conversationID, options) {
-        return this._client.delete(path9`/conversations/${conversationID}`, {
+        return this._client.delete(path10`/conversations/${conversationID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60654,7 +60654,7 @@ var init_output_items = __esm({
        */
       retrieve(outputItemID, params, options) {
         const { eval_id, run_id } = params;
-        return this._client.get(path9`/evals/${eval_id}/runs/${run_id}/output_items/${outputItemID}`, {
+        return this._client.get(path10`/evals/${eval_id}/runs/${run_id}/output_items/${outputItemID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60664,7 +60664,7 @@ var init_output_items = __esm({
        */
       list(runID, params, options) {
         const { eval_id, ...query } = params;
-        return this._client.getAPIList(path9`/evals/${eval_id}/runs/${runID}/output_items`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path10`/evals/${eval_id}/runs/${runID}/output_items`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
       }
     };
   }
@@ -60690,7 +60690,7 @@ var init_runs2 = __esm({
        * schema specified in the config of the evaluation.
        */
       create(evalID, body, options) {
-        return this._client.post(path9`/evals/${evalID}/runs`, {
+        return this._client.post(path10`/evals/${evalID}/runs`, {
           body,
           ...options,
           __security: { bearerAuth: true }
@@ -60701,7 +60701,7 @@ var init_runs2 = __esm({
        */
       retrieve(runID, params, options) {
         const { eval_id } = params;
-        return this._client.get(path9`/evals/${eval_id}/runs/${runID}`, {
+        return this._client.get(path10`/evals/${eval_id}/runs/${runID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60710,7 +60710,7 @@ var init_runs2 = __esm({
        * Get a list of runs for an evaluation.
        */
       list(evalID, query = {}, options) {
-        return this._client.getAPIList(path9`/evals/${evalID}/runs`, CursorPage, {
+        return this._client.getAPIList(path10`/evals/${evalID}/runs`, CursorPage, {
           query,
           ...options,
           __security: { bearerAuth: true }
@@ -60721,7 +60721,7 @@ var init_runs2 = __esm({
        */
       delete(runID, params, options) {
         const { eval_id } = params;
-        return this._client.delete(path9`/evals/${eval_id}/runs/${runID}`, {
+        return this._client.delete(path10`/evals/${eval_id}/runs/${runID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60731,7 +60731,7 @@ var init_runs2 = __esm({
        */
       cancel(runID, params, options) {
         const { eval_id } = params;
-        return this._client.post(path9`/evals/${eval_id}/runs/${runID}`, {
+        return this._client.post(path10`/evals/${eval_id}/runs/${runID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60770,13 +60770,13 @@ var init_evals = __esm({
        * Get an evaluation by ID.
        */
       retrieve(evalID, options) {
-        return this._client.get(path9`/evals/${evalID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path10`/evals/${evalID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * Update certain properties of an evaluation.
        */
       update(evalID, body, options) {
-        return this._client.post(path9`/evals/${evalID}`, { body, ...options, __security: { bearerAuth: true } });
+        return this._client.post(path10`/evals/${evalID}`, { body, ...options, __security: { bearerAuth: true } });
       }
       /**
        * List evaluations for a project.
@@ -60792,7 +60792,7 @@ var init_evals = __esm({
        * Delete an evaluation.
        */
       delete(evalID, options) {
-        return this._client.delete(path9`/evals/${evalID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.delete(path10`/evals/${evalID}`, { ...options, __security: { bearerAuth: true } });
       }
     };
     Evals.Runs = Runs2;
@@ -60847,7 +60847,7 @@ var init_files2 = __esm({
        * Returns information about a specific file.
        */
       retrieve(fileID, options) {
-        return this._client.get(path9`/files/${fileID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path10`/files/${fileID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * Returns a list of files.
@@ -60863,13 +60863,13 @@ var init_files2 = __esm({
        * Delete a file and remove it from all vector stores.
        */
       delete(fileID, options) {
-        return this._client.delete(path9`/files/${fileID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.delete(path10`/files/${fileID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * Returns the contents of the specified file.
        */
       content(fileID, options) {
-        return this._client.get(path9`/files/${fileID}/content`, {
+        return this._client.get(path10`/files/${fileID}/content`, {
           ...options,
           headers: buildHeaders([{ Accept: "application/binary" }, options?.headers]),
           __security: { bearerAuth: true },
@@ -61009,7 +61009,7 @@ var init_permissions = __esm({
        * ```
        */
       create(fineTunedModelCheckpoint, body, options) {
-        return this._client.getAPIList(path9`/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, Page, { body, method: "post", ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path10`/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, Page, { body, method: "post", ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * **NOTE:** This endpoint requires an [admin API key](../admin-api-keys).
@@ -61020,7 +61020,7 @@ var init_permissions = __esm({
        * @deprecated Retrieve is deprecated. Please swap to the paginated list method instead.
        */
       retrieve(fineTunedModelCheckpoint, query = {}, options) {
-        return this._client.get(path9`/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, {
+        return this._client.get(path10`/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, {
           query,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -61043,7 +61043,7 @@ var init_permissions = __esm({
        * ```
        */
       list(fineTunedModelCheckpoint, query = {}, options) {
-        return this._client.getAPIList(path9`/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path10`/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * **NOTE:** This endpoint requires an [admin API key](../admin-api-keys).
@@ -61065,7 +61065,7 @@ var init_permissions = __esm({
        */
       delete(permissionID, params, options) {
         const { fine_tuned_model_checkpoint } = params;
-        return this._client.delete(path9`/fine_tuning/checkpoints/${fine_tuned_model_checkpoint}/permissions/${permissionID}`, { ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.delete(path10`/fine_tuning/checkpoints/${fine_tuned_model_checkpoint}/permissions/${permissionID}`, { ...options, __security: { adminAPIKeyAuth: true } });
       }
     };
   }
@@ -61110,7 +61110,7 @@ var init_checkpoints2 = __esm({
        * ```
        */
       list(fineTuningJobID, query = {}, options) {
-        return this._client.getAPIList(path9`/fine_tuning/jobs/${fineTuningJobID}/checkpoints`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path10`/fine_tuning/jobs/${fineTuningJobID}/checkpoints`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
       }
     };
   }
@@ -61163,7 +61163,7 @@ var init_jobs = __esm({
        * ```
        */
       retrieve(fineTuningJobID, options) {
-        return this._client.get(path9`/fine_tuning/jobs/${fineTuningJobID}`, {
+        return this._client.get(path10`/fine_tuning/jobs/${fineTuningJobID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -61197,7 +61197,7 @@ var init_jobs = __esm({
        * ```
        */
       cancel(fineTuningJobID, options) {
-        return this._client.post(path9`/fine_tuning/jobs/${fineTuningJobID}/cancel`, {
+        return this._client.post(path10`/fine_tuning/jobs/${fineTuningJobID}/cancel`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -61216,7 +61216,7 @@ var init_jobs = __esm({
        * ```
        */
       listEvents(fineTuningJobID, query = {}, options) {
-        return this._client.getAPIList(path9`/fine_tuning/jobs/${fineTuningJobID}/events`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path10`/fine_tuning/jobs/${fineTuningJobID}/events`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
       }
       /**
        * Pause a fine-tune job.
@@ -61229,7 +61229,7 @@ var init_jobs = __esm({
        * ```
        */
       pause(fineTuningJobID, options) {
-        return this._client.post(path9`/fine_tuning/jobs/${fineTuningJobID}/pause`, {
+        return this._client.post(path10`/fine_tuning/jobs/${fineTuningJobID}/pause`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -61245,7 +61245,7 @@ var init_jobs = __esm({
        * ```
        */
       resume(fineTuningJobID, options) {
-        return this._client.post(path9`/fine_tuning/jobs/${fineTuningJobID}/resume`, {
+        return this._client.post(path10`/fine_tuning/jobs/${fineTuningJobID}/resume`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -61359,7 +61359,7 @@ var init_models = __esm({
        * the owner and permissioning.
        */
       retrieve(model, options) {
-        return this._client.get(path9`/models/${model}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path10`/models/${model}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * Lists the currently available models, and provides basic information about each
@@ -61373,7 +61373,7 @@ var init_models = __esm({
        * delete a model.
        */
       delete(model, options) {
-        return this._client.delete(path9`/models/${model}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.delete(path10`/models/${model}`, { ...options, __security: { bearerAuth: true } });
       }
     };
   }
@@ -61416,7 +61416,7 @@ var init_calls = __esm({
        * ```
        */
       accept(callID, body, options) {
-        return this._client.post(path9`/realtime/calls/${callID}/accept`, {
+        return this._client.post(path10`/realtime/calls/${callID}/accept`, {
           body,
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
@@ -61432,7 +61432,7 @@ var init_calls = __esm({
        * ```
        */
       hangup(callID, options) {
-        return this._client.post(path9`/realtime/calls/${callID}/hangup`, {
+        return this._client.post(path10`/realtime/calls/${callID}/hangup`, {
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -61449,7 +61449,7 @@ var init_calls = __esm({
        * ```
        */
       refer(callID, body, options) {
-        return this._client.post(path9`/realtime/calls/${callID}/refer`, {
+        return this._client.post(path10`/realtime/calls/${callID}/refer`, {
           body,
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
@@ -61465,7 +61465,7 @@ var init_calls = __esm({
        * ```
        */
       reject(callID, body = {}, options) {
-        return this._client.post(path9`/realtime/calls/${callID}/reject`, {
+        return this._client.post(path10`/realtime/calls/${callID}/reject`, {
           body,
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
@@ -62284,7 +62284,7 @@ var init_input_items2 = __esm({
        * ```
        */
       list(responseID, query = {}, options) {
-        return this._client.getAPIList(path9`/responses/${responseID}/input_items`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path10`/responses/${responseID}/input_items`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
       }
     };
   }
@@ -62351,7 +62351,7 @@ var init_responses2 = __esm({
         });
       }
       retrieve(responseID, query = {}, options) {
-        return this._client.get(path9`/responses/${responseID}`, {
+        return this._client.get(path10`/responses/${responseID}`, {
           query,
           ...options,
           stream: query?.stream ?? false,
@@ -62374,7 +62374,7 @@ var init_responses2 = __esm({
        * ```
        */
       delete(responseID, options) {
-        return this._client.delete(path9`/responses/${responseID}`, {
+        return this._client.delete(path10`/responses/${responseID}`, {
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -62402,7 +62402,7 @@ var init_responses2 = __esm({
        * ```
        */
       cancel(responseID, options) {
-        return this._client.post(path9`/responses/${responseID}/cancel`, {
+        return this._client.post(path10`/responses/${responseID}/cancel`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -62443,7 +62443,7 @@ var init_content2 = __esm({
        * Download a skill zip bundle by its ID.
        */
       retrieve(skillID, options) {
-        return this._client.get(path9`/skills/${skillID}/content`, {
+        return this._client.get(path10`/skills/${skillID}/content`, {
           ...options,
           headers: buildHeaders([{ Accept: "application/binary" }, options?.headers]),
           __security: { bearerAuth: true },
@@ -62467,7 +62467,7 @@ var init_content3 = __esm({
        */
       retrieve(version2, params, options) {
         const { skill_id } = params;
-        return this._client.get(path9`/skills/${skill_id}/versions/${version2}/content`, {
+        return this._client.get(path10`/skills/${skill_id}/versions/${version2}/content`, {
           ...options,
           headers: buildHeaders([{ Accept: "application/binary" }, options?.headers]),
           __security: { bearerAuth: true },
@@ -62497,14 +62497,14 @@ var init_versions = __esm({
        * Create a new immutable skill version.
        */
       create(skillID, body = {}, options) {
-        return this._client.post(path9`/skills/${skillID}/versions`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
+        return this._client.post(path10`/skills/${skillID}/versions`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
       }
       /**
        * Get a specific skill version.
        */
       retrieve(version2, params, options) {
         const { skill_id } = params;
-        return this._client.get(path9`/skills/${skill_id}/versions/${version2}`, {
+        return this._client.get(path10`/skills/${skill_id}/versions/${version2}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -62513,7 +62513,7 @@ var init_versions = __esm({
        * List skill versions for a skill.
        */
       list(skillID, query = {}, options) {
-        return this._client.getAPIList(path9`/skills/${skillID}/versions`, CursorPage, {
+        return this._client.getAPIList(path10`/skills/${skillID}/versions`, CursorPage, {
           query,
           ...options,
           __security: { bearerAuth: true }
@@ -62524,7 +62524,7 @@ var init_versions = __esm({
        */
       delete(version2, params, options) {
         const { skill_id } = params;
-        return this._client.delete(path9`/skills/${skill_id}/versions/${version2}`, {
+        return this._client.delete(path10`/skills/${skill_id}/versions/${version2}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -62562,13 +62562,13 @@ var init_skills = __esm({
        * Get a skill by its ID.
        */
       retrieve(skillID, options) {
-        return this._client.get(path9`/skills/${skillID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path10`/skills/${skillID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * Update the default version pointer for a skill.
        */
       update(skillID, body, options) {
-        return this._client.post(path9`/skills/${skillID}`, {
+        return this._client.post(path10`/skills/${skillID}`, {
           body,
           ...options,
           __security: { bearerAuth: true }
@@ -62588,7 +62588,7 @@ var init_skills = __esm({
        * Delete a skill by its ID.
        */
       delete(skillID, options) {
-        return this._client.delete(path9`/skills/${skillID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.delete(path10`/skills/${skillID}`, { ...options, __security: { bearerAuth: true } });
       }
     };
     Skills.Content = Content2;
@@ -62618,7 +62618,7 @@ var init_parts = __esm({
        * [complete the Upload](https://platform.openai.com/docs/api-reference/uploads/complete).
        */
       create(uploadID, body, options) {
-        return this._client.post(path9`/uploads/${uploadID}/parts`, multipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
+        return this._client.post(path10`/uploads/${uploadID}/parts`, multipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
       }
     };
   }
@@ -62669,7 +62669,7 @@ var init_uploads3 = __esm({
        * Returns the Upload object with status `cancelled`.
        */
       cancel(uploadID, options) {
-        return this._client.post(path9`/uploads/${uploadID}/cancel`, {
+        return this._client.post(path10`/uploads/${uploadID}/cancel`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -62692,7 +62692,7 @@ var init_uploads3 = __esm({
        * object.
        */
       complete(uploadID, body, options) {
-        return this._client.post(path9`/uploads/${uploadID}/complete`, {
+        return this._client.post(path10`/uploads/${uploadID}/complete`, {
           body,
           ...options,
           __security: { bearerAuth: true }
@@ -62742,7 +62742,7 @@ var init_file_batches = __esm({
        * Create a vector store file batch.
        */
       create(vectorStoreID, body, options) {
-        return this._client.post(path9`/vector_stores/${vectorStoreID}/file_batches`, {
+        return this._client.post(path10`/vector_stores/${vectorStoreID}/file_batches`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -62754,7 +62754,7 @@ var init_file_batches = __esm({
        */
       retrieve(batchID, params, options) {
         const { vector_store_id } = params;
-        return this._client.get(path9`/vector_stores/${vector_store_id}/file_batches/${batchID}`, {
+        return this._client.get(path10`/vector_stores/${vector_store_id}/file_batches/${batchID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -62766,7 +62766,7 @@ var init_file_batches = __esm({
        */
       cancel(batchID, params, options) {
         const { vector_store_id } = params;
-        return this._client.post(path9`/vector_stores/${vector_store_id}/file_batches/${batchID}/cancel`, {
+        return this._client.post(path10`/vector_stores/${vector_store_id}/file_batches/${batchID}/cancel`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -62784,7 +62784,7 @@ var init_file_batches = __esm({
        */
       listFiles(batchID, params, options) {
         const { vector_store_id, ...query } = params;
-        return this._client.getAPIList(path9`/vector_stores/${vector_store_id}/file_batches/${batchID}/files`, CursorPage, {
+        return this._client.getAPIList(path10`/vector_stores/${vector_store_id}/file_batches/${batchID}/files`, CursorPage, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -62879,7 +62879,7 @@ var init_files3 = __esm({
        * [vector store](https://platform.openai.com/docs/api-reference/vector-stores/object).
        */
       create(vectorStoreID, body, options) {
-        return this._client.post(path9`/vector_stores/${vectorStoreID}/files`, {
+        return this._client.post(path10`/vector_stores/${vectorStoreID}/files`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -62891,7 +62891,7 @@ var init_files3 = __esm({
        */
       retrieve(fileID, params, options) {
         const { vector_store_id } = params;
-        return this._client.get(path9`/vector_stores/${vector_store_id}/files/${fileID}`, {
+        return this._client.get(path10`/vector_stores/${vector_store_id}/files/${fileID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -62902,7 +62902,7 @@ var init_files3 = __esm({
        */
       update(fileID, params, options) {
         const { vector_store_id, ...body } = params;
-        return this._client.post(path9`/vector_stores/${vector_store_id}/files/${fileID}`, {
+        return this._client.post(path10`/vector_stores/${vector_store_id}/files/${fileID}`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -62913,7 +62913,7 @@ var init_files3 = __esm({
        * Returns a list of vector store files.
        */
       list(vectorStoreID, query = {}, options) {
-        return this._client.getAPIList(path9`/vector_stores/${vectorStoreID}/files`, CursorPage, {
+        return this._client.getAPIList(path10`/vector_stores/${vectorStoreID}/files`, CursorPage, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -62928,7 +62928,7 @@ var init_files3 = __esm({
        */
       delete(fileID, params, options) {
         const { vector_store_id } = params;
-        return this._client.delete(path9`/vector_stores/${vector_store_id}/files/${fileID}`, {
+        return this._client.delete(path10`/vector_stores/${vector_store_id}/files/${fileID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -63004,7 +63004,7 @@ var init_files3 = __esm({
        */
       content(fileID, params, options) {
         const { vector_store_id } = params;
-        return this._client.getAPIList(path9`/vector_stores/${vector_store_id}/files/${fileID}/content`, Page, {
+        return this._client.getAPIList(path10`/vector_stores/${vector_store_id}/files/${fileID}/content`, Page, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -63047,7 +63047,7 @@ var init_vector_stores = __esm({
        * Retrieves a vector store.
        */
       retrieve(vectorStoreID, options) {
-        return this._client.get(path9`/vector_stores/${vectorStoreID}`, {
+        return this._client.get(path10`/vector_stores/${vectorStoreID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -63057,7 +63057,7 @@ var init_vector_stores = __esm({
        * Modifies a vector store.
        */
       update(vectorStoreID, body, options) {
-        return this._client.post(path9`/vector_stores/${vectorStoreID}`, {
+        return this._client.post(path10`/vector_stores/${vectorStoreID}`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -63079,7 +63079,7 @@ var init_vector_stores = __esm({
        * Delete a vector store.
        */
       delete(vectorStoreID, options) {
-        return this._client.delete(path9`/vector_stores/${vectorStoreID}`, {
+        return this._client.delete(path10`/vector_stores/${vectorStoreID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -63090,7 +63090,7 @@ var init_vector_stores = __esm({
        * filter.
        */
       search(vectorStoreID, body, options) {
-        return this._client.getAPIList(path9`/vector_stores/${vectorStoreID}/search`, Page, {
+        return this._client.getAPIList(path10`/vector_stores/${vectorStoreID}/search`, Page, {
           body,
           method: "post",
           ...options,
@@ -63124,7 +63124,7 @@ var init_videos = __esm({
        * Fetch the latest metadata for a generated video.
        */
       retrieve(videoID, options) {
-        return this._client.get(path9`/videos/${videoID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path10`/videos/${videoID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * List recently generated videos for the current project.
@@ -63140,7 +63140,7 @@ var init_videos = __esm({
        * Permanently delete a completed or failed video and its stored assets.
        */
       delete(videoID, options) {
-        return this._client.delete(path9`/videos/${videoID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.delete(path10`/videos/${videoID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * Create a character from an uploaded video.
@@ -63154,7 +63154,7 @@ var init_videos = __esm({
        * Streams the rendered video content for the specified video job.
        */
       downloadContent(videoID, query = {}, options) {
-        return this._client.get(path9`/videos/${videoID}/content`, {
+        return this._client.get(path10`/videos/${videoID}/content`, {
           query,
           ...options,
           headers: buildHeaders([{ Accept: "application/binary" }, options?.headers]),
@@ -63179,7 +63179,7 @@ var init_videos = __esm({
        * Fetch a character.
        */
       getCharacter(characterID, options) {
-        return this._client.get(path9`/videos/characters/${characterID}`, {
+        return this._client.get(path10`/videos/characters/${characterID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -63188,7 +63188,7 @@ var init_videos = __esm({
        * Create a remix of a completed video using a refreshed prompt.
        */
       remix(videoID, body, options) {
-        return this._client.post(path9`/videos/${videoID}/remix`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
+        return this._client.post(path10`/videos/${videoID}/remix`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
       }
     };
   }
@@ -63636,9 +63636,9 @@ var init_client = __esm({
         this.apiKey = token;
         return true;
       }
-      buildURL(path12, query, defaultBaseURL) {
+      buildURL(path13, query, defaultBaseURL) {
         const baseURL = !__classPrivateFieldGet(this, _OpenAI_instances, "m", _OpenAI_baseURLOverridden).call(this) && defaultBaseURL || this.baseURL;
-        const url = isAbsoluteURL(path12) ? new URL(path12) : new URL(baseURL + (baseURL.endsWith("/") && path12.startsWith("/") ? path12.slice(1) : path12));
+        const url = isAbsoluteURL(path13) ? new URL(path13) : new URL(baseURL + (baseURL.endsWith("/") && path13.startsWith("/") ? path13.slice(1) : path13));
         const defaultQuery = this.defaultQuery();
         const pathQuery = Object.fromEntries(url.searchParams);
         if (!isEmptyObj(defaultQuery) || !isEmptyObj(pathQuery)) {
@@ -63668,24 +63668,24 @@ var init_client = __esm({
        */
       async prepareRequest(request, { url, options }) {
       }
-      get(path12, opts) {
-        return this.methodRequest("get", path12, opts);
+      get(path13, opts) {
+        return this.methodRequest("get", path13, opts);
       }
-      post(path12, opts) {
-        return this.methodRequest("post", path12, opts);
+      post(path13, opts) {
+        return this.methodRequest("post", path13, opts);
       }
-      patch(path12, opts) {
-        return this.methodRequest("patch", path12, opts);
+      patch(path13, opts) {
+        return this.methodRequest("patch", path13, opts);
       }
-      put(path12, opts) {
-        return this.methodRequest("put", path12, opts);
+      put(path13, opts) {
+        return this.methodRequest("put", path13, opts);
       }
-      delete(path12, opts) {
-        return this.methodRequest("delete", path12, opts);
+      delete(path13, opts) {
+        return this.methodRequest("delete", path13, opts);
       }
-      methodRequest(method, path12, opts) {
+      methodRequest(method, path13, opts) {
         return this.request(Promise.resolve(opts).then((opts2) => {
-          return { method, path: path12, ...opts2 };
+          return { method, path: path13, ...opts2 };
         }));
       }
       request(options, remainingRetries = null) {
@@ -63810,8 +63810,8 @@ var init_client = __esm({
         }));
         return { response, options, controller, requestLogID, retryOfRequestLogID, startTime };
       }
-      getAPIList(path12, Page2, opts) {
-        return this.requestAPIList(Page2, opts && "then" in opts ? opts.then((opts2) => ({ method: "get", path: path12, ...opts2 })) : { method: "get", path: path12, ...opts });
+      getAPIList(path13, Page2, opts) {
+        return this.requestAPIList(Page2, opts && "then" in opts ? opts.then((opts2) => ({ method: "get", path: path13, ...opts2 })) : { method: "get", path: path13, ...opts });
       }
       requestAPIList(Page2, options) {
         const request = this.makeRequest(options, null, void 0);
@@ -63905,8 +63905,8 @@ var init_client = __esm({
       }
       async buildRequest(inputOptions, { retryCount = 0 } = {}) {
         const options = { ...inputOptions };
-        const { method, path: path12, query, defaultBaseURL } = options;
-        const url = this.buildURL(path12, query, defaultBaseURL);
+        const { method, path: path13, query, defaultBaseURL } = options;
+        const url = this.buildURL(path13, query, defaultBaseURL);
         if ("timeout" in options)
           validatePositiveInteger("timeout", options.timeout);
         options.timeout = options.timeout ?? this.timeout;
@@ -64766,8 +64766,8 @@ function getErrorMap() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path12, errorMaps, issueData } = params;
-  const fullPath = [...path12, ...issueData.path || []];
+  const { data, path: path13, errorMaps, issueData } = params;
+  const fullPath = [...path13, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -64883,11 +64883,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path12, key) {
+  constructor(parent, value, path13, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path12;
+    this._path = path13;
     this._key = key;
   }
   get path() {
@@ -68524,10 +68524,10 @@ function assignProp(target, prop, value) {
     configurable: true
   });
 }
-function getElementAtPath(obj, path12) {
-  if (!path12)
+function getElementAtPath(obj, path13) {
+  if (!path13)
     return obj;
-  return path12.reduce((acc, key) => acc?.[key], obj);
+  return path13.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -68847,11 +68847,11 @@ function aborted(x2, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path12, issues) {
+function prefixIssues(path13, issues) {
   return issues.map((iss) => {
     var _a4;
     (_a4 = iss).path ?? (_a4.path = []);
-    iss.path.unshift(path12);
+    iss.path.unshift(path13);
     return iss;
   });
 }
@@ -76692,6 +76692,7 @@ var SUPERTONIC_LANGUAGES = [
 var DEFAULT_SUPERTONIC_LANGUAGE = "ko";
 var DEFAULT_SUPERTONIC_SPEED = 1;
 var DEFAULT_SUPERTONIC_STEPS = 8;
+var DEFAULT_SUPERTONIC_CHUNK_PAUSE = 0.3;
 var MAX_SUPERTONIC_SPEED = 1.2;
 var SUPERTONIC_SAMPLE_RATE = 44100;
 var MAX_SUPERTONIC_INPUT_CHARS = 16e3;
@@ -76704,11 +76705,12 @@ var supertonicGenerateSchema = external_exports.object({
   lang: external_exports.enum(SUPERTONIC_LANGUAGES).optional().default(DEFAULT_SUPERTONIC_LANGUAGE),
   speed: external_exports.number().min(0.7).max(MAX_SUPERTONIC_SPEED, `speed above ${MAX_SUPERTONIC_SPEED} drops syllables; synthesize at 1.2 or below and use the playback speed pass for a faster cut`).optional().default(DEFAULT_SUPERTONIC_SPEED),
   steps: external_exports.number().int().min(1).max(100).optional().default(DEFAULT_SUPERTONIC_STEPS),
+  chunkPause: external_exports.number().min(0).max(1.5).optional().default(DEFAULT_SUPERTONIC_CHUNK_PAUSE),
   outputPath: external_exports.string().optional(),
   filename: bareFilenameSchema("audio").optional()
 });
 var SYNTH_SNIPPET = `
-import json, sys, time
+import json, re, sys, time
 args = json.loads(sys.argv[1])
 try:
     import numpy as np
@@ -76717,19 +76719,51 @@ except ImportError as e:
     print(json.dumps({"ok": False, "kind": "missing_package", "error": str(e)}))
     sys.exit(0)
 
+SR = 44100
+# Sentence groups, not the package's paragraph chunks: the model reads one group as one
+# utterance (prosody flows across its sentences), and a group never exceeds the language's
+# chunk cap (120 chars for Korean, 300 otherwise \u2014 the package's own figures).
+def groups(text, cap):
+    sentences = [x for x in re.split(r"(?<=[.?!\\u2026])\\s+", text.strip()) if x]
+    out, cur = [], ""
+    for sent in sentences:
+        if cur and len(cur) + 1 + len(sent) > cap:
+            out.append(cur); cur = sent
+        else:
+            cur = (cur + " " + sent) if cur else sent
+    if cur: out.append(cur)
+    return out
+
+# The model pads every utterance with 0.4-0.5 s of silence on each side. Trimming to a short
+# margin makes the join a natural gap the checked lane can measure and pad, instead of a
+# 1.3 s hole (measured 2026-09-15: package join = trailing pad + 0.3 s + leading pad).
+def trim(wav, margin=0.08, floor=0.004):
+    loud = np.flatnonzero(np.abs(wav) > floor)
+    if loud.size == 0: return wav
+    a = max(0, int(loud[0]) - int(margin * SR)); b = min(wav.size, int(loud[-1]) + int(margin * SR))
+    return wav[a:b]
+
 t0 = time.time()
 try:
     tts = TTS(model="supertonic-3")
     style = tts.get_voice_style(args["voice"])
-    wav, _ = tts.synthesize(
-        args["text"], voice_style=style, lang=args["lang"],
-        speed=args["speed"], total_steps=args["steps"],
-    )
-    tts.save_audio(wav, args["out"])
-    samples = int(np.asarray(wav).reshape(-1).size)
+    lang = args["lang"]
+    cap = 120 if lang == "ko" else 300
+    pieces, spans, cursor = [], [], 0.0
+    gap = np.zeros(int(args["chunkPause"] * SR), dtype=np.float32)
+    for k, group in enumerate(groups(args["text"], cap)):
+        wav, _ = tts.model([group], style, args["steps"], args["speed"], lang)
+        piece = trim(np.asarray(wav, dtype=np.float32).reshape(-1))
+        if k: pieces.append(gap); cursor += gap.size / SR
+        pieces.append(piece)
+        spans.append({"text": group, "start": round(cursor, 3), "end": round(cursor + piece.size / SR, 3)})
+        cursor += piece.size / SR
+    out = np.concatenate(pieces).reshape(1, -1)
+    tts.save_audio(out, args["out"])
     print(json.dumps({
-        "ok": True, "samples": samples,
-        "duration": round(samples / 44100.0, 3),
+        "ok": True, "samples": int(out.size),
+        "duration": round(out.size / SR, 3),
+        "groups": spans,
         "elapsed": round(time.time() - t0, 2),
     }))
 except Exception as e:
@@ -76758,6 +76792,7 @@ async function generateLocalSpeech(request) {
     lang: request.lang,
     speed: request.speed,
     steps: request.steps,
+    chunkPause: request.chunkPause,
     out: outFile
   });
   console.error(
@@ -76812,6 +76847,7 @@ ${stdout.slice(0, 500)}` };
     lang: request.lang,
     durationSeconds: result.duration,
     sampleRate: SUPERTONIC_SAMPLE_RATE,
+    groups: result.groups,
     elapsedSeconds: result.elapsed
   };
 }
@@ -77880,10 +77916,10 @@ async function generateDialogue(request) {
 
 // src/tts-quality.ts
 var import_tts_speed_policy3 = __toESM(require_tts_speed_policy(), 1);
-import { execFile as execFile4 } from "node:child_process";
+import { execFile as execFile5 } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
-import { closeSync, existsSync as existsSync7, mkdirSync as mkdirSync3, openSync, readFileSync as readFileSync6, renameSync as renameSync2, rmSync as rmSync2, writeFileSync as writeFileSync6 } from "node:fs";
-import path7 from "node:path";
+import { closeSync, existsSync as existsSync9, mkdirSync as mkdirSync4, openSync, readFileSync as readFileSync7, renameSync as renameSync3, rmSync as rmSync4, writeFileSync as writeFileSync6 } from "node:fs";
+import path8 from "node:path";
 import { promisify as promisify2 } from "node:util";
 
 // src/elevenlabs-client.ts
@@ -78852,8 +78888,8 @@ async function editMlxImage(request) {
   const src = fileToBase64(request.imagePath);
   if (!src.ok) return { success: false, error: src.error };
   const refs = [];
-  for (const path12 of request.refImagePaths ?? []) {
-    const ref = fileToBase64(path12);
+  for (const path13 of request.refImagePaths ?? []) {
+    const ref = fileToBase64(path13);
     if (!ref.ok) return { success: false, error: ref.error };
     refs.push(ref.b64);
   }
@@ -79485,8 +79521,370 @@ function respace(wavBuffer, alignment, segments, options) {
   };
 }
 
+// src/asr-alignment.ts
+import { existsSync as existsSync8, mkdtempSync as mkdtempSync3, rmSync as rmSync3 } from "node:fs";
+import { tmpdir as tmpdir2 } from "node:os";
+import path7 from "node:path";
+
+// src/qwen3-asr-client.ts
+import { execFile as execFile4 } from "node:child_process";
+import { existsSync as existsSync7, mkdirSync as mkdirSync3, mkdtempSync as mkdtempSync2, readFileSync as readFileSync6, renameSync as renameSync2, rmSync as rmSync2 } from "node:fs";
+import { homedir as homedir2 } from "node:os";
+import { basename as basename7, extname as extname5, join as join5 } from "node:path";
+var QWEN3_ASR_MODELS = ["Qwen/Qwen3-ASR-1.7B", "Qwen/Qwen3-ASR-0.6B"];
+var DEFAULT_QWEN3_ASR_MODEL = "Qwen/Qwen3-ASR-1.7B";
+var QWEN3_ASR_LANGUAGES = [
+  "Korean",
+  "English",
+  "Chinese",
+  "Japanese",
+  "Arabic",
+  "German",
+  "French",
+  "Spanish",
+  "Portuguese",
+  "Russian",
+  "Hindi",
+  "Italian",
+  "Turkish",
+  "Dutch"
+];
+var DEFAULT_QWEN3_ASR_LANGUAGE = "Korean";
+var LANGUAGE_ALIASES = {
+  ko: "Korean",
+  "ko-kr": "Korean",
+  korean: "Korean",
+  en: "English",
+  "en-us": "English",
+  "en-gb": "English",
+  english: "English",
+  zh: "Chinese",
+  "zh-cn": "Chinese",
+  "zh-tw": "Chinese",
+  cmn: "Chinese",
+  mandarin: "Chinese",
+  chinese: "Chinese",
+  ja: "Japanese",
+  "ja-jp": "Japanese",
+  japanese: "Japanese",
+  ar: "Arabic",
+  "ar-eg": "Arabic",
+  arabic: "Arabic",
+  de: "German",
+  "de-de": "German",
+  german: "German",
+  fr: "French",
+  "fr-fr": "French",
+  french: "French",
+  es: "Spanish",
+  "es-es": "Spanish",
+  "es-419": "Spanish",
+  spanish: "Spanish",
+  pt: "Portuguese",
+  "pt-br": "Portuguese",
+  "pt-pt": "Portuguese",
+  portuguese: "Portuguese",
+  ru: "Russian",
+  "ru-ru": "Russian",
+  russian: "Russian",
+  hi: "Hindi",
+  "hi-in": "Hindi",
+  hindi: "Hindi",
+  it: "Italian",
+  "it-it": "Italian",
+  italian: "Italian",
+  tr: "Turkish",
+  "tr-tr": "Turkish",
+  turkish: "Turkish",
+  nl: "Dutch",
+  "nl-nl": "Dutch",
+  dutch: "Dutch"
+};
+function canonicalizeLanguage(value) {
+  if (QWEN3_ASR_LANGUAGES.includes(value)) {
+    return value;
+  }
+  const mapped = LANGUAGE_ALIASES[value.trim().toLowerCase()];
+  if (!mapped) {
+    throw new Error(
+      `Unsupported language "${value}". Use one of: ${QWEN3_ASR_LANGUAGES.join(", ")} (aliases like ko/en/ja also work).`
+    );
+  }
+  return mapped;
+}
+var AUDIO_INPUT_EXTENSIONS = [
+  ".wav",
+  ".mp3",
+  ".m4a",
+  ".flac",
+  ".ogg",
+  ".aac",
+  ".mp4",
+  ".mov",
+  ".webm",
+  ".mkv"
+];
+function qwen3AsrTimeoutMs(audioSeconds) {
+  return Math.min(30 * 6e4, 9e4 + Math.ceil(Math.max(audioSeconds, 1) * 2e3));
+}
+var WEIGHT_DOWNLOAD_ALLOWANCE_MS = 60 * 6e4;
+function weightCacheDir(model) {
+  const hfHome = process.env.HF_HOME || join5(homedir2(), ".cache", "huggingface");
+  const slug = model.replaceAll("/", "--");
+  return join5(hfHome, "hub", `models--${slug}`);
+}
+function alignerCacheDir() {
+  const hfHome = process.env.HF_HOME || join5(homedir2(), ".cache", "huggingface");
+  return join5(hfHome, "hub", "models--Qwen--Qwen3-ForcedAligner-0.6B");
+}
+function installHint2(detail) {
+  return `${detail}
+
+Local STT requires mlx-qwen3-asr (Apple Silicon only, MLX):
+  uv tool install --python 3.12 "mlx-qwen3-asr[aligner]"
+If installed elsewhere, point QWEN3_ASR_BIN at the executable (e.g. QWEN3_ASR_BIN=~/.local/bin/mlx-qwen3-asr).
+The first call downloads ~3.4GB of Qwen3-ASR-1.7B weights (plus the ForcedAligner) to ~/.cache/huggingface. Until it is installed, ingest uses the whisper.cpp fallback.`;
+}
+var qwen3AsrTranscribeSchema = external_exports.object({
+  audioPath: external_exports.string().min(1, "audioPath is required").refine((p) => !p.includes(".."), { message: 'audioPath must not contain ".."' }).refine((p) => AUDIO_INPUT_EXTENSIONS.includes(extname5(p).toLowerCase()), {
+    message: `audioPath extension must be one of: ${AUDIO_INPUT_EXTENSIONS.join(", ")}`
+  }),
+  language: external_exports.string().optional().default(DEFAULT_QWEN3_ASR_LANGUAGE).transform((value) => canonicalizeLanguage(value)),
+  model: external_exports.enum(QWEN3_ASR_MODELS).optional().default(DEFAULT_QWEN3_ASR_MODEL),
+  context: external_exports.string().max(4e3).optional(),
+  timestamps: external_exports.boolean().optional().default(true),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("json").optional()
+});
+function probeDurationSeconds(audioPath) {
+  return new Promise((resolve5) => {
+    execFile4(
+      "ffprobe",
+      ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", audioPath],
+      { timeout: 15e3 },
+      (error2, out) => {
+        const seconds = Number.parseFloat((out || "").trim());
+        if (error2 || !Number.isFinite(seconds) || seconds <= 0) {
+          resolve5(60);
+          return;
+        }
+        resolve5(seconds);
+      }
+    );
+  });
+}
+function parseCliJson(raw) {
+  return JSON.parse(raw);
+}
+function normalizeSegments(data) {
+  return (data.segments ?? []).map((seg) => ({
+    text: (seg.text ?? "").trim(),
+    start: Number(seg.start ?? 0),
+    end: Number(seg.end ?? 0)
+  })).filter((seg) => seg.text.length > 0);
+}
+async function transcribeLocal(request) {
+  const bin = qwen3AsrBin();
+  if (!existsSync7(bin)) {
+    return { success: false, error: installHint2(`mlx-qwen3-asr binary not found: "${bin}"`) };
+  }
+  if (!existsSync7(request.audioPath)) {
+    return { success: false, error: `Audio file not found: ${request.audioPath}` };
+  }
+  const outFile = resolveOutputFile(
+    request.outputPath || process.cwd(),
+    request.filename || `stt_${Date.now()}.json`,
+    "json"
+  );
+  const outDir = request.outputPath || process.cwd();
+  mkdirSync3(outDir, { recursive: true });
+  const scratchDir = mkdtempSync2(join5(outDir, ".qwen3-asr-"));
+  const firstCall = !existsSync7(weightCacheDir(request.model)) || request.timestamps && !existsSync7(alignerCacheDir());
+  if (firstCall) {
+    console.error(
+      "[Qwen3-ASR] First call \u2014 downloading ~3.4GB of weights (plus ForcedAligner if timestamps) to the huggingface cache. This can take a while."
+    );
+  }
+  const duration3 = await probeDurationSeconds(request.audioPath);
+  const cliArgs = [
+    request.audioPath,
+    "--model",
+    request.model,
+    "--language",
+    request.language,
+    "-f",
+    "json",
+    "-o",
+    scratchDir,
+    "--quiet"
+  ];
+  if (request.timestamps) cliArgs.push("--timestamps");
+  if (request.context?.trim()) cliArgs.push("--context", request.context.trim());
+  console.error(
+    `[Qwen3-ASR] Transcribing locally... (${request.model}, ${request.language}, ${duration3.toFixed(1)}s audio)`
+  );
+  const startedAt = Date.now();
+  try {
+    await new Promise((resolve5, reject) => {
+      execFile4(
+        bin,
+        cliArgs,
+        {
+          timeout: qwen3AsrTimeoutMs(duration3) + (firstCall ? WEIGHT_DOWNLOAD_ALLOWANCE_MS : 0),
+          maxBuffer: 16 * 1024 * 1024
+        },
+        (error2, _out, errOut) => {
+          if (error2) {
+            const code = error2.code;
+            if (code === "ENOENT") {
+              reject(new Error(installHint2(`mlx-qwen3-asr binary not found: "${bin}"`)));
+              return;
+            }
+            const tail = (errOut || "").split("\n").filter((line) => line.trim() && !line.includes("%|") && !line.includes("it/s]")).slice(-8).join("\n");
+            reject(new Error(`${error2.message}${tail ? `
+${tail}` : ""}`));
+            return;
+          }
+          resolve5();
+        }
+      );
+    });
+  } catch (error2) {
+    rmSync2(scratchDir, { recursive: true, force: true });
+    const message = error2 instanceof Error ? error2.message : String(error2);
+    console.error(`[Qwen3-ASR] Error: ${message.split("\n")[0]}`);
+    return { success: false, error: message };
+  }
+  const cliJsonPath = join5(scratchDir, `${basename7(request.audioPath, extname5(request.audioPath))}.json`);
+  if (!existsSync7(cliJsonPath)) {
+    rmSync2(scratchDir, { recursive: true, force: true });
+    return { success: false, error: `mlx-qwen3-asr exited without producing JSON (looked for ${cliJsonPath})` };
+  }
+  let parsed;
+  try {
+    parsed = parseCliJson(readFileSync6(cliJsonPath, "utf8"));
+  } catch (error2) {
+    rmSync2(scratchDir, { recursive: true, force: true });
+    const message = error2 instanceof Error ? error2.message : String(error2);
+    return { success: false, error: `Failed to parse CLI JSON: ${message}` };
+  }
+  renameSync2(cliJsonPath, outFile);
+  rmSync2(scratchDir, { recursive: true, force: true });
+  const segments = normalizeSegments(parsed);
+  const text2 = (parsed.text ?? segments.map((s2) => s2.text).join("")).trim();
+  const elapsed = Math.round((Date.now() - startedAt) / 100) / 10;
+  console.error(`[Qwen3-ASR] Transcript saved to: ${outFile} (${segments.length} segments in ${elapsed}s)`);
+  return {
+    success: true,
+    transcriptPath: outFile,
+    text: text2,
+    language: parsed.language || request.language,
+    model: request.model,
+    segments,
+    elapsedSeconds: elapsed
+  };
+}
+
+// src/asr-alignment.ts
+var isLetter2 = (c) => /[\p{L}\p{N}]/u.test(c);
+function transcriptLetters(words) {
+  const out = [];
+  for (const word of words) {
+    const letters = [...word.text].filter(isLetter2);
+    if (!letters.length) continue;
+    const step = Math.max(0, word.end - word.start) / letters.length;
+    letters.forEach((char, i2) => out.push({ char, start: word.start + i2 * step, end: word.start + (i2 + 1) * step }));
+  }
+  return out;
+}
+function matchLetters(script, heard) {
+  const n = script.length, m2 = heard.length;
+  if (!n || !m2) return script.map(() => -1);
+  const dp = [];
+  for (let i3 = 0; i3 <= n; i3++) {
+    dp.push(new Int32Array(m2 + 1));
+    dp[i3][0] = i3;
+  }
+  for (let j2 = 0; j2 <= m2; j2++) dp[0][j2] = j2;
+  for (let i3 = 1; i3 <= n; i3++) {
+    for (let j2 = 1; j2 <= m2; j2++) {
+      dp[i3][j2] = Math.min(dp[i3 - 1][j2] + 1, dp[i3][j2 - 1] + 1, dp[i3 - 1][j2 - 1] + (script[i3 - 1] === heard[j2 - 1] ? 0 : 1));
+    }
+  }
+  const matched = new Array(n).fill(-1);
+  let i2 = n, j = m2;
+  while (i2 > 0 && j > 0) {
+    const same = script[i2 - 1] === heard[j - 1];
+    if (dp[i2][j] === dp[i2 - 1][j - 1] + (same ? 0 : 1)) {
+      if (same) matched[i2 - 1] = j - 1;
+      i2--;
+      j--;
+    } else if (dp[i2][j] === dp[i2 - 1][j] + 1) i2--;
+    else j--;
+  }
+  return matched;
+}
+function alignmentFromWords(text2, words) {
+  const chars = [...text2];
+  const letterIdx = chars.map((c, i2) => isLetter2(c) ? i2 : -1).filter((i2) => i2 >= 0);
+  const heard = transcriptLetters(words);
+  const matched = matchLetters(letterIdx.map((i2) => chars[i2]), heard.map((h2) => h2.char));
+  const starts = new Array(chars.length).fill(NaN), ends = new Array(chars.length).fill(NaN);
+  let count = 0;
+  matched.forEach((h2, k) => {
+    if (h2 >= 0) {
+      starts[letterIdx[k]] = heard[h2].start;
+      ends[letterIdx[k]] = heard[h2].end;
+      count++;
+    }
+  });
+  if (!count) throw new Error("No script letter matched the transcript");
+  let prev = -1;
+  for (let k = 0; k <= letterIdx.length; k++) {
+    const known = k < letterIdx.length && matched[k] >= 0;
+    if (!known && k < letterIdx.length) continue;
+    const from = prev, to = k < letterIdx.length ? k : letterIdx.length;
+    const gapCount = to - from - 1;
+    if (gapCount > 0) {
+      const t0 = from >= 0 ? ends[letterIdx[from]] : starts[letterIdx[to]];
+      const t1 = to < letterIdx.length ? starts[letterIdx[to]] : ends[letterIdx[from]];
+      const step = (t1 - t0) / gapCount;
+      for (let g = 1; g <= gapCount; g++) {
+        const i2 = letterIdx[from + g];
+        starts[i2] = t0 + (g - 1) * step;
+        ends[i2] = t0 + g * step;
+      }
+    }
+    prev = k;
+  }
+  let cursor = 0;
+  for (let i2 = 0; i2 < chars.length; i2++) {
+    if (Number.isNaN(starts[i2])) {
+      starts[i2] = cursor;
+      ends[i2] = cursor;
+    } else {
+      starts[i2] = Math.max(cursor, starts[i2]);
+      ends[i2] = Math.max(starts[i2], ends[i2]);
+      cursor = ends[i2];
+    }
+  }
+  const round = (t2) => Math.round(t2 * 1e3) / 1e3;
+  return { alignment: { characters: chars, character_start_times_seconds: starts.map(round), character_end_times_seconds: ends.map(round) }, matched: count, letters: letterIdx.length };
+}
+async function alignmentFromAsr(wav, text2, language) {
+  if (!existsSync8(wav)) throw new Error(`No WAV at ${wav}`);
+  const scratch = mkdtempSync3(path7.join(tmpdir2(), "asr-align-"));
+  try {
+    const result = await transcribeLocal(qwen3AsrTranscribeSchema.parse({ audioPath: wav, language, timestamps: true, outputPath: scratch, filename: "align.json" }));
+    if (!result.success || !result.segments?.length) throw new Error(result.error || "The aligner returned no words");
+    return { ...alignmentFromWords(text2, result.segments), transcript: result.text || "" };
+  } finally {
+    rmSync3(scratch, { recursive: true, force: true });
+  }
+}
+
 // src/tts-quality.ts
-var exec = promisify2(execFile4);
+var exec = promisify2(execFile5);
 var QUALITY_POLICY = "speech-quality-v1";
 var REVIEW_API_VERSION = process.env.SOCIAL_FLOW_TTS_REVIEW_API_VERSION?.trim() || "v1";
 var REVIEW_MODEL = process.env.SOCIAL_FLOW_TTS_REVIEW_MODEL?.trim() || "gemini-3.8-flash";
@@ -79607,8 +80005,8 @@ var REVIEW_JSON_SCHEMA = {
 async function listen(file, request, episodeReview = false) {
   let laidInPauses = null;
   try {
-    if (existsSync7(sentencesPathFor(file))) {
-      const side = JSON.parse(readFileSync6(sentencesPathFor(file), "utf8"));
+    if (existsSync9(sentencesPathFor(file))) {
+      const side = JSON.parse(readFileSync7(sentencesPathFor(file), "utf8"));
       if (Array.isArray(side.boundaries)) laidInPauses = { lead: Number(side.lead) || 0, boundaries: side.boundaries };
     }
   } catch {
@@ -79616,7 +80014,7 @@ async function listen(file, request, episodeReview = false) {
   }
   const { GoogleGenAI: GoogleGenAI3 } = await Promise.resolve().then(() => (init_node(), node_exports));
   const client = new GoogleGenAI3({ apiKey: requireGeminiKey(), httpOptions: { apiVersion: REVIEW_API_VERSION, timeout: 18e4 } });
-  const audio = readFileSync6(file);
+  const audio = readFileSync7(file);
   const flac = episodeReview && audio.subarray(0, 4).toString() === "fLaC";
   if (audio.length > 14 * 1024 * 1024 || !flac && audio.subarray(0, 4).toString() !== "RIFF") throw new Error("Review requires WAV (or final FLAC) smaller than 14 MiB");
   const audioPart = { inlineData: { mimeType: flac ? "audio/flac" : "audio/wav", data: audio.toString("base64") } };
@@ -79683,11 +80081,13 @@ function prepareGeneration(request) {
   }
   let spoken, parsed, run, spacing = false, seed;
   switch (request.generator) {
+    // Single-voice engines without a vendor alignment get one from the local aligner (applySentenceSpacing), so their sentences are spaced like an ElevenLabs take.
     case "tts_generate": {
       const p = ttsGenerateSchema.parse(args);
       parsed = p;
       spoken = p.text;
       run = () => generateSpeech(p);
+      spacing = true;
       break;
     }
     case "tts_multi_speaker": {
@@ -79705,6 +80105,7 @@ function prepareGeneration(request) {
       parsed = p;
       spoken = p.text;
       run = () => generateLocalSpeech(p);
+      spacing = true;
       break;
     }
     // Timestamps cost nothing extra and are what the sentence spacing reads, so the checked lane always asks for them.
@@ -79730,6 +80131,7 @@ function prepareGeneration(request) {
       parsed = p;
       spoken = p.input;
       run = () => generateMlxTts(p);
+      spacing = true;
       break;
     }
   }
@@ -79738,21 +80140,33 @@ function prepareGeneration(request) {
   return { args: parsed, run, spacing, seed };
 }
 var sentencesPathFor = (wav) => wav + ".sentences.json";
-function applySentenceSpacing(output, request) {
+async function applySentenceSpacing(output, request, align) {
   (0, import_tts_speed_policy3.authorizeSpeed)(request.outputPath, "final", request.playbackSpeed);
   const alignmentPath = output.replace(/\.wav$/i, "") + ".alignment.json";
-  rmSync2(sentencesPathFor(output), { force: true });
-  if (!existsSync7(alignmentPath)) return { skipped: "no alignment sidecar beside the take" };
+  rmSync4(sentencesPathFor(output), { force: true });
   try {
-    const sidecar = JSON.parse(readFileSync6(alignmentPath, "utf8"));
+    if (existsSync9(alignmentPath)) {
+      try {
+        if (JSON.parse(readFileSync7(alignmentPath, "utf8")).engine === "asr-aligner") rmSync4(alignmentPath, { force: true });
+      } catch {
+        rmSync4(alignmentPath, { force: true });
+      }
+    }
+    if (!existsSync9(alignmentPath)) {
+      if (!align) return { skipped: "no alignment sidecar beside the take and no aligner" };
+      const aligned = await align(output, request.expectedText, request.language);
+      if (aligned.matched < aligned.letters * 0.8) throw new Error(`aligner matched ${aligned.matched}/${aligned.letters} script letters; transcript "${aligned.transcript.slice(0, 60)}"`);
+      writeFileSync6(alignmentPath, JSON.stringify({ engine: "asr-aligner", generator: request.generator, text: request.expectedText, transcript: aligned.transcript, matched: aligned.matched, letters: aligned.letters, alignment: aligned.alignment }, null, 2));
+    }
+    const sidecar = JSON.parse(readFileSync7(alignmentPath, "utf8"));
     const alignment = sidecar.alignment;
     if (!alignment?.characters?.length) return { skipped: "alignment sidecar carries no characters" };
     const segments = request.segments ?? splitSentences(alignment.characters.join(""));
-    const result = respace(readFileSync6(output), alignment, segments, { pause: request.sentencePause, playbackSpeed: request.playbackSpeed });
+    const result = respace(readFileSync7(output), alignment, segments, { pause: request.sentencePause, playbackSpeed: request.playbackSpeed });
     writeFileSync6(output, result.wav);
-    const meta = { policy: SPACING_POLICY, pause: request.sentencePause, playbackSpeed: request.playbackSpeed, lead: result.lead, gaps: result.gaps, inserted: result.inserted, boundaries: result.boundaries, duration: result.duration, segmentsFrom: request.segments ? "request" : "sentence-final punctuation" };
+    const meta = { policy: SPACING_POLICY, source: sidecar.engine === "asr-aligner" ? "asr-aligner" : "vendor", pause: request.sentencePause, playbackSpeed: request.playbackSpeed, lead: result.lead, gaps: result.gaps, inserted: result.inserted, boundaries: result.boundaries, duration: result.duration, segmentsFrom: request.segments ? "request" : "sentence-final punctuation" };
     writeFileSync6(alignmentPath, JSON.stringify({ ...sidecar, alignment: result.alignment, vendor_alignment: sidecar.vendor_alignment ?? sidecar.alignment, respaced: meta }, null, 2));
-    writeFileSync6(sentencesPathFor(output), JSON.stringify({ version: 1, ...meta, audio: path7.basename(output), audioSha256: sha256(result.wav), sentences: result.sentences }, null, 2) + "\n");
+    writeFileSync6(sentencesPathFor(output), JSON.stringify({ version: 1, ...meta, audio: path8.basename(output), audioSha256: sha256(result.wav), sentences: result.sentences }, null, 2) + "\n");
     return meta;
   } catch (error2) {
     return { skipped: error2 instanceof Error ? error2.message : String(error2) };
@@ -79765,8 +80179,8 @@ async function generateCheckedSpeech(input, dependencies) {
     generation: (0, import_tts_speed_policy3.authorizeSpeed)(request.outputPath, "generation", Number(prepared.args.speed ?? 1)),
     final: (0, import_tts_speed_policy3.authorizeSpeed)(request.outputPath, "final", request.playbackSpeed)
   };
-  const output = path7.resolve(request.outputPath, request.filename), proofFile = output + ".quality.json";
-  mkdirSync3(path7.dirname(output), { recursive: true });
+  const output = path8.resolve(request.outputPath, request.filename), proofFile = output + ".quality.json";
+  mkdirSync4(path8.dirname(output), { recursive: true });
   const lockFile = proofFile + ".lock";
   let lock;
   try {
@@ -79779,7 +80193,7 @@ async function generateCheckedSpeech(input, dependencies) {
     if (!gate.enabled) throw new Error(`Selected generator is disabled: ${gate.reason}`);
     requireGeminiKey();
     await exec("ffmpeg", ["-version"], { timeout: 1e4 });
-  }, generate: prepared.run, measure: measureSignal, listen };
+  }, generate: prepared.run, measure: measureSignal, listen, align: alignmentFromAsr };
   const attempts = [];
   const settings = prepared.spacing ? { ...prepared.args, episode: request.episode ?? null, spacing: { segments: request.segments ?? null, sentencePause: request.sentencePause, playbackSpeed: request.playbackSpeed } } : prepared.args;
   const base = {
@@ -79802,24 +80216,24 @@ async function generateCheckedSpeech(input, dependencies) {
     const report = { ...base, status, attempts, checkedAt: (/* @__PURE__ */ new Date()).toISOString(), ...extra };
     const temporary = proofFile + "." + randomUUID() + ".tmp";
     writeFileSync6(temporary, JSON.stringify(report, null, 2) + "\n");
-    renameSync2(temporary, proofFile);
+    renameSync3(temporary, proofFile);
     return { success: status === "pass", status, audioPath: output, proofPath: proofFile, attempts: attempts.length, ...extra };
   }
   try {
-    if (existsSync7(proofFile)) {
-      const old = JSON.parse(readFileSync6(proofFile, "utf8"));
+    if (existsSync9(proofFile)) {
+      const old = JSON.parse(readFileSync7(proofFile, "utf8"));
       if (Object.entries(base).every(([key, value]) => key === "model" || JSON.stringify(old[key]) === JSON.stringify(value))) {
         if (!Array.isArray(old.attempts) || old.attempts.length > 3) throw new Error("Invalid attempt history");
         attempts.push(...old.attempts.map((take) => ({ ...take, model: take.model ?? old.model })));
         const last = attempts.at(-1);
         if (last?.duplicateOf) return save("fail", { error: "Identical rejected audio already stopped this request; correct the episode pronunciation or delivery plan" });
         if (request.rejectTake) {
-          if (!last || last.audioSha256 !== request.rejectTake.audioSha256 || !existsSync7(output) || sha256(readFileSync6(output)) !== request.rejectTake.audioSha256) throw new Error("The rejected take is not the current audio; inspect the current file before requesting another retake");
+          if (!last || last.audioSha256 !== request.rejectTake.audioSha256 || !existsSync9(output) || sha256(readFileSync7(output)) !== request.rejectTake.audioSha256) throw new Error("The rejected take is not the current audio; inspect the current file before requesting another retake");
           last.authorRejection = request.rejectTake.reason;
           last.pending = false;
           last.failures = [...Array.isArray(last.failures) ? last.failures : [], "Rejected during final listening: " + request.rejectTake.reason];
         }
-        if (!request.rejectTake && old.model === REVIEW_MODEL && old.status === "pass" && last?.pending === false && Array.isArray(last.failures) && !last.failures.length && typeof last.transcript === "string" && existsSync7(output) && old.audioSha256 === sha256(readFileSync6(output)) && last.audioSha256 === old.audioSha256 && !signalFailures(last.signal, request.expectedText).length && !reviewFailures(request.expectedText, String(last.transcript), reviewSchema.parse(last.review), last.signal.duration).length) {
+        if (!request.rejectTake && old.model === REVIEW_MODEL && old.status === "pass" && last?.pending === false && Array.isArray(last.failures) && !last.failures.length && typeof last.transcript === "string" && existsSync9(output) && old.audioSha256 === sha256(readFileSync7(output)) && last.audioSha256 === old.audioSha256 && !signalFailures(last.signal, request.expectedText).length && !reviewFailures(request.expectedText, String(last.transcript), reviewSchema.parse(last.review), last.signal.duration).length) {
           const lastSpacing = last.spacing;
           return {
             success: true,
@@ -79831,7 +80245,7 @@ async function generateCheckedSpeech(input, dependencies) {
             spacing: !prepared.spacing ? "not applicable" : lastSpacing?.skipped ? "skipped: " + String(lastSpacing.skipped) : "applied"
           };
         }
-        if (!request.rejectTake && old.model !== REVIEW_MODEL && old.status === "pass" && last && existsSync7(output) && last.audioSha256 === sha256(readFileSync6(output))) {
+        if (!request.rejectTake && old.model !== REVIEW_MODEL && old.status === "pass" && last && existsSync9(output) && last.audioSha256 === sha256(readFileSync7(output))) {
           last.previousReviews = [
             ...Array.isArray(last.previousReviews) ? last.previousReviews : [],
             { model: last.model, transcript: last.transcript, review: last.review, failures: last.failures, signal: last.signal, cer: last.cer }
@@ -79846,7 +80260,7 @@ async function generateCheckedSpeech(input, dependencies) {
     await deps.preflight();
     while (true) {
       let take = attempts.at(-1);
-      const resumeReview = take?.pending === true && typeof take.audioSha256 === "string" && existsSync7(output) && take.audioSha256 === sha256(readFileSync6(output));
+      const resumeReview = take?.pending === true && typeof take.audioSha256 === "string" && existsSync9(output) && take.audioSha256 === sha256(readFileSync7(output));
       if (!resumeReview) {
         if (attempts.length >= request.maxAttempts) break;
         const attempt = attempts.length + 1;
@@ -79873,13 +80287,13 @@ async function generateCheckedSpeech(input, dependencies) {
             detail: { ...generated?.requestId ? { requestId: generated.requestId } : {} }
           });
         }
-        if (!generated.success || path7.resolve(generated.audioPath || generated.path || "") !== output) throw new Error(generated.error || "Generator did not return the requested audio path");
-        if (prepared.spacing) take.spacing = applySentenceSpacing(output, request);
+        if (!generated.success || path8.resolve(generated.audioPath || generated.path || "") !== output) throw new Error(generated.error || "Generator did not return the requested audio path");
+        if (prepared.spacing) take.spacing = await applySentenceSpacing(output, request, deps.align);
         else {
-          rmSync2(sentencesPathFor(output), { force: true });
+          rmSync4(sentencesPathFor(output), { force: true });
           take.spacing = { skipped: "engine has no alignment" };
         }
-        take.audioSha256 = sha256(readFileSync6(output));
+        take.audioSha256 = sha256(readFileSync7(output));
         save("unverified");
         const duplicate = attempts.slice(0, -1).find((a) => a.audioSha256 === take.audioSha256 && a.pending === false && Array.isArray(a.failures) && a.failures.length);
         if (duplicate) {
@@ -79896,27 +80310,27 @@ async function generateCheckedSpeech(input, dependencies) {
         listened.review = reviewSchema.parse(listened.review);
         failures = reviewFailures(request.expectedText, listened.transcript, listened.review, signal.duration);
       }
-      if (audioSha256 !== sha256(readFileSync6(output))) throw new Error("Audio changed during review");
+      if (audioSha256 !== sha256(readFileSync7(output))) throw new Error("Audio changed during review");
       Object.assign(take, { pending: false, audioSha256, signal, ...listened ? { model: REVIEW_MODEL, ...listened } : {}, cer: listened ? characterErrorRate(request.expectedText, listened.transcript) : null, failures });
       const spacingState = take.spacing;
       const spacing = !prepared.spacing ? "not applicable" : spacingState?.skipped ? "skipped: " + String(spacingState.skipped) : "applied";
       if (!failures.length) return save("pass", { audioSha256, spacing });
       save("retry", { audioSha256, spacing });
     }
-    return save("fail", { error: "Speech did not pass within the attempt limit. Hold production; inspect the per-attempt issues. Do not reset the retry budget or change the voice to bypass review." });
+    return save("fail", { error: "Speech did not pass within the attempt limit. Present the per-attempt issues to the user (tts-hitl.md): they can accept this take, fix first or stop. Do not reset the retry budget or change the voice to bypass review." });
   } catch (error2) {
     return save("unverified", { error: error2 instanceof Error ? error2.message : String(error2) });
   } finally {
     closeSync(lock);
-    rmSync2(lockFile, { force: true });
+    rmSync4(lockFile, { force: true });
   }
 }
 
 // src/zimage-client.ts
-import { execFile as execFile5 } from "node:child_process";
-import { existsSync as existsSync8 } from "node:fs";
-import { homedir as homedir2 } from "node:os";
-import { join as join5 } from "node:path";
+import { execFile as execFile6 } from "node:child_process";
+import { existsSync as existsSync10 } from "node:fs";
+import { homedir as homedir3 } from "node:os";
+import { join as join6 } from "node:path";
 var DEFAULT_ZIMAGE_STEPS = 9;
 var ZIMAGE_QUANTIZE_OPTIONS = [4, 6, 8];
 var DEFAULT_ZIMAGE_QUANTIZE = 8;
@@ -79930,12 +80344,12 @@ function zimageTimeoutMs(width, height, steps) {
   const megapixels = width * height / 1e6;
   return Math.min(30 * 6e4, 12e4 + Math.ceil(steps * megapixels * 45e3));
 }
-function weightCacheDir() {
-  const hfHome = process.env.HF_HOME || join5(homedir2(), ".cache", "huggingface");
-  return join5(hfHome, "hub", "models--Tongyi-MAI--Z-Image-Turbo");
+function weightCacheDir2() {
+  const hfHome = process.env.HF_HOME || join6(homedir3(), ".cache", "huggingface");
+  return join6(hfHome, "hub", "models--Tongyi-MAI--Z-Image-Turbo");
 }
-var WEIGHT_DOWNLOAD_ALLOWANCE_MS = 60 * 6e4;
-function installHint2(detail) {
+var WEIGHT_DOWNLOAD_ALLOWANCE_MS2 = 60 * 6e4;
+function installHint3(detail) {
   return `${detail}
 
 Local image generation requires mflux (Apple Silicon only, MLX):
@@ -79956,8 +80370,8 @@ var zimageGenerateSchema = external_exports.object({
 });
 async function generateLocalImage(request) {
   const bin = mfluxZImageBin();
-  if (!existsSync8(bin)) {
-    return { success: false, error: installHint2(`mflux binary not found: "${bin}"`) };
+  if (!existsSync10(bin)) {
+    return { success: false, error: installHint3(`mflux binary not found: "${bin}"`) };
   }
   const outFile = resolveOutputFile(
     request.outputPath || process.cwd(),
@@ -79979,7 +80393,7 @@ async function generateLocalImage(request) {
     outFile
   ];
   if (request.seed !== void 0) cliArgs.push("--seed", String(request.seed));
-  const firstCall = !existsSync8(weightCacheDir());
+  const firstCall = !existsSync10(weightCacheDir2());
   if (firstCall) {
     console.error("[Z-Image] First call \u2014 downloading ~31GB of weights to the huggingface cache first. This can take a long time.");
   }
@@ -79989,11 +80403,11 @@ async function generateLocalImage(request) {
   const startedAt = Date.now();
   try {
     await new Promise((resolve5, reject) => {
-      execFile5(
+      execFile6(
         bin,
         cliArgs,
         {
-          timeout: zimageTimeoutMs(request.width, request.height, request.steps) + (firstCall ? WEIGHT_DOWNLOAD_ALLOWANCE_MS : 0),
+          timeout: zimageTimeoutMs(request.width, request.height, request.steps) + (firstCall ? WEIGHT_DOWNLOAD_ALLOWANCE_MS2 : 0),
           // The first call accumulates several MB of tqdm progress output from the
           // 31GB download — reusing Supertonic's 1MB would die on maxBuffer mid-download.
           maxBuffer: 16 * 1024 * 1024
@@ -80002,7 +80416,7 @@ async function generateLocalImage(request) {
           if (error2) {
             const code = error2.code;
             if (code === "ENOENT") {
-              reject(new Error(installHint2(`mflux binary not found: "${bin}"`)));
+              reject(new Error(installHint3(`mflux binary not found: "${bin}"`)));
               return;
             }
             const tail = errOut.split("\n").filter((line) => line.trim() && !line.includes("it/s]") && !line.includes("%|")).slice(-5).join("\n");
@@ -80019,7 +80433,7 @@ ${tail}` : ""}`));
     console.error(`[Z-Image] Error: ${message.split("\n")[0]}`);
     return { success: false, error: message };
   }
-  if (!existsSync8(outFile)) {
+  if (!existsSync10(outFile)) {
     return {
       success: false,
       error: `mflux exited without producing the output file: ${outFile}`
@@ -80039,269 +80453,10 @@ ${tail}` : ""}`));
   };
 }
 
-// src/qwen3-asr-client.ts
-import { execFile as execFile6 } from "node:child_process";
-import { existsSync as existsSync9, mkdirSync as mkdirSync4, mkdtempSync as mkdtempSync2, readFileSync as readFileSync7, renameSync as renameSync3, rmSync as rmSync3 } from "node:fs";
-import { homedir as homedir3 } from "node:os";
-import { basename as basename7, extname as extname5, join as join6 } from "node:path";
-var QWEN3_ASR_MODELS = ["Qwen/Qwen3-ASR-1.7B", "Qwen/Qwen3-ASR-0.6B"];
-var DEFAULT_QWEN3_ASR_MODEL = "Qwen/Qwen3-ASR-1.7B";
-var QWEN3_ASR_LANGUAGES = [
-  "Korean",
-  "English",
-  "Chinese",
-  "Japanese",
-  "Arabic",
-  "German",
-  "French",
-  "Spanish",
-  "Portuguese",
-  "Russian",
-  "Hindi",
-  "Italian",
-  "Turkish",
-  "Dutch"
-];
-var DEFAULT_QWEN3_ASR_LANGUAGE = "Korean";
-var LANGUAGE_ALIASES = {
-  ko: "Korean",
-  "ko-kr": "Korean",
-  korean: "Korean",
-  en: "English",
-  "en-us": "English",
-  "en-gb": "English",
-  english: "English",
-  zh: "Chinese",
-  "zh-cn": "Chinese",
-  "zh-tw": "Chinese",
-  cmn: "Chinese",
-  mandarin: "Chinese",
-  chinese: "Chinese",
-  ja: "Japanese",
-  "ja-jp": "Japanese",
-  japanese: "Japanese",
-  ar: "Arabic",
-  "ar-eg": "Arabic",
-  arabic: "Arabic",
-  de: "German",
-  "de-de": "German",
-  german: "German",
-  fr: "French",
-  "fr-fr": "French",
-  french: "French",
-  es: "Spanish",
-  "es-es": "Spanish",
-  "es-419": "Spanish",
-  spanish: "Spanish",
-  pt: "Portuguese",
-  "pt-br": "Portuguese",
-  "pt-pt": "Portuguese",
-  portuguese: "Portuguese",
-  ru: "Russian",
-  "ru-ru": "Russian",
-  russian: "Russian",
-  hi: "Hindi",
-  "hi-in": "Hindi",
-  hindi: "Hindi",
-  it: "Italian",
-  "it-it": "Italian",
-  italian: "Italian",
-  tr: "Turkish",
-  "tr-tr": "Turkish",
-  turkish: "Turkish",
-  nl: "Dutch",
-  "nl-nl": "Dutch",
-  dutch: "Dutch"
-};
-function canonicalizeLanguage(value) {
-  if (QWEN3_ASR_LANGUAGES.includes(value)) {
-    return value;
-  }
-  const mapped = LANGUAGE_ALIASES[value.trim().toLowerCase()];
-  if (!mapped) {
-    throw new Error(
-      `Unsupported language "${value}". Use one of: ${QWEN3_ASR_LANGUAGES.join(", ")} (aliases like ko/en/ja also work).`
-    );
-  }
-  return mapped;
-}
-var AUDIO_INPUT_EXTENSIONS = [
-  ".wav",
-  ".mp3",
-  ".m4a",
-  ".flac",
-  ".ogg",
-  ".aac",
-  ".mp4",
-  ".mov",
-  ".webm",
-  ".mkv"
-];
-function qwen3AsrTimeoutMs(audioSeconds) {
-  return Math.min(30 * 6e4, 9e4 + Math.ceil(Math.max(audioSeconds, 1) * 2e3));
-}
-var WEIGHT_DOWNLOAD_ALLOWANCE_MS2 = 60 * 6e4;
-function weightCacheDir2(model) {
-  const hfHome = process.env.HF_HOME || join6(homedir3(), ".cache", "huggingface");
-  const slug = model.replaceAll("/", "--");
-  return join6(hfHome, "hub", `models--${slug}`);
-}
-function alignerCacheDir() {
-  const hfHome = process.env.HF_HOME || join6(homedir3(), ".cache", "huggingface");
-  return join6(hfHome, "hub", "models--Qwen--Qwen3-ForcedAligner-0.6B");
-}
-function installHint3(detail) {
-  return `${detail}
-
-Local STT requires mlx-qwen3-asr (Apple Silicon only, MLX):
-  uv tool install --python 3.12 "mlx-qwen3-asr[aligner]"
-If installed elsewhere, point QWEN3_ASR_BIN at the executable (e.g. QWEN3_ASR_BIN=~/.local/bin/mlx-qwen3-asr).
-The first call downloads ~3.4GB of Qwen3-ASR-1.7B weights (plus the ForcedAligner) to ~/.cache/huggingface. Until it is installed, ingest uses the whisper.cpp fallback.`;
-}
-var qwen3AsrTranscribeSchema = external_exports.object({
-  audioPath: external_exports.string().min(1, "audioPath is required").refine((p) => !p.includes(".."), { message: 'audioPath must not contain ".."' }).refine((p) => AUDIO_INPUT_EXTENSIONS.includes(extname5(p).toLowerCase()), {
-    message: `audioPath extension must be one of: ${AUDIO_INPUT_EXTENSIONS.join(", ")}`
-  }),
-  language: external_exports.string().optional().default(DEFAULT_QWEN3_ASR_LANGUAGE).transform((value) => canonicalizeLanguage(value)),
-  model: external_exports.enum(QWEN3_ASR_MODELS).optional().default(DEFAULT_QWEN3_ASR_MODEL),
-  context: external_exports.string().max(4e3).optional(),
-  timestamps: external_exports.boolean().optional().default(true),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("json").optional()
-});
-function probeDurationSeconds(audioPath) {
-  return new Promise((resolve5) => {
-    execFile6(
-      "ffprobe",
-      ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", audioPath],
-      { timeout: 15e3 },
-      (error2, out) => {
-        const seconds = Number.parseFloat((out || "").trim());
-        if (error2 || !Number.isFinite(seconds) || seconds <= 0) {
-          resolve5(60);
-          return;
-        }
-        resolve5(seconds);
-      }
-    );
-  });
-}
-function parseCliJson(raw) {
-  return JSON.parse(raw);
-}
-function normalizeSegments(data) {
-  return (data.segments ?? []).map((seg) => ({
-    text: (seg.text ?? "").trim(),
-    start: Number(seg.start ?? 0),
-    end: Number(seg.end ?? 0)
-  })).filter((seg) => seg.text.length > 0);
-}
-async function transcribeLocal(request) {
-  const bin = qwen3AsrBin();
-  if (!existsSync9(bin)) {
-    return { success: false, error: installHint3(`mlx-qwen3-asr binary not found: "${bin}"`) };
-  }
-  if (!existsSync9(request.audioPath)) {
-    return { success: false, error: `Audio file not found: ${request.audioPath}` };
-  }
-  const outFile = resolveOutputFile(
-    request.outputPath || process.cwd(),
-    request.filename || `stt_${Date.now()}.json`,
-    "json"
-  );
-  const outDir = request.outputPath || process.cwd();
-  mkdirSync4(outDir, { recursive: true });
-  const scratchDir = mkdtempSync2(join6(outDir, ".qwen3-asr-"));
-  const firstCall = !existsSync9(weightCacheDir2(request.model)) || request.timestamps && !existsSync9(alignerCacheDir());
-  if (firstCall) {
-    console.error(
-      "[Qwen3-ASR] First call \u2014 downloading ~3.4GB of weights (plus ForcedAligner if timestamps) to the huggingface cache. This can take a while."
-    );
-  }
-  const duration3 = await probeDurationSeconds(request.audioPath);
-  const cliArgs = [
-    request.audioPath,
-    "--model",
-    request.model,
-    "--language",
-    request.language,
-    "-f",
-    "json",
-    "-o",
-    scratchDir,
-    "--quiet"
-  ];
-  if (request.timestamps) cliArgs.push("--timestamps");
-  if (request.context?.trim()) cliArgs.push("--context", request.context.trim());
-  console.error(
-    `[Qwen3-ASR] Transcribing locally... (${request.model}, ${request.language}, ${duration3.toFixed(1)}s audio)`
-  );
-  const startedAt = Date.now();
-  try {
-    await new Promise((resolve5, reject) => {
-      execFile6(
-        bin,
-        cliArgs,
-        {
-          timeout: qwen3AsrTimeoutMs(duration3) + (firstCall ? WEIGHT_DOWNLOAD_ALLOWANCE_MS2 : 0),
-          maxBuffer: 16 * 1024 * 1024
-        },
-        (error2, _out, errOut) => {
-          if (error2) {
-            const code = error2.code;
-            if (code === "ENOENT") {
-              reject(new Error(installHint3(`mlx-qwen3-asr binary not found: "${bin}"`)));
-              return;
-            }
-            const tail = (errOut || "").split("\n").filter((line) => line.trim() && !line.includes("%|") && !line.includes("it/s]")).slice(-8).join("\n");
-            reject(new Error(`${error2.message}${tail ? `
-${tail}` : ""}`));
-            return;
-          }
-          resolve5();
-        }
-      );
-    });
-  } catch (error2) {
-    rmSync3(scratchDir, { recursive: true, force: true });
-    const message = error2 instanceof Error ? error2.message : String(error2);
-    console.error(`[Qwen3-ASR] Error: ${message.split("\n")[0]}`);
-    return { success: false, error: message };
-  }
-  const cliJsonPath = join6(scratchDir, `${basename7(request.audioPath, extname5(request.audioPath))}.json`);
-  if (!existsSync9(cliJsonPath)) {
-    rmSync3(scratchDir, { recursive: true, force: true });
-    return { success: false, error: `mlx-qwen3-asr exited without producing JSON (looked for ${cliJsonPath})` };
-  }
-  let parsed;
-  try {
-    parsed = parseCliJson(readFileSync7(cliJsonPath, "utf8"));
-  } catch (error2) {
-    rmSync3(scratchDir, { recursive: true, force: true });
-    const message = error2 instanceof Error ? error2.message : String(error2);
-    return { success: false, error: `Failed to parse CLI JSON: ${message}` };
-  }
-  renameSync3(cliJsonPath, outFile);
-  rmSync3(scratchDir, { recursive: true, force: true });
-  const segments = normalizeSegments(parsed);
-  const text2 = (parsed.text ?? segments.map((s2) => s2.text).join("")).trim();
-  const elapsed = Math.round((Date.now() - startedAt) / 100) / 10;
-  console.error(`[Qwen3-ASR] Transcript saved to: ${outFile} (${segments.length} segments in ${elapsed}s)`);
-  return {
-    success: true,
-    transcriptPath: outFile,
-    text: text2,
-    language: parsed.language || request.language,
-    model: request.model,
-    segments,
-    elapsedSeconds: elapsed
-  };
-}
-
 // src/blender-bridge.ts
 import { execFile as execFile7 } from "node:child_process";
-import { existsSync as existsSync10, mkdtempSync as mkdtempSync3, readFileSync as readFileSync8, rmSync as rmSync4, writeFileSync as writeFileSync7 } from "node:fs";
-import { tmpdir as tmpdir2 } from "node:os";
+import { existsSync as existsSync11, mkdtempSync as mkdtempSync4, readFileSync as readFileSync8, rmSync as rmSync5, writeFileSync as writeFileSync7 } from "node:fs";
+import { tmpdir as tmpdir3 } from "node:os";
 import { dirname as dirname3, extname as extname6, join as join7, resolve as resolve3 } from "node:path";
 var BLENDER_PROXY_KINDS = ["person", "dog", "car", "box", "cylinder", "sphere"];
 var BLENDER_INTERPOLATIONS = ["LINEAR", "BEZIER", "CONSTANT"];
@@ -80602,7 +80757,7 @@ function runBridge(job, timeoutMs) {
 async function runBridgeUnlocked(job, timeoutMs) {
   const blender = blenderBin();
   if (!blender) return { success: false, error: installHint4("Blender was not found on this machine.") };
-  const dir = mkdtempSync3(join7(tmpdir2(), "blender-bridge-"));
+  const dir = mkdtempSync4(join7(tmpdir3(), "blender-bridge-"));
   const script = join7(dir, "bridge.py");
   const jobPath = join7(dir, "job.json");
   const resultPath = join7(dir, "result.json");
@@ -80626,7 +80781,7 @@ ${stderr}`.split("\n").filter((l) => l.trim().length > 0);
         }
       );
     });
-    if (existsSync10(resultPath)) {
+    if (existsSync11(resultPath)) {
       const raw = JSON.parse(readFileSync8(resultPath, "utf-8"));
       if (raw.ok) return { success: true, result: raw.result };
       return { success: false, error: `${raw.error ?? "Blender reported an error"}${raw.trace ? `
@@ -80638,11 +80793,11 @@ ${raw.trace}` : ""}` };
     return { success: false, error: `Blender exited with code ${run.code ?? "unknown"} before writing a result:
 ${run.tail}` };
   } finally {
-    rmSync4(dir, { recursive: true, force: true });
+    rmSync5(dir, { recursive: true, force: true });
   }
 }
 async function readScene(request) {
-  if (!existsSync10(request.blendPath)) {
+  if (!existsSync11(request.blendPath)) {
     return { success: false, error: `blend file not found: ${request.blendPath} \u2014 blender_scene_build creates one.` };
   }
   const r2 = await runBridge({ op: "read", blendPath: request.blendPath }, EDIT_TIMEOUT_MS);
@@ -80650,45 +80805,45 @@ async function readScene(request) {
 }
 async function buildScene(request) {
   for (const imp of request.imports) {
-    if (!existsSync10(imp.glbPath)) return { success: false, error: `GLB not found: ${imp.glbPath}` };
+    if (!existsSync11(imp.glbPath)) return { success: false, error: `GLB not found: ${imp.glbPath}` };
   }
-  if (!request.reset && !existsSync10(request.blendPath)) {
+  if (!request.reset && !existsSync11(request.blendPath)) {
     return { success: false, error: `reset is false but ${request.blendPath} does not exist yet \u2014 set reset to true to create it.` };
   }
   const r2 = await runBridge({ op: "build", ...request }, EDIT_TIMEOUT_MS);
   return r2.success ? { success: true, scene: r2.result } : r2;
 }
 async function setCamera(request) {
-  if (!existsSync10(request.blendPath)) {
+  if (!existsSync11(request.blendPath)) {
     return { success: false, error: `blend file not found: ${request.blendPath} \u2014 blender_scene_build creates one.` };
   }
   const r2 = await runBridge({ op: "camera", ...request }, EDIT_TIMEOUT_MS);
   return r2.success ? { success: true, scene: r2.result } : r2;
 }
 async function animateObject(request) {
-  if (!existsSync10(request.blendPath)) {
+  if (!existsSync11(request.blendPath)) {
     return { success: false, error: `blend file not found: ${request.blendPath} \u2014 blender_scene_build creates one.` };
   }
   const r2 = await runBridge({ op: "animate", ...request }, EDIT_TIMEOUT_MS);
   return r2.success ? { success: true, scene: r2.result } : r2;
 }
 async function poseKey(request) {
-  if (!existsSync10(request.blendPath)) {
+  if (!existsSync11(request.blendPath)) {
     return { success: false, error: `blend file not found: ${request.blendPath} \u2014 blender_scene_build creates one.` };
   }
   const r2 = await runBridge({ op: "pose", ...request }, EDIT_TIMEOUT_MS);
   return r2.success ? { success: true, scene: r2.result } : r2;
 }
 async function importMotion(request) {
-  if (!existsSync10(request.blendPath)) {
+  if (!existsSync11(request.blendPath)) {
     return { success: false, error: `blend file not found: ${request.blendPath} \u2014 blender_scene_build creates one.` };
   }
-  if (!existsSync10(request.motionPath)) return { success: false, error: `motion file not found: ${request.motionPath}` };
+  if (!existsSync11(request.motionPath)) return { success: false, error: `motion file not found: ${request.motionPath}` };
   const r2 = await runBridge({ op: "motion", ...request, maxFrames: MAX_PREVIZ_FRAMES }, MOTION_TIMEOUT_MS);
   return r2.success ? { success: true, scene: r2.result } : r2;
 }
 async function renderPreviz(request) {
-  if (!existsSync10(request.blendPath)) {
+  if (!existsSync11(request.blendPath)) {
     return { success: false, error: `blend file not found: ${request.blendPath} \u2014 blender_scene_build creates one.` };
   }
   const outputDir = request.outputPath ? resolve3(request.outputPath) : join7(dirname3(request.blendPath), "previz");
@@ -82121,7 +82276,7 @@ main()
 
 // src/suno-client.ts
 import { spawnSync } from "node:child_process";
-import * as path8 from "node:path";
+import * as path9 from "node:path";
 var SUNO_MODELS = ["V4", "V4_5", "V4_5PLUS", "V4_5ALL", "V5", "V5_5"];
 var DEFAULT_SUNO_MODEL = "V5";
 var SUNO_SOUND_MODEL = "V5";
@@ -82316,7 +82471,7 @@ function stemFromFilename(filename) {
   return filename.replace(/\.[^.]+$/, "");
 }
 function extOf(filename) {
-  return path8.extname(filename).toLowerCase();
+  return path9.extname(filename).toLowerCase();
 }
 function transcodeToWav(src, dest) {
   const result = spawnSync(
@@ -82347,7 +82502,7 @@ async function saveTracks(parsed, outputDir, filename, pickTrack) {
     const mp3Path = saveAudioFile(outputDir, mp3Name, buffer);
     let audioPath = mp3Path;
     if (isPick && wantWav) {
-      const wavPath = path8.join(path8.dirname(mp3Path), primaryName);
+      const wavPath = path9.join(path9.dirname(mp3Path), primaryName);
       transcodeToWav(mp3Path, wavPath);
       audioPath = wavPath;
     }
@@ -84927,8 +85082,8 @@ Returns: a text block with the mp4 path, still paths (and any requested still ou
     annotations: HINT.generate,
     description: `Generate one scene with the pinned TTS engine, review the actual WAV, and regenerate failed takes up to maxAttempts (1\u20133, including the first take).
 Use for every generated narration scene in produce/autoproduce. Pass the existing generator's arguments in generation, the complete spoken expectedText (phonetic spelling; no acting tags or speaker labels), language, and the profile's intended delivery. Voice and generation settings stay unchanged across attempts; the episode seed stays fixed on every retake (vendor determinism is best-effort). An entire scene is one call; never split it into sentence calls.
-On tts_elevenlabs_generate the take is fetched with timestamps and its sentences are re-spaced before review: a fixed sentencePause of digital silence between sentences (stretched up to 1.0s where a subtitle cue would read faster than 6.0 chars/s after playbackSpeed), a 0.14s lead, speech samples copied as generated (the 12 ms fades stay on the natural gap). Pass segments (the scene's narration[].tts list) so the pauses land on the builder's segment boundaries; the wrapper writes <wav>.sentences.json and shifts the .alignment.json to the shipped audio.
-Checks signal/duration, a blind transcript (CER <=2%), then ${REVIEW_MODEL} listening scores: accuracy >=98, pronunciation/naturalness/clarity >=95, confidence >=0.9, no audible defects. Returns a hash-bound .wav.quality.json proof required by the builder. Missing keys, unavailable reviewer, malformed responses or exhausted attempts block production. Scores are operational thresholds, not a guarantee of human judgement.
+Every single-voice take has its sentences re-spaced before review: a fixed sentencePause of digital silence between sentences (stretched up to 1.0s where a subtitle cue would read faster than 6.0 chars/s after playbackSpeed), a 0.14s lead, speech samples copied as generated (the 12 ms fades stay on the natural gap). tts_elevenlabs_generate is fetched with timestamps and spaced from its own alignment; tts_local_generate, tts_generate and mlx_tts_generate are aligned by the local forced aligner (mlx-qwen3-asr --timestamps) first, so a multi-sentence scene on any engine ships with the same pauses. Pass segments (the scene's narration[].tts list) so the pauses land on the builder's segment boundaries; the wrapper writes <wav>.sentences.json and the .alignment.json for the shipped audio. Generate consecutive sentences in one call whenever they belong to one breath \u2014 the engine reads them as one utterance, where one call per sentence restarts the voice at every sentence.
+Checks signal/duration, a blind transcript (CER <=2%), then ${REVIEW_MODEL} listening scores: accuracy >=98, pronunciation/naturalness/clarity >=95, confidence >=0.9, no audible defects. Returns a hash-bound .wav.quality.json proof required by the builder. Missing keys, unavailable reviewer or malformed responses hold production (unverified); exhausted attempts return fail, and that finding goes to the user as a warning they can accept for the current take (skills/produce/references/tts-hitl.md). Scores are operational thresholds, not a guarantee of human judgement.
 Requires ffmpeg and GEMINI_API_KEY even for local synthesis. Two paid audio-review calls per acoustically valid take, plus the selected generator's costs. Record the retry-inclusive allowance before calling; review tokens are logged as unpriced until reconciled with provider billing. Do not call again to reset an exhausted attempt budget. Do not use for recordings or native clip speech; retain their final listening QA. Do not change engines/voices or lower thresholds to obtain PASS.`,
     inputSchema: {
       type: "object",
@@ -84951,7 +85106,7 @@ Requires ffmpeg and GEMINI_API_KEY even for local synthesis. Two paid audio-revi
           index: { description: "Index of this scene in texts, starting at zero.", type: "integer", minimum: 0 },
           seed: { description: "One seed fixed across the episode and all retakes.", type: "integer", minimum: 0, maximum: 4294967295 }
         }, required: ["texts", "index", "seed"] },
-        segments: { type: "array", minItems: 1, maxItems: 80, items: { type: "string", minLength: 1, maxLength: 1e3 }, description: "The scene's narration[].tts sentences in order (joined they read as expectedText). ElevenLabs takes get a fixed pause at each segment boundary \u2014 the boundary the builder's reveals and subtitle cues use. Without it, pauses go after sentence-final punctuation." },
+        segments: { type: "array", minItems: 1, maxItems: 80, items: { type: "string", minLength: 1, maxLength: 1e3 }, description: "The scene's narration[].tts sentences in order (joined they read as expectedText). Every single-voice take gets a fixed pause at each segment boundary \u2014 the boundary the builder's reveals and subtitle cues use. Without it, pauses go after sentence-final punctuation." },
         sentencePause: { type: "number", minimum: 0.25, maximum: 1.5, default: 0.5, description: "Silence between sentences in the take's own timeline, seconds. The builder detects pauses from 0.16s and fits a 0.35s reveal fade inside one." },
         playbackSpeed: { type: "number", minimum: 0.5, maximum: 3, default: 1, description: "ElevenLabs requires 1: use generation.speed for the requested rate and keep assembly at 1. Other engines require an explicit user request in outputPath/speed-authorization.json for any non-1 factor; this controls subtitle pause sizing." }
       },
@@ -85080,7 +85235,7 @@ Returns: a text block with the saved .wav path, voice, language, audio duration,
         },
         lang: {
           type: "string",
-          description: `Language code (default: "${DEFAULT_SUPERTONIC_LANGUAGE}"). Unlike tts_generate this is NOT auto-detected \u2014 set it, because the code also selects chunking (Korean uses shorter chunks). Use "na" only for text whose language is unsupported.`,
+          description: `Language code (default: "${DEFAULT_SUPERTONIC_LANGUAGE}"). Unlike tts_generate this is NOT auto-detected \u2014 set it, because the code also sets the sentence-group cap (120 characters for Korean, 300 otherwise). Use "na" only for text whose language is unsupported.`,
           enum: [...SUPERTONIC_LANGUAGES],
           default: DEFAULT_SUPERTONIC_LANGUAGE
         },
@@ -85097,6 +85252,13 @@ Returns: a text block with the saved .wav path, voice, language, audio duration,
           minimum: 1,
           maximum: 100,
           default: DEFAULT_SUPERTONIC_STEPS
+        },
+        chunkPause: {
+          type: "number",
+          description: `Silence between sentence groups, seconds (default: ${DEFAULT_SUPERTONIC_CHUNK_PAUSE}). Sentences are grouped up to the language cap and each group is read as one utterance; the model's own 0.4\u20130.5s of leading and trailing quiet is trimmed off every group, so a join is this pause plus a short margin \u2014 not the 1.3s hole the package's chunking left (measured 2026-09-15). The checked lane pads every sentence gap to its sentencePause afterwards.`,
+          minimum: 0,
+          maximum: 1.5,
+          default: DEFAULT_SUPERTONIC_CHUNK_PAUSE
         },
         outputPath: {
           type: "string",
@@ -86463,8 +86625,8 @@ var SNS_PLATFORM_BY_TOOL = {
 
 // src/datago-client.ts
 import { mkdir, writeFile as writeFile2 } from "node:fs/promises";
-import { existsSync as existsSync11 } from "node:fs";
-import { tmpdir as tmpdir3 } from "node:os";
+import { existsSync as existsSync12 } from "node:fs";
+import { tmpdir as tmpdir4 } from "node:os";
 import { join as join9 } from "node:path";
 var PORTAL_BASE = "https://www.data.go.kr";
 var ODCLOUD_BASE = "https://api.odcloud.kr/api";
@@ -86704,10 +86866,10 @@ async function downloadFile2(input) {
   const cd = fileRes.headers.get("content-disposition") ?? "";
   const rawName = cd.match(/filename\*?=(?:UTF-8''|")?([^";]+)/i)?.[1] ?? `datago-${input.publicDataPk}.bin`;
   const filename = sanitizeFilename(fixHeaderEncoding(rawName.replace(/"/g, "")));
-  const saveDir = input.saveDir ?? join9(tmpdir3(), "social-flow-datago");
+  const saveDir = input.saveDir ?? join9(tmpdir4(), "social-flow-datago");
   await mkdir(saveDir, { recursive: true });
   let savedPath = join9(saveDir, filename);
-  for (let i2 = 1; existsSync11(savedPath); i2++) {
+  for (let i2 = 1; existsSync12(savedPath); i2++) {
     if (i2 >= 100) {
       return err(`there are already 100+ files with the same name in ${saveDir} \u2014 clean up saveDir or point at a different directory.`);
     }
@@ -86788,9 +86950,9 @@ var OPENAPI_CODE_HELP = {
 };
 async function callOpenApi(input) {
   const key = requireDataGoKrKey();
-  const path12 = input.path.replace(/^\/+/, "");
-  if (path12.includes("..") || path12.includes("://")) return err("path only accepts a route under apis.data.go.kr (e.g. 1360000/VilageFcstInfoService_2.0/getUltraSrtNcst)");
-  const url = `${OPENAPI_BASE}/${path12}${buildQuery({ ...input.params, serviceKey: key })}`;
+  const path13 = input.path.replace(/^\/+/, "");
+  if (path13.includes("..") || path13.includes("://")) return err("path only accepts a route under apis.data.go.kr (e.g. 1360000/VilageFcstInfoService_2.0/getUltraSrtNcst)");
+  const url = `${OPENAPI_BASE}/${path13}${buildQuery({ ...input.params, serviceKey: key })}`;
   const res = await requestRaw("get", url, { "User-Agent": BROWSER_UA });
   const body = res.body;
   if (/^\s*Unauthorized\s*$/i.test(body)) return err(`apis.data.go.kr: ${OPENAPI_AUTH_HELP}`);
@@ -88044,7 +88206,7 @@ async function stockSearch(input) {
 // src/sns-client.ts
 import { createHash as createHash2, randomUUID as randomUUID2 } from "node:crypto";
 import {
-  existsSync as existsSync12,
+  existsSync as existsSync13,
   mkdirSync as nodeMkdirSync,
   readFileSync as nodeReadFileSync,
   rmSync as nodeRmSync,
@@ -88055,11 +88217,11 @@ import { basename as basename8, dirname as dirname5, extname as extname8, join a
 function enabledPlatforms() {
   const channelDirs = listChannelDirs();
   return SNS_PLATFORMS.filter(
-    (platform) => existsSync12(snsCredentialFile(platform)) || channelDirs.some((dir) => dir.platforms.includes(platform))
+    (platform) => existsSync13(snsCredentialFile(platform)) || channelDirs.some((dir) => dir.platforms.includes(platform))
   );
 }
 function availablePlatformsFor(channel) {
-  return SNS_PLATFORMS.filter((platform) => existsSync12(snsCredentialFile(platform, channel)));
+  return SNS_PLATFORMS.filter((platform) => existsSync13(snsCredentialFile(platform, channel)));
 }
 var GRAPH_VERSION = "v23.0";
 var THREADS_BASE = "https://graph.threads.net/v1.0";
@@ -88629,19 +88791,19 @@ var YT_THUMB_MIME_BY_EXT = {
 var YT_THUMB_MAX_BYTES = 2 * 1024 * 1024;
 var CAPTION_MAX_BYTES_YT = 100 * 1024 * 1024;
 var CAPTION_MAX_BYTES_FB = 200 * 1024;
-async function readCaptionFile(path12, maxBytes) {
-  if (extname8(path12).toLowerCase() !== ".srt") {
-    return { error: fail2(400, `Caption file must be .srt (SubRip): ${path12}`) };
+async function readCaptionFile(path13, maxBytes) {
+  if (extname8(path13).toLowerCase() !== ".srt") {
+    return { error: fail2(400, `Caption file must be .srt (SubRip): ${path13}`) };
   }
   let bytes;
   try {
-    bytes = await readFile(path12);
+    bytes = await readFile(path13);
   } catch (error2) {
     return { error: fail2(400, `Cannot read caption file: ${error2 instanceof Error ? error2.message : String(error2)}`) };
   }
-  if (bytes.byteLength === 0) return { error: fail2(400, `Caption file is empty: ${path12}`) };
+  if (bytes.byteLength === 0) return { error: fail2(400, `Caption file is empty: ${path13}`) };
   if (bytes.byteLength > maxBytes) {
-    return { error: fail2(400, `Caption file exceeds ${maxBytes} bytes: ${path12} (${bytes.byteLength} bytes)`) };
+    return { error: fail2(400, `Caption file exceeds ${maxBytes} bytes: ${path13} (${bytes.byteLength} bytes)`) };
   }
   return { bytes };
 }
@@ -89877,9 +90039,9 @@ async function checkAccounts(channel) {
 
 // src/tts-final-quality.ts
 import { execFile as execFile8 } from "node:child_process";
-import { existsSync as existsSync13, mkdtempSync as mkdtempSync4, readFileSync as readFileSync9, rmSync as rmSync5, writeFileSync as writeFileSync8, renameSync as renameSync4, openSync as openSync2, closeSync as closeSync2 } from "node:fs";
-import { tmpdir as tmpdir4 } from "node:os";
-import path10 from "node:path";
+import { existsSync as existsSync14, mkdtempSync as mkdtempSync5, readFileSync as readFileSync9, rmSync as rmSync6, writeFileSync as writeFileSync8, renameSync as renameSync4, openSync as openSync2, closeSync as closeSync2 } from "node:fs";
+import { tmpdir as tmpdir5 } from "node:os";
+import path11 from "node:path";
 import { promisify as promisify3 } from "node:util";
 var exec2 = promisify3(execFile8);
 var finalSpeechSchema = external_exports.object({
@@ -89889,7 +90051,7 @@ var finalSpeechSchema = external_exports.object({
   delivery: external_exports.string().trim().min(1).max(2e3)
 }).strict();
 async function reviewFinalSpeech(input) {
-  const request = finalSpeechSchema.parse(input), media = path10.resolve(request.mediaPath);
+  const request = finalSpeechSchema.parse(input), media = path11.resolve(request.mediaPath);
   const proofPath = media + ".speech-quality.json", lockPath = proofPath + ".lock";
   let lock;
   try {
@@ -89897,11 +90059,11 @@ async function reviewFinalSpeech(input) {
   } catch {
     return { success: false, status: "unverified", error: "Final speech review is already locked" };
   }
-  const temp = mkdtempSync4(path10.join(tmpdir4(), "speech-final-"));
+  const temp = mkdtempSync5(path11.join(tmpdir5(), "speech-final-"));
   let base = { version: 1, policy: "final-speech-v1", model: REVIEW_MODEL, ...request, mediaPath: media };
   function save(status, extra) {
     const result = { ...base, status, checkedAt: (/* @__PURE__ */ new Date()).toISOString(), ...extra };
-    const staging = path10.join(temp, "proof.json");
+    const staging = path11.join(temp, "proof.json");
     writeFileSync8(staging, JSON.stringify(result, null, 2) + "\n");
     writeFileSync8(proofPath + ".tmp", readFileSync9(staging));
     renameSync4(proofPath + ".tmp", proofPath);
@@ -89909,11 +90071,11 @@ async function reviewFinalSpeech(input) {
   }
   try {
     base = { ...base, mediaSha256: sha256(readFileSync9(media)), textSha256: sha256(normalizeSpeech(request.expectedText)) };
-    const wav = path10.join(temp, "final.flac");
+    const wav = path11.join(temp, "final.flac");
     await exec2("ffmpeg", ["-y", "-v", "error", "-i", media, "-map", "0:a:0", "-map_metadata", "-1", "-ac", "1", "-ar", "24000", "-c:a", "flac", wav], { timeout: 6e4 });
     base.audioSha256 = sha256(readFileSync9(wav));
     if (sha256(readFileSync9(media)) !== base.mediaSha256) throw new Error("Final media changed during decoding");
-    if (existsSync13(proofPath)) {
+    if (existsSync14(proofPath)) {
       const old = JSON.parse(readFileSync9(proofPath, "utf8"));
       const same = Object.entries(base).every(([k, v]) => ["mediaSha256", "expectedText"].includes(k) || old[k] === v);
       if (old.audioSha256 === base.audioSha256 && old.textSha256 === base.textSha256 && old.status === "fail") return save("fail", { reused: true, signal: old.signal, transcript: old.transcript, failures: old.failures, review: old.review, error: "This exact final audio already failed; fix the audio before another listening review" });
@@ -89932,7 +90094,7 @@ async function reviewFinalSpeech(input) {
       expectedText: request.expectedText.slice(0, 4e3),
       language: request.language,
       delivery: request.delivery,
-      outputPath: path10.dirname(media),
+      outputPath: path11.dirname(media),
       filename: "final.wav"
     }), expectedText: request.expectedText };
     const result = await listen(wav, reviewRequest, true);
@@ -89943,9 +90105,9 @@ async function reviewFinalSpeech(input) {
   } catch (error2) {
     return save("unverified", { error: error2 instanceof Error ? error2.message : String(error2) });
   } finally {
-    rmSync5(temp, { recursive: true, force: true });
+    rmSync6(temp, { recursive: true, force: true });
     closeSync2(lock);
-    rmSync5(lockPath, { force: true });
+    rmSync6(lockPath, { force: true });
   }
 }
 
@@ -91497,9 +91659,9 @@ function isShortEnough(seconds, duration3) {
   if (seconds == null) return true;
   return seconds <= 180;
 }
-async function youtubeGet(path12, params, auth) {
+async function youtubeGet(path13, params, auth) {
   const query = auth.kind === "key" ? { ...params, key: auth.key } : params;
-  const url = `${YT_DATA_BASE2}/${path12}${buildQuery(query)}`;
+  const url = `${YT_DATA_BASE2}/${path13}${buildQuery(query)}`;
   try {
     const res = await fetch(url, {
       method: "GET",
@@ -91511,7 +91673,7 @@ async function youtubeGet(path12, params, auth) {
     return { ok: false, status: res.status, body: maskKey4(text2) };
   } catch (error2) {
     const message = error2 instanceof Error ? error2.message : String(error2);
-    return fail3(502, `YouTube Data API call failed (${path12}): ${maskKey4(message)}`);
+    return fail3(502, `YouTube Data API call failed (${path13}): ${maskKey4(message)}`);
   }
 }
 function chunk(items, size) {
@@ -92309,14 +92471,14 @@ ${errors.join("\n")}`);
 }
 
 // src/capability-status.ts
-import { existsSync as existsSync15 } from "node:fs";
-import path11 from "node:path";
+import { existsSync as existsSync16 } from "node:fs";
+import path12 from "node:path";
 import os from "node:os";
 var has2 = (v) => Boolean(v && v.length > 0);
 var binOk = (p) => {
   try {
-    if (p.includes(path11.sep)) return existsSync15(p);
-    return (process.env.PATH || "").split(path11.delimiter).some((dir) => dir && existsSync15(path11.join(dir, p)));
+    if (p.includes(path12.sep)) return existsSync16(p);
+    return (process.env.PATH || "").split(path12.delimiter).some((dir) => dir && existsSync16(path12.join(dir, p)));
   } catch {
     return false;
   }
@@ -92781,7 +92943,7 @@ var instagramPublishSchema = external_exports.object({
   videoUrl: external_exports.string().url().optional(),
   channel: channelSlugSchema
 }).superRefine((v, ctx) => {
-  const issue2 = (path12, message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: [path12], message });
+  const issue2 = (path13, message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: [path13], message });
   if (!v.imageUrls && !v.videoUrl) issue2("imageUrls", "INSTAGRAM requires imageUrls (1-10) or videoUrl (reel)");
   if (v.imageUrls && v.videoUrl) issue2("videoUrl", "imageUrls and videoUrl are mutually exclusive");
   if (v.videoUrl && !isVideoUrl(v.videoUrl)) issue2("videoUrl", "videoUrl must be a .mp4/.mov URL");
@@ -92801,7 +92963,7 @@ var facebookPublishSchema = external_exports.object({
   linkUrl: external_exports.string().url().optional(),
   channel: channelSlugSchema
 }).superRefine((v, ctx) => {
-  const issue2 = (path12, message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: [path12], message });
+  const issue2 = (path13, message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: [path13], message });
   if (v.imageUrls && v.videoUrl) issue2("videoUrl", "imageUrls and videoUrl are mutually exclusive");
   if (v.videoUrl && !isVideoUrl(v.videoUrl)) issue2("videoUrl", "videoUrl must be a .mp4/.mov URL");
   if (v.linkUrl && (v.imageUrls || v.videoUrl)) issue2("linkUrl", "linkUrl is for text-only posts (no media)");
@@ -93906,7 +94068,7 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
 // src/index.ts
 import { readFileSync as readFinalRequest } from "node:fs";
 var server = new Server(
-  { name: "social-flow", version: "0.78.3" },
+  { name: "social-flow", version: "0.79.0" },
   { capabilities: { tools: {} } }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {

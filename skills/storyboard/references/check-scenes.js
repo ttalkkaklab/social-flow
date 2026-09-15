@@ -47,6 +47,8 @@ const FORMAT_RESOLVE = path.resolve(SELF_DIR, '..', '..', 'platform-guide', 'ref
    checker and the assembler can never disagree about what a seedance prompt may say. */
 const PROMPT = require(path.join(SELF_DIR, 'assemble-bg-prompt.js'));
 const { scenePlan } = require('../../produce/references/seedance-route.js');
+const { assemble: assembleSpatialPrompt } = require('./spatial-prompts.js');
+const { APPEARANCE_WORDS } = require('./cut-treatments.js');
 
 function die(msg) {
   process.stderr.write('check-scenes: ' + msg + '\n');
@@ -427,6 +429,101 @@ function playbackShots(scenes) {
   return out;
 }
 
+const PEOPLE_CUT_TYPES = ['action', 'reaction', 'insert'];
+const EMPTY_CUT_TYPES = ['document', 'map', 'scenery'];
+const APPEARANCE_PATTERNS = APPEARANCE_WORDS.map((word) => ({
+  word,
+  re: /^[a-z]+$/i.test(word)
+    ? new RegExp('\\b' + word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i')
+    : null,
+}));
+
+function castIds(value) {
+  const values = Array.isArray(value) ? value : value ? [value] : [];
+  return [...new Set(values.map((entry) => typeof entry === 'string' ? entry : entry?.id)
+    .filter((id) => typeof id === 'string' && id.trim()))];
+}
+
+function appearanceWord(value) {
+  const source = typeof value === 'string' ? value : '';
+  const hit = APPEARANCE_PATTERNS.find(({ word, re }) => re ? re.test(source) : source.includes(word));
+  return hit && hit.word;
+}
+
+function perShotLookFindings(win, { bad, machine, warn }) {
+  const scenes = win.SCENES || [];
+  const production = win.PRODUCTION || {};
+  const cast = production.cast && typeof production.cast === 'object' && !Array.isArray(production.cast)
+    ? production.cast : {};
+  const optIn = production.cast !== undefined || scenes.some((scene) => scene.shot?.cutType !== undefined);
+  const own = (object, key) => Object.prototype.hasOwnProperty.call(object, key);
+
+  if (optIn) {
+    Object.entries(cast).forEach(([id, entry]) => {
+      if (!entry || typeof entry !== 'object' || Array.isArray(entry) || typeof entry.sheet !== 'string') return;
+      const negative = PROMPT.negDirectiveHits(entry.sheet, 'seedance');
+      const hangul = PROMPT.hangulHits(entry.sheet, 'seedance');
+      if (negative.length)
+        bad(`PRODUCTION.cast.${id}.sheet`, `[cast-sheet] rewrite the sheet as positive English appearance states; negative directive: ${negative.join(', ')}`);
+      if (hangul.length)
+        bad(`PRODUCTION.cast.${id}.sheet`, `[cast-sheet] the sheet must be English; Korean text: ${hangul.join(', ')}`);
+    });
+
+    scenes.forEach((scene, index) => {
+      const where = `shot ${index + 1}`;
+      const shot = scene.shot || {};
+      const cutType = shot.cutType;
+      const refs = castIds(scene.visual?.character);
+      const generated = ['generated_video', 'still_camera'].includes(shot.render?.mode) && !!scene.visual?.bg;
+      if (generated && cutType === undefined)
+        machine(where, '[cutType-missing] generated cuts with visual.bg need shot.cutType');
+
+      refs.filter((id) => !own(cast, id)).forEach((id) =>
+        warn(where, `[character-unresolved] visual.character "${id}" is not in PRODUCTION.cast; treating it as a channel cast reference`));
+
+      const episodeRefs = refs.filter((id) => own(cast, id));
+      if (episodeRefs.length) {
+        const design = shot.videoDesign || {};
+        const fields = [
+          ['shot.videoDesign.before', design.before],
+          ['shot.videoDesign.action', design.action],
+          ['shot.videoDesign.after', design.after],
+          ['shot.videoDesign.continuity', design.continuity],
+          ['shot.space.layout', shot.space?.layout],
+          ['shot.space.facing', shot.space?.facing],
+        ];
+        fields.forEach(([field, value]) => {
+          const word = appearanceWord(value);
+          if (word) bad(where, `[appearance-redefined] ${field} repeats appearance word "${word}"; move character appearance to PRODUCTION.cast`);
+        });
+      }
+
+      if (PEOPLE_CUT_TYPES.includes(cutType) && Object.keys(cast).length && !refs.length)
+        bad(where, `[character-missing] ${cutType} cuts need visual.character when PRODUCTION.cast is not empty`);
+      if (EMPTY_CUT_TYPES.includes(cutType) && refs.length)
+        warn(where, `[character-on-empty-cut] ${cutType} cuts omit cast sheets and should not carry visual.character`);
+
+      if (generated && typeof scene.visual?.bgPrompt === 'string') {
+        try {
+          if (assembleSpatialPrompt(win, index).sourcePrompt !== scene.visual.bgPrompt)
+            warn(where, '[bgPrompt-stale] visual.bgPrompt differs from spatial-prompts.js output; run the helper again');
+        } catch (_) {
+          // The assembler reports its own missing inputs. A stale comparison has no value here.
+        }
+      }
+    });
+  }
+
+  const worlds = production.style?.worlds;
+  if (worlds && typeof worlds === 'object' && !Array.isArray(worlds)) {
+    scenes.forEach((scene, index) => {
+      const worldId = scene.shot?.videoDesign?.worldId;
+      if (!own(worlds, worldId))
+        warn(`shot ${index + 1}`, `[worldId-unmapped] videoDesign.worldId ${JSON.stringify(worldId)} is not in PRODUCTION.style.worlds; using style.world`);
+    });
+  }
+}
+
 /**
  * Runs the structural contract. `fmt` is the resolved preset; every band comes from it.
  * Returns findings — `bad` is a violation, `warn` is worth a look, `later` is a machine-layer
@@ -451,6 +548,7 @@ function check(win, fmt, opts) {
     ? Math.floor(Number(fmt.video.generatedSecondsMax) / 8) : 2;
   const productionMode = require('./production-mode.js');
   productionMode.check(win, { draft }).forEach(message => bad('production mode', message));
+  perShotLookFindings(win, { bad, machine, warn });
   /* Sequence → scene → shot (structure-contract.js) — the same rules storyboard_apply refuses
      to write past. A board with no window.STRUCTURE only warns here: old boards still build. */
   require('./structure-contract.js').check(win, { draft }).forEach(f => {
@@ -2210,6 +2308,100 @@ function selftest() {
      engineOf({ type: 'broll', visual: { engine: 'host' } }) === 'host');
   ok('a host clip prompt is not held to the Seedance grammar',
      seedancePromptFindings('she turns to the window', 'host').length === 0);
+
+  // ── per-cut look and episode cast contracts (2026-09-15) ──
+  const perShotFixture = () => {
+    const win = {
+      PRODUCTION: {
+        mode: 'hybrid', videoBudgetUsd: 0, maxAttempts: 1,
+        style: {
+          preset: 'photoreal', world: 'A Joseon examination yard.',
+          worlds: { yard: 'A dry Joseon examination yard beside a willow tree.' },
+          materials: 'Weathered timber, packed earth and woven cotton.',
+          palette: 'Warm earth, dull iron and one red accent.',
+          lighting: 'Low warm side light from camera-left.',
+          camera: 'Natural portrait lenses with restrained depth of field.'
+        },
+        cast: { yi: { name: 'Yi Sun-sin', sheet: 'A lean Joseon officer with a short dark beard, dark brown armor, red cotton sleeves and black leather boots.' } }
+      },
+      SCENES: [{
+        narration: [{ tts: 'The officer crosses the yard.' }],
+        shot: {
+          cutType: 'action', render: { mode: 'still_camera' },
+          videoDesign: {
+            look: 'realistic', worldId: 'yard', before: 'The officer stands at the rail.',
+            action: 'The officer crosses the yard.', after: 'The officer reaches the horse.',
+            continuity: 'The horse and rail keep their positions.'
+          },
+          space: { layout: 'The officer stands left of the horse.', facing: 'The officer faces camera-right.' }
+        },
+        visual: {
+          bg: 'images/scene-1.png', character: ['yi'],
+          camera: { framing: 'Medium full shot across the yard.' }
+        }
+      }]
+    };
+    win.SCENES[0].visual.bgPrompt = assembleSpatialPrompt(win, 0).sourcePrompt;
+    return win;
+  };
+  const perShot = (win) => {
+    const findings = [];
+    const add = level => (where, what) => findings.push({ level, where, what });
+    perShotLookFindings(win, { bad: add('bad'), machine: add('machine'), warn: add('warn') });
+    return findings;
+  };
+  const lookHas = (findings, level, re) => findings.some(f => f.level === level && re.test(f.what));
+  const productionMode = require('./production-mode.js');
+
+  ok('cast-sheet rejects a missing or unsafe sheet and accepts the clean sheet', (() => {
+    const missing = perShotFixture(); delete missing.PRODUCTION.cast.yi.sheet;
+    const unsafe = perShotFixture(); unsafe.PRODUCTION.cast.yi.sheet = 'No helmet, with Korean text 한글.';
+    return productionMode.check(missing, { draft: true }).some(e => /\[cast-sheet\].*sheet is required/.test(e)) &&
+      lookHas(perShot(unsafe), 'bad', /\[cast-sheet\].*negative directive/) &&
+      lookHas(perShot(unsafe), 'bad', /\[cast-sheet\].*Korean text/) &&
+      !perShot(perShotFixture()).some(f => /\[cast-sheet\]/.test(f.what));
+  })());
+  ok('cutType-missing rejects a generated image cut and accepts a declared type', (() => {
+    const missing = perShotFixture(); delete missing.SCENES[0].shot.cutType;
+    return lookHas(perShot(missing), 'machine', /\[cutType-missing\]/) &&
+      !lookHas(perShot(perShotFixture()), 'machine', /\[cutType-missing\]/);
+  })());
+  ok('cutType-unknown rejects an invented type and accepts the closed vocabulary', (() => {
+    const unknown = perShotFixture(); unknown.SCENES[0].shot.cutType = 'portrait';
+    return productionMode.check(unknown, { draft: true }).some(e => /\[cutType-unknown\]/.test(e)) &&
+      !productionMode.check(perShotFixture(), { draft: true }).some(e => /\[cutType-unknown\]/.test(e));
+  })());
+  ok('appearance-redefined rejects handwritten costume details and accepts action continuity', (() => {
+    const repeated = perShotFixture(); repeated.SCENES[0].shot.videoDesign.continuity = 'The red sleeves and horse keep their positions.';
+    return lookHas(perShot(repeated), 'bad', /\[appearance-redefined\].*sleeve/) &&
+      !lookHas(perShot(perShotFixture()), 'bad', /\[appearance-redefined\]/);
+  })());
+  ok('character-missing rejects an empty people cut and accepts an episode cast reference', (() => {
+    const missing = perShotFixture(); delete missing.SCENES[0].visual.character;
+    return lookHas(perShot(missing), 'bad', /\[character-missing\]/) &&
+      !lookHas(perShot(perShotFixture()), 'bad', /\[character-missing\]/);
+  })());
+  ok('character-on-empty-cut warns on a document cast and accepts an empty document', (() => {
+    const carried = perShotFixture(); carried.SCENES[0].shot.cutType = 'document';
+    const empty = perShotFixture(); empty.SCENES[0].shot.cutType = 'document'; delete empty.SCENES[0].visual.character;
+    return lookHas(perShot(carried), 'warn', /\[character-on-empty-cut\]/) &&
+      !lookHas(perShot(empty), 'warn', /\[character-on-empty-cut\]/);
+  })());
+  ok('bgPrompt-stale warns on handwritten output and accepts helper output', (() => {
+    const stale = perShotFixture(); stale.SCENES[0].visual.bgPrompt = 'A handwritten prompt.';
+    return lookHas(perShot(stale), 'warn', /\[bgPrompt-stale\]/) &&
+      !lookHas(perShot(perShotFixture()), 'warn', /\[bgPrompt-stale\]/);
+  })());
+  ok('worldId-unmapped warns on a missing set and accepts a mapped set', (() => {
+    const missing = perShotFixture(); missing.SCENES[0].shot.videoDesign.worldId = 'workshop';
+    return lookHas(perShot(missing), 'warn', /\[worldId-unmapped\]/) &&
+      !lookHas(perShot(perShotFixture()), 'warn', /\[worldId-unmapped\]/);
+  })());
+  ok('a board without cast, cutType or worlds gets no per-cut look finding', (() => {
+    const legacy = perShotFixture(); delete legacy.PRODUCTION.cast; delete legacy.PRODUCTION.style.worlds;
+    delete legacy.SCENES[0].shot.cutType; delete legacy.SCENES[0].visual.character;
+    return perShot(legacy).length === 0;
+  })());
 
   if (failed) { process.stderr.write(failed + ' check(s) failed\n'); process.exit(1); }
   process.stdout.write('check-scenes selftest OK\n');
