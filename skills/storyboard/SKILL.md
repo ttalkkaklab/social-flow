@@ -694,10 +694,11 @@ Core rules:
   motion prompt for image→video does **not** rewrite sides, facing, or lighting — the PNG
   already locked them. A quote speech clip has no still, so its prompt carries the shot's
   `From the camera: …` sentence (`assemble-bg-prompt.js --space-only`).
-- **Name whoever from the channel cast is on screen** in `visual.character` — one id, or an array
-  with the shot's subject first (order is reference weight). It is what lets produce attach the
-  character panels without re-reading the scene, and what resolves a character's veo ban per cut
-  instead of per episode. Ids come from the channel's `assets/catalog.md`
+- **Declare `shot.cutType` on every generated still and video cut** when the episode defines
+  `PRODUCTION.cast` or any cut type: `action`, `reaction`, `insert`, `document`, `map` or `scenery`.
+  Put each episode character's appearance once in `PRODUCTION.cast[id].sheet`, outside `videoDesign` and `shot.space`.
+- **Name whoever is on screen** in `visual.character`, with the subject first. A matching episode
+  cast id takes priority; other ids come from the channel's `assets/catalog.md`
   (`channel/references/resolve-asset.py --list <channel dir>`). **Where a generated clip hands over more than one
   reference, write each entry as `{ id, scope }`** — one clause per reference saying what it
   governs and where it may appear ("controls the helmet and body only", "appears only in the last

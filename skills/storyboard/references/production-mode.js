@@ -3,6 +3,7 @@
   'use strict';
   const text = value => typeof value === 'string' && !!value.trim();
   const CHOICES = ['full_video', 'video_50', 'video_30', 'hook_only'];
+  const CUT_TYPES = ['action', 'reaction', 'insert', 'document', 'map', 'scenery'];
   const MODES = { full_video: '100% 이상', video_50: '50% 이상', video_30: '30% 이상', hook_only: '훅만 영상', hybrid: '혼합 제작 (기존 승인)' };
   const RATIOS = { full_video: 1, video_50: .5, video_30: .3 };
   // A cut is a shot in the playback line; b-roll is spliced by `after` and is not a cut, so it
@@ -284,13 +285,13 @@
   function signature(win) {
     const p = win.PRODUCTION || {};
     return JSON.stringify({ format: win.FORMAT, mode: p.mode, imageProvider: p.imageProvider, videoProvider: p.videoProvider, videoBudgetUsd: p.videoBudgetUsd,
-      maxAttempts: p.maxAttempts, generationRevision: p.generationRevision, comparison: p.comparison, style: p.style,
+      maxAttempts: p.maxAttempts, generationRevision: p.generationRevision, comparison: p.comparison, style: p.style, cast: p.cast,
       scenes: (win.SCENES || []).filter(eligible).map(s => {
         const v = s.visual || {}, video = { ...v.video };
         delete video.clip;
         return { type: s.type, duration: s.duration, narration: s.narration,
           ...(reused(s) ? { reuse: v.reuse } : {}),
-          render: s.shot?.render, design: s.shot?.videoDesign,
+          render: s.shot?.render, design: s.shot?.videoDesign, cutType: s.shot?.cutType,
           frames: v.frames, imagePair: v.imagePair, styleRole: v.styleRole, stylePack: v.stylePack,
           bg: v.bg, bgPrompt: v.bgPrompt, camera: v.camera, action: v.action, video, engine: v.engine,
           prompt: v.prompt, clip: typeof v.clip === 'object' ? v.clip : undefined,
@@ -341,6 +342,23 @@
         !text(p.style.selection?.reference))) errors.push('Record the actual style HITL choice in PRODUCTION.style.selection');
     if (STYLES[chosen] && !packPresets.includes(chosen) && p.style.referencePack)
       errors.push('Only cinematic-miniature carries the miniature reference pack; drop referencePack for ' + chosen);
+    if (p.cast !== undefined) {
+      if (!p.cast || typeof p.cast !== 'object' || Array.isArray(p.cast)) errors.push('[cast-sheet] PRODUCTION.cast must be an object keyed by character id');
+      else Object.entries(p.cast).forEach(([id, entry]) => {
+        if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+          errors.push('[cast-sheet] PRODUCTION.cast.' + id + ' must be an object with name and sheet');
+          return;
+        }
+        if (!text(entry.name)) errors.push('[cast-sheet] PRODUCTION.cast.' + id + '.name is required');
+        if (!text(entry.sheet)) errors.push('[cast-sheet] PRODUCTION.cast.' + id + '.sheet is required');
+        if (entry.image !== undefined && (!text(entry.image) || /^[a-z][a-z0-9+.-]*:|^\/|^\\|(?:^|[\\/])\.\.(?:[\\/]|$)|[\t\r\n|]/i.test(entry.image)))
+          errors.push('[cast-sheet] PRODUCTION.cast.' + id + '.image must be a relative path beside scenes.js');
+      });
+    }
+    (win.SCENES || []).forEach((scene, i) => {
+      if (scene.shot?.cutType !== undefined && !CUT_TYPES.includes(scene.shot.cutType))
+        errors.push('[cutType-unknown] shot ' + (i + 1) + ': shot.cutType must be one of ' + CUT_TYPES.join(', '));
+    });
     if (draft) return errors; // Shot assets/designs are authored after the narration-only draft.
     (win.SCENES || []).forEach((s, i) => {
       if (eligible(s) && !reused(s) && s.visual?.video) cameraErrors(s).forEach(e => errors.push('shot ' + (i + 1) + ': ' + e));
@@ -441,7 +459,7 @@
       // hook_only: the hook plus every imported clip — reuse is outside the count but still a slot.
       generatedVideoMax: production.mode === 'hook_only' ? 1 + scenes.filter(reused).length : RATIOS[production.mode] ? scenes.filter(eligible).length : Math.min(base.generatedVideoMax ?? 2, 2) };
   }
-  const api = { CAMERA_INPUT_SCHEMA, cameraInputErrors, CAMERA_PRESETS, isDrone, droneErrors, droneSample, droneSlots, droneBinding, droneCameraKeys, droneSceneErrors, STYLES, MODES, CHOICES, RATIOS, newCut, generated, hookScene, coverageErrors, CAMERA_SLOTS, PREVIZ_RENDERERS, VIDEO_MODELS, packPresets, ALL_LOOKS, eligible, reused, reuseErrors, full, signature, check, policy, motionErrors, missingCameraSlots, cameraErrors, staticCamera, finalState };
+  const api = { CAMERA_INPUT_SCHEMA, cameraInputErrors, CAMERA_PRESETS, isDrone, droneErrors, droneSample, droneSlots, droneBinding, droneCameraKeys, droneSceneErrors, STYLES, MODES, CHOICES, CUT_TYPES, RATIOS, newCut, generated, hookScene, coverageErrors, CAMERA_SLOTS, PREVIZ_RENDERERS, VIDEO_MODELS, packPresets, ALL_LOOKS, eligible, reused, reuseErrors, full, signature, check, policy, motionErrors, missingCameraSlots, cameraErrors, staticCamera, finalState };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.PRODUCTION_MODE = api;
 })(typeof window === 'object' ? window : globalThis);

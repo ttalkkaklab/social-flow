@@ -405,6 +405,12 @@ repo already uses.
 
 ### The character panels — how a channel cast is stored
 
+An episode may override a channel character with `PRODUCTION.cast[id]`. Its required `sheet`
+supplies the same appearance sentence to every people cut. When the entry also has an `image`,
+that episode-relative file is the appearance reference and takes priority over channel panels.
+Without an episode image, resolve the same id from the channel directory below. Document, map
+and scenery cuts omit episode cast image references even if `visual.character` was filled by mistake.
+
 The rule above says *don't hand the model one sheet with several angles drawn on it*. It does
 not say keep only one picture. Store the angles as **separate files**, one subject per file, and
 hand over the two or three the shot actually needs:

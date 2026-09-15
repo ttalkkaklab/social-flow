@@ -145,6 +145,59 @@ test('source and motion prompts share style without inventing a person; end-fram
   win.SCENES[0].visual.video.lastImagePath = 'images/end.png';
   assert.equal(scenePlan(win.SCENES[0]).lastImagePath, 'images/end.png');
 });
+test('legacy prompt bytes stay fixed when cast and cutType are absent', () => {
+  const p = assemble(fixture(1), 0);
+  assert.equal(digest(p.sourcePrompt), '8a15019e3e4691ba94903a125dd26358a0d1e10bbd0ef2abc0c7401361367050');
+  assert.equal(digest(p.endFramePrompt), 'ea5266c699957affead597eaf0c2a1cd4e60bf4e014136b27b6f0207612221a3');
+  assert.equal(digest(p.motionPrompt), '2ed0cb8cfad2acce5a6cffe08edc71ceaad3d8acd5229630c3c248bcd7754a98');
+});
+test('per-cut prompts inject cast locks, cast images and mapped worlds', () => {
+  const win = fixture(1), scene = win.SCENES[0];
+  const sheet = 'A Joseon officer in his early thirties, lean build, short dark beard; dark brown armor, red cotton sleeves and black leather boots.';
+  win.PRODUCTION.cast = { yi: { name: 'Yi Sun-sin', sheet, image: 'images/cast-yi.png' } };
+  win.PRODUCTION.style.worlds = { valley: 'A scholar desk beside a paper window.' };
+  scene.shot.cutType = 'action'; scene.visual.character = [{ id: 'yi', scope: 'controls the rider only' }];
+  const p = assemble(win, 0, '/board');
+  for (const key of ['sourcePrompt', 'endFramePrompt', 'motionPrompt']) assert.match(p[key], new RegExp(sheet.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  assert.match(p.sourcePrompt, /Cut type action:/);
+  assert.match(p.sourcePrompt, /Cast — Yi Sun-sin:/);
+  assert.match(p.sourcePrompt, /attached image 2 is the approved appearance of Yi Sun-sin/);
+  assert.match(p.sourcePrompt, /A scholar desk beside a paper window/);
+  assert.deepEqual(p.castIds, ['yi']); assert.equal(p.cutType, 'action');
+  assert.deepEqual(p.castReferenceImages, [{ id: 'yi', name: 'Yi Sun-sin', path: '/board/images/cast-yi.png' }]);
+  assert.match(p.sourceReferenceImages[0], /tactile-miniature-v1/);
+  assert.equal(p.sourceReferenceImages[1], '/board/images/cast-yi.png');
+
+  scene.shot.cutType = 'document';
+  const document = assemble(win, 0, '/board');
+  for (const key of ['sourcePrompt', 'endFramePrompt', 'motionPrompt'])
+    assert.doesNotMatch(document[key], /Cast —|approved appearance|exact appearance|Yi Sun-sin/);
+  assert.deepEqual(document.castReferenceImages, []);
+  assert.match(document.sourcePrompt, /Cut type document:/);
+
+  scene.shot.videoDesign.worldId = 'unmapped';
+  assert.match(assemble(win, 0).sourcePrompt, /A granite valley with a river/);
+
+  scene.shot.cutType = 'action'; scene.shot.videoDesign.look = 'archive';
+  const archive = assemble(win, 0, '/board');
+  for (const key of ['sourcePrompt', 'endFramePrompt', 'motionPrompt'])
+    assert.doesNotMatch(archive[key], /Cut type action:|Cast —|approved appearance|exact appearance|Yi Sun-sin/);
+  assert.deepEqual(archive.castReferenceImages, []);
+});
+test('cast sheets and cut types affect validation and quote fingerprints', () => {
+  const win = fixture(1), before = quote(win).quoteFingerprint;
+  win.PRODUCTION.cast = { yi: { name: 'Yi Sun-sin', sheet: 'A lean officer in dark armor.' } };
+  win.SCENES[0].shot.cutType = 'action';
+  assert.notEqual(quote(win).quoteFingerprint, before);
+  const first = quote(win).quoteFingerprint;
+  win.PRODUCTION.cast.yi.sheet = 'A broad officer in a blue robe.';
+  assert.notEqual(quote(win).quoteFingerprint, first);
+  win.PRODUCTION.cast.yi.image = '/absolute/cast.png';
+  win.SCENES[0].shot.cutType = 'portrait';
+  const errors = mode.check(win, { draft: true }).join('\n');
+  assert.match(errors, /image must be a relative path/);
+  assert.match(errors, /shot\.cutType must be one of/);
+});
 test('approval is bound to actual plan and prices but recording a generated output does not stale it', () => withBoard(({ board, save }) => {
   const win = fixture(); save(win); assert.deepEqual(check(board, { requireSelection: true }).errors, []);
   win.SCENES[0].visual.video.clip = '.work/accepted.mp4'; save(win);

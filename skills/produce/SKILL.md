@@ -343,16 +343,16 @@ means generating something nobody approved.
   camera:` sentence and the exclusions — and `--no-person` again when the stored string reads
   "the subject" instead of a body) rather than editing the string by hand.
 
-- **`visual.character` — who is on screen.** Resolve the id to its panel directory and attach the
-  panels as reference images:
+- **`visual.character` — who is on screen.** Use `PRODUCTION.cast[id].image` when present;
+  otherwise resolve the id to the channel panel directory:
 
   ```bash
   CH=$(python3 ../channel/references/resolve-asset.py "$CHANNEL_DIR" character claude)
   # → …/assets/characters/claude — reference set: $CH/face.png then $CH/body.png
   ```
-
-  **Order is weight** — face first, body second, and `back.png` third only when the shot is
-  back-facing. No panels yet means falling back to that character's `front.png`; a live-action
+  Keep source-image order as previz, style pack, episode cast. **Inside channel panels, order is
+  weight**: face first, body second, and
+  `back.png` third only when the shot is back-facing. No panels yet means falling back to that character's `front.png`; a live-action
   character keeps its single image (`real.png`). Drawn character → `seedance_reference`,
   photoreal person → `veo_reference` (**3 images max**, validated in code). The full rule is
   [video-model-selection.md](references/video-model-selection.md) §The character panels.
