@@ -54,7 +54,10 @@ BGM_SEP=${BGM_SEP:-12}             # LU the bed sits under the measured voice �
 BGM_SEP_MIN=${BGM_SEP_MIN:-4}      # below this the build stops (bgm-scoring.md §1)
 BGM_LOOP_XF=${BGM_LOOP_XF:-2.0}
 export BGM_LOOP_XF
-DUCK_RELEASE=${DUCK_RELEASE:-250}
+DUCK_RELEASE=${DUCK_RELEASE:-250}  # sidechain release ms (bgm-scoring.md §2)
+DUCK_ATTACK=${DUCK_ATTACK:-20}     # sidechain attack ms
+DUCK_RATIO=${DUCK_RATIO:-8}        # sidechain ratio
+BGM_EQ=${BGM_EQ:-0}                # dB scooped out of the bed at 250 Hz and 2.5 kHz — 0 = off (craft, A/B it)
 XFADE=${XFADE:-0.6}                # feature↔outro transition length
 XFADE_T=${XFADE_T:-fadeblack}
 SUB=${SUB:-1}                      # 1=generate subtitle data (subs.srt·subs.ass), 0=no subtitles
@@ -286,23 +289,50 @@ printf '0.0000\tbgm.wav\n' > work/bgmcue.list
   || { cat work/bed.log; say "✗ the music bed failed to render"; exit 1; }
 while IFS= read -r L; do say "$L"; done < work/bed.log
 
+BEDEQ=""
+if awk -v e="$BGM_EQ" 'BEGIN{exit !(e > 0)}'; then
+  BEDEQ="equalizer=f=250:t=q:w=1.0:g=-${BGM_EQ},equalizer=f=2500:t=q:w=1.0:g=-${BGM_EQ},"
+  say "── BGM eq: -${BGM_EQ} dB at 250 Hz and 2.5 kHz"
+fi
 ffmpeg -y -v error -i work/narration.wav -i work/bed.wav -filter_complex "
   [0:a]aformat=channel_layouts=stereo,asplit=2[vo_key][vo_mix];
-  [1:a]atrim=0:$NT,asetpts=PTS-STARTPTS,
+  [1:a]atrim=0:$NT,asetpts=PTS-STARTPTS,${BEDEQ}
        afade=t=in:st=0:d=1.2,afade=t=out:st=$FOUT:d=2.2[bgv];
-  [bgv][vo_key]sidechaincompress=threshold=0.02:ratio=8:attack=20:release=$DUCK_RELEASE:makeup=1,
+  [bgv][vo_key]sidechaincompress=threshold=0.02:ratio=$DUCK_RATIO:attack=$DUCK_ATTACK:release=$DUCK_RELEASE:makeup=1,
        asplit=2[duck][duckqa];
   [vo_mix][duck]amix=inputs=2:duration=first:dropout_transition=0,
        loudnorm=I=-14:TP=-1.0:LRA=11,aresample=48000[out]
 " -map "[out]" -ac 2 -ar 48000 work/mix.wav \
   -map "[duckqa]" -ac 2 -ar 48000 work/bed-ducked.wav
 
-BED_D=$(ffmpeg -hide_banner -nostats -i work/bed-ducked.wav -af loudnorm=print_format=json -f null - 2>&1 \
-  | tr -d ' \t"' | awk -F: '$1=="input_i"{gsub(/,/,"",$2); print $2}')
+# The reading that decides is taken while the voice is up — the ducked bed gated by the voice on
+# the ducker's own key and threshold (the same machine as build-reel.sh 10c). The whole-timeline
+# figure stays in the log; it has the gaps in it and reads lower.
+measure_i() {   # measure_i <file> [filter_complex-with-loudnorm] — integrated LUFS, or "" when unreadable
+  local V
+  if [ $# -gt 1 ]; then
+    V=$(ffmpeg -hide_banner -nostats -i "$1" -i work/narration.wav -filter_complex "$2" -f null - 2>&1 \
+      | tr -d ' \t"' | awk -F: '$1=="input_i"{gsub(/,/,"",$2); print $2}')
+  else
+    V=$(ffmpeg -hide_banner -nostats -i "$1" -af loudnorm=print_format=json -f null - 2>&1 \
+      | tr -d ' \t"' | awk -F: '$1=="input_i"{gsub(/,/,"",$2); print $2}')
+  fi
+  case "$V" in ''|*[!0-9.+-]*) echo "";; *) echo "$V";; esac
+}
+BED_D=$(measure_i work/bed-ducked.wav)
+BED_S=$(measure_i work/bed-ducked.wav \
+  "[1:a]aformat=channel_layouts=stereo[k];[0:a][k]sidechaingate=threshold=0.02:ratio=9000:range=0:attack=1:release=50,loudnorm=print_format=json")
 SEP=$(awk -v s="$SPEECH_I" -v b="$BED_D" 'BEGIN{printf "%.1f", s-b}')
-say "── voice-to-bed separation ${SEP} LU (voice ${SPEECH_I} / ducked bed ${BED_D})"
-if awk -v v="$SEP" -v m="$BGM_SEP_MIN" 'BEGIN{exit !(v < m)}'; then
-  say "✗ separation ${SEP} LU is under the ${BGM_SEP_MIN} LU floor — the bed is competing with the voice"
+if [ -n "$BED_S" ]; then
+  SEP_S=$(awk -v s="$SPEECH_I" -v b="$BED_S" 'BEGIN{printf "%.1f", s-b}')
+  DEPTH=$(awk -v v="$SEP_S" -v d="$BGM_SEP" 'BEGIN{printf "%.1f", v-d}')
+  say "── voice-to-bed separation ${SEP_S} LU while the voice is up (bed ${BED_S} LUFS, ducking depth ≈ ${DEPTH} LU) · ${SEP} LU across the whole timeline (voice ${SPEECH_I} / ducked bed ${BED_D})"
+else
+  SEP_S=$SEP
+  say "── voice-to-bed separation ${SEP} LU across the whole timeline (voice ${SPEECH_I} / ducked bed ${BED_D}) — no speech-gated reading, the voice key stayed under the gate"
+fi
+if awk -v v="$SEP_S" -v m="$BGM_SEP_MIN" 'BEGIN{exit !(v < m)}'; then
+  say "✗ separation ${SEP_S} LU is under the ${BGM_SEP_MIN} LU floor — the bed is competing with the voice"
   exit 1
 fi
 

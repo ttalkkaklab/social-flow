@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>배경음악 연출 스코어 맵</title>
+<meta name="description" content="영상 생성 파이프라인에서 배경음악을 어디에 넣고 얼마나 낮추고 언제 바꾸는지 — 근거 등급을 붙인 도표 모음">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --paper:#f3f5f7; --card:#ffffff; --ink:#151b24; --muted:#616c7a; --rule:#d7dde5; --code:#e9edf2;
+    --music:#d48a17; --music-soft:#f6e3bf; --voice:#1c8c86; --voice-soft:#c9ebe8;
+    --warn:#c2453a; --warn-soft:#f4d3cf; --ok:#2f8a4e; --grid:#e3e8ee;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#0f141b; --card:#161d27; --ink:#e7ebf1; --muted:#98a3b1; --rule:#28313d; --code:#1f2733;
+      --music:#f0a83a; --music-soft:#3a2d13; --voice:#3fc2bb; --voice-soft:#123532;
+      --warn:#f08a80; --warn-soft:#3c1f1c; --ok:#5fcf85; --grid:#222b36;
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#0f141b; --card:#161d27; --ink:#e7ebf1; --muted:#98a3b1; --rule:#28313d; --code:#1f2733;
+    --music:#f0a83a; --music-soft:#3a2d13; --voice:#3fc2bb; --voice-soft:#123532;
+    --warn:#f08a80; --warn-soft:#3c1f1c; --ok:#5fcf85; --grid:#222b36;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--paper);color:var(--ink);
+    font-family:"IBM Plex Sans KR","Pretendard Variable","Pretendard","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+    font-size:16px;line-height:1.72;-webkit-font-smoothing:antialiased}
+  a{color:var(--voice);text-decoration:none;border-bottom:1px solid color-mix(in srgb,var(--voice) 40%,transparent)}
+  .wrap{max-width:1080px;margin:0 auto;padding-block:52px 96px;padding-inline:20px}
+  .eyebrow{font-family:"IBM Plex Mono",Menlo,monospace;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+  h1,h2,h3{font-weight:700;letter-spacing:-.02em;text-wrap:balance;margin:0}
+  h1{font-size:clamp(30px,4.6vw,44px);line-height:1.18;margin-top:10px}
+  h2{font-size:23px;line-height:1.3;margin-top:68px;padding-top:22px;border-top:1px solid var(--rule)}
+  h2 .n{font-family:"IBM Plex Mono",Menlo,monospace;font-size:13px;color:var(--music);margin-right:10px;letter-spacing:.08em}
+  h3{font-size:16px;margin-top:22px}
+  p{margin:12px 0;max-width:68ch}
+  ul{padding-left:20px;max-width:70ch} li{margin:6px 0}
+  code{font-family:"IBM Plex Mono",Menlo,monospace;font-size:.86em;background:var(--code);padding:1px 6px;border-radius:5px}
+  .lede{font-size:18px;max-width:64ch}
+  .lede b{font-weight:600;color:var(--music)}
+  .note{font-size:14px;color:var(--muted);max-width:70ch}
+
+  /* 근거 등급 */
+  .grade{display:inline-block;font-family:"IBM Plex Mono",Menlo,monospace;font-size:11px;letter-spacing:.06em;padding:1px 8px;border-radius:999px;border:1px solid;vertical-align:middle;white-space:nowrap}
+  .g-ev{color:var(--ok);border-color:var(--ok)}
+  .g-cr{color:var(--music);border-color:var(--music)}
+  .g-no{color:var(--warn);border-color:var(--warn)}
+  .legend{display:flex;flex-wrap:wrap;gap:10px 18px;margin:18px 0 0;font-size:13.5px;color:var(--muted)}
+  .legend span{display:flex;align-items:center;gap:8px}
+
+  /* 타일 */
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:22px 0 0}
+  .tile{background:var(--card);border:1px solid var(--rule);border-radius:10px;padding:16px 16px 14px}
+  .tile .k{font-family:"IBM Plex Mono",Menlo,monospace;font-size:26px;font-weight:500;letter-spacing:-.02em;line-height:1.1;font-variant-numeric:tabular-nums}
+  .tile .k small{font-size:13px;color:var(--muted);margin-left:4px;letter-spacing:0}
+  .tile .t{font-weight:600;margin-top:8px}
+  .tile .d{font-size:13.5px;color:var(--muted);margin-top:4px;line-height:1.5}
+
+  /* 그림 */
+  figure{margin:20px 0 0;background:var(--card);border:1px solid var(--rule);border-radius:12px;padding:16px 16px 12px}
+  figure .fw{overflow-x:auto}
+  figure svg{display:block;max-width:100%;height:auto}
+  figcaption{font-size:13.5px;color:var(--muted);margin-top:10px;line-height:1.55;max-width:none}
+  .svgtxt{font-family:"IBM Plex Sans KR","Pretendard",sans-serif}
+  .mono{font-family:"IBM Plex Mono",Menlo,monospace}
+
+  /* 표 */
+  .tablewrap{overflow-x:auto;margin:18px 0 0}
+  table{border-collapse:collapse;width:100%;font-size:14px;background:var(--card);border:1px solid var(--rule);border-radius:10px}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--rule);vertical-align:top}
+  tr:last-child td{border-bottom:0}
+  th{font-weight:600;color:var(--muted);font-size:12.5px;letter-spacing:.04em;background:color-mix(in srgb,var(--code) 60%,transparent)}
+  td.num{font-family:"IBM Plex Mono",Menlo,monospace;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+  .yes{background:var(--ok)} .no{background:var(--warn)} .part{background:var(--music)}
+
+  /* 체크리스트 */
+  .check{list-style:none;padding:0;max-width:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px;margin-top:18px}
+  .check li{margin:0;background:var(--card);border:1px solid var(--rule);border-radius:10px;padding:12px 14px 12px 40px;position:relative;font-size:14.5px;line-height:1.55}
+  .check li::before{content:"";position:absolute;left:14px;top:15px;width:14px;height:14px;border:1.5px solid var(--music);border-radius:4px}
+  .check li code{font-size:.84em}
+
+  .srcs{font-size:13.5px;color:var(--muted);columns:2;column-gap:32px;max-width:none}
+  .srcs li{break-inside:avoid;margin:4px 0}
+  @media (max-width:640px){.srcs{columns:1}}
+  @media (prefers-reduced-motion:no-preference){ .pulse{animation:pulse 2.4s ease-in-out infinite} }
+  @keyframes pulse{0%,100%{opacity:.55}50%{opacity:1}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="eyebrow">social-flow · research · 2026-09-16</div>
+<h1>배경음악은 대사 밑 10 LU에서 시작하고, 에피소드가 방향을 바꾸는 자리에서만 움직인다</h1>
+<p class="lede">영화 스코어링의 스포팅 세션, 방송 납품 규격, 숏폼 플랫폼 실측, AI 음악 생성기 넷의 프롬프트 문법을 한 장에 모았다. 문장은 줄이고 <b>도표·흐름도·타임라인</b>으로 그렸다. 숫자마다 근거 등급을 붙였다 — 이 플러그인의 <code>bgm-scoring.md</code>가 세운 원칙 그대로, 청취 실험이 있는 수치와 업계 관행을 섞지 않는다.</p>
+<div class="legend">
+  <span><i class="grade g-ev">근거</i> 청취 실험·납품 규격·벤더 문서</span>
+  <span><i class="grade g-cr">관행</i> 편집자·작곡가 실무, A/B 없음</span>
+  <span><i class="grade g-no">반박</i> 널리 인용되지만 검증에서 떨어진 주장</span>
+</div>
+
+<!-- 1 ─────────────────────────────────────────── -->
+<h2><span class="n">01</span>한눈에 — 여섯 숫자</h2>
+<div class="tiles">
+  <div class="tile"><div class="k">−10<small>LU</small></div><div class="t">대사 밑 거리 <i class="grade g-ev">근거</i></div><div class="d">해설 위 음악의 선호 거리는 최소 10 LU (JAES 2019, QoMEX 2023). 빌더 <code>BGM_SEP</code> 기본값.</div></div>
+  <div class="tile"><div class="k">4<small>LU</small></div><div class="t">빌드가 멈추는 바닥 <i class="grade g-ev">근거</i></div><div class="d">UK DPP 최소 분리. 여기는 경보선이다 — <code>BGM_SEP_MIN</code>.</div></div>
+  <div class="tile"><div class="k">1<small>회</small></div><div class="t">45초 숏폼의 큐 변경 <i class="grade g-cr">관행</i></div><div class="d">훅→본문, 또는 마무리 진입. 셋이면 장식이다.</div></div>
+  <div class="tile"><div class="k">1<small>회</small></div><div class="t">드롭(무음) <i class="grade g-cr">관행</i></div><div class="d">에피소드가 기억되는 한 문장에만. 둘이면 둘 다 안 읽힌다.</div></div>
+  <div class="tile"><div class="k">88<small>%</small></div><div class="t">소리가 필수라는 TikTok 이용자 <i class="grade g-ev">근거</i></div><div class="d">Kantar × TikTok. 소리 켠 캠페인이 끈 쪽보다 2.2배 성과.</div></div>
+  <div class="tile"><div class="k">250<small>ms</small></div><div class="t">더킹 릴리스 <i class="grade g-cr">관행</i></div><div class="d">실무 권장 200–700ms 안. 빌더 <code>DUCK_RELEASE</code>, attack 20ms, ratio 8.</div></div>
+</div>
+
+<!-- 2 ─────────────────────────────────────────── -->
+<h2><span class="n">02</span>컷마다 음악을 정하는 흐름</h2>
+<p>스포팅 세션의 질문은 하나다 — <b>이 음악이 이야기에 무엇을 해 주나.</b> 답이 없으면 그 자리에 음악이 없어야 한다. 아래는 그 질문을 우리 컷 유형에 맞춰 편 것이다.</p>
+<figure>
+<div class="fw">
+<svg viewBox="0 0 1000 560" width="1000" height="560" role="img" aria-label="컷별 배경음악 결정 흐름도">
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--muted)"/></marker>
+  </defs>
+  <style>
+    .bx{fill:var(--card);stroke:var(--rule);stroke-width:1.5}
+    .dc{fill:var(--card);stroke:var(--music);stroke-width:1.5}
+    .en{fill:var(--music-soft);stroke:var(--music);stroke-width:1.5}
+    .vo{fill:var(--voice-soft);stroke:var(--voice);stroke-width:1.5}
+    .ln{stroke:var(--muted);stroke-width:1.4;fill:none;marker-end:url(#ar)}
+    .lb{font-size:13px;fill:var(--ink)}
+    .sm{font-size:11.5px;fill:var(--muted)}
+    .yn{font-size:11px;fill:var(--muted);font-family:"IBM Plex Mono",Menlo,monospace}
+  </style>
+  <!-- start -->
+  <rect x="400" y="14" width="200" height="40" rx="20" class="en"/>
+  <text x="500" y="39" text-anchor="middle" class="lb svgtxt" font-weight="600">컷 하나</text>
+  <path d="M500 54V84" class="ln"/>
+  <!-- Q1 -->
+  <polygon points="500,84 640,124 500,164 360,124" class="dc"/>
+  <text x="500" y="120" text-anchor="middle" class="lb svgtxt">대사(TTS)가 얹히나?</text>
+  <text x="500" y="138" text-anchor="middle" class="sm svgtxt">cover · points · quote</text>
+  <!-- no → broll -->
+  <path d="M360 124H200V184" class="ln"/><text x="270" y="118" class="yn">아니오</text>
+  <rect x="100" y="184" width="200" height="60" rx="8" class="bx"/>
+  <text x="200" y="208" text-anchor="middle" class="lb svgtxt" font-weight="600">b-roll · 아웃트로</text>
+  <text x="200" y="228" text-anchor="middle" class="sm svgtxt">클립 자체 소리 유지, 큐를 걸 카드가 없다</text>
+  <path d="M200 244V290" class="ln"/>
+  <rect x="100" y="290" width="200" height="56" rx="8" class="bx"/>
+  <text x="200" y="313" text-anchor="middle" class="lb svgtxt">visual.audio 문장에</text>
+  <text x="200" y="331" text-anchor="middle" class="sm svgtxt mono">"no music, no speech" 명시</text>
+  <!-- yes → Q2 -->
+  <path d="M500 164V194" class="ln"/><text x="510" y="184" class="yn">예</text>
+  <polygon points="500,194 640,234 500,274 360,234" class="dc"/>
+  <text x="500" y="230" text-anchor="middle" class="lb svgtxt">에피소드가 여기서 방향을 바꾸나?</text>
+  <text x="500" y="248" text-anchor="middle" class="sm svgtxt">훅→본문 · 반전 · 마무리 진입</text>
+  <!-- no → carry -->
+  <path d="M640 234H800V184" class="ln"/><text x="700" y="228" class="yn">아니오</text>
+  <rect x="700" y="124" width="200" height="60" rx="8" class="vo"/>
+  <text x="800" y="148" text-anchor="middle" class="lb svgtxt" font-weight="600">앞 큐를 그대로 잇는다</text>
+  <text x="800" y="168" text-anchor="middle" class="sm svgtxt" fill="var(--ink)" opacity=".75">sound 생략 = 이전 베드 유지</text>
+  <!-- yes → Q3 -->
+  <path d="M500 274V304" class="ln"/><text x="510" y="294" class="yn">예</text>
+  <polygon points="500,304 640,344 500,384 360,344" class="dc"/>
+  <text x="500" y="340" text-anchor="middle" class="lb svgtxt">에피소드가 기억될 한 문장인가?</text>
+  <text x="500" y="358" text-anchor="middle" class="sm svgtxt">story arc의 turn · scenario-craft §7의 peak</text>
+  <!-- yes → drop -->
+  <path d="M640 344H700" class="ln"/><text x="650" y="338" class="yn">예</text>
+  <rect x="700" y="314" width="200" height="60" rx="8" class="en"/>
+  <text x="800" y="338" text-anchor="middle" class="lb svgtxt" font-weight="600">sound.drop: true</text>
+  <text x="800" y="358" text-anchor="middle" class="sm svgtxt">0.30s 램프로 무음 · 숏폼에 한 번</text>
+  <!-- no → cue change -->
+  <path d="M500 384V414" class="ln"/><text x="510" y="404" class="yn">아니오</text>
+  <rect x="400" y="414" width="200" height="60" rx="8" class="en"/>
+  <text x="500" y="438" text-anchor="middle" class="lb svgtxt" font-weight="600">sound.cue: "&lt;이름&gt;"</text>
+  <text x="500" y="458" text-anchor="middle" class="sm svgtxt">window.MUSIC 의 키 · 카드 시작에 크로스페이드</text>
+  <!-- guard -->
+  <path d="M500 474V504" class="ln"/>
+  <rect x="330" y="504" width="340" height="44" rx="8" class="bx" stroke-dasharray="4 3"/>
+  <text x="500" y="524" text-anchor="middle" class="lb svgtxt">같은 샷에 cue 와 drop 을 같이 쓰지 않는다</text>
+  <text x="500" y="540" text-anchor="middle" class="sm svgtxt">들어오는 큐가 무음으로 페이드인 → 변화가 다음 샷에 떨어진다</text>
+  <!-- also: quote clips -->
+  <path d="M800 374V414" class="ln"/>
+  <rect x="700" y="414" width="200" height="60" rx="8" class="bx"/>
+  <text x="800" y="438" text-anchor="middle" class="lb svgtxt">되돌아오는 자리가 결과</text>
+  <text x="800" y="458" text-anchor="middle" class="sm svgtxt">turn 에서 나가고 result 에서 돌아온다</text>
+</svg>
+</div>
+<figcaption>스포팅 세션의 in/out 원칙(음악은 장면 전환이나 깨달음을 받치려 들어오고 대사가 숨 쉬거나 침묵이 필요할 때 나간다)을 <code>scenes-schema.md</code> §Music cues 의 <code>sound</code> 계약으로 옮긴 것. 마름모는 storyboard 단계의 질문, 주황 상자는 scenes.js 에 적히는 값이다.</figcaption>
+</figure>
+
+<!-- 3 ─────────────────────────────────────────── -->
+<h2><span class="n">03</span>45초 숏폼의 스코어 맵</h2>
+<p>한 편 안에서 음악이 실제로 어떻게 움직여야 하는지를 시간축에 그렸다. 위는 대사와 카드, 가운데는 베드의 레벨, 아래는 이벤트다.</p>
+<figure>
+<div class="fw">
+<svg viewBox="0 0 1000 420" width="1000" height="420" role="img" aria-label="45초 숏폼 배경음악 타임라인">
+  <style>
+    .ax{stroke:var(--rule);stroke-width:1}
+    .gl{stroke:var(--grid);stroke-width:1;stroke-dasharray:3 4}
+    .tk{font-size:11px;fill:var(--muted);font-family:"IBM Plex Mono",Menlo,monospace}
+    .lab{font-size:12.5px;fill:var(--ink)}
+    .lab2{font-size:11.5px;fill:var(--muted)}
+    .vo{fill:var(--voice);opacity:.85}
+    .bed{fill:none;stroke:var(--music);stroke-width:2.5;stroke-linejoin:round}
+    .bedfill{fill:var(--music);opacity:.18}
+    .ev{fill:var(--music)}
+  </style>
+  <!-- time axis -->
+  <g transform="translate(70,0)">
+    <!-- 900px = 45s → 20px/s -->
+    <line x1="0" y1="336" x2="900" y2="336" class="ax"/>
+    <g class="tk">
+      <text x="0" y="354">0s</text><text x="100" y="354">5s</text><text x="200" y="354">10s</text><text x="300" y="354">15s</text><text x="400" y="354">20s</text><text x="500" y="354">25s</text><text x="600" y="354">30s</text><text x="700" y="354">35s</text><text x="800" y="354">40s</text><text x="900" y="354" text-anchor="end">45s</text>
+    </g>
+    <line x1="60" y1="40" x2="60" y2="330" class="gl"/>
+    <line x1="560" y1="40" x2="560" y2="330" class="gl"/>
+    <line x1="640" y1="40" x2="640" y2="330" class="gl"/>
+    <line x1="820" y1="40" x2="820" y2="330" class="gl"/>
+
+    <!-- row 1: cards -->
+    <text x="-62" y="62" class="lab svgtxt">카드</text>
+    <g class="lab2 svgtxt">
+      <rect x="0" y="46" width="60" height="22" rx="4" fill="var(--code)"/><text x="30" y="61" text-anchor="middle">훅</text>
+      <rect x="62" y="46" width="200" height="22" rx="4" fill="var(--code)"/><text x="162" y="61" text-anchor="middle">전개 #1</text>
+      <rect x="264" y="46" width="294" height="22" rx="4" fill="var(--code)"/><text x="411" y="61" text-anchor="middle">전개 #2</text>
+      <rect x="560" y="46" width="80" height="22" rx="4" fill="var(--music-soft)" stroke="var(--music)"/><text x="600" y="61" text-anchor="middle">turn</text>
+      <rect x="642" y="46" width="178" height="22" rx="4" fill="var(--code)"/><text x="731" y="61" text-anchor="middle">결과·전개 #3</text>
+      <rect x="822" y="46" width="78" height="22" rx="4" fill="var(--code)"/><text x="861" y="61" text-anchor="middle">마무리·CTA</text>
+    </g>
+
+    <!-- row 2: voice blocks -->
+    <text x="-62" y="100" class="lab svgtxt">대사</text>
+    <g class="vo">
+      <rect x="4" y="86" width="52" height="16" rx="3"/>
+      <rect x="66" y="86" width="86" height="16" rx="3"/><rect x="160" y="86" width="98" height="16" rx="3"/>
+      <rect x="270" y="86" width="120" height="16" rx="3"/><rect x="398" y="86" width="72" height="16" rx="3"/><rect x="478" y="86" width="76" height="16" rx="3"/>
+      <rect x="566" y="86" width="70" height="16" rx="3"/>
+      <rect x="648" y="86" width="80" height="16" rx="3"/><rect x="736" y="86" width="80" height="16" rx="3"/>
+      <rect x="826" y="86" width="50" height="16" rx="3"/>
+    </g>
+    <text x="878" y="80" text-anchor="end" class="lab2 svgtxt">마지막 말 ↓</text>
+
+    <!-- row 3: bed level -->
+    <text x="-62" y="150" class="lab svgtxt">베드</text>
+    <text x="-62" y="166" class="lab2 svgtxt">레벨</text>
+    <line x1="0" y1="140" x2="900" y2="140" class="gl"/><text x="-8" y="143" text-anchor="end" class="tk">−10 LU</text>
+    <line x1="0" y1="200" x2="900" y2="200" class="gl"/><text x="-8" y="203" text-anchor="end" class="tk">−18</text>
+    <line x1="0" y1="260" x2="900" y2="260" class="gl"/><text x="-8" y="263" text-anchor="end" class="tk">−∞</text>
+    <!-- ducking sawtooth shape: baseline at 140 (rest), ducks to ~165 during voice -->
+    <path class="bedfill" d="M0 260 L0 236 L24 236
+      L60 218 L64 140 L70 165 L152 165 L156 140 L160 165 L258 165 L262 140
+      L270 165 L390 165 L394 140 L398 165 L470 165 L474 140 L478 165 L554 165 L558 140
+      L560 140 L566 260 L636 260 L640 260 L642 140
+      L648 165 L728 165 L732 140 L736 165 L816 165 L820 140
+      L826 165 L876 165 L880 140 L900 152 L900 260 Z"/>
+    <path class="bed" d="M0 236 L24 236
+      L60 218 L64 140 L70 165 L152 165 L156 140 L160 165 L258 165 L262 140
+      L270 165 L390 165 L394 140 L398 165 L470 165 L474 140 L478 165 L554 165 L558 140
+      L560 140 L566 260 L636 260 L640 260 L642 140
+      L648 165 L728 165 L732 140 L736 165 L816 165 L820 140
+      L826 165 L876 165 L880 140 L900 152"/>
+    <!-- cue colour bands under -->
+    <rect x="0" y="266" width="60" height="6" fill="var(--muted)" opacity=".4"/>
+    <rect x="62" y="266" width="758" height="6" fill="var(--music)" opacity=".6"/>
+    <rect x="822" y="266" width="78" height="6" fill="var(--voice)" opacity=".6"/>
+    <text x="30" y="286" text-anchor="middle" class="tk">low drone</text>
+    <text x="440" y="286" text-anchor="middle" class="tk">cue: base</text>
+    <text x="861" y="286" text-anchor="middle" class="tk">cue: close</text>
+
+    <!-- events -->
+    <text x="-62" y="312" class="lab svgtxt">이벤트</text>
+    <g class="ev">
+      <circle cx="0" cy="306" r="4"/><text x="8" y="310" class="lab2 svgtxt" fill="var(--ink)">1.2s 페이드인</text>
+      <circle cx="62" cy="306" r="4"/><text x="70" y="326" class="lab2 svgtxt" fill="var(--ink)">큐 변경 (카드 시작에 크로스페이드)</text>
+      <circle cx="562" cy="306" r="4"/><text x="570" y="310" class="lab2 svgtxt" fill="var(--ink)">drop 0.30s 램프</text>
+      <circle cx="822" cy="306" r="4"/><text x="814" y="310" text-anchor="end" class="lab2 svgtxt" fill="var(--ink)">마무리 큐</text>
+      <circle cx="898" cy="306" r="4" class="pulse"/><text x="892" y="326" text-anchor="end" class="lab2 svgtxt" fill="var(--ink)">2.2s 페이드아웃 — 꼬리를 울리게 둔다</text>
+    </g>
+    <!-- annotations -->
+    <text x="30" y="128" text-anchor="middle" class="lab2 svgtxt">훅 밑은 거의 무음</text>
+    <text x="600" y="128" text-anchor="middle" class="lab2 svgtxt" fill="var(--music)">무음이 히트보다 크다</text>
+    <text x="440" y="182" text-anchor="middle" class="lab2 svgtxt">문장마다 더킹 · 릴리스 250ms</text>
+  </g>
+</svg>
+</div>
+<figcaption>훅에서 음악이 크게 들어오면 시청 유지를 결정하는 첫 문장과 경쟁한다(관행 · 자체 제작 가이드). 큐는 방향이 바뀌는 카드 시작에 크로스페이드로 들어오고, 드롭은 turn 에 한 번, 마지막 말 뒤에는 꼬리가 울리게 둔다. 문장 사이 톱니는 사이드체인 더킹의 회복(빌더 step 10). 레벨 축의 −10 LU 는 측정한 대사 라우드니스 기준이다.</figcaption>
+</figure>
+
+<!-- 4 ─────────────────────────────────────────── -->
+<h2><span class="n">04</span>레벨 — 유일하게 청취 실험이 있는 숫자</h2>
+<figure>
+<div class="fw">
+<svg viewBox="0 0 1000 300" width="1000" height="300" role="img" aria-label="대사 대비 음악 분리 거리 척도">
+  <style>
+    .sc{stroke:var(--rule);stroke-width:1.5}
+    .zone-bad{fill:var(--warn);opacity:.16}
+    .zone-warn{fill:var(--music);opacity:.16}
+    .zone-ok{fill:var(--ok);opacity:.14}
+    .zt{font-size:12.5px;fill:var(--ink)}
+    .zs{font-size:11.5px;fill:var(--muted)}
+    .mk{stroke:var(--ink);stroke-width:2}
+  </style>
+  <g transform="translate(60,0)">
+    <!-- scale 0..20 LU → 880px, 44px per LU; x = LU*44 -->
+    <rect x="0" y="120" width="176" height="46" class="zone-bad"/>
+    <rect x="176" y="120" width="264" height="46" class="zone-warn"/>
+    <rect x="440" y="120" width="440" height="46" class="zone-ok"/>
+    <line x1="0" y1="166" x2="880" y2="166" class="sc"/>
+    <g class="tk">
+      <text x="0" y="186" text-anchor="middle">0</text><text x="176" y="186" text-anchor="middle">4</text><text x="440" y="186" text-anchor="middle">10</text><text x="660" y="186" text-anchor="middle">15</text><text x="880" y="186" text-anchor="middle">20 LU</text>
+    </g>
+    <text x="0" y="206" class="zs svgtxt">← 음악이 대사만큼 크다</text>
+    <text x="880" y="206" text-anchor="end" class="zs svgtxt">대사보다 훨씬 작다 →</text>
+    <!-- markers -->
+    <line x1="0" y1="100" x2="0" y2="166" class="mk"/>
+    <text x="4" y="70" class="zt svgtxt" font-weight="600">0 LU</text>
+    <text x="4" y="88" class="zs svgtxt">청취 노력이 오르는 지점 (AES 2024)</text>
+    <line x1="176" y1="56" x2="176" y2="166" class="mk"/>
+    <text x="180" y="30" class="zt svgtxt" font-weight="600">4 LU — 바닥</text>
+    <text x="180" y="48" class="zs svgtxt">UK DPP 최소 분리 · BGM_SEP_MIN, 빌드 중단</text>
+    <line x1="440" y1="100" x2="440" y2="166" class="mk" stroke="var(--music)" stroke-width="3"/>
+    <text x="444" y="70" class="zt svgtxt" font-weight="600" fill="var(--music)">10 LU — 시작점</text>
+    <text x="444" y="88" class="zs svgtxt">해설 위 음악 선호 거리 최소치 (JAES 67(12)) · BGM_SEP</text>
+    <line x1="660" y1="56" x2="660" y2="166" class="mk" stroke-dasharray="4 3"/>
+    <text x="664" y="30" class="zt svgtxt">15 LU</text>
+    <text x="664" y="48" class="zs svgtxt">해설 위 앰비언스 (음악보다 5 LU 더)</text>
+    <!-- bottom notes -->
+    <g class="zs svgtxt">
+      <text x="0" y="248">screencast(생목소리)는 12 LU — TTS 보다 크게 흔들려서</text>
+      <text x="0" y="268">마스터 loudnorm I=−14 · TP=−1.0 · LRA=11 (DPP: LRA ≤ 18, 팩추얼 대사 ≤ 6 「참고용」)</text>
+      <text x="880" y="248" text-anchor="end">YouTube 「안정적인 볼륨」이 기본 켜짐 → 재생 때 더킹이 한 번 더 얹힐 수 있다</text>
+      <text x="880" y="268" text-anchor="end">「YouTube 는 −14 LUFS 로 정규화한다」는 YouTube 가 쓴 숫자가 아니다 (자체 확인)</text>
+    </g>
+  </g>
+</svg>
+</div>
+<figcaption><i class="grade g-ev">근거</i> 두 연구 모두 독일어 화자 20명 안팎이 9–14초 방송 발췌를 판단한 결과다. 9:16·한국어 TTS·폰 스피커는 그 집합에 없다. 10 LU 는 출발선이고, 같은 논문이 청취자 개인차(분산 32%)가 측정한 효과보다 크다고 적었으니 우리 조건에서는 한 번은 직접 들어 보고 정할 숫자다.</figcaption>
+</figure>
+
+<!-- 5 ─────────────────────────────────────────── -->
+<h2><span class="n">05</span>더킹 — 실무 범위와 우리 기본값</h2>
+<p>사이드체인 값은 청취 실험이 없다. 편집자 커뮤니티(Avid DUC·VI-Control·Larry Jordan)와 Resolve·CapCut 가이드가 말하는 범위를 겹쳐 그리고 그 위에 빌더의 값을 찍었다.</p>
+<figure>
+<div class="fw">
+<svg viewBox="0 0 1000 340" width="1000" height="340" role="img" aria-label="더킹 파라미터 범위 차트">
+  <style>
+    .rng{fill:var(--music);opacity:.28}
+    .rng2{fill:var(--music);opacity:.5}
+    .ours{fill:var(--voice)}
+    .rl{font-size:12.5px;fill:var(--ink)}
+    .rs{font-size:11.5px;fill:var(--muted)}
+  </style>
+  <!-- attack: 0..80ms → 0..600px (7.5px/ms) -->
+  <g transform="translate(200,40)">
+    <text x="-190" y="18" class="rl svgtxt" font-weight="600">Attack</text>
+    <text x="-190" y="36" class="rs svgtxt">첫 단어가 묻히면 짧게</text>
+    <line x1="0" y1="24" x2="600" y2="24" class="ax"/>
+    <g class="tk"><text x="0" y="46" text-anchor="middle">0</text><text x="150" y="46" text-anchor="middle">20</text><text x="300" y="46" text-anchor="middle">40</text><text x="450" y="46" text-anchor="middle">60</text><text x="600" y="46" text-anchor="middle">80 ms</text></g>
+    <rect x="75" y="12" width="75" height="24" rx="4" class="rng"/>   <!-- 10-20 -->
+    <rect x="225" y="12" width="225" height="24" rx="4" class="rng"/> <!-- 30-60 -->
+    <circle cx="150" cy="24" r="7" class="ours"/>
+    <text x="150" y="4" text-anchor="middle" class="rs svgtxt" fill="var(--voice)">빌더 20ms</text>
+    <text x="620" y="28" class="rs svgtxt">10–20 · 30–60 (가이드 둘)</text>
+  </g>
+  <!-- release: 0..800ms → 600px (0.75px/ms) -->
+  <g transform="translate(200,130)">
+    <text x="-190" y="18" class="rl svgtxt" font-weight="600">Release</text>
+    <text x="-190" y="36" class="rs svgtxt">펌핑하면 길게 — 첫 번째로 만지는 손잡이</text>
+    <line x1="0" y1="24" x2="600" y2="24" class="ax"/>
+    <g class="tk"><text x="0" y="46" text-anchor="middle">0</text><text x="150" y="46" text-anchor="middle">200</text><text x="300" y="46" text-anchor="middle">400</text><text x="450" y="46" text-anchor="middle">600</text><text x="600" y="46" text-anchor="middle">800 ms</text></g>
+    <rect x="150" y="12" width="225" height="24" rx="4" class="rng"/>  <!-- 200-500 -->
+    <rect x="300" y="12" width="225" height="24" rx="4" class="rng2"/> <!-- 400-700 -->
+    <circle cx="187.5" cy="24" r="7" class="ours"/>
+    <text x="187.5" y="4" text-anchor="middle" class="rs svgtxt" fill="var(--voice)">빌더 250ms</text>
+    <text x="620" y="28" class="rs svgtxt">200–500 시작 · 튀면 400–700</text>
+  </g>
+  <!-- depth: 0..12 dB → 600px (50px/dB) -->
+  <g transform="translate(200,220)">
+    <text x="-190" y="18" class="rl svgtxt" font-weight="600">Gain reduction</text>
+    <text x="-190" y="36" class="rs svgtxt">깊이 — 가이드끼리 갈라지는 자리</text>
+    <line x1="0" y1="24" x2="600" y2="24" class="ax"/>
+    <g class="tk"><text x="0" y="46" text-anchor="middle">0</text><text x="150" y="46" text-anchor="middle">3</text><text x="300" y="46" text-anchor="middle">6</text><text x="450" y="46" text-anchor="middle">9</text><text x="600" y="46" text-anchor="middle">12 dB</text></g>
+    <rect x="150" y="12" width="100" height="24" rx="4" class="rng"/>  <!-- 3-5 -->
+    <rect x="300" y="12" width="200" height="24" rx="4" class="rng2"/> <!-- 6-10 -->
+    <text x="620" y="28" class="rs svgtxt">3–5 · 6–10 (가이드 둘)</text>
+    <text x="0" y="70" class="rs svgtxt">한쪽은 「5 dB 넘으면 티 난다」, 다른 쪽은 「6–10 에서 시작」 · 빌더: sidechaincompress threshold 0.02 · ratio 8 — 깊이는 대사 레벨에 따라 결정. 정지 거리 10 LU 를 이미 두고 있어 더킹은 문장 안에서만 조금 더 낮춘다</text>
+    <text x="0" y="90" class="rs svgtxt">step 10c 가 실제 분리를 다시 잰다 — 분리가 BGM_SEP 보다 좁으면 「더킹이 안 켜졌다」 경고, 4 LU 아래면 중단</text>
+  </g>
+</svg>
+</div>
+<figcaption><i class="grade g-cr">관행</i> 두 가이드가 attack 을 서로 다르게 잡는 건 재료 차이다 — 생녹음 대사는 숨소리가 트리거를 물어서 attack 을 길게, TTS 는 숨이 없어 짧게 잡아도 된다. 깊이는 정지 거리를 얼마나 두느냐에 달려서 두 표가 다르게 읽힌다. 「음악이 뛰면 릴리스를, 숨이 트리거하면 임계값을」이 공통 진단 순서다.</figcaption>
+</figure>
+
+<!-- 6 ─────────────────────────────────────────── -->
+<h2><span class="n">06</span>주파수 자리 — 음악은 목소리의 대역을 비운다</h2>
+<figure>
+<div class="fw">
+<svg viewBox="0 0 1000 300" width="1000" height="300" role="img" aria-label="대사와 음악의 주파수 분담 도식">
+  <style>
+    .fq{font-size:11px;fill:var(--muted);font-family:"IBM Plex Mono",Menlo,monospace}
+    .curveV{fill:var(--voice);opacity:.35}
+    .curveM{fill:none;stroke:var(--music);stroke-width:2.5}
+    .curveM0{fill:none;stroke:var(--music);stroke-width:1.5;stroke-dasharray:4 3;opacity:.6}
+    .band{fill:var(--voice);opacity:.12}
+  </style>
+  <g transform="translate(60,20)">
+    <!-- log axis: 60Hz..12kHz over 880px -->
+    <line x1="0" y1="200" x2="880" y2="200" class="ax"/>
+    <g class="fq">
+      <text x="0" y="220" text-anchor="middle">60</text>
+      <text x="118" y="220" text-anchor="middle">120</text>
+      <text x="236" y="220" text-anchor="middle">250</text>
+      <text x="354" y="220" text-anchor="middle">500</text>
+      <text x="472" y="220" text-anchor="middle">1k</text>
+      <text x="590" y="220" text-anchor="middle">2k</text>
+      <text x="708" y="220" text-anchor="middle">4k</text>
+      <text x="826" y="220" text-anchor="middle">8k Hz</text>
+    </g>
+    <!-- voice band 1k-4k intelligibility -->
+    <rect x="472" y="30" width="236" height="170" class="band"/>
+    <text x="590" y="24" text-anchor="middle" class="rs svgtxt" fill="var(--voice)">말소리 명료도 1–4 kHz · 귀가 가장 민감한 2–5 kHz</text>
+    <!-- voice energy shape -->
+    <path class="curveV" d="M118 200 C 200 120, 300 70, 400 60 C 520 50, 620 70, 708 110 C 780 150, 830 190, 880 200 Z"/>
+    <text x="400" y="92" class="rs svgtxt" fill="var(--voice)">대사(TTS)</text>
+    <!-- music flat (before) -->
+    <path class="curveM0" d="M0 110 L880 110"/>
+    <text x="8" y="104" class="rs svgtxt" fill="var(--music)">음악 원본 (평평)</text>
+    <!-- music after scoop: dips at 250 and 2.5k -->
+    <path class="curveM" d="M0 110 C 150 110, 200 110, 236 150 C 270 190, 300 110, 360 110 L 520 110 C 570 110, 600 175, 628 175 C 660 175, 690 110, 740 110 L 880 110"/>
+    <text x="236" y="176" text-anchor="middle" class="rs svgtxt" fill="var(--music)">−6 dB @ 250 Hz</text>
+    <text x="628" y="196" text-anchor="middle" class="rs svgtxt" fill="var(--music)">−6 dB @ 2.5 kHz</text>
+    <text x="8" y="256" class="rs svgtxt">프롬프트로 먼저 비운다: "leaves space for a spoken voiceover, no melody in the vocal frequency range" — EQ 는 그 다음이다.</text>
+  </g>
+</svg>
+</div>
+<figcaption><i class="grade g-cr">관행</i> 작곡가·믹서 포럼의 공통 처방: 음악 버스에서 250 Hz 저중역과 2.5 kHz 를 벨로 −6 dB 씩 파고, 대사가 있을 때만 켜지게 자동화하면 볼륨만 낮추는 것보다 티가 덜 난다. 「1–4 kHz 를 자르는 게 목소리를 키우는 것보다 낫다」가 같은 말이다. 이 플러그인은 이 처방을 <b>생성 프롬프트</b>에서 먼저 적용한다 — 애초에 그 대역에 멜로디가 없는 베드를 만든다. <code>bgm-scoring.md</code>가 적었듯 2–4 kHz 카빙에는 1차 출처가 없다.</figcaption>
+</figure>
+
+<!-- 7 ─────────────────────────────────────────── -->
+<h2><span class="n">07</span>템포와 컷 — 60 ÷ BPM</h2>
+<p>비트에 맞춘 컷은 「의도된 편집」으로 읽히고 조금 어긋난 컷은 이유를 모른 채 어설프게 느껴진다. 다만 우리 파이프라인은 <b>대사 길이가 컷 길이를 정한다</b>(글자 수 ÷ 4.5). 그래서 방향이 반대다 — 컷을 비트에 맞추는 게 아니라, 카드 길이에 마디가 얹히는 BPM 을 고른다.</p>
+<div class="tablewrap">
+<table>
+<tr><th>BPM</th><th>1비트</th><th>1마디(4/4)</th><th>4마디 프레이즈</th><th>30fps 프레임/비트</th><th>어울리는 자리 <i class="grade g-cr">관행</i></th></tr>
+<tr><td class="num">80</td><td class="num">0.750 s</td><td class="num">3.0 s</td><td class="num">12 s</td><td class="num">22.5</td><td>설명·회고, 카드 하나 = 한 마디</td></tr>
+<tr><td class="num">90</td><td class="num">0.667 s</td><td class="num">2.67 s</td><td class="num">10.7 s</td><td class="num">20</td><td>스키마 예시 base 큐(88)</td></tr>
+<tr><td class="num">100</td><td class="num">0.600 s</td><td class="num">2.4 s</td><td class="num">9.6 s</td><td class="num">18</td><td>보통 걸음의 해설</td></tr>
+<tr><td class="num">120</td><td class="num">0.500 s</td><td class="num">2.0 s</td><td class="num">8.0 s</td><td class="num">15</td><td>tense 큐 · 프레임이 정수로 떨어진다</td></tr>
+<tr><td class="num">140</td><td class="num">0.429 s</td><td class="num">1.71 s</td><td class="num">6.9 s</td><td class="num">12.9</td><td>몽타주·b-roll 나열</td></tr>
+</table>
+</div>
+<figure>
+<div class="fw">
+<svg viewBox="0 0 1000 150" width="1000" height="150" role="img" aria-label="컷 강도별 편집 단위">
+  <g transform="translate(60,20)">
+    <text x="0" y="14" class="rl svgtxt" font-weight="600">차분함</text>
+    <text x="880" y="14" text-anchor="end" class="rl svgtxt" font-weight="600">강도</text>
+    <line x1="0" y1="44" x2="880" y2="44" class="ax"/>
+    <g>
+      <rect x="0" y="32" width="280" height="24" rx="4" fill="var(--voice-soft)" stroke="var(--voice)"/><text x="140" y="49" text-anchor="middle" class="rs svgtxt" fill="var(--ink)">마디 단위로 컷 (4·8마디마다 장면 전환)</text>
+      <rect x="300" y="32" width="280" height="24" rx="4" fill="var(--music-soft)" stroke="var(--music)"/><text x="440" y="49" text-anchor="middle" class="rs svgtxt" fill="var(--ink)">강박(1·3)에 컷</text>
+      <rect x="600" y="32" width="280" height="24" rx="4" fill="var(--warn-soft)" stroke="var(--warn)"/><text x="740" y="49" text-anchor="middle" class="rs svgtxt" fill="var(--ink)">드롭에 컷 — 다시 보게 되는 순간</text>
+    </g>
+    <text x="0" y="90" class="rs svgtxt">대사 카드는 마디 쪽, b-roll 몽타주는 강박 쪽. 여기서 드롭은 음악의 드롭이고, 우리 sound.drop(무음) 과 겹치지 않게 — 한 편에 큰 사건은 하나다.</text>
+    <text x="0" y="110" class="rs svgtxt">템포와 설득: 120–160 BPM 기악 베드가 전문가 해설 영상에서 저템포·무음악보다 나았다(JCMC 2024, N=873) — 단일 미복제 연구, 설명 편에 빠른 베드를 시험할 이유일 뿐 규칙은 아니다.</text>
+  </g>
+</svg>
+</div>
+</figure>
+
+<!-- 8 ─────────────────────────────────────────── -->
+<h2><span class="n">08</span>생성 프롬프트 해부</h2>
+<p>ElevenLabs 의 가이드 한 줄이 네 생성기 공통이다 — <b>「비워 둔 질문은 모델이 가장 평균적인 답으로 채운다.」</b> 장르·무드·악기·템포·프로덕션 시대 다섯을 다 적고, 대사 밑 베드에는 두 문장을 더 붙인다.</p>
+<figure>
+<div class="fw">
+<svg viewBox="0 0 1000 250" width="1000" height="250" role="img" aria-label="베드 프롬프트 구성 요소">
+  <style>
+    .pb{fill:var(--card);stroke:var(--rule);stroke-width:1.5}
+    .pm{fill:var(--music-soft);stroke:var(--music);stroke-width:1.5}
+    .pv{fill:var(--voice-soft);stroke:var(--voice);stroke-width:1.5}
+    .pt{font-size:12.5px;fill:var(--ink)}
+    .ps{font-size:11px;fill:var(--muted)}
+  </style>
+  <g transform="translate(20,20)">
+    <g class="pt svgtxt">
+      <rect x="0" y="0" width="176" height="64" rx="8" class="pb"/><text x="88" y="26" text-anchor="middle" font-weight="600">장르</text><text x="88" y="46" text-anchor="middle" class="ps">warm low strings</text>
+      <rect x="192" y="0" width="176" height="64" rx="8" class="pb"/><text x="280" y="26" text-anchor="middle" font-weight="600">무드</text><text x="280" y="46" text-anchor="middle" class="ps">calm explanation</text>
+      <rect x="384" y="0" width="176" height="64" rx="8" class="pb"/><text x="472" y="26" text-anchor="middle" font-weight="600">악기</text><text x="472" y="46" text-anchor="middle" class="ps">strings, soft pad, no drums</text>
+      <rect x="576" y="0" width="176" height="64" rx="8" class="pb"/><text x="664" y="26" text-anchor="middle" font-weight="600">템포·조</text><text x="664" y="46" text-anchor="middle" class="ps">bpm: 88 · scale (Lyria 인자)</text>
+      <rect x="768" y="0" width="192" height="64" rx="8" class="pb"/><text x="864" y="26" text-anchor="middle" font-weight="600">프로덕션 어휘</text><text x="864" y="46" text-anchor="middle" class="ps">tape saturation, plate reverb</text>
+    </g>
+    <text x="480" y="96" text-anchor="middle" class="ps svgtxt">+ 대사 밑 베드에만 붙는 두 문장</text>
+    <g class="pt svgtxt">
+      <rect x="96" y="108" width="368" height="70" rx="8" class="pv"/><text x="280" y="132" text-anchor="middle" font-weight="600">목소리 대역을 비운다</text><text x="280" y="150" text-anchor="middle" class="ps mono">leaves space for a spoken voiceover,</text><text x="280" y="164" text-anchor="middle" class="ps mono">no melody in the vocal frequency range</text>
+      <rect x="496" y="108" width="368" height="70" rx="8" class="pm"/><text x="680" y="132" text-anchor="middle" font-weight="600">기악 고정</text><text x="680" y="150" text-anchor="middle" class="ps mono">instrumental only / no vocals (맨 끝에)</text><text x="680" y="164" text-anchor="middle" class="ps mono">force_instrumental: true</text>
+    </g>
+    <text x="480" y="204" text-anchor="middle" class="ps svgtxt">Lyria 는 가중 프롬프트 배열을 받는다 — {text, weight} 비율만 의미가 있다 · Suno 는 가사 칸을 비우거나 [Instrumental] 만 · 「pop song」 같은 보컬 암시 장르어를 피한다</text>
+    <text x="480" y="224" text-anchor="middle" class="ps svgtxt">편곡은 순서대로 서술한다 — "start with … just … then bring in …" · "just" 가 없으면 모델이 빈자리를 채운다 (ElevenLabs)</text>
+  </g>
+</svg>
+</div>
+</figure>
+<div class="tablewrap">
+<table>
+<tr><th>생성기</th><th>플러그인 툴</th><th>기악 보장</th><th>길이 지정</th><th>재현(seed)</th><th>구조 제어</th><th>상업 라이선스 <i class="grade g-ev">근거</i></th></tr>
+<tr><td>Lyria RealTime (Google)</td><td><code>music_generate</code> · <code>_clip</code></td><td><span class="dot yes"></span>기악 전용</td><td class="num">5–300 s 정확</td><td><span class="dot yes"></span>seed</td><td>bpm · scale · density · mute_drums/bass · guidance(높으면 전환이 거칠어짐)</td><td>SynthID 워터마크 · 단가 미공표</td></tr>
+<tr><td>ElevenLabs Music</td><td>—(미배선)</td><td><span class="dot yes"></span>force_instrumental</td><td class="num">초 단위 · auto</td><td><span class="dot part"></span></td><td>composition_plan 섹션별 duration_ms · 타이밍 큐 문장</td><td>Merlin·Kobalt 제휴, Starter($6)부터 상업 사용</td></tr>
+<tr><td>Suno v5</td><td><code>suno_generate_sound</code> (loop) · <code>suno_generate</code></td><td><span class="dot part"></span>스타일 끝에 "instrumental, no vocals" + 가사 [Instrumental]</td><td class="num">근사</td><td><span class="dot no"></span></td><td>[Intro][Build][Drop][Outro] 메타태그</td><td>Pro/Premier 구독 중 생성분만 상업 사용 · 비독점</td></tr>
+<tr><td>Stable Audio 2.5</td><td>—</td><td><span class="dot yes"></span>기악·SFX 특화</td><td class="num">정확</td><td><span class="dot yes"></span></td><td>BPM·Key·Duration · inpainting</td><td>플랜별</td></tr>
+<tr><td>Udio</td><td>—</td><td colspan="5"><span class="dot no"></span>2025-10 UMG 합의 뒤 다운로드 비활성 — 베드 소스로 쓸 수 없다</td></tr>
+<tr><td>MLX 로컬</td><td><code>mlx_music_generate</code></td><td><span class="dot yes"></span>instrumental: true</td><td class="num">근사</td><td><span class="dot part"></span></td><td>—</td><td>$0 이해 · MLX Core 켜져 있을 때 언더스터디</td></tr>
+</table>
+</div>
+<p class="note">Lyria 의 <code>bpm</code>·<code>scale</code> 은 스트림 중간에 바꾸면 컨텍스트 리셋이 필요하다. 그래서 큐가 둘이면 <b>따로 두 번 생성</b>하고 빌더가 카드 경계에서 크로스페이드한다 — 한 스트림 안에서 템포를 바꾸지 않는다.</p>
+
+<!-- 9 ─────────────────────────────────────────── -->
+<h2><span class="n">09</span>네이티브 오디오 — 영상 모델이 만든 음악과 우리 베드가 부딪히지 않게</h2>
+<p>2026년 영상 모델은 소리를 같이 만든다. Seedance 2.x 는 대사·SFX·BGM 세 층을 따로 켜고 끄고, Veo 3.x 는 영상과 한 덩어리로 낸다. 어느 쪽이든 <b>두 베드가 겹치는 사고</b>를 막는 게 연출의 첫 일이다.</p>
+<figure>
+<div class="fw">
+<svg viewBox="0 0 1000 330" width="1000" height="330" role="img" aria-label="네이티브 오디오와 후반 BGM 의 분담 흐름">
+  <g transform="translate(20,16)">
+    <!-- columns -->
+    <g class="pt svgtxt">
+      <rect x="0" y="0" width="300" height="52" rx="8" class="pb"/><text x="150" y="22" text-anchor="middle" font-weight="600">Seedance 2.x</text><text x="150" y="40" text-anchor="middle" class="ps">generate_audio · 층별 on/off · 참조 오디오</text>
+      <rect x="330" y="0" width="300" height="52" rx="8" class="pb"/><text x="480" y="22" text-anchor="middle" font-weight="600">Veo 3.x</text><text x="480" y="40" text-anchor="middle" class="ps">영상·소리 융합 생성 · 층 분리 없음</text>
+      <rect x="660" y="0" width="300" height="52" rx="8" class="pb"/><text x="810" y="22" text-anchor="middle" font-weight="600">우리 빌더</text><text x="810" y="40" text-anchor="middle" class="ps">TTS + 베드 + 더킹 + 자막 (step 9.5–10c)</text>
+    </g>
+    <!-- rows -->
+    <g class="ps svgtxt">
+      <text x="0" y="86" class="pt svgtxt" font-weight="600">모션 배경 · quote 클립</text>
+      <rect x="0" y="96" width="300" height="40" rx="6" class="pv"/><text x="150" y="120" text-anchor="middle" fill="var(--ink)">Audio: room tone, no music, no speech</text>
+      <rect x="330" y="96" width="300" height="40" rx="6" class="pv"/><text x="480" y="120" text-anchor="middle" fill="var(--ink)">같은 문장 — 빼면 대사·음악을 지어낸다</text>
+      <rect x="660" y="96" width="300" height="40" rx="6" class="pm"/><text x="810" y="120" text-anchor="middle" fill="var(--ink)">클립 소리 버림 → 베드가 이어진다</text>
+
+      <text x="0" y="170" class="pt svgtxt" font-weight="600">b-roll (대사 없음)</text>
+      <rect x="0" y="180" width="300" height="40" rx="6" class="pv"/><text x="150" y="204" text-anchor="middle" fill="var(--ink)">room tone + 질감 하나, no music</text>
+      <rect x="330" y="180" width="300" height="40" rx="6" class="pv"/><text x="480" y="204" text-anchor="middle" fill="var(--ink)">같음 · negativePrompt 는 img2video 만</text>
+      <rect x="660" y="180" width="300" height="40" rx="6" class="pm"/><text x="810" y="204" text-anchor="middle" fill="var(--ink)">클립 소리 유지 + 베드 믹스 (broll-a0-mixed)</text>
+
+      <text x="0" y="254" class="pt svgtxt" font-weight="600">음악이 곧 컷인 경우 (뮤비·안무)</text>
+      <rect x="0" y="264" width="300" height="40" rx="6" class="pm"/><text x="150" y="288" text-anchor="middle" fill="var(--ink)">BGM 층 on, 참조 오디오로 곡 지정</text>
+      <rect x="330" y="264" width="300" height="40" rx="6" class="pb"/><text x="480" y="288" text-anchor="middle" fill="var(--muted)">프롬프트로만 — 곡을 고정할 수 없다</text>
+      <rect x="660" y="264" width="300" height="40" rx="6" class="pb"/><text x="810" y="288" text-anchor="middle" fill="var(--muted)">베드 off (sfx.tsv bgm=off) — 둘이 겹치면 사고</text>
+    </g>
+  </g>
+</svg>
+</div>
+<figcaption>원칙은 하나다 — <b>베드는 빌더가 한 번만 깐다.</b> 영상 모델에는 「no music」을 상태 서술로 적고(부정 명사는 그림 프롬프트에서는 그 물건을 그리지만 Audio 문장에서는 제외로 읽힌다 · 4/4 실측), 모델의 음악을 쓰는 컷은 빌더 쪽 베드를 끈다. Seedance 의 참조 오디오는 음색·곡 참조다 (음성인식이 아니다).</figcaption>
+</figure>
+
+<!-- 10 ─────────────────────────────────────────── -->
+<h2><span class="n">10</span>플랫폼 실측 — 소리가 켜져 있다는 가정</h2>
+<figure>
+<div class="fw">
+<svg viewBox="0 0 1000 250" width="1000" height="250" role="img" aria-label="TikTok Kantar 사운드 지표 막대">
+  <g transform="translate(300,20)">
+    <g class="rs svgtxt">
+      <text x="-290" y="26" class="pt svgtxt">소리가 TikTok 경험에 필수</text>
+      <rect x="0" y="12" width="528" height="20" rx="3" fill="var(--music)" opacity=".85"/><text x="536" y="27" class="mono" fill="var(--ink)">88%</text>
+      <text x="-290" y="66" class="pt svgtxt">소리 있는 광고에 멈춰 본다</text>
+      <rect x="0" y="52" width="438" height="20" rx="3" fill="var(--music)" opacity=".7"/><text x="446" y="67" class="mono" fill="var(--ink)">73%</text>
+      <text x="-290" y="106" class="pt svgtxt">좋아하는 곡을 쓴 브랜드를 더 기억</text>
+      <rect x="0" y="92" width="408" height="20" rx="3" fill="var(--music)" opacity=".6"/><text x="416" y="107" class="mono" fill="var(--ink)">68%</text>
+      <text x="-290" y="146" class="pt svgtxt">소리 켠 캠페인 vs 끈 캠페인 성과</text>
+      <rect x="0" y="132" width="600" height="20" rx="3" fill="var(--voice)" opacity=".8"/><text x="608" y="147" class="mono" fill="var(--ink)">2.2×</text>
+      <text x="-290" y="186" class="pt svgtxt">Shorts 3초 안 이탈 비중</text>
+      <rect x="0" y="172" width="330" height="20" rx="3" fill="var(--warn)" opacity=".7"/><text x="338" y="187" class="mono" fill="var(--ink)">50–60%</text>
+    </g>
+    <text x="-290" y="222" class="ps svgtxt">Kantar × TikTok for Business (표본·방법 미공개) · Shorts 이탈은 OpusClip·adshorts 집계 — 광고 맥락 수치를 오가닉 숏폼에 그대로 옮기지 않는다</text>
+  </g>
+</svg>
+</div>
+<figcaption><i class="grade g-ev">근거</i> 표본은 공개되지 않았지만 방향은 일관된다 — 폰에서 소리는 켜져 있고, 첫 3초에 절반이 나간다. 그래서 훅 밑 음악은 작게, 3초 안의 첫 소리는 대사여야 한다. Shorts 는 자동 루프라 마지막 프레임이 첫 프레임으로 이어져야 하는데 음악도 같다 — 하드 스톱 대신 꼬리를 두고, 「팔로우 해 주세요」 3초는 20초 편의 15% 를 루프 밖으로 버린다.</figcaption>
+</figure>
+
+<!-- 11 ─────────────────────────────────────────── -->
+<h2><span class="n">11</span>라이선스와 수익화 — 네 질문은 서로 다른 질문이다</h2>
+<figure>
+<div class="fw">
+<svg viewBox="0 0 1000 200" width="1000" height="200" role="img" aria-label="AI 음악 라이선스 네 질문 흐름">
+  <g transform="translate(20,20)" class="pt svgtxt">
+    <rect x="0" y="20" width="210" height="72" rx="8" class="pb"/><text x="105" y="48" text-anchor="middle" font-weight="600">① 상업 사용권</text><text x="105" y="68" text-anchor="middle" class="ps">생성기 플랜이 준다</text>
+    <path d="M210 56H250" class="ln"/>
+    <rect x="250" y="20" width="210" height="72" rx="8" class="pb"/><text x="355" y="48" text-anchor="middle" font-weight="600">② 저작권 보호</text><text x="355" y="68" text-anchor="middle" class="ps">완전 AI 생성분은 주장 못 함</text>
+    <path d="M460 56H500" class="ln"/>
+    <rect x="500" y="20" width="210" height="72" rx="8" class="pb"/><text x="605" y="48" text-anchor="middle" font-weight="600">③ Content ID</text><text x="605" y="68" text-anchor="middle" class="ps">2025-07 이후 완전 AI 오디오 부적격</text>
+    <path d="M710 56H750" class="ln"/>
+    <rect x="750" y="20" width="210" height="72" rx="8" class="pm"/><text x="855" y="48" text-anchor="middle" font-weight="600">④ YouTube 수익화</text><text x="855" y="68" text-anchor="middle" class="ps">채널 단위 「반복·대량 생산」 심사 + AI 고지</text>
+    <text x="480" y="130" text-anchor="middle" class="ps">①이 있어도 ④가 보장되지 않는다. 반대로 ③이 안 돼도 내 영상의 수익화는 된다 — 남의 사용을 청구하지 못할 뿐.</text>
+    <text x="480" y="152" text-anchor="middle" class="ps">우리 기본값 Lyria 는 기악·SynthID 워터마크 · 업로드 폼의 합성 콘텐츠 고지는 필수(수익에 영향 없음, 2026년 라벨 노출 강화)</text>
+  </g>
+</svg>
+</div>
+</figure>
+
+<!-- 12 ─────────────────────────────────────────── -->
+<h2><span class="n">12</span>인용하지 않는 것 <i class="grade g-no">반박</i></h2>
+<p><code>bgm-scoring.md</code> §5 의 3표 적대 검증에서 떨어진 주장이다. 「시네마틱 나레이션 믹스」 가이드가 가장 자주 쓰는 숫자들이라 여기 다시 적는다.</p>
+<div class="tablewrap">
+<table>
+<tr><th>흔히 보는 주장</th><th>왜 안 쓰나</th></tr>
+<tr><td>Netflix 대사 −27 LKFS · −2 dBTP, LRA 4–18 LU</td><td>만장일치 반박. 가장 많이 인용되는 「시네마틱」 숫자</td></tr>
+<tr><td>DPP 4 LU 가 「베드가 있을 자리」</td><td>4 LU 는 최소 분리 — 바닥이지 목표가 아니다</td></tr>
+<tr><td>같은 라우드니스면 말이 음악보다 2–3 dB 크게 들린다</td><td>출처 없음</td></tr>
+<tr><td>베드를 깔면 몰입·유지율이 오른다 / 음악이 기억을 해친다</td><td>성인 메타분석의 전역 효과는 0 — 방향이 반대인 효과들의 합</td></tr>
+<tr><td>장조·단조가 감정을 바꾼다</td><td>SMD 0.22 (p=0.001) 이지만 예측구간 −0.23~0.67 이 0 을 지난다</td></tr>
+<tr><td>EEG 알파 억제·P300 수치, 템포 동조 조절 효과</td><td>검증에서 탈락</td></tr>
+</table>
+</div>
+
+<!-- 13 ─────────────────────────────────────────── -->
+<h2><span class="n">13</span>사운드 플랜 체크리스트 — scenes.js 에 적는 것</h2>
+<ul class="check">
+  <li>훅 카드 밑은 near-silence 또는 low drone — 베드가 첫 문장과 경쟁하지 않는다</li>
+  <li><code>window.MUSIC</code> 큐마다 프롬프트에 장르·무드·악기·템포 + 「leaves space for a spoken voiceover, no melody in the vocal frequency range」</li>
+  <li><code>sound.cue</code> 는 방향이 바뀌는 카드에만 — 45초 편에 한 번, 없어도 된다</li>
+  <li><code>sound.drop</code> 은 story arc 의 turn 한 곳 — 두 번이면 둘 다 안 읽힌다</li>
+  <li>같은 샷에 <code>cue</code> 와 <code>drop</code> 을 같이 쓰지 않는다</li>
+  <li>생성 영상 샷 전부에 <code>visual.audio</code> — 「no music, no speech」 상태 서술</li>
+  <li>모델 음악을 쓰는 컷은 <code>sfx.tsv</code> 의 bgm=off — 베드는 한 번만 깔린다</li>
+  <li>큐가 둘이면 Lyria 를 두 번 부른다 — 스트림 안에서 bpm·scale 을 바꾸지 않는다</li>
+  <li>마지막 말 뒤 꼬리 2.2s — 하드 스톱 없이 마무리 질문이 걸릴 자리를 둔다</li>
+  <li>빌드 뒤 step 10c 분리값을 읽는다 — 10 LU 보다 좁으면 더킹 미작동, 4 LU 아래면 중단</li>
+  <li>재현이 필요한 큐는 <code>seed</code> 를 적어 둔다 — Lyria 의 유일한 재현 수단</li>
+  <li>업로드 폼의 합성 콘텐츠 고지 · Suno 는 생성 시점에 Pro/Premier 였는지 기록</li>
+</ul>
+
+<!-- 14 ─────────────────────────────────────────── -->
+<h2><span class="n">14</span>출처</h2>
+<ul class="srcs">
+  <li>레벨 — <a href="https://arxiv.org/abs/2305.19100">QoMEX 2023 (Fraunhofer IIS)</a> · <a href="https://www.aes.org/publications/elibrary-page/?id=20711">JAES 67(12) 2019</a> · <a href="https://arxiv.org/html/2405.17364v1">AES 156th 2024</a> · <a href="https://assets-corporate.channel4.com/_flysystem/s3/documents/2023-03/ProgrammeDeliverySpecificationFile_DPP-Channel4_v5.2.pdf">UK DPP / Channel 4 v5.2</a></li>
+  <li>플랫폼 — <a href="https://ads.tiktok.com/business/en/blog/kantar-report-how-brands-are-making-noise-and-driving-impact-with-sound-on-tiktok">Kantar × TikTok for Business</a> · <a href="https://support.google.com/youtube/answer/14106294">YouTube 안정적인 볼륨·음성 강조</a> · <a href="https://www.opus.pro/blog/ideal-youtube-shorts-length-format-retention">OpusClip Shorts 유지율</a> · <a href="https://virvid.ai/blog/looping-structure-shorts-retention-2026">루프 구조</a></li>
+  <li>스포팅 — <a href="https://www.soundbridge.io/spotting-session-film">Soundbridge</a> · <a href="https://filmscoringtips.com/film-editors-spotting-session/">Film Scoring Tips</a> · <a href="https://www.heather-fenoughty.com/composing-music/how-i-spot-cues-in-a-film-works-for-any-media-a-quick-and-dirty-guide/">Fenoughty, 큐 스포팅</a> · <a href="https://en.wikipedia.org/wiki/Mickey_Mousing">Mickey Mousing / 언더스코어</a></li>
+  <li>더킹 — <a href="https://larryjordan.com/articles/automatically-duck-background-music-under-dialog-in-davinci-resolve/">Larry Jordan (Resolve)</a> · <a href="https://duc.avid.com/showthread.php?t=130703">Avid DUC</a> · <a href="https://vi-control.net/community/threads/ducking-music-volume-to-make-way-for-voice-narration-is-there-a-better-way-than-side-chaining.83139/">VI-Control 더킹</a> · <a href="https://www.capcut.com/create/audio-ducking-for-clear-dialogue-in-video">CapCut</a></li>
+  <li>EQ — <a href="https://vi-control.net/community/threads/your-tips-for-mixing-dialogue-vs-music.143697/">VI-Control 대사 vs 음악</a> · <a href="https://nofilmschool.com/2015/05/simple-trick-will-make-your-dialogue-sound-better-stand-out">No Film School</a></li>
+  <li>템포 — <a href="https://www.silvermansound.com/bpm-to-fps-calculator">BPM→FPS 계산기</a> · <a href="https://www.toolsforfilm.com/blog/bpm-and-picture-editors-guide">Tools for Film</a> · <a href="https://doi.org/10.1093/jcmc/zmae007">JCMC 2024 (템포와 설득)</a></li>
+  <li>생성기 — <a href="https://ai.google.dev/gemini-api/docs/realtime-music-generation">Lyria RealTime 문서</a> · <a href="https://elevenlabs.io/docs/overview/capabilities/music/best-practices">ElevenLabs Music 베스트 프랙티스</a> · <a href="https://elevenlabs.io/docs/api-reference/music/compose-detailed">compose-detailed</a> · <a href="https://blakecrosley.com/guides/suno">Suno 태그 가이드</a> · <a href="https://hookgenius.app/learn/suno-instrumental-prompts/">Suno 기악 프롬프트</a> · <a href="https://kb.stability.ai/knowledge-base/stable-audio-2.5-prompt-guide">Stable Audio 2.5</a></li>
+  <li>네이티브 오디오 — <a href="https://www.sitepoint.com/seedance-2-0-vs-veo-3-1-which-is-best-for-ai-video-creators/">Seedance 2.0 vs Veo 3.1</a> · <a href="https://www.cutout.pro/learn/blog-seedance-2-0-audio-guide/">Seedance 오디오 가이드</a> · <a href="https://www.mindstudio.ai/blog/seedance-2-vs-veo-3-1-comparison">MindStudio 비교</a></li>
+  <li>라이선스 — <a href="https://jackrighteous.com/en-us/blogs/ai-music-distribution-guide/youtube-ai-policy-for-suno-creators">YouTube AI 정책 · Suno</a> · <a href="https://musicmake.ai/blog/youtube-ai-generated-music-policy-2026">2026 체크리스트</a> · <a href="https://jam.com/resources/best-ai-music-generators-2026">생성기 비교 2026</a></li>
+  <li>플러그인 내부 — <code>skills/produce/references/bgm-scoring.md</code> · <code>build-reel.sh</code> step 9.5–10c · <code>scenes-schema.md</code> §Music cues · §Clip audio</li>
+</ul>
+</div>
+</body>
+</html>

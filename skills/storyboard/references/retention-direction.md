@@ -124,6 +124,9 @@ In the table, map every intended event to a supported control:
   Resolve asset cues before building and include generated cues in the approved cost plan.
 - `sound.drop: true` removes the bed for the shot. Spend the short's single drop on the
   line that needs room, on the turn for a story arc. This does not mute voice or SFX.
+- The opening needs no control of its own: build-reel.sh holds the bed a further 6 LU
+  down under card 0 and ramps back from card 1 (`BGM_HOOK_LU`), on the one-bed path too.
+  Do not spend the drop on the hook to get a quiet opening.
 - `sound.sfx` names an existing channel asset and plays at the shot's first frame. Use it
   for a visible event or a specific transition, not as a whoosh on every cut. If the impact
   happens mid-shot, use the documented segment manifest route in produce §6 or omit the

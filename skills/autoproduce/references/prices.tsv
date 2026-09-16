@@ -93,6 +93,8 @@ tts.gemini-pro	1000 chars	0.076	derived	$76/1M chars — fallback when flash ref
 # metered quantity and sits below the raw count (Korean 18 chars → 10, measured) — log that header ÷ 1000, not the text length.
 tts.elevenlabs	1000 chars (metered)	0.100	official	$0.10/1K chars — multilingual_v2 · eleven_v3 (docs/research/2026-08-22-elevenlabs-tts-api §7·§10); quantity = character-cost header ÷ 1000
 tts.elevenlabs-flash	1000 chars (metered)	0.050	official	$0.05/1K chars — flash_v2_5 · v3_conversational; same quantity rule
+# ElevenLabs sound effects (pricing/api, read 2026-09-16): $0.12 per minute of generated audio, the same on every plan.
+sfx.elevenlabs	second	0.002	derived	sfx_elevenlabs_generate — $0.12/min ÷ 60; quantity = the WAV's measured seconds (durationSeconds when it was requested)
 
 # ── Music (Lyria) ────────────────────────────────────────────────────────
 # 2026-08-15: checked directly at ai.google.dev/gemini-api/docs/pricing — clips are right there

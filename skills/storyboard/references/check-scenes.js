@@ -203,6 +203,27 @@ function frontmatter(file) {
   return out;
 }
 
+/**
+ * Does the channel have this effect on disk — a catalog row of kind sfx, or the well-known
+ * assets/audio/sfx/<id>.wav|.mp4 (the same order resolve-asset.py uses). Only the file question;
+ * generation is produce's.
+ */
+function sfxAssetExists(channelDir, id) {
+  const assets = path.join(channelDir, 'assets');
+  const catalog = path.join(assets, 'catalog.md');
+  if (fs.existsSync(catalog)) {
+    const rows = fs.readFileSync(catalog, 'utf8').split(/\r?\n/);
+    for (const line of rows) {
+      const t = line.trim();
+      if (!t.startsWith('|')) continue;
+      const cells = t.replace(/^\||\|$/g, '').split('|').map((c) => c.trim());
+      if (cells.length < 3 || cells[0].toLowerCase() !== 'sfx' || cells[1].toLowerCase() !== id.toLowerCase()) continue;
+      if (fs.existsSync(path.join(assets, cells[2]))) return true;
+    }
+  }
+  return ['.wav', '.mp4'].some((ext) => fs.existsSync(path.join(assets, 'audio', 'sfx', id + ext)));
+}
+
 function findProfile(scenesPath) {
   let dir = path.dirname(path.resolve(scenesPath));
   for (let i = 0; i < 7; i++) {
@@ -1304,7 +1325,87 @@ function check(win, fmt, opts) {
       if (cues.indexOf(s.sound.cue) === -1)
         bad(where, `sound.cue "${s.sound.cue}" is not in window.MUSIC — the bed stays where it was`);
     }
+
+    // An effect that names nothing has no file — the builder stops at sfx.tsv with "sfx file
+    // missing" after the narration and stills are already paid for. With window.SFX the id is
+    // a key there (produce generates or fetches it); without one it is a channel catalog id,
+    // checked against the files once the channel is known (main passes opts.channelDir).
+    if (s.sound && s.sound.sfx) {
+      const id = String(s.sound.sfx);
+      if (s.type === 'broll' || s.type === 'outro')
+        bad(where, `sound.sfx on a ${s.type} — not a card; a broll plays its own sound and the outro is spliced after the build`);
+      const book = win.SFX && typeof win.SFX === 'object' && !Array.isArray(win.SFX) ? win.SFX : null;
+      if (book) {
+        if (!Object.prototype.hasOwnProperty.call(book, id))
+          bad(where, `sound.sfx "${id}" is not in window.SFX — the builder has no file to place`);
+      } else if (opts && opts.channelDir && !sfxAssetExists(opts.channelDir, id)) {
+        machine(where, `sound.sfx "${id}" is not in the channel catalog (assets/audio/sfx/${id}.wav) ` +
+                       'and there is no window.SFX entry to generate it from (scenes-schema §sound effects)');
+      }
+    }
   });
+
+  // The effects book — each entry is generated once into the channel catalog or fetched from it.
+  if (win.SFX !== undefined) {
+    if (!win.SFX || typeof win.SFX !== 'object' || Array.isArray(win.SFX)) {
+      bad('window.SFX', 'window.SFX is an object of { <id>: { prompt, seconds?, loop? } | { asset } }');
+    } else {
+      Object.keys(win.SFX).forEach((id) => {
+        const e = win.SFX[id];
+        const at = `window.SFX.${id}`;
+        if (!e || typeof e !== 'object') { bad(at, 'an effect is { prompt, seconds?, loop? } or { asset }'); return; }
+        if (!/^[a-z0-9][a-z0-9-]*$/.test(id))
+          bad(at, 'an effect id is lowercase letters, digits and hyphens — it becomes assets/audio/sfx/<id>.wav');
+        const hasPrompt = typeof e.prompt === 'string' && e.prompt.trim() !== '';
+        const hasAsset = typeof e.asset === 'string' && e.asset.trim() !== '';
+        if (!hasPrompt && !hasAsset) bad(at, 'neither prompt nor asset — nothing to generate and nothing to fetch');
+        if (hasPrompt && hasAsset) bad(at, 'both prompt and asset — one or the other');
+        if (e.seconds !== undefined) {
+          const n = Number(e.seconds);
+          if (!Number.isFinite(n) || n < 0.5 || n > 30) bad(at, `seconds ${e.seconds} — the generator takes 0.5–30`);
+          else if (e.loop && n < 5) bad(at, 'a loop under 5 s seams audibly under narration — 10–30 s for a bed');
+        }
+        if (!scenes.some((s) => s.sound && String(s.sound.sfx) === id)) warn(at, 'declared but no shot uses it');
+      });
+    }
+  }
+
+  // Craft, not contract: an effect belongs to the cut that changed. Two in a row tick like a
+  // machine, and past one per ~10 s they read as decoration (scenes-schema §sound effects).
+  {
+    const cards = scenes.filter((s) => s.type !== 'broll' && s.type !== 'outro');
+    cards.forEach((s, i) => {
+      if (i > 0 && s.sound && s.sound.sfx && cards[i - 1].sound && cards[i - 1].sound.sfx)
+        warn('shot ' + (scenes.indexOf(s) + 1), `sound.sfx on this card and the one before it — effects on adjacent cuts tick; keep the one on the bigger change`);
+    });
+    const total = cards.reduce((acc, s) => acc + (Number(s.duration) || 0), 0);
+    const n = cards.filter((s) => s.sound && s.sound.sfx).length;
+    if (total > 0 && n > Math.ceil(total / 10))
+      warn('sound', `${n} effects over ${total}s of cards — past one per 10 s they read as decoration; keep the ones on the cuts that changed most`);
+  }
+
+  // window.MUSIC — every cue has to be something produce can turn into a file: a prompt for
+  // music_generate, a weighted-prompt blend for music_generate_advanced, or a channel asset.
+  if (win.MUSIC && typeof win.MUSIC === 'object') {
+    Object.keys(win.MUSIC).forEach((name) => {
+      const c = win.MUSIC[name];
+      const at = `window.MUSIC.${name}`;
+      if (!c || typeof c !== 'object') {
+        bad(at, 'a cue is an object — { prompt } · { prompts: [{ text, weight }] } · { asset } (scenes-schema §music cues)');
+        return;
+      }
+      if (c.asset) return;
+      const hasPrompt = typeof c.prompt === 'string' && c.prompt.trim().length > 0;
+      const hasPrompts = Array.isArray(c.prompts) && c.prompts.length > 0;
+      if (hasPrompt && hasPrompts) bad(at, 'prompt and prompts on one cue — one or the other');
+      else if (!hasPrompt && !hasPrompts) bad(at, 'no prompt, prompts or asset — produce has nothing to generate or fetch');
+      if (hasPrompts) c.prompts.forEach((p, i) => {
+        if (!p || typeof p.text !== 'string' || !p.text.trim()) bad(at, `prompts[${i}] has no text`);
+        if (p && p.weight !== undefined && !(typeof p.weight === 'number' && p.weight !== 0))
+          bad(at, `prompts[${i}].weight ${JSON.stringify(p.weight)} — any non-zero number (1.0 is the vendor's starting point; only the ratios matter)`);
+      });
+    });
+  }
 
   return out;
 }
@@ -2016,6 +2117,61 @@ function selftest() {
   ok('a cue that exists passes',
      !has(bads(run([cover, Object.assign({}, goodShot, { sound: { cue: 'base' } }), ctaShot], { MUSIC: { base: {} } })),
           /not in window\.MUSIC/));
+  ok('a cue with neither prompt, prompts nor asset is a violation',
+     has(bads(run([cover, goodShot, ctaShot], { MUSIC: { base: {} } })), /no prompt, prompts or asset/));
+  ok('an asset cue needs no prompt',
+     !has(bads(run([cover, goodShot, ctaShot], { MUSIC: { close: { asset: 'reflect' } } })), /no prompt, prompts or asset/));
+  ok('a weighted-prompt cue passes',
+     !has(bads(run([cover, goodShot, ctaShot],
+                   { MUSIC: { base: { prompts: [{ text: 'low strings', weight: 1 }, { text: 'pulse', weight: 1.5 }], density: 0.4 } } })),
+          /prompts|no prompt/));
+  ok('a zero weight is a violation',
+     has(bads(run([cover, goodShot, ctaShot], { MUSIC: { base: { prompts: [{ text: 'low strings', weight: 0 }] } } })),
+         /weight 0/));
+  ok('prompt and prompts on one cue is a violation',
+     has(bads(run([cover, goodShot, ctaShot], { MUSIC: { base: { prompt: 'a', prompts: [{ text: 'b' }] } } })),
+         /one or the other/));
+
+  // sound effects
+  const withSfx = (base, id) => Object.assign({}, base, { sound: { sfx: id } });
+  ok('an effect naming nothing in window.SFX is a violation',
+     has(bads(run([cover, withSfx(goodShot, 'whoosh'), ctaShot], { SFX: { hit: { prompt: 'low hit' } } })),
+         /not in window\.SFX/));
+  ok('an effect that exists in window.SFX passes',
+     !has(bads(run([cover, withSfx(goodShot, 'whoosh'), ctaShot], { SFX: { whoosh: { prompt: 'short soft whoosh', seconds: 0.8 } } })),
+          /not in window\.SFX|window\.SFX/));
+  ok('a window.SFX entry with neither prompt nor asset is a violation',
+     has(bads(run([cover, withSfx(goodShot, 'x'), ctaShot], { SFX: { x: { seconds: 1 } } })), /neither prompt nor asset/));
+  ok('a window.SFX entry with both prompt and asset is a violation',
+     has(bads(run([cover, withSfx(goodShot, 'x'), ctaShot], { SFX: { x: { prompt: 'p', asset: 'a' } } })), /both prompt and asset/));
+  ok('an effect length outside the generator range is a violation',
+     has(bads(run([cover, withSfx(goodShot, 'x'), ctaShot], { SFX: { x: { prompt: 'p', seconds: 45 } } })), /0\.5–30/));
+  ok('a short loop is a violation',
+     has(bads(run([cover, withSfx(goodShot, 'x'), ctaShot], { SFX: { x: { prompt: 'p', seconds: 2, loop: true } } })), /loop under 5 s/));
+  ok('an effect id with uppercase or spaces is a violation',
+     has(bads(run([cover, withSfx(goodShot, 'Big Hit'), ctaShot], { SFX: { 'Big Hit': { prompt: 'p' } } })), /lowercase letters/));
+  ok('a declared effect no shot uses warns',
+     has(warns(run([cover, goodShot, ctaShot], { SFX: { spare: { prompt: 'p' } } })), /declared but no shot uses it/));
+  ok('effects on adjacent cards warn',
+     has(warns(run([withSfx(cover, 'a'), withSfx(goodShot, 'b'), ctaShot], { SFX: { a: { prompt: 'p' }, b: { prompt: 'q' } } })),
+         /adjacent cuts/));
+  ok('an effect on a broll is a violation',
+     has(bads(run([cover, goodShot, Object.assign({}, broll, { sound: { sfx: 'a' } }), ctaShot], { SFX: { a: { prompt: 'p' } } })),
+         /sound\.sfx on a broll/));
+  ok('without window.SFX the id is checked against the channel catalog outside --draft',
+     (() => {
+       const os = require('os');
+       const ch = fs.mkdtempSync(path.join(os.tmpdir(), 'sfx-'));
+       fs.mkdirSync(path.join(ch, 'assets', 'audio', 'sfx'), { recursive: true });
+       fs.writeFileSync(path.join(ch, 'assets', 'audio', 'sfx', 'tick.wav'), 'x');
+       const missing = run([cover, withSfx(goodShot, 'whoosh'), ctaShot], null, { channelDir: ch });
+       const present = run([cover, withSfx(goodShot, 'tick'), ctaShot], null, { channelDir: ch });
+       const deferred = run([cover, withSfx(goodShot, 'whoosh'), ctaShot], null, { channelDir: ch, draft: true });
+       return has(bads(missing), /not in the channel catalog/) &&
+              !has(bads(present), /not in the channel catalog/) &&
+              !has(bads(deferred), /not in the channel catalog/) &&
+              deferred.some((f) => f.level === 'later' && /not in the channel catalog/.test(f.what));
+     })());
 
   // ── sequence → scene → shot (structure-contract.js) ──
   {
@@ -2430,7 +2586,8 @@ function main() {
   const scenePolicy = normalizeMotionPolicy(win.MOTION_POLICY || null, formatVideoMax, 'window.MOTION_POLICY', fmt.pacing, isShort);
   const effectivePolicy = profileHasPolicy ? profilePolicy
     : normalizeMotionPolicy(null, formatVideoMax, 'format default', fmt.pacing, isShort);
-  const findings = check(win, fmt, { draft, policy: effectivePolicy, requireRenderPlan: true });
+  const findings = check(win, fmt, { draft, policy: effectivePolicy, requireRenderPlan: true,
+                                     channelDir: profilePath ? path.dirname(profilePath) : null });
   require('./render-routing.js').checkEpisode(win).forEach(what =>
     findings.push({ level: 'bad', where: 'visual direction', what }));
   // Draft validates the plan; full production also requires a current evidence-backed read.

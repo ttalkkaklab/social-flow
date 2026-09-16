@@ -14,7 +14,7 @@ import { reviewFinalSpeech } from './tts-final-quality.js';
 // package.json's version and the four plugin manifests (skill-lint.js checks that they agree).
 // If the two drift, the version clients see stops matching the actual package, so bump this
 // line together with package.json (the contract test checks that the two agree).
-const server = new Server({ name: 'social-flow', version: '0.79.0' }, { capabilities: { tools: {} } });
+const server = new Server({ name: 'social-flow', version: '0.80.0' }, { capabilities: { tools: {} } });
 // Per-platform publish tools are exposed only for platforms that have a credential file
 // (default tokens ∪ channel directories) — this is evaluated per request, so adding a token
 // file takes effect without a server restart. Every handler stays registered, so calling a
@@ -142,7 +142,7 @@ async function main() {
         `openai key ${config.openaiApiKey ? 'set' : 'MISSING (gpt_image_* image generation tools will fail — image_local_generate does not need it)'}, ` +
         `ark key ${config.arkApiKey ? 'set' : 'MISSING (seedance_* video generation tools will fail — veo_* does not need it)'}, ` +
         `suno key ${config.sunoApiKey ? 'set' : 'MISSING (suno_* will fail — music_*(Lyria) does not need it)'}, ` +
-        `elevenlabs key ${config.elevenLabsApiKey ? 'set' : 'MISSING (tts_elevenlabs_* will fail — tts_generate/tts_local_generate do not need it)'}, ` +
+        `elevenlabs key ${config.elevenLabsApiKey ? 'set' : 'MISSING (tts_elevenlabs_* and sfx_elevenlabs_generate will fail — tts_generate/tts_local_generate do not need it)'}, ` +
         `local tts python ${process.env.SUPERTONIC_PYTHON ? process.env.SUPERTONIC_PYTHON : 'python3 (default — set SUPERTONIC_PYTHON for a virtualenv)'}, ` +
         `local image mflux ${process.env.MFLUX_ZIMAGE_BIN ? process.env.MFLUX_ZIMAGE_BIN : '~/.local/bin/mflux-generate-z-image-turbo (default — set MFLUX_ZIMAGE_BIN if elsewhere)'}, ` +
         `local stt mlx-qwen3-asr ${process.env.QWEN3_ASR_BIN ? process.env.QWEN3_ASR_BIN : '~/.local/bin/mlx-qwen3-asr (default — set QWEN3_ASR_BIN if elsewhere)'}, ` +

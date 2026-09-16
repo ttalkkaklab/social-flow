@@ -457,10 +457,10 @@ social-flow/
 ├── .plugin/plugin.json          # Buzz persona pack (Open Plugin Spec)
 ├── personas/                    # Buzz pack persona (pipeline.persona.md)
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 79 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 80 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
-│       ├── tools.ts             # tool definitions — 79: research 9 + open data 5 + generation 39 + publish 6 + comments 3 + growth insights 5 + check 2 + blender 7 + storyboard 3
+│       ├── tools.ts             # tool definitions — 80: research 9 + open data 5 + generation 40 + publish 6 + comments 3 + growth insights 5 + check 2 + blender 7 + storyboard 3
 │       ├── handlers.ts          # zod validation + routing
 │       ├── sns-client.ts        # Threads·IG·FB·YouTube publish/comments
 │       ├── serp-client.ts       # SerpApi (key masking + response slimming)
@@ -519,9 +519,9 @@ social-flow/
 └── data/                        # content data root (see data/README.md)
 ```
 
-## MCP tool surface (79 tools)
+## MCP tool surface (80 tools)
 
-**`tools/list` does not show all 79.** The nine publish/insights tools
+**`tools/list` does not show all 80.** The nine publish/insights tools
 (`threads_publish` · `instagram_publish` · `facebook_publish` · `facebook_comment` ·
 `youtube_publish` · `threads_insights` · `instagram_insights` · `youtube_insights` ·
 `threads_search`) are exposed **only for platforms whose credential file exists** —
@@ -557,6 +557,7 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | Voice generation | `tts_local_generate` | Supertonic 3 on-device (**no API key, no network** — 10 voices, 31 explicitly specified languages, mono 44.1kHz wav. Needs local python + `pip install supertonic`) |
 | Voice generation | `mlx_tts_generate` | MLX Core / mlx-serve (raw WAV. Optional; never a silent fallback for the engine in profile §2) |
 | Voice generation | `tts_elevenlabs_generate` / `tts_elevenlabs_dialogue` / `tts_elevenlabs_voices` | ElevenLabs (ELEVENLABS_API_KEY — the paid third lane: inline audio-tag acting on eleven_v3, text-to-dialogue with **up to 10 voices in one request**, per-character timestamps for subtitle sync, any cloned or Voice Library voice. Saves mono 24kHz wav by default, so the builder reads it like the Gemini lane. API rate $0.10 per 1,000 characters on v2·v3, $0.05 on flash and v3 conversational, the same on every plan; the Free tier is non-commercial) |
+| Sound effects | `sfx_elevenlabs_generate` | ElevenLabs text→SFX (ELEVENLABS_API_KEY — `eleven_text_to_sound_v2`, 0.5–30 s, prompt influence, seamless loops for room-tone beds). The endpoint has no WAV format, so the server asks for PCM and writes the RIFF header itself: a mono 48 kHz WAV the builder reads directly, plus a `.json` provenance sidecar (tool, model, prompt, seconds, request id, date, rights). The storyboard names each effect in `window.SFX` and points shots at it with `sound.sfx`; produce generates each id **once into the channel catalog** (`assets/audio/sfx/<id>.wav`) and later episodes reuse it at $0. $0.12 per minute of generated audio on every plan; the Free tier is non-commercial. Which cuts get one: [scenes-schema §sound effects](skills/storyboard/references/scenes-schema.md#sound-effects-windowsfx-soundsfx) |
 | Speech recognition | `stt_local_transcribe` | Qwen3-ASR on-device via mlx-qwen3-asr/MLX (**no API key, no network, no billing — the default Korean STT**. Needs Apple Silicon + `uv tool install --python 3.12 "mlx-qwen3-asr[aligner]"`; the first call downloads ~3.4GB of weights. ingest runs the same engine and falls back to whisper.cpp without it) |
 | Music generation | `music_generate_clip` / `music_generate` / `music_generate_advanced` / `music_list_options` | Lyria 3 Clip (fixed 30s mp3 — the default BGM path) · Lyria RealTime (5–300s variable wav 48kHz, seed reproducibility). `GEMINI_API_KEY` |
 | Music generation | `suno_generate` / `suno_generate_sound` / `suno_generate_lyrics` / `suno_credits` | sunoapi.org third-party REST (not an official Suno Inc. API). Sung full songs (2 tracks, 2–8 min) · loopable beds with BPM/key · lyrics only · remaining credits. `SUNO_API_KEY`. Autoproduce does not call these |
@@ -655,7 +656,7 @@ explicit error and everything else works.
 | `ARK_API_KEY` | seedance_* | — | BytePlus ModelArk API key (ai.byteplus.com/ark — the second video engine. Dreamina Seedance 2.x models additionally require **an account balance over $30 or a resource pack** to activate; 1.5 pro and 1.0 have no such gate. `veo_*` works fine without this key) |
 | `SUNO_API_KEY` | suno_* | — | sunoapi.org API key (https://sunoapi.org/api-key — third-party REST, not Gemini and not an official Suno Inc. API). Unset, `music_*(Lyria)` still works |
 | `SUNO_BASE_URL` | | `https://api.sunoapi.org` | Same-spec self-host or regional mirror. Other vendors use different auth/paths — do not point this there |
-| `ELEVENLABS_API_KEY` | tts_elevenlabs_* | — | ElevenLabs API key (elevenlabs.io/app/settings/api-keys — a restricted key needs the `text_to_speech` permission, plus `voices_read` for `tts_elevenlabs_voices`). Unset, `tts_generate` (Gemini) and `tts_local_generate` still work |
+| `ELEVENLABS_API_KEY` | tts_elevenlabs_* · sfx_elevenlabs_generate | — | ElevenLabs API key (elevenlabs.io/app/settings/api-keys — a restricted key needs the `text_to_speech` permission, plus `voices_read` for `tts_elevenlabs_voices` and the sound-generation permission for `sfx_elevenlabs_generate`). Unset, `tts_generate` (Gemini) and `tts_local_generate` still work |
 | `ELEVENLABS_BASE_URL` | | `https://api.elevenlabs.io` | Same-spec proxy or the EU residency host (`api.eu.residency.elevenlabs.io`). Normally leave it alone |
 | `ARK_BASE_URL` | | `https://ark.ap-southeast.bytepluses.com/api/v3` | ModelArk region endpoint. The video models only exist in ap-southeast-1, so normally leave it alone |
 | `SUPERTONIC_PYTHON` | | `python3` | Python interpreter for local TTS. Point it at your virtualenv if you used one (e.g. `~/venvs/tts/bin/python`). No venv auto-discovery — quietly picking up a different environment per repo and changing the voice is exactly the accident this avoids |

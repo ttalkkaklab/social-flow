@@ -35,7 +35,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { z } from 'zod';
 import { elevenLabsBaseUrl, requireElevenLabsKey } from './config.js';
-import { bareFilenameSchema, saveAudioFile } from './media-utils.js';
+import { bareFilenameSchema, pcmToWav, saveAudioFile } from './media-utils.js';
 
 // ── Constants (source of truth for the tool schemas) ─────────────
 
@@ -265,6 +265,104 @@ export const elevenLabsVoicesSchema = z.object({
   /** Named `limit` like every other paged tool here (server-wide contract); maps to the vendor's page_size. */
   limit: z.number().int().min(1).max(100).optional().default(30),
 });
+
+// ── Sound effects (text → SFX) ───────────────────────────────────
+//
+// POST /v1/sound-generation (docs api-reference/text-to-sound-effects/convert, read
+// 2026-09-16). One model, `eleven_text_to_sound_v2`; `duration_seconds` 0.5–30 or the vendor
+// picks; `prompt_influence` 0–1 (vendor default 0.3); `loop` for beds. The endpoint's
+// output_format enum has no wav_* entry — only mp3/pcm/opus — so this lane asks for PCM and
+// wraps it in a RIFF header itself (pcmToWav), which is what build-reel.sh and the channel
+// catalog (`assets/audio/sfx/<id>.wav`) expect. API pricing is per minute of generated audio,
+// $0.12 on every plan (pricing/api, read 2026-09-16) — $0.002 a second, so a 1-second whoosh is
+// a fifth of a cent. Free-tier output is non-commercial and needs attribution.
+
+export const ELEVENLABS_SFX_MODEL = 'eleven_text_to_sound_v2';
+export const ELEVENLABS_SFX_SECONDS = { min: 0.5, max: 30 } as const;
+export const DEFAULT_ELEVENLABS_SFX_PROMPT_INFLUENCE = 0.3;
+/**
+ * A schema cap, not a vendor one — the vendor documents no character limit for this
+ * endpoint. A sound effect prompt is a description ("short soft whoosh, fabric through air,
+ * no tail"), not a script; anything near this length is a paragraph the model will average.
+ */
+export const MAX_ELEVENLABS_SFX_TEXT_CHARS = 450;
+/**
+ * PCM first: mono 16-bit little-endian, wrapped as WAV here. 48 kHz is the mix rate of
+ * build-reel.sh (no resample on the way in); 44.1 kHz is the CD rate; 24 kHz is the
+ * ungated fallback on plans that refuse the higher rates (403 output_format_not_allowed —
+ * the speech lane measured wav_44100 gated and wav_48000 open, so try 48 first). mp3 is kept
+ * for a preview that never enters the build.
+ */
+export const ELEVENLABS_SFX_OUTPUT_FORMATS = ['pcm_48000', 'pcm_44100', 'pcm_24000', 'mp3_44100_128'] as const;
+export type ElevenLabsSfxOutputFormat = (typeof ELEVENLABS_SFX_OUTPUT_FORMATS)[number];
+export const DEFAULT_ELEVENLABS_SFX_OUTPUT_FORMAT: ElevenLabsSfxOutputFormat = 'pcm_48000';
+/** Per minute of generated audio, USD, every plan (pricing/api, read 2026-09-16). */
+export const ELEVENLABS_SFX_USD_PER_MINUTE = 0.12;
+
+export function sfxExtensionForFormat(format: ElevenLabsSfxOutputFormat): '.wav' | '.mp3' {
+  return format.startsWith('mp3_') ? '.mp3' : '.wav';
+}
+
+export function sfxSampleRateForFormat(format: ElevenLabsSfxOutputFormat): number {
+  return Number(format.split('_')[1]);
+}
+
+export const elevenLabsSfxSchema = z
+  .object({
+    text: z.string().min(1).max(MAX_ELEVENLABS_SFX_TEXT_CHARS),
+    durationSeconds: z.number().min(ELEVENLABS_SFX_SECONDS.min).max(ELEVENLABS_SFX_SECONDS.max).optional(),
+    promptInfluence: z.number().min(0).max(1).optional(),
+    loop: z.boolean().optional().default(false),
+    outputFormat: z.enum(ELEVENLABS_SFX_OUTPUT_FORMATS).optional().default(DEFAULT_ELEVENLABS_SFX_OUTPUT_FORMAT),
+    outputPath: z.string().optional(),
+    filename: bareFilenameSchema('audio').optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.filename && path.extname(data.filename).toLowerCase() !== sfxExtensionForFormat(data.outputFormat)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['filename'],
+        message: `filename extension must be ${sfxExtensionForFormat(data.outputFormat)} for outputFormat ${data.outputFormat}`,
+      });
+    }
+    // A loop with no length is the vendor picking a length for a bed — a room-tone bed wants
+    // the whole 30 s it can have, and a short loop under a 45-second short is a seam every 3 s.
+    if (data.loop && data.durationSeconds !== undefined && data.durationSeconds < 5) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['durationSeconds'],
+        message: 'a looping effect shorter than 5 s seams audibly under narration — ask for 10–30 s, or drop loop for a one-shot',
+      });
+    }
+  });
+
+export type ElevenLabsSfxRequest = z.infer<typeof elevenLabsSfxSchema>;
+
+/** The vendor body, split out so the mapping is testable without a network. */
+export function soundEffectRequestBody(request: ElevenLabsSfxRequest): Record<string, unknown> {
+  return {
+    text: request.text,
+    model_id: ELEVENLABS_SFX_MODEL,
+    ...(request.durationSeconds !== undefined ? { duration_seconds: request.durationSeconds } : {}),
+    ...(request.promptInfluence !== undefined ? { prompt_influence: request.promptInfluence } : {}),
+    ...(request.loop ? { loop: true } : {}),
+  };
+}
+
+export interface ElevenLabsSfxResponse {
+  success: boolean;
+  error?: string;
+  audioPath?: string;
+  /** Provenance sidecar — the record the channel catalog note points at. */
+  sidecarPath?: string;
+  model?: string;
+  outputFormat?: ElevenLabsSfxOutputFormat;
+  durationSeconds?: number;
+  /** USD at the per-minute API rate, from the measured duration — the ledger quantity is the seconds. */
+  estimatedUsd?: number;
+  requestId?: string;
+  latencyMs?: number;
+}
 
 export type ElevenLabsGenerateRequest = z.infer<typeof elevenLabsGenerateSchema>;
 export type ElevenLabsDialogueRequest = z.infer<typeof elevenLabsDialogueSchema>;
@@ -770,6 +868,71 @@ export async function listElevenLabsVoices(request: ElevenLabsVoicesRequest): Pr
 }
 
 /** Keep source names intact; multilingual_v2 uses aliases, v3 also supports non-English IPA. */
+/** Text → sound effect — POST /v1/sound-generation (eleven_text_to_sound_v2). */
+export async function generateElevenLabsSoundEffect(request: ElevenLabsSfxRequest): Promise<ElevenLabsSfxResponse> {
+  const outputDir = request.outputPath || process.cwd();
+  const ext = sfxExtensionForFormat(request.outputFormat);
+  const filename = request.filename || `elevenlabs_sfx_${Date.now()}${ext}`;
+
+  try {
+    console.error(
+      `[ElevenLabs] Sound effect... (${request.text.length} chars, ` +
+        `${request.durationSeconds !== undefined ? `${request.durationSeconds}s` : 'auto length'}` +
+        `${request.loop ? ', loop' : ''}, ${request.outputFormat})`,
+    );
+    const body = soundEffectRequestBody(request);
+    const response = await elevenFetch(
+      `/v1/sound-generation?output_format=${request.outputFormat}`,
+      { method: 'POST', body: JSON.stringify(body) },
+      120_000,
+    );
+    const meta = readMeta(response);
+    const raw = Buffer.from(await response.arrayBuffer());
+    const audio = ext === '.wav' ? pcmToWav(raw, sfxSampleRateForFormat(request.outputFormat), 1) : raw;
+    const audioPath = saveAudioFile(outputDir, filename, audio);
+    const durationSeconds = ext === '.wav'
+      ? wavDurationSeconds(audio)
+      : undefined;
+
+    // Where this file came from, next to the file — the catalog row's note points here.
+    const sidecar = {
+      tool: 'sfx_elevenlabs_generate',
+      engine: 'elevenlabs',
+      model: ELEVENLABS_SFX_MODEL,
+      text: request.text,
+      durationSeconds: request.durationSeconds ?? null,
+      promptInfluence: request.promptInfluence ?? DEFAULT_ELEVENLABS_SFX_PROMPT_INFLUENCE,
+      loop: !!request.loop,
+      outputFormat: request.outputFormat,
+      measuredSeconds: durationSeconds ?? null,
+      requestId: meta.requestId ?? null,
+      generatedAt: new Date().toISOString(),
+      rights: 'ElevenLabs API output — commercial use on a paid plan; Free-tier output is non-commercial and needs attribution',
+    };
+    const sidecarPath = audioPath.replace(/\.(wav|mp3)$/i, '') + '.json';
+    fs.writeFileSync(sidecarPath, JSON.stringify(sidecar, null, 2) + '\n', 'utf8');
+    console.error(`[ElevenLabs] Sound effect saved to: ${audioPath} (+ ${path.basename(sidecarPath)})`);
+
+    return {
+      success: true,
+      audioPath,
+      sidecarPath,
+      model: ELEVENLABS_SFX_MODEL,
+      outputFormat: request.outputFormat,
+      durationSeconds,
+      estimatedUsd: durationSeconds !== undefined
+        ? Math.round((durationSeconds / 60) * ELEVENLABS_SFX_USD_PER_MINUTE * 1e6) / 1e6
+        : undefined,
+      requestId: meta.requestId,
+      latencyMs: meta.latencyMs,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`[ElevenLabs] Error: ${message.split('\n')[0]}`);
+    return { success: false, error: message };
+  }
+}
+
 export const elevenLabsDictionarySchema = z.object({
   name: z.string().trim().min(1).max(200),
   rules: z.array(z.object({
