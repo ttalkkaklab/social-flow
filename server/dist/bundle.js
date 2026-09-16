@@ -75617,7 +75617,7 @@ function elevenLabsBaseUrl() {
 function requireElevenLabsKey() {
   if (!config2.elevenLabsApiKey) {
     throw new Error(
-      "ELEVENLABS_API_KEY is not set. tts_elevenlabs_* speech tools require an ElevenLabs API key (https://elevenlabs.io/app/settings/api-keys \u2014 a restricted key needs the text_to_speech permission, plus voices_read for tts_elevenlabs_voices). Without it, tts_generate/tts_multi_speaker (Gemini, GEMINI_API_KEY) and tts_local_generate (on-device, no key) still work."
+      "ELEVENLABS_API_KEY is not set. tts_elevenlabs_* speech tools and sfx_elevenlabs_generate require an ElevenLabs API key (https://elevenlabs.io/app/settings/api-keys \u2014 a restricted key needs the text_to_speech permission, plus voices_read for tts_elevenlabs_voices and sound generation for sfx_elevenlabs_generate). Without it, tts_generate/tts_multi_speaker (Gemini, GEMINI_API_KEY) and tts_local_generate (on-device, no key) still work."
     );
   }
   return config2.elevenLabsApiKey;
@@ -78071,6 +78071,52 @@ var elevenLabsVoicesSchema = external_exports.object({
   /** Named `limit` like every other paged tool here (server-wide contract); maps to the vendor's page_size. */
   limit: external_exports.number().int().min(1).max(100).optional().default(30)
 });
+var ELEVENLABS_SFX_MODEL = "eleven_text_to_sound_v2";
+var ELEVENLABS_SFX_SECONDS = { min: 0.5, max: 30 };
+var DEFAULT_ELEVENLABS_SFX_PROMPT_INFLUENCE = 0.3;
+var MAX_ELEVENLABS_SFX_TEXT_CHARS = 450;
+var ELEVENLABS_SFX_OUTPUT_FORMATS = ["pcm_48000", "pcm_44100", "pcm_24000", "mp3_44100_128"];
+var DEFAULT_ELEVENLABS_SFX_OUTPUT_FORMAT = "pcm_48000";
+var ELEVENLABS_SFX_USD_PER_MINUTE = 0.12;
+function sfxExtensionForFormat(format) {
+  return format.startsWith("mp3_") ? ".mp3" : ".wav";
+}
+function sfxSampleRateForFormat(format) {
+  return Number(format.split("_")[1]);
+}
+var elevenLabsSfxSchema = external_exports.object({
+  text: external_exports.string().min(1).max(MAX_ELEVENLABS_SFX_TEXT_CHARS),
+  durationSeconds: external_exports.number().min(ELEVENLABS_SFX_SECONDS.min).max(ELEVENLABS_SFX_SECONDS.max).optional(),
+  promptInfluence: external_exports.number().min(0).max(1).optional(),
+  loop: external_exports.boolean().optional().default(false),
+  outputFormat: external_exports.enum(ELEVENLABS_SFX_OUTPUT_FORMATS).optional().default(DEFAULT_ELEVENLABS_SFX_OUTPUT_FORMAT),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("audio").optional()
+}).superRefine((data, ctx) => {
+  if (data.filename && path5.extname(data.filename).toLowerCase() !== sfxExtensionForFormat(data.outputFormat)) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["filename"],
+      message: `filename extension must be ${sfxExtensionForFormat(data.outputFormat)} for outputFormat ${data.outputFormat}`
+    });
+  }
+  if (data.loop && data.durationSeconds !== void 0 && data.durationSeconds < 5) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["durationSeconds"],
+      message: "a looping effect shorter than 5 s seams audibly under narration \u2014 ask for 10\u201330 s, or drop loop for a one-shot"
+    });
+  }
+});
+function soundEffectRequestBody(request) {
+  return {
+    text: request.text,
+    model_id: ELEVENLABS_SFX_MODEL,
+    ...request.durationSeconds !== void 0 ? { duration_seconds: request.durationSeconds } : {},
+    ...request.promptInfluence !== void 0 ? { prompt_influence: request.promptInfluence } : {},
+    ...request.loop ? { loop: true } : {}
+  };
+}
 function describeElevenLabsError(httpStatus, bodyText) {
   let detail;
   try {
@@ -78373,6 +78419,59 @@ async function listElevenLabsVoices(request) {
       subscription = void 0;
     }
     return { success: true, voices, totalCount: body.total_count, hasMore: body.has_more, subscription };
+  } catch (error2) {
+    const message = error2 instanceof Error ? error2.message : String(error2);
+    console.error(`[ElevenLabs] Error: ${message.split("\n")[0]}`);
+    return { success: false, error: message };
+  }
+}
+async function generateElevenLabsSoundEffect(request) {
+  const outputDir = request.outputPath || process.cwd();
+  const ext = sfxExtensionForFormat(request.outputFormat);
+  const filename = request.filename || `elevenlabs_sfx_${Date.now()}${ext}`;
+  try {
+    console.error(
+      `[ElevenLabs] Sound effect... (${request.text.length} chars, ${request.durationSeconds !== void 0 ? `${request.durationSeconds}s` : "auto length"}${request.loop ? ", loop" : ""}, ${request.outputFormat})`
+    );
+    const body = soundEffectRequestBody(request);
+    const response = await elevenFetch(
+      `/v1/sound-generation?output_format=${request.outputFormat}`,
+      { method: "POST", body: JSON.stringify(body) },
+      12e4
+    );
+    const meta = readMeta(response);
+    const raw = Buffer.from(await response.arrayBuffer());
+    const audio = ext === ".wav" ? pcmToWav(raw, sfxSampleRateForFormat(request.outputFormat), 1) : raw;
+    const audioPath = saveAudioFile(outputDir, filename, audio);
+    const durationSeconds = ext === ".wav" ? wavDurationSeconds(audio) : void 0;
+    const sidecar = {
+      tool: "sfx_elevenlabs_generate",
+      engine: "elevenlabs",
+      model: ELEVENLABS_SFX_MODEL,
+      text: request.text,
+      durationSeconds: request.durationSeconds ?? null,
+      promptInfluence: request.promptInfluence ?? DEFAULT_ELEVENLABS_SFX_PROMPT_INFLUENCE,
+      loop: !!request.loop,
+      outputFormat: request.outputFormat,
+      measuredSeconds: durationSeconds ?? null,
+      requestId: meta.requestId ?? null,
+      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      rights: "ElevenLabs API output \u2014 commercial use on a paid plan; Free-tier output is non-commercial and needs attribution"
+    };
+    const sidecarPath = audioPath.replace(/\.(wav|mp3)$/i, "") + ".json";
+    fs6.writeFileSync(sidecarPath, JSON.stringify(sidecar, null, 2) + "\n", "utf8");
+    console.error(`[ElevenLabs] Sound effect saved to: ${audioPath} (+ ${path5.basename(sidecarPath)})`);
+    return {
+      success: true,
+      audioPath,
+      sidecarPath,
+      model: ELEVENLABS_SFX_MODEL,
+      outputFormat: request.outputFormat,
+      durationSeconds,
+      estimatedUsd: durationSeconds !== void 0 ? Math.round(durationSeconds / 60 * ELEVENLABS_SFX_USD_PER_MINUTE * 1e6) / 1e6 : void 0,
+      requestId: meta.requestId,
+      latencyMs: meta.latencyMs
+    };
   } catch (error2) {
     const message = error2 instanceof Error ? error2.message : String(error2);
     console.error(`[ElevenLabs] Error: ${message.split("\n")[0]}`);
@@ -79310,6 +79409,14 @@ function priceOf(tool, args) {
       key,
       quantity: null,
       note: `ElevenLabs bills the metered character-cost header, which sits below the raw text length (raw ${rawChars(args)} chars) \u2014 read the quantity off the response, not from here`
+    };
+  }
+  if (tool === "sfx_elevenlabs_generate") {
+    const seconds = args.durationSeconds;
+    return {
+      key: "sfx.elevenlabs",
+      quantity: typeof seconds === "number" && Number.isFinite(seconds) ? seconds : null,
+      note: typeof seconds === "number" ? void 0 : "billed per second of generated audio and no durationSeconds was requested \u2014 read the measured duration off the response"
     };
   }
   if (tool === "music_generate_clip") return { key: "music.lyria-clip", quantity: 1 };
@@ -85488,6 +85595,60 @@ Returns: a text list "name \u2014 voice_id \xB7 category \xB7 labels \xB7 langua
         }
       },
       required: []
+    }
+  },
+  // ── Sound effects (ElevenLabs — text → SFX) ──────────────────────────────
+  {
+    name: "sfx_elevenlabs_generate",
+    title: "Sound effect (ElevenLabs \xB7 text \u2192 SFX)",
+    annotations: HINT.generate,
+    description: `Generate one sound effect from a text description with ElevenLabs (${ELEVENLABS_SFX_MODEL}) \u2014 the lane that fills a channel's sfx catalog so a shot's \`sound.sfx\` has a file behind it.
+
+Use for the cut effects a storyboard names in window.SFX (scenes-schema \xA7sound effects): a whoosh on a whip transition, a low hit on the line before a drop, a tick or pop when a figure lands on a slide, a riser under a build, a 30-second room-tone loop for a bed. Write the prompt as a description in the vendor's own vocabulary (whoosh \xB7 impact \xB7 braam \xB7 riser \xB7 click \xB7 texture \xB7 ambience), one sound per call, with its shape spelled out ("short soft whoosh, fabric through air, no tail"); set durationSeconds for one-shots (a whoosh 0.6\u20131.0 s, a hit 1\u20132 s, a riser 2\u20134 s) and loop: true with 10\u201330 s for a bed. promptInfluence above the ${DEFAULT_ELEVENLABS_SFX_PROMPT_INFLUENCE} default reads the prompt more literally; below it, more freely. Save straight into the channel catalog \u2014 outputPath data/<channel>/assets/audio/sfx, filename <id>.wav \u2014 then register the row with resolve-asset.py --ensure and point its note at the .json sidecar this tool writes next to the file (tool, model, prompt, seconds, request id, date, rights). Generated once, an effect is a channel asset reused at $0 in every later episode.
+Do NOT use for music or a melodic bed \u2014 that is music_generate_clip / suno_generate_sound. Do NOT use for a clip's own soundtrack \u2014 that is the model's native audio through visual.audio. Do NOT request a loop under 5 s (it seams audibly under narration). The endpoint has no WAV format of its own: the server asks for PCM and writes the RIFF header itself, so the file is a mono 16-bit WAV the builder reads directly; a 403 output_format_not_allowed means the plan lacks that rate \u2014 retry with pcm_24000. API pricing is per minute of generated audio, $${ELEVENLABS_SFX_USD_PER_MINUTE.toFixed(2)} on every plan (pricing/api, read 2026-09-16), so a one-second effect is about $0.002; the ledger key is sfx.elevenlabs with the measured seconds as the quantity. Free-tier output is non-commercial and needs attribution \u2014 check the plan before publishing.
+
+Returns: a text block with the saved WAV path, the provenance sidecar path, the model, format, the measured duration, the USD estimate at the per-minute rate, and the request id.`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        text: {
+          type: "string",
+          description: `What the effect sounds like, as a description (max ${MAX_ELEVENLABS_SFX_TEXT_CHARS} characters) \u2014 the source, the surface, the shape and the tail: "short soft whoosh, fabric through air, no tail" \xB7 "low cinematic impact, single hit, short decay, no music" \xB7 "quiet office room tone, distant ventilation, no voices". One sound per call; the vendor's terms (whoosh, impact, braam, riser, click, ambience) land more reliably than metaphors.`,
+          maxLength: MAX_ELEVENLABS_SFX_TEXT_CHARS
+        },
+        durationSeconds: {
+          type: "number",
+          description: `Length in seconds, ${ELEVENLABS_SFX_SECONDS.min}\u2013${ELEVENLABS_SFX_SECONDS.max}. Omit and the vendor picks a length for the description. Set it for cut effects \u2014 a whoosh 0.6\u20131.0, a hit 1\u20132, a riser 2\u20134 \u2014 and for beds (10\u201330 with loop).`,
+          minimum: ELEVENLABS_SFX_SECONDS.min,
+          maximum: ELEVENLABS_SFX_SECONDS.max
+        },
+        promptInfluence: {
+          type: "number",
+          description: `How literally to follow the text, 0\u20131 (vendor default ${DEFAULT_ELEVENLABS_SFX_PROMPT_INFLUENCE}). Raise it toward 0.7\u20130.9 when the effect must be exactly the named sound; lower it for a texture where variation is welcome.`,
+          minimum: 0,
+          maximum: 1
+        },
+        loop: {
+          type: "boolean",
+          description: "Make the effect loop seamlessly (default false). For room tone and ambience beds only, with durationSeconds 10\u201330; never for a one-shot.",
+          default: false
+        },
+        outputFormat: {
+          type: "string",
+          description: `Vendor output format (default "${DEFAULT_ELEVENLABS_SFX_OUTPUT_FORMAT}" \u2014 mono 16-bit PCM at 48 kHz, wrapped as WAV here; the builder mixes at 48 kHz). pcm_44100 and pcm_24000 are the same wrapped as WAV at those rates \u2014 pcm_24000 is the fallback when the plan refuses the higher rate (403 output_format_not_allowed). mp3_44100_128 is a preview only; it never enters the build.`,
+          enum: [...ELEVENLABS_SFX_OUTPUT_FORMATS],
+          default: DEFAULT_ELEVENLABS_SFX_OUTPUT_FORMAT
+        },
+        outputPath: {
+          type: "string",
+          description: "Directory for the audio file (default: the current working directory). For a channel asset: data/<channel>/assets/audio/sfx."
+        },
+        filename: {
+          type: "string",
+          description: "Filename for the audio file (default: elevenlabs_sfx_<timestamp>.wav \u2014 .mp3 when outputFormat is mp3_*). For a channel asset use the catalog id: <id>.wav. The provenance sidecar is written as <name>.json next to it."
+        }
+      },
+      required: ["text"]
     }
   },
   {
@@ -92558,7 +92719,7 @@ function capabilityStatus() {
           provider: "elevenlabs",
           configured: has2(config2.elevenLabsApiKey),
           needs: "ELEVENLABS_API_KEY",
-          note: "tts_elevenlabs_generate \xB7 tts_elevenlabs_dialogue"
+          note: "tts_elevenlabs_generate \xB7 tts_elevenlabs_dialogue \xB7 sfx_elevenlabs_generate"
         },
         {
           provider: "mlx-serve (local, MLX Core)",
@@ -92731,7 +92892,7 @@ function imageResult(message, base64Data, mimeType) {
 }
 function elevenlabsFormatNote(format) {
   if (!format) return "";
-  return format.startsWith("wav_") ? ` (mono 16-bit WAV ${Number(format.split("_")[1]) / 1e3}kHz \u2014 RIFF, builder-ready)` : " (mp3 \u2014 not for build-reel.sh narration input)";
+  return format.startsWith("wav_") || format.startsWith("pcm_") ? ` (mono 16-bit WAV ${Number(format.split("_")[1]) / 1e3}kHz \u2014 RIFF, builder-ready)` : " (mp3 \u2014 not for build-reel.sh narration input)";
 }
 function elevenlabsMeta(result) {
   return (result.durationSeconds !== void 0 ? `Duration: ${result.durationSeconds}s
@@ -93621,6 +93782,25 @@ If the channel profile (data/<slug>/profile.md) names a voice, use that value as
   // ── speech synthesis (ElevenLabs) — REST, saves the file locally, returns path + measured cost ──
   // character-cost is the vendor's billing header, so it is reported as measured rather
   // than estimated from a price sheet (the same reasoning as Seedance's token count).
+  sfx_elevenlabs_generate: async (args) => {
+    const request = parseArgs(elevenLabsSfxSchema, args);
+    const result = await generateElevenLabsSoundEffect(request);
+    if (!result.success) return text(`ElevenLabs sound effect generation failed: ${result.error}`, true);
+    return text(
+      `Sound effect generated successfully!
+
+File: ${result.audioPath}
+Provenance: ${result.sidecarPath}
+Engine: ElevenLabs ${result.model}
+Format: ${result.outputFormat}${elevenlabsFormatNote(result.outputFormat)}
+` + (result.durationSeconds !== void 0 ? `Duration: ${result.durationSeconds}s (measured \u2014 the ledger quantity for sfx.elevenlabs)
+` : "") + (result.estimatedUsd !== void 0 ? `Estimated cost: $${result.estimatedUsd} at $${ELEVENLABS_SFX_USD_PER_MINUTE.toFixed(2)} per minute of generated audio
+` : "") + (result.latencyMs !== void 0 ? `Vendor latency: ${result.latencyMs} ms
+` : "") + (result.requestId ? `Request ID: ${result.requestId}
+` : "") + `Prompt: ${request.text}` + (request.durationSeconds !== void 0 ? ` \xB7 ${request.durationSeconds}s requested` : " \xB7 length chosen by the vendor") + (request.loop ? " \xB7 loop" : "") + `
+Next: for a channel asset, register it \u2014 python3 skills/channel/references/resolve-asset.py --ensure data/<channel> sfx <id> audio/sfx/<id>.wav "elevenlabs ${result.model} \xB7 see <id>.json"`
+    );
+  },
   tts_elevenlabs_generate: async (args) => {
     const request = parseArgs(elevenLabsGenerateSchema, args);
     const result = await generateElevenLabsSpeech(request);
@@ -94068,7 +94248,7 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
 // src/index.ts
 import { readFileSync as readFinalRequest } from "node:fs";
 var server = new Server(
-  { name: "social-flow", version: "0.79.0" },
+  { name: "social-flow", version: "0.80.0" },
   { capabilities: { tools: {} } }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {
@@ -94167,7 +94347,7 @@ async function main() {
     console.error(`[social-flow] ${warning}`);
   }
   console.error(
-    `Credentials: serpapi key ${config2.serpApiKey ? "set" : "MISSING (serp_* and sns_issue_scout tools will fail)"}, naver keys ${config2.naverClientId && config2.naverClientSecret ? "set" : "MISSING (naver_search will fail)"}, data.go.kr key ${config2.dataGoKrApiKey ? "set" : "MISSING (datago_file_fetch/datago_api_call will fail \u2014 search/detail/download still work)"}, gemini key ${config2.geminiApiKey ? "set" : "MISSING (veo_*/omni_*/tts_generate/tts_multi_speaker/music_* will fail \u2014 tts_local_generate does not need it)"}, openai key ${config2.openaiApiKey ? "set" : "MISSING (gpt_image_* image generation tools will fail \u2014 image_local_generate does not need it)"}, ark key ${config2.arkApiKey ? "set" : "MISSING (seedance_* video generation tools will fail \u2014 veo_* does not need it)"}, suno key ${config2.sunoApiKey ? "set" : "MISSING (suno_* will fail \u2014 music_*(Lyria) does not need it)"}, elevenlabs key ${config2.elevenLabsApiKey ? "set" : "MISSING (tts_elevenlabs_* will fail \u2014 tts_generate/tts_local_generate do not need it)"}, local tts python ${process.env.SUPERTONIC_PYTHON ? process.env.SUPERTONIC_PYTHON : "python3 (default \u2014 set SUPERTONIC_PYTHON for a virtualenv)"}, local image mflux ${process.env.MFLUX_ZIMAGE_BIN ? process.env.MFLUX_ZIMAGE_BIN : "~/.local/bin/mflux-generate-z-image-turbo (default \u2014 set MFLUX_ZIMAGE_BIN if elsewhere)"}, local stt mlx-qwen3-asr ${process.env.QWEN3_ASR_BIN ? process.env.QWEN3_ASR_BIN : "~/.local/bin/mlx-qwen3-asr (default \u2014 set QWEN3_ASR_BIN if elsewhere)"}, mlx-serve ${process.env.MLX_SERVE_URL ? process.env.MLX_SERVE_URL : "http://127.0.0.1:11234 (default \u2014 MLX Core.app / mlx-serve; this plugin never launches the app)"}, youtube data key ${config2.youtubeApiKey ? "set" : "MISSING (youtube_topic_scout falls back to OAuth youtube.readonly)"}, sns platforms ${snsEnabled.length > 0 ? snsEnabled.join(",") : "none"} (credential files found \u2014 others hidden from ListTools), sns channels ${channelDirs.length > 0 ? channelDirs.map((d) => `${d.channel}[${d.platforms.join(",")}]`).join(" ") : "none (flat/default tokens only)"}, ` + describeToolGate(toolNames, process.env, jsonPatterns)
+    `Credentials: serpapi key ${config2.serpApiKey ? "set" : "MISSING (serp_* and sns_issue_scout tools will fail)"}, naver keys ${config2.naverClientId && config2.naverClientSecret ? "set" : "MISSING (naver_search will fail)"}, data.go.kr key ${config2.dataGoKrApiKey ? "set" : "MISSING (datago_file_fetch/datago_api_call will fail \u2014 search/detail/download still work)"}, gemini key ${config2.geminiApiKey ? "set" : "MISSING (veo_*/omni_*/tts_generate/tts_multi_speaker/music_* will fail \u2014 tts_local_generate does not need it)"}, openai key ${config2.openaiApiKey ? "set" : "MISSING (gpt_image_* image generation tools will fail \u2014 image_local_generate does not need it)"}, ark key ${config2.arkApiKey ? "set" : "MISSING (seedance_* video generation tools will fail \u2014 veo_* does not need it)"}, suno key ${config2.sunoApiKey ? "set" : "MISSING (suno_* will fail \u2014 music_*(Lyria) does not need it)"}, elevenlabs key ${config2.elevenLabsApiKey ? "set" : "MISSING (tts_elevenlabs_* and sfx_elevenlabs_generate will fail \u2014 tts_generate/tts_local_generate do not need it)"}, local tts python ${process.env.SUPERTONIC_PYTHON ? process.env.SUPERTONIC_PYTHON : "python3 (default \u2014 set SUPERTONIC_PYTHON for a virtualenv)"}, local image mflux ${process.env.MFLUX_ZIMAGE_BIN ? process.env.MFLUX_ZIMAGE_BIN : "~/.local/bin/mflux-generate-z-image-turbo (default \u2014 set MFLUX_ZIMAGE_BIN if elsewhere)"}, local stt mlx-qwen3-asr ${process.env.QWEN3_ASR_BIN ? process.env.QWEN3_ASR_BIN : "~/.local/bin/mlx-qwen3-asr (default \u2014 set QWEN3_ASR_BIN if elsewhere)"}, mlx-serve ${process.env.MLX_SERVE_URL ? process.env.MLX_SERVE_URL : "http://127.0.0.1:11234 (default \u2014 MLX Core.app / mlx-serve; this plugin never launches the app)"}, youtube data key ${config2.youtubeApiKey ? "set" : "MISSING (youtube_topic_scout falls back to OAuth youtube.readonly)"}, sns platforms ${snsEnabled.length > 0 ? snsEnabled.join(",") : "none"} (credential files found \u2014 others hidden from ListTools), sns channels ${channelDirs.length > 0 ? channelDirs.map((d) => `${d.channel}[${d.platforms.join(",")}]`).join(" ") : "none (flat/default tokens only)"}, ` + describeToolGate(toolNames, process.env, jsonPatterns)
   );
 }
 main().catch((error2) => {

@@ -80,7 +80,7 @@ export function capabilityStatus() {
                 { provider: 'gemini', configured: gemini, needs: 'GEMINI_API_KEY',
                     note: 'tts_generate · tts_multi_speaker' },
                 { provider: 'elevenlabs', configured: has(config.elevenLabsApiKey), needs: 'ELEVENLABS_API_KEY',
-                    note: 'tts_elevenlabs_generate · tts_elevenlabs_dialogue' },
+                    note: 'tts_elevenlabs_generate · tts_elevenlabs_dialogue · sfx_elevenlabs_generate' },
                 { provider: 'mlx-serve (local, MLX Core)', configured: mlx, needs: 'MLX Core.app or mlx-serve on PATH',
                     note: 'mlx_tts_generate — optional; never a silent fallback for profile §2' },
             ],

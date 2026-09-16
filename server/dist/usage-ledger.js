@@ -287,6 +287,16 @@ export function priceOf(tool, args) {
                 `length (raw ${rawChars(args)} chars) — read the quantity off the response, not from here`,
         };
     }
+    if (tool === 'sfx_elevenlabs_generate') {
+        const seconds = args.durationSeconds;
+        return {
+            key: 'sfx.elevenlabs',
+            quantity: typeof seconds === 'number' && Number.isFinite(seconds) ? seconds : null,
+            note: typeof seconds === 'number'
+                ? undefined
+                : 'billed per second of generated audio and no durationSeconds was requested — read the measured duration off the response',
+        };
+    }
     if (tool === 'music_generate_clip')
         return { key: 'music.lyria-clip', quantity: 1 };
     if (tool === 'music_generate' || tool === 'music_generate_advanced') {

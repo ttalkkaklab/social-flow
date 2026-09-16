@@ -22,7 +22,7 @@ allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Age
   "mcp__social-flow__datago_api_call",
   "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img",
   "mcp__social-flow__mlx_image_generate", "mcp__social-flow__mlx_image_edit",
-  "mcp__social-flow__tts_generate_checked", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue",
+  "mcp__social-flow__tts_generate_checked", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue", "mcp__social-flow__sfx_elevenlabs_generate",
   "mcp__social-flow__tts_list_voices", "mcp__social-flow__mlx_tts_generate",
   "mcp__social-flow__veo_img2video",
   "mcp__social-flow__seedance_img2video", "mcp__social-flow__seedance_reference",
@@ -732,7 +732,10 @@ the price.
   30-second `music_generate_clip` instrumental at `.work/bgm.wav`. Include
   "leaves space for a spoken voiceover, no melody in the vocal frequency range"
   in the prompt. To reuse the same tone next episode, copy it to
-  `assets/audio/bgm/default.wav` and add it to the catalog.
+  `assets/audio/bgm/default.wav` and add it to the catalog with its provenance in the
+  note (`lyria-clip · <prompt> · <date>`, assets-catalog-template.md). One bed still
+  opens out of the way: the builder holds it a further 6 LU down under card 0
+  (`BGM_HOOK_LU`) and ramps back from card 1.
   **No `window.MUSIC` cues unattended.** Cues are made with `music_generate`
   (variable length), whose price is unconfirmed in `prices.tsv` — `cost-report.sh`
   would answer "verdict unavailable" and §5 would abort the run (cost-tiers §BGM says
@@ -758,6 +761,14 @@ against what that scene says. The image review of 0.49 is not called on this pat
 this look is the only eye, so it is not skipped. What disqualifies an image: a picture
 unrelated to what the scene says, a baked-in pseudo-character, readable text or lookalike
 glyphs, a bright lower third that will drown the subtitles.
+
+- **SFX** — unattended runs use only effects that resolve. A `window.SFX` `{ prompt }` entry
+  is generated once with `sfx_elevenlabs_generate` into the channel catalog
+  (`assets/audio/sfx/<id>.wav`, produce §3) when `ELEVENLABS_API_KEY` is set — about $0.002 a
+  second, logged as `sfx.elevenlabs`. Without the key, an id with no catalog file is a build
+  stop later, so the storyboard step leaves `sound.sfx` off those shots rather than naming
+  one it cannot make. One effect per ~10 s, on the cut that changed (scenes-schema §sound
+  effects).
 
 - **Regenerate only what fails**, once. When you decide to regenerate, **put that line on
   `.work/cost-estimate.tsv` first** and rerun the `--cap` verdict as in §5 — over the cap

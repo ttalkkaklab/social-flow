@@ -48,7 +48,7 @@ function imageResult(message, base64Data, mimeType) {
 function elevenlabsFormatNote(format) {
     if (!format)
         return '';
-    return format.startsWith('wav_')
+    return format.startsWith('wav_') || format.startsWith('pcm_')
         ? ` (mono 16-bit WAV ${Number(format.split('_')[1]) / 1000}kHz — RIFF, builder-ready)`
         : ' (mp3 — not for build-reel.sh narration input)';
 }
@@ -881,6 +881,22 @@ export const ROUTES = {
     // ── speech synthesis (ElevenLabs) — REST, saves the file locally, returns path + measured cost ──
     // character-cost is the vendor's billing header, so it is reported as measured rather
     // than estimated from a price sheet (the same reasoning as Seedance's token count).
+    sfx_elevenlabs_generate: async (args) => {
+        const request = parseArgs(elevenlabs.elevenLabsSfxSchema, args);
+        const result = await elevenlabs.generateElevenLabsSoundEffect(request);
+        if (!result.success)
+            return text(`ElevenLabs sound effect generation failed: ${result.error}`, true);
+        return text(`Sound effect generated successfully!\n\nFile: ${result.audioPath}\nProvenance: ${result.sidecarPath}\n` +
+            `Engine: ElevenLabs ${result.model}\nFormat: ${result.outputFormat}${elevenlabsFormatNote(result.outputFormat)}\n` +
+            (result.durationSeconds !== undefined ? `Duration: ${result.durationSeconds}s (measured — the ledger quantity for sfx.elevenlabs)\n` : '') +
+            (result.estimatedUsd !== undefined ? `Estimated cost: $${result.estimatedUsd} at $${elevenlabs.ELEVENLABS_SFX_USD_PER_MINUTE.toFixed(2)} per minute of generated audio\n` : '') +
+            (result.latencyMs !== undefined ? `Vendor latency: ${result.latencyMs} ms\n` : '') +
+            (result.requestId ? `Request ID: ${result.requestId}\n` : '') +
+            `Prompt: ${request.text}` +
+            (request.durationSeconds !== undefined ? ` · ${request.durationSeconds}s requested` : ' · length chosen by the vendor') +
+            (request.loop ? ' · loop' : '') +
+            `\nNext: for a channel asset, register it — python3 skills/channel/references/resolve-asset.py --ensure data/<channel> sfx <id> audio/sfx/<id>.wav "elevenlabs ${result.model} · see <id>.json"`);
+    },
     tts_elevenlabs_generate: async (args) => {
         const request = parseArgs(elevenlabs.elevenLabsGenerateSchema, args);
         const result = await elevenlabs.generateElevenLabsSpeech(request);

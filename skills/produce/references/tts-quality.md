@@ -8,7 +8,7 @@ Assembly and the delivery speed pass verify the evidence again.
 ## Contents
 
 - [Generation contract](#generation-contract)
-- [Sentence spacing (ElevenLabs)](#sentence-spacing-elevenlabs)
+- [Sentence spacing (ElevenLabs)](#sentence-spacing-every-single-voice-take)
 - [What passes](#what-passes)
 - [Retry and stop](#retry-and-stop)
 - [Cost and prerequisites](#cost-and-prerequisites)

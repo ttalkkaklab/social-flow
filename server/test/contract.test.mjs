@@ -46,6 +46,8 @@ import {
   ELEVENLABS_TEXT_NORMALIZATION,
   ELEVENLABS_VOICE_CATEGORIES,
   MAX_ELEVENLABS_INPUT_CHARS,
+  DEFAULT_ELEVENLABS_SFX_OUTPUT_FORMAT,
+  ELEVENLABS_SFX_OUTPUT_FORMATS,
 } from '../dist/elevenlabs-client.js';
 import { MUSIC_GENERATION_MODES, MUSIC_SCALES } from '../dist/music-client.js';
 import { DEFAULT_VIDEO_MODEL, img2VideoSchema } from '../dist/video-client.js';
@@ -891,6 +893,8 @@ describe('single-source constants', () => {
       assert.deepEqual(enumOf(tool, 'applyTextNormalization'), [...ELEVENLABS_TEXT_NORMALIZATION], tool);
     }
     assert.deepEqual(enumOf('tts_elevenlabs_voices', 'category'), [...ELEVENLABS_VOICE_CATEGORIES]);
+    assert.deepEqual(enumOf('sfx_elevenlabs_generate', 'outputFormat'), [...ELEVENLABS_SFX_OUTPUT_FORMATS]);
+    assert.equal(byName.get('sfx_elevenlabs_generate').inputSchema.properties.outputFormat.default, DEFAULT_ELEVENLABS_SFX_OUTPUT_FORMAT);
   });
 });
 

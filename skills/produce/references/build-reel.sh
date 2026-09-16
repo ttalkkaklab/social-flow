@@ -150,7 +150,12 @@ BGM_SEP_MIN=${BGM_SEP_MIN:-4}      # below this the build stops — the music is
 BGM_LOOP_XF=${BGM_LOOP_XF:-2.0}    # crossfade when a cue is shorter than its span
 BGM_CUE_XF=${BGM_CUE_XF:-2.0}      # crossfade between two cues (bgm.tsv)
 export BGM_LOOP_XF BGM_CUE_XF
-DUCK_RELEASE=${DUCK_RELEASE:-250}
+DUCK_RELEASE=${DUCK_RELEASE:-250}  # sidechain release ms — guides put 200–500, 400–700 if it pumps (bgm-scoring.md §2)
+DUCK_ATTACK=${DUCK_ATTACK:-20}     # sidechain attack ms
+DUCK_RATIO=${DUCK_RATIO:-8}        # sidechain ratio — measured ~16 LU of ducking on a TTS voice (bgm-scoring.md §2)
+BGM_HOOK_LU=${BGM_HOOK_LU:-6}      # extra LU the bed sits under BGM_SEP during card 0 — the hook opens over a quieter bed
+BGM_HOOK_R=${BGM_HOOK_R:-2.0}      # ramp back to the resting level, starting at card 1. 0 = no hook attenuation
+BGM_EQ=${BGM_EQ:-0}                # dB scooped out of the bed at 250 Hz and 2.5 kHz to clear the voice — 0 = off (craft, A/B it)
 SFX_VOL=${SFX_VOL:-0.85}           # per-segment sfx volume (sfx.tsv)
 BGM_GATE_R=${BGM_GATE_R:-0.30}     # ramp around BGM-gated spans — a hard cut sounds chopped
 XFADE=${XFADE:-0.6}                # feature↔outro transition length
@@ -1153,6 +1158,26 @@ if [ -s work/bgmgate.list ]; then
   say "── BGM mute $(wc -l < work/bgmgate.list | tr -d ' ') windows (ramp ${BGM_GATE_R}s)"
 fi
 
+# 10b') Hook attenuation — the bed sits BGM_HOOK_LU further down while card 0 (the hook) runs and
+#      ramps back to the resting level over BGM_HOOK_R from the start of card 1. The one sentence
+#      that decides whether anyone stays gets the quietest bed in the episode (bgm-scoring.md §3).
+#      A one-card build has no card 1 and gets no attenuation.
+HOOKVOL=""
+C1=$(awk -F'\t' '$1==1{print $2; exit}' work/cardstart.tsv)
+if [ -n "$C1" ] && awk -v h="$BGM_HOOK_LU" 'BEGIN{exit !(h > 0)}'; then
+  HOOKG=$(awk -v h="$BGM_HOOK_LU" 'BEGIN{printf "%.4f", 10^(-h/20)}')
+  HOOKVOL=$(awk -v g="$HOOKG" -v c="$C1" -v r="$BGM_HOOK_R" \
+    'BEGIN{printf "volume=eval=frame:volume='"'"'if(lt(t\\,%s)\\,%s\\,if(lt(t\\,%s+%s)\\,%s+(1-%s)*(t-%s)/%s\\,1))'"'"',", c, g, c, r, g, g, c, r}')
+  say "── BGM hook: card 0 sits ${BGM_HOOK_LU} LU further down until ${C1}s, back over ${BGM_HOOK_R}s"
+fi
+# 10b'') Bed EQ — a scoop at 250 Hz (mud under the voice) and 2.5 kHz (consonants). Off by default;
+#      the only evidence-grade lever is the level, and this one is settled by an A/B in our own mix.
+BEDEQ=""
+if awk -v e="$BGM_EQ" 'BEGIN{exit !(e > 0)}'; then
+  BEDEQ="equalizer=f=250:t=q:w=1.0:g=-${BGM_EQ},equalizer=f=2500:t=q:w=1.0:g=-${BGM_EQ},"
+  say "── BGM eq: -${BGM_EQ} dB at 250 Hz and 2.5 kHz"
+fi
+
 if [ -n "$SFXIN" ]; then VOMIX="[vo_raw][sfxa]amix=inputs=2:duration=first:normalize=0[vo_mix];"
 else VOMIX="[vo_raw]anull[vo_mix];"; fi
 #      The bed arrives already gained and already the right length, so this stage only shapes it:
@@ -1162,9 +1187,9 @@ ffmpeg -y -v error -i work/narration.wav -i work/bed.wav $SFXIN -filter_complex 
   [0:a]aformat=channel_layouts=stereo,asplit=2[vo_key][vo_raw];
   ${SFXIN:+[2:a]aformat=channel_layouts=stereo[sfxa];}
   $VOMIX
-  [1:a]atrim=0:$NT,asetpts=PTS-STARTPTS,
-       afade=t=in:st=0:d=1.2,afade=t=out:st=$FOUT:d=2.2$BGMGATE[bgv];
-  [bgv][vo_key]sidechaincompress=threshold=0.02:ratio=8:attack=20:release=$DUCK_RELEASE:makeup=1,
+  [1:a]atrim=0:$NT,asetpts=PTS-STARTPTS,${BEDEQ}
+       afade=t=in:st=0:d=1.2,afade=t=out:st=$FOUT:d=2.2,${HOOKVOL}anull$BGMGATE[bgv];
+  [bgv][vo_key]sidechaincompress=threshold=0.02:ratio=$DUCK_RATIO:attack=$DUCK_ATTACK:release=$DUCK_RELEASE:makeup=1,
        asplit=2[duck][duckqa];
   [vo_mix][duck]amix=inputs=2:duration=first:dropout_transition=0,
        loudnorm=I=-14:TP=-1.0:LRA=11,aresample=48000[out]
@@ -1174,19 +1199,43 @@ ffmpeg -y -v error -i work/narration.wav -i work/bed.wav $SFXIN -filter_complex 
 # 10c) Voice-to-bed separation — the one number that says whether the music is sitting under the
 #      voice or next to it. Listening tests put the preferred commentary-over-music distance at
 #      10 LU or more and treat 4 LU as the floor where speech stops being comfortably above the
-#      background (bgm-scoring.md §1). Measured across the whole timeline, so the un-ducked gaps
-#      are in it too — that makes this reading conservative, never flattering.
-BED_D=$(ffmpeg -hide_banner -nostats -i work/bed-ducked.wav -af loudnorm=print_format=json -f null - 2>&1 \
-  | tr -d ' \t"' | awk -F: '$1=="input_i"{gsub(/,/,"",$2); print $2}')
+#      background (bgm-scoring.md §1). Those tests compare the two while the voice is up, so the
+#      reading that decides is taken with the ducked bed gated by the voice — a sidechain gate
+#      on the same key and threshold the ducker uses, which leaves only the bed under speech for
+#      the R128 gate to integrate. The whole-timeline figure is kept for the log: it has the
+#      un-ducked gaps in it, so it reads lower, and the distance between the two is how much
+#      the bed rises between sentences.
+measure_i() {   # measure_i <file> [filter_complex-with-loudnorm] — integrated LUFS, or "" when unreadable
+  local V
+  if [ $# -gt 1 ]; then
+    V=$(ffmpeg -hide_banner -nostats -i "$1" -i work/narration.wav -filter_complex "$2" -f null - 2>&1 \
+      | tr -d ' \t"' | awk -F: '$1=="input_i"{gsub(/,/,"",$2); print $2}')
+  else
+    V=$(ffmpeg -hide_banner -nostats -i "$1" -af loudnorm=print_format=json -f null - 2>&1 \
+      | tr -d ' \t"' | awk -F: '$1=="input_i"{gsub(/,/,"",$2); print $2}')
+  fi
+  case "$V" in ''|*[!0-9.+-]*) echo "";; *) echo "$V";; esac
+}
+BED_D=$(measure_i work/bed-ducked.wav)
+BED_S=$(measure_i work/bed-ducked.wav \
+  "[1:a]aformat=channel_layouts=stereo[k];[0:a][k]sidechaingate=threshold=0.02:ratio=9000:range=0:attack=1:release=50,loudnorm=print_format=json")
 SEP=$(awk -v s="$SPEECH_I" -v b="$BED_D" 'BEGIN{printf "%.1f", s-b}')
-say "── voice-to-bed separation ${SEP} LU (speech ${SPEECH_I} / ducked bed ${BED_D})"
-if awk -v v="$SEP" -v m="$BGM_SEP_MIN" 'BEGIN{exit !(v < m)}'; then
-  say "✗ separation ${SEP} LU is under the ${BGM_SEP_MIN} LU floor — the bed is competing with the voice"
+if [ -n "$BED_S" ]; then
+  SEP_S=$(awk -v s="$SPEECH_I" -v b="$BED_S" 'BEGIN{printf "%.1f", s-b}')
+  DEPTH=$(awk -v v="$SEP_S" -v d="$BGM_SEP" 'BEGIN{printf "%.1f", v-d}')
+  say "── voice-to-bed separation ${SEP_S} LU while the voice is up (bed ${BED_S} LUFS, ducking depth ≈ ${DEPTH} LU) · ${SEP} LU across the whole timeline (speech ${SPEECH_I} / ducked bed ${BED_D})"
+else
+  # The gate never opened — no readable speech in the key. Fall back to the whole-timeline reading.
+  SEP_S=$SEP
+  say "── voice-to-bed separation ${SEP} LU across the whole timeline (speech ${SPEECH_I} / ducked bed ${BED_D}) — no speech-gated reading, the voice key stayed under the gate"
+fi
+if awk -v v="$SEP_S" -v m="$BGM_SEP_MIN" 'BEGIN{exit !(v < m)}'; then
+  say "✗ separation ${SEP_S} LU is under the ${BGM_SEP_MIN} LU floor — the bed is competing with the voice"
   exit 1
-elif awk -v v="$SEP" -v d="$BGM_SEP" 'BEGIN{exit !(v < d)}'; then
-  # Ducking can only widen the gap, so a reading at or under the resting distance means the
+elif awk -v v="$SEP_S" -v d="$BGM_SEP" 'BEGIN{exit !(v < d + 1)}'; then
+  # Ducking can only widen the gap, so a speech-gated reading at the resting distance means the
   # sidechain never fired — the key went silent, or the bed reached the mix around it.
-  say "⚠ separation ${SEP} LU is no wider than the ${BGM_SEP} LU resting distance — the ducking isn't firing"
+  say "⚠ separation ${SEP_S} LU under speech is no wider than the ${BGM_SEP} LU resting distance — the ducking isn't firing"
   WARN=1
 fi
 

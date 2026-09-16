@@ -69,6 +69,10 @@ render_seg() {
   XF=$(awk -v x="$LOOP_XF" -v d="$D" 'BEGIN{m=d/3; if(x>m)x=m; printf "%.3f", x}')
   N=$(awk -v d="$D" -v l="$L" -v x="$XF" 'BEGIN{n=1; t=d; while(t<l){t+=d-x; n++} print n}')
   [ "$N" -le 20 ] || echo "  ⚠ $(basename "$SRC") is ${D}s under a ${L}s span — ${N} laps. A longer bed sounds less repetitive." >&2
+  # A cue the storyboard generated for this span is meant to fit it; a lap here is the seam
+  # nobody planned, usually because the cue was asked for the shots' length without the
+  # handover the next cue needs. Say the exact number to regenerate at.
+  [ "${NC:-1}" -le 1 ] || echo "  ⚠ $(basename "$SRC") is ${D}s under its ${L}s span (shots + the ${CUE_XF}s handover) — ${N} laps at the cue boundary. Regenerate it at ${L}s or longer." >&2
   local IN=(); FC=""; MIX=""
   for ((i=0; i<N; i++)); do
     IN+=(-i "$SRC")
@@ -101,12 +105,14 @@ if [ "$NC" -eq 1 ]; then
   rm -rf "$WORK"; exit 0
 fi
 
-# Each cue is rendered CUE_XF longer than its span so it has something to hand over. Chaining
-# acrossfade eats exactly that overlap back, which puts every boundary on its own cue start.
+# Each cue except the last is rendered CUE_XF longer than its span so it has something to hand
+# over. Chaining acrossfade eats exactly that overlap back, which puts every boundary on its own
+# cue start. The last cue ends with the feature and hands over to nothing, so it gets its span
+# exactly — the extra 2s used to be trimmed off, and a cue generated to the span looped for them.
 SEGS=()
 for ((k=0; k<NC; k++)); do
-  if [ $((k+1)) -lt "$NC" ]; then NEXT="${STARTS[$((k+1))]}"; else NEXT="$LEN"; fi
-  SPAN=$(awk -v a="${STARTS[$k]}" -v b="$NEXT" -v x="$CUE_XF" 'BEGIN{printf "%.3f", b-a+x}')
+  if [ $((k+1)) -lt "$NC" ]; then NEXT="${STARTS[$((k+1))]}"; X="$CUE_XF"; else NEXT="$LEN"; X=0; fi
+  SPAN=$(awk -v a="${STARTS[$k]}" -v b="$NEXT" -v x="$X" 'BEGIN{printf "%.3f", b-a+x}')
   awk -v s="$SPAN" -v x="$CUE_XF" 'BEGIN{exit !(s > x)}' \
     || { echo "✗ bgm-bed: cue $((k+1)) is shorter than the ${CUE_XF}s crossfade" >&2; exit 1; }
   render_seg "${FILES[$k]}" "$SPAN" "$WORK/seg$k.wav"
