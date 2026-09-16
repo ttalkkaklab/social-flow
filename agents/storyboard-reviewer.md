@@ -1315,7 +1315,8 @@ made later in produce §3; what you judge is the plan the storyboard commits to.
 
 ## Scope
 
-In scope: the music plan (`window.MUSIC` and each shot's `sound`), `visual.audio` on every
+In scope: the music plan (`window.MUSIC` and each shot's `sound`), the effects plan
+(`window.SFX` and each shot's `sound.sfx`), `visual.audio` on every
 generated-video shot, which voice each line is spoken in, the `tts` phonetic spellings, the beats
 where the sound should get out of the way, and the narration's own rhythm.
 
@@ -1357,6 +1358,10 @@ volume.
   that is a one-bed episode, which is a normal design.
 - **P0-8 `cue` and `drop` on the same shot** — the incoming cue fades in while the bed is gated,
   so the change actually lands on the next shot, where nobody planned it.
+- **P0-9 a `sound.sfx` that names nothing** — no key in `window.SFX` and, when there is no
+  `window.SFX`, no file in the channel catalog. produce has nothing to place and the builder
+  stops at sfx.tsv after the narration and stills are already paid for. A `sound.sfx` on a
+  `broll` or the `outro` is the same defect — neither is a card.
 
 **An episode where the sound never moves is not a P0.** One bed with no drop is a real design,
 it is what most short-form episodes ship as, and a P0 there would halt every unattended run on a
@@ -1370,7 +1375,7 @@ weight for a judgement call.
 | Clip audio written, and consistent with the lane | 30 | every generated shot says what it sounds like, that matches whether its audio survives, and the balance follows the shot size — a wide with the space forward and the lines distant, a close-up with the voice and breath forward (directing-grammar §2: a wide with studio-clean speech reads as fake, a close-up with distant sound reads as off) |
 | Voice casting | 20 | every speaking character matches profile §2, speaker count per scene is buildable |
 | `tts` spellings | 20 | figures, units, and swallowed endings spelled the way the engine reads them |
-| The music plan | 20 | cues change where the episode turns rather than on a timer, drops are spent on the line the episode is about, and the count is what the format can carry (one drop in a short). An episode whose reveal or result lands at full music level earns little of this axis |
+| The music and effects plan | 20 | cues change where the episode turns rather than on a timer, drops are spent on the line the episode is about, and the count is what the format can carry (one drop in a short). An episode whose reveal or result lands at full music level earns little of this axis. Effects sit on the cuts that changed — a whoosh on a whip, one hit before the drop, nothing on a dissolve — at most one per ~10 s, never on adjacent cards, and never the same sound `visual.audio` already asks the clip for (scenes-schema §sound effects) |
 | Narration rhythm | 10 | sentence lengths vary, and every scene leaves the builder a boundary to cut on |
 
 **A quiet plan is not a poor one.** A scene that asks for room tone and nothing else scores
@@ -1388,6 +1393,7 @@ full marks on the first axis — what gets docked is a scene that didn't say.
 ## P0 list
 - [P0-1] scene 2 — `visual.audio` unwritten on a generated clip
 - [P0-7] scene 4 — `sound.cue: "warm"` names no cue in window.MUSIC
+- [P0-9] scene 5 — `sound.sfx: "whoosh"` names no key in window.SFX and no catalog file
   (if none, "No P0")
 
 ## Axis scores

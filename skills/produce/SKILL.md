@@ -416,17 +416,21 @@ Follow [illustrated-scenes.md](../storyboard/references/illustrated-scenes.md): 
     cp "$BGM" .work/bgm.wav
   else
     # generate only when there isn't one — to reuse it next episode, copy it to
-    # assets/audio/bgm/default.wav and register it in the catalog with resolve-asset.py --ensure
+    # assets/audio/bgm/default.wav and register it with its provenance in the note:
+    #   resolve-asset.py --ensure data/<channel> bgm default audio/bgm/default.wav "lyria-clip · <prompt> · <date>"
+    # (assets-catalog-template.md — the note is what answers a claim or a rights question later)
     : # default: music_generate_clip (Lyria, 30s instrumental) → .work/bgm.wav
   fi
   ```
 
   **With `window.MUSIC`**, one file per cue. `base` (or the channel's shared bed when there is no
   `base`) becomes `.work/bgm.wav`; every other cue becomes `.work/bgm-<name>.wav`. A cue with
-  `asset` comes from `resolve-asset.py <channel dir> bgm <id>` instead of being generated. Add up the durations of
-  the shots each cue covers and ask `music_generate` for that many seconds — the bed then never
-  loops. Past 300s the builder crossfades it onto itself, so a long-form cue is fine too, just
-  more repetitive.
+  `asset` comes from `resolve-asset.py <channel dir> bgm <id>` instead of being generated. A cue
+  with `prompts` (a weighted blend, scenes-schema §music cues) goes to `music_generate_advanced`;
+  a cue with `prompt` goes to `music_generate`.
+  **Ask for the length the cue has to fill** — trimmed TTS of its shots + ~1 s a shot of card
+  padding + the 2 s handover (bgm-scoring.md §2; the last cue needs no handover). A cue that
+  comes up short loops at the boundary and `bed.log` prints the exact span to regenerate at.
 
   Then write **`.work/bgm.tsv`** — `idx <TAB> audio-file`, one row per shot that changes the cue:
   ```
@@ -441,10 +445,15 @@ Follow [illustrated-scenes.md](../storyboard/references/illustrated-scenes.md): 
 
   **The level is not a knob here.** The builder measures the narration and sets the bed
   `BGM_SEP` LU under it (10 by default), clamps the bed's true peak, and stops the build if the
-  voice-to-bed separation lands under 4 LU. So the prompt only has to make the bed *fit* — the
-  established wording is "leaves space for a spoken voiceover, no melody in the vocal frequency
-  range". Where those numbers come from, and which parts of this are evidence and which are our
-  own practice: [bgm-scoring.md](references/bgm-scoring.md).
+  voice-to-bed separation **while the voice is up** lands under 4 LU. The hook is handled there
+  too: card 0 sits a further `BGM_HOOK_LU` (6) down and ramps back from card 1, so the opening
+  needs no drone cue. So the prompt only has to make the bed *fit* — the established wording is
+  "leaves space for a spoken voiceover, no melody in the vocal frequency range". The build
+  report prints the separation under speech with the ducking depth it measured and the
+  whole-timeline figure next to it. Two craft knobs exist for an A/B and are off or at their old
+  values by default: `BGM_EQ` (a dB scoop at 250 Hz and 2.5 kHz) and `DUCK_RATIO` /
+  `DUCK_ATTACK` / `DUCK_RELEASE`. Where those numbers come from, and which parts of this are
+  evidence and which are our own practice: [bgm-scoring.md](references/bgm-scoring.md).
 
   | Job | Tool | Key |
   |---|---|---|
@@ -459,6 +468,31 @@ Follow [illustrated-scenes.md](../storyboard/references/illustrated-scenes.md): 
   Sung vocals fight the voiceover, so `suno_generate` is
   for episodes where the song itself is the piece. There is no official Suno
   API (2026-08); `suno_*` talks to sunoapi.org.
+
+- **SFX**: the storyboard's `window.SFX` and each shot's `sound.sfx` (scenes-schema §sound
+  effects). Every id becomes a file in the **channel** catalog, not `.work/` — an effect is
+  generated once and every later episode that names the same id reuses it at $0.
+  ```bash
+  ASSET=${CLAUDE_PLUGIN_ROOT}/skills/channel/references/resolve-asset.py
+  # for each id in window.SFX — and each bare sound.sfx id when there is no window.SFX:
+  if ! python3 "$ASSET" data/<channel> sfx <id> >/dev/null 2>&1; then
+    # { prompt } entries only — a missing { asset } is a storyboard error, not a generation
+    : # sfx_elevenlabs_generate — text: <prompt>, durationSeconds: <seconds>, loop: <loop>,
+      #   outputPath: data/<channel>/assets/audio/sfx, filename: <id>.wav
+    python3 "$ASSET" --ensure data/<channel> sfx <id> audio/sfx/<id>.wav \
+      "elevenlabs eleven_text_to_sound_v2 · $(date +%F) · see <id>.json"
+    printf 'sfx.elevenlabs\t<measured seconds>\tproduce: sfx <id>\n' >> .work/cost-tally.tsv
+  fi
+  ```
+  Listen to a new effect once before it goes into the manifest — a whoosh with a tail under
+  the next line, or a hit that arrives as music, gets regenerated with the prompt sharpened
+  ("no tail", "no music", "short decay"), not shipped. The `.json` sidecar next to the WAV is
+  the provenance record (tool, model, prompt, seconds, request id, date, rights) and the
+  catalog note points at it. Then the manifest: one `sfx.tsv` row per shot on **seg 0** with
+  the path `resolve-asset.py` returns (§sfx below), `bgm` column `on` — the effect lands on the
+  cut and the bed keeps playing under it. A shot that also drops writes its seg-0 row with the
+  path and `off`, and the drop's other segments as usual. The effect plays at `SFX_VOL` (0.85);
+  that is a knob, not a measured distance like the bed's (bgm-scoring §effects).
 
 **Write one line to `.work/cost-tally.tsv` per call** — the same ledger §1.5 started
 was using. The convention's source of truth is
@@ -972,7 +1006,9 @@ resolve finds an old `assets/outro.mp4` too. For subtitle fonts, copy the ttf fi
 still gets you publish quality).
 
 The third column of `sfx.tsv` is a file path or a catalog id. With just an id, resolve it with
-`python3 "$ASSET" data/<channel> sfx <id>`.
+`python3 "$ASSET" data/<channel> sfx <id>`. A generated effect is already there by this point — §3's SFX step
+made it from `window.SFX` and registered it — so an id that fails to resolve here is a step
+that was skipped, not a file to invent.
 
 ```bash
 $REF/build-reel.sh .work storyboard/    # → .work/reel.mp4 (clean) · reel-sub.mp4 (burned-in) · subs.srt · cover.jpg · build-report.txt
@@ -986,85 +1022,9 @@ subtitles, and `subs.srt` goes to the publish tools alongside it.
 
 #### Splicing in the b-roll (when §3 made one — inside the approved channel cap)
 
-The generated-video stretches get inserted **after the build finishes**, at time T where each
-slot's `after` scene ends. `build-reel.sh` only splices the outro, so this is post-processing
-outside the builder.
-
-Before splicing, handle **trim + loudness normalization + BGM in a single re-encode** per
-slot — cut the broll scene's `duration` (the used length) out of the 8-second original while
-matching the veo sound to the body's level and laying the BGM on (generated sound is quieter
-than the body — measured at mean −18 to −22dB on person sources):
-
-```bash
-BED=${CLAUDE_PLUGIN_ROOT}/skills/produce/references/bgm-bed.sh
-mix_broll() {           # mix_broll <after> <used length in seconds> [cue file]
-  local A=$1 USE=$2 SRC=${3:-bgm.wav}
-  # Same conditioning the feature gets: the clip's own voice is normalized to -20, so the bed is
-  # measured and set 10 LU under that. A raw multiplier here would put the b-roll's music at a
-  # different distance from the voice than the rest of the episode, on the same bed file.
-  printf '0.0000\t%s\n' "$SRC" > .work/bedcue.list
-  ( cd .work && "$BED" bed-broll.wav "$USE" "$(awk -v s="${BGM_SEP:-10}" 'BEGIN{print -20 - s}')" bedcue.list )
-  ffmpeg -y -i .work/broll/broll-a$A.mp4 -i .work/bed-broll.wav \
-    -filter_complex "[0:a]loudnorm=I=-20:TP=-2:LRA=7[va];
-      [1:a]afade=t=in:st=0:d=0.4,afade=t=out:st=$((USE-1)):d=1[bg];
-      [va][bg]amix=inputs=2:duration=first:normalize=0[a]" \
-    -map 0:v -map "[a]" -r 30 -c:v libx264 -profile:v high -level 4.1 -pix_fmt yuv420p \
-    -c:a aac -ar 48000 -ac 2 -b:a 192k .work/broll/broll-a$A-mixed.mp4
-}
-mix_broll 0 4          # pass the broll scene's after and duration from scenes.js as they are
-mix_broll 3 4          # if there's a second slot
-```
-
-**A b-roll stretch gets the cue that is playing where it splices in** — pass that cue's file as
-the third argument. Leave it out and it plays the opening bed, which under a `tense` section is an
-audible jump back to the theme in the middle of a scene.
-
-**Don't cut the mixed file again** — the fades are pinned to its length, so cutting loses the
-tail fade and shifts the BGM fade out of place. To change the length, re-mix from the
-original clip. (A 24fps veo clip gets its 30fps re-encode here at the same time.)
-
-Get the insertion time T by **accumulating the confirmed lengths up to the `after` card** from
-the `card` lines in `build-report.txt`. broll and outro aren't in the manifest and broll
-scenes sit at the end of the array, so **body scene index = card index** holds directly.
-
-```bash
-cardend() {   # cardend <after> — sum of confirmed lengths for cards 0..after = when that scene ends
-  awk -v n="$1" -F'|' '/^card /{ split($1,a," "); if (a[2]+0 <= n) { gsub(/[^0-9.]/,"",$(NF-2)); s += $(NF-2) } }
-                       END{ printf "%.3f", s }' .work/build-report.txt
-}
-$REF/splice-clip.sh .work \
-  .work/broll/broll-a0-mixed.mp4 "$(cardend 0)" \
-  .work/broll/broll-a3-mixed.mp4 "$(cardend 3)"
-# → reel-spliced.mp4 · reel-sub-spliced.mp4 · subs-spliced.srt
-```
-
-- **Pass both slots in a single call.** Call the script twice and the second call re-reads
-  `reel.mp4`, wiping out the first splice (the input and output names are fixed). Give both
-  T values **on the original timeline** — don't pre-add the length the earlier clip will push
-  out. The script does the pushing math.
-- **Don't eyeball T** — a card's confirmed length (seconds after frame rounding) is when the
-  scene ends. Approximate it and the last frame of that scene gets cut off.
-- Splice the clean and burned-in versions **separately, at the same T with the same clip**.
-  The burned-in version already has the subtitles on screen so it needs no timecode shift, and
-  the builder's ASS styling is preserved (re-burning from the srt changes the font, position,
-  and outline from the original).
-- Each cue in `subs.srt` shifts back by **the sum of the measured lengths of the clips
-  inserted before it**. Use the value **measured with ffprobe after re-encoding**, not the
-  nominal length (for example 4 seconds) — frame rounding throws it off by tens of
-  milliseconds, and that error accumulates to the end of the video and pushes the subtitles
-  out of sync.
-- **Confirm that 0 subtitle cues straddle T** (the script reports per T). A straddle drops the
-  b-roll into the middle of a sentence — move that T to a sentence boundary.
-- After splicing, check that **the clean and burned-in versions have the same length**. A
-  mismatch means one side's pieces got cut wrong. An output length tens of milliseconds above
-  "expected" is normal (each piece rounds up to a frame boundary) — with two slots there are
-  three pieces, so that error grows a little.
-
-There's one reason to keep the burned-in version (`reel-sub.mp4`) around — **Instagram has no
-path for a subtitle file.** The IG Content Publishing container has no subtitle parameter, so
-there, burning them into the picture is the only way to deliver subtitles. The two files are
-each encoded from the same original, so both are first-generation (the clean one isn't
-re-encoded), and the builder verifies that the lengths match.
+The procedure — trim + loudness + bed per slot in one re-encode, then the splice at each
+slot's `after` scene — is [broll-splice.md](references/broll-splice.md). It runs after
+the build finishes and before §7; the builder only splices the outro.
 
 ### 7. The build report gate
 
@@ -1336,6 +1296,7 @@ and the `status: produced` file update regardless — the portal is a mirror, no
 - **`references/screencast-overlay.html`** — scene title alpha overlay renderer (top block y 190–460, scenes.js injected)
 - **`references/video-template.html`** — 1080×1920 scene renderer (THEME injection · reveal · alpha · safe zone · overflow guard)
 - **`references/build-reel.sh`** — the compositing pipeline SoT (silence trim → loudnorm → boundary detection → reveal xfade → Ken Burns → subtitles → outro splice)
+- **`references/broll-splice.md`** — the b-roll splice: per-slot trim + loudness + bed in one re-encode, then the insert at each `after` scene (§6)
 - **`references/bgm-bed.sh`** — renders the music bed the mix lays under the voice: every cue measured and gained to one distance under the narration, a short cue crossfaded onto itself instead of butt-joined, cue changes crossfaded. Called by both builders and by the b-roll premix
 - **`references/bgm-scoring.md`** — where the bed's numbers come from, which of them are published listening tests and which are our own practice, and the widely-quoted figures that failed verification
 - **`references/build-outro.sh`** — generates the channel's shared outro
