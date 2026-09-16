@@ -13,6 +13,7 @@ working practice, marked as such, and the way to settle them is an A/B in our ow
 
 - [1. Levels — the part with evidence](#1-levels-the-part-with-evidence)
 - [2. What the builder does with all that](#2-what-the-builder-does-with-all-that)
+  - [Effects — a knob, not a measurement](#effects-a-knob-not-a-measurement)
 - [3. Cues — this part is craft](#3-cues-this-part-is-craft)
 - [4. Generating a bed](#4-generating-a-bed)
 - [5. What did not survive](#5-what-did-not-survive)
@@ -73,11 +74,36 @@ Instagram and TikTok publish nothing we could verify either.
   exactly the one that crowds the voice in the gaps.
 - **True peak is clamped.** If the target gain would push the bed's own peak past −1 dBTP, the
   gain is pulled back to whatever keeps it under.
-- **The separation is verified.** Step 10c taps the ducked bed off before it meets the voice,
-  measures both, and reports `speech − bed` in LU. Under `BGM_SEP_MIN` (4) the build **stops**;
-  no wider than the resting distance means the sidechain never fired, which is a warning. The
-  reading covers the whole timeline, un-ducked gaps included, so it reads conservative — it can
-  understate the distance during speech, never overstate it.
+- **The separation is verified — while the voice is up.** Step 10c taps the ducked bed off
+  before it meets the voice and measures it twice: once gated by the voice (a sidechain gate on
+  the ducker's own key and threshold, so only the bed under speech reaches the R128 integration)
+  and once across the whole timeline. The gated reading is speech-to-background *during speech*,
+  the quantity the listening tests above measured, and it is the one checked against
+  `BGM_SEP_MIN` (4): under it the build **stops**; no wider than the resting distance means the
+  sidechain never fired, which is a warning. The whole-timeline figure stays in the log; it has
+  the un-ducked gaps in it and reads lower, and the distance between the two is how far the bed
+  rises between sentences. Measured on one 71 s TTS episode (pundago ep421): 25.8 LU under
+  speech against 14.4 LU whole-timeline, so the ducker at ratio 8 is taking about 16 LU off the
+  bed while the voice is up. The guides' "deep" ducking is 6–10 dB; ours sits past that, which is
+  the first A/B to run — `DUCK_RATIO`, `DUCK_ATTACK` (20 ms) and `DUCK_RELEASE` (250 ms) are env
+  knobs on both builders for exactly that. Guide ranges: attack 10–20 or 30–60 ms, release
+  200–500 ms and 400–700 if it pumps; all of it craft grade.
+- **The hook opens over a quieter bed.** `build-reel.sh` adds `BGM_HOOK_LU` (6) to the distance
+  while card 0 runs and ramps back over `BGM_HOOK_R` (2.0 s) from the start of card 1, on the
+  one-bed path too. That is §3's own rule made mechanical, not evidence — measured −32.3 LUFS
+  under the hook against −26.8 after the ramp on ep421. `BGM_HOOK_LU=0` turns it off.
+- **A bed EQ, off by default.** `BGM_EQ=N` scoops N dB out of the bed at 250 Hz and 2.5 kHz — the
+  two carve points the mixing guides name (mud under the voice, consonants). Craft grade with no
+  listening test behind it, so it exists to be A/B'd, not assumed; at 4 dB it also lowers the
+  bed's integrated level by about 2 LU, which the separation reading shows.
+- **A cue is rendered to its span plus the handover.** `bgm-bed.sh` renders every cue but the last
+  `BGM_CUE_XF` longer than its span so it has something to crossfade out of; the last cue is
+  rendered to its span exactly (it used to get the extra 2 s and have them trimmed, so a cue
+  generated to the span looped for them). A generated cue that comes up short is crossfaded
+  onto itself at the boundary and the log says the exact span to regenerate at. The length to
+  ask for: scenes.js `duration` is not what the builder cuts — a card runs its trimmed TTS plus
+  about a second of padding — so add up the trimmed TTS lengths of the shots the cue covers,
+  about 1 s per shot for the padding, and `BGM_CUE_XF` (2 s) for the handover; round up.
 
 **The outro keeps its fixed multiplier.** `build-outro.sh` still runs `BGM_VOL 0.30` on purpose:
 it is a few seconds long, it carries its own music rather than a bed under a narration, and its
@@ -90,6 +116,18 @@ in a single sample at 90.00s. `bgm-bed.sh` crossfades the bed onto itself instea
 (`BGM_LOOP_XF`, 2.0s). In a synthetic reproduction the butt-join left a sample jump 4.4× the
 local median at every lap; the crossfaded render left none. The better fix is still to not loop
 at all — `music_generate` takes an exact length up to 300s.
+
+### Effects — a knob, not a measurement
+
+`sfx.tsv` effects play at `SFX_VOL` (0.85, linear) on top of whatever level the file was
+generated at. Nothing measures them against the voice the way step 9.5 measures the bed, so two
+effects from two prompts can land 8 LU apart at the same knob — the same trap §2 describes for
+beds. Until an effect step measures and gains each file (open work, 2026-09-16), the control is
+the prompt: "soft", "short decay", "no tail", "no music" produce a file that already sits under
+speech. The ducking key is the voice alone, so an effect never pushes the bed down (build-reel.sh
+step 10a). Generated effects are channel assets — `assets/audio/sfx/<id>.wav`, one
+`sfx_elevenlabs_generate` call per id, reused by every later episode; the contract is
+scenes-schema §sound effects.
 
 ## 3. Cues — this part is craft
 
@@ -115,7 +153,9 @@ Our working defaults, all of them ours to overturn:
   low drone — a bed that arrives loud with the first line competes with the one sentence
   that decides whether anyone stays. And don't hard-stop the music at the last word: let
   the tail ring under the closing question, which needs room to hang, not a cut to black.
-  Own-channel production guide (2026-08), field practice.
+  Own-channel production guide (2026-08), field practice. Since 2026-09-16 the builder does
+  the first half itself (`BGM_HOOK_LU`, §2), so a quiet opening needs no drone cue and no
+  drop on the cover.
 - **The crossfade lands on the card start**, so the incoming cue arrives with the picture rather
   than after it.
 - **Don't score against the narration's own rhythm.** The one BPM finding that survived
@@ -138,6 +178,11 @@ normalized, so only the ratios matter — blending is what the format is for (`P
 from three groups — instruments, genre, mood — and the vendor calls its list non-exhaustive.
 Changing `bpm` or `scale` mid-stream needs a context reset, and the vendor recommends crossfading
 prompt changes because transitions "can be a bit abrupt".
+
+`window.MUSIC` takes that format directly — `prompts: [{ text, weight }]` with `density` and
+`brightness`, which produce sends to `music_generate_advanced` (scenes-schema §music cues). Two
+cues that share their text and differ in weights move less at the crossfade than two written
+from scratch.
 
 For our purpose the prompt has one job beyond mood: **leave the voice its band**. "leaves space for
 a spoken voiceover, no melody in the vocal frequency range" is the established wording. The bed is
@@ -172,3 +217,6 @@ Sources for §1: [QoMEX 2023](https://arxiv.org/abs/2305.19100) ·
 [YouTube automatic enhancements](https://support.google.com/youtube/answer/16619284).
 §3's BPM note: [JCMC 29(5) zmae007 (2024)](https://doi.org/10.1093/jcmc/zmae007).
 §4: [Lyria RealTime docs](https://ai.google.dev/gemini-api/docs/music-generation).
+The survey behind the 2026-09-16 changes — the guide ranges for ducking and EQ, the platform
+figures and the generator prompt grammars, drawn as charts with an evidence grade on each
+number: `docs/research/2026-09-16-bgm-direction/index.html`.

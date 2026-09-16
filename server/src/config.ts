@@ -356,9 +356,9 @@ export function elevenLabsBaseUrl(): string {
 export function requireElevenLabsKey(): string {
   if (!config.elevenLabsApiKey) {
     throw new Error(
-      'ELEVENLABS_API_KEY is not set. tts_elevenlabs_* speech tools require an ElevenLabs API key ' +
+      'ELEVENLABS_API_KEY is not set. tts_elevenlabs_* speech tools and sfx_elevenlabs_generate require an ElevenLabs API key ' +
         '(https://elevenlabs.io/app/settings/api-keys — a restricted key needs the text_to_speech permission, ' +
-        'plus voices_read for tts_elevenlabs_voices). ' +
+        'plus voices_read for tts_elevenlabs_voices and sound generation for sfx_elevenlabs_generate). ' +
         'Without it, tts_generate/tts_multi_speaker (Gemini, GEMINI_API_KEY) and tts_local_generate (on-device, no key) still work.',
     );
   }

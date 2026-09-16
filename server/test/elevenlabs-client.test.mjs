@@ -30,6 +30,15 @@ import {
   extensionForFormat,
   sampleRateForFormat,
   wavDurationSeconds,
+  DEFAULT_ELEVENLABS_SFX_OUTPUT_FORMAT,
+  ELEVENLABS_SFX_MODEL,
+  ELEVENLABS_SFX_OUTPUT_FORMATS,
+  ELEVENLABS_SFX_USD_PER_MINUTE,
+  MAX_ELEVENLABS_SFX_TEXT_CHARS,
+  elevenLabsSfxSchema,
+  sfxExtensionForFormat,
+  sfxSampleRateForFormat,
+  soundEffectRequestBody,
 } from '../dist/elevenlabs-client.js';
 import { pcmToWav } from '../dist/media-utils.js';
 
@@ -221,5 +230,72 @@ describe('wavDurationSeconds', () => {
     assert.equal(wavDurationSeconds(Buffer.alloc(0)), undefined);
     // RIFF/WAVE with no data chunk
     assert.equal(wavDurationSeconds(pcmToWav(Buffer.alloc(0), 24_000, 1).subarray(0, 36)), undefined);
+  });
+});
+
+/**
+ * Sound effects — POST /v1/sound-generation. The endpoint's output_format enum has no wav_*
+ * entry (docs, read 2026-09-16), so the lane asks for PCM and wraps it itself; what is pinned
+ * here is the request mapping and the pre-call guards.
+ */
+describe('ElevenLabs sound effects (sfx_elevenlabs_generate)', () => {
+  it('defaults: PCM 48 kHz wrapped as WAV, no loop, the vendor picks the length', () => {
+    const r = elevenLabsSfxSchema.parse({ text: 'short soft whoosh, fabric through air, no tail' });
+    assert.equal(r.outputFormat, DEFAULT_ELEVENLABS_SFX_OUTPUT_FORMAT);
+    assert.equal(r.outputFormat, 'pcm_48000');
+    assert.equal(r.loop, false);
+    assert.equal(r.durationSeconds, undefined);
+    assert.equal(sfxExtensionForFormat(r.outputFormat), '.wav');
+    assert.equal(sfxSampleRateForFormat(r.outputFormat), 48000);
+  });
+
+  it('no format in the enum is wav_* — the endpoint has none, the server writes the RIFF header', () => {
+    for (const format of ELEVENLABS_SFX_OUTPUT_FORMATS) {
+      assert.match(format, /^(pcm|mp3)_/);
+      assert.equal(sfxExtensionForFormat(format), format.startsWith('mp3_') ? '.mp3' : '.wav');
+    }
+    assert.equal(sfxSampleRateForFormat('pcm_24000'), 24000);
+    assert.equal(sfxSampleRateForFormat('mp3_44100_128'), 44100);
+  });
+
+  it('the vendor body carries the model and only the fields that were asked for', () => {
+    assert.deepEqual(soundEffectRequestBody(elevenLabsSfxSchema.parse({ text: 'x' })), {
+      text: 'x',
+      model_id: ELEVENLABS_SFX_MODEL,
+    });
+    assert.deepEqual(
+      soundEffectRequestBody(elevenLabsSfxSchema.parse({ text: 'room tone', durationSeconds: 12, promptInfluence: 0.7, loop: true })),
+      { text: 'room tone', model_id: 'eleven_text_to_sound_v2', duration_seconds: 12, prompt_influence: 0.7, loop: true },
+    );
+  });
+
+  it('rejects a length outside 0.5–30 s, an over-long prompt and an influence outside 0–1 before the call', () => {
+    assert.equal(elevenLabsSfxSchema.safeParse({ text: 'x', durationSeconds: 0.2 }).success, false);
+    assert.equal(elevenLabsSfxSchema.safeParse({ text: 'x', durationSeconds: 31 }).success, false);
+    assert.equal(elevenLabsSfxSchema.safeParse({ text: 'x', promptInfluence: 1.2 }).success, false);
+    assert.equal(elevenLabsSfxSchema.safeParse({ text: 'y'.repeat(MAX_ELEVENLABS_SFX_TEXT_CHARS + 1) }).success, false);
+    assert.equal(elevenLabsSfxSchema.safeParse({ text: 'x', durationSeconds: 0.5 }).success, true);
+    assert.equal(elevenLabsSfxSchema.safeParse({ text: 'x', durationSeconds: 30 }).success, true);
+  });
+
+  it('a loop under 5 s is refused — it seams under narration', () => {
+    const short = elevenLabsSfxSchema.safeParse({ text: 'hum', loop: true, durationSeconds: 2 });
+    assert.equal(short.success, false);
+    assert.match(short.error.issues[0].message, /loop/);
+    assert.equal(elevenLabsSfxSchema.safeParse({ text: 'hum', loop: true, durationSeconds: 10 }).success, true);
+    assert.equal(elevenLabsSfxSchema.safeParse({ text: 'hum', loop: true }).success, true);
+  });
+
+  it('the filename extension has to match the format', () => {
+    const wrong = elevenLabsSfxSchema.safeParse({ text: 'x', filename: 'whoosh.mp3' });
+    assert.equal(wrong.success, false);
+    assert.match(wrong.error.issues[0].message, /\.wav/);
+    assert.equal(elevenLabsSfxSchema.safeParse({ text: 'x', filename: 'whoosh.wav' }).success, true);
+    assert.equal(elevenLabsSfxSchema.safeParse({ text: 'x', filename: 'whoosh.mp3', outputFormat: 'mp3_44100_128' }).success, true);
+    assert.equal(elevenLabsSfxSchema.safeParse({ text: 'x', filename: '../whoosh.wav' }).success, false);
+  });
+
+  it('the rate is the pricing/api figure — per minute of generated audio, every plan', () => {
+    assert.equal(ELEVENLABS_SFX_USD_PER_MINUTE, 0.12);
   });
 });

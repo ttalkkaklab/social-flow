@@ -38,6 +38,13 @@ import {
   ELEVENLABS_VOICE_CATEGORIES,
   MAX_ELEVENLABS_DIALOGUE_CHARS,
   MAX_ELEVENLABS_INPUT_CHARS,
+  DEFAULT_ELEVENLABS_SFX_OUTPUT_FORMAT,
+  DEFAULT_ELEVENLABS_SFX_PROMPT_INFLUENCE,
+  ELEVENLABS_SFX_MODEL,
+  ELEVENLABS_SFX_OUTPUT_FORMATS,
+  ELEVENLABS_SFX_SECONDS,
+  ELEVENLABS_SFX_USD_PER_MINUTE,
+  MAX_ELEVENLABS_SFX_TEXT_CHARS,
 } from './elevenlabs-client.js';
 import {
   DEFAULT_ZIMAGE_QUANTIZE,
@@ -3068,6 +3075,61 @@ Returns: a text list "name — voice_id · category · labels · languages", the
         },
       },
       required: [],
+    },
+  },
+
+  // ── Sound effects (ElevenLabs — text → SFX) ──────────────────────────────
+  {
+    name: 'sfx_elevenlabs_generate',
+    title: 'Sound effect (ElevenLabs · text → SFX)',
+    annotations: HINT.generate,
+    description: `Generate one sound effect from a text description with ElevenLabs (${ELEVENLABS_SFX_MODEL}) — the lane that fills a channel's sfx catalog so a shot's \`sound.sfx\` has a file behind it.
+
+Use for the cut effects a storyboard names in window.SFX (scenes-schema §sound effects): a whoosh on a whip transition, a low hit on the line before a drop, a tick or pop when a figure lands on a slide, a riser under a build, a 30-second room-tone loop for a bed. Write the prompt as a description in the vendor's own vocabulary (whoosh · impact · braam · riser · click · texture · ambience), one sound per call, with its shape spelled out ("short soft whoosh, fabric through air, no tail"); set durationSeconds for one-shots (a whoosh 0.6–1.0 s, a hit 1–2 s, a riser 2–4 s) and loop: true with 10–30 s for a bed. promptInfluence above the ${DEFAULT_ELEVENLABS_SFX_PROMPT_INFLUENCE} default reads the prompt more literally; below it, more freely. Save straight into the channel catalog — outputPath data/<channel>/assets/audio/sfx, filename <id>.wav — then register the row with resolve-asset.py --ensure and point its note at the .json sidecar this tool writes next to the file (tool, model, prompt, seconds, request id, date, rights). Generated once, an effect is a channel asset reused at $0 in every later episode.
+Do NOT use for music or a melodic bed — that is music_generate_clip / suno_generate_sound. Do NOT use for a clip's own soundtrack — that is the model's native audio through visual.audio. Do NOT request a loop under 5 s (it seams audibly under narration). The endpoint has no WAV format of its own: the server asks for PCM and writes the RIFF header itself, so the file is a mono 16-bit WAV the builder reads directly; a 403 output_format_not_allowed means the plan lacks that rate — retry with pcm_24000. API pricing is per minute of generated audio, $${ELEVENLABS_SFX_USD_PER_MINUTE.toFixed(2)} on every plan (pricing/api, read 2026-09-16), so a one-second effect is about $0.002; the ledger key is sfx.elevenlabs with the measured seconds as the quantity. Free-tier output is non-commercial and needs attribution — check the plan before publishing.
+
+Returns: a text block with the saved WAV path, the provenance sidecar path, the model, format, the measured duration, the USD estimate at the per-minute rate, and the request id.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        text: {
+          type: 'string',
+          description: `What the effect sounds like, as a description (max ${MAX_ELEVENLABS_SFX_TEXT_CHARS} characters) — the source, the surface, the shape and the tail: "short soft whoosh, fabric through air, no tail" · "low cinematic impact, single hit, short decay, no music" · "quiet office room tone, distant ventilation, no voices". One sound per call; the vendor's terms (whoosh, impact, braam, riser, click, ambience) land more reliably than metaphors.`,
+          maxLength: MAX_ELEVENLABS_SFX_TEXT_CHARS,
+        },
+        durationSeconds: {
+          type: 'number',
+          description: `Length in seconds, ${ELEVENLABS_SFX_SECONDS.min}–${ELEVENLABS_SFX_SECONDS.max}. Omit and the vendor picks a length for the description. Set it for cut effects — a whoosh 0.6–1.0, a hit 1–2, a riser 2–4 — and for beds (10–30 with loop).`,
+          minimum: ELEVENLABS_SFX_SECONDS.min,
+          maximum: ELEVENLABS_SFX_SECONDS.max,
+        },
+        promptInfluence: {
+          type: 'number',
+          description: `How literally to follow the text, 0–1 (vendor default ${DEFAULT_ELEVENLABS_SFX_PROMPT_INFLUENCE}). Raise it toward 0.7–0.9 when the effect must be exactly the named sound; lower it for a texture where variation is welcome.`,
+          minimum: 0,
+          maximum: 1,
+        },
+        loop: {
+          type: 'boolean',
+          description: 'Make the effect loop seamlessly (default false). For room tone and ambience beds only, with durationSeconds 10–30; never for a one-shot.',
+          default: false,
+        },
+        outputFormat: {
+          type: 'string',
+          description: `Vendor output format (default "${DEFAULT_ELEVENLABS_SFX_OUTPUT_FORMAT}" — mono 16-bit PCM at 48 kHz, wrapped as WAV here; the builder mixes at 48 kHz). pcm_44100 and pcm_24000 are the same wrapped as WAV at those rates — pcm_24000 is the fallback when the plan refuses the higher rate (403 output_format_not_allowed). mp3_44100_128 is a preview only; it never enters the build.`,
+          enum: [...ELEVENLABS_SFX_OUTPUT_FORMATS],
+          default: DEFAULT_ELEVENLABS_SFX_OUTPUT_FORMAT,
+        },
+        outputPath: {
+          type: 'string',
+          description: 'Directory for the audio file (default: the current working directory). For a channel asset: data/<channel>/assets/audio/sfx.',
+        },
+        filename: {
+          type: 'string',
+          description: 'Filename for the audio file (default: elevenlabs_sfx_<timestamp>.wav — .mp3 when outputFormat is mp3_*). For a channel asset use the catalog id: <id>.wav. The provenance sidecar is written as <name>.json next to it.',
+        },
+      },
+      required: ['text'],
     },
   },
 

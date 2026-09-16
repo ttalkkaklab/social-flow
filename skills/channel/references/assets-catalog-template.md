@@ -13,6 +13,11 @@ Well-known files are found even without a row in the table below.
 - intro / master·stinger·lockup·sonic → `intro/<slug>-intro-*.mp4` · `-lockup.png` · `-sonic-logo.wav`
 - outro / default (or youtube·instagram) → `outro/default.mp4` · `outro/<platform>.mp4`
 - bgm / default → `audio/bgm/default.wav`
+  — a bgm row's note says where the file came from: generator and plan (`lyria-clip`,
+  `suno-sound Pro`, `mlx`), the prompt or seed, and the date. Fully AI-generated audio is not
+  eligible for Content ID (YouTube, 2025-07) and a Suno file's commercial rights follow the plan
+  it was made on, so the note is what answers a claim or a rights question later.
+  `resolve-asset.py --ensure <channel dir> bgm <id> audio/bgm/<id>.wav "<note>"` writes it.
 - sfx / `<id>` → `audio/sfx/<id>.wav`
 - character / `<id>` → `characters/<id>/`
   — inside it: `identity.md` (the canonical description), `face.png` (face close-up),

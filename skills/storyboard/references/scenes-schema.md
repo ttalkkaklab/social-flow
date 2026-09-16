@@ -38,6 +38,7 @@ consumes after storyboard approval. `video-template.html` loads it with
   - [Clip audio (`visual.audio`)](#clip-audio-visualaudio)
   - [Clip prompt — one scene, one call, the prompt stored here](#clip-prompt-one-scene-one-call-the-prompt-stored-here)
   - [Music cues (`window.MUSIC` · `sound`)](#music-cues-windowmusic-sound)
+  - [Sound effects (`window.SFX` · `sound.sfx`)](#sound-effects-windowsfx-soundsfx)
   - [Cut length (`duration`) — decided by what the cut is for](#cut-length-duration-decided-by-what-the-cut-is-for)
   - [Motion background (`visual.video`) — a scene background from image to video](#motion-background-visualvideo-a-scene-background-from-image-to-video)
   - [broll — a generated-video stretch (reference only) · spliced between scenes](#broll-a-generated-video-stretch-reference-only-spliced-between-scenes)
@@ -731,7 +732,7 @@ and `camera-slide-template.html`; its image and effect parameters come from scen
 | `beat` | optional on long-form, required on a short | short: `hook` \| `drip` \| `cta`. long-form: `hook` \| `hooking` \| `result` \| `body` \| `turn` \| `cta` (`turn` on the story arc only). See §playback order above |
 | `arc` | long-form cover only | `answer-first` (default) \| `story` — which playback order a long-form episode walks. Ignored on a short. See §playback order above |
 | `shot` | recommended | `{ feel, size, angle, why, info, infoType, share, shareType, space }` — below. `feel` and `infoType` are written **before** `size`·`angle`·`space`·`camera` are chosen (directing-grammar §5) |
-| `sound` | optional | `{ cue, drop, sfx }` — what the audience hears under this shot (§music cues). Narrated shots only (`cover`, `points`, `quote`); `broll` and `outro` aren't cards, so there is nothing for a cue to key to |
+| `sound` | optional | `{ cue, drop, sfx }` — what the audience hears under this shot (§music cues · §sound effects). Narrated shots only (`cover`, `points`, `quote`); `broll` and `outro` aren't cards, so there is nothing for a cue to key to |
 
 ```js
 shot: {
@@ -1940,6 +1941,21 @@ uses a channel bed instead — the id `resolve-asset.py <channel dir> bgm <id>` 
 `assets/audio/bgm/<id>.wav`. produce works out how long each cue has to run from the shots that use
 it; don't write a length.
 
+**`prompts` instead of `prompt`** hands Lyria the format it is built for — a weighted blend:
+
+```js
+tense: { prompts: [{ text: "warm low strings, leaves space for a spoken voiceover, no melody in the vocal range", weight: 1.0 },
+                   { text: "low pulsing bass, tighter", weight: 1.5 }],
+         bpm: 120, density: 0.4, brightness: 0.4 }
+```
+
+Each entry is `{ text, weight }`; weight is any non-zero number, 1.0 is the vendor's starting point
+and only the ratios matter. `density` and `brightness` (0–1) pass through too. produce sends a cue
+with `prompts` to `music_generate_advanced`. Two cues that share their text and differ only in
+weights and density move less at the crossfade than two written from scratch — that is how a body
+cue and its tenser variant come from one material. A cue carries `prompt` or `prompts`, not both;
+a cue with neither and no `asset` is an error (`check-scenes.js`).
+
 **`base` is optional.** With only `{ tense: … }` the episode still opens on the channel's shared
 bed and switches at the first shot that asks for `tense`.
 
@@ -1949,7 +1965,7 @@ Per shot:
 sound: {
   cue:  "tense",    // the bed changes to this cue here and stays until another shot changes it
   drop: false,      // true = the bed goes silent under this shot (0.30s ramp, not a cut)
-  sfx:  "whoosh"    // a shared sfx asset id, heard at the shot's first frame
+  sfx:  "whoosh-soft"  // a key in window.SFX (or a channel sfx catalog id), heard at the shot's first frame (§sound effects)
 }
 ```
 
@@ -1964,6 +1980,61 @@ sound: {
 - **On a story arc the drop goes on the turn.** The music goes out at the peak, and the turn is
   the peak; the result is where it comes back (scenario-craft §7). storyboard.html warns when a
   story arc's drop sits anywhere else.
+- **The hook is quieter without a cue.** `build-reel.sh` holds the bed a further `BGM_HOOK_LU`
+  (6) under the resting level while card 0 runs and ramps back over 2 s from the start of card 1,
+  on the one-bed path too. A quiet opening needs no drone cue and no `sound.drop` on the cover —
+  spend the drop on the line the episode is about.
+
+### Sound effects (`window.SFX` · `sound.sfx`)
+
+An effect is heard at the shot's first frame, so it belongs to **the cut** — to what changed
+between the previous shot and this one — not to the shot's content. The clip's own soundtrack
+is `visual.audio` (what the model records); an effect is what the edit lays on top.
+
+```js
+window.SFX = {
+  "whoosh-soft": { prompt: "short soft whoosh, fabric through air, no tail", seconds: 0.8 },
+  "hit-low":     { prompt: "low cinematic impact, single hit, short decay, no music", seconds: 1.5 },
+  "tick":        { asset: "ui-tick" }         // a channel catalog id instead of a generated effect
+};
+```
+
+Each key is an effect id — lowercase letters, digits and hyphens, named by family and variant
+(`whoosh-soft`, `hit-low`, `riser-2s`) so the next episode reuses it. `prompt` goes to
+`sfx_elevenlabs_generate` **once**: produce saves the file as `assets/audio/sfx/<id>.wav` in the
+channel catalog with a `.json` provenance sidecar (tool, model, prompt, seconds, request id, date,
+rights), and every later episode that names the same id fetches it at $0. `seconds` (0.5–30) pins
+the length — 0.6–1.0 for a whoosh, 1–2 for a hit, 2–4 for a riser; `loop: true` with 10–30 s is a
+bed (room tone), never a one-shot. `asset` skips generation and names a catalog id
+(`resolve-asset.py <channel dir> sfx <id>`).
+
+**Without `window.SFX`, `sound.sfx` is a catalog id**, and the full check refuses one whose file
+is missing. With it, `sound.sfx` names a key there, and a name that isn't there is an error.
+
+Which cuts get one — the effect matches the size and speed of what moved on the cut:
+
+| What happened on the cut | Effect | Family |
+|---|---|---|
+| a `whip:` or `push:` transition, a smash `cut` onto a new place | the air moving with the camera | `whoosh` — soft for a push, hard for a whip |
+| the line before `sound.drop` — the hit, then the silence | one low impact on this cut; the drop is the next shot's | `hit` · `braam` |
+| a figure, a stamp or a label landing on a slide (`kind:"diagram"`, a reveal group) | a small dry click as it lands, once per shot at most | `tick` · `pop` |
+| a build across several shots toward the turn | a rise that ends on the cut it aims at | `riser` |
+| an `insert` of a thing doing something on a still — a phone ringing, a stamp coming down | the thing's own sound | the object's family |
+| a `dissolve`, a `dip`, a slow `dolly in`, a caption appearing | **nothing** — a soft picture takes a small sound or none | — |
+
+- **Budget.** A short carries one effect per ~10 s at most and never two on adjacent cards; the
+  hook may carry one. Long-form: one per scene. Past that they read as decoration, and
+  `check-scenes.js` warns.
+- **Not a substitute for a drop.** The drop is the loudest thing an edit can do; an effect
+  announces the drop, it does not replace it.
+- **Not on `broll` or `outro`.** A broll plays its own sound (produce absolute rule 9) and the
+  outro is spliced after the build; the checker refuses both.
+- **Not twice.** When `visual.audio` already asks the clip for the sound (a door closing in the
+  clip), don't add the same door as `sound.sfx` — one source per sound.
+- **Level is a knob, not a measurement.** The builder plays effects at `SFX_VOL` (0.85) and keys
+  the ducking on the voice alone, so an effect never pushes the bed down. Unlike the bed there is
+  no measured distance from the voice (bgm-scoring §effects) — write prompts that already sit
+  under speech ("soft", "short decay", "no music") instead of reaching for the knob.
 
 Where the numbers under all this come from, and which of them are evidence and which are our own
 practice: [bgm-scoring.md](../../produce/references/bgm-scoring.md). The short version — the bed
