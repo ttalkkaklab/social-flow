@@ -235,7 +235,13 @@ function clipAssemble(opts) {
   if (space) parts.push(space);
   if (scene) parts.push(dot(scene));
   const move = isStatic ? "static camera" : ((cam.speed || "").trim() + " " + (cam.movement || "").trim()).trim();
-  const span = [(cam.framing || "").trim(), move, cam.end ? "ending on " + String(cam.end).trim() : ""]
+  // A pan, tilt, truck, pedestal, dolly or zoom is a sentence from A to B, and the sentence has a
+  // hold on each end (L13–L14): the camera pauses on the opening picture, moves, then settles on
+  // the closing one — the handles the edit needs, and the rhythm the previz clip renders too.
+  // ("pauses", not "holds": the lock verbs LOCK_RE reads are the scene's, never the camera's.)
+  const travels = require("./production-mode.js").travels(cam);
+  const span = [(cam.framing || "").trim(), travels ? "pauses, then " + move : move,
+                cam.end ? (travels ? "settling on " : "ending on ") + String(cam.end).trim() : ""]
     .filter(Boolean).join(", ");
   if (span) parts.push(dot(span));
   if (motion) parts.push(dot(motion));
@@ -295,6 +301,8 @@ function spaceSentence(opts) {
   if (eye && opts.eyeline.mode !== "none") bits.push(eye);
   const composition = require("./structure-contract.js").compositionText(opts.composition);
   if (composition) bits.push(composition);
+  const depth = require("./structure-contract.js").depthText(opts.depth);
+  if (depth) bits.push(depth);
   if (line) bits.push("keep " + line + " true in this frame");
   if (light) bits.push(light);
   return bits.length ? "From the camera: " + bits.join(". ") + "." : "";
@@ -351,7 +359,7 @@ function loadShot(file, index) {
     angle: sh.angle,
     layout: sp.layout,
     facing: sp.facing,
-    eyeline: sh.eyeline, composition: sh.composition,
+    eyeline: sh.eyeline, composition: sh.composition, depth: sh.depth,
     line: sp.line,
     light: sp.light,
     camera: v.camera || null,
@@ -481,9 +489,12 @@ function selftest() {
   const c1 = clipAssemble({ camera: camA, engine: "seedance",
     motion: "steam curling off the cup", locks: "the notepad's three lines stay identical in every frame",
     audio: "quiet room tone, no music, no speech" });
-  eq("clip: the produce §3 recipe — framing, speed movement, ending on end",
+  eq("clip: the produce §3 recipe — framing, pauses, then speed movement, settling on end",
     c1.prompt,
-    "chest-up on the subject, very slow dolly in, ending on subject centred at mid-frame. steam curling off the cup. the notepad's three lines stay identical in every frame. Audio: quiet room tone, no music, no speech.");
+    "chest-up on the subject, pauses, then very slow dolly in, settling on subject centred at mid-frame. steam curling off the cup. the notepad's three lines stay identical in every frame. Audio: quiet room tone, no music, no speech.");
+  ok("clip: a move that does not travel (handheld) keeps the plain span",
+    clipAssemble({ camera: { movement: "handheld", speed: "steady", framing: "chest-up", end: "the same" }, engine: "veo" })
+      .prompt.startsWith("chest-up, steady handheld, ending on the same."));
   eq("clip: 'no music, no speech' in the Audio sentence is exempt", c1.negHits.length, 0);
   eq("clip: clean prompt has no timing hits", c1.timeHits.length, 0);
   eq("clip: all four slots present", c1.missing.length, 0);
@@ -652,7 +663,7 @@ function main(argv) {
       scene: opts.scene, motion: args.motion, locks: args.locks,
       audio: args.audio !== undefined ? args.audio : opts.audio,
       withSpace: !!args["with-space"],
-      layout: opts.layout, facing: opts.facing, line: opts.line, light: opts.light, eyeline: opts.eyeline, composition: opts.composition
+      layout: opts.layout, facing: opts.facing, line: opts.line, light: opts.light, eyeline: opts.eyeline, composition: opts.composition, depth: opts.depth
     });
     if (r.missing.length)
       console.error("warning: visual.camera is missing " + r.missing.join(", ") +

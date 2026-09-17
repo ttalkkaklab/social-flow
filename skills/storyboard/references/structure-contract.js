@@ -297,6 +297,85 @@
       (c.reason ? '; framing intent: ' + c.reason : '') + '. Keep key facial features clear of the format subtitle and platform UI safe zones';
   }
 
+  // L11: depth of field is a decision about how many things the viewer may read at once.
+  // One readable piece of information → shallow (the director chooses for the viewer); two or
+  // more → deep (the viewer chooses). Optical simulation on the still lane is a region mask,
+  // so the record is a plan and a prompt, never proof of a focal plane.
+  const DEPTH_SCHEMA = {
+    type: 'object', additionalProperties: false, required: ['mode'],
+    description: 'L11 depth-of-field plan. Count the information the viewer must read in the frame at once: one → shallow, two or more → deep; a departure from that rule needs a reason. Not applicable on HTML explanation routes; legacy omissions warn.',
+    properties: {
+      mode: { type: 'string', enum: ['shallow', 'deep', 'none'], description: 'shallow = one plane sharp, the rest soft; deep = every named plane sharp at once; none = not applicable' },
+      reads: { type: 'integer', minimum: 1, description: 'How many separate things the viewer must read in this frame at the same time (a face, a document, a person in the doorway)' },
+      focus: { type: 'string', minLength: 1, description: 'shallow: the one thing that stays sharp; on a person, the eyes' },
+      planes: { type: 'array', minItems: 2, maxItems: 3, items: { type: 'string', minLength: 1 }, description: 'deep: what reads on each plane, listed front to back' },
+      sound: { type: 'string', enum: ['near', 'full'], description: 'Sound perspective that pairs with the depth: near = voice forward, room behind (shallow); full = every source audible (deep)' },
+      reason: { type: 'string', minLength: 1, description: 'Required for none, for shallow with reads ≥ 2 and for deep with reads = 1; say why the rule is broken' }
+    },
+    allOf: [
+      { if: { properties: { mode: { const: 'shallow' } } }, then: { required: ['reads', 'focus'] } },
+      { if: { properties: { mode: { const: 'deep' } } }, then: { required: ['reads', 'planes'] } },
+      { if: { properties: { mode: { const: 'none' } } }, then: { required: ['reason'] } }
+    ]
+  };
+  const PHOTO_MODES = ['still_camera', 'generated_video', 'stock_video'];
+  const FOCUS_EFFECTS = ['focus-in', 'rack-focus'];
+  const EYES_RE = /눈|\beyes?\b/i;
+  function validateDepth(d) {
+    if (!d || typeof d !== 'object' || Array.isArray(d)) return ['depth must be an object'];
+    const errors = [], required = new Set(DEPTH_SCHEMA.required);
+    Object.keys(d).forEach(k => {
+      const r = Object.prototype.hasOwnProperty.call(DEPTH_SCHEMA.properties, k) && DEPTH_SCHEMA.properties[k], v = d[k];
+      if (!r) { errors.push('unknown depth field: ' + k); return; }
+      if (r.type === 'string' && (typeof v !== 'string' || !v.trim())) errors.push(k + ' must be nonempty text');
+      if (r.enum && !r.enum.includes(v)) errors.push(k + ' is outside the depth vocabulary');
+      if (r.type === 'integer' && !posInt(v)) errors.push(k + ' must be a positive integer');
+      if (r.type === 'array' && (!Array.isArray(v) || v.length < r.minItems || v.length > r.maxItems || v.some(x => !text(x)))) errors.push(k + ' lists two or three planes, front to back, each nonempty text');
+    });
+    DEPTH_SCHEMA.allOf.forEach(b => { if (b.if.properties.mode.const === d.mode) b.then.required.forEach(k => required.add(k)); });
+    if (d.mode === 'shallow' && posInt(d.reads) && d.reads >= 2) required.add('reason');
+    if (d.mode === 'deep' && d.reads === 1) required.add('reason');
+    required.forEach(k => { if (d[k] === undefined) errors.push(k + ' is required for ' + (d.mode || 'depth') + (k === 'reason' && d.mode !== 'none' ? ' when reads disagrees with the depth (one thing → shallow, two or more → deep)' : '')); });
+    if (d.mode === 'none' && Object.keys(d).some(k => !['mode', 'reason'].includes(k))) errors.push('none carries only mode and reason');
+    if (d.mode === 'shallow' && d.planes !== undefined) errors.push('shallow names one focus, not planes');
+    if (d.mode === 'deep' && d.focus !== undefined) errors.push('deep names planes, not one focus');
+    return errors;
+  }
+  function depthNeeded(s) {
+    const sh = s && s.shot || {}, r = sh.render || {};
+    if (!PLACED(s) || (r.mode && !PHOTO_MODES.includes(r.mode))) return false;
+    const effect = r.mode === 'still_camera' && r.camera && r.camera.effect;
+    return !!(FOCUS_EFFECTS.includes(effect) || ['mcu', 'cu', 'choker', 'ecu', 'insert', 'two', 'three', 'ots'].includes(sh.size));
+  }
+  function checkDepths(shots, draft) {
+    const out = [];
+    shots.forEach((s, i) => {
+      if (!s) return;
+      const sh = s.shot || {}, d = sh.depth, r = sh.render || {}, c = sh.composition;
+      const add = (msg, level) => out.push({ level: level || (draft ? 'later' : 'bad'), where: 'shot ' + (i + 1), what: 'shot.depth: ' + msg });
+      if (d === undefined) {
+        if (depthNeeded(s)) add('count what the viewer must read here and record shallow or deep, or none with a reason', s.scene && shots.some(x => x && x.scene === s.scene && x.shot && x.shot.depth) ? undefined : 'warn');
+        return;
+      }
+      const errors = validateDepth(d);
+      errors.forEach(msg => add(msg, 'bad'));
+      if (errors.length || d.mode === 'none') return;
+      const effect = r.mode === 'still_camera' && r.camera && r.camera.effect;
+      if (d.mode === 'deep' && FOCUS_EFFECTS.includes(effect)) add(effect + ' blurs every plane but one; deep focus keeps them all sharp — choose pull, pan, push or a hold, or declare shallow');
+      if (d.mode === 'shallow' && c && c.subjectKind === 'face' && !EYES_RE.test(d.focus)) add('on a person the focus goes on the eyes; name them in focus', 'warn');
+      if (d.mode === 'shallow' && d.reads === 1 && ['two', 'three', 'ots'].includes(sh.size)) add('two people in frame with one plane sharp loses the partner; confirm the other person is not information here', 'warn');
+      if (d.mode === 'deep' && ['choker', 'ecu', 'insert'].includes(sh.size)) add('an extreme close-up rarely holds two readable planes; review reads', 'warn');
+      if (d.sound && ((d.mode === 'shallow') !== (d.sound === 'near'))) add('depth and sound perspective usually pair — voice forward with shallow, every source with deep; review the mix', 'warn');
+    });
+    return out;
+  }
+  function depthText(d) {
+    if (!d || validateDepth(d).length || d.mode === 'none') return '';
+    const intent = d.reason ? '; depth intent: ' + d.reason : '';
+    if (d.mode === 'shallow') return 'Shallow depth of field: only ' + d.focus + ' is sharp, everything nearer and farther falls softly out of focus' + intent;
+    return 'Deep focus: ' + d.planes.join(', ') + ' all read sharp at the same time, front to back' + intent;
+  }
+
   function check(win, opts) {
     const out = [];
     const bad = (where, what) => out.push({ level: 'bad', where, what });
@@ -307,6 +386,7 @@
     const placed = shots.map((s, i) => ({ s, no: i + 1 })).filter(x => PLACED(x.s));
     out.push(...checkEyelines(shots, opts && opts.draft));
     out.push(...checkCompositions(shots, opts && opts.draft));
+    out.push(...checkDepths(shots, opts && opts.draft));
     const st = win.STRUCTURE;
 
     if (st === undefined) {
@@ -965,6 +1045,7 @@
       if (s.shot) Object.assign(row, {
         feel: s.shot.feel, info: s.shot.info, infoType: s.shot.infoType, size: s.shot.size, angle: s.shot.angle, why: s.shot.why,
         render: s.shot.render && s.shot.render.mode, share: s.shot.share,
+        depth: s.shot.depth && s.shot.depth.mode,
       });
       row.narration = (s.narration || []).map(seg => seg && (seg.tts || seg.sub) || '').join(' ');
       if (s.transition) row.transition = s.transition;
@@ -987,7 +1068,7 @@
              sequences, unplacedShots: orphans, splicedShots: spliced };
   }
 
-  const api = { VERSION, COMPOSITION_SCHEMA, validateComposition, compositionNeeded, checkCompositions, compositionText, EYELINE_SCHEMA, validateEyeline, checkEyelines, eyelineNeeded, eyelineText, VOCAB: { SIZES, ANGLES, TYPES, BEATS, INFO_TYPES, SHARE_TYPES, HOOK_TYPES, HOOK_FORMS, ARCS,
+  const api = { VERSION, COMPOSITION_SCHEMA, validateComposition, compositionNeeded, checkCompositions, compositionText, DEPTH_SCHEMA, validateDepth, depthNeeded, checkDepths, depthText, EYELINE_SCHEMA, validateEyeline, checkEyelines, eyelineNeeded, eyelineText, VOCAB: { SIZES, ANGLES, TYPES, BEATS, INFO_TYPES, SHARE_TYPES, HOOK_TYPES, HOOK_FORMS, ARCS,
                                   RENDER_MODES, CHARGES_OPEN, CHARGES_CLOSE, TRANSITION_RE },
                 check, sync, outline, slugOf, ownerOf };
   if (typeof module === 'object' && module.exports) module.exports = api;

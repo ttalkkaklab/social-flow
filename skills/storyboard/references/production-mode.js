@@ -58,10 +58,10 @@
     properties: {
       preset: { type: 'string', enum: Object.keys(CAMERA_PRESETS), description: 'Optional shot preset. Omit on ordinary camera shots; drone-flythrough is continuous travel through a 3D location.' },
       variant: { type: 'string', enum: Object.keys(CAMERA_PRESETS['drone-flythrough'].variants), description: 'cinematic keeps the horizon level; fpv uses authored bank at bends. Required with drone-flythrough.' },
-      movement: { type: 'string', description: 'Camera movement. For drone shots copy the trajectory-derived value from drone-previz.js.' },
-      speed: { type: 'string', description: 'Movement pace; generated from the trajectory on drone shots.' },
-      framing: { type: 'string', description: 'Opening composition; generated from the trajectory on drone shots.' },
-      end: { type: 'string', description: 'Endpoint composition; generated from the trajectory on drone shots.' },
+      movement: { type: 'string', description: 'One camera move in vendor vocabulary, chosen from shot.feel (directing-grammar §4–§5): static · dolly in/out · zoom in/out (lens only) · dolly zoom in/out · pan left/right · tilt up/down · whip pan · truck left/right · pedestal up/down · crane up/down · arc shot · tracking · handheld · aerial. Not push in, orbit, boom or a Korean word (storyboard_check enforces the vocabulary and the conditions below). A pan, tilt, truck, pedestal or dolly is a sentence from framing to end, so end must differ from framing. A whip pan needs the hit in sound.sfx or visual.audio. A dolly zoom needs shot.depth deep (the background that stretches), a stationary subject, and happens once per episode. For drone shots copy the trajectory-derived value from drone-previz.js.' },
+      speed: { type: 'string', description: 'Movement pace as slow, steady or fast — never inside movement, never a word the viewer cannot see (very slow, subtle). Empty on static. Generated from the trajectory on drone shots.' },
+      framing: { type: 'string', description: 'Opening composition — what the camera holds before the move starts (hold in). Generated from the trajectory on drone shots.' },
+      end: { type: 'string', description: 'Closing composition — where the move settles and holds (hold out); on a pan, tilt, truck, pedestal or dolly it names a different picture from framing. Generated from the trajectory on drone shots.' },
       trajectory: {
         type: 'object', additionalProperties: true,
         description: 'Drone flight plan. Keys cover zero through seconds in increasing order; positions move and targets remain distinct and nonvertical. Render and inspect the interpolated path before generation.',
@@ -206,6 +206,90 @@
 
   const NEUTERED = /\b(?:very|extremely|almost|ever so)\s+(?:slow|slight|small|subtle|gentle)|\b(?:barely|hardly|imperceptibl[ey]|subtle|subtly|tiny|minimal|micro|slight|slightly|gentle|gently|restrained|quiet)\b|\bhold(?:ing)?\s+(?:the\s+)?(?:composition|frame|shot)\b|\block(?:ed)?[- ]off\b|\bbreathing only\b/i;
   const WIDE = /\b(?:wide|establishing|extreme long|long shot|full[- ]body figures|small figures)\b/i;
+  // The move families a generated shot may declare, in the vendor's words (video-model-selection
+  // §Camera), and what each one has to bring with it (directing-grammar §4, film-directing course
+  // L13 pan·tilt · L14 dolly·truck·tracking · L15 dolly zoom, 2026-08-28 ~ 08-30). `movement` opens
+  // with the move; a trailing description ("dolly in toward the gate") is allowed, a speed word is not.
+  const MOVES = [
+    { key: 'static', family: 'static', re: /^(?:static|fixed|locked(?:[- ]off)?)(?:\s+camera)?\b/i },
+    { key: 'dolly zoom', family: 'dollyzoom', re: /^dolly zoom(?:\s+(in|out))?\b/i },
+    { key: 'dolly', family: 'travel', re: /^dolly (?:in|out)\b/i },
+    { key: 'zoom', family: 'lens', re: /^zoom (?:in|out)\b/i },
+    { key: 'whip pan', family: 'whip', re: /^whip pan\b/i },
+    { key: 'pan', family: 'rotate', re: /^pan(?:\s+(?:left|right))?\b/i },
+    { key: 'tilt', family: 'rotate', re: /^tilt (?:up|down)\b/i },
+    { key: 'truck', family: 'travel', re: /^truck(?:\s+(?:left|right))?\b/i },
+    { key: 'pedestal', family: 'height', re: /^pedestal (?:up|down)\b/i },
+    { key: 'crane', family: 'height', re: /^crane (?:up|down)\b/i },
+    // arc and tracking hold one framing while the world moves past — no A/B rule, no hold phrase.
+    { key: 'arc shot', family: 'follow', re: /^arc shot\b/i },
+    { key: 'tracking', family: 'follow', re: /^tracking\b/i },
+    { key: 'handheld', family: 'viewpoint', re: /^(?:handheld|shaky cam)\b/i },
+    { key: 'aerial', family: 'aerial', re: /^(?:aerial|drone)\b/i },
+  ];
+  const MOVE_WORDS = 'static, dolly in/out, zoom in/out, dolly zoom in/out, pan left/right, tilt up/down, whip pan, truck left/right, pedestal up/down, crane up/down, arc shot, tracking, handheld, aerial';
+  // What practitioners say → the word the engines were shown (Veo: 0 hits for push, orbit, boom).
+  const SYNONYMS = [
+    [/\bpush(?:ing)?[ -]?in\b/i, 'dolly in'], [/\bpull[ -]?(?:back|out)\b/i, 'dolly out'],
+    [/\borbit(?:ing)?\b/i, 'arc shot'], [/\bboom (?:up|down)\b/i, 'pedestal up/down'], [/\bcrab\b/i, 'truck left/right'],
+    [/\b(?:zolly|vertigo(?: effect)?|contra[- ]zoom|trombone shot)\b/i, 'dolly zoom in/out'], [/\bswish pan\b/i, 'whip pan'],
+    [/팬|패닝/, 'pan left/right'], [/틸트/, 'tilt up/down'], [/달리/, 'dolly in/out'], [/트럭/, 'truck left/right'],
+    [/트래킹|따라가/, 'tracking'], [/휩|스윕/, 'whip pan'], [/페데스탈|붐/, 'pedestal up/down'],
+  ];
+  const moveOf = camera => MOVES.find(m => m.re.test(String(camera?.movement || '').trim())) || null;
+  // Moves that travel from one picture to another — the ones that carry a hold on each end.
+  const TRAVELS = ['rotate', 'travel', 'height', 'lens', 'dollyzoom'];
+  const travels = camera => { const m = moveOf(camera); return !!m && TRAVELS.includes(m.family); };
+  function moveErrors(scene) {
+    const v = scene.visual || {}, camera = v.camera || {}, errors = [];
+    if (isDrone(camera) || !text(camera.movement)) return errors;
+    const written = String(camera.movement).trim();
+    // "slow dolly in" is a move with its pace in the wrong slot — read the move past the pace word.
+    const pace = /^(?:very\s+)?(?:slow|steady|fast|quick|rapid)(?:ly)?\s+/i.exec(written);
+    const movement = pace ? written.slice(pace[0].length) : written, move = moveOf({ movement });
+    if (pace) errors.push(`visual.camera.movement "${written}" carries the pace — the pace lives in visual.camera.speed; write "${movement}"`);
+    if (!move) {
+      const hint = SYNONYMS.find(([re]) => re.test(movement));
+      errors.push(`visual.camera.movement "${written}" is not a vendor move` +
+        (hint ? ` — write "${hint[1]}"` : ` — open with one of ${MOVE_WORDS}`) + ' (directing-grammar §4)');
+      return errors;
+    }
+    // L13 — a pan is a sentence from A to B, not a look around: the two ends name different pictures.
+    if (travels({ movement }) && text(camera.framing) && text(camera.end) && normalize(camera.framing) === normalize(camera.end))
+      errors.push(`a ${move.key} that starts and ends on "${camera.framing}" has nowhere to go — write what the camera settles on in visual.camera.end, or choose static`);
+    // L13 — a whip pan lands only on a sound; without one it is a smear the edit cannot hide.
+    if (move.family === 'whip' && !text(scene.sound?.sfx) && !text(v.audio))
+      errors.push('a whip pan lands on a sound — write the hit in sound.sfx (or the whoosh in visual.audio) on this shot');
+    // L15 — a dolly zoom happens to the background, on a subject who stands still, in one direction.
+    if (move.family === 'dollyzoom') {
+      if (!/^dolly zoom (?:in|out)\b/i.test(movement))
+        errors.push('a dolly zoom names its direction — "dolly zoom in" (camera in, lens out: the world backs away, isolation) or "dolly zoom out" (camera out, lens in: the background closes in, cornered)');
+      const depth = scene.shot?.depth;
+      if (depth?.mode !== 'deep' || !Array.isArray(depth.planes) || depth.planes.length < 2)
+        errors.push('a dolly zoom is something that happens to the background — write shot.depth deep with the planes that stretch (a corridor, columns, a row of cars); in front of a plain wall nothing happens');
+      const travel = scene.shot?.composition?.movement;
+      if (travel && travel !== 'stationary')
+        errors.push(`a dolly zoom holds the subject's size, so the subject stands still — shot.composition.movement is "${travel}"`);
+    }
+    return errors;
+  }
+  function cameraWarnings(scene) {
+    const camera = scene.visual?.camera || {}, move = moveOf(camera), warnings = [], d = scene.duration;
+    if (!move || isDrone(camera)) return warnings;
+    if (move.family === 'dollyzoom' && Number.isFinite(d) && d > 5)
+      warnings.push(`a dolly zoom is one hit, 3–5 s (directing-grammar §5); this cut runs ${d} s — the viewer sees the trick before the feeling lands`);
+    if (move.family === 'whip' && Number.isFinite(d) && d > 4)
+      warnings.push(`a whip pan is a transition, 3–4 s (directing-grammar §5); this cut runs ${d} s`);
+    if (move.family === 'rotate' && /\bfast\b/i.test(String(camera.speed || '')))
+      warnings.push(`a fast ${move.key} strobes at 24 fps when the background holds vertical lines (posts, window frames); if it reads broken, widen the framing and come closer rather than slowing down (L13)`);
+    return warnings;
+  }
+  // L15 — the trick is spent once: the second time the audience watches the camera, not the person.
+  // Takes the whole board so the numbers it prints are board shot numbers.
+  function episodeMoveErrors(scenes) {
+    const at = (scenes || []).map((s, i) => eligible(s) && !reused(s) && s.visual?.video && moveOf(s.visual?.camera)?.family === 'dollyzoom' ? i + 1 : 0).filter(Boolean);
+    return at.length > 1 ? [`[dolly-zoom-twice] shots ${at.join(', ')} each ask for a dolly zoom — it is spent once per episode (directing-grammar §4); keep the shot where the world turns over, and write another move on the rest`] : [];
+  }
   function cameraErrors(scene) {
     const v = scene.visual || {}, camera = v.camera || {}, errors = droneSceneErrors(scene);
     const span = [camera.movement, camera.speed].filter(text).join(' ');
@@ -213,7 +297,7 @@
     if (hit) errors.push(`visual.camera asks for a move the viewer cannot see ("${hit[0]}"); write a visible move at slow, steady or fast, or choose static`);
     if (v.video?.cameraFixed === true && !staticCamera(camera))
       errors.push(`visual.video.cameraFixed locks the provider camera while visual.camera.movement is "${camera.movement}"; drop cameraFixed or write static`);
-    return errors;
+    return errors.concat(moveErrors(scene));
   }
   // The final state is written once: the last motion beat on an acted shot, videoDesign.after otherwise.
   function finalState(design) {
@@ -363,6 +447,7 @@
     (win.SCENES || []).forEach((s, i) => {
       if (eligible(s) && !reused(s) && s.visual?.video) cameraErrors(s).forEach(e => errors.push('shot ' + (i + 1) + ': ' + e));
     });
+    episodeMoveErrors(win.SCENES || []).forEach(e => errors.push(e));
     // A generated cut exists → the previz renderer and the video model were put to the user
     // (blender-previz.md §6, production-mode.md §When to ask). Nothing renders or bills before that.
     const generatedCuts = (win.SCENES || []).filter(s => eligible(s) && !reused(s) && s.visual?.video && s.shot?.render?.mode === 'generated_video');
@@ -459,7 +544,7 @@
       // hook_only: the hook plus every imported clip — reuse is outside the count but still a slot.
       generatedVideoMax: production.mode === 'hook_only' ? 1 + scenes.filter(reused).length : RATIOS[production.mode] ? scenes.filter(eligible).length : Math.min(base.generatedVideoMax ?? 2, 2) };
   }
-  const api = { CAMERA_INPUT_SCHEMA, cameraInputErrors, CAMERA_PRESETS, isDrone, droneErrors, droneSample, droneSlots, droneBinding, droneCameraKeys, droneSceneErrors, STYLES, MODES, CHOICES, CUT_TYPES, RATIOS, newCut, generated, hookScene, coverageErrors, CAMERA_SLOTS, PREVIZ_RENDERERS, VIDEO_MODELS, packPresets, ALL_LOOKS, eligible, reused, reuseErrors, full, signature, check, policy, motionErrors, missingCameraSlots, cameraErrors, staticCamera, finalState };
+  const api = { CAMERA_INPUT_SCHEMA, cameraInputErrors, CAMERA_PRESETS, isDrone, droneErrors, droneSample, droneSlots, droneBinding, droneCameraKeys, droneSceneErrors, STYLES, MODES, CHOICES, CUT_TYPES, RATIOS, newCut, generated, hookScene, coverageErrors, CAMERA_SLOTS, PREVIZ_RENDERERS, VIDEO_MODELS, packPresets, ALL_LOOKS, eligible, reused, reuseErrors, full, signature, check, policy, motionErrors, missingCameraSlots, cameraErrors, cameraWarnings, episodeMoveErrors, moveOf, travels, MOVES, staticCamera, finalState };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.PRODUCTION_MODE = api;
 })(typeof window === 'object' ? window : globalThis);

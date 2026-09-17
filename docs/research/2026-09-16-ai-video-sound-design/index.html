@@ -267,7 +267,7 @@
 
 <!-- ───────────────────────────── 4 ───────────────────────────── -->
 <h2 id="post">4. 후처리 레인 — 효과음·폴리·음악</h2>
-<p>무음 클립에 소리를 입히는 방법은 셋이다. 영상을 넣으면 소리를 만들어 주는 V2A(video-to-audio), 글로 효과음을 만드는 텍스트→SFX, 그리고 음악 생성. 우리 플러그인은 둘째와 셋째를 갖고 있다. 텍스트→SFX 는 이 조사 직후(2026-09-16) 붙였다.</p>
+<p>무음 클립에 소리를 입히는 방법은 셋이다. 영상을 넣으면 소리를 만들어 주는 V2A(video-to-audio), 글로 효과음을 만드는 텍스트→SFX, 그리고 음악 생성. 우리 플러그인은 둘째와 셋째를 갖고 있다. 텍스트→SFX 는 이 조사 직후(2026-09-16) 붙였고 같은 날 효과음 레벨 실측과 룸톤 레인, 돌아온 클립의 자막·대사 검사를 이어 붙였다. V2A 는 ElevenLabs 의 Video-to-Sound 가 스튜디오 기능이지 공개 API 가 아니라서(SFX API 는 텍스트 입력만 받는다, 2026-09-16 문서 확인) 아직 빈 자리다.</p>
 
 <div class="tablewrap">
 <table>
@@ -355,7 +355,7 @@
     <text x="468" y="242" font-size="12" fill="var(--muted)">−15 LU 이상 아래 (같은 논문의 해설 위 환경음 수치)</text>
   </g>
 </svg>
-<figcaption>보라 막대의 진한 경계 둘이 근거가 있는 숫자다. 효과음 막대는 편집 현장 관행(−10 ~ −20 dB 를 대사 −6 ~ −12 dB 기준으로 환산)이라 실측으로 조정한다.</figcaption>
+<figcaption>보라 막대의 진한 경계 둘이 근거가 있는 숫자다. 효과음 막대는 편집 현장 관행(−10 ~ −20 dB 를 대사 −6 ~ −12 dB 기준으로 환산)이라 실측으로 조정한다. 빌더 기본값은 효과음의 가장 큰 400ms 가 음성 아래 6 LU(SFX_SEP), 룸톤은 15 LU(AMB_SEP).</figcaption>
 </figure>
 
 <h3>덕킹은 음성 게이트 하나로</h3>
@@ -493,7 +493,7 @@
 
 <!-- ───────────────────────────── 9 ───────────────────────────── -->
 <h2 id="plugin">9. 플러그인 대응표</h2>
-<p>조사한 관행 중 이미 구현된 것과 빈 자리를 나란히 놓았다. 빈 자리 가운데 값이 가장 컸던 텍스트→SFX 레인은 이 조사 직후 붙였다(<code>sfx_elevenlabs_generate</code> · <code>window.SFX</code> · check-scenes 의 id 검사). 아직 없는 둘은 V2A 폴리와 Veo 자막 환각 검출이다.</p>
+<p>조사한 관행 중 이미 구현된 것과 빈 자리를 나란히 놓았다. 빈 자리 가운데 값이 가장 컸던 텍스트→SFX 레인은 이 조사 직후 붙였다(<code>sfx_elevenlabs_generate</code> · <code>window.SFX</code> · check-scenes 의 id 검사). 같은 날 두 번째 묶음으로 효과음 레벨 실측, 룸톤 레인, 돌아온 클립의 자막·대사 검사를 붙였다. 아직 없는 건 V2A 폴리 하나다.</p>
 
 <div class="tablewrap">
 <table>
@@ -504,10 +504,11 @@
 <tr><td>음성 아래 10 LU · 바닥 4 LU · 실측</td><td><span class="tag ev">있음</span></td><td>bgm-bed.sh · build-reel step 10c</td><td>근거 있는 숫자 둘</td></tr>
 <tr><td>큐 전환 · 드롭 · 샷 첫 프레임 sfx</td><td><span class="tag ev">있음</span></td><td>window.MUSIC · sound.{cue,drop,sfx}</td><td>sfx 는 카탈로그 id 만</td></tr>
 <tr><td>J컷 · 문장 사이 고정 무음</td><td><span class="tag ev">있음</span></td><td>transition:"jcut" · 0.79.0 TTS 간격</td><td></td></tr>
-<tr><td>텍스트→SFX 생성</td><td><span class="tag ev">있음</span></td><td>sfx_elevenlabs_generate → assets/audio/sfx/&lt;id&gt;.wav · window.SFX 계약 · check-scenes 가 id 와 카탈로그 파일을 검사 · 리뷰어 sound 모드 P0-9</td><td>0.5–30초, 루프, 48kHz WAV, 분당 $0.12. 채널 카탈로그에 한 번 만들고 다음 회차부터 재사용. 효과음 높이는 아직 손잡이(SFX_VOL)라 실측 레벨은 빈 자리</td></tr>
-<tr><td>V2A 폴리 (무음 클립에 동작 소리)</td><td><span class="tag cr">없음</span></td><td>후보: ElevenLabs Video-to-Sound · HunyuanVideo-Foley 로컬</td><td>b-roll 슬롯에서 Veo 대신 "Seedance 무음 + 폴리" 가 싸질 수 있다. 우리 컷으로 실측 먼저</td></tr>
-<tr><td>Veo 자막 환각 자동 검출</td><td><span class="tag cr">없음</span></td><td>후보: 클립 프레임 OCR (vision_ocr)</td><td>지금은 리뷰어 눈으로만</td></tr>
-<tr><td>효과음 레벨 규칙</td><td><span class="tag cr">관행값</span></td><td>SFX_VOL 0.85</td><td>−10 ~ −20 dB 관행과 대조한 실측 없음</td></tr>
+<tr><td>텍스트→SFX 생성</td><td><span class="tag ev">있음</span></td><td>sfx_elevenlabs_generate → assets/audio/sfx/&lt;id&gt;.wav · window.SFX 계약 · check-scenes 가 id 와 카탈로그 파일을 검사 · 리뷰어 sound 모드 P0-9</td><td>0.5–30초, 루프, 48kHz WAV, 분당 $0.12. 채널 카탈로그에 한 번 만들고 다음 회차부터 재사용</td></tr>
+<tr><td>룸톤 · 앰비언스 베드</td><td><span class="tag ev">있음</span></td><td>sound.ambience → amb.tsv · bgm-bed.sh 가 렌더 · build-reel step 10a'</td><td>loop:true 항목, 음성 아래 15 LU(JAES 해설 위 환경음 수치), 덕킹 없음. 문장 사이 디지털 무음을 메운다</td></tr>
+<tr><td>V2A 폴리 (무음 클립에 동작 소리)</td><td><span class="tag cr">없음</span></td><td>ElevenLabs Video-to-Sound 는 스튜디오 기능(공개 API 없음, 2026-09-16 확인) · HunyuanVideo-Foley·MMAudio 는 GPU 로컬 또는 fal 키</td><td>대신 클립 길이만큼의 효과음을 visual.prompt 의 동작으로 만들어 sound.sfx 에 얹는 길을 계약에 적었다(연속음 전용, 프레임 동기 없음). 진짜 V2A 는 키·GPU 결정이 먼저</td></tr>
+<tr><td>Veo 자막 환각 · 대사 환각 검출</td><td><span class="tag ev">있음</span></td><td>check-clip-artifacts.js — 초당 한 프레임 tesseract(kor+eng) · 오디오 트랙 대조 · 로컬 Qwen3-ASR</td><td>돌아온 클립마다 돌린다. 발견은 HITL 경고(재생성 또는 승인 기록). 자체 검사 5건 통과, 실제 Veo 클립 오탐 0</td></tr>
+<tr><td>효과음 레벨 규칙</td><td><span class="tag ev">있음</span></td><td>build-reel step 10a — ebur128 최대 모멘터리 → 음성 아래 SFX_SEP 6 LU, 트루피크 −1 dBTP</td><td>파일마다 실측·게인. 6 은 관행값(대사 −4 ~ −8 dB), 청취 실험은 없다</td></tr>
 </table>
 </div>
 

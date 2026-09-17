@@ -156,7 +156,8 @@ DUCK_RATIO=${DUCK_RATIO:-8}        # sidechain ratio — measured ~16 LU of duck
 BGM_HOOK_LU=${BGM_HOOK_LU:-6}      # extra LU the bed sits under BGM_SEP during card 0 — the hook opens over a quieter bed
 BGM_HOOK_R=${BGM_HOOK_R:-2.0}      # ramp back to the resting level, starting at card 1. 0 = no hook attenuation
 BGM_EQ=${BGM_EQ:-0}                # dB scooped out of the bed at 250 Hz and 2.5 kHz to clear the voice — 0 = off (craft, A/B it)
-SFX_VOL=${SFX_VOL:-0.85}           # per-segment sfx volume (sfx.tsv)
+SFX_SEP=${SFX_SEP:-6}              # LU the loudest moment of an effect sits under the measured speech (sfx.tsv)
+AMB_SEP=${AMB_SEP:-15}             # LU the room-tone bed sits under the speech (amb.tsv) — the JAES figure for ambience under commentary
 BGM_GATE_R=${BGM_GATE_R:-0.30}     # ramp around BGM-gated spans — a hard cut sounds chopped
 XFADE=${XFADE:-0.6}                # feature↔outro transition length
 SCENE_FADE=${SCENE_FADE:-0.30}     # dip half-length — the black/white a card fades through (cards.tsv enter=/exit=).
@@ -390,6 +391,7 @@ done < cards.resolved.tsv
 #   The audio file can be wav or mp4 (a video contributes its own sound). Left empty with just
 #   bgm set to off, only the music drops out during that seg.
 SFXTSV=""; [ -f sfx.tsv ] && SFXTSV=sfx.tsv
+AMBTSV=""; [ -f amb.tsv ] && AMBTSV=amb.tsv
 # Chapter input (optional) — chapter-first-card-idx<TAB>ts-label. Absent = chapters.txt isn't created.
 CHAPTSV=""; [ -f chapters.tsv ] && CHAPTSV=chapters.tsv
 : > work/chapstart.tsv
@@ -1130,22 +1132,78 @@ while IFS= read -r L; do say "$L"; done < work/bed.log
 # ── 10) BGM ducking mix (same as v2) — with sfx.tsv, the sfx track and BGM mute windows go on top
 FOUT=$(awk -v t="$NT" 'BEGIN{printf "%.3f", t-2.2}')
 
+# sfx_measure <file> — "<max momentary LUFS> <true peak dBTP>" over the whole file, or "" when
+#   unreadable. One ebur128 pass; the momentary (400 ms) maximum is the number a one-shot is
+#   heard at, where the integrated figure of a 0.8 s whoosh is mostly its own silence.
+#   A one-shot shorter than the 400 ms window never fills it (a 0.25 s click measures -120.7),
+#   so the file is padded with silence to a second first. The true peak is unchanged; the
+#   momentary figure of a file under 400 ms reads 1–2 LU low because the window is part silence
+#   (0.25 s sine -29.1 vs -27.1 sustained), which lands a short one-shot ~2 LU louder — fine.
+sfx_measure() {
+  ffmpeg -hide_banner -nostats -vn -i "$1" -af "apad=whole_dur=1,ebur128=peak=true" -f null - 2>&1 \
+    | awk 'BEGIN{m=-200; p=-200}
+           { if (match($0, /M: *-?[0-9.]+/)) { v=substr($0, RSTART+2, RLENGTH-2)+0; if (v>m) m=v }
+             if (match($0, /^ +Peak: *-?[0-9.]+/)) { sub(/^ +Peak: */, "", $0); p=$1+0 } }
+           END{ if (m>-200) printf "%.1f %.1f\n", m, p }'
+}
+
 # 10a) SFX track — silence the length of the main part, with each effect delayed to its start time.
 #      Why it's built separately instead of mixed into the narration: the ducking key (vo_key) must be
 #      voice only. Put sfx in the key and the keyboard sound pushes the BGM down, making the music hiccup.
+#      Each effect is measured and gained the way the bed is: its loudest 400 ms (max momentary,
+#      EBU R128) lands SFX_SEP LU under the speech, pulled back further when its own true peak
+#      would pass the bed's ceiling. Two effects from two prompts used to land 8 LU apart at the
+#      same knob (bgm-scoring.md §effects); now the distance is the decision, the file is not.
 SFXIN=""
 if [ -s work/sfx.list ]; then
+  SFX_T=$(awk -v s="$SPEECH_I" -v d="$SFX_SEP" 'BEGIN{printf "%.2f", s-d}')
   SI=(-f lavfi -t "$NT" -i "anullsrc=r=48000:cl=mono"); SFC=""; SMIX="[0:a]"; SN2=1
   while IFS=$'\t' read -r ST SP; do
+    read -r SM SPK <<< "$(sfx_measure "$SP")"
+    case "$SM" in ''|*[!0-9.+-]*) say "✗ sfx: could not measure $SP"; exit 1;; esac
+    awk -v m="$SM" 'BEGIN{exit !(m > -60)}' || { say "✗ sfx: $SP is silent (max momentary ${SM} LUFS)"; exit 1; }
+    SG=$(awk -v t="$SFX_T" -v m="$SM" -v pk="$SPK" -v c="${BGM_TP_CEIL:--1.0}" \
+          'BEGIN{g=t-m; h=c-pk; if(g>h)g=h; printf "%.2f", g}')
+    say "· sfx $(basename "$SP") @${ST}s: max momentary ${SM} LUFS / ${SPK} dBTP → ${SG} dB"
     SI+=(-i "$SP")
-    SFC+="[$SN2:a]aresample=48000,aformat=channel_layouts=mono,adelay=$(awk -v s="$ST" 'BEGIN{printf "%d", s*1000}'):all=1,atrim=0:$NT[x$SN2];"
+    SFC+="[$SN2:a]aresample=48000,aformat=channel_layouts=mono,volume=${SG}dB,adelay=$(awk -v s="$ST" 'BEGIN{printf "%d", s*1000}'):all=1,atrim=0:$NT[x$SN2];"
     SMIX+="[x$SN2]"; SN2=$((SN2+1))
   done < work/sfx.list
   ffmpeg -y -v error "${SI[@]}" -filter_complex \
-    "${SFC}${SMIX}amix=inputs=$SN2:duration=first:normalize=0,volume=$SFX_VOL,apad,atrim=0:$NT[sx]" \
+    "${SFC}${SMIX}amix=inputs=$SN2:duration=first:normalize=0,apad,atrim=0:$NT[sx]" \
     -map "[sx]" -ac 1 -ar 48000 work/sfx.wav
   SFXIN="-i work/sfx.wav"
-  say "── sfx: $((SN2-1)) (volume $SFX_VOL)"
+  read -r SXM _ <<< "$(sfx_measure work/sfx.wav)"
+  say "── sfx: $((SN2-1)) effect(s), loudest moment ${SXM} LUFS = $(awk -v s="$SPEECH_I" -v m="$SXM" 'BEGIN{printf "%.1f", s-m}') LU under speech (target ${SFX_SEP})"
+fi
+
+# 10a') Ambience — room tone under the voice, rendered by bgm-bed.sh like the music bed (measured,
+#      gained to speech − AMB_SEP, self-looped with a crossfade, cue changes crossfaded) but never
+#      ducked: a room that dips every time the voice starts is the pumping the ducker is for music,
+#      not for the floor of the scene. A `-` row ends the room tone at that card.
+AMBIN=""
+if [ -n "$AMBTSV" ]; then
+  : > work/ambcue.list
+  while IFS=$'\t' read -r CI CF || [ -n "${CI:-}" ]; do
+    [ -z "${CI:-}" ] && continue
+    CT=$(awk -F'\t' -v i="$CI" '$1==i{print $2; exit}' work/cardstart.tsv)
+    [ -n "$CT" ] || { say "✗ amb.tsv names card $CI, which isn't in this build"; exit 1; }
+    [ "$CF" = "-" ] || [ -f "$CF" ] || { say "✗ amb.tsv card $CI: ambience file missing — $CF"; exit 1; }
+    printf '%s\t%s\n' "$CT" "$CF" >> work/ambcue.list
+  done < "$AMBTSV"
+  sort -n -o work/ambcue.list work/ambcue.list
+  if grep -qv $'\t-$' work/ambcue.list; then
+    CUE0=$(head -1 work/ambcue.list | cut -f1)
+    if ! awk -v s="$CUE0" 'BEGIN{exit !(s < 0.001)}'; then
+      { printf '0.0000\t-\n'; cat work/ambcue.list; } > work/ambcue.tmp; mv work/ambcue.tmp work/ambcue.list
+    fi
+    AMB_I=$(awk -v s="$SPEECH_I" -v d="$AMB_SEP" 'BEGIN{printf "%.2f", s-d}')
+    BED_LOOP_OK=1 "$HERE/bgm-bed.sh" work/amb.wav "$NT" "$AMB_I" work/ambcue.list > work/amb.log 2>&1 \
+      || { cat work/amb.log; say "✗ the ambience bed failed to render"; exit 1; }
+    while IFS= read -r L; do say "$L"; done < work/amb.log
+    AMBIN="-i work/amb.wav"
+    say "── ambience: $(grep -cv $'\t-$' work/ambcue.list) cue(s) at ${AMB_I} LUFS (${AMB_SEP} LU under speech), not ducked"
+  fi
 fi
 
 # 10b) BGM mute — multiply a gate in per window. A hard cut makes the music stop dead, so there's a
@@ -1180,18 +1238,27 @@ fi
 
 if [ -n "$SFXIN" ]; then VOMIX="[vo_raw][sfxa]amix=inputs=2:duration=first:normalize=0[vo_mix];"
 else VOMIX="[vo_raw]anull[vo_mix];"; fi
+# The ambience is the third leg of the final sum. Its input index follows the sfx track's.
+AMBIDX=2; [ -n "$SFXIN" ] && AMBIDX=3
+if [ -n "$AMBIN" ]; then
+  AMBLEG="[${AMBIDX}:a]aformat=channel_layouts=stereo,afade=t=in:st=0:d=1.2,afade=t=out:st=$FOUT:d=2.2[amb];"
+  FINALMIX="[vo_mix][duck][amb]amix=inputs=3:duration=first:dropout_transition=0"
+else
+  AMBLEG=""; FINALMIX="[vo_mix][duck]amix=inputs=2:duration=first:dropout_transition=0"
+fi
 #      The bed arrives already gained and already the right length, so this stage only shapes it:
 #      head and tail fades, the gate windows, then ducking. bed-ducked.wav is tapped off for the
 #      separation check below — measuring it after the amix would be measuring the voice too.
-ffmpeg -y -v error -i work/narration.wav -i work/bed.wav $SFXIN -filter_complex "
+ffmpeg -y -v error -i work/narration.wav -i work/bed.wav $SFXIN $AMBIN -filter_complex "
   [0:a]aformat=channel_layouts=stereo,asplit=2[vo_key][vo_raw];
   ${SFXIN:+[2:a]aformat=channel_layouts=stereo[sfxa];}
+  $AMBLEG
   $VOMIX
   [1:a]atrim=0:$NT,asetpts=PTS-STARTPTS,${BEDEQ}
        afade=t=in:st=0:d=1.2,afade=t=out:st=$FOUT:d=2.2,${HOOKVOL}anull$BGMGATE[bgv];
   [bgv][vo_key]sidechaincompress=threshold=0.02:ratio=$DUCK_RATIO:attack=$DUCK_ATTACK:release=$DUCK_RELEASE:makeup=1,
        asplit=2[duck][duckqa];
-  [vo_mix][duck]amix=inputs=2:duration=first:dropout_transition=0,
+  ${FINALMIX},
        loudnorm=I=-14:TP=-1.0:LRA=11,aresample=48000[out]
 " -map "[out]" -ac 2 -ar 48000 work/mix.wav \
   -map "[duckqa]" -ac 2 -ar 48000 work/bed-ducked.wav
