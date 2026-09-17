@@ -762,6 +762,13 @@ this look is the only eye, so it is not skipped. What disqualifies an image: a p
 unrelated to what the scene says, a baked-in pseudo-character, readable text or lookalike
 glyphs, a bright lower third that will drown the subtitles.
 
+- **What the clip brought back** — every returned clip runs `check-clip-artifacts.js`
+  (produce §3). A finding gets **one** regeneration off the same still with the artifact
+  negatives added; a finding on the second take is written to the run's findings and the run
+  waits, the same as a speech warning — it does not approve its own warnings, and a clip
+  with text on the picture is never assembled unflagged.
+- **Room tone** — `sound.ambience` follows the SFX rule below: a loop entry that resolves or
+  can be generated is laid, one that cannot is left off the shots rather than named.
 - **SFX** — unattended runs use only effects that resolve. A `window.SFX` `{ prompt }` entry
   is generated once with `sfx_elevenlabs_generate` into the channel catalog
   (`assets/audio/sfx/<id>.wav`, produce §3) when `ELEVENLABS_API_KEY` is set — about $0.002 a

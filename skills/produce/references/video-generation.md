@@ -9,6 +9,7 @@ is enough there.
 - [Video engines, split by job](#video-engines-split-by-job) — the face → sound → grid route between `veo_*` and `seedance_*`
 - [Video prompt grammar](#video-prompt-grammar-it-differs-by-engine) — what each engine's sentence looks like
 - [Per-slot recipes](#per-slot-recipes) — b-roll, motion background, quote speaking clip
+- [What the clip brought back](#what-the-clip-brought-back) — burned text, an unasked soundtrack, an invented line: the check every returned clip passes
 
 Everything the storyboard already settled (the stored clip prompt, `visual.camera`,
 `shot.feel`/`size`/`angle`/`space`, `visual.character`, `duration`) stays in produce §3 —
@@ -257,3 +258,14 @@ generated cover. These three are generated only when the episode has that kind o
   to the static quote card. A reference carries appearance only, so **when the avatar's
   composition has to be preserved exactly, it's `veo_img2video` first/last frames, not a
   reference**.
+
+## What the clip brought back
+
+A returned clip is checked before it is accepted, not after the build — `check-clip-artifacts.js`
+(produce §3) runs one frame a second through OCR for burned text, compares the audio track with
+what the plan asked for (`--expect silent | sound | speech`) and, when the local Qwen3-ASR is
+installed, listens for a spoken line the prompt never wrote. Findings are HITL warnings with the
+frame time and the words; the fix is the vendor's own artifact lock — `subtitles, text, captions,
+logo, watermark` in Veo's `negativePrompt`, "keep it subtitle-free" in a Seedance lock, `no
+speech, no dialogue` in the `Audio:` sentence — off the same PNG, and a clip that keeps its text
+after that is cropped or replaced, never shipped with type on the picture.

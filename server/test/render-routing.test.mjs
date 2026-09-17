@@ -170,3 +170,24 @@ test('the license record is checked on every stock source, photo or clip',()=>{
  delete photo.visual.license;
  assert.match(checkScene(photo).join('\n'),/visual\.license/);
 });
+test('a still pan or tilt travels between two regions of the actual image (L13)',()=>{
+ const s=still();s.shot.render.camera={effect:'tilt',target:'the tower',reason:'Its height is told by the time the eye needs.'};
+ assert.deepEqual(checkScene(s,{draft:true}),[]);
+ assert.match(checkScene(s).join('\n'),/tilt needs focusFrom and focusTo/);
+ s.shot.render.camera.focusFrom=[.5,.9,.4,.2];s.shot.render.camera.focusTo=[.5,.9,.4,.2];
+ assert.match(checkScene(s).join('\n'),/starts and ends on the same region/);
+ s.shot.render.camera.focusTo=[.5,.1,.4,.2];
+ assert.deepEqual(checkScene(s),[]);
+ const p=still();p.shot.render.camera={effect:'pan',target:'the room',reason:'One pan leaves the room as a map.',focusFrom:[.2,.5,.3,.3],focusTo:[.8,.5,.3,.3]};
+ assert.deepEqual(checkScene(p),[]);
+ assert.ok(routing.STILL_CAMERA_EFFECTS.includes('tilt'));
+ const cam=require(path.join(ref,'still-camera.js'));
+ const spec={template:'tilt',duration:5,focusFrom:[.5,.9,.4,.2],focusTo:[.5,.1,.4,.2]};
+ const near=(a,b)=>assert.ok(Math.abs(a-b)<1e-9,a+' ≠ '+b);
+ near(cam.state(spec,0).fy,.9);near(cam.state(spec,5).fy,.1);near(cam.state(spec,2.5).fx,.5);
+ // the ease holds both ends: a tenth of the way in, the window has barely left A
+ assert.ok(cam.state(spec,.5).fy>.88);
+ const pan={template:'pan',duration:5,focusFrom:[.2,.5,.3,.3],focusTo:[.8,.5,.3,.3]};
+ near(cam.state(pan,0).fx,.2);near(cam.state(pan,5).fx,.8);
+ near(cam.state({template:'pan',duration:5},0).fx,.26);
+});

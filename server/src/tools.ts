@@ -1,4 +1,4 @@
-import { cameraContract, renderPurposes, contract as storyboardContract } from './storyboard.js';
+import { cameraContract, renderPurposes, stillCameraEffectList, contract as storyboardContract } from './storyboard.js';
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { MUSIC_GENERATION_MODES, MUSIC_SCALES } from './music-client.js';
 import {
@@ -784,6 +784,10 @@ const compositionInput = (() => {
   try { return storyboardContract().COMPOSITION_SCHEMA; }
   catch { return { type: 'object', description: 'Composition contract unavailable: restore skills/storyboard/references/structure-contract.js' }; }
 })();
+const depthInput = (() => {
+  try { return storyboardContract().DEPTH_SCHEMA; }
+  catch { return { type: 'object', description: 'Depth contract unavailable: restore skills/storyboard/references/structure-contract.js' }; }
+})();
 const storyboardVocabulary = (() => {
   try { return storyboardContract().VOCAB; } catch { return null; }
 })();
@@ -793,6 +797,20 @@ const shotCameraInput = (() => {
 })();
 const enumInput = (values: string[] | undefined, description: string) => ({ type: 'string', ...(values?.length ? { enum: values } : {}), description });
 const purposes = (() => { try { return renderPurposes(); } catch { return []; } })();
+const stillCameraEffects = (() => { try { return stillCameraEffectList(); } catch { return []; } })();
+// The still lane's window move (render-routing.js, still-camera.js) — the camera a photograph gets.
+const stillCameraInput = {
+  type: 'object', additionalProperties: true, required: ['effect', 'target', 'reason'],
+  description: 'Required on still_camera. The eased window move the builder drives over the photograph: push (slow zoom-in, the default) · pull · approach · focus-in · rack-focus · pan · tilt (L13: a pan or tilt travels from focusFrom to focusTo, the vertical tilt being the scale-by-time move) · reveal · parallax (prepared layers). The ease holds the opening and closing pictures on its own.',
+  properties: {
+    effect: enumInput(stillCameraEffects, 'The window move. Choose from the cut\'s meaning (directing-grammar §5 Still column), never repeat one on every cut.'),
+    target: { type: 'string', description: 'What the move arrives on or travels over, in the picture.' },
+    reason: { type: 'string', description: 'Why this move conveys the cut; content-based.' },
+    focusTo: { type: 'array', minItems: 4, maxItems: 4, items: { type: 'number' }, description: 'Normalized [x, y, rx, ry] region from the actual image: the arrival plane for focus-in, rack-focus and approach; the closing picture for pan and tilt.' },
+    focusFrom: { type: 'array', minItems: 4, maxItems: 4, items: { type: 'number' }, description: 'Normalized [x, y, rx, ry] region: the departure plane for rack-focus; the opening picture for pan and tilt (it must differ from focusTo).' },
+    layersPlan: { type: 'string', description: 'reveal and parallax only: the prepared foreground and clean-background plan.' }
+  }
+};
 const looks = (() => { try { return cameraContract().ALL_LOOKS; } catch { return []; } })();
 const storyboardShotInput = {
   type: 'object', additionalProperties: true, required: ['type'],
@@ -806,13 +824,13 @@ const storyboardShotInput = {
     beat: enumInput(storyboardVocabulary?.BEATS, 'Narrative beat in playback order.'),
     shot: {
       type: 'object', additionalProperties: true,
-      description: 'Shot grammar and production route. Render mode chooses how to build the shot; visual.camera chooses how it is filmed.',
+      description: 'Shot grammar and production route. Render mode chooses how to build the shot; visual.camera chooses how it is filmed; shot.depth chooses how many planes the viewer may read at once (L11).',
       properties: {
         size: enumInput(storyboardVocabulary?.SIZES, 'Framing size.'),
         angle: enumInput(storyboardVocabulary?.ANGLES, 'Camera angle.'),
         infoType: enumInput(storyboardVocabulary?.INFO_TYPES, 'Information carried by the shot; must agree with its purpose.'),
         feel: { type: 'string', description: 'What the viewer should feel before choosing framing and movement.' },
-        eyeline: eyelineInput, composition: compositionInput,
+        eyeline: eyelineInput, composition: compositionInput, depth: depthInput,
         render: {
           type: 'object', additionalProperties: true, required: ['mode'],
           description: 'Production route. A drone spatial reveal uses generated_video with purpose place or live_action, motionEssential:true and whyNotStill, including full_video.',
@@ -822,7 +840,8 @@ const storyboardShotInput = {
             reason: { type: 'string', description: 'Why this route conveys the intended information.' },
             action: { type: 'string', description: 'Visible action or spatial reveal.' },
             motionEssential: { type: 'boolean', description: 'true when continuous movement is essential. Required true for drone-flythrough.' },
-            whyNotStill: { type: 'string', description: 'What travel reveals that a still cannot. Required for drone-flythrough.' }
+            whyNotStill: { type: 'string', description: 'What travel reveals that a still cannot. Required for drone-flythrough.' },
+            camera: stillCameraInput
           }
         },
         videoDesign: {
@@ -4232,7 +4251,7 @@ Returns: JSON — { version, format, shots, sequences[…scenes[…shots]], unpl
     description: `Write a storyboard's scenes.js from a sequence → scene → shot model, or patch part of it, in one call. Every shot is validated against the grammar vocabularies (type · beat · size · angle · infoType · shareType · render.mode · transition), the structure against its rules (one place and time per scene, a charge that turns, every scene in exactly one sequence, shots grouped by scene in sequence order, two sizes per scene), and the derived shot labels (sceneSlug · sequence) are written from the structure. Nothing is written when a violation is found — the findings come back instead. Warnings are written and reported.
 
 Use it to author a new board (set = { structure, shots }) after the narration is approved (storyboard §4), and to change one thing later (scenes / sequences / shots by key, insertShots, removeShots, globals for FORMAT · THEME · COMPREHENSION · STORY · PRODUCTION · MUSIC). Use transitions to change only the effect before selected shots without replacing their narration or visuals. dip fades out to black and fades the next scene in; prefer it for changes of place or time unless a specific cut calls for another effect. One call carries the whole change — do not write scenes.js by hand and do not call this once per shot. dryRun:true validates without writing.
-Shot creation, upserts and inserts expose type, shot.render.mode, shot.videoDesign and visual.camera in the input schema. For a drone shot choose preset:"drone-flythrough", variant:"cinematic" or "fpv", and the trajectory. The preset does not change the episode style or select a paid model.
+Shot creation, upserts and inserts expose type, shot.render.mode, shot.videoDesign, visual.camera and the three plan records shot.eyeline · shot.composition · shot.depth in the input schema. shot.depth (L11): count what the viewer must read in the frame at once — one thing → shallow with focus (a person's eyes), two or more → deep with the planes listed front to back; a departure needs a reason, and a still_camera focus-in/rack-focus cut cannot be deep. For a drone shot choose preset:"drone-flythrough", variant:"cinematic" or "fpv", and the trajectory. The preset does not change the episode style or select a paid model.
 Do NOT pass a shot's visual plan through a summary — pass the object scenes-schema.md defines (visual · shot.space · visual.camera · visual.video …); unknown keys on a shot pass through untouched. Editing an approved board drops its \`// approved:\` line; it is approved again at the HITL gate.
 
 Scene: { no, place, time, event, charge: { open: "+"|"-", close: "+"|"-"|"++"|"--" }, turn, out? }. Sequence: { id, title, purpose, question?, payoff?, scenes: [no…] }. The reasons for each field are in scenes-schema.md §structure.

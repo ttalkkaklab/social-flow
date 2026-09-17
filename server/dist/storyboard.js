@@ -51,6 +51,10 @@ export function renderPurposes() {
     const routing = loadFromHere(join(REFERENCES_DIR, 'render-routing.js'));
     return Object.keys(routing.PURPOSES);
 }
+export function stillCameraEffectList() {
+    const routing = loadFromHere(join(REFERENCES_DIR, 'render-routing.js'));
+    return routing.STILL_CAMERA_EFFECTS;
+}
 // ── Schemas ─────────────────────────────────────────────────────
 const tuple = (list) => z.enum(list);
 // The schemas are built at module load, so a missing contract file must not take the whole
@@ -126,6 +130,10 @@ export const eyelineSchema = z.record(z.unknown()).superRefine((value, ctx) => {
     for (const message of contract().validateEyeline(value))
         ctx.addIssue({ code: z.ZodIssueCode.custom, message });
 });
+export const depthSchema = z.record(z.unknown()).superRefine((value, ctx) => {
+    for (const message of contract().validateDepth(value))
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message });
+});
 export const cameraSchema = z.record(z.unknown()).superRefine((value, ctx) => {
     for (const message of cameraContract().cameraInputErrors(value))
         ctx.addIssue({ code: z.ZodIssueCode.custom, message });
@@ -161,6 +169,7 @@ export const shotSchema = z
         space: z.record(z.unknown()).optional(),
         eyeline: eyelineSchema.optional(),
         composition: compositionSchema.optional(),
+        depth: depthSchema.optional(),
         coverage: coverageSchema.optional(),
         lineNeutral: z.literal(true).optional(),
         lineCrossing: lineCrossingSchema.optional(),

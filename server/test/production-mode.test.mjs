@@ -515,7 +515,7 @@ test('generation output existence never discounts a new generation or its retrie
 }));
 test('a previz cut gets the clay-model preamble, the composition lock and the first frame as the first still reference', () => {
   const win = fixture(), prompts = withPreviz(win, 1), scene = win.SCENES[1];
-  assert.match(prompts.motionPrompt, /^Image 1 is the first frame\. Use Video 1, a 3D clay-model previz, as the only reference for camera movement.*Do not reference its visual content\. The red model in Video 1 is the buildings from Image 2\. Low wide view of the valley, slow dolly in, ending on The open stream\./);
+  assert.match(prompts.motionPrompt, /^Image 1 is the first frame\. Use Video 1, a 3D clay-model previz, as the only reference for camera movement.*Do not reference its visual content\. The red model in Video 1 is the buildings from Image 2\. Low wide view of the valley, pauses, then slow dolly in, settling on The open stream\./);
   assert.match(prompts.sourcePrompt, /Composition lock: the first attached image is frame 1 of the 3D previz/);
   assert.equal(prompts.previzFirstFrame, path.resolve('/board', 'previz/s2-f0001.png'));
   // The frame comes first (the composition), the miniature pack image second (the look).
@@ -845,4 +845,69 @@ test('three 2.5 hook cuts can mix with 1.5 body cuts and retain per-cut pricing'
   const fingerprint = quote(win).quoteFingerprint;
   win.SCENES[5].visual.video.resolution = '1080p';
   assert.notEqual(quote(win).quoteFingerprint, fingerprint);
+});
+
+// L13–L15 (film-directing course, 2026-08-28 ~ 08-30): the move is a vendor word, a travelling
+// move names two pictures, a whip pan lands on a sound, a dolly zoom is a background event
+// spent once — per shot, in the same contract the approval page and the MCP schema read.
+test('a generated shot names its move in vendor vocabulary and gets the practitioner word corrected', () => {
+  const shot = (camera, extra = {}) => ({ type: 'points', duration: 5, shot: { feel: 'x', ...extra }, visual: { camera, video: { prompt: 'p' } } });
+  const four = (movement) => ({ movement, speed: 'slow', framing: 'the desk', end: 'the door' });
+  assert.deepEqual(mode.cameraErrors(shot(four('dolly in toward the door'))), []);
+  for (const [written, want] of [['push in', /write "dolly in"/], ['orbit the table', /write "arc shot"/],
+    ['boom up', /write "pedestal up\/down"/], ['zolly', /write "dolly zoom in\/out"/], ['틸트 업', /write "tilt up\/down"/],
+    ['camera looks around', /open with one of static, dolly in\/out/]]) {
+    assert.match(mode.cameraErrors(shot(four(written))).join('\n'), want, written);
+  }
+  assert.match(mode.cameraErrors(shot(four('slow dolly in'))).join('\n'), /pace lives in visual\.camera\.speed; write "dolly in"/);
+  assert.deepEqual(mode.cameraErrors(shot({ movement: 'static', framing: 'the desk', end: 'the desk' })), []);
+});
+test('a pan, tilt, truck or dolly is a sentence from A to B — the two ends differ', () => {
+  const shot = (camera) => ({ type: 'points', duration: 5, shot: { feel: 'x' }, visual: { camera, video: { prompt: 'p' } } });
+  for (const movement of ['pan left', 'tilt up', 'truck right', 'dolly in', 'pedestal up', 'zoom in'])
+    assert.match(mode.cameraErrors(shot({ movement, speed: 'slow', framing: 'The desk', end: 'the desk.' })).join('\n'), /has nowhere to go/, movement);
+  assert.deepEqual(mode.cameraErrors(shot({ movement: 'pan left', speed: 'slow', framing: 'the desk', end: 'the door' })), []);
+  // handheld, tracking and arc hold one framing while the world moves past — no A/B rule, no hold phrase
+  for (const movement of ['handheld', 'tracking', 'arc shot'])
+    assert.deepEqual(mode.cameraErrors(shot({ movement, speed: 'steady', framing: 'the desk', end: 'the desk' })), [], movement);
+  assert.equal(mode.travels({ movement: 'tilt up' }), true);
+  assert.equal(mode.travels({ movement: 'handheld' }), false);
+  assert.equal(mode.travels({ movement: 'tracking' }), false);
+});
+test('a whip pan lands on a sound', () => {
+  const base = { type: 'points', duration: 3, shot: { feel: 'x' }, visual: { camera: { movement: 'whip pan', speed: 'fast', framing: 'A', end: 'B' }, video: { prompt: 'p' } } };
+  assert.match(mode.cameraErrors(base).join('\n'), /lands on a sound/);
+  assert.deepEqual(mode.cameraErrors({ ...base, sound: { sfx: 'whoosh-hard' } }), []);
+  assert.deepEqual(mode.cameraErrors({ ...base, visual: { ...base.visual, audio: 'a hard whoosh' } }), []);
+  assert.match(mode.cameraWarnings({ ...base, sound: { sfx: 'whoosh-hard' }, duration: 6 }).join('\n'), /whip pan is a transition/);
+});
+test('a dolly zoom names its direction, happens to a deep background, on a standing subject, once', () => {
+  const shot = (movement, extra = {}) => ({ type: 'points', duration: 4, shot: { feel: 'x', ...extra },
+    visual: { camera: { movement, speed: 'fast', framing: 'chest-up', end: 'chest-up, the corridor stretched' }, video: { prompt: 'p' } } });
+  const bare = mode.cameraErrors(shot('dolly zoom')).join('\n');
+  assert.match(bare, /names its direction/); assert.match(bare, /happens to the background/);
+  const ok = { depth: { mode: 'deep', reads: 2, planes: ['the face', 'the corridor'] }, composition: { mode: 'standard', subject: 'A', subjectKind: 'face', position: 'center', eyeHeight: .33, headroom: 'natural', lookRoom: 'balanced', movement: 'stationary', leadRoom: 'none' } };
+  assert.deepEqual(mode.cameraErrors(shot('dolly zoom in', ok)), []);
+  assert.deepEqual(mode.cameraErrors(shot('dolly zoom out', ok)), []);
+  assert.match(mode.cameraErrors(shot('dolly zoom in', { ...ok, depth: { mode: 'shallow', reads: 1, focus: 'the eyes' } })).join('\n'), /happens to the background/);
+  assert.match(mode.cameraErrors(shot('dolly zoom in', { ...ok, composition: { ...ok.composition, movement: 'toward', leadRoom: 'balanced' } })).join('\n'), /subject stands still/);
+  assert.match(mode.cameraWarnings({ ...shot('dolly zoom in', ok), duration: 8 }).join('\n'), /one hit, 3–5 s/);
+  assert.deepEqual(mode.episodeMoveErrors([shot('dolly zoom in', ok), shot('static'), shot('pan left')]), []);
+  // board shot numbers, with an HTML slide (no visual.video) in between
+  const slide = { type: 'points', duration: 5, shot: { feel: 'x' }, visual: { slide: { kind: 'diagram' } } };
+  assert.match(mode.episodeMoveErrors([shot('dolly zoom in', ok), slide, slide, shot('static'), shot('dolly zoom out', ok)]).join('\n'), /\[dolly-zoom-twice\] shots 1, 5/);
+  // the episode check runs it: the second dolly zoom in a full-video board is a production-mode finding
+  const win = fixture(3);
+  for (const i of [0, 2]) { Object.assign(win.SCENES[i].shot, ok); win.SCENES[i].visual.camera = { movement: 'dolly zoom in', speed: 'fast', framing: 'A', end: 'B' }; }
+  assert.match(mode.check(win).join('\n'), /\[dolly-zoom-twice\]/);
+});
+test('a fast pan or tilt warns about 24 fps strobing', () => {
+  const shot = (movement, speed) => ({ type: 'points', duration: 5, shot: { feel: 'x' }, visual: { camera: { movement, speed, framing: 'A', end: 'B' }, video: { prompt: 'p' } } });
+  assert.match(mode.cameraWarnings(shot('pan right', 'fast')).join('\n'), /strobes at 24 fps/);
+  assert.deepEqual(mode.cameraWarnings(shot('pan right', 'slow')), []);
+  assert.deepEqual(mode.cameraWarnings(shot('truck right', 'fast')), []);
+});
+test('the MCP camera schema carries the vocabulary and the per-move conditions', () => {
+  const m = mode.CAMERA_INPUT_SCHEMA.properties.movement.description;
+  for (const word of ['tilt up/down', 'dolly zoom in/out', 'whip pan', 'end must differ from framing', 'sound.sfx', 'shot.depth deep', 'once per episode']) assert.ok(m.includes(word), word);
 });

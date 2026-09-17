@@ -1,6 +1,6 @@
 'use strict';
-const cameraPurposes={introduce:'focus-in',inspect:'rack-focus',detail:'approach',context:'pull',discovery:'reveal',depth:'parallax'};
-const lanes={still_camera:['push','pan','pull','focus-in','rack-focus','approach','reveal','parallax'],character_explanation:['alliance','document','supply'],object_explanation:['gears','pulley','hinge']};
+const cameraPurposes={introduce:'focus-in',inspect:'rack-focus',detail:'approach',context:'pull',space:'pan',scale:'tilt',discovery:'reveal',depth:'parallax'};
+const lanes={still_camera:['push','pan','tilt','pull','focus-in','rack-focus','approach','reveal','parallax'],character_explanation:['alliance','document','supply'],object_explanation:['gears','pulley','hinge']};
 const region=r=>Array.isArray(r)&&r.length===4&&r.every(Number.isFinite)&&r[0]>=0&&r[0]<=1&&r[1]>=0&&r[1]<=1&&r[2]>0&&r[2]<=1&&r[3]>0&&r[3]<=1;
 function validate(plan){
  const errors=[];
