@@ -6,7 +6,11 @@
   const q=clamp(seconds/spec.duration),u=ease(q),kind=spec.template;
   let zoom=1+.10*u,fx=.45,fy=.4;   // the default is `push` — a plain eased zoom-in
   if(kind==='pull'){zoom=mix(1.34,1,u);fx=spec.focusTo?.[0]??.35;fy=spec.focusTo?.[1]??.38}
-  if(kind==='pan'){zoom=1.13;fx=mix(.26,.61,u);fy=mix(.65,.45,u)}
+  // pan · tilt — the window travels from focusFrom to focusTo (L13: a pan is a sentence from A
+  // to B). The smoothstep ease is the hold in and hold out: zero velocity on both ends. Without
+  // regions a pan keeps the classic diagonal and a tilt looks up the picture, bottom to top.
+  if(kind==='pan'){zoom=1.13;const a=spec.focusFrom||[.26,.65],b=spec.focusTo||[.61,.45];fx=mix(a[0],b[0],u);fy=mix(a[1],b[1],u)}
+  if(kind==='tilt'){zoom=1.22;const a=spec.focusFrom||[.5,.92],b=spec.focusTo||[.5,.08];fx=mix(a[0],b[0],u);fy=mix(a[1],b[1],u)}
   if(kind==='focus-in'){zoom=1.04+.055*u;fx=spec.focusTo[0];fy=spec.focusTo[1]}
   if(kind==='rack-focus'){zoom=1.08;fx=mix(spec.focusFrom[0],spec.focusTo[0],u);fy=mix(spec.focusFrom[1],spec.focusTo[1],u)}
   if(kind==='approach'){zoom=mix(1,1.38,u);fx=spec.focusTo[0];fy=spec.focusTo[1]}

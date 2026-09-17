@@ -208,6 +208,40 @@ function frontmatter(file) {
  * assets/audio/sfx/<id>.wav|.mp4 (the same order resolve-asset.py uses). Only the file question;
  * generation is produce's.
  */
+/*
+ * The visual.audio sentence, read for the four ways it fights the mix (scenes-schema §clip audio):
+ * it asks the clip for music (the bed is the builder's), it puts a spoken line in a clip that is
+ * not a quote (the TTS is already speaking there), it names the same sound sound.sfx lays on the
+ * cut, or on a b-roll — the one slot whose clip audio survives the build — it never says what
+ * isn't there. Craft findings, so the caller files them as warnings.
+ */
+function audioPromptFindings(scene, audio) {
+  const out = [];
+  const text = String(audio);
+  const lower = text.toLowerCase();
+  const music = /\b(music|soundtrack|score|bgm|melody|orchestral|synth pad|beat)\b/g;
+  let m;
+  while ((m = music.exec(lower))) {
+    const before = lower.slice(Math.max(0, m.index - 12), m.index);
+    if (!/\b(no|without|free of)\s+$/.test(before) && !/\bno\s+(\w+,?\s+)*$/.test(before)) {
+      out.push(`visual.audio asks the clip for ${m[0]} — the bed is the builder's and lands 10 LU under the voice; write "no music" and let the mix place it`);
+      break;
+    }
+  }
+  // "no speech, no dialogue, no voice-over" is the recommended exclusion sentence, not a request.
+  const speechAsked = (() => { const re = /["“”]([^"“”]{3,})["“”]|\b(says|speaks|shouts|whispers|dialogue|voice-?over|narrat(?:es|ion))\b/gi; let m;
+    while ((m = re.exec(text))) { const before = text.slice(Math.max(0, m.index - 12), m.index); if (!/\b(no|without|free of)\s+$/i.test(before) && !/\bno\s+(\w+,?\s+)*$/i.test(before)) return true; } return false; })();
+  if (scene.type !== 'quote' && speechAsked)
+    out.push('visual.audio puts a spoken line in the clip — a clip with speech is a quote shot; under narration it collides with the TTS');
+  if (scene.type === 'broll' && !/\bno\s+(music|speech|voice|dialogue)\b/i.test(text))
+    out.push('visual.audio on a b-roll never says what isn\'t there — its clip audio survives the build; "no music, no speech" is the established wording');
+  const sfx = scene.sound && scene.sound.sfx ? String(scene.sound.sfx) : '';
+  const family = sfx.split('-')[0];
+  if (family.length >= 3 && new RegExp('\\b' + family + '(?:es|s|ing)?\\b', 'i').test(text))
+    out.push(`visual.audio already asks the clip for the ${family} that sound.sfx "${sfx}" lays on the cut — one source per sound`);
+  return out;
+}
+
 function sfxAssetExists(channelDir, id) {
   const assets = path.join(channelDir, 'assets');
   const catalog = path.join(assets, 'catalog.md');
@@ -1242,8 +1276,10 @@ function check(win, fmt, opts) {
       productionMode.missingCameraSlots(v.camera).forEach((slot) => {
         machine(where, `visual.camera.${slot} is empty — a generated shot leaves here with all four filled (speed may stay empty on a static camera)`);
       });
-      // A move the viewer cannot see, or a provider camera lock under a written move (production-mode.js).
+      // A move the viewer cannot see, a provider camera lock under a written move, a move outside
+      // the vendor vocabulary or one missing what it needs (production-mode.js — L13–L15 rules).
       productionMode.cameraErrors(s).forEach((e) => machine(where, e));
+      productionMode.cameraWarnings(s).forEach((w) => warn(where, w));
       const prompt = v.prompt || (v.video && v.video.prompt) ||
                      (v.clip && typeof v.clip === 'object' && v.clip.prompt);
       if (!prompt) machine(where, 'no stored clip prompt — produce sends this verbatim (scenes-schema §clip prompt)');
@@ -1251,6 +1287,7 @@ function check(win, fmt, opts) {
       // A clip planned silent (generateAudio:false — every full-video cut) has nothing to describe.
       if (!v.audio && s.type !== 'quote' && !(v.video && v.video.generateAudio === false))
         warn(where, 'no visual.audio — the engine invents a soundtrack under the narration');
+      else if (typeof v.audio === 'string') audioPromptFindings(s, v.audio).forEach((f) => warn(where, f));
     }
 
     // A still never sits frozen under the voice (owner directive 2026-09-03). The builder's
@@ -1343,6 +1380,29 @@ function check(win, fmt, opts) {
                        'and there is no window.SFX entry to generate it from (scenes-schema §sound effects)');
       }
     }
+
+    // Room tone — sound.ambience names a looping entry that starts on this card and holds until a
+    // card names another or ends it with null / "-". The builder lays it 15 LU under the voice and
+    // never ducks it (build-reel.sh step 10a'), so an entry that isn't a loop seams every lap.
+    if (s.sound && s.sound.ambience !== undefined) {
+      const a = s.sound.ambience;
+      const stops = a === null || a === '-' || a === 'none';
+      if (s.type === 'broll' || s.type === 'outro')
+        bad(where, `sound.ambience on a ${s.type} — not a card; the room tone runs across cards only`);
+      else if (!stops) {
+        const id = String(a);
+        const book = win.SFX && typeof win.SFX === 'object' && !Array.isArray(win.SFX) ? win.SFX : null;
+        if (book) {
+          const e = Object.prototype.hasOwnProperty.call(book, id) ? book[id] : null;
+          if (!e) bad(where, `sound.ambience "${id}" is not in window.SFX — the builder has no room tone to lay`);
+          else if (e && typeof e === 'object' && !e.asset && e.loop !== true)
+            bad(where, `sound.ambience "${id}" is not a loop — room tone is { prompt, seconds: 10–30, loop: true } (scenes-schema §sound effects)`);
+        } else if (opts && opts.channelDir && !sfxAssetExists(opts.channelDir, id)) {
+          machine(where, `sound.ambience "${id}" is not in the channel catalog (assets/audio/sfx/${id}.wav) ` +
+                         'and there is no window.SFX entry to generate it from');
+        }
+      }
+    }
   });
 
   // The effects book — each entry is generated once into the channel catalog or fetched from it.
@@ -1365,7 +1425,8 @@ function check(win, fmt, opts) {
           if (!Number.isFinite(n) || n < 0.5 || n > 30) bad(at, `seconds ${e.seconds} — the generator takes 0.5–30`);
           else if (e.loop && n < 5) bad(at, 'a loop under 5 s seams audibly under narration — 10–30 s for a bed');
         }
-        if (!scenes.some((s) => s.sound && String(s.sound.sfx) === id)) warn(at, 'declared but no shot uses it');
+        if (!scenes.some((s) => s.sound && (String(s.sound.sfx) === id || String(s.sound.ambience) === id)))
+          warn(at, 'declared but no shot uses it');
       });
     }
   }
@@ -2173,6 +2234,39 @@ function selftest() {
               deferred.some((f) => f.level === 'later' && /not in the channel catalog/.test(f.what));
      })());
 
+  // room tone (sound.ambience)
+  const withAmb = (base, id) => Object.assign({}, base, { sound: { ambience: id } });
+  const room = { room: { prompt: 'quiet office room tone', seconds: 12, loop: true } };
+  ok('an ambience naming a loop in window.SFX passes',
+     !has(bads(run([withAmb(cover, 'room'), goodShot, ctaShot], { SFX: room })), /ambience/));
+  ok('an ambience ending with "-" passes',
+     !has(bads(run([withAmb(cover, 'room'), withAmb(goodShot, '-'), ctaShot], { SFX: room })), /ambience/));
+  ok('an ambience naming nothing in window.SFX is a violation',
+     has(bads(run([withAmb(cover, 'hall'), goodShot, ctaShot], { SFX: room })), /ambience "hall" is not in window\.SFX/));
+  ok('an ambience naming a one-shot entry is a violation',
+     has(bads(run([withAmb(cover, 'x'), goodShot, ctaShot], { SFX: { x: { prompt: 'p', seconds: 1 } } })), /not a loop/));
+  ok('an ambience on a broll is a violation',
+     has(bads(run([cover, goodShot, Object.assign({}, broll, { sound: { ambience: 'room' } }), ctaShot], { SFX: room })),
+         /sound\.ambience on a broll/));
+  ok('an entry used only as ambience is not reported unused',
+     !has(warns(run([withAmb(cover, 'room'), goodShot, ctaShot], { SFX: room })), /declared but no shot uses it/));
+
+  // the visual.audio sentence
+  const brollAudio = (audio, extra) => Object.assign({}, broll, extra || {}, { visual: Object.assign({}, broll.visual, { audio }) });
+  ok('a clip audio that asks for music warns',
+     has(warns(run([cover, goodShot, ctaShot, brollAudio('soft piano music under city traffic, no speech')])), /asks the clip for music/));
+  ok('"no music" is not a request for music',
+     !has(warns(run([cover, goodShot, ctaShot, brollAudio('city traffic, no music, no speech')])), /asks the clip for/));
+  ok('a spoken line in a non-quote clip warns',
+     has(warns(run([cover, goodShot, ctaShot, brollAudio('a man says "we have to go", no music')])), /spoken line/));
+  ok('a b-roll audio that never says what isn\'t there warns',
+     has(warns(run([cover, goodShot, ctaShot, brollAudio('city traffic and wind')])), /never says what isn't there/));
+  ok('the same sound in visual.audio and sound.sfx warns',
+     has(warns(run([cover, Object.assign({}, goodShot, { sound: { sfx: 'door-close' },
+                       visual: { video: { prompt: SEEDANCE_PROMPT }, audio: 'a door closes, no music, no speech',
+                                 camera: { movement: 'dolly in', speed: 'slow', framing: 'chest-up', end: 'centred' } } }), ctaShot],
+                   { SFX: { 'door-close': { prompt: 'a door closing' } } })), /one source per sound/));
+
   // ── sequence → scene → shot (structure-contract.js) ──
   {
     const sc = require('./structure-contract.js');
@@ -2457,6 +2551,20 @@ function selftest() {
        goodShot, ctaShot])), /never sits frozen/));
   ok('the frozen-still check waits for the camera pass (--draft)',
      !has(bads(run([cover, frozenStill, goodShot, ctaShot], null, { draft: true })), /never sits frozen/));
+
+  // ── the move is a vendor word with what it needs (L13–L15, production-mode.js) ──
+  const moveShot = (camera, over) => Object.assign({}, goodShot, {
+    visual: Object.assign({ video: { prompt: SEEDANCE_PROMPT }, audio: 'wind', camera }, over || {}) });
+  ok('a generated shot whose move is a practitioner word is a violation with the vendor word',
+     has(bads(run([cover, moveShot({ movement: 'push in', speed: 'slow', framing: 'the desk', end: 'the door' }), goodShot, ctaShot])), /write "dolly in"/));
+  ok('a pan whose two ends are the same picture is a violation',
+     has(bads(run([cover, moveShot({ movement: 'pan left', speed: 'slow', framing: 'the desk', end: 'the desk' }), goodShot, ctaShot])), /has nowhere to go/));
+  ok('"no speech, no dialogue, no voice-over" in visual.audio is the exclusion sentence, not a spoken line',
+     !has(run([cover, moveShot({ movement: 'dolly in', speed: 'slow', framing: 'a', end: 'b' }, { audio: 'city traffic, no music, no speech, no dialogue, no voice-over' }), goodShot, ctaShot]), /spoken line/) &&
+     has(run([cover, moveShot({ movement: 'dolly in', speed: 'slow', framing: 'a', end: 'b' }, { audio: 'a narrator says the line' }), goodShot, ctaShot]), /spoken line/));
+  ok('a fast pan is a strobing warning, not a block',
+     (() => { const f = run([cover, moveShot({ movement: 'pan left', speed: 'fast', framing: 'the desk', end: 'the door' }), goodShot, ctaShot]);
+              return has(f, /strobes at 24 fps/) && !has(bads(f), /strobes/); })());
 
   // ── the host video tool is a route of its own (2026-09-07) ──
   ok('engine:"host" resolves to the host route, not the type default',

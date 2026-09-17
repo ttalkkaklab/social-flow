@@ -5,6 +5,8 @@
  const PURPOSES={portrait:'still_camera',atmosphere:'still_camera',place:'still_camera',detail:'still_camera',human_process:'character_html',mechanism:'object_html',physical_state:'object_html',comparison:'data_graph',trend:'data_graph',share:'data_graph',distribution:'data_graph',geographic:'data_graph',timeline:'data_graph',live_action:'generated_video',evidence_quote:'editorial_html',verdict:'editorial_html',archive:'stock_video'};
  // A purpose's default route comes first; free real footage may stand in where the actual place, era or action carries the cut (render-routing.md §Routes).
  const ALTERNATIVES={live_action:['stock_video'],atmosphere:['stock_video'],place:['stock_video']};
+ // The still lane's nine window moves (still-camera.js state()); tilt is the vertical pan — the scale-by-time move of L13.
+ const STILL_CAMERA_EFFECTS=['focus-in','rack-focus','approach','pull','pan','tilt','push','reveal','parallax'];
  const LABELS={still_camera:'정지 이미지 · 카메라 무빙',character_html:'3D 캐릭터 · HTML',object_html:'3D 사물 · HTML',data_graph:'수치·그래프 · HTML',generated_video:'영상 생성',editorial_html:'짧은 인용·결론 · HTML',stock_video:'외부 영상 · 무료 소재'};
  const CHARTS={comparison:['bar','dot'],trend:['line'],share:['stacked-bar','donut','pie'],distribution:['histogram'],geographic:['map'],timeline:['timeline']};
  const text=x=>typeof x==='string'&&!!x.trim();
@@ -130,9 +132,13 @@
   if(CHARTS[r.purpose]&&info!==(r.purpose==='timeline'?'timeline':'statistic'))bad('chart purpose and infoType disagree');
   if(r.mode==='still_camera'){
    const camera=r.camera;
-   if(!camera||!['focus-in','rack-focus','approach','pull','pan','push','reveal','parallax'].includes(camera.effect)||!text(camera.target)||!text(camera.reason))bad('still camera needs effect, target and a content-based reason');
-   if(['reveal','parallax'].includes(camera?.effect)&&!text(camera.layersPlan))bad('layered camera needs a prepared foreground and clean-background plan');
    const region=p=>Array.isArray(p)&&p.length===4&&p.every(Number.isFinite)&&p[0]>=0&&p[0]<=1&&p[1]>=0&&p[1]<=1&&p[2]>0&&p[2]<=1&&p[3]>0&&p[3]<=1;
+   if(!camera||!STILL_CAMERA_EFFECTS.includes(camera.effect)||!text(camera.target)||!text(camera.reason))bad('still camera needs effect, target and a content-based reason');
+   // L13 — a pan or tilt is a sentence from A to B: both ends are regions of the actual picture, and they differ.
+   // A `tilt` is new and always names its two regions; a `pan` approved before 0.81.0 keeps the runtime's diagonal default, so it is held to the regions only once it names either.
+   if(!draft&&(camera?.effect==='tilt'||(camera?.effect==='pan'&&(camera.focusFrom!==undefined||camera.focusTo!==undefined)))&&(!region(camera.focusFrom)||!region(camera.focusTo)))bad(camera.effect+' needs focusFrom and focusTo — the picture it starts on and the picture it settles on, as normalized x,y,rx,ry from the actual image');
+   if(['pan','tilt'].includes(camera?.effect)&&region(camera.focusFrom)&&region(camera.focusTo)&&camera.focusFrom[0]===camera.focusTo[0]&&camera.focusFrom[1]===camera.focusTo[1])bad(camera.effect+' starts and ends on the same region; write where the window settles');
+   if(['reveal','parallax'].includes(camera?.effect)&&!text(camera.layersPlan))bad('layered camera needs a prepared foreground and clean-background plan');
    if(!draft&&['focus-in','rack-focus','approach'].includes(camera?.effect)&&!region(camera.focusTo))bad('focusTo needs normalized x,y,rx,ry from the actual image');
    if(!draft&&camera?.effect==='rack-focus'&&!region(camera.focusFrom))bad('rack-focus needs a source focus region');
    if(!draft&&['reveal','parallax'].includes(camera?.effect)&&(!Array.isArray(camera.layers)||!camera.layers.length))bad('layered camera needs actual layer assets before production');
@@ -294,7 +300,7 @@ if(r.mode==='data_graph'||(fullVideo&&CHARTS[r.purpose])){
   if((!long&&textCount>2)||(long&&total>0&&textSeconds/total>0.2))errors.push('text-led slides dominate: at most 2 per short, or 20% of generated duration in long-form; use source images, acted processes or actual charts where the content calls for them');
   return errors;
  }
- const api={PURPOSES,ALTERNATIVES,LABELS,CHARTS,PREVIZ_RENDERERS,PREVIZ_HANDOFFS,recommend,modesFor,checkLicense,exempt,framePlan,checkFrames,checkPreviz,previzHandoff,checkScene,checkData,checkMap,checkEpisode};
+ const api={PURPOSES,ALTERNATIVES,LABELS,STILL_CAMERA_EFFECTS,CHARTS,PREVIZ_RENDERERS,PREVIZ_HANDOFFS,recommend,modesFor,checkLicense,exempt,framePlan,checkFrames,checkPreviz,previzHandoff,checkScene,checkData,checkMap,checkEpisode};
 
  if(typeof module==='object'&&module.exports)module.exports=api;else root.RENDER_ROUTING=api;
 })(typeof window==='object'?window:globalThis);

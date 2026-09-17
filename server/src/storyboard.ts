@@ -51,6 +51,8 @@ interface Contract {
   validateComposition(value: unknown): string[];
   EYELINE_SCHEMA: Record<string, unknown>;
   validateEyeline(value: unknown): string[];
+  DEPTH_SCHEMA: Record<string, unknown>;
+  validateDepth(value: unknown): string[];
   VOCAB: {
     SIZES: string[]; ANGLES: string[]; TYPES: string[]; BEATS: string[]; INFO_TYPES: string[];
     SHARE_TYPES: string[]; HOOK_TYPES: string[]; HOOK_FORMS: string[]; ARCS: string[];
@@ -83,6 +85,10 @@ export function cameraContract(): CameraContract {
 export function renderPurposes(): string[] {
   const routing = loadFromHere(join(REFERENCES_DIR, 'render-routing.js')) as { PURPOSES: Record<string, string> };
   return Object.keys(routing.PURPOSES);
+}
+export function stillCameraEffectList(): string[] {
+  const routing = loadFromHere(join(REFERENCES_DIR, 'render-routing.js')) as { STILL_CAMERA_EFFECTS: string[] };
+  return routing.STILL_CAMERA_EFFECTS;
 }
 
 // ── Schemas ─────────────────────────────────────────────────────
@@ -164,6 +170,10 @@ export const eyelineSchema = z.record(z.unknown()).superRefine((value, ctx) => {
   for (const message of contract().validateEyeline(value)) ctx.addIssue({ code: z.ZodIssueCode.custom, message });
 });
 
+export const depthSchema = z.record(z.unknown()).superRefine((value, ctx) => {
+  for (const message of contract().validateDepth(value)) ctx.addIssue({ code: z.ZodIssueCode.custom, message });
+});
+
 export const cameraSchema = z.record(z.unknown()).superRefine((value, ctx) => {
   for (const message of cameraContract().cameraInputErrors(value))
     ctx.addIssue({ code: z.ZodIssueCode.custom, message });
@@ -200,6 +210,7 @@ export const shotSchema = z
         space: z.record(z.unknown()).optional(),
         eyeline: eyelineSchema.optional(),
         composition: compositionSchema.optional(),
+        depth: depthSchema.optional(),
         coverage: coverageSchema.optional(),
         lineNeutral: z.literal(true).optional(),
         lineCrossing: lineCrossingSchema.optional(),

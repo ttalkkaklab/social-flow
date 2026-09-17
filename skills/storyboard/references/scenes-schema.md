@@ -710,7 +710,7 @@ wants the handoff):
 | `mode` | ✅ | one of the seven routes above |
 | `purpose` | ✅ | `portrait` · `atmosphere` · `place` · `detail` · `human_process` · `mechanism` · `physical_state` · `comparison` · `trend` · `share` · `distribution` · `geographic` · `timeline` · `live_action` · `evidence_quote` · `verdict` · `archive` — each has a default route (render-routing.md §Routes) |
 | `reason` | ✅ | why this treatment conveys the cut; one generic reason repeated across the episode fails visual-direction |
-| `camera` | ✅ on `still_camera` | `{effect, target, reason}` — `effect` one of `focus-in` · `rack-focus` · `approach` · `pull` · `pan` · `push` · `reveal` · `parallax`; `focusTo` (and `focusFrom` for rack-focus) as normalized `[x, y, rx, ry]` from the actual image; `layersPlan` and, before production, `layers` for reveal/parallax |
+| `camera` | ✅ on `still_camera` | `{effect, target, reason}` — `effect` one of `focus-in` · `rack-focus` · `approach` · `pull` · `pan` · `tilt` · `push` · `reveal` · `parallax`; `focusTo` (and `focusFrom` for rack-focus) as normalized `[x, y, rx, ry]` from the actual image; `pan` and `tilt` travel from `focusFrom` to `focusTo` (both required, and different — a pan is a sentence from A to B, L13; `tilt` is the vertical pan, the scale-by-time move); `layersPlan` and, before production, `layers` for reveal/parallax |
 | `action` | ✅ on `character_html` · `object_html` · `generated_video` · `stock_video` | the visible subject change, before and after |
 | `actors` | ✅ on `character_html`, forbidden on `object_html` | who performs the action |
 | `motionEssential` · `whyNotStill` | ✅ on `generated_video` in hybrid | `true` plus why a still or controlled HTML action is not enough |
@@ -732,7 +732,7 @@ and `camera-slide-template.html`; its image and effect parameters come from scen
 | `beat` | optional on long-form, required on a short | short: `hook` \| `drip` \| `cta`. long-form: `hook` \| `hooking` \| `result` \| `body` \| `turn` \| `cta` (`turn` on the story arc only). See §playback order above |
 | `arc` | long-form cover only | `answer-first` (default) \| `story` — which playback order a long-form episode walks. Ignored on a short. See §playback order above |
 | `shot` | recommended | `{ feel, size, angle, why, info, infoType, share, shareType, space }` — below. `feel` and `infoType` are written **before** `size`·`angle`·`space`·`camera` are chosen (directing-grammar §5) |
-| `sound` | optional | `{ cue, drop, sfx }` — what the audience hears under this shot (§music cues · §sound effects). Narrated shots only (`cover`, `points`, `quote`); `broll` and `outro` aren't cards, so there is nothing for a cue to key to |
+| `sound` | optional | `{ cue, drop, sfx, ambience }` — what the audience hears under this shot (§music cues · §sound effects). Narrated shots only (`cover`, `points`, `quote`); `broll` and `outro` aren't cards, so there is nothing for a cue to key to |
 
 ```js
 shot: {
@@ -1570,14 +1570,28 @@ closing composition.
 
 **The slots become the camera span of the stored clip prompt** (§clip prompt) — assembled at
 the storyboard by `assemble-bg-prompt.js --clip` in this order: `framing`, then
-`speed movement`, then `ending on end`:
+`speed movement`, then `ending on end`; on a travelling move (pan, tilt, truck, pedestal,
+crane, dolly, zoom, dolly zoom) the span carries the two holds of L13–L14 — `framing, pauses,
+then speed movement, settling on end` — so the clip opens held on A and closes held on B, the
+handles the edit needs (a static camera, `handheld` and `aerial` keep the plain form):
 
-> `chest-up on the subject, very slow dolly in, ending on subject centred at mid-frame`
+> `chest-up on the subject, pauses, then slow dolly in, settling on subject centred at mid-frame`
 
 produce keeps the same recipe as its fallback for an older scenes.js with no stored prompt.
 
 The rules that applied to the old one-string camera line now apply per slot:
 
+- **A move the checker knows, and what the move needs** (directing-grammar §L13–L15;
+  `production-mode.js`). `movement` opens with one of `static` · `dolly in/out` · `zoom in/out`
+  · `dolly zoom in/out` · `pan left/right` · `tilt up/down` · `whip pan` · `truck left/right` ·
+  `pedestal up/down` · `crane up/down` · `arc shot` · `tracking` · `handheld` · `aerial`; a
+  description may follow (`dolly in toward the gate`), a pace word may not (`slow dolly in`
+  → the pace lives in `speed`). Per move: a pan, tilt, truck, pedestal, dolly or zoom names two
+  different pictures in `framing` and `end`; a whip pan carries its hit in `sound.sfx` or
+  `visual.audio`; a dolly zoom names its direction, carries `shot.depth` deep with the planes
+  that stretch, keeps `shot.composition.movement` stationary, and is written once per episode
+  (`[dolly-zoom-twice]`). Warnings: a dolly zoom over 5 s, a whip pan over 4 s, a `fast` pan
+  or tilt (24 fps strobing against vertical lines).
 - **Vendor vocabulary only** — `dolly in` not `push in`, `arc shot` not `orbit`. `push` appears 0
   times in the canonical Veo text, and a b-roll or speech slot lands on Veo (a motion
   background is a previz cut on Seedance and has no Veo route, §motion background).
@@ -1746,6 +1760,51 @@ A POV without a later linked reaction warns: retain it when the missing face is 
 A POV does not require hands to be visible. Review gaze against the actual paired source
 images and boundary playback; metadata cannot measure pupils or prove target distance.
 
+### Depth of field (`shot.depth`, L11)
+
+One structured property owns the depth plan. The approval icon, MCP schema, source-image
+prompt and shooting script read it; do not store a second depth note in `visual.camera` or in
+the prompt alone. The rule is a count: how many things must the viewer read in this frame at
+the same moment? One thing → `shallow` with the sharp plane named; two or more → `deep` with
+the planes listed front to back. A blurred background is a choice, not the default.
+
+```js
+depth: { mode: "shallow", reads: 1, focus: "A's eyes", sound: "near" }
+depth: { mode: "deep", reads: 3, planes: ["the cup", "A at the table", "the window"], sound: "full" }
+depth: { mode: "none", reason: "Flat chart on the studio stage" }
+```
+
+| Field | Values | Meaning |
+|---|---|---|
+| `mode` | `shallow` / `deep` / `none` | how many planes stay sharp; `none` when depth carries no information (graphs, flat slides, type) |
+| `reads` | integer ≥ 1 | the number of things the viewer must read at once; shallow with 2+ or deep with 1 needs a `reason` |
+| `focus` | text (shallow only) | the one sharp plane; on a person, name the eyes |
+| `planes` | 2–3 strings front to back (deep only) | every plane that must read, in depth order |
+| `sound` | `near` / `full` | sound perspective; shallow usually pairs with `near`, deep with `full` |
+| `reason` | text | required for `none` and for a count that departs from the mode; optional depth intent otherwise |
+
+**Required or optional:** new boards declare it on every placed photographic cut that is a
+close size (`mcu` and tighter, `insert`, `two`, `three`, `ots`) or a still-camera
+`focus-in` / `rack-focus` cut. HTML and chart routes never need it. As with `eyeline` and
+`composition`, the first `depth` record in a scene enrolls the scene: other needy cuts then
+fail without one, and an old scene with no record warns. The story draft defers missing
+records; full checks block them. A shallow record on a `two` / `three` / `ots` size warns
+that the partner disappears; a deep record on `choker` / `ecu` / `insert` warns that the
+frame rarely holds two readable planes.
+
+**Still lane caveat.** `still-camera.js` fakes focus with a feathered elliptical mask, so a
+`focus-in` or `rack-focus` cut is always `shallow`; a `deep` record on one fails. The mask
+does not know distance: two objects at the same depth blur differently when only one sits
+inside the ellipse. When that shows, the cut is not a focus-effect cut. A generated still
+that arrives with the key subject soft is a failed still, not a style.
+
+**Sound pairs with depth.** Shallow means the voice is forward and the room is faint;
+deep means every source is heard. `sound` records that pairing and a mismatch warns.
+The shooting script prints the depth handle: shallow opens the aperture, gets close, uses a
+longer lens and separates the subject from the background, never a post blur; deep stops
+down and adds light. Phone portrait mode is a mask like the still lane and shows the same
+edge halo on hair and glasses.
+
 ### Axis crossings and 30° coverage
 
 `shot.lineCrossing` belongs on the first shot from a new side of an existing axis. It is
@@ -1841,7 +1900,7 @@ What to write depends on whether the clip's own sound survives the build:
 engine: "seedance",                  // the planned route — written only when it departs the type default
                                      // (broll → veo, motion background → seedance, quote → veo_reference);
                                      // "host" under PRODUCTION.videoProvider:"host" — the CLI's own image_to_video (Grok)
-prompt: "chest-up on the subject, very slow dolly in, ending on subject centred at mid-frame. steam curling off the cup. Audio: quiet room tone, no music, no speech.",
+prompt: "chest-up on the subject, pauses, then slow dolly in, settling on subject centred at mid-frame. steam curling off the cup. Audio: quiet room tone, no music, no speech.",
 negative: "text, subtitles, black bars"   // veo text/img lanes only — nouns for the negativePrompt argument, never the body
                                      // (the reference lane rejects the argument — 400, measured; there exclusions become positive description)
 ```
@@ -1965,7 +2024,8 @@ Per shot:
 sound: {
   cue:  "tense",    // the bed changes to this cue here and stays until another shot changes it
   drop: false,      // true = the bed goes silent under this shot (0.30s ramp, not a cut)
-  sfx:  "whoosh-soft"  // a key in window.SFX (or a channel sfx catalog id), heard at the shot's first frame (§sound effects)
+  sfx:  "whoosh-soft",  // a key in window.SFX (or a channel sfx catalog id), heard at the shot's first frame (§sound effects)
+  ambience: "room-office" // a loop in window.SFX — the room tone starts here and holds until a shot names another or ends it with null
 }
 ```
 
@@ -2031,10 +2091,30 @@ Which cuts get one — the effect matches the size and speed of what moved on th
   outro is spliced after the build; the checker refuses both.
 - **Not twice.** When `visual.audio` already asks the clip for the sound (a door closing in the
   clip), don't add the same door as `sound.sfx` — one source per sound.
-- **Level is a knob, not a measurement.** The builder plays effects at `SFX_VOL` (0.85) and keys
-  the ducking on the voice alone, so an effect never pushes the bed down. Unlike the bed there is
-  no measured distance from the voice (bgm-scoring §effects) — write prompts that already sit
-  under speech ("soft", "short decay", "no music") instead of reaching for the knob.
+- **Level is measured, not a knob.** The builder measures each effect and gains it so its loudest
+  400 ms sits 6 LU under the narration (`SFX_SEP`), pulled back when its own true peak would pass
+  −1 dBTP, and keys the ducking on the voice alone, so an effect never pushes the bed down. Two
+  effects from two prompts land at the same distance from the voice; what the prompt still owns
+  is the shape ("short decay", "no tail", "no music") — a hit with a musical tail is a bed
+  fragment however quietly it sits (bgm-scoring §effects).
+
+**Room tone — `sound.ambience`.** Between sentences the mix used to fall to digital silence,
+which is what a viewer hears as a loading failure and what makes a cut sound spliced. A shot's
+`sound.ambience` names a `window.SFX` entry with `loop: true` (10–30 s — "quiet office room tone,
+no music, no speech", "night rain on a window, steady") and the room starts on that card and
+holds until a later shot names another or ends it with `ambience: null` (or `"-"`). The builder
+lays it 15 LU under the narration (`AMB_SEP`, the JAES figure for ambience under commentary)
+and never ducks it. One room per place: it changes where `STRUCTURE` changes place, not per
+shot. The checker refuses an entry that isn't a loop and an ambience on a `broll` or the
+`outro`. A hook that opens on room tone is the cheapest fix for the first-second silence.
+
+**A silent clip that needs its own sound.** The plugin has no video-to-audio lane (nothing takes
+a clip and returns synchronised foley — the candidates in the sound-design research need a
+key or a GPU the plugin does not have). What it does have covers most of the need: an effect
+the clip's length, prompted from the action in `visual.prompt` ("a cart rolling over gravel,
+six seconds, no music"), named on that card's `sound.sfx`. It lands on the cut and plays under
+the clip; it is not frame-synchronised to a footstep, so use it for continuous sounds (rolling,
+rain, an engine) and leave a single impact to the cut it belongs to.
 
 Where the numbers under all this come from, and which of them are evidence and which are our own
 practice: [bgm-scoring.md](../../produce/references/bgm-scoring.md). The short version — the bed

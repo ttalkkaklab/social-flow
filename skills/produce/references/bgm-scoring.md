@@ -13,7 +13,7 @@ working practice, marked as such, and the way to settle them is an A/B in our ow
 
 - [1. Levels — the part with evidence](#1-levels-the-part-with-evidence)
 - [2. What the builder does with all that](#2-what-the-builder-does-with-all-that)
-  - [Effects — a knob, not a measurement](#effects-a-knob-not-a-measurement)
+  - [Effects and room tone — measured like the bed](#effects-and-room-tone-measured-like-the-bed)
 - [3. Cues — this part is craft](#3-cues-this-part-is-craft)
 - [4. Generating a bed](#4-generating-a-bed)
 - [5. What did not survive](#5-what-did-not-survive)
@@ -117,15 +117,29 @@ in a single sample at 90.00s. `bgm-bed.sh` crossfades the bed onto itself instea
 local median at every lap; the crossfaded render left none. The better fix is still to not loop
 at all — `music_generate` takes an exact length up to 300s.
 
-### Effects — a knob, not a measurement
+### Effects and room tone — measured like the bed
 
-`sfx.tsv` effects play at `SFX_VOL` (0.85, linear) on top of whatever level the file was
-generated at. Nothing measures them against the voice the way step 9.5 measures the bed, so two
-effects from two prompts can land 8 LU apart at the same knob — the same trap §2 describes for
-beds. Until an effect step measures and gains each file (open work, 2026-09-16), the control is
-the prompt: "soft", "short decay", "no tail", "no music" produce a file that already sits under
-speech. The ducking key is the voice alone, so an effect never pushes the bed down (build-reel.sh
-step 10a). Generated effects are channel assets — `assets/audio/sfx/<id>.wav`, one
+`sfx.tsv` effects used to play at a fixed knob (`SFX_VOL` 0.85) on top of whatever level the file
+was generated at, so two effects from two prompts could land 8 LU apart — the same trap §2
+describes for beds. Since 2026-09-16 step 10a measures each file in one `ebur128` pass and gains
+it so its **maximum momentary loudness** (the loudest 400 ms — the figure a one-shot is heard
+at, where the integrated reading of a 0.8 s whoosh is mostly its own silence) lands `SFX_SEP`
+LU under the measured narration, 6 by default, pulled back when the file's own true peak would
+pass −1 dBTP. The 6 is practice, not a listening test: mixing guides put effects 4–8 dB under
+dialogue on the meters (the research doc's −10 ~ −20 dB range against a −6 ~ −12 dB dialogue
+reference), and the ducking key is still the voice alone, so an effect never pushes the bed
+down. The report prints where the loudest moment of the whole effects track landed.
+
+Room tone (`amb.tsv`, scenes-schema §sound effects) is the third lane: rendered by `bgm-bed.sh`
+exactly like the music bed — measured, gained, self-looped with a crossfade, cue changes
+crossfaded, a `-` cue for silence — to `AMB_SEP` LU under the narration, 15 by default, which is
+the same JAES paper's figure for ambience under commentary (§1). It is **not ducked**: the
+ducker's job is to move music out of the way of a sentence, and a room that dips at every
+sentence start is the pumping it was tuned to avoid. Its floor is the sound between sentences,
+which is what the 0.79.0 chunk-gap work found the ear reading as a splice when it is digital
+silence.
+
+Generated effects and rooms are channel assets — `assets/audio/sfx/<id>.wav`, one
 `sfx_elevenlabs_generate` call per id, reused by every later episode; the contract is
 scenes-schema §sound effects.
 

@@ -4,6 +4,7 @@
 # Usage: bgm-bed.sh <out.wav> <length-sec> <target-LUFS> <cuelist.tsv>
 #   <cuelist.tsv> : start-sec <TAB> audio-file, sorted, the first row starting at 0.
 #                   One row is a single bed for the whole feature — the old behavior.
+#                   A file of `-` is a silent span (the ambience lane ends its room tone with one).
 #
 # Three jobs, all of which the mix stage used to get wrong or skip:
 #
@@ -30,6 +31,7 @@ TARGET="${3:?target integrated LUFS}"
 CUES="${4:?cue list tsv}"
 
 LOOP_XF=${BGM_LOOP_XF:-2.0}        # self-loop crossfade for a cue shorter than its span
+                                   # BED_LOOP_OK=1 — laps are the plan (a room-tone loop), not a seam to warn about
 CUE_XF=${BGM_CUE_XF:-2.0}          # crossfade between two different cues
 TP_CEIL=${BGM_TP_CEIL:--1.0}       # the bed alone never goes above this true peak
 
@@ -47,6 +49,12 @@ measure() {
 # render_seg <src> <length> <out> — one cue, gained and stretched to exactly <length>.
 render_seg() {
   local SRC="$1" L="$2" O="$3" D I TP G XF N i FC MIX
+  # A `-` cue is a span with nothing playing — the ambience lane uses it to end the room tone.
+  if [ "$SRC" = "-" ]; then
+    ffmpeg -y -v error -f lavfi -t "$L" -i "anullsrc=r=48000:cl=stereo" -c:a pcm_s16le "$O"
+    echo "  cue -: silence, ${L}s"
+    return
+  fi
   D=$(dur "$SRC")
   read -r I TP <<< "$(measure "$SRC")"
   case "$I" in ''|*[!0-9.+-]*) echo "✗ bgm-bed: could not measure $SRC" >&2; exit 1;; esac
@@ -72,7 +80,7 @@ render_seg() {
   # A cue the storyboard generated for this span is meant to fit it; a lap here is the seam
   # nobody planned, usually because the cue was asked for the shots' length without the
   # handover the next cue needs. Say the exact number to regenerate at.
-  [ "${NC:-1}" -le 1 ] || echo "  ⚠ $(basename "$SRC") is ${D}s under its ${L}s span (shots + the ${CUE_XF}s handover) — ${N} laps at the cue boundary. Regenerate it at ${L}s or longer." >&2
+  [ "${NC:-1}" -le 1 ] || [ "${BED_LOOP_OK:-0}" = 1 ] || echo "  ⚠ $(basename "$SRC") is ${D}s under its ${L}s span (shots + the ${CUE_XF}s handover) — ${N} laps at the cue boundary. Regenerate it at ${L}s or longer." >&2
   local IN=(); FC=""; MIX=""
   for ((i=0; i<N; i++)); do
     IN+=(-i "$SRC")
@@ -92,7 +100,7 @@ render_seg() {
 STARTS=(); FILES=()
 while IFS=$'\t' read -r S F || [ -n "${S:-}" ]; do
   [ -z "${S:-}" ] && continue
-  [ -f "$F" ] || { echo "✗ bgm-bed: cue file missing — $F" >&2; exit 1; }
+  [ "$F" = "-" ] || [ -f "$F" ] || { echo "✗ bgm-bed: cue file missing — $F" >&2; exit 1; }
   STARTS+=("$S"); FILES+=("$F")
 done < "$CUES"
 NC=${#FILES[@]}

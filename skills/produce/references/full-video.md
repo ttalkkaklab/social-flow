@@ -176,7 +176,8 @@ node ${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/spatial-prompts.js story
 The helper is read-only. `sourcePrompt` restates the narrated meaning, the opening state, the
 world bible and the framing slot; store it as `visual.bgPrompt`. `motionPrompt` goes through
 the same `clipAssemble` recipe as every other clip in this pipeline: the camera span from the
-four slots (`framing, speed movement, ending on end`; a static camera has no speed), the
+four slots (`framing, speed movement, ending on end`; a travelling move reads `framing, pauses, then
+speed movement, settling on end` — the hold on each end; a static camera has no speed), the
 subject action with its beats in words, a consistency lock that carries the look and the
 episode camera language, and `Audio: silent`. Store it as `visual.video.prompt`. Before
 returning, the helper runs the Seedance prompt gate that `check-scenes.js` runs on every

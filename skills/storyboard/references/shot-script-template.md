@@ -162,11 +162,16 @@ generated: <YYYY-MM-DD>
 - **Every shot block carries 느낌 · 사이즈·앵글 · 소리** rendered from `shot.feel`, `shot.size`
   and `shot.angle` — the feel first, then the size with its phone distance, the angle with its
   eye-height baseline, and the sound balance that follows the size. When `shot.space` is
-  written it also prints **자리** (camera-frame layout, facing, the 180° line). The standing notes at the top
+  written it also prints **자리** (camera-frame layout, facing, the 180° line), and when
+  `visual.camera` is written it prints **카메라** — the move as the instruction for a phone
+  (pan: torso not wrist, 3 s held on each end, a five count for 90°; dolly: walk, pre-focus at
+  the arrival; tilt up: the time it takes is the size; dolly zoom: walk and zoom the other way,
+  the person's size fixed) — and **시작 → 끝** from `framing` and `end`. The standing notes at the top
   ("카메라를 들기 전에") carry the rules the person filming has to hold: walk to change size, don't
   cut at a joint, eye level means the subject's eyes, the 180° line when two people are on
   screen, 30°/two sizes/cut on action when re-filming the same subject, one mic position per
-  sitting. The source of truth is `directing-grammar.md` §2–§3, §3.5 and §7; the renderer prints them.
+  sitting, 3 s of stillness before and after any camera move, pan from the waist, pre-focus
+  before a walk-in. The source of truth is `directing-grammar.md` §2–§3, §3.5, §4 and §7; the renderer prints them.
 - **On a short, the cta shot's forwardable line is one of its 대사 sentences.** The board's
   `shot.share` names which one — the sentence, figure or verdict a viewer can pass on as-is —
   so it is said exactly as scripted, under the same rule as the figures and proper nouns. It

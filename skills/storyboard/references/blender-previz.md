@@ -230,6 +230,13 @@ trade: exact camera and timing from the clip, a close first frame from the still
   only when the cut needs both — a 12 s clip with a dolly, a walk and a pan made the model pick
   a random part each take, a 6 s dolly alone landed every time
   (docs/research/2026-09-11-previz-mandatory §7.5–7.6).
+- **Hold in, hold out.** A travelling move (pan, tilt, truck, pedestal, crane, dolly, zoom,
+  dolly zoom) keys the opening camera twice — frame 1 and about half a second in — and the
+  closing camera twice — about half a second before the end and the last frame — so the clip
+  opens held on `framing` and closes held on `end` (L13–L14; the prompt span says the same:
+  `pauses, then … settling on`). Keys interpolate linearly, so without the second key the
+  move starts on frame 1 and the cut attaches to nothing on either side. A `dolly zoom` also
+  keys `lensMm` on the camera keys (this lane only; the three.js template holds one lens).
 - **24 fps.** The vendor takes 24–60 and outputs 24; rendering at 24 makes frame n of the
   previz frame n of the result, which is what the QA overlay compares. Set it in
   `blender_scene_build` (`fps: 24`).
