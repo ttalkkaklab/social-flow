@@ -335,6 +335,11 @@ describe('shot camera MCP input', () => {
       assert.deepEqual(camera.properties.trajectory.properties.keys.items.required, ['at', 'position', 'target', 'rollDeg', 'label']);
       assert.deepEqual(camera.allOf[0].then.required, ['variant', 'trajectory']);
       assert.equal(camera.allOf[1].then.properties.trajectory.properties.keys.items.properties.rollDeg.const, 0);
+      // L13–L15: the move vocabulary rides the schema, and the still lane's window move is an item of its own.
+      assert.ok(camera.properties.movement.description.includes('tilt up/down'));
+      const stillCamera = schema.properties.shot.properties.render.properties.camera;
+      assert.deepEqual(stillCamera.required, ['effect', 'target', 'reason']);
+      assert.deepEqual(stillCamera.properties.effect.enum, ['focus-in', 'rack-focus', 'approach', 'pull', 'pan', 'tilt', 'push', 'reveal', 'parallax']);
       assert.equal(schema.additionalProperties, true);
       assert.equal(schema.properties.visual.additionalProperties, true);
     }

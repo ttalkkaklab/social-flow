@@ -383,7 +383,9 @@ move while the other dials stayed at their defaults.
 |---|---|---|---|
 | approach | `dolly in` | realisation · awakening · attention closing in on one thing | the camera passes through the space — fore and background flow at different speeds |
 | approach | `zoom in` (lens only, slow) | pressure · quiet tension — the space compresses behind the person | not a dolly: the frame scales, the background presses onto the back |
-| approach | `dolly zoom` | shock · the ground falling away — the person's size holds, the background stretches | two actions in one: the vendor table's exception. Once per episode |
+| approach | `dolly zoom in` / `dolly zoom out` | the moment the world turns over — the person's size holds, only the background moves. **in** (camera in, lens out): the background backs away and spreads — isolation, "I'm alone in this". **out** (camera out, lens in): the background closes in and stacks up — cornered, "nowhere to go" | two actions in one: the vendor table's exception. It happens to the *background*, so the shot needs depth cues (a corridor, columns, a row of cars — `shot.depth` deep with the planes) and a subject who stands still; in front of a plain wall nothing happens. 3–5 s, once per episode — the second time the audience watches the camera |
+| rotate | `pan left` / `pan right` | introducing a space (one pan leaves the room's map in the viewer's head — better than three cuts) · confirming a relation (A, then the pan finds B: the two are in one room and know it) | the camera turns in place. A pan is a sentence from A to B — `framing` is A, `end` is B, and a pan whose two ends are the same picture is a look-around the edit cuts. It buys spatial proof with speed: a cut is faster but cannot prove the two share a room |
+| rotate | `tilt up` / `tilt down` | scale by time — how big a thing is, told by how long it takes the eye to finish it; a reveal after a reaction (face → gaze up → camera follows → the thing enters from the top) | the camera nods in place. A tilt up makes the subject larger; a `pedestal up` (height, not angle) looks down on it instead — the two are never the same cue. Sound before picture on a reveal: the bed swells before the whole thing is in frame |
 | rotate · travel | `arc shot` | a first appearance · explaining the space around one person in a single move | not `orbit` (0 hits in the Veo text) |
 | rotate · travel | `tracking` (follow, from behind, shoulder height) | immersion — the audience stands behind the character; moving, chasing | the most immersive of the set |
 | rotate · travel | `tracking` (reverse — ahead of the subject, retreating) | walk-and-talk | keep the face framed in `framing` |
@@ -405,6 +407,32 @@ move while the other dials stayed at their defaults.
   engine file carries the per-model nuance (the default model teaches combinations; 2.0 asks
   for one) — the storyboard writes one unless a reason sits beside the second.
 - **A long take (10 s+) holds one move, no exception.**
+- **A move has a hold on each end** `[course]` (L13–L14). Hold in → ease in → the move → ease
+  out → hold out. `framing` is the held opening, `end` the held closing; the assembled span
+  reads `framing, pauses, then speed movement, settling on end` on every travelling move (pan,
+  tilt, truck, pedestal, crane, dolly, zoom, dolly zoom), and the previz clip keys the same two
+  holds (blender-previz §6.1). `arc shot`, `tracking`, `handheld` and `aerial` hold one framing while the world moves past, so they take neither the two-picture rule nor the hold phrase. Without them the cut attaches to nothing on either side. The
+  practice value is about 3 s per end on a filmed shot; on a 5 s generated clip it is the
+  eased first and last half-second.
+- **A pan or tilt strobes before it blurs** `[course]`. At 24 fps a 90° pan in under 3–4 s
+  starts to judder wherever the background carries vertical lines (posts, window frames,
+  trees); 5–8 s reads; 10 s+ is a change the eye notices only afterwards. The lens sets the
+  threshold: the same angle looks slower on a wide lens and breaks sooner on a long one — so
+  when a pan reads broken, widen the framing and come closer before slowing it down.
+  `speed: fast` on a pan or tilt is a warning the checker prints for that reason.
+- **Dolly, not zoom, for approach — the difference is the background** `[course]` (L14). A
+  zoom scales the whole frame: person and background grow together, nothing changes place, and
+  the viewer reads "someone raised binoculars". A dolly changes distance, so the near subject
+  grows faster than the far background and steps out of it — the viewer reads "I walked
+  toward them", which is what a body does when it attends. That is why `zoom in` serves
+  pressure (the space presses onto the back) and `dolly in` serves realisation. On a filmed
+  shot: walk, and pre-focus on the arrival point before the walk starts (`shot.depth`, L11) —
+  focus set at the start point breathes the whole way in.
+- **A reveal arrives in order** `[course]` (L13, *Jurassic Park*'s first brachiosaur): the face
+  changes first, the gaze goes up, the camera follows the gaze, the thing enters from the top
+  of frame — and the sound (the bed swelling, the thing's own sound) arrives before the whole
+  picture does. Nobody says "look at that"; the reaction is the line. The cut works with a
+  phone held in two hands; the crane was never the point.
 - **A whip pan starts and ends on the same size** `[course]`. It is one continuous move, so
   opening on `ms` and landing on `cu` makes it a cut wearing a smear — it reads as an error, not
   a transition. And give the swing a budget in `speed`/`framing`: hold, then the blurred swing,
@@ -488,6 +516,8 @@ scene that doesn't need a move written stays on the alternating default.
 | Feel (what the audience should get) | Size | Angle | Move (generated only) | Still (Ken Burns lane) | Length | Sound | Watch out |
 |---|---|---|---|---|---|---|---|
 | observe · understand the situation (관찰·설명) | `ls` → `ms` | `eye` | `static`, or one slow `truck` | `auto` drift, or a slow `pan` across the scene | 5–8 s | space forward, lines clear enough | the body's default register — don't decorate it |
+| introduce the space · confirm a relation (공간 소개·관계 확정) | `ls`/`ms` | `eye` | slow `pan` from A to B | slow `pan` from A to B (focusFrom → focusTo) | 5–8 s | the room, then B's sound as B arrives | `framing` A and `end` B differ; a pan with no B is cut in the edit |
+| scale by time · looking up (규모 — 올려다봄) | `fs`/`ls`, the thing filling the top | `low` → `eye` | `tilt up`, steady | `tilt` up the picture | 5–8 s | the bed swells before the top is in frame | after a reaction shot when there is a person; a `pedestal up` looks down on it instead |
 | scale · how big this is (규모) | `els`/`ls` with many subjects | `high` or `overhead` | `static`, or `dolly out` rising | `out`, or `pan` across the expanse | 5–8 s | space loud | the same tiny person alone means loneliness, not scale — the head count flips the meaning |
 | alone · powerless · the world is big (고독·무력) | `els` | `eye` or slight `high` | `static` or slow `dolly out` | slow `out` | 5–8 s | wind, room, distant machine — **no human voice** | Mad Max's cliff: the smallness says the sentence; don't narrate it on top |
 | intimate · I'm in it (친밀·당사자) | `mcu` → `cu` | `eye` | `static` or very slow `dolly in` | slow `in`, `focus` on the person | 7–10 s | voice and breath forward, space gone | one close-up (`cu`·`choker`·`ecu`) per scene — spend it on the line that matters |
@@ -498,7 +528,8 @@ scene that doesn't need a move written stays on the alternating default.
 | imposing · hero · dangerous (위압·영웅) | `fs`/`ms` | `low` (+ wide lens) | `static` or slow `dolly in` | slow `in` — the low angle is drawn in the still | 5–7 s | low end forward | `[study]`: bigger and stronger, **not** better liked |
 | powerless · isolated · watched (무력·고립·감시) | `ls`/`ms` | `high` | `static` or slow `dolly out` | `out` | 5–8 s | the surroundings' sound | a subject filling a high-angle frame alone doesn't read weak |
 | fate · the whole picture in one frame (운명·요약) | `ls`/`els` | `overhead` | `static` | slow `out`, or `hold` + `drift` | 5–8 s | space | |
-| shock · the floor drops (충격) | `mcu` | `eye` | `dolly zoom` | `punch` | 3–5 s | one hit, then nothing | once per episode |
+| shock · alone in it · the world backs away (충격·고립) | `mcu` | `eye` | `dolly zoom in` | `punch` | 3–5 s | the surroundings drop out, one hit, then only the person's own sound (*Jaws*: the beach noise leaves, Brody stays) | once per episode, either direction; needs depth cues behind the person (`shot.depth` deep) and a subject who stands still |
+| cornered · no way out (궁지·압박) | `mcu` | `eye` | `dolly zoom out` | slow `in`, `focus` on the person | 3–5 s | the room closes in — a low drone rises | the same once-per-episode budget as the row above |
 | hidden information revealed (숨은 정보 공개) | two planes, or `insert` | `eye` | `rack focus` / `static` | `in` + `focus` at the detail | 3–4 s | the object's sound | an insert replaces three lines |
 | the rhythm of travel (이동의 리듬) | `fs`/`ms` | `eye` | `truck` | `pan` in the travel's direction | 5–7 s | footsteps, passing space | |
 | inside the character · immersion (몰입·1인칭) | `pov` or `tracking` from behind | `eye` | `tracking` | `in` + `drift` | 5–7 s | breathing, footsteps | |
@@ -677,6 +708,22 @@ Warnings, not blocks — the reviewer and the person at the approval step weigh 
   180° rule (the line, four legal crossings, "A left, B right"); L06 the 30° rule (jump cuts,
   axial cut, cutting on action, the vlog contract); L07 eyeline match (reciprocal gaze,
   target eye height and distance, POV and reaction, offscreen markers).
+- Film-directing daily course, L11 deep focus and shallow depth of field (2026-08-26): count
+  what must be read (one → shallow, two or more → deep); eyes as the focus plane; *Citizen
+  Kane* three-plane simultaneity; sound perspective follows depth; the blurred background is
+  a choice, not a default; phone portrait mode and mask edges.
+- Film-directing daily course, L13 pan and tilt · L14 dolly, truck and tracking · L15 dolly
+  zoom (2026-08-28 ~ 08-30): a move has a hold on each end and a named A and B; pan proves a
+  shared space where a cut cannot; tilt up is scale by time; tilt vs pedestal; 24 fps strobing
+  by pan speed and lens; *Jurassic Park*'s reveal order (reaction → gaze → camera → thing, sound
+  first); whip pans land on a sound (Edgar Wright); dolly changes distance and zoom does not,
+  so the background tells them apart; walk-and-talk and lead room on a tracking shot; pre-focus
+  at the arrival point; the dolly zoom's two directions (isolation / cornered), its depth-cue
+  and stationary-subject conditions, its once-per-episode budget, *Vertigo* · *Jaws* ·
+  *Fellowship of the Ring*. In this file §4 rows and bullets, §5 rows, and the L13–L15 section;
+  the machine form is `production-mode.js` (move vocabulary and per-move conditions),
+  `still-camera.js` (`pan`/`tilt` between two regions), the `pauses, then … settling on` span
+  in `assemble-bg-prompt.js`, and the camera block `make-script.js` prints.
 - AI Astra, "AI 영화 제작 가이드 — AI 영상 퀄리티 3배 높여주는 8가지 비법" (YouTube
   `sHs0_iZJxHk`, 2026-08-21): camera prompts in four slots (movement · speed · framing · end);
   camera apart from the scene description; 20 moves with the feel each serves, in five bundles
@@ -736,6 +783,38 @@ third, and close-ups may crop the crown while preserving the chin. Detail shots 
 headroom when no head is visible. Record pressure, pursuit or deliberate imbalance as
 intentional with a reason. Safe zones come from the output format and platform UI, not a
 universal 5% inset. Check the actual final crop and moving-shot endpoints.
+
+## L11 — Deep focus and shallow depth of field
+
+Use `shot.depth` (scenes-schema §Depth of field). Decide by counting: how many things must
+the viewer read in this frame at once? One → shallow depth of field with the sharp plane
+named, and on a person that plane is the eyes. Two or more → deep focus with every plane
+listed front to back, the way *Citizen Kane* keeps the boy in the window, the mother at the
+table and the banker in one sharp frame. A departure needs a reason on the record; a
+blurred background is never the default, and a still whose key subject is soft has failed.
+Depth and sound perspective move together: shallow brings the voice forward and dims the
+room, deep lets every source be heard. The still lane fakes focus with a mask, so a
+focus-in or rack-focus cut is always shallow, and objects at one distance that blur
+differently expose the mask. Check depth on the actual image and clip, not on the record.
+
+## L13–L15 — Camera moves: pan and tilt, dolly and truck, dolly zoom
+
+The move sits in `visual.camera.movement` in vendor vocabulary (§4 table; `production-mode.js`
+refuses `push in`, `orbit`, `boom`, a Korean word, or a pace word inside the move) and is
+chosen from `shot.feel` through §5. Three things the checker holds per shot: a travelling move
+names two different pictures (`framing` A, `end` B — the hold in and the hold out, spoken in
+the span as `pauses, then … settling on`); a whip pan lands on a sound (`sound.sfx` or
+`visual.audio`); a dolly zoom names its direction (`in` = isolation, `out` = cornered), carries
+`shot.depth` deep with the planes that stretch, keeps `shot.composition.movement` stationary,
+and appears once in the episode. Two are warnings: a dolly zoom over 5 s and a whip pan over
+4 s (the trick outlives the feeling), and a `fast` pan or tilt (strobing at 24 fps against
+vertical lines — widen and approach before slowing). On the still lane the same moves are
+`shot.render.camera.effect` `pan` / `tilt` between `focusFrom` and `focusTo` regions of the
+actual image, eased at both ends by the runtime. On a filmed shot `script.md` prints the move
+as an instruction: the 3 s holds, the torso-not-wrist pan, "five count for 90°", walk instead
+of zoom, pre-focus at the arrival, walk-and-zoom for the dolly zoom. The previz keys the two
+holds too (blender-previz §6.1); a `dolly zoom` previz needs the lens keyed, which only the
+Blender lane does — the three.js template holds one `lensMm` for the clip.
 
 ## Drone fly-through preset
 

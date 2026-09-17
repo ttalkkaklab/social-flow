@@ -688,6 +688,7 @@ Core rules:
   carry it alone, and `framing` restates the shot's size and angle in the engine's words.
 - **Composition uses `shot.composition`** (scenes-schema §Composition): plan visible faces and directional subjects, inherit FORMAT safe zones, and keep space.layout consistent. The frame icon shows the plan; intentional departures need a reason.
 - **Gaze sequences declare `shot.eyeline`** using scenes-schema §Eyeline: write the subject, target, screen direction, target distance and linked cut. The eye icon reads this record. Unrelated cuts can omit it; movement-only axes use `none` with a reason. New gaze scenes fill every relevant cut; legacy omissions warn.
+- **Depth is a count, recorded in `shot.depth`** (scenes-schema §Depth of field): one thing to read → `shallow` with the sharp plane named (a person's eyes), two or more → `deep` with the planes listed front to back, `none` with a reason on flat routes. The two-plane icon reads this record. A still-camera focus-in or rack-focus cut is always shallow; a blurred background is never the default.
 
 - **Every generated still leaves here with its floor plan decided** — `shot.space` filled
   (`frame: "camera"` · `layout` — empty only on an `insert`/`ecu` that fills the frame with one
@@ -755,7 +756,10 @@ Core rules:
   ~10 s with none on adjacent cards. produce generates each id once into the channel catalog
   and the next episode reuses it — so before inventing a new id, read
   `assets/catalog.md` for the effects the channel already has
-  (`references/scenes-schema.md` §sound effects).
+  (`references/scenes-schema.md` §sound effects). Give each place a room: a `loop: true`
+  entry ("quiet office room tone, no music, no speech") named on the first shot of the place
+  with `sound.ambience`, ended with `ambience: null` where the place ends. It sits 15 LU under
+  the voice and fills the silence between sentences that otherwise reads as a splice.
 
 #### Turning channel measurements into story structure
 

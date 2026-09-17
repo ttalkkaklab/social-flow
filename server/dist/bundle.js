@@ -75814,6 +75814,10 @@ function renderPurposes() {
   const routing = loadFromHere(join2(REFERENCES_DIR, "render-routing.js"));
   return Object.keys(routing.PURPOSES);
 }
+function stillCameraEffectList() {
+  const routing = loadFromHere(join2(REFERENCES_DIR, "render-routing.js"));
+  return routing.STILL_CAMERA_EFFECTS;
+}
 var tuple = (list) => external_exports.enum(list);
 var MISSING = ["__contract-missing__"];
 function vocabAtLoad() {
@@ -75888,6 +75892,9 @@ var compositionSchema = external_exports.record(external_exports.unknown()).supe
 var eyelineSchema = external_exports.record(external_exports.unknown()).superRefine((value, ctx) => {
   for (const message of contract().validateEyeline(value)) ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
 });
+var depthSchema = external_exports.record(external_exports.unknown()).superRefine((value, ctx) => {
+  for (const message of contract().validateDepth(value)) ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+});
 var cameraSchema = external_exports.record(external_exports.unknown()).superRefine((value, ctx) => {
   for (const message of cameraContract().cameraInputErrors(value))
     ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
@@ -75921,6 +75928,7 @@ var shotSchema = external_exports.object({
     space: external_exports.record(external_exports.unknown()).optional(),
     eyeline: eyelineSchema.optional(),
     composition: compositionSchema.optional(),
+    depth: depthSchema.optional(),
     coverage: coverageSchema.optional(),
     lineNeutral: external_exports.literal(true).optional(),
     lineCrossing: lineCrossingSchema.optional(),
@@ -83293,6 +83301,13 @@ var compositionInput = (() => {
     return { type: "object", description: "Composition contract unavailable: restore skills/storyboard/references/structure-contract.js" };
   }
 })();
+var depthInput = (() => {
+  try {
+    return contract().DEPTH_SCHEMA;
+  } catch {
+    return { type: "object", description: "Depth contract unavailable: restore skills/storyboard/references/structure-contract.js" };
+  }
+})();
 var storyboardVocabulary = (() => {
   try {
     return contract().VOCAB;
@@ -83315,6 +83330,27 @@ var purposes = (() => {
     return [];
   }
 })();
+var stillCameraEffects = (() => {
+  try {
+    return stillCameraEffectList();
+  } catch {
+    return [];
+  }
+})();
+var stillCameraInput = {
+  type: "object",
+  additionalProperties: true,
+  required: ["effect", "target", "reason"],
+  description: "Required on still_camera. The eased window move the builder drives over the photograph: push (slow zoom-in, the default) \xB7 pull \xB7 approach \xB7 focus-in \xB7 rack-focus \xB7 pan \xB7 tilt (L13: a pan or tilt travels from focusFrom to focusTo, the vertical tilt being the scale-by-time move) \xB7 reveal \xB7 parallax (prepared layers). The ease holds the opening and closing pictures on its own.",
+  properties: {
+    effect: enumInput(stillCameraEffects, "The window move. Choose from the cut's meaning (directing-grammar \xA75 Still column), never repeat one on every cut."),
+    target: { type: "string", description: "What the move arrives on or travels over, in the picture." },
+    reason: { type: "string", description: "Why this move conveys the cut; content-based." },
+    focusTo: { type: "array", minItems: 4, maxItems: 4, items: { type: "number" }, description: "Normalized [x, y, rx, ry] region from the actual image: the arrival plane for focus-in, rack-focus and approach; the closing picture for pan and tilt." },
+    focusFrom: { type: "array", minItems: 4, maxItems: 4, items: { type: "number" }, description: "Normalized [x, y, rx, ry] region: the departure plane for rack-focus; the opening picture for pan and tilt (it must differ from focusTo)." },
+    layersPlan: { type: "string", description: "reveal and parallax only: the prepared foreground and clean-background plan." }
+  }
+};
 var looks = (() => {
   try {
     return cameraContract().ALL_LOOKS;
@@ -83337,7 +83373,7 @@ var storyboardShotInput = {
     shot: {
       type: "object",
       additionalProperties: true,
-      description: "Shot grammar and production route. Render mode chooses how to build the shot; visual.camera chooses how it is filmed.",
+      description: "Shot grammar and production route. Render mode chooses how to build the shot; visual.camera chooses how it is filmed; shot.depth chooses how many planes the viewer may read at once (L11).",
       properties: {
         size: enumInput(storyboardVocabulary?.SIZES, "Framing size."),
         angle: enumInput(storyboardVocabulary?.ANGLES, "Camera angle."),
@@ -83345,6 +83381,7 @@ var storyboardShotInput = {
         feel: { type: "string", description: "What the viewer should feel before choosing framing and movement." },
         eyeline: eyelineInput,
         composition: compositionInput,
+        depth: depthInput,
         render: {
           type: "object",
           additionalProperties: true,
@@ -83356,7 +83393,8 @@ var storyboardShotInput = {
             reason: { type: "string", description: "Why this route conveys the intended information." },
             action: { type: "string", description: "Visible action or spatial reveal." },
             motionEssential: { type: "boolean", description: "true when continuous movement is essential. Required true for drone-flythrough." },
-            whyNotStill: { type: "string", description: "What travel reveals that a still cannot. Required for drone-flythrough." }
+            whyNotStill: { type: "string", description: "What travel reveals that a still cannot. Required for drone-flythrough." },
+            camera: stillCameraInput
           }
         },
         videoDesign: {
@@ -86706,7 +86744,7 @@ Returns: JSON \u2014 { version, format, shots, sequences[\u2026scenes[\u2026shot
     description: `Write a storyboard's scenes.js from a sequence \u2192 scene \u2192 shot model, or patch part of it, in one call. Every shot is validated against the grammar vocabularies (type \xB7 beat \xB7 size \xB7 angle \xB7 infoType \xB7 shareType \xB7 render.mode \xB7 transition), the structure against its rules (one place and time per scene, a charge that turns, every scene in exactly one sequence, shots grouped by scene in sequence order, two sizes per scene), and the derived shot labels (sceneSlug \xB7 sequence) are written from the structure. Nothing is written when a violation is found \u2014 the findings come back instead. Warnings are written and reported.
 
 Use it to author a new board (set = { structure, shots }) after the narration is approved (storyboard \xA74), and to change one thing later (scenes / sequences / shots by key, insertShots, removeShots, globals for FORMAT \xB7 THEME \xB7 COMPREHENSION \xB7 STORY \xB7 PRODUCTION \xB7 MUSIC). Use transitions to change only the effect before selected shots without replacing their narration or visuals. dip fades out to black and fades the next scene in; prefer it for changes of place or time unless a specific cut calls for another effect. One call carries the whole change \u2014 do not write scenes.js by hand and do not call this once per shot. dryRun:true validates without writing.
-Shot creation, upserts and inserts expose type, shot.render.mode, shot.videoDesign and visual.camera in the input schema. For a drone shot choose preset:"drone-flythrough", variant:"cinematic" or "fpv", and the trajectory. The preset does not change the episode style or select a paid model.
+Shot creation, upserts and inserts expose type, shot.render.mode, shot.videoDesign, visual.camera and the three plan records shot.eyeline \xB7 shot.composition \xB7 shot.depth in the input schema. shot.depth (L11): count what the viewer must read in the frame at once \u2014 one thing \u2192 shallow with focus (a person's eyes), two or more \u2192 deep with the planes listed front to back; a departure needs a reason, and a still_camera focus-in/rack-focus cut cannot be deep. For a drone shot choose preset:"drone-flythrough", variant:"cinematic" or "fpv", and the trajectory. The preset does not change the episode style or select a paid model.
 Do NOT pass a shot's visual plan through a summary \u2014 pass the object scenes-schema.md defines (visual \xB7 shot.space \xB7 visual.camera \xB7 visual.video \u2026); unknown keys on a shot pass through untouched. Editing an approved board drops its \`// approved:\` line; it is approved again at the HITL gate.
 
 Scene: { no, place, time, event, charge: { open: "+"|"-", close: "+"|"-"|"++"|"--" }, turn, out? }. Sequence: { id, title, purpose, question?, payoff?, scenes: [no\u2026] }. The reasons for each field are in scenes-schema.md \xA7structure.
@@ -94248,7 +94286,7 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
 // src/index.ts
 import { readFileSync as readFinalRequest } from "node:fs";
 var server = new Server(
-  { name: "social-flow", version: "0.80.0" },
+  { name: "social-flow", version: "0.81.0" },
   { capabilities: { tools: {} } }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {

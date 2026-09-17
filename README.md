@@ -45,6 +45,11 @@ source-image prompt and filming script. New gaze sequences declare it on related
 unrelated cuts can omit it. Scenes using the property enforce required records and linked
 shot consistency; older scenes without it warn. See [eyeline contract](skills/storyboard/references/scenes-schema.md#eyeline-shoteyeline-l07).
 
+Depth of field uses one `shot.depth` record for the board two-plane icon, MCP input,
+source-image prompt and shooting script. It counts what the viewer must read at once: one
+thing → shallow with the sharp plane named, two or more → deep with the planes listed front
+to back. A still-camera focus effect is always shallow. See [depth contract](skills/storyboard/references/scenes-schema.md#depth-of-field-shotdepth-l11).
+
 Assembly compiles each storyboard transition into the production timeline.
 `storyboard_apply.transitions` changes selected incoming effects without replacing shots.
 For scene changes in place or time, prefer `dip` (fade through black); the storyboard

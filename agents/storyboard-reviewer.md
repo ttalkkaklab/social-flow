@@ -1316,7 +1316,7 @@ made later in produce §3; what you judge is the plan the storyboard commits to.
 ## Scope
 
 In scope: the music plan (`window.MUSIC` and each shot's `sound`), the effects plan
-(`window.SFX` and each shot's `sound.sfx`), `visual.audio` on every
+(`window.SFX`, each shot's `sound.sfx` and the room tone in `sound.ambience`), `visual.audio` on every
 generated-video shot, which voice each line is spoken in, the `tts` phonetic spellings, the beats
 where the sound should get out of the way, and the narration's own rhythm.
 
@@ -1361,7 +1361,9 @@ volume.
 - **P0-9 a `sound.sfx` that names nothing** — no key in `window.SFX` and, when there is no
   `window.SFX`, no file in the channel catalog. produce has nothing to place and the builder
   stops at sfx.tsv after the narration and stills are already paid for. A `sound.sfx` on a
-  `broll` or the `outro` is the same defect — neither is a card.
+  `broll` or the `outro` is the same defect — neither is a card. A `sound.ambience` that names
+  no `loop: true` entry is the same defect on the room-tone lane: a one-shot laid as a room
+  seams at every lap.
 
 **An episode where the sound never moves is not a P0.** One bed with no drop is a real design,
 it is what most short-form episodes ship as, and a P0 there would halt every unattended run on a
@@ -1582,3 +1584,12 @@ crop to the declared headroom, eye height, gaze-side room and travel-side room. 
 against captions and platform UI, including the first and last frames of moving shots.
 Review any space.layout conflict. Upper thirds are advice, and motivated tight or reversed
 room is valid with an intentional reason. A metadata pass never approves the footage.
+
+For L11, read `shot.depth` and scenes-schema §Depth of field. Count what the frame must
+carry and compare it with the record: one thing on a `deep` record, or two planes of
+information on a `shallow` one, is a finding even when the record validates. On a person
+the sharp plane is the eyes. On a still-camera `focus-in` / `rack-focus` cut, look for two
+objects at one distance that blur differently; that exposes the mask. Check the sound
+perspective against the depth: a shallow frame with the whole room audible, or a deep frame
+with only the voice, is a mismatch. A blurred background with no reason is a default, not a
+choice.

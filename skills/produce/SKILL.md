@@ -311,18 +311,18 @@ means generating something nobody approved.
   editing the string by hand — the same discipline as `bgPrompt`.
 
 - **`visual.camera` — the four camera slots — is the fallback assembly recipe.** On an older
-  scenes.js with no stored prompt, assemble the camera part in this order — `framing`, then
-  `speed movement`, then `ending on end`:
+  scenes.js with no stored prompt, assemble the camera part as `framing`, then `speed movement`,
+  then `ending on end` — or, on a travelling move, `framing, pauses, then speed movement, settling on end` (scenes-schema §camera, L13–L14):
 
   ```
-  { movement:"dolly in", speed:"very slow", framing:"chest-up on the subject", end:"subject centred at mid-frame" }
-  → "chest-up on the subject, very slow dolly in, ending with the subject centred at mid-frame"
+  { movement:"dolly in", speed:"slow", framing:"chest-up on the subject", end:"subject centred at mid-frame" }
+  → "chest-up on the subject, pauses, then slow dolly in, settling on subject centred at mid-frame"
   ```
 
   Then append the subject motion, and for b-roll the audio line. **An empty `end` is a storyboard
   defect, not something to fill in here** — send it back. Older episodes carry a single
   `visual.motion` string instead; use that as-is.
-- **`shot.composition` owns framing room.** Source prompts and filming scripts read the record. Check headroom, gaze space, travel space and subtitle clearance in actual frames and motion endpoints; image-to-video inherits the approved source composition.
+- **`shot.composition` owns framing room.** Source prompts and filming scripts read the record. Check headroom, gaze space, travel space and subtitle clearance in actual frames and motion endpoints; image-to-video inherits the approved source composition. **`shot.depth` owns focus** the same way: shallow names the one sharp plane, deep lists every plane that must read; check the actual still and clip, and treat a still-camera focus mask that blurs two objects at one distance differently, or a soft key subject, as a failed cut rather than a look.
 - **`shot.eyeline` owns gaze.** Read the scene plan before source images. `assemble-bg-prompt.js --from` includes it in source prompts; the shooting script prints the marker. Compare linked images and final boundary playback for direction, eye height and target distance. Keep the image-to-video prompt from restating locked space.
 - **`shot.feel`·`shot.size`·`shot.angle`·`shot.space` — the shot grammar.** The storyboard wrote
   what the audience should feel on each shot and chose the size, the angle and the frame space
@@ -383,6 +383,19 @@ means generating something nobody approved.
   `durationSeconds` is the used length, **clamped to the routed model's server floor**: 1.5 pro takes 4–12s, so a 3-second scene requests 4 and the build cuts at the scene boundary.
   Veo's reference lane is the exception the other way, pinned at 8s, so there you generate 8 and trim. Handing a model more seconds than the idea holds is how the
   middle of a clip goes dead — it fills the time it is given.
+
+- **What the clip brought back — check it before it enters the plan.** Every returned clip
+  runs `node $REF/check-clip-artifacts.js <clip.mp4> --expect silent|sound|speech --json
+  <clip>.artifacts.json` (silent = a card clip planned `generateAudio:false`, sound = a b-roll
+  whose own audio ships, speech = a quote clip): one frame a second through OCR for burned
+  text, the audio track against the plan, the local ASR for a line the prompt never wrote.
+  Exit 2 lists findings, and a finding is a **warning under HITL** with the same standing as
+  the assembly video checks (CLAUDE.md, 2026-09-14): show the frame time and the words, and
+  the user regenerates off the same PNG with the artifact negatives (`subtitles, text,
+  captions, logo, watermark` in Veo's `negativePrompt`, "keep it subtitle-free" in a Seedance
+  lock, `no speech, no dialogue` in the `Audio:` sentence) or accepts with the warning in the
+  build record. Type on the picture never ships unflagged (video-generation §what the clip
+  brought back).
 
 - **`visual.video.previz` — the 3D previz every generated cut carries** (user directive 2026-09-11; `check-scenes.js` refuses a cut without it). On the Seedance reference-video route pass the `generation` object's `referenceVideoPaths` to `seedance_reference` resolved from the storyboard directory like `referenceImagePaths` — never a re-rendered or substituted clip (its bytes are hash-bound to the approval; `check-production.js` refuses a mismatch); on Seedance 1.x or a host video tool (`handoff:"frame_and_prompt"`) the still edited from `previz.firstFrame` and the stored prompt carry it. Either way check the result against the previz — a contact sheet at 0/25/50/75/100 % and an edge overlay — before accepting it ([blender-previz.md](../storyboard/references/blender-previz.md) §6.4, §6.7). **The model is the user's choice, asked before any video call**: `PRODUCTION.videoModel` holds it (storyboard §1.7, production-mode.md §Two more questions); on an older board without the record, print `video-model-options.js storyboard/` and ask with AskUserQuestion, record the episode default or `model:"mixed"` and each cut's selected model and resolution, re-quote and re-approve before the first call — `check-production.js` refuses the call until then.
 
@@ -491,8 +504,19 @@ Follow [illustrated-scenes.md](../storyboard/references/illustrated-scenes.md): 
   catalog note points at it. Then the manifest: one `sfx.tsv` row per shot on **seg 0** with
   the path `resolve-asset.py` returns (§sfx below), `bgm` column `on` — the effect lands on the
   cut and the bed keeps playing under it. A shot that also drops writes its seg-0 row with the
-  path and `off`, and the drop's other segments as usual. The effect plays at `SFX_VOL` (0.85);
-  that is a knob, not a measured distance like the bed's (bgm-scoring §effects).
+  path and `off`, and the drop's other segments as usual. The builder measures each effect
+  the way it measures the bed — its loudest 400 ms lands `SFX_SEP` (6) LU under the narration,
+  pulled back when its own true peak would pass −1 dBTP — so two effects from two prompts sit
+  at the same distance from the voice, and the build report prints where the loudest moment
+  landed (bgm-scoring §effects).
+- **Room tone**: a shot's `sound.ambience` names a `window.SFX` entry with `loop: true`
+  (10–30 s), generated and registered exactly like an effect. Then `amb.tsv`: one row per
+  card where the room starts or changes (`idx <TAB> path`), a `-` row where it ends; cards
+  without a row carry the previous room. The builder renders the lane with `bgm-bed.sh`
+  (measured, `AMB_SEP` (15) LU under the narration, self-looped with a crossfade) and mixes
+  it **un-ducked** — a room that dips at every sentence start is the pumping the ducker is
+  for music, not for the floor of the scene. Without it the gaps between sentences are
+  digital silence, which the ear reads as a splice (bgm-scoring §effects).
 
 **Write one line to `.work/cost-tally.tsv` per call** — the same ledger §1.5 started
 was using. The convention's source of truth is
@@ -797,6 +821,7 @@ cards.tsv : idx <TAB> absolute audio path <TAB> target chars/sec <TAB> zoom(in|o
 segs.tsv  : idx <TAB> seg (0-based) <TAB> visual <TAB> tts sentence <TAB> sub sentence
 sfx.tsv   : idx <TAB> seg <TAB> audio file <TAB> bgm(on|off)          (optional)
 bgm.tsv   : idx <TAB> audio file — the music cue changes at that card (optional)
+amb.tsv   : idx <TAB> audio file | - — room tone starts at that card and holds; "-" ends it (optional)
 chapters.tsv : idx of the chapter's first card <TAB> chapter title    (long-form)
 ```
 
@@ -950,8 +975,13 @@ or an mp4 (for a video, its sound is used), and leaving it blank with only `bgm`
 drops just the music across that stretch. The timing reference is **when that visual
 appears**, not the sentence boundary — xfade starts playing the later input's 0-second mark at
 the offset, so aligning to the boundary puts the sound three or four syllables ahead of the
-picture. Ducking is keyed on the voice alone, so an effect doesn't push the BGM down. Volume
-is `SFX_VOL` (0.85 by default) and the BGM cut ramp is `BGM_GATE_R` (0.30s by default).
+picture. Ducking is keyed on the voice alone, so an effect doesn't push the BGM down. Each
+effect is measured and gained so its loudest moment sits `SFX_SEP` LU (6 by default) under the
+narration, and the BGM cut ramp is `BGM_GATE_R` (0.30s by default).
+
+**Room tone (`amb.tsv`)** — `idx <TAB> audio file`, the room starting at that card and holding
+until the next row; a `-` in the file column ends it. Rendered by `bgm-bed.sh` like the music
+bed, gained to `AMB_SEP` LU (15 by default) under the narration, never ducked.
 
 **Music cues (`bgm.tsv`)** — `idx <TAB> audio file`, the bed changing at that card and staying
 until the next row. `idx` is the 0-based card idx. A row for card 0 overrides `bgm.wav` as the
@@ -1297,6 +1327,7 @@ and the `status: produced` file update regardless — the portal is a mirror, no
 - **`references/video-template.html`** — 1080×1920 scene renderer (THEME injection · reveal · alpha · safe zone · overflow guard)
 - **`references/build-reel.sh`** — the compositing pipeline SoT (silence trim → loudnorm → boundary detection → reveal xfade → Ken Burns → subtitles → outro splice)
 - **`references/broll-splice.md`** — the b-roll splice: per-slot trim + loudness + bed in one re-encode, then the insert at each `after` scene (§6)
+- **`references/check-clip-artifacts.js`** — what a returned clip brought back that nobody asked for: burned text (OCR, one frame a second), a soundtrack on a clip planned silent, a spoken line (local ASR); `--selftest` renders its own fixtures. Findings are HITL warnings (§3)
 - **`references/bgm-bed.sh`** — renders the music bed the mix lays under the voice: every cue measured and gained to one distance under the narration, a short cue crossfaded onto itself instead of butt-joined, cue changes crossfaded. Called by both builders and by the b-roll premix
 - **`references/bgm-scoring.md`** — where the bed's numbers come from, which of them are published listening tests and which are our own practice, and the widely-quoted figures that failed verification
 - **`references/build-outro.sh`** — generates the channel's shared outro

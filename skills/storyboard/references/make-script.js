@@ -116,7 +116,48 @@ m += `
   끊는다.** 반 걸음만 옮기면 컷이 튄다 — 확실히 바꾸거나 아예 안 바꾼다.
 - **소리는 사이즈를 따라간다.** 와이드는 공간음이 살아도 되고 클로즈업은 목소리가 깨끗해야
   한다. 한 번 앉은 자리와 마이크를 바꾸지 않는다 — 바꾸면 붙는 자리가 들린다.
+- **카메라를 움직이는 샷은 앞뒤에 정지 3초를 찍는다.** 시작 그림에서 3초 멈춤 → 움직임 → 끝
+  그림에서 3초 멈춤. 이 정지 구간이 없으면 그 컷은 편집에서 앞뒤 어디에도 안 붙는다. 시작 그림과
+  끝 그림이 샷마다 적혀 있다 — 둘이 정해지지 않은 팬은 걸지 않는다.
+- **팬·틸트는 손목이 아니라 허리다.** 삼각대가 없으면 두 팔꿈치를 몸통에 붙이고 허리를 통째로
+  돌린다. 90도 도는 데 5초쯤(속으로 다섯) — 배경에 기둥·창틀 같은 세로선이 많아 뚝뚝 끊겨 보이면
+  속도를 줄이기 전에 더 넓게 잡고 대상에 다가간다.
+- **다가가는 샷은 줌이 아니라 걸음이다.** 줌은 배경까지 같이 키우고, 걸어가면 인물만 커지고 배경은
+  그대로다. 도착할 자리에 먼저 초점을 잡아 잠그고(AF/AE 락) 출발한다 — 출발점에 초점을 두면 가는 내내
+  화면이 숨을 쉰다. 무릎을 살짝 굽히고 뒤꿈치부터 딛는다.
 `;
+
+// visual.camera on a filmed shot → what the person holding the phone actually does (directing-grammar §4·§7, L13–L15).
+const CAMERA_KR = [
+  [/^(?:static|fixed|locked)/i, "고정 — 삼각대나 팔꿈치를 붙인 채 움직이지 않는다"],
+  [/^dolly zoom out/i, "달리 아웃 + 줌 인 — 물러나며 손가락으로 줌을 당긴다. 인물 크기가 안 변하게 걸음과 줌 속도를 맞춘다. 배경이 앞으로 몰려와 겹친다(궁지)"],
+  [/^dolly zoom/i, "달리 인 + 줌 아웃 — 다가가며 렌즈를 넓힌다. 인물 크기가 안 변하게 걸음과 줌 속도를 맞춘다. 배경이 뒤로 물러난다(고립). 인물은 서 있는다"],
+  [/^dolly in/i, "달리 인 — 줌 말고 걸어서 다가간다. 도착 자리에 초점을 먼저 잠근다"],
+  [/^dolly out/i, "달리 아웃 — 줌 말고 걸어서 물러난다. 도착 자리에 초점을 먼저 잠근다"],
+  [/^zoom in/i, "줌 인 — 제자리에서 손가락으로만 당긴다. 배경이 등 뒤에 눌린다(압박)"],
+  [/^zoom out/i, "줌 아웃 — 제자리에서 손가락으로만 넓힌다"],
+  [/^whip pan/i, "휩 팬 — 잔상이 남게 후려친다. 양 끝 사이즈를 같게, 소리(효과음·비트)에 정확히 맞춘다"],
+  [/^pan/i, "팬 — 제자리에서 허리째 좌우로 돈다. 앞뒤 3초 정지, 90도에 5초쯤"],
+  [/^tilt up/i, "틸트 업 — 제자리에서 고개를 젖히듯 올린다(높이는 그대로). 다 보는 데 걸리는 시간이 크기다. 앞뒤 3초 정지"],
+  [/^tilt down/i, "틸트 다운 — 제자리에서 내려다보듯 내린다(높이는 그대로). 앞뒤 3초 정지"],
+  [/^truck/i, "트럭 — 게걸음으로 옆으로 평행 이동. 인물이 가는 쪽에 공간을 남긴 채 같은 속도로"],
+  [/^pedestal up|^crane up/i, "붐 업 — 고개가 아니라 카메라 높이를 올린다(사다리·팔). 각도는 그대로"],
+  [/^pedestal down|^crane down/i, "붐 다운 — 카메라 높이를 내린다. 각도는 그대로"],
+  [/^tracking/i, "트래킹 — 움직이는 인물과 같은 속도로 따라간다. 인물이 프레임 안 늘 같은 자리, 리드룸 일정하게"],
+  [/^arc shot/i, "아크 — 인물을 중심으로 반원을 걷는다. 거리 일정하게"],
+  [/^(?:handheld|shaky)/i, "핸드헬드 — 몸통에 붙여 들고 미세하게만 흔들린다"],
+  [/^(?:aerial|drone)/i, "드론 — 경로는 프리비즈대로"],
+];
+const cameraLine = cam => {
+  if (!cam || !cam.movement) return "";
+  const hit = CAMERA_KR.find(([re]) => re.test(String(cam.movement).trim()));
+  const how = hit ? hit[1] : `${cam.movement} (어휘 밖 — directing-grammar §4)`;
+  const bits = [how];
+  if (cam.speed && !/^(?:static|fixed|locked)/i.test(cam.movement)) bits.push(`속도 ${cam.speed}`);
+  let out = `**카메라**: ${bits.join(" · ")}\n`;
+  if (cam.framing || cam.end) out += `**시작 → 끝**: ${cam.framing || "(시작 그림 없음)"} → ${cam.end || "(끝 그림 없음 — 팬·달리는 걸지 않는다)"}\n`;
+  return out;
+};
 
 const SIZE_KR = { els: "익스트림 롱(완전 풀)", ls: "롱·와이드", ws: "와이드", fs: "풀숏", mfs: "니숏(미디엄 풀)", ms: "미디엄",
                   mcu: "바스트(미디엄 클로즈업)", cu: "클로즈업", choker: "초커", ecu: "익스트림 클로즈업", insert: "인서트",
@@ -148,9 +189,18 @@ const shotLine = s => {
     if (sp.light) bits.push(sp.light);
     out += `**자리**: 카메라 기준 — ${bits.join(" · ")}\n`;
   }
+  out += cameraLine(s.visual && s.visual.camera);
   if (sh.composition) {
     const composition = require("./structure-contract.js").compositionText(sh.composition);
     out += `**구도**: ${composition || sh.composition.reason || ""}\n`;
+  }
+  const depth = sh.depth;
+  if (depth) {
+    const modeLabel = { shallow: "얕은 심도", deep: "딥포커스", none: "심도 선택 없음" }[depth.mode] || depth.mode;
+    out += `**심도**: ${modeLabel}${depth.reads ? ` · 읽을 정보 ${depth.reads}개` : ""}${depth.mode === "shallow" ? ` · 초점 ${depth.focus}` : depth.mode === "deep" && Array.isArray(depth.planes) ? ` · 앞에서 뒤로 ${depth.planes.join(" / ")}` : ""}${depth.sound ? ` · 소리 ${depth.sound === "near" ? "대사 앞, 주변음 뒤" : "발소리·문소리까지 다 살림"}` : ""}\n`;
+    if (depth.reason) out += `**심도 의도**: ${depth.reason}\n`;
+    if (depth.mode === "shallow") out += `**심도 손잡이**: 조리개를 열거나 피사체에 붙거나 망원으로 당기거나 배경을 뒤로 뗀다 — 후보정 흐림으로 대신하지 않는다.\n`;
+    if (depth.mode === "deep") out += `**심도 손잡이**: 조리개를 조이고 빛을 더 준다 — 전경·중경·원경이 한 프레임에서 같이 읽혀야 한다.\n`;
   }
   const eye = sh.eyeline;
   if (eye) {

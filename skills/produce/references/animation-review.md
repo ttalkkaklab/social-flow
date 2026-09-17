@@ -40,8 +40,8 @@ writes the HTML from its bundled templates. Do not slip in a separate model scri
 episode folder or a hand-edited delivery HTML. Fix a recurring defect in the plugin source and
 rerun the same input.
 
-- Camera: choose focus-in, rack focus, approach, pull, foreground reveal or depth parallax
-  from the cut's purpose. Never bend the pixels of a face or a hand.
+- Camera: choose focus-in, rack focus, approach, pull, pan, tilt, foreground reveal or depth
+  parallax from the cut's purpose. Never bend the pixels of a face or a hand.
 - Character: moving a piece, stamping a document, pulling a cart. Move elbow, hand and foot
   joints and keep the hand's contact.
 - Object: meshing gears, a fixed pulley, a toolbox hinge. Use the real shape and the joints
@@ -50,9 +50,11 @@ rerun the same input.
   briefly, with a light line backing and a dark leader line that separate from the background.
 
 `purpose` maps to camera templates as `introduce → focus-in`, `inspect → rack-focus`,
-`detail → approach`, `context → pull`, `discovery → reveal`, `depth → parallax`. Choose by the
-actual content and assets of the cut. `focusFrom` and `focusTo` are normalized `[x,y,rx,ry]`
-coordinates in the source picture. Focus effects are simulated with a soft region mask; they
+`detail → approach`, `context → pull`, `space → pan`, `scale → tilt`, `discovery → reveal`,
+`depth → parallax`. Choose by the actual content and assets of the cut. `focusFrom` and
+`focusTo` are normalized `[x,y,rx,ry]` coordinates in the source picture; a `pan` or `tilt`
+travels from `focusFrom` to `focusTo` (L13: a pan is a sentence from A to B, so the two differ),
+eased at both ends. Focus effects are simulated with a soft region mask; they
 do not recover real depth. `reveal` and `parallax` need same-size transparent PNG
 `layers:[{image,depth}]` and a background filled in behind them. Without layers, raise an
 error; do not substitute another treatment on your own.

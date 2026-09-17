@@ -3880,6 +3880,7 @@ window.SB_DOC = {
 
   var compositionPlanFindings = window.STRUCTURE_CONTRACT ? window.STRUCTURE_CONTRACT.checkCompositions(SCENES, false) : [];
   var eyelinePlanFindings = window.STRUCTURE_CONTRACT ? window.STRUCTURE_CONTRACT.checkEyelines(SCENES, false) : [];
+  var depthPlanFindings = window.STRUCTURE_CONTRACT ? window.STRUCTURE_CONTRACT.checkDepths(SCENES, false) : [];
   var carryNoted = false, prevSeq = "";
   /* window.STRUCTURE (scenes-schema §structure) — the sequence's purpose under its heading and
      the scene's event and turn under the band head. Boards without it draw the labels alone. */
@@ -3952,6 +3953,23 @@ window.SB_DOC = {
       var tip = label + (eyeline && ec ? '\n' + ec.eyelineText(eyeline) : '') + (eyeline && eyeline.matchShot ? (LANG === 'ko' ? '\n연결 컷 ' : '\nLinked shot ') + eyeline.matchShot : '') + (eyeline && eyeline.reason ? '\n' + eyeline.reason : '') + (eyeline && eyeline.marker ? (LANG === 'ko' ? '\n기준물: ' : '\nMarker: ') + eyeline.marker : '') + (LANG === 'ko' ? '\n계획 검사이며 실제 영상 검수 결과가 아닙니다.' : '\nPlan status, not footage approval.');
       if (eyeFindings.length) tip += '\n' + eyeFindings.map(function (f) { return f.what; }).join('\n');
       gram += '<span class="shot-size' + (eyeFindings.length || !eyeline ? ' unknown' : '') + '" tabindex="0" role="img" aria-label="' + esc(tip) + '" data-tip="' + esc(tip) + '"><svg viewBox="0 0 48 32" width="48" height="32" aria-hidden="true"><path d="M3 12 Q13 1 23 12 Q13 23 3 12Z" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="13" cy="12" r="3" fill="currentColor"/><text x="26" y="23" font-size="13" fill="currentColor">' + esc(suffix) + '</text></svg></span>';
+    }
+    var depth = s.shot && s.shot.depth, dc = window.STRUCTURE_CONTRACT;
+    if (depth || (dc && dc.depthNeeded(s))) {
+      var depthLabels = LANG === 'ko' ? { shallow: '얕은 심도', deep: '딥포커스', none: '심도 선택 없음' } : { shallow: 'Shallow depth of field', deep: 'Deep focus', none: 'No depth choice' };
+      var dmode = depth && depth.mode, dlabel = depthLabels[dmode] || (LANG === 'ko' ? '심도 미설정' : 'Depth not planned');
+      var depthFindings = depthPlanFindings.filter(function (f) { return f.where === 'shot ' + no; });
+      var dtip = (LANG === 'ko' ? '심도: ' : 'Depth: ') + dlabel;
+      if (depth && typeof depth.reads === 'number') dtip += LANG === 'ko' ? ' · 읽을 정보 ' + depth.reads + '개' : ' · ' + depth.reads + ' thing(s) to read';
+      if (depth && dc) { var dtext = dc.depthText(depth); if (dtext) dtip += '\n' + dtext; }
+      if (depth && depth.reason && dmode === 'none') dtip += '\n' + depth.reason;
+      if (depth && depth.sound) dtip += LANG === 'ko' ? '\n소리: ' + (depth.sound === 'near' ? '가까운 소리만' : '공간 전체') : '\nSound: ' + (depth.sound === 'near' ? 'near only' : 'full room');
+      var deff = s.shot && s.shot.render && s.shot.render.camera && s.shot.render.camera.effect;
+      if (deff === 'focus-in' || deff === 'rack-focus') dtip += LANG === 'ko' ? '\n스틸 레인의 초점은 타원 마스크 흉내입니다. 같은 거리의 물체가 다르게 흐려지면 그 컷은 초점 효과 대상이 아닙니다.' : '\nThe still lane fakes focus with an elliptical mask. If objects at the same distance blur differently, this cut is not a focus-effect cut.';
+      dtip += LANG === 'ko' ? '\n계획 검사입니다. 실제 초점은 이미지·영상에서 확인합니다.' : '\nPlan check. Confirm the actual focus in the image and video.';
+      depthFindings.forEach(function (f) { dtip += '\n' + f.what; });
+      var farOpacity = dmode === 'shallow' ? '.25' : '1';
+      gram += '<span class="shot-size' + (depthFindings.length || !depth ? ' unknown' : '') + '" tabindex="0" role="img" aria-label="' + esc(dtip) + '" data-tip="' + esc(dtip) + '"><svg viewBox="0 0 48 32" width="48" height="32" aria-hidden="true"><circle cx="29" cy="12" r="5" fill="none" stroke="currentColor" stroke-width="1.5" opacity="' + farOpacity + '"/><circle cx="16" cy="19" r="7" fill="none" stroke="currentColor" stroke-width="1.5"/>' + (dmode === 'none' ? '<path d="M6 28L42 4" stroke="currentColor"/>' : '') + (depth && typeof depth.reads === 'number' ? '<text x="38" y="28" font-size="11" fill="currentColor">' + depth.reads + '</text>' : '') + '</svg></span>';
     }
     // A shot with no title (screen text only when needed — scenes-schema) builds its header from badges alone
     var headTitle = s.title || (s.type === "quote" ? s.text : "");
