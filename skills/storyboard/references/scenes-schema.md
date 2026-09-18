@@ -632,6 +632,17 @@ Before authoring, follow [visual-style.md](visual-style.md). Both production mod
 `paper-cutout`, `ink-wash`, `toon-3d` or `arcade-2d` (`production-mode.js` `STYLES`), with the actual
 `selection: { kind: "user" | "standing", reference: "actual choice or plan" }`.
 The `spatial-explainer` preset is accepted for existing boards only. New episodes require HITL.
+`production-mode.js` refuses a board without `style.preset` and its `selection` in every mode, the
+story pass (`--draft`) included; the six detail fields (`reference`, `world`, `materials`, `palette`,
+`lighting`, `camera`) become required once the board holds a generated cut, because
+`spatial-prompts.js` assembles every source and motion prompt from them.
+
+A single shot leaves the episode preset only through `shot.style` — `{ preset, reason,
+selection: { kind: "user", reference }, materials?, palette?, lighting? }` — written after the
+user approved that shot in HITL (visual-style.md §Per-shot style). Its `videoDesign.look` then
+follows the shot's preset. Every generated still's `visual.bgPrompt` carries the treatment
+sentence of the preset the shot carries; `check-scenes.js` refuses one that does not
+(`[style-missing]`) and an override without the user's record (`[shot-style]`).
 Use `videoDesign.look: "realistic"` for photoreal, `"webtoon"` for webtoon, `"clay"`, `"papercut"`,
 `"inkwash"`, `"toon3d"` and `"arcade"` for the five prompt-only presets; only cinematic-miniature attaches
 the miniature pack. Source, end-frame and motion prompts carry the selected treatment.

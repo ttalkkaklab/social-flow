@@ -23,6 +23,10 @@
  *       # --shot <n> counts from 1 — the same number as the strip's "Shot n", script.md
  *       # and scene-<n>.png. (--index <i> is the raw array position, from 0.)
  *
+ *       # With --from, the episode style (PRODUCTION.style, or the shot's user-approved
+ *       # shot.style) is written into the prompt after the space sentence. A hand-assembled
+ *       # still names it with --preset <name>; check-scenes.js refuses a still without it.
+ *
  *   node assemble-bg-prompt.js --from ./scenes.js --shot 4 --space-only
  *       # only the "From the camera: …" sentence — for a quote speech clip, whose
  *       # size and framing come from the produce quote contract, not from here
@@ -328,6 +332,7 @@ function assemble(opts) {
   if (sizeWords) parts.push(sizeWords + ", " + angleWords + ".");
   else parts.push(angleWords + ".");
   if (space) parts.push(space);
+  parts.push(...styleSentences(opts.style));
   if (scene) parts.push(scene.replace(/[.!?\s]*$/, "") + ".");
   if (mood) parts.push(mood.replace(/[.!?\s]*$/, "") + ".");
   if (exclude) parts.push(exclude.replace(/[.!?\s]*$/, "") + ".");
@@ -351,6 +356,11 @@ function loadShot(file, index) {
     throw new Error("index " + index + " is outside SCENES[0.." + (scenes.length - 1) + "]");
   }
   const s = scenes[i] || {};
+  // The episode style, or this shot's user-approved override (production-mode.js shotStyle).
+  const pm = require("./production-mode.js");
+  const overrideProblems = pm.shotStyleErrors(s, i);
+  if (overrideProblems.length) throw new Error(overrideProblems.join("; "));
+  const style = pm.shotStyle(sandbox.window, i);
   const sh = s.shot || {};
   const sp = sh.space || {};
   const v = s.visual || {};
@@ -364,12 +374,27 @@ function loadShot(file, index) {
     light: sp.light,
     camera: v.camera || null,
     audio: typeof v.audio === "string" ? v.audio : "",
-    position: "SCENES[" + i + "] = shot " + (i + 1) + " of " + scenes.length + (s.type ? " (" + s.type + ")" : "")
+    style: style.preset ? style : null,
+    position: "SCENES[" + i + "] = shot " + (i + 1) + " of " + scenes.length + (s.type ? " (" + s.type + ")" : "") +
+      (style.preset ? " · style " + style.preset + (style.override ? " (per-shot override)" : "") : "")
   };
 }
 
+// The style sentences a generated still carries (visual-style.md): the preset's treatment, then
+// the episode materials, palette and lighting when the board wrote them. check-scenes.js refuses a
+// generated still whose bgPrompt lacks the treatment sentence ([style-missing]).
+function styleSentences(style) {
+  const { STYLES } = require("./production-mode.js");
+  if (!style || !STYLES[style.preset]) return [];
+  const out = [STYLES[style.preset].prompt];
+  for (const k of ["materials", "palette", "lighting"])
+    if (typeof style[k] === "string" && style[k].trim())
+      out.push(k[0].toUpperCase() + k.slice(1) + ": " + style[k].trim().replace(/[.!?\s]*$/, "") + ".");
+  return out;
+}
+
 const VALUE_FLAGS = ["size", "angle", "layout", "facing", "line", "light", "scene", "mood", "exclude", "tail", "from", "index", "shot",
-  "motion", "locks", "engine", "audio", "movement", "speed", "framing", "end"];
+  "motion", "locks", "engine", "audio", "movement", "speed", "framing", "end", "preset"];
 
 function selftest() {
   let fail = 0;
@@ -649,6 +674,18 @@ function main(argv) {
     process.exit(2);
   }
   opts.noPerson = !!args["no-person"];
+  // --preset names the style on a hand-assembled still (no --from); with --from the board's
+  // style (or the shot's approved override) is read, and --preset may not contradict it.
+  if (args.preset !== undefined) {
+    const { STYLES } = require("./production-mode.js");
+    if (!STYLES[args.preset]) { console.error("assemble-bg-prompt: --preset must be one of " + Object.keys(STYLES).join(", ")); process.exit(2); }
+    if (opts.style && opts.style.preset !== args.preset) {
+      console.error("assemble-bg-prompt: --preset " + args.preset + " contradicts the board's style " + opts.style.preset +
+        " — a shot leaves the episode style only through shot.style with the user's approval (visual-style.md)");
+      process.exit(1);
+    }
+    opts.style = opts.style || { preset: args.preset };
+  }
 
   if (args.clip) {
     if (args.engine !== "seedance" && args.engine !== "veo" && args.engine !== "seedance-2.5") {
@@ -702,4 +739,4 @@ function main(argv) {
 
 if (require.main === module) main(process.argv.slice(2));
 
-module.exports = { assemble, clipAssemble, bannedHits, negDirectiveHits, timingHits, hangulHits, lockMissing, spaceSentence, SIZE_WORDS, SIZE_WORDS_OBJECT, ANGLE_WORDS, BANNED, NEG_RE, NEG_OK };
+module.exports = { assemble, clipAssemble, styleSentences, bannedHits, negDirectiveHits, timingHits, hangulHits, lockMissing, spaceSentence, SIZE_WORDS, SIZE_WORDS_OBJECT, ANGLE_WORDS, BANNED, NEG_RE, NEG_OK };

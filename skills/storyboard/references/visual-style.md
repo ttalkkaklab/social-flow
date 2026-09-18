@@ -26,7 +26,17 @@ When the user proposes another style, spell out its rendering rules and add a su
 preset before continuing. Without a choice, wait before authoring. Never record a
 recommendation or silence as the choice. A style already chosen for this episode is not
 asked again. Unattended runs need the style written in their standing plan; otherwise the
-question stays pending.
+question stays pending. `production-mode.js` (and so `check-scenes.js` and `storyboard_check`)
+refuses a board without `PRODUCTION.style.preset` and its selection record in every production
+mode, from the story pass on.
+
+## Contents
+
+- [Recording the choice and writing images](#recording-the-choice-and-writing-images)
+- [The prompt carries the style, machine-checked](#the-prompt-carries-the-style-machine-checked)
+- [Per-shot style — only through the user](#per-shot-style-only-through-the-user)
+- [The still is looked at for style, on record](#the-still-is-looked-at-for-style-on-record)
+- [Camera presets are separate](#camera-presets-are-separate)
 
 ## Recording the choice and writing images
 
@@ -141,6 +151,53 @@ Full-video character scenes use articulated action in every style. Preserve face
 materials while changing pose and position as planned. A miniature style reference supplies
 the look, not a frozen pose. Apply the subject-motion contract in
 [full-video.md](../../produce/references/full-video.md) before generating either frame.
+
+## The prompt carries the style, machine-checked
+
+Every generated still's `visual.bgPrompt` holds the preset's treatment sentence
+(`production-mode.js` `STYLES[preset].prompt`), then the episode materials, palette and lighting.
+Both assemblers write it — `spatial-prompts.js` on generated-video cuts, `assemble-bg-prompt.js
+--from scenes.js` on still-camera cuts — so a prompt is never typed by hand. `check-scenes.js`
+refuses a generated still whose prompt lacks the treatment (`[style-missing]`); archive looks,
+stock photographs and pre-preset `spatial-explainer` boards are the exceptions. A hand-assembled
+still without `--from` names its preset with `--preset`.
+
+## Per-shot style — only through the user
+
+Sometimes the author reads a shot and judges that the episode preset cannot carry this picture:
+a painted memory inside a photoreal episode, a document that has to look like the real paper.
+That judgement is not the author's to act on. Stop and put it to the user with AskUserQuestion —
+which shot, what the picture needs, which preset would carry it and why, and the option to keep
+the episode style. Only the user's answer opens the shot, recorded on that shot:
+
+```js
+shot: {
+  style: {
+    preset: 'ink-wash',                      // one of the STYLES presets
+    reason: 'The valley is remembered, not seen; a painted frame says so.',
+    selection: { kind: 'user', reference: 'User approved ink-wash for shot 4 on 2026-09-19.' },
+    materials: 'Brushed ink on rice paper.'  // optional: materials · palette · lighting for this shot
+  }
+}
+```
+
+- `selection.kind` is `user` only. A standing plan cannot pre-authorise a per-shot style; an
+  unattended run that wants one holds and asks.
+- `videoDesign.look` follows the shot's preset, not the episode's. World and camera language
+  stay episode constants — the shot changes how the picture is rendered, not where it is.
+- Both assemblers read the override, so the shot's prompts carry its treatment, and
+  `check-scenes.js` checks the prompt against the shot's preset. `production-mode.js` refuses an
+  override without `reason` and the user's `selection` (`[shot-style]`).
+- The approval page draws the shot's own style tile with the reason and the approval record.
+- A picture that came back off-style is not a reason to write an override after the fact. Remake
+  it in the shot's preset; ask the user only when the preset itself is wrong for the shot.
+
+## The still is looked at for style, on record
+
+After generation, each still is read for content and for style separately (still-generation.md
+§3) and the read is written to `.work/still-review.json`, bound to the image bytes and the preset
+the shot carries. `check-production.js --ready` refuses assembly without a current review, with
+`styleMatch:false`, or with a review made against another preset than the shot now has.
 
 ## Camera presets are separate
 
