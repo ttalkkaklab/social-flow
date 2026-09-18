@@ -2,7 +2,7 @@
 'use strict';
 const fs = require('fs'), path = require('path');
 const { readScenes } = require('../../autoproduce/references/cost-preview.js');
-const { droneSceneErrors, isDrone, full, MODES, STYLES, packPresets, motionErrors, missingCameraSlots, finalState } = require('./production-mode.js');
+const { droneSceneErrors, isDrone, full, MODES, STYLES, packPresets, motionErrors, missingCameraSlots, finalState, shotStyle, shotStyleErrors } = require('./production-mode.js');
 const { resolveStylePack } = require('./style-pack.js');
 const PROMPT = require('./assemble-bg-prompt.js');
 const { previzHandoff } = require('./render-routing.js');
@@ -64,8 +64,12 @@ function characterIds(value) {
 }
 function assemble(win, index, dir) {
   if (!MODES[win.PRODUCTION?.mode]) throw new Error('Choose a production mode before assembling prompts');
-  const scene = win.SCENES[index], d = scene?.shot?.videoDesign, style = win.PRODUCTION.style, v = scene?.visual;
-  if (!d || !style || !LOOKS[d.look]) throw new Error('Choose style and videoDesign before assembling prompts');
+  const scene = win.SCENES[index], d = scene?.shot?.videoDesign, v = scene?.visual;
+  if (!d || !win.PRODUCTION.style || !LOOKS[d.look]) throw new Error('Choose style and videoDesign before assembling prompts');
+  const overrideProblems = shotStyleErrors(scene, index);
+  if (overrideProblems.length) throw new Error(overrideProblems.join('; '));
+  // The episode style, or the user-approved per-shot preset with its own materials/palette/lighting.
+  const style = shotStyle(win, index);
   if (!v || typeof v !== 'object') throw new Error('Missing visual');
   if (d.camera !== undefined) throw new Error('videoDesign.camera is retired; the camera lives in the four visual.camera slots');
   const droneProblems = droneSceneErrors(scene, {draft:true});
@@ -85,8 +89,8 @@ function assemble(win, index, dir) {
   const preset = style.preset || 'spatial-explainer'; // Resume existing miniature boards.
   if (preset !== 'spatial-explainer' && !STYLES[preset]) throw new Error('Unknown visual style: ' + preset);
   if (STYLES[preset] && d.look !== 'archive' && !STYLES[preset].looks.includes(d.look))
-    throw new Error('Shot look conflicts with selected visual style');
-  if (STYLES[preset] && !packPresets.includes(preset) && style.referencePack)
+    throw new Error('Shot look conflicts with the ' + (style.override ? 'per-shot' : 'selected') + ' visual style');
+  if (STYLES[preset] && !packPresets.includes(preset) && style.referencePack && !style.override)
     throw new Error('Remove the miniature reference pack for this style');
   const treatment = d.look === 'archive' ? LOOKS.archive : (STYLES[preset]?.prompt || LOOKS[d.look]);
   const cutType = scene.shot?.cutType;

@@ -113,9 +113,23 @@ test('hybrid and full video retain distinct semantic and policy rules', () => {
   assert.equal(base.generatedVideoMax, 2);
   scene.visual.slide = { kind: 'camera' };
   assert.match(mode.check(win).join(), /no slide\/still/);
+  // The style is asked before authoring in every mode, so even the narration-only draft carries it;
+  // the six style detail fields wait for the first generated cut.
   const draft = { PRODUCTION: { mode: 'full_video', videoBudgetUsd: 15, maxAttempts: 3 }, SCENES: [] };
-  assert.deepEqual(mode.check(draft, { draft: true }), []);
+  assert.match(mode.check(draft, { draft: true }).join(), /Choose an episode visual style/);
   assert.match(mode.check(draft).join(), /style/);
+  for (const m of ['video_50', 'video_30', 'hook_only']) {
+    const partial = { PRODUCTION: { mode: m, videoBudgetUsd: 5, maxAttempts: 2 }, SCENES: [] };
+    assert.match(mode.check(partial, { draft: true }).join(), /Choose an episode visual style/);
+    partial.PRODUCTION.style = { preset: 'webtoon' };
+    assert.match(mode.check(partial).join(), /style HITL choice/);
+    partial.PRODUCTION.style.selection = { kind: 'user', reference: 'User chose webtoon.' };
+    assert.doesNotMatch(mode.check(partial).join(), /style/);
+  }
+  // A partial-mode board with one generated cut needs the fields spatial-prompts.js assembles from.
+  const partialCut = fixture(1); partialCut.PRODUCTION.mode = 'video_50';
+  partialCut.PRODUCTION.style = { preset: 'webtoon', selection: { kind: 'user', reference: 'User chose webtoon.' } };
+  assert.match(mode.check(partialCut).join(), /style\.world is required once a generated cut exists/);
 });
 test('the normal scene CLI permits full-video explanations beyond the hybrid cap', () => withBoard(({ board, save }) => {
   const win = fixture(); save(win);
@@ -242,6 +256,39 @@ test('actual media and review hashes gate the full-video manifest', () => withBo
   const still = check(board, { ready: true }).errors.join();
   assert.match(still, /reads as a still/); assert.match(still, /too little motion/);
   assert.ok(JSON.parse(readFileSync(path.join(work, 'motion-metrics.json'), 'utf8'))[review.videoSha256].frozenShare > .9);
+}));
+// Every generated still is looked at for content and style before assembly (visual-style.md): the
+// record is still-review.json, bound to the image bytes and the preset the shot carries. A mismatch
+// is remade or the shot changes style with the user's approval — the gate never lets it through as is.
+test('a generated still needs a current style review against the preset the shot carries', () => withBoard(({ board, work, save }) => {
+  const win = fixture(1), video = movingClip(path.join(work, 'accepted.mp4'));
+  win.PRODUCTION.style = { preset: 'photoreal', selection: { kind: 'user', reference: 'User chose photoreal.' }, reference: 'live action',
+    world: 'A granite valley with a river.', materials: 'Wet granite and moss.', palette: 'Grey, green and blue.', lighting: 'Soft daylight.', camera: 'Elevated reveals.' };
+  win.SCENES[0].shot.videoDesign.look = 'realistic';
+  writeFileSync(path.join(board, 'images/scene-1.png'), 'fixture source bytes');
+  win.SCENES[0].visual.video.clip = '.work/accepted.mp4';
+  withPreviz(win, 0); approve(win); save(win);
+  const review = { shot: 1, reviewer: 'test fixture, not a human quality verdict', at: '2026-09-06T12:00:00Z',
+    planDigest: shotDigest(win, 0), sourceSha256: hashFile(board, win.SCENES[0].visual.bg),
+    motionEvidence: {kind:'subject_action',cameraOnly:false,observedChange:'The buildings lift away from the stream.',beats:[{at:0,state:'Buildings stand beside the stream.'},{at:4,state:'Buildings have cleared the stream.'}]},
+    videoSha256: digest(readFileSync(video)), playback: true, seeks: [.1, 2.5, 4.8], defects: [],
+    ...Object.fromEntries(['composition', 'materials', 'continuity', 'action', 'camera', 'referenceMatch'].map(k => [k, 'Synthetic fixture evidence for the contract: ' + k])) };
+  writeFileSync(path.join(work, 'video-review.json'), JSON.stringify({ shots: [review] }));
+  assert.match(check(board, { ready: true }).errors.join(), /still review is required/);
+  const still = { shot: 1, imageSha256: hashFile(board, 'images/scene-1.png'), preset: 'photoreal', styleMatch: true,
+    reviewer: 'test fixture', at: '2026-09-06T12:00:00Z', evidence: 'Synthetic: photographic skin and real granite at real scale.' };
+  const saveStill = () => writeFileSync(path.join(work, 'still-review.json'), JSON.stringify({ shots: [still] }));
+  saveStill(); assert.doesNotMatch(check(board, { ready: true }).errors.join(), /still/);
+  still.styleMatch = false; saveStill();
+  assert.match(check(board, { ready: true }).errors.join(), /does not match the photoreal style — remake it, or change this shot's style with the user's approval/);
+  still.styleMatch = true; still.imageSha256 = '0'.repeat(64); saveStill();
+  assert.match(check(board, { ready: true }).errors.join(), /still review is stale/);
+  // The shot moved to an approved per-shot preset: the old review no longer speaks for it.
+  still.imageSha256 = hashFile(board, 'images/scene-1.png'); saveStill();
+  win.SCENES[0].shot.style = { preset: 'ink-wash', reason: 'The valley reads as a painted memory.', selection: { kind: 'user', reference: 'User approved ink-wash for shot 1.' } };
+  win.SCENES[0].shot.videoDesign.look = 'inkwash'; withPreviz(win, 0); approve(win); save(win);
+  assert.match(check(board, { ready: true }).errors.join(), /made against "photoreal", the shot now carries "ink-wash"/);
+  assert.match(win.SCENES[0].visual.bgPrompt, /ink-wash painting/);
 }));
 test('measured motion gates the in-point and the generated length against the card', () => withBoard(({ board, work, save }) => {
   const { motionGateErrors, motionMetrics } = require('../../skills/produce/references/check-production.js');
@@ -375,7 +422,7 @@ test('travelling end images follow the camera endpoint without forcing a fixed v
 
 // Offline media validates the import contract, not the visual quality of generated footage.
 function reuseFixture(video) {
- const w=fixture(4); w.PRODUCTION={mode:'hybrid',videoBudgetUsd:0,maxAttempts:2};
+ const w=fixture(4); w.PRODUCTION={mode:'hybrid',videoBudgetUsd:0,maxAttempts:2,style:{preset:'photoreal',selection:{kind:'user',reference:'User chose photoreal for the imported clips.'}}};
  const lines=['Why is the box moving?','The table shakes.','A fan moves the table.','Check the table before the box.'];
  const ref=shot=>({shot,group:1,quote:lines[shot-1]});
  w.COMPREHENSION={mode:'narrative',question:'Why does the box move?',answer:'A fan moves the table.',takeaway:'Check the support.',branches:[],terms:[]};

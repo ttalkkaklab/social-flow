@@ -3929,6 +3929,17 @@ window.SB_DOC = {
     var rmode = renderModeOf(s, g);
     if (rmode) gram += tile(renderIcon(rmode), T.render[rmode] || (rmode + " ?"),
                             renderTitle(rmode) + (g.render && g.render.reason ? "\n\n" + g.render.reason : ""), !T.render[rmode]);
+    /* A shot that left the episode style (shot.style) shows its own preset here, with the reason and
+       the user's approval record — the reader must see where the look changes before approving. */
+    var so = s.shot && s.shot.style;
+    if (so && so.preset) {
+      var soName = T.styleName[so.preset] || so.preset, soOk = !!(so.selection && so.selection.kind === "user" && so.selection.reference);
+      var soTip = (LANG === "ko" ? "이 샷만 다른 화풍: " : "Per-shot style: ") + soName + " (" + so.preset + ")" +
+        (so.reason ? "\n\n" + so.reason : "") +
+        "\n\n" + (soOk ? (LANG === "ko" ? "사용자 승인: " : "User approval: ") + so.selection.reference
+                      : (LANG === "ko" ? "승인 기록 없음 — 검사기가 막습니다" : "No approval record — the checker refuses it"));
+      gram += tile(styleIcon(so.preset), (LANG === "ko" ? "샷 화풍 · " : "Shot style · ") + soName, soTip, !soOk);
+    }
     var comp = s.shot && s.shot.composition, cc = window.STRUCTURE_CONTRACT;
     if (comp || (cc && cc.compositionNeeded(s))) {
       var compFindings = compositionPlanFindings.filter(function (f) { return f.where === 'shot ' + no; });

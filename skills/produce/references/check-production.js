@@ -20,6 +20,34 @@ function readReviews(work) {
   return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : { shots: [] };
 }
 function videoFile(scene) { return mode.reused(scene) ? scene.visual.reuse.clip : scene.visual.video.clip; }
+// Every generated still was looked at for content and style separately (visual-style.md): the record
+// is .work/still-review.json { shots: [{ shot, imageSha256, preset, styleMatch, reviewer, at, evidence }] }.
+// A still that does not match its preset is remade, or the shot's style is changed with the user's
+// approval (shot.style) and the new still reviewed again — never assembled as it is.
+function readStillReviews(work) {
+  const file = path.join(work, 'still-review.json');
+  return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : { shots: [] };
+}
+function generatedStill(scene) {
+  const v = scene.visual || {};
+  return !mode.reused(scene) && typeof v.bg === 'string' && v.source !== 'stock' &&
+    ['still_camera', 'generated_video'].includes(scene.shot?.render?.mode) && scene.shot?.videoDesign?.look !== 'archive';
+}
+function stillReviewErrors(win, index, storyboard, reviews) {
+  const scene = win.SCENES[index], preset = mode.shotStyle(win, index).preset;
+  if (!mode.STYLES[preset]) return [];
+  const matches = (reviews.shots || []).filter(r => r.shot === index + 1), review = matches[0];
+  if (matches.length !== 1) return ['one current still review is required in still-review.json (content and style, visual-style.md)'];
+  const errors = [];
+  let sha; try { sha = hashFile(storyboard, scene.visual.bg); } catch (e) { return [e.message]; }
+  if (review.imageSha256 !== sha) errors.push('still review is stale; look at the current image and record it again');
+  if (review.preset !== preset) errors.push('still review was made against "' + review.preset + '", the shot now carries "' + preset + '"; review the image against that preset');
+  if (review.styleMatch !== true)
+    errors.push('the still does not match the ' + preset + ' style — remake it, or change this shot\'s style with the user\'s approval (shot.style) and review the new image');
+  if (!review.reviewer || !Number.isFinite(Date.parse(review.at)) || typeof review.evidence !== 'string' || review.evidence.trim().length < 12)
+    errors.push('still review needs reviewer, time and concrete evidence of what was seen');
+  return errors;
+}
 // Measured once per file: the summary is cached by the clip's SHA-256 in .work/motion-metrics.json.
 function motionMetrics(work, file, sha256) {
   const cache = path.join(work, 'motion-metrics.json');
@@ -140,7 +168,11 @@ function check(storyboard, { requireSelection = false, ready = false, beforeCall
       errors.push('Spent video plus the next call and unfinished shots exceeds the approved budget');
   }
   if (ready) {
+    const stills = readStillReviews(work);
+    if (!Array.isArray(stills.shots)) errors.push('still-review.json needs a shots array');
     win.SCENES.forEach((scene, index) => {
+      if (mode.eligible(scene) && generatedStill(scene))
+        stillReviewErrors(win, index, storyboard, stills).forEach(m => errors.push('shot ' + (index + 1) + ': ' + m));
       if (!mode.reused(scene) && !(mode.full(p) && mode.eligible(scene))) return;
       const prefix = 'shot ' + (index + 1) + ': ', bad = msg => errors.push(prefix + msg);
       const matches = (reviews.shots || []).filter(r => r.shot === index + 1), review = matches[0];
@@ -182,7 +214,7 @@ function check(storyboard, { requireSelection = false, ready = false, beforeCall
   }
   return { active: true, mode: p.mode, generatedShots, reusedShots, plainVideoShots, errors, quote: current };
 }
-module.exports = { resolutionErrors, check, shotDigest, hashFile, assetPath, motionReviewErrors, motionGateErrors, motionMetrics, videoFile, validateReuseAsset };
+module.exports = { resolutionErrors, check, shotDigest, hashFile, assetPath, motionReviewErrors, motionGateErrors, motionMetrics, videoFile, validateReuseAsset, readStillReviews, stillReviewErrors, generatedStill };
 if (require.main === module) {
   try {
     const args = process.argv.slice(2), target = args[0];
