@@ -330,6 +330,29 @@
   // Only the miniature presets carry a bundled reference pack; every other preset is prompt-only.
   const packPresets = ['cinematic-miniature', 'spatial-explainer'];
   const ALL_LOOKS = ['archive', ...new Set(Object.values(STYLES).flatMap(s => s.looks))];
+  // A shot may leave the episode style when the author judges the picture needs another preset —
+  // only after the user approved that shot in HITL (visual-style.md §Per-shot style). The record is
+  // shot.style: { preset, reason, selection: { kind: 'user', reference } }, optionally its own
+  // materials / palette / lighting; everything it leaves out falls back to PRODUCTION.style.
+  const SHOT_STYLE_KEYS = ['preset', 'reason', 'selection', 'materials', 'palette', 'lighting'];
+  function shotStyle(win, index) {
+    const base = win.PRODUCTION?.style || {}, o = win.SCENES?.[index]?.shot?.style;
+    if (!o || typeof o !== 'object' || !text(o.preset)) return { ...base, override: false };
+    const own = Object.fromEntries(['materials', 'palette', 'lighting'].filter(k => text(o[k])).map(k => [k, o[k]]));
+    return { ...base, ...own, preset: o.preset, override: true, reason: o.reason, selection: o.selection };
+  }
+  function shotStyleErrors(scene, index) {
+    const o = scene?.shot?.style, tag = '[shot-style] shot ' + (index + 1) + ': ';
+    if (o === undefined) return [];
+    const errors = [];
+    if (!o || typeof o !== 'object' || Array.isArray(o)) return [tag + 'shot.style must be an object with preset, reason and selection'];
+    if (!STYLES[o.preset]) errors.push(tag + 'shot.style.preset must be one of ' + Object.keys(STYLES).join(', '));
+    if (!text(o.reason)) errors.push(tag + 'shot.style.reason states why this picture needs another preset than the episode');
+    if (!(o.selection && o.selection.kind === 'user' && text(o.selection.reference)))
+      errors.push(tag + 'a per-shot style leaves the episode style only on the user\'s HITL approval; record it in shot.style.selection { kind: "user", reference }');
+    Object.keys(o).filter(k => !SHOT_STYLE_KEYS.includes(k)).forEach(k => errors.push(tag + 'shot.style.' + k + ' is not a shot-level field (world and camera language stay episode constants)'));
+    return errors;
+  }
   // Explicit imported inputs, never inferred from an existing generation output.
   function reused(scene) { return scene.visual?.reuse !== undefined; }
   function reuseErrors(scene) {
@@ -420,8 +443,12 @@
     if (requireApproval && (!p.approval || !['user', 'standing'].includes(p.approval.kind) ||
         !text(p.approval.reference) || !Number.isFinite(Date.parse(p.approval.at)) || !text(p.approval.quoteFingerprint)))
       errors.push('PRODUCTION.approval needs kind, reference, at and the approved cost quoteFingerprint');
+    // The visual style is asked before authoring in every production mode (visual-style.md,
+    // user directive 2026-09-06): a board without the preset stops here, not only under full_video.
+    // spatial-explainer is accepted for boards that predate the presets.
     const chosen = p.style?.preset;
-    if (chosen && chosen !== 'spatial-explainer' && !STYLES[chosen]) errors.push('Unknown PRODUCTION.style.preset');
+    if (!chosen) errors.push('Choose an episode visual style (PRODUCTION.style.preset) before authoring; every production mode carries one');
+    else if (chosen !== 'spatial-explainer' && !STYLES[chosen]) errors.push('Unknown PRODUCTION.style.preset');
     if (STYLES[chosen] && (!['user', 'standing'].includes(p.style.selection?.kind) ||
         !text(p.style.selection?.reference))) errors.push('Record the actual style HITL choice in PRODUCTION.style.selection');
     if (STYLES[chosen] && !packPresets.includes(chosen) && p.style.referencePack)
@@ -442,6 +469,7 @@
     (win.SCENES || []).forEach((scene, i) => {
       if (scene.shot?.cutType !== undefined && !CUT_TYPES.includes(scene.shot.cutType))
         errors.push('[cutType-unknown] shot ' + (i + 1) + ': shot.cutType must be one of ' + CUT_TYPES.join(', '));
+      shotStyleErrors(scene, i).forEach(e => errors.push(e));
     });
     if (draft) return errors; // Shot assets/designs are authored after the narration-only draft.
     (win.SCENES || []).forEach((s, i) => {
@@ -452,6 +480,9 @@
     // (blender-previz.md §6, production-mode.md §When to ask). Nothing renders or bills before that.
     const generatedCuts = (win.SCENES || []).filter(s => eligible(s) && !reused(s) && s.visual?.video && s.shot?.render?.mode === 'generated_video');
     if (generatedCuts.length) {
+      // spatial-prompts.js assembles every source and motion prompt from these six fields.
+      for (const key of ['reference', 'world', 'materials', 'palette', 'lighting', 'camera'])
+        if (!text(p.style?.[key])) errors.push('PRODUCTION.style.' + key + ' is required once a generated cut exists');
       if (!PREVIZ_RENDERERS[p.previz?.renderer]) errors.push('Ask which 3D previz renderer draws the generated cuts and record it in PRODUCTION.previz.renderer (blender | threejs)');
       else if (!selectionRecorded(p.previz.selection)) errors.push('Record the actual previz renderer HITL choice in PRODUCTION.previz.selection');
       const vm = p.videoModel;
@@ -468,9 +499,9 @@
       return errors;
     }
     const style = p.style || {};
-    if (style.preset !== 'spatial-explainer' && !STYLES[style.preset]) errors.push('Choose an episode visual style before full_video');
-    for (const key of ['reference', 'world', 'materials', 'palette', 'lighting', 'camera'])
-      if (!text(style[key])) errors.push('PRODUCTION.style.' + key + ' is required');
+    if (!generatedCuts.length)
+      for (const key of ['reference', 'world', 'materials', 'palette', 'lighting', 'camera'])
+        if (!text(style[key])) errors.push('PRODUCTION.style.' + key + ' is required');
     (win.SCENES || []).forEach((s, i) => {
       if (!eligible(s) || reused(s)) return;
       const v = s.visual || {}, design = s.shot?.videoDesign || {};
@@ -499,8 +530,9 @@
         bad('visual.camera.' + slot + ' is required; the motion prompt is assembled from the four slots (speed may stay empty on a static camera)');
       if (!ALL_LOOKS.includes(design.look))
         bad('videoDesign.look must be one of ' + ALL_LOOKS.join(', '));
-      if (STYLES[style.preset] && design.look !== 'archive' && !STYLES[style.preset].looks.includes(design.look))
-        bad('videoDesign.look conflicts with the selected episode style');
+      const shotPreset = shotStyle(win, i).preset;
+      if (STYLES[shotPreset] && design.look !== 'archive' && !STYLES[shotPreset].looks.includes(design.look))
+        bad('videoDesign.look conflicts with the selected ' + (shotPreset === style.preset ? 'episode' : 'per-shot') + ' style');
       motionErrors(s).forEach(bad);
       if (!Array.isArray(s.narration) || !s.narration.length) bad('a generated cut needs its approved narration');
       if (s.title || s.stat || (s.bullets || []).length || s.footnote || !['none', undefined].includes(v.overlay))
@@ -544,7 +576,7 @@
       // hook_only: the hook plus every imported clip — reuse is outside the count but still a slot.
       generatedVideoMax: production.mode === 'hook_only' ? 1 + scenes.filter(reused).length : RATIOS[production.mode] ? scenes.filter(eligible).length : Math.min(base.generatedVideoMax ?? 2, 2) };
   }
-  const api = { CAMERA_INPUT_SCHEMA, cameraInputErrors, CAMERA_PRESETS, isDrone, droneErrors, droneSample, droneSlots, droneBinding, droneCameraKeys, droneSceneErrors, STYLES, MODES, CHOICES, CUT_TYPES, RATIOS, newCut, generated, hookScene, coverageErrors, CAMERA_SLOTS, PREVIZ_RENDERERS, VIDEO_MODELS, packPresets, ALL_LOOKS, eligible, reused, reuseErrors, full, signature, check, policy, motionErrors, missingCameraSlots, cameraErrors, cameraWarnings, episodeMoveErrors, moveOf, travels, MOVES, staticCamera, finalState };
+  const api = { CAMERA_INPUT_SCHEMA, cameraInputErrors, CAMERA_PRESETS, isDrone, droneErrors, droneSample, droneSlots, droneBinding, droneCameraKeys, droneSceneErrors, STYLES, MODES, CHOICES, CUT_TYPES, RATIOS, newCut, generated, hookScene, coverageErrors, CAMERA_SLOTS, PREVIZ_RENDERERS, VIDEO_MODELS, packPresets, ALL_LOOKS, shotStyle, shotStyleErrors, eligible, reused, reuseErrors, full, signature, check, policy, motionErrors, missingCameraSlots, cameraErrors, cameraWarnings, episodeMoveErrors, moveOf, travels, MOVES, staticCamera, finalState };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.PRODUCTION_MODE = api;
 })(typeof window === 'object' ? window : globalThis);
