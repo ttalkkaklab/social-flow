@@ -50,6 +50,13 @@ source-image prompt and shooting script. It counts what the viewer must read at 
 thing → shallow with the sharp plane named, two or more → deep with the planes listed front
 to back. A still-camera focus effect is always shallow. See [depth contract](skills/storyboard/references/scenes-schema.md#depth-of-field-shotdepth-l11).
 
+The visual style is an episode choice the user makes before authoring, in every production
+mode; the checker refuses a board without it. Both prompt assemblers write the preset's
+treatment into every generated still, `check-scenes.js` refuses a still whose prompt lacks it,
+and `check-production.js --ready` refuses assembly until each still's style read is on record.
+One shot leaves the episode preset only through `shot.style`, written after the user approved
+that shot in HITL. See [visual style](skills/storyboard/references/visual-style.md).
+
 Assembly compiles each storyboard transition into the production timeline.
 `storyboard_apply.transitions` changes selected incoming effects without replacing shots.
 For scene changes in place or time, prefer `dip` (fade through black); the storyboard

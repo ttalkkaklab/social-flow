@@ -137,8 +137,28 @@ attach an image. Narration edits require a fresh content check even when no came
 changed. Reuse after a wording-only edit is allowed only after reading the image against the
 new words. A checksum or a refreshed approval hash is not evidence of that read.
 
+**Read the style as its own question**, after the content: is this the preset the shot carries
+(`PRODUCTION.style.preset`, or the shot's approved `shot.style.preset`)? Photographic skin in
+webtoon, a smooth plastic figure in claymation, a doll-like surface in photoreal, a painted-looking
+photo in ink-wash — each is a mismatch (visual-style.md). Write the read to
+`.work/still-review.json`, one entry per generated still:
+
+```json
+{ "shots": [{ "shot": 4, "imageSha256": "<sha256 of images/scene-4.png>", "preset": "webtoon",
+              "styleMatch": true, "reviewer": "produce §3 read", "at": "2026-09-19T10:20:00+09:00",
+              "evidence": "Drawn skin and cloth, clean contour lines, cel-shaded background." }] }
+```
+
+`check-production.js --ready` refuses assembly for a generated still without a current entry,
+with `styleMatch:false`, or reviewed against another preset than the shot now carries. A
+mismatch is remade in the shot's preset. When the preset itself is wrong for this picture, that
+is the user's call: ask with AskUserQuestion, and only their approval writes `shot.style`
+(visual-style.md §Per-shot style) — then the prompt is reassembled, the still regenerated and
+read again. Never write an override to excuse a picture that already came back.
+
 What disqualifies an image:
 
+- a picture off the preset the shot carries (see the style read above)
 - a picture unrelated to what the scene says
 - a baked-in pseudo-character or a lookalike glyph
 - readable text (unless the scene asked for it and went to gpt)

@@ -558,6 +558,14 @@ function perShotLookFindings(win, { bad, machine, warn }) {
       if (EMPTY_CUT_TYPES.includes(cutType) && refs.length)
         warn(where, `[character-on-empty-cut] ${cutType} cuts omit cast sheets and should not carry visual.character`);
 
+      // Every generated still carries its style in the prompt (visual-style.md): the episode preset's
+      // treatment sentence, or the user-approved per-shot preset from shot.style. Archive looks and
+      // stock photographs carry no treatment; the pre-preset spatial-explainer boards are exempt.
+      if (generated && typeof scene.visual?.bgPrompt === 'string' && scene.visual.source !== 'stock' && shot.videoDesign?.look !== 'archive') {
+        const st = require("./production-mode.js").shotStyle(win, index), treatment = require("./production-mode.js").STYLES[st.preset]?.prompt;
+        if (treatment && !scene.visual.bgPrompt.includes(treatment))
+          bad(where, `[style-missing] visual.bgPrompt does not carry the ${st.override ? 'per-shot' : 'episode'} style "${st.preset}"; assemble it with spatial-prompts.js or assemble-bg-prompt.js --from, never by hand`);
+      }
       if (generated && typeof scene.visual?.bgPrompt === 'string') {
         try {
           if (assembleSpatialPrompt(win, index).sourcePrompt !== scene.visual.bgPrompt)
@@ -2655,6 +2663,26 @@ function selftest() {
     const stale = perShotFixture(); stale.SCENES[0].visual.bgPrompt = 'A handwritten prompt.';
     return lookHas(perShot(stale), 'warn', /\[bgPrompt-stale\]/) &&
       !lookHas(perShot(perShotFixture()), 'warn', /\[bgPrompt-stale\]/);
+  })());
+  ok('style-missing refuses a still whose prompt lacks the episode treatment, and follows an approved per-shot preset', (() => {
+    const pm = require('./production-mode.js');
+    const handwritten = perShotFixture(); handwritten.SCENES[0].visual.bgPrompt = 'Medium full shot, the officer crosses the yard.';
+    const bare = perShot(handwritten);
+    // A per-shot preset the user approved: the prompt must carry that treatment, not the episode's.
+    const over = perShotFixture();
+    over.SCENES[0].shot.style = { preset: 'ink-wash', reason: 'The crossing reads as a painted memory.', selection: { kind: 'user', reference: 'User approved ink-wash for shot 1.' } };
+    over.SCENES[0].shot.videoDesign.look = 'inkwash';
+    over.SCENES[0].visual.bgPrompt = assembleSpatialPrompt(over, 0).sourcePrompt;
+    const stale = perShotFixture(); stale.SCENES[0].shot.style = over.SCENES[0].shot.style; stale.SCENES[0].shot.videoDesign.look = 'inkwash';
+    // An override without the user's record is refused by production-mode.js, not silently applied.
+    const unapproved = perShotFixture(); unapproved.SCENES[0].shot.style = { preset: 'ink-wash', reason: 'x' };
+    return lookHas(bare, 'bad', /\[style-missing\].*episode style "photoreal"/) &&
+      !lookHas(perShot(perShotFixture()), 'bad', /\[style-missing\]/) &&
+      over.SCENES[0].visual.bgPrompt.includes(pm.STYLES['ink-wash'].prompt) &&
+      !lookHas(perShot(over), 'bad', /\[style-missing\]/) &&
+      lookHas(perShot(stale), 'bad', /\[style-missing\].*per-shot style "ink-wash"/) &&
+      pm.check(unapproved, { draft: true }).some(e => /\[shot-style\].*HITL approval/.test(e)) &&
+      !pm.check(over, { draft: true }).some(e => /\[shot-style\]/.test(e));
   })());
   ok('worldId-unmapped warns on a missing set and accepts a mapped set', (() => {
     const missing = perShotFixture(); missing.SCENES[0].shot.videoDesign.worldId = 'workshop';
