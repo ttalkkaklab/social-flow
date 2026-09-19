@@ -4,6 +4,7 @@
  */
 
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -17,6 +18,7 @@ import {
   DEFAULT_MLX_VIDEO_FRAMES,
   DEFAULT_MLX_VIDEO_HEIGHT,
   DEFAULT_MLX_VIDEO_WIDTH,
+  MAX_MLX_VIDEO_FRAMES,
   MAX_VIDEO_RGB_BYTES,
   MLX_VIDEO_FPS,
   editMlxImage,
@@ -128,6 +130,28 @@ describe('mlx schemas', () => {
     assert.equal(mlxVideoGenerateSchema.safeParse({ prompt: 'x', width: 1088, height: 1920, numFrames: 192 }).success, false);
     assert.equal(mlxVideoGenerateSchema.safeParse({ prompt: 'x', numFrames: 8 }).success, false);
     assert.equal(mlxVideoGenerateSchema.safeParse({ prompt: 'x', width: 768, height: 1280, numFrames: 49 }).success, true);
+  });
+
+  it('video takes the 32px grid only on one_stage, and only 8k+1 frames', () => {
+    // 800 is on the server's 32px grid but off the two-stage 64px one.
+    assert.equal(mlxVideoGenerateSchema.safeParse({ prompt: 'x', width: 800, height: 1280 }).success, false);
+    assert.equal(
+      mlxVideoGenerateSchema.safeParse({ prompt: 'x', width: 800, height: 1280, pipeline: 'one_stage' }).success,
+      true,
+    );
+    // 1080 is off both grids, so one_stage does not rescue it.
+    assert.equal(
+      mlxVideoGenerateSchema.safeParse({ prompt: 'x', width: 1080, height: 1920, pipeline: 'one_stage' }).success,
+      false,
+    );
+    assert.equal(mlxVideoGenerateSchema.safeParse({ prompt: 'x', pipeline: 'two_stage_hq' }).success, true);
+
+    // mlx-serve answers 200 on a frame count off the 8k+1 ladder and quietly uses its own.
+    const off = mlxVideoGenerateSchema.safeParse({ prompt: 'x', numFrames: 50 });
+    assert.equal(off.success, false);
+    assert.match(off.error.issues[0].message, /8k\+1/);
+    assert.equal(mlxVideoGenerateSchema.safeParse({ prompt: 'x', numFrames: 57 }).success, true);
+    assert.equal(mlxVideoGenerateSchema.safeParse({ prompt: 'x', numFrames: MAX_MLX_VIDEO_FRAMES }).success, true);
   });
 
   it('3d requires imagePath and a .glb filename', () => {
@@ -340,6 +364,60 @@ describe('mlx generate — mocked fetch', () => {
       const result = await generateMlx3d({ imagePath: src, outputPath: dir, filename: 'm.glb' });
       assert.equal(result.success, true, result.error);
       assert.equal(readFileSync(join(dir, 'm.glb')).toString(), 'glb-bytes');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('keeps every requested frame when the audio track is shorter than the picture', async () => {
+    const width = 256;
+    const height = 256;
+    const frames = 49;
+    const sampleRate = 16_000;
+    const channels = 2;
+    // The picture is 49/24 = 2.0417s; LTX hands back 2.010s of audio. -shortest used to cut a frame.
+    const audioSamples = Math.round(2.01 * sampleRate);
+    globalThis.fetch = async (url) => {
+      const path = String(url);
+      if (path.endsWith('/health')) return jsonResponse(200, { ok: true });
+      if (path.endsWith('/v1/models')) {
+        return jsonResponse(200, { data: [{ id: 'ltx', state: 'ready', capabilities: ['video'] }] });
+      }
+      if (path.endsWith('/v1/video/generations')) {
+        return jsonResponse(200, {
+          format: 'rgb8',
+          frames,
+          width,
+          height,
+          fps: MLX_VIDEO_FPS,
+          data: Buffer.alloc(frames * width * height * 3, 9).toString('base64'),
+          audio_data: Buffer.alloc(audioSamples * channels * 2, 0).toString('base64'),
+          audio_sample_rate: sampleRate,
+          audio_channels: channels,
+        });
+      }
+      throw new Error(`unexpected ${path}`);
+    };
+    const dir = mkdtempSync(join(tmpdir(), 'mlx-video-test-'));
+    try {
+      const result = await generateMlxVideo({
+        prompt: 'walk',
+        width,
+        height,
+        numFrames: frames,
+        outputPath: dir,
+        filename: 'clip.mp4',
+      });
+      assert.equal(result.success, true, result.error);
+      const probed = JSON.parse(
+        execFileSync(
+          'ffprobe',
+          ['-v', 'error', '-count_frames', '-select_streams', 'v:0',
+           '-show_entries', 'stream=nb_read_frames', '-of', 'json', join(dir, 'clip.mp4')],
+          { encoding: 'utf8' },
+        ),
+      ).streams[0];
+      assert.equal(Number(probed.nb_read_frames), frames);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

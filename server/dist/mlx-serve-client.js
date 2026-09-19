@@ -32,7 +32,9 @@ export const MLX_IMAGE_DIMENSION_STEP = 16;
 export const MIN_MLX_IMAGE_DIMENSION = 256;
 export const MAX_MLX_IMAGE_DIMENSION = 2048;
 export const DEFAULT_MLX_IMAGE_SIZE = 1024;
+/** Two-stage LTX runs on a 64px grid; one_stage accepts 32. mlx-serve itself takes 32. */
 export const MLX_VIDEO_DIMENSION_STEP = 64;
+export const MLX_VIDEO_DIMENSION_STEP_ONE_STAGE = 32;
 export const MIN_MLX_VIDEO_DIMENSION = 256;
 export const MAX_MLX_VIDEO_DIMENSION = 1920;
 export const DEFAULT_MLX_VIDEO_WIDTH = 768;
@@ -40,6 +42,8 @@ export const DEFAULT_MLX_VIDEO_HEIGHT = 1280;
 export const DEFAULT_MLX_VIDEO_FRAMES = 49;
 export const MIN_MLX_VIDEO_FRAMES = 9;
 export const MAX_MLX_VIDEO_FRAMES = 241;
+/** LTX frame counts are 8k+1 (9, 17, …, 241). mlx-serve silently falls back on any other value. */
+export const MLX_VIDEO_FRAME_STEP = 8;
 export const MLX_VIDEO_FPS = 24;
 export const MIN_MLX_MUSIC_SECONDS = 10;
 export const MAX_MLX_MUSIC_SECONDS = 600;
@@ -84,8 +88,8 @@ const videoDimension = z
     .int()
     .min(MIN_MLX_VIDEO_DIMENSION)
     .max(MAX_MLX_VIDEO_DIMENSION)
-    .refine((v) => v % MLX_VIDEO_DIMENSION_STEP === 0, {
-    message: `width/height must be a multiple of ${MLX_VIDEO_DIMENSION_STEP} (two-stage LTX grid). 1080 is not on that grid — use 1088×1920 or the default 768×1280.`,
+    .refine((v) => v % MLX_VIDEO_DIMENSION_STEP_ONE_STAGE === 0, {
+    message: `width/height must be a multiple of ${MLX_VIDEO_DIMENSION_STEP_ONE_STAGE} (LTX grid), and of ${MLX_VIDEO_DIMENSION_STEP} unless you pass pipeline:"one_stage". 1080 is on neither grid — use 1088×1920 or the default 768×1280.`,
 });
 export const mlxImageGenerateSchema = z.object({
     prompt: z.string().min(1, 'Prompt is required').max(32_000),
@@ -162,7 +166,7 @@ export const mlxVideoGenerateSchema = z
     seed: z.number().int().min(0).optional(),
     firstFrameImagePath: z.string().min(1).optional(),
     lastFrameImagePath: z.string().min(1).optional(),
-    pipeline: z.enum(['one_stage', 'two_stage']).optional(),
+    pipeline: z.enum(['one_stage', 'two_stage', 'two_stage_hq']).optional(),
     decoder: z.enum(['conv', 'diffusion']).optional(),
     outputPath: z.string().optional(),
     filename: bareFilenameSchema('video').optional(),
@@ -172,6 +176,27 @@ export const mlxVideoGenerateSchema = z
         ctx.addIssue({
             code: z.ZodIssueCode.custom,
             message: videoMemoryMessage(value.width, value.height, value.numFrames),
+        });
+    }
+    // The 32px grid is a one_stage-only relaxation: the server default pipeline is two-stage.
+    if (value.pipeline !== 'one_stage') {
+        for (const [field, size] of [['width', value.width], ['height', value.height]]) {
+            if (size % MLX_VIDEO_DIMENSION_STEP !== 0) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    path: [field],
+                    message: `${field} ${size} is off the two-stage LTX grid (multiple of ${MLX_VIDEO_DIMENSION_STEP}). Pass pipeline:"one_stage" to use the ${MLX_VIDEO_DIMENSION_STEP_ONE_STAGE}px grid, or round to ${Math.round(size / MLX_VIDEO_DIMENSION_STEP) * MLX_VIDEO_DIMENSION_STEP}.`,
+                });
+            }
+        }
+    }
+    if ((value.numFrames - 1) % MLX_VIDEO_FRAME_STEP !== 0) {
+        const below = value.numFrames - ((value.numFrames - 1) % MLX_VIDEO_FRAME_STEP);
+        const above = below + MLX_VIDEO_FRAME_STEP;
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['numFrames'],
+            message: `numFrames must be ${MLX_VIDEO_FRAME_STEP}k+1 (${MIN_MLX_VIDEO_FRAMES}, 17, 25, … ${MAX_MLX_VIDEO_FRAMES}) — LTX latent depth. ${value.numFrames} is not, and mlx-serve answers 200 with its own default instead of refusing. Use ${below} or ${Math.min(above, MAX_MLX_VIDEO_FRAMES)}.`,
         });
     }
 });
@@ -389,8 +414,10 @@ async function muxRgbToMp4(opts) {
             args.push('-i', wavPath);
         }
         args.push('-frames:v', String(opts.frames), '-c:v', 'libx264', '-pix_fmt', 'yuv420p');
+        // No -shortest: LTX audio comes back a frame shorter than the video (2.010s vs 2.042s at
+        // 49/24fps), and -shortest would cut the last frame. -frames:v already fixes the length.
         if (opts.audio)
-            args.push('-c:a', 'aac', '-shortest');
+            args.push('-c:a', 'aac');
         args.push(opts.outFile);
         await new Promise((resolve, reject) => {
             execFile('ffmpeg', args, { timeout: 120_000, maxBuffer: 2 * 1024 * 1024 }, (error, _out, errOut) => {
