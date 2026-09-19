@@ -1,15 +1,20 @@
 # Threads growth playbook — tactics source of truth for the grow-threads skill
 
 Based on 2026-08 research (Meta Transparency Center + multi-source
-cross-checks). Single-source numbers were dropped. Platform-wide style and
-posting rules live in `skills/platform-guide/references/platform-playbook.md`
-§3; this document carries **growth-loop tactics only**.
+cross-checks), re-measured 2026-09-19 against 61 popular posts written by other
+people plus two third-party datasets
+(`docs/research/2026-09-19-threads-post-styles/`). Single-source numbers were
+dropped. Platform-wide style and posting rules live in
+`skills/platform-guide/references/platform-playbook.md` §3; this document
+carries **growth-loop tactics only**.
 
 ## Contents
 
 - [Principles — what creates reach](#principles-what-creates-reach)
 - [Rhythm](#rhythm)
 - [§New-post style](#new-post-style)
+- [§Post types — what each one buys](#post-types-what-each-one-buys)
+- [§Chain posts (hook + own replies)](#chain-posts-hook-own-replies)
 - [§Replies (inbox handling)](#replies-inbox-handling)
 - [§Search engagement (other people's conversations)](#search-engagement-other-peoples-conversations)
 - [Seuhari culture (Korea-local)](#seuhari-culture-korea-local)
@@ -20,15 +25,26 @@ posting rules live in `skills/platform-guide/references/platform-playbook.md`
 
 ## Principles — what creates reach
 
-Threads judges **each post on its own**, not your follower count. The ranking
-signals Meta has published are five: probability of a like · **probability of
-clicking into the replies** · probability of following the author ·
-probability of a profile click · probability of scrolling past (lower is
-better). Translated into practice:
+Threads judges **each post on its own**, not your follower count. The
+Transparency Center card "Instagram Threads Feed AI system", read 2026-09-19,
+names ten predictions: ① like · ② **scroll past** (lower is better) · ③ tap the
+author's profile, then another post · ④ tap the post, then another post ·
+⑤ reply · ⑥ tap the post · ⑦ tap the author's profile · ⑧ like after tapping in ·
+⑨ **time spent on the permalink page** · ⑩ time spent viewing the post.
+
+**Six of the ten are clicks and dwell; a like appears in two.** Follower count
+and posting frequency are on neither list. (A 2026-08 read of the same card
+recorded five predictions, one of them "probability of following the author",
+which the card no longer shows — the ten above replace that note. Like, reply,
+profile tap and scroll-past appear in both reads.) Translated into practice:
 
 - **A post that leaves the reader with nothing to say has a low ceiling.**
   Don't close with a verdict — leave a gap someone can step into. A post that
   collects replies beats one that only collects likes.
+- **⑨ is what "replies are weighted heavily" actually is.** A post with a stack
+  of replies turns its permalink into something to read, and that reading time
+  comes back as reach. So the reply count is not a vanity number — it is the
+  input to two of the ten predictions.
 - **Early velocity beats total volume.** The same reactions spread further
   when they land within the first 60 minutes — which is why golden-hour
   reply handling is the tick's top priority.
@@ -53,7 +69,7 @@ measurements.
   audience's active hours) are guidance to prefer those windows when a post
   does go out.
 - **No mechanism punishing frequency itself has been confirmed**
-  (2026-08-15 research). The Threads evidence is the five ranking signals in
+  (2026-08-15 research). The Threads evidence is the ten predictions in
   §Principles — posting frequency isn't on the list Meta published. **Keep
   the citation path precise**: the Transparency Center feed/explore ranking
   cards and the official ranking explainer swept in that same research are
@@ -91,7 +107,13 @@ Use the single speech style pinned in the plan (the Korean Threads default is
 반말/casual — not mandatory, but switching between posts reads as an admin
 account). Rules:
 
-1. **1–3 lines.** 500 characters are allowed; the timeline is scanned.
+1. **Short by default — but the rule is whether it gets read to the last
+   line.** 500 characters are allowed and the timeline is scanned, so 1–3
+   lines is where a post starts. It is not a cap: in the 61-post sample the
+   four posts over 250 characters led every length band (72,500 median views ·
+   188 median replies), and all four were narratives carrying a time, a place
+   and a person. Predictions ⑨ and ⑩ measure reading time, not brevity. Go long
+   only with material that holds — two lines that lose the reader are long.
 2. **Observation and confession > finished argument.** "이거 나만 그런가?"
    (is this just me?) collects more replies than "이래야 합니다" (this is how
    it should be). Neutral summaries and news relays with the judgment removed
@@ -103,7 +125,14 @@ account). Rules:
    think?) is close to engagement begging.
 4. **Don't spend the hook.** Say the whole conclusion and there's nothing
    left to reply with.
-5. **One image wins** — attach the channel-theme image when there is one.
+5. **An image lands harder and travels less.** Buffer's 10.2M-post set puts
+   image posts at 4.55% engagement against text's 2.79%, while BlackTwist's
+   66,605-post set puts text-only at 3,900 median views against media's 1,219.
+   Both hold at once — text travels, images land. So attach an image to a post
+   written for conversation, and leave a post written for reach as text.
+   (Until 2026-09-19 this rule read "an image wins on reach", which is
+   backwards.) Never a decorative image: it earns its place by carrying a
+   number, a comparison or a scene.
 6. No unexplained jargon (plain-language principle — inherited from
    platform-playbook §2).
 7. **Don't close in written register.** Ending on `-ㄴ다/-는다` — like
@@ -113,6 +142,83 @@ account). Rules:
    Posts explaining a procedure drift into this ending, so watch **while
    authoring** — meet it first at the checker and you rewrite the paragraph
    wholesale.
+8. **Pick the intent before the first sentence** — reach or conversation. They
+   come from different posts and a post reaching for both usually misses both
+   (§Post types).
+9. **Reply to your own post right after publishing.** Buffer measured +42%
+   engagement on posts where the author replied to their own post — the
+   largest lift of the six platforms it tracks. One line that adds something
+   (the detail that didn't fit, the number behind the claim, the counter-case),
+   never "많이 봐줘"-type filler, and it goes through the gate like any other
+   copy.
+
+## §Post types — what each one buys
+
+Measured on 61 popular Korean posts collected from the logged-out
+recommendation feed on 2026-09-19 (view counts read off each permalink —
+Threads publishes them for other people's posts too, which is how a post's
+reach can be measured with no insights access). Medians; type labels are the
+reader's judgment.
+
+| Type | Views | Replies | Response rate |
+|---|---:|---:|---:|
+| Verdict request ("이거 어때?", "내가 잘못한 걸까?") | 32,000 | **59** | 0.48% |
+| Small talk / scene | 30,500 | 24 | 0.54% |
+| Personal story / confession | 27,000 | 19 | 0.41% |
+| Information / tip | 24,000 | **13** | 0.41% |
+| Fandom / match reaction | 21,000 | 23 | **1.33%** |
+
+- **A verdict request is the type that opens conversation** — 4.5× the replies
+  of an information post at comparable reach. Its shape is one thing:
+  **someone else holds the answer.** "해저 터널 벽 왜 투명하게 못 만들어?"
+  collected 199 replies against 71 likes. A question the writer already
+  answered inside the post collects nothing, and it is the failure mode this
+  loop falls into — we know our own material too well.
+- **Information posts get sprayed wide and go quiet.** Four of the five were
+  shown to 20,000–30,000 people and collected 7–16 replies. The one exception
+  (2.71% response) was information the reader could answer with a memory of
+  their own — a neighborhood restaurant reopening. Our material is mostly
+  information, so this is the type to convert: carry one judgment of our own,
+  or a line that pulls up the reader's own memory, or turn it into a verdict
+  request.
+- **Confession is our measured strength** and the sample agrees it collects
+  response rather than reach (§Form's cold-start numbers, same direction).
+- **A question doubles replies and sells likes** — 46 median replies against 21
+  without one, but 0.51% response against 0.70%. That is the reach-versus-
+  conversation trade priced out. Decide which one this post is for.
+
+## §Chain posts (hook + own replies)
+
+One short hook post, then the substance in **self-replies** —
+`threads_publish` with the previous part's `postId` as `replyToId`, one call
+per part. June's two most-viewed English posts (1.9M · 1.4M) were both this
+shape, and the third-party "long chains reach 8.5× short posts" figure
+(BlackTwist, 66,605 posts) is this structure, not one post filled to 500
+characters.
+
+Why it works: the reader clicks once and keeps clicking, which hits
+predictions ③, ④, ⑨ and ⑩ at the same time. The body is short; the substance
+is one click away.
+
+When to use it: material that is a list or a sequence of lines the reader can
+use as-is. A single observation stays a single post — a chain built out of one
+idea padded into parts reads as a stitched-together essay thread, which
+§Principles already lists as a pattern that dies in our measurements.
+
+Rules for a chain:
+- **The hook part carries a loss, not a promise.** "아무도 안 알려준다" ·
+  "너무 늦기 전에" worked; "꿀팁 알려줄게" is the engagement-bait register.
+- **Every part stands on its own.** A reader who lands on part 3 from a
+  permalink has to get something from it.
+- **Every part clears the style checker on its own, and the chain goes to the
+  reviewer as one draft** — the parts numbered in reading order on the
+  `post_chain` surface, judged as a whole, and one FAIL anywhere fails the
+  chain.
+- **Publish in order and stop on a failure.** A half-published chain is worse
+  than no chain: don't retry inside the tick (absolute rule 3), record the
+  parts that went out in posts.md, and leave the rest.
+- Chain parts count against the publish quota one by one (250 per 24h,
+  `references/api-limits.md`) — a 5-part chain is 5 publishes.
 
 ## §Replies (inbox handling)
 
