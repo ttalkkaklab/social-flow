@@ -149,7 +149,7 @@ as written by a person** (no AI tells), and **does it fit the context**
 
    ```bash
    CS=${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references/check-style.py
-   printf '%s\n' "$draft" | python3 $CS --surface threads -   # new post
+   printf '%s\n' "$draft" | python3 $CS --surface threads -   # new post (a chain: once per part)
    printf '%s\n' "$draft" | python3 $CS --surface reply -     # replies (search engagement · inbox)
    ```
 
@@ -245,9 +245,12 @@ as written by a person** (no AI tells), and **does it fit the context**
    delegation prompt must carry: the full draft texts (numbered, surface
    stated), for replies the source context (target post and original comment in
    full — without this the context axis scores 0), the paths to
-   `growth-plan.md` and `profile.md`, and the self-check exit code. The
-   reviewer returns a
-   `GROWTH_POST_REVIEW: draft=N score=NN p0=N verdict=PASS|FAIL` tail per draft.
+   `growth-plan.md` and `profile.md`, and the self-check exit code. **A chain
+   goes up as one `post_chain` draft** — its parts numbered in reading order in
+   the one draft, so the reviewer judges the hook, each part and the whole the
+   way a reader meets them; one FAIL anywhere fails the chain. The reviewer
+   returns a `GROWTH_POST_REVIEW: draft=N score=NN p0=N verdict=PASS|FAIL` tail
+   per draft.
 
 3. **Improvement loop (3 rounds max)** — fix FAIL drafts as the correction
    directives say. When fixing, **only delete** — plant a metaphor or stock
@@ -446,10 +449,10 @@ measured cases of skipping big-reach posts (a keyboard app at 7,232 exposures
 its `pushTargets`, that `state.pushes` has no entry for, and the plan's
 `push_allowed` is true (§Cross-platform push) — that candidate is this tick's
 material. Write a post that stands on its own about what the episode found
-(playbook §New-post style: 1–3 lines, hook not spent, question ending) and let
-the video hang off it. **A post whose whole content is "go watch this" doesn't
-go out** — that's the engagement-begging shape absolute rule 2 names, and it
-reads as an ad to everyone scrolling past. The link follows the plan's §Link
+(playbook §New-post style: short unless the material holds a longer read, hook
+not spent, question ending) and let the video hang off it. **A post whose whole
+content is "go watch this" doesn't go out** — that's the engagement-begging
+shape absolute rule 2 names, and it reads as an ad to everyone scrolling past. The link follows the plan's §Link
 policy and its target is the YouTube watch URL, not the IG permalink the
 episode fallback uses (playbook §Principles, the links bullet). The gate runs
 as it does on any other post, and so does the golden-hour hold below. On
@@ -475,9 +478,50 @@ afterwards.
 **When there's something to say, write — any time.** The gate on a new post is
 the material, not the clock — first judge, from the topic pool × step-2
 learning, whether there is "something this channel is worth hearing on right
-now"; if yes, author it per playbook §New-post style (1–3 lines, hook not
-spent, question ending, hashtags ≤1), pass the §gate, then `threads_publish`.
-If not, don't write even at slot time — filler posting is the worst move.
+now"; if yes, author it per playbook §New-post style (short by default, hook
+not spent, question ending, hashtags ≤1), pass the §gate, then
+`threads_publish`. If not, don't write even at slot time — filler posting is
+the worst move.
+
+**Two decisions come before the first sentence** (playbook §Post types):
+
+1. **Reach or conversation.** They come from different posts — a question
+   doubles replies and costs response rate (measured: 46 vs 21 median replies,
+   0.51% vs 0.70% response). Write down which one this post is for, because it
+   decides the ending, the image and the type.
+2. **Which type.** Verdict request · confession · scene · information. Our
+   material is mostly information, and that is the type that collects 13
+   median replies after 20,000–30,000 people see it. Converting it is the job:
+   one judgment of our own, or a memory the reader can answer with, or a
+   question **someone else holds the answer to**. A question we answered
+   ourselves inside the post is the loop's standard failure and the reviewer
+   scores it as an empty question.
+
+**A chain is an option when the material is a list or a sequence** (playbook
+§Chain posts) — a short hook post and the substance in self-replies. Procedure:
+
+- Style-check every part on its own (`--surface threads`), then delegate the
+  whole chain to the reviewer **as one draft** — the parts numbered in reading
+  order on the `post_chain` surface, so the reviewer sees what a reader would
+  see. A FAIL anywhere fails the chain.
+- Publish part 1 with `threads_publish`, take its `postId`, publish part 2 with
+  `replyToId: <part 1 postId>`, and keep chaining off the previous part's id.
+- **Stop at the first failure and don't retry inside the tick** (absolute rule
+  3). Record the parts that went out in posts.md and note the stop in
+  growth-log; the chain does not resume in a later tick.
+- Every part counts against the publish quota (250/24h, api-limits.md).
+- The golden-hour hold below is about root posts. Chain parts and the author's
+  own reply are replies, so they go out back to back — that early stack of
+  replies is the point.
+
+**After publishing, reply to your own post once.** Buffer's 10.2M-post set
+measured +42% engagement where the author replied to their own post, the
+largest lift of the six platforms. One line that adds something — the detail
+that didn't fit, the number behind the claim, a counter-case — through the same
+gate on the `post` surface, published with `replyToId: <the new post's id>`.
+Skip it when the post already carries everything: a filler self-reply is the
+engagement-begging register absolute rule 2 bans. A chain needs none, since its
+parts already are the self-replies.
 
 Plan slots are not a cap but a **rhythm guide**: reminders that help posts go
 out during the target audience's active hours. If a slot time has passed and
@@ -490,10 +534,12 @@ one — your own posts would split the early distribution. **On a publish
 failure, don't retry within the tick** (the next tick retries — duplicate-post
 prevention).
 
-**If an image would help the post, attach one** — image posts beat text-only
-on reach (playbook §New-post style, rule 5). Material with a number, a
-comparison, or a scene is the candidate. Generation and upload follow §Image
-procedure; put the verified public URL into `imageUrl`. If the post stands
+**If an image would help the post, attach one** — an image lifts response and
+costs reach (playbook §New-post style, rule 5: Buffer 4.55% vs text 2.79%
+engagement; BlackTwist text-only 3,900 vs media 1,219 median views), so it
+belongs on a post written for conversation and not on one written to travel.
+Material with a number, a comparison, or a scene is the candidate. Generation
+and upload follow §Image procedure; put the verified public URL into `imageUrl`. If the post stands
 without an image, publish text-only — no decorative images.
 
 **Before writing, pin the reader in one line** — "who among profile.md's
@@ -523,7 +569,12 @@ no Korean field data. The procedure costs nearly nothing, so it's in.
 ### 5. Save · report
 
 Save `state.json` (update lastTickAt) → if a new post was published, append
-its full copy to `posts.md` under a `## <postId> <time>` header → append one
+its full copy to `posts.md` under a `## <postId> <time>` header — **a chain is
+one piece, not N**: one header carrying the first part's id (the rest listed
+after it), the parts in reading order in the body, and the author's own first
+reply under the post it answers. The batch checker splits on headers, so
+filing the parts separately would read one chain as several near-identical
+posts and cry homogenization → append one
 tick-summary line to growth-log.md — the memo carries each published draft's
 gate score (skips included) → one report line to the user:
 `[tick hh:mm] replies n · engagements n · new posts n · gate passed n/skipped n · followers ±n`.
