@@ -3,7 +3,9 @@
 > **Freshness** — verified 2026-08-19 · source: the platforms' own published limits plus what
 > our accounts actually accepted · recheck every 90 days, and immediately when a publish call
 > starts failing on a limit. The §6 title and description contract was researched 2026-09-03
-> (YouTube Help · Google's clickbait policy post · two peer-reviewed headline studies).
+> (YouTube Help · Google's clickbait policy post · two peer-reviewed headline studies). §3's
+> style rules were re-measured 2026-09-19 against 61 popular posts by other people, Meta's
+> ranking card and two third-party datasets (`docs/research/2026-09-19-threads-post-styles/`).
 
 Generalized from rules field-tested in fect-persona publish-social·make-reels
 operations. produce's per-platform text authoring, publish's approval review,
@@ -64,8 +66,9 @@ When unsure, start with Threads — lightest, cheapest to fail.
   the hook inside the first 125 characters (everything before the fold), then
   context and a save/share CTA. Links in captions aren't clickable — the link
   goes in a comment.
-- **Threads = spoken register** — casual speech, 1–3 lines + one closing
-  question. Don't spend the whole hook (say everything and there's no reason to
+- **Threads = spoken register** — casual speech, short by default + one closing
+  question (§3 decides the length and the type; short is the default, not the
+  rule). Don't spend the whole hook (say everything and there's no reason to
   click). Hashtags ≤1. Video episodes carry no cover image — **the video rides on
   the post itself** (§3).
 
@@ -101,10 +104,52 @@ five read — so it now sits here, in `check-meta.js` (verbatim copies of
 
 ## §3 Threads
 
-- Body limit is 500 chars, but **1–3 lines is the right answer** — the timeline
-  gets scanned, not read closely.
+- **Decide the intent before the draft: is this post going far, or opening a
+  conversation?** Reach and replies come from different posts, and a post
+  reaching for both usually misses both. Measured on 61 popular Korean posts
+  (2026-09-19, `docs/research/2026-09-19-threads-post-styles/`): the 19 posts
+  carrying a question had a median 46 replies against 21 for the 42 without
+  one, and their response rate ran the other way — 0.51% against 0.70%. A
+  question buys conversation and sells likes. Pick which one you want.
+- **Type, by what it buys** (same sample, medians):
+
+  | Type | Views | Replies | Response rate |
+  |---|---:|---:|---:|
+  | Verdict request ("이거 어때?", "내가 잘못한 걸까?") | 32,000 | **59** | 0.48% |
+  | Small talk / scene | 30,500 | 24 | 0.54% |
+  | Personal story / confession | 27,000 | 19 | 0.41% |
+  | Information / tip | 24,000 | **13** | 0.41% |
+  | Fandom / match reaction | 21,000 | 23 | **1.33%** |
+
+  The verdict request collects 4.5× the replies of an information post at
+  comparable reach, and the shape behind it is one thing: **someone else holds
+  the answer.** A question you already answered yourself collects nothing.
+- **Information copy needs a stake or a memory hook.** Four of the five
+  information posts in that sample were seen by 20,000–30,000 people and
+  collected 7–16 replies — after reading one there is nothing to add. The
+  exception was information the reader could answer with a memory of their own
+  (a neighborhood restaurant reopening, 2.71% response). An episode summary or
+  a news relay sits in the losing column by default: carry one judgment of our
+  own, or a line that pulls the reader's own memory up, or don't post it.
+- Body limit is 500 chars. **Length is not the rule — being read to the last
+  line is.** Meta's ranking card predicts time on the post and time on the
+  permalink page (the ten predictions are listed in the research doc and in
+  grow-threads `references/growth-playbook.md` §Principles), and in the sample the
+  four posts over 250 characters led every length band at 72,500 median views
+  and 188 median replies — all four narratives carrying a time, a place and a
+  person. Short stays the default because the timeline is scanned, not because
+  long is penalized. Two lines that lose the reader are long.
 - Structure: one line of observation/discovery → (optional) one line of
   elaboration → closing question.
+- **The biggest form is a hook plus a chain of your own replies.** One short
+  hook post, then the substance in self-replies (`threads_publish`'s
+  `replyToId`, one part per call). The reader clicks once and keeps clicking,
+  which hits four of the ten ranking predictions at the same time — both
+  post-then-another-post predictions and both dwell predictions. June's two
+  most-viewed English posts (1.9M · 1.4M) were both this shape, and the "long
+  chains get 8.5× the reach" figure is this, not one post filled to 500
+  characters. Use it when the material is a list or a sequence of lines the
+  reader can use as-is; a single observation stays a single post.
 - **A video episode carries the video on the post itself** — pass the public URL
   of the subtitle-burned cut (`video-sub.mp4`) as `threads_publish`'s `videoUrl`
   (user directive 2026-08-19). Don't attach the video as a reply and don't settle
@@ -118,7 +163,7 @@ five read — so it now sits here, in `check-meta.js` (verbatim copies of
   on the post removes the problem outright** — which is why the reply link dropped
   to being the fallback for episodes that can't carry one.
 - The body post stays in casual spoken register and is complete in itself — it
-  has to stand as a post without the video. The 1–3 lines are the post; the video
+  has to stand as a post without the video. The body is the post; the video
   hangs off it.
 - The fallback (no video file, or hosting is blocked) is a self-reply link — one
   line, "풀영상은 여기 →" / "full video here →", plus the IG reel permalink. The
@@ -329,6 +374,12 @@ five read — so it now sits here, in `check-meta.js` (verbatim copies of
       Only an episode with no video file falls back to a self-reply link
 - [ ] **A Threads video episode with no video on the post** → `videoUrl` is missing.
       Attaching the video as a reply is the fallback, not the default
+- [ ] A Threads post written for replies whose question **the writer already
+      answered** inside the post → nobody else holds the answer, so nobody
+      answers (§3 type table: verdict requests 59 median replies, information
+      posts 13)
+- [ ] A Threads post relaying information with **no judgment of ours and no
+      memory the reader can answer with** → it gets shown and scrolled past (§3)
 - [ ] The IG caption hook sits past the 125-char fold
 - [ ] The YT title has no topic noun in its first half, contains <>, or a
       preset-required hashtag is missing (§6 · `check-meta.js`)

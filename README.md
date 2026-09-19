@@ -409,6 +409,16 @@ catalog to throw out rewordings of things already made. Ladder, promotion rules,
 unit prices live in `skills/autoproduce/references/`. This is also the skill the
 growth loops call when they refill their own queues.
 
+**Threads copy is written for one of two outcomes.** Reach and replies come from
+different posts, measured on 61 popular posts by other people plus Meta's ranking card
+and two third-party datasets (2026-09-19). The playbook now picks the intent before the
+draft, carries the measured type table (a verdict request takes a median 59 replies where
+an information post takes 13), drops "1–3 lines" for "is it read to the last line", and
+adds the hook-plus-own-replies chain — one short post with the substance in self-replies,
+which `threads_publish`'s `replyToId` already supports. The growth loop reviews a chain as
+one draft and replies to its own post after publishing. See
+[the research](docs/research/2026-09-19-threads-post-styles/README.md).
+
 **Style gate** — wherever Korean text is produced (storyboard authoring, produce
 right before TTS and per-platform copy, publish right before approval,
 content-reviewer verification), `check-style.py` deterministically flags AI-sounding
@@ -785,8 +795,8 @@ external vendor contract to document, so their evidence lives in research notes 
   storyboard-first shooting flow: filming rules, alignment-drift reports, edit-screen
   layout, troubleshooting.
 - **[Threads growth best practices](docs/guides/threads-growth/index.html)** —
-  per-post review, the 5 ranking signals, reply culture. The commentary edition of
-  grow-threads.
+  per-post review, the ten ranking predictions, measured post types, reply
+  culture. The commentary edition of grow-threads.
 - **[YouTube Shorts growth best practices](docs/guides/youtube-shorts-growth/index.html)** —
   the AI-disclosure boundary, the 2027 YPP changes, myths the official docs deny. The
   commentary edition of grow-youtube.

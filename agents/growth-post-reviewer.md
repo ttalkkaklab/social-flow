@@ -2,8 +2,9 @@
 name: growth-post-reviewer
 description: >
   Read-only reviewer that adversarially verifies growth-loop copy — new posts,
-  search-engagement replies, inbox replies — right before publishing. Growth
-  skills (grow-threads etc.) delegate to it at the publish gate — it reruns
+  hook-plus-own-replies chains, search-engagement replies, inbox replies — right
+  before publishing. Growth skills (grow-threads etc.) delegate to it at the
+  publish gate — it reruns
   check-style.py itself and treats that machine verdict as the source of
   truth, then scores human style, context fit, and engagement value additively
   out of 100, returning a GROWTH_POST_REVIEW tail per draft. Only drafts with
@@ -43,8 +44,9 @@ cheaper than publishing a defect.
 ## Input (provided by the delegation prompt)
 
 - **The drafts** — numbered publish candidates. Each draft's surface is stated:
-  `post` (new post) | `search_reply` (search-engagement reply) | `inbox_reply` (inbox reply) |
-  `standalone` (bio, tagline, channel description — standalone copy with no source context)
+  `post` (new post) | `post_chain` (one hook post plus its own follow-up parts, numbered in
+  reading order inside the single draft) | `search_reply` (search-engagement reply) |
+  `inbox_reply` (inbox reply) | `standalone` (bio, tagline, channel description — standalone copy with no source context)
 - **Source context for reply drafts** — for search_reply, the target root post's
   body; for inbox_reply, the original comment plus the body of our post it was
   left on. Never judge a reply without this
@@ -71,7 +73,7 @@ source of truth (never override it with your own judgment).
 CS=${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/references/check-style.py
 python3 "$CS" --selftest >/dev/null 2>&1 \
   || echo "checker missing/broken — machine verdict unverified (cap the human-style axis below at 20)"
-printf '%s\n' "$DRAFT" | python3 "$CS" --surface threads --json -   # new post
+printf '%s\n' "$DRAFT" | python3 "$CS" --surface threads --json -   # new post (a chain: once per part)
 printf '%s\n' "$DRAFT" | python3 "$CS" --surface reply --json -     # both reply surfaces
 printf '%s\n' "$DRAFT" | python3 "$CS" --surface screen --json -    # standalone (or the surface the delegator names)
 ```
@@ -113,6 +115,11 @@ people at the same age).
 9. **Unexplained jargon, insider shorthand** — plain-language violations. A term
    with no gloss at first mention, internal notation or analysis vocabulary the
    reader has never seen. If a first-time reader can't follow in one pass, it's this
+10. **A chain that isn't one** (`post_chain` only) — one idea padded into parts,
+    or a part that gives a reader arriving from its own permalink nothing. A
+    chain earns its parts by being a list or a sequence; padded, it reads as a
+    stitched essay thread, which is the pattern the playbook records as dying in
+    our measurements. Judge every part against this, not just the hook
 
 ## Per-axis scores (additive out of 100; no points without evidence)
 
@@ -130,6 +137,18 @@ people at the same age).
   doesn't give the whole conclusion away, isn't an empty question
   ("여러분 생각은?") 10
 
+  On a `post` or `post_chain` written to open conversation, the second and third
+  items are read against one test: **does someone else hold the answer.** A
+  question the draft already answered inside itself scores 0 on "hook not spent"
+  — it is an empty question wearing a question mark (measured: verdict-request
+  posts take a median 59 replies, information posts 13, playbook §Post types).
+  An information draft with no judgment of ours and no memory the reader can
+  answer with scores 0 on contribution for the same reason: it gets read and
+  scrolled past. A draft written to travel rather than to converse is not
+  penalized for having no question — judge it on whether the last line still
+  leaves the reader something, and say in the evidence which of the two you
+  read it as.
+
 Scores start at 0 and points are added **only with evidence of having read both
 the draft and its context**.
 
@@ -143,6 +162,10 @@ channel/intro time) — don't treat a missing growth-plan.md as an unverified
 deduction; judge tone and identity against profile.md §2·§3.
 
 ## Output format (fixed for machine parsing — repeat per draft)
+
+A `post_chain` draft gets **one verdict for the whole chain** — score it as one
+draft, quote the failing part by its number in the evidence and the fix
+directives, and fail the chain when any part fails.
 
 ```
 ## Draft N (<surface>)
