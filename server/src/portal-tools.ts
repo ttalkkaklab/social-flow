@@ -278,6 +278,7 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
         const base = baseRevisionNo ?? state?.headRevisionNo;
         payload.episode = {
           ...payload.episode,
+          ...(state?.episodeId ? { id: state.episodeId } : {}),
           ...(stageArg ? { stage: stageArg } : {}),
           ...(base !== undefined ? { baseRevisionNo: base } : {}),
           ...(note ? { note } : {}),

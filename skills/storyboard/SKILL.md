@@ -1321,9 +1321,8 @@ copies that field; an earlier save shows `draft`), then call `portal_storyboard_
 `storyboard.md`, `research.md`, `script.md` and `storyboard.html`, and returns `pageUrl`,
 `episodeId` and `storyboardId` — show the URL on the wrap-up line and write `portal_episode:
 <episodeId>` and `portal_url: <pageUrl>` into `storyboard.md`'s frontmatter, which is how
-produce and publish address the same record later. The portal matches a storyboard by its
-title, so a re-save after a change request updates the same episode only while the title (or
-the `storyboardTitle` you passed) stays the same; a retitled board is a new record. If the
+produce and publish address the same record later. On every later save, `.portal.json` supplies
+the episode id, so a changed episode or storyboard title updates that same portal record. If the
 tools are not there, say so in one line and move on; if a call errors (a broken key file, 401),
 report the message in one line and never hold the approval on it — the portal records the
 approval, it does not gate it. The save is also a **checkpoint** at stage `approved` (revision into

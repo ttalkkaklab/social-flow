@@ -83601,7 +83601,7 @@ Returns: JSON \u2014 { channel, workspace, source, holder, episodeDir?, copyOf?,
     name: "portal_storyboard_save",
     title: "Upload an episode directory to the portal",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-    description: `Upload data/<channel>/episodes/<topic>/storyboard/ \u2014 scenes.js (the shots verbatim, the window.* blocks as episode meta), storyboard.md, research.md, script.md, storyboard.html \u2014 to the ttalkkakstory portal under the channel's workspace key. Saving the same episode again updates it (idempotent); the project is the channel, the storyboard is found or created by the episode title (or storyboardTitle for a series). The save is also a checkpoint: stage from the argument or storyboard.md's status (approved \u2192 approved, otherwise board), baseRevisionNo from .portal.json. A 409 head_moved means another machine saved first \u2014 portal_storyboard_pull, re-apply, save again; a 409 leased names who holds the lease and until when.
+    description: `Upload data/<channel>/episodes/<topic>/storyboard/ \u2014 scenes.js (the shots verbatim, the window.* blocks as episode meta), storyboard.md, research.md, script.md, storyboard.html \u2014 to the ttalkkakstory portal under the channel's workspace key. Saving the same episode again updates it (idempotent); the project is the channel, the storyboard is found or created by the episode title (or storyboardTitle for a series). When .portal.json exists, its episodeId updates that same row even if the title changed. The save is also a checkpoint: stage from the argument or storyboard.md's status (approved \u2192 approved, otherwise board), baseRevisionNo from .portal.json. A 409 head_moved means another machine saved first \u2014 portal_storyboard_pull, re-apply, save again; a 409 leased names who holds the lease and until when.
 
 Writes .portal.json (workspace \xB7 storyboardId \xB7 episodeId \xB7 headRevisionNo) into the episode directory. Returns: JSON \u2014 { result: created|updated, storyboardId, episodeId, revisionNo, url, pageUrl, uploaded: { scenes, characters, documents } }.`,
     inputSchema: {
@@ -87736,6 +87736,7 @@ function portalHandlers(fetchImpl) {
         const base = baseRevisionNo ?? state?.headRevisionNo;
         payload.episode = {
           ...payload.episode,
+          ...state?.episodeId ? { id: state.episodeId } : {},
           ...stageArg ? { stage: stageArg } : {},
           ...base !== void 0 ? { baseRevisionNo: base } : {},
           ...note ? { note } : {},
