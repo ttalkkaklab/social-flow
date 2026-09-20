@@ -2756,6 +2756,9 @@ function main() {
                     what: 'scenario.md is newer than scenes.js — an upstream input changed after ' +
                           'its consumer; the board is the source of truth once §4 opens' });
   }
+  if (fs.existsSync(scenarioPath)) {
+    findings.push(...require('./check-scenario.js').checkAnchors(win, fs.readFileSync(scenarioPath, 'utf8')));
+  }
   const bad = findings.filter((f) => f.level === 'bad');
   const warn = findings.filter((f) => f.level === 'warn');
   const later = findings.filter((f) => f.level === 'later');

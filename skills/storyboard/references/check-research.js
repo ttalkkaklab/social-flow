@@ -1093,4 +1093,5 @@ function main() {
   process.exit(bad.length ? 1 : 0);
 }
 
-main();
+module.exports = { IGNORANCE, section, rows, formatOf };
+if (require.main === module) main();

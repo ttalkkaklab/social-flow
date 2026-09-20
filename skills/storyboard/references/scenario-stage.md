@@ -435,9 +435,19 @@ topic: <slug>
 direction: D1
 message: M1
 wow: W1
-wow_lands: <전개 #1 | 전개 #2 | 전개 #3 — where the 실제로는 half is first said plainly>
+wow_type: 반전             # 반전 | 숫자 | 숨은 원인 | 정체 | 규모 | 내 일
+wow_belief: "<the viewer belief>"
+wow_truth: "<the supported reversal (#N)>"
+wow_lands: "전개 #2"        # 전개 #1 | 전개 #2 | 전개 #3; quote the #
 engine_primary: <curiosity | fear | intrigue | comedy>
 engine_secondary: <curiosity | fear | intrigue | comedy | none>
+reveal: held               # held | spoiler
+anchors:
+  hook_first: "<first spoken sentence>"
+  closing_line: "<earned closing sentence>"
+  forwardable: "<one thing a viewer can pass on>"
+  cta: 없음                 # 없음 | an optional ask
+claims: [1, 2, 3]          # Verified row numbers used by this page
 structure: <short: hook-drip-cta | long-form: the arc + the shape 전개 #1 rides inside>
 arc: <short: n/a | long-form: answer-first | story>
 score:
@@ -453,35 +463,67 @@ frozen:                     # stamped on entering §4, on scenario.md only
 **Engine.** primary <…> · secondary <…>
 
 ## 주제
+<!-- One sentence including its question; no ignorance ending. -->
 <the subject cut from the message — what the episode is about and the question it answers,
 one sentence in the viewer's words; never "…는 알 수 없다">
 
-## 훅 — feel <sign · feeling>
+## 훅 — feel <s> · <감정>
+<!-- Include anchors.hook_first and the promise. Withhold wow_truth when reveal=held. -->
 <the dramatised scene — the viewer inside the 믿는 것 half. First spoken sentence verbatim:
 "…". Ends on the promise — and the promise reaches the present: what the viewer will know
 about now, not only what happened. The 실제로는 half is not said here.>
 
-## 전개 #1 — feel <sign · feeling>
+## 전개 #1 — feel <s> · <감정>
+<!-- Cite claims #N. Open on the false answer when available. At wow_lands, end on the plain reversal and put the feel maximum here. -->
 <what actually happened — who · when · what, on claims #N. The false answer set up and
 taken apart, when the research holds one. Its darkest beat is usually the curve's minimum.
 When this is `wow_lands`, its last sentence is the reversal, said plainly.>
 
-## 전개 #2 — feel <sign · feeling>
+## 전개 #2 — feel <s> · <감정>
+<!-- Cite claims #N. At wow_lands, end on the plain reversal and put the feel maximum here. -->
 <the next necessary evidence, choice or consequence, on claims #N — a modern bridge only if
 the story needs one (item 4 above)>
 
-## 전개 #3 — feel <sign · feeling>
+## 전개 #3 — feel <s> · <감정>
+<!-- Cite claims #N. Number the cases when used. At wow_lands, end on the plain reversal and put the feel maximum here. -->
 <the item that pays the promise or lands the wow — cases (1–3, each on a row) only when
 cases are the evidence>
 
-## 마무리 — feel <sign · feeling>
+## 마무리 — feel <s> · <감정>
+<!-- One after-the-change picture; include anchors.closing_line and anchors.forwardable verbatim. -->
 <the 「그날 이후로」 picture — where the world stands after the reversal, one sentence>
 <the message line, verbatim — the **Message.** sentence in the narration's words, heard last: "…">
 <forwardable — that line, or the reversal in one sentence, verbatim: "…">
 
-## CTA — feel <sign · feeling>
+## CTA — feel <s> · <감정>
+<!-- 없음 with a reason, or anchors.cta verbatim; no subscription or like request. -->
 <없음 + reason, or the optional relevant ask verbatim after the resolution>
 ```
+
+### Machine check
+
+Run `node check-scenario.js candidates/` before showing or scoring the three pages;
+P0 findings must be zero. Use `node check-scenario.js scenario.md` after the pick
+and freeze. `--json` returns `{files, violations, warnings, findings}`; findings carry
+`level` (`bad` or `warn`), `where` and `what` (S1–S12). Exit codes are 0 (no P0),
+1 (P0) and 3 (input error). `--selftest` exercises passing and failing fixtures.
+
+Keep exactly the seven level-two headings above, in order. Replace `<s>` with a
+signed integer from −3 to +3 and `<감정>` with the feeling. Quote scalar values that
+contain `#` (especially `wow_lands` and claim citations) or YAML punctuation; use
+the `anchors` mapping and a numeric inline `claims` array. Multiline strings may
+use quoted continuation, `>` or `|`; other YAML structures are not supported.
+
+S1–S4 and S6–S11 reject missing schema, broken research references, missing
+anchors and board-level material. S5 warns about unreadable or misplaced feel
+values and monotone rises. S12 warns on short-form character bands (spaces count):
+훅 60, 전개 #1 130, #2 150, #3 150, 마무리 100, CTA 40. Long-form turns the bands
+off (resolved board format, otherwise `arc: answer-first|story` before a board).
+S12 rejects a chosen direction mismatch or missing frozen stamp beside scenes.js.
+S13 in check-scenes starts as a warning, comparing the cover first narration
+sentence (`sub`, falling back to `tts`), last narrated non-outro shot, its `shot.share`
+and spoiler flag against the anchors. Legacy scenarios without anchors skip S13.
+The checker reads and compares only; scenes.js is still the sole production source.
 
 ## What it does not do
 

@@ -342,6 +342,8 @@ start of the timeline, or a feel curve that never dips costs nothing to fix here
 the whole board later. Three different primaries. Naming an engine is not enough — the
 items have to run it.
 
+Before gate 6a judges the three candidates, run `node ${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/check-scenario.js storyboard/candidates/` and reach P0 = 0.
+
 **Run the word check on each page before delegating** — the same one storyboard §2.2 runs:
 `check-style.py --surface narration --json candidates/d<n>.md`, reading **only the findings
 whose id starts with E**. These sentences become narration: match the audience and voice

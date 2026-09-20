@@ -263,6 +263,8 @@ what this check is for: E1~E3 offer context-review suggestions (korean-style §E
 actual audience should follow the 주제 sentence without needing an unseen explanation. The other rules
 get their turn at §4.5, on the sentences that actually get spoken.
 
+Before showing the three candidates, run `node ${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/check-scenario.js storyboard/candidates/` and reach P0 = 0.
+
 **No reviewer here** — the user is the judge of this stage, and the narration reads at §4.4
 and §4.5 catch a story that does not carry. Test each page against scenario-stage.md's
 wow and engine tests yourself before showing it: does the 주제 hand over what its message says, does the 훅
