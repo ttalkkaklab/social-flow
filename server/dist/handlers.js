@@ -318,8 +318,8 @@ const threadsPublishSchema = z
     linkUrl: z.string().url().optional(),
     replyToId: z.string().min(1).optional(),
     channel: channelSlugSchema,
-    draftId: z.string().min(1).optional(),
-    episodeRef: z.string().min(1).optional(),
+    draftId: z.string().trim().min(1).optional(),
+    episodeRef: z.string().trim().min(1).optional(),
     selfReply: z.string().trim().min(1).refine((s) => threadsTextLength(s) <= THREADS_MAX_CHARS).optional(),
     dryRun: z.boolean().optional(),
 })
@@ -469,11 +469,19 @@ const commentInboxSchema = z.object({
 const commentReplySchema = z
     .object({
     platform: commentPlatform,
-    commentId: z.string().min(1),
+    commentId: z.string().trim().min(1),
     message: z.string().min(1),
     channel: channelSlugSchema,
+    draftId: z.string().trim().min(1).optional(),
+    dryRun: z.boolean().optional(),
 })
     .superRefine((v, ctx) => {
+    if (v.platform === 'THREADS' && (!v.draftId || !v.channel)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'THREADS replies require channel and reviewed reply draftId' });
+    }
+    if (v.platform !== 'THREADS' && (v.draftId !== undefined || v.dryRun !== undefined)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'draftId and dryRun are supported only for THREADS replies' });
+    }
     const max = REPLY_MAX_CHARS[v.platform];
     // THREADS uses the same emoji-byte rule as post bodies (a reply = a new post)
     const length = v.platform === 'THREADS' ? threadsTextLength(v.message) : v.message.length;
@@ -1228,7 +1236,14 @@ export const ROUTES = {
         return fromApi(await sns.commentInbox(input));
     },
     sns_comment_reply: async (args) => {
-        const input = parseArgs(commentReplySchema, args);
+        const isThreads = !!args && typeof args === 'object' && 'platform' in args && args.platform === 'THREADS';
+        const input = isThreads
+            ? gateCall('sns_comment_reply', args, () => parseArgs(commentReplySchema, args))
+            : parseArgs(commentReplySchema, args);
+        if (input.platform === 'THREADS') {
+            return ROUTES.threads_publish({ caption: input.message, replyToId: input.commentId,
+                channel: input.channel, draftId: input.draftId, dryRun: input.dryRun });
+        }
         return fromApi(await sns.replyToComment(input), SNS_PUBLISHED_NOTE);
     },
     sns_comment_moderate: async (args) => {

@@ -41,6 +41,9 @@ test('Threads growth and episode gates: real routes, no publishing APIs', async 
     await assert.rejects(invoke('threads_review_submit', review('voice', { findings: [] })));
     await assert.rejects(invoke('threads_review_submit', review('voice', { bodyHash: '0'.repeat(64) })), /hash mismatch/);
     await assert.rejects(invoke('threads_review_submit', review('voice', { findings: [{ quote: '없는 문장', issue: '위조', severity: 'pass' }] })), /quote not present/);
+    for (const quote of [body.replace('맥북을', '맥북이'), body.replace('.', '!')]) {
+      await assert.rejects(invoke('threads_review_submit', review('voice', { findings: [{ quote, issue: '변조 인용', severity: 'pass' }] })), /quote not present/);
+    }
     const receipt = payload(await invoke('threads_review_submit', review('voice', { findings: [{ quote: body.replaceAll(' ', '\n  '), issue: '공백 차이', severity: 'pass' }] })));
     assert.equal(receipt.selfReview, true);
     assert.equal(receipt.sameContext, true);
@@ -61,6 +64,10 @@ test('Threads growth and episode gates: real routes, no publishing APIs', async 
     assert.equal((await invoke('threads_publish', pub)).structuredContent.gatePassed, true);
     writeFileSync(join(dir, 'gate.json'), '{bad');
     await assert.rejects(invoke('threads_publish', pub));
+    for (const settings of [{ voice: 95 }, { voice: '95', purpose: 80, flow: 80 }, { voice: 101, purpose: 80, flow: 80 }, null]) {
+      writeFileSync(join(dir, 'gate.json'), JSON.stringify(settings));
+      await assert.rejects(invoke('threads_publish', pub));
+    }
     config();
     // An actual checker failure must block even when all reviews pass.
     const bad = payload(await invoke('threads_draft_create', { ...base, body: '결과는 둘로 나뉩니다.', purposeEvidence: '결과는 둘로 나뉩니다.' }));
@@ -82,6 +89,18 @@ test('Threads growth and episode gates: real routes, no publishing APIs', async 
     await invoke('threads_review_submit', review('voice', { findings: [{ quote: body, issue: '해결 전 결함', severity: 'P0' }] }));
     await assert.rejects(invoke('threads_publish', pub), /unresolved P0/);
     await invoke('threads_review_submit', review('voice'));
+    for (const invalid of ['', '   ', null, undefined]) {
+      await assert.rejects(invoke('threads_publish', { ...pub, draftId: invalid }));
+      await assert.rejects(invoke('threads_publish', { channel: 'test', caption: body, episodeRef: invalid, dryRun: true }));
+      await assert.rejects(invoke('sns_comment_reply', { platform: 'THREADS', channel: 'test', commentId: 'parent-1', message: body, draftId: invalid, dryRun: true }));
+      await assert.rejects(invoke('sns_comment_reply', { platform: 'THREADS', channel: 'test', commentId: invalid, message: body, draftId: replyDraft.draftId, dryRun: true }));
+    }
+    const comment = { platform: 'THREADS', channel: 'test', commentId: 'parent-1', message: body, draftId: replyDraft.draftId, dryRun: true };
+    assert.equal((await invoke('sns_comment_reply', comment)).structuredContent.dryRun, true);
+    await assert.rejects(invoke('sns_comment_reply', { ...comment, commentId: 'other-parent' }), /reply target mismatch/);
+    await assert.rejects(invoke('sns_comment_reply', { ...comment, message: body + ' 수정' }), /hash mismatch/);
+    await assert.rejects(invoke('sns_comment_reply', { ...comment, draftId: draft.draftId }), /reply target mismatch/);
+    await assert.rejects(invoke('sns_comment_reply', { ...comment, platform: 'INSTAGRAM' }), /only for THREADS/);
     // Disk mutation cannot retain a review for the old body.
     const file = join(dir, 'drafts', draft.draftId.split('.')[1] + '.json');
     const saved = JSON.parse(readFileSync(file, 'utf8'));
@@ -96,7 +115,7 @@ test('Threads growth and episode gates: real routes, no publishing APIs', async 
     writeFileSync(join(ep, 'storyboard/scenes.js'), 'window.SCENES = [];');
     const episodeInput = { channel: 'test', episodeRef: 'episode', caption: body, dryRun: true };
     await assert.rejects(invoke('threads_publish', episodeInput));
-    for (const media of [{}, { videoUrl: 'https://example.com/video.mp4' }]) {
+    for (const media of [{}, { videoUrl: 'https://example.com/video.mp4' }, { selfReply: '전체 영상 https://example.com/ig' }]) {
       writeFileSync(join(ep, 'threads-publish-approval.json'), JSON.stringify({ approved: true, caption: body, ...media }));
       assert.equal((await invoke('threads_publish', { ...episodeInput, ...media })).structuredContent.dryRun, true);
       await assert.rejects(invoke('threads_publish', { ...episodeInput, ...media, caption: '다른 글이에요.' }), /approval mismatch/);

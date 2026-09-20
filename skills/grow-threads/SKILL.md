@@ -354,9 +354,10 @@ Local draft, threshold and episode-approval files assume a trusted workspace wri
 
 Every `threads_publish` in the growth loop, including image posts and keyword
 replies below, uses this sequence and carries `draftId`. Never use an episode
-reference to bypass growth review. Inbox `sns_comment_reply` remains a separate
-conversation route with the skill's voice review; this gate does not claim to cover
-all possible direct platform API calls.
+reference to bypass growth review. Inbox `sns_comment_reply(platform: "THREADS")`
+also requires the reviewed reply `draftId` and runs this same voice gate. Its
+`commentId` must match the draft's `replyToId`; omitting a draft never bypasses
+review. This covers the plugin MCP routes, not external direct API clients.
 
 ## Image procedure — generate and upload
 
@@ -411,8 +412,9 @@ reset it.
 `summary.withinGoldenHour` is non-zero, start with those comments. Skip
 comments listed in `state.gateSkippedCommentIds` (below). Write the reply per
 playbook §Replies (plan tone, 1–3 sentences, leave room for the other person
-to answer again), pass it through the §gate, then post via
-`sns_comment_reply` — replies are person-to-person conversation, where AI
+to answer again), create a `surface: "reply"` draft with `replyToId: commentId`, pass its voice
+review through the §Server publishing gate, then post via
+`sns_comment_reply(platform: "THREADS", channel, commentId, message, draftId)` — replies are person-to-person conversation, where AI
 tells get caught fastest. For successful posts, the inbox's `answeredByUs`
 filter guarantees dedup.
 

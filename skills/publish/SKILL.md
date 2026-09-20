@@ -353,9 +353,12 @@ permalink, say).
    Carrying the video on the post means nothing links out, which sidesteps this.
 
    **Fallback** — only when there's no video file or hosting is blocked: publish the
-   body alone with the same `episodeRef` and a matching text-only approval record, then attach the IG permalink as a **self-reply** with `sns_comment_reply`
-   (one line like "full video here →" plus the link). In that case, and only that case,
-   Threads isn't published until the reply is up.
+   body plus the approved IG permalink `selfReply` in one `threads_publish` call
+   with `episodeRef`. The approval record must contain both the exact `caption`
+   and `selfReply` (one line like "full video here →" plus the link). The server
+   posts the reply only after the root succeeds. A self-reply failure returns the
+   root ID and a warning: record the partial result and do not republish the root.
+   Threads is complete only when both posts succeed.
 4. **Facebook**: `facebook_publish` — `videoUrl` is the public URL of the **clean copy
    (video.mp4)**, `captionFilePath`=output/video/subs.srt (a local path — with extra
    languages pass `captionFiles` instead, **default locale first**: `[{filePath:
@@ -459,7 +462,11 @@ it and report the rest as done.
 ### 5. Record and wrap up
 
 When you reply to comments after publishing (`sns_comment_reply`), check the copy
-first as well. A reply is person-to-person talk, which is where AI phrasing gets
+first as well. For THREADS, create a `surface: "reply"` draft with its parent
+comment ID as `replyToId`, submit its voice review, then pass that `draftId` to
+`sns_comment_reply`; the server applies the same configured gate as grow-threads.
+The episode fallback self-reply above is already handled in its approved call.
+A reply is person-to-person talk, which is where AI phrasing gets
 spotted fastest — golden-hour response isn't a reason to skip the check.
 
 ```bash

@@ -86536,14 +86536,16 @@ Returns: integer credit balance.`,
     title: "\u26A0\uFE0F Reply to inbound comment (immediately public)",
     annotations: HINT.publish,
     outputSchema: COMMENT_REPLY_OUTPUT,
-    description: `\u26A0\uFE0F Replies to an inbound comment \u2014 posts an **immediately public** reply with local tokens (the author is the brand account itself). There is no separate review gate, so publish only copy the user has approved (HITL \u2014 never call without approval). Use commentId straight from the sns_comment_inbox response. Per-platform contracts: THREADS \u2014 a new post carrying reply_to_id is the reply, so chains extend freely down to replies-to-replies / INSTAGRAM \u2014 replies attach to **top-level comments only** (to answer a sub-comment, pass its parent commentId \u2014 for comments carrying parentCommentId, use that value) / FACEBOOK \u2014 a comment on a comment id is the sub-comment / YOUTUBE \u2014 also top-level only, but a sub-comment id is accepted: this tool looks up the parent, reattaches at the thread root, and reports where it landed via parentCommentId in the response (needs the youtube.force-ssl scope). On failure, never blindly retry the same call (non-idempotent \u2014 duplicate replies). ${SNS_HITL_LINE}`,
+    description: `\u26A0\uFE0F Replies to an inbound comment \u2014 posts an **immediately public** reply with local tokens (the author is the brand account itself). THREADS requires a reviewed surface=reply draftId with matching commentId, voice score and server style check, exactly as threads_publish; dryRun validates without posting. Publish only copy the user has approved (HITL \u2014 never call without approval). Use commentId straight from the sns_comment_inbox response. Per-platform contracts: THREADS \u2014 a new post carrying reply_to_id is the reply, so chains extend freely down to replies-to-replies / INSTAGRAM \u2014 replies attach to **top-level comments only** (to answer a sub-comment, pass its parent commentId \u2014 for comments carrying parentCommentId, use that value) / FACEBOOK \u2014 a comment on a comment id is the sub-comment / YOUTUBE \u2014 also top-level only, but a sub-comment id is accepted: this tool looks up the parent, reattaches at the thread root, and reports where it landed via parentCommentId in the response (needs the youtube.force-ssl scope). On failure, never blindly retry the same call (non-idempotent \u2014 duplicate replies). ${SNS_HITL_LINE}`,
     inputSchema: {
       type: "object",
       properties: {
         platform: { type: "string", enum: ["THREADS", "INSTAGRAM", "FACEBOOK", "YOUTUBE"], description: "Target platform" },
         commentId: { type: "string", description: "commentId from sns_comment_inbox (IG must be a top-level comment id \u2014 YT also accepts a sub-comment id)" },
         message: { type: "string", description: "Final reply \u2014 THREADS \u2264500 chars, IG \u22642,200, FB \u22648,000, YT \u226410,000" },
-        channel: SNS_CHANNEL_PROPERTY
+        channel: SNS_CHANNEL_PROPERTY,
+        draftId: { type: "string", description: "Required for THREADS: reviewed reply draft bound to this commentId. Not accepted for other platforms." },
+        dryRun: { type: "boolean", description: "THREADS only: validate the reply gate without credential or API access." }
       },
       required: ["platform", "commentId", "message"]
     }
@@ -93385,8 +93387,8 @@ var threadsPublishSchema = external_exports.object({
   linkUrl: external_exports.string().url().optional(),
   replyToId: external_exports.string().min(1).optional(),
   channel: channelSlugSchema,
-  draftId: external_exports.string().min(1).optional(),
-  episodeRef: external_exports.string().min(1).optional(),
+  draftId: external_exports.string().trim().min(1).optional(),
+  episodeRef: external_exports.string().trim().min(1).optional(),
   selfReply: external_exports.string().trim().min(1).refine((s2) => threadsTextLength(s2) <= THREADS_MAX_CHARS).optional(),
   dryRun: external_exports.boolean().optional()
 }).superRefine((v, ctx) => {
@@ -93489,10 +93491,18 @@ var commentInboxSchema = external_exports.object({
 });
 var commentReplySchema = external_exports.object({
   platform: commentPlatform,
-  commentId: external_exports.string().min(1),
+  commentId: external_exports.string().trim().min(1),
   message: external_exports.string().min(1),
-  channel: channelSlugSchema
+  channel: channelSlugSchema,
+  draftId: external_exports.string().trim().min(1).optional(),
+  dryRun: external_exports.boolean().optional()
 }).superRefine((v, ctx) => {
+  if (v.platform === "THREADS" && (!v.draftId || !v.channel)) {
+    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message: "THREADS replies require channel and reviewed reply draftId" });
+  }
+  if (v.platform !== "THREADS" && (v.draftId !== void 0 || v.dryRun !== void 0)) {
+    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message: "draftId and dryRun are supported only for THREADS replies" });
+  }
   const max = REPLY_MAX_CHARS[v.platform];
   const length = v.platform === "THREADS" ? threadsTextLength(v.message) : v.message.length;
   if (length > max) {
@@ -94519,7 +94529,17 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
     return fromApi(await commentInbox(input));
   },
   sns_comment_reply: async (args) => {
-    const input = parseArgs(commentReplySchema, args);
+    const isThreads = !!args && typeof args === "object" && "platform" in args && args.platform === "THREADS";
+    const input = isThreads ? gateCall("sns_comment_reply", args, () => parseArgs(commentReplySchema, args)) : parseArgs(commentReplySchema, args);
+    if (input.platform === "THREADS") {
+      return ROUTES.threads_publish({
+        caption: input.message,
+        replyToId: input.commentId,
+        channel: input.channel,
+        draftId: input.draftId,
+        dryRun: input.dryRun
+      });
+    }
     return fromApi(await replyToComment(input), SNS_PUBLISHED_NOTE);
   },
   sns_comment_moderate: async (args) => {
