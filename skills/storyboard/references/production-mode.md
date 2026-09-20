@@ -25,11 +25,23 @@ Do not reinterpret an approval of a topic as approval of full-video spend.
 A channel whose `generated_video_max` is 0 never reaches this comparison — there is no video to
 buy and no cost to weigh, so no option is offered. Its board writes `mode: 'stills_only'`, which
 is not one of the four choices and carries no cost approval. Use it only while the channel cap
-stays 0, and only on a board that plays no video at all — no generated clip, and no imported
+stays 0, and only on a board that buys no video: no generated clip, and no imported
 `visual.reuse` either (an imported clip keeps its own zero-generation shape under legacy
 `hybrid`). The board still records its visual style, which is the one thing `PRODUCTION`
 carries there. `check-production.js` skips the quote, the approval and the budget comparison
 for this mode, and refuses `--before-call`: there is no video call to make.
+
+The cap is read from the channel policy the caller resolved — `profile.md` first, the board's
+`window.MOTION_POLICY` otherwise — in either spelling (`generated_video_max`,
+`generatedVideoMax`). A board that records no cap anywhere is told to copy the profile policy in
+rather than judged against a format default it never declared.
+
+**What `stills_only` still allows.** Footage the channel already owns is not generation:
+the user's recording or screencast, a licensed stock clip (`visual.source` with a `clip` path)
+and the shared outro. `eligible()` leaves all three outside every mode's generated count, and
+barring them here would leave a recording-based board on a zero-cap channel with no passing
+mode — the same hole this contract exists to close. The line the mode draws is *bought video*,
+not *moving pixels*.
 
 Count cuts, not duration; round the minimum up. Exclude imported `visual.reuse` clips,
 user recordings, supplied stock clips and the shared outro from the denominator; b-roll is
@@ -139,7 +151,8 @@ approved episode video budget on top; other channel constraints still apply. `vi
 `hook_only` allows exactly the opening hook. Legacy `hybrid` caps
 generated shots at two (or a lower explicit channel cap). Plan 1–2 new clips, or zero new
 clips with at least one explicit `visual.reuse` input. Zero of both is rejected. `stills_only` is the
-zero-cap contract instead: no clip, no reuse, no approval, and `policy()` keeps the channel's 0. See the
+zero-cap contract instead: no generated clip, no reuse, no approval, and `policy()` keeps the
+channel's 0; supplied recordings, stock clips and the outro stay allowed. See the
 [reuse contract](scenes-schema.md#existing-generated-clip-input-visualreuse) for file checks,
 separate reuse counts and the final $0 estimate. Reuse does not relax the screen policy. `full_video` permits every generated scene to be a
 video, including explanations. Existing user recordings and the shared outro retain their source.

@@ -358,6 +358,16 @@
   }
   // Explicit imported inputs, never inferred from an existing generation output.
   function reused(scene) { return scene.visual?.reuse !== undefined; }
+  // The channel's generated-video cap is written snake_case in profile.md and copied into
+  // scenes.js, where boards use either spelling — check-scenes normalizeMotionPolicy accepts both
+  // and resolves the profile value, so take the caller's normalized number first and read the
+  // board in both spellings after it. null means no cap was recorded anywhere.
+  function videoCap(win, given) {
+    const policy = win.MOTION_POLICY || {};
+    const raw = given !== undefined ? given
+      : policy.generatedVideoMax !== undefined ? policy.generatedVideoMax : policy.generated_video_max;
+    return raw === undefined || raw === null || raw === '' ? null : Number(raw);
+  }
   function reuseErrors(scene) {
     if (!reused(scene)) return [];
     const v = scene.visual || {}, r = v.reuse, errors = [];
@@ -431,7 +441,7 @@
     }
     return errors;
   }
-  function check(win, { requireSelection = false, requireApproval = false, draft = false } = {}) {
+  function check(win, { requireSelection = false, requireApproval = false, draft = false, generatedVideoMax } = {}) {
     const p = win.PRODUCTION, errors = Array.from(win.SCENES || []).flatMap((s, i) => reuseErrors(s).map(e => `shot ${i + 1}: ${e}`));
     if (!p) return requireSelection || (win.SCENES || []).some(reused)
       ? errors.concat(['Choose a production mode with a four-option cost comparison before generation']) : errors;
@@ -504,7 +514,10 @@
       // stills_only holds only while the channel cap stays 0, and only while no shot carries a clip —
       // otherwise the board is buying video under a contract that says it buys none.
       if (p.mode === 'stills_only') {
-        if (Number(win.MOTION_POLICY?.generatedVideoMax) !== 0)
+        const cap = videoCap(win, generatedVideoMax);
+        if (cap === null)
+          errors.push('stills_only needs the channel cap on the board: copy the profile policy into window.MOTION_POLICY with generated_video_max 0 (generatedVideoMax is read too)');
+        else if (cap !== 0)
           errors.push('stills_only is for a channel whose generated_video_max is 0; choose a cost mode from the four-option comparison instead');
         if (count) errors.push('stills_only carries no generated clip; ' + count + ' shot(s) hold one — drop them or choose a cost mode');
         // An imported clip already has its own zero-generation shape under legacy hybrid, so the two
@@ -592,7 +605,7 @@
       // hook_only: the hook plus every imported clip — reuse is outside the count but still a slot.
       generatedVideoMax: production.mode === 'hook_only' ? 1 + scenes.filter(reused).length : RATIOS[production.mode] ? scenes.filter(eligible).length : Math.min(base.generatedVideoMax ?? 2, 2) };
   }
-  const api = { CAMERA_INPUT_SCHEMA, cameraInputErrors, CAMERA_PRESETS, isDrone, droneErrors, droneSample, droneSlots, droneBinding, droneCameraKeys, droneSceneErrors, STYLES, MODES, CHOICES, CUT_TYPES, RATIOS, newCut, generated, hookScene, coverageErrors, CAMERA_SLOTS, PREVIZ_RENDERERS, VIDEO_MODELS, packPresets, ALL_LOOKS, shotStyle, shotStyleErrors, eligible, reused, reuseErrors, full, signature, check, policy, motionErrors, missingCameraSlots, cameraErrors, cameraWarnings, episodeMoveErrors, moveOf, travels, MOVES, staticCamera, finalState };
+  const api = { CAMERA_INPUT_SCHEMA, cameraInputErrors, CAMERA_PRESETS, isDrone, droneErrors, droneSample, droneSlots, droneBinding, droneCameraKeys, droneSceneErrors, STYLES, MODES, CHOICES, CUT_TYPES, RATIOS, videoCap, newCut, generated, hookScene, coverageErrors, CAMERA_SLOTS, PREVIZ_RENDERERS, VIDEO_MODELS, packPresets, ALL_LOOKS, shotStyle, shotStyleErrors, eligible, reused, reuseErrors, full, signature, check, policy, motionErrors, missingCameraSlots, cameraErrors, cameraWarnings, episodeMoveErrors, moveOf, travels, MOVES, staticCamera, finalState };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.PRODUCTION_MODE = api;
 })(typeof window === 'object' ? window : globalThis);
