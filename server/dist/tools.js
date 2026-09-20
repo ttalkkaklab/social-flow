@@ -791,9 +791,7 @@ Returns: JSON — the portal's paginated list (storyboards with id · title · p
         name: 'portal_storyboard_pull',
         title: 'Download a portal episode into a local directory',
         annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
-        description: `⚠️ Overwrites local files — never call without the user knowing the directory is a working copy of the portal (HITL at the top of a session). Download an episode from the ttalkkakstory portal into data/<channel>/episodes/<topic>/storyboard/: scenes.js rebuilt from the portal's rows (the source of truth), the documents that were uploaded with it, and the chosen scenario as scenario.md. Existing files with those names are replaced. With revision, every file comes from that revision's snapshot (nothing from head is mixed in) and .portal.json's head becomes that number — use it to inspect before portal_episode_restore.
-
-Writes .portal.json. Returns: JSON — { episode: { id, slug, title, sceneCount, stage, headRevisionNo, lease }, revision, dir, written[] }.`,
+        description: `⚠️ Download an episode from the ttalkkakstory portal after the session-opening HITL. scenes.js is rebuilt from the portal's rows; uploaded documents and the chosen scenario arrive beside it. mode replace (default) writes into storyboard/, first copies changed local files to backupDir under .portal-local/, and updates .portal.json. mode side clears and writes sideDir under .portal-head/ while leaving storyboard/ and .portal.json untouched. With revision, every file comes from that revision's snapshot and headRevisionNo is that revision; otherwise it is the portal head. Returns backupDir (null when no local file changed), replaced[], sideDir, and headRevisionNo.`,
         inputSchema: {
             type: 'object',
             properties: {
@@ -801,6 +799,7 @@ Writes .portal.json. Returns: JSON — { episode: { id, slug, title, sceneCount,
                 targetDir: { type: 'string', description: 'Absolute path of data/<channel>/episodes/<topic>; storyboard/ is created inside. The channel slug on the path picks the key' },
                 includeDocuments: { type: 'boolean', description: 'Also write the uploaded documents (storyboard.md · research.md · script.md · storyboard.html). Default true' },
                 revision: { type: 'number', description: 'Pull this revision\'s snapshot instead of head — scenes and documents both from that revision' },
+                mode: { type: 'string', enum: ['replace', 'side'], description: 'replace updates the working copy after backing up changed files; side writes only to storyboard/.portal-head/. Default replace' },
             },
             required: ['episodeId', 'targetDir'],
         },

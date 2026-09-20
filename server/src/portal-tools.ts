@@ -11,7 +11,7 @@
  * (`portalUnavailable`) and the skill carries on in local-file mode.
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { z } from 'zod';
 import { portalCredentialFile, PORTAL_CREDENTIAL_FILENAME } from './config.js';
@@ -72,6 +72,7 @@ export const storyboardPullSchema = z.object({
   targetDir: z.string().min(1),
   includeDocuments: z.boolean().optional(),
   revision: z.number().int().min(1).optional(),
+  mode: z.enum(['replace', 'side']).optional(),
 });
 export const episodeStatusSchema = z.object({
   episodeId: uuid.optional(),
@@ -262,6 +263,14 @@ function refuseMismatch(client: PortalClient, ...dirs: Array<string | undefined>
   return null;
 }
 
+let lastBackupTimeMs = 0;
+
+function backupStamp(): string {
+  const now = Math.max(Date.now(), lastBackupTimeMs + 1);
+  lastBackupTimeMs = now;
+  return new Date(now).toISOString().replace(/[:.]/g, '-');
+}
+
 /** Episode id — the argument, or `episodeDir/.portal.json`. */
 function resolveEpisodeId(episodeId: string | undefined, episodeDir: string | undefined): string {
   if (episodeId) return episodeId;
@@ -375,7 +384,7 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
       }
     },
 
-    async storyboardPull({ episodeId, targetDir, includeDocuments = true, revision }) {
+    async storyboardPull({ episodeId, targetDir, includeDocuments = true, revision, mode = 'replace' }) {
       const r = resolveClient(fetchImpl, undefined, targetDir);
       if ('error' in r) return r.error;
       const refused = refuseMismatch(r.client, targetDir);
@@ -385,11 +394,8 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
         const { data: episode } = await c.getEpisode(episodeId);
         const dir = episodeDirOf(targetDir);
         const sb = path.join(dir, 'storyboard');
-        mkdirSync(sb, { recursive: true });
-        const written: string[] = [];
-
-        writeFileSync(path.join(sb, 'scenes.js'), await c.scenesJs(episodeId, revision));
-        written.push('scenes.js');
+        const fileContents = new Map<string, string>();
+        fileContents.set('scenes.js', await c.scenesJs(episodeId, revision));
 
         if (revision) {
           // A named revision writes that revision's documents — mixing head's documents under old shots
@@ -398,8 +404,7 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
             const { data: rev } = await c.getRevision(episodeId, revision);
             for (const [filename, content] of Object.entries(rev.documents ?? {})) {
               if (filename === 'scenes.js' || !SAFE_DOCUMENT_NAME.test(filename)) continue;
-              writeFileSync(path.join(sb, filename), content);
-              written.push(filename);
+              fileContents.set(filename, content);
             }
           }
         } else {
@@ -407,23 +412,50 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
             for (const doc of episode.documents ?? []) {
               if (doc.filename === 'scenes.js') continue; // the rebuilt one is the source of truth
               if (!SAFE_DOCUMENT_NAME.test(doc.filename)) continue;
-              writeFileSync(path.join(sb, doc.filename), await c.document(episodeId, doc.filename));
-              written.push(doc.filename);
+              fileContents.set(doc.filename, await c.document(episodeId, doc.filename));
             }
           }
           // The chosen scenario rides along — the board checker reads scenario.md next to scenes.js.
           const chosen = (episode.scenarios ?? []).find((s) => s.chosen);
           if (chosen) {
-            writeFileSync(path.join(sb, 'scenario.md'), await c.scenarioMd(episodeId, chosen.candidate));
-            written.push('scenario.md');
+            fileContents.set('scenario.md', await c.scenarioMd(episodeId, chosen.candidate));
           }
         }
-        writePortalState(dir, {
-          workspace: c.workspace,
-          storyboardId: episode.storyboardId,
-          episodeId,
-          headRevisionNo: revision ?? episode.headRevisionNo,
-        });
+        const files = [...fileContents].map(([filename, content]) => ({ filename, content }));
+        const headRevisionNo = revision ?? episode.headRevisionNo ?? 0;
+        const written = files.map(({ filename }) => filename);
+        let backupDir: string | null = null;
+        let sideDir: string | null = null;
+        const replaced: string[] = [];
+
+        if (mode === 'side') {
+          sideDir = path.join(sb, '.portal-head');
+          rmSync(sideDir, { recursive: true, force: true });
+          mkdirSync(sideDir, { recursive: true });
+          for (const { filename, content } of files) writeFileSync(path.join(sideDir, filename), content);
+        } else {
+          mkdirSync(sb, { recursive: true });
+          const changed = files.filter(({ filename, content }) => {
+            const target = path.join(sb, filename);
+            return existsSync(target) && !readFileSync(target).equals(Buffer.from(content));
+          });
+          if (changed.length > 0) {
+            const state = readPortalState(dir);
+            backupDir = path.join(sb, '.portal-local', `${backupStamp()}-r${state?.headRevisionNo ?? 0}`);
+            mkdirSync(backupDir, { recursive: true });
+            for (const { filename } of changed) {
+              copyFileSync(path.join(sb, filename), path.join(backupDir, filename));
+              replaced.push(filename);
+            }
+          }
+          for (const { filename, content } of files) writeFileSync(path.join(sb, filename), content);
+          writePortalState(dir, {
+            workspace: c.workspace,
+            storyboardId: episode.storyboardId,
+            episodeId,
+            headRevisionNo,
+          });
+        }
         return ok({
           episode: {
             id: episode.id,
@@ -434,9 +466,14 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
             headRevisionNo: episode.headRevisionNo,
             lease: episode.lease,
           },
+          mode,
           revision: revision ?? null,
-          dir: sb,
+          headRevisionNo,
+          dir: mode === 'side' ? sideDir : sb,
           written,
+          backupDir,
+          replaced,
+          sideDir,
         });
       } catch (error) {
         return failed(error);

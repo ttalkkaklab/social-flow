@@ -83675,16 +83675,15 @@ Returns: JSON \u2014 the portal's paginated list (storyboards with id \xB7 title
     name: "portal_storyboard_pull",
     title: "Download a portal episode into a local directory",
     annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
-    description: `\u26A0\uFE0F Overwrites local files \u2014 never call without the user knowing the directory is a working copy of the portal (HITL at the top of a session). Download an episode from the ttalkkakstory portal into data/<channel>/episodes/<topic>/storyboard/: scenes.js rebuilt from the portal's rows (the source of truth), the documents that were uploaded with it, and the chosen scenario as scenario.md. Existing files with those names are replaced. With revision, every file comes from that revision's snapshot (nothing from head is mixed in) and .portal.json's head becomes that number \u2014 use it to inspect before portal_episode_restore.
-
-Writes .portal.json. Returns: JSON \u2014 { episode: { id, slug, title, sceneCount, stage, headRevisionNo, lease }, revision, dir, written[] }.`,
+    description: `\u26A0\uFE0F Download an episode from the ttalkkakstory portal after the session-opening HITL. scenes.js is rebuilt from the portal's rows; uploaded documents and the chosen scenario arrive beside it. mode replace (default) writes into storyboard/, first copies changed local files to backupDir under .portal-local/, and updates .portal.json. mode side clears and writes sideDir under .portal-head/ while leaving storyboard/ and .portal.json untouched. With revision, every file comes from that revision's snapshot and headRevisionNo is that revision; otherwise it is the portal head. Returns backupDir (null when no local file changed), replaced[], sideDir, and headRevisionNo.`,
     inputSchema: {
       type: "object",
       properties: {
         episodeId: { type: "string", description: "Episode id (uuid) \u2014 from portal_storyboard_list or .portal.json" },
         targetDir: { type: "string", description: "Absolute path of data/<channel>/episodes/<topic>; storyboard/ is created inside. The channel slug on the path picks the key" },
         includeDocuments: { type: "boolean", description: "Also write the uploaded documents (storyboard.md \xB7 research.md \xB7 script.md \xB7 storyboard.html). Default true" },
-        revision: { type: "number", description: "Pull this revision's snapshot instead of head \u2014 scenes and documents both from that revision" }
+        revision: { type: "number", description: "Pull this revision's snapshot instead of head \u2014 scenes and documents both from that revision" },
+        mode: { type: "string", enum: ["replace", "side"], description: "replace updates the working copy after backing up changed files; side writes only to storyboard/.portal-head/. Default replace" }
       },
       required: ["episodeId", "targetDir"]
     }
@@ -87333,7 +87332,7 @@ var SNS_PLATFORM_BY_TOOL = {
 };
 
 // src/portal-tools.ts
-import { existsSync as existsSync13, mkdirSync as mkdirSync5, readFileSync as readFileSync10, writeFileSync as writeFileSync9 } from "node:fs";
+import { copyFileSync, existsSync as existsSync13, mkdirSync as mkdirSync5, readFileSync as readFileSync10, rmSync as rmSync6, writeFileSync as writeFileSync9 } from "node:fs";
 import path11 from "node:path";
 
 // src/portal-client.ts
@@ -87618,7 +87617,8 @@ var storyboardPullSchema = external_exports.object({
   episodeId: uuid2,
   targetDir: external_exports.string().min(1),
   includeDocuments: external_exports.boolean().optional(),
-  revision: external_exports.number().int().min(1).optional()
+  revision: external_exports.number().int().min(1).optional(),
+  mode: external_exports.enum(["replace", "side"]).optional()
 });
 var episodeStatusSchema = external_exports.object({
   episodeId: uuid2.optional(),
@@ -87760,6 +87760,12 @@ function refuseMismatch(client, ...dirs) {
   }
   return null;
 }
+var lastBackupTimeMs = 0;
+function backupStamp() {
+  const now = Math.max(Date.now(), lastBackupTimeMs + 1);
+  lastBackupTimeMs = now;
+  return new Date(now).toISOString().replace(/[:.]/g, "-");
+}
 function resolveEpisodeId(episodeId, episodeDir) {
   if (episodeId) return episodeId;
   const state = episodeDir ? readPortalState(episodeDir) : null;
@@ -87849,7 +87855,7 @@ function portalHandlers(fetchImpl) {
         return failed(error2);
       }
     },
-    async storyboardPull({ episodeId, targetDir, includeDocuments = true, revision }) {
+    async storyboardPull({ episodeId, targetDir, includeDocuments = true, revision, mode = "replace" }) {
       const r2 = resolveClient(fetchImpl, void 0, targetDir);
       if ("error" in r2) return r2.error;
       const refused = refuseMismatch(r2.client, targetDir);
@@ -87859,17 +87865,14 @@ function portalHandlers(fetchImpl) {
         const { data: episode } = await c.getEpisode(episodeId);
         const dir = episodeDirOf(targetDir);
         const sb = path11.join(dir, "storyboard");
-        mkdirSync5(sb, { recursive: true });
-        const written = [];
-        writeFileSync9(path11.join(sb, "scenes.js"), await c.scenesJs(episodeId, revision));
-        written.push("scenes.js");
+        const fileContents = /* @__PURE__ */ new Map();
+        fileContents.set("scenes.js", await c.scenesJs(episodeId, revision));
         if (revision) {
           if (includeDocuments) {
             const { data: rev } = await c.getRevision(episodeId, revision);
             for (const [filename, content] of Object.entries(rev.documents ?? {})) {
               if (filename === "scenes.js" || !SAFE_DOCUMENT_NAME.test(filename)) continue;
-              writeFileSync9(path11.join(sb, filename), content);
-              written.push(filename);
+              fileContents.set(filename, content);
             }
           }
         } else {
@@ -87877,22 +87880,48 @@ function portalHandlers(fetchImpl) {
             for (const doc of episode.documents ?? []) {
               if (doc.filename === "scenes.js") continue;
               if (!SAFE_DOCUMENT_NAME.test(doc.filename)) continue;
-              writeFileSync9(path11.join(sb, doc.filename), await c.document(episodeId, doc.filename));
-              written.push(doc.filename);
+              fileContents.set(doc.filename, await c.document(episodeId, doc.filename));
             }
           }
           const chosen = (episode.scenarios ?? []).find((s2) => s2.chosen);
           if (chosen) {
-            writeFileSync9(path11.join(sb, "scenario.md"), await c.scenarioMd(episodeId, chosen.candidate));
-            written.push("scenario.md");
+            fileContents.set("scenario.md", await c.scenarioMd(episodeId, chosen.candidate));
           }
         }
-        writePortalState(dir, {
-          workspace: c.workspace,
-          storyboardId: episode.storyboardId,
-          episodeId,
-          headRevisionNo: revision ?? episode.headRevisionNo
-        });
+        const files = [...fileContents].map(([filename, content]) => ({ filename, content }));
+        const headRevisionNo = revision ?? episode.headRevisionNo ?? 0;
+        const written = files.map(({ filename }) => filename);
+        let backupDir = null;
+        let sideDir = null;
+        const replaced = [];
+        if (mode === "side") {
+          sideDir = path11.join(sb, ".portal-head");
+          rmSync6(sideDir, { recursive: true, force: true });
+          mkdirSync5(sideDir, { recursive: true });
+          for (const { filename, content } of files) writeFileSync9(path11.join(sideDir, filename), content);
+        } else {
+          mkdirSync5(sb, { recursive: true });
+          const changed = files.filter(({ filename, content }) => {
+            const target = path11.join(sb, filename);
+            return existsSync13(target) && !readFileSync10(target).equals(Buffer.from(content));
+          });
+          if (changed.length > 0) {
+            const state = readPortalState(dir);
+            backupDir = path11.join(sb, ".portal-local", `${backupStamp()}-r${state?.headRevisionNo ?? 0}`);
+            mkdirSync5(backupDir, { recursive: true });
+            for (const { filename } of changed) {
+              copyFileSync(path11.join(sb, filename), path11.join(backupDir, filename));
+              replaced.push(filename);
+            }
+          }
+          for (const { filename, content } of files) writeFileSync9(path11.join(sb, filename), content);
+          writePortalState(dir, {
+            workspace: c.workspace,
+            storyboardId: episode.storyboardId,
+            episodeId,
+            headRevisionNo
+          });
+        }
         return ok({
           episode: {
             id: episode.id,
@@ -87903,9 +87932,14 @@ function portalHandlers(fetchImpl) {
             headRevisionNo: episode.headRevisionNo,
             lease: episode.lease
           },
+          mode,
           revision: revision ?? null,
-          dir: sb,
-          written
+          headRevisionNo,
+          dir: mode === "side" ? sideDir : sb,
+          written,
+          backupDir,
+          replaced,
+          sideDir
         });
       } catch (error2) {
         return failed(error2);
@@ -91722,7 +91756,7 @@ async function checkAccounts(channel) {
 
 // src/tts-final-quality.ts
 import { execFile as execFile8 } from "node:child_process";
-import { existsSync as existsSync16, mkdtempSync as mkdtempSync5, readFileSync as readFileSync12, rmSync as rmSync6, writeFileSync as writeFileSync11, renameSync as renameSync5, openSync as openSync2, closeSync as closeSync2 } from "node:fs";
+import { existsSync as existsSync16, mkdtempSync as mkdtempSync5, readFileSync as readFileSync12, rmSync as rmSync7, writeFileSync as writeFileSync11, renameSync as renameSync5, openSync as openSync2, closeSync as closeSync2 } from "node:fs";
 import { tmpdir as tmpdir5 } from "node:os";
 import path13 from "node:path";
 import { promisify as promisify3 } from "node:util";
@@ -91788,9 +91822,9 @@ async function reviewFinalSpeech(input) {
   } catch (error2) {
     return save2("unverified", { error: error2 instanceof Error ? error2.message : String(error2) });
   } finally {
-    rmSync6(temp, { recursive: true, force: true });
+    rmSync7(temp, { recursive: true, force: true });
     closeSync2(lock);
-    rmSync6(lockPath, { force: true });
+    rmSync7(lockPath, { force: true });
   }
 }
 
