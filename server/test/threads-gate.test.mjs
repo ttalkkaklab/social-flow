@@ -7,7 +7,7 @@ import { ROUTES } from '../dist/handlers.js';
 import { threadsBodyHash } from '../dist/threads-gate.js';
 
 // All calls use the real MCP routes; network access fails the test immediately.
-test('Threads growth and episode gates: real routes, no publishing APIs', async () => {
+test('Threads growth and episode gates: real routes, no publishing APIs', async (t) => {
   const cwd = process.cwd();
   const temp = mkdtempSync(join(tmpdir(), 'threads-gate-'));
   const fetch = globalThis.fetch;
@@ -69,6 +69,28 @@ test('Threads growth and episode gates: real routes, no publishing APIs', async 
       await assert.rejects(invoke('threads_publish', pub));
     }
     config();
+    for (const [exit, caption] of [
+      [2, '결과는 둘로 나뉩니다.'],
+      [1, '접수 절차를 개선시킬 방법을 찾았어요.\n기한 전 신고에 주의가 요구됩니다.\n이 수치는 현지 물가가 얼마나 올랐는지를 말해 줍니다.'],
+    ]) {
+      await t.test(`style checker exit ${exit}: ${exit === 2 ? 'blocks' : 'passes with visible warning'}`, async (t) => {
+        const warning = t.mock.method(console, 'warn', () => {});
+        const checked = payload(await invoke('threads_draft_create', { ...base, body: caption, purposeEvidence: caption }));
+        for (const axis of ['voice', 'purpose', 'flow']) {
+          await invoke('threads_review_submit', { ...review(axis), ...checked, findings: [{ quote: caption, issue: '체커 종료 코드 검증', severity: 'pass' }] });
+        }
+        const input = { ...pub, draftId: checked.draftId, caption };
+        if (exit === 2) {
+          await assert.rejects(invoke('threads_publish', input), /Style check failed \(threads, exit 2\)/);
+          assert.equal(warning.mock.callCount(), 0);
+        } else {
+          assert.equal((await invoke('threads_publish', input)).structuredContent.gatePassed, true);
+          assert.equal(warning.mock.callCount(), 1);
+          assert.match(warning.mock.calls[0].arguments[0], /Style check warning \(threads, exit 1\):.*verdict WARN/s);
+          assert.match(warning.mock.calls[0].arguments[0], /S1 0 S2 2 S3 1/);
+        }
+      });
+    }
     // An actual checker failure must block even when all reviews pass.
     const bad = payload(await invoke('threads_draft_create', { ...base, body: '결과는 둘로 나뉩니다.', purposeEvidence: '결과는 둘로 나뉩니다.' }));
     for (const axis of ['voice', 'purpose', 'flow']) await invoke('threads_review_submit', { ...review(axis), ...bad, findings: [{ quote: '결과는 둘로 나뉩니다.', issue: '검사기 차단 검증', severity: 'pass' }] });

@@ -155,8 +155,10 @@ export function checkThreadsGate(input) {
             if (!body)
                 continue;
             const run = spawnSync('python3', [checker, '--surface', surface, '-'], { input: body, encoding: 'utf8', timeout: 15000, maxBuffer: 1024 * 1024 });
-            if (run.error || run.status !== 0)
+            if (run.error || (run.status !== 0 && run.status !== 1))
                 throw new Error(`Style check failed (${surface}, exit ${run.status}): ${run.error?.message ?? run.stdout}`);
+            if (run.status === 1)
+                console.warn(`Style check warning (${surface}, exit 1): ${run.stdout}`);
         }
         return { bodyHash };
     });
