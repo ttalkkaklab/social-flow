@@ -2,9 +2,8 @@
  * Local episode directory ⇄ portal — the file side of the `portal_*` tools.
  *
  * Reads `data/<channel>/episodes/<topic>/storyboard/`. `scenes.js` is a browser script
- * (`window.SCENES = …`), so it is evaluated in an isolated `vm` context — an empty room
- * with one `window` object, no filesystem, no network — and JSON-round-tripped into plain
- * objects. Whatever that loses (functions, undefined) could not have travelled over HTTP anyway.
+ * (`window.SCENES = …`), so it is evaluated in a `vm` room that holds nothing from the host
+ * (scenes-vm.ts) and comes out as plain JSON objects. Whatever that loses (functions, undefined) could not have travelled over HTTP anyway.
  *
  * `.portal.json` sits in the episode directory (not in storyboard/ — it has to exist at the
  * research stage, before there is a board) and records which portal row the copy is and the
@@ -15,7 +14,7 @@
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import vm from 'node:vm';
+import { evaluateWindowScript } from './scenes-vm.js';
 import { CHANNEL_SLUG_RE } from './config.js';
 
 export const EPISODE_STATUSES = ['draft', 'approved', 'produced', 'published'] as const;
@@ -79,21 +78,11 @@ export interface EvaluatedScenes {
 
 /**
  * `scenes.js` source → `{ scenes, meta, sbDoc }`. Throws when there is no `window.SCENES` array.
- *
- * Nothing from the host crosses into the room. `window` is created *inside* the context, so
- * `window.constructor.constructor` is the room's own Function and cannot reach the host
- * `process` (review P1 — a board written by someone else is untrusted input). What comes
- * back out is one JSON string built inside the room, parsed here into plain objects.
- * vm is not a security boundary against a hostile engine, but the known escape through
- * host-object prototypes is closed, and the timeout bounds a runaway script.
+ * The evaluation itself (nothing from the host in the room, JSON out) is scenes-vm.ts — the
+ * same helper the local board tools use, so a pulled board meets one rule in both places.
  */
 export function evaluateScenesJs(source: string): EvaluatedScenes {
-  const context = vm.createContext(Object.create(null) as Record<string, unknown>);
-  vm.runInContext('var window = {};', context);
-  vm.runInContext(source, context, { timeout: 5000 });
-  const json: unknown = vm.runInContext('JSON.stringify(window)', context, { timeout: 5000 });
-  if (typeof json !== 'string') throw new Error('scenes.js did not leave a window object.');
-  const plain = JSON.parse(json) as Record<string, unknown>;
+  const plain = evaluateWindowScript(source);
   if (!Array.isArray(plain.SCENES)) throw new Error('scenes.js has no window.SCENES array.');
   const { SCENES, SB_DOC, ...meta } = plain;
   return {

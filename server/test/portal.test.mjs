@@ -26,6 +26,7 @@ const episode = await import('../dist/portal-episode.js');
 const portal = await import('../dist/portal-tools.js');
 const { TOOLS } = await import('../dist/tools.js');
 const { ROUTES } = await import('../dist/handlers.js');
+const storyboard = await import('../dist/storyboard.js');
 
 const KEY = 'tks_0123456789abcdefghijklmnopqrstuvwxyzABCDEF';
 const EPISODE_ID = '11111111-1111-4111-8111-111111111111';
@@ -273,6 +274,14 @@ describe('episode payload', () => {
       assert.equal(r.meta.stolen3, undefined);
       assert.equal(JSON.stringify(r).includes('must-not-leak'), false);
       assert.match(String(r.meta.caught ?? r.meta.caught2 ?? ''), /process is not defined/);
+      // the local board reader (storyboard_read/apply/check) is the second place a pulled board runs — same room
+      const dir = join(root, 'data', 'my-channel', 'episodes', 'ep-escape');
+      mkdirSync(join(dir, 'storyboard'), { recursive: true });
+      writeFileSync(join(dir, 'storyboard', 'scenes.js'), `${escape}\nconsole.log("boards may log"); window.viaGlobal = typeof globalThis.process;`);
+      const board = storyboard.readBoard(join(dir, 'storyboard'));
+      assert.equal(board.win.stolen, undefined);
+      assert.equal(board.win.viaGlobal, 'undefined');
+      assert.equal(JSON.stringify(board.win).includes('must-not-leak'), false);
     } finally {
       delete process.env.REVIEW52_SENTINEL;
     }

@@ -75854,11 +75854,26 @@ function describeToolGate(knownNames, env2 = process.env, jsonPatterns = []) {
 
 // src/storyboard.ts
 import { execFileSync } from "node:child_process";
+
+// src/scenes-vm.ts
+import vm from "node:vm";
+function evaluateWindowScript(source, options = {}) {
+  const timeout = options.timeoutMs ?? 5e3;
+  const context = vm.createContext(/* @__PURE__ */ Object.create(null));
+  vm.runInContext("var window = {}; var console = { log() {}, warn() {}, error() {}, info() {}, debug() {} };", context);
+  vm.runInContext(source, context, { filename: options.filename, timeout });
+  const json2 = vm.runInContext("JSON.stringify(window)", context, { timeout });
+  if (typeof json2 !== "string") throw new Error("the script did not leave a window object");
+  const plain = JSON.parse(json2);
+  if (!plain || typeof plain !== "object" || Array.isArray(plain)) throw new Error("the script replaced window with a non-object");
+  return plain;
+}
+
+// src/storyboard.ts
 import { existsSync as existsSync2, readFileSync as readFileSync2, renameSync, statSync as statSync2, unlinkSync, writeFileSync } from "node:fs";
 import * as nodeModule from "node:module";
 import { basename, dirname, join as join2, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import vm from "node:vm";
 var PLUGIN_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 var REFERENCES_DIR = join2(PLUGIN_ROOT, "skills", "storyboard", "references");
 var CONTRACT_FILE = join2(REFERENCES_DIR, "structure-contract.js");
@@ -76070,14 +76085,9 @@ function readBoard(target) {
     if (/^\s*\/\//.test(line)) header.push(line.trim());
     else if (line.trim()) break;
   }
-  const win = {};
-  const sandbox = { window: win, console: { log() {
-  }, warn() {
-  }, error() {
-  } } };
-  sandbox.globalThis = sandbox;
+  let win;
   try {
-    vm.runInNewContext(src, sandbox, { filename: file, timeout: 5e3 });
+    win = evaluateWindowScript(src, { filename: file });
   } catch (e2) {
     throw new Error(`failed to evaluate ${file}: ${e2.message}`);
   }
@@ -87400,7 +87410,6 @@ ${JSON.stringify(error2.detail)}`;
 // src/portal-episode.ts
 import { existsSync as existsSync12, readFileSync as readFileSync9, writeFileSync as writeFileSync8 } from "node:fs";
 import path10 from "node:path";
-import vm2 from "node:vm";
 var EPISODE_STATUSES = ["draft", "approved", "produced", "published"];
 var EPISODE_STAGES = ["researched", "candidates", "scenario", "narration", "board", "approved", "produced", "published"];
 var SCENARIO_CANDIDATES = ["D1", "D2", "D3"];
@@ -87435,12 +87444,7 @@ function writePortalState(dir, patch) {
   return next;
 }
 function evaluateScenesJs(source) {
-  const context = vm2.createContext(/* @__PURE__ */ Object.create(null));
-  vm2.runInContext("var window = {};", context);
-  vm2.runInContext(source, context, { timeout: 5e3 });
-  const json2 = vm2.runInContext("JSON.stringify(window)", context, { timeout: 5e3 });
-  if (typeof json2 !== "string") throw new Error("scenes.js did not leave a window object.");
-  const plain = JSON.parse(json2);
+  const plain = evaluateWindowScript(source);
   if (!Array.isArray(plain.SCENES)) throw new Error("scenes.js has no window.SCENES array.");
   const { SCENES, SB_DOC, ...meta } = plain;
   return {
