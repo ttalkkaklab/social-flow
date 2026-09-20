@@ -2,9 +2,10 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ErrorCode, ListToolsRequestSchema, McpError } from '@modelcontextprotocol/sdk/types.js';
-import { config, disabledToolPatterns, disabledToolsFile, listChannelDirs } from './config.js';
+import { config, disabledToolPatterns, disabledToolsFile, listChannelDirs, portalConfigured } from './config.js';
 import { describeToolGate, resolveToolGate, warnUnknownPatterns } from './tool-gate.js';
 import { SNS_PLATFORM_BY_TOOL, TOOLS } from './tools.js';
+import { PORTAL_TOOL_NAMES } from './portal-tools.js';
 import { ROUTES } from './handlers.js';
 import { enabledPlatforms } from './sns-client.js';
 import { episodePathArg, isBillableTool, priceOf, recordUsage } from './usage-ledger.js';
@@ -16,7 +17,7 @@ import { reviewFinalSpeech } from './tts-final-quality.js';
 // If the two drift, the version clients see stops matching the actual package, so bump this
 // line together with package.json (the contract test checks that the two agree).
 const server = new Server(
-  { name: 'social-flow', version: '0.84.0' },
+  { name: 'social-flow', version: '0.85.0' },
   { capabilities: { tools: {} } },
 );
 
@@ -27,12 +28,18 @@ const server = new Server(
 // On top of that, env (SOCIAL_FLOW_*) and <SNS_TOKEN_DIR>/disabled-tools.json turn
 // individual tools off by name (trailing "*" covers a family) — also read per
 // request, and CallTool refuses them too.
+// The portal_* tools follow the same rule on the ttalkkakstory key: listed only while a
+// ttalkkakstory.json (flat or under a channel) or the TTALKKAKSTORY_* env exists, so a
+// plugin with no portal key shows the skills nothing and they stay in local-file mode.
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   const enabled = new Set<string>(enabledPlatforms());
   const jsonPatterns = disabledToolPatterns();
+  const portalTools = new Set<string>(PORTAL_TOOL_NAMES);
+  const portalOn = portalConfigured();
   return {
     tools: TOOLS.filter((tool) => {
       if (!resolveToolGate(tool.name, { jsonPatterns, jsonFile: disabledToolsFile }).enabled) return false;
+      if (portalTools.has(tool.name)) return portalOn;
       const platform = SNS_PLATFORM_BY_TOOL[tool.name];
       return platform === undefined || enabled.has(platform);
     }),
@@ -155,6 +162,7 @@ async function main() {
       `youtube data key ${config.youtubeApiKey ? 'set' : 'MISSING (youtube_topic_scout falls back to OAuth youtube.readonly)'}, ` +
       `sns platforms ${snsEnabled.length > 0 ? snsEnabled.join(',') : 'none'} (credential files found — others hidden from ListTools), ` +
       `sns channels ${channelDirs.length > 0 ? channelDirs.map((d) => `${d.channel}[${d.platforms.join(',')}]`).join(' ') : 'none (flat/default tokens only)'}, ` +
+      `ttalkkakstory portal key ${portalConfigured() ? 'set (portal_* tools listed)' : 'MISSING (portal_* hidden — episodes stay local files; save <SNS_TOKEN_DIR>/<channel>/ttalkkakstory.json to mirror)'}, ` +
       describeToolGate(toolNames, process.env, jsonPatterns),
   );
 }

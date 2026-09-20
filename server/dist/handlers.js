@@ -26,6 +26,7 @@ import { youtubeTopicScout } from './youtube-topic-scout.js';
 import * as snsScout from './sns-issue-scout.js';
 import { formatError, formatFileSize, saveBase64Image } from './media-utils.js';
 import { renderCapabilityStatus } from './capability-status.js';
+import * as portal from './portal-tools.js';
 function text(message, isError = false) {
     return { content: [{ type: 'text', text: message }], isError };
 }
@@ -576,6 +577,10 @@ const snsIssueScoutSchema = z.object({
     limit: z.number().int().min(3).max(30).optional(),
 });
 // ── routing ──────────────────────────────────────────────────────
+const portalRoutes = portal.portalHandlers();
+function fromPortal(r) {
+    return text(r.text, r.isError);
+}
 export const ROUTES = {
     serp_web_search: async (args) => {
         const result = await serp.webSearch(parseArgs(serpWebSchema, args));
@@ -1280,4 +1285,20 @@ export const ROUTES = {
         const r = storyboard.checkScenario(parseArgs(storyboard.scenarioCheckSchema, args));
         return text(JSON.stringify(r, null, 2), r.violations > 0);
     },
+    // ── ttalkkakstory portal (workspace API key) ──
+    // One route per portal endpoint; the handler resolves the key from the channel on the
+    // episode path and answers one line (isError) when there is none — a mirror, not a gate.
+    portal_workspace_check: async (args) => fromPortal(await portalRoutes.workspaceCheck(parseArgs(portal.workspaceCheckSchema, args))),
+    portal_storyboard_save: async (args) => fromPortal(await portalRoutes.storyboardSave(parseArgs(portal.storyboardSaveSchema, args))),
+    portal_storyboard_list: async (args) => fromPortal(await portalRoutes.storyboardList(parseArgs(portal.storyboardListSchema, args))),
+    portal_storyboard_pull: async (args) => fromPortal(await portalRoutes.storyboardPull(parseArgs(portal.storyboardPullSchema, args))),
+    portal_episode_status: async (args) => fromPortal(await portalRoutes.episodeStatus(parseArgs(portal.episodeStatusSchema, args))),
+    portal_episode_create: async (args) => fromPortal(await portalRoutes.episodeCreate(parseArgs(portal.episodeCreateSchema, args))),
+    portal_episode_checkpoint: async (args) => fromPortal(await portalRoutes.episodeCheckpoint(parseArgs(portal.episodeCheckpointSchema, args))),
+    portal_episode_revisions: async (args) => fromPortal(await portalRoutes.episodeRevisions(parseArgs(portal.episodeRevisionsSchema, args))),
+    portal_episode_restore: async (args) => fromPortal(await portalRoutes.episodeRestore(parseArgs(portal.episodeRestoreSchema, args))),
+    portal_episode_lease: async (args) => fromPortal(await portalRoutes.episodeLease(parseArgs(portal.episodeLeaseSchema, args))),
+    portal_scenario_save: async (args) => fromPortal(await portalRoutes.scenarioSave(parseArgs(portal.scenarioSaveSchema, args))),
+    portal_scenario_pull: async (args) => fromPortal(await portalRoutes.scenarioPull(parseArgs(portal.scenarioPullSchema, args))),
+    portal_scenario_choose: async (args) => fromPortal(await portalRoutes.scenarioChoose(parseArgs(portal.scenarioChooseSchema, args))),
 };
