@@ -570,6 +570,15 @@ SURFACE_CFG = {
 # posts get caught; lower it and nothing does.
 C7_FLOOR = 23
 SOCIAL_STRUCTURE_SURFACES = {"threads", "ig", "fb", "reply"}
+# A reply answers someone, so opening on ourselves is normal there. These three
+# are the surfaces where a post has to earn its reader in the first sentence.
+NEW_POST_SURFACES = {"threads", "ig", "fb"}
+OUR_SUBJECT = re.compile(r"(저희|우리\s*(팀|회사|쪽|시스템|서비스|제품|계정)|우리가|우리는|우리도)")
+# Anything that puts the reader in the sentence: address, shared-knowledge endings,
+# or a question mark. One of these is enough — the test is presence, not form.
+READER_MARK = re.compile(r"(여러분|당신|너희|다들|하시는|하시나요|있지\s*않|잖아|지\s*않아|\?)")
+# A figure, a name, or a time word. Abstract copy has none of the three.
+CONCRETE_ANCHOR = re.compile(r"(\d|[A-Za-z]{2,}|어제|오늘|그제|엊그제|지난주|지난달|아침|점심|저녁|새벽|방금|作)")
 REPEATED_ENDING_SURFACES = {"threads", "reply"}
 HOST_ANNOUNCEMENT = re.compile(
     r"(숫자\s*몇\s*개만?\s*더\s*둘게요|정리해\s*볼게요|말씀드리면)"
@@ -1065,6 +1074,37 @@ def analyze(text: str, surface: str, doc: bool = False) -> dict:
                     "excerpt": sents[0][1][:40],
                     "fix": "Read the whole rhythm; do not manufacture a fragment only to clear this warning",
                 })
+
+        # C15 — the post opens on us. The reader meets our team, our system or our
+        # incident before anything they recognise. The draft the owner rejected on
+        # sight (2026-09-20) opened on our monitoring script and passed every other
+        # rule at 100. A reply is exempt: answering someone starts from our side.
+        if surface in NEW_POST_SURFACES and sents:
+            first_offset, first = sents[0]
+            opening = text[first_offset:first_offset + len(first)]
+            if OUR_SUBJECT.search(opening) and not READER_MARK.search(opening):
+                findings.append({
+                    "id": "C15", "severity": "S2",
+                    "label": "opens on us with nothing the reader recognises",
+                    "line": line_of(text, first_offset),
+                    "excerpt": opening[:40],
+                    "fix": "Open on the reader's own situation; move our experience to the 근데 우리도 position",
+                })
+
+        # C16 — nothing concrete in the whole post: no figure, no name, no time word.
+        # Specificity is what separates a first-hand account from a generality.
+        # Floor: a post long enough to make a claim — three sentences and 80
+        # visible characters. A one-line remark can carry no anchor and be fine.
+        body_length = sum(visible_len(sentence) for _, sentence in sents)
+        if (surface in NEW_POST_SURFACES and len(sents) >= 3 and body_length >= 80
+                and not CONCRETE_ANCHOR.search(text)):
+            findings.append({
+                "id": "C16", "severity": "S2",
+                "label": "no figure, name or time word anywhere",
+                "line": 1,
+                "excerpt": text.strip()[:40],
+                "fix": "Anchor it — how many, whose, when. One real detail beats three adjectives",
+            })
 
     # Sentence length (only surfaces with a schema bound)
     if cfg["len"] and sents:
@@ -1670,6 +1710,29 @@ SELFTEST = [
         "마지막 자료는 팀에 보냈고.\n"
         "내일 다시 볼까요?\n"
     ), (), ("C14",)),
+    ("C15 opening on our own system warns", "threads", 0, (
+        "저희 팀 감시 스크립트가 어제부터 조용히 죽어 있었어요.\n"
+        "로그를 열어 보니 빨간 줄이 열아홉 개.\n"
+        "오늘 아침에야 알았고요.\n"
+    ), ("C15",)),
+    ("a reader-first opening clears C15", "threads", 0, (
+        "자동으로 돌려놓고 잊어버린 거, 하나씩 있지 않아?\n"
+        "저흰 그게 감시 스크립트였어. 어제 열어 보니 빨간 줄만 열아홉 개.\n"
+    ), (), ("C15",)),
+    ("a reply may open on us", "reply", 0,
+     "저희 팀도 같은 자리에서 막혔어요. 로그를 다시 뒤지고 있어요.\n",
+     (), ("C15",)),
+    ("C16 nothing concrete warns", "threads", 0, (
+        "일이 많을수록 마음만 급해지는 것 같아.\n"
+        "급해지면 손이 오히려 느려지고 결국 처음부터 다시 보게 되더라.\n"
+        "그러다 보면 하루가 통째로 날아가 있고 남는 건 피로뿐이야.\n"
+        "그럴 때마다 천천히 가는 게 빠르다는 말을 떠올려.\n"
+    ), ("C16",)),
+    ("one figure clears C16", "threads", 0, (
+        "일이 많을수록 마음만 급해지는 것 같아.\n"
+        "급해지면 손이 오히려 느려져서 어제도 같은 파일을 세 번 다시 열었어.\n"
+        "그럴 때마다 천천히 가는 게 빠르다는 말을 떠올려.\n"
+    ), (), ("C16",)),
     ("stacked social template signals block", "reply", 2, (
         "숫자 몇 개만 더 둘게요.\n\n"
         "- 첫 검사에서 1건을 마쳤어요\n"

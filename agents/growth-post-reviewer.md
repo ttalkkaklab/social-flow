@@ -125,6 +125,21 @@ people at the same age).
     chain earns its parts by being a list or a sequence; padded, it reads as a
     stitched essay thread, which is the pattern the playbook records as dying in
     our measurements. Judge every part against this, not just the hook
+11. **The reader has no stake** (`post` / `post_chain` only) — every subject in
+    the draft is ours: our system, our tooling, our process. Test it by writing
+    two lines from the draft's own sentences — the situation the reader has
+    already been in, and what this post changes for them. Neither line
+    writable, this is it. A topic the reader would merely find interesting is
+    not a stake, and neither is a closing question bolted onto our story.
+    Self-relevance and social relevance are what move sharing, and reframing
+    alone moves them (playbook §Message selection), so the fix directive is a
+    reframe or a different topic — never a wording pass
+12. **The opening only works from inside** (`post` / `post_chain` only) — the
+    first sentence needs our team, our systems or our incident to make sense,
+    so a reader meets our context before they meet a reason to care. Quote the
+    complete first sentence in the finding. Style and scene scores don't
+    compensate: read the opening before scoring the rest (playbook §New-post
+    style, 여는 자리)
 
 ## Per-axis scores (additive out of 100; no points without evidence)
 
@@ -136,9 +151,12 @@ people at the same age).
   mismatch or turn that belongs to this subject rather than a pasted joke 10 /
   the humor stays on the narrator's habits and keeps factual qualifiers intact 5
 - **Context fit (25)**: coheres with the source context (replies) or the plan's
-  topic pool (new posts) 10 / reader stake — does the target reader read it as
-  their own story; doesn't open with tool names or insider vocabulary 10 /
-  holds the plan's tone and the channel identity 5
+  topic pool (new posts) 5 / **reader stake** — write the reader's situation
+  and what the draft changes for them in one line each; score 0 when neither
+  line can be written from the draft, and don't award this for a subject the
+  reader merely finds interesting 10 / one topic — the draft reduces to a
+  single sentence with no "and", and no second point rides along 5 / holds the
+  plan's tone and the channel identity 5
 - **Engagement value (25)**: room to join in — doesn't close on a flat
   assertion, leaves something specific to answer 10 / contribution — at least
   one real piece of information, experience, or concrete tip 10 / hook not
@@ -183,11 +201,18 @@ Human style: NN/25 (evidence: …)
 Fun and human presence: NN/25 (evidence: …)
 Context fit: NN/25 (evidence: …)
 Engagement value: NN/25 (evidence: …)
+Structure: beat 1 "<quote>" · beat 2 "<quote>" · beat 3 "<quote>" · beat 4 "<quote>" (write `missing` for any beat you cannot quote)
 Fix directives (priority order — subtract only; never plant similes or stock phrases that weren't there):
 1. <location> — <symptom> → <directive>
 Resolution of previous findings (only when there was a previous round): <finding> → resolved | unresolved
 GROWTH_POST_REVIEW: draft=N score=NN p0=N verdict=PASS|FAIL
 ```
+
+Before the axes, quote the four beats from the draft — the reader's situation,
+one concrete case, the turn, and what is handed over (playbook §New-post style,
+글의 뼈대). A beat you cannot quote is a missing beat: say `missing` and write a
+fix directive for it. A missing beat 1 is P0-12; a missing beat 3 means the
+topic has no turn in it, so the directive is a different topic, not a rewrite.
 
 Verdict rule: **PASS when score ≥95 and p0=0**, otherwise FAIL. The tail line is machine-parsed by the delegator — don't change
 its format or spelling. Downgrade findings you aren't sure about from P0 to fix
