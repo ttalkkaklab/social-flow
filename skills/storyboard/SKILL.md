@@ -411,7 +411,7 @@ held episode; **every later write** (checkpoint, save, scenario, status) returns
 `portal_storyboard_pull` (`episodeId` from `.portal.json`, `targetDir:` the directory) whenever the
 portal's `headRevisionNo` is ahead — it rewrites `scenes.js`, the documents and a chosen
 `scenario.md`. Later `portal_episode_checkpoint` / `portal_storyboard_save` send that number as base; **409
-`head_moved`** = the portal moved under you: pull, re-apply, save. Release in §7 or expire (2h).
+`head_moved`** = the portal moved under you; the answer lists what moved since your base (shots · meta · documents): pull, re-apply only what it names, save. Release in §7 or expire (2h).
 
 ### 3.5 Scenario — freeze the winner
 
@@ -1326,7 +1326,7 @@ the episode id, so a changed episode or storyboard title updates that same porta
 tools are not there, say so in one line and move on; if a call errors (a broken key file, 401),
 report the message in one line and never hold the approval on it — the portal records the
 approval, it does not gate it. The save is also a **checkpoint** at stage `approved` (revision into
-`.portal.json`); **409 `head_moved`** is not a retry — another machine saved first: `portal_storyboard_pull`, re-apply, save again; **409 `leased`** is the §3 rule. Then `portal_episode_lease` `action: "release"`.
+`.portal.json`); **409 `head_moved`** is not a retry — another machine saved first and the answer names what moved since your base: `portal_storyboard_pull`, re-apply only those shots and documents (`portal_episode_revisions` `compareTo` for the full diff), save again; **409 `leased`** is the §3 rule. Then `portal_episode_lease` `action: "release"`.
 
 **If there are filmed scenes**, the hand-off after approval is recording. It differs by lane.
 

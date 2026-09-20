@@ -60,6 +60,8 @@ export interface PortalClient {
   createEpisode(storyboardId: string, body: Record<string, unknown>): Promise<PortalResponse<{ id: string; url: string }>>;
   listRevisions(episodeId: string): Promise<PortalResponse>;
   getRevision(episodeId: string, no: number): Promise<PortalResponse<PortalRevision>>;
+  /** Two revisions compared — `to` is a number or 'head' (portal loop R3). */
+  revisionDiff(episodeId: string, from: number, to: number | 'head'): Promise<PortalResponse<PortalRevisionDiff>>;
   checkpoint(episodeId: string, body: Record<string, unknown>): Promise<PortalResponse<{ revisionNo: number }>>;
   restoreRevision(episodeId: string, no: number, body?: Record<string, unknown>): Promise<PortalResponse<{ revisionNo: number }>>;
   getLease(episodeId: string): Promise<PortalResponse>;
@@ -97,6 +99,15 @@ export interface PortalRevision {
   revisionNo: number;
   documents?: Record<string, string>;
   [key: string]: unknown;
+}
+
+export interface PortalRevisionDiff {
+  from: { revisionNo: number; stage?: string };
+  to: { revisionNo: number; stage?: string };
+  identical: boolean;
+  scenes: { countA: number; countB: number; added: string[]; removed: string[]; changed: Array<{ key: string; fields: string[] }>; reordered: boolean };
+  meta: { added: string[]; removed: string[]; changed: string[] };
+  documents: Record<string, { status: 'same' | 'added' | 'removed' | 'changed'; unified?: string | null; truncated?: boolean; linesA?: number; linesB?: number }>;
 }
 
 export interface PortalScenario {
@@ -198,6 +209,7 @@ export function createPortalClient(credential: PortalCredential, fetchImpl: Fetc
     createEpisode: (storyboardId, body) => json<{ id: string; url: string }>('POST', `/storyboards/${storyboardId}/episodes`, body),
     listRevisions: (episodeId) => json('GET', `/episodes/${episodeId}/revisions`),
     getRevision: (episodeId, no) => json<PortalRevision>('GET', `/episodes/${episodeId}/revisions/${no}`),
+    revisionDiff: (episodeId, from, to) => json<PortalRevisionDiff>('GET', `/episodes/${episodeId}/revisions/${from}/diff/${to}`),
     checkpoint: (episodeId, body) => json<{ revisionNo: number }>('POST', `/episodes/${episodeId}/revisions`, body),
     restoreRevision: (episodeId, no, body = {}) =>
       json<{ revisionNo: number }>('POST', `/episodes/${episodeId}/revisions/${no}/restore`, body),

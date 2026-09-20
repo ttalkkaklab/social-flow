@@ -83601,7 +83601,7 @@ Returns: JSON \u2014 { channel, workspace, source, holder, episodeDir?, copyOf?,
     name: "portal_storyboard_save",
     title: "Upload an episode directory to the portal",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-    description: `Upload data/<channel>/episodes/<topic>/storyboard/ \u2014 scenes.js (the shots verbatim, the window.* blocks as episode meta), storyboard.md, research.md, script.md, storyboard.html \u2014 to the ttalkkakstory portal under the channel's workspace key. Saving the same episode again updates it (idempotent); the project is the channel, the storyboard is found or created by the episode title (or storyboardTitle for a series). When .portal.json exists, its episodeId updates that same row even if the title changed. The save is also a checkpoint: stage from the argument or storyboard.md's status (approved \u2192 approved, otherwise board), baseRevisionNo from .portal.json. A 409 head_moved means another machine saved first \u2014 portal_storyboard_pull, re-apply, save again; a 409 leased names who holds the lease and until when.
+    description: `Upload data/<channel>/episodes/<topic>/storyboard/ \u2014 scenes.js (the shots verbatim, the window.* blocks as episode meta), storyboard.md, research.md, script.md, storyboard.html \u2014 to the ttalkkakstory portal under the channel's workspace key. Saving the same episode again updates it (idempotent); the project is the channel, the storyboard is found or created by the episode title (or storyboardTitle for a series). When .portal.json exists, its episodeId updates that same row even if the title changed. The save is also a checkpoint: stage from the argument or storyboard.md's status (approved \u2192 approved, otherwise board), baseRevisionNo from .portal.json. A 409 head_moved means another machine saved first \u2014 the answer lists what moved since your base (shots \xB7 meta \xB7 documents): portal_storyboard_pull, re-apply only what it names, save again; a 409 leased names who holds the lease and until when.
 
 Writes .portal.json (workspace \xB7 storyboardId \xB7 episodeId \xB7 headRevisionNo) into the episode directory. Returns: JSON \u2014 { result: created|updated, storyboardId, episodeId, revisionNo, url, pageUrl, uploaded: { scenes, characters, documents } }.`,
     inputSchema: {
@@ -83699,7 +83699,7 @@ Returns: JSON \u2014 { id, slug, title, stage, url, pageUrl }.`,
     name: "portal_episode_checkpoint",
     title: "Save a revision when a stage ends",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-    description: `Checkpoint the episode on the portal when a stage ends \u2014 candidates after the three scenario pages, scenario after the pick, board after scenes.js is written. With episodeDir the shots and meta from storyboard/scenes.js (when present) and the standard documents that exist (research.md \xB7 storyboard.md \xB7 script.md \xB7 storyboard.html) go up together; identical content makes no new revision and only moves the stage. baseRevisionNo defaults to .portal.json's head; when it differs from the portal's head the answer is 409 head_moved \u2014 another machine saved first: portal_storyboard_pull, re-apply, checkpoint again. Never retry a 409 blind.
+    description: `Checkpoint the episode on the portal when a stage ends \u2014 candidates after the three scenario pages, scenario after the pick, board after scenes.js is written. With episodeDir the shots and meta from storyboard/scenes.js (when present) and the standard documents that exist (research.md \xB7 storyboard.md \xB7 script.md \xB7 storyboard.html) go up together; identical content makes no new revision and only moves the stage. baseRevisionNo defaults to .portal.json's head; when it differs from the portal's head the answer is 409 head_moved with what moved since your base (shots \xB7 meta \xB7 documents) \u2014 another machine saved first: portal_storyboard_pull, re-apply only what it names, checkpoint again. Never retry a 409 blind.
 
 Updates .portal.json headRevisionNo. Returns: JSON \u2014 { result: "new revision"|"unchanged (stage only)", revisionNo, stage, uploaded: { scenes, documents } }.`,
     inputSchema: {
@@ -83720,16 +83720,17 @@ Updates .portal.json headRevisionNo. Returns: JSON \u2014 { result: "new revisio
     name: "portal_episode_revisions",
     title: "List an episode's revisions or read one",
     annotations: HINT.read,
-    description: `List a portal episode's revisions, newest first \u2014 number, stage, note, who saved it and when \u2014 or, with revisionNo, read one revision's snapshot (shots \xB7 meta \xB7 documents). Read before portal_episode_restore so the number being restored is the one meant.
+    description: `List a portal episode's revisions, newest first \u2014 number, stage, note, who saved it and when \u2014 or, with revisionNo, read one revision's snapshot (shots \xB7 meta \xB7 documents). With compareTo (a number or "head"), return what changed from revisionNo (default: the directory's recorded head) to it \u2014 shots added/removed/changed with the changed field names, meta keys, and a unified diff per document \u2014 plus a one-line summary. Read before portal_episode_restore so the number being restored is the one meant, and after a 409 head_moved to see what to re-apply.
 
-Returns: JSON \u2014 the revision list, or one revision's snapshot.`,
+Returns: JSON \u2014 the revision list, one revision's snapshot, or { summary, from, to, identical, scenes, meta, documents }.`,
     inputSchema: {
       type: "object",
       properties: {
         episodeId: PORTAL_EPISODE_ID_ARG,
         episodeDir: PORTAL_EPISODE_DIR_ARG,
         channel: PORTAL_CHANNEL_ARG,
-        revisionNo: { type: "number", description: "Read this revision's snapshot instead of listing" }
+        revisionNo: { type: "number", description: "Read this revision's snapshot instead of listing; with compareTo, the revision to compare from" },
+        compareTo: { type: ["number", "string"], description: `Compare revisionNo (or the directory's recorded head) to this revision number or "head" \u2014 returns the diff instead of the list` }
       }
     }
   },
@@ -87391,6 +87392,7 @@ function createPortalClient(credential, fetchImpl = fetch) {
     createEpisode: (storyboardId, body) => json2("POST", `/storyboards/${storyboardId}/episodes`, body),
     listRevisions: (episodeId) => json2("GET", `/episodes/${episodeId}/revisions`),
     getRevision: (episodeId, no) => json2("GET", `/episodes/${episodeId}/revisions/${no}`),
+    revisionDiff: (episodeId, from, to) => json2("GET", `/episodes/${episodeId}/revisions/${from}/diff/${to}`),
     checkpoint: (episodeId, body) => json2("POST", `/episodes/${episodeId}/revisions`, body),
     restoreRevision: (episodeId, no, body = {}) => json2("POST", `/episodes/${episodeId}/revisions/${no}/restore`, body),
     getLease: (episodeId) => json2("GET", `/episodes/${episodeId}/lease`),
@@ -87614,7 +87616,8 @@ var episodeRevisionsSchema = external_exports.object({
   episodeId: uuid2.optional(),
   episodeDir: external_exports.string().optional(),
   channel: channelArg,
-  revisionNo: external_exports.number().int().min(1).optional()
+  revisionNo: external_exports.number().int().min(1).optional(),
+  compareTo: external_exports.union([external_exports.number().int().min(1), external_exports.literal("head")]).optional()
 });
 var episodeRestoreSchema = external_exports.object({
   revisionNo: external_exports.number().int().min(1),
@@ -87655,6 +87658,37 @@ var scenarioChooseSchema = external_exports.object({
 });
 var ok = (payload) => ({ text: JSON.stringify(payload, null, 2), isError: false });
 var failed = (error2) => ({ text: describePortalError(error2), isError: true });
+function summarizeRevisionDiff(d) {
+  if (d.identical) return `#${d.from.revisionNo} and #${d.to.revisionNo} have the same content.`;
+  const parts = [];
+  const s2 = d.scenes;
+  const keys = s2.changed.map((c) => `${c.key}[${c.fields.join(",")}]`);
+  parts.push(
+    `scenes +${s2.added.length} \u2212${s2.removed.length} ~${s2.changed.length}` + (keys.length ? ` (${keys.slice(0, 8).join(" \xB7 ")}${keys.length > 8 ? " \u2026" : ""})` : "") + (s2.added.length ? ` added ${s2.added.slice(0, 8).join("\xB7")}` : "") + (s2.removed.length ? ` removed ${s2.removed.slice(0, 8).join("\xB7")}` : "") + (s2.reordered ? " reordered" : "")
+  );
+  const meta = [...d.meta.added.map((k) => `+${k}`), ...d.meta.removed.map((k) => `\u2212${k}`), ...d.meta.changed.map((k) => `~${k}`)];
+  if (meta.length) parts.push(`meta ${meta.join(" ")}`);
+  const docs = Object.entries(d.documents).filter(([, c]) => c.status !== "same").map(([name, c]) => `${name} ${c.status}`);
+  if (docs.length) parts.push(`documents ${docs.join(", ")}`);
+  return parts.join(" \xB7 ");
+}
+async function withHeadMovedDiff(client, episodeId, base, error2) {
+  const result = failed(error2);
+  if (!(error2 instanceof PortalError) || error2.code !== "head_moved" || base === void 0) return result;
+  const head = error2.detail?.head?.revisionNo;
+  if (typeof head !== "number" || head < 1 || head === base) return result;
+  try {
+    const { data } = await client.revisionDiff(episodeId, base, head);
+    return {
+      isError: true,
+      text: `${result.text}
+Since your base #${base} the portal head moved to #${head}: ${summarizeRevisionDiff(data)}
+Pull (portal_storyboard_pull), then re-apply only the shots and documents named above; portal_episode_revisions compareTo shows the full diff.`
+    };
+  } catch {
+    return result;
+  }
+}
 function portalUnavailable(channel) {
   const where = channel ? `${portalCredentialFile(channel)} (or ${portalCredentialFile()})` : portalCredentialFile();
   return `No ttalkkakstory portal key configured \u2014 the episode stays a local file. To mirror it, issue a workspace API key on the portal (/{workspace}/settings/api-keys) and save it as ${where} as { "apiUrl", "workspace", "apiKey" } (${PORTAL_CREDENTIAL_FILENAME}), or set TTALKKAKSTORY_API_URL \xB7 TTALKKAKSTORY_WORKSPACE \xB7 TTALKKAKSTORY_API_KEY.`;
@@ -87742,7 +87776,14 @@ function portalHandlers(fetchImpl) {
           ...note ? { note } : {},
           sourceHost: r2.client.holder
         };
-        const { status, data } = await r2.client.importStoryboard(payload);
+        let response;
+        try {
+          response = await r2.client.importStoryboard(payload);
+        } catch (error2) {
+          const id = state?.episodeId;
+          return id ? await withHeadMovedDiff(r2.client, id, base, error2) : failed(error2);
+        }
+        const { status, data } = response;
         writePortalState(episodeDir, {
           workspace: r2.client.workspace,
           storyboardId: data.storyboardId,
@@ -87895,7 +87936,13 @@ function portalHandlers(fetchImpl) {
           body.documents = docs;
           uploadedDocuments = docs.map((d) => d.filename);
         }
-        const { status, data } = await r2.client.checkpoint(id, body);
+        let response;
+        try {
+          response = await r2.client.checkpoint(id, body);
+        } catch (error2) {
+          return await withHeadMovedDiff(r2.client, id, body.baseRevisionNo, error2);
+        }
+        const { status, data } = response;
         if (episodeDir) writePortalState(episodeDir, { episodeId: id, headRevisionNo: data.revisionNo });
         return ok({
           result: status === 201 ? "new revision" : "unchanged (stage only)",
@@ -87906,11 +87953,17 @@ function portalHandlers(fetchImpl) {
         return failed(error2);
       }
     },
-    async episodeRevisions({ episodeId, episodeDir, channel, revisionNo }) {
+    async episodeRevisions({ episodeId, episodeDir, channel, revisionNo, compareTo }) {
       const r2 = resolveClient(fetchImpl, channel, episodeDir);
       if ("error" in r2) return r2.error;
       try {
         const id = resolveEpisodeId(episodeId, episodeDir);
+        if (compareTo !== void 0) {
+          const from = revisionNo ?? (episodeDir ? readPortalState(episodeDir)?.headRevisionNo : void 0);
+          if (!from) throw new Error("compareTo needs revisionNo, or an episodeDir whose .portal.json records headRevisionNo.");
+          const { data: data2 } = await r2.client.revisionDiff(id, from, compareTo);
+          return ok({ summary: summarizeRevisionDiff(data2), ...data2 });
+        }
         const { data } = revisionNo ? await r2.client.getRevision(id, revisionNo) : await r2.client.listRevisions(id);
         return ok(data);
       } catch (error2) {
