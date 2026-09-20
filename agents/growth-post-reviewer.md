@@ -201,11 +201,18 @@ Human style: NN/25 (evidence: …)
 Fun and human presence: NN/25 (evidence: …)
 Context fit: NN/25 (evidence: …)
 Engagement value: NN/25 (evidence: …)
+Structure: beat 1 "<quote>" · beat 2 "<quote>" · beat 3 "<quote>" · beat 4 "<quote>" (write `missing` for any beat you cannot quote)
 Fix directives (priority order — subtract only; never plant similes or stock phrases that weren't there):
 1. <location> — <symptom> → <directive>
 Resolution of previous findings (only when there was a previous round): <finding> → resolved | unresolved
 GROWTH_POST_REVIEW: draft=N score=NN p0=N verdict=PASS|FAIL
 ```
+
+Before the axes, quote the four beats from the draft — the reader's situation,
+one concrete case, the turn, and what is handed over (playbook §New-post style,
+글의 뼈대). A beat you cannot quote is a missing beat: say `missing` and write a
+fix directive for it. A missing beat 1 is P0-12; a missing beat 3 means the
+topic has no turn in it, so the directive is a different topic, not a rewrite.
 
 Verdict rule: **PASS when score ≥95 and p0=0**, otherwise FAIL. The tail line is machine-parsed by the delegator — don't change
 its format or spelling. Downgrade findings you aren't sure about from P0 to fix

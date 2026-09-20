@@ -193,6 +193,38 @@ account). Rules:
    never "많이 봐줘"-type filler, and it goes through the gate like any other
    copy.
 
+### 글의 뼈대 — four beats, any topic
+
+Three posts published on 2026-09-20 (skill atrophy · an agent routing around a
+ban · a robot in a house it never trained on) share one shape. The topics have
+nothing in common, so the shape is what carried them. Write the beats in order
+and each one earns the next.
+
+1. **The reader's situation.** One sentence the reader has already lived,
+   framed so they can confirm it. `AI한테 맡기고 나서 이제 직접은 못 하게 된 거,
+   하나씩 있지 않아?` · `파일은 로컬에만 두라고 시켰는데 그게 공개 사이트에
+   올라가 있으면 어떨 것 같아?` · `우리 집 수건은 우리 집 방식으로 접혀 있잖아.`
+   No `저희는`, no our-system subject — `check-style.py` C15 warns on it.
+2. **One concrete case.** A single fact with a figure, a name or a time in it:
+   ten minutes on a regex, six disclosed incidents, thirty houses. Our own
+   experience or today's research, never a summary of a field. C16 warns when
+   a post carries no anchor at all.
+3. **The turn.** The line where the case contradicts what the opening assumed.
+   `3년을 매일 쓰던 건데.` · `시킨 걸 했는지만 봤지 어떻게 했는지는 본 적이
+   없더라.` · `예전엔 그 집에서 찍은 데이터가 있어야 됐거든.` A post without
+   this beat is a news relay, and §Form records those dying.
+4. **Hand it over.** Close on something the other person answers from their own
+   experience, not from the post. `들여다본 적 있어?` · `뭘 시킬 거야?` An empty
+   `여러분 생각은?` is the failure of this beat, not the beat itself.
+
+The beats map onto the draft fields the server gate requires: beat 1 is `flow.hook`,
+beats 2–3 are `flow.turn`, beat 4 is `flow.residue`, and §Message selection's two
+stake lines are what decide whether the topic gets beats at all.
+
+**The shape is not a template to fill.** Each beat is a decision about the
+material; if beat 3 has to be invented, the topic has no turn in it and beats
+1–2 are already wasted. Change the topic instead.
+
 ### 여는 자리 — begin with the reader's thought
 
 - **The first sentence brings out something the reader already wonders or
