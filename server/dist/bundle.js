@@ -86262,7 +86262,7 @@ Returns: integer credit balance.`,
   {
     name: "threads_review_submit",
     title: "Submit Threads draft review",
-    description: "Record a voice/purpose/flow review; score purpose only against the chosen draft purpose (fun, moved, info, empathy), never against another purpose. Bind the review to bodyHash. Findings quote actual draft text; only whitespace differences are ignored. No LLM/API is called. Identifiers are self-reported: the server cannot distinguish subagents in the same session or enforce reviewer independence.",
+    description: "Record a voice/purpose/flow review; score purpose only against the chosen draft purpose (fun, moved, info, empathy), never against another purpose. Bind the review to bodyHash. A required rubric item scoring zero must be submitted as a P0 finding to block publication; the server does not infer semantic failures from scores. Findings quote actual draft text; only whitespace differences are ignored. No LLM/API is called. Identifiers are self-reported: the server cannot distinguish subagents in the same session or enforce reviewer independence.",
     annotations: HINT.generate,
     inputSchema: { type: "object", properties: {
       draftId: { description: "Identifier returned by threads_draft_create.", type: "string" },
