@@ -410,8 +410,8 @@ merge left in `.portal-head/` first, on a lease held by someone else wait), then
 with no `.portal.json` yet, `portal_episode_create` first (`storyboardId` from `portal_storyboard_list`, `slug` = the directory name, `title`, `format`, `episodeDir`), which writes that file. A **409 `leased`** names who
 holds it and until when: one line to the user, wait or ask an admin to release — never write over a
 held episode; **every later write** (checkpoint, save, scenario, status) returns the same 409 while someone else holds it, handled the same way, never skipped as an error. Then
-`portal_storyboard_pull` (`episodeId` from `.portal.json`, `targetDir:` the directory) whenever the check said
-`portal_ahead` — it rewrites `scenes.js`, the documents and a chosen `scenario.md` (changed local files go to `.portal-local/`). Later `portal_episode_checkpoint` / `portal_storyboard_save` send that number as base; **409
+on `portal_ahead` the side pull above **is** the pull — do not call `portal_storyboard_pull` again without `mode`
+(the default `replace` would overwrite what you just merged; use it only on a directory with no local edits — changed files still go to `.portal-local/`). Save with `baseRevisionNo:` the side result's `headRevisionNo`. Later `portal_episode_checkpoint` / `portal_storyboard_save` send that number as base; **409
 `head_moved`** = the portal moved under you: call `portal_storyboard_pull` with `mode: "side"`, use `.portal-head/` and the 409 list of what the other side changed to resolve only overlapping scenes and documents by hand while keeping every other local change, then call `portal_storyboard_save` with `baseRevisionNo: <the side result's headRevisionNo>`. Release in §7 or expire (2h).
 
 ### 3.5 Scenario — freeze the winner
