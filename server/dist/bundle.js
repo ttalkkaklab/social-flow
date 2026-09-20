@@ -75559,14 +75559,16 @@ function readPortalCredentialFile(file) {
   let raw;
   try {
     raw = readFileSync(file, "utf8");
-  } catch {
-    return null;
+  } catch (error2) {
+    const code = error2.code;
+    if (code === "ENOENT" || code === "ENOTDIR") return null;
+    throw new Error(`${file} exists but could not be read (${code ?? "unknown error"}) \u2014 fix the file instead of relying on a fallback.`);
   }
   let parsed;
   try {
     parsed = JSON.parse(raw);
-  } catch (error2) {
-    throw new Error(`${file} is not valid JSON (${error2 instanceof Error ? error2.message : String(error2)}).`);
+  } catch {
+    throw new Error(`${file} is not valid JSON \u2014 expected { "apiUrl", "workspace", "apiKey" }.`);
   }
   const o = parsed && typeof parsed === "object" ? parsed : {};
   const str8 = (k) => typeof o[k] === "string" ? o[k].trim() : "";

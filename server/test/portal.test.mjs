@@ -9,7 +9,7 @@
  */
 
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, before, beforeEach, describe, it } from 'node:test';
@@ -138,6 +138,35 @@ describe('portal credential resolution', () => {
     assert.throws(() => config.portalCredential('my-channel'), /missing apiKey/);
     writeFileSync(config.portalCredentialFile('my-channel'), '{not json');
     assert.throws(() => config.portalCredential('my-channel'), /not valid JSON/);
+  });
+
+  it('a malformed file never echoes its contents — the offending text is part of the key (review P2)', () => {
+    writeFileSync(config.portalCredentialFile(), `{ "apiUrl": "https://x", "workspace": "w", "apiKey": ${KEY} }`);
+    assert.throws(
+      () => config.portalCredential(),
+      (error) => {
+        assert.match(error.message, /not valid JSON/);
+        assert.equal(error.message.includes(KEY.slice(4, 16)), false, 'error message leaks the key');
+        return true;
+      },
+    );
+  });
+
+  it('an unreadable channel file stops the lookup — it does not fall through to the flat workspace (review P1)', (t) => {
+    if (typeof process.getuid === 'function' && process.getuid() === 0) return t.skip('root ignores file modes');
+    writeCredential(config.portalCredentialFile(), { apiUrl: 'https://flat.example', workspace: 'flat', apiKey: KEY });
+    const file = config.portalCredentialFile('my-channel');
+    writeCredential(file, { apiUrl: 'https://ch.example', workspace: 'lab', apiKey: KEY });
+    chmodSync(file, 0o000);
+    try {
+      assert.throws(() => config.portalCredential('my-channel'), /could not be read \(EACCES\)/);
+    } finally {
+      chmodSync(file, 0o600);
+    }
+    // a directory where the file should be is the same kind of failure
+    rmSync(file);
+    mkdirSync(file);
+    assert.throws(() => config.portalCredential('my-channel'), /could not be read \(EISDIR\)/);
   });
 
   it('snake_case keys are accepted too (api_url · api_key)', () => {

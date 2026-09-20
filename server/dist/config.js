@@ -267,15 +267,23 @@ function readPortalCredentialFile(file) {
     try {
         raw = readFileSync(file, 'utf8');
     }
-    catch {
-        return null;
+    catch (error) {
+        // Only a *missing* file means "not configured". A file that exists but cannot be read
+        // (EACCES, EISDIR, an I/O error) must stop here — falling through to the flat file
+        // would pick another workspace's key for this channel (review P1).
+        const code = error.code;
+        if (code === 'ENOENT' || code === 'ENOTDIR')
+            return null;
+        throw new Error(`${file} exists but could not be read (${code ?? 'unknown error'}) — fix the file instead of relying on a fallback.`);
     }
     let parsed;
     try {
         parsed = JSON.parse(raw);
     }
-    catch (error) {
-        throw new Error(`${file} is not valid JSON (${error instanceof Error ? error.message : String(error)}).`);
+    catch {
+        // No parser message here — it quotes the offending text, which in a credential file is
+        // part of the key (review P2).
+        throw new Error(`${file} is not valid JSON — expected { "apiUrl", "workspace", "apiKey" }.`);
     }
     const o = (parsed && typeof parsed === 'object' ? parsed : {});
     const str = (k) => (typeof o[k] === 'string' ? o[k].trim() : '');
