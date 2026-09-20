@@ -24,11 +24,11 @@
  */
 
 import { execFileSync } from 'node:child_process';
+import { evaluateWindowScript } from './scenes-vm.js';
 import { existsSync, readFileSync, renameSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import * as nodeModule from 'node:module';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import vm from 'node:vm';
 import { z } from 'zod';
 
 // ── Plugin tree ─────────────────────────────────────────────────
@@ -301,11 +301,10 @@ export function readBoard(target: string): BoardFile {
     if (/^\s*\/\//.test(line)) header.push(line.trim());
     else if (line.trim()) break;
   }
-  const win: Board = {};
-  const sandbox = { window: win, console: { log() {}, warn() {}, error() {} } } as Record<string, unknown>;
-  sandbox.globalThis = sandbox;
+  // The room holds nothing from the host — a pulled board is someone else's code (scenes-vm.ts).
+  let win: Board;
   try {
-    vm.runInNewContext(src, sandbox, { filename: file, timeout: 5000 });
+    win = evaluateWindowScript(src, { filename: file }) as Board;
   } catch (e) {
     throw new Error(`failed to evaluate ${file}: ${(e as Error).message}`);
   }

@@ -23,11 +23,11 @@
  * at runtime from the plugin tree, the same way the bundle finds the skills it ships with.
  */
 import { execFileSync } from 'node:child_process';
+import { evaluateWindowScript } from './scenes-vm.js';
 import { existsSync, readFileSync, renameSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import * as nodeModule from 'node:module';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import vm from 'node:vm';
 import { z } from 'zod';
 // ── Plugin tree ─────────────────────────────────────────────────
 /** dist/bundle.js and dist/storyboard.js sit at the same depth — two up is the plugin root. */
@@ -243,11 +243,10 @@ export function readBoard(target) {
         else if (line.trim())
             break;
     }
-    const win = {};
-    const sandbox = { window: win, console: { log() { }, warn() { }, error() { } } };
-    sandbox.globalThis = sandbox;
+    // The room holds nothing from the host — a pulled board is someone else's code (scenes-vm.ts).
+    let win;
     try {
-        vm.runInNewContext(src, sandbox, { filename: file, timeout: 5000 });
+        win = evaluateWindowScript(src, { filename: file });
     }
     catch (e) {
         throw new Error(`failed to evaluate ${file}: ${e.message}`);
