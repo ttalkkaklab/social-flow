@@ -11,15 +11,17 @@ import { BLENDER_INTERPOLATIONS, BLENDER_PREVIZ_ENGINES, BLENDER_PROXY_KINDS, BL
 import { DEFAULT_SUNO_MODEL, SUNO_MODELS, SUNO_PERSONA_MODELS, SUNO_SOUND_KEYS, SUNO_VOCAL_GENDERS, } from './suno-client.js';
 import { DEFAULT_MLX_IMAGE_SIZE, DEFAULT_MLX_MUSIC_SECONDS, DEFAULT_MLX_VIDEO_FRAMES, DEFAULT_MLX_VIDEO_HEIGHT, DEFAULT_MLX_VIDEO_WIDTH, MAX_MLX_IMAGE_DIMENSION, MAX_MLX_IMAGE_REFS, MAX_MLX_MUSIC_SECONDS, MAX_MLX_TTS_CHARS, MAX_MLX_VIDEO_DIMENSION, MAX_MLX_VIDEO_FRAMES, MAX_VIDEO_RGB_BYTES, MIN_MLX_IMAGE_DIMENSION, MIN_MLX_MUSIC_SECONDS, MIN_MLX_VIDEO_DIMENSION, MIN_MLX_VIDEO_FRAMES, MLX_IMAGE_DIMENSION_STEP, MLX_VIDEO_DIMENSION_STEP, MLX_VIDEO_DIMENSION_STEP_ONE_STAGE, MLX_VIDEO_FRAME_STEP, MLX_VIDEO_FPS, } from './mlx-serve-client.js';
 /**
- * Tool surface definitions (77 tools) — 9 research (incl. stock_search) + 5 open-data +
- * 37 generation (5 image + 12 video + 9 voice + 1 STT + 9 music + 1 mesh) +
+ * Tool surface definitions (83 tools) — 9 research (incl. stock_search) + 5 open-data +
+ * 40 generation (5 image + 12 video + 9 voice + 1 STT + 9 music + 1 mesh +
+ * youtube_topic_scout + sns_issue_scout + content_feedback) +
  * 6 per-platform publishing + 3 inbound comments + 5 growth lookups (Threads
  * insights/keyword search · YouTube insights · Instagram insights · recent-content
  * feedback — the insights trio is for the grow-* skills only; content_feedback covers
- * both video platforms and writes an HTML report) + 2 checks (sns_account_check ·
- * capability_status) + 7 blender previz + 3 storyboard. The six mlx_* tools wrap
- * MLX Core / mlx-serve on loopback; they are not a second MCP server. 68 of those
- * list without SNS tokens (README §MCP tools is the per-tool table).
+ * both video platforms and writes an HTML report) + 2 growth review + 2 checks
+ * (sns_account_check · capability_status) + 7 blender previz + 4 storyboard. The six
+ * mlx_* tools wrap MLX Core / mlx-serve on loopback; they are not a second MCP server. 72 of those
+ * list without SNS tokens; explicit tool-disable settings can reduce that further
+ * (README §MCP tools is the per-tool table).
  *
  * Publish tool descriptions embed the HITL contract — this server has no
  * review gate, so a call is an immediately public post, and the descriptions
@@ -3482,11 +3484,51 @@ Returns: integer credit balance.`,
     // Only tools for platforms with a credentials file are exposed in ListTools (index.ts + SNS_PLATFORM_BY_TOOL).
     // Multi-channel: with channel (brand slug) set, only <SNS_TOKEN_DIR>/<slug>/ tokens are used (no fallback).
     {
+        name: 'threads_draft_create',
+        title: 'Create Threads growth draft',
+        description: 'Store a Threads growth draft before review. Returns draftId and bodyHash (SHA-256 of NFC, LF, trimmed body + selfReply). Edits require a new draft and reviews. No public posting.',
+        annotations: HINT.generate,
+        inputSchema: { type: 'object', properties: {
+                channel: SNS_CHANNEL_PROPERTY,
+                body: { type: 'string', minLength: 1, description: 'Draft body.' }, selfReply: { type: 'string', minLength: 1, description: 'Optional information self-reply (voice review only).' },
+                surface: { type: 'string', enum: ['post', 'reply'], description: 'post by default; reply requires replyToId and only voice review.' },
+                replyToId: { type: 'string', description: 'Required reply target for a reply draft; bound to publication.' },
+                readerMessage: { type: 'string', minLength: 1, description: 'One-sentence summary of the post.' },
+                purpose: { type: 'string', enum: ['fun', 'moved', 'info', 'empathy'], description: 'Exactly one intended reader outcome.' },
+                purposeEvidence: { type: 'string', minLength: 1, description: 'Verbatim body excerpt demonstrating the chosen purpose; whitespace-only normalization.' },
+                flow: { type: 'object', description: 'Reader progression: hook, turn, residue.', properties: {
+                        hook: { type: 'string', minLength: 1, description: 'Why the opening holds attention.' },
+                        turn: { type: 'string', minLength: 1, description: 'What the middle reveals.' },
+                        residue: { type: 'string', minLength: 1, description: 'What the reader takes away.' },
+                    }, required: ['hook', 'turn', 'residue'] },
+                comicElements: { description: 'Concrete comic elements in the draft.', type: 'array', items: { type: 'string', minLength: 1 }, minItems: 1 },
+                submitter: { type: 'string', description: 'Submitting agent identifier (self-reported).' },
+                submitterContext: { type: 'string', description: 'Submitting session/context identifier (self-reported).' },
+            }, required: ['channel', 'body', 'readerMessage', 'comicElements', 'purpose', 'purposeEvidence', 'flow'] },
+    },
+    {
+        name: 'threads_review_submit',
+        title: 'Submit Threads draft review',
+        description: 'Record a voice/purpose/flow review; score purpose only against the chosen draft purpose (fun, moved, info, empathy), never against another purpose. Bind the review to bodyHash. A required rubric item scoring zero must be submitted as a P0 finding to block publication; the server does not infer semantic failures from scores. Findings quote actual draft text; only whitespace differences are ignored. No LLM/API is called. Identifiers are self-reported: the server cannot distinguish subagents in the same session or enforce reviewer independence.',
+        annotations: HINT.generate,
+        inputSchema: { type: 'object', properties: {
+                draftId: { description: 'Identifier returned by threads_draft_create.', type: 'string' }, bodyHash: { description: 'Exact reviewed draft hash.', type: 'string', pattern: '^[a-f0-9]{64}$' },
+                axis: { description: 'Review axis.', type: 'string', enum: ['voice', 'purpose', 'flow'] }, score: { description: 'Score from 0 to 100.', type: 'number', minimum: 0, maximum: 100 },
+                reasons: { description: 'Reasons supporting the score.', type: 'array', items: { type: 'string', minLength: 1 }, minItems: 1 },
+                improvements: { description: 'Concrete improvements or next-post guidance.', type: 'array', items: { type: 'string', minLength: 1 }, minItems: 1 },
+                reviewer: { description: 'Self-reported reviewer identifier.', type: 'string', minLength: 1 }, reviewerContext: { description: 'Self-reported session/context identifier.', type: 'string', minLength: 1 },
+                findings: { description: 'Quoted evidence, including at least one pass finding for a clean review.', type: 'array', minItems: 1, items: { type: 'object', properties: {
+                            quote: { description: 'Exact draft excerpt; whitespace differences allowed.', type: 'string', minLength: 1 }, issue: { description: 'Observation supported by the quote.', type: 'string', minLength: 1 },
+                            severity: { description: 'pass for positive evidence; P0 blocks publishing.', type: 'string', enum: ['pass', 'P0', 'P1', 'P2'] },
+                        }, required: ['quote', 'issue', 'severity'] } },
+            }, required: ['draftId', 'bodyHash', 'axis', 'score', 'reasons', 'improvements', 'reviewer', 'reviewerContext', 'findings'] },
+    },
+    {
         name: 'threads_publish',
         title: '⚠️ Threads publish (immediately public)',
         annotations: HINT.publish,
         outputSchema: publishOutput('postId', 'Threads post id — pass as replyToId to chain a follow-up reply'),
-        description: `⚠️ Direct Threads publishing — posts to the Threads API with local tokens, **immediately public** (the posting account is auto-resolved from the token's /me). There is no separate review gate, so call only right after the user has checked and approved the final copy and media (HITL — never call without approval). A post carries one of four shapes: a video (videoUrl), a single image (imageUrl), a link preview card (linkUrl), or text alone. The three media fields are mutually exclusive — one media_type per post. **Video episodes put the video on the post itself via videoUrl**, so it plays inline in the timeline with nothing to click away to; do not attach the video as a reply or fall back to a bare link (user directive 2026-08-19). Carousels are not supported by this tool. Publish quota: 250 per 24 hours. ${SNS_HITL_LINE}`,
+        description: `⚠️ Direct Threads publishing — posts to the Threads API with local tokens, **immediately public** (the posting account is auto-resolved from the token's /me). Exactly one of draftId (growth: hash-bound reviews, configured gate.json thresholds and style check) or episodeRef (existing episode and matching approval record) is required. dryRun checks without API calls. Call only right after the user has checked and approved the final copy and media (HITL — never call without approval). A post carries one of four shapes: a video (videoUrl), a single image (imageUrl), a link preview card (linkUrl), or text alone. The three media fields are mutually exclusive — one media_type per post. **Video episodes put the video on the post itself via videoUrl**, so it plays inline in the timeline with nothing to click away to; do not attach the video as a reply or fall back to a bare link (user directive 2026-08-19). Carousels are not supported by this tool. Publish quota: 250 per 24 hours. ${SNS_HITL_LINE}`,
         inputSchema: {
             type: 'object',
             properties: {
@@ -3507,8 +3549,13 @@ Returns: integer credit balance.`,
                 },
                 replyToId: { type: 'string', description: 'Publish as a reply to this post id (own reply chain, or joining someone else\'s post)' },
                 channel: SNS_CHANNEL_PROPERTY,
+                draftId: { type: 'string', description: 'Reviewed growth draft identifier; exclusive with episodeRef.' },
+                episodeRef: { type: 'string', description: 'Episode topic slug under data/<channel>/episodes; requires matching threads-publish-approval.json.' },
+                selfReply: { type: 'string', description: 'Optional reviewed self-reply; posted after the root succeeds.' },
+                dryRun: { type: 'boolean', description: 'Validate all gates without token access or network publishing.' },
             },
-            required: ['caption'],
+            required: ['caption', 'channel'],
+            oneOf: [{ required: ['draftId'], not: { required: ['episodeRef'] } }, { required: ['episodeRef'], not: { required: ['draftId'] } }],
         },
     },
     {
@@ -3732,7 +3779,7 @@ Returns: integer credit balance.`,
         title: '⚠️ Reply to inbound comment (immediately public)',
         annotations: HINT.publish,
         outputSchema: COMMENT_REPLY_OUTPUT,
-        description: `⚠️ Replies to an inbound comment — posts an **immediately public** reply with local tokens (the author is the brand account itself). There is no separate review gate, so publish only copy the user has approved (HITL — never call without approval). Use commentId straight from the sns_comment_inbox response. Per-platform contracts: THREADS — a new post carrying reply_to_id is the reply, so chains extend freely down to replies-to-replies / INSTAGRAM — replies attach to **top-level comments only** (to answer a sub-comment, pass its parent commentId — for comments carrying parentCommentId, use that value) / FACEBOOK — a comment on a comment id is the sub-comment / YOUTUBE — also top-level only, but a sub-comment id is accepted: this tool looks up the parent, reattaches at the thread root, and reports where it landed via parentCommentId in the response (needs the youtube.force-ssl scope). On failure, never blindly retry the same call (non-idempotent — duplicate replies). ${SNS_HITL_LINE}`,
+        description: `⚠️ Replies to an inbound comment — posts an **immediately public** reply with local tokens (the author is the brand account itself). THREADS requires a reviewed surface=reply draftId with matching commentId, voice score and server style check, exactly as threads_publish; dryRun validates without posting. Publish only copy the user has approved (HITL — never call without approval). Use commentId straight from the sns_comment_inbox response. Per-platform contracts: THREADS — a new post carrying reply_to_id is the reply, so chains extend freely down to replies-to-replies / INSTAGRAM — replies attach to **top-level comments only** (to answer a sub-comment, pass its parent commentId — for comments carrying parentCommentId, use that value) / FACEBOOK — a comment on a comment id is the sub-comment / YOUTUBE — also top-level only, but a sub-comment id is accepted: this tool looks up the parent, reattaches at the thread root, and reports where it landed via parentCommentId in the response (needs the youtube.force-ssl scope). On failure, never blindly retry the same call (non-idempotent — duplicate replies). ${SNS_HITL_LINE}`,
         inputSchema: {
             type: 'object',
             properties: {
@@ -3740,6 +3787,8 @@ Returns: integer credit balance.`,
                 commentId: { type: 'string', description: 'commentId from sns_comment_inbox (IG must be a top-level comment id — YT also accepts a sub-comment id)' },
                 message: { type: 'string', description: 'Final reply — THREADS ≤500 chars, IG ≤2,200, FB ≤8,000, YT ≤10,000' },
                 channel: SNS_CHANNEL_PROPERTY,
+                draftId: { type: 'string', description: 'Required for THREADS: reviewed reply draft bound to this commentId. Not accepted for other platforms.' },
+                dryRun: { type: 'boolean', description: 'THREADS only: validate the reply gate without credential or API access.' },
             },
             required: ['platform', 'commentId', 'message'],
         },
@@ -4076,6 +4125,24 @@ Returns: counts (violations · warnings · deferred) and two lists — structure
             required: ['path'],
         },
     },
+    {
+        name: 'scenario_check',
+        title: 'Check scenario candidates against their contract',
+        annotations: HINT.local,
+        description: `Run check-scenario.js on candidates/d1–d3.md or the selected scenario.md and return its machine-readable S1–S12 findings. Reads local scenario and research files and runs a local script; no API call.
+
+Use it after writing the three candidates and before showing them for selection, then again on scenario.md before the board is authored. A candidates/ directory includes the S7 set check; a selected scenario.md includes the chosen-direction and frozen checks.
+Do NOT treat a pass as approval of the wording or replace the storyboard review — this checks fields, references, structure, anchors, reveal discipline, length bands and frozen state.
+
+Returns: JSON — { files, violations, warnings, findings: [{ level, where, what }] }. Every what starts with S1–S12; violations are P0 and warnings do not make the tool fail.`,
+        inputSchema: {
+            type: 'object',
+            properties: {
+                path: { type: 'string', description: 'The candidates/ directory or the selected scenario.md' },
+            },
+            required: ['path'],
+        },
+    },
 ];
 /**
  * Per-platform publish tool → required credential platform — index.ts uses this
@@ -4085,6 +4152,8 @@ Returns: counts (violations · warnings · deferred) and two lists — structure
  */
 export const SNS_PLATFORM_BY_TOOL = {
     threads_publish: 'THREADS',
+    threads_draft_create: 'THREADS',
+    threads_review_submit: 'THREADS',
     threads_insights: 'THREADS',
     threads_search: 'THREADS',
     instagram_publish: 'INSTAGRAM',

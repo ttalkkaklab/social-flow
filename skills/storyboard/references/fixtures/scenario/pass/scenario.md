@@ -1,0 +1,42 @@
+---
+channel: test
+topic: gears
+direction: D1
+message: M1
+wow: W1
+wow_type: 반전
+wow_belief: 기어가 힘을 만든다
+wow_truth: "힘을 만드는 장치는 없다, 힘과 회전수를 맞바꿀 뿐 (#1)"
+wow_lands: "전개 #2"
+engine_primary: curiosity
+engine_secondary: none
+reveal: held
+structure: hook-drip-cta
+arc: n/a
+anchors:
+  hook_first: "무엇이 바뀔까요?"
+  closing_line: "힘을 쓸 곳을 고른다."
+  forwardable: "기어는 힘을 만들지 않는다."
+  cta: 없음
+claims: [1]
+score:
+p0:
+round: 0
+frozen: 2026-09-20
+---
+# 기어 — 시나리오
+**Message.** 힘을 쓸 곳을 고른다.
+## 주제
+왜 속도가 달라질까?
+## 훅 — feel -1 · 의문
+무엇이 바뀔까요? 기어의 원리를 알게 된다.
+## 전개 #1 — feel -3 · 막힘
+페달을 밟아도 힘이 늘지는 않는다. (#1)
+## 전개 #2 — feel +3 · 놀람
+힘을 만드는 장치는 없다, 힘과 회전수를 맞바꿀 뿐이다. (#1)
+## 전개 #3 — feel +2 · 납득
+1. 기어를 바꾸면 회전수가 달라진다. (#1)
+## 마무리 — feel +2 · 이해
+언덕 앞에서 기어를 고른다. 힘을 쓸 곳을 고른다. 기어는 힘을 만들지 않는다.
+## CTA — feel +2 · 충분함
+없음. 원리로 답을 마쳤다.

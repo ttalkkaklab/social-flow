@@ -1,6 +1,6 @@
 /**
- * Storyboard module — the sequence → scene → shot data behind three tools
- * (storyboard_read · storyboard_apply · storyboard_check).
+ * Storyboard module — the sequence → scene → shot data behind four tools
+ * (storyboard_read · storyboard_apply · storyboard_check · scenario_check).
  *
  * ## One module, two doors
  *
@@ -35,6 +35,7 @@ export const PLUGIN_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..'
 export const REFERENCES_DIR = join(PLUGIN_ROOT, 'skills', 'storyboard', 'references');
 export const CONTRACT_FILE = join(REFERENCES_DIR, 'structure-contract.js');
 export const CHECK_SCENES_FILE = join(REFERENCES_DIR, 'check-scenes.js');
+export const CHECK_SCENARIO_FILE = join(REFERENCES_DIR, 'check-scenario.js');
 // Namespace import: the esbuild banner already declares a top-level `createRequire`, and a named
 // import of the same identifier makes the bundle a SyntaxError.
 const loadFromHere = nodeModule.createRequire(import.meta.url);
@@ -188,6 +189,9 @@ export const storyboardReadSchema = z.object({
 export const storyboardCheckSchema = z.object({
     path: z.string().min(1).describe('The storyboard directory, or its scenes.js'),
     draft: z.boolean().default(false).describe('The story pass (storyboard §4a) — machine-layer absences are deferred, not violations'),
+});
+export const scenarioCheckSchema = z.object({
+    path: z.string().min(1).describe('The candidates directory, or its selected scenario.md'),
 });
 const globalsSchema = z.record(z.string().regex(/^[A-Z][A-Z0-9_]*$/, 'a window.* global is UPPER_CASE'), z.unknown());
 export const transitionPatchSchema = z.object({
@@ -459,6 +463,41 @@ export function applyStoryboard(args) {
     }
     result.written = true;
     return result;
+}
+const scenarioCheckResultSchema = z.object({
+    files: z.array(z.string()),
+    violations: z.number().int().nonnegative(),
+    warnings: z.number().int().nonnegative(),
+    findings: z.array(z.object({
+        level: z.enum(['bad', 'warn']),
+        where: z.string(),
+        what: z.string(),
+    })),
+});
+/** scenario_check — run check-scenario.js and preserve its JSON contract. Exit 1 is a
+ * valid result with P0 findings; exit 3 is an invalid target and becomes a tool error. */
+export function checkScenario(args, checkFile = CHECK_SCENARIO_FILE) {
+    let raw = '';
+    try {
+        raw = execFileSync(process.execPath, [checkFile, args.path, '--json'], {
+            encoding: 'utf8', timeout: 60_000, stdio: ['ignore', 'pipe', 'pipe'],
+        });
+    }
+    catch (e) {
+        const err = e;
+        raw = err.stdout || '';
+        if (err.status !== 1 || !raw.trim()) {
+            throw new Error(`check-scenario.js failed: ${(err.stderr || err.message).trim()}`);
+        }
+    }
+    let parsed;
+    try {
+        parsed = JSON.parse(raw);
+    }
+    catch {
+        throw new Error(`check-scenario.js returned no JSON: ${raw.slice(0, 400)}`);
+    }
+    return scenarioCheckResultSchema.parse(parsed);
 }
 /** storyboard_check — the structure rules here plus the full scenes.js contract from check-scenes.js. */
 export function checkStoryboard(args) {
