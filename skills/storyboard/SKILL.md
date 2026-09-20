@@ -284,11 +284,11 @@ the seven items is what starts the rest** — write `Chosen: D#`, copy the winne
 `scenario.md`, then §2.3. Unattended autoproduce has no user to ask, so it gets one batched
 reviewer read of the three pages and takes the highest (its §2.2).
 
-Portal (tools present): `scenario_save` per page as shown (`candidate: D<n>`, `file:` the absolute
-path of `candidates/d<n>.md`, `episodeDir:`), the pick as the same call with `chosen: true` — the
-portal keeps the seven items as structure and renders the page back through `scenario_pull`.
-`episode_checkpoint` `stage: "candidates"` before the pick, `"scenario"` after. Absent or
-erroring tools: one line, never hold the pick.
+Portal (tools present): **§3's lease-then-pull runs first** — a new topic has no `.portal.json`
+until `episode_create`. Then `scenario_save` per page as shown (`candidate: D<n>`, `file:` the
+absolute path of `candidates/d<n>.md`, `episodeDir:`), the pick as the same call with `chosen:
+true` — the portal keeps the seven items as structure and renders the page back through
+`scenario_pull`. `episode_checkpoint` `stage: "candidates"` before the pick, `"scenario"` after. Absent/erroring tools: one line, never hold the pick — except **409 `leased`** (§3 rule).
 
 #### 2.3 Additional research — close the chosen direction
 
@@ -397,23 +397,24 @@ before asking whether to continue from the existing storyboard, so the choice is
 the real state rather than a guess.
 
 **Portal — lease, then pull, before touching the copy (tools present, README §Optional).**
-An episode the portal has seen is the portal's; the directory is a working copy (two machines
-on one topic used to be last-writer-wins, silently). Top of a session: `episode_lease`
-`action: "acquire"`, `episodeDir:` the episode directory — with no `.portal.json` yet,
-`episode_create` first (`storyboardId` from `storyboard_list`, `slug` = the directory name,
-`title`, `format`, `episodeDir`), which writes that file. A **409** names who holds it and until
-when: one line to the user, wait or ask an admin to release — never write over a held episode.
-Then `storyboard_pull` (`episodeId` from `.portal.json`, `targetDir:` the directory) whenever the
+An episode the portal has seen is the portal's; the directory is a working copy (two machines on
+one topic used to be last-writer-wins, silently). Top of a session, before any portal write (§2.2
+included): `episode_lease` `action: "acquire"`, `episodeDir:` the episode directory — with no
+`.portal.json` yet, `episode_create` first (`storyboardId` from `storyboard_list`, `slug` = the
+directory name, `title`, `format`, `episodeDir`), which writes that file. A **409 `leased`** names who
+holds it and until when: one line to the user, wait or ask an admin to release — never write over a
+held episode; **every later write** (checkpoint, save, scenario, status) returns the same 409 while
+someone else holds it, handled the same way, never skipped as an error. Then
+`storyboard_pull` (`episodeId` from `.portal.json`, `targetDir:` the directory) whenever the
 portal's `headRevisionNo` is ahead — it rewrites `scenes.js`, the documents and a chosen
 `scenario.md`. Later `episode_checkpoint` / `storyboard_save` send that number as base; **409
-`head_moved`** = the portal moved under you: pull, re-apply, save. Release in §7 or let it expire (2h).
+`head_moved`** = the portal moved under you: pull, re-apply, save. Release in §7 or expire (2h).
 
 ### 3.5 Scenario — freeze the winner
 
 `storyboard/scenario.md` is already the §2.2 winner. After §2.3 extra research (and §2.5's
 long-form pick), patch that page if a new fact breaks an item, a false answer or a promise.
-Stamp `frozen:` when §4 opens — then `scenario_save` it once more (`chosen: true`, portal tools
-present). Four devices: [scenario-stage.md](references/scenario-stage.md). No reviewer reads this page.
+Stamp `frozen:` when §4 opens — then `scenario_save` it once more (`chosen: true`, portal tools present). Four devices: [scenario-stage.md](references/scenario-stage.md). No reviewer reads this page.
 ### 4. Scene design — writing scenes.js
 
 Write it to the contract in `references/scenes-schema.md` **through `storyboard_apply`** — one call carries the whole board (`set`: `structure` + `shots`) or one change (`scenes`·`sequences`·`shots` by key), validates the grammar vocabularies and the structure rules, and writes nothing past a violation. Keep the array name (`SCENES`); one entry is a **shot**.
@@ -968,9 +969,8 @@ once, in this order, before §5:
 Write what you changed and what you chose not to change into the §7 hand-off note — the
 approval screen is where a defect on the board gets its human look.
 
-Portal: `episode_checkpoint` `stage: "board"`, `episodeDir:` — it evaluates `scenes.js` and sends
-the shots as-is, the `window.*` blocks as meta, the documents. Same content as the last
-checkpoint makes no new revision, only a stage move, so an extra `"narration"` call after §4.6 is free.
+Portal: `episode_checkpoint` `stage: "board"`, `episodeDir:` — `scenes.js` shots as-is, `window.*`
+as meta, the documents. Same content as the last checkpoint makes no revision, only a stage move.
 
 ### 5. The image and clip plan — nothing is generated here
 
@@ -1327,7 +1327,7 @@ tools are not there, say so in one line and move on; if a call errors (missing v
 report the message in one line and never hold the approval on it — the portal records the
 approval, it does not gate it. The save is also a **checkpoint** at stage `approved` (revision into
 `.portal.json`); **409 `head_moved`** is not a retry — another machine saved first: `storyboard_pull`,
-re-apply the approved change, save again. Then `episode_lease` `action: "release"`.
+re-apply, save again; **409 `leased`** is the §3 rule. Then `episode_lease` `action: "release"`.
 
 **If there are filmed scenes**, the hand-off after approval is recording. It differs by lane.
 
