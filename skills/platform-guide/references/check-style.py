@@ -569,6 +569,21 @@ SURFACE_CFG = {
 # measured split point was 21/25, so a value in between. Raise it and normal list-style
 # posts get caught; lower it and nothing does.
 C7_FLOOR = 23
+SOCIAL_STRUCTURE_SURFACES = {"threads", "ig", "fb", "reply"}
+REPEATED_ENDING_SURFACES = {"threads", "reply"}
+HOST_ANNOUNCEMENT = re.compile(
+    r"(숫자\s*몇\s*개만?\s*더\s*둘게요|정리해\s*볼게요|말씀드리면)"
+)
+NUMBER_FIGURE = re.compile(
+    r"\d[\d,.\-~/:]*\s*(?:%|개|건|명|회|번|점|원)?"
+)
+DATE_FIGURE = re.compile(
+    r"(?<!\d)(?:\d{2,4}\s*년(?:\s*\d{1,2}\s*월)?(?:\s*\d{1,2}\s*일)?"
+    r"|\d{1,2}\s*월(?:\s*\d{1,2}\s*일)?|\d{1,2}\s*일)"
+)
+INCOMPLETE_ENDING = re.compile(
+    r"(?:고|며|면서|지만|는데|은데|다가|거나|든지|으면|면|아서|어서|니까|라서|려고)$"
+)
 
 PENALTY = {"S1": 20, "S2": 7, "S3": 2}
 METRIC_PENALTY = 3
@@ -720,6 +735,33 @@ def sentences(masked: str) -> list[tuple[int, str]]:
     return out
 
 
+def paragraph_blocks(masked: str) -> list[tuple[int, str]]:
+    """Paragraph blocks with their source offsets, preserving blank-line groups."""
+    out = []
+    for m in re.finditer(r"(?ms)(?:^|\n\s*\n)([^\n].*?)(?=\n\s*\n|\Z)", masked):
+        body = m.group(1).strip()
+        if body:
+            out.append((m.start(1), body))
+    return out
+
+
+def bullet_groups(masked: str) -> list[list[tuple[int, str]]]:
+    """Consecutive Markdown bullet groups with line offsets."""
+    groups, current = [], []
+    offset = 0
+    for line in masked.splitlines(keepends=True):
+        m = re.match(r"\s*(?:[-*+]\s+|\d+[.)]\s+)(.+?)\s*$", line.rstrip("\n"))
+        if m:
+            current.append((offset + m.start(1), m.group(1)))
+        elif current:
+            groups.append(current)
+            current = []
+        offset += len(line)
+    if current:
+        groups.append(current)
+    return groups
+
+
 def ending_key(sentence: str) -> str | None:
     """Last 2 syllables of the sentence's final eojeol — for repeated-ending checks."""
     words = sentence.split()
@@ -727,6 +769,35 @@ def ending_key(sentence: str) -> str | None:
         return None
     last = re.sub(r"[^가-힣]", "", words[-1])
     return last[-2:] if len(last) >= 2 else (last or None)
+
+
+def social_ending_key(sentence: str) -> str | None:
+    """Spoken ending form for social rhythm checks; a final 요 alone is not a form."""
+    key = ending_key(sentence)
+    if not key:
+        return None
+    last = re.sub(r"[^가-힣]", "", sentence.split()[-1])
+    for suffix, family in (("이에요", "이에요"), ("예요", "예요"),
+                           ("었어요", "어요"), ("았어요", "아요"),
+                           ("였어요", "어요"), ("했어요", "어요"),
+                           ("어요", "어요"), ("아요", "아요"),
+                           ("네요", "네요"), ("군요", "군요"),
+                           ("고요", "고요"), ("나요", "나요"),
+                           ("까요", "까요"), ("지요", "지요"),
+                           ("죠", "죠"), ("습니다", "습니다"),
+                           ("입니다", "입니다"), ("다", "다")):
+        if last.endswith(suffix):
+            return family
+    return key
+
+
+def has_complete_ending(sentence: str) -> bool:
+    """False for an obvious connective ending deliberately left hanging."""
+    words = sentence.split()
+    if not words:
+        return False
+    last = re.sub(r"[^가-힣]", "", words[-1])
+    return bool(last) and not INCOMPLETE_ENDING.search(last)
 
 
 def visible_len(sentence: str) -> int:
@@ -850,6 +921,147 @@ def analyze(text: str, surface: str, doc: bool = False) -> dict:
 
     sents = sentences(masked)
 
+    # Social-copy structure warnings. Each individual signal stays at S2: paragraph
+    # regularity, a host announcement, or four figures can all be legitimate alone.
+    # C13 blocks only when independent template signals reinforce one another.
+    structure_ids: set[str] = set()
+    if surface in SOCIAL_STRUCTURE_SURFACES:
+        blocks = paragraph_blocks(masked)
+        for i in range(max(0, len(blocks) - 2)):
+            window = blocks[i:i + 3]
+            parsed = [sentences(body) for _, body in window]
+            if any(len(items) < 2 for items in parsed):
+                continue
+            counts = [len(items) for items in parsed]
+            lengths = [sum(visible_len(sentence) for _, sentence in items)
+                       for items in parsed]
+            mean = sum(lengths) / len(lengths)
+            signatures = [tuple(social_ending_key(sentence) for _, sentence in items)
+                          for items in parsed]
+            same_count = len(set(counts)) == 1
+            near_length = mean > 0 and (max(lengths) - min(lengths)) / mean <= 0.15
+            same_endings = len(set(signatures)) == 1 and all(signatures[0])
+            if same_count and near_length and same_endings:
+                findings.append({
+                    "id": "C8", "severity": "S2",
+                    "label": "three matching paragraph boxes",
+                    "line": line_of(text, window[0][0]),
+                    "excerpt": window[0][1][:40],
+                    "fix": "Rewrite the whole rhythm; length uniformity alone is not the defect",
+                })
+                structure_ids.add("C8")
+                break
+
+        if surface in REPEATED_ENDING_SURFACES and len(sents) >= 3:
+            keys = [social_ending_key(sentence) for _, sentence in sents]
+            run, worst, at = 1, 1, 0
+            for i in range(1, len(keys)):
+                if keys[i] and keys[i] == keys[i - 1]:
+                    run += 1
+                    if run > worst:
+                        worst, at = run, i
+                else:
+                    run = 1
+            if worst >= 3:
+                findings.append({
+                    "id": "C9", "severity": "S2",
+                    "label": f"same sentence ending {worst} in a row on social copy",
+                    "line": line_of(text, sents[at][0]),
+                    "excerpt": sents[at][1][:40],
+                    "fix": "Read the passage aloud and change the rhythm, not just the suffix",
+                })
+                structure_ids.add("C9")
+
+        host_hits = list(HOST_ANNOUNCEMENT.finditer(masked))
+        if host_hits:
+            m = host_hits[0]
+            findings.append({
+                "id": "C10", "severity": "S2",
+                "label": "host announcement instead of information",
+                "line": line_of(text, m.start()),
+                "excerpt": text[m.start():m.end()],
+                "fix": "Delete the announcement and start with the information",
+            })
+            structure_ids.add("C10")
+
+        matching_bullets = None
+        for group in bullet_groups(masked):
+            if len(group) < 3:
+                continue
+            keys = [social_ending_key(body) for _, body in group]
+            if keys[0] and len(set(keys)) == 1:
+                matching_bullets = group
+                break
+        if matching_bullets:
+            findings.append({
+                "id": "C11", "severity": "S2",
+                "label": f"{len(matching_bullets)} matching bullet endings",
+                "line": line_of(text, matching_bullets[0][0]),
+                "excerpt": matching_bullets[0][1][:40],
+                "fix": "Keep the list only when comparison or order needs it; rewrite its rhythm",
+            })
+            structure_ids.add("C11")
+
+        # Keep URLs, hashtags and Latin names out of the count while leaving figures
+        # visible. Four figures trigger a density review; they are not a defect alone.
+        number_source = list(text)
+        for rx in MASKS[:3]:
+            for m in rx.finditer(text):
+                for pos in range(m.start(), m.end()):
+                    if number_source[pos] != "\n":
+                        number_source[pos] = " "
+        figure_text = "".join(number_source)
+        figure_chars = list(figure_text)
+        for m in DATE_FIGURE.finditer(figure_text):
+            for pos in range(m.start(), m.end()):
+                if figure_chars[pos] != "\n":
+                    figure_chars[pos] = " "
+        figure_text = "".join(figure_chars)
+        figures = list(NUMBER_FIGURE.finditer(figure_text))
+        figure_limit = 6 if surface == "reply" else 3
+        if len(figures) > figure_limit:
+            findings.append({
+                "id": "C12", "severity": "S2",
+                "label": f"number density review ({len(figures)} figures)",
+                "line": line_of(text, figures[0].start()),
+                "excerpt": text[figures[0].start():figures[min(3, len(figures) - 1)].end()],
+                "fix": "Check density; keep every date, unit, denominator and factual qualifier the claim needs",
+            })
+            structure_ids.add("C12")
+
+        # Repeated polite endings plus several figures are common in factual copy. The
+        # blocking aggregate needs a stronger template pair: matching paragraph boxes,
+        # a host announcement, or matching bullets reinforced by another strong signal.
+        strong = structure_ids & {"C8", "C10", "C11", "C12"}
+        stacked = ({"C10", "C11"} <= strong or {"C10", "C12"} <= strong
+                   or {"C11", "C12"} <= strong
+                   or ("C8" in strong and bool(strong - {"C8"})))
+        if stacked:
+            findings.append({
+                "id": "C13", "severity": "S1",
+                "label": "stacked social-post template signals",
+                "line": min((f["line"] for f in findings if f["id"] in strong), default=1),
+                "excerpt": ", ".join(sorted(strong)),
+                "fix": "Rewrite the post as one specific scene or judgment before publishing",
+            })
+
+        # C7 covers pieces whose longest sentence is under 23 chars. Channel measurement
+        # found a second narrow shape above that floor: every sentence closes cleanly and
+        # even the longest stays at 40 chars or below. A single connective-ending fragment
+        # is enough to disprove this signal. Length variance is deliberately not used.
+        if surface in REPEATED_ENDING_SURFACES and len(sents) >= 5:
+            longest = max((visible_len(sentence) for _, sentence in sents), default=0)
+            complete = sum(has_complete_ending(sentence) for _, sentence in sents)
+            if C7_FLOOR <= longest <= 40 and complete == len(sents):
+                findings.append({
+                    "id": "C14", "severity": "S2",
+                    "label": ("all sentences fully closed and longest is "
+                              f"{longest} chars"),
+                    "line": line_of(text, sents[0][0]),
+                    "excerpt": sents[0][1][:40],
+                    "fix": "Read the whole rhythm; do not manufacture a fragment only to clear this warning",
+                })
+
     # Sentence length (only surfaces with a schema bound)
     if cfg["len"] and sents:
         lo, hi = cfg["len"]
@@ -919,8 +1131,14 @@ def analyze(text: str, surface: str, doc: bool = False) -> dict:
     quoted = [f for f in findings if f.get("quoted")]
 
     score = 100
+    # C9 is the broad version of the same ending signal already carried by C8, C11 or
+    # D9b. Keep it visible, but charge that signal only once.
+    c9_duplicate = any(f["id"] == "C9" for f in live) and any(
+        f["id"] in {"C8", "C11", "D9b"} for f in live)
     for f in live:
         if f["id"] not in {"E1", "E2", "E3"}:
+            if f["id"] == "C9" and c9_duplicate:
+                continue
             score -= PENALTY[f["severity"]]
     for m in metrics:
         # Length deviations are penalized by ratio — charging one deviant sentence and
@@ -1374,6 +1592,73 @@ SELFTEST = [
      "빠르고 간편하며 안전한 절차입니다.\n"
      "첫째로 신청서를 냅니다. 둘째로 서류를 냅니다. 마지막으로 기다립니다.\n"
      "끝까지 읽어주셔서 고맙습니다.\n"),
+    # C8~C13 social-copy structure. Individual signals warn; independent signals
+    # together form the blocking template finding C13.
+    ("C8 matching paragraph boxes warn", "threads", 0, (
+        "나는 문을 열었어요. 가방을 내려놨어요.\n\n"
+        "친구는 불을 켰어요. 의자를 꺼냈어요.\n\n"
+        "동생은 창을 열었어요. 외투를 걸었어요.\n"
+    ), ("C8",), ("C13",)),
+    ("length regularity alone is not C8", "threads", 0, (
+        "나는 문을 열었어요. 가방을 내려놨어요.\n\n"
+        "친구는 불을 켰고 의자를 꺼냈어.\n\n"
+        "동생은 창을 닫았어요. 외투를 걸고 앉았지.\n"
+    ), (), ("C8", "C13")),
+    ("C9 three repeated social endings warn", "threads", 0,
+     "문을 열었어요. 가방을 내려놨어요. 의자를 꺼냈어요. 이제 시작할까요?\n",
+     ("C9",), ("C13",)),
+    ("varied polite endings are not one C9 suffix", "threads", 0,
+     "오늘 회의를 했어요. 생각보다 길었고요. 그래서 정리를 못 했네요. 내일 다시 볼까요?\n",
+     (), ("C9", "C13")),
+    ("C10 matches the whole host phrase", "threads", 0,
+     "숫자 몇 개만 더 둘게요. 첫 수치는 어제 확인했어.\n",
+     ("C10",), ("C13",)),
+    ("ordinary promise is not C10", "threads", 0,
+     "자료는 책상에 둘게요. 정리는 내일 같이 하자.\n",
+     (), ("C10", "C13")),
+    ("C11 matching bullets warn", "threads", 0, (
+        "- 첫 화면을 닫았어요\n"
+        "- 둘째 창을 닫았어요\n"
+        "- 마지막 탭을 닫았어요\n"
+    ), ("C11",), ("C13",)),
+    ("mixed bullet endings do not trigger C11", "threads", 0, (
+        "- 첫 화면은 닫았어\n"
+        "- 둘째 창은 아직 열려 있어요\n"
+        "- 마지막 탭은 내일 보자\n"
+    ), (), ("C11", "C13")),
+    ("C12 four figures are a density review, not a block", "threads", 0,
+     "1명이 2건을 맡아 3번 확인했고 비용은 4만 원이었어. 이 숫자부터 확인할까?\n",
+     ("C12",), ("C13",)),
+    ("dates do not count toward C12 density", "threads", 0,
+     "설정 파일 9개를 복원했어. 에이전트 약 700개가 나갔어. 7월 첫 행동은 8일, 확인은 19일이야.\n",
+     (), ("C12", "C13")),
+    ("four supporting figures fit in a reply", "reply", 0,
+     "10억 건 중 0.002%였고, 다른 시험은 122건 중 10건이었어요.\n",
+     (), ("C12", "C13")),
+    ("seven figures trigger C12 in a reply", "reply", 0,
+     "1건, 2건, 3건, 4건, 5건, 6건, 7건을 한꺼번에 적었어요.\n",
+     ("C12",), ("C13",)),
+    ("C14 fully closed short-range prose warns", "threads", 0, (
+        "회의가 예상보다 길어서 점심시간까지 회의실에 있었어요.\n"
+        "첫 안건은 어제 확인했어요.\n"
+        "둘째 안건도 오늘 확인했어요.\n"
+        "마지막 자료는 팀에 보냈어요.\n"
+        "내일 다시 볼까요?\n"
+    ), ("C14",)),
+    ("a connective-ending fragment clears C14", "threads", 0, (
+        "회의가 예상보다 길어서 점심시간까지 회의실에 있었어요.\n"
+        "첫 안건은 어제 확인했어요.\n"
+        "둘째 안건도 오늘 확인했어요.\n"
+        "마지막 자료는 팀에 보냈고.\n"
+        "내일 다시 볼까요?\n"
+    ), (), ("C14",)),
+    ("stacked social template signals block", "reply", 2, (
+        "숫자 몇 개만 더 둘게요.\n\n"
+        "- 첫 검사에서 1건을 마쳤어요\n"
+        "- 둘째 검사에서 2건을 마쳤어요\n"
+        "- 셋째 검사에서 3건을 마쳤어요\n\n"
+        "4건, 5건, 6건, 7건 중 어느 쪽이 더 걸리세요?\n"
+    ), ("C10", "C11", "C12", "C13")),
     # C7 no long sentence. Both fixtures are **actual published posts** — the one whose
     # same-age reach lagged 2.6x (longest 21 chars) and the best-performing one (longest
     # 30 chars). A pair with zero lexical tells yet opposite outcomes, so C7 is pinned

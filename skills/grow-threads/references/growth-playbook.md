@@ -152,6 +152,54 @@ account). Rules:
    never "많이 봐줘"-type filler, and it goes through the gate like any other
    copy.
 
+### AI 티가 나는 구조 — avoid the template
+
+- **Don't build matching paragraph boxes.** Repeated sentence counts,
+  near-identical paragraph lengths and identical endings together call for a
+  rewrite. Read the whole post aloud; varying endings mechanically (`~거든요`
+  here, `~더라고요` there) doesn't fix its structure. Length uniformity alone
+  isn't proof of machine authorship — §Form records a counterexample.
+- **Cut the host's announcements.** `숫자 몇 개만 더 둘게요`, `정리해 볼게요`
+  and `말씀드리면` announce information instead of giving it. Start with the
+  information. Don't ban an ordinary promise just because it ends in `둘게요`.
+- **Don't default to three matching bullets plus a question.** Lists earn
+  their place when the reader needs to compare or follow steps. Three bullets
+  with matching endings followed by `어느 쪽이 더 걸리세요?` don't become a
+  conversation by adding the question mark.
+- **Give numbers a job.** Keep the number that makes the scene legible; move
+  supporting figures to the self-reply or omit them. Four figures are a cue
+  to inspect density, not an automatic defect. Keep dates, denominators,
+  units and qualifications needed to understand the remaining claim.
+- **Don't manufacture a confession to escape the template.** First-person
+  incidents, dialogue and actions need supplied evidence. Mark an imagined
+  scene as hypothetical. A style-check PASS never certifies truth or rhythm.
+- **Earn the closing question.** §New-post style's question ending must grow
+  out of a specific tension in the post. Don't append a generic audience poll
+  to a finished mini-lecture. Leave readers something concrete to answer.
+
+### 코믹 요소 — make the situation do the work
+
+- **Start with the friction, not a joke quota.** Use a concrete object or
+  action and a mismatch between what the narrator expects and what happens.
+  When comic copy is requested, test whether the reader can point to the
+  scene and the turn; an emoji or `ㅋㅋ` is neither.
+- **Let the narrator take the hit.** A modest self-directed jab can make a
+  serious subject approachable. Keep it an opinion or a supported experience;
+  don't invent a mishap, quote or customer story to sound human.
+- **Keep the turn attached to the subject.** For example, imagining less work
+  after delegation and finding oneself busy supervising keeps the joke on
+  the operator. Don't give the AI invented motives or dialogue and present
+  them as an observed incident.
+- **Keep the facts intact through the punchline.** A monitoring block rate
+  isn't a failure rate or the share of danger detected. An incident count
+  isn't a prediction for all deployments. Don't shorten away the qualifier
+  that prevents that reading.
+- **No victim ridicule, forced memes or alarmist punchlines.** No fabricated
+  damage, slurs, emoji piles, engagement bait or jokes at an affected user's
+  expense. On harm-heavy material, keep the joke on the narrator's habits
+  or skip it. Don't turn every post into the same confession–joke–question
+  template; comic strength is judged by reading, not by counting devices.
+
 ## §Post types — what each one buys
 
 Measured on 61 popular Korean posts collected from the logged-out
