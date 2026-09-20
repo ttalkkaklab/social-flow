@@ -191,6 +191,9 @@ GROWTH_POST_REVIEW: draft=N score=NN p0=N verdict=PASS|FAIL
 
 Verdict rule: **PASS when score ≥95 and p0=0**, otherwise FAIL. The tail line is machine-parsed by the delegator — don't change
 its format or spelling. Downgrade findings you aren't sure about from P0 to fix
-directives, except suspected AI-tell structure (P0-8) and answering past the
-point (P0-7), which always go to P0 — those two are the defects that kill an
-account, and a false positive gets refuted next round.
+directives, except answering past the point (P0-7), which always goes to P0 —
+that one kills an account, and a false positive gets refuted next round.
+AI-tell structure (P0-8) keeps its own threshold here too: call it P0 once
+several structural signals reinforce one another, even while you are unsure,
+but leave a lone rhythm, host or density signal as a deduction. Don't resolve
+an uncertain single signal by blocking.

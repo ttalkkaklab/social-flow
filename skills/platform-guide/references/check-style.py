@@ -581,6 +581,9 @@ DATE_FIGURE = re.compile(
     r"(?<!\d)(?:\d{2,4}\s*년(?:\s*\d{1,2}\s*월)?(?:\s*\d{1,2}\s*일)?"
     r"|\d{1,2}\s*월(?:\s*\d{1,2}\s*일)?|\d{1,2}\s*일)"
 )
+# An ordered-list marker is structure, not a quantity. "1." "2)" at the head of a
+# line say nothing about how many of anything there are.
+LIST_MARKER_FIGURE = re.compile(r"(?m)^[ \t]*\d+[.)](?=[ \t])")
 INCOMPLETE_ENDING = re.compile(
     r"(?:고|며|면서|지만|는데|은데|다가|거나|든지|으면|면|아서|어서|니까|라서|려고)$"
 )
@@ -1012,10 +1015,11 @@ def analyze(text: str, surface: str, doc: bool = False) -> dict:
                         number_source[pos] = " "
         figure_text = "".join(number_source)
         figure_chars = list(figure_text)
-        for m in DATE_FIGURE.finditer(figure_text):
-            for pos in range(m.start(), m.end()):
-                if figure_chars[pos] != "\n":
-                    figure_chars[pos] = " "
+        for rx in (LIST_MARKER_FIGURE, DATE_FIGURE):
+            for m in rx.finditer(figure_text):
+                for pos in range(m.start(), m.end()):
+                    if figure_chars[pos] != "\n":
+                        figure_chars[pos] = " "
         figure_text = "".join(figure_chars)
         figures = list(NUMBER_FIGURE.finditer(figure_text))
         figure_limit = 6 if surface == "reply" else 3
@@ -1629,6 +1633,20 @@ SELFTEST = [
     ("C12 four figures are a density review, not a block", "threads", 0,
      "1명이 2건을 맡아 3번 확인했고 비용은 4만 원이었어. 이 숫자부터 확인할까?\n",
      ("C12",), ("C13",)),
+    ("ordered-list markers are not figures", "threads", 0, (
+        "정리해 볼게요.\n"
+        "1. 창을 닫아요\n"
+        "2. 파일을 열어요\n"
+        "3. 내용을 고쳐요\n"
+        "4. 저장을 눌러요\n"
+    ), ("C10",), ("C12", "C13")),
+    ("quantities inside a numbered list still count", "threads", 0, (
+        "어제 고친 자리를 적어 둡니다.\n"
+        "1. 창 12개를 닫아요\n"
+        "2. 파일 34건을 열어요\n"
+        "3. 줄 56개를 고쳐요\n"
+        "4. 78번 저장을 눌러요\n"
+    ), ("C12",), ("C13",)),
     ("dates do not count toward C12 density", "threads", 0,
      "설정 파일 9개를 복원했어. 에이전트 약 700개가 나갔어. 7월 첫 행동은 8일, 확인은 19일이야.\n",
      (), ("C12", "C13")),
