@@ -1432,4 +1432,8 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
     const r = storyboard.checkStoryboard(parseArgs(storyboard.storyboardCheckSchema, args));
     return text(storyboard.renderCheck(r), r.violations > 0);
   },
+  scenario_check: async (args) => {
+    const r = storyboard.checkScenario(parseArgs(storyboard.scenarioCheckSchema, args));
+    return text(JSON.stringify(r, null, 2), r.violations > 0);
+  },
 };

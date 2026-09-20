@@ -107,14 +107,15 @@ import {
 } from './mlx-serve-client.js';
 
 /**
- * Tool surface definitions (77 tools) — 9 research (incl. stock_search) + 5 open-data +
- * 37 generation (5 image + 12 video + 9 voice + 1 STT + 9 music + 1 mesh) +
+ * Tool surface definitions (83 tools) — 9 research (incl. stock_search) + 5 open-data +
+ * 40 generation (5 image + 12 video + 9 voice + 1 STT + 9 music + 1 mesh +
+ * youtube_topic_scout + sns_issue_scout + content_feedback) +
  * 6 per-platform publishing + 3 inbound comments + 5 growth lookups (Threads
  * insights/keyword search · YouTube insights · Instagram insights · recent-content
  * feedback — the insights trio is for the grow-* skills only; content_feedback covers
- * both video platforms and writes an HTML report) + 2 checks (sns_account_check ·
- * capability_status) + 7 blender previz + 3 storyboard. The six mlx_* tools wrap
- * MLX Core / mlx-serve on loopback; they are not a second MCP server. 68 of those
+ * both video platforms and writes an HTML report) + 2 growth review + 2 checks
+ * (sns_account_check · capability_status) + 7 blender previz + 4 storyboard. The six
+ * mlx_* tools wrap MLX Core / mlx-serve on loopback; they are not a second MCP server. 69 of those
  * list without SNS tokens (README §MCP tools is the per-tool table).
  *
  * Publish tool descriptions embed the HITL contract — this server has no
@@ -4360,6 +4361,24 @@ Returns: counts (violations · warnings · deferred) and two lists — structure
       properties: {
         path: { type: 'string', description: 'The storyboard directory or its scenes.js' },
         draft: { type: 'boolean', description: 'The story pass (storyboard §4a) — machine-layer absences deferred' },
+      },
+      required: ['path'],
+    },
+  },
+  {
+    name: 'scenario_check',
+    title: 'Check scenario candidates against their contract',
+    annotations: HINT.local,
+    description: `Run check-scenario.js on candidates/d1–d3.md or the selected scenario.md and return its machine-readable S1–S12 findings. Reads local scenario and research files and runs a local script; no API call.
+
+Use it after writing the three candidates and before showing them for selection, then again on scenario.md before the board is authored. A candidates/ directory includes the S7 set check; a selected scenario.md includes the chosen-direction and frozen checks.
+Do NOT treat a pass as approval of the wording or replace the storyboard review — this checks fields, references, structure, anchors, reveal discipline, length bands and frozen state.
+
+Returns: JSON — { files, violations, warnings, findings: [{ level, where, what }] }. Every what starts with S1–S12; violations are P0 and warnings do not make the tool fail.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        path: { type: 'string', description: 'The candidates/ directory or the selected scenario.md' },
       },
       required: ['path'],
     },
