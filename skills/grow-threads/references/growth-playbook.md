@@ -152,6 +152,40 @@ account). Rules:
    never "많이 봐줘"-type filler, and it goes through the gate like any other
    copy.
 
+### 여는 자리 — begin with the reader's thought
+
+- **The first sentence brings out something the reader already wonders or
+  recognizes.** It must work before any explanation of our organization,
+  systems or internal incident. Name enough of the actor and action that a
+  reader can follow the tension immediately. A concrete object and a problem
+  inside our team don't, by themselves, give the reader a reason to care.
+- **Don't open with `저희는` or `우리 팀` and make our internal situation the
+  subject.** Move our experience later, into the `근데 우리도 똑같더라` position.
+  That is where a complaint about others turns back on the narrator and the
+  reader's opening thought becomes a shared embarrassment. Use an experience
+  only when its facts are supplied or verified; don't invent a failure to
+  fill this position.
+- **Failed opening:** `AI 위험 얘기를 하던 저희 팀의 감시 프로그램이 조용히
+  죽어 있었어요.` The internal failure may be concrete, but the reader must
+  first care about our monitoring setup to care about the sentence.
+- **Accepted opening:** `AI 만드는 회사들은 위험하다면서 왜 AI한테 일을 더
+  맡길까요?` The actor, action and apparent inconsistency are readable at
+  once; the next paragraph can supply the evidence. This is an example of the
+  position, not a stock line to reuse on every topic.
+- **No generic reaction in place of a thought.** `저만 이러나요?` doesn't name
+  what the reader recognizes. Nor does a metaphor such as `판을 키우다` help
+  when the actor and action remain unclear. A question earns its place by
+  naming the tension; adding a question mark isn't enough.
+- **Don't assign the reader an emotion.** `다들 화나셨죠` or claiming that
+  everyone feels the same thing supplies an audience reaction we haven't
+  observed. Let readers recognize their own thought without telling them
+  what they feel. Keep factual qualifiers even when they soften the joke.
+- **Check the opening before scoring the rest.** If it needs internal context
+  to make sense, rewrite it; high style or scene scores don't compensate.
+  When the review uses F0, a zero must be submitted as a P0 finding quoting
+  the complete first sentence, so the gate can block it without inferring
+  meaning from a total score.
+
 ### AI 티가 나는 구조 — avoid the template
 
 - **Don't build matching paragraph boxes.** Repeated sentence counts,
