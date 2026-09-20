@@ -26,18 +26,30 @@ hf download ddalcu/LTX-2.5-MLX-Serve-4bit --local-dir ~/models/LTX-2.5-MLX-Serve
 Check the text encoder is there before starting the server — a pack without it looks fine on
 disk and fails at the first request.
 
+`--local-dir` and `--model` take any path, so the pack does not have to sit under `$HOME`. Set
+`HF_HOME` to the same volume before downloading, or `huggingface_hub` stages another copy of the
+36GB in `~/.cache/huggingface` on the way through. A separate volume must be one that mounts at
+boot — the server starts before a removable disk is there and reports no video capability.
+
 ## 2. Start the server so that video is registered
 
-Point the server at the folder:
+Point the server at the folder — **from launchd, not from a shell an agent owns**:
 
 ```bash
-mlx-serve --model ~/models/LTX-2.5-MLX-Serve-4bit --serve
+# ~/Library/LaunchAgents/com.ttalkkaklab.mlx-serve.plist → ProgramArguments:
+#   mlx-serve --model /path/to/LTX-2.5-MLX-Serve-4bit --serve
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.ttalkkaklab.mlx-serve.plist
 curl -s http://127.0.0.1:11234/v1/models | jq '.data[] | {id, state, capabilities}'
 # {"id":"LTX-2.5-MLX-Serve-4bit","state":"ready","capabilities":["video"]}
 ```
 
-Two things to know:
+Three things to know:
 
+- **A generation that dies at ~51s is the parent shell, not the model.** Started as a child of an
+  agent's shell, the server is torn down with the process group when that turn ends, and every
+  request dies at the same second (51.7s measured three times in a row on 2026-09-20). `nohup`
+  does not survive it. Under launchd the same model and the same request ran the full 13 minutes.
+  A 768×1280 49-frame clip takes ~13 minutes, so no interactive shell outlives it.
 - `mlx-serve serve` (catalog mode) does **not** register `POST /v1/video/generations`. The
   request comes back 404 and `mlx_video_generate` reports the server as down for video. Use
   `--model <path> --serve`.
@@ -45,7 +57,7 @@ Two things to know:
   mode. The server does not validate the `model` field either way (a wrong id still answers
   200), so let the tool pick the model instead of passing one.
 
-Both of these live in MLX Core.app, not in this repository.
+The last two live in MLX Core.app, not in this repository.
 
 ## 3. What the request has to satisfy
 
@@ -68,6 +80,12 @@ The schema refuses each of these before the POST, so a mistake costs no GPU time
 |---|---|
 | 768×1280 | 12min 47s |
 | 1088×1920 | 42min 37s |
+
+Both rows are end-to-end `time_total` on one request, not GPU time. A cold model load and the
+192MB JSON response body are inside the number. A launchd re-measurement of the 768×1280 row on
+2026-09-20 landed at 786.7s, 20s off the row above, but the server logs carry no timestamps, so
+the load has not been separated from the diffusion. Budget from these numbers; do not subtract a
+warm start nobody has measured.
 
 Scaling is not linear — a linear estimate from the pack's own benchmark was off by 3.8× and
 6×. Treat this as a batch-render lane: it does not replace `veo_*` / `seedance_*` for a cut
