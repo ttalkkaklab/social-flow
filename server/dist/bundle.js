@@ -76254,7 +76254,8 @@ function applyPatch(win, patch) {
     }
   }
   const finalOrder = shots.slice();
-  for (const source of patch.removeShots || patch.insertShots ? finalOrder : []) {
+  const reordered = Boolean(patch.removeShots || patch.removeShotIds || patch.insertShots);
+  for (const source of reordered ? finalOrder : []) {
     if (!beforeReorder.includes(source)) continue;
     const e2 = source.shot?.eyeline;
     if (e2 && typeof e2.matchShot === "number") {

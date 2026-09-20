@@ -417,7 +417,10 @@ export function applyPatch(win, patch) {
     }
     // Existing references name pre-reorder shots. Inserted records use final positions.
     const finalOrder = shots.slice();
-    for (const source of patch.removeShots || patch.insertShots ? finalOrder : []) {
+    // Any reorder — by position or by id (R7) — has to walk the references; a removeShotIds-only
+    // patch used to skip this and leave matchShot pointing at the wrong position (review P2).
+    const reordered = Boolean(patch.removeShots || patch.removeShotIds || patch.insertShots);
+    for (const source of reordered ? finalOrder : []) {
         if (!beforeReorder.includes(source))
             continue;
         const e = source.shot?.eyeline;
