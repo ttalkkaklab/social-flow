@@ -415,7 +415,8 @@ export function applyPatch(win: Board, patch: StoryboardApplyArgs): { win: Board
   let shots: Shot[] = Array.isArray(next.SCENES) ? next.SCENES.slice() : [];
   if (patch.shots) for (const { no, shot } of patch.shots.slice().sort((a, b) => a.no - b.no)) {
     if (no > shots.length + 1) throw new Error(`shot ${no}: the board has ${shots.length} shots — no = ${shots.length + 1} appends`);
-    shots[no - 1] = shot;
+    const current = shots[no - 1];
+    shots[no - 1] = shot.id === undefined && current?.id !== undefined ? { id: current.id, ...shot } : shot;
   }
   const beforeReorder = shots.slice();
   if (patch.removeShots) {

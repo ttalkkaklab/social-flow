@@ -76209,7 +76209,8 @@ function applyPatch(win, patch) {
   let shots = Array.isArray(next.SCENES) ? next.SCENES.slice() : [];
   if (patch.shots) for (const { no, shot } of patch.shots.slice().sort((a, b) => a.no - b.no)) {
     if (no > shots.length + 1) throw new Error(`shot ${no}: the board has ${shots.length} shots \u2014 no = ${shots.length + 1} appends`);
-    shots[no - 1] = shot;
+    const current = shots[no - 1];
+    shots[no - 1] = shot.id === void 0 && current?.id !== void 0 ? { id: current.id, ...shot } : shot;
   }
   const beforeReorder = shots.slice();
   if (patch.removeShots) {

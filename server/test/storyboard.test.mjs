@@ -162,13 +162,17 @@ describe('applyPatch', () => {
     assert.deepEqual(again.win.SCENES.map((s) => s.id), ['s0005', 's0006', 's0007', 's0008']);
     assert.equal(again.win.STRUCTURE.nextShotId, 9);
   });
-  it('assigns a new id to a positional upsert and preserves an id supplied by the caller', () => {
+  it('positional upsert without id inherits the id at that position', () => {
     const base = applyPatch({}, storyboardApplySchema.parse({ path: 'x', set: { structure: structure([scene(1), scene(2)]), shots: board() } })).win;
     const changed = applyPatch(base, storyboardApplySchema.parse({ path: 'x', shots: [{ no: 2, shot: board()[1] }] }));
-    assert.equal(changed.win.SCENES[1].id, 's0005');
-    const preserved = applyPatch(changed.win, storyboardApplySchema.parse({ path: 'x', shots: [{ no: 2, shot: { ...board()[1], id: 's0005' } }] }));
-    assert.equal(preserved.win.SCENES[1].id, 's0005');
-    assert.equal(preserved.win.STRUCTURE.nextShotId, 6);
+    assert.equal(changed.win.SCENES[1].id, 's0002');
+    assert.equal(changed.win.STRUCTURE.nextShotId, 5);
+  });
+  it('positional upsert with an explicit different id replaces the id', () => {
+    const base = applyPatch({}, storyboardApplySchema.parse({ path: 'x', set: { structure: structure([scene(1), scene(2)]), shots: board() } })).win;
+    const changed = applyPatch(base, storyboardApplySchema.parse({ path: 'x', shots: [{ no: 2, shot: { ...board()[1], id: 's0042' } }] }));
+    assert.equal(changed.win.SCENES[1].id, 's0042');
+    assert.equal(changed.win.STRUCTURE.nextShotId, 43);
   });
   it('assigns ids to inserts and never reuses a deleted number', () => {
     const base = applyPatch({}, storyboardApplySchema.parse({ path: 'x', set: { structure: structure([scene(1), scene(2)]), shots: board() } })).win;
