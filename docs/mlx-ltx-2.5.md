@@ -81,6 +81,12 @@ The schema refuses each of these before the POST, so a mistake costs no GPU time
 | 768×1280 | 12min 47s |
 | 1088×1920 | 42min 37s |
 
+Both rows are end-to-end `time_total` on one request, not GPU time. A cold model load and the
+192MB JSON response body are inside the number. A launchd re-measurement of the 768×1280 row on
+2026-09-20 landed at 786.7s, 20s off the row above, but the server logs carry no timestamps, so
+the load has not been separated from the diffusion. Budget from these numbers; do not subtract a
+warm start nobody has measured.
+
 Scaling is not linear — a linear estimate from the pack's own benchmark was off by 3.8× and
 6×. Treat this as a batch-render lane: it does not replace `veo_*` / `seedance_*` for a cut
 with a deadline. It earns its place when the clip must not leave the machine, or when there
