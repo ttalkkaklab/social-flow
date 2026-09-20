@@ -784,7 +784,17 @@ describe('portal_* handlers on a scripted portal', () => {
     });
     const local = JSON.parse((await portal.portalHandlers(mine.impl).workspaceCheck({ episodeDir: dir })).text);
     assert.equal(local.sync, 'local_ahead');
-    assert.equal(local.portal.lease.mine, true, 'no mine flag from the portal → compared with my holder');
+    assert.match(local.syncWarning, /records head #5 but the portal's head is #3/);
+    assert.equal(local.portal.lease.mine, true, 'no mine flag from the portal → my holder → mine');
+    assert.equal(ahead.syncWarning, undefined);
+
+    // same key, other machine: the portal says mine (same key) but the holder differs → not mine
+    const twin = fakeFetch({
+      'GET /api/workspaces/lab/me': { success: true, data: { role: 'member' } },
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}`]: { success: true, data: { id: EPISODE_ID, slug: 's', title: 't', storyboardId: STORYBOARD_ID, headRevisionNo: 5, lease: { holder: 'me@other-box', expiresAt: 'x', mine: true } } },
+    });
+    const t = JSON.parse((await portal.portalHandlers(twin.impl).workspaceCheck({ episodeDir: dir })).text);
+    assert.equal(t.portal.lease.mine, false);
   });
 
   it('workspace_check keeps answering when the portal lookup fails, has no record, or the workspace mismatches', async () => {

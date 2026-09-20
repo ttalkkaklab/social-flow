@@ -291,15 +291,23 @@ export function portalHandlers(fetchImpl) {
                             const lease = (ep.lease ?? null);
                             const portalHead = ep.headRevisionNo ?? 0;
                             const localHead = state.headRevisionNo ?? 0;
+                            const sync = portalHead > localHead ? 'portal_ahead' : portalHead < localHead ? 'local_ahead' : 'in_sync';
                             portalPart = {
                                 ...portalPart,
                                 portal: {
                                     headRevisionNo: portalHead,
                                     stage: ep.stage ?? null,
                                     status: ep.status ?? null,
-                                    lease: lease && lease.holder ? { holder: lease.holder, until: lease.expiresAt ?? null, mine: lease.mine ?? lease.holder === r.client.holder } : null,
+                                    // "mine" follows the lease rule (portal leases.ts): same key AND same holder. The portal's
+                                    // `mine` only knows the key, so a second machine on the same key still reads as someone else.
+                                    lease: lease && lease.holder ? { holder: lease.holder, until: lease.expiresAt ?? null, mine: (lease.mine ?? true) && lease.holder === r.client.holder } : null,
                                 },
-                                sync: portalHead > localHead ? 'portal_ahead' : portalHead < localHead ? 'local_ahead' : 'in_sync',
+                                sync,
+                                // local_ahead never happens in the normal flow — the portal assigns revision numbers. A record
+                                // above the portal's head means the record was edited by hand or the portal lost revisions.
+                                ...(sync === 'local_ahead'
+                                    ? { syncWarning: `.portal.json records head #${localHead} but the portal's head is #${portalHead} — the record is ahead of the portal; pull mode "side" and reconcile before writing, or delete .portal.json's headRevisionNo to resync.` }
+                                    : {}),
                             };
                         }
                         catch (error) {

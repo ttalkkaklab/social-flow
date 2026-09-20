@@ -83621,7 +83621,7 @@ var PORTAL_TOOLS = [
 
 The key is issued on the portal at /{workspace}/settings/api-keys (admin+) and saved as <SNS_TOKEN_DIR>/<channel>/ttalkkakstory.json \u2014 { "apiUrl", "workspace", "apiKey" }. With no key anywhere the portal_* tools are hidden and every call answers one line; the episode stays a local file.
 
-With episodeDir, also compares the directory's .portal.json (the workspace it is a copy of) with the key's workspace \u2014 workspaceMatches:false with a warning means every write to that directory will be refused until the key file or the record is fixed, so the topic does not fork into a second workspace. When the record names an episode, the portal's side comes too: portal { headRevisionNo, stage, status, lease { holder, until, mine } | null } and sync \u2014 "portal_ahead" (pull with mode "side" and merge before writing), "local_ahead", "in_sync", or "unknown" (no record, or the lookup failed \u2014 see portalWarning) \u2014 plus pending { sideDir, backups }: a leftover .portal-head/ means a merge was started and not finished, backups counts .portal-local/ entries.
+With episodeDir, also compares the directory's .portal.json (the workspace it is a copy of) with the key's workspace \u2014 workspaceMatches:false with a warning means every write to that directory will be refused until the key file or the record is fixed, so the topic does not fork into a second workspace. When the record names an episode, the portal's side comes too: portal { headRevisionNo, stage, status, lease { holder, until, mine } | null } and sync \u2014 "portal_ahead" (pull with mode "side" and merge before writing), "local_ahead" (never in the normal flow \u2014 syncWarning says how to resync), "in_sync", or "unknown" (no record, or the lookup failed \u2014 see portalWarning) \u2014 plus pending { sideDir, backups }: a leftover .portal-head/ means a merge was started and not finished, backups counts .portal-local/ entries.
 
 Returns: JSON \u2014 { channel, workspace, source, holder, episodeDir?, copyOf?, workspaceMatches?, warning?, portal?, sync?, pending?, portalWarning?, \u2026the portal's /me answer }.`,
     inputSchema: {
@@ -87804,15 +87804,21 @@ function portalHandlers(fetchImpl) {
               const lease = ep.lease ?? null;
               const portalHead = ep.headRevisionNo ?? 0;
               const localHead = state.headRevisionNo ?? 0;
+              const sync = portalHead > localHead ? "portal_ahead" : portalHead < localHead ? "local_ahead" : "in_sync";
               portalPart = {
                 ...portalPart,
                 portal: {
                   headRevisionNo: portalHead,
                   stage: ep.stage ?? null,
                   status: ep.status ?? null,
-                  lease: lease && lease.holder ? { holder: lease.holder, until: lease.expiresAt ?? null, mine: lease.mine ?? lease.holder === r2.client.holder } : null
+                  // "mine" follows the lease rule (portal leases.ts): same key AND same holder. The portal's
+                  // `mine` only knows the key, so a second machine on the same key still reads as someone else.
+                  lease: lease && lease.holder ? { holder: lease.holder, until: lease.expiresAt ?? null, mine: (lease.mine ?? true) && lease.holder === r2.client.holder } : null
                 },
-                sync: portalHead > localHead ? "portal_ahead" : portalHead < localHead ? "local_ahead" : "in_sync"
+                sync,
+                // local_ahead never happens in the normal flow — the portal assigns revision numbers. A record
+                // above the portal's head means the record was edited by hand or the portal lost revisions.
+                ...sync === "local_ahead" ? { syncWarning: `.portal.json records head #${localHead} but the portal's head is #${portalHead} \u2014 the record is ahead of the portal; pull mode "side" and reconcile before writing, or delete .portal.json's headRevisionNo to resync.` } : {}
               };
             } catch (error2) {
               portalPart = { ...portalPart, portal: null, sync: "unknown", portalWarning: describePortalError(error2) };
