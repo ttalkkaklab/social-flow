@@ -198,8 +198,10 @@ PATTERNS: list[Pattern] = [
     # "상대한 업체" (measured false positives: 0).
     # `관해/관하여` are the same translationese. **`관한` is deliberately left out** —
     # "개인정보 보호에 관한 법률" is the standard format for statute titles and is
-    # normal (T1 is S1 = reject).
-    ("T1", "S1", "~에 대해(서)·~에 대한·~에 관해",
+    # normal. T1 is S2 since 2026-09-20: on 56 real Threads posts it fired alone on
+    # 1 (2%) and the fix is a two-character deletion — a warning is enough
+    # (RESEARCH/CHECK_STYLE_FALSE_BLOCK_RATE_20260920.md).
+    ("T1", "S2", "~에 대해(서)·~에 대한·~에 관해",
      re.compile(r"에\s*(대(해서|해|하여|한(?=\s))|관(해서|해|하여))"), 0,
      "Use the object particle directly — '제도에 대해 알아보자' → '제도를 알아보자'"),
     # Distinguish from the existence verb — "가방에 있어." is normal; only "문제에 있어서"
@@ -381,7 +383,10 @@ PATTERNS: list[Pattern] = [
     # automatically.
     # Sentence-final only — connective ('간다고 했어'), adnominal ('가는 길'), and
     # conditional ('간다면') aren't targets. Closing quotes and brackets are looked past.
-    ("D9", "S1", "written-register declarative ending (-ㄴ다/-는다)",
+    # S2 since 2026-09-20: D9 alone blocked 6 of 56 real Threads posts (11%), and
+    # every one was narrative or list register ("바로 직감했다", "9.22 까지 매수한다"),
+    # not translationese. The register is still flagged; it no longer rejects.
+    ("D9", "S2", "written-register declarative ending (-ㄴ다/-는다)",
      re.compile(r"[가-힣]다(?=[\"'”’」』)\]]*\s*(?:[.!?…]|\n|$))", re.M), 0,
      "End in casual spoken form — '화면이 나온다' → '화면이 나와', '주소부터 준다' →"
      " '주소부터 줘', '이렇게 친다' → '이렇게 쳐'"),
@@ -1359,7 +1364,12 @@ SELFTEST = [
      "집주인이 해주겠거니 하다가 과태료 물더라.\n"
      "너는 어떻게 하고 있어?\n"),
     # D9 — the very sentences the user pointed at are the answer key (2026-08-13).
-    ("written-register declarative endings detected", "threads", 2, (
+    # T1 is S2 since 2026-09-20 — one hit is 93, so the post passes with the finding
+    # visible instead of being rejected (the 6.3% Threads post measured on 2026-09-20).
+    ("single translationese T1 warns, no longer rejects", "threads", 0,
+     "영상에 대해 하나도 모르는데 숏폼을 만들었어.\n", ("T1",), (), 93),
+    # S2 since 2026-09-20 — three hits cost 21, so the post warns (exit 1), not rejects.
+    ("written-register declarative endings detected", "threads", 1, (
         '"예쁘게 만들어줘"라고 하면 어디서 본 것 같은 화면이 나온다.\n'
         "요즘은 주소부터 준다.\n"
         "맘에 드는 사이트 링크를 붙이고 이렇게 친다.\n"
@@ -1772,7 +1782,7 @@ SELFTEST = [
      "요금을 납부하고 자료를 기입하고 환급하고 수령합니다.\n",
      ("E1", "E2"), (), 100),
     ("E suggestions do not disable unrelated blockers", "narration", 2,
-     "세금을 납부했습니다. 납부에 대해 설명합니다.\n", ("E2", "T1")),
+     "세금을 납부했습니다. 납부에 있어서 설명합니다.\n", ("E2", "T2")),
     # The eojeol-start guard and the pinned endings, as fixtures. Every one of these
     # was a real false positive before the guards: 이야기→야기, 내용이→용이,
     # 저해상도→저해, 막대기→막대, 수령(나무 나이)→수령, 경유(연료)→경유.
