@@ -2757,7 +2757,7 @@ function main() {
                           'its consumer; the board is the source of truth once §4 opens' });
   }
   if (fs.existsSync(scenarioPath)) {
-    findings.push(...require('./check-scenario.js').checkAnchors(win, fs.readFileSync(scenarioPath, 'utf8')));
+    findings.push(...require('./check-scenario.js').checkAnchors(win, fs.readFileSync(scenarioPath, 'utf8'), spokenText));
   }
   const bad = findings.filter((f) => f.level === 'bad');
   const warn = findings.filter((f) => f.level === 'warn');
@@ -2807,4 +2807,5 @@ function main() {
   process.exit(bad.length ? 1 : 0);
 }
 
-main();
+module.exports = { spokenText };
+if (require.main === module) main();

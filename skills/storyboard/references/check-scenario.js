@@ -189,24 +189,24 @@ function checkPath(target) {
 
 // S13 starts as warnings; promotion to P0 requires an explicit policy change.
 // The board remains the production source of truth. Legacy pages without anchors skip.
-function checkAnchors(win, scenario) {
+function checkAnchors(win, scenario, spokenText) {
   const parsed = parseScenario(scenario), m = parsed.meta;
   if (!m.anchors) return [];
   const out = [], warn = what => out.push({level:'warn',where:'scenario',what:'S13 ' + what});
   if (parsed.errors.length) warn('invalid scenario frontmatter: ' + parsed.errors.join('; '));
   const a = m.anchors, scenes = (win.SCENES || []).filter(s => s.type !== 'outro');
-  const spoken = s => (s?.narration || []).map(n => text(n.sub || n.tts)).filter(Boolean);
   const cover = scenes.find(s => s.type === 'cover');
-  const first = spoken(cover)[0] || '';
-  const last = [...scenes].reverse().find(s => spoken(s).length);
+  const first = spokenText({ narration: (cover?.narration || []).slice(0, 1) }).trim();
+  const last = [...scenes].reverse().find(s => spokenText(s).trim());
   if (!text(a.hook_first) || first !== a.hook_first) warn('cover first narration sentence differs from anchors.hook_first');
-  if (!text(a.closing_line) || !spoken(last).join(' ').includes(a.closing_line)) warn('last narrated shot does not contain anchors.closing_line');
+  if (!text(a.closing_line) || !spokenText(last).includes(a.closing_line)) warn('last narrated shot does not contain anchors.closing_line');
   if (!text(a.forwardable) || last?.shot?.share !== a.forwardable) warn('last narrated shot.share differs from anchors.forwardable');
   if (!['held','spoiler'].includes(m.reveal) || (cover?.hookType === 'spoiler') !== (m.reveal === 'spoiler')) warn('cover hookType spoiler and scenario reveal disagree');
   return out;
 }
 function selftest() {
   const assert = require('assert/strict');
+  const compareAnchors = (win, src) => checkAnchors(win, src, require('./check-scenes.js').spokenText);
   const fixture = path.join(__dirname, 'fixtures/scenario');
   assert.equal(checkPath(path.join(fixture,'pass/candidates')).violations, 0);
   assert.equal(checkPath(path.join(fixture,'pass/scenario.md')).violations, 0);
@@ -235,20 +235,20 @@ function selftest() {
   const m = parseScenario(src).meta;
   const win = {SCENES:[{type:'cover',hookType:'curiosity',narration:[{sub:m.anchors.hook_first}]},
     {type:'points',narration:[{sub:m.anchors.closing_line}],shot:{share:m.anchors.forwardable}}, {type:'outro'}]};
-  assert.equal(checkAnchors(win,src).length,0);
-  assert.equal(checkAnchors({SCENES:[]},src).length,3);
-  assert.equal(checkAnchors(win,'legacy scenario').length,0);
-  assert.equal(checkAnchors(win,src.replace('reveal: held','reveal: spoiler')).length,1);
+  assert.equal(compareAnchors(win,src).length,0);
+  assert.equal(compareAnchors({SCENES:[]},src).length,3);
+  assert.equal(compareAnchors(win,'legacy scenario').length,0);
+  assert.equal(compareAnchors(win,src.replace('reveal: held','reveal: spoiler')).length,1);
   const edited = structuredClone(win);
   edited.SCENES[0].narration[0].sub = 'changed';
-  assert.equal(checkAnchors(edited,src).length,1);
+  assert.equal(compareAnchors(edited,src).length,1);
   edited.SCENES[0].narration[0] = {tts:m.anchors.hook_first};
-  assert.equal(checkAnchors(edited,src).length,0);
+  assert.equal(compareAnchors(edited,src).length,0);
   edited.SCENES[1].shot.share = 'changed';
-  assert.equal(checkAnchors(edited,src).length,1);
+  assert.equal(compareAnchors(edited,src).length,1);
   edited.SCENES[1].shot.share = m.anchors.forwardable;
   edited.SCENES[1].narration[0].sub = 'changed';
-  assert.equal(checkAnchors(edited,src).length,1);
+  assert.equal(compareAnchors(edited,src).length,1);
   assert(has(src.replace('## 주제','카메라 이동\n## 주제'),'S10'));
   assert(has(src.replace('  cta: 없음','  cta: ""'),'S1'));
   assert.equal(parseScenario('---\nanchors: invalid\n  cta: 없음\n---\n').errors.length,1);
