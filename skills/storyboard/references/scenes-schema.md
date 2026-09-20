@@ -735,6 +735,7 @@ and `camera-slide-template.html`; its image and effect parameters come from scen
 
 | Field | Required | Description |
 |---|---|---|
+| `id` | assigned by `storyboard_apply` | Stable shot identity such as `s0007`. Preserve it; do not change it by hand |
 | `type` | ✅ | `cover` \| `points` \| `quote` \| `broll` \| `outro` — the role (`hooking` is also accepted as a type, but write `beat: "hooking"` on a `points`/`quote` shot instead, §hooking) |
 | `narration` | ✅ (except `broll`, `outro`) | Segment array `[{tts, sub}, ...]` — one sentence = one segment = one reveal |
 | `visual` | ✅ | The visual plan object (below) |

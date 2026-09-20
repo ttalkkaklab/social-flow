@@ -143,6 +143,7 @@ export type Sequence = z.infer<typeof sequenceSchema>;
 export const structureSchema = z
   .object({
     version: z.literal(STRUCTURE_VERSION),
+    nextShotId: z.number().int().positive().optional(),
     sequences: z.array(sequenceSchema).min(1),
     scenes: z.array(sceneSchema).min(1),
   })
@@ -183,6 +184,7 @@ const visualSchema = z.object({ camera: cameraSchema.optional() }).passthrough()
 
 export const shotSchema = z
   .object({
+    id: z.string().regex(/^s\d{4,}$/).optional(),
     type: tuple(V.TYPES),
     title: z.string().optional(),
     narration: z.array(z.object({ tts: z.string(), sub: z.string().optional() }).passthrough()).optional(),
@@ -324,7 +326,12 @@ export function serializeBoard(win: Board, header: string[] = []): string {
   });
   const lines = header.filter((h) => !/^\/\/\s*approved:/.test(h));
   if (lines.length) lines.push('');
-  for (const k of keys) lines.push(`window.${k} = ${JSON.stringify(win[k], null, 2)};`);
+  for (const k of keys) {
+    const value = k === 'SCENES' && Array.isArray(win[k])
+      ? (win[k] as Shot[]).map((shot) => shot.id === undefined ? shot : ({ id: shot.id, ...shot }))
+      : win[k];
+    lines.push(`window.${k} = ${JSON.stringify(value, null, 2)};`);
+  }
   return lines.join('\n') + '\n';
 }
 
@@ -354,10 +361,17 @@ function upsertBy<T extends Record<string, unknown>>(list: T[], items: T[], key:
 /** Validate every shot against the shot schema; findings, not exceptions, so a board reports all of them at once. */
 export function validateShots(shots: unknown[]): Finding[] {
   const out: Finding[] = [];
+  const ids = new Map<string, number>();
   shots.forEach((s, i) => {
     const parsed = shotSchema.safeParse(s);
-    if (parsed.success) return;
-    for (const issue of parsed.error.issues) out.push({ level: 'bad', where: `shot ${i + 1}`, what: `${issue.path.join('.') || '(root)'}: ${issue.message}` });
+    if (!parsed.success) {
+      for (const issue of parsed.error.issues) out.push({ level: 'bad', where: `shot ${i + 1}`, what: `${issue.path.join('.') || '(root)'}: ${issue.message}` });
+    }
+    const id = s && typeof s === 'object' ? (s as Record<string, unknown>).id : undefined;
+    if (typeof id !== 'string') return;
+    const first = ids.get(id);
+    if (first !== undefined) out.push({ level: 'bad', where: `shot ${i + 1}`, what: `id: duplicate ${id} (already used by shot ${first})` });
+    else ids.set(id, i + 1);
   });
   return out;
 }
@@ -396,7 +410,7 @@ export function applyPatch(win: Board, patch: StoryboardApplyArgs): { win: Board
     sequences = sequences.filter((q) => !drop.has(q.id));
   }
   if (patch.sequences || patch.scenes || patch.removeScenes || patch.removeSequences || next.STRUCTURE)
-    next.STRUCTURE = { version: st.version ?? STRUCTURE_VERSION, sequences, scenes };  // an older version is kept so check() reports it, never silently upgraded
+    next.STRUCTURE = { version: st.version ?? STRUCTURE_VERSION, ...(st.nextShotId === undefined ? {} : { nextShotId: st.nextShotId }), sequences, scenes };  // an older version is kept so check() reports it, never silently upgraded
 
   let shots: Shot[] = Array.isArray(next.SCENES) ? next.SCENES.slice() : [];
   if (patch.shots) for (const { no, shot } of patch.shots.slice().sort((a, b) => a.no - b.no)) {
@@ -456,6 +470,26 @@ export function applyPatch(win: Board, patch: StoryboardApplyArgs): { win: Board
     if (moving && Number(edit.pre ?? 0) !== 0) throw new Error('Moving transitions require edit.pre=0; update the shot timing first');
     shots[change.no - 1] = { ...source, transition: change.transition, edit };
   }
+  const originalShots = Array.isArray(win.SCENES) ? win.SCENES : [];
+  const numericId = (shot: Shot): number => typeof shot.id === 'string' && /^s\d{4,}$/.test(shot.id) ? Number(shot.id.slice(1)) : 0;
+  const priorCounter = win.STRUCTURE && Number.isInteger(win.STRUCTURE.nextShotId) ? win.STRUCTURE.nextShotId : undefined;
+  const requestedCounter = Number.isInteger(st.nextShotId) ? st.nextShotId : undefined;
+  let nextShotId = Math.max(
+    priorCounter ?? 0,
+    requestedCounter ?? 0,
+    ...shots.map(numericId).map((id) => id + 1),
+    ...(priorCounter === undefined && requestedCounter === undefined
+      ? [Math.max(originalShots.length, ...originalShots.map(numericId)) + 1]
+      : []),
+    1,
+  );
+  shots = shots.map((shot) => {
+    if (shot.id !== undefined) return shot;
+    const id = `s${String(nextShotId).padStart(4, '0')}`;
+    nextShotId += 1;
+    return { id, ...shot };
+  });
+  if (next.STRUCTURE) next.STRUCTURE = { ...next.STRUCTURE, nextShotId };
   next.SCENES = shots.map((shot) => ({ ...shot }));  // sync() writes sceneSlug/sequence — never into the caller's objects
 
   const findings: Finding[] = [];
@@ -562,7 +596,7 @@ export function checkScenario(
 /** storyboard_check — the structure rules here plus the full scenes.js contract from check-scenes.js. */
 export function checkStoryboard(args: z.infer<typeof storyboardCheckSchema>): CheckResult {
   const { file, win } = readBoard(args.path);
-  const structure = contract().check(win, { draft: args.draft });
+  const structure = contract().check(win, { draft: args.draft }).concat(validateShots(win.SCENES ?? []));
   const argv = [CHECK_SCENES_FILE, file, '--json'];
   if (args.draft) argv.push('--draft');
   let raw = '';
