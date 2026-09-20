@@ -785,7 +785,12 @@ describe('portal_* handlers on a scripted portal', () => {
     const local = JSON.parse((await portal.portalHandlers(mine.impl).workspaceCheck({ episodeDir: dir })).text);
     assert.equal(local.sync, 'local_ahead');
     assert.match(local.syncWarning, /records head #5 but the portal's head is #3/);
-    assert.equal(local.portal.lease.mine, true, 'no mine flag from the portal → my holder → mine');
+    assert.equal(local.portal.lease.mine, false, 'no mine flag from the portal → the holder string alone proves nothing');
+    const said = fakeFetch({
+      'GET /api/workspaces/lab/me': { success: true, data: { role: 'member' } },
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}`]: { success: true, data: { id: EPISODE_ID, slug: 's', title: 't', storyboardId: STORYBOARD_ID, headRevisionNo: 5, lease: { holder: 'me@box', expiresAt: 'x', mine: true } } },
+    });
+    assert.equal(JSON.parse((await portal.portalHandlers(said.impl).workspaceCheck({ episodeDir: dir })).text).portal.lease.mine, true, 'same key and same holder → mine');
     assert.equal(ahead.syncWarning, undefined);
 
     // same key, other machine: the portal says mine (same key) but the holder differs → not mine

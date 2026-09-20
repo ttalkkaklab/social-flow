@@ -341,9 +341,10 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
                   headRevisionNo: portalHead,
                   stage: ep.stage ?? null,
                   status: (ep as { status?: string }).status ?? null,
-                  // "mine" follows the lease rule (portal leases.ts): same key AND same holder. The portal's
-                  // `mine` only knows the key, so a second machine on the same key still reads as someone else.
-                  lease: lease && lease.holder ? { holder: lease.holder, until: lease.expiresAt ?? null, mine: (lease.mine ?? true) && lease.holder === r.client.holder } : null,
+                  // "mine" follows the lease rule (portal leases.ts): same subject (the portal's `mine`, which
+                  // knows the key) AND same holder. A second machine on the same key reads as someone else, and
+                  // a portal that did not say `mine` gets no guess from the holder string alone.
+                  lease: lease && lease.holder ? { holder: lease.holder, until: lease.expiresAt ?? null, mine: lease.mine === true && lease.holder === r.client.holder } : null,
                 },
                 sync,
                 // local_ahead never happens in the normal flow — the portal assigns revision numbers. A record
