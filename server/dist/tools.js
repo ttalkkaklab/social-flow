@@ -3482,11 +3482,51 @@ Returns: integer credit balance.`,
     // Only tools for platforms with a credentials file are exposed in ListTools (index.ts + SNS_PLATFORM_BY_TOOL).
     // Multi-channel: with channel (brand slug) set, only <SNS_TOKEN_DIR>/<slug>/ tokens are used (no fallback).
     {
+        name: 'threads_draft_create',
+        title: 'Create Threads growth draft',
+        description: 'Store a Threads growth draft before review. Returns draftId and bodyHash (SHA-256 of NFC, LF, trimmed body + selfReply). Edits require a new draft and reviews. No public posting.',
+        annotations: HINT.generate,
+        inputSchema: { type: 'object', properties: {
+                channel: SNS_CHANNEL_PROPERTY,
+                body: { type: 'string', minLength: 1, description: 'Draft body.' }, selfReply: { type: 'string', minLength: 1, description: 'Optional information self-reply (voice review only).' },
+                surface: { type: 'string', enum: ['post', 'reply'], description: 'post by default; reply requires replyToId and only voice review.' },
+                replyToId: { type: 'string', description: 'Required reply target for a reply draft; bound to publication.' },
+                readerMessage: { type: 'string', minLength: 1, description: 'One-sentence summary of the post.' },
+                purpose: { type: 'string', enum: ['fun', 'moved', 'info', 'empathy'], description: 'Exactly one intended reader outcome.' },
+                purposeEvidence: { type: 'string', minLength: 1, description: 'Verbatim body excerpt demonstrating the chosen purpose; whitespace-only normalization.' },
+                flow: { type: 'object', description: 'Reader progression: hook, turn, residue.', properties: {
+                        hook: { type: 'string', minLength: 1, description: 'Why the opening holds attention.' },
+                        turn: { type: 'string', minLength: 1, description: 'What the middle reveals.' },
+                        residue: { type: 'string', minLength: 1, description: 'What the reader takes away.' },
+                    }, required: ['hook', 'turn', 'residue'] },
+                comicElements: { description: 'Concrete comic elements in the draft.', type: 'array', items: { type: 'string', minLength: 1 }, minItems: 1 },
+                submitter: { type: 'string', description: 'Submitting agent identifier (self-reported).' },
+                submitterContext: { type: 'string', description: 'Submitting session/context identifier (self-reported).' },
+            }, required: ['channel', 'body', 'readerMessage', 'comicElements', 'purpose', 'purposeEvidence', 'flow'] },
+    },
+    {
+        name: 'threads_review_submit',
+        title: 'Submit Threads draft review',
+        description: 'Record a voice/purpose/flow review; score purpose only against the chosen draft purpose (fun, moved, info, empathy), never against another purpose. Bind the review to bodyHash. Findings quote actual draft text; only whitespace differences are ignored. No LLM/API is called. Identifiers are self-reported: the server cannot distinguish subagents in the same session or enforce reviewer independence.',
+        annotations: HINT.generate,
+        inputSchema: { type: 'object', properties: {
+                draftId: { description: 'Identifier returned by threads_draft_create.', type: 'string' }, bodyHash: { description: 'Exact reviewed draft hash.', type: 'string', pattern: '^[a-f0-9]{64}$' },
+                axis: { description: 'Review axis.', type: 'string', enum: ['voice', 'purpose', 'flow'] }, score: { description: 'Score from 0 to 100.', type: 'number', minimum: 0, maximum: 100 },
+                reasons: { description: 'Reasons supporting the score.', type: 'array', items: { type: 'string', minLength: 1 }, minItems: 1 },
+                improvements: { description: 'Concrete improvements or next-post guidance.', type: 'array', items: { type: 'string', minLength: 1 }, minItems: 1 },
+                reviewer: { description: 'Self-reported reviewer identifier.', type: 'string', minLength: 1 }, reviewerContext: { description: 'Self-reported session/context identifier.', type: 'string', minLength: 1 },
+                findings: { description: 'Quoted evidence, including at least one pass finding for a clean review.', type: 'array', minItems: 1, items: { type: 'object', properties: {
+                            quote: { description: 'Exact draft excerpt; whitespace differences allowed.', type: 'string', minLength: 1 }, issue: { description: 'Observation supported by the quote.', type: 'string', minLength: 1 },
+                            severity: { description: 'pass for positive evidence; P0 blocks publishing.', type: 'string', enum: ['pass', 'P0', 'P1', 'P2'] },
+                        }, required: ['quote', 'issue', 'severity'] } },
+            }, required: ['draftId', 'bodyHash', 'axis', 'score', 'reasons', 'improvements', 'reviewer', 'reviewerContext', 'findings'] },
+    },
+    {
         name: 'threads_publish',
         title: '⚠️ Threads publish (immediately public)',
         annotations: HINT.publish,
         outputSchema: publishOutput('postId', 'Threads post id — pass as replyToId to chain a follow-up reply'),
-        description: `⚠️ Direct Threads publishing — posts to the Threads API with local tokens, **immediately public** (the posting account is auto-resolved from the token's /me). There is no separate review gate, so call only right after the user has checked and approved the final copy and media (HITL — never call without approval). A post carries one of four shapes: a video (videoUrl), a single image (imageUrl), a link preview card (linkUrl), or text alone. The three media fields are mutually exclusive — one media_type per post. **Video episodes put the video on the post itself via videoUrl**, so it plays inline in the timeline with nothing to click away to; do not attach the video as a reply or fall back to a bare link (user directive 2026-08-19). Carousels are not supported by this tool. Publish quota: 250 per 24 hours. ${SNS_HITL_LINE}`,
+        description: `⚠️ Direct Threads publishing — posts to the Threads API with local tokens, **immediately public** (the posting account is auto-resolved from the token's /me). Exactly one of draftId (growth: hash-bound reviews, configured gate.json thresholds and style check) or episodeRef (existing episode and matching approval record) is required. dryRun checks without API calls. Call only right after the user has checked and approved the final copy and media (HITL — never call without approval). A post carries one of four shapes: a video (videoUrl), a single image (imageUrl), a link preview card (linkUrl), or text alone. The three media fields are mutually exclusive — one media_type per post. **Video episodes put the video on the post itself via videoUrl**, so it plays inline in the timeline with nothing to click away to; do not attach the video as a reply or fall back to a bare link (user directive 2026-08-19). Carousels are not supported by this tool. Publish quota: 250 per 24 hours. ${SNS_HITL_LINE}`,
         inputSchema: {
             type: 'object',
             properties: {
@@ -3507,8 +3547,13 @@ Returns: integer credit balance.`,
                 },
                 replyToId: { type: 'string', description: 'Publish as a reply to this post id (own reply chain, or joining someone else\'s post)' },
                 channel: SNS_CHANNEL_PROPERTY,
+                draftId: { type: 'string', description: 'Reviewed growth draft identifier; exclusive with episodeRef.' },
+                episodeRef: { type: 'string', description: 'Episode topic slug under data/<channel>/episodes; requires matching threads-publish-approval.json.' },
+                selfReply: { type: 'string', description: 'Optional reviewed self-reply; posted after the root succeeds.' },
+                dryRun: { type: 'boolean', description: 'Validate all gates without token access or network publishing.' },
             },
-            required: ['caption'],
+            required: ['caption', 'channel'],
+            oneOf: [{ required: ['draftId'], not: { required: ['episodeRef'] } }, { required: ['episodeRef'], not: { required: ['draftId'] } }],
         },
     },
     {
@@ -4085,6 +4130,8 @@ Returns: counts (violations · warnings · deferred) and two lists — structure
  */
 export const SNS_PLATFORM_BY_TOOL = {
     threads_publish: 'THREADS',
+    threads_draft_create: 'THREADS',
+    threads_review_submit: 'THREADS',
     threads_insights: 'THREADS',
     threads_search: 'THREADS',
     instagram_publish: 'INSTAGRAM',

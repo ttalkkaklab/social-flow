@@ -333,7 +333,17 @@ permalink, say).
 2. **Instagram**: `instagram_publish` — `videoUrl` is the public URL of the
    **burned-in copy (video-sub.mp4)** + caption. This is the only place the subtitles
    are baked into the picture.
-3. **Threads**: `threads_publish` — the approved body (no link) as `caption` and the
+3. **Threads**: before calling, record the actual §1 human approval in
+   `data/<channel>/episodes/<topic>/threads-publish-approval.json`. Use JSON with
+   `approved: true`, the exact approved `caption`, and every supplied `imageUrl`,
+   `videoUrl`, `linkUrl`, `selfReply`, or `replyToId`. Omit unused fields. Write this
+   record only after approval, and update it only after approval for changed copy
+   or media. This local record is an attestation, not server authentication of the
+   human. The server requires the real episode directory, `storyboard/scenes.js`,
+   and an approval record matching every publishing field.
+
+   Call `threads_publish(channel, episodeRef: <topic>, ...)` — the approved body
+   (no link) as `caption` and the
    public URL of the burned-in copy (`video-sub.mp4`) as `videoUrl`. **One call finishes
    it** — no reply. The video container transcodes, so the tool waits up to 2 minutes
    for FINISHED.
@@ -343,7 +353,7 @@ permalink, say).
    Carrying the video on the post means nothing links out, which sidesteps this.
 
    **Fallback** — only when there's no video file or hosting is blocked: publish the
-   body alone, then attach the IG permalink as a **self-reply** with `sns_comment_reply`
+   body alone with the same `episodeRef` and a matching text-only approval record, then attach the IG permalink as a **self-reply** with `sns_comment_reply`
    (one line like "full video here →" plus the link). In that case, and only that case,
    Threads isn't published until the reply is up.
 4. **Facebook**: `facebook_publish` — `videoUrl` is the public URL of the **clean copy

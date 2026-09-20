@@ -7,7 +7,7 @@ description: >
   insights, joins keyword conversations whenever it judges it has a real contribution (no
   daily cap), and writes and publishes new posts whenever there is something worth saying
   — slots are a rhythm, not a gate — attaching a generated image when one helps. Every
-  outgoing text clears the growth-post-reviewer gate (95 or above, zero P0) before it goes
+  outgoing text clears the configured review gates (zero P0) before it goes
   out, inside the standing authorization in data/[channel]/growth/threads/growth-plan.md.
   Recur with /loop [interval] /social-flow:grow-threads [channel]. First run needs the
   init argument.
@@ -20,6 +20,7 @@ argument-hint: "<channel> [init|tick|status]"
 allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent",
   "mcp__social-flow__sns_account_check", "mcp__social-flow__sns_comment_inbox",
   "mcp__social-flow__threads_insights", "mcp__social-flow__threads_search",
+  "mcp__social-flow__threads_draft_create", "mcp__social-flow__threads_review_submit",
   "mcp__social-flow__threads_publish", "mcp__social-flow__sns_comment_reply",
   "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img"]
 ---
@@ -78,9 +79,8 @@ account. Tactics and style rules live in `references/growth-playbook.md`
    state.json or growth-log.md (only the fields you need).
 5. **No publishing without passing the review gate** — every outgoing piece of
    copy (new post, search engagement, inbox reply) must pass the §Adversarial
-   review gate (score ≥95 and P0=0 — the user lowered the bar from 95 to 90 on
-   2026-08-12, then retracted that on 2026-08-13 and restored 95. The P0
-   condition and the 3-round cap are unchanged).
+   review gate (each required axis meets `gate.json`, with P0=0).
+   Missing thresholds block publishing. The 3-round cap is unchanged.
    If a draft can't clear it within 3 rounds, don't publish it — record it in
    growth-log as skipped, with its score. There is no per-day or per-tick count
    cap — the only remaining limits are the platform's own quotas (publish
@@ -134,7 +134,7 @@ The template and the state schema are in `references/growth-plan-template.md`.
    scope (topic pool, keywords, tone) the loop publishes publicly and
    immediately without per-post approval, and publishing frequency has no fixed
    cap; the loop decides. Only copy that passes the adversarial review gate
-   (95 points) goes out. To stop, stop /loop; to change scope, edit the plan."*
+   (the owner-configured thresholds and zero P0) goes out. To stop, stop /loop; to change scope, edit the plan."*
 5. Initialize `state.json`, write the growth-log.md header.
 
 ## Adversarial review gate (required before publishing — all copy)
@@ -297,11 +297,66 @@ as written by a person** (no AI tells), and **does it fit the context**
    Re-delegate only the fixed drafts, and include the previous round's
    findings so the reviewer rules on whether they're resolved.
 
-4. **Verdict** — **only drafts with score ≥95 and p0=0 get published.** Still
+4. **Verdict** — **only drafts meeting every configured axis threshold and p0=0 get published.** Still
    short after 3 rounds — don't publish; write `skipped (gate NN)` in
    growth-log. Not posting beats posting a sub-par post. Also note each
    published draft's final score in the growth-log memo — that's the window
    through which the user observes whether the gate actually works.
+
+## Server publishing gate — draft, independent review, publish
+
+Run from the project root containing `data/`. Before authoring, read
+`data/<channel>/growth/threads/gate.json`. The owner sets its numeric `voice`, `purpose`,
+and `flow` thresholds (0–100) after rubric calibration. Missing or malformed
+configuration blocks publication; never invent defaults to get a post out.
+Zero unresolved P0 findings remains mandatory.
+
+1. Call `threads_draft_create(channel, body, readerMessage, comicElements,
+   purpose, purposeEvidence, flow, submitter, submitterContext, selfReply?)`. Every required text must be nonempty,
+   and `comicElements` must contain at least one concrete element. The response
+   supplies `draftId` and `bodyHash`. `readerMessage` is a one-sentence summary.
+   Choose exactly one `purpose`; `purposeEvidence` must quote the main body.
+   Supply all three flow fields: `hook`, `turn`, `residue`. For a conversation reply, also pass
+   `surface: "reply"` and `replyToId`; this target is bound to the draft.
+2. Delegate voice, purpose and flow reviews to separate host subagents within the subscription,
+   supplying the exact stored copy and hash. Do not call paid model APIs or use
+   `OPENAI_API_KEY` / `GEMINI_API_KEY` for review. Voice covers the body and any
+   information self-reply; purpose and flow cover the new post body only. Score purpose against exactly the
+   chosen outcome (`fun`, `moved`, `info`, or `empathy`), not a different outcome. A `surface: "reply"`
+   draft needs voice only. Keep information self-replies factual; do not add jokes
+   to satisfy the new-post rubric.
+3. Submit each result with `threads_review_submit(draftId, bodyHash, axis, score,
+   reasons, improvements, reviewer, reviewerContext, findings)`. Reasons,
+   improvements, and findings each need at least one item. Each finding includes
+   `quote`, `issue`, and `severity` (`pass`, `P0`, `P1`, or `P2`). A passing review
+   still quotes the passage supporting its verdict. The server checks that the
+   quote occurs in the draft, normalizing whitespace only; invented or paraphrased
+   quotations are rejected. Purpose and flow findings must quote the main body.
+4. Call `threads_publish(channel, draftId, caption, selfReply?, imageUrl?,
+   replyToId?, dryRun?)` with the reviewed text. The server verifies the normalized
+   body+selfReply SHA-256, required axes, configured scores, and runs the bundled
+   `check-style.py` itself (`threads` for a post, `reply` for replies). Only exit 0
+   passes; nonzero exits (including accumulated-warning exit 1 and skip exit 4),
+   timeouts or a missing checker block. S2 findings that still return exit 0 do not block. `dryRun: true`
+   exercises the same gate without reading credentials or calling publishing APIs.
+   A successful live call posts the main body and then its optional self-reply.
+   If the self-reply fails after the main post succeeds, retain the returned root
+   post ID and warning; never retry the whole post.
+
+Changing either text requires a new draft and fresh reviews. Audit records go to
+`data/<channel>/growth/threads/gate-log.jsonl`; malformed calls with no resolvable
+channel go to `data/unknown/growth/threads/gate-log.jsonl`. Scores and findings
+remain reviewer claims: exact quotation proves textual grounding, not sound judgment.
+Reviewer and context identifiers are self-reported. The server cannot distinguish
+subagents in the same session or enforce reviewer independence; matching submitter
+identifiers are logged, not rejected. Unknown submitters are recorded as unknown.
+Local draft, threshold and episode-approval files assume a trusted workspace writer.
+
+Every `threads_publish` in the growth loop, including image posts and keyword
+replies below, uses this sequence and carries `draftId`. Never use an episode
+reference to bypass growth review. Inbox `sns_comment_reply` remains a separate
+conversation route with the skill's voice review; this gate does not claim to cover
+all possible direct platform API calls.
 
 ## Image procedure — generate and upload
 
@@ -333,7 +388,7 @@ hosting to get one.
    · ≤10MB (shrink with sips if over) · type is judged from the leading bytes,
    so a disguised extension won't pass. On 429 (60-per-10-minutes cap), give
    up on the image this tick and try next tick.
-4. **Publish** — `threads_publish(caption, imageUrl, channel)` with body copy
+4. **Publish** — `threads_publish(caption, imageUrl, channel, draftId)` with body copy
    that passed the gate (§Adversarial review).
 
 > Hosting is the operator's to provide — any endpoint that accepts `POST` with
@@ -401,7 +456,7 @@ but the moment even one presence-only reply slips in, the whole account's
 signal takes the hit — that's the yardstick. Write the copy per playbook
 §Search engagement (experience and information contributions only, no
 promotion or links, 8+ words), pass the §gate, then publish via
-`threads_publish(replyToId: <postId>)`. Add the postId to `engagedPostIds`
+`threads_publish(channel, draftId, caption, replyToId: <postId>)`. Add the postId to `engagedPostIds`
 (keep the latest 500 — prevents re-engaging the same post). **Add postIds
 skipped after 3 failed gate rounds exactly the same way** — it's the record of
 "attempted". Otherwise every tick re-drafts and re-reviews that post until it

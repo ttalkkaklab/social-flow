@@ -1,3 +1,4 @@
+import { createThreadsDraft, submitThreadsReview, checkThreadsGate, checkThreadsEpisode, gateCall } from './threads-gate.js';
 import { z } from 'zod';
 import * as datago from './datago-client.js';
 import * as elevenlabs from './elevenlabs-client.js';
@@ -380,8 +381,15 @@ const threadsPublishSchema = z
     linkUrl: z.string().url().optional(),
     replyToId: z.string().min(1).optional(),
     channel: channelSlugSchema,
+    draftId: z.string().min(1).optional(),
+    episodeRef: z.string().min(1).optional(),
+    selfReply: z.string().trim().min(1).refine((s) => threadsTextLength(s) <= THREADS_MAX_CHARS).optional(),
+    dryRun: z.boolean().optional(),
   })
   .superRefine((v, ctx) => {
+    if (Boolean(v.draftId) === Boolean(v.episodeRef)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Exactly one of draftId or episodeRef is required' });
+    }
     // One media_type per post — VIDEO, IMAGE or TEXT(link_attachment). The platform
     // rejects two together, so catch it before the call is spent.
     const media = (['imageUrl', 'videoUrl', 'linkUrl'] as const).filter((k) => v[k]);
@@ -1275,9 +1283,14 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   },
 
   // ── direct SNS publishing to our own accounts (per-platform tools — public immediately; call after HITL approval) ──
+  threads_draft_create: async (args) => text(JSON.stringify(createThreadsDraft(args))),
+  threads_review_submit: async (args) => text(JSON.stringify(submitThreadsReview(args))),
   threads_publish: async (args) => {
-    const input = parseArgs(threadsPublishSchema, args);
-    return fromApi(await sns.publishThreads(input), SNS_PUBLISHED_NOTE);
+    const input = gateCall('threads_publish', args, () => parseArgs(threadsPublishSchema, args));
+    if (input.draftId) checkThreadsGate(input);
+    else checkThreadsEpisode(input);
+    if (input.dryRun) return fromApi({ ok: true, status: 200, body: JSON.stringify({ platform: 'THREADS', postId: '', dryRun: true, gatePassed: true }) }, 'Dry run: no publishing API called.');
+    return fromApi(await sns.publishThreadsWithSelfReply(input), SNS_PUBLISHED_NOTE);
   },
   instagram_publish: async (args) => {
     const input = parseArgs(instagramPublishSchema, args);
