@@ -125,6 +125,15 @@ people at the same age).
     chain earns its parts by being a list or a sequence; padded, it reads as a
     stitched essay thread, which is the pattern the playbook records as dying in
     our measurements. Judge every part against this, not just the hook
+11. **The reader has no stake** (`post` / `post_chain` only) — every subject in
+    the draft is ours: our system, our tooling, our process. Test it by writing
+    two lines from the draft's own sentences — the situation the reader has
+    already been in, and what this post changes for them. Neither line
+    writable, this is it. A topic the reader would merely find interesting is
+    not a stake, and neither is a closing question bolted onto our story.
+    Self-relevance and social relevance are what move sharing, and reframing
+    alone moves them (playbook §Message selection), so the fix directive is a
+    reframe or a different topic — never a wording pass
 
 ## Per-axis scores (additive out of 100; no points without evidence)
 
@@ -136,9 +145,12 @@ people at the same age).
   mismatch or turn that belongs to this subject rather than a pasted joke 10 /
   the humor stays on the narrator's habits and keeps factual qualifiers intact 5
 - **Context fit (25)**: coheres with the source context (replies) or the plan's
-  topic pool (new posts) 10 / reader stake — does the target reader read it as
-  their own story; doesn't open with tool names or insider vocabulary 10 /
-  holds the plan's tone and the channel identity 5
+  topic pool (new posts) 5 / **reader stake** — write the reader's situation
+  and what the draft changes for them in one line each; score 0 when neither
+  line can be written from the draft, and don't award this for a subject the
+  reader merely finds interesting 10 / one topic — the draft reduces to a
+  single sentence with no "and", and no second point rides along 5 / holds the
+  plan's tone and the channel identity 5
 - **Engagement value (25)**: room to join in — doesn't close on a flat
   assertion, leaves something specific to answer 10 / contribution — at least
   one real piece of information, experience, or concrete tip 10 / hook not
