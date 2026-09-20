@@ -176,9 +176,11 @@ export function summarizeRevisionDiff(d: PortalRevisionDiff): string {
 }
 
 /**
- * A 409 head_moved answered to a write that carried a base: fetch what moved between that base
- * and the portal's head and put it under the error, so "pull → re-apply" can re-apply only the
- * shots and documents that overlap instead of everything from memory (loop R3). Any failure to
+ * A 409 head_moved answered to a write that carried a base: fetch what the *other* side changed
+ * between that base and the portal's head and put it under the error (loop R3). It is the remote
+ * change list, not a to-do list — the local edits since the base are all re-applied on the pulled
+ * head, and the list only says where the two sides touched the same shot or document (review P1:
+ * "re-apply only what it names" would drop the local edits it does not name). Any failure to
  * fetch the diff leaves the original 409 text alone — the diff is help, not a second gate.
  */
 async function withHeadMovedDiff(client: PortalClient, episodeId: string, base: number | undefined, error: unknown): Promise<PortalToolResult> {
@@ -191,8 +193,10 @@ async function withHeadMovedDiff(client: PortalClient, episodeId: string, base: 
     return {
       isError: true,
       text:
-        `${result.text}\nSince your base #${base} the portal head moved to #${head}: ${summarizeRevisionDiff(data)}\n` +
-        `Pull (portal_storyboard_pull), then re-apply only the shots and documents named above; portal_episode_revisions compareTo shows the full diff.`,
+        `${result.text}\nWhat the other side changed since your base #${base} (portal head is now #${head}): ${summarizeRevisionDiff(data)}\n` +
+        `Keep your local edits: copy the directory aside, portal_storyboard_pull the head, then re-apply ALL of your changes since #${base} on it — ` +
+        `the list above is where both sides touched the same shot or document, so resolve those by hand (ask the user if unsure). ` +
+        `The list is cut at 8 items; portal_episode_revisions compareTo gives the full diff.`,
     };
   } catch {
     return result;

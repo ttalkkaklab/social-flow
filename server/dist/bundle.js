@@ -83601,7 +83601,7 @@ Returns: JSON \u2014 { channel, workspace, source, holder, episodeDir?, copyOf?,
     name: "portal_storyboard_save",
     title: "Upload an episode directory to the portal",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-    description: `Upload data/<channel>/episodes/<topic>/storyboard/ \u2014 scenes.js (the shots verbatim, the window.* blocks as episode meta), storyboard.md, research.md, script.md, storyboard.html \u2014 to the ttalkkakstory portal under the channel's workspace key. Saving the same episode again updates it (idempotent); the project is the channel, the storyboard is found or created by the episode title (or storyboardTitle for a series). When .portal.json exists, its episodeId updates that same row even if the title changed. The save is also a checkpoint: stage from the argument or storyboard.md's status (approved \u2192 approved, otherwise board), baseRevisionNo from .portal.json. A 409 head_moved means another machine saved first \u2014 the answer lists what moved since your base (shots \xB7 meta \xB7 documents): portal_storyboard_pull, re-apply only what it names, save again; a 409 leased names who holds the lease and until when.
+    description: `Upload data/<channel>/episodes/<topic>/storyboard/ \u2014 scenes.js (the shots verbatim, the window.* blocks as episode meta), storyboard.md, research.md, script.md, storyboard.html \u2014 to the ttalkkakstory portal under the channel's workspace key. Saving the same episode again updates it (idempotent); the project is the channel, the storyboard is found or created by the episode title (or storyboardTitle for a series). When .portal.json exists, its episodeId updates that same row even if the title changed. The save is also a checkpoint: stage from the argument or storyboard.md's status (approved \u2192 approved, otherwise board), baseRevisionNo from .portal.json. A 409 head_moved means another machine saved first \u2014 the answer lists what THEY changed since your base (shots \xB7 meta \xB7 documents): keep your local edits aside, portal_storyboard_pull the head, re-apply all of your changes on it and resolve by hand where the list overlaps them, save again; a 409 leased names who holds the lease and until when.
 
 Writes .portal.json (workspace \xB7 storyboardId \xB7 episodeId \xB7 headRevisionNo) into the episode directory. Returns: JSON \u2014 { result: created|updated, storyboardId, episodeId, revisionNo, url, pageUrl, uploaded: { scenes, characters, documents } }.`,
     inputSchema: {
@@ -83699,7 +83699,7 @@ Returns: JSON \u2014 { id, slug, title, stage, url, pageUrl }.`,
     name: "portal_episode_checkpoint",
     title: "Save a revision when a stage ends",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-    description: `Checkpoint the episode on the portal when a stage ends \u2014 candidates after the three scenario pages, scenario after the pick, board after scenes.js is written. With episodeDir the shots and meta from storyboard/scenes.js (when present) and the standard documents that exist (research.md \xB7 storyboard.md \xB7 script.md \xB7 storyboard.html) go up together; identical content makes no new revision and only moves the stage. baseRevisionNo defaults to .portal.json's head; when it differs from the portal's head the answer is 409 head_moved with what moved since your base (shots \xB7 meta \xB7 documents) \u2014 another machine saved first: portal_storyboard_pull, re-apply only what it names, checkpoint again. Never retry a 409 blind.
+    description: `Checkpoint the episode on the portal when a stage ends \u2014 candidates after the three scenario pages, scenario after the pick, board after scenes.js is written. With episodeDir the shots and meta from storyboard/scenes.js (when present) and the standard documents that exist (research.md \xB7 storyboard.md \xB7 script.md \xB7 storyboard.html) go up together; identical content makes no new revision and only moves the stage. baseRevisionNo defaults to .portal.json's head; when it differs from the portal's head the answer is 409 head_moved with what the other machine changed since your base (shots \xB7 meta \xB7 documents): keep your local edits aside, portal_storyboard_pull the head, re-apply all of your changes on it (the list marks the overlaps to resolve by hand), checkpoint again. Never retry a 409 blind.
 
 Updates .portal.json headRevisionNo. Returns: JSON \u2014 { result: "new revision"|"unchanged (stage only)", revisionNo, stage, uploaded: { scenes, documents } }.`,
     inputSchema: {
@@ -83720,7 +83720,7 @@ Updates .portal.json headRevisionNo. Returns: JSON \u2014 { result: "new revisio
     name: "portal_episode_revisions",
     title: "List an episode's revisions or read one",
     annotations: HINT.read,
-    description: `List a portal episode's revisions, newest first \u2014 number, stage, note, who saved it and when \u2014 or, with revisionNo, read one revision's snapshot (shots \xB7 meta \xB7 documents). With compareTo (a number or "head"), return what changed from revisionNo (default: the directory's recorded head) to it \u2014 shots added/removed/changed with the changed field names, meta keys, and a unified diff per document \u2014 plus a one-line summary. Read before portal_episode_restore so the number being restored is the one meant, and after a 409 head_moved to see what to re-apply.
+    description: `List a portal episode's revisions, newest first \u2014 number, stage, note, who saved it and when \u2014 or, with revisionNo, read one revision's snapshot (shots \xB7 meta \xB7 documents). With compareTo (a number or "head"), return what changed from revisionNo (default: the directory's recorded head) to it \u2014 shots added/removed/changed with the changed field names, meta keys, and a unified diff per document \u2014 plus a one-line summary. Read before portal_episode_restore so the number being restored is the one meant, and after a 409 head_moved to see the full list of what the other side changed (the 409 line is cut at 8 items).
 
 Returns: JSON \u2014 the revision list, one revision's snapshot, or { summary, from, to, identical, scenes, meta, documents }.`,
     inputSchema: {
@@ -87682,8 +87682,8 @@ async function withHeadMovedDiff(client, episodeId, base, error2) {
     return {
       isError: true,
       text: `${result.text}
-Since your base #${base} the portal head moved to #${head}: ${summarizeRevisionDiff(data)}
-Pull (portal_storyboard_pull), then re-apply only the shots and documents named above; portal_episode_revisions compareTo shows the full diff.`
+What the other side changed since your base #${base} (portal head is now #${head}): ${summarizeRevisionDiff(data)}
+Keep your local edits: copy the directory aside, portal_storyboard_pull the head, then re-apply ALL of your changes since #${base} on it \u2014 the list above is where both sides touched the same shot or document, so resolve those by hand (ask the user if unsure). The list is cut at 8 items; portal_episode_revisions compareTo gives the full diff.`
     };
   } catch {
     return result;

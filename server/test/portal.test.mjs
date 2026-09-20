@@ -613,11 +613,12 @@ describe('portal_* handlers on a scripted portal', () => {
     const save = await h.storyboardSave({ episodeDir: dir });
     assert.equal(save.isError, true);
     assert.match(save.text, /portal 409 head_moved/);
-    assert.match(save.text, /base #2 the portal head moved to #5: scenes \+1 −0 ~1 \(2\[narration\]\) added 4 · meta ~THEME · documents script.md changed/);
-    assert.match(save.text, /re-apply only/);
+    assert.match(save.text, /since your base #2 \(portal head is now #5\): scenes \+1 −0 ~1 \(2\[narration\]\) added 4 · meta ~THEME · documents script.md changed/);
+    assert.match(save.text, /re-apply ALL of your changes since #2/);
+    assert.match(save.text, /resolve those by hand/);
     const cp = await h.episodeCheckpoint({ stage: 'board', episodeDir: dir });
     assert.equal(cp.isError, true);
-    assert.match(cp.text, /head moved to #5/);
+    assert.match(cp.text, /portal head is now #5/);
     assert.equal(calls.filter((c) => c.path.endsWith('/diff/5')).length, 2);
     assert.equal(episode.readPortalState(dir).headRevisionNo, 2, 'the local head is not touched by a refused write');
   });
@@ -632,7 +633,7 @@ describe('portal_* handlers on a scripted portal', () => {
     const cp = await portal.portalHandlers(impl).episodeCheckpoint({ stage: 'board', episodeDir: dir });
     assert.equal(cp.isError, true);
     assert.match(cp.text, /portal 409 head_moved: head moved/);
-    assert.equal(cp.text.includes('head moved to'), false);
+    assert.equal(cp.text.includes('portal head is now'), false);
     const leased = fakeFetch({
       [`POST /api/workspaces/lab/episodes/${EPISODE_ID}/revisions`]: { status: 409, success: false, error: 'leased', error_code: 'leased', detail: { holder: 'x' } },
     });
