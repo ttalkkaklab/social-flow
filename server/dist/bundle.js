@@ -87819,7 +87819,10 @@ function portalHandlers(fetchImpl) {
                 sync,
                 // local_ahead never happens in the normal flow — the portal assigns revision numbers. A record
                 // above the portal's head means the record was edited by hand or the portal lost revisions.
-                ...sync === "local_ahead" ? { syncWarning: `.portal.json records head #${localHead} but the portal's head is #${portalHead} \u2014 the record is ahead of the portal; pull mode "side" and reconcile before writing, or delete .portal.json's headRevisionNo to resync.` } : {}
+                // The only way back is through the portal: never tell the caller to drop headRevisionNo — a
+                // record without it sends no baseRevisionNo, and the portal skips the head check without one
+                // (review P1: that would reopen the stale-overwrite door R2/R4 closed).
+                ...sync === "local_ahead" ? { syncWarning: `.portal.json records head #${localHead} but the portal's head is #${portalHead} \u2014 the record is ahead of the portal. Pull mode "side", merge the portal's head into the local files, then save with baseRevisionNo ${portalHead} (the headRevisionNo the pull returned). Do not delete headRevisionNo from .portal.json \u2014 a save without a base skips the portal's conflict check.` } : {}
               };
             } catch (error2) {
               portalPart = { ...portalPart, portal: null, sync: "unknown", portalWarning: describePortalError(error2) };

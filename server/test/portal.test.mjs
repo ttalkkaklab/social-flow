@@ -785,6 +785,8 @@ describe('portal_* handlers on a scripted portal', () => {
     const local = JSON.parse((await portal.portalHandlers(mine.impl).workspaceCheck({ episodeDir: dir })).text);
     assert.equal(local.sync, 'local_ahead');
     assert.match(local.syncWarning, /records head #5 but the portal's head is #3/);
+    assert.match(local.syncWarning, /save with baseRevisionNo 3/);
+    assert.doesNotMatch(local.syncWarning, /delete .*headRevisionNo to resync/);
     assert.equal(local.portal.lease.mine, false, 'no mine flag from the portal → the holder string alone proves nothing');
     const said = fakeFetch({
       'GET /api/workspaces/lab/me': { success: true, data: { role: 'member' } },
