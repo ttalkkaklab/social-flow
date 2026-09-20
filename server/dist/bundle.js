@@ -83750,7 +83750,7 @@ Returns: JSON \u2014 { holder, expiresAt, \u2026 } as the portal reports it.`,
         episodeDir: PORTAL_EPISODE_DIR_ARG,
         channel: PORTAL_CHANNEL_ARG,
         ttlMinutes: { type: "number", description: "Lease length in minutes for acquire (1\u20131440). Default 120" },
-        force: { type: "boolean", description: "release only \u2014 take someone else's lease away; needs an admin key" }
+        force: { type: "boolean", description: "release only \u2014 take someone else's lease away. A workspace key is always member, so the portal refuses this with 409; an admin releases it on the episode page" }
       },
       required: ["action"]
     }
