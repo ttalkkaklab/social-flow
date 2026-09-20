@@ -1,141 +1,66 @@
 /**
- * The literal-only scenes.js reader. Storyboards assign JSON-shaped values to window.*;
- * this parser accepts that grammar and never executes the file.
+ * Evaluate a `scenes.js` file in an isolated realm and return its window data as plain JSON.
+ * The context has no host objects: window and the silent console are created inside it, and
+ * only a JSON string crosses the boundary. Dynamic string compilation is disabled.
  */
 
-export const SCENES_VM_POLICY = Object.freeze({ timeoutMs: 5000, execution: false });
+import vm from 'node:vm';
 
-class LiteralParser {
-  private offset = 0;
-  constructor(private readonly source: string) {}
-  private fail(message: string): never { throw new SyntaxError(`${message} at offset ${this.offset}`); }
-  private skip(): void {
-    for (;;) {
-      const rest = this.source.slice(this.offset);
-      const space = /^(?:\s+)/.exec(rest);
-      if (space) { this.offset += space[0].length; continue; }
-      const line = /^\/\/[^\n]*(?:\n|$)/.exec(rest);
-      if (line) { this.offset += line[0].length; continue; }
-      const block = /^\/\*[\s\S]*?\*\//.exec(rest);
-      if (block) { this.offset += block[0].length; continue; }
-      return;
-    }
-  }
-  private take(text: string): void {
-    this.skip();
-    if (!this.source.startsWith(text, this.offset)) this.fail(`expected ${JSON.stringify(text)}`);
-    this.offset += text.length;
-  }
-  private maybe(text: string): boolean {
-    this.skip();
-    if (!this.source.startsWith(text, this.offset)) return false;
-    this.offset += text.length;
-    return true;
-  }
-  private identifier(): string {
-    this.skip();
-    const match = /^[$A-Z_a-z][$\w]*/.exec(this.source.slice(this.offset));
-    if (!match) this.fail('expected an identifier');
-    this.offset += match[0].length;
-    return match[0];
-  }
-  private string(): string {
-    this.skip();
-    const quote = this.source[this.offset++];
-    if (quote !== '"' && quote !== "'") this.fail('expected a string');
-    let out = '';
-    while (this.offset < this.source.length) {
-      const ch = this.source[this.offset++];
-      if (ch === quote) return out;
-      if (ch === '\n' || ch === '\r') this.fail('a string cannot contain a raw newline');
-      if (ch !== '\\') { out += ch; continue; }
-      const escaped = this.source[this.offset++];
-      const simple: Record<string, string> = { b: '\b', f: '\f', n: '\n', r: '\r', t: '\t', v: '\v', '0': '\0' };
-      if (Object.hasOwn(simple, escaped)) { out += simple[escaped]; continue; }
-      if (escaped === 'x') {
-        const hex = this.source.slice(this.offset, this.offset + 2);
-        if (!/^[0-9a-f]{2}$/i.test(hex)) this.fail('invalid hexadecimal escape');
-        out += String.fromCodePoint(parseInt(hex, 16)); this.offset += 2; continue;
-      }
-      if (escaped === 'u') {
-        const braced = /^\{([0-9a-f]+)\}/i.exec(this.source.slice(this.offset));
-        if (braced) { out += String.fromCodePoint(parseInt(braced[1], 16)); this.offset += braced[0].length; continue; }
-        const hex = this.source.slice(this.offset, this.offset + 4);
-        if (!/^[0-9a-f]{4}$/i.test(hex)) this.fail('invalid Unicode escape');
-        out += String.fromCharCode(parseInt(hex, 16)); this.offset += 4; continue;
-      }
-      if (escaped === '\n') continue;
-      if (escaped === '\r') { if (this.source[this.offset] === '\n') this.offset++; continue; }
-      out += escaped;
-    }
-    this.fail('unterminated string');
-  }
-  private number(): number {
-    this.skip();
-    const match = /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/.exec(this.source.slice(this.offset));
-    if (!match) this.fail('expected a JSON number');
-    this.offset += match[0].length;
-    return Number(match[0]);
-  }
-  private value(): unknown {
-    this.skip();
-    const ch = this.source[this.offset];
-    if (ch === '"' || ch === "'") return this.string();
-    if (ch === '[') return this.array();
-    if (ch === '{') return this.object();
-    if (ch === '-' || /\d/.test(ch ?? '')) return this.number();
-    const word = this.identifier();
-    if (word === 'true') return true;
-    if (word === 'false') return false;
-    if (word === 'null') return null;
-    this.fail(`only literal values are allowed, found ${word}`);
-  }
-  private array(): unknown[] {
-    const out: unknown[] = [];
-    this.take('[');
-    if (this.maybe(']')) return out;
-    for (;;) {
-      out.push(this.value());
-      if (this.maybe(']')) return out;
-      this.take(',');
-      if (this.maybe(']')) return out;
-    }
-  }
-  private object(): Record<string, unknown> {
-    const out = Object.create(null) as Record<string, unknown>;
-    this.take('{');
-    if (this.maybe('}')) return out;
-    for (;;) {
-      this.skip();
-      const key = ['"', "'"].includes(this.source[this.offset] ?? '') ? this.string() : this.identifier();
-      this.take(':');
-      out[key] = this.value();
-      if (this.maybe('}')) return out;
-      this.take(',');
-      if (this.maybe('}')) return out;
-    }
-  }
-  script(): Record<string, unknown> {
-    const out = Object.create(null) as Record<string, unknown>;
-    for (;;) {
-      this.skip();
-      if (this.offset === this.source.length) return JSON.parse(JSON.stringify(out)) as Record<string, unknown>;
-      if (this.identifier() !== 'window') this.fail('only window.KEY assignments are allowed');
-      this.take('.');
-      const key = this.identifier();
-      this.take('=');
-      out[key] = this.value();
-      this.maybe(';');
-    }
-  }
-}
+export const SCENES_VM_POLICY = Object.freeze({
+  timeoutMs: 5000,
+  codeGeneration: Object.freeze({ strings: false, wasm: false }),
+});
 
 export interface EvaluateWindowOptions {
+  /** Shown in stack traces and evaluation errors. */
   filename?: string;
+  /** Wall-clock cap for every script run (default 5 s). */
   timeoutMs?: number;
 }
 
-/** Parse a literal-only storyboard without executing JavaScript. */
-export function evaluateWindowScript(source: string, _options: EvaluateWindowOptions = {}): Record<string, unknown> {
-  return new LiteralParser(source).script();
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function describeEvaluationError(error: unknown, filename: string): Error {
+  const detail = error && typeof error === 'object' ? error as { message?: unknown; stack?: unknown; name?: unknown } : {};
+  const message = typeof detail.message === 'string' ? detail.message : String(error);
+  const stack = typeof detail.stack === 'string' ? detail.stack : '';
+  const locations = [...stack.matchAll(new RegExp(`${escapeRegExp(filename)}:([0-9]+)(?::([0-9]+))?`, 'g'))];
+  const location = locations.find((match) => match[2]) ?? locations[0];
+  const line = location?.[1] ?? '1';
+  const column = location?.[2] ?? '1';
+  const wrapped = new Error(
+    `${filename}:${line}:${column}: ${message}. ` +
+    'Allowed syntax: storyboard JavaScript that assigns JSON-serializable data to window.*; eval and Function are disabled.',
+  );
+  wrapped.name = typeof detail.name === 'string' ? detail.name : 'Error';
+  (wrapped as Error & { cause?: unknown }).cause = error;
+  return wrapped;
+}
+
+/** Evaluate the script and return window as plain objects. */
+export function evaluateWindowScript(source: string, options: EvaluateWindowOptions = {}): Record<string, unknown> {
+  const timeout = options.timeoutMs ?? SCENES_VM_POLICY.timeoutMs;
+  const filename = options.filename ?? 'scenes.js';
+  const context = vm.createContext(Object.create(null) as Record<string, unknown>, {
+    codeGeneration: SCENES_VM_POLICY.codeGeneration,
+  });
+  try {
+    vm.runInContext(
+      'var window = {}; var console = { log() {}, warn() {}, error() {}, info() {}, debug() {} };',
+      context,
+      { timeout },
+    );
+    vm.runInContext(source, context, { filename, timeout });
+    const json: unknown = vm.runInContext('JSON.stringify(window)', context, { timeout });
+    if (typeof json !== 'string') throw new Error('the script did not leave a window object');
+    const plain: unknown = JSON.parse(json);
+    if (!plain || typeof plain !== 'object' || Array.isArray(plain)) {
+      throw new Error('the script replaced window with a non-object');
+    }
+    return plain as Record<string, unknown>;
+  } catch (error) {
+    throw describeEvaluationError(error, filename);
+  }
 }

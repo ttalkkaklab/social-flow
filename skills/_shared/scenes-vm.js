@@ -1,127 +1,56 @@
 'use strict';
 
-const SCENES_VM_POLICY = Object.freeze({ timeoutMs: 5000, execution: false });
+const vm = require('node:vm');
 
-class LiteralParser {
-  constructor(source) { this.source = source; this.offset = 0; }
-  fail(message) { throw new SyntaxError(`${message} at offset ${this.offset}`); }
-  skip() {
-    for (;;) {
-      const rest = this.source.slice(this.offset);
-      const space = /^(?:\s+)/.exec(rest);
-      if (space) { this.offset += space[0].length; continue; }
-      const line = /^\/\/[^\n]*(?:\n|$)/.exec(rest);
-      if (line) { this.offset += line[0].length; continue; }
-      const block = /^\/\*[\s\S]*?\*\//.exec(rest);
-      if (block) { this.offset += block[0].length; continue; }
-      return;
-    }
-  }
-  take(text) { this.skip(); if (!this.source.startsWith(text, this.offset)) this.fail(`expected ${JSON.stringify(text)}`); this.offset += text.length; }
-  maybe(text) { this.skip(); if (!this.source.startsWith(text, this.offset)) return false; this.offset += text.length; return true; }
-  identifier() {
-    this.skip();
-    const match = /^[$A-Z_a-z][$\w]*/.exec(this.source.slice(this.offset));
-    if (!match) this.fail('expected an identifier');
-    this.offset += match[0].length;
-    return match[0];
-  }
-  string() {
-    this.skip();
-    const quote = this.source[this.offset++];
-    if (quote !== '"' && quote !== "'") this.fail('expected a string');
-    let out = '';
-    while (this.offset < this.source.length) {
-      const ch = this.source[this.offset++];
-      if (ch === quote) return out;
-      if (ch === '\n' || ch === '\r') this.fail('a string cannot contain a raw newline');
-      if (ch !== '\\') { out += ch; continue; }
-      const escaped = this.source[this.offset++];
-      const simple = { b: '\b', f: '\f', n: '\n', r: '\r', t: '\t', v: '\v', '0': '\0' };
-      if (Object.hasOwn(simple, escaped)) { out += simple[escaped]; continue; }
-      if (escaped === 'x') {
-        const hex = this.source.slice(this.offset, this.offset + 2);
-        if (!/^[0-9a-f]{2}$/i.test(hex)) this.fail('invalid hexadecimal escape');
-        out += String.fromCodePoint(parseInt(hex, 16)); this.offset += 2; continue;
-      }
-      if (escaped === 'u') {
-        const braced = /^\{([0-9a-f]+)\}/i.exec(this.source.slice(this.offset));
-        if (braced) { out += String.fromCodePoint(parseInt(braced[1], 16)); this.offset += braced[0].length; continue; }
-        const hex = this.source.slice(this.offset, this.offset + 4);
-        if (!/^[0-9a-f]{4}$/i.test(hex)) this.fail('invalid Unicode escape');
-        out += String.fromCharCode(parseInt(hex, 16)); this.offset += 4; continue;
-      }
-      if (escaped === '\n') continue;
-      if (escaped === '\r') { if (this.source[this.offset] === '\n') this.offset++; continue; }
-      out += escaped;
-    }
-    this.fail('unterminated string');
-  }
-  number() {
-    this.skip();
-    const match = /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/.exec(this.source.slice(this.offset));
-    if (!match) this.fail('expected a JSON number');
-    this.offset += match[0].length;
-    return Number(match[0]);
-  }
-  value() {
-    this.skip();
-    const ch = this.source[this.offset];
-    if (ch === '"' || ch === "'") return this.string();
-    if (ch === '[') return this.array();
-    if (ch === '{') return this.object();
-    if (ch === '-' || /\d/.test(ch || '')) return this.number();
-    const word = this.identifier();
-    if (word === 'true') return true;
-    if (word === 'false') return false;
-    if (word === 'null') return null;
-    this.fail(`only literal values are allowed, found ${word}`);
-  }
-  array() {
-    const out = [];
-    this.take('[');
-    if (this.maybe(']')) return out;
-    for (;;) {
-      out.push(this.value());
-      if (this.maybe(']')) return out;
-      this.take(',');
-      if (this.maybe(']')) return out;
-    }
-  }
-  object() {
-    const out = Object.create(null);
-    this.take('{');
-    if (this.maybe('}')) return out;
-    for (;;) {
-      this.skip();
-      const key = ['"', "'"].includes(this.source[this.offset]) ? this.string() : this.identifier();
-      this.take(':');
-      out[key] = this.value();
-      if (this.maybe('}')) return out;
-      this.take(',');
-      if (this.maybe('}')) return out;
-    }
-  }
-  script() {
-    const out = Object.create(null);
-    for (;;) {
-      this.skip();
-      if (this.offset === this.source.length) return JSON.parse(JSON.stringify(out));
-      if (this.identifier() !== 'window') this.fail('only window.KEY assignments are allowed');
-      this.take('.');
-      const key = this.identifier();
-      this.take('=');
-      out[key] = this.value();
-      this.maybe(';');
-    }
-  }
+const SCENES_VM_POLICY = Object.freeze({
+  timeoutMs: 5000,
+  codeGeneration: Object.freeze({ strings: false, wasm: false }),
+});
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-/** Parse a literal-only storyboard without executing JavaScript. */
-function evaluateWindowScript(source) {
-  const plain = new LiteralParser(source).script();
-  if (!plain || typeof plain !== 'object' || Array.isArray(plain)) throw new Error('the script did not leave a window object');
-  return plain;
+function describeEvaluationError(error, filename) {
+  const detail = error && typeof error === 'object' ? error : {};
+  const message = typeof detail.message === 'string' ? detail.message : String(error);
+  const stack = typeof detail.stack === 'string' ? detail.stack : '';
+  const locations = [...stack.matchAll(new RegExp(`${escapeRegExp(filename)}:([0-9]+)(?::([0-9]+))?`, 'g'))];
+  const location = locations.find((match) => match[2]) || locations[0];
+  const line = location?.[1] || '1';
+  const column = location?.[2] || '1';
+  const wrapped = new Error(
+    `${filename}:${line}:${column}: ${message}. ` +
+    'Allowed syntax: storyboard JavaScript that assigns JSON-serializable data to window.*; eval and Function are disabled.',
+  );
+  wrapped.name = typeof detail.name === 'string' ? detail.name : 'Error';
+  wrapped.cause = error;
+  return wrapped;
+}
+
+function evaluateWindowScript(source, options = {}) {
+  const timeout = options.timeoutMs ?? SCENES_VM_POLICY.timeoutMs;
+  const filename = options.filename ?? 'scenes.js';
+  const context = vm.createContext(Object.create(null), {
+    codeGeneration: SCENES_VM_POLICY.codeGeneration,
+  });
+  try {
+    vm.runInContext(
+      'var window = {}; var console = { log() {}, warn() {}, error() {}, info() {}, debug() {} };',
+      context,
+      { timeout },
+    );
+    vm.runInContext(source, context, { filename, timeout });
+    const json = vm.runInContext('JSON.stringify(window)', context, { timeout });
+    if (typeof json !== 'string') throw new Error('the script did not leave a window object');
+    const plain = JSON.parse(json);
+    if (!plain || typeof plain !== 'object' || Array.isArray(plain)) {
+      throw new Error('the script replaced window with a non-object');
+    }
+    return plain;
+  } catch (error) {
+    throw describeEvaluationError(error, filename);
+  }
 }
 
 module.exports = { SCENES_VM_POLICY, evaluateWindowScript };

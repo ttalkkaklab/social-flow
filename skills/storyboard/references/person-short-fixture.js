@@ -33,18 +33,19 @@ window.STORY = {
     { shot: 9, change: "그 배가 있었는지 마을 절반이 다르게 말한다. 갈리는 기록", necessity: "기록이 두 갈래라는 사실 자체가 마지막 정보" }
   ]
 };
+const line = (tts) => [{ tts, sub: tts }];
 window.SCENES = [
   { type: "cover", beat: "hook", hookType: "curiosity", hookForm: "gap", title: "등대지기가 집을 태운 밤",
     shot: { info: "불 꺼진 등탑 위, 성냥을 세는 손" },
-    narration: [{ tts: "불이 꺼진 등대 꼭대기에서 한 남자가 성냥 한 갑을 세고 있어요.", sub: "불이 꺼진 등대 꼭대기에서 한 남자가 성냥 한 갑을 세고 있어요." }] },
-  { type: "points", beat: "drip", narration: [{ tts: "박만수라는 사람인데 이 등대를 서른 해 넘게 혼자 지켰어요.", sub: "박만수라는 사람인데 이 등대를 서른 해 넘게 혼자 지켰어요." }] },
-  { type: "points", beat: "drip", narration: [{ tts: "그날 밤 폭풍이 기름 창고 지붕을 통째로 걷어 갔거든요.", sub: "그날 밤 폭풍이 기름 창고 지붕을 통째로 걷어 갔거든요." }] },
-  { type: "points", beat: "drip", narration: [{ tts: "기름이 없으면 등불은 세 시간을 못 버텨요.", sub: "기름이 없으면 등불은 세 시간을 못 버텨요." }] },
-  { type: "points", beat: "drip", narration: [{ tts: "그런데 항구 쪽에서 배 한 척이 이미 암초 길로 들어오고 있었죠.", sub: "그런데 항구 쪽에서 배 한 척이 이미 암초 길로 들어오고 있었죠." }] },
+    narration: line("불이 꺼진 등대 꼭대기에서 한 남자가 성냥 한 갑을 세고 있어요.") },
+  { type: "points", beat: "drip", narration: line("박만수라는 사람인데 이 등대를 서른 해 넘게 혼자 지켰어요.") },
+  { type: "points", beat: "drip", narration: line("그날 밤 폭풍이 기름 창고 지붕을 통째로 걷어 갔거든요.") },
+  { type: "points", beat: "drip", narration: line("기름이 없으면 등불은 세 시간을 못 버텨요.") },
+  { type: "points", beat: "drip", narration: line("그런데 항구 쪽에서 배 한 척이 이미 암초 길로 들어오고 있었죠.") },
   { type: "points", beat: "drip", sound: { drop: true },
-    narration: [{ tts: "만수는 집에 있던 이불이랑 문짝을 다 뜯어 등탑 위에서 태웠어요.", sub: "만수는 집에 있던 이불이랑 문짝을 다 뜯어 등탑 위에서 태웠어요." }] },
-  { type: "points", beat: "drip", narration: [{ tts: "그 불빛이 배를 돌려세운 게 새벽 두 시였대요.", sub: "그 불빛이 배를 돌려세운 게 새벽 두 시였대요." }] },
-  { type: "points", beat: "drip", narration: [{ tts: "다음 날 아침 등대 옆엔 문짝 없는 집 한 채, 배 한 척을 돌리는 불빛은 집 한 채 값이에요.", sub: "다음 날 아침 등대 옆엔 문짝 없는 집 한 채, 배 한 척을 돌리는 불빛은 집 한 채 값이에요." }] },
+    narration: line("만수는 집에 있던 이불이랑 문짝을 다 뜯어 등탑 위에서 태웠어요.") },
+  { type: "points", beat: "drip", narration: line("그 불빛이 배를 돌려세운 게 새벽 두 시였대요.") },
+  { type: "points", beat: "drip", narration: line("다음 날 아침 등대 옆엔 문짝 없는 집 한 채, 배 한 척을 돌리는 불빛은 집 한 채 값이에요.") },
   { type: "points", beat: "cta", shot: { share: "등대지기가 자기 집을 태워 배를 돌렸는데, 그 배가 있었는지는 마을 절반이 다르게 말한다" },
-    narration: [{ tts: "그 배가 정말 있었는지는 지금도 마을 사람 절반이 다르게 말해요.", sub: "그 배가 정말 있었는지는 지금도 마을 사람 절반이 다르게 말해요." }] }
+    narration: line("그 배가 정말 있었는지는 지금도 마을 사람 절반이 다르게 말해요.") }
 ];

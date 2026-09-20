@@ -268,19 +268,27 @@ describe('episode payload', () => {
         try { window.stolen2 = this.constructor.constructor("return process")().env.REVIEW52_SENTINEL; } catch (e) { window.caught2 = String(e); }
         try { window.stolen3 = (function(){ return this; })().process; } catch (e) { window.caught3 = String(e); }
       `;
-      assert.throws(() => episode.evaluateScenesJs(escape), /only window/i);
+      const r = episode.evaluateScenesJs(escape);
+      assert.equal(r.meta.stolen, undefined);
+      assert.equal(r.meta.stolen2, undefined);
+      assert.equal(r.meta.stolen3, undefined);
+      assert.equal(JSON.stringify(r).includes('must-not-leak'), false);
+      assert.match(String(r.meta.caught ?? r.meta.caught2 ?? ''), /Code generation from strings disallowed/);
       // the local board reader (storyboard_read/apply/check) is the second place a pulled board runs — same room
       const dir = join(root, 'data', 'my-channel', 'episodes', 'ep-escape');
       mkdirSync(join(dir, 'storyboard'), { recursive: true });
       writeFileSync(join(dir, 'storyboard', 'scenes.js'), `${escape}\nconsole.log("boards may log"); window.viaGlobal = typeof globalThis.process;`);
-      assert.throws(() => storyboard.readBoard(join(dir, 'storyboard')), /only window/i);
+      const board = storyboard.readBoard(join(dir, 'storyboard'));
+      assert.equal(board.win.stolen, undefined);
+      assert.equal(board.win.viaGlobal, 'undefined');
+      assert.equal(JSON.stringify(board.win).includes('must-not-leak'), false);
     } finally {
       delete process.env.REVIEW52_SENTINEL;
     }
   });
 
-  it('a runaway board is rejected before execution', () => {
-    assert.throws(() => episode.evaluateScenesJs('window.SCENES = []; while (true) {}'), /only window/i);
+  it('a runaway board hits the timeout instead of hanging the server', () => {
+    assert.throws(() => episode.evaluateScenesJs('window.SCENES = []; while (true) {}'), /Script execution timed out/);
   });
 
   it('reads the storyboard.md head and strips the " — Storyboard" suffix from the title', () => {
