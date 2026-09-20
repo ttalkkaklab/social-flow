@@ -532,6 +532,67 @@ describe('portal_* handlers on a scripted portal', () => {
     assert.equal(readFileSync(join(dir, 'storyboard', 'scenario.md'), 'utf8'), '# d1 page\n');
   });
 
+  it('a directory recorded as another workspace\'s copy is refused by every writing tool, and passes by none of the reads (loop R1)', async () => {
+    const dir = makeEpisodeDir(root, 'my-channel', 'ep-other-ws');
+    episode.writePortalState(dir, { workspace: 'other-lab', episodeId: EPISODE_ID, headRevisionNo: 2 });
+    const { impl, calls } = fakeFetch({
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}/revisions`]: { success: true, data: { revisions: [] } },
+      'GET /api/workspaces/lab/me': { success: true, data: { role: 'member' } },
+    });
+    const h = portal.portalHandlers(impl);
+    const writes = [
+      () => h.storyboardSave({ episodeDir: dir }),
+      () => h.storyboardPull({ episodeId: EPISODE_ID, targetDir: dir }),
+      () => h.episodeStatus({ episodeDir: dir, status: 'produced' }),
+      () => h.episodeCreate({ storyboardId: STORYBOARD_ID, slug: 'x', title: 'x', episodeDir: dir }),
+      () => h.episodeCheckpoint({ stage: 'board', episodeDir: dir }),
+      () => h.episodeRestore({ revisionNo: 1, episodeDir: dir }),
+      () => h.episodeLease({ action: 'acquire', episodeDir: dir }),
+      () => h.scenarioSave({ candidate: 'D1', episodeDir: dir, markdown: '# d1' }),
+      () => h.scenarioSave({ candidate: 'D1', file: join(dir, 'storyboard', 'candidates', 'd1.md') }),
+      () => h.scenarioPull({ targetDir: dir }),
+      () => h.scenarioChoose({ candidate: 'D1', episodeDir: dir }),
+    ];
+    for (const call of writes) {
+      const r = await call();
+      assert.equal(r.isError, true, call.toString());
+      assert.match(r.text, /Workspace mismatch/);
+      assert.match(r.text, /"other-lab"/);
+      assert.match(r.text, /"lab"/);
+    }
+    assert.equal(calls.length, 0, 'nothing reached the portal');
+    assert.equal(episode.readPortalState(dir).headRevisionNo, 2, 'the record is untouched');
+
+    const read = await h.episodeRevisions({ episodeDir: dir });
+    assert.equal(read.isError, false, 'reading with the other key only asks the portal, which answers for itself');
+
+    const check = await h.workspaceCheck({ episodeDir: dir });
+    assert.equal(check.isError, false);
+    const out = JSON.parse(check.text);
+    assert.equal(out.workspaceMatches, false);
+    assert.deepEqual(out.copyOf, { workspace: 'other-lab', episodeId: EPISODE_ID, headRevisionNo: 2 });
+    assert.match(out.warning, /Workspace mismatch/);
+    assert.equal(out.channel, 'my-channel', 'the channel came off the path');
+  });
+
+  it('a matching or absent workspace record passes the guard', async () => {
+    const same = makeEpisodeDir(root, 'my-channel', 'ep-same-ws');
+    episode.writePortalState(same, { workspace: 'lab', episodeId: EPISODE_ID, headRevisionNo: 0 });
+    const fresh = makeEpisodeDir(root, 'my-channel', 'ep-fresh');
+    const { impl } = fakeFetch({
+      'POST /api/workspaces/lab/storyboards/import': { status: 200, success: true, data: { storyboardId: STORYBOARD_ID, episodeId: EPISODE_ID, revisionNo: 1, url: '/u' } },
+      'GET /api/workspaces/lab/me': { success: true, data: { role: 'member' } },
+    });
+    const h = portal.portalHandlers(impl);
+    assert.equal((await h.storyboardSave({ episodeDir: same })).isError, false);
+    assert.equal((await h.storyboardSave({ episodeDir: fresh })).isError, false);
+    const check = await h.workspaceCheck({ episodeDir: same });
+    assert.equal(JSON.parse(check.text).workspaceMatches, true);
+    const legacy = makeEpisodeDir(root, 'my-channel', 'ep-legacy');
+    episode.writePortalState(legacy, { episodeId: EPISODE_ID }); // a record from before the workspace field
+    assert.equal((await h.storyboardSave({ episodeDir: legacy })).isError, false);
+  });
+
   it('episode_status refuses an empty patch before touching the portal', async () => {
     const r = await portal.portalHandlers(async () => {
       throw new Error('must not be called');

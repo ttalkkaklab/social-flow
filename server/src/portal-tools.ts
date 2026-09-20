@@ -50,7 +50,7 @@ const uuid = z.string().uuid();
 const stage = z.enum(EPISODE_STAGES);
 const candidate = z.enum(SCENARIO_CANDIDATES);
 
-export const workspaceCheckSchema = z.object({ channel: channelArg });
+export const workspaceCheckSchema = z.object({ channel: channelArg, episodeDir: z.string().optional() });
 export const storyboardSaveSchema = z.object({
   episodeDir: z.string().min(1),
   project: z.string().min(1).optional(),
@@ -186,6 +186,31 @@ function resolveClient(fetchImpl: FetchLike | undefined, explicit: string | unde
   return { client, channel };
 }
 
+/**
+ * The directory's `.portal.json` names the workspace it is a copy of. A write with a key for
+ * another workspace would not fail — the portal would create a second, unrelated episode
+ * there and the topic would fork silently (loop R1). So every tool that writes, or that
+ * overwrites the directory, refuses when the two differ; a directory with no record passes.
+ */
+export function workspaceMismatch(client: PortalClient, dir: string | undefined): string | null {
+  if (!dir) return null;
+  const recorded = readPortalState(dir)?.workspace;
+  if (!recorded || recorded === client.workspace) return null;
+  return (
+    `Workspace mismatch — ${episodeDirOf(dir)}/.portal.json says this directory is a copy of workspace "${recorded}", ` +
+    `but the key in use (${client.source}) opens workspace "${client.workspace}". Nothing was sent. ` +
+    `Fix the key file for this channel, or — to start the topic over in "${client.workspace}" — delete .portal.json first.`
+  );
+}
+
+function refuseMismatch(client: PortalClient, ...dirs: Array<string | undefined>): PortalToolResult | null {
+  for (const dir of dirs) {
+    const message = workspaceMismatch(client, dir);
+    if (message) return { text: message, isError: true };
+  }
+  return null;
+}
+
 /** Episode id — the argument, or `episodeDir/.portal.json`. */
 function resolveEpisodeId(episodeId: string | undefined, episodeDir: string | undefined): string {
   if (episodeId) return episodeId;
@@ -215,12 +240,28 @@ export interface PortalHandlers {
 /** The handlers, with fetch injectable so the tests never touch a network. */
 export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
   return {
-    async workspaceCheck({ channel }) {
-      const r = resolveClient(fetchImpl, channel);
+    async workspaceCheck({ channel, episodeDir }) {
+      const r = resolveClient(fetchImpl, channel, episodeDir);
       if ('error' in r) return r.error;
       try {
         const { data } = await r.client.me();
-        return ok({ channel: r.channel ?? null, workspace: r.client.workspace, source: r.client.source, holder: r.client.holder, ...(data as object) });
+        const state = episodeDir ? readPortalState(episodeDir) : null;
+        const mismatch = workspaceMismatch(r.client, episodeDir);
+        return ok({
+          channel: r.channel ?? null,
+          workspace: r.client.workspace,
+          source: r.client.source,
+          holder: r.client.holder,
+          ...(episodeDir
+            ? {
+                episodeDir: episodeDirOf(episodeDir),
+                copyOf: state ? { workspace: state.workspace ?? null, episodeId: state.episodeId ?? null, headRevisionNo: state.headRevisionNo ?? null } : null,
+                workspaceMatches: !mismatch,
+                ...(mismatch ? { warning: mismatch } : {}),
+              }
+            : {}),
+          ...(data as object),
+        });
       } catch (error) {
         return failed(error);
       }
@@ -229,6 +270,8 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
     async storyboardSave({ episodeDir, project, storyboardTitle, title, stage: stageArg, baseRevisionNo, note }) {
       const r = resolveClient(fetchImpl, undefined, episodeDir);
       if ('error' in r) return r.error;
+      const refused = refuseMismatch(r.client, episodeDir);
+      if (refused) return refused;
       try {
         const payload = buildImportPayload(episodeDir, { project, storyboard: storyboardTitle, title });
         const state = readPortalState(episodeDir);
@@ -276,6 +319,8 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
     async storyboardPull({ episodeId, targetDir, includeDocuments = true, revision }) {
       const r = resolveClient(fetchImpl, undefined, targetDir);
       if ('error' in r) return r.error;
+      const refused = refuseMismatch(r.client, targetDir);
+      if (refused) return refused;
       try {
         const c = r.client;
         const { data: episode } = await c.getEpisode(episodeId);
@@ -342,6 +387,8 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
     async episodeStatus({ episodeId, episodeDir, channel, status, stage: stageArg, title }) {
       const r = resolveClient(fetchImpl, channel, episodeDir);
       if ('error' in r) return r.error;
+      const refused = refuseMismatch(r.client, episodeDir);
+      if (refused) return refused;
       try {
         const patch = { ...(status ? { status } : {}), ...(stageArg ? { stage: stageArg } : {}), ...(title ? { title } : {}) };
         if (Object.keys(patch).length === 0) throw new Error('one of status · stage · title is required.');
@@ -355,6 +402,8 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
     async episodeCreate({ storyboardId, episodeDir, channel, ...body }) {
       const r = resolveClient(fetchImpl, channel, episodeDir);
       if ('error' in r) return r.error;
+      const refused = refuseMismatch(r.client, episodeDir);
+      if (refused) return refused;
       try {
         const { data } = await r.client.createEpisode(storyboardId, body);
         if (episodeDir) {
@@ -370,6 +419,8 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
     async episodeCheckpoint({ stage: stageArg, episodeId, episodeDir, channel, baseRevisionNo, note, documents }) {
       const r = resolveClient(fetchImpl, channel, episodeDir);
       if ('error' in r) return r.error;
+      const refused = refuseMismatch(r.client, episodeDir);
+      if (refused) return refused;
       try {
         const id = resolveEpisodeId(episodeId, episodeDir);
         const state = episodeDir ? readPortalState(episodeDir) : null;
@@ -422,6 +473,8 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
     async episodeRestore({ revisionNo, episodeId, episodeDir, channel, note }) {
       const r = resolveClient(fetchImpl, channel, episodeDir);
       if ('error' in r) return r.error;
+      const refused = refuseMismatch(r.client, episodeDir);
+      if (refused) return refused;
       try {
         const id = resolveEpisodeId(episodeId, episodeDir);
         const { data } = await r.client.restoreRevision(id, revisionNo, { note, sourceHost: r.client.holder });
@@ -435,6 +488,8 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
     async episodeLease({ action, episodeId, episodeDir, channel, ttlMinutes, force }) {
       const r = resolveClient(fetchImpl, channel, episodeDir);
       if ('error' in r) return r.error;
+      const refused = refuseMismatch(r.client, episodeDir);
+      if (refused) return refused;
       try {
         const id = resolveEpisodeId(episodeId, episodeDir);
         const me = r.client.holder;
@@ -455,6 +510,8 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
       const dirFromFile = file ? (path.basename(path.dirname(file)) === 'candidates' ? path.dirname(path.dirname(file)) : path.dirname(file)) : undefined;
       const r = resolveClient(fetchImpl, channel, episodeDir, dirFromFile);
       if ('error' in r) return r.error;
+      const refused = refuseMismatch(r.client, episodeDir, dirFromFile);
+      if (refused) return refused;
       try {
         const id = resolveEpisodeId(episodeId, episodeDir ?? dirFromFile);
         const source = markdown ?? (file ? readFileSync(file, 'utf8') : null);
@@ -479,6 +536,8 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
     async scenarioPull({ targetDir, candidate: cand, episodeId, episodeDir, channel }) {
       const r = resolveClient(fetchImpl, channel, episodeDir, targetDir);
       if ('error' in r) return r.error;
+      const refused = refuseMismatch(r.client, episodeDir, targetDir);
+      if (refused) return refused;
       try {
         const id = resolveEpisodeId(episodeId, episodeDir ?? targetDir);
         if (cand && !targetDir) return { text: await r.client.scenarioMd(id, cand), isError: false };
@@ -518,6 +577,8 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
     async scenarioChoose({ candidate: cand, episodeId, episodeDir, channel }) {
       const r = resolveClient(fetchImpl, channel, episodeDir);
       if ('error' in r) return r.error;
+      const refused = refuseMismatch(r.client, episodeDir);
+      if (refused) return refused;
       try {
         const id = resolveEpisodeId(episodeId, episodeDir);
         const { data } = await r.client.chooseScenario(id, cand);

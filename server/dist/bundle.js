@@ -83586,10 +83586,15 @@ var PORTAL_TOOLS = [
 
 The key is issued on the portal at /{workspace}/settings/api-keys (admin+) and saved as <SNS_TOKEN_DIR>/<channel>/ttalkkakstory.json \u2014 { "apiUrl", "workspace", "apiKey" }. With no key anywhere the portal_* tools are hidden and every call answers one line; the episode stays a local file.
 
-Returns: JSON \u2014 { channel, workspace, source, holder, \u2026the portal's /me answer }.`,
+With episodeDir, also compares the directory's .portal.json (the workspace it is a copy of) with the key's workspace \u2014 workspaceMatches:false with a warning means every write to that directory will be refused until the key file or the record is fixed, so the topic does not fork into a second workspace.
+
+Returns: JSON \u2014 { channel, workspace, source, holder, episodeDir?, copyOf?, workspaceMatches?, warning?, \u2026the portal's /me answer }.`,
     inputSchema: {
       type: "object",
-      properties: { channel: PORTAL_CHANNEL_ARG }
+      properties: {
+        channel: PORTAL_CHANNEL_ARG,
+        episodeDir: { type: "string", description: "Absolute path of data/<channel>/episodes/<topic> \u2014 checks its .portal.json against the key's workspace and picks the channel off the path" }
+      }
     }
   },
   {
@@ -87555,7 +87560,7 @@ var channelArg = external_exports.string().regex(/^[a-z0-9][a-z0-9-]{0,63}$/, "k
 var uuid2 = external_exports.string().uuid();
 var stage = external_exports.enum(EPISODE_STAGES);
 var candidate = external_exports.enum(SCENARIO_CANDIDATES);
-var workspaceCheckSchema = external_exports.object({ channel: channelArg });
+var workspaceCheckSchema = external_exports.object({ channel: channelArg, episodeDir: external_exports.string().optional() });
 var storyboardSaveSchema = external_exports.object({
   episodeDir: external_exports.string().min(1),
   project: external_exports.string().min(1).optional(),
@@ -87673,6 +87678,19 @@ function resolveClient(fetchImpl, explicit, ...dirs) {
   if (!client) return { error: { text: portalUnavailable(channel), isError: true } };
   return { client, channel };
 }
+function workspaceMismatch(client, dir) {
+  if (!dir) return null;
+  const recorded = readPortalState(dir)?.workspace;
+  if (!recorded || recorded === client.workspace) return null;
+  return `Workspace mismatch \u2014 ${episodeDirOf(dir)}/.portal.json says this directory is a copy of workspace "${recorded}", but the key in use (${client.source}) opens workspace "${client.workspace}". Nothing was sent. Fix the key file for this channel, or \u2014 to start the topic over in "${client.workspace}" \u2014 delete .portal.json first.`;
+}
+function refuseMismatch(client, ...dirs) {
+  for (const dir of dirs) {
+    const message = workspaceMismatch(client, dir);
+    if (message) return { text: message, isError: true };
+  }
+  return null;
+}
 function resolveEpisodeId(episodeId, episodeDir) {
   if (episodeId) return episodeId;
   const state = episodeDir ? readPortalState(episodeDir) : null;
@@ -87683,12 +87701,26 @@ function resolveEpisodeId(episodeId, episodeDir) {
 }
 function portalHandlers(fetchImpl) {
   return {
-    async workspaceCheck({ channel }) {
-      const r2 = resolveClient(fetchImpl, channel);
+    async workspaceCheck({ channel, episodeDir }) {
+      const r2 = resolveClient(fetchImpl, channel, episodeDir);
       if ("error" in r2) return r2.error;
       try {
         const { data } = await r2.client.me();
-        return ok({ channel: r2.channel ?? null, workspace: r2.client.workspace, source: r2.client.source, holder: r2.client.holder, ...data });
+        const state = episodeDir ? readPortalState(episodeDir) : null;
+        const mismatch = workspaceMismatch(r2.client, episodeDir);
+        return ok({
+          channel: r2.channel ?? null,
+          workspace: r2.client.workspace,
+          source: r2.client.source,
+          holder: r2.client.holder,
+          ...episodeDir ? {
+            episodeDir: episodeDirOf(episodeDir),
+            copyOf: state ? { workspace: state.workspace ?? null, episodeId: state.episodeId ?? null, headRevisionNo: state.headRevisionNo ?? null } : null,
+            workspaceMatches: !mismatch,
+            ...mismatch ? { warning: mismatch } : {}
+          } : {},
+          ...data
+        });
       } catch (error2) {
         return failed(error2);
       }
@@ -87696,6 +87728,8 @@ function portalHandlers(fetchImpl) {
     async storyboardSave({ episodeDir, project, storyboardTitle, title, stage: stageArg, baseRevisionNo, note }) {
       const r2 = resolveClient(fetchImpl, void 0, episodeDir);
       if ("error" in r2) return r2.error;
+      const refused = refuseMismatch(r2.client, episodeDir);
+      if (refused) return refused;
       try {
         const payload = buildImportPayload(episodeDir, { project, storyboard: storyboardTitle, title });
         const state = readPortalState(episodeDir);
@@ -87741,6 +87775,8 @@ function portalHandlers(fetchImpl) {
     async storyboardPull({ episodeId, targetDir, includeDocuments = true, revision }) {
       const r2 = resolveClient(fetchImpl, void 0, targetDir);
       if ("error" in r2) return r2.error;
+      const refused = refuseMismatch(r2.client, targetDir);
+      if (refused) return refused;
       try {
         const c = r2.client;
         const { data: episode } = await c.getEpisode(episodeId);
@@ -87801,6 +87837,8 @@ function portalHandlers(fetchImpl) {
     async episodeStatus({ episodeId, episodeDir, channel, status, stage: stageArg, title }) {
       const r2 = resolveClient(fetchImpl, channel, episodeDir);
       if ("error" in r2) return r2.error;
+      const refused = refuseMismatch(r2.client, episodeDir);
+      if (refused) return refused;
       try {
         const patch = { ...status ? { status } : {}, ...stageArg ? { stage: stageArg } : {}, ...title ? { title } : {} };
         if (Object.keys(patch).length === 0) throw new Error("one of status \xB7 stage \xB7 title is required.");
@@ -87813,6 +87851,8 @@ function portalHandlers(fetchImpl) {
     async episodeCreate({ storyboardId, episodeDir, channel, ...body }) {
       const r2 = resolveClient(fetchImpl, channel, episodeDir);
       if ("error" in r2) return r2.error;
+      const refused = refuseMismatch(r2.client, episodeDir);
+      if (refused) return refused;
       try {
         const { data } = await r2.client.createEpisode(storyboardId, body);
         if (episodeDir) {
@@ -87827,6 +87867,8 @@ function portalHandlers(fetchImpl) {
     async episodeCheckpoint({ stage: stageArg, episodeId, episodeDir, channel, baseRevisionNo, note, documents }) {
       const r2 = resolveClient(fetchImpl, channel, episodeDir);
       if ("error" in r2) return r2.error;
+      const refused = refuseMismatch(r2.client, episodeDir);
+      if (refused) return refused;
       try {
         const id = resolveEpisodeId(episodeId, episodeDir);
         const state = episodeDir ? readPortalState(episodeDir) : null;
@@ -87877,6 +87919,8 @@ function portalHandlers(fetchImpl) {
     async episodeRestore({ revisionNo, episodeId, episodeDir, channel, note }) {
       const r2 = resolveClient(fetchImpl, channel, episodeDir);
       if ("error" in r2) return r2.error;
+      const refused = refuseMismatch(r2.client, episodeDir);
+      if (refused) return refused;
       try {
         const id = resolveEpisodeId(episodeId, episodeDir);
         const { data } = await r2.client.restoreRevision(id, revisionNo, { note, sourceHost: r2.client.holder });
@@ -87889,6 +87933,8 @@ function portalHandlers(fetchImpl) {
     async episodeLease({ action, episodeId, episodeDir, channel, ttlMinutes, force }) {
       const r2 = resolveClient(fetchImpl, channel, episodeDir);
       if ("error" in r2) return r2.error;
+      const refused = refuseMismatch(r2.client, episodeDir);
+      if (refused) return refused;
       try {
         const id = resolveEpisodeId(episodeId, episodeDir);
         const me = r2.client.holder;
@@ -87907,6 +87953,8 @@ function portalHandlers(fetchImpl) {
       const dirFromFile = file ? path11.basename(path11.dirname(file)) === "candidates" ? path11.dirname(path11.dirname(file)) : path11.dirname(file) : void 0;
       const r2 = resolveClient(fetchImpl, channel, episodeDir, dirFromFile);
       if ("error" in r2) return r2.error;
+      const refused = refuseMismatch(r2.client, episodeDir, dirFromFile);
+      if (refused) return refused;
       try {
         const id = resolveEpisodeId(episodeId, episodeDir ?? dirFromFile);
         const source = markdown ?? (file ? readFileSync10(file, "utf8") : null);
@@ -87930,6 +87978,8 @@ function portalHandlers(fetchImpl) {
     async scenarioPull({ targetDir, candidate: cand, episodeId, episodeDir, channel }) {
       const r2 = resolveClient(fetchImpl, channel, episodeDir, targetDir);
       if ("error" in r2) return r2.error;
+      const refused = refuseMismatch(r2.client, episodeDir, targetDir);
+      if (refused) return refused;
       try {
         const id = resolveEpisodeId(episodeId, episodeDir ?? targetDir);
         if (cand && !targetDir) return { text: await r2.client.scenarioMd(id, cand), isError: false };
@@ -87968,6 +88018,8 @@ function portalHandlers(fetchImpl) {
     async scenarioChoose({ candidate: cand, episodeId, episodeDir, channel }) {
       const r2 = resolveClient(fetchImpl, channel, episodeDir);
       if ("error" in r2) return r2.error;
+      const refused = refuseMismatch(r2.client, episodeDir);
+      if (refused) return refused;
       try {
         const id = resolveEpisodeId(episodeId, episodeDir);
         const { data } = await r2.client.chooseScenario(id, cand);

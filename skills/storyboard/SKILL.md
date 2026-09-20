@@ -402,12 +402,12 @@ ttalkkakstory portal).** The plugin's server calls the portal with the channel's
 only while a key exists, so their absence is local-file mode — one line, go on. An episode the
 portal has seen is the portal's; the directory is a working copy (two machines on one topic used
 to be last-writer-wins, silently). Top of a session, before any portal write (§2.2 included):
-`portal_workspace_check` once (`channel:` — names the workspace the key opens, so a save never
-lands elsewhere), then `portal_episode_lease` `action: "acquire"`, `episodeDir:` the episode directory —
+`portal_workspace_check` once (`episodeDir:` — names the workspace the key opens and whether the
+directory is that workspace's copy; on `workspaceMatches: false` every write is refused — fix the key
+file or, to start over there, delete `.portal.json`), then `portal_episode_lease` `action: "acquire"`, `episodeDir:` the episode directory —
 with no `.portal.json` yet, `portal_episode_create` first (`storyboardId` from `portal_storyboard_list`, `slug` = the directory name, `title`, `format`, `episodeDir`), which writes that file. A **409 `leased`** names who
 holds it and until when: one line to the user, wait or ask an admin to release — never write over a
-held episode; **every later write** (checkpoint, save, scenario, status) returns the same 409 while
-someone else holds it, handled the same way, never skipped as an error. Then
+held episode; **every later write** (checkpoint, save, scenario, status) returns the same 409 while someone else holds it, handled the same way, never skipped as an error. Then
 `portal_storyboard_pull` (`episodeId` from `.portal.json`, `targetDir:` the directory) whenever the
 portal's `headRevisionNo` is ahead — it rewrites `scenes.js`, the documents and a chosen
 `scenario.md`. Later `portal_episode_checkpoint` / `portal_storyboard_save` send that number as base; **409

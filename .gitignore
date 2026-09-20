@@ -64,3 +64,4 @@ apps/*/build/
 
 # scratch frames from the 2026-08-16 mouse-character test — local only
 .tmp-mouse-vid/
+node_modules
