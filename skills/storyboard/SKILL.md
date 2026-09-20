@@ -404,13 +404,14 @@ portal has seen is the portal's; the directory is a working copy (two machines o
 to be last-writer-wins, silently). Top of a session, before any portal write (§2.2 included):
 `portal_workspace_check` once (`episodeDir:` — names the workspace the key opens and whether the
 directory is that workspace's copy; on `workspaceMatches: false` every write is refused — fix the key
-file or, to start over there, delete `.portal.json`), then `portal_episode_lease` `action: "acquire"`, `episodeDir:` the episode directory —
+file or, to start over there, delete `.portal.json`; it also answers `sync` and `portal.lease`: on `sync:
+"portal_ahead"` pull `mode: "side"` and merge before any write, on `pending.sideDir: true` finish the
+merge left in `.portal-head/` first, on a lease held by someone else wait), then `portal_episode_lease` `action: "acquire"`, `episodeDir:` the episode directory —
 with no `.portal.json` yet, `portal_episode_create` first (`storyboardId` from `portal_storyboard_list`, `slug` = the directory name, `title`, `format`, `episodeDir`), which writes that file. A **409 `leased`** names who
 holds it and until when: one line to the user, wait or ask an admin to release — never write over a
 held episode; **every later write** (checkpoint, save, scenario, status) returns the same 409 while someone else holds it, handled the same way, never skipped as an error. Then
-`portal_storyboard_pull` (`episodeId` from `.portal.json`, `targetDir:` the directory) whenever the
-portal's `headRevisionNo` is ahead — it rewrites `scenes.js`, the documents and a chosen
-`scenario.md`. Later `portal_episode_checkpoint` / `portal_storyboard_save` send that number as base; **409
+`portal_storyboard_pull` (`episodeId` from `.portal.json`, `targetDir:` the directory) whenever the check said
+`portal_ahead` — it rewrites `scenes.js`, the documents and a chosen `scenario.md` (changed local files go to `.portal-local/`). Later `portal_episode_checkpoint` / `portal_storyboard_save` send that number as base; **409
 `head_moved`** = the portal moved under you: call `portal_storyboard_pull` with `mode: "side"`, use `.portal-head/` and the 409 list of what the other side changed to resolve only overlapping scenes and documents by hand while keeping every other local change, then call `portal_storyboard_save` with `baseRevisionNo: <the side result's headRevisionNo>`. Release in §7 or expire (2h).
 
 ### 3.5 Scenario — freeze the winner

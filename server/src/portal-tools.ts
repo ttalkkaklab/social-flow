@@ -11,7 +11,7 @@
  * (`portalUnavailable`) and the skill carries on in local-file mode.
  */
 
-import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { z } from 'zod';
 import { portalCredentialFile, PORTAL_CREDENTIAL_FILENAME } from './config.js';
@@ -271,6 +271,20 @@ function backupStamp(): string {
   return new Date(now).toISOString().replace(/[:.]/g, '-');
 }
 
+/** What R4 may have left in the directory: a half-merged side pull (`.portal-head/`) and how many backups sit in `.portal-local/`. */
+function pendingOf(dir: string): { sideDir: boolean; backups: number } {
+  const sb = path.join(episodeDirOf(dir), 'storyboard');
+  const side = path.join(sb, '.portal-head');
+  const local = path.join(sb, '.portal-local');
+  let backups = 0;
+  try {
+    backups = readdirSync(local, { withFileTypes: true }).filter((e) => e.isDirectory()).length;
+  } catch {
+    backups = 0;
+  }
+  return { sideDir: existsSync(side), backups };
+}
+
 /** Episode id — the argument, or `episodeDir/.portal.json`. */
 function resolveEpisodeId(episodeId: string | undefined, episodeDir: string | undefined): string {
   if (episodeId) return episodeId;
@@ -307,6 +321,36 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
         const { data } = await r.client.me();
         const state = episodeDir ? readPortalState(episodeDir) : null;
         const mismatch = workspaceMismatch(r.client, episodeDir);
+        // Loop R5 — the one call at the top of a session also answers "is the portal ahead, who
+        // holds it, is there a half-merged side pull or a backup lying around", so the skill does
+        // not walk into the first checkpoint's 409. A portal lookup that fails leaves portal:null
+        // with a warning; the check itself still answers.
+        let portalPart: Record<string, unknown> = {};
+        if (episodeDir && !mismatch) {
+          portalPart = { pending: pendingOf(episodeDir) };
+          if (state?.episodeId) {
+            try {
+              const { data: ep } = await r.client.getEpisode(state.episodeId);
+              const lease = (ep.lease ?? null) as { holder?: string; expiresAt?: string; mine?: boolean } | null;
+              const portalHead = ep.headRevisionNo ?? 0;
+              const localHead = state.headRevisionNo ?? 0;
+              portalPart = {
+                ...portalPart,
+                portal: {
+                  headRevisionNo: portalHead,
+                  stage: ep.stage ?? null,
+                  status: (ep as { status?: string }).status ?? null,
+                  lease: lease && lease.holder ? { holder: lease.holder, until: lease.expiresAt ?? null, mine: lease.mine ?? lease.holder === r.client.holder } : null,
+                },
+                sync: portalHead > localHead ? 'portal_ahead' : portalHead < localHead ? 'local_ahead' : 'in_sync',
+              };
+            } catch (error) {
+              portalPart = { ...portalPart, portal: null, sync: 'unknown', portalWarning: describePortalError(error) };
+            }
+          } else {
+            portalPart = { ...portalPart, portal: null, sync: 'unknown' };
+          }
+        }
         return ok({
           channel: r.channel ?? null,
           workspace: r.client.workspace,
@@ -318,6 +362,7 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
                 copyOf: state ? { workspace: state.workspace ?? null, episodeId: state.episodeId ?? null, headRevisionNo: state.headRevisionNo ?? null } : null,
                 workspaceMatches: !mismatch,
                 ...(mismatch ? { warning: mismatch } : {}),
+                ...portalPart,
               }
             : {}),
           ...(data as object),

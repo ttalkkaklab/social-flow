@@ -83621,9 +83621,9 @@ var PORTAL_TOOLS = [
 
 The key is issued on the portal at /{workspace}/settings/api-keys (admin+) and saved as <SNS_TOKEN_DIR>/<channel>/ttalkkakstory.json \u2014 { "apiUrl", "workspace", "apiKey" }. With no key anywhere the portal_* tools are hidden and every call answers one line; the episode stays a local file.
 
-With episodeDir, also compares the directory's .portal.json (the workspace it is a copy of) with the key's workspace \u2014 workspaceMatches:false with a warning means every write to that directory will be refused until the key file or the record is fixed, so the topic does not fork into a second workspace.
+With episodeDir, also compares the directory's .portal.json (the workspace it is a copy of) with the key's workspace \u2014 workspaceMatches:false with a warning means every write to that directory will be refused until the key file or the record is fixed, so the topic does not fork into a second workspace. When the record names an episode, the portal's side comes too: portal { headRevisionNo, stage, status, lease { holder, until, mine } | null } and sync \u2014 "portal_ahead" (pull with mode "side" and merge before writing), "local_ahead", "in_sync", or "unknown" (no record, or the lookup failed \u2014 see portalWarning) \u2014 plus pending { sideDir, backups }: a leftover .portal-head/ means a merge was started and not finished, backups counts .portal-local/ entries.
 
-Returns: JSON \u2014 { channel, workspace, source, holder, episodeDir?, copyOf?, workspaceMatches?, warning?, \u2026the portal's /me answer }.`,
+Returns: JSON \u2014 { channel, workspace, source, holder, episodeDir?, copyOf?, workspaceMatches?, warning?, portal?, sync?, pending?, portalWarning?, \u2026the portal's /me answer }.`,
     inputSchema: {
       type: "object",
       properties: {
@@ -87332,7 +87332,7 @@ var SNS_PLATFORM_BY_TOOL = {
 };
 
 // src/portal-tools.ts
-import { copyFileSync, existsSync as existsSync13, mkdirSync as mkdirSync5, readFileSync as readFileSync10, rmSync as rmSync6, writeFileSync as writeFileSync9 } from "node:fs";
+import { copyFileSync, existsSync as existsSync13, mkdirSync as mkdirSync5, readdirSync as readdirSync2, readFileSync as readFileSync10, rmSync as rmSync6, writeFileSync as writeFileSync9 } from "node:fs";
 import path11 from "node:path";
 
 // src/portal-client.ts
@@ -87766,6 +87766,18 @@ function backupStamp() {
   lastBackupTimeMs = now;
   return new Date(now).toISOString().replace(/[:.]/g, "-");
 }
+function pendingOf(dir) {
+  const sb = path11.join(episodeDirOf(dir), "storyboard");
+  const side = path11.join(sb, ".portal-head");
+  const local = path11.join(sb, ".portal-local");
+  let backups = 0;
+  try {
+    backups = readdirSync2(local, { withFileTypes: true }).filter((e2) => e2.isDirectory()).length;
+  } catch {
+    backups = 0;
+  }
+  return { sideDir: existsSync13(side), backups };
+}
 function resolveEpisodeId(episodeId, episodeDir) {
   if (episodeId) return episodeId;
   const state = episodeDir ? readPortalState(episodeDir) : null;
@@ -87783,6 +87795,32 @@ function portalHandlers(fetchImpl) {
         const { data } = await r2.client.me();
         const state = episodeDir ? readPortalState(episodeDir) : null;
         const mismatch = workspaceMismatch(r2.client, episodeDir);
+        let portalPart = {};
+        if (episodeDir && !mismatch) {
+          portalPart = { pending: pendingOf(episodeDir) };
+          if (state?.episodeId) {
+            try {
+              const { data: ep } = await r2.client.getEpisode(state.episodeId);
+              const lease = ep.lease ?? null;
+              const portalHead = ep.headRevisionNo ?? 0;
+              const localHead = state.headRevisionNo ?? 0;
+              portalPart = {
+                ...portalPart,
+                portal: {
+                  headRevisionNo: portalHead,
+                  stage: ep.stage ?? null,
+                  status: ep.status ?? null,
+                  lease: lease && lease.holder ? { holder: lease.holder, until: lease.expiresAt ?? null, mine: lease.mine ?? lease.holder === r2.client.holder } : null
+                },
+                sync: portalHead > localHead ? "portal_ahead" : portalHead < localHead ? "local_ahead" : "in_sync"
+              };
+            } catch (error2) {
+              portalPart = { ...portalPart, portal: null, sync: "unknown", portalWarning: describePortalError(error2) };
+            }
+          } else {
+            portalPart = { ...portalPart, portal: null, sync: "unknown" };
+          }
+        }
         return ok({
           channel: r2.channel ?? null,
           workspace: r2.client.workspace,
@@ -87792,7 +87830,8 @@ function portalHandlers(fetchImpl) {
             episodeDir: episodeDirOf(episodeDir),
             copyOf: state ? { workspace: state.workspace ?? null, episodeId: state.episodeId ?? null, headRevisionNo: state.headRevisionNo ?? null } : null,
             workspaceMatches: !mismatch,
-            ...mismatch ? { warning: mismatch } : {}
+            ...mismatch ? { warning: mismatch } : {},
+            ...portalPart
           } : {},
           ...data
         });
