@@ -59,7 +59,7 @@ scroll. One translationese sentence and they think "ah, an ad" and swipe on.
 
 | ID | Pattern | How to fix | Severity |
 |---|---|---|---|
-| T1 | ~에 대해(서)·~에 대한 | Object particle directly — "제도에 대해 알아보자" → "제도를 알아보자" | S1 |
+| T1 | ~에 대해(서)·~에 대한 | Object particle directly — "제도에 대해 알아보자" → "제도를 알아보자" | S2 |
 | T2 | ~에 있어서 | "~에서" or "~할 때" | S1 |
 | T3 | Double passive (되어지다·보여지다·잊혀지다·쓰여지다, incl. the endings "보여집니다"·"보여질") | Simple passive — "판단되어진다" → "판단한다" | S1 |
 | T4 | ~을 가지고 있다 | Use a verb — "강점을 가지고 있다" → "강점이 있다" | S1 |
@@ -117,7 +117,7 @@ targets.
 | D6 | Empty modifiers (매우·굉장히·효과적으로·원활하게·다양한·성공적으로) | Delete | S2 |
 | D7 | Hollow rhetoric ("물결 속에서"·"균형점을 찾아가는"·"답은 간단합니다") | Replace with concrete facts and numbers, or delete | S2 |
 | D8 | Report-register stative verb endings — 나뉩니다/나뉜다·갈립니다/갈린다/갈려요·남습니다/남는다·**남긴다/남깁니다** | Make the target the subject, concretely — "추천이 갈려요" → "미용실마다 다른 색을 권해요", "둘로 나뉩니다" → "두 갈래예요", "근거를 남긴다" → "근거를 적어 둔다" | S1 |
-| D9 | **Written-register declarative ending `-ㄴ다/-는다`** (spoken surfaces only) — "화면이 나온다"·"주소부터 준다"·"이렇게 친다" | Casual spoken form — "화면이 나와"·"주소부터 줘"·"이렇게 쳐" | S1 |
+| D9 | **Written-register declarative ending `-ㄴ다/-는다`** (spoken surfaces only) — "화면이 나온다"·"주소부터 준다"·"이렇게 친다" | Casual spoken form — "화면이 나와"·"주소부터 줘"·"이렇게 쳐" | S2 |
 | D9b | Diary-style past ending `-았다/었다/였다/했다` (spoken surfaces only) | "만들었다" → "만들었어". One is tolerated (from the second) | S2 |
 | D10 | **Sentence closed on a bare noun** — "~해냈을 리 없다는 것." · "~을 물은 것." (spoken surfaces only) | Finish the sentence with a verb — say who did what | S1 |
 | D10b | Stock reveal or drama line — 결과는 정반대였다·(근거/이유/답/설명/방법)은 하나였다·시간이 많지 않다·놀랍게도·여기서 반전 | State the fact itself — what was measured, what is left, what happens next | S2 |
@@ -174,6 +174,17 @@ the very test for telling adjectives apart), so the false-positive surface is sm
 Adjective base forms (편하다·다르다·같다) and `-이다` have a different final
 consonant and drop out automatically. Sentence-final only — connectives ("간다고
 했어"), adnominals ("가는 길"), and conditionals ("간다면") are not targets.
+
+**D9 is S2 since 2026-09-20.** Measured on 56 real Threads posts (the 09-19 popular-post
+sample), D9 was the only S1 on 6 of them (11%) — a 270k-view Pilates story ("바로
+직감했다"), a third-person narrative, a numbered buy-list ("9.22 까지 매수한다") — and
+none was translationese: `-ㄴ다` closing is the normal register of Korean narrative and
+list prose, and the checker's suggested fix ("직감했어") would have broken the posts.
+Under S1 the gate rejected 16% of the sample; with D9 and T1 at S2 it rejects 4%, and
+the remaining two are `C1`. The owner's call (2026-09-20) was to keep the rule visible
+as a warning and stop it rejecting (RESEARCH/CHECK_STYLE_FALSE_BLOCK_RATE_20260920.md
+in the leader workspace). T1 moved with it: it fired alone on 1 of 56 (2%), and the fix
+is a two-character deletion — a warning is enough.
 
 **D9b (past) is S2 with the first hit exempt.** S2 costs 7 points, so just two
 sentences closed with `-았다` hit 86 and fall under the 95 line. What the user flagged was
