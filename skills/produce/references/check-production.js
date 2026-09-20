@@ -136,19 +136,27 @@ function check(storyboard, { requireSelection = false, ready = false, beforeCall
     catch (e) { errors.push('shot ' + (index + 1) + ': ' + e.message); }
   }
   const work = workdir ? path.resolve(workdir) : path.join(path.dirname(storyboard), '.work'), p = win.PRODUCTION;
-  const current = quote(win), option = current.options[p.mode];
-  if (option.provisional) errors.push('The selected mode still has a provisional quote; finish its shot plan before approval');
-  if (p.approval.quoteFingerprint !== current.quoteFingerprint)
-    errors.push('Approved cost quote is stale: re-quote the changed plan/prices and obtain approval before generation');
-  if (option.retryHighUsd > p.videoBudgetUsd + 1e-9)
-    errors.push('Retry-inclusive video estimate exceeds the approved episode budget');
+  // stills_only holds no generated clip (production-mode.md): there is no priced option, no quote
+  // to approve and no retry estimate. Imported clips, the ledger and the still reviews still hold.
+  const priced = p.mode !== 'stills_only';
+  const current = priced ? quote(win) : null;
+  const option = priced ? current.options[p.mode] : { provisional: false, retryHighUsd: 0, rows: [] };
+  if (priced) {
+    if (option.provisional) errors.push('The selected mode still has a provisional quote; finish its shot plan before approval');
+    if (p.approval.quoteFingerprint !== current.quoteFingerprint)
+      errors.push('Approved cost quote is stale: re-quote the changed plan/prices and obtain approval before generation');
+    if (option.retryHighUsd > p.videoBudgetUsd + 1e-9)
+      errors.push('Retry-inclusive video estimate exceeds the approved episode budget');
+  }
   const ledger = path.join(work, 'cost-tally.tsv');
   const spent = fs.existsSync(ledger) ? cost.runReport(ledger) : { exit: 0, items: [] };
   if (spent.exit) errors.push('Actual cost ledger has unresolved prices');
   if (cost.videoSpent(spent.items) > p.videoBudgetUsd + 1e-9) errors.push('Actual video spend exceeds the approved budget');
   const reviews = readReviews(work);
   if (!Array.isArray(reviews.shots)) errors.push('video-review.json needs a shots array');
-  if (beforeCall !== null) {
+  if (beforeCall !== null && !priced) {
+    errors.push('stills_only generates no video; no shot can be selected for a video API call — choose a cost mode first');
+  } else if (beforeCall !== null) {
     const row = option.rows.find(r => r.shot === beforeCall);
     if (!row) errors.push('Requested shot has no priced video generation');
     const lines = fs.existsSync(ledger) ? fs.readFileSync(ledger, 'utf8').split(/\r?\n/).filter(l => /^(seedance|veo)\./.test(l)) : [];
@@ -214,11 +222,48 @@ function check(storyboard, { requireSelection = false, ready = false, beforeCall
   }
   return { active: true, mode: p.mode, generatedShots, reusedShots, plainVideoShots, errors, quote: current };
 }
+// A zero-video board reaches this gate with no quote and no approval; every other mode still
+// owes both. The fixture boards live in a temp dir so the checker runs its real file path.
+function selftest() {
+  const os = require('os');
+  const board = production => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'check-production-selftest-'));
+    fs.mkdirSync(path.join(dir, 'storyboard'));
+    fs.writeFileSync(path.join(dir, 'storyboard', 'scenes.js'), [
+      'window.FORMAT = "shorts-9x16";',
+      'window.MOTION_POLICY = { generatedVideoMax: 0, videoBudgetUsd: 0 };',
+      'window.PRODUCTION = ' + JSON.stringify(production) + ';',
+      'window.SCENES = [',
+      '  { type: "cover", duration: 4, narration: "\uc2a4\ud0c0\ub514\uc6c0\uc5d0 \ubd88\uc774 \ucf1c\uc84c\ub2e4",',
+      '    visual: { bg: "images/s1.png", bgPrompt: "miniature stadium at dusk, macro lens" },',
+      '    shot: { render: { mode: "still_camera" }, cutType: "scenery" } },',
+      '  { type: "points", duration: 5, narration: "\uadf8\ub294 \ucf54\uc2a4\ub97c \ubc97\uc5b4\ub0ac\ub2e4",',
+      '    visual: { bg: "images/s2.png", bgPrompt: "miniature sailboat turning away, macro lens" },',
+      '    shot: { render: { mode: "still_camera" }, cutType: "action" } }',
+      '];', ''].join('\n'));
+    return path.join(dir, 'storyboard');
+  };
+  const stills = { mode: 'stills_only', imageProvider: 'host', videoBudgetUsd: 0, maxAttempts: 1,
+    style: { preset: 'cinematic-miniature', selection: { kind: 'standing', reference: 'profile.md §3' } } };
+  let fails = 0;
+  const ok = (name, pass) => { console.log((pass ? 'ok   ' : 'FAIL ') + name); if (!pass) fails++; };
+  ok('stills_only passes the production gate without a cost approval', (() => {
+    const r = check(board(stills));
+    return r.active && !r.errors.length && r.quote === null && !r.generatedShots.length;
+  })());
+  ok('stills_only refuses a video API call', check(board(stills), { beforeCall: 2 }).errors
+    .some(e => /stills_only generates no video/.test(e)));
+  ok('a cost mode still owes its approval', check(board({ ...stills, mode: 'hook_only', videoBudgetUsd: 10 })).errors
+    .some(e => /PRODUCTION\.approval needs/.test(e)));
+  console.log(fails ? 'check-production selftest: ' + fails + ' failed' : 'check-production selftest OK');
+  process.exitCode = fails ? 1 : 0;
+}
 module.exports = { resolutionErrors, check, shotDigest, hashFile, assetPath, motionReviewErrors, motionGateErrors, motionMetrics, videoFile, validateReuseAsset, readStillReviews, stillReviewErrors, generatedStill };
 if (require.main === module) {
   try {
     const args = process.argv.slice(2), target = args[0];
-    if (!target) throw new Error('usage: check-production.js <storyboard dir> [--selection|--ready|--before-call N]');
+    if (args.includes('--selftest')) return selftest();
+    if (!target) throw new Error('usage: check-production.js <storyboard dir> [--selection|--ready|--before-call N|--selftest]');
     const result = check(target, { requireSelection: args.includes('--selection'), ready: args.includes('--ready'), manifest: args.includes('--manifest'), workdir: args.includes('--workdir') ? args[args.indexOf('--workdir') + 1] : null,
       beforeCall: args.includes('--before-call') ? Number(args[args.indexOf('--before-call') + 1]) : null });
     if (args.includes('--json')) console.log(JSON.stringify(result, null, 2));

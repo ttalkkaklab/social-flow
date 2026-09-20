@@ -4,7 +4,10 @@
   const text = value => typeof value === 'string' && !!value.trim();
   const CHOICES = ['full_video', 'video_50', 'video_30', 'hook_only'];
   const CUT_TYPES = ['action', 'reaction', 'insert', 'document', 'map', 'scenery'];
-  const MODES = { full_video: '100% 이상', video_50: '50% 이상', video_30: '30% 이상', hook_only: '훅만 영상', hybrid: '혼합 제작 (기존 승인)' };
+  // stills_only is out of CHOICES on purpose: a channel whose generated-video cap is 0 has no
+  // video cost to compare, so the four-option HITL has nothing to offer. The board still
+  // records its visual style, and that record is what stills_only carries.
+  const MODES = { full_video: '100% 이상', video_50: '50% 이상', video_30: '30% 이상', hook_only: '훅만 영상', stills_only: '정지 전용 (생성 영상 0)', hybrid: '혼합 제작 (기존 승인)' };
   const RATIOS = { full_video: 1, video_50: .5, video_30: .3 };
   // A cut is a shot in the playback line; b-roll is spliced by `after` and is not a cut, so it
   // sits outside the ratio on both sides (it still counts toward the generated-slot cap).
@@ -355,6 +358,16 @@
   }
   // Explicit imported inputs, never inferred from an existing generation output.
   function reused(scene) { return scene.visual?.reuse !== undefined; }
+  // The channel's generated-video cap is written snake_case in profile.md and copied into
+  // scenes.js, where boards use either spelling — check-scenes normalizeMotionPolicy accepts both
+  // and resolves the profile value, so take the caller's normalized number first and read the
+  // board in both spellings after it. null means no cap was recorded anywhere.
+  function videoCap(win, given) {
+    const policy = win.MOTION_POLICY || {};
+    const raw = given !== undefined ? given
+      : policy.generatedVideoMax !== undefined ? policy.generatedVideoMax : policy.generated_video_max;
+    return raw === undefined || raw === null || raw === '' ? null : Number(raw);
+  }
   function reuseErrors(scene) {
     if (!reused(scene)) return [];
     const v = scene.visual || {}, r = v.reuse, errors = [];
@@ -428,11 +441,11 @@
     }
     return errors;
   }
-  function check(win, { requireSelection = false, requireApproval = false, draft = false } = {}) {
+  function check(win, { requireSelection = false, requireApproval = false, draft = false, generatedVideoMax } = {}) {
     const p = win.PRODUCTION, errors = Array.from(win.SCENES || []).flatMap((s, i) => reuseErrors(s).map(e => `shot ${i + 1}: ${e}`));
     if (!p) return requireSelection || (win.SCENES || []).some(reused)
       ? errors.concat(['Choose a production mode with a four-option cost comparison before generation']) : errors;
-    if (!MODES[p.mode]) errors.push('PRODUCTION.mode must be full_video, video_50, video_30 or hook_only (hybrid is legacy)');
+    if (!MODES[p.mode]) errors.push('PRODUCTION.mode must be full_video, video_50, video_30, hook_only, or stills_only where the channel generated-video cap is 0 (hybrid is legacy)');
     // host = the CLI's own media tool (image_gen on Codex and Grok, image_to_video on Grok); absent reads as api.
     for (const key of ['imageProvider', 'videoProvider'])
       if (p[key] !== undefined && !['host', 'api'].includes(p[key])) errors.push('PRODUCTION.' + key + ' must be host or api');
@@ -440,7 +453,9 @@
       errors.push('PRODUCTION.videoBudgetUsd must be a finite nonnegative episode cap');
     if (!Number.isInteger(p.maxAttempts) || p.maxAttempts < 1 || p.maxAttempts > 5)
       errors.push('PRODUCTION.maxAttempts must be 1–5 total attempts per clip (including the first)');
-    if (requireApproval && (!p.approval || !['user', 'standing'].includes(p.approval.kind) ||
+    // stills_only buys no generated video, so there is no cost quote to fingerprint and nothing
+    // for the user to approve; the four-option comparison never ran. Every other mode carries one.
+    if (requireApproval && p.mode !== 'stills_only' && (!p.approval || !['user', 'standing'].includes(p.approval.kind) ||
         !text(p.approval.reference) || !Number.isFinite(Date.parse(p.approval.at)) || !text(p.approval.quoteFingerprint)))
       errors.push('PRODUCTION.approval needs kind, reference, at and the approved cost quoteFingerprint');
     // The visual style is asked before authoring in every production mode (visual-style.md,
@@ -496,6 +511,20 @@
       const count = (win.SCENES || []).filter(s => eligible(s) &&
         (s.visual?.video || s.type === 'broll' || (s.type === 'quote' && typeof s.visual?.clip === 'object'))).length;
       if (p.mode === 'hybrid' && ((count < 1 && !(win.SCENES || []).some(reused)) || count > 2)) errors.push('hybrid needs 1–2 generated clips or at least one reused clip with zero generation; revise conflicting channel constraints before production');
+      // stills_only holds only while the channel cap stays 0, and only while no shot carries a clip —
+      // otherwise the board is buying video under a contract that says it buys none.
+      if (p.mode === 'stills_only') {
+        const cap = videoCap(win, generatedVideoMax);
+        if (cap === null)
+          errors.push('stills_only needs the channel cap on the board: copy the profile policy into window.MOTION_POLICY with generated_video_max 0 (generatedVideoMax is read too)');
+        else if (cap !== 0)
+          errors.push('stills_only is for a channel whose generated_video_max is 0; choose a cost mode from the four-option comparison instead');
+        if (count) errors.push('stills_only carries no generated clip; ' + count + ' shot(s) hold one — drop them or choose a cost mode');
+        // An imported clip already has its own zero-generation shape under legacy hybrid, so the two
+        // contracts stay disjoint: stills_only is the board that plays no video at all.
+        const imported = (win.SCENES || []).filter(reused).length;
+        if (imported) errors.push('stills_only plays no video at all; ' + imported + ' shot(s) import one (visual.reuse) — drop them or use the reuse shape');
+      }
       return errors;
     }
     const style = p.style || {};
@@ -576,7 +605,7 @@
       // hook_only: the hook plus every imported clip — reuse is outside the count but still a slot.
       generatedVideoMax: production.mode === 'hook_only' ? 1 + scenes.filter(reused).length : RATIOS[production.mode] ? scenes.filter(eligible).length : Math.min(base.generatedVideoMax ?? 2, 2) };
   }
-  const api = { CAMERA_INPUT_SCHEMA, cameraInputErrors, CAMERA_PRESETS, isDrone, droneErrors, droneSample, droneSlots, droneBinding, droneCameraKeys, droneSceneErrors, STYLES, MODES, CHOICES, CUT_TYPES, RATIOS, newCut, generated, hookScene, coverageErrors, CAMERA_SLOTS, PREVIZ_RENDERERS, VIDEO_MODELS, packPresets, ALL_LOOKS, shotStyle, shotStyleErrors, eligible, reused, reuseErrors, full, signature, check, policy, motionErrors, missingCameraSlots, cameraErrors, cameraWarnings, episodeMoveErrors, moveOf, travels, MOVES, staticCamera, finalState };
+  const api = { CAMERA_INPUT_SCHEMA, cameraInputErrors, CAMERA_PRESETS, isDrone, droneErrors, droneSample, droneSlots, droneBinding, droneCameraKeys, droneSceneErrors, STYLES, MODES, CHOICES, CUT_TYPES, RATIOS, videoCap, newCut, generated, hookScene, coverageErrors, CAMERA_SLOTS, PREVIZ_RENDERERS, VIDEO_MODELS, packPresets, ALL_LOOKS, shotStyle, shotStyleErrors, eligible, reused, reuseErrors, full, signature, check, policy, motionErrors, missingCameraSlots, cameraErrors, cameraWarnings, episodeMoveErrors, moveOf, travels, MOVES, staticCamera, finalState };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.PRODUCTION_MODE = api;
 })(typeof window === 'object' ? window : globalThis);
