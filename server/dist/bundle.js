@@ -75985,6 +75985,7 @@ var sequenceSchema = external_exports.object({
 }).strict();
 var structureSchema = external_exports.object({
   version: external_exports.literal(STRUCTURE_VERSION),
+  nextShotId: external_exports.number().int().positive().optional(),
   sequences: external_exports.array(sequenceSchema).min(1),
   scenes: external_exports.array(sceneSchema).min(1)
 }).strict();
@@ -76014,6 +76015,7 @@ var cameraSchema = external_exports.record(external_exports.unknown()).superRefi
 });
 var visualSchema = external_exports.object({ camera: cameraSchema.optional() }).passthrough();
 var shotSchema = external_exports.object({
+  id: external_exports.string().regex(/^s\d{4,}$/).optional(),
   type: tuple(V.TYPES),
   title: external_exports.string().optional(),
   narration: external_exports.array(external_exports.object({ tts: external_exports.string(), sub: external_exports.string().optional() }).passthrough()).optional(),
@@ -76139,7 +76141,10 @@ function serializeBoard(win, header = []) {
   });
   const lines = header.filter((h2) => !/^\/\/\s*approved:/.test(h2));
   if (lines.length) lines.push("");
-  for (const k of keys) lines.push(`window.${k} = ${JSON.stringify(win[k], null, 2)};`);
+  for (const k of keys) {
+    const value = k === "SCENES" && Array.isArray(win[k]) ? win[k].map((shot) => shot.id === void 0 ? shot : { id: shot.id, ...shot }) : win[k];
+    lines.push(`window.${k} = ${JSON.stringify(value, null, 2)};`);
+  }
   return lines.join("\n") + "\n";
 }
 function upsertBy(list, items, key) {
@@ -76153,10 +76158,17 @@ function upsertBy(list, items, key) {
 }
 function validateShots(shots) {
   const out = [];
+  const ids = /* @__PURE__ */ new Map();
   shots.forEach((s2, i2) => {
     const parsed = shotSchema.safeParse(s2);
-    if (parsed.success) return;
-    for (const issue2 of parsed.error.issues) out.push({ level: "bad", where: `shot ${i2 + 1}`, what: `${issue2.path.join(".") || "(root)"}: ${issue2.message}` });
+    if (!parsed.success) {
+      for (const issue2 of parsed.error.issues) out.push({ level: "bad", where: `shot ${i2 + 1}`, what: `${issue2.path.join(".") || "(root)"}: ${issue2.message}` });
+    }
+    const id = s2 && typeof s2 === "object" ? s2.id : void 0;
+    if (typeof id !== "string") return;
+    const first = ids.get(id);
+    if (first !== void 0) out.push({ level: "bad", where: `shot ${i2 + 1}`, what: `id: duplicate ${id} (already used by shot ${first})` });
+    else ids.set(id, i2 + 1);
   });
   return out;
 }
@@ -76193,11 +76205,12 @@ function applyPatch(win, patch) {
     sequences = sequences.filter((q) => !drop.has(q.id));
   }
   if (patch.sequences || patch.scenes || patch.removeScenes || patch.removeSequences || next.STRUCTURE)
-    next.STRUCTURE = { version: st.version ?? STRUCTURE_VERSION, sequences, scenes };
+    next.STRUCTURE = { version: st.version ?? STRUCTURE_VERSION, ...st.nextShotId === void 0 ? {} : { nextShotId: st.nextShotId }, sequences, scenes };
   let shots = Array.isArray(next.SCENES) ? next.SCENES.slice() : [];
   if (patch.shots) for (const { no, shot } of patch.shots.slice().sort((a, b) => a.no - b.no)) {
     if (no > shots.length + 1) throw new Error(`shot ${no}: the board has ${shots.length} shots \u2014 no = ${shots.length + 1} appends`);
-    shots[no - 1] = shot;
+    const current = shots[no - 1];
+    shots[no - 1] = shot.id === void 0 && current?.id !== void 0 ? { id: current.id, ...shot } : shot;
   }
   const beforeReorder = shots.slice();
   if (patch.removeShots) {
@@ -76250,6 +76263,24 @@ function applyPatch(win, patch) {
     if (moving && Number(edit.pre ?? 0) !== 0) throw new Error("Moving transitions require edit.pre=0; update the shot timing first");
     shots[change.no - 1] = { ...source, transition: change.transition, edit };
   }
+  const originalShots = Array.isArray(win.SCENES) ? win.SCENES : [];
+  const numericId = (shot) => typeof shot.id === "string" && /^s\d{4,}$/.test(shot.id) ? Number(shot.id.slice(1)) : 0;
+  const priorCounter = win.STRUCTURE && Number.isInteger(win.STRUCTURE.nextShotId) ? win.STRUCTURE.nextShotId : void 0;
+  const requestedCounter = Number.isInteger(st.nextShotId) ? st.nextShotId : void 0;
+  let nextShotId = Math.max(
+    priorCounter ?? 0,
+    requestedCounter ?? 0,
+    ...shots.map(numericId).map((id) => id + 1),
+    ...priorCounter === void 0 && requestedCounter === void 0 ? [Math.max(originalShots.length, ...originalShots.map(numericId)) + 1] : [],
+    1
+  );
+  shots = shots.map((shot) => {
+    if (shot.id !== void 0) return shot;
+    const id = `s${String(nextShotId).padStart(4, "0")}`;
+    nextShotId += 1;
+    return { id, ...shot };
+  });
+  if (next.STRUCTURE) next.STRUCTURE = { ...next.STRUCTURE, nextShotId };
   next.SCENES = shots.map((shot) => ({ ...shot }));
   const findings = [];
   if (!shots.length) findings.push({ level: "bad", where: "board", what: "the board has no shots" });
@@ -76335,7 +76366,7 @@ function checkScenario(args, checkFile = CHECK_SCENARIO_FILE) {
 }
 function checkStoryboard(args) {
   const { file, win } = readBoard(args.path);
-  const structure = contract().check(win, { draft: args.draft });
+  const structure = contract().check(win, { draft: args.draft }).concat(validateShots(win.SCENES ?? []));
   const argv = [CHECK_SCENES_FILE, file, "--json"];
   if (args.draft) argv.push("--draft");
   let raw = "";
@@ -83530,6 +83561,7 @@ var storyboardShotInput = {
   required: ["type"],
   description: "Complete scenes-schema.md playback shot. On upsert, supply the complete shot; fields are not deep-merged. Extra visual and machine fields are preserved.",
   properties: {
+    id: { type: "string", pattern: "^s\\d{4,}$", description: "Stable shot id. storyboard_apply assigns it; preserve it and do not edit it by hand." },
     type: enumInput(storyboardVocabulary?.TYPES, "Playback role, distinct from shot.render.mode and the camera preset."),
     scene: { type: "integer", minimum: 1, description: "Parent scene number in STRUCTURE." },
     duration: { type: "number", exclusiveMinimum: 0, description: "Shot duration in seconds; model duration may round up." },
@@ -87229,6 +87261,7 @@ Returns: JSON \u2014 { version, format, shots, sequences[\u2026scenes[\u2026shot
     description: `Write a storyboard's scenes.js from a sequence \u2192 scene \u2192 shot model, or patch part of it, in one call. Every shot is validated against the grammar vocabularies (type \xB7 beat \xB7 size \xB7 angle \xB7 infoType \xB7 shareType \xB7 render.mode \xB7 transition), the structure against its rules (one place and time per scene, a charge that turns, every scene in exactly one sequence, shots grouped by scene in sequence order, two sizes per scene), and the derived shot labels (sceneSlug \xB7 sequence) are written from the structure. Nothing is written when a violation is found \u2014 the findings come back instead. Warnings are written and reported.
 
 Use it to author a new board (set = { structure, shots }) after the narration is approved (storyboard \xA74), and to change one thing later (scenes / sequences / shots by key, insertShots, removeShots, globals for FORMAT \xB7 THEME \xB7 COMPREHENSION \xB7 STORY \xB7 PRODUCTION \xB7 MUSIC). Use transitions to change only the effect before selected shots without replacing their narration or visuals. dip fades out to black and fades the next scene in; prefer it for changes of place or time unless a specific cut calls for another effect. One call carries the whole change \u2014 do not write scenes.js by hand and do not call this once per shot. dryRun:true validates without writing.
+storyboard_apply assigns stable shot ids (s0001\u2026) and advances STRUCTURE.nextShotId; preserve those ids and do not edit them by hand.
 Shot creation, upserts and inserts expose type, shot.render.mode, shot.videoDesign, visual.camera and the three plan records shot.eyeline \xB7 shot.composition \xB7 shot.depth in the input schema. shot.depth (L11): count what the viewer must read in the frame at once \u2014 one thing \u2192 shallow with focus (a person's eyes), two or more \u2192 deep with the planes listed front to back; a departure needs a reason, and a still_camera focus-in/rack-focus cut cannot be deep. For a drone shot choose preset:"drone-flythrough", variant:"cinematic" or "fpv", and the trajectory. The preset does not change the episode style or select a paid model.
 Do NOT pass a shot's visual plan through a summary \u2014 pass the object scenes-schema.md defines (visual \xB7 shot.space \xB7 visual.camera \xB7 visual.video \u2026); unknown keys on a shot pass through untouched. Editing an approved board drops its \`// approved:\` line; it is approved again at the HITL gate.
 
