@@ -2638,6 +2638,26 @@ function selftest() {
     return lookHas(perShot(missing), 'machine', /\[cutType-missing\]/) &&
       !lookHas(perShot(perShotFixture()), 'machine', /\[cutType-missing\]/);
   })());
+  // A channel with generated_video_max 0 still has to record its visual style, and recording a
+  // style needs a PRODUCTION block, which needs a mode. Every cost mode demands a clip, so such a
+  // board had no passing shape before stills_only (인물을 푼다고 EP08, 2026-09-20).
+  const stillsOnlyFixture = () => ({
+    MOTION_POLICY: { generatedVideoMax: 0, videoBudgetUsd: 0 },
+    PRODUCTION: {
+      mode: 'stills_only', imageProvider: 'host', videoBudgetUsd: 0, maxAttempts: 1,
+      style: { preset: 'cinematic-miniature', selection: { kind: 'standing', reference: 'profile.md §3' } }
+    },
+    SCENES: [{ type: 'cover', visual: { bg: 'a miniature stadium at dusk' } }]
+  });
+  ok('stills_only passes a zero-video board where hybrid cannot, and holds its two conditions', (() => {
+    const capped = stillsOnlyFixture(); capped.MOTION_POLICY.generatedVideoMax = 2;
+    const withClip = stillsOnlyFixture(); withClip.SCENES.push({ type: 'broll', visual: { bg: 'a javelin in flight' } });
+    const onHybrid = stillsOnlyFixture(); onHybrid.PRODUCTION.mode = 'hybrid';
+    return productionMode.check(stillsOnlyFixture(), {}).length === 0 &&
+      productionMode.check(capped, {}).some(e => /stills_only is for a channel/.test(e)) &&
+      productionMode.check(withClip, {}).some(e => /stills_only carries no generated clip/.test(e)) &&
+      productionMode.check(onHybrid, {}).some(e => /hybrid needs 1–2 generated clips/.test(e));
+  })());
   ok('cutType-unknown rejects an invented type and accepts the closed vocabulary', (() => {
     const unknown = perShotFixture(); unknown.SCENES[0].shot.cutType = 'portrait';
     return productionMode.check(unknown, { draft: true }).some(e => /\[cutType-unknown\]/.test(e)) &&

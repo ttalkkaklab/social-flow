@@ -22,6 +22,12 @@ Do not reinterpret an approval of a topic as approval of full-video spend.
 - **30% 이상** (`video_30`) — at least 30% of new cuts are generated video.
 - **훅만 영상** (`hook_only`) — only the opening hook is generated video; use HTML/still-camera scenes for other new cuts.
 
+A channel whose `generated_video_max` is 0 never reaches this comparison — there is no video to
+buy and no cost to weigh, so no option is offered. Its board writes `mode: 'stills_only'`, which
+is not one of the four choices and carries no cost approval. Use it only while the channel cap
+stays 0, and only on a board where no shot holds a clip; the board still records its visual
+style, which is the one thing `PRODUCTION` carries there.
+
 Count cuts, not duration; round the minimum up. Exclude imported `visual.reuse` clips,
 user recordings, supplied stock clips and the shared outro from the denominator; b-roll is
 spliced by `after`, not a cut, so it sits on neither side of the ratio (it still fills a
@@ -129,7 +135,8 @@ remains an exact channel snapshot. `production-mode.js` applies only the selecte
 approved episode video budget on top; other channel constraints still apply. `video_50` and `video_30` allow up to all new cuts and enforce their minimum counts;
 `hook_only` allows exactly the opening hook. Legacy `hybrid` caps
 generated shots at two (or a lower explicit channel cap). Plan 1–2 new clips, or zero new
-clips with at least one explicit `visual.reuse` input. Zero of both is rejected. See the
+clips with at least one explicit `visual.reuse` input. Zero of both is rejected. `stills_only` is the
+zero-cap contract instead: no clip, no reuse, no approval, and `policy()` keeps the channel's 0. See the
 [reuse contract](scenes-schema.md#existing-generated-clip-input-visualreuse) for file checks,
 separate reuse counts and the final $0 estimate. Reuse does not relax the screen policy. `full_video` permits every generated scene to be a
 video, including explanations. Existing user recordings and the shared outro retain their source.

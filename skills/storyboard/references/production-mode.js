@@ -4,7 +4,10 @@
   const text = value => typeof value === 'string' && !!value.trim();
   const CHOICES = ['full_video', 'video_50', 'video_30', 'hook_only'];
   const CUT_TYPES = ['action', 'reaction', 'insert', 'document', 'map', 'scenery'];
-  const MODES = { full_video: '100% 이상', video_50: '50% 이상', video_30: '30% 이상', hook_only: '훅만 영상', hybrid: '혼합 제작 (기존 승인)' };
+  // stills_only is out of CHOICES on purpose: a channel whose generated-video cap is 0 has no
+  // video cost to compare, so the four-option HITL has nothing to offer. The board still
+  // records its visual style, and that record is what stills_only carries.
+  const MODES = { full_video: '100% 이상', video_50: '50% 이상', video_30: '30% 이상', hook_only: '훅만 영상', stills_only: '정지 전용 (생성 영상 0)', hybrid: '혼합 제작 (기존 승인)' };
   const RATIOS = { full_video: 1, video_50: .5, video_30: .3 };
   // A cut is a shot in the playback line; b-roll is spliced by `after` and is not a cut, so it
   // sits outside the ratio on both sides (it still counts toward the generated-slot cap).
@@ -432,7 +435,7 @@
     const p = win.PRODUCTION, errors = Array.from(win.SCENES || []).flatMap((s, i) => reuseErrors(s).map(e => `shot ${i + 1}: ${e}`));
     if (!p) return requireSelection || (win.SCENES || []).some(reused)
       ? errors.concat(['Choose a production mode with a four-option cost comparison before generation']) : errors;
-    if (!MODES[p.mode]) errors.push('PRODUCTION.mode must be full_video, video_50, video_30 or hook_only (hybrid is legacy)');
+    if (!MODES[p.mode]) errors.push('PRODUCTION.mode must be full_video, video_50, video_30, hook_only, or stills_only where the channel generated-video cap is 0 (hybrid is legacy)');
     // host = the CLI's own media tool (image_gen on Codex and Grok, image_to_video on Grok); absent reads as api.
     for (const key of ['imageProvider', 'videoProvider'])
       if (p[key] !== undefined && !['host', 'api'].includes(p[key])) errors.push('PRODUCTION.' + key + ' must be host or api');
@@ -496,6 +499,13 @@
       const count = (win.SCENES || []).filter(s => eligible(s) &&
         (s.visual?.video || s.type === 'broll' || (s.type === 'quote' && typeof s.visual?.clip === 'object'))).length;
       if (p.mode === 'hybrid' && ((count < 1 && !(win.SCENES || []).some(reused)) || count > 2)) errors.push('hybrid needs 1–2 generated clips or at least one reused clip with zero generation; revise conflicting channel constraints before production');
+      // stills_only holds only while the channel cap stays 0, and only while no shot carries a clip —
+      // otherwise the board is buying video under a contract that says it buys none.
+      if (p.mode === 'stills_only') {
+        if (Number(win.MOTION_POLICY?.generatedVideoMax) !== 0)
+          errors.push('stills_only is for a channel whose generated_video_max is 0; choose a cost mode from the four-option comparison instead');
+        if (count) errors.push('stills_only carries no generated clip; ' + count + ' shot(s) hold one — drop them or choose a cost mode');
+      }
       return errors;
     }
     const style = p.style || {};
