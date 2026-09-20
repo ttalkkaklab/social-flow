@@ -2250,8 +2250,8 @@ var require_resolve = __commonJS({
       }
       return count;
     }
-    function getFullPath(resolver, id = "", normalize) {
-      if (normalize !== false)
+    function getFullPath(resolver, id = "", normalize2) {
+      if (normalize2 !== false)
         id = normalizeId(id);
       const p = resolver.parse(id);
       return _getFullPath(resolver, p);
@@ -2999,7 +2999,7 @@ var require_compile = __commonJS({
       const schOrFunc = root.refs[ref];
       if (schOrFunc)
         return schOrFunc;
-      let _sch = resolve5.call(this, root, ref);
+      let _sch = resolve6.call(this, root, ref);
       if (_sch === void 0) {
         const schema = (_a4 = root.localRefs) === null || _a4 === void 0 ? void 0 : _a4[ref];
         const { schemaId } = this.opts;
@@ -3026,7 +3026,7 @@ var require_compile = __commonJS({
     function sameSchemaEnv(s1, s2) {
       return s1.schema === s2.schema && s1.root === s2.root && s1.baseId === s2.baseId;
     }
-    function resolve5(root, ref) {
+    function resolve6(root, ref) {
       let sch;
       while (typeof (sch = this.refs[ref]) == "string")
         ref = sch;
@@ -3647,7 +3647,7 @@ var require_fast_uri = __commonJS({
     "use strict";
     var { normalizeIPv6, removeDotSegments, recomposeAuthority, normalizePercentEncoding, normalizePathEncoding, escapePreservingEscapes, reescapeHostDelimiters, isIPv4, nonSimpleDomain } = require_utils();
     var { SCHEMES, getSchemeHandler } = require_schemes();
-    function normalize(uri, options) {
+    function normalize2(uri, options) {
       if (typeof uri === "string") {
         uri = /** @type {T} */
         normalizeString(uri, options);
@@ -3657,7 +3657,7 @@ var require_fast_uri = __commonJS({
       }
       return uri;
     }
-    function resolve5(baseURI, relativeURI, options) {
+    function resolve6(baseURI, relativeURI, options) {
       const schemelessOptions = options ? Object.assign({ scheme: "null" }, options) : { scheme: "null" };
       const { parsed: baseParsed, malformedAuthorityOrPort: baseMalformed } = parseWithStatus(baseURI, schemelessOptions);
       const { parsed: relativeParsed, malformedAuthorityOrPort: relativeMalformed } = parseWithStatus(relativeURI, schemelessOptions);
@@ -3940,8 +3940,8 @@ var require_fast_uri = __commonJS({
     }
     var fastUri = {
       SCHEMES,
-      normalize,
-      resolve: resolve5,
+      normalize: normalize2,
+      resolve: resolve6,
       resolveComponent,
       equal,
       serialize,
@@ -7194,7 +7194,7 @@ var require_p_retry = __commonJS({
       return error2;
     };
     var isNetworkError = (errorMessage) => networkErrorMsgs.includes(errorMessage);
-    var pRetry2 = (input, options) => new Promise((resolve5, reject) => {
+    var pRetry2 = (input, options) => new Promise((resolve6, reject) => {
       options = {
         onFailedAttempt: () => {
         },
@@ -7204,7 +7204,7 @@ var require_p_retry = __commonJS({
       const operation = retry2.operation(options);
       operation.attempt(async (attemptNumber) => {
         try {
-          resolve5(await input(attemptNumber));
+          resolve6(await input(attemptNumber));
         } catch (error2) {
           if (!(error2 instanceof Error)) {
             reject(new TypeError(`Non-error was thrown: "${error2}". You should only throw errors.`));
@@ -7738,8 +7738,8 @@ var require_retry3 = __commonJS({
       }
       const delay2 = getNextRetryDelay(config3);
       err4.config.retryConfig.currentRetryAttempt += 1;
-      const backoff = config3.retryBackoff ? config3.retryBackoff(err4, delay2) : new Promise((resolve5) => {
-        setTimeout(resolve5, delay2);
+      const backoff = config3.retryBackoff ? config3.retryBackoff(err4, delay2) : new Promise((resolve6) => {
+        setTimeout(resolve6, delay2);
       });
       if (config3.onRetryAttempt) {
         await config3.onRetryAttempt(err4);
@@ -8104,8 +8104,8 @@ var require_common2 = __commonJS({
 var require_browser = __commonJS({
   "node_modules/debug/src/browser.js"(exports, module) {
     exports.formatArgs = formatArgs;
-    exports.save = save;
-    exports.load = load;
+    exports.save = save2;
+    exports.load = load2;
     exports.useColors = useColors;
     exports.storage = localstorage();
     exports.destroy = /* @__PURE__ */ (() => {
@@ -8231,7 +8231,7 @@ var require_browser = __commonJS({
     }
     exports.log = console.debug || console.log || (() => {
     });
-    function save(namespaces) {
+    function save2(namespaces) {
       try {
         if (namespaces) {
           exports.storage.setItem("debug", namespaces);
@@ -8241,7 +8241,7 @@ var require_browser = __commonJS({
       } catch (error2) {
       }
     }
-    function load() {
+    function load2() {
       let r2;
       try {
         r2 = exports.storage.getItem("debug") || exports.storage.getItem("DEBUG");
@@ -8278,8 +8278,8 @@ var require_node = __commonJS({
     exports.init = init;
     exports.log = log;
     exports.formatArgs = formatArgs;
-    exports.save = save;
-    exports.load = load;
+    exports.save = save2;
+    exports.load = load2;
     exports.useColors = useColors;
     exports.destroy = util2.deprecate(
       () => {
@@ -8414,14 +8414,14 @@ var require_node = __commonJS({
     function log(...args) {
       return process.stderr.write(util2.formatWithOptions(exports.inspectOpts, ...args) + "\n");
     }
-    function save(namespaces) {
+    function save2(namespaces) {
       if (namespaces) {
         process.env.DEBUG = namespaces;
       } else {
         delete process.env.DEBUG;
       }
     }
-    function load() {
+    function load2() {
       return process.env.DEBUG;
     }
     function init(debug) {
@@ -8515,8 +8515,8 @@ var require_helpers = __commonJS({
     function req(url, opts = {}) {
       const href = typeof url === "string" ? url : url.href;
       const req2 = (href.startsWith("https:") ? https2 : http4).request(url, opts);
-      const promise = new Promise((resolve5, reject) => {
-        req2.once("response", resolve5).once("error", reject).end();
+      const promise = new Promise((resolve6, reject) => {
+        req2.once("response", resolve6).once("error", reject).end();
       });
       req2.then = promise.then.bind(promise);
       return req2;
@@ -8693,7 +8693,7 @@ var require_parse_proxy_response = __commonJS({
     var debug_1 = __importDefault(require_src());
     var debug = (0, debug_1.default)("https-proxy-agent:parse-proxy-response");
     function parseProxyResponse(socket) {
-      return new Promise((resolve5, reject) => {
+      return new Promise((resolve6, reject) => {
         let buffersLength = 0;
         const buffers = [];
         function read2() {
@@ -8759,7 +8759,7 @@ var require_parse_proxy_response = __commonJS({
           }
           debug("got proxy server response: %o %o", firstLine, headers);
           cleanup();
-          resolve5({
+          resolve6({
             connect: {
               statusCode,
               statusText,
@@ -9001,7 +9001,7 @@ var require_ponyfill_es2018 = __commonJS({
         return new originalPromise(executor);
       }
       function promiseResolvedWith(value) {
-        return newPromise((resolve5) => resolve5(value));
+        return newPromise((resolve6) => resolve6(value));
       }
       function promiseRejectedWith(reason) {
         return originalPromiseReject(reason);
@@ -9171,8 +9171,8 @@ var require_ponyfill_es2018 = __commonJS({
         return new TypeError("Cannot " + name + " a stream using a released reader");
       }
       function defaultReaderClosedPromiseInitialize(reader) {
-        reader._closedPromise = newPromise((resolve5, reject) => {
-          reader._closedPromise_resolve = resolve5;
+        reader._closedPromise = newPromise((resolve6, reject) => {
+          reader._closedPromise_resolve = resolve6;
           reader._closedPromise_reject = reject;
         });
       }
@@ -9346,8 +9346,8 @@ var require_ponyfill_es2018 = __commonJS({
           }
           let resolvePromise;
           let rejectPromise;
-          const promise = newPromise((resolve5, reject) => {
-            resolvePromise = resolve5;
+          const promise = newPromise((resolve6, reject) => {
+            resolvePromise = resolve6;
             rejectPromise = reject;
           });
           const readRequest = {
@@ -9452,8 +9452,8 @@ var require_ponyfill_es2018 = __commonJS({
           const reader = this._reader;
           let resolvePromise;
           let rejectPromise;
-          const promise = newPromise((resolve5, reject) => {
-            resolvePromise = resolve5;
+          const promise = newPromise((resolve6, reject) => {
+            resolvePromise = resolve6;
             rejectPromise = reject;
           });
           const readRequest = {
@@ -10472,8 +10472,8 @@ var require_ponyfill_es2018 = __commonJS({
           }
           let resolvePromise;
           let rejectPromise;
-          const promise = newPromise((resolve5, reject) => {
-            resolvePromise = resolve5;
+          const promise = newPromise((resolve6, reject) => {
+            resolvePromise = resolve6;
             rejectPromise = reject;
           });
           const readIntoRequest = {
@@ -10785,10 +10785,10 @@ var require_ponyfill_es2018 = __commonJS({
           wasAlreadyErroring = true;
           reason = void 0;
         }
-        const promise = newPromise((resolve5, reject) => {
+        const promise = newPromise((resolve6, reject) => {
           stream._pendingAbortRequest = {
             _promise: void 0,
-            _resolve: resolve5,
+            _resolve: resolve6,
             _reject: reject,
             _reason: reason,
             _wasAlreadyErroring: wasAlreadyErroring
@@ -10805,9 +10805,9 @@ var require_ponyfill_es2018 = __commonJS({
         if (state === "closed" || state === "errored") {
           return promiseRejectedWith(new TypeError(`The stream (in ${state} state) is not in the writable state and cannot be closed`));
         }
-        const promise = newPromise((resolve5, reject) => {
+        const promise = newPromise((resolve6, reject) => {
           const closeRequest = {
-            _resolve: resolve5,
+            _resolve: resolve6,
             _reject: reject
           };
           stream._closeRequest = closeRequest;
@@ -10820,9 +10820,9 @@ var require_ponyfill_es2018 = __commonJS({
         return promise;
       }
       function WritableStreamAddWriteRequest(stream) {
-        const promise = newPromise((resolve5, reject) => {
+        const promise = newPromise((resolve6, reject) => {
           const writeRequest = {
-            _resolve: resolve5,
+            _resolve: resolve6,
             _reject: reject
           };
           stream._writeRequests.push(writeRequest);
@@ -11438,8 +11438,8 @@ var require_ponyfill_es2018 = __commonJS({
         return new TypeError("Cannot " + name + " a stream using a released writer");
       }
       function defaultWriterClosedPromiseInitialize(writer) {
-        writer._closedPromise = newPromise((resolve5, reject) => {
-          writer._closedPromise_resolve = resolve5;
+        writer._closedPromise = newPromise((resolve6, reject) => {
+          writer._closedPromise_resolve = resolve6;
           writer._closedPromise_reject = reject;
           writer._closedPromiseState = "pending";
         });
@@ -11475,8 +11475,8 @@ var require_ponyfill_es2018 = __commonJS({
         writer._closedPromiseState = "resolved";
       }
       function defaultWriterReadyPromiseInitialize(writer) {
-        writer._readyPromise = newPromise((resolve5, reject) => {
-          writer._readyPromise_resolve = resolve5;
+        writer._readyPromise = newPromise((resolve6, reject) => {
+          writer._readyPromise_resolve = resolve6;
           writer._readyPromise_reject = reject;
         });
         writer._readyPromiseState = "pending";
@@ -11563,7 +11563,7 @@ var require_ponyfill_es2018 = __commonJS({
         source._disturbed = true;
         let shuttingDown = false;
         let currentWrite = promiseResolvedWith(void 0);
-        return newPromise((resolve5, reject) => {
+        return newPromise((resolve6, reject) => {
           let abortAlgorithm;
           if (signal !== void 0) {
             abortAlgorithm = () => {
@@ -11708,7 +11708,7 @@ var require_ponyfill_es2018 = __commonJS({
             if (isError) {
               reject(error2);
             } else {
-              resolve5(void 0);
+              resolve6(void 0);
             }
             return null;
           }
@@ -11989,8 +11989,8 @@ var require_ponyfill_es2018 = __commonJS({
         let branch1;
         let branch2;
         let resolveCancelPromise;
-        const cancelPromise = newPromise((resolve5) => {
-          resolveCancelPromise = resolve5;
+        const cancelPromise = newPromise((resolve6) => {
+          resolveCancelPromise = resolve6;
         });
         function pullAlgorithm() {
           if (reading) {
@@ -12081,8 +12081,8 @@ var require_ponyfill_es2018 = __commonJS({
         let branch1;
         let branch2;
         let resolveCancelPromise;
-        const cancelPromise = newPromise((resolve5) => {
-          resolveCancelPromise = resolve5;
+        const cancelPromise = newPromise((resolve6) => {
+          resolveCancelPromise = resolve6;
         });
         function forwardReaderError(thisReader) {
           uponRejection(thisReader._closedPromise, (r2) => {
@@ -12862,8 +12862,8 @@ var require_ponyfill_es2018 = __commonJS({
           const writableHighWaterMark = ExtractHighWaterMark(writableStrategy, 1);
           const writableSizeAlgorithm = ExtractSizeAlgorithm(writableStrategy);
           let startPromise_resolve;
-          const startPromise = newPromise((resolve5) => {
-            startPromise_resolve = resolve5;
+          const startPromise = newPromise((resolve6) => {
+            startPromise_resolve = resolve6;
           });
           InitializeTransformStream(this, startPromise, writableHighWaterMark, writableSizeAlgorithm, readableHighWaterMark, readableSizeAlgorithm);
           SetUpTransformStreamDefaultControllerFromTransformer(this, transformer);
@@ -12956,8 +12956,8 @@ var require_ponyfill_es2018 = __commonJS({
         if (stream._backpressureChangePromise !== void 0) {
           stream._backpressureChangePromise_resolve();
         }
-        stream._backpressureChangePromise = newPromise((resolve5) => {
-          stream._backpressureChangePromise_resolve = resolve5;
+        stream._backpressureChangePromise = newPromise((resolve6) => {
+          stream._backpressureChangePromise_resolve = resolve6;
         });
         stream._backpressure = backpressure;
       }
@@ -13125,8 +13125,8 @@ var require_ponyfill_es2018 = __commonJS({
           return controller._finishPromise;
         }
         const readable = stream._readable;
-        controller._finishPromise = newPromise((resolve5, reject) => {
-          controller._finishPromise_resolve = resolve5;
+        controller._finishPromise = newPromise((resolve6, reject) => {
+          controller._finishPromise_resolve = resolve6;
           controller._finishPromise_reject = reject;
         });
         const cancelPromise = controller._cancelAlgorithm(reason);
@@ -13152,8 +13152,8 @@ var require_ponyfill_es2018 = __commonJS({
           return controller._finishPromise;
         }
         const readable = stream._readable;
-        controller._finishPromise = newPromise((resolve5, reject) => {
-          controller._finishPromise_resolve = resolve5;
+        controller._finishPromise = newPromise((resolve6, reject) => {
+          controller._finishPromise_resolve = resolve6;
           controller._finishPromise_reject = reject;
         });
         const flushPromise = controller._flushAlgorithm();
@@ -13183,8 +13183,8 @@ var require_ponyfill_es2018 = __commonJS({
           return controller._finishPromise;
         }
         const writable = stream._writable;
-        controller._finishPromise = newPromise((resolve5, reject) => {
-          controller._finishPromise_resolve = resolve5;
+        controller._finishPromise = newPromise((resolve6, reject) => {
+          controller._finishPromise_resolve = resolve6;
           controller._finishPromise_reject = reject;
         });
         const cancelPromise = controller._cancelAlgorithm(reason);
@@ -15135,7 +15135,7 @@ import zlib from "node:zlib";
 import Stream2, { PassThrough as PassThrough2, pipeline as pump } from "node:stream";
 import { Buffer as Buffer3 } from "node:buffer";
 async function fetch2(url, options_) {
-  return new Promise((resolve5, reject) => {
+  return new Promise((resolve6, reject) => {
     const request = new Request2(url, options_);
     const { parsedURL, options } = getNodeRequestOptions(request);
     if (!supportedSchemas.has(parsedURL.protocol)) {
@@ -15144,7 +15144,7 @@ async function fetch2(url, options_) {
     if (parsedURL.protocol === "data:") {
       const data = dist_default(request.url);
       const response2 = new Response2(data, { headers: { "Content-Type": data.typeFull } });
-      resolve5(response2);
+      resolve6(response2);
       return;
     }
     const send = (parsedURL.protocol === "https:" ? https : http2).request;
@@ -15266,7 +15266,7 @@ async function fetch2(url, options_) {
             if (responseReferrerPolicy) {
               requestOptions.referrerPolicy = responseReferrerPolicy;
             }
-            resolve5(fetch2(new Request2(locationURL, requestOptions)));
+            resolve6(fetch2(new Request2(locationURL, requestOptions)));
             finalize();
             return;
           }
@@ -15299,7 +15299,7 @@ async function fetch2(url, options_) {
       const codings = headers.get("Content-Encoding");
       if (!request.compress || request.method === "HEAD" || codings === null || response_.statusCode === 204 || response_.statusCode === 304) {
         response = new Response2(body, responseOptions);
-        resolve5(response);
+        resolve6(response);
         return;
       }
       const zlibOptions = {
@@ -15313,7 +15313,7 @@ async function fetch2(url, options_) {
           }
         });
         response = new Response2(body, responseOptions);
-        resolve5(response);
+        resolve6(response);
         return;
       }
       if (codings === "deflate" || codings === "x-deflate") {
@@ -15337,12 +15337,12 @@ async function fetch2(url, options_) {
             });
           }
           response = new Response2(body, responseOptions);
-          resolve5(response);
+          resolve6(response);
         });
         raw.once("end", () => {
           if (!response) {
             response = new Response2(body, responseOptions);
-            resolve5(response);
+            resolve6(response);
           }
         });
         return;
@@ -15354,11 +15354,11 @@ async function fetch2(url, options_) {
           }
         });
         response = new Response2(body, responseOptions);
-        resolve5(response);
+        resolve6(response);
         return;
       }
       response = new Response2(body, responseOptions);
-      resolve5(response);
+      resolve6(response);
     });
     writeToStream(request_, request).catch(reject);
   });
@@ -15430,7 +15430,7 @@ var require_gaxios = __commonJS({
     var retry_js_1 = require_retry3();
     var stream_1 = __require("stream");
     var interceptor_js_1 = require_interceptor();
-    var randomUUID3 = async () => globalThis.crypto?.randomUUID() || (await import("crypto")).randomUUID();
+    var randomUUID4 = async () => globalThis.crypto?.randomUUID() || (await import("crypto")).randomUUID();
     var HTTP_STATUS_NO_CONTENT = 204;
     var Gaxios = class {
       agentCache = /* @__PURE__ */ new Map();
@@ -15703,7 +15703,7 @@ var require_gaxios = __commonJS({
          */
         ["Blob", "File", "FormData"].includes(opts.data?.constructor?.name || "");
         if (opts.multipart?.length) {
-          const boundary = await randomUUID3();
+          const boundary = await randomUUID4();
           preparedHeaders.set("content-type", `multipart/related; boundary=${boundary}`);
           opts.body = stream_1.Readable.from(this.getMultipartRequest(opts.multipart, boundary));
         } else if (shouldDirectlyPassData) {
@@ -21426,7 +21426,7 @@ var require_jwtaccess = __commonJS({
         }
       }
       fromStreamAsync(inputStream) {
-        return new Promise((resolve5, reject) => {
+        return new Promise((resolve6, reject) => {
           if (!inputStream) {
             reject(new Error("Must pass in a stream containing the service account auth settings."));
           }
@@ -21435,7 +21435,7 @@ var require_jwtaccess = __commonJS({
             try {
               const data = JSON.parse(s2);
               this.fromJSON(data);
-              resolve5();
+              resolve6();
             } catch (err4) {
               reject(err4);
             }
@@ -21674,7 +21674,7 @@ var require_jwtclient = __commonJS({
         }
       }
       fromStreamAsync(inputStream) {
-        return new Promise((resolve5, reject) => {
+        return new Promise((resolve6, reject) => {
           if (!inputStream) {
             throw new Error("Must pass in a stream containing the service account auth settings.");
           }
@@ -21683,7 +21683,7 @@ var require_jwtclient = __commonJS({
             try {
               const data = JSON.parse(s2);
               this.fromJSON(data);
-              resolve5();
+              resolve6();
             } catch (e2) {
               reject(e2);
             }
@@ -21816,7 +21816,7 @@ var require_refreshclient = __commonJS({
         }
       }
       async fromStreamAsync(inputStream) {
-        return new Promise((resolve5, reject) => {
+        return new Promise((resolve6, reject) => {
           if (!inputStream) {
             return reject(new Error("Must pass in a stream containing the user refresh token."));
           }
@@ -21825,7 +21825,7 @@ var require_refreshclient = __commonJS({
             try {
               const data = JSON.parse(s2);
               this.fromJSON(data);
-              return resolve5();
+              return resolve6();
             } catch (err4) {
               return reject(err4);
             }
@@ -23658,7 +23658,7 @@ var require_pluggable_auth_handler = __commonJS({
        * @return A promise that resolves with the executable response.
        */
       retrieveResponseFromExecutable(envMap) {
-        return new Promise((resolve5, reject) => {
+        return new Promise((resolve6, reject) => {
           const child = childProcess.spawn(this.commandComponents[0], this.commandComponents.slice(1), {
             env: { ...process.env, ...Object.fromEntries(envMap) }
           });
@@ -23680,7 +23680,7 @@ var require_pluggable_auth_handler = __commonJS({
               try {
                 const responseJson = JSON.parse(output);
                 const response = new executable_response_1.ExecutableResponse(responseJson);
-                return resolve5(response);
+                return resolve6(response);
               } catch (error2) {
                 if (error2 instanceof executable_response_1.ExecutableResponseError) {
                   return reject(error2);
@@ -24872,7 +24872,7 @@ var require_googleauth = __commonJS({
         }
       }
       fromStreamAsync(inputStream, options) {
-        return new Promise((resolve5, reject) => {
+        return new Promise((resolve6, reject) => {
           if (!inputStream) {
             throw new Error("Must pass in a stream containing the Google auth settings.");
           }
@@ -24882,7 +24882,7 @@ var require_googleauth = __commonJS({
               try {
                 const data = JSON.parse(chunks.join(""));
                 const r2 = this._cacheClientFromJSON(data, options);
-                return resolve5(r2);
+                return resolve6(r2);
               } catch (err4) {
                 if (!this.keyFilename)
                   throw err4;
@@ -24892,7 +24892,7 @@ var require_googleauth = __commonJS({
                 });
                 this.cachedCredential = client;
                 this.setGapicJWTValues(client);
-                return resolve5(client);
+                return resolve6(client);
               }
             } catch (err4) {
               return reject(err4);
@@ -24928,17 +24928,17 @@ var require_googleauth = __commonJS({
        * Run the Google Cloud SDK command that prints the default project ID
        */
       async getDefaultServiceProjectId() {
-        return new Promise((resolve5) => {
+        return new Promise((resolve6) => {
           (0, child_process_1.exec)("gcloud config config-helper --format json", (err4, stdout) => {
             if (!err4 && stdout) {
               try {
                 const projectId = JSON.parse(stdout).configuration.properties.core.project;
-                resolve5(projectId);
+                resolve6(projectId);
                 return;
               } catch (e2) {
               }
             }
-            resolve5(null);
+            resolve6(null);
           });
         });
       }
@@ -27846,7 +27846,7 @@ var require_websocket = __commonJS({
     var http4 = __require("http");
     var net = __require("net");
     var tls = __require("tls");
-    var { randomBytes: randomBytes2, createHash: createHash3 } = __require("crypto");
+    var { randomBytes: randomBytes2, createHash: createHash4 } = __require("crypto");
     var { Duplex, Readable: Readable2 } = __require("stream");
     var { URL: URL2 } = __require("url");
     var PerMessageDeflate2 = require_permessage_deflate();
@@ -28514,7 +28514,7 @@ var require_websocket = __commonJS({
           abortHandshake(websocket, socket, "Invalid Upgrade header");
           return;
         }
-        const digest = createHash3("sha1").update(key + GUID).digest("base64");
+        const digest = createHash4("sha1").update(key + GUID).digest("base64");
         if (res.headers["sec-websocket-accept"] !== digest) {
           abortHandshake(websocket, socket, "Invalid Sec-WebSocket-Accept header");
           return;
@@ -28883,7 +28883,7 @@ var require_websocket_server = __commonJS({
     var EventEmitter = __require("events");
     var http4 = __require("http");
     var { Duplex } = __require("stream");
-    var { createHash: createHash3 } = __require("crypto");
+    var { createHash: createHash4 } = __require("crypto");
     var extension2 = require_extension();
     var PerMessageDeflate2 = require_permessage_deflate();
     var subprotocol2 = require_subprotocol();
@@ -29190,7 +29190,7 @@ var require_websocket_server = __commonJS({
           );
         }
         if (this._state > RUNNING) return abortHandshake(socket, 503);
-        const digest = createHash3("sha1").update(key + GUID).digest("base64");
+        const digest = createHash4("sha1").update(key + GUID).digest("base64");
         const headers = [
           "HTTP/1.1 101 Switching Protocols",
           "Upgrade: websocket",
@@ -32939,14 +32939,14 @@ function __asyncValues(o) {
   }, i2);
   function verb(n) {
     i2[n] = o[n] && function(v) {
-      return new Promise(function(resolve5, reject) {
-        v = o[n](v), settle(resolve5, reject, v.done, v.value);
+      return new Promise(function(resolve6, reject) {
+        v = o[n](v), settle(resolve6, reject, v.done, v.value);
       });
     };
   }
-  function settle(resolve5, reject, d, v) {
+  function settle(resolve6, reject, d, v) {
     Promise.resolve(v).then(function(v2) {
-      resolve5({ value: v2, done: d });
+      resolve6({ value: v2, done: d });
     }, reject);
   }
 }
@@ -39880,7 +39880,7 @@ function retryIntervalFromResponse(res) {
   return 0;
 }
 async function delay(delay2) {
-  return new Promise((resolve5) => setTimeout(resolve5, delay2));
+  return new Promise((resolve6) => setTimeout(resolve6, delay2));
 }
 async function logRequest(logger, req) {
   if (!logger) {
@@ -47323,8 +47323,8 @@ var init_node = __esm({
         const url = `${websocketBaseUrl}/ws/google.ai.generativelanguage.${apiVersion}.GenerativeService.BidiGenerateMusic?key=${apiKey}`;
         let onopenResolve = () => {
         };
-        const onopenPromise = new Promise((resolve5) => {
-          onopenResolve = resolve5;
+        const onopenPromise = new Promise((resolve6) => {
+          onopenResolve = resolve6;
         });
         const callbacks = params.callbacks;
         const onopenAwaitedCallback = function() {
@@ -47530,8 +47530,8 @@ var init_node = __esm({
         }
         let onopenResolve = () => {
         };
-        const onopenPromise = new Promise((resolve5) => {
-          onopenResolve = resolve5;
+        const onopenPromise = new Promise((resolve6) => {
+          onopenResolve = resolve6;
         });
         const callbacks = params.callbacks;
         const onopenAwaitedCallback = function() {
@@ -47544,8 +47544,8 @@ var init_node = __esm({
         const messageQueue = [];
         let setupCompleteResolve = () => {
         };
-        const setupCompletePromise = new Promise((resolve5) => {
-          setupCompleteResolve = resolve5;
+        const setupCompletePromise = new Promise((resolve6) => {
+          setupCompleteResolve = resolve6;
         });
         const websocketCallbacks = {
           onopen: onopenAwaitedCallback,
@@ -52113,7 +52113,7 @@ var init_values = __esm({
 var sleep5;
 var init_sleep = __esm({
   "node_modules/openai/internal/utils/sleep.mjs"() {
-    sleep5 = (ms) => new Promise((resolve5) => setTimeout(resolve5, ms));
+    sleep5 = (ms) => new Promise((resolve6) => setTimeout(resolve6, ms));
   }
 });
 
@@ -53306,8 +53306,8 @@ var init_api_promise = __esm({
     init_parse();
     APIPromise2 = class _APIPromise extends Promise {
       constructor(client, responsePromise, parseResponse2 = defaultParseResponse) {
-        super((resolve5) => {
-          resolve5(null);
+        super((resolve6) => {
+          resolve6(null);
         });
         this.responsePromise = responsePromise;
         this.parseResponse = parseResponse2;
@@ -54277,12 +54277,12 @@ var init_EventStream = __esm({
         _EventStream_errored.set(this, false);
         _EventStream_aborted.set(this, false);
         _EventStream_catchingPromiseCreated.set(this, false);
-        __classPrivateFieldSet(this, _EventStream_connectedPromise, new Promise((resolve5, reject) => {
-          __classPrivateFieldSet(this, _EventStream_resolveConnectedPromise, resolve5, "f");
+        __classPrivateFieldSet(this, _EventStream_connectedPromise, new Promise((resolve6, reject) => {
+          __classPrivateFieldSet(this, _EventStream_resolveConnectedPromise, resolve6, "f");
           __classPrivateFieldSet(this, _EventStream_rejectConnectedPromise, reject, "f");
         }), "f");
-        __classPrivateFieldSet(this, _EventStream_endPromise, new Promise((resolve5, reject) => {
-          __classPrivateFieldSet(this, _EventStream_resolveEndPromise, resolve5, "f");
+        __classPrivateFieldSet(this, _EventStream_endPromise, new Promise((resolve6, reject) => {
+          __classPrivateFieldSet(this, _EventStream_resolveEndPromise, resolve6, "f");
           __classPrivateFieldSet(this, _EventStream_rejectEndPromise, reject, "f");
         }), "f");
         __classPrivateFieldGet(this, _EventStream_connectedPromise, "f").catch(() => {
@@ -54382,11 +54382,11 @@ var init_EventStream = __esm({
        *   const message = await stream.emitted('message') // rejects if the stream errors
        */
       emitted(event) {
-        return new Promise((resolve5, reject) => {
+        return new Promise((resolve6, reject) => {
           __classPrivateFieldSet(this, _EventStream_catchingPromiseCreated, true, "f");
           if (event !== "error")
             this.once("error", reject);
-          this.once(event, resolve5);
+          this.once(event, resolve6);
         });
       }
       /**
@@ -54469,8 +54469,8 @@ var init_EventStream = __esm({
             }
             if (ended)
               return Promise.resolve(doneResult());
-            return new Promise((resolve5, reject) => {
-              readQueue.push({ resolve: resolve5, reject });
+            return new Promise((resolve6, reject) => {
+              readQueue.push({ resolve: resolve6, reject });
             });
           },
           return: () => {
@@ -55688,7 +55688,7 @@ var init_ChatCompletionStream = __esm({
               if (done) {
                 return { value: void 0, done: true };
               }
-              return new Promise((resolve5, reject) => readQueue.push({ resolve: resolve5, reject })).then((chunk3) => chunk3 ? { value: chunk3, done: false } : { value: void 0, done: true });
+              return new Promise((resolve6, reject) => readQueue.push({ resolve: resolve6, reject })).then((chunk3) => chunk3 ? { value: chunk3, done: false } : { value: void 0, done: true });
             }
             const chunk2 = pushQueue.shift();
             return { value: chunk2, done: false };
@@ -55778,7 +55778,7 @@ var init_ChatCompletionStreamingRunner = __esm({
               if (done) {
                 return { value: void 0, done: true };
               }
-              return new Promise((resolve5, reject) => readQueue.push({ resolve: resolve5, reject })).then((event2) => event2 ? { value: event2, done: false } : { value: void 0, done: true });
+              return new Promise((resolve6, reject) => readQueue.push({ resolve: resolve6, reject })).then((event2) => event2 ? { value: event2, done: false } : { value: void 0, done: true });
             }
             const event = pushQueue.shift();
             if (!event) {
@@ -59572,7 +59572,7 @@ var init_AssistantStream = __esm({
               if (done) {
                 return { value: void 0, done: true };
               }
-              return new Promise((resolve5, reject) => readQueue.push({ resolve: resolve5, reject })).then((chunk3) => chunk3 ? { value: chunk3, done: false } : { value: void 0, done: true });
+              return new Promise((resolve6, reject) => readQueue.push({ resolve: resolve6, reject })).then((chunk3) => chunk3 ? { value: chunk3, done: false } : { value: void 0, done: true });
             }
             const chunk2 = pushQueue.shift();
             return { value: chunk2, done: false };
@@ -62236,7 +62236,7 @@ var init_ResponseStream = __esm({
               if (done) {
                 return { value: void 0, done: true };
               }
-              return new Promise((resolve5, reject) => readQueue.push({ resolve: resolve5, reject })).then((event2) => event2 ? { value: event2, done: false } : { value: void 0, done: true });
+              return new Promise((resolve6, reject) => readQueue.push({ resolve: resolve6, reject })).then((event2) => event2 ? { value: event2, done: false } : { value: void 0, done: true });
             }
             const event = pushQueue.shift();
             return { value: event, done: false };
@@ -74169,7 +74169,7 @@ var Protocol = class {
           return;
         }
         const pollInterval = task2.pollInterval ?? this._options?.defaultTaskPollInterval ?? 1e3;
-        await new Promise((resolve5) => setTimeout(resolve5, pollInterval));
+        await new Promise((resolve6) => setTimeout(resolve6, pollInterval));
         options?.signal?.throwIfAborted();
       }
     } catch (error2) {
@@ -74186,7 +74186,7 @@ var Protocol = class {
    */
   request(request, resultSchema, options) {
     const { relatedRequestId, resumptionToken, onresumptiontoken, task, relatedTask } = options ?? {};
-    return new Promise((resolve5, reject) => {
+    return new Promise((resolve6, reject) => {
       const earlyReject = (error2) => {
         reject(error2);
       };
@@ -74264,7 +74264,7 @@ var Protocol = class {
           if (!parseResult.success) {
             reject(parseResult.error);
           } else {
-            resolve5(parseResult.data);
+            resolve6(parseResult.data);
           }
         } catch (error2) {
           reject(error2);
@@ -74525,12 +74525,12 @@ var Protocol = class {
       }
     } catch {
     }
-    return new Promise((resolve5, reject) => {
+    return new Promise((resolve6, reject) => {
       if (signal.aborted) {
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
         return;
       }
-      const timeoutId = setTimeout(resolve5, interval);
+      const timeoutId = setTimeout(resolve6, interval);
       signal.addEventListener("abort", () => {
         clearTimeout(timeoutId);
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
@@ -75406,12 +75406,12 @@ var StdioServerTransport = class {
     this.onclose?.();
   }
   send(message) {
-    return new Promise((resolve5) => {
+    return new Promise((resolve6) => {
       const json2 = serializeMessage(message);
       if (this._stdout.write(json2)) {
-        resolve5();
+        resolve6();
       } else {
-        this._stdout.once("drain", resolve5);
+        this._stdout.once("drain", resolve6);
       }
     });
   }
@@ -76616,7 +76616,7 @@ async function generateAdvanced(request) {
     const timeoutMs = targetDuration * 1e3 + REALTIME_TIMEOUT_MARGIN_MS;
     while (state.received < targetBytes && Date.now() - startTime < timeoutMs) {
       if (state.error) throw state.error;
-      await new Promise((resolve5) => setTimeout(resolve5, REALTIME_POLL_INTERVAL_MS));
+      await new Promise((resolve6) => setTimeout(resolve6, REALTIME_POLL_INTERVAL_MS));
     }
     state.done = true;
     closeQuietly(session);
@@ -76808,7 +76808,7 @@ async function generateLocalSpeech(request) {
   );
   let stdout;
   try {
-    stdout = await new Promise((resolve5, reject) => {
+    stdout = await new Promise((resolve6, reject) => {
       execFile(
         python,
         ["-c", SYNTH_SNIPPET, payload],
@@ -76824,7 +76824,7 @@ async function generateLocalSpeech(request) {
 ${errOut.trim()}`.trim())));
             return;
           }
-          resolve5(out);
+          resolve6(out);
         }
       );
     });
@@ -76903,7 +76903,7 @@ async function assertReachable(url, attempts, waitMs) {
     } catch (error2) {
       last = error2 instanceof Error ? error2.message : String(error2);
     }
-    if (i2 < attempts - 1) await new Promise((resolve5) => setTimeout(resolve5, waitMs));
+    if (i2 < attempts - 1) await new Promise((resolve6) => setTimeout(resolve6, waitMs));
   }
   throw new Error(`public URL not reachable: ${url} (${last})`);
 }
@@ -76972,19 +76972,19 @@ function serveLocally(filePaths) {
     }
     fs4.createReadStream(file, { start, end }).on("error", () => res.destroy()).pipe(res);
   });
-  return new Promise((resolve5, reject) => {
+  return new Promise((resolve6, reject) => {
     server2.once("error", reject);
     server2.listen(0, "127.0.0.1", () => {
       const address = server2.address();
       const port = typeof address === "object" && address ? address.port : 0;
-      resolve5({ server: server2, port, routes });
+      resolve6({ server: server2, port, routes });
     });
   });
 }
 function closeServer(server2) {
-  return new Promise((resolve5) => {
+  return new Promise((resolve6) => {
     server2.closeAllConnections?.();
-    server2.close(() => resolve5());
+    server2.close(() => resolve6());
   });
 }
 var liveTunnels = /* @__PURE__ */ new Set();
@@ -77017,7 +77017,7 @@ async function publishViaTunnel(filePaths, cloudflared = "cloudflared") {
   };
   killTunnelsOnExit();
   try {
-    const origin = await new Promise((resolve5, reject) => {
+    const origin = await new Promise((resolve6, reject) => {
       child = spawn(cloudflared, ["tunnel", "--url", `http://127.0.0.1:${port}`, "--no-autoupdate"], {
         stdio: ["ignore", "pipe", "pipe"]
       });
@@ -77030,7 +77030,7 @@ ${log.slice(-600)}`)), 6e4);
         const m2 = /https:\/\/[a-z0-9-]+\.trycloudflare\.com/.exec(log);
         if (m2) {
           clearTimeout(timer);
-          resolve5(m2[0]);
+          resolve6(m2[0]);
         }
       };
       child.stdout?.on("data", onLine);
@@ -77046,7 +77046,7 @@ ${log.slice(-600)}`));
       });
     });
     const urls = routes.map((r2) => origin + r2);
-    await new Promise((resolve5) => setTimeout(resolve5, 5e3));
+    await new Promise((resolve6) => setTimeout(resolve6, 5e3));
     for (const url of urls) await assertReachable(url, 30, 3e3);
     console.error(`[media-publish] quick tunnel ${origin} serving ${filePaths.length} file(s)`);
     return { urls, how: "tunnel", close };
@@ -77379,7 +77379,7 @@ var seedanceReferenceSchema = external_exports.object({
   }
 });
 function sleep2(ms) {
-  return new Promise((resolve5) => setTimeout(resolve5, ms));
+  return new Promise((resolve6) => setTimeout(resolve6, ms));
 }
 function describeHttpError(status, body) {
   try {
@@ -77481,23 +77481,23 @@ function loadReferenceAudio(filePaths) {
   });
 }
 function probeVideo(filePath) {
-  return new Promise((resolve5) => {
+  return new Promise((resolve6) => {
     execFile2(
       "ffprobe",
       ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height,r_frame_rate:format=duration", "-of", "json", filePath],
       { timeout: 15e3 },
       (error2, out) => {
-        if (error2) return resolve5(null);
+        if (error2) return resolve6(null);
         try {
           const parsed = JSON.parse(String(out));
           const stream = parsed.streams?.[0];
           const [num5, den] = String(stream?.r_frame_rate || "").split("/").map(Number);
           const fps = num5 && den ? num5 / den : NaN;
           const seconds = Number.parseFloat(String(parsed.format?.duration ?? ""));
-          if (!stream?.width || !stream?.height || !Number.isFinite(fps) || !Number.isFinite(seconds) || seconds <= 0) return resolve5(null);
-          resolve5({ seconds, fps, width: stream.width, height: stream.height });
+          if (!stream?.width || !stream?.height || !Number.isFinite(fps) || !Number.isFinite(seconds) || seconds <= 0) return resolve6(null);
+          resolve6({ seconds, fps, width: stream.width, height: stream.height });
         } catch {
-          resolve5(null);
+          resolve6(null);
         }
       }
     );
@@ -77539,14 +77539,14 @@ async function checkReferenceVideos(filePaths, spec, model) {
   return total;
 }
 function probeAudioSeconds(filePath) {
-  return new Promise((resolve5) => {
+  return new Promise((resolve6) => {
     execFile2(
       "ffprobe",
       ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", filePath],
       { timeout: 15e3 },
       (error2, out) => {
         const seconds = Number.parseFloat(String(out ?? "").trim());
-        resolve5(!error2 && Number.isFinite(seconds) && seconds > 0 ? seconds : null);
+        resolve6(!error2 && Number.isFinite(seconds) && seconds > 0 ? seconds : null);
       }
     );
   });
@@ -77851,7 +77851,7 @@ async function synthesizeWithRetry(model, contentText, speechConfig, temperature
     } catch (error2) {
       lastError = error2;
       if (attempt < MAX_ATTEMPTS - 1) {
-        await new Promise((resolve5) => setTimeout(resolve5, RETRY_BASE_DELAY_MS * (attempt + 1)));
+        await new Promise((resolve6) => setTimeout(resolve6, RETRY_BASE_DELAY_MS * (attempt + 1)));
       }
     }
   }
@@ -78179,7 +78179,7 @@ function isRetryable(httpStatus) {
   return httpStatus === 429 || httpStatus >= 500;
 }
 function sleep3(ms) {
-  return new Promise((resolve5) => setTimeout(resolve5, ms));
+  return new Promise((resolve6) => setTimeout(resolve6, ms));
 }
 function timeoutFor2(textLength) {
   return Math.min(5 * 6e4, 6e4 + textLength * 40);
@@ -78811,7 +78811,7 @@ async function loadModel(id) {
     if (!listed.ok) return listed;
     const found = listed.models?.find((m2) => m2.id === id);
     if (found?.state === "ready") return { ok: true };
-    await new Promise((resolve5) => setTimeout(resolve5, 2e3));
+    await new Promise((resolve6) => setTimeout(resolve6, 2e3));
   }
   return { ok: false, error: `Timed out waiting for model "${id}" to become ready.` };
 }
@@ -78936,7 +78936,7 @@ async function muxRgbToMp4(opts) {
     );
     if (opts.audio) args.push("-c:a", "aac");
     args.push(opts.outFile);
-    await new Promise((resolve5, reject) => {
+    await new Promise((resolve6, reject) => {
       execFile3("ffmpeg", args, { timeout: 12e4, maxBuffer: 2 * 1024 * 1024 }, (error2, _out, errOut) => {
         if (error2) {
           const code = error2.code;
@@ -78948,7 +78948,7 @@ async function muxRgbToMp4(opts) {
 ${String(errOut).slice(-500)}` : ""}`));
           return;
         }
-        resolve5();
+        resolve6();
       });
     });
     if (!existsSync5(opts.outFile)) return { ok: false, error: "ffmpeg exited 0 but the mp4 was not written" };
@@ -79794,7 +79794,7 @@ var qwen3AsrTranscribeSchema = external_exports.object({
   filename: bareFilenameSchema("json").optional()
 });
 function probeDurationSeconds(audioPath) {
-  return new Promise((resolve5) => {
+  return new Promise((resolve6) => {
     execFile4(
       "ffprobe",
       ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", audioPath],
@@ -79802,10 +79802,10 @@ function probeDurationSeconds(audioPath) {
       (error2, out) => {
         const seconds = Number.parseFloat((out || "").trim());
         if (error2 || !Number.isFinite(seconds) || seconds <= 0) {
-          resolve5(60);
+          resolve6(60);
           return;
         }
-        resolve5(seconds);
+        resolve6(seconds);
       }
     );
   });
@@ -79862,7 +79862,7 @@ async function transcribeLocal(request) {
   );
   const startedAt = Date.now();
   try {
-    await new Promise((resolve5, reject) => {
+    await new Promise((resolve6, reject) => {
       execFile4(
         bin,
         cliArgs,
@@ -79882,7 +79882,7 @@ async function transcribeLocal(request) {
 ${tail}` : ""}`));
             return;
           }
-          resolve5();
+          resolve6();
         }
       );
     });
@@ -80349,7 +80349,7 @@ async function generateCheckedSpeech(input, dependencies) {
     language: request.language,
     delivery: request.delivery
   };
-  function save(status, extra = {}) {
+  function save2(status, extra = {}) {
     const report = { ...base, status, attempts, checkedAt: (/* @__PURE__ */ new Date()).toISOString(), ...extra };
     const temporary = proofFile + "." + randomUUID() + ".tmp";
     writeFileSync6(temporary, JSON.stringify(report, null, 2) + "\n");
@@ -80363,7 +80363,7 @@ async function generateCheckedSpeech(input, dependencies) {
         if (!Array.isArray(old.attempts) || old.attempts.length > 3) throw new Error("Invalid attempt history");
         attempts.push(...old.attempts.map((take) => ({ ...take, model: take.model ?? old.model })));
         const last = attempts.at(-1);
-        if (last?.duplicateOf) return save("fail", { error: "Identical rejected audio already stopped this request; correct the episode pronunciation or delivery plan" });
+        if (last?.duplicateOf) return save2("fail", { error: "Identical rejected audio already stopped this request; correct the episode pronunciation or delivery plan" });
         if (request.rejectTake) {
           if (!last || last.audioSha256 !== request.rejectTake.audioSha256 || !existsSync9(output) || sha256(readFileSync7(output)) !== request.rejectTake.audioSha256) throw new Error("The rejected take is not the current audio; inspect the current file before requesting another retake");
           last.authorRejection = request.rejectTake.reason;
@@ -80393,7 +80393,7 @@ async function generateCheckedSpeech(input, dependencies) {
       }
     }
     if (request.rejectTake && !attempts.length) throw new Error("No matching checked take to reject");
-    save("unverified");
+    save2("unverified");
     await deps.preflight();
     while (true) {
       let take = attempts.at(-1);
@@ -80403,7 +80403,7 @@ async function generateCheckedSpeech(input, dependencies) {
         const attempt = attempts.length + 1;
         take = { attempt, pending: true };
         attempts.push(take);
-        save("unverified");
+        save2("unverified");
         const started = Date.now();
         let generated;
         const overrides = prepared.seed !== void 0 ? { seed: prepared.seed } : {};
@@ -80431,11 +80431,11 @@ async function generateCheckedSpeech(input, dependencies) {
           take.spacing = { skipped: "engine has no alignment" };
         }
         take.audioSha256 = sha256(readFileSync7(output));
-        save("unverified");
+        save2("unverified");
         const duplicate = attempts.slice(0, -1).find((a) => a.audioSha256 === take.audioSha256 && a.pending === false && Array.isArray(a.failures) && a.failures.length);
         if (duplicate) {
           Object.assign(take, { pending: false, duplicateOf: duplicate.attempt, failures: ["Identical rejected audio; change the pronunciation or episode-wide delivery plan before another synthesis"] });
-          return save("fail", { audioSha256: take.audioSha256, error: "Generator repeated a rejected WAV; stopped without another paid listening review" });
+          return save2("fail", { audioSha256: take.audioSha256, error: "Generator repeated a rejected WAV; stopped without another paid listening review" });
         }
       }
       const audioSha256 = take.audioSha256;
@@ -80451,12 +80451,12 @@ async function generateCheckedSpeech(input, dependencies) {
       Object.assign(take, { pending: false, audioSha256, signal, ...listened ? { model: REVIEW_MODEL, ...listened } : {}, cer: listened ? characterErrorRate(request.expectedText, listened.transcript) : null, failures });
       const spacingState = take.spacing;
       const spacing = !prepared.spacing ? "not applicable" : spacingState?.skipped ? "skipped: " + String(spacingState.skipped) : "applied";
-      if (!failures.length) return save("pass", { audioSha256, spacing });
-      save("retry", { audioSha256, spacing });
+      if (!failures.length) return save2("pass", { audioSha256, spacing });
+      save2("retry", { audioSha256, spacing });
     }
-    return save("fail", { error: "Speech did not pass within the attempt limit. Present the per-attempt issues to the user (tts-hitl.md): they can accept this take, fix first or stop. Do not reset the retry budget or change the voice to bypass review." });
+    return save2("fail", { error: "Speech did not pass within the attempt limit. Present the per-attempt issues to the user (tts-hitl.md): they can accept this take, fix first or stop. Do not reset the retry budget or change the voice to bypass review." });
   } catch (error2) {
-    return save("unverified", { error: error2 instanceof Error ? error2.message : String(error2) });
+    return save2("unverified", { error: error2 instanceof Error ? error2.message : String(error2) });
   } finally {
     closeSync(lock);
     rmSync4(lockFile, { force: true });
@@ -80539,7 +80539,7 @@ async function generateLocalImage(request) {
   );
   const startedAt = Date.now();
   try {
-    await new Promise((resolve5, reject) => {
+    await new Promise((resolve6, reject) => {
       execFile6(
         bin,
         cliArgs,
@@ -80561,7 +80561,7 @@ async function generateLocalImage(request) {
 ${tail}` : ""}`));
             return;
           }
-          resolve5();
+          resolve6();
         }
       );
     });
@@ -82490,7 +82490,7 @@ var sunoLyricsSchema = external_exports.object({
   prompt: external_exports.string().min(1).max(200)
 });
 function sleep4(ms) {
-  return new Promise((resolve5) => setTimeout(resolve5, ms));
+  return new Promise((resolve6) => setTimeout(resolve6, ms));
 }
 function describeSunoError(code, msg, httpStatus) {
   const text2 = (msg || "").trim() || "(no message)";
@@ -86236,11 +86236,56 @@ Returns: integer credit balance.`,
   // Only tools for platforms with a credentials file are exposed in ListTools (index.ts + SNS_PLATFORM_BY_TOOL).
   // Multi-channel: with channel (brand slug) set, only <SNS_TOKEN_DIR>/<slug>/ tokens are used (no fallback).
   {
+    name: "threads_draft_create",
+    title: "Create Threads growth draft",
+    description: "Store a Threads growth draft before review. Returns draftId and bodyHash (SHA-256 of NFC, LF, trimmed body + selfReply). Edits require a new draft and reviews. No public posting.",
+    annotations: HINT.generate,
+    inputSchema: { type: "object", properties: {
+      channel: SNS_CHANNEL_PROPERTY,
+      body: { type: "string", minLength: 1, description: "Draft body." },
+      selfReply: { type: "string", minLength: 1, description: "Optional information self-reply (voice review only)." },
+      surface: { type: "string", enum: ["post", "reply"], description: "post by default; reply requires replyToId and only voice review." },
+      replyToId: { type: "string", description: "Required reply target for a reply draft; bound to publication." },
+      readerMessage: { type: "string", minLength: 1, description: "One-sentence summary of the post." },
+      purpose: { type: "string", enum: ["fun", "moved", "info", "empathy"], description: "Exactly one intended reader outcome." },
+      purposeEvidence: { type: "string", minLength: 1, description: "Verbatim body excerpt demonstrating the chosen purpose; whitespace-only normalization." },
+      flow: { type: "object", description: "Reader progression: hook, turn, residue.", properties: {
+        hook: { type: "string", minLength: 1, description: "Why the opening holds attention." },
+        turn: { type: "string", minLength: 1, description: "What the middle reveals." },
+        residue: { type: "string", minLength: 1, description: "What the reader takes away." }
+      }, required: ["hook", "turn", "residue"] },
+      comicElements: { description: "Concrete comic elements in the draft.", type: "array", items: { type: "string", minLength: 1 }, minItems: 1 },
+      submitter: { type: "string", description: "Submitting agent identifier (self-reported)." },
+      submitterContext: { type: "string", description: "Submitting session/context identifier (self-reported)." }
+    }, required: ["channel", "body", "readerMessage", "comicElements", "purpose", "purposeEvidence", "flow"] }
+  },
+  {
+    name: "threads_review_submit",
+    title: "Submit Threads draft review",
+    description: "Record a voice/purpose/flow review; score purpose only against the chosen draft purpose (fun, moved, info, empathy), never against another purpose. Bind the review to bodyHash. A required rubric item scoring zero must be submitted as a P0 finding to block publication; the server does not infer semantic failures from scores. Findings quote actual draft text; only whitespace differences are ignored. No LLM/API is called. Identifiers are self-reported: the server cannot distinguish subagents in the same session or enforce reviewer independence.",
+    annotations: HINT.generate,
+    inputSchema: { type: "object", properties: {
+      draftId: { description: "Identifier returned by threads_draft_create.", type: "string" },
+      bodyHash: { description: "Exact reviewed draft hash.", type: "string", pattern: "^[a-f0-9]{64}$" },
+      axis: { description: "Review axis.", type: "string", enum: ["voice", "purpose", "flow"] },
+      score: { description: "Score from 0 to 100.", type: "number", minimum: 0, maximum: 100 },
+      reasons: { description: "Reasons supporting the score.", type: "array", items: { type: "string", minLength: 1 }, minItems: 1 },
+      improvements: { description: "Concrete improvements or next-post guidance.", type: "array", items: { type: "string", minLength: 1 }, minItems: 1 },
+      reviewer: { description: "Self-reported reviewer identifier.", type: "string", minLength: 1 },
+      reviewerContext: { description: "Self-reported session/context identifier.", type: "string", minLength: 1 },
+      findings: { description: "Quoted evidence, including at least one pass finding for a clean review.", type: "array", minItems: 1, items: { type: "object", properties: {
+        quote: { description: "Exact draft excerpt; whitespace differences allowed.", type: "string", minLength: 1 },
+        issue: { description: "Observation supported by the quote.", type: "string", minLength: 1 },
+        severity: { description: "pass for positive evidence; P0 blocks publishing.", type: "string", enum: ["pass", "P0", "P1", "P2"] }
+      }, required: ["quote", "issue", "severity"] } }
+    }, required: ["draftId", "bodyHash", "axis", "score", "reasons", "improvements", "reviewer", "reviewerContext", "findings"] }
+  },
+  {
     name: "threads_publish",
     title: "\u26A0\uFE0F Threads publish (immediately public)",
     annotations: HINT.publish,
     outputSchema: publishOutput("postId", "Threads post id \u2014 pass as replyToId to chain a follow-up reply"),
-    description: `\u26A0\uFE0F Direct Threads publishing \u2014 posts to the Threads API with local tokens, **immediately public** (the posting account is auto-resolved from the token's /me). There is no separate review gate, so call only right after the user has checked and approved the final copy and media (HITL \u2014 never call without approval). A post carries one of four shapes: a video (videoUrl), a single image (imageUrl), a link preview card (linkUrl), or text alone. The three media fields are mutually exclusive \u2014 one media_type per post. **Video episodes put the video on the post itself via videoUrl**, so it plays inline in the timeline with nothing to click away to; do not attach the video as a reply or fall back to a bare link (user directive 2026-08-19). Carousels are not supported by this tool. Publish quota: 250 per 24 hours. ${SNS_HITL_LINE}`,
+    description: `\u26A0\uFE0F Direct Threads publishing \u2014 posts to the Threads API with local tokens, **immediately public** (the posting account is auto-resolved from the token's /me). Exactly one of draftId (growth: hash-bound reviews, configured gate.json thresholds and style check) or episodeRef (existing episode and matching approval record) is required. dryRun checks without API calls. Call only right after the user has checked and approved the final copy and media (HITL \u2014 never call without approval). A post carries one of four shapes: a video (videoUrl), a single image (imageUrl), a link preview card (linkUrl), or text alone. The three media fields are mutually exclusive \u2014 one media_type per post. **Video episodes put the video on the post itself via videoUrl**, so it plays inline in the timeline with nothing to click away to; do not attach the video as a reply or fall back to a bare link (user directive 2026-08-19). Carousels are not supported by this tool. Publish quota: 250 per 24 hours. ${SNS_HITL_LINE}`,
     inputSchema: {
       type: "object",
       properties: {
@@ -86260,9 +86305,14 @@ Returns: integer credit balance.`,
           description: "Link preview card URL attached to the post. Text posts only, so mutually exclusive with imageUrl and videoUrl; writing the same URL in the caption still counts as one link to the platform (cap 5). **Meta's own URLs (an IG reels permalink) come back 400** \u2014 put those in the body text instead"
         },
         replyToId: { type: "string", description: "Publish as a reply to this post id (own reply chain, or joining someone else's post)" },
-        channel: SNS_CHANNEL_PROPERTY
+        channel: SNS_CHANNEL_PROPERTY,
+        draftId: { type: "string", description: "Reviewed growth draft identifier; exclusive with episodeRef." },
+        episodeRef: { type: "string", description: "Episode topic slug under data/<channel>/episodes; requires matching threads-publish-approval.json." },
+        selfReply: { type: "string", description: "Optional reviewed self-reply; posted after the root succeeds." },
+        dryRun: { type: "boolean", description: "Validate all gates without token access or network publishing." }
       },
-      required: ["caption"]
+      required: ["caption", "channel"],
+      oneOf: [{ required: ["draftId"], not: { required: ["episodeRef"] } }, { required: ["episodeRef"], not: { required: ["draftId"] } }]
     }
   },
   {
@@ -86486,14 +86536,16 @@ Returns: integer credit balance.`,
     title: "\u26A0\uFE0F Reply to inbound comment (immediately public)",
     annotations: HINT.publish,
     outputSchema: COMMENT_REPLY_OUTPUT,
-    description: `\u26A0\uFE0F Replies to an inbound comment \u2014 posts an **immediately public** reply with local tokens (the author is the brand account itself). There is no separate review gate, so publish only copy the user has approved (HITL \u2014 never call without approval). Use commentId straight from the sns_comment_inbox response. Per-platform contracts: THREADS \u2014 a new post carrying reply_to_id is the reply, so chains extend freely down to replies-to-replies / INSTAGRAM \u2014 replies attach to **top-level comments only** (to answer a sub-comment, pass its parent commentId \u2014 for comments carrying parentCommentId, use that value) / FACEBOOK \u2014 a comment on a comment id is the sub-comment / YOUTUBE \u2014 also top-level only, but a sub-comment id is accepted: this tool looks up the parent, reattaches at the thread root, and reports where it landed via parentCommentId in the response (needs the youtube.force-ssl scope). On failure, never blindly retry the same call (non-idempotent \u2014 duplicate replies). ${SNS_HITL_LINE}`,
+    description: `\u26A0\uFE0F Replies to an inbound comment \u2014 posts an **immediately public** reply with local tokens (the author is the brand account itself). THREADS requires a reviewed surface=reply draftId with matching commentId, voice score and server style check, exactly as threads_publish; dryRun validates without posting. Publish only copy the user has approved (HITL \u2014 never call without approval). Use commentId straight from the sns_comment_inbox response. Per-platform contracts: THREADS \u2014 a new post carrying reply_to_id is the reply, so chains extend freely down to replies-to-replies / INSTAGRAM \u2014 replies attach to **top-level comments only** (to answer a sub-comment, pass its parent commentId \u2014 for comments carrying parentCommentId, use that value) / FACEBOOK \u2014 a comment on a comment id is the sub-comment / YOUTUBE \u2014 also top-level only, but a sub-comment id is accepted: this tool looks up the parent, reattaches at the thread root, and reports where it landed via parentCommentId in the response (needs the youtube.force-ssl scope). On failure, never blindly retry the same call (non-idempotent \u2014 duplicate replies). ${SNS_HITL_LINE}`,
     inputSchema: {
       type: "object",
       properties: {
         platform: { type: "string", enum: ["THREADS", "INSTAGRAM", "FACEBOOK", "YOUTUBE"], description: "Target platform" },
         commentId: { type: "string", description: "commentId from sns_comment_inbox (IG must be a top-level comment id \u2014 YT also accepts a sub-comment id)" },
         message: { type: "string", description: "Final reply \u2014 THREADS \u2264500 chars, IG \u22642,200, FB \u22648,000, YT \u226410,000" },
-        channel: SNS_CHANNEL_PROPERTY
+        channel: SNS_CHANNEL_PROPERTY,
+        draftId: { type: "string", description: "Required for THREADS: reviewed reply draft bound to this commentId. Not accepted for other platforms." },
+        dryRun: { type: "boolean", description: "THREADS only: validate the reply gate without credential or API access." }
       },
       required: ["platform", "commentId", "message"]
     }
@@ -86834,6 +86886,8 @@ Returns: counts (violations \xB7 warnings \xB7 deferred) and two lists \u2014 st
 ];
 var SNS_PLATFORM_BY_TOOL = {
   threads_publish: "THREADS",
+  threads_draft_create: "THREADS",
+  threads_review_submit: "THREADS",
   threads_insights: "THREADS",
   threads_search: "THREADS",
   instagram_publish: "INSTAGRAM",
@@ -86844,11 +86898,184 @@ var SNS_PLATFORM_BY_TOOL = {
   youtube_insights: "YOUTUBE"
 };
 
+// src/threads-gate.ts
+import { createHash as createHash2, randomUUID as randomUUID2 } from "node:crypto";
+import { appendFileSync as appendFileSync2, mkdirSync as mkdirSync5, readFileSync as readFileSync9, realpathSync, renameSync as renameSync4, statSync as statSync6, writeFileSync as writeFileSync8 } from "node:fs";
+import { dirname as dirname5, join as join9, resolve as resolve4 } from "node:path";
+import { fileURLToPath as fileURLToPath2 } from "node:url";
+import { spawnSync as spawnSync2 } from "node:child_process";
+var nonempty = external_exports.string().trim().min(1);
+var channelSchema = external_exports.string().regex(CHANNEL_SLUG_RE);
+var AXES = ["voice", "purpose", "flow"];
+var whitespace = (s2) => s2.replace(/\s+/gu, " ").trim();
+var hashSchema = external_exports.string().regex(/^[a-f0-9]{64}$/);
+var draftSchema = external_exports.object({
+  channel: channelSchema,
+  body: nonempty,
+  selfReply: nonempty.optional(),
+  surface: external_exports.enum(["post", "reply"]).default("post"),
+  replyToId: nonempty.optional(),
+  readerMessage: nonempty,
+  purpose: external_exports.enum(["fun", "moved", "info", "empathy"]),
+  purposeEvidence: nonempty,
+  flow: external_exports.object({ hook: nonempty, turn: nonempty, residue: nonempty }),
+  comicElements: external_exports.array(nonempty).min(1),
+  submitter: nonempty.optional(),
+  submitterContext: nonempty.optional()
+});
+var reviewSchema2 = external_exports.object({
+  draftId: nonempty,
+  bodyHash: hashSchema,
+  axis: external_exports.enum(AXES),
+  score: external_exports.number().finite().min(0).max(100),
+  reasons: external_exports.array(nonempty).min(1),
+  improvements: external_exports.array(nonempty).min(1),
+  reviewer: nonempty,
+  reviewerContext: nonempty,
+  findings: external_exports.array(external_exports.object({ quote: nonempty, issue: nonempty, severity: external_exports.enum(["pass", "P0", "P1", "P2"]) })).min(1)
+});
+var normalize = (s2) => s2.normalize("NFC").replace(/\r\n?/g, "\n").trim();
+function threadsBodyHash(body, selfReply = "") {
+  return createHash2("sha256").update(JSON.stringify([normalize(body), normalize(selfReply)])).digest("hex");
+}
+function directory(channel) {
+  return join9(process.cwd(), "data", channelSchema.parse(channel), "growth", "threads");
+}
+function draftLocation(id) {
+  const match2 = /^([a-z0-9][a-z0-9-]*)\.([a-f0-9-]{36})$/.exec(id);
+  if (!match2 || !external_exports.string().uuid().safeParse(match2[2]).success) throw new Error("Invalid draftId");
+  return { channel: match2[1], file: join9(directory(match2[1]), "drafts", `${match2[2]}.json`) };
+}
+function audit(channel, tool, result, details = {}) {
+  const dir = directory(channel);
+  mkdirSync5(dir, { recursive: true });
+  appendFileSync2(join9(dir, "gate-log.jsonl"), JSON.stringify({ at: (/* @__PURE__ */ new Date()).toISOString(), tool, result, ...details }) + "\n", { mode: 384 });
+}
+function save(draft) {
+  const { file } = draftLocation(draft.draftId);
+  mkdirSync5(dirname5(file), { recursive: true });
+  const temp = `${file}.${randomUUID2()}.tmp`;
+  writeFileSync8(temp, JSON.stringify(draft), { mode: 384 });
+  renameSync4(temp, file);
+}
+function load(id) {
+  const value = JSON.parse(readFileSync9(draftLocation(id).file, "utf8"));
+  draftSchema.parse(value);
+  if (value.draftId !== id || value.channel !== draftLocation(id).channel || threadsBodyHash(value.body, value.selfReply) !== value.bodyHash) {
+    throw new Error("Draft body hash mismatch; create and review a new draft");
+  }
+  return value;
+}
+function gateCall(tool, args, action) {
+  const raw = args && typeof args === "object" ? args : {};
+  let channel = channelSchema.safeParse(raw.channel).success ? String(raw.channel) : "unknown";
+  if (typeof raw.draftId === "string") {
+    try {
+      channel = draftLocation(raw.draftId).channel;
+    } catch {
+    }
+  }
+  try {
+    const result = action();
+    audit(channel, tool, "accepted", { draftId: raw.draftId, axis: raw.axis });
+    return result;
+  } catch (error2) {
+    audit(channel, tool, "rejected", { draftId: raw.draftId, reason: error2 instanceof Error ? error2.message : "Gate failed" });
+    throw error2;
+  }
+}
+function createThreadsDraft(args) {
+  return gateCall("threads_draft_create", args, () => {
+    const input = draftSchema.strict().parse(args);
+    if (input.surface === "reply" !== Boolean(input.replyToId)) throw new Error("Reply drafts require replyToId; post drafts must omit it");
+    if (!whitespace(input.body).includes(whitespace(input.purposeEvidence))) throw new Error("Purpose evidence quote not present in draft body");
+    const draftId = `${input.channel}.${randomUUID2()}`;
+    const bodyHash = threadsBodyHash(input.body, input.selfReply);
+    save({ ...input, draftId, bodyHash, reviews: {} });
+    audit(input.channel, "threads_draft_create", "created", { draftId, bodyHash, submitter: input.submitter ?? null, submitterContext: input.submitterContext ?? null });
+    return { draftId, bodyHash };
+  });
+}
+function submitThreadsReview(args) {
+  return gateCall("threads_review_submit", args, () => {
+    const input = reviewSchema2.strict().parse(args);
+    const draft = load(input.draftId);
+    if (input.bodyHash !== draft.bodyHash) throw new Error("Review body hash mismatch");
+    if (draft.surface === "reply" && input.axis !== "voice") throw new Error("Reply drafts use voice review only");
+    const surfaces = (input.axis !== "voice" ? [draft.body] : [draft.body, draft.selfReply ?? ""]).map(whitespace);
+    for (const finding of input.findings) {
+      if (!surfaces.some((body) => body.includes(whitespace(finding.quote)))) throw new Error("Finding quote not present in draft");
+    }
+    const review = {
+      ...input,
+      selfReview: draft.submitter ? input.reviewer === draft.submitter : null,
+      sameContext: draft.submitterContext ? input.reviewerContext === draft.submitterContext : null
+    };
+    draft.reviews[input.axis] = review;
+    save(draft);
+    audit(draft.channel, "threads_review_submit", "reviewed", review);
+    return review;
+  });
+}
+function checkThreadsGate(input) {
+  return gateCall("threads_publish", input, () => {
+    if (!input.draftId) throw new Error("Growth publishing requires draftId");
+    const draft = load(input.draftId);
+    if (input.channel !== draft.channel) throw new Error("Draft channel mismatch");
+    if (input.replyToId !== draft.replyToId) throw new Error("Draft reply target mismatch");
+    const bodyHash = threadsBodyHash(input.caption, input.selfReply);
+    if (bodyHash !== draft.bodyHash) throw new Error("Publish body hash mismatch");
+    let limits;
+    try {
+      limits = external_exports.object({ voice: external_exports.number().finite().min(0).max(100), purpose: external_exports.number().finite().min(0).max(100), flow: external_exports.number().finite().min(0).max(100) }).parse(JSON.parse(readFileSync9(join9(directory(draft.channel), "gate.json"), "utf8")));
+    } catch (error2) {
+      if (error2.code === "ENOENT") throw new Error("Gate thresholds not configured (\uAE30\uC900\uC810 \uBBF8\uC124\uC815): gate.json required");
+      throw error2;
+    }
+    const axes = draft.surface === "reply" ? ["voice"] : AXES;
+    for (const axis of axes) {
+      const review = draft.reviews[axis];
+      if (!review) throw new Error(`Missing ${axis} review`);
+      reviewSchema2.parse(review);
+      if (review.draftId !== draft.draftId || review.axis !== axis) throw new Error("Review identity mismatch");
+      if (review.findings.some((finding) => finding.severity === "P0")) throw new Error(`${axis} review has unresolved P0`);
+      if (review.bodyHash !== bodyHash) throw new Error(`${axis} review hash mismatch`);
+      if (review.score < limits[axis]) throw new Error(`${axis} score ${review.score} below ${limits[axis]}`);
+    }
+    const checker = resolve4(dirname5(fileURLToPath2(import.meta.url)), "../../skills/platform-guide/references/check-style.py");
+    for (const [body, surface] of [[input.caption, input.replyToId ? "reply" : "threads"], [input.selfReply, "reply"]]) {
+      if (!body) continue;
+      const run = spawnSync2("python3", [checker, "--surface", surface, "-"], { input: body, encoding: "utf8", timeout: 15e3, maxBuffer: 1024 * 1024 });
+      if (run.error || run.status !== 0 && run.status !== 1) throw new Error(`Style check failed (${surface}, exit ${run.status}): ${run.error?.message ?? run.stdout}`);
+      if (run.status === 1) console.warn(`Style check warning (${surface}, exit 1): ${run.stdout}`);
+    }
+    return { bodyHash };
+  });
+}
+function checkThreadsEpisode(input) {
+  gateCall("threads_publish", input, () => {
+    const channel = channelSchema.parse(input.channel);
+    const topic = channelSchema.parse(input.episodeRef);
+    const root = realpathSync(join9(process.cwd(), "data", channel, "episodes"));
+    const episode = realpathSync(join9(root, topic));
+    if (dirname5(episode) !== root || !statSync6(episode).isDirectory()) throw new Error("Invalid episode directory");
+    const board = realpathSync(join9(episode, "storyboard", "scenes.js"));
+    if (!board.startsWith(episode + "/") || !statSync6(board).isFile()) throw new Error("Missing episode storyboard");
+    const approvalPath = realpathSync(join9(episode, "threads-publish-approval.json"));
+    if (dirname5(approvalPath) !== episode) throw new Error("Invalid episode approval path");
+    const approval = JSON.parse(readFileSync9(approvalPath, "utf8"));
+    if (approval.approved !== true) throw new Error("Episode publishing approval required");
+    for (const key of ["caption", "selfReply", "imageUrl", "videoUrl", "linkUrl", "replyToId"]) {
+      if ((approval[key] ?? "") !== (input[key] ?? "")) throw new Error(`Episode approval mismatch: ${key}`);
+    }
+  });
+}
+
 // src/datago-client.ts
 import { mkdir, writeFile as writeFile2 } from "node:fs/promises";
 import { existsSync as existsSync12 } from "node:fs";
 import { tmpdir as tmpdir4 } from "node:os";
-import { join as join9 } from "node:path";
+import { join as join10 } from "node:path";
 var PORTAL_BASE = "https://www.data.go.kr";
 var ODCLOUD_BASE = "https://api.odcloud.kr/api";
 var OPENAPI_BASE = "https://apis.data.go.kr";
@@ -87087,14 +87314,14 @@ async function downloadFile2(input) {
   const cd = fileRes.headers.get("content-disposition") ?? "";
   const rawName = cd.match(/filename\*?=(?:UTF-8''|")?([^";]+)/i)?.[1] ?? `datago-${input.publicDataPk}.bin`;
   const filename = sanitizeFilename(fixHeaderEncoding(rawName.replace(/"/g, "")));
-  const saveDir = input.saveDir ?? join9(tmpdir4(), "social-flow-datago");
+  const saveDir = input.saveDir ?? join10(tmpdir4(), "social-flow-datago");
   await mkdir(saveDir, { recursive: true });
-  let savedPath = join9(saveDir, filename);
+  let savedPath = join10(saveDir, filename);
   for (let i2 = 1; existsSync12(savedPath); i2++) {
     if (i2 >= 100) {
       return err(`there are already 100+ files with the same name in ${saveDir} \u2014 clean up saveDir or point at a different directory.`);
     }
-    savedPath = join9(saveDir, filename.replace(/(\.[^.]*)?$/, `-${i2}$1`));
+    savedPath = join10(saveDir, filename.replace(/(\.[^.]*)?$/, `-${i2}$1`));
   }
   await writeFile2(savedPath, buf);
   const preview = decodePreview(buf.subarray(0, 4096));
@@ -88425,7 +88652,7 @@ async function stockSearch(input) {
 }
 
 // src/sns-client.ts
-import { createHash as createHash2, randomUUID as randomUUID2 } from "node:crypto";
+import { createHash as createHash3, randomUUID as randomUUID3 } from "node:crypto";
 import {
   existsSync as existsSync13,
   mkdirSync as nodeMkdirSync,
@@ -88434,7 +88661,7 @@ import {
   writeFileSync as nodeWriteFileSync
 } from "node:fs";
 import { open as nodeOpen, readFile, stat as stat3 } from "node:fs/promises";
-import { basename as basename8, dirname as dirname5, extname as extname8, join as join10 } from "node:path";
+import { basename as basename8, dirname as dirname6, extname as extname8, join as join11 } from "node:path";
 function enabledPlatforms() {
   const channelDirs = listChannelDirs();
   return SNS_PLATFORMS.filter(
@@ -88450,7 +88677,7 @@ var IG_BASE = `https://graph.instagram.com/${GRAPH_VERSION}`;
 var FB_BASE = `https://graph.facebook.com/${GRAPH_VERSION}`;
 var DEFAULT_POLL_INTERVAL_MS = 2e3;
 var DEFAULT_POLL_MAX_TRIES = 60;
-var sleep6 = (ms) => new Promise((resolve5) => setTimeout(resolve5, ms));
+var sleep6 = (ms) => new Promise((resolve6) => setTimeout(resolve6, ms));
 function fail2(status, message) {
   return { ok: false, status, body: message };
 }
@@ -88525,6 +88752,19 @@ async function fetchMe(baseUrl, accessToken, fields) {
 }
 function okJson(payload) {
   return { ok: true, status: 200, body: JSON.stringify(payload) };
+}
+async function publishThreadsWithSelfReply(input) {
+  const root = await publishThreads(input);
+  if (!root.ok || !input.selfReply) return root;
+  const data = parseJson(root.body);
+  const postId = String(data?.postId ?? "");
+  if (!postId) return fail2(502, "Root publish returned no postId; do not retry the root post");
+  const reply = await publishThreads({ caption: input.selfReply, replyToId: postId, channel: input.channel });
+  return okJson({
+    ...data,
+    selfReply: reply.ok ? parseJson(reply.body) : null,
+    ...reply.ok ? {} : { warning: "Root published, self-reply failed. Do not republish the root.", selfReplyStatus: reply.status }
+  });
 }
 async function publishThreads(input, opts) {
   if ([input.imageUrl, input.videoUrl, input.linkUrl].filter(Boolean).length > 1) {
@@ -89029,7 +89269,7 @@ async function readCaptionFile(path13, maxBytes) {
   return { bytes };
 }
 async function uploadYoutubeCaption(token, videoId, caption) {
-  const boundary = `sfcap${randomUUID2().replace(/-/g, "")}`;
+  const boundary = `sfcap${randomUUID3().replace(/-/g, "")}`;
   const meta = JSON.stringify({
     snippet: { videoId, language: caption.language, name: "", isDraft: false }
   });
@@ -89125,8 +89365,8 @@ function parseResumeOffset(range) {
   return m2 ? Number(m2[1]) + 1 : 0;
 }
 function sessionStateFile(filePath) {
-  const key = createHash2("sha256").update(filePath).digest("hex").slice(0, 16);
-  return join10(snsTokenDir, ".yt-upload", `${key}.json`);
+  const key = createHash3("sha256").update(filePath).digest("hex").slice(0, 16);
+  return join11(snsTokenDir, ".yt-upload", `${key}.json`);
 }
 function readState(filePath) {
   try {
@@ -89145,7 +89385,7 @@ function writeState(filePath, s2) {
       nodeRmSync(p, { force: true });
       return;
     }
-    nodeMkdirSync(dirname5(p), { recursive: true });
+    nodeMkdirSync(dirname6(p), { recursive: true });
     nodeWriteFileSync(p, JSON.stringify(s2), "utf8");
   } catch {
   }
@@ -90260,7 +90500,7 @@ async function checkAccounts(channel) {
 
 // src/tts-final-quality.ts
 import { execFile as execFile8 } from "node:child_process";
-import { existsSync as existsSync14, mkdtempSync as mkdtempSync5, readFileSync as readFileSync9, rmSync as rmSync6, writeFileSync as writeFileSync8, renameSync as renameSync4, openSync as openSync2, closeSync as closeSync2 } from "node:fs";
+import { existsSync as existsSync14, mkdtempSync as mkdtempSync5, readFileSync as readFileSync10, rmSync as rmSync6, writeFileSync as writeFileSync9, renameSync as renameSync5, openSync as openSync2, closeSync as closeSync2 } from "node:fs";
 import { tmpdir as tmpdir5 } from "node:os";
 import path11 from "node:path";
 import { promisify as promisify3 } from "node:util";
@@ -90282,33 +90522,33 @@ async function reviewFinalSpeech(input) {
   }
   const temp = mkdtempSync5(path11.join(tmpdir5(), "speech-final-"));
   let base = { version: 1, policy: "final-speech-v1", model: REVIEW_MODEL, ...request, mediaPath: media };
-  function save(status, extra) {
+  function save2(status, extra) {
     const result = { ...base, status, checkedAt: (/* @__PURE__ */ new Date()).toISOString(), ...extra };
     const staging = path11.join(temp, "proof.json");
-    writeFileSync8(staging, JSON.stringify(result, null, 2) + "\n");
-    writeFileSync8(proofPath + ".tmp", readFileSync9(staging));
-    renameSync4(proofPath + ".tmp", proofPath);
+    writeFileSync9(staging, JSON.stringify(result, null, 2) + "\n");
+    writeFileSync9(proofPath + ".tmp", readFileSync10(staging));
+    renameSync5(proofPath + ".tmp", proofPath);
     return { success: status === "pass", status, proofPath, ...extra };
   }
   try {
-    base = { ...base, mediaSha256: sha256(readFileSync9(media)), textSha256: sha256(normalizeSpeech(request.expectedText)) };
+    base = { ...base, mediaSha256: sha256(readFileSync10(media)), textSha256: sha256(normalizeSpeech(request.expectedText)) };
     const wav = path11.join(temp, "final.flac");
     await exec2("ffmpeg", ["-y", "-v", "error", "-i", media, "-map", "0:a:0", "-map_metadata", "-1", "-ac", "1", "-ar", "24000", "-c:a", "flac", wav], { timeout: 6e4 });
-    base.audioSha256 = sha256(readFileSync9(wav));
-    if (sha256(readFileSync9(media)) !== base.mediaSha256) throw new Error("Final media changed during decoding");
+    base.audioSha256 = sha256(readFileSync10(wav));
+    if (sha256(readFileSync10(media)) !== base.mediaSha256) throw new Error("Final media changed during decoding");
     if (existsSync14(proofPath)) {
-      const old = JSON.parse(readFileSync9(proofPath, "utf8"));
+      const old = JSON.parse(readFileSync10(proofPath, "utf8"));
       const same = Object.entries(base).every(([k, v]) => ["mediaSha256", "expectedText"].includes(k) || old[k] === v);
-      if (old.audioSha256 === base.audioSha256 && old.textSha256 === base.textSha256 && old.status === "fail") return save("fail", { reused: true, signal: old.signal, transcript: old.transcript, failures: old.failures, review: old.review, error: "This exact final audio already failed; fix the audio before another listening review" });
+      if (old.audioSha256 === base.audioSha256 && old.textSha256 === base.textSha256 && old.status === "fail") return save2("fail", { reused: true, signal: old.signal, transcript: old.transcript, failures: old.failures, review: old.review, error: "This exact final audio already failed; fix the audio before another listening review" });
       if (same && old.status === "pass") {
         const review = reviewSchema.parse(old.review);
-        if (!signalFailures(old.signal, request.expectedText, 1800).length && !reviewFailures(request.expectedText, old.transcript, review, old.signal.duration).length && (review.continuity ?? 0) >= 95 && review.continuityEvidence) return save("pass", { reused: true, signal: old.signal, transcript: old.transcript, review, failures: [] });
+        if (!signalFailures(old.signal, request.expectedText, 1800).length && !reviewFailures(request.expectedText, old.transcript, review, old.signal.duration).length && (review.continuity ?? 0) >= 95 && review.continuityEvidence) return save2("pass", { reused: true, signal: old.signal, transcript: old.transcript, review, failures: [] });
       }
     }
-    save("unverified", {});
+    save2("unverified", {});
     const signal = await measureSignal(wav, 1800);
     const failures = signalFailures(signal, request.expectedText, 1800);
-    if (failures.length) return save("fail", { signal, failures });
+    if (failures.length) return save2("fail", { signal, failures });
     const reviewRequest = { ...checkedSpeechSchema.parse({
       generator: "tts_local_generate",
       generation: {},
@@ -90321,10 +90561,10 @@ async function reviewFinalSpeech(input) {
     const result = await listen(wav, reviewRequest, true);
     failures.push(...reviewFailures(request.expectedText, result.transcript, result.review, signal.duration));
     if ((result.review.continuity ?? 0) < 95 || !result.review.continuityEvidence) failures.push("Episode continuity below 95 or missing listening evidence");
-    if (sha256(readFileSync9(media)) !== base.mediaSha256) throw new Error("Final media changed during listening");
-    return save(failures.length ? "fail" : "pass", { signal, ...result, failures });
+    if (sha256(readFileSync10(media)) !== base.mediaSha256) throw new Error("Final media changed during listening");
+    return save2(failures.length ? "fail" : "pass", { signal, ...result, failures });
   } catch (error2) {
-    return save("unverified", { error: error2 instanceof Error ? error2.message : String(error2) });
+    return save2("unverified", { error: error2 instanceof Error ? error2.message : String(error2) });
   } finally {
     rmSync6(temp, { recursive: true, force: true });
     closeSync2(lock);
@@ -90385,7 +90625,7 @@ function requireOneSource(data, ctx) {
 var omniExtendSchema = external_exports.object({ ...continuationFields, durationSeconds: durationSchema2 }).superRefine(requireOneSource);
 var omniEditSchema = external_exports.object(continuationFields).superRefine(requireOneSource);
 function sleep7(ms) {
-  return new Promise((resolve5) => setTimeout(resolve5, ms));
+  return new Promise((resolve6) => setTimeout(resolve6, ms));
 }
 function readInlineFile(filePath, kind) {
   const data = fs7.readFileSync(filePath).toString("base64");
@@ -90742,7 +90982,7 @@ async function downloadVideo2(apiKey, videoUri) {
   return Buffer.from(arrayBuffer);
 }
 function sleep8(ms) {
-  return new Promise((resolve5) => setTimeout(resolve5, ms));
+  return new Promise((resolve6) => setTimeout(resolve6, ms));
 }
 async function awaitVideoAndSave2(apiKey, operationName, outputPath, filename, label) {
   let pollCount = 0;
@@ -91017,8 +91257,8 @@ async function generateWithReferences2(request) {
 }
 
 // src/content-feedback.ts
-import { mkdirSync as mkdirSync5, writeFileSync as writeFileSync11 } from "node:fs";
-import { dirname as dirname6, isAbsolute, join as join11, resolve as resolve4 } from "node:path";
+import { mkdirSync as mkdirSync6, writeFileSync as writeFileSync12 } from "node:fs";
+import { dirname as dirname7, isAbsolute, join as join12, resolve as resolve5 } from "node:path";
 
 // src/content-feedback-html.ts
 function escapeHtml(value) {
@@ -91603,14 +91843,14 @@ function analyzeInstagramMedia(media, limit2) {
   return { items, cohort, notes };
 }
 function defaultHtmlPath(channel) {
-  return join11(process.cwd(), "data", channel, "growth", "review-recent.html");
+  return join12(process.cwd(), "data", channel, "growth", "review-recent.html");
 }
 function resolveHtmlPath(channel, outputPath) {
   if (outputPath) {
     if (outputPath.includes("..")) {
       throw new Error(`Path traversal detected: ${outputPath}`);
     }
-    const resolved = isAbsolute(outputPath) ? outputPath : resolve4(process.cwd(), outputPath);
+    const resolved = isAbsolute(outputPath) ? outputPath : resolve5(process.cwd(), outputPath);
     if (!resolved.toLowerCase().endsWith(".html")) {
       throw new Error(`outputPath must end in .html: ${outputPath}`);
     }
@@ -91649,8 +91889,8 @@ async function contentFeedback(input) {
     instagram
   };
   if (htmlPath) {
-    mkdirSync5(dirname6(htmlPath), { recursive: true });
-    writeFileSync11(htmlPath, renderFeedbackHtml(report), "utf8");
+    mkdirSync6(dirname7(htmlPath), { recursive: true });
+    writeFileSync12(htmlPath, renderFeedbackHtml(report), "utf8");
   }
   return { ok: true, status: 200, body: JSON.stringify(report) };
 }
@@ -93147,8 +93387,15 @@ var threadsPublishSchema = external_exports.object({
   videoUrl: external_exports.string().url().optional(),
   linkUrl: external_exports.string().url().optional(),
   replyToId: external_exports.string().min(1).optional(),
-  channel: channelSlugSchema
+  channel: channelSlugSchema,
+  draftId: external_exports.string().trim().min(1).optional(),
+  episodeRef: external_exports.string().trim().min(1).optional(),
+  selfReply: external_exports.string().trim().min(1).refine((s2) => threadsTextLength(s2) <= THREADS_MAX_CHARS).optional(),
+  dryRun: external_exports.boolean().optional()
 }).superRefine((v, ctx) => {
+  if (Boolean(v.draftId) === Boolean(v.episodeRef)) {
+    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message: "Exactly one of draftId or episodeRef is required" });
+  }
   const media = ["imageUrl", "videoUrl", "linkUrl"].filter((k) => v[k]);
   if (media.length > 1) {
     ctx.addIssue({
@@ -93245,10 +93492,18 @@ var commentInboxSchema = external_exports.object({
 });
 var commentReplySchema = external_exports.object({
   platform: commentPlatform,
-  commentId: external_exports.string().min(1),
+  commentId: external_exports.string().trim().min(1),
   message: external_exports.string().min(1),
-  channel: channelSlugSchema
+  channel: channelSlugSchema,
+  draftId: external_exports.string().trim().min(1).optional(),
+  dryRun: external_exports.boolean().optional()
 }).superRefine((v, ctx) => {
+  if (v.platform === "THREADS" && (!v.draftId || !v.channel)) {
+    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message: "THREADS replies require channel and reviewed reply draftId" });
+  }
+  if (v.platform !== "THREADS" && (v.draftId !== void 0 || v.dryRun !== void 0)) {
+    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message: "draftId and dryRun are supported only for THREADS replies" });
+  }
   const max = REPLY_MAX_CHARS[v.platform];
   const length = v.platform === "THREADS" ? threadsTextLength(v.message) : v.message.length;
   if (length > max) {
@@ -94182,9 +94437,14 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
     );
   },
   // ── direct SNS publishing to our own accounts (per-platform tools — public immediately; call after HITL approval) ──
+  threads_draft_create: async (args) => text(JSON.stringify(createThreadsDraft(args))),
+  threads_review_submit: async (args) => text(JSON.stringify(submitThreadsReview(args))),
   threads_publish: async (args) => {
-    const input = parseArgs(threadsPublishSchema, args);
-    return fromApi(await publishThreads(input), SNS_PUBLISHED_NOTE);
+    const input = gateCall("threads_publish", args, () => parseArgs(threadsPublishSchema, args));
+    if (input.draftId) checkThreadsGate(input);
+    else checkThreadsEpisode(input);
+    if (input.dryRun) return fromApi({ ok: true, status: 200, body: JSON.stringify({ platform: "THREADS", postId: "", dryRun: true, gatePassed: true }) }, "Dry run: no publishing API called.");
+    return fromApi(await publishThreadsWithSelfReply(input), SNS_PUBLISHED_NOTE);
   },
   instagram_publish: async (args) => {
     const input = parseArgs(instagramPublishSchema, args);
@@ -94270,7 +94530,17 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
     return fromApi(await commentInbox(input));
   },
   sns_comment_reply: async (args) => {
-    const input = parseArgs(commentReplySchema, args);
+    const isThreads = !!args && typeof args === "object" && "platform" in args && args.platform === "THREADS";
+    const input = isThreads ? gateCall("sns_comment_reply", args, () => parseArgs(commentReplySchema, args)) : parseArgs(commentReplySchema, args);
+    if (input.platform === "THREADS") {
+      return ROUTES.threads_publish({
+        caption: input.message,
+        replyToId: input.commentId,
+        channel: input.channel,
+        draftId: input.draftId,
+        dryRun: input.dryRun
+      });
+    }
     return fromApi(await replyToComment(input), SNS_PUBLISHED_NOTE);
   },
   sns_comment_moderate: async (args) => {

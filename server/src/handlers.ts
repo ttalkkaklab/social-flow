@@ -1,3 +1,4 @@
+import { createThreadsDraft, submitThreadsReview, checkThreadsGate, checkThreadsEpisode, gateCall } from './threads-gate.js';
 import { z } from 'zod';
 import * as datago from './datago-client.js';
 import * as elevenlabs from './elevenlabs-client.js';
@@ -380,8 +381,15 @@ const threadsPublishSchema = z
     linkUrl: z.string().url().optional(),
     replyToId: z.string().min(1).optional(),
     channel: channelSlugSchema,
+    draftId: z.string().trim().min(1).optional(),
+    episodeRef: z.string().trim().min(1).optional(),
+    selfReply: z.string().trim().min(1).refine((s) => threadsTextLength(s) <= THREADS_MAX_CHARS).optional(),
+    dryRun: z.boolean().optional(),
   })
   .superRefine((v, ctx) => {
+    if (Boolean(v.draftId) === Boolean(v.episodeRef)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Exactly one of draftId or episodeRef is required' });
+    }
     // One media_type per post — VIDEO, IMAGE or TEXT(link_attachment). The platform
     // rejects two together, so catch it before the call is spent.
     const media = (['imageUrl', 'videoUrl', 'linkUrl'] as const).filter((k) => v[k]);
@@ -533,11 +541,19 @@ const commentInboxSchema = z.object({
 const commentReplySchema = z
   .object({
     platform: commentPlatform,
-    commentId: z.string().min(1),
+    commentId: z.string().trim().min(1),
     message: z.string().min(1),
     channel: channelSlugSchema,
+    draftId: z.string().trim().min(1).optional(),
+    dryRun: z.boolean().optional(),
   })
   .superRefine((v, ctx) => {
+    if (v.platform === 'THREADS' && (!v.draftId || !v.channel)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'THREADS replies require channel and reviewed reply draftId' });
+    }
+    if (v.platform !== 'THREADS' && (v.draftId !== undefined || v.dryRun !== undefined)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'draftId and dryRun are supported only for THREADS replies' });
+    }
     const max = REPLY_MAX_CHARS[v.platform];
     // THREADS uses the same emoji-byte rule as post bodies (a reply = a new post)
     const length = v.platform === 'THREADS' ? threadsTextLength(v.message) : v.message.length;
@@ -1275,9 +1291,14 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   },
 
   // ── direct SNS publishing to our own accounts (per-platform tools — public immediately; call after HITL approval) ──
+  threads_draft_create: async (args) => text(JSON.stringify(createThreadsDraft(args))),
+  threads_review_submit: async (args) => text(JSON.stringify(submitThreadsReview(args))),
   threads_publish: async (args) => {
-    const input = parseArgs(threadsPublishSchema, args);
-    return fromApi(await sns.publishThreads(input), SNS_PUBLISHED_NOTE);
+    const input = gateCall('threads_publish', args, () => parseArgs(threadsPublishSchema, args));
+    if (input.draftId) checkThreadsGate(input);
+    else checkThreadsEpisode(input);
+    if (input.dryRun) return fromApi({ ok: true, status: 200, body: JSON.stringify({ platform: 'THREADS', postId: '', dryRun: true, gatePassed: true }) }, 'Dry run: no publishing API called.');
+    return fromApi(await sns.publishThreadsWithSelfReply(input), SNS_PUBLISHED_NOTE);
   },
   instagram_publish: async (args) => {
     const input = parseArgs(instagramPublishSchema, args);
@@ -1370,7 +1391,14 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
     return fromApi(await sns.commentInbox(input));
   },
   sns_comment_reply: async (args) => {
-    const input = parseArgs(commentReplySchema, args);
+    const isThreads = !!args && typeof args === 'object' && 'platform' in args && args.platform === 'THREADS';
+    const input = isThreads
+      ? gateCall('sns_comment_reply', args, () => parseArgs(commentReplySchema, args))
+      : parseArgs(commentReplySchema, args);
+    if (input.platform === 'THREADS') {
+      return ROUTES.threads_publish({ caption: input.message, replyToId: input.commentId,
+        channel: input.channel, draftId: input.draftId, dryRun: input.dryRun });
+    }
     return fromApi(await sns.replyToComment(input), SNS_PUBLISHED_NOTE);
   },
   sns_comment_moderate: async (args) => {
