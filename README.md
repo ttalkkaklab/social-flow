@@ -738,12 +738,18 @@ machine. Register it once (user scope) and set three variables:
     "env": { "TTALKKAKSTORY_API_URL": "https://…", "TTALKKAKSTORY_WORKSPACE": "<slug>", "TTALKKAKSTORY_API_KEY": "<key>" } } } }
 ```
 
-With the `mcp__ttalkkakstory__*` tools present, approval calls `storyboard_save` on the
-episode directory's absolute path and records the returned `episodeId`/`pageUrl` in
-`storyboard.md`'s frontmatter (`portal_episode` · `portal_url`), produce saves again and sets
-`produced`, publish sets `published` by that id. Without the tools the skills say so in one
-line and carry on, and an errored call is reported in one line (a 409 retried once) — the
-portal is a mirror, not a gate.
+With the `mcp__ttalkkakstory__*` tools present the portal is the episode's **source of truth
+and the local directory a working copy** (portal design note, 2026-09-20). The storyboard skill
+takes a lease and pulls at the top of a session (`episode_lease acquire` · `storyboard_pull`,
+or `episode_create` for a topic the portal has never seen), uploads the three candidate pages
+and the pick (`scenario_save`, `chosen: true` for the winner), checkpoints the stages
+(`episode_checkpoint` — `candidates` · `scenario` · `board`), and approval calls
+`storyboard_save` on the episode directory's absolute path — now also a checkpoint at
+`approved` — recording the returned `episodeId`/`pageUrl` in `storyboard.md`'s frontmatter
+(`portal_episode` · `portal_url`) and the revision in `.portal.json`; produce saves again and
+sets `produced`, publish sets `published` by that id. A `409 head_moved` means another machine
+saved first: pull, re-apply, save. Without the tools the skills say so in one line and carry
+on, and an errored call is reported in one line — the portal records, it does not gate.
 
 ## Documentation (docs/)
 
