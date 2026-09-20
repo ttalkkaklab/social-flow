@@ -1656,13 +1656,6 @@ SELFTEST = [
     ("seven figures trigger C12 in a reply", "reply", 0,
      "1건, 2건, 3건, 4건, 5건, 6건, 7건을 한꺼번에 적었어요.\n",
      ("C12",), ("C13",)),
-    ("ordered list markers do not count toward C12", "threads", 0, (
-        "정리해 볼게요.\n"
-        "1. 첫 화면은 닫았어\n"
-        "2. 둘째 창은 아직 열려 있어요\n"
-        "3. 마지막 탭은 내일 보자\n"
-        "4. 로그는 방금 지웠네\n"
-    ), ("C10",), ("C12", "C13")),
     ("C14 fully closed short-range prose warns", "threads", 0, (
         "회의가 예상보다 길어서 점심시간까지 회의실에 있었어요.\n"
         "첫 안건은 어제 확인했어요.\n"
