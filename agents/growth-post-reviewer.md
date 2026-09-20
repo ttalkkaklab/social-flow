@@ -134,6 +134,12 @@ people at the same age).
     Self-relevance and social relevance are what move sharing, and reframing
     alone moves them (playbook §Message selection), so the fix directive is a
     reframe or a different topic — never a wording pass
+12. **The opening only works from inside** (`post` / `post_chain` only) — the
+    first sentence needs our team, our systems or our incident to make sense,
+    so a reader meets our context before they meet a reason to care. Quote the
+    complete first sentence in the finding. Style and scene scores don't
+    compensate: read the opening before scoring the rest (playbook §New-post
+    style, 여는 자리)
 
 ## Per-axis scores (additive out of 100; no points without evidence)
 

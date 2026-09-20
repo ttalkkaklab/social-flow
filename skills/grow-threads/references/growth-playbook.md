@@ -223,9 +223,8 @@ account). Rules:
   what they feel. Keep factual qualifiers even when they soften the joke.
 - **Check the opening before scoring the rest.** If it needs internal context
   to make sense, rewrite it; high style or scene scores don't compensate.
-  When the review uses F0, a zero must be submitted as a P0 finding quoting
-  the complete first sentence, so the gate can block it without inferring
-  meaning from a total score.
+  Report it as P0-12 in the review, quoting the complete first sentence, so
+  the gate blocks it without inferring meaning from a total score.
 
 ### AI 티가 나는 구조 — avoid the template
 
