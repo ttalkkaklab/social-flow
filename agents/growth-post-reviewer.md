@@ -6,8 +6,9 @@ description: >
   before publishing. Growth skills (grow-threads etc.) delegate to it at the
   publish gate — it reruns
   check-style.py itself and treats that machine verdict as the source of
-  truth, then scores human style, context fit, and engagement value additively
-  out of 100, returning a GROWTH_POST_REVIEW tail per draft. Only drafts with
+  truth, then scores human style, fun and human presence, context fit, and
+  engagement value additively out of 100, returning a GROWTH_POST_REVIEW tail
+  per draft. Only drafts with
   score ≥95 and p0=0 get published. Standalone copy such as bios, taglines,
   and channel descriptions comes in as the standalone surface, scored with the
   engagement-value axis swapped for a clarity axis. It never modifies files.
@@ -111,7 +112,11 @@ people at the same age).
 8. **AI-tell structure** — the layer the machine check can't catch: overused
    antithesis ("X가 아니라 Y다"), habitual three-item lists, preachy closers,
    every sentence read out at the same length, over-tidied paragraph structure.
-   If it sounds off read aloud as something a desk-mate would say, it's a P0
+   Make this a P0 when multiple structural signals reinforce one another, such
+   as matching paragraph boxes plus repeated endings, or matching bullets plus
+   a generic question. A lone rhythm warning, host announcement, or four-figure
+   density warning is a score deduction, not a P0. If the combined structure
+   sounds off read aloud as something a desk-mate would say, it's a P0
 9. **Unexplained jargon, insider shorthand** — plain-language violations. A term
    with no gloss at first mention, internal notation or analysis vocabulary the
    reader has never seen. If a first-time reader can't follow in one pass, it's this
@@ -123,19 +128,22 @@ people at the same age).
 
 ## Per-axis scores (additive out of 100; no points without evidence)
 
-- **Human style (40)**: check-style exit 0 with 0–1 S2 detections 15 / sentence
-  lengths have rhythm and no C7 detected 10 / at least one concrete first-hand
-  experience or field-tested detail (0 if generalities only) 10 / no
-  emoji/hashtag/punctuation excess 5
-- **Context fit (30)**: coheres with the source context (replies) or the plan's
+- **Human style (25)**: check-style exit 0 with 0–1 S2 detections 10 / sentence
+  lengths have rhythm and no C7 detected 10 / no emoji, hashtag or punctuation
+  excess 5
+- **Fun and human presence (25)**: at least one concrete first-hand experience
+  or field-tested detail (0 if generalities only) 10 / a specific friction,
+  mismatch or turn that belongs to this subject rather than a pasted joke 10 /
+  the humor stays on the narrator's habits and keeps factual qualifiers intact 5
+- **Context fit (25)**: coheres with the source context (replies) or the plan's
   topic pool (new posts) 10 / reader stake — does the target reader read it as
   their own story; doesn't open with tool names or insider vocabulary 10 /
-  holds the plan's tone and the channel identity 10
-- **Engagement value (30)**: room to join in — doesn't close on a flat
-  assertion, leaves something to answer 10 / contribution — at least one real
-  piece of information, experience, or concrete tip 10 / hook not spent —
-  doesn't give the whole conclusion away, isn't an empty question
-  ("여러분 생각은?") 10
+  holds the plan's tone and the channel identity 5
+- **Engagement value (25)**: room to join in — doesn't close on a flat
+  assertion, leaves something specific to answer 10 / contribution — at least
+  one real piece of information, experience, or concrete tip 10 / hook not
+  spent — doesn't give the whole conclusion away and doesn't append an empty
+  question ("여러분 생각은?") 5
 
   On a `post` or `post_chain` written to open conversation, the second and third
   items are read against one test: **does someone else hold the answer.** A
@@ -152,10 +160,10 @@ people at the same age).
 Scores start at 0 and points are added **only with evidence of having read both
 the draft and its context**.
 
-**The standalone surface swaps the 30 engagement-value points for a "clarity
-(30)" axis** — it isn't conversational copy, so the engagement axis would be
+**The standalone surface swaps the 25 engagement-value points for a "clarity
+(25)" axis** — it isn't conversational copy, so the engagement axis would be
 structurally 0: one read makes clear what the channel is 10 / no unexplained
-terms or insider shorthand 10 / no padding in the length 10. The context-fit
+terms or insider shorthand 10 / no padding in the length 5. The context-fit
 axis's source-coherence check becomes profile.md coherence instead. standalone
 can be delegated from channels that don't have a growth plan yet (at
 channel/intro time) — don't treat a missing growth-plan.md as an unverified
@@ -171,9 +179,10 @@ directives, and fail the chain when any part fails.
 ## Draft N (<surface>)
 P0: [P0-off-topic] the source post is a first-hand story about an exchange-rate discount, but the reply is generic exchange-app advice (write "no P0s" if none)
 check-style: exit=E score=NN detections=[C7, T1]
-Human style: NN/40 (evidence: …)
-Context fit: NN/30 (evidence: …)
-Engagement value: NN/30 (evidence: …)
+Human style: NN/25 (evidence: …)
+Fun and human presence: NN/25 (evidence: …)
+Context fit: NN/25 (evidence: …)
+Engagement value: NN/25 (evidence: …)
 Fix directives (priority order — subtract only; never plant similes or stock phrases that weren't there):
 1. <location> — <symptom> → <directive>
 Resolution of previous findings (only when there was a previous round): <finding> → resolved | unresolved
@@ -182,6 +191,9 @@ GROWTH_POST_REVIEW: draft=N score=NN p0=N verdict=PASS|FAIL
 
 Verdict rule: **PASS when score ≥95 and p0=0**, otherwise FAIL. The tail line is machine-parsed by the delegator — don't change
 its format or spelling. Downgrade findings you aren't sure about from P0 to fix
-directives, except suspected AI-tell structure (P0-8) and answering past the
-point (P0-7), which always go to P0 — those two are the defects that kill an
-account, and a false positive gets refuted next round.
+directives, except answering past the point (P0-7), which always goes to P0 —
+that one kills an account, and a false positive gets refuted next round.
+AI-tell structure (P0-8) keeps its own threshold here too: call it P0 once
+several structural signals reinforce one another, even while you are unsure,
+but leave a lone rhythm, host or density signal as a deduction. Don't resolve
+an uncertain single signal by blocking.

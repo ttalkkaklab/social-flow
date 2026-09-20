@@ -41,6 +41,7 @@ test('dist/bundle.js boots and lists tools without the skills tree', async () =>
     setTimeout(() => { p.kill(); resolve(buf); }, 8000);
   });
   assert.match(out, /"name":"storyboard_apply"/, 'tools/list did not include the storyboard tools:\n' + out.slice(0, 500));
+  assert.match(out, /"name":"scenario_check"/, 'tools/list did not include scenario_check:\n' + out.slice(0, 500));
 });
 
 // The rules file is read at runtime; when it is gone the three storyboard routes say so in

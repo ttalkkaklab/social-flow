@@ -219,6 +219,18 @@ export interface ThreadsPublishInput {
   channel?: string;
 }
 
+/** Publish the already checked body, then its optional checked self-reply. */
+export async function publishThreadsWithSelfReply(input: ThreadsPublishInput & { selfReply?: string }): Promise<ApiResult> {
+  const root = await publishThreads(input);
+  if (!root.ok || !input.selfReply) return root;
+  const data = parseJson(root.body);
+  const postId = String(data?.postId ?? '');
+  if (!postId) return fail(502, 'Root publish returned no postId; do not retry the root post');
+  const reply = await publishThreads({ caption: input.selfReply, replyToId: postId, channel: input.channel });
+  return okJson({ ...data, selfReply: reply.ok ? parseJson(reply.body) : null,
+    ...(reply.ok ? {} : { warning: 'Root published, self-reply failed. Do not republish the root.', selfReplyStatus: reply.status }) });
+}
+
 export async function publishThreads(input: ThreadsPublishInput, opts?: PollOpts): Promise<ApiResult> {
   // One media_type per post — VIDEO, IMAGE or TEXT(link_attachment). Sending two
   // gets rejected by the platform, so reject before spending the call.
