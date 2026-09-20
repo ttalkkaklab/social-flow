@@ -391,6 +391,7 @@ describe('portal_* handlers on a scripted portal', () => {
     const body = calls[0].body;
     assert.equal(body.episode.sourceHost, 'me@box');
     assert.equal(body.episode.status, 'approved');
+    assert.equal(body.episode.id, undefined, 'first save has no recorded episode id');
     assert.equal(body.episode.baseRevisionNo, undefined, 'first save has no base');
     const state = episode.readPortalState(dir);
     assert.equal(state.episodeId, EPISODE_ID);
@@ -399,6 +400,7 @@ describe('portal_* handlers on a scripted portal', () => {
 
     // second save carries the recorded head as baseRevisionNo
     await portal.portalHandlers(impl).storyboardSave({ episodeDir: dir });
+    assert.equal(calls[1].body.episode.id, EPISODE_ID);
     assert.equal(calls[1].body.episode.baseRevisionNo, 1);
   });
 
