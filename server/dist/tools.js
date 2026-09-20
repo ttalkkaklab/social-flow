@@ -19,8 +19,9 @@ import { DEFAULT_MLX_IMAGE_SIZE, DEFAULT_MLX_MUSIC_SECONDS, DEFAULT_MLX_VIDEO_FR
  * feedback — the insights trio is for the grow-* skills only; content_feedback covers
  * both video platforms and writes an HTML report) + 2 growth review + 2 checks
  * (sns_account_check · capability_status) + 7 blender previz + 4 storyboard. The six
- * mlx_* tools wrap MLX Core / mlx-serve on loopback; they are not a second MCP server. 69 of those
- * list without SNS tokens (README §MCP tools is the per-tool table).
+ * mlx_* tools wrap MLX Core / mlx-serve on loopback; they are not a second MCP server. 72 of those
+ * list without SNS tokens; explicit tool-disable settings can reduce that further
+ * (README §MCP tools is the per-tool table).
  *
  * Publish tool descriptions embed the HITL contract — this server has no
  * review gate, so a call is an immediately public post, and the descriptions

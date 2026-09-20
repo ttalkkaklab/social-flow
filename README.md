@@ -223,9 +223,9 @@ optional, and they're what turns the tool from a video maker into an operator.**
   storyboard, image generation, narration, the build — `produce` writes the finished
   9:16 or 16:9 video plus per-platform text into
   `data/<channel>/episodes/<topic>/output/`, and you upload those files by hand. Only
-  the publishing and growth-loop half is unavailable: the nine publish/insight tools
-  aren't even listed (`tools/list` shows 69 instead of 78), and the growth skills have
-  nothing to drive.
+  the publishing and growth-loop half is unavailable: the 11 publish/review/insight tools
+  aren't even listed (`tools/list` shows 72 instead of 83), and the growth skills have
+  nothing to drive. Explicit tool-disable settings can reduce that list further.
 
 Credentials are per platform, so this is not all-or-nothing — a YouTube-only setup
 publishes and grows YouTube while Threads and Instagram stay manual. Add a token
@@ -548,7 +548,8 @@ social-flow/
 `youtube_publish` · `threads_insights` · `instagram_insights` · `youtube_insights` ·
 `threads_search`) are exposed **only for platforms whose credential file exists** —
 evaluated at list time, so adding a token makes them appear without restarting the
-server. With no tokens at all you'll count 69. Hidden tools still have live handlers:
+server. With no tokens at all you'll count 72; explicit tool-disable settings can reduce
+that list further. Hidden tools still have live handlers:
 calling one directly returns a missing-token error rather than failing silently.
 `content_feedback`, `youtube_topic_scout`, and `sns_issue_scout` sit outside the
 platform gate and stay listed without tokens — the YouTube scout needs
