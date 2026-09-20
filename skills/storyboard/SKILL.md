@@ -411,7 +411,7 @@ held episode; **every later write** (checkpoint, save, scenario, status) returns
 `portal_storyboard_pull` (`episodeId` from `.portal.json`, `targetDir:` the directory) whenever the
 portal's `headRevisionNo` is ahead — it rewrites `scenes.js`, the documents and a chosen
 `scenario.md`. Later `portal_episode_checkpoint` / `portal_storyboard_save` send that number as base; **409
-`head_moved`** = the portal moved under you; the answer lists what the *other* side changed since your base: keep your local edits aside, pull the head, re-apply all of yours on it, resolve the overlaps it names by hand, save. Release in §7 or expire (2h).
+`head_moved`** = the portal moved under you: call `portal_storyboard_pull` with `mode: "side"`, use `.portal-head/` and the 409 list of what the other side changed to resolve only overlapping scenes and documents by hand while keeping every other local change, then call `portal_storyboard_save` with `baseRevisionNo: <the side result's headRevisionNo>`. Release in §7 or expire (2h).
 
 ### 3.5 Scenario — freeze the winner
 
@@ -1326,7 +1326,7 @@ the episode id, so a changed episode or storyboard title updates that same porta
 tools are not there, say so in one line and move on; if a call errors (a broken key file, 401),
 report the message in one line and never hold the approval on it — the portal records the
 approval, it does not gate it. The save is also a **checkpoint** at stage `approved` (revision into
-`.portal.json`); **409 `head_moved`** is not a retry — another machine saved first and the answer names what *they* changed since your base: keep your edits aside, `portal_storyboard_pull` the head, re-apply all of yours on it and resolve by hand where their list overlaps (`portal_episode_revisions` `compareTo` for the full diff), save again; **409 `leased`** is the §3 rule. Then `portal_episode_lease` `action: "release"`.
+`.portal.json`); **409 `head_moved`** is not a retry — another machine saved first: call `portal_storyboard_pull` with `mode: "side"`, use `.portal-head/` and the 409 list of what the other side changed to resolve only overlapping scenes and documents by hand while keeping every other local change (`portal_episode_revisions` `compareTo` gives the full diff), then call `portal_storyboard_save` with `baseRevisionNo: <the side result's headRevisionNo>`; **409 `leased`** is the §3 rule. Then `portal_episode_lease` `action: "release"`.
 
 **If there are filmed scenes**, the hand-off after approval is recording. It differs by lane.
 

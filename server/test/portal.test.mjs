@@ -434,8 +434,12 @@ describe('portal_* handlers on a scripted portal', () => {
     assert.equal(episode.readPortalState(dir).headRevisionNo, 4);
   });
 
-  it('storyboard_pull writes scenes.js, the documents and the chosen scenario, skipping unsafe names', async () => {
-    const dir = join(root, 'data', 'my-channel', 'episodes', 'ep-pull');
+  it('storyboard_pull replace backs up only changed local files before writing portal content', async () => {
+    const dir = makeEpisodeDir(root, 'my-channel', 'ep-pull');
+    const sb = join(dir, 'storyboard');
+    writeFileSync(join(sb, 'scenes.js'), 'local scenes\n');
+    writeFileSync(join(sb, 'storyboard.md'), '# pulled\n');
+    episode.writePortalState(dir, { workspace: 'lab', episodeId: EPISODE_ID, headRevisionNo: 6 });
     const { impl } = fakeFetch({
       [`GET /api/workspaces/lab/episodes/${EPISODE_ID}`]: {
         success: true,
@@ -453,10 +457,89 @@ describe('portal_* handlers on a scripted portal', () => {
     assert.equal(r.isError, false, r.text);
     const out = JSON.parse(r.text);
     assert.deepEqual(out.written, ['scenes.js', 'storyboard.md', 'scenario.md']);
+    assert.deepEqual(out.replaced, ['scenes.js']);
+    assert.match(out.backupDir, /storyboard\/\.portal-local\/.+-r6$/);
+    assert.equal(readFileSync(join(out.backupDir, 'scenes.js'), 'utf8'), 'local scenes\n');
+    assert.equal(existsSync(join(out.backupDir, 'storyboard.md')), false, 'identical files are not backed up');
     assert.equal(readFileSync(join(dir, 'storyboard', 'storyboard.md'), 'utf8'), '# pulled\n');
     assert.equal(readFileSync(join(dir, 'storyboard', 'scenario.md'), 'utf8'), '# D2\n');
     assert.equal(existsSync(join(dir, 'evil')), false);
     assert.equal(episode.readPortalState(dir).headRevisionNo, 7);
+    const unchanged = JSON.parse((await portal.portalHandlers(impl).storyboardPull({ episodeId: EPISODE_ID, targetDir: dir })).text);
+    assert.equal(unchanged.backupDir, null);
+    assert.deepEqual(unchanged.replaced, []);
+  });
+
+  it('storyboard_pull side preserves the working copy and .portal.json while refreshing .portal-head', async () => {
+    const dir = makeEpisodeDir(root, 'my-channel', 'ep-side');
+    const sb = join(dir, 'storyboard');
+    episode.writePortalState(dir, { workspace: 'lab', storyboardId: STORYBOARD_ID, episodeId: EPISODE_ID, headRevisionNo: 6 });
+    const scenesBefore = readFileSync(join(sb, 'scenes.js'));
+    const storyboardBefore = readFileSync(join(sb, 'storyboard.md'));
+    const stateBefore = readFileSync(join(dir, '.portal.json'));
+    mkdirSync(join(sb, '.portal-head'), { recursive: true });
+    writeFileSync(join(sb, '.portal-head', 'stale.md'), 'remove me');
+    const { impl } = fakeFetch({
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}`]: {
+        success: true,
+        data: {
+          id: EPISODE_ID, slug: 'ep-side', title: 'Side', storyboardId: STORYBOARD_ID, sceneCount: 1, stage: 'board', headRevisionNo: 7,
+          documents: [{ filename: 'scenes.js' }, { filename: 'storyboard.md' }],
+          scenarios: [{ candidate: 'D2', chosen: true }],
+        },
+      },
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}/scenes.js`]: 'window.SCENES = [{ no: 7 }];',
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}/documents/storyboard.md`]: '# portal head\n',
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}/scenarios/D2/scenario.md`]: '# portal scenario\n',
+    });
+    const r = await portal.portalHandlers(impl).storyboardPull({ episodeId: EPISODE_ID, targetDir: dir, mode: 'side' });
+    assert.equal(r.isError, false, r.text);
+    const out = JSON.parse(r.text);
+    assert.equal(out.headRevisionNo, 7);
+    assert.equal(out.sideDir, join(sb, '.portal-head'));
+    assert.equal(readFileSync(join(sb, 'scenes.js')).equals(scenesBefore), true);
+    assert.equal(readFileSync(join(sb, 'storyboard.md')).equals(storyboardBefore), true);
+    assert.equal(readFileSync(join(dir, '.portal.json')).equals(stateBefore), true);
+    assert.equal(readFileSync(join(out.sideDir, 'scenes.js'), 'utf8'), 'window.SCENES = [{ no: 7 }];');
+    assert.equal(readFileSync(join(out.sideDir, 'storyboard.md'), 'utf8'), '# portal head\n');
+    assert.equal(readFileSync(join(out.sideDir, 'scenario.md'), 'utf8'), '# portal scenario\n');
+    assert.equal(existsSync(join(out.sideDir, 'stale.md')), false);
+  });
+
+  it('storyboard_pull side with revision writes only that snapshot and reports its revision number', async () => {
+    const dir = makeEpisodeDir(root, 'my-channel', 'ep-side-rev');
+    const sb = join(dir, 'storyboard');
+    const { impl, calls } = fakeFetch({
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}`]: { success: true, data: { id: EPISODE_ID, slug: 'ep-side-rev', title: 't', storyboardId: STORYBOARD_ID, headRevisionNo: 9, documents: [{ filename: 'storyboard.md' }] } },
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}/scenes.js`]: 'window.SCENES = [{ no: 3 }];',
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}/revisions/3`]: { success: true, data: { revisionNo: 3, documents: { 'script.md': 'old script', 'scenes.js': 'ignored' } } },
+    });
+    const r = await portal.portalHandlers(impl).storyboardPull({ episodeId: EPISODE_ID, targetDir: dir, revision: 3, mode: 'side' });
+    assert.equal(r.isError, false, r.text);
+    const out = JSON.parse(r.text);
+    assert.equal(out.headRevisionNo, 3);
+    assert.deepEqual(out.written, ['scenes.js', 'script.md']);
+    assert.equal(calls.find((c) => c.path.endsWith('/scenes.js')).search, '?revision=3');
+    assert.equal(readFileSync(join(out.sideDir, 'script.md'), 'utf8'), 'old script');
+    assert.equal(existsSync(join(out.sideDir, 'storyboard.md')), false, "head's documents are not mixed into an old revision");
+    assert.equal(existsSync(join(sb, 'script.md')), false, 'side mode does not write into the working copy');
+  });
+
+  it('storyboard_pull replace gives consecutive backups different timestamp directories', async () => {
+    const dir = makeEpisodeDir(root, 'my-channel', 'ep-backup-twice');
+    const sb = join(dir, 'storyboard');
+    const { impl } = fakeFetch({
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}`]: { success: true, data: { id: EPISODE_ID, slug: 'ep-backup-twice', title: 't', storyboardId: STORYBOARD_ID, headRevisionNo: 7, documents: [] } },
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}/scenes.js`]: 'portal scenes\n',
+    });
+    writeFileSync(join(sb, 'scenes.js'), 'local one\n');
+    const first = JSON.parse((await portal.portalHandlers(impl).storyboardPull({ episodeId: EPISODE_ID, targetDir: dir })).text);
+    writeFileSync(join(sb, 'scenes.js'), 'local two\n');
+    const second = JSON.parse((await portal.portalHandlers(impl).storyboardPull({ episodeId: EPISODE_ID, targetDir: dir })).text);
+    assert.notEqual(first.backupDir, second.backupDir);
+    assert.notEqual(first.backupDir.split('/').at(-1).replace(/-r\d+$/, ''), second.backupDir.split('/').at(-1).replace(/-r\d+$/, ''));
+    assert.equal(readFileSync(join(first.backupDir, 'scenes.js'), 'utf8'), 'local one\n');
+    assert.equal(readFileSync(join(second.backupDir, 'scenes.js'), 'utf8'), 'local two\n');
   });
 
   it('a named revision pulls that snapshot only and pins the local head to it', async () => {
