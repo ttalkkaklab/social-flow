@@ -49,7 +49,7 @@
   <p class="sub">스레드는 팔로워 수가 아니라 게시물 하나하나를 심사한다. 그래서 계정을 키운다는 건 팔로워를 모으는 일이 아니라, 매번 심사를 통과할 글을 쓰는 일이다. 이 문서는 그 심사가 무엇을 보는지와, 거기에 맞춰 무엇을 하고 무엇을 하지 말지를 정리한다.</p>
   <div class="meta">
     <span>기준일 <strong>2026-08-11</strong></span>
-    <span>갱신 <strong>2026-08-15 — 빈도·차단·답글 도달 반영</strong></span>
+    <span>갱신 <strong>2026-09-19 — 랭킹 예측 10개·글 유형 실측·체인 반영</strong></span>
     <span>근거 <strong>Meta 투명성 센터 + 다출처 교차 확인</strong></span>
     <span>자동화 <strong><code>/social-flow:grow-threads</code></strong></span>
   </div>
@@ -59,7 +59,7 @@
   <div class="toc-title">목차</div>
   <ol>
     <li><a href="#why">왜 스레드는 다른가</a></li>
-    <li><a href="#signals">도달을 정하는 5개 신호</a></li>
+    <li><a href="#signals">도달을 정하는 10개 예측</a></li>
     <li><a href="#do">도달을 만드는 네 가지 행동</a></li>
     <li><a href="#dont">눌리는 것 — 하지 말 것</a></li>
     <li><a href="#rhythm">운영 리듬</a></li>
@@ -80,22 +80,30 @@
 </section>
 
 <section id="signals">
-  <h2>2. 도달을 정하는 5개 신호</h2>
-  <p>Meta가 투명성 센터에서 공개한 스레드 피드 랭킹 신호는 다섯 가지다. 앞의 넷을 올리고 마지막 하나를 낮추는 게 전부다.</p>
+  <h2>2. 도달을 정하는 10개 예측</h2>
+  <p>Meta 투명성 센터의 「Instagram Threads Feed AI system」 카드가 이름까지 밝힌 예측은 열 개다(2026-09-19 확인). <strong>열 개 중 여섯 개가 클릭과 체류이고, 좋아요는 두 개에만 들어간다.</strong></p>
   <div class="table-scroll">
   <table>
-    <thead><tr><th>신호</th><th>알고리즘이 예측하는 것</th><th>실무 번역</th></tr></thead>
+    <thead><tr><th>예측</th><th>알고리즘이 보는 것</th><th>실무 번역</th></tr></thead>
     <tbody>
-      <tr><td><span class="signal-num">1</span> 좋아요 확률</td><td>이 사용자가 이 글에 좋아요를 누를까</td><td>공감·유용함이 첫인상에 들어와야 한다</td></tr>
-      <tr><td><span class="signal-num">2</span> 답글 조회 확률</td><td>답글을 보려고 눌러 들어갈까</td><td><strong>가장 중요.</strong> 댓글이 붙는 글이 좋아요만 많은 글을 이긴다</td></tr>
-      <tr><td><span class="signal-num">3</span> 팔로우 확률</td><td>작성자를 팔로우할까</td><td>인스타 프로필 조회 이력도 여기 반영된다</td></tr>
-      <tr><td><span class="signal-num">4</span> 프로필 클릭 확률</td><td>프로필을 눌러 볼까</td><td>글 한 편이 "이 사람 더 보고 싶다"를 만들어야 한다</td></tr>
-      <tr><td><span class="signal-num">5</span> 스크롤 통과 확률</td><td>그냥 지나칠까 <span class="badge de">낮출수록 좋음</span></td><td>첫 줄에서 멈춰 세워야 한다</td></tr>
+      <tr><td><span class="signal-num">1</span> 좋아요 확률</td><td>이 글에 좋아요를 누를까</td><td>공감·유용함이 첫인상에 들어와야 한다</td></tr>
+      <tr><td><span class="signal-num">2</span> 스크롤 통과 확률</td><td>그냥 지나칠까 <span class="badge de">낮출수록 좋음</span></td><td>첫 줄에서 멈춰 세워야 한다</td></tr>
+      <tr><td><span class="signal-num">3</span> 프로필 → 다른 글</td><td>작성자 프로필을 누른 뒤 또 다른 글을 누를까</td><td>글 하나가 계정 전체로 이어지는가</td></tr>
+      <tr><td><span class="signal-num">4</span> 글 → 다른 글</td><td>이 글을 누른 뒤 또 다른 글을 누를까</td><td>체인이 정확히 이 자리를 때린다</td></tr>
+      <tr><td><span class="signal-num">5</span> 답글 확률</td><td>답글을 달까</td><td>답을 남이 갖고 있는 질문이어야 달린다</td></tr>
+      <tr><td><span class="signal-num">6</span> 글 클릭 확률</td><td>눌러서 펼쳐 볼까</td><td>다 말해 버리면 누를 이유가 없다</td></tr>
+      <tr><td><span class="signal-num">7</span> 프로필 클릭 확률</td><td>프로필을 눌러 볼까</td><td>「이 사람 뭐지」를 만드는가</td></tr>
+      <tr><td><span class="signal-num">8</span> 클릭 후 좋아요</td><td>읽고 나서 좋아요를 누를까</td><td>끝까지 읽힌 글만 받는 신호다</td></tr>
+      <tr><td><span class="signal-num">9</span> 퍼머링크 체류 시간</td><td>글 페이지에서 얼마나 머무는가</td><td><strong>답글이 중요한 진짜 이유</strong></td></tr>
+      <tr><td><span class="signal-num">10</span> 글 조회 시간</td><td>이 글을 보는 데 얼마를 쓰는가</td><td>길이가 아니라 끝까지 읽히느냐</td></tr>
     </tbody>
   </table>
   </div>
   <div class="note">
-    <strong>2번이 핵심이다.</strong> 좋아요는 그 자리에서 끝나지만 답글은 사람을 글 안으로 끌어들인다. 실전 규칙으로 바꾸면 하나다 — <strong>읽고 나서 할 말이 안 생기는 글은 아무리 잘 써도 천장이 낮다.</strong> 단정하고 끝내는 대신 남이 끼어들 틈을 준다.
+    <strong>9번이 답글의 정체다.</strong> 「답글 가중치가 크다」는 말은 절반만 맞다. 답글이 쌓인 글은 퍼머링크가 읽을거리가 되고, 그 체류 시간이 다시 노출로 돌아온다. 그래서 읽고 나서 할 말이 안 생기는 글은 아무리 잘 써도 천장이 낮다 — 단정하고 끝내는 대신 남이 끼어들 틈을 준다. <strong>팔로워 수와 게시 빈도는 이 목록에 없다.</strong>
+  </div>
+  <div class="note">
+    <strong>이전 판(2026-08)은 이 카드를 다섯 개로 적었다.</strong> 그중 「팔로우 확률」은 2026-09-19 카드에 없다. 좋아요·답글·프로필 클릭·스크롤 통과는 두 판 모두에 있다. 카드가 바뀌었거나 이전 메모가 뭉뚱그린 것이고, 지금 카드에 적힌 건 위의 열 개다.
   </div>
 </section>
 
@@ -180,7 +188,7 @@
   <p>슬롯을 고정하라는 건 타깃이 활동하는 시간대에 규칙적으로 올리라는 뜻이다. 아무 때나 몰아 올리는 것보다, 정한 시간에 꾸준히 나가는 편이 초기 반응을 모으기 쉽다. <strong>슬롯은 리듬 가이드이지 채워야 할 칸이 아니다</strong> — 할 말 없이 리듬을 지키려는 채우기 게시가 계정을 가장 빨리 죽인다.</p>
 
   <h3>"많이 올리면 차단된다"는 통념 — 확인해 봤다</h3>
-  <p>빈도 자체를 벌하는 장치는 <strong>찾지 못했다</strong>. 스레드 쪽 근거는 §2의 랭킹 5신호다 — 메타가 공개한 그 목록에 게시 빈도가 없다.</p>
+  <p>빈도 자체를 벌하는 장치는 <strong>찾지 못했다</strong>. 스레드 쪽 근거는 §2의 예측 열 개다 — 메타가 공개한 그 목록에 게시 빈도가 없다.</p>
   <div class="warn">
     <strong>인용 경로를 정확히 해둔다.</strong> 같은 조사에서 훑은 메타 투명성 센터의 피드·탐색 랭킹 카드와 공식 랭킹 해설은 <strong>인스타그램 문서</strong>다. 스레드 랭킹 문서를 쓸어본 게 아니므로, 거기서 확인한 것(배포 감소 사유가 전부 콘텐츠 속성이라는 것, 피드 다양성 규칙)은 <a href="../instagram-growth/index.html">인스타그램 가이드</a>의 이야기로만 쓴다.
   </div>
@@ -199,11 +207,14 @@
     <div class="col-box win">
       <h4>✓ 먹힌다</h4>
       <ul>
-        <li><strong>1~3줄.</strong> 500자까지 되지만 타임라인은 스캔된다</li>
+        <li><strong>기본은 짧게, 기준은 끝까지 읽히느냐.</strong> 500자까지 되고 타임라인은 스캔되지만, 표본 61건에서 250자 넘는 서사 네 글이 모든 길이 구간을 앞섰다</li>
         <li>관찰·고백 — "이거 나만 그런가?"</li>
+        <li><strong>판정 요청 — 답을 남이 갖고 있는 질문.</strong> 표본에서 답글 중앙 59개로 정보글(13개)의 4.5배</li>
         <li>자기 경험 하나 깔고 상대 경험을 부르는 질문으로 종결</li>
         <li>훅을 다 소진하지 않기 (결론까지 말하면 댓글에 쓸 말이 없다)</li>
-        <li>이미지 한 장 첨부 (텍스트만보다 우위)</li>
+        <li><strong>훅 한 줄 + 자기답글 체인.</strong> 본문은 짧게, 알맹이는 답글에 — 예측 3·4·9·10번을 한 번에 때린다</li>
+        <li>대화를 열 글에는 이미지 한 장 (반응률은 올리고 도달은 깎는다)</li>
+        <li><strong>올린 직후 자기 글에 답글 하나.</strong> Buffer 1,020만 글 실측에서 +42%</li>
       </ul>
     </div>
     <div class="col-box fail">
@@ -313,7 +324,8 @@
 <section id="sources">
   <h2>11. 출처</h2>
   <ul>
-    <li>Meta 투명성 센터 — 스레드 피드 랭킹 신호 (5개 예측값). 본문 §2·§5의 근거.</li>
+    <li>Meta 투명성 센터 — 「Instagram Threads Feed AI system」 (10개 예측값, 2026-09-19 확인). 본문 §2·§5의 근거.</li>
+    <li>스레드 인기글 61건 직접 실측 (2026-09-19, 비로그인 추천 피드 + 퍼머링크 공개 조회수) · Buffer 「State of Social Media Engagement 2026」 스레드 1,020만 글 · BlackTwist 월간 리포트 6월 66,605글. 정리는 <code>docs/research/2026-09-19-threads-post-styles/</code>.</li>
     <li><a href="https://developers.facebook.com/docs/threads/troubleshooting/">Threads API 문서</a> — 24시간 게시·답글·삭제 쿼터. §5의 근거.</li>
     <li>Adam Mosseri (Instagram 책임자) — 링크 랭킹 정상화 발언 · Social Media Today, Engadget 보도. §8의 근거.</li>
     <li>Adam Mosseri — "reply much more than you post" (Platformer 인터뷰). §3의 근거. <strong>원문 URL 404로 1차 확인 실패</strong>, 2차 매체 인용으로만 확보했으므로 공식 문서와 같은 무게로 쓰지 않는다.</li>

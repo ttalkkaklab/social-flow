@@ -101,6 +101,8 @@ import {
   MIN_MLX_VIDEO_FRAMES,
   MLX_IMAGE_DIMENSION_STEP,
   MLX_VIDEO_DIMENSION_STEP,
+  MLX_VIDEO_DIMENSION_STEP_ONE_STAGE,
+  MLX_VIDEO_FRAME_STEP,
   MLX_VIDEO_FPS,
 } from './mlx-serve-client.js';
 
@@ -2055,7 +2057,7 @@ Returns: a text block with the saved .mp4 file path, reference image, video and 
     annotations: HINT.generateLocal,
     description: `Generate a video on this machine via MLX Core / mlx-serve. The server returns raw rgb8 frames (plus optional PCM), which this tool muxes to mp4 with ffmpeg (libx264 yuv420p). No vendor bill. This plugin never launches the app.
 
-Use as an optional local clip when MLX Core is running with a video model (LTX-2). Default canvas is ${DEFAULT_MLX_VIDEO_WIDTH}×${DEFAULT_MLX_VIDEO_HEIGHT} at ${DEFAULT_MLX_VIDEO_FRAMES} frames / ${MLX_VIDEO_FPS} fps (~2s). Width/height must be a multiple of ${MLX_VIDEO_DIMENSION_STEP} (two-stage LTX grid) — 1080 is not on that grid; use 1088×1920 or the default. Decoded RGB is capped at ${Math.round(MAX_VIDEO_RGB_BYTES / (1024 * 1024))}MB — 1088×1920 at 8s/24fps is ~1.2GB and is refused. lastFrameImagePath needs at least ${MIN_MLX_VIDEO_FRAMES} frames.
+Use as an optional local clip when MLX Core is running with a video model (LTX 2.5 MLX pack — install runbook in docs/mlx-ltx-2.5.md). Default canvas is ${DEFAULT_MLX_VIDEO_WIDTH}×${DEFAULT_MLX_VIDEO_HEIGHT} at ${DEFAULT_MLX_VIDEO_FRAMES} frames / ${MLX_VIDEO_FPS} fps (~2s). Width/height must be a multiple of ${MLX_VIDEO_DIMENSION_STEP} (two-stage LTX grid), or of ${MLX_VIDEO_DIMENSION_STEP_ONE_STAGE} when you pass pipeline:"one_stage" — 1080 is on neither grid; use 1088×1920 or the default. numFrames is ${MLX_VIDEO_FRAME_STEP}k+1 (${MIN_MLX_VIDEO_FRAMES}, 17, … ${DEFAULT_MLX_VIDEO_FRAMES} …): any other count is answered 200 with the server's own default. Decoded RGB is capped at ${Math.round(MAX_VIDEO_RGB_BYTES / (1024 * 1024))}MB — 1088×1920 at 8s/24fps is ~1.2GB and is refused. lastFrameImagePath needs at least ${MIN_MLX_VIDEO_FRAMES} frames.
 Do NOT use this as the default generated-video path — that stays veo_* / seedance_* per video-model-selection.md. Do NOT put this tool on the Veo/Seedance face-policy table; it is a separate local engine. Output is ${MLX_VIDEO_FPS} fps; produce's builder is 30 fps, so a splice re-encodes. ffmpeg must be on PATH. Shares the GPU with Z-Image and the chat model — LTX wants 24GB+ on its own.
 Requires Apple Silicon, macOS 26.2+, MLX Core.app or mlx-serve (or MLX_SERVE_URL), and ffmpeg. brew install --cask mlx-core if :11234 is down.
 
@@ -2074,7 +2076,7 @@ Returns: a text block with the saved .mp4 path, model, size, frame count, fps, a
         },
         width: {
           type: 'number',
-          description: `Width (default: ${DEFAULT_MLX_VIDEO_WIDTH}). ${MIN_MLX_VIDEO_DIMENSION}–${MAX_MLX_VIDEO_DIMENSION}, multiple of ${MLX_VIDEO_DIMENSION_STEP}. 1080 is not on the grid.`,
+          description: `Width (default: ${DEFAULT_MLX_VIDEO_WIDTH}). ${MIN_MLX_VIDEO_DIMENSION}–${MAX_MLX_VIDEO_DIMENSION}, multiple of ${MLX_VIDEO_DIMENSION_STEP} (${MLX_VIDEO_DIMENSION_STEP_ONE_STAGE} with pipeline:"one_stage"). 1080 is on neither grid.`,
           minimum: MIN_MLX_VIDEO_DIMENSION,
           maximum: MAX_MLX_VIDEO_DIMENSION,
           default: DEFAULT_MLX_VIDEO_WIDTH,
@@ -2088,14 +2090,14 @@ Returns: a text block with the saved .mp4 path, model, size, frame count, fps, a
         },
         numFrames: {
           type: 'number',
-          description: `Frame count (default: ${DEFAULT_MLX_VIDEO_FRAMES}). ${MIN_MLX_VIDEO_FRAMES}–${MAX_MLX_VIDEO_FRAMES} at ${MLX_VIDEO_FPS} fps. last_frame interpolation needs at least ${MIN_MLX_VIDEO_FRAMES}.`,
+          description: `Frame count (default: ${DEFAULT_MLX_VIDEO_FRAMES}). ${MIN_MLX_VIDEO_FRAMES}–${MAX_MLX_VIDEO_FRAMES} at ${MLX_VIDEO_FPS} fps, and ${MLX_VIDEO_FRAME_STEP}k+1 (${MIN_MLX_VIDEO_FRAMES}, 17, 25, … ${MAX_MLX_VIDEO_FRAMES}). last_frame interpolation needs at least ${MIN_MLX_VIDEO_FRAMES}.`,
           minimum: MIN_MLX_VIDEO_FRAMES,
           maximum: MAX_MLX_VIDEO_FRAMES,
           default: DEFAULT_MLX_VIDEO_FRAMES,
         },
         steps: {
           type: 'number',
-          description: 'Diffusion steps 1–50. Omit for the model default.',
+          description: 'Diffusion steps 1–50. Distilled packs (the 4-bit LTX 2.5 build) run a fixed 8 and ignore this; it only moves a non-distilled pack. Omit for the model default.',
           minimum: 1,
           maximum: 50,
         },
@@ -2114,8 +2116,8 @@ Returns: a text block with the saved .mp4 path, model, size, frame count, fps, a
         },
         pipeline: {
           type: 'string',
-          description: 'LTX pipeline. two_stage is the usual quality setting.',
-          enum: ['one_stage', 'two_stage'],
+          description: `LTX pipeline. two_stage is the usual quality setting; two_stage_hq costs more time again. one_stage is the only one that takes the ${MLX_VIDEO_DIMENSION_STEP_ONE_STAGE}px grid.`,
+          enum: ['one_stage', 'two_stage', 'two_stage_hq'],
         },
         decoder: {
           type: 'string',

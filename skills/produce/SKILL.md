@@ -1157,8 +1157,8 @@ evidence grade is low (an English-language creative-writing preprint, 1.6–2.1�
 `korean-style.md` §Evidence grades).
 
 Read the platform-guide playbook
-(`../platform-guide/references/platform-playbook.md`) and rewrite per platform — Threads 1–3 lines
-of casual (반말) spoken register + the video link on the last line / an IG caption with a hook in
+(`../platform-guide/references/platform-playbook.md`) and rewrite per platform — a short Threads
+body in casual (반말) spoken register carrying one judgment of ours (§3) + the video link on the last line / an IG caption with a hook in
 the first 125 characters and a save CTA / an FB structured body plus the first-comment link copy /
 YouTube in the playbook §6 contract — one spoken sentence for the title with the topic noun in its
 first half, a description whose first line is a second hook in different words, and `meta.md` in

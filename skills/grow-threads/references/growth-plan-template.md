@@ -143,6 +143,12 @@ Every time a new post is published, append its copy verbatim. The headers are
 …
 ```
 
+A chain goes in as **one piece** — one header carrying the first part's id with
+the rest listed after it, the parts in reading order underneath, and the
+author's own first reply under the post it answers. The checker splits on
+headers, so one header per part would read a single chain as several
+near-identical posts.
+
 **Why a separate file**: growth-log is one summary line per tick so no copy
 survives there, and `threads_insights` gives metrics only. Batch
 homogenization only shows when the published drafts sit in one place — this

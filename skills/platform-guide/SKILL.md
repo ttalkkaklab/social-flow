@@ -45,7 +45,7 @@ content-reviewer agent all take this skill's playbook as their baseline.
 |---|---|---|---|---|
 | Form | text · 1 image · video on the post (`videoUrl`) | reels · carousel ≤10 images | text/image/regular video | Shorts (9:16 ≤3 min) |
 | Body limit | 500 chars | caption 2,200 chars | 5,000 chars | title 100 · description 5,000 |
-| Register | casual spoken, 1–3 lines | hook + save CTA | structured expository | one spoken sentence, result withheld |
+| Register | casual spoken, short by default (§3) | hook + save CTA | structured expository | one spoken sentence, result withheld |
 | Links | 1 in body (`linkUrl` card) | caption links not clickable → comment | banned in body → first comment | description OK |
 | Hashtags | ≤1 (ranking weight 0) | 3–5 | 0–2 | 3–5 (#Shorts by preset) |
 | Media | video/image as public HTTPS URL | public HTTPS URL | public HTTPS URL | local file upload |
