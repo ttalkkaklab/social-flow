@@ -224,7 +224,8 @@ optional, and they're what turns the tool from a video maker into an operator.**
   9:16 or 16:9 video plus per-platform text into
   `data/<channel>/episodes/<topic>/output/`, and you upload those files by hand. Only
   the publishing and growth-loop half is unavailable: the 11 publish/review/insight tools
-  aren't even listed (`tools/list` shows 72 instead of 83), and the growth skills have
+  aren't even listed (`tools/list` shows 72 instead of 96 — the 13 `portal_*` tools are
+  gated the same way on a portal key), and the growth skills have
   nothing to drive. Explicit tool-disable settings can reduce that list further.
 
 Credentials are per platform, so this is not all-or-nothing — a YouTube-only setup
@@ -479,7 +480,7 @@ social-flow/
 ├── .plugin/plugin.json          # Buzz persona pack (Open Plugin Spec)
 ├── personas/                    # Buzz pack persona (pipeline.persona.md)
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 83 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 96 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
 │       ├── tools.ts             # tool definitions — 83: research 9 + open data 5 + generation 40 + publish 6 + comments 3 + growth insights 5 + growth review 2 + check 2 + blender 7 + storyboard 4
@@ -541,14 +542,16 @@ social-flow/
 └── data/                        # content data root (see data/README.md)
 ```
 
-## MCP tool surface (83 tools)
+## MCP tool surface (96 tools)
 
-**`tools/list` does not show all 83.** The credential-gated publish, review and insights tools
+**`tools/list` does not show all 96.** The credential-gated publish, review and insights tools
 (`threads_draft_create` · `threads_review_submit` · `threads_publish` · `instagram_publish` · `facebook_publish` · `facebook_comment` ·
 `youtube_publish` · `threads_insights` · `instagram_insights` · `youtube_insights` ·
 `threads_search`) are exposed **only for platforms whose credential file exists** —
 evaluated at list time, so adding a token makes them appear without restarting the
-server. With no tokens at all you'll count 72; explicit tool-disable settings can reduce
+server. The 13 `portal_*` tools follow the same rule on the ttalkkakstory workspace key
+(`<SNS_TOKEN_DIR>/<channel>/ttalkkakstory.json`, the flat file, or `TTALKKAKSTORY_*`). With
+no tokens and no portal key you'll count 72; explicit tool-disable settings can reduce
 that list further. Hidden tools still have live handlers:
 calling one directly returns a missing-token error rather than failing silently.
 `content_feedback`, `youtube_topic_scout`, and `sns_issue_scout` sit outside the
@@ -591,6 +594,7 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | Publish | `threads_publish` / `instagram_publish` / `facebook_publish` / `facebook_comment` / `youtube_publish` / `youtube_update` | Direct platform API calls — **exposed only for platforms with a credential file** (`youtube_update` edits title/description/tags/visibility of an already-uploaded video) |
 | Comment inbox | `sns_comment_inbox` / `sns_comment_reply` / `sns_comment_moderate` | Cross-platform normalized inbox · replies · hiding (no deletes). Inbox and replies cover all 4 platforms; hiding excludes YouTube (its API only offers held-for-review, which means something else) |
 | Storyboard | `storyboard_read` / `storyboard_apply` / `storyboard_check` / `scenario_check` | The episode board as sequences → scenes → shots (`window.STRUCTURE` beside the flat `SCENES` produce reads), plus the scenario input contract. `read` returns the tree at four levels; `apply` writes or patches the board and refuses to write past a violation; `storyboard_check` runs the structure rules plus the full `check-scenes.js` contract; `scenario_check` runs S1–S12 on `candidates/` or `scenario.md` and returns the checker JSON. Local files only — the board rules live in [structure-contract.js](skills/storyboard/references/structure-contract.js), shared with the checker and approval page |
+| Portal | `portal_workspace_check` / `portal_storyboard_save` / `portal_storyboard_list` / `portal_storyboard_pull` / `portal_episode_create` / `portal_episode_checkpoint` / `portal_episode_revisions` / `portal_episode_restore` / `portal_episode_lease` / `portal_episode_status` / `portal_scenario_save` / `portal_scenario_pull` / `portal_scenario_choose` | The ttalkkakstory portal by **workspace API key** (`Authorization: Bearer tks_…`) — the episode's record while the local directory is the working copy. The key comes from `<SNS_TOKEN_DIR>/<channel>/ttalkkakstory.json`, read off the episode path (`data/<channel>/episodes/<topic>`), so one channel is one workspace; listed only while a key exists, and every call answers one line without one. `save` uploads the board and documents (also a checkpoint), `pull` rebuilds the directory from the portal, `lease` guards two machines on one topic, `checkpoint`/`revisions`/`restore` are the revision history, `scenario_*` carry the three candidate pages and the pick — see [the portal section](#the-ttalkkakstory-portal-by-workspace-api-key) |
 | Capability | `capability_status` | What this machine has configured, grouped by capability with an "N of M" count, plus the env var that would unlock each missing provider. Call it before planning anything that spends money — otherwise a missing key only surfaces when the call fails, after the plan was built around it. Reports configuration, not reachability |
 | Check | `sns_account_check` | Batch /me check across tokens (token values never shown) |
 | Growth insights | `threads_insights` / `threads_search` | Threads insights (account/post metrics) + public keyword search — for grow-threads (`threads_manage_insights` · `threads_keyword_search` scopes) |
@@ -696,6 +700,7 @@ explicit error and everything else works.
 | `HF_HOME` | image_local_generate · stt_local_transcribe | HF default | Hugging Face cache for the local models |
 | `MEDIA_UPLOAD_URL` / `MEDIA_UPLOAD_API_KEY` | grow-threads image posts · Seedance reference-video hosting | — | Media hosting endpoint + key. Threads only accepts images as **public URLs**, so local files need somewhere to live. Anything works that accepts `POST` with an `x-api-key` header + raw bytes, returns `201 {data:{url}}`, and serves that url as unauthenticated public GET (the header of `skills/grow-threads/references/upload-media.sh` is the contract SoT). Unset, only the image step turns off — text posts still go out |
 | `THREADS_TOKEN_FILE` and friends | | `<SNS_TOKEN_DIR>/conventional name` | Per-platform override of the default (flat) path — not applied to channel directories |
+| `TTALKKAKSTORY_API_URL` / `TTALKKAKSTORY_WORKSPACE` / `TTALKKAKSTORY_API_KEY` | portal_* | — | The ttalkkakstory portal key **when no `ttalkkakstory.json` exists** — the file under the channel directory, then the flat one, come first. `TTALKKAKSTORY_HOLDER` renames the lease holder (default `<key prefix>@<hostname>`) |
 
 Credential file convention (mode 600, never committed) — `threads_token` ·
 `instagram_token` · `facebook_page_token` · `youtube-oauth-client.json`.
@@ -725,25 +730,41 @@ the entry (or delete the file) to turn the tools back on. A per-tool env overrid
 can turn one JSON-disabled tool back on for that session. Values split on commas
 or whitespace; a bare `*` matches every tool.
 
-### Optional: the ttalkkakstory portal mirror
+### The ttalkkakstory portal by workspace API key
 
-The storyboard, produce and publish skills mirror an episode's state to the ttalkkakstory
-portal **when its MCP server is registered in your own Claude Code settings** — the plugin
-does not ship it, because the server lives in the portal repository and its path differs per
-machine. Register it once (user scope) and set three variables:
+The storyboard, produce and publish skills keep an episode on the ttalkkakstory portal
+**when the channel has a portal key** — the plugin's own server calls the portal API with it
+(owner directive 2026-09-21; before that the portal's MCP server had to be registered by hand
+in user settings). A key is issued per workspace on the portal at `/{workspace}/settings/api-keys`
+(admin+; the plaintext is shown once, the portal keeps a hash) and that page prints the file
+ready to save:
 
-```json
-{ "mcpServers": { "ttalkkakstory": {
-    "command": "node", "args": ["<portal repo>/mcp/src/index.mjs"],
-    "env": { "TTALKKAKSTORY_API_URL": "https://…", "TTALKKAKSTORY_WORKSPACE": "<slug>", "TTALKKAKSTORY_API_KEY": "<key>" } } } }
+```
+~/.config/social-flow/<channel>/ttalkkakstory.json      # one channel → one workspace
+~/.config/social-flow/ttalkkakstory.json                # or one key for every channel
+{ "apiUrl": "https://story.example.com", "workspace": "<slug>", "apiKey": "tks_…" }
 ```
 
-With the `mcp__ttalkkakstory__*` tools present, approval calls `storyboard_save` on the
-episode directory's absolute path and records the returned `episodeId`/`pageUrl` in
-`storyboard.md`'s frontmatter (`portal_episode` · `portal_url`), produce saves again and sets
-`produced`, publish sets `published` by that id. Without the tools the skills say so in one
-line and carry on, and an errored call is reported in one line (a 409 retried once) — the
-portal is a mirror, not a gate.
+The channel is read off the episode path (`data/<channel>/episodes/<topic>`), the channel file
+falls through to the flat file, and the `TTALKKAKSTORY_*` env is the last resort. Mode 600,
+never committed. `portal_workspace_check` tells which file answered and which workspace the
+key opens — the storyboard skill calls it once at the top of a session.
+
+With a key present the portal is the episode's **source of truth and the local directory a
+working copy** (portal design note, 2026-09-20). The storyboard skill takes a lease and pulls
+at the top of a session (`portal_episode_lease acquire` · `portal_storyboard_pull`, or
+`portal_episode_create` for a topic the portal has never seen), uploads the three candidate
+pages and the pick (`portal_scenario_save`, `chosen: true` for the winner), checkpoints the
+stages (`portal_episode_checkpoint` — `candidates` · `scenario` · `board`), and approval calls
+`portal_storyboard_save` on the episode directory's absolute path — also a checkpoint at
+`approved` — recording the returned `episodeId`/`pageUrl` in `storyboard.md`'s frontmatter
+(`portal_episode` · `portal_url`) and the revision in `.portal.json`; produce saves again and
+sets `produced`, publish sets `published` by that id (`portal_episode_status`). A
+`409 head_moved` means another machine saved first: pull, re-apply, save; a `409 leased` names
+who holds the topic and until when. Without a key the `portal_*` tools are not listed, the
+skills say so in one line and carry on with local files, and an errored call is reported in one
+line — the portal records, it does not gate. The portal repository's own `mcp/` server still
+exists for other clients; this plugin no longer needs it.
 
 ## Documentation (docs/)
 

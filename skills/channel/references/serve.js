@@ -40,6 +40,7 @@ const path = require('path');
 const http = require('http');
 const os = require('os');
 const vm = require('vm');
+const { evaluateWindowScript } = require('../../_shared/scenes-vm.js');
 const { execFileSync, spawn } = require('child_process');
 
 const SELF_DIR = __dirname;
@@ -216,11 +217,9 @@ function coverImage(sb, scenesSrc) {
   const okPath = (p) => typeof p === 'string' && p && !p.split('/').some((s) => !s || s.startsWith('.')) &&
     isFile(path.join(sb, p)) && IMAGE_RE.test(p);
   if (scenesSrc) {
-    const sandbox = { window: {}, console: { log() {}, warn() {}, error() {} } };
-    sandbox.globalThis = sandbox;
     try {
-      vm.runInNewContext(scenesSrc, sandbox, { timeout: 2000 });
-      const scenes = Array.isArray(sandbox.window.SCENES) ? sandbox.window.SCENES : [];
+      const win = evaluateWindowScript(scenesSrc, { timeoutMs: 2000 });
+      const scenes = Array.isArray(win.SCENES) ? win.SCENES : [];
       for (const s of scenes) {
         const v = (s && s.visual) || {};
         const first = (s && s.narration || []).map((n) => n && n.img).find(okPath);
@@ -1031,10 +1030,17 @@ function selftest() {
         const script = (shell.match(/<script>([\s\S]*?)<\/script>/) || [])[1] || '';
         const m = script.match(/var STRINGS = (\{[\s\S]*?\n  \});/);
         if (!m) return false;
-        const dict = new vm.Script('(' + m[1] + ')').runInNewContext({});
-        const want = Object.keys(dict.en);
-        return Object.keys(dict).every((code) => {
-          const missing = want.filter((k) => !(k in dict[code]));
+        // This is the server's own trusted template, not a storyboard. Export key arrays as
+        // one JSON string from an empty realm so no host object enters the evaluation.
+        const context = vm.createContext(Object.create(null), { codeGeneration: { strings: false, wasm: false } });
+        const keys = JSON.parse(vm.runInContext(
+          'JSON.stringify(Object.fromEntries(Object.entries(' + m[1] + ').map(([code, values]) => [code, Object.keys(values)])))',
+          context,
+          { timeout: 1000 },
+        ));
+        const want = keys.en;
+        return Object.keys(keys).every((code) => {
+          const missing = want.filter((k) => !keys[code].includes(k));
           if (missing.length) process.stdout.write('       ' + code + ' missing: ' + missing.join(',') + '\n');
           return !missing.length;
         });

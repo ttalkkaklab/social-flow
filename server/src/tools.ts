@@ -820,6 +820,7 @@ const storyboardShotInput = {
   type: 'object', additionalProperties: true, required: ['type'],
   description: 'Complete scenes-schema.md playback shot. On upsert, supply the complete shot; fields are not deep-merged. Extra visual and machine fields are preserved.',
   properties: {
+    id: { type: 'string', pattern: '^s\\d{4,}$', description: 'Stable shot id. storyboard_apply assigns it; preserve it and do not edit it by hand.' },
     type: enumInput(storyboardVocabulary?.TYPES, 'Playback role, distinct from shot.render.mode and the camera preset.'),
     scene: { type: 'integer', minimum: 1, description: 'Parent scene number in STRUCTURE.' },
     duration: { type: 'number', exclusiveMinimum: 0, description: 'Shot duration in seconds; model duration may round up.' },
@@ -874,6 +875,281 @@ const storyboardShotInput = {
     }
   },
 };
+
+
+// ── ttalkkakstory portal tool surface ─────────────────────────────────────────
+// The channel (and so the workspace key) is read off the episode directory's path,
+// data/<channel>/episodes/<topic>; `channel` is for the tools that have no directory to read.
+
+const PORTAL_CHANNEL_ARG = {
+  type: 'string',
+  description:
+    'Channel slug (data/<channel>) that picks the key file <SNS_TOKEN_DIR>/<channel>/ttalkkakstory.json. Optional when an episodeDir is given — the slug is read off its path; without either, the flat <SNS_TOKEN_DIR>/ttalkkakstory.json or the TTALKKAKSTORY_* env is used',
+} as const;
+const PORTAL_EPISODE_ID_ARG = {
+  type: 'string',
+  description: 'Episode id (uuid). Optional when episodeDir holds .portal.json (written by portal_storyboard_pull · portal_storyboard_save · portal_episode_create)',
+} as const;
+const PORTAL_EPISODE_DIR_ARG = {
+  type: 'string',
+  description: 'Absolute path of data/<channel>/episodes/<topic> (or its storyboard/). Supplies the episode id from .portal.json and the channel for the key',
+} as const;
+const PORTAL_STAGE_ENUM = ['researched', 'candidates', 'scenario', 'narration', 'board', 'approved', 'produced', 'published'];
+const PORTAL_CANDIDATE_ENUM = ['D1', 'D2', 'D3'];
+
+const PORTAL_TOOLS: Tool[] = [
+  {
+    name: 'portal_workspace_check',
+    title: 'Check the portal key and its workspace',
+    annotations: HINT.read,
+    description: `Resolve the ttalkkakstory portal key for a channel and ask the portal who it is — the workspace the key opens, the role (member), and which file answered (per-channel · flat · env). Call it once at the top of a storyboard session before any portal write, so a save never lands in another workspace.
+
+The key is issued on the portal at /{workspace}/settings/api-keys (admin+) and saved as <SNS_TOKEN_DIR>/<channel>/ttalkkakstory.json — { "apiUrl", "workspace", "apiKey" }. With no key anywhere the portal_* tools are hidden and every call answers one line; the episode stays a local file.
+
+With episodeDir, also compares the directory's .portal.json (the workspace it is a copy of) with the key's workspace — workspaceMatches:false with a warning means every write to that directory will be refused until the key file or the record is fixed, so the topic does not fork into a second workspace.
+
+Returns: JSON — { channel, workspace, source, holder, episodeDir?, copyOf?, workspaceMatches?, warning?, …the portal's /me answer }.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        channel: PORTAL_CHANNEL_ARG,
+        episodeDir: { type: 'string', description: 'Absolute path of data/<channel>/episodes/<topic> — checks its .portal.json against the key\'s workspace and picks the channel off the path' },
+      },
+    },
+  },
+  {
+    name: 'portal_storyboard_save',
+    title: 'Upload an episode directory to the portal',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    description: `Upload data/<channel>/episodes/<topic>/storyboard/ — scenes.js (the shots verbatim, the window.* blocks as episode meta), storyboard.md, research.md, script.md, storyboard.html — to the ttalkkakstory portal under the channel's workspace key. Saving the same episode again updates it (idempotent); the project is the channel, the storyboard is found or created by the episode title (or storyboardTitle for a series). When .portal.json exists, its episodeId updates that same row even if the title changed. The save is also a checkpoint: stage from the argument or storyboard.md's status (approved → approved, otherwise board), baseRevisionNo from .portal.json. A 409 head_moved means another machine saved first — the answer lists what THEY changed since your base (shots · meta · documents): keep your local edits aside, portal_storyboard_pull the head, re-apply all of your changes on it and resolve by hand where the list overlaps them, save again; a 409 leased names who holds the lease and until when.
+
+Writes .portal.json (workspace · storyboardId · episodeId · headRevisionNo) into the episode directory. Returns: JSON — { result: created|updated, storyboardId, episodeId, revisionNo, url, pageUrl, uploaded: { scenes, characters, documents } }.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        episodeDir: { type: 'string', description: 'Absolute path of data/<channel>/episodes/<topic> or its storyboard/ — the channel slug on the path picks the key' },
+        project: { type: 'string', description: 'Portal project name. Default: storyboard.md channel, else the channel directory name' },
+        storyboardTitle: { type: 'string', description: 'Group several episodes under one storyboard (a series) by this title. Default: the episode title' },
+        title: { type: 'string', description: 'Episode title override. Default: storyboard.md heading, else the scenes.js header comment, else the directory name' },
+        stage: { type: 'string', enum: PORTAL_STAGE_ENUM, description: 'Checkpoint stage. Default: approved when storyboard.md says status: approved, otherwise board' },
+        baseRevisionNo: { type: 'number', description: 'The last revision this copy saw. Default: .portal.json headRevisionNo. Differs from head → 409 head_moved' },
+        note: { type: 'string', description: 'Revision note, up to 500 characters — e.g. "narration 95 · approved"' },
+      },
+      required: ['episodeDir'],
+    },
+  },
+  {
+    name: 'portal_storyboard_list',
+    title: 'List portal storyboards or their episodes',
+    annotations: HINT.read,
+    description: `List the storyboards in the channel's portal workspace, or — with storyboardId — the episodes under one storyboard. Use it to find the storyboardId that portal_episode_create needs, or to see which topics the portal already holds before starting one locally.
+
+Returns: JSON — the portal's paginated list (storyboards with id · title · project · episode counts, or episodes with id · slug · title · stage · headRevisionNo).`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        channel: PORTAL_CHANNEL_ARG,
+        storyboardId: { type: 'string', description: 'List this storyboard\'s episodes instead of the storyboards' },
+        query: { type: 'string', description: 'Title search text' },
+        projectId: { type: 'string', description: 'Only storyboards under this project (uuid)' },
+        page: { type: 'number', description: 'Page number, starting at 1' },
+      },
+    },
+  },
+  {
+    name: 'portal_storyboard_pull',
+    title: 'Download a portal episode into a local directory',
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
+    description: `⚠️ Download an episode from the ttalkkakstory portal after the session-opening HITL. scenes.js is rebuilt from the portal's rows; uploaded documents and the chosen scenario arrive beside it. mode replace (default) writes into storyboard/, first copies changed local files to backupDir under .portal-local/, and updates .portal.json. mode side clears and writes sideDir under .portal-head/ while leaving storyboard/ and .portal.json untouched. With revision, every file comes from that revision's snapshot and headRevisionNo is that revision; otherwise it is the portal head. Returns backupDir (null when no local file changed), replaced[], sideDir, and headRevisionNo.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        episodeId: { type: 'string', description: 'Episode id (uuid) — from portal_storyboard_list or .portal.json' },
+        targetDir: { type: 'string', description: 'Absolute path of data/<channel>/episodes/<topic>; storyboard/ is created inside. The channel slug on the path picks the key' },
+        includeDocuments: { type: 'boolean', description: 'Also write the uploaded documents (storyboard.md · research.md · script.md · storyboard.html). Default true' },
+        revision: { type: 'number', description: 'Pull this revision\'s snapshot instead of head — scenes and documents both from that revision' },
+        mode: { type: 'string', enum: ['replace', 'side'], description: 'replace updates the working copy after backing up changed files; side writes only to storyboard/.portal-head/. Default replace' },
+      },
+      required: ['episodeId', 'targetDir'],
+    },
+  },
+  {
+    name: 'portal_episode_status',
+    title: 'Advance a portal episode\'s status or stage',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    description: `Move a portal episode forward — status draft → approved → produced → published (produce calls produced when the build passes, publish calls published), or the finer stage; the title can change in the same call. The holder travels with the call, so a lease held by another machine on the same key answers 409 leased.
+
+Returns: JSON — the updated episode (id, status, stage, title, headRevisionNo).`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        episodeId: PORTAL_EPISODE_ID_ARG,
+        episodeDir: PORTAL_EPISODE_DIR_ARG,
+        channel: PORTAL_CHANNEL_ARG,
+        status: { type: 'string', enum: ['draft', 'approved', 'produced', 'published'], description: 'Publication status to set' },
+        stage: { type: 'string', enum: PORTAL_STAGE_ENUM, description: 'Internal stage to set; status follows it' },
+        title: { type: 'string', description: 'New episode title (1–200 characters)' },
+      },
+    },
+  },
+  {
+    name: 'portal_episode_create',
+    title: 'Create an empty episode row on the portal',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    description: `Create an episode on the ttalkkakstory portal before anything is written locally — from the research stage on, the portal is the record and the directory a working copy. slug is the local directory name (data/<channel>/episodes/<slug>); storyboardId comes from portal_storyboard_list. With episodeDir the directory is created and .portal.json written (headRevisionNo 0), which the later checkpoints read.
+
+Returns: JSON — { id, slug, title, stage, url, pageUrl }.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        storyboardId: { type: 'string', description: 'The storyboard (series) to create the episode under (uuid)' },
+        slug: { type: 'string', description: 'Episode slug = the local directory name under episodes/' },
+        title: { type: 'string', description: 'Episode title (1–200 characters)' },
+        format: { type: 'string', enum: ['shorts-9x16', 'youtube-long-16x9'], description: 'Episode format' },
+        stage: { type: 'string', enum: PORTAL_STAGE_ENUM, description: 'Starting stage. Default researched' },
+        sourceChannelSlug: { type: 'string', description: 'The social-flow channel directory name, recorded on the episode' },
+        episodeDir: { type: 'string', description: 'Absolute path of data/<channel>/episodes/<slug> — created if missing, .portal.json written there' },
+        channel: PORTAL_CHANNEL_ARG,
+      },
+      required: ['storyboardId', 'slug', 'title'],
+    },
+  },
+  {
+    name: 'portal_episode_checkpoint',
+    title: 'Save a revision when a stage ends',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    description: `Checkpoint the episode on the portal when a stage ends — candidates after the three scenario pages, scenario after the pick, board after scenes.js is written. With episodeDir the shots and meta from storyboard/scenes.js (when present) and the standard documents that exist (research.md · storyboard.md · script.md · storyboard.html) go up together; identical content makes no new revision and only moves the stage. baseRevisionNo defaults to .portal.json's head; when it differs from the portal's head the answer is 409 head_moved with what the other machine changed since your base (shots · meta · documents): keep your local edits aside, portal_storyboard_pull the head, re-apply all of your changes on it (the list marks the overlaps to resolve by hand), checkpoint again. Never retry a 409 blind.
+
+Updates .portal.json headRevisionNo. Returns: JSON — { result: "new revision"|"unchanged (stage only)", revisionNo, stage, uploaded: { scenes, documents } }.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        stage: { type: 'string', enum: PORTAL_STAGE_ENUM, description: 'The stage that just ended' },
+        episodeId: PORTAL_EPISODE_ID_ARG,
+        episodeDir: PORTAL_EPISODE_DIR_ARG,
+        channel: PORTAL_CHANNEL_ARG,
+        baseRevisionNo: { type: 'number', description: 'The last revision this copy saw. Default: .portal.json headRevisionNo' },
+        note: { type: 'string', description: 'Revision note, up to 500 characters — e.g. "narration 95 · three candidates"' },
+        documents: { type: 'array', items: { type: 'string', description: 'A filename inside storyboard/' }, description: 'Document filenames to upload from storyboard/. Default: the standard five that exist' },
+      },
+      required: ['stage'],
+    },
+  },
+  {
+    name: 'portal_episode_revisions',
+    title: 'List an episode\'s revisions or read one',
+    annotations: HINT.read,
+    description: `List a portal episode's revisions, newest first — number, stage, note, who saved it and when — or, with revisionNo, read one revision's snapshot (shots · meta · documents). With compareTo (a number or "head"), return what changed from revisionNo (default: the directory's recorded head) to it — shots added/removed/changed with the changed field names, meta keys, and a unified diff per document — plus a one-line summary. Read before portal_episode_restore so the number being restored is the one meant, and after a 409 head_moved to see the full list of what the other side changed (the 409 line is cut at 8 items).
+
+Returns: JSON — the revision list, one revision's snapshot, or { summary, from, to, identical, scenes, meta, documents }.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        episodeId: PORTAL_EPISODE_ID_ARG,
+        episodeDir: PORTAL_EPISODE_DIR_ARG,
+        channel: PORTAL_CHANNEL_ARG,
+        revisionNo: { type: 'number', description: 'Read this revision\'s snapshot instead of listing; with compareTo, the revision to compare from' },
+        compareTo: { type: ['number', 'string'], description: 'Compare revisionNo (or the directory\'s recorded head) to this revision number or "head" — returns the diff instead of the list' },
+      },
+    },
+  },
+  {
+    name: 'portal_episode_restore',
+    title: 'Restore an older revision as a new one',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    description: `Re-publish an older revision of a portal episode as the new head — history only moves forward, nothing is deleted. Follow it with portal_storyboard_pull so the local working copy matches the restored head; .portal.json's head is updated to the new revision when episodeDir is given.
+
+Returns: JSON — { revisionNo, stage, restoredFrom }.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        revisionNo: { type: 'number', description: 'The revision to bring back as head' },
+        episodeId: PORTAL_EPISODE_ID_ARG,
+        episodeDir: PORTAL_EPISODE_DIR_ARG,
+        channel: PORTAL_CHANNEL_ARG,
+        note: { type: 'string', description: 'Revision note, up to 500 characters' },
+      },
+      required: ['revisionNo'],
+    },
+  },
+  {
+    name: 'portal_episode_lease',
+    title: 'Take, release or read the episode lease',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    description: `acquire at the top of a session (and to extend), release when done, status to look. The holder is <key prefix>@<hostname> (TTALKKAKSTORY_HOLDER or the "holder" field of ttalkkakstory.json to change it); the lease's owner is key + holder, so another machine on the same key is someone else. A live lease held by someone else answers 409 with who and until when — wait or ask the user, never force. While it is held, their checkpoint · save · scenario · status calls all answer 409 leased. Default 2 hours.
+
+Returns: JSON — { holder, expiresAt, … } as the portal reports it.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: { type: 'string', enum: ['acquire', 'release', 'status'], description: 'acquire = take or extend · release = give back · status = read' },
+        episodeId: PORTAL_EPISODE_ID_ARG,
+        episodeDir: PORTAL_EPISODE_DIR_ARG,
+        channel: PORTAL_CHANNEL_ARG,
+        ttlMinutes: { type: 'number', description: 'Lease length in minutes for acquire (1–1440). Default 120' },
+        force: { type: 'boolean', description: 'release only — take someone else\'s lease away. A workspace key is always member, so the portal refuses this with 409; an admin releases it on the episode page' },
+      },
+      required: ['action'],
+    },
+  },
+  {
+    name: 'portal_scenario_save',
+    title: 'Upload one scenario candidate page',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    description: `Upload one scenario page — candidates/d1.md … d3.md written on the scenario-stage template, or the chosen scenario.md — to the portal episode. The same candidate saved again is updated; chosen: true picks it (the others are unpicked). The findings in the answer are the portal's in-file checks (S1 · S4 …); the research cross-check stays local (check-scenario.js).
+
+Returns: JSON — { result: created|updated, candidate, chosen, findings[], updatedAt }.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        candidate: { type: 'string', enum: PORTAL_CANDIDATE_ENUM, description: 'Which candidate slot this page is' },
+        file: { type: 'string', description: 'Absolute path of storyboard/candidates/dN.md or storyboard/scenario.md — its episode directory supplies the id and channel' },
+        markdown: { type: 'string', description: 'The page text itself, instead of file' },
+        chosen: { type: 'boolean', description: 'true = this is the pick; the other candidates are unpicked' },
+        episodeId: PORTAL_EPISODE_ID_ARG,
+        episodeDir: PORTAL_EPISODE_DIR_ARG,
+        channel: PORTAL_CHANNEL_ARG,
+      },
+      required: ['candidate'],
+    },
+  },
+  {
+    name: 'portal_scenario_pull',
+    title: 'Download the scenario candidates',
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
+    description: `⚠️ Overwrites local scenario files — never call without the user knowing the directory is a working copy of the portal (HITL at the top of a session). Write the portal episode's candidates to storyboard/candidates/d1.md … and the chosen one to storyboard/scenario.md. With candidate and no targetDir, return that one page's text and write nothing.
+
+Returns: JSON — { scenarios: [{ candidate, chosen, score, p0, findings }], written[] } — or the page text.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        targetDir: { type: 'string', description: 'Absolute path of data/<channel>/episodes/<topic>. Omit to return text only' },
+        candidate: { type: 'string', enum: PORTAL_CANDIDATE_ENUM, description: 'Only this candidate' },
+        episodeId: PORTAL_EPISODE_ID_ARG,
+        episodeDir: PORTAL_EPISODE_DIR_ARG,
+        channel: PORTAL_CHANNEL_ARG,
+      },
+    },
+  },
+  {
+    name: 'portal_scenario_choose',
+    title: 'Pick one scenario candidate as scenario.md',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    description: `Make one candidate the episode's scenario on the portal (the others are unpicked); a stage below scenario moves up to scenario. Use it after the user's pick when the pages were uploaded earlier without chosen.
+
+Returns: JSON — { candidate, chosen, findings[] }.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        candidate: { type: 'string', enum: PORTAL_CANDIDATE_ENUM, description: 'The candidate to pick' },
+        episodeId: PORTAL_EPISODE_ID_ARG,
+        episodeDir: PORTAL_EPISODE_DIR_ARG,
+        channel: PORTAL_CHANNEL_ARG,
+      },
+      required: ['candidate'],
+    },
+  },
+];
 
 export const TOOLS: Tool[] = [
   // ── Research & fact-checking ──────────────────────────────────────────
@@ -4302,6 +4578,7 @@ Returns: JSON — { version, format, shots, sequences[…scenes[…shots]], unpl
     description: `Write a storyboard's scenes.js from a sequence → scene → shot model, or patch part of it, in one call. Every shot is validated against the grammar vocabularies (type · beat · size · angle · infoType · shareType · render.mode · transition), the structure against its rules (one place and time per scene, a charge that turns, every scene in exactly one sequence, shots grouped by scene in sequence order, two sizes per scene), and the derived shot labels (sceneSlug · sequence) are written from the structure. Nothing is written when a violation is found — the findings come back instead. Warnings are written and reported.
 
 Use it to author a new board (set = { structure, shots }) after the narration is approved (storyboard §4), and to change one thing later (scenes / sequences / shots by key, insertShots, removeShots, globals for FORMAT · THEME · COMPREHENSION · STORY · PRODUCTION · MUSIC). Use transitions to change only the effect before selected shots without replacing their narration or visuals. dip fades out to black and fades the next scene in; prefer it for changes of place or time unless a specific cut calls for another effect. One call carries the whole change — do not write scenes.js by hand and do not call this once per shot. dryRun:true validates without writing.
+storyboard_apply assigns stable shot ids (s0001…) and advances STRUCTURE.nextShotId; preserve those ids and do not edit them by hand.
 Shot creation, upserts and inserts expose type, shot.render.mode, shot.videoDesign, visual.camera and the three plan records shot.eyeline · shot.composition · shot.depth in the input schema. shot.depth (L11): count what the viewer must read in the frame at once — one thing → shallow with focus (a person's eyes), two or more → deep with the planes listed front to back; a departure needs a reason, and a still_camera focus-in/rack-focus cut cannot be deep. For a drone shot choose preset:"drone-flythrough", variant:"cinematic" or "fpv", and the trajectory. The preset does not change the episode style or select a paid model.
 Do NOT pass a shot's visual plan through a summary — pass the object scenes-schema.md defines (visual · shot.space · visual.camera · visual.video …); unknown keys on a shot pass through untouched. Editing an approved board drops its \`// approved:\` line; it is approved again at the HITL gate.
 
@@ -4384,6 +4661,10 @@ Returns: JSON — { files, violations, warnings, findings: [{ level, where, what
       required: ['path'],
     },
   },
+  // ── ttalkkakstory portal (workspace API key) ──
+  // Listed only when a portal key exists (config.portalConfigured, per request like the SNS gate).
+  // Every tool answers one line and isError when no key resolves — the skills carry on in local-file mode.
+  ...PORTAL_TOOLS,
 ];
 
 /**

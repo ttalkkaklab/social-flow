@@ -68,6 +68,8 @@ describe('storyboard schemas', () => {
   });
   it('the shot grammar is a closed vocabulary; the visual plan passes through', () => {
     assert.ok(shotSchema.safeParse(board()[1]).success);
+    assert.ok(shotSchema.safeParse({ ...board()[1], id: 's0007' }).success);
+    assert.ok(!shotSchema.safeParse({ ...board()[1], id: 's007' }).success);
     assert.ok(!shotSchema.safeParse({ ...board()[1], shot: { size: 'wide' } }).success);
     assert.ok(!shotSchema.safeParse({ ...board()[1], transition: 'push:left' }).success);
     assert.ok(!shotSchema.safeParse({ ...board()[1], beat: 'middle' }).success);
@@ -146,6 +148,49 @@ describe('applyPatch', () => {
     assert.equal(r.win.SCENES[2].sceneSlug, '부엌 / 밤');
     assert.equal(r.win.SCENES[2].sequence, undefined, 'one sequence writes no shot label');
   });
+  it('assigns stable ids to every shot in a full set', () => {
+    const r = applyPatch({}, storyboardApplySchema.parse({ path: 'x', set: { structure: structure([scene(1), scene(2)]), shots: board() } }));
+    assert.deepEqual(r.win.SCENES.map((s) => s.id), ['s0001', 's0002', 's0003', 's0004']);
+    assert.equal(r.win.STRUCTURE.nextShotId, 5);
+  });
+  it('backfills a legacy board once from its current shot count', () => {
+    const legacy = { STRUCTURE: structure([scene(1), scene(2)]), SCENES: board() };
+    const r = applyPatch(legacy, storyboardApplySchema.parse({ path: 'x', globals: { FORMAT: 'shorts-9x16' } }));
+    assert.deepEqual(r.win.SCENES.map((s) => s.id), ['s0005', 's0006', 's0007', 's0008']);
+    assert.equal(r.win.STRUCTURE.nextShotId, 9);
+    const again = applyPatch(r.win, storyboardApplySchema.parse({ path: 'x', globals: { FORMAT: 'shorts-9x16' } }));
+    assert.deepEqual(again.win.SCENES.map((s) => s.id), ['s0005', 's0006', 's0007', 's0008']);
+    assert.equal(again.win.STRUCTURE.nextShotId, 9);
+  });
+  it('positional upsert without id inherits the id at that position', () => {
+    const base = applyPatch({}, storyboardApplySchema.parse({ path: 'x', set: { structure: structure([scene(1), scene(2)]), shots: board() } })).win;
+    const changed = applyPatch(base, storyboardApplySchema.parse({ path: 'x', shots: [{ no: 2, shot: board()[1] }] }));
+    assert.equal(changed.win.SCENES[1].id, 's0002');
+    assert.equal(changed.win.STRUCTURE.nextShotId, 5);
+  });
+  it('positional upsert with an explicit different id replaces the id', () => {
+    const base = applyPatch({}, storyboardApplySchema.parse({ path: 'x', set: { structure: structure([scene(1), scene(2)]), shots: board() } })).win;
+    const changed = applyPatch(base, storyboardApplySchema.parse({ path: 'x', shots: [{ no: 2, shot: { ...board()[1], id: 's0042' } }] }));
+    assert.equal(changed.win.SCENES[1].id, 's0042');
+    assert.equal(changed.win.STRUCTURE.nextShotId, 43);
+  });
+  it('assigns ids to inserts and never reuses a deleted number', () => {
+    const base = applyPatch({}, storyboardApplySchema.parse({ path: 'x', set: { structure: structure([scene(1), scene(2)]), shots: board() } })).win;
+    const inserted = applyPatch(base, storyboardApplySchema.parse({ path: 'x', insertShots: [{ after: 0, shots: [board()[0]] }] }));
+    assert.equal(inserted.win.SCENES[0].id, 's0005');
+    const removed = applyPatch(inserted.win, storyboardApplySchema.parse({ path: 'x', removeShots: [1] }));
+    const insertedAgain = applyPatch(removed.win, storyboardApplySchema.parse({ path: 'x', insertShots: [{ after: 0, shots: [board()[0]] }] }));
+    assert.equal(insertedAgain.win.SCENES[0].id, 's0006');
+    assert.equal(insertedAgain.win.STRUCTURE.nextShotId, 7);
+  });
+  it('preserves duplicate ids and reports one finding for the repeated shot', () => {
+    const shots = board().map((s, i) => ({ ...s, id: `s${String(i + 1).padStart(4, '0')}` }));
+    shots[2].id = 's0002';
+    const r = applyPatch({}, storyboardApplySchema.parse({ path: 'x', set: { structure: structure([scene(1), scene(2)]), shots } }));
+    const duplicates = r.findings.filter((f) => /duplicate s0002/.test(f.what));
+    assert.equal(duplicates.length, 1);
+    assert.equal(r.win.SCENES[2].id, 's0002');
+  });
   it('a violation in the structure comes back as findings, one per issue', () => {
     const r = applyPatch({}, storyboardApplySchema.parse({ path: 'x', set: { structure: structure([scene(1)]), shots: board() } }));
     assert.ok(r.findings.some((f) => f.level === 'bad' && /scene 2 is not in STRUCTURE/.test(f.what)));
@@ -184,12 +229,15 @@ describe('applyPatch', () => {
 
 describe('file round trip', () => {
   it('serialises every global in schema order and keeps the header, minus the approval line', () => {
-    const win = { SCENES: board(), STRUCTURE: structure([scene(1), scene(2)]), FORMAT: 'shorts-9x16', THEME: { accent: '#fff' }, ZZZ: 1 };
+    const shots = board();
+    shots[0] = { type: shots[0].type, id: 's0001', ...shots[0] };
+    const win = { SCENES: shots, STRUCTURE: structure([scene(1), scene(2)]), FORMAT: 'shorts-9x16', THEME: { accent: '#fff' }, ZZZ: 1 };
     const src = serializeBoard(win, ['// approved: 2026-09-01', '// note']);
     assert.ok(src.startsWith('// note\n'));
     assert.ok(!/approved/.test(src));
     const order = [...src.matchAll(/^window\.([A-Z_]+) =/gm)].map((m) => m[1]);
     assert.deepEqual(order, ['FORMAT', 'THEME', 'STRUCTURE', 'SCENES', 'ZZZ']);
+    assert.match(src, /window\.SCENES = \[\n  \{\n    "id": "s0001",/);
   });
   it('creates a board with set, refuses a patch on a missing file, patches an existing one, and drops the approval line', () => {
     const dir = tmp();
@@ -286,6 +334,17 @@ describe('checkStoryboard', () => {
     assert.ok(r.structure.some((f) => f.level === 'later' && /adjacent picture cut/.test(f.what)));
     // No duplicate: the deferred finding lands once, not as bad in one list and later in the other.
     assert.ok(!r.contract.some((f) => /adjacent picture cut/.test(f.what)), JSON.stringify(r.contract));
+  });
+  it('allows missing shot ids but reports one duplicate id', () => {
+    const dir = tmp();
+    const base = { FORMAT: 'shorts-9x16', COMPREHENSION: comprehension, STRUCTURE: structure([scene(1), scene(2)]), SCENES: board() };
+    writeFileSync(join(dir, 'scenes.js'), serializeBoard(base));
+    const missing = checkStoryboard({ path: dir, draft: true });
+    assert.equal([...missing.structure, ...missing.contract].filter((f) => /\bid:/.test(f.what)).length, 0);
+    const duplicate = board().map((s, i) => ({ ...s, id: `s${String(i === 2 ? 2 : i + 1).padStart(4, '0')}` }));
+    writeFileSync(join(dir, 'scenes.js'), serializeBoard({ ...base, SCENES: duplicate }));
+    const checked = checkStoryboard({ path: dir, draft: true });
+    assert.equal([...checked.structure, ...checked.contract].filter((f) => /duplicate s0002/.test(f.what)).length, 1);
   });
 });
 

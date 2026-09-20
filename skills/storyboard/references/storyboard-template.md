@@ -12,7 +12,7 @@ channel: <channel slug>
 topic: <topic slug>
 status: draft            # draft | approved | produced | published
 created: <YYYY-MM-DD>
-portal_episode: <uuid>   # optional — written at approval by storyboard_save when the ttalkkakstory portal MCP is registered
+portal_episode: <uuid>   # optional — written at approval by portal_storyboard_save when the channel has a ttalkkakstory workspace API key
 portal_url: <url>        # optional — the portal page of that episode
 ---
 

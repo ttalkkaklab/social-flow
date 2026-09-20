@@ -30,7 +30,11 @@
         "YOUTUBE_OAUTH_FILE",
         "SUPERTONIC_PYTHON",
         "MFLUX_ZIMAGE_BIN",
-        "QWEN3_ASR_BIN"
+        "QWEN3_ASR_BIN",
+        "TTALKKAKSTORY_API_URL",
+        "TTALKKAKSTORY_WORKSPACE",
+        "TTALKKAKSTORY_API_KEY",
+        "TTALKKAKSTORY_HOLDER"
       ]
     }
   }

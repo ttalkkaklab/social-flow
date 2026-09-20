@@ -80,7 +80,7 @@
 
 const fs = require("fs");
 const path = require("path");
-const vm = require("vm");
+const { evaluateWindowScript } = require('../../_shared/scenes-vm.js');
 
 const SIZE_WORDS = {
   els: "extreme long shot, person under a tenth of the frame height",
@@ -347,10 +347,8 @@ function assemble(opts) {
 
 function loadShot(file, index) {
   const src = fs.readFileSync(file, "utf8");
-  const sandbox = { window: {}, console: { log() {}, warn() {}, error() {} } };
-  sandbox.globalThis = sandbox;
-  vm.runInNewContext(src, sandbox, { filename: file, timeout: 5000 });
-  const scenes = (sandbox.window && sandbox.window.SCENES) || [];
+  const win = evaluateWindowScript(src, { filename: file });
+  const scenes = win.SCENES || [];
   const i = Number(index);
   if (!Number.isInteger(i) || i < 0 || i >= scenes.length) {
     throw new Error("index " + index + " is outside SCENES[0.." + (scenes.length - 1) + "]");
@@ -360,7 +358,7 @@ function loadShot(file, index) {
   const pm = require("./production-mode.js");
   const overrideProblems = pm.shotStyleErrors(s, i);
   if (overrideProblems.length) throw new Error(overrideProblems.join("; "));
-  const style = pm.shotStyle(sandbox.window, i);
+  const style = pm.shotStyle(win, i);
   const sh = s.shot || {};
   const sp = sh.space || {};
   const v = s.visual || {};
