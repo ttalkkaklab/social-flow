@@ -16,10 +16,12 @@ import {
   STRUCTURE_VERSION,
   applyPatch,
   applyStoryboard,
+  checkScenario,
   checkStoryboard,
   contract,
   readBoard,
   sceneSchema,
+  scenarioCheckSchema,
   sequenceSchema,
   serializeBoard,
   shotSchema,
@@ -288,8 +290,8 @@ describe('checkStoryboard', () => {
 });
 
 describe('tool surface', () => {
-  it('the three tools exist with handlers and local hints', () => {
-    for (const name of ['storyboard_read', 'storyboard_apply', 'storyboard_check']) {
+  it('the four tools exist with handlers and local hints', () => {
+    for (const name of ['storyboard_read', 'storyboard_apply', 'storyboard_check', 'scenario_check']) {
       const tool = TOOLS.find((t) => t.name === name);
       assert.ok(tool, `missing tool ${name}`);
       assert.equal(typeof ROUTES[name], 'function');
@@ -300,6 +302,7 @@ describe('tool surface', () => {
     }
     assert.equal(TOOLS.find((t) => t.name === 'storyboard_apply').annotations.readOnlyHint, false);
     assert.equal(TOOLS.find((t) => t.name === 'storyboard_read').annotations.readOnlyHint, true);
+    assert.equal(TOOLS.find((t) => t.name === 'scenario_check').annotations.readOnlyHint, true);
   });
   it('storyboard_read returns the tree; storyboard_apply rejects an unknown argument', async () => {
     const dir = tmp();
@@ -308,6 +311,31 @@ describe('tool surface', () => {
     const tree = JSON.parse(out.content[0].text);
     assert.equal(tree.sequences[0].scenes[1].shots.length, 2);
     await assert.rejects(ROUTES.storyboard_apply({ path: dir, scene: [scene(1)] }), /unknown argument/);
+  });
+});
+
+describe('scenario_check runner', () => {
+  it('returns the checker JSON on exit 1 and turns exit 3 stderr into an input error', () => {
+    const dir = tmp();
+    const checker = join(dir, 'check-scenario-fixture.js');
+    writeFileSync(checker, `
+const target = process.argv[2];
+if (target === 'input-error') { console.error('check-scenario: target must be candidates/ or scenario.md'); process.exit(3); }
+const result = { files: [target], violations: 1, warnings: 1, findings: [
+  { level: 'bad', where: target, what: 'S1 missing direction' },
+  { level: 'warn', where: target, what: 'S12 hook exceeds the length band' }
+] };
+console.log(JSON.stringify(result));
+process.exit(1);
+`);
+    const parsed = checkScenario(scenarioCheckSchema.parse({ path: 'scenario.md' }), checker);
+    assert.equal(parsed.violations, 1);
+    assert.equal(parsed.warnings, 1);
+    assert.match(parsed.findings[0].what, /^S1 /);
+    assert.throws(
+      () => checkScenario(scenarioCheckSchema.parse({ path: 'input-error' }), checker),
+      /check-scenario\.js failed: check-scenario: target must be candidates\/ or scenario\.md/,
+    );
   });
 });
 

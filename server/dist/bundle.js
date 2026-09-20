@@ -75801,6 +75801,7 @@ var PLUGIN_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 var REFERENCES_DIR = join2(PLUGIN_ROOT, "skills", "storyboard", "references");
 var CONTRACT_FILE = join2(REFERENCES_DIR, "structure-contract.js");
 var CHECK_SCENES_FILE = join2(REFERENCES_DIR, "check-scenes.js");
+var CHECK_SCENARIO_FILE = join2(REFERENCES_DIR, "check-scenario.js");
 var loadFromHere = nodeModule.createRequire(import.meta.url);
 var contractCache;
 function contract() {
@@ -75944,6 +75945,9 @@ var storyboardReadSchema = external_exports.object({
 var storyboardCheckSchema = external_exports.object({
   path: external_exports.string().min(1).describe("The storyboard directory, or its scenes.js"),
   draft: external_exports.boolean().default(false).describe("The story pass (storyboard \xA74a) \u2014 machine-layer absences are deferred, not violations")
+});
+var scenarioCheckSchema = external_exports.object({
+  path: external_exports.string().min(1).describe("The candidates directory, or its selected scenario.md")
 });
 var globalsSchema = external_exports.record(external_exports.string().regex(/^[A-Z][A-Z0-9_]*$/, "a window.* global is UPPER_CASE"), external_exports.unknown());
 var transitionPatchSchema = external_exports.object({
@@ -76188,6 +76192,39 @@ function applyStoryboard(args) {
   }
   result.written = true;
   return result;
+}
+var scenarioCheckResultSchema = external_exports.object({
+  files: external_exports.array(external_exports.string()),
+  violations: external_exports.number().int().nonnegative(),
+  warnings: external_exports.number().int().nonnegative(),
+  findings: external_exports.array(external_exports.object({
+    level: external_exports.enum(["bad", "warn"]),
+    where: external_exports.string(),
+    what: external_exports.string()
+  }))
+});
+function checkScenario(args, checkFile = CHECK_SCENARIO_FILE) {
+  let raw = "";
+  try {
+    raw = execFileSync(process.execPath, [checkFile, args.path, "--json"], {
+      encoding: "utf8",
+      timeout: 6e4,
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+  } catch (e2) {
+    const err4 = e2;
+    raw = err4.stdout || "";
+    if (err4.status !== 1 || !raw.trim()) {
+      throw new Error(`check-scenario.js failed: ${(err4.stderr || err4.message).trim()}`);
+    }
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error(`check-scenario.js returned no JSON: ${raw.slice(0, 400)}`);
+  }
+  return scenarioCheckResultSchema.parse(parsed);
 }
 function checkStoryboard(args) {
   const { file, win } = readBoard(args.path);
@@ -86882,6 +86919,24 @@ Returns: counts (violations \xB7 warnings \xB7 deferred) and two lists \u2014 st
       },
       required: ["path"]
     }
+  },
+  {
+    name: "scenario_check",
+    title: "Check scenario candidates against their contract",
+    annotations: HINT.local,
+    description: `Run check-scenario.js on candidates/d1\u2013d3.md or the selected scenario.md and return its machine-readable S1\u2013S12 findings. Reads local scenario and research files and runs a local script; no API call.
+
+Use it after writing the three candidates and before showing them for selection, then again on scenario.md before the board is authored. A candidates/ directory includes the S7 set check; a selected scenario.md includes the chosen-direction and frozen checks.
+Do NOT treat a pass as approval of the wording or replace the storyboard review \u2014 this checks fields, references, structure, anchors, reveal discipline, length bands and frozen state.
+
+Returns: JSON \u2014 { files, violations, warnings, findings: [{ level, where, what }] }. Every what starts with S1\u2013S12; violations are P0 and warnings do not make the tool fail.`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        path: { type: "string", description: "The candidates/ directory or the selected scenario.md" }
+      },
+      required: ["path"]
+    }
   }
 ];
 var SNS_PLATFORM_BY_TOOL = {
@@ -94572,6 +94627,10 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
     contract();
     const r2 = checkStoryboard(parseArgs(storyboardCheckSchema, args));
     return text(renderCheck(r2), r2.violations > 0);
+  },
+  scenario_check: async (args) => {
+    const r2 = checkScenario(parseArgs(scenarioCheckSchema, args));
+    return text(JSON.stringify(r2, null, 2), r2.violations > 0);
   }
 };
 
