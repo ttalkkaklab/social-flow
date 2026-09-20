@@ -258,6 +258,30 @@ describe('episode payload', () => {
     assert.throws(() => episode.evaluateScenesJs('require("fs")'), 'the room has no require');
   });
 
+  it('a board cannot climb out of the room to the host process (review P1 — prototype escape)', () => {
+    process.env.REVIEW52_SENTINEL = 'must-not-leak';
+    try {
+      const escape = `
+        window.SCENES = [];
+        try { window.stolen = window.constructor.constructor("return process")().env.REVIEW52_SENTINEL; } catch (e) { window.caught = String(e); }
+        try { window.stolen2 = this.constructor.constructor("return process")().env.REVIEW52_SENTINEL; } catch (e) { window.caught2 = String(e); }
+        try { window.stolen3 = (function(){ return this; })().process; } catch (e) { window.caught3 = String(e); }
+      `;
+      const r = episode.evaluateScenesJs(escape);
+      assert.equal(r.meta.stolen, undefined);
+      assert.equal(r.meta.stolen2, undefined);
+      assert.equal(r.meta.stolen3, undefined);
+      assert.equal(JSON.stringify(r).includes('must-not-leak'), false);
+      assert.match(String(r.meta.caught ?? r.meta.caught2 ?? ''), /process is not defined/);
+    } finally {
+      delete process.env.REVIEW52_SENTINEL;
+    }
+  });
+
+  it('a runaway board hits the timeout instead of hanging the server', () => {
+    assert.throws(() => episode.evaluateScenesJs('window.SCENES = []; while (true) {}'), /Script execution timed out/);
+  });
+
   it('reads the storyboard.md head and strips the " — Storyboard" suffix from the title', () => {
     const h = episode.readStoryboardMd('---\nchannel: c\nstatus: draft\n---\n# Title Here — Storyboard\n');
     assert.deepEqual(h, { channel: 'c', topic: null, status: 'draft', title: 'Title Here' });

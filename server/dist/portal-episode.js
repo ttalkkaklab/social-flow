@@ -59,14 +59,26 @@ export function writePortalState(dir, patch) {
     writeFileSync(file, `${JSON.stringify(next, null, 2)}\n`);
     return next;
 }
-/** `scenes.js` source → `{ scenes, meta, sbDoc }`. Throws when there is no `window.SCENES` array. */
+/**
+ * `scenes.js` source → `{ scenes, meta, sbDoc }`. Throws when there is no `window.SCENES` array.
+ *
+ * Nothing from the host crosses into the room. `window` is created *inside* the context, so
+ * `window.constructor.constructor` is the room's own Function and cannot reach the host
+ * `process` (review P1 — a board written by someone else is untrusted input). What comes
+ * back out is one JSON string built inside the room, parsed here into plain objects.
+ * vm is not a security boundary against a hostile engine, but the known escape through
+ * host-object prototypes is closed, and the timeout bounds a runaway script.
+ */
 export function evaluateScenesJs(source) {
-    const win = {};
-    vm.runInNewContext(source, { window: win }, { timeout: 5000 });
-    if (!Array.isArray(win.SCENES))
+    const context = vm.createContext(Object.create(null));
+    vm.runInContext('var window = {};', context);
+    vm.runInContext(source, context, { timeout: 5000 });
+    const json = vm.runInContext('JSON.stringify(window)', context, { timeout: 5000 });
+    if (typeof json !== 'string')
+        throw new Error('scenes.js did not leave a window object.');
+    const plain = JSON.parse(json);
+    if (!Array.isArray(plain.SCENES))
         throw new Error('scenes.js has no window.SCENES array.');
-    // Objects from the vm context carry that room's prototypes — JSON round-trip makes them plain.
-    const plain = JSON.parse(JSON.stringify(win));
     const { SCENES, SB_DOC, ...meta } = plain;
     return {
         scenes: SCENES,

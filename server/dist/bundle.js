@@ -87435,10 +87435,13 @@ function writePortalState(dir, patch) {
   return next;
 }
 function evaluateScenesJs(source) {
-  const win = {};
-  vm2.runInNewContext(source, { window: win }, { timeout: 5e3 });
-  if (!Array.isArray(win.SCENES)) throw new Error("scenes.js has no window.SCENES array.");
-  const plain = JSON.parse(JSON.stringify(win));
+  const context = vm2.createContext(/* @__PURE__ */ Object.create(null));
+  vm2.runInContext("var window = {};", context);
+  vm2.runInContext(source, context, { timeout: 5e3 });
+  const json2 = vm2.runInContext("JSON.stringify(window)", context, { timeout: 5e3 });
+  if (typeof json2 !== "string") throw new Error("scenes.js did not leave a window object.");
+  const plain = JSON.parse(json2);
+  if (!Array.isArray(plain.SCENES)) throw new Error("scenes.js has no window.SCENES array.");
   const { SCENES, SB_DOC, ...meta } = plain;
   return {
     scenes: SCENES,
