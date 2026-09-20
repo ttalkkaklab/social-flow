@@ -131,6 +131,49 @@ test('hybrid and full video retain distinct semantic and policy rules', () => {
   partialCut.PRODUCTION.style = { preset: 'webtoon', selection: { kind: 'user', reference: 'User chose webtoon.' } };
   assert.match(mode.check(partialCut).join(), /style\.world is required once a generated cut exists/);
 });
+// A channel whose generated-video cap is 0 records its visual style through stills_only, and the
+// four-option cost comparison stays exactly four — there is no video to buy on such a board
+// (인물을 푼다고 EP08, 2026-09-20). This case carries the mode into `npm test`; the checkers'
+// own --selftest runs cover the same ground at a finer grain.
+function stillsBoard(n = 9, policy = { generatedVideoMax: 0, videoBudgetUsd: 0 }) {
+  const win = fixture(n);
+  win.MOTION_POLICY = policy;
+  win.PRODUCTION = { ...win.PRODUCTION, mode: 'stills_only', videoBudgetUsd: 0, maxAttempts: 1 };
+  delete win.PRODUCTION.approval;
+  for (const scene of win.SCENES) { scene.shot.render.mode = 'still_camera'; delete scene.visual.video; }
+  return win;
+}
+test('stills_only accepts nine still cuts, keeps the four cost choices and preserves the channel cap', () => {
+  const win = stillsBoard();
+  assert.deepEqual(mode.coverageErrors(win), []);
+  assert.deepEqual(mode.check(win), []);
+  assert.equal(mode.RATIOS.stills_only, undefined);
+  // The HITL surface is the owner directive of 2026-09-06 and does not grow a fifth option.
+  assert.deepEqual(Object.keys(quote(win).options), ['full_video', 'video_50', 'video_30', 'hook_only']);
+  assert.deepEqual(mode.policy({ generatedVideoMax: 0, videoBudgetUsd: 7 }, win.PRODUCTION, win.SCENES),
+    { generatedVideoMax: 0, videoBudgetUsd: 0 });
+  // The cap is read in the profile's spelling too, and from the policy the caller resolved.
+  assert.deepEqual(mode.check(stillsBoard(9, { generated_video_max: 0 })), []);
+  const capless = stillsBoard(); delete capless.MOTION_POLICY;
+  assert.match(mode.check(capless).join(), /needs the channel cap on the board/);
+  assert.deepEqual(mode.check(capless, { generatedVideoMax: 0 }), []);
+  assert.match(mode.check(stillsBoard(9, { generatedVideoMax: 2 })).join(), /generated_video_max is 0/);
+  const withCut = stillsBoard();
+  withCut.SCENES[4].visual.video = { engine: 'host' };
+  assert.match(mode.check(withCut).join(), /stills_only carries no generated clip/);
+  const withImport = stillsBoard();
+  withImport.SCENES[4].visual.reuse = { clip: 'clips/old.mp4' };
+  assert.match(mode.check(withImport).join(), /stills_only plays no video at all/);
+});
+test('the production gate clears a stills_only board with no quote and refuses a video call', () => withBoard(({ board, save }) => {
+  save(stillsBoard());
+  const gate = check(board);
+  assert.deepEqual(gate.errors, []);
+  assert.equal(gate.active, true);
+  assert.equal(gate.quote, null);
+  assert.deepEqual(gate.generatedShots, []);
+  assert.match(check(board, { beforeCall: 2 }).errors.join(), /no shot can be selected for a video API call/);
+}));
 test('the normal scene CLI permits full-video explanations beyond the hybrid cap', () => withBoard(({ board, save }) => {
   const win = fixture(); save(win);
   const run = spawnSync(process.execPath, [path.join(root, 'skills/storyboard/references/check-scenes.js'), board, '--draft', '--json'], { encoding: 'utf8' });

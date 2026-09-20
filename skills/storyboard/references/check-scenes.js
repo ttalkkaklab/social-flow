@@ -38,7 +38,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const vm = require('vm');
+const { evaluateWindowScript } = require('../../_shared/scenes-vm.js');
 const { execFileSync } = require('child_process');
 
 const SELF_DIR = __dirname;
@@ -146,15 +146,13 @@ function compactLength(value) {
 
 function readScenes(file) {
   const src = fs.readFileSync(file, 'utf8');
-  const sandbox = { window: {}, console: { log() {}, warn() {}, error() {} } };
-  sandbox.globalThis = sandbox;
   try {
-    vm.runInNewContext(src, sandbox, { filename: file, timeout: 5000 });
+    const win = evaluateWindowScript(src, { filename: file });
+    if (!Array.isArray(win.SCENES)) die('scenes.js has no window.SCENES array');
+    return win;
   } catch (e) {
     die('scenes.js does not evaluate: ' + (e && e.message));
   }
-  if (!Array.isArray(sandbox.window.SCENES)) die('scenes.js has no window.SCENES array');
-  return sandbox.window;
 }
 
 /** The format contract, straight from the preset — never a copy kept here. */
@@ -610,7 +608,13 @@ function check(win, fmt, opts) {
   const formatVideoMax = fmt.video && Number.isFinite(Number(fmt.video.generatedSecondsMax))
     ? Math.floor(Number(fmt.video.generatedSecondsMax) / 8) : 2;
   const productionMode = require('./production-mode.js');
-  productionMode.check(win, { draft }).forEach(message => bad('production mode', message));
+  const isShort = fmt.format !== LONG_FORMAT;
+  /* The channel policy the caller resolved (profile.md first, scenes.js otherwise) before
+     PRODUCTION's own overrides — production-mode reads the generated-video cap from it so a
+     board is not judged by whether it spelled the key snake_case or camelCase. */
+  const channelPolicy = (opts && opts.policy) || normalizeMotionPolicy(win.MOTION_POLICY || null, formatVideoMax, 'window.MOTION_POLICY', pacing, isShort);
+  productionMode.check(win, { draft, generatedVideoMax: channelPolicy.generatedVideoMax })
+    .forEach(message => bad('production mode', message));
   perShotLookFindings(win, { bad, machine, warn });
   /* Sequence → scene → shot (structure-contract.js) — the same rules storyboard_apply refuses
      to write past. A board with no window.STRUCTURE only warns here: old boards still build. */
@@ -619,8 +623,7 @@ function check(win, fmt, opts) {
     else if (f.level === 'later') machine(f.where, f.what);
     else warn(f.where, f.what);
   });
-  const isShort = fmt.format !== LONG_FORMAT;
-  const motionPolicy = productionMode.policy((opts && opts.policy) || normalizeMotionPolicy(null, formatVideoMax, 'default', pacing, isShort), win.PRODUCTION, scenes);
+  const motionPolicy = productionMode.policy(channelPolicy, win.PRODUCTION, scenes);
   const main = scenes.filter((s) => s.type !== 'broll' && s.type !== 'outro');
   const cover = scenes.find((s) => s.type === 'cover');
 
@@ -2637,6 +2640,57 @@ function selftest() {
     const missing = perShotFixture(); delete missing.SCENES[0].shot.cutType;
     return lookHas(perShot(missing), 'machine', /\[cutType-missing\]/) &&
       !lookHas(perShot(perShotFixture()), 'machine', /\[cutType-missing\]/);
+  })());
+  // A channel with generated_video_max 0 still has to record its visual style, and recording a
+  // style needs a PRODUCTION block, which needs a mode. Every cost mode demands a clip, so such a
+  // board had no passing shape before stills_only (인물을 푼다고 EP08, 2026-09-20).
+  const stillsOnlyFixture = () => ({
+    MOTION_POLICY: { generatedVideoMax: 0, videoBudgetUsd: 0 },
+    PRODUCTION: {
+      mode: 'stills_only', imageProvider: 'host', videoBudgetUsd: 0, maxAttempts: 1,
+      style: { preset: 'cinematic-miniature', selection: { kind: 'standing', reference: 'profile.md §3' } }
+    },
+    SCENES: [{ type: 'cover', visual: { bg: 'a miniature stadium at dusk' } }]
+  });
+  ok('stills_only passes a zero-video board where hybrid cannot, and holds its conditions', (() => {
+    const capped = stillsOnlyFixture(); capped.MOTION_POLICY.generatedVideoMax = 2;
+    const withClip = stillsOnlyFixture(); withClip.SCENES.push({ type: 'broll', visual: { bg: 'a javelin in flight' } });
+    const onHybrid = stillsOnlyFixture(); onHybrid.PRODUCTION.mode = 'hybrid';
+    const imported = stillsOnlyFixture();
+    imported.SCENES.push({ type: 'points', visual: { reuse: { clip: 'clips/old.mp4' } } });
+    return productionMode.check(stillsOnlyFixture(), {}).length === 0 &&
+      productionMode.check(capped, {}).some(e => /stills_only is for a channel/.test(e)) &&
+      productionMode.check(withClip, {}).some(e => /stills_only carries no generated clip/.test(e)) &&
+      productionMode.check(imported, {}).some(e => /stills_only plays no video at all/.test(e)) &&
+      productionMode.check(onHybrid, {}).some(e => /hybrid needs 1–2 generated clips/.test(e));
+  })());
+  // 인물을 푼다고 EP08 writes the cap the way profile.md does. A board judged by the key it
+  // happened to use is the same bug in a different coat (PR #282 review, 2026-09-20).
+  ok('stills_only reads the channel cap in either spelling, and from the resolved channel policy', (() => {
+    const snake = stillsOnlyFixture();
+    snake.MOTION_POLICY = { generated_video_max: 0, video_budget_usd: 0 };
+    const unrecorded = stillsOnlyFixture(); delete unrecorded.MOTION_POLICY;
+    const fromPolicy = stillsOnlyFixture(); delete fromPolicy.MOTION_POLICY;
+    const snakeCapped = stillsOnlyFixture();
+    snakeCapped.MOTION_POLICY = { generated_video_max: 2 };
+    return productionMode.check(snake, {}).length === 0 &&
+      productionMode.check(fromPolicy, { generatedVideoMax: 0 }).length === 0 &&
+      productionMode.check(unrecorded, {}).some(e => /stills_only needs the channel cap on the board/.test(e)) &&
+      productionMode.check(snakeCapped, {}).some(e => /stills_only is for a channel/.test(e)) &&
+      productionMode.videoCap({ MOTION_POLICY: { generated_video_max: 0 } }) === 0 &&
+      productionMode.videoCap({}) === null;
+  })());
+  // A user recording and a licensed stock clip are supplied footage, never generation: they sit
+  // outside eligible() everywhere else, and stills_only bars buying video, not playing the
+  // channel's own material (production-mode.md §stills_only).
+  ok('stills_only accepts supplied footage and still refuses a generated clip beside it', (() => {
+    const supplied = stillsOnlyFixture();
+    supplied.SCENES.push({ type: 'points', visual: { source: 'recording', clip: 'clips/screen.mp4' } });
+    supplied.SCENES.push({ type: 'points', visual: { source: 'stock', clip: 'clips/licensed.mp4' } });
+    const mixed = JSON.parse(JSON.stringify(supplied));
+    mixed.SCENES.push({ type: 'broll', visual: { bg: 'a javelin in flight' } });
+    return productionMode.check(supplied, {}).length === 0 &&
+      productionMode.check(mixed, {}).some(e => /stills_only carries no generated clip/.test(e));
   })());
   ok('cutType-unknown rejects an invented type and accepts the closed vocabulary', (() => {
     const unknown = perShotFixture(); unknown.SCENES[0].shot.cutType = 'portrait';

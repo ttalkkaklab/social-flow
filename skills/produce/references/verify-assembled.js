@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 'use strict';
-const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
+const fs=require('node:fs'),path=require('node:path');
+const {evaluateWindowScript}=require('../../_shared/scenes-vm.js');
 const {execFileSync}=require('node:child_process'),{createHash}=require('node:crypto');
 const hash=f=>createHash('sha256').update(fs.readFileSync(f)).digest('hex');
 const motion=require('./measure-motion.js');
@@ -44,8 +45,8 @@ function load(work){
   if(!proof.mediaSha256)throw new Error('rebuild: missing media provenance');
   match(work,proof.mediaSha256);
   for(const [file,digest] of Object.entries(speechMedia))if(proof.mediaSha256[file]!==digest)throw new Error('rebuild: missing or stale audio review provenance: '+file);
-  const sandbox={window:{}};vm.runInNewContext(fs.readFileSync(source,'utf8'),sandbox,{timeout:5000});
-  return {proof,scenes:sandbox.window.SCENES,policy:sandbox.window.MOTION_POLICY};
+  const win=evaluateWindowScript(fs.readFileSync(source,'utf8'),{filename:source});
+  return {proof,scenes:win.SCENES,policy:win.MOTION_POLICY};
 }
 function masters(work){
   const verified=JSON.parse(fs.readFileSync(path.join(work,'assembled-check.json'),'utf8'));

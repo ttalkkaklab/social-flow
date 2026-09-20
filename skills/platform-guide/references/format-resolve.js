@@ -40,7 +40,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const vm = require('vm');
+const { evaluateWindowScript } = require('../../_shared/scenes-vm.js');
 
 const { FORMATS, DEFAULT_FORMAT } = require('./formats.js');
 
@@ -52,21 +52,18 @@ function die(msg) {
 /**
  * Pulls window.FORMAT out of scenes.js.
  *
- * Evaluates with global.window laid into a vm sandbox — the same precedent
+ * Parses window assignments with the shared literal-only reader — the same contract
  * extract-text.js:32 uses. scenes.js is a plain script assigning
  * window.SCENES / window.THEME etc. at top level, so this reads all of it.
  */
 function readScenes(file) {
   if (!fs.existsSync(file)) die(`scenes.js not found: ${file}`);
   const src = fs.readFileSync(file, 'utf8');
-  const sandbox = { window: {}, console: { log() {}, warn() {}, error() {} } };
-  sandbox.globalThis = sandbox;
   try {
-    vm.runInNewContext(src, sandbox, { filename: file, timeout: 5000 });
+    return evaluateWindowScript(src, { filename: file });
   } catch (e) {
     die(`failed to evaluate scenes.js: ${e && e.message}`);
   }
-  return sandbox.window;
 }
 
 function pickFormat(win, override) {

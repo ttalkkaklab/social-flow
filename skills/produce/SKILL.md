@@ -997,12 +997,11 @@ three requirements (first chapter at 0:00 · 3 or more · at least `10 × SPEED`
 **stops there** if any is broken.
 
 ```bash
-# scenes.js array index = card idx (0-based). Read it the same vm way as format-resolve
+# scenes.js array index = card idx (0-based). Use the shared evaluator, as format-resolve does.
 node -e '
-const fs=require("fs"), vm=require("vm");
-const sb={window:{},console:{log(){},warn(){},error(){}}}; sb.globalThis=sb;
-vm.runInNewContext(fs.readFileSync("storyboard/scenes.js","utf8"), sb);
-(sb.window.SCENES||[]).forEach((s,i)=>{ if(s.chapter) console.log(i+"\t"+s.chapter); });
+const fs=require("fs"),{evaluateWindowScript}=require("./skills/_shared/scenes-vm.js");
+const win=evaluateWindowScript(fs.readFileSync("storyboard/scenes.js","utf8"));
+(win.SCENES||[]).forEach((s,i)=>{ if(s.chapter) console.log(i+"\t"+s.chapter); });
 ' > .work/chapters.tsv
 ```
 
@@ -1308,10 +1307,10 @@ Report every `fallback` and each `engine_selection` or `voice_selection` marked 
 
 On a pass, update storyboard.md to `status: produced`, present the artifact table (paths,
 length, platforms) together with the cost summary, and point the user at
-`/social-flow:publish`. If the portal MCP is registered (`mcp__ttalkkakstory__*`, README
-§Optional), call `storyboard_save` once more with the episode directory's absolute path (the
-board may have moved since approval — regenerated prompts, slide plans) and then
-`episode_set_status` with `status: "produced"` and the `episodeId` the save returned; that is `portal_episode` in `storyboard.md`'s frontmatter while the title is unchanged — a retitled board comes back as a new record, so overwrite `portal_episode`/`portal_url` with the save result before setting the status. Tools absent: one line, move on.
+`/social-flow:publish`. If the `portal_*` tools are listed (the channel has a ttalkkakstory
+workspace API key, README §The ttalkkakstory portal), call `portal_storyboard_save` once more with
+the episode directory's absolute path (the board may have moved since approval — regenerated prompts,
+slide plans) and then `portal_episode_status` with `status: "produced"` and the `episodeId` the save returned; `.portal.json` supplies that id on the save, so a retitled board updates the same portal record. Keep `portal_episode`/`portal_url` aligned with the save result before setting the status. Tools absent: one line, move on.
 A call that errors: report the message in one line, retry a 409 once, and finish the report
 and the `status: produced` file update regardless — the portal is a mirror, not a gate.
 

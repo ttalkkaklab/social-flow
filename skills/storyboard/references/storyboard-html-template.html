@@ -1379,10 +1379,11 @@ window.SB_DOC = {
       // ── production mode (window.PRODUCTION) and frame inputs ──
       prodHead: "Production mode and video cost",
       prodMode: "Mode", prodClips: "Generated clips", prodFirst: "First pass", prodRetry: "With retries",
-      prodModes: { hybrid: "Hybrid (legacy)", full_video: "100% or more", video_50: "50% or more", video_30: "30% or more", hook_only: "Hook only" },
+      prodModes: { hybrid: "Hybrid (legacy)", full_video: "100% or more", video_50: "50% or more", video_30: "30% or more", hook_only: "Hook only", stills_only: "Stills only (no generated video)" },
       prodScope: "Video API cost only. Images, narration, editing and tax are excluded; the mode not selected is an estimate under stated assumptions.",
       prodTerms: function (rate, cap, attempts) { return "Assumed KRW/USD: " + rate + ". Approved video budget: $" + cap + ". Total attempts per clip: " + attempts + "."; },
       prodRows: "Model, resolution and cost per shot", prodShot: "Shot ", withAudio: "with audio", silent: "silent",
+      prodOutside: function (label) { return "Selected mode: " + label + ". It generates no video, so it is not one of the four options compared above."; },
       framePending: "Image pending", frameStart: "Start frame", frameEnd: "End frame", framePreviz: "Previz · Video 1 (camera and timing)", framePrevizFirst: "Previz frame 1 (the still's composition)",
       frameChange: "Subject change", frameEndState: "End state: ",
 
@@ -1716,10 +1717,11 @@ window.SB_DOC = {
       // ── production mode (window.PRODUCTION) and frame inputs ──
       prodHead: "제작 방식과 영상 생성비",
       prodMode: "방식", prodClips: "생성 영상", prodFirst: "최초 생성", prodRetry: "재시도 포함 예상",
-      prodModes: { hybrid: "혼합 제작 (기존 승인)", full_video: "100% 이상", video_50: "50% 이상", video_30: "30% 이상", hook_only: "훅만 영상" },
+      prodModes: { hybrid: "혼합 제작 (기존 승인)", full_video: "100% 이상", video_50: "50% 이상", video_30: "30% 이상", hook_only: "훅만 영상", stills_only: "정지 전용 (생성 영상 0)" },
       prodScope: "영상 API 비용만 계산합니다. 이미지·음성·편집·세금은 제외하며 선택하지 않은 방식은 가정에 따른 추산입니다.",
       prodTerms: function (rate, cap, attempts) { return "원화 환산 가정: 1달러=" + rate + "원. 승인 예산: $" + cap + ". 장면당 총 시도 한도: " + attempts + "회."; },
       prodRows: "장면별 모델·해상도·생성비", prodShot: "장면 ", withAudio: "음성 포함", silent: "무음",
+      prodOutside: function (label) { return "선택한 방식: " + label + ". 생성 영상이 없어 위 네 가지 비교에는 들어가지 않습니다."; },
       framePending: "이미지 생성 예정", frameStart: "시작 프레임", frameEnd: "끝 프레임", framePreviz: "프리비즈 · Video 1 (카메라·타이밍)", framePrevizFirst: "프리비즈 1번 프레임 (스틸의 구도)",
       frameChange: "피사체 변화", frameEndState: "끝 상태: ",
 
@@ -3951,12 +3953,18 @@ window.SB_DOC = {
       });
       h += '</tbody></table><p>' + esc(T.prodScope) + '</p><p>' +
         esc(T.prodTerms(PCOST.krwPerUsd, window.PRODUCTION.videoBudgetUsd, window.PRODUCTION.maxAttempts)) + '</p>';
-      var selectedRows = PCOST.options[window.PRODUCTION.mode].rows;
-      h += '<details><summary>' + esc(T.prodRows) + '</summary><ul>' + selectedRows.map(function (r) {
+      // A selected mode the quote carries no entry for must not take the whole page down.
+      // stills_only is deliberately outside CHOICES (production-mode.js): a channel capped at 0
+      // generated video has nothing to compare. Say which mode is selected and read no row for it.
+      var selectedOption = PCOST.options[window.PRODUCTION.mode];
+      if (!selectedOption)
+        h += '<p>' + esc(T.prodOutside(T.prodModes[window.PRODUCTION.mode] || window.PRODUCTION.mode)) + '</p>';
+      var selectedRows = (selectedOption && selectedOption.rows) || [];
+      h += (selectedRows.length ? '<details><summary>' + esc(T.prodRows) + '</summary><ul>' : '') + selectedRows.map(function (r) {
         var g = r.generation || {}, model = g.model === 'seedance-1-5-pro-251215' ? 'Seedance 1.5 Pro' : g.model || r.key;
         return '<li>' + esc(T.prodShot) + r.shot + ' · ' + esc(model) + ' · ' + esc(g.resolution || '') +
           ' · ' + esc(g.generateAudio ? T.withAudio : T.silent) + ' · ' + r.seconds + 's · $' + r.usd.toFixed(3) + '</li>';
-      }).join('') + '</ul></details></section>';
+      }).join('') + (selectedRows.length ? '</ul></details>' : '') + '</section>';
     }
   }
   if (COST) {

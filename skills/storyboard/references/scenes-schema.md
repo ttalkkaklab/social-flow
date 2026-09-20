@@ -603,7 +603,10 @@ Use [production-mode.md](production-mode.md) for the HITL choice and machine fie
 choices (100% 이상, 50% 이상, 30% 이상, 훅만 영상) with video-only first-pass/retry costs
 and the explicit cap before assets. `video_50` and `video_30` enforce minimum shares of new
 cuts rounded up; `hook_only` generates only the opening hook. Other new cuts use purpose-routed
-HTML/still-camera scenes. Existing `hybrid` approvals retain their 1–2 clip rule. `full_video` uses every new scene as
+HTML/still-camera scenes. Existing `hybrid` approvals retain their 1–2 clip rule. A channel whose
+`generated_video_max` is 0 is never shown the comparison at all: its board writes the derived
+`stills_only`, which carries the visual style with no clip, no `visual.reuse`, no quote and no
+cost approval ([production-mode.md](production-mode.md) §stills_only). The choices stay four. `full_video` uses every new scene as
 `visual.video` and the selected episode style, including physical explanations; this replaces
 only the hybrid renderer and generated-count restrictions below. `MOTION_POLICY` remains the
 channel snapshot. Actual approval binds the quote fingerprint; changing inputs requires a new
@@ -732,6 +735,7 @@ and `camera-slide-template.html`; its image and effect parameters come from scen
 
 | Field | Required | Description |
 |---|---|---|
+| `id` | assigned by `storyboard_apply` | Stable shot identity such as `s0007`. Preserve it; do not change it by hand |
 | `type` | ✅ | `cover` \| `points` \| `quote` \| `broll` \| `outro` — the role (`hooking` is also accepted as a type, but write `beat: "hooking"` on a `points`/`quote` shot instead, §hooking) |
 | `narration` | ✅ (except `broll`, `outro`) | Segment array `[{tts, sub}, ...]` — one sentence = one segment = one reveal |
 | `visual` | ✅ | The visual plan object (below) |

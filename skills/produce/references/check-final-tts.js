@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 'use strict';
-const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
+const fs=require('node:fs'),path=require('node:path');
+const {evaluateWindowScript}=require('../../_shared/scenes-vm.js');
 const {createHash}=require('node:crypto');
 const {spawnSync}=require('node:child_process');
 const {normalize,cer}=require('./check-tts-quality.js');
 const hash=file=>createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 function narration(board){
-  const sandbox={window:{}};vm.runInNewContext(fs.readFileSync(board,'utf8'),sandbox,{timeout:5000});
-  const w=sandbox.window;
+  const w=evaluateWindowScript(fs.readFileSync(board,'utf8'),{filename:board});
   if(!Array.isArray(w.SCENES))throw new Error('Missing SCENES for final listening');
   const generated=w.VOICE!=='user'&&w.SCENES.some(s=>!['broll','outro'].includes(s.type)&&!(s.visual?.source==='screencast'&&s.visual?.sync===true)&&(s.narration||[]).some(n=>normalize(n.tts||'')));
   const speech=require('../../storyboard/references/story-contract.js').storySpeech(w).map(g=>g.n.tts||g.n.sub);

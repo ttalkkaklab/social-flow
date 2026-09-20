@@ -10,8 +10,7 @@ style rules there are enforced by a checker.
 
 These are the lanes the skills are allowed to name. A skill's `allowed-tools` may
 list the plugin's own server and nothing else; a host CLI's native media tools are not MCP
-tools and never appear there, and the portal mirror below is called by name in prose only,
-never listed.
+tools and never appear there.
 
 | Job | Lane | Not allowed |
 |---|---|---|
@@ -20,7 +19,7 @@ never listed.
 | Images and video where the host CLI ships its own media tools (Codex `image_gen`; Grok `image_gen` · `image_edit` · `image_to_video` · `reference_to_video`) | the host tool first (user directive 2026-09-07); the plugin server only as a fallback the user asked for | any external MCP server |
 | Images, video, voice, music, search otherwise | `mcp__social-flow__*` — the server this plugin ships | any external MCP server |
 | Reading an image | the `Read` tool, which takes images natively | vision MCP servers |
-| Mirroring an episode to the ttalkkakstory portal (approval · produced · published) | `mcp__ttalkkakstory__*`, registered in the user's own settings (README §Optional) — a mirror the skills call only when present, never a gate | shipping that server in the plugin's `.mcp.json` |
+| Keeping an episode on the ttalkkakstory portal (lease · candidates · board · approval · produced · published) | the plugin server's own `portal_*` tools, authenticated by the channel's workspace API key in `<SNS_TOKEN_DIR>/<channel>/ttalkkakstory.json` (README §The ttalkkakstory portal by workspace API key). Listed only while a key exists; a record the skills keep when present, never a gate. Owner directive 2026-09-21 — before it the portal's own MCP server had to be registered by hand, and the plugin was forbidden to ship it | registering the portal repository's `mcp/` server in the plugin's `.mcp.json`; any other portal client |
 
 **ego lite has no fallback.** It is macOS-only. Where it is missing, the skill says
 so and stops; it does not reach for a second browser. Two of these lanes exist
