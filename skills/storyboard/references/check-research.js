@@ -214,15 +214,12 @@ function formatOf(storyboardDir) {
 function readScenes(storyboardDir) {
   const file = path.join(storyboardDir, 'scenes.js');
   if (!fs.existsSync(file)) return null;
-  const vm = require('vm');
-  const sandbox = { window: {}, console: { log() {}, warn() {}, error() {} } };
-  sandbox.globalThis = sandbox;
   try {
-    vm.runInNewContext(fs.readFileSync(file, 'utf8'), sandbox, { filename: file, timeout: 5000 });
+    const win = require('../../_shared/scenes-vm.js').evaluateWindowScript(fs.readFileSync(file, 'utf8'), { filename: file });
+    return Array.isArray(win.SCENES) ? win.SCENES : null;
   } catch (e) {
     return null;
   }
-  return Array.isArray(sandbox.window.SCENES) ? sandbox.window.SCENES : null;
 }
 
 /**

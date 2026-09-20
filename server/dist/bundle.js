@@ -75856,17 +75856,164 @@ function describeToolGate(knownNames, env2 = process.env, jsonPatterns = []) {
 import { execFileSync } from "node:child_process";
 
 // src/scenes-vm.ts
-import vm from "node:vm";
-function evaluateWindowScript(source, options = {}) {
-  const timeout = options.timeoutMs ?? 5e3;
-  const context = vm.createContext(/* @__PURE__ */ Object.create(null));
-  vm.runInContext("var window = {}; var console = { log() {}, warn() {}, error() {}, info() {}, debug() {} };", context);
-  vm.runInContext(source, context, { filename: options.filename, timeout });
-  const json2 = vm.runInContext("JSON.stringify(window)", context, { timeout });
-  if (typeof json2 !== "string") throw new Error("the script did not leave a window object");
-  const plain = JSON.parse(json2);
-  if (!plain || typeof plain !== "object" || Array.isArray(plain)) throw new Error("the script replaced window with a non-object");
-  return plain;
+var SCENES_VM_POLICY = Object.freeze({ timeoutMs: 5e3, execution: false });
+var LiteralParser = class {
+  constructor(source) {
+    this.source = source;
+  }
+  source;
+  offset = 0;
+  fail(message) {
+    throw new SyntaxError(`${message} at offset ${this.offset}`);
+  }
+  skip() {
+    for (; ; ) {
+      const rest = this.source.slice(this.offset);
+      const space = /^(?:\s+)/.exec(rest);
+      if (space) {
+        this.offset += space[0].length;
+        continue;
+      }
+      const line = /^\/\/[^\n]*(?:\n|$)/.exec(rest);
+      if (line) {
+        this.offset += line[0].length;
+        continue;
+      }
+      const block = /^\/\*[\s\S]*?\*\//.exec(rest);
+      if (block) {
+        this.offset += block[0].length;
+        continue;
+      }
+      return;
+    }
+  }
+  take(text2) {
+    this.skip();
+    if (!this.source.startsWith(text2, this.offset)) this.fail(`expected ${JSON.stringify(text2)}`);
+    this.offset += text2.length;
+  }
+  maybe(text2) {
+    this.skip();
+    if (!this.source.startsWith(text2, this.offset)) return false;
+    this.offset += text2.length;
+    return true;
+  }
+  identifier() {
+    this.skip();
+    const match2 = /^[$A-Z_a-z][$\w]*/.exec(this.source.slice(this.offset));
+    if (!match2) this.fail("expected an identifier");
+    this.offset += match2[0].length;
+    return match2[0];
+  }
+  string() {
+    this.skip();
+    const quote = this.source[this.offset++];
+    if (quote !== '"' && quote !== "'") this.fail("expected a string");
+    let out = "";
+    while (this.offset < this.source.length) {
+      const ch = this.source[this.offset++];
+      if (ch === quote) return out;
+      if (ch === "\n" || ch === "\r") this.fail("a string cannot contain a raw newline");
+      if (ch !== "\\") {
+        out += ch;
+        continue;
+      }
+      const escaped = this.source[this.offset++];
+      const simple = { b: "\b", f: "\f", n: "\n", r: "\r", t: "	", v: "\v", "0": "\0" };
+      if (Object.hasOwn(simple, escaped)) {
+        out += simple[escaped];
+        continue;
+      }
+      if (escaped === "x") {
+        const hex = this.source.slice(this.offset, this.offset + 2);
+        if (!/^[0-9a-f]{2}$/i.test(hex)) this.fail("invalid hexadecimal escape");
+        out += String.fromCodePoint(parseInt(hex, 16));
+        this.offset += 2;
+        continue;
+      }
+      if (escaped === "u") {
+        const braced = /^\{([0-9a-f]+)\}/i.exec(this.source.slice(this.offset));
+        if (braced) {
+          out += String.fromCodePoint(parseInt(braced[1], 16));
+          this.offset += braced[0].length;
+          continue;
+        }
+        const hex = this.source.slice(this.offset, this.offset + 4);
+        if (!/^[0-9a-f]{4}$/i.test(hex)) this.fail("invalid Unicode escape");
+        out += String.fromCharCode(parseInt(hex, 16));
+        this.offset += 4;
+        continue;
+      }
+      if (escaped === "\n") continue;
+      if (escaped === "\r") {
+        if (this.source[this.offset] === "\n") this.offset++;
+        continue;
+      }
+      out += escaped;
+    }
+    this.fail("unterminated string");
+  }
+  number() {
+    this.skip();
+    const match2 = /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/.exec(this.source.slice(this.offset));
+    if (!match2) this.fail("expected a JSON number");
+    this.offset += match2[0].length;
+    return Number(match2[0]);
+  }
+  value() {
+    this.skip();
+    const ch = this.source[this.offset];
+    if (ch === '"' || ch === "'") return this.string();
+    if (ch === "[") return this.array();
+    if (ch === "{") return this.object();
+    if (ch === "-" || /\d/.test(ch ?? "")) return this.number();
+    const word = this.identifier();
+    if (word === "true") return true;
+    if (word === "false") return false;
+    if (word === "null") return null;
+    this.fail(`only literal values are allowed, found ${word}`);
+  }
+  array() {
+    const out = [];
+    this.take("[");
+    if (this.maybe("]")) return out;
+    for (; ; ) {
+      out.push(this.value());
+      if (this.maybe("]")) return out;
+      this.take(",");
+      if (this.maybe("]")) return out;
+    }
+  }
+  object() {
+    const out = /* @__PURE__ */ Object.create(null);
+    this.take("{");
+    if (this.maybe("}")) return out;
+    for (; ; ) {
+      this.skip();
+      const key = ['"', "'"].includes(this.source[this.offset] ?? "") ? this.string() : this.identifier();
+      this.take(":");
+      out[key] = this.value();
+      if (this.maybe("}")) return out;
+      this.take(",");
+      if (this.maybe("}")) return out;
+    }
+  }
+  script() {
+    const out = /* @__PURE__ */ Object.create(null);
+    for (; ; ) {
+      this.skip();
+      if (this.offset === this.source.length) return JSON.parse(JSON.stringify(out));
+      if (this.identifier() !== "window") this.fail("only window.KEY assignments are allowed");
+      this.take(".");
+      const key = this.identifier();
+      this.take("=");
+      out[key] = this.value();
+      this.maybe(";");
+    }
+  }
+};
+function evaluateWindowScript(source, _options = {}) {
+  return new LiteralParser(source).script();
 }
 
 // src/storyboard.ts

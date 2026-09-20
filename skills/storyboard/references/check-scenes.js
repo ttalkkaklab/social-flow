@@ -38,7 +38,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const vm = require('vm');
+const { evaluateWindowScript } = require('../../_shared/scenes-vm.js');
 const { execFileSync } = require('child_process');
 
 const SELF_DIR = __dirname;
@@ -146,15 +146,13 @@ function compactLength(value) {
 
 function readScenes(file) {
   const src = fs.readFileSync(file, 'utf8');
-  const sandbox = { window: {}, console: { log() {}, warn() {}, error() {} } };
-  sandbox.globalThis = sandbox;
   try {
-    vm.runInNewContext(src, sandbox, { filename: file, timeout: 5000 });
+    const win = evaluateWindowScript(src, { filename: file });
+    if (!Array.isArray(win.SCENES)) die('scenes.js has no window.SCENES array');
+    return win;
   } catch (e) {
     die('scenes.js does not evaluate: ' + (e && e.message));
   }
-  if (!Array.isArray(sandbox.window.SCENES)) die('scenes.js has no window.SCENES array');
-  return sandbox.window;
 }
 
 /** The format contract, straight from the preset — never a copy kept here. */

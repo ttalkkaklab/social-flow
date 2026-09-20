@@ -1,15 +1,11 @@
-/**
- * The literal-only scenes.js reader. Storyboards assign JSON-shaped values to window.*;
- * this parser accepts that grammar and never executes the file.
- */
+'use strict';
 
-export const SCENES_VM_POLICY = Object.freeze({ timeoutMs: 5000, execution: false });
+const SCENES_VM_POLICY = Object.freeze({ timeoutMs: 5000, execution: false });
 
 class LiteralParser {
-  private offset = 0;
-  constructor(private readonly source: string) {}
-  private fail(message: string): never { throw new SyntaxError(`${message} at offset ${this.offset}`); }
-  private skip(): void {
+  constructor(source) { this.source = source; this.offset = 0; }
+  fail(message) { throw new SyntaxError(`${message} at offset ${this.offset}`); }
+  skip() {
     for (;;) {
       const rest = this.source.slice(this.offset);
       const space = /^(?:\s+)/.exec(rest);
@@ -21,25 +17,16 @@ class LiteralParser {
       return;
     }
   }
-  private take(text: string): void {
-    this.skip();
-    if (!this.source.startsWith(text, this.offset)) this.fail(`expected ${JSON.stringify(text)}`);
-    this.offset += text.length;
-  }
-  private maybe(text: string): boolean {
-    this.skip();
-    if (!this.source.startsWith(text, this.offset)) return false;
-    this.offset += text.length;
-    return true;
-  }
-  private identifier(): string {
+  take(text) { this.skip(); if (!this.source.startsWith(text, this.offset)) this.fail(`expected ${JSON.stringify(text)}`); this.offset += text.length; }
+  maybe(text) { this.skip(); if (!this.source.startsWith(text, this.offset)) return false; this.offset += text.length; return true; }
+  identifier() {
     this.skip();
     const match = /^[$A-Z_a-z][$\w]*/.exec(this.source.slice(this.offset));
     if (!match) this.fail('expected an identifier');
     this.offset += match[0].length;
     return match[0];
   }
-  private string(): string {
+  string() {
     this.skip();
     const quote = this.source[this.offset++];
     if (quote !== '"' && quote !== "'") this.fail('expected a string');
@@ -50,7 +37,7 @@ class LiteralParser {
       if (ch === '\n' || ch === '\r') this.fail('a string cannot contain a raw newline');
       if (ch !== '\\') { out += ch; continue; }
       const escaped = this.source[this.offset++];
-      const simple: Record<string, string> = { b: '\b', f: '\f', n: '\n', r: '\r', t: '\t', v: '\v', '0': '\0' };
+      const simple = { b: '\b', f: '\f', n: '\n', r: '\r', t: '\t', v: '\v', '0': '\0' };
       if (Object.hasOwn(simple, escaped)) { out += simple[escaped]; continue; }
       if (escaped === 'x') {
         const hex = this.source.slice(this.offset, this.offset + 2);
@@ -70,28 +57,28 @@ class LiteralParser {
     }
     this.fail('unterminated string');
   }
-  private number(): number {
+  number() {
     this.skip();
     const match = /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/.exec(this.source.slice(this.offset));
     if (!match) this.fail('expected a JSON number');
     this.offset += match[0].length;
     return Number(match[0]);
   }
-  private value(): unknown {
+  value() {
     this.skip();
     const ch = this.source[this.offset];
     if (ch === '"' || ch === "'") return this.string();
     if (ch === '[') return this.array();
     if (ch === '{') return this.object();
-    if (ch === '-' || /\d/.test(ch ?? '')) return this.number();
+    if (ch === '-' || /\d/.test(ch || '')) return this.number();
     const word = this.identifier();
     if (word === 'true') return true;
     if (word === 'false') return false;
     if (word === 'null') return null;
     this.fail(`only literal values are allowed, found ${word}`);
   }
-  private array(): unknown[] {
-    const out: unknown[] = [];
+  array() {
+    const out = [];
     this.take('[');
     if (this.maybe(']')) return out;
     for (;;) {
@@ -101,13 +88,13 @@ class LiteralParser {
       if (this.maybe(']')) return out;
     }
   }
-  private object(): Record<string, unknown> {
-    const out = Object.create(null) as Record<string, unknown>;
+  object() {
+    const out = Object.create(null);
     this.take('{');
     if (this.maybe('}')) return out;
     for (;;) {
       this.skip();
-      const key = ['"', "'"].includes(this.source[this.offset] ?? '') ? this.string() : this.identifier();
+      const key = ['"', "'"].includes(this.source[this.offset]) ? this.string() : this.identifier();
       this.take(':');
       out[key] = this.value();
       if (this.maybe('}')) return out;
@@ -115,11 +102,11 @@ class LiteralParser {
       if (this.maybe('}')) return out;
     }
   }
-  script(): Record<string, unknown> {
-    const out = Object.create(null) as Record<string, unknown>;
+  script() {
+    const out = Object.create(null);
     for (;;) {
       this.skip();
-      if (this.offset === this.source.length) return JSON.parse(JSON.stringify(out)) as Record<string, unknown>;
+      if (this.offset === this.source.length) return JSON.parse(JSON.stringify(out));
       if (this.identifier() !== 'window') this.fail('only window.KEY assignments are allowed');
       this.take('.');
       const key = this.identifier();
@@ -130,12 +117,11 @@ class LiteralParser {
   }
 }
 
-export interface EvaluateWindowOptions {
-  filename?: string;
-  timeoutMs?: number;
+/** Parse a literal-only storyboard without executing JavaScript. */
+function evaluateWindowScript(source) {
+  const plain = new LiteralParser(source).script();
+  if (!plain || typeof plain !== 'object' || Array.isArray(plain)) throw new Error('the script did not leave a window object');
+  return plain;
 }
 
-/** Parse a literal-only storyboard without executing JavaScript. */
-export function evaluateWindowScript(source: string, _options: EvaluateWindowOptions = {}): Record<string, unknown> {
-  return new LiteralParser(source).script();
-}
+module.exports = { SCENES_VM_POLICY, evaluateWindowScript };

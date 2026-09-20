@@ -26,6 +26,7 @@ const require = createRequire(import.meta.url);
 const HERE = fileURLToPath(new URL('.', import.meta.url));
 const REF = resolve(HERE, '../../skills/platform-guide/references');
 const RESOLVE = join(REF, 'format-resolve.js');
+const SCENES_VM = resolve(HERE, '../../skills/_shared/scenes-vm.js');
 const PRODUCE = resolve(HERE, '../../skills/produce/references');
 
 const run = (...args) =>
@@ -172,7 +173,8 @@ test('presets without typesetting coordinates still reject --json', () => {
   ].join('\n'));
   const copy = join(dir, 'format-resolve.js');
   writeFileSync(copy, readFileSync(RESOLVE, 'utf8')
-    .replace("require('./formats.js')", `require(${JSON.stringify(fake)})`));
+    .replace("require('./formats.js')", `require(${JSON.stringify(fake)})`)
+    .replace("require('../../_shared/scenes-vm.js')", `require(${JSON.stringify(SCENES_VM)})`));
   assert.throws(
     () => execFileSync(process.execPath, [copy, '--format', 'shorts-9x16', '--json'],
       { encoding: 'utf8', stdio: 'pipe' }),
