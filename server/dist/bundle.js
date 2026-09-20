@@ -75857,16 +75857,51 @@ import { execFileSync } from "node:child_process";
 
 // src/scenes-vm.ts
 import vm from "node:vm";
+var SCENES_VM_POLICY = Object.freeze({
+  timeoutMs: 5e3,
+  codeGeneration: Object.freeze({ strings: false, wasm: false })
+});
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+function describeEvaluationError(error2, filename) {
+  const detail = error2 && typeof error2 === "object" ? error2 : {};
+  const message = typeof detail.message === "string" ? detail.message : String(error2);
+  const stack = typeof detail.stack === "string" ? detail.stack : "";
+  const locations = [...stack.matchAll(new RegExp(`${escapeRegExp(filename)}:([0-9]+)(?::([0-9]+))?`, "g"))];
+  const location = locations.find((match2) => match2[2]) ?? locations[0];
+  const line = location?.[1] ?? "1";
+  const column = location?.[2] ?? "1";
+  const wrapped = new Error(
+    `${filename}:${line}:${column}: ${message}. Allowed syntax: storyboard JavaScript that assigns JSON-serializable data to window.*; eval and Function are disabled.`
+  );
+  wrapped.name = typeof detail.name === "string" ? detail.name : "Error";
+  wrapped.cause = error2;
+  return wrapped;
+}
 function evaluateWindowScript(source, options = {}) {
-  const timeout = options.timeoutMs ?? 5e3;
-  const context = vm.createContext(/* @__PURE__ */ Object.create(null));
-  vm.runInContext("var window = {}; var console = { log() {}, warn() {}, error() {}, info() {}, debug() {} };", context);
-  vm.runInContext(source, context, { filename: options.filename, timeout });
-  const json2 = vm.runInContext("JSON.stringify(window)", context, { timeout });
-  if (typeof json2 !== "string") throw new Error("the script did not leave a window object");
-  const plain = JSON.parse(json2);
-  if (!plain || typeof plain !== "object" || Array.isArray(plain)) throw new Error("the script replaced window with a non-object");
-  return plain;
+  const timeout = options.timeoutMs ?? SCENES_VM_POLICY.timeoutMs;
+  const filename = options.filename ?? "scenes.js";
+  const context = vm.createContext(/* @__PURE__ */ Object.create(null), {
+    codeGeneration: SCENES_VM_POLICY.codeGeneration
+  });
+  try {
+    vm.runInContext(
+      "var window = {}; var console = { log() {}, warn() {}, error() {}, info() {}, debug() {} };",
+      context,
+      { timeout }
+    );
+    vm.runInContext(source, context, { filename, timeout });
+    const json2 = vm.runInContext("JSON.stringify(window)", context, { timeout });
+    if (typeof json2 !== "string") throw new Error("the script did not leave a window object");
+    const plain = JSON.parse(json2);
+    if (!plain || typeof plain !== "object" || Array.isArray(plain)) {
+      throw new Error("the script replaced window with a non-object");
+    }
+    return plain;
+  } catch (error2) {
+    throw describeEvaluationError(error2, filename);
+  }
 }
 
 // src/storyboard.ts

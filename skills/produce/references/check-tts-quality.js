@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 'use strict';
 // A report is valid only for the current scene text and exact source WAV.
-const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm');
+const fs = require('node:fs'), path = require('node:path');
+const { evaluateWindowScript } = require('../../_shared/scenes-vm.js');
 const { createHash } = require('node:crypto');
 const { authorizeSpeed } = require('./tts-speed-policy.js');
 const hash = value => createHash('sha256').update(value).digest('hex');
@@ -76,8 +77,8 @@ function approve(work, reference) {
 const lastReport=work=>read(path.join(path.resolve(work),REPORT));
 function check(work, board) {
   work=path.resolve(work);board=path.resolve(board);
-  const sandbox={window:{}};vm.runInNewContext(fs.readFileSync(path.join(board,'scenes.js'),'utf8'),sandbox,{timeout:5000});
-  const win=sandbox.window;
+  const scenesFile=path.join(board,'scenes.js');
+  const win=evaluateWindowScript(fs.readFileSync(scenesFile,'utf8'),{filename:scenesFile});
   if(!Array.isArray(win.SCENES))throw new Error('SCENES missing');
   const rows=fs.readFileSync(path.join(work,'cards.tsv'),'utf8').split(/\r?\n/).filter(l=>l.trim()&&!l.startsWith('#')).map(l=>l.split('\t'));
   const expected=win.SCENES.map((s,i)=>({s,i})).filter(({s})=>!['broll','outro'].includes(s.type));

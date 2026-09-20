@@ -273,7 +273,7 @@ describe('episode payload', () => {
       assert.equal(r.meta.stolen2, undefined);
       assert.equal(r.meta.stolen3, undefined);
       assert.equal(JSON.stringify(r).includes('must-not-leak'), false);
-      assert.match(String(r.meta.caught ?? r.meta.caught2 ?? ''), /process is not defined/);
+      assert.match(String(r.meta.caught ?? r.meta.caught2 ?? ''), /Code generation from strings disallowed/);
       // the local board reader (storyboard_read/apply/check) is the second place a pulled board runs — same room
       const dir = join(root, 'data', 'my-channel', 'episodes', 'ep-escape');
       mkdirSync(join(dir, 'storyboard'), { recursive: true });

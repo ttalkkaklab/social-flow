@@ -997,12 +997,11 @@ three requirements (first chapter at 0:00 · 3 or more · at least `10 × SPEED`
 **stops there** if any is broken.
 
 ```bash
-# scenes.js array index = card idx (0-based). Read it the same vm way as format-resolve
+# scenes.js array index = card idx (0-based). Use the shared evaluator, as format-resolve does.
 node -e '
-const fs=require("fs"), vm=require("vm");
-const sb={window:{},console:{log(){},warn(){},error(){}}}; sb.globalThis=sb;
-vm.runInNewContext(fs.readFileSync("storyboard/scenes.js","utf8"), sb);
-(sb.window.SCENES||[]).forEach((s,i)=>{ if(s.chapter) console.log(i+"\t"+s.chapter); });
+const fs=require("fs"),{evaluateWindowScript}=require("./skills/_shared/scenes-vm.js");
+const win=evaluateWindowScript(fs.readFileSync("storyboard/scenes.js","utf8"));
+(win.SCENES||[]).forEach((s,i)=>{ if(s.chapter) console.log(i+"\t"+s.chapter); });
 ' > .work/chapters.tsv
 ```
 

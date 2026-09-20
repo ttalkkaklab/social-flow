@@ -53,7 +53,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const vm = require('vm');
+const { evaluateWindowScript } = require('../../_shared/scenes-vm.js');
 const { spawnSync } = require('child_process');
 
 const SELF_DIR = __dirname;
@@ -171,21 +171,19 @@ function routeEngine(named, fallback) {
 }
 
 /**
- * Reads scenes.js by evaluating it in a vm sandbox — the same precedent
+ * Reads scenes.js with the shared literal-only parser — the same contract
  * format-resolve.js:readScenes and extract-text.js use. The file is a plain script
  * assigning window.SCENES / window.THEME at top level.
  */
 function readScenes(file) {
   const src = fs.readFileSync(file, 'utf8');
-  const sandbox = { window: {}, console: { log() {}, warn() {}, error() {} } };
-  sandbox.globalThis = sandbox;
   try {
-    vm.runInNewContext(src, sandbox, { filename: file, timeout: 5000 });
+    const win = evaluateWindowScript(src, { filename: file });
+    if (!Array.isArray(win.SCENES)) die('scenes.js has no window.SCENES array');
+    return win;
   } catch (e) {
     die('failed to evaluate scenes.js: ' + (e && e.message));
   }
-  if (!Array.isArray(sandbox.window.SCENES)) die('scenes.js has no window.SCENES array');
-  return sandbox.window;
 }
 
 /**

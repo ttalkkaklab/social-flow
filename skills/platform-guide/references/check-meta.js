@@ -25,7 +25,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const vm = require('vm');
+const { evaluateWindowScript } = require('../../_shared/scenes-vm.js');
 // Required in process, not spawned — a child resolved off PATH dies wherever `node` isn't on it
 // (launchd, `env -i`), and the failure is invisible: the hashtag rules go quiet and the
 // answer-leak gate flips to the shorts default. format-resolve.js --json emits this same preset.
@@ -196,10 +196,7 @@ function check(meta, ctx) {
 
 function readScenes(file) {
   const src = fs.readFileSync(file, 'utf8');
-  const sandbox = { window: {}, console: { log() {}, warn() {}, error() {} } };
-  sandbox.globalThis = sandbox;
-  vm.runInNewContext(src, sandbox, { filename: file, timeout: 5000 });
-  return sandbox.window;
+  return evaluateWindowScript(src, { filename: file });
 }
 
 function contextFrom(scenesPath) {

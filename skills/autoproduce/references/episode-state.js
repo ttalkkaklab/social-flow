@@ -40,7 +40,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const vm = require('vm');
+const { evaluateWindowScript } = require('../../_shared/scenes-vm.js');
 // The stage ladder lives in the pipeline manifest, not here. docs/pipeline-manifest.md
 const { STAGE_IDS, BROKEN_STAGE, resolveStage, nextFor } =
   require('../../platform-guide/references/pipeline.js');
@@ -91,12 +91,9 @@ function frontmatter(file) {
 function readScenes(file) {
   if (!exists(file)) return null;
   const src = fs.readFileSync(file, 'utf8');
-  const sandbox = { window: {}, console: { log() {}, warn() {}, error() {} } };
-  sandbox.globalThis = sandbox;
   let win = {};
   try {
-    vm.runInNewContext(src, sandbox, { filename: file, timeout: 5000 });
-    win = sandbox.window;
+    win = evaluateWindowScript(src, { filename: file });
   } catch (e) {
     return { broken: e && e.message };
   }

@@ -3,7 +3,7 @@
 // Assembly-only HITL: generation and publishing retain their own authorization.
 const fs = require('node:fs');
 const path = require('node:path');
-const vm = require('node:vm');
+const {evaluateWindowScript} = require('../../_shared/scenes-vm.js');
 const {createHash} = require('node:crypto');
 const {spawnSync} = require('node:child_process');
 const hash = value => createHash('sha256').update(value).digest('hex');
@@ -13,8 +13,7 @@ function read(file) { return fs.existsSync(file) ? JSON.parse(fs.readFileSync(fi
 function snapshot(work, board) {
   const files = new Set([path.join(board,'scenes.js')]);
   for (const name of ['cards.tsv','segs.tsv','video-review.json','cost-tally.tsv','format.env']) files.add(path.join(work,name));
-  const win = {window:{}};
-  vm.runInNewContext(fs.readFileSync(path.join(board,'scenes.js'),'utf8'),win,{timeout:5000});
+  const win = evaluateWindowScript(fs.readFileSync(path.join(board,'scenes.js'),'utf8'));
   // Include source images, clips and previz bytes as well as the plan itself.
   function visit(value) {
     if (typeof value === 'string' && value && !/^https?:/.test(value)) {
@@ -23,7 +22,7 @@ function snapshot(work, board) {
     } else if (Array.isArray(value)) value.forEach(visit);
     else if (value && typeof value === 'object') Object.values(value).forEach(visit);
   }
-  visit(win.window);
+  visit(win);
   if(fs.existsSync(path.join(work,'segs.tsv'))) {
     for(const line of fs.readFileSync(path.join(work,'segs.tsv'),'utf8').split(/\r?\n/)) {
       if(!line.trim() || line.startsWith('#')) continue;
@@ -101,10 +100,9 @@ function check(work, board) {
   const production=require('./check-production.js').check(board,{ready:true,manifest:true,workdir:work});
   warnings.push(...production.errors.map(e=>'check-production: '+e));
   // Mode validation may return early; reuse still needs its manifest indices downstream.
-  const win={window:{}};
-  vm.runInNewContext(fs.readFileSync(path.join(board,'scenes.js'),'utf8'),win,{timeout:5000});
-  warnings.push(...assemblyWarnings(work,board,win.window.SCENES,win.window.FORMAT));
-  production.reusedShots=win.window.SCENES.flatMap((s,i)=>s.visual?.reuse!==undefined?[i]:[]);
+  const win=evaluateWindowScript(fs.readFileSync(path.join(board,'scenes.js'),'utf8'));
+  warnings.push(...assemblyWarnings(work,board,win.SCENES,win.FORMAT));
+  production.reusedShots=win.SCENES.flatMap((s,i)=>s.visual?.reuse!==undefined?[i]:[]);
   fs.writeFileSync(path.join(work,'production-preflight.json'),JSON.stringify(production,null,2)+'\n');
   return decide(work,board,warnings,snapshot(work,board));
 }

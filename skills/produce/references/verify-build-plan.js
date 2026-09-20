@@ -3,7 +3,7 @@
 // Run against the source plan on every assembly, never a cached PASS marker.
 const fs = require('node:fs');
 const path = require('node:path');
-const vm = require('node:vm');
+const {evaluateWindowScript}=require('../../_shared/scenes-vm.js');
 const {createHash} = require('node:crypto');
 const {verifyClip}=require('./slide-render-proof.js');
 
@@ -54,14 +54,13 @@ function verify(work, board) {
   const file = path.join(board, 'scenes.js');
   if (!fs.existsSync(file)) throw new Error('source storyboard/scenes.js is required; pass the storyboard directory as build-reel.sh argument 2');
   const videoGate = require('./assembly-video-gate.js').check(work, board);
-  const win = {window:{}};
-  vm.runInNewContext(fs.readFileSync(file, 'utf8'), win, {timeout:5000});
-  const expected = win.window.SCENES.map((s,i)=>({s,i})).filter(({s})=>!['broll','outro'].includes(s.type)).map(({i})=>i);
+  const win = evaluateWindowScript(fs.readFileSync(file, 'utf8'), {filename:file});
+  const expected = win.SCENES.map((s,i)=>({s,i})).filter(({s})=>!['broll','outro'].includes(s.type)).map(({i})=>i);
   const cards = fs.readFileSync(path.join(work, 'cards.tsv'), 'utf8').split(/\r?\n/).filter(l=>l.trim()&&!l.startsWith('#'));
   const ids = cards.map(l=>l.split('\t')[0]);
   if (JSON.stringify(ids)!==JSON.stringify(expected.map(String))) throw new Error('cards.tsv does not match SCENES order; no unplanned opening, missing card or duplicate card is allowed');
-  require('./edit-plan.js').write(work,win.window.SCENES,{videoWarningsApproved:videoGate.approved});
-  const mediaSha256={...verifyManifest(work,board,win.window.SCENES,win.window.FORMAT,{videoWarningsApproved:videoGate.approved}),...require('./check-tts-quality.js').check(work,board)};
+  require('./edit-plan.js').write(work,win.SCENES,{videoWarningsApproved:videoGate.approved});
+  const mediaSha256={...verifyManifest(work,board,win.SCENES,win.FORMAT,{videoWarningsApproved:videoGate.approved}),...require('./check-tts-quality.js').check(work,board)};
   const hash = p=>createHash('sha256').update(fs.readFileSync(p)).digest('hex');
   const plugin = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../../.claude-plugin/plugin.json'),'utf8'));
   fs.writeFileSync(path.join(work, 'build-plan-check.json'), JSON.stringify({videoGate,ttsGate:require('./check-tts-quality.js').lastReport(work),mediaSha256,version:plugin.version,storyboard:board,scenesSha256:hash(file),cardsSha256:hash(path.join(work,'cards.tsv')),segsSha256:hash(path.join(work,'segs.tsv')),resolvedCardsSha256:hash(path.join(work,'cards.resolved.tsv')),editPlanSha256:hash(path.join(work,'edit-plan.json')),checks:['check-scenes','check-slide','segment-inputs','edit-plan'],cards:expected},null,2)+'\n');
