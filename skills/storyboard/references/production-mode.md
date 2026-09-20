@@ -25,8 +25,11 @@ Do not reinterpret an approval of a topic as approval of full-video spend.
 A channel whose `generated_video_max` is 0 never reaches this comparison — there is no video to
 buy and no cost to weigh, so no option is offered. Its board writes `mode: 'stills_only'`, which
 is not one of the four choices and carries no cost approval. Use it only while the channel cap
-stays 0, and only on a board where no shot holds a clip; the board still records its visual
-style, which is the one thing `PRODUCTION` carries there.
+stays 0, and only on a board that plays no video at all — no generated clip, and no imported
+`visual.reuse` either (an imported clip keeps its own zero-generation shape under legacy
+`hybrid`). The board still records its visual style, which is the one thing `PRODUCTION`
+carries there. `check-production.js` skips the quote, the approval and the budget comparison
+for this mode, and refuses `--before-call`: there is no video call to make.
 
 Count cuts, not duration; round the minimum up. Exclude imported `visual.reuse` clips,
 user recordings, supplied stock clips and the shared outro from the denominator; b-roll is

@@ -2649,13 +2649,16 @@ function selftest() {
     },
     SCENES: [{ type: 'cover', visual: { bg: 'a miniature stadium at dusk' } }]
   });
-  ok('stills_only passes a zero-video board where hybrid cannot, and holds its two conditions', (() => {
+  ok('stills_only passes a zero-video board where hybrid cannot, and holds its conditions', (() => {
     const capped = stillsOnlyFixture(); capped.MOTION_POLICY.generatedVideoMax = 2;
     const withClip = stillsOnlyFixture(); withClip.SCENES.push({ type: 'broll', visual: { bg: 'a javelin in flight' } });
     const onHybrid = stillsOnlyFixture(); onHybrid.PRODUCTION.mode = 'hybrid';
+    const imported = stillsOnlyFixture();
+    imported.SCENES.push({ type: 'points', visual: { reuse: { clip: 'clips/old.mp4' } } });
     return productionMode.check(stillsOnlyFixture(), {}).length === 0 &&
       productionMode.check(capped, {}).some(e => /stills_only is for a channel/.test(e)) &&
       productionMode.check(withClip, {}).some(e => /stills_only carries no generated clip/.test(e)) &&
+      productionMode.check(imported, {}).some(e => /stills_only plays no video at all/.test(e)) &&
       productionMode.check(onHybrid, {}).some(e => /hybrid needs 1–2 generated clips/.test(e));
   })());
   ok('cutType-unknown rejects an invented type and accepts the closed vocabulary', (() => {

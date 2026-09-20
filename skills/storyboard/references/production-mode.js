@@ -443,7 +443,9 @@
       errors.push('PRODUCTION.videoBudgetUsd must be a finite nonnegative episode cap');
     if (!Number.isInteger(p.maxAttempts) || p.maxAttempts < 1 || p.maxAttempts > 5)
       errors.push('PRODUCTION.maxAttempts must be 1–5 total attempts per clip (including the first)');
-    if (requireApproval && (!p.approval || !['user', 'standing'].includes(p.approval.kind) ||
+    // stills_only buys no generated video, so there is no cost quote to fingerprint and nothing
+    // for the user to approve; the four-option comparison never ran. Every other mode carries one.
+    if (requireApproval && p.mode !== 'stills_only' && (!p.approval || !['user', 'standing'].includes(p.approval.kind) ||
         !text(p.approval.reference) || !Number.isFinite(Date.parse(p.approval.at)) || !text(p.approval.quoteFingerprint)))
       errors.push('PRODUCTION.approval needs kind, reference, at and the approved cost quoteFingerprint');
     // The visual style is asked before authoring in every production mode (visual-style.md,
@@ -505,6 +507,10 @@
         if (Number(win.MOTION_POLICY?.generatedVideoMax) !== 0)
           errors.push('stills_only is for a channel whose generated_video_max is 0; choose a cost mode from the four-option comparison instead');
         if (count) errors.push('stills_only carries no generated clip; ' + count + ' shot(s) hold one — drop them or choose a cost mode');
+        // An imported clip already has its own zero-generation shape under legacy hybrid, so the two
+        // contracts stay disjoint: stills_only is the board that plays no video at all.
+        const imported = (win.SCENES || []).filter(reused).length;
+        if (imported) errors.push('stills_only plays no video at all; ' + imported + ' shot(s) import one (visual.reuse) — drop them or use the reuse shape');
       }
       return errors;
     }
