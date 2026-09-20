@@ -76014,8 +76014,9 @@ var cameraSchema = external_exports.record(external_exports.unknown()).superRefi
     ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
 });
 var visualSchema = external_exports.object({ camera: cameraSchema.optional() }).passthrough();
+var shotIdSchema = external_exports.string().regex(/^s\d{4,}$/);
 var shotSchema = external_exports.object({
-  id: external_exports.string().regex(/^s\d{4,}$/).optional(),
+  id: shotIdSchema.optional(),
   type: tuple(V.TYPES),
   title: external_exports.string().optional(),
   narration: external_exports.array(external_exports.object({ tts: external_exports.string(), sub: external_exports.string().optional() }).passthrough()).optional(),
@@ -76099,9 +76100,15 @@ var storyboardApplySchema = external_exports.object({
   sequences: external_exports.array(sequenceSchema).optional().describe("Upsert sequences by id"),
   scenes: external_exports.array(sceneSchema).optional().describe("Upsert scenes by no"),
   shots: external_exports.array(external_exports.object({ no: external_exports.number().int().positive(), shot: shotSchema })).optional().describe("Upsert shots by 1-based position; no = length + 1 appends"),
-  insertShots: external_exports.array(external_exports.object({ after: external_exports.number().int().min(0), shots: external_exports.array(shotSchema).min(1) })).optional().describe("Insert shots after a 1-based position (0 = at the start). Later positions shift"),
+  shotsById: external_exports.array(external_exports.object({ id: shotIdSchema, shot: shotSchema })).optional().describe("Replace shots by their stable id (R6); the shot keeps that id. An unknown id is an error, nothing is written"),
+  insertShots: external_exports.array(external_exports.object({
+    after: external_exports.number().int().min(0).optional(),
+    afterId: shotIdSchema.optional(),
+    shots: external_exports.array(shotSchema).min(1)
+  }).refine((e2) => e2.after === void 0 !== (e2.afterId === void 0), { message: "give exactly one of after (position) or afterId (shot id)" })).optional().describe("Insert shots after a 1-based position (0 = at the start) or after the shot with afterId. Later positions shift"),
   transitions: external_exports.array(transitionPatchSchema).min(1).optional().describe("Change only incoming transitions; dip fades through black. Keeps narration and visuals intact"),
   removeShots: external_exports.array(external_exports.number().int().positive()).optional().describe("1-based positions to drop, resolved before the insert"),
+  removeShotIds: external_exports.array(shotIdSchema).min(1).optional().describe("Shot ids to drop, resolved before the insert"),
   removeScenes: external_exports.array(external_exports.number().int().positive()).optional(),
   removeSequences: external_exports.array(external_exports.string()).optional(),
   globals: globalsSchema.optional().describe("Set other window.* blocks \u2014 FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, VOICE, MOTION_POLICY"),
@@ -76207,6 +76214,19 @@ function applyPatch(win, patch) {
   if (patch.sequences || patch.scenes || patch.removeScenes || patch.removeSequences || next.STRUCTURE)
     next.STRUCTURE = { version: st.version ?? STRUCTURE_VERSION, ...st.nextShotId === void 0 ? {} : { nextShotId: st.nextShotId }, sequences, scenes };
   let shots = Array.isArray(next.SCENES) ? next.SCENES.slice() : [];
+  const byPosition = Boolean(patch.shots || patch.removeShots || patch.insertShots?.some((e2) => e2.after !== void 0));
+  const byId = Boolean(patch.shotsById || patch.removeShotIds || patch.insertShots?.some((e2) => e2.afterId !== void 0));
+  if (byPosition && byId) throw new Error("address shots by position (shots \xB7 after \xB7 removeShots) or by id (shotsById \xB7 afterId \xB7 removeShotIds) in one patch, not both");
+  const positionOfId = (id, list, what) => {
+    const index = list.findIndex((shot) => shot.id === id);
+    if (index < 0) throw new Error(`${what}: no shot with id ${id} on this board`);
+    return index;
+  };
+  if (patch.shotsById) for (const { id, shot } of patch.shotsById) {
+    const index = positionOfId(id, shots, "shotsById");
+    if (shot.id !== void 0 && shot.id !== id) throw new Error(`shotsById ${id}: the shot carries a different id (${shot.id}) \u2014 an id is not renamed through an upsert`);
+    shots[index] = { id, ...shot };
+  }
   if (patch.shots) for (const { no, shot } of patch.shots.slice().sort((a, b) => a.no - b.no)) {
     if (no > shots.length + 1) throw new Error(`shot ${no}: the board has ${shots.length} shots \u2014 no = ${shots.length + 1} appends`);
     const current = shots[no - 1];
@@ -76218,15 +76238,24 @@ function applyPatch(win, patch) {
     for (const no of drop) if (no > shots.length) throw new Error(`removeShots: there is no shot ${no}`);
     shots = shots.filter((_, i2) => !drop.has(i2 + 1));
   }
+  if (patch.removeShotIds) {
+    const drop = new Set(patch.removeShotIds.map((id) => positionOfId(id, shots, "removeShotIds")));
+    shots = shots.filter((_, i2) => !drop.has(i2));
+  }
   if (patch.insertShots) {
-    const inserts = patch.insertShots.slice().sort((a, b) => b.after - a.after);
+    const resolved = patch.insertShots.map((e2) => ({
+      after: e2.after !== void 0 ? e2.after : positionOfId(e2.afterId, shots, "insertShots.afterId") + 1,
+      shots: e2.shots
+    }));
+    const inserts = resolved.sort((a, b) => b.after - a.after);
     for (const { after, shots: add } of inserts) {
       if (after > shots.length) throw new Error(`insertShots: after ${after} is past the last shot (${shots.length})`);
       shots.splice(after, 0, ...add);
     }
   }
   const finalOrder = shots.slice();
-  for (const source of patch.removeShots || patch.insertShots ? finalOrder : []) {
+  const reordered = Boolean(patch.removeShots || patch.removeShotIds || patch.insertShots);
+  for (const source of reordered ? finalOrder : []) {
     if (!beforeReorder.includes(source)) continue;
     const e2 = source.shot?.eyeline;
     if (e2 && typeof e2.matchShot === "number") {
@@ -87260,7 +87289,7 @@ Returns: JSON \u2014 { version, format, shots, sequences[\u2026scenes[\u2026shot
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     description: `Write a storyboard's scenes.js from a sequence \u2192 scene \u2192 shot model, or patch part of it, in one call. Every shot is validated against the grammar vocabularies (type \xB7 beat \xB7 size \xB7 angle \xB7 infoType \xB7 shareType \xB7 render.mode \xB7 transition), the structure against its rules (one place and time per scene, a charge that turns, every scene in exactly one sequence, shots grouped by scene in sequence order, two sizes per scene), and the derived shot labels (sceneSlug \xB7 sequence) are written from the structure. Nothing is written when a violation is found \u2014 the findings come back instead. Warnings are written and reported.
 
-Use it to author a new board (set = { structure, shots }) after the narration is approved (storyboard \xA74), and to change one thing later (scenes / sequences / shots by key, insertShots, removeShots, globals for FORMAT \xB7 THEME \xB7 COMPREHENSION \xB7 STORY \xB7 PRODUCTION \xB7 MUSIC). Use transitions to change only the effect before selected shots without replacing their narration or visuals. dip fades out to black and fades the next scene in; prefer it for changes of place or time unless a specific cut calls for another effect. One call carries the whole change \u2014 do not write scenes.js by hand and do not call this once per shot. dryRun:true validates without writing.
+Use it to author a new board (set = { structure, shots }) after the narration is approved (storyboard \xA74), and to change one thing later (scenes / sequences by key, shots by id \u2014 shotsById \xB7 insertShots.afterId \xB7 removeShotIds \u2014 or by position, globals for FORMAT \xB7 THEME \xB7 COMPREHENSION \xB7 STORY \xB7 PRODUCTION \xB7 MUSIC). Address shots by id once the board has them (every board written by this tool does): a review note names s0007, and positions shift with every insert; a patch mixes id and position addressing at its own peril \u2014 it is refused. Use transitions to change only the effect before selected shots without replacing their narration or visuals. dip fades out to black and fades the next scene in; prefer it for changes of place or time unless a specific cut calls for another effect. One call carries the whole change \u2014 do not write scenes.js by hand and do not call this once per shot. dryRun:true validates without writing.
 storyboard_apply assigns stable shot ids (s0001\u2026) and advances STRUCTURE.nextShotId; preserve those ids and do not edit them by hand.
 Shot creation, upserts and inserts expose type, shot.render.mode, shot.videoDesign, visual.camera and the three plan records shot.eyeline \xB7 shot.composition \xB7 shot.depth in the input schema. shot.depth (L11): count what the viewer must read in the frame at once \u2014 one thing \u2192 shallow with focus (a person's eyes), two or more \u2192 deep with the planes listed front to back; a departure needs a reason, and a still_camera focus-in/rack-focus cut cannot be deep. For a drone shot choose preset:"drone-flythrough", variant:"cinematic" or "fpv", and the trajectory. The preset does not change the episode style or select a paid model.
 Do NOT pass a shot's visual plan through a summary \u2014 pass the object scenes-schema.md defines (visual \xB7 shot.space \xB7 visual.camera \xB7 visual.video \u2026); unknown keys on a shot pass through untouched. Editing an approved board drops its \`// approved:\` line; it is approved again at the HITL gate.
@@ -87284,8 +87313,9 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
         structure: { type: "object", description: "Replace window.STRUCTURE only" },
         sequences: { type: "array", items: { type: "object", description: "{ id, title, purpose, question?, payoff?, scenes }" }, description: "Upsert sequences by id" },
         scenes: { type: "array", items: { type: "object", description: "{ no, place, time, event, charge, turn, out? }" }, description: "Upsert scenes by no" },
-        shots: { type: "array", items: { type: "object", description: "One positional upsert", properties: { no: { type: "number", description: "1-based position" }, shot: storyboardShotInput }, required: ["no", "shot"] }, description: "Upsert shots by 1-based position; no = length + 1 appends" },
-        insertShots: { type: "array", items: { type: "object", description: "One insert", properties: { after: { type: "number", description: "1-based position to insert after; 0 = at the start" }, shots: { type: "array", items: storyboardShotInput, description: "Shots to insert, in order" } }, required: ["after", "shots"] }, description: "Insert shots after a 1-based position (0 = at the start)" },
+        shots: { type: "array", items: { type: "object", description: "One positional upsert", properties: { no: { type: "number", description: "1-based position" }, shot: storyboardShotInput }, required: ["no", "shot"] }, description: "Upsert shots by 1-based position; no = length + 1 appends. Not with the id fields in the same patch" },
+        shotsById: { type: "array", items: { type: "object", description: "One upsert by id", properties: { id: { type: "string", pattern: "^s\\d{4,}$", description: "The stable shot id (s0007) to replace" }, shot: storyboardShotInput }, required: ["id", "shot"] }, description: "Replace shots by their stable id \u2014 the shot keeps that id, an unknown id writes nothing. Preferred over shots once the board has ids: positions shift with every insert, ids do not" },
+        insertShots: { type: "array", items: { type: "object", description: "One insert", properties: { after: { type: "number", description: "1-based position to insert after; 0 = at the start" }, afterId: { type: "string", pattern: "^s\\d{4,}$", description: "The shot id to insert after \u2014 instead of after" }, shots: { type: "array", items: storyboardShotInput, description: "Shots to insert, in order" } }, required: ["shots"] }, description: "Insert shots after a 1-based position (0 = at the start) or after the shot with afterId \u2014 exactly one of the two per entry" },
         transitions: {
           type: "array",
           minItems: 1,
@@ -87299,6 +87329,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
           }, required: ["no", "transition", "reason"] }
         },
         removeShots: { type: "array", items: { type: "number", description: "1-based position" }, description: "1-based positions to drop (resolved before inserts)" },
+        removeShotIds: { type: "array", items: { type: "string", pattern: "^s\\d{4,}$", description: "A stable shot id" }, description: "Shot ids to drop (resolved before inserts). Not with the position fields in the same patch" },
         removeScenes: { type: "array", items: { type: "number", description: "Scene number" }, description: "Scene numbers to drop from STRUCTURE.scenes and from every sequence" },
         removeSequences: { type: "array", items: { type: "string", description: "Sequence id" }, description: "Sequence ids to drop" },
         globals: { type: "object", description: "Other window.* blocks to set \u2014 FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, VOICE, MOTION_POLICY" },

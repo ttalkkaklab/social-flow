@@ -53,6 +53,15 @@ test('insert remaps references without mutating input and removal refuses dangli
   assert.equal(JSON.stringify(win), before);
   assert.throws(() => applyPatch(win, storyboardApplySchema.parse({ path: 'unused', removeShots: [2] })), /target was removed/);
 });
+test('removeShotIds remaps references like a positional remove and refuses a dropped target (R7)', () => {
+  const ids = (xs) => xs.map((s, i) => ({ ...s, id: `s000${i + 1}` }));
+  // [s0001, s0002, s0003(matchShot:2)] — dropping s0001 by id must move the reference to 1, not leave it at 2 (itself).
+  const base = { SCENES: ids([shot(undefined), shot(undefined), shot(eye({ mode: 'reaction', subject: 'B', target: 'A', matchShot: 2 }))]) };
+  const r = applyPatch(base, storyboardApplySchema.parse({ path: 'unused', removeShotIds: ['s0001'] }));
+  assert.deepEqual(r.win.SCENES.map((s) => s.id), ['s0002', 's0003']);
+  assert.equal(r.win.SCENES[1].shot.eyeline.matchShot, 1);
+  assert.throws(() => applyPatch(base, storyboardApplySchema.parse({ path: 'unused', removeShotIds: ['s0002'] })), /target was removed/);
+});
 test('source prompts use eyeline but skip none', () => {
   assert.match(assemble({ size: 'mcu', eyeline: eye() }).prompt, /A looks at B, screen-right, up, target distance near/);
   assert.doesNotMatch(assemble({ size: 'ls', eyeline: { mode: 'none', reason: 'landscape' } }).prompt, /No gaze/);

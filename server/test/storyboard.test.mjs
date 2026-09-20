@@ -174,6 +174,33 @@ describe('applyPatch', () => {
     assert.equal(changed.win.SCENES[1].id, 's0042');
     assert.equal(changed.win.STRUCTURE.nextShotId, 43);
   });
+  it('shotsById replaces a shot by its id and keeps the id; an unknown id or a renamed id writes nothing (R7)', () => {
+    const base = applyPatch({}, storyboardApplySchema.parse({ path: 'x', set: { structure: structure([scene(1), scene(2)]), shots: board() } })).win;
+    const edited = applyPatch(base, storyboardApplySchema.parse({ path: 'x', shotsById: [{ id: 's0002', shot: { ...board()[1], title: 'edited by id' } }] }));
+    assert.deepEqual(edited.win.SCENES.map((s) => s.id), ['s0001', 's0002', 's0003', 's0004']);
+    assert.equal(edited.win.SCENES[1].title, 'edited by id');
+    assert.equal(edited.win.STRUCTURE.nextShotId, 5, 'no id was spent');
+    assert.throws(() => applyPatch(base, storyboardApplySchema.parse({ path: 'x', shotsById: [{ id: 's0099', shot: board()[1] }] })), /no shot with id s0099/);
+    assert.throws(() => applyPatch(base, storyboardApplySchema.parse({ path: 'x', shotsById: [{ id: 's0002', shot: { ...board()[1], id: 's0003' } }] })), /not renamed through an upsert/);
+    assert.throws(() => storyboardApplySchema.parse({ path: 'x', shotsById: [{ id: 'shot-2', shot: board()[1] }] }));
+  });
+  it('afterId inserts after that shot and removeShotIds drops by id — positions may shift, ids do not (R7)', () => {
+    const base = applyPatch({}, storyboardApplySchema.parse({ path: 'x', set: { structure: structure([scene(1), scene(2)]), shots: board() } })).win;
+    const r = applyPatch(base, storyboardApplySchema.parse({ path: 'x', removeShotIds: ['s0001'], insertShots: [{ afterId: 's0003', shots: [board()[0]] }] }));
+    assert.deepEqual(r.win.SCENES.map((s) => s.id), ['s0002', 's0003', 's0005', 's0004']);
+    assert.throws(() => applyPatch(base, storyboardApplySchema.parse({ path: 'x', removeShotIds: ['s0042'] })), /removeShotIds: no shot with id s0042/);
+    assert.throws(() => applyPatch(base, storyboardApplySchema.parse({ path: 'x', insertShots: [{ afterId: 's0042', shots: [board()[0]] }] })), /insertShots.afterId: no shot with id s0042/);
+    // an insert entry names exactly one anchor
+    assert.throws(() => storyboardApplySchema.parse({ path: 'x', insertShots: [{ after: 1, afterId: 's0001', shots: [board()[0]] }] }), /exactly one of after/);
+    assert.throws(() => storyboardApplySchema.parse({ path: 'x', insertShots: [{ shots: [board()[0]] }] }), /exactly one of after/);
+  });
+  it('a patch addresses shots by position or by id, never both (R7)', () => {
+    const base = applyPatch({}, storyboardApplySchema.parse({ path: 'x', set: { structure: structure([scene(1), scene(2)]), shots: board() } })).win;
+    assert.throws(() => applyPatch(base, storyboardApplySchema.parse({ path: 'x', shots: [{ no: 1, shot: board()[0] }], removeShotIds: ['s0002'] })), /not both/);
+    assert.throws(() => applyPatch(base, storyboardApplySchema.parse({ path: 'x', removeShots: [1], insertShots: [{ afterId: 's0002', shots: [board()[0]] }] })), /not both/);
+    const ok = applyPatch(base, storyboardApplySchema.parse({ path: 'x', shotsById: [{ id: 's0001', shot: board()[0] }], transitions: undefined }));
+    assert.equal(ok.win.SCENES[0].id, 's0001');
+  });
   it('assigns ids to inserts and never reuses a deleted number', () => {
     const base = applyPatch({}, storyboardApplySchema.parse({ path: 'x', set: { structure: structure([scene(1), scene(2)]), shots: board() } })).win;
     const inserted = applyPatch(base, storyboardApplySchema.parse({ path: 'x', insertShots: [{ after: 0, shots: [board()[0]] }] }));
