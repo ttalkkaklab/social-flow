@@ -85,7 +85,8 @@ storyboard.md and script.md suffer is structurally impossible here.
 
 - The only places to fill in are **`<title>` and the `✎ SB_DOC` block** — styles and renderer
   are off-limits.
-- SB_DOC holds only editorial metadata that isn't in scenes.js: core message, docNotes,
+- SB_DOC holds only editorial metadata that isn't in scenes.js: core message, the selected
+  scenario handoff (`scenario` — references and intent copied from `scenario.md`), docNotes,
   per-scene notes (sceneNotes), transitions, audio directions (audioNotes), privacy avoidance
   (privacy), source summary (sources), platform plan (platforms), shooting prep (prep), and
   the recheck list (recheck).
