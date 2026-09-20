@@ -15,7 +15,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { z } from 'zod';
 import { portalCredentialFile, PORTAL_CREDENTIAL_FILENAME } from './config.js';
-import { describePortalError, portalClientFor, SAFE_DOCUMENT_NAME, type FetchLike, type PortalClient } from './portal-client.js';
+import { describePortalError, PortalError, portalClientFor, SAFE_DOCUMENT_NAME, type FetchLike, type PortalClient, type PortalRevisionDiff } from './portal-client.js';
 import {
   buildImportPayload,
   channelOfEpisodeDir,
@@ -105,6 +105,7 @@ export const episodeRevisionsSchema = z.object({
   episodeDir: z.string().optional(),
   channel: channelArg,
   revisionNo: z.number().int().min(1).optional(),
+  compareTo: z.union([z.number().int().min(1), z.literal('head')]).optional(),
 });
 export const episodeRestoreSchema = z.object({
   revisionNo: z.number().int().min(1),
@@ -151,6 +152,56 @@ export interface PortalToolResult {
 
 const ok = (payload: unknown): PortalToolResult => ({ text: JSON.stringify(payload, null, 2), isError: false });
 const failed = (error: unknown): PortalToolResult => ({ text: describePortalError(error), isError: true });
+
+/** One line a skill reads before deciding what to re-apply — "scenes +1 −0 ~2(3·5) · documents script.md changed". */
+export function summarizeRevisionDiff(d: PortalRevisionDiff): string {
+  if (d.identical) return `#${d.from.revisionNo} and #${d.to.revisionNo} have the same content.`;
+  const parts: string[] = [];
+  const s = d.scenes;
+  const keys = s.changed.map((c) => `${c.key}[${c.fields.join(',')}]`);
+  parts.push(
+    `scenes +${s.added.length} −${s.removed.length} ~${s.changed.length}` +
+      (keys.length ? ` (${keys.slice(0, 8).join(' · ')}${keys.length > 8 ? ' …' : ''})` : '') +
+      (s.added.length ? ` added ${s.added.slice(0, 8).join('·')}` : '') +
+      (s.removed.length ? ` removed ${s.removed.slice(0, 8).join('·')}` : '') +
+      (s.reordered ? ' reordered' : ''),
+  );
+  const meta = [...d.meta.added.map((k) => `+${k}`), ...d.meta.removed.map((k) => `−${k}`), ...d.meta.changed.map((k) => `~${k}`)];
+  if (meta.length) parts.push(`meta ${meta.join(' ')}`);
+  const docs = Object.entries(d.documents)
+    .filter(([, c]) => c.status !== 'same')
+    .map(([name, c]) => `${name} ${c.status}`);
+  if (docs.length) parts.push(`documents ${docs.join(', ')}`);
+  return parts.join(' · ');
+}
+
+/**
+ * A 409 head_moved answered to a write that carried a base: fetch what the *other* side changed
+ * between that base and the portal's head and put it under the error (loop R3). It is the remote
+ * change list, not a to-do list — the local edits since the base are all re-applied on the pulled
+ * head, and the list only says where the two sides touched the same shot or document (review P1:
+ * "re-apply only what it names" would drop the local edits it does not name). Any failure to
+ * fetch the diff leaves the original 409 text alone — the diff is help, not a second gate.
+ */
+async function withHeadMovedDiff(client: PortalClient, episodeId: string, base: number | undefined, error: unknown): Promise<PortalToolResult> {
+  const result = failed(error);
+  if (!(error instanceof PortalError) || error.code !== 'head_moved' || base === undefined) return result;
+  const head = (error.detail as { head?: { revisionNo?: number } } | undefined)?.head?.revisionNo;
+  if (typeof head !== 'number' || head < 1 || head === base) return result;
+  try {
+    const { data } = await client.revisionDiff(episodeId, base, head);
+    return {
+      isError: true,
+      text:
+        `${result.text}\nWhat the other side changed since your base #${base} (portal head is now #${head}): ${summarizeRevisionDiff(data)}\n` +
+        `Keep your local edits: copy the directory aside, portal_storyboard_pull the head, then re-apply ALL of your changes since #${base} on it — ` +
+        `the list above is where both sides touched the same shot or document, so resolve those by hand (ask the user if unsure). ` +
+        `The list is cut at 8 items; portal_episode_revisions compareTo gives the full diff.`,
+    };
+  } catch {
+    return result;
+  }
+}
 
 /** The one line a skill reads to fall back to local-file mode — where a key would go, and how to get one. */
 export function portalUnavailable(channel?: string): string {
@@ -284,7 +335,14 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
           ...(note ? { note } : {}),
           sourceHost: r.client.holder,
         };
-        const { status, data } = await r.client.importStoryboard(payload);
+        let response: Awaited<ReturnType<typeof r.client.importStoryboard>>;
+        try {
+          response = await r.client.importStoryboard(payload);
+        } catch (error) {
+          const id = state?.episodeId;
+          return id ? await withHeadMovedDiff(r.client, id, base, error) : failed(error);
+        }
+        const { status, data } = response;
         writePortalState(episodeDir, {
           workspace: r.client.workspace,
           storyboardId: data.storyboardId,
@@ -447,7 +505,13 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
           body.documents = docs;
           uploadedDocuments = docs.map((d) => d.filename);
         }
-        const { status, data } = await r.client.checkpoint(id, body);
+        let response: Awaited<ReturnType<typeof r.client.checkpoint>>;
+        try {
+          response = await r.client.checkpoint(id, body);
+        } catch (error) {
+          return await withHeadMovedDiff(r.client, id, body.baseRevisionNo as number | undefined, error);
+        }
+        const { status, data } = response;
         if (episodeDir) writePortalState(episodeDir, { episodeId: id, headRevisionNo: data.revisionNo });
         return ok({
           result: status === 201 ? 'new revision' : 'unchanged (stage only)',
@@ -459,11 +523,18 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
       }
     },
 
-    async episodeRevisions({ episodeId, episodeDir, channel, revisionNo }) {
+    async episodeRevisions({ episodeId, episodeDir, channel, revisionNo, compareTo }) {
       const r = resolveClient(fetchImpl, channel, episodeDir);
       if ('error' in r) return r.error;
       try {
         const id = resolveEpisodeId(episodeId, episodeDir);
+        if (compareTo !== undefined) {
+          // compare from revisionNo, or from the directory's recorded head, to compareTo
+          const from = revisionNo ?? (episodeDir ? readPortalState(episodeDir)?.headRevisionNo : undefined);
+          if (!from) throw new Error('compareTo needs revisionNo, or an episodeDir whose .portal.json records headRevisionNo.');
+          const { data } = await r.client.revisionDiff(id, from, compareTo);
+          return ok({ summary: summarizeRevisionDiff(data), ...data });
+        }
         const { data } = revisionNo ? await r.client.getRevision(id, revisionNo) : await r.client.listRevisions(id);
         return ok(data);
       } catch (error) {

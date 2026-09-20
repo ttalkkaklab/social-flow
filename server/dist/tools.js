@@ -752,7 +752,7 @@ Returns: JSON — { channel, workspace, source, holder, episodeDir?, copyOf?, wo
         name: 'portal_storyboard_save',
         title: 'Upload an episode directory to the portal',
         annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-        description: `Upload data/<channel>/episodes/<topic>/storyboard/ — scenes.js (the shots verbatim, the window.* blocks as episode meta), storyboard.md, research.md, script.md, storyboard.html — to the ttalkkakstory portal under the channel's workspace key. Saving the same episode again updates it (idempotent); the project is the channel, the storyboard is found or created by the episode title (or storyboardTitle for a series). When .portal.json exists, its episodeId updates that same row even if the title changed. The save is also a checkpoint: stage from the argument or storyboard.md's status (approved → approved, otherwise board), baseRevisionNo from .portal.json. A 409 head_moved means another machine saved first — portal_storyboard_pull, re-apply, save again; a 409 leased names who holds the lease and until when.
+        description: `Upload data/<channel>/episodes/<topic>/storyboard/ — scenes.js (the shots verbatim, the window.* blocks as episode meta), storyboard.md, research.md, script.md, storyboard.html — to the ttalkkakstory portal under the channel's workspace key. Saving the same episode again updates it (idempotent); the project is the channel, the storyboard is found or created by the episode title (or storyboardTitle for a series). When .portal.json exists, its episodeId updates that same row even if the title changed. The save is also a checkpoint: stage from the argument or storyboard.md's status (approved → approved, otherwise board), baseRevisionNo from .portal.json. A 409 head_moved means another machine saved first — the answer lists what THEY changed since your base (shots · meta · documents): keep your local edits aside, portal_storyboard_pull the head, re-apply all of your changes on it and resolve by hand where the list overlaps them, save again; a 409 leased names who holds the lease and until when.
 
 Writes .portal.json (workspace · storyboardId · episodeId · headRevisionNo) into the episode directory. Returns: JSON — { result: created|updated, storyboardId, episodeId, revisionNo, url, pageUrl, uploaded: { scenes, characters, documents } }.`,
         inputSchema: {
@@ -850,7 +850,7 @@ Returns: JSON — { id, slug, title, stage, url, pageUrl }.`,
         name: 'portal_episode_checkpoint',
         title: 'Save a revision when a stage ends',
         annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-        description: `Checkpoint the episode on the portal when a stage ends — candidates after the three scenario pages, scenario after the pick, board after scenes.js is written. With episodeDir the shots and meta from storyboard/scenes.js (when present) and the standard documents that exist (research.md · storyboard.md · script.md · storyboard.html) go up together; identical content makes no new revision and only moves the stage. baseRevisionNo defaults to .portal.json's head; when it differs from the portal's head the answer is 409 head_moved — another machine saved first: portal_storyboard_pull, re-apply, checkpoint again. Never retry a 409 blind.
+        description: `Checkpoint the episode on the portal when a stage ends — candidates after the three scenario pages, scenario after the pick, board after scenes.js is written. With episodeDir the shots and meta from storyboard/scenes.js (when present) and the standard documents that exist (research.md · storyboard.md · script.md · storyboard.html) go up together; identical content makes no new revision and only moves the stage. baseRevisionNo defaults to .portal.json's head; when it differs from the portal's head the answer is 409 head_moved with what the other machine changed since your base (shots · meta · documents): keep your local edits aside, portal_storyboard_pull the head, re-apply all of your changes on it (the list marks the overlaps to resolve by hand), checkpoint again. Never retry a 409 blind.
 
 Updates .portal.json headRevisionNo. Returns: JSON — { result: "new revision"|"unchanged (stage only)", revisionNo, stage, uploaded: { scenes, documents } }.`,
         inputSchema: {
@@ -871,16 +871,17 @@ Updates .portal.json headRevisionNo. Returns: JSON — { result: "new revision"|
         name: 'portal_episode_revisions',
         title: 'List an episode\'s revisions or read one',
         annotations: HINT.read,
-        description: `List a portal episode's revisions, newest first — number, stage, note, who saved it and when — or, with revisionNo, read one revision's snapshot (shots · meta · documents). Read before portal_episode_restore so the number being restored is the one meant.
+        description: `List a portal episode's revisions, newest first — number, stage, note, who saved it and when — or, with revisionNo, read one revision's snapshot (shots · meta · documents). With compareTo (a number or "head"), return what changed from revisionNo (default: the directory's recorded head) to it — shots added/removed/changed with the changed field names, meta keys, and a unified diff per document — plus a one-line summary. Read before portal_episode_restore so the number being restored is the one meant, and after a 409 head_moved to see the full list of what the other side changed (the 409 line is cut at 8 items).
 
-Returns: JSON — the revision list, or one revision's snapshot.`,
+Returns: JSON — the revision list, one revision's snapshot, or { summary, from, to, identical, scenes, meta, documents }.`,
         inputSchema: {
             type: 'object',
             properties: {
                 episodeId: PORTAL_EPISODE_ID_ARG,
                 episodeDir: PORTAL_EPISODE_DIR_ARG,
                 channel: PORTAL_CHANNEL_ARG,
-                revisionNo: { type: 'number', description: 'Read this revision\'s snapshot instead of listing' },
+                revisionNo: { type: 'number', description: 'Read this revision\'s snapshot instead of listing; with compareTo, the revision to compare from' },
+                compareTo: { type: ['number', 'string'], description: 'Compare revisionNo (or the directory\'s recorded head) to this revision number or "head" — returns the diff instead of the list' },
             },
         },
     },

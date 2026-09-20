@@ -595,6 +595,72 @@ describe('portal_* handlers on a scripted portal', () => {
     assert.equal((await h.storyboardSave({ episodeDir: legacy })).isError, false);
   });
 
+  it('a 409 head_moved on save or checkpoint carries what moved since the base (loop R3)', async () => {
+    const dir = makeEpisodeDir(root, 'my-channel', 'ep-moved');
+    episode.writePortalState(dir, { episodeId: EPISODE_ID, headRevisionNo: 2 });
+    const diff = {
+      from: { revisionNo: 2 }, to: { revisionNo: 5 }, identical: false,
+      scenes: { countA: 3, countB: 4, added: ['4'], removed: [], changed: [{ key: '2', fields: ['narration'] }], reordered: false },
+      meta: { added: [], removed: [], changed: ['THEME'] },
+      documents: { 'script.md': { status: 'changed', unified: '--- a\n+++ b', truncated: false, linesA: 3, linesB: 4 }, 'research.md': { status: 'same' } },
+    };
+    const { impl, calls } = fakeFetch({
+      'POST /api/workspaces/lab/storyboards/import': { status: 409, success: false, error: 'Episode head moved. Pull and retry.', error_code: 'head_moved', detail: { head: { revisionNo: 5 } } },
+      [`POST /api/workspaces/lab/episodes/${EPISODE_ID}/revisions`]: { status: 409, success: false, error: 'Episode head moved. Pull and retry.', error_code: 'head_moved', detail: { head: { revisionNo: 5 } } },
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}/revisions/2/diff/5`]: { success: true, data: diff },
+    });
+    const h = portal.portalHandlers(impl);
+    const save = await h.storyboardSave({ episodeDir: dir });
+    assert.equal(save.isError, true);
+    assert.match(save.text, /portal 409 head_moved/);
+    assert.match(save.text, /since your base #2 \(portal head is now #5\): scenes \+1 −0 ~1 \(2\[narration\]\) added 4 · meta ~THEME · documents script.md changed/);
+    assert.match(save.text, /re-apply ALL of your changes since #2/);
+    assert.match(save.text, /resolve those by hand/);
+    const cp = await h.episodeCheckpoint({ stage: 'board', episodeDir: dir });
+    assert.equal(cp.isError, true);
+    assert.match(cp.text, /portal head is now #5/);
+    assert.equal(calls.filter((c) => c.path.endsWith('/diff/5')).length, 2);
+    assert.equal(episode.readPortalState(dir).headRevisionNo, 2, 'the local head is not touched by a refused write');
+  });
+
+  it('a 409 without a usable diff keeps the plain 409 text; other errors are untouched', async () => {
+    const dir = makeEpisodeDir(root, 'my-channel', 'ep-moved-nodiff');
+    episode.writePortalState(dir, { episodeId: EPISODE_ID, headRevisionNo: 2 });
+    const { impl } = fakeFetch({
+      [`POST /api/workspaces/lab/episodes/${EPISODE_ID}/revisions`]: { status: 409, success: false, error: 'head moved', error_code: 'head_moved', detail: { head: { revisionNo: 5 } } },
+      // no diff route → 404 from the fake portal
+    });
+    const cp = await portal.portalHandlers(impl).episodeCheckpoint({ stage: 'board', episodeDir: dir });
+    assert.equal(cp.isError, true);
+    assert.match(cp.text, /portal 409 head_moved: head moved/);
+    assert.equal(cp.text.includes('portal head is now'), false);
+    const leased = fakeFetch({
+      [`POST /api/workspaces/lab/episodes/${EPISODE_ID}/revisions`]: { status: 409, success: false, error: 'leased', error_code: 'leased', detail: { holder: 'x' } },
+    });
+    const l = await portal.portalHandlers(leased.impl).episodeCheckpoint({ stage: 'board', episodeDir: dir });
+    assert.match(l.text, /portal 409 leased/);
+  });
+
+  it('episode_revisions compareTo returns the diff with a summary, from revisionNo or the recorded head', async () => {
+    const dir = makeEpisodeDir(root, 'my-channel', 'ep-compare');
+    episode.writePortalState(dir, { episodeId: EPISODE_ID, headRevisionNo: 3 });
+    const diff = { from: { revisionNo: 3 }, to: { revisionNo: 3 }, identical: true, scenes: { countA: 1, countB: 1, added: [], removed: [], changed: [], reordered: false }, meta: { added: [], removed: [], changed: [] }, documents: {} };
+    const { impl, calls } = fakeFetch({
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}/revisions/3/diff/head`]: { success: true, data: diff },
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}/revisions/1/diff/3`]: { success: true, data: { ...diff, from: { revisionNo: 1 }, identical: false } },
+    });
+    const h = portal.portalHandlers(impl);
+    const a = await h.episodeRevisions({ episodeDir: dir, compareTo: 'head' });
+    assert.equal(a.isError, false, a.text);
+    assert.match(JSON.parse(a.text).summary, /same content/);
+    const b = await h.episodeRevisions({ episodeDir: dir, revisionNo: 1, compareTo: 3 });
+    assert.equal(JSON.parse(b.text).from.revisionNo, 1);
+    assert.equal(calls.length, 2);
+    const none = await h.episodeRevisions({ episodeId: EPISODE_ID, channel: 'my-channel', compareTo: 'head' });
+    assert.equal(none.isError, true);
+    assert.match(none.text, /compareTo needs revisionNo/);
+  });
+
   it('episode_status refuses an empty patch before touching the portal', async () => {
     const r = await portal.portalHandlers(async () => {
       throw new Error('must not be called');
