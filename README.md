@@ -409,6 +409,16 @@ catalog to throw out rewordings of things already made. Ladder, promotion rules,
 unit prices live in `skills/autoproduce/references/`. This is also the skill the
 growth loops call when they refill their own queues.
 
+**Threads copy is written for one of two outcomes.** Reach and replies come from
+different posts, measured on 61 popular posts by other people plus Meta's ranking card
+and two third-party datasets (2026-09-19). The playbook now picks the intent before the
+draft, carries the measured type table (a verdict request takes a median 59 replies where
+an information post takes 13), drops "1–3 lines" for "is it read to the last line", and
+adds the hook-plus-own-replies chain — one short post with the substance in self-replies,
+which `threads_publish`'s `replyToId` already supports. The growth loop reviews a chain as
+one draft and replies to its own post after publishing. See
+[the research](docs/research/2026-09-19-threads-post-styles/README.md).
+
 **Style gate** — wherever Korean text is produced (storyboard authoring, produce
 right before TTS and per-platform copy, publish right before approval,
 content-reviewer verification), `check-style.py` deterministically flags AI-sounding
@@ -561,7 +571,7 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | Video generation | `veo_text2video` / `veo_img2video` / `veo_extension` / `veo_reference` | Veo 3.1 (GEMINI_API_KEY — 720p–4k, 4/6/8s grid; **native audio, local-file extension, and live-person reference** are this engine's edge) |
 | Video generation | `omni_text2video` / `omni_img2video` / `omni_extend` / `omni_edit` | Gemini Omni 1.1 Flash (GEMINI_API_KEY, Interactions API — 360p–4k, **any whole 3–10s**, and the only lane that **edits a clip by instruction** or extends a local mp4 to a 40s cumulative cap. **Billed flat ~$1.01 per call** — measured against the spend counter, not per second as the pricing page reads — so a 3s draft costs more than a full 8s veo-3.1-lite shot; worth it at the full 10s or for the edit lane, never for a short cut. No reference-image or negative-prompt field, and its person policy is unmeasured — photoreal faces stay on `veo_img2video`) |
 | Video generation | `seedance_text2video` / `seedance_img2video` / `seedance_reference` | Seedance (ARK_API_KEY, BytePlus ModelArk — 480p–4k, **2–30s in 1-second steps** billed for what you request, 7 aspect ratios, up to 30 reference images plus reference audio — a character's fixed voice (`referenceAudioPaths`, 2.x) — plus reference video (`referenceVideoPaths`, 2.x): the 3D previz as `Video 1`, the vendor's clay-model reference — every generated cut pre-renders in Blender or three.js first (user directive 2026-09-11), so the camera path and timing land as planned; a local clip is served through `MEDIA_UPLOAD_URL` or a cloudflared quick tunnel for the life of the task. Audio can be turned off, so silent cuts are cheap — $0.23 for 1080p 4s vs $0.64 on Veo lite. Every generated motion background is a previz cut on the 2.x grade the user chose (`PRODUCTION.videoModel`); 1.5 Pro serves only b-roll or speech slots that land on Seedance; fixed voice or over nine reference images use 2.5. The storyboard records the reason and forecasts that model's cost. Which engine when: [decision table](skills/produce/references/video-model-selection.md)) |
-| Video generation | `mlx_video_generate` | MLX Core / mlx-serve (24fps rgb8 muxed to mp4 with ffmpeg. Default 768×1280, RAM-capped at 800MB decoded RGB. Not the default path and not on the Veo/Seedance face-policy table) |
+| Video generation | `mlx_video_generate` | MLX Core / mlx-serve (24fps rgb8 muxed to mp4 with ffmpeg. Default 768×1280, RAM-capped at 800MB decoded RGB. Not the default path and not on the Veo/Seedance face-policy table. Pack install, request grid and measured render times: [LTX 2.5 runbook](docs/mlx-ltx-2.5.md)) |
 | Checked narration | `tts_generate_checked` | Generates with the pinned engine and reviews the actual WAV: blind transcript, pronunciation, naturalness and clarity. Up to three takes (one episode seed stays fixed across retakes); current hash-bound PASS required for assembly. Every single-voice take gets a fixed pause laid in at each sentence boundary — ElevenLabs from its own alignment, the local/Gemini/mlx engines from the local forced aligner — with `<wav>.sentences.json` for the builder. Requires Gemini API review even for local TTS; see [speech quality gate](skills/produce/references/tts-quality.md). |
 | Final speech review | `tts_review_final` | Listens to the assembled media and every sentence transition; continuity and other listening axes must reach 95, accuracy 98. The final hash-bound proof is required for delivery. |
 | Pronunciation dictionary | `tts_elevenlabs_dictionary` | Creates Korean alias rules and returns pinned dictionary/version IDs for `pronunciationDictionaryLocators`. Keep the source name intact and test the actual pronunciation. |
@@ -785,8 +795,8 @@ external vendor contract to document, so their evidence lives in research notes 
   storyboard-first shooting flow: filming rules, alignment-drift reports, edit-screen
   layout, troubleshooting.
 - **[Threads growth best practices](docs/guides/threads-growth/index.html)** —
-  per-post review, the 5 ranking signals, reply culture. The commentary edition of
-  grow-threads.
+  per-post review, the ten ranking predictions, measured post types, reply
+  culture. The commentary edition of grow-threads.
 - **[YouTube Shorts growth best practices](docs/guides/youtube-shorts-growth/index.html)** —
   the AI-disclosure boundary, the 2027 YPP changes, myths the official docs deny. The
   commentary edition of grow-youtube.

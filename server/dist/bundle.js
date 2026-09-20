@@ -78599,6 +78599,7 @@ var MIN_MLX_IMAGE_DIMENSION = 256;
 var MAX_MLX_IMAGE_DIMENSION = 2048;
 var DEFAULT_MLX_IMAGE_SIZE = 1024;
 var MLX_VIDEO_DIMENSION_STEP = 64;
+var MLX_VIDEO_DIMENSION_STEP_ONE_STAGE = 32;
 var MIN_MLX_VIDEO_DIMENSION = 256;
 var MAX_MLX_VIDEO_DIMENSION = 1920;
 var DEFAULT_MLX_VIDEO_WIDTH = 768;
@@ -78606,6 +78607,7 @@ var DEFAULT_MLX_VIDEO_HEIGHT = 1280;
 var DEFAULT_MLX_VIDEO_FRAMES = 49;
 var MIN_MLX_VIDEO_FRAMES = 9;
 var MAX_MLX_VIDEO_FRAMES = 241;
+var MLX_VIDEO_FRAME_STEP = 8;
 var MLX_VIDEO_FPS = 24;
 var MIN_MLX_MUSIC_SECONDS = 10;
 var MAX_MLX_MUSIC_SECONDS = 600;
@@ -78639,8 +78641,8 @@ The loaded media model and the chat model share one GPU. Unload a large chat or 
 var imageDimension = external_exports.number().int().min(MIN_MLX_IMAGE_DIMENSION).max(MAX_MLX_IMAGE_DIMENSION).refine((v) => v % MLX_IMAGE_DIMENSION_STEP === 0, {
   message: `width/height must be a multiple of ${MLX_IMAGE_DIMENSION_STEP} (for 9:16 that's 1088\xD71920, not 1080\xD71920). FLUX.2-klein is fixed at 1024\xD71024 \u2014 pick a Krea/Mage-Flow model for other sizes.`
 });
-var videoDimension = external_exports.number().int().min(MIN_MLX_VIDEO_DIMENSION).max(MAX_MLX_VIDEO_DIMENSION).refine((v) => v % MLX_VIDEO_DIMENSION_STEP === 0, {
-  message: `width/height must be a multiple of ${MLX_VIDEO_DIMENSION_STEP} (two-stage LTX grid). 1080 is not on that grid \u2014 use 1088\xD71920 or the default 768\xD71280.`
+var videoDimension = external_exports.number().int().min(MIN_MLX_VIDEO_DIMENSION).max(MAX_MLX_VIDEO_DIMENSION).refine((v) => v % MLX_VIDEO_DIMENSION_STEP_ONE_STAGE === 0, {
+  message: `width/height must be a multiple of ${MLX_VIDEO_DIMENSION_STEP_ONE_STAGE} (LTX grid), and of ${MLX_VIDEO_DIMENSION_STEP} unless you pass pipeline:"one_stage". 1080 is on neither grid \u2014 use 1088\xD71920 or the default 768\xD71280.`
 });
 var mlxImageGenerateSchema = external_exports.object({
   prompt: external_exports.string().min(1, "Prompt is required").max(32e3),
@@ -78702,7 +78704,7 @@ var mlxVideoGenerateSchema = external_exports.object({
   seed: external_exports.number().int().min(0).optional(),
   firstFrameImagePath: external_exports.string().min(1).optional(),
   lastFrameImagePath: external_exports.string().min(1).optional(),
-  pipeline: external_exports.enum(["one_stage", "two_stage"]).optional(),
+  pipeline: external_exports.enum(["one_stage", "two_stage", "two_stage_hq"]).optional(),
   decoder: external_exports.enum(["conv", "diffusion"]).optional(),
   outputPath: external_exports.string().optional(),
   filename: bareFilenameSchema("video").optional()
@@ -78711,6 +78713,26 @@ var mlxVideoGenerateSchema = external_exports.object({
     ctx.addIssue({
       code: external_exports.ZodIssueCode.custom,
       message: videoMemoryMessage(value.width, value.height, value.numFrames)
+    });
+  }
+  if (value.pipeline !== "one_stage") {
+    for (const [field, size] of [["width", value.width], ["height", value.height]]) {
+      if (size % MLX_VIDEO_DIMENSION_STEP !== 0) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: [field],
+          message: `${field} ${size} is off the two-stage LTX grid (multiple of ${MLX_VIDEO_DIMENSION_STEP}). Pass pipeline:"one_stage" to use the ${MLX_VIDEO_DIMENSION_STEP_ONE_STAGE}px grid, or round to ${Math.round(size / MLX_VIDEO_DIMENSION_STEP) * MLX_VIDEO_DIMENSION_STEP}.`
+        });
+      }
+    }
+  }
+  if ((value.numFrames - 1) % MLX_VIDEO_FRAME_STEP !== 0) {
+    const below = value.numFrames - (value.numFrames - 1) % MLX_VIDEO_FRAME_STEP;
+    const above = below + MLX_VIDEO_FRAME_STEP;
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["numFrames"],
+      message: `numFrames must be ${MLX_VIDEO_FRAME_STEP}k+1 (${MIN_MLX_VIDEO_FRAMES}, 17, 25, \u2026 ${MAX_MLX_VIDEO_FRAMES}) \u2014 LTX latent depth. ${value.numFrames} is not, and mlx-serve answers 200 with its own default instead of refusing. Use ${below} or ${Math.min(above, MAX_MLX_VIDEO_FRAMES)}.`
     });
   }
 });
@@ -78912,7 +78934,7 @@ async function muxRgbToMp4(opts) {
       "-pix_fmt",
       "yuv420p"
     );
-    if (opts.audio) args.push("-c:a", "aac", "-shortest");
+    if (opts.audio) args.push("-c:a", "aac");
     args.push(opts.outFile);
     await new Promise((resolve5, reject) => {
       execFile3("ffmpeg", args, { timeout: 12e4, maxBuffer: 2 * 1024 * 1024 }, (error2, _out, errOut) => {
@@ -84593,7 +84615,7 @@ Returns: a text block with the saved .mp4 file path, reference image, video and 
     annotations: HINT.generateLocal,
     description: `Generate a video on this machine via MLX Core / mlx-serve. The server returns raw rgb8 frames (plus optional PCM), which this tool muxes to mp4 with ffmpeg (libx264 yuv420p). No vendor bill. This plugin never launches the app.
 
-Use as an optional local clip when MLX Core is running with a video model (LTX-2). Default canvas is ${DEFAULT_MLX_VIDEO_WIDTH}\xD7${DEFAULT_MLX_VIDEO_HEIGHT} at ${DEFAULT_MLX_VIDEO_FRAMES} frames / ${MLX_VIDEO_FPS} fps (~2s). Width/height must be a multiple of ${MLX_VIDEO_DIMENSION_STEP} (two-stage LTX grid) \u2014 1080 is not on that grid; use 1088\xD71920 or the default. Decoded RGB is capped at ${Math.round(MAX_VIDEO_RGB_BYTES / (1024 * 1024))}MB \u2014 1088\xD71920 at 8s/24fps is ~1.2GB and is refused. lastFrameImagePath needs at least ${MIN_MLX_VIDEO_FRAMES} frames.
+Use as an optional local clip when MLX Core is running with a video model (LTX 2.5 MLX pack \u2014 install runbook in docs/mlx-ltx-2.5.md). Default canvas is ${DEFAULT_MLX_VIDEO_WIDTH}\xD7${DEFAULT_MLX_VIDEO_HEIGHT} at ${DEFAULT_MLX_VIDEO_FRAMES} frames / ${MLX_VIDEO_FPS} fps (~2s). Width/height must be a multiple of ${MLX_VIDEO_DIMENSION_STEP} (two-stage LTX grid), or of ${MLX_VIDEO_DIMENSION_STEP_ONE_STAGE} when you pass pipeline:"one_stage" \u2014 1080 is on neither grid; use 1088\xD71920 or the default. numFrames is ${MLX_VIDEO_FRAME_STEP}k+1 (${MIN_MLX_VIDEO_FRAMES}, 17, \u2026 ${DEFAULT_MLX_VIDEO_FRAMES} \u2026): any other count is answered 200 with the server's own default. Decoded RGB is capped at ${Math.round(MAX_VIDEO_RGB_BYTES / (1024 * 1024))}MB \u2014 1088\xD71920 at 8s/24fps is ~1.2GB and is refused. lastFrameImagePath needs at least ${MIN_MLX_VIDEO_FRAMES} frames.
 Do NOT use this as the default generated-video path \u2014 that stays veo_* / seedance_* per video-model-selection.md. Do NOT put this tool on the Veo/Seedance face-policy table; it is a separate local engine. Output is ${MLX_VIDEO_FPS} fps; produce's builder is 30 fps, so a splice re-encodes. ffmpeg must be on PATH. Shares the GPU with Z-Image and the chat model \u2014 LTX wants 24GB+ on its own.
 Requires Apple Silicon, macOS 26.2+, MLX Core.app or mlx-serve (or MLX_SERVE_URL), and ffmpeg. brew install --cask mlx-core if :11234 is down.
 
@@ -84612,7 +84634,7 @@ Returns: a text block with the saved .mp4 path, model, size, frame count, fps, a
         },
         width: {
           type: "number",
-          description: `Width (default: ${DEFAULT_MLX_VIDEO_WIDTH}). ${MIN_MLX_VIDEO_DIMENSION}\u2013${MAX_MLX_VIDEO_DIMENSION}, multiple of ${MLX_VIDEO_DIMENSION_STEP}. 1080 is not on the grid.`,
+          description: `Width (default: ${DEFAULT_MLX_VIDEO_WIDTH}). ${MIN_MLX_VIDEO_DIMENSION}\u2013${MAX_MLX_VIDEO_DIMENSION}, multiple of ${MLX_VIDEO_DIMENSION_STEP} (${MLX_VIDEO_DIMENSION_STEP_ONE_STAGE} with pipeline:"one_stage"). 1080 is on neither grid.`,
           minimum: MIN_MLX_VIDEO_DIMENSION,
           maximum: MAX_MLX_VIDEO_DIMENSION,
           default: DEFAULT_MLX_VIDEO_WIDTH
@@ -84626,14 +84648,14 @@ Returns: a text block with the saved .mp4 path, model, size, frame count, fps, a
         },
         numFrames: {
           type: "number",
-          description: `Frame count (default: ${DEFAULT_MLX_VIDEO_FRAMES}). ${MIN_MLX_VIDEO_FRAMES}\u2013${MAX_MLX_VIDEO_FRAMES} at ${MLX_VIDEO_FPS} fps. last_frame interpolation needs at least ${MIN_MLX_VIDEO_FRAMES}.`,
+          description: `Frame count (default: ${DEFAULT_MLX_VIDEO_FRAMES}). ${MIN_MLX_VIDEO_FRAMES}\u2013${MAX_MLX_VIDEO_FRAMES} at ${MLX_VIDEO_FPS} fps, and ${MLX_VIDEO_FRAME_STEP}k+1 (${MIN_MLX_VIDEO_FRAMES}, 17, 25, \u2026 ${MAX_MLX_VIDEO_FRAMES}). last_frame interpolation needs at least ${MIN_MLX_VIDEO_FRAMES}.`,
           minimum: MIN_MLX_VIDEO_FRAMES,
           maximum: MAX_MLX_VIDEO_FRAMES,
           default: DEFAULT_MLX_VIDEO_FRAMES
         },
         steps: {
           type: "number",
-          description: "Diffusion steps 1\u201350. Omit for the model default.",
+          description: "Diffusion steps 1\u201350. Distilled packs (the 4-bit LTX 2.5 build) run a fixed 8 and ignore this; it only moves a non-distilled pack. Omit for the model default.",
           minimum: 1,
           maximum: 50
         },
@@ -84652,8 +84674,8 @@ Returns: a text block with the saved .mp4 path, model, size, frame count, fps, a
         },
         pipeline: {
           type: "string",
-          description: "LTX pipeline. two_stage is the usual quality setting.",
-          enum: ["one_stage", "two_stage"]
+          description: `LTX pipeline. two_stage is the usual quality setting; two_stage_hq costs more time again. one_stage is the only one that takes the ${MLX_VIDEO_DIMENSION_STEP_ONE_STAGE}px grid.`,
+          enum: ["one_stage", "two_stage", "two_stage_hq"]
         },
         decoder: {
           type: "string",
@@ -94286,7 +94308,7 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
 // src/index.ts
 import { readFileSync as readFinalRequest } from "node:fs";
 var server = new Server(
-  { name: "social-flow", version: "0.82.0" },
+  { name: "social-flow", version: "0.83.0" },
   { capabilities: { tools: {} } }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {
