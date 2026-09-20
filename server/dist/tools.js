@@ -737,10 +737,15 @@ const PORTAL_TOOLS = [
 
 The key is issued on the portal at /{workspace}/settings/api-keys (admin+) and saved as <SNS_TOKEN_DIR>/<channel>/ttalkkakstory.json — { "apiUrl", "workspace", "apiKey" }. With no key anywhere the portal_* tools are hidden and every call answers one line; the episode stays a local file.
 
-Returns: JSON — { channel, workspace, source, holder, …the portal's /me answer }.`,
+With episodeDir, also compares the directory's .portal.json (the workspace it is a copy of) with the key's workspace — workspaceMatches:false with a warning means every write to that directory will be refused until the key file or the record is fixed, so the topic does not fork into a second workspace.
+
+Returns: JSON — { channel, workspace, source, holder, episodeDir?, copyOf?, workspaceMatches?, warning?, …the portal's /me answer }.`,
         inputSchema: {
             type: 'object',
-            properties: { channel: PORTAL_CHANNEL_ARG },
+            properties: {
+                channel: PORTAL_CHANNEL_ARG,
+                episodeDir: { type: 'string', description: 'Absolute path of data/<channel>/episodes/<topic> — checks its .portal.json against the key\'s workspace and picks the channel off the path' },
+            },
         },
     },
     {
