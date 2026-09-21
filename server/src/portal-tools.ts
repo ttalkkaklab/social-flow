@@ -11,7 +11,7 @@
  * (`portalUnavailable`) and the skill carries on in local-file mode.
  */
 
-import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { z } from 'zod';
 import { portalCredentialFile, PORTAL_CREDENTIAL_FILENAME } from './config.js';
@@ -43,12 +43,22 @@ export const PORTAL_TOOL_NAMES = [
   'portal_scenario_save',
   'portal_scenario_pull',
   'portal_scenario_choose',
+  'portal_render_allocation',
 ] as const;
 
 const channelArg = z.string().regex(/^[a-z0-9][a-z0-9-]{0,63}$/, 'kebab-case channel slug').optional();
 const uuid = z.string().uuid();
 const stage = z.enum(EPISODE_STAGES);
 const candidate = z.enum(SCENARIO_CANDIDATES);
+
+export const renderAllocationSchema = z.object({
+  episodeId: uuid.optional(), episodeDir: z.string().optional(), channel: channelArg,
+  requestId: uuid.optional(), baseRevisionNo: z.number().int().min(0).optional(),
+  assignments: z.array(z.object({ id: uuid,
+    mode: z.enum(['still_camera','character_html','object_html','data_graph','generated_video','editorial_html','stock_video']),
+    purpose: z.string().trim().min(1).max(200), reason: z.string().trim().min(1).max(2000),
+  })).min(1).max(500).optional(),
+}).refine(a => !a.assignments || (a.requestId && a.baseRevisionNo !== undefined), 'Submitting requires requestId and baseRevisionNo from the latest read');
 
 export const workspaceCheckSchema = z.object({ channel: channelArg, episodeDir: z.string().optional() });
 export const storyboardSaveSchema = z.object({
@@ -271,6 +281,20 @@ function backupStamp(): string {
   return new Date(now).toISOString().replace(/[:.]/g, '-');
 }
 
+/** What R4 may have left in the directory: a half-merged side pull (`.portal-head/`) and how many backups sit in `.portal-local/`. */
+function pendingOf(dir: string): { sideDir: boolean; backups: number } {
+  const sb = path.join(episodeDirOf(dir), 'storyboard');
+  const side = path.join(sb, '.portal-head');
+  const local = path.join(sb, '.portal-local');
+  let backups = 0;
+  try {
+    backups = readdirSync(local, { withFileTypes: true }).filter((e) => e.isDirectory()).length;
+  } catch {
+    backups = 0;
+  }
+  return { sideDir: existsSync(side), backups };
+}
+
 /** Episode id — the argument, or `episodeDir/.portal.json`. */
 function resolveEpisodeId(episodeId: string | undefined, episodeDir: string | undefined): string {
   if (episodeId) return episodeId;
@@ -282,6 +306,7 @@ function resolveEpisodeId(episodeId: string | undefined, episodeDir: string | un
 }
 
 export interface PortalHandlers {
+  renderAllocation(a: z.infer<typeof renderAllocationSchema>): Promise<PortalToolResult>;
   workspaceCheck(a: z.infer<typeof workspaceCheckSchema>): Promise<PortalToolResult>;
   storyboardSave(a: z.infer<typeof storyboardSaveSchema>): Promise<PortalToolResult>;
   storyboardList(a: z.infer<typeof storyboardListSchema>): Promise<PortalToolResult>;
@@ -300,6 +325,17 @@ export interface PortalHandlers {
 /** The handlers, with fetch injectable so the tests never touch a network. */
 export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
   return {
+    async renderAllocation({ episodeId, episodeDir, channel, assignments, requestId, baseRevisionNo }) {
+      const r = resolveClient(fetchImpl, channel, episodeDir);
+      if ('error' in r) return r.error;
+      const refused = refuseMismatch(r.client, episodeDir);
+      if (refused) return refused;
+      try {
+        const id = resolveEpisodeId(episodeId, episodeDir);
+        const { data } = await r.client.renderAllocation(id, assignments ? { assignments, requestId, baseRevisionNo } : undefined);
+        return ok({ ...data, ...(assignments ? { next: 'portal_storyboard_pull before any local save; server updated the revision and shot modes.' } : {}) });
+      } catch (error) { return failed(error); }
+    },
     async workspaceCheck({ channel, episodeDir }) {
       const r = resolveClient(fetchImpl, channel, episodeDir);
       if ('error' in r) return r.error;
@@ -307,6 +343,48 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
         const { data } = await r.client.me();
         const state = episodeDir ? readPortalState(episodeDir) : null;
         const mismatch = workspaceMismatch(r.client, episodeDir);
+        // Loop R5 — the one call at the top of a session also answers "is the portal ahead, who
+        // holds it, is there a half-merged side pull or a backup lying around", so the skill does
+        // not walk into the first checkpoint's 409. A portal lookup that fails leaves portal:null
+        // with a warning; the check itself still answers.
+        let portalPart: Record<string, unknown> = {};
+        if (episodeDir && !mismatch) {
+          portalPart = { pending: pendingOf(episodeDir) };
+          if (state?.episodeId) {
+            try {
+              const { data: ep } = await r.client.getEpisode(state.episodeId);
+              const lease = (ep.lease ?? null) as { holder?: string; expiresAt?: string; mine?: boolean } | null;
+              const portalHead = ep.headRevisionNo ?? 0;
+              const localHead = state.headRevisionNo ?? 0;
+              const sync = portalHead > localHead ? 'portal_ahead' : portalHead < localHead ? 'local_ahead' : 'in_sync';
+              portalPart = {
+                ...portalPart,
+                portal: {
+                  headRevisionNo: portalHead,
+                  stage: ep.stage ?? null,
+                  status: (ep as { status?: string }).status ?? null,
+                  // "mine" follows the lease rule (portal leases.ts): same subject (the portal's `mine`, which
+                  // knows the key) AND same holder. A second machine on the same key reads as someone else, and
+                  // a portal that did not say `mine` gets no guess from the holder string alone.
+                  lease: lease && lease.holder ? { holder: lease.holder, until: lease.expiresAt ?? null, mine: lease.mine === true && lease.holder === r.client.holder } : null,
+                },
+                sync,
+                // local_ahead never happens in the normal flow — the portal assigns revision numbers. A record
+                // above the portal's head means the record was edited by hand or the portal lost revisions.
+                // The only way back is through the portal: never tell the caller to drop headRevisionNo — a
+                // record without it sends no baseRevisionNo, and the portal skips the head check without one
+                // (review P1: that would reopen the stale-overwrite door R2/R4 closed).
+                ...(sync === 'local_ahead'
+                  ? { syncWarning: `.portal.json records head #${localHead} but the portal's head is #${portalHead} — the record is ahead of the portal. Pull mode "side", merge the portal's head into the local files, then save with baseRevisionNo ${portalHead} (the headRevisionNo the pull returned). Do not delete headRevisionNo from .portal.json — a save without a base skips the portal's conflict check.` }
+                  : {}),
+              };
+            } catch (error) {
+              portalPart = { ...portalPart, portal: null, sync: 'unknown', portalWarning: describePortalError(error) };
+            }
+          } else {
+            portalPart = { ...portalPart, portal: null, sync: 'unknown' };
+          }
+        }
         return ok({
           channel: r.channel ?? null,
           workspace: r.client.workspace,
@@ -318,6 +396,7 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
                 copyOf: state ? { workspace: state.workspace ?? null, episodeId: state.episodeId ?? null, headRevisionNo: state.headRevisionNo ?? null } : null,
                 workspaceMatches: !mismatch,
                 ...(mismatch ? { warning: mismatch } : {}),
+                ...portalPart,
               }
             : {}),
           ...(data as object),

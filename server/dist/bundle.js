@@ -75948,6 +75948,7 @@ function vocabAtLoad() {
       HOOK_FORMS: MISSING,
       ARCS: MISSING,
       RENDER_MODES: MISSING,
+      PRODUCTION_MODES: MISSING,
       CHARGES_OPEN: MISSING,
       CHARGES_CLOSE: MISSING,
       TRANSITION_RE: /^$/
@@ -76014,8 +76015,9 @@ var cameraSchema = external_exports.record(external_exports.unknown()).superRefi
     ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
 });
 var visualSchema = external_exports.object({ camera: cameraSchema.optional() }).passthrough();
+var shotIdSchema = external_exports.string().regex(/^s\d{4,}$/);
 var shotSchema = external_exports.object({
-  id: external_exports.string().regex(/^s\d{4,}$/).optional(),
+  id: shotIdSchema.optional(),
   type: tuple(V.TYPES),
   title: external_exports.string().optional(),
   narration: external_exports.array(external_exports.object({ tts: external_exports.string(), sub: external_exports.string().optional() }).passthrough()).optional(),
@@ -76063,7 +76065,12 @@ var storyboardCheckSchema = external_exports.object({
 var scenarioCheckSchema = external_exports.object({
   path: external_exports.string().min(1).describe("The candidates directory, or its selected scenario.md")
 });
-var globalsSchema = external_exports.record(external_exports.string().regex(/^[A-Z][A-Z0-9_]*$/, "a window.* global is UPPER_CASE"), external_exports.unknown());
+var productionSchema = external_exports.object({ mode: tuple([...V.PRODUCTION_MODES, "hook_only", "stills_only", "hybrid"]).optional(), renderRatioVersion: external_exports.literal(1).optional() }).passthrough();
+var globalsSchema = external_exports.record(external_exports.string().regex(/^[A-Z][A-Z0-9_]*$/, "a window.* global is UPPER_CASE"), external_exports.unknown()).superRefine((value, ctx) => {
+  if (value.PRODUCTION === void 0) return;
+  const parsed = productionSchema.safeParse(value.PRODUCTION);
+  if (!parsed.success) for (const issue2 of parsed.error.issues) ctx.addIssue({ ...issue2, path: ["PRODUCTION", ...issue2.path] });
+});
 var transitionPatchSchema = external_exports.object({
   no: external_exports.number().int().positive().describe("Incoming shot number, 1-based, after removals and inserts"),
   transition: external_exports.enum([
@@ -76099,9 +76106,15 @@ var storyboardApplySchema = external_exports.object({
   sequences: external_exports.array(sequenceSchema).optional().describe("Upsert sequences by id"),
   scenes: external_exports.array(sceneSchema).optional().describe("Upsert scenes by no"),
   shots: external_exports.array(external_exports.object({ no: external_exports.number().int().positive(), shot: shotSchema })).optional().describe("Upsert shots by 1-based position; no = length + 1 appends"),
-  insertShots: external_exports.array(external_exports.object({ after: external_exports.number().int().min(0), shots: external_exports.array(shotSchema).min(1) })).optional().describe("Insert shots after a 1-based position (0 = at the start). Later positions shift"),
+  shotsById: external_exports.array(external_exports.object({ id: shotIdSchema, shot: shotSchema })).optional().describe("Replace shots by their stable id (R6); the shot keeps that id. An unknown id is an error, nothing is written"),
+  insertShots: external_exports.array(external_exports.object({
+    after: external_exports.number().int().min(0).optional(),
+    afterId: shotIdSchema.optional(),
+    shots: external_exports.array(shotSchema).min(1)
+  }).refine((e2) => e2.after === void 0 !== (e2.afterId === void 0), { message: "give exactly one of after (position) or afterId (shot id)" })).optional().describe("Insert shots after a 1-based position (0 = at the start) or after the shot with afterId. Later positions shift"),
   transitions: external_exports.array(transitionPatchSchema).min(1).optional().describe("Change only incoming transitions; dip fades through black. Keeps narration and visuals intact"),
   removeShots: external_exports.array(external_exports.number().int().positive()).optional().describe("1-based positions to drop, resolved before the insert"),
+  removeShotIds: external_exports.array(shotIdSchema).min(1).optional().describe("Shot ids to drop, resolved before the insert"),
   removeScenes: external_exports.array(external_exports.number().int().positive()).optional(),
   removeSequences: external_exports.array(external_exports.string()).optional(),
   globals: globalsSchema.optional().describe("Set other window.* blocks \u2014 FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, VOICE, MOTION_POLICY"),
@@ -76207,6 +76220,19 @@ function applyPatch(win, patch) {
   if (patch.sequences || patch.scenes || patch.removeScenes || patch.removeSequences || next.STRUCTURE)
     next.STRUCTURE = { version: st.version ?? STRUCTURE_VERSION, ...st.nextShotId === void 0 ? {} : { nextShotId: st.nextShotId }, sequences, scenes };
   let shots = Array.isArray(next.SCENES) ? next.SCENES.slice() : [];
+  const byPosition = Boolean(patch.shots || patch.removeShots || patch.insertShots?.some((e2) => e2.after !== void 0));
+  const byId = Boolean(patch.shotsById || patch.removeShotIds || patch.insertShots?.some((e2) => e2.afterId !== void 0));
+  if (byPosition && byId) throw new Error("address shots by position (shots \xB7 after \xB7 removeShots) or by id (shotsById \xB7 afterId \xB7 removeShotIds) in one patch, not both");
+  const positionOfId = (id, list, what) => {
+    const index = list.findIndex((shot) => shot.id === id);
+    if (index < 0) throw new Error(`${what}: no shot with id ${id} on this board`);
+    return index;
+  };
+  if (patch.shotsById) for (const { id, shot } of patch.shotsById) {
+    const index = positionOfId(id, shots, "shotsById");
+    if (shot.id !== void 0 && shot.id !== id) throw new Error(`shotsById ${id}: the shot carries a different id (${shot.id}) \u2014 an id is not renamed through an upsert`);
+    shots[index] = { id, ...shot };
+  }
   if (patch.shots) for (const { no, shot } of patch.shots.slice().sort((a, b) => a.no - b.no)) {
     if (no > shots.length + 1) throw new Error(`shot ${no}: the board has ${shots.length} shots \u2014 no = ${shots.length + 1} appends`);
     const current = shots[no - 1];
@@ -76218,15 +76244,24 @@ function applyPatch(win, patch) {
     for (const no of drop) if (no > shots.length) throw new Error(`removeShots: there is no shot ${no}`);
     shots = shots.filter((_, i2) => !drop.has(i2 + 1));
   }
+  if (patch.removeShotIds) {
+    const drop = new Set(patch.removeShotIds.map((id) => positionOfId(id, shots, "removeShotIds")));
+    shots = shots.filter((_, i2) => !drop.has(i2));
+  }
   if (patch.insertShots) {
-    const inserts = patch.insertShots.slice().sort((a, b) => b.after - a.after);
+    const resolved = patch.insertShots.map((e2) => ({
+      after: e2.after !== void 0 ? e2.after : positionOfId(e2.afterId, shots, "insertShots.afterId") + 1,
+      shots: e2.shots
+    }));
+    const inserts = resolved.sort((a, b) => b.after - a.after);
     for (const { after, shots: add } of inserts) {
       if (after > shots.length) throw new Error(`insertShots: after ${after} is past the last shot (${shots.length})`);
       shots.splice(after, 0, ...add);
     }
   }
   const finalOrder = shots.slice();
-  for (const source of patch.removeShots || patch.insertShots ? finalOrder : []) {
+  const reordered = Boolean(patch.removeShots || patch.removeShotIds || patch.insertShots);
+  for (const source of reordered ? finalOrder : []) {
     if (!beforeReorder.includes(source)) continue;
     const e2 = source.shot?.eyeline;
     if (e2 && typeof e2.matchShot === "number") {
@@ -83653,9 +83688,9 @@ var PORTAL_TOOLS = [
 
 The key is issued on the portal at /{workspace}/settings/api-keys (admin+) and saved as <SNS_TOKEN_DIR>/<channel>/ttalkkakstory.json \u2014 { "apiUrl", "workspace", "apiKey" }. With no key anywhere the portal_* tools are hidden and every call answers one line; the episode stays a local file.
 
-With episodeDir, also compares the directory's .portal.json (the workspace it is a copy of) with the key's workspace \u2014 workspaceMatches:false with a warning means every write to that directory will be refused until the key file or the record is fixed, so the topic does not fork into a second workspace.
+With episodeDir, also compares the directory's .portal.json (the workspace it is a copy of) with the key's workspace \u2014 workspaceMatches:false with a warning means every write to that directory will be refused until the key file or the record is fixed, so the topic does not fork into a second workspace. When the record names an episode, the portal's side comes too: portal { headRevisionNo, stage, status, lease { holder, until, mine } | null } and sync \u2014 "portal_ahead" (pull with mode "side" and merge before writing), "local_ahead" (never in the normal flow \u2014 syncWarning says how to resync), "in_sync", or "unknown" (no record, or the lookup failed \u2014 see portalWarning) \u2014 plus pending { sideDir, backups }: a leftover .portal-head/ means a merge was started and not finished, backups counts .portal-local/ entries.
 
-Returns: JSON \u2014 { channel, workspace, source, holder, episodeDir?, copyOf?, workspaceMatches?, warning?, \u2026the portal's /me answer }.`,
+Returns: JSON \u2014 { channel, workspace, source, holder, episodeDir?, copyOf?, workspaceMatches?, warning?, portal?, sync?, pending?, portalWarning?, \u2026the portal's /me answer }.`,
     inputSchema: {
       type: "object",
       properties: {
@@ -83877,6 +83912,25 @@ Returns: JSON \u2014 { scenarios: [{ candidate, chosen, score, p0, findings }], 
         channel: PORTAL_CHANNEL_ARG
       }
     }
+  },
+  {
+    name: "portal_render_allocation",
+    title: "Read or submit the episode render allocation",
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    description: "Read the pending render ratio request and every shot. The host LLM chooses render.mode by shot purpose within bounds, then submits assignments with requestId and baseRevisionNo. No LLM API or paid asset call occurs here. The portal validates complete shot IDs, video bands, lease and revision, then saves atomically. Read again on conflict; pull the updated board before local edits. Returns request, bounds, shots and instructions on read, or the new revision on submit.",
+    inputSchema: { type: "object", properties: {
+      episodeId: PORTAL_EPISODE_ID_ARG,
+      episodeDir: PORTAL_EPISODE_DIR_ARG,
+      channel: PORTAL_CHANNEL_ARG,
+      requestId: { type: "string", format: "uuid", description: "Exact pending request ID returned by the read; required when submitting." },
+      baseRevisionNo: { type: "integer", minimum: 0, description: "Read revision; required when submitting. Stale writes are rejected." },
+      assignments: { type: "array", description: "One assignment per returned shot ID; omit to read the pending plan.", minItems: 1, maxItems: 500, items: { type: "object", required: ["id", "mode", "purpose", "reason"], properties: {
+        id: { type: "string", format: "uuid", description: "Portal shot row ID from the latest read, never an array position." },
+        mode: enumInput(storyboardVocabulary?.RENDER_MODES, "Shot render route; generated_video and stock_video both count toward the ratio."),
+        purpose: { type: "string", minLength: 1, maxLength: 200, description: "Shot purpose in the render-routing vocabulary." },
+        reason: { type: "string", minLength: 1, maxLength: 2e3, description: "Specific reason this render mode serves this shot." }
+      } } }
+    } }
   },
   {
     name: "portal_scenario_choose",
@@ -87260,7 +87314,7 @@ Returns: JSON \u2014 { version, format, shots, sequences[\u2026scenes[\u2026shot
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     description: `Write a storyboard's scenes.js from a sequence \u2192 scene \u2192 shot model, or patch part of it, in one call. Every shot is validated against the grammar vocabularies (type \xB7 beat \xB7 size \xB7 angle \xB7 infoType \xB7 shareType \xB7 render.mode \xB7 transition), the structure against its rules (one place and time per scene, a charge that turns, every scene in exactly one sequence, shots grouped by scene in sequence order, two sizes per scene), and the derived shot labels (sceneSlug \xB7 sequence) are written from the structure. Nothing is written when a violation is found \u2014 the findings come back instead. Warnings are written and reported.
 
-Use it to author a new board (set = { structure, shots }) after the narration is approved (storyboard \xA74), and to change one thing later (scenes / sequences / shots by key, insertShots, removeShots, globals for FORMAT \xB7 THEME \xB7 COMPREHENSION \xB7 STORY \xB7 PRODUCTION \xB7 MUSIC). Use transitions to change only the effect before selected shots without replacing their narration or visuals. dip fades out to black and fades the next scene in; prefer it for changes of place or time unless a specific cut calls for another effect. One call carries the whole change \u2014 do not write scenes.js by hand and do not call this once per shot. dryRun:true validates without writing.
+Use it to author a new board (set = { structure, shots }) after the narration is approved (storyboard \xA74), and to change one thing later (scenes / sequences by key, shots by id \u2014 shotsById \xB7 insertShots.afterId \xB7 removeShotIds \u2014 or by position, globals for FORMAT \xB7 THEME \xB7 COMPREHENSION \xB7 STORY \xB7 PRODUCTION \xB7 MUSIC). Address shots by id once the board has them (every board written by this tool does): a review note names s0007, and positions shift with every insert; a patch mixes id and position addressing at its own peril \u2014 it is refused. Use transitions to change only the effect before selected shots without replacing their narration or visuals. dip fades out to black and fades the next scene in; prefer it for changes of place or time unless a specific cut calls for another effect. One call carries the whole change \u2014 do not write scenes.js by hand and do not call this once per shot. dryRun:true validates without writing.
 storyboard_apply assigns stable shot ids (s0001\u2026) and advances STRUCTURE.nextShotId; preserve those ids and do not edit them by hand.
 Shot creation, upserts and inserts expose type, shot.render.mode, shot.videoDesign, visual.camera and the three plan records shot.eyeline \xB7 shot.composition \xB7 shot.depth in the input schema. shot.depth (L11): count what the viewer must read in the frame at once \u2014 one thing \u2192 shallow with focus (a person's eyes), two or more \u2192 deep with the planes listed front to back; a departure needs a reason, and a still_camera focus-in/rack-focus cut cannot be deep. For a drone shot choose preset:"drone-flythrough", variant:"cinematic" or "fpv", and the trajectory. The preset does not change the episode style or select a paid model.
 Do NOT pass a shot's visual plan through a summary \u2014 pass the object scenes-schema.md defines (visual \xB7 shot.space \xB7 visual.camera \xB7 visual.video \u2026); unknown keys on a shot pass through untouched. Editing an approved board drops its \`// approved:\` line; it is approved again at the HITL gate.
@@ -87284,8 +87338,9 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
         structure: { type: "object", description: "Replace window.STRUCTURE only" },
         sequences: { type: "array", items: { type: "object", description: "{ id, title, purpose, question?, payoff?, scenes }" }, description: "Upsert sequences by id" },
         scenes: { type: "array", items: { type: "object", description: "{ no, place, time, event, charge, turn, out? }" }, description: "Upsert scenes by no" },
-        shots: { type: "array", items: { type: "object", description: "One positional upsert", properties: { no: { type: "number", description: "1-based position" }, shot: storyboardShotInput }, required: ["no", "shot"] }, description: "Upsert shots by 1-based position; no = length + 1 appends" },
-        insertShots: { type: "array", items: { type: "object", description: "One insert", properties: { after: { type: "number", description: "1-based position to insert after; 0 = at the start" }, shots: { type: "array", items: storyboardShotInput, description: "Shots to insert, in order" } }, required: ["after", "shots"] }, description: "Insert shots after a 1-based position (0 = at the start)" },
+        shots: { type: "array", items: { type: "object", description: "One positional upsert", properties: { no: { type: "number", description: "1-based position" }, shot: storyboardShotInput }, required: ["no", "shot"] }, description: "Upsert shots by 1-based position; no = length + 1 appends. Not with the id fields in the same patch" },
+        shotsById: { type: "array", items: { type: "object", description: "One upsert by id", properties: { id: { type: "string", pattern: "^s\\d{4,}$", description: "The stable shot id (s0007) to replace" }, shot: storyboardShotInput }, required: ["id", "shot"] }, description: "Replace shots by their stable id \u2014 the shot keeps that id, an unknown id writes nothing. Preferred over shots once the board has ids: positions shift with every insert, ids do not" },
+        insertShots: { type: "array", items: { type: "object", description: "One insert", properties: { after: { type: "number", description: "1-based position to insert after; 0 = at the start" }, afterId: { type: "string", pattern: "^s\\d{4,}$", description: "The shot id to insert after \u2014 instead of after" }, shots: { type: "array", items: storyboardShotInput, description: "Shots to insert, in order" } }, required: ["shots"] }, description: "Insert shots after a 1-based position (0 = at the start) or after the shot with afterId \u2014 exactly one of the two per entry" },
         transitions: {
           type: "array",
           minItems: 1,
@@ -87299,9 +87354,10 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
           }, required: ["no", "transition", "reason"] }
         },
         removeShots: { type: "array", items: { type: "number", description: "1-based position" }, description: "1-based positions to drop (resolved before inserts)" },
+        removeShotIds: { type: "array", items: { type: "string", pattern: "^s\\d{4,}$", description: "A stable shot id" }, description: "Shot ids to drop (resolved before inserts). Not with the position fields in the same patch" },
         removeScenes: { type: "array", items: { type: "number", description: "Scene number" }, description: "Scene numbers to drop from STRUCTURE.scenes and from every sequence" },
         removeSequences: { type: "array", items: { type: "string", description: "Sequence id" }, description: "Sequence ids to drop" },
-        globals: { type: "object", description: "Other window.* blocks to set \u2014 FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, VOICE, MOTION_POLICY" },
+        globals: { type: "object", description: "Other window.* blocks to set \u2014 FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, VOICE, MOTION_POLICY. PRODUCTION.mode: full_video, video_80, video_50, video_30, video_lt10, no_video (hook_only/stills_only/hybrid are legacy). New selections write renderRatioVersion:1." },
         dryRun: { type: "boolean", description: "Validate and report, write nothing" },
         draft: { type: "boolean", description: "The story pass (storyboard \xA74a): camera-continuity records \u2014 shot.lineCrossing, shot.coverage \u2014 are deferred (later), not violations; leave it off in \xA74b" }
       },
@@ -87365,7 +87421,7 @@ var SNS_PLATFORM_BY_TOOL = {
 };
 
 // src/portal-tools.ts
-import { copyFileSync, existsSync as existsSync13, mkdirSync as mkdirSync5, readFileSync as readFileSync10, rmSync as rmSync6, writeFileSync as writeFileSync9 } from "node:fs";
+import { copyFileSync, existsSync as existsSync13, mkdirSync as mkdirSync5, readdirSync as readdirSync2, readFileSync as readFileSync10, rmSync as rmSync6, writeFileSync as writeFileSync9 } from "node:fs";
 import path11 from "node:path";
 
 // src/portal-client.ts
@@ -87460,6 +87516,7 @@ function createPortalClient(credential, fetchImpl = fetch) {
     listRevisions: (episodeId) => json2("GET", `/episodes/${episodeId}/revisions`),
     getRevision: (episodeId, no) => json2("GET", `/episodes/${episodeId}/revisions/${no}`),
     revisionDiff: (episodeId, from, to) => json2("GET", `/episodes/${episodeId}/revisions/${from}/diff/${to}`),
+    renderAllocation: (episodeId, body) => json2(body ? "PUT" : "GET", `/episodes/${episodeId}/render-allocation`, body ? { ...body, sourceHost: holder } : void 0),
     checkpoint: (episodeId, body) => json2("POST", `/episodes/${episodeId}/revisions`, body),
     restoreRevision: (episodeId, no, body = {}) => json2("POST", `/episodes/${episodeId}/revisions/${no}/restore`, body),
     getLease: (episodeId) => json2("GET", `/episodes/${episodeId}/lease`),
@@ -87623,12 +87680,26 @@ var PORTAL_TOOL_NAMES = [
   "portal_episode_lease",
   "portal_scenario_save",
   "portal_scenario_pull",
-  "portal_scenario_choose"
+  "portal_scenario_choose",
+  "portal_render_allocation"
 ];
 var channelArg = external_exports.string().regex(/^[a-z0-9][a-z0-9-]{0,63}$/, "kebab-case channel slug").optional();
 var uuid2 = external_exports.string().uuid();
 var stage = external_exports.enum(EPISODE_STAGES);
 var candidate = external_exports.enum(SCENARIO_CANDIDATES);
+var renderAllocationSchema = external_exports.object({
+  episodeId: uuid2.optional(),
+  episodeDir: external_exports.string().optional(),
+  channel: channelArg,
+  requestId: uuid2.optional(),
+  baseRevisionNo: external_exports.number().int().min(0).optional(),
+  assignments: external_exports.array(external_exports.object({
+    id: uuid2,
+    mode: external_exports.enum(["still_camera", "character_html", "object_html", "data_graph", "generated_video", "editorial_html", "stock_video"]),
+    purpose: external_exports.string().trim().min(1).max(200),
+    reason: external_exports.string().trim().min(1).max(2e3)
+  })).min(1).max(500).optional()
+}).refine((a) => !a.assignments || a.requestId && a.baseRevisionNo !== void 0, "Submitting requires requestId and baseRevisionNo from the latest read");
 var workspaceCheckSchema = external_exports.object({ channel: channelArg, episodeDir: external_exports.string().optional() });
 var storyboardSaveSchema = external_exports.object({
   episodeDir: external_exports.string().min(1),
@@ -87799,6 +87870,18 @@ function backupStamp() {
   lastBackupTimeMs = now;
   return new Date(now).toISOString().replace(/[:.]/g, "-");
 }
+function pendingOf(dir) {
+  const sb = path11.join(episodeDirOf(dir), "storyboard");
+  const side = path11.join(sb, ".portal-head");
+  const local = path11.join(sb, ".portal-local");
+  let backups = 0;
+  try {
+    backups = readdirSync2(local, { withFileTypes: true }).filter((e2) => e2.isDirectory()).length;
+  } catch {
+    backups = 0;
+  }
+  return { sideDir: existsSync13(side), backups };
+}
 function resolveEpisodeId(episodeId, episodeDir) {
   if (episodeId) return episodeId;
   const state = episodeDir ? readPortalState(episodeDir) : null;
@@ -87809,6 +87892,19 @@ function resolveEpisodeId(episodeId, episodeDir) {
 }
 function portalHandlers(fetchImpl) {
   return {
+    async renderAllocation({ episodeId, episodeDir, channel, assignments, requestId, baseRevisionNo }) {
+      const r2 = resolveClient(fetchImpl, channel, episodeDir);
+      if ("error" in r2) return r2.error;
+      const refused = refuseMismatch(r2.client, episodeDir);
+      if (refused) return refused;
+      try {
+        const id = resolveEpisodeId(episodeId, episodeDir);
+        const { data } = await r2.client.renderAllocation(id, assignments ? { assignments, requestId, baseRevisionNo } : void 0);
+        return ok({ ...data, ...assignments ? { next: "portal_storyboard_pull before any local save; server updated the revision and shot modes." } : {} });
+      } catch (error2) {
+        return failed(error2);
+      }
+    },
     async workspaceCheck({ channel, episodeDir }) {
       const r2 = resolveClient(fetchImpl, channel, episodeDir);
       if ("error" in r2) return r2.error;
@@ -87816,6 +87912,42 @@ function portalHandlers(fetchImpl) {
         const { data } = await r2.client.me();
         const state = episodeDir ? readPortalState(episodeDir) : null;
         const mismatch = workspaceMismatch(r2.client, episodeDir);
+        let portalPart = {};
+        if (episodeDir && !mismatch) {
+          portalPart = { pending: pendingOf(episodeDir) };
+          if (state?.episodeId) {
+            try {
+              const { data: ep } = await r2.client.getEpisode(state.episodeId);
+              const lease = ep.lease ?? null;
+              const portalHead = ep.headRevisionNo ?? 0;
+              const localHead = state.headRevisionNo ?? 0;
+              const sync = portalHead > localHead ? "portal_ahead" : portalHead < localHead ? "local_ahead" : "in_sync";
+              portalPart = {
+                ...portalPart,
+                portal: {
+                  headRevisionNo: portalHead,
+                  stage: ep.stage ?? null,
+                  status: ep.status ?? null,
+                  // "mine" follows the lease rule (portal leases.ts): same subject (the portal's `mine`, which
+                  // knows the key) AND same holder. A second machine on the same key reads as someone else, and
+                  // a portal that did not say `mine` gets no guess from the holder string alone.
+                  lease: lease && lease.holder ? { holder: lease.holder, until: lease.expiresAt ?? null, mine: lease.mine === true && lease.holder === r2.client.holder } : null
+                },
+                sync,
+                // local_ahead never happens in the normal flow — the portal assigns revision numbers. A record
+                // above the portal's head means the record was edited by hand or the portal lost revisions.
+                // The only way back is through the portal: never tell the caller to drop headRevisionNo — a
+                // record without it sends no baseRevisionNo, and the portal skips the head check without one
+                // (review P1: that would reopen the stale-overwrite door R2/R4 closed).
+                ...sync === "local_ahead" ? { syncWarning: `.portal.json records head #${localHead} but the portal's head is #${portalHead} \u2014 the record is ahead of the portal. Pull mode "side", merge the portal's head into the local files, then save with baseRevisionNo ${portalHead} (the headRevisionNo the pull returned). Do not delete headRevisionNo from .portal.json \u2014 a save without a base skips the portal's conflict check.` } : {}
+              };
+            } catch (error2) {
+              portalPart = { ...portalPart, portal: null, sync: "unknown", portalWarning: describePortalError(error2) };
+            }
+          } else {
+            portalPart = { ...portalPart, portal: null, sync: "unknown" };
+          }
+        }
         return ok({
           channel: r2.channel ?? null,
           workspace: r2.client.workspace,
@@ -87825,7 +87957,8 @@ function portalHandlers(fetchImpl) {
             episodeDir: episodeDirOf(episodeDir),
             copyOf: state ? { workspace: state.workspace ?? null, episodeId: state.episodeId ?? null, headRevisionNo: state.headRevisionNo ?? null } : null,
             workspaceMatches: !mismatch,
-            ...mismatch ? { warning: mismatch } : {}
+            ...mismatch ? { warning: mismatch } : {},
+            ...portalPart
           } : {},
           ...data
         });
@@ -95885,13 +96018,14 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
   portal_episode_lease: async (args) => fromPortal(await portalRoutes.episodeLease(parseArgs(episodeLeaseSchema, args))),
   portal_scenario_save: async (args) => fromPortal(await portalRoutes.scenarioSave(parseArgs(scenarioSaveSchema, args))),
   portal_scenario_pull: async (args) => fromPortal(await portalRoutes.scenarioPull(parseArgs(scenarioPullSchema, args))),
+  portal_render_allocation: async (args) => fromPortal(await portalRoutes.renderAllocation(parseArgs(renderAllocationSchema, args))),
   portal_scenario_choose: async (args) => fromPortal(await portalRoutes.scenarioChoose(parseArgs(scenarioChooseSchema, args)))
 };
 
 // src/index.ts
 import { readFileSync as readFinalRequest } from "node:fs";
 var server = new Server(
-  { name: "social-flow", version: "0.85.0" },
+  { name: "social-flow", version: "0.86.0" },
   { capabilities: { tools: {} } }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {

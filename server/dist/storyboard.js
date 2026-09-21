@@ -68,7 +68,7 @@ function vocabAtLoad() {
     }
     catch {
         return { SIZES: MISSING, ANGLES: MISSING, BEATS: MISSING, TYPES: MISSING, INFO_TYPES: MISSING, SHARE_TYPES: MISSING,
-            HOOK_TYPES: MISSING, HOOK_FORMS: MISSING, ARCS: MISSING, RENDER_MODES: MISSING, CHARGES_OPEN: MISSING, CHARGES_CLOSE: MISSING,
+            HOOK_TYPES: MISSING, HOOK_FORMS: MISSING, ARCS: MISSING, RENDER_MODES: MISSING, PRODUCTION_MODES: MISSING, CHARGES_OPEN: MISSING, CHARGES_CLOSE: MISSING,
             TRANSITION_RE: /^$/ };
     }
 }
@@ -141,9 +141,11 @@ export const cameraSchema = z.record(z.unknown()).superRefine((value, ctx) => {
         ctx.addIssue({ code: z.ZodIssueCode.custom, message });
 });
 const visualSchema = z.object({ camera: cameraSchema.optional() }).passthrough();
+/** The stable shot id storyboard_apply assigns (R6): `s` + four or more digits. */
+export const shotIdSchema = z.string().regex(/^s\d{4,}$/);
 export const shotSchema = z
     .object({
-    id: z.string().regex(/^s\d{4,}$/).optional(),
+    id: shotIdSchema.optional(),
     type: tuple(V.TYPES),
     title: z.string().optional(),
     narration: z.array(z.object({ tts: z.string(), sub: z.string().optional() }).passthrough()).optional(),
@@ -195,7 +197,15 @@ export const storyboardCheckSchema = z.object({
 export const scenarioCheckSchema = z.object({
     path: z.string().min(1).describe('The candidates directory, or its selected scenario.md'),
 });
-const globalsSchema = z.record(z.string().regex(/^[A-Z][A-Z0-9_]*$/, 'a window.* global is UPPER_CASE'), z.unknown());
+export const productionSchema = z.object({ mode: tuple([...V.PRODUCTION_MODES, 'hook_only', 'stills_only', 'hybrid']).optional(), renderRatioVersion: z.literal(1).optional() }).passthrough();
+const globalsSchema = z.record(z.string().regex(/^[A-Z][A-Z0-9_]*$/, 'a window.* global is UPPER_CASE'), z.unknown()).superRefine((value, ctx) => {
+    if (value.PRODUCTION === undefined)
+        return;
+    const parsed = productionSchema.safeParse(value.PRODUCTION);
+    if (!parsed.success)
+        for (const issue of parsed.error.issues)
+            ctx.addIssue({ ...issue, path: ['PRODUCTION', ...issue.path] });
+});
 export const transitionPatchSchema = z.object({
     no: z.number().int().positive().describe('Incoming shot number, 1-based, after removals and inserts'),
     transition: z.enum(['cut', 'dip', 'dip:white', 'jcut', 'dissolve', 'iris', 'blur', 'zoom',
@@ -214,10 +224,17 @@ export const storyboardApplySchema = z.object({
     scenes: z.array(sceneSchema).optional().describe('Upsert scenes by no'),
     shots: z.array(z.object({ no: z.number().int().positive(), shot: shotSchema })).optional()
         .describe('Upsert shots by 1-based position; no = length + 1 appends'),
-    insertShots: z.array(z.object({ after: z.number().int().min(0), shots: z.array(shotSchema).min(1) })).optional()
-        .describe('Insert shots after a 1-based position (0 = at the start). Later positions shift'),
+    shotsById: z.array(z.object({ id: shotIdSchema, shot: shotSchema })).optional()
+        .describe('Replace shots by their stable id (R6); the shot keeps that id. An unknown id is an error, nothing is written'),
+    insertShots: z.array(z.object({
+        after: z.number().int().min(0).optional(),
+        afterId: shotIdSchema.optional(),
+        shots: z.array(shotSchema).min(1),
+    }).refine((e) => (e.after === undefined) !== (e.afterId === undefined), { message: 'give exactly one of after (position) or afterId (shot id)' })).optional()
+        .describe('Insert shots after a 1-based position (0 = at the start) or after the shot with afterId. Later positions shift'),
     transitions: z.array(transitionPatchSchema).min(1).optional().describe('Change only incoming transitions; dip fades through black. Keeps narration and visuals intact'),
     removeShots: z.array(z.number().int().positive()).optional().describe('1-based positions to drop, resolved before the insert'),
+    removeShotIds: z.array(shotIdSchema).min(1).optional().describe('Shot ids to drop, resolved before the insert'),
     removeScenes: z.array(z.number().int().positive()).optional(),
     removeSequences: z.array(z.string()).optional(),
     globals: globalsSchema.optional().describe('Set other window.* blocks — FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, VOICE, MOTION_POLICY'),
@@ -353,6 +370,26 @@ export function applyPatch(win, patch) {
     if (patch.sequences || patch.scenes || patch.removeScenes || patch.removeSequences || next.STRUCTURE)
         next.STRUCTURE = { version: st.version ?? STRUCTURE_VERSION, ...(st.nextShotId === undefined ? {} : { nextShotId: st.nextShotId }), sequences, scenes }; // an older version is kept so check() reports it, never silently upgraded
     let shots = Array.isArray(next.SCENES) ? next.SCENES.slice() : [];
+    // Shots are addressed either by position (shots · insertShots.after · removeShots) or by id
+    // (shotsById · insertShots.afterId · removeShotIds, R7) — never both in one patch: a position
+    // read before an id-resolved remove is a different shot after it.
+    const byPosition = Boolean(patch.shots || patch.removeShots || patch.insertShots?.some((e) => e.after !== undefined));
+    const byId = Boolean(patch.shotsById || patch.removeShotIds || patch.insertShots?.some((e) => e.afterId !== undefined));
+    if (byPosition && byId)
+        throw new Error('address shots by position (shots · after · removeShots) or by id (shotsById · afterId · removeShotIds) in one patch, not both');
+    const positionOfId = (id, list, what) => {
+        const index = list.findIndex((shot) => shot.id === id);
+        if (index < 0)
+            throw new Error(`${what}: no shot with id ${id} on this board`);
+        return index;
+    };
+    if (patch.shotsById)
+        for (const { id, shot } of patch.shotsById) {
+            const index = positionOfId(id, shots, 'shotsById');
+            if (shot.id !== undefined && shot.id !== id)
+                throw new Error(`shotsById ${id}: the shot carries a different id (${shot.id}) — an id is not renamed through an upsert`);
+            shots[index] = { id, ...shot };
+        }
     if (patch.shots)
         for (const { no, shot } of patch.shots.slice().sort((a, b) => a.no - b.no)) {
             if (no > shots.length + 1)
@@ -368,9 +405,18 @@ export function applyPatch(win, patch) {
                 throw new Error(`removeShots: there is no shot ${no}`);
         shots = shots.filter((_, i) => !drop.has(i + 1));
     }
+    if (patch.removeShotIds) {
+        const drop = new Set(patch.removeShotIds.map((id) => positionOfId(id, shots, 'removeShotIds')));
+        shots = shots.filter((_, i) => !drop.has(i));
+    }
     if (patch.insertShots) {
+        // afterId resolves against the board after the removes, like a position does.
+        const resolved = patch.insertShots.map((e) => ({
+            after: e.after !== undefined ? e.after : positionOfId(e.afterId, shots, 'insertShots.afterId') + 1,
+            shots: e.shots,
+        }));
         // Highest position first, so earlier inserts don't shift later ones.
-        const inserts = patch.insertShots.slice().sort((a, b) => b.after - a.after);
+        const inserts = resolved.sort((a, b) => b.after - a.after);
         for (const { after, shots: add } of inserts) {
             if (after > shots.length)
                 throw new Error(`insertShots: after ${after} is past the last shot (${shots.length})`);
@@ -379,7 +425,10 @@ export function applyPatch(win, patch) {
     }
     // Existing references name pre-reorder shots. Inserted records use final positions.
     const finalOrder = shots.slice();
-    for (const source of patch.removeShots || patch.insertShots ? finalOrder : []) {
+    // Any reorder — by position or by id (R7) — has to walk the references; a removeShotIds-only
+    // patch used to skip this and leave matchShot pointing at the wrong position (review P2).
+    const reordered = Boolean(patch.removeShots || patch.removeShotIds || patch.insertShots);
+    for (const source of reordered ? finalOrder : []) {
         if (!beforeReorder.includes(source))
             continue;
         const e = source.shot?.eyeline;

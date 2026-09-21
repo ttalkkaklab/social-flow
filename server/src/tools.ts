@@ -906,9 +906,9 @@ const PORTAL_TOOLS: Tool[] = [
 
 The key is issued on the portal at /{workspace}/settings/api-keys (admin+) and saved as <SNS_TOKEN_DIR>/<channel>/ttalkkakstory.json — { "apiUrl", "workspace", "apiKey" }. With no key anywhere the portal_* tools are hidden and every call answers one line; the episode stays a local file.
 
-With episodeDir, also compares the directory's .portal.json (the workspace it is a copy of) with the key's workspace — workspaceMatches:false with a warning means every write to that directory will be refused until the key file or the record is fixed, so the topic does not fork into a second workspace.
+With episodeDir, also compares the directory's .portal.json (the workspace it is a copy of) with the key's workspace — workspaceMatches:false with a warning means every write to that directory will be refused until the key file or the record is fixed, so the topic does not fork into a second workspace. When the record names an episode, the portal's side comes too: portal { headRevisionNo, stage, status, lease { holder, until, mine } | null } and sync — "portal_ahead" (pull with mode "side" and merge before writing), "local_ahead" (never in the normal flow — syncWarning says how to resync), "in_sync", or "unknown" (no record, or the lookup failed — see portalWarning) — plus pending { sideDir, backups }: a leftover .portal-head/ means a merge was started and not finished, backups counts .portal-local/ entries.
 
-Returns: JSON — { channel, workspace, source, holder, episodeDir?, copyOf?, workspaceMatches?, warning?, …the portal's /me answer }.`,
+Returns: JSON — { channel, workspace, source, holder, episodeDir?, copyOf?, workspaceMatches?, warning?, portal?, sync?, pending?, portalWarning?, …the portal's /me answer }.`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -1130,6 +1130,19 @@ Returns: JSON — { scenarios: [{ candidate, chosen, score, p0, findings }], wri
         channel: PORTAL_CHANNEL_ARG,
       },
     },
+  },
+  {
+    name: 'portal_render_allocation', title: 'Read or submit the episode render allocation',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    description: 'Read the pending render ratio request and every shot. The host LLM chooses render.mode by shot purpose within bounds, then submits assignments with requestId and baseRevisionNo. No LLM API or paid asset call occurs here. The portal validates complete shot IDs, video bands, lease and revision, then saves atomically. Read again on conflict; pull the updated board before local edits. Returns request, bounds, shots and instructions on read, or the new revision on submit.',
+    inputSchema: { type: 'object', properties: {
+      episodeId: PORTAL_EPISODE_ID_ARG, episodeDir: PORTAL_EPISODE_DIR_ARG, channel: PORTAL_CHANNEL_ARG,
+      requestId: { type: 'string', format: 'uuid', description: 'Exact pending request ID returned by the read; required when submitting.' }, baseRevisionNo: { type: 'integer', minimum: 0, description: 'Read revision; required when submitting. Stale writes are rejected.' },
+      assignments: { type: 'array', description: 'One assignment per returned shot ID; omit to read the pending plan.', minItems: 1, maxItems: 500, items: { type: 'object', required: ['id','mode','purpose','reason'], properties: {
+        id: { type: 'string', format: 'uuid', description: 'Portal shot row ID from the latest read, never an array position.' }, mode: enumInput(storyboardVocabulary?.RENDER_MODES, 'Shot render route; generated_video and stock_video both count toward the ratio.'),
+        purpose: { type: 'string', minLength: 1, maxLength: 200, description: 'Shot purpose in the render-routing vocabulary.' }, reason: { type: 'string', minLength: 1, maxLength: 2000, description: 'Specific reason this render mode serves this shot.' },
+      } } },
+    } },
   },
   {
     name: 'portal_scenario_choose',
@@ -4577,7 +4590,7 @@ Returns: JSON — { version, format, shots, sequences[…scenes[…shots]], unpl
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     description: `Write a storyboard's scenes.js from a sequence → scene → shot model, or patch part of it, in one call. Every shot is validated against the grammar vocabularies (type · beat · size · angle · infoType · shareType · render.mode · transition), the structure against its rules (one place and time per scene, a charge that turns, every scene in exactly one sequence, shots grouped by scene in sequence order, two sizes per scene), and the derived shot labels (sceneSlug · sequence) are written from the structure. Nothing is written when a violation is found — the findings come back instead. Warnings are written and reported.
 
-Use it to author a new board (set = { structure, shots }) after the narration is approved (storyboard §4), and to change one thing later (scenes / sequences / shots by key, insertShots, removeShots, globals for FORMAT · THEME · COMPREHENSION · STORY · PRODUCTION · MUSIC). Use transitions to change only the effect before selected shots without replacing their narration or visuals. dip fades out to black and fades the next scene in; prefer it for changes of place or time unless a specific cut calls for another effect. One call carries the whole change — do not write scenes.js by hand and do not call this once per shot. dryRun:true validates without writing.
+Use it to author a new board (set = { structure, shots }) after the narration is approved (storyboard §4), and to change one thing later (scenes / sequences by key, shots by id — shotsById · insertShots.afterId · removeShotIds — or by position, globals for FORMAT · THEME · COMPREHENSION · STORY · PRODUCTION · MUSIC). Address shots by id once the board has them (every board written by this tool does): a review note names s0007, and positions shift with every insert; a patch mixes id and position addressing at its own peril — it is refused. Use transitions to change only the effect before selected shots without replacing their narration or visuals. dip fades out to black and fades the next scene in; prefer it for changes of place or time unless a specific cut calls for another effect. One call carries the whole change — do not write scenes.js by hand and do not call this once per shot. dryRun:true validates without writing.
 storyboard_apply assigns stable shot ids (s0001…) and advances STRUCTURE.nextShotId; preserve those ids and do not edit them by hand.
 Shot creation, upserts and inserts expose type, shot.render.mode, shot.videoDesign, visual.camera and the three plan records shot.eyeline · shot.composition · shot.depth in the input schema. shot.depth (L11): count what the viewer must read in the frame at once — one thing → shallow with focus (a person's eyes), two or more → deep with the planes listed front to back; a departure needs a reason, and a still_camera focus-in/rack-focus cut cannot be deep. For a drone shot choose preset:"drone-flythrough", variant:"cinematic" or "fpv", and the trajectory. The preset does not change the episode style or select a paid model.
 Do NOT pass a shot's visual plan through a summary — pass the object scenes-schema.md defines (visual · shot.space · visual.camera · visual.video …); unknown keys on a shot pass through untouched. Editing an approved board drops its \`// approved:\` line; it is approved again at the HITL gate.
@@ -4601,8 +4614,9 @@ Returns: the file written or not, counts, and findings (! violation · warning).
         structure: { type: 'object', description: 'Replace window.STRUCTURE only' },
         sequences: { type: 'array', items: { type: 'object', description: '{ id, title, purpose, question?, payoff?, scenes }' }, description: 'Upsert sequences by id' },
         scenes: { type: 'array', items: { type: 'object', description: '{ no, place, time, event, charge, turn, out? }' }, description: 'Upsert scenes by no' },
-        shots: { type: 'array', items: { type: 'object', description: 'One positional upsert', properties: { no: { type: 'number', description: '1-based position' }, shot: storyboardShotInput }, required: ['no', 'shot'] }, description: 'Upsert shots by 1-based position; no = length + 1 appends' },
-        insertShots: { type: 'array', items: { type: 'object', description: 'One insert', properties: { after: { type: 'number', description: '1-based position to insert after; 0 = at the start' }, shots: { type: 'array', items: storyboardShotInput, description: 'Shots to insert, in order' } }, required: ['after', 'shots'] }, description: 'Insert shots after a 1-based position (0 = at the start)' },
+        shots: { type: 'array', items: { type: 'object', description: 'One positional upsert', properties: { no: { type: 'number', description: '1-based position' }, shot: storyboardShotInput }, required: ['no', 'shot'] }, description: 'Upsert shots by 1-based position; no = length + 1 appends. Not with the id fields in the same patch' },
+        shotsById: { type: 'array', items: { type: 'object', description: 'One upsert by id', properties: { id: { type: 'string', pattern: '^s\\d{4,}$', description: 'The stable shot id (s0007) to replace' }, shot: storyboardShotInput }, required: ['id', 'shot'] }, description: 'Replace shots by their stable id — the shot keeps that id, an unknown id writes nothing. Preferred over shots once the board has ids: positions shift with every insert, ids do not' },
+        insertShots: { type: 'array', items: { type: 'object', description: 'One insert', properties: { after: { type: 'number', description: '1-based position to insert after; 0 = at the start' }, afterId: { type: 'string', pattern: '^s\\d{4,}$', description: 'The shot id to insert after — instead of after' }, shots: { type: 'array', items: storyboardShotInput, description: 'Shots to insert, in order' } }, required: ['shots'] }, description: 'Insert shots after a 1-based position (0 = at the start) or after the shot with afterId — exactly one of the two per entry' },
         transitions: {
           type: 'array', minItems: 1,
           description: 'Patch incoming transitions only, by final shot position after inserts/removals. Prefer dip for a gradual fade through black when place or time changes. Same-scene shots keep their chosen join. Example: [{no:3,transition:"dip",reason:"The next scene begins at night"}].',
@@ -4615,9 +4629,10 @@ Returns: the file written or not, counts, and findings (! violation · warning).
           }, required: ['no', 'transition', 'reason'] },
         },
         removeShots: { type: 'array', items: { type: 'number', description: '1-based position' }, description: '1-based positions to drop (resolved before inserts)' },
+        removeShotIds: { type: 'array', items: { type: 'string', pattern: '^s\\d{4,}$', description: 'A stable shot id' }, description: 'Shot ids to drop (resolved before inserts). Not with the position fields in the same patch' },
         removeScenes: { type: 'array', items: { type: 'number', description: 'Scene number' }, description: 'Scene numbers to drop from STRUCTURE.scenes and from every sequence' },
         removeSequences: { type: 'array', items: { type: 'string', description: 'Sequence id' }, description: 'Sequence ids to drop' },
-        globals: { type: 'object', description: 'Other window.* blocks to set — FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, VOICE, MOTION_POLICY' },
+        globals: { type: 'object', description: 'Other window.* blocks to set — FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, VOICE, MOTION_POLICY. PRODUCTION.mode: full_video, video_80, video_50, video_30, video_lt10, no_video (hook_only/stills_only/hybrid are legacy). New selections write renderRatioVersion:1.' },
         dryRun: { type: 'boolean', description: 'Validate and report, write nothing' },
         draft: { type: 'boolean', description: 'The story pass (storyboard §4a): camera-continuity records — shot.lineCrossing, shot.coverage — are deferred (later), not violations; leave it off in §4b' },
       },

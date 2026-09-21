@@ -66,12 +66,13 @@ function withBoard(fn) {
   const save = win => writeFileSync(path.join(board, 'scenes.js'), Object.entries(win).map(([k, v]) => `window.${k}=${JSON.stringify(v)};`).join('\n'));
   try { return fn({ dir, board, work, save }); } finally { rmSync(dir, { recursive: true, force: true }); }
 }
-test('quotes four choices with billed seconds, retry range and API rates, excluding recordings', () => {
+test('quotes six choices with billed seconds, retry range and API rates, excluding recordings', () => {
   const win = fixture(15), q = quote(win);
-  assert.deepEqual(Object.keys(q.options), ['full_video', 'video_50', 'video_30', 'hook_only']);
+  assert.deepEqual(Object.keys(q.options), mode.CHOICES);
   assert.equal(q.options.video_50.clips, 8);
   assert.equal(q.options.video_30.clips, 5);
-  assert.equal(q.options.hook_only.firstPassUsd, .29);
+  assert.equal(q.options.video_80.clips, 12);
+  assert.equal(q.options.no_video.firstPassUsd, 0);
   assert.equal(q.options.full_video.firstPassUsd, 4.35);
   assert.equal(q.options.full_video.retryHighUsd, 13.05);
   assert.equal(q.options.full_video.retryHighKrw, 18270);
@@ -149,7 +150,7 @@ test('stills_only accepts nine still cuts, keeps the four cost choices and prese
   assert.deepEqual(mode.check(win), []);
   assert.equal(mode.RATIOS.stills_only, undefined);
   // The HITL surface is the owner directive of 2026-09-06 and does not grow a fifth option.
-  assert.deepEqual(Object.keys(quote(win).options), ['full_video', 'video_50', 'video_30', 'hook_only']);
+  assert.deepEqual(Object.keys(quote(win).options), mode.CHOICES);
   assert.deepEqual(mode.policy({ generatedVideoMax: 0, videoBudgetUsd: 7 }, win.PRODUCTION, win.SCENES),
     { generatedVideoMax: 0, videoBudgetUsd: 0 });
   // The cap is read in the profile's spelling too, and from the policy the caller resolved.
@@ -875,14 +876,14 @@ test('the quote runs the ratio over cuts and bills b-roll outside it', () => {
   assert.equal(q.options.video_50.clips, 5 + 2);   // ceil(9 × .5) cuts + both b-rolls
   assert.equal(q.options.video_30.clips, 3 + 2);
   assert.equal(q.options.full_video.clips, 9 + 2);
-  assert.equal(q.options.hook_only.clips, 1);
+  assert.equal(q.options.video_lt10.clips, 0);
 });
 
 test('long-form hook-only comparison quotes hooking rather than cover', () => {
   const win = { SCENES: [{ type: 'cover', duration: 4, visual: {} }, { type: 'hooking', duration: 8, visual: {} }], PRODUCTION: { videoProvider: 'host' } };
   const q = quote(win);
-  assert.equal(q.options.hook_only.clips, 1);
-  assert.equal(q.options.hook_only.generatedSeconds, 8);
+  assert.equal(q.options.video_lt10.clips, 0);
+  assert.equal(q.options.no_video.generatedSeconds, 0);
   win.PRODUCTION.mode = 'hook_only';
   win.SCENES[1].visual.video = { engine: 'host' };
   assert.deepEqual(mode.coverageErrors(win), []);
@@ -1000,4 +1001,39 @@ test('a fast pan or tilt warns about 24 fps strobing', () => {
 test('the MCP camera schema carries the vocabulary and the per-move conditions', () => {
   const m = mode.CAMERA_INPUT_SCHEMA.properties.movement.description;
   for (const word of ['tilt up/down', 'dolly zoom in/out', 'whip pan', 'end must differ from framing', 'sound.sfx', 'shot.depth deep', 'once per episode']) assert.ok(m.includes(word), word);
+});
+
+
+test('six render bands count stock and generated shots, with small-N lower-bound precedence', () => {
+  for (const n of [1,2,3,7,10,11,100]) for (const key of mode.CHOICES) {
+    const bounds = mode.ratioBounds(key,n);
+    assert.ok(bounds.min <= bounds.max);
+    const win = {PRODUCTION:{mode:key,renderRatioVersion:1}, SCENES:Array.from({length:n},(_,i)=>({shot:{render:{mode:i<bounds.min ? (i%2?'stock_video':'generated_video'):'still_camera'}}}))};
+    assert.deepEqual(mode.coverageErrors(win), []);
+    if (bounds.min) { win.SCENES[0].shot.render.mode='still_camera'; assert.ok(mode.coverageErrors(win).length); }
+    win.SCENES.forEach(s=>s.shot.render.mode='generated_video');
+    if(bounds.max<n) assert.ok(mode.coverageErrors(win).length);
+  }
+  assert.deepEqual(mode.ratioBounds('video_80',1),{min:1,max:1});
+  assert.deepEqual(mode.ratioBounds('video_30',2),{min:1,max:1});
+  assert.deepEqual(mode.ratioBounds('video_lt10',10),{min:0,max:0});
+  assert.deepEqual(mode.ratioBounds('video_lt10',11),{min:0,max:1});
+  const data=JSON.parse(readFileSync(path.join(root,'skills/storyboard/references/render-ratios.json'),'utf8'));
+  assert.deepEqual(Object.keys(data),mode.CHOICES);
+  for(const key of mode.CHOICES) {
+    assert.equal(data[key].label,mode.MODES[key]);
+    assert.deepEqual([data[key].min,data[key].max],mode.BANDS[key]);
+  }
+});
+
+
+test('an unchanged four-choice approval retains its quote fingerprint; new contracts bind their version', () => {
+  const win=fixture(10);
+  win.PRODUCTION.approval.quoteFingerprint=quote(win,{legacy:true}).quoteFingerprint;
+  assert.equal(quote(win).quoteFingerprint,win.PRODUCTION.approval.quoteFingerprint);
+  assert.deepEqual(Object.keys(quote(win).options),['full_video','video_50','video_30','hook_only']);
+  const old=mode.signature(win);
+  win.PRODUCTION.renderRatioVersion=1;
+  assert.notEqual(mode.signature(win),old);
+  assert.deepEqual(Object.keys(quote(win).options),mode.CHOICES);
 });
