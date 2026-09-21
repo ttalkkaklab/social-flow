@@ -352,6 +352,24 @@ describe('portal_* handlers on a scripted portal', () => {
     clearTokenDir();
   });
 
+  it('reads a pending render request and submits exact revision and holder', async () => {
+    const { impl, calls } = fakeFetch({
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}/render-allocation`]: { success:true, data:{ request: {status:'pending'}, bounds:{min:5,max:7}, shots:[] } },
+      [`PUT /api/workspaces/lab/episodes/${EPISODE_ID}/render-allocation`]: { success:true, data:{ revisionNo: 4 } },
+    });
+    const h=portal.portalHandlers(impl);
+    const r=await h.renderAllocation({channel:'my-channel',episodeId:EPISODE_ID});
+    assert.equal(r.isError,false);
+    const assignments=[{id:STORYBOARD_ID,mode:'generated_video',purpose:'live_action',reason:'Visible continuous action'}];
+    const args={channel:'my-channel',episodeId:EPISODE_ID,requestId:EPISODE_ID,baseRevisionNo:3,assignments};
+    assert.equal(portal.renderAllocationSchema.safeParse(args).success,true);
+    assert.equal(portal.renderAllocationSchema.safeParse({...args,requestId:undefined}).success,false);
+    await h.renderAllocation(args);
+    assert.equal(calls[1].body.sourceHost,'me@box');
+    assert.equal(calls[1].body.baseRevisionNo,3);
+    assert.deepEqual(calls[1].body.assignments,assignments);
+  });
+
   it('with no key for the channel (and no flat file) every tool answers the one-line fallback, isError', async () => {
     const h = portal.portalHandlers(async () => {
       throw new Error('must not be called');
@@ -744,6 +762,91 @@ describe('portal_* handlers on a scripted portal', () => {
     assert.match(none.text, /compareTo needs revisionNo/);
   });
 
+  it('workspace_check with an episodeDir also reports the portal head, lease, sync and pending (loop R5)', async () => {
+    const dir = makeEpisodeDir(root, 'my-channel', 'ep-sync');
+    episode.writePortalState(dir, { workspace: 'lab', episodeId: EPISODE_ID, headRevisionNo: 2 });
+    const { impl, calls } = fakeFetch({
+      'GET /api/workspaces/lab/me': { success: true, data: { role: 'member' } },
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}`]: {
+        success: true,
+        data: { id: EPISODE_ID, slug: 'ep-sync', title: 't', storyboardId: STORYBOARD_ID, headRevisionNo: 3, stage: 'board', status: 'draft', lease: { holder: 'other@box', expiresAt: '2026-09-21T23:00:00.000Z', mine: false } },
+      },
+    });
+    const h = portal.portalHandlers(impl);
+    const ahead = JSON.parse((await h.workspaceCheck({ episodeDir: dir })).text);
+    assert.equal(ahead.sync, 'portal_ahead');
+    assert.deepEqual(ahead.portal, { headRevisionNo: 3, stage: 'board', status: 'draft', lease: { holder: 'other@box', until: '2026-09-21T23:00:00.000Z', mine: false } });
+    assert.deepEqual(ahead.pending, { sideDir: false, backups: 0 });
+    assert.equal(ahead.workspaceMatches, true);
+    assert.equal(calls.filter((c) => c.path.endsWith(`/episodes/${EPISODE_ID}`)).length, 1);
+
+    // in sync, no lease, and a half-merged side pull plus two backups lying around
+    episode.writePortalState(dir, { headRevisionNo: 3 });
+    mkdirSync(join(dir, 'storyboard', '.portal-head'), { recursive: true });
+    mkdirSync(join(dir, 'storyboard', '.portal-local', 'a-r1'), { recursive: true });
+    mkdirSync(join(dir, 'storyboard', '.portal-local', 'b-r2'), { recursive: true });
+    const same = fakeFetch({
+      'GET /api/workspaces/lab/me': { success: true, data: { role: 'member' } },
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}`]: { success: true, data: { id: EPISODE_ID, slug: 's', title: 't', storyboardId: STORYBOARD_ID, headRevisionNo: 3, stage: 'board', lease: null } },
+    });
+    const inSync = JSON.parse((await portal.portalHandlers(same.impl).workspaceCheck({ episodeDir: dir })).text);
+    assert.equal(inSync.sync, 'in_sync');
+    assert.equal(inSync.portal.lease, null);
+    assert.deepEqual(inSync.pending, { sideDir: true, backups: 2 });
+
+    // local ahead (a checkpoint the portal lost) and a lease of my own
+    episode.writePortalState(dir, { headRevisionNo: 5 });
+    const mine = fakeFetch({
+      'GET /api/workspaces/lab/me': { success: true, data: { role: 'member' } },
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}`]: { success: true, data: { id: EPISODE_ID, slug: 's', title: 't', storyboardId: STORYBOARD_ID, headRevisionNo: 3, lease: { holder: 'me@box', expiresAt: 'x' } } },
+    });
+    const local = JSON.parse((await portal.portalHandlers(mine.impl).workspaceCheck({ episodeDir: dir })).text);
+    assert.equal(local.sync, 'local_ahead');
+    assert.match(local.syncWarning, /records head #5 but the portal's head is #3/);
+    assert.match(local.syncWarning, /save with baseRevisionNo 3/);
+    assert.doesNotMatch(local.syncWarning, /delete .*headRevisionNo to resync/);
+    assert.equal(local.portal.lease.mine, false, 'no mine flag from the portal → the holder string alone proves nothing');
+    const said = fakeFetch({
+      'GET /api/workspaces/lab/me': { success: true, data: { role: 'member' } },
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}`]: { success: true, data: { id: EPISODE_ID, slug: 's', title: 't', storyboardId: STORYBOARD_ID, headRevisionNo: 5, lease: { holder: 'me@box', expiresAt: 'x', mine: true } } },
+    });
+    assert.equal(JSON.parse((await portal.portalHandlers(said.impl).workspaceCheck({ episodeDir: dir })).text).portal.lease.mine, true, 'same key and same holder → mine');
+    assert.equal(ahead.syncWarning, undefined);
+
+    // same key, other machine: the portal says mine (same key) but the holder differs → not mine
+    const twin = fakeFetch({
+      'GET /api/workspaces/lab/me': { success: true, data: { role: 'member' } },
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}`]: { success: true, data: { id: EPISODE_ID, slug: 's', title: 't', storyboardId: STORYBOARD_ID, headRevisionNo: 5, lease: { holder: 'me@other-box', expiresAt: 'x', mine: true } } },
+    });
+    const t = JSON.parse((await portal.portalHandlers(twin.impl).workspaceCheck({ episodeDir: dir })).text);
+    assert.equal(t.portal.lease.mine, false);
+  });
+
+  it('workspace_check keeps answering when the portal lookup fails, has no record, or the workspace mismatches', async () => {
+    const dir = makeEpisodeDir(root, 'my-channel', 'ep-sync-404');
+    episode.writePortalState(dir, { workspace: 'lab', episodeId: EPISODE_ID, headRevisionNo: 1 });
+    const gone = fakeFetch({ 'GET /api/workspaces/lab/me': { success: true, data: { role: 'member' } } }); // episode route → 404
+    const r = await portal.portalHandlers(gone.impl).workspaceCheck({ episodeDir: dir });
+    assert.equal(r.isError, false);
+    const out = JSON.parse(r.text);
+    assert.equal(out.portal, null);
+    assert.equal(out.sync, 'unknown');
+    assert.match(out.portalWarning, /portal 404/);
+    assert.equal(out.workspaceMatches, true);
+
+    const fresh = makeEpisodeDir(root, 'my-channel', 'ep-sync-fresh');
+    const none = JSON.parse((await portal.portalHandlers(gone.impl).workspaceCheck({ episodeDir: fresh })).text);
+    assert.equal(none.copyOf, null);
+    assert.equal(none.sync, 'unknown');
+    assert.deepEqual(none.pending, { sideDir: false, backups: 0 });
+
+    const other = makeEpisodeDir(root, 'my-channel', 'ep-sync-other');
+    episode.writePortalState(other, { workspace: 'other-lab', episodeId: EPISODE_ID, headRevisionNo: 1 });
+    const mm = JSON.parse((await portal.portalHandlers(gone.impl).workspaceCheck({ episodeDir: other })).text);
+    assert.equal(mm.workspaceMatches, false);
+    assert.equal('sync' in mm, false, 'no portal lookup with the wrong key');
+  });
+
   it('episode_status refuses an empty patch before touching the portal', async () => {
     const r = await portal.portalHandlers(async () => {
       throw new Error('must not be called');
@@ -756,8 +859,8 @@ describe('portal_* handlers on a scripted portal', () => {
 describe('portal tool surface', () => {
   const names = new Set(TOOLS.map((t) => t.name));
 
-  it('all thirteen portal tools are defined and routed, and nothing else starts with portal_', () => {
-    assert.equal(portal.PORTAL_TOOL_NAMES.length, 13);
+  it('all fourteen portal tools are defined and routed, and nothing else starts with portal_', () => {
+    assert.equal(portal.PORTAL_TOOL_NAMES.length, 14);
     for (const name of portal.PORTAL_TOOL_NAMES) {
       assert.ok(names.has(name), `${name} not in TOOLS`);
       assert.equal(typeof ROUTES[name], 'function', `${name} not routed`);

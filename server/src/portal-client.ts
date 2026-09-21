@@ -62,6 +62,7 @@ export interface PortalClient {
   getRevision(episodeId: string, no: number): Promise<PortalResponse<PortalRevision>>;
   /** Two revisions compared — `to` is a number or 'head' (portal loop R3). */
   revisionDiff(episodeId: string, from: number, to: number | 'head'): Promise<PortalResponse<PortalRevisionDiff>>;
+  renderAllocation(episodeId: string, body?: Record<string, unknown>): Promise<PortalResponse<Record<string, unknown>>>;
   checkpoint(episodeId: string, body: Record<string, unknown>): Promise<PortalResponse<{ revisionNo: number }>>;
   restoreRevision(episodeId: string, no: number, body?: Record<string, unknown>): Promise<PortalResponse<{ revisionNo: number }>>;
   getLease(episodeId: string): Promise<PortalResponse>;
@@ -210,6 +211,7 @@ export function createPortalClient(credential: PortalCredential, fetchImpl: Fetc
     listRevisions: (episodeId) => json('GET', `/episodes/${episodeId}/revisions`),
     getRevision: (episodeId, no) => json<PortalRevision>('GET', `/episodes/${episodeId}/revisions/${no}`),
     revisionDiff: (episodeId, from, to) => json<PortalRevisionDiff>('GET', `/episodes/${episodeId}/revisions/${from}/diff/${to}`),
+    renderAllocation: (episodeId, body) => json(body ? 'PUT' : 'GET', `/episodes/${episodeId}/render-allocation`, body ? { ...body, sourceHost: holder } : undefined),
     checkpoint: (episodeId, body) => json<{ revisionNo: number }>('POST', `/episodes/${episodeId}/revisions`, body),
     restoreRevision: (episodeId, no, body = {}) =>
       json<{ revisionNo: number }>('POST', `/episodes/${episodeId}/revisions/${no}/restore`, body),
