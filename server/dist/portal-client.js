@@ -114,6 +114,7 @@ export function createPortalClient(credential, fetchImpl = fetch) {
         listRevisions: (episodeId) => json('GET', `/episodes/${episodeId}/revisions`),
         getRevision: (episodeId, no) => json('GET', `/episodes/${episodeId}/revisions/${no}`),
         revisionDiff: (episodeId, from, to) => json('GET', `/episodes/${episodeId}/revisions/${from}/diff/${to}`),
+        renderAllocation: (episodeId, body) => json(body ? 'PUT' : 'GET', `/episodes/${episodeId}/render-allocation`, body ? { ...body, sourceHost: holder } : undefined),
         checkpoint: (episodeId, body) => json('POST', `/episodes/${episodeId}/revisions`, body),
         restoreRevision: (episodeId, no, body = {}) => json('POST', `/episodes/${episodeId}/revisions/${no}/restore`, body),
         getLease: (episodeId) => json('GET', `/episodes/${episodeId}/lease`),

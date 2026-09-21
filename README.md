@@ -480,7 +480,7 @@ social-flow/
 ├── .plugin/plugin.json          # Buzz persona pack (Open Plugin Spec)
 ├── personas/                    # Buzz pack persona (pipeline.persona.md)
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 96 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 97 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
 │       ├── tools.ts             # tool definitions — 83: research 9 + open data 5 + generation 40 + publish 6 + comments 3 + growth insights 5 + growth review 2 + check 2 + blender 7 + storyboard 4
@@ -542,7 +542,7 @@ social-flow/
 └── data/                        # content data root (see data/README.md)
 ```
 
-## MCP tool surface (96 tools)
+## MCP tool surface (97 tools)
 
 **`tools/list` does not show all 96.** The credential-gated publish, review and insights tools
 (`threads_draft_create` · `threads_review_submit` · `threads_publish` · `instagram_publish` · `facebook_publish` · `facebook_comment` ·
@@ -731,6 +731,8 @@ can turn one JSON-disabled tool back on for that session. Values split on commas
 or whitespace; a bare `*` matches every tool.
 
 ### The ttalkkakstory portal by workspace API key
+
+`portal_render_allocation` reads the episode’s pending six-ratio request and accepts the host LLM’s complete shot-mode assignment with revision checks. The portal UI records the request; no background worker is started.
 
 The storyboard, produce and publish skills keep an episode on the ttalkkakstory portal
 **when the channel has a portal key** — the plugin's own server calls the portal API with it

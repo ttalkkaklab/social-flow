@@ -75948,6 +75948,7 @@ function vocabAtLoad() {
       HOOK_FORMS: MISSING,
       ARCS: MISSING,
       RENDER_MODES: MISSING,
+      PRODUCTION_MODES: MISSING,
       CHARGES_OPEN: MISSING,
       CHARGES_CLOSE: MISSING,
       TRANSITION_RE: /^$/
@@ -76064,7 +76065,12 @@ var storyboardCheckSchema = external_exports.object({
 var scenarioCheckSchema = external_exports.object({
   path: external_exports.string().min(1).describe("The candidates directory, or its selected scenario.md")
 });
-var globalsSchema = external_exports.record(external_exports.string().regex(/^[A-Z][A-Z0-9_]*$/, "a window.* global is UPPER_CASE"), external_exports.unknown());
+var productionSchema = external_exports.object({ mode: tuple([...V.PRODUCTION_MODES, "hook_only", "stills_only", "hybrid"]).optional(), renderRatioVersion: external_exports.literal(1).optional() }).passthrough();
+var globalsSchema = external_exports.record(external_exports.string().regex(/^[A-Z][A-Z0-9_]*$/, "a window.* global is UPPER_CASE"), external_exports.unknown()).superRefine((value, ctx) => {
+  if (value.PRODUCTION === void 0) return;
+  const parsed = productionSchema.safeParse(value.PRODUCTION);
+  if (!parsed.success) for (const issue2 of parsed.error.issues) ctx.addIssue({ ...issue2, path: ["PRODUCTION", ...issue2.path] });
+});
 var transitionPatchSchema = external_exports.object({
   no: external_exports.number().int().positive().describe("Incoming shot number, 1-based, after removals and inserts"),
   transition: external_exports.enum([
@@ -83908,6 +83914,25 @@ Returns: JSON \u2014 { scenarios: [{ candidate, chosen, score, p0, findings }], 
     }
   },
   {
+    name: "portal_render_allocation",
+    title: "Read or submit the episode render allocation",
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    description: "Read the pending render ratio request and every shot. The host LLM chooses render.mode by shot purpose within bounds, then submits assignments with requestId and baseRevisionNo. No LLM API or paid asset call occurs here. The portal validates complete shot IDs, video bands, lease and revision, then saves atomically. Read again on conflict; pull the updated board before local edits. Returns request, bounds, shots and instructions on read, or the new revision on submit.",
+    inputSchema: { type: "object", properties: {
+      episodeId: PORTAL_EPISODE_ID_ARG,
+      episodeDir: PORTAL_EPISODE_DIR_ARG,
+      channel: PORTAL_CHANNEL_ARG,
+      requestId: { type: "string", format: "uuid", description: "Exact pending request ID returned by the read; required when submitting." },
+      baseRevisionNo: { type: "integer", minimum: 0, description: "Read revision; required when submitting. Stale writes are rejected." },
+      assignments: { type: "array", description: "One assignment per returned shot ID; omit to read the pending plan.", minItems: 1, maxItems: 500, items: { type: "object", required: ["id", "mode", "purpose", "reason"], properties: {
+        id: { type: "string", format: "uuid", description: "Portal shot row ID from the latest read, never an array position." },
+        mode: enumInput(storyboardVocabulary?.RENDER_MODES, "Shot render route; generated_video and stock_video both count toward the ratio."),
+        purpose: { type: "string", minLength: 1, maxLength: 200, description: "Shot purpose in the render-routing vocabulary." },
+        reason: { type: "string", minLength: 1, maxLength: 2e3, description: "Specific reason this render mode serves this shot." }
+      } } }
+    } }
+  },
+  {
     name: "portal_scenario_choose",
     title: "Pick one scenario candidate as scenario.md",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
@@ -87332,7 +87357,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
         removeShotIds: { type: "array", items: { type: "string", pattern: "^s\\d{4,}$", description: "A stable shot id" }, description: "Shot ids to drop (resolved before inserts). Not with the position fields in the same patch" },
         removeScenes: { type: "array", items: { type: "number", description: "Scene number" }, description: "Scene numbers to drop from STRUCTURE.scenes and from every sequence" },
         removeSequences: { type: "array", items: { type: "string", description: "Sequence id" }, description: "Sequence ids to drop" },
-        globals: { type: "object", description: "Other window.* blocks to set \u2014 FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, VOICE, MOTION_POLICY" },
+        globals: { type: "object", description: "Other window.* blocks to set \u2014 FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, VOICE, MOTION_POLICY. PRODUCTION.mode: full_video, video_80, video_50, video_30, video_lt10, no_video (hook_only/stills_only/hybrid are legacy). New selections write renderRatioVersion:1." },
         dryRun: { type: "boolean", description: "Validate and report, write nothing" },
         draft: { type: "boolean", description: "The story pass (storyboard \xA74a): camera-continuity records \u2014 shot.lineCrossing, shot.coverage \u2014 are deferred (later), not violations; leave it off in \xA74b" }
       },
@@ -87491,6 +87516,7 @@ function createPortalClient(credential, fetchImpl = fetch) {
     listRevisions: (episodeId) => json2("GET", `/episodes/${episodeId}/revisions`),
     getRevision: (episodeId, no) => json2("GET", `/episodes/${episodeId}/revisions/${no}`),
     revisionDiff: (episodeId, from, to) => json2("GET", `/episodes/${episodeId}/revisions/${from}/diff/${to}`),
+    renderAllocation: (episodeId, body) => json2(body ? "PUT" : "GET", `/episodes/${episodeId}/render-allocation`, body ? { ...body, sourceHost: holder } : void 0),
     checkpoint: (episodeId, body) => json2("POST", `/episodes/${episodeId}/revisions`, body),
     restoreRevision: (episodeId, no, body = {}) => json2("POST", `/episodes/${episodeId}/revisions/${no}/restore`, body),
     getLease: (episodeId) => json2("GET", `/episodes/${episodeId}/lease`),
@@ -87654,12 +87680,26 @@ var PORTAL_TOOL_NAMES = [
   "portal_episode_lease",
   "portal_scenario_save",
   "portal_scenario_pull",
-  "portal_scenario_choose"
+  "portal_scenario_choose",
+  "portal_render_allocation"
 ];
 var channelArg = external_exports.string().regex(/^[a-z0-9][a-z0-9-]{0,63}$/, "kebab-case channel slug").optional();
 var uuid2 = external_exports.string().uuid();
 var stage = external_exports.enum(EPISODE_STAGES);
 var candidate = external_exports.enum(SCENARIO_CANDIDATES);
+var renderAllocationSchema = external_exports.object({
+  episodeId: uuid2.optional(),
+  episodeDir: external_exports.string().optional(),
+  channel: channelArg,
+  requestId: uuid2.optional(),
+  baseRevisionNo: external_exports.number().int().min(0).optional(),
+  assignments: external_exports.array(external_exports.object({
+    id: uuid2,
+    mode: external_exports.enum(["still_camera", "character_html", "object_html", "data_graph", "generated_video", "editorial_html", "stock_video"]),
+    purpose: external_exports.string().trim().min(1).max(200),
+    reason: external_exports.string().trim().min(1).max(2e3)
+  })).min(1).max(500).optional()
+}).refine((a) => !a.assignments || a.requestId && a.baseRevisionNo !== void 0, "Submitting requires requestId and baseRevisionNo from the latest read");
 var workspaceCheckSchema = external_exports.object({ channel: channelArg, episodeDir: external_exports.string().optional() });
 var storyboardSaveSchema = external_exports.object({
   episodeDir: external_exports.string().min(1),
@@ -87852,6 +87892,19 @@ function resolveEpisodeId(episodeId, episodeDir) {
 }
 function portalHandlers(fetchImpl) {
   return {
+    async renderAllocation({ episodeId, episodeDir, channel, assignments, requestId, baseRevisionNo }) {
+      const r2 = resolveClient(fetchImpl, channel, episodeDir);
+      if ("error" in r2) return r2.error;
+      const refused = refuseMismatch(r2.client, episodeDir);
+      if (refused) return refused;
+      try {
+        const id = resolveEpisodeId(episodeId, episodeDir);
+        const { data } = await r2.client.renderAllocation(id, assignments ? { assignments, requestId, baseRevisionNo } : void 0);
+        return ok({ ...data, ...assignments ? { next: "portal_storyboard_pull before any local save; server updated the revision and shot modes." } : {} });
+      } catch (error2) {
+        return failed(error2);
+      }
+    },
     async workspaceCheck({ channel, episodeDir }) {
       const r2 = resolveClient(fetchImpl, channel, episodeDir);
       if ("error" in r2) return r2.error;
@@ -95965,13 +96018,14 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
   portal_episode_lease: async (args) => fromPortal(await portalRoutes.episodeLease(parseArgs(episodeLeaseSchema, args))),
   portal_scenario_save: async (args) => fromPortal(await portalRoutes.scenarioSave(parseArgs(scenarioSaveSchema, args))),
   portal_scenario_pull: async (args) => fromPortal(await portalRoutes.scenarioPull(parseArgs(scenarioPullSchema, args))),
+  portal_render_allocation: async (args) => fromPortal(await portalRoutes.renderAllocation(parseArgs(renderAllocationSchema, args))),
   portal_scenario_choose: async (args) => fromPortal(await portalRoutes.scenarioChoose(parseArgs(scenarioChooseSchema, args)))
 };
 
 // src/index.ts
 import { readFileSync as readFinalRequest } from "node:fs";
 var server = new Server(
-  { name: "social-flow", version: "0.85.0" },
+  { name: "social-flow", version: "0.86.0" },
   { capabilities: { tools: {} } }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {

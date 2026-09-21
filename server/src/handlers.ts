@@ -1457,5 +1457,6 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   portal_episode_lease: async (args) => fromPortal(await portalRoutes.episodeLease(parseArgs(portal.episodeLeaseSchema, args))),
   portal_scenario_save: async (args) => fromPortal(await portalRoutes.scenarioSave(parseArgs(portal.scenarioSaveSchema, args))),
   portal_scenario_pull: async (args) => fromPortal(await portalRoutes.scenarioPull(parseArgs(portal.scenarioPullSchema, args))),
+  portal_render_allocation: async (args) => fromPortal(await portalRoutes.renderAllocation(parseArgs(portal.renderAllocationSchema, args))),
   portal_scenario_choose: async (args) => fromPortal(await portalRoutes.scenarioChoose(parseArgs(portal.scenarioChooseSchema, args))),
 };

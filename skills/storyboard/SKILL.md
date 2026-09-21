@@ -13,11 +13,11 @@ description: >
   checkers and the author's own read. Plans each promise, visual change and sound event.
   Nothing is generated here. Produce builds the approved board; autoproduce runs unattended.
 argument-hint: "<channel> <topic or topic hint>"
-allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "Agent", "AskUserQuestion", "WebSearch", "WebFetch", "mcp__social-flow__capability_status", "mcp__social-flow__storyboard_apply", "mcp__social-flow__storyboard_check", "mcp__social-flow__storyboard_read", "mcp__social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__social-flow__serp_image_search", "mcp__social-flow__stock_search", "mcp__social-flow__datago_search", "mcp__social-flow__datago_detail", "mcp__social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch", "mcp__social-flow__datago_api_call", "mcp__social-flow__suno_generate_lyrics"]
+allowed-tools: ["mcp__social-flow__portal_render_allocation", "Read", "Write", "Edit", "Glob", "Bash", "Agent", "AskUserQuestion", "WebSearch", "WebFetch", "mcp__social-flow__capability_status", "mcp__social-flow__storyboard_apply", "mcp__social-flow__storyboard_check", "mcp__social-flow__storyboard_read", "mcp__social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__social-flow__serp_image_search", "mcp__social-flow__stock_search", "mcp__social-flow__datago_search", "mcp__social-flow__datago_detail", "mcp__social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch", "mcp__social-flow__datago_api_call", "mcp__social-flow__suno_generate_lyrics"]
 ---
 
 # Storyboard authoring — data/[channel]/episodes/[topic]/storyboard/
-
+For pending portal render requests, follow [the six-ratio allocation contract](references/production-mode.md): `portal_render_allocation` read → host LLM reasons over every shot → submit requestId/baseRevisionNo and all assignments → pull. New choices persist `PRODUCTION.renderRatioVersion:1`; neither a pending request nor ratio selection approves spending.
 Read [story-quality.md](references/story-quality.md) before candidates or narration. Its evidence → meaning → ending → optional CTA contract overrides older mandatory-question and modern-case rules. Write `window.STORY` in §4a; draft checks require it. The existing narration review supplies its four evidence-backed findings; after vocabulary edits revalidate the read and run `check-story.js storyboard/` before §4b or approval. No score waives a failed criterion.
 
 Takes one topic through **research → wow points → three messages → three scenario candidates → one pick → more research →
@@ -170,7 +170,7 @@ start/end storyboard image and subsequent video prompt, in every production mode
 Reuse an explicit existing choice; do not infer a style from production mode. Both prompt assemblers write the preset's treatment into every generated still's `bgPrompt`, and `check-scenes.js` refuses one without it (`[style-missing]`). When you judge that one shot needs another preset, that is the user's call: ask with AskUserQuestion and write their answer to `shot.style` (visual-style.md §Per-shot style); never change a shot's look on your own. For shot-level drone flight, follow [drone-flythrough.md](references/drone-flythrough.md).
 
 Read [production-mode.md](references/production-mode.md). Before visual planning, present
-100% 이상 (`full_video`), 50% 이상 (`video_50`), 30% 이상 (`video_30`) and 훅만 영상 (`hook_only`)
+the six render ratios in production-mode.md
 with `production-cost.js` first-pass and retry-inclusive estimates, model, resolution, audio,
 clip counts, exchange-rate assumption, exclusions and the explicit episode budget cap.
 Persist the actual HITL answer in `window.PRODUCTION` beside the §1 `imageProvider`/`videoProvider` detection; no paid generation happens here. **Two more questions on every episode with generated cuts** (user directive 2026-09-11, production-mode.md §Two more questions): before the first previz render ask **which 3D renderer** — Blender or three.js — and persist `PRODUCTION.previz`; before the §7 approval ask **which video model** with `video-model-options.js`'s cost table and persist `PRODUCTION.videoModel` as the episode default or `model:"mixed"`, and write each cut's selected model and resolution. `production-mode.js` refuses the board without both records.

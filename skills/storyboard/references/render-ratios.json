@@ -1,0 +1,32 @@
+{
+  "full_video": {
+    "label": "전체 영상",
+    "min": 100,
+    "max": 100
+  },
+  "video_80": {
+    "label": "80% 이상 영상",
+    "min": 80,
+    "max": 100
+  },
+  "video_50": {
+    "label": "50% 이상 영상",
+    "min": 50,
+    "max": 80
+  },
+  "video_30": {
+    "label": "30% 이상 영상",
+    "min": 30,
+    "max": 50
+  },
+  "video_lt10": {
+    "label": "10% 미만 영상",
+    "min": 0,
+    "max": 10
+  },
+  "no_video": {
+    "label": "0% 영상",
+    "min": 0,
+    "max": 0
+  }
+}

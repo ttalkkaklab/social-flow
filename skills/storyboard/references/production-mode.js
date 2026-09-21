@@ -2,19 +2,36 @@
 (function (root) {
   'use strict';
   const text = value => typeof value === 'string' && !!value.trim();
-  const CHOICES = ['full_video', 'video_50', 'video_30', 'hook_only'];
+  const CHOICES = ['full_video', 'video_80', 'video_50', 'video_30', 'video_lt10', 'no_video'];
   const CUT_TYPES = ['action', 'reaction', 'insert', 'document', 'map', 'scenery'];
-  // stills_only is out of CHOICES on purpose: a channel whose generated-video cap is 0 has no
-  // video cost to compare, so the four-option HITL has nothing to offer. The board still
-  // records its visual style, and that record is what stills_only carries.
-  const MODES = { full_video: '100% 이상', video_50: '50% 이상', video_30: '30% 이상', hook_only: '훅만 영상', stills_only: '정지 전용 (생성 영상 0)', hybrid: '혼합 제작 (기존 승인)' };
-  const RATIOS = { full_video: 1, video_50: .5, video_30: .3 };
+  const MODES = { full_video: '전체 영상', video_80: '80% 이상 영상', video_50: '50% 이상 영상', video_30: '30% 이상 영상', video_lt10: '10% 미만 영상', no_video: '0% 영상', hook_only: '훅만 영상 (기존 승인)', stills_only: '정지 전용 (기존 승인)', hybrid: '혼합 제작 (기존 승인)' };
+  const RATIOS = { full_video: 1, video_80: .8, video_50: .5, video_30: .3, video_lt10: 0, no_video: 0 };
+  const BANDS = { full_video: [100,100], video_80: [80,100], video_50: [50,80], video_30: [30,50], video_lt10: [0,10], no_video: [0,0] };
+  const ratioMode = mode => mode === 'hook_only' ? 'video_lt10' : mode === 'stills_only' ? 'no_video' : mode;
+  function ratioBounds(mode, total) {
+    const key = ratioMode(mode), band = BANDS[key];
+    if (!band) return null;
+    const min = Math.ceil(total * band[0] / 100);
+    const max = key === 'full_video' ? total : key === 'no_video' ? 0 : Math.max(0, Math.ceil(total * band[1] / 100) - 1);
+    return { min, max: Math.max(min, max) };
+  }
+  const videoRender = scene => ['generated_video','stock_video'].includes(scene.shot?.render?.mode);
+  function ratioErrors(win) {
+    const scenes = win.SCENES || [], bounds = ratioBounds(win.PRODUCTION?.mode, scenes.length);
+    if (!bounds) return [];
+    const n = scenes.filter(videoRender).length;
+    const missing = scenes.some(s => !s.shot?.render?.mode);
+    return missing ? ['render ratio requires render.mode on every shot'] : n < bounds.min || n > bounds.max
+      ? [`render ratio requires ${bounds.min}–${bounds.max} video shots of ${scenes.length}; got ${n}`] : [];
+  }
+  const bandContract = p => p?.renderRatioVersion === 1 || ['video_80','video_lt10','no_video'].includes(p?.mode);
   // A cut is a shot in the playback line; b-roll is spliced by `after` and is not a cut, so it
   // sits outside the ratio on both sides (it still counts toward the generated-slot cap).
   const newCut = scene => eligible(scene) && !reused(scene) && scene.type !== 'broll';
   const generated = scene => !!scene.visual?.video || (scene.type === 'quote' && typeof scene.visual?.clip === 'object');
   function hookScene(scenes) { return scenes.find(s => s.type === 'hooking' || s.beat === 'hooking') || scenes.find(s => s.type === 'cover') || scenes.find(newCut); }
   function coverageErrors(win) {
+    if (bandContract(win.PRODUCTION)) return ratioErrors(win);
     const key = win.PRODUCTION?.mode, scenes = win.SCENES || [], cuts = scenes.filter(newCut);
     if (key === 'hook_only') {
       const hook = hookScene(scenes);
@@ -404,7 +421,7 @@
   // Outputs and approval metadata must not invalidate their own input signature.
   function signature(win) {
     const p = win.PRODUCTION || {};
-    return JSON.stringify({ format: win.FORMAT, mode: p.mode, imageProvider: p.imageProvider, videoProvider: p.videoProvider, videoBudgetUsd: p.videoBudgetUsd,
+    return JSON.stringify({ format: win.FORMAT, mode: p.mode, ...(p.renderRatioVersion !== undefined ? { renderRatioVersion: p.renderRatioVersion } : {}), imageProvider: p.imageProvider, videoProvider: p.videoProvider, videoBudgetUsd: p.videoBudgetUsd,
       maxAttempts: p.maxAttempts, generationRevision: p.generationRevision, comparison: p.comparison, style: p.style, cast: p.cast,
       scenes: (win.SCENES || []).filter(eligible).map(s => {
         const v = s.visual || {}, video = { ...v.video };
@@ -444,8 +461,10 @@
   function check(win, { requireSelection = false, requireApproval = false, draft = false, generatedVideoMax } = {}) {
     const p = win.PRODUCTION, errors = Array.from(win.SCENES || []).flatMap((s, i) => reuseErrors(s).map(e => `shot ${i + 1}: ${e}`));
     if (!p) return requireSelection || (win.SCENES || []).some(reused)
-      ? errors.concat(['Choose a production mode with a four-option cost comparison before generation']) : errors;
-    if (!MODES[p.mode]) errors.push('PRODUCTION.mode must be full_video, video_50, video_30, hook_only, or stills_only where the channel generated-video cap is 0 (hybrid is legacy)');
+      ? errors.concat(['Choose a production mode with a six-option cost comparison before generation']) : errors;
+    if (!MODES[p.mode]) errors.push('PRODUCTION.mode must be one of ' + CHOICES.join(', ') + ' (hook_only, stills_only and hybrid are legacy)');
+    if (p.renderRatioVersion !== undefined && p.renderRatioVersion !== 1) errors.push('renderRatioVersion must be 1');
+    if (bandContract(p) && (win.SCENES || []).every(s => s.shot?.render?.mode)) errors.push(...ratioErrors(win));
     // host = the CLI's own media tool (image_gen on Codex and Grok, image_to_video on Grok); absent reads as api.
     for (const key of ['imageProvider', 'videoProvider'])
       if (p[key] !== undefined && !['host', 'api'].includes(p[key])) errors.push('PRODUCTION.' + key + ' must be host or api');
@@ -454,7 +473,7 @@
     if (!Number.isInteger(p.maxAttempts) || p.maxAttempts < 1 || p.maxAttempts > 5)
       errors.push('PRODUCTION.maxAttempts must be 1–5 total attempts per clip (including the first)');
     // stills_only buys no generated video, so there is no cost quote to fingerprint and nothing
-    // for the user to approve; the four-option comparison never ran. Every other mode carries one.
+    // for the user to approve; the six-option comparison never ran. Every other mode carries one.
     if (requireApproval && p.mode !== 'stills_only' && (!p.approval || !['user', 'standing'].includes(p.approval.kind) ||
         !text(p.approval.reference) || !Number.isFinite(Date.parse(p.approval.at)) || !text(p.approval.quoteFingerprint)))
       errors.push('PRODUCTION.approval needs kind, reference, at and the approved cost quoteFingerprint');
@@ -486,6 +505,7 @@
         errors.push('[cutType-unknown] shot ' + (i + 1) + ': shot.cutType must be one of ' + CUT_TYPES.join(', '));
       shotStyleErrors(scene, i).forEach(e => errors.push(e));
     });
+    if (win.RENDER_ALLOCATION?.status === 'pending') errors.push('render allocation is pending; submit the LLM plan before production');
     if (draft) return errors; // Shot assets/designs are authored after the narration-only draft.
     (win.SCENES || []).forEach((s, i) => {
       if (eligible(s) && !reused(s) && s.visual?.video) cameraErrors(s).forEach(e => errors.push('shot ' + (i + 1) + ': ' + e));
@@ -518,7 +538,7 @@
         if (cap === null)
           errors.push('stills_only needs the channel cap on the board: copy the profile policy into window.MOTION_POLICY with generated_video_max 0 (generatedVideoMax is read too)');
         else if (cap !== 0)
-          errors.push('stills_only is for a channel whose generated_video_max is 0; choose a cost mode from the four-option comparison instead');
+          errors.push('stills_only is for a channel whose generated_video_max is 0; choose a cost mode from the six-option comparison instead');
         if (count) errors.push('stills_only carries no generated clip; ' + count + ' shot(s) hold one — drop them or choose a cost mode');
         // An imported clip already has its own zero-generation shape under legacy hybrid, so the two
         // contracts stay disjoint: stills_only is the board that plays no video at all.
@@ -532,7 +552,7 @@
       for (const key of ['reference', 'world', 'materials', 'palette', 'lighting', 'camera'])
         if (!text(style[key])) errors.push('PRODUCTION.style.' + key + ' is required');
     (win.SCENES || []).forEach((s, i) => {
-      if (!eligible(s) || reused(s)) return;
+      if (!eligible(s) || reused(s) || (bandContract(p) && s.shot?.render?.mode === 'stock_video')) return;
       const v = s.visual || {}, design = s.shot?.videoDesign || {};
       const bad = message => errors.push('shot ' + (i + 1) + ': ' + message);
       if (s.shot?.render?.mode !== 'generated_video' || !v.video || v.slide || (v.source && v.source !== 'stock') || v.clip)
@@ -601,11 +621,16 @@
     // The episode approval authorizes these two changes only. Keep channel motion floors,
     // voice, format, factual evidence and publishing gates intact.
     if (!production || !MODES[production.mode]) return base;
+    if (bandContract(production)) {
+      const bounds = ratioBounds(production.mode, scenes.length);
+      return { ...base, videoBudgetUsd: production.videoBudgetUsd,
+        generatedVideoMax: bounds ? Math.max(0, bounds.max - scenes.filter(s => s.shot?.render?.mode === 'stock_video').length) : base.generatedVideoMax };
+    }
     return { ...base, videoBudgetUsd: production.videoBudgetUsd,
       // hook_only: the hook plus every imported clip — reuse is outside the count but still a slot.
       generatedVideoMax: production.mode === 'hook_only' ? 1 + scenes.filter(reused).length : RATIOS[production.mode] ? scenes.filter(eligible).length : Math.min(base.generatedVideoMax ?? 2, 2) };
   }
-  const api = { CAMERA_INPUT_SCHEMA, cameraInputErrors, CAMERA_PRESETS, isDrone, droneErrors, droneSample, droneSlots, droneBinding, droneCameraKeys, droneSceneErrors, STYLES, MODES, CHOICES, CUT_TYPES, RATIOS, videoCap, newCut, generated, hookScene, coverageErrors, CAMERA_SLOTS, PREVIZ_RENDERERS, VIDEO_MODELS, packPresets, ALL_LOOKS, shotStyle, shotStyleErrors, eligible, reused, reuseErrors, full, signature, check, policy, motionErrors, missingCameraSlots, cameraErrors, cameraWarnings, episodeMoveErrors, moveOf, travels, MOVES, staticCamera, finalState };
+  const api = { BANDS, ratioMode, ratioBounds, ratioErrors, videoRender, bandContract, CAMERA_INPUT_SCHEMA, cameraInputErrors, CAMERA_PRESETS, isDrone, droneErrors, droneSample, droneSlots, droneBinding, droneCameraKeys, droneSceneErrors, STYLES, MODES, CHOICES, CUT_TYPES, RATIOS, videoCap, newCut, generated, hookScene, coverageErrors, CAMERA_SLOTS, PREVIZ_RENDERERS, VIDEO_MODELS, packPresets, ALL_LOOKS, shotStyle, shotStyleErrors, eligible, reused, reuseErrors, full, signature, check, policy, motionErrors, missingCameraSlots, cameraErrors, cameraWarnings, episodeMoveErrors, moveOf, travels, MOVES, staticCamera, finalState };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.PRODUCTION_MODE = api;
 })(typeof window === 'object' ? window : globalThis);

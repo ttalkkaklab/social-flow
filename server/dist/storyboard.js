@@ -68,7 +68,7 @@ function vocabAtLoad() {
     }
     catch {
         return { SIZES: MISSING, ANGLES: MISSING, BEATS: MISSING, TYPES: MISSING, INFO_TYPES: MISSING, SHARE_TYPES: MISSING,
-            HOOK_TYPES: MISSING, HOOK_FORMS: MISSING, ARCS: MISSING, RENDER_MODES: MISSING, CHARGES_OPEN: MISSING, CHARGES_CLOSE: MISSING,
+            HOOK_TYPES: MISSING, HOOK_FORMS: MISSING, ARCS: MISSING, RENDER_MODES: MISSING, PRODUCTION_MODES: MISSING, CHARGES_OPEN: MISSING, CHARGES_CLOSE: MISSING,
             TRANSITION_RE: /^$/ };
     }
 }
@@ -197,7 +197,15 @@ export const storyboardCheckSchema = z.object({
 export const scenarioCheckSchema = z.object({
     path: z.string().min(1).describe('The candidates directory, or its selected scenario.md'),
 });
-const globalsSchema = z.record(z.string().regex(/^[A-Z][A-Z0-9_]*$/, 'a window.* global is UPPER_CASE'), z.unknown());
+export const productionSchema = z.object({ mode: tuple([...V.PRODUCTION_MODES, 'hook_only', 'stills_only', 'hybrid']).optional(), renderRatioVersion: z.literal(1).optional() }).passthrough();
+const globalsSchema = z.record(z.string().regex(/^[A-Z][A-Z0-9_]*$/, 'a window.* global is UPPER_CASE'), z.unknown()).superRefine((value, ctx) => {
+    if (value.PRODUCTION === undefined)
+        return;
+    const parsed = productionSchema.safeParse(value.PRODUCTION);
+    if (!parsed.success)
+        for (const issue of parsed.error.issues)
+            ctx.addIssue({ ...issue, path: ['PRODUCTION', ...issue.path] });
+});
 export const transitionPatchSchema = z.object({
     no: z.number().int().positive().describe('Incoming shot number, 1-based, after removals and inserts'),
     transition: z.enum(['cut', 'dip', 'dip:white', 'jcut', 'dissolve', 'iris', 'blur', 'zoom',
