@@ -104,6 +104,7 @@ export function createPortalClient(credential, fetchImpl = fetch) {
             return json('GET', `/storyboards${qs ? `?${qs}` : ''}`);
         },
         listEpisodes: (storyboardId) => json('GET', `/storyboards/${storyboardId}/episodes`),
+        recordDecision: (episodeId, body) => json('POST', `/episodes/${episodeId}/decisions`, body),
         getEpisode: (episodeId) => json('GET', `/episodes/${episodeId}`),
         // holder travels on every write — a lease held by another machine on the same key is still someone else's.
         updateEpisode: (episodeId, patch) => json('PATCH', withHolder(`/episodes/${episodeId}`), patch),

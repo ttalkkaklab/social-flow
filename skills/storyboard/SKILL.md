@@ -15,6 +15,7 @@ description: >
 argument-hint: "<channel> <topic or topic hint>"
 allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "Agent", "AskUserQuestion", "WebSearch", "WebFetch", "mcp__social-flow__capability_status", "mcp__social-flow__storyboard_apply", "mcp__social-flow__storyboard_check", "mcp__social-flow__storyboard_read", "mcp__social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__social-flow__serp_image_search", "mcp__social-flow__stock_search", "mcp__social-flow__datago_search", "mcp__social-flow__datago_detail", "mcp__social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch", "mcp__social-flow__datago_api_call", "mcp__social-flow__suno_generate_lyrics"]
 ---
+**Portal HITL answers:** G1–G11: topic_axis; format; mode; style_preset and shot_style:ID; production_mode/video_budget_usd/max_attempts; previz_renderer; video_model and video_model:ID; scenario_choice; longform_layout; narration_approval; board_approval. Follow [the decision contract](references/portal-decisions.md): save each answer immediately, then let the next existing checkpoint carry `decisions[]`. Never infer approval from completion.
 
 # Storyboard authoring — data/[channel]/episodes/[topic]/storyboard/
 

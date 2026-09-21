@@ -13,6 +13,7 @@
 import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { z } from 'zod';
+import { decisionSchema, decisionsSchema, publicationsSchema, readDecisions } from './portal-decisions.js';
 import { portalCredentialFile, PORTAL_CREDENTIAL_FILENAME } from './config.js';
 import { describePortalError, PortalError, portalClientFor, SAFE_DOCUMENT_NAME } from './portal-client.js';
 import { buildImportPayload, channelOfEpisodeDir, DOCUMENT_FILES, EPISODE_STAGES, EPISODE_STATUSES, episodeDirOf, readDocuments, readPortalState, SCENARIO_CANDIDATES, writePortalState, } from './portal-episode.js';
@@ -24,6 +25,7 @@ export const PORTAL_TOOL_NAMES = [
     'portal_episode_status',
     'portal_episode_create',
     'portal_episode_checkpoint',
+    'portal_decision_record',
     'portal_episode_revisions',
     'portal_episode_restore',
     'portal_episode_lease',
@@ -37,6 +39,8 @@ const stage = z.enum(EPISODE_STAGES);
 const candidate = z.enum(SCENARIO_CANDIDATES);
 export const workspaceCheckSchema = z.object({ channel: channelArg, episodeDir: z.string().optional() });
 export const storyboardSaveSchema = z.object({
+    decisions: decisionsSchema.optional(),
+    publications: publicationsSchema.optional(),
     episodeDir: z.string().min(1),
     project: z.string().min(1).optional(),
     storyboardTitle: z.string().min(1).optional(),
@@ -78,6 +82,8 @@ export const episodeCreateSchema = z.object({
     channel: channelArg,
 });
 export const episodeCheckpointSchema = z.object({
+    decisions: decisionsSchema.optional(),
+    publications: publicationsSchema.optional(),
     stage,
     episodeId: uuid.optional(),
     episodeDir: z.string().optional(),
@@ -86,6 +92,7 @@ export const episodeCheckpointSchema = z.object({
     note: z.string().max(500).optional(),
     documents: z.array(z.string()).optional(),
 });
+export const decisionRecordSchema = z.object({ decision: decisionSchema, episodeId: uuid.optional(), episodeDir: z.string().optional(), channel: channelArg, baseRevisionNo: z.number().int().min(0).optional() });
 export const episodeRevisionsSchema = z.object({
     episodeId: uuid.optional(),
     episodeDir: z.string().optional(),
@@ -284,7 +291,7 @@ export function portalHandlers(fetchImpl) {
                 return failed(error);
             }
         },
-        async storyboardSave({ episodeDir, project, storyboardTitle, title, stage: stageArg, baseRevisionNo, note }) {
+        async storyboardSave({ episodeDir, project, storyboardTitle, title, stage: stageArg, baseRevisionNo, note, decisions, publications }) {
             const r = resolveClient(fetchImpl, undefined, episodeDir);
             if ('error' in r)
                 return r.error;
@@ -297,6 +304,8 @@ export function portalHandlers(fetchImpl) {
                 const base = baseRevisionNo ?? state?.headRevisionNo;
                 payload.episode = {
                     ...payload.episode,
+                    decisions: readDecisions(path.join(episodeDirOf(episodeDir), "storyboard"), decisions),
+                    ...(publications ? { publications } : {}),
                     ...(state?.episodeId ? { id: state.episodeId } : {}),
                     ...(stageArg ? { stage: stageArg } : {}),
                     ...(base !== undefined ? { baseRevisionNo: base } : {}),
@@ -360,6 +369,13 @@ export function portalHandlers(fetchImpl) {
                 const sb = path.join(dir, 'storyboard');
                 const fileContents = new Map();
                 fileContents.set('scenes.js', await c.scenesJs(episodeId, revision));
+                let decisions = episode.decisions ?? [];
+                if (revision) {
+                    const { data: rev } = await c.getRevision(episodeId, revision);
+                    decisions = rev.snapshot?.decisions ?? [];
+                }
+                if (decisions.length || episode.decisions !== undefined || existsSync(path.join(sb, 'decisions.json')))
+                    fileContents.set('decisions.json', JSON.stringify(decisionsSchema.parse(decisions), null, 2) + '\n');
                 if (revision) {
                     // A named revision writes that revision's documents — mixing head's documents under old shots
                     // puts today's script on yesterday's board. A document the revision lacks is not fetched.
@@ -435,6 +451,8 @@ export function portalHandlers(fetchImpl) {
                         headRevisionNo: episode.headRevisionNo,
                         lease: episode.lease,
                     },
+                    decisions,
+                    publications: revision ? [] : (episode.publications ?? []),
                     mode,
                     revision: revision ?? null,
                     headRevisionNo,
@@ -459,9 +477,10 @@ export function portalHandlers(fetchImpl) {
             try {
                 const patch = { ...(status ? { status } : {}), ...(stageArg ? { stage: stageArg } : {}), ...(title ? { title } : {}) };
                 if (Object.keys(patch).length === 0)
-                    throw new Error('one of status · stage · title is required.');
+                    return ok((await r.client.getEpisode(resolveEpisodeId(episodeId, episodeDir))).data);
                 const id = resolveEpisodeId(episodeId, episodeDir);
-                return ok((await r.client.updateEpisode(id, patch)).data);
+                await r.client.updateEpisode(id, patch);
+                return ok((await r.client.getEpisode(id)).data);
             }
             catch (error) {
                 return failed(error);
@@ -486,7 +505,7 @@ export function portalHandlers(fetchImpl) {
                 return failed(error);
             }
         },
-        async episodeCheckpoint({ stage: stageArg, episodeId, episodeDir, channel, baseRevisionNo, note, documents }) {
+        async episodeCheckpoint({ stage: stageArg, episodeId, episodeDir, channel, baseRevisionNo, note, documents, decisions, publications }) {
             const r = resolveClient(fetchImpl, channel, episodeDir);
             if ('error' in r)
                 return r.error;
@@ -498,6 +517,8 @@ export function portalHandlers(fetchImpl) {
                 const state = episodeDir ? readPortalState(episodeDir) : null;
                 const body = {
                     stage: stageArg,
+                    decisions: episodeDir ? readDecisions(path.join(episodeDirOf(episodeDir), "storyboard"), decisions) : decisions,
+                    publications,
                     note,
                     sourceHost: r.client.holder,
                     baseRevisionNo: baseRevisionNo ?? state?.headRevisionNo,
@@ -533,6 +554,31 @@ export function portalHandlers(fetchImpl) {
                     ...data,
                     uploaded: { scenes: uploadedScenes, documents: uploadedDocuments },
                 });
+            }
+            catch (error) {
+                return failed(error);
+            }
+        },
+        async decisionRecord({ decision, episodeId, episodeDir, channel, baseRevisionNo }) {
+            const r = resolveClient(fetchImpl, channel, episodeDir);
+            if ('error' in r)
+                return r.error;
+            const refused = refuseMismatch(r.client, episodeDir);
+            if (refused)
+                return refused;
+            try {
+                const id = resolveEpisodeId(episodeId, episodeDir);
+                const { data: episode } = await r.client.getEpisode(id);
+                const base = baseRevisionNo ?? (episodeDir ? readPortalState(episodeDir)?.headRevisionNo : undefined) ?? episode.headRevisionNo;
+                const decisionDir = episodeDir ? path.join(episodeDirOf(episodeDir), 'storyboard') : null;
+                const localDecisions = decisionDir ? readDecisions(decisionDir, [decision]) : null;
+                const { data } = await r.client.recordDecision(id, { decision, baseRevisionNo: base, sourceHost: r.client.holder });
+                if (episodeDir && decisionDir && localDecisions) {
+                    mkdirSync(decisionDir, { recursive: true });
+                    writeFileSync(path.join(decisionDir, 'decisions.json'), JSON.stringify(localDecisions, null, 2) + '\n');
+                    writePortalState(episodeDir, { episodeId: id, headRevisionNo: data.revisionNo });
+                }
+                return ok(data);
             }
             catch (error) {
                 return failed(error);

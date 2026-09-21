@@ -11,6 +11,12 @@ argument-hint: "[add|list|update|serve] [channel-name]"
 allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_list_voices", "mcp__social-flow__tts_elevenlabs_voices", "mcp__social-flow__tts_elevenlabs_generate"]
 ---
 
+## Record HITL answers for the portal
+
+G16 audience/tone/voice/theme/platforms/fact-check answers stay in profile.md. The projects.profile column is reserved; channel transport is deferred for #63. Do not create an episode for a channel answer.
+Follow [the decision contract](../storyboard/references/portal-decisions.md): save each answer immediately, then let the next existing checkpoint carry `decisions[]`. Never infer approval from completion.
+
+
 # Channel management — data/[channel]/profile.md
 
 A channel is the top-level unit of the social-flow pipeline — one **content channel

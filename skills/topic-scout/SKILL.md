@@ -16,6 +16,12 @@ allowed-tools: ["Read", "Write", "Glob", "Bash", "AskUserQuestion",
   "mcp__social-flow__serp_trending_now"]
 ---
 
+## Record HITL answers for the portal
+
+G19 selected and banned phrases stay in the channel keyword files. Channel portal transport is deferred for #63.
+Follow [the decision contract](../storyboard/references/portal-decisions.md): save each answer immediately, then let the next existing checkpoint carry `decisions[]`. Never infer approval from completion.
+
+
 # Finding market-validated topics
 
 Views usually don't come because you posted **what you wanted to say**.

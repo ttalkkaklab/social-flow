@@ -29,6 +29,12 @@ allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Age
   "mcp__social-flow__music_generate_clip", "mcp__social-flow__mlx_music_generate"]
 ---
 
+## Record HITL answers for the portal
+
+G14 queue stamping → queue_stamp. Record user/standing/auto provenance and the exact platform scope. Existing unattended authorization remains valid; this adds no human gate.
+Follow [the decision contract](../storyboard/references/portal-decisions.md): save each answer immediately, then let the next existing checkpoint carry `decisions[]`. Never infer approval from completion.
+
+
 # From one topic to a finished video — unattended authoring
 
 Read [story-quality.md](../storyboard/references/story-quality.md) before candidate writing, including skip-research channels. It overrides mandatory closing questions and modern parallels. Write STORY with the story pass; use gate 6f's existing narration read for the four quoted findings. After vocabulary edits revalidate and run `check-story.js storyboard/` before any generation. Missing, failed or stale reviews stop production with queue hold, not merely publication. A closing beat may have `cta:"none"`. An ask stays optional; a forwardable thing does not — an ask requests behaviour from the viewer, while a forwardable thing is one sentence, figure or verdict they can pass on as-is. Asking to be shared is an ask, not a trigger.

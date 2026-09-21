@@ -1,3 +1,4 @@
+import type { PortalDecision, PortalPublication } from './portal-decisions.js';
 /**
  * ttalkkakstory portal client — the HTTP side of the `portal_*` tools.
  *
@@ -52,6 +53,7 @@ export interface PortalClient {
   me(): Promise<PortalResponse>;
   listStoryboards(query?: Record<string, string | number | undefined>): Promise<PortalResponse>;
   listEpisodes(storyboardId: string): Promise<PortalResponse>;
+  recordDecision(episodeId: string, body: Record<string, unknown>): Promise<PortalResponse<{ revisionNo: number }>>;
   getEpisode(episodeId: string): Promise<PortalResponse<PortalEpisode>>;
   updateEpisode(episodeId: string, patch: Record<string, unknown>): Promise<PortalResponse>;
   importStoryboard(payload: unknown): Promise<PortalResponse<ImportResult>>;
@@ -75,6 +77,8 @@ export interface PortalClient {
 }
 
 export interface PortalEpisode {
+  decisions?: PortalDecision[];
+  publications?: PortalPublication[];
   id: string;
   slug: string;
   title: string;
@@ -200,6 +204,7 @@ export function createPortalClient(credential: PortalCredential, fetchImpl: Fetc
       return json('GET', `/storyboards${qs ? `?${qs}` : ''}`);
     },
     listEpisodes: (storyboardId) => json('GET', `/storyboards/${storyboardId}/episodes`),
+    recordDecision: (episodeId, body) => json<{ revisionNo: number }>('POST', `/episodes/${episodeId}/decisions`, body),
     getEpisode: (episodeId) => json<PortalEpisode>('GET', `/episodes/${episodeId}`),
     // holder travels on every write — a lease held by another machine on the same key is still someone else's.
     updateEpisode: (episodeId, patch) => json('PATCH', withHolder(`/episodes/${episodeId}`), patch),

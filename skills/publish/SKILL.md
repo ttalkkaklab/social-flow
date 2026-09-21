@@ -14,6 +14,12 @@ argument-hint: "<channel> <topic> [platformCSV|auto]"
 allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__sns_account_check"]
 ---
 
+## Record HITL answers for the portal
+
+G15 final platform approval → publish_approval. Preserve all/some/revise/stop and the selected platforms; send actual publication results as publications[] at the published checkpoint.
+Follow [the decision contract](../storyboard/references/portal-decisions.md): save each answer immediately, then let the next existing checkpoint carry `decisions[]`. Never infer approval from completion.
+
+
 # Platform publishing — public immediately after HITL approval
 
 Publishes the finished artifacts in `output/` with the per-platform publish tools.

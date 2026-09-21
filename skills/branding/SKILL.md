@@ -14,6 +14,12 @@ argument-hint: "<channel> [extra instructions]"
 allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__gpt_image_img2img"]
 ---
 
+## Record HITL answers for the portal
+
+G17 brief and A–D choice stay in channel branding files; retain both the brief and selection reference. Channel portal transport is deferred for #63.
+Follow [the decision contract](../storyboard/references/portal-decisions.md): save each answer immediately, then let the next existing checkpoint carry `decisions[]`. Never infer approval from completion.
+
+
 # Channel profile image — data/[channel]/assets/branding/
 
 Produces the channel's profile image (logo/avatar) in this order: **brief

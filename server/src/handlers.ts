@@ -1445,6 +1445,7 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   // ── ttalkkakstory portal (workspace API key) ──
   // One route per portal endpoint; the handler resolves the key from the channel on the
   // episode path and answers one line (isError) when there is none — a mirror, not a gate.
+  portal_decision_record: async (args) => fromPortal(await portalRoutes.decisionRecord(parseArgs(portal.decisionRecordSchema, args))),
   portal_workspace_check: async (args) => fromPortal(await portalRoutes.workspaceCheck(parseArgs(portal.workspaceCheckSchema, args))),
   portal_storyboard_save: async (args) => fromPortal(await portalRoutes.storyboardSave(parseArgs(portal.storyboardSaveSchema, args))),
   portal_storyboard_list: async (args) => fromPortal(await portalRoutes.storyboardList(parseArgs(portal.storyboardListSchema, args))),

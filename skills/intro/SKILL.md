@@ -14,6 +14,12 @@ argument-hint: "<channel> [extra instructions]"
 allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__gpt_image_img2img", "mcp__social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__social-flow__music_generate_clip", "mcp__social-flow__mlx_music_generate", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue"]
 ---
 
+## Record HITL answers for the portal
+
+G18 concept choice stays in the channel intro files with action/mood/sonic-logo details. Channel portal transport is deferred for #63.
+Follow [the decision contract](../storyboard/references/portal-decisions.md): save each answer immediately, then let the next existing checkpoint carry `decisions[]`. Never infer approval from completion.
+
+
 # Channel intro video — data/[channel]/assets/intro/
 
 Makes the intro (logo sting) that the channel's profile character **acts in

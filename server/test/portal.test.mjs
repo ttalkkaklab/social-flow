@@ -744,20 +744,57 @@ describe('portal_* handlers on a scripted portal', () => {
     assert.match(none.text, /compareTo needs revisionNo/);
   });
 
-  it('episode_status refuses an empty patch before touching the portal', async () => {
-    const r = await portal.portalHandlers(async () => {
-      throw new Error('must not be called');
-    }).episodeStatus({ episodeId: EPISODE_ID, channel: 'my-channel' });
-    assert.equal(r.isError, true);
-    assert.match(r.text, /one of status · stage · title/);
+  it('episode_status without a patch reads decisions and publications', async () => {
+    const data={id:EPISODE_ID, decisions:[{key:'topic_axis',value:'hold'}], publications:[]};
+    const {impl,calls}=fakeFetch({[`GET /api/workspaces/lab/episodes/${EPISODE_ID}`]:{success:true,data}});
+    const r=await portal.portalHandlers(impl).episodeStatus({episodeId:EPISODE_ID,channel:'my-channel'});
+    assert.equal(r.isError,false,r.text); assert.deepEqual(JSON.parse(r.text),data); assert.equal(calls[0].method,'GET');
+  });
+
+  it('checkpoint carries sidecar answers before scenes.js and explicit arguments override the same key', async () => {
+    const dir=makeEpisodeDir(root,'my-channel','hitl-sidecar');
+    rmSync(join(dir,'storyboard','scenes.js'));
+    episode.writePortalState(dir,{episodeId:EPISODE_ID,headRevisionNo:3});
+    const d={key:'topic_axis',value:'hold',chosenBy:'user',source:'storyboard§1.2'};
+    writeFileSync(join(dir,'storyboard','decisions.json'),JSON.stringify([d]));
+    const {impl,calls}=fakeFetch({[`POST /api/workspaces/lab/episodes/${EPISODE_ID}/revisions`]:{success:true,data:{revisionNo:4}}});
+    const r=await portal.portalHandlers(impl).episodeCheckpoint({episodeDir:dir,stage:'researched',decisions:[{...d,value:'proceed'}]});
+    assert.equal(r.isError,false,r.text); assert.deepEqual(calls[0].body.decisions,[{...d,value:'proceed'}]); assert.equal(calls[0].body.baseRevisionNo,3);
+    assert.equal(episode.readPortalState(dir).headRevisionNo,4);
+  });
+
+  it('save carries decision and publication arrays outside meta', async () => {
+    const dir=makeEpisodeDir(root,'my-channel','hitl-save');
+    const d={key:'slide_fallback:hook',value:'ship',chosenBy:'user',source:'produce§3.6'};
+    const {impl,calls}=fakeFetch({'POST /api/workspaces/lab/storyboards/import':{success:true,data:{episodeId:EPISODE_ID,storyboardId:STORYBOARD_ID,revisionNo:1,url:'/episode'}}});
+    const r=await portal.portalHandlers(impl).storyboardSave({episodeDir:dir,decisions:[d],publications:[]});
+    assert.equal(r.isError,false,r.text); assert.deepEqual(calls[0].body.episode.decisions,[d]); assert.equal(calls[0].body.episode.meta.decisions,undefined);
+  });
+
+  it('decision_record uses recorded base and holder, then advances local head', async () => {
+    const dir=makeEpisodeDir(root,'my-channel','hitl-record'); episode.writePortalState(dir,{episodeId:EPISODE_ID,headRevisionNo:3});
+    const d={key:'assembly_warning:hook',value:'accept',chosenBy:'user',source:'produce:assembly'};
+    const {impl,calls}=fakeFetch({[`GET /api/workspaces/lab/episodes/${EPISODE_ID}`]:{success:true,data:{headRevisionNo:4}},[`POST /api/workspaces/lab/episodes/${EPISODE_ID}/decisions`]:{success:true,data:{revisionNo:5}}});
+    const r=await portal.portalHandlers(impl).decisionRecord({episodeDir:dir,decision:d});
+    assert.equal(r.isError,false,r.text); assert.deepEqual(calls[1].body,{decision:d,baseRevisionNo:3,sourceHost:'me@box'}); assert.equal(episode.readPortalState(dir).headRevisionNo,5); assert.deepEqual(JSON.parse(readFileSync(join(dir,'storyboard','decisions.json'),'utf8')),[d]);
+  });
+
+  it('pull writes decision sidecar and keeps overwritten local answers in its backup', async () => {
+    const dir=makeEpisodeDir(root,'my-channel','hitl-pull');
+    writeFileSync(join(dir,'storyboard','decisions.json'),'[]');
+    const d={key:'topic_axis',value:'proceed',chosenBy:'user',source:'storyboard§1.2'};
+    const {impl}=fakeFetch({[`GET /api/workspaces/lab/episodes/${EPISODE_ID}`]:{success:true,data:{id:EPISODE_ID,storyboardId:STORYBOARD_ID,decisions:[d],publications:[]}},[`GET /api/workspaces/lab/episodes/${EPISODE_ID}/scenes.js`]:scenesJs()});
+    const r=await portal.portalHandlers(impl).storyboardPull({episodeId:EPISODE_ID,targetDir:dir,includeDocuments:false});
+    assert.equal(r.isError,false,r.text); assert.deepEqual(JSON.parse(readFileSync(join(dir,'storyboard','decisions.json'),'utf8')),[d]);
+    assert.equal(readFileSync(join(JSON.parse(r.text).backupDir,'decisions.json'),'utf8'),'[]');
   });
 });
 
 describe('portal tool surface', () => {
   const names = new Set(TOOLS.map((t) => t.name));
 
-  it('all thirteen portal tools are defined and routed, and nothing else starts with portal_', () => {
-    assert.equal(portal.PORTAL_TOOL_NAMES.length, 13);
+  it('all fourteen portal tools are defined and routed, and nothing else starts with portal_', () => {
+    assert.equal(portal.PORTAL_TOOL_NAMES.length, 14);
     for (const name of portal.PORTAL_TOOL_NAMES) {
       assert.ok(names.has(name), `${name} not in TOOLS`);
       assert.equal(typeof ROUTES[name], 'function', `${name} not routed`);

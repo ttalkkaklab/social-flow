@@ -1,3 +1,4 @@
+import { DECISION_JSON_SCHEMA, DECISIONS_JSON_SCHEMA, PUBLICATIONS_JSON_SCHEMA } from './portal-decisions.js';
 import { cameraContract, renderPurposes, stillCameraEffectList, contract as storyboardContract } from './storyboard.js';
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { MUSIC_GENERATION_MODES, MUSIC_SCALES } from './music-client.js';
@@ -898,6 +899,10 @@ const PORTAL_STAGE_ENUM = ['researched', 'candidates', 'scenario', 'narration', 
 const PORTAL_CANDIDATE_ENUM = ['D1', 'D2', 'D3'];
 
 const PORTAL_TOOLS: Tool[] = [
+  { name: 'portal_decision_record', title: 'Record an episode HITL answer', annotations: { readOnlyHint:false, destructiveHint:false, idempotentHint:true, openWorldHint:true },
+    description: 'Record one actual answer with key/value/options/chosenBy/source/reason/decidedAt. Uses the episode revision and lease contract; does not grant approval or publish. Returns revisionNo, stage, contentHash, created.',
+    inputSchema: { type:'object', required:['decision'], properties:{ decision:DECISION_JSON_SCHEMA, episodeId:PORTAL_EPISODE_ID_ARG, episodeDir:PORTAL_EPISODE_DIR_ARG, channel:PORTAL_CHANNEL_ARG, baseRevisionNo:{type:'number',description:'Last known head; stale revisions are rejected with 409'} } },
+  },
   {
     name: 'portal_workspace_check',
     title: 'Check the portal key and its workspace',
@@ -927,6 +932,8 @@ Writes .portal.json (workspace · storyboardId · episodeId · headRevisionNo) i
     inputSchema: {
       type: 'object',
       properties: {
+        decisions: DECISIONS_JSON_SCHEMA,
+        publications: PUBLICATIONS_JSON_SCHEMA,
         episodeDir: { type: 'string', description: 'Absolute path of data/<channel>/episodes/<topic> or its storyboard/ — the channel slug on the path picks the key' },
         project: { type: 'string', description: 'Portal project name. Default: storyboard.md channel, else the channel directory name' },
         storyboardTitle: { type: 'string', description: 'Group several episodes under one storyboard (a series) by this title. Default: the episode title' },
@@ -1024,6 +1031,8 @@ Updates .portal.json headRevisionNo. Returns: JSON — { result: "new revision"|
     inputSchema: {
       type: 'object',
       properties: {
+        decisions: DECISIONS_JSON_SCHEMA,
+        publications: PUBLICATIONS_JSON_SCHEMA,
         stage: { type: 'string', enum: PORTAL_STAGE_ENUM, description: 'The stage that just ended' },
         episodeId: PORTAL_EPISODE_ID_ARG,
         episodeDir: PORTAL_EPISODE_DIR_ARG,
