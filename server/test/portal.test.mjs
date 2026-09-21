@@ -352,6 +352,24 @@ describe('portal_* handlers on a scripted portal', () => {
     clearTokenDir();
   });
 
+  it('reads a pending render request and submits exact revision and holder', async () => {
+    const { impl, calls } = fakeFetch({
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}/render-allocation`]: { success:true, data:{ request: {status:'pending'}, bounds:{min:5,max:7}, shots:[] } },
+      [`PUT /api/workspaces/lab/episodes/${EPISODE_ID}/render-allocation`]: { success:true, data:{ revisionNo: 4 } },
+    });
+    const h=portal.portalHandlers(impl);
+    const r=await h.renderAllocation({channel:'my-channel',episodeId:EPISODE_ID});
+    assert.equal(r.isError,false);
+    const assignments=[{id:STORYBOARD_ID,mode:'generated_video',purpose:'live_action',reason:'Visible continuous action'}];
+    const args={channel:'my-channel',episodeId:EPISODE_ID,requestId:EPISODE_ID,baseRevisionNo:3,assignments};
+    assert.equal(portal.renderAllocationSchema.safeParse(args).success,true);
+    assert.equal(portal.renderAllocationSchema.safeParse({...args,requestId:undefined}).success,false);
+    await h.renderAllocation(args);
+    assert.equal(calls[1].body.sourceHost,'me@box');
+    assert.equal(calls[1].body.baseRevisionNo,3);
+    assert.deepEqual(calls[1].body.assignments,assignments);
+  });
+
   it('with no key for the channel (and no flat file) every tool answers the one-line fallback, isError', async () => {
     const h = portal.portalHandlers(async () => {
       throw new Error('must not be called');
@@ -841,8 +859,8 @@ describe('portal_* handlers on a scripted portal', () => {
 describe('portal tool surface', () => {
   const names = new Set(TOOLS.map((t) => t.name));
 
-  it('all thirteen portal tools are defined and routed, and nothing else starts with portal_', () => {
-    assert.equal(portal.PORTAL_TOOL_NAMES.length, 13);
+  it('all fourteen portal tools are defined and routed, and nothing else starts with portal_', () => {
+    assert.equal(portal.PORTAL_TOOL_NAMES.length, 14);
     for (const name of portal.PORTAL_TOOL_NAMES) {
       assert.ok(names.has(name), `${name} not in TOOLS`);
       assert.equal(typeof ROUTES[name], 'function', `${name} not routed`);

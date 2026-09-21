@@ -490,3 +490,13 @@ describe('shot camera MCP input', () => {
     assert.ok(shotSchema.safeParse({ ...board()[1], visual: { camera: c } }).success);
   });
 });
+
+it('production vocabulary and apply schema support all six ratios and reject unknown modes', () => {
+  const bands=JSON.parse(readFileSync(new URL('../../skills/storyboard/references/render-ratios.json',import.meta.url),'utf8'));
+  assert.deepEqual(contract().VOCAB.PRODUCTION_MODES,Object.keys(bands));
+  for(const mode of [...Object.keys(bands),'hook_only','stills_only','hybrid']) {
+    assert.equal(storyboardApplySchema.safeParse({path:'x',globals:{PRODUCTION:{mode,renderRatioVersion:1}}}).success,true);
+  }
+  assert.equal(storyboardApplySchema.safeParse({path:'x',globals:{PRODUCTION:{mode:'video_99'}}}).success,false);
+  assert.equal(storyboardApplySchema.safeParse({path:'x',globals:{PRODUCTION:{mode:'no_video',renderRatioVersion:2}}}).success,false);
+});

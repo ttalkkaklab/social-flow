@@ -68,10 +68,10 @@ tense, and imperatives (`남겼어`·`남겨 둬`).
 
 ## Episode production choice (user directive, 2026-09-06)
 
-Before assets, HITL offers **100% 이상** (`full_video`), **50% 이상** (`video_50`),
-**30% 이상** (`video_30`) or **훅만 영상** (`hook_only`) with first-pass and retry-inclusive video
+New episodes follow the six-ratio contract in `skills/storyboard/references/production-mode.md`
+and persist `renderRatioVersion:1`. Before assets, HITL offers those six choices with first-pass and retry-inclusive video
 costs, model, resolution, audio setting, explicit budget cap and exclusions. Persist the choice
-in `window.PRODUCTION`. Ratios count new cuts, rounded up; exclude reused clips, supplied
+in `window.PRODUCTION`. Legacy approvals without that version count new cuts, rounded up; exclude reused clips, supplied
 recordings/stock clips and the shared outro. Hook-only generates the opening hook alone.
 Explicit episode choices override the old 1–2 clip cap and optional-hook default. Keep
 `hybrid` only for existing approvals. Bind approval to the final cost quote. Resume an unchanged approval.

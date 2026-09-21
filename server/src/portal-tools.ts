@@ -43,12 +43,22 @@ export const PORTAL_TOOL_NAMES = [
   'portal_scenario_save',
   'portal_scenario_pull',
   'portal_scenario_choose',
+  'portal_render_allocation',
 ] as const;
 
 const channelArg = z.string().regex(/^[a-z0-9][a-z0-9-]{0,63}$/, 'kebab-case channel slug').optional();
 const uuid = z.string().uuid();
 const stage = z.enum(EPISODE_STAGES);
 const candidate = z.enum(SCENARIO_CANDIDATES);
+
+export const renderAllocationSchema = z.object({
+  episodeId: uuid.optional(), episodeDir: z.string().optional(), channel: channelArg,
+  requestId: uuid.optional(), baseRevisionNo: z.number().int().min(0).optional(),
+  assignments: z.array(z.object({ id: uuid,
+    mode: z.enum(['still_camera','character_html','object_html','data_graph','generated_video','editorial_html','stock_video']),
+    purpose: z.string().trim().min(1).max(200), reason: z.string().trim().min(1).max(2000),
+  })).min(1).max(500).optional(),
+}).refine(a => !a.assignments || (a.requestId && a.baseRevisionNo !== undefined), 'Submitting requires requestId and baseRevisionNo from the latest read');
 
 export const workspaceCheckSchema = z.object({ channel: channelArg, episodeDir: z.string().optional() });
 export const storyboardSaveSchema = z.object({
@@ -296,6 +306,7 @@ function resolveEpisodeId(episodeId: string | undefined, episodeDir: string | un
 }
 
 export interface PortalHandlers {
+  renderAllocation(a: z.infer<typeof renderAllocationSchema>): Promise<PortalToolResult>;
   workspaceCheck(a: z.infer<typeof workspaceCheckSchema>): Promise<PortalToolResult>;
   storyboardSave(a: z.infer<typeof storyboardSaveSchema>): Promise<PortalToolResult>;
   storyboardList(a: z.infer<typeof storyboardListSchema>): Promise<PortalToolResult>;
@@ -314,6 +325,17 @@ export interface PortalHandlers {
 /** The handlers, with fetch injectable so the tests never touch a network. */
 export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
   return {
+    async renderAllocation({ episodeId, episodeDir, channel, assignments, requestId, baseRevisionNo }) {
+      const r = resolveClient(fetchImpl, channel, episodeDir);
+      if ('error' in r) return r.error;
+      const refused = refuseMismatch(r.client, episodeDir);
+      if (refused) return refused;
+      try {
+        const id = resolveEpisodeId(episodeId, episodeDir);
+        const { data } = await r.client.renderAllocation(id, assignments ? { assignments, requestId, baseRevisionNo } : undefined);
+        return ok({ ...data, ...(assignments ? { next: 'portal_storyboard_pull before any local save; server updated the revision and shot modes.' } : {}) });
+      } catch (error) { return failed(error); }
+    },
     async workspaceCheck({ channel, episodeDir }) {
       const r = resolveClient(fetchImpl, channel, episodeDir);
       if ('error' in r) return r.error;

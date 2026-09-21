@@ -1132,6 +1132,19 @@ Returns: JSON — { scenarios: [{ candidate, chosen, score, p0, findings }], wri
     },
   },
   {
+    name: 'portal_render_allocation', title: 'Read or submit the episode render allocation',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    description: 'Read the pending render ratio request and every shot. The host LLM chooses render.mode by shot purpose within bounds, then submits assignments with requestId and baseRevisionNo. No LLM API or paid asset call occurs here. The portal validates complete shot IDs, video bands, lease and revision, then saves atomically. Read again on conflict; pull the updated board before local edits. Returns request, bounds, shots and instructions on read, or the new revision on submit.',
+    inputSchema: { type: 'object', properties: {
+      episodeId: PORTAL_EPISODE_ID_ARG, episodeDir: PORTAL_EPISODE_DIR_ARG, channel: PORTAL_CHANNEL_ARG,
+      requestId: { type: 'string', format: 'uuid', description: 'Exact pending request ID returned by the read; required when submitting.' }, baseRevisionNo: { type: 'integer', minimum: 0, description: 'Read revision; required when submitting. Stale writes are rejected.' },
+      assignments: { type: 'array', description: 'One assignment per returned shot ID; omit to read the pending plan.', minItems: 1, maxItems: 500, items: { type: 'object', required: ['id','mode','purpose','reason'], properties: {
+        id: { type: 'string', format: 'uuid', description: 'Portal shot row ID from the latest read, never an array position.' }, mode: enumInput(storyboardVocabulary?.RENDER_MODES, 'Shot render route; generated_video and stock_video both count toward the ratio.'),
+        purpose: { type: 'string', minLength: 1, maxLength: 200, description: 'Shot purpose in the render-routing vocabulary.' }, reason: { type: 'string', minLength: 1, maxLength: 2000, description: 'Specific reason this render mode serves this shot.' },
+      } } },
+    } },
+  },
+  {
     name: 'portal_scenario_choose',
     title: 'Pick one scenario candidate as scenario.md',
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
@@ -4619,7 +4632,7 @@ Returns: the file written or not, counts, and findings (! violation · warning).
         removeShotIds: { type: 'array', items: { type: 'string', pattern: '^s\\d{4,}$', description: 'A stable shot id' }, description: 'Shot ids to drop (resolved before inserts). Not with the position fields in the same patch' },
         removeScenes: { type: 'array', items: { type: 'number', description: 'Scene number' }, description: 'Scene numbers to drop from STRUCTURE.scenes and from every sequence' },
         removeSequences: { type: 'array', items: { type: 'string', description: 'Sequence id' }, description: 'Sequence ids to drop' },
-        globals: { type: 'object', description: 'Other window.* blocks to set — FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, VOICE, MOTION_POLICY' },
+        globals: { type: 'object', description: 'Other window.* blocks to set — FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, VOICE, MOTION_POLICY. PRODUCTION.mode: full_video, video_80, video_50, video_30, video_lt10, no_video (hook_only/stills_only/hybrid are legacy). New selections write renderRatioVersion:1.' },
         dryRun: { type: 'boolean', description: 'Validate and report, write nothing' },
         draft: { type: 'boolean', description: 'The story pass (storyboard §4a): camera-continuity records — shot.lineCrossing, shot.coverage — are deferred (later), not violations; leave it off in §4b' },
       },
