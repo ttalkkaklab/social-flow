@@ -82,7 +82,7 @@ export async function uploadAttachments(client: PortalClient, episodeId: string,
 }
 
 /** Download and hash-check all files before replacing anything. Changed local files get a backup. */
-export async function restoreAttachments(client: PortalClient, episodeId: string, root: string) {
+export async function prepareAttachmentRestore(client: PortalClient, episodeId: string, root: string) {
   const { data } = await client.listAttachments(episodeId);
   if (data.items.length > 10000 || data.items.reduce((sum, item) => sum + item.byteSize, 0) > 500 * 1024 * 1024) throw new Error('Attachment manifest exceeds restore limits');
   const seen = new Set<string>();
@@ -95,6 +95,12 @@ export async function restoreAttachments(client: PortalClient, episodeId: string
     if (bytes.length !== item.byteSize || hash(bytes) !== item.sha256) throw new Error(`Attachment hash mismatch: ${item.relativePath}`);
     staged.push({ item, bytes });
   }
+  return { items: data.items, staged };
+}
+
+export async function restoreAttachments(client: PortalClient, episodeId: string, root: string,
+  snapshot?: Awaited<ReturnType<typeof prepareAttachmentRestore>>) {
+  const { items, staged } = snapshot ?? await prepareAttachmentRestore(client, episodeId, root);
   const backup = `.portal-local/attachments-${randomUUID()}`;
   for (const { item, bytes } of staged) {
     const target = safeAttachmentTarget(root, item.relativePath);
@@ -116,7 +122,7 @@ export async function restoreAttachments(client: PortalClient, episodeId: string
   mkdirSync(root, { recursive: true });
   const manifest = path.join(root, MANIFEST);
   if (existsSync(manifest) && lstatSync(manifest).isSymbolicLink()) throw new Error('Unsafe attachment metadata file');
-  writeFileSync(manifest, JSON.stringify(Object.fromEntries(data.items.map(item => [item.relativePath, item])), null, 2));
+  writeFileSync(manifest, JSON.stringify(Object.fromEntries(items.map(item => [item.relativePath, item])), null, 2));
   return { restored: staged.length, bytes: staged.reduce((n, file) => n + file.bytes.length, 0) };
 }
 

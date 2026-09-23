@@ -1,4 +1,4 @@
-import { uploadAttachments, restoreAttachments, attachmentSyncReport, safeAttachmentTarget } from './portal-attachments.js';
+import { uploadAttachments, restoreAttachments, prepareAttachmentRestore, attachmentSyncReport, safeAttachmentTarget } from './portal-attachments.js';
 /**
  * `portal_*` tool handlers — the ttalkkakstory portal called by workspace API key.
  *
@@ -584,6 +584,8 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
         let sideDir: string | null = null;
         const replaced: string[] = [];
 
+        const attachmentRoot = mode === 'side' ? path.join(sb, '.portal-head', 'attachments') : dir;
+        const attachmentSnapshot = revision ? undefined : await prepareAttachmentRestore(c, episodeId, attachmentRoot);
         if (mode === 'side') {
           sideDir = path.join(sb, '.portal-head');
           rmSync(sideDir, { recursive: true, force: true });
@@ -605,14 +607,10 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
             }
           }
           for (const { filename, content } of files) writeFileSync(path.join(sb, filename), content);
-          writePortalState(dir, {
-            workspace: c.workspace,
-            storyboardId: episode.storyboardId,
-            episodeId,
-            headRevisionNo,
-          });
+
         }
-        const attachments = revision ? { skipped: 'Attachments are current episode files, not revision snapshots.' } : await restoreAttachments(c, episodeId, mode === 'side' ? path.join(sideDir!, 'attachments') : dir);
+        const attachments = revision ? { skipped: 'Attachments are current episode files, not revision snapshots.' } : await restoreAttachments(c, episodeId, attachmentRoot, attachmentSnapshot);
+        if (mode !== 'side') writePortalState(dir, { workspace: c.workspace, storyboardId: episode.storyboardId, episodeId, headRevisionNo });
         return ok({
           attachments,
           episode: {

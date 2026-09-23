@@ -87581,7 +87581,7 @@ async function uploadAttachments(client, episodeId, root) {
   }
   return { complete: skipped.length === 0, uploaded, unchanged, skipped };
 }
-async function restoreAttachments(client, episodeId, root) {
+async function prepareAttachmentRestore(client, episodeId, root) {
   const { data } = await client.listAttachments(episodeId);
   if (data.items.length > 1e4 || data.items.reduce((sum, item) => sum + item.byteSize, 0) > 500 * 1024 * 1024) throw new Error("Attachment manifest exceeds restore limits");
   const seen = /* @__PURE__ */ new Set();
@@ -87594,6 +87594,10 @@ async function restoreAttachments(client, episodeId, root) {
     if (bytes.length !== item.byteSize || hash(bytes) !== item.sha256) throw new Error(`Attachment hash mismatch: ${item.relativePath}`);
     staged.push({ item, bytes });
   }
+  return { items: data.items, staged };
+}
+async function restoreAttachments(client, episodeId, root, snapshot) {
+  const { items, staged } = snapshot ?? await prepareAttachmentRestore(client, episodeId, root);
   const backup = `.portal-local/attachments-${randomUUID2()}`;
   for (const { item, bytes } of staged) {
     const target = safeAttachmentTarget(root, item.relativePath);
@@ -87614,7 +87618,7 @@ async function restoreAttachments(client, episodeId, root) {
   mkdirSync5(root, { recursive: true });
   const manifest = path10.join(root, MANIFEST);
   if (existsSync12(manifest) && lstatSync(manifest).isSymbolicLink()) throw new Error("Unsafe attachment metadata file");
-  writeFileSync8(manifest, JSON.stringify(Object.fromEntries(data.items.map((item) => [item.relativePath, item])), null, 2));
+  writeFileSync8(manifest, JSON.stringify(Object.fromEntries(items.map((item) => [item.relativePath, item])), null, 2));
   return { restored: staged.length, bytes: staged.reduce((n, file) => n + file.bytes.length, 0) };
 }
 async function attachmentSyncReport(action) {
@@ -88544,6 +88548,8 @@ function portalHandlers(fetchImpl) {
         let backupDir = null;
         let sideDir = null;
         const replaced = [];
+        const attachmentRoot = mode === "side" ? path13.join(sb, ".portal-head", "attachments") : dir;
+        const attachmentSnapshot = revision ? void 0 : await prepareAttachmentRestore(c, episodeId, attachmentRoot);
         if (mode === "side") {
           sideDir = path13.join(sb, ".portal-head");
           rmSync7(sideDir, { recursive: true, force: true });
@@ -88565,14 +88571,9 @@ function portalHandlers(fetchImpl) {
             }
           }
           for (const { filename, content } of files) writeFileSync11(path13.join(sb, filename), content);
-          writePortalState(dir, {
-            workspace: c.workspace,
-            storyboardId: episode.storyboardId,
-            episodeId,
-            headRevisionNo
-          });
         }
-        const attachments = revision ? { skipped: "Attachments are current episode files, not revision snapshots." } : await restoreAttachments(c, episodeId, mode === "side" ? path13.join(sideDir, "attachments") : dir);
+        const attachments = revision ? { skipped: "Attachments are current episode files, not revision snapshots." } : await restoreAttachments(c, episodeId, attachmentRoot, attachmentSnapshot);
+        if (mode !== "side") writePortalState(dir, { workspace: c.workspace, storyboardId: episode.storyboardId, episodeId, headRevisionNo });
         return ok({
           attachments,
           episode: {

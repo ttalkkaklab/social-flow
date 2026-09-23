@@ -705,6 +705,22 @@ describe('portal_* handlers on a scripted portal', () => {
     assert.equal(episode.readPortalState(dir).headRevisionNo, 4);
   });
 
+  it('attachment download failure preserves the working board and recorded head before pull writes', async () => {
+    const dir = makeEpisodeDir(root, 'my-channel', 'ep-attachment-failure');
+    episode.writePortalState(dir, { episodeId: EPISODE_ID, headRevisionNo: 2, workspace: 'lab' });
+    const before = readFileSync(join(dir, 'storyboard/scenes.js'), 'utf8');
+    const state = readFileSync(join(dir, '.portal.json'), 'utf8');
+    const { impl } = fakeFetch({
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}`]: { success: true, data: { id: EPISODE_ID, storyboardId: STORYBOARD_ID, headRevisionNo: 9 } },
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}/scenes.js`]: 'window.SCENES = [];',
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}/attachments`]: { status: 502, success: false, error: 'attachment unavailable' },
+    });
+    const result = await portal.portalHandlers(impl).storyboardPull({ episodeId: EPISODE_ID, targetDir: dir });
+    assert.equal(result.isError, true);
+    assert.equal(readFileSync(join(dir, 'storyboard/scenes.js'), 'utf8'), before);
+    assert.equal(readFileSync(join(dir, '.portal.json'), 'utf8'), state);
+  });
+
   it('storyboard_pull replace backs up only changed local files before writing portal content', async () => {
     const dir = makeEpisodeDir(root, 'my-channel', 'ep-pull');
     const sb = join(dir, 'storyboard');
