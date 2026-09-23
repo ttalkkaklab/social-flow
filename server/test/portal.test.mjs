@@ -9,7 +9,9 @@
  */
 
 import assert from 'node:assert/strict';
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync, symlinkSync } from 'node:fs';
+import fs from 'node:fs';
+import { syncBuiltinESMExports } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, before, beforeEach, describe, it } from 'node:test';
@@ -49,7 +51,16 @@ function fakeFetch(routes) {
     const method = (init.method ?? 'GET').toUpperCase();
     const u = new URL(url);
     const key = `${method} ${u.pathname}`;
-    calls.push({ method, url, path: u.pathname, search: u.search, headers: init.headers ?? {}, body: init.body ? JSON.parse(init.body) : undefined });
+    if (!routes[key] && method === 'GET' && /\/episodes\/[^/]+$/.test(u.pathname) && Object.keys(routes).some(route => route.startsWith('POST ') && /\/(import|revisions)$/.test(route))) {
+      return Response.json({ success: true, data: { documents: [] } });
+    }
+    if (!routes[key] && u.pathname.endsWith('/attachments')) {
+      if (method === 'GET') return Response.json({ success: true, data: { items: [] } });
+      const bytes = Buffer.from(init.body);
+      const { createHash } = await import('node:crypto');
+      return Response.json({ success: true, data: { id: '33333333-3333-4333-8333-333333333333', relativePath: u.searchParams.get('path'), sha256: createHash('sha256').update(bytes).digest('hex'), byteSize: bytes.length, provenance: {} } });
+    }
+    calls.push({ method, url, path: u.pathname, search: u.search, headers: init.headers ?? {}, body: init.body ? (typeof init.body === 'string' ? JSON.parse(init.body) : init.body) : undefined });
     const answer = routes[key];
     if (!answer) return new Response(JSON.stringify({ success: false, error: `no route ${key}` }), { status: 404 });
     const out = typeof answer === 'function' ? answer(calls[calls.length - 1]) : answer;
@@ -471,11 +482,14 @@ describe('portal_* handlers on a scripted portal', () => {
       for (const run of [() => h.storyboardSave({ episodeDir: dir }), () => h.episodeCheckpoint({ episodeDir: dir, stage: 'board' })]) {
         const r = await run();
         assert.equal(r.isError, true);
-        assert.match(r.text, /Nothing was sent.*mode "side"/);
+        assert.match(r.text, base === undefined ? /Nothing was sent.*mode "side"/ : /Cannot read \.portal\.json/);
         assert.equal(readFileSync(join(dir, '.portal.json'), 'utf8'), before);
       }
     }
     assert.equal(calls.length, 0);
+    // A missing base in an otherwise valid record can use an explicit merged base;
+    // a wrongly typed recorded base must first be repaired, not bypassed.
+    writeFileSync(join(dir, '.portal.json'), JSON.stringify({ episodeId: EPISODE_ID }));
     for (const run of [() => h.storyboardSave({ episodeDir: dir, baseRevisionNo: 3 }), () => h.episodeCheckpoint({ episodeDir: dir, stage: 'board', baseRevisionNo: 3 })]) {
       assert.equal((await run()).isError, false);
     }
@@ -603,6 +617,103 @@ describe('portal_* handlers on a scripted portal', () => {
     assert.equal(calls.length, 5);
   });
 
+  it('missing state and valid optional records stay distinct from malformed present fields', () => {
+    const dir = makeEpisodeDir(root, 'my-channel', 'ep-state-shapes');
+    const file = join(dir, '.portal.json');
+    assert.equal(episode.readPortalState(dir), null);
+    for (const record of [{ episodeId: EPISODE_ID, holder: 'review@localhost' }, { episodeId: EPISODE_ID }, { episodeId: EPISODE_ID, headRevisionNo: 0 }, { episodeId: EPISODE_ID, headRevisionNo: 2, future: true }]) {
+      writeFileSync(file, JSON.stringify(record));
+      assert.deepEqual(episode.readPortalState(dir), record);
+    }
+    const broken = ['{', '', 'null', '[]', '1', '"text"', 'true', '{}', ...[
+      { episodeId: undefined, holder: 'review@localhost' }, { episodeId: undefined, headRevisionNo: 0 }, { episodeId: '' }, { episodeId: '   ' },
+      { episodeId: 42 }, { episodeId: null }, { workspace: false }, { holder: [] }, { storyboardId: {} }, { updatedAt: 1 },
+      { headRevisionNo: null }, { headRevisionNo: '2' }, { headRevisionNo: -1 }, { headRevisionNo: 1.5 }, { headRevisionNo: Number.MAX_SAFE_INTEGER + 1 },
+    ].map(value => JSON.stringify({ episodeId: EPISODE_ID, ...value }))];
+    for (const source of broken) {
+      writeFileSync(file, source);
+      assert.throws(() => episode.readPortalState(dir), /Cannot read \.portal\.json/);
+      assert.throws(() => episode.writePortalState(dir, { episodeId: EPISODE_ID, headRevisionNo: 0 }), /Cannot read \.portal\.json/);
+      assert.equal(readFileSync(file, 'utf8'), source, 'damaged state is never overwritten by the writer');
+    }
+  });
+
+  it('unreadable metadata or bytes and dangling state links refuse tools without HTTP or overwriting', async (ctx) => {
+    const dir = makeEpisodeDir(root, 'my-channel', 'ep-state-io');
+    const file = join(dir, '.portal.json');
+    episode.writePortalState(dir, { episodeId: EPISODE_ID, headRevisionNo: 1 });
+    const originalState = readFileSync(file, 'utf8');
+    const { impl, calls } = fakeFetch({}); const h = portal.portalHandlers(impl);
+    for (const method of ['lstatSync', 'readFileSync']) {
+      const original = fs[method];
+      const mock = ctx.mock.method(fs, method, function (target, ...args) {
+        if (String(target) === file) throw Object.assign(new Error('injected EACCES'), { code: 'EACCES' });
+        return original.call(this, target, ...args);
+      }); syncBuiltinESMExports();
+      try {
+        const out = await h.storyboardSave({ episodeDir: dir, baseRevisionNo: 1 });
+        assert.equal(out.isError, true); assert.match(out.text, /Cannot read \.portal\.json/);
+        assert.throws(() => episode.writePortalState(dir, { holder: 'new' }), /Cannot read \.portal\.json/);
+      } finally { mock.mock.restore(); syncBuiltinESMExports(); }
+      assert.equal(readFileSync(file, 'utf8'), originalState);
+    }
+    rmSync(file); symlinkSync(join(dir, 'missing-state'), file);
+    const out = await h.storyboardSave({ episodeDir: dir });
+    assert.equal(out.isError, true); assert.match(out.text, /file exists but is unreadable/);
+    assert.throws(() => episode.writePortalState(dir, { episodeId: EPISODE_ID }), /Cannot read/);
+    assert.equal(fs.lstatSync(file).isSymbolicLink(), true);
+    assert.equal(calls.length, 0);
+  });
+
+  it('damaged state reaches non-diagnostic tools as isError before HTTP even with explicit identity and base', async () => {
+    const dir = makeEpisodeDir(root, 'my-channel', 'ep-state-tools');
+    const file = join(dir, '.portal.json'), board = join(dir, 'storyboard/scenes.js');
+    const before = readFileSync(board, 'utf8');
+    const { impl, calls } = fakeFetch({}); const h = portal.portalHandlers(impl);
+    for (const source of ['{invalid', JSON.stringify({ episodeId: 7, headRevisionNo: 1 })]) {
+      writeFileSync(file, source);
+      const args = { episodeDir: dir, episodeId: EPISODE_ID };
+      const operations = [
+        () => h.storyboardSave({ ...args, baseRevisionNo: 1 }),
+        () => h.episodeCheckpoint({ ...args, stage: 'board', baseRevisionNo: 1 }),
+        () => h.imagesUpload({ episodeDir: dir, stage: 'board', baseRevisionNo: 1 }),
+        () => h.episodeCreate({ episodeDir: dir, storyboardId: STORYBOARD_ID, slug: 'new' }),
+        () => h.episodeStatus({ ...args, status: 'produced' }),
+        () => h.episodeRestore({ ...args, revisionNo: 1 }),
+        () => h.episodeLease({ ...args, action: 'acquire' }),
+        () => h.episodeRevisions(args), () => h.renderAllocation(args),
+        () => h.scenarioSave({ ...args, candidate: 'D1', markdown: '# test' }),
+        () => h.scenarioChoose({ ...args, candidate: 'D1' }),
+        () => h.scenarioPull({ ...args, targetDir: dir }),
+        () => h.storyboardPull({ episodeId: EPISODE_ID, targetDir: dir }),
+      ];
+      for (const run of operations) {
+        const out = await run(); assert.equal(out.isError, true); assert.match(out.text, /Cannot read \.portal\.json/);
+        assert.equal(calls.length, 0); assert.equal(readFileSync(file, 'utf8'), source); assert.equal(readFileSync(board, 'utf8'), before);
+      }
+    }
+  });
+
+  it('lease partial records remain usable while an absent required identity or save base is refused', async () => {
+    const dir = makeEpisodeDir(root, 'my-channel', 'ep-state-partial');
+    writeFileSync(join(dir, '.portal.json'), '{}');
+    const { impl, calls } = fakeFetch({
+      [`POST /api/workspaces/lab/episodes/${EPISODE_ID}/lease`]: { success: true, data: { holder: 'me@box' } },
+      [`PATCH /api/workspaces/lab/episodes/${EPISODE_ID}`]: { success: true, data: { status: 'approved' } },
+    }); const h = portal.portalHandlers(impl);
+    assert.equal((await h.episodeStatus({ episodeDir: dir, status: 'approved' })).isError, true);
+    assert.equal((await h.storyboardSave({ episodeDir: dir })).isError, true);
+    assert.equal(calls.length, 0);
+    rmSync(join(dir, '.portal.json'));
+    const lease = await h.episodeLease({ episodeDir: dir, episodeId: EPISODE_ID, action: 'acquire' });
+    assert.equal(lease.isError, false, lease.text);
+    const partial = episode.readPortalState(dir); assert.equal(partial.episodeId, EPISODE_ID); assert.equal(partial.headRevisionNo, undefined);
+    assert.equal((await h.episodeStatus({ episodeDir: dir, status: 'approved' })).isError, false);
+    const before = calls.length;
+    assert.equal((await h.episodeCheckpoint({ episodeDir: dir, stage: 'board' })).isError, true);
+    assert.equal(calls.length, before);
+  });
+
   it('a 409 from the portal comes back as one isError line with the detail, not a thrown error', async () => {
     const dir = makeEpisodeDir(root, 'my-channel', 'ep-409');
     episode.writePortalState(dir, { episodeId: EPISODE_ID, headRevisionNo: 2 });
@@ -631,6 +742,43 @@ describe('portal_* handlers on a scripted portal', () => {
     assert.deepEqual(body.documents.map((d) => d.filename), ['storyboard.md', 'research.md', 'scenes.js']);
     assert.equal(JSON.parse(r.text).result, 'new revision');
     assert.equal(episode.readPortalState(dir).headRevisionNo, 4);
+  });
+
+  it('revision head 7 wins over stale canonical attachments and reports them without downloading', async () => {
+    const dir = makeEpisodeDir(root, 'my-channel', 'ep-canonical-attachment');
+    const latest = 'window.SCENES = [{type:"cover",title:"revision 7"}];';
+    const { impl, calls } = fakeFetch({
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}`]: { success: true, data: { id: EPISODE_ID, storyboardId: STORYBOARD_ID, headRevisionNo: 7, documents: [{ filename: 'custom-notes.md' }] } },
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}/scenes.js`]: latest,
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}/documents/custom-notes.md`]: 'latest custom document',
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}/attachments`]: { success: true, data: { items: [
+        { id: 'old-scene', relativePath: 'storyboard/scenes.js', sha256: 'a'.repeat(64), byteSize: 6 },
+        { id: 'old-custom', relativePath: 'storyboard/custom-notes.md', sha256: 'b'.repeat(64), byteSize: 8 },
+      ] } },
+    });
+    const result = await portal.portalHandlers(impl).storyboardPull({ episodeId: EPISODE_ID, targetDir: dir });
+    assert.equal(result.isError, false, result.text);
+    assert.equal(readFileSync(join(dir, 'storyboard/scenes.js'), 'utf8'), latest);
+    assert.equal(readFileSync(join(dir, 'storyboard/custom-notes.md'), 'utf8'), 'latest custom document');
+    assert.equal(episode.readPortalState(dir).headRevisionNo, 7);
+    assert.deepEqual(JSON.parse(result.text).attachments.skipped.map(s => s.reason), ['canonical', 'canonical']);
+    assert.equal(calls.some(c => /attachments\/old-/.test(c.path)), false);
+  });
+
+  it('attachment download failure preserves the working board and recorded head before pull writes', async () => {
+    const dir = makeEpisodeDir(root, 'my-channel', 'ep-attachment-failure');
+    episode.writePortalState(dir, { episodeId: EPISODE_ID, headRevisionNo: 2, workspace: 'lab' });
+    const before = readFileSync(join(dir, 'storyboard/scenes.js'), 'utf8');
+    const state = readFileSync(join(dir, '.portal.json'), 'utf8');
+    const { impl } = fakeFetch({
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}`]: { success: true, data: { id: EPISODE_ID, storyboardId: STORYBOARD_ID, headRevisionNo: 9 } },
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}/scenes.js`]: 'window.SCENES = [];',
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}/attachments`]: { status: 502, success: false, error: 'attachment unavailable' },
+    });
+    const result = await portal.portalHandlers(impl).storyboardPull({ episodeId: EPISODE_ID, targetDir: dir });
+    assert.equal(result.isError, true);
+    assert.equal(readFileSync(join(dir, 'storyboard/scenes.js'), 'utf8'), before);
+    assert.equal(readFileSync(join(dir, '.portal.json'), 'utf8'), state);
   });
 
   it('storyboard_pull replace backs up only changed local files before writing portal content', async () => {
@@ -1028,6 +1176,150 @@ describe('portal_* handlers on a scripted portal', () => {
     assert.equal('sync' in mm, false, 'no portal lookup with the wrong key');
   });
 
+  it('workspace_check diagnoses damaged records without trusting their identity or changing files', async () => {
+    const dir = makeEpisodeDir(root, 'my-channel', 'ep-diagnostic');
+    const file = join(dir, '.portal.json');
+    const board = readFileSync(join(dir, 'storyboard/scenes.js'), 'utf8');
+    mkdirSync(join(dir, 'storyboard/.portal-head'), { recursive: true });
+    mkdirSync(join(dir, 'storyboard/.portal-local/backup'), { recursive: true });
+    for (const source of ['{broken', 'null', JSON.stringify({ episodeId: EPISODE_ID, headRevisionNo: '1' }), '{}']) {
+      writeFileSync(file, source);
+      const { impl, calls } = fakeFetch({
+        'GET /api/workspaces/lab/me': { success: true, data: { role: 'member' } },
+        [`GET /api/workspaces/lab/episodes/${EPISODE_ID}`]: { success: true, data: { headRevisionNo: 3, lease: { holder: 'me@box', mine: true } } },
+      });
+      const h = portal.portalHandlers(impl);
+      const noId = await h.workspaceCheck({ episodeDir: dir });
+      assert.equal(noId.isError, false, noId.text);
+      const out = JSON.parse(noId.text);
+      assert.equal(out.role, 'member'); assert.equal(out.copyOf, null); assert.equal(out.workspaceMatches, null);
+      assert.equal(out.portal, null); assert.equal(out.sync, 'unknown');
+      assert.match(out.localWarning, /Cannot read \.portal\.json/); assert.match(out.portalWarning, /episodeId/);
+      assert.deepEqual(out.pending, { sideDir: true, backups: 1 });
+      assert.equal(calls.length, 1, 'never salvages an ID from invalid state');
+      const explicit = await h.workspaceCheck({ episodeDir: dir, episodeId: EPISODE_ID });
+      assert.equal(explicit.isError, false, explicit.text);
+      const remote = JSON.parse(explicit.text);
+      assert.equal(remote.portal.headRevisionNo, 3); assert.equal(remote.portal.lease.mine, true);
+      assert.equal(remote.sync, 'unknown'); assert.match(remote.localWarning, /Cannot read/);
+      assert.deepEqual(remote.pending, out.pending);
+      assert.equal(calls.length, 3); assert.ok(calls.every(c => c.method === 'GET'));
+      const save = await h.storyboardSave({ episodeDir: dir, baseRevisionNo: 3 });
+      assert.equal(save.isError, true); assert.equal(calls.length, 3, 'diagnosis never relaxes write guards');
+      assert.equal(readFileSync(file, 'utf8'), source); assert.equal(readFileSync(join(dir, 'storyboard/scenes.js'), 'utf8'), board);
+    }
+  });
+
+  it('workspace_check keeps I/O errors and remote errors as separate warnings', async (ctx) => {
+    const dir = makeEpisodeDir(root, 'my-channel', 'ep-diagnostic-io'), file = join(dir, '.portal.json');
+    episode.writePortalState(dir, { episodeId: EPISODE_ID, headRevisionNo: 1 });
+    const source = readFileSync(file, 'utf8');
+    const { impl, calls } = fakeFetch({ 'GET /api/workspaces/lab/me': { success: true, data: { role: 'member' } } });
+    const h = portal.portalHandlers(impl);
+    async function check() {
+      const result = await h.workspaceCheck({ episodeDir: dir, episodeId: EPISODE_ID });
+      assert.equal(result.isError, false, result.text);
+      const out = JSON.parse(result.text);
+      assert.match(out.localWarning, /Cannot read/); assert.match(out.portalWarning, /portal 404/);
+      assert.equal(out.workspaceMatches, null); assert.equal(out.portal, null); assert.equal(out.sync, 'unknown');
+      assert.deepEqual(out.pending, { sideDir: false, backups: 0 });
+    }
+    for (const method of ['lstatSync', 'readFileSync']) {
+      const original = fs[method];
+      const mock = ctx.mock.method(fs, method, function(target, ...args) {
+        if (String(target) === file) throw Object.assign(new Error('injected'), { code: 'EACCES' });
+        return original.call(this, target, ...args);
+      }); syncBuiltinESMExports();
+      try { await check(); } finally { mock.mock.restore(); syncBuiltinESMExports(); }
+      assert.equal(readFileSync(file, 'utf8'), source);
+    }
+    rmSync(file); symlinkSync(join(dir, 'absent'), file); await check();
+    assert.equal(fs.lstatSync(file).isSymbolicLink(), true);
+    assert.equal(calls.length, 6); assert.ok(calls.every(c => c.method === 'GET'));
+  });
+
+  it('workspace_check supports remote-only and partial records but will not compare conflicting identities', async () => {
+    assert.equal(portal.workspaceCheckSchema.parse({ episodeId: EPISODE_ID }).episodeId, EPISODE_ID);
+    assert.equal(portal.workspaceCheckSchema.safeParse({ episodeId: 'bad' }).success, false);
+    assert.equal(TOOLS.find(t => t.name === 'portal_workspace_check').inputSchema.properties.episodeId.format, 'uuid');
+    const { impl, calls } = fakeFetch({
+      'GET /api/workspaces/lab/me': { success: true, data: { role: 'member' } },
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}`]: { success: true, data: { headRevisionNo: 0, lease: null } },
+    });
+    const h = portal.portalHandlers(impl);
+    const remote = JSON.parse((await h.workspaceCheck({ channel: 'my-channel', episodeId: EPISODE_ID })).text);
+    assert.equal(remote.portal.headRevisionNo, 0); assert.equal(remote.sync, 'unknown'); assert.equal(remote.localWarning, undefined);
+    const dir = makeEpisodeDir(root, 'my-channel', 'ep-diagnostic-partial');
+    for (const state of [null, { episodeId: EPISODE_ID }, { episodeId: EPISODE_ID, headRevisionNo: 0 }]) {
+      if (state) writeFileSync(join(dir, '.portal.json'), JSON.stringify(state));
+      const out = JSON.parse((await h.workspaceCheck({ episodeDir: dir, episodeId: EPISODE_ID })).text);
+      assert.equal(out.sync, state?.headRevisionNo === 0 ? 'in_sync' : 'unknown');
+      assert.equal(out.portal.headRevisionNo, 0); assert.equal(out.localWarning, undefined);
+    }
+    const before = calls.length;
+    const conflict = JSON.parse((await h.workspaceCheck({ episodeDir: dir, episodeId: STORYBOARD_ID })).text);
+    assert.match(conflict.warning, /Episode mismatch/); assert.equal(conflict.portal, undefined);
+    writeFileSync(join(dir, '.portal.json'), JSON.stringify({ workspace: 'other', episodeId: EPISODE_ID }));
+    const workspace = JSON.parse((await h.workspaceCheck({ episodeDir: dir, episodeId: EPISODE_ID })).text);
+    assert.equal(workspace.workspaceMatches, false); assert.equal(workspace.portal, undefined);
+    assert.equal(calls.length, before + 2, 'identity mismatches only query /me');
+    const both = JSON.parse((await h.workspaceCheck({ episodeDir: dir, episodeId: STORYBOARD_ID })).text);
+    assert.match(both.warning, /Workspace mismatch/); assert.match(both.warning, /Episode mismatch/);
+    assert.equal(both.workspaceMatches, false); assert.equal(both.portal, undefined);
+    assert.equal(calls.length, before + 3, 'simultaneous mismatches still only query /me');
+  });
+
+  it('workspace_check distinguishes missing pending entries from unreadable directories and dangling links', async (ctx) => {
+    const dir = makeEpisodeDir(root, 'my-channel', 'ep-pending-errors');
+    const sb = join(dir, 'storyboard'), side = join(sb, '.portal-head'), backups = join(sb, '.portal-local');
+    episode.writePortalState(dir, { workspace: 'lab', episodeId: EPISODE_ID, headRevisionNo: 1 });
+    const source = readFileSync(join(dir, '.portal.json'), 'utf8');
+    const board = readFileSync(join(sb, 'scenes.js'), 'utf8');
+    const { impl, calls } = fakeFetch({
+      'GET /api/workspaces/lab/me': { success: true, data: { role: 'member' } },
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}`]: { success: true, data: { headRevisionNo: 1, lease: null } },
+    });
+    const h = portal.portalHandlers(impl);
+    async function check() {
+      const result = await h.workspaceCheck({ episodeDir: dir });
+      assert.equal(result.isError, false, result.text);
+      const out = JSON.parse(result.text);
+      assert.equal(out.sync, 'in_sync'); assert.equal(out.portal.headRevisionNo, 1);
+      assert.equal(readFileSync(join(dir, '.portal.json'), 'utf8'), source);
+      assert.equal(readFileSync(join(sb, 'scenes.js'), 'utf8'), board);
+      return out.pending;
+    }
+    assert.deepEqual(await check(), { sideDir: false, backups: 0 });
+    mkdirSync(side); mkdirSync(join(backups, 'one'), { recursive: true });
+    writeFileSync(join(backups, 'not-a-directory.txt'), 'ignored');
+    assert.deepEqual(await check(), { sideDir: true, backups: 1 });
+    for (const method of ['lstatSync', 'readdirSync']) {
+      for (const target of [side, backups]) {
+        const original = fs[method];
+        const mock = ctx.mock.method(fs, method, function(file, ...args) {
+          if (String(file) === target) throw Object.assign(new Error('injected'), { code: 'EACCES' });
+          return original.call(this, file, ...args);
+        }); syncBuiltinESMExports();
+        try {
+          const pending = await check(), field = target === side ? 'sideDir' : 'backups';
+          assert.equal(pending[field], null); assert.match(pending.warnings[field], /Cannot read/);
+          assert.equal(pending[target === side ? 'backups' : 'sideDir'], target === side ? 1 : true);
+          assert.deepEqual(Object.keys(pending.warnings), [field]);
+        } finally { mock.mock.restore(); syncBuiltinESMExports(); }
+      }
+    }
+    for (const target of [side, backups]) {
+      rmSync(target, { recursive: true }); symlinkSync(join(sb, 'missing'), target);
+    }
+    const broken = await check();
+    assert.equal(broken.sideDir, null); assert.equal(broken.backups, null);
+    assert.match(broken.warnings.sideDir, /Cannot read/); assert.match(broken.warnings.backups, /Cannot read/);
+    assert.equal(fs.lstatSync(side).isSymbolicLink(), true); assert.equal(fs.lstatSync(backups).isSymbolicLink(), true);
+    for (const target of [side, backups]) { rmSync(target); writeFileSync(target, 'wrong type'); }
+    const wrongType = await check(); assert.equal(wrongType.sideDir, null); assert.equal(wrongType.backups, null);
+    assert.ok(calls.every(c => c.method === 'GET'));
+  });
+
   it('episode_status refuses an empty patch before touching the portal', async () => {
     const r = await portal.portalHandlers(async () => {
       throw new Error('must not be called');
@@ -1040,8 +1332,8 @@ describe('portal_* handlers on a scripted portal', () => {
 describe('portal tool surface', () => {
   const names = new Set(TOOLS.map((t) => t.name));
 
-  it('all fifteen portal tools are defined and routed, and nothing else starts with portal_', () => {
-    assert.equal(portal.PORTAL_TOOL_NAMES.length, 15);
+  it('all seventeen portal tools are defined and routed, and nothing else starts with portal_', () => {
+    assert.equal(portal.PORTAL_TOOL_NAMES.length, 17);
     for (const name of portal.PORTAL_TOOL_NAMES) {
       assert.ok(names.has(name), `${name} not in TOOLS`);
       assert.equal(typeof ROUTES[name], 'function', `${name} not routed`);
