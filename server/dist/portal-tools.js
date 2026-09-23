@@ -577,6 +577,20 @@ export function portalHandlers(fetchImpl) {
                 }
                 for (const filename of fileContents.keys())
                     safeAttachmentTarget(dir, `storyboard/${filename}`);
+                // A historical working copy must not carry newer managed documents into the next save.
+                // Unknown local notes are not ours to remove; preserve every removed file in the same backup.
+                const removed = revision && includeDocuments && mode === 'replace'
+                    ? [...new Set([...DOCUMENT_FILES, 'scenario.md', ...(episode.documents ?? []).map(doc => doc.filename)])]
+                        .filter(filename => SAFE_DOCUMENT_NAME.test(filename) && !fileContents.has(filename))
+                        .filter(filename => {
+                        const target = safeAttachmentTarget(dir, `storyboard/${filename}`);
+                        if (!existsSync(target))
+                            return false;
+                        if (!lstatSync(target).isFile())
+                            throw new Error(`Not a regular document: ${filename}`);
+                        return true;
+                    })
+                    : [];
                 const files = [...fileContents].map(([filename, content]) => ({ filename, content }));
                 const headRevisionNo = revision ?? episode.headRevisionNo ?? 0;
                 const written = files.map(({ filename }) => filename);
@@ -607,15 +621,20 @@ export function portalHandlers(fetchImpl) {
                         const target = path.join(sb, filename);
                         return existsSync(target) && !readFileSync(target).equals(Buffer.from(content));
                     });
-                    if (changed.length > 0) {
+                    if (changed.length > 0 || removed.length > 0) {
                         const state = readPortalState(dir);
+                        const backupRoot = path.join(sb, '.portal-local');
+                        if (existsSync(backupRoot) && lstatSync(backupRoot).isSymbolicLink())
+                            throw new Error('Unsafe document backup directory');
                         backupDir = path.join(sb, '.portal-local', `${backupStamp()}-r${state?.headRevisionNo ?? 0}`);
                         mkdirSync(backupDir, { recursive: true });
-                        for (const { filename } of changed) {
+                        for (const filename of [...changed.map(file => file.filename), ...removed]) {
                             copyFileSync(path.join(sb, filename), path.join(backupDir, filename));
-                            replaced.push(filename);
                         }
+                        replaced.push(...changed.map(file => file.filename));
                     }
+                    for (const filename of removed)
+                        rmSync(path.join(sb, filename));
                     for (const { filename, content } of files)
                         writeFileSync(path.join(sb, filename), content);
                 }
@@ -640,6 +659,7 @@ export function portalHandlers(fetchImpl) {
                     written,
                     backupDir,
                     replaced,
+                    removed,
                     sideDir,
                 });
             }

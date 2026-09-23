@@ -778,6 +778,12 @@ Revision comparisons and `409 head_moved` recovery summaries include decision ke
 `+key` added, `−key` removed and `~key` changed, including revisions that change only decisions.
 Older diff responses without `decisions` keep their existing summary.
 
+Historical `portal_storyboard_pull` with `mode: "replace"` and documents enabled also removes
+managed documents absent from that revision, after backing them up under `storyboard/.portal-local/`.
+Managed names are the standard board documents, `scenario.md`, and documents listed by the current
+episode. The result lists them in `removed`; unrelated local notes stay untouched. `mode: "side"`
+preserves the working copy, and `includeDocuments: false` replaces only the board without this cleanup.
+
 A missing `.portal.json` is an unlinked copy. An existing unreadable file, dangling
 symlink, malformed JSON, non-object JSON or wrongly typed present field is an
 error, never an unlinked fallback. Optional string fields must be strings and a
