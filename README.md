@@ -480,7 +480,7 @@ social-flow/
 ├── .plugin/plugin.json          # Buzz persona pack (Open Plugin Spec)
 ├── personas/                    # Buzz pack persona (pipeline.persona.md)
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 100 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 101 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
 │       ├── tools.ts             # tool definitions — 83: research 9 + open data 5 + generation 40 + publish 6 + comments 3 + growth insights 5 + growth review 2 + check 2 + blender 7 + storyboard 4
@@ -542,7 +542,7 @@ social-flow/
 └── data/                        # content data root (see data/README.md)
 ```
 
-## MCP tool surface (100 tools)
+## MCP tool surface (101 tools)
 
 **`tools/list` does not show all 99.** The credential-gated publish, review and insights tools
 (`threads_draft_create` · `threads_review_submit` · `threads_publish` · `instagram_publish` · `facebook_publish` · `facebook_comment` ·
@@ -777,6 +777,14 @@ exists for other clients; this plugin no longer needs it.
 Revision comparisons and `409 head_moved` recovery summaries include decision keys as
 `+key` added, `−key` removed and `~key` changed, including revisions that change only decisions.
 Older diff responses without `decisions` keep their existing summary.
+
+`storyboard_backups` lists local recovery copies and previews retention with `keep` (default 10,
+minimum 1 per kind). It needs no portal credential. Board/scenario backups use their timestamp name;
+image/attachment backups use directory modification time. Unknown names are reported and preserved.
+To prune an authorized list, pass `apply: true` and the preview's `plan` as `confirm`; changed inventory
+requires a new preview. Working files, state and `.portal-head` are excluded. Pull never prunes automatically.
+Symlinks or unreadable recognized backups stop pruning; an I/O failure during deletion reports which paths
+were already deleted. This is not a transaction across directories; stop other local backup writers before pruning.
 
 Historical `portal_storyboard_pull` with `mode: "replace"` and documents enabled also removes
 managed documents absent from that revision, after backing them up under `storyboard/.portal-local/`.

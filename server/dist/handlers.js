@@ -28,6 +28,7 @@ import * as snsScout from './sns-issue-scout.js';
 import { formatError, formatFileSize, saveBase64Image } from './media-utils.js';
 import { renderCapabilityStatus } from './capability-status.js';
 import * as portal from './portal-tools.js';
+import { manageBackups } from './portal-backups.js';
 function text(message, isError = false) {
     return { content: [{ type: 'text', text: message }], isError };
 }
@@ -1266,6 +1267,15 @@ export const ROUTES = {
         return fromApi(await sns.threadsKeywordSearch(input));
     },
     // ── Storyboard ──
+    storyboard_backups: async (args) => {
+        try {
+            const result = manageBackups(args);
+            return text(JSON.stringify(result, null, 2), Boolean(result.error));
+        }
+        catch (error) {
+            return text(error instanceof Error ? error.message : String(error), true);
+        }
+    },
     storyboard_read: async (args) => {
         storyboard.contract(); // a missing structure-contract.js reports itself here, before the argument schema does
         const a = parseArgs(storyboard.storyboardReadSchema, args);
