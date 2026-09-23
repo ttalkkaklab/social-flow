@@ -592,6 +592,15 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
 
         const attachmentRoot = mode === 'side' ? path.join(sb, '.portal-head', 'attachments') : dir;
         const attachmentSnapshot = revision ? undefined : await prepareAttachmentRestore(c, episodeId, attachmentRoot, canonicalPullPaths(episode, fileContents.keys()));
+        if (!revision) {
+          // Downloads use current endpoints. Check again after staging attachments, before any local writes.
+          const { data: latest } = await c.getEpisode(episodeId).catch((error: unknown) => {
+            throw new Error(`Could not verify episode head during pull. Pull did not write local files. Retry portal_storyboard_pull. ${error instanceof Error ? error.message : String(error)}`);
+          });
+          if ((latest.headRevisionNo ?? 0) !== headRevisionNo) {
+            throw new Error(`Episode head moved during pull (#${headRevisionNo} → #${latest.headRevisionNo ?? 0}). Pull did not write local files. Retry portal_storyboard_pull.`);
+          }
+        }
         if (mode === 'side') {
           sideDir = path.join(sb, '.portal-head');
           rmSync(sideDir, { recursive: true, force: true });

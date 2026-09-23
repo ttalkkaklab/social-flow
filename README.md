@@ -945,6 +945,9 @@ responsibility (see the disclaimer in LICENSE).
 
 Episode attachments: `portal_attachments_sync` uploads missing/changed files after a board is linked.
 Board import/checkpoint also call it automatically; current-head pull restores original paths and SHA256-verified bytes.
+Current-head pull rechecks the episode revision after all downloads, before writing local files. If the head changed
+or that check fails, the working copy, side copy, backups, attachments and `.portal.json` stay untouched; retry the pull.
+This check also applies with `includeDocuments: false`. Explicit historical revision pulls keep their existing behavior.
 Inspect `attachments.complete` before removing local originals. The per-file maximum is 10 MiB; shared quotas are
 100 MiB/episode and 500 MiB/workspace. Rights evidence in `.portal-attachments.json` is keyed by relative path
 and travels with the file. Scene sound design refers to the returned logical attachment UUID.
