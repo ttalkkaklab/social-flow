@@ -964,7 +964,9 @@ Returns: JSON — { result: created|updated, candidate, chosen, findings[], upda
         annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
         description: `⚠️ Overwrites local scenario files — never call without the user knowing the directory is a working copy of the portal (HITL at the top of a session). Write the portal episode's candidates to storyboard/candidates/d1.md … and the chosen one to storyboard/scenario.md. With candidate and no targetDir, return that one page's text and write nothing.
 
-Returns: JSON — { scenarios: [{ candidate, chosen, score, p0, findings }], written[] } — or the page text.`,
+Changed local candidates and the chosen scenario are backed up together under storyboard/.portal-local/ before any are replaced. Identical files need no backup.
+
+Returns: JSON — { scenarios: [{ candidate, chosen, score, p0, findings }], written[], backupDir, replaced[] } — or the page text.`,
         inputSchema: {
             type: 'object',
             properties: {
