@@ -551,7 +551,7 @@ social-flow/
 evaluated at list time, so adding a token makes them appear without restarting the
 server. The 17 `portal_*` tools follow the same rule on the ttalkkakstory workspace key
 (`<SNS_TOKEN_DIR>/<channel>/ttalkkakstory.json`, the flat file, or `TTALKKAKSTORY_*`). With
-no tokens and no portal key you'll count 72; explicit tool-disable settings can reduce
+no tokens and no portal key you'll count 73; explicit tool-disable settings can reduce
 that list further. Hidden tools still have live handlers:
 calling one directly returns a missing-token error rather than failing silently.
 `content_feedback`, `youtube_topic_scout`, and `sns_issue_scout` sit outside the
