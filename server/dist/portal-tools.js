@@ -247,6 +247,16 @@ function refuseMismatch(client, ...dirs) {
     }
     return null;
 }
+/** A recorded copy must name the revision its local contents are based on. */
+function saveBase(dir, explicit, required = false) {
+    const state = dir ? readPortalState(dir) : null;
+    const base = explicit ?? state?.headRevisionNo;
+    if (base !== undefined && Number.isSafeInteger(base) && base >= 0)
+        return base;
+    if (!required && !state && base === undefined)
+        return undefined;
+    throw new Error('Missing or invalid base revision. Nothing was sent. Pull portal_storyboard_pull with mode "side", merge the portal head with your local edits, then save with baseRevisionNo from that result. Keep .portal.json and your local files.');
+}
 let lastBackupTimeMs = 0;
 function backupStamp() {
     const now = Math.max(Date.now(), lastBackupTimeMs + 1);
@@ -378,7 +388,7 @@ export function portalHandlers(fetchImpl) {
             try {
                 const payload = buildImportPayload(episodeDir, { project, storyboard: storyboardTitle, title });
                 const state = readPortalState(episodeDir);
-                const base = baseRevisionNo ?? state?.headRevisionNo;
+                const base = saveBase(episodeDir, baseRevisionNo);
                 payload.episode = {
                     ...payload.episode,
                     ...(state?.episodeId ? { id: state.episodeId } : {}),
@@ -579,12 +589,12 @@ export function portalHandlers(fetchImpl) {
                 return refused;
             try {
                 const id = resolveEpisodeId(episodeId, episodeDir);
-                const state = episodeDir ? readPortalState(episodeDir) : null;
+                const base = saveBase(episodeDir, baseRevisionNo, true);
                 const body = {
                     stage: stageArg,
                     note,
                     sourceHost: r.client.holder,
-                    baseRevisionNo: baseRevisionNo ?? state?.headRevisionNo,
+                    baseRevisionNo: base,
                 };
                 let uploadedDocuments = [];
                 let uploadedScenes = 0;

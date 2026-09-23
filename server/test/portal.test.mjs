@@ -422,6 +422,37 @@ describe('portal_* handlers on a scripted portal', () => {
     assert.equal(calls[1].body.episode.baseRevisionNo, 1);
   });
 
+  it('refuses missing or invalid recorded bases before save/checkpoint send; explicit base recovers', async () => {
+    const dir = makeEpisodeDir(root, 'my-channel', 'ep-missing-base');
+    const { impl, calls } = fakeFetch({
+      'POST /api/workspaces/lab/storyboards/import': { status: 200, success: true, data: { episodeId: EPISODE_ID, revisionNo: 4 } },
+      [`POST /api/workspaces/lab/episodes/${EPISODE_ID}/revisions`]: { status: 201, success: true, data: { revisionNo: 4 } },
+    });
+    const h = portal.portalHandlers(impl);
+    for (const base of [undefined, null, -1, 1.5, '3']) {
+      writeFileSync(join(dir, '.portal.json'), JSON.stringify({ episodeId: EPISODE_ID, headRevisionNo: base }));
+      const before = readFileSync(join(dir, '.portal.json'), 'utf8');
+      for (const run of [() => h.storyboardSave({ episodeDir: dir }), () => h.episodeCheckpoint({ episodeDir: dir, stage: 'board' })]) {
+        const r = await run();
+        assert.equal(r.isError, true);
+        assert.match(r.text, /Nothing was sent.*mode "side"/);
+        assert.equal(readFileSync(join(dir, '.portal.json'), 'utf8'), before);
+      }
+    }
+    assert.equal(calls.length, 0);
+    for (const run of [() => h.storyboardSave({ episodeDir: dir, baseRevisionNo: 3 }), () => h.episodeCheckpoint({ episodeDir: dir, stage: 'board', baseRevisionNo: 3 })]) {
+      assert.equal((await run()).isError, false);
+    }
+    assert.equal(calls[0].body.episode.baseRevisionNo, 3);
+    assert.equal(calls[1].body.baseRevisionNo, 3);
+    episode.writePortalState(dir, { headRevisionNo: 0 });
+    assert.equal((await h.episodeCheckpoint({ episodeDir: dir, stage: 'board' })).isError, false);
+    assert.equal(calls[2].body.baseRevisionNo, 0, 'a newly created episode has a valid zero base');
+    const remote = await h.episodeCheckpoint({ channel: 'my-channel', episodeId: EPISODE_ID, stage: 'board' });
+    assert.equal(remote.isError, true);
+    assert.equal(calls.length, 3, 'directory-free checkpoint must explicitly name its base');
+  });
+
   it('a 409 from the portal comes back as one isError line with the detail, not a thrown error', async () => {
     const dir = makeEpisodeDir(root, 'my-channel', 'ep-409');
     episode.writePortalState(dir, { episodeId: EPISODE_ID, headRevisionNo: 2 });
@@ -692,7 +723,7 @@ describe('portal_* handlers on a scripted portal', () => {
     const check = await h.workspaceCheck({ episodeDir: same });
     assert.equal(JSON.parse(check.text).workspaceMatches, true);
     const legacy = makeEpisodeDir(root, 'my-channel', 'ep-legacy');
-    episode.writePortalState(legacy, { episodeId: EPISODE_ID }); // a record from before the workspace field
+    episode.writePortalState(legacy, { episodeId: EPISODE_ID, headRevisionNo: 1 }); // a record from before the workspace field
     assert.equal((await h.storyboardSave({ episodeDir: legacy })).isError, false);
   });
 
