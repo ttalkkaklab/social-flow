@@ -2156,7 +2156,7 @@ Which cuts get one — the effect matches the size and speed of what moved on th
 which is what a viewer hears as a loading failure and what makes a cut sound spliced. A shot's
 `sound.ambience` names a `window.SFX` entry with `loop: true` (10–30 s — "quiet office room tone,
 no music, no speech", "night rain on a window, steady") and the room starts on that card and
-holds until a later shot names another or ends it with `ambience: null` (or `"-"`). The builder
+holds until a later shot names another or ends it with `ambience: null` (or `"-"` / `"none"`). The builder
 lays it 15 LU under the narration (`AMB_SEP`, the JAES figure for ambience under commentary)
 and never ducks it. One room per place: it changes where `STRUCTURE` changes place, not per
 shot. The checker refuses an entry that isn't a loop and an ambience on a `broll` or the

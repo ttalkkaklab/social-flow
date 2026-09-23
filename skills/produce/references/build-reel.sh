@@ -110,6 +110,12 @@ WORKDIR="${1:?usage: build-reel.sh <workdir>}"
 # Resolve the supplied board before changing directories; both gates inspect the same plan.
 STORYBOARD=$(node -e 'console.log(require("path").resolve(process.argv[1]))' "${2:-$WORKDIR/../storyboard}")
 node "$HERE/verify-build-plan.js" "$WORKDIR" "$STORYBOARD"
+# A normal board is <channel>/episodes/<topic>/storyboard. Proof fixtures may put storyboard/
+# directly under their channel root, so fall back to the storyboard parent in that shape.
+CHANNEL_DIR=$(node -e 'const p=require("path"), s=p.resolve(process.argv[1]), episode=p.dirname(s), episodes=p.dirname(episode); console.log(p.basename(episodes)==="episodes"?p.dirname(episodes):p.dirname(s))' "$STORYBOARD")
+# Rebuild every compiler-owned sound manifest from the current scenes.js before sourcing mix
+# values. Removing a field must remove its previous row instead of reviving stale audio.
+node "$HERE/compile-sound-plan.js" "$STORYBOARD/scenes.js" "$WORKDIR" "$CHANNEL_DIR"
 cd "$WORKDIR"
 VIDEO_WARNINGS_APPROVED=$(node -e 'console.log(require(process.argv[1]).videoGate.approved ? 1 : 0)' "$PWD/build-plan-check.json")
 # verify-build-plan.js writes production-preflight.json after the video warning/HITL check.
@@ -121,7 +127,7 @@ REUSED_VIDEO_SHOTS=$(node -e 'const p=require(process.argv[1]); console.log((p.r
 # Without the file this is today's behavior — portrait episodes don't change when this line appears.
 [ -f format.env ] && . ./format.env
 # Optional storyboard-authored mix values. compile-sound-plan.js writes numeric assignments only.
-# Legacy boards have no sound.env and take the exact defaults below.
+# Boards without $mix have no sound.env and take the exact defaults below.
 [ -f sound.env ] && . ./sound.env
 
 FPS=${FPS:-30}
