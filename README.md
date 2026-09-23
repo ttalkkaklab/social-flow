@@ -786,7 +786,11 @@ for a remote-only check. Without an ID the tool still answers `/me` and pending,
 with `portal: null` and a `portalWarning`; it never extracts an ID from damaged JSON.
 Readable but conflicting workspace/episode identities skip the episode lookup
 with a warning. No local revision means unknown sync, including valid first-lease
-records. Diagnostic success neither repairs local files nor relaxes write guards.
+records. Simultaneous identity mismatches preserve both messages in `warning`.
+`pending.sideDir` and `pending.backups` use false/0 only for missing entries; an
+unreadable entry, dangling link or wrong entry type returns null with a matching
+`pending.warnings.sideDir`/`backups` message. The other field and remote diagnosis
+still answer. Diagnostic success neither repairs local files nor relaxes write guards.
 
 An explicit `episodeId` must agree with `.portal.json` in every supplied local
 copy, including scenario input files and pull targets. Conflicting IDs are refused

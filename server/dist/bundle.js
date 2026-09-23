@@ -83688,7 +83688,7 @@ var PORTAL_TOOLS = [
 
 The key is issued on the portal at /{workspace}/settings/api-keys (admin+) and saved as <SNS_TOKEN_DIR>/<channel>/ttalkkakstory.json \u2014 { "apiUrl", "workspace", "apiKey" }. With no key anywhere the portal_* tools are hidden and every call answers one line; the episode stays a local file.
 
-With episodeDir, also compares the directory's .portal.json (the workspace it is a copy of) with the key's workspace \u2014 workspaceMatches:false with a warning means every write to that directory will be refused until the key file or the record is fixed, so the topic does not fork into a second workspace. When the record names an episode, the portal's side comes too: portal { headRevisionNo, stage, status, lease { holder, until, mine } | null } and sync \u2014 "portal_ahead" (pull with mode "side" and merge before writing), "local_ahead" (never in the normal flow \u2014 syncWarning says how to resync), "in_sync", or "unknown" (no record, or the lookup failed \u2014 see portalWarning) \u2014 plus pending { sideDir, backups }: a leftover .portal-head/ means a merge was started and not finished, backups counts .portal-local/ entries.
+With episodeDir, also compares the directory's .portal.json (the workspace it is a copy of) with the key's workspace \u2014 workspaceMatches:false with a warning means every write to that directory will be refused until the key file or the record is fixed, so the topic does not fork into a second workspace. When the record names an episode, the portal's side comes too: portal { headRevisionNo, stage, status, lease { holder, until, mine } | null } and sync \u2014 "portal_ahead" (pull with mode "side" and merge before writing), "local_ahead" (never in the normal flow \u2014 syncWarning says how to resync), "in_sync", or "unknown" (no record, or the lookup failed \u2014 see portalWarning) \u2014 plus pending { sideDir, backups }: a leftover .portal-head/ means a merge was started and not finished, backups counts .portal-local/ directory entries. Missing entries return false/0; unreadable entries, dangling links or wrong entry types return null for the affected field plus pending.warnings { sideDir?, backups? }. Both mismatch messages are preserved in warning when workspace and episode identities conflict together.
 
 A damaged or unreadable local record returns localWarning, copyOf:null, workspaceMatches:null and sync:"unknown"; pending is still inspected. Pass episodeId explicitly to read the remote head and lease without trusting that record, or use episodeId + channel alone for a remote-only check. Without a trustworthy ID no episode is guessed; portalWarning explains how to request it. A valid local record conflicting with the explicit ID or key workspace skips the episode lookup with a warning. A missing local revision also means sync:"unknown". Diagnostic success does not repair the record or permit writes: other tools keep refusing the damaged state.
 
@@ -87488,7 +87488,7 @@ var SNS_PLATFORM_BY_TOOL = {
 };
 
 // src/portal-tools.ts
-import { copyFileSync, existsSync as existsSync14, mkdirSync as mkdirSync6, readdirSync as readdirSync2, readFileSync as readFileSync11, rmSync as rmSync7, writeFileSync as writeFileSync10 } from "node:fs";
+import { copyFileSync, existsSync as existsSync14, lstatSync as lstatSync2, mkdirSync as mkdirSync6, readdirSync as readdirSync2, readFileSync as readFileSync11, rmSync as rmSync7, writeFileSync as writeFileSync10 } from "node:fs";
 import path12 from "node:path";
 
 // src/portal-images.ts
@@ -88128,13 +88128,29 @@ function pendingOf(dir) {
   const sb = path12.join(episodeDirOf(dir), "storyboard");
   const side = path12.join(sb, ".portal-head");
   const local = path12.join(sb, ".portal-local");
-  let backups = 0;
+  const entries = (target) => {
+    try {
+      lstatSync2(target);
+    } catch (error2) {
+      if (error2.code === "ENOENT") return null;
+      throw error2;
+    }
+    return readdirSync2(target, { withFileTypes: true });
+  };
+  let sideDir = null;
+  let backups = null;
+  const warnings = {};
   try {
-    backups = readdirSync2(local, { withFileTypes: true }).filter((e2) => e2.isDirectory()).length;
+    sideDir = entries(side) !== null;
   } catch {
-    backups = 0;
+    warnings.sideDir = "Cannot read .portal-head; side directory presence is unknown. Keep local files and inspect permissions or links.";
   }
-  return { sideDir: existsSync14(side), backups };
+  try {
+    backups = entries(local)?.filter((e2) => e2.isDirectory()).length ?? 0;
+  } catch {
+    warnings.backups = "Cannot read .portal-local; backup count is unknown. Keep local files and inspect permissions or links.";
+  }
+  return { sideDir, backups, ...Object.keys(warnings).length ? { warnings } : {} };
 }
 function resolveEpisodeId(episodeId, ...dirs) {
   let id = episodeId;
@@ -88193,6 +88209,7 @@ function portalHandlers(fetchImpl) {
           localWarning = describePortalError(error2);
         }
         const episodeMismatch = !!(episodeId && state?.episodeId && episodeId !== state.episodeId);
+        const warning = [mismatch, episodeMismatch ? "Episode mismatch \u2014 episodeId and .portal.json identify different episodes. No episode was queried; use the matching ID or omit episodeDir for a remote-only check." : null].filter(Boolean).join(" ");
         const id = episodeId ?? state?.episodeId;
         const { data } = await r2.client.me();
         let portalPart = episodeDir ? { pending: pendingOf(episodeDir) } : {};
@@ -88244,9 +88261,8 @@ function portalHandlers(fetchImpl) {
             episodeDir: episodeDirOf(episodeDir),
             copyOf: state ? { workspace: state.workspace ?? null, episodeId: state.episodeId ?? null, headRevisionNo: state.headRevisionNo ?? null } : null,
             workspaceMatches: localWarning ? null : !mismatch,
-            ...mismatch ? { warning: mismatch } : {},
-            ...localWarning ? { localWarning } : {},
-            ...episodeMismatch ? { warning: "Episode mismatch \u2014 episodeId and .portal.json identify different episodes. No episode was queried; use the matching ID or omit episodeDir for a remote-only check." } : {}
+            ...warning ? { warning } : {},
+            ...localWarning ? { localWarning } : {}
           } : {},
           ...portalPart,
           ...data

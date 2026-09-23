@@ -1181,6 +1181,61 @@ describe('portal_* handlers on a scripted portal', () => {
     const workspace = JSON.parse((await h.workspaceCheck({ episodeDir: dir, episodeId: EPISODE_ID })).text);
     assert.equal(workspace.workspaceMatches, false); assert.equal(workspace.portal, undefined);
     assert.equal(calls.length, before + 2, 'identity mismatches only query /me');
+    const both = JSON.parse((await h.workspaceCheck({ episodeDir: dir, episodeId: STORYBOARD_ID })).text);
+    assert.match(both.warning, /Workspace mismatch/); assert.match(both.warning, /Episode mismatch/);
+    assert.equal(both.workspaceMatches, false); assert.equal(both.portal, undefined);
+    assert.equal(calls.length, before + 3, 'simultaneous mismatches still only query /me');
+  });
+
+  it('workspace_check distinguishes missing pending entries from unreadable directories and dangling links', async (ctx) => {
+    const dir = makeEpisodeDir(root, 'my-channel', 'ep-pending-errors');
+    const sb = join(dir, 'storyboard'), side = join(sb, '.portal-head'), backups = join(sb, '.portal-local');
+    episode.writePortalState(dir, { workspace: 'lab', episodeId: EPISODE_ID, headRevisionNo: 1 });
+    const source = readFileSync(join(dir, '.portal.json'), 'utf8');
+    const board = readFileSync(join(sb, 'scenes.js'), 'utf8');
+    const { impl, calls } = fakeFetch({
+      'GET /api/workspaces/lab/me': { success: true, data: { role: 'member' } },
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}`]: { success: true, data: { headRevisionNo: 1, lease: null } },
+    });
+    const h = portal.portalHandlers(impl);
+    async function check() {
+      const result = await h.workspaceCheck({ episodeDir: dir });
+      assert.equal(result.isError, false, result.text);
+      const out = JSON.parse(result.text);
+      assert.equal(out.sync, 'in_sync'); assert.equal(out.portal.headRevisionNo, 1);
+      assert.equal(readFileSync(join(dir, '.portal.json'), 'utf8'), source);
+      assert.equal(readFileSync(join(sb, 'scenes.js'), 'utf8'), board);
+      return out.pending;
+    }
+    assert.deepEqual(await check(), { sideDir: false, backups: 0 });
+    mkdirSync(side); mkdirSync(join(backups, 'one'), { recursive: true });
+    writeFileSync(join(backups, 'not-a-directory.txt'), 'ignored');
+    assert.deepEqual(await check(), { sideDir: true, backups: 1 });
+    for (const method of ['lstatSync', 'readdirSync']) {
+      for (const target of [side, backups]) {
+        const original = fs[method];
+        const mock = ctx.mock.method(fs, method, function(file, ...args) {
+          if (String(file) === target) throw Object.assign(new Error('injected'), { code: 'EACCES' });
+          return original.call(this, file, ...args);
+        }); syncBuiltinESMExports();
+        try {
+          const pending = await check(), field = target === side ? 'sideDir' : 'backups';
+          assert.equal(pending[field], null); assert.match(pending.warnings[field], /Cannot read/);
+          assert.equal(pending[target === side ? 'backups' : 'sideDir'], target === side ? 1 : true);
+          assert.deepEqual(Object.keys(pending.warnings), [field]);
+        } finally { mock.mock.restore(); syncBuiltinESMExports(); }
+      }
+    }
+    for (const target of [side, backups]) {
+      rmSync(target, { recursive: true }); symlinkSync(join(sb, 'missing'), target);
+    }
+    const broken = await check();
+    assert.equal(broken.sideDir, null); assert.equal(broken.backups, null);
+    assert.match(broken.warnings.sideDir, /Cannot read/); assert.match(broken.warnings.backups, /Cannot read/);
+    assert.equal(fs.lstatSync(side).isSymbolicLink(), true); assert.equal(fs.lstatSync(backups).isSymbolicLink(), true);
+    for (const target of [side, backups]) { rmSync(target); writeFileSync(target, 'wrong type'); }
+    const wrongType = await check(); assert.equal(wrongType.sideDir, null); assert.equal(wrongType.backups, null);
+    assert.ok(calls.every(c => c.method === 'GET'));
   });
 
   it('episode_status refuses an empty patch before touching the portal', async () => {
