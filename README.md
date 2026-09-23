@@ -480,7 +480,7 @@ social-flow/
 ├── .plugin/plugin.json          # Buzz persona pack (Open Plugin Spec)
 ├── personas/                    # Buzz pack persona (pipeline.persona.md)
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 100 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 101 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
 │       ├── tools.ts             # tool definitions — 83: research 9 + open data 5 + generation 40 + publish 6 + comments 3 + growth insights 5 + growth review 2 + check 2 + blender 7 + storyboard 4
@@ -542,7 +542,7 @@ social-flow/
 └── data/                        # content data root (see data/README.md)
 ```
 
-## MCP tool surface (100 tools)
+## MCP tool surface (101 tools)
 
 **`tools/list` does not show all 99.** The credential-gated publish, review and insights tools
 (`threads_draft_create` · `threads_review_submit` · `threads_publish` · `instagram_publish` · `facebook_publish` · `facebook_comment` ·
