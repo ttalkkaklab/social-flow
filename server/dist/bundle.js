@@ -48,9 +48,9 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 
-// node_modules/ajv/dist/compile/codegen/code.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/compile/codegen/code.js
 var require_code = __commonJS({
-  "node_modules/ajv/dist/compile/codegen/code.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/compile/codegen/code.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.regexpCode = exports.getEsmExportName = exports.getProperty = exports.safeStringify = exports.stringify = exports.strConcat = exports.addCodeArg = exports.str = exports._ = exports.nil = exports._Code = exports.Name = exports.IDENTIFIER = exports._CodeOrName = void 0;
@@ -202,9 +202,9 @@ var require_code = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/codegen/scope.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/compile/codegen/scope.js
 var require_scope = __commonJS({
-  "node_modules/ajv/dist/compile/codegen/scope.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/compile/codegen/scope.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ValueScope = exports.ValueScopeName = exports.Scope = exports.varKinds = exports.UsedValueState = void 0;
@@ -347,9 +347,9 @@ var require_scope = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/codegen/index.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/compile/codegen/index.js
 var require_codegen = __commonJS({
-  "node_modules/ajv/dist/compile/codegen/index.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/compile/codegen/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.or = exports.and = exports.not = exports.CodeGen = exports.operators = exports.varKinds = exports.ValueScopeName = exports.ValueScope = exports.Scope = exports.Name = exports.regexpCode = exports.stringify = exports.getProperty = exports.nil = exports.strConcat = exports.str = exports._ = void 0;
@@ -1067,9 +1067,9 @@ var require_codegen = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/util.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/compile/util.js
 var require_util = __commonJS({
-  "node_modules/ajv/dist/compile/util.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/compile/util.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.checkStrictMode = exports.getErrorPath = exports.Type = exports.useFunc = exports.setEvaluated = exports.evaluatedPropsToName = exports.mergeEvaluated = exports.eachItem = exports.unescapeJsonPointer = exports.escapeJsonPointer = exports.escapeFragment = exports.unescapeFragment = exports.schemaRefOrVal = exports.schemaHasRulesButRef = exports.schemaHasRules = exports.checkUnknownRules = exports.alwaysValidSchema = exports.toHash = void 0;
@@ -1234,9 +1234,9 @@ var require_util = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/names.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/compile/names.js
 var require_names = __commonJS({
-  "node_modules/ajv/dist/compile/names.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/compile/names.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -1273,9 +1273,9 @@ var require_names = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/errors.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/compile/errors.js
 var require_errors = __commonJS({
-  "node_modules/ajv/dist/compile/errors.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/compile/errors.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.extendErrors = exports.resetErrorsCount = exports.reportExtraError = exports.reportError = exports.keyword$DataError = exports.keywordError = void 0;
@@ -1395,9 +1395,9 @@ var require_errors = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/validate/boolSchema.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/compile/validate/boolSchema.js
 var require_boolSchema = __commonJS({
-  "node_modules/ajv/dist/compile/validate/boolSchema.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/compile/validate/boolSchema.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.boolOrEmptySchema = exports.topBoolOrEmptySchema = void 0;
@@ -1446,9 +1446,9 @@ var require_boolSchema = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/rules.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/compile/rules.js
 var require_rules = __commonJS({
-  "node_modules/ajv/dist/compile/rules.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/compile/rules.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getRules = exports.isJSONType = void 0;
@@ -1477,9 +1477,9 @@ var require_rules = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/validate/applicability.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/compile/validate/applicability.js
 var require_applicability = __commonJS({
-  "node_modules/ajv/dist/compile/validate/applicability.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/compile/validate/applicability.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.shouldUseRule = exports.shouldUseGroup = exports.schemaHasRulesForType = void 0;
@@ -1500,9 +1500,9 @@ var require_applicability = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/validate/dataType.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/compile/validate/dataType.js
 var require_dataType = __commonJS({
-  "node_modules/ajv/dist/compile/validate/dataType.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/compile/validate/dataType.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.reportTypeError = exports.checkDataTypes = exports.checkDataType = exports.coerceAndCheckDataType = exports.getJSONTypes = exports.getSchemaTypes = exports.DataType = void 0;
@@ -1684,9 +1684,9 @@ var require_dataType = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/validate/defaults.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/compile/validate/defaults.js
 var require_defaults = __commonJS({
-  "node_modules/ajv/dist/compile/validate/defaults.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/compile/validate/defaults.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.assignDefaults = void 0;
@@ -1721,9 +1721,9 @@ var require_defaults = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/code.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/code.js
 var require_code2 = __commonJS({
-  "node_modules/ajv/dist/vocabularies/code.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/code.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateUnion = exports.validateArray = exports.usePattern = exports.callValidateCode = exports.schemaProperties = exports.allSchemaProperties = exports.noPropertyInData = exports.propertyInData = exports.isOwnProperty = exports.hasPropFunc = exports.reportMissingProp = exports.checkMissingProp = exports.checkReportMissingProp = void 0;
@@ -1854,9 +1854,9 @@ var require_code2 = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/validate/keyword.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/compile/validate/keyword.js
 var require_keyword = __commonJS({
-  "node_modules/ajv/dist/compile/validate/keyword.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/compile/validate/keyword.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateKeywordUsage = exports.validSchemaType = exports.funcKeywordCode = exports.macroKeywordCode = void 0;
@@ -1972,9 +1972,9 @@ var require_keyword = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/validate/subschema.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/compile/validate/subschema.js
 var require_subschema = __commonJS({
-  "node_modules/ajv/dist/compile/validate/subschema.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/compile/validate/subschema.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.extendSubschemaMode = exports.extendSubschemaData = exports.getSubschema = void 0;
@@ -2055,9 +2055,9 @@ var require_subschema = __commonJS({
   }
 });
 
-// node_modules/fast-deep-equal/index.js
+// ../../social-flow-loop-i2/server/node_modules/fast-deep-equal/index.js
 var require_fast_deep_equal = __commonJS({
-  "node_modules/fast-deep-equal/index.js"(exports, module) {
+  "../../social-flow-loop-i2/server/node_modules/fast-deep-equal/index.js"(exports, module) {
     "use strict";
     module.exports = function equal(a, b) {
       if (a === b) return true;
@@ -2090,9 +2090,9 @@ var require_fast_deep_equal = __commonJS({
   }
 });
 
-// node_modules/json-schema-traverse/index.js
+// ../../social-flow-loop-i2/server/node_modules/json-schema-traverse/index.js
 var require_json_schema_traverse = __commonJS({
-  "node_modules/json-schema-traverse/index.js"(exports, module) {
+  "../../social-flow-loop-i2/server/node_modules/json-schema-traverse/index.js"(exports, module) {
     "use strict";
     var traverse = module.exports = function(schema, opts, cb) {
       if (typeof opts == "function") {
@@ -2178,9 +2178,9 @@ var require_json_schema_traverse = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/resolve.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/compile/resolve.js
 var require_resolve = __commonJS({
-  "node_modules/ajv/dist/compile/resolve.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/compile/resolve.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getSchemaRefs = exports.resolveUrl = exports.normalizeId = exports._getFullPath = exports.getFullPath = exports.inlineRef = void 0;
@@ -2334,9 +2334,9 @@ var require_resolve = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/validate/index.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/compile/validate/index.js
 var require_validate = __commonJS({
-  "node_modules/ajv/dist/compile/validate/index.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/compile/validate/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getData = exports.KeywordCxt = exports.validateFunctionCode = void 0;
@@ -2842,9 +2842,9 @@ var require_validate = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/runtime/validation_error.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/runtime/validation_error.js
 var require_validation_error = __commonJS({
-  "node_modules/ajv/dist/runtime/validation_error.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/runtime/validation_error.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var ValidationError = class extends Error {
@@ -2858,9 +2858,9 @@ var require_validation_error = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/ref_error.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/compile/ref_error.js
 var require_ref_error = __commonJS({
-  "node_modules/ajv/dist/compile/ref_error.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/compile/ref_error.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var resolve_1 = require_resolve();
@@ -2875,9 +2875,9 @@ var require_ref_error = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/index.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/compile/index.js
 var require_compile = __commonJS({
-  "node_modules/ajv/dist/compile/index.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/compile/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.resolveSchema = exports.getCompilingSchema = exports.resolveRef = exports.compileSchema = exports.SchemaEnv = void 0;
@@ -3099,9 +3099,9 @@ var require_compile = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/refs/data.json
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/refs/data.json
 var require_data = __commonJS({
-  "node_modules/ajv/dist/refs/data.json"(exports, module) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/refs/data.json"(exports, module) {
     module.exports = {
       $id: "https://raw.githubusercontent.com/ajv-validator/ajv/master/lib/refs/data.json#",
       description: "Meta-schema for $data reference (JSON AnySchema extension proposal)",
@@ -3118,9 +3118,9 @@ var require_data = __commonJS({
   }
 });
 
-// node_modules/fast-uri/lib/utils.js
+// ../../social-flow-loop-i2/server/node_modules/fast-uri/lib/utils.js
 var require_utils = __commonJS({
-  "node_modules/fast-uri/lib/utils.js"(exports, module) {
+  "../../social-flow-loop-i2/server/node_modules/fast-uri/lib/utils.js"(exports, module) {
     "use strict";
     var isUUID = RegExp.prototype.test.bind(/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/iu);
     var isIPv4 = RegExp.prototype.test.bind(/^(?:(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]\d|\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]\d|\d)$/u);
@@ -3244,8 +3244,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path16) {
-      let input = path16;
+    function removeDotSegments(path17) {
+      let input = path17;
       const output = [];
       let nextSlash = -1;
       let len = 0;
@@ -3431,9 +3431,9 @@ var require_utils = __commonJS({
   }
 });
 
-// node_modules/fast-uri/lib/schemes.js
+// ../../social-flow-loop-i2/server/node_modules/fast-uri/lib/schemes.js
 var require_schemes = __commonJS({
-  "node_modules/fast-uri/lib/schemes.js"(exports, module) {
+  "../../social-flow-loop-i2/server/node_modules/fast-uri/lib/schemes.js"(exports, module) {
     "use strict";
     var { isUUID } = require_utils();
     var URN_REG = /([\da-z][\d\-a-z]{0,31}):((?:[\w!$'()*+,\-.:;=@]|%[\da-f]{2})+)/iu;
@@ -3497,8 +3497,8 @@ var require_schemes = __commonJS({
         wsComponent.secure = void 0;
       }
       if (wsComponent.resourceName) {
-        const [path16, query] = wsComponent.resourceName.split("?");
-        wsComponent.path = path16 && path16 !== "/" ? path16 : void 0;
+        const [path17, query] = wsComponent.resourceName.split("?");
+        wsComponent.path = path17 && path17 !== "/" ? path17 : void 0;
         wsComponent.query = query;
         wsComponent.resourceName = void 0;
       }
@@ -3641,9 +3641,9 @@ var require_schemes = __commonJS({
   }
 });
 
-// node_modules/fast-uri/index.js
+// ../../social-flow-loop-i2/server/node_modules/fast-uri/index.js
 var require_fast_uri = __commonJS({
-  "node_modules/fast-uri/index.js"(exports, module) {
+  "../../social-flow-loop-i2/server/node_modules/fast-uri/index.js"(exports, module) {
     "use strict";
     var { normalizeIPv6, removeDotSegments, recomposeAuthority, normalizePercentEncoding, normalizePathEncoding, escapePreservingEscapes, reescapeHostDelimiters, isIPv4, nonSimpleDomain } = require_utils();
     var { SCHEMES, getSchemeHandler } = require_schemes();
@@ -3953,9 +3953,9 @@ var require_fast_uri = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/runtime/uri.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/runtime/uri.js
 var require_uri = __commonJS({
-  "node_modules/ajv/dist/runtime/uri.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/runtime/uri.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var uri = require_fast_uri();
@@ -3964,9 +3964,9 @@ var require_uri = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/core.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/core.js
 var require_core = __commonJS({
-  "node_modules/ajv/dist/core.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/core.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.CodeGen = exports.Name = exports.nil = exports.stringify = exports.str = exports._ = exports.KeywordCxt = void 0;
@@ -4575,9 +4575,9 @@ var require_core = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/core/id.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/core/id.js
 var require_id = __commonJS({
-  "node_modules/ajv/dist/vocabularies/core/id.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/core/id.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var def = {
@@ -4590,9 +4590,9 @@ var require_id = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/core/ref.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/core/ref.js
 var require_ref = __commonJS({
-  "node_modules/ajv/dist/vocabularies/core/ref.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/core/ref.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.callRef = exports.getValidate = void 0;
@@ -4712,9 +4712,9 @@ var require_ref = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/core/index.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/core/index.js
 var require_core2 = __commonJS({
-  "node_modules/ajv/dist/vocabularies/core/index.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/core/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var id_1 = require_id();
@@ -4733,9 +4733,9 @@ var require_core2 = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/limitNumber.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/validation/limitNumber.js
 var require_limitNumber = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/limitNumber.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/validation/limitNumber.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -4765,9 +4765,9 @@ var require_limitNumber = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/multipleOf.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/validation/multipleOf.js
 var require_multipleOf = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/multipleOf.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/validation/multipleOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -4793,9 +4793,9 @@ var require_multipleOf = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/runtime/ucs2length.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/runtime/ucs2length.js
 var require_ucs2length = __commonJS({
-  "node_modules/ajv/dist/runtime/ucs2length.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/runtime/ucs2length.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     function ucs2length(str8) {
@@ -4819,9 +4819,9 @@ var require_ucs2length = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/limitLength.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/validation/limitLength.js
 var require_limitLength = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/limitLength.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/validation/limitLength.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -4851,9 +4851,9 @@ var require_limitLength = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/pattern.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/validation/pattern.js
 var require_pattern = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/pattern.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/validation/pattern.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -4888,9 +4888,9 @@ var require_pattern = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/limitProperties.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/validation/limitProperties.js
 var require_limitProperties = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/limitProperties.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/validation/limitProperties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -4917,9 +4917,9 @@ var require_limitProperties = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/required.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/validation/required.js
 var require_required = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/required.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/validation/required.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -4999,9 +4999,9 @@ var require_required = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/limitItems.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/validation/limitItems.js
 var require_limitItems = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/limitItems.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/validation/limitItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5028,9 +5028,9 @@ var require_limitItems = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/runtime/equal.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/runtime/equal.js
 var require_equal = __commonJS({
-  "node_modules/ajv/dist/runtime/equal.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/runtime/equal.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var equal = require_fast_deep_equal();
@@ -5039,9 +5039,9 @@ var require_equal = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/uniqueItems.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/validation/uniqueItems.js
 var require_uniqueItems = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/uniqueItems.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/validation/uniqueItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var dataType_1 = require_dataType();
@@ -5106,9 +5106,9 @@ var require_uniqueItems = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/const.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/validation/const.js
 var require_const = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/const.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/validation/const.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5135,9 +5135,9 @@ var require_const = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/enum.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/validation/enum.js
 var require_enum = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/enum.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/validation/enum.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5184,9 +5184,9 @@ var require_enum = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/index.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/validation/index.js
 var require_validation = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/index.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/validation/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var limitNumber_1 = require_limitNumber();
@@ -5222,9 +5222,9 @@ var require_validation = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/additionalItems.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/applicator/additionalItems.js
 var require_additionalItems = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/additionalItems.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/applicator/additionalItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateAdditionalItems = void 0;
@@ -5275,9 +5275,9 @@ var require_additionalItems = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/items.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/applicator/items.js
 var require_items = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/items.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/applicator/items.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateTuple = void 0;
@@ -5332,9 +5332,9 @@ var require_items = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/prefixItems.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/applicator/prefixItems.js
 var require_prefixItems = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/prefixItems.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/applicator/prefixItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var items_1 = require_items();
@@ -5349,9 +5349,9 @@ var require_prefixItems = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/items2020.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/applicator/items2020.js
 var require_items2020 = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/items2020.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/applicator/items2020.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5384,9 +5384,9 @@ var require_items2020 = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/contains.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/applicator/contains.js
 var require_contains = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/contains.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/applicator/contains.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5478,9 +5478,9 @@ var require_contains = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/dependencies.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/applicator/dependencies.js
 var require_dependencies = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/dependencies.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/applicator/dependencies.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateSchemaDeps = exports.validatePropertyDeps = exports.error = void 0;
@@ -5572,9 +5572,9 @@ var require_dependencies = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/propertyNames.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/applicator/propertyNames.js
 var require_propertyNames = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/propertyNames.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/applicator/propertyNames.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5615,9 +5615,9 @@ var require_propertyNames = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js
 var require_additionalProperties = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -5721,9 +5721,9 @@ var require_additionalProperties = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/properties.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/applicator/properties.js
 var require_properties = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/properties.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/applicator/properties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var validate_1 = require_validate();
@@ -5779,9 +5779,9 @@ var require_properties = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/patternProperties.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/applicator/patternProperties.js
 var require_patternProperties = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/patternProperties.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/applicator/patternProperties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -5853,9 +5853,9 @@ var require_patternProperties = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/not.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/applicator/not.js
 var require_not = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/not.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/applicator/not.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var util_1 = require_util();
@@ -5884,9 +5884,9 @@ var require_not = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/anyOf.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/applicator/anyOf.js
 var require_anyOf = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/anyOf.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/applicator/anyOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -5901,9 +5901,9 @@ var require_anyOf = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/oneOf.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/applicator/oneOf.js
 var require_oneOf = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/oneOf.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/applicator/oneOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5959,9 +5959,9 @@ var require_oneOf = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/allOf.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/applicator/allOf.js
 var require_allOf = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/allOf.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/applicator/allOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var util_1 = require_util();
@@ -5986,9 +5986,9 @@ var require_allOf = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/if.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/applicator/if.js
 var require_if = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/if.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/applicator/if.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -6055,9 +6055,9 @@ var require_if = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/thenElse.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/applicator/thenElse.js
 var require_thenElse = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/thenElse.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/applicator/thenElse.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var util_1 = require_util();
@@ -6073,9 +6073,9 @@ var require_thenElse = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/index.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/applicator/index.js
 var require_applicator = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/index.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/applicator/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var additionalItems_1 = require_additionalItems();
@@ -6121,9 +6121,9 @@ var require_applicator = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/format/format.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/format/format.js
 var require_format = __commonJS({
-  "node_modules/ajv/dist/vocabularies/format/format.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/format/format.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -6211,9 +6211,9 @@ var require_format = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/format/index.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/format/index.js
 var require_format2 = __commonJS({
-  "node_modules/ajv/dist/vocabularies/format/index.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/format/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var format_1 = require_format();
@@ -6222,9 +6222,9 @@ var require_format2 = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/metadata.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/metadata.js
 var require_metadata = __commonJS({
-  "node_modules/ajv/dist/vocabularies/metadata.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/metadata.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.contentVocabulary = exports.metadataVocabulary = void 0;
@@ -6245,9 +6245,9 @@ var require_metadata = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/draft7.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/draft7.js
 var require_draft7 = __commonJS({
-  "node_modules/ajv/dist/vocabularies/draft7.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/draft7.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var core_1 = require_core2();
@@ -6267,9 +6267,9 @@ var require_draft7 = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/discriminator/types.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/discriminator/types.js
 var require_types = __commonJS({
-  "node_modules/ajv/dist/vocabularies/discriminator/types.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/discriminator/types.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.DiscrError = void 0;
@@ -6281,9 +6281,9 @@ var require_types = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/discriminator/index.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/discriminator/index.js
 var require_discriminator = __commonJS({
-  "node_modules/ajv/dist/vocabularies/discriminator/index.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/vocabularies/discriminator/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -6386,9 +6386,9 @@ var require_discriminator = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/refs/json-schema-draft-07.json
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/refs/json-schema-draft-07.json
 var require_json_schema_draft_07 = __commonJS({
-  "node_modules/ajv/dist/refs/json-schema-draft-07.json"(exports, module) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/refs/json-schema-draft-07.json"(exports, module) {
     module.exports = {
       $schema: "http://json-schema.org/draft-07/schema#",
       $id: "http://json-schema.org/draft-07/schema#",
@@ -6543,9 +6543,9 @@ var require_json_schema_draft_07 = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/ajv.js
+// ../../social-flow-loop-i2/server/node_modules/ajv/dist/ajv.js
 var require_ajv = __commonJS({
-  "node_modules/ajv/dist/ajv.js"(exports, module) {
+  "../../social-flow-loop-i2/server/node_modules/ajv/dist/ajv.js"(exports, module) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.MissingRefError = exports.ValidationError = exports.CodeGen = exports.Name = exports.nil = exports.stringify = exports.str = exports._ = exports.KeywordCxt = exports.Ajv = void 0;
@@ -6613,9 +6613,9 @@ var require_ajv = __commonJS({
   }
 });
 
-// node_modules/ajv-formats/dist/formats.js
+// ../../social-flow-loop-i2/server/node_modules/ajv-formats/dist/formats.js
 var require_formats = __commonJS({
-  "node_modules/ajv-formats/dist/formats.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv-formats/dist/formats.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.formatNames = exports.fastFormats = exports.fullFormats = void 0;
@@ -6816,9 +6816,9 @@ var require_formats = __commonJS({
   }
 });
 
-// node_modules/ajv-formats/dist/limit.js
+// ../../social-flow-loop-i2/server/node_modules/ajv-formats/dist/limit.js
 var require_limit = __commonJS({
-  "node_modules/ajv-formats/dist/limit.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/ajv-formats/dist/limit.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.formatLimitDefinition = void 0;
@@ -6888,9 +6888,9 @@ var require_limit = __commonJS({
   }
 });
 
-// node_modules/ajv-formats/dist/index.js
+// ../../social-flow-loop-i2/server/node_modules/ajv-formats/dist/index.js
 var require_dist = __commonJS({
-  "node_modules/ajv-formats/dist/index.js"(exports, module) {
+  "../../social-flow-loop-i2/server/node_modules/ajv-formats/dist/index.js"(exports, module) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var formats_1 = require_formats();
@@ -6930,9 +6930,9 @@ var require_dist = __commonJS({
   }
 });
 
-// node_modules/retry/lib/retry_operation.js
+// ../../social-flow-loop-i2/server/node_modules/retry/lib/retry_operation.js
 var require_retry_operation = __commonJS({
-  "node_modules/retry/lib/retry_operation.js"(exports, module) {
+  "../../social-flow-loop-i2/server/node_modules/retry/lib/retry_operation.js"(exports, module) {
     function RetryOperation(timeouts, options) {
       if (typeof options === "boolean") {
         options = { forever: options };
@@ -7065,9 +7065,9 @@ var require_retry_operation = __commonJS({
   }
 });
 
-// node_modules/retry/lib/retry.js
+// ../../social-flow-loop-i2/server/node_modules/retry/lib/retry.js
 var require_retry = __commonJS({
-  "node_modules/retry/lib/retry.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/retry/lib/retry.js"(exports) {
     var RetryOperation = require_retry_operation();
     exports.operation = function(options) {
       var timeouts = exports.timeouts(options);
@@ -7151,16 +7151,16 @@ var require_retry = __commonJS({
   }
 });
 
-// node_modules/retry/index.js
+// ../../social-flow-loop-i2/server/node_modules/retry/index.js
 var require_retry2 = __commonJS({
-  "node_modules/retry/index.js"(exports, module) {
+  "../../social-flow-loop-i2/server/node_modules/retry/index.js"(exports, module) {
     module.exports = require_retry();
   }
 });
 
-// node_modules/p-retry/index.js
+// ../../social-flow-loop-i2/server/node_modules/p-retry/index.js
 var require_p_retry = __commonJS({
-  "node_modules/p-retry/index.js"(exports, module) {
+  "../../social-flow-loop-i2/server/node_modules/p-retry/index.js"(exports, module) {
     "use strict";
     var retry2 = require_retry2();
     var networkErrorMsgs = [
@@ -7237,9 +7237,9 @@ var require_p_retry = __commonJS({
   }
 });
 
-// node_modules/extend/index.js
+// ../../social-flow-loop-i2/server/node_modules/extend/index.js
 var require_extend = __commonJS({
-  "node_modules/extend/index.js"(exports, module) {
+  "../../social-flow-loop-i2/server/node_modules/extend/index.js"(exports, module) {
     "use strict";
     var hasOwn3 = Object.prototype.hasOwnProperty;
     var toStr = Object.prototype.toString;
@@ -7328,9 +7328,9 @@ var require_extend = __commonJS({
   }
 });
 
-// node_modules/gaxios/package.json
+// ../../social-flow-loop-i2/server/node_modules/gaxios/package.json
 var require_package = __commonJS({
-  "node_modules/gaxios/package.json"(exports, module) {
+  "../../social-flow-loop-i2/server/node_modules/gaxios/package.json"(exports, module) {
     module.exports = {
       name: "gaxios",
       version: "7.3.0",
@@ -7439,18 +7439,18 @@ var require_package = __commonJS({
   }
 });
 
-// node_modules/gaxios/build/cjs/src/util.cjs
+// ../../social-flow-loop-i2/server/node_modules/gaxios/build/cjs/src/util.cjs
 var require_util2 = __commonJS({
-  "node_modules/gaxios/build/cjs/src/util.cjs"(exports, module) {
+  "../../social-flow-loop-i2/server/node_modules/gaxios/build/cjs/src/util.cjs"(exports, module) {
     "use strict";
     var pkg = require_package();
     module.exports = { pkg };
   }
 });
 
-// node_modules/gaxios/build/cjs/src/common.js
+// ../../social-flow-loop-i2/server/node_modules/gaxios/build/cjs/src/common.js
 var require_common = __commonJS({
-  "node_modules/gaxios/build/cjs/src/common.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/gaxios/build/cjs/src/common.js"(exports) {
     "use strict";
     var __importDefault = exports && exports.__importDefault || function(mod) {
       return mod && mod.__esModule ? mod : { "default": mod };
@@ -7690,9 +7690,9 @@ var require_common = __commonJS({
   }
 });
 
-// node_modules/gaxios/build/cjs/src/retry.js
+// ../../social-flow-loop-i2/server/node_modules/gaxios/build/cjs/src/retry.js
 var require_retry3 = __commonJS({
-  "node_modules/gaxios/build/cjs/src/retry.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/gaxios/build/cjs/src/retry.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getRetryConfig = getRetryConfig;
@@ -7795,9 +7795,9 @@ var require_retry3 = __commonJS({
   }
 });
 
-// node_modules/gaxios/build/cjs/src/interceptor.js
+// ../../social-flow-loop-i2/server/node_modules/gaxios/build/cjs/src/interceptor.js
 var require_interceptor = __commonJS({
-  "node_modules/gaxios/build/cjs/src/interceptor.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/gaxios/build/cjs/src/interceptor.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.GaxiosInterceptorManager = void 0;
@@ -7807,9 +7807,9 @@ var require_interceptor = __commonJS({
   }
 });
 
-// node_modules/ms/index.js
+// ../../social-flow-loop-i2/server/node_modules/ms/index.js
 var require_ms = __commonJS({
-  "node_modules/ms/index.js"(exports, module) {
+  "../../social-flow-loop-i2/server/node_modules/ms/index.js"(exports, module) {
     var s2 = 1e3;
     var m2 = s2 * 60;
     var h2 = m2 * 60;
@@ -7923,9 +7923,9 @@ var require_ms = __commonJS({
   }
 });
 
-// node_modules/debug/src/common.js
+// ../../social-flow-loop-i2/server/node_modules/debug/src/common.js
 var require_common2 = __commonJS({
-  "node_modules/debug/src/common.js"(exports, module) {
+  "../../social-flow-loop-i2/server/node_modules/debug/src/common.js"(exports, module) {
     function setup(env2) {
       createDebug.debug = createDebug;
       createDebug.default = createDebug;
@@ -8100,9 +8100,9 @@ var require_common2 = __commonJS({
   }
 });
 
-// node_modules/debug/src/browser.js
+// ../../social-flow-loop-i2/server/node_modules/debug/src/browser.js
 var require_browser = __commonJS({
-  "node_modules/debug/src/browser.js"(exports, module) {
+  "../../social-flow-loop-i2/server/node_modules/debug/src/browser.js"(exports, module) {
     exports.formatArgs = formatArgs;
     exports.save = save2;
     exports.load = load2;
@@ -8270,9 +8270,9 @@ var require_browser = __commonJS({
   }
 });
 
-// node_modules/debug/src/node.js
+// ../../social-flow-loop-i2/server/node_modules/debug/src/node.js
 var require_node = __commonJS({
-  "node_modules/debug/src/node.js"(exports, module) {
+  "../../social-flow-loop-i2/server/node_modules/debug/src/node.js"(exports, module) {
     var tty = __require("tty");
     var util2 = __require("util");
     exports.init = init;
@@ -8444,9 +8444,9 @@ var require_node = __commonJS({
   }
 });
 
-// node_modules/debug/src/index.js
+// ../../social-flow-loop-i2/server/node_modules/debug/src/index.js
 var require_src = __commonJS({
-  "node_modules/debug/src/index.js"(exports, module) {
+  "../../social-flow-loop-i2/server/node_modules/debug/src/index.js"(exports, module) {
     if (typeof process === "undefined" || process.type === "renderer" || process.browser === true || process.__nwjs) {
       module.exports = require_browser();
     } else {
@@ -8455,9 +8455,9 @@ var require_src = __commonJS({
   }
 });
 
-// node_modules/agent-base/dist/helpers.js
+// ../../social-flow-loop-i2/server/node_modules/agent-base/dist/helpers.js
 var require_helpers = __commonJS({
-  "node_modules/agent-base/dist/helpers.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/agent-base/dist/helpers.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m2, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -8525,9 +8525,9 @@ var require_helpers = __commonJS({
   }
 });
 
-// node_modules/agent-base/dist/index.js
+// ../../social-flow-loop-i2/server/node_modules/agent-base/dist/index.js
 var require_dist2 = __commonJS({
-  "node_modules/agent-base/dist/index.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/agent-base/dist/index.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m2, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -8681,9 +8681,9 @@ var require_dist2 = __commonJS({
   }
 });
 
-// node_modules/https-proxy-agent/dist/parse-proxy-response.js
+// ../../social-flow-loop-i2/server/node_modules/https-proxy-agent/dist/parse-proxy-response.js
 var require_parse_proxy_response = __commonJS({
-  "node_modules/https-proxy-agent/dist/parse-proxy-response.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/https-proxy-agent/dist/parse-proxy-response.js"(exports) {
     "use strict";
     var __importDefault = exports && exports.__importDefault || function(mod) {
       return mod && mod.__esModule ? mod : { "default": mod };
@@ -8777,9 +8777,9 @@ var require_parse_proxy_response = __commonJS({
   }
 });
 
-// node_modules/https-proxy-agent/dist/index.js
+// ../../social-flow-loop-i2/server/node_modules/https-proxy-agent/dist/index.js
 var require_dist3 = __commonJS({
-  "node_modules/https-proxy-agent/dist/index.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/https-proxy-agent/dist/index.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m2, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -8927,7 +8927,7 @@ var require_dist3 = __commonJS({
   }
 });
 
-// node_modules/data-uri-to-buffer/dist/index.js
+// ../../social-flow-loop-i2/server/node_modules/data-uri-to-buffer/dist/index.js
 function dataUriToBuffer(uri) {
   if (!/^data:/i.test(uri)) {
     throw new TypeError('`uri` does not appear to be a Data URI (must begin with "data:")');
@@ -8966,14 +8966,14 @@ function dataUriToBuffer(uri) {
 }
 var dist_default;
 var init_dist = __esm({
-  "node_modules/data-uri-to-buffer/dist/index.js"() {
+  "../../social-flow-loop-i2/server/node_modules/data-uri-to-buffer/dist/index.js"() {
     dist_default = dataUriToBuffer;
   }
 });
 
-// node_modules/web-streams-polyfill/dist/ponyfill.es2018.js
+// ../../social-flow-loop-i2/server/node_modules/web-streams-polyfill/dist/ponyfill.es2018.js
 var require_ponyfill_es2018 = __commonJS({
-  "node_modules/web-streams-polyfill/dist/ponyfill.es2018.js"(exports, module) {
+  "../../social-flow-loop-i2/server/node_modules/web-streams-polyfill/dist/ponyfill.es2018.js"(exports, module) {
     (function(global2, factory) {
       typeof exports === "object" && typeof module !== "undefined" ? factory(exports) : typeof define === "function" && define.amd ? define(["exports"], factory) : (global2 = typeof globalThis !== "undefined" ? globalThis : global2 || self, factory(global2.WebStreamsPolyfill = {}));
     })(exports, (function(exports2) {
@@ -13246,9 +13246,9 @@ var require_ponyfill_es2018 = __commonJS({
   }
 });
 
-// node_modules/fetch-blob/streams.cjs
+// ../../social-flow-loop-i2/server/node_modules/fetch-blob/streams.cjs
 var require_streams = __commonJS({
-  "node_modules/fetch-blob/streams.cjs"() {
+  "../../social-flow-loop-i2/server/node_modules/fetch-blob/streams.cjs"() {
     var POOL_SIZE2 = 65536;
     if (!globalThis.ReadableStream) {
       try {
@@ -13292,7 +13292,7 @@ var require_streams = __commonJS({
   }
 });
 
-// node_modules/fetch-blob/index.js
+// ../../social-flow-loop-i2/server/node_modules/fetch-blob/index.js
 async function* toIterator(parts, clone3 = true) {
   for (const part of parts) {
     if ("stream" in part) {
@@ -13329,7 +13329,7 @@ async function* toIterator(parts, clone3 = true) {
 }
 var import_streams, POOL_SIZE, _Blob, Blob3, fetch_blob_default;
 var init_fetch_blob = __esm({
-  "node_modules/fetch-blob/index.js"() {
+  "../../social-flow-loop-i2/server/node_modules/fetch-blob/index.js"() {
     import_streams = __toESM(require_streams(), 1);
     POOL_SIZE = 65536;
     _Blob = class Blob2 {
@@ -13496,10 +13496,10 @@ var init_fetch_blob = __esm({
   }
 });
 
-// node_modules/fetch-blob/file.js
+// ../../social-flow-loop-i2/server/node_modules/fetch-blob/file.js
 var _File, File3, file_default;
 var init_file = __esm({
-  "node_modules/fetch-blob/file.js"() {
+  "../../social-flow-loop-i2/server/node_modules/fetch-blob/file.js"() {
     init_fetch_blob();
     _File = class File2 extends fetch_blob_default {
       #lastModified = 0;
@@ -13540,7 +13540,7 @@ var init_file = __esm({
   }
 });
 
-// node_modules/formdata-polyfill/esm.min.js
+// ../../social-flow-loop-i2/server/node_modules/formdata-polyfill/esm.min.js
 function formDataToBlob(F2, B = fetch_blob_default) {
   var b = `${r()}${r()}`.replace(/\./g, "").slice(-28).padStart(32, "-"), c = [], p = `--${b}\r
 Content-Disposition: form-data; name="`;
@@ -13556,7 +13556,7 @@ Content-Type: ${v.type || "application/octet-stream"}\r
 }
 var t, i, h, r, m, f, e, x, FormData2;
 var init_esm_min = __esm({
-  "node_modules/formdata-polyfill/esm.min.js"() {
+  "../../social-flow-loop-i2/server/node_modules/formdata-polyfill/esm.min.js"() {
     init_fetch_blob();
     init_file();
     ({ toStringTag: t, iterator: i, hasInstance: h } = Symbol);
@@ -13637,10 +13637,10 @@ var init_esm_min = __esm({
   }
 });
 
-// node_modules/node-fetch/src/errors/base.js
+// ../../social-flow-loop-i2/server/node_modules/node-fetch/src/errors/base.js
 var FetchBaseError;
 var init_base = __esm({
-  "node_modules/node-fetch/src/errors/base.js"() {
+  "../../social-flow-loop-i2/server/node_modules/node-fetch/src/errors/base.js"() {
     FetchBaseError = class extends Error {
       constructor(message, type) {
         super(message);
@@ -13657,10 +13657,10 @@ var init_base = __esm({
   }
 });
 
-// node_modules/node-fetch/src/errors/fetch-error.js
+// ../../social-flow-loop-i2/server/node_modules/node-fetch/src/errors/fetch-error.js
 var FetchError;
 var init_fetch_error = __esm({
-  "node_modules/node-fetch/src/errors/fetch-error.js"() {
+  "../../social-flow-loop-i2/server/node_modules/node-fetch/src/errors/fetch-error.js"() {
     init_base();
     FetchError = class extends FetchBaseError {
       /**
@@ -13679,10 +13679,10 @@ var init_fetch_error = __esm({
   }
 });
 
-// node_modules/node-fetch/src/utils/is.js
+// ../../social-flow-loop-i2/server/node_modules/node-fetch/src/utils/is.js
 var NAME, isURLSearchParameters, isBlob, isAbortSignal, isDomainOrSubdomain, isSameProtocol;
 var init_is = __esm({
-  "node_modules/node-fetch/src/utils/is.js"() {
+  "../../social-flow-loop-i2/server/node_modules/node-fetch/src/utils/is.js"() {
     NAME = Symbol.toStringTag;
     isURLSearchParameters = (object3) => {
       return typeof object3 === "object" && typeof object3.append === "function" && typeof object3.delete === "function" && typeof object3.get === "function" && typeof object3.getAll === "function" && typeof object3.has === "function" && typeof object3.set === "function" && typeof object3.sort === "function" && object3[NAME] === "URLSearchParams";
@@ -13706,9 +13706,9 @@ var init_is = __esm({
   }
 });
 
-// node_modules/node-domexception/index.js
+// ../../social-flow-loop-i2/server/node_modules/node-domexception/index.js
 var require_node_domexception = __commonJS({
-  "node_modules/node-domexception/index.js"(exports, module) {
+  "../../social-flow-loop-i2/server/node_modules/node-domexception/index.js"(exports, module) {
     if (!globalThis.DOMException) {
       try {
         const { MessageChannel } = __require("worker_threads"), port = new MessageChannel().port1, ab = new ArrayBuffer();
@@ -13721,32 +13721,32 @@ var require_node_domexception = __commonJS({
   }
 });
 
-// node_modules/fetch-blob/from.js
+// ../../social-flow-loop-i2/server/node_modules/fetch-blob/from.js
 import { statSync as statSync3, createReadStream, promises as fs2 } from "node:fs";
 import { basename as basename2 } from "node:path";
 var import_node_domexception, stat, blobFromSync, blobFrom, fileFrom, fileFromSync, fromBlob, fromFile, BlobDataItem;
 var init_from = __esm({
-  "node_modules/fetch-blob/from.js"() {
+  "../../social-flow-loop-i2/server/node_modules/fetch-blob/from.js"() {
     import_node_domexception = __toESM(require_node_domexception(), 1);
     init_file();
     init_fetch_blob();
     ({ stat } = fs2);
-    blobFromSync = (path16, type) => fromBlob(statSync3(path16), path16, type);
-    blobFrom = (path16, type) => stat(path16).then((stat4) => fromBlob(stat4, path16, type));
-    fileFrom = (path16, type) => stat(path16).then((stat4) => fromFile(stat4, path16, type));
-    fileFromSync = (path16, type) => fromFile(statSync3(path16), path16, type);
-    fromBlob = (stat4, path16, type = "") => new fetch_blob_default([new BlobDataItem({
-      path: path16,
+    blobFromSync = (path17, type) => fromBlob(statSync3(path17), path17, type);
+    blobFrom = (path17, type) => stat(path17).then((stat4) => fromBlob(stat4, path17, type));
+    fileFrom = (path17, type) => stat(path17).then((stat4) => fromFile(stat4, path17, type));
+    fileFromSync = (path17, type) => fromFile(statSync3(path17), path17, type);
+    fromBlob = (stat4, path17, type = "") => new fetch_blob_default([new BlobDataItem({
+      path: path17,
       size: stat4.size,
       lastModified: stat4.mtimeMs,
       start: 0
     })], { type });
-    fromFile = (stat4, path16, type = "") => new file_default([new BlobDataItem({
-      path: path16,
+    fromFile = (stat4, path17, type = "") => new file_default([new BlobDataItem({
+      path: path17,
       size: stat4.size,
       lastModified: stat4.mtimeMs,
       start: 0
-    })], basename2(path16), { type, lastModified: stat4.mtimeMs });
+    })], basename2(path17), { type, lastModified: stat4.mtimeMs });
     BlobDataItem = class _BlobDataItem {
       #path;
       #start;
@@ -13785,7 +13785,7 @@ var init_from = __esm({
   }
 });
 
-// node_modules/node-fetch/src/utils/multipart-parser.js
+// ../../social-flow-loop-i2/server/node_modules/node-fetch/src/utils/multipart-parser.js
 var multipart_parser_exports = {};
 __export(multipart_parser_exports, {
   toFormData: () => toFormData
@@ -13879,7 +13879,7 @@ async function toFormData(Body2, ct) {
 }
 var s, S, f2, F, LF, CR, SPACE, HYPHEN, COLON, A, Z, lower, noop, MultipartParser;
 var init_multipart_parser = __esm({
-  "node_modules/node-fetch/src/utils/multipart-parser.js"() {
+  "../../social-flow-loop-i2/server/node_modules/node-fetch/src/utils/multipart-parser.js"() {
     init_from();
     init_esm_min();
     s = 0;
@@ -14147,7 +14147,7 @@ var init_multipart_parser = __esm({
   }
 });
 
-// node_modules/node-fetch/src/body.js
+// ../../social-flow-loop-i2/server/node_modules/node-fetch/src/body.js
 import Stream, { PassThrough } from "node:stream";
 import { types, deprecate, promisify } from "node:util";
 import { Buffer as Buffer2 } from "node:buffer";
@@ -14197,7 +14197,7 @@ async function consumeBody(data) {
 }
 var pipeline, INTERNALS, Body, clone2, getNonSpecFormDataBoundary, extractContentType, getTotalBytes, writeToStream;
 var init_body = __esm({
-  "node_modules/node-fetch/src/body.js"() {
+  "../../social-flow-loop-i2/server/node_modules/node-fetch/src/body.js"() {
     init_fetch_blob();
     init_esm_min();
     init_fetch_error();
@@ -14405,7 +14405,7 @@ var init_body = __esm({
   }
 });
 
-// node_modules/node-fetch/src/headers.js
+// ../../social-flow-loop-i2/server/node_modules/node-fetch/src/headers.js
 import { types as types2 } from "node:util";
 import http from "node:http";
 function fromRawHeaders(headers = []) {
@@ -14428,7 +14428,7 @@ function fromRawHeaders(headers = []) {
 }
 var validateHeaderName, validateHeaderValue, Headers2;
 var init_headers = __esm({
-  "node_modules/node-fetch/src/headers.js"() {
+  "../../social-flow-loop-i2/server/node_modules/node-fetch/src/headers.js"() {
     validateHeaderName = typeof http.validateHeaderName === "function" ? http.validateHeaderName : (name) => {
       if (!/^[\^`\-\w!#$%&'*+.|~]+$/.test(name)) {
         const error2 = new TypeError(`Header name must be a valid HTTP token [${name}]`);
@@ -14596,10 +14596,10 @@ var init_headers = __esm({
   }
 });
 
-// node_modules/node-fetch/src/utils/is-redirect.js
+// ../../social-flow-loop-i2/server/node_modules/node-fetch/src/utils/is-redirect.js
 var redirectStatus, isRedirect;
 var init_is_redirect = __esm({
-  "node_modules/node-fetch/src/utils/is-redirect.js"() {
+  "../../social-flow-loop-i2/server/node_modules/node-fetch/src/utils/is-redirect.js"() {
     redirectStatus = /* @__PURE__ */ new Set([301, 302, 303, 307, 308]);
     isRedirect = (code) => {
       return redirectStatus.has(code);
@@ -14607,10 +14607,10 @@ var init_is_redirect = __esm({
   }
 });
 
-// node_modules/node-fetch/src/response.js
+// ../../social-flow-loop-i2/server/node_modules/node-fetch/src/response.js
 var INTERNALS2, Response2;
 var init_response = __esm({
-  "node_modules/node-fetch/src/response.js"() {
+  "../../social-flow-loop-i2/server/node_modules/node-fetch/src/response.js"() {
     init_headers();
     init_body();
     init_is_redirect();
@@ -14733,10 +14733,10 @@ var init_response = __esm({
   }
 });
 
-// node_modules/node-fetch/src/utils/get-search.js
+// ../../social-flow-loop-i2/server/node_modules/node-fetch/src/utils/get-search.js
 var getSearch;
 var init_get_search = __esm({
-  "node_modules/node-fetch/src/utils/get-search.js"() {
+  "../../social-flow-loop-i2/server/node_modules/node-fetch/src/utils/get-search.js"() {
     getSearch = (parsedURL) => {
       if (parsedURL.search) {
         return parsedURL.search;
@@ -14748,7 +14748,7 @@ var init_get_search = __esm({
   }
 });
 
-// node_modules/node-fetch/src/utils/referrer.js
+// ../../social-flow-loop-i2/server/node_modules/node-fetch/src/utils/referrer.js
 import { isIP } from "node:net";
 function stripURLForUseAsAReferrer(url, originOnly = false) {
   if (url == null) {
@@ -14877,7 +14877,7 @@ function parseReferrerPolicyFromHeader(headers) {
 }
 var ReferrerPolicy, DEFAULT_REFERRER_POLICY;
 var init_referrer = __esm({
-  "node_modules/node-fetch/src/utils/referrer.js"() {
+  "../../social-flow-loop-i2/server/node_modules/node-fetch/src/utils/referrer.js"() {
     ReferrerPolicy = /* @__PURE__ */ new Set([
       "",
       "no-referrer",
@@ -14893,12 +14893,12 @@ var init_referrer = __esm({
   }
 });
 
-// node_modules/node-fetch/src/request.js
+// ../../social-flow-loop-i2/server/node_modules/node-fetch/src/request.js
 import { format as formatUrl } from "node:url";
 import { deprecate as deprecate2 } from "node:util";
 var INTERNALS3, isRequest, doBadDataWarn, Request2, getNodeRequestOptions;
 var init_request = __esm({
-  "node_modules/node-fetch/src/request.js"() {
+  "../../social-flow-loop-i2/server/node_modules/node-fetch/src/request.js"() {
     init_headers();
     init_body();
     init_is();
@@ -15098,10 +15098,10 @@ var init_request = __esm({
   }
 });
 
-// node_modules/node-fetch/src/errors/abort-error.js
+// ../../social-flow-loop-i2/server/node_modules/node-fetch/src/errors/abort-error.js
 var AbortError;
 var init_abort_error = __esm({
-  "node_modules/node-fetch/src/errors/abort-error.js"() {
+  "../../social-flow-loop-i2/server/node_modules/node-fetch/src/errors/abort-error.js"() {
     init_base();
     AbortError = class extends FetchBaseError {
       constructor(message, type = "aborted") {
@@ -15111,7 +15111,7 @@ var init_abort_error = __esm({
   }
 });
 
-// node_modules/node-fetch/src/index.js
+// ../../social-flow-loop-i2/server/node_modules/node-fetch/src/index.js
 var src_exports = {};
 __export(src_exports, {
   AbortError: () => AbortError,
@@ -15397,7 +15397,7 @@ function fixResponseChunkedTransferBadEnding(request, errorCallback) {
 }
 var supportedSchemas;
 var init_src = __esm({
-  "node_modules/node-fetch/src/index.js"() {
+  "../../social-flow-loop-i2/server/node_modules/node-fetch/src/index.js"() {
     init_dist();
     init_body();
     init_response();
@@ -15414,9 +15414,9 @@ var init_src = __esm({
   }
 });
 
-// node_modules/gaxios/build/cjs/src/gaxios.js
+// ../../social-flow-loop-i2/server/node_modules/gaxios/build/cjs/src/gaxios.js
 var require_gaxios = __commonJS({
-  "node_modules/gaxios/build/cjs/src/gaxios.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/gaxios/build/cjs/src/gaxios.js"(exports) {
     "use strict";
     var __importDefault = exports && exports.__importDefault || function(mod) {
       return mod && mod.__esModule ? mod : { "default": mod };
@@ -15430,7 +15430,7 @@ var require_gaxios = __commonJS({
     var retry_js_1 = require_retry3();
     var stream_1 = __require("stream");
     var interceptor_js_1 = require_interceptor();
-    var randomUUID5 = async () => globalThis.crypto?.randomUUID() || (await import("crypto")).randomUUID();
+    var randomUUID6 = async () => globalThis.crypto?.randomUUID() || (await import("crypto")).randomUUID();
     var HTTP_STATUS_NO_CONTENT = 204;
     var Gaxios = class {
       agentCache = /* @__PURE__ */ new Map();
@@ -15703,7 +15703,7 @@ var require_gaxios = __commonJS({
          */
         ["Blob", "File", "FormData"].includes(opts.data?.constructor?.name || "");
         if (opts.multipart?.length) {
-          const boundary = await randomUUID5();
+          const boundary = await randomUUID6();
           preparedHeaders.set("content-type", `multipart/related; boundary=${boundary}`);
           opts.body = stream_1.Readable.from(this.getMultipartRequest(opts.multipart, boundary));
         } else if (shouldDirectlyPassData) {
@@ -15888,9 +15888,9 @@ Content-Type: ${partContentType}\r
   }
 });
 
-// node_modules/gaxios/build/cjs/src/index.js
+// ../../social-flow-loop-i2/server/node_modules/gaxios/build/cjs/src/index.js
 var require_src2 = __commonJS({
-  "node_modules/gaxios/build/cjs/src/index.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/gaxios/build/cjs/src/index.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m2, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -15927,9 +15927,9 @@ var require_src2 = __commonJS({
   }
 });
 
-// node_modules/bignumber.js/bignumber.js
+// ../../social-flow-loop-i2/server/node_modules/bignumber.js/bignumber.js
 var require_bignumber = __commonJS({
-  "node_modules/bignumber.js/bignumber.js"(exports, module) {
+  "../../social-flow-loop-i2/server/node_modules/bignumber.js/bignumber.js"(exports, module) {
     (function(globalObject) {
       "use strict";
       var BigNumber, isNumeric = /^-?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i, mathceil = Math.ceil, mathfloor = Math.floor, bignumberError = "[BigNumber Error] ", tooManyDigits = bignumberError + "Number primitive has more than 15 significant digits: ", BASE = 1e14, LOG_BASE = 14, MAX_SAFE_INTEGER = 9007199254740991, POWS_TEN = [1, 10, 100, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11, 1e12, 1e13], SQRT_BASE = 1e7, MAX = 1e9;
@@ -17278,9 +17278,9 @@ var require_bignumber = __commonJS({
   }
 });
 
-// node_modules/json-bigint/lib/stringify.js
+// ../../social-flow-loop-i2/server/node_modules/json-bigint/lib/stringify.js
 var require_stringify = __commonJS({
-  "node_modules/json-bigint/lib/stringify.js"(exports, module) {
+  "../../social-flow-loop-i2/server/node_modules/json-bigint/lib/stringify.js"(exports, module) {
     var BigNumber = require_bignumber();
     var JSON2 = module.exports;
     (function() {
@@ -17390,9 +17390,9 @@ var require_stringify = __commonJS({
   }
 });
 
-// node_modules/json-bigint/lib/parse.js
+// ../../social-flow-loop-i2/server/node_modules/json-bigint/lib/parse.js
 var require_parse = __commonJS({
-  "node_modules/json-bigint/lib/parse.js"(exports, module) {
+  "../../social-flow-loop-i2/server/node_modules/json-bigint/lib/parse.js"(exports, module) {
     var BigNumber = null;
     var suspectProtoRx = /(?:_|\\u005[Ff])(?:_|\\u005[Ff])(?:p|\\u0070)(?:r|\\u0072)(?:o|\\u006[Ff])(?:t|\\u0074)(?:o|\\u006[Ff])(?:_|\\u005[Ff])(?:_|\\u005[Ff])/;
     var suspectConstructorRx = /(?:c|\\u0063)(?:o|\\u006[Ff])(?:n|\\u006[Ee])(?:s|\\u0073)(?:t|\\u0074)(?:r|\\u0072)(?:u|\\u0075)(?:c|\\u0063)(?:t|\\u0074)(?:o|\\u006[Ff])(?:r|\\u0072)/;
@@ -17671,9 +17671,9 @@ var require_parse = __commonJS({
   }
 });
 
-// node_modules/json-bigint/index.js
+// ../../social-flow-loop-i2/server/node_modules/json-bigint/index.js
 var require_json_bigint = __commonJS({
-  "node_modules/json-bigint/index.js"(exports, module) {
+  "../../social-flow-loop-i2/server/node_modules/json-bigint/index.js"(exports, module) {
     var json_stringify = require_stringify().stringify;
     var json_parse = require_parse();
     module.exports = function(options) {
@@ -17687,9 +17687,9 @@ var require_json_bigint = __commonJS({
   }
 });
 
-// node_modules/gcp-metadata/build/src/gcp-residency.js
+// ../../social-flow-loop-i2/server/node_modules/gcp-metadata/build/src/gcp-residency.js
 var require_gcp_residency = __commonJS({
-  "node_modules/gcp-metadata/build/src/gcp-residency.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/gcp-metadata/build/src/gcp-residency.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.GCE_LINUX_BIOS_PATHS = void 0;
@@ -17742,9 +17742,9 @@ var require_gcp_residency = __commonJS({
   }
 });
 
-// node_modules/google-logging-utils/build/src/colours.js
+// ../../social-flow-loop-i2/server/node_modules/google-logging-utils/build/src/colours.js
 var require_colours = __commonJS({
-  "node_modules/google-logging-utils/build/src/colours.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/google-logging-utils/build/src/colours.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Colours = void 0;
@@ -17803,9 +17803,9 @@ var require_colours = __commonJS({
   }
 });
 
-// node_modules/google-logging-utils/build/src/logging-utils.js
+// ../../social-flow-loop-i2/server/node_modules/google-logging-utils/build/src/logging-utils.js
 var require_logging_utils = __commonJS({
-  "node_modules/google-logging-utils/build/src/logging-utils.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/google-logging-utils/build/src/logging-utils.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m2, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -18092,9 +18092,9 @@ var require_logging_utils = __commonJS({
   }
 });
 
-// node_modules/google-logging-utils/build/src/index.js
+// ../../social-flow-loop-i2/server/node_modules/google-logging-utils/build/src/index.js
 var require_src3 = __commonJS({
-  "node_modules/google-logging-utils/build/src/index.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/google-logging-utils/build/src/index.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m2, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -18117,9 +18117,9 @@ var require_src3 = __commonJS({
   }
 });
 
-// node_modules/gcp-metadata/build/src/index.js
+// ../../social-flow-loop-i2/server/node_modules/gcp-metadata/build/src/index.js
 var require_src4 = __commonJS({
-  "node_modules/gcp-metadata/build/src/index.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/gcp-metadata/build/src/index.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m2, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -18373,9 +18373,9 @@ var require_src4 = __commonJS({
   }
 });
 
-// node_modules/base64-js/index.js
+// ../../social-flow-loop-i2/server/node_modules/base64-js/index.js
 var require_base64_js = __commonJS({
-  "node_modules/base64-js/index.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/base64-js/index.js"(exports) {
     "use strict";
     exports.byteLength = byteLength;
     exports.toByteArray = toByteArray;
@@ -18474,9 +18474,9 @@ var require_base64_js = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/crypto/shared.js
+// ../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/crypto/shared.js
 var require_shared = __commonJS({
-  "node_modules/google-auth-library/build/src/crypto/shared.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/crypto/shared.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.fromArrayBufferToHex = fromArrayBufferToHex;
@@ -18489,9 +18489,9 @@ var require_shared = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/crypto/browser/crypto.js
+// ../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/crypto/browser/crypto.js
 var require_crypto = __commonJS({
-  "node_modules/google-auth-library/build/src/crypto/browser/crypto.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/crypto/browser/crypto.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.BrowserCrypto = void 0;
@@ -18585,9 +18585,9 @@ var require_crypto = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/crypto/node/crypto.js
+// ../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/crypto/node/crypto.js
 var require_crypto2 = __commonJS({
-  "node_modules/google-auth-library/build/src/crypto/node/crypto.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/crypto/node/crypto.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.NodeCrypto = void 0;
@@ -18654,9 +18654,9 @@ var require_crypto2 = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/crypto/crypto.js
+// ../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/crypto/crypto.js
 var require_crypto3 = __commonJS({
-  "node_modules/google-auth-library/build/src/crypto/crypto.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/crypto/crypto.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m2, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -18692,9 +18692,9 @@ var require_crypto3 = __commonJS({
   }
 });
 
-// node_modules/safe-buffer/index.js
+// ../../social-flow-loop-i2/server/node_modules/safe-buffer/index.js
 var require_safe_buffer = __commonJS({
-  "node_modules/safe-buffer/index.js"(exports, module) {
+  "../../social-flow-loop-i2/server/node_modules/safe-buffer/index.js"(exports, module) {
     var buffer = __require("buffer");
     var Buffer4 = buffer.Buffer;
     function copyProps(src, dst) {
@@ -18750,9 +18750,9 @@ var require_safe_buffer = __commonJS({
   }
 });
 
-// node_modules/ecdsa-sig-formatter/src/param-bytes-for-alg.js
+// ../../social-flow-loop-i2/server/node_modules/ecdsa-sig-formatter/src/param-bytes-for-alg.js
 var require_param_bytes_for_alg = __commonJS({
-  "node_modules/ecdsa-sig-formatter/src/param-bytes-for-alg.js"(exports, module) {
+  "../../social-flow-loop-i2/server/node_modules/ecdsa-sig-formatter/src/param-bytes-for-alg.js"(exports, module) {
     "use strict";
     function getParamSize(keySize) {
       var result = (keySize / 8 | 0) + (keySize % 8 === 0 ? 0 : 1);
@@ -18774,9 +18774,9 @@ var require_param_bytes_for_alg = __commonJS({
   }
 });
 
-// node_modules/ecdsa-sig-formatter/src/ecdsa-sig-formatter.js
+// ../../social-flow-loop-i2/server/node_modules/ecdsa-sig-formatter/src/ecdsa-sig-formatter.js
 var require_ecdsa_sig_formatter = __commonJS({
-  "node_modules/ecdsa-sig-formatter/src/ecdsa-sig-formatter.js"(exports, module) {
+  "../../social-flow-loop-i2/server/node_modules/ecdsa-sig-formatter/src/ecdsa-sig-formatter.js"(exports, module) {
     "use strict";
     var Buffer4 = require_safe_buffer().Buffer;
     var getParamBytesForAlg = require_param_bytes_for_alg();
@@ -18914,9 +18914,9 @@ var require_ecdsa_sig_formatter = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/util.js
+// ../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/util.js
 var require_util3 = __commonJS({
-  "node_modules/google-auth-library/build/src/util.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/util.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.LRUCache = void 0;
@@ -18927,7 +18927,7 @@ var require_util3 = __commonJS({
     exports.getWellKnownCertificateConfigFileLocation = getWellKnownCertificateConfigFileLocation;
     var fs9 = __require("fs");
     var os2 = __require("os");
-    var path16 = __require("path");
+    var path17 = __require("path");
     var WELL_KNOWN_CERTIFICATE_CONFIG_FILE = "certificate_config.json";
     var CLOUDSDK_CONFIG_DIRECTORY = "gcloud";
     function snakeToCamel(str8) {
@@ -19020,8 +19020,8 @@ var require_util3 = __commonJS({
       }
     }
     function getWellKnownCertificateConfigFileLocation() {
-      const configDir = process.env.CLOUDSDK_CONFIG || (_isWindows() ? path16.join(process.env.APPDATA || "", CLOUDSDK_CONFIG_DIRECTORY) : path16.join(process.env.HOME || "", ".config", CLOUDSDK_CONFIG_DIRECTORY));
-      return path16.join(configDir, WELL_KNOWN_CERTIFICATE_CONFIG_FILE);
+      const configDir = process.env.CLOUDSDK_CONFIG || (_isWindows() ? path17.join(process.env.APPDATA || "", CLOUDSDK_CONFIG_DIRECTORY) : path17.join(process.env.HOME || "", ".config", CLOUDSDK_CONFIG_DIRECTORY));
+      return path17.join(configDir, WELL_KNOWN_CERTIFICATE_CONFIG_FILE);
     }
     function _isWindows() {
       return os2.platform().startsWith("win");
@@ -19029,9 +19029,9 @@ var require_util3 = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/package.json
+// ../../social-flow-loop-i2/server/node_modules/google-auth-library/package.json
 var require_package2 = __commonJS({
-  "node_modules/google-auth-library/package.json"(exports, module) {
+  "../../social-flow-loop-i2/server/node_modules/google-auth-library/package.json"(exports, module) {
     module.exports = {
       name: "google-auth-library",
       version: "10.9.1",
@@ -19125,9 +19125,9 @@ var require_package2 = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/shared.cjs
+// ../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/shared.cjs
 var require_shared2 = __commonJS({
-  "node_modules/google-auth-library/build/src/shared.cjs"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/shared.cjs"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.USER_AGENT = exports.PRODUCT_NAME = exports.pkg = void 0;
@@ -19140,9 +19140,9 @@ var require_shared2 = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/authclient.js
+// ../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/authclient.js
 var require_authclient = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/authclient.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/authclient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.AuthClient = exports.DEFAULT_EAGER_REFRESH_THRESHOLD_MILLIS = exports.DEFAULT_UNIVERSE = void 0;
@@ -19375,9 +19375,9 @@ var require_authclient = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/loginticket.js
+// ../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/loginticket.js
 var require_loginticket = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/loginticket.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/loginticket.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.LoginTicket = void 0;
@@ -19427,9 +19427,9 @@ var require_loginticket = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/oauth2client.js
+// ../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/oauth2client.js
 var require_oauth2client = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/oauth2client.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/oauth2client.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.OAuth2Client = exports.ClientAuthentication = exports.CertificateFormat = exports.CodeChallengeMethod = void 0;
@@ -20108,9 +20108,9 @@ var require_oauth2client = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/computeclient.js
+// ../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/computeclient.js
 var require_computeclient = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/computeclient.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/computeclient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Compute = void 0;
@@ -20200,9 +20200,9 @@ var require_computeclient = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/idtokenclient.js
+// ../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/idtokenclient.js
 var require_idtokenclient = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/idtokenclient.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/idtokenclient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.IdTokenClient = void 0;
@@ -20246,9 +20246,9 @@ var require_idtokenclient = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/envDetect.js
+// ../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/envDetect.js
 var require_envDetect = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/envDetect.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/envDetect.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.GCPEnv = void 0;
@@ -20323,9 +20323,9 @@ var require_envDetect = __commonJS({
   }
 });
 
-// node_modules/jws/lib/data-stream.js
+// ../../social-flow-loop-i2/server/node_modules/jws/lib/data-stream.js
 var require_data_stream = __commonJS({
-  "node_modules/jws/lib/data-stream.js"(exports, module) {
+  "../../social-flow-loop-i2/server/node_modules/jws/lib/data-stream.js"(exports, module) {
     var Buffer4 = require_safe_buffer().Buffer;
     var Stream5 = __require("stream");
     var util2 = __require("util");
@@ -20371,9 +20371,9 @@ var require_data_stream = __commonJS({
   }
 });
 
-// node_modules/buffer-equal-constant-time/index.js
+// ../../social-flow-loop-i2/server/node_modules/buffer-equal-constant-time/index.js
 var require_buffer_equal_constant_time = __commonJS({
-  "node_modules/buffer-equal-constant-time/index.js"(exports, module) {
+  "../../social-flow-loop-i2/server/node_modules/buffer-equal-constant-time/index.js"(exports, module) {
     "use strict";
     var Buffer4 = __require("buffer").Buffer;
     var SlowBuffer = __require("buffer").SlowBuffer;
@@ -20405,9 +20405,9 @@ var require_buffer_equal_constant_time = __commonJS({
   }
 });
 
-// node_modules/jwa/index.js
+// ../../social-flow-loop-i2/server/node_modules/jwa/index.js
 var require_jwa = __commonJS({
-  "node_modules/jwa/index.js"(exports, module) {
+  "../../social-flow-loop-i2/server/node_modules/jwa/index.js"(exports, module) {
     var Buffer4 = require_safe_buffer().Buffer;
     var crypto2 = __require("crypto");
     var formatEcdsa = require_ecdsa_sig_formatter();
@@ -20629,9 +20629,9 @@ var require_jwa = __commonJS({
   }
 });
 
-// node_modules/jws/lib/tostring.js
+// ../../social-flow-loop-i2/server/node_modules/jws/lib/tostring.js
 var require_tostring = __commonJS({
-  "node_modules/jws/lib/tostring.js"(exports, module) {
+  "../../social-flow-loop-i2/server/node_modules/jws/lib/tostring.js"(exports, module) {
     var Buffer4 = __require("buffer").Buffer;
     module.exports = function toString(obj) {
       if (typeof obj === "string")
@@ -20643,9 +20643,9 @@ var require_tostring = __commonJS({
   }
 });
 
-// node_modules/jws/lib/sign-stream.js
+// ../../social-flow-loop-i2/server/node_modules/jws/lib/sign-stream.js
 var require_sign_stream = __commonJS({
-  "node_modules/jws/lib/sign-stream.js"(exports, module) {
+  "../../social-flow-loop-i2/server/node_modules/jws/lib/sign-stream.js"(exports, module) {
     var Buffer4 = require_safe_buffer().Buffer;
     var DataStream = require_data_stream();
     var jwa = require_jwa();
@@ -20718,9 +20718,9 @@ var require_sign_stream = __commonJS({
   }
 });
 
-// node_modules/jws/lib/verify-stream.js
+// ../../social-flow-loop-i2/server/node_modules/jws/lib/verify-stream.js
 var require_verify_stream = __commonJS({
-  "node_modules/jws/lib/verify-stream.js"(exports, module) {
+  "../../social-flow-loop-i2/server/node_modules/jws/lib/verify-stream.js"(exports, module) {
     var Buffer4 = require_safe_buffer().Buffer;
     var DataStream = require_data_stream();
     var jwa = require_jwa();
@@ -20833,9 +20833,9 @@ var require_verify_stream = __commonJS({
   }
 });
 
-// node_modules/jws/index.js
+// ../../social-flow-loop-i2/server/node_modules/jws/index.js
 var require_jws = __commonJS({
-  "node_modules/jws/index.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/jws/index.js"(exports) {
     var SignStream = require_sign_stream();
     var VerifyStream = require_verify_stream();
     var ALGORITHMS = [
@@ -20866,9 +20866,9 @@ var require_jws = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/gtoken/jwsSign.js
+// ../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/gtoken/jwsSign.js
 var require_jwsSign = __commonJS({
-  "node_modules/google-auth-library/build/src/gtoken/jwsSign.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/gtoken/jwsSign.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.buildPayloadForJwsSign = buildPayloadForJwsSign;
@@ -20900,9 +20900,9 @@ var require_jwsSign = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/gtoken/getToken.js
+// ../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/gtoken/getToken.js
 var require_getToken = __commonJS({
-  "node_modules/google-auth-library/build/src/gtoken/getToken.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/gtoken/getToken.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getToken = getToken;
@@ -20944,9 +20944,9 @@ var require_getToken = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/gtoken/errorWithCode.js
+// ../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/gtoken/errorWithCode.js
 var require_errorWithCode = __commonJS({
-  "node_modules/google-auth-library/build/src/gtoken/errorWithCode.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/gtoken/errorWithCode.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ErrorWithCode = void 0;
@@ -20961,13 +20961,13 @@ var require_errorWithCode = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/gtoken/getCredentials.js
+// ../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/gtoken/getCredentials.js
 var require_getCredentials = __commonJS({
-  "node_modules/google-auth-library/build/src/gtoken/getCredentials.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/gtoken/getCredentials.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getCredentials = getCredentials;
-    var path16 = __require("path");
+    var path17 = __require("path");
     var fs9 = __require("fs");
     var util_1 = __require("util");
     var errorWithCode_1 = require_errorWithCode();
@@ -21039,7 +21039,7 @@ var require_getCredentials = __commonJS({
        * @returns An instance of a class that implements ICredentialsProvider.
        */
       static create(keyFilePath) {
-        const keyFileExtension = path16.extname(keyFilePath);
+        const keyFileExtension = path17.extname(keyFilePath);
         switch (keyFileExtension) {
           case ExtensionFiles.JSON:
             return new JsonCredentialsProvider(keyFilePath);
@@ -21062,9 +21062,9 @@ var require_getCredentials = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/gtoken/tokenHandler.js
+// ../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/gtoken/tokenHandler.js
 var require_tokenHandler = __commonJS({
-  "node_modules/google-auth-library/build/src/gtoken/tokenHandler.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/gtoken/tokenHandler.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.TokenHandler = void 0;
@@ -21153,9 +21153,9 @@ var require_tokenHandler = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/gtoken/revokeToken.js
+// ../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/gtoken/revokeToken.js
 var require_revokeToken = __commonJS({
-  "node_modules/google-auth-library/build/src/gtoken/revokeToken.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/gtoken/revokeToken.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.revokeToken = revokeToken;
@@ -21171,9 +21171,9 @@ var require_revokeToken = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/gtoken/googleToken.js
+// ../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/gtoken/googleToken.js
 var require_googleToken = __commonJS({
-  "node_modules/google-auth-library/build/src/gtoken/googleToken.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/gtoken/googleToken.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.GoogleToken = void 0;
@@ -21277,9 +21277,9 @@ var require_googleToken = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/jwtaccess.js
+// ../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/jwtaccess.js
 var require_jwtaccess = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/jwtaccess.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/jwtaccess.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.JWTAccess = void 0;
@@ -21447,9 +21447,9 @@ var require_jwtaccess = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/jwtclient.js
+// ../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/jwtclient.js
 var require_jwtclient = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/jwtclient.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/jwtclient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.JWT = void 0;
@@ -21719,9 +21719,9 @@ var require_jwtclient = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/refreshclient.js
+// ../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/refreshclient.js
 var require_refreshclient = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/refreshclient.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/refreshclient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.UserRefreshClient = exports.USER_REFRESH_ACCOUNT_TYPE = void 0;
@@ -21847,9 +21847,9 @@ var require_refreshclient = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/impersonated.js
+// ../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/impersonated.js
 var require_impersonated = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/impersonated.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/impersonated.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Impersonated = exports.IMPERSONATED_ACCOUNT_TYPE = void 0;
@@ -22026,9 +22026,9 @@ var require_impersonated = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/oauth2common.js
+// ../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/oauth2common.js
 var require_oauth2common = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/oauth2common.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/oauth2common.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.OAuthClientAuthHandler = void 0;
@@ -22174,9 +22174,9 @@ var require_oauth2common = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/stscredentials.js
+// ../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/stscredentials.js
 var require_stscredentials = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/stscredentials.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/stscredentials.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.StsCredentials = void 0;
@@ -22262,9 +22262,9 @@ var require_stscredentials = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/baseexternalclient.js
+// ../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/baseexternalclient.js
 var require_baseexternalclient = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/baseexternalclient.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/baseexternalclient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.BaseExternalAccountClient = exports.CLOUD_RESOURCE_MANAGER = exports.EXTERNAL_ACCOUNT_TYPE = exports.EXPIRATION_TIME_OFFSET = void 0;
@@ -22641,9 +22641,9 @@ var require_baseexternalclient = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/filesubjecttokensupplier.js
+// ../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/filesubjecttokensupplier.js
 var require_filesubjecttokensupplier = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/filesubjecttokensupplier.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/filesubjecttokensupplier.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.FileSubjectTokenSupplier = void 0;
@@ -22706,9 +22706,9 @@ var require_filesubjecttokensupplier = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/urlsubjecttokensupplier.js
+// ../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/urlsubjecttokensupplier.js
 var require_urlsubjecttokensupplier = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/urlsubjecttokensupplier.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/urlsubjecttokensupplier.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.UrlSubjectTokenSupplier = void 0;
@@ -22764,9 +22764,9 @@ var require_urlsubjecttokensupplier = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/certificatesubjecttokensupplier.js
+// ../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/certificatesubjecttokensupplier.js
 var require_certificatesubjecttokensupplier = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/certificatesubjecttokensupplier.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/certificatesubjecttokensupplier.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.CertificateSubjectTokenSupplier = exports.InvalidConfigurationError = exports.CertificateSourceUnavailableError = exports.CERTIFICATE_CONFIGURATION_ENV_VARIABLE = void 0;
@@ -22948,9 +22948,9 @@ var require_certificatesubjecttokensupplier = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/identitypoolclient.js
+// ../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/identitypoolclient.js
 var require_identitypoolclient = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/identitypoolclient.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/identitypoolclient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.IdentityPoolClient = void 0;
@@ -23060,9 +23060,9 @@ var require_identitypoolclient = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/awsrequestsigner.js
+// ../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/awsrequestsigner.js
 var require_awsrequestsigner = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/awsrequestsigner.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/awsrequestsigner.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.AwsRequestSigner = void 0;
@@ -23210,9 +23210,9 @@ ${credentialScope}
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/defaultawssecuritycredentialssupplier.js
+// ../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/defaultawssecuritycredentialssupplier.js
 var require_defaultawssecuritycredentialssupplier = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/defaultawssecuritycredentialssupplier.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/defaultawssecuritycredentialssupplier.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.DefaultAwsSecurityCredentialsSupplier = void 0;
@@ -23365,9 +23365,9 @@ var require_defaultawssecuritycredentialssupplier = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/awsclient.js
+// ../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/awsclient.js
 var require_awsclient = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/awsclient.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/awsclient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.AwsClient = void 0;
@@ -23479,9 +23479,9 @@ var require_awsclient = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/executable-response.js
+// ../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/executable-response.js
 var require_executable_response = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/executable-response.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/executable-response.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.InvalidSubjectTokenError = exports.InvalidMessageFieldError = exports.InvalidCodeFieldError = exports.InvalidTokenTypeFieldError = exports.InvalidExpirationTimeFieldError = exports.InvalidSuccessFieldError = exports.InvalidVersionFieldError = exports.ExecutableResponseError = exports.ExecutableResponse = void 0;
@@ -23610,9 +23610,9 @@ var require_executable_response = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/pluggable-auth-handler.js
+// ../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/pluggable-auth-handler.js
 var require_pluggable_auth_handler = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/pluggable-auth-handler.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/pluggable-auth-handler.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.PluggableAuthHandler = exports.ExecutableError = void 0;
@@ -23751,9 +23751,9 @@ var require_pluggable_auth_handler = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/pluggable-auth-client.js
+// ../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/pluggable-auth-client.js
 var require_pluggable_auth_client = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/pluggable-auth-client.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/pluggable-auth-client.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.PluggableAuthClient = exports.ExecutableError = void 0;
@@ -23878,9 +23878,9 @@ var require_pluggable_auth_client = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/externalclient.js
+// ../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/externalclient.js
 var require_externalclient = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/externalclient.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/externalclient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ExternalAccountClient = void 0;
@@ -23927,9 +23927,9 @@ var require_externalclient = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/externalAccountAuthorizedUserClient.js
+// ../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/externalAccountAuthorizedUserClient.js
 var require_externalAccountAuthorizedUserClient = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/externalAccountAuthorizedUserClient.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/externalAccountAuthorizedUserClient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ExternalAccountAuthorizedUserClient = exports.EXTERNAL_ACCOUNT_AUTHORIZED_USER_TYPE = void 0;
@@ -24114,9 +24114,9 @@ var require_externalAccountAuthorizedUserClient = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/gdchclient.js
+// ../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/gdchclient.js
 var require_gdchclient = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/gdchclient.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/gdchclient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.GdchClient = exports.GDCH_SERVICE_ACCOUNT_TYPE = void 0;
@@ -24397,9 +24397,9 @@ var require_gdchclient = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/googleauth.js
+// ../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/googleauth.js
 var require_googleauth = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/googleauth.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/googleauth.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.GoogleAuth = exports.GoogleAuthExceptionMessages = void 0;
@@ -24408,7 +24408,7 @@ var require_googleauth = __commonJS({
     var gaxios_1 = require_src2();
     var gcpMetadata = require_src4();
     var os2 = __require("os");
-    var path16 = __require("path");
+    var path17 = __require("path");
     var crypto_1 = require_crypto3();
     var computeclient_1 = require_computeclient();
     var idtokenclient_1 = require_idtokenclient();
@@ -24693,19 +24693,19 @@ var require_googleauth = __commonJS({
         if (!configDir) {
           if (this._isWindows()) {
             if (process.env["APPDATA"]) {
-              configDir = path16.join(process.env["APPDATA"], "gcloud");
+              configDir = path17.join(process.env["APPDATA"], "gcloud");
             }
           } else {
             const home = process.env["HOME"];
             if (home) {
-              configDir = path16.join(home, ".config", "gcloud");
+              configDir = path17.join(home, ".config", "gcloud");
             }
           }
         }
         if (!configDir) {
           return null;
         }
-        const location = path16.join(configDir, "application_default_credentials.json");
+        const location = path17.join(configDir, "application_default_credentials.json");
         if (!fs9.existsSync(location)) {
           return null;
         }
@@ -25060,7 +25060,7 @@ var require_googleauth = __commonJS({
         if (this.jsonContent) {
           return this._cacheClientFromJSON(this.jsonContent, this.clientOptions);
         } else if (this.keyFilename) {
-          const filePath = path16.resolve(this.keyFilename);
+          const filePath = path17.resolve(this.keyFilename);
           const stream = fs9.createReadStream(filePath);
           return await this.fromStreamAsync(stream, this.clientOptions);
         } else if (this.apiKey) {
@@ -25205,9 +25205,9 @@ var require_googleauth = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/iam.js
+// ../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/iam.js
 var require_iam = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/iam.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/iam.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.IAMAuth = void 0;
@@ -25241,9 +25241,9 @@ var require_iam = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/downscopedclient.js
+// ../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/downscopedclient.js
 var require_downscopedclient = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/downscopedclient.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/downscopedclient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.DownscopedClient = exports.EXPIRATION_TIME_OFFSET = exports.MAX_ACCESS_BOUNDARY_RULES_COUNT = void 0;
@@ -25426,9 +25426,9 @@ var require_downscopedclient = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/auth/passthrough.js
+// ../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/passthrough.js
 var require_passthrough = __commonJS({
-  "node_modules/google-auth-library/build/src/auth/passthrough.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/auth/passthrough.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.PassThroughClient = void 0;
@@ -25471,9 +25471,9 @@ var require_passthrough = __commonJS({
   }
 });
 
-// node_modules/google-auth-library/build/src/index.js
+// ../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/index.js
 var require_src5 = __commonJS({
-  "node_modules/google-auth-library/build/src/index.js"(exports) {
+  "../../social-flow-loop-i2/server/node_modules/google-auth-library/build/src/index.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m2, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -25607,9 +25607,9 @@ var require_src5 = __commonJS({
   }
 });
 
-// node_modules/ws/lib/constants.js
+// ../../social-flow-loop-i2/server/node_modules/ws/lib/constants.js
 var require_constants = __commonJS({
-  "node_modules/ws/lib/constants.js"(exports, module) {
+  "../../social-flow-loop-i2/server/node_modules/ws/lib/constants.js"(exports, module) {
     "use strict";
     var BINARY_TYPES = ["nodebuffer", "arraybuffer", "fragments"];
     var hasBlob = typeof Blob !== "undefined";
@@ -25630,9 +25630,9 @@ var require_constants = __commonJS({
   }
 });
 
-// node_modules/ws/lib/buffer-util.js
+// ../../social-flow-loop-i2/server/node_modules/ws/lib/buffer-util.js
 var require_buffer_util = __commonJS({
-  "node_modules/ws/lib/buffer-util.js"(exports, module) {
+  "../../social-flow-loop-i2/server/node_modules/ws/lib/buffer-util.js"(exports, module) {
     "use strict";
     var { EMPTY_BUFFER } = require_constants();
     var FastBuffer = Buffer[Symbol.species];
@@ -25705,9 +25705,9 @@ var require_buffer_util = __commonJS({
   }
 });
 
-// node_modules/ws/lib/limiter.js
+// ../../social-flow-loop-i2/server/node_modules/ws/lib/limiter.js
 var require_limiter = __commonJS({
-  "node_modules/ws/lib/limiter.js"(exports, module) {
+  "../../social-flow-loop-i2/server/node_modules/ws/lib/limiter.js"(exports, module) {
     "use strict";
     var kDone = /* @__PURE__ */ Symbol("kDone");
     var kRun = /* @__PURE__ */ Symbol("kRun");
@@ -25755,9 +25755,9 @@ var require_limiter = __commonJS({
   }
 });
 
-// node_modules/ws/lib/permessage-deflate.js
+// ../../social-flow-loop-i2/server/node_modules/ws/lib/permessage-deflate.js
 var require_permessage_deflate = __commonJS({
-  "node_modules/ws/lib/permessage-deflate.js"(exports, module) {
+  "../../social-flow-loop-i2/server/node_modules/ws/lib/permessage-deflate.js"(exports, module) {
     "use strict";
     var zlib2 = __require("zlib");
     var bufferUtil = require_buffer_util();
@@ -26138,9 +26138,9 @@ var require_permessage_deflate = __commonJS({
   }
 });
 
-// node_modules/ws/lib/validation.js
+// ../../social-flow-loop-i2/server/node_modules/ws/lib/validation.js
 var require_validation2 = __commonJS({
-  "node_modules/ws/lib/validation.js"(exports, module) {
+  "../../social-flow-loop-i2/server/node_modules/ws/lib/validation.js"(exports, module) {
     "use strict";
     var { isUtf8 } = __require("buffer");
     var { hasBlob } = require_constants();
@@ -26339,9 +26339,9 @@ var require_validation2 = __commonJS({
   }
 });
 
-// node_modules/ws/lib/receiver.js
+// ../../social-flow-loop-i2/server/node_modules/ws/lib/receiver.js
 var require_receiver = __commonJS({
-  "node_modules/ws/lib/receiver.js"(exports, module) {
+  "../../social-flow-loop-i2/server/node_modules/ws/lib/receiver.js"(exports, module) {
     "use strict";
     var { Writable } = __require("stream");
     var PerMessageDeflate2 = require_permessage_deflate();
@@ -26962,9 +26962,9 @@ var require_receiver = __commonJS({
   }
 });
 
-// node_modules/ws/lib/sender.js
+// ../../social-flow-loop-i2/server/node_modules/ws/lib/sender.js
 var require_sender = __commonJS({
-  "node_modules/ws/lib/sender.js"(exports, module) {
+  "../../social-flow-loop-i2/server/node_modules/ws/lib/sender.js"(exports, module) {
     "use strict";
     var { Duplex } = __require("stream");
     var { randomFillSync } = __require("crypto");
@@ -27455,9 +27455,9 @@ var require_sender = __commonJS({
   }
 });
 
-// node_modules/ws/lib/event-target.js
+// ../../social-flow-loop-i2/server/node_modules/ws/lib/event-target.js
 var require_event_target = __commonJS({
-  "node_modules/ws/lib/event-target.js"(exports, module) {
+  "../../social-flow-loop-i2/server/node_modules/ws/lib/event-target.js"(exports, module) {
     "use strict";
     var { kForOnEventAttribute, kListener } = require_constants();
     var kCode = /* @__PURE__ */ Symbol("kCode");
@@ -27684,9 +27684,9 @@ var require_event_target = __commonJS({
   }
 });
 
-// node_modules/ws/lib/extension.js
+// ../../social-flow-loop-i2/server/node_modules/ws/lib/extension.js
 var require_extension = __commonJS({
-  "node_modules/ws/lib/extension.js"(exports, module) {
+  "../../social-flow-loop-i2/server/node_modules/ws/lib/extension.js"(exports, module) {
     "use strict";
     var { tokenChars } = require_validation2();
     function push(dest, name, elem) {
@@ -27837,16 +27837,16 @@ var require_extension = __commonJS({
   }
 });
 
-// node_modules/ws/lib/websocket.js
+// ../../social-flow-loop-i2/server/node_modules/ws/lib/websocket.js
 var require_websocket = __commonJS({
-  "node_modules/ws/lib/websocket.js"(exports, module) {
+  "../../social-flow-loop-i2/server/node_modules/ws/lib/websocket.js"(exports, module) {
     "use strict";
     var EventEmitter = __require("events");
     var https2 = __require("https");
     var http4 = __require("http");
     var net = __require("net");
     var tls = __require("tls");
-    var { randomBytes: randomBytes2, createHash: createHash5 } = __require("crypto");
+    var { randomBytes: randomBytes2, createHash: createHash6 } = __require("crypto");
     var { Duplex, Readable: Readable2 } = __require("stream");
     var { URL: URL2 } = __require("url");
     var PerMessageDeflate2 = require_permessage_deflate();
@@ -28514,7 +28514,7 @@ var require_websocket = __commonJS({
           abortHandshake(websocket, socket, "Invalid Upgrade header");
           return;
         }
-        const digest = createHash5("sha1").update(key + GUID).digest("base64");
+        const digest = createHash6("sha1").update(key + GUID).digest("base64");
         if (res.headers["sec-websocket-accept"] !== digest) {
           abortHandshake(websocket, socket, "Invalid Sec-WebSocket-Accept header");
           return;
@@ -28733,9 +28733,9 @@ var require_websocket = __commonJS({
   }
 });
 
-// node_modules/ws/lib/stream.js
+// ../../social-flow-loop-i2/server/node_modules/ws/lib/stream.js
 var require_stream = __commonJS({
-  "node_modules/ws/lib/stream.js"(exports, module) {
+  "../../social-flow-loop-i2/server/node_modules/ws/lib/stream.js"(exports, module) {
     "use strict";
     var WebSocket2 = require_websocket();
     var { Duplex } = __require("stream");
@@ -28831,9 +28831,9 @@ var require_stream = __commonJS({
   }
 });
 
-// node_modules/ws/lib/subprotocol.js
+// ../../social-flow-loop-i2/server/node_modules/ws/lib/subprotocol.js
 var require_subprotocol = __commonJS({
-  "node_modules/ws/lib/subprotocol.js"(exports, module) {
+  "../../social-flow-loop-i2/server/node_modules/ws/lib/subprotocol.js"(exports, module) {
     "use strict";
     var { tokenChars } = require_validation2();
     function parse3(header) {
@@ -28876,14 +28876,14 @@ var require_subprotocol = __commonJS({
   }
 });
 
-// node_modules/ws/lib/websocket-server.js
+// ../../social-flow-loop-i2/server/node_modules/ws/lib/websocket-server.js
 var require_websocket_server = __commonJS({
-  "node_modules/ws/lib/websocket-server.js"(exports, module) {
+  "../../social-flow-loop-i2/server/node_modules/ws/lib/websocket-server.js"(exports, module) {
     "use strict";
     var EventEmitter = __require("events");
     var http4 = __require("http");
     var { Duplex } = __require("stream");
-    var { createHash: createHash5 } = __require("crypto");
+    var { createHash: createHash6 } = __require("crypto");
     var extension2 = require_extension();
     var PerMessageDeflate2 = require_permessage_deflate();
     var subprotocol2 = require_subprotocol();
@@ -29190,7 +29190,7 @@ var require_websocket_server = __commonJS({
           );
         }
         if (this._state > RUNNING) return abortHandshake(socket, 503);
-        const digest = createHash5("sha1").update(key + GUID).digest("base64");
+        const digest = createHash6("sha1").update(key + GUID).digest("base64");
         const headers = [
           "HTTP/1.1 101 Switching Protocols",
           "Upgrade: websocket",
@@ -29277,10 +29277,10 @@ var require_websocket_server = __commonJS({
   }
 });
 
-// node_modules/ws/wrapper.mjs
+// ../../social-flow-loop-i2/server/node_modules/ws/wrapper.mjs
 var import_stream, import_extension, import_permessage_deflate, import_receiver, import_sender, import_subprotocol, import_websocket, import_websocket_server;
 var init_wrapper = __esm({
-  "node_modules/ws/wrapper.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/ws/wrapper.mjs"() {
     import_stream = __toESM(require_stream(), 1);
     import_extension = __toESM(require_extension(), 1);
     import_permessage_deflate = __toESM(require_permessage_deflate(), 1);
@@ -29292,7 +29292,7 @@ var init_wrapper = __esm({
   }
 });
 
-// node_modules/@google/genai/dist/node/index.mjs
+// ../../social-flow-loop-i2/server/node_modules/@google/genai/dist/node/index.mjs
 var node_exports = {};
 __export(node_exports, {
   ActivityHandling: () => ActivityHandling,
@@ -40315,7 +40315,7 @@ async function $do$q(client, body, api_version, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path16 = pathToFunc("/{api_version}/agents")(pathParams);
+  const path17 = pathToFunc("/{api_version}/agents")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -40346,7 +40346,7 @@ async function $do$q(client, body, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path16,
+    path: path17,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -40390,7 +40390,7 @@ async function $do$p(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path16 = pathToFunc("/{api_version}/agents/{id}")(pathParams);
+  const path17 = pathToFunc("/{api_version}/agents/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -40420,7 +40420,7 @@ async function $do$p(client, id, api_version, options) {
     security: requestSecurity,
     method: "DELETE",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path16,
+    path: path17,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -40464,7 +40464,7 @@ async function $do$o(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path16 = pathToFunc("/{api_version}/agents/{id}")(pathParams);
+  const path17 = pathToFunc("/{api_version}/agents/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -40494,7 +40494,7 @@ async function $do$o(client, id, api_version, options) {
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path16,
+    path: path17,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -40536,7 +40536,7 @@ async function $do$n(client, api_version, page_size, page_token, parent, options
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload === null || payload === void 0 ? void 0 : payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path16 = pathToFunc("/{api_version}/agents")(pathParams);
+  const path17 = pathToFunc("/{api_version}/agents")(pathParams);
   const query = encodeFormQuery({
     "page_size": payload === null || payload === void 0 ? void 0 : payload.page_size,
     "page_token": payload === null || payload === void 0 ? void 0 : payload.page_token,
@@ -40571,7 +40571,7 @@ async function $do$n(client, api_version, page_size, page_token, parent, options
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path16,
+    path: path17,
     headers,
     query,
     body,
@@ -40612,7 +40612,7 @@ async function $do$m(client, body, api_version, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path16 = pathToFunc("/{api_version}/environments")(pathParams);
+  const path17 = pathToFunc("/{api_version}/environments")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -40643,7 +40643,7 @@ async function $do$m(client, body, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path16,
+    path: path17,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -40687,7 +40687,7 @@ async function $do$l(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path16 = pathToFunc("/{api_version}/environments/{id}")(pathParams);
+  const path17 = pathToFunc("/{api_version}/environments/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -40717,7 +40717,7 @@ async function $do$l(client, id, api_version, options) {
     security: requestSecurity,
     method: "DELETE",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path16,
+    path: path17,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -40761,7 +40761,7 @@ async function $do$k(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path16 = pathToFunc("/{api_version}/environments/{id}")(pathParams);
+  const path17 = pathToFunc("/{api_version}/environments/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -40791,7 +40791,7 @@ async function $do$k(client, id, api_version, options) {
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path16,
+    path: path17,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -40832,7 +40832,7 @@ async function $do$j(client, api_version, page_size, page_token, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload === null || payload === void 0 ? void 0 : payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path16 = pathToFunc("/{api_version}/environments")(pathParams);
+  const path17 = pathToFunc("/{api_version}/environments")(pathParams);
   const query = encodeFormQuery({
     "page_size": payload === null || payload === void 0 ? void 0 : payload.page_size,
     "page_token": payload === null || payload === void 0 ? void 0 : payload.page_token
@@ -40866,7 +40866,7 @@ async function $do$j(client, api_version, page_size, page_token, options) {
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path16,
+    path: path17,
     headers,
     query,
     body,
@@ -40893,14 +40893,14 @@ async function $do$j(client, api_version, page_size, page_token, options) {
   }
   return [result, { status: "complete", request: req, response }];
 }
-function environmentsFilesList(client, environment, path16, api_version, page_size, page_token, recursive, options) {
-  return new APIPromise($do$i(client, environment, path16, api_version, page_size, page_token, recursive, options));
+function environmentsFilesList(client, environment, path17, api_version, page_size, page_token, recursive, options) {
+  return new APIPromise($do$i(client, environment, path17, api_version, page_size, page_token, recursive, options));
 }
-async function $do$i(client, environment, path16, api_version, page_size, page_token, recursive, options) {
+async function $do$i(client, environment, path17, api_version, page_size, page_token, recursive, options) {
   var _a4, _b, _c;
   const input = {
     environment,
-    path: path16,
+    path: path17,
     api_version,
     page_size,
     page_token,
@@ -40999,7 +40999,7 @@ async function $do$h(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path16 = pathToFunc("/{api_version}/interactions/{id}/cancel")(pathParams);
+  const path17 = pathToFunc("/{api_version}/interactions/{id}/cancel")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -41029,7 +41029,7 @@ async function $do$h(client, id, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path16,
+    path: path17,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -41072,7 +41072,7 @@ async function $do$g(client, body, api_version, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path16 = pathToFunc("/{api_version}/interactions")(pathParams);
+  const path17 = pathToFunc("/{api_version}/interactions")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: ((_b = input === null || input === void 0 ? void 0 : input.body) === null || _b === void 0 ? void 0 : _b.stream) ? "text/event-stream" : "application/json"
@@ -41103,7 +41103,7 @@ async function $do$g(client, body, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path16,
+    path: path17,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -41153,7 +41153,7 @@ async function $do$f(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path16 = pathToFunc("/{api_version}/interactions/{id}")(pathParams);
+  const path17 = pathToFunc("/{api_version}/interactions/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -41183,7 +41183,7 @@ async function $do$f(client, id, api_version, options) {
     security: requestSecurity,
     method: "DELETE",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path16,
+    path: path17,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -41233,7 +41233,7 @@ async function $do$e(client, id, api_version, include_input, last_event_id, stre
       charEncoding: "percent"
     })
   };
-  const path16 = pathToFunc("/{api_version}/interactions/{id}")(pathParams);
+  const path17 = pathToFunc("/{api_version}/interactions/{id}")(pathParams);
   const query = encodeFormQuery({
     "include_input": payload.include_input,
     "last_event_id": payload.last_event_id,
@@ -41268,7 +41268,7 @@ async function $do$e(client, id, api_version, include_input, last_event_id, stre
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path16,
+    path: path17,
     headers,
     query,
     body,
@@ -41315,7 +41315,7 @@ async function $do$d(client, body, api_version, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path16 = pathToFunc("/{api_version}/triggers")(pathParams);
+  const path17 = pathToFunc("/{api_version}/triggers")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -41346,7 +41346,7 @@ async function $do$d(client, body, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path16,
+    path: path17,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -41390,7 +41390,7 @@ async function $do$c(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path16 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
+  const path17 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -41420,7 +41420,7 @@ async function $do$c(client, id, api_version, options) {
     security: requestSecurity,
     method: "DELETE",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path16,
+    path: path17,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -41464,7 +41464,7 @@ async function $do$b(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path16 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
+  const path17 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -41494,7 +41494,7 @@ async function $do$b(client, id, api_version, options) {
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path16,
+    path: path17,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -41540,7 +41540,7 @@ async function $do$a(client, trigger_id, api_version, page_size, page_token, opt
       charEncoding: "percent"
     })
   };
-  const path16 = pathToFunc("/{api_version}/triggers/{trigger_id}/executions")(pathParams);
+  const path17 = pathToFunc("/{api_version}/triggers/{trigger_id}/executions")(pathParams);
   const query = encodeFormQuery({
     "page_size": payload.page_size,
     "page_token": payload.page_token
@@ -41574,7 +41574,7 @@ async function $do$a(client, trigger_id, api_version, page_size, page_token, opt
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path16,
+    path: path17,
     headers,
     query,
     body,
@@ -41617,7 +41617,7 @@ async function $do$9(client, api_version, filter, page_size, page_token, options
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload === null || payload === void 0 ? void 0 : payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path16 = pathToFunc("/{api_version}/triggers")(pathParams);
+  const path17 = pathToFunc("/{api_version}/triggers")(pathParams);
   const query = encodeFormQuery({
     "filter": payload === null || payload === void 0 ? void 0 : payload.filter,
     "page_size": payload === null || payload === void 0 ? void 0 : payload.page_size,
@@ -41652,7 +41652,7 @@ async function $do$9(client, api_version, filter, page_size, page_token, options
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path16,
+    path: path17,
     headers,
     query,
     body,
@@ -41697,7 +41697,7 @@ async function $do$8(client, trigger_id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path16 = pathToFunc("/{api_version}/triggers/{trigger_id}/executions")(pathParams);
+  const path17 = pathToFunc("/{api_version}/triggers/{trigger_id}/executions")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -41727,7 +41727,7 @@ async function $do$8(client, trigger_id, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path16,
+    path: path17,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -41772,7 +41772,7 @@ async function $do$7(client, id, body, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path16 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
+  const path17 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -41803,7 +41803,7 @@ async function $do$7(client, id, body, api_version, options) {
     security: requestSecurity,
     method: "PATCH",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path16,
+    path: path17,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -41843,7 +41843,7 @@ async function $do$6(client, body, api_version, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path16 = pathToFunc("/{api_version}/webhooks")(pathParams);
+  const path17 = pathToFunc("/{api_version}/webhooks")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -41874,7 +41874,7 @@ async function $do$6(client, body, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path16,
+    path: path17,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -41918,7 +41918,7 @@ async function $do$5(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path16 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
+  const path17 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -41948,7 +41948,7 @@ async function $do$5(client, id, api_version, options) {
     security: requestSecurity,
     method: "DELETE",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path16,
+    path: path17,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -41992,7 +41992,7 @@ async function $do$4(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path16 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
+  const path17 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -42022,7 +42022,7 @@ async function $do$4(client, id, api_version, options) {
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path16,
+    path: path17,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -42063,7 +42063,7 @@ async function $do$3(client, api_version, page_size, page_token, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload === null || payload === void 0 ? void 0 : payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path16 = pathToFunc("/{api_version}/webhooks")(pathParams);
+  const path17 = pathToFunc("/{api_version}/webhooks")(pathParams);
   const query = encodeFormQuery({
     "page_size": payload === null || payload === void 0 ? void 0 : payload.page_size,
     "page_token": payload === null || payload === void 0 ? void 0 : payload.page_token
@@ -42097,7 +42097,7 @@ async function $do$3(client, api_version, page_size, page_token, options) {
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path16,
+    path: path17,
     headers,
     query,
     body,
@@ -42143,7 +42143,7 @@ async function $do$2(client, id, api_version, body, options) {
       charEncoding: "percent"
     })
   };
-  const path16 = pathToFunc("/{api_version}/webhooks/{id}:ping")(pathParams);
+  const path17 = pathToFunc("/{api_version}/webhooks/{id}:ping")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -42174,7 +42174,7 @@ async function $do$2(client, id, api_version, body, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path16,
+    path: path17,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -42219,7 +42219,7 @@ async function $do$1(client, id, api_version, body, options) {
       charEncoding: "percent"
     })
   };
-  const path16 = pathToFunc("/{api_version}/webhooks/{id}:rotateSigningSecret")(pathParams);
+  const path17 = pathToFunc("/{api_version}/webhooks/{id}:rotateSigningSecret")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -42250,7 +42250,7 @@ async function $do$1(client, id, api_version, body, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path16,
+    path: path17,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -42296,7 +42296,7 @@ async function $do(client, id, api_version, update_mask, body, options) {
       charEncoding: "percent"
     })
   };
-  const path16 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
+  const path17 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
   const query = encodeFormQuery({
     "update_mask": payload.update_mask
   });
@@ -42330,7 +42330,7 @@ async function $do(client, id, api_version, update_mask, body, options) {
     security: requestSecurity,
     method: "PATCH",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path16,
+    path: path17,
     headers,
     query,
     body: body$,
@@ -44156,7 +44156,7 @@ function getApiKeyFromEnv() {
 }
 var import_p_retry, import_google_auth_library, _defaultBaseGeminiUrl, _defaultBaseVertexUrl, BaseModule, Outcome, Language, FunctionResponseScheduling, Type, AuthType, HttpElementLocation, ApiSpec, Environment, SafetyPolicy, PhishBlockThreshold, Behavior, DynamicRetrievalConfigMode, ThinkingLevel, PersonGeneration, ProminentPeople, HarmCategory, HarmBlockMethod, HarmBlockThreshold, FunctionCallingConfigMode, FinishReason, HarmProbability, HarmSeverity, UrlRetrievalStatus, BlockedReason, TrafficType, MediaModality, ModelStage, MediaResolution, Modality, Delivery, AspectRatio, ImageSize, TuningMode, AdapterSize, ResponseParseType, MatchOperation, ReinforcementTuningThinkingLevel, JobState, TuningJobState, AggregationMetric, PairwiseChoice, VideoOrientation, TuningSpeed, TuningTask, DocumentState, ServiceTier, MediaProcessing, PartMediaResolutionLevel, ToolType, ResourceScope, FeatureSelectionPreference, EmbeddingApiType, SafetyFilterLevel, ImagePromptLanguage, MaskReferenceMode, ControlReferenceType, SubjectReferenceType, EditMode, SegmentMode, VideoGenerationReferenceType, VideoGenerationMaskMode, VideoCompressionQuality, ImageResizeMode, TuningMethod, FileState, FileSource, TurnCompleteReason, InteractionStatus, VadSignalType, VoiceActivityType, StartSensitivity, EndSensitivity, ActivityHandling, TurnCoverage, AudioTranscriptionConfigMode, Scale, MusicGenerationMode, LiveMusicPlaybackControl, ToolResponse, FunctionResponseFileData, FunctionResponseBlob, FunctionResponsePart, FunctionResponse, HttpResponse, GenerateContentResponsePromptFeedback, GenerateContentResponseUsageMetadata, GenerateContentResponse, EmbedContentResponse, GenerateImagesResponse, EditImageResponse, UpscaleImageResponse, RecontextImageResponse, SegmentImageResponse, ListModelsResponse, DeleteModelResponse, AudioResponseFormat, ImageResponseFormat, TextResponseFormat, VideoResponseFormat, ResponseFormat, CountTokensResponse, ComputeTokensResponse, GenerateVideosResponse, GenerateVideosOperation, ReinforcementTuningParseResponseConfig, ReinforcementTuningAutoraterScorerParsedResponseConversionScorer, EvaluateDatasetResponse, ListTuningJobsResponse, CancelTuningJobResponse, ValidateRewardResponse, DeleteCachedContentResponse, ListCachedContentsResponse, ListDocumentsResponse, ListFileSearchStoresResponse, UploadToFileSearchStoreResumableResponse, ImportFileResponse, ImportFileOperation, ListFilesResponse, CreateFileResponse, DeleteFileResponse, RegisterFilesResponse, InlinedResponse, SingleEmbedContentResponse, InlinedEmbedContentResponse, ListBatchJobsResponse, ReplayResponse, RawReferenceImage, MaskReferenceImage, ControlReferenceImage, StyleReferenceImage, SubjectReferenceImage, ContentReferenceImage, LiveServerMessage, LiveClientToolResponse, LiveSendToolResponseParameters, LiveMusicServerMessage, UploadToFileSearchStoreResponse, UploadToFileSearchStoreOperation, PagedItem, Pager, Batches, Caches, Chats, Chat, ApiError, Files$1, CONTENT_TYPE_HEADER, SERVER_TIMEOUT_HEADER, USER_AGENT_HEADER, GOOGLE_API_CLIENT_HEADER, SDK_VERSION, LIBRARY_LABEL, VERTEX_AI_API_DEFAULT_VERSION, GOOGLE_AI_API_DEFAULT_VERSION, MULTI_REGIONAL_LOCATIONS, DEFAULT_RETRY_ATTEMPTS, DEFAULT_RETRY_INITIAL_DELAY, DEFAULT_RETRY_MAX_DELAY, DEFAULT_RETRY_EXP_BASE, DEFAULT_RETRY_JITTER, DEFAULT_RETRY_HTTP_STATUS_CODES, ApiClient, MCP_LABEL, hasMcpToolUsageFromMcpToTool, McpCallableTool, LiveMusic, LiveMusicSession, FUNCTION_RESPONSE_REQUIRES_ID, Live, defaultLiveSendClientContentParamerters, Session, DEFAULT_MAX_REMOTE_CALLS, Models, Operations, Tokens, Documents, FileSearchStores, envMemo, GoogleGenAISecurityProvider, GoogleGenAIAuthHook, HTTPClientError, UnexpectedClientError, InvalidRequestError, RequestAbortedError, RequestTimeoutError, ConnectionError, GoogleGenAiError, GeminiNextGenAPIClientError, APIError, APIUserAbortError, APIConnectionError, APIConnectionTimeoutError, BadRequestError, AuthenticationError, PermissionDeniedError, NotFoundError, ConflictError, UnprocessableEntityError, RateLimitError, InternalServerError, SDKHooks, hasOwn, ServerList, SDK_METADATA, encodeForm, encodeSimple, encodeFormQuery, DEFAULT_FETCHER, HTTPClient, mediaParamSeparator, codeRangeRE$1, defaultBackoff, PermanentError, TemporaryError, codeRangeRE, gt, webWorkerLike, isBrowserLike, ClientSDK, jsonLikeContentTypeRE, jsonlLikeContentTypeRE, GoogleGenAiDefaultError, Stream3, CR2, LF2, BOUNDARIES, MAX_BOUNDARY_LEN, DEFAULT_CONTENT_TYPES, headerValRE, SecurityErrorCode, SecurityError, _a, APIPromise, Agents, Files2, Environments, CancelInteractionByIdServerError, CancelInteractionByIdClientError, CreateInteractionServerError, CreateInteractionClientError, DeleteInteractionServerError, DeleteInteractionClientError, GetInteractionByIdServerError, GetInteractionByIdClientError, Interactions, Triggers, Webhooks, GoogleGenAI$1, LEGACY_LYRIA_MODELS, GeminiNextGenInteractions, GeminiNextGenAgents, GeminiNextGenWebhooks, GeminiNextGenTriggers, GeminiNextGenEnvironmentFiles, GeminiNextGenEnvironments, GOOGLE_API_KEY_HEADER, REQUIRED_VERTEX_AI_SCOPE, NodeAuth, NodeDownloader, NodeWebSocketFactory, NodeWebSocket, Tunings, MAX_CHUNK_SIZE, MAX_RETRY_COUNT, INITIAL_RETRY_DELAY_MS, DELAY_MULTIPLIER, X_GOOG_UPLOAD_STATUS_HEADER_FIELD, NodeUploader, NodeFiles, LANGUAGE_LABEL_PREFIX, GoogleGenAI2;
 var init_node = __esm({
-  "node_modules/@google/genai/dist/node/index.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/@google/genai/dist/node/index.mjs"() {
     import_p_retry = __toESM(require_p_retry(), 1);
     import_google_auth_library = __toESM(require_src5(), 1);
     init_wrapper();
@@ -45450,7 +45450,7 @@ var init_node = __esm({
           params
         );
         const urlParams = body["_url"];
-        const path16 = formatMap("{model}:batchGenerateContent", urlParams);
+        const path17 = formatMap("{model}:batchGenerateContent", urlParams);
         const batch = body["batch"];
         const inputConfig = batch["inputConfig"];
         const requestsWrapper = inputConfig["requests"];
@@ -45471,7 +45471,7 @@ var init_node = __esm({
         delete body["config"];
         delete body["_url"];
         delete body["_query"];
-        return { path: path16, body };
+        return { path: path17, body };
       }
       // Helper function to get the first GCS URI
       getGcsUri(src) {
@@ -45527,16 +45527,16 @@ var init_node = __esm({
       async createInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path16 = "";
+        let path17 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = createBatchJobParametersToVertex(this.apiClient, params);
-          path16 = formatMap("batchPredictionJobs", body["_url"]);
+          path17 = formatMap("batchPredictionJobs", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -45551,12 +45551,12 @@ var init_node = __esm({
           });
         } else {
           const body = createBatchJobParametersToMldev(this.apiClient, params);
-          path16 = formatMap("{model}:batchGenerateContent", body["_url"]);
+          path17 = formatMap("{model}:batchGenerateContent", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -45581,18 +45581,18 @@ var init_node = __esm({
       async createEmbeddingsInternal(params) {
         var _a4, _b;
         let response;
-        let path16 = "";
+        let path17 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = createEmbeddingsBatchJobParametersToMldev(this.apiClient, params);
-          path16 = formatMap("{model}:asyncBatchEmbedContent", body["_url"]);
+          path17 = formatMap("{model}:asyncBatchEmbedContent", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -45621,16 +45621,16 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path16 = "";
+        let path17 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = getBatchJobParametersToVertex(this.apiClient, params);
-          path16 = formatMap("batchPredictionJobs/{name}", body["_url"]);
+          path17 = formatMap("batchPredictionJobs/{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -45645,12 +45645,12 @@ var init_node = __esm({
           });
         } else {
           const body = getBatchJobParametersToMldev(this.apiClient, params);
-          path16 = formatMap("batches/{name}", body["_url"]);
+          path17 = formatMap("batches/{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -45678,16 +45678,16 @@ var init_node = __esm({
        */
       async cancel(params) {
         var _a4, _b, _c, _d;
-        let path16 = "";
+        let path17 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = cancelBatchJobParametersToVertex(this.apiClient, params);
-          path16 = formatMap("batchPredictionJobs/{name}:cancel", body["_url"]);
+          path17 = formatMap("batchPredictionJobs/{name}:cancel", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           await this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -45696,12 +45696,12 @@ var init_node = __esm({
           });
         } else {
           const body = cancelBatchJobParametersToMldev(this.apiClient, params);
-          path16 = formatMap("batches/{name}:cancel", body["_url"]);
+          path17 = formatMap("batches/{name}:cancel", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           await this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -45713,16 +45713,16 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path16 = "";
+        let path17 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = listBatchJobsParametersToVertex(params);
-          path16 = formatMap("batchPredictionJobs", body["_url"]);
+          path17 = formatMap("batchPredictionJobs", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -45745,12 +45745,12 @@ var init_node = __esm({
           });
         } else {
           const body = listBatchJobsParametersToMldev(params);
-          path16 = formatMap("batches", body["_url"]);
+          path17 = formatMap("batches", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -45787,16 +45787,16 @@ var init_node = __esm({
       async delete(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path16 = "";
+        let path17 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = deleteBatchJobParametersToVertex(this.apiClient, params);
-          path16 = formatMap("batchPredictionJobs/{name}", body["_url"]);
+          path17 = formatMap("batchPredictionJobs/{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -45817,12 +45817,12 @@ var init_node = __esm({
           });
         } else {
           const body = deleteBatchJobParametersToMldev(this.apiClient, params);
-          path16 = formatMap("batches/{name}", body["_url"]);
+          path17 = formatMap("batches/{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -45881,16 +45881,16 @@ var init_node = __esm({
       async create(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path16 = "";
+        let path17 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = createCachedContentParametersToVertex(this.apiClient, params);
-          path16 = formatMap("cachedContents", body["_url"]);
+          path17 = formatMap("cachedContents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -45904,12 +45904,12 @@ var init_node = __esm({
           });
         } else {
           const body = createCachedContentParametersToMldev(this.apiClient, params);
-          path16 = formatMap("cachedContents", body["_url"]);
+          path17 = formatMap("cachedContents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -45937,16 +45937,16 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path16 = "";
+        let path17 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = getCachedContentParametersToVertex(this.apiClient, params);
-          path16 = formatMap("{name}", body["_url"]);
+          path17 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -45960,12 +45960,12 @@ var init_node = __esm({
           });
         } else {
           const body = getCachedContentParametersToMldev(this.apiClient, params);
-          path16 = formatMap("{name}", body["_url"]);
+          path17 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -45993,16 +45993,16 @@ var init_node = __esm({
       async delete(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path16 = "";
+        let path17 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = deleteCachedContentParametersToVertex(this.apiClient, params);
-          path16 = formatMap("{name}", body["_url"]);
+          path17 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -46025,12 +46025,12 @@ var init_node = __esm({
           });
         } else {
           const body = deleteCachedContentParametersToMldev(this.apiClient, params);
-          path16 = formatMap("{name}", body["_url"]);
+          path17 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -46070,16 +46070,16 @@ var init_node = __esm({
       async update(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path16 = "";
+        let path17 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = updateCachedContentParametersToVertex(this.apiClient, params);
-          path16 = formatMap("{name}", body["_url"]);
+          path17 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "PATCH",
@@ -46093,12 +46093,12 @@ var init_node = __esm({
           });
         } else {
           const body = updateCachedContentParametersToMldev(this.apiClient, params);
-          path16 = formatMap("{name}", body["_url"]);
+          path17 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "PATCH",
@@ -46115,16 +46115,16 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path16 = "";
+        let path17 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = listCachedContentsParametersToVertex(params);
-          path16 = formatMap("cachedContents", body["_url"]);
+          path17 = formatMap("cachedContents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -46147,12 +46147,12 @@ var init_node = __esm({
           });
         } else {
           const body = listCachedContentsParametersToMldev(params);
-          path16 = formatMap("cachedContents", body["_url"]);
+          path17 = formatMap("cachedContents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -46483,18 +46483,18 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b;
         let response;
-        let path16 = "";
+        let path17 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = listFilesParametersToMldev(params);
-          path16 = formatMap("files", body["_url"]);
+          path17 = formatMap("files", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -46520,18 +46520,18 @@ var init_node = __esm({
       async createInternal(params) {
         var _a4, _b;
         let response;
-        let path16 = "";
+        let path17 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = createFileParametersToMldev(params);
-          path16 = formatMap("upload/v1beta/files", body["_url"]);
+          path17 = formatMap("upload/v1beta/files", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -46566,18 +46566,18 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b;
         let response;
-        let path16 = "";
+        let path17 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = getFileParametersToMldev(params);
-          path16 = formatMap("files/{file}", body["_url"]);
+          path17 = formatMap("files/{file}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -46607,18 +46607,18 @@ var init_node = __esm({
       async delete(params) {
         var _a4, _b;
         let response;
-        let path16 = "";
+        let path17 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = deleteFileParametersToMldev(params);
-          path16 = formatMap("files/{file}", body["_url"]);
+          path17 = formatMap("files/{file}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -46644,18 +46644,18 @@ var init_node = __esm({
       async registerFilesInternal(params) {
         var _a4, _b;
         let response;
-        let path16 = "";
+        let path17 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = internalRegisterFilesParametersToMldev(params);
-          path16 = formatMap("files:register", body["_url"]);
+          path17 = formatMap("files:register", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -46811,13 +46811,13 @@ var init_node = __esm({
           throw new Error("HTTP options are not correctly set.");
         }
       }
-      constructUrl(path16, httpOptions, prependProjectLocation) {
+      constructUrl(path17, httpOptions, prependProjectLocation) {
         const urlElement = [this.getRequestUrlInternal(httpOptions)];
         if (prependProjectLocation) {
           urlElement.push(this.getBaseResourcePath());
         }
-        if (path16 !== "") {
-          urlElement.push(path16);
+        if (path17 !== "") {
+          urlElement.push(path17);
         }
         const url = new URL(`${urlElement.join("/")}`);
         return url;
@@ -47110,8 +47110,8 @@ var init_node = __esm({
           file: fileToUpload
         };
         const fileName = this.getFileName(file);
-        const path16 = formatMap("upload/v1beta/files", body["_url"]);
-        const uploadUrl = await this.fetchUploadUrl(path16, fileToUpload.sizeBytes, fileToUpload.mimeType, fileName, body, config3 === null || config3 === void 0 ? void 0 : config3.httpOptions);
+        const path17 = formatMap("upload/v1beta/files", body["_url"]);
+        const uploadUrl = await this.fetchUploadUrl(path17, fileToUpload.sizeBytes, fileToUpload.mimeType, fileName, body, config3 === null || config3 === void 0 ? void 0 : config3.httpOptions);
         return uploader.upload(file, uploadUrl, this);
       }
       /**
@@ -47135,13 +47135,13 @@ var init_node = __esm({
         if (mimeType === void 0 || mimeType === "") {
           throw new Error("Can not determine mimeType. Please provide mimeType in the config.");
         }
-        const path16 = `upload/v1beta/${fileSearchStoreName}:uploadToFileSearchStore`;
+        const path17 = `upload/v1beta/${fileSearchStoreName}:uploadToFileSearchStore`;
         const fileName = this.getFileName(file);
         const body = {};
         if (config3 != null) {
           uploadToFileSearchStoreConfigToMldev(config3, body);
         }
-        const uploadUrl = await this.fetchUploadUrl(path16, sizeBytes, mimeType, fileName, body, config3 === null || config3 === void 0 ? void 0 : config3.httpOptions);
+        const uploadUrl = await this.fetchUploadUrl(path17, sizeBytes, mimeType, fileName, body, config3 === null || config3 === void 0 ? void 0 : config3.httpOptions);
         return uploader.uploadToFileSearchStore(file, uploadUrl, this);
       }
       /**
@@ -47154,7 +47154,7 @@ var init_node = __esm({
         const downloader = this.clientOptions.downloader;
         await downloader.download(params, this);
       }
-      async fetchUploadUrl(path16, sizeBytes, mimeType, fileName, body, configHttpOptions) {
+      async fetchUploadUrl(path17, sizeBytes, mimeType, fileName, body, configHttpOptions) {
         var _a4;
         let httpOptions = {};
         if (configHttpOptions) {
@@ -47167,7 +47167,7 @@ var init_node = __esm({
           };
         }
         const httpResponse = await this.request({
-          path: path16,
+          path: path17,
           body: JSON.stringify(body),
           httpMethod: "POST",
           httpOptions
@@ -48181,16 +48181,16 @@ var init_node = __esm({
       async generateContentInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path16 = "";
+        let path17 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = generateContentParametersToVertex(this.apiClient, params);
-          path16 = formatMap("{model}:generateContent", body["_url"]);
+          path17 = formatMap("{model}:generateContent", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48213,12 +48213,12 @@ var init_node = __esm({
           });
         } else {
           const body = generateContentParametersToMldev(this.apiClient, params);
-          path16 = formatMap("{model}:generateContent", body["_url"]);
+          path17 = formatMap("{model}:generateContent", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48244,17 +48244,17 @@ var init_node = __esm({
       async generateContentStreamInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path16 = "";
+        let path17 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = generateContentParametersToVertex(this.apiClient, params);
-          path16 = formatMap("{model}:streamGenerateContent?alt=sse", body["_url"]);
+          path17 = formatMap("{model}:streamGenerateContent?alt=sse", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           const apiClient = this.apiClient;
           response = apiClient.requestStream({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48290,13 +48290,13 @@ var init_node = __esm({
           });
         } else {
           const body = generateContentParametersToMldev(this.apiClient, params);
-          path16 = formatMap("{model}:streamGenerateContent?alt=sse", body["_url"]);
+          path17 = formatMap("{model}:streamGenerateContent?alt=sse", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           const apiClient = this.apiClient;
           response = apiClient.requestStream({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48356,17 +48356,17 @@ var init_node = __esm({
       async embedContentInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path16 = "";
+        let path17 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = embedContentParametersPrivateToVertex(this.apiClient, params, params);
           const endpointUrl = tIsVertexEmbedContentModel(params.model) ? "{model}:embedContent" : "{model}:predict";
-          path16 = formatMap(endpointUrl, body["_url"]);
+          path17 = formatMap(endpointUrl, body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48389,12 +48389,12 @@ var init_node = __esm({
           });
         } else {
           const body = embedContentParametersPrivateToMldev(this.apiClient, params);
-          path16 = formatMap("{model}:batchEmbedContents", body["_url"]);
+          path17 = formatMap("{model}:batchEmbedContents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48423,16 +48423,16 @@ var init_node = __esm({
       async generateImagesInternal(params) {
         var _a4, _b;
         let response;
-        let path16 = "";
+        let path17 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = generateImagesParametersToVertex(this.apiClient, params);
-          path16 = formatMap("{model}:predict", body["_url"]);
+          path17 = formatMap("{model}:predict", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48463,16 +48463,16 @@ var init_node = __esm({
       async editImageInternal(params) {
         var _a4, _b;
         let response;
-        let path16 = "";
+        let path17 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = editImageParametersInternalToVertex(this.apiClient, params);
-          path16 = formatMap("{model}:predict", body["_url"]);
+          path17 = formatMap("{model}:predict", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48503,16 +48503,16 @@ var init_node = __esm({
       async upscaleImageInternal(params) {
         var _a4, _b;
         let response;
-        let path16 = "";
+        let path17 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = upscaleImageAPIParametersInternalToVertex(this.apiClient, params);
-          path16 = formatMap("{model}:predict", body["_url"]);
+          path17 = formatMap("{model}:predict", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48564,16 +48564,16 @@ var init_node = __esm({
       async recontextImage(params) {
         var _a4, _b;
         let response;
-        let path16 = "";
+        let path17 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = recontextImageParametersToVertex(this.apiClient, params);
-          path16 = formatMap("{model}:predict", body["_url"]);
+          path17 = formatMap("{model}:predict", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48615,16 +48615,16 @@ var init_node = __esm({
       async segmentImage(params) {
         var _a4, _b;
         let response;
-        let path16 = "";
+        let path17 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = segmentImageParametersToVertex(this.apiClient, params);
-          path16 = formatMap("{model}:predict", body["_url"]);
+          path17 = formatMap("{model}:predict", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48654,16 +48654,16 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path16 = "";
+        let path17 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = getModelParametersToVertex(this.apiClient, params);
-          path16 = formatMap("{name}", body["_url"]);
+          path17 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -48678,12 +48678,12 @@ var init_node = __esm({
           });
         } else {
           const body = getModelParametersToMldev(this.apiClient, params);
-          path16 = formatMap("{name}", body["_url"]);
+          path17 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -48701,16 +48701,16 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path16 = "";
+        let path17 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = listModelsParametersToVertex(this.apiClient, params);
-          path16 = formatMap("{models_url}", body["_url"]);
+          path17 = formatMap("{models_url}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -48733,12 +48733,12 @@ var init_node = __esm({
           });
         } else {
           const body = listModelsParametersToMldev(this.apiClient, params);
-          path16 = formatMap("{models_url}", body["_url"]);
+          path17 = formatMap("{models_url}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -48781,16 +48781,16 @@ var init_node = __esm({
       async update(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path16 = "";
+        let path17 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = updateModelParametersToVertex(this.apiClient, params);
-          path16 = formatMap("{model}", body["_url"]);
+          path17 = formatMap("{model}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "PATCH",
@@ -48805,12 +48805,12 @@ var init_node = __esm({
           });
         } else {
           const body = updateModelParametersToMldev(this.apiClient, params);
-          path16 = formatMap("{name}", body["_url"]);
+          path17 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "PATCH",
@@ -48839,16 +48839,16 @@ var init_node = __esm({
       async delete(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path16 = "";
+        let path17 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = deleteModelParametersToVertex(this.apiClient, params);
-          path16 = formatMap("{name}", body["_url"]);
+          path17 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -48871,12 +48871,12 @@ var init_node = __esm({
           });
         } else {
           const body = deleteModelParametersToMldev(this.apiClient, params);
-          path16 = formatMap("{name}", body["_url"]);
+          path17 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -48918,16 +48918,16 @@ var init_node = __esm({
       async countTokens(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path16 = "";
+        let path17 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = countTokensParametersToVertex(this.apiClient, params);
-          path16 = formatMap("{model}:countTokens", body["_url"]);
+          path17 = formatMap("{model}:countTokens", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48950,12 +48950,12 @@ var init_node = __esm({
           });
         } else {
           const body = countTokensParametersToMldev(this.apiClient, params);
-          path16 = formatMap("{model}:countTokens", body["_url"]);
+          path17 = formatMap("{model}:countTokens", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48999,16 +48999,16 @@ var init_node = __esm({
       async computeTokens(params) {
         var _a4, _b;
         let response;
-        let path16 = "";
+        let path17 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = computeTokensParametersToVertex(this.apiClient, params);
-          path16 = formatMap("{model}:computeTokens", body["_url"]);
+          path17 = formatMap("{model}:computeTokens", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -49039,16 +49039,16 @@ var init_node = __esm({
       async generateVideosInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path16 = "";
+        let path17 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = generateVideosParametersToVertex(this.apiClient, params);
-          path16 = formatMap("{model}:predictLongRunning", body["_url"]);
+          path17 = formatMap("{model}:predictLongRunning", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -49065,12 +49065,12 @@ var init_node = __esm({
           });
         } else {
           const body = generateVideosParametersToMldev(this.apiClient, params);
-          path16 = formatMap("{model}:predictLongRunning", body["_url"]);
+          path17 = formatMap("{model}:predictLongRunning", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -49175,16 +49175,16 @@ var init_node = __esm({
       async getVideosOperationInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path16 = "";
+        let path17 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = getOperationParametersToVertex(params);
-          path16 = formatMap("{operationName}", body["_url"]);
+          path17 = formatMap("{operationName}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -49196,12 +49196,12 @@ var init_node = __esm({
           return response;
         } else {
           const body = getOperationParametersToMldev(params);
-          path16 = formatMap("{operationName}", body["_url"]);
+          path17 = formatMap("{operationName}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -49216,16 +49216,16 @@ var init_node = __esm({
       async fetchPredictVideosOperationInternal(params) {
         var _a4, _b;
         let response;
-        let path16 = "";
+        let path17 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = fetchPredictOperationParametersToVertex(params);
-          path16 = formatMap("{resourceName}:fetchPredictOperation", body["_url"]);
+          path17 = formatMap("{resourceName}:fetchPredictOperation", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -49331,20 +49331,20 @@ var init_node = __esm({
       async create(params) {
         var _a4, _b;
         let response;
-        let path16 = "";
+        let path17 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("The client.tokens.create method is only supported by the Gemini Developer API.");
         } else {
           const body = createAuthTokenParametersToMldev(this.apiClient, params);
-          path16 = formatMap("auth_tokens", body["_url"]);
+          path17 = formatMap("auth_tokens", body["_url"]);
           queryParams = body["_query"];
           delete body["config"];
           delete body["_url"];
           delete body["_query"];
           const transformedBody = convertBidiSetupToTokenSetup(body, params.config);
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(transformedBody),
             httpMethod: "POST",
@@ -49376,18 +49376,18 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b;
         let response;
-        let path16 = "";
+        let path17 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = getDocumentParametersToMldev(params);
-          path16 = formatMap("{name}", body["_url"]);
+          path17 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -49408,18 +49408,18 @@ var init_node = __esm({
        */
       async delete(params) {
         var _a4, _b;
-        let path16 = "";
+        let path17 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = deleteDocumentParametersToMldev(params);
-          path16 = formatMap("{name}", body["_url"]);
+          path17 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           await this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -49431,18 +49431,18 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b;
         let response;
-        let path16 = "";
+        let path17 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = listDocumentsParametersToMldev(params);
-          path16 = formatMap("{parent}/documents", body["_url"]);
+          path17 = formatMap("{parent}/documents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -49559,18 +49559,18 @@ var init_node = __esm({
       async create(params) {
         var _a4, _b;
         let response;
-        let path16 = "";
+        let path17 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = createFileSearchStoreParametersToMldev(this.apiClient, params);
-          path16 = formatMap("fileSearchStores", body["_url"]);
+          path17 = formatMap("fileSearchStores", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -49593,18 +49593,18 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b;
         let response;
-        let path16 = "";
+        let path17 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = getFileSearchStoreParametersToMldev(params);
-          path16 = formatMap("{name}", body["_url"]);
+          path17 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -49625,18 +49625,18 @@ var init_node = __esm({
        */
       async delete(params) {
         var _a4, _b;
-        let path16 = "";
+        let path17 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = deleteFileSearchStoreParametersToMldev(params);
-          path16 = formatMap("{name}", body["_url"]);
+          path17 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           await this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -49648,18 +49648,18 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b;
         let response;
-        let path16 = "";
+        let path17 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = listFileSearchStoresParametersToMldev(params);
-          path16 = formatMap("fileSearchStores", body["_url"]);
+          path17 = formatMap("fileSearchStores", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -49679,18 +49679,18 @@ var init_node = __esm({
       async uploadToFileSearchStoreInternal(params) {
         var _a4, _b;
         let response;
-        let path16 = "";
+        let path17 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = uploadToFileSearchStoreParametersToMldev(params);
-          path16 = formatMap("upload/v1beta/{file_search_store_name}:uploadToFileSearchStore", body["_url"]);
+          path17 = formatMap("upload/v1beta/{file_search_store_name}:uploadToFileSearchStore", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -49718,18 +49718,18 @@ var init_node = __esm({
       async importFile(params) {
         var _a4, _b;
         let response;
-        let path16 = "";
+        let path17 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = importFileParametersToMldev(params);
-          path16 = formatMap("{file_search_store_name}:importFile", body["_url"]);
+          path17 = formatMap("{file_search_store_name}:importFile", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -50173,16 +50173,16 @@ var init_node = __esm({
       }
       _createRequest(context, conf, options) {
         var _a4, _b, _c, _d, _e;
-        const { method, path: path16, query, headers: opHeaders, security } = conf;
+        const { method, path: path17, query, headers: opHeaders, security } = conf;
         const base = (_a4 = conf.baseURL) !== null && _a4 !== void 0 ? _a4 : this._baseURL;
         if (!base) {
           return ERR(new InvalidRequestError("No base URL provided for operation"));
         }
         const baseURL = new URL(base);
         let reqURL;
-        if (path16) {
+        if (path17) {
           baseURL.pathname = baseURL.pathname.replace(/\/+$/, "") + "/";
-          reqURL = new URL(path16, baseURL);
+          reqURL = new URL(path17, baseURL);
           if (!reqURL.search && baseURL.search) {
             reqURL.search = baseURL.search;
           }
@@ -50594,8 +50594,8 @@ var init_node = __esm({
       /**
        * Retrieves file metadata or directory contents from an environment's snapshot. To download file contents directly, pass ?alt=media or use the files.download helper.
        */
-      list(environment, path16, params, options) {
-        return unwrapAsAPIPromise(environmentsFilesList(this, environment, path16, params === null || params === void 0 ? void 0 : params.api_version, params === null || params === void 0 ? void 0 : params.page_size, params === null || params === void 0 ? void 0 : params.page_token, params === null || params === void 0 ? void 0 : params.recursive, options));
+      list(environment, path17, params, options) {
+        return unwrapAsAPIPromise(environmentsFilesList(this, environment, path17, params === null || params === void 0 ? void 0 : params.api_version, params === null || params === void 0 ? void 0 : params.page_size, params === null || params === void 0 ? void 0 : params.page_token, params === null || params === void 0 ? void 0 : params.recursive, options));
       }
     };
     Environments = class extends ClientSDK {
@@ -51003,8 +51003,8 @@ var init_node = __esm({
         this.resolveClient = resolveClient2;
       }
       async list(params, options) {
-        const { environment, path: path16, page_size, page_token, recursive, api_version } = params;
-        return unwrapWithSdkHttpResponse(environmentsFilesList(this.resolveClient(api_version), environment, path16, api_version, page_size, page_token, recursive, toGoogleGenAIRequestOptions(options)));
+        const { environment, path: path17, page_size, page_token, recursive, api_version } = params;
+        return unwrapWithSdkHttpResponse(environmentsFilesList(this.resolveClient(api_version), environment, path17, api_version, page_size, page_token, recursive, toGoogleGenAIRequestOptions(options)));
       }
     };
     GeminiNextGenEnvironments = class {
@@ -51179,16 +51179,16 @@ var init_node = __esm({
       async getInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path16 = "";
+        let path17 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = getTuningJobParametersToVertex(params);
-          path16 = formatMap("{name}", body["_url"]);
+          path17 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -51209,12 +51209,12 @@ var init_node = __esm({
           });
         } else {
           const body = getTuningJobParametersToMldev(params);
-          path16 = formatMap("{name}", body["_url"]);
+          path17 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -51238,16 +51238,16 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b;
         let response;
-        let path16 = "";
+        let path17 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = listTuningJobsParametersToVertex(params);
-          path16 = formatMap("tuningJobs", body["_url"]);
+          path17 = formatMap("tuningJobs", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -51286,16 +51286,16 @@ var init_node = __esm({
       async cancel(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path16 = "";
+        let path17 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = cancelTuningJobParametersToVertex(params);
-          path16 = formatMap("{name}:cancel", body["_url"]);
+          path17 = formatMap("{name}:cancel", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -51318,12 +51318,12 @@ var init_node = __esm({
           });
         } else {
           const body = cancelTuningJobParametersToMldev(params);
-          path16 = formatMap("{name}:cancel", body["_url"]);
+          path17 = formatMap("{name}:cancel", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -51349,16 +51349,16 @@ var init_node = __esm({
       async tuneInternal(params) {
         var _a4, _b;
         let response;
-        let path16 = "";
+        let path17 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = createTuningJobParametersPrivateToVertex(params, params);
-          path16 = formatMap("tuningJobs", body["_url"]);
+          path17 = formatMap("tuningJobs", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -51384,18 +51384,18 @@ var init_node = __esm({
       async tuneMldevInternal(params) {
         var _a4, _b;
         let response;
-        let path16 = "";
+        let path17 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = createTuningJobParametersPrivateToMldev(params);
-          path16 = formatMap("tunedModels", body["_url"]);
+          path17 = formatMap("tunedModels", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -51419,16 +51419,16 @@ var init_node = __esm({
       async validateReward(params) {
         var _a4, _b;
         let response;
-        let path16 = "";
+        let path17 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = validateRewardParametersToVertex(params);
-          path16 = formatMap("{parent}/tuningJobs:validateReinforcementTuningReward", body["_url"]);
+          path17 = formatMap("{parent}/tuningJobs:validateReinforcementTuningReward", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path16,
+            path: path17,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -51824,13 +51824,13 @@ var require_tts_speed_policy = __commonJS({
   "../skills/produce/references/tts-speed-policy.js"(exports, module) {
     "use strict";
     var fs9 = __require("node:fs");
-    var path16 = __require("node:path");
+    var path17 = __require("node:path");
     function authorizeSpeed4(work, scope, factor) {
       if (!["generation", "final"].includes(scope) || !Number.isFinite(factor) || factor < 0.5 || factor > 3) {
         throw new Error("Invalid TTS speed scope or factor");
       }
       if (factor === 1) return null;
-      const file = path16.resolve(work, "speed-authorization.json");
+      const file = path17.resolve(work, "speed-authorization.json");
       let record2;
       try {
         record2 = JSON.parse(fs9.readFileSync(file, "utf8"));
@@ -51845,7 +51845,7 @@ var require_tts_speed_policy = __commonJS({
   }
 });
 
-// node_modules/openai/internal/tslib.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/internal/tslib.mjs
 function __classPrivateFieldSet(receiver, state, value, kind, f3) {
   if (kind === "m")
     throw new TypeError("Private method is not writable");
@@ -51863,14 +51863,14 @@ function __classPrivateFieldGet(receiver, state, kind, f3) {
   return kind === "m" ? f3 : kind === "a" ? f3.call(receiver) : f3 ? f3.value : state.get(receiver);
 }
 var init_tslib = __esm({
-  "node_modules/openai/internal/tslib.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/internal/tslib.mjs"() {
   }
 });
 
-// node_modules/openai/internal/utils/uuid.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/internal/utils/uuid.mjs
 var uuid4;
 var init_uuid = __esm({
-  "node_modules/openai/internal/utils/uuid.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/internal/utils/uuid.mjs"() {
     uuid4 = function() {
       const { crypto: crypto2 } = globalThis;
       if (crypto2?.randomUUID) {
@@ -51884,7 +51884,7 @@ var init_uuid = __esm({
   }
 });
 
-// node_modules/openai/internal/errors.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/internal/errors.mjs
 function isAbortError2(err4) {
   return typeof err4 === "object" && err4 !== null && // Spec-compliant fetch implementations
   ("name" in err4 && err4.name === "AbortError" || // Expo fetch
@@ -51892,7 +51892,7 @@ function isAbortError2(err4) {
 }
 var castToError;
 var init_errors = __esm({
-  "node_modules/openai/internal/errors.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/internal/errors.mjs"() {
     castToError = (err4) => {
       if (err4 instanceof Error)
         return err4;
@@ -51920,10 +51920,10 @@ var init_errors = __esm({
   }
 });
 
-// node_modules/openai/core/error.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/core/error.mjs
 var OpenAIError, APIError2, APIUserAbortError2, APIConnectionError2, APIConnectionTimeoutError2, BadRequestError2, AuthenticationError2, PermissionDeniedError2, NotFoundError2, ConflictError2, UnprocessableEntityError2, RateLimitError2, InternalServerError2, LengthFinishReasonError, ContentFilterFinishReasonError, InvalidWebhookSignatureError, OAuthError, SubjectTokenProviderError;
 var init_error = __esm({
-  "node_modules/openai/core/error.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/core/error.mjs"() {
     init_errors();
     OpenAIError = class extends Error {
     };
@@ -52060,7 +52060,7 @@ var init_error = __esm({
   }
 });
 
-// node_modules/openai/internal/utils/values.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/internal/utils/values.mjs
 function maybeObj(x2) {
   if (typeof x2 !== "object") {
     return {};
@@ -52082,7 +52082,7 @@ function isObj(obj) {
 }
 var startsWithSchemeRegexp, isAbsoluteURL, isArray, isReadonlyArray, validatePositiveInteger, safeJSON;
 var init_values = __esm({
-  "node_modules/openai/internal/utils/values.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/internal/utils/values.mjs"() {
     init_error();
     startsWithSchemeRegexp = /^[a-z][a-z0-9+.-]*:/i;
     isAbsoluteURL = (url) => {
@@ -52109,23 +52109,23 @@ var init_values = __esm({
   }
 });
 
-// node_modules/openai/internal/utils/sleep.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/internal/utils/sleep.mjs
 var sleep5;
 var init_sleep = __esm({
-  "node_modules/openai/internal/utils/sleep.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/internal/utils/sleep.mjs"() {
     sleep5 = (ms) => new Promise((resolve6) => setTimeout(resolve6, ms));
   }
 });
 
-// node_modules/openai/version.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/version.mjs
 var VERSION;
 var init_version = __esm({
-  "node_modules/openai/version.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/version.mjs"() {
     VERSION = "6.49.0";
   }
 });
 
-// node_modules/openai/internal/detect-platform.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/internal/detect-platform.mjs
 function getDetectedPlatform() {
   if (typeof Deno !== "undefined" && Deno.build != null) {
     return "deno";
@@ -52163,7 +52163,7 @@ function getBrowserInfo() {
 }
 var isRunningInBrowser, getPlatformProperties, normalizeArch, normalizePlatform, _platformHeaders, getPlatformHeaders;
 var init_detect_platform = __esm({
-  "node_modules/openai/internal/detect-platform.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/internal/detect-platform.mjs"() {
     init_version();
     isRunningInBrowser = () => {
       return (
@@ -52264,7 +52264,7 @@ var init_detect_platform = __esm({
   }
 });
 
-// node_modules/openai/internal/shims.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/internal/shims.mjs
 function getDefaultFetch() {
   if (typeof fetch !== "undefined") {
     return fetch;
@@ -52336,14 +52336,14 @@ async function CancelReadableStream(stream) {
   await cancelPromise;
 }
 var init_shims = __esm({
-  "node_modules/openai/internal/shims.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/internal/shims.mjs"() {
   }
 });
 
-// node_modules/openai/internal/request-options.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/internal/request-options.mjs
 var FallbackEncoder;
 var init_request_options = __esm({
-  "node_modules/openai/internal/request-options.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/internal/request-options.mjs"() {
     FallbackEncoder = ({ headers, body }) => {
       return {
         bodyHeaders: {
@@ -52355,10 +52355,10 @@ var init_request_options = __esm({
   }
 });
 
-// node_modules/openai/internal/qs/formats.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/internal/qs/formats.mjs
 var default_format, default_formatter, formatters, RFC1738;
 var init_formats = __esm({
-  "node_modules/openai/internal/qs/formats.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/internal/qs/formats.mjs"() {
     default_format = "RFC3986";
     default_formatter = (v) => String(v);
     formatters = {
@@ -52369,7 +52369,7 @@ var init_formats = __esm({
   }
 });
 
-// node_modules/openai/internal/qs/utils.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/internal/qs/utils.mjs
 function is_buffer(obj) {
   if (!obj || typeof obj !== "object") {
     return false;
@@ -52388,7 +52388,7 @@ function maybe_map(val, fn) {
 }
 var has, hex_table, limit, encode;
 var init_utils = __esm({
-  "node_modules/openai/internal/qs/utils.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/internal/qs/utils.mjs"() {
     init_formats();
     init_values();
     has = (obj, key) => (has = Object.hasOwn ?? Function.prototype.call.bind(Object.prototype.hasOwnProperty), has(obj, key));
@@ -52455,7 +52455,7 @@ var init_utils = __esm({
   }
 });
 
-// node_modules/openai/internal/qs/stringify.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/internal/qs/stringify.mjs
 function is_non_nullish_primitive(v) {
   return typeof v === "string" || typeof v === "number" || typeof v === "boolean" || typeof v === "symbol" || typeof v === "bigint";
 }
@@ -52695,7 +52695,7 @@ function stringify(object3, opts = {}) {
 }
 var array_prefix_generators, push_to_array, toISOString, defaults, sentinel;
 var init_stringify = __esm({
-  "node_modules/openai/internal/qs/stringify.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/internal/qs/stringify.mjs"() {
     init_utils();
     init_formats();
     init_values();
@@ -52740,17 +52740,17 @@ var init_stringify = __esm({
   }
 });
 
-// node_modules/openai/internal/utils/query.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/internal/utils/query.mjs
 function stringifyQuery(query) {
   return stringify(query, { arrayFormat: "brackets" });
 }
 var init_query = __esm({
-  "node_modules/openai/internal/utils/query.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/internal/utils/query.mjs"() {
     init_stringify();
   }
 });
 
-// node_modules/openai/internal/utils/bytes.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/internal/utils/bytes.mjs
 function concatBytes(buffers) {
   let length = 0;
   for (const buffer of buffers) {
@@ -52774,11 +52774,11 @@ function decodeUTF8(bytes) {
 }
 var encodeUTF8_, decodeUTF8_;
 var init_bytes = __esm({
-  "node_modules/openai/internal/utils/bytes.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/internal/utils/bytes.mjs"() {
   }
 });
 
-// node_modules/openai/internal/decoders/line.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/internal/decoders/line.mjs
 function findNewlineIndex(buffer, startIndex) {
   const newline = 10;
   const carriage = 13;
@@ -52810,7 +52810,7 @@ function findDoubleNewlineIndex(buffer) {
 }
 var _LineDecoder_buffer, _LineDecoder_carriageReturnIndex, LineDecoder;
 var init_line = __esm({
-  "node_modules/openai/internal/decoders/line.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/internal/decoders/line.mjs"() {
     init_tslib();
     init_bytes();
     LineDecoder = class {
@@ -52860,7 +52860,7 @@ var init_line = __esm({
   }
 });
 
-// node_modules/openai/internal/utils/log.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/internal/utils/log.mjs
 function noop2() {
 }
 function makeLogFn(fnLevel, logger, logLevel) {
@@ -52891,7 +52891,7 @@ function loggerFor(client) {
 }
 var levelNumbers, parseLogLevel, noopLogger, cachedLoggers, formatRequestDetails;
 var init_log = __esm({
-  "node_modules/openai/internal/utils/log.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/internal/utils/log.mjs"() {
     init_values();
     levelNumbers = {
       off: 0,
@@ -52939,7 +52939,7 @@ var init_log = __esm({
   }
 });
 
-// node_modules/openai/core/streaming.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/core/streaming.mjs
 async function* _iterSSEMessages(response, controller) {
   if (!response.body) {
     controller.abort();
@@ -52994,7 +52994,7 @@ function partition(str8, delimiter2) {
 }
 var _Stream_client, Stream4, SSEDecoder;
 var init_streaming = __esm({
-  "node_modules/openai/core/streaming.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/core/streaming.mjs"() {
     init_tslib();
     init_error();
     init_shims();
@@ -53242,7 +53242,7 @@ var init_streaming = __esm({
   }
 });
 
-// node_modules/openai/internal/parse.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/internal/parse.mjs
 async function defaultParseResponse(client, props) {
   const { response, requestLogID, retryOfRequestLogID, startTime } = props;
   const body = await (async () => {
@@ -53292,16 +53292,16 @@ function addRequestID(value, response) {
   });
 }
 var init_parse = __esm({
-  "node_modules/openai/internal/parse.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/internal/parse.mjs"() {
     init_streaming();
     init_log();
   }
 });
 
-// node_modules/openai/core/api-promise.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/core/api-promise.mjs
 var _APIPromise_client, APIPromise2;
 var init_api_promise = __esm({
-  "node_modules/openai/core/api-promise.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/core/api-promise.mjs"() {
     init_tslib();
     init_parse();
     APIPromise2 = class _APIPromise extends Promise {
@@ -53367,10 +53367,10 @@ var init_api_promise = __esm({
   }
 });
 
-// node_modules/openai/core/pagination.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/core/pagination.mjs
 var _AbstractPage_client, AbstractPage, PagePromise, Page, CursorPage, ConversationCursorPage, NextCursorPage;
 var init_pagination = __esm({
-  "node_modules/openai/core/pagination.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/core/pagination.mjs"() {
     init_tslib();
     init_error();
     init_parse();
@@ -53537,10 +53537,10 @@ var init_pagination = __esm({
   }
 });
 
-// node_modules/openai/auth/workload-identity-auth.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/auth/workload-identity-auth.mjs
 var SUBJECT_TOKEN_TYPES, TOKEN_EXCHANGE_GRANT_TYPE, WorkloadIdentityAuth;
 var init_workload_identity_auth = __esm({
-  "node_modules/openai/auth/workload-identity-auth.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/auth/workload-identity-auth.mjs"() {
     init_shims();
     init_error();
     SUBJECT_TOKEN_TYPES = {
@@ -53636,7 +53636,7 @@ var init_workload_identity_auth = __esm({
   }
 });
 
-// node_modules/openai/internal/headers.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/internal/headers.mjs
 function* iterateHeaders(headers) {
   if (!headers)
     return;
@@ -53677,7 +53677,7 @@ function* iterateHeaders(headers) {
 }
 var brand_privateNullableHeaders, httpTokenHeaderName, buildHeaders;
 var init_headers2 = __esm({
-  "node_modules/openai/internal/headers.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/internal/headers.mjs"() {
     init_values();
     brand_privateNullableHeaders = /* @__PURE__ */ Symbol("brand.privateNullableHeaders");
     httpTokenHeaderName = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/;
@@ -53709,7 +53709,7 @@ var init_headers2 = __esm({
   }
 });
 
-// node_modules/openai/internal/uploads.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/internal/uploads.mjs
 function toStreamingFile(data, name, options) {
   if (!name) {
     throw new TypeError("toStreamingFile requires a non-empty file name");
@@ -53850,7 +53850,7 @@ function escapeHeaderValue(value) {
 }
 var brand_privateStreamingFile, checkFileSupport, isAsyncIterable, maybeMultipartFormRequestOptions, multipartFormRequestOptions, supportsFormDataMap, createForm, isNamedBlob, isReadableStream, isStreamingFile, isUploadable, hasStreamingUploadableValue, hasUploadableValue, createStreamingFormRequestOptions, addFormValue;
 var init_uploads = __esm({
-  "node_modules/openai/internal/uploads.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/internal/uploads.mjs"() {
     init_headers2();
     init_shims();
     init_bytes();
@@ -53950,7 +53950,7 @@ var init_uploads = __esm({
   }
 });
 
-// node_modules/openai/internal/to-file.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/internal/to-file.mjs
 async function toFile(value, name, options) {
   checkFileSupport();
   value = await value;
@@ -54000,7 +54000,7 @@ function propsForError(value) {
 }
 var isBlobLike, isFileLike, isResponseLike;
 var init_to_file = __esm({
-  "node_modules/openai/internal/to-file.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/internal/to-file.mjs"() {
     init_uploads();
     init_uploads();
     isBlobLike = (value) => value != null && typeof value === "object" && typeof value.size === "number" && typeof value.type === "string" && typeof value.text === "function" && typeof value.slice === "function" && typeof value.arrayBuffer === "function";
@@ -54009,18 +54009,18 @@ var init_to_file = __esm({
   }
 });
 
-// node_modules/openai/core/uploads.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/core/uploads.mjs
 var init_uploads2 = __esm({
-  "node_modules/openai/core/uploads.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/core/uploads.mjs"() {
     init_uploads();
     init_to_file();
   }
 });
 
-// node_modules/openai/core/resource.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/core/resource.mjs
 var APIResource;
 var init_resource = __esm({
-  "node_modules/openai/core/resource.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/core/resource.mjs"() {
     APIResource = class {
       constructor(client) {
         this._client = client;
@@ -54029,21 +54029,21 @@ var init_resource = __esm({
   }
 });
 
-// node_modules/openai/internal/utils/path.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/internal/utils/path.mjs
 function encodeURIPath(str8) {
   return str8.replace(/[^A-Za-z0-9\-._~!$&'()*+,;=:@]+/g, encodeURIComponent);
 }
-var EMPTY, createPathTagFunction, path13;
+var EMPTY, createPathTagFunction, path14;
 var init_path = __esm({
-  "node_modules/openai/internal/utils/path.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/internal/utils/path.mjs"() {
     init_error();
     EMPTY = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.create(null));
-    createPathTagFunction = (pathEncoder = encodeURIPath) => function path16(statics, ...params) {
+    createPathTagFunction = (pathEncoder = encodeURIPath) => function path17(statics, ...params) {
       if (statics.length === 1)
         return statics[0];
       let postPath = false;
       const invalidSegments = [];
-      const path17 = statics.reduce((previousValue, currentValue, index) => {
+      const path18 = statics.reduce((previousValue, currentValue, index) => {
         if (/[?#]/.test(currentValue)) {
           postPath = true;
         }
@@ -54060,7 +54060,7 @@ var init_path = __esm({
         }
         return previousValue + currentValue + (index === params.length ? "" : encoded);
       }, "");
-      const pathOnly = path17.split(/[?#]/, 1)[0];
+      const pathOnly = path18.split(/[?#]/, 1)[0];
       const invalidSegmentPattern = /(?<=^|\/)(?:\.|%2e){1,2}(?=\/|$)/gi;
       let match2;
       while ((match2 = invalidSegmentPattern.exec(pathOnly)) !== null) {
@@ -54081,19 +54081,19 @@ var init_path = __esm({
         }, "");
         throw new OpenAIError(`Path parameters result in path with invalid segments:
 ${invalidSegments.map((e2) => e2.error).join("\n")}
-${path17}
+${path18}
 ${underline}`);
       }
-      return path17;
+      return path18;
     };
-    path13 = /* @__PURE__ */ createPathTagFunction(encodeURIPath);
+    path14 = /* @__PURE__ */ createPathTagFunction(encodeURIPath);
   }
 });
 
-// node_modules/openai/resources/chat/completions/messages.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/chat/completions/messages.mjs
 var Messages;
 var init_messages = __esm({
-  "node_modules/openai/resources/chat/completions/messages.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/chat/completions/messages.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -54113,20 +54113,20 @@ var init_messages = __esm({
        * ```
        */
       list(completionID, query = {}, options) {
-        return this._client.getAPIList(path13`/chat/completions/${completionID}/messages`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path14`/chat/completions/${completionID}/messages`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
       }
     };
   }
 });
 
-// node_modules/openai/error.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/error.mjs
 var init_error2 = __esm({
-  "node_modules/openai/error.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/error.mjs"() {
     init_error();
   }
 });
 
-// node_modules/openai/lib/parser.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/lib/parser.mjs
 function isChatCompletionFunctionTool(tool) {
   return tool !== void 0 && "function" in tool && tool.function !== void 0;
 }
@@ -54233,15 +54233,15 @@ function validateInputTools(tools) {
   }
 }
 var init_parser = __esm({
-  "node_modules/openai/lib/parser.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/lib/parser.mjs"() {
     init_error2();
   }
 });
 
-// node_modules/openai/lib/chatCompletionUtils.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/lib/chatCompletionUtils.mjs
 var isAssistantMessage, isToolMessage;
 var init_chatCompletionUtils = __esm({
-  "node_modules/openai/lib/chatCompletionUtils.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/lib/chatCompletionUtils.mjs"() {
     isAssistantMessage = (message) => {
       return message?.role === "assistant";
     };
@@ -54251,10 +54251,10 @@ var init_chatCompletionUtils = __esm({
   }
 });
 
-// node_modules/openai/lib/EventStream.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/lib/EventStream.mjs
 var _EventStream_instances, _EventStream_connectedPromise, _EventStream_resolveConnectedPromise, _EventStream_rejectConnectedPromise, _EventStream_endPromise, _EventStream_resolveEndPromise, _EventStream_rejectEndPromise, _EventStream_listeners, _EventStream_abortListeners, _EventStream_ended, _EventStream_errored, _EventStream_aborted, _EventStream_catchingPromiseCreated, _EventStream_removeAbortListeners, _EventStream_handleError, EventStream;
 var init_EventStream = __esm({
-  "node_modules/openai/lib/EventStream.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/lib/EventStream.mjs"() {
     init_tslib();
     init_error2();
     EventStream = class {
@@ -54552,16 +54552,16 @@ var init_EventStream = __esm({
   }
 });
 
-// node_modules/openai/lib/RunnableFunction.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/lib/RunnableFunction.mjs
 function isRunnableFunctionWithParse(fn) {
   return typeof fn.parse === "function";
 }
 var init_RunnableFunction = __esm({
-  "node_modules/openai/lib/RunnableFunction.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/lib/RunnableFunction.mjs"() {
   }
 });
 
-// node_modules/openai/lib/AbstractChatCompletionRunner.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/lib/AbstractChatCompletionRunner.mjs
 function normalizeToolCallIds(chatCompletion) {
   for (const choice of chatCompletion.choices) {
     for (const toolCall of choice.message.tool_calls ?? []) {
@@ -54611,7 +54611,7 @@ function toRequestMessage(message) {
 }
 var _AbstractChatCompletionRunner_instances, _AbstractChatCompletionRunner_getFinalContent, _AbstractChatCompletionRunner_getFinalMessage, _AbstractChatCompletionRunner_getFinalFunctionToolCall, _AbstractChatCompletionRunner_getFinalFunctionToolCallResult, _AbstractChatCompletionRunner_calculateTotalUsage, _AbstractChatCompletionRunner_validateParams, _AbstractChatCompletionRunner_stringifyFunctionCallResult, DEFAULT_MAX_CHAT_COMPLETIONS, AbstractChatCompletionRunner;
 var init_AbstractChatCompletionRunner = __esm({
-  "node_modules/openai/lib/AbstractChatCompletionRunner.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/lib/AbstractChatCompletionRunner.mjs"() {
     init_tslib();
     init_error2();
     init_uuid();
@@ -54908,10 +54908,10 @@ var init_AbstractChatCompletionRunner = __esm({
   }
 });
 
-// node_modules/openai/lib/ChatCompletionRunner.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/lib/ChatCompletionRunner.mjs
 var ChatCompletionRunner;
 var init_ChatCompletionRunner = __esm({
-  "node_modules/openai/lib/ChatCompletionRunner.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/lib/ChatCompletionRunner.mjs"() {
     init_AbstractChatCompletionRunner();
     init_chatCompletionUtils();
     ChatCompletionRunner = class _ChatCompletionRunner extends AbstractChatCompletionRunner {
@@ -54934,7 +54934,7 @@ var init_ChatCompletionRunner = __esm({
   }
 });
 
-// node_modules/openai/_vendor/partial-json-parser/parser.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/_vendor/partial-json-parser/parser.mjs
 function parseJSON(jsonString, allowPartial = Allow.ALL) {
   if (typeof jsonString !== "string") {
     throw new TypeError(`expecting str, got ${typeof jsonString}`);
@@ -54946,7 +54946,7 @@ function parseJSON(jsonString, allowPartial = Allow.ALL) {
 }
 var STR, NUM, ARR, OBJ, NULL, BOOL, NAN, INFINITY, MINUS_INFINITY, INF, SPECIAL, ATOM, COLLECTION, ALL, Allow, PartialJSON, MalformedJSON, _parseJSON, partialParse;
 var init_parser2 = __esm({
-  "node_modules/openai/_vendor/partial-json-parser/parser.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/_vendor/partial-json-parser/parser.mjs"() {
     STR = 1;
     NUM = 2;
     ARR = 4;
@@ -55151,14 +55151,14 @@ var init_parser2 = __esm({
   }
 });
 
-// node_modules/openai/streaming.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/streaming.mjs
 var init_streaming2 = __esm({
-  "node_modules/openai/streaming.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/streaming.mjs"() {
     init_streaming();
   }
 });
 
-// node_modules/openai/lib/ChatCompletionStream.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/lib/ChatCompletionStream.mjs
 function makeChatCompletionReadableStreamMessageChunk(chunk2, message, toolCallIds) {
   const payload = {
     type: "message",
@@ -55285,7 +55285,7 @@ function assertNever2(_x) {
 }
 var _ChatCompletionStream_instances, _ChatCompletionStream_params, _ChatCompletionStream_audioDoneChoiceIndexes, _ChatCompletionStream_choiceEventStates, _ChatCompletionStream_currentChatCompletionSnapshot, _ChatCompletionStream_beginRequest, _ChatCompletionStream_getChoiceEventState, _ChatCompletionStream_addChunk, _ChatCompletionStream_emitToolCallDoneEvent, _ChatCompletionStream_emitContentDoneEvents, _ChatCompletionStream_endRequest, _ChatCompletionStream_getAutoParseableResponseFormat, _ChatCompletionStream_accumulateChatCompletion, CHAT_COMPLETION_READABLE_STREAM_MESSAGE_PREFIX, ChatCompletionStream;
 var init_ChatCompletionStream = __esm({
-  "node_modules/openai/lib/ChatCompletionStream.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/lib/ChatCompletionStream.mjs"() {
     init_tslib();
     init_parser2();
     init_error2();
@@ -55707,10 +55707,10 @@ var init_ChatCompletionStream = __esm({
   }
 });
 
-// node_modules/openai/lib/ChatCompletionStreamingRunner.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/lib/ChatCompletionStreamingRunner.mjs
 var ChatCompletionStreamingRunner;
 var init_ChatCompletionStreamingRunner = __esm({
-  "node_modules/openai/lib/ChatCompletionStreamingRunner.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/lib/ChatCompletionStreamingRunner.mjs"() {
     init_ChatCompletionStream();
     init_error2();
     init_streaming2();
@@ -55810,10 +55810,10 @@ var init_ChatCompletionStreamingRunner = __esm({
   }
 });
 
-// node_modules/openai/resources/chat/completions/completions.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/chat/completions/completions.mjs
 var Completions;
 var init_completions = __esm({
-  "node_modules/openai/resources/chat/completions/completions.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/chat/completions/completions.mjs"() {
     init_resource();
     init_messages();
     init_messages();
@@ -55851,7 +55851,7 @@ var init_completions = __esm({
        * ```
        */
       retrieve(completionID, options) {
-        return this._client.get(path13`/chat/completions/${completionID}`, {
+        return this._client.get(path14`/chat/completions/${completionID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -55870,7 +55870,7 @@ var init_completions = __esm({
        * ```
        */
       update(completionID, body, options) {
-        return this._client.post(path13`/chat/completions/${completionID}`, {
+        return this._client.post(path14`/chat/completions/${completionID}`, {
           body,
           ...options,
           __security: { bearerAuth: true }
@@ -55906,7 +55906,7 @@ var init_completions = __esm({
        * ```
        */
       delete(completionID, options) {
-        return this._client.delete(path13`/chat/completions/${completionID}`, {
+        return this._client.delete(path14`/chat/completions/${completionID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -55938,10 +55938,10 @@ var init_completions = __esm({
   }
 });
 
-// node_modules/openai/resources/chat/chat.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/chat/chat.mjs
 var Chat2;
 var init_chat = __esm({
-  "node_modules/openai/resources/chat/chat.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/chat/chat.mjs"() {
     init_resource();
     init_completions();
     init_completions();
@@ -55955,33 +55955,33 @@ var init_chat = __esm({
   }
 });
 
-// node_modules/openai/resources/chat/completions/index.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/chat/completions/index.mjs
 var init_completions2 = __esm({
-  "node_modules/openai/resources/chat/completions/index.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/chat/completions/index.mjs"() {
     init_completions();
     init_completions();
     init_messages();
   }
 });
 
-// node_modules/openai/resources/chat/index.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/chat/index.mjs
 var init_chat2 = __esm({
-  "node_modules/openai/resources/chat/index.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/chat/index.mjs"() {
     init_chat();
     init_completions2();
   }
 });
 
-// node_modules/openai/resources/shared.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/shared.mjs
 var init_shared = __esm({
-  "node_modules/openai/resources/shared.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/shared.mjs"() {
   }
 });
 
-// node_modules/openai/resources/admin/organization/admin-api-keys.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/admin-api-keys.mjs
 var AdminAPIKeys;
 var init_admin_api_keys = __esm({
-  "node_modules/openai/resources/admin/organization/admin-api-keys.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/admin-api-keys.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -56016,7 +56016,7 @@ var init_admin_api_keys = __esm({
        * ```
        */
       retrieve(keyID, options) {
-        return this._client.get(path13`/organization/admin_api_keys/${keyID}`, {
+        return this._client.get(path14`/organization/admin_api_keys/${keyID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56051,7 +56051,7 @@ var init_admin_api_keys = __esm({
        * ```
        */
       delete(keyID, options) {
-        return this._client.delete(path13`/organization/admin_api_keys/${keyID}`, {
+        return this._client.delete(path14`/organization/admin_api_keys/${keyID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56060,10 +56060,10 @@ var init_admin_api_keys = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/audit-logs.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/audit-logs.mjs
 var AuditLogs;
 var init_audit_logs = __esm({
-  "node_modules/openai/resources/admin/organization/audit-logs.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/audit-logs.mjs"() {
     init_resource();
     init_pagination();
     AuditLogs = class extends APIResource {
@@ -56089,10 +56089,10 @@ var init_audit_logs = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/certificates.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/certificates.mjs
 var Certificates;
 var init_certificates = __esm({
-  "node_modules/openai/resources/admin/organization/certificates.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/certificates.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -56132,7 +56132,7 @@ var init_certificates = __esm({
        * ```
        */
       retrieve(certificateID, query = {}, options) {
-        return this._client.get(path13`/organization/certificates/${certificateID}`, {
+        return this._client.get(path14`/organization/certificates/${certificateID}`, {
           query,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -56150,7 +56150,7 @@ var init_certificates = __esm({
        * ```
        */
       update(certificateID, body, options) {
-        return this._client.post(path13`/organization/certificates/${certificateID}`, {
+        return this._client.post(path14`/organization/certificates/${certificateID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -56184,7 +56184,7 @@ var init_certificates = __esm({
        * ```
        */
       delete(certificateID, options) {
-        return this._client.delete(path13`/organization/certificates/${certificateID}`, {
+        return this._client.delete(path14`/organization/certificates/${certificateID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56234,10 +56234,10 @@ var init_certificates = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/data-retention.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/data-retention.mjs
 var DataRetention;
 var init_data_retention = __esm({
-  "node_modules/openai/resources/admin/organization/data-retention.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/data-retention.mjs"() {
     init_resource();
     DataRetention = class extends APIResource {
       /**
@@ -56277,10 +56277,10 @@ var init_data_retention = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/invites.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/invites.mjs
 var Invites;
 var init_invites = __esm({
-  "node_modules/openai/resources/admin/organization/invites.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/invites.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -56317,7 +56317,7 @@ var init_invites = __esm({
        * ```
        */
       retrieve(inviteID, options) {
-        return this._client.get(path13`/organization/invites/${inviteID}`, {
+        return this._client.get(path14`/organization/invites/${inviteID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56352,7 +56352,7 @@ var init_invites = __esm({
        * ```
        */
       delete(inviteID, options) {
-        return this._client.delete(path13`/organization/invites/${inviteID}`, {
+        return this._client.delete(path14`/organization/invites/${inviteID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56361,10 +56361,10 @@ var init_invites = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/roles.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/roles.mjs
 var Roles;
 var init_roles = __esm({
-  "node_modules/openai/resources/admin/organization/roles.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/roles.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -56398,7 +56398,7 @@ var init_roles = __esm({
        * ```
        */
       retrieve(roleID, options) {
-        return this._client.get(path13`/organization/roles/${roleID}`, {
+        return this._client.get(path14`/organization/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56414,7 +56414,7 @@ var init_roles = __esm({
        * ```
        */
       update(roleID, body, options) {
-        return this._client.post(path13`/organization/roles/${roleID}`, {
+        return this._client.post(path14`/organization/roles/${roleID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -56449,7 +56449,7 @@ var init_roles = __esm({
        * ```
        */
       delete(roleID, options) {
-        return this._client.delete(path13`/organization/roles/${roleID}`, {
+        return this._client.delete(path14`/organization/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56458,10 +56458,10 @@ var init_roles = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/spend-alerts.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/spend-alerts.mjs
 var SpendAlerts;
 var init_spend_alerts = __esm({
-  "node_modules/openai/resources/admin/organization/spend-alerts.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/spend-alerts.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -56502,7 +56502,7 @@ var init_spend_alerts = __esm({
        * ```
        */
       retrieve(alertID, options) {
-        return this._client.get(path13`/organization/spend_alerts/${alertID}`, {
+        return this._client.get(path14`/organization/spend_alerts/${alertID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56528,7 +56528,7 @@ var init_spend_alerts = __esm({
        * ```
        */
       update(alertID, body, options) {
-        return this._client.post(path13`/organization/spend_alerts/${alertID}`, {
+        return this._client.post(path14`/organization/spend_alerts/${alertID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -56560,7 +56560,7 @@ var init_spend_alerts = __esm({
        * ```
        */
       delete(alertID, options) {
-        return this._client.delete(path13`/organization/spend_alerts/${alertID}`, {
+        return this._client.delete(path14`/organization/spend_alerts/${alertID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56569,10 +56569,10 @@ var init_spend_alerts = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/spend-limit.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/spend-limit.mjs
 var SpendLimit;
 var init_spend_limit = __esm({
-  "node_modules/openai/resources/admin/organization/spend-limit.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/spend-limit.mjs"() {
     init_resource();
     SpendLimit = class extends APIResource {
       /**
@@ -56629,10 +56629,10 @@ var init_spend_limit = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/usage.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/usage.mjs
 var Usage;
 var init_usage = __esm({
-  "node_modules/openai/resources/admin/organization/usage.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/usage.mjs"() {
     init_resource();
     Usage = class extends APIResource {
       /**
@@ -56837,10 +56837,10 @@ var init_usage = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/groups/roles.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/groups/roles.mjs
 var Roles2;
 var init_roles2 = __esm({
-  "node_modules/openai/resources/admin/organization/groups/roles.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/groups/roles.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -56858,7 +56858,7 @@ var init_roles2 = __esm({
        * ```
        */
       create(groupID, body, options) {
-        return this._client.post(path13`/organization/groups/${groupID}/roles`, {
+        return this._client.post(path14`/organization/groups/${groupID}/roles`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -56878,7 +56878,7 @@ var init_roles2 = __esm({
        */
       retrieve(roleID, params, options) {
         const { group_id } = params;
-        return this._client.get(path13`/organization/groups/${group_id}/roles/${roleID}`, {
+        return this._client.get(path14`/organization/groups/${group_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56897,7 +56897,7 @@ var init_roles2 = __esm({
        * ```
        */
       list(groupID, query = {}, options) {
-        return this._client.getAPIList(path13`/organization/groups/${groupID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path14`/organization/groups/${groupID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Unassigns an organization role from a group within the organization.
@@ -56913,7 +56913,7 @@ var init_roles2 = __esm({
        */
       delete(roleID, params, options) {
         const { group_id } = params;
-        return this._client.delete(path13`/organization/groups/${group_id}/roles/${roleID}`, {
+        return this._client.delete(path14`/organization/groups/${group_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56922,10 +56922,10 @@ var init_roles2 = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/groups/users.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/groups/users.mjs
 var Users;
 var init_users = __esm({
-  "node_modules/openai/resources/admin/organization/groups/users.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/groups/users.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -56943,7 +56943,7 @@ var init_users = __esm({
        * ```
        */
       create(groupID, body, options) {
-        return this._client.post(path13`/organization/groups/${groupID}/users`, {
+        return this._client.post(path14`/organization/groups/${groupID}/users`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -56963,7 +56963,7 @@ var init_users = __esm({
        */
       retrieve(userID, params, options) {
         const { group_id } = params;
-        return this._client.get(path13`/organization/groups/${group_id}/users/${userID}`, {
+        return this._client.get(path14`/organization/groups/${group_id}/users/${userID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56982,7 +56982,7 @@ var init_users = __esm({
        * ```
        */
       list(groupID, query = {}, options) {
-        return this._client.getAPIList(path13`/organization/groups/${groupID}/users`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path14`/organization/groups/${groupID}/users`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Removes a user from a group.
@@ -56998,7 +56998,7 @@ var init_users = __esm({
        */
       delete(userID, params, options) {
         const { group_id } = params;
-        return this._client.delete(path13`/organization/groups/${group_id}/users/${userID}`, {
+        return this._client.delete(path14`/organization/groups/${group_id}/users/${userID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57007,10 +57007,10 @@ var init_users = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/groups/groups.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/groups/groups.mjs
 var Groups;
 var init_groups = __esm({
-  "node_modules/openai/resources/admin/organization/groups/groups.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/groups/groups.mjs"() {
     init_resource();
     init_roles2();
     init_roles2();
@@ -57053,7 +57053,7 @@ var init_groups = __esm({
        * ```
        */
       retrieve(groupID, options) {
-        return this._client.get(path13`/organization/groups/${groupID}`, {
+        return this._client.get(path14`/organization/groups/${groupID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57070,7 +57070,7 @@ var init_groups = __esm({
        * ```
        */
       update(groupID, body, options) {
-        return this._client.post(path13`/organization/groups/${groupID}`, {
+        return this._client.post(path14`/organization/groups/${groupID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57105,7 +57105,7 @@ var init_groups = __esm({
        * ```
        */
       delete(groupID, options) {
-        return this._client.delete(path13`/organization/groups/${groupID}`, {
+        return this._client.delete(path14`/organization/groups/${groupID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57116,10 +57116,10 @@ var init_groups = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/projects/api-keys.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/projects/api-keys.mjs
 var APIKeys;
 var init_api_keys = __esm({
-  "node_modules/openai/resources/admin/organization/projects/api-keys.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/projects/api-keys.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -57138,7 +57138,7 @@ var init_api_keys = __esm({
        */
       retrieve(apiKeyID, params, options) {
         const { project_id } = params;
-        return this._client.get(path13`/organization/projects/${project_id}/api_keys/${apiKeyID}`, {
+        return this._client.get(path14`/organization/projects/${project_id}/api_keys/${apiKeyID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57157,7 +57157,7 @@ var init_api_keys = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path13`/organization/projects/${projectID}/api_keys`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path14`/organization/projects/${projectID}/api_keys`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Deletes an API key from the project.
@@ -57176,7 +57176,7 @@ var init_api_keys = __esm({
        */
       delete(apiKeyID, params, options) {
         const { project_id } = params;
-        return this._client.delete(path13`/organization/projects/${project_id}/api_keys/${apiKeyID}`, {
+        return this._client.delete(path14`/organization/projects/${project_id}/api_keys/${apiKeyID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57185,10 +57185,10 @@ var init_api_keys = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/projects/certificates.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/projects/certificates.mjs
 var Certificates2;
 var init_certificates2 = __esm({
-  "node_modules/openai/resources/admin/organization/projects/certificates.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/projects/certificates.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -57207,7 +57207,7 @@ var init_certificates2 = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path13`/organization/projects/${projectID}/certificates`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path14`/organization/projects/${projectID}/certificates`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Activate certificates at the project level.
@@ -57226,7 +57226,7 @@ var init_certificates2 = __esm({
        * ```
        */
       activate(projectID, body, options) {
-        return this._client.getAPIList(path13`/organization/projects/${projectID}/certificates/activate`, Page, { body, method: "post", ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path14`/organization/projects/${projectID}/certificates/activate`, Page, { body, method: "post", ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Deactivate certificates at the project level. You can atomically and
@@ -57244,16 +57244,16 @@ var init_certificates2 = __esm({
        * ```
        */
       deactivate(projectID, body, options) {
-        return this._client.getAPIList(path13`/organization/projects/${projectID}/certificates/deactivate`, Page, { body, method: "post", ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path14`/organization/projects/${projectID}/certificates/deactivate`, Page, { body, method: "post", ...options, __security: { adminAPIKeyAuth: true } });
       }
     };
   }
 });
 
-// node_modules/openai/resources/admin/organization/projects/data-retention.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/projects/data-retention.mjs
 var DataRetention2;
 var init_data_retention2 = __esm({
-  "node_modules/openai/resources/admin/organization/projects/data-retention.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/projects/data-retention.mjs"() {
     init_resource();
     init_path();
     DataRetention2 = class extends APIResource {
@@ -57269,7 +57269,7 @@ var init_data_retention2 = __esm({
        * ```
        */
       retrieve(projectID, options) {
-        return this._client.get(path13`/organization/projects/${projectID}/data_retention`, {
+        return this._client.get(path14`/organization/projects/${projectID}/data_retention`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57287,7 +57287,7 @@ var init_data_retention2 = __esm({
        * ```
        */
       update(projectID, body, options) {
-        return this._client.post(path13`/organization/projects/${projectID}/data_retention`, {
+        return this._client.post(path14`/organization/projects/${projectID}/data_retention`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57297,10 +57297,10 @@ var init_data_retention2 = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/projects/hosted-tool-permissions.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/projects/hosted-tool-permissions.mjs
 var HostedToolPermissions;
 var init_hosted_tool_permissions = __esm({
-  "node_modules/openai/resources/admin/organization/projects/hosted-tool-permissions.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/projects/hosted-tool-permissions.mjs"() {
     init_resource();
     init_path();
     HostedToolPermissions = class extends APIResource {
@@ -57316,7 +57316,7 @@ var init_hosted_tool_permissions = __esm({
        * ```
        */
       retrieve(projectID, options) {
-        return this._client.get(path13`/organization/projects/${projectID}/hosted_tool_permissions`, {
+        return this._client.get(path14`/organization/projects/${projectID}/hosted_tool_permissions`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57333,7 +57333,7 @@ var init_hosted_tool_permissions = __esm({
        * ```
        */
       update(projectID, body, options) {
-        return this._client.post(path13`/organization/projects/${projectID}/hosted_tool_permissions`, {
+        return this._client.post(path14`/organization/projects/${projectID}/hosted_tool_permissions`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57343,10 +57343,10 @@ var init_hosted_tool_permissions = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/projects/model-permissions.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/projects/model-permissions.mjs
 var ModelPermissions;
 var init_model_permissions = __esm({
-  "node_modules/openai/resources/admin/organization/projects/model-permissions.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/projects/model-permissions.mjs"() {
     init_resource();
     init_path();
     ModelPermissions = class extends APIResource {
@@ -57362,7 +57362,7 @@ var init_model_permissions = __esm({
        * ```
        */
       retrieve(projectID, options) {
-        return this._client.get(path13`/organization/projects/${projectID}/model_permissions`, {
+        return this._client.get(path14`/organization/projects/${projectID}/model_permissions`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57380,7 +57380,7 @@ var init_model_permissions = __esm({
        * ```
        */
       update(projectID, body, options) {
-        return this._client.post(path13`/organization/projects/${projectID}/model_permissions`, {
+        return this._client.post(path14`/organization/projects/${projectID}/model_permissions`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57398,7 +57398,7 @@ var init_model_permissions = __esm({
        * ```
        */
       delete(projectID, options) {
-        return this._client.delete(path13`/organization/projects/${projectID}/model_permissions`, {
+        return this._client.delete(path14`/organization/projects/${projectID}/model_permissions`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57407,10 +57407,10 @@ var init_model_permissions = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/projects/rate-limits.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/projects/rate-limits.mjs
 var RateLimits;
 var init_rate_limits = __esm({
-  "node_modules/openai/resources/admin/organization/projects/rate-limits.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/projects/rate-limits.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -57429,7 +57429,7 @@ var init_rate_limits = __esm({
        * ```
        */
       listRateLimits(projectID, query = {}, options) {
-        return this._client.getAPIList(path13`/organization/projects/${projectID}/rate_limits`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path14`/organization/projects/${projectID}/rate_limits`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Updates a project rate limit.
@@ -57445,7 +57445,7 @@ var init_rate_limits = __esm({
        */
       updateRateLimit(rateLimitID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path13`/organization/projects/${project_id}/rate_limits/${rateLimitID}`, {
+        return this._client.post(path14`/organization/projects/${project_id}/rate_limits/${rateLimitID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57455,10 +57455,10 @@ var init_rate_limits = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/projects/roles.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/projects/roles.mjs
 var Roles3;
 var init_roles3 = __esm({
-  "node_modules/openai/resources/admin/organization/projects/roles.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/projects/roles.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -57476,7 +57476,7 @@ var init_roles3 = __esm({
        * ```
        */
       create(projectID, body, options) {
-        return this._client.post(path13`/projects/${projectID}/roles`, {
+        return this._client.post(path14`/projects/${projectID}/roles`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57496,7 +57496,7 @@ var init_roles3 = __esm({
        */
       retrieve(roleID, params, options) {
         const { project_id } = params;
-        return this._client.get(path13`/projects/${project_id}/roles/${roleID}`, {
+        return this._client.get(path14`/projects/${project_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57515,7 +57515,7 @@ var init_roles3 = __esm({
        */
       update(roleID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path13`/projects/${project_id}/roles/${roleID}`, {
+        return this._client.post(path14`/projects/${project_id}/roles/${roleID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57535,7 +57535,7 @@ var init_roles3 = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path13`/projects/${projectID}/roles`, NextCursorPage, {
+        return this._client.getAPIList(path14`/projects/${projectID}/roles`, NextCursorPage, {
           query,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57555,7 +57555,7 @@ var init_roles3 = __esm({
        */
       delete(roleID, params, options) {
         const { project_id } = params;
-        return this._client.delete(path13`/projects/${project_id}/roles/${roleID}`, {
+        return this._client.delete(path14`/projects/${project_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57564,10 +57564,10 @@ var init_roles3 = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/projects/spend-alerts.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/projects/spend-alerts.mjs
 var SpendAlerts2;
 var init_spend_alerts2 = __esm({
-  "node_modules/openai/resources/admin/organization/projects/spend-alerts.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/projects/spend-alerts.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -57593,7 +57593,7 @@ var init_spend_alerts2 = __esm({
        * ```
        */
       create(projectID, body, options) {
-        return this._client.post(path13`/organization/projects/${projectID}/spend_alerts`, {
+        return this._client.post(path14`/organization/projects/${projectID}/spend_alerts`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57613,7 +57613,7 @@ var init_spend_alerts2 = __esm({
        */
       retrieve(alertID, params, options) {
         const { project_id } = params;
-        return this._client.get(path13`/organization/projects/${project_id}/spend_alerts/${alertID}`, {
+        return this._client.get(path14`/organization/projects/${project_id}/spend_alerts/${alertID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57641,7 +57641,7 @@ var init_spend_alerts2 = __esm({
        */
       update(alertID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path13`/organization/projects/${project_id}/spend_alerts/${alertID}`, {
+        return this._client.post(path14`/organization/projects/${project_id}/spend_alerts/${alertID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57661,7 +57661,7 @@ var init_spend_alerts2 = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path13`/organization/projects/${projectID}/spend_alerts`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path14`/organization/projects/${projectID}/spend_alerts`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Deletes a project spend alert.
@@ -57677,7 +57677,7 @@ var init_spend_alerts2 = __esm({
        */
       delete(alertID, params, options) {
         const { project_id } = params;
-        return this._client.delete(path13`/organization/projects/${project_id}/spend_alerts/${alertID}`, {
+        return this._client.delete(path14`/organization/projects/${project_id}/spend_alerts/${alertID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57686,10 +57686,10 @@ var init_spend_alerts2 = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/projects/spend-limit.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/projects/spend-limit.mjs
 var SpendLimit2;
 var init_spend_limit2 = __esm({
-  "node_modules/openai/resources/admin/organization/projects/spend-limit.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/projects/spend-limit.mjs"() {
     init_resource();
     init_path();
     SpendLimit2 = class extends APIResource {
@@ -57705,7 +57705,7 @@ var init_spend_limit2 = __esm({
        * ```
        */
       retrieve(projectID, options) {
-        return this._client.get(path13`/organization/projects/${projectID}/spend_limit`, {
+        return this._client.get(path14`/organization/projects/${projectID}/spend_limit`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57727,7 +57727,7 @@ var init_spend_limit2 = __esm({
        * ```
        */
       update(projectID, body, options) {
-        return this._client.post(path13`/organization/projects/${projectID}/spend_limit`, {
+        return this._client.post(path14`/organization/projects/${projectID}/spend_limit`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57745,7 +57745,7 @@ var init_spend_limit2 = __esm({
        * ```
        */
       delete(projectID, options) {
-        return this._client.delete(path13`/organization/projects/${projectID}/spend_limit`, {
+        return this._client.delete(path14`/organization/projects/${projectID}/spend_limit`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57754,10 +57754,10 @@ var init_spend_limit2 = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/projects/groups/roles.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/projects/groups/roles.mjs
 var Roles4;
 var init_roles4 = __esm({
-  "node_modules/openai/resources/admin/organization/projects/groups/roles.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/projects/groups/roles.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -57776,7 +57776,7 @@ var init_roles4 = __esm({
        */
       create(groupID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path13`/projects/${project_id}/groups/${groupID}/roles`, {
+        return this._client.post(path14`/projects/${project_id}/groups/${groupID}/roles`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57796,7 +57796,7 @@ var init_roles4 = __esm({
        */
       retrieve(roleID, params, options) {
         const { project_id, group_id } = params;
-        return this._client.get(path13`/projects/${project_id}/groups/${group_id}/roles/${roleID}`, {
+        return this._client.get(path14`/projects/${project_id}/groups/${group_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57817,7 +57817,7 @@ var init_roles4 = __esm({
        */
       list(groupID, params, options) {
         const { project_id, ...query } = params;
-        return this._client.getAPIList(path13`/projects/${project_id}/groups/${groupID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path14`/projects/${project_id}/groups/${groupID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Unassigns a project role from a group within a project.
@@ -57833,7 +57833,7 @@ var init_roles4 = __esm({
        */
       delete(roleID, params, options) {
         const { project_id, group_id } = params;
-        return this._client.delete(path13`/projects/${project_id}/groups/${group_id}/roles/${roleID}`, {
+        return this._client.delete(path14`/projects/${project_id}/groups/${group_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57842,10 +57842,10 @@ var init_roles4 = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/projects/groups/groups.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/projects/groups/groups.mjs
 var Groups2;
 var init_groups2 = __esm({
-  "node_modules/openai/resources/admin/organization/projects/groups/groups.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/projects/groups/groups.mjs"() {
     init_resource();
     init_roles4();
     init_roles4();
@@ -57869,7 +57869,7 @@ var init_groups2 = __esm({
        * ```
        */
       create(projectID, body, options) {
-        return this._client.post(path13`/organization/projects/${projectID}/groups`, {
+        return this._client.post(path14`/organization/projects/${projectID}/groups`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57889,7 +57889,7 @@ var init_groups2 = __esm({
        */
       retrieve(groupID, params, options) {
         const { project_id, ...query } = params;
-        return this._client.get(path13`/organization/projects/${project_id}/groups/${groupID}`, {
+        return this._client.get(path14`/organization/projects/${project_id}/groups/${groupID}`, {
           query,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57909,7 +57909,7 @@ var init_groups2 = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path13`/organization/projects/${projectID}/groups`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path14`/organization/projects/${projectID}/groups`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Revokes a group's access to a project.
@@ -57925,7 +57925,7 @@ var init_groups2 = __esm({
        */
       delete(groupID, params, options) {
         const { project_id } = params;
-        return this._client.delete(path13`/organization/projects/${project_id}/groups/${groupID}`, {
+        return this._client.delete(path14`/organization/projects/${project_id}/groups/${groupID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57935,10 +57935,10 @@ var init_groups2 = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/projects/service-accounts/api-keys.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/projects/service-accounts/api-keys.mjs
 var APIKeys2;
 var init_api_keys2 = __esm({
-  "node_modules/openai/resources/admin/organization/projects/service-accounts/api-keys.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/projects/service-accounts/api-keys.mjs"() {
     init_resource();
     init_path();
     APIKeys2 = class extends APIResource {
@@ -57956,16 +57956,16 @@ var init_api_keys2 = __esm({
        */
       create(serviceAccountID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path13`/organization/projects/${project_id}/service_accounts/${serviceAccountID}/api_keys`, { body, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.post(path14`/organization/projects/${project_id}/service_accounts/${serviceAccountID}/api_keys`, { body, ...options, __security: { adminAPIKeyAuth: true } });
       }
     };
   }
 });
 
-// node_modules/openai/resources/admin/organization/projects/service-accounts/service-accounts.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/projects/service-accounts/service-accounts.mjs
 var ServiceAccounts;
 var init_service_accounts = __esm({
-  "node_modules/openai/resources/admin/organization/projects/service-accounts/service-accounts.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/projects/service-accounts/service-accounts.mjs"() {
     init_resource();
     init_api_keys2();
     init_api_keys2();
@@ -57990,7 +57990,7 @@ var init_service_accounts = __esm({
        * ```
        */
       create(projectID, body, options) {
-        return this._client.post(path13`/organization/projects/${projectID}/service_accounts`, {
+        return this._client.post(path14`/organization/projects/${projectID}/service_accounts`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -58010,7 +58010,7 @@ var init_service_accounts = __esm({
        */
       retrieve(serviceAccountID, params, options) {
         const { project_id } = params;
-        return this._client.get(path13`/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, {
+        return this._client.get(path14`/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58029,7 +58029,7 @@ var init_service_accounts = __esm({
        */
       update(serviceAccountID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path13`/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, { body, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.post(path14`/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, { body, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Returns a list of service accounts in the project.
@@ -58045,7 +58045,7 @@ var init_service_accounts = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path13`/organization/projects/${projectID}/service_accounts`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path14`/organization/projects/${projectID}/service_accounts`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Deletes a service account from the project.
@@ -58064,17 +58064,17 @@ var init_service_accounts = __esm({
        */
       delete(serviceAccountID, params, options) {
         const { project_id } = params;
-        return this._client.delete(path13`/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, { ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.delete(path14`/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, { ...options, __security: { adminAPIKeyAuth: true } });
       }
     };
     ServiceAccounts.APIKeys = APIKeys2;
   }
 });
 
-// node_modules/openai/resources/admin/organization/projects/users/roles.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/projects/users/roles.mjs
 var Roles5;
 var init_roles5 = __esm({
-  "node_modules/openai/resources/admin/organization/projects/users/roles.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/projects/users/roles.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -58093,7 +58093,7 @@ var init_roles5 = __esm({
        */
       create(userID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path13`/projects/${project_id}/users/${userID}/roles`, {
+        return this._client.post(path14`/projects/${project_id}/users/${userID}/roles`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -58113,7 +58113,7 @@ var init_roles5 = __esm({
        */
       retrieve(roleID, params, options) {
         const { project_id, user_id } = params;
-        return this._client.get(path13`/projects/${project_id}/users/${user_id}/roles/${roleID}`, {
+        return this._client.get(path14`/projects/${project_id}/users/${user_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58134,7 +58134,7 @@ var init_roles5 = __esm({
        */
       list(userID, params, options) {
         const { project_id, ...query } = params;
-        return this._client.getAPIList(path13`/projects/${project_id}/users/${userID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path14`/projects/${project_id}/users/${userID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Unassigns a project role from a user within a project.
@@ -58150,7 +58150,7 @@ var init_roles5 = __esm({
        */
       delete(roleID, params, options) {
         const { project_id, user_id } = params;
-        return this._client.delete(path13`/projects/${project_id}/users/${user_id}/roles/${roleID}`, {
+        return this._client.delete(path14`/projects/${project_id}/users/${user_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58159,10 +58159,10 @@ var init_roles5 = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/projects/users/users.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/projects/users/users.mjs
 var Users2;
 var init_users2 = __esm({
-  "node_modules/openai/resources/admin/organization/projects/users/users.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/projects/users/users.mjs"() {
     init_resource();
     init_roles5();
     init_roles5();
@@ -58187,7 +58187,7 @@ var init_users2 = __esm({
        * ```
        */
       create(projectID, body, options) {
-        return this._client.post(path13`/organization/projects/${projectID}/users`, {
+        return this._client.post(path14`/organization/projects/${projectID}/users`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -58207,7 +58207,7 @@ var init_users2 = __esm({
        */
       retrieve(userID, params, options) {
         const { project_id } = params;
-        return this._client.get(path13`/organization/projects/${project_id}/users/${userID}`, {
+        return this._client.get(path14`/organization/projects/${project_id}/users/${userID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58226,7 +58226,7 @@ var init_users2 = __esm({
        */
       update(userID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path13`/organization/projects/${project_id}/users/${userID}`, {
+        return this._client.post(path14`/organization/projects/${project_id}/users/${userID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -58246,7 +58246,7 @@ var init_users2 = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path13`/organization/projects/${projectID}/users`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path14`/organization/projects/${projectID}/users`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Deletes a user from the project.
@@ -58265,7 +58265,7 @@ var init_users2 = __esm({
        */
       delete(userID, params, options) {
         const { project_id } = params;
-        return this._client.delete(path13`/organization/projects/${project_id}/users/${userID}`, {
+        return this._client.delete(path14`/organization/projects/${project_id}/users/${userID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58275,10 +58275,10 @@ var init_users2 = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/projects/projects.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/projects/projects.mjs
 var Projects;
 var init_projects = __esm({
-  "node_modules/openai/resources/admin/organization/projects/projects.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/projects/projects.mjs"() {
     init_resource();
     init_api_keys();
     init_api_keys();
@@ -58353,7 +58353,7 @@ var init_projects = __esm({
        * ```
        */
       retrieve(projectID, options) {
-        return this._client.get(path13`/organization/projects/${projectID}`, {
+        return this._client.get(path14`/organization/projects/${projectID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58370,7 +58370,7 @@ var init_projects = __esm({
        * ```
        */
       update(projectID, body, options) {
-        return this._client.post(path13`/organization/projects/${projectID}`, {
+        return this._client.post(path14`/organization/projects/${projectID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -58407,7 +58407,7 @@ var init_projects = __esm({
        * ```
        */
       archive(projectID, options) {
-        return this._client.post(path13`/organization/projects/${projectID}/archive`, {
+        return this._client.post(path14`/organization/projects/${projectID}/archive`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58428,10 +58428,10 @@ var init_projects = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/users/roles.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/users/roles.mjs
 var Roles6;
 var init_roles6 = __esm({
-  "node_modules/openai/resources/admin/organization/users/roles.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/users/roles.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -58449,7 +58449,7 @@ var init_roles6 = __esm({
        * ```
        */
       create(userID, body, options) {
-        return this._client.post(path13`/organization/users/${userID}/roles`, {
+        return this._client.post(path14`/organization/users/${userID}/roles`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -58469,7 +58469,7 @@ var init_roles6 = __esm({
        */
       retrieve(roleID, params, options) {
         const { user_id } = params;
-        return this._client.get(path13`/organization/users/${user_id}/roles/${roleID}`, {
+        return this._client.get(path14`/organization/users/${user_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58488,7 +58488,7 @@ var init_roles6 = __esm({
        * ```
        */
       list(userID, query = {}, options) {
-        return this._client.getAPIList(path13`/organization/users/${userID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path14`/organization/users/${userID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Unassigns an organization role from a user within the organization.
@@ -58504,7 +58504,7 @@ var init_roles6 = __esm({
        */
       delete(roleID, params, options) {
         const { user_id } = params;
-        return this._client.delete(path13`/organization/users/${user_id}/roles/${roleID}`, {
+        return this._client.delete(path14`/organization/users/${user_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58513,10 +58513,10 @@ var init_roles6 = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/users/users.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/users/users.mjs
 var Users3;
 var init_users3 = __esm({
-  "node_modules/openai/resources/admin/organization/users/users.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/users/users.mjs"() {
     init_resource();
     init_roles6();
     init_roles6();
@@ -58537,7 +58537,7 @@ var init_users3 = __esm({
        * ```
        */
       retrieve(userID, options) {
-        return this._client.get(path13`/organization/users/${userID}`, {
+        return this._client.get(path14`/organization/users/${userID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58552,7 +58552,7 @@ var init_users3 = __esm({
        * ```
        */
       update(userID, body, options) {
-        return this._client.post(path13`/organization/users/${userID}`, {
+        return this._client.post(path14`/organization/users/${userID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -58587,7 +58587,7 @@ var init_users3 = __esm({
        * ```
        */
       delete(userID, options) {
-        return this._client.delete(path13`/organization/users/${userID}`, {
+        return this._client.delete(path14`/organization/users/${userID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58597,10 +58597,10 @@ var init_users3 = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/organization/organization.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/organization.mjs
 var Organization;
 var init_organization = __esm({
-  "node_modules/openai/resources/admin/organization/organization.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/admin/organization/organization.mjs"() {
     init_resource();
     init_admin_api_keys();
     init_admin_api_keys();
@@ -58658,10 +58658,10 @@ var init_organization = __esm({
   }
 });
 
-// node_modules/openai/resources/admin/admin.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/admin/admin.mjs
 var Admin;
 var init_admin = __esm({
-  "node_modules/openai/resources/admin/admin.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/admin/admin.mjs"() {
     init_resource();
     init_organization();
     init_organization();
@@ -58675,10 +58675,10 @@ var init_admin = __esm({
   }
 });
 
-// node_modules/openai/resources/audio/speech.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/audio/speech.mjs
 var Speech;
 var init_speech = __esm({
-  "node_modules/openai/resources/audio/speech.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/audio/speech.mjs"() {
     init_resource();
     init_headers2();
     Speech = class extends APIResource {
@@ -58712,10 +58712,10 @@ var init_speech = __esm({
   }
 });
 
-// node_modules/openai/resources/audio/transcriptions.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/audio/transcriptions.mjs
 var Transcriptions;
 var init_transcriptions = __esm({
-  "node_modules/openai/resources/audio/transcriptions.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/audio/transcriptions.mjs"() {
     init_resource();
     init_uploads();
     Transcriptions = class extends APIResource {
@@ -58732,10 +58732,10 @@ var init_transcriptions = __esm({
   }
 });
 
-// node_modules/openai/resources/audio/translations.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/audio/translations.mjs
 var Translations;
 var init_translations = __esm({
-  "node_modules/openai/resources/audio/translations.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/audio/translations.mjs"() {
     init_resource();
     init_uploads();
     Translations = class extends APIResource {
@@ -58746,10 +58746,10 @@ var init_translations = __esm({
   }
 });
 
-// node_modules/openai/resources/audio/audio.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/audio/audio.mjs
 var Audio;
 var init_audio = __esm({
-  "node_modules/openai/resources/audio/audio.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/audio/audio.mjs"() {
     init_resource();
     init_speech();
     init_speech();
@@ -58771,10 +58771,10 @@ var init_audio = __esm({
   }
 });
 
-// node_modules/openai/resources/batches.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/batches.mjs
 var Batches2;
 var init_batches = __esm({
-  "node_modules/openai/resources/batches.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/batches.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -58789,7 +58789,7 @@ var init_batches = __esm({
        * Retrieves a batch.
        */
       retrieve(batchID, options) {
-        return this._client.get(path13`/batches/${batchID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path14`/batches/${batchID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * List your organization's batches.
@@ -58807,7 +58807,7 @@ var init_batches = __esm({
        * (if any) available in the output file.
        */
       cancel(batchID, options) {
-        return this._client.post(path13`/batches/${batchID}/cancel`, {
+        return this._client.post(path14`/batches/${batchID}/cancel`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -58816,10 +58816,10 @@ var init_batches = __esm({
   }
 });
 
-// node_modules/openai/resources/beta/assistants.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/beta/assistants.mjs
 var Assistants;
 var init_assistants = __esm({
-  "node_modules/openai/resources/beta/assistants.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/beta/assistants.mjs"() {
     init_resource();
     init_pagination();
     init_headers2();
@@ -58844,7 +58844,7 @@ var init_assistants = __esm({
        * @deprecated
        */
       retrieve(assistantID, options) {
-        return this._client.get(path13`/assistants/${assistantID}`, {
+        return this._client.get(path14`/assistants/${assistantID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -58856,7 +58856,7 @@ var init_assistants = __esm({
        * @deprecated
        */
       update(assistantID, body, options) {
-        return this._client.post(path13`/assistants/${assistantID}`, {
+        return this._client.post(path14`/assistants/${assistantID}`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -58882,7 +58882,7 @@ var init_assistants = __esm({
        * @deprecated
        */
       delete(assistantID, options) {
-        return this._client.delete(path13`/assistants/${assistantID}`, {
+        return this._client.delete(path14`/assistants/${assistantID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -58892,10 +58892,10 @@ var init_assistants = __esm({
   }
 });
 
-// node_modules/openai/resources/beta/realtime/sessions.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/beta/realtime/sessions.mjs
 var Sessions;
 var init_sessions = __esm({
-  "node_modules/openai/resources/beta/realtime/sessions.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/beta/realtime/sessions.mjs"() {
     init_resource();
     init_headers2();
     Sessions = class extends APIResource {
@@ -58926,10 +58926,10 @@ var init_sessions = __esm({
   }
 });
 
-// node_modules/openai/resources/beta/realtime/transcription-sessions.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/beta/realtime/transcription-sessions.mjs
 var TranscriptionSessions;
 var init_transcription_sessions = __esm({
-  "node_modules/openai/resources/beta/realtime/transcription-sessions.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/beta/realtime/transcription-sessions.mjs"() {
     init_resource();
     init_headers2();
     TranscriptionSessions = class extends APIResource {
@@ -58960,10 +58960,10 @@ var init_transcription_sessions = __esm({
   }
 });
 
-// node_modules/openai/resources/beta/realtime/realtime.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/beta/realtime/realtime.mjs
 var Realtime;
 var init_realtime = __esm({
-  "node_modules/openai/resources/beta/realtime/realtime.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/beta/realtime/realtime.mjs"() {
     init_resource();
     init_sessions();
     init_sessions();
@@ -58981,10 +58981,10 @@ var init_realtime = __esm({
   }
 });
 
-// node_modules/openai/resources/beta/chatkit/sessions.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/beta/chatkit/sessions.mjs
 var Sessions2;
 var init_sessions2 = __esm({
-  "node_modules/openai/resources/beta/chatkit/sessions.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/beta/chatkit/sessions.mjs"() {
     init_resource();
     init_headers2();
     init_path();
@@ -59021,7 +59021,7 @@ var init_sessions2 = __esm({
        * ```
        */
       cancel(sessionID, options) {
-        return this._client.post(path13`/chatkit/sessions/${sessionID}/cancel`, {
+        return this._client.post(path14`/chatkit/sessions/${sessionID}/cancel`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "chatkit_beta=v1" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -59031,10 +59031,10 @@ var init_sessions2 = __esm({
   }
 });
 
-// node_modules/openai/resources/beta/chatkit/threads.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/beta/chatkit/threads.mjs
 var Threads;
 var init_threads = __esm({
-  "node_modules/openai/resources/beta/chatkit/threads.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/beta/chatkit/threads.mjs"() {
     init_resource();
     init_pagination();
     init_headers2();
@@ -59050,7 +59050,7 @@ var init_threads = __esm({
        * ```
        */
       retrieve(threadID, options) {
-        return this._client.get(path13`/chatkit/threads/${threadID}`, {
+        return this._client.get(path14`/chatkit/threads/${threadID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "chatkit_beta=v1" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -59086,7 +59086,7 @@ var init_threads = __esm({
        * ```
        */
       delete(threadID, options) {
-        return this._client.delete(path13`/chatkit/threads/${threadID}`, {
+        return this._client.delete(path14`/chatkit/threads/${threadID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "chatkit_beta=v1" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -59106,7 +59106,7 @@ var init_threads = __esm({
        * ```
        */
       listItems(threadID, query = {}, options) {
-        return this._client.getAPIList(path13`/chatkit/threads/${threadID}/items`, ConversationCursorPage, {
+        return this._client.getAPIList(path14`/chatkit/threads/${threadID}/items`, ConversationCursorPage, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "chatkit_beta=v1" }, options?.headers]),
@@ -59117,10 +59117,10 @@ var init_threads = __esm({
   }
 });
 
-// node_modules/openai/resources/beta/chatkit/chatkit.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/beta/chatkit/chatkit.mjs
 var ChatKit;
 var init_chatkit = __esm({
-  "node_modules/openai/resources/beta/chatkit/chatkit.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/beta/chatkit/chatkit.mjs"() {
     init_resource();
     init_sessions2();
     init_sessions2();
@@ -59138,10 +59138,10 @@ var init_chatkit = __esm({
   }
 });
 
-// node_modules/openai/resources/beta/responses/input-items.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/beta/responses/input-items.mjs
 var InputItems;
 var init_input_items = __esm({
-  "node_modules/openai/resources/beta/responses/input-items.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/beta/responses/input-items.mjs"() {
     init_resource();
     init_pagination();
     init_headers2();
@@ -59162,7 +59162,7 @@ var init_input_items = __esm({
        */
       list(responseID, params = {}, options) {
         const { betas, ...query } = params ?? {};
-        return this._client.getAPIList(path13`/responses/${responseID}/input_items?beta=true`, CursorPage, {
+        return this._client.getAPIList(path14`/responses/${responseID}/input_items?beta=true`, CursorPage, {
           query,
           ...options,
           headers: buildHeaders([
@@ -59176,10 +59176,10 @@ var init_input_items = __esm({
   }
 });
 
-// node_modules/openai/resources/beta/responses/input-tokens.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/beta/responses/input-tokens.mjs
 var InputTokens;
 var init_input_tokens = __esm({
-  "node_modules/openai/resources/beta/responses/input-tokens.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/beta/responses/input-tokens.mjs"() {
     init_resource();
     init_headers2();
     InputTokens = class extends APIResource {
@@ -59211,10 +59211,10 @@ var init_input_tokens = __esm({
   }
 });
 
-// node_modules/openai/resources/beta/responses/responses.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/beta/responses/responses.mjs
 var Responses;
 var init_responses = __esm({
-  "node_modules/openai/resources/beta/responses/responses.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/beta/responses/responses.mjs"() {
     init_resource();
     init_input_items();
     init_input_items();
@@ -59243,7 +59243,7 @@ var init_responses = __esm({
       }
       retrieve(responseID, params = {}, options) {
         const { betas, ...query } = params ?? {};
-        return this._client.get(path13`/responses/${responseID}?beta=true`, {
+        return this._client.get(path14`/responses/${responseID}?beta=true`, {
           query,
           ...options,
           headers: buildHeaders([
@@ -59266,7 +59266,7 @@ var init_responses = __esm({
        */
       delete(responseID, params = {}, options) {
         const { betas } = params ?? {};
-        return this._client.delete(path13`/responses/${responseID}?beta=true`, {
+        return this._client.delete(path14`/responses/${responseID}?beta=true`, {
           ...options,
           headers: buildHeaders([
             { Accept: "*/*", ...betas?.toString() != null ? { "openai-beta": betas?.toString() } : void 0 },
@@ -59289,7 +59289,7 @@ var init_responses = __esm({
        */
       cancel(responseID, params = {}, options) {
         const { betas } = params ?? {};
-        return this._client.post(path13`/responses/${responseID}/cancel?beta=true`, {
+        return this._client.post(path14`/responses/${responseID}/cancel?beta=true`, {
           ...options,
           headers: buildHeaders([
             { ...betas?.toString() != null ? { "openai-beta": betas?.toString() } : void 0 },
@@ -59332,10 +59332,10 @@ var init_responses = __esm({
   }
 });
 
-// node_modules/openai/resources/beta/threads/messages.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/beta/threads/messages.mjs
 var Messages2;
 var init_messages2 = __esm({
-  "node_modules/openai/resources/beta/threads/messages.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/beta/threads/messages.mjs"() {
     init_resource();
     init_pagination();
     init_headers2();
@@ -59347,7 +59347,7 @@ var init_messages2 = __esm({
        * @deprecated The Assistants API is deprecated in favor of the Responses API
        */
       create(threadID, body, options) {
-        return this._client.post(path13`/threads/${threadID}/messages`, {
+        return this._client.post(path14`/threads/${threadID}/messages`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -59361,7 +59361,7 @@ var init_messages2 = __esm({
        */
       retrieve(messageID, params, options) {
         const { thread_id } = params;
-        return this._client.get(path13`/threads/${thread_id}/messages/${messageID}`, {
+        return this._client.get(path14`/threads/${thread_id}/messages/${messageID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -59374,7 +59374,7 @@ var init_messages2 = __esm({
        */
       update(messageID, params, options) {
         const { thread_id, ...body } = params;
-        return this._client.post(path13`/threads/${thread_id}/messages/${messageID}`, {
+        return this._client.post(path14`/threads/${thread_id}/messages/${messageID}`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -59387,7 +59387,7 @@ var init_messages2 = __esm({
        * @deprecated The Assistants API is deprecated in favor of the Responses API
        */
       list(threadID, query = {}, options) {
-        return this._client.getAPIList(path13`/threads/${threadID}/messages`, CursorPage, {
+        return this._client.getAPIList(path14`/threads/${threadID}/messages`, CursorPage, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -59401,7 +59401,7 @@ var init_messages2 = __esm({
        */
       delete(messageID, params, options) {
         const { thread_id } = params;
-        return this._client.delete(path13`/threads/${thread_id}/messages/${messageID}`, {
+        return this._client.delete(path14`/threads/${thread_id}/messages/${messageID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -59411,10 +59411,10 @@ var init_messages2 = __esm({
   }
 });
 
-// node_modules/openai/resources/beta/threads/runs/steps.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/beta/threads/runs/steps.mjs
 var Steps;
 var init_steps = __esm({
-  "node_modules/openai/resources/beta/threads/runs/steps.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/beta/threads/runs/steps.mjs"() {
     init_resource();
     init_pagination();
     init_headers2();
@@ -59427,7 +59427,7 @@ var init_steps = __esm({
        */
       retrieve(stepID, params, options) {
         const { thread_id, run_id, ...query } = params;
-        return this._client.get(path13`/threads/${thread_id}/runs/${run_id}/steps/${stepID}`, {
+        return this._client.get(path14`/threads/${thread_id}/runs/${run_id}/steps/${stepID}`, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -59441,7 +59441,7 @@ var init_steps = __esm({
        */
       list(runID, params, options) {
         const { thread_id, ...query } = params;
-        return this._client.getAPIList(path13`/threads/${thread_id}/runs/${runID}/steps`, CursorPage, {
+        return this._client.getAPIList(path14`/threads/${thread_id}/runs/${runID}/steps`, CursorPage, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -59452,10 +59452,10 @@ var init_steps = __esm({
   }
 });
 
-// node_modules/openai/internal/utils/base64.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/internal/utils/base64.mjs
 var toFloat32Array;
 var init_base64 = __esm({
-  "node_modules/openai/internal/utils/base64.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/internal/utils/base64.mjs"() {
     init_error();
     init_bytes();
     toFloat32Array = (base64Str) => {
@@ -59475,10 +59475,10 @@ var init_base64 = __esm({
   }
 });
 
-// node_modules/openai/internal/utils/env.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/internal/utils/env.mjs
 var readEnv;
 var init_env = __esm({
-  "node_modules/openai/internal/utils/env.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/internal/utils/env.mjs"() {
     readEnv = (env2) => {
       if (typeof globalThis.process !== "undefined") {
         return globalThis.process.env?.[env2]?.trim() || void 0;
@@ -59491,9 +59491,9 @@ var init_env = __esm({
   }
 });
 
-// node_modules/openai/internal/utils.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/internal/utils.mjs
 var init_utils2 = __esm({
-  "node_modules/openai/internal/utils.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/internal/utils.mjs"() {
     init_values();
     init_base64();
     init_env();
@@ -59504,12 +59504,12 @@ var init_utils2 = __esm({
   }
 });
 
-// node_modules/openai/lib/AssistantStream.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/lib/AssistantStream.mjs
 function assertNever3(_x) {
 }
 var _AssistantStream_instances, _a2, _AssistantStream_events, _AssistantStream_runStepSnapshots, _AssistantStream_messageSnapshots, _AssistantStream_messageSnapshot, _AssistantStream_finalRun, _AssistantStream_currentContentIndex, _AssistantStream_currentContent, _AssistantStream_currentToolCallIndex, _AssistantStream_currentToolCall, _AssistantStream_currentEvent, _AssistantStream_currentRunSnapshot, _AssistantStream_currentRunStepSnapshot, _AssistantStream_addEvent, _AssistantStream_endRequest, _AssistantStream_handleMessage, _AssistantStream_handleRunStep, _AssistantStream_handleEvent, _AssistantStream_accumulateRunStep, _AssistantStream_accumulateMessage, _AssistantStream_accumulateContent, _AssistantStream_handleRun, AssistantStream;
 var init_AssistantStream = __esm({
-  "node_modules/openai/lib/AssistantStream.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/lib/AssistantStream.mjs"() {
     init_tslib();
     init_streaming2();
     init_error2();
@@ -60011,10 +60011,10 @@ var init_AssistantStream = __esm({
   }
 });
 
-// node_modules/openai/resources/beta/threads/runs/runs.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/beta/threads/runs/runs.mjs
 var Runs;
 var init_runs = __esm({
-  "node_modules/openai/resources/beta/threads/runs/runs.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/beta/threads/runs/runs.mjs"() {
     init_resource();
     init_steps();
     init_steps();
@@ -60030,7 +60030,7 @@ var init_runs = __esm({
       }
       create(threadID, params, options) {
         const { include, ...body } = params;
-        return this._client.post(path13`/threads/${threadID}/runs`, {
+        return this._client.post(path14`/threads/${threadID}/runs`, {
           query: { include },
           body,
           ...options,
@@ -60047,7 +60047,7 @@ var init_runs = __esm({
        */
       retrieve(runID, params, options) {
         const { thread_id } = params;
-        return this._client.get(path13`/threads/${thread_id}/runs/${runID}`, {
+        return this._client.get(path14`/threads/${thread_id}/runs/${runID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -60060,7 +60060,7 @@ var init_runs = __esm({
        */
       update(runID, params, options) {
         const { thread_id, ...body } = params;
-        return this._client.post(path13`/threads/${thread_id}/runs/${runID}`, {
+        return this._client.post(path14`/threads/${thread_id}/runs/${runID}`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -60073,7 +60073,7 @@ var init_runs = __esm({
        * @deprecated The Assistants API is deprecated in favor of the Responses API
        */
       list(threadID, query = {}, options) {
-        return this._client.getAPIList(path13`/threads/${threadID}/runs`, CursorPage, {
+        return this._client.getAPIList(path14`/threads/${threadID}/runs`, CursorPage, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -60087,7 +60087,7 @@ var init_runs = __esm({
        */
       cancel(runID, params, options) {
         const { thread_id } = params;
-        return this._client.post(path13`/threads/${thread_id}/runs/${runID}/cancel`, {
+        return this._client.post(path14`/threads/${thread_id}/runs/${runID}/cancel`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -60166,7 +60166,7 @@ var init_runs = __esm({
       }
       submitToolOutputs(runID, params, options) {
         const { thread_id, ...body } = params;
-        return this._client.post(path13`/threads/${thread_id}/runs/${runID}/submit_tool_outputs`, {
+        return this._client.post(path14`/threads/${thread_id}/runs/${runID}/submit_tool_outputs`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -60197,10 +60197,10 @@ var init_runs = __esm({
   }
 });
 
-// node_modules/openai/resources/beta/threads/threads.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/beta/threads/threads.mjs
 var Threads2;
 var init_threads2 = __esm({
-  "node_modules/openai/resources/beta/threads/threads.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/beta/threads/threads.mjs"() {
     init_resource();
     init_messages2();
     init_messages2();
@@ -60234,7 +60234,7 @@ var init_threads2 = __esm({
        * @deprecated The Assistants API is deprecated in favor of the Responses API
        */
       retrieve(threadID, options) {
-        return this._client.get(path13`/threads/${threadID}`, {
+        return this._client.get(path14`/threads/${threadID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -60246,7 +60246,7 @@ var init_threads2 = __esm({
        * @deprecated The Assistants API is deprecated in favor of the Responses API
        */
       update(threadID, body, options) {
-        return this._client.post(path13`/threads/${threadID}`, {
+        return this._client.post(path14`/threads/${threadID}`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -60259,7 +60259,7 @@ var init_threads2 = __esm({
        * @deprecated The Assistants API is deprecated in favor of the Responses API
        */
       delete(threadID, options) {
-        return this._client.delete(path13`/threads/${threadID}`, {
+        return this._client.delete(path14`/threads/${threadID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -60296,10 +60296,10 @@ var init_threads2 = __esm({
   }
 });
 
-// node_modules/openai/resources/beta/beta.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/beta/beta.mjs
 var Beta;
 var init_beta = __esm({
-  "node_modules/openai/resources/beta/beta.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/beta/beta.mjs"() {
     init_resource();
     init_assistants();
     init_assistants();
@@ -60329,10 +60329,10 @@ var init_beta = __esm({
   }
 });
 
-// node_modules/openai/resources/completions.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/completions.mjs
 var Completions2;
 var init_completions3 = __esm({
-  "node_modules/openai/resources/completions.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/completions.mjs"() {
     init_resource();
     Completions2 = class extends APIResource {
       create(body, options) {
@@ -60347,10 +60347,10 @@ var init_completions3 = __esm({
   }
 });
 
-// node_modules/openai/resources/containers/files/content.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/containers/files/content.mjs
 var Content;
 var init_content = __esm({
-  "node_modules/openai/resources/containers/files/content.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/containers/files/content.mjs"() {
     init_resource();
     init_headers2();
     init_path();
@@ -60360,7 +60360,7 @@ var init_content = __esm({
        */
       retrieve(fileID, params, options) {
         const { container_id } = params;
-        return this._client.get(path13`/containers/${container_id}/files/${fileID}/content`, {
+        return this._client.get(path14`/containers/${container_id}/files/${fileID}/content`, {
           ...options,
           headers: buildHeaders([{ Accept: "application/binary" }, options?.headers]),
           __security: { bearerAuth: true },
@@ -60371,10 +60371,10 @@ var init_content = __esm({
   }
 });
 
-// node_modules/openai/resources/containers/files/files.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/containers/files/files.mjs
 var Files3;
 var init_files = __esm({
-  "node_modules/openai/resources/containers/files/files.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/containers/files/files.mjs"() {
     init_resource();
     init_content();
     init_content();
@@ -60394,14 +60394,14 @@ var init_files = __esm({
        * a JSON request with a file ID.
        */
       create(containerID, body, options) {
-        return this._client.post(path13`/containers/${containerID}/files`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
+        return this._client.post(path14`/containers/${containerID}/files`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
       }
       /**
        * Retrieve Container File
        */
       retrieve(fileID, params, options) {
         const { container_id } = params;
-        return this._client.get(path13`/containers/${container_id}/files/${fileID}`, {
+        return this._client.get(path14`/containers/${container_id}/files/${fileID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60410,7 +60410,7 @@ var init_files = __esm({
        * List Container files
        */
       list(containerID, query = {}, options) {
-        return this._client.getAPIList(path13`/containers/${containerID}/files`, CursorPage, {
+        return this._client.getAPIList(path14`/containers/${containerID}/files`, CursorPage, {
           query,
           ...options,
           __security: { bearerAuth: true }
@@ -60421,7 +60421,7 @@ var init_files = __esm({
        */
       delete(fileID, params, options) {
         const { container_id } = params;
-        return this._client.delete(path13`/containers/${container_id}/files/${fileID}`, {
+        return this._client.delete(path14`/containers/${container_id}/files/${fileID}`, {
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -60432,10 +60432,10 @@ var init_files = __esm({
   }
 });
 
-// node_modules/openai/resources/containers/containers.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/containers/containers.mjs
 var Containers;
 var init_containers = __esm({
-  "node_modules/openai/resources/containers/containers.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/containers/containers.mjs"() {
     init_resource();
     init_files();
     init_files();
@@ -60457,7 +60457,7 @@ var init_containers = __esm({
        * Retrieve Container
        */
       retrieve(containerID, options) {
-        return this._client.get(path13`/containers/${containerID}`, {
+        return this._client.get(path14`/containers/${containerID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60476,7 +60476,7 @@ var init_containers = __esm({
        * Delete Container
        */
       delete(containerID, options) {
-        return this._client.delete(path13`/containers/${containerID}`, {
+        return this._client.delete(path14`/containers/${containerID}`, {
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -60487,10 +60487,10 @@ var init_containers = __esm({
   }
 });
 
-// node_modules/openai/resources/conversations/items.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/conversations/items.mjs
 var Items;
 var init_items = __esm({
-  "node_modules/openai/resources/conversations/items.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/conversations/items.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -60500,7 +60500,7 @@ var init_items = __esm({
        */
       create(conversationID, params, options) {
         const { include, ...body } = params;
-        return this._client.post(path13`/conversations/${conversationID}/items`, {
+        return this._client.post(path14`/conversations/${conversationID}/items`, {
           query: { include },
           body,
           ...options,
@@ -60512,7 +60512,7 @@ var init_items = __esm({
        */
       retrieve(itemID, params, options) {
         const { conversation_id, ...query } = params;
-        return this._client.get(path13`/conversations/${conversation_id}/items/${itemID}`, {
+        return this._client.get(path14`/conversations/${conversation_id}/items/${itemID}`, {
           query,
           ...options,
           __security: { bearerAuth: true }
@@ -60522,14 +60522,14 @@ var init_items = __esm({
        * List all items for a conversation with the given ID.
        */
       list(conversationID, query = {}, options) {
-        return this._client.getAPIList(path13`/conversations/${conversationID}/items`, ConversationCursorPage, { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path14`/conversations/${conversationID}/items`, ConversationCursorPage, { query, ...options, __security: { bearerAuth: true } });
       }
       /**
        * Delete an item from a conversation with the given IDs.
        */
       delete(itemID, params, options) {
         const { conversation_id } = params;
-        return this._client.delete(path13`/conversations/${conversation_id}/items/${itemID}`, {
+        return this._client.delete(path14`/conversations/${conversation_id}/items/${itemID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60538,10 +60538,10 @@ var init_items = __esm({
   }
 });
 
-// node_modules/openai/resources/conversations/conversations.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/conversations/conversations.mjs
 var Conversations;
 var init_conversations = __esm({
-  "node_modules/openai/resources/conversations/conversations.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/conversations/conversations.mjs"() {
     init_resource();
     init_items();
     init_items();
@@ -60561,7 +60561,7 @@ var init_conversations = __esm({
        * Get a conversation
        */
       retrieve(conversationID, options) {
-        return this._client.get(path13`/conversations/${conversationID}`, {
+        return this._client.get(path14`/conversations/${conversationID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60570,7 +60570,7 @@ var init_conversations = __esm({
        * Update a conversation
        */
       update(conversationID, body, options) {
-        return this._client.post(path13`/conversations/${conversationID}`, {
+        return this._client.post(path14`/conversations/${conversationID}`, {
           body,
           ...options,
           __security: { bearerAuth: true }
@@ -60580,7 +60580,7 @@ var init_conversations = __esm({
        * Delete a conversation. Items in the conversation will not be deleted.
        */
       delete(conversationID, options) {
-        return this._client.delete(path13`/conversations/${conversationID}`, {
+        return this._client.delete(path14`/conversations/${conversationID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60590,10 +60590,10 @@ var init_conversations = __esm({
   }
 });
 
-// node_modules/openai/resources/embeddings.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/embeddings.mjs
 var Embeddings;
 var init_embeddings = __esm({
-  "node_modules/openai/resources/embeddings.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/embeddings.mjs"() {
     init_resource();
     init_utils2();
     Embeddings = class extends APIResource {
@@ -60641,10 +60641,10 @@ var init_embeddings = __esm({
   }
 });
 
-// node_modules/openai/resources/evals/runs/output-items.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/evals/runs/output-items.mjs
 var OutputItems;
 var init_output_items = __esm({
-  "node_modules/openai/resources/evals/runs/output-items.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/evals/runs/output-items.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -60654,7 +60654,7 @@ var init_output_items = __esm({
        */
       retrieve(outputItemID, params, options) {
         const { eval_id, run_id } = params;
-        return this._client.get(path13`/evals/${eval_id}/runs/${run_id}/output_items/${outputItemID}`, {
+        return this._client.get(path14`/evals/${eval_id}/runs/${run_id}/output_items/${outputItemID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60664,16 +60664,16 @@ var init_output_items = __esm({
        */
       list(runID, params, options) {
         const { eval_id, ...query } = params;
-        return this._client.getAPIList(path13`/evals/${eval_id}/runs/${runID}/output_items`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path14`/evals/${eval_id}/runs/${runID}/output_items`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
       }
     };
   }
 });
 
-// node_modules/openai/resources/evals/runs/runs.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/evals/runs/runs.mjs
 var Runs2;
 var init_runs2 = __esm({
-  "node_modules/openai/resources/evals/runs/runs.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/evals/runs/runs.mjs"() {
     init_resource();
     init_output_items();
     init_output_items();
@@ -60690,7 +60690,7 @@ var init_runs2 = __esm({
        * schema specified in the config of the evaluation.
        */
       create(evalID, body, options) {
-        return this._client.post(path13`/evals/${evalID}/runs`, {
+        return this._client.post(path14`/evals/${evalID}/runs`, {
           body,
           ...options,
           __security: { bearerAuth: true }
@@ -60701,7 +60701,7 @@ var init_runs2 = __esm({
        */
       retrieve(runID, params, options) {
         const { eval_id } = params;
-        return this._client.get(path13`/evals/${eval_id}/runs/${runID}`, {
+        return this._client.get(path14`/evals/${eval_id}/runs/${runID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60710,7 +60710,7 @@ var init_runs2 = __esm({
        * Get a list of runs for an evaluation.
        */
       list(evalID, query = {}, options) {
-        return this._client.getAPIList(path13`/evals/${evalID}/runs`, CursorPage, {
+        return this._client.getAPIList(path14`/evals/${evalID}/runs`, CursorPage, {
           query,
           ...options,
           __security: { bearerAuth: true }
@@ -60721,7 +60721,7 @@ var init_runs2 = __esm({
        */
       delete(runID, params, options) {
         const { eval_id } = params;
-        return this._client.delete(path13`/evals/${eval_id}/runs/${runID}`, {
+        return this._client.delete(path14`/evals/${eval_id}/runs/${runID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60731,7 +60731,7 @@ var init_runs2 = __esm({
        */
       cancel(runID, params, options) {
         const { eval_id } = params;
-        return this._client.post(path13`/evals/${eval_id}/runs/${runID}`, {
+        return this._client.post(path14`/evals/${eval_id}/runs/${runID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60741,10 +60741,10 @@ var init_runs2 = __esm({
   }
 });
 
-// node_modules/openai/resources/evals/evals.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/evals/evals.mjs
 var Evals;
 var init_evals = __esm({
-  "node_modules/openai/resources/evals/evals.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/evals/evals.mjs"() {
     init_resource();
     init_runs2();
     init_runs2();
@@ -60770,13 +60770,13 @@ var init_evals = __esm({
        * Get an evaluation by ID.
        */
       retrieve(evalID, options) {
-        return this._client.get(path13`/evals/${evalID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path14`/evals/${evalID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * Update certain properties of an evaluation.
        */
       update(evalID, body, options) {
-        return this._client.post(path13`/evals/${evalID}`, { body, ...options, __security: { bearerAuth: true } });
+        return this._client.post(path14`/evals/${evalID}`, { body, ...options, __security: { bearerAuth: true } });
       }
       /**
        * List evaluations for a project.
@@ -60792,17 +60792,17 @@ var init_evals = __esm({
        * Delete an evaluation.
        */
       delete(evalID, options) {
-        return this._client.delete(path13`/evals/${evalID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.delete(path14`/evals/${evalID}`, { ...options, __security: { bearerAuth: true } });
       }
     };
     Evals.Runs = Runs2;
   }
 });
 
-// node_modules/openai/resources/files.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/files.mjs
 var Files4;
 var init_files2 = __esm({
-  "node_modules/openai/resources/files.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/files.mjs"() {
     init_resource();
     init_pagination();
     init_headers2();
@@ -60847,7 +60847,7 @@ var init_files2 = __esm({
        * Returns information about a specific file.
        */
       retrieve(fileID, options) {
-        return this._client.get(path13`/files/${fileID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path14`/files/${fileID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * Returns a list of files.
@@ -60863,13 +60863,13 @@ var init_files2 = __esm({
        * Delete a file and remove it from all vector stores.
        */
       delete(fileID, options) {
-        return this._client.delete(path13`/files/${fileID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.delete(path14`/files/${fileID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * Returns the contents of the specified file.
        */
       content(fileID, options) {
-        return this._client.get(path13`/files/${fileID}/content`, {
+        return this._client.get(path14`/files/${fileID}/content`, {
           ...options,
           headers: buildHeaders([{ Accept: "application/binary" }, options?.headers]),
           __security: { bearerAuth: true },
@@ -60898,20 +60898,20 @@ var init_files2 = __esm({
   }
 });
 
-// node_modules/openai/resources/fine-tuning/methods.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/fine-tuning/methods.mjs
 var Methods;
 var init_methods = __esm({
-  "node_modules/openai/resources/fine-tuning/methods.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/fine-tuning/methods.mjs"() {
     init_resource();
     Methods = class extends APIResource {
     };
   }
 });
 
-// node_modules/openai/resources/fine-tuning/alpha/graders.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/fine-tuning/alpha/graders.mjs
 var Graders;
 var init_graders = __esm({
-  "node_modules/openai/resources/fine-tuning/alpha/graders.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/fine-tuning/alpha/graders.mjs"() {
     init_resource();
     Graders = class extends APIResource {
       /**
@@ -60966,10 +60966,10 @@ var init_graders = __esm({
   }
 });
 
-// node_modules/openai/resources/fine-tuning/alpha/alpha.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/fine-tuning/alpha/alpha.mjs
 var Alpha;
 var init_alpha = __esm({
-  "node_modules/openai/resources/fine-tuning/alpha/alpha.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/fine-tuning/alpha/alpha.mjs"() {
     init_resource();
     init_graders();
     init_graders();
@@ -60983,10 +60983,10 @@ var init_alpha = __esm({
   }
 });
 
-// node_modules/openai/resources/fine-tuning/checkpoints/permissions.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/fine-tuning/checkpoints/permissions.mjs
 var Permissions;
 var init_permissions = __esm({
-  "node_modules/openai/resources/fine-tuning/checkpoints/permissions.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/fine-tuning/checkpoints/permissions.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -61009,7 +61009,7 @@ var init_permissions = __esm({
        * ```
        */
       create(fineTunedModelCheckpoint, body, options) {
-        return this._client.getAPIList(path13`/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, Page, { body, method: "post", ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path14`/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, Page, { body, method: "post", ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * **NOTE:** This endpoint requires an [admin API key](../admin-api-keys).
@@ -61020,7 +61020,7 @@ var init_permissions = __esm({
        * @deprecated Retrieve is deprecated. Please swap to the paginated list method instead.
        */
       retrieve(fineTunedModelCheckpoint, query = {}, options) {
-        return this._client.get(path13`/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, {
+        return this._client.get(path14`/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, {
           query,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -61043,7 +61043,7 @@ var init_permissions = __esm({
        * ```
        */
       list(fineTunedModelCheckpoint, query = {}, options) {
-        return this._client.getAPIList(path13`/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path14`/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * **NOTE:** This endpoint requires an [admin API key](../admin-api-keys).
@@ -61065,16 +61065,16 @@ var init_permissions = __esm({
        */
       delete(permissionID, params, options) {
         const { fine_tuned_model_checkpoint } = params;
-        return this._client.delete(path13`/fine_tuning/checkpoints/${fine_tuned_model_checkpoint}/permissions/${permissionID}`, { ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.delete(path14`/fine_tuning/checkpoints/${fine_tuned_model_checkpoint}/permissions/${permissionID}`, { ...options, __security: { adminAPIKeyAuth: true } });
       }
     };
   }
 });
 
-// node_modules/openai/resources/fine-tuning/checkpoints/checkpoints.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/fine-tuning/checkpoints/checkpoints.mjs
 var Checkpoints;
 var init_checkpoints = __esm({
-  "node_modules/openai/resources/fine-tuning/checkpoints/checkpoints.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/fine-tuning/checkpoints/checkpoints.mjs"() {
     init_resource();
     init_permissions();
     init_permissions();
@@ -61088,10 +61088,10 @@ var init_checkpoints = __esm({
   }
 });
 
-// node_modules/openai/resources/fine-tuning/jobs/checkpoints.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/fine-tuning/jobs/checkpoints.mjs
 var Checkpoints2;
 var init_checkpoints2 = __esm({
-  "node_modules/openai/resources/fine-tuning/jobs/checkpoints.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/fine-tuning/jobs/checkpoints.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -61110,16 +61110,16 @@ var init_checkpoints2 = __esm({
        * ```
        */
       list(fineTuningJobID, query = {}, options) {
-        return this._client.getAPIList(path13`/fine_tuning/jobs/${fineTuningJobID}/checkpoints`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path14`/fine_tuning/jobs/${fineTuningJobID}/checkpoints`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
       }
     };
   }
 });
 
-// node_modules/openai/resources/fine-tuning/jobs/jobs.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/fine-tuning/jobs/jobs.mjs
 var Jobs;
 var init_jobs = __esm({
-  "node_modules/openai/resources/fine-tuning/jobs/jobs.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/fine-tuning/jobs/jobs.mjs"() {
     init_resource();
     init_checkpoints2();
     init_checkpoints2();
@@ -61163,7 +61163,7 @@ var init_jobs = __esm({
        * ```
        */
       retrieve(fineTuningJobID, options) {
-        return this._client.get(path13`/fine_tuning/jobs/${fineTuningJobID}`, {
+        return this._client.get(path14`/fine_tuning/jobs/${fineTuningJobID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -61197,7 +61197,7 @@ var init_jobs = __esm({
        * ```
        */
       cancel(fineTuningJobID, options) {
-        return this._client.post(path13`/fine_tuning/jobs/${fineTuningJobID}/cancel`, {
+        return this._client.post(path14`/fine_tuning/jobs/${fineTuningJobID}/cancel`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -61216,7 +61216,7 @@ var init_jobs = __esm({
        * ```
        */
       listEvents(fineTuningJobID, query = {}, options) {
-        return this._client.getAPIList(path13`/fine_tuning/jobs/${fineTuningJobID}/events`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path14`/fine_tuning/jobs/${fineTuningJobID}/events`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
       }
       /**
        * Pause a fine-tune job.
@@ -61229,7 +61229,7 @@ var init_jobs = __esm({
        * ```
        */
       pause(fineTuningJobID, options) {
-        return this._client.post(path13`/fine_tuning/jobs/${fineTuningJobID}/pause`, {
+        return this._client.post(path14`/fine_tuning/jobs/${fineTuningJobID}/pause`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -61245,7 +61245,7 @@ var init_jobs = __esm({
        * ```
        */
       resume(fineTuningJobID, options) {
-        return this._client.post(path13`/fine_tuning/jobs/${fineTuningJobID}/resume`, {
+        return this._client.post(path14`/fine_tuning/jobs/${fineTuningJobID}/resume`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -61255,10 +61255,10 @@ var init_jobs = __esm({
   }
 });
 
-// node_modules/openai/resources/fine-tuning/fine-tuning.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/fine-tuning/fine-tuning.mjs
 var FineTuning;
 var init_fine_tuning = __esm({
-  "node_modules/openai/resources/fine-tuning/fine-tuning.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/fine-tuning/fine-tuning.mjs"() {
     init_resource();
     init_methods();
     init_methods();
@@ -61284,20 +61284,20 @@ var init_fine_tuning = __esm({
   }
 });
 
-// node_modules/openai/resources/graders/grader-models.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/graders/grader-models.mjs
 var GraderModels;
 var init_grader_models = __esm({
-  "node_modules/openai/resources/graders/grader-models.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/graders/grader-models.mjs"() {
     init_resource();
     GraderModels = class extends APIResource {
     };
   }
 });
 
-// node_modules/openai/resources/graders/graders.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/graders/graders.mjs
 var Graders2;
 var init_graders2 = __esm({
-  "node_modules/openai/resources/graders/graders.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/graders/graders.mjs"() {
     init_resource();
     init_grader_models();
     init_grader_models();
@@ -61311,10 +61311,10 @@ var init_graders2 = __esm({
   }
 });
 
-// node_modules/openai/resources/images.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/images.mjs
 var Images;
 var init_images = __esm({
-  "node_modules/openai/resources/images.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/images.mjs"() {
     init_resource();
     init_uploads();
     Images = class extends APIResource {
@@ -61346,10 +61346,10 @@ var init_images = __esm({
   }
 });
 
-// node_modules/openai/resources/models.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/models.mjs
 var Models2;
 var init_models = __esm({
-  "node_modules/openai/resources/models.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/models.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -61359,7 +61359,7 @@ var init_models = __esm({
        * the owner and permissioning.
        */
       retrieve(model, options) {
-        return this._client.get(path13`/models/${model}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path14`/models/${model}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * Lists the currently available models, and provides basic information about each
@@ -61373,16 +61373,16 @@ var init_models = __esm({
        * delete a model.
        */
       delete(model, options) {
-        return this._client.delete(path13`/models/${model}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.delete(path14`/models/${model}`, { ...options, __security: { bearerAuth: true } });
       }
     };
   }
 });
 
-// node_modules/openai/resources/moderations.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/moderations.mjs
 var Moderations;
 var init_moderations = __esm({
-  "node_modules/openai/resources/moderations.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/moderations.mjs"() {
     init_resource();
     Moderations = class extends APIResource {
       /**
@@ -61396,10 +61396,10 @@ var init_moderations = __esm({
   }
 });
 
-// node_modules/openai/resources/realtime/calls.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/realtime/calls.mjs
 var Calls;
 var init_calls = __esm({
-  "node_modules/openai/resources/realtime/calls.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/realtime/calls.mjs"() {
     init_resource();
     init_headers2();
     init_path();
@@ -61416,7 +61416,7 @@ var init_calls = __esm({
        * ```
        */
       accept(callID, body, options) {
-        return this._client.post(path13`/realtime/calls/${callID}/accept`, {
+        return this._client.post(path14`/realtime/calls/${callID}/accept`, {
           body,
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
@@ -61432,7 +61432,7 @@ var init_calls = __esm({
        * ```
        */
       hangup(callID, options) {
-        return this._client.post(path13`/realtime/calls/${callID}/hangup`, {
+        return this._client.post(path14`/realtime/calls/${callID}/hangup`, {
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -61449,7 +61449,7 @@ var init_calls = __esm({
        * ```
        */
       refer(callID, body, options) {
-        return this._client.post(path13`/realtime/calls/${callID}/refer`, {
+        return this._client.post(path14`/realtime/calls/${callID}/refer`, {
           body,
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
@@ -61465,7 +61465,7 @@ var init_calls = __esm({
        * ```
        */
       reject(callID, body = {}, options) {
-        return this._client.post(path13`/realtime/calls/${callID}/reject`, {
+        return this._client.post(path14`/realtime/calls/${callID}/reject`, {
           body,
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
@@ -61476,10 +61476,10 @@ var init_calls = __esm({
   }
 });
 
-// node_modules/openai/resources/realtime/client-secrets.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/realtime/client-secrets.mjs
 var ClientSecrets;
 var init_client_secrets = __esm({
-  "node_modules/openai/resources/realtime/client-secrets.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/realtime/client-secrets.mjs"() {
     init_resource();
     ClientSecrets = class extends APIResource {
       /**
@@ -61516,10 +61516,10 @@ var init_client_secrets = __esm({
   }
 });
 
-// node_modules/openai/resources/realtime/realtime.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/realtime/realtime.mjs
 var Realtime2;
 var init_realtime2 = __esm({
-  "node_modules/openai/resources/realtime/realtime.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/realtime/realtime.mjs"() {
     init_resource();
     init_calls();
     init_calls();
@@ -61537,7 +61537,7 @@ var init_realtime2 = __esm({
   }
 });
 
-// node_modules/openai/lib/ResponsesParser.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/lib/ResponsesParser.mjs
 function maybeParseResponse(response, params) {
   if (!params || !hasAutoParseableInput2(params)) {
     const parsed = {
@@ -61663,13 +61663,13 @@ function addOutputText(rsp) {
   rsp.output_text = texts.join("");
 }
 var init_ResponsesParser = __esm({
-  "node_modules/openai/lib/ResponsesParser.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/lib/ResponsesParser.mjs"() {
     init_error2();
     init_parser();
   }
 });
 
-// node_modules/openai/lib/responses/ResponseAccumulator.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/lib/responses/ResponseAccumulator.mjs
 function accumulateResponse(event, snapshot) {
   if (!snapshot) {
     if (event.type !== "response.created") {
@@ -62058,19 +62058,19 @@ function assertNever4(value) {
   throw new OpenAIError(`Unhandled response stream event: ${JSON.stringify(value)}`);
 }
 var init_ResponseAccumulator = __esm({
-  "node_modules/openai/lib/responses/ResponseAccumulator.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/lib/responses/ResponseAccumulator.mjs"() {
     init_error2();
     init_ResponsesParser();
   }
 });
 
-// node_modules/openai/lib/responses/ResponseStream.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/lib/responses/ResponseStream.mjs
 function finalizeResponse(snapshot, params) {
   return maybeParseResponse(snapshot, params);
 }
 var _ResponseStream_instances, _ResponseStream_params, _ResponseStream_currentResponseSnapshot, _ResponseStream_finalResponse, _ResponseStream_beginRequest, _ResponseStream_addEvent, _ResponseStream_endRequest, ResponseStream;
 var init_ResponseStream = __esm({
-  "node_modules/openai/lib/responses/ResponseStream.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/lib/responses/ResponseStream.mjs"() {
     init_tslib();
     init_error2();
     init_EventStream();
@@ -62262,10 +62262,10 @@ var init_ResponseStream = __esm({
   }
 });
 
-// node_modules/openai/resources/responses/input-items.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/responses/input-items.mjs
 var InputItems2;
 var init_input_items2 = __esm({
-  "node_modules/openai/resources/responses/input-items.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/responses/input-items.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -62284,16 +62284,16 @@ var init_input_items2 = __esm({
        * ```
        */
       list(responseID, query = {}, options) {
-        return this._client.getAPIList(path13`/responses/${responseID}/input_items`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path14`/responses/${responseID}/input_items`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
       }
     };
   }
 });
 
-// node_modules/openai/resources/responses/input-tokens.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/responses/input-tokens.mjs
 var InputTokens2;
 var init_input_tokens2 = __esm({
-  "node_modules/openai/resources/responses/input-tokens.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/responses/input-tokens.mjs"() {
     init_resource();
     InputTokens2 = class extends APIResource {
       /**
@@ -62318,10 +62318,10 @@ var init_input_tokens2 = __esm({
   }
 });
 
-// node_modules/openai/resources/responses/responses.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/responses/responses.mjs
 var Responses2;
 var init_responses2 = __esm({
-  "node_modules/openai/resources/responses/responses.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/responses/responses.mjs"() {
     init_ResponsesParser();
     init_ResponseStream();
     init_resource();
@@ -62351,7 +62351,7 @@ var init_responses2 = __esm({
         });
       }
       retrieve(responseID, query = {}, options) {
-        return this._client.get(path13`/responses/${responseID}`, {
+        return this._client.get(path14`/responses/${responseID}`, {
           query,
           ...options,
           stream: query?.stream ?? false,
@@ -62374,7 +62374,7 @@ var init_responses2 = __esm({
        * ```
        */
       delete(responseID, options) {
-        return this._client.delete(path13`/responses/${responseID}`, {
+        return this._client.delete(path14`/responses/${responseID}`, {
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -62402,7 +62402,7 @@ var init_responses2 = __esm({
        * ```
        */
       cancel(responseID, options) {
-        return this._client.post(path13`/responses/${responseID}/cancel`, {
+        return this._client.post(path14`/responses/${responseID}/cancel`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -62431,10 +62431,10 @@ var init_responses2 = __esm({
   }
 });
 
-// node_modules/openai/resources/skills/content.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/skills/content.mjs
 var Content2;
 var init_content2 = __esm({
-  "node_modules/openai/resources/skills/content.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/skills/content.mjs"() {
     init_resource();
     init_headers2();
     init_path();
@@ -62443,7 +62443,7 @@ var init_content2 = __esm({
        * Download a skill zip bundle by its ID.
        */
       retrieve(skillID, options) {
-        return this._client.get(path13`/skills/${skillID}/content`, {
+        return this._client.get(path14`/skills/${skillID}/content`, {
           ...options,
           headers: buildHeaders([{ Accept: "application/binary" }, options?.headers]),
           __security: { bearerAuth: true },
@@ -62454,10 +62454,10 @@ var init_content2 = __esm({
   }
 });
 
-// node_modules/openai/resources/skills/versions/content.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/skills/versions/content.mjs
 var Content3;
 var init_content3 = __esm({
-  "node_modules/openai/resources/skills/versions/content.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/skills/versions/content.mjs"() {
     init_resource();
     init_headers2();
     init_path();
@@ -62467,7 +62467,7 @@ var init_content3 = __esm({
        */
       retrieve(version2, params, options) {
         const { skill_id } = params;
-        return this._client.get(path13`/skills/${skill_id}/versions/${version2}/content`, {
+        return this._client.get(path14`/skills/${skill_id}/versions/${version2}/content`, {
           ...options,
           headers: buildHeaders([{ Accept: "application/binary" }, options?.headers]),
           __security: { bearerAuth: true },
@@ -62478,10 +62478,10 @@ var init_content3 = __esm({
   }
 });
 
-// node_modules/openai/resources/skills/versions/versions.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/skills/versions/versions.mjs
 var Versions;
 var init_versions = __esm({
-  "node_modules/openai/resources/skills/versions/versions.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/skills/versions/versions.mjs"() {
     init_resource();
     init_content3();
     init_content3();
@@ -62497,14 +62497,14 @@ var init_versions = __esm({
        * Create a new immutable skill version.
        */
       create(skillID, body = {}, options) {
-        return this._client.post(path13`/skills/${skillID}/versions`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
+        return this._client.post(path14`/skills/${skillID}/versions`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
       }
       /**
        * Get a specific skill version.
        */
       retrieve(version2, params, options) {
         const { skill_id } = params;
-        return this._client.get(path13`/skills/${skill_id}/versions/${version2}`, {
+        return this._client.get(path14`/skills/${skill_id}/versions/${version2}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -62513,7 +62513,7 @@ var init_versions = __esm({
        * List skill versions for a skill.
        */
       list(skillID, query = {}, options) {
-        return this._client.getAPIList(path13`/skills/${skillID}/versions`, CursorPage, {
+        return this._client.getAPIList(path14`/skills/${skillID}/versions`, CursorPage, {
           query,
           ...options,
           __security: { bearerAuth: true }
@@ -62524,7 +62524,7 @@ var init_versions = __esm({
        */
       delete(version2, params, options) {
         const { skill_id } = params;
-        return this._client.delete(path13`/skills/${skill_id}/versions/${version2}`, {
+        return this._client.delete(path14`/skills/${skill_id}/versions/${version2}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -62534,10 +62534,10 @@ var init_versions = __esm({
   }
 });
 
-// node_modules/openai/resources/skills/skills.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/skills/skills.mjs
 var Skills;
 var init_skills = __esm({
-  "node_modules/openai/resources/skills/skills.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/skills/skills.mjs"() {
     init_resource();
     init_content2();
     init_content2();
@@ -62562,13 +62562,13 @@ var init_skills = __esm({
        * Get a skill by its ID.
        */
       retrieve(skillID, options) {
-        return this._client.get(path13`/skills/${skillID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path14`/skills/${skillID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * Update the default version pointer for a skill.
        */
       update(skillID, body, options) {
-        return this._client.post(path13`/skills/${skillID}`, {
+        return this._client.post(path14`/skills/${skillID}`, {
           body,
           ...options,
           __security: { bearerAuth: true }
@@ -62588,7 +62588,7 @@ var init_skills = __esm({
        * Delete a skill by its ID.
        */
       delete(skillID, options) {
-        return this._client.delete(path13`/skills/${skillID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.delete(path14`/skills/${skillID}`, { ...options, __security: { bearerAuth: true } });
       }
     };
     Skills.Content = Content2;
@@ -62596,10 +62596,10 @@ var init_skills = __esm({
   }
 });
 
-// node_modules/openai/resources/uploads/parts.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/uploads/parts.mjs
 var Parts;
 var init_parts = __esm({
-  "node_modules/openai/resources/uploads/parts.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/uploads/parts.mjs"() {
     init_resource();
     init_uploads();
     init_path();
@@ -62618,16 +62618,16 @@ var init_parts = __esm({
        * [complete the Upload](https://platform.openai.com/docs/api-reference/uploads/complete).
        */
       create(uploadID, body, options) {
-        return this._client.post(path13`/uploads/${uploadID}/parts`, multipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
+        return this._client.post(path14`/uploads/${uploadID}/parts`, multipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
       }
     };
   }
 });
 
-// node_modules/openai/resources/uploads/uploads.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/uploads/uploads.mjs
 var Uploads;
 var init_uploads3 = __esm({
-  "node_modules/openai/resources/uploads/uploads.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/uploads/uploads.mjs"() {
     init_resource();
     init_parts();
     init_parts();
@@ -62669,7 +62669,7 @@ var init_uploads3 = __esm({
        * Returns the Upload object with status `cancelled`.
        */
       cancel(uploadID, options) {
-        return this._client.post(path13`/uploads/${uploadID}/cancel`, {
+        return this._client.post(path14`/uploads/${uploadID}/cancel`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -62692,7 +62692,7 @@ var init_uploads3 = __esm({
        * object.
        */
       complete(uploadID, body, options) {
-        return this._client.post(path13`/uploads/${uploadID}/complete`, {
+        return this._client.post(path14`/uploads/${uploadID}/complete`, {
           body,
           ...options,
           __security: { bearerAuth: true }
@@ -62703,10 +62703,10 @@ var init_uploads3 = __esm({
   }
 });
 
-// node_modules/openai/lib/Util.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/lib/Util.mjs
 var allSettledWithThrow;
 var init_Util = __esm({
-  "node_modules/openai/lib/Util.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/lib/Util.mjs"() {
     allSettledWithThrow = async (promises2) => {
       const results = await Promise.allSettled(promises2);
       const rejected = results.filter((result) => result.status === "rejected");
@@ -62727,10 +62727,10 @@ var init_Util = __esm({
   }
 });
 
-// node_modules/openai/resources/vector-stores/file-batches.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/vector-stores/file-batches.mjs
 var FileBatches;
 var init_file_batches = __esm({
-  "node_modules/openai/resources/vector-stores/file-batches.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/vector-stores/file-batches.mjs"() {
     init_resource();
     init_pagination();
     init_headers2();
@@ -62742,7 +62742,7 @@ var init_file_batches = __esm({
        * Create a vector store file batch.
        */
       create(vectorStoreID, body, options) {
-        return this._client.post(path13`/vector_stores/${vectorStoreID}/file_batches`, {
+        return this._client.post(path14`/vector_stores/${vectorStoreID}/file_batches`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -62754,7 +62754,7 @@ var init_file_batches = __esm({
        */
       retrieve(batchID, params, options) {
         const { vector_store_id } = params;
-        return this._client.get(path13`/vector_stores/${vector_store_id}/file_batches/${batchID}`, {
+        return this._client.get(path14`/vector_stores/${vector_store_id}/file_batches/${batchID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -62766,7 +62766,7 @@ var init_file_batches = __esm({
        */
       cancel(batchID, params, options) {
         const { vector_store_id } = params;
-        return this._client.post(path13`/vector_stores/${vector_store_id}/file_batches/${batchID}/cancel`, {
+        return this._client.post(path14`/vector_stores/${vector_store_id}/file_batches/${batchID}/cancel`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -62784,7 +62784,7 @@ var init_file_batches = __esm({
        */
       listFiles(batchID, params, options) {
         const { vector_store_id, ...query } = params;
-        return this._client.getAPIList(path13`/vector_stores/${vector_store_id}/file_batches/${batchID}/files`, CursorPage, {
+        return this._client.getAPIList(path14`/vector_stores/${vector_store_id}/file_batches/${batchID}/files`, CursorPage, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -62863,10 +62863,10 @@ var init_file_batches = __esm({
   }
 });
 
-// node_modules/openai/resources/vector-stores/files.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/vector-stores/files.mjs
 var Files5;
 var init_files3 = __esm({
-  "node_modules/openai/resources/vector-stores/files.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/vector-stores/files.mjs"() {
     init_resource();
     init_pagination();
     init_headers2();
@@ -62879,7 +62879,7 @@ var init_files3 = __esm({
        * [vector store](https://platform.openai.com/docs/api-reference/vector-stores/object).
        */
       create(vectorStoreID, body, options) {
-        return this._client.post(path13`/vector_stores/${vectorStoreID}/files`, {
+        return this._client.post(path14`/vector_stores/${vectorStoreID}/files`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -62891,7 +62891,7 @@ var init_files3 = __esm({
        */
       retrieve(fileID, params, options) {
         const { vector_store_id } = params;
-        return this._client.get(path13`/vector_stores/${vector_store_id}/files/${fileID}`, {
+        return this._client.get(path14`/vector_stores/${vector_store_id}/files/${fileID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -62902,7 +62902,7 @@ var init_files3 = __esm({
        */
       update(fileID, params, options) {
         const { vector_store_id, ...body } = params;
-        return this._client.post(path13`/vector_stores/${vector_store_id}/files/${fileID}`, {
+        return this._client.post(path14`/vector_stores/${vector_store_id}/files/${fileID}`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -62913,7 +62913,7 @@ var init_files3 = __esm({
        * Returns a list of vector store files.
        */
       list(vectorStoreID, query = {}, options) {
-        return this._client.getAPIList(path13`/vector_stores/${vectorStoreID}/files`, CursorPage, {
+        return this._client.getAPIList(path14`/vector_stores/${vectorStoreID}/files`, CursorPage, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -62928,7 +62928,7 @@ var init_files3 = __esm({
        */
       delete(fileID, params, options) {
         const { vector_store_id } = params;
-        return this._client.delete(path13`/vector_stores/${vector_store_id}/files/${fileID}`, {
+        return this._client.delete(path14`/vector_stores/${vector_store_id}/files/${fileID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -63004,7 +63004,7 @@ var init_files3 = __esm({
        */
       content(fileID, params, options) {
         const { vector_store_id } = params;
-        return this._client.getAPIList(path13`/vector_stores/${vector_store_id}/files/${fileID}/content`, Page, {
+        return this._client.getAPIList(path14`/vector_stores/${vector_store_id}/files/${fileID}/content`, Page, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -63014,10 +63014,10 @@ var init_files3 = __esm({
   }
 });
 
-// node_modules/openai/resources/vector-stores/vector-stores.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/vector-stores/vector-stores.mjs
 var VectorStores;
 var init_vector_stores = __esm({
-  "node_modules/openai/resources/vector-stores/vector-stores.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/vector-stores/vector-stores.mjs"() {
     init_resource();
     init_file_batches();
     init_file_batches();
@@ -63047,7 +63047,7 @@ var init_vector_stores = __esm({
        * Retrieves a vector store.
        */
       retrieve(vectorStoreID, options) {
-        return this._client.get(path13`/vector_stores/${vectorStoreID}`, {
+        return this._client.get(path14`/vector_stores/${vectorStoreID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -63057,7 +63057,7 @@ var init_vector_stores = __esm({
        * Modifies a vector store.
        */
       update(vectorStoreID, body, options) {
-        return this._client.post(path13`/vector_stores/${vectorStoreID}`, {
+        return this._client.post(path14`/vector_stores/${vectorStoreID}`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -63079,7 +63079,7 @@ var init_vector_stores = __esm({
        * Delete a vector store.
        */
       delete(vectorStoreID, options) {
-        return this._client.delete(path13`/vector_stores/${vectorStoreID}`, {
+        return this._client.delete(path14`/vector_stores/${vectorStoreID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -63090,7 +63090,7 @@ var init_vector_stores = __esm({
        * filter.
        */
       search(vectorStoreID, body, options) {
-        return this._client.getAPIList(path13`/vector_stores/${vectorStoreID}/search`, Page, {
+        return this._client.getAPIList(path14`/vector_stores/${vectorStoreID}/search`, Page, {
           body,
           method: "post",
           ...options,
@@ -63104,10 +63104,10 @@ var init_vector_stores = __esm({
   }
 });
 
-// node_modules/openai/resources/videos.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/videos.mjs
 var Videos;
 var init_videos = __esm({
-  "node_modules/openai/resources/videos.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/videos.mjs"() {
     init_resource();
     init_pagination();
     init_headers2();
@@ -63124,7 +63124,7 @@ var init_videos = __esm({
        * Fetch the latest metadata for a generated video.
        */
       retrieve(videoID, options) {
-        return this._client.get(path13`/videos/${videoID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path14`/videos/${videoID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * List recently generated videos for the current project.
@@ -63140,7 +63140,7 @@ var init_videos = __esm({
        * Permanently delete a completed or failed video and its stored assets.
        */
       delete(videoID, options) {
-        return this._client.delete(path13`/videos/${videoID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.delete(path14`/videos/${videoID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * Create a character from an uploaded video.
@@ -63154,7 +63154,7 @@ var init_videos = __esm({
        * Streams the rendered video content for the specified video job.
        */
       downloadContent(videoID, query = {}, options) {
-        return this._client.get(path13`/videos/${videoID}/content`, {
+        return this._client.get(path14`/videos/${videoID}/content`, {
           query,
           ...options,
           headers: buildHeaders([{ Accept: "application/binary" }, options?.headers]),
@@ -63179,7 +63179,7 @@ var init_videos = __esm({
        * Fetch a character.
        */
       getCharacter(characterID, options) {
-        return this._client.get(path13`/videos/characters/${characterID}`, {
+        return this._client.get(path14`/videos/characters/${characterID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -63188,16 +63188,16 @@ var init_videos = __esm({
        * Create a remix of a completed video using a refreshed prompt.
        */
       remix(videoID, body, options) {
-        return this._client.post(path13`/videos/${videoID}/remix`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
+        return this._client.post(path14`/videos/${videoID}/remix`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
       }
     };
   }
 });
 
-// node_modules/openai/resources/webhooks/webhooks.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/webhooks/webhooks.mjs
 var _Webhooks_instances, _Webhooks_validateSecret, _Webhooks_getRequiredHeader, Webhooks2;
 var init_webhooks = __esm({
-  "node_modules/openai/resources/webhooks/webhooks.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/webhooks/webhooks.mjs"() {
     init_tslib();
     init_error2();
     init_resource();
@@ -63279,23 +63279,23 @@ var init_webhooks = __esm({
   }
 });
 
-// node_modules/openai/resources/webhooks/index.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/webhooks/index.mjs
 var init_webhooks2 = __esm({
-  "node_modules/openai/resources/webhooks/index.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/webhooks/index.mjs"() {
     init_webhooks();
   }
 });
 
-// node_modules/openai/resources/webhooks.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/webhooks.mjs
 var init_webhooks3 = __esm({
-  "node_modules/openai/resources/webhooks.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/webhooks.mjs"() {
     init_webhooks2();
   }
 });
 
-// node_modules/openai/resources/index.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/resources/index.mjs
 var init_resources = __esm({
-  "node_modules/openai/resources/index.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/resources/index.mjs"() {
     init_chat2();
     init_shared();
     init_admin();
@@ -63323,7 +63323,7 @@ var init_resources = __esm({
   }
 });
 
-// node_modules/openai/internal/provider.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/internal/provider.mjs
 function configureProvider(provider) {
   const definition = providerDefinitions.get(provider);
   if (!definition) {
@@ -63333,7 +63333,7 @@ function configureProvider(provider) {
 }
 var providerDefinitionsKey, providerGlobal, existingProviderDefinitions, providerDefinitions;
 var init_provider = __esm({
-  "node_modules/openai/internal/provider.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/internal/provider.mjs"() {
     providerDefinitionsKey = /* @__PURE__ */ Symbol.for("openai.node.providerDefinitions.v1");
     providerGlobal = globalThis;
     existingProviderDefinitions = providerGlobal[providerDefinitionsKey];
@@ -63344,7 +63344,7 @@ var init_provider = __esm({
   }
 });
 
-// node_modules/openai/client.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/client.mjs
 function getConnectionErrorMessage(error2) {
   if (isUndiciDispatcherVersionMismatchError(error2)) {
     return `Connection error. This may be caused by passing an undici dispatcher, such as ProxyAgent, that is incompatible with the fetch implementation. If you are using undici's ProxyAgent, pass the fetch implementation from the same undici package: import { fetch, ProxyAgent } from 'undici'; new OpenAI({ fetch, fetchOptions: { dispatcher: new ProxyAgent(...) } });`;
@@ -63364,7 +63364,7 @@ function isUndiciDispatcherVersionMismatchError(error2) {
 }
 var _OpenAI_instances, _a3, _OpenAI_encoder, _OpenAI_baseURLOverridden, WORKLOAD_IDENTITY_API_KEY_PLACEHOLDER, OpenAI;
 var init_client = __esm({
-  "node_modules/openai/client.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/client.mjs"() {
     init_tslib();
     init_uuid();
     init_values();
@@ -63636,9 +63636,9 @@ var init_client = __esm({
         this.apiKey = token;
         return true;
       }
-      buildURL(path16, query, defaultBaseURL) {
+      buildURL(path17, query, defaultBaseURL) {
         const baseURL = !__classPrivateFieldGet(this, _OpenAI_instances, "m", _OpenAI_baseURLOverridden).call(this) && defaultBaseURL || this.baseURL;
-        const url = isAbsoluteURL(path16) ? new URL(path16) : new URL(baseURL + (baseURL.endsWith("/") && path16.startsWith("/") ? path16.slice(1) : path16));
+        const url = isAbsoluteURL(path17) ? new URL(path17) : new URL(baseURL + (baseURL.endsWith("/") && path17.startsWith("/") ? path17.slice(1) : path17));
         const defaultQuery = this.defaultQuery();
         const pathQuery = Object.fromEntries(url.searchParams);
         if (!isEmptyObj(defaultQuery) || !isEmptyObj(pathQuery)) {
@@ -63668,24 +63668,24 @@ var init_client = __esm({
        */
       async prepareRequest(request, { url, options }) {
       }
-      get(path16, opts) {
-        return this.methodRequest("get", path16, opts);
+      get(path17, opts) {
+        return this.methodRequest("get", path17, opts);
       }
-      post(path16, opts) {
-        return this.methodRequest("post", path16, opts);
+      post(path17, opts) {
+        return this.methodRequest("post", path17, opts);
       }
-      patch(path16, opts) {
-        return this.methodRequest("patch", path16, opts);
+      patch(path17, opts) {
+        return this.methodRequest("patch", path17, opts);
       }
-      put(path16, opts) {
-        return this.methodRequest("put", path16, opts);
+      put(path17, opts) {
+        return this.methodRequest("put", path17, opts);
       }
-      delete(path16, opts) {
-        return this.methodRequest("delete", path16, opts);
+      delete(path17, opts) {
+        return this.methodRequest("delete", path17, opts);
       }
-      methodRequest(method, path16, opts) {
+      methodRequest(method, path17, opts) {
         return this.request(Promise.resolve(opts).then((opts2) => {
-          return { method, path: path16, ...opts2 };
+          return { method, path: path17, ...opts2 };
         }));
       }
       request(options, remainingRetries = null) {
@@ -63810,8 +63810,8 @@ var init_client = __esm({
         }));
         return { response, options, controller, requestLogID, retryOfRequestLogID, startTime };
       }
-      getAPIList(path16, Page2, opts) {
-        return this.requestAPIList(Page2, opts && "then" in opts ? opts.then((opts2) => ({ method: "get", path: path16, ...opts2 })) : { method: "get", path: path16, ...opts });
+      getAPIList(path17, Page2, opts) {
+        return this.requestAPIList(Page2, opts && "then" in opts ? opts.then((opts2) => ({ method: "get", path: path17, ...opts2 })) : { method: "get", path: path17, ...opts });
       }
       requestAPIList(Page2, options) {
         const request = this.makeRequest(options, null, void 0);
@@ -63905,8 +63905,8 @@ var init_client = __esm({
       }
       async buildRequest(inputOptions, { retryCount = 0 } = {}) {
         const options = { ...inputOptions };
-        const { method, path: path16, query, defaultBaseURL } = options;
-        const url = this.buildURL(path16, query, defaultBaseURL);
+        const { method, path: path17, query, defaultBaseURL } = options;
+        const url = this.buildURL(path17, query, defaultBaseURL);
         if ("timeout" in options)
           validatePositiveInteger("timeout", options.timeout);
         options.timeout = options.timeout ?? this.timeout;
@@ -64045,10 +64045,10 @@ var init_client = __esm({
   }
 });
 
-// node_modules/openai/azure.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/azure.mjs
 var AzureOpenAI, _deployments_endpoints;
 var init_azure = __esm({
-  "node_modules/openai/azure.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/azure.mjs"() {
     init_headers2();
     init_error2();
     init_utils2();
@@ -64146,7 +64146,7 @@ var init_azure = __esm({
   }
 });
 
-// node_modules/openai/bedrock.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/bedrock.mjs
 function deriveBedrockBaseURL(awsRegion) {
   const region = awsRegion?.trim();
   if (!region) {
@@ -64180,7 +64180,7 @@ function restoreBedrockStreamOutputText(responses) {
 }
 var BedrockOpenAI;
 var init_bedrock = __esm({
-  "node_modules/openai/bedrock.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/bedrock.mjs"() {
     init_error2();
     init_client();
     init_headers2();
@@ -64247,7 +64247,7 @@ var init_bedrock = __esm({
   }
 });
 
-// node_modules/openai/index.mjs
+// ../../social-flow-loop-i2/server/node_modules/openai/index.mjs
 var openai_exports = {};
 __export(openai_exports, {
   APIConnectionError: () => APIConnectionError2,
@@ -64276,7 +64276,7 @@ __export(openai_exports, {
   toStreamingFile: () => toStreamingFile
 });
 var init_openai = __esm({
-  "node_modules/openai/index.mjs"() {
+  "../../social-flow-loop-i2/server/node_modules/openai/index.mjs"() {
     init_client();
     init_uploads2();
     init_api_promise();
@@ -64288,7 +64288,7 @@ var init_openai = __esm({
   }
 });
 
-// node_modules/zod/v3/external.js
+// ../../social-flow-loop-i2/server/node_modules/zod/v3/external.js
 var external_exports = {};
 __export(external_exports, {
   BRAND: () => BRAND,
@@ -64400,7 +64400,7 @@ __export(external_exports, {
   void: () => voidType
 });
 
-// node_modules/zod/v3/helpers/util.js
+// ../../social-flow-loop-i2/server/node_modules/zod/v3/helpers/util.js
 var util;
 (function(util2) {
   util2.assertEqual = (_) => {
@@ -64534,7 +64534,7 @@ var getParsedType = (data) => {
   }
 };
 
-// node_modules/zod/v3/ZodError.js
+// ../../social-flow-loop-i2/server/node_modules/zod/v3/ZodError.js
 var ZodIssueCode = util.arrayToEnum([
   "invalid_type",
   "invalid_literal",
@@ -64652,7 +64652,7 @@ ZodError.create = (issues) => {
   return error2;
 };
 
-// node_modules/zod/v3/locales/en.js
+// ../../social-flow-loop-i2/server/node_modules/zod/v3/locales/en.js
 var errorMap = (issue2, _ctx) => {
   let message;
   switch (issue2.code) {
@@ -64755,7 +64755,7 @@ var errorMap = (issue2, _ctx) => {
 };
 var en_default = errorMap;
 
-// node_modules/zod/v3/errors.js
+// ../../social-flow-loop-i2/server/node_modules/zod/v3/errors.js
 var overrideErrorMap = en_default;
 function setErrorMap(map) {
   overrideErrorMap = map;
@@ -64764,10 +64764,10 @@ function getErrorMap() {
   return overrideErrorMap;
 }
 
-// node_modules/zod/v3/helpers/parseUtil.js
+// ../../social-flow-loop-i2/server/node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path16, errorMaps, issueData } = params;
-  const fullPath = [...path16, ...issueData.path || []];
+  const { data, path: path17, errorMaps, issueData } = params;
+  const fullPath = [...path17, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -64874,20 +64874,20 @@ var isDirty = (x2) => x2.status === "dirty";
 var isValid = (x2) => x2.status === "valid";
 var isAsync = (x2) => typeof Promise !== "undefined" && x2 instanceof Promise;
 
-// node_modules/zod/v3/helpers/errorUtil.js
+// ../../social-flow-loop-i2/server/node_modules/zod/v3/helpers/errorUtil.js
 var errorUtil;
 (function(errorUtil2) {
   errorUtil2.errToObj = (message) => typeof message === "string" ? { message } : message || {};
   errorUtil2.toString = (message) => typeof message === "string" ? message : message?.message;
 })(errorUtil || (errorUtil = {}));
 
-// node_modules/zod/v3/types.js
+// ../../social-flow-loop-i2/server/node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path16, key) {
+  constructor(parent, value, path17, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path16;
+    this._path = path17;
     this._key = key;
   }
   get path() {
@@ -68329,7 +68329,7 @@ var coerce = {
 };
 var NEVER = INVALID;
 
-// node_modules/zod/v4/core/core.js
+// ../../social-flow-loop-i2/server/node_modules/zod/v4/core/core.js
 var NEVER2 = Object.freeze({
   status: "aborted"
 });
@@ -68388,7 +68388,7 @@ function config(newConfig) {
   return globalConfig;
 }
 
-// node_modules/zod/v4/core/util.js
+// ../../social-flow-loop-i2/server/node_modules/zod/v4/core/util.js
 var util_exports = {};
 __export(util_exports, {
   BIGINT_FORMAT_RANGES: () => BIGINT_FORMAT_RANGES,
@@ -68524,10 +68524,10 @@ function assignProp(target, prop, value) {
     configurable: true
   });
 }
-function getElementAtPath(obj, path16) {
-  if (!path16)
+function getElementAtPath(obj, path17) {
+  if (!path17)
     return obj;
-  return path16.reduce((acc, key) => acc?.[key], obj);
+  return path17.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -68847,11 +68847,11 @@ function aborted(x2, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path16, issues) {
+function prefixIssues(path17, issues) {
   return issues.map((iss) => {
     var _a4;
     (_a4 = iss).path ?? (_a4.path = []);
-    iss.path.unshift(path16);
+    iss.path.unshift(path17);
     return iss;
   });
 }
@@ -68909,7 +68909,7 @@ var Class = class {
   }
 };
 
-// node_modules/zod/v4/core/errors.js
+// ../../social-flow-loop-i2/server/node_modules/zod/v4/core/errors.js
 var initializer = (inst, def) => {
   inst.name = "$ZodError";
   Object.defineProperty(inst, "_zod", {
@@ -68984,7 +68984,7 @@ function formatError(error2, _mapper) {
   return fieldErrors;
 }
 
-// node_modules/zod/v4/core/parse.js
+// ../../social-flow-loop-i2/server/node_modules/zod/v4/core/parse.js
 var _parse = (_Err) => (schema, value, _ctx, _params) => {
   const ctx = _ctx ? Object.assign(_ctx, { async: false }) : { async: false };
   const result = schema._zod.run({ value, issues: [] }, ctx);
@@ -69034,7 +69034,7 @@ var _safeParseAsync = (_Err) => async (schema, value, _ctx) => {
 };
 var safeParseAsync = /* @__PURE__ */ _safeParseAsync($ZodRealError);
 
-// node_modules/zod/v4/core/regexes.js
+// ../../social-flow-loop-i2/server/node_modules/zod/v4/core/regexes.js
 var cuid = /^[cC][^\s-]{8,}$/;
 var cuid2 = /^[0-9a-z]+$/;
 var ulid = /^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$/;
@@ -69092,7 +69092,7 @@ var _null = /null/i;
 var lowercase = /^[^A-Z]*$/;
 var uppercase = /^[^a-z]*$/;
 
-// node_modules/zod/v4/core/checks.js
+// ../../social-flow-loop-i2/server/node_modules/zod/v4/core/checks.js
 var $ZodCheck = /* @__PURE__ */ $constructor("$ZodCheck", (inst, def) => {
   var _a4;
   inst._zod ?? (inst._zod = {});
@@ -69477,7 +69477,7 @@ var $ZodCheckOverwrite = /* @__PURE__ */ $constructor("$ZodCheckOverwrite", (ins
   };
 });
 
-// node_modules/zod/v4/core/doc.js
+// ../../social-flow-loop-i2/server/node_modules/zod/v4/core/doc.js
 var Doc = class {
   constructor(args = []) {
     this.content = [];
@@ -69513,14 +69513,14 @@ var Doc = class {
   }
 };
 
-// node_modules/zod/v4/core/versions.js
+// ../../social-flow-loop-i2/server/node_modules/zod/v4/core/versions.js
 var version = {
   major: 4,
   minor: 0,
   patch: 0
 };
 
-// node_modules/zod/v4/core/schemas.js
+// ../../social-flow-loop-i2/server/node_modules/zod/v4/core/schemas.js
 var $ZodType = /* @__PURE__ */ $constructor("$ZodType", (inst, def) => {
   var _a4;
   inst ?? (inst = {});
@@ -70758,7 +70758,7 @@ function handleRefineResult(result, payload, input, inst) {
   }
 }
 
-// node_modules/zod/v4/locales/en.js
+// ../../social-flow-loop-i2/server/node_modules/zod/v4/locales/en.js
 var parsedType = (data) => {
   const t2 = typeof data;
   switch (t2) {
@@ -70876,7 +70876,7 @@ function en_default2() {
   };
 }
 
-// node_modules/zod/v4/core/registries.js
+// ../../social-flow-loop-i2/server/node_modules/zod/v4/core/registries.js
 var $ZodRegistry = class {
   constructor() {
     this._map = /* @__PURE__ */ new Map();
@@ -70924,7 +70924,7 @@ function registry() {
 }
 var globalRegistry = /* @__PURE__ */ registry();
 
-// node_modules/zod/v4/core/api.js
+// ../../social-flow-loop-i2/server/node_modules/zod/v4/core/api.js
 function _string(Class2, params) {
   return new Class2({
     type: "string",
@@ -71363,7 +71363,7 @@ function _refine(Class2, fn, _params) {
   return schema;
 }
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-compat.js
+// ../../social-flow-loop-i2/server/node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-compat.js
 function isZ4Schema(s2) {
   const schema = s2;
   return !!schema._zod;
@@ -71426,7 +71426,7 @@ function getLiteralValue(schema) {
   return void 0;
 }
 
-// node_modules/zod/v4/classic/iso.js
+// ../../social-flow-loop-i2/server/node_modules/zod/v4/classic/iso.js
 var iso_exports = {};
 __export(iso_exports, {
   ZodISODate: () => ZodISODate,
@@ -71467,7 +71467,7 @@ function duration2(params) {
   return _isoDuration(ZodISODuration, params);
 }
 
-// node_modules/zod/v4/classic/errors.js
+// ../../social-flow-loop-i2/server/node_modules/zod/v4/classic/errors.js
 var initializer2 = (inst, issues) => {
   $ZodError.init(inst, issues);
   inst.name = "ZodError";
@@ -71501,13 +71501,13 @@ var ZodRealError = $constructor("ZodError", initializer2, {
   Parent: Error
 });
 
-// node_modules/zod/v4/classic/parse.js
+// ../../social-flow-loop-i2/server/node_modules/zod/v4/classic/parse.js
 var parse2 = /* @__PURE__ */ _parse(ZodRealError);
 var parseAsync2 = /* @__PURE__ */ _parseAsync(ZodRealError);
 var safeParse3 = /* @__PURE__ */ _safeParse(ZodRealError);
 var safeParseAsync2 = /* @__PURE__ */ _safeParseAsync(ZodRealError);
 
-// node_modules/zod/v4/classic/schemas.js
+// ../../social-flow-loop-i2/server/node_modules/zod/v4/classic/schemas.js
 var ZodType2 = /* @__PURE__ */ $constructor("ZodType", (inst, def) => {
   $ZodType.init(inst, def);
   inst.def = def;
@@ -72118,10 +72118,10 @@ function preprocess(fn, schema) {
   return pipe(transform(fn), schema);
 }
 
-// node_modules/zod/v4/classic/external.js
+// ../../social-flow-loop-i2/server/node_modules/zod/v4/classic/external.js
 config(en_default2());
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/types.js
+// ../../social-flow-loop-i2/server/node_modules/@modelcontextprotocol/sdk/dist/esm/types.js
 var LATEST_PROTOCOL_VERSION = "2025-11-25";
 var SUPPORTED_PROTOCOL_VERSIONS = [LATEST_PROTOCOL_VERSION, "2025-06-18", "2025-03-26", "2024-11-05", "2024-10-07"];
 var RELATED_TASK_META_KEY = "io.modelcontextprotocol/related-task";
@@ -73640,15 +73640,15 @@ var UrlElicitationRequiredError = class extends McpError {
   }
 };
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/interfaces.js
+// ../../social-flow-loop-i2/server/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/interfaces.js
 function isTerminal(status) {
   return status === "completed" || status === "failed" || status === "cancelled";
 }
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/string.js
+// ../../social-flow-loop-i2/server/node_modules/zod-to-json-schema/dist/esm/parsers/string.js
 var ALPHA_NUMERIC = new Set("ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvxyz0123456789");
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-json-schema-compat.js
+// ../../social-flow-loop-i2/server/node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-json-schema-compat.js
 function getMethodLiteral(schema) {
   const shape = getObjectShape(schema);
   const methodSchema = shape?.method;
@@ -73669,7 +73669,7 @@ function parseWithCompat(schema, data) {
   return result.data;
 }
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/shared/protocol.js
+// ../../social-flow-loop-i2/server/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/protocol.js
 var DEFAULT_REQUEST_TIMEOUT_MSEC = 6e4;
 var Protocol = class {
   constructor(_options) {
@@ -74623,7 +74623,7 @@ function mergeCapabilities(base, additional) {
   return result;
 }
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/validation/ajv-provider.js
+// ../../social-flow-loop-i2/server/node_modules/@modelcontextprotocol/sdk/dist/esm/validation/ajv-provider.js
 var import_ajv = __toESM(require_ajv(), 1);
 var import_ajv_formats = __toESM(require_dist(), 1);
 function createDefaultAjvInstance() {
@@ -74691,7 +74691,7 @@ var AjvJsonSchemaValidator = class {
   }
 };
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/server.js
+// ../../social-flow-loop-i2/server/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/server.js
 var ExperimentalServerTasks = class {
   constructor(_server) {
     this._server = _server;
@@ -74904,7 +74904,7 @@ var ExperimentalServerTasks = class {
   }
 };
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/helpers.js
+// ../../social-flow-loop-i2/server/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/helpers.js
 function assertToolsCallTaskCapability(requests, method, entityName) {
   if (!requests) {
     throw new Error(`${entityName} does not support task creation (required for ${method})`);
@@ -74939,7 +74939,7 @@ function assertClientRequestTaskCapability(requests, method, entityName) {
   }
 }
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/server/index.js
+// ../../social-flow-loop-i2/server/node_modules/@modelcontextprotocol/sdk/dist/esm/server/index.js
 var Server = class extends Protocol {
   /**
    * Initializes this server with the given name and version information.
@@ -75310,10 +75310,10 @@ var Server = class extends Protocol {
   }
 };
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js
+// ../../social-flow-loop-i2/server/node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js
 import process2 from "node:process";
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/shared/stdio.js
+// ../../social-flow-loop-i2/server/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/stdio.js
 var STDIO_DEFAULT_MAX_BUFFER_SIZE = 10 * 1024 * 1024;
 var ReadBuffer = class {
   constructor(options) {
@@ -75350,7 +75350,7 @@ function serializeMessage(message) {
   return JSON.stringify(message) + "\n";
 }
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js
+// ../../social-flow-loop-i2/server/node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js
 var StdioServerTransport = class {
   constructor(_stdin = process2.stdin, _stdout = process2.stdout, options) {
     this._stdin = _stdin;
@@ -79227,8 +79227,8 @@ async function editMlxImage(request) {
   const src = fileToBase64(request.imagePath);
   if (!src.ok) return { success: false, error: src.error };
   const refs = [];
-  for (const path16 of request.refImagePaths ?? []) {
-    const ref = fileToBase64(path16);
+  for (const path17 of request.refImagePaths ?? []) {
+    const ref = fileToBase64(path17);
     if (!ref.ok) return { success: false, error: ref.error };
     refs.push(ref.b64);
   }
@@ -83700,6 +83700,19 @@ Returns: JSON \u2014 { channel, workspace, source, holder, episodeDir?, copyOf?,
     }
   },
   {
+    name: "portal_shot_media_upload",
+    title: "Upload and link one shot media file",
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    description: "Upload image, Blender/three.js previz, generated video or narration from this episode, then checkpoint the shot UUID. Render previz \u2192 await this upload \u2192 call video generation. Save the episode first. Missing key silently skips. Oversized files alone are skipped and logged to .portal-media-skips.jsonl; production continues. Existing .portal.json must match the workspace and head; conflicts preserve local files and provide recovery instructions. Never regenerate a file just because its upload failed.",
+    inputSchema: { type: "object", properties: {
+      episodeDir: { type: "string", description: "Episode directory; its channel path selects the workspace key." },
+      shotId: { type: "string", description: "Stable source shot ID; preferred over ordinal." },
+      shotNo: { type: "integer", minimum: 1, description: "One-based source position, only for ID-less shots." },
+      kind: { type: "string", enum: ["image", "previz", "video", "narration"], description: "Shot media role; MP4 for previz/video, WAV/MP3 for narration, PNG/JPEG/WebP for image." },
+      file: { type: "string", description: "Absolute file or episode-relative path; must stay inside this episode." }
+    }, required: ["episodeDir", "kind", "file"] }
+  },
+  {
     name: "portal_storyboard_save",
     title: "Upload an episode directory to the portal",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
@@ -84971,6 +84984,12 @@ Returns: a text block with the saved .mp4 file path, model, ratio, resolution, d
     inputSchema: {
       type: "object",
       properties: {
+        portal: { type: "object", description: "Configured portal shot target. Previz uploads immediately after rendering; video uploads previzFile before its vendor call and the output afterwards; narration uploads its completed take. Omit only in local-only mode.", properties: {
+          episodeDir: { type: "string", description: "Episode directory; its channel path selects the workspace key." },
+          shotId: { type: "string", description: "Stable source shot ID; use this when the shot has an ID." },
+          shotNo: { type: "integer", minimum: 1, description: "One-based source position, only for ID-less shots." },
+          previzFile: { type: "string", description: "Required on video calls; episode-relative or absolute previz mp4." }
+        }, required: ["episodeDir"] },
         prompt: {
           type: "string",
           description: 'Video description. Vendor formula: Subject + Movement + Environment + Camera movement + Aesthetic description + Sound. Write camera as a span, not a verb \u2014 "starting frame composition + movement + movement amplitude + ending frame composition" (combos the docs name: Hitchcock = dolly-in/out + zoom-out/in, bullet time = time slowdown + surround). Shot size follows the example word order, "Close-up of the man on the left". Do NOT write timecodes such as "0-3 seconds" \u2014 the vendor states precise-timing support is unstable and forcing it degrades the result; cut timing in the edit instead, and write an in-clip state change in words ("in under half a second"). Multi-cut in one call is supported via "Shot 1: ... Shot 2: ..." or "The shot cuts to ..." \u2014 open on the wide so the later cuts inherit one floor plan, time each cut by a dialogue or action beat, and give each its own shot size. There is no negativePrompt parameter on this engine: an unwanted element is designed out of the sentence, never forbidden in it, and what must hold goes into a closing positive-locks paragraph ("the lantern stays lit in every cut; only two people ever appear") \u2014 the one exception the vendor templates is the artifact classes (subtitles, on-frame text, logo, watermark, BGM), which may stay negative. Prompt body must be English or Chinese (Korean only on dreamina-seedance-2-5-260628) \u2014 Korean dialogue still works inside quotes on 1.5-pro, which lip-syncs it.'
@@ -85014,6 +85033,12 @@ Returns: a text block with the saved .mp4 file path, source/last frame image pat
     inputSchema: {
       type: "object",
       properties: {
+        portal: { type: "object", description: "Configured portal shot target. Previz uploads immediately after rendering; video uploads previzFile before its vendor call and the output afterwards; narration uploads its completed take. Omit only in local-only mode.", properties: {
+          episodeDir: { type: "string", description: "Episode directory; its channel path selects the workspace key." },
+          shotId: { type: "string", description: "Stable source shot ID; use this when the shot has an ID." },
+          shotNo: { type: "integer", minimum: 1, description: "One-based source position, only for ID-less shots." },
+          previzFile: { type: "string", description: "Required on video calls; episode-relative or absolute previz mp4." }
+        }, required: ["episodeDir"] },
         prompt: {
           type: "string",
           description: `Identity words stay, layout words go \u2014 the Seedance image lane is not motion-only (that is Veo's rule). Reuse the source image prompt's identity words (who and what the subject is), drop the composition words (where things sit \u2014 the frame already holds that), add the motion, write camera as a span ("starting frame composition + movement + ending frame composition"), and CLOSE WITH A CONSISTENCY LOCK: "the subject stays exactly consistent with the input frame; appearance, proportions and materials hold; no unrelated elements appear". Re-describe the layout, facing or lighting and the model redesigns the scene. Do NOT write timecodes such as "0-3 seconds" (vendor: precise-timing support is unstable) \u2014 an in-clip state change goes in words ("in under half a second"), and the length lives in durationSeconds. English or Chinese only (Korean on dreamina-seedance-2-5 alone, and inside dialogue quotes on 1.5-pro). There is no negativePrompt parameter on this engine: an unwanted element is designed out of the sentence and pinned by the lock, never forbidden in it \u2014 the one exception the vendor templates is the artifact classes (subtitles, on-frame text, logo, watermark, BGM), which may stay negative.`
@@ -85068,6 +85093,12 @@ Returns: a text block with the saved .mp4 file path, reference image, video and 
     inputSchema: {
       type: "object",
       properties: {
+        portal: { type: "object", description: "Configured portal shot target. Previz uploads immediately after rendering; video uploads previzFile before its vendor call and the output afterwards; narration uploads its completed take. Omit only in local-only mode.", properties: {
+          episodeDir: { type: "string", description: "Episode directory; its channel path selects the workspace key." },
+          shotId: { type: "string", description: "Stable source shot ID; use this when the shot has an ID." },
+          shotNo: { type: "integer", minimum: 1, description: "One-based source position, only for ID-less shots." },
+          previzFile: { type: "string", description: "Required on video calls; episode-relative or absolute previz mp4." }
+        }, required: ["episodeDir"] },
         prompt: {
           type: "string",
           description: 'Scene and subject interactions. The 2.x advanced formula: precise subject + action details + scene/environment + lighting & color tone + camera movement + visual style + image quality + constraints. For multi-cut, write a "Shot 1 / Shot 2 / Shot 3" storyboard and order each shot as camera movement -> subject action and expression -> position change -> audio; open on the wide so the later cuts inherit one floor plan, and time each cut by an action beat. Do NOT put timecodes on the shots \u2014 the vendor states precise-timing support is unstable (dreamina-seedance-2-5-260628 alone takes integer-second forms). Close with the constraints slot as a POSITIVE-LOCKS paragraph \u2014 what holds in every frame, said positively, with each reference given its scope ("@ocean_location controls water and sky only"; "the lantern stays lit in every cut") \u2014 because this engine has no negativePrompt parameter; the one exception the vendor templates is the artifact classes (subtitles, on-frame text, logo, watermark, BGM), which may stay negative. English or Chinese only (Korean on dreamina-seedance-2-5-260628 alone; on other models Korean belongs inside dialogue quotes). Unwanted subtitles cannot be fully blocked at 9:16: the vendor notes portrait output hallucinates burned-in text noticeably more often than landscape, so inspect the frames.'
@@ -85694,6 +85725,12 @@ Returns: a text block with the mp4 path, still paths (and any requested still ou
     inputSchema: {
       type: "object",
       properties: {
+        portal: { type: "object", description: "Configured portal shot target. Previz uploads immediately after rendering; video uploads previzFile before its vendor call and the output afterwards; narration uploads its completed take. Omit only in local-only mode.", properties: {
+          episodeDir: { type: "string", description: "Episode directory; its channel path selects the workspace key." },
+          shotId: { type: "string", description: "Stable source shot ID; use this when the shot has an ID." },
+          shotNo: { type: "integer", minimum: 1, description: "One-based source position, only for ID-less shots." },
+          previzFile: { type: "string", description: "Required on video calls; episode-relative or absolute previz mp4." }
+        }, required: ["episodeDir"] },
         blendPath: { type: "string", description: 'Absolute path to the .blend file (must end in .blend, no "..").' },
         outputPath: { type: "string", description: "Directory for the mp4 and stills (default: <blend dir>/previz)." },
         filename: {
@@ -85774,6 +85811,12 @@ Requires ffmpeg and GEMINI_API_KEY even for local synthesis. Two paid audio-revi
       type: "object",
       additionalProperties: false,
       properties: {
+        portal: { type: "object", description: "Configured portal shot target. Previz uploads immediately after rendering; video uploads previzFile before its vendor call and the output afterwards; narration uploads its completed take. Omit only in local-only mode.", properties: {
+          episodeDir: { type: "string", description: "Episode directory; its channel path selects the workspace key." },
+          shotId: { type: "string", description: "Stable source shot ID; use this when the shot has an ID." },
+          shotNo: { type: "integer", minimum: 1, description: "One-based source position, only for ID-less shots." },
+          previzFile: { type: "string", description: "Required on video calls; episode-relative or absolute previz mp4." }
+        }, required: ["episodeDir"] },
         generator: { type: "string", enum: [...GENERATORS], description: "Existing synthesis tool matching profile \xA72." },
         generation: { type: "object", additionalProperties: true, description: "Arguments accepted by generator, including its text/script/inputs and pinned voice settings. Outer outputPath and filename control the output." },
         expectedText: { type: "string", minLength: 1, maxLength: 4e3, description: "All spoken narration for this scene, matching narration[].tts. Write numbers as spoken words." },
@@ -87480,10 +87523,10 @@ function createPortalClient(credential, fetchImpl = fetch) {
   const headers = { authorization: `Bearer ${credential.apiKey}` };
   const holder = credential.holder || defaultHolder(credential.apiKey);
   const timeoutMs = Math.max(config2.requestTimeoutMs, PORTAL_TIMEOUT_MS);
-  async function json2(method, path16, body, binaryMime) {
+  async function json2(method, path17, body, binaryMime) {
     let response;
     try {
-      response = await fetchImpl(`${base}${path16}`, {
+      response = await fetchImpl(`${base}${path17}`, {
         method,
         headers: body === void 0 ? headers : { ...headers, "content-type": binaryMime ?? "application/json", ...binaryMime ? { "content-length": String(body.byteLength) } : {} },
         body: body === void 0 ? void 0 : binaryMime ? body : JSON.stringify(body),
@@ -87491,13 +87534,13 @@ function createPortalClient(credential, fetchImpl = fetch) {
         signal: AbortSignal.timeout(timeoutMs)
       });
     } catch (error2) {
-      throw new PortalError(502, `portal unreachable (${base}${path16}): ${error2 instanceof Error ? error2.message : String(error2)}`);
+      throw new PortalError(502, `portal unreachable (${base}${path17}): ${error2 instanceof Error ? error2.message : String(error2)}`);
     }
     let envelope;
     try {
       envelope = await response.json();
     } catch {
-      throw new PortalError(response.status, `portal answered ${response.status} without a JSON body (${method} ${path16}).`);
+      throw new PortalError(response.status, `portal answered ${response.status} without a JSON body (${method} ${path17}).`);
     }
     if (!envelope.success) {
       throw new PortalError(
@@ -87509,22 +87552,23 @@ function createPortalClient(credential, fetchImpl = fetch) {
     }
     return { status: response.status, data: envelope.data };
   }
-  async function text2(path16) {
+  async function text2(path17) {
     let response;
     try {
-      response = await fetchImpl(`${base}${path16}`, { headers, signal: AbortSignal.timeout(timeoutMs) });
+      response = await fetchImpl(`${base}${path17}`, { headers, signal: AbortSignal.timeout(timeoutMs) });
     } catch (error2) {
-      throw new PortalError(502, `portal unreachable (${base}${path16}): ${error2 instanceof Error ? error2.message : String(error2)}`);
+      throw new PortalError(502, `portal unreachable (${base}${path17}): ${error2 instanceof Error ? error2.message : String(error2)}`);
     }
-    if (!response.ok) throw new PortalError(response.status, `request failed (${response.status}): GET ${path16}`);
+    if (!response.ok) throw new PortalError(response.status, `request failed (${response.status}): GET ${path17}`);
     return response.text();
   }
-  const withHolder = (path16) => `${path16}?holder=${encodeURIComponent(holder)}`;
+  const withHolder = (path17) => `${path17}?holder=${encodeURIComponent(holder)}`;
   return {
     base,
     workspace: credential.workspace,
     source: credential.source,
     holder,
+    uploadMedia: (episodeId, kind, bytes, mime) => json2("POST", `${withHolder(`/episodes/${episodeId}/media`)}&kind=${encodeURIComponent(kind)}`, bytes, mime),
     me: () => json2("GET", "/me"),
     listStoryboards: (query = {}) => {
       const sp = new URLSearchParams();
@@ -87863,6 +87907,7 @@ async function uploadEpisodeImages(client, args, base) {
 // src/portal-tools.ts
 var PORTAL_TOOL_NAMES = [
   "portal_images_upload",
+  "portal_shot_media_upload",
   "portal_workspace_check",
   "portal_storyboard_save",
   "portal_storyboard_list",
@@ -88676,9 +88721,9 @@ function checkThreadsGate(input) {
     if (input.replyToId !== draft.replyToId) throw new Error("Draft reply target mismatch");
     const bodyHash = threadsBodyHash(input.caption, input.selfReply);
     if (bodyHash !== draft.bodyHash) throw new Error("Publish body hash mismatch");
-    let limits;
+    let limits2;
     try {
-      limits = external_exports.object({ voice: external_exports.number().finite().min(0).max(100), purpose: external_exports.number().finite().min(0).max(100), flow: external_exports.number().finite().min(0).max(100) }).parse(JSON.parse(readFileSync12(join9(directory(draft.channel), "gate.json"), "utf8")));
+      limits2 = external_exports.object({ voice: external_exports.number().finite().min(0).max(100), purpose: external_exports.number().finite().min(0).max(100), flow: external_exports.number().finite().min(0).max(100) }).parse(JSON.parse(readFileSync12(join9(directory(draft.channel), "gate.json"), "utf8")));
     } catch (error2) {
       if (error2.code === "ENOENT") throw new Error("Gate thresholds not configured (\uAE30\uC900\uC810 \uBBF8\uC124\uC815): gate.json required");
       throw error2;
@@ -88691,7 +88736,7 @@ function checkThreadsGate(input) {
       if (review.draftId !== draft.draftId || review.axis !== axis) throw new Error("Review identity mismatch");
       if (review.findings.some((finding) => finding.severity === "P0")) throw new Error(`${axis} review has unresolved P0`);
       if (review.bodyHash !== bodyHash) throw new Error(`${axis} review hash mismatch`);
-      if (review.score < limits[axis]) throw new Error(`${axis} score ${review.score} below ${limits[axis]}`);
+      if (review.score < limits2[axis]) throw new Error(`${axis} score ${review.score} below ${limits2[axis]}`);
     }
     const checker = resolve4(dirname5(fileURLToPath2(import.meta.url)), "../../skills/platform-guide/references/check-style.py");
     for (const [body, surface] of [[input.caption, input.replyToId ? "reply" : "threads"], [input.selfReply, "reply"]]) {
@@ -88720,6 +88765,180 @@ function checkThreadsEpisode(input) {
       if ((approval[key] ?? "") !== (input[key] ?? "")) throw new Error(`Episode approval mismatch: ${key}`);
     }
   });
+}
+
+// src/portal-media.ts
+import { createHash as createHash4, randomUUID as randomUUID4 } from "node:crypto";
+import { appendFileSync as appendFileSync3, closeSync as closeSync3, fstatSync as fstatSync2, statSync as statSync7, mkdirSync as mkdirSync8, openSync as openSync3, readFileSync as readFileSync13, readSync as readSync2, realpathSync as realpathSync3, renameSync as renameSync6, rmSync as rmSync8, writeFileSync as writeFileSync12 } from "node:fs";
+import path13 from "node:path";
+var portalShotFields = {
+  episodeDir: external_exports.string().min(1),
+  shotId: external_exports.string().min(1).optional(),
+  shotNo: external_exports.number().int().positive().optional(),
+  previzFile: external_exports.string().min(1).optional()
+};
+var portalShotSchema = external_exports.object(portalShotFields).refine((a) => Number(Boolean(a.shotId)) + Number(a.shotNo !== void 0) === 1, "Choose shotId or shotNo");
+var mediaUploadSchema = external_exports.object({
+  ...portalShotFields,
+  kind: external_exports.enum(["image", "previz", "video", "narration"]),
+  file: external_exports.string().min(1)
+}).refine((a) => Number(Boolean(a.shotId)) + Number(a.shotNo !== void 0) === 1, "Choose shotId or shotNo");
+var limits = { image: 5, previz: 10, video: 10, narration: 10 };
+var mimeByExt = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".mp4": "video/mp4", ".wav": "audio/wav", ".mp3": "audio/mpeg" };
+var MediaTooLarge = class extends Error {
+  constructor(bytes) {
+    super("media exceeds upload limit");
+    this.bytes = bytes;
+  }
+  bytes;
+};
+function recordOversize(dir, file, kind, bytes) {
+  const result = { skipped: true, reason: "oversized", kind, file, byteSize: bytes, limitBytes: limits[kind] * 1024 * 1024 };
+  appendFileSync3(path13.join(dir, ".portal-media-skips.jsonl"), JSON.stringify({ at: (/* @__PURE__ */ new Date()).toISOString(), ...result }) + "\n");
+  return result;
+}
+function readMedia(file, kind) {
+  const mime = mimeByExt[path13.extname(file).toLowerCase()];
+  if (!mime || !(kind === "image" ? mime.startsWith("image/") : kind === "narration" ? mime.startsWith("audio/") : mime === "video/mp4")) throw new Error("Media extension does not match its kind.");
+  const limit2 = limits[kind] * 1024 * 1024, fd = openSync3(file, "r");
+  try {
+    const stat4 = fstatSync2(fd);
+    if (!stat4.isFile() || !stat4.size) throw new Error(`${kind} must be a regular nonempty file.`);
+    if (stat4.size > limit2) throw new MediaTooLarge(stat4.size);
+    const buffer = Buffer.allocUnsafe(limit2 + 1);
+    let size = 0;
+    while (size < buffer.length) {
+      const n = readSync2(fd, buffer, size, buffer.length - size, null);
+      if (!n) break;
+      size += n;
+    }
+    if (!size) throw new Error("Media is empty.");
+    if (size > limit2) throw new MediaTooLarge(size);
+    const bytes = buffer.subarray(0, size);
+    return { bytes, mime, sha256: createHash4("sha256").update(bytes).digest("hex") };
+  } finally {
+    closeSync3(fd);
+  }
+}
+async function uploadShotMedia(args, fetchImpl) {
+  const dir = episodeDirOf(path13.resolve(args.episodeDir));
+  const client = portalClientFor(channelOfEpisodeDir(dir), fetchImpl);
+  if (!client) return { skipped: true };
+  const state = readPortalState(dir);
+  if (!state?.episodeId || state.workspace !== client.workspace || !Number.isSafeInteger(state.headRevisionNo) || state.headRevisionNo < 0)
+    throw new Error("Save/pull this episode with the configured workspace first; a matching .portal.json and explicit head revision are required. Nothing was sent.");
+  const root = realpathSync3(dir), file = realpathSync3(path13.resolve(dir, args.file));
+  if (!file.startsWith(root + path13.sep)) throw new Error("Media must be inside the episode directory, including symlinks.");
+  const sb = path13.join(dir, "storyboard"), scenesFile = path13.join(sb, "scenes.js");
+  const source = readFileSync13(scenesFile, "utf8"), stateSource = readFileSync13(path13.join(dir, ".portal.json"), "utf8");
+  const payload = buildImportPayload(dir), shots = payload.scenes;
+  if (shots.some((s2) => !s2 || typeof s2 !== "object" || Array.isArray(s2))) throw new Error("Every shot must be an object.");
+  const index = args.shotId ? shots.findIndex((s2) => s2.id === args.shotId) : (args.shotNo ?? 0) - 1;
+  if (index < 0 || index >= shots.length || args.shotId && shots.filter((s2) => s2.id === args.shotId).length !== 1) throw new Error("Unknown or ambiguous shot target.");
+  if (!args.shotId && shots[index].id !== void 0) throw new Error("Use shotId for a shot that has an ID.");
+  const initial = statSync7(file);
+  if (initial.isFile() && initial.size > limits[args.kind] * 1024 * 1024) return recordOversize(dir, file, args.kind, initial.size);
+  const unchanged = () => readFileSync13(scenesFile, "utf8") === source && readFileSync13(path13.join(dir, ".portal.json"), "utf8") === stateSource;
+  const lock = path13.join(dir, ".portal-media.lock");
+  let fd;
+  try {
+    fd = openSync3(lock, "wx");
+  } catch {
+    throw new Error("Another media upload is active for this episode. After a crash, inspect .portal-media.lock before removing it.");
+  }
+  let uploaded, revisionNo, recoveryFile;
+  let phase = "validate";
+  try {
+    const { data: head } = await client.getEpisode(state.episodeId);
+    if (head.headRevisionNo !== state.headRevisionNo) throw new Error("Portal head moved. Side-pull and merge before uploading; no blob or checkpoint sent.");
+    const media = readMedia(file, args.kind);
+    if (!unchanged()) throw new Error("Local board/state changed before upload.");
+    phase = "upload";
+    const { data } = await client.uploadMedia(state.episodeId, args.kind, media.bytes, media.mime);
+    uploaded = data;
+    if (!external_exports.string().uuid().safeParse(data.id).success || data.sha256 !== media.sha256 || data.byteSize !== media.bytes.length || data.mime !== media.mime || data.kind !== args.kind) throw new Error("Portal response does not match uploaded bytes/kind.");
+    const target = args.shotId ? `window.SCENES.find(shot => shot.id === ${JSON.stringify(args.shotId)})` : `window.SCENES[${index}]`;
+    const existing = args.kind === "image" ? shots[index].portalImageId : shots[index].portalMedia?.[args.kind];
+    const assignment = args.kind === "image" ? `${target}.portalImageId = ${JSON.stringify(data.id)};` : `${target}.portalMedia = { ...${target}.portalMedia, ${JSON.stringify(args.kind)}: ${JSON.stringify(data.id)} };`;
+    const next = source + (existing === data.id ? "" : `
+// Portal shot media UUID (no local path).
+${assignment}
+`);
+    const backup = path13.join(sb, ".portal-local", `media-${randomUUID4()}`);
+    mkdirSync8(backup, { recursive: true });
+    writeFileSync12(path13.join(backup, "scenes.js"), source);
+    recoveryFile = path13.join(backup, "uploaded-scenes.js");
+    writeFileSync12(recoveryFile, next);
+    if (!unchanged()) throw new Error("Local board/state changed; upload is not linked.");
+    phase = "checkpoint";
+    const saved = await client.checkpoint(state.episodeId, {
+      stage: head.stage ?? "board",
+      sourceHost: client.holder,
+      baseRevisionNo: state.headRevisionNo,
+      scenes: evaluateScenesJs(next).scenes,
+      meta: payload.episode.meta,
+      characters: payload.characters,
+      documents: payload.documents.map((d) => d.filename === "scenes.js" ? { ...d, content: next } : d),
+      note: `Link shot ${args.kind}`
+    });
+    revisionNo = saved.data.revisionNo;
+    if (!Number.isSafeInteger(revisionNo) || revisionNo < state.headRevisionNo) throw new Error("Invalid checkpoint revision. Side-pull before proceeding.");
+    phase = "local";
+    if (!unchanged()) throw new Error("Portal saved; local board/state changed and was preserved.");
+    const tmp = `${scenesFile}.${randomUUID4()}.tmp`;
+    try {
+      writeFileSync12(tmp, next);
+      renameSync6(tmp, scenesFile);
+    } finally {
+      rmSync8(tmp, { force: true });
+    }
+    writePortalState(dir, { headRevisionNo: revisionNo });
+    return { skipped: false, episodeId: state.episodeId, revisionNo, kind: args.kind, id: data.id, sha256: data.sha256 };
+  } catch (error2) {
+    if (error2 instanceof MediaTooLarge) return recordOversize(dir, file, args.kind, error2.bytes);
+    throw new Error(JSON.stringify({
+      result: "incomplete",
+      phase,
+      file,
+      uploaded,
+      revisionNo,
+      recoveryFile,
+      error: describePortalError(error2),
+      next: phase === "validate" ? "Resolve the local target or side-pull/merge the head. No generation was called." : "Keep the existing media file. Do not regenerate it. Side-pull/merge the head and recovery copy before retrying with an explicit base. Unlinked uploads may be cleaned after 24h."
+    }));
+  } finally {
+    closeSync3(fd);
+    rmSync8(lock, { force: true });
+  }
+}
+async function withShotMedia(args, kind, run, output, fetchImpl) {
+  const raw = args?.portal;
+  if (!raw) return run();
+  const dir = raw.episodeDir;
+  const configured = portalClientFor(typeof dir === "string" ? channelOfEpisodeDir(dir) : void 0, fetchImpl);
+  if (!configured) return run();
+  const target = portalShotSchema.parse(raw);
+  if (kind === "video") {
+    if (!target.previzFile) throw new Error("Pass portal.previzFile. Video generation has not been called.");
+    await uploadShotMedia({ ...target, kind: "previz", file: target.previzFile }, fetchImpl);
+  }
+  const result = await run(), file = output(result);
+  if (!file) return result;
+  try {
+    return { ...result, portalMedia: await uploadShotMedia({ ...target, kind, file }, fetchImpl) };
+  } catch (error2) {
+    return { ...result, portalMedia: { error: describePortalError(error2), file, next: "Media already exists. Retry portal_shot_media_upload; do not repeat generation." } };
+  }
+}
+function portalMediaReport(result) {
+  return result.portalMedia ? `
+
+Portal media: ${JSON.stringify(result.portalMedia)}` : "";
+}
+function withoutPortal(args) {
+  if (!args || typeof args !== "object" || Array.isArray(args)) return args;
+  const { portal: _portal, ...rest } = args;
+  return rest;
 }
 
 // src/datago-client.ts
@@ -89049,9 +89268,9 @@ var OPENAPI_CODE_HELP = {
 };
 async function callOpenApi(input) {
   const key = requireDataGoKrKey();
-  const path16 = input.path.replace(/^\/+/, "");
-  if (path16.includes("..") || path16.includes("://")) return err("path only accepts a route under apis.data.go.kr (e.g. 1360000/VilageFcstInfoService_2.0/getUltraSrtNcst)");
-  const url = `${OPENAPI_BASE}/${path16}${buildQuery({ ...input.params, serviceKey: key })}`;
+  const path17 = input.path.replace(/^\/+/, "");
+  if (path17.includes("..") || path17.includes("://")) return err("path only accepts a route under apis.data.go.kr (e.g. 1360000/VilageFcstInfoService_2.0/getUltraSrtNcst)");
+  const url = `${OPENAPI_BASE}/${path17}${buildQuery({ ...input.params, serviceKey: key })}`;
   const res = await requestRaw("get", url, { "User-Agent": BROWSER_UA });
   const body = res.body;
   if (/^\s*Unauthorized\s*$/i.test(body)) return err(`apis.data.go.kr: ${OPENAPI_AUTH_HELP}`);
@@ -90303,7 +90522,7 @@ async function stockSearch(input) {
 }
 
 // src/sns-client.ts
-import { createHash as createHash4, randomUUID as randomUUID4 } from "node:crypto";
+import { createHash as createHash5, randomUUID as randomUUID5 } from "node:crypto";
 import {
   existsSync as existsSync16,
   mkdirSync as nodeMkdirSync,
@@ -90903,24 +91122,24 @@ var YT_THUMB_MIME_BY_EXT = {
 var YT_THUMB_MAX_BYTES = 2 * 1024 * 1024;
 var CAPTION_MAX_BYTES_YT = 100 * 1024 * 1024;
 var CAPTION_MAX_BYTES_FB = 200 * 1024;
-async function readCaptionFile(path16, maxBytes) {
-  if (extname8(path16).toLowerCase() !== ".srt") {
-    return { error: fail2(400, `Caption file must be .srt (SubRip): ${path16}`) };
+async function readCaptionFile(path17, maxBytes) {
+  if (extname8(path17).toLowerCase() !== ".srt") {
+    return { error: fail2(400, `Caption file must be .srt (SubRip): ${path17}`) };
   }
   let bytes;
   try {
-    bytes = await readFile(path16);
+    bytes = await readFile(path17);
   } catch (error2) {
     return { error: fail2(400, `Cannot read caption file: ${error2 instanceof Error ? error2.message : String(error2)}`) };
   }
-  if (bytes.byteLength === 0) return { error: fail2(400, `Caption file is empty: ${path16}`) };
+  if (bytes.byteLength === 0) return { error: fail2(400, `Caption file is empty: ${path17}`) };
   if (bytes.byteLength > maxBytes) {
-    return { error: fail2(400, `Caption file exceeds ${maxBytes} bytes: ${path16} (${bytes.byteLength} bytes)`) };
+    return { error: fail2(400, `Caption file exceeds ${maxBytes} bytes: ${path17} (${bytes.byteLength} bytes)`) };
   }
   return { bytes };
 }
 async function uploadYoutubeCaption(token, videoId, caption) {
-  const boundary = `sfcap${randomUUID4().replace(/-/g, "")}`;
+  const boundary = `sfcap${randomUUID5().replace(/-/g, "")}`;
   const meta = JSON.stringify({
     snippet: { videoId, language: caption.language, name: "", isDraft: false }
   });
@@ -91016,7 +91235,7 @@ function parseResumeOffset(range) {
   return m2 ? Number(m2[1]) + 1 : 0;
 }
 function sessionStateFile(filePath) {
-  const key = createHash4("sha256").update(filePath).digest("hex").slice(0, 16);
+  const key = createHash5("sha256").update(filePath).digest("hex").slice(0, 16);
   return join11(snsTokenDir, ".yt-upload", `${key}.json`);
 }
 function readState(filePath) {
@@ -91894,7 +92113,7 @@ async function inboxYoutube(input, now, channel) {
 }
 async function commentInbox(input = {}) {
   const now = Date.now();
-  const limits = {
+  const limits2 = {
     postLimit: Math.min(Math.max(input.postLimit ?? 5, 1), 25),
     commentLimit: Math.min(Math.max(input.commentLimit ?? 50, 1), 100)
   };
@@ -91912,7 +92131,7 @@ async function commentInbox(input = {}) {
   const collected = await Promise.all(
     requested.map(async (platform) => ({
       platform,
-      inbox: available.has(platform) ? await collectors[platform](limits, now, input.channel) : null
+      inbox: available.has(platform) ? await collectors[platform](limits2, now, input.channel) : null
     }))
   );
   for (const { platform, inbox } of collected) {
@@ -91961,7 +92180,7 @@ async function commentInbox(input = {}) {
         includeOwn: input.includeOwn ?? false,
         includeAnswered: input.includeAnswered ?? false,
         sinceHours: input.sinceHours ?? null,
-        ...limits
+        ...limits2
       },
       ...dropped > 0 ? {
         truncated: `The response size ceiling dropped ${dropped} older comment(s) from the list (the counts above are pre-trim). To see them all, narrow the window with sinceHours or lower commentLimit/postLimit and query again.`
@@ -92151,9 +92370,9 @@ async function checkAccounts(channel) {
 
 // src/tts-final-quality.ts
 import { execFile as execFile8 } from "node:child_process";
-import { existsSync as existsSync17, mkdtempSync as mkdtempSync5, readFileSync as readFileSync13, rmSync as rmSync8, writeFileSync as writeFileSync12, renameSync as renameSync6, openSync as openSync3, closeSync as closeSync3 } from "node:fs";
+import { existsSync as existsSync17, mkdtempSync as mkdtempSync5, readFileSync as readFileSync14, rmSync as rmSync9, writeFileSync as writeFileSync13, renameSync as renameSync7, openSync as openSync4, closeSync as closeSync4 } from "node:fs";
 import { tmpdir as tmpdir5 } from "node:os";
-import path14 from "node:path";
+import path15 from "node:path";
 import { promisify as promisify3 } from "node:util";
 var exec2 = promisify3(execFile8);
 var finalSpeechSchema = external_exports.object({
@@ -92163,32 +92382,32 @@ var finalSpeechSchema = external_exports.object({
   delivery: external_exports.string().trim().min(1).max(2e3)
 }).strict();
 async function reviewFinalSpeech(input) {
-  const request = finalSpeechSchema.parse(input), media = path14.resolve(request.mediaPath);
+  const request = finalSpeechSchema.parse(input), media = path15.resolve(request.mediaPath);
   const proofPath = media + ".speech-quality.json", lockPath = proofPath + ".lock";
   let lock;
   try {
-    lock = openSync3(lockPath, "wx");
+    lock = openSync4(lockPath, "wx");
   } catch {
     return { success: false, status: "unverified", error: "Final speech review is already locked" };
   }
-  const temp = mkdtempSync5(path14.join(tmpdir5(), "speech-final-"));
+  const temp = mkdtempSync5(path15.join(tmpdir5(), "speech-final-"));
   let base = { version: 1, policy: "final-speech-v1", model: REVIEW_MODEL, ...request, mediaPath: media };
   function save2(status, extra) {
     const result = { ...base, status, checkedAt: (/* @__PURE__ */ new Date()).toISOString(), ...extra };
-    const staging = path14.join(temp, "proof.json");
-    writeFileSync12(staging, JSON.stringify(result, null, 2) + "\n");
-    writeFileSync12(proofPath + ".tmp", readFileSync13(staging));
-    renameSync6(proofPath + ".tmp", proofPath);
+    const staging = path15.join(temp, "proof.json");
+    writeFileSync13(staging, JSON.stringify(result, null, 2) + "\n");
+    writeFileSync13(proofPath + ".tmp", readFileSync14(staging));
+    renameSync7(proofPath + ".tmp", proofPath);
     return { success: status === "pass", status, proofPath, ...extra };
   }
   try {
-    base = { ...base, mediaSha256: sha256(readFileSync13(media)), textSha256: sha256(normalizeSpeech(request.expectedText)) };
-    const wav = path14.join(temp, "final.flac");
+    base = { ...base, mediaSha256: sha256(readFileSync14(media)), textSha256: sha256(normalizeSpeech(request.expectedText)) };
+    const wav = path15.join(temp, "final.flac");
     await exec2("ffmpeg", ["-y", "-v", "error", "-i", media, "-map", "0:a:0", "-map_metadata", "-1", "-ac", "1", "-ar", "24000", "-c:a", "flac", wav], { timeout: 6e4 });
-    base.audioSha256 = sha256(readFileSync13(wav));
-    if (sha256(readFileSync13(media)) !== base.mediaSha256) throw new Error("Final media changed during decoding");
+    base.audioSha256 = sha256(readFileSync14(wav));
+    if (sha256(readFileSync14(media)) !== base.mediaSha256) throw new Error("Final media changed during decoding");
     if (existsSync17(proofPath)) {
-      const old = JSON.parse(readFileSync13(proofPath, "utf8"));
+      const old = JSON.parse(readFileSync14(proofPath, "utf8"));
       const same = Object.entries(base).every(([k, v]) => ["mediaSha256", "expectedText"].includes(k) || old[k] === v);
       if (old.audioSha256 === base.audioSha256 && old.textSha256 === base.textSha256 && old.status === "fail") return save2("fail", { reused: true, signal: old.signal, transcript: old.transcript, failures: old.failures, review: old.review, error: "This exact final audio already failed; fix the audio before another listening review" });
       if (same && old.status === "pass") {
@@ -92206,20 +92425,20 @@ async function reviewFinalSpeech(input) {
       expectedText: request.expectedText.slice(0, 4e3),
       language: request.language,
       delivery: request.delivery,
-      outputPath: path14.dirname(media),
+      outputPath: path15.dirname(media),
       filename: "final.wav"
     }), expectedText: request.expectedText };
     const result = await listen(wav, reviewRequest, true);
     failures.push(...reviewFailures(request.expectedText, result.transcript, result.review, signal.duration));
     if ((result.review.continuity ?? 0) < 95 || !result.review.continuityEvidence) failures.push("Episode continuity below 95 or missing listening evidence");
-    if (sha256(readFileSync13(media)) !== base.mediaSha256) throw new Error("Final media changed during listening");
+    if (sha256(readFileSync14(media)) !== base.mediaSha256) throw new Error("Final media changed during listening");
     return save2(failures.length ? "fail" : "pass", { signal, ...result, failures });
   } catch (error2) {
     return save2("unverified", { error: error2 instanceof Error ? error2.message : String(error2) });
   } finally {
-    rmSync8(temp, { recursive: true, force: true });
-    closeSync3(lock);
-    rmSync8(lockPath, { force: true });
+    rmSync9(temp, { recursive: true, force: true });
+    closeSync4(lock);
+    rmSync9(lockPath, { force: true });
   }
 }
 
@@ -92908,7 +93127,7 @@ async function generateWithReferences2(request) {
 }
 
 // src/content-feedback.ts
-import { mkdirSync as mkdirSync8, writeFileSync as writeFileSync15 } from "node:fs";
+import { mkdirSync as mkdirSync9, writeFileSync as writeFileSync16 } from "node:fs";
 import { dirname as dirname7, isAbsolute, join as join12, resolve as resolve5 } from "node:path";
 
 // src/content-feedback-html.ts
@@ -93540,8 +93759,8 @@ async function contentFeedback(input) {
     instagram
   };
   if (htmlPath) {
-    mkdirSync8(dirname7(htmlPath), { recursive: true });
-    writeFileSync15(htmlPath, renderFeedbackHtml(report), "utf8");
+    mkdirSync9(dirname7(htmlPath), { recursive: true });
+    writeFileSync16(htmlPath, renderFeedbackHtml(report), "utf8");
   }
   return { ok: true, status: 200, body: JSON.stringify(report) };
 }
@@ -93771,9 +93990,9 @@ function isShortEnough(seconds, duration3) {
   if (seconds == null) return true;
   return seconds <= 180;
 }
-async function youtubeGet(path16, params, auth) {
+async function youtubeGet(path17, params, auth) {
   const query = auth.kind === "key" ? { ...params, key: auth.key } : params;
-  const url = `${YT_DATA_BASE2}/${path16}${buildQuery(query)}`;
+  const url = `${YT_DATA_BASE2}/${path17}${buildQuery(query)}`;
   try {
     const res = await fetch(url, {
       method: "GET",
@@ -93785,7 +94004,7 @@ async function youtubeGet(path16, params, auth) {
     return { ok: false, status: res.status, body: maskKey4(text2) };
   } catch (error2) {
     const message = error2 instanceof Error ? error2.message : String(error2);
-    return fail3(502, `YouTube Data API call failed (${path16}): ${maskKey4(message)}`);
+    return fail3(502, `YouTube Data API call failed (${path17}): ${maskKey4(message)}`);
   }
 }
 function chunk(items, size) {
@@ -94584,13 +94803,13 @@ ${errors.join("\n")}`);
 
 // src/capability-status.ts
 import { existsSync as existsSync19 } from "node:fs";
-import path15 from "node:path";
+import path16 from "node:path";
 import os from "node:os";
 var has2 = (v) => Boolean(v && v.length > 0);
 var binOk = (p) => {
   try {
-    if (p.includes(path15.sep)) return existsSync19(p);
-    return (process.env.PATH || "").split(path15.delimiter).some((dir) => dir && existsSync19(path15.join(dir, p)));
+    if (p.includes(path16.sep)) return existsSync19(p);
+    return (process.env.PATH || "").split(path16.delimiter).some((dir) => dir && existsSync19(path16.join(dir, p)));
   } catch {
     return false;
   }
@@ -95062,7 +95281,7 @@ var instagramPublishSchema = external_exports.object({
   videoUrl: external_exports.string().url().optional(),
   channel: channelSlugSchema
 }).superRefine((v, ctx) => {
-  const issue2 = (path16, message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: [path16], message });
+  const issue2 = (path17, message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: [path17], message });
   if (!v.imageUrls && !v.videoUrl) issue2("imageUrls", "INSTAGRAM requires imageUrls (1-10) or videoUrl (reel)");
   if (v.imageUrls && v.videoUrl) issue2("videoUrl", "imageUrls and videoUrl are mutually exclusive");
   if (v.videoUrl && !isVideoUrl(v.videoUrl)) issue2("videoUrl", "videoUrl must be a .mp4/.mov URL");
@@ -95082,7 +95301,7 @@ var facebookPublishSchema = external_exports.object({
   linkUrl: external_exports.string().url().optional(),
   channel: channelSlugSchema
 }).superRefine((v, ctx) => {
-  const issue2 = (path16, message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: [path16], message });
+  const issue2 = (path17, message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: [path17], message });
   if (v.imageUrls && v.videoUrl) issue2("videoUrl", "imageUrls and videoUrl are mutually exclusive");
   if (v.videoUrl && !isVideoUrl(v.videoUrl)) issue2("videoUrl", "videoUrl must be a .mp4/.mov URL");
   if (v.linkUrl && (v.imageUrls || v.videoUrl)) issue2("linkUrl", "linkUrl is for text-only posts (no media)");
@@ -95612,16 +95831,16 @@ Length is unchanged from the input.`
   // billing basis, not a rate-sheet estimate, so per-episode cost tallies should
   // record this number.
   seedance_text2video: async (args) => {
-    const result = await generateFromText(parseArgs(seedanceText2VideoSchema, args));
+    const result = await withShotMedia(args, "video", () => generateFromText(parseArgs(seedanceText2VideoSchema, withoutPortal(args))), (result2) => result2.videoPath);
     if (!result.success) return text(`Seedance video generation failed: ${result.error}`, true);
     return text(`Video generated successfully!
 
 File: ${result.videoPath}
-${seedanceMeta(result)}
-Prompt: ${result.prompt}`);
+${seedanceMeta(result)}${portalMediaReport(result)}
+Prompt: ${result.prompt}`, Boolean(result.portalMedia?.error));
   },
   seedance_img2video: async (args) => {
-    const result = await generateFromImage(parseArgs(seedanceImg2VideoSchema, args));
+    const result = await withShotMedia(args, "video", () => generateFromImage(parseArgs(seedanceImg2VideoSchema, withoutPortal(args))), (result2) => result2.videoPath);
     if (!result.success) return text(`Seedance video generation from image failed: ${result.error}`, true);
     const lastImageInfo = result.lastImage ? `
 Last Frame Image: ${result.lastImage}` : "";
@@ -95631,12 +95850,13 @@ Last Frame Image: ${result.lastImage}` : "";
 
 Output: ${result.videoPath}
 First Frame Image: ${result.sourceImage}${lastImageInfo}
-${seedanceMeta(result)}
-Prompt: ${result.prompt}`
+${seedanceMeta(result)}${portalMediaReport(result)}
+Prompt: ${result.prompt}`,
+      Boolean(result.portalMedia?.error)
     );
   },
   seedance_reference: async (args) => {
-    const result = await generateWithReferences(parseArgs(seedanceReferenceSchema, args));
+    const result = await withShotMedia(args, "video", () => generateWithReferences(parseArgs(seedanceReferenceSchema, withoutPortal(args))), (result2) => result2.videoPath);
     if (!result.success) return text(`Seedance video generation with references failed: ${result.error}`, true);
     const refImagesInfo = result.referenceImages?.length ? `
 Reference Images (${result.referenceImages.length}):
@@ -95651,8 +95871,9 @@ Reference Videos (${result.referenceVideos.length}, ${result.referenceVideoSecon
       `Video generated with references successfully!
 
 Output: ${result.videoPath}${refImagesInfo}${refVideoInfo}${refAudioInfo}
-${seedanceMeta(result)}
-Prompt: ${result.prompt}`
+${seedanceMeta(result)}${portalMediaReport(result)}
+Prompt: ${result.prompt}`,
+      Boolean(result.portalMedia?.error)
     );
   },
   // ── speech synthesis (Gemini TTS) — saves the wav locally, returns path + meta text ──
@@ -95668,8 +95889,8 @@ Prompt: ${result.prompt}`
     return text(JSON.stringify(result, null, 2));
   },
   tts_generate_checked: async (args) => {
-    const result = await generateCheckedSpeech(parseArgs(checkedSpeechSchema, args));
-    return text(JSON.stringify(result, null, 2), result.success !== true);
+    const result = await withShotMedia(args, "narration", () => generateCheckedSpeech(parseArgs(checkedSpeechSchema, withoutPortal(args))), (result2) => typeof result2.audioPath === "string" ? result2.audioPath : void 0);
+    return text(JSON.stringify(result, null, 2), result.success !== true || Boolean(result.portalMedia?.error));
   },
   tts_generate: async (args) => {
     const request = parseArgs(ttsGenerateSchema, args);
@@ -95918,7 +96139,7 @@ ${describeScene(r2.scene)}`
     );
   },
   blender_render_previz: async (args) => {
-    const r2 = await renderPreviz(parseArgs(blenderRenderPrevizSchema, args));
+    const r2 = await withShotMedia(args, "previz", () => renderPreviz(parseArgs(blenderRenderPrevizSchema, withoutPortal(args))), (result) => result.success ? result.videoPath : void 0);
     if (!r2.success) return text(`Blender previz render failed: ${r2.error}`, true);
     const skipped = r2.skippedStills.length ? `
 Skipped stills (outside frames ${r2.frameStart}\u2013${r2.frameEnd}): ${r2.skippedStills.join(", ")}` : "";
@@ -95928,9 +96149,10 @@ Skipped stills (outside frames ${r2.frameStart}\u2013${r2.frameEnd}): ${r2.skipp
 File: ${r2.videoPath}
 Stills: ${r2.stillPaths.join(", ") || "(none)"}${skipped}
 Engine: ${r2.engine} \xB7 ${r2.width}\xD7${r2.height} @ ${r2.fps} fps \xB7 frames ${r2.frameStart}\u2013${r2.frameEnd} (${r2.frames} = ${r2.seconds}s)
-Render time: ${r2.elapsedSeconds}s
+Render time: ${r2.elapsedSeconds}s${portalMediaReport(r2)}
 
-Open the stills before judging the move \u2014 the stamp shows frame, camera and lens. The clip is a camera and blocking plan, not appearance.`
+Open the stills before judging the move \u2014 the stamp shows frame, camera and lens. The clip is a camera and blocking plan, not appearance.`,
+      Boolean(r2.portalMedia?.error)
     );
   },
   // ── music generation (Lyria) — 30s batch clip / streaming with an exact duration ──
@@ -96236,6 +96458,13 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
   // One route per portal endpoint; the handler resolves the key from the channel on the
   // episode path and answers one line (isError) when there is none — a mirror, not a gate.
   portal_workspace_check: async (args) => fromPortal(await portalRoutes.workspaceCheck(parseArgs(workspaceCheckSchema, args))),
+  portal_shot_media_upload: async (args) => {
+    try {
+      return text(JSON.stringify(await uploadShotMedia(parseArgs(mediaUploadSchema, args))));
+    } catch (error2) {
+      return text(error2 instanceof Error ? error2.message : String(error2), true);
+    }
+  },
   portal_storyboard_save: async (args) => fromPortal(await portalRoutes.storyboardSave(parseArgs(storyboardSaveSchema, args))),
   portal_storyboard_list: async (args) => fromPortal(await portalRoutes.storyboardList(parseArgs(storyboardListSchema, args))),
   portal_storyboard_pull: async (args) => fromPortal(await portalRoutes.storyboardPull(parseArgs(storyboardPullSchema, args))),

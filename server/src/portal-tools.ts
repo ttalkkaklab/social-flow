@@ -33,6 +33,7 @@ import {
 
 export const PORTAL_TOOL_NAMES = [
   'portal_images_upload',
+  'portal_shot_media_upload',
   'portal_workspace_check',
   'portal_storyboard_save',
   'portal_storyboard_list',

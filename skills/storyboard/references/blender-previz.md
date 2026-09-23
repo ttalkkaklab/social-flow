@@ -242,6 +242,11 @@ trade: exact camera and timing from the clip, a close first frame from the still
   `blender_scene_build` (`fps: 24`).
 - **Format resolution.** 1080×1920 or 1920×1080 pass the vendor's pixel window
   (407,696–8,295,044 a frame); so does 720×1280.
+  Set both `width` and `height` on `blender_scene_build` or `blender_render_previz`
+  from the approved episode format (shorts-9x16: 1080×1920; youtube-long-16x9: 1920×1080),
+  using an explicit shot render ratio when supplied. The bridge does not read `window.FORMAT`: omitted
+  dimensions preserve the .blend resolution (a fresh scene defaults to 1080×1920).
+  Check the returned width/height before uploading and calling the video model.
 - **Workbench, no stamp on the clip, no gizmos.** The mp4 is never stamped (only the stills
   are); nothing else may be in frame either — no grid, camera cone, trajectory line or
   coordinate axis. The vendor lists those as distractions.

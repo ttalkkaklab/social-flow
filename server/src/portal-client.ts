@@ -49,6 +49,7 @@ export interface PortalClient {
   workspace: string;
   source: string;
   holder: string;
+  uploadMedia(episodeId: string, kind: string, bytes: Uint8Array, mime: string): Promise<PortalResponse<{ id: string; sha256: string; mime: string; byteSize: number; kind: string }>>;
   me(): Promise<PortalResponse>;
   listStoryboards(query?: Record<string, string | number | undefined>): Promise<PortalResponse>;
   listEpisodes(storyboardId: string): Promise<PortalResponse>;
@@ -199,6 +200,7 @@ export function createPortalClient(credential: PortalCredential, fetchImpl: Fetc
     workspace: credential.workspace,
     source: credential.source,
     holder,
+    uploadMedia: (episodeId, kind, bytes, mime) => json('POST', `${withHolder(`/episodes/${episodeId}/media`)}&kind=${encodeURIComponent(kind)}`, bytes, mime),
     me: () => json('GET', '/me'),
     listStoryboards: (query = {}) => {
       const sp = new URLSearchParams();

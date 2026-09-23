@@ -95,6 +95,7 @@ export function createPortalClient(credential, fetchImpl = fetch) {
         workspace: credential.workspace,
         source: credential.source,
         holder,
+        uploadMedia: (episodeId, kind, bytes, mime) => json('POST', `${withHolder(`/episodes/${episodeId}/media`)}&kind=${encodeURIComponent(kind)}`, bytes, mime),
         me: () => json('GET', '/me'),
         listStoryboards: (query = {}) => {
             const sp = new URLSearchParams();
