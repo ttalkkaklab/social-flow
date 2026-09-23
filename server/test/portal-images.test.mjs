@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync, symlinkSync } from 'node:fs';
+import fs from 'node:fs';
+import { syncBuiltinESMExports } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test, after } from 'node:test';
@@ -133,5 +135,40 @@ test('invalid checkpoint revision preserves local files and reports unknown outc
     assert.match(result.error, /invalid revision/);
     assert.equal(readPortalState(x.dir).headRevisionNo, 3);
     assert.equal(readFileSync(join(x.sb, 'scenes.js'), 'utf8'), x.source);
+  }
+});
+
+test('remote image checkpoint survives actual local write failures with recovery and an unchanged base', async (ctx) => {
+  for (const failingFile of ['board', 'state']) {
+    const x = setup(); const t = transport();
+    const beforeState = readFileSync(join(x.dir, '.portal.json'), 'utf8');
+    const original = fs.writeFileSync;
+    let failures = 0;
+    const mock = ctx.mock.method(fs, 'writeFileSync', function (file, ...args) {
+      const name = String(file);
+      if ((failingFile === 'board' && name.startsWith(join(x.sb, 'scenes.js.')) && name.endsWith('.tmp')) ||
+          (failingFile === 'state' && name === join(x.dir, '.portal.json'))) {
+        failures++;
+        throw Object.assign(new Error('injected EACCES during local write'), { code: 'EACCES' });
+      }
+      return original.call(this, file, ...args);
+    });
+    syncBuiltinESMExports();
+    let out;
+    try { out = await t.handler.imagesUpload(x.args); }
+    finally { mock.mock.restore(); syncBuiltinESMExports(); }
+    assert.equal(failures, 1);
+    assert.equal(out.isError, true);
+    const result = JSON.parse(out.text);
+    assert.equal(result.phase, 'local');
+    assert.equal(result.revisionNo, 4);
+    assert.match(result.error, /EACCES/);
+    assert.match(result.next, /Portal revision saved/);
+    assert.equal(t.calls.length, 2, 'exactly one upload and one successful checkpoint');
+    assert.equal(readFileSync(join(x.dir, '.portal.json'), 'utf8'), beforeState);
+    const recovery = readFileSync(result.recoveryFile, 'utf8');
+    assert.equal(evaluateScenesJs(recovery).scenes[0].portalImageId, ID);
+    assert.equal(readFileSync(join(result.recoveryFile, '../scenes.js'), 'utf8'), x.source);
+    assert.equal(readFileSync(join(x.sb, 'scenes.js'), 'utf8'), failingFile === 'board' ? x.source : recovery);
   }
 });
