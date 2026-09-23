@@ -1186,13 +1186,8 @@ The block carries a fingerprint of the video slots, and the check strip recomput
 live scenes — so a snapshot that no longer matches shows up as a violation instead of a stale
 number. Regenerate it after any §7 change that adds, retimes, reroutes or moves a video slot.
 
-**Fill `SB_DOC.characters` with the characters this episode actually uses** — the ids that appear
-in any scene's `visual.character`, no more. One entry each: `id`, `name`, `role` (one line from
-`identity.md`), `panels` (the panel paths relative to the storyboard directory —
-`../../../assets/characters/<id>/face.png` and so on; list only files that exist), `note` (what
-governs this character on screen — a veo ban, a fixed voice), and `veo` (`"banned"` when the
-profile bans it, otherwise omitted). Leave the array out entirely and the document simply has no
-cast section. `channel/references/resolve-asset.py --list <channel dir>` prints the ids and paths.
+**Every storyboard has at least one character and one narrator.** Set `SB_DOC.narratorCharacterId` to a character `id`; `SB_DOC.characters` contains it and every id used by `visual.character` or `narration[].speaker`. Each entry has `id`, `name`, profile §2 `tts` (`engine`, `voiceId`, plus set model/speed/language/stylePrompt), identity `role`, existing `panels` paths, governing `note`, and `veo:"banned"` when applicable.
+A narration `speaker` uses that character id; absence uses the narrator. Import accepts names but saves ids, while unmatched non-empty values fail. Do not approve or call `portal_storyboard_save` until complete. `channel/references/resolve-asset.py --list <channel dir>` prints ids and paths.
 
 **Fill `SB_DOC.craft` with the promises the episode makes** — the loop ledger the §4 craft
 rules ask for, in the one place the approver reads. `loops[]` first: the cover's own hook as

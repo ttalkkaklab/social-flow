@@ -148,7 +148,7 @@ export const shotSchema = z
     id: shotIdSchema.optional(),
     type: tuple(V.TYPES),
     title: z.string().optional(),
-    narration: z.array(z.object({ tts: z.string(), sub: z.string().optional() }).passthrough()).optional(),
+    narration: z.array(z.object({ tts: z.string(), sub: z.string().optional(), speaker: z.string().trim().min(1).optional() }).passthrough()).optional(),
     visual: visualSchema.optional(),
     duration: z.number().positive().optional(),
     scene: z.number().int().positive().optional(),

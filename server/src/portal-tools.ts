@@ -474,6 +474,7 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
           uploaded: {
             scenes: payload.scenes.length,
             characters: payload.characters.map((c) => c.id),
+            narratorCharacterId: payload.narratorCharacterId,
             documents: payload.documents.map((d) => d.filename),
           },
         });
@@ -646,6 +647,7 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
             body.scenes = payload.scenes;
             body.meta = payload.episode.meta;
             body.characters = payload.characters;
+            body.narratorCharacterId = payload.narratorCharacterId;
             uploadedScenes = payload.scenes.length;
           }
           const docs = readDocuments(sb, documents ?? DOCUMENT_FILES);

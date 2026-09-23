@@ -24,7 +24,7 @@ let serial = 0;
 function setup(shots = [{ id: 's0002' }, { id: 's0001' }]) {
   const dir = join(root, 'data/test-images/episodes', `ep-${serial++}`);
   const sb = join(dir, 'storyboard'); mkdirSync(join(sb, 'images'), { recursive: true });
-  const source = '// approved: keep-authored-comments\nwindow.FORMAT = "shorts-9x16";\nwindow.SCENES = '+JSON.stringify(shots)+';\n';
+  const source = '// approved: keep-authored-comments\nwindow.FORMAT = "shorts-9x16";\nwindow.SB_DOC = {"narratorCharacterId":"narrator","characters":[{"id":"narrator","name":"Narrator","tts":{"engine":"supertonic","voiceId":"F1"}}]};\nwindow.SCENES = '+JSON.stringify(shots)+';\n';
   writeFileSync(join(sb, 'scenes.js'), source);
   writeFileSync(join(sb, 'images/scene-1.png'), PNG);
   writePortalState(dir, { workspace: 'lab', episodeId: EP, headRevisionNo: 3 });

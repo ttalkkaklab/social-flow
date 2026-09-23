@@ -821,7 +821,7 @@ shot: {
 
 ```js
 narration: [
-  { tts: "사천칠백만 동이 기준입니다.", sub: "4,700만 동이 기준입니다." },
+  { tts: "사천칠백만 동이 기준입니다.", sub: "4,700만 동이 기준입니다.", speaker: "mina" },
   { tts: "안 내면 과태료가 붙습니다.",  sub: "안 내면 과태료가 붙습니다." }
 ]
 ```
@@ -829,6 +829,9 @@ narration: [
 - `tts` — Korean phonetic spelling (numbers and loanwords as they sound: "4,700만"→"사천칠백만",
   "eTax"→"이택스")
 - `sub` — the subtitle's original notation (numbers and proper nouns kept as written)
+- `speaker` (optional) — `SB_DOC.characters[].id`. Omit it only for the
+  `SB_DOC.narratorCharacterId` voice. A non-empty value must resolve; save never silently falls
+  back after a typo or rename.
 - `img`, `imgPrompt` (optional) — **per-line illustration mode**: when attaching one
   illustration per segment, write the path and the generation prompt (the scene-content part).
   When the storyboard.html renderer detects these fields it switches to illustration mode,

@@ -64,9 +64,15 @@ function scenesJs(extra = '') {
   return `// ep-one — The first episode (draft)
 window.FORMAT = "shorts-9x16";
 window.THEME = { preset: "cinematic-miniature" };
-window.SB_DOC = { characters: { mina: {} } };
+window.SB_DOC = {
+  narratorCharacterId: "mina",
+  characters: {
+    mina: { name: "Mina", tts: { engine: "supertonic", voiceId: "F1", speed: 1 } },
+    bo: { tts: { engine: "gemini", voiceId: "Kore" } }
+  }
+};
 window.SCENES = [
-  { no: 1, narration: "one", visual: { character: "mina" } },
+  { no: 1, narration: [{ tts: "one", speaker: "Mina" }], visual: { character: "mina" } },
   { no: 2, narration: "two", visual: { character: [{ id: "bo" }] } },
 ];
 ${extra}`;
@@ -253,7 +259,7 @@ describe('episode payload', () => {
     const r = episode.evaluateScenesJs(scenesJs());
     assert.equal(r.scenes.length, 2);
     assert.equal(r.meta.FORMAT, 'shorts-9x16');
-    assert.deepEqual(r.sbDoc, { characters: { mina: {} } });
+    assert.equal(r.sbDoc.narratorCharacterId, 'mina');
     assert.equal('SCENES' in r.meta, false);
     assert.throws(() => episode.evaluateScenesJs('window.X = 1'), /no window.SCENES/);
     assert.throws(() => episode.evaluateScenesJs('require("fs")'), 'the room has no require');
@@ -304,21 +310,51 @@ describe('episode payload', () => {
     assert.equal(p.episode.title, 'The First Episode');
     assert.equal(p.episode.status, 'approved');
     assert.equal(p.episode.format, 'shorts-9x16');
-    assert.deepEqual(p.episode.meta.SB_DOC, { characters: { mina: {} } });
+    assert.equal(p.episode.meta.SB_DOC.narratorCharacterId, 'mina');
     assert.equal(p.scenes.length, 2);
+    assert.equal(p.scenes[0].narration[0].speaker, 'mina', 'speaker name is persisted as the character id');
+    assert.equal(p.narratorCharacterId, 'mina');
     assert.deepEqual(p.characters, [
-      { id: 'mina', name: 'Mina', role: 'host', appearance: 'short hair' },
-      { id: 'bo' },
+      { id: 'mina', name: 'Mina', role: 'host', appearance: 'short hair', tts: { engine: 'supertonic', voiceId: 'F1', speed: 1 } },
+      { id: 'bo', tts: { engine: 'gemini', voiceId: 'Kore' } },
     ]);
     assert.deepEqual(p.documents.map((d) => d.filename), ['storyboard.md', 'research.md', 'scenes.js']);
     const same = episode.buildImportPayload(join(dir, 'storyboard'));
     assert.equal(same.episode.slug, 'ep-one', 'the storyboard/ path resolves to the episode');
   });
 
+  it('normalizes speakers by id before name, removes an empty speaker, and rejects an unknown speaker', () => {
+    const characters = [
+      { id: 'mina', name: 'Bo', tts: { engine: 'supertonic', voiceId: 'F1' } },
+      { id: 'bo', name: 'Mina', tts: { engine: 'gemini', voiceId: 'Kore' } },
+    ];
+    const normalized = episode.normalizeNarrationSpeakers([
+      { narration: [{ tts: 'id wins', speaker: 'mina' }, { tts: 'fallback', speaker: '' }, { tts: 'by name', speaker: 'Mina' }] },
+    ], characters);
+    assert.deepEqual(normalized[0].narration, [
+      { tts: 'id wins', speaker: 'mina' },
+      { tts: 'fallback' },
+      { tts: 'by name', speaker: 'bo' },
+    ]);
+    assert.throws(() => episode.normalizeNarrationSpeakers([{ narration: [{ tts: 'typo', speaker: 'nobody' }] }], characters), /does not match/);
+  });
+
+  it('blocks saves with no character, no matching narrator, or missing character TTS', () => {
+    const dir = join(root, 'data', 'my-channel', 'episodes', 'invalid-voice');
+    mkdirSync(join(dir, 'storyboard'), { recursive: true });
+    const file = join(dir, 'storyboard', 'scenes.js');
+    writeFileSync(file, 'window.SB_DOC={characters:{},narratorCharacterId:""}; window.SCENES=[];');
+    assert.throws(() => episode.buildImportPayload(dir), /narratorCharacterId/);
+    writeFileSync(file, 'window.SB_DOC={characters:{mina:{tts:{engine:"gemini",voiceId:"Kore"}}},narratorCharacterId:"bo"}; window.SCENES=[];');
+    assert.throws(() => episode.buildImportPayload(dir), /narratorCharacterId/);
+    writeFileSync(file, 'window.SB_DOC={characters:{mina:{}},narratorCharacterId:"mina"}; window.SCENES=[];');
+    assert.throws(() => episode.buildImportPayload(dir), /must define engine and voiceId/);
+  });
+
   it('falls back to the scenes.js header comment for the title when storyboard.md is missing', () => {
     const dir = join(root, 'data', 'my-channel', 'episodes', 'ep-two');
     mkdirSync(join(dir, 'storyboard'), { recursive: true });
-    writeFileSync(join(dir, 'storyboard', 'scenes.js'), '// ep-two — Second One (v2)\nwindow.SCENES = [];\n');
+    writeFileSync(join(dir, 'storyboard', 'scenes.js'), '// ep-two — Second One (v2)\nwindow.SB_DOC={narratorCharacterId:"n",characters:{n:{tts:{engine:"supertonic",voiceId:"M1"}}}};\nwindow.SCENES = [];\n');
     const p = episode.buildImportPayload(dir, { storyboard: 'Series A', project: 'proj' });
     assert.equal(p.episode.title, 'Second One');
     assert.deepEqual(p.storyboard, { title: 'Series A' });
@@ -405,7 +441,7 @@ describe('portal_* handlers on a scripted portal', () => {
     const out = JSON.parse(r.text);
     assert.equal(out.result, 'created');
     assert.equal(out.pageUrl, 'https://story.example/lab/storyboards/s/episodes/e');
-    assert.deepEqual(out.uploaded, { scenes: 2, characters: ['mina', 'bo'], documents: ['storyboard.md', 'research.md', 'scenes.js'] });
+    assert.deepEqual(out.uploaded, { scenes: 2, characters: ['mina', 'bo'], narratorCharacterId: 'mina', documents: ['storyboard.md', 'research.md', 'scenes.js'] });
     const body = calls[0].body;
     assert.equal(body.episode.sourceHost, 'me@box');
     assert.equal(body.episode.status, 'approved');
