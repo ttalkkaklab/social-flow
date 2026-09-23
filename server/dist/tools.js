@@ -740,12 +740,15 @@ The key is issued on the portal at /{workspace}/settings/api-keys (admin+) and s
 
 With episodeDir, also compares the directory's .portal.json (the workspace it is a copy of) with the key's workspace — workspaceMatches:false with a warning means every write to that directory will be refused until the key file or the record is fixed, so the topic does not fork into a second workspace. When the record names an episode, the portal's side comes too: portal { headRevisionNo, stage, status, lease { holder, until, mine } | null } and sync — "portal_ahead" (pull with mode "side" and merge before writing), "local_ahead" (never in the normal flow — syncWarning says how to resync), "in_sync", or "unknown" (no record, or the lookup failed — see portalWarning) — plus pending { sideDir, backups }: a leftover .portal-head/ means a merge was started and not finished, backups counts .portal-local/ entries.
 
-Returns: JSON — { channel, workspace, source, holder, episodeDir?, copyOf?, workspaceMatches?, warning?, portal?, sync?, pending?, portalWarning?, …the portal's /me answer }.`,
+A damaged or unreadable local record returns localWarning, copyOf:null, workspaceMatches:null and sync:"unknown"; pending is still inspected. Pass episodeId explicitly to read the remote head and lease without trusting that record, or use episodeId + channel alone for a remote-only check. Without a trustworthy ID no episode is guessed; portalWarning explains how to request it. A valid local record conflicting with the explicit ID or key workspace skips the episode lookup with a warning. A missing local revision also means sync:"unknown". Diagnostic success does not repair the record or permit writes: other tools keep refusing the damaged state.
+
+Returns: JSON — { channel, workspace, source, holder, episodeDir?, copyOf?, workspaceMatches?, warning?, localWarning?, portal?, sync?, pending?, portalWarning?, …the portal's /me answer }.`,
         inputSchema: {
             type: 'object',
             properties: {
                 channel: PORTAL_CHANNEL_ARG,
                 episodeDir: { type: 'string', description: 'Absolute path of data/<channel>/episodes/<topic> — checks its .portal.json against the key\'s workspace and picks the channel off the path' },
+                episodeId: { type: 'string', format: 'uuid', description: 'Explicit episode to inspect when local state is damaged or absent; must agree with a readable local record' },
             },
         },
     },
