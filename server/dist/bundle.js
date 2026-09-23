@@ -83690,12 +83690,15 @@ The key is issued on the portal at /{workspace}/settings/api-keys (admin+) and s
 
 With episodeDir, also compares the directory's .portal.json (the workspace it is a copy of) with the key's workspace \u2014 workspaceMatches:false with a warning means every write to that directory will be refused until the key file or the record is fixed, so the topic does not fork into a second workspace. When the record names an episode, the portal's side comes too: portal { headRevisionNo, stage, status, lease { holder, until, mine } | null } and sync \u2014 "portal_ahead" (pull with mode "side" and merge before writing), "local_ahead" (never in the normal flow \u2014 syncWarning says how to resync), "in_sync", or "unknown" (no record, or the lookup failed \u2014 see portalWarning) \u2014 plus pending { sideDir, backups }: a leftover .portal-head/ means a merge was started and not finished, backups counts .portal-local/ entries.
 
-Returns: JSON \u2014 { channel, workspace, source, holder, episodeDir?, copyOf?, workspaceMatches?, warning?, portal?, sync?, pending?, portalWarning?, \u2026the portal's /me answer }.`,
+A damaged or unreadable local record returns localWarning, copyOf:null, workspaceMatches:null and sync:"unknown"; pending is still inspected. Pass episodeId explicitly to read the remote head and lease without trusting that record, or use episodeId + channel alone for a remote-only check. Without a trustworthy ID no episode is guessed; portalWarning explains how to request it. A valid local record conflicting with the explicit ID or key workspace skips the episode lookup with a warning. A missing local revision also means sync:"unknown". Diagnostic success does not repair the record or permit writes: other tools keep refusing the damaged state.
+
+Returns: JSON \u2014 { channel, workspace, source, holder, episodeDir?, copyOf?, workspaceMatches?, warning?, localWarning?, portal?, sync?, pending?, portalWarning?, \u2026the portal's /me answer }.`,
     inputSchema: {
       type: "object",
       properties: {
         channel: PORTAL_CHANNEL_ARG,
-        episodeDir: { type: "string", description: "Absolute path of data/<channel>/episodes/<topic> \u2014 checks its .portal.json against the key's workspace and picks the channel off the path" }
+        episodeDir: { type: "string", description: "Absolute path of data/<channel>/episodes/<topic> \u2014 checks its .portal.json against the key's workspace and picks the channel off the path" },
+        episodeId: { type: "string", format: "uuid", description: "Explicit episode to inspect when local state is damaged or absent; must agree with a readable local record" }
       }
     }
   },
@@ -88059,7 +88062,7 @@ var renderAllocationSchema = external_exports.object({
   })).min(1).max(500).optional()
 }).refine((a) => !a.assignments || a.requestId && a.baseRevisionNo !== void 0, "Submitting requires requestId and baseRevisionNo from the latest read");
 var attachmentsSyncSchema = external_exports.object({ episodeDir: external_exports.string().min(1), episodeId: uuid2.optional(), channel: channelArg });
-var workspaceCheckSchema = external_exports.object({ channel: channelArg, episodeDir: external_exports.string().optional() });
+var workspaceCheckSchema = external_exports.object({ channel: channelArg, episodeDir: external_exports.string().optional(), episodeId: uuid2.optional() });
 var storyboardSaveSchema = external_exports.object({
   episodeDir: external_exports.string().min(1),
   project: external_exports.string().min(1).optional(),
@@ -88306,23 +88309,32 @@ function portalHandlers(fetchImpl) {
         return failed(error2);
       }
     },
-    async workspaceCheck({ channel, episodeDir }) {
+    async workspaceCheck({ channel, episodeDir, episodeId }) {
       const r2 = resolveClient(fetchImpl, channel, episodeDir);
       if ("error" in r2) return r2.error;
       try {
-        const state = episodeDir ? readPortalState(episodeDir) : null;
-        const mismatch = workspaceMismatch(r2.client, episodeDir);
+        let state = null;
+        let mismatch = null;
+        let localWarning;
+        try {
+          state = episodeDir ? readPortalState(episodeDir) : null;
+          mismatch = workspaceMismatch(r2.client, episodeDir);
+        } catch (error2) {
+          state = null;
+          localWarning = describePortalError(error2);
+        }
+        const episodeMismatch = !!(episodeId && state?.episodeId && episodeId !== state.episodeId);
+        const id = episodeId ?? state?.episodeId;
         const { data } = await r2.client.me();
-        let portalPart = {};
-        if (episodeDir && !mismatch) {
-          portalPart = { pending: pendingOf(episodeDir) };
-          if (state?.episodeId) {
+        let portalPart = episodeDir ? { pending: pendingOf(episodeDir) } : {};
+        if ((episodeDir || episodeId) && !mismatch && !episodeMismatch) {
+          if (id) {
             try {
-              const { data: ep } = await r2.client.getEpisode(state.episodeId);
+              const { data: ep } = await r2.client.getEpisode(id);
               const lease = ep.lease ?? null;
               const portalHead = ep.headRevisionNo ?? 0;
-              const localHead = state.headRevisionNo ?? 0;
-              const sync = portalHead > localHead ? "portal_ahead" : portalHead < localHead ? "local_ahead" : "in_sync";
+              const localHead = state?.headRevisionNo;
+              const sync = localHead === void 0 ? "unknown" : portalHead > localHead ? "portal_ahead" : portalHead < localHead ? "local_ahead" : "in_sync";
               portalPart = {
                 ...portalPart,
                 portal: {
@@ -88346,7 +88358,12 @@ function portalHandlers(fetchImpl) {
               portalPart = { ...portalPart, portal: null, sync: "unknown", portalWarning: describePortalError(error2) };
             }
           } else {
-            portalPart = { ...portalPart, portal: null, sync: "unknown" };
+            portalPart = {
+              ...portalPart,
+              portal: null,
+              sync: "unknown",
+              ...localWarning ? { portalWarning: "Pass episodeId explicitly to inspect the portal head and lease; the damaged local state cannot identify the episode." } : {}
+            };
           }
         }
         return ok({
@@ -88357,10 +88374,12 @@ function portalHandlers(fetchImpl) {
           ...episodeDir ? {
             episodeDir: episodeDirOf(episodeDir),
             copyOf: state ? { workspace: state.workspace ?? null, episodeId: state.episodeId ?? null, headRevisionNo: state.headRevisionNo ?? null } : null,
-            workspaceMatches: !mismatch,
+            workspaceMatches: localWarning ? null : !mismatch,
             ...mismatch ? { warning: mismatch } : {},
-            ...portalPart
+            ...localWarning ? { localWarning } : {},
+            ...episodeMismatch ? { warning: "Episode mismatch \u2014 episodeId and .portal.json identify different episodes. No episode was queried; use the matching ID or omit episodeDir for a remote-only check." } : {}
           } : {},
+          ...portalPart,
           ...data
         });
       } catch (error2) {

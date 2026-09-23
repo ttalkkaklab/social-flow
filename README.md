@@ -778,6 +778,16 @@ valid recorded or explicit base. Keep a damaged state file and local edits, rest
 or inspect the portal in a new directory, then repair the original copy. Neither
 an explicit ID/base nor `writePortalState` bypasses a damaged existing record.
 
+The read-only `portal_workspace_check` is the diagnostic exception: it returns
+`localWarning`, `copyOf: null`, `workspaceMatches: null`, `sync: "unknown"` and
+local `pending` when the state cannot be read. Pass an explicit `episodeId` to
+inspect the remote head and lease, or omit the directory and specify ID + channel
+for a remote-only check. Without an ID the tool still answers `/me` and pending,
+with `portal: null` and a `portalWarning`; it never extracts an ID from damaged JSON.
+Readable but conflicting workspace/episode identities skip the episode lookup
+with a warning. No local revision means unknown sync, including valid first-lease
+records. Diagnostic success neither repairs local files nor relaxes write guards.
+
 An explicit `episodeId` must agree with `.portal.json` in every supplied local
 copy, including scenario input files and pull targets. Conflicting IDs are refused
 before HTTP or file writes; equal revision numbers do not make two episodes the

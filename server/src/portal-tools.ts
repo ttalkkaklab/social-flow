@@ -67,7 +67,7 @@ export const renderAllocationSchema = z.object({
 
 export const attachmentsSyncSchema = z.object({ episodeDir: z.string().min(1), episodeId: uuid.optional(), channel: channelArg });
 
-export const workspaceCheckSchema = z.object({ channel: channelArg, episodeDir: z.string().optional() });
+export const workspaceCheckSchema = z.object({ channel: channelArg, episodeDir: z.string().optional(), episodeId: uuid.optional() });
 export const storyboardSaveSchema = z.object({
   episodeDir: z.string().min(1),
   project: z.string().min(1).optional(),
@@ -383,27 +383,36 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
         return ok({ ...data, ...(assignments ? { next: 'portal_storyboard_pull before any local save; server updated the revision and shot modes.' } : {}) });
       } catch (error) { return failed(error); }
     },
-    async workspaceCheck({ channel, episodeDir }) {
+    async workspaceCheck({ channel, episodeDir, episodeId }) {
       const r = resolveClient(fetchImpl, channel, episodeDir);
       if ('error' in r) return r.error;
       try {
-        const state = episodeDir ? readPortalState(episodeDir) : null;
-        const mismatch = workspaceMismatch(r.client, episodeDir);
+        let state: ReturnType<typeof readPortalState> = null;
+        let mismatch: string | null = null;
+        let localWarning: string | undefined;
+        try {
+          state = episodeDir ? readPortalState(episodeDir) : null;
+          mismatch = workspaceMismatch(r.client, episodeDir);
+        } catch (error) {
+          state = null;
+          localWarning = describePortalError(error);
+        }
+        const episodeMismatch = !!(episodeId && state?.episodeId && episodeId !== state.episodeId);
+        const id = episodeId ?? state?.episodeId;
         const { data } = await r.client.me();
         // Loop R5 — the one call at the top of a session also answers "is the portal ahead, who
         // holds it, is there a half-merged side pull or a backup lying around", so the skill does
         // not walk into the first checkpoint's 409. A portal lookup that fails leaves portal:null
         // with a warning; the check itself still answers.
-        let portalPart: Record<string, unknown> = {};
-        if (episodeDir && !mismatch) {
-          portalPart = { pending: pendingOf(episodeDir) };
-          if (state?.episodeId) {
+        let portalPart: Record<string, unknown> = episodeDir ? { pending: pendingOf(episodeDir) } : {};
+        if ((episodeDir || episodeId) && !mismatch && !episodeMismatch) {
+          if (id) {
             try {
-              const { data: ep } = await r.client.getEpisode(state.episodeId);
+              const { data: ep } = await r.client.getEpisode(id);
               const lease = (ep.lease ?? null) as { holder?: string; expiresAt?: string; mine?: boolean } | null;
               const portalHead = ep.headRevisionNo ?? 0;
-              const localHead = state.headRevisionNo ?? 0;
-              const sync = portalHead > localHead ? 'portal_ahead' : portalHead < localHead ? 'local_ahead' : 'in_sync';
+              const localHead = state?.headRevisionNo;
+              const sync = localHead === undefined ? 'unknown' : portalHead > localHead ? 'portal_ahead' : portalHead < localHead ? 'local_ahead' : 'in_sync';
               portalPart = {
                 ...portalPart,
                 portal: {
@@ -429,7 +438,9 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
               portalPart = { ...portalPart, portal: null, sync: 'unknown', portalWarning: describePortalError(error) };
             }
           } else {
-            portalPart = { ...portalPart, portal: null, sync: 'unknown' };
+            portalPart = { ...portalPart, portal: null, sync: 'unknown',
+              ...(localWarning ? { portalWarning: 'Pass episodeId explicitly to inspect the portal head and lease; the damaged local state cannot identify the episode.' } : {}),
+            };
           }
         }
         return ok({
@@ -441,11 +452,13 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
             ? {
                 episodeDir: episodeDirOf(episodeDir),
                 copyOf: state ? { workspace: state.workspace ?? null, episodeId: state.episodeId ?? null, headRevisionNo: state.headRevisionNo ?? null } : null,
-                workspaceMatches: !mismatch,
+                workspaceMatches: localWarning ? null : !mismatch,
                 ...(mismatch ? { warning: mismatch } : {}),
-                ...portalPart,
+                ...(localWarning ? { localWarning } : {}),
+                ...(episodeMismatch ? { warning: 'Episode mismatch — episodeId and .portal.json identify different episodes. No episode was queried; use the matching ID or omit episodeDir for a remote-only check.' } : {}),
               }
             : {}),
+          ...portalPart,
           ...(data as object),
         });
       } catch (error) {
