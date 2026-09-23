@@ -614,7 +614,7 @@ describe('portal_* handlers on a scripted portal', () => {
     const pulled = await h.storyboardPull({ episodeId: EPISODE_ID, targetDir: fresh });
     assert.equal(pulled.isError, false, pulled.text);
     assert.equal(episode.readPortalState(fresh).episodeId, EPISODE_ID);
-    assert.equal(calls.length, 5);
+    assert.equal(calls.length, 6);
   });
 
   it('missing state and valid optional records stay distinct from malformed present fields', () => {
@@ -781,6 +781,64 @@ describe('portal_* handlers on a scripted portal', () => {
     assert.equal(readFileSync(join(dir, '.portal.json'), 'utf8'), state);
   });
 
+  for (const mode of ['replace', 'side']) {
+    for (const failure of ['documents', 'attachment', 'head-check']) {
+      it(`head pull ${mode}: ${failure} race/failure preserves every local file, then retry succeeds`, async () => {
+        const { createHash } = await import('node:crypto');
+        const dir = makeEpisodeDir(root, 'my-channel', `ep-race-${mode}-${failure}`);
+        const sb = join(dir, 'storyboard');
+        episode.writePortalState(dir, { workspace: 'lab', episodeId: EPISODE_ID, headRevisionNo: 6 });
+        mkdirSync(join(sb, '.portal-head'), { recursive: true });
+        writeFileSync(join(sb, '.portal-head/stale.md'), 'previous side copy');
+        writeFileSync(join(dir, 'asset.txt'), 'local attachment');
+        const snapshot = () => fs.readdirSync(dir, { recursive: true }).sort().map(name => {
+          const file = join(dir, name);
+          return [name, fs.statSync(file).isFile() ? readFileSync(file).toString('base64') : null];
+        });
+        const before = snapshot();
+        const base = `/api/workspaces/lab/episodes/${EPISODE_ID}`;
+        const bytes = 'remote attachment';
+        let head = 7, reads = 0, fail = true;
+        const { impl, calls } = fakeFetch({
+          [`GET ${base}`]: () => {
+            reads++;
+            if (failure === 'head-check' && reads === 2 && fail) return { status: 503, success: false, error: 'head check unavailable' };
+            return { success: true, data: { id: EPISODE_ID, storyboardId: STORYBOARD_ID, headRevisionNo: head, documents: [{ filename: 'storyboard.md' }] } };
+          },
+          [`GET ${base}/scenes.js`]: () => {
+            const content = `scenes revision ${head}`;
+            if (failure === 'documents' && fail) head = 8;
+            return content;
+          },
+          [`GET ${base}/documents/storyboard.md`]: () => `document revision ${head}`,
+          [`GET ${base}/attachments`]: { success: true, data: { items: [{ id: 'asset', relativePath: 'asset.txt', sha256: createHash('sha256').update(bytes).digest('hex'), byteSize: Buffer.byteLength(bytes) }] } },
+          [`GET ${base}/attachments/asset`]: () => {
+            if (failure === 'attachment' && fail) head = 8;
+            return bytes;
+          },
+        });
+        const handlers = portal.portalHandlers(impl);
+        const args = { episodeId: EPISODE_ID, targetDir: dir, mode, includeDocuments: failure !== 'attachment' };
+        const result = await handlers.storyboardPull(args);
+        assert.equal(result.isError, true, result.text);
+        assert.match(result.text, failure === 'head-check' ? /head check unavailable/ : /head moved during pull.*Retry portal_storyboard_pull/);
+        assert.match(result.text, /Retry portal_storyboard_pull/);
+        assert.deepEqual(snapshot(), before, 'no file, directory, backup, side copy or state mutation');
+        assert.equal(reads, 2);
+        assert.equal(calls.at(-1).path, base, 'head check runs after attachment downloads');
+        fail = false;
+        const retry = await handlers.storyboardPull(args);
+        assert.equal(retry.isError, false, retry.text);
+        const output = JSON.parse(retry.text);
+        assert.equal(readFileSync(join(output.dir, 'scenes.js'), 'utf8'), `scenes revision ${head}`);
+        if (args.includeDocuments) assert.equal(readFileSync(join(output.dir, 'storyboard.md'), 'utf8'), `document revision ${head}`);
+        const attachmentRoot = mode === 'side' ? join(output.dir, 'attachments') : dir;
+        assert.equal(readFileSync(join(attachmentRoot, 'asset.txt'), 'utf8'), bytes);
+        assert.equal(episode.readPortalState(dir).headRevisionNo, mode === 'side' ? 6 : head);
+      });
+    }
+  }
+
   it('storyboard_pull replace backs up only changed local files before writing portal content', async () => {
     const dir = makeEpisodeDir(root, 'my-channel', 'ep-pull');
     const sb = join(dir, 'storyboard');
@@ -870,6 +928,7 @@ describe('portal_* handlers on a scripted portal', () => {
     assert.equal(readFileSync(join(out.sideDir, 'script.md'), 'utf8'), 'old script');
     assert.equal(existsSync(join(out.sideDir, 'storyboard.md')), false, "head's documents are not mixed into an old revision");
     assert.equal(existsSync(join(sb, 'script.md')), false, 'side mode does not write into the working copy');
+    assert.equal(calls.filter(c => c.path.endsWith(`/episodes/${EPISODE_ID}`)).length, 1, 'historical pull does not recheck current head');
   });
 
   it('storyboard_pull replace gives consecutive backups different timestamp directories', async () => {
@@ -902,6 +961,7 @@ describe('portal_* handlers on a scripted portal', () => {
     assert.equal(calls.find((c) => c.path.endsWith('/scenes.js')).search, '?revision=3');
     assert.equal(existsSync(join(dir, 'storyboard', 'storyboard.md')), false, "head's documents are not mixed into an old revision");
     assert.equal(episode.readPortalState(dir).headRevisionNo, 3);
+    assert.equal(calls.filter(c => c.path.endsWith(`/episodes/${EPISODE_ID}`)).length, 1, 'historical pull does not recheck current head');
   });
 
   it('episode_lease acquire records the holder; status and release go through with the same holder', async () => {

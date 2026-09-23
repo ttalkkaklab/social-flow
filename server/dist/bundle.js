@@ -88636,6 +88636,14 @@ function portalHandlers(fetchImpl) {
         const replaced = [];
         const attachmentRoot = mode === "side" ? path13.join(sb, ".portal-head", "attachments") : dir;
         const attachmentSnapshot = revision ? void 0 : await prepareAttachmentRestore(c, episodeId, attachmentRoot, canonicalPullPaths(episode, fileContents.keys()));
+        if (!revision) {
+          const { data: latest } = await c.getEpisode(episodeId).catch((error2) => {
+            throw new Error(`Could not verify episode head during pull. Pull did not write local files. Retry portal_storyboard_pull. ${error2 instanceof Error ? error2.message : String(error2)}`);
+          });
+          if ((latest.headRevisionNo ?? 0) !== headRevisionNo) {
+            throw new Error(`Episode head moved during pull (#${headRevisionNo} \u2192 #${latest.headRevisionNo ?? 0}). Pull did not write local files. Retry portal_storyboard_pull.`);
+          }
+        }
         if (mode === "side") {
           sideDir = path13.join(sb, ".portal-head");
           rmSync7(sideDir, { recursive: true, force: true });
