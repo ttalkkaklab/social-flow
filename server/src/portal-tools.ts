@@ -12,7 +12,7 @@ import { uploadAttachments, restoreAttachments, attachmentSyncReport, safeAttach
  * (`portalUnavailable`) and the skill carries on in local-file mode.
  */
 
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { z } from 'zod';
 import { imageUploadSchema, uploadEpisodeImages } from './portal-images.js';
@@ -35,6 +35,7 @@ import {
 export const PORTAL_TOOL_NAMES = [
   'portal_attachments_sync',
   'portal_images_upload',
+  'portal_shot_media_upload',
   'portal_workspace_check',
   'portal_storyboard_save',
   'portal_storyboard_list',
@@ -300,17 +301,30 @@ function backupStamp(): string {
 }
 
 /** What R4 may have left in the directory: a half-merged side pull (`.portal-head/`) and how many backups sit in `.portal-local/`. */
-function pendingOf(dir: string): { sideDir: boolean; backups: number } {
+function pendingOf(dir: string): { sideDir: boolean | null; backups: number | null; warnings?: { sideDir?: string; backups?: string } } {
   const sb = path.join(episodeDirOf(dir), 'storyboard');
   const side = path.join(sb, '.portal-head');
   const local = path.join(sb, '.portal-local');
-  let backups = 0;
+  // Test the entry before reading: readdir ENOENT can also mean a dangling link.
+  const entries = (target: string) => {
+    try { lstatSync(target); }
+    catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+      throw error;
+    }
+    return readdirSync(target, { withFileTypes: true });
+  };
+  let sideDir: boolean | null = null;
+  let backups: number | null = null;
+  const warnings: { sideDir?: string; backups?: string } = {};
+  try { sideDir = entries(side) !== null; }
+  catch { warnings.sideDir = 'Cannot read .portal-head; side directory presence is unknown. Keep local files and inspect permissions or links.'; }
   try {
-    backups = readdirSync(local, { withFileTypes: true }).filter((e) => e.isDirectory()).length;
+    backups = entries(local)?.filter((e) => e.isDirectory()).length ?? 0;
   } catch {
-    backups = 0;
+    warnings.backups = 'Cannot read .portal-local; backup count is unknown. Keep local files and inspect permissions or links.';
   }
-  return { sideDir: existsSync(side), backups };
+  return { sideDir, backups, ...(Object.keys(warnings).length ? { warnings } : {}) };
 }
 
 /** Every supplied local copy must agree with the explicit or inferred episode id. */
@@ -398,6 +412,7 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
           localWarning = describePortalError(error);
         }
         const episodeMismatch = !!(episodeId && state?.episodeId && episodeId !== state.episodeId);
+        const warning = [mismatch, episodeMismatch ? 'Episode mismatch — episodeId and .portal.json identify different episodes. No episode was queried; use the matching ID or omit episodeDir for a remote-only check.' : null].filter(Boolean).join(' ');
         const id = episodeId ?? state?.episodeId;
         const { data } = await r.client.me();
         // Loop R5 — the one call at the top of a session also answers "is the portal ahead, who
@@ -453,9 +468,8 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
                 episodeDir: episodeDirOf(episodeDir),
                 copyOf: state ? { workspace: state.workspace ?? null, episodeId: state.episodeId ?? null, headRevisionNo: state.headRevisionNo ?? null } : null,
                 workspaceMatches: localWarning ? null : !mismatch,
-                ...(mismatch ? { warning: mismatch } : {}),
+                ...(warning ? { warning } : {}),
                 ...(localWarning ? { localWarning } : {}),
-                ...(episodeMismatch ? { warning: 'Episode mismatch — episodeId and .portal.json identify different episodes. No episode was queried; use the matching ID or omit episodeDir for a remote-only check.' } : {}),
               }
             : {}),
           ...portalPart,
