@@ -752,6 +752,12 @@ falls through to the flat file, and the `TTALKKAKSTORY_*` env is the last resort
 never committed. `portal_workspace_check` tells which file answered and which workspace the
 key opens — the storyboard skill calls it once at the top of a session.
 
+`portal_storyboard_save` requires `SB_DOC.characters` with at least one character, a matching
+`SB_DOC.narratorCharacterId`, and a `tts` object on every character. Narration segment
+`speaker` values are saved as character ids; a name is accepted only at the save boundary, and
+an unmatched value fails instead of falling back. `portal_storyboard_pull` restores the same
+block, and produce uses it for synthesis.
+
 With a key present the portal is the episode's **source of truth and the local directory a
 working copy** (portal design note, 2026-09-20). The storyboard skill takes a lease and pulls
 at the top of a session (`portal_episode_lease acquire` · `portal_storyboard_pull`, or
@@ -767,6 +773,22 @@ who holds the topic and until when. Without a key the `portal_*` tools are not l
 skills say so in one line and carry on with local files, and an errored call is reported in one
 line — the portal records, it does not gate. The portal repository's own `mcp/` server still
 exists for other clients; this plugin no longer needs it.
+
+Revision comparisons and `409 head_moved` recovery summaries include decision keys as
+`+key` added, `−key` removed and `~key` changed, including revisions that change only decisions.
+Older diff responses without `decisions` keep their existing summary.
+
+Historical `portal_storyboard_pull` with `mode: "replace"` and documents enabled also removes
+managed documents absent from that revision, after backing them up under `storyboard/.portal-local/`.
+Managed names are the standard board documents, `scenario.md`, and documents listed by the current
+episode. The result lists them in `removed`; unrelated local notes stay untouched. `mode: "side"`
+preserves the working copy, and `includeDocuments: false` replaces only the board without this cleanup.
+
+`portal_scenario_pull` backs up changed local candidates and the chosen `scenario.md` under
+`storyboard/.portal-local/<timestamp>-scenarios/` before replacing any file. Its result includes
+`backupDir` and episode-relative `replaced` paths. Identical files need no backup; candidate filtering
+and text-only reads keep their existing behavior. A failed download, target validation or backup
+leaves the existing scenario files and `.portal.json` untouched.
 
 A missing `.portal.json` is an unlinked copy. An existing unreadable file, dangling
 symlink, malformed JSON, non-object JSON or wrongly typed present field is an
@@ -935,6 +957,9 @@ responsibility (see the disclaimer in LICENSE).
 
 Episode attachments: `portal_attachments_sync` uploads missing/changed files after a board is linked.
 Board import/checkpoint also call it automatically; current-head pull restores original paths and SHA256-verified bytes.
+Current-head pull rechecks the episode revision after all downloads, before writing local files. If the head changed
+or that check fails, the working copy, side copy, backups, attachments and `.portal.json` stay untouched; retry the pull.
+This check also applies with `includeDocuments: false`. Explicit historical revision pulls keep their existing behavior.
 Inspect `attachments.complete` before removing local originals. The per-file maximum is 10 MiB; shared quotas are
 100 MiB/episode and 500 MiB/workspace. Rights evidence in `.portal-attachments.json` is keyed by relative path
 and travels with the file. Scene sound design refers to the returned logical attachment UUID.

@@ -821,7 +821,7 @@ shot: {
 
 ```js
 narration: [
-  { tts: "사천칠백만 동이 기준입니다.", sub: "4,700만 동이 기준입니다." },
+  { tts: "사천칠백만 동이 기준입니다.", sub: "4,700만 동이 기준입니다.", speaker: "mina" },
   { tts: "안 내면 과태료가 붙습니다.",  sub: "안 내면 과태료가 붙습니다." }
 ]
 ```
@@ -829,6 +829,9 @@ narration: [
 - `tts` — Korean phonetic spelling (numbers and loanwords as they sound: "4,700만"→"사천칠백만",
   "eTax"→"이택스")
 - `sub` — the subtitle's original notation (numbers and proper nouns kept as written)
+- `speaker` (optional) — `SB_DOC.characters[].id`. Omit it only for the
+  `SB_DOC.narratorCharacterId` voice. A non-empty value must resolve; save never silently falls
+  back after a typo or rename.
 - `img`, `imgPrompt` (optional) — **per-line illustration mode**: when attaching one
   illustration per segment, write the path and the generation prompt (the scene-content part).
   When the storyboard.html renderer detects these fields it switches to illustration mode,
@@ -2003,6 +2006,15 @@ episode changes what it is doing and the music should say so.
 
 ```js
 window.MUSIC = {
+  $mix: {                               // optional; omit the whole block for today's builder defaults
+    targetLufs: -14, truePeakDbtp: -1, // project delivery values, not a published YouTube upload spec
+    bedSeparationLu: 10, minimumSeparationLu: 4,
+    cueCrossfadeSeconds: 2,
+    hook: { attenuationLu: 6, releaseSeconds: 2 },
+    ducking: { ratio: 8, attackMs: 20, releaseMs: 250 },
+    endingFadeSeconds: 2.2,
+    silenceRampSeconds: 0.3
+  },
   base:  { prompt: "warm low strings under a calm explanation, leaves space for a spoken voiceover, no melody in the vocal frequency range", bpm: 88 },
   tense: { prompt: "same strings with a low pulsing bass, tighter, still no melody in the vocal range", bpm: 120 },
   close: { asset: "reflect" }            // a channel asset instead of a generated cue
@@ -2040,9 +2052,32 @@ sound: {
   cue:  "tense",    // the bed changes to this cue here and stays until another shot changes it
   drop: false,      // true = the bed goes silent under this shot (0.30s ramp, not a cut)
   sfx:  "whoosh-soft",  // a key in window.SFX (or a channel sfx catalog id), heard at the shot's first frame (§sound effects)
-  ambience: "room-office" // a loop in window.SFX — the room tone starts here and holds until a shot names another or ends it with null
+  ambience: "room-office", // a loop in window.SFX — the room tone starts here and holds until a shot names another or ends it with null
+  effects: [             // optional timed effects; sound.sfx remains the one-effect-at-the-cut shorthand
+    { sfx: "whoosh-soft", atSeconds: 0.35, intensity: "subtle" }
+  ],
+  silence: [             // music only; narration and room tone keep playing
+    { startSeconds: 2.4, endSeconds: 3.1, scope: "music" }
+  ]
 }
 ```
+
+`sound` stays a **shot field** on narrated `cover` · `points` · `quote` cards. There is no scene
+default and nothing inherits onto `broll` or `outro`. Every `atSeconds`, `startSeconds` and
+`endSeconds` is measured from that shot's first frame; a value outside the shot is an error.
+When adding `effects` or `silence` to an existing `sound` object, merge the new members and keep
+its `sfx`, `cue`, `drop` and `ambience` values unless the storyboard intentionally changes them.
+`effects[].sfx` uses the same logical id as the legacy `sound.sfx`: a key in `window.SFX`, or a
+channel SFX catalog id when the book is absent. It does not introduce `sfxId`, a file path or a URL.
+Likewise, music continues to use cue names and each cue's existing `asset` id. The attachment
+record owned by the portal stores the physical file and rights metadata; the board stores design
+and logical ids only.
+
+`window.MUSIC.$mix` is reserved metadata, not a cue. Every member is optional. Omitted values take
+the builder's existing defaults, and omitting `$mix` entirely leaves a legacy board on its old
+manifest and mix path. `targetLufs` and `truePeakDbtp` are this project's delivery values; YouTube's
+public help describes Stable volume but does not publish a numeric upload target. `bedSeparationLu`
+sets the music below measured narration; `minimumSeparationLu` is the speech-time build floor.
 
 - **`cue` names a key in `window.MUSIC`.** A name that isn't there is an error, not a new cue.
 - **Omitting `sound` carries the previous bed.** Only write a cue where it changes.
@@ -2059,6 +2094,13 @@ sound: {
   (6) under the resting level while card 0 runs and ramps back over 2 s from the start of card 1,
   on the one-bed path too. A quiet opening needs no drone cue and no `sound.drop` on the cover —
   spend the drop on the line the episode is about.
+- **A timed effect uses `effects[]`.** `intensity` is `subtle` (10 LU below voice), `normal`
+  (6 LU) or `strong` (3 LU); `separationLu` may state the exact 0–30 LU distance and overrides
+  that mapping. These are production defaults, not platform standards. More than one effect may
+  share a shot, but every id still resolves through `window.SFX` or the channel catalog.
+- **A silence window mutes music only.** `scope:"music"` is the only value. Full digital silence
+  would also erase narration and room tone, so it is not a storyboard field. Use `sound.drop:true`
+  for the whole narrated shot and `sound.silence[]` for a shorter shot-relative window.
 
 ### Sound effects (`window.SFX` · `sound.sfx`)
 
@@ -2117,7 +2159,7 @@ Which cuts get one — the effect matches the size and speed of what moved on th
 which is what a viewer hears as a loading failure and what makes a cut sound spliced. A shot's
 `sound.ambience` names a `window.SFX` entry with `loop: true` (10–30 s — "quiet office room tone,
 no music, no speech", "night rain on a window, steady") and the room starts on that card and
-holds until a later shot names another or ends it with `ambience: null` (or `"-"`). The builder
+holds until a later shot names another or ends it with `ambience: null` (or `"-"` / `"none"`). The builder
 lays it 15 LU under the narration (`AMB_SEP`, the JAES figure for ambience under commentary)
 and never ducks it. One room per place: it changes where `STRUCTURE` changes place, not per
 shot. The checker refuses an entry that isn't a loop and an ambience on a `broll` or the

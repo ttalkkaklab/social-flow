@@ -4,7 +4,7 @@ import { closeSync, existsSync, fstatSync, mkdirSync, openSync, readFileSync, re
 import path from 'node:path';
 import { z } from 'zod';
 import { describePortalError } from './portal-client.js';
-import { buildImportPayload, episodeDirOf, EPISODE_STAGES, evaluateScenesJs, readPortalState, writePortalState } from './portal-episode.js';
+import { buildImportPayload, episodeDirOf, EPISODE_STAGES, evaluateScenesJs, normalizeNarrationSpeakers, readPortalState, writePortalState } from './portal-episode.js';
 export const imageUploadSchema = z.object({
     episodeDir: z.string().min(1),
     stage: z.enum(EPISODE_STAGES),
@@ -118,7 +118,7 @@ export async function uploadEpisodeImages(client, args, base) {
             const target = item.shotId ? `window.SCENES.find(shot => shot.id === ${JSON.stringify(item.shotId)})` : `window.SCENES[${item.shotNo - 1}]`;
             return `${target}.portalImageId = ${JSON.stringify(item.imageId)};`;
         }).join('\n') + '\n' : '');
-        const scenes = evaluateScenesJs(nextSource).scenes;
+        const scenes = normalizeNarrationSpeakers(evaluateScenesJs(nextSource).scenes, payload.characters);
         const documents = payload.documents.map(d => d.filename === 'scenes.js' ? { ...d, content: nextSource } : d);
         if (!unchanged())
             throw new Error('Local board or portal state changed; uploaded blobs are not linked.');
@@ -131,7 +131,8 @@ export async function uploadEpisodeImages(client, args, base) {
         phase = 'checkpoint';
         const { data } = await client.checkpoint(state.episodeId, {
             stage: args.stage, baseRevisionNo: base, sourceHost: client.holder,
-            scenes, meta: payload.episode.meta, characters: payload.characters, documents,
+            scenes, meta: payload.episode.meta, characters: payload.characters,
+            narratorCharacterId: payload.narratorCharacterId, documents,
             note: 'Link uploaded shot images',
         });
         if (!Number.isSafeInteger(data.revisionNo) || data.revisionNo <= base)

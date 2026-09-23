@@ -110,6 +110,12 @@ WORKDIR="${1:?usage: build-reel.sh <workdir>}"
 # Resolve the supplied board before changing directories; both gates inspect the same plan.
 STORYBOARD=$(node -e 'console.log(require("path").resolve(process.argv[1]))' "${2:-$WORKDIR/../storyboard}")
 node "$HERE/verify-build-plan.js" "$WORKDIR" "$STORYBOARD"
+# A normal board is <channel>/episodes/<topic>/storyboard. Proof fixtures may put storyboard/
+# directly under their channel root, so fall back to the storyboard parent in that shape.
+CHANNEL_DIR=$(node -e 'const p=require("path"), s=p.resolve(process.argv[1]), episode=p.dirname(s), episodes=p.dirname(episode); console.log(p.basename(episodes)==="episodes"?p.dirname(episodes):p.dirname(s))' "$STORYBOARD")
+# Rebuild every compiler-owned sound manifest from the current scenes.js before sourcing mix
+# values. Removing a field must remove its previous row instead of reviving stale audio.
+node "$HERE/compile-sound-plan.js" "$STORYBOARD/scenes.js" "$WORKDIR" "$CHANNEL_DIR"
 cd "$WORKDIR"
 VIDEO_WARNINGS_APPROVED=$(node -e 'console.log(require(process.argv[1]).videoGate.approved ? 1 : 0)' "$PWD/build-plan-check.json")
 # verify-build-plan.js writes production-preflight.json after the video warning/HITL check.
@@ -120,6 +126,9 @@ REUSED_VIDEO_SHOTS=$(node -e 'const p=require(process.argv[1]); console.log((p.r
 # Placed after, the ${VAR:-…} below sets the value first and format.env never wins.
 # Without the file this is today's behavior — portrait episodes don't change when this line appears.
 [ -f format.env ] && . ./format.env
+# Optional storyboard-authored mix values. compile-sound-plan.js writes numeric assignments only.
+# Boards without $mix have no sound.env and take the exact defaults below.
+[ -f sound.env ] && . ./sound.env
 
 FPS=${FPS:-30}
 SPF=$((48000 / FPS))               # audio samples per frame
@@ -159,6 +168,10 @@ BGM_EQ=${BGM_EQ:-0}                # dB scooped out of the bed at 250 Hz and 2.5
 SFX_SEP=${SFX_SEP:-6}              # LU the loudest moment of an effect sits under the measured speech (sfx.tsv)
 AMB_SEP=${AMB_SEP:-15}             # LU the room-tone bed sits under the speech (amb.tsv) — the JAES figure for ambience under commentary
 BGM_GATE_R=${BGM_GATE_R:-0.30}     # ramp around BGM-gated spans — a hard cut sounds chopped
+BGM_FADE_OUT=${BGM_FADE_OUT:-2.2}  # final music/ambience fade before the feature ends
+FINAL_LUFS=${FINAL_LUFS:--14}      # project delivery target; YouTube does not publish a numeric upload target
+FINAL_TP=${FINAL_TP:--1.0}
+FINAL_LRA=${FINAL_LRA:-11}
 XFADE=${XFADE:-0.6}                # feature↔outro transition length
 SCENE_FADE=${SCENE_FADE:-0.30}     # dip half-length — the black/white a card fades through (cards.tsv enter=/exit=).
                                    # 0.6s through the colour, the outro seam's length (XFADE). Was 0.12: four
@@ -387,11 +400,13 @@ while IFS=$'\t' read -r _CI _ _ _CZ _CO; do
   exit 1
 done < cards.resolved.tsv
 
-# Per-segment sfx + BGM gating (optional) — sfx.tsv: idx <TAB> seg <TAB> audio-file <TAB> bgm(on|off)
+# Per-segment sfx + BGM gating (optional) — sfx.tsv:
+# idx <TAB> seg <TAB> audio-file <TAB> bgm(on|off) [<TAB> shot-offset-sec <TAB> separation-LU]
 #   The audio file can be wav or mp4 (a video contributes its own sound). Left empty with just
 #   bgm set to off, only the music drops out during that seg.
 SFXTSV=""; [ -f sfx.tsv ] && SFXTSV=sfx.tsv
 AMBTSV=""; [ -f amb.tsv ] && AMBTSV=amb.tsv
+SILTSV=""; [ -f silence.tsv ] && SILTSV=silence.tsv
 # Chapter input (optional) — chapter-first-card-idx<TAB>ts-label. Absent = chapters.txt isn't created.
 CHAPTSV=""; [ -f chapters.tsv ] && CHAPTSV=chapters.tsv
 : > work/chapstart.tsv
@@ -938,26 +953,45 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
   #   The time base is **the visual's appearance time FOFF**, not the sentence boundary. xfade starts
   #   playing the later input from its 0s at the offset, so aligning to the boundary puts the sound
   #   three or four characters ahead of the picture.
+  CS0=$(awk -v f="$TOTF" -v fps="$FPS" 'BEGIN{printf "%.4f", f/fps}')
   if [ -n "$SFXTSV" ]; then
-    CS0=$(awk -v f="$TOTF" -v fps="$FPS" 'BEGIN{printf "%.4f", f/fps}')
     FJ=0
     for ((j=0; j<M; j++)); do
       SN=$(awk -F, -v k=$((j+1)) 'NR==1{print $k}' <<< "$SUBS")
-      SPATH=$(awk -F'\t' -v i="$IDX" -v s="$j" '$1==i && $2==s{print $3}' "$SFXTSV" | head -1)
-      SBGM=$(awk -F'\t' -v i="$IDX" -v s="$j" '$1==i && $2==s{print $4}' "$SFXTSV" | head -1)
-      if [ -n "$SPATH" ] || [ "${SBGM:-}" = "off" ]; then
-        WS=$(awk -v c="$CS0" -v o="${FOFF[$FJ]}" 'BEGIN{printf "%.3f", c+o}')
+      SBGM=$(awk -F'\t' -v i="$IDX" -v s="$j" '$1==i && $2==s && $4=="off"{print "off"; exit}' "$SFXTSV")
+      SMATCH=$(awk -F'\t' -v i="$IDX" -v s="$j" '$1==i && $2==s && $3!=""{n++} END{print n+0}' "$SFXTSV")
+      if [ "$SMATCH" -gt 0 ] || [ "${SBGM:-}" = "off" ]; then
+        VISUAL_WS=$(awk -v c="$CS0" -v o="${FOFF[$FJ]}" 'BEGIN{printf "%.3f", c+o}')
         if [ "$j" -lt $((M-1)) ]; then WE=$(awk -v c="$CS0" -v p="$CPRE" -v b="${BARR[$j]}" 'BEGIN{printf "%.3f", c+p+b}')
         else WE=$(awk -v c="$CS0" -v d="$D" 'BEGIN{printf "%.3f", c+d}'); fi
-        if [ -n "$SPATH" ]; then
+        while IFS=$'\t' read -r _ _ SPATH _ SOFF SSEP; do
+          [ -n "$SPATH" ] || continue
           [ -f "$SPATH" ] || { say "✗ card $IDX seg $j: sfx file missing — $SPATH"; exit 1; }
-          printf '%s\t%s\n' "$WS" "$SPATH" >> work/sfx.list
-        fi
-        [ "${SBGM:-}" = "off" ] && printf '%s\t%s\n' "$WS" "$WE" >> work/bgmgate.list
-        say "· card $IDX seg $j: sfx ${SPATH:-none} @${WS}s · BGM ${SBGM:-on} (~${WE}s)"
+          # An authored atSeconds is measured from the shot's first frame. A legacy four-column
+          # row stays aligned to the segment visual, preserving its old placement.
+          if [ -n "${SOFF:-}" ]; then WS=$(awk -v c="$CS0" -v o="$SOFF" 'BEGIN{printf "%.3f", c+o}')
+          else WS="$VISUAL_WS"; fi
+          printf '%s\t%s\t%s\n' "$WS" "$SPATH" "${SSEP:-$SFX_SEP}" >> work/sfx.list
+          say "· card $IDX seg $j: sfx $SPATH @${WS}s (${SSEP:-$SFX_SEP} LU under voice)"
+        done < <(awk -F'\t' -v i="$IDX" -v s="$j" '$1==i && $2==s && $3!=""' "$SFXTSV")
+        [ "${SBGM:-}" = "off" ] && printf '%s\t%s\n' "$VISUAL_WS" "$WE" >> work/bgmgate.list
+        [ "${SBGM:-}" = "off" ] && say "· card $IDX seg $j: BGM off @${VISUAL_WS}s–${WE}s"
       fi
       FJ=$((FJ + SN))
     done
+  fi
+
+  # Shot-relative, music-only silence windows. Narration and room tone keep playing.
+  if [ -n "$SILTSV" ]; then
+    while IFS=$'\t' read -r _ SS SE SCOPE; do
+      [ "${SCOPE:-music}" = "music" ] || { say "✗ card $IDX: unsupported silence scope ${SCOPE:-}"; exit 1; }
+      awk -v s="$SS" -v e="$SE" -v d="$D" 'BEGIN{exit !(s>=0 && e>s && e<=d+0.001)}' \
+        || { say "✗ card $IDX: silence ${SS}–${SE}s is outside the ${D}s shot"; exit 1; }
+      WS=$(awk -v c="$CS0" -v o="$SS" 'BEGIN{printf "%.3f", c+o}')
+      WE=$(awk -v c="$CS0" -v o="$SE" 'BEGIN{printf "%.3f", c+o}')
+      printf '%s\t%s\n' "$WS" "$WE" >> work/bgmgate.list
+      say "· card $IDX: music silence @${WS}s–${WE}s"
+    done < <(awk -F'\t' -v i="$IDX" '$1==i' "$SILTSV")
   fi
 
   # ── 8) ASS subtitle lines (the subtitle-text column) — times are card absolute offsets (cumulative frames/FPS)
@@ -1130,7 +1164,7 @@ say "── BGM bed: speech ${SPEECH_I} LUFS → bed ${BED_I} LUFS (${BGM_SEP} L
 while IFS= read -r L; do say "$L"; done < work/bed.log
 
 # ── 10) BGM ducking mix (same as v2) — with sfx.tsv, the sfx track and BGM mute windows go on top
-FOUT=$(awk -v t="$NT" 'BEGIN{printf "%.3f", t-2.2}')
+FOUT=$(awk -v t="$NT" -v f="$BGM_FADE_OUT" 'BEGIN{s=t-f; if(s<0)s=0; printf "%.3f", s}')
 
 # sfx_measure <file> — "<max momentary LUFS> <true peak dBTP>" over the whole file, or "" when
 #   unreadable. One ebur128 pass; the momentary (400 ms) maximum is the number a one-shot is
@@ -1156,15 +1190,16 @@ sfx_measure() {
 #      same knob (bgm-scoring.md §effects); now the distance is the decision, the file is not.
 SFXIN=""
 if [ -s work/sfx.list ]; then
-  SFX_T=$(awk -v s="$SPEECH_I" -v d="$SFX_SEP" 'BEGIN{printf "%.2f", s-d}')
   SI=(-f lavfi -t "$NT" -i "anullsrc=r=48000:cl=mono"); SFC=""; SMIX="[0:a]"; SN2=1
-  while IFS=$'\t' read -r ST SP; do
+  while IFS=$'\t' read -r ST SP SSEP; do
+    SSEP=${SSEP:-$SFX_SEP}
+    SFX_T=$(awk -v s="$SPEECH_I" -v d="$SSEP" 'BEGIN{printf "%.2f", s-d}')
     read -r SM SPK <<< "$(sfx_measure "$SP")"
     case "$SM" in ''|*[!0-9.+-]*) say "✗ sfx: could not measure $SP"; exit 1;; esac
     awk -v m="$SM" 'BEGIN{exit !(m > -60)}' || { say "✗ sfx: $SP is silent (max momentary ${SM} LUFS)"; exit 1; }
     SG=$(awk -v t="$SFX_T" -v m="$SM" -v pk="$SPK" -v c="${BGM_TP_CEIL:--1.0}" \
           'BEGIN{g=t-m; h=c-pk; if(g>h)g=h; printf "%.2f", g}')
-    say "· sfx $(basename "$SP") @${ST}s: max momentary ${SM} LUFS / ${SPK} dBTP → ${SG} dB"
+    say "· sfx $(basename "$SP") @${ST}s: max momentary ${SM} LUFS / ${SPK} dBTP → ${SG} dB (${SSEP} LU under voice)"
     SI+=(-i "$SP")
     SFC+="[$SN2:a]aresample=48000,aformat=channel_layouts=mono,volume=${SG}dB,adelay=$(awk -v s="$ST" 'BEGIN{printf "%d", s*1000}'):all=1,atrim=0:$NT[x$SN2];"
     SMIX+="[x$SN2]"; SN2=$((SN2+1))
@@ -1174,7 +1209,7 @@ if [ -s work/sfx.list ]; then
     -map "[sx]" -ac 1 -ar 48000 work/sfx.wav
   SFXIN="-i work/sfx.wav"
   read -r SXM _ <<< "$(sfx_measure work/sfx.wav)"
-  say "── sfx: $((SN2-1)) effect(s), loudest moment ${SXM} LUFS = $(awk -v s="$SPEECH_I" -v m="$SXM" 'BEGIN{printf "%.1f", s-m}') LU under speech (target ${SFX_SEP})"
+  say "── sfx: $((SN2-1)) effect(s), loudest moment ${SXM} LUFS = $(awk -v s="$SPEECH_I" -v m="$SXM" 'BEGIN{printf "%.1f", s-m}') LU under speech"
 fi
 
 # 10a') Ambience — room tone under the voice, rendered by bgm-bed.sh like the music bed (measured,
@@ -1241,7 +1276,7 @@ else VOMIX="[vo_raw]anull[vo_mix];"; fi
 # The ambience is the third leg of the final sum. Its input index follows the sfx track's.
 AMBIDX=2; [ -n "$SFXIN" ] && AMBIDX=3
 if [ -n "$AMBIN" ]; then
-  AMBLEG="[${AMBIDX}:a]aformat=channel_layouts=stereo,afade=t=in:st=0:d=1.2,afade=t=out:st=$FOUT:d=2.2[amb];"
+  AMBLEG="[${AMBIDX}:a]aformat=channel_layouts=stereo,afade=t=in:st=0:d=1.2,afade=t=out:st=$FOUT:d=$BGM_FADE_OUT[amb];"
   FINALMIX="[vo_mix][duck][amb]amix=inputs=3:duration=first:dropout_transition=0"
 else
   AMBLEG=""; FINALMIX="[vo_mix][duck]amix=inputs=2:duration=first:dropout_transition=0"
@@ -1255,11 +1290,11 @@ ffmpeg -y -v error -i work/narration.wav -i work/bed.wav $SFXIN $AMBIN -filter_c
   $AMBLEG
   $VOMIX
   [1:a]atrim=0:$NT,asetpts=PTS-STARTPTS,${BEDEQ}
-       afade=t=in:st=0:d=1.2,afade=t=out:st=$FOUT:d=2.2,${HOOKVOL}anull$BGMGATE[bgv];
+       afade=t=in:st=0:d=1.2,afade=t=out:st=$FOUT:d=$BGM_FADE_OUT,${HOOKVOL}anull$BGMGATE[bgv];
   [bgv][vo_key]sidechaincompress=threshold=0.02:ratio=$DUCK_RATIO:attack=$DUCK_ATTACK:release=$DUCK_RELEASE:makeup=1,
        asplit=2[duck][duckqa];
   ${FINALMIX},
-       loudnorm=I=-14:TP=-1.0:LRA=11,aresample=48000[out]
+       loudnorm=I=$FINAL_LUFS:TP=$FINAL_TP:LRA=$FINAL_LRA,aresample=48000[out]
 " -map "[out]" -ac 2 -ar 48000 work/mix.wav \
   -map "[duckqa]" -ac 2 -ar 48000 work/bed-ducked.wav
 

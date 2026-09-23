@@ -121,6 +121,7 @@ export interface PortalRevisionDiff {
   identical: boolean;
   scenes: { countA: number; countB: number; added: string[]; removed: string[]; changed: Array<{ key: string; fields: string[] }>; reordered: boolean };
   meta: { added: string[]; removed: string[]; changed: string[] };
+  decisions?: { added: string[]; removed: string[]; changed: string[] };
   documents: Record<string, { status: 'same' | 'added' | 'removed' | 'changed'; unified?: string | null; truncated?: boolean; linesA?: number; linesB?: number }>;
 }
 

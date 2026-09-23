@@ -188,6 +188,10 @@ export function summarizeRevisionDiff(d: PortalRevisionDiff): string {
   );
   const meta = [...d.meta.added.map((k) => `+${k}`), ...d.meta.removed.map((k) => `−${k}`), ...d.meta.changed.map((k) => `~${k}`)];
   if (meta.length) parts.push(`meta ${meta.join(' ')}`);
+  if (d.decisions) {
+    const decisions = [...d.decisions.added.map((k) => `+${k}`), ...d.decisions.removed.map((k) => `−${k}`), ...d.decisions.changed.map((k) => `~${k}`)];
+    if (decisions.length) parts.push(`decisions ${decisions.join(' ')}`);
+  }
   const docs = Object.entries(d.documents)
     .filter(([, c]) => c.status !== 'same')
     .map(([name, c]) => `${name} ${c.status}`);
@@ -520,6 +524,7 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
           uploaded: {
             scenes: payload.scenes.length,
             characters: payload.characters.map((c) => c.id),
+            narratorCharacterId: payload.narratorCharacterId,
             documents: payload.documents.map((d) => d.filename),
           },
         });
@@ -578,6 +583,18 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
           }
         }
         for (const filename of fileContents.keys()) safeAttachmentTarget(dir, `storyboard/${filename}`);
+        // A historical working copy must not carry newer managed documents into the next save.
+        // Unknown local notes are not ours to remove; preserve every removed file in the same backup.
+        const removed = revision && includeDocuments && mode === 'replace'
+          ? [...new Set<string>([...DOCUMENT_FILES, 'scenario.md', ...(episode.documents ?? []).map(doc => doc.filename)])]
+            .filter(filename => SAFE_DOCUMENT_NAME.test(filename) && !fileContents.has(filename))
+            .filter(filename => {
+              const target = safeAttachmentTarget(dir, `storyboard/${filename}`);
+              if (!existsSync(target)) return false;
+              if (!lstatSync(target).isFile()) throw new Error(`Not a regular document: ${filename}`);
+              return true;
+            })
+          : [];
         const files = [...fileContents].map(([filename, content]) => ({ filename, content }));
         const headRevisionNo = revision ?? episode.headRevisionNo ?? 0;
         const written = files.map(({ filename }) => filename);
@@ -587,6 +604,15 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
 
         const attachmentRoot = mode === 'side' ? path.join(sb, '.portal-head', 'attachments') : dir;
         const attachmentSnapshot = revision ? undefined : await prepareAttachmentRestore(c, episodeId, attachmentRoot, canonicalPullPaths(episode, fileContents.keys()));
+        if (!revision) {
+          // Downloads use current endpoints. Check again after staging attachments, before any local writes.
+          const { data: latest } = await c.getEpisode(episodeId).catch((error: unknown) => {
+            throw new Error(`Could not verify episode head during pull. Pull did not write local files. Retry portal_storyboard_pull. ${error instanceof Error ? error.message : String(error)}`);
+          });
+          if ((latest.headRevisionNo ?? 0) !== headRevisionNo) {
+            throw new Error(`Episode head moved during pull (#${headRevisionNo} → #${latest.headRevisionNo ?? 0}). Pull did not write local files. Retry portal_storyboard_pull.`);
+          }
+        }
         if (mode === 'side') {
           sideDir = path.join(sb, '.portal-head');
           rmSync(sideDir, { recursive: true, force: true });
@@ -598,15 +624,18 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
             const target = path.join(sb, filename);
             return existsSync(target) && !readFileSync(target).equals(Buffer.from(content));
           });
-          if (changed.length > 0) {
+          if (changed.length > 0 || removed.length > 0) {
             const state = readPortalState(dir);
+            const backupRoot = path.join(sb, '.portal-local');
+            if (existsSync(backupRoot) && lstatSync(backupRoot).isSymbolicLink()) throw new Error('Unsafe document backup directory');
             backupDir = path.join(sb, '.portal-local', `${backupStamp()}-r${state?.headRevisionNo ?? 0}`);
             mkdirSync(backupDir, { recursive: true });
-            for (const { filename } of changed) {
+            for (const filename of [...changed.map(file => file.filename), ...removed]) {
               copyFileSync(path.join(sb, filename), path.join(backupDir, filename));
-              replaced.push(filename);
             }
+            replaced.push(...changed.map(file => file.filename));
           }
+          for (const filename of removed) rmSync(path.join(sb, filename));
           for (const { filename, content } of files) writeFileSync(path.join(sb, filename), content);
 
         }
@@ -630,6 +659,7 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
           written,
           backupDir,
           replaced,
+          removed,
           sideDir,
         });
       } catch (error) {
@@ -693,6 +723,7 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
             body.scenes = payload.scenes;
             body.meta = payload.episode.meta;
             body.characters = payload.characters;
+            body.narratorCharacterId = payload.narratorCharacterId;
             uploadedScenes = payload.scenes.length;
           }
           const docs = readDocuments(sb, documents ?? DOCUMENT_FILES);
@@ -815,20 +846,40 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
         if (cand && !targetDir) return { text: await r.client.scenarioMd(id, cand), isError: false };
         const { data } = await r.client.listScenarios(id);
         const written: string[] = [];
+        let backupDir: string | null = null;
+        const replaced: string[] = [];
         if (targetDir) {
           const dir = episodeDirOf(targetDir);
           const sb = path.join(dir, 'storyboard');
           const candDir = path.join(sb, 'candidates');
-          mkdirSync(candDir, { recursive: true });
+          const files = new Map<string, string>();
           for (const s of data.scenarios) {
             if (cand && s.candidate !== cand) continue;
-            const file = path.join(candDir, `${s.candidate.toLowerCase()}.md`);
-            writeFileSync(file, s.markdown);
-            written.push(path.relative(dir, file));
-            if (s.chosen) {
-              writeFileSync(path.join(sb, 'scenario.md'), s.markdown);
-              written.push('storyboard/scenario.md');
+            candidate.parse(s.candidate);
+            files.set(`candidates/${s.candidate.toLowerCase()}.md`, s.markdown);
+            if (s.chosen) files.set('scenario.md', s.markdown);
+          }
+          // Validate every target and finish all backups before replacing the first local draft.
+          for (const [filename, content] of files) {
+            const target = safeAttachmentTarget(dir, `storyboard/${filename}`);
+            if (!existsSync(target)) continue;
+            if (!lstatSync(target).isFile()) throw new Error(`Not a regular scenario file: ${filename}`);
+            if (!readFileSync(target).equals(Buffer.from(content))) replaced.push(`storyboard/${filename}`);
+          }
+          if (replaced.length > 0) {
+            const backupRoot = path.join(sb, '.portal-local');
+            if (existsSync(backupRoot) && lstatSync(backupRoot).isSymbolicLink()) throw new Error('Unsafe scenario backup directory');
+            backupDir = path.join(backupRoot, `${backupStamp()}-scenarios`);
+            for (const relative of replaced) {
+              const backup = path.join(backupDir, path.relative('storyboard', relative));
+              mkdirSync(path.dirname(backup), { recursive: true });
+              copyFileSync(path.join(dir, relative), backup);
             }
+          }
+          mkdirSync(candDir, { recursive: true });
+          for (const [filename, content] of files) {
+            writeFileSync(path.join(sb, filename), content);
+            written.push(`storyboard/${filename}`);
           }
         }
         return ok({
@@ -840,6 +891,8 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
             findings: s.findings.length,
           })),
           written,
+          backupDir,
+          replaced,
         });
       } catch (error) {
         return failed(error);

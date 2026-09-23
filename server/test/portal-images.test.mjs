@@ -24,7 +24,7 @@ let serial = 0;
 function setup(shots = [{ id: 's0002' }, { id: 's0001' }]) {
   const dir = join(root, 'data/test-images/episodes', `ep-${serial++}`);
   const sb = join(dir, 'storyboard'); mkdirSync(join(sb, 'images'), { recursive: true });
-  const source = '// approved: keep-authored-comments\nwindow.FORMAT = "shorts-9x16";\nwindow.SCENES = '+JSON.stringify(shots)+';\n';
+  const source = '// approved: keep-authored-comments\nwindow.FORMAT = "shorts-9x16";\nwindow.SB_DOC = {"narratorCharacterId":"narrator","characters":[{"id":"narrator","name":"Narrator","tts":{"engine":"supertonic","voiceId":"F1"}}]};\nwindow.SCENES = '+JSON.stringify(shots)+';\n';
   writeFileSync(join(sb, 'scenes.js'), source);
   writeFileSync(join(sb, 'images/scene-1.png'), PNG);
   writePortalState(dir, { workspace: 'lab', episodeId: EP, headRevisionNo: 3 });
@@ -52,6 +52,8 @@ test('uploads bytes with bearer, holder and length; one checkpoint links UUID by
   assert.equal(upload.init.headers['content-length'], String(PNG.length)); assert.deepEqual(upload.body, PNG);
   assert.equal(upload.init.redirect, 'error');
   assert.equal(checkpoint.body.baseRevisionNo, 3); assert.equal(checkpoint.body.scenes[0].id, 's0002');
+  assert.equal(checkpoint.body.narratorCharacterId, 'narrator');
+  assert.equal(checkpoint.body.characters[0].tts.voiceId, 'F1');
   assert.equal(checkpoint.body.scenes[0].portalImageId, ID); assert.equal(checkpoint.body.scenes[1].portalImageId, undefined);
   const saved = readFileSync(join(x.sb, 'scenes.js'), 'utf8'); assert.ok(saved.startsWith(x.source));
   assert.equal(checkpoint.body.documents.find(d => d.filename === 'scenes.js').content, saved);

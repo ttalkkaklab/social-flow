@@ -150,6 +150,11 @@ export function buildImportPayload(episodeDir, options = {}) {
         filename: f,
         content: readFileSync(path.join(sb, f), 'utf8'),
     }));
+    const characters = collectCharacters(scenes, sbDoc, channelDir);
+    const narratorCharacterId = typeof sbDoc?.narratorCharacterId === 'string' ? sbDoc.narratorCharacterId : '';
+    if (!narratorCharacterId || !characters.some((character) => character.id === narratorCharacterId))
+        throw new Error('SB_DOC.narratorCharacterId must match one SB_DOC.characters id.');
+    const normalizedScenes = normalizeNarrationSpeakers(scenes, characters);
     const status = md.status ?? null;
     return {
         project: { name: channel },
@@ -161,8 +166,9 @@ export function buildImportPayload(episodeDir, options = {}) {
             ...(status && EPISODE_STATUSES.includes(status) ? { status } : {}),
             meta: sbDoc ? { ...meta, SB_DOC: sbDoc } : meta,
         },
-        scenes,
-        characters: collectCharacters(scenes, sbDoc, channelDir),
+        scenes: normalizedScenes,
+        characters,
+        narratorCharacterId,
         documents,
     };
 }
@@ -182,16 +188,51 @@ function characterIdsOf(shot) {
         .map((c) => (typeof c === 'string' ? c : c && typeof c.id === 'string' ? c.id : null))
         .filter((id) => Boolean(id));
 }
+function ttsOf(value) {
+    if (!value || typeof value !== 'object')
+        return null;
+    const tts = value;
+    if (!['gemini', 'supertonic', 'elevenlabs', 'mlx'].includes(String(tts.engine)) || typeof tts.voiceId !== 'string' || !tts.voiceId.trim())
+        return null;
+    return {
+        engine: tts.engine, voiceId: tts.voiceId,
+        ...(typeof tts.model === 'string' ? { model: tts.model } : {}),
+        ...(typeof tts.speed === 'number' ? { speed: tts.speed } : {}),
+        ...(typeof tts.language === 'string' ? { language: tts.language } : {}),
+        ...(typeof tts.stylePrompt === 'string' ? { stylePrompt: tts.stylePrompt } : {}),
+    };
+}
 function collectCharacters(scenes, sbDoc, channelDir) {
     const ids = new Set(scenes.flatMap(characterIdsOf));
     const docCharacters = sbDoc?.characters;
-    if (docCharacters && typeof docCharacters === 'object') {
-        for (const id of Object.keys(docCharacters))
+    const details = new Map();
+    if (Array.isArray(docCharacters)) {
+        for (const value of docCharacters) {
+            if (!value || typeof value !== 'object' || typeof value.id !== 'string')
+                continue;
+            const detail = value;
+            details.set(detail.id, detail);
+            ids.add(detail.id);
+        }
+    }
+    else if (docCharacters && typeof docCharacters === 'object') {
+        for (const [id, value] of Object.entries(docCharacters)) {
+            details.set(id, value && typeof value === 'object' ? value : {});
             ids.add(id);
+        }
     }
     return [...ids].map((id) => {
+        const fromDoc = details.get(id) ?? {};
+        const tts = ttsOf(fromDoc.tts);
+        if (!tts)
+            throw new Error(`SB_DOC.characters.${id}.tts must define engine and voiceId.`);
         const identity = path.join(channelDir, 'assets', 'characters', id, 'identity.md');
-        const detail = { id };
+        const detail = {
+            id, tts,
+            ...(typeof fromDoc.name === 'string' ? { name: fromDoc.name } : {}),
+            ...(typeof fromDoc.role === 'string' ? { role: fromDoc.role } : {}),
+            ...(typeof fromDoc.appearance === 'string' ? { appearance: fromDoc.appearance } : {}),
+        };
         if (existsSync(identity)) {
             const text = readFileSync(identity, 'utf8');
             const heading = /^#\s+(.+?)\s*(?:\(([^)]*)\))?\s*$/m.exec(text);
@@ -205,5 +246,36 @@ function collectCharacters(scenes, sbDoc, channelDir) {
                 detail.appearance = look.trim();
         }
         return detail;
+    });
+}
+/** `speaker` is persisted as a stable character id. Names are accepted only at this save boundary. */
+export function normalizeNarrationSpeakers(scenes, characters) {
+    const byId = new Map(characters.map((character) => [character.id, character.id]));
+    const names = new Map();
+    for (const character of characters) {
+        if (!character.name)
+            continue;
+        names.set(character.name, [...(names.get(character.name) ?? []), character.id]);
+    }
+    return scenes.map((scene) => {
+        if (!scene || typeof scene !== 'object' || !Array.isArray(scene.narration))
+            return scene;
+        return {
+            ...scene,
+            narration: (scene.narration).map((segment) => {
+                if (!segment || typeof segment !== 'object' || typeof segment.speaker !== 'string')
+                    return segment;
+                const speaker = segment.speaker;
+                if (!speaker.trim()) {
+                    const { speaker: _speaker, ...withoutSpeaker } = segment;
+                    return withoutSpeaker;
+                }
+                const named = names.get(speaker);
+                const id = byId.get(speaker) ?? (named?.length === 1 ? named[0] : undefined);
+                if (!id)
+                    throw new Error(`narration speaker "${speaker}" does not match a character id or name.`);
+                return { ...segment, speaker: id };
+            }),
+        };
     });
 }

@@ -31,6 +31,9 @@ function server({ failUpload, failCheckpoint, changedHead } = {}) {
     }
     const body=JSON.parse(init.body); events.push('checkpoint');
     assert.equal(body.baseRevisionNo,revision); assert.equal(body.stage,'approved');
+    assert.equal(body.narratorCharacterId,'narrator');
+    assert.equal(body.characters[0].tts.voiceId,'F1');
+    assert.equal(body.scenes[0].narration[0].speaker,'narrator');
     if(failCheckpoint) return Response.json({success:false,error:'moved',error_code:'head_moved'}, {status:409});
     lastScenes=body.scenes; revision++;
     assert.equal(JSON.stringify(body).includes(dir),false,'local media paths do not enter portal snapshots');
@@ -41,7 +44,7 @@ function server({ failUpload, failCheckpoint, changedHead } = {}) {
 beforeEach(()=>{
   rmSync(join(root,'tokens'),{recursive:true,force:true}); rmSync(dir,{recursive:true,force:true});
   mkdirSync(join(dir,'storyboard'),{recursive:true});
-  writeFileSync(join(dir,'storyboard','scenes.js'),'// authored comment\nwindow.SCENES=[{id:"s1",type:"cover",title:"One"}];\nwindow.PRODUCTION={mode:"full_video"};\n');
+  writeFileSync(join(dir,'storyboard','scenes.js'),'// authored comment\nwindow.SB_DOC={narratorCharacterId:"narrator",characters:[{id:"narrator",name:"Narrator",tts:{engine:"supertonic",voiceId:"F1"}}]};\nwindow.SCENES=[{id:"s1",type:"cover",title:"One",narration:[{tts:"One",speaker:"Narrator"}]}];\nwindow.PRODUCTION={mode:"full_video"};\n');
   writePortalState(dir,{workspace:'lab',episodeId:ep,headRevisionNo:1});
   for(const file of ['previz.mp4','output.mp4','voice.wav','source.png']) writeFileSync(join(dir,file),`fixture-${file}`);
 });
