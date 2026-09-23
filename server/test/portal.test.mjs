@@ -620,7 +620,7 @@ describe('portal_* handlers on a scripted portal', () => {
     assert.equal(calls.length, 0);
   });
 
-  it('damaged state reaches every tool as isError before HTTP even with explicit identity and base', async () => {
+  it('damaged state reaches non-diagnostic tools as isError before HTTP even with explicit identity and base', async () => {
     const dir = makeEpisodeDir(root, 'my-channel', 'ep-state-tools');
     const file = join(dir, '.portal.json'), board = join(dir, 'storyboard/scenes.js');
     const before = readFileSync(board, 'utf8');
@@ -637,7 +637,6 @@ describe('portal_* handlers on a scripted portal', () => {
         () => h.episodeRestore({ ...args, revisionNo: 1 }),
         () => h.episodeLease({ ...args, action: 'acquire' }),
         () => h.episodeRevisions(args), () => h.renderAllocation(args),
-        () => h.workspaceCheck({ episodeDir: dir }),
         () => h.scenarioSave({ ...args, candidate: 'D1', markdown: '# test' }),
         () => h.scenarioChoose({ ...args, candidate: 'D1' }),
         () => h.scenarioPull({ ...args, targetDir: dir }),
@@ -1093,6 +1092,95 @@ describe('portal_* handlers on a scripted portal', () => {
     const mm = JSON.parse((await portal.portalHandlers(gone.impl).workspaceCheck({ episodeDir: other })).text);
     assert.equal(mm.workspaceMatches, false);
     assert.equal('sync' in mm, false, 'no portal lookup with the wrong key');
+  });
+
+  it('workspace_check diagnoses damaged records without trusting their identity or changing files', async () => {
+    const dir = makeEpisodeDir(root, 'my-channel', 'ep-diagnostic');
+    const file = join(dir, '.portal.json');
+    const board = readFileSync(join(dir, 'storyboard/scenes.js'), 'utf8');
+    mkdirSync(join(dir, 'storyboard/.portal-head'), { recursive: true });
+    mkdirSync(join(dir, 'storyboard/.portal-local/backup'), { recursive: true });
+    for (const source of ['{broken', 'null', JSON.stringify({ episodeId: EPISODE_ID, headRevisionNo: '1' }), '{}']) {
+      writeFileSync(file, source);
+      const { impl, calls } = fakeFetch({
+        'GET /api/workspaces/lab/me': { success: true, data: { role: 'member' } },
+        [`GET /api/workspaces/lab/episodes/${EPISODE_ID}`]: { success: true, data: { headRevisionNo: 3, lease: { holder: 'me@box', mine: true } } },
+      });
+      const h = portal.portalHandlers(impl);
+      const noId = await h.workspaceCheck({ episodeDir: dir });
+      assert.equal(noId.isError, false, noId.text);
+      const out = JSON.parse(noId.text);
+      assert.equal(out.role, 'member'); assert.equal(out.copyOf, null); assert.equal(out.workspaceMatches, null);
+      assert.equal(out.portal, null); assert.equal(out.sync, 'unknown');
+      assert.match(out.localWarning, /Cannot read \.portal\.json/); assert.match(out.portalWarning, /episodeId/);
+      assert.deepEqual(out.pending, { sideDir: true, backups: 1 });
+      assert.equal(calls.length, 1, 'never salvages an ID from invalid state');
+      const explicit = await h.workspaceCheck({ episodeDir: dir, episodeId: EPISODE_ID });
+      assert.equal(explicit.isError, false, explicit.text);
+      const remote = JSON.parse(explicit.text);
+      assert.equal(remote.portal.headRevisionNo, 3); assert.equal(remote.portal.lease.mine, true);
+      assert.equal(remote.sync, 'unknown'); assert.match(remote.localWarning, /Cannot read/);
+      assert.deepEqual(remote.pending, out.pending);
+      assert.equal(calls.length, 3); assert.ok(calls.every(c => c.method === 'GET'));
+      const save = await h.storyboardSave({ episodeDir: dir, baseRevisionNo: 3 });
+      assert.equal(save.isError, true); assert.equal(calls.length, 3, 'diagnosis never relaxes write guards');
+      assert.equal(readFileSync(file, 'utf8'), source); assert.equal(readFileSync(join(dir, 'storyboard/scenes.js'), 'utf8'), board);
+    }
+  });
+
+  it('workspace_check keeps I/O errors and remote errors as separate warnings', async (ctx) => {
+    const dir = makeEpisodeDir(root, 'my-channel', 'ep-diagnostic-io'), file = join(dir, '.portal.json');
+    episode.writePortalState(dir, { episodeId: EPISODE_ID, headRevisionNo: 1 });
+    const source = readFileSync(file, 'utf8');
+    const { impl, calls } = fakeFetch({ 'GET /api/workspaces/lab/me': { success: true, data: { role: 'member' } } });
+    const h = portal.portalHandlers(impl);
+    async function check() {
+      const result = await h.workspaceCheck({ episodeDir: dir, episodeId: EPISODE_ID });
+      assert.equal(result.isError, false, result.text);
+      const out = JSON.parse(result.text);
+      assert.match(out.localWarning, /Cannot read/); assert.match(out.portalWarning, /portal 404/);
+      assert.equal(out.workspaceMatches, null); assert.equal(out.portal, null); assert.equal(out.sync, 'unknown');
+      assert.deepEqual(out.pending, { sideDir: false, backups: 0 });
+    }
+    for (const method of ['lstatSync', 'readFileSync']) {
+      const original = fs[method];
+      const mock = ctx.mock.method(fs, method, function(target, ...args) {
+        if (String(target) === file) throw Object.assign(new Error('injected'), { code: 'EACCES' });
+        return original.call(this, target, ...args);
+      }); syncBuiltinESMExports();
+      try { await check(); } finally { mock.mock.restore(); syncBuiltinESMExports(); }
+      assert.equal(readFileSync(file, 'utf8'), source);
+    }
+    rmSync(file); symlinkSync(join(dir, 'absent'), file); await check();
+    assert.equal(fs.lstatSync(file).isSymbolicLink(), true);
+    assert.equal(calls.length, 6); assert.ok(calls.every(c => c.method === 'GET'));
+  });
+
+  it('workspace_check supports remote-only and partial records but will not compare conflicting identities', async () => {
+    assert.equal(portal.workspaceCheckSchema.parse({ episodeId: EPISODE_ID }).episodeId, EPISODE_ID);
+    assert.equal(portal.workspaceCheckSchema.safeParse({ episodeId: 'bad' }).success, false);
+    assert.equal(TOOLS.find(t => t.name === 'portal_workspace_check').inputSchema.properties.episodeId.format, 'uuid');
+    const { impl, calls } = fakeFetch({
+      'GET /api/workspaces/lab/me': { success: true, data: { role: 'member' } },
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}`]: { success: true, data: { headRevisionNo: 0, lease: null } },
+    });
+    const h = portal.portalHandlers(impl);
+    const remote = JSON.parse((await h.workspaceCheck({ channel: 'my-channel', episodeId: EPISODE_ID })).text);
+    assert.equal(remote.portal.headRevisionNo, 0); assert.equal(remote.sync, 'unknown'); assert.equal(remote.localWarning, undefined);
+    const dir = makeEpisodeDir(root, 'my-channel', 'ep-diagnostic-partial');
+    for (const state of [null, { episodeId: EPISODE_ID }, { episodeId: EPISODE_ID, headRevisionNo: 0 }]) {
+      if (state) writeFileSync(join(dir, '.portal.json'), JSON.stringify(state));
+      const out = JSON.parse((await h.workspaceCheck({ episodeDir: dir, episodeId: EPISODE_ID })).text);
+      assert.equal(out.sync, state?.headRevisionNo === 0 ? 'in_sync' : 'unknown');
+      assert.equal(out.portal.headRevisionNo, 0); assert.equal(out.localWarning, undefined);
+    }
+    const before = calls.length;
+    const conflict = JSON.parse((await h.workspaceCheck({ episodeDir: dir, episodeId: STORYBOARD_ID })).text);
+    assert.match(conflict.warning, /Episode mismatch/); assert.equal(conflict.portal, undefined);
+    writeFileSync(join(dir, '.portal.json'), JSON.stringify({ workspace: 'other', episodeId: EPISODE_ID }));
+    const workspace = JSON.parse((await h.workspaceCheck({ episodeDir: dir, episodeId: EPISODE_ID })).text);
+    assert.equal(workspace.workspaceMatches, false); assert.equal(workspace.portal, undefined);
+    assert.equal(calls.length, before + 2, 'identity mismatches only query /me');
   });
 
   it('episode_status refuses an empty patch before touching the portal', async () => {
