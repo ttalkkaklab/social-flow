@@ -964,6 +964,94 @@ describe('portal_* handlers on a scripted portal', () => {
     assert.equal(calls.filter(c => c.path.endsWith(`/episodes/${EPISODE_ID}`)).length, 1, 'historical pull does not recheck current head');
   });
 
+  it('historical replace backs up absent managed documents and excludes them from the next save', async () => {
+    const dir = makeEpisodeDir(root, 'my-channel', 'ep-historical-cleanup');
+    const sb = join(dir, 'storyboard');
+    episode.writePortalState(dir, { workspace: 'lab', episodeId: EPISODE_ID, headRevisionNo: 9 });
+    for (const file of ['script.md', 'scenario.md', 'custom.md', 'notes.md']) writeFileSync(join(sb, file), `local ${file}`);
+    const { impl } = fakeFetch({
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}`]: { success: true, data: { id: EPISODE_ID, headRevisionNo: 9, documents: [{ filename: 'custom.md' }, { filename: '../outside.md' }] } },
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}/scenes.js`]: scenesJs(),
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}/revisions/3`]: { success: true, data: { revisionNo: 3, documents: { 'research.md': 'old research' } } },
+    });
+    const h = portal.portalHandlers(impl);
+    const result = await h.storyboardPull({ episodeId: EPISODE_ID, targetDir: dir, revision: 3 });
+    assert.equal(result.isError, false, result.text);
+    const out = JSON.parse(result.text);
+    assert.deepEqual(out.removed, ['storyboard.md', 'script.md', 'scenario.md', 'custom.md']);
+    assert.deepEqual(out.replaced, ['research.md']);
+    for (const file of out.removed) {
+      assert.equal(existsSync(join(sb, file)), false);
+      assert.ok(existsSync(join(out.backupDir, file)));
+    }
+    assert.equal(readFileSync(join(out.backupDir, 'script.md'), 'utf8'), 'local script.md');
+    assert.equal(readFileSync(join(sb, 'notes.md'), 'utf8'), 'local notes.md');
+    assert.deepEqual(episode.buildImportPayload(dir).documents.map(d => d.filename), ['research.md', 'scenes.js']);
+    assert.equal(episode.readPortalState(dir).headRevisionNo, 3);
+    const again = JSON.parse((await h.storyboardPull({ episodeId: EPISODE_ID, targetDir: dir, revision: 3 })).text);
+    assert.equal(again.backupDir, null);
+    assert.deepEqual(again.removed, []);
+  });
+
+  it('historical replace backs up removals even when the incoming board is identical', async () => {
+    const dir = makeEpisodeDir(root, 'my-channel', 'ep-remove-only');
+    const { impl } = fakeFetch({
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}`]: { success: true, data: { id: EPISODE_ID, headRevisionNo: 9 } },
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}/scenes.js`]: scenesJs(),
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}/revisions/3`]: { success: true, data: { revisionNo: 3, documents: {} } },
+    });
+    const result = await portal.portalHandlers(impl).storyboardPull({ episodeId: EPISODE_ID, targetDir: dir, revision: 3 });
+    assert.equal(result.isError, false, result.text);
+    const out = JSON.parse(result.text);
+    assert.deepEqual(out.replaced, []);
+    assert.deepEqual(out.removed, ['storyboard.md', 'research.md']);
+    assert.equal(readFileSync(join(out.backupDir, 'research.md'), 'utf8'), '# research\n');
+  });
+
+  for (const args of [{ revision: 3, includeDocuments: false }, { revision: 3, mode: 'side' }, {}]) {
+    it(`pull preserves existing documents outside historical replace cleanup: ${JSON.stringify(args)}`, async () => {
+      const dir = makeEpisodeDir(root, 'my-channel', `ep-preserve-${args.mode ?? args.revision ?? 'head'}`);
+      const before = readFileSync(join(dir, 'storyboard/research.md'));
+      const { impl } = fakeFetch({
+        [`GET /api/workspaces/lab/episodes/${EPISODE_ID}`]: { success: true, data: { id: EPISODE_ID, headRevisionNo: 9 } },
+        [`GET /api/workspaces/lab/episodes/${EPISODE_ID}/scenes.js`]: scenesJs(),
+        [`GET /api/workspaces/lab/episodes/${EPISODE_ID}/revisions/3`]: { success: true, data: { revisionNo: 3, documents: {} } },
+      });
+      const result = await portal.portalHandlers(impl).storyboardPull({ episodeId: EPISODE_ID, targetDir: dir, ...args });
+      assert.equal(result.isError, false, result.text);
+      assert.deepEqual(JSON.parse(result.text).removed, []);
+      assert.deepEqual(readFileSync(join(dir, 'storyboard/research.md')), before);
+    });
+  }
+
+  for (const obstacle of ['directory', 'symlink', 'backup-failure']) {
+    it(`historical cleanup refuses ${obstacle} before replacing files or advancing state`, async (t) => {
+      const dir = makeEpisodeDir(root, 'my-channel', `ep-cleanup-${obstacle}`), sb = join(dir, 'storyboard');
+      episode.writePortalState(dir, { workspace: 'lab', episodeId: EPISODE_ID, headRevisionNo: 9 });
+      const board = readFileSync(join(sb, 'scenes.js')), state = readFileSync(join(dir, '.portal.json'));
+      const target = join(sb, 'script.md');
+      if (obstacle === 'directory') mkdirSync(target);
+      else if (obstacle === 'symlink') symlinkSync(join(sb, 'research.md'), target);
+      else writeFileSync(target, 'keep script');
+      const { impl } = fakeFetch({
+        [`GET /api/workspaces/lab/episodes/${EPISODE_ID}`]: { success: true, data: { id: EPISODE_ID, headRevisionNo: 9 } },
+        [`GET /api/workspaces/lab/episodes/${EPISODE_ID}/scenes.js`]: scenesJs('// old revision'),
+        [`GET /api/workspaces/lab/episodes/${EPISODE_ID}/revisions/3`]: { success: true, data: { revisionNo: 3, documents: {} } },
+      });
+      const mock = obstacle === 'backup-failure' ? t.mock.method(fs, 'copyFileSync', () => { throw new Error('backup unavailable'); }) : null;
+      syncBuiltinESMExports();
+      try {
+        const result = await portal.portalHandlers(impl).storyboardPull({ episodeId: EPISODE_ID, targetDir: dir, revision: 3 });
+        assert.equal(result.isError, true, result.text);
+        assert.match(result.text, /regular document|Symlink|backup unavailable/);
+        assert.deepEqual(readFileSync(join(sb, 'scenes.js')), board);
+        assert.deepEqual(readFileSync(join(dir, '.portal.json')), state);
+        assert.equal(readFileSync(join(sb, 'research.md'), 'utf8'), '# research\n');
+        assert.ok(existsSync(target));
+      } finally { mock?.mock.restore(); syncBuiltinESMExports(); }
+    });
+  }
+
   it('episode_lease acquire records the holder; status and release go through with the same holder', async () => {
     const dir = makeEpisodeDir(root, 'my-channel', 'ep-lease');
     episode.writePortalState(dir, { episodeId: EPISODE_ID, headRevisionNo: 0 });

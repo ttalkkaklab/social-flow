@@ -88628,6 +88628,12 @@ function portalHandlers(fetchImpl) {
           }
         }
         for (const filename of fileContents.keys()) safeAttachmentTarget(dir, `storyboard/${filename}`);
+        const removed = revision && includeDocuments && mode === "replace" ? [.../* @__PURE__ */ new Set([...DOCUMENT_FILES, "scenario.md", ...(episode.documents ?? []).map((doc) => doc.filename)])].filter((filename) => SAFE_DOCUMENT_NAME.test(filename) && !fileContents.has(filename)).filter((filename) => {
+          const target = safeAttachmentTarget(dir, `storyboard/${filename}`);
+          if (!existsSync15(target)) return false;
+          if (!lstatSync3(target).isFile()) throw new Error(`Not a regular document: ${filename}`);
+          return true;
+        }) : [];
         const files = [...fileContents].map(([filename, content]) => ({ filename, content }));
         const headRevisionNo = revision ?? episode.headRevisionNo ?? 0;
         const written = files.map(({ filename }) => filename);
@@ -88655,15 +88661,18 @@ function portalHandlers(fetchImpl) {
             const target = path13.join(sb, filename);
             return existsSync15(target) && !readFileSync12(target).equals(Buffer.from(content));
           });
-          if (changed.length > 0) {
+          if (changed.length > 0 || removed.length > 0) {
             const state = readPortalState(dir);
+            const backupRoot = path13.join(sb, ".portal-local");
+            if (existsSync15(backupRoot) && lstatSync3(backupRoot).isSymbolicLink()) throw new Error("Unsafe document backup directory");
             backupDir = path13.join(sb, ".portal-local", `${backupStamp()}-r${state?.headRevisionNo ?? 0}`);
             mkdirSync7(backupDir, { recursive: true });
-            for (const { filename } of changed) {
+            for (const filename of [...changed.map((file) => file.filename), ...removed]) {
               copyFileSync(path13.join(sb, filename), path13.join(backupDir, filename));
-              replaced.push(filename);
             }
+            replaced.push(...changed.map((file) => file.filename));
           }
+          for (const filename of removed) rmSync7(path13.join(sb, filename));
           for (const { filename, content } of files) writeFileSync11(path13.join(sb, filename), content);
         }
         const attachments = revision ? { skipped: "Attachments are current episode files, not revision snapshots." } : await restoreAttachments(c, episodeId, attachmentRoot, attachmentSnapshot);
@@ -88686,6 +88695,7 @@ function portalHandlers(fetchImpl) {
           written,
           backupDir,
           replaced,
+          removed,
           sideDir
         });
       } catch (error2) {
