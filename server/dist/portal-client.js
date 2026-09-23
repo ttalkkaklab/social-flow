@@ -51,13 +51,14 @@ export function createPortalClient(credential, fetchImpl = fetch) {
     const headers = { authorization: `Bearer ${credential.apiKey}` };
     const holder = credential.holder || defaultHolder(credential.apiKey);
     const timeoutMs = Math.max(config.requestTimeoutMs, PORTAL_TIMEOUT_MS);
-    async function json(method, path, body) {
+    async function json(method, path, body, binaryMime, extraHeaders = {}) {
         let response;
         try {
             response = await fetchImpl(`${base}${path}`, {
                 method,
-                headers: body === undefined ? headers : { ...headers, 'content-type': 'application/json' },
-                body: body === undefined ? undefined : JSON.stringify(body),
+                headers: body === undefined ? headers : { ...headers, ...extraHeaders, 'content-type': binaryMime ?? 'application/json', ...(binaryMime ? { 'content-length': String(body.byteLength) } : {}) },
+                body: body === undefined ? undefined : binaryMime ? body : JSON.stringify(body),
+                redirect: 'error',
                 signal: AbortSignal.timeout(timeoutMs),
             });
         }
@@ -94,6 +95,7 @@ export function createPortalClient(credential, fetchImpl = fetch) {
         workspace: credential.workspace,
         source: credential.source,
         holder,
+        uploadMedia: (episodeId, kind, bytes, mime) => json('POST', `${withHolder(`/episodes/${episodeId}/media`)}&kind=${encodeURIComponent(kind)}`, bytes, mime),
         me: () => json('GET', '/me'),
         listStoryboards: (query = {}) => {
             const sp = new URLSearchParams();
@@ -115,6 +117,35 @@ export function createPortalClient(credential, fetchImpl = fetch) {
         getRevision: (episodeId, no) => json('GET', `/episodes/${episodeId}/revisions/${no}`),
         revisionDiff: (episodeId, from, to) => json('GET', `/episodes/${episodeId}/revisions/${from}/diff/${to}`),
         renderAllocation: (episodeId, body) => json(body ? 'PUT' : 'GET', `/episodes/${episodeId}/render-allocation`, body ? { ...body, sourceHost: holder } : undefined),
+        uploadImage: (episodeId, bytes, mime) => json('POST', withHolder(`/episodes/${episodeId}/images`), bytes, mime),
+        listAttachments: (episodeId) => json('GET', `/episodes/${episodeId}/attachments`),
+        uploadAttachment: (episodeId, relativePath, bytes, mime, provenance) => json('POST', `${withHolder(`/episodes/${episodeId}/attachments`)}&path=${encodeURIComponent(relativePath)}`, bytes, mime, provenance ? { 'x-attachment-provenance': encodeURIComponent(JSON.stringify(provenance)) } : {}),
+        downloadAttachment: async (episodeId, id) => {
+            const response = await fetchImpl(`${base}/episodes/${episodeId}/attachments/${id}`, { headers, redirect: 'error', signal: AbortSignal.timeout(timeoutMs) });
+            if (!response.ok)
+                throw new PortalError(response.status, 'Attachment download failed');
+            const reader = response.body?.getReader();
+            if (!reader)
+                throw new Error('Attachment download has no body');
+            const chunks = [];
+            let size = 0;
+            try {
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done)
+                        break;
+                    size += value.length;
+                    if (size > 10 * 1024 * 1024)
+                        throw new Error('Attachment exceeds 10 MiB');
+                    chunks.push(value);
+                }
+            }
+            finally {
+                await reader.cancel().catch(() => { });
+                reader.releaseLock();
+            }
+            return Buffer.concat(chunks);
+        },
         checkpoint: (episodeId, body) => json('POST', `/episodes/${episodeId}/revisions`, body),
         restoreRevision: (episodeId, no, body = {}) => json('POST', `/episodes/${episodeId}/revisions/${no}/restore`, body),
         getLease: (episodeId) => json('GET', `/episodes/${episodeId}/lease`),

@@ -1021,3 +1021,6 @@ authorization.
 - `../produce/references/build-reel.sh` — the compositing pipeline
 - `../platform-guide/references/platform-playbook.md` · `korean-style.md` · `check-style.py`
 - `../../docs/guides/ai-video-production/index.html` — why hybrid is the default, Veo hard specs, prompt rules
+
+
+Attachment sync and rights evidence: follow [portal attachments](../produce/references/portal-attachments.md). Check `attachments.complete` before removing local originals. Retry files only with `portal_attachments_sync`.
