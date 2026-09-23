@@ -682,9 +682,13 @@ export function portalHandlers(fetchImpl) {
             try {
                 const id = resolveEpisodeId(episodeId, episodeDir);
                 const { data } = await r.client.restoreRevision(id, revisionNo, { note, sourceHost: r.client.holder });
-                if (episodeDir)
-                    writePortalState(episodeDir, { episodeId: id, headRevisionNo: data.revisionNo });
-                return ok(data);
+                // Restore changes the portal, not the local files. Advancing their base here
+                // would let the old board overwrite the restored revision without a conflict.
+                return ok(episodeDir ? {
+                    ...data,
+                    localCopy: { unchanged: true, syncRequired: true },
+                    next: 'Local files and .portal.json were not changed. Pull mode "side", review the restored head and merge any intended local edits, then save with the pull result\'s explicit baseRevisionNo. Do not advance the local head without synchronizing the files.',
+                } : data);
             }
             catch (error) {
                 return failed(error);

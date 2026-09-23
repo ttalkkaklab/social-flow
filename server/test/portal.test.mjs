@@ -453,6 +453,51 @@ describe('portal_* handlers on a scripted portal', () => {
     assert.equal(calls.length, 3, 'directory-free checkpoint must explicitly name its base');
   });
 
+  it('restore preserves the local board and base, so the next unmerged checkpoint still conflicts', async () => {
+    const dir = makeEpisodeDir(root, 'my-channel', 'ep-restore');
+    episode.writePortalState(dir, { workspace: 'lab', episodeId: EPISODE_ID, headRevisionNo: 2 });
+    const state = readFileSync(join(dir, '.portal.json'), 'utf8');
+    const source = readFileSync(join(dir, 'storyboard/scenes.js'), 'utf8');
+    const { impl, calls } = fakeFetch({
+      [`POST /api/workspaces/lab/episodes/${EPISODE_ID}/revisions/1/restore`]: { success: true, data: { revisionNo: 3, restoredFrom: 1, stage: 'board' } },
+      [`POST /api/workspaces/lab/episodes/${EPISODE_ID}/revisions`]: call => call.body.baseRevisionNo === 3
+        ? { success: true, data: { revisionNo: 4 } }
+        : { status: 409, success: false, error_code: 'head_moved', error: 'head moved' },
+    });
+    const h = portal.portalHandlers(impl);
+    const restored = await h.episodeRestore({ episodeDir: dir, revisionNo: 1 });
+    assert.equal(restored.isError, false, restored.text);
+    const result = JSON.parse(restored.text);
+    assert.equal(result.revisionNo, 3);
+    assert.deepEqual(result.localCopy, { unchanged: true, syncRequired: true });
+    assert.match(result.next, /Pull mode "side"/);
+    assert.equal(readFileSync(join(dir, '.portal.json'), 'utf8'), state);
+    assert.equal(readFileSync(join(dir, 'storyboard/scenes.js'), 'utf8'), source);
+    const stale = await h.episodeCheckpoint({ episodeDir: dir, stage: 'board' });
+    assert.equal(stale.isError, true);
+    assert.match(stale.text, /409 head_moved/);
+    assert.equal(calls[1].body.baseRevisionNo, 2);
+    assert.equal(readFileSync(join(dir, '.portal.json'), 'utf8'), state);
+    const merged = await h.episodeCheckpoint({ episodeDir: dir, stage: 'board', baseRevisionNo: 3 });
+    assert.equal(merged.isError, false);
+    assert.equal(episode.readPortalState(dir).headRevisionNo, 4);
+  });
+
+  it('restore without a local copy keeps the remote result contract and does not create local state', async () => {
+    const dir = makeEpisodeDir(root, 'my-channel', 'ep-restore-unlinked');
+    const data = { revisionNo: 3, restoredFrom: 1, stage: 'board' };
+    const { impl } = fakeFetch({
+      [`POST /api/workspaces/lab/episodes/${EPISODE_ID}/revisions/1/restore`]: { success: true, data },
+    });
+    const h = portal.portalHandlers(impl);
+    const remote = await h.episodeRestore({ channel: 'my-channel', episodeId: EPISODE_ID, revisionNo: 1 });
+    assert.equal(remote.isError, false);
+    assert.deepEqual(JSON.parse(remote.text), data);
+    const local = await h.episodeRestore({ episodeDir: dir, episodeId: EPISODE_ID, revisionNo: 1 });
+    assert.equal(local.isError, false);
+    assert.equal(existsSync(join(dir, '.portal.json')), false);
+  });
+
   it('a 409 from the portal comes back as one isError line with the detail, not a thrown error', async () => {
     const dir = makeEpisodeDir(root, 'my-channel', 'ep-409');
     episode.writePortalState(dir, { episodeId: EPISODE_ID, headRevisionNo: 2 });

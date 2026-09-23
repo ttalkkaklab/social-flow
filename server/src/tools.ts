@@ -1057,9 +1057,9 @@ Returns: JSON — the revision list, one revision's snapshot, or { summary, from
     name: 'portal_episode_restore',
     title: 'Restore an older revision as a new one',
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
-    description: `Re-publish an older revision of a portal episode as the new head — history only moves forward, nothing is deleted. Follow it with portal_storyboard_pull so the local working copy matches the restored head; .portal.json's head is updated to the new revision when episodeDir is given.
+    description: `Re-publish an older revision of a portal episode as the new head — history only moves forward, nothing is deleted. Local files and .portal.json stay unchanged, including their base revision. With episodeDir, the result marks localCopy.syncRequired: pull mode "side", review the restored head, merge intended local edits, then save with that pull result's explicit baseRevisionNo. Never advance the local head without synchronizing files.
 
-Returns: JSON — { revisionNo, stage, restoredFrom }.`,
+Returns: JSON — { revisionNo, stage, restoredFrom, localCopy?: { unchanged, syncRequired }, next? }.`,
     inputSchema: {
       type: 'object',
       properties: {

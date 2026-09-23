@@ -83839,9 +83839,9 @@ Returns: JSON \u2014 the revision list, one revision's snapshot, or { summary, f
     name: "portal_episode_restore",
     title: "Restore an older revision as a new one",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
-    description: `Re-publish an older revision of a portal episode as the new head \u2014 history only moves forward, nothing is deleted. Follow it with portal_storyboard_pull so the local working copy matches the restored head; .portal.json's head is updated to the new revision when episodeDir is given.
+    description: `Re-publish an older revision of a portal episode as the new head \u2014 history only moves forward, nothing is deleted. Local files and .portal.json stay unchanged, including their base revision. With episodeDir, the result marks localCopy.syncRequired: pull mode "side", review the restored head, merge intended local edits, then save with that pull result's explicit baseRevisionNo. Never advance the local head without synchronizing files.
 
-Returns: JSON \u2014 { revisionNo, stage, restoredFrom }.`,
+Returns: JSON \u2014 { revisionNo, stage, restoredFrom, localCopy?: { unchanged, syncRequired }, next? }.`,
     inputSchema: {
       type: "object",
       properties: {
@@ -88403,8 +88403,11 @@ function portalHandlers(fetchImpl) {
       try {
         const id = resolveEpisodeId(episodeId, episodeDir);
         const { data } = await r2.client.restoreRevision(id, revisionNo, { note, sourceHost: r2.client.holder });
-        if (episodeDir) writePortalState(episodeDir, { episodeId: id, headRevisionNo: data.revisionNo });
-        return ok(data);
+        return ok(episodeDir ? {
+          ...data,
+          localCopy: { unchanged: true, syncRequired: true },
+          next: `Local files and .portal.json were not changed. Pull mode "side", review the restored head and merge any intended local edits, then save with the pull result's explicit baseRevisionNo. Do not advance the local head without synchronizing the files.`
+        } : data);
       } catch (error2) {
         return failed(error2);
       }

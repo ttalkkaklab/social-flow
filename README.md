@@ -768,6 +768,12 @@ skills say so in one line and carry on with local files, and an errored call is 
 line — the portal records, it does not gate. The portal repository's own `mcp/` server still
 exists for other clients; this plugin no longer needs it.
 
+`portal_episode_restore` changes the portal head only. Local files and `.portal.json`
+keep their previous base so an immediate save cannot silently overwrite the restored
+head. With `episodeDir`, the result includes `localCopy.syncRequired` and recovery
+steps: side-pull the head, review and merge intended local edits, then save with
+that pull result's explicit `baseRevisionNo`.
+
 Once local shot images exist, call `portal_images_upload` with `episodeDir` and the
 current `stage` after the first `portal_storyboard_save` has created the episode. It
 uploads `storyboard/images/scene-N.{png,jpg,jpeg,webp}` sequentially (PNG/JPEG/WebP,
