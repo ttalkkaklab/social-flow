@@ -224,7 +224,7 @@ optional, and they're what turns the tool from a video maker into an operator.**
   9:16 or 16:9 video plus per-platform text into
   `data/<channel>/episodes/<topic>/output/`, and you upload those files by hand. Only
   the publishing and growth-loop half is unavailable: the 11 publish/review/insight tools
-  aren't even listed (`tools/list` shows 72 instead of 99 — the 16 `portal_*` tools are
+  aren't even listed (`tools/list` shows 73 instead of 101 — the 17 `portal_*` tools are
   gated the same way on a portal key), and the growth skills have
   nothing to drive. Explicit tool-disable settings can reduce that list further.
 
@@ -480,7 +480,7 @@ social-flow/
 ├── .plugin/plugin.json          # Buzz persona pack (Open Plugin Spec)
 ├── personas/                    # Buzz pack persona (pipeline.persona.md)
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 100 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 101 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
 │       ├── tools.ts             # tool definitions — 83: research 9 + open data 5 + generation 40 + publish 6 + comments 3 + growth insights 5 + growth review 2 + check 2 + blender 7 + storyboard 4
@@ -542,16 +542,16 @@ social-flow/
 └── data/                        # content data root (see data/README.md)
 ```
 
-## MCP tool surface (100 tools)
+## MCP tool surface (101 tools)
 
-**`tools/list` does not show all 99.** The credential-gated publish, review and insights tools
+**`tools/list` does not show all 101.** The credential-gated publish, review and insights tools
 (`threads_draft_create` · `threads_review_submit` · `threads_publish` · `instagram_publish` · `facebook_publish` · `facebook_comment` ·
 `youtube_publish` · `threads_insights` · `instagram_insights` · `youtube_insights` ·
 `threads_search`) are exposed **only for platforms whose credential file exists** —
 evaluated at list time, so adding a token makes them appear without restarting the
-server. The 16 `portal_*` tools follow the same rule on the ttalkkakstory workspace key
+server. The 17 `portal_*` tools follow the same rule on the ttalkkakstory workspace key
 (`<SNS_TOKEN_DIR>/<channel>/ttalkkakstory.json`, the flat file, or `TTALKKAKSTORY_*`). With
-no tokens and no portal key you'll count 72; explicit tool-disable settings can reduce
+no tokens and no portal key you'll count 73; explicit tool-disable settings can reduce
 that list further. Hidden tools still have live handlers:
 calling one directly returns a missing-token error rather than failing silently.
 `content_feedback`, `youtube_topic_scout`, and `sns_issue_scout` sit outside the
@@ -777,6 +777,18 @@ exists for other clients; this plugin no longer needs it.
 Revision comparisons and `409 head_moved` recovery summaries include decision keys as
 `+key` added, `−key` removed and `~key` changed, including revisions that change only decisions.
 Older diff responses without `decisions` keep their existing summary.
+
+`storyboard_backups` lists local recovery copies and previews retention with `keep` (default 10,
+minimum 1 per kind). It needs no portal credential. Board/scenario backups use their timestamp name;
+image/attachment backups use directory modification time. Unknown names are reported and preserved.
+To prune an authorized list, pass `apply: true` and the preview's `plan` as `confirm`; changed inventory
+requires a new preview. Working files, state and `.portal-head` are excluded. Pull never prunes automatically.
+Symlinks or unreadable recognized backups stop pruning; an I/O failure during deletion reports which paths
+were already deleted. This is not a transaction across directories; stop other local backup writers before pruning.
+
+Board and scenario pulls reserve a new backup directory before copying. A timestamp collision
+uses another timestamp and never reuses an existing directory, file or symlink. After 100 collisions
+or another directory-creation error, the pull stops before replacing local files or advancing state.
 
 Historical `portal_storyboard_pull` with `mode: "replace"` and documents enabled also removes
 managed documents absent from that revision, after backing them up under `storyboard/.portal-local/`.

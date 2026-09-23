@@ -305,6 +305,22 @@ function backupStamp(): string {
   return new Date(now).toISOString().replace(/[:.]/g, '-');
 }
 
+/** Reserve on disk: the timestamp counter alone cannot coordinate restarted or separate processes. */
+function reserveBackupDirectory(root: string, suffix: string): string {
+  if (existsSync(root) && lstatSync(root).isSymbolicLink()) throw new Error('Unsafe backup directory');
+  mkdirSync(root, { recursive: true });
+  for (let attempt = 0; attempt < 100; attempt++) {
+    const directory = path.join(root, `${backupStamp()}-${suffix}`);
+    try {
+      mkdirSync(directory); // Exclusive creation; never reuse an existing file, directory or symlink.
+      return directory;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+    }
+  }
+  throw new Error('Could not reserve a new backup directory. Local files were not replaced. Retry the pull.');
+}
+
 /** What R4 may have left in the directory: a half-merged side pull (`.portal-head/`) and how many backups sit in `.portal-local/`. */
 function pendingOf(dir: string): { sideDir: boolean | null; backups: number | null; warnings?: { sideDir?: string; backups?: string } } {
   const sb = path.join(episodeDirOf(dir), 'storyboard');
@@ -627,9 +643,7 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
           if (changed.length > 0 || removed.length > 0) {
             const state = readPortalState(dir);
             const backupRoot = path.join(sb, '.portal-local');
-            if (existsSync(backupRoot) && lstatSync(backupRoot).isSymbolicLink()) throw new Error('Unsafe document backup directory');
-            backupDir = path.join(sb, '.portal-local', `${backupStamp()}-r${state?.headRevisionNo ?? 0}`);
-            mkdirSync(backupDir, { recursive: true });
+            backupDir = reserveBackupDirectory(backupRoot, `r${state?.headRevisionNo ?? 0}`);
             for (const filename of [...changed.map(file => file.filename), ...removed]) {
               copyFileSync(path.join(sb, filename), path.join(backupDir, filename));
             }
@@ -855,7 +869,8 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
           const files = new Map<string, string>();
           for (const s of data.scenarios) {
             if (cand && s.candidate !== cand) continue;
-            candidate.parse(s.candidate);
+            if (!candidate.safeParse(s.candidate).success)
+              throw new Error(`portal_scenario_pull: 알 수 없는 시나리오 후보 ${JSON.stringify(s.candidate)}입니다. 후보를 D1~D3으로 고친 뒤 다시 가져와 주세요.`);
             files.set(`candidates/${s.candidate.toLowerCase()}.md`, s.markdown);
             if (s.chosen) files.set('scenario.md', s.markdown);
           }
@@ -868,8 +883,7 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
           }
           if (replaced.length > 0) {
             const backupRoot = path.join(sb, '.portal-local');
-            if (existsSync(backupRoot) && lstatSync(backupRoot).isSymbolicLink()) throw new Error('Unsafe scenario backup directory');
-            backupDir = path.join(backupRoot, `${backupStamp()}-scenarios`);
+            backupDir = reserveBackupDirectory(backupRoot, 'scenarios');
             for (const relative of replaced) {
               const backup = path.join(backupDir, path.relative('storyboard', relative));
               mkdirSync(path.dirname(backup), { recursive: true });
