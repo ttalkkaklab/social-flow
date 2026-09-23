@@ -888,11 +888,11 @@ const PORTAL_CHANNEL_ARG = {
 } as const;
 const PORTAL_EPISODE_ID_ARG = {
   type: 'string',
-  description: 'Episode id (uuid). Optional when episodeDir holds .portal.json (written by portal_storyboard_pull · portal_storyboard_save · portal_episode_create)',
+  description: 'Episode id (uuid). Must match every supplied local copy; mismatch is refused before HTTP or file writes. Optional when episodeDir holds .portal.json (written by portal_storyboard_pull · portal_storyboard_save · portal_episode_create)',
 } as const;
 const PORTAL_EPISODE_DIR_ARG = {
   type: 'string',
-  description: 'Absolute path of data/<channel>/episodes/<topic> (or its storyboard/). Supplies the episode id from .portal.json and the channel for the key',
+  description: 'Absolute path of data/<channel>/episodes/<topic> (or its storyboard/). Supplies the episode id from .portal.json and the channel for the key. A supplied episodeId must match this copy',
 } as const;
 const PORTAL_STAGE_ENUM = ['researched', 'candidates', 'scenario', 'narration', 'board', 'approved', 'produced', 'published'];
 const PORTAL_CANDIDATE_ENUM = ['D1', 'D2', 'D3'];
@@ -965,7 +965,7 @@ Returns: JSON — the portal's paginated list (storyboards with id · title · p
       type: 'object',
       properties: {
         episodeId: { type: 'string', description: 'Episode id (uuid) — from portal_storyboard_list or .portal.json' },
-        targetDir: { type: 'string', description: 'Absolute path of data/<channel>/episodes/<topic>; storyboard/ is created inside. The channel slug on the path picks the key' },
+        targetDir: { type: 'string', description: 'Absolute path of data/<channel>/episodes/<topic>; storyboard/ is created inside. An existing linked target must match episodeId; use a new directory for another episode. The channel slug on the path picks the key' },
         includeDocuments: { type: 'boolean', description: 'Also write the uploaded documents (storyboard.md · research.md · script.md · storyboard.html). Default true' },
         revision: { type: 'number', description: 'Pull this revision\'s snapshot instead of head — scenes and documents both from that revision' },
         mode: { type: 'string', enum: ['replace', 'side'], description: 'replace updates the working copy after backing up changed files; side writes only to storyboard/.portal-head/. Default replace' },
@@ -1123,7 +1123,7 @@ Returns: JSON — { scenarios: [{ candidate, chosen, score, p0, findings }], wri
     inputSchema: {
       type: 'object',
       properties: {
-        targetDir: { type: 'string', description: 'Absolute path of data/<channel>/episodes/<topic>. Omit to return text only' },
+        targetDir: { type: 'string', description: 'Absolute path of data/<channel>/episodes/<topic>. A linked target must match the source episode. Omit to return text only' },
         candidate: { type: 'string', enum: PORTAL_CANDIDATE_ENUM, description: 'Only this candidate' },
         episodeId: PORTAL_EPISODE_ID_ARG,
         episodeDir: PORTAL_EPISODE_DIR_ARG,

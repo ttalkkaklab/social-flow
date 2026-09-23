@@ -307,11 +307,18 @@ function pendingOf(dir: string): { sideDir: boolean; backups: number } {
   return { sideDir: existsSync(side), backups };
 }
 
-/** Episode id — the argument, or `episodeDir/.portal.json`. */
-function resolveEpisodeId(episodeId: string | undefined, episodeDir: string | undefined): string {
-  if (episodeId) return episodeId;
-  const state = episodeDir ? readPortalState(episodeDir) : null;
-  if (state?.episodeId) return state.episodeId;
+/** Every supplied local copy must agree with the explicit or inferred episode id. */
+function resolveEpisodeId(episodeId: string | undefined, ...dirs: Array<string | undefined>): string {
+  let id = episodeId;
+  for (const dir of dirs) {
+    const recorded = dir ? readPortalState(dir)?.episodeId : undefined;
+    if (!recorded) continue;
+    if (id && id !== recorded) {
+      throw new Error('Episode mismatch — episodeId and the supplied local copies identify different episodes. Nothing was sent or written. Use the matching episode directory or a new unlinked target for a pull; for a remote-only call, omit local directories and files. Keep existing .portal.json and local edits.');
+    }
+    id = recorded;
+  }
+  if (id) return id;
   throw new Error(
     'episodeId is missing — pass it, or pass an episodeDir that holds .portal.json (portal_storyboard_pull · portal_storyboard_save · portal_episode_create write it).',
   );
@@ -493,6 +500,7 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
       if (refused) return refused;
       try {
         const c = r.client;
+        resolveEpisodeId(episodeId, targetDir);
         const { data: episode } = await c.getEpisode(episodeId);
         const dir = episodeDirOf(targetDir);
         const sb = path.join(dir, 'storyboard');
@@ -729,7 +737,7 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
       const refused = refuseMismatch(r.client, episodeDir, dirFromFile);
       if (refused) return refused;
       try {
-        const id = resolveEpisodeId(episodeId, episodeDir ?? dirFromFile);
+        const id = resolveEpisodeId(episodeId, episodeDir, dirFromFile);
         const source = markdown ?? (file ? readFileSync(file, 'utf8') : null);
         if (source === null) throw new Error('one of file · markdown is required.');
         const { status, data } = await r.client.saveScenario(id, cand, {
@@ -755,7 +763,7 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
       const refused = refuseMismatch(r.client, episodeDir, targetDir);
       if (refused) return refused;
       try {
-        const id = resolveEpisodeId(episodeId, episodeDir ?? targetDir);
+        const id = resolveEpisodeId(episodeId, episodeDir, targetDir);
         if (cand && !targetDir) return { text: await r.client.scenarioMd(id, cand), isError: false };
         const { data } = await r.client.listScenarios(id);
         const written: string[] = [];

@@ -498,6 +498,75 @@ describe('portal_* handlers on a scripted portal', () => {
     assert.equal(existsSync(join(dir, '.portal.json')), false);
   });
 
+  it('conflicting explicit and local episode IDs refuse all shared handlers before any HTTP or writes', async () => {
+    const dir = makeEpisodeDir(root, 'my-channel', 'ep-id-conflict');
+    episode.writePortalState(dir, { workspace: 'lab', episodeId: EPISODE_ID, headRevisionNo: 2 });
+    const state = readFileSync(join(dir, '.portal.json'), 'utf8');
+    const source = readFileSync(join(dir, 'storyboard/scenes.js'), 'utf8');
+    const { impl, calls } = fakeFetch({}); const h = portal.portalHandlers(impl);
+    const args = { episodeId: STORYBOARD_ID, episodeDir: join(dir, 'storyboard') };
+    const operations = [
+      () => h.episodeCheckpoint({ ...args, stage: 'board', baseRevisionNo: 2 }),
+      () => h.episodeStatus({ ...args, status: 'produced' }),
+      () => h.episodeRestore({ ...args, revisionNo: 1 }),
+      () => h.episodeLease({ ...args, action: 'acquire' }),
+      () => h.episodeLease({ ...args, action: 'release' }),
+      () => h.episodeLease({ ...args, action: 'status' }),
+      () => h.episodeRevisions({ ...args, compareTo: 'head' }),
+      () => h.renderAllocation(args),
+      () => h.renderAllocation({ ...args, assignments: [{ id: EPISODE_ID, mode: 'still_camera', purpose: 'mood', reason: 'still' }] }),
+      () => h.scenarioSave({ ...args, candidate: 'D1', markdown: '# test' }),
+      () => h.scenarioChoose({ ...args, candidate: 'D1' }),
+      () => h.scenarioPull({ ...args, targetDir: dir }),
+      () => h.storyboardPull({ episodeId: STORYBOARD_ID, targetDir: dir }),
+      () => h.storyboardPull({ episodeId: STORYBOARD_ID, targetDir: dir, mode: 'side' }),
+    ];
+    for (const run of operations) {
+      const out = await run(); assert.equal(out.isError, true, out.text);
+      assert.match(out.text, /Episode mismatch.*Nothing was sent or written/);
+      assert.equal(calls.length, 0);
+      assert.equal(readFileSync(join(dir, '.portal.json'), 'utf8'), state);
+      assert.equal(readFileSync(join(dir, 'storyboard/scenes.js'), 'utf8'), source);
+    }
+  });
+
+  it('scenario source files and pull targets cannot hide a second conflicting local copy', async () => {
+    const a = makeEpisodeDir(root, 'my-channel', 'ep-id-a');
+    const b = makeEpisodeDir(root, 'my-channel', 'ep-id-b');
+    episode.writePortalState(a, { workspace: 'lab', episodeId: EPISODE_ID, headRevisionNo: 2 });
+    episode.writePortalState(b, { workspace: 'lab', episodeId: STORYBOARD_ID, headRevisionNo: 2 });
+    const candidate = join(b, 'storyboard/candidates/d1.md');
+    mkdirSync(join(candidate, '..'), { recursive: true }); writeFileSync(candidate, '# keep this candidate');
+    const { impl, calls } = fakeFetch({}); const h = portal.portalHandlers(impl);
+    for (const args of [{ episodeDir: a }, { episodeDir: a, episodeId: EPISODE_ID }, { episodeId: EPISODE_ID }]) {
+      const saved = await h.scenarioSave({ ...args, candidate: 'D1', file: candidate });
+      const pulled = await h.scenarioPull({ ...args, targetDir: b });
+      for (const out of [saved, pulled]) { assert.equal(out.isError, true); assert.match(out.text, /Episode mismatch/); }
+    }
+    assert.equal(calls.length, 0);
+    assert.equal(readFileSync(candidate, 'utf8'), '# keep this candidate');
+    assert.equal(episode.readPortalState(a).episodeId, EPISODE_ID);
+    assert.equal(episode.readPortalState(b).episodeId, STORYBOARD_ID);
+  });
+
+  it('matching IDs, inferred IDs, remote-only calls and unlinked targets remain usable', async () => {
+    const dir = makeEpisodeDir(root, 'my-channel', 'ep-id-match');
+    episode.writePortalState(dir, { workspace: 'lab', episodeId: EPISODE_ID, headRevisionNo: 2 });
+    const fresh = join(root, 'data/my-channel/episodes/ep-id-new');
+    const { impl, calls } = fakeFetch({
+      [`PATCH /api/workspaces/lab/episodes/${EPISODE_ID}`]: { success: true, data: { status: 'produced' } },
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}`]: { success: true, data: { id: EPISODE_ID, storyboardId: STORYBOARD_ID, headRevisionNo: 2, documents: [] } },
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}/scenes.js`]: scenesJs(),
+    }); const h = portal.portalHandlers(impl);
+    for (const args of [{ episodeDir: dir }, { episodeDir: dir, episodeId: EPISODE_ID }, { channel: 'my-channel', episodeId: EPISODE_ID }]) {
+      const out = await h.episodeStatus({ ...args, status: 'produced' }); assert.equal(out.isError, false, out.text);
+    }
+    const pulled = await h.storyboardPull({ episodeId: EPISODE_ID, targetDir: fresh });
+    assert.equal(pulled.isError, false, pulled.text);
+    assert.equal(episode.readPortalState(fresh).episodeId, EPISODE_ID);
+    assert.equal(calls.length, 5);
+  });
+
   it('a 409 from the portal comes back as one isError line with the detail, not a thrown error', async () => {
     const dir = makeEpisodeDir(root, 'my-channel', 'ep-409');
     episode.writePortalState(dir, { episodeId: EPISODE_ID, headRevisionNo: 2 });
