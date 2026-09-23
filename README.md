@@ -778,6 +778,14 @@ Revision comparisons and `409 head_moved` recovery summaries include decision ke
 `+key` added, `−key` removed and `~key` changed, including revisions that change only decisions.
 Older diff responses without `decisions` keep their existing summary.
 
+`storyboard_backups` lists local recovery copies and previews retention with `keep` (default 10,
+minimum 1 per kind). It needs no portal credential. Board/scenario backups use their timestamp name;
+image/attachment backups use directory modification time. Unknown names are reported and preserved.
+To prune an authorized list, pass `apply: true` and the preview's `plan` as `confirm`; changed inventory
+requires a new preview. Working files, state and `.portal-head` are excluded. Pull never prunes automatically.
+Symlinks or unreadable recognized backups stop pruning; an I/O failure during deletion reports which paths
+were already deleted. This is not a transaction across directories; stop other local backup writers before pruning.
+
 Historical `portal_storyboard_pull` with `mode: "replace"` and documents enabled also removes
 managed documents absent from that revision, after backing them up under `storyboard/.portal-local/`.
 Managed names are the standard board documents, `scenario.md`, and documents listed by the current

@@ -29,6 +29,7 @@ import { formatError, formatFileSize, saveBase64Image } from './media-utils.js';
 import type { ApiResult } from './http.js';
 import { renderCapabilityStatus } from './capability-status.js';
 import * as portal from './portal-tools.js';
+import { manageBackups } from './portal-backups.js';
 
 /** MCP content blocks — generated images are also returned as base64 image blocks. */
 export type ToolContent =
@@ -1423,6 +1424,12 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
     return fromApi(await sns.threadsKeywordSearch(input));
   },
   // ── Storyboard ──
+  storyboard_backups: async (args) => {
+    try {
+      const result = manageBackups(args as Parameters<typeof manageBackups>[0]);
+      return text(JSON.stringify(result, null, 2), Boolean(result.error));
+    } catch (error) { return text(error instanceof Error ? error.message : String(error), true); }
+  },
   storyboard_read: async (args) => {
     storyboard.contract();  // a missing structure-contract.js reports itself here, before the argument schema does
     const a = parseArgs(storyboard.storyboardReadSchema, args);

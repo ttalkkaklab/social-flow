@@ -4373,6 +4373,22 @@ Returns: integer credit balance.`,
     },
     // ── Storyboard — sequence → scene → shot (skills/storyboard/references/structure-contract.js) ──
     {
+        name: 'storyboard_backups',
+        title: 'Inspect and prune local recovery backups',
+        annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
+        description: '⚠️ Never apply pruning without user approval (HITL). Read-only previews need no approval. Local-only inventory and retention preview for portal recovery backups; no portal key needed. Keeps the newest N backups per kind (board, scenarios, images, attachments), minimum 1. Default is read-only. Show the remove list to the user and use apply:true only when pruning is authorized, with the exact preview plan token in confirm. A changed inventory requires a new preview. Unknown names, working files, .portal-head and state are never cleanup targets. UUID media backups use directory modification time; timestamp-named board/scenario backups use their name. Returns entries with paths/files/bytes, ignored paths, remove, reclaimBytes, plan and deleted. Partial deletion errors report deleted paths.',
+        inputSchema: {
+            type: 'object',
+            properties: {
+                episodeDir: { type: 'string', description: 'Local episode directory or its storyboard directory.' },
+                keep: { type: 'integer', minimum: 1, maximum: 1000, default: 10, description: 'Newest backups to preserve per kind; at least one.' },
+                apply: { type: 'boolean', default: false, description: 'Delete the reviewed remove list only after user approval; false previews without writes.' },
+                confirm: { type: 'string', pattern: '^[a-f0-9]{64}$', description: 'Exact plan token from the reviewed preview.' },
+            },
+            required: ['episodeDir'],
+        },
+    },
+    {
         name: 'storyboard_read',
         title: 'Read a storyboard as sequences → scenes → shots',
         annotations: HINT.local,
