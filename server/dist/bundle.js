@@ -76117,7 +76117,7 @@ var storyboardApplySchema = external_exports.object({
   removeShotIds: external_exports.array(shotIdSchema).min(1).optional().describe("Shot ids to drop, resolved before the insert"),
   removeScenes: external_exports.array(external_exports.number().int().positive()).optional(),
   removeSequences: external_exports.array(external_exports.string()).optional(),
-  globals: globalsSchema.optional().describe("Set other window.* blocks \u2014 FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, VOICE, MOTION_POLICY"),
+  globals: globalsSchema.optional().describe("Set other window.* blocks \u2014 FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, SFX, VOICE, MOTION_POLICY"),
   dryRun: external_exports.boolean().default(false).describe("Validate and report, write nothing")
 });
 function scenesPath(target) {
@@ -76144,7 +76144,7 @@ function readBoard(target) {
   if (!Array.isArray(win.SCENES)) throw new Error(`${file} has no window.SCENES array`);
   return { file, header, win };
 }
-var GLOBAL_ORDER = ["FORMAT", "VOICE", "THEME", "COMPREHENSION", "STORY", "PRODUCTION", "MOTION_POLICY", "MUSIC", "STRUCTURE", "SCENES"];
+var GLOBAL_ORDER = ["FORMAT", "VOICE", "THEME", "COMPREHENSION", "STORY", "PRODUCTION", "MOTION_POLICY", "MUSIC", "SFX", "STRUCTURE", "SCENES"];
 function serializeBoard(win, header = []) {
   const keys = Object.keys(win).filter((k) => win[k] !== void 0);
   keys.sort((a, b) => {
@@ -87390,7 +87390,7 @@ Returns: JSON \u2014 { version, format, shots, sequences[\u2026scenes[\u2026shot
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     description: `Write a storyboard's scenes.js from a sequence \u2192 scene \u2192 shot model, or patch part of it, in one call. Every shot is validated against the grammar vocabularies (type \xB7 beat \xB7 size \xB7 angle \xB7 infoType \xB7 shareType \xB7 render.mode \xB7 transition), the structure against its rules (one place and time per scene, a charge that turns, every scene in exactly one sequence, shots grouped by scene in sequence order, two sizes per scene), and the derived shot labels (sceneSlug \xB7 sequence) are written from the structure. Nothing is written when a violation is found \u2014 the findings come back instead. Warnings are written and reported.
 
-Use it to author a new board (set = { structure, shots }) after the narration is approved (storyboard \xA74), and to change one thing later (scenes / sequences by key, shots by id \u2014 shotsById \xB7 insertShots.afterId \xB7 removeShotIds \u2014 or by position, globals for FORMAT \xB7 THEME \xB7 COMPREHENSION \xB7 STORY \xB7 PRODUCTION \xB7 MUSIC). Address shots by id once the board has them (every board written by this tool does): a review note names s0007, and positions shift with every insert; a patch mixes id and position addressing at its own peril \u2014 it is refused. Use transitions to change only the effect before selected shots without replacing their narration or visuals. dip fades out to black and fades the next scene in; prefer it for changes of place or time unless a specific cut calls for another effect. One call carries the whole change \u2014 do not write scenes.js by hand and do not call this once per shot. dryRun:true validates without writing.
+Use it to author a new board (set = { structure, shots }) after the narration is approved (storyboard \xA74), and to change one thing later (scenes / sequences by key, shots by id \u2014 shotsById \xB7 insertShots.afterId \xB7 removeShotIds \u2014 or by position, globals for FORMAT \xB7 THEME \xB7 COMPREHENSION \xB7 STORY \xB7 PRODUCTION \xB7 MUSIC \xB7 SFX). Address shots by id once the board has them (every board written by this tool does): a review note names s0007, and positions shift with every insert; a patch mixes id and position addressing at its own peril \u2014 it is refused. Use transitions to change only the effect before selected shots without replacing their narration or visuals. dip fades out to black and fades the next scene in; prefer it for changes of place or time unless a specific cut calls for another effect. One call carries the whole change \u2014 do not write scenes.js by hand and do not call this once per shot. dryRun:true validates without writing.
 storyboard_apply assigns stable shot ids (s0001\u2026) and advances STRUCTURE.nextShotId; preserve those ids and do not edit them by hand.
 Shot creation, upserts and inserts expose type, shot.render.mode, shot.videoDesign, visual.camera and the three plan records shot.eyeline \xB7 shot.composition \xB7 shot.depth in the input schema. shot.depth (L11): count what the viewer must read in the frame at once \u2014 one thing \u2192 shallow with focus (a person's eyes), two or more \u2192 deep with the planes listed front to back; a departure needs a reason, and a still_camera focus-in/rack-focus cut cannot be deep. For a drone shot choose preset:"drone-flythrough", variant:"cinematic" or "fpv", and the trajectory. The preset does not change the episode style or select a paid model.
 Do NOT pass a shot's visual plan through a summary \u2014 pass the object scenes-schema.md defines (visual \xB7 shot.space \xB7 visual.camera \xB7 visual.video \u2026); unknown keys on a shot pass through untouched. Editing an approved board drops its \`// approved:\` line; it is approved again at the HITL gate.
@@ -87433,7 +87433,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
         removeShotIds: { type: "array", items: { type: "string", pattern: "^s\\d{4,}$", description: "A stable shot id" }, description: "Shot ids to drop (resolved before inserts). Not with the position fields in the same patch" },
         removeScenes: { type: "array", items: { type: "number", description: "Scene number" }, description: "Scene numbers to drop from STRUCTURE.scenes and from every sequence" },
         removeSequences: { type: "array", items: { type: "string", description: "Sequence id" }, description: "Sequence ids to drop" },
-        globals: { type: "object", description: "Other window.* blocks to set \u2014 FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, VOICE, MOTION_POLICY. PRODUCTION.mode: full_video, video_80, video_50, video_30, video_lt10, no_video (hook_only/stills_only/hybrid are legacy). New selections write renderRatioVersion:1." },
+        globals: { type: "object", description: "Other window.* blocks to set \u2014 FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, SFX, VOICE, MOTION_POLICY. MUSIC.$mix is optional sound-design metadata; SFX keeps logical asset ids only. PRODUCTION.mode: full_video, video_80, video_50, video_30, video_lt10, no_video (hook_only/stills_only/hybrid are legacy). New selections write renderRatioVersion:1." },
         dryRun: { type: "boolean", description: "Validate and report, write nothing" },
         draft: { type: "boolean", description: "The story pass (storyboard \xA74a): camera-continuity records \u2014 shot.lineCrossing, shot.coverage \u2014 are deferred (later), not violations; leave it off in \xA74b" }
       },

@@ -3611,6 +3611,23 @@ window.SB_DOC = {
         flag("warn", T.shotCap(i + 1), "sound.cue and sound.drop on the same shot — the cue fades in muted, so the change lands on the next shot instead");
       }
     }
+    if (sd.effects !== undefined) {
+      if (!Array.isArray(sd.effects)) flag("warn", T.shotCap(i + 1), "sound.effects must be an array");
+      else sd.effects.forEach(function (effect, j) {
+        if (!effect || !effect.sfx) flag("warn", T.shotCap(i + 1), "sound.effects[" + j + "] has no existing SFX id");
+        var at = Number(effect && effect.atSeconds == null ? 0 : effect.atSeconds);
+        if (!isFinite(at) || at < 0 || (Number(s.duration) && at >= Number(s.duration)))
+          flag("warn", T.shotCap(i + 1), "sound.effects[" + j + "].atSeconds is outside this shot — timing starts at the shot's first frame");
+      });
+    }
+    if (sd.silence !== undefined) {
+      if (!Array.isArray(sd.silence)) flag("warn", T.shotCap(i + 1), "sound.silence must be an array");
+      else sd.silence.forEach(function (window, j) {
+        var start = Number(window && window.startSeconds), end = Number(window && window.endSeconds);
+        if (!window || (window.scope || "music") !== "music" || !isFinite(start) || !isFinite(end) || start < 0 || end <= start || (Number(s.duration) && end > Number(s.duration)))
+          flag("warn", T.shotCap(i + 1), "sound.silence[" + j + "] must be a music-only window inside this shot");
+      });
+    }
   });
   if (dropCount > 1 && FMT_KEY === "shorts-9x16") {
     flag("warn", T.where.sound, dropCount + " music drops in a short — spend one on the line the episode is about; past that neither reads");
@@ -3871,7 +3888,7 @@ window.SB_DOC = {
        (feelGaps ? badge("warn", T.feelGaps(feelGaps)) : badge("ok", T.feelAll)) +
        (sizeUnknown ? badge("warn", T.sizeUnknown(sizeUnknown)) : "") +
        (MUSIC || cueCount || dropCount
-          ? badge("", T.musicBadge(MUSIC ? Object.keys(MUSIC).length : null, dropCount))
+          ? badge("", T.musicBadge(MUSIC ? Object.keys(MUSIC).filter(function (key) { return key !== "$mix"; }).length : null, dropCount))
           : "") +
        (LOOPS.length
           ? badge(unpaid ? "warn" : "ok", T.promiseBadge(LOOPS.length, plantCount, unpaid))
