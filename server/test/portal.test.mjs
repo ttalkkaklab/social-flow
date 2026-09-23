@@ -1052,6 +1052,72 @@ describe('portal_* handlers on a scripted portal', () => {
     });
   }
 
+  for (const kind of ['board', 'scenarios']) {
+    for (const obstacle of ['directory', 'file', 'symlink', 'mkdir-failure', 'exhausted']) {
+      it(`${kind} backup reserves a fresh directory and preserves existing copies: ${obstacle}`, async (t) => {
+        const dir = makeEpisodeDir(root, 'my-channel', `ep-reserve-${kind}-${obstacle}`);
+        const sb = join(dir, 'storyboard'), backupRoot = join(sb, '.portal-local');
+        const source = kind === 'board' ? 'scenes.js' : 'scenario.md';
+        writeFileSync(join(sb, source), 'local original');
+        episode.writePortalState(dir, { episodeId: EPISODE_ID, headRevisionNo: 7 });
+        const state = readFileSync(join(dir, '.portal.json'));
+        mkdirSync(backupRoot);
+        const now = Date.parse('2040-01-02T03:04:05.000Z');
+        const name = n => `${new Date(now + n).toISOString().replace(/[:.]/g, '-')}-${kind === 'board' ? 'r7' : 'scenarios'}`;
+        const occupied = join(backupRoot, name(0));
+        const outside = join(dir, 'existing-copy');
+        mkdirSync(outside);
+        writeFileSync(join(outside, source), 'previous backup');
+        if (obstacle === 'file') writeFileSync(occupied, 'previous file');
+        else if (obstacle === 'symlink') symlinkSync(outside, occupied);
+        else if (obstacle === 'exhausted') {
+          for (let n = 0; n < 100; n++) mkdirSync(join(backupRoot, name(n)));
+        } else {
+          mkdirSync(occupied);
+          writeFileSync(join(occupied, source), 'previous backup');
+        }
+        // A fresh module models an MCP restart: the in-memory timestamp counter is empty.
+        const restarted = await import(`../dist/portal-tools.js?reserve=${kind}-${obstacle}`);
+        const clock = t.mock.method(Date, 'now', () => now);
+        const originalMkdir = fs.mkdirSync;
+        const failure = obstacle === 'mkdir-failure' ? t.mock.method(fs, 'mkdirSync', (target, ...args) => {
+          if (String(target).startsWith(backupRoot + '/')) throw Object.assign(new Error('backup permission denied'), { code: 'EACCES' });
+          return originalMkdir(target, ...args);
+        }) : null;
+        syncBuiltinESMExports();
+        const { impl } = fakeFetch({
+          [`GET /api/workspaces/lab/episodes/${EPISODE_ID}`]: { success: true, data: { id: EPISODE_ID, headRevisionNo: 9 } },
+          [`GET /api/workspaces/lab/episodes/${EPISODE_ID}/scenes.js`]: 'remote board',
+          [`GET /api/workspaces/lab/episodes/${EPISODE_ID}/scenarios`]: { success: true, data: { scenarios: [
+            { candidate: 'D1', markdown: 'remote scenario', chosen: true, findings: [] },
+          ] } },
+        });
+        try {
+          const h = restarted.portalHandlers(impl);
+          const result = kind === 'board'
+            ? await h.storyboardPull({ episodeId: EPISODE_ID, targetDir: dir, revision: 3, includeDocuments: false })
+            : await h.scenarioPull({ targetDir: dir });
+          if (obstacle === 'mkdir-failure' || obstacle === 'exhausted') {
+            assert.equal(result.isError, true, result.text);
+            assert.match(result.text, /backup permission denied|Could not reserve/);
+            assert.equal(readFileSync(join(sb, source), 'utf8'), 'local original');
+            assert.deepEqual(readFileSync(join(dir, '.portal.json')), state);
+          } else {
+            assert.equal(result.isError, false, result.text);
+            const out = JSON.parse(result.text);
+            assert.notEqual(out.backupDir, occupied);
+            assert.equal(readFileSync(join(out.backupDir, source), 'utf8'), 'local original');
+            assert.equal(readFileSync(join(sb, source), 'utf8'), kind === 'board' ? 'remote board' : 'remote scenario');
+          }
+          assert.equal(readFileSync(join(outside, source), 'utf8'), 'previous backup');
+          if (obstacle === 'file') assert.equal(readFileSync(occupied, 'utf8'), 'previous file');
+          else if (obstacle === 'symlink') assert.equal(fs.lstatSync(occupied).isSymbolicLink(), true);
+          else if (obstacle !== 'exhausted') assert.equal(readFileSync(join(occupied, source), 'utf8'), 'previous backup');
+        } finally { clock.mock.restore(); failure?.mock.restore(); syncBuiltinESMExports(); }
+      });
+    }
+  }
+
   it('episode_lease acquire records the holder; status and release go through with the same holder', async () => {
     const dir = makeEpisodeDir(root, 'my-channel', 'ep-lease');
     episode.writePortalState(dir, { episodeId: EPISODE_ID, headRevisionNo: 0 });
@@ -1117,7 +1183,7 @@ describe('portal_* handlers on a scripted portal', () => {
     assert.deepEqual(readFileSync(join(dir, '.portal.json')), state);
   });
 
-  for (const failure of ['download', 'invalid-candidate', 'directory', 'symlink', 'backup-symlink', 'backup-copy']) {
+  for (const failure of ['download', 'invalid-candidate', 'unknown-candidate', 'directory', 'symlink', 'backup-symlink', 'backup-copy']) {
     it(`scenario_pull ${failure} fails before replacing any local candidate or chosen text`, async (t) => {
       const dir = makeEpisodeDir(root, 'my-channel', `ep-scenario-${failure}`), sb = join(dir, 'storyboard');
       mkdirSync(join(sb, 'candidates'));
@@ -1135,7 +1201,7 @@ describe('portal_* handlers on a scripted portal', () => {
           ? { status: 503, success: false, error: 'download unavailable' }
           : { success: true, data: { scenarios: [
             { candidate: 'D1', markdown: 'remote D1', chosen: true, findings: [] },
-            { candidate: failure === 'invalid-candidate' ? '../outside' : 'D2', markdown: 'remote D2', chosen: false, findings: [] },
+            { candidate: failure === 'invalid-candidate' ? '../outside' : failure === 'unknown-candidate' ? 'D4' : 'D2', markdown: 'remote D2', chosen: false, findings: [] },
           ] } },
       });
       let copies = 0;
@@ -1148,6 +1214,10 @@ describe('portal_* handlers on a scripted portal', () => {
       try {
         const result = await portal.portalHandlers(impl).scenarioPull({ targetDir: dir });
         assert.equal(result.isError, true, result.text);
+        if (failure === 'invalid-candidate' || failure === 'unknown-candidate') {
+          const rejected = failure === 'invalid-candidate' ? '../outside' : 'D4';
+          assert.equal(result.text, `portal_scenario_pull: 알 수 없는 시나리오 후보 ${JSON.stringify(rejected)}입니다. 후보를 D1~D3으로 고친 뒤 다시 가져와 주세요.`);
+        }
         assert.equal(readFileSync(join(sb, 'candidates/d1.md'), 'utf8'), 'local D1');
         assert.equal(readFileSync(join(sb, 'scenario.md'), 'utf8'), 'local chosen');
         assert.deepEqual(readFileSync(join(dir, '.portal.json')), state);
