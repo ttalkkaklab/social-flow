@@ -83671,11 +83671,11 @@ var PORTAL_CHANNEL_ARG = {
 };
 var PORTAL_EPISODE_ID_ARG = {
   type: "string",
-  description: "Episode id (uuid). Optional when episodeDir holds .portal.json (written by portal_storyboard_pull \xB7 portal_storyboard_save \xB7 portal_episode_create)"
+  description: "Episode id (uuid). Must match every supplied local copy; mismatch is refused before HTTP or file writes. Optional when episodeDir holds .portal.json (written by portal_storyboard_pull \xB7 portal_storyboard_save \xB7 portal_episode_create)"
 };
 var PORTAL_EPISODE_DIR_ARG = {
   type: "string",
-  description: "Absolute path of data/<channel>/episodes/<topic> (or its storyboard/). Supplies the episode id from .portal.json and the channel for the key"
+  description: "Absolute path of data/<channel>/episodes/<topic> (or its storyboard/). Supplies the episode id from .portal.json and the channel for the key. A supplied episodeId must match this copy"
 };
 var PORTAL_STAGE_ENUM = ["researched", "candidates", "scenario", "narration", "board", "approved", "produced", "published"];
 var PORTAL_CANDIDATE_ENUM = ["D1", "D2", "D3"];
@@ -83747,7 +83747,7 @@ Returns: JSON \u2014 the portal's paginated list (storyboards with id \xB7 title
       type: "object",
       properties: {
         episodeId: { type: "string", description: "Episode id (uuid) \u2014 from portal_storyboard_list or .portal.json" },
-        targetDir: { type: "string", description: "Absolute path of data/<channel>/episodes/<topic>; storyboard/ is created inside. The channel slug on the path picks the key" },
+        targetDir: { type: "string", description: "Absolute path of data/<channel>/episodes/<topic>; storyboard/ is created inside. An existing linked target must match episodeId; use a new directory for another episode. The channel slug on the path picks the key" },
         includeDocuments: { type: "boolean", description: "Also write the uploaded documents (storyboard.md \xB7 research.md \xB7 script.md \xB7 storyboard.html). Default true" },
         revision: { type: "number", description: "Pull this revision's snapshot instead of head \u2014 scenes and documents both from that revision" },
         mode: { type: "string", enum: ["replace", "side"], description: "replace updates the working copy after backing up changed files; side writes only to storyboard/.portal-head/. Default replace" }
@@ -83905,7 +83905,7 @@ Returns: JSON \u2014 { scenarios: [{ candidate, chosen, score, p0, findings }], 
     inputSchema: {
       type: "object",
       properties: {
-        targetDir: { type: "string", description: "Absolute path of data/<channel>/episodes/<topic>. Omit to return text only" },
+        targetDir: { type: "string", description: "Absolute path of data/<channel>/episodes/<topic>. A linked target must match the source episode. Omit to return text only" },
         candidate: { type: "string", enum: PORTAL_CANDIDATE_ENUM, description: "Only this candidate" },
         episodeId: PORTAL_EPISODE_ID_ARG,
         episodeDir: PORTAL_EPISODE_DIR_ARG,
@@ -88060,10 +88060,17 @@ function pendingOf(dir) {
   }
   return { sideDir: existsSync14(side), backups };
 }
-function resolveEpisodeId(episodeId, episodeDir) {
-  if (episodeId) return episodeId;
-  const state = episodeDir ? readPortalState(episodeDir) : null;
-  if (state?.episodeId) return state.episodeId;
+function resolveEpisodeId(episodeId, ...dirs) {
+  let id = episodeId;
+  for (const dir of dirs) {
+    const recorded = dir ? readPortalState(dir)?.episodeId : void 0;
+    if (!recorded) continue;
+    if (id && id !== recorded) {
+      throw new Error("Episode mismatch \u2014 episodeId and the supplied local copies identify different episodes. Nothing was sent or written. Use the matching episode directory or a new unlinked target for a pull; for a remote-only call, omit local directories and files. Keep existing .portal.json and local edits.");
+    }
+    id = recorded;
+  }
+  if (id) return id;
   throw new Error(
     "episodeId is missing \u2014 pass it, or pass an episodeDir that holds .portal.json (portal_storyboard_pull \xB7 portal_storyboard_save \xB7 portal_episode_create write it)."
   );
@@ -88218,6 +88225,7 @@ function portalHandlers(fetchImpl) {
       if (refused) return refused;
       try {
         const c = r2.client;
+        resolveEpisodeId(episodeId, targetDir);
         const { data: episode } = await c.getEpisode(episodeId);
         const dir = episodeDirOf(targetDir);
         const sb = path12.join(dir, "storyboard");
@@ -88438,7 +88446,7 @@ function portalHandlers(fetchImpl) {
       const refused = refuseMismatch(r2.client, episodeDir, dirFromFile);
       if (refused) return refused;
       try {
-        const id = resolveEpisodeId(episodeId, episodeDir ?? dirFromFile);
+        const id = resolveEpisodeId(episodeId, episodeDir, dirFromFile);
         const source = markdown ?? (file ? readFileSync11(file, "utf8") : null);
         if (source === null) throw new Error("one of file \xB7 markdown is required.");
         const { status, data } = await r2.client.saveScenario(id, cand, {
@@ -88463,7 +88471,7 @@ function portalHandlers(fetchImpl) {
       const refused = refuseMismatch(r2.client, episodeDir, targetDir);
       if (refused) return refused;
       try {
-        const id = resolveEpisodeId(episodeId, episodeDir ?? targetDir);
+        const id = resolveEpisodeId(episodeId, episodeDir, targetDir);
         if (cand && !targetDir) return { text: await r2.client.scenarioMd(id, cand), isError: false };
         const { data } = await r2.client.listScenarios(id);
         const written = [];

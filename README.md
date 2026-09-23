@@ -768,6 +768,13 @@ skills say so in one line and carry on with local files, and an errored call is 
 line — the portal records, it does not gate. The portal repository's own `mcp/` server still
 exists for other clients; this plugin no longer needs it.
 
+An explicit `episodeId` must agree with `.portal.json` in every supplied local
+copy, including scenario input files and pull targets. Conflicting IDs are refused
+before HTTP or file writes; equal revision numbers do not make two episodes the
+same copy. Use the matching directory, or a fresh unlinked directory for a pull.
+For a remote-only call, omit local directories and files and specify the ID and
+channel. Keep the existing state file and local edits when resolving a mismatch.
+
 `portal_episode_restore` changes the portal head only. Local files and `.portal.json`
 keep their previous base so an immediate save cannot silently overwrite the restored
 head. With `episodeDir`, the result includes `localCopy.syncRequired` and recovery
