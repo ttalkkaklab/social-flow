@@ -1344,6 +1344,5 @@ approval, it does not gate it. The save is also a **checkpoint** at stage `appro
 ## Traps
 
 What has actually gone wrong on this skill, one item per incident, with the section that
-catches each — [traps.md](references/traps.md). Read it once per episode before §2.
-
+catches each — [traps.md](references/traps.md). Read it once per episode before §2. Attachment sync and rights evidence: follow [portal attachments](../produce/references/portal-attachments.md). Check `attachments.complete` before removing local originals. Retry files only with `portal_attachments_sync`.
 With a portal key, save the board then upload source images via `portal_shot_media_upload`; follow [produce media order](../produce/references/portal-shot-media.md) for previz before video and for narration. Missing keys keep local-only mode.

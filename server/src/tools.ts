@@ -1145,6 +1145,12 @@ Returns: JSON — { scenarios: [{ candidate, chosen, score, p0, findings }], wri
     },
   },
   {
+    name: 'portal_attachments_sync', title: 'Sync episode attachments',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    description: 'Upload missing or changed episode files with original relative paths and optional rights evidence from .portal-attachments.json. Returns incomplete for skipped files; keep local files until complete. No board revision is created.',
+    inputSchema: { type: 'object', properties: { episodeDir: PORTAL_EPISODE_DIR_ARG, episodeId: { type: 'string', description: 'Episode UUID; defaults to the directory portal state.' }, channel: PORTAL_CHANNEL_ARG }, required: ['episodeDir'] },
+  },
+  {
     name: 'portal_images_upload', title: 'Upload and link local shot images',
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     description: 'After portal_storyboard_save has linked the episode, upload PNG/JPEG/WebP files (5 MiB each), then checkpoint their portalImageId UUIDs with the local base revision. Images upload sequentially. Defaults to storyboard/images/scene-N.* by source array ordinal, retaining shot IDs. Explicit mappings require shotId when present; shotNo is only for legacy shots without IDs. Paths stay inside storyboard/. Missing default images are reported as skipped. Success updates scenes.js and .portal.json; partial failures report uploaded UUIDs and recovery instructions. No automatic conflict retry. No image generation or publishing.',

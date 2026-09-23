@@ -51,7 +51,16 @@ function fakeFetch(routes) {
     const method = (init.method ?? 'GET').toUpperCase();
     const u = new URL(url);
     const key = `${method} ${u.pathname}`;
-    calls.push({ method, url, path: u.pathname, search: u.search, headers: init.headers ?? {}, body: init.body ? JSON.parse(init.body) : undefined });
+    if (!routes[key] && method === 'GET' && /\/episodes\/[^/]+$/.test(u.pathname) && Object.keys(routes).some(route => route.startsWith('POST ') && /\/(import|revisions)$/.test(route))) {
+      return Response.json({ success: true, data: { documents: [] } });
+    }
+    if (!routes[key] && u.pathname.endsWith('/attachments')) {
+      if (method === 'GET') return Response.json({ success: true, data: { items: [] } });
+      const bytes = Buffer.from(init.body);
+      const { createHash } = await import('node:crypto');
+      return Response.json({ success: true, data: { id: '33333333-3333-4333-8333-333333333333', relativePath: u.searchParams.get('path'), sha256: createHash('sha256').update(bytes).digest('hex'), byteSize: bytes.length, provenance: {} } });
+    }
+    calls.push({ method, url, path: u.pathname, search: u.search, headers: init.headers ?? {}, body: init.body ? (typeof init.body === 'string' ? JSON.parse(init.body) : init.body) : undefined });
     const answer = routes[key];
     if (!answer) return new Response(JSON.stringify({ success: false, error: `no route ${key}` }), { status: 404 });
     const out = typeof answer === 'function' ? answer(calls[calls.length - 1]) : answer;
@@ -699,6 +708,43 @@ describe('portal_* handlers on a scripted portal', () => {
     assert.equal(episode.readPortalState(dir).headRevisionNo, 4);
   });
 
+  it('revision head 7 wins over stale canonical attachments and reports them without downloading', async () => {
+    const dir = makeEpisodeDir(root, 'my-channel', 'ep-canonical-attachment');
+    const latest = 'window.SCENES = [{type:"cover",title:"revision 7"}];';
+    const { impl, calls } = fakeFetch({
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}`]: { success: true, data: { id: EPISODE_ID, storyboardId: STORYBOARD_ID, headRevisionNo: 7, documents: [{ filename: 'custom-notes.md' }] } },
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}/scenes.js`]: latest,
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}/documents/custom-notes.md`]: 'latest custom document',
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}/attachments`]: { success: true, data: { items: [
+        { id: 'old-scene', relativePath: 'storyboard/scenes.js', sha256: 'a'.repeat(64), byteSize: 6 },
+        { id: 'old-custom', relativePath: 'storyboard/custom-notes.md', sha256: 'b'.repeat(64), byteSize: 8 },
+      ] } },
+    });
+    const result = await portal.portalHandlers(impl).storyboardPull({ episodeId: EPISODE_ID, targetDir: dir });
+    assert.equal(result.isError, false, result.text);
+    assert.equal(readFileSync(join(dir, 'storyboard/scenes.js'), 'utf8'), latest);
+    assert.equal(readFileSync(join(dir, 'storyboard/custom-notes.md'), 'utf8'), 'latest custom document');
+    assert.equal(episode.readPortalState(dir).headRevisionNo, 7);
+    assert.deepEqual(JSON.parse(result.text).attachments.skipped.map(s => s.reason), ['canonical', 'canonical']);
+    assert.equal(calls.some(c => /attachments\/old-/.test(c.path)), false);
+  });
+
+  it('attachment download failure preserves the working board and recorded head before pull writes', async () => {
+    const dir = makeEpisodeDir(root, 'my-channel', 'ep-attachment-failure');
+    episode.writePortalState(dir, { episodeId: EPISODE_ID, headRevisionNo: 2, workspace: 'lab' });
+    const before = readFileSync(join(dir, 'storyboard/scenes.js'), 'utf8');
+    const state = readFileSync(join(dir, '.portal.json'), 'utf8');
+    const { impl } = fakeFetch({
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}`]: { success: true, data: { id: EPISODE_ID, storyboardId: STORYBOARD_ID, headRevisionNo: 9 } },
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}/scenes.js`]: 'window.SCENES = [];',
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}/attachments`]: { status: 502, success: false, error: 'attachment unavailable' },
+    });
+    const result = await portal.portalHandlers(impl).storyboardPull({ episodeId: EPISODE_ID, targetDir: dir });
+    assert.equal(result.isError, true);
+    assert.equal(readFileSync(join(dir, 'storyboard/scenes.js'), 'utf8'), before);
+    assert.equal(readFileSync(join(dir, '.portal.json'), 'utf8'), state);
+  });
+
   it('storyboard_pull replace backs up only changed local files before writing portal content', async () => {
     const dir = makeEpisodeDir(root, 'my-channel', 'ep-pull');
     const sb = join(dir, 'storyboard');
@@ -1250,8 +1296,8 @@ describe('portal_* handlers on a scripted portal', () => {
 describe('portal tool surface', () => {
   const names = new Set(TOOLS.map((t) => t.name));
 
-  it('all sixteen portal tools are defined and routed, and nothing else starts with portal_', () => {
-    assert.equal(portal.PORTAL_TOOL_NAMES.length, 16);
+  it('all seventeen portal tools are defined and routed, and nothing else starts with portal_', () => {
+    assert.equal(portal.PORTAL_TOOL_NAMES.length, 17);
     for (const name of portal.PORTAL_TOOL_NAMES) {
       assert.ok(names.has(name), `${name} not in TOOLS`);
       assert.equal(typeof ROUTES[name], 'function', `${name} not routed`);

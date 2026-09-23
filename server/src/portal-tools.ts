@@ -1,3 +1,5 @@
+import { canonicalPullPaths } from './portal-canonical.js';
+import { uploadAttachments, restoreAttachments, prepareAttachmentRestore, attachmentSyncReport, safeAttachmentTarget } from './portal-attachments.js';
 /**
  * `portal_*` tool handlers — the ttalkkakstory portal called by workspace API key.
  *
@@ -32,6 +34,7 @@ import {
 } from './portal-episode.js';
 
 export const PORTAL_TOOL_NAMES = [
+  'portal_attachments_sync',
   'portal_images_upload',
   'portal_shot_media_upload',
   'portal_workspace_check',
@@ -63,6 +66,8 @@ export const renderAllocationSchema = z.object({
     purpose: z.string().trim().min(1).max(200), reason: z.string().trim().min(1).max(2000),
   })).min(1).max(500).optional(),
 }).refine(a => !a.assignments || (a.requestId && a.baseRevisionNo !== undefined), 'Submitting requires requestId and baseRevisionNo from the latest read');
+
+export const attachmentsSyncSchema = z.object({ episodeDir: z.string().min(1), episodeId: uuid.optional(), channel: channelArg });
 
 export const workspaceCheckSchema = z.object({ channel: channelArg, episodeDir: z.string().optional(), episodeId: uuid.optional() });
 export const storyboardSaveSchema = z.object({
@@ -341,6 +346,7 @@ function resolveEpisodeId(episodeId: string | undefined, ...dirs: Array<string |
 }
 
 export interface PortalHandlers {
+  attachmentsSync(a: z.infer<typeof attachmentsSyncSchema>): Promise<PortalToolResult>;
   imagesUpload(a: z.infer<typeof imageUploadSchema>): Promise<PortalToolResult>;
   renderAllocation(a: z.infer<typeof renderAllocationSchema>): Promise<PortalToolResult>;
   workspaceCheck(a: z.infer<typeof workspaceCheckSchema>): Promise<PortalToolResult>;
@@ -361,6 +367,16 @@ export interface PortalHandlers {
 /** The handlers, with fetch injectable so the tests never touch a network. */
 export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
   return {
+    async attachmentsSync(args) {
+      const r = resolveClient(fetchImpl, args.channel, args.episodeDir);
+      if ('error' in r) return r.error;
+      const refused = refuseMismatch(r.client, args.episodeDir);
+      if (refused) return refused;
+      try {
+        const id = resolveEpisodeId(args.episodeId, args.episodeDir);
+        return ok(await uploadAttachments(r.client, id, episodeDirOf(args.episodeDir)));
+      } catch (error) { return failed(error); }
+    },
     async imagesUpload(args) {
       const r = resolveClient(fetchImpl, undefined, args.episodeDir);
       if ('error' in r) return r.error;
@@ -500,6 +516,7 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
           result: status === 201 ? 'created' : 'updated',
           ...data,
           pageUrl: r.client.pageUrl(data.url),
+          attachments: await attachmentSyncReport(() => uploadAttachments(r.client, data.episodeId, episodeDirOf(episodeDir))),
           uploaded: {
             scenes: payload.scenes.length,
             characters: payload.characters.map((c) => c.id),
@@ -560,6 +577,7 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
             fileContents.set('scenario.md', await c.scenarioMd(episodeId, chosen.candidate));
           }
         }
+        for (const filename of fileContents.keys()) safeAttachmentTarget(dir, `storyboard/${filename}`);
         const files = [...fileContents].map(([filename, content]) => ({ filename, content }));
         const headRevisionNo = revision ?? episode.headRevisionNo ?? 0;
         const written = files.map(({ filename }) => filename);
@@ -567,6 +585,8 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
         let sideDir: string | null = null;
         const replaced: string[] = [];
 
+        const attachmentRoot = mode === 'side' ? path.join(sb, '.portal-head', 'attachments') : dir;
+        const attachmentSnapshot = revision ? undefined : await prepareAttachmentRestore(c, episodeId, attachmentRoot, canonicalPullPaths(episode, fileContents.keys()));
         if (mode === 'side') {
           sideDir = path.join(sb, '.portal-head');
           rmSync(sideDir, { recursive: true, force: true });
@@ -588,14 +608,12 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
             }
           }
           for (const { filename, content } of files) writeFileSync(path.join(sb, filename), content);
-          writePortalState(dir, {
-            workspace: c.workspace,
-            storyboardId: episode.storyboardId,
-            episodeId,
-            headRevisionNo,
-          });
+
         }
+        const attachments = revision ? { skipped: 'Attachments are current episode files, not revision snapshots.' } : await restoreAttachments(c, episodeId, attachmentRoot, attachmentSnapshot);
+        if (mode !== 'side') writePortalState(dir, { workspace: c.workspace, storyboardId: episode.storyboardId, episodeId, headRevisionNo });
         return ok({
+          attachments,
           episode: {
             id: episode.id,
             slug: episode.slug,
@@ -692,6 +710,7 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
         return ok({
           result: status === 201 ? 'new revision' : 'unchanged (stage only)',
           ...data,
+          attachments: episodeDir ? await attachmentSyncReport(() => uploadAttachments(r.client, id, episodeDirOf(episodeDir))) : undefined,
           uploaded: { scenes: uploadedScenes, documents: uploadedDocuments },
         });
       } catch (error) {
