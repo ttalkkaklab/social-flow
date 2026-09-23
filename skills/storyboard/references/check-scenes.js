@@ -1537,7 +1537,7 @@ function check(win, fmt, opts) {
         if (mix.ducking !== undefined) {
           const d = mix.ducking;
           if (!d || typeof d !== 'object' || Array.isArray(d)) bad(at, 'ducking is { ratio, attackMs, releaseMs }');
-          else for (const [key, min, max] of [['ratio', 1, 30], ['attackMs', 1, 1000], ['releaseMs', 10, 3000]]) {
+          else for (const [key, min, max] of [['ratio', 1, 20], ['attackMs', 1, 1000], ['releaseMs', 10, 3000]]) {
             if (d[key] !== undefined && (!Number.isFinite(Number(d[key])) || Number(d[key]) < min || Number(d[key]) > max))
               bad(at, `ducking.${key} ${JSON.stringify(d[key])} — expected ${min}–${max}`);
           }
@@ -2296,6 +2296,14 @@ function selftest() {
                ducking: { ratio: 8, attackMs: 20, releaseMs: 250 } },
        base: { asset: 'default' }
      } })), /window\.MUSIC\.\$mix|no prompt, prompts or asset/));
+  ok('a ducking ratio at the FFmpeg upper bound passes',
+     !has(bads(run([cover, goodShot, ctaShot], { MUSIC: {
+       $mix: { ducking: { ratio: 20 } }, base: { asset: 'default' }
+     } })), /ducking\.ratio/));
+  ok('a ducking ratio above the FFmpeg upper bound is a violation',
+     has(bads(run([cover, goodShot, ctaShot], { MUSIC: {
+       $mix: { ducking: { ratio: 21 } }, base: { asset: 'default' }
+     } })), /ducking\.ratio 21 — expected 1–20/));
   ok('a mix floor wider than its resting target is a violation',
      has(bads(run([cover, goodShot, ctaShot], { MUSIC: {
        $mix: { bedSeparationLu: 4, minimumSeparationLu: 10 }, base: { asset: 'default' }
