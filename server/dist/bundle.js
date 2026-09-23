@@ -76020,7 +76020,7 @@ var shotSchema = external_exports.object({
   id: shotIdSchema.optional(),
   type: tuple(V.TYPES),
   title: external_exports.string().optional(),
-  narration: external_exports.array(external_exports.object({ tts: external_exports.string(), sub: external_exports.string().optional() }).passthrough()).optional(),
+  narration: external_exports.array(external_exports.object({ tts: external_exports.string(), sub: external_exports.string().optional(), speaker: external_exports.string().trim().min(1).optional() }).passthrough()).optional(),
   visual: visualSchema.optional(),
   duration: external_exports.number().positive().optional(),
   scene: external_exports.number().int().positive().optional(),
@@ -76117,7 +76117,7 @@ var storyboardApplySchema = external_exports.object({
   removeShotIds: external_exports.array(shotIdSchema).min(1).optional().describe("Shot ids to drop, resolved before the insert"),
   removeScenes: external_exports.array(external_exports.number().int().positive()).optional(),
   removeSequences: external_exports.array(external_exports.string()).optional(),
-  globals: globalsSchema.optional().describe("Set other window.* blocks \u2014 FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, VOICE, MOTION_POLICY"),
+  globals: globalsSchema.optional().describe("Set other window.* blocks \u2014 FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, SFX, VOICE, MOTION_POLICY"),
   dryRun: external_exports.boolean().default(false).describe("Validate and report, write nothing")
 });
 function scenesPath(target) {
@@ -76144,7 +76144,7 @@ function readBoard(target) {
   if (!Array.isArray(win.SCENES)) throw new Error(`${file} has no window.SCENES array`);
   return { file, header, win };
 }
-var GLOBAL_ORDER = ["FORMAT", "VOICE", "THEME", "COMPREHENSION", "STORY", "PRODUCTION", "MOTION_POLICY", "MUSIC", "STRUCTURE", "SCENES"];
+var GLOBAL_ORDER = ["FORMAT", "VOICE", "THEME", "COMPREHENSION", "STORY", "PRODUCTION", "MOTION_POLICY", "MUSIC", "SFX", "STRUCTURE", "SCENES"];
 function serializeBoard(win, header = []) {
   const keys = Object.keys(win).filter((k) => win[k] !== void 0);
   keys.sort((a, b) => {
@@ -83917,7 +83917,9 @@ Returns: JSON \u2014 { result: created|updated, candidate, chosen, findings[], u
     annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
     description: `\u26A0\uFE0F Overwrites local scenario files \u2014 never call without the user knowing the directory is a working copy of the portal (HITL at the top of a session). Write the portal episode's candidates to storyboard/candidates/d1.md \u2026 and the chosen one to storyboard/scenario.md. With candidate and no targetDir, return that one page's text and write nothing.
 
-Returns: JSON \u2014 { scenarios: [{ candidate, chosen, score, p0, findings }], written[] } \u2014 or the page text.`,
+Changed local candidates and the chosen scenario are backed up together under storyboard/.portal-local/ before any are replaced. Identical files need no backup.
+
+Returns: JSON \u2014 { scenarios: [{ candidate, chosen, score, p0, findings }], written[], backupDir, replaced[] } \u2014 or the page text.`,
     inputSchema: {
       type: "object",
       properties: {
@@ -87388,7 +87390,7 @@ Returns: JSON \u2014 { version, format, shots, sequences[\u2026scenes[\u2026shot
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     description: `Write a storyboard's scenes.js from a sequence \u2192 scene \u2192 shot model, or patch part of it, in one call. Every shot is validated against the grammar vocabularies (type \xB7 beat \xB7 size \xB7 angle \xB7 infoType \xB7 shareType \xB7 render.mode \xB7 transition), the structure against its rules (one place and time per scene, a charge that turns, every scene in exactly one sequence, shots grouped by scene in sequence order, two sizes per scene), and the derived shot labels (sceneSlug \xB7 sequence) are written from the structure. Nothing is written when a violation is found \u2014 the findings come back instead. Warnings are written and reported.
 
-Use it to author a new board (set = { structure, shots }) after the narration is approved (storyboard \xA74), and to change one thing later (scenes / sequences by key, shots by id \u2014 shotsById \xB7 insertShots.afterId \xB7 removeShotIds \u2014 or by position, globals for FORMAT \xB7 THEME \xB7 COMPREHENSION \xB7 STORY \xB7 PRODUCTION \xB7 MUSIC). Address shots by id once the board has them (every board written by this tool does): a review note names s0007, and positions shift with every insert; a patch mixes id and position addressing at its own peril \u2014 it is refused. Use transitions to change only the effect before selected shots without replacing their narration or visuals. dip fades out to black and fades the next scene in; prefer it for changes of place or time unless a specific cut calls for another effect. One call carries the whole change \u2014 do not write scenes.js by hand and do not call this once per shot. dryRun:true validates without writing.
+Use it to author a new board (set = { structure, shots }) after the narration is approved (storyboard \xA74), and to change one thing later (scenes / sequences by key, shots by id \u2014 shotsById \xB7 insertShots.afterId \xB7 removeShotIds \u2014 or by position, globals for FORMAT \xB7 THEME \xB7 COMPREHENSION \xB7 STORY \xB7 PRODUCTION \xB7 MUSIC \xB7 SFX). Address shots by id once the board has them (every board written by this tool does): a review note names s0007, and positions shift with every insert; a patch mixes id and position addressing at its own peril \u2014 it is refused. Use transitions to change only the effect before selected shots without replacing their narration or visuals. dip fades out to black and fades the next scene in; prefer it for changes of place or time unless a specific cut calls for another effect. One call carries the whole change \u2014 do not write scenes.js by hand and do not call this once per shot. dryRun:true validates without writing.
 storyboard_apply assigns stable shot ids (s0001\u2026) and advances STRUCTURE.nextShotId; preserve those ids and do not edit them by hand.
 Shot creation, upserts and inserts expose type, shot.render.mode, shot.videoDesign, visual.camera and the three plan records shot.eyeline \xB7 shot.composition \xB7 shot.depth in the input schema. shot.depth (L11): count what the viewer must read in the frame at once \u2014 one thing \u2192 shallow with focus (a person's eyes), two or more \u2192 deep with the planes listed front to back; a departure needs a reason, and a still_camera focus-in/rack-focus cut cannot be deep. For a drone shot choose preset:"drone-flythrough", variant:"cinematic" or "fpv", and the trajectory. The preset does not change the episode style or select a paid model.
 Do NOT pass a shot's visual plan through a summary \u2014 pass the object scenes-schema.md defines (visual \xB7 shot.space \xB7 visual.camera \xB7 visual.video \u2026); unknown keys on a shot pass through untouched. Editing an approved board drops its \`// approved:\` line; it is approved again at the HITL gate.
@@ -87431,7 +87433,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
         removeShotIds: { type: "array", items: { type: "string", pattern: "^s\\d{4,}$", description: "A stable shot id" }, description: "Shot ids to drop (resolved before inserts). Not with the position fields in the same patch" },
         removeScenes: { type: "array", items: { type: "number", description: "Scene number" }, description: "Scene numbers to drop from STRUCTURE.scenes and from every sequence" },
         removeSequences: { type: "array", items: { type: "string", description: "Sequence id" }, description: "Sequence ids to drop" },
-        globals: { type: "object", description: "Other window.* blocks to set \u2014 FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, VOICE, MOTION_POLICY. PRODUCTION.mode: full_video, video_80, video_50, video_30, video_lt10, no_video (hook_only/stills_only/hybrid are legacy). New selections write renderRatioVersion:1." },
+        globals: { type: "object", description: "Other window.* blocks to set \u2014 FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, SFX, VOICE, MOTION_POLICY. MUSIC.$mix is optional sound-design metadata; SFX keeps logical asset ids only. PRODUCTION.mode: full_video, video_80, video_50, video_30, video_lt10, no_video (hook_only/stills_only/hybrid are legacy). New selections write renderRatioVersion:1." },
         dryRun: { type: "boolean", description: "Validate and report, write nothing" },
         draft: { type: "boolean", description: "The story pass (storyboard \xA74a): camera-continuity records \u2014 shot.lineCrossing, shot.coverage \u2014 are deferred (later), not violations; leave it off in \xA74b" }
       },
@@ -87599,6 +87601,11 @@ function buildImportPayload(episodeDir, options = {}) {
     filename: f3,
     content: readFileSync9(path10.join(sb, f3), "utf8")
   }));
+  const characters = collectCharacters(scenes, sbDoc, channelDir);
+  const narratorCharacterId = typeof sbDoc?.narratorCharacterId === "string" ? sbDoc.narratorCharacterId : "";
+  if (!narratorCharacterId || !characters.some((character) => character.id === narratorCharacterId))
+    throw new Error("SB_DOC.narratorCharacterId must match one SB_DOC.characters id.");
+  const normalizedScenes = normalizeNarrationSpeakers(scenes, characters);
   const status = md.status ?? null;
   return {
     project: { name: channel },
@@ -87610,8 +87617,9 @@ function buildImportPayload(episodeDir, options = {}) {
       ...status && EPISODE_STATUSES.includes(status) ? { status } : {},
       meta: sbDoc ? { ...meta, SB_DOC: sbDoc } : meta
     },
-    scenes,
-    characters: collectCharacters(scenes, sbDoc, channelDir),
+    scenes: normalizedScenes,
+    characters,
+    narratorCharacterId,
     documents
   };
 }
@@ -87624,15 +87632,48 @@ function characterIdsOf(shot) {
   const list = Array.isArray(raw) ? raw : [raw];
   return list.map((c) => typeof c === "string" ? c : c && typeof c.id === "string" ? c.id : null).filter((id) => Boolean(id));
 }
+function ttsOf(value) {
+  if (!value || typeof value !== "object") return null;
+  const tts = value;
+  if (!["gemini", "supertonic", "elevenlabs", "mlx"].includes(String(tts.engine)) || typeof tts.voiceId !== "string" || !tts.voiceId.trim()) return null;
+  return {
+    engine: tts.engine,
+    voiceId: tts.voiceId,
+    ...typeof tts.model === "string" ? { model: tts.model } : {},
+    ...typeof tts.speed === "number" ? { speed: tts.speed } : {},
+    ...typeof tts.language === "string" ? { language: tts.language } : {},
+    ...typeof tts.stylePrompt === "string" ? { stylePrompt: tts.stylePrompt } : {}
+  };
+}
 function collectCharacters(scenes, sbDoc, channelDir) {
   const ids = new Set(scenes.flatMap(characterIdsOf));
   const docCharacters = sbDoc?.characters;
-  if (docCharacters && typeof docCharacters === "object") {
-    for (const id of Object.keys(docCharacters)) ids.add(id);
+  const details = /* @__PURE__ */ new Map();
+  if (Array.isArray(docCharacters)) {
+    for (const value of docCharacters) {
+      if (!value || typeof value !== "object" || typeof value.id !== "string") continue;
+      const detail = value;
+      details.set(detail.id, detail);
+      ids.add(detail.id);
+    }
+  } else if (docCharacters && typeof docCharacters === "object") {
+    for (const [id, value] of Object.entries(docCharacters)) {
+      details.set(id, value && typeof value === "object" ? value : {});
+      ids.add(id);
+    }
   }
   return [...ids].map((id) => {
+    const fromDoc = details.get(id) ?? {};
+    const tts = ttsOf(fromDoc.tts);
+    if (!tts) throw new Error(`SB_DOC.characters.${id}.tts must define engine and voiceId.`);
     const identity = path10.join(channelDir, "assets", "characters", id, "identity.md");
-    const detail = { id };
+    const detail = {
+      id,
+      tts,
+      ...typeof fromDoc.name === "string" ? { name: fromDoc.name } : {},
+      ...typeof fromDoc.role === "string" ? { role: fromDoc.role } : {},
+      ...typeof fromDoc.appearance === "string" ? { appearance: fromDoc.appearance } : {}
+    };
     if (existsSync12(identity)) {
       const text2 = readFileSync9(identity, "utf8");
       const heading = /^#\s+(.+?)\s*(?:\(([^)]*)\))?\s*$/m.exec(text2);
@@ -87643,6 +87684,32 @@ function collectCharacters(scenes, sbDoc, channelDir) {
       if (look) detail.appearance = look.trim();
     }
     return detail;
+  });
+}
+function normalizeNarrationSpeakers(scenes, characters) {
+  const byId = new Map(characters.map((character) => [character.id, character.id]));
+  const names = /* @__PURE__ */ new Map();
+  for (const character of characters) {
+    if (!character.name) continue;
+    names.set(character.name, [...names.get(character.name) ?? [], character.id]);
+  }
+  return scenes.map((scene) => {
+    if (!scene || typeof scene !== "object" || !Array.isArray(scene.narration)) return scene;
+    return {
+      ...scene,
+      narration: scene.narration.map((segment) => {
+        if (!segment || typeof segment !== "object" || typeof segment.speaker !== "string") return segment;
+        const speaker = segment.speaker;
+        if (!speaker.trim()) {
+          const { speaker: _speaker, ...withoutSpeaker } = segment;
+          return withoutSpeaker;
+        }
+        const named = names.get(speaker);
+        const id = byId.get(speaker) ?? (named?.length === 1 ? named[0] : void 0);
+        if (!id) throw new Error(`narration speaker "${speaker}" does not match a character id or name.`);
+        return { ...segment, speaker: id };
+      })
+    };
   });
 }
 
@@ -88039,7 +88106,7 @@ async function uploadEpisodeImages(client, args, base) {
       const target = item.shotId ? `window.SCENES.find(shot => shot.id === ${JSON.stringify(item.shotId)})` : `window.SCENES[${item.shotNo - 1}]`;
       return `${target}.portalImageId = ${JSON.stringify(item.imageId)};`;
     }).join("\n") + "\n" : "");
-    const scenes = evaluateScenesJs(nextSource).scenes;
+    const scenes = normalizeNarrationSpeakers(evaluateScenesJs(nextSource).scenes, payload.characters);
     const documents = payload.documents.map((d) => d.filename === "scenes.js" ? { ...d, content: nextSource } : d);
     if (!unchanged()) throw new Error("Local board or portal state changed; uploaded blobs are not linked.");
     const backup = path12.join(sb, ".portal-local", `images-${randomUUID3()}`);
@@ -88055,6 +88122,7 @@ async function uploadEpisodeImages(client, args, base) {
       scenes,
       meta: payload.episode.meta,
       characters: payload.characters,
+      narratorCharacterId: payload.narratorCharacterId,
       documents,
       note: "Link uploaded shot images"
     });
@@ -88233,6 +88301,10 @@ function summarizeRevisionDiff(d) {
   );
   const meta = [...d.meta.added.map((k) => `+${k}`), ...d.meta.removed.map((k) => `\u2212${k}`), ...d.meta.changed.map((k) => `~${k}`)];
   if (meta.length) parts.push(`meta ${meta.join(" ")}`);
+  if (d.decisions) {
+    const decisions = [...d.decisions.added.map((k) => `+${k}`), ...d.decisions.removed.map((k) => `\u2212${k}`), ...d.decisions.changed.map((k) => `~${k}`)];
+    if (decisions.length) parts.push(`decisions ${decisions.join(" ")}`);
+  }
   const docs = Object.entries(d.documents).filter(([, c]) => c.status !== "same").map(([name, c]) => `${name} ${c.status}`);
   if (docs.length) parts.push(`documents ${docs.join(", ")}`);
   return parts.join(" \xB7 ");
@@ -88505,6 +88577,7 @@ function portalHandlers(fetchImpl) {
           uploaded: {
             scenes: payload.scenes.length,
             characters: payload.characters.map((c) => c.id),
+            narratorCharacterId: payload.narratorCharacterId,
             documents: payload.documents.map((d) => d.filename)
           }
         });
@@ -88557,6 +88630,12 @@ function portalHandlers(fetchImpl) {
           }
         }
         for (const filename of fileContents.keys()) safeAttachmentTarget(dir, `storyboard/${filename}`);
+        const removed = revision && includeDocuments && mode === "replace" ? [.../* @__PURE__ */ new Set([...DOCUMENT_FILES, "scenario.md", ...(episode.documents ?? []).map((doc) => doc.filename)])].filter((filename) => SAFE_DOCUMENT_NAME.test(filename) && !fileContents.has(filename)).filter((filename) => {
+          const target = safeAttachmentTarget(dir, `storyboard/${filename}`);
+          if (!existsSync15(target)) return false;
+          if (!lstatSync3(target).isFile()) throw new Error(`Not a regular document: ${filename}`);
+          return true;
+        }) : [];
         const files = [...fileContents].map(([filename, content]) => ({ filename, content }));
         const headRevisionNo = revision ?? episode.headRevisionNo ?? 0;
         const written = files.map(({ filename }) => filename);
@@ -88565,6 +88644,14 @@ function portalHandlers(fetchImpl) {
         const replaced = [];
         const attachmentRoot = mode === "side" ? path13.join(sb, ".portal-head", "attachments") : dir;
         const attachmentSnapshot = revision ? void 0 : await prepareAttachmentRestore(c, episodeId, attachmentRoot, canonicalPullPaths(episode, fileContents.keys()));
+        if (!revision) {
+          const { data: latest } = await c.getEpisode(episodeId).catch((error2) => {
+            throw new Error(`Could not verify episode head during pull. Pull did not write local files. Retry portal_storyboard_pull. ${error2 instanceof Error ? error2.message : String(error2)}`);
+          });
+          if ((latest.headRevisionNo ?? 0) !== headRevisionNo) {
+            throw new Error(`Episode head moved during pull (#${headRevisionNo} \u2192 #${latest.headRevisionNo ?? 0}). Pull did not write local files. Retry portal_storyboard_pull.`);
+          }
+        }
         if (mode === "side") {
           sideDir = path13.join(sb, ".portal-head");
           rmSync7(sideDir, { recursive: true, force: true });
@@ -88576,15 +88663,18 @@ function portalHandlers(fetchImpl) {
             const target = path13.join(sb, filename);
             return existsSync15(target) && !readFileSync12(target).equals(Buffer.from(content));
           });
-          if (changed.length > 0) {
+          if (changed.length > 0 || removed.length > 0) {
             const state = readPortalState(dir);
+            const backupRoot = path13.join(sb, ".portal-local");
+            if (existsSync15(backupRoot) && lstatSync3(backupRoot).isSymbolicLink()) throw new Error("Unsafe document backup directory");
             backupDir = path13.join(sb, ".portal-local", `${backupStamp()}-r${state?.headRevisionNo ?? 0}`);
             mkdirSync7(backupDir, { recursive: true });
-            for (const { filename } of changed) {
+            for (const filename of [...changed.map((file) => file.filename), ...removed]) {
               copyFileSync(path13.join(sb, filename), path13.join(backupDir, filename));
-              replaced.push(filename);
             }
+            replaced.push(...changed.map((file) => file.filename));
           }
+          for (const filename of removed) rmSync7(path13.join(sb, filename));
           for (const { filename, content } of files) writeFileSync11(path13.join(sb, filename), content);
         }
         const attachments = revision ? { skipped: "Attachments are current episode files, not revision snapshots." } : await restoreAttachments(c, episodeId, attachmentRoot, attachmentSnapshot);
@@ -88607,6 +88697,7 @@ function portalHandlers(fetchImpl) {
           written,
           backupDir,
           replaced,
+          removed,
           sideDir
         });
       } catch (error2) {
@@ -88667,6 +88758,7 @@ function portalHandlers(fetchImpl) {
             body.scenes = payload.scenes;
             body.meta = payload.episode.meta;
             body.characters = payload.characters;
+            body.narratorCharacterId = payload.narratorCharacterId;
             uploadedScenes = payload.scenes.length;
           }
           const docs = readDocuments(sb, documents ?? DOCUMENT_FILES);
@@ -88780,20 +88872,39 @@ function portalHandlers(fetchImpl) {
         if (cand && !targetDir) return { text: await r2.client.scenarioMd(id, cand), isError: false };
         const { data } = await r2.client.listScenarios(id);
         const written = [];
+        let backupDir = null;
+        const replaced = [];
         if (targetDir) {
           const dir = episodeDirOf(targetDir);
           const sb = path13.join(dir, "storyboard");
           const candDir = path13.join(sb, "candidates");
-          mkdirSync7(candDir, { recursive: true });
+          const files = /* @__PURE__ */ new Map();
           for (const s2 of data.scenarios) {
             if (cand && s2.candidate !== cand) continue;
-            const file = path13.join(candDir, `${s2.candidate.toLowerCase()}.md`);
-            writeFileSync11(file, s2.markdown);
-            written.push(path13.relative(dir, file));
-            if (s2.chosen) {
-              writeFileSync11(path13.join(sb, "scenario.md"), s2.markdown);
-              written.push("storyboard/scenario.md");
+            candidate.parse(s2.candidate);
+            files.set(`candidates/${s2.candidate.toLowerCase()}.md`, s2.markdown);
+            if (s2.chosen) files.set("scenario.md", s2.markdown);
+          }
+          for (const [filename, content] of files) {
+            const target = safeAttachmentTarget(dir, `storyboard/${filename}`);
+            if (!existsSync15(target)) continue;
+            if (!lstatSync3(target).isFile()) throw new Error(`Not a regular scenario file: ${filename}`);
+            if (!readFileSync12(target).equals(Buffer.from(content))) replaced.push(`storyboard/${filename}`);
+          }
+          if (replaced.length > 0) {
+            const backupRoot = path13.join(sb, ".portal-local");
+            if (existsSync15(backupRoot) && lstatSync3(backupRoot).isSymbolicLink()) throw new Error("Unsafe scenario backup directory");
+            backupDir = path13.join(backupRoot, `${backupStamp()}-scenarios`);
+            for (const relative of replaced) {
+              const backup = path13.join(backupDir, path13.relative("storyboard", relative));
+              mkdirSync7(path13.dirname(backup), { recursive: true });
+              copyFileSync(path13.join(dir, relative), backup);
             }
+          }
+          mkdirSync7(candDir, { recursive: true });
+          for (const [filename, content] of files) {
+            writeFileSync11(path13.join(sb, filename), content);
+            written.push(`storyboard/${filename}`);
           }
         }
         return ok({
@@ -88804,7 +88915,9 @@ function portalHandlers(fetchImpl) {
             p0: s2.meta?.p0 ?? null,
             findings: s2.findings.length
           })),
-          written
+          written,
+          backupDir,
+          replaced
         });
       } catch (error2) {
         return failed(error2);
@@ -89107,9 +89220,10 @@ ${assignment}
       stage: head.stage ?? "board",
       sourceHost: client.holder,
       baseRevisionNo: state.headRevisionNo,
-      scenes: evaluateScenesJs(next).scenes,
+      scenes: normalizeNarrationSpeakers(evaluateScenesJs(next).scenes, payload.characters),
       meta: payload.episode.meta,
       characters: payload.characters,
+      narratorCharacterId: payload.narratorCharacterId,
       documents: payload.documents.map((d) => d.filename === "scenes.js" ? { ...d, content: next } : d),
       note: `Link shot ${args.kind}`
     });
@@ -96717,7 +96831,7 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
 // src/index.ts
 import { readFileSync as readFinalRequest } from "node:fs";
 var server = new Server(
-  { name: "social-flow", version: "0.87.0" },
+  { name: "social-flow", version: "0.88.0" },
   { capabilities: { tools: {} } }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {

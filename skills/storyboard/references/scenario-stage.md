@@ -530,5 +530,6 @@ The checker reads and compares only; scenes.js is still the sole production sour
 It does not approve wording — §7 is where sentences get read, and the reviewer's scenario
 mode scores the engines and the shape, not the phrasing. It does not replace `research.md`:
 the facts stay there, and every claim this page leans on has a row in that table. And it
-does not become a second board — a page that names shots, cameras or prompts is P0-9, and
-the fix is to delete those lines, not to keep them in sync.
+does not become a second board — a page that names shots, cameras, prompts, BGM/SFX cues,
+timed effects, LUFS, BPM or ducking values is S10, and the fix is to move those values to the
+shot-level `sound` plan in `scenes.js`, not to keep two copies in sync.

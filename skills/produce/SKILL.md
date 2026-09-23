@@ -446,7 +446,7 @@ Follow [illustrated-scenes.md](../storyboard/references/illustrated-scenes.md): 
   padding + the 2 s handover (bgm-scoring.md §2; the last cue needs no handover). A cue that
   comes up short loops at the boundary and `bed.log` prints the exact span to regenerate at.
 
-  Then write **`.work/bgm.tsv`** — `idx <TAB> audio-file`, one row per shot that changes the cue:
+  On a legacy board without `$mix`, `sound.effects` or `sound.silence`, continue to write **`.work/bgm.tsv`** by hand — `idx <TAB> audio-file`, one row per shot that changes the cue:
   ```
   4	bgm-tense.wav
   ```
@@ -456,7 +456,8 @@ Follow [illustrated-scenes.md](../storyboard/references/illustrated-scenes.md): 
   A shot with `sound.drop` becomes an `sfx.tsv` row per segment of that shot, audio column empty
   and `bgm` set to `off` (§sfx below). A shot with `sound.sfx` becomes one row on **seg 0** — the
   shot's first frame — with the path `resolve-asset.py <channel dir> sfx <id>` returns.
-
+  `build-reel.sh` runs `compile-sound-plan.js` before reading `sound.env`. On an extended board, do not hand-write `bgm.tsv` · `sfx.tsv` · `amb.tsv` · `silence.tsv` or `sound.env`: the compiler records their hashes in `.work/sound-plan.json`.
+  It removes only a stale file whose hash still matches that marker; human edits are kept with a warning, and a markerless legacy board stays byte-identical.
   **The level is not a knob here.** The builder measures the narration and sets the bed
   `BGM_SEP` LU under it (10 by default), clamps the bed's true peak, and stops the build if the
   voice-to-bed separation **while the voice is up** lands under 4 LU. The hook is handled there
@@ -732,8 +733,8 @@ The calls below describe `generator` and `generation`; raw TTS has no assembly p
 that ends `fail` after its attempts is not the end of the episode: present its findings and
 follow `references/tts-hitl.md` — the user decides whether it ships.
 
-One checked call per scene — the profile registry as it stands, and the script is the full text
-of that scene's narration segments' `tts` sentences joined with periods. `.work/pcm/c<n>.wav`.
+Resolve every checked call from `window.SB_DOC`: `speaker` selects that character id and its absence selects `SB_DOC.narratorCharacterId`. The matched `tts` supplies `generator` and `generation`: map `voiceId` to Gemini `voiceName`, Supertonic/MLX `voice`, or ElevenLabs `voiceId`, and pass model, speed, language and stylePrompt only when accepted. Portal voice data overrides profile §2; unknown speakers, missing narrator/characters, or missing TTS stop production.
+One checked call per scene when all segments share a character — join their `tts` sentences with periods into `.work/pcm/c<n>.wav`. For changes, synthesize each contiguous speaker run with its character settings, join in order with the standard sentence pause, apply the same speech-quality gate, and resample differing engine rates before joining.
 Don't split a scene into several calls by sentence (the voice varies between calls). Pass the
 same `tts` sentences as `segments`. Default `generation.speed` and `playbackSpeed` to 1.0;
 non-1 values require the episode's explicit user request under `references/tts-speed.md`.
@@ -745,7 +746,7 @@ pundago voice, three sentences as three calls reviewed at continuity 94 · natur
 96 · 95 for the same three in one call. When consecutive sentences are one breath, keep them in
 one scene as several segments (each segment still gets its own clip or reveal).
 
-**profile §2 decides the engine.** A new channel's narration default is `tts_local_generate`
+**For a board without portal character voice data, profile §2 decides the engine.** A new channel's narration default is `tts_local_generate`
 (Supertonic, local) — no key, no quota, and 0 cost however many times you rerun the episode,
 so regenerating is free. Only lines that need a style instruction, meaning shots where an
 emotion has to be acted, go to `tts_generate` (Gemini). The local side has no stylePrompt.
@@ -820,9 +821,9 @@ Manifest columns:
 ```
 cards.tsv : idx <TAB> absolute audio path <TAB> target chars/sec <TAB> zoom(in|out|auto|none|punch|hold) [<TAB> options]
 segs.tsv  : idx <TAB> seg (0-based) <TAB> visual <TAB> tts sentence <TAB> sub sentence
-sfx.tsv   : idx <TAB> seg <TAB> audio file <TAB> bgm(on|off)          (optional)
+sfx.tsv   : idx <TAB> seg <TAB> audio file <TAB> bgm(on|off) [<TAB> shot offset <TAB> separation LU] (optional)
 bgm.tsv   : idx <TAB> audio file — the music cue changes at that card (optional)
-amb.tsv   : idx <TAB> audio file | - — room tone starts at that card and holds; "-" ends it (optional)
+amb.tsv   : idx <TAB> audio file | - — room tone starts at that card and holds; "-" ends it (optional); silence.tsv: idx <TAB> shot start <TAB> shot end <TAB> music (optional)
 chapters.tsv : idx of the chapter's first card <TAB> chapter title    (long-form)
 ```
 
@@ -979,7 +980,6 @@ the offset, so aligning to the boundary puts the sound three or four syllables a
 picture. Ducking is keyed on the voice alone, so an effect doesn't push the BGM down. Each
 effect is measured and gained so its loudest moment sits `SFX_SEP` LU (6 by default) under the
 narration, and the BGM cut ramp is `BGM_GATE_R` (0.30s by default).
-
 **Room tone (`amb.tsv`)** — `idx <TAB> audio file`, the room starting at that card and holding
 until the next row; a `-` in the file column ends it. Rendered by `bgm-bed.sh` like the music
 bed, gained to `AMB_SEP` LU (15 by default) under the narration, never ducked.
