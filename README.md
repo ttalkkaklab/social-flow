@@ -768,6 +768,10 @@ skills say so in one line and carry on with local files, and an errored call is 
 line — the portal records, it does not gate. The portal repository's own `mcp/` server still
 exists for other clients; this plugin no longer needs it.
 
+Revision comparisons and `409 head_moved` recovery summaries include decision keys as
+`+key` added, `−key` removed and `~key` changed, including revisions that change only decisions.
+Older diff responses without `decisions` keep their existing summary.
+
 A missing `.portal.json` is an unlinked copy. An existing unreadable file, dangling
 symlink, malformed JSON, non-object JSON or wrongly typed present field is an
 error, never an unlinked fallback. Optional string fields must be strings and a
