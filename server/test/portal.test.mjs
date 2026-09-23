@@ -9,7 +9,9 @@
  */
 
 import assert from 'node:assert/strict';
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync, symlinkSync } from 'node:fs';
+import fs from 'node:fs';
+import { syncBuiltinESMExports } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, before, beforeEach, describe, it } from 'node:test';
@@ -435,11 +437,14 @@ describe('portal_* handlers on a scripted portal', () => {
       for (const run of [() => h.storyboardSave({ episodeDir: dir }), () => h.episodeCheckpoint({ episodeDir: dir, stage: 'board' })]) {
         const r = await run();
         assert.equal(r.isError, true);
-        assert.match(r.text, /Nothing was sent.*mode "side"/);
+        assert.match(r.text, base === undefined ? /Nothing was sent.*mode "side"/ : /Cannot read \.portal\.json/);
         assert.equal(readFileSync(join(dir, '.portal.json'), 'utf8'), before);
       }
     }
     assert.equal(calls.length, 0);
+    // A missing base in an otherwise valid record can use an explicit merged base;
+    // a wrongly typed recorded base must first be repaired, not bypassed.
+    writeFileSync(join(dir, '.portal.json'), JSON.stringify({ episodeId: EPISODE_ID }));
     for (const run of [() => h.storyboardSave({ episodeDir: dir, baseRevisionNo: 3 }), () => h.episodeCheckpoint({ episodeDir: dir, stage: 'board', baseRevisionNo: 3 })]) {
       assert.equal((await run()).isError, false);
     }
@@ -565,6 +570,104 @@ describe('portal_* handlers on a scripted portal', () => {
     assert.equal(pulled.isError, false, pulled.text);
     assert.equal(episode.readPortalState(fresh).episodeId, EPISODE_ID);
     assert.equal(calls.length, 5);
+  });
+
+  it('missing state and valid optional records stay distinct from malformed present fields', () => {
+    const dir = makeEpisodeDir(root, 'my-channel', 'ep-state-shapes');
+    const file = join(dir, '.portal.json');
+    assert.equal(episode.readPortalState(dir), null);
+    for (const record of [{ episodeId: EPISODE_ID, holder: 'review@localhost' }, { episodeId: EPISODE_ID }, { episodeId: EPISODE_ID, headRevisionNo: 0 }, { episodeId: EPISODE_ID, headRevisionNo: 2, future: true }]) {
+      writeFileSync(file, JSON.stringify(record));
+      assert.deepEqual(episode.readPortalState(dir), record);
+    }
+    const broken = ['{', '', 'null', '[]', '1', '"text"', 'true', '{}', ...[
+      { episodeId: undefined, holder: 'review@localhost' }, { episodeId: undefined, headRevisionNo: 0 }, { episodeId: '' }, { episodeId: '   ' },
+      { episodeId: 42 }, { episodeId: null }, { workspace: false }, { holder: [] }, { storyboardId: {} }, { updatedAt: 1 },
+      { headRevisionNo: null }, { headRevisionNo: '2' }, { headRevisionNo: -1 }, { headRevisionNo: 1.5 }, { headRevisionNo: Number.MAX_SAFE_INTEGER + 1 },
+    ].map(value => JSON.stringify({ episodeId: EPISODE_ID, ...value }))];
+    for (const source of broken) {
+      writeFileSync(file, source);
+      assert.throws(() => episode.readPortalState(dir), /Cannot read \.portal\.json/);
+      assert.throws(() => episode.writePortalState(dir, { episodeId: EPISODE_ID, headRevisionNo: 0 }), /Cannot read \.portal\.json/);
+      assert.equal(readFileSync(file, 'utf8'), source, 'damaged state is never overwritten by the writer');
+    }
+  });
+
+  it('unreadable metadata or bytes and dangling state links refuse tools without HTTP or overwriting', async (ctx) => {
+    const dir = makeEpisodeDir(root, 'my-channel', 'ep-state-io');
+    const file = join(dir, '.portal.json');
+    episode.writePortalState(dir, { episodeId: EPISODE_ID, headRevisionNo: 1 });
+    const originalState = readFileSync(file, 'utf8');
+    const { impl, calls } = fakeFetch({}); const h = portal.portalHandlers(impl);
+    for (const method of ['lstatSync', 'readFileSync']) {
+      const original = fs[method];
+      const mock = ctx.mock.method(fs, method, function (target, ...args) {
+        if (String(target) === file) throw Object.assign(new Error('injected EACCES'), { code: 'EACCES' });
+        return original.call(this, target, ...args);
+      }); syncBuiltinESMExports();
+      try {
+        const out = await h.storyboardSave({ episodeDir: dir, baseRevisionNo: 1 });
+        assert.equal(out.isError, true); assert.match(out.text, /Cannot read \.portal\.json/);
+        assert.throws(() => episode.writePortalState(dir, { holder: 'new' }), /Cannot read \.portal\.json/);
+      } finally { mock.mock.restore(); syncBuiltinESMExports(); }
+      assert.equal(readFileSync(file, 'utf8'), originalState);
+    }
+    rmSync(file); symlinkSync(join(dir, 'missing-state'), file);
+    const out = await h.storyboardSave({ episodeDir: dir });
+    assert.equal(out.isError, true); assert.match(out.text, /file exists but is unreadable/);
+    assert.throws(() => episode.writePortalState(dir, { episodeId: EPISODE_ID }), /Cannot read/);
+    assert.equal(fs.lstatSync(file).isSymbolicLink(), true);
+    assert.equal(calls.length, 0);
+  });
+
+  it('damaged state reaches every tool as isError before HTTP even with explicit identity and base', async () => {
+    const dir = makeEpisodeDir(root, 'my-channel', 'ep-state-tools');
+    const file = join(dir, '.portal.json'), board = join(dir, 'storyboard/scenes.js');
+    const before = readFileSync(board, 'utf8');
+    const { impl, calls } = fakeFetch({}); const h = portal.portalHandlers(impl);
+    for (const source of ['{invalid', JSON.stringify({ episodeId: 7, headRevisionNo: 1 })]) {
+      writeFileSync(file, source);
+      const args = { episodeDir: dir, episodeId: EPISODE_ID };
+      const operations = [
+        () => h.storyboardSave({ ...args, baseRevisionNo: 1 }),
+        () => h.episodeCheckpoint({ ...args, stage: 'board', baseRevisionNo: 1 }),
+        () => h.imagesUpload({ episodeDir: dir, stage: 'board', baseRevisionNo: 1 }),
+        () => h.episodeCreate({ episodeDir: dir, storyboardId: STORYBOARD_ID, slug: 'new' }),
+        () => h.episodeStatus({ ...args, status: 'produced' }),
+        () => h.episodeRestore({ ...args, revisionNo: 1 }),
+        () => h.episodeLease({ ...args, action: 'acquire' }),
+        () => h.episodeRevisions(args), () => h.renderAllocation(args),
+        () => h.workspaceCheck({ episodeDir: dir }),
+        () => h.scenarioSave({ ...args, candidate: 'D1', markdown: '# test' }),
+        () => h.scenarioChoose({ ...args, candidate: 'D1' }),
+        () => h.scenarioPull({ ...args, targetDir: dir }),
+        () => h.storyboardPull({ episodeId: EPISODE_ID, targetDir: dir }),
+      ];
+      for (const run of operations) {
+        const out = await run(); assert.equal(out.isError, true); assert.match(out.text, /Cannot read \.portal\.json/);
+        assert.equal(calls.length, 0); assert.equal(readFileSync(file, 'utf8'), source); assert.equal(readFileSync(board, 'utf8'), before);
+      }
+    }
+  });
+
+  it('lease partial records remain usable while an absent required identity or save base is refused', async () => {
+    const dir = makeEpisodeDir(root, 'my-channel', 'ep-state-partial');
+    writeFileSync(join(dir, '.portal.json'), '{}');
+    const { impl, calls } = fakeFetch({
+      [`POST /api/workspaces/lab/episodes/${EPISODE_ID}/lease`]: { success: true, data: { holder: 'me@box' } },
+      [`PATCH /api/workspaces/lab/episodes/${EPISODE_ID}`]: { success: true, data: { status: 'approved' } },
+    }); const h = portal.portalHandlers(impl);
+    assert.equal((await h.episodeStatus({ episodeDir: dir, status: 'approved' })).isError, true);
+    assert.equal((await h.storyboardSave({ episodeDir: dir })).isError, true);
+    assert.equal(calls.length, 0);
+    rmSync(join(dir, '.portal.json'));
+    const lease = await h.episodeLease({ episodeDir: dir, episodeId: EPISODE_ID, action: 'acquire' });
+    assert.equal(lease.isError, false, lease.text);
+    const partial = episode.readPortalState(dir); assert.equal(partial.episodeId, EPISODE_ID); assert.equal(partial.headRevisionNo, undefined);
+    assert.equal((await h.episodeStatus({ episodeDir: dir, status: 'approved' })).isError, false);
+    const before = calls.length;
+    assert.equal((await h.episodeCheckpoint({ episodeDir: dir, stage: 'board' })).isError, true);
+    assert.equal(calls.length, before);
   });
 
   it('a 409 from the portal comes back as one isError line with the detail, not a thrown error', async () => {

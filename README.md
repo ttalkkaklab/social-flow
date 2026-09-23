@@ -768,6 +768,16 @@ skills say so in one line and carry on with local files, and an errored call is 
 line — the portal records, it does not gate. The portal repository's own `mcp/` server still
 exists for other clients; this plugin no longer needs it.
 
+A missing `.portal.json` is an unlinked copy. An existing unreadable file, dangling
+symlink, malformed JSON, non-object JSON or wrongly typed present field is an
+error, never an unlinked fallback. Optional string fields must be strings and a
+present `headRevisionNo` must be a nonnegative safe integer. Every existing state record needs a nonempty string `episodeId`; all state
+writers supply it or patch an already linked copy. Other missing fields remain
+allowed for legacy/pre-checkpoint records; save/checkpoint/images still require a
+valid recorded or explicit base. Keep a damaged state file and local edits, restore a readable valid backup
+or inspect the portal in a new directory, then repair the original copy. Neither
+an explicit ID/base nor `writePortalState` bypasses a damaged existing record.
+
 An explicit `episodeId` must agree with `.portal.json` in every supplied local
 copy, including scenario input files and pull targets. Conflicting IDs are refused
 before HTTP or file writes; equal revision numbers do not make two episodes the
