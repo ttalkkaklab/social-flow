@@ -1053,6 +1053,34 @@ describe('portal_* handlers on a scripted portal', () => {
     assert.equal(episode.readPortalState(dir).headRevisionNo, 2, 'the local head is not touched by a refused write');
   });
 
+  it('decision-only changes appear in explicit revision comparisons and head_moved recovery', async () => {
+    const dir = makeEpisodeDir(root, 'my-channel', 'ep-decision-diff');
+    episode.writePortalState(dir, { episodeId: EPISODE_ID, headRevisionNo: 2 });
+    const diff = {
+      from: { revisionNo: 2 }, to: { revisionNo: 3 }, identical: false,
+      scenes: { countA: 1, countB: 1, added: [], removed: [], changed: [], reordered: false },
+      meta: { added: [], removed: [], changed: [] }, documents: {},
+      decisions: { added: ['video_model'], removed: ['max_attempts'], changed: ['video_budget_usd'] },
+    };
+    const { impl } = fakeFetch({
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}/revisions/2/diff/3`]: { success: true, data: diff },
+      [`POST /api/workspaces/lab/episodes/${EPISODE_ID}/revisions`]: { status: 409, success: false, error: 'head moved', error_code: 'head_moved', detail: { head: { revisionNo: 3 } } },
+    });
+    const h = portal.portalHandlers(impl);
+    const compared = await h.episodeRevisions({ episodeDir: dir, compareTo: 3 });
+    assert.equal(compared.isError, false);
+    assert.equal(JSON.parse(compared.text).summary, 'scenes +0 −0 ~0 · decisions +video_model −max_attempts ~video_budget_usd');
+    assert.deepEqual(JSON.parse(compared.text).decisions, diff.decisions);
+    const conflict = await h.episodeCheckpoint({ stage: 'board', episodeDir: dir });
+    assert.equal(conflict.isError, true);
+    assert.match(conflict.text, /decisions \+video_model −max_attempts ~video_budget_usd/);
+    assert.equal(episode.readPortalState(dir).headRevisionNo, 2);
+    for (const decisions of [undefined, { added: [], removed: [], changed: [] }]) {
+      assert.equal(portal.summarizeRevisionDiff({ ...diff, decisions }), 'scenes +0 −0 ~0');
+      assert.match(portal.summarizeRevisionDiff({ ...diff, decisions, identical: true }), /same content/);
+    }
+  });
+
   it('a 409 without a usable diff keeps the plain 409 text; other errors are untouched', async () => {
     const dir = makeEpisodeDir(root, 'my-channel', 'ep-moved-nodiff');
     episode.writePortalState(dir, { episodeId: EPISODE_ID, headRevisionNo: 2 });

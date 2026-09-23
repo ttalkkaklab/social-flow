@@ -188,6 +188,10 @@ export function summarizeRevisionDiff(d: PortalRevisionDiff): string {
   );
   const meta = [...d.meta.added.map((k) => `+${k}`), ...d.meta.removed.map((k) => `−${k}`), ...d.meta.changed.map((k) => `~${k}`)];
   if (meta.length) parts.push(`meta ${meta.join(' ')}`);
+  if (d.decisions) {
+    const decisions = [...d.decisions.added.map((k) => `+${k}`), ...d.decisions.removed.map((k) => `−${k}`), ...d.decisions.changed.map((k) => `~${k}`)];
+    if (decisions.length) parts.push(`decisions ${decisions.join(' ')}`);
+  }
   const docs = Object.entries(d.documents)
     .filter(([, c]) => c.status !== 'same')
     .map(([name, c]) => `${name} ${c.status}`);
