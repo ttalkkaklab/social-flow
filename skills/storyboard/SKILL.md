@@ -17,7 +17,7 @@ allowed-tools: ["mcp__social-flow__portal_render_allocation", "Read", "Write", "
 ---
 
 # Storyboard authoring — data/[channel]/episodes/[topic]/storyboard/
-For pending portal render requests, follow [the six-ratio allocation contract](references/production-mode.md): `portal_render_allocation` read → host LLM reasons over every shot → submit requestId/baseRevisionNo and all assignments → pull. New choices persist `PRODUCTION.renderRatioVersion:1`; neither a pending request nor ratio selection approves spending.
+A linked copy without a valid `headRevisionNo` cannot save or checkpoint: pull `mode: "side"`, merge, and pass the returned head as `baseRevisionNo`. Keep `.portal.json`; directory-free checkpoints also require an explicit base. For pending portal render requests, follow [the six-ratio allocation contract](references/production-mode.md): `portal_render_allocation` read → host LLM reasons over every shot → submit requestId/baseRevisionNo and all assignments → pull. New choices persist `PRODUCTION.renderRatioVersion:1`; neither a pending request nor ratio selection approves spending.
 Read [story-quality.md](references/story-quality.md) before candidates or narration. Its evidence → meaning → ending → optional CTA contract overrides older mandatory-question and modern-case rules. Write `window.STORY` in §4a; draft checks require it. The existing narration review supplies its four evidence-backed findings; after vocabulary edits revalidate the read and run `check-story.js storyboard/` before §4b or approval. No score waives a failed criterion.
 
 Takes one topic through **research → wow points → three messages → three scenario candidates → one pick → more research →
