@@ -446,8 +446,7 @@ Follow [illustrated-scenes.md](../storyboard/references/illustrated-scenes.md): 
   padding + the 2 s handover (bgm-scoring.md §2; the last cue needs no handover). A cue that
   comes up short loops at the boundary and `bed.log` prints the exact span to regenerate at.
 
-  On a legacy board without `$mix`, `sound.effects` or `sound.silence`, continue to write
-  **`.work/bgm.tsv`** by hand — `idx <TAB> audio-file`, one row per shot that changes the cue:
+  On a legacy board without `$mix`, `sound.effects` or `sound.silence`, continue to write **`.work/bgm.tsv`** by hand — `idx <TAB> audio-file`, one row per shot that changes the cue:
   ```
   4	bgm-tense.wav
   ```
@@ -457,12 +456,8 @@ Follow [illustrated-scenes.md](../storyboard/references/illustrated-scenes.md): 
   A shot with `sound.drop` becomes an `sfx.tsv` row per segment of that shot, audio column empty
   and `bgm` set to `off` (§sfx below). A shot with `sound.sfx` becomes one row on **seg 0** — the
   shot's first frame — with the path `resolve-asset.py <channel dir> sfx <id>` returns.
-
-  `build-reel.sh` runs `compile-sound-plan.js` before it reads `sound.env`. On an extended board,
-  do not hand-write `bgm.tsv` · `sfx.tsv` · `amb.tsv` · `silence.tsv` or `sound.env`: the compiler
-  writes them and records their hashes in `.work/sound-plan.json`. A later build removes only a
-  stale file whose hash still matches that marker; a human-edited output is kept with a warning.
-  Without an extended field and without a marker, legacy hand-written manifests stay byte-identical.
+  `build-reel.sh` runs `compile-sound-plan.js` before reading `sound.env`. On an extended board, do not hand-write `bgm.tsv` · `sfx.tsv` · `amb.tsv` · `silence.tsv` or `sound.env`: the compiler records their hashes in `.work/sound-plan.json`.
+  It removes only a stale file whose hash still matches that marker; human edits are kept with a warning, and a markerless legacy board stays byte-identical.
   **The level is not a knob here.** The builder measures the narration and sets the bed
   `BGM_SEP` LU under it (10 by default), clamps the bed's true peak, and stops the build if the
   voice-to-bed separation **while the voice is up** lands under 4 LU. The hook is handled there
