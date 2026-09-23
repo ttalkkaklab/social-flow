@@ -51,6 +51,9 @@ function fakeFetch(routes) {
     const method = (init.method ?? 'GET').toUpperCase();
     const u = new URL(url);
     const key = `${method} ${u.pathname}`;
+    if (!routes[key] && method === 'GET' && /\/episodes\/[^/]+$/.test(u.pathname) && Object.keys(routes).some(route => route.startsWith('POST ') && /\/(import|revisions)$/.test(route))) {
+      return Response.json({ success: true, data: { documents: [] } });
+    }
     if (!routes[key] && u.pathname.endsWith('/attachments')) {
       if (method === 'GET') return Response.json({ success: true, data: { items: [] } });
       const bytes = Buffer.from(init.body);
@@ -703,6 +706,27 @@ describe('portal_* handlers on a scripted portal', () => {
     assert.deepEqual(body.documents.map((d) => d.filename), ['storyboard.md', 'research.md', 'scenes.js']);
     assert.equal(JSON.parse(r.text).result, 'new revision');
     assert.equal(episode.readPortalState(dir).headRevisionNo, 4);
+  });
+
+  it('revision head 7 wins over stale canonical attachments and reports them without downloading', async () => {
+    const dir = makeEpisodeDir(root, 'my-channel', 'ep-canonical-attachment');
+    const latest = 'window.SCENES = [{type:"cover",title:"revision 7"}];';
+    const { impl, calls } = fakeFetch({
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}`]: { success: true, data: { id: EPISODE_ID, storyboardId: STORYBOARD_ID, headRevisionNo: 7, documents: [{ filename: 'custom-notes.md' }] } },
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}/scenes.js`]: latest,
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}/documents/custom-notes.md`]: 'latest custom document',
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}/attachments`]: { success: true, data: { items: [
+        { id: 'old-scene', relativePath: 'storyboard/scenes.js', sha256: 'a'.repeat(64), byteSize: 6 },
+        { id: 'old-custom', relativePath: 'storyboard/custom-notes.md', sha256: 'b'.repeat(64), byteSize: 8 },
+      ] } },
+    });
+    const result = await portal.portalHandlers(impl).storyboardPull({ episodeId: EPISODE_ID, targetDir: dir });
+    assert.equal(result.isError, false, result.text);
+    assert.equal(readFileSync(join(dir, 'storyboard/scenes.js'), 'utf8'), latest);
+    assert.equal(readFileSync(join(dir, 'storyboard/custom-notes.md'), 'utf8'), 'latest custom document');
+    assert.equal(episode.readPortalState(dir).headRevisionNo, 7);
+    assert.deepEqual(JSON.parse(result.text).attachments.skipped.map(s => s.reason), ['canonical', 'canonical']);
+    assert.equal(calls.some(c => /attachments\/old-/.test(c.path)), false);
   });
 
   it('attachment download failure preserves the working board and recorded head before pull writes', async () => {

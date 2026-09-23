@@ -18,6 +18,7 @@ test('attachment round trip preserves duplicate paths, empty files, binary audio
     writeFileSync(path.join(source, '.portal-attachments.json'), JSON.stringify({ 'storyboard/audio.m4a': { provenance } }));
     const saved = new Map(), blobs = new Map(); let sends = 0;
     const client = {
+      getEpisode: async () => ({ data: { documents: [] } }),
       listAttachments: async () => ({ data: { items: [...saved.values()] } }),
       uploadAttachment: async (_id, relativePath, bytes, mime, provenance = {}) => {
         sends++;
@@ -47,10 +48,36 @@ test('rejects traversal, reserved state paths, symlink escapes and corrupt downl
     mkdirSync(target); mkdirSync(outside); symlinkSync(outside, path.join(target, 'link'));
     const item = { id: randomUUID(), relativePath: 'link/x', sha256: 'a'.repeat(64), byteSize: 1 };
     let downloads = 0;
-    const client = { listAttachments: async () => ({ data: { items: [item] } }), downloadAttachment: async () => { downloads++; return Buffer.from('x'); } };
+    const client = { getEpisode: async () => ({ data: { documents: [] } }), listAttachments: async () => ({ data: { items: [item] } }), downloadAttachment: async () => { downloads++; return Buffer.from('x'); } };
     await assert.rejects(restoreAttachments(client, 'ep', target), /Symlink/);
     assert.equal(downloads, 0);
     item.relativePath = 'safe.md';
     await assert.rejects(restoreAttachments(client, 'ep', target), /hash mismatch/);
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+
+test('canonical revision paths are excluded from upload and legacy restore including case aliases', async () => {
+  const root = mkdtempSync(path.join(tmpdir(), 'attachments81-canonical-'));
+  try {
+    mkdirSync(path.join(root, 'storyboard'));
+    const names = ['scenes.js', 'storyboard.md', 'research.md', 'script.md', 'storyboard.html', 'scenario.md', 'custom.md'];
+    for (const name of names) writeFileSync(path.join(root, 'storyboard', name), 'revision-owned');
+    let writes = 0;
+    const client = {
+      getEpisode: async () => ({ data: { documents: [{ filename: 'custom.md' }] } }),
+      listAttachments: async () => ({ data: { items: [...names, 'SCENES.JS'].map(name => ({ relativePath: `storyboard/${name}`, byteSize: 1 })) } }),
+      uploadAttachment: async () => { writes++; throw new Error('must not upload canonical'); },
+      downloadAttachment: async () => { throw new Error('must not download canonical'); },
+    };
+    const result = await uploadAttachments(client, 'ep', root);
+    assert.equal(result.complete, true);
+    assert.equal(result.uploaded, 0);
+    assert.equal(result.skipped.length, names.length);
+    assert.equal(writes, 0);
+    const restore = await restoreAttachments(client, 'ep', root);
+    assert.equal(restore.restored, 0);
+    assert.equal(restore.skipped.length, names.length + 1);
+    for (const name of names) assert.equal(readFileSync(path.join(root, 'storyboard', name), 'utf8'), 'revision-owned');
   } finally { rmSync(root, { recursive: true, force: true }); }
 });

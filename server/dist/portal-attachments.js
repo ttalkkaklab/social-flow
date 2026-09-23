@@ -1,3 +1,4 @@
+import { canonicalPullPaths } from './portal-canonical.js';
 import { createHash, randomUUID } from 'node:crypto';
 import { constants, closeSync, existsSync, fstatSync, lstatSync, mkdirSync, openSync, readFileSync, readSync, readdirSync, renameSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -55,12 +56,18 @@ function mime(relative) {
     return { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.mp4': 'video/mp4', '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.m4a': 'audio/mp4', '.ogg': 'audio/ogg', '.flac': 'audio/flac', '.html': 'text/html', '.md': 'text/markdown', '.json': 'application/json' }[path.extname(relative).toLowerCase()] ?? 'application/octet-stream';
 }
 export async function uploadAttachments(client, episodeId, root) {
+    const { data: episode } = await client.getEpisode(episodeId);
+    const canonical = canonicalPullPaths(episode);
     const files = [], skipped = [];
     function walk(relative = '') {
         for (const item of readdirSync(path.join(root, relative), { withFileTypes: true })) {
             if (ignored(item.name))
                 continue;
             const name = relative ? `${relative}/${item.name}` : item.name;
+            if (canonical.has(name.toLowerCase())) {
+                skipped.push({ path: name, reason: 'canonical' });
+                continue;
+            }
             try {
                 const target = safeAttachmentTarget(root, name);
                 if (item.isDirectory())
@@ -100,16 +107,22 @@ export async function uploadAttachments(client, episodeId, root) {
             throw new Error(`Attachment upload mismatch: ${relative}`);
         uploaded++;
     }
-    return { complete: skipped.length === 0, uploaded, unchanged, skipped };
+    return { complete: skipped.every(item => item.reason === 'canonical'), uploaded, unchanged, skipped };
 }
 /** Download and hash-check all files before replacing anything. Changed local files get a backup. */
-export async function prepareAttachmentRestore(client, episodeId, root) {
+export async function prepareAttachmentRestore(client, episodeId, root, canonical) {
+    const reserved = canonical ?? canonicalPullPaths((await client.getEpisode(episodeId)).data);
+    const skipped = [];
     const { data } = await client.listAttachments(episodeId);
     if (data.items.length > 10000 || data.items.reduce((sum, item) => sum + item.byteSize, 0) > 500 * 1024 * 1024)
         throw new Error('Attachment manifest exceeds restore limits');
     const seen = new Set();
     const staged = [];
     for (const item of data.items) {
+        if (reserved.has(item.relativePath.toLowerCase())) {
+            skipped.push({ path: item.relativePath, reason: "canonical" });
+            continue;
+        }
         safeAttachmentTarget(root, item.relativePath);
         if (seen.has(item.relativePath) || !/^[a-f0-9]{64}$/.test(item.sha256) || !Number.isSafeInteger(item.byteSize) || item.byteSize < 0 || item.byteSize > LIMIT)
             throw new Error('Invalid attachment manifest');
@@ -119,10 +132,10 @@ export async function prepareAttachmentRestore(client, episodeId, root) {
             throw new Error(`Attachment hash mismatch: ${item.relativePath}`);
         staged.push({ item, bytes });
     }
-    return { items: data.items, staged };
+    return { items: data.items.filter(item => !reserved.has(item.relativePath.toLowerCase())), staged, skipped };
 }
 export async function restoreAttachments(client, episodeId, root, snapshot) {
-    const { items, staged } = snapshot ?? await prepareAttachmentRestore(client, episodeId, root);
+    const { items, staged, skipped } = snapshot ?? await prepareAttachmentRestore(client, episodeId, root);
     const backup = `.portal-local/attachments-${randomUUID()}`;
     for (const { item, bytes } of staged) {
         const target = safeAttachmentTarget(root, item.relativePath);
@@ -147,7 +160,7 @@ export async function restoreAttachments(client, episodeId, root, snapshot) {
     if (existsSync(manifest) && lstatSync(manifest).isSymbolicLink())
         throw new Error('Unsafe attachment metadata file');
     writeFileSync(manifest, JSON.stringify(Object.fromEntries(items.map(item => [item.relativePath, item])), null, 2));
-    return { restored: staged.length, bytes: staged.reduce((n, file) => n + file.bytes.length, 0) };
+    return { restored: staged.length, bytes: staged.reduce((n, file) => n + file.bytes.length, 0), skipped };
 }
 /** Board writes can succeed before file sync fails. Report both facts without inviting a blind re-save. */
 export async function attachmentSyncReport(action) {

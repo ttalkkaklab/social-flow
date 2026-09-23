@@ -1,3 +1,4 @@
+import { canonicalPullPaths } from './portal-canonical.js';
 import { uploadAttachments, restoreAttachments, prepareAttachmentRestore, attachmentSyncReport, safeAttachmentTarget } from './portal-attachments.js';
 /**
  * `portal_*` tool handlers — the ttalkkakstory portal called by workspace API key.
@@ -585,7 +586,7 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
         const replaced: string[] = [];
 
         const attachmentRoot = mode === 'side' ? path.join(sb, '.portal-head', 'attachments') : dir;
-        const attachmentSnapshot = revision ? undefined : await prepareAttachmentRestore(c, episodeId, attachmentRoot);
+        const attachmentSnapshot = revision ? undefined : await prepareAttachmentRestore(c, episodeId, attachmentRoot, canonicalPullPaths(episode, fileContents.keys()));
         if (mode === 'side') {
           sideDir = path.join(sb, '.portal-head');
           rmSync(sideDir, { recursive: true, force: true });

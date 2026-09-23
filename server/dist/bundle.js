@@ -87494,149 +87494,157 @@ var SNS_PLATFORM_BY_TOOL = {
   youtube_insights: "YOUTUBE"
 };
 
-// src/portal-attachments.ts
-import { createHash as createHash2, randomUUID as randomUUID2 } from "node:crypto";
-import { constants as constants2, closeSync as closeSync2, existsSync as existsSync12, fstatSync, lstatSync, mkdirSync as mkdirSync5, openSync as openSync2, readFileSync as readFileSync9, readSync, readdirSync as readdirSync2, renameSync as renameSync4, writeFileSync as writeFileSync8 } from "node:fs";
+// src/portal-episode.ts
+import { existsSync as existsSync12, lstatSync, readFileSync as readFileSync9, writeFileSync as writeFileSync8 } from "node:fs";
 import path10 from "node:path";
-var LIMIT = 10 * 1024 * 1024;
-var MANIFEST = ".portal-attachments.json";
-var hash = (bytes) => createHash2("sha256").update(bytes).digest("hex");
-var ignored = (part) => [".git", "node_modules", ".portal.json", MANIFEST, ".portal-head", ".portal-local", ".DS_Store"].includes(part) || part === ".env" || part.startsWith(".env.");
-function validateAttachmentPath(value) {
-  if (!value || Buffer.byteLength(value) > 1024 || /[\\\x00-\x1f\x7f:]/.test(value) || value.startsWith("/") || value.split("/").some((p) => !p || p === "." || p === ".." || /[. ]$/.test(p) || ignored(p))) throw new Error(`Unsafe attachment path: ${value}`);
-  return value;
+var EPISODE_STATUSES = ["draft", "approved", "produced", "published"];
+var EPISODE_STAGES = ["researched", "candidates", "scenario", "narration", "board", "approved", "produced", "published"];
+var SCENARIO_CANDIDATES = ["D1", "D2", "D3"];
+var DOCUMENT_FILES = ["storyboard.md", "research.md", "script.md", "storyboard.html", "scenes.js"];
+var PORTAL_STATE_FILE = ".portal.json";
+function episodeDirOf(dir) {
+  return path10.basename(dir) === "storyboard" ? path10.dirname(dir) : dir;
 }
-function safeAttachmentTarget(root, relative) {
-  validateAttachmentPath(relative);
-  const absoluteRoot = path10.resolve(root);
-  const canonicalRoot = process.platform === "darwin" ? absoluteRoot.replace(/^\/var(?=\/|$)/, "/private/var").replace(/^\/tmp(?=\/|$)/, "/private/tmp") : absoluteRoot;
-  const target = path10.resolve(canonicalRoot, relative);
-  let current = path10.parse(target).root;
-  for (const part of target.slice(current.length).split(path10.sep)) {
-    current = path10.join(current, part);
-    try {
-      if (lstatSync(current).isSymbolicLink()) throw new Error(`Symlink is not an attachment target: ${relative}`);
-    } catch (error2) {
-      if (error2.code !== "ENOENT") throw error2;
-    }
-  }
-  return target;
+function channelOfEpisodeDir(dir) {
+  if (!dir) return void 0;
+  const episodeDir = episodeDirOf(path10.resolve(dir));
+  const episodes = path10.dirname(episodeDir);
+  if (path10.basename(episodes) !== "episodes") return void 0;
+  const channel = path10.basename(path10.dirname(episodes));
+  return CHANNEL_SLUG_RE.test(channel) ? channel : void 0;
 }
-function readBounded(root, relative) {
-  const file = safeAttachmentTarget(root, relative);
-  const fd = openSync2(file, constants2.O_RDONLY | constants2.O_NOFOLLOW);
+function stateReadError(reason) {
+  return new Error(`Cannot read .portal.json: ${reason}. Keep the state file and local edits. Restore a readable, valid backup or inspect the portal in a new directory before repairing this copy; do not delete the state file to bypass this error.`);
+}
+function readPortalState(dir) {
+  const file = path10.join(episodeDirOf(dir), PORTAL_STATE_FILE);
   try {
-    const stat4 = fstatSync(fd);
-    if (!stat4.isFile() || stat4.size > LIMIT) throw new Error(`Not a regular file of at most 10 MiB: ${relative}`);
-    const bytes = Buffer.alloc(LIMIT + 1);
-    let size = 0, count = 0;
-    while ((count = readSync(fd, bytes, size, bytes.length - size, null)) > 0) {
-      size += count;
-      if (size > LIMIT) throw new Error(`File grew past 10 MiB: ${relative}`);
-    }
-    return bytes.subarray(0, size);
-  } finally {
-    closeSync2(fd);
-  }
-}
-function mime(relative) {
-  return { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".mp4": "video/mp4", ".mp3": "audio/mpeg", ".wav": "audio/wav", ".m4a": "audio/mp4", ".ogg": "audio/ogg", ".flac": "audio/flac", ".html": "text/html", ".md": "text/markdown", ".json": "application/json" }[path10.extname(relative).toLowerCase()] ?? "application/octet-stream";
-}
-async function uploadAttachments(client, episodeId, root) {
-  const files = [], skipped = [];
-  function walk(relative = "") {
-    for (const item of readdirSync2(path10.join(root, relative), { withFileTypes: true })) {
-      if (ignored(item.name)) continue;
-      const name = relative ? `${relative}/${item.name}` : item.name;
-      try {
-        const target = safeAttachmentTarget(root, name);
-        if (item.isDirectory()) walk(name);
-        else if (!item.isFile()) throw new Error("Not a regular file");
-        else if (lstatSync(target).size > LIMIT) throw new Error("Exceeds 10 MiB");
-        else files.push(name);
-      } catch (error2) {
-        skipped.push({ path: name, reason: String(error2) });
-      }
-    }
-  }
-  safeAttachmentTarget(root, "root-check");
-  walk();
-  if (files.length > 1e4) throw new Error("Too many episode attachments");
-  const metadataFile = path10.join(root, MANIFEST);
-  if (existsSync12(metadataFile) && (lstatSync(metadataFile).isSymbolicLink() || lstatSync(metadataFile).size > LIMIT)) throw new Error("Unsafe attachment metadata file");
-  const local = existsSync12(metadataFile) ? JSON.parse(readFileSync9(metadataFile, "utf8")) : {};
-  const { data } = await client.listAttachments(episodeId);
-  const remote = new Map(data.items.map((item) => [item.relativePath, item]));
-  let uploaded = 0, unchanged = 0;
-  for (const relative of files.sort()) {
-    const bytes = readBounded(root, relative), sha2562 = hash(bytes);
-    const existing = remote.get(relative), provenance = local[relative]?.provenance;
-    if (existing?.sha256 === sha2562 && (!provenance || JSON.stringify(existing.provenance) === JSON.stringify(provenance))) {
-      unchanged++;
-      continue;
-    }
-    const { data: saved } = await client.uploadAttachment(episodeId, relative, bytes, mime(relative), provenance);
-    if (saved.sha256 !== sha2562 || saved.byteSize !== bytes.length || saved.relativePath !== relative) throw new Error(`Attachment upload mismatch: ${relative}`);
-    uploaded++;
-  }
-  return { complete: skipped.length === 0, uploaded, unchanged, skipped };
-}
-async function prepareAttachmentRestore(client, episodeId, root) {
-  const { data } = await client.listAttachments(episodeId);
-  if (data.items.length > 1e4 || data.items.reduce((sum, item) => sum + item.byteSize, 0) > 500 * 1024 * 1024) throw new Error("Attachment manifest exceeds restore limits");
-  const seen = /* @__PURE__ */ new Set();
-  const staged = [];
-  for (const item of data.items) {
-    safeAttachmentTarget(root, item.relativePath);
-    if (seen.has(item.relativePath) || !/^[a-f0-9]{64}$/.test(item.sha256) || !Number.isSafeInteger(item.byteSize) || item.byteSize < 0 || item.byteSize > LIMIT) throw new Error("Invalid attachment manifest");
-    seen.add(item.relativePath);
-    const bytes = await client.downloadAttachment(episodeId, item.id);
-    if (bytes.length !== item.byteSize || hash(bytes) !== item.sha256) throw new Error(`Attachment hash mismatch: ${item.relativePath}`);
-    staged.push({ item, bytes });
-  }
-  return { items: data.items, staged };
-}
-async function restoreAttachments(client, episodeId, root, snapshot) {
-  const { items, staged } = snapshot ?? await prepareAttachmentRestore(client, episodeId, root);
-  const backup = `.portal-local/attachments-${randomUUID2()}`;
-  for (const { item, bytes } of staged) {
-    const target = safeAttachmentTarget(root, item.relativePath);
-    mkdirSync5(path10.dirname(target), { recursive: true });
-    if (existsSync12(target) && !readBounded(root, item.relativePath).equals(Buffer.from(bytes))) {
-      const backupRoot = path10.join(root, backup);
-      safeAttachmentTarget(root, ".attachment-backup-check");
-      if (existsSync12(path10.join(root, ".portal-local")) && lstatSync(path10.join(root, ".portal-local")).isSymbolicLink()) throw new Error("Unsafe backup directory");
-      const backupFile = path10.join(backupRoot, item.relativePath);
-      mkdirSync5(path10.dirname(backupFile), { recursive: true });
-      writeFileSync8(backupFile, readBounded(root, item.relativePath), { flag: "wx" });
-    }
-    const temporary = `${target}.${randomUUID2()}.tmp`;
-    writeFileSync8(temporary, bytes, { flag: "wx" });
-    safeAttachmentTarget(root, item.relativePath);
-    renameSync4(temporary, target);
-  }
-  mkdirSync5(root, { recursive: true });
-  const manifest = path10.join(root, MANIFEST);
-  if (existsSync12(manifest) && lstatSync(manifest).isSymbolicLink()) throw new Error("Unsafe attachment metadata file");
-  writeFileSync8(manifest, JSON.stringify(Object.fromEntries(items.map((item) => [item.relativePath, item])), null, 2));
-  return { restored: staged.length, bytes: staged.reduce((n, file) => n + file.bytes.length, 0) };
-}
-async function attachmentSyncReport(action) {
-  try {
-    return await action();
+    lstatSync(file);
   } catch (error2) {
-    return { complete: false, error: error2 instanceof Error ? error2.message : String(error2), next: "Keep the local episode. The board operation already completed; attachment backup is incomplete. Retry portal_attachments_sync after fixing the error." };
+    if (error2.code === "ENOENT") return null;
+    throw stateReadError("file metadata is unreadable");
   }
+  let source;
+  try {
+    source = readFileSync9(file, "utf8");
+  } catch {
+    throw stateReadError("file exists but is unreadable");
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(source);
+  } catch {
+    throw stateReadError("invalid JSON");
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw stateReadError("expected a JSON object");
+  const state = parsed;
+  if (typeof state.episodeId !== "string" || !state.episodeId.trim())
+    throw stateReadError("episodeId must be a nonempty string");
+  for (const field of ["workspace", "storyboardId", "episodeId", "holder", "updatedAt"]) {
+    if (field in state && typeof state[field] !== "string") throw stateReadError(`${field} must be a string when present`);
+  }
+  if ("headRevisionNo" in state && (!Number.isSafeInteger(state.headRevisionNo) || state.headRevisionNo < 0))
+    throw stateReadError("headRevisionNo must be a nonnegative safe integer when present");
+  return state;
 }
-
-// src/portal-tools.ts
-import { copyFileSync, existsSync as existsSync15, lstatSync as lstatSync3, mkdirSync as mkdirSync7, readdirSync as readdirSync3, readFileSync as readFileSync12, rmSync as rmSync7, writeFileSync as writeFileSync11 } from "node:fs";
-import path13 from "node:path";
-
-// src/portal-images.ts
-import { createHash as createHash3, randomUUID as randomUUID3 } from "node:crypto";
-import { closeSync as closeSync3, existsSync as existsSync14, fstatSync as fstatSync2, mkdirSync as mkdirSync6, openSync as openSync3, readFileSync as readFileSync11, readSync as readSync2, realpathSync, renameSync as renameSync5, rmSync as rmSync6, writeFileSync as writeFileSync10 } from "node:fs";
-import path12 from "node:path";
+function writePortalState(dir, patch) {
+  const file = path10.join(episodeDirOf(dir), PORTAL_STATE_FILE);
+  const next = { ...readPortalState(dir) ?? {}, ...patch, updatedAt: (/* @__PURE__ */ new Date()).toISOString() };
+  writeFileSync8(file, `${JSON.stringify(next, null, 2)}
+`);
+  return next;
+}
+function evaluateScenesJs(source) {
+  const plain = evaluateWindowScript(source);
+  if (!Array.isArray(plain.SCENES)) throw new Error("scenes.js has no window.SCENES array.");
+  const { SCENES, SB_DOC, ...meta } = plain;
+  return {
+    scenes: SCENES,
+    meta,
+    sbDoc: SB_DOC && typeof SB_DOC === "object" ? SB_DOC : null
+  };
+}
+function readStoryboardMd(markdown) {
+  const fm = /^---\n([\s\S]*?)\n---/.exec(markdown)?.[1] ?? "";
+  const pick3 = (key) => new RegExp(`^${key}:\\s*(.+)$`, "m").exec(fm)?.[1]?.trim();
+  const heading = /^#\s+(.+?)\s*$/m.exec(markdown)?.[1];
+  return {
+    channel: pick3("channel") ?? null,
+    topic: pick3("topic") ?? null,
+    status: pick3("status") ?? null,
+    title: heading ? heading.replace(/\s+[—-]\s+Storyboard\s*$/i, "") : null
+  };
+}
+function titleFromHeader(source, slug) {
+  const first = source.split("\n").find((line) => line.startsWith("//"));
+  if (!first) return null;
+  const escaped = slug.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const m2 = new RegExp(`^//\\s*${escaped}\\s*[\u2014-]\\s*(.+)$`).exec(first);
+  return m2 ? m2[1].replace(/\s*\([^)]*\)\s*$/, "").trim() : null;
+}
+function buildImportPayload(episodeDir, options = {}) {
+  const dir = episodeDirOf(episodeDir);
+  const sb = path10.join(dir, "storyboard");
+  const scenesPath2 = path10.join(sb, "scenes.js");
+  if (!existsSync12(scenesPath2)) throw new Error(`scenes.js not found: ${scenesPath2}`);
+  const source = readFileSync9(scenesPath2, "utf8");
+  const { scenes, meta, sbDoc } = evaluateScenesJs(source);
+  const mdPath = path10.join(sb, "storyboard.md");
+  const md = existsSync12(mdPath) ? readStoryboardMd(readFileSync9(mdPath, "utf8")) : {};
+  const slug = path10.basename(dir);
+  const channelDir = path10.dirname(path10.dirname(dir));
+  const channel = options.project ?? md.channel ?? path10.basename(channelDir);
+  const title = options.title ?? md.title ?? titleFromHeader(source, slug) ?? slug;
+  const documents = DOCUMENT_FILES.filter((f3) => existsSync12(path10.join(sb, f3))).map((f3) => ({
+    filename: f3,
+    content: readFileSync9(path10.join(sb, f3), "utf8")
+  }));
+  const status = md.status ?? null;
+  return {
+    project: { name: channel },
+    ...options.storyboard ? { storyboard: { title: options.storyboard } } : {},
+    episode: {
+      slug,
+      title,
+      ...typeof meta.FORMAT === "string" ? { format: meta.FORMAT } : {},
+      ...status && EPISODE_STATUSES.includes(status) ? { status } : {},
+      meta: sbDoc ? { ...meta, SB_DOC: sbDoc } : meta
+    },
+    scenes,
+    characters: collectCharacters(scenes, sbDoc, channelDir),
+    documents
+  };
+}
+function readDocuments(dir, filenames) {
+  return filenames.map((f3) => path10.join(dir, f3)).filter((p) => existsSync12(p)).map((p) => ({ filename: path10.basename(p), content: readFileSync9(p, "utf8") }));
+}
+function characterIdsOf(shot) {
+  const raw = shot?.visual?.character;
+  if (!raw) return [];
+  const list = Array.isArray(raw) ? raw : [raw];
+  return list.map((c) => typeof c === "string" ? c : c && typeof c.id === "string" ? c.id : null).filter((id) => Boolean(id));
+}
+function collectCharacters(scenes, sbDoc, channelDir) {
+  const ids = new Set(scenes.flatMap(characterIdsOf));
+  const docCharacters = sbDoc?.characters;
+  if (docCharacters && typeof docCharacters === "object") {
+    for (const id of Object.keys(docCharacters)) ids.add(id);
+  }
+  return [...ids].map((id) => {
+    const identity = path10.join(channelDir, "assets", "characters", id, "identity.md");
+    const detail = { id };
+    if (existsSync12(identity)) {
+      const text2 = readFileSync9(identity, "utf8");
+      const heading = /^#\s+(.+?)\s*(?:\(([^)]*)\))?\s*$/m.exec(text2);
+      if (heading?.[1]) detail.name = heading[1].trim();
+      const role = /\*\*역할\*\*:\s*(.+)/.exec(text2)?.[1];
+      const look = /\*\*생김새\*\*:\s*(.+)/.exec(text2)?.[1];
+      if (role) detail.role = role.trim();
+      if (look) detail.appearance = look.trim();
+    }
+    return detail;
+  });
+}
 
 // src/portal-client.ts
 import { hostname as hostname2 } from "node:os";
@@ -87779,159 +87787,166 @@ ${JSON.stringify(error2.detail)}`;
   return error2 instanceof Error ? error2.message : String(error2);
 }
 
-// src/portal-episode.ts
-import { existsSync as existsSync13, lstatSync as lstatSync2, readFileSync as readFileSync10, writeFileSync as writeFileSync9 } from "node:fs";
-import path11 from "node:path";
-var EPISODE_STATUSES = ["draft", "approved", "produced", "published"];
-var EPISODE_STAGES = ["researched", "candidates", "scenario", "narration", "board", "approved", "produced", "published"];
-var SCENARIO_CANDIDATES = ["D1", "D2", "D3"];
-var DOCUMENT_FILES = ["storyboard.md", "research.md", "script.md", "storyboard.html", "scenes.js"];
-var PORTAL_STATE_FILE = ".portal.json";
-function episodeDirOf(dir) {
-  return path11.basename(dir) === "storyboard" ? path11.dirname(dir) : dir;
-}
-function channelOfEpisodeDir(dir) {
-  if (!dir) return void 0;
-  const episodeDir = episodeDirOf(path11.resolve(dir));
-  const episodes = path11.dirname(episodeDir);
-  if (path11.basename(episodes) !== "episodes") return void 0;
-  const channel = path11.basename(path11.dirname(episodes));
-  return CHANNEL_SLUG_RE.test(channel) ? channel : void 0;
-}
-function stateReadError(reason) {
-  return new Error(`Cannot read .portal.json: ${reason}. Keep the state file and local edits. Restore a readable, valid backup or inspect the portal in a new directory before repairing this copy; do not delete the state file to bypass this error.`);
-}
-function readPortalState(dir) {
-  const file = path11.join(episodeDirOf(dir), PORTAL_STATE_FILE);
-  try {
-    lstatSync2(file);
-  } catch (error2) {
-    if (error2.code === "ENOENT") return null;
-    throw stateReadError("file metadata is unreadable");
-  }
-  let source;
-  try {
-    source = readFileSync10(file, "utf8");
-  } catch {
-    throw stateReadError("file exists but is unreadable");
-  }
-  let parsed;
-  try {
-    parsed = JSON.parse(source);
-  } catch {
-    throw stateReadError("invalid JSON");
-  }
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw stateReadError("expected a JSON object");
-  const state = parsed;
-  if (typeof state.episodeId !== "string" || !state.episodeId.trim())
-    throw stateReadError("episodeId must be a nonempty string");
-  for (const field of ["workspace", "storyboardId", "episodeId", "holder", "updatedAt"]) {
-    if (field in state && typeof state[field] !== "string") throw stateReadError(`${field} must be a string when present`);
-  }
-  if ("headRevisionNo" in state && (!Number.isSafeInteger(state.headRevisionNo) || state.headRevisionNo < 0))
-    throw stateReadError("headRevisionNo must be a nonnegative safe integer when present");
-  return state;
-}
-function writePortalState(dir, patch) {
-  const file = path11.join(episodeDirOf(dir), PORTAL_STATE_FILE);
-  const next = { ...readPortalState(dir) ?? {}, ...patch, updatedAt: (/* @__PURE__ */ new Date()).toISOString() };
-  writeFileSync9(file, `${JSON.stringify(next, null, 2)}
-`);
-  return next;
-}
-function evaluateScenesJs(source) {
-  const plain = evaluateWindowScript(source);
-  if (!Array.isArray(plain.SCENES)) throw new Error("scenes.js has no window.SCENES array.");
-  const { SCENES, SB_DOC, ...meta } = plain;
-  return {
-    scenes: SCENES,
-    meta,
-    sbDoc: SB_DOC && typeof SB_DOC === "object" ? SB_DOC : null
-  };
-}
-function readStoryboardMd(markdown) {
-  const fm = /^---\n([\s\S]*?)\n---/.exec(markdown)?.[1] ?? "";
-  const pick3 = (key) => new RegExp(`^${key}:\\s*(.+)$`, "m").exec(fm)?.[1]?.trim();
-  const heading = /^#\s+(.+?)\s*$/m.exec(markdown)?.[1];
-  return {
-    channel: pick3("channel") ?? null,
-    topic: pick3("topic") ?? null,
-    status: pick3("status") ?? null,
-    title: heading ? heading.replace(/\s+[—-]\s+Storyboard\s*$/i, "") : null
-  };
-}
-function titleFromHeader(source, slug) {
-  const first = source.split("\n").find((line) => line.startsWith("//"));
-  if (!first) return null;
-  const escaped = slug.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const m2 = new RegExp(`^//\\s*${escaped}\\s*[\u2014-]\\s*(.+)$`).exec(first);
-  return m2 ? m2[1].replace(/\s*\([^)]*\)\s*$/, "").trim() : null;
-}
-function buildImportPayload(episodeDir, options = {}) {
-  const dir = episodeDirOf(episodeDir);
-  const sb = path11.join(dir, "storyboard");
-  const scenesPath2 = path11.join(sb, "scenes.js");
-  if (!existsSync13(scenesPath2)) throw new Error(`scenes.js not found: ${scenesPath2}`);
-  const source = readFileSync10(scenesPath2, "utf8");
-  const { scenes, meta, sbDoc } = evaluateScenesJs(source);
-  const mdPath = path11.join(sb, "storyboard.md");
-  const md = existsSync13(mdPath) ? readStoryboardMd(readFileSync10(mdPath, "utf8")) : {};
-  const slug = path11.basename(dir);
-  const channelDir = path11.dirname(path11.dirname(dir));
-  const channel = options.project ?? md.channel ?? path11.basename(channelDir);
-  const title = options.title ?? md.title ?? titleFromHeader(source, slug) ?? slug;
-  const documents = DOCUMENT_FILES.filter((f3) => existsSync13(path11.join(sb, f3))).map((f3) => ({
-    filename: f3,
-    content: readFileSync10(path11.join(sb, f3), "utf8")
-  }));
-  const status = md.status ?? null;
-  return {
-    project: { name: channel },
-    ...options.storyboard ? { storyboard: { title: options.storyboard } } : {},
-    episode: {
-      slug,
-      title,
-      ...typeof meta.FORMAT === "string" ? { format: meta.FORMAT } : {},
-      ...status && EPISODE_STATUSES.includes(status) ? { status } : {},
-      meta: sbDoc ? { ...meta, SB_DOC: sbDoc } : meta
-    },
-    scenes,
-    characters: collectCharacters(scenes, sbDoc, channelDir),
-    documents
-  };
-}
-function readDocuments(dir, filenames) {
-  return filenames.map((f3) => path11.join(dir, f3)).filter((p) => existsSync13(p)).map((p) => ({ filename: path11.basename(p), content: readFileSync10(p, "utf8") }));
-}
-function characterIdsOf(shot) {
-  const raw = shot?.visual?.character;
-  if (!raw) return [];
-  const list = Array.isArray(raw) ? raw : [raw];
-  return list.map((c) => typeof c === "string" ? c : c && typeof c.id === "string" ? c.id : null).filter((id) => Boolean(id));
-}
-function collectCharacters(scenes, sbDoc, channelDir) {
-  const ids = new Set(scenes.flatMap(characterIdsOf));
-  const docCharacters = sbDoc?.characters;
-  if (docCharacters && typeof docCharacters === "object") {
-    for (const id of Object.keys(docCharacters)) ids.add(id);
-  }
-  return [...ids].map((id) => {
-    const identity = path11.join(channelDir, "assets", "characters", id, "identity.md");
-    const detail = { id };
-    if (existsSync13(identity)) {
-      const text2 = readFileSync10(identity, "utf8");
-      const heading = /^#\s+(.+?)\s*(?:\(([^)]*)\))?\s*$/m.exec(text2);
-      if (heading?.[1]) detail.name = heading[1].trim();
-      const role = /\*\*역할\*\*:\s*(.+)/.exec(text2)?.[1];
-      const look = /\*\*생김새\*\*:\s*(.+)/.exec(text2)?.[1];
-      if (role) detail.role = role.trim();
-      if (look) detail.appearance = look.trim();
-    }
-    return detail;
-  });
+// src/portal-canonical.ts
+function canonicalPullPaths(episode, written = []) {
+  return new Set([...DOCUMENT_FILES, "scenario.md", ...(episode.documents ?? []).map((d) => d.filename), ...written].filter((filename) => SAFE_DOCUMENT_NAME.test(filename)).map((filename) => `storyboard/${filename}`.toLowerCase()));
 }
 
+// src/portal-attachments.ts
+import { createHash as createHash2, randomUUID as randomUUID2 } from "node:crypto";
+import { constants as constants2, closeSync as closeSync2, existsSync as existsSync13, fstatSync, lstatSync as lstatSync2, mkdirSync as mkdirSync5, openSync as openSync2, readFileSync as readFileSync10, readSync, readdirSync as readdirSync2, renameSync as renameSync4, writeFileSync as writeFileSync9 } from "node:fs";
+import path11 from "node:path";
+var LIMIT = 10 * 1024 * 1024;
+var MANIFEST = ".portal-attachments.json";
+var hash = (bytes) => createHash2("sha256").update(bytes).digest("hex");
+var ignored = (part) => [".git", "node_modules", ".portal.json", MANIFEST, ".portal-head", ".portal-local", ".DS_Store"].includes(part) || part === ".env" || part.startsWith(".env.");
+function validateAttachmentPath(value) {
+  if (!value || Buffer.byteLength(value) > 1024 || /[\\\x00-\x1f\x7f:]/.test(value) || value.startsWith("/") || value.split("/").some((p) => !p || p === "." || p === ".." || /[. ]$/.test(p) || ignored(p))) throw new Error(`Unsafe attachment path: ${value}`);
+  return value;
+}
+function safeAttachmentTarget(root, relative) {
+  validateAttachmentPath(relative);
+  const absoluteRoot = path11.resolve(root);
+  const canonicalRoot = process.platform === "darwin" ? absoluteRoot.replace(/^\/var(?=\/|$)/, "/private/var").replace(/^\/tmp(?=\/|$)/, "/private/tmp") : absoluteRoot;
+  const target = path11.resolve(canonicalRoot, relative);
+  let current = path11.parse(target).root;
+  for (const part of target.slice(current.length).split(path11.sep)) {
+    current = path11.join(current, part);
+    try {
+      if (lstatSync2(current).isSymbolicLink()) throw new Error(`Symlink is not an attachment target: ${relative}`);
+    } catch (error2) {
+      if (error2.code !== "ENOENT") throw error2;
+    }
+  }
+  return target;
+}
+function readBounded(root, relative) {
+  const file = safeAttachmentTarget(root, relative);
+  const fd = openSync2(file, constants2.O_RDONLY | constants2.O_NOFOLLOW);
+  try {
+    const stat4 = fstatSync(fd);
+    if (!stat4.isFile() || stat4.size > LIMIT) throw new Error(`Not a regular file of at most 10 MiB: ${relative}`);
+    const bytes = Buffer.alloc(LIMIT + 1);
+    let size = 0, count = 0;
+    while ((count = readSync(fd, bytes, size, bytes.length - size, null)) > 0) {
+      size += count;
+      if (size > LIMIT) throw new Error(`File grew past 10 MiB: ${relative}`);
+    }
+    return bytes.subarray(0, size);
+  } finally {
+    closeSync2(fd);
+  }
+}
+function mime(relative) {
+  return { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".mp4": "video/mp4", ".mp3": "audio/mpeg", ".wav": "audio/wav", ".m4a": "audio/mp4", ".ogg": "audio/ogg", ".flac": "audio/flac", ".html": "text/html", ".md": "text/markdown", ".json": "application/json" }[path11.extname(relative).toLowerCase()] ?? "application/octet-stream";
+}
+async function uploadAttachments(client, episodeId, root) {
+  const { data: episode } = await client.getEpisode(episodeId);
+  const canonical = canonicalPullPaths(episode);
+  const files = [], skipped = [];
+  function walk(relative = "") {
+    for (const item of readdirSync2(path11.join(root, relative), { withFileTypes: true })) {
+      if (ignored(item.name)) continue;
+      const name = relative ? `${relative}/${item.name}` : item.name;
+      if (canonical.has(name.toLowerCase())) {
+        skipped.push({ path: name, reason: "canonical" });
+        continue;
+      }
+      try {
+        const target = safeAttachmentTarget(root, name);
+        if (item.isDirectory()) walk(name);
+        else if (!item.isFile()) throw new Error("Not a regular file");
+        else if (lstatSync2(target).size > LIMIT) throw new Error("Exceeds 10 MiB");
+        else files.push(name);
+      } catch (error2) {
+        skipped.push({ path: name, reason: String(error2) });
+      }
+    }
+  }
+  safeAttachmentTarget(root, "root-check");
+  walk();
+  if (files.length > 1e4) throw new Error("Too many episode attachments");
+  const metadataFile = path11.join(root, MANIFEST);
+  if (existsSync13(metadataFile) && (lstatSync2(metadataFile).isSymbolicLink() || lstatSync2(metadataFile).size > LIMIT)) throw new Error("Unsafe attachment metadata file");
+  const local = existsSync13(metadataFile) ? JSON.parse(readFileSync10(metadataFile, "utf8")) : {};
+  const { data } = await client.listAttachments(episodeId);
+  const remote = new Map(data.items.map((item) => [item.relativePath, item]));
+  let uploaded = 0, unchanged = 0;
+  for (const relative of files.sort()) {
+    const bytes = readBounded(root, relative), sha2562 = hash(bytes);
+    const existing = remote.get(relative), provenance = local[relative]?.provenance;
+    if (existing?.sha256 === sha2562 && (!provenance || JSON.stringify(existing.provenance) === JSON.stringify(provenance))) {
+      unchanged++;
+      continue;
+    }
+    const { data: saved } = await client.uploadAttachment(episodeId, relative, bytes, mime(relative), provenance);
+    if (saved.sha256 !== sha2562 || saved.byteSize !== bytes.length || saved.relativePath !== relative) throw new Error(`Attachment upload mismatch: ${relative}`);
+    uploaded++;
+  }
+  return { complete: skipped.every((item) => item.reason === "canonical"), uploaded, unchanged, skipped };
+}
+async function prepareAttachmentRestore(client, episodeId, root, canonical) {
+  const reserved = canonical ?? canonicalPullPaths((await client.getEpisode(episodeId)).data);
+  const skipped = [];
+  const { data } = await client.listAttachments(episodeId);
+  if (data.items.length > 1e4 || data.items.reduce((sum, item) => sum + item.byteSize, 0) > 500 * 1024 * 1024) throw new Error("Attachment manifest exceeds restore limits");
+  const seen = /* @__PURE__ */ new Set();
+  const staged = [];
+  for (const item of data.items) {
+    if (reserved.has(item.relativePath.toLowerCase())) {
+      skipped.push({ path: item.relativePath, reason: "canonical" });
+      continue;
+    }
+    safeAttachmentTarget(root, item.relativePath);
+    if (seen.has(item.relativePath) || !/^[a-f0-9]{64}$/.test(item.sha256) || !Number.isSafeInteger(item.byteSize) || item.byteSize < 0 || item.byteSize > LIMIT) throw new Error("Invalid attachment manifest");
+    seen.add(item.relativePath);
+    const bytes = await client.downloadAttachment(episodeId, item.id);
+    if (bytes.length !== item.byteSize || hash(bytes) !== item.sha256) throw new Error(`Attachment hash mismatch: ${item.relativePath}`);
+    staged.push({ item, bytes });
+  }
+  return { items: data.items.filter((item) => !reserved.has(item.relativePath.toLowerCase())), staged, skipped };
+}
+async function restoreAttachments(client, episodeId, root, snapshot) {
+  const { items, staged, skipped } = snapshot ?? await prepareAttachmentRestore(client, episodeId, root);
+  const backup = `.portal-local/attachments-${randomUUID2()}`;
+  for (const { item, bytes } of staged) {
+    const target = safeAttachmentTarget(root, item.relativePath);
+    mkdirSync5(path11.dirname(target), { recursive: true });
+    if (existsSync13(target) && !readBounded(root, item.relativePath).equals(Buffer.from(bytes))) {
+      const backupRoot = path11.join(root, backup);
+      safeAttachmentTarget(root, ".attachment-backup-check");
+      if (existsSync13(path11.join(root, ".portal-local")) && lstatSync2(path11.join(root, ".portal-local")).isSymbolicLink()) throw new Error("Unsafe backup directory");
+      const backupFile = path11.join(backupRoot, item.relativePath);
+      mkdirSync5(path11.dirname(backupFile), { recursive: true });
+      writeFileSync9(backupFile, readBounded(root, item.relativePath), { flag: "wx" });
+    }
+    const temporary = `${target}.${randomUUID2()}.tmp`;
+    writeFileSync9(temporary, bytes, { flag: "wx" });
+    safeAttachmentTarget(root, item.relativePath);
+    renameSync4(temporary, target);
+  }
+  mkdirSync5(root, { recursive: true });
+  const manifest = path11.join(root, MANIFEST);
+  if (existsSync13(manifest) && lstatSync2(manifest).isSymbolicLink()) throw new Error("Unsafe attachment metadata file");
+  writeFileSync9(manifest, JSON.stringify(Object.fromEntries(items.map((item) => [item.relativePath, item])), null, 2));
+  return { restored: staged.length, bytes: staged.reduce((n, file) => n + file.bytes.length, 0), skipped };
+}
+async function attachmentSyncReport(action) {
+  try {
+    return await action();
+  } catch (error2) {
+    return { complete: false, error: error2 instanceof Error ? error2.message : String(error2), next: "Keep the local episode. The board operation already completed; attachment backup is incomplete. Retry portal_attachments_sync after fixing the error." };
+  }
+}
+
+// src/portal-tools.ts
+import { copyFileSync, existsSync as existsSync15, lstatSync as lstatSync3, mkdirSync as mkdirSync7, readdirSync as readdirSync3, readFileSync as readFileSync12, rmSync as rmSync7, writeFileSync as writeFileSync11 } from "node:fs";
+import path13 from "node:path";
+
 // src/portal-images.ts
+import { createHash as createHash3, randomUUID as randomUUID3 } from "node:crypto";
+import { closeSync as closeSync3, existsSync as existsSync14, fstatSync as fstatSync2, mkdirSync as mkdirSync6, openSync as openSync3, readFileSync as readFileSync11, readSync as readSync2, realpathSync, renameSync as renameSync5, rmSync as rmSync6, writeFileSync as writeFileSync10 } from "node:fs";
+import path12 from "node:path";
 var imageUploadSchema = external_exports.object({
   episodeDir: external_exports.string().min(1),
   stage: external_exports.enum(EPISODE_STAGES),
@@ -88549,7 +88564,7 @@ function portalHandlers(fetchImpl) {
         let sideDir = null;
         const replaced = [];
         const attachmentRoot = mode === "side" ? path13.join(sb, ".portal-head", "attachments") : dir;
-        const attachmentSnapshot = revision ? void 0 : await prepareAttachmentRestore(c, episodeId, attachmentRoot);
+        const attachmentSnapshot = revision ? void 0 : await prepareAttachmentRestore(c, episodeId, attachmentRoot, canonicalPullPaths(episode, fileContents.keys()));
         if (mode === "side") {
           sideDir = path13.join(sb, ".portal-head");
           rmSync7(sideDir, { recursive: true, force: true });

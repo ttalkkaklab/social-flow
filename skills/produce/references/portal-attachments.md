@@ -21,3 +21,9 @@ Use ISO8601 dates and the actual generation-time plan/rights; omit unknown value
 Pull restores this metadata. Scene sound design uses the attachment logical id, never
 an absolute file path or URL. A rights claim is evidence supplied by the producer,
 not an automatic commercial-use approval.
+
+
+Revision-owned paths are never uploaded or restored as attachments. The shared canonical
+pull-path helper covers the five document names, selected `scenario.md`, and any additional
+portal documents. Existing legacy attachment records at those paths are retained remotely
+and reported as `skipped: canonical`; the revision contents stay in the working directory.
