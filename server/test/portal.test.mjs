@@ -1082,6 +1082,80 @@ describe('portal_* handlers on a scripted portal', () => {
     assert.match(r.text, /episodeId is missing/);
   });
 
+  it('scenario_pull backs up changed drafts and chosen text, preserving identical/unselected files and state', async () => {
+    const dir = makeEpisodeDir(root, 'my-channel', 'ep-scenario-backup'), sb = join(dir, 'storyboard');
+    mkdirSync(join(sb, 'candidates'));
+    writeFileSync(join(sb, 'candidates/d1.md'), 'local D1');
+    writeFileSync(join(sb, 'candidates/d2.md'), 'remote D2');
+    writeFileSync(join(sb, 'scenario.md'), 'local chosen');
+    episode.writePortalState(dir, { episodeId: EPISODE_ID, headRevisionNo: 7 });
+    const state = readFileSync(join(dir, '.portal.json'));
+    const scenarios = ['D1', 'D2', 'D3'].map(candidate => ({ candidate, markdown: `remote ${candidate}`, chosen: candidate === 'D1', findings: [] }));
+    const { impl } = fakeFetch({
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}/scenarios`]: { success: true, data: { scenarios } },
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}/scenarios/D1/scenario.md`]: 'remote D1',
+    });
+    const h = portal.portalHandlers(impl), args = { targetDir: dir };
+    const first = await h.scenarioPull(args); assert.equal(first.isError, false, first.text);
+    const out = JSON.parse(first.text);
+    assert.deepEqual(out.replaced, ['storyboard/candidates/d1.md', 'storyboard/scenario.md']);
+    assert.equal(readFileSync(join(out.backupDir, 'candidates/d1.md'), 'utf8'), 'local D1');
+    assert.equal(readFileSync(join(out.backupDir, 'scenario.md'), 'utf8'), 'local chosen');
+    assert.equal(existsSync(join(out.backupDir, 'candidates/d2.md')), false);
+    assert.equal(readFileSync(join(sb, 'candidates/d3.md'), 'utf8'), 'remote D3');
+    const repeated = JSON.parse((await h.scenarioPull(args)).text);
+    assert.equal(repeated.backupDir, null); assert.deepEqual(repeated.replaced, []);
+    writeFileSync(join(sb, 'candidates/d2.md'), 'edited D2');
+    writeFileSync(join(sb, 'scenario.md'), 'keep chosen');
+    const filtered = JSON.parse((await h.scenarioPull({ ...args, candidate: 'D2' })).text);
+    assert.deepEqual(filtered.written, ['storyboard/candidates/d2.md']);
+    assert.equal(readFileSync(join(filtered.backupDir, 'candidates/d2.md'), 'utf8'), 'edited D2');
+    assert.equal(readFileSync(join(sb, 'scenario.md'), 'utf8'), 'keep chosen');
+    assert.notEqual(filtered.backupDir, out.backupDir);
+    const text = await h.scenarioPull({ episodeId: EPISODE_ID, channel: 'my-channel', candidate: 'D1' });
+    assert.deepEqual(text, { text: 'remote D1', isError: false });
+    assert.deepEqual(readFileSync(join(dir, '.portal.json')), state);
+  });
+
+  for (const failure of ['download', 'invalid-candidate', 'directory', 'symlink', 'backup-symlink', 'backup-copy']) {
+    it(`scenario_pull ${failure} fails before replacing any local candidate or chosen text`, async (t) => {
+      const dir = makeEpisodeDir(root, 'my-channel', `ep-scenario-${failure}`), sb = join(dir, 'storyboard');
+      mkdirSync(join(sb, 'candidates'));
+      writeFileSync(join(sb, 'candidates/d1.md'), 'local D1');
+      writeFileSync(join(sb, 'scenario.md'), 'local chosen');
+      const second = join(sb, 'candidates/d2.md');
+      if (failure === 'directory') mkdirSync(second);
+      else if (failure === 'symlink') symlinkSync(join(sb, 'scenario.md'), second);
+      else writeFileSync(second, 'local D2');
+      if (failure === 'backup-symlink') symlinkSync(join(sb, 'candidates'), join(sb, '.portal-local'));
+      episode.writePortalState(dir, { episodeId: EPISODE_ID, headRevisionNo: 7 });
+      const state = readFileSync(join(dir, '.portal.json'));
+      const { impl } = fakeFetch({
+        [`GET /api/workspaces/lab/episodes/${EPISODE_ID}/scenarios`]: failure === 'download'
+          ? { status: 503, success: false, error: 'download unavailable' }
+          : { success: true, data: { scenarios: [
+            { candidate: 'D1', markdown: 'remote D1', chosen: true, findings: [] },
+            { candidate: failure === 'invalid-candidate' ? '../outside' : 'D2', markdown: 'remote D2', chosen: false, findings: [] },
+          ] } },
+      });
+      let copies = 0;
+      const original = fs.copyFileSync;
+      const mock = failure === 'backup-copy' ? t.mock.method(fs, 'copyFileSync', (...args) => {
+        if (++copies === 2) throw new Error('backup unavailable');
+        return original(...args);
+      }) : null;
+      syncBuiltinESMExports();
+      try {
+        const result = await portal.portalHandlers(impl).scenarioPull({ targetDir: dir });
+        assert.equal(result.isError, true, result.text);
+        assert.equal(readFileSync(join(sb, 'candidates/d1.md'), 'utf8'), 'local D1');
+        assert.equal(readFileSync(join(sb, 'scenario.md'), 'utf8'), 'local chosen');
+        assert.deepEqual(readFileSync(join(dir, '.portal.json')), state);
+        if (failure === 'backup-copy') assert.equal(copies, 2, 'a later backup failure still preserves all originals');
+      } finally { mock?.mock.restore(); syncBuiltinESMExports(); }
+    });
+  }
+
   it('scenario_save finds the episode from candidates/dN.md and uploads the page; scenario_pull writes the set', async () => {
     const dir = makeEpisodeDir(root, 'my-channel', 'ep-scn');
     episode.writePortalState(dir, { episodeId: EPISODE_ID });

@@ -869,21 +869,46 @@ export function portalHandlers(fetchImpl) {
                     return { text: await r.client.scenarioMd(id, cand), isError: false };
                 const { data } = await r.client.listScenarios(id);
                 const written = [];
+                let backupDir = null;
+                const replaced = [];
                 if (targetDir) {
                     const dir = episodeDirOf(targetDir);
                     const sb = path.join(dir, 'storyboard');
                     const candDir = path.join(sb, 'candidates');
-                    mkdirSync(candDir, { recursive: true });
+                    const files = new Map();
                     for (const s of data.scenarios) {
                         if (cand && s.candidate !== cand)
                             continue;
-                        const file = path.join(candDir, `${s.candidate.toLowerCase()}.md`);
-                        writeFileSync(file, s.markdown);
-                        written.push(path.relative(dir, file));
-                        if (s.chosen) {
-                            writeFileSync(path.join(sb, 'scenario.md'), s.markdown);
-                            written.push('storyboard/scenario.md');
+                        candidate.parse(s.candidate);
+                        files.set(`candidates/${s.candidate.toLowerCase()}.md`, s.markdown);
+                        if (s.chosen)
+                            files.set('scenario.md', s.markdown);
+                    }
+                    // Validate every target and finish all backups before replacing the first local draft.
+                    for (const [filename, content] of files) {
+                        const target = safeAttachmentTarget(dir, `storyboard/${filename}`);
+                        if (!existsSync(target))
+                            continue;
+                        if (!lstatSync(target).isFile())
+                            throw new Error(`Not a regular scenario file: ${filename}`);
+                        if (!readFileSync(target).equals(Buffer.from(content)))
+                            replaced.push(`storyboard/${filename}`);
+                    }
+                    if (replaced.length > 0) {
+                        const backupRoot = path.join(sb, '.portal-local');
+                        if (existsSync(backupRoot) && lstatSync(backupRoot).isSymbolicLink())
+                            throw new Error('Unsafe scenario backup directory');
+                        backupDir = path.join(backupRoot, `${backupStamp()}-scenarios`);
+                        for (const relative of replaced) {
+                            const backup = path.join(backupDir, path.relative('storyboard', relative));
+                            mkdirSync(path.dirname(backup), { recursive: true });
+                            copyFileSync(path.join(dir, relative), backup);
                         }
+                    }
+                    mkdirSync(candDir, { recursive: true });
+                    for (const [filename, content] of files) {
+                        writeFileSync(path.join(sb, filename), content);
+                        written.push(`storyboard/${filename}`);
                     }
                 }
                 return ok({
@@ -895,6 +920,8 @@ export function portalHandlers(fetchImpl) {
                         findings: s.findings.length,
                     })),
                     written,
+                    backupDir,
+                    replaced,
                 });
             }
             catch (error) {

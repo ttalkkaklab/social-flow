@@ -784,6 +784,12 @@ Managed names are the standard board documents, `scenario.md`, and documents lis
 episode. The result lists them in `removed`; unrelated local notes stay untouched. `mode: "side"`
 preserves the working copy, and `includeDocuments: false` replaces only the board without this cleanup.
 
+`portal_scenario_pull` backs up changed local candidates and the chosen `scenario.md` under
+`storyboard/.portal-local/<timestamp>-scenarios/` before replacing any file. Its result includes
+`backupDir` and episode-relative `replaced` paths. Identical files need no backup; candidate filtering
+and text-only reads keep their existing behavior. A failed download, target validation or backup
+leaves the existing scenario files and `.portal.json` untouched.
+
 A missing `.portal.json` is an unlinked copy. An existing unreadable file, dangling
 symlink, malformed JSON, non-object JSON or wrongly typed present field is an
 error, never an unlinked fallback. Optional string fields must be strings and a
