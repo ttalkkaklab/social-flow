@@ -224,7 +224,7 @@ optional, and they're what turns the tool from a video maker into an operator.**
   9:16 or 16:9 video plus per-platform text into
   `data/<channel>/episodes/<topic>/output/`, and you upload those files by hand. Only
   the publishing and growth-loop half is unavailable: the 11 publish/review/insight tools
-  aren't even listed (`tools/list` shows 72 instead of 99 — the 16 `portal_*` tools are
+  aren't even listed (`tools/list` shows 73 instead of 101 — the 17 `portal_*` tools are
   gated the same way on a portal key), and the growth skills have
   nothing to drive. Explicit tool-disable settings can reduce that list further.
 
@@ -544,14 +544,14 @@ social-flow/
 
 ## MCP tool surface (101 tools)
 
-**`tools/list` does not show all 99.** The credential-gated publish, review and insights tools
+**`tools/list` does not show all 101.** The credential-gated publish, review and insights tools
 (`threads_draft_create` · `threads_review_submit` · `threads_publish` · `instagram_publish` · `facebook_publish` · `facebook_comment` ·
 `youtube_publish` · `threads_insights` · `instagram_insights` · `youtube_insights` ·
 `threads_search`) are exposed **only for platforms whose credential file exists** —
 evaluated at list time, so adding a token makes them appear without restarting the
-server. The 16 `portal_*` tools follow the same rule on the ttalkkakstory workspace key
+server. The 17 `portal_*` tools follow the same rule on the ttalkkakstory workspace key
 (`<SNS_TOKEN_DIR>/<channel>/ttalkkakstory.json`, the flat file, or `TTALKKAKSTORY_*`). With
-no tokens and no portal key you'll count 72; explicit tool-disable settings can reduce
+no tokens and no portal key you'll count 73; explicit tool-disable settings can reduce
 that list further. Hidden tools still have live handlers:
 calling one directly returns a missing-token error rather than failing silently.
 `content_feedback`, `youtube_topic_scout`, and `sns_issue_scout` sit outside the

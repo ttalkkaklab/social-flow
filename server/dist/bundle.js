@@ -88897,7 +88897,8 @@ function portalHandlers(fetchImpl) {
           const files = /* @__PURE__ */ new Map();
           for (const s2 of data.scenarios) {
             if (cand && s2.candidate !== cand) continue;
-            candidate.parse(s2.candidate);
+            if (!candidate.safeParse(s2.candidate).success)
+              throw new Error(`portal_scenario_pull: \uC54C \uC218 \uC5C6\uB294 \uC2DC\uB098\uB9AC\uC624 \uD6C4\uBCF4 ${JSON.stringify(s2.candidate)}\uC785\uB2C8\uB2E4. \uD6C4\uBCF4\uB97C D1~D3\uC73C\uB85C \uACE0\uCE5C \uB4A4 \uB2E4\uC2DC \uAC00\uC838\uC640 \uC8FC\uC138\uC694.`);
             files.set(`candidates/${s2.candidate.toLowerCase()}.md`, s2.markdown);
             if (s2.chosen) files.set("scenario.md", s2.markdown);
           }

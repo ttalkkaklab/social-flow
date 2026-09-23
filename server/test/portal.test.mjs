@@ -1117,7 +1117,7 @@ describe('portal_* handlers on a scripted portal', () => {
     assert.deepEqual(readFileSync(join(dir, '.portal.json')), state);
   });
 
-  for (const failure of ['download', 'invalid-candidate', 'directory', 'symlink', 'backup-symlink', 'backup-copy']) {
+  for (const failure of ['download', 'invalid-candidate', 'unknown-candidate', 'directory', 'symlink', 'backup-symlink', 'backup-copy']) {
     it(`scenario_pull ${failure} fails before replacing any local candidate or chosen text`, async (t) => {
       const dir = makeEpisodeDir(root, 'my-channel', `ep-scenario-${failure}`), sb = join(dir, 'storyboard');
       mkdirSync(join(sb, 'candidates'));
@@ -1135,7 +1135,7 @@ describe('portal_* handlers on a scripted portal', () => {
           ? { status: 503, success: false, error: 'download unavailable' }
           : { success: true, data: { scenarios: [
             { candidate: 'D1', markdown: 'remote D1', chosen: true, findings: [] },
-            { candidate: failure === 'invalid-candidate' ? '../outside' : 'D2', markdown: 'remote D2', chosen: false, findings: [] },
+            { candidate: failure === 'invalid-candidate' ? '../outside' : failure === 'unknown-candidate' ? 'D4' : 'D2', markdown: 'remote D2', chosen: false, findings: [] },
           ] } },
       });
       let copies = 0;
@@ -1148,6 +1148,10 @@ describe('portal_* handlers on a scripted portal', () => {
       try {
         const result = await portal.portalHandlers(impl).scenarioPull({ targetDir: dir });
         assert.equal(result.isError, true, result.text);
+        if (failure === 'invalid-candidate' || failure === 'unknown-candidate') {
+          const rejected = failure === 'invalid-candidate' ? '../outside' : 'D4';
+          assert.equal(result.text, `portal_scenario_pull: 알 수 없는 시나리오 후보 ${JSON.stringify(rejected)}입니다. 후보를 D1~D3으로 고친 뒤 다시 가져와 주세요.`);
+        }
         assert.equal(readFileSync(join(sb, 'candidates/d1.md'), 'utf8'), 'local D1');
         assert.equal(readFileSync(join(sb, 'scenario.md'), 'utf8'), 'local chosen');
         assert.deepEqual(readFileSync(join(dir, '.portal.json')), state);

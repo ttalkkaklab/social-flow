@@ -879,7 +879,8 @@ export function portalHandlers(fetchImpl) {
                     for (const s of data.scenarios) {
                         if (cand && s.candidate !== cand)
                             continue;
-                        candidate.parse(s.candidate);
+                        if (!candidate.safeParse(s.candidate).success)
+                            throw new Error(`portal_scenario_pull: 알 수 없는 시나리오 후보 ${JSON.stringify(s.candidate)}입니다. 후보를 D1~D3으로 고친 뒤 다시 가져와 주세요.`);
                         files.set(`candidates/${s.candidate.toLowerCase()}.md`, s.markdown);
                         if (s.chosen)
                             files.set('scenario.md', s.markdown);
