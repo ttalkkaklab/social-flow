@@ -762,9 +762,9 @@ Core rules:
   generated video gets `visual.audio` — one sentence on what that clip sounds like, ending in
   `no music, no speech` unless speech is the point. Leave it out and the engine invents a
   soundtrack under a line the TTS is already speaking.
-  **Then decide whether the music stays one bed.** One bed all the way through is a real design
-  and the default — leave `window.MUSIC` out and the channel's shared bed carries the episode.
-  Where the episode turns, name a cue in `window.MUSIC` and point the shot at it with
+  **Then decide whether the music stays one bed.** One bed all the way through is a real design.
+  By default, leave `window.MUSIC` out and the channel's shared bed carries the episode; timed
+  effects, music-only gaps and optional mix targets follow `scenes-schema.md` and stay shot-level. Where the episode turns, name a cue in `window.MUSIC` and point the shot at it with
   `sound.cue`; where one line has to land alone, give that shot `sound.drop: true`. A short
   usually gets one change or none, and one drop at most. The contract is
   `references/scenes-schema.md` §music cues, and the levels behind it —

@@ -237,7 +237,7 @@ export const storyboardApplySchema = z.object({
     removeShotIds: z.array(shotIdSchema).min(1).optional().describe('Shot ids to drop, resolved before the insert'),
     removeScenes: z.array(z.number().int().positive()).optional(),
     removeSequences: z.array(z.string()).optional(),
-    globals: globalsSchema.optional().describe('Set other window.* blocks — FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, VOICE, MOTION_POLICY'),
+    globals: globalsSchema.optional().describe('Set other window.* blocks — FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, SFX, VOICE, MOTION_POLICY'),
     dryRun: z.boolean().default(false).describe('Validate and report, write nothing'),
 });
 /** Accepts a storyboard directory or the scenes.js inside it. */
@@ -275,7 +275,7 @@ export function readBoard(target) {
     return { file, header, win };
 }
 /** The order the schema document lists the blocks in; anything else follows alphabetically. */
-const GLOBAL_ORDER = ['FORMAT', 'VOICE', 'THEME', 'COMPREHENSION', 'STORY', 'PRODUCTION', 'MOTION_POLICY', 'MUSIC', 'STRUCTURE', 'SCENES'];
+const GLOBAL_ORDER = ['FORMAT', 'VOICE', 'THEME', 'COMPREHENSION', 'STORY', 'PRODUCTION', 'MOTION_POLICY', 'MUSIC', 'SFX', 'STRUCTURE', 'SCENES'];
 export function serializeBoard(win, header = []) {
     const keys = Object.keys(win).filter((k) => win[k] !== undefined);
     keys.sort((a, b) => {

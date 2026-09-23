@@ -1369,7 +1369,8 @@ function check(win, fmt, opts) {
 
     // A music cue that names nothing leaves the bed where it was, silently.
     if (s.sound && s.sound.cue) {
-      const cues = win.MUSIC && typeof win.MUSIC === 'object' ? Object.keys(win.MUSIC) : [];
+      const cues = win.MUSIC && typeof win.MUSIC === 'object'
+        ? Object.keys(win.MUSIC).filter((name) => name !== '$mix') : [];
       if (cues.indexOf(s.sound.cue) === -1)
         bad(where, `sound.cue "${s.sound.cue}" is not in window.MUSIC — the bed stays where it was`);
     }
@@ -1390,6 +1391,54 @@ function check(win, fmt, opts) {
         machine(where, `sound.sfx "${id}" is not in the channel catalog (assets/audio/sfx/${id}.wav) ` +
                        'and there is no window.SFX entry to generate it from (scenes-schema §sound effects)');
       }
+    }
+
+    // Timed effects extend the legacy one-effect-at-the-cut shorthand. Files stay behind logical
+    // ids; compile-sound-plan.js is the one place that turns those ids into catalog paths.
+    if (s.sound && s.sound.effects !== undefined) {
+      const effects = s.sound.effects;
+      if (!Array.isArray(effects)) bad(where, 'sound.effects is an array of { sfx, atSeconds?, intensity?, separationLu? }');
+      else effects.forEach((effect, ei) => {
+        const at = `${where} sound.effects[${ei}]`;
+        if (!effect || typeof effect !== 'object' || Array.isArray(effect)) { bad(at, 'an effect is { sfx, atSeconds?, intensity?, separationLu? }'); return; }
+        const id = typeof effect.sfx === 'string' ? effect.sfx.trim() : '';
+        if (!id) bad(at, 'has no sfx');
+        else {
+          const book = win.SFX && typeof win.SFX === 'object' && !Array.isArray(win.SFX) ? win.SFX : null;
+          if (book && !Object.prototype.hasOwnProperty.call(book, id))
+            bad(at, `sfx "${id}" is not in window.SFX — the builder has no file to place`);
+          else if (!book && opts && opts.channelDir && !sfxAssetExists(opts.channelDir, id))
+            machine(at, `sfx "${id}" is not in the channel catalog (assets/audio/sfx/${id}.wav)`);
+        }
+        const offset = effect.atSeconds === undefined ? 0 : Number(effect.atSeconds);
+        if (!Number.isFinite(offset) || offset < 0) bad(at, `atSeconds ${JSON.stringify(effect.atSeconds)} — expected a number at or above 0`);
+        else if (Number.isFinite(Number(s.duration)) && offset >= Number(s.duration))
+          bad(at, `atSeconds ${offset} is outside this ${s.duration}s shot`);
+        if (effect.intensity !== undefined && !['subtle', 'normal', 'strong'].includes(effect.intensity))
+          bad(at, `intensity ${JSON.stringify(effect.intensity)} — subtle | normal | strong`);
+        if (effect.separationLu !== undefined) {
+          const n = Number(effect.separationLu);
+          if (!Number.isFinite(n) || n < 0 || n > 30) bad(at, `separationLu ${JSON.stringify(effect.separationLu)} — expected 0–30`);
+        }
+        if (s.type === 'broll' || s.type === 'outro') bad(at, `timed effect on a ${s.type} — not a card`);
+      });
+    }
+
+    // Explicit music-only silence windows preserve narration and room tone. Full digital silence
+    // is not represented here because it would also erase the words the shot is meant to carry.
+    if (s.sound && s.sound.silence !== undefined) {
+      const windows = s.sound.silence;
+      if (!Array.isArray(windows)) bad(where, 'sound.silence is an array of { startSeconds, endSeconds, scope: "music" }');
+      else windows.forEach((window, wi) => {
+        const at = `${where} sound.silence[${wi}]`;
+        if (!window || typeof window !== 'object' || Array.isArray(window)) { bad(at, 'a window is { startSeconds, endSeconds, scope: "music" }'); return; }
+        const start = Number(window.startSeconds), end = Number(window.endSeconds);
+        if (!Number.isFinite(start) || start < 0) bad(at, `startSeconds ${JSON.stringify(window.startSeconds)} — expected a number at or above 0`);
+        if (!Number.isFinite(end) || end <= start) bad(at, `endSeconds ${JSON.stringify(window.endSeconds)} must be after startSeconds`);
+        if (Number.isFinite(Number(s.duration)) && end > Number(s.duration)) bad(at, `endSeconds ${end} is outside this ${s.duration}s shot`);
+        if ((window.scope || 'music') !== 'music') bad(at, `scope ${JSON.stringify(window.scope)} — only "music" preserves narration and room tone`);
+        if (s.type === 'broll' || s.type === 'outro') bad(at, `silence window on a ${s.type} — not a card`);
+      });
     }
 
     // Room tone — sound.ambience names a looping entry that starts on this card and holds until a
@@ -1436,7 +1485,8 @@ function check(win, fmt, opts) {
           if (!Number.isFinite(n) || n < 0.5 || n > 30) bad(at, `seconds ${e.seconds} — the generator takes 0.5–30`);
           else if (e.loop && n < 5) bad(at, 'a loop under 5 s seams audibly under narration — 10–30 s for a bed');
         }
-        if (!scenes.some((s) => s.sound && (String(s.sound.sfx) === id || String(s.sound.ambience) === id)))
+        if (!scenes.some((s) => s.sound && (String(s.sound.sfx) === id || String(s.sound.ambience) === id ||
+            (Array.isArray(s.sound.effects) && s.sound.effects.some((effect) => effect && effect.sfx === id)))))
           warn(at, 'declared but no shot uses it');
       });
     }
@@ -1451,7 +1501,8 @@ function check(win, fmt, opts) {
         warn('shot ' + (scenes.indexOf(s) + 1), `sound.sfx on this card and the one before it — effects on adjacent cuts tick; keep the one on the bigger change`);
     });
     const total = cards.reduce((acc, s) => acc + (Number(s.duration) || 0), 0);
-    const n = cards.filter((s) => s.sound && s.sound.sfx).length;
+    const n = cards.reduce((count, s) => count + (s.sound && s.sound.sfx ? 1 : 0) +
+      (s.sound && Array.isArray(s.sound.effects) ? s.sound.effects.length : 0), 0);
     if (total > 0 && n > Math.ceil(total / 10))
       warn('sound', `${n} effects over ${total}s of cards — past one per 10 s they read as decoration; keep the ones on the cuts that changed most`);
   }
@@ -1459,7 +1510,41 @@ function check(win, fmt, opts) {
   // window.MUSIC — every cue has to be something produce can turn into a file: a prompt for
   // music_generate, a weighted-prompt blend for music_generate_advanced, or a channel asset.
   if (win.MUSIC && typeof win.MUSIC === 'object') {
-    Object.keys(win.MUSIC).forEach((name) => {
+    const mix = win.MUSIC.$mix;
+    if (mix !== undefined) {
+      const at = 'window.MUSIC.$mix';
+      if (!mix || typeof mix !== 'object' || Array.isArray(mix)) bad(at, 'mix settings are an object');
+      else {
+        const numeric = (key, min, max) => {
+          if (mix[key] === undefined) return;
+          const n = Number(mix[key]);
+          if (!Number.isFinite(n) || n < min || n > max) bad(at, `${key} ${JSON.stringify(mix[key])} — expected ${min}–${max}`);
+        };
+        numeric('targetLufs', -30, -5); numeric('truePeakDbtp', -6, 0);
+        numeric('bedSeparationLu', 0, 30); numeric('minimumSeparationLu', 0, 30);
+        numeric('cueCrossfadeSeconds', 0, 10); numeric('endingFadeSeconds', 0, 10);
+        numeric('silenceRampSeconds', 0, 3);
+        if (Number(mix.minimumSeparationLu) > Number(mix.bedSeparationLu))
+          bad(at, 'minimumSeparationLu is wider than bedSeparationLu — the floor must not exceed the resting target');
+        if (mix.hook !== undefined) {
+          const h = mix.hook;
+          if (!h || typeof h !== 'object' || Array.isArray(h)) bad(at, 'hook is { attenuationLu, releaseSeconds }');
+          else for (const [key, min, max] of [['attenuationLu', 0, 30], ['releaseSeconds', 0, 10]]) {
+            if (h[key] !== undefined && (!Number.isFinite(Number(h[key])) || Number(h[key]) < min || Number(h[key]) > max))
+              bad(at, `hook.${key} ${JSON.stringify(h[key])} — expected ${min}–${max}`);
+          }
+        }
+        if (mix.ducking !== undefined) {
+          const d = mix.ducking;
+          if (!d || typeof d !== 'object' || Array.isArray(d)) bad(at, 'ducking is { ratio, attackMs, releaseMs }');
+          else for (const [key, min, max] of [['ratio', 1, 30], ['attackMs', 1, 1000], ['releaseMs', 10, 3000]]) {
+            if (d[key] !== undefined && (!Number.isFinite(Number(d[key])) || Number(d[key]) < min || Number(d[key]) > max))
+              bad(at, `ducking.${key} ${JSON.stringify(d[key])} — expected ${min}–${max}`);
+          }
+        }
+      }
+    }
+    Object.keys(win.MUSIC).filter((name) => name !== '$mix').forEach((name) => {
       const c = win.MUSIC[name];
       const at = `window.MUSIC.${name}`;
       if (!c || typeof c !== 'object') {
@@ -2203,6 +2288,18 @@ function selftest() {
   ok('prompt and prompts on one cue is a violation',
      has(bads(run([cover, goodShot, ctaShot], { MUSIC: { base: { prompt: 'a', prompts: [{ text: 'b' }] } } })),
          /one or the other/));
+  ok('optional mix settings pass and are not mistaken for a cue',
+     !has(bads(run([cover, goodShot, ctaShot], { MUSIC: {
+       $mix: { targetLufs: -14, truePeakDbtp: -1, bedSeparationLu: 10, minimumSeparationLu: 4,
+               cueCrossfadeSeconds: 2, endingFadeSeconds: 2.2, silenceRampSeconds: 0.3,
+               hook: { attenuationLu: 6, releaseSeconds: 2 },
+               ducking: { ratio: 8, attackMs: 20, releaseMs: 250 } },
+       base: { asset: 'default' }
+     } })), /window\.MUSIC\.\$mix|no prompt, prompts or asset/));
+  ok('a mix floor wider than its resting target is a violation',
+     has(bads(run([cover, goodShot, ctaShot], { MUSIC: {
+       $mix: { bedSeparationLu: 4, minimumSeparationLu: 10 }, base: { asset: 'default' }
+     } })), /floor must not exceed/));
 
   // sound effects
   const withSfx = (base, id) => Object.assign({}, base, { sound: { sfx: id } });
@@ -2230,6 +2327,25 @@ function selftest() {
   ok('an effect on a broll is a violation',
      has(bads(run([cover, goodShot, Object.assign({}, broll, { sound: { sfx: 'a' } }), ctaShot], { SFX: { a: { prompt: 'p' } } })),
          /sound\.sfx on a broll/));
+  ok('timed effects use the existing sfx id and measure atSeconds from the shot start',
+     !has(bads(run([cover, Object.assign({}, goodShot, { sound: {
+       effects: [{ sfx: 'whoosh', atSeconds: 1.25, intensity: 'subtle' }]
+     } }), ctaShot], { SFX: { whoosh: { prompt: 'short soft whoosh', seconds: 0.8 } } })),
+       /sound\.effects|outside this|not in window\.SFX/));
+  ok('a timed effect outside its shot is a violation',
+     has(bads(run([cover, Object.assign({}, goodShot, { sound: {
+       effects: [{ sfx: 'whoosh', atSeconds: 6 }]
+     } }), ctaShot], { SFX: { whoosh: { prompt: 'short soft whoosh' } } })), /outside this 6s shot/));
+  ok('a music silence window passes while full-silence scope is refused',
+     (() => {
+       const pass = run([cover, Object.assign({}, goodShot, { sound: {
+         silence: [{ startSeconds: 1, endSeconds: 2, scope: 'music' }]
+       } }), ctaShot]);
+       const fail = run([cover, Object.assign({}, goodShot, { sound: {
+         silence: [{ startSeconds: 1, endSeconds: 2, scope: 'all' }]
+       } }), ctaShot]);
+       return !has(bads(pass), /sound\.silence|scope/) && has(bads(fail), /only "music"/);
+     })());
   ok('without window.SFX the id is checked against the channel catalog outside --draft',
      (() => {
        const os = require('os');

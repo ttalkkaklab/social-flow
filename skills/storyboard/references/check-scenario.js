@@ -153,8 +153,8 @@ function analyse(src, research, opts = {}) {
   });
   if (anchors.cta === '없음' && !compact(item('CTA')).replace(/^없음[\s.。:—–-]*/, '').length) add('S9', 'CTA 없음 needs a reason');
   const bodyOnly = prose(body);
-  if (/(?:샷|shot|scene)\s*#?\s*\d+|카메라|camera|프롬프트|\bprompt\b|\d+(?:\.\d+)?\s*(?:초|seconds?\b|sec\b)|\b\d+(?:\.\d+)?s\b|글자\s*수|character\s*count|\d+\s*(?:자|chars?\b)/i.test(bodyOnly))
-    add('S10', 'shot numbers, cameras, prompts, timing and character counts belong on the board');
+  if (/(?:샷|shot|scene)\s*#?\s*\d+|카메라|camera|프롬프트|\bprompt\b|\d+(?:\.\d+)?\s*(?:초|seconds?\b|sec\b)|\b\d+(?:\.\d+)?s\b|글자\s*수|character\s*count|\d+\s*(?:자|chars?\b)|\b(?:BGM|SFX|LUFS|BPM|ducking|sound\.cue|sound\.drop)\b|더킹|음악\s*큐|효과음\s*(?:시점|큐)/i.test(bodyOnly))
+    add('S10', 'shot numbers, cameras, prompts, timing, character counts and sound production values belong on the board');
   if (/구독|좋아요|\bsubscribe\b|\blike\b/i.test(item('CTA'))) add('S11', 'CTA must not ask for subscriptions or likes');
   if (!opts.long) ITEMS.slice(1).forEach((name, i) => {
     const length = [...compact(item(name))].length, limit = BANDS[i + 1];
@@ -226,6 +226,7 @@ function selftest() {
   assert(has(src.replace('왜 속도가 달라질까?', '정체는 알 수 없다.'),'S8'));
   assert(has(src.replace('  closing_line: "힘을 쓸 곳을 고른다."','  closing_line: "다른 문장"'),'S9'));
   assert(has(src + '\n카메라 프롬프트 샷 3','S10'));
+  assert(has(src + '\nBGM 88 BPM, sound.cue tense, 더킹 10 LUFS','S10'));
   assert(has(src + '\n구독해 주세요.','S11'));
   assert(has(src + '\n' + '가'.repeat(100),'S12'));
   assert(!has(src + '\n' + '가'.repeat(100),'S12',{long:true}));
