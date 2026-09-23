@@ -921,6 +921,16 @@ Returns: JSON — { channel, workspace, source, holder, episodeDir?, copyOf?, wo
     },
   },
   {
+    name: 'portal_shot_media_upload',
+    title: 'Upload and link one shot media file',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    description: 'Upload image, Blender/three.js previz, generated video or narration from this episode, then checkpoint the shot UUID. Render previz → await this upload → call video generation. Save the episode first. Missing key silently skips. Oversized files alone are skipped and logged to .portal-media-skips.jsonl; production continues. Existing .portal.json must match the workspace and head; conflicts preserve local files and provide recovery instructions. Never regenerate a file just because its upload failed.',
+    inputSchema: { type: 'object', properties: {
+      episodeDir: { type: 'string', description: 'Episode directory; its channel path selects the workspace key.' }, shotId: { type: 'string', description: 'Stable source shot ID; preferred over ordinal.' }, shotNo: { type: 'integer', minimum: 1, description: 'One-based source position, only for ID-less shots.' },
+      kind: { type: 'string', enum: ['image', 'previz', 'video', 'narration'], description: 'Shot media role; MP4 for previz/video, WAV/MP3 for narration, PNG/JPEG/WebP for image.' }, file: { type: 'string', description: 'Absolute file or episode-relative path; must stay inside this episode.' },
+    }, required: ['episodeDir', 'kind', 'file'] },
+  },
+  {
     name: 'portal_storyboard_save',
     title: 'Upload an episode directory to the portal',
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
@@ -2206,6 +2216,9 @@ Returns: a text block with the saved .mp4 file path, model, ratio, resolution, d
     inputSchema: {
       type: 'object',
       properties: {
+        portal: { type: 'object', description: 'Configured portal shot target. Previz uploads immediately after rendering; video uploads previzFile before its vendor call and the output afterwards; narration uploads its completed take. Omit only in local-only mode.', properties: {
+          episodeDir: { type: 'string', description: 'Episode directory; its channel path selects the workspace key.' }, shotId: { type: 'string', description: 'Stable source shot ID; use this when the shot has an ID.' }, shotNo: { type: 'integer', minimum: 1, description: 'One-based source position, only for ID-less shots.' }, previzFile: { type: 'string', description: 'Required on video calls; episode-relative or absolute previz mp4.' },
+        }, required: ['episodeDir'] },
         prompt: {
           type: 'string',
           description: 'Video description. Vendor formula: Subject + Movement + Environment + Camera movement + Aesthetic description + Sound. Write camera as a span, not a verb — "starting frame composition + movement + movement amplitude + ending frame composition" (combos the docs name: Hitchcock = dolly-in/out + zoom-out/in, bullet time = time slowdown + surround). Shot size follows the example word order, "Close-up of the man on the left". Do NOT write timecodes such as "0-3 seconds" — the vendor states precise-timing support is unstable and forcing it degrades the result; cut timing in the edit instead, and write an in-clip state change in words ("in under half a second"). Multi-cut in one call is supported via "Shot 1: ... Shot 2: ..." or "The shot cuts to ..." — open on the wide so the later cuts inherit one floor plan, time each cut by a dialogue or action beat, and give each its own shot size. There is no negativePrompt parameter on this engine: an unwanted element is designed out of the sentence, never forbidden in it, and what must hold goes into a closing positive-locks paragraph ("the lantern stays lit in every cut; only two people ever appear") — the one exception the vendor templates is the artifact classes (subtitles, on-frame text, logo, watermark, BGM), which may stay negative. Prompt body must be English or Chinese (Korean only on dreamina-seedance-2-5-260628) — Korean dialogue still works inside quotes on 1.5-pro, which lip-syncs it.',
@@ -2249,6 +2262,9 @@ Returns: a text block with the saved .mp4 file path, source/last frame image pat
     inputSchema: {
       type: 'object',
       properties: {
+        portal: { type: 'object', description: 'Configured portal shot target. Previz uploads immediately after rendering; video uploads previzFile before its vendor call and the output afterwards; narration uploads its completed take. Omit only in local-only mode.', properties: {
+          episodeDir: { type: 'string', description: 'Episode directory; its channel path selects the workspace key.' }, shotId: { type: 'string', description: 'Stable source shot ID; use this when the shot has an ID.' }, shotNo: { type: 'integer', minimum: 1, description: 'One-based source position, only for ID-less shots.' }, previzFile: { type: 'string', description: 'Required on video calls; episode-relative or absolute previz mp4.' },
+        }, required: ['episodeDir'] },
         prompt: {
           type: 'string',
           description: 'Identity words stay, layout words go — the Seedance image lane is not motion-only (that is Veo\'s rule). Reuse the source image prompt\'s identity words (who and what the subject is), drop the composition words (where things sit — the frame already holds that), add the motion, write camera as a span ("starting frame composition + movement + ending frame composition"), and CLOSE WITH A CONSISTENCY LOCK: "the subject stays exactly consistent with the input frame; appearance, proportions and materials hold; no unrelated elements appear". Re-describe the layout, facing or lighting and the model redesigns the scene. Do NOT write timecodes such as "0-3 seconds" (vendor: precise-timing support is unstable) — an in-clip state change goes in words ("in under half a second"), and the length lives in durationSeconds. English or Chinese only (Korean on dreamina-seedance-2-5 alone, and inside dialogue quotes on 1.5-pro). There is no negativePrompt parameter on this engine: an unwanted element is designed out of the sentence and pinned by the lock, never forbidden in it — the one exception the vendor templates is the artifact classes (subtitles, on-frame text, logo, watermark, BGM), which may stay negative.',
@@ -2303,6 +2319,9 @@ Returns: a text block with the saved .mp4 file path, reference image, video and 
     inputSchema: {
       type: 'object',
       properties: {
+        portal: { type: 'object', description: 'Configured portal shot target. Previz uploads immediately after rendering; video uploads previzFile before its vendor call and the output afterwards; narration uploads its completed take. Omit only in local-only mode.', properties: {
+          episodeDir: { type: 'string', description: 'Episode directory; its channel path selects the workspace key.' }, shotId: { type: 'string', description: 'Stable source shot ID; use this when the shot has an ID.' }, shotNo: { type: 'integer', minimum: 1, description: 'One-based source position, only for ID-less shots.' }, previzFile: { type: 'string', description: 'Required on video calls; episode-relative or absolute previz mp4.' },
+        }, required: ['episodeDir'] },
         prompt: {
           type: 'string',
           description: 'Scene and subject interactions. The 2.x advanced formula: precise subject + action details + scene/environment + lighting & color tone + camera movement + visual style + image quality + constraints. For multi-cut, write a "Shot 1 / Shot 2 / Shot 3" storyboard and order each shot as camera movement -> subject action and expression -> position change -> audio; open on the wide so the later cuts inherit one floor plan, and time each cut by an action beat. Do NOT put timecodes on the shots — the vendor states precise-timing support is unstable (dreamina-seedance-2-5-260628 alone takes integer-second forms). Close with the constraints slot as a POSITIVE-LOCKS paragraph — what holds in every frame, said positively, with each reference given its scope ("@ocean_location controls water and sky only"; "the lantern stays lit in every cut") — because this engine has no negativePrompt parameter; the one exception the vendor templates is the artifact classes (subtitles, on-frame text, logo, watermark, BGM), which may stay negative. English or Chinese only (Korean on dreamina-seedance-2-5-260628 alone; on other models Korean belongs inside dialogue quotes). Unwanted subtitles cannot be fully blocked at 9:16: the vendor notes portrait output hallucinates burned-in text noticeably more often than landscape, so inspect the frames.',
@@ -2937,6 +2956,9 @@ Returns: a text block with the mp4 path, still paths (and any requested still ou
     inputSchema: {
       type: 'object',
       properties: {
+        portal: { type: 'object', description: 'Configured portal shot target. Previz uploads immediately after rendering; video uploads previzFile before its vendor call and the output afterwards; narration uploads its completed take. Omit only in local-only mode.', properties: {
+          episodeDir: { type: 'string', description: 'Episode directory; its channel path selects the workspace key.' }, shotId: { type: 'string', description: 'Stable source shot ID; use this when the shot has an ID.' }, shotNo: { type: 'integer', minimum: 1, description: 'One-based source position, only for ID-less shots.' }, previzFile: { type: 'string', description: 'Required on video calls; episode-relative or absolute previz mp4.' },
+        }, required: ['episodeDir'] },
         blendPath: { type: 'string', description: 'Absolute path to the .blend file (must end in .blend, no "..").' },
         outputPath: { type: 'string', description: 'Directory for the mp4 and stills (default: <blend dir>/previz).' },
         filename: {
@@ -3012,6 +3034,9 @@ Requires ffmpeg and GEMINI_API_KEY even for local synthesis. Two paid audio-revi
     inputSchema: {
       type: 'object', additionalProperties: false,
       properties: {
+        portal: { type: 'object', description: 'Configured portal shot target. Previz uploads immediately after rendering; video uploads previzFile before its vendor call and the output afterwards; narration uploads its completed take. Omit only in local-only mode.', properties: {
+          episodeDir: { type: 'string', description: 'Episode directory; its channel path selects the workspace key.' }, shotId: { type: 'string', description: 'Stable source shot ID; use this when the shot has an ID.' }, shotNo: { type: 'integer', minimum: 1, description: 'One-based source position, only for ID-less shots.' }, previzFile: { type: 'string', description: 'Required on video calls; episode-relative or absolute previz mp4.' },
+        }, required: ['episodeDir'] },
         generator: { type: 'string', enum: [...GENERATORS], description: 'Existing synthesis tool matching profile §2.' },
         generation: { type: 'object', additionalProperties: true, description: 'Arguments accepted by generator, including its text/script/inputs and pinned voice settings. Outer outputPath and filename control the output.' },
         expectedText: { type: 'string', minLength: 1, maxLength: 4000, description: 'All spoken narration for this scene, matching narration[].tts. Write numbers as spoken words.' },

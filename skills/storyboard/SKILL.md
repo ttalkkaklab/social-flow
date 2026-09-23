@@ -13,13 +13,11 @@ description: >
   checkers and the author's own read. Plans each promise, visual change and sound event.
   Nothing is generated here. Produce builds the approved board; autoproduce runs unattended.
 argument-hint: "<channel> <topic or topic hint>"
-allowed-tools: ["mcp__social-flow__portal_render_allocation", "Read", "Write", "Edit", "Glob", "Bash", "Agent", "AskUserQuestion", "WebSearch", "WebFetch", "mcp__social-flow__capability_status", "mcp__social-flow__storyboard_apply", "mcp__social-flow__storyboard_check", "mcp__social-flow__storyboard_read", "mcp__social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__social-flow__serp_image_search", "mcp__social-flow__stock_search", "mcp__social-flow__datago_search", "mcp__social-flow__datago_detail", "mcp__social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch", "mcp__social-flow__datago_api_call", "mcp__social-flow__suno_generate_lyrics"]
+allowed-tools: ["mcp__social-flow__portal_shot_media_upload", "mcp__social-flow__portal_render_allocation", "Read", "Write", "Edit", "Glob", "Bash", "Agent", "AskUserQuestion", "WebSearch", "WebFetch", "mcp__social-flow__capability_status", "mcp__social-flow__storyboard_apply", "mcp__social-flow__storyboard_check", "mcp__social-flow__storyboard_read", "mcp__social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__social-flow__serp_image_search", "mcp__social-flow__stock_search", "mcp__social-flow__datago_search", "mcp__social-flow__datago_detail", "mcp__social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch", "mcp__social-flow__datago_api_call", "mcp__social-flow__suno_generate_lyrics"]
 ---
-
 # Storyboard authoring — data/[channel]/episodes/[topic]/storyboard/
 A linked copy without a valid `headRevisionNo` cannot save or checkpoint: pull `mode: "side"`, merge, and pass the returned head as `baseRevisionNo`. Keep `.portal.json`; directory-free checkpoints also require an explicit base. For pending portal render requests, follow [the six-ratio allocation contract](references/production-mode.md): `portal_render_allocation` read → host LLM reasons over every shot → submit requestId/baseRevisionNo and all assignments → pull. New choices persist `PRODUCTION.renderRatioVersion:1`; neither a pending request nor ratio selection approves spending.
 Read [story-quality.md](references/story-quality.md) before candidates or narration. Its evidence → meaning → ending → optional CTA contract overrides older mandatory-question and modern-case rules. Write `window.STORY` in §4a; draft checks require it. The existing narration review supplies its four evidence-backed findings; after vocabulary edits revalidate the read and run `check-story.js storyboard/` before §4b or approval. No score waives a failed criterion.
-
 Takes one topic through **research → wow points → three messages → three scenario candidates → one pick → more research →
 narration (the story pass) → narration read-through (looped to 95) → narration vocabulary
 (looped to 95) → the narration approval → the board (camera · space · sound · slides) →
@@ -1347,3 +1345,5 @@ approval, it does not gate it. The save is also a **checkpoint** at stage `appro
 
 What has actually gone wrong on this skill, one item per incident, with the section that
 catches each — [traps.md](references/traps.md). Read it once per episode before §2.
+
+With a portal key, save the board then upload source images via `portal_shot_media_upload`; follow [produce media order](../produce/references/portal-shot-media.md) for previz before video and for narration. Missing keys keep local-only mode.

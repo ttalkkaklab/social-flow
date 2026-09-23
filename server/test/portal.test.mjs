@@ -1195,8 +1195,8 @@ describe('portal_* handlers on a scripted portal', () => {
 describe('portal tool surface', () => {
   const names = new Set(TOOLS.map((t) => t.name));
 
-  it('all fifteen portal tools are defined and routed, and nothing else starts with portal_', () => {
-    assert.equal(portal.PORTAL_TOOL_NAMES.length, 15);
+  it('all sixteen portal tools are defined and routed, and nothing else starts with portal_', () => {
+    assert.equal(portal.PORTAL_TOOL_NAMES.length, 16);
     for (const name of portal.PORTAL_TOOL_NAMES) {
       assert.ok(names.has(name), `${name} not in TOOLS`);
       assert.equal(typeof ROUTES[name], 'function', `${name} not routed`);

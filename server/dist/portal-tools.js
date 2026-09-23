@@ -20,6 +20,7 @@ import { describePortalError, PortalError, portalClientFor, SAFE_DOCUMENT_NAME }
 import { buildImportPayload, channelOfEpisodeDir, DOCUMENT_FILES, EPISODE_STAGES, EPISODE_STATUSES, episodeDirOf, readDocuments, readPortalState, SCENARIO_CANDIDATES, writePortalState, } from './portal-episode.js';
 export const PORTAL_TOOL_NAMES = [
     'portal_images_upload',
+    'portal_shot_media_upload',
     'portal_workspace_check',
     'portal_storyboard_save',
     'portal_storyboard_list',
