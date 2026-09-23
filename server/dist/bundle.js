@@ -88395,6 +88395,20 @@ function backupStamp() {
   lastBackupTimeMs = now;
   return new Date(now).toISOString().replace(/[:.]/g, "-");
 }
+function reserveBackupDirectory(root, suffix) {
+  if (existsSync15(root) && lstatSync3(root).isSymbolicLink()) throw new Error("Unsafe backup directory");
+  mkdirSync7(root, { recursive: true });
+  for (let attempt = 0; attempt < 100; attempt++) {
+    const directory2 = path13.join(root, `${backupStamp()}-${suffix}`);
+    try {
+      mkdirSync7(directory2);
+      return directory2;
+    } catch (error2) {
+      if (error2.code !== "EEXIST") throw error2;
+    }
+  }
+  throw new Error("Could not reserve a new backup directory. Local files were not replaced. Retry the pull.");
+}
 function pendingOf(dir) {
   const sb = path13.join(episodeDirOf(dir), "storyboard");
   const side = path13.join(sb, ".portal-head");
@@ -88682,9 +88696,7 @@ function portalHandlers(fetchImpl) {
           if (changed.length > 0 || removed.length > 0) {
             const state = readPortalState(dir);
             const backupRoot = path13.join(sb, ".portal-local");
-            if (existsSync15(backupRoot) && lstatSync3(backupRoot).isSymbolicLink()) throw new Error("Unsafe document backup directory");
-            backupDir = path13.join(sb, ".portal-local", `${backupStamp()}-r${state?.headRevisionNo ?? 0}`);
-            mkdirSync7(backupDir, { recursive: true });
+            backupDir = reserveBackupDirectory(backupRoot, `r${state?.headRevisionNo ?? 0}`);
             for (const filename of [...changed.map((file) => file.filename), ...removed]) {
               copyFileSync(path13.join(sb, filename), path13.join(backupDir, filename));
             }
@@ -88910,8 +88922,7 @@ function portalHandlers(fetchImpl) {
           }
           if (replaced.length > 0) {
             const backupRoot = path13.join(sb, ".portal-local");
-            if (existsSync15(backupRoot) && lstatSync3(backupRoot).isSymbolicLink()) throw new Error("Unsafe scenario backup directory");
-            backupDir = path13.join(backupRoot, `${backupStamp()}-scenarios`);
+            backupDir = reserveBackupDirectory(backupRoot, "scenarios");
             for (const relative of replaced) {
               const backup = path13.join(backupDir, path13.relative("storyboard", relative));
               mkdirSync7(path13.dirname(backup), { recursive: true });

@@ -786,6 +786,10 @@ requires a new preview. Working files, state and `.portal-head` are excluded. Pu
 Symlinks or unreadable recognized backups stop pruning; an I/O failure during deletion reports which paths
 were already deleted. This is not a transaction across directories; stop other local backup writers before pruning.
 
+Board and scenario pulls reserve a new backup directory before copying. A timestamp collision
+uses another timestamp and never reuses an existing directory, file or symlink. After 100 collisions
+or another directory-creation error, the pull stops before replacing local files or advancing state.
+
 Historical `portal_storyboard_pull` with `mode: "replace"` and documents enabled also removes
 managed documents absent from that revision, after backing them up under `storyboard/.portal-local/`.
 Managed names are the standard board documents, `scenario.md`, and documents listed by the current
