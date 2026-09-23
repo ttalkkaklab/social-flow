@@ -1,3 +1,5 @@
+import { canonicalPullPaths } from './portal-canonical.js';
+import { uploadAttachments, restoreAttachments, prepareAttachmentRestore, attachmentSyncReport, safeAttachmentTarget } from './portal-attachments.js';
 /**
  * `portal_*` tool handlers — the ttalkkakstory portal called by workspace API key.
  *
@@ -10,13 +12,18 @@
  * Nothing here is a gate: when no key is configured the handler answers one line
  * (`portalUnavailable`) and the skill carries on in local-file mode.
  */
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { z } from 'zod';
+import { uploadEpisodeImages } from './portal-images.js';
+export { imageUploadSchema } from './portal-images.js';
 import { portalCredentialFile, PORTAL_CREDENTIAL_FILENAME } from './config.js';
 import { describePortalError, PortalError, portalClientFor, SAFE_DOCUMENT_NAME } from './portal-client.js';
 import { buildImportPayload, channelOfEpisodeDir, DOCUMENT_FILES, EPISODE_STAGES, EPISODE_STATUSES, episodeDirOf, readDocuments, readPortalState, SCENARIO_CANDIDATES, writePortalState, } from './portal-episode.js';
 export const PORTAL_TOOL_NAMES = [
+    'portal_attachments_sync',
+    'portal_images_upload',
+    'portal_shot_media_upload',
     'portal_workspace_check',
     'portal_storyboard_save',
     'portal_storyboard_list',
@@ -44,7 +51,8 @@ export const renderAllocationSchema = z.object({
         purpose: z.string().trim().min(1).max(200), reason: z.string().trim().min(1).max(2000),
     })).min(1).max(500).optional(),
 }).refine(a => !a.assignments || (a.requestId && a.baseRevisionNo !== undefined), 'Submitting requires requestId and baseRevisionNo from the latest read');
-export const workspaceCheckSchema = z.object({ channel: channelArg, episodeDir: z.string().optional() });
+export const attachmentsSyncSchema = z.object({ episodeDir: z.string().min(1), episodeId: uuid.optional(), channel: channelArg });
+export const workspaceCheckSchema = z.object({ channel: channelArg, episodeDir: z.string().optional(), episodeId: uuid.optional() });
 export const storyboardSaveSchema = z.object({
     episodeDir: z.string().min(1),
     project: z.string().min(1).optional(),
@@ -240,12 +248,27 @@ export function workspaceMismatch(client, dir) {
         `Fix the key file for this channel, or — to start the topic over in "${client.workspace}" — delete .portal.json first.`);
 }
 function refuseMismatch(client, ...dirs) {
-    for (const dir of dirs) {
-        const message = workspaceMismatch(client, dir);
-        if (message)
-            return { text: message, isError: true };
+    try {
+        for (const dir of dirs) {
+            const message = workspaceMismatch(client, dir);
+            if (message)
+                return { text: message, isError: true };
+        }
+        return null;
     }
-    return null;
+    catch (error) {
+        return failed(error);
+    }
+}
+/** A recorded copy must name the revision its local contents are based on. */
+function saveBase(dir, explicit, required = false) {
+    const state = dir ? readPortalState(dir) : null;
+    const base = explicit ?? state?.headRevisionNo;
+    if (base !== undefined && Number.isSafeInteger(base) && base >= 0)
+        return base;
+    if (!required && !state && base === undefined)
+        return undefined;
+    throw new Error('Missing or invalid base revision. Nothing was sent. Pull portal_storyboard_pull with mode "side", merge the portal head with your local edits, then save with baseRevisionNo from that result. Keep .portal.json and your local files.');
 }
 let lastBackupTimeMs = 0;
 function backupStamp() {
@@ -258,27 +281,85 @@ function pendingOf(dir) {
     const sb = path.join(episodeDirOf(dir), 'storyboard');
     const side = path.join(sb, '.portal-head');
     const local = path.join(sb, '.portal-local');
-    let backups = 0;
+    // Test the entry before reading: readdir ENOENT can also mean a dangling link.
+    const entries = (target) => {
+        try {
+            lstatSync(target);
+        }
+        catch (error) {
+            if (error.code === 'ENOENT')
+                return null;
+            throw error;
+        }
+        return readdirSync(target, { withFileTypes: true });
+    };
+    let sideDir = null;
+    let backups = null;
+    const warnings = {};
     try {
-        backups = readdirSync(local, { withFileTypes: true }).filter((e) => e.isDirectory()).length;
+        sideDir = entries(side) !== null;
     }
     catch {
-        backups = 0;
+        warnings.sideDir = 'Cannot read .portal-head; side directory presence is unknown. Keep local files and inspect permissions or links.';
     }
-    return { sideDir: existsSync(side), backups };
+    try {
+        backups = entries(local)?.filter((e) => e.isDirectory()).length ?? 0;
+    }
+    catch {
+        warnings.backups = 'Cannot read .portal-local; backup count is unknown. Keep local files and inspect permissions or links.';
+    }
+    return { sideDir, backups, ...(Object.keys(warnings).length ? { warnings } : {}) };
 }
-/** Episode id — the argument, or `episodeDir/.portal.json`. */
-function resolveEpisodeId(episodeId, episodeDir) {
-    if (episodeId)
-        return episodeId;
-    const state = episodeDir ? readPortalState(episodeDir) : null;
-    if (state?.episodeId)
-        return state.episodeId;
+/** Every supplied local copy must agree with the explicit or inferred episode id. */
+function resolveEpisodeId(episodeId, ...dirs) {
+    let id = episodeId;
+    for (const dir of dirs) {
+        const recorded = dir ? readPortalState(dir)?.episodeId : undefined;
+        if (!recorded)
+            continue;
+        if (id && id !== recorded) {
+            throw new Error('Episode mismatch — episodeId and the supplied local copies identify different episodes. Nothing was sent or written. Use the matching episode directory or a new unlinked target for a pull; for a remote-only call, omit local directories and files. Keep existing .portal.json and local edits.');
+        }
+        id = recorded;
+    }
+    if (id)
+        return id;
     throw new Error('episodeId is missing — pass it, or pass an episodeDir that holds .portal.json (portal_storyboard_pull · portal_storyboard_save · portal_episode_create write it).');
 }
 /** The handlers, with fetch injectable so the tests never touch a network. */
 export function portalHandlers(fetchImpl) {
     return {
+        async attachmentsSync(args) {
+            const r = resolveClient(fetchImpl, args.channel, args.episodeDir);
+            if ('error' in r)
+                return r.error;
+            const refused = refuseMismatch(r.client, args.episodeDir);
+            if (refused)
+                return refused;
+            try {
+                const id = resolveEpisodeId(args.episodeId, args.episodeDir);
+                return ok(await uploadAttachments(r.client, id, episodeDirOf(args.episodeDir)));
+            }
+            catch (error) {
+                return failed(error);
+            }
+        },
+        async imagesUpload(args) {
+            const r = resolveClient(fetchImpl, undefined, args.episodeDir);
+            if ('error' in r)
+                return r.error;
+            const refused = refuseMismatch(r.client, args.episodeDir);
+            if (refused)
+                return refused;
+            try {
+                if (!readPortalState(args.episodeDir)?.episodeId)
+                    throw new Error('Save with portal_storyboard_save first to create/link the episode, then upload images. Nothing was sent.');
+                return await uploadEpisodeImages(r.client, args, saveBase(args.episodeDir, args.baseRevisionNo, true));
+            }
+            catch (error) {
+                return failed(error);
+            }
+        },
         async renderAllocation({ episodeId, episodeDir, channel, assignments, requestId, baseRevisionNo }) {
             const r = resolveClient(fetchImpl, channel, episodeDir);
             if ('error' in r)
@@ -295,28 +376,39 @@ export function portalHandlers(fetchImpl) {
                 return failed(error);
             }
         },
-        async workspaceCheck({ channel, episodeDir }) {
+        async workspaceCheck({ channel, episodeDir, episodeId }) {
             const r = resolveClient(fetchImpl, channel, episodeDir);
             if ('error' in r)
                 return r.error;
             try {
+                let state = null;
+                let mismatch = null;
+                let localWarning;
+                try {
+                    state = episodeDir ? readPortalState(episodeDir) : null;
+                    mismatch = workspaceMismatch(r.client, episodeDir);
+                }
+                catch (error) {
+                    state = null;
+                    localWarning = describePortalError(error);
+                }
+                const episodeMismatch = !!(episodeId && state?.episodeId && episodeId !== state.episodeId);
+                const warning = [mismatch, episodeMismatch ? 'Episode mismatch — episodeId and .portal.json identify different episodes. No episode was queried; use the matching ID or omit episodeDir for a remote-only check.' : null].filter(Boolean).join(' ');
+                const id = episodeId ?? state?.episodeId;
                 const { data } = await r.client.me();
-                const state = episodeDir ? readPortalState(episodeDir) : null;
-                const mismatch = workspaceMismatch(r.client, episodeDir);
                 // Loop R5 — the one call at the top of a session also answers "is the portal ahead, who
                 // holds it, is there a half-merged side pull or a backup lying around", so the skill does
                 // not walk into the first checkpoint's 409. A portal lookup that fails leaves portal:null
                 // with a warning; the check itself still answers.
-                let portalPart = {};
-                if (episodeDir && !mismatch) {
-                    portalPart = { pending: pendingOf(episodeDir) };
-                    if (state?.episodeId) {
+                let portalPart = episodeDir ? { pending: pendingOf(episodeDir) } : {};
+                if ((episodeDir || episodeId) && !mismatch && !episodeMismatch) {
+                    if (id) {
                         try {
-                            const { data: ep } = await r.client.getEpisode(state.episodeId);
+                            const { data: ep } = await r.client.getEpisode(id);
                             const lease = (ep.lease ?? null);
                             const portalHead = ep.headRevisionNo ?? 0;
-                            const localHead = state.headRevisionNo ?? 0;
-                            const sync = portalHead > localHead ? 'portal_ahead' : portalHead < localHead ? 'local_ahead' : 'in_sync';
+                            const localHead = state?.headRevisionNo;
+                            const sync = localHead === undefined ? 'unknown' : portalHead > localHead ? 'portal_ahead' : portalHead < localHead ? 'local_ahead' : 'in_sync';
                             portalPart = {
                                 ...portalPart,
                                 portal: {
@@ -344,7 +436,9 @@ export function portalHandlers(fetchImpl) {
                         }
                     }
                     else {
-                        portalPart = { ...portalPart, portal: null, sync: 'unknown' };
+                        portalPart = { ...portalPart, portal: null, sync: 'unknown',
+                            ...(localWarning ? { portalWarning: 'Pass episodeId explicitly to inspect the portal head and lease; the damaged local state cannot identify the episode.' } : {}),
+                        };
                     }
                 }
                 return ok({
@@ -356,11 +450,12 @@ export function portalHandlers(fetchImpl) {
                         ? {
                             episodeDir: episodeDirOf(episodeDir),
                             copyOf: state ? { workspace: state.workspace ?? null, episodeId: state.episodeId ?? null, headRevisionNo: state.headRevisionNo ?? null } : null,
-                            workspaceMatches: !mismatch,
-                            ...(mismatch ? { warning: mismatch } : {}),
-                            ...portalPart,
+                            workspaceMatches: localWarning ? null : !mismatch,
+                            ...(warning ? { warning } : {}),
+                            ...(localWarning ? { localWarning } : {}),
                         }
                         : {}),
+                    ...portalPart,
                     ...data,
                 });
             }
@@ -378,7 +473,7 @@ export function portalHandlers(fetchImpl) {
             try {
                 const payload = buildImportPayload(episodeDir, { project, storyboard: storyboardTitle, title });
                 const state = readPortalState(episodeDir);
-                const base = baseRevisionNo ?? state?.headRevisionNo;
+                const base = saveBase(episodeDir, baseRevisionNo);
                 payload.episode = {
                     ...payload.episode,
                     ...(state?.episodeId ? { id: state.episodeId } : {}),
@@ -406,6 +501,7 @@ export function portalHandlers(fetchImpl) {
                     result: status === 201 ? 'created' : 'updated',
                     ...data,
                     pageUrl: r.client.pageUrl(data.url),
+                    attachments: await attachmentSyncReport(() => uploadAttachments(r.client, data.episodeId, episodeDirOf(episodeDir))),
                     uploaded: {
                         scenes: payload.scenes.length,
                         characters: payload.characters.map((c) => c.id),
@@ -439,6 +535,7 @@ export function portalHandlers(fetchImpl) {
                 return refused;
             try {
                 const c = r.client;
+                resolveEpisodeId(episodeId, targetDir);
                 const { data: episode } = await c.getEpisode(episodeId);
                 const dir = episodeDirOf(targetDir);
                 const sb = path.join(dir, 'storyboard');
@@ -472,12 +569,16 @@ export function portalHandlers(fetchImpl) {
                         fileContents.set('scenario.md', await c.scenarioMd(episodeId, chosen.candidate));
                     }
                 }
+                for (const filename of fileContents.keys())
+                    safeAttachmentTarget(dir, `storyboard/${filename}`);
                 const files = [...fileContents].map(([filename, content]) => ({ filename, content }));
                 const headRevisionNo = revision ?? episode.headRevisionNo ?? 0;
                 const written = files.map(({ filename }) => filename);
                 let backupDir = null;
                 let sideDir = null;
                 const replaced = [];
+                const attachmentRoot = mode === 'side' ? path.join(sb, '.portal-head', 'attachments') : dir;
+                const attachmentSnapshot = revision ? undefined : await prepareAttachmentRestore(c, episodeId, attachmentRoot, canonicalPullPaths(episode, fileContents.keys()));
                 if (mode === 'side') {
                     sideDir = path.join(sb, '.portal-head');
                     rmSync(sideDir, { recursive: true, force: true });
@@ -502,14 +603,12 @@ export function portalHandlers(fetchImpl) {
                     }
                     for (const { filename, content } of files)
                         writeFileSync(path.join(sb, filename), content);
-                    writePortalState(dir, {
-                        workspace: c.workspace,
-                        storyboardId: episode.storyboardId,
-                        episodeId,
-                        headRevisionNo,
-                    });
                 }
+                const attachments = revision ? { skipped: 'Attachments are current episode files, not revision snapshots.' } : await restoreAttachments(c, episodeId, attachmentRoot, attachmentSnapshot);
+                if (mode !== 'side')
+                    writePortalState(dir, { workspace: c.workspace, storyboardId: episode.storyboardId, episodeId, headRevisionNo });
                 return ok({
+                    attachments,
                     episode: {
                         id: episode.id,
                         slug: episode.slug,
@@ -579,12 +678,12 @@ export function portalHandlers(fetchImpl) {
                 return refused;
             try {
                 const id = resolveEpisodeId(episodeId, episodeDir);
-                const state = episodeDir ? readPortalState(episodeDir) : null;
+                const base = saveBase(episodeDir, baseRevisionNo, true);
                 const body = {
                     stage: stageArg,
                     note,
                     sourceHost: r.client.holder,
-                    baseRevisionNo: baseRevisionNo ?? state?.headRevisionNo,
+                    baseRevisionNo: base,
                 };
                 let uploadedDocuments = [];
                 let uploadedScenes = 0;
@@ -615,6 +714,7 @@ export function portalHandlers(fetchImpl) {
                 return ok({
                     result: status === 201 ? 'new revision' : 'unchanged (stage only)',
                     ...data,
+                    attachments: episodeDir ? await attachmentSyncReport(() => uploadAttachments(r.client, id, episodeDirOf(episodeDir))) : undefined,
                     uploaded: { scenes: uploadedScenes, documents: uploadedDocuments },
                 });
             }
@@ -653,9 +753,13 @@ export function portalHandlers(fetchImpl) {
             try {
                 const id = resolveEpisodeId(episodeId, episodeDir);
                 const { data } = await r.client.restoreRevision(id, revisionNo, { note, sourceHost: r.client.holder });
-                if (episodeDir)
-                    writePortalState(episodeDir, { episodeId: id, headRevisionNo: data.revisionNo });
-                return ok(data);
+                // Restore changes the portal, not the local files. Advancing their base here
+                // would let the old board overwrite the restored revision without a conflict.
+                return ok(episodeDir ? {
+                    ...data,
+                    localCopy: { unchanged: true, syncRequired: true },
+                    next: 'Local files and .portal.json were not changed. Pull mode "side", review the restored head and merge any intended local edits, then save with the pull result\'s explicit baseRevisionNo. Do not advance the local head without synchronizing the files.',
+                } : data);
             }
             catch (error) {
                 return failed(error);
@@ -695,7 +799,7 @@ export function portalHandlers(fetchImpl) {
             if (refused)
                 return refused;
             try {
-                const id = resolveEpisodeId(episodeId, episodeDir ?? dirFromFile);
+                const id = resolveEpisodeId(episodeId, episodeDir, dirFromFile);
                 const source = markdown ?? (file ? readFileSync(file, 'utf8') : null);
                 if (source === null)
                     throw new Error('one of file · markdown is required.');
@@ -724,7 +828,7 @@ export function portalHandlers(fetchImpl) {
             if (refused)
                 return refused;
             try {
-                const id = resolveEpisodeId(episodeId, episodeDir ?? targetDir);
+                const id = resolveEpisodeId(episodeId, episodeDir, targetDir);
                 if (cand && !targetDir)
                     return { text: await r.client.scenarioMd(id, cand), isError: false };
                 const { data } = await r.client.listScenarios(id);

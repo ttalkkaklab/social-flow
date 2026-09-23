@@ -721,11 +721,11 @@ const PORTAL_CHANNEL_ARG = {
 };
 const PORTAL_EPISODE_ID_ARG = {
     type: 'string',
-    description: 'Episode id (uuid). Optional when episodeDir holds .portal.json (written by portal_storyboard_pull · portal_storyboard_save · portal_episode_create)',
+    description: 'Episode id (uuid). Must match every supplied local copy; mismatch is refused before HTTP or file writes. Optional when episodeDir holds .portal.json (written by portal_storyboard_pull · portal_storyboard_save · portal_episode_create)',
 };
 const PORTAL_EPISODE_DIR_ARG = {
     type: 'string',
-    description: 'Absolute path of data/<channel>/episodes/<topic> (or its storyboard/). Supplies the episode id from .portal.json and the channel for the key',
+    description: 'Absolute path of data/<channel>/episodes/<topic> (or its storyboard/). Supplies the episode id from .portal.json and the channel for the key. A supplied episodeId must match this copy',
 };
 const PORTAL_STAGE_ENUM = ['researched', 'candidates', 'scenario', 'narration', 'board', 'approved', 'produced', 'published'];
 const PORTAL_CANDIDATE_ENUM = ['D1', 'D2', 'D3'];
@@ -738,16 +738,29 @@ const PORTAL_TOOLS = [
 
 The key is issued on the portal at /{workspace}/settings/api-keys (admin+) and saved as <SNS_TOKEN_DIR>/<channel>/ttalkkakstory.json — { "apiUrl", "workspace", "apiKey" }. With no key anywhere the portal_* tools are hidden and every call answers one line; the episode stays a local file.
 
-With episodeDir, also compares the directory's .portal.json (the workspace it is a copy of) with the key's workspace — workspaceMatches:false with a warning means every write to that directory will be refused until the key file or the record is fixed, so the topic does not fork into a second workspace. When the record names an episode, the portal's side comes too: portal { headRevisionNo, stage, status, lease { holder, until, mine } | null } and sync — "portal_ahead" (pull with mode "side" and merge before writing), "local_ahead" (never in the normal flow — syncWarning says how to resync), "in_sync", or "unknown" (no record, or the lookup failed — see portalWarning) — plus pending { sideDir, backups }: a leftover .portal-head/ means a merge was started and not finished, backups counts .portal-local/ entries.
+With episodeDir, also compares the directory's .portal.json (the workspace it is a copy of) with the key's workspace — workspaceMatches:false with a warning means every write to that directory will be refused until the key file or the record is fixed, so the topic does not fork into a second workspace. When the record names an episode, the portal's side comes too: portal { headRevisionNo, stage, status, lease { holder, until, mine } | null } and sync — "portal_ahead" (pull with mode "side" and merge before writing), "local_ahead" (never in the normal flow — syncWarning says how to resync), "in_sync", or "unknown" (no record, or the lookup failed — see portalWarning) — plus pending { sideDir, backups }: a leftover .portal-head/ means a merge was started and not finished, backups counts .portal-local/ directory entries. Missing entries return false/0; unreadable entries, dangling links or wrong entry types return null for the affected field plus pending.warnings { sideDir?, backups? }. Both mismatch messages are preserved in warning when workspace and episode identities conflict together.
 
-Returns: JSON — { channel, workspace, source, holder, episodeDir?, copyOf?, workspaceMatches?, warning?, portal?, sync?, pending?, portalWarning?, …the portal's /me answer }.`,
+A damaged or unreadable local record returns localWarning, copyOf:null, workspaceMatches:null and sync:"unknown"; pending is still inspected. Pass episodeId explicitly to read the remote head and lease without trusting that record, or use episodeId + channel alone for a remote-only check. Without a trustworthy ID no episode is guessed; portalWarning explains how to request it. A valid local record conflicting with the explicit ID or key workspace skips the episode lookup with a warning. A missing local revision also means sync:"unknown". Diagnostic success does not repair the record or permit writes: other tools keep refusing the damaged state.
+
+Returns: JSON — { channel, workspace, source, holder, episodeDir?, copyOf?, workspaceMatches?, warning?, localWarning?, portal?, sync?, pending?, portalWarning?, …the portal's /me answer }.`,
         inputSchema: {
             type: 'object',
             properties: {
                 channel: PORTAL_CHANNEL_ARG,
                 episodeDir: { type: 'string', description: 'Absolute path of data/<channel>/episodes/<topic> — checks its .portal.json against the key\'s workspace and picks the channel off the path' },
+                episodeId: { type: 'string', format: 'uuid', description: 'Explicit episode to inspect when local state is damaged or absent; must agree with a readable local record' },
             },
         },
+    },
+    {
+        name: 'portal_shot_media_upload',
+        title: 'Upload and link one shot media file',
+        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+        description: 'Upload image, Blender/three.js previz, generated video or narration from this episode, then checkpoint the shot UUID. Render previz → await this upload → call video generation. Save the episode first. Missing key silently skips. Oversized files alone are skipped and logged to .portal-media-skips.jsonl; production continues. Existing .portal.json must match the workspace and head; conflicts preserve local files and provide recovery instructions. Never regenerate a file just because its upload failed.',
+        inputSchema: { type: 'object', properties: {
+                episodeDir: { type: 'string', description: 'Episode directory; its channel path selects the workspace key.' }, shotId: { type: 'string', description: 'Stable source shot ID; preferred over ordinal.' }, shotNo: { type: 'integer', minimum: 1, description: 'One-based source position, only for ID-less shots.' },
+                kind: { type: 'string', enum: ['image', 'previz', 'video', 'narration'], description: 'Shot media role; MP4 for previz/video, WAV/MP3 for narration, PNG/JPEG/WebP for image.' }, file: { type: 'string', description: 'Absolute file or episode-relative path; must stay inside this episode.' },
+            }, required: ['episodeDir', 'kind', 'file'] },
     },
     {
         name: 'portal_storyboard_save',
@@ -797,7 +810,7 @@ Returns: JSON — the portal's paginated list (storyboards with id · title · p
             type: 'object',
             properties: {
                 episodeId: { type: 'string', description: 'Episode id (uuid) — from portal_storyboard_list or .portal.json' },
-                targetDir: { type: 'string', description: 'Absolute path of data/<channel>/episodes/<topic>; storyboard/ is created inside. The channel slug on the path picks the key' },
+                targetDir: { type: 'string', description: 'Absolute path of data/<channel>/episodes/<topic>; storyboard/ is created inside. An existing linked target must match episodeId; use a new directory for another episode. The channel slug on the path picks the key' },
                 includeDocuments: { type: 'boolean', description: 'Also write the uploaded documents (storyboard.md · research.md · script.md · storyboard.html). Default true' },
                 revision: { type: 'number', description: 'Pull this revision\'s snapshot instead of head — scenes and documents both from that revision' },
                 mode: { type: 'string', enum: ['replace', 'side'], description: 'replace updates the working copy after backing up changed files; side writes only to storyboard/.portal-head/. Default replace' },
@@ -889,9 +902,9 @@ Returns: JSON — the revision list, one revision's snapshot, or { summary, from
         name: 'portal_episode_restore',
         title: 'Restore an older revision as a new one',
         annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
-        description: `Re-publish an older revision of a portal episode as the new head — history only moves forward, nothing is deleted. Follow it with portal_storyboard_pull so the local working copy matches the restored head; .portal.json's head is updated to the new revision when episodeDir is given.
+        description: `Re-publish an older revision of a portal episode as the new head — history only moves forward, nothing is deleted. Local files and .portal.json stay unchanged, including their base revision. With episodeDir, the result marks localCopy.syncRequired: pull mode "side", review the restored head, merge intended local edits, then save with that pull result's explicit baseRevisionNo. Never advance the local head without synchronizing files.
 
-Returns: JSON — { revisionNo, stage, restoredFrom }.`,
+Returns: JSON — { revisionNo, stage, restoredFrom, localCopy?: { unchanged, syncRequired }, next? }.`,
         inputSchema: {
             type: 'object',
             properties: {
@@ -955,13 +968,36 @@ Returns: JSON — { scenarios: [{ candidate, chosen, score, p0, findings }], wri
         inputSchema: {
             type: 'object',
             properties: {
-                targetDir: { type: 'string', description: 'Absolute path of data/<channel>/episodes/<topic>. Omit to return text only' },
+                targetDir: { type: 'string', description: 'Absolute path of data/<channel>/episodes/<topic>. A linked target must match the source episode. Omit to return text only' },
                 candidate: { type: 'string', enum: PORTAL_CANDIDATE_ENUM, description: 'Only this candidate' },
                 episodeId: PORTAL_EPISODE_ID_ARG,
                 episodeDir: PORTAL_EPISODE_DIR_ARG,
                 channel: PORTAL_CHANNEL_ARG,
             },
         },
+    },
+    {
+        name: 'portal_attachments_sync', title: 'Sync episode attachments',
+        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+        description: 'Upload missing or changed episode files with original relative paths and optional rights evidence from .portal-attachments.json. Returns incomplete for skipped files; keep local files until complete. No board revision is created.',
+        inputSchema: { type: 'object', properties: { episodeDir: PORTAL_EPISODE_DIR_ARG, episodeId: { type: 'string', description: 'Episode UUID; defaults to the directory portal state.' }, channel: PORTAL_CHANNEL_ARG }, required: ['episodeDir'] },
+    },
+    {
+        name: 'portal_images_upload', title: 'Upload and link local shot images',
+        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+        description: 'After portal_storyboard_save has linked the episode, upload PNG/JPEG/WebP files (5 MiB each), then checkpoint their portalImageId UUIDs with the local base revision. Images upload sequentially. Defaults to storyboard/images/scene-N.* by source array ordinal, retaining shot IDs. Explicit mappings require shotId when present; shotNo is only for legacy shots without IDs. Paths stay inside storyboard/. Missing default images are reported as skipped. Success updates scenes.js and .portal.json; partial failures report uploaded UUIDs and recovery instructions. No automatic conflict retry. No image generation or publishing.',
+        inputSchema: { type: 'object', required: ['episodeDir', 'stage'], properties: {
+                episodeDir: PORTAL_EPISODE_DIR_ARG,
+                stage: { type: 'string', enum: PORTAL_STAGE_ENUM, description: 'Current workflow stage to checkpoint; do not downgrade an approved or produced episode.' },
+                baseRevisionNo: { type: 'integer', minimum: 0, description: 'Explicit merged base; defaults to .portal.json headRevisionNo.' },
+                images: { type: 'array', minItems: 1, maxItems: 500, description: 'Optional explicit shot-to-file mappings. Omit to discover scene-N files.', items: {
+                        type: 'object', required: ['file'], properties: {
+                            shotId: { type: 'string', minLength: 1, description: 'Stable source shot ID (preferred).' },
+                            shotNo: { type: 'integer', minimum: 1, description: '1-based array ordinal, only for shots without IDs.' },
+                            file: { type: 'string', minLength: 1, description: 'File path relative to storyboard/, or an absolute path inside it.' },
+                        }, oneOf: [{ required: ['shotId'], not: { required: ['shotNo'] } }, { required: ['shotNo'], not: { required: ['shotId'] } }],
+                    } },
+            } },
     },
     {
         name: 'portal_render_allocation', title: 'Read or submit the episode render allocation',
@@ -1996,6 +2032,9 @@ Returns: a text block with the saved .mp4 file path, model, ratio, resolution, d
         inputSchema: {
             type: 'object',
             properties: {
+                portal: { type: 'object', description: 'Configured portal shot target. Previz uploads immediately after rendering; video uploads previzFile before its vendor call and the output afterwards; narration uploads its completed take. Omit only in local-only mode.', properties: {
+                        episodeDir: { type: 'string', description: 'Episode directory; its channel path selects the workspace key.' }, shotId: { type: 'string', description: 'Stable source shot ID; use this when the shot has an ID.' }, shotNo: { type: 'integer', minimum: 1, description: 'One-based source position, only for ID-less shots.' }, previzFile: { type: 'string', description: 'Required on video calls; episode-relative or absolute previz mp4.' },
+                    }, required: ['episodeDir'] },
                 prompt: {
                     type: 'string',
                     description: 'Video description. Vendor formula: Subject + Movement + Environment + Camera movement + Aesthetic description + Sound. Write camera as a span, not a verb — "starting frame composition + movement + movement amplitude + ending frame composition" (combos the docs name: Hitchcock = dolly-in/out + zoom-out/in, bullet time = time slowdown + surround). Shot size follows the example word order, "Close-up of the man on the left". Do NOT write timecodes such as "0-3 seconds" — the vendor states precise-timing support is unstable and forcing it degrades the result; cut timing in the edit instead, and write an in-clip state change in words ("in under half a second"). Multi-cut in one call is supported via "Shot 1: ... Shot 2: ..." or "The shot cuts to ..." — open on the wide so the later cuts inherit one floor plan, time each cut by a dialogue or action beat, and give each its own shot size. There is no negativePrompt parameter on this engine: an unwanted element is designed out of the sentence, never forbidden in it, and what must hold goes into a closing positive-locks paragraph ("the lantern stays lit in every cut; only two people ever appear") — the one exception the vendor templates is the artifact classes (subtitles, on-frame text, logo, watermark, BGM), which may stay negative. Prompt body must be English or Chinese (Korean only on dreamina-seedance-2-5-260628) — Korean dialogue still works inside quotes on 1.5-pro, which lip-syncs it.',
@@ -2039,6 +2078,9 @@ Returns: a text block with the saved .mp4 file path, source/last frame image pat
         inputSchema: {
             type: 'object',
             properties: {
+                portal: { type: 'object', description: 'Configured portal shot target. Previz uploads immediately after rendering; video uploads previzFile before its vendor call and the output afterwards; narration uploads its completed take. Omit only in local-only mode.', properties: {
+                        episodeDir: { type: 'string', description: 'Episode directory; its channel path selects the workspace key.' }, shotId: { type: 'string', description: 'Stable source shot ID; use this when the shot has an ID.' }, shotNo: { type: 'integer', minimum: 1, description: 'One-based source position, only for ID-less shots.' }, previzFile: { type: 'string', description: 'Required on video calls; episode-relative or absolute previz mp4.' },
+                    }, required: ['episodeDir'] },
                 prompt: {
                     type: 'string',
                     description: 'Identity words stay, layout words go — the Seedance image lane is not motion-only (that is Veo\'s rule). Reuse the source image prompt\'s identity words (who and what the subject is), drop the composition words (where things sit — the frame already holds that), add the motion, write camera as a span ("starting frame composition + movement + ending frame composition"), and CLOSE WITH A CONSISTENCY LOCK: "the subject stays exactly consistent with the input frame; appearance, proportions and materials hold; no unrelated elements appear". Re-describe the layout, facing or lighting and the model redesigns the scene. Do NOT write timecodes such as "0-3 seconds" (vendor: precise-timing support is unstable) — an in-clip state change goes in words ("in under half a second"), and the length lives in durationSeconds. English or Chinese only (Korean on dreamina-seedance-2-5 alone, and inside dialogue quotes on 1.5-pro). There is no negativePrompt parameter on this engine: an unwanted element is designed out of the sentence and pinned by the lock, never forbidden in it — the one exception the vendor templates is the artifact classes (subtitles, on-frame text, logo, watermark, BGM), which may stay negative.',
@@ -2093,6 +2135,9 @@ Returns: a text block with the saved .mp4 file path, reference image, video and 
         inputSchema: {
             type: 'object',
             properties: {
+                portal: { type: 'object', description: 'Configured portal shot target. Previz uploads immediately after rendering; video uploads previzFile before its vendor call and the output afterwards; narration uploads its completed take. Omit only in local-only mode.', properties: {
+                        episodeDir: { type: 'string', description: 'Episode directory; its channel path selects the workspace key.' }, shotId: { type: 'string', description: 'Stable source shot ID; use this when the shot has an ID.' }, shotNo: { type: 'integer', minimum: 1, description: 'One-based source position, only for ID-less shots.' }, previzFile: { type: 'string', description: 'Required on video calls; episode-relative or absolute previz mp4.' },
+                    }, required: ['episodeDir'] },
                 prompt: {
                     type: 'string',
                     description: 'Scene and subject interactions. The 2.x advanced formula: precise subject + action details + scene/environment + lighting & color tone + camera movement + visual style + image quality + constraints. For multi-cut, write a "Shot 1 / Shot 2 / Shot 3" storyboard and order each shot as camera movement -> subject action and expression -> position change -> audio; open on the wide so the later cuts inherit one floor plan, and time each cut by an action beat. Do NOT put timecodes on the shots — the vendor states precise-timing support is unstable (dreamina-seedance-2-5-260628 alone takes integer-second forms). Close with the constraints slot as a POSITIVE-LOCKS paragraph — what holds in every frame, said positively, with each reference given its scope ("@ocean_location controls water and sky only"; "the lantern stays lit in every cut") — because this engine has no negativePrompt parameter; the one exception the vendor templates is the artifact classes (subtitles, on-frame text, logo, watermark, BGM), which may stay negative. English or Chinese only (Korean on dreamina-seedance-2-5-260628 alone; on other models Korean belongs inside dialogue quotes). Unwanted subtitles cannot be fully blocked at 9:16: the vendor notes portrait output hallucinates burned-in text noticeably more often than landscape, so inspect the frames.',
@@ -2719,6 +2764,9 @@ Returns: a text block with the mp4 path, still paths (and any requested still ou
         inputSchema: {
             type: 'object',
             properties: {
+                portal: { type: 'object', description: 'Configured portal shot target. Previz uploads immediately after rendering; video uploads previzFile before its vendor call and the output afterwards; narration uploads its completed take. Omit only in local-only mode.', properties: {
+                        episodeDir: { type: 'string', description: 'Episode directory; its channel path selects the workspace key.' }, shotId: { type: 'string', description: 'Stable source shot ID; use this when the shot has an ID.' }, shotNo: { type: 'integer', minimum: 1, description: 'One-based source position, only for ID-less shots.' }, previzFile: { type: 'string', description: 'Required on video calls; episode-relative or absolute previz mp4.' },
+                    }, required: ['episodeDir'] },
                 blendPath: { type: 'string', description: 'Absolute path to the .blend file (must end in .blend, no "..").' },
                 outputPath: { type: 'string', description: 'Directory for the mp4 and stills (default: <blend dir>/previz).' },
                 filename: {
@@ -2793,6 +2841,9 @@ Requires ffmpeg and GEMINI_API_KEY even for local synthesis. Two paid audio-revi
         inputSchema: {
             type: 'object', additionalProperties: false,
             properties: {
+                portal: { type: 'object', description: 'Configured portal shot target. Previz uploads immediately after rendering; video uploads previzFile before its vendor call and the output afterwards; narration uploads its completed take. Omit only in local-only mode.', properties: {
+                        episodeDir: { type: 'string', description: 'Episode directory; its channel path selects the workspace key.' }, shotId: { type: 'string', description: 'Stable source shot ID; use this when the shot has an ID.' }, shotNo: { type: 'integer', minimum: 1, description: 'One-based source position, only for ID-less shots.' }, previzFile: { type: 'string', description: 'Required on video calls; episode-relative or absolute previz mp4.' },
+                    }, required: ['episodeDir'] },
                 generator: { type: 'string', enum: [...GENERATORS], description: 'Existing synthesis tool matching profile §2.' },
                 generation: { type: 'object', additionalProperties: true, description: 'Arguments accepted by generator, including its text/script/inputs and pinned voice settings. Outer outputPath and filename control the output.' },
                 expectedText: { type: 'string', minLength: 1, maxLength: 4000, description: 'All spoken narration for this scene, matching narration[].tts. Write numbers as spoken words.' },
