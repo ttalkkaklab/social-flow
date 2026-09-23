@@ -1092,11 +1092,13 @@ window.SB_DOC = {
   // only for a back-facing shot — video-model-selection.md §The character panels.
   characters: [
     // { id: "claude", name: "Claude", role: "the AI — answers carefully",
+    //   tts: { engine: "supertonic", voiceId: "M1", speed: 1 },
     //   panels: { face: "../../../assets/characters/claude/face.png",
     //             body: "../../../assets/characters/claude/body.png",
     //             back: "../../../assets/characters/claude/back.png" },
     //   note: "no lettered wordmark · voice is profile §2 Leda", veo: "" }
   ],
+  narratorCharacterId: "", // required — one id from characters above
 
   // Promise ledger — what the episode promises and the shot that keeps each promise
   // (scenario-craft §3 · §5), plus the story-arc devices (§7 · §8 · §10). Shot numbers are the

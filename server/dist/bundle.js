@@ -76020,7 +76020,7 @@ var shotSchema = external_exports.object({
   id: shotIdSchema.optional(),
   type: tuple(V.TYPES),
   title: external_exports.string().optional(),
-  narration: external_exports.array(external_exports.object({ tts: external_exports.string(), sub: external_exports.string().optional() }).passthrough()).optional(),
+  narration: external_exports.array(external_exports.object({ tts: external_exports.string(), sub: external_exports.string().optional(), speaker: external_exports.string().trim().min(1).optional() }).passthrough()).optional(),
   visual: visualSchema.optional(),
   duration: external_exports.number().positive().optional(),
   scene: external_exports.number().int().positive().optional(),
@@ -87599,6 +87599,11 @@ function buildImportPayload(episodeDir, options = {}) {
     filename: f3,
     content: readFileSync9(path10.join(sb, f3), "utf8")
   }));
+  const characters = collectCharacters(scenes, sbDoc, channelDir);
+  const narratorCharacterId = typeof sbDoc?.narratorCharacterId === "string" ? sbDoc.narratorCharacterId : "";
+  if (!narratorCharacterId || !characters.some((character) => character.id === narratorCharacterId))
+    throw new Error("SB_DOC.narratorCharacterId must match one SB_DOC.characters id.");
+  const normalizedScenes = normalizeNarrationSpeakers(scenes, characters);
   const status = md.status ?? null;
   return {
     project: { name: channel },
@@ -87610,8 +87615,9 @@ function buildImportPayload(episodeDir, options = {}) {
       ...status && EPISODE_STATUSES.includes(status) ? { status } : {},
       meta: sbDoc ? { ...meta, SB_DOC: sbDoc } : meta
     },
-    scenes,
-    characters: collectCharacters(scenes, sbDoc, channelDir),
+    scenes: normalizedScenes,
+    characters,
+    narratorCharacterId,
     documents
   };
 }
@@ -87624,15 +87630,48 @@ function characterIdsOf(shot) {
   const list = Array.isArray(raw) ? raw : [raw];
   return list.map((c) => typeof c === "string" ? c : c && typeof c.id === "string" ? c.id : null).filter((id) => Boolean(id));
 }
+function ttsOf(value) {
+  if (!value || typeof value !== "object") return null;
+  const tts = value;
+  if (!["gemini", "supertonic", "elevenlabs", "mlx"].includes(String(tts.engine)) || typeof tts.voiceId !== "string" || !tts.voiceId.trim()) return null;
+  return {
+    engine: tts.engine,
+    voiceId: tts.voiceId,
+    ...typeof tts.model === "string" ? { model: tts.model } : {},
+    ...typeof tts.speed === "number" ? { speed: tts.speed } : {},
+    ...typeof tts.language === "string" ? { language: tts.language } : {},
+    ...typeof tts.stylePrompt === "string" ? { stylePrompt: tts.stylePrompt } : {}
+  };
+}
 function collectCharacters(scenes, sbDoc, channelDir) {
   const ids = new Set(scenes.flatMap(characterIdsOf));
   const docCharacters = sbDoc?.characters;
-  if (docCharacters && typeof docCharacters === "object") {
-    for (const id of Object.keys(docCharacters)) ids.add(id);
+  const details = /* @__PURE__ */ new Map();
+  if (Array.isArray(docCharacters)) {
+    for (const value of docCharacters) {
+      if (!value || typeof value !== "object" || typeof value.id !== "string") continue;
+      const detail = value;
+      details.set(detail.id, detail);
+      ids.add(detail.id);
+    }
+  } else if (docCharacters && typeof docCharacters === "object") {
+    for (const [id, value] of Object.entries(docCharacters)) {
+      details.set(id, value && typeof value === "object" ? value : {});
+      ids.add(id);
+    }
   }
   return [...ids].map((id) => {
+    const fromDoc = details.get(id) ?? {};
+    const tts = ttsOf(fromDoc.tts);
+    if (!tts) throw new Error(`SB_DOC.characters.${id}.tts must define engine and voiceId.`);
     const identity = path10.join(channelDir, "assets", "characters", id, "identity.md");
-    const detail = { id };
+    const detail = {
+      id,
+      tts,
+      ...typeof fromDoc.name === "string" ? { name: fromDoc.name } : {},
+      ...typeof fromDoc.role === "string" ? { role: fromDoc.role } : {},
+      ...typeof fromDoc.appearance === "string" ? { appearance: fromDoc.appearance } : {}
+    };
     if (existsSync12(identity)) {
       const text2 = readFileSync9(identity, "utf8");
       const heading = /^#\s+(.+?)\s*(?:\(([^)]*)\))?\s*$/m.exec(text2);
@@ -87643,6 +87682,32 @@ function collectCharacters(scenes, sbDoc, channelDir) {
       if (look) detail.appearance = look.trim();
     }
     return detail;
+  });
+}
+function normalizeNarrationSpeakers(scenes, characters) {
+  const byId = new Map(characters.map((character) => [character.id, character.id]));
+  const names = /* @__PURE__ */ new Map();
+  for (const character of characters) {
+    if (!character.name) continue;
+    names.set(character.name, [...names.get(character.name) ?? [], character.id]);
+  }
+  return scenes.map((scene) => {
+    if (!scene || typeof scene !== "object" || !Array.isArray(scene.narration)) return scene;
+    return {
+      ...scene,
+      narration: scene.narration.map((segment) => {
+        if (!segment || typeof segment !== "object" || typeof segment.speaker !== "string") return segment;
+        const speaker = segment.speaker;
+        if (!speaker.trim()) {
+          const { speaker: _speaker, ...withoutSpeaker } = segment;
+          return withoutSpeaker;
+        }
+        const named = names.get(speaker);
+        const id = byId.get(speaker) ?? (named?.length === 1 ? named[0] : void 0);
+        if (!id) throw new Error(`narration speaker "${speaker}" does not match a character id or name.`);
+        return { ...segment, speaker: id };
+      })
+    };
   });
 }
 
@@ -88039,7 +88104,7 @@ async function uploadEpisodeImages(client, args, base) {
       const target = item.shotId ? `window.SCENES.find(shot => shot.id === ${JSON.stringify(item.shotId)})` : `window.SCENES[${item.shotNo - 1}]`;
       return `${target}.portalImageId = ${JSON.stringify(item.imageId)};`;
     }).join("\n") + "\n" : "");
-    const scenes = evaluateScenesJs(nextSource).scenes;
+    const scenes = normalizeNarrationSpeakers(evaluateScenesJs(nextSource).scenes, payload.characters);
     const documents = payload.documents.map((d) => d.filename === "scenes.js" ? { ...d, content: nextSource } : d);
     if (!unchanged()) throw new Error("Local board or portal state changed; uploaded blobs are not linked.");
     const backup = path12.join(sb, ".portal-local", `images-${randomUUID3()}`);
@@ -88055,6 +88120,7 @@ async function uploadEpisodeImages(client, args, base) {
       scenes,
       meta: payload.episode.meta,
       characters: payload.characters,
+      narratorCharacterId: payload.narratorCharacterId,
       documents,
       note: "Link uploaded shot images"
     });
@@ -88505,6 +88571,7 @@ function portalHandlers(fetchImpl) {
           uploaded: {
             scenes: payload.scenes.length,
             characters: payload.characters.map((c) => c.id),
+            narratorCharacterId: payload.narratorCharacterId,
             documents: payload.documents.map((d) => d.filename)
           }
         });
@@ -88667,6 +88734,7 @@ function portalHandlers(fetchImpl) {
             body.scenes = payload.scenes;
             body.meta = payload.episode.meta;
             body.characters = payload.characters;
+            body.narratorCharacterId = payload.narratorCharacterId;
             uploadedScenes = payload.scenes.length;
           }
           const docs = readDocuments(sb, documents ?? DOCUMENT_FILES);
@@ -89107,9 +89175,10 @@ ${assignment}
       stage: head.stage ?? "board",
       sourceHost: client.holder,
       baseRevisionNo: state.headRevisionNo,
-      scenes: evaluateScenesJs(next).scenes,
+      scenes: normalizeNarrationSpeakers(evaluateScenesJs(next).scenes, payload.characters),
       meta: payload.episode.meta,
       characters: payload.characters,
+      narratorCharacterId: payload.narratorCharacterId,
       documents: payload.documents.map((d) => d.filename === "scenes.js" ? { ...d, content: next } : d),
       note: `Link shot ${args.kind}`
     });

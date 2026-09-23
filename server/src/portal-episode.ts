@@ -148,6 +148,16 @@ export interface PortalCharacter {
   name?: string;
   role?: string;
   appearance?: string;
+  tts: PortalTts;
+}
+
+export interface PortalTts {
+  engine: 'gemini' | 'supertonic' | 'elevenlabs' | 'mlx';
+  voiceId: string;
+  model?: string;
+  speed?: number;
+  language?: string;
+  stylePrompt?: string;
 }
 
 export interface ImportPayload {
@@ -163,6 +173,7 @@ export interface ImportPayload {
   };
   scenes: unknown[];
   characters: PortalCharacter[];
+  narratorCharacterId: string;
   documents: Array<{ filename: string; content: string }>;
 }
 
@@ -197,6 +208,11 @@ export function buildImportPayload(episodeDir: string, options: ImportOptions = 
     content: readFileSync(path.join(sb, f), 'utf8'),
   }));
 
+  const characters = collectCharacters(scenes, sbDoc, channelDir);
+  const narratorCharacterId = typeof sbDoc?.narratorCharacterId === 'string' ? sbDoc.narratorCharacterId : '';
+  if (!narratorCharacterId || !characters.some((character) => character.id === narratorCharacterId))
+    throw new Error('SB_DOC.narratorCharacterId must match one SB_DOC.characters id.');
+  const normalizedScenes = normalizeNarrationSpeakers(scenes, characters);
   const status = md.status ?? null;
   return {
     project: { name: channel },
@@ -208,8 +224,9 @@ export function buildImportPayload(episodeDir: string, options: ImportOptions = 
       ...(status && (EPISODE_STATUSES as readonly string[]).includes(status) ? { status } : {}),
       meta: sbDoc ? { ...meta, SB_DOC: sbDoc } : meta,
     },
-    scenes,
-    characters: collectCharacters(scenes, sbDoc, channelDir),
+    scenes: normalizedScenes,
+    characters,
+    narratorCharacterId,
     documents,
   };
 }
@@ -231,15 +248,47 @@ function characterIdsOf(shot: unknown): string[] {
     .filter((id): id is string => Boolean(id));
 }
 
+function ttsOf(value: unknown): PortalTts | null {
+  if (!value || typeof value !== 'object') return null;
+  const tts = value as Record<string, unknown>;
+  if (!['gemini', 'supertonic', 'elevenlabs', 'mlx'].includes(String(tts.engine)) || typeof tts.voiceId !== 'string' || !tts.voiceId.trim()) return null;
+  return {
+    engine: tts.engine as PortalTts['engine'], voiceId: tts.voiceId,
+    ...(typeof tts.model === 'string' ? { model: tts.model } : {}),
+    ...(typeof tts.speed === 'number' ? { speed: tts.speed } : {}),
+    ...(typeof tts.language === 'string' ? { language: tts.language } : {}),
+    ...(typeof tts.stylePrompt === 'string' ? { stylePrompt: tts.stylePrompt } : {}),
+  };
+}
+
 function collectCharacters(scenes: unknown[], sbDoc: Record<string, unknown> | null, channelDir: string): PortalCharacter[] {
   const ids = new Set(scenes.flatMap(characterIdsOf));
   const docCharacters = sbDoc?.characters;
-  if (docCharacters && typeof docCharacters === 'object') {
-    for (const id of Object.keys(docCharacters as Record<string, unknown>)) ids.add(id);
+  const details = new Map<string, Record<string, unknown>>();
+  if (Array.isArray(docCharacters)) {
+    for (const value of docCharacters) {
+      if (!value || typeof value !== 'object' || typeof (value as { id?: unknown }).id !== 'string') continue;
+      const detail = value as Record<string, unknown>;
+      details.set(detail.id as string, detail);
+      ids.add(detail.id as string);
+    }
+  } else if (docCharacters && typeof docCharacters === 'object') {
+    for (const [id, value] of Object.entries(docCharacters as Record<string, unknown>)) {
+      details.set(id, value && typeof value === 'object' ? value as Record<string, unknown> : {});
+      ids.add(id);
+    }
   }
   return [...ids].map((id) => {
+    const fromDoc = details.get(id) ?? {};
+    const tts = ttsOf(fromDoc.tts);
+    if (!tts) throw new Error(`SB_DOC.characters.${id}.tts must define engine and voiceId.`);
     const identity = path.join(channelDir, 'assets', 'characters', id, 'identity.md');
-    const detail: PortalCharacter = { id };
+    const detail: PortalCharacter = {
+      id, tts,
+      ...(typeof fromDoc.name === 'string' ? { name: fromDoc.name } : {}),
+      ...(typeof fromDoc.role === 'string' ? { role: fromDoc.role } : {}),
+      ...(typeof fromDoc.appearance === 'string' ? { appearance: fromDoc.appearance } : {}),
+    };
     if (existsSync(identity)) {
       const text = readFileSync(identity, 'utf8');
       const heading = /^#\s+(.+?)\s*(?:\(([^)]*)\))?\s*$/m.exec(text);
@@ -250,5 +299,33 @@ function collectCharacters(scenes: unknown[], sbDoc: Record<string, unknown> | n
       if (look) detail.appearance = look.trim();
     }
     return detail;
+  });
+}
+
+/** `speaker` is persisted as a stable character id. Names are accepted only at this save boundary. */
+export function normalizeNarrationSpeakers(scenes: unknown[], characters: PortalCharacter[]): unknown[] {
+  const byId = new Map(characters.map((character) => [character.id, character.id]));
+  const names = new Map<string, string[]>();
+  for (const character of characters) {
+    if (!character.name) continue;
+    names.set(character.name, [...(names.get(character.name) ?? []), character.id]);
+  }
+  return scenes.map((scene) => {
+    if (!scene || typeof scene !== 'object' || !Array.isArray((scene as { narration?: unknown }).narration)) return scene;
+    return {
+      ...(scene as Record<string, unknown>),
+      narration: ((scene as { narration: unknown[] }).narration).map((segment) => {
+        if (!segment || typeof segment !== 'object' || typeof (segment as { speaker?: unknown }).speaker !== 'string') return segment;
+        const speaker = (segment as { speaker: string }).speaker;
+        if (!speaker.trim()) {
+          const { speaker: _speaker, ...withoutSpeaker } = segment as Record<string, unknown>;
+          return withoutSpeaker;
+        }
+        const named = names.get(speaker);
+        const id = byId.get(speaker) ?? (named?.length === 1 ? named[0] : undefined);
+        if (!id) throw new Error(`narration speaker "${speaker}" does not match a character id or name.`);
+        return { ...(segment as Record<string, unknown>), speaker: id };
+      }),
+    };
   });
 }

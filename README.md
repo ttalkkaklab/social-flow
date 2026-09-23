@@ -752,6 +752,12 @@ falls through to the flat file, and the `TTALKKAKSTORY_*` env is the last resort
 never committed. `portal_workspace_check` tells which file answered and which workspace the
 key opens — the storyboard skill calls it once at the top of a session.
 
+`portal_storyboard_save` requires `SB_DOC.characters` with at least one character, a matching
+`SB_DOC.narratorCharacterId`, and a `tts` object on every character. Narration segment
+`speaker` values are saved as character ids; a name is accepted only at the save boundary, and
+an unmatched value fails instead of falling back. `portal_storyboard_pull` restores the same
+block, and produce uses it for synthesis.
+
 With a key present the portal is the episode's **source of truth and the local directory a
 working copy** (portal design note, 2026-09-20). The storyboard skill takes a lease and pulls
 at the top of a session (`portal_episode_lease acquire` · `portal_storyboard_pull`, or

@@ -4,7 +4,7 @@ import { appendFileSync, closeSync, fstatSync, statSync, mkdirSync, openSync, re
 import path from 'node:path';
 import { z } from 'zod';
 import { portalClientFor, describePortalError } from './portal-client.js';
-import { buildImportPayload, channelOfEpisodeDir, episodeDirOf, evaluateScenesJs, readPortalState, writePortalState } from './portal-episode.js';
+import { buildImportPayload, channelOfEpisodeDir, episodeDirOf, evaluateScenesJs, normalizeNarrationSpeakers, readPortalState, writePortalState } from './portal-episode.js';
 const portalShotFields = {
     episodeDir: z.string().min(1),
     shotId: z.string().min(1).optional(),
@@ -122,7 +122,8 @@ export async function uploadShotMedia(args, fetchImpl) {
             throw new Error('Local board/state changed; upload is not linked.');
         phase = 'checkpoint';
         const saved = await client.checkpoint(state.episodeId, { stage: head.stage ?? 'board', sourceHost: client.holder, baseRevisionNo: state.headRevisionNo,
-            scenes: evaluateScenesJs(next).scenes, meta: payload.episode.meta, characters: payload.characters,
+            scenes: normalizeNarrationSpeakers(evaluateScenesJs(next).scenes, payload.characters),
+            meta: payload.episode.meta, characters: payload.characters, narratorCharacterId: payload.narratorCharacterId,
             documents: payload.documents.map(d => d.filename === 'scenes.js' ? { ...d, content: next } : d), note: `Link shot ${args.kind}` });
         revisionNo = saved.data.revisionNo;
         if (!Number.isSafeInteger(revisionNo) || revisionNo < state.headRevisionNo)
