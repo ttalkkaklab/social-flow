@@ -1311,7 +1311,7 @@ length, platforms) together with the cost summary, and point the user at
 `/social-flow:publish`. If the `portal_*` tools are listed (the channel has a ttalkkakstory
 workspace API key, README §The ttalkkakstory portal), call `portal_storyboard_save` once more with
 the episode directory's absolute path (the board may have moved since approval — regenerated prompts,
-slide plans) and then `portal_episode_status` with `status: "produced"` and the `episodeId` the save returned; `.portal.json` supplies that id on the save, so a retitled board updates the same portal record. Keep `portal_episode`/`portal_url` aligned with the save result before setting the status. Tools absent: one line, move on.
+slide plans). Then call `portal_images_upload` with `episodeDir` and `stage: "produced"`; inspect `skipped` and partial failures. On 409/unknown checkpoint, keep the recovery copy and side-pull/merge; do not blindly retry images. See README §The ttalkkakstory portal. Then call `portal_episode_status` with `status: "produced"` and the `episodeId` the save returned; `.portal.json` supplies that id on the save, so a retitled board updates the same portal record. Keep `portal_episode`/`portal_url` aligned with the save result before setting the status. Tools absent: one line, move on.
 A call that errors: report the message in one line, retry a 409 once, and finish the report
 and the `status: produced` file update regardless — the portal is a mirror, not a gate.
 

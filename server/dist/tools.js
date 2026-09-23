@@ -964,6 +964,23 @@ Returns: JSON — { scenarios: [{ candidate, chosen, score, p0, findings }], wri
         },
     },
     {
+        name: 'portal_images_upload', title: 'Upload and link local shot images',
+        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+        description: 'After portal_storyboard_save has linked the episode, upload PNG/JPEG/WebP files (5 MiB each), then checkpoint their portalImageId UUIDs with the local base revision. Images upload sequentially. Defaults to storyboard/images/scene-N.* by source array ordinal, retaining shot IDs. Explicit mappings require shotId when present; shotNo is only for legacy shots without IDs. Paths stay inside storyboard/. Missing default images are reported as skipped. Success updates scenes.js and .portal.json; partial failures report uploaded UUIDs and recovery instructions. No automatic conflict retry. No image generation or publishing.',
+        inputSchema: { type: 'object', required: ['episodeDir', 'stage'], properties: {
+                episodeDir: PORTAL_EPISODE_DIR_ARG,
+                stage: { type: 'string', enum: PORTAL_STAGE_ENUM, description: 'Current workflow stage to checkpoint; do not downgrade an approved or produced episode.' },
+                baseRevisionNo: { type: 'integer', minimum: 0, description: 'Explicit merged base; defaults to .portal.json headRevisionNo.' },
+                images: { type: 'array', minItems: 1, maxItems: 500, description: 'Optional explicit shot-to-file mappings. Omit to discover scene-N files.', items: {
+                        type: 'object', required: ['file'], properties: {
+                            shotId: { type: 'string', minLength: 1, description: 'Stable source shot ID (preferred).' },
+                            shotNo: { type: 'integer', minimum: 1, description: '1-based array ordinal, only for shots without IDs.' },
+                            file: { type: 'string', minLength: 1, description: 'File path relative to storyboard/, or an absolute path inside it.' },
+                        }, oneOf: [{ required: ['shotId'], not: { required: ['shotNo'] } }, { required: ['shotNo'], not: { required: ['shotId'] } }],
+                    } },
+            } },
+    },
+    {
         name: 'portal_render_allocation', title: 'Read or submit the episode render allocation',
         annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
         description: 'Read the pending render ratio request and every shot. The host LLM chooses render.mode by shot purpose within bounds, then submits assignments with requestId and baseRevisionNo. No LLM API or paid asset call occurs here. The portal validates complete shot IDs, video bands, lease and revision, then saves atomically. Read again on conflict; pull the updated board before local edits. Returns request, bounds, shots and instructions on read, or the new revision on submit.',

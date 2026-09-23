@@ -14,6 +14,8 @@
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { z } from 'zod';
+import { imageUploadSchema, uploadEpisodeImages } from './portal-images.js';
+export { imageUploadSchema } from './portal-images.js';
 import { portalCredentialFile, PORTAL_CREDENTIAL_FILENAME } from './config.js';
 import { describePortalError, PortalError, portalClientFor, SAFE_DOCUMENT_NAME, type FetchLike, type PortalClient, type PortalRevisionDiff } from './portal-client.js';
 import {
@@ -30,6 +32,7 @@ import {
 } from './portal-episode.js';
 
 export const PORTAL_TOOL_NAMES = [
+  'portal_images_upload',
   'portal_workspace_check',
   'portal_storyboard_save',
   'portal_storyboard_list',
@@ -315,6 +318,7 @@ function resolveEpisodeId(episodeId: string | undefined, episodeDir: string | un
 }
 
 export interface PortalHandlers {
+  imagesUpload(a: z.infer<typeof imageUploadSchema>): Promise<PortalToolResult>;
   renderAllocation(a: z.infer<typeof renderAllocationSchema>): Promise<PortalToolResult>;
   workspaceCheck(a: z.infer<typeof workspaceCheckSchema>): Promise<PortalToolResult>;
   storyboardSave(a: z.infer<typeof storyboardSaveSchema>): Promise<PortalToolResult>;
@@ -334,6 +338,16 @@ export interface PortalHandlers {
 /** The handlers, with fetch injectable so the tests never touch a network. */
 export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
   return {
+    async imagesUpload(args) {
+      const r = resolveClient(fetchImpl, undefined, args.episodeDir);
+      if ('error' in r) return r.error;
+      const refused = refuseMismatch(r.client, args.episodeDir);
+      if (refused) return refused;
+      try {
+        if (!readPortalState(args.episodeDir)?.episodeId) throw new Error('Save with portal_storyboard_save first to create/link the episode, then upload images. Nothing was sent.');
+        return await uploadEpisodeImages(r.client, args, saveBase(args.episodeDir, args.baseRevisionNo, true)!);
+      } catch (error) { return failed(error); }
+    },
     async renderAllocation({ episodeId, episodeDir, channel, assignments, requestId, baseRevisionNo }) {
       const r = resolveClient(fetchImpl, channel, episodeDir);
       if ('error' in r) return r.error;

@@ -224,7 +224,7 @@ optional, and they're what turns the tool from a video maker into an operator.**
   9:16 or 16:9 video plus per-platform text into
   `data/<channel>/episodes/<topic>/output/`, and you upload those files by hand. Only
   the publishing and growth-loop half is unavailable: the 11 publish/review/insight tools
-  aren't even listed (`tools/list` shows 72 instead of 96 — the 13 `portal_*` tools are
+  aren't even listed (`tools/list` shows 72 instead of 98 — the 15 `portal_*` tools are
   gated the same way on a portal key), and the growth skills have
   nothing to drive. Explicit tool-disable settings can reduce that list further.
 
@@ -480,7 +480,7 @@ social-flow/
 ├── .plugin/plugin.json          # Buzz persona pack (Open Plugin Spec)
 ├── personas/                    # Buzz pack persona (pipeline.persona.md)
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 97 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 98 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
 │       ├── tools.ts             # tool definitions — 83: research 9 + open data 5 + generation 40 + publish 6 + comments 3 + growth insights 5 + growth review 2 + check 2 + blender 7 + storyboard 4
@@ -542,14 +542,14 @@ social-flow/
 └── data/                        # content data root (see data/README.md)
 ```
 
-## MCP tool surface (97 tools)
+## MCP tool surface (98 tools)
 
-**`tools/list` does not show all 96.** The credential-gated publish, review and insights tools
+**`tools/list` does not show all 98.** The credential-gated publish, review and insights tools
 (`threads_draft_create` · `threads_review_submit` · `threads_publish` · `instagram_publish` · `facebook_publish` · `facebook_comment` ·
 `youtube_publish` · `threads_insights` · `instagram_insights` · `youtube_insights` ·
 `threads_search`) are exposed **only for platforms whose credential file exists** —
 evaluated at list time, so adding a token makes them appear without restarting the
-server. The 13 `portal_*` tools follow the same rule on the ttalkkakstory workspace key
+server. The 15 `portal_*` tools follow the same rule on the ttalkkakstory workspace key
 (`<SNS_TOKEN_DIR>/<channel>/ttalkkakstory.json`, the flat file, or `TTALKKAKSTORY_*`). With
 no tokens and no portal key you'll count 72; explicit tool-disable settings can reduce
 that list further. Hidden tools still have live handlers:
@@ -594,7 +594,7 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | Publish | `threads_publish` / `instagram_publish` / `facebook_publish` / `facebook_comment` / `youtube_publish` / `youtube_update` | Direct platform API calls — **exposed only for platforms with a credential file** (`youtube_update` edits title/description/tags/visibility of an already-uploaded video) |
 | Comment inbox | `sns_comment_inbox` / `sns_comment_reply` / `sns_comment_moderate` | Cross-platform normalized inbox · replies · hiding (no deletes). Inbox and replies cover all 4 platforms; hiding excludes YouTube (its API only offers held-for-review, which means something else) |
 | Storyboard | `storyboard_read` / `storyboard_apply` / `storyboard_check` / `scenario_check` | The episode board as sequences → scenes → shots (`window.STRUCTURE` beside the flat `SCENES` produce reads), plus the scenario input contract. `read` returns the tree at four levels; `apply` writes or patches the board and refuses to write past a violation; `storyboard_check` runs the structure rules plus the full `check-scenes.js` contract; `scenario_check` runs S1–S12 on `candidates/` or `scenario.md` and returns the checker JSON. Local files only — the board rules live in [structure-contract.js](skills/storyboard/references/structure-contract.js), shared with the checker and approval page |
-| Portal | `portal_workspace_check` / `portal_storyboard_save` / `portal_storyboard_list` / `portal_storyboard_pull` / `portal_episode_create` / `portal_episode_checkpoint` / `portal_episode_revisions` / `portal_episode_restore` / `portal_episode_lease` / `portal_episode_status` / `portal_scenario_save` / `portal_scenario_pull` / `portal_scenario_choose` | The ttalkkakstory portal by **workspace API key** (`Authorization: Bearer tks_…`) — the episode's record while the local directory is the working copy. The key comes from `<SNS_TOKEN_DIR>/<channel>/ttalkkakstory.json`, read off the episode path (`data/<channel>/episodes/<topic>`), so one channel is one workspace; listed only while a key exists, and every call answers one line without one. `save` uploads the board and documents (also a checkpoint), `pull` rebuilds the directory from the portal, `lease` guards two machines on one topic, `checkpoint`/`revisions`/`restore` are the revision history, `scenario_*` carry the three candidate pages and the pick — see [the portal section](#the-ttalkkakstory-portal-by-workspace-api-key) |
+| Portal | `portal_images_upload` / `portal_render_allocation` / `portal_workspace_check` / `portal_storyboard_save` / `portal_storyboard_list` / `portal_storyboard_pull` / `portal_episode_create` / `portal_episode_checkpoint` / `portal_episode_revisions` / `portal_episode_restore` / `portal_episode_lease` / `portal_episode_status` / `portal_scenario_save` / `portal_scenario_pull` / `portal_scenario_choose` | The ttalkkakstory portal by **workspace API key** (`Authorization: Bearer tks_…`) — the episode's record while the local directory is the working copy. The key comes from `<SNS_TOKEN_DIR>/<channel>/ttalkkakstory.json`, read off the episode path (`data/<channel>/episodes/<topic>`), so one channel is one workspace; listed only while a key exists, and every call answers one line without one. `save` uploads the board and documents (also a checkpoint), `pull` rebuilds the directory from the portal, `lease` guards two machines on one topic, `checkpoint`/`revisions`/`restore` are the revision history, `scenario_*` carry the three candidate pages and the pick — see [the portal section](#the-ttalkkakstory-portal-by-workspace-api-key) |
 | Capability | `capability_status` | What this machine has configured, grouped by capability with an "N of M" count, plus the env var that would unlock each missing provider. Call it before planning anything that spends money — otherwise a missing key only surfaces when the call fails, after the plan was built around it. Reports configuration, not reachability |
 | Check | `sns_account_check` | Batch /me check across tokens (token values never shown) |
 | Growth insights | `threads_insights` / `threads_search` | Threads insights (account/post metrics) + public keyword search — for grow-threads (`threads_manage_insights` · `threads_keyword_search` scopes) |
@@ -767,6 +767,24 @@ who holds the topic and until when. Without a key the `portal_*` tools are not l
 skills say so in one line and carry on with local files, and an errored call is reported in one
 line — the portal records, it does not gate. The portal repository's own `mcp/` server still
 exists for other clients; this plugin no longer needs it.
+
+Once local shot images exist, call `portal_images_upload` with `episodeDir` and the
+current `stage` after the first `portal_storyboard_save` has created the episode. It
+uploads `storyboard/images/scene-N.{png,jpg,jpeg,webp}` sequentially (PNG/JPEG/WebP,
+5 MiB each), then checkpoints the returned `portalImageId` UUIDs using the copy's
+base revision. N is the 1-based source array ordinal, independent of a shot's `no`.
+An explicit `images: [{ shotId, file }]` mapping uses stable source IDs; `shotNo`
+is accepted only for legacy shots without IDs. Files must resolve inside storyboard/.
+Missing default files are listed as `skipped`; an empty selection is an error.
+The tool adds only UUID references to shots and updates local `scenes.js` and
+`.portal.json` after the checkpoint succeeds. It preserves authored JavaScript and
+keeps recovery copies under `storyboard/.portal-local/images-*/`.
+An upload or checkpoint failure is **not** a completed save: the error includes
+successful uploads, the failed phase and recovery instructions. Identical bytes are
+deduplicated by the portal. On 409 or an unknown checkpoint outcome, side-pull the
+head, merge local edits and recovered image UUIDs, then save with that explicit base.
+A checkpoint success followed by a local write failure reports the saved revision;
+keep local edits and merge the recovery copy rather than retrying blindly.
 
 ## Documentation (docs/)
 
