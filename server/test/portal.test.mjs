@@ -51,7 +51,13 @@ function fakeFetch(routes) {
     const method = (init.method ?? 'GET').toUpperCase();
     const u = new URL(url);
     const key = `${method} ${u.pathname}`;
-    calls.push({ method, url, path: u.pathname, search: u.search, headers: init.headers ?? {}, body: init.body ? JSON.parse(init.body) : undefined });
+    if (!routes[key] && u.pathname.endsWith('/attachments')) {
+      if (method === 'GET') return Response.json({ success: true, data: { items: [] } });
+      const bytes = Buffer.from(init.body);
+      const { createHash } = await import('node:crypto');
+      return Response.json({ success: true, data: { id: '33333333-3333-4333-8333-333333333333', relativePath: u.searchParams.get('path'), sha256: createHash('sha256').update(bytes).digest('hex'), byteSize: bytes.length, provenance: {} } });
+    }
+    calls.push({ method, url, path: u.pathname, search: u.search, headers: init.headers ?? {}, body: init.body ? (typeof init.body === 'string' ? JSON.parse(init.body) : init.body) : undefined });
     const answer = routes[key];
     if (!answer) return new Response(JSON.stringify({ success: false, error: `no route ${key}` }), { status: 404 });
     const out = typeof answer === 'function' ? answer(calls[calls.length - 1]) : answer;
@@ -1107,8 +1113,8 @@ describe('portal_* handlers on a scripted portal', () => {
 describe('portal tool surface', () => {
   const names = new Set(TOOLS.map((t) => t.name));
 
-  it('all fifteen portal tools are defined and routed, and nothing else starts with portal_', () => {
-    assert.equal(portal.PORTAL_TOOL_NAMES.length, 15);
+  it('all sixteen portal tools are defined and routed, and nothing else starts with portal_', () => {
+    assert.equal(portal.PORTAL_TOOL_NAMES.length, 16);
     for (const name of portal.PORTAL_TOOL_NAMES) {
       assert.ok(names.has(name), `${name} not in TOOLS`);
       assert.equal(typeof ROUTES[name], 'function', `${name} not routed`);

@@ -480,7 +480,7 @@ social-flow/
 ├── .plugin/plugin.json          # Buzz persona pack (Open Plugin Spec)
 ├── personas/                    # Buzz pack persona (pipeline.persona.md)
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 98 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 99 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
 │       ├── tools.ts             # tool definitions — 83: research 9 + open data 5 + generation 40 + publish 6 + comments 3 + growth insights 5 + growth review 2 + check 2 + blender 7 + storyboard 4
@@ -542,7 +542,7 @@ social-flow/
 └── data/                        # content data root (see data/README.md)
 ```
 
-## MCP tool surface (98 tools)
+## MCP tool surface (99 tools)
 
 **`tools/list` does not show all 98.** The credential-gated publish, review and insights tools
 (`threads_draft_create` · `threads_review_submit` · `threads_publish` · `instagram_publish` · `facebook_publish` · `facebook_comment` ·
@@ -913,3 +913,10 @@ responsibility (see the disclaimer in LICENSE).
 ## License
 
 [Apache License 2.0](LICENSE). Copyright 2026 Zeans.
+
+
+Episode attachments: `portal_attachments_sync` uploads missing/changed files after a board is linked.
+Board import/checkpoint also call it automatically; current-head pull restores original paths and SHA256-verified bytes.
+Inspect `attachments.complete` before removing local originals. The per-file maximum is 10 MiB; shared quotas are
+100 MiB/episode and 500 MiB/workspace. Rights evidence in `.portal-attachments.json` is keyed by relative path
+and travels with the file. Scene sound design refers to the returned logical attachment UUID.
