@@ -87567,7 +87567,7 @@ ${JSON.stringify(error2.detail)}`;
 }
 
 // src/portal-episode.ts
-import { existsSync as existsSync12, readFileSync as readFileSync9, writeFileSync as writeFileSync8 } from "node:fs";
+import { existsSync as existsSync12, lstatSync, readFileSync as readFileSync9, writeFileSync as writeFileSync8 } from "node:fs";
 import path10 from "node:path";
 var EPISODE_STATUSES = ["draft", "approved", "produced", "published"];
 var EPISODE_STAGES = ["researched", "candidates", "scenario", "narration", "board", "approved", "produced", "published"];
@@ -87585,15 +87585,39 @@ function channelOfEpisodeDir(dir) {
   const channel = path10.basename(path10.dirname(episodes));
   return CHANNEL_SLUG_RE.test(channel) ? channel : void 0;
 }
+function stateReadError(reason) {
+  return new Error(`Cannot read .portal.json: ${reason}. Keep the state file and local edits. Restore a readable, valid backup or inspect the portal in a new directory before repairing this copy; do not delete the state file to bypass this error.`);
+}
 function readPortalState(dir) {
   const file = path10.join(episodeDirOf(dir), PORTAL_STATE_FILE);
-  if (!existsSync12(file)) return null;
   try {
-    const parsed = JSON.parse(readFileSync9(file, "utf8"));
-    return parsed && typeof parsed === "object" ? parsed : null;
-  } catch {
-    return null;
+    lstatSync(file);
+  } catch (error2) {
+    if (error2.code === "ENOENT") return null;
+    throw stateReadError("file metadata is unreadable");
   }
+  let source;
+  try {
+    source = readFileSync9(file, "utf8");
+  } catch {
+    throw stateReadError("file exists but is unreadable");
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(source);
+  } catch {
+    throw stateReadError("invalid JSON");
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw stateReadError("expected a JSON object");
+  const state = parsed;
+  if (typeof state.episodeId !== "string" || !state.episodeId.trim())
+    throw stateReadError("episodeId must be a nonempty string");
+  for (const field of ["workspace", "storyboardId", "episodeId", "holder", "updatedAt"]) {
+    if (field in state && typeof state[field] !== "string") throw stateReadError(`${field} must be a string when present`);
+  }
+  if ("headRevisionNo" in state && (!Number.isSafeInteger(state.headRevisionNo) || state.headRevisionNo < 0))
+    throw stateReadError("headRevisionNo must be a nonnegative safe integer when present");
+  return state;
 }
 function writePortalState(dir, patch) {
   const file = path10.join(episodeDirOf(dir), PORTAL_STATE_FILE);
@@ -88029,11 +88053,15 @@ function workspaceMismatch(client, dir) {
   return `Workspace mismatch \u2014 ${episodeDirOf(dir)}/.portal.json says this directory is a copy of workspace "${recorded}", but the key in use (${client.source}) opens workspace "${client.workspace}". Nothing was sent. Fix the key file for this channel, or \u2014 to start the topic over in "${client.workspace}" \u2014 delete .portal.json first.`;
 }
 function refuseMismatch(client, ...dirs) {
-  for (const dir of dirs) {
-    const message = workspaceMismatch(client, dir);
-    if (message) return { text: message, isError: true };
+  try {
+    for (const dir of dirs) {
+      const message = workspaceMismatch(client, dir);
+      if (message) return { text: message, isError: true };
+    }
+    return null;
+  } catch (error2) {
+    return failed(error2);
   }
-  return null;
 }
 function saveBase(dir, explicit, required2 = false) {
   const state = dir ? readPortalState(dir) : null;
@@ -88106,9 +88134,9 @@ function portalHandlers(fetchImpl) {
       const r2 = resolveClient(fetchImpl, channel, episodeDir);
       if ("error" in r2) return r2.error;
       try {
-        const { data } = await r2.client.me();
         const state = episodeDir ? readPortalState(episodeDir) : null;
         const mismatch = workspaceMismatch(r2.client, episodeDir);
+        const { data } = await r2.client.me();
         let portalPart = {};
         if (episodeDir && !mismatch) {
           portalPart = { pending: pendingOf(episodeDir) };

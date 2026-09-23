@@ -243,12 +243,17 @@ export function workspaceMismatch(client, dir) {
         `Fix the key file for this channel, or — to start the topic over in "${client.workspace}" — delete .portal.json first.`);
 }
 function refuseMismatch(client, ...dirs) {
-    for (const dir of dirs) {
-        const message = workspaceMismatch(client, dir);
-        if (message)
-            return { text: message, isError: true };
+    try {
+        for (const dir of dirs) {
+            const message = workspaceMismatch(client, dir);
+            if (message)
+                return { text: message, isError: true };
+        }
+        return null;
     }
-    return null;
+    catch (error) {
+        return failed(error);
+    }
 }
 /** A recorded copy must name the revision its local contents are based on. */
 function saveBase(dir, explicit, required = false) {
@@ -336,9 +341,9 @@ export function portalHandlers(fetchImpl) {
             if ('error' in r)
                 return r.error;
             try {
-                const { data } = await r.client.me();
                 const state = episodeDir ? readPortalState(episodeDir) : null;
                 const mismatch = workspaceMismatch(r.client, episodeDir);
+                const { data } = await r.client.me();
                 // Loop R5 — the one call at the top of a session also answers "is the portal ahead, who
                 // holds it, is there a half-merged side pull or a backup lying around", so the skill does
                 // not walk into the first checkpoint's 409. A portal lookup that fails leaves portal:null

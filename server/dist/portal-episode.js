@@ -11,7 +11,7 @@
  * The next checkpoint sends `headRevisionNo` as `baseRevisionNo`; when another machine saved
  * first the portal answers 409 `head_moved` and the skill pulls before saving again.
  */
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, lstatSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { evaluateWindowScript } from './scenes-vm.js';
 import { CHANNEL_SLUG_RE } from './config.js';
@@ -40,17 +40,49 @@ export function channelOfEpisodeDir(dir) {
     const channel = path.basename(path.dirname(episodes));
     return CHANNEL_SLUG_RE.test(channel) ? channel : undefined;
 }
+function stateReadError(reason) {
+    return new Error(`Cannot read .portal.json: ${reason}. Keep the state file and local edits. Restore a readable, valid backup or inspect the portal in a new directory before repairing this copy; do not delete the state file to bypass this error.`);
+}
 export function readPortalState(dir) {
     const file = path.join(episodeDirOf(dir), PORTAL_STATE_FILE);
-    if (!existsSync(file))
-        return null;
+    // existsSync hides permission errors and dangling symlinks as "absent".
+    // Only a missing directory entry is an unlinked copy.
     try {
-        const parsed = JSON.parse(readFileSync(file, 'utf8'));
-        return parsed && typeof parsed === 'object' ? parsed : null;
+        lstatSync(file);
+    }
+    catch (error) {
+        if (error.code === 'ENOENT')
+            return null;
+        throw stateReadError('file metadata is unreadable');
+    }
+    let source;
+    try {
+        source = readFileSync(file, 'utf8');
     }
     catch {
-        return null;
+        throw stateReadError('file exists but is unreadable');
     }
+    let parsed;
+    try {
+        parsed = JSON.parse(source);
+    }
+    catch {
+        throw stateReadError('invalid JSON');
+    }
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))
+        throw stateReadError('expected a JSON object');
+    const state = parsed;
+    // Every state writer supplies an episodeId or patches an already linked copy.
+    // Other missing fields remain valid for legacy and pre-checkpoint records.
+    if (typeof state.episodeId !== 'string' || !state.episodeId.trim())
+        throw stateReadError('episodeId must be a nonempty string');
+    for (const field of ['workspace', 'storyboardId', 'episodeId', 'holder', 'updatedAt']) {
+        if (field in state && typeof state[field] !== 'string')
+            throw stateReadError(`${field} must be a string when present`);
+    }
+    if ('headRevisionNo' in state && (!Number.isSafeInteger(state.headRevisionNo) || state.headRevisionNo < 0))
+        throw stateReadError('headRevisionNo must be a nonnegative safe integer when present');
+    return state;
 }
 export function writePortalState(dir, patch) {
     const file = path.join(episodeDirOf(dir), PORTAL_STATE_FILE);
