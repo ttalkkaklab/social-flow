@@ -63,6 +63,7 @@ export interface PortalClient {
   /** Two revisions compared — `to` is a number or 'head' (portal loop R3). */
   revisionDiff(episodeId: string, from: number, to: number | 'head'): Promise<PortalResponse<PortalRevisionDiff>>;
   renderAllocation(episodeId: string, body?: Record<string, unknown>): Promise<PortalResponse<Record<string, unknown>>>;
+  uploadImage(episodeId: string, bytes: Uint8Array, mime: string): Promise<PortalResponse<PortalImage>>;
   checkpoint(episodeId: string, body: Record<string, unknown>): Promise<PortalResponse<{ revisionNo: number }>>;
   restoreRevision(episodeId: string, no: number, body?: Record<string, unknown>): Promise<PortalResponse<{ revisionNo: number }>>;
   getLease(episodeId: string): Promise<PortalResponse>;
@@ -73,6 +74,10 @@ export interface PortalClient {
   chooseScenario(episodeId: string, candidate: string): Promise<PortalResponse<PortalScenarioSaved>>;
   scenarioMd(episodeId: string, candidate: string): Promise<string>;
   pageUrl(relative: string): string;
+}
+
+export interface PortalImage {
+  id: string; sha256: string; mime: string; byteSize: number; created: boolean;
 }
 
 export interface PortalEpisode {
@@ -146,13 +151,14 @@ export function createPortalClient(credential: PortalCredential, fetchImpl: Fetc
   const holder = credential.holder || defaultHolder(credential.apiKey);
   const timeoutMs = Math.max(config.requestTimeoutMs, PORTAL_TIMEOUT_MS);
 
-  async function json<T = unknown>(method: string, path: string, body?: unknown): Promise<PortalResponse<T>> {
+  async function json<T = unknown>(method: string, path: string, body?: unknown, binaryMime?: string): Promise<PortalResponse<T>> {
     let response: Response;
     try {
       response = await fetchImpl(`${base}${path}`, {
         method,
-        headers: body === undefined ? headers : { ...headers, 'content-type': 'application/json' },
-        body: body === undefined ? undefined : JSON.stringify(body),
+        headers: body === undefined ? headers : { ...headers, 'content-type': binaryMime ?? 'application/json', ...(binaryMime ? { 'content-length': String((body as Uint8Array).byteLength) } : {}) },
+        body: body === undefined ? undefined : binaryMime ? body as BodyInit : JSON.stringify(body),
+        redirect: 'error',
         signal: AbortSignal.timeout(timeoutMs),
       });
     } catch (error) {
@@ -212,6 +218,7 @@ export function createPortalClient(credential: PortalCredential, fetchImpl: Fetc
     getRevision: (episodeId, no) => json<PortalRevision>('GET', `/episodes/${episodeId}/revisions/${no}`),
     revisionDiff: (episodeId, from, to) => json<PortalRevisionDiff>('GET', `/episodes/${episodeId}/revisions/${from}/diff/${to}`),
     renderAllocation: (episodeId, body) => json(body ? 'PUT' : 'GET', `/episodes/${episodeId}/render-allocation`, body ? { ...body, sourceHost: holder } : undefined),
+    uploadImage: (episodeId, bytes, mime) => json<PortalImage>('POST', withHolder(`/episodes/${episodeId}/images`), bytes, mime),
     checkpoint: (episodeId, body) => json<{ revisionNo: number }>('POST', `/episodes/${episodeId}/revisions`, body),
     restoreRevision: (episodeId, no, body = {}) =>
       json<{ revisionNo: number }>('POST', `/episodes/${episodeId}/revisions/${no}/restore`, body),

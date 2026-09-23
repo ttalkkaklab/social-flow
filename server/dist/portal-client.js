@@ -51,13 +51,14 @@ export function createPortalClient(credential, fetchImpl = fetch) {
     const headers = { authorization: `Bearer ${credential.apiKey}` };
     const holder = credential.holder || defaultHolder(credential.apiKey);
     const timeoutMs = Math.max(config.requestTimeoutMs, PORTAL_TIMEOUT_MS);
-    async function json(method, path, body) {
+    async function json(method, path, body, binaryMime) {
         let response;
         try {
             response = await fetchImpl(`${base}${path}`, {
                 method,
-                headers: body === undefined ? headers : { ...headers, 'content-type': 'application/json' },
-                body: body === undefined ? undefined : JSON.stringify(body),
+                headers: body === undefined ? headers : { ...headers, 'content-type': binaryMime ?? 'application/json', ...(binaryMime ? { 'content-length': String(body.byteLength) } : {}) },
+                body: body === undefined ? undefined : binaryMime ? body : JSON.stringify(body),
+                redirect: 'error',
                 signal: AbortSignal.timeout(timeoutMs),
             });
         }
@@ -115,6 +116,7 @@ export function createPortalClient(credential, fetchImpl = fetch) {
         getRevision: (episodeId, no) => json('GET', `/episodes/${episodeId}/revisions/${no}`),
         revisionDiff: (episodeId, from, to) => json('GET', `/episodes/${episodeId}/revisions/${from}/diff/${to}`),
         renderAllocation: (episodeId, body) => json(body ? 'PUT' : 'GET', `/episodes/${episodeId}/render-allocation`, body ? { ...body, sourceHost: holder } : undefined),
+        uploadImage: (episodeId, bytes, mime) => json('POST', withHolder(`/episodes/${episodeId}/images`), bytes, mime),
         checkpoint: (episodeId, body) => json('POST', `/episodes/${episodeId}/revisions`, body),
         restoreRevision: (episodeId, no, body = {}) => json('POST', `/episodes/${episodeId}/revisions/${no}/restore`, body),
         getLease: (episodeId) => json('GET', `/episodes/${episodeId}/lease`),
