@@ -33,6 +33,7 @@ function setup(shots = [{ id: 's0002' }, { id: 's0001' }]) {
 function transport(hook) {
   const calls = [];
   const fetch = async (url, init) => {
+    if (new URL(url).pathname === '/api/token') return Response.json({ success: true, data: { workspaceSlug: 'lab', workspaceName: 'Lab', role: 'member' } });
     const binary = init.headers['content-type'] !== 'application/json';
     const body = binary ? Buffer.from(init.body) : JSON.parse(init.body);
     const call = { url, init, body, binary }; calls.push(call);
