@@ -51,7 +51,7 @@ function readMedia(file: string, kind: MediaKind) {
 
 export async function uploadShotMedia(args: z.infer<typeof mediaUploadSchema>, fetchImpl?: FetchLike) {
   const dir = episodeDirOf(path.resolve(args.episodeDir));
-  const client = portalClientFor(channelOfEpisodeDir(dir), fetchImpl);
+  const client = await portalClientFor(channelOfEpisodeDir(dir), fetchImpl);
   if (!client) return { skipped: true as const };
   const state = readPortalState(dir);
   if (!state?.episodeId || state.workspace !== client.workspace || !Number.isSafeInteger(state.headRevisionNo) || state.headRevisionNo! < 0)
@@ -118,7 +118,7 @@ export async function withShotMedia<T extends object>(args: unknown, kind: Media
   const raw = (args as { portal?: unknown } | null)?.portal;
   if (!raw) return run();
   const dir = (raw as { episodeDir?: unknown }).episodeDir;
-  const configured = portalClientFor(typeof dir === 'string' ? channelOfEpisodeDir(dir) : undefined, fetchImpl);
+  const configured = await portalClientFor(typeof dir === 'string' ? channelOfEpisodeDir(dir) : undefined, fetchImpl);
   if (!configured) return run();
   const target = portalShotSchema.parse(raw);
   if (kind === 'video') {

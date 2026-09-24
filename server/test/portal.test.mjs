@@ -51,6 +51,7 @@ function fakeFetch(routes) {
     const method = (init.method ?? 'GET').toUpperCase();
     const u = new URL(url);
     const key = `${method} ${u.pathname}`;
+    if (u.pathname === '/api/token' && !routes[key]) return Response.json({ success: true, data: { workspaceSlug: 'lab', workspaceName: 'Lab', role: 'member' } });
     if (!routes[key] && method === 'GET' && /\/episodes\/[^/]+$/.test(u.pathname) && Object.keys(routes).some(route => route.startsWith('POST ') && /\/(import|revisions)$/.test(route))) {
       return Response.json({ success: true, data: { documents: [] } });
     }
@@ -103,6 +104,99 @@ function makeEpisodeDir(root, channel = 'my-channel', topic = 'ep-one') {
   return dir;
 }
 
+describe('token-only workspace discovery', () => {
+  beforeEach(clearTokenDir);
+  after(() => { clearTokenDir(); for (const k of ['API_KEY', 'API_URL', 'WORKSPACE']) delete process.env[`TTALKKAKSTORY_${k}`]; });
+  const token = { success: true, data: { workspaceSlug: 'lab', workspaceName: 'Lab', role: 'member' } };
+  function server(answer = token) { return fakeFetch({
+    'GET /api/token': answer,
+    'GET /api/workspaces/lab/me': { success: true, data: { workspaceSlug: 'lab', role: 'member' } },
+  }); }
+
+  for (const source of ['channel', 'flat', 'env']) it(`resolves an API key alone from ${source}`, async () => {
+    if (source === 'env') process.env.TTALKKAKSTORY_API_KEY = KEY;
+    else writeCredential(config.portalCredentialFile(source === 'channel' ? 'my-channel' : undefined), { apiKey: KEY });
+    try {
+      assert.equal(config.portalConfigured(), true);
+      const { impl, calls } = server();
+      const result = await portal.portalHandlers(impl).workspaceCheck({ channel: 'my-channel' });
+      assert.equal(result.isError, false, result.text);
+      const out = JSON.parse(result.text);
+      assert.equal(out.workspace, 'lab'); assert.equal(out.resolvedBy, 'token');
+      assert.equal(calls[0].url, 'https://story.ttalkkaklab.com/api/token');
+      assert.equal(calls[0].headers.authorization, `Bearer ${KEY}`);
+      assert.equal(result.text.includes(KEY), false);
+    } finally { delete process.env.TTALKKAKSTORY_API_KEY; }
+  });
+
+  it('accepts the portal slug grammar including consecutive hyphens', async () => {
+    writeCredential(config.portalCredentialFile(), { apiKey: KEY });
+    const { impl } = server({ success: true, data: { ...token.data, workspaceSlug: 'my--lab' } });
+    assert.equal((await client.portalClientFor(undefined, impl)).workspace, 'my--lab');
+  });
+
+  it('explicit env workspace is checked and a file URL wins over the custom env URL', async () => {
+    process.env.TTALKKAKSTORY_API_KEY = KEY;
+    process.env.TTALKKAKSTORY_WORKSPACE = 'wrong';
+    process.env.TTALKKAKSTORY_API_URL = 'http://localhost:3999';
+    try {
+      const { impl, calls } = server();
+      await assert.rejects(client.portalClientFor(undefined, impl), /Workspace mismatch/);
+      process.env.TTALKKAKSTORY_WORKSPACE = 'lab';
+      assert.equal((await client.portalClientFor(undefined, impl)).resolvedBy, 'file');
+      writeCredential(config.portalCredentialFile(), { api_key: KEY, apiUrl: 'https://file.example' });
+      const c = await client.portalClientFor(undefined, impl);
+      assert.equal(c.resolvedBy, 'token'); assert.equal(c.base, 'https://file.example/api/workspaces/lab');
+      assert.equal(calls.length, 2);
+    } finally { for (const k of ['API_KEY', 'WORKSPACE', 'API_URL']) delete process.env[`TTALKKAKSTORY_${k}`]; }
+  });
+
+  it('caches concurrent lookups, checks edited workspace, and isolates key/origin changes', async () => {
+    const file = config.portalCredentialFile('my-channel');
+    writeCredential(file, { apiKey: KEY });
+    const { impl, calls } = server();
+    await Promise.all([client.portalClientFor('my-channel', impl), client.portalClientFor('my-channel', impl)]);
+    assert.equal(calls.length, 1);
+    writeCredential(file, { apiKey: KEY, workspace: 'wrong' });
+    await assert.rejects(client.portalClientFor('my-channel', impl), /Workspace mismatch/);
+    assert.equal(calls.length, 1);
+    writeCredential(file, { apiKey: KEY, workspace: 'lab' });
+    assert.equal((await client.portalClientFor('my-channel', impl)).resolvedBy, 'file');
+    writeCredential(file, { apiKey: KEY + 'rotated' });
+    await client.portalClientFor('my-channel', impl);
+    writeCredential(file, { apiKey: KEY, apiUrl: 'http://localhost:3999' });
+    await client.portalClientFor('my-channel', impl);
+    assert.equal(calls.length, 3);
+  });
+
+  it('workspace mismatch stops writes before any workspace request', async () => {
+    writeCredential(config.portalCredentialFile('my-channel'), { apiKey: KEY, workspace: 'wrong' });
+    const { impl, calls } = server();
+    const result = await portal.portalHandlers(impl).episodeStatus({ channel: 'my-channel', episodeId: EPISODE_ID, stage: 'produced' });
+    assert.equal(result.isError, true); assert.match(result.text, /Workspace mismatch/);
+    assert.deepEqual(calls.map(c => c.path), ['/api/token']);
+  });
+
+  it('does not cache authentication errors or leak response text; recovers on the same transport', async () => {
+    writeCredential(config.portalCredentialFile(), { apiKey: KEY });
+    let attempts = 0;
+    const { impl } = server(() => ++attempts === 1 ? { status: 401, success: false, error: KEY } : token);
+    await assert.rejects(client.portalClientFor(undefined, impl), e => e.status === 401 && !e.message.includes(KEY));
+    assert.equal((await client.portalClientFor(undefined, impl)).workspace, 'lab');
+    assert.equal(attempts, 2);
+  });
+
+  it('rejects unavailable or malformed discovery without falling back to an explicit workspace', async () => {
+    writeCredential(config.portalCredentialFile(), { apiKey: KEY, workspace: 'lab' });
+    for (const answer of [{ status: 404, success: false }, { success: true, data: {} }, { success: true, data: { ...token.data, workspaceSlug: '../elsewhere' } }, 'not JSON']) {
+      await assert.rejects(client.portalClientFor(undefined, server(answer).impl));
+    }
+    let initSeen;
+    await assert.rejects(client.portalClientFor(undefined, async (_url, init) => { initSeen = init; throw new Error(KEY); }), e => !e.message.includes(KEY));
+    assert.equal(initSeen.redirect, 'error'); assert.ok(initSeen.signal);
+  });
+});
+
 describe('portal credential resolution', () => {
   beforeEach(clearTokenDir);
   after(() => rmSync(tokenDir, { recursive: true, force: true }));
@@ -132,7 +226,7 @@ describe('portal credential resolution', () => {
     assert.equal(config.portalCredential(), null, 'no channel and no flat file → nothing, not the channel file');
   });
 
-  it('env is the last resort and only when all three are set', () => {
+  it('env is the last resort and requires the API key', () => {
     process.env.TTALKKAKSTORY_API_URL = 'https://env.example';
     process.env.TTALKKAKSTORY_WORKSPACE = 'envws';
     try {
@@ -418,8 +512,9 @@ describe('portal_* handlers on a scripted portal', () => {
   });
 
   it('with no key for the channel (and no flat file) every tool answers the one-line fallback, isError', async () => {
-    const h = portal.portalHandlers(async () => {
-      throw new Error('must not be called');
+    const h = portal.portalHandlers(async (url) => {
+      if (new URL(url).pathname === '/api/token') return Response.json({ success: true, data: { workspaceSlug: 'lab', workspaceName: 'Lab', role: 'member' } });
+      throw new Error('workspace must not be called');
     });
     const r = await h.workspaceCheck({ channel: 'no-key-channel' });
     assert.equal(r.isError, true);
@@ -1141,8 +1236,9 @@ describe('portal_* handlers on a scripted portal', () => {
   it('a tool that needs an episode id and has neither the argument nor .portal.json says so', async () => {
     const dir = join(root, 'data', 'my-channel', 'episodes', 'ep-noid');
     mkdirSync(dir, { recursive: true });
-    const r = await portal.portalHandlers(async () => {
-      throw new Error('must not be called');
+    const r = await portal.portalHandlers(async (url) => {
+      if (new URL(url).pathname === '/api/token') return Response.json({ success: true, data: { workspaceSlug: 'lab', workspaceName: 'Lab', role: 'member' } });
+      throw new Error('workspace must not be called');
     }).episodeRevisions({ episodeDir: dir });
     assert.equal(r.isError, true);
     assert.match(r.text, /episodeId is missing/);
@@ -1641,8 +1737,9 @@ describe('portal_* handlers on a scripted portal', () => {
   });
 
   it('episode_status refuses an empty patch before touching the portal', async () => {
-    const r = await portal.portalHandlers(async () => {
-      throw new Error('must not be called');
+    const r = await portal.portalHandlers(async (url) => {
+      if (new URL(url).pathname === '/api/token') return Response.json({ success: true, data: { workspaceSlug: 'lab', workspaceName: 'Lab', role: 'member' } });
+      throw new Error('workspace must not be called');
     }).episodeStatus({ episodeId: EPISODE_ID, channel: 'my-channel' });
     assert.equal(r.isError, true);
     assert.match(r.text, /one of status · stage · title/);
