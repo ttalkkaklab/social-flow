@@ -1515,3 +1515,54 @@ window.SCENES.find(shot => shot.id === "s0010").portalImageId = "3e568caa-e8ca-4
 
 // Explicit narrator contract for portal 0.90; profile local TTS is Supertonic M2.
 window.SB_DOC = { narratorCharacterId: "narrator", characters: [{ id: "narrator", name: "내레이터", role: "화면 밖 내레이션", tts: { engine: "supertonic", voiceId: "M2", language: "ko", speed: 1.0 } }] };
+
+// Portal shot media UUID (no local path).
+window.SCENES.find(shot => shot.id === "s0010").portalMedia = { ...window.SCENES.find(shot => shot.id === "s0010").portalMedia, "previz": "365a5d23-b45d-4fa2-a666-107cdcf7b87f" };
+
+// Portal shot media UUID (no local path).
+window.SCENES.find(shot => shot.id === "s0011").portalImageId = "b6fe742b-8efa-436d-957c-03bc938b84a2";
+
+// Portal shot media UUID (no local path).
+window.SCENES.find(shot => shot.id === "s0011").portalMedia = { ...window.SCENES.find(shot => shot.id === "s0011").portalMedia, "previz": "1aedc5ff-bd1b-4707-9cd5-1814b27d06aa" };
+
+// Portal shot media UUID (no local path).
+window.SCENES.find(shot => shot.id === "s0012").portalImageId = "33a54f77-6f08-4f89-b1a1-f3f74b5a9d05";
+
+// Portal shot media UUID (no local path).
+window.SCENES.find(shot => shot.id === "s0012").portalMedia = { ...window.SCENES.find(shot => shot.id === "s0012").portalMedia, "previz": "bc8df368-f643-41c0-84d7-de3df614dbfc" };
+
+// Portal shot media UUID (no local path).
+window.SCENES.find(shot => shot.id === "s0013").portalImageId = "853a670e-cfa1-446a-8697-43d829f1fb27";
+
+// Portal shot media UUID (no local path).
+window.SCENES.find(shot => shot.id === "s0013").portalMedia = { ...window.SCENES.find(shot => shot.id === "s0013").portalMedia, "previz": "dcdee919-44a6-4345-8480-c61e4097a05a" };
+
+// Portal shot media UUID (no local path).
+window.SCENES.find(shot => shot.id === "s0014").portalImageId = "b09e47c1-00db-4e37-a68e-155ffcb8e5d5";
+
+// Portal shot media UUID (no local path).
+window.SCENES.find(shot => shot.id === "s0014").portalMedia = { ...window.SCENES.find(shot => shot.id === "s0014").portalMedia, "previz": "55c6cab4-031b-440b-8710-4ac63add995f" };
+
+// Portal shot media UUID (no local path).
+window.SCENES.find(shot => shot.id === "s0015").portalImageId = "993ab716-2816-4db1-84f0-cb94e71644d0";
+
+// Portal shot media UUID (no local path).
+window.SCENES.find(shot => shot.id === "s0015").portalMedia = { ...window.SCENES.find(shot => shot.id === "s0015").portalMedia, "previz": "81b5ca5f-56f9-4e84-8a1f-1904fecf87e6" };
+
+// Portal shot media UUID (no local path).
+window.SCENES.find(shot => shot.id === "s0016").portalImageId = "11ea534c-3504-4fe5-807c-d3ff260398e6";
+
+// Portal shot media UUID (no local path).
+window.SCENES.find(shot => shot.id === "s0016").portalMedia = { ...window.SCENES.find(shot => shot.id === "s0016").portalMedia, "previz": "128cb41c-cc3f-4286-b793-0358d9488ec3" };
+
+// Portal shot media UUID (no local path).
+window.SCENES.find(shot => shot.id === "s0017").portalImageId = "8b3eb1fd-f63c-42f6-a774-53fc34572ba3";
+
+// Portal shot media UUID (no local path).
+window.SCENES.find(shot => shot.id === "s0017").portalMedia = { ...window.SCENES.find(shot => shot.id === "s0017").portalMedia, "previz": "c9464b29-b01b-4fb2-83b5-5a2ce64e02e0" };
+
+// Portal shot media UUID (no local path).
+window.SCENES.find(shot => shot.id === "s0018").portalImageId = "a2d839ec-63a4-4f50-bcdc-70a69e25ac58";
+
+// Portal shot media UUID (no local path).
+window.SCENES.find(shot => shot.id === "s0018").portalMedia = { ...window.SCENES.find(shot => shot.id === "s0018").portalMedia, "previz": "9735c6ac-2b1b-42b2-a9c6-bfc7dfacefcd" };
