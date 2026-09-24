@@ -1,3 +1,4 @@
+import { UNIT_TOOLS } from './portal-unit-tools.js';
 import { cameraContract, renderPurposes, stillCameraEffectList, contract as storyboardContract } from './storyboard.js';
 import { MUSIC_GENERATION_MODES, MUSIC_SCALES } from './music-client.js';
 import { DEFAULT_SUPERTONIC_CHUNK_PAUSE, DEFAULT_SUPERTONIC_LANGUAGE, DEFAULT_SUPERTONIC_SPEED, DEFAULT_SUPERTONIC_STEPS, DEFAULT_SUPERTONIC_VOICE, MAX_SUPERTONIC_INPUT_CHARS, MAX_SUPERTONIC_SPEED, SUPERTONIC_LANGUAGES, SUPERTONIC_VOICE_NAMES, } from './supertonic-client.js';
@@ -1063,6 +1064,7 @@ Returns: JSON — { candidate, chosen, findings[] }.`,
     },
 ];
 export const TOOLS = [
+    ...UNIT_TOOLS,
     // ── Research & fact-checking ──────────────────────────────────────────
     {
         name: 'serp_web_search',

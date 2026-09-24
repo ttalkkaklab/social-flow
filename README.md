@@ -480,7 +480,7 @@ social-flow/
 ├── .plugin/plugin.json          # Buzz persona pack (Open Plugin Spec)
 ├── personas/                    # Buzz pack persona (pipeline.persona.md)
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 103 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 169 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
 │       ├── tools.ts             # tool definitions — 83: research 9 + open data 5 + generation 40 + publish 6 + comments 3 + growth insights 5 + growth review 2 + check 2 + blender 7 + storyboard 4
@@ -542,9 +542,9 @@ social-flow/
 └── data/                        # content data root (see data/README.md)
 ```
 
-## MCP tool surface (103 tools)
+## MCP tool surface (169 tools)
 
-**`tools/list` does not show all 103.** The credential-gated publish, review and insights tools
+**`tools/list` does not show all 169.** The credential-gated publish, review and insights tools
 (`threads_draft_create` · `threads_review_submit` · `threads_publish` · `instagram_publish` · `facebook_publish` · `facebook_comment` ·
 `youtube_publish` · `threads_insights` · `instagram_insights` · `youtube_insights` ·
 `threads_search`) are exposed **only for platforms whose credential file exists** —
@@ -987,3 +987,13 @@ This check also applies with `includeDocuments: false`. Explicit historical revi
 Inspect `attachments.complete` before removing local originals. The per-file maximum is 10 MiB; shared quotas are
 100 MiB/episode and 500 MiB/workspace. Rights evidence in `.portal-attachments.json` is keyed by relative path
 and travels with the file. Scene sound design refers to the returned logical attachment UUID.
+
+### Portal unit editing
+
+The portal also exposes playlist/episode CRUD, sequence/scene/shot CRUD and reorder,
+meta/music/voice settings, narration lines, camera/background/slide/sound/transition
+patches, background/prop registries, audio uploads, scenario deletion, scene search,
+and render-allocation requests. See
+[portal unit tools](skills/storyboard/references/portal-units.md) for identifiers,
+atomic companion edits, validation and conflict recovery. These tools require only
+the credential channel and playlist/episode identifiers, never a project input.

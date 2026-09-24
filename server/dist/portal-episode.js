@@ -166,6 +166,8 @@ export function buildImportPayload(episodeDir, options = {}) {
             ...(status && EPISODE_STATUSES.includes(status) ? { status } : {}),
             meta: sbDoc ? { ...meta, SB_DOC: sbDoc } : meta,
         },
+        ...(Array.isArray(sbDoc?.backgrounds) ? { backgrounds: sbDoc.backgrounds } : {}),
+        ...(Array.isArray(sbDoc?.props) ? { props: sbDoc.props } : {}),
         scenes: normalizedScenes,
         characters,
         narratorCharacterId,

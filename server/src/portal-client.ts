@@ -45,6 +45,7 @@ export function defaultHolder(apiKey: string): string {
 export const PORTAL_TIMEOUT_MS = 60_000;
 
 export interface PortalClient {
+  request(method: 'GET' | 'POST' | 'PATCH' | 'DELETE', path: string, body?: unknown): Promise<PortalResponse>;
   /** The workspace-scoped API base, e.g. https://story.example/api/workspaces/lab */
   base: string;
   workspace: string;
@@ -264,6 +265,7 @@ export function createPortalClient(credential: PortalCredential & { workspace: s
   const withHolder = (path: string): string => `${path}?holder=${encodeURIComponent(holder)}`;
 
   return {
+    request: (method, path, body) => json(method, `${path}${path.includes('?') ? '&' : '?'}holder=${encodeURIComponent(holder)}`, body),
     base,
     workspace: credential.workspace,
     resolvedBy,
@@ -362,7 +364,10 @@ export function createPortalClient(credential: PortalCredential & { workspace: s
 export function describePortalError(error: unknown): string {
   if (error instanceof PortalError) {
     const head = `portal ${error.status}${error.code ? ` ${error.code}` : ''}: ${error.message}`;
-    return error.detail === undefined ? head : `${head}\n${JSON.stringify(error.detail)}`;
+    const detail = error.detail === undefined ? head : `${head}\n${JSON.stringify(error.detail)}`;
+    return error.status === 409 && error.code === 'leased'
+      ? `${detail}\nUse portal_episode_lease with action:"status" for this episode. Wait for its holder to release or expire, then read and reconcile before writing. Unit tools do not acquire or release leases automatically.`
+      : detail;
   }
   return error instanceof Error ? error.message : String(error);
 }
