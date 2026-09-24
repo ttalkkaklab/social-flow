@@ -1,3 +1,4 @@
+import { REVIEW_ROUTES } from './portal-review-tools.js';
 import { UNIT_ROUTES } from './portal-unit-routes.js';
 import { createThreadsDraft, submitThreadsReview, checkThreadsGate, checkThreadsEpisode, gateCall } from './threads-gate.js';
 import { withShotMedia, uploadShotMedia, mediaUploadSchema, portalMediaReport, withoutPortal } from './portal-media.js';
@@ -586,6 +587,7 @@ function fromPortal(r) {
 }
 export const ROUTES = {
     ...UNIT_ROUTES,
+    ...REVIEW_ROUTES,
     serp_web_search: async (args) => {
         const result = await serp.webSearch(parseArgs(serpWebSchema, args));
         return text(result.text, result.isError);
