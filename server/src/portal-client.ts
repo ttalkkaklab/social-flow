@@ -45,6 +45,7 @@ export function defaultHolder(apiKey: string): string {
 export const PORTAL_TIMEOUT_MS = 60_000;
 
 export interface PortalClient {
+  request(method: 'GET' | 'POST' | 'PATCH' | 'DELETE', path: string, body?: unknown): Promise<PortalResponse>;
   /** The workspace-scoped API base, e.g. https://story.example/api/workspaces/lab */
   base: string;
   workspace: string;
@@ -264,6 +265,7 @@ export function createPortalClient(credential: PortalCredential & { workspace: s
   const withHolder = (path: string): string => `${path}?holder=${encodeURIComponent(holder)}`;
 
   return {
+    request: (method, path, body) => json(method, `${path}${path.includes('?') ? '&' : '?'}holder=${encodeURIComponent(holder)}`, body),
     base,
     workspace: credential.workspace,
     resolvedBy,

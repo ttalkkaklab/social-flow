@@ -1,3 +1,4 @@
+import { UNIT_TOOL_NAMES } from './portal-unit-tools.js';
 import { canonicalPullPaths } from './portal-canonical.js';
 import { uploadAttachments, restoreAttachments, prepareAttachmentRestore, attachmentSyncReport, safeAttachmentTarget } from './portal-attachments.js';
 /**
@@ -38,6 +39,7 @@ import {
 export const PORTAL_TOOL_NAMES = [
   'portal_assets_search',
   'portal_assets_get',
+  ...UNIT_TOOL_NAMES,
   'portal_attachments_sync',
   'portal_images_upload',
   'portal_shot_media_upload',
@@ -755,6 +757,8 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
             body.scenes = payload.scenes;
             body.meta = payload.episode.meta;
             body.characters = payload.characters;
+            body.backgrounds = payload.backgrounds;
+            body.props = payload.props;
             body.narratorCharacterId = payload.narratorCharacterId;
             uploadedScenes = payload.scenes.length;
           }

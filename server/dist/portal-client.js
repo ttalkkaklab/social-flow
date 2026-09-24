@@ -141,6 +141,7 @@ export function createPortalClient(credential, fetchImpl = fetch, resolvedBy = '
     }
     const withHolder = (path) => `${path}?holder=${encodeURIComponent(holder)}`;
     return {
+        request: (method, path, body) => json(method, `${path}${path.includes('?') ? '&' : '?'}holder=${encodeURIComponent(holder)}`, body),
         base,
         workspace: credential.workspace,
         resolvedBy,

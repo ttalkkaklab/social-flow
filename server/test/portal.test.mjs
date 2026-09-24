@@ -1749,8 +1749,8 @@ describe('portal_* handlers on a scripted portal', () => {
 describe('portal tool surface', () => {
   const names = new Set(TOOLS.map((t) => t.name));
 
-  it('all nineteen portal tools are defined and routed, and nothing else starts with portal_', () => {
-    assert.equal(portal.PORTAL_TOOL_NAMES.length, 19);
+  it('all registered portal tools are defined and routed, and nothing else starts with portal_', () => {
+    assert.equal(new Set(portal.PORTAL_TOOL_NAMES).size, portal.PORTAL_TOOL_NAMES.length);
     for (const name of portal.PORTAL_TOOL_NAMES) {
       assert.ok(names.has(name), `${name} not in TOOLS`);
       assert.equal(typeof ROUTES[name], 'function', `${name} not routed`);
@@ -1765,7 +1765,7 @@ describe('portal tool surface', () => {
       assert.equal(tool.annotations.destructiveHint, true, name);
       assert.match(tool.description, /HITL/);
     }
-    for (const name of portal.PORTAL_TOOL_NAMES.filter((n) => !n.endsWith('_pull'))) {
+    for (const name of portal.PORTAL_TOOL_NAMES.filter((n) => !n.endsWith('_pull') && !n.endsWith('_delete'))) {
       const tool = TOOLS.find((t) => t.name === name);
       assert.notEqual(tool.annotations.destructiveHint, true, `${name} must not read as destructive — it writes the portal, never deletes`);
     }
