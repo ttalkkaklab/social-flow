@@ -83,11 +83,25 @@ export interface PortalClient {
   chooseScenario(episodeId: string, candidate: string): Promise<PortalResponse<PortalScenarioSaved>>;
   scenarioMd(episodeId: string, candidate: string): Promise<string>;
   pageUrl(relative: string): string;
+  /** Workspace characters (#91) — `/characters`, never a project id; `project` in create is the channel name. */
+  listCharacters(query?: Record<string, string | number | undefined>): Promise<PortalResponse<{ items: PortalCharacter[]; hasNext: boolean }>>;
+  getCharacter(id: string): Promise<PortalResponse<PortalCharacter>>;
+  createCharacter(body: Record<string, unknown>): Promise<PortalResponse<PortalCharacter>>;
+  updateCharacter(id: string, patch: Record<string, unknown>): Promise<PortalResponse<PortalCharacter>>;
+  deleteCharacter(id: string): Promise<PortalResponse<{ id: string }>>;
+  /** PUT — one image per character; 201 replaced, 200 same bytes. */
+  uploadCharacterImage(id: string, bytes: Uint8Array, mime: string): Promise<PortalResponse<{ id: string; sha256: string; mime: string; byteSize: number; created: boolean; url: string }>>;
   /** Global asset library (portal `/api/assets`, #87) — outside the workspace; any live key reads the same library. */
   assetsSearch(query: Record<string, string | number | undefined>): Promise<PortalResponse<PortalAssetPage>>;
   assetsGet(id: string): Promise<PortalResponse<PortalAsset>>;
   /** Stream one asset's bytes to `sink`; resolves with the byte count. `maxBytes` aborts an oversized body before it lands on disk. */
   assetsDownload(id: string, sink: (chunk: Uint8Array) => void, maxBytes: number): Promise<number>;
+}
+
+export interface PortalCharacter {
+  id: string; projectId: string; key: string | null; name: string; role: string | null; appearance: string | null;
+  referenceImageUrl: string | null; tts: { engine: 'gemini' | 'supertonic' | 'elevenlabs' | 'mlx'; voiceId: string; model?: string; speed?: number; language?: string; stylePrompt?: string } | null;
+  updatedAt: string;
 }
 
 export interface PortalAsset {
@@ -296,6 +310,17 @@ export function createPortalClient(credential: PortalCredential & { workspace: s
     revisionDiff: (episodeId, from, to) => json<PortalRevisionDiff>('GET', `/episodes/${episodeId}/revisions/${from}/diff/${to}`),
     renderAllocation: (episodeId, body) => json(body ? 'PUT' : 'GET', `/episodes/${episodeId}/render-allocation`, body ? { ...body, sourceHost: holder } : undefined),
     uploadImage: (episodeId, bytes, mime) => json<PortalImage>('POST', withHolder(`/episodes/${episodeId}/images`), bytes, mime),
+    listCharacters: (query = {}) => {
+      const sp = new URLSearchParams();
+      for (const [k, v] of Object.entries(query)) if (v !== undefined && v !== '') sp.set(k, String(v));
+      const qs = sp.toString();
+      return json('GET', `/characters${qs ? `?${qs}` : ''}`);
+    },
+    getCharacter: (id) => json<PortalCharacter>('GET', `/characters/${id}`),
+    createCharacter: (body) => json<PortalCharacter>('POST', '/characters', body),
+    updateCharacter: (id, patch) => json<PortalCharacter>('PATCH', `/characters/${id}`, patch),
+    deleteCharacter: (id) => json('DELETE', `/characters/${id}`),
+    uploadCharacterImage: (id, bytes, mime) => json('PUT', `/characters/${id}/image`, bytes, mime),
     listAttachments: (episodeId) => json('GET', `/episodes/${episodeId}/attachments`),
     uploadAttachment: (episodeId, relativePath, bytes, mime, provenance) => json('POST', `${withHolder(`/episodes/${episodeId}/attachments`)}&path=${encodeURIComponent(relativePath)}`, bytes, mime, provenance ? { 'x-attachment-provenance': encodeURIComponent(JSON.stringify(provenance)) } : {}),
     downloadAttachment: async (episodeId, id) => {
