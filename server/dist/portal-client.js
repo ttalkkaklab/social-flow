@@ -141,6 +141,7 @@ export function createPortalClient(credential, fetchImpl = fetch, resolvedBy = '
     }
     const withHolder = (path) => `${path}?holder=${encodeURIComponent(holder)}`;
     return {
+        request: (method, path, body) => json(method, `${path}${path.includes('?') ? '&' : '?'}holder=${encodeURIComponent(holder)}`, body),
         base,
         workspace: credential.workspace,
         resolvedBy,
@@ -259,7 +260,10 @@ export function createPortalClient(credential, fetchImpl = fetch, resolvedBy = '
 export function describePortalError(error) {
     if (error instanceof PortalError) {
         const head = `portal ${error.status}${error.code ? ` ${error.code}` : ''}: ${error.message}`;
-        return error.detail === undefined ? head : `${head}\n${JSON.stringify(error.detail)}`;
+        const detail = error.detail === undefined ? head : `${head}\n${JSON.stringify(error.detail)}`;
+        return error.status === 409 && error.code === 'leased'
+            ? `${detail}\nUse portal_episode_lease with action:"status" for this episode. Wait for its holder to release or expire, then read and reconcile before writing. Unit tools do not acquire or release leases automatically.`
+            : detail;
     }
     return error instanceof Error ? error.message : String(error);
 }

@@ -161,6 +161,8 @@ export interface PortalTts {
 }
 
 export interface ImportPayload {
+  backgrounds?: unknown[];
+  props?: unknown[];
   project: { name: string };
   storyboard?: { title: string };
   episode: {
@@ -224,6 +226,8 @@ export function buildImportPayload(episodeDir: string, options: ImportOptions = 
       ...(status && (EPISODE_STATUSES as readonly string[]).includes(status) ? { status } : {}),
       meta: sbDoc ? { ...meta, SB_DOC: sbDoc } : meta,
     },
+    ...(Array.isArray(sbDoc?.backgrounds) ? { backgrounds: sbDoc.backgrounds } : {}),
+    ...(Array.isArray(sbDoc?.props) ? { props: sbDoc.props } : {}),
     scenes: normalizedScenes,
     characters,
     narratorCharacterId,

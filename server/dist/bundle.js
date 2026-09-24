@@ -1693,10 +1693,10 @@ var require_defaults = __commonJS({
     var codegen_1 = require_codegen();
     var util_1 = require_util();
     function assignDefaults(it, ty) {
-      const { properties, items } = it.schema;
-      if (ty === "object" && properties) {
-        for (const key in properties) {
-          assignDefault(it, key, properties[key].default);
+      const { properties: properties2, items } = it.schema;
+      if (ty === "object" && properties2) {
+        for (const key in properties2) {
+          assignDefault(it, key, properties2[key].default);
         }
       } else if (ty === "array" && Array.isArray(items)) {
         items.forEach((sch, i2) => assignDefault(it, i2, sch.default));
@@ -1739,8 +1739,8 @@ var require_code2 = __commonJS({
       });
     }
     exports.checkReportMissingProp = checkReportMissingProp;
-    function checkMissingProp({ gen, data, it: { opts } }, properties, missing) {
-      return (0, codegen_1.or)(...properties.map((prop) => (0, codegen_1.and)(noPropertyInData(gen, data, prop, opts.ownProperties), (0, codegen_1._)`${missing} = ${prop}`)));
+    function checkMissingProp({ gen, data, it: { opts } }, properties2, missing) {
+      return (0, codegen_1.or)(...properties2.map((prop) => (0, codegen_1.and)(noPropertyInData(gen, data, prop, opts.ownProperties), (0, codegen_1._)`${missing} = ${prop}`)));
     }
     exports.checkMissingProp = checkMissingProp;
     function reportMissingProp(cxt, missing) {
@@ -5746,11 +5746,11 @@ var require_properties = __commonJS({
         if (it.opts.unevaluated && allProps.length && it.props !== true) {
           it.props = util_1.mergeEvaluated.props(gen, (0, util_1.toHash)(allProps), it.props);
         }
-        const properties = allProps.filter((p) => !(0, util_1.alwaysValidSchema)(it, schema[p]));
-        if (properties.length === 0)
+        const properties2 = allProps.filter((p) => !(0, util_1.alwaysValidSchema)(it, schema[p]));
+        if (properties2.length === 0)
           return;
         const valid = gen.name("valid");
-        for (const prop of properties) {
+        for (const prop of properties2) {
           if (hasDefault(prop)) {
             applyPropertySchema(prop);
           } else {
@@ -6359,8 +6359,8 @@ var require_discriminator = __commonJS({
           if (!tagRequired)
             throw new Error(`discriminator: "${tagName}" must be required`);
           return oneOfMapping;
-          function hasRequired({ required: required2 }) {
-            return Array.isArray(required2) && required2.includes(tagName);
+          function hasRequired({ required: required3 }) {
+            return Array.isArray(required3) && required3.includes(tagName);
           }
           function addMappings(sch, i2) {
             if (sch.const) {
@@ -13482,8 +13482,8 @@ var init_fetch_blob = __esm({
       get [Symbol.toStringTag]() {
         return "Blob";
       }
-      static [Symbol.hasInstance](object3) {
-        return object3 && typeof object3 === "object" && typeof object3.constructor === "function" && (typeof object3.stream === "function" || typeof object3.arrayBuffer === "function") && /^(Blob|File)$/.test(object3[Symbol.toStringTag]);
+      static [Symbol.hasInstance](object4) {
+        return object4 && typeof object4 === "object" && typeof object4.constructor === "function" && (typeof object4.stream === "function" || typeof object4.arrayBuffer === "function") && /^(Blob|File)$/.test(object4[Symbol.toStringTag]);
       }
     };
     Object.defineProperties(_Blob.prototype, {
@@ -13531,8 +13531,8 @@ var init_file = __esm({
       get [Symbol.toStringTag]() {
         return "File";
       }
-      static [Symbol.hasInstance](object3) {
-        return !!object3 && object3 instanceof fetch_blob_default && /^(File)$/.test(object3[Symbol.toStringTag]);
+      static [Symbol.hasInstance](object4) {
+        return !!object4 && object4 instanceof fetch_blob_default && /^(File)$/.test(object4[Symbol.toStringTag]);
       }
     };
     File3 = _File;
@@ -13684,14 +13684,14 @@ var NAME, isURLSearchParameters, isBlob, isAbortSignal, isDomainOrSubdomain, isS
 var init_is = __esm({
   "node_modules/node-fetch/src/utils/is.js"() {
     NAME = Symbol.toStringTag;
-    isURLSearchParameters = (object3) => {
-      return typeof object3 === "object" && typeof object3.append === "function" && typeof object3.delete === "function" && typeof object3.get === "function" && typeof object3.getAll === "function" && typeof object3.has === "function" && typeof object3.set === "function" && typeof object3.sort === "function" && object3[NAME] === "URLSearchParams";
+    isURLSearchParameters = (object4) => {
+      return typeof object4 === "object" && typeof object4.append === "function" && typeof object4.delete === "function" && typeof object4.get === "function" && typeof object4.getAll === "function" && typeof object4.has === "function" && typeof object4.set === "function" && typeof object4.sort === "function" && object4[NAME] === "URLSearchParams";
     };
-    isBlob = (object3) => {
-      return object3 && typeof object3 === "object" && typeof object3.arrayBuffer === "function" && typeof object3.type === "string" && typeof object3.stream === "function" && typeof object3.constructor === "function" && /^(Blob|File)$/.test(object3[NAME]);
+    isBlob = (object4) => {
+      return object4 && typeof object4 === "object" && typeof object4.arrayBuffer === "function" && typeof object4.type === "string" && typeof object4.stream === "function" && typeof object4.constructor === "function" && /^(Blob|File)$/.test(object4[NAME]);
     };
-    isAbortSignal = (object3) => {
-      return typeof object3 === "object" && (object3[NAME] === "AbortSignal" || object3[NAME] === "EventTarget");
+    isAbortSignal = (object4) => {
+      return typeof object4 === "object" && (object4[NAME] === "AbortSignal" || object4[NAME] === "EventTarget");
     };
     isDomainOrSubdomain = (destination, original) => {
       const orig = new URL(original).hostname;
@@ -14905,8 +14905,8 @@ var init_request = __esm({
     init_get_search();
     init_referrer();
     INTERNALS3 = /* @__PURE__ */ Symbol("Request internals");
-    isRequest = (object3) => {
-      return typeof object3 === "object" && typeof object3[INTERNALS3] === "object";
+    isRequest = (object4) => {
+      return typeof object4 === "object" && typeof object4[INTERNALS3] === "object";
     };
     doBadDataWarn = deprecate2(
       () => {
@@ -17580,20 +17580,20 @@ var require_parse = __commonJS({
           }
         }
         error2("Bad array");
-      }, object3 = function() {
-        var key, object4 = /* @__PURE__ */ Object.create(null);
+      }, object4 = function() {
+        var key, object5 = /* @__PURE__ */ Object.create(null);
         if (ch === "{") {
           next("{");
           white();
           if (ch === "}") {
             next("}");
-            return object4;
+            return object5;
           }
           while (ch) {
             key = string3();
             white();
             next(":");
-            if (_options.strict === true && Object.hasOwnProperty.call(object4, key)) {
+            if (_options.strict === true && Object.hasOwnProperty.call(object5, key)) {
               error2('Duplicate key "' + key + '"');
             }
             if (suspectProtoRx.test(key) === true) {
@@ -17602,7 +17602,7 @@ var require_parse = __commonJS({
               } else if (_options.protoAction === "ignore") {
                 value();
               } else {
-                object4[key] = value();
+                object5[key] = value();
               }
             } else if (suspectConstructorRx.test(key) === true) {
               if (_options.constructorAction === "error") {
@@ -17610,15 +17610,15 @@ var require_parse = __commonJS({
               } else if (_options.constructorAction === "ignore") {
                 value();
               } else {
-                object4[key] = value();
+                object5[key] = value();
               }
             } else {
-              object4[key] = value();
+              object5[key] = value();
             }
             white();
             if (ch === "}") {
               next("}");
-              return object4;
+              return object5;
             }
             next(",");
             white();
@@ -17630,7 +17630,7 @@ var require_parse = __commonJS({
         white();
         switch (ch) {
           case "{":
-            return object3();
+            return object4();
           case "[":
             return array2();
           case '"':
@@ -18278,9 +18278,9 @@ var require_src4 = __commonJS({
     function universe(options) {
       return metadataAccessor("universe", options);
     }
-    async function bulk(properties) {
+    async function bulk(properties2) {
       const r2 = {};
-      await Promise.all(properties.map((item) => {
+      await Promise.all(properties2.map((item) => {
         return (async () => {
           const res = await metadataAccessor(item);
           const key = item.metadataKey;
@@ -19003,13 +19003,13 @@ var require_util3 = __commonJS({
       }
     };
     exports.LRUCache = LRUCache;
-    function removeUndefinedValuesInObject(object3) {
-      Object.entries(object3).forEach(([key, value]) => {
+    function removeUndefinedValuesInObject(object4) {
+      Object.entries(object4).forEach(([key, value]) => {
         if (value === void 0 || value === "undefined") {
-          delete object3[key];
+          delete object4[key];
         }
       });
-      return object3;
+      return object4;
     }
     async function isValidFile(filePath) {
       try {
@@ -27030,7 +27030,7 @@ var require_sender = __commonJS({
        */
       static frame(data, options) {
         let mask;
-        let merge2 = false;
+        let merge3 = false;
         let offset = 2;
         let skipMasking = false;
         if (options.mask) {
@@ -27063,7 +27063,7 @@ var require_sender = __commonJS({
           }
         } else {
           dataLength = data.length;
-          merge2 = options.mask && options.readOnly && !skipMasking;
+          merge3 = options.mask && options.readOnly && !skipMasking;
         }
         let payloadLength = dataLength;
         if (dataLength >= 65536) {
@@ -27073,7 +27073,7 @@ var require_sender = __commonJS({
           offset += 2;
           payloadLength = 126;
         }
-        const target = Buffer.allocUnsafe(merge2 ? dataLength + offset : offset);
+        const target = Buffer.allocUnsafe(merge3 ? dataLength + offset : offset);
         target[0] = options.fin ? options.opcode | 128 : options.opcode;
         if (options.rsv1) target[0] |= 64;
         target[1] = payloadLength;
@@ -27090,7 +27090,7 @@ var require_sender = __commonJS({
         target[offset - 2] = mask[2];
         target[offset - 1] = mask[3];
         if (skipMasking) return [target, data];
-        if (merge2) {
+        if (merge3) {
           applyMask(data, mask, target, offset, dataLength);
           return [target];
         }
@@ -38403,8 +38403,8 @@ function setMcpUsageHeader(headers) {
   const existingHeader = (_a4 = headers[GOOGLE_API_CLIENT_HEADER]) !== null && _a4 !== void 0 ? _a4 : "";
   headers[GOOGLE_API_CLIENT_HEADER] = (existingHeader + ` ${MCP_LABEL}`).trimStart();
 }
-function isMcpCallableTool(object3) {
-  return object3 !== null && typeof object3 === "object" && object3 instanceof McpCallableTool;
+function isMcpCallableTool(object4) {
+  return object4 !== null && typeof object4 === "object" && object4 instanceof McpCallableTool;
 }
 function listAllTools(mcpClient_1) {
   return __asyncGenerator(this, arguments, function* listAllTools_1(mcpClient, maxTools = 100) {
@@ -52459,13 +52459,13 @@ var init_utils = __esm({
 function is_non_nullish_primitive(v) {
   return typeof v === "string" || typeof v === "number" || typeof v === "boolean" || typeof v === "symbol" || typeof v === "bigint";
 }
-function inner_stringify(object3, prefix, generateArrayPrefix, commaRoundTrip, allowEmptyArrays, strictNullHandling, skipNulls, encodeDotInKeys, encoder, filter, sort, allowDots, serializeDate, format, formatter, encodeValuesOnly, charset, sideChannel) {
-  let obj = object3;
+function inner_stringify(object4, prefix, generateArrayPrefix, commaRoundTrip, allowEmptyArrays, strictNullHandling, skipNulls, encodeDotInKeys, encoder, filter, sort, allowDots, serializeDate, format, formatter, encodeValuesOnly, charset, sideChannel) {
+  let obj = object4;
   let tmp_sc = sideChannel;
   let step = 0;
   let find_flag = false;
   while ((tmp_sc = tmp_sc.get(sentinel)) !== void 0 && !find_flag) {
-    const pos = tmp_sc.get(object3);
+    const pos = tmp_sc.get(object4);
     step += 1;
     if (typeof pos !== "undefined") {
       if (pos === step) {
@@ -52541,7 +52541,7 @@ function inner_stringify(object3, prefix, generateArrayPrefix, commaRoundTrip, a
     }
     const encoded_key = allowDots && encodeDotInKeys ? key.replace(/\./g, "%2E") : key;
     const key_prefix = isArray(obj) ? typeof generateArrayPrefix === "function" ? generateArrayPrefix(adjusted_prefix, encoded_key) : adjusted_prefix : adjusted_prefix + (allowDots ? "." + encoded_key : "[" + encoded_key + "]");
-    sideChannel.set(object3, step);
+    sideChannel.set(object4, step);
     const valueSideChannel = /* @__PURE__ */ new WeakMap();
     valueSideChannel.set(sentinel, sideChannel);
     push_to_array(values, inner_stringify(
@@ -52630,8 +52630,8 @@ function normalize_stringify_options(opts = defaults) {
     strictNullHandling: typeof opts.strictNullHandling === "boolean" ? opts.strictNullHandling : defaults.strictNullHandling
   };
 }
-function stringify(object3, opts = {}) {
-  let obj = object3;
+function stringify(object4, opts = {}) {
+  let obj = object4;
   const options = normalize_stringify_options(opts);
   let obj_keys;
   let filter;
@@ -64432,10 +64432,10 @@ var util;
       return obj[e2];
     });
   };
-  util2.objectKeys = typeof Object.keys === "function" ? (obj) => Object.keys(obj) : (object3) => {
+  util2.objectKeys = typeof Object.keys === "function" ? (obj) => Object.keys(obj) : (object4) => {
     const keys = [];
-    for (const key in object3) {
-      if (Object.prototype.hasOwnProperty.call(object3, key)) {
+    for (const key in object4) {
+      if (Object.prototype.hasOwnProperty.call(object4, key)) {
         keys.push(key);
       }
     }
@@ -68496,19 +68496,19 @@ function floatSafeRemainder2(val, step) {
   const stepInt = Number.parseInt(step.toFixed(decCount).replace(".", ""));
   return valInt % stepInt / 10 ** decCount;
 }
-function defineLazy(object3, key, getter) {
+function defineLazy(object4, key, getter) {
   const set = false;
-  Object.defineProperty(object3, key, {
+  Object.defineProperty(object4, key, {
     get() {
       if (!set) {
         const value = getter();
-        object3[key] = value;
+        object4[key] = value;
         return value;
       }
       throw new Error("cached value already set");
     },
     set(v) {
-      Object.defineProperty(object3, key, {
+      Object.defineProperty(object4, key, {
         value: v
         // configurable: true,
       });
@@ -75852,6 +75852,127 @@ function describeToolGate(knownNames, env2 = process.env, jsonPatterns = []) {
   ].filter(Boolean);
   return `tool gate ${on.length} on / ${off} off (${bits.join("; ")})`;
 }
+
+// src/portal-unit-tools.ts
+var CRUD = ["list", "get", "create", "update", "delete", "reorder"];
+var specs = [
+  ["sequence", CRUD],
+  ["scene", CRUD],
+  ["shot", CRUD],
+  ["shot_narration", CRUD],
+  ...["episode_meta", "episode_music", "episode_voice", "shot_camera", "shot_background", "shot_slide", "shot_sound", "shot_transition"].map((area) => [area, ["get", "update"]])
+];
+var UNIT_NAMES = specs.flatMap(([area, actions]) => actions.map((action) => `portal_${area}_${action}`));
+var simple = {
+  storyboard: ["create", "get", "update", "delete"],
+  episode: ["list", "get", "update", "delete"],
+  background: ["list", "get", "create", "update", "delete", "register", "unregister"],
+  prop: ["list", "get", "create", "update", "delete", "register", "unregister"],
+  scenario: ["delete"],
+  render_allocation: ["create"],
+  scene: ["search"],
+  episode_audio: ["upload"]
+};
+var EXTRA_NAMES = Object.entries(simple).flatMap(([area, actions]) => actions.map((action) => `portal_${area}_${action}`));
+var UNIT_TOOL_NAMES = [...UNIT_NAMES, ...EXTRA_NAMES];
+var properties = {
+  channel: { type: "string", description: "Credential channel slug; no project input." },
+  episodeId: { type: "string", format: "uuid" },
+  storyboardId: { type: "string", format: "uuid" },
+  baseRevisionNo: { type: "integer", minimum: 0, description: "Head revision returned by the last read; required on unit writes." },
+  id: { type: "string", description: "Sequence/shot stable id, or registry entity UUID." },
+  no: { type: "integer", minimum: 1, description: "Story scene number." },
+  sequenceId: { type: "string", description: "Parent sequence for a new story scene." },
+  shotId: { type: "string" },
+  index: { type: "integer", minimum: 0, description: "Zero-based insertion position, or narration line index." },
+  value: { type: "object", additionalProperties: true, description: "Field patch; nested objects merge, arrays replace. Transition: {transition,reason,transitionSeconds?,continuity?}. Sound: {sound?,effect?}. Background prompt: {bgPrompt}. Other settings use their direct object." },
+  key: { type: "string", description: "Episode meta key: THEME, COMPREHENSION, STORY, PRODUCTION, MOTION_POLICY, STRUCTURE, PREVIZ, SLIDE_OBJECTS, MUSIC, VOICE." },
+  order: { type: "array", items: { anyOf: [{ type: "string" }, { type: "integer" }] }, description: "Every identifier exactly once; narration uses zero-based indexes." },
+  targetSequenceId: { type: "string", description: "On sequence deletion, explicitly transfer its scenes to this sequence instead of deleting them." },
+  targetSceneNo: { type: "integer", minimum: 1, description: "On scene deletion, explicitly transfer its shots to this scene instead of deleting them." },
+  shotIds: { type: "array", items: { type: "string" }, description: "On scene creation, explicitly move these existing shots into the new scene." },
+  moveScenes: { type: "boolean", description: "On sequence creation, explicitly move listed existing scenes out of their old sequences." },
+  cascade: { type: "boolean", description: "Explicitly remove children too." },
+  draft: { type: "boolean", default: true },
+  note: { type: "string" },
+  globals: { type: "object", additionalProperties: true, description: "Companion meta patch, e.g. update STORY.beats and numbered quotes atomically when inserting or deleting narration. Other keys and review fields are preserved." },
+  scenes: { type: "array", items: { type: "object", additionalProperties: true }, description: "Companion scene records for atomic sequence creation." },
+  shots: { type: "array", items: { type: "object", additionalProperties: true }, description: "Companion shots for an atomic structural edit." },
+  query: { type: "string", description: "Search narration, subtitles, titles and background prompts." },
+  candidate: { type: "string", enum: ["D1", "D2", "D3"] },
+  file: { type: "string" },
+  kind: { type: "string", enum: ["music", "sfx"] }
+};
+var descriptions = {
+  episodeId: "Portal episode UUID.",
+  storyboardId: "Portal playlist UUID.",
+  shotId: "Stable source shot id (s0001), not the database row UUID.",
+  draft: "Run the draft contract; machine-layer requirements are deferred by the standard checker.",
+  note: "Revision note.",
+  candidate: "Scenario candidate to delete.",
+  file: "Absolute path to an existing WAV or MP3 file.",
+  kind: "Audio media kind."
+};
+var described = Object.fromEntries(Object.entries(properties).map(([key, spec]) => [key, { ...spec, description: "description" in spec ? spec.description : descriptions[key] }]));
+var UNIT_TOOLS = UNIT_TOOL_NAMES.map((name) => {
+  const read2 = /_(get|list|search)$/.test(name), unit = UNIT_NAMES.includes(name), remove = /_delete$/.test(name);
+  const suffix = name.slice(7), pos = suffix.lastIndexOf("_"), area = suffix.slice(0, pos), action = suffix.slice(pos + 1);
+  const keys = ["channel"];
+  const required3 = [];
+  const add = (key, mandatory = false) => {
+    keys.push(key);
+    if (mandatory) required3.push(key);
+  };
+  if (unit) {
+    add("episodeId", true);
+    if (!read2) {
+      add("baseRevisionNo", true);
+      add("draft");
+      add("note");
+      add("globals");
+    }
+    if (area === "episode_meta") add("key", true);
+    if (area.startsWith("shot_")) add("shotId", true);
+    if (area === "shot_narration" && !["list", "create", "reorder"].includes(action)) add("index", true);
+    if (["shot_narration", "shot", "scene", "sequence"].includes(area) && action === "create") add("index");
+    if (area === "sequence" && action === "create") add("moveScenes");
+    if (["sequence", "shot"].includes(area) && ["get", "update", "delete"].includes(action)) add("id", true);
+    if (area === "scene" && ["get", "update", "delete"].includes(action)) add("no", true);
+    if (action === "create" || action === "update") add("value", true);
+    if (action === "reorder") add("order", true);
+    if (["sequence", "scene"].includes(area) && action === "delete") {
+      add("cascade");
+      add(area === "sequence" ? "targetSequenceId" : "targetSceneNo");
+    }
+    if (["sequence", "scene"].includes(area) && action === "create") {
+      add("scenes");
+      add("shots");
+    }
+    if (area === "scene" && action === "create") {
+      add("sequenceId", true);
+      add("shotIds");
+    }
+  } else {
+    if (area === "storyboard" && action !== "create" || ["background", "prop"].includes(area) || area === "episode" && action === "list") add("storyboardId", true);
+    if (["episode", "scenario", "render_allocation", "episode_audio"].includes(area) && !(area === "episode" && action === "list")) add("episodeId", true);
+    if (["background", "prop"].includes(area) && !["list", "create"].includes(action)) add("id", true);
+    if (["create", "update"].includes(action)) add("value", true);
+    if (area === "render_allocation") add("baseRevisionNo", true);
+    if (area === "scenario") add("candidate", true);
+    if (area === "episode_audio") {
+      add("file", true);
+      add("kind", true);
+    }
+    if (area === "scene") add("query", true);
+  }
+  return {
+    name,
+    title: name.slice(7).replaceAll("_", " "),
+    description: `${name.replaceAll("_", " ")}. ${unit ? "Reads return headRevisionNo. Edits validate the complete board with scenes-vm and storyboard_check, then checkpoint with lease and revision conflict checks. Local files are untouched. New structure must include enough companion scenes/shots/globals to pass the contract." : "Workspace-scoped portal operation. Pass API fields in value; registry operations infer the project from storyboardId. Playlist create value: {title,characterId}; episode update: {title?,status?,stage?}; background create: {name,description?,imageUrl?}; prop create also needs characterId."}${remove ? " \u26A0\uFE0F HITL: never call without user authorization to delete this resource." : ""}`,
+    annotations: read2 ? { readOnlyHint: true, openWorldHint: true } : { readOnlyHint: false, destructiveHint: remove, idempotentHint: false, openWorldHint: true },
+    inputSchema: { type: "object", properties: Object.fromEntries(keys.map((key) => [key, described[key]])), required: required3, additionalProperties: false }
+  };
+});
 
 // src/storyboard.ts
 import { execFileSync } from "node:child_process";
@@ -84033,6 +84154,7 @@ Returns: JSON \u2014 { candidate, chosen, findings[] }.`,
   }
 ];
 var TOOLS = [
+  ...UNIT_TOOLS,
   // ── Research & fact-checking ──────────────────────────────────────────
   {
     name: "serp_web_search",
@@ -87668,6 +87790,8 @@ function buildImportPayload(episodeDir, options = {}) {
       ...status && EPISODE_STATUSES.includes(status) ? { status } : {},
       meta: sbDoc ? { ...meta, SB_DOC: sbDoc } : meta
     },
+    ...Array.isArray(sbDoc?.backgrounds) ? { backgrounds: sbDoc.backgrounds } : {},
+    ...Array.isArray(sbDoc?.props) ? { props: sbDoc.props } : {},
     scenes: normalizedScenes,
     characters,
     narratorCharacterId,
@@ -87883,6 +88007,7 @@ function createPortalClient(credential, fetchImpl = fetch, resolvedBy = "file") 
   }
   const withHolder = (path20) => `${path20}?holder=${encodeURIComponent(holder)}`;
   return {
+    request: (method, path20, body) => json2(method, `${path20}${path20.includes("?") ? "&" : "?"}holder=${encodeURIComponent(holder)}`, body),
     base,
     workspace: credential.workspace,
     resolvedBy,
@@ -87988,8 +88113,10 @@ function createPortalClient(credential, fetchImpl = fetch, resolvedBy = "file") 
 function describePortalError(error2) {
   if (error2 instanceof PortalError) {
     const head = `portal ${error2.status}${error2.code ? ` ${error2.code}` : ""}: ${error2.message}`;
-    return error2.detail === void 0 ? head : `${head}
+    const detail = error2.detail === void 0 ? head : `${head}
 ${JSON.stringify(error2.detail)}`;
+    return error2.status === 409 && error2.code === "leased" ? `${detail}
+Use portal_episode_lease with action:"status" for this episode. Wait for its holder to release or expire, then read and reconcile before writing. Unit tools do not acquire or release leases automatically.` : detail;
   }
   return error2 instanceof Error ? error2.message : String(error2);
 }
@@ -88466,6 +88593,7 @@ async function getAsset(client, args) {
 var PORTAL_TOOL_NAMES = [
   "portal_assets_search",
   "portal_assets_get",
+  ...UNIT_TOOL_NAMES,
   "portal_attachments_sync",
   "portal_images_upload",
   "portal_shot_media_upload",
@@ -88674,11 +88802,11 @@ function refuseMismatch(client, ...dirs) {
     return failed(error2);
   }
 }
-function saveBase(dir, explicit, required2 = false) {
+function saveBase(dir, explicit, required3 = false) {
   const state = dir ? readPortalState(dir) : null;
   const base = explicit ?? state?.headRevisionNo;
   if (base !== void 0 && Number.isSafeInteger(base) && base >= 0) return base;
-  if (!required2 && !state && base === void 0) return void 0;
+  if (!required3 && !state && base === void 0) return void 0;
   throw new Error('Missing or invalid base revision. Nothing was sent. Pull portal_storyboard_pull with mode "side", merge the portal head with your local edits, then save with baseRevisionNo from that result. Keep .portal.json and your local files.');
 }
 var lastBackupTimeMs = 0;
@@ -89098,6 +89226,8 @@ function portalHandlers(fetchImpl) {
             body.scenes = payload.scenes;
             body.meta = payload.episode.meta;
             body.characters = payload.characters;
+            body.backgrounds = payload.backgrounds;
+            body.props = payload.props;
             body.narratorCharacterId = payload.narratorCharacterId;
             uploadedScenes = payload.scenes.length;
           }
@@ -89279,10 +89409,333 @@ function portalHandlers(fetchImpl) {
   };
 }
 
+// src/portal-unit-routes.ts
+import { mkdtempSync as mkdtempSync5, readFileSync as readFileSync14, rmSync as rmSync9, writeFileSync as writeFileSync12 } from "node:fs";
+import { tmpdir as tmpdir4 } from "node:os";
+import { join as join9, extname as extname8 } from "node:path";
+
+// src/portal-unit-edit.ts
+var unitEditSchema = external_exports.object({
+  episodeId: external_exports.string().uuid(),
+  channel: external_exports.string().optional(),
+  baseRevisionNo: external_exports.number().int().nonnegative().optional(),
+  id: external_exports.string().optional(),
+  no: external_exports.number().int().positive().optional(),
+  sequenceId: external_exports.string().optional(),
+  shotId: external_exports.string().optional(),
+  targetSequenceId: external_exports.string().optional(),
+  targetSceneNo: external_exports.number().int().positive().optional(),
+  shotIds: external_exports.array(external_exports.string()).optional(),
+  index: external_exports.number().int().nonnegative().optional(),
+  value: external_exports.record(external_exports.unknown()).optional(),
+  key: external_exports.string().optional(),
+  order: external_exports.array(external_exports.union([external_exports.string(), external_exports.number().int()])).optional(),
+  cascade: external_exports.boolean().optional(),
+  moveScenes: external_exports.boolean().optional(),
+  draft: external_exports.boolean().default(true),
+  note: external_exports.string().max(500).optional(),
+  // Atomic companion records let a new sequence include its first scenes and shots.
+  globals: external_exports.record(external_exports.unknown()).optional(),
+  scenes: external_exports.array(external_exports.record(external_exports.unknown())).optional(),
+  shots: external_exports.array(external_exports.record(external_exports.unknown())).optional()
+}).strict();
+function object3(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Expected an object");
+  return value;
+}
+function merge2(base, patch) {
+  const out = base && typeof base === "object" && !Array.isArray(base) ? { ...base } : {};
+  for (const [key, value] of Object.entries(patch)) {
+    if (["__proto__", "constructor", "prototype"].includes(key)) throw new Error("Unsafe property");
+    out[key] = value && typeof value === "object" && !Array.isArray(value) ? merge2(out[key], value) : value;
+  }
+  return out;
+}
+function ordered(items, order, key) {
+  if (!order || order.length !== items.length || new Set(order).size !== items.length || items.some((v) => !order.includes(key(v))))
+    throw new Error("order must contain every current identifier exactly once");
+  return order.map((id) => items.find((v) => key(v) === id));
+}
+var META_KEYS = ["THEME", "COMPREHENSION", "STORY", "PRODUCTION", "MOTION_POLICY", "STRUCTURE", "PREVIZ", "SLIDE_OBJECTS", "MUSIC", "VOICE"];
+function editUnit(input, area, action, args) {
+  const board = structuredClone(input);
+  if (args.globals) {
+    if (["get", "list"].includes(action)) throw new Error("Read operations do not accept globals");
+    for (const [key, value2] of Object.entries(args.globals)) {
+      if (!META_KEYS.includes(key) || key === "STRUCTURE") throw new Error("Unknown companion meta key");
+      board[key] = merge2(board[key], object3(value2));
+    }
+  }
+  const read2 = action === "get" || action === "list";
+  const st = board.STRUCTURE ?? { version: "structure-v1", sequences: [], scenes: [] };
+  let shots = board.SCENES ?? [];
+  let value;
+  const needValue = () => {
+    if (!args.value) throw new Error("value is required");
+    return args.value;
+  };
+  const requireItem = (item) => {
+    if (item === void 0) throw new Error("Unit not found");
+    return item;
+  };
+  if (area.startsWith("episode_")) {
+    const key = area === "episode_music" ? "MUSIC" : area === "episode_voice" ? "VOICE" : args.key;
+    if (!META_KEYS.includes(key)) throw new Error("Unknown meta key");
+    value = board[key] ?? null;
+    if (!read2) {
+      board[key] = merge2(value, needValue());
+      value = board[key];
+    }
+  } else if (area === "sequence" || area === "scene" || area === "shot") {
+    let list2 = area === "sequence" ? st.sequences : area === "scene" ? st.scenes : shots;
+    const key = area === "scene" ? "no" : "id";
+    const id = area === "scene" ? args.no : args.id;
+    if (["get", "update", "delete"].includes(action) && id === void 0) throw new Error(`${key} is required`);
+    const index = list2.findIndex((item) => item[key] === id);
+    if (action === "list") value = list2;
+    else if (action === "get") value = requireItem(list2[index]);
+    else if (action === "reorder") list2 = ordered(list2, args.order, (item) => item[key]);
+    else if (action === "create") {
+      const item = needValue();
+      if (list2.some((v) => v[key] === item[key]) && item[key] !== void 0) throw new Error("Duplicate identifier");
+      if (area !== "shot" && item[key] === void 0) throw new Error(`${key} is required`);
+      const at = args.index ?? list2.length;
+      if (at > list2.length) throw new Error("index past last unit");
+      if (area === "sequence" && args.moveScenes) {
+        if (!Array.isArray(item.scenes)) throw new Error("sequence.scenes must be an array");
+        for (const sequence of st.sequences) sequence.scenes = sequence.scenes.filter((no) => !item.scenes.includes(no));
+      }
+      list2.splice(at, 0, item);
+      if (area === "scene") {
+        const sequence = requireItem(st.sequences.find((q) => q.id === args.sequenceId));
+        sequence.scenes.push(item.no);
+        const rank = new Map(list2.map((scene, i2) => [scene.no, i2]));
+        sequence.scenes.sort((a, b) => rank.get(a) - rank.get(b));
+        for (const id2 of args.shotIds ?? []) requireItem(shots.find((shot) => shot.id === id2)).scene = item.no;
+      }
+      value = item;
+    } else if (action === "update") {
+      const old = requireItem(list2[index]);
+      const patch = needValue();
+      if (patch[key] !== void 0 && patch[key] !== old[key]) throw new Error("Identifiers cannot be renamed");
+      list2[index] = merge2(old, patch);
+      value = list2[index];
+    } else if (action === "delete") {
+      const old = requireItem(list2[index]);
+      const drop = area === "sequence" ? old.scenes : area === "scene" ? [old.no] : [];
+      const transfer = area === "sequence" && args.targetSequenceId || area === "scene" && args.targetSceneNo;
+      if (area === "sequence" && args.targetSequenceId) {
+        if (args.targetSequenceId === id) throw new Error("Cannot transfer to the deleted sequence");
+        requireItem(st.sequences.find((q) => q.id === args.targetSequenceId)).scenes.push(...drop);
+      }
+      if (area === "scene" && args.targetSceneNo) {
+        if (args.targetSceneNo === id) throw new Error("Cannot transfer to the deleted scene");
+        requireItem(st.scenes.find((scene) => scene.no === args.targetSceneNo));
+        for (const shot of shots) if (drop.includes(shot.scene)) shot.scene = args.targetSceneNo;
+      }
+      if (!transfer && !args.cascade && (area === "sequence" && drop.length || area === "scene" && shots.some((s2) => drop.includes(s2.scene)))) throw new Error("Children exist; cascade:true is required");
+      if (drop.length && !(area === "sequence" && transfer)) {
+        st.scenes = st.scenes.filter((s2) => !drop.includes(s2.no));
+        st.sequences = st.sequences.map((q) => ({ ...q, scenes: q.scenes.filter((no) => !drop.includes(no)) }));
+        shots = shots.filter((s2) => !drop.includes(s2.scene));
+      }
+      list2 = list2.filter((_, i2) => i2 !== index);
+      value = old;
+    } else throw new Error("Unknown action");
+    if (!read2) {
+      if (area === "sequence") st.sequences = list2;
+      if (area === "scene") st.scenes = list2;
+      if (area === "shot") shots = list2;
+      if (args.scenes) st.scenes.push(...args.scenes);
+      if (args.shots) shots.push(...args.shots);
+      if (area === "scene" && action === "reorder") {
+        const rank = new Map(st.scenes.map((s2, i2) => [s2.no, i2]));
+        st.sequences.forEach((q) => q.scenes.sort((a, b) => rank.get(a) - rank.get(b)));
+      }
+      if ((area === "sequence" || area === "scene") && ["create", "reorder"].includes(action)) {
+        const order = st.sequences.flatMap((q) => q.scenes);
+        st.scenes.sort((a, b) => order.indexOf(a.no) - order.indexOf(b.no));
+        shots.sort((a, b) => order.indexOf(a.scene) - order.indexOf(b.scene));
+      }
+      board.STRUCTURE = st;
+      board.SCENES = shots;
+    }
+  } else {
+    if (!args.shotId) throw new Error("shotId is required");
+    const shot = requireItem(shots.find((s2) => s2.id === args.shotId));
+    if (area === "shot_narration") {
+      let lines = shot.narration ?? [];
+      if (action === "list") value = lines;
+      else if (action === "get") value = requireItem(lines[args.index]);
+      else if (action === "create") {
+        const line = needValue();
+        const at = args.index ?? lines.length;
+        if (at > lines.length) throw new Error("index past last narration line");
+        lines.splice(at, 0, line);
+        value = line;
+      } else if (action === "reorder") lines = ordered(lines.map((line, index) => ({ line, index })), args.order, (item) => item.index).map((item) => item.line);
+      else {
+        const old = requireItem(lines[args.index]);
+        if (action === "delete") lines.splice(args.index, 1);
+        else lines[args.index] = merge2(old, needValue());
+        value = lines[args.index] ?? null;
+      }
+      if (!read2) shot.narration = lines;
+    } else if (area === "shot_transition") {
+      value = { transition: shot.transition, edit: shot.edit };
+      if (!read2) {
+        const patch = needValue();
+        const applied = applyPatch(board, { path: "", dryRun: false, draft: args.draft, transitions: [transitionPatchSchema.parse({ no: shots.indexOf(shot) + 1, ...patch })] });
+        if (applied.findings.some((f3) => f3.level === "bad")) throw new Error(JSON.stringify(applied.findings));
+        return { board: applied.win, value: patch };
+      }
+    } else if (area === "shot_sound") {
+      value = { sound: shot.sound, effect: shot.effect };
+      if (!read2) {
+        const patch = needValue();
+        for (const key of Object.keys(patch)) if (!["sound", "effect"].includes(key)) throw new Error("Only sound and effect are accepted");
+        Object.assign(shot, merge2(shot, patch));
+        value = { sound: shot.sound, effect: shot.effect };
+      }
+    } else {
+      const key = area === "shot_camera" ? "camera" : area === "shot_slide" ? "slide" : area === "shot_background" ? "bgPrompt" : void 0;
+      if (!key) throw new Error("Unknown shot field");
+      shot.visual ??= {};
+      value = shot.visual[key] ?? null;
+      if (!read2) {
+        const patch = needValue();
+        if (key === "bgPrompt") {
+          if (typeof patch.bgPrompt !== "string") throw new Error("value.bgPrompt must be a string");
+          shot.visual.bgPrompt = patch.bgPrompt;
+        } else shot.visual[key] = merge2(value, patch);
+        value = shot.visual[key];
+      }
+    }
+  }
+  if (!read2) {
+    for (const shot of board.SCENES ?? []) {
+      const old = input.SCENES?.find((s2) => s2.id && s2.id === shot.id);
+      const line = shot.shot?.eyeline;
+      if (old && line && typeof line.matchShot === "number") {
+        const target = input.SCENES?.[line.matchShot - 1];
+        const at = board.SCENES.findIndex((s2) => s2.id === target?.id);
+        if (at < 0) throw new Error("Removed eyeline target; repair the relation first");
+        line.matchShot = at + 1;
+      }
+    }
+    if (board.STRUCTURE) contract().sync(board);
+  }
+  return { board, value: value ?? null };
+}
+
+// src/portal-unit-routes.ts
+var apiArgs = external_exports.object({
+  channel: external_exports.string().regex(/^[a-z0-9][a-z0-9-]{0,63}$/).optional(),
+  episodeId: external_exports.string().uuid().optional(),
+  storyboardId: external_exports.string().uuid().optional(),
+  id: external_exports.string().uuid().optional(),
+  value: external_exports.record(external_exports.unknown()).optional(),
+  query: external_exports.string().min(1).optional(),
+  candidate: external_exports.enum(["D1", "D2", "D3"]).optional(),
+  file: external_exports.string().optional(),
+  kind: external_exports.enum(["music", "sfx"]).optional(),
+  baseRevisionNo: external_exports.number().int().nonnegative().optional()
+}).strict();
+function required2(value, field) {
+  if (value === void 0) throw new Error(`${field} is required`);
+  return value;
+}
+async function runPortalUnit(name, raw, fetchImpl) {
+  try {
+    const args = UNIT_NAMES.includes(name) ? unitEditSchema.parse(raw) : apiArgs.parse(raw);
+    const client = await portalClientFor(args.channel, fetchImpl);
+    if (!client) throw new Error("No portal workspace key is configured.");
+    const value = UNIT_NAMES.includes(name) ? await boardOperation(client, name, unitEditSchema.parse(raw)) : await apiOperation(client, name, apiArgs.parse(raw));
+    return { content: [{ type: "text", text: JSON.stringify(value, null, 2) }], isError: typeof value === "object" && value !== null && "saved" in value && value.saved === false };
+  } catch (error2) {
+    return { content: [{ type: "text", text: describePortalError(error2) }], isError: true };
+  }
+}
+async function boardOperation(client, name, args) {
+  const suffix = name.slice(7), split = suffix.lastIndexOf("_"), area = suffix.slice(0, split), action = suffix.slice(split + 1);
+  const { data: episode } = await client.getEpisode(args.episodeId);
+  const head = episode.headRevisionNo ?? 0;
+  const read2 = ["get", "list"].includes(action);
+  if (!read2 && args.baseRevisionNo !== head) throw new Error(`head_moved: expected ${args.baseRevisionNo}, current ${head}. Read and reconcile before retrying.`);
+  const detail = episode;
+  const meta = object3(detail.meta ?? {});
+  const board = { ...meta, SB_DOC: { ...object3(meta.SB_DOC ?? {}), backgrounds: detail.backgrounds, props: detail.props, characters: detail.characters, narratorCharacterId: detail.narratorCharacterId }, SCENES: detail.scenes.map((s2) => s2.extra) };
+  const identified = (board.SCENES ?? []).some((shot) => !shot.id) ? applyPatch(board, { path: "", dryRun: false, draft: args.draft }).win : board;
+  const result = editUnit(identified, area, action, args);
+  if (read2) return { headRevisionNo: head, value: result.value };
+  const normalized = applyPatch(result.board, { path: "", dryRun: false, draft: args.draft });
+  if (normalized.findings.some((f3) => f3.level === "bad")) throw new Error(`Board not saved: ${JSON.stringify(normalized.findings)}`);
+  const source = Object.entries(normalized.win).map(([key, value]) => `window[${JSON.stringify(key)}] = ${JSON.stringify(value)};`).join("\n");
+  const checked = evaluateWindowScript(source);
+  const dir = mkdtempSync5(join9(tmpdir4(), "portal-unit-"));
+  try {
+    const file = join9(dir, "scenes.js");
+    writeFileSync12(file, source);
+    for (const doc of episode.documents ?? []) if (["scenario.md", "script.md"].includes(doc.filename)) writeFileSync12(join9(dir, doc.filename), await client.document(args.episodeId, doc.filename));
+    const chosen = episode.scenarios?.find((s2) => s2.chosen);
+    if (chosen) writeFileSync12(join9(dir, "scenario.md"), await client.scenarioMd(args.episodeId, chosen.candidate));
+    const check2 = checkStoryboard({ path: file, draft: args.draft });
+    if (check2.violations) return { saved: false, headRevisionNo: head, check: check2 };
+    const { SCENES, SB_DOC, ...nextMeta } = checked;
+    const { data } = await client.checkpoint(args.episodeId, { stage: episode.stage ?? "board", baseRevisionNo: head, sourceHost: client.holder, note: args.note ?? name, scenes: SCENES, backgrounds: object3(SB_DOC).backgrounds, props: object3(SB_DOC).props, meta: { ...nextMeta, SB_DOC }, characters: object3(SB_DOC).characters, narratorCharacterId: object3(SB_DOC).narratorCharacterId });
+    return { saved: true, ...data, check: check2, localCopy: { unchanged: true, syncRequired: true } };
+  } finally {
+    rmSync9(dir, { recursive: true, force: true });
+  }
+}
+async function apiOperation(c, name, a) {
+  const suffix = name.slice(7), at = suffix.lastIndexOf("_"), area = suffix.slice(0, at), action = suffix.slice(at + 1);
+  const body = () => required2(a.value, "value");
+  const ep = () => required2(a.episodeId, "episodeId");
+  const sb = () => required2(a.storyboardId, "storyboardId");
+  const id = () => required2(a.id, "id");
+  if (area === "storyboard") return (await c.request(action === "get" ? "GET" : action === "create" ? "POST" : action === "update" ? "PATCH" : "DELETE", `/storyboards${action === "create" ? "" : `/${sb()}`}`, ["create", "update"].includes(action) ? body() : void 0)).data;
+  if (area === "episode") {
+    if (action === "list") return (await c.listEpisodes(sb())).data;
+    if (action === "get") return (await c.getEpisode(ep())).data;
+    return (await c.request(action === "update" ? "PATCH" : "DELETE", `/episodes/${ep()}`, action === "update" ? body() : void 0)).data;
+  }
+  if (area === "scene" && action === "search") return (await c.request("GET", `/scenes/search?q=${encodeURIComponent(required2(a.query, "query"))}`)).data;
+  if (area === "scenario") return (await c.request("DELETE", `/episodes/${ep()}/scenarios/${required2(a.candidate, "candidate")}`)).data;
+  if (area === "render_allocation") return (await c.request("POST", `/episodes/${ep()}/render-allocation`, { ...body(), baseRevisionNo: required2(a.baseRevisionNo, "baseRevisionNo"), sourceHost: c.holder })).data;
+  if (area === "episode_audio") {
+    const file = required2(a.file, "file"), kind = required2(a.kind, "kind");
+    const mime2 = extname8(file).toLowerCase() === ".wav" ? "audio/wav" : extname8(file).toLowerCase() === ".mp3" ? "audio/mpeg" : null;
+    if (!mime2) throw new Error("Audio must be a WAV or MP3 file");
+    const bytes = readFileSync14(file);
+    if (!bytes.length || bytes.length > 10 * 1024 * 1024) throw new Error("Audio must be 1 byte..10 MiB");
+    return (await c.uploadMedia(ep(), kind, bytes, mime2)).data;
+  }
+  if (area === "background" || area === "prop") {
+    const plural = area === "background" ? "backgrounds" : "props";
+    const registry2 = object3((await c.request("GET", `/storyboards/${sb()}/registry`)).data);
+    if (action === "register" || action === "unregister") return (await c.request(action === "register" ? "POST" : "DELETE", `/storyboards/${sb()}/registry`, { kind: area, entityId: id() })).data;
+    const entries = registry2[plural];
+    if (action === "list") return entries;
+    if (action === "get") {
+      const response = (await c.request("GET", `/projects/${registry2.projectId}/${plural}`)).data;
+      const rows = Array.isArray(response) ? response : object3(response)[plural];
+      return required2(rows.find((row) => row.id === id() && entries.some((e2) => e2.entityId === row.id)), area);
+    }
+    if (action === "create") {
+      return (await c.request("POST", `/storyboards/${sb()}/registry`, { kind: area, value: body() })).data;
+    }
+    if (!entries.some((e2) => e2.entityId === id())) throw new Error("Entity is not registered on this storyboard");
+    return (await c.request(action === "update" ? "PATCH" : "DELETE", `/${plural}/${id()}`, action === "update" ? body() : void 0)).data;
+  }
+  throw new Error("Unknown portal tool");
+}
+var UNIT_ROUTES = Object.fromEntries(UNIT_TOOL_NAMES.map((name) => [name, (args) => runPortalUnit(name, args)]));
+
 // src/threads-gate.ts
 import { createHash as createHash6, randomUUID as randomUUID4 } from "node:crypto";
-import { appendFileSync as appendFileSync2, mkdirSync as mkdirSync9, readFileSync as readFileSync14, realpathSync as realpathSync2, renameSync as renameSync7, statSync as statSync7, writeFileSync as writeFileSync12 } from "node:fs";
-import { dirname as dirname5, join as join9, resolve as resolve4 } from "node:path";
+import { appendFileSync as appendFileSync2, mkdirSync as mkdirSync9, readFileSync as readFileSync15, realpathSync as realpathSync2, renameSync as renameSync7, statSync as statSync7, writeFileSync as writeFileSync13 } from "node:fs";
+import { dirname as dirname5, join as join10, resolve as resolve4 } from "node:path";
 import { fileURLToPath as fileURLToPath2 } from "node:url";
 import { spawnSync as spawnSync2 } from "node:child_process";
 var nonempty = external_exports.string().trim().min(1);
@@ -89320,27 +89773,27 @@ function threadsBodyHash(body, selfReply = "") {
   return createHash6("sha256").update(JSON.stringify([normalize(body), normalize(selfReply)])).digest("hex");
 }
 function directory(channel) {
-  return join9(process.cwd(), "data", channelSchema.parse(channel), "growth", "threads");
+  return join10(process.cwd(), "data", channelSchema.parse(channel), "growth", "threads");
 }
 function draftLocation(id) {
   const match2 = /^([a-z0-9][a-z0-9-]*)\.([a-f0-9-]{36})$/.exec(id);
   if (!match2 || !external_exports.string().uuid().safeParse(match2[2]).success) throw new Error("Invalid draftId");
-  return { channel: match2[1], file: join9(directory(match2[1]), "drafts", `${match2[2]}.json`) };
+  return { channel: match2[1], file: join10(directory(match2[1]), "drafts", `${match2[2]}.json`) };
 }
 function audit(channel, tool, result, details = {}) {
   const dir = directory(channel);
   mkdirSync9(dir, { recursive: true });
-  appendFileSync2(join9(dir, "gate-log.jsonl"), JSON.stringify({ at: (/* @__PURE__ */ new Date()).toISOString(), tool, result, ...details }) + "\n", { mode: 384 });
+  appendFileSync2(join10(dir, "gate-log.jsonl"), JSON.stringify({ at: (/* @__PURE__ */ new Date()).toISOString(), tool, result, ...details }) + "\n", { mode: 384 });
 }
 function save(draft) {
   const { file } = draftLocation(draft.draftId);
   mkdirSync9(dirname5(file), { recursive: true });
   const temp = `${file}.${randomUUID4()}.tmp`;
-  writeFileSync12(temp, JSON.stringify(draft), { mode: 384 });
+  writeFileSync13(temp, JSON.stringify(draft), { mode: 384 });
   renameSync7(temp, file);
 }
 function load(id) {
-  const value = JSON.parse(readFileSync14(draftLocation(id).file, "utf8"));
+  const value = JSON.parse(readFileSync15(draftLocation(id).file, "utf8"));
   draftSchema.parse(value);
   if (value.draftId !== id || value.channel !== draftLocation(id).channel || threadsBodyHash(value.body, value.selfReply) !== value.bodyHash) {
     throw new Error("Draft body hash mismatch; create and review a new draft");
@@ -89408,7 +89861,7 @@ function checkThreadsGate(input) {
     if (bodyHash !== draft.bodyHash) throw new Error("Publish body hash mismatch");
     let limits2;
     try {
-      limits2 = external_exports.object({ voice: external_exports.number().finite().min(0).max(100), purpose: external_exports.number().finite().min(0).max(100), flow: external_exports.number().finite().min(0).max(100) }).parse(JSON.parse(readFileSync14(join9(directory(draft.channel), "gate.json"), "utf8")));
+      limits2 = external_exports.object({ voice: external_exports.number().finite().min(0).max(100), purpose: external_exports.number().finite().min(0).max(100), flow: external_exports.number().finite().min(0).max(100) }).parse(JSON.parse(readFileSync15(join10(directory(draft.channel), "gate.json"), "utf8")));
     } catch (error2) {
       if (error2.code === "ENOENT") throw new Error("Gate thresholds not configured (\uAE30\uC900\uC810 \uBBF8\uC124\uC815): gate.json required");
       throw error2;
@@ -89437,14 +89890,14 @@ function checkThreadsEpisode(input) {
   gateCall("threads_publish", input, () => {
     const channel = channelSchema.parse(input.channel);
     const topic = channelSchema.parse(input.episodeRef);
-    const root = realpathSync2(join9(process.cwd(), "data", channel, "episodes"));
-    const episode = realpathSync2(join9(root, topic));
+    const root = realpathSync2(join10(process.cwd(), "data", channel, "episodes"));
+    const episode = realpathSync2(join10(root, topic));
     if (dirname5(episode) !== root || !statSync7(episode).isDirectory()) throw new Error("Invalid episode directory");
-    const board = realpathSync2(join9(episode, "storyboard", "scenes.js"));
+    const board = realpathSync2(join10(episode, "storyboard", "scenes.js"));
     if (!board.startsWith(episode + "/") || !statSync7(board).isFile()) throw new Error("Missing episode storyboard");
-    const approvalPath = realpathSync2(join9(episode, "threads-publish-approval.json"));
+    const approvalPath = realpathSync2(join10(episode, "threads-publish-approval.json"));
     if (dirname5(approvalPath) !== episode) throw new Error("Invalid episode approval path");
-    const approval = JSON.parse(readFileSync14(approvalPath, "utf8"));
+    const approval = JSON.parse(readFileSync15(approvalPath, "utf8"));
     if (approval.approved !== true) throw new Error("Episode publishing approval required");
     for (const key of ["caption", "selfReply", "imageUrl", "videoUrl", "linkUrl", "replyToId"]) {
       if ((approval[key] ?? "") !== (input[key] ?? "")) throw new Error(`Episode approval mismatch: ${key}`);
@@ -89454,7 +89907,7 @@ function checkThreadsEpisode(input) {
 
 // src/portal-media.ts
 import { createHash as createHash7, randomUUID as randomUUID5 } from "node:crypto";
-import { appendFileSync as appendFileSync3, closeSync as closeSync5, fstatSync as fstatSync3, statSync as statSync8, mkdirSync as mkdirSync10, openSync as openSync5, readFileSync as readFileSync15, readSync as readSync3, realpathSync as realpathSync3, renameSync as renameSync8, rmSync as rmSync9, writeFileSync as writeFileSync13 } from "node:fs";
+import { appendFileSync as appendFileSync3, closeSync as closeSync5, fstatSync as fstatSync3, statSync as statSync8, mkdirSync as mkdirSync10, openSync as openSync5, readFileSync as readFileSync16, readSync as readSync3, realpathSync as realpathSync3, renameSync as renameSync8, rmSync as rmSync10, writeFileSync as writeFileSync14 } from "node:fs";
 import path15 from "node:path";
 var portalShotFields = {
   episodeDir: external_exports.string().min(1),
@@ -89515,7 +89968,7 @@ async function uploadShotMedia(args, fetchImpl) {
   const root = realpathSync3(dir), file = realpathSync3(path15.resolve(dir, args.file));
   if (!file.startsWith(root + path15.sep)) throw new Error("Media must be inside the episode directory, including symlinks.");
   const sb = path15.join(dir, "storyboard"), scenesFile = path15.join(sb, "scenes.js");
-  const source = readFileSync15(scenesFile, "utf8"), stateSource = readFileSync15(path15.join(dir, ".portal.json"), "utf8");
+  const source = readFileSync16(scenesFile, "utf8"), stateSource = readFileSync16(path15.join(dir, ".portal.json"), "utf8");
   const payload = buildImportPayload(dir), shots = payload.scenes;
   if (shots.some((s2) => !s2 || typeof s2 !== "object" || Array.isArray(s2))) throw new Error("Every shot must be an object.");
   const index = args.shotId ? shots.findIndex((s2) => s2.id === args.shotId) : (args.shotNo ?? 0) - 1;
@@ -89523,7 +89976,7 @@ async function uploadShotMedia(args, fetchImpl) {
   if (!args.shotId && shots[index].id !== void 0) throw new Error("Use shotId for a shot that has an ID.");
   const initial = statSync8(file);
   if (initial.isFile() && initial.size > limits[args.kind] * 1024 * 1024) return recordOversize(dir, file, args.kind, initial.size);
-  const unchanged = () => readFileSync15(scenesFile, "utf8") === source && readFileSync15(path15.join(dir, ".portal.json"), "utf8") === stateSource;
+  const unchanged = () => readFileSync16(scenesFile, "utf8") === source && readFileSync16(path15.join(dir, ".portal.json"), "utf8") === stateSource;
   const lock = path15.join(dir, ".portal-media.lock");
   let fd;
   try {
@@ -89551,9 +90004,9 @@ ${assignment}
 `);
     const backup = path15.join(sb, ".portal-local", `media-${randomUUID5()}`);
     mkdirSync10(backup, { recursive: true });
-    writeFileSync13(path15.join(backup, "scenes.js"), source);
+    writeFileSync14(path15.join(backup, "scenes.js"), source);
     recoveryFile = path15.join(backup, "uploaded-scenes.js");
-    writeFileSync13(recoveryFile, next);
+    writeFileSync14(recoveryFile, next);
     if (!unchanged()) throw new Error("Local board/state changed; upload is not linked.");
     phase = "checkpoint";
     const saved = await client.checkpoint(state.episodeId, {
@@ -89573,10 +90026,10 @@ ${assignment}
     if (!unchanged()) throw new Error("Portal saved; local board/state changed and was preserved.");
     const tmp = `${scenesFile}.${randomUUID5()}.tmp`;
     try {
-      writeFileSync13(tmp, next);
+      writeFileSync14(tmp, next);
       renameSync8(tmp, scenesFile);
     } finally {
-      rmSync9(tmp, { force: true });
+      rmSync10(tmp, { force: true });
     }
     writePortalState(dir, { headRevisionNo: revisionNo });
     return { skipped: false, episodeId: state.episodeId, revisionNo, kind: args.kind, id: data.id, sha256: data.sha256 };
@@ -89594,7 +90047,7 @@ ${assignment}
     }));
   } finally {
     closeSync5(fd);
-    rmSync9(lock, { force: true });
+    rmSync10(lock, { force: true });
   }
 }
 async function withShotMedia(args, kind, run, output, fetchImpl) {
@@ -89630,8 +90083,8 @@ function withoutPortal(args) {
 // src/datago-client.ts
 import { mkdir, writeFile as writeFile2 } from "node:fs/promises";
 import { existsSync as existsSync17 } from "node:fs";
-import { tmpdir as tmpdir4 } from "node:os";
-import { join as join10 } from "node:path";
+import { tmpdir as tmpdir5 } from "node:os";
+import { join as join11 } from "node:path";
 var PORTAL_BASE = "https://www.data.go.kr";
 var ODCLOUD_BASE = "https://api.odcloud.kr/api";
 var OPENAPI_BASE = "https://apis.data.go.kr";
@@ -89870,14 +90323,14 @@ async function downloadFile2(input) {
   const cd = fileRes.headers.get("content-disposition") ?? "";
   const rawName = cd.match(/filename\*?=(?:UTF-8''|")?([^";]+)/i)?.[1] ?? `datago-${input.publicDataPk}.bin`;
   const filename = sanitizeFilename(fixHeaderEncoding(rawName.replace(/"/g, "")));
-  const saveDir = input.saveDir ?? join10(tmpdir4(), "social-flow-datago");
+  const saveDir = input.saveDir ?? join11(tmpdir5(), "social-flow-datago");
   await mkdir(saveDir, { recursive: true });
-  let savedPath = join10(saveDir, filename);
+  let savedPath = join11(saveDir, filename);
   for (let i2 = 1; existsSync17(savedPath); i2++) {
     if (i2 >= 100) {
       return err(`there are already 100+ files with the same name in ${saveDir} \u2014 clean up saveDir or point at a different directory.`);
     }
-    savedPath = join10(saveDir, filename.replace(/(\.[^.]*)?$/, `-${i2}$1`));
+    savedPath = join11(saveDir, filename.replace(/(\.[^.]*)?$/, `-${i2}$1`));
   }
   await writeFile2(savedPath, buf);
   const preview = decodePreview(buf.subarray(0, 4096));
@@ -91217,7 +91670,7 @@ import {
   writeFileSync as nodeWriteFileSync
 } from "node:fs";
 import { open as nodeOpen, readFile, stat as stat3 } from "node:fs/promises";
-import { basename as basename8, dirname as dirname6, extname as extname8, join as join11 } from "node:path";
+import { basename as basename8, dirname as dirname6, extname as extname9, join as join12 } from "node:path";
 function enabledPlatforms() {
   const channelDirs = listChannelDirs();
   return SNS_PLATFORMS.filter(
@@ -91809,7 +92262,7 @@ var YT_THUMB_MAX_BYTES = 2 * 1024 * 1024;
 var CAPTION_MAX_BYTES_YT = 100 * 1024 * 1024;
 var CAPTION_MAX_BYTES_FB = 200 * 1024;
 async function readCaptionFile(path20, maxBytes) {
-  if (extname8(path20).toLowerCase() !== ".srt") {
+  if (extname9(path20).toLowerCase() !== ".srt") {
     return { error: fail2(400, `Caption file must be .srt (SubRip): ${path20}`) };
   }
   let bytes;
@@ -91922,7 +92375,7 @@ function parseResumeOffset(range) {
 }
 function sessionStateFile(filePath) {
   const key = createHash8("sha256").update(filePath).digest("hex").slice(0, 16);
-  return join11(snsTokenDir, ".yt-upload", `${key}.json`);
+  return join12(snsTokenDir, ".yt-upload", `${key}.json`);
 }
 function readState(filePath) {
   try {
@@ -92022,7 +92475,7 @@ async function queryResumeOffset(sessionUrl, total, mimeType) {
   }
 }
 async function publishYoutube(input) {
-  const mimeType = YT_VIDEO_MIME_BY_EXT[extname8(input.videoFilePath).toLowerCase()];
+  const mimeType = YT_VIDEO_MIME_BY_EXT[extname9(input.videoFilePath).toLowerCase()];
   if (!mimeType) return fail2(400, `Unsupported video extension: ${input.videoFilePath} (.mp4/.mov)`);
   let videoSize;
   let videoMtimeMs;
@@ -92037,7 +92490,7 @@ async function publishYoutube(input) {
   }
   let thumb;
   if (input.thumbnailFilePath) {
-    const thumbMime = YT_THUMB_MIME_BY_EXT[extname8(input.thumbnailFilePath).toLowerCase()];
+    const thumbMime = YT_THUMB_MIME_BY_EXT[extname9(input.thumbnailFilePath).toLowerCase()];
     if (!thumbMime) {
       return fail2(400, `Unsupported thumbnail extension: ${input.thumbnailFilePath} (.jpg/.jpeg/.png)`);
     }
@@ -93056,8 +93509,8 @@ async function checkAccounts(channel) {
 
 // src/tts-final-quality.ts
 import { execFile as execFile8 } from "node:child_process";
-import { existsSync as existsSync19, mkdtempSync as mkdtempSync5, readFileSync as readFileSync16, rmSync as rmSync10, writeFileSync as writeFileSync14, renameSync as renameSync9, openSync as openSync6, closeSync as closeSync6 } from "node:fs";
-import { tmpdir as tmpdir5 } from "node:os";
+import { existsSync as existsSync19, mkdtempSync as mkdtempSync6, readFileSync as readFileSync17, rmSync as rmSync11, writeFileSync as writeFileSync15, renameSync as renameSync9, openSync as openSync6, closeSync as closeSync6 } from "node:fs";
+import { tmpdir as tmpdir6 } from "node:os";
 import path17 from "node:path";
 import { promisify as promisify3 } from "node:util";
 var exec2 = promisify3(execFile8);
@@ -93076,24 +93529,24 @@ async function reviewFinalSpeech(input) {
   } catch {
     return { success: false, status: "unverified", error: "Final speech review is already locked" };
   }
-  const temp = mkdtempSync5(path17.join(tmpdir5(), "speech-final-"));
+  const temp = mkdtempSync6(path17.join(tmpdir6(), "speech-final-"));
   let base = { version: 1, policy: "final-speech-v1", model: REVIEW_MODEL, ...request, mediaPath: media };
   function save2(status, extra) {
     const result = { ...base, status, checkedAt: (/* @__PURE__ */ new Date()).toISOString(), ...extra };
     const staging = path17.join(temp, "proof.json");
-    writeFileSync14(staging, JSON.stringify(result, null, 2) + "\n");
-    writeFileSync14(proofPath + ".tmp", readFileSync16(staging));
+    writeFileSync15(staging, JSON.stringify(result, null, 2) + "\n");
+    writeFileSync15(proofPath + ".tmp", readFileSync17(staging));
     renameSync9(proofPath + ".tmp", proofPath);
     return { success: status === "pass", status, proofPath, ...extra };
   }
   try {
-    base = { ...base, mediaSha256: sha256(readFileSync16(media)), textSha256: sha256(normalizeSpeech(request.expectedText)) };
+    base = { ...base, mediaSha256: sha256(readFileSync17(media)), textSha256: sha256(normalizeSpeech(request.expectedText)) };
     const wav = path17.join(temp, "final.flac");
     await exec2("ffmpeg", ["-y", "-v", "error", "-i", media, "-map", "0:a:0", "-map_metadata", "-1", "-ac", "1", "-ar", "24000", "-c:a", "flac", wav], { timeout: 6e4 });
-    base.audioSha256 = sha256(readFileSync16(wav));
-    if (sha256(readFileSync16(media)) !== base.mediaSha256) throw new Error("Final media changed during decoding");
+    base.audioSha256 = sha256(readFileSync17(wav));
+    if (sha256(readFileSync17(media)) !== base.mediaSha256) throw new Error("Final media changed during decoding");
     if (existsSync19(proofPath)) {
-      const old = JSON.parse(readFileSync16(proofPath, "utf8"));
+      const old = JSON.parse(readFileSync17(proofPath, "utf8"));
       const same = Object.entries(base).every(([k, v]) => ["mediaSha256", "expectedText"].includes(k) || old[k] === v);
       if (old.audioSha256 === base.audioSha256 && old.textSha256 === base.textSha256 && old.status === "fail") return save2("fail", { reused: true, signal: old.signal, transcript: old.transcript, failures: old.failures, review: old.review, error: "This exact final audio already failed; fix the audio before another listening review" });
       if (same && old.status === "pass") {
@@ -93117,14 +93570,14 @@ async function reviewFinalSpeech(input) {
     const result = await listen(wav, reviewRequest, true);
     failures.push(...reviewFailures(request.expectedText, result.transcript, result.review, signal.duration));
     if ((result.review.continuity ?? 0) < 95 || !result.review.continuityEvidence) failures.push("Episode continuity below 95 or missing listening evidence");
-    if (sha256(readFileSync16(media)) !== base.mediaSha256) throw new Error("Final media changed during listening");
+    if (sha256(readFileSync17(media)) !== base.mediaSha256) throw new Error("Final media changed during listening");
     return save2(failures.length ? "fail" : "pass", { signal, ...result, failures });
   } catch (error2) {
     return save2("unverified", { error: error2 instanceof Error ? error2.message : String(error2) });
   } finally {
-    rmSync10(temp, { recursive: true, force: true });
+    rmSync11(temp, { recursive: true, force: true });
     closeSync6(lock);
-    rmSync10(lockPath, { force: true });
+    rmSync11(lockPath, { force: true });
   }
 }
 
@@ -93813,8 +94266,8 @@ async function generateWithReferences2(request) {
 }
 
 // src/content-feedback.ts
-import { mkdirSync as mkdirSync11, writeFileSync as writeFileSync17 } from "node:fs";
-import { dirname as dirname7, isAbsolute, join as join12, resolve as resolve5 } from "node:path";
+import { mkdirSync as mkdirSync11, writeFileSync as writeFileSync18 } from "node:fs";
+import { dirname as dirname7, isAbsolute, join as join13, resolve as resolve5 } from "node:path";
 
 // src/content-feedback-html.ts
 function escapeHtml(value) {
@@ -94399,7 +94852,7 @@ function analyzeInstagramMedia(media, limit2) {
   return { items, cohort, notes };
 }
 function defaultHtmlPath(channel) {
-  return join12(process.cwd(), "data", channel, "growth", "review-recent.html");
+  return join13(process.cwd(), "data", channel, "growth", "review-recent.html");
 }
 function resolveHtmlPath(channel, outputPath) {
   if (outputPath) {
@@ -94446,7 +94899,7 @@ async function contentFeedback(input) {
   };
   if (htmlPath) {
     mkdirSync11(dirname7(htmlPath), { recursive: true });
-    writeFileSync17(htmlPath, renderFeedbackHtml(report), "utf8");
+    writeFileSync18(htmlPath, renderFeedbackHtml(report), "utf8");
   }
   return { ok: true, status: 200, body: JSON.stringify(report) };
 }
@@ -95736,7 +96189,7 @@ function renderCapabilityStatus() {
 
 // src/portal-backups.ts
 import { createHash as createHash9 } from "node:crypto";
-import { lstatSync as lstatSync4, readdirSync as readdirSync4, rmSync as rmSync11 } from "node:fs";
+import { lstatSync as lstatSync4, readdirSync as readdirSync4, rmSync as rmSync12 } from "node:fs";
 import path19 from "node:path";
 var backupSchema = external_exports.object({
   episodeDir: external_exports.string().min(1),
@@ -95816,7 +96269,7 @@ function manageBackups(input) {
   if (args.apply) {
     try {
       for (const entry of remove) {
-        rmSync11(path19.join(dir, entry.path), { recursive: true });
+        rmSync12(path19.join(dir, entry.path), { recursive: true });
         deleted.push(entry.path);
       }
     } catch (cause) {
@@ -96257,6 +96710,7 @@ function fromPortal(r2) {
   return text(r2.text, r2.isError);
 }
 var ROUTES = {
+  ...UNIT_ROUTES,
   serp_web_search: async (args) => {
     const result = await webSearch(parseArgs(serpWebSchema, args));
     return text(result.text, result.isError);

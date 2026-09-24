@@ -1,3 +1,4 @@
+import { UNIT_TOOLS } from './portal-unit-tools.js';
 import { cameraContract, renderPurposes, stillCameraEffectList, contract as storyboardContract } from './storyboard.js';
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { MUSIC_GENERATION_MODES, MUSIC_SCALES } from './music-client.js';
@@ -1232,6 +1233,7 @@ Returns: JSON — { candidate, chosen, findings[] }.`,
 ];
 
 export const TOOLS: Tool[] = [
+  ...UNIT_TOOLS,
   // ── Research & fact-checking ──────────────────────────────────────────
   {
     name: 'serp_web_search',
