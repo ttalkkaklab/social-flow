@@ -251,8 +251,9 @@ export function listChannelDirs() {
  * visible before anything is written. A key is issued on the portal at
  * `/{workspace}/settings/api-keys` (admin+), which also prints this file ready to save.
  *
- *   { "apiUrl": "https://story.example.com", "workspace": "<slug>", "apiKey": "tks_…", "holder": "optional" }
+ *   { "apiKey": "tks_…" } — apiUrl, workspace and holder are optional.
  */
+export const DEFAULT_PORTAL_API_URL = 'https://story.ttalkkaklab.com';
 export const PORTAL_CREDENTIAL_FILENAME = 'ttalkkakstory.json';
 export function portalCredentialFile(channel) {
     if (!channel)
@@ -283,16 +284,16 @@ function readPortalCredentialFile(file) {
     catch {
         // No parser message here — it quotes the offending text, which in a credential file is
         // part of the key (review P2).
-        throw new Error(`${file} is not valid JSON — expected { "apiUrl", "workspace", "apiKey" }.`);
+        throw new Error(`${file} is not valid JSON — expected { "apiKey": "tks_…" }.`);
     }
     const o = (parsed && typeof parsed === 'object' ? parsed : {});
     const str = (k) => (typeof o[k] === 'string' ? o[k].trim() : '');
-    const apiUrl = str('apiUrl') || str('api_url');
+    const apiUrl = str('apiUrl') || str('api_url') || (process.env.TTALKKAKSTORY_API_URL || '').trim() || DEFAULT_PORTAL_API_URL;
     const workspace = str('workspace');
     const apiKey = str('apiKey') || str('api_key');
-    const missing = [!apiUrl && 'apiUrl', !workspace && 'workspace', !apiKey && 'apiKey'].filter(Boolean);
+    const missing = [!apiKey && 'apiKey'].filter(Boolean);
     if (missing.length > 0) {
-        throw new Error(`${file} is missing ${missing.join(', ')} — expected { "apiUrl", "workspace", "apiKey" }.`);
+        throw new Error(`${file} is missing ${missing.join(', ')} — expected { "apiKey": "tks_…" }.`);
     }
     const holder = str('holder');
     return { apiUrl, workspace, apiKey, ...(holder ? { holder } : {}), source: file };
@@ -312,10 +313,10 @@ export function portalCredential(channel) {
     const flat = readPortalCredentialFile(portalCredentialFile());
     if (flat)
         return flat;
-    const apiUrl = (process.env.TTALKKAKSTORY_API_URL || '').trim();
+    const apiUrl = (process.env.TTALKKAKSTORY_API_URL || '').trim() || DEFAULT_PORTAL_API_URL;
     const workspace = (process.env.TTALKKAKSTORY_WORKSPACE || '').trim();
     const apiKey = (process.env.TTALKKAKSTORY_API_KEY || '').trim();
-    if (apiUrl && workspace && apiKey) {
+    if (apiKey) {
         const holder = (process.env.TTALKKAKSTORY_HOLDER || '').trim();
         return { apiUrl, workspace, apiKey, ...(holder ? { holder } : {}), source: 'env' };
     }
@@ -329,7 +330,7 @@ export function portalCredential(channel) {
 export function portalConfigured() {
     if (existsSync(portalCredentialFile()))
         return true;
-    if (process.env.TTALKKAKSTORY_API_URL && process.env.TTALKKAKSTORY_WORKSPACE && process.env.TTALKKAKSTORY_API_KEY)
+    if (process.env.TTALKKAKSTORY_API_KEY?.trim())
         return true;
     let entries;
     try {

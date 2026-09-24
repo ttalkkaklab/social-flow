@@ -12,6 +12,7 @@
  * of retrying blind. Route list = the portal's `docs/API.md`; one method per route.
  */
 
+import { createHash } from 'node:crypto';
 import { hostname } from 'node:os';
 import { config, portalCredential, type PortalCredential } from './config.js';
 
@@ -47,6 +48,7 @@ export interface PortalClient {
   /** The workspace-scoped API base, e.g. https://story.example/api/workspaces/lab */
   base: string;
   workspace: string;
+  resolvedBy: "file" | "token";
   source: string;
   holder: string;
   uploadMedia(episodeId: string, kind: string, bytes: Uint8Array, mime: string): Promise<PortalResponse<{ id: string; sha256: string; mime: string; byteSize: number; kind: string }>>;
@@ -147,13 +149,56 @@ export const SAFE_DOCUMENT_NAME = /^(?!\.\.?$)[^/\\\0]+$/;
  * Resolve the credential for a channel and build the client. `null` when nothing is
  * configured — the tool turns that into the one-line "no portal key" answer.
  */
-export function portalClientFor(channel?: string, fetchImpl?: FetchLike): PortalClient | null {
-  const credential = portalCredential(channel);
-  if (!credential) return null;
-  return createPortalClient(credential, fetchImpl);
+type TokenWorkspace = { workspaceSlug: string; workspaceName: string; role: string };
+// A process/session cache, isolated by transport and API origin/key. Rejected lookups are retriable.
+const tokenWorkspaces = new WeakMap<FetchLike, Map<string, Promise<TokenWorkspace>>>();
+
+async function resolveToken(credential: PortalCredential, fetchImpl: FetchLike): Promise<TokenWorkspace> {
+  const root = credential.apiUrl.replace(/\/+$/, '');
+  let cache = tokenWorkspaces.get(fetchImpl);
+  if (!cache) { cache = new Map(); tokenWorkspaces.set(fetchImpl, cache); }
+  const key = createHash('sha256').update(JSON.stringify([root, credential.apiKey])).digest('hex');
+  let pending = cache.get(key);
+  if (!pending) {
+    pending = (async () => {
+      let response: Response;
+      try {
+        response = await fetchImpl(`${root}/api/token`, {
+          headers: { authorization: `Bearer ${credential.apiKey}` },
+          redirect: 'error', signal: AbortSignal.timeout(Math.max(config.requestTimeoutMs, PORTAL_TIMEOUT_MS)),
+        });
+      } catch { throw new PortalError(502, 'Token workspace lookup failed. Check the portal URL and connection.'); }
+      if (!response.ok) throw new PortalError(response.status, 'Token workspace lookup failed. Check the API key and portal deployment.');
+      let envelope: { success?: boolean; data?: TokenWorkspace };
+      try { envelope = await response.json() as typeof envelope; }
+      catch { throw new PortalError(502, 'Token workspace lookup returned invalid JSON.'); }
+      const data = envelope?.data;
+      if (!envelope?.success || !data || typeof data.workspaceSlug !== 'string' ||
+          !/^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/.test(data.workspaceSlug) ||
+          typeof data.workspaceName !== 'string' || data.role !== 'member') {
+        throw new PortalError(502, 'Token workspace lookup returned an invalid workspace.');
+      }
+      return data;
+    })();
+    cache.set(key, pending);
+    // Bound long-lived servers that see frequent key rotations.
+    if (cache.size > 100) cache.delete(cache.keys().next().value!);
+    pending.catch(() => { if (cache.get(key) === pending) cache.delete(key); });
+  }
+  return pending;
 }
 
-export function createPortalClient(credential: PortalCredential, fetchImpl: FetchLike = fetch): PortalClient {
+export async function portalClientFor(channel?: string, fetchImpl: FetchLike = fetch): Promise<PortalClient | null> {
+  const credential = portalCredential(channel);
+  if (!credential) return null;
+  const token = await resolveToken(credential, fetchImpl);
+  if (credential.workspace && credential.workspace !== token.workspaceSlug) {
+    throw new PortalError(409, `Workspace mismatch — ${credential.source} specifies "${credential.workspace}", but the API key opens "${token.workspaceSlug}". Fix the credential file or environment. Nothing was sent to a workspace.`);
+  }
+  return createPortalClient({ ...credential, workspace: token.workspaceSlug }, fetchImpl, credential.workspace ? 'file' : 'token');
+}
+
+export function createPortalClient(credential: PortalCredential & { workspace: string }, fetchImpl: FetchLike = fetch, resolvedBy: 'file' | 'token' = 'file'): PortalClient {
   const root = credential.apiUrl.replace(/\/+$/, '');
   const base = `${root}/api/workspaces/${encodeURIComponent(credential.workspace)}`;
   const headers: Record<string, string> = { authorization: `Bearer ${credential.apiKey}` };
@@ -206,6 +251,7 @@ export function createPortalClient(credential: PortalCredential, fetchImpl: Fetc
   return {
     base,
     workspace: credential.workspace,
+    resolvedBy,
     source: credential.source,
     holder,
     uploadMedia: (episodeId, kind, bytes, mime) => json('POST', `${withHolder(`/episodes/${episodeId}/media`)}&kind=${encodeURIComponent(kind)}`, bytes, mime),

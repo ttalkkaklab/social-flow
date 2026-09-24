@@ -396,8 +396,8 @@ the real state rather than a guess.
 
 **Portal — lease, then pull, before touching the copy (`portal_*` tools listed, README §The
 ttalkkakstory portal).** The plugin's server calls the portal with the channel's workspace API key
-(`<SNS_TOKEN_DIR>/<channel>/ttalkkakstory.json`, read off the episode path); the tools are listed
-only while a key exists, so their absence is local-file mode — one line, go on. An episode the
+(`<SNS_TOKEN_DIR>/<channel>/ttalkkakstory.json`, read off the episode path, containing only `{ "apiKey": "tks_…" }`); the tools are listed
+only while a key exists. The API URL defaults to `https://story.ttalkkaklab.com`; the key resolves its workspace automatically, and an explicit workspace must match. `portal_workspace_check` reports `resolvedBy: "token"|"file"`. Their absence is local-file mode — one line, go on. An episode the
 portal has seen is the portal's; the directory is a working copy (two machines on one topic used
 to be last-writer-wins, silently). Top of a session, before any portal write (§2.2 included):
 `portal_workspace_check` once (`episodeDir:` — names the workspace the key opens and whether the

@@ -20,6 +20,7 @@ function credential() { mkdirSync(join(root,'tokens','test'),{recursive:true}); 
 function server({ failUpload, failCheckpoint, changedHead } = {}) {
   const events = []; let revision = 1, lastScenes;
   const fetch = async (url, init = {}) => {
+    if (new URL(url).pathname === '/api/token') return Response.json({success:true,data:{workspaceSlug:'lab',workspaceName:'Lab',role:'member'}});
     const u = new URL(url), method=init.method ?? 'GET';
     assert.equal(init.headers.authorization,'Bearer tks_test_media');
     if (method === 'GET') { events.push('head'); return Response.json({success:true,data:{id:ep, headRevisionNo: changedHead ?? revision,stage:'approved'}}); }

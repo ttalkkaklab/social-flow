@@ -223,11 +223,11 @@ function channelFor(explicit, ...dirs) {
     }
     return undefined;
 }
-function resolveClient(fetchImpl, explicit, ...dirs) {
+async function resolveClient(fetchImpl, explicit, ...dirs) {
     const channel = channelFor(explicit, ...dirs);
     let client;
     try {
-        client = portalClientFor(channel, fetchImpl);
+        client = await portalClientFor(channel, fetchImpl);
     }
     catch (error) {
         return { error: failed(error) };
@@ -353,7 +353,7 @@ function resolveEpisodeId(episodeId, ...dirs) {
 export function portalHandlers(fetchImpl) {
     return {
         async attachmentsSync(args) {
-            const r = resolveClient(fetchImpl, args.channel, args.episodeDir);
+            const r = await resolveClient(fetchImpl, args.channel, args.episodeDir);
             if ('error' in r)
                 return r.error;
             const refused = refuseMismatch(r.client, args.episodeDir);
@@ -368,7 +368,7 @@ export function portalHandlers(fetchImpl) {
             }
         },
         async imagesUpload(args) {
-            const r = resolveClient(fetchImpl, undefined, args.episodeDir);
+            const r = await resolveClient(fetchImpl, undefined, args.episodeDir);
             if ('error' in r)
                 return r.error;
             const refused = refuseMismatch(r.client, args.episodeDir);
@@ -384,7 +384,7 @@ export function portalHandlers(fetchImpl) {
             }
         },
         async renderAllocation({ episodeId, episodeDir, channel, assignments, requestId, baseRevisionNo }) {
-            const r = resolveClient(fetchImpl, channel, episodeDir);
+            const r = await resolveClient(fetchImpl, channel, episodeDir);
             if ('error' in r)
                 return r.error;
             const refused = refuseMismatch(r.client, episodeDir);
@@ -400,7 +400,7 @@ export function portalHandlers(fetchImpl) {
             }
         },
         async workspaceCheck({ channel, episodeDir, episodeId }) {
-            const r = resolveClient(fetchImpl, channel, episodeDir);
+            const r = await resolveClient(fetchImpl, channel, episodeDir);
             if ('error' in r)
                 return r.error;
             try {
@@ -467,6 +467,7 @@ export function portalHandlers(fetchImpl) {
                 return ok({
                     channel: r.channel ?? null,
                     workspace: r.client.workspace,
+                    resolvedBy: r.client.resolvedBy,
                     source: r.client.source,
                     holder: r.client.holder,
                     ...(episodeDir
@@ -487,7 +488,7 @@ export function portalHandlers(fetchImpl) {
             }
         },
         async storyboardSave({ episodeDir, project, storyboardTitle, title, stage: stageArg, baseRevisionNo, note }) {
-            const r = resolveClient(fetchImpl, undefined, episodeDir);
+            const r = await resolveClient(fetchImpl, undefined, episodeDir);
             if ('error' in r)
                 return r.error;
             const refused = refuseMismatch(r.client, episodeDir);
@@ -538,7 +539,7 @@ export function portalHandlers(fetchImpl) {
             }
         },
         async storyboardList({ channel, storyboardId, query, projectId, page }) {
-            const r = resolveClient(fetchImpl, channel);
+            const r = await resolveClient(fetchImpl, channel);
             if ('error' in r)
                 return r.error;
             try {
@@ -551,7 +552,7 @@ export function portalHandlers(fetchImpl) {
             }
         },
         async storyboardPull({ episodeId, targetDir, includeDocuments = true, revision, mode = 'replace' }) {
-            const r = resolveClient(fetchImpl, undefined, targetDir);
+            const r = await resolveClient(fetchImpl, undefined, targetDir);
             if ('error' in r)
                 return r.error;
             const refused = refuseMismatch(r.client, targetDir);
@@ -683,7 +684,7 @@ export function portalHandlers(fetchImpl) {
             }
         },
         async episodeStatus({ episodeId, episodeDir, channel, status, stage: stageArg, title }) {
-            const r = resolveClient(fetchImpl, channel, episodeDir);
+            const r = await resolveClient(fetchImpl, channel, episodeDir);
             if ('error' in r)
                 return r.error;
             const refused = refuseMismatch(r.client, episodeDir);
@@ -701,7 +702,7 @@ export function portalHandlers(fetchImpl) {
             }
         },
         async episodeCreate({ storyboardId, episodeDir, channel, ...body }) {
-            const r = resolveClient(fetchImpl, channel, episodeDir);
+            const r = await resolveClient(fetchImpl, channel, episodeDir);
             if ('error' in r)
                 return r.error;
             const refused = refuseMismatch(r.client, episodeDir);
@@ -720,7 +721,7 @@ export function portalHandlers(fetchImpl) {
             }
         },
         async episodeCheckpoint({ stage: stageArg, episodeId, episodeDir, channel, baseRevisionNo, note, documents }) {
-            const r = resolveClient(fetchImpl, channel, episodeDir);
+            const r = await resolveClient(fetchImpl, channel, episodeDir);
             if ('error' in r)
                 return r.error;
             const refused = refuseMismatch(r.client, episodeDir);
@@ -774,7 +775,7 @@ export function portalHandlers(fetchImpl) {
             }
         },
         async episodeRevisions({ episodeId, episodeDir, channel, revisionNo, compareTo }) {
-            const r = resolveClient(fetchImpl, channel, episodeDir);
+            const r = await resolveClient(fetchImpl, channel, episodeDir);
             if ('error' in r)
                 return r.error;
             try {
@@ -795,7 +796,7 @@ export function portalHandlers(fetchImpl) {
             }
         },
         async episodeRestore({ revisionNo, episodeId, episodeDir, channel, note }) {
-            const r = resolveClient(fetchImpl, channel, episodeDir);
+            const r = await resolveClient(fetchImpl, channel, episodeDir);
             if ('error' in r)
                 return r.error;
             const refused = refuseMismatch(r.client, episodeDir);
@@ -817,7 +818,7 @@ export function portalHandlers(fetchImpl) {
             }
         },
         async episodeLease({ action, episodeId, episodeDir, channel, ttlMinutes, force }) {
-            const r = resolveClient(fetchImpl, channel, episodeDir);
+            const r = await resolveClient(fetchImpl, channel, episodeDir);
             if ('error' in r)
                 return r.error;
             const refused = refuseMismatch(r.client, episodeDir);
@@ -843,7 +844,7 @@ export function portalHandlers(fetchImpl) {
         async scenarioSave({ candidate: cand, file, markdown, chosen, episodeId, episodeDir, channel }) {
             // candidates/dN.md sits two levels under the episode directory; scenario.md one level (storyboard/).
             const dirFromFile = file ? (path.basename(path.dirname(file)) === 'candidates' ? path.dirname(path.dirname(file)) : path.dirname(file)) : undefined;
-            const r = resolveClient(fetchImpl, channel, episodeDir, dirFromFile);
+            const r = await resolveClient(fetchImpl, channel, episodeDir, dirFromFile);
             if ('error' in r)
                 return r.error;
             const refused = refuseMismatch(r.client, episodeDir, dirFromFile);
@@ -872,7 +873,7 @@ export function portalHandlers(fetchImpl) {
             }
         },
         async scenarioPull({ targetDir, candidate: cand, episodeId, episodeDir, channel }) {
-            const r = resolveClient(fetchImpl, channel, episodeDir, targetDir);
+            const r = await resolveClient(fetchImpl, channel, episodeDir, targetDir);
             if ('error' in r)
                 return r.error;
             const refused = refuseMismatch(r.client, episodeDir, targetDir);
@@ -943,7 +944,7 @@ export function portalHandlers(fetchImpl) {
             }
         },
         async scenarioChoose({ candidate: cand, episodeId, episodeDir, channel }) {
-            const r = resolveClient(fetchImpl, channel, episodeDir);
+            const r = await resolveClient(fetchImpl, channel, episodeDir);
             if ('error' in r)
                 return r.error;
             const refused = refuseMismatch(r.client, episodeDir);
