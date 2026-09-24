@@ -80,7 +80,22 @@ export interface PortalClient {
   chooseScenario(episodeId: string, candidate: string): Promise<PortalResponse<PortalScenarioSaved>>;
   scenarioMd(episodeId: string, candidate: string): Promise<string>;
   pageUrl(relative: string): string;
+  /** Global asset library (portal `/api/assets`, #87) — outside the workspace; any live key reads the same library. */
+  assetsSearch(query: Record<string, string | number | undefined>): Promise<PortalResponse<PortalAssetPage>>;
+  assetsGet(id: string): Promise<PortalResponse<PortalAsset>>;
+  /** Stream one asset's bytes to `sink`; resolves with the byte count. `maxBytes` aborts an oversized body before it lands on disk. */
+  assetsDownload(id: string, sink: (chunk: Uint8Array) => void, maxBytes: number): Promise<number>;
 }
+
+export interface PortalAsset {
+  id: string; sha256: string; sourceId: string | null; type: 'video' | 'music' | 'sfx' | 'image';
+  category: string | null; categoryKo: string | null; title: string | null; descKo: string; descEn: string | null;
+  tagsKo: string[]; tagsEn: string[]; prompt: string | null; mime: string; byteSize: number;
+  durationMs: number | null; width: number | null; height: number | null; aspect: string | null;
+  extra: Record<string, unknown>; binary: { ready: boolean; storedAt: string | null };
+  urls: { play: string; download: string }; createdAt: string; updatedAt: string;
+}
+export interface PortalAssetPage { items: PortalAsset[]; page: number; limit: number; total: number; hasNext: boolean }
 
 export interface PortalAttachment {
   id: string; relativePath: string; sha256: string; byteSize: number; mime: string; provenance: Record<string, string>;
@@ -205,10 +220,10 @@ export function createPortalClient(credential: PortalCredential & { workspace: s
   const holder = credential.holder || defaultHolder(credential.apiKey);
   const timeoutMs = Math.max(config.requestTimeoutMs, PORTAL_TIMEOUT_MS);
 
-  async function json<T = unknown>(method: string, path: string, body?: unknown, binaryMime?: string, extraHeaders: Record<string, string> = {}): Promise<PortalResponse<T>> {
+  async function json<T = unknown>(method: string, path: string, body?: unknown, binaryMime?: string, extraHeaders: Record<string, string> = {}, origin: string = base): Promise<PortalResponse<T>> {
     let response: Response;
     try {
-      response = await fetchImpl(`${base}${path}`, {
+      response = await fetchImpl(`${origin}${path}`, {
         method,
         headers: body === undefined ? headers : { ...headers, ...extraHeaders, 'content-type': binaryMime ?? 'application/json', ...(binaryMime ? { 'content-length': String((body as Uint8Array).byteLength) } : {}) },
         body: body === undefined ? undefined : binaryMime ? body as BodyInit : JSON.stringify(body),
@@ -216,7 +231,7 @@ export function createPortalClient(credential: PortalCredential & { workspace: s
         signal: AbortSignal.timeout(timeoutMs),
       });
     } catch (error) {
-      throw new PortalError(502, `portal unreachable (${base}${path}): ${error instanceof Error ? error.message : String(error)}`);
+      throw new PortalError(502, `portal unreachable (${origin}${path}): ${error instanceof Error ? error.message : String(error)}`);
     }
     let envelope: { success?: boolean; data?: T; error?: string; error_code?: string; detail?: unknown };
     try {
@@ -307,6 +322,39 @@ export function createPortalClient(credential: PortalCredential & { workspace: s
       json<PortalScenarioSaved>('POST', withHolder(`/episodes/${episodeId}/scenarios/${candidate}/choose`)),
     scenarioMd: (episodeId, candidate) => text(`/episodes/${episodeId}/scenarios/${candidate}/scenario.md`),
     pageUrl: (relative) => `${root}${relative}`,
+    assetsSearch: (query) => {
+      const sp = new URLSearchParams();
+      for (const [k, v] of Object.entries(query)) if (v !== undefined && v !== '') sp.set(k, String(v));
+      const qs = sp.toString();
+      return json<PortalAssetPage>('GET', `/api/assets${qs ? `?${qs}` : ''}`, undefined, undefined, {}, root);
+    },
+    assetsGet: (id) => json<PortalAsset>('GET', `/api/assets/${encodeURIComponent(id)}`, undefined, undefined, {}, root),
+    assetsDownload: async (id, sink, maxBytes) => {
+      let response: Response;
+      try {
+        response = await fetchImpl(`${root}/api/assets/${encodeURIComponent(id)}/binary`, { headers, redirect: 'error', signal: AbortSignal.timeout(timeoutMs * 5) });
+      } catch (error) {
+        throw new PortalError(502, `portal unreachable (asset ${id}): ${error instanceof Error ? error.message : String(error)}`);
+      }
+      if (!response.ok) {
+        let code: string | undefined;
+        try { code = ((await response.json()) as { error_code?: string }).error_code; } catch { /* no envelope on a binary route failure */ }
+        throw new PortalError(response.status, 'Asset download failed', code);
+      }
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error('Asset download has no body');
+      let size = 0;
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          size += value.length;
+          if (size > maxBytes) throw new Error(`Asset exceeds ${maxBytes} bytes`);
+          sink(value);
+        }
+      } finally { await reader.cancel().catch(() => {}); reader.releaseLock(); }
+      return size;
+    },
   };
 }
 
