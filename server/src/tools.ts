@@ -925,10 +925,10 @@ Returns: JSON — { channel, workspace, resolvedBy: "file"|"token", source, hold
     name: 'portal_shot_media_upload',
     title: 'Upload and link one shot media file',
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-    description: 'Upload image, Blender/three.js previz, generated video or narration from this episode, then checkpoint the shot UUID. Render previz → await this upload → call video generation. Save the episode first. Missing key silently skips. Oversized files alone are skipped and logged to .portal-media-skips.jsonl; production continues. Existing .portal.json must match the workspace and head; conflicts preserve local files and provide recovery instructions. Never regenerate a file just because its upload failed.',
+    description: 'Upload a source image, end frame, Blender/three.js previz, generated video, whole-shot narration or one narration segment, then checkpoint the shot UUID. Render previz → await this upload → call video generation. Save the episode first. Missing key silently skips. Oversized files alone are skipped and logged to .portal-media-skips.jsonl; production continues. Existing .portal.json must match the workspace and head; conflicts preserve local files and provide recovery instructions. Never regenerate a file just because its upload failed.',
     inputSchema: { type: 'object', properties: {
       episodeDir: { type: 'string', description: 'Episode directory; its channel path selects the workspace key.' }, shotId: { type: 'string', description: 'Stable source shot ID; preferred over ordinal.' }, shotNo: { type: 'integer', minimum: 1, description: 'One-based source position, only for ID-less shots.' },
-      kind: { type: 'string', enum: ['image', 'previz', 'video', 'narration'], description: 'Shot media role; MP4 for previz/video, WAV/MP3 for narration, PNG/JPEG/WebP for image.' }, file: { type: 'string', description: 'Absolute file or episode-relative path; must stay inside this episode.' },
+      kind: { type: 'string', enum: ['image', 'end_frame', 'previz', 'video', 'narration', 'narration_segment'], description: 'Shot media role; MP4 for previz/video, WAV/MP3 for narration, PNG/JPEG/WebP for image/end_frame.' }, segmentIndex: { type: 'integer', minimum: 0, description: 'Zero-based narration[] index; required only for narration_segment.' }, file: { type: 'string', description: 'Absolute file or episode-relative path; must stay inside this episode.' },
     }, required: ['episodeDir', 'kind', 'file'] },
   },
   {
@@ -1005,6 +1005,31 @@ Returns: JSON — the updated episode (id, status, stage, title, headRevisionNo)
         title: { type: 'string', description: 'New episode title (1–200 characters)' },
       },
     },
+  },
+  {
+    name: 'portal_episode_artifacts_sync',
+    title: 'Sync platform copy, cover and actual costs',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    description: 'Read output platform copy and .work/cost-tally.tsv from an episode, upload output/video/cover.jpg when present, and store structured outputs plus actual USD cost on the portal. Unknown prices stay explicit and postpone the budget verdict.',
+    inputSchema: { type: 'object', properties: {
+      episodeDir: PORTAL_EPISODE_DIR_ARG,
+      episodeId: { type: 'string', format: 'uuid', description: 'Optional explicit episode ID; must match .portal.json.' },
+      uploadCover: { type: 'boolean', description: 'Upload and link output/video/cover.jpg. Default true.' },
+      outputs: { type: 'array', maxItems: 4, description: 'Optional structured override. Omit to read the standard output/<platform> files.', items: { type: 'object', properties: {
+        platform: { type: 'string', enum: ['youtube', 'instagram', 'threads', 'facebook'], description: 'Destination platform.' },
+        title: { type: 'string', description: 'Final platform title, when the platform has one.' }, description: { type: 'string', description: 'Final description or post body.' }, hashtags: { type: 'array', items: { type: 'string' }, description: 'Final hashtags including #.' }, coverMediaId: { type: ['string', 'null'], format: 'uuid', description: 'An already uploaded episode image to use as the cover.' },
+      }, required: ['platform', 'hashtags'] } },
+    }, required: ['episodeDir'] },
+  },
+  {
+    name: 'portal_publication_record',
+    title: 'Record a published platform post',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    description: 'Persist one successful platform publication with its post ID, permanent link, approval record, time and caption hash. Call immediately after each platform publish succeeds, before setting the episode status to published.',
+    inputSchema: { type: 'object', properties: {
+      episodeDir: PORTAL_EPISODE_DIR_ARG, episodeId: PORTAL_EPISODE_ID_ARG, channel: PORTAL_CHANNEL_ARG,
+      platform: { type: 'string', enum: ['youtube', 'instagram', 'threads', 'facebook'], description: 'Platform that accepted the post.' }, postId: { type: 'string', description: 'Platform post or video ID returned by the publish call.' }, permalink: { type: 'string', description: 'Permanent public URL returned by the publish call.' }, approvedBy: { type: 'string', description: 'Approval record or approver display name.' }, publishedAt: { type: 'string', format: 'date-time', description: 'Successful publish time in ISO 8601. Defaults to now.' }, captionHash: { type: 'string', pattern: '^[a-f0-9]{64}$', description: 'SHA-256 of the exact published caption or description.' },
+    }, required: ['platform', 'postId', 'permalink'] },
   },
   {
     name: 'portal_episode_create',

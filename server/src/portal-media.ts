@@ -15,12 +15,16 @@ const portalShotFields = {
 export const portalShotSchema = z.object(portalShotFields).refine(a => Number(Boolean(a.shotId)) + Number(a.shotNo !== undefined) === 1, 'Choose shotId or shotNo');
 export const mediaUploadSchema = z.object({
   ...portalShotFields,
-  kind: z.enum(['image', 'previz', 'video', 'narration']),
+  kind: z.enum(['image', 'end_frame', 'previz', 'video', 'narration', 'narration_segment']),
+  segmentIndex: z.number().int().min(0).optional(),
   file: z.string().min(1),
-}).refine(a => Number(Boolean(a.shotId)) + Number(a.shotNo !== undefined) === 1, 'Choose shotId or shotNo');
+}).superRefine((a, ctx) => {
+  if (Number(Boolean(a.shotId)) + Number(a.shotNo !== undefined) !== 1) ctx.addIssue({ code: 'custom', message: 'Choose shotId or shotNo' });
+  if ((a.kind === 'narration_segment') !== (a.segmentIndex !== undefined)) ctx.addIssue({ code: 'custom', message: 'segmentIndex is required only for narration_segment' });
+});
 export type MediaKind = z.infer<typeof mediaUploadSchema>['kind'];
 type ShotTarget = z.infer<typeof portalShotSchema>;
-const limits = { image: 5, previz: 10, video: 10, narration: 10 };
+const limits = { image: 5, end_frame: 5, previz: 10, video: 10, narration: 10, narration_segment: 10 };
 const mimeByExt: Record<string, string> = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.mp4': 'video/mp4', '.wav': 'audio/wav', '.mp3': 'audio/mpeg' };
 
 class MediaTooLarge extends Error {
@@ -33,7 +37,7 @@ function recordOversize(dir: string, file: string, kind: MediaKind, bytes: numbe
 }
 function readMedia(file: string, kind: MediaKind) {
   const mime = mimeByExt[path.extname(file).toLowerCase()];
-  if (!mime || !(kind === 'image' ? mime.startsWith('image/') : kind === 'narration' ? mime.startsWith('audio/') : mime === 'video/mp4')) throw new Error('Media extension does not match its kind.');
+  if (!mime || !(['image', 'end_frame'].includes(kind) ? mime.startsWith('image/') : ['narration', 'narration_segment'].includes(kind) ? mime.startsWith('audio/') : mime === 'video/mp4')) throw new Error('Media extension does not match its kind.');
   const limit = limits[kind] * 1024 * 1024, fd = openSync(file, 'r');
   try {
     const stat = fstatSync(fd);
@@ -65,6 +69,10 @@ export async function uploadShotMedia(args: z.infer<typeof mediaUploadSchema>, f
   const index = args.shotId ? shots.findIndex(s => s.id === args.shotId) : (args.shotNo ?? 0) - 1;
   if (index < 0 || index >= shots.length || (args.shotId && shots.filter(s => s.id === args.shotId).length !== 1)) throw new Error('Unknown or ambiguous shot target.');
   if (!args.shotId && shots[index].id !== undefined) throw new Error('Use shotId for a shot that has an ID.');
+  if (args.kind === 'narration_segment') {
+    const segments = shots[index].narration;
+    if (!Array.isArray(segments) || args.segmentIndex! >= segments.length) throw new Error('segmentIndex does not identify a narration segment.');
+  }
   const initial = statSync(file);
   if (initial.isFile() && initial.size > limits[args.kind] * 1024 * 1024) return recordOversize(dir, file, args.kind, initial.size);
   const unchanged = () => readFileSync(scenesFile, 'utf8') === source && readFileSync(path.join(dir, '.portal.json'), 'utf8') === stateSource;
@@ -79,13 +87,19 @@ export async function uploadShotMedia(args: z.infer<typeof mediaUploadSchema>, f
     const media = readMedia(file, args.kind);
     if (!unchanged()) throw new Error('Local board/state changed before upload.');
     phase = 'upload';
-    const { data } = await client.uploadMedia(state.episodeId, args.kind, media.bytes, media.mime);
+    const transportKind = args.kind === 'end_frame' ? 'image' : args.kind === 'narration_segment' ? 'narration' : args.kind;
+    const { data } = await client.uploadMedia(state.episodeId, transportKind, media.bytes, media.mime);
     uploaded = data;
-    if (!z.string().uuid().safeParse(data.id).success || data.sha256 !== media.sha256 || data.byteSize !== media.bytes.length || data.mime !== media.mime || data.kind !== args.kind) throw new Error('Portal response does not match uploaded bytes/kind.');
+    if (!z.string().uuid().safeParse(data.id).success || data.sha256 !== media.sha256 || data.byteSize !== media.bytes.length || data.mime !== media.mime || data.kind !== transportKind) throw new Error('Portal response does not match uploaded bytes/kind.');
     const target = args.shotId ? `window.SCENES.find(shot => shot.id === ${JSON.stringify(args.shotId)})` : `window.SCENES[${index}]`;
-    const existing = args.kind === 'image' ? shots[index].portalImageId : (shots[index].portalMedia as Record<string, unknown> | undefined)?.[args.kind];
+    const portalMedia = shots[index].portalMedia as Record<string, unknown> | undefined;
+    const semanticKey = args.kind === 'end_frame' ? 'endFrame' : args.kind;
+    const existing = args.kind === 'image' ? shots[index].portalImageId
+      : args.kind === 'narration_segment' && Array.isArray(portalMedia?.narrationSegments) ? portalMedia.narrationSegments[args.segmentIndex!] : portalMedia?.[semanticKey];
     const assignment = args.kind === 'image' ? `${target}.portalImageId = ${JSON.stringify(data.id)};`
-      : `${target}.portalMedia = { ...${target}.portalMedia, ${JSON.stringify(args.kind)}: ${JSON.stringify(data.id)} };`;
+      : args.kind === 'narration_segment'
+        ? `${target}.portalMedia = { ...${target}.portalMedia, narrationSegments: Object.assign([...(${target}.portalMedia?.narrationSegments ?? [])], { ${args.segmentIndex}: ${JSON.stringify(data.id)} }) };`
+        : `${target}.portalMedia = { ...${target}.portalMedia, ${JSON.stringify(semanticKey)}: ${JSON.stringify(data.id)} };`;
     const next = source + (existing === data.id ? '' : `\n// Portal shot media UUID (no local path).\n${assignment}\n`);
     const backup = path.join(sb, '.portal-local', `media-${randomUUID()}`);
     mkdirSync(backup, { recursive: true });

@@ -101,6 +101,16 @@ describe('shot media production order',()=>{
     await uploadShotMedia({...target,kind:'image',file:'source.png'},s.fetch);
     assert.equal(s.scenes()[0].portalImageId,ids.image); assert.equal(s.scenes()[0].portalMedia.narration,ids.narration);
   });
+  it('links an end frame as an image and narration audio by segment index',async()=>{
+    credential(); const s=server();
+    writeFileSync(join(dir,'storyboard','scenes.js'),'window.SB_DOC={narratorCharacterId:"narrator",characters:[{id:"narrator",name:"Narrator",tts:{engine:"supertonic",voiceId:"F1"}}]};\nwindow.SCENES=[{id:"s1",type:"cover",narration:[{tts:"One",speaker:"Narrator"},{tts:"Two",speaker:"Narrator"}]}];\n');
+    writeFileSync(join(dir,'end.png'),'fixture-end'); writeFileSync(join(dir,'segment.wav'),'fixture-segment');
+    await uploadShotMedia({...target,kind:'end_frame',file:'end.png'},s.fetch);
+    await uploadShotMedia({...target,kind:'narration_segment',segmentIndex:1,file:'segment.wav'},s.fetch);
+    assert.equal(s.scenes()[0].portalMedia.narrationSegments[1],ids.narration);
+    assert.equal(s.scenes()[0].portalMedia.endFrame,ids.image);
+    assert.deepEqual(s.events.filter(event=>event.startsWith('upload:')),['upload:image','upload:narration']);
+  });
   it('oversized previz/output files are logged and skipped while production continues',async()=>{
     credential();const s=server();let calls=0;
     writeFileSync(join(dir,'large.mp4'),Buffer.alloc(10*1024*1024+1));
