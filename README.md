@@ -480,7 +480,7 @@ social-flow/
 ├── .plugin/plugin.json          # Buzz persona pack (Open Plugin Spec)
 ├── personas/                    # Buzz pack persona (pipeline.persona.md)
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 101 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 103 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
 │       ├── tools.ts             # tool definitions — 83: research 9 + open data 5 + generation 40 + publish 6 + comments 3 + growth insights 5 + growth review 2 + check 2 + blender 7 + storyboard 4
@@ -542,14 +542,14 @@ social-flow/
 └── data/                        # content data root (see data/README.md)
 ```
 
-## MCP tool surface (101 tools)
+## MCP tool surface (103 tools)
 
-**`tools/list` does not show all 101.** The credential-gated publish, review and insights tools
+**`tools/list` does not show all 103.** The credential-gated publish, review and insights tools
 (`threads_draft_create` · `threads_review_submit` · `threads_publish` · `instagram_publish` · `facebook_publish` · `facebook_comment` ·
 `youtube_publish` · `threads_insights` · `instagram_insights` · `youtube_insights` ·
 `threads_search`) are exposed **only for platforms whose credential file exists** —
 evaluated at list time, so adding a token makes them appear without restarting the
-server. The 17 `portal_*` tools follow the same rule on the ttalkkakstory workspace key
+server. The 19 `portal_*` tools follow the same rule on the ttalkkakstory workspace key
 (`<SNS_TOKEN_DIR>/<channel>/ttalkkakstory.json`, the flat file, or `TTALKKAKSTORY_*`). With
 no tokens and no portal key you'll count 73; explicit tool-disable settings can reduce
 that list further. Hidden tools still have live handlers:
@@ -594,7 +594,7 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | Publish | `threads_publish` / `instagram_publish` / `facebook_publish` / `facebook_comment` / `youtube_publish` / `youtube_update` | Direct platform API calls — **exposed only for platforms with a credential file** (`youtube_update` edits title/description/tags/visibility of an already-uploaded video) |
 | Comment inbox | `sns_comment_inbox` / `sns_comment_reply` / `sns_comment_moderate` | Cross-platform normalized inbox · replies · hiding (no deletes). Inbox and replies cover all 4 platforms; hiding excludes YouTube (its API only offers held-for-review, which means something else) |
 | Storyboard | `storyboard_read` / `storyboard_apply` / `storyboard_check` / `scenario_check` | The episode board as sequences → scenes → shots (`window.STRUCTURE` beside the flat `SCENES` produce reads), plus the scenario input contract. `read` returns the tree at four levels; `apply` writes or patches the board and refuses to write past a violation; `storyboard_check` runs the structure rules plus the full `check-scenes.js` contract; `scenario_check` runs S1–S12 on `candidates/` or `scenario.md` and returns the checker JSON. Local files only — the board rules live in [structure-contract.js](skills/storyboard/references/structure-contract.js), shared with the checker and approval page |
-| Portal | `portal_shot_media_upload` / `portal_images_upload` / `portal_render_allocation` / `portal_workspace_check` / `portal_storyboard_save` / `portal_storyboard_list` / `portal_storyboard_pull` / `portal_episode_create` / `portal_episode_checkpoint` / `portal_episode_revisions` / `portal_episode_restore` / `portal_episode_lease` / `portal_episode_status` / `portal_scenario_save` / `portal_scenario_pull` / `portal_scenario_choose` | The ttalkkakstory portal by **workspace API key** (`Authorization: Bearer tks_…`) — the episode's record while the local directory is the working copy. The key comes from `<SNS_TOKEN_DIR>/<channel>/ttalkkakstory.json`, read off the episode path (`data/<channel>/episodes/<topic>`), so one channel is one workspace; listed only while a key exists, and every call answers one line without one. `save` uploads the board and documents (also a checkpoint), `pull` rebuilds the directory from the portal, `lease` guards two machines on one topic, `checkpoint`/`revisions`/`restore` are the revision history, `scenario_*` carry the three candidate pages and the pick — see [the portal section](#the-ttalkkakstory-portal-by-workspace-api-key) |
+| Portal | `portal_assets_search` / `portal_assets_get` / `portal_shot_media_upload` / `portal_images_upload` / `portal_render_allocation` / `portal_workspace_check` / `portal_storyboard_save` / `portal_storyboard_list` / `portal_storyboard_pull` / `portal_episode_create` / `portal_episode_checkpoint` / `portal_episode_revisions` / `portal_episode_restore` / `portal_episode_lease` / `portal_episode_status` / `portal_scenario_save` / `portal_scenario_pull` / `portal_scenario_choose` | The ttalkkakstory portal by **workspace API key** (`Authorization: Bearer tks_…`) — the episode's record while the local directory is the working copy. The key comes from `<SNS_TOKEN_DIR>/<channel>/ttalkkakstory.json`, read off the episode path (`data/<channel>/episodes/<topic>`), so one channel is one workspace; listed only while a key exists, and every call answers one line without one. `save` uploads the board and documents (also a checkpoint), `pull` rebuilds the directory from the portal, `lease` guards two machines on one topic, `checkpoint`/`revisions`/`restore` are the revision history, `scenario_*` carry the three candidate pages and the pick, `assets_search`/`assets_get` read the **global asset library** (Gemini B-roll · BGM · effects · images shared by every workspace — the first place produce looks before stock_search or a generator; see [global assets](#global-asset-library-on-ttalkkakstory)) — see [the portal section](#the-ttalkkakstory-portal-by-workspace-api-key) |
 | Capability | `capability_status` | What this machine has configured, grouped by capability with an "N of M" count, plus the env var that would unlock each missing provider. Call it before planning anything that spends money — otherwise a missing key only surfaces when the call fails, after the plan was built around it. Reports configuration, not reachability |
 | Check | `sns_account_check` | Batch /me check across tokens (token values never shown) |
 | Growth insights | `threads_insights` / `threads_search` | Threads insights (account/post metrics) + public keyword search — for grow-threads (`threads_manage_insights` · `threads_keyword_search` scopes) |
@@ -865,6 +865,9 @@ deduplicated by the portal. On 409 or an unknown checkpoint outcome, side-pull t
 head, merge local edits and recovered image UUIDs, then save with that explicit base.
 A checkpoint success followed by a local write failure reports the saved revision;
 keep local edits and merge the recovery copy rather than retrying blindly.
+
+### Global asset library on ttalkkakstory
+`portal_assets_search` and `portal_assets_get` read the portal's **global** asset library (`/api/assets`, portal #87) — Gemini B-roll clips, BGM beds, sound effects and images the owner collected on the Mac mini and synced up. The library sits outside every workspace: any channel's key returns the same results, and only the owner's admin key can write. Storyboard asks it before `stock_search` when a cut wants real footage; produce and autoproduce ask it before `music_generate_clip` for a bed. Search is AND over Korean/English words plus tag, type, category, duration and aspect filters. `get` with `download:true` writes the file into the supplied-file lanes that already exist — video to `storyboard/footage/s<shot>-portal-<sourceId>.mp4` (a `stock_video` cut with `visual.source: "stock"` and the returned `visual.license`, provider `ttalkkakstory`), music and effects to `.work/portal/<sourceId>.<ext>`, images to `storyboard/images/stock/` — and verifies the portal's sha256; an identical file is not fetched twice and a different file at that name is refused. No key → one line, and the skill goes on to the paid lane.
 
 ### Shot media on ttalkkakstory
 `portal_shot_media_upload` uploads and checkpoints one episode-local file: image (5 MiB), previz/video MP4 (10 MiB), or narration WAV/MP3 (10 MiB). Save the board first, then use episodeDir and shotId (shotNo only for ID-less shots). The portal card displays all four media kinds. With a configured key, Blender and checked TTS take an optional `portal` target and upload the result immediately; Seedance also requires `portal.previzFile`, uploading and linking it **before** the vendor call. Host/other generation tools use the explicit uploader in the same order. Missing keys silently preserve local-only production. Oversized files alone are skipped with `.portal-media-skips.jsonl`, and production continues; larger files need a later chunked-storage/object-storage extension. Failures preserve generated files and offer upload recovery; do not regenerate media to fix an upload. See [produce order](skills/produce/references/portal-shot-media.md).
