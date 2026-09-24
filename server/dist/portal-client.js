@@ -172,6 +172,19 @@ export function createPortalClient(credential, fetchImpl = fetch, resolvedBy = '
         revisionDiff: (episodeId, from, to) => json('GET', `/episodes/${episodeId}/revisions/${from}/diff/${to}`),
         renderAllocation: (episodeId, body) => json(body ? 'PUT' : 'GET', `/episodes/${episodeId}/render-allocation`, body ? { ...body, sourceHost: holder } : undefined),
         uploadImage: (episodeId, bytes, mime) => json('POST', withHolder(`/episodes/${episodeId}/images`), bytes, mime),
+        listCharacters: (query = {}) => {
+            const sp = new URLSearchParams();
+            for (const [k, v] of Object.entries(query))
+                if (v !== undefined && v !== '')
+                    sp.set(k, String(v));
+            const qs = sp.toString();
+            return json('GET', `/characters${qs ? `?${qs}` : ''}`);
+        },
+        getCharacter: (id) => json('GET', `/characters/${id}`),
+        createCharacter: (body) => json('POST', '/characters', body),
+        updateCharacter: (id, patch) => json('PATCH', `/characters/${id}`, patch),
+        deleteCharacter: (id) => json('DELETE', `/characters/${id}`),
+        uploadCharacterImage: (id, bytes, mime) => json('PUT', `/characters/${id}/image`, bytes, mime),
         listAttachments: (episodeId) => json('GET', `/episodes/${episodeId}/attachments`),
         uploadAttachment: (episodeId, relativePath, bytes, mime, provenance) => json('POST', `${withHolder(`/episodes/${episodeId}/attachments`)}&path=${encodeURIComponent(relativePath)}`, bytes, mime, provenance ? { 'x-attachment-provenance': encodeURIComponent(JSON.stringify(provenance)) } : {}),
         downloadAttachment: async (episodeId, id) => {

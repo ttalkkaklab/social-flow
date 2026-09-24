@@ -8,7 +8,7 @@ description: >
   platforms, fact-check policy — the source of truth every storyboard, produce and publish
   run opens before anything else.
 argument-hint: "[add|list|update|serve] [channel-name]"
-allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_list_voices", "mcp__social-flow__tts_elevenlabs_voices", "mcp__social-flow__tts_elevenlabs_generate"]
+allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_list_voices", "mcp__social-flow__tts_elevenlabs_voices", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__portal_character_list", "mcp__social-flow__portal_character_get", "mcp__social-flow__portal_character_create", "mcp__social-flow__portal_character_update", "mcp__social-flow__portal_character_delete", "mcp__social-flow__portal_character_image_upload", "mcp__social-flow__portal_character_tts_set"]
 ---
 
 # Channel management — data/[channel]/profile.md
@@ -187,6 +187,16 @@ node "$CLAUDE_PLUGIN_ROOT/skills/channel/references/serve.js" data --port 8400
 4. Stop it when the user is done (`pkill -f references/serve.js`) — a listener left
    behind is one more process the next session has to notice.
 
+## register procedure (portal characters)
+
+When the channel has a ttalkkakstory portal key, its characters live on the portal too —
+the record the storyboard import and the narration lane read. Register or refresh them
+with the `portal_character_*` tools after the local `assets/characters/<id>/` folder is
+final: `portal_character_create` with `identityDir` (key from the folder, name·역할·생김새
+from `identity.md`) and `file` (the face panel), then `portal_character_tts_set` with the
+channel's voice. Steps, field mapping and the update/delete rules:
+`references/portal-characters.md`. No key → the tools answer one line; skip the step.
+
 ## Rules
 
 - **profile.md is the only SoT** — don't keep tone·voice·theme in session memory
@@ -205,4 +215,5 @@ node "$CLAUDE_PLUGIN_ROOT/skills/channel/references/serve.js" data --port 8400
 - **`references/profile-template.md`** — standard profile.md template (section structure, THEME contract, voice examples)
 - **`references/assets-catalog-template.md`** — `assets/catalog.md` starter (kind+id table)
 - **`references/resolve-asset.py`** — resolve shared assets via catalog + well-known paths (`--ensure` adds a row, `--selftest`)
+- **`references/portal-characters.md`** — registering the channel's characters on the ttalkkakstory portal with `portal_character_*` (create from `identityDir`, image, TTS block, update, delete)
 - **`references/serve.js`** — the channel browser over HTTP: `/api/channels`, `/api/channels/<slug>/storyboards`, `/api/channels/<slug>/characters[/<id>]`, and `/files/<slug>/…` static from `data/` (dot segments refused, Range for audio/video). Zero dependencies, `--selftest`
