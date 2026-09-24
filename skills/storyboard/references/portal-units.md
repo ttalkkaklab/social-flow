@@ -20,6 +20,13 @@ uses the normal draft checker. A validation failure writes nothing. A 409 lease 
 head conflict requires a new read and reconciliation; the tool never retries a
 write or advances a local `.portal.json` automatically.
 
+Lease use is optional: callers can reserve an episode with `portal_episode_lease`
+(`action:"acquire"`, then `action:"release"` when done, using the same channel).
+Unit tools never acquire or release it automatically. A write is allowed when no active lease exists;
+another subject or holder's active lease returns 409 `leased`, with a
+`portal_episode_lease` `action:"status"` hint. Wait for release/expiry, then read
+and reconcile; absence of a lease does not cause a 409.
+
 A new sequence can include companion `scenes` and `shots` so its first checkpoint
 already has a valid hierarchy. `moveScenes:true` explicitly moves existing scenes
 into a new sequence. A new scene names `sequenceId` and can move existing `shotIds`.

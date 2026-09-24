@@ -333,6 +333,15 @@ describe('portal client', () => {
     });
   });
 
+  it('lease conflicts name the lease status tool while preserving holder details', () => {
+    const error = new client.PortalError(409, 'Leased by other@host', 'leased', { lease: { holder: 'other@host' } });
+    const text = client.describePortalError(error);
+    assert.match(text, /portal 409 leased/);
+    assert.match(text, /other@host/);
+    assert.match(text, /portal_episode_lease with action:"status"/);
+    assert.match(text, /do not acquire or release leases automatically/);
+  });
+
   it('a non-JSON body and an unreachable host are reported with the status, not thrown raw', async () => {
     const c = client.createPortalClient(credential, async () => new Response('<html>', { status: 502 }));
     await assert.rejects(c.me(), /portal answered 502 without a JSON body/);

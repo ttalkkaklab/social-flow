@@ -88113,8 +88113,10 @@ function createPortalClient(credential, fetchImpl = fetch, resolvedBy = "file") 
 function describePortalError(error2) {
   if (error2 instanceof PortalError) {
     const head = `portal ${error2.status}${error2.code ? ` ${error2.code}` : ""}: ${error2.message}`;
-    return error2.detail === void 0 ? head : `${head}
+    const detail = error2.detail === void 0 ? head : `${head}
 ${JSON.stringify(error2.detail)}`;
+    return error2.status === 409 && error2.code === "leased" ? `${detail}
+Use portal_episode_lease with action:"status" for this episode. Wait for its holder to release or expire, then read and reconcile before writing. Unit tools do not acquire or release leases automatically.` : detail;
   }
   return error2 instanceof Error ? error2.message : String(error2);
 }
