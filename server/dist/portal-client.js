@@ -101,10 +101,10 @@ export function createPortalClient(credential, fetchImpl = fetch, resolvedBy = '
     const headers = { authorization: `Bearer ${credential.apiKey}` };
     const holder = credential.holder || defaultHolder(credential.apiKey);
     const timeoutMs = Math.max(config.requestTimeoutMs, PORTAL_TIMEOUT_MS);
-    async function json(method, path, body, binaryMime, extraHeaders = {}) {
+    async function json(method, path, body, binaryMime, extraHeaders = {}, origin = base) {
         let response;
         try {
-            response = await fetchImpl(`${base}${path}`, {
+            response = await fetchImpl(`${origin}${path}`, {
                 method,
                 headers: body === undefined ? headers : { ...headers, ...extraHeaders, 'content-type': binaryMime ?? 'application/json', ...(binaryMime ? { 'content-length': String(body.byteLength) } : {}) },
                 body: body === undefined ? undefined : binaryMime ? body : JSON.stringify(body),
@@ -113,7 +113,7 @@ export function createPortalClient(credential, fetchImpl = fetch, resolvedBy = '
             });
         }
         catch (error) {
-            throw new PortalError(502, `portal unreachable (${base}${path}): ${error instanceof Error ? error.message : String(error)}`);
+            throw new PortalError(502, `portal unreachable (${origin}${path}): ${error instanceof Error ? error.message : String(error)}`);
         }
         let envelope;
         try {
@@ -207,6 +207,52 @@ export function createPortalClient(credential, fetchImpl = fetch, resolvedBy = '
         chooseScenario: (episodeId, candidate) => json('POST', withHolder(`/episodes/${episodeId}/scenarios/${candidate}/choose`)),
         scenarioMd: (episodeId, candidate) => text(`/episodes/${episodeId}/scenarios/${candidate}/scenario.md`),
         pageUrl: (relative) => `${root}${relative}`,
+        assetsSearch: (query) => {
+            const sp = new URLSearchParams();
+            for (const [k, v] of Object.entries(query))
+                if (v !== undefined && v !== '')
+                    sp.set(k, String(v));
+            const qs = sp.toString();
+            return json('GET', `/api/assets${qs ? `?${qs}` : ''}`, undefined, undefined, {}, root);
+        },
+        assetsGet: (id) => json('GET', `/api/assets/${encodeURIComponent(id)}`, undefined, undefined, {}, root),
+        assetsDownload: async (id, sink, maxBytes) => {
+            let response;
+            try {
+                response = await fetchImpl(`${root}/api/assets/${encodeURIComponent(id)}/binary`, { headers, redirect: 'error', signal: AbortSignal.timeout(timeoutMs * 5) });
+            }
+            catch (error) {
+                throw new PortalError(502, `portal unreachable (asset ${id}): ${error instanceof Error ? error.message : String(error)}`);
+            }
+            if (!response.ok) {
+                let code;
+                try {
+                    code = (await response.json()).error_code;
+                }
+                catch { /* no envelope on a binary route failure */ }
+                throw new PortalError(response.status, 'Asset download failed', code);
+            }
+            const reader = response.body?.getReader();
+            if (!reader)
+                throw new Error('Asset download has no body');
+            let size = 0;
+            try {
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done)
+                        break;
+                    size += value.length;
+                    if (size > maxBytes)
+                        throw new Error(`Asset exceeds ${maxBytes} bytes`);
+                    sink(value);
+                }
+            }
+            finally {
+                await reader.cancel().catch(() => { });
+                reader.releaseLock();
+            }
+            return size;
+        },
     };
 }
 /** One line for the tool result — status, message, and the 409 detail when the portal sent one. */

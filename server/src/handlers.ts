@@ -1470,6 +1470,8 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   portal_scenario_save: async (args) => fromPortal(await portalRoutes.scenarioSave(parseArgs(portal.scenarioSaveSchema, args))),
   portal_scenario_pull: async (args) => fromPortal(await portalRoutes.scenarioPull(parseArgs(portal.scenarioPullSchema, args))),
   portal_attachments_sync: async (args) => fromPortal(await portalRoutes.attachmentsSync(parseArgs(portal.attachmentsSyncSchema, args))),
+  portal_assets_search: async (args) => fromPortal(await portalRoutes.assetsSearch(parseArgs(portal.assetsSearchSchema, args))),
+  portal_assets_get: async (args) => fromPortal(await portalRoutes.assetsGet(parseArgs(portal.assetsGetSchema, args))),
   portal_images_upload: async (args) => fromPortal(await portalRoutes.imagesUpload(parseArgs(portal.imageUploadSchema, args))),
   portal_render_allocation: async (args) => fromPortal(await portalRoutes.renderAllocation(parseArgs(portal.renderAllocationSchema, args))),
   portal_scenario_choose: async (args) => fromPortal(await portalRoutes.scenarioChoose(parseArgs(portal.scenarioChooseSchema, args))),

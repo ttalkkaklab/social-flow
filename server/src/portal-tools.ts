@@ -18,6 +18,8 @@ import path from 'node:path';
 import { z } from 'zod';
 import { imageUploadSchema, uploadEpisodeImages } from './portal-images.js';
 export { imageUploadSchema } from './portal-images.js';
+import { assetsGetSchema, assetsSearchSchema, getAsset, searchAssets } from './portal-assets.js';
+export { assetsGetSchema, assetsSearchSchema } from './portal-assets.js';
 import { portalCredentialFile, PORTAL_CREDENTIAL_FILENAME } from './config.js';
 import { describePortalError, PortalError, portalClientFor, SAFE_DOCUMENT_NAME, type FetchLike, type PortalClient, type PortalRevisionDiff } from './portal-client.js';
 import {
@@ -34,6 +36,8 @@ import {
 } from './portal-episode.js';
 
 export const PORTAL_TOOL_NAMES = [
+  'portal_assets_search',
+  'portal_assets_get',
   'portal_attachments_sync',
   'portal_images_upload',
   'portal_shot_media_upload',
@@ -366,6 +370,8 @@ function resolveEpisodeId(episodeId: string | undefined, ...dirs: Array<string |
 }
 
 export interface PortalHandlers {
+  assetsSearch(a: z.infer<typeof assetsSearchSchema>): Promise<PortalToolResult>;
+  assetsGet(a: z.infer<typeof assetsGetSchema>): Promise<PortalToolResult>;
   attachmentsSync(a: z.infer<typeof attachmentsSyncSchema>): Promise<PortalToolResult>;
   imagesUpload(a: z.infer<typeof imageUploadSchema>): Promise<PortalToolResult>;
   renderAllocation(a: z.infer<typeof renderAllocationSchema>): Promise<PortalToolResult>;
@@ -387,6 +393,17 @@ export interface PortalHandlers {
 /** The handlers, with fetch injectable so the tests never touch a network. */
 export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
   return {
+    // The library is global — no workspace record to compare, so no refuseMismatch here.
+    async assetsSearch(args) {
+      const r = await resolveClient(fetchImpl, args.channel, args.episodeDir);
+      if ('error' in r) return r.error;
+      try { return ok(await searchAssets(r.client, args)); } catch (error) { return failed(error); }
+    },
+    async assetsGet(args) {
+      const r = await resolveClient(fetchImpl, args.channel, args.episodeDir);
+      if ('error' in r) return r.error;
+      try { return ok(await getAsset(r.client, args)); } catch (error) { return failed(error); }
+    },
     async attachmentsSync(args) {
       const r = await resolveClient(fetchImpl, args.channel, args.episodeDir);
       if ('error' in r) return r.error;
