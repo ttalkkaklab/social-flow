@@ -63,7 +63,7 @@ function readMedia(file, kind) {
 }
 export async function uploadShotMedia(args, fetchImpl) {
     const dir = episodeDirOf(path.resolve(args.episodeDir));
-    const client = portalClientFor(channelOfEpisodeDir(dir), fetchImpl);
+    const client = await portalClientFor(channelOfEpisodeDir(dir), fetchImpl);
     if (!client)
         return { skipped: true };
     const state = readPortalState(dir);
@@ -159,7 +159,7 @@ export async function withShotMedia(args, kind, run, output, fetchImpl) {
     if (!raw)
         return run();
     const dir = raw.episodeDir;
-    const configured = portalClientFor(typeof dir === 'string' ? channelOfEpisodeDir(dir) : undefined, fetchImpl);
+    const configured = await portalClientFor(typeof dir === 'string' ? channelOfEpisodeDir(dir) : undefined, fetchImpl);
     if (!configured)
         return run();
     const target = portalShotSchema.parse(raw);

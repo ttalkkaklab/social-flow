@@ -11,6 +11,7 @@
  * revision is head · who holds the lease until when) so the skill can pull or wait instead
  * of retrying blind. Route list = the portal's `docs/API.md`; one method per route.
  */
+import { createHash } from 'node:crypto';
 import { hostname } from 'node:os';
 import { config, portalCredential } from './config.js';
 export class PortalError extends Error {
@@ -35,17 +36,66 @@ export function defaultHolder(apiKey) {
 export const PORTAL_TIMEOUT_MS = 60_000;
 /** A filename the portal may hand back that is safe to write next to scenes.js — no path parts, not `.`/`..`. */
 export const SAFE_DOCUMENT_NAME = /^(?!\.\.?$)[^/\\\0]+$/;
-/**
- * Resolve the credential for a channel and build the client. `null` when nothing is
- * configured — the tool turns that into the one-line "no portal key" answer.
- */
-export function portalClientFor(channel, fetchImpl) {
+// A process/session cache, isolated by transport and API origin/key. Rejected lookups are retriable.
+const tokenWorkspaces = new WeakMap();
+async function resolveToken(credential, fetchImpl) {
+    const root = credential.apiUrl.replace(/\/+$/, '');
+    let cache = tokenWorkspaces.get(fetchImpl);
+    if (!cache) {
+        cache = new Map();
+        tokenWorkspaces.set(fetchImpl, cache);
+    }
+    const key = createHash('sha256').update(JSON.stringify([root, credential.apiKey])).digest('hex');
+    let pending = cache.get(key);
+    if (!pending) {
+        pending = (async () => {
+            let response;
+            try {
+                response = await fetchImpl(`${root}/api/token`, {
+                    headers: { authorization: `Bearer ${credential.apiKey}` },
+                    redirect: 'error', signal: AbortSignal.timeout(Math.max(config.requestTimeoutMs, PORTAL_TIMEOUT_MS)),
+                });
+            }
+            catch {
+                throw new PortalError(502, 'Token workspace lookup failed. Check the portal URL and connection.');
+            }
+            if (!response.ok)
+                throw new PortalError(response.status, 'Token workspace lookup failed. Check the API key and portal deployment.');
+            let envelope;
+            try {
+                envelope = await response.json();
+            }
+            catch {
+                throw new PortalError(502, 'Token workspace lookup returned invalid JSON.');
+            }
+            const data = envelope?.data;
+            if (!envelope?.success || !data || typeof data.workspaceSlug !== 'string' ||
+                !/^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/.test(data.workspaceSlug) ||
+                typeof data.workspaceName !== 'string' || data.role !== 'member') {
+                throw new PortalError(502, 'Token workspace lookup returned an invalid workspace.');
+            }
+            return data;
+        })();
+        cache.set(key, pending);
+        // Bound long-lived servers that see frequent key rotations.
+        if (cache.size > 100)
+            cache.delete(cache.keys().next().value);
+        pending.catch(() => { if (cache.get(key) === pending)
+            cache.delete(key); });
+    }
+    return pending;
+}
+export async function portalClientFor(channel, fetchImpl = fetch) {
     const credential = portalCredential(channel);
     if (!credential)
         return null;
-    return createPortalClient(credential, fetchImpl);
+    const token = await resolveToken(credential, fetchImpl);
+    if (credential.workspace && credential.workspace !== token.workspaceSlug) {
+        throw new PortalError(409, `Workspace mismatch — ${credential.source} specifies "${credential.workspace}", but the API key opens "${token.workspaceSlug}". Fix the credential file or environment. Nothing was sent to a workspace.`);
+    }
+    return createPortalClient({ ...credential, workspace: token.workspaceSlug }, fetchImpl, credential.workspace ? 'file' : 'token');
 }
-export function createPortalClient(credential, fetchImpl = fetch) {
+export function createPortalClient(credential, fetchImpl = fetch, resolvedBy = 'file') {
     const root = credential.apiUrl.replace(/\/+$/, '');
     const base = `${root}/api/workspaces/${encodeURIComponent(credential.workspace)}`;
     const headers = { authorization: `Bearer ${credential.apiKey}` };
@@ -93,6 +143,7 @@ export function createPortalClient(credential, fetchImpl = fetch) {
     return {
         base,
         workspace: credential.workspace,
+        resolvedBy,
         source: credential.source,
         holder,
         uploadMedia: (episodeId, kind, bytes, mime) => json('POST', `${withHolder(`/episodes/${episodeId}/media`)}&kind=${encodeURIComponent(kind)}`, bytes, mime),

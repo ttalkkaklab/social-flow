@@ -27846,7 +27846,7 @@ var require_websocket = __commonJS({
     var http4 = __require("http");
     var net = __require("net");
     var tls = __require("tls");
-    var { randomBytes: randomBytes2, createHash: createHash8 } = __require("crypto");
+    var { randomBytes: randomBytes2, createHash: createHash9 } = __require("crypto");
     var { Duplex, Readable: Readable2 } = __require("stream");
     var { URL: URL2 } = __require("url");
     var PerMessageDeflate2 = require_permessage_deflate();
@@ -28514,7 +28514,7 @@ var require_websocket = __commonJS({
           abortHandshake(websocket, socket, "Invalid Upgrade header");
           return;
         }
-        const digest = createHash8("sha1").update(key + GUID).digest("base64");
+        const digest = createHash9("sha1").update(key + GUID).digest("base64");
         if (res.headers["sec-websocket-accept"] !== digest) {
           abortHandshake(websocket, socket, "Invalid Sec-WebSocket-Accept header");
           return;
@@ -28883,7 +28883,7 @@ var require_websocket_server = __commonJS({
     var EventEmitter = __require("events");
     var http4 = __require("http");
     var { Duplex } = __require("stream");
-    var { createHash: createHash8 } = __require("crypto");
+    var { createHash: createHash9 } = __require("crypto");
     var extension2 = require_extension();
     var PerMessageDeflate2 = require_permessage_deflate();
     var subprotocol2 = require_subprotocol();
@@ -29190,7 +29190,7 @@ var require_websocket_server = __commonJS({
           );
         }
         if (this._state > RUNNING) return abortHandshake(socket, 503);
-        const digest = createHash8("sha1").update(key + GUID).digest("base64");
+        const digest = createHash9("sha1").update(key + GUID).digest("base64");
         const headers = [
           "HTTP/1.1 101 Switching Protocols",
           "Upgrade: websocket",
@@ -75547,6 +75547,7 @@ function listChannelDirs() {
     platforms: SNS_PLATFORMS.filter((platform) => existsSync(snsCredentialFile(platform, channel)))
   })).filter((dir) => dir.platforms.length > 0).sort((a, b) => a.channel.localeCompare(b.channel));
 }
+var DEFAULT_PORTAL_API_URL = "https://story.ttalkkaklab.com";
 var PORTAL_CREDENTIAL_FILENAME = "ttalkkakstory.json";
 function portalCredentialFile(channel) {
   if (!channel) return join(snsTokenDir, PORTAL_CREDENTIAL_FILENAME);
@@ -75568,16 +75569,16 @@ function readPortalCredentialFile(file) {
   try {
     parsed = JSON.parse(raw);
   } catch {
-    throw new Error(`${file} is not valid JSON \u2014 expected { "apiUrl", "workspace", "apiKey" }.`);
+    throw new Error(`${file} is not valid JSON \u2014 expected { "apiKey": "tks_\u2026" }.`);
   }
   const o = parsed && typeof parsed === "object" ? parsed : {};
   const str8 = (k) => typeof o[k] === "string" ? o[k].trim() : "";
-  const apiUrl = str8("apiUrl") || str8("api_url");
+  const apiUrl = str8("apiUrl") || str8("api_url") || (process.env.TTALKKAKSTORY_API_URL || "").trim() || DEFAULT_PORTAL_API_URL;
   const workspace = str8("workspace");
   const apiKey = str8("apiKey") || str8("api_key");
-  const missing = [!apiUrl && "apiUrl", !workspace && "workspace", !apiKey && "apiKey"].filter(Boolean);
+  const missing = [!apiKey && "apiKey"].filter(Boolean);
   if (missing.length > 0) {
-    throw new Error(`${file} is missing ${missing.join(", ")} \u2014 expected { "apiUrl", "workspace", "apiKey" }.`);
+    throw new Error(`${file} is missing ${missing.join(", ")} \u2014 expected { "apiKey": "tks_\u2026" }.`);
   }
   const holder = str8("holder");
   return { apiUrl, workspace, apiKey, ...holder ? { holder } : {}, source: file };
@@ -75589,10 +75590,10 @@ function portalCredential(channel) {
   }
   const flat = readPortalCredentialFile(portalCredentialFile());
   if (flat) return flat;
-  const apiUrl = (process.env.TTALKKAKSTORY_API_URL || "").trim();
+  const apiUrl = (process.env.TTALKKAKSTORY_API_URL || "").trim() || DEFAULT_PORTAL_API_URL;
   const workspace = (process.env.TTALKKAKSTORY_WORKSPACE || "").trim();
   const apiKey = (process.env.TTALKKAKSTORY_API_KEY || "").trim();
-  if (apiUrl && workspace && apiKey) {
+  if (apiKey) {
     const holder = (process.env.TTALKKAKSTORY_HOLDER || "").trim();
     return { apiUrl, workspace, apiKey, ...holder ? { holder } : {}, source: "env" };
   }
@@ -75600,7 +75601,7 @@ function portalCredential(channel) {
 }
 function portalConfigured() {
   if (existsSync(portalCredentialFile())) return true;
-  if (process.env.TTALKKAKSTORY_API_URL && process.env.TTALKKAKSTORY_WORKSPACE && process.env.TTALKKAKSTORY_API_KEY) return true;
+  if (process.env.TTALKKAKSTORY_API_KEY?.trim()) return true;
   let entries;
   try {
     entries = readdirSync(snsTokenDir, { withFileTypes: true }).filter((entry) => entry.isDirectory() && CHANNEL_SLUG_RE.test(entry.name)).map((entry) => entry.name);
@@ -83686,13 +83687,13 @@ var PORTAL_TOOLS = [
     annotations: HINT.read,
     description: `Resolve the ttalkkakstory portal key for a channel and ask the portal who it is \u2014 the workspace the key opens, the role (member), and which file answered (per-channel \xB7 flat \xB7 env). Call it once at the top of a storyboard session before any portal write, so a save never lands in another workspace.
 
-The key is issued on the portal at /{workspace}/settings/api-keys (admin+) and saved as <SNS_TOKEN_DIR>/<channel>/ttalkkakstory.json \u2014 { "apiUrl", "workspace", "apiKey" }. With no key anywhere the portal_* tools are hidden and every call answers one line; the episode stays a local file.
+The key is issued on the portal at /{workspace}/settings/api-keys (admin+) and saved as <SNS_TOKEN_DIR>/<channel>/ttalkkakstory.json \u2014 { "apiKey": "tks_\u2026" }. apiUrl defaults to https://story.ttalkkaklab.com; workspace is resolved from /api/token and an explicit workspace must match the key. With no key anywhere the portal_* tools are hidden and every call answers one line; the episode stays a local file.
 
 With episodeDir, also compares the directory's .portal.json (the workspace it is a copy of) with the key's workspace \u2014 workspaceMatches:false with a warning means every write to that directory will be refused until the key file or the record is fixed, so the topic does not fork into a second workspace. When the record names an episode, the portal's side comes too: portal { headRevisionNo, stage, status, lease { holder, until, mine } | null } and sync \u2014 "portal_ahead" (pull with mode "side" and merge before writing), "local_ahead" (never in the normal flow \u2014 syncWarning says how to resync), "in_sync", or "unknown" (no record, or the lookup failed \u2014 see portalWarning) \u2014 plus pending { sideDir, backups }: a leftover .portal-head/ means a merge was started and not finished, backups counts .portal-local/ directory entries. Missing entries return false/0; unreadable entries, dangling links or wrong entry types return null for the affected field plus pending.warnings { sideDir?, backups? }. Both mismatch messages are preserved in warning when workspace and episode identities conflict together.
 
 A damaged or unreadable local record returns localWarning, copyOf:null, workspaceMatches:null and sync:"unknown"; pending is still inspected. Pass episodeId explicitly to read the remote head and lease without trusting that record, or use episodeId + channel alone for a remote-only check. Without a trustworthy ID no episode is guessed; portalWarning explains how to request it. A valid local record conflicting with the explicit ID or key workspace skips the episode lookup with a warning. A missing local revision also means sync:"unknown". Diagnostic success does not repair the record or permit writes: other tools keep refusing the damaged state.
 
-Returns: JSON \u2014 { channel, workspace, source, holder, episodeDir?, copyOf?, workspaceMatches?, warning?, localWarning?, portal?, sync?, pending?, portalWarning?, \u2026the portal's /me answer }.`,
+Returns: JSON \u2014 { channel, workspace, resolvedBy: "file"|"token", source, holder, episodeDir?, copyOf?, workspaceMatches?, warning?, localWarning?, portal?, sync?, pending?, portalWarning?, \u2026the portal's /me answer }.`,
     inputSchema: {
       type: "object",
       properties: {
@@ -87730,6 +87731,7 @@ function normalizeNarrationSpeakers(scenes, characters) {
 }
 
 // src/portal-client.ts
+import { createHash as createHash2 } from "node:crypto";
 import { hostname as hostname2 } from "node:os";
 var PortalError = class extends Error {
   status;
@@ -87748,12 +87750,59 @@ function defaultHolder(apiKey) {
 }
 var PORTAL_TIMEOUT_MS = 6e4;
 var SAFE_DOCUMENT_NAME = /^(?!\.\.?$)[^/\\\0]+$/;
-function portalClientFor(channel, fetchImpl) {
+var tokenWorkspaces = /* @__PURE__ */ new WeakMap();
+async function resolveToken(credential, fetchImpl) {
+  const root = credential.apiUrl.replace(/\/+$/, "");
+  let cache = tokenWorkspaces.get(fetchImpl);
+  if (!cache) {
+    cache = /* @__PURE__ */ new Map();
+    tokenWorkspaces.set(fetchImpl, cache);
+  }
+  const key = createHash2("sha256").update(JSON.stringify([root, credential.apiKey])).digest("hex");
+  let pending = cache.get(key);
+  if (!pending) {
+    pending = (async () => {
+      let response;
+      try {
+        response = await fetchImpl(`${root}/api/token`, {
+          headers: { authorization: `Bearer ${credential.apiKey}` },
+          redirect: "error",
+          signal: AbortSignal.timeout(Math.max(config2.requestTimeoutMs, PORTAL_TIMEOUT_MS))
+        });
+      } catch {
+        throw new PortalError(502, "Token workspace lookup failed. Check the portal URL and connection.");
+      }
+      if (!response.ok) throw new PortalError(response.status, "Token workspace lookup failed. Check the API key and portal deployment.");
+      let envelope;
+      try {
+        envelope = await response.json();
+      } catch {
+        throw new PortalError(502, "Token workspace lookup returned invalid JSON.");
+      }
+      const data = envelope?.data;
+      if (!envelope?.success || !data || typeof data.workspaceSlug !== "string" || !/^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/.test(data.workspaceSlug) || typeof data.workspaceName !== "string" || data.role !== "member") {
+        throw new PortalError(502, "Token workspace lookup returned an invalid workspace.");
+      }
+      return data;
+    })();
+    cache.set(key, pending);
+    if (cache.size > 100) cache.delete(cache.keys().next().value);
+    pending.catch(() => {
+      if (cache.get(key) === pending) cache.delete(key);
+    });
+  }
+  return pending;
+}
+async function portalClientFor(channel, fetchImpl = fetch) {
   const credential = portalCredential(channel);
   if (!credential) return null;
-  return createPortalClient(credential, fetchImpl);
+  const token = await resolveToken(credential, fetchImpl);
+  if (credential.workspace && credential.workspace !== token.workspaceSlug) {
+    throw new PortalError(409, `Workspace mismatch \u2014 ${credential.source} specifies "${credential.workspace}", but the API key opens "${token.workspaceSlug}". Fix the credential file or environment. Nothing was sent to a workspace.`);
+  }
+  return createPortalClient({ ...credential, workspace: token.workspaceSlug }, fetchImpl, credential.workspace ? "file" : "token");
 }
-function createPortalClient(credential, fetchImpl = fetch) {
+function createPortalClient(credential, fetchImpl = fetch, resolvedBy = "file") {
   const root = credential.apiUrl.replace(/\/+$/, "");
   const base = `${root}/api/workspaces/${encodeURIComponent(credential.workspace)}`;
   const headers = { authorization: `Bearer ${credential.apiKey}` };
@@ -87802,6 +87851,7 @@ function createPortalClient(credential, fetchImpl = fetch) {
   return {
     base,
     workspace: credential.workspace,
+    resolvedBy,
     source: credential.source,
     holder,
     uploadMedia: (episodeId, kind, bytes, mime2) => json2("POST", `${withHolder(`/episodes/${episodeId}/media`)}&kind=${encodeURIComponent(kind)}`, bytes, mime2),
@@ -87876,12 +87926,12 @@ function canonicalPullPaths(episode, written = []) {
 }
 
 // src/portal-attachments.ts
-import { createHash as createHash2, randomUUID as randomUUID2 } from "node:crypto";
+import { createHash as createHash3, randomUUID as randomUUID2 } from "node:crypto";
 import { constants as constants2, closeSync as closeSync2, existsSync as existsSync13, fstatSync, lstatSync as lstatSync2, mkdirSync as mkdirSync5, openSync as openSync2, readFileSync as readFileSync10, readSync, readdirSync as readdirSync2, renameSync as renameSync4, writeFileSync as writeFileSync9 } from "node:fs";
 import path11 from "node:path";
 var LIMIT = 10 * 1024 * 1024;
 var MANIFEST = ".portal-attachments.json";
-var hash = (bytes) => createHash2("sha256").update(bytes).digest("hex");
+var hash = (bytes) => createHash3("sha256").update(bytes).digest("hex");
 var ignored = (part) => [".git", "node_modules", ".portal.json", MANIFEST, ".portal-head", ".portal-local", ".DS_Store"].includes(part) || part === ".env" || part.startsWith(".env.");
 function validateAttachmentPath(value) {
   if (!value || Buffer.byteLength(value) > 1024 || /[\\\x00-\x1f\x7f:]/.test(value) || value.startsWith("/") || value.split("/").some((p) => !p || p === "." || p === ".." || /[. ]$/.test(p) || ignored(p))) throw new Error(`Unsafe attachment path: ${value}`);
@@ -88027,7 +88077,7 @@ import { copyFileSync, existsSync as existsSync15, lstatSync as lstatSync3, mkdi
 import path13 from "node:path";
 
 // src/portal-images.ts
-import { createHash as createHash3, randomUUID as randomUUID3 } from "node:crypto";
+import { createHash as createHash4, randomUUID as randomUUID3 } from "node:crypto";
 import { closeSync as closeSync3, existsSync as existsSync14, fstatSync as fstatSync2, mkdirSync as mkdirSync6, openSync as openSync3, readFileSync as readFileSync11, readSync as readSync2, realpathSync, renameSync as renameSync5, rmSync as rmSync6, writeFileSync as writeFileSync10 } from "node:fs";
 import path12 from "node:path";
 var imageUploadSchema = external_exports.object({
@@ -88041,7 +88091,7 @@ var imageUploadSchema = external_exports.object({
   }).refine((a) => Number(Boolean(a.shotId)) + Number(a.shotNo !== void 0) === 1, "Choose shotId or shotNo")).min(1).max(500).optional()
 });
 var MAX_BYTES = 5 * 1024 * 1024;
-var hash2 = (bytes) => createHash3("sha256").update(bytes).digest("hex");
+var hash2 = (bytes) => createHash4("sha256").update(bytes).digest("hex");
 function readImage(file) {
   const fd = openSync3(file, "r");
   try {
@@ -88354,11 +88404,11 @@ function channelFor(explicit, ...dirs) {
   }
   return void 0;
 }
-function resolveClient(fetchImpl, explicit, ...dirs) {
+async function resolveClient(fetchImpl, explicit, ...dirs) {
   const channel = channelFor(explicit, ...dirs);
   let client;
   try {
-    client = portalClientFor(channel, fetchImpl);
+    client = await portalClientFor(channel, fetchImpl);
   } catch (error2) {
     return { error: failed(error2) };
   }
@@ -88455,7 +88505,7 @@ function resolveEpisodeId(episodeId, ...dirs) {
 function portalHandlers(fetchImpl) {
   return {
     async attachmentsSync(args) {
-      const r2 = resolveClient(fetchImpl, args.channel, args.episodeDir);
+      const r2 = await resolveClient(fetchImpl, args.channel, args.episodeDir);
       if ("error" in r2) return r2.error;
       const refused = refuseMismatch(r2.client, args.episodeDir);
       if (refused) return refused;
@@ -88467,7 +88517,7 @@ function portalHandlers(fetchImpl) {
       }
     },
     async imagesUpload(args) {
-      const r2 = resolveClient(fetchImpl, void 0, args.episodeDir);
+      const r2 = await resolveClient(fetchImpl, void 0, args.episodeDir);
       if ("error" in r2) return r2.error;
       const refused = refuseMismatch(r2.client, args.episodeDir);
       if (refused) return refused;
@@ -88479,7 +88529,7 @@ function portalHandlers(fetchImpl) {
       }
     },
     async renderAllocation({ episodeId, episodeDir, channel, assignments, requestId, baseRevisionNo }) {
-      const r2 = resolveClient(fetchImpl, channel, episodeDir);
+      const r2 = await resolveClient(fetchImpl, channel, episodeDir);
       if ("error" in r2) return r2.error;
       const refused = refuseMismatch(r2.client, episodeDir);
       if (refused) return refused;
@@ -88492,7 +88542,7 @@ function portalHandlers(fetchImpl) {
       }
     },
     async workspaceCheck({ channel, episodeDir, episodeId }) {
-      const r2 = resolveClient(fetchImpl, channel, episodeDir);
+      const r2 = await resolveClient(fetchImpl, channel, episodeDir);
       if ("error" in r2) return r2.error;
       try {
         let state = null;
@@ -88552,6 +88602,7 @@ function portalHandlers(fetchImpl) {
         return ok({
           channel: r2.channel ?? null,
           workspace: r2.client.workspace,
+          resolvedBy: r2.client.resolvedBy,
           source: r2.client.source,
           holder: r2.client.holder,
           ...episodeDir ? {
@@ -88569,7 +88620,7 @@ function portalHandlers(fetchImpl) {
       }
     },
     async storyboardSave({ episodeDir, project, storyboardTitle, title, stage: stageArg, baseRevisionNo, note }) {
-      const r2 = resolveClient(fetchImpl, void 0, episodeDir);
+      const r2 = await resolveClient(fetchImpl, void 0, episodeDir);
       if ("error" in r2) return r2.error;
       const refused = refuseMismatch(r2.client, episodeDir);
       if (refused) return refused;
@@ -88616,7 +88667,7 @@ function portalHandlers(fetchImpl) {
       }
     },
     async storyboardList({ channel, storyboardId, query, projectId, page }) {
-      const r2 = resolveClient(fetchImpl, channel);
+      const r2 = await resolveClient(fetchImpl, channel);
       if ("error" in r2) return r2.error;
       try {
         if (storyboardId) return ok((await r2.client.listEpisodes(storyboardId)).data);
@@ -88626,7 +88677,7 @@ function portalHandlers(fetchImpl) {
       }
     },
     async storyboardPull({ episodeId, targetDir, includeDocuments = true, revision, mode = "replace" }) {
-      const r2 = resolveClient(fetchImpl, void 0, targetDir);
+      const r2 = await resolveClient(fetchImpl, void 0, targetDir);
       if ("error" in r2) return r2.error;
       const refused = refuseMismatch(r2.client, targetDir);
       if (refused) return refused;
@@ -88733,7 +88784,7 @@ function portalHandlers(fetchImpl) {
       }
     },
     async episodeStatus({ episodeId, episodeDir, channel, status, stage: stageArg, title }) {
-      const r2 = resolveClient(fetchImpl, channel, episodeDir);
+      const r2 = await resolveClient(fetchImpl, channel, episodeDir);
       if ("error" in r2) return r2.error;
       const refused = refuseMismatch(r2.client, episodeDir);
       if (refused) return refused;
@@ -88747,7 +88798,7 @@ function portalHandlers(fetchImpl) {
       }
     },
     async episodeCreate({ storyboardId, episodeDir, channel, ...body }) {
-      const r2 = resolveClient(fetchImpl, channel, episodeDir);
+      const r2 = await resolveClient(fetchImpl, channel, episodeDir);
       if ("error" in r2) return r2.error;
       const refused = refuseMismatch(r2.client, episodeDir);
       if (refused) return refused;
@@ -88763,7 +88814,7 @@ function portalHandlers(fetchImpl) {
       }
     },
     async episodeCheckpoint({ stage: stageArg, episodeId, episodeDir, channel, baseRevisionNo, note, documents }) {
-      const r2 = resolveClient(fetchImpl, channel, episodeDir);
+      const r2 = await resolveClient(fetchImpl, channel, episodeDir);
       if ("error" in r2) return r2.error;
       const refused = refuseMismatch(r2.client, episodeDir);
       if (refused) return refused;
@@ -88812,7 +88863,7 @@ function portalHandlers(fetchImpl) {
       }
     },
     async episodeRevisions({ episodeId, episodeDir, channel, revisionNo, compareTo }) {
-      const r2 = resolveClient(fetchImpl, channel, episodeDir);
+      const r2 = await resolveClient(fetchImpl, channel, episodeDir);
       if ("error" in r2) return r2.error;
       try {
         const id = resolveEpisodeId(episodeId, episodeDir);
@@ -88829,7 +88880,7 @@ function portalHandlers(fetchImpl) {
       }
     },
     async episodeRestore({ revisionNo, episodeId, episodeDir, channel, note }) {
-      const r2 = resolveClient(fetchImpl, channel, episodeDir);
+      const r2 = await resolveClient(fetchImpl, channel, episodeDir);
       if ("error" in r2) return r2.error;
       const refused = refuseMismatch(r2.client, episodeDir);
       if (refused) return refused;
@@ -88846,7 +88897,7 @@ function portalHandlers(fetchImpl) {
       }
     },
     async episodeLease({ action, episodeId, episodeDir, channel, ttlMinutes, force }) {
-      const r2 = resolveClient(fetchImpl, channel, episodeDir);
+      const r2 = await resolveClient(fetchImpl, channel, episodeDir);
       if ("error" in r2) return r2.error;
       const refused = refuseMismatch(r2.client, episodeDir);
       if (refused) return refused;
@@ -88866,7 +88917,7 @@ function portalHandlers(fetchImpl) {
     },
     async scenarioSave({ candidate: cand, file, markdown, chosen, episodeId, episodeDir, channel }) {
       const dirFromFile = file ? path13.basename(path13.dirname(file)) === "candidates" ? path13.dirname(path13.dirname(file)) : path13.dirname(file) : void 0;
-      const r2 = resolveClient(fetchImpl, channel, episodeDir, dirFromFile);
+      const r2 = await resolveClient(fetchImpl, channel, episodeDir, dirFromFile);
       if ("error" in r2) return r2.error;
       const refused = refuseMismatch(r2.client, episodeDir, dirFromFile);
       if (refused) return refused;
@@ -88891,7 +88942,7 @@ function portalHandlers(fetchImpl) {
       }
     },
     async scenarioPull({ targetDir, candidate: cand, episodeId, episodeDir, channel }) {
-      const r2 = resolveClient(fetchImpl, channel, episodeDir, targetDir);
+      const r2 = await resolveClient(fetchImpl, channel, episodeDir, targetDir);
       if ("error" in r2) return r2.error;
       const refused = refuseMismatch(r2.client, episodeDir, targetDir);
       if (refused) return refused;
@@ -88952,7 +89003,7 @@ function portalHandlers(fetchImpl) {
       }
     },
     async scenarioChoose({ candidate: cand, episodeId, episodeDir, channel }) {
-      const r2 = resolveClient(fetchImpl, channel, episodeDir);
+      const r2 = await resolveClient(fetchImpl, channel, episodeDir);
       if ("error" in r2) return r2.error;
       const refused = refuseMismatch(r2.client, episodeDir);
       if (refused) return refused;
@@ -88968,7 +89019,7 @@ function portalHandlers(fetchImpl) {
 }
 
 // src/threads-gate.ts
-import { createHash as createHash4, randomUUID as randomUUID4 } from "node:crypto";
+import { createHash as createHash5, randomUUID as randomUUID4 } from "node:crypto";
 import { appendFileSync as appendFileSync2, mkdirSync as mkdirSync8, readFileSync as readFileSync13, realpathSync as realpathSync2, renameSync as renameSync6, statSync as statSync6, writeFileSync as writeFileSync12 } from "node:fs";
 import { dirname as dirname5, join as join9, resolve as resolve4 } from "node:path";
 import { fileURLToPath as fileURLToPath2 } from "node:url";
@@ -89005,7 +89056,7 @@ var reviewSchema2 = external_exports.object({
 });
 var normalize = (s2) => s2.normalize("NFC").replace(/\r\n?/g, "\n").trim();
 function threadsBodyHash(body, selfReply = "") {
-  return createHash4("sha256").update(JSON.stringify([normalize(body), normalize(selfReply)])).digest("hex");
+  return createHash5("sha256").update(JSON.stringify([normalize(body), normalize(selfReply)])).digest("hex");
 }
 function directory(channel) {
   return join9(process.cwd(), "data", channelSchema.parse(channel), "growth", "threads");
@@ -89141,7 +89192,7 @@ function checkThreadsEpisode(input) {
 }
 
 // src/portal-media.ts
-import { createHash as createHash5, randomUUID as randomUUID5 } from "node:crypto";
+import { createHash as createHash6, randomUUID as randomUUID5 } from "node:crypto";
 import { appendFileSync as appendFileSync3, closeSync as closeSync4, fstatSync as fstatSync3, statSync as statSync7, mkdirSync as mkdirSync9, openSync as openSync4, readFileSync as readFileSync14, readSync as readSync3, realpathSync as realpathSync3, renameSync as renameSync7, rmSync as rmSync8, writeFileSync as writeFileSync13 } from "node:fs";
 import path14 from "node:path";
 var portalShotFields = {
@@ -89188,14 +89239,14 @@ function readMedia(file, kind) {
     if (!size) throw new Error("Media is empty.");
     if (size > limit2) throw new MediaTooLarge(size);
     const bytes = buffer.subarray(0, size);
-    return { bytes, mime: mime2, sha256: createHash5("sha256").update(bytes).digest("hex") };
+    return { bytes, mime: mime2, sha256: createHash6("sha256").update(bytes).digest("hex") };
   } finally {
     closeSync4(fd);
   }
 }
 async function uploadShotMedia(args, fetchImpl) {
   const dir = episodeDirOf(path14.resolve(args.episodeDir));
-  const client = portalClientFor(channelOfEpisodeDir(dir), fetchImpl);
+  const client = await portalClientFor(channelOfEpisodeDir(dir), fetchImpl);
   if (!client) return { skipped: true };
   const state = readPortalState(dir);
   if (!state?.episodeId || state.workspace !== client.workspace || !Number.isSafeInteger(state.headRevisionNo) || state.headRevisionNo < 0)
@@ -89289,7 +89340,7 @@ async function withShotMedia(args, kind, run, output, fetchImpl) {
   const raw = args?.portal;
   if (!raw) return run();
   const dir = raw.episodeDir;
-  const configured = portalClientFor(typeof dir === "string" ? channelOfEpisodeDir(dir) : void 0, fetchImpl);
+  const configured = await portalClientFor(typeof dir === "string" ? channelOfEpisodeDir(dir) : void 0, fetchImpl);
   if (!configured) return run();
   const target = portalShotSchema.parse(raw);
   if (kind === "video") {
@@ -90896,7 +90947,7 @@ async function stockSearch(input) {
 }
 
 // src/sns-client.ts
-import { createHash as createHash6, randomUUID as randomUUID6 } from "node:crypto";
+import { createHash as createHash7, randomUUID as randomUUID6 } from "node:crypto";
 import {
   existsSync as existsSync17,
   mkdirSync as nodeMkdirSync,
@@ -91609,7 +91660,7 @@ function parseResumeOffset(range) {
   return m2 ? Number(m2[1]) + 1 : 0;
 }
 function sessionStateFile(filePath) {
-  const key = createHash6("sha256").update(filePath).digest("hex").slice(0, 16);
+  const key = createHash7("sha256").update(filePath).digest("hex").slice(0, 16);
   return join11(snsTokenDir, ".yt-upload", `${key}.json`);
 }
 function readState(filePath) {
@@ -95423,7 +95474,7 @@ function renderCapabilityStatus() {
 }
 
 // src/portal-backups.ts
-import { createHash as createHash7 } from "node:crypto";
+import { createHash as createHash8 } from "node:crypto";
 import { lstatSync as lstatSync4, readdirSync as readdirSync4, rmSync as rmSync10 } from "node:fs";
 import path18 from "node:path";
 var backupSchema = external_exports.object({
@@ -95497,7 +95548,7 @@ function manageBackups(input) {
     counts.set(entry.kind, n);
     return n > args.keep;
   });
-  const plan = createHash7("sha256").update(JSON.stringify({ dir, keep: args.keep, entries, ignored: ignored2, fingerprint })).digest("hex");
+  const plan = createHash8("sha256").update(JSON.stringify({ dir, keep: args.keep, entries, ignored: ignored2, fingerprint })).digest("hex");
   if (args.apply && args.confirm !== plan) throw new Error("Backup inventory changed or confirmation does not match. Preview again; nothing was pruned.");
   const deleted = [];
   let error2;

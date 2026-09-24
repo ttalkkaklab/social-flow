@@ -744,8 +744,17 @@ ready to save:
 ```
 ~/.config/social-flow/<channel>/ttalkkakstory.json      # one channel → one workspace
 ~/.config/social-flow/ttalkkakstory.json                # or one key for every channel
-{ "apiUrl": "https://story.example.com", "workspace": "<slug>", "apiKey": "tks_…" }
+{ "apiKey": "tks_…" }
 ```
+
+Only `apiKey` is required, including for the flat file and `TTALKKAKSTORY_API_KEY` env.
+The API URL defaults to `https://story.ttalkkaklab.com`; an optional `apiUrl` in the file
+(or `TTALKKAKSTORY_API_URL` for a custom/local portal) overrides it. Before any workspace
+request, `/api/token` resolves the workspace and caches that result for the server session.
+An optional `workspace` must match the key or the call stops. `portal_workspace_check`
+returns `resolvedBy: "token"` for automatic lookup and `"file"` for an explicitly configured
+workspace (file or env); `source` identifies the credential source. Failed lookups are not cached.
+Deploy a portal with `/api/token` before updating the plugin.
 
 The channel is read off the episode path (`data/<channel>/episodes/<topic>`), the channel file
 falls through to the flat file, and the `TTALKKAKSTORY_*` env is the last resort. Mode 600,
