@@ -21,6 +21,8 @@ import { imageUploadSchema, uploadEpisodeImages } from './portal-images.js';
 export { imageUploadSchema } from './portal-images.js';
 import { assetsGetSchema, assetsSearchSchema, getAsset, searchAssets } from './portal-assets.js';
 export { assetsGetSchema, assetsSearchSchema } from './portal-assets.js';
+import { artifactSyncSchema, publicationRecordSchema, recordPublication, syncEpisodeArtifacts } from './portal-artifacts.js';
+export { artifactSyncSchema, publicationRecordSchema } from './portal-artifacts.js';
 import { portalCredentialFile, PORTAL_CREDENTIAL_FILENAME } from './config.js';
 import { describePortalError, PortalError, portalClientFor, SAFE_DOCUMENT_NAME, type FetchLike, type PortalClient, type PortalRevisionDiff } from './portal-client.js';
 import {
@@ -48,6 +50,8 @@ export const PORTAL_TOOL_NAMES = [
   'portal_storyboard_list',
   'portal_storyboard_pull',
   'portal_episode_status',
+  'portal_episode_artifacts_sync',
+  'portal_publication_record',
   'portal_episode_create',
   'portal_episode_checkpoint',
   'portal_episode_revisions',
@@ -382,6 +386,8 @@ export interface PortalHandlers {
   storyboardList(a: z.infer<typeof storyboardListSchema>): Promise<PortalToolResult>;
   storyboardPull(a: z.infer<typeof storyboardPullSchema>): Promise<PortalToolResult>;
   episodeStatus(a: z.infer<typeof episodeStatusSchema>): Promise<PortalToolResult>;
+  episodeArtifactsSync(a: z.infer<typeof artifactSyncSchema>): Promise<PortalToolResult>;
+  publicationRecord(a: z.infer<typeof publicationRecordSchema>): Promise<PortalToolResult>;
   episodeCreate(a: z.infer<typeof episodeCreateSchema>): Promise<PortalToolResult>;
   episodeCheckpoint(a: z.infer<typeof episodeCheckpointSchema>): Promise<PortalToolResult>;
   episodeRevisions(a: z.infer<typeof episodeRevisionsSchema>): Promise<PortalToolResult>;
@@ -714,6 +720,16 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
       } catch (error) {
         return failed(error);
       }
+    },
+
+    async episodeArtifactsSync(args) {
+      try { return ok(await syncEpisodeArtifacts(args, fetchImpl)); }
+      catch (error) { return failed(error); }
+    },
+
+    async publicationRecord(args) {
+      try { return ok(await recordPublication(args, fetchImpl)); }
+      catch (error) { return failed(error); }
     },
 
     async episodeCreate({ storyboardId, episodeDir, channel, ...body }) {

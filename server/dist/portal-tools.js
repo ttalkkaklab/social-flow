@@ -20,6 +20,8 @@ import { uploadEpisodeImages } from './portal-images.js';
 export { imageUploadSchema } from './portal-images.js';
 import { getAsset, searchAssets } from './portal-assets.js';
 export { assetsGetSchema, assetsSearchSchema } from './portal-assets.js';
+import { recordPublication, syncEpisodeArtifacts } from './portal-artifacts.js';
+export { artifactSyncSchema, publicationRecordSchema } from './portal-artifacts.js';
 import { portalCredentialFile, PORTAL_CREDENTIAL_FILENAME } from './config.js';
 import { describePortalError, PortalError, portalClientFor, SAFE_DOCUMENT_NAME } from './portal-client.js';
 import { buildImportPayload, channelOfEpisodeDir, DOCUMENT_FILES, EPISODE_STAGES, EPISODE_STATUSES, episodeDirOf, readDocuments, readPortalState, SCENARIO_CANDIDATES, writePortalState, } from './portal-episode.js';
@@ -35,6 +37,8 @@ export const PORTAL_TOOL_NAMES = [
     'portal_storyboard_list',
     'portal_storyboard_pull',
     'portal_episode_status',
+    'portal_episode_artifacts_sync',
+    'portal_publication_record',
     'portal_episode_create',
     'portal_episode_checkpoint',
     'portal_episode_revisions',
@@ -725,6 +729,22 @@ export function portalHandlers(fetchImpl) {
                     throw new Error('one of status · stage · title is required.');
                 const id = resolveEpisodeId(episodeId, episodeDir);
                 return ok((await r.client.updateEpisode(id, patch)).data);
+            }
+            catch (error) {
+                return failed(error);
+            }
+        },
+        async episodeArtifactsSync(args) {
+            try {
+                return ok(await syncEpisodeArtifacts(args, fetchImpl));
+            }
+            catch (error) {
+                return failed(error);
+            }
+        },
+        async publicationRecord(args) {
+            try {
+                return ok(await recordPublication(args, fetchImpl));
             }
             catch (error) {
                 return failed(error);

@@ -58,6 +58,8 @@ export interface PortalClient {
   listEpisodes(storyboardId: string): Promise<PortalResponse>;
   getEpisode(episodeId: string): Promise<PortalResponse<PortalEpisode>>;
   updateEpisode(episodeId: string, patch: Record<string, unknown>): Promise<PortalResponse>;
+  updateArtifacts(episodeId: string, body: Record<string, unknown>): Promise<PortalResponse>;
+  recordPublication(episodeId: string, body: Record<string, unknown>): Promise<PortalResponse>;
   importStoryboard(payload: unknown): Promise<PortalResponse<ImportResult>>;
   scenesJs(episodeId: string, revision?: number): Promise<string>;
   document(episodeId: string, filename: string): Promise<string>;
@@ -283,6 +285,8 @@ export function createPortalClient(credential: PortalCredential & { workspace: s
     getEpisode: (episodeId) => json<PortalEpisode>('GET', `/episodes/${episodeId}`),
     // holder travels on every write — a lease held by another machine on the same key is still someone else's.
     updateEpisode: (episodeId, patch) => json('PATCH', withHolder(`/episodes/${episodeId}`), patch),
+    updateArtifacts: (episodeId, body) => json('PUT', withHolder(`/episodes/${episodeId}/artifacts`), body),
+    recordPublication: (episodeId, body) => json('POST', withHolder(`/episodes/${episodeId}/publications`), body),
     importStoryboard: (payload) => json<ImportResult>('POST', '/storyboards/import', payload),
     scenesJs: (episodeId, revision) => text(`/episodes/${episodeId}/scenes.js${revision ? `?revision=${revision}` : ''}`),
     document: (episodeId, filename) => text(`/episodes/${episodeId}/documents/${encodeURIComponent(filename)}`),
