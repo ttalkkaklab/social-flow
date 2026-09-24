@@ -13,7 +13,7 @@ description: >
   report, one content-reviewer read at 95 with zero P0, and a cost cap. Boundary — storyboard
   plans and stops, produce builds an approved episode, autoproduce does both without stopping.
 argument-hint: "<channel> \"<topic>\" [unattended]"
-allowed-tools: ["mcp__social-flow__portal_render_allocation", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent",
+allowed-tools: ["mcp__social-flow__portal_assets_search", "mcp__social-flow__portal_assets_get", "mcp__social-flow__portal_render_allocation", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent",
   "WebSearch", "WebFetch",
   "mcp__social-flow__naver_search", "mcp__social-flow__serp_web_search",
   "mcp__social-flow__serp_news_search", "mcp__social-flow__serp_naver_search",
@@ -730,7 +730,10 @@ the price.
   out and this step copies or generates a single `.work/bgm.wav`. If the channel has a
   shared bed, just copy it.
   `python3 ${CLAUDE_PLUGIN_ROOT}/skills/channel/references/resolve-asset.py data/<channel> bgm default`
-  — if a path comes back, copy it to `.work/bgm.wav`. Otherwise put a
+  — if a path comes back, copy it to `.work/bgm.wav`. Otherwise, with a portal key,
+  `portal_assets_search` `type: ["music"]`, `query` the episode's mood words; a hit goes through
+  `portal_assets_get` `download: true` to `.work/portal/<sourceId>.m4a` and then ffmpeg
+  (`-vn -ac 2 -ar 48000`) to `.work/bgm.wav` at no cost. Only when the library has nothing put a
   30-second `music_generate_clip` instrumental at `.work/bgm.wav`. Include
   "leaves space for a spoken voiceover, no melody in the vocal frequency range"
   in the prompt. To reuse the same tone next episode, copy it to

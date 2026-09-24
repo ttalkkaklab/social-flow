@@ -17,10 +17,14 @@ import path from 'node:path';
 import { z } from 'zod';
 import { uploadEpisodeImages } from './portal-images.js';
 export { imageUploadSchema } from './portal-images.js';
+import { getAsset, searchAssets } from './portal-assets.js';
+export { assetsGetSchema, assetsSearchSchema } from './portal-assets.js';
 import { portalCredentialFile, PORTAL_CREDENTIAL_FILENAME } from './config.js';
 import { describePortalError, PortalError, portalClientFor, SAFE_DOCUMENT_NAME } from './portal-client.js';
 import { buildImportPayload, channelOfEpisodeDir, DOCUMENT_FILES, EPISODE_STAGES, EPISODE_STATUSES, episodeDirOf, readDocuments, readPortalState, SCENARIO_CANDIDATES, writePortalState, } from './portal-episode.js';
 export const PORTAL_TOOL_NAMES = [
+    'portal_assets_search',
+    'portal_assets_get',
     'portal_attachments_sync',
     'portal_images_upload',
     'portal_shot_media_upload',
@@ -352,6 +356,29 @@ function resolveEpisodeId(episodeId, ...dirs) {
 /** The handlers, with fetch injectable so the tests never touch a network. */
 export function portalHandlers(fetchImpl) {
     return {
+        // The library is global — no workspace record to compare, so no refuseMismatch here.
+        async assetsSearch(args) {
+            const r = await resolveClient(fetchImpl, args.channel, args.episodeDir);
+            if ('error' in r)
+                return r.error;
+            try {
+                return ok(await searchAssets(r.client, args));
+            }
+            catch (error) {
+                return failed(error);
+            }
+        },
+        async assetsGet(args) {
+            const r = await resolveClient(fetchImpl, args.channel, args.episodeDir);
+            if ('error' in r)
+                return r.error;
+            try {
+                return ok(await getAsset(r.client, args));
+            }
+            catch (error) {
+                return failed(error);
+            }
+        },
         async attachmentsSync(args) {
             const r = await resolveClient(fetchImpl, args.channel, args.episodeDir);
             if ('error' in r)

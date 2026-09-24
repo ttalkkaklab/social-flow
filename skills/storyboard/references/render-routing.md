@@ -33,8 +33,10 @@ write `shot.render`.
    is not enough and consider generated video: complex expressions, cloth, a crowd in motion.
 5. Does real footage of it exist — the actual place, the actual era, the actual event? A free
    stock or archive clip beats a generated one when reality is the point, and costs nothing.
-   Run `stock_search`, keep an item only when its license record says commercial and modify,
-   and route the cut as `stock_video`. A stock photograph feeds a still-camera cut the same
+   With a portal key, ask `portal_assets_search` first (the owner's global library — Gemini
+   B-roll already cleared for use; `portal_assets_get` hands back the license record and the
+   footage name); with no hit, run `stock_search`, keep an item only when its license record
+   says commercial and modify. Either way route the cut as `stock_video`. A stock photograph feeds a still-camera cut the same
    way: `visual.bg` under `images/stock/` plus `visual.license`, no `bgPrompt`.
 6. Is the point who a person is, a mood, a place or a clue? Use a still with a camera move
    that fits the purpose.
