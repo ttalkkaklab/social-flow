@@ -161,6 +161,8 @@ export function createPortalClient(credential, fetchImpl = fetch, resolvedBy = '
         getEpisode: (episodeId) => json('GET', `/episodes/${episodeId}`),
         // holder travels on every write — a lease held by another machine on the same key is still someone else's.
         updateEpisode: (episodeId, patch) => json('PATCH', withHolder(`/episodes/${episodeId}`), patch),
+        updateArtifacts: (episodeId, body) => json('PUT', withHolder(`/episodes/${episodeId}/artifacts`), body),
+        recordPublication: (episodeId, body) => json('POST', withHolder(`/episodes/${episodeId}/publications`), body),
         importStoryboard: (payload) => json('POST', '/storyboards/import', payload),
         scenesJs: (episodeId, revision) => text(`/episodes/${episodeId}/scenes.js${revision ? `?revision=${revision}` : ''}`),
         document: (episodeId, filename) => text(`/episodes/${episodeId}/documents/${encodeURIComponent(filename)}`),
