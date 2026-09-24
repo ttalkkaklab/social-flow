@@ -436,12 +436,12 @@ Follow [illustrated-scenes.md](../storyboard/references/illustrated-scenes.md): 
     : # default: music_generate_clip (Lyria, 30s instrumental) → .work/bgm.wav
   fi
   ```
-  **Before generating, ask the portal library** (`portal_*` tools listed): `portal_assets_search` `type: ["music"]` with the episode's mood words (`query` or `tags`); when a bed fits, `portal_assets_get` `download: true` puts it at `.work/portal/<sourceId>.m4a` — ffmpeg it (`-vn -ac 2 -ar 48000`) to `.work/bgm.wav` and note the asset id in `.work/decisions.tsv`. No hit or no key: the generation above.
+  **Before generating, ask the portal library** (`portal_*` tools listed): `portal_assets_search` `type: ["music"]` with the episode's mood words as `query` (required — AND over words; add `tags` only to narrow); when a bed fits, `portal_assets_get` `download: true` puts it at `.work/portal/<sourceId>.m4a` — ffmpeg it (`-vn -ac 2 -ar 48000`) to `.work/bgm.wav` and note the asset id in `.work/decisions.tsv`. No hit or no key: the generation above.
 
   **With `window.MUSIC`**, one file per cue. `base` (or the channel's shared bed when there is no
   `base`) becomes `.work/bgm.wav`; every other cue becomes `.work/bgm-<name>.wav`. A cue with
   `asset` comes from `resolve-asset.py <channel dir> bgm <id>` instead of being generated. A cue
-  with `prompts` (a weighted blend, scenes-schema §music cues) goes to `music_generate_advanced`; a cue with `prompt` goes to `music_generate` — after `portal_assets_search` `type: ["music"]` on the cue's words has answered nothing (a library bed from `portal_assets_get` serves the cue like an `asset`; `sfx` the same way for a `sound.sfx` the catalog lacks).
+  with `prompts` (a weighted blend, scenes-schema §music cues) goes to `music_generate_advanced`; a cue with `prompt` goes to `music_generate` — after `portal_assets_search` `type: ["music"]` on the cue's words has answered nothing. A library bed the search does return goes through `portal_assets_get` `download: true` to `.work/portal/<sourceId>.m4a` and ffmpeg (`-vn -ac 2 -ar 48000`) writes it straight to that cue's file — `.work/bgm.wav` for `base`, `.work/bgm-<name>.wav` otherwise. **Do not put the local path in the cue's `asset`**: `asset` is a channel catalog id that `resolve-asset.py` resolves, and a path there fails or silently falls back to the channel's `default.wav`. A `sound.sfx` id the channel catalog lacks can come from the library the same way — copy the downloaded file to `data/<channel>/assets/audio/sfx/<id>.wav` and register it with `--ensure` exactly as §SFX below does for a generated one.
   **Ask for the length the cue has to fill** — trimmed TTS of its shots + ~1 s a shot of card
   padding + the 2 s handover (bgm-scoring.md §2; the last cue needs no handover). A cue that
   comes up short loops at the boundary and `bed.log` prints the exact span to regenerate at.
