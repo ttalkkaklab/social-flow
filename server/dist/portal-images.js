@@ -18,7 +18,7 @@ export const imageUploadSchema = z.object({
 const MAX_BYTES = 5 * 1024 * 1024;
 const hash = (bytes) => createHash('sha256').update(bytes).digest('hex');
 /** Read at most the limit plus one byte, even if the file grows after fstat. */
-function readImage(file) {
+export function readImage(file) {
     const fd = openSync(file, 'r');
     try {
         const stat = fstatSync(fd);

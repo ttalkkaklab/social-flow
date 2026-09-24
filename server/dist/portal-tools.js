@@ -22,6 +22,8 @@ import { getAsset, searchAssets } from './portal-assets.js';
 export { assetsGetSchema, assetsSearchSchema } from './portal-assets.js';
 import { recordPublication, syncEpisodeArtifacts } from './portal-artifacts.js';
 export { artifactSyncSchema, publicationRecordSchema } from './portal-artifacts.js';
+import { createCharacter, deleteCharacter, getCharacter, listCharacters, setCharacterTts, updateCharacter, uploadCharacterImage, } from './portal-characters.js';
+export { characterCreateSchema, characterDeleteSchema, characterGetSchema, characterImageUploadSchema, characterListSchema, characterTtsSetSchema, characterUpdateSchema, } from './portal-characters.js';
 import { portalCredentialFile, PORTAL_CREDENTIAL_FILENAME } from './config.js';
 import { describePortalError, PortalError, portalClientFor, SAFE_DOCUMENT_NAME } from './portal-client.js';
 import { buildImportPayload, channelOfEpisodeDir, DOCUMENT_FILES, EPISODE_STAGES, EPISODE_STATUSES, episodeDirOf, readDocuments, readPortalState, SCENARIO_CANDIDATES, writePortalState, } from './portal-episode.js';
@@ -29,6 +31,13 @@ export const PORTAL_TOOL_NAMES = [
     'portal_assets_search',
     'portal_assets_get',
     ...UNIT_TOOL_NAMES,
+    'portal_character_list',
+    'portal_character_get',
+    'portal_character_create',
+    'portal_character_update',
+    'portal_character_delete',
+    'portal_character_image_upload',
+    'portal_character_tts_set',
     'portal_attachments_sync',
     'portal_images_upload',
     'portal_shot_media_upload',
@@ -380,6 +389,84 @@ export function portalHandlers(fetchImpl) {
                 return r.error;
             try {
                 return ok(await getAsset(r.client, args));
+            }
+            catch (error) {
+                return failed(error);
+            }
+        },
+        // Characters belong to the workspace the key opens — the channel only names the project (#88/#91).
+        async characterList(args) {
+            const r = await resolveClient(fetchImpl, args.channel, args.episodeDir);
+            if ('error' in r)
+                return r.error;
+            try {
+                return ok(await listCharacters(r.client, args));
+            }
+            catch (error) {
+                return failed(error);
+            }
+        },
+        async characterGet(args) {
+            const r = await resolveClient(fetchImpl, args.channel, args.episodeDir);
+            if ('error' in r)
+                return r.error;
+            try {
+                return ok(await getCharacter(r.client, args));
+            }
+            catch (error) {
+                return failed(error);
+            }
+        },
+        async characterCreate(args) {
+            const r = await resolveClient(fetchImpl, args.channel, args.episodeDir);
+            if ('error' in r)
+                return r.error;
+            try {
+                return ok(await createCharacter(r.client, args, r.channel));
+            }
+            catch (error) {
+                return failed(error);
+            }
+        },
+        async characterUpdate(args) {
+            const r = await resolveClient(fetchImpl, args.channel, args.episodeDir);
+            if ('error' in r)
+                return r.error;
+            try {
+                return ok(await updateCharacter(r.client, args));
+            }
+            catch (error) {
+                return failed(error);
+            }
+        },
+        async characterDelete(args) {
+            const r = await resolveClient(fetchImpl, args.channel, args.episodeDir);
+            if ('error' in r)
+                return r.error;
+            try {
+                return ok(await deleteCharacter(r.client, args));
+            }
+            catch (error) {
+                return failed(error);
+            }
+        },
+        async characterImageUpload(args) {
+            const r = await resolveClient(fetchImpl, args.channel, args.episodeDir);
+            if ('error' in r)
+                return r.error;
+            try {
+                return ok(await uploadCharacterImage(r.client, args));
+            }
+            catch (error) {
+                return failed(error);
+            }
+        },
+        async characterTtsSet(args) {
+            const r = await resolveClient(fetchImpl, args.channel, args.episodeDir);
+            if ('error' in r)
+                return r.error;
+            try {
+                return ok(await setCharacterTts(r.client, args));
             }
             catch (error) {
                 return failed(error);

@@ -3244,8 +3244,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path21) {
-      let input = path21;
+    function removeDotSegments(path22) {
+      let input = path22;
       const output2 = [];
       let nextSlash = -1;
       let len = 0;
@@ -3497,8 +3497,8 @@ var require_schemes = __commonJS({
         wsComponent.secure = void 0;
       }
       if (wsComponent.resourceName) {
-        const [path21, query] = wsComponent.resourceName.split("?");
-        wsComponent.path = path21 && path21 !== "/" ? path21 : void 0;
+        const [path22, query] = wsComponent.resourceName.split("?");
+        wsComponent.path = path22 && path22 !== "/" ? path22 : void 0;
         wsComponent.query = query;
         wsComponent.resourceName = void 0;
       }
@@ -13731,22 +13731,22 @@ var init_from = __esm({
     init_file();
     init_fetch_blob();
     ({ stat } = fs2);
-    blobFromSync = (path21, type) => fromBlob(statSync3(path21), path21, type);
-    blobFrom = (path21, type) => stat(path21).then((stat4) => fromBlob(stat4, path21, type));
-    fileFrom = (path21, type) => stat(path21).then((stat4) => fromFile(stat4, path21, type));
-    fileFromSync = (path21, type) => fromFile(statSync3(path21), path21, type);
-    fromBlob = (stat4, path21, type = "") => new fetch_blob_default([new BlobDataItem({
-      path: path21,
+    blobFromSync = (path22, type) => fromBlob(statSync3(path22), path22, type);
+    blobFrom = (path22, type) => stat(path22).then((stat4) => fromBlob(stat4, path22, type));
+    fileFrom = (path22, type) => stat(path22).then((stat4) => fromFile(stat4, path22, type));
+    fileFromSync = (path22, type) => fromFile(statSync3(path22), path22, type);
+    fromBlob = (stat4, path22, type = "") => new fetch_blob_default([new BlobDataItem({
+      path: path22,
       size: stat4.size,
       lastModified: stat4.mtimeMs,
       start: 0
     })], { type });
-    fromFile = (stat4, path21, type = "") => new file_default([new BlobDataItem({
-      path: path21,
+    fromFile = (stat4, path22, type = "") => new file_default([new BlobDataItem({
+      path: path22,
       size: stat4.size,
       lastModified: stat4.mtimeMs,
       start: 0
-    })], basename2(path21), { type, lastModified: stat4.mtimeMs });
+    })], basename2(path22), { type, lastModified: stat4.mtimeMs });
     BlobDataItem = class _BlobDataItem {
       #path;
       #start;
@@ -17884,15 +17884,15 @@ var require_logging_utils = __commonJS({
         this.func.error = (...args) => this.invokeSeverity(LogSeverity.ERROR, ...args);
         this.func.sublog = (namespace2) => log(namespace2, this.func);
       }
-      invoke(fields, ...args) {
+      invoke(fields2, ...args) {
         if (this.upstream) {
           try {
-            this.upstream(fields, ...args);
+            this.upstream(fields2, ...args);
           } catch (e2) {
           }
         }
         try {
-          this.emit("log", fields, args);
+          this.emit("log", fields2, args);
         } catch (e2) {
         }
       }
@@ -17915,7 +17915,7 @@ var require_logging_utils = __commonJS({
         }
         this.filters = nodeFlag.split(",");
       }
-      log(namespace, fields, ...args) {
+      log(namespace, fields2, ...args) {
         try {
           if (!this.filtersSet) {
             this.setFilters();
@@ -17926,7 +17926,7 @@ var require_logging_utils = __commonJS({
             logger = this.makeLogger(namespace);
             this.cached.set(namespace, logger);
           }
-          logger(fields, ...args);
+          logger(fields2, ...args);
         } catch (e2) {
           console.error(e2);
         }
@@ -17946,27 +17946,27 @@ var require_logging_utils = __commonJS({
           return () => {
           };
         }
-        return (fields, ...args) => {
+        return (fields2, ...args) => {
           var _a4;
           const nscolour = `${colours_1.Colours.green}${namespace}${colours_1.Colours.reset}`;
           const pid = `${colours_1.Colours.yellow}${process3.pid}${colours_1.Colours.reset}`;
           let level;
-          switch (fields.severity) {
+          switch (fields2.severity) {
             case LogSeverity.ERROR:
-              level = `${colours_1.Colours.red}${fields.severity}${colours_1.Colours.reset}`;
+              level = `${colours_1.Colours.red}${fields2.severity}${colours_1.Colours.reset}`;
               break;
             case LogSeverity.INFO:
-              level = `${colours_1.Colours.magenta}${fields.severity}${colours_1.Colours.reset}`;
+              level = `${colours_1.Colours.magenta}${fields2.severity}${colours_1.Colours.reset}`;
               break;
             case LogSeverity.WARNING:
-              level = `${colours_1.Colours.yellow}${fields.severity}${colours_1.Colours.reset}`;
+              level = `${colours_1.Colours.yellow}${fields2.severity}${colours_1.Colours.reset}`;
               break;
             default:
-              level = (_a4 = fields.severity) !== null && _a4 !== void 0 ? _a4 : LogSeverity.DEFAULT;
+              level = (_a4 = fields2.severity) !== null && _a4 !== void 0 ? _a4 : LogSeverity.DEFAULT;
               break;
           }
           const msg = util2.formatWithOptions({ colors: colours_1.Colours.enabled }, ...args);
-          const filteredFields = Object.assign({}, fields);
+          const filteredFields = Object.assign({}, fields2);
           delete filteredFields.severity;
           const fieldsJson = Object.getOwnPropertyNames(filteredFields).length ? JSON.stringify(filteredFields) : "";
           const fieldsColour = fieldsJson ? `${colours_1.Colours.grey}${fieldsJson}${colours_1.Colours.reset}` : "";
@@ -17991,7 +17991,7 @@ var require_logging_utils = __commonJS({
       }
       makeLogger(namespace) {
         const debugLogger = this.debugPkg(namespace);
-        return (fields, ...args) => {
+        return (fields2, ...args) => {
           debugLogger(args[0], ...args.slice(1));
         };
       }
@@ -18013,16 +18013,16 @@ var require_logging_utils = __commonJS({
       makeLogger(namespace) {
         var _a4;
         const debugLogger = (_a4 = this.upstream) === null || _a4 === void 0 ? void 0 : _a4.makeLogger(namespace);
-        return (fields, ...args) => {
+        return (fields2, ...args) => {
           var _a5;
-          const severity = (_a5 = fields.severity) !== null && _a5 !== void 0 ? _a5 : LogSeverity.INFO;
+          const severity = (_a5 = fields2.severity) !== null && _a5 !== void 0 ? _a5 : LogSeverity.INFO;
           const json2 = Object.assign({
             severity,
             message: util2.format(...args)
-          }, fields);
+          }, fields2);
           const jsonString = JSON.stringify(json2);
           if (debugLogger) {
-            debugLogger(fields, jsonString);
+            debugLogger(fields2, jsonString);
           } else {
             console.log("%s", jsonString);
           }
@@ -18073,7 +18073,7 @@ var require_logging_utils = __commonJS({
       }
       const logger = (() => {
         let previousBackend = void 0;
-        const newLogger = new AdhocDebugLogger(namespace, (fields, ...args) => {
+        const newLogger = new AdhocDebugLogger(namespace, (fields2, ...args) => {
           if (previousBackend !== cachedBackend) {
             if (cachedBackend === null) {
               return;
@@ -18082,7 +18082,7 @@ var require_logging_utils = __commonJS({
             }
             previousBackend = cachedBackend;
           }
-          cachedBackend === null || cachedBackend === void 0 ? void 0 : cachedBackend.log(namespace, fields, ...args);
+          cachedBackend === null || cachedBackend === void 0 ? void 0 : cachedBackend.log(namespace, fields2, ...args);
         });
         return newLogger;
       })();
@@ -18927,7 +18927,7 @@ var require_util3 = __commonJS({
     exports.getWellKnownCertificateConfigFileLocation = getWellKnownCertificateConfigFileLocation;
     var fs9 = __require("fs");
     var os2 = __require("os");
-    var path21 = __require("path");
+    var path22 = __require("path");
     var WELL_KNOWN_CERTIFICATE_CONFIG_FILE = "certificate_config.json";
     var CLOUDSDK_CONFIG_DIRECTORY = "gcloud";
     function snakeToCamel(str8) {
@@ -19020,8 +19020,8 @@ var require_util3 = __commonJS({
       }
     }
     function getWellKnownCertificateConfigFileLocation() {
-      const configDir = process.env.CLOUDSDK_CONFIG || (_isWindows() ? path21.join(process.env.APPDATA || "", CLOUDSDK_CONFIG_DIRECTORY) : path21.join(process.env.HOME || "", ".config", CLOUDSDK_CONFIG_DIRECTORY));
-      return path21.join(configDir, WELL_KNOWN_CERTIFICATE_CONFIG_FILE);
+      const configDir = process.env.CLOUDSDK_CONFIG || (_isWindows() ? path22.join(process.env.APPDATA || "", CLOUDSDK_CONFIG_DIRECTORY) : path22.join(process.env.HOME || "", ".config", CLOUDSDK_CONFIG_DIRECTORY));
+      return path22.join(configDir, WELL_KNOWN_CERTIFICATE_CONFIG_FILE);
     }
     function _isWindows() {
       return os2.platform().startsWith("win");
@@ -20967,7 +20967,7 @@ var require_getCredentials = __commonJS({
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getCredentials = getCredentials;
-    var path21 = __require("path");
+    var path22 = __require("path");
     var fs9 = __require("fs");
     var util_1 = __require("util");
     var errorWithCode_1 = require_errorWithCode();
@@ -21039,7 +21039,7 @@ var require_getCredentials = __commonJS({
        * @returns An instance of a class that implements ICredentialsProvider.
        */
       static create(keyFilePath) {
-        const keyFileExtension = path21.extname(keyFilePath);
+        const keyFileExtension = path22.extname(keyFilePath);
         switch (keyFileExtension) {
           case ExtensionFiles.JSON:
             return new JsonCredentialsProvider(keyFilePath);
@@ -24408,7 +24408,7 @@ var require_googleauth = __commonJS({
     var gaxios_1 = require_src2();
     var gcpMetadata = require_src4();
     var os2 = __require("os");
-    var path21 = __require("path");
+    var path22 = __require("path");
     var crypto_1 = require_crypto3();
     var computeclient_1 = require_computeclient();
     var idtokenclient_1 = require_idtokenclient();
@@ -24693,19 +24693,19 @@ var require_googleauth = __commonJS({
         if (!configDir) {
           if (this._isWindows()) {
             if (process.env["APPDATA"]) {
-              configDir = path21.join(process.env["APPDATA"], "gcloud");
+              configDir = path22.join(process.env["APPDATA"], "gcloud");
             }
           } else {
             const home = process.env["HOME"];
             if (home) {
-              configDir = path21.join(home, ".config", "gcloud");
+              configDir = path22.join(home, ".config", "gcloud");
             }
           }
         }
         if (!configDir) {
           return null;
         }
-        const location = path21.join(configDir, "application_default_credentials.json");
+        const location = path22.join(configDir, "application_default_credentials.json");
         if (!fs9.existsSync(location)) {
           return null;
         }
@@ -25060,7 +25060,7 @@ var require_googleauth = __commonJS({
         if (this.jsonContent) {
           return this._cacheClientFromJSON(this.jsonContent, this.clientOptions);
         } else if (this.keyFilename) {
-          const filePath = path21.resolve(this.keyFilename);
+          const filePath = path22.resolve(this.keyFilename);
           const stream = fs9.createReadStream(filePath);
           return await this.fromStreamAsync(stream, this.clientOptions);
         } else if (this.apiKey) {
@@ -39043,19 +39043,19 @@ function toolToMldev(fromObject) {
   return toObject;
 }
 function getFieldMasks(setup) {
-  const fields = [];
+  const fields2 = [];
   for (const key in setup) {
     if (Object.prototype.hasOwnProperty.call(setup, key)) {
       const value = setup[key];
       if (typeof value === "object" && value != null && Object.keys(value).length > 0) {
         const field = Object.keys(value).map((kk) => `${key}.${kk}`);
-        fields.push(...field);
+        fields2.push(...field);
       } else {
-        fields.push(key);
+        fields2.push(key);
       }
     }
   }
-  return fields.join(",");
+  return fields2.join(",");
 }
 function convertBidiSetupToTokenSetup(requestDict, config3) {
   let setupForMaskGeneration = null;
@@ -40315,7 +40315,7 @@ async function $do$q(client, body, api_version, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path21 = pathToFunc("/{api_version}/agents")(pathParams);
+  const path22 = pathToFunc("/{api_version}/agents")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -40346,7 +40346,7 @@ async function $do$q(client, body, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path21,
+    path: path22,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -40390,7 +40390,7 @@ async function $do$p(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path21 = pathToFunc("/{api_version}/agents/{id}")(pathParams);
+  const path22 = pathToFunc("/{api_version}/agents/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -40420,7 +40420,7 @@ async function $do$p(client, id, api_version, options) {
     security: requestSecurity,
     method: "DELETE",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path21,
+    path: path22,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -40464,7 +40464,7 @@ async function $do$o(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path21 = pathToFunc("/{api_version}/agents/{id}")(pathParams);
+  const path22 = pathToFunc("/{api_version}/agents/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -40494,7 +40494,7 @@ async function $do$o(client, id, api_version, options) {
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path21,
+    path: path22,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -40536,7 +40536,7 @@ async function $do$n(client, api_version, page_size, page_token, parent, options
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload === null || payload === void 0 ? void 0 : payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path21 = pathToFunc("/{api_version}/agents")(pathParams);
+  const path22 = pathToFunc("/{api_version}/agents")(pathParams);
   const query = encodeFormQuery({
     "page_size": payload === null || payload === void 0 ? void 0 : payload.page_size,
     "page_token": payload === null || payload === void 0 ? void 0 : payload.page_token,
@@ -40571,7 +40571,7 @@ async function $do$n(client, api_version, page_size, page_token, parent, options
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path21,
+    path: path22,
     headers,
     query,
     body,
@@ -40612,7 +40612,7 @@ async function $do$m(client, body, api_version, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path21 = pathToFunc("/{api_version}/environments")(pathParams);
+  const path22 = pathToFunc("/{api_version}/environments")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -40643,7 +40643,7 @@ async function $do$m(client, body, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path21,
+    path: path22,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -40687,7 +40687,7 @@ async function $do$l(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path21 = pathToFunc("/{api_version}/environments/{id}")(pathParams);
+  const path22 = pathToFunc("/{api_version}/environments/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -40717,7 +40717,7 @@ async function $do$l(client, id, api_version, options) {
     security: requestSecurity,
     method: "DELETE",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path21,
+    path: path22,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -40761,7 +40761,7 @@ async function $do$k(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path21 = pathToFunc("/{api_version}/environments/{id}")(pathParams);
+  const path22 = pathToFunc("/{api_version}/environments/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -40791,7 +40791,7 @@ async function $do$k(client, id, api_version, options) {
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path21,
+    path: path22,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -40832,7 +40832,7 @@ async function $do$j(client, api_version, page_size, page_token, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload === null || payload === void 0 ? void 0 : payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path21 = pathToFunc("/{api_version}/environments")(pathParams);
+  const path22 = pathToFunc("/{api_version}/environments")(pathParams);
   const query = encodeFormQuery({
     "page_size": payload === null || payload === void 0 ? void 0 : payload.page_size,
     "page_token": payload === null || payload === void 0 ? void 0 : payload.page_token
@@ -40866,7 +40866,7 @@ async function $do$j(client, api_version, page_size, page_token, options) {
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path21,
+    path: path22,
     headers,
     query,
     body,
@@ -40893,14 +40893,14 @@ async function $do$j(client, api_version, page_size, page_token, options) {
   }
   return [result, { status: "complete", request: req, response }];
 }
-function environmentsFilesList(client, environment, path21, api_version, page_size, page_token, recursive, options) {
-  return new APIPromise($do$i(client, environment, path21, api_version, page_size, page_token, recursive, options));
+function environmentsFilesList(client, environment, path22, api_version, page_size, page_token, recursive, options) {
+  return new APIPromise($do$i(client, environment, path22, api_version, page_size, page_token, recursive, options));
 }
-async function $do$i(client, environment, path21, api_version, page_size, page_token, recursive, options) {
+async function $do$i(client, environment, path22, api_version, page_size, page_token, recursive, options) {
   var _a4, _b, _c;
   const input = {
     environment,
-    path: path21,
+    path: path22,
     api_version,
     page_size,
     page_token,
@@ -40999,7 +40999,7 @@ async function $do$h(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path21 = pathToFunc("/{api_version}/interactions/{id}/cancel")(pathParams);
+  const path22 = pathToFunc("/{api_version}/interactions/{id}/cancel")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -41029,7 +41029,7 @@ async function $do$h(client, id, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path21,
+    path: path22,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -41072,7 +41072,7 @@ async function $do$g(client, body, api_version, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path21 = pathToFunc("/{api_version}/interactions")(pathParams);
+  const path22 = pathToFunc("/{api_version}/interactions")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: ((_b = input === null || input === void 0 ? void 0 : input.body) === null || _b === void 0 ? void 0 : _b.stream) ? "text/event-stream" : "application/json"
@@ -41103,7 +41103,7 @@ async function $do$g(client, body, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path21,
+    path: path22,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -41153,7 +41153,7 @@ async function $do$f(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path21 = pathToFunc("/{api_version}/interactions/{id}")(pathParams);
+  const path22 = pathToFunc("/{api_version}/interactions/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -41183,7 +41183,7 @@ async function $do$f(client, id, api_version, options) {
     security: requestSecurity,
     method: "DELETE",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path21,
+    path: path22,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -41233,7 +41233,7 @@ async function $do$e(client, id, api_version, include_input, last_event_id, stre
       charEncoding: "percent"
     })
   };
-  const path21 = pathToFunc("/{api_version}/interactions/{id}")(pathParams);
+  const path22 = pathToFunc("/{api_version}/interactions/{id}")(pathParams);
   const query = encodeFormQuery({
     "include_input": payload.include_input,
     "last_event_id": payload.last_event_id,
@@ -41268,7 +41268,7 @@ async function $do$e(client, id, api_version, include_input, last_event_id, stre
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path21,
+    path: path22,
     headers,
     query,
     body,
@@ -41315,7 +41315,7 @@ async function $do$d(client, body, api_version, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path21 = pathToFunc("/{api_version}/triggers")(pathParams);
+  const path22 = pathToFunc("/{api_version}/triggers")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -41346,7 +41346,7 @@ async function $do$d(client, body, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path21,
+    path: path22,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -41390,7 +41390,7 @@ async function $do$c(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path21 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
+  const path22 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -41420,7 +41420,7 @@ async function $do$c(client, id, api_version, options) {
     security: requestSecurity,
     method: "DELETE",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path21,
+    path: path22,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -41464,7 +41464,7 @@ async function $do$b(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path21 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
+  const path22 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -41494,7 +41494,7 @@ async function $do$b(client, id, api_version, options) {
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path21,
+    path: path22,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -41540,7 +41540,7 @@ async function $do$a(client, trigger_id, api_version, page_size, page_token, opt
       charEncoding: "percent"
     })
   };
-  const path21 = pathToFunc("/{api_version}/triggers/{trigger_id}/executions")(pathParams);
+  const path22 = pathToFunc("/{api_version}/triggers/{trigger_id}/executions")(pathParams);
   const query = encodeFormQuery({
     "page_size": payload.page_size,
     "page_token": payload.page_token
@@ -41574,7 +41574,7 @@ async function $do$a(client, trigger_id, api_version, page_size, page_token, opt
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path21,
+    path: path22,
     headers,
     query,
     body,
@@ -41617,7 +41617,7 @@ async function $do$9(client, api_version, filter, page_size, page_token, options
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload === null || payload === void 0 ? void 0 : payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path21 = pathToFunc("/{api_version}/triggers")(pathParams);
+  const path22 = pathToFunc("/{api_version}/triggers")(pathParams);
   const query = encodeFormQuery({
     "filter": payload === null || payload === void 0 ? void 0 : payload.filter,
     "page_size": payload === null || payload === void 0 ? void 0 : payload.page_size,
@@ -41652,7 +41652,7 @@ async function $do$9(client, api_version, filter, page_size, page_token, options
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path21,
+    path: path22,
     headers,
     query,
     body,
@@ -41697,7 +41697,7 @@ async function $do$8(client, trigger_id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path21 = pathToFunc("/{api_version}/triggers/{trigger_id}/executions")(pathParams);
+  const path22 = pathToFunc("/{api_version}/triggers/{trigger_id}/executions")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -41727,7 +41727,7 @@ async function $do$8(client, trigger_id, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path21,
+    path: path22,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -41772,7 +41772,7 @@ async function $do$7(client, id, body, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path21 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
+  const path22 = pathToFunc("/{api_version}/triggers/{id}")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -41803,7 +41803,7 @@ async function $do$7(client, id, body, api_version, options) {
     security: requestSecurity,
     method: "PATCH",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path21,
+    path: path22,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -41843,7 +41843,7 @@ async function $do$6(client, body, api_version, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path21 = pathToFunc("/{api_version}/webhooks")(pathParams);
+  const path22 = pathToFunc("/{api_version}/webhooks")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -41874,7 +41874,7 @@ async function $do$6(client, body, api_version, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path21,
+    path: path22,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -41918,7 +41918,7 @@ async function $do$5(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path21 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
+  const path22 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -41948,7 +41948,7 @@ async function $do$5(client, id, api_version, options) {
     security: requestSecurity,
     method: "DELETE",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path21,
+    path: path22,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -41992,7 +41992,7 @@ async function $do$4(client, id, api_version, options) {
       charEncoding: "percent"
     })
   };
-  const path21 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
+  const path22 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
   const headers = new Headers(compactMap({
     Accept: "application/json"
   }));
@@ -42022,7 +42022,7 @@ async function $do$4(client, id, api_version, options) {
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path21,
+    path: path22,
     headers,
     body,
     userAgent: client._options.user_agent,
@@ -42063,7 +42063,7 @@ async function $do$3(client, api_version, page_size, page_token, options) {
   const pathParams = {
     api_version: encodeSimple("api_version", (_a4 = payload === null || payload === void 0 ? void 0 : payload.api_version) !== null && _a4 !== void 0 ? _a4 : client._options.api_version, { explode: false, charEncoding: "percent" })
   };
-  const path21 = pathToFunc("/{api_version}/webhooks")(pathParams);
+  const path22 = pathToFunc("/{api_version}/webhooks")(pathParams);
   const query = encodeFormQuery({
     "page_size": payload === null || payload === void 0 ? void 0 : payload.page_size,
     "page_token": payload === null || payload === void 0 ? void 0 : payload.page_token
@@ -42097,7 +42097,7 @@ async function $do$3(client, api_version, page_size, page_token, options) {
     security: requestSecurity,
     method: "GET",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path21,
+    path: path22,
     headers,
     query,
     body,
@@ -42143,7 +42143,7 @@ async function $do$2(client, id, api_version, body, options) {
       charEncoding: "percent"
     })
   };
-  const path21 = pathToFunc("/{api_version}/webhooks/{id}:ping")(pathParams);
+  const path22 = pathToFunc("/{api_version}/webhooks/{id}:ping")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -42174,7 +42174,7 @@ async function $do$2(client, id, api_version, body, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path21,
+    path: path22,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -42219,7 +42219,7 @@ async function $do$1(client, id, api_version, body, options) {
       charEncoding: "percent"
     })
   };
-  const path21 = pathToFunc("/{api_version}/webhooks/{id}:rotateSigningSecret")(pathParams);
+  const path22 = pathToFunc("/{api_version}/webhooks/{id}:rotateSigningSecret")(pathParams);
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
     Accept: "application/json"
@@ -42250,7 +42250,7 @@ async function $do$1(client, id, api_version, body, options) {
     security: requestSecurity,
     method: "POST",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path21,
+    path: path22,
     headers,
     body: body$,
     userAgent: client._options.user_agent,
@@ -42296,7 +42296,7 @@ async function $do(client, id, api_version, update_mask, body, options) {
       charEncoding: "percent"
     })
   };
-  const path21 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
+  const path22 = pathToFunc("/{api_version}/webhooks/{id}")(pathParams);
   const query = encodeFormQuery({
     "update_mask": payload.update_mask
   });
@@ -42330,7 +42330,7 @@ async function $do(client, id, api_version, update_mask, body, options) {
     security: requestSecurity,
     method: "PATCH",
     baseURL: options === null || options === void 0 ? void 0 : options.server_url,
-    path: path21,
+    path: path22,
     headers,
     query,
     body: body$,
@@ -45450,7 +45450,7 @@ var init_node = __esm({
           params
         );
         const urlParams = body["_url"];
-        const path21 = formatMap("{model}:batchGenerateContent", urlParams);
+        const path22 = formatMap("{model}:batchGenerateContent", urlParams);
         const batch = body["batch"];
         const inputConfig = batch["inputConfig"];
         const requestsWrapper = inputConfig["requests"];
@@ -45471,7 +45471,7 @@ var init_node = __esm({
         delete body["config"];
         delete body["_url"];
         delete body["_query"];
-        return { path: path21, body };
+        return { path: path22, body };
       }
       // Helper function to get the first GCS URI
       getGcsUri(src) {
@@ -45527,16 +45527,16 @@ var init_node = __esm({
       async createInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path21 = "";
+        let path22 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = createBatchJobParametersToVertex(this.apiClient, params);
-          path21 = formatMap("batchPredictionJobs", body["_url"]);
+          path22 = formatMap("batchPredictionJobs", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -45551,12 +45551,12 @@ var init_node = __esm({
           });
         } else {
           const body = createBatchJobParametersToMldev(this.apiClient, params);
-          path21 = formatMap("{model}:batchGenerateContent", body["_url"]);
+          path22 = formatMap("{model}:batchGenerateContent", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -45581,18 +45581,18 @@ var init_node = __esm({
       async createEmbeddingsInternal(params) {
         var _a4, _b;
         let response;
-        let path21 = "";
+        let path22 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = createEmbeddingsBatchJobParametersToMldev(this.apiClient, params);
-          path21 = formatMap("{model}:asyncBatchEmbedContent", body["_url"]);
+          path22 = formatMap("{model}:asyncBatchEmbedContent", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -45621,16 +45621,16 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path21 = "";
+        let path22 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = getBatchJobParametersToVertex(this.apiClient, params);
-          path21 = formatMap("batchPredictionJobs/{name}", body["_url"]);
+          path22 = formatMap("batchPredictionJobs/{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -45645,12 +45645,12 @@ var init_node = __esm({
           });
         } else {
           const body = getBatchJobParametersToMldev(this.apiClient, params);
-          path21 = formatMap("batches/{name}", body["_url"]);
+          path22 = formatMap("batches/{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -45678,16 +45678,16 @@ var init_node = __esm({
        */
       async cancel(params) {
         var _a4, _b, _c, _d;
-        let path21 = "";
+        let path22 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = cancelBatchJobParametersToVertex(this.apiClient, params);
-          path21 = formatMap("batchPredictionJobs/{name}:cancel", body["_url"]);
+          path22 = formatMap("batchPredictionJobs/{name}:cancel", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           await this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -45696,12 +45696,12 @@ var init_node = __esm({
           });
         } else {
           const body = cancelBatchJobParametersToMldev(this.apiClient, params);
-          path21 = formatMap("batches/{name}:cancel", body["_url"]);
+          path22 = formatMap("batches/{name}:cancel", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           await this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -45713,16 +45713,16 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path21 = "";
+        let path22 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = listBatchJobsParametersToVertex(params);
-          path21 = formatMap("batchPredictionJobs", body["_url"]);
+          path22 = formatMap("batchPredictionJobs", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -45745,12 +45745,12 @@ var init_node = __esm({
           });
         } else {
           const body = listBatchJobsParametersToMldev(params);
-          path21 = formatMap("batches", body["_url"]);
+          path22 = formatMap("batches", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -45787,16 +45787,16 @@ var init_node = __esm({
       async delete(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path21 = "";
+        let path22 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = deleteBatchJobParametersToVertex(this.apiClient, params);
-          path21 = formatMap("batchPredictionJobs/{name}", body["_url"]);
+          path22 = formatMap("batchPredictionJobs/{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -45817,12 +45817,12 @@ var init_node = __esm({
           });
         } else {
           const body = deleteBatchJobParametersToMldev(this.apiClient, params);
-          path21 = formatMap("batches/{name}", body["_url"]);
+          path22 = formatMap("batches/{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -45881,16 +45881,16 @@ var init_node = __esm({
       async create(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path21 = "";
+        let path22 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = createCachedContentParametersToVertex(this.apiClient, params);
-          path21 = formatMap("cachedContents", body["_url"]);
+          path22 = formatMap("cachedContents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -45904,12 +45904,12 @@ var init_node = __esm({
           });
         } else {
           const body = createCachedContentParametersToMldev(this.apiClient, params);
-          path21 = formatMap("cachedContents", body["_url"]);
+          path22 = formatMap("cachedContents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -45937,16 +45937,16 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path21 = "";
+        let path22 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = getCachedContentParametersToVertex(this.apiClient, params);
-          path21 = formatMap("{name}", body["_url"]);
+          path22 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -45960,12 +45960,12 @@ var init_node = __esm({
           });
         } else {
           const body = getCachedContentParametersToMldev(this.apiClient, params);
-          path21 = formatMap("{name}", body["_url"]);
+          path22 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -45993,16 +45993,16 @@ var init_node = __esm({
       async delete(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path21 = "";
+        let path22 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = deleteCachedContentParametersToVertex(this.apiClient, params);
-          path21 = formatMap("{name}", body["_url"]);
+          path22 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -46025,12 +46025,12 @@ var init_node = __esm({
           });
         } else {
           const body = deleteCachedContentParametersToMldev(this.apiClient, params);
-          path21 = formatMap("{name}", body["_url"]);
+          path22 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -46070,16 +46070,16 @@ var init_node = __esm({
       async update(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path21 = "";
+        let path22 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = updateCachedContentParametersToVertex(this.apiClient, params);
-          path21 = formatMap("{name}", body["_url"]);
+          path22 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "PATCH",
@@ -46093,12 +46093,12 @@ var init_node = __esm({
           });
         } else {
           const body = updateCachedContentParametersToMldev(this.apiClient, params);
-          path21 = formatMap("{name}", body["_url"]);
+          path22 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "PATCH",
@@ -46115,16 +46115,16 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path21 = "";
+        let path22 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = listCachedContentsParametersToVertex(params);
-          path21 = formatMap("cachedContents", body["_url"]);
+          path22 = formatMap("cachedContents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -46147,12 +46147,12 @@ var init_node = __esm({
           });
         } else {
           const body = listCachedContentsParametersToMldev(params);
-          path21 = formatMap("cachedContents", body["_url"]);
+          path22 = formatMap("cachedContents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -46483,18 +46483,18 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b;
         let response;
-        let path21 = "";
+        let path22 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = listFilesParametersToMldev(params);
-          path21 = formatMap("files", body["_url"]);
+          path22 = formatMap("files", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -46520,18 +46520,18 @@ var init_node = __esm({
       async createInternal(params) {
         var _a4, _b;
         let response;
-        let path21 = "";
+        let path22 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = createFileParametersToMldev(params);
-          path21 = formatMap("upload/v1beta/files", body["_url"]);
+          path22 = formatMap("upload/v1beta/files", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -46566,18 +46566,18 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b;
         let response;
-        let path21 = "";
+        let path22 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = getFileParametersToMldev(params);
-          path21 = formatMap("files/{file}", body["_url"]);
+          path22 = formatMap("files/{file}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -46607,18 +46607,18 @@ var init_node = __esm({
       async delete(params) {
         var _a4, _b;
         let response;
-        let path21 = "";
+        let path22 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = deleteFileParametersToMldev(params);
-          path21 = formatMap("files/{file}", body["_url"]);
+          path22 = formatMap("files/{file}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -46644,18 +46644,18 @@ var init_node = __esm({
       async registerFilesInternal(params) {
         var _a4, _b;
         let response;
-        let path21 = "";
+        let path22 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = internalRegisterFilesParametersToMldev(params);
-          path21 = formatMap("files:register", body["_url"]);
+          path22 = formatMap("files:register", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -46811,13 +46811,13 @@ var init_node = __esm({
           throw new Error("HTTP options are not correctly set.");
         }
       }
-      constructUrl(path21, httpOptions, prependProjectLocation) {
+      constructUrl(path22, httpOptions, prependProjectLocation) {
         const urlElement = [this.getRequestUrlInternal(httpOptions)];
         if (prependProjectLocation) {
           urlElement.push(this.getBaseResourcePath());
         }
-        if (path21 !== "") {
-          urlElement.push(path21);
+        if (path22 !== "") {
+          urlElement.push(path22);
         }
         const url = new URL(`${urlElement.join("/")}`);
         return url;
@@ -47110,8 +47110,8 @@ var init_node = __esm({
           file: fileToUpload
         };
         const fileName = this.getFileName(file);
-        const path21 = formatMap("upload/v1beta/files", body["_url"]);
-        const uploadUrl = await this.fetchUploadUrl(path21, fileToUpload.sizeBytes, fileToUpload.mimeType, fileName, body, config3 === null || config3 === void 0 ? void 0 : config3.httpOptions);
+        const path22 = formatMap("upload/v1beta/files", body["_url"]);
+        const uploadUrl = await this.fetchUploadUrl(path22, fileToUpload.sizeBytes, fileToUpload.mimeType, fileName, body, config3 === null || config3 === void 0 ? void 0 : config3.httpOptions);
         return uploader.upload(file, uploadUrl, this);
       }
       /**
@@ -47135,13 +47135,13 @@ var init_node = __esm({
         if (mimeType === void 0 || mimeType === "") {
           throw new Error("Can not determine mimeType. Please provide mimeType in the config.");
         }
-        const path21 = `upload/v1beta/${fileSearchStoreName}:uploadToFileSearchStore`;
+        const path22 = `upload/v1beta/${fileSearchStoreName}:uploadToFileSearchStore`;
         const fileName = this.getFileName(file);
         const body = {};
         if (config3 != null) {
           uploadToFileSearchStoreConfigToMldev(config3, body);
         }
-        const uploadUrl = await this.fetchUploadUrl(path21, sizeBytes, mimeType, fileName, body, config3 === null || config3 === void 0 ? void 0 : config3.httpOptions);
+        const uploadUrl = await this.fetchUploadUrl(path22, sizeBytes, mimeType, fileName, body, config3 === null || config3 === void 0 ? void 0 : config3.httpOptions);
         return uploader.uploadToFileSearchStore(file, uploadUrl, this);
       }
       /**
@@ -47154,7 +47154,7 @@ var init_node = __esm({
         const downloader = this.clientOptions.downloader;
         await downloader.download(params, this);
       }
-      async fetchUploadUrl(path21, sizeBytes, mimeType, fileName, body, configHttpOptions) {
+      async fetchUploadUrl(path22, sizeBytes, mimeType, fileName, body, configHttpOptions) {
         var _a4;
         let httpOptions = {};
         if (configHttpOptions) {
@@ -47167,7 +47167,7 @@ var init_node = __esm({
           };
         }
         const httpResponse = await this.request({
-          path: path21,
+          path: path22,
           body: JSON.stringify(body),
           httpMethod: "POST",
           httpOptions
@@ -48181,16 +48181,16 @@ var init_node = __esm({
       async generateContentInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path21 = "";
+        let path22 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = generateContentParametersToVertex(this.apiClient, params);
-          path21 = formatMap("{model}:generateContent", body["_url"]);
+          path22 = formatMap("{model}:generateContent", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48213,12 +48213,12 @@ var init_node = __esm({
           });
         } else {
           const body = generateContentParametersToMldev(this.apiClient, params);
-          path21 = formatMap("{model}:generateContent", body["_url"]);
+          path22 = formatMap("{model}:generateContent", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48244,17 +48244,17 @@ var init_node = __esm({
       async generateContentStreamInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path21 = "";
+        let path22 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = generateContentParametersToVertex(this.apiClient, params);
-          path21 = formatMap("{model}:streamGenerateContent?alt=sse", body["_url"]);
+          path22 = formatMap("{model}:streamGenerateContent?alt=sse", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           const apiClient = this.apiClient;
           response = apiClient.requestStream({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48290,13 +48290,13 @@ var init_node = __esm({
           });
         } else {
           const body = generateContentParametersToMldev(this.apiClient, params);
-          path21 = formatMap("{model}:streamGenerateContent?alt=sse", body["_url"]);
+          path22 = formatMap("{model}:streamGenerateContent?alt=sse", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           const apiClient = this.apiClient;
           response = apiClient.requestStream({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48356,17 +48356,17 @@ var init_node = __esm({
       async embedContentInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path21 = "";
+        let path22 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = embedContentParametersPrivateToVertex(this.apiClient, params, params);
           const endpointUrl = tIsVertexEmbedContentModel(params.model) ? "{model}:embedContent" : "{model}:predict";
-          path21 = formatMap(endpointUrl, body["_url"]);
+          path22 = formatMap(endpointUrl, body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48389,12 +48389,12 @@ var init_node = __esm({
           });
         } else {
           const body = embedContentParametersPrivateToMldev(this.apiClient, params);
-          path21 = formatMap("{model}:batchEmbedContents", body["_url"]);
+          path22 = formatMap("{model}:batchEmbedContents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48423,16 +48423,16 @@ var init_node = __esm({
       async generateImagesInternal(params) {
         var _a4, _b;
         let response;
-        let path21 = "";
+        let path22 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = generateImagesParametersToVertex(this.apiClient, params);
-          path21 = formatMap("{model}:predict", body["_url"]);
+          path22 = formatMap("{model}:predict", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48463,16 +48463,16 @@ var init_node = __esm({
       async editImageInternal(params) {
         var _a4, _b;
         let response;
-        let path21 = "";
+        let path22 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = editImageParametersInternalToVertex(this.apiClient, params);
-          path21 = formatMap("{model}:predict", body["_url"]);
+          path22 = formatMap("{model}:predict", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48503,16 +48503,16 @@ var init_node = __esm({
       async upscaleImageInternal(params) {
         var _a4, _b;
         let response;
-        let path21 = "";
+        let path22 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = upscaleImageAPIParametersInternalToVertex(this.apiClient, params);
-          path21 = formatMap("{model}:predict", body["_url"]);
+          path22 = formatMap("{model}:predict", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48564,16 +48564,16 @@ var init_node = __esm({
       async recontextImage(params) {
         var _a4, _b;
         let response;
-        let path21 = "";
+        let path22 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = recontextImageParametersToVertex(this.apiClient, params);
-          path21 = formatMap("{model}:predict", body["_url"]);
+          path22 = formatMap("{model}:predict", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48615,16 +48615,16 @@ var init_node = __esm({
       async segmentImage(params) {
         var _a4, _b;
         let response;
-        let path21 = "";
+        let path22 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = segmentImageParametersToVertex(this.apiClient, params);
-          path21 = formatMap("{model}:predict", body["_url"]);
+          path22 = formatMap("{model}:predict", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48654,16 +48654,16 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path21 = "";
+        let path22 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = getModelParametersToVertex(this.apiClient, params);
-          path21 = formatMap("{name}", body["_url"]);
+          path22 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -48678,12 +48678,12 @@ var init_node = __esm({
           });
         } else {
           const body = getModelParametersToMldev(this.apiClient, params);
-          path21 = formatMap("{name}", body["_url"]);
+          path22 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -48701,16 +48701,16 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path21 = "";
+        let path22 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = listModelsParametersToVertex(this.apiClient, params);
-          path21 = formatMap("{models_url}", body["_url"]);
+          path22 = formatMap("{models_url}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -48733,12 +48733,12 @@ var init_node = __esm({
           });
         } else {
           const body = listModelsParametersToMldev(this.apiClient, params);
-          path21 = formatMap("{models_url}", body["_url"]);
+          path22 = formatMap("{models_url}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -48781,16 +48781,16 @@ var init_node = __esm({
       async update(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path21 = "";
+        let path22 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = updateModelParametersToVertex(this.apiClient, params);
-          path21 = formatMap("{model}", body["_url"]);
+          path22 = formatMap("{model}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "PATCH",
@@ -48805,12 +48805,12 @@ var init_node = __esm({
           });
         } else {
           const body = updateModelParametersToMldev(this.apiClient, params);
-          path21 = formatMap("{name}", body["_url"]);
+          path22 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "PATCH",
@@ -48839,16 +48839,16 @@ var init_node = __esm({
       async delete(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path21 = "";
+        let path22 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = deleteModelParametersToVertex(this.apiClient, params);
-          path21 = formatMap("{name}", body["_url"]);
+          path22 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -48871,12 +48871,12 @@ var init_node = __esm({
           });
         } else {
           const body = deleteModelParametersToMldev(this.apiClient, params);
-          path21 = formatMap("{name}", body["_url"]);
+          path22 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -48918,16 +48918,16 @@ var init_node = __esm({
       async countTokens(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path21 = "";
+        let path22 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = countTokensParametersToVertex(this.apiClient, params);
-          path21 = formatMap("{model}:countTokens", body["_url"]);
+          path22 = formatMap("{model}:countTokens", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48950,12 +48950,12 @@ var init_node = __esm({
           });
         } else {
           const body = countTokensParametersToMldev(this.apiClient, params);
-          path21 = formatMap("{model}:countTokens", body["_url"]);
+          path22 = formatMap("{model}:countTokens", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -48999,16 +48999,16 @@ var init_node = __esm({
       async computeTokens(params) {
         var _a4, _b;
         let response;
-        let path21 = "";
+        let path22 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = computeTokensParametersToVertex(this.apiClient, params);
-          path21 = formatMap("{model}:computeTokens", body["_url"]);
+          path22 = formatMap("{model}:computeTokens", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -49039,16 +49039,16 @@ var init_node = __esm({
       async generateVideosInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path21 = "";
+        let path22 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = generateVideosParametersToVertex(this.apiClient, params);
-          path21 = formatMap("{model}:predictLongRunning", body["_url"]);
+          path22 = formatMap("{model}:predictLongRunning", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -49065,12 +49065,12 @@ var init_node = __esm({
           });
         } else {
           const body = generateVideosParametersToMldev(this.apiClient, params);
-          path21 = formatMap("{model}:predictLongRunning", body["_url"]);
+          path22 = formatMap("{model}:predictLongRunning", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -49175,16 +49175,16 @@ var init_node = __esm({
       async getVideosOperationInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path21 = "";
+        let path22 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = getOperationParametersToVertex(params);
-          path21 = formatMap("{operationName}", body["_url"]);
+          path22 = formatMap("{operationName}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -49196,12 +49196,12 @@ var init_node = __esm({
           return response;
         } else {
           const body = getOperationParametersToMldev(params);
-          path21 = formatMap("{operationName}", body["_url"]);
+          path22 = formatMap("{operationName}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -49216,16 +49216,16 @@ var init_node = __esm({
       async fetchPredictVideosOperationInternal(params) {
         var _a4, _b;
         let response;
-        let path21 = "";
+        let path22 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = fetchPredictOperationParametersToVertex(params);
-          path21 = formatMap("{resourceName}:fetchPredictOperation", body["_url"]);
+          path22 = formatMap("{resourceName}:fetchPredictOperation", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -49331,20 +49331,20 @@ var init_node = __esm({
       async create(params) {
         var _a4, _b;
         let response;
-        let path21 = "";
+        let path22 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("The client.tokens.create method is only supported by the Gemini Developer API.");
         } else {
           const body = createAuthTokenParametersToMldev(this.apiClient, params);
-          path21 = formatMap("auth_tokens", body["_url"]);
+          path22 = formatMap("auth_tokens", body["_url"]);
           queryParams = body["_query"];
           delete body["config"];
           delete body["_url"];
           delete body["_query"];
           const transformedBody = convertBidiSetupToTokenSetup(body, params.config);
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(transformedBody),
             httpMethod: "POST",
@@ -49376,18 +49376,18 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b;
         let response;
-        let path21 = "";
+        let path22 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = getDocumentParametersToMldev(params);
-          path21 = formatMap("{name}", body["_url"]);
+          path22 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -49408,18 +49408,18 @@ var init_node = __esm({
        */
       async delete(params) {
         var _a4, _b;
-        let path21 = "";
+        let path22 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = deleteDocumentParametersToMldev(params);
-          path21 = formatMap("{name}", body["_url"]);
+          path22 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           await this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -49431,18 +49431,18 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b;
         let response;
-        let path21 = "";
+        let path22 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = listDocumentsParametersToMldev(params);
-          path21 = formatMap("{parent}/documents", body["_url"]);
+          path22 = formatMap("{parent}/documents", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -49559,18 +49559,18 @@ var init_node = __esm({
       async create(params) {
         var _a4, _b;
         let response;
-        let path21 = "";
+        let path22 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = createFileSearchStoreParametersToMldev(this.apiClient, params);
-          path21 = formatMap("fileSearchStores", body["_url"]);
+          path22 = formatMap("fileSearchStores", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -49593,18 +49593,18 @@ var init_node = __esm({
       async get(params) {
         var _a4, _b;
         let response;
-        let path21 = "";
+        let path22 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = getFileSearchStoreParametersToMldev(params);
-          path21 = formatMap("{name}", body["_url"]);
+          path22 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -49625,18 +49625,18 @@ var init_node = __esm({
        */
       async delete(params) {
         var _a4, _b;
-        let path21 = "";
+        let path22 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = deleteFileSearchStoreParametersToMldev(params);
-          path21 = formatMap("{name}", body["_url"]);
+          path22 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           await this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "DELETE",
@@ -49648,18 +49648,18 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b;
         let response;
-        let path21 = "";
+        let path22 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = listFileSearchStoresParametersToMldev(params);
-          path21 = formatMap("fileSearchStores", body["_url"]);
+          path22 = formatMap("fileSearchStores", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -49679,18 +49679,18 @@ var init_node = __esm({
       async uploadToFileSearchStoreInternal(params) {
         var _a4, _b;
         let response;
-        let path21 = "";
+        let path22 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = uploadToFileSearchStoreParametersToMldev(params);
-          path21 = formatMap("upload/v1beta/{file_search_store_name}:uploadToFileSearchStore", body["_url"]);
+          path22 = formatMap("upload/v1beta/{file_search_store_name}:uploadToFileSearchStore", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -49718,18 +49718,18 @@ var init_node = __esm({
       async importFile(params) {
         var _a4, _b;
         let response;
-        let path21 = "";
+        let path22 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = importFileParametersToMldev(params);
-          path21 = formatMap("{file_search_store_name}:importFile", body["_url"]);
+          path22 = formatMap("{file_search_store_name}:importFile", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -50173,16 +50173,16 @@ var init_node = __esm({
       }
       _createRequest(context, conf, options) {
         var _a4, _b, _c, _d, _e;
-        const { method, path: path21, query, headers: opHeaders, security } = conf;
+        const { method, path: path22, query, headers: opHeaders, security } = conf;
         const base = (_a4 = conf.baseURL) !== null && _a4 !== void 0 ? _a4 : this._baseURL;
         if (!base) {
           return ERR(new InvalidRequestError("No base URL provided for operation"));
         }
         const baseURL = new URL(base);
         let reqURL;
-        if (path21) {
+        if (path22) {
           baseURL.pathname = baseURL.pathname.replace(/\/+$/, "") + "/";
-          reqURL = new URL(path21, baseURL);
+          reqURL = new URL(path22, baseURL);
           if (!reqURL.search && baseURL.search) {
             reqURL.search = baseURL.search;
           }
@@ -50594,8 +50594,8 @@ var init_node = __esm({
       /**
        * Retrieves file metadata or directory contents from an environment's snapshot. To download file contents directly, pass ?alt=media or use the files.download helper.
        */
-      list(environment, path21, params, options) {
-        return unwrapAsAPIPromise(environmentsFilesList(this, environment, path21, params === null || params === void 0 ? void 0 : params.api_version, params === null || params === void 0 ? void 0 : params.page_size, params === null || params === void 0 ? void 0 : params.page_token, params === null || params === void 0 ? void 0 : params.recursive, options));
+      list(environment, path22, params, options) {
+        return unwrapAsAPIPromise(environmentsFilesList(this, environment, path22, params === null || params === void 0 ? void 0 : params.api_version, params === null || params === void 0 ? void 0 : params.page_size, params === null || params === void 0 ? void 0 : params.page_token, params === null || params === void 0 ? void 0 : params.recursive, options));
       }
     };
     Environments = class extends ClientSDK {
@@ -51003,8 +51003,8 @@ var init_node = __esm({
         this.resolveClient = resolveClient2;
       }
       async list(params, options) {
-        const { environment, path: path21, page_size, page_token, recursive, api_version } = params;
-        return unwrapWithSdkHttpResponse(environmentsFilesList(this.resolveClient(api_version), environment, path21, api_version, page_size, page_token, recursive, toGoogleGenAIRequestOptions(options)));
+        const { environment, path: path22, page_size, page_token, recursive, api_version } = params;
+        return unwrapWithSdkHttpResponse(environmentsFilesList(this.resolveClient(api_version), environment, path22, api_version, page_size, page_token, recursive, toGoogleGenAIRequestOptions(options)));
       }
     };
     GeminiNextGenEnvironments = class {
@@ -51179,16 +51179,16 @@ var init_node = __esm({
       async getInternal(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path21 = "";
+        let path22 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = getTuningJobParametersToVertex(params);
-          path21 = formatMap("{name}", body["_url"]);
+          path22 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -51209,12 +51209,12 @@ var init_node = __esm({
           });
         } else {
           const body = getTuningJobParametersToMldev(params);
-          path21 = formatMap("{name}", body["_url"]);
+          path22 = formatMap("{name}", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -51238,16 +51238,16 @@ var init_node = __esm({
       async listInternal(params) {
         var _a4, _b;
         let response;
-        let path21 = "";
+        let path22 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = listTuningJobsParametersToVertex(params);
-          path21 = formatMap("tuningJobs", body["_url"]);
+          path22 = formatMap("tuningJobs", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "GET",
@@ -51286,16 +51286,16 @@ var init_node = __esm({
       async cancel(params) {
         var _a4, _b, _c, _d;
         let response;
-        let path21 = "";
+        let path22 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = cancelTuningJobParametersToVertex(params);
-          path21 = formatMap("{name}:cancel", body["_url"]);
+          path22 = formatMap("{name}:cancel", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -51318,12 +51318,12 @@ var init_node = __esm({
           });
         } else {
           const body = cancelTuningJobParametersToMldev(params);
-          path21 = formatMap("{name}:cancel", body["_url"]);
+          path22 = formatMap("{name}:cancel", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -51349,16 +51349,16 @@ var init_node = __esm({
       async tuneInternal(params) {
         var _a4, _b;
         let response;
-        let path21 = "";
+        let path22 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = createTuningJobParametersPrivateToVertex(params, params);
-          path21 = formatMap("tuningJobs", body["_url"]);
+          path22 = formatMap("tuningJobs", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -51384,18 +51384,18 @@ var init_node = __esm({
       async tuneMldevInternal(params) {
         var _a4, _b;
         let response;
-        let path21 = "";
+        let path22 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           throw new Error("This method is only supported by the Gemini Developer API.");
         } else {
           const body = createTuningJobParametersPrivateToMldev(params);
-          path21 = formatMap("tunedModels", body["_url"]);
+          path22 = formatMap("tunedModels", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -51419,16 +51419,16 @@ var init_node = __esm({
       async validateReward(params) {
         var _a4, _b;
         let response;
-        let path21 = "";
+        let path22 = "";
         let queryParams = {};
         if (this.apiClient.isVertexAI()) {
           const body = validateRewardParametersToVertex(params);
-          path21 = formatMap("{parent}/tuningJobs:validateReinforcementTuningReward", body["_url"]);
+          path22 = formatMap("{parent}/tuningJobs:validateReinforcementTuningReward", body["_url"]);
           queryParams = body["_query"];
           delete body["_url"];
           delete body["_query"];
           response = this.apiClient.request({
-            path: path21,
+            path: path22,
             queryParams,
             body: JSON.stringify(body),
             httpMethod: "POST",
@@ -51824,22 +51824,22 @@ var require_tts_speed_policy = __commonJS({
   "../skills/produce/references/tts-speed-policy.js"(exports, module) {
     "use strict";
     var fs9 = __require("node:fs");
-    var path21 = __require("node:path");
-    function authorizeSpeed4(work, scope, factor) {
-      if (!["generation", "final"].includes(scope) || !Number.isFinite(factor) || factor < 0.5 || factor > 3) {
+    var path22 = __require("node:path");
+    function authorizeSpeed4(work, scope2, factor) {
+      if (!["generation", "final"].includes(scope2) || !Number.isFinite(factor) || factor < 0.5 || factor > 3) {
         throw new Error("Invalid TTS speed scope or factor");
       }
       if (factor === 1) return null;
-      const file = path21.resolve(work, "speed-authorization.json");
+      const file = path22.resolve(work, "speed-authorization.json");
       let record2;
       try {
         record2 = JSON.parse(fs9.readFileSync(file, "utf8"));
       } catch {
         throw new Error(`TTS speed changes require an explicit user request: ${file}; use 1.0 otherwise`);
       }
-      const approval = record2?.version === 1 && Array.isArray(record2.requests) && record2.requests.find((a) => a?.source === "explicit-user-request" && a.scope === scope && a.factor === factor && typeof a.request === "string" && a.request.trim().length >= 10 && typeof a.requestedAt === "string" && Number.isFinite(Date.parse(a.requestedAt)));
-      if (!approval) throw new Error(`TTS speed changes require an explicit user request for ${scope} x${factor}; channel profiles and automatic pace corrections are not approval`);
-      return { source: approval.source, scope, factor, request: approval.request, requestedAt: approval.requestedAt };
+      const approval = record2?.version === 1 && Array.isArray(record2.requests) && record2.requests.find((a) => a?.source === "explicit-user-request" && a.scope === scope2 && a.factor === factor && typeof a.request === "string" && a.request.trim().length >= 10 && typeof a.requestedAt === "string" && Number.isFinite(Date.parse(a.requestedAt)));
+      if (!approval) throw new Error(`TTS speed changes require an explicit user request for ${scope2} x${factor}; channel profiles and automatic pace corrections are not approval`);
+      return { source: approval.source, scope: scope2, factor, request: approval.request, requestedAt: approval.requestedAt };
     }
     module.exports = { authorizeSpeed: authorizeSpeed4 };
   }
@@ -54033,17 +54033,17 @@ var init_resource = __esm({
 function encodeURIPath(str8) {
   return str8.replace(/[^A-Za-z0-9\-._~!$&'()*+,;=:@]+/g, encodeURIComponent);
 }
-var EMPTY, createPathTagFunction, path17;
+var EMPTY, createPathTagFunction, path18;
 var init_path = __esm({
   "node_modules/openai/internal/utils/path.mjs"() {
     init_error();
     EMPTY = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.create(null));
-    createPathTagFunction = (pathEncoder = encodeURIPath) => function path21(statics, ...params) {
+    createPathTagFunction = (pathEncoder = encodeURIPath) => function path22(statics, ...params) {
       if (statics.length === 1)
         return statics[0];
       let postPath = false;
       const invalidSegments = [];
-      const path22 = statics.reduce((previousValue, currentValue, index) => {
+      const path23 = statics.reduce((previousValue, currentValue, index) => {
         if (/[?#]/.test(currentValue)) {
           postPath = true;
         }
@@ -54060,7 +54060,7 @@ var init_path = __esm({
         }
         return previousValue + currentValue + (index === params.length ? "" : encoded);
       }, "");
-      const pathOnly = path22.split(/[?#]/, 1)[0];
+      const pathOnly = path23.split(/[?#]/, 1)[0];
       const invalidSegmentPattern = /(?<=^|\/)(?:\.|%2e){1,2}(?=\/|$)/gi;
       let match2;
       while ((match2 = invalidSegmentPattern.exec(pathOnly)) !== null) {
@@ -54081,12 +54081,12 @@ var init_path = __esm({
         }, "");
         throw new OpenAIError(`Path parameters result in path with invalid segments:
 ${invalidSegments.map((e2) => e2.error).join("\n")}
-${path22}
+${path23}
 ${underline}`);
       }
-      return path22;
+      return path23;
     };
-    path17 = /* @__PURE__ */ createPathTagFunction(encodeURIPath);
+    path18 = /* @__PURE__ */ createPathTagFunction(encodeURIPath);
   }
 });
 
@@ -54113,7 +54113,7 @@ var init_messages = __esm({
        * ```
        */
       list(completionID, query = {}, options) {
-        return this._client.getAPIList(path17`/chat/completions/${completionID}/messages`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path18`/chat/completions/${completionID}/messages`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
       }
     };
   }
@@ -55851,7 +55851,7 @@ var init_completions = __esm({
        * ```
        */
       retrieve(completionID, options) {
-        return this._client.get(path17`/chat/completions/${completionID}`, {
+        return this._client.get(path18`/chat/completions/${completionID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -55870,7 +55870,7 @@ var init_completions = __esm({
        * ```
        */
       update(completionID, body, options) {
-        return this._client.post(path17`/chat/completions/${completionID}`, {
+        return this._client.post(path18`/chat/completions/${completionID}`, {
           body,
           ...options,
           __security: { bearerAuth: true }
@@ -55906,7 +55906,7 @@ var init_completions = __esm({
        * ```
        */
       delete(completionID, options) {
-        return this._client.delete(path17`/chat/completions/${completionID}`, {
+        return this._client.delete(path18`/chat/completions/${completionID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -56016,7 +56016,7 @@ var init_admin_api_keys = __esm({
        * ```
        */
       retrieve(keyID, options) {
-        return this._client.get(path17`/organization/admin_api_keys/${keyID}`, {
+        return this._client.get(path18`/organization/admin_api_keys/${keyID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56051,7 +56051,7 @@ var init_admin_api_keys = __esm({
        * ```
        */
       delete(keyID, options) {
-        return this._client.delete(path17`/organization/admin_api_keys/${keyID}`, {
+        return this._client.delete(path18`/organization/admin_api_keys/${keyID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56132,7 +56132,7 @@ var init_certificates = __esm({
        * ```
        */
       retrieve(certificateID, query = {}, options) {
-        return this._client.get(path17`/organization/certificates/${certificateID}`, {
+        return this._client.get(path18`/organization/certificates/${certificateID}`, {
           query,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -56150,7 +56150,7 @@ var init_certificates = __esm({
        * ```
        */
       update(certificateID, body, options) {
-        return this._client.post(path17`/organization/certificates/${certificateID}`, {
+        return this._client.post(path18`/organization/certificates/${certificateID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -56184,7 +56184,7 @@ var init_certificates = __esm({
        * ```
        */
       delete(certificateID, options) {
-        return this._client.delete(path17`/organization/certificates/${certificateID}`, {
+        return this._client.delete(path18`/organization/certificates/${certificateID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56317,7 +56317,7 @@ var init_invites = __esm({
        * ```
        */
       retrieve(inviteID, options) {
-        return this._client.get(path17`/organization/invites/${inviteID}`, {
+        return this._client.get(path18`/organization/invites/${inviteID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56352,7 +56352,7 @@ var init_invites = __esm({
        * ```
        */
       delete(inviteID, options) {
-        return this._client.delete(path17`/organization/invites/${inviteID}`, {
+        return this._client.delete(path18`/organization/invites/${inviteID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56398,7 +56398,7 @@ var init_roles = __esm({
        * ```
        */
       retrieve(roleID, options) {
-        return this._client.get(path17`/organization/roles/${roleID}`, {
+        return this._client.get(path18`/organization/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56414,7 +56414,7 @@ var init_roles = __esm({
        * ```
        */
       update(roleID, body, options) {
-        return this._client.post(path17`/organization/roles/${roleID}`, {
+        return this._client.post(path18`/organization/roles/${roleID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -56449,7 +56449,7 @@ var init_roles = __esm({
        * ```
        */
       delete(roleID, options) {
-        return this._client.delete(path17`/organization/roles/${roleID}`, {
+        return this._client.delete(path18`/organization/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56502,7 +56502,7 @@ var init_spend_alerts = __esm({
        * ```
        */
       retrieve(alertID, options) {
-        return this._client.get(path17`/organization/spend_alerts/${alertID}`, {
+        return this._client.get(path18`/organization/spend_alerts/${alertID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56528,7 +56528,7 @@ var init_spend_alerts = __esm({
        * ```
        */
       update(alertID, body, options) {
-        return this._client.post(path17`/organization/spend_alerts/${alertID}`, {
+        return this._client.post(path18`/organization/spend_alerts/${alertID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -56560,7 +56560,7 @@ var init_spend_alerts = __esm({
        * ```
        */
       delete(alertID, options) {
-        return this._client.delete(path17`/organization/spend_alerts/${alertID}`, {
+        return this._client.delete(path18`/organization/spend_alerts/${alertID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56858,7 +56858,7 @@ var init_roles2 = __esm({
        * ```
        */
       create(groupID, body, options) {
-        return this._client.post(path17`/organization/groups/${groupID}/roles`, {
+        return this._client.post(path18`/organization/groups/${groupID}/roles`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -56878,7 +56878,7 @@ var init_roles2 = __esm({
        */
       retrieve(roleID, params, options) {
         const { group_id } = params;
-        return this._client.get(path17`/organization/groups/${group_id}/roles/${roleID}`, {
+        return this._client.get(path18`/organization/groups/${group_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56897,7 +56897,7 @@ var init_roles2 = __esm({
        * ```
        */
       list(groupID, query = {}, options) {
-        return this._client.getAPIList(path17`/organization/groups/${groupID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path18`/organization/groups/${groupID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Unassigns an organization role from a group within the organization.
@@ -56913,7 +56913,7 @@ var init_roles2 = __esm({
        */
       delete(roleID, params, options) {
         const { group_id } = params;
-        return this._client.delete(path17`/organization/groups/${group_id}/roles/${roleID}`, {
+        return this._client.delete(path18`/organization/groups/${group_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56943,7 +56943,7 @@ var init_users = __esm({
        * ```
        */
       create(groupID, body, options) {
-        return this._client.post(path17`/organization/groups/${groupID}/users`, {
+        return this._client.post(path18`/organization/groups/${groupID}/users`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -56963,7 +56963,7 @@ var init_users = __esm({
        */
       retrieve(userID, params, options) {
         const { group_id } = params;
-        return this._client.get(path17`/organization/groups/${group_id}/users/${userID}`, {
+        return this._client.get(path18`/organization/groups/${group_id}/users/${userID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -56982,7 +56982,7 @@ var init_users = __esm({
        * ```
        */
       list(groupID, query = {}, options) {
-        return this._client.getAPIList(path17`/organization/groups/${groupID}/users`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path18`/organization/groups/${groupID}/users`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Removes a user from a group.
@@ -56998,7 +56998,7 @@ var init_users = __esm({
        */
       delete(userID, params, options) {
         const { group_id } = params;
-        return this._client.delete(path17`/organization/groups/${group_id}/users/${userID}`, {
+        return this._client.delete(path18`/organization/groups/${group_id}/users/${userID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57053,7 +57053,7 @@ var init_groups = __esm({
        * ```
        */
       retrieve(groupID, options) {
-        return this._client.get(path17`/organization/groups/${groupID}`, {
+        return this._client.get(path18`/organization/groups/${groupID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57070,7 +57070,7 @@ var init_groups = __esm({
        * ```
        */
       update(groupID, body, options) {
-        return this._client.post(path17`/organization/groups/${groupID}`, {
+        return this._client.post(path18`/organization/groups/${groupID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57105,7 +57105,7 @@ var init_groups = __esm({
        * ```
        */
       delete(groupID, options) {
-        return this._client.delete(path17`/organization/groups/${groupID}`, {
+        return this._client.delete(path18`/organization/groups/${groupID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57138,7 +57138,7 @@ var init_api_keys = __esm({
        */
       retrieve(apiKeyID, params, options) {
         const { project_id } = params;
-        return this._client.get(path17`/organization/projects/${project_id}/api_keys/${apiKeyID}`, {
+        return this._client.get(path18`/organization/projects/${project_id}/api_keys/${apiKeyID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57157,7 +57157,7 @@ var init_api_keys = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path17`/organization/projects/${projectID}/api_keys`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path18`/organization/projects/${projectID}/api_keys`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Deletes an API key from the project.
@@ -57176,7 +57176,7 @@ var init_api_keys = __esm({
        */
       delete(apiKeyID, params, options) {
         const { project_id } = params;
-        return this._client.delete(path17`/organization/projects/${project_id}/api_keys/${apiKeyID}`, {
+        return this._client.delete(path18`/organization/projects/${project_id}/api_keys/${apiKeyID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57207,7 +57207,7 @@ var init_certificates2 = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path17`/organization/projects/${projectID}/certificates`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path18`/organization/projects/${projectID}/certificates`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Activate certificates at the project level.
@@ -57226,7 +57226,7 @@ var init_certificates2 = __esm({
        * ```
        */
       activate(projectID, body, options) {
-        return this._client.getAPIList(path17`/organization/projects/${projectID}/certificates/activate`, Page, { body, method: "post", ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path18`/organization/projects/${projectID}/certificates/activate`, Page, { body, method: "post", ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Deactivate certificates at the project level. You can atomically and
@@ -57244,7 +57244,7 @@ var init_certificates2 = __esm({
        * ```
        */
       deactivate(projectID, body, options) {
-        return this._client.getAPIList(path17`/organization/projects/${projectID}/certificates/deactivate`, Page, { body, method: "post", ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path18`/organization/projects/${projectID}/certificates/deactivate`, Page, { body, method: "post", ...options, __security: { adminAPIKeyAuth: true } });
       }
     };
   }
@@ -57269,7 +57269,7 @@ var init_data_retention2 = __esm({
        * ```
        */
       retrieve(projectID, options) {
-        return this._client.get(path17`/organization/projects/${projectID}/data_retention`, {
+        return this._client.get(path18`/organization/projects/${projectID}/data_retention`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57287,7 +57287,7 @@ var init_data_retention2 = __esm({
        * ```
        */
       update(projectID, body, options) {
-        return this._client.post(path17`/organization/projects/${projectID}/data_retention`, {
+        return this._client.post(path18`/organization/projects/${projectID}/data_retention`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57316,7 +57316,7 @@ var init_hosted_tool_permissions = __esm({
        * ```
        */
       retrieve(projectID, options) {
-        return this._client.get(path17`/organization/projects/${projectID}/hosted_tool_permissions`, {
+        return this._client.get(path18`/organization/projects/${projectID}/hosted_tool_permissions`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57333,7 +57333,7 @@ var init_hosted_tool_permissions = __esm({
        * ```
        */
       update(projectID, body, options) {
-        return this._client.post(path17`/organization/projects/${projectID}/hosted_tool_permissions`, {
+        return this._client.post(path18`/organization/projects/${projectID}/hosted_tool_permissions`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57362,7 +57362,7 @@ var init_model_permissions = __esm({
        * ```
        */
       retrieve(projectID, options) {
-        return this._client.get(path17`/organization/projects/${projectID}/model_permissions`, {
+        return this._client.get(path18`/organization/projects/${projectID}/model_permissions`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57380,7 +57380,7 @@ var init_model_permissions = __esm({
        * ```
        */
       update(projectID, body, options) {
-        return this._client.post(path17`/organization/projects/${projectID}/model_permissions`, {
+        return this._client.post(path18`/organization/projects/${projectID}/model_permissions`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57398,7 +57398,7 @@ var init_model_permissions = __esm({
        * ```
        */
       delete(projectID, options) {
-        return this._client.delete(path17`/organization/projects/${projectID}/model_permissions`, {
+        return this._client.delete(path18`/organization/projects/${projectID}/model_permissions`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57429,7 +57429,7 @@ var init_rate_limits = __esm({
        * ```
        */
       listRateLimits(projectID, query = {}, options) {
-        return this._client.getAPIList(path17`/organization/projects/${projectID}/rate_limits`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path18`/organization/projects/${projectID}/rate_limits`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Updates a project rate limit.
@@ -57445,7 +57445,7 @@ var init_rate_limits = __esm({
        */
       updateRateLimit(rateLimitID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path17`/organization/projects/${project_id}/rate_limits/${rateLimitID}`, {
+        return this._client.post(path18`/organization/projects/${project_id}/rate_limits/${rateLimitID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57476,7 +57476,7 @@ var init_roles3 = __esm({
        * ```
        */
       create(projectID, body, options) {
-        return this._client.post(path17`/projects/${projectID}/roles`, {
+        return this._client.post(path18`/projects/${projectID}/roles`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57496,7 +57496,7 @@ var init_roles3 = __esm({
        */
       retrieve(roleID, params, options) {
         const { project_id } = params;
-        return this._client.get(path17`/projects/${project_id}/roles/${roleID}`, {
+        return this._client.get(path18`/projects/${project_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57515,7 +57515,7 @@ var init_roles3 = __esm({
        */
       update(roleID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path17`/projects/${project_id}/roles/${roleID}`, {
+        return this._client.post(path18`/projects/${project_id}/roles/${roleID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57535,7 +57535,7 @@ var init_roles3 = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path17`/projects/${projectID}/roles`, NextCursorPage, {
+        return this._client.getAPIList(path18`/projects/${projectID}/roles`, NextCursorPage, {
           query,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57555,7 +57555,7 @@ var init_roles3 = __esm({
        */
       delete(roleID, params, options) {
         const { project_id } = params;
-        return this._client.delete(path17`/projects/${project_id}/roles/${roleID}`, {
+        return this._client.delete(path18`/projects/${project_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57593,7 +57593,7 @@ var init_spend_alerts2 = __esm({
        * ```
        */
       create(projectID, body, options) {
-        return this._client.post(path17`/organization/projects/${projectID}/spend_alerts`, {
+        return this._client.post(path18`/organization/projects/${projectID}/spend_alerts`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57613,7 +57613,7 @@ var init_spend_alerts2 = __esm({
        */
       retrieve(alertID, params, options) {
         const { project_id } = params;
-        return this._client.get(path17`/organization/projects/${project_id}/spend_alerts/${alertID}`, {
+        return this._client.get(path18`/organization/projects/${project_id}/spend_alerts/${alertID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57641,7 +57641,7 @@ var init_spend_alerts2 = __esm({
        */
       update(alertID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path17`/organization/projects/${project_id}/spend_alerts/${alertID}`, {
+        return this._client.post(path18`/organization/projects/${project_id}/spend_alerts/${alertID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57661,7 +57661,7 @@ var init_spend_alerts2 = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path17`/organization/projects/${projectID}/spend_alerts`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path18`/organization/projects/${projectID}/spend_alerts`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Deletes a project spend alert.
@@ -57677,7 +57677,7 @@ var init_spend_alerts2 = __esm({
        */
       delete(alertID, params, options) {
         const { project_id } = params;
-        return this._client.delete(path17`/organization/projects/${project_id}/spend_alerts/${alertID}`, {
+        return this._client.delete(path18`/organization/projects/${project_id}/spend_alerts/${alertID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57705,7 +57705,7 @@ var init_spend_limit2 = __esm({
        * ```
        */
       retrieve(projectID, options) {
-        return this._client.get(path17`/organization/projects/${projectID}/spend_limit`, {
+        return this._client.get(path18`/organization/projects/${projectID}/spend_limit`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57727,7 +57727,7 @@ var init_spend_limit2 = __esm({
        * ```
        */
       update(projectID, body, options) {
-        return this._client.post(path17`/organization/projects/${projectID}/spend_limit`, {
+        return this._client.post(path18`/organization/projects/${projectID}/spend_limit`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57745,7 +57745,7 @@ var init_spend_limit2 = __esm({
        * ```
        */
       delete(projectID, options) {
-        return this._client.delete(path17`/organization/projects/${projectID}/spend_limit`, {
+        return this._client.delete(path18`/organization/projects/${projectID}/spend_limit`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57776,7 +57776,7 @@ var init_roles4 = __esm({
        */
       create(groupID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path17`/projects/${project_id}/groups/${groupID}/roles`, {
+        return this._client.post(path18`/projects/${project_id}/groups/${groupID}/roles`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57796,7 +57796,7 @@ var init_roles4 = __esm({
        */
       retrieve(roleID, params, options) {
         const { project_id, group_id } = params;
-        return this._client.get(path17`/projects/${project_id}/groups/${group_id}/roles/${roleID}`, {
+        return this._client.get(path18`/projects/${project_id}/groups/${group_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57817,7 +57817,7 @@ var init_roles4 = __esm({
        */
       list(groupID, params, options) {
         const { project_id, ...query } = params;
-        return this._client.getAPIList(path17`/projects/${project_id}/groups/${groupID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path18`/projects/${project_id}/groups/${groupID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Unassigns a project role from a group within a project.
@@ -57833,7 +57833,7 @@ var init_roles4 = __esm({
        */
       delete(roleID, params, options) {
         const { project_id, group_id } = params;
-        return this._client.delete(path17`/projects/${project_id}/groups/${group_id}/roles/${roleID}`, {
+        return this._client.delete(path18`/projects/${project_id}/groups/${group_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57869,7 +57869,7 @@ var init_groups2 = __esm({
        * ```
        */
       create(projectID, body, options) {
-        return this._client.post(path17`/organization/projects/${projectID}/groups`, {
+        return this._client.post(path18`/organization/projects/${projectID}/groups`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57889,7 +57889,7 @@ var init_groups2 = __esm({
        */
       retrieve(groupID, params, options) {
         const { project_id, ...query } = params;
-        return this._client.get(path17`/organization/projects/${project_id}/groups/${groupID}`, {
+        return this._client.get(path18`/organization/projects/${project_id}/groups/${groupID}`, {
           query,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -57909,7 +57909,7 @@ var init_groups2 = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path17`/organization/projects/${projectID}/groups`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path18`/organization/projects/${projectID}/groups`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Revokes a group's access to a project.
@@ -57925,7 +57925,7 @@ var init_groups2 = __esm({
        */
       delete(groupID, params, options) {
         const { project_id } = params;
-        return this._client.delete(path17`/organization/projects/${project_id}/groups/${groupID}`, {
+        return this._client.delete(path18`/organization/projects/${project_id}/groups/${groupID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -57956,7 +57956,7 @@ var init_api_keys2 = __esm({
        */
       create(serviceAccountID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path17`/organization/projects/${project_id}/service_accounts/${serviceAccountID}/api_keys`, { body, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.post(path18`/organization/projects/${project_id}/service_accounts/${serviceAccountID}/api_keys`, { body, ...options, __security: { adminAPIKeyAuth: true } });
       }
     };
   }
@@ -57990,7 +57990,7 @@ var init_service_accounts = __esm({
        * ```
        */
       create(projectID, body, options) {
-        return this._client.post(path17`/organization/projects/${projectID}/service_accounts`, {
+        return this._client.post(path18`/organization/projects/${projectID}/service_accounts`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -58010,7 +58010,7 @@ var init_service_accounts = __esm({
        */
       retrieve(serviceAccountID, params, options) {
         const { project_id } = params;
-        return this._client.get(path17`/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, {
+        return this._client.get(path18`/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58029,7 +58029,7 @@ var init_service_accounts = __esm({
        */
       update(serviceAccountID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path17`/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, { body, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.post(path18`/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, { body, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Returns a list of service accounts in the project.
@@ -58045,7 +58045,7 @@ var init_service_accounts = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path17`/organization/projects/${projectID}/service_accounts`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path18`/organization/projects/${projectID}/service_accounts`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Deletes a service account from the project.
@@ -58064,7 +58064,7 @@ var init_service_accounts = __esm({
        */
       delete(serviceAccountID, params, options) {
         const { project_id } = params;
-        return this._client.delete(path17`/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, { ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.delete(path18`/organization/projects/${project_id}/service_accounts/${serviceAccountID}`, { ...options, __security: { adminAPIKeyAuth: true } });
       }
     };
     ServiceAccounts.APIKeys = APIKeys2;
@@ -58093,7 +58093,7 @@ var init_roles5 = __esm({
        */
       create(userID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path17`/projects/${project_id}/users/${userID}/roles`, {
+        return this._client.post(path18`/projects/${project_id}/users/${userID}/roles`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -58113,7 +58113,7 @@ var init_roles5 = __esm({
        */
       retrieve(roleID, params, options) {
         const { project_id, user_id } = params;
-        return this._client.get(path17`/projects/${project_id}/users/${user_id}/roles/${roleID}`, {
+        return this._client.get(path18`/projects/${project_id}/users/${user_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58134,7 +58134,7 @@ var init_roles5 = __esm({
        */
       list(userID, params, options) {
         const { project_id, ...query } = params;
-        return this._client.getAPIList(path17`/projects/${project_id}/users/${userID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path18`/projects/${project_id}/users/${userID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Unassigns a project role from a user within a project.
@@ -58150,7 +58150,7 @@ var init_roles5 = __esm({
        */
       delete(roleID, params, options) {
         const { project_id, user_id } = params;
-        return this._client.delete(path17`/projects/${project_id}/users/${user_id}/roles/${roleID}`, {
+        return this._client.delete(path18`/projects/${project_id}/users/${user_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58187,7 +58187,7 @@ var init_users2 = __esm({
        * ```
        */
       create(projectID, body, options) {
-        return this._client.post(path17`/organization/projects/${projectID}/users`, {
+        return this._client.post(path18`/organization/projects/${projectID}/users`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -58207,7 +58207,7 @@ var init_users2 = __esm({
        */
       retrieve(userID, params, options) {
         const { project_id } = params;
-        return this._client.get(path17`/organization/projects/${project_id}/users/${userID}`, {
+        return this._client.get(path18`/organization/projects/${project_id}/users/${userID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58226,7 +58226,7 @@ var init_users2 = __esm({
        */
       update(userID, params, options) {
         const { project_id, ...body } = params;
-        return this._client.post(path17`/organization/projects/${project_id}/users/${userID}`, {
+        return this._client.post(path18`/organization/projects/${project_id}/users/${userID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -58246,7 +58246,7 @@ var init_users2 = __esm({
        * ```
        */
       list(projectID, query = {}, options) {
-        return this._client.getAPIList(path17`/organization/projects/${projectID}/users`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path18`/organization/projects/${projectID}/users`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Deletes a user from the project.
@@ -58265,7 +58265,7 @@ var init_users2 = __esm({
        */
       delete(userID, params, options) {
         const { project_id } = params;
-        return this._client.delete(path17`/organization/projects/${project_id}/users/${userID}`, {
+        return this._client.delete(path18`/organization/projects/${project_id}/users/${userID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58353,7 +58353,7 @@ var init_projects = __esm({
        * ```
        */
       retrieve(projectID, options) {
-        return this._client.get(path17`/organization/projects/${projectID}`, {
+        return this._client.get(path18`/organization/projects/${projectID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58370,7 +58370,7 @@ var init_projects = __esm({
        * ```
        */
       update(projectID, body, options) {
-        return this._client.post(path17`/organization/projects/${projectID}`, {
+        return this._client.post(path18`/organization/projects/${projectID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -58407,7 +58407,7 @@ var init_projects = __esm({
        * ```
        */
       archive(projectID, options) {
-        return this._client.post(path17`/organization/projects/${projectID}/archive`, {
+        return this._client.post(path18`/organization/projects/${projectID}/archive`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58449,7 +58449,7 @@ var init_roles6 = __esm({
        * ```
        */
       create(userID, body, options) {
-        return this._client.post(path17`/organization/users/${userID}/roles`, {
+        return this._client.post(path18`/organization/users/${userID}/roles`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -58469,7 +58469,7 @@ var init_roles6 = __esm({
        */
       retrieve(roleID, params, options) {
         const { user_id } = params;
-        return this._client.get(path17`/organization/users/${user_id}/roles/${roleID}`, {
+        return this._client.get(path18`/organization/users/${user_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58488,7 +58488,7 @@ var init_roles6 = __esm({
        * ```
        */
       list(userID, query = {}, options) {
-        return this._client.getAPIList(path17`/organization/users/${userID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path18`/organization/users/${userID}/roles`, NextCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * Unassigns an organization role from a user within the organization.
@@ -58504,7 +58504,7 @@ var init_roles6 = __esm({
        */
       delete(roleID, params, options) {
         const { user_id } = params;
-        return this._client.delete(path17`/organization/users/${user_id}/roles/${roleID}`, {
+        return this._client.delete(path18`/organization/users/${user_id}/roles/${roleID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58537,7 +58537,7 @@ var init_users3 = __esm({
        * ```
        */
       retrieve(userID, options) {
-        return this._client.get(path17`/organization/users/${userID}`, {
+        return this._client.get(path18`/organization/users/${userID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58552,7 +58552,7 @@ var init_users3 = __esm({
        * ```
        */
       update(userID, body, options) {
-        return this._client.post(path17`/organization/users/${userID}`, {
+        return this._client.post(path18`/organization/users/${userID}`, {
           body,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -58587,7 +58587,7 @@ var init_users3 = __esm({
        * ```
        */
       delete(userID, options) {
-        return this._client.delete(path17`/organization/users/${userID}`, {
+        return this._client.delete(path18`/organization/users/${userID}`, {
           ...options,
           __security: { adminAPIKeyAuth: true }
         });
@@ -58789,7 +58789,7 @@ var init_batches = __esm({
        * Retrieves a batch.
        */
       retrieve(batchID, options) {
-        return this._client.get(path17`/batches/${batchID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path18`/batches/${batchID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * List your organization's batches.
@@ -58807,7 +58807,7 @@ var init_batches = __esm({
        * (if any) available in the output file.
        */
       cancel(batchID, options) {
-        return this._client.post(path17`/batches/${batchID}/cancel`, {
+        return this._client.post(path18`/batches/${batchID}/cancel`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -58844,7 +58844,7 @@ var init_assistants = __esm({
        * @deprecated
        */
       retrieve(assistantID, options) {
-        return this._client.get(path17`/assistants/${assistantID}`, {
+        return this._client.get(path18`/assistants/${assistantID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -58856,7 +58856,7 @@ var init_assistants = __esm({
        * @deprecated
        */
       update(assistantID, body, options) {
-        return this._client.post(path17`/assistants/${assistantID}`, {
+        return this._client.post(path18`/assistants/${assistantID}`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -58882,7 +58882,7 @@ var init_assistants = __esm({
        * @deprecated
        */
       delete(assistantID, options) {
-        return this._client.delete(path17`/assistants/${assistantID}`, {
+        return this._client.delete(path18`/assistants/${assistantID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -59021,7 +59021,7 @@ var init_sessions2 = __esm({
        * ```
        */
       cancel(sessionID, options) {
-        return this._client.post(path17`/chatkit/sessions/${sessionID}/cancel`, {
+        return this._client.post(path18`/chatkit/sessions/${sessionID}/cancel`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "chatkit_beta=v1" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -59050,7 +59050,7 @@ var init_threads = __esm({
        * ```
        */
       retrieve(threadID, options) {
-        return this._client.get(path17`/chatkit/threads/${threadID}`, {
+        return this._client.get(path18`/chatkit/threads/${threadID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "chatkit_beta=v1" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -59086,7 +59086,7 @@ var init_threads = __esm({
        * ```
        */
       delete(threadID, options) {
-        return this._client.delete(path17`/chatkit/threads/${threadID}`, {
+        return this._client.delete(path18`/chatkit/threads/${threadID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "chatkit_beta=v1" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -59106,7 +59106,7 @@ var init_threads = __esm({
        * ```
        */
       listItems(threadID, query = {}, options) {
-        return this._client.getAPIList(path17`/chatkit/threads/${threadID}/items`, ConversationCursorPage, {
+        return this._client.getAPIList(path18`/chatkit/threads/${threadID}/items`, ConversationCursorPage, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "chatkit_beta=v1" }, options?.headers]),
@@ -59162,7 +59162,7 @@ var init_input_items = __esm({
        */
       list(responseID, params = {}, options) {
         const { betas, ...query } = params ?? {};
-        return this._client.getAPIList(path17`/responses/${responseID}/input_items?beta=true`, CursorPage, {
+        return this._client.getAPIList(path18`/responses/${responseID}/input_items?beta=true`, CursorPage, {
           query,
           ...options,
           headers: buildHeaders([
@@ -59243,7 +59243,7 @@ var init_responses = __esm({
       }
       retrieve(responseID, params = {}, options) {
         const { betas, ...query } = params ?? {};
-        return this._client.get(path17`/responses/${responseID}?beta=true`, {
+        return this._client.get(path18`/responses/${responseID}?beta=true`, {
           query,
           ...options,
           headers: buildHeaders([
@@ -59266,7 +59266,7 @@ var init_responses = __esm({
        */
       delete(responseID, params = {}, options) {
         const { betas } = params ?? {};
-        return this._client.delete(path17`/responses/${responseID}?beta=true`, {
+        return this._client.delete(path18`/responses/${responseID}?beta=true`, {
           ...options,
           headers: buildHeaders([
             { Accept: "*/*", ...betas?.toString() != null ? { "openai-beta": betas?.toString() } : void 0 },
@@ -59289,7 +59289,7 @@ var init_responses = __esm({
        */
       cancel(responseID, params = {}, options) {
         const { betas } = params ?? {};
-        return this._client.post(path17`/responses/${responseID}/cancel?beta=true`, {
+        return this._client.post(path18`/responses/${responseID}/cancel?beta=true`, {
           ...options,
           headers: buildHeaders([
             { ...betas?.toString() != null ? { "openai-beta": betas?.toString() } : void 0 },
@@ -59347,7 +59347,7 @@ var init_messages2 = __esm({
        * @deprecated The Assistants API is deprecated in favor of the Responses API
        */
       create(threadID, body, options) {
-        return this._client.post(path17`/threads/${threadID}/messages`, {
+        return this._client.post(path18`/threads/${threadID}/messages`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -59361,7 +59361,7 @@ var init_messages2 = __esm({
        */
       retrieve(messageID, params, options) {
         const { thread_id } = params;
-        return this._client.get(path17`/threads/${thread_id}/messages/${messageID}`, {
+        return this._client.get(path18`/threads/${thread_id}/messages/${messageID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -59374,7 +59374,7 @@ var init_messages2 = __esm({
        */
       update(messageID, params, options) {
         const { thread_id, ...body } = params;
-        return this._client.post(path17`/threads/${thread_id}/messages/${messageID}`, {
+        return this._client.post(path18`/threads/${thread_id}/messages/${messageID}`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -59387,7 +59387,7 @@ var init_messages2 = __esm({
        * @deprecated The Assistants API is deprecated in favor of the Responses API
        */
       list(threadID, query = {}, options) {
-        return this._client.getAPIList(path17`/threads/${threadID}/messages`, CursorPage, {
+        return this._client.getAPIList(path18`/threads/${threadID}/messages`, CursorPage, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -59401,7 +59401,7 @@ var init_messages2 = __esm({
        */
       delete(messageID, params, options) {
         const { thread_id } = params;
-        return this._client.delete(path17`/threads/${thread_id}/messages/${messageID}`, {
+        return this._client.delete(path18`/threads/${thread_id}/messages/${messageID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -59427,7 +59427,7 @@ var init_steps = __esm({
        */
       retrieve(stepID, params, options) {
         const { thread_id, run_id, ...query } = params;
-        return this._client.get(path17`/threads/${thread_id}/runs/${run_id}/steps/${stepID}`, {
+        return this._client.get(path18`/threads/${thread_id}/runs/${run_id}/steps/${stepID}`, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -59441,7 +59441,7 @@ var init_steps = __esm({
        */
       list(runID, params, options) {
         const { thread_id, ...query } = params;
-        return this._client.getAPIList(path17`/threads/${thread_id}/runs/${runID}/steps`, CursorPage, {
+        return this._client.getAPIList(path18`/threads/${thread_id}/runs/${runID}/steps`, CursorPage, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -60030,7 +60030,7 @@ var init_runs = __esm({
       }
       create(threadID, params, options) {
         const { include, ...body } = params;
-        return this._client.post(path17`/threads/${threadID}/runs`, {
+        return this._client.post(path18`/threads/${threadID}/runs`, {
           query: { include },
           body,
           ...options,
@@ -60047,7 +60047,7 @@ var init_runs = __esm({
        */
       retrieve(runID, params, options) {
         const { thread_id } = params;
-        return this._client.get(path17`/threads/${thread_id}/runs/${runID}`, {
+        return this._client.get(path18`/threads/${thread_id}/runs/${runID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -60060,7 +60060,7 @@ var init_runs = __esm({
        */
       update(runID, params, options) {
         const { thread_id, ...body } = params;
-        return this._client.post(path17`/threads/${thread_id}/runs/${runID}`, {
+        return this._client.post(path18`/threads/${thread_id}/runs/${runID}`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -60073,7 +60073,7 @@ var init_runs = __esm({
        * @deprecated The Assistants API is deprecated in favor of the Responses API
        */
       list(threadID, query = {}, options) {
-        return this._client.getAPIList(path17`/threads/${threadID}/runs`, CursorPage, {
+        return this._client.getAPIList(path18`/threads/${threadID}/runs`, CursorPage, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -60087,7 +60087,7 @@ var init_runs = __esm({
        */
       cancel(runID, params, options) {
         const { thread_id } = params;
-        return this._client.post(path17`/threads/${thread_id}/runs/${runID}/cancel`, {
+        return this._client.post(path18`/threads/${thread_id}/runs/${runID}/cancel`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -60166,7 +60166,7 @@ var init_runs = __esm({
       }
       submitToolOutputs(runID, params, options) {
         const { thread_id, ...body } = params;
-        return this._client.post(path17`/threads/${thread_id}/runs/${runID}/submit_tool_outputs`, {
+        return this._client.post(path18`/threads/${thread_id}/runs/${runID}/submit_tool_outputs`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -60234,7 +60234,7 @@ var init_threads2 = __esm({
        * @deprecated The Assistants API is deprecated in favor of the Responses API
        */
       retrieve(threadID, options) {
-        return this._client.get(path17`/threads/${threadID}`, {
+        return this._client.get(path18`/threads/${threadID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -60246,7 +60246,7 @@ var init_threads2 = __esm({
        * @deprecated The Assistants API is deprecated in favor of the Responses API
        */
       update(threadID, body, options) {
-        return this._client.post(path17`/threads/${threadID}`, {
+        return this._client.post(path18`/threads/${threadID}`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -60259,7 +60259,7 @@ var init_threads2 = __esm({
        * @deprecated The Assistants API is deprecated in favor of the Responses API
        */
       delete(threadID, options) {
-        return this._client.delete(path17`/threads/${threadID}`, {
+        return this._client.delete(path18`/threads/${threadID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -60360,7 +60360,7 @@ var init_content = __esm({
        */
       retrieve(fileID, params, options) {
         const { container_id } = params;
-        return this._client.get(path17`/containers/${container_id}/files/${fileID}/content`, {
+        return this._client.get(path18`/containers/${container_id}/files/${fileID}/content`, {
           ...options,
           headers: buildHeaders([{ Accept: "application/binary" }, options?.headers]),
           __security: { bearerAuth: true },
@@ -60394,14 +60394,14 @@ var init_files = __esm({
        * a JSON request with a file ID.
        */
       create(containerID, body, options) {
-        return this._client.post(path17`/containers/${containerID}/files`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
+        return this._client.post(path18`/containers/${containerID}/files`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
       }
       /**
        * Retrieve Container File
        */
       retrieve(fileID, params, options) {
         const { container_id } = params;
-        return this._client.get(path17`/containers/${container_id}/files/${fileID}`, {
+        return this._client.get(path18`/containers/${container_id}/files/${fileID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60410,7 +60410,7 @@ var init_files = __esm({
        * List Container files
        */
       list(containerID, query = {}, options) {
-        return this._client.getAPIList(path17`/containers/${containerID}/files`, CursorPage, {
+        return this._client.getAPIList(path18`/containers/${containerID}/files`, CursorPage, {
           query,
           ...options,
           __security: { bearerAuth: true }
@@ -60421,7 +60421,7 @@ var init_files = __esm({
        */
       delete(fileID, params, options) {
         const { container_id } = params;
-        return this._client.delete(path17`/containers/${container_id}/files/${fileID}`, {
+        return this._client.delete(path18`/containers/${container_id}/files/${fileID}`, {
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -60457,7 +60457,7 @@ var init_containers = __esm({
        * Retrieve Container
        */
       retrieve(containerID, options) {
-        return this._client.get(path17`/containers/${containerID}`, {
+        return this._client.get(path18`/containers/${containerID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60476,7 +60476,7 @@ var init_containers = __esm({
        * Delete Container
        */
       delete(containerID, options) {
-        return this._client.delete(path17`/containers/${containerID}`, {
+        return this._client.delete(path18`/containers/${containerID}`, {
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -60500,7 +60500,7 @@ var init_items = __esm({
        */
       create(conversationID, params, options) {
         const { include, ...body } = params;
-        return this._client.post(path17`/conversations/${conversationID}/items`, {
+        return this._client.post(path18`/conversations/${conversationID}/items`, {
           query: { include },
           body,
           ...options,
@@ -60512,7 +60512,7 @@ var init_items = __esm({
        */
       retrieve(itemID, params, options) {
         const { conversation_id, ...query } = params;
-        return this._client.get(path17`/conversations/${conversation_id}/items/${itemID}`, {
+        return this._client.get(path18`/conversations/${conversation_id}/items/${itemID}`, {
           query,
           ...options,
           __security: { bearerAuth: true }
@@ -60522,14 +60522,14 @@ var init_items = __esm({
        * List all items for a conversation with the given ID.
        */
       list(conversationID, query = {}, options) {
-        return this._client.getAPIList(path17`/conversations/${conversationID}/items`, ConversationCursorPage, { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path18`/conversations/${conversationID}/items`, ConversationCursorPage, { query, ...options, __security: { bearerAuth: true } });
       }
       /**
        * Delete an item from a conversation with the given IDs.
        */
       delete(itemID, params, options) {
         const { conversation_id } = params;
-        return this._client.delete(path17`/conversations/${conversation_id}/items/${itemID}`, {
+        return this._client.delete(path18`/conversations/${conversation_id}/items/${itemID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60561,7 +60561,7 @@ var init_conversations = __esm({
        * Get a conversation
        */
       retrieve(conversationID, options) {
-        return this._client.get(path17`/conversations/${conversationID}`, {
+        return this._client.get(path18`/conversations/${conversationID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60570,7 +60570,7 @@ var init_conversations = __esm({
        * Update a conversation
        */
       update(conversationID, body, options) {
-        return this._client.post(path17`/conversations/${conversationID}`, {
+        return this._client.post(path18`/conversations/${conversationID}`, {
           body,
           ...options,
           __security: { bearerAuth: true }
@@ -60580,7 +60580,7 @@ var init_conversations = __esm({
        * Delete a conversation. Items in the conversation will not be deleted.
        */
       delete(conversationID, options) {
-        return this._client.delete(path17`/conversations/${conversationID}`, {
+        return this._client.delete(path18`/conversations/${conversationID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60654,7 +60654,7 @@ var init_output_items = __esm({
        */
       retrieve(outputItemID, params, options) {
         const { eval_id, run_id } = params;
-        return this._client.get(path17`/evals/${eval_id}/runs/${run_id}/output_items/${outputItemID}`, {
+        return this._client.get(path18`/evals/${eval_id}/runs/${run_id}/output_items/${outputItemID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60664,7 +60664,7 @@ var init_output_items = __esm({
        */
       list(runID, params, options) {
         const { eval_id, ...query } = params;
-        return this._client.getAPIList(path17`/evals/${eval_id}/runs/${runID}/output_items`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path18`/evals/${eval_id}/runs/${runID}/output_items`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
       }
     };
   }
@@ -60690,7 +60690,7 @@ var init_runs2 = __esm({
        * schema specified in the config of the evaluation.
        */
       create(evalID, body, options) {
-        return this._client.post(path17`/evals/${evalID}/runs`, {
+        return this._client.post(path18`/evals/${evalID}/runs`, {
           body,
           ...options,
           __security: { bearerAuth: true }
@@ -60701,7 +60701,7 @@ var init_runs2 = __esm({
        */
       retrieve(runID, params, options) {
         const { eval_id } = params;
-        return this._client.get(path17`/evals/${eval_id}/runs/${runID}`, {
+        return this._client.get(path18`/evals/${eval_id}/runs/${runID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60710,7 +60710,7 @@ var init_runs2 = __esm({
        * Get a list of runs for an evaluation.
        */
       list(evalID, query = {}, options) {
-        return this._client.getAPIList(path17`/evals/${evalID}/runs`, CursorPage, {
+        return this._client.getAPIList(path18`/evals/${evalID}/runs`, CursorPage, {
           query,
           ...options,
           __security: { bearerAuth: true }
@@ -60721,7 +60721,7 @@ var init_runs2 = __esm({
        */
       delete(runID, params, options) {
         const { eval_id } = params;
-        return this._client.delete(path17`/evals/${eval_id}/runs/${runID}`, {
+        return this._client.delete(path18`/evals/${eval_id}/runs/${runID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60731,7 +60731,7 @@ var init_runs2 = __esm({
        */
       cancel(runID, params, options) {
         const { eval_id } = params;
-        return this._client.post(path17`/evals/${eval_id}/runs/${runID}`, {
+        return this._client.post(path18`/evals/${eval_id}/runs/${runID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -60770,13 +60770,13 @@ var init_evals = __esm({
        * Get an evaluation by ID.
        */
       retrieve(evalID, options) {
-        return this._client.get(path17`/evals/${evalID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path18`/evals/${evalID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * Update certain properties of an evaluation.
        */
       update(evalID, body, options) {
-        return this._client.post(path17`/evals/${evalID}`, { body, ...options, __security: { bearerAuth: true } });
+        return this._client.post(path18`/evals/${evalID}`, { body, ...options, __security: { bearerAuth: true } });
       }
       /**
        * List evaluations for a project.
@@ -60792,7 +60792,7 @@ var init_evals = __esm({
        * Delete an evaluation.
        */
       delete(evalID, options) {
-        return this._client.delete(path17`/evals/${evalID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.delete(path18`/evals/${evalID}`, { ...options, __security: { bearerAuth: true } });
       }
     };
     Evals.Runs = Runs2;
@@ -60847,7 +60847,7 @@ var init_files2 = __esm({
        * Returns information about a specific file.
        */
       retrieve(fileID, options) {
-        return this._client.get(path17`/files/${fileID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path18`/files/${fileID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * Returns a list of files.
@@ -60863,13 +60863,13 @@ var init_files2 = __esm({
        * Delete a file and remove it from all vector stores.
        */
       delete(fileID, options) {
-        return this._client.delete(path17`/files/${fileID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.delete(path18`/files/${fileID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * Returns the contents of the specified file.
        */
       content(fileID, options) {
-        return this._client.get(path17`/files/${fileID}/content`, {
+        return this._client.get(path18`/files/${fileID}/content`, {
           ...options,
           headers: buildHeaders([{ Accept: "application/binary" }, options?.headers]),
           __security: { bearerAuth: true },
@@ -61009,7 +61009,7 @@ var init_permissions = __esm({
        * ```
        */
       create(fineTunedModelCheckpoint, body, options) {
-        return this._client.getAPIList(path17`/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, Page, { body, method: "post", ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path18`/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, Page, { body, method: "post", ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * **NOTE:** This endpoint requires an [admin API key](../admin-api-keys).
@@ -61020,7 +61020,7 @@ var init_permissions = __esm({
        * @deprecated Retrieve is deprecated. Please swap to the paginated list method instead.
        */
       retrieve(fineTunedModelCheckpoint, query = {}, options) {
-        return this._client.get(path17`/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, {
+        return this._client.get(path18`/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, {
           query,
           ...options,
           __security: { adminAPIKeyAuth: true }
@@ -61043,7 +61043,7 @@ var init_permissions = __esm({
        * ```
        */
       list(fineTunedModelCheckpoint, query = {}, options) {
-        return this._client.getAPIList(path17`/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.getAPIList(path18`/fine_tuning/checkpoints/${fineTunedModelCheckpoint}/permissions`, ConversationCursorPage, { query, ...options, __security: { adminAPIKeyAuth: true } });
       }
       /**
        * **NOTE:** This endpoint requires an [admin API key](../admin-api-keys).
@@ -61065,7 +61065,7 @@ var init_permissions = __esm({
        */
       delete(permissionID, params, options) {
         const { fine_tuned_model_checkpoint } = params;
-        return this._client.delete(path17`/fine_tuning/checkpoints/${fine_tuned_model_checkpoint}/permissions/${permissionID}`, { ...options, __security: { adminAPIKeyAuth: true } });
+        return this._client.delete(path18`/fine_tuning/checkpoints/${fine_tuned_model_checkpoint}/permissions/${permissionID}`, { ...options, __security: { adminAPIKeyAuth: true } });
       }
     };
   }
@@ -61110,7 +61110,7 @@ var init_checkpoints2 = __esm({
        * ```
        */
       list(fineTuningJobID, query = {}, options) {
-        return this._client.getAPIList(path17`/fine_tuning/jobs/${fineTuningJobID}/checkpoints`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path18`/fine_tuning/jobs/${fineTuningJobID}/checkpoints`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
       }
     };
   }
@@ -61163,7 +61163,7 @@ var init_jobs = __esm({
        * ```
        */
       retrieve(fineTuningJobID, options) {
-        return this._client.get(path17`/fine_tuning/jobs/${fineTuningJobID}`, {
+        return this._client.get(path18`/fine_tuning/jobs/${fineTuningJobID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -61197,7 +61197,7 @@ var init_jobs = __esm({
        * ```
        */
       cancel(fineTuningJobID, options) {
-        return this._client.post(path17`/fine_tuning/jobs/${fineTuningJobID}/cancel`, {
+        return this._client.post(path18`/fine_tuning/jobs/${fineTuningJobID}/cancel`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -61216,7 +61216,7 @@ var init_jobs = __esm({
        * ```
        */
       listEvents(fineTuningJobID, query = {}, options) {
-        return this._client.getAPIList(path17`/fine_tuning/jobs/${fineTuningJobID}/events`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path18`/fine_tuning/jobs/${fineTuningJobID}/events`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
       }
       /**
        * Pause a fine-tune job.
@@ -61229,7 +61229,7 @@ var init_jobs = __esm({
        * ```
        */
       pause(fineTuningJobID, options) {
-        return this._client.post(path17`/fine_tuning/jobs/${fineTuningJobID}/pause`, {
+        return this._client.post(path18`/fine_tuning/jobs/${fineTuningJobID}/pause`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -61245,7 +61245,7 @@ var init_jobs = __esm({
        * ```
        */
       resume(fineTuningJobID, options) {
-        return this._client.post(path17`/fine_tuning/jobs/${fineTuningJobID}/resume`, {
+        return this._client.post(path18`/fine_tuning/jobs/${fineTuningJobID}/resume`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -61359,7 +61359,7 @@ var init_models = __esm({
        * the owner and permissioning.
        */
       retrieve(model, options) {
-        return this._client.get(path17`/models/${model}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path18`/models/${model}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * Lists the currently available models, and provides basic information about each
@@ -61373,7 +61373,7 @@ var init_models = __esm({
        * delete a model.
        */
       delete(model, options) {
-        return this._client.delete(path17`/models/${model}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.delete(path18`/models/${model}`, { ...options, __security: { bearerAuth: true } });
       }
     };
   }
@@ -61416,7 +61416,7 @@ var init_calls = __esm({
        * ```
        */
       accept(callID, body, options) {
-        return this._client.post(path17`/realtime/calls/${callID}/accept`, {
+        return this._client.post(path18`/realtime/calls/${callID}/accept`, {
           body,
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
@@ -61432,7 +61432,7 @@ var init_calls = __esm({
        * ```
        */
       hangup(callID, options) {
-        return this._client.post(path17`/realtime/calls/${callID}/hangup`, {
+        return this._client.post(path18`/realtime/calls/${callID}/hangup`, {
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -61449,7 +61449,7 @@ var init_calls = __esm({
        * ```
        */
       refer(callID, body, options) {
-        return this._client.post(path17`/realtime/calls/${callID}/refer`, {
+        return this._client.post(path18`/realtime/calls/${callID}/refer`, {
           body,
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
@@ -61465,7 +61465,7 @@ var init_calls = __esm({
        * ```
        */
       reject(callID, body = {}, options) {
-        return this._client.post(path17`/realtime/calls/${callID}/reject`, {
+        return this._client.post(path18`/realtime/calls/${callID}/reject`, {
           body,
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
@@ -62284,7 +62284,7 @@ var init_input_items2 = __esm({
        * ```
        */
       list(responseID, query = {}, options) {
-        return this._client.getAPIList(path17`/responses/${responseID}/input_items`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
+        return this._client.getAPIList(path18`/responses/${responseID}/input_items`, CursorPage, { query, ...options, __security: { bearerAuth: true } });
       }
     };
   }
@@ -62351,7 +62351,7 @@ var init_responses2 = __esm({
         });
       }
       retrieve(responseID, query = {}, options) {
-        return this._client.get(path17`/responses/${responseID}`, {
+        return this._client.get(path18`/responses/${responseID}`, {
           query,
           ...options,
           stream: query?.stream ?? false,
@@ -62374,7 +62374,7 @@ var init_responses2 = __esm({
        * ```
        */
       delete(responseID, options) {
-        return this._client.delete(path17`/responses/${responseID}`, {
+        return this._client.delete(path18`/responses/${responseID}`, {
           ...options,
           headers: buildHeaders([{ Accept: "*/*" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -62402,7 +62402,7 @@ var init_responses2 = __esm({
        * ```
        */
       cancel(responseID, options) {
-        return this._client.post(path17`/responses/${responseID}/cancel`, {
+        return this._client.post(path18`/responses/${responseID}/cancel`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -62443,7 +62443,7 @@ var init_content2 = __esm({
        * Download a skill zip bundle by its ID.
        */
       retrieve(skillID, options) {
-        return this._client.get(path17`/skills/${skillID}/content`, {
+        return this._client.get(path18`/skills/${skillID}/content`, {
           ...options,
           headers: buildHeaders([{ Accept: "application/binary" }, options?.headers]),
           __security: { bearerAuth: true },
@@ -62467,7 +62467,7 @@ var init_content3 = __esm({
        */
       retrieve(version2, params, options) {
         const { skill_id } = params;
-        return this._client.get(path17`/skills/${skill_id}/versions/${version2}/content`, {
+        return this._client.get(path18`/skills/${skill_id}/versions/${version2}/content`, {
           ...options,
           headers: buildHeaders([{ Accept: "application/binary" }, options?.headers]),
           __security: { bearerAuth: true },
@@ -62497,14 +62497,14 @@ var init_versions = __esm({
        * Create a new immutable skill version.
        */
       create(skillID, body = {}, options) {
-        return this._client.post(path17`/skills/${skillID}/versions`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
+        return this._client.post(path18`/skills/${skillID}/versions`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
       }
       /**
        * Get a specific skill version.
        */
       retrieve(version2, params, options) {
         const { skill_id } = params;
-        return this._client.get(path17`/skills/${skill_id}/versions/${version2}`, {
+        return this._client.get(path18`/skills/${skill_id}/versions/${version2}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -62513,7 +62513,7 @@ var init_versions = __esm({
        * List skill versions for a skill.
        */
       list(skillID, query = {}, options) {
-        return this._client.getAPIList(path17`/skills/${skillID}/versions`, CursorPage, {
+        return this._client.getAPIList(path18`/skills/${skillID}/versions`, CursorPage, {
           query,
           ...options,
           __security: { bearerAuth: true }
@@ -62524,7 +62524,7 @@ var init_versions = __esm({
        */
       delete(version2, params, options) {
         const { skill_id } = params;
-        return this._client.delete(path17`/skills/${skill_id}/versions/${version2}`, {
+        return this._client.delete(path18`/skills/${skill_id}/versions/${version2}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -62562,13 +62562,13 @@ var init_skills = __esm({
        * Get a skill by its ID.
        */
       retrieve(skillID, options) {
-        return this._client.get(path17`/skills/${skillID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path18`/skills/${skillID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * Update the default version pointer for a skill.
        */
       update(skillID, body, options) {
-        return this._client.post(path17`/skills/${skillID}`, {
+        return this._client.post(path18`/skills/${skillID}`, {
           body,
           ...options,
           __security: { bearerAuth: true }
@@ -62588,7 +62588,7 @@ var init_skills = __esm({
        * Delete a skill by its ID.
        */
       delete(skillID, options) {
-        return this._client.delete(path17`/skills/${skillID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.delete(path18`/skills/${skillID}`, { ...options, __security: { bearerAuth: true } });
       }
     };
     Skills.Content = Content2;
@@ -62618,7 +62618,7 @@ var init_parts = __esm({
        * [complete the Upload](https://platform.openai.com/docs/api-reference/uploads/complete).
        */
       create(uploadID, body, options) {
-        return this._client.post(path17`/uploads/${uploadID}/parts`, multipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
+        return this._client.post(path18`/uploads/${uploadID}/parts`, multipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
       }
     };
   }
@@ -62669,7 +62669,7 @@ var init_uploads3 = __esm({
        * Returns the Upload object with status `cancelled`.
        */
       cancel(uploadID, options) {
-        return this._client.post(path17`/uploads/${uploadID}/cancel`, {
+        return this._client.post(path18`/uploads/${uploadID}/cancel`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -62692,7 +62692,7 @@ var init_uploads3 = __esm({
        * object.
        */
       complete(uploadID, body, options) {
-        return this._client.post(path17`/uploads/${uploadID}/complete`, {
+        return this._client.post(path18`/uploads/${uploadID}/complete`, {
           body,
           ...options,
           __security: { bearerAuth: true }
@@ -62742,7 +62742,7 @@ var init_file_batches = __esm({
        * Create a vector store file batch.
        */
       create(vectorStoreID, body, options) {
-        return this._client.post(path17`/vector_stores/${vectorStoreID}/file_batches`, {
+        return this._client.post(path18`/vector_stores/${vectorStoreID}/file_batches`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -62754,7 +62754,7 @@ var init_file_batches = __esm({
        */
       retrieve(batchID, params, options) {
         const { vector_store_id } = params;
-        return this._client.get(path17`/vector_stores/${vector_store_id}/file_batches/${batchID}`, {
+        return this._client.get(path18`/vector_stores/${vector_store_id}/file_batches/${batchID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -62766,7 +62766,7 @@ var init_file_batches = __esm({
        */
       cancel(batchID, params, options) {
         const { vector_store_id } = params;
-        return this._client.post(path17`/vector_stores/${vector_store_id}/file_batches/${batchID}/cancel`, {
+        return this._client.post(path18`/vector_stores/${vector_store_id}/file_batches/${batchID}/cancel`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -62784,7 +62784,7 @@ var init_file_batches = __esm({
        */
       listFiles(batchID, params, options) {
         const { vector_store_id, ...query } = params;
-        return this._client.getAPIList(path17`/vector_stores/${vector_store_id}/file_batches/${batchID}/files`, CursorPage, {
+        return this._client.getAPIList(path18`/vector_stores/${vector_store_id}/file_batches/${batchID}/files`, CursorPage, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -62879,7 +62879,7 @@ var init_files3 = __esm({
        * [vector store](https://platform.openai.com/docs/api-reference/vector-stores/object).
        */
       create(vectorStoreID, body, options) {
-        return this._client.post(path17`/vector_stores/${vectorStoreID}/files`, {
+        return this._client.post(path18`/vector_stores/${vectorStoreID}/files`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -62891,7 +62891,7 @@ var init_files3 = __esm({
        */
       retrieve(fileID, params, options) {
         const { vector_store_id } = params;
-        return this._client.get(path17`/vector_stores/${vector_store_id}/files/${fileID}`, {
+        return this._client.get(path18`/vector_stores/${vector_store_id}/files/${fileID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -62902,7 +62902,7 @@ var init_files3 = __esm({
        */
       update(fileID, params, options) {
         const { vector_store_id, ...body } = params;
-        return this._client.post(path17`/vector_stores/${vector_store_id}/files/${fileID}`, {
+        return this._client.post(path18`/vector_stores/${vector_store_id}/files/${fileID}`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -62913,7 +62913,7 @@ var init_files3 = __esm({
        * Returns a list of vector store files.
        */
       list(vectorStoreID, query = {}, options) {
-        return this._client.getAPIList(path17`/vector_stores/${vectorStoreID}/files`, CursorPage, {
+        return this._client.getAPIList(path18`/vector_stores/${vectorStoreID}/files`, CursorPage, {
           query,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -62928,7 +62928,7 @@ var init_files3 = __esm({
        */
       delete(fileID, params, options) {
         const { vector_store_id } = params;
-        return this._client.delete(path17`/vector_stores/${vector_store_id}/files/${fileID}`, {
+        return this._client.delete(path18`/vector_stores/${vector_store_id}/files/${fileID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -63004,7 +63004,7 @@ var init_files3 = __esm({
        */
       content(fileID, params, options) {
         const { vector_store_id } = params;
-        return this._client.getAPIList(path17`/vector_stores/${vector_store_id}/files/${fileID}/content`, Page, {
+        return this._client.getAPIList(path18`/vector_stores/${vector_store_id}/files/${fileID}/content`, Page, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -63047,7 +63047,7 @@ var init_vector_stores = __esm({
        * Retrieves a vector store.
        */
       retrieve(vectorStoreID, options) {
-        return this._client.get(path17`/vector_stores/${vectorStoreID}`, {
+        return this._client.get(path18`/vector_stores/${vectorStoreID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -63057,7 +63057,7 @@ var init_vector_stores = __esm({
        * Modifies a vector store.
        */
       update(vectorStoreID, body, options) {
-        return this._client.post(path17`/vector_stores/${vectorStoreID}`, {
+        return this._client.post(path18`/vector_stores/${vectorStoreID}`, {
           body,
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
@@ -63079,7 +63079,7 @@ var init_vector_stores = __esm({
        * Delete a vector store.
        */
       delete(vectorStoreID, options) {
-        return this._client.delete(path17`/vector_stores/${vectorStoreID}`, {
+        return this._client.delete(path18`/vector_stores/${vectorStoreID}`, {
           ...options,
           headers: buildHeaders([{ "OpenAI-Beta": "assistants=v2" }, options?.headers]),
           __security: { bearerAuth: true }
@@ -63090,7 +63090,7 @@ var init_vector_stores = __esm({
        * filter.
        */
       search(vectorStoreID, body, options) {
-        return this._client.getAPIList(path17`/vector_stores/${vectorStoreID}/search`, Page, {
+        return this._client.getAPIList(path18`/vector_stores/${vectorStoreID}/search`, Page, {
           body,
           method: "post",
           ...options,
@@ -63124,7 +63124,7 @@ var init_videos = __esm({
        * Fetch the latest metadata for a generated video.
        */
       retrieve(videoID, options) {
-        return this._client.get(path17`/videos/${videoID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.get(path18`/videos/${videoID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * List recently generated videos for the current project.
@@ -63140,7 +63140,7 @@ var init_videos = __esm({
        * Permanently delete a completed or failed video and its stored assets.
        */
       delete(videoID, options) {
-        return this._client.delete(path17`/videos/${videoID}`, { ...options, __security: { bearerAuth: true } });
+        return this._client.delete(path18`/videos/${videoID}`, { ...options, __security: { bearerAuth: true } });
       }
       /**
        * Create a character from an uploaded video.
@@ -63154,7 +63154,7 @@ var init_videos = __esm({
        * Streams the rendered video content for the specified video job.
        */
       downloadContent(videoID, query = {}, options) {
-        return this._client.get(path17`/videos/${videoID}/content`, {
+        return this._client.get(path18`/videos/${videoID}/content`, {
           query,
           ...options,
           headers: buildHeaders([{ Accept: "application/binary" }, options?.headers]),
@@ -63179,7 +63179,7 @@ var init_videos = __esm({
        * Fetch a character.
        */
       getCharacter(characterID, options) {
-        return this._client.get(path17`/videos/characters/${characterID}`, {
+        return this._client.get(path18`/videos/characters/${characterID}`, {
           ...options,
           __security: { bearerAuth: true }
         });
@@ -63188,7 +63188,7 @@ var init_videos = __esm({
        * Create a remix of a completed video using a refreshed prompt.
        */
       remix(videoID, body, options) {
-        return this._client.post(path17`/videos/${videoID}/remix`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
+        return this._client.post(path18`/videos/${videoID}/remix`, maybeMultipartFormRequestOptions({ body, ...options, __security: { bearerAuth: true } }, this._client));
       }
     };
   }
@@ -63636,9 +63636,9 @@ var init_client = __esm({
         this.apiKey = token;
         return true;
       }
-      buildURL(path21, query, defaultBaseURL) {
+      buildURL(path22, query, defaultBaseURL) {
         const baseURL = !__classPrivateFieldGet(this, _OpenAI_instances, "m", _OpenAI_baseURLOverridden).call(this) && defaultBaseURL || this.baseURL;
-        const url = isAbsoluteURL(path21) ? new URL(path21) : new URL(baseURL + (baseURL.endsWith("/") && path21.startsWith("/") ? path21.slice(1) : path21));
+        const url = isAbsoluteURL(path22) ? new URL(path22) : new URL(baseURL + (baseURL.endsWith("/") && path22.startsWith("/") ? path22.slice(1) : path22));
         const defaultQuery = this.defaultQuery();
         const pathQuery = Object.fromEntries(url.searchParams);
         if (!isEmptyObj(defaultQuery) || !isEmptyObj(pathQuery)) {
@@ -63668,24 +63668,24 @@ var init_client = __esm({
        */
       async prepareRequest(request, { url, options }) {
       }
-      get(path21, opts) {
-        return this.methodRequest("get", path21, opts);
+      get(path22, opts) {
+        return this.methodRequest("get", path22, opts);
       }
-      post(path21, opts) {
-        return this.methodRequest("post", path21, opts);
+      post(path22, opts) {
+        return this.methodRequest("post", path22, opts);
       }
-      patch(path21, opts) {
-        return this.methodRequest("patch", path21, opts);
+      patch(path22, opts) {
+        return this.methodRequest("patch", path22, opts);
       }
-      put(path21, opts) {
-        return this.methodRequest("put", path21, opts);
+      put(path22, opts) {
+        return this.methodRequest("put", path22, opts);
       }
-      delete(path21, opts) {
-        return this.methodRequest("delete", path21, opts);
+      delete(path22, opts) {
+        return this.methodRequest("delete", path22, opts);
       }
-      methodRequest(method, path21, opts) {
+      methodRequest(method, path22, opts) {
         return this.request(Promise.resolve(opts).then((opts2) => {
-          return { method, path: path21, ...opts2 };
+          return { method, path: path22, ...opts2 };
         }));
       }
       request(options, remainingRetries = null) {
@@ -63810,8 +63810,8 @@ var init_client = __esm({
         }));
         return { response, options, controller, requestLogID, retryOfRequestLogID, startTime };
       }
-      getAPIList(path21, Page2, opts) {
-        return this.requestAPIList(Page2, opts && "then" in opts ? opts.then((opts2) => ({ method: "get", path: path21, ...opts2 })) : { method: "get", path: path21, ...opts });
+      getAPIList(path22, Page2, opts) {
+        return this.requestAPIList(Page2, opts && "then" in opts ? opts.then((opts2) => ({ method: "get", path: path22, ...opts2 })) : { method: "get", path: path22, ...opts });
       }
       requestAPIList(Page2, options) {
         const request = this.makeRequest(options, null, void 0);
@@ -63905,8 +63905,8 @@ var init_client = __esm({
       }
       async buildRequest(inputOptions, { retryCount = 0 } = {}) {
         const options = { ...inputOptions };
-        const { method, path: path21, query, defaultBaseURL } = options;
-        const url = this.buildURL(path21, query, defaultBaseURL);
+        const { method, path: path22, query, defaultBaseURL } = options;
+        const url = this.buildURL(path22, query, defaultBaseURL);
         if ("timeout" in options)
           validatePositiveInteger("timeout", options.timeout);
         options.timeout = options.timeout ?? this.timeout;
@@ -64766,8 +64766,8 @@ function getErrorMap() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path21, errorMaps, issueData } = params;
-  const fullPath = [...path21, ...issueData.path || []];
+  const { data, path: path22, errorMaps, issueData } = params;
+  const fullPath = [...path22, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -64883,11 +64883,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path21, key) {
+  constructor(parent, value, path22, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path21;
+    this._path = path22;
     this._key = key;
   }
   get path() {
@@ -68524,10 +68524,10 @@ function assignProp(target, prop, value) {
     configurable: true
   });
 }
-function getElementAtPath(obj, path21) {
-  if (!path21)
+function getElementAtPath(obj, path22) {
+  if (!path22)
     return obj;
-  return path21.reduce((acc, key) => acc?.[key], obj);
+  return path22.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -68847,11 +68847,11 @@ function aborted(x2, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path21, issues) {
+function prefixIssues(path22, issues) {
   return issues.map((iss) => {
     var _a4;
     (_a4 = iss).path ?? (_a4.path = []);
-    iss.path.unshift(path21);
+    iss.path.unshift(path22);
     return iss;
   });
 }
@@ -79349,8 +79349,8 @@ async function editMlxImage(request) {
   const src = fileToBase64(request.imagePath);
   if (!src.ok) return { success: false, error: src.error };
   const refs = [];
-  for (const path21 of request.refImagePaths ?? []) {
-    const ref = fileToBase64(path21);
+  for (const path22 of request.refImagePaths ?? []) {
+    const ref = fileToBase64(path22);
     if (!ref.ok) return { success: false, error: ref.error };
     refs.push(ref.b64);
   }
@@ -84187,6 +84187,87 @@ Returns: JSON \u2014 { candidate, chosen, findings[] }.`,
       },
       required: ["candidate"]
     }
+  },
+  {
+    name: "portal_character_list",
+    title: "List the workspace characters on the portal",
+    annotations: { readOnlyHint: true, openWorldHint: true },
+    description: "The characters of the workspace the key opens \u2014 id, key (the assets/characters/<id> folder name), name, role, appearance, referenceImageUrl and the tts block. q searches name and role; key finds one exactly; 24 per page. Read-only. No key \u2192 one line, go on.",
+    inputSchema: { type: "object", properties: { channel: PORTAL_CHANNEL_ARG, episodeDir: PORTAL_EPISODE_DIR_ARG, q: { type: "string", maxLength: 200, description: "Name or role contains" }, key: { type: "string", description: "Exact character key" }, page: { type: "integer", minimum: 1, description: "Page number, 24 per page (default 1)" } } }
+  },
+  {
+    name: "portal_character_get",
+    title: "Fetch one portal character",
+    annotations: { readOnlyHint: true, openWorldHint: true },
+    description: "One character by id or by key (exactly one of the two). Returns the same fields as portal_character_list. Read-only.",
+    inputSchema: { type: "object", properties: { channel: PORTAL_CHANNEL_ARG, episodeDir: PORTAL_EPISODE_DIR_ARG, id: { type: "string", format: "uuid", description: "Portal character id" }, key: { type: "string", description: "Character key, e.g. the assets/characters/<id> folder name" } } }
+  },
+  {
+    name: "portal_character_create",
+    title: "Create a portal character",
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    description: "Create a character in the workspace. Never a project id: the portal files it under project = the channel name (default: the channel the key was read off, override with project) \u2014 the same rule the storyboard import uses, so the character is available to that channel's playlists. Pass name and fields directly, or identityDir (assets/characters/<id>) to read the key from the folder name and name/\uC5ED\uD560/\uC0DD\uAE40\uC0C8 from identity.md; explicit fields win. file sends one PNG/JPEG/WebP panel (5 MiB) as the reference image right after creation. tts is optional here \u2014 portal_character_tts_set fills the owner defaults.",
+    inputSchema: { type: "object", properties: {
+      channel: PORTAL_CHANNEL_ARG,
+      episodeDir: PORTAL_EPISODE_DIR_ARG,
+      project: { type: "string", maxLength: 100, description: "Channel name the character belongs to (default: the key's channel)" },
+      identityDir: { type: "string", description: "Absolute path of assets/characters/<id> \u2014 key from the folder, name/role/appearance from identity.md" },
+      file: { type: "string", description: "Absolute path of a PNG/JPEG/WebP reference panel to upload after creating" },
+      key: { type: "string", description: "Character key \u2014 lowercase letters, digits, hyphens" },
+      name: { type: "string", maxLength: 100, description: "Display name" },
+      role: { type: "string", maxLength: 500, description: "Role in the channel, e.g. \uC9C4\uD589\uC790" },
+      appearance: { type: "string", maxLength: 4e3, description: "Look \u2014 the \uC0DD\uAE40\uC0C8 line" },
+      referenceImageUrl: { type: "string", maxLength: 2e3, description: "External image URL; prefer file" },
+      tts: { type: "object", description: "Voice block; optional \u2014 portal_character_tts_set fills the defaults", properties: { engine: { type: "string", enum: ["gemini", "supertonic", "elevenlabs", "mlx"], description: "TTS engine" }, voiceId: { type: "string", description: "Voice id on that engine" }, model: { type: "string", description: "Model name, e.g. eleven_multilingual_v2" }, speed: { type: "number", minimum: 0.7, maximum: 1.2, description: "Speaking rate" }, language: { type: "string", description: "Language code, e.g. ko" }, stylePrompt: { type: "string", description: "Style direction for engines that read one" } }, required: ["engine", "voiceId"] }
+    } }
+  },
+  {
+    name: "portal_character_update",
+    title: "Update a portal character",
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    description: "Partial update by id \u2014 key, name, role, appearance, referenceImageUrl, tts. null clears a nullable field. Fields you leave out stay. For the voice block alone prefer portal_character_tts_set (it fills defaults); for the image prefer portal_character_image_upload.",
+    inputSchema: { type: "object", required: ["id"], properties: {
+      channel: PORTAL_CHANNEL_ARG,
+      episodeDir: PORTAL_EPISODE_DIR_ARG,
+      id: { type: "string", format: "uuid", description: "Portal character id" },
+      key: { type: ["string", "null"], description: "Character key; null clears" },
+      name: { type: "string", maxLength: 100, description: "Display name" },
+      role: { type: ["string", "null"], maxLength: 500, description: "Role; null clears" },
+      appearance: { type: ["string", "null"], maxLength: 4e3, description: "Look; null clears" },
+      referenceImageUrl: { type: ["string", "null"], maxLength: 2e3, description: "External image URL; null clears (prefer portal_character_image_upload)" },
+      tts: { type: ["object", "null"], description: "Whole voice block; null clears (prefer portal_character_tts_set)", properties: { engine: { type: "string", enum: ["gemini", "supertonic", "elevenlabs", "mlx"], description: "TTS engine" }, voiceId: { type: "string", description: "Voice id on that engine" }, model: { type: "string", description: "Model name" }, speed: { type: "number", description: "Speaking rate 0.7\u20131.2" }, language: { type: "string", description: "Language code" }, stylePrompt: { type: "string", description: "Style direction" } } }
+    } }
+  },
+  {
+    name: "portal_character_delete",
+    title: "Delete a portal character",
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
+    description: "\u26A0\uFE0F Delete one character by id on the portal \u2014 never call without the user confirming that character (HITL). The portal cascades its playlist registrations, scene links, props it owns and its reference image; a playlist that still narrates with it loses the speaker. Ask the user before deleting a character a playlist still narrates with. Local assets/characters/<id> files are untouched.",
+    inputSchema: { type: "object", required: ["id"], properties: { channel: PORTAL_CHANNEL_ARG, episodeDir: PORTAL_EPISODE_DIR_ARG, id: { type: "string", format: "uuid", description: "Portal character id" } } }
+  },
+  {
+    name: "portal_character_image_upload",
+    title: "Upload a character reference image",
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    description: "Send one local PNG/JPEG/WebP (5 MiB, matching extension and signature) as the character's reference image. One image per character: a different file replaces the old one, the same bytes are a no-op. The portal keeps the bytes and sets referenceImageUrl to its own authenticated URL \u2014 no public link. Verifies the returned sha256 against the file.",
+    inputSchema: { type: "object", required: ["id", "file"], properties: { channel: PORTAL_CHANNEL_ARG, episodeDir: PORTAL_EPISODE_DIR_ARG, id: { type: "string", format: "uuid", description: "Portal character id" }, file: { type: "string", description: "Absolute path of the panel, e.g. assets/characters/<id>/face.png" } } }
+  },
+  {
+    name: "portal_character_tts_set",
+    title: "Set a character's TTS voice",
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    description: "Write the tts block the narration lane reads \u2014 engine, voiceId, model, speed (0.7\u20131.2), language, stylePrompt. Whatever you leave out keeps its current value or falls back to the owner defaults: ElevenLabs voice L4az9Gb378GIycFl2nAB, model eleven_multilingual_v2, speed 1.0. Call with only id to apply the defaults.",
+    inputSchema: { type: "object", required: ["id"], properties: {
+      channel: PORTAL_CHANNEL_ARG,
+      episodeDir: PORTAL_EPISODE_DIR_ARG,
+      id: { type: "string", format: "uuid", description: "Portal character id" },
+      engine: { type: "string", enum: ["gemini", "supertonic", "elevenlabs", "mlx"], description: "TTS engine (default elevenlabs)" },
+      voiceId: { type: "string", maxLength: 128, description: "Voice id (default L4az9Gb378GIycFl2nAB)" },
+      model: { type: "string", maxLength: 128, description: "Model name (default eleven_multilingual_v2)" },
+      speed: { type: "number", minimum: 0.7, maximum: 1.2, description: "Speaking rate (default 1.0)" },
+      language: { type: "string", maxLength: 32, description: "Language code, e.g. ko" },
+      stylePrompt: { type: "string", maxLength: 1e3, description: "Style direction for engines that read one" }
+    } }
   }
 ];
 var TOOLS = [
@@ -88002,10 +88083,10 @@ function createPortalClient(credential, fetchImpl = fetch, resolvedBy = "file") 
   const headers = { authorization: `Bearer ${credential.apiKey}` };
   const holder = credential.holder || defaultHolder(credential.apiKey);
   const timeoutMs = Math.max(config2.requestTimeoutMs, PORTAL_TIMEOUT_MS);
-  async function json2(method, path21, body, binaryMime, extraHeaders = {}, origin = base) {
+  async function json2(method, path22, body, binaryMime, extraHeaders = {}, origin = base) {
     let response;
     try {
-      response = await fetchImpl(`${origin}${path21}`, {
+      response = await fetchImpl(`${origin}${path22}`, {
         method,
         headers: body === void 0 ? headers : { ...headers, ...extraHeaders, "content-type": binaryMime ?? "application/json", ...binaryMime ? { "content-length": String(body.byteLength) } : {} },
         body: body === void 0 ? void 0 : binaryMime ? body : JSON.stringify(body),
@@ -88013,13 +88094,13 @@ function createPortalClient(credential, fetchImpl = fetch, resolvedBy = "file") 
         signal: AbortSignal.timeout(timeoutMs)
       });
     } catch (error2) {
-      throw new PortalError(502, `portal unreachable (${origin}${path21}): ${error2 instanceof Error ? error2.message : String(error2)}`);
+      throw new PortalError(502, `portal unreachable (${origin}${path22}): ${error2 instanceof Error ? error2.message : String(error2)}`);
     }
     let envelope;
     try {
       envelope = await response.json();
     } catch {
-      throw new PortalError(response.status, `portal answered ${response.status} without a JSON body (${method} ${path21}).`);
+      throw new PortalError(response.status, `portal answered ${response.status} without a JSON body (${method} ${path22}).`);
     }
     if (!envelope.success) {
       throw new PortalError(
@@ -88031,19 +88112,19 @@ function createPortalClient(credential, fetchImpl = fetch, resolvedBy = "file") 
     }
     return { status: response.status, data: envelope.data };
   }
-  async function text2(path21) {
+  async function text2(path22) {
     let response;
     try {
-      response = await fetchImpl(`${base}${path21}`, { headers, signal: AbortSignal.timeout(timeoutMs) });
+      response = await fetchImpl(`${base}${path22}`, { headers, signal: AbortSignal.timeout(timeoutMs) });
     } catch (error2) {
-      throw new PortalError(502, `portal unreachable (${base}${path21}): ${error2 instanceof Error ? error2.message : String(error2)}`);
+      throw new PortalError(502, `portal unreachable (${base}${path22}): ${error2 instanceof Error ? error2.message : String(error2)}`);
     }
-    if (!response.ok) throw new PortalError(response.status, `request failed (${response.status}): GET ${path21}`);
+    if (!response.ok) throw new PortalError(response.status, `request failed (${response.status}): GET ${path22}`);
     return response.text();
   }
-  const withHolder = (path21) => `${path21}?holder=${encodeURIComponent(holder)}`;
+  const withHolder = (path22) => `${path22}?holder=${encodeURIComponent(holder)}`;
   return {
-    request: (method, path21, body) => json2(method, `${path21}${path21.includes("?") ? "&" : "?"}holder=${encodeURIComponent(holder)}`, body),
+    request: (method, path22, body) => json2(method, `${path22}${path22.includes("?") ? "&" : "?"}holder=${encodeURIComponent(holder)}`, body),
     base,
     workspace: credential.workspace,
     resolvedBy,
@@ -88072,6 +88153,17 @@ function createPortalClient(credential, fetchImpl = fetch, resolvedBy = "file") 
     revisionDiff: (episodeId, from, to) => json2("GET", `/episodes/${episodeId}/revisions/${from}/diff/${to}`),
     renderAllocation: (episodeId, body) => json2(body ? "PUT" : "GET", `/episodes/${episodeId}/render-allocation`, body ? { ...body, sourceHost: holder } : void 0),
     uploadImage: (episodeId, bytes, mime2) => json2("POST", withHolder(`/episodes/${episodeId}/images`), bytes, mime2),
+    listCharacters: (query = {}) => {
+      const sp = new URLSearchParams();
+      for (const [k, v] of Object.entries(query)) if (v !== void 0 && v !== "") sp.set(k, String(v));
+      const qs = sp.toString();
+      return json2("GET", `/characters${qs ? `?${qs}` : ""}`);
+    },
+    getCharacter: (id) => json2("GET", `/characters/${id}`),
+    createCharacter: (body) => json2("POST", "/characters", body),
+    updateCharacter: (id, patch) => json2("PATCH", `/characters/${id}`, patch),
+    deleteCharacter: (id) => json2("DELETE", `/characters/${id}`),
+    uploadCharacterImage: (id, bytes, mime2) => json2("PUT", `/characters/${id}/image`, bytes, mime2),
     listAttachments: (episodeId) => json2("GET", `/episodes/${episodeId}/attachments`),
     uploadAttachment: (episodeId, relativePath, bytes, mime2, provenance) => json2("POST", `${withHolder(`/episodes/${episodeId}/attachments`)}&path=${encodeURIComponent(relativePath)}`, bytes, mime2, provenance ? { "x-attachment-provenance": encodeURIComponent(JSON.stringify(provenance)) } : {}),
     downloadAttachment: async (episodeId, id) => {
@@ -88312,8 +88404,8 @@ async function attachmentSyncReport(action) {
 }
 
 // src/portal-tools.ts
-import { copyFileSync, existsSync as existsSync17, lstatSync as lstatSync3, mkdirSync as mkdirSync8, readdirSync as readdirSync3, readFileSync as readFileSync14, rmSync as rmSync8, writeFileSync as writeFileSync11 } from "node:fs";
-import path15 from "node:path";
+import { copyFileSync, existsSync as existsSync18, lstatSync as lstatSync3, mkdirSync as mkdirSync8, readdirSync as readdirSync3, readFileSync as readFileSync15, rmSync as rmSync8, writeFileSync as writeFileSync11 } from "node:fs";
+import path16 from "node:path";
 
 // src/portal-images.ts
 import { createHash as createHash4, randomUUID as randomUUID3 } from "node:crypto";
@@ -88779,11 +88871,142 @@ async function recordPublication(args, fetchImpl) {
   return (await client.recordPublication(episodeId, body)).data;
 }
 
+// src/portal-characters.ts
+import { existsSync as existsSync17, readFileSync as readFileSync14 } from "node:fs";
+import path15 from "node:path";
+var channelArg2 = external_exports.string().regex(/^[a-z0-9][a-z0-9-]{0,63}$/, "kebab-case channel slug").optional();
+var uuid2 = external_exports.string().uuid();
+var keyArg = external_exports.string().regex(/^[a-z0-9][a-z0-9-]{0,62}$/, "lowercase letters, digits or hyphens");
+var scope = { channel: channelArg2, episodeDir: external_exports.string().optional() };
+var TTS_DEFAULTS = { engine: "elevenlabs", voiceId: "L4az9Gb378GIycFl2nAB", model: "eleven_multilingual_v2", speed: 1 };
+var ttsSchema = external_exports.object({
+  engine: external_exports.enum(["gemini", "supertonic", "elevenlabs", "mlx"]),
+  voiceId: external_exports.string().trim().min(1).max(128),
+  model: external_exports.string().trim().min(1).max(128).optional(),
+  speed: external_exports.number().min(0.7).max(1.2).optional(),
+  language: external_exports.string().trim().min(1).max(32).optional(),
+  stylePrompt: external_exports.string().trim().min(1).max(1e3).optional()
+});
+var fields = {
+  key: keyArg.optional(),
+  name: external_exports.string().trim().min(1).max(100),
+  role: external_exports.string().trim().max(500).optional(),
+  appearance: external_exports.string().trim().max(4e3).optional(),
+  referenceImageUrl: external_exports.string().trim().max(2e3).optional(),
+  tts: ttsSchema.optional()
+};
+var characterListSchema = external_exports.object({ ...scope, q: external_exports.string().trim().min(1).max(200).optional(), key: keyArg.optional(), page: external_exports.number().int().min(1).max(1e4).optional() });
+var characterGetSchema = external_exports.object({ ...scope, id: uuid2.optional(), key: keyArg.optional() }).refine((a) => Number(Boolean(a.id)) + Number(Boolean(a.key)) === 1, "Pass exactly one of id or key");
+var characterCreateSchema = external_exports.object({
+  ...scope,
+  project: external_exports.string().trim().min(1).max(100).optional(),
+  identityDir: external_exports.string().min(1).optional(),
+  file: external_exports.string().min(1).optional(),
+  ...fields,
+  name: fields.name.optional()
+}).refine((a) => a.name || a.identityDir, "Pass name, or identityDir with an identity.md heading");
+var characterUpdateSchema = external_exports.object({ ...scope, id: uuid2, key: keyArg.nullable().optional(), name: fields.name.optional(), role: fields.role.nullable(), appearance: fields.appearance.nullable(), referenceImageUrl: fields.referenceImageUrl.nullable(), tts: ttsSchema.nullable().optional() }).refine((a) => ["key", "name", "role", "appearance", "referenceImageUrl", "tts"].some((k) => a[k] !== void 0), "Nothing to change");
+var characterDeleteSchema = external_exports.object({ ...scope, id: uuid2 });
+var characterImageUploadSchema = external_exports.object({ ...scope, id: uuid2, file: external_exports.string().min(1) });
+var characterTtsSetSchema = external_exports.object({ ...scope, id: uuid2, engine: ttsSchema.shape.engine.optional(), voiceId: ttsSchema.shape.voiceId.optional(), model: ttsSchema.shape.model, speed: ttsSchema.shape.speed, language: ttsSchema.shape.language, stylePrompt: ttsSchema.shape.stylePrompt });
+function readIdentity(dir) {
+  const folder = path15.resolve(dir);
+  const file = path15.join(folder, "identity.md");
+  const key = path15.basename(folder);
+  if (!keyArg.safeParse(key).success) throw new Error(`identityDir must be assets/characters/<id> with a kebab-case id (got "${key}").`);
+  if (!existsSync17(file)) throw new Error(`${file} not found. Nothing was sent.`);
+  const text2 = readFileSync14(file, "utf8");
+  const heading = /^#\s+(.+?)\s*(?:\(([^)]*)\))?\s*$/m.exec(text2)?.[1]?.trim();
+  const role = /\*\*역할\*\*:\s*(.+)/.exec(text2)?.[1]?.trim();
+  const appearance = /\*\*생김새\*\*:\s*(.+)/.exec(text2)?.[1]?.trim();
+  return { key, ...heading ? { name: heading } : {}, ...role ? { role } : {}, ...appearance ? { appearance } : {} };
+}
+var summarize = (c) => ({
+  id: c.id,
+  key: c.key,
+  name: c.name,
+  role: c.role,
+  appearance: c.appearance,
+  referenceImageUrl: c.referenceImageUrl,
+  tts: c.tts,
+  updatedAt: c.updatedAt
+});
+async function listCharacters(client, args) {
+  const { data } = await client.listCharacters({ q: args.q, key: args.key, page: args.page });
+  return { items: data.items.map(summarize), hasNext: data.hasNext, workspace: client.workspace };
+}
+async function byKey(client, key) {
+  const { data } = await client.listCharacters({ key });
+  return data.items[0] ?? null;
+}
+async function getCharacter(client, args) {
+  const record2 = args.id ? (await client.getCharacter(args.id)).data : await byKey(client, args.key);
+  if (!record2) throw new Error(`No character with key "${args.key}" in workspace ${client.workspace}.`);
+  return summarize(record2);
+}
+async function createCharacter(client, args, channel) {
+  const identity = args.identityDir ? readIdentity(args.identityDir) : void 0;
+  const body = {
+    project: args.project ?? channel,
+    key: args.key ?? identity?.key,
+    name: args.name ?? identity?.name,
+    role: args.role ?? identity?.role,
+    appearance: args.appearance ?? identity?.appearance,
+    referenceImageUrl: args.referenceImageUrl,
+    tts: args.tts
+  };
+  if (!body.name) throw new Error(`${args.identityDir}/identity.md has no "# Name" heading \u2014 pass name. Nothing was sent.`);
+  if (!body.project) throw new Error("No channel to file the character under \u2014 pass project (the channel name), channel, or episodeDir. Nothing was sent.");
+  const image = args.file ? readImage(args.file) : void 0;
+  const { data: created } = await client.createCharacter(body);
+  let record2 = created;
+  if (image) record2 = { ...record2, referenceImageUrl: (await client.uploadCharacterImage(created.id, image.bytes, image.mime)).data.url };
+  return { created: true, ...summarize(record2), project: body.project };
+}
+async function updateCharacter(client, args) {
+  const { id: _id, channel: _c, episodeDir: _d, ...patch } = args;
+  const { data } = await client.updateCharacter(args.id, patch);
+  return summarize(data);
+}
+async function deleteCharacter(client, args) {
+  await client.deleteCharacter(args.id);
+  return { deleted: true, id: args.id };
+}
+async function uploadCharacterImage(client, args) {
+  const image = readImage(args.file);
+  const { status, data } = await client.uploadCharacterImage(args.id, image.bytes, image.mime);
+  if (data.sha256 !== image.sha256) throw new Error(`The portal stored sha256 ${data.sha256} but the file is ${image.sha256}. Re-upload.`);
+  return { id: args.id, replaced: status === 201, sha256: data.sha256, mime: data.mime, byteSize: data.byteSize, referenceImageUrl: data.url };
+}
+async function setCharacterTts(client, args) {
+  const { data: current } = await client.getCharacter(args.id);
+  const existing = current.tts ?? {};
+  const tts = ttsSchema.parse({
+    ...TTS_DEFAULTS,
+    ...existing,
+    ...args.engine ? { engine: args.engine } : {},
+    ...args.voiceId ? { voiceId: args.voiceId } : {},
+    ...args.model ? { model: args.model } : {},
+    ...args.speed !== void 0 ? { speed: args.speed } : {},
+    ...args.language ? { language: args.language } : {},
+    ...args.stylePrompt ? { stylePrompt: args.stylePrompt } : {}
+  });
+  const { data } = await client.updateCharacter(args.id, { tts });
+  return { id: data.id, name: data.name, tts: data.tts };
+}
+
 // src/portal-tools.ts
 var PORTAL_TOOL_NAMES = [
   "portal_assets_search",
   "portal_assets_get",
   ...UNIT_TOOL_NAMES,
+  "portal_character_list",
+  "portal_character_get",
+  "portal_character_create",
+  "portal_character_update",
+  "portal_character_delete",
+  "portal_character_image_upload",
+  "portal_character_tts_set",
   "portal_attachments_sync",
   "portal_images_upload",
   "portal_shot_media_upload",
@@ -88804,25 +89027,25 @@ var PORTAL_TOOL_NAMES = [
   "portal_scenario_choose",
   "portal_render_allocation"
 ];
-var channelArg2 = external_exports.string().regex(/^[a-z0-9][a-z0-9-]{0,63}$/, "kebab-case channel slug").optional();
-var uuid2 = external_exports.string().uuid();
+var channelArg3 = external_exports.string().regex(/^[a-z0-9][a-z0-9-]{0,63}$/, "kebab-case channel slug").optional();
+var uuid3 = external_exports.string().uuid();
 var stage = external_exports.enum(EPISODE_STAGES);
 var candidate = external_exports.enum(SCENARIO_CANDIDATES);
 var renderAllocationSchema = external_exports.object({
-  episodeId: uuid2.optional(),
+  episodeId: uuid3.optional(),
   episodeDir: external_exports.string().optional(),
-  channel: channelArg2,
-  requestId: uuid2.optional(),
+  channel: channelArg3,
+  requestId: uuid3.optional(),
   baseRevisionNo: external_exports.number().int().min(0).optional(),
   assignments: external_exports.array(external_exports.object({
-    id: uuid2,
+    id: uuid3,
     mode: external_exports.enum(["still_camera", "character_html", "object_html", "data_graph", "generated_video", "editorial_html", "stock_video"]),
     purpose: external_exports.string().trim().min(1).max(200),
     reason: external_exports.string().trim().min(1).max(2e3)
   })).min(1).max(500).optional()
 }).refine((a) => !a.assignments || a.requestId && a.baseRevisionNo !== void 0, "Submitting requires requestId and baseRevisionNo from the latest read");
-var attachmentsSyncSchema = external_exports.object({ episodeDir: external_exports.string().min(1), episodeId: uuid2.optional(), channel: channelArg2 });
-var workspaceCheckSchema = external_exports.object({ channel: channelArg2, episodeDir: external_exports.string().optional(), episodeId: uuid2.optional() });
+var attachmentsSyncSchema = external_exports.object({ episodeDir: external_exports.string().min(1), episodeId: uuid3.optional(), channel: channelArg3 });
+var workspaceCheckSchema = external_exports.object({ channel: channelArg3, episodeDir: external_exports.string().optional(), episodeId: uuid3.optional() });
 var storyboardSaveSchema = external_exports.object({
   episodeDir: external_exports.string().min(1),
   project: external_exports.string().min(1).optional(),
@@ -88833,65 +89056,65 @@ var storyboardSaveSchema = external_exports.object({
   note: external_exports.string().max(500).optional()
 });
 var storyboardListSchema = external_exports.object({
-  channel: channelArg2,
-  storyboardId: uuid2.optional(),
+  channel: channelArg3,
+  storyboardId: uuid3.optional(),
   query: external_exports.string().optional(),
-  projectId: uuid2.optional(),
+  projectId: uuid3.optional(),
   page: external_exports.number().int().min(1).optional()
 });
 var storyboardPullSchema = external_exports.object({
-  episodeId: uuid2,
+  episodeId: uuid3,
   targetDir: external_exports.string().min(1),
   includeDocuments: external_exports.boolean().optional(),
   revision: external_exports.number().int().min(1).optional(),
   mode: external_exports.enum(["replace", "side"]).optional()
 });
 var episodeStatusSchema = external_exports.object({
-  episodeId: uuid2.optional(),
+  episodeId: uuid3.optional(),
   episodeDir: external_exports.string().optional(),
-  channel: channelArg2,
+  channel: channelArg3,
   status: external_exports.enum(EPISODE_STATUSES).optional(),
   stage: stage.optional(),
   title: external_exports.string().min(1).max(200).optional()
 });
 var episodeCreateSchema = external_exports.object({
-  storyboardId: uuid2,
+  storyboardId: uuid3,
   slug: external_exports.string().min(1).max(120),
   title: external_exports.string().min(1).max(200),
   format: external_exports.enum(["shorts-9x16", "youtube-long-16x9"]).optional(),
   stage: stage.optional(),
   sourceChannelSlug: external_exports.string().max(120).optional(),
   episodeDir: external_exports.string().optional(),
-  channel: channelArg2
+  channel: channelArg3
 });
 var episodeCheckpointSchema = external_exports.object({
   stage,
-  episodeId: uuid2.optional(),
+  episodeId: uuid3.optional(),
   episodeDir: external_exports.string().optional(),
-  channel: channelArg2,
+  channel: channelArg3,
   baseRevisionNo: external_exports.number().int().min(0).optional(),
   note: external_exports.string().max(500).optional(),
   documents: external_exports.array(external_exports.string()).optional()
 });
 var episodeRevisionsSchema = external_exports.object({
-  episodeId: uuid2.optional(),
+  episodeId: uuid3.optional(),
   episodeDir: external_exports.string().optional(),
-  channel: channelArg2,
+  channel: channelArg3,
   revisionNo: external_exports.number().int().min(1).optional(),
   compareTo: external_exports.union([external_exports.number().int().min(1), external_exports.literal("head")]).optional()
 });
 var episodeRestoreSchema = external_exports.object({
   revisionNo: external_exports.number().int().min(1),
-  episodeId: uuid2.optional(),
+  episodeId: uuid3.optional(),
   episodeDir: external_exports.string().optional(),
-  channel: channelArg2,
+  channel: channelArg3,
   note: external_exports.string().max(500).optional()
 });
 var episodeLeaseSchema = external_exports.object({
   action: external_exports.enum(["acquire", "release", "status"]),
-  episodeId: uuid2.optional(),
+  episodeId: uuid3.optional(),
   episodeDir: external_exports.string().optional(),
-  channel: channelArg2,
+  channel: channelArg3,
   ttlMinutes: external_exports.number().int().min(1).max(1440).optional(),
   force: external_exports.boolean().optional()
 });
@@ -88900,22 +89123,22 @@ var scenarioSaveSchema = external_exports.object({
   file: external_exports.string().optional(),
   markdown: external_exports.string().optional(),
   chosen: external_exports.boolean().optional(),
-  episodeId: uuid2.optional(),
+  episodeId: uuid3.optional(),
   episodeDir: external_exports.string().optional(),
-  channel: channelArg2
+  channel: channelArg3
 });
 var scenarioPullSchema = external_exports.object({
   targetDir: external_exports.string().optional(),
   candidate: candidate.optional(),
-  episodeId: uuid2.optional(),
+  episodeId: uuid3.optional(),
   episodeDir: external_exports.string().optional(),
-  channel: channelArg2
+  channel: channelArg3
 });
 var scenarioChooseSchema = external_exports.object({
   candidate,
-  episodeId: uuid2.optional(),
+  episodeId: uuid3.optional(),
   episodeDir: external_exports.string().optional(),
-  channel: channelArg2
+  channel: channelArg3
 });
 var ok = (payload) => ({ text: JSON.stringify(payload, null, 2), isError: false });
 var failed = (error2) => ({ text: describePortalError(error2), isError: true });
@@ -89008,10 +89231,10 @@ function backupStamp() {
   return new Date(now).toISOString().replace(/[:.]/g, "-");
 }
 function reserveBackupDirectory(root, suffix) {
-  if (existsSync17(root) && lstatSync3(root).isSymbolicLink()) throw new Error("Unsafe backup directory");
+  if (existsSync18(root) && lstatSync3(root).isSymbolicLink()) throw new Error("Unsafe backup directory");
   mkdirSync8(root, { recursive: true });
   for (let attempt = 0; attempt < 100; attempt++) {
-    const directory2 = path15.join(root, `${backupStamp()}-${suffix}`);
+    const directory2 = path16.join(root, `${backupStamp()}-${suffix}`);
     try {
       mkdirSync8(directory2);
       return directory2;
@@ -89022,9 +89245,9 @@ function reserveBackupDirectory(root, suffix) {
   throw new Error("Could not reserve a new backup directory. Local files were not replaced. Retry the pull.");
 }
 function pendingOf(dir) {
-  const sb = path15.join(episodeDirOf(dir), "storyboard");
-  const side = path15.join(sb, ".portal-head");
-  const local = path15.join(sb, ".portal-local");
+  const sb = path16.join(episodeDirOf(dir), "storyboard");
+  const side = path16.join(sb, ".portal-head");
+  const local = path16.join(sb, ".portal-local");
   const entries = (target) => {
     try {
       lstatSync3(target);
@@ -89081,6 +89304,70 @@ function portalHandlers(fetchImpl) {
       if ("error" in r2) return r2.error;
       try {
         return ok(await getAsset(r2.client, args));
+      } catch (error2) {
+        return failed(error2);
+      }
+    },
+    // Characters belong to the workspace the key opens — the channel only names the project (#88/#91).
+    async characterList(args) {
+      const r2 = await resolveClient(fetchImpl, args.channel, args.episodeDir);
+      if ("error" in r2) return r2.error;
+      try {
+        return ok(await listCharacters(r2.client, args));
+      } catch (error2) {
+        return failed(error2);
+      }
+    },
+    async characterGet(args) {
+      const r2 = await resolveClient(fetchImpl, args.channel, args.episodeDir);
+      if ("error" in r2) return r2.error;
+      try {
+        return ok(await getCharacter(r2.client, args));
+      } catch (error2) {
+        return failed(error2);
+      }
+    },
+    async characterCreate(args) {
+      const r2 = await resolveClient(fetchImpl, args.channel, args.episodeDir);
+      if ("error" in r2) return r2.error;
+      try {
+        return ok(await createCharacter(r2.client, args, r2.channel));
+      } catch (error2) {
+        return failed(error2);
+      }
+    },
+    async characterUpdate(args) {
+      const r2 = await resolveClient(fetchImpl, args.channel, args.episodeDir);
+      if ("error" in r2) return r2.error;
+      try {
+        return ok(await updateCharacter(r2.client, args));
+      } catch (error2) {
+        return failed(error2);
+      }
+    },
+    async characterDelete(args) {
+      const r2 = await resolveClient(fetchImpl, args.channel, args.episodeDir);
+      if ("error" in r2) return r2.error;
+      try {
+        return ok(await deleteCharacter(r2.client, args));
+      } catch (error2) {
+        return failed(error2);
+      }
+    },
+    async characterImageUpload(args) {
+      const r2 = await resolveClient(fetchImpl, args.channel, args.episodeDir);
+      if ("error" in r2) return r2.error;
+      try {
+        return ok(await uploadCharacterImage(r2.client, args));
+      } catch (error2) {
+        return failed(error2);
+      }
+    },
+    async characterTtsSet(args) {
+      const r2 = await resolveClient(fetchImpl, args.channel, args.episodeDir);
+      if ("error" in r2) return r2.error;
+      try {
+        return ok(await setCharacterTts(r2.client, args));
       } catch (error2) {
         return failed(error2);
       }
@@ -89267,7 +89554,7 @@ function portalHandlers(fetchImpl) {
         resolveEpisodeId2(episodeId, targetDir);
         const { data: episode } = await c.getEpisode(episodeId);
         const dir = episodeDirOf(targetDir);
-        const sb = path15.join(dir, "storyboard");
+        const sb = path16.join(dir, "storyboard");
         const fileContents = /* @__PURE__ */ new Map();
         fileContents.set("scenes.js", await c.scenesJs(episodeId, revision));
         if (revision) {
@@ -89294,7 +89581,7 @@ function portalHandlers(fetchImpl) {
         for (const filename of fileContents.keys()) safeAttachmentTarget(dir, `storyboard/${filename}`);
         const removed = revision && includeDocuments && mode === "replace" ? [.../* @__PURE__ */ new Set([...DOCUMENT_FILES, "scenario.md", ...(episode.documents ?? []).map((doc) => doc.filename)])].filter((filename) => SAFE_DOCUMENT_NAME.test(filename) && !fileContents.has(filename)).filter((filename) => {
           const target = safeAttachmentTarget(dir, `storyboard/${filename}`);
-          if (!existsSync17(target)) return false;
+          if (!existsSync18(target)) return false;
           if (!lstatSync3(target).isFile()) throw new Error(`Not a regular document: ${filename}`);
           return true;
         }) : [];
@@ -89304,7 +89591,7 @@ function portalHandlers(fetchImpl) {
         let backupDir = null;
         let sideDir = null;
         const replaced = [];
-        const attachmentRoot = mode === "side" ? path15.join(sb, ".portal-head", "attachments") : dir;
+        const attachmentRoot = mode === "side" ? path16.join(sb, ".portal-head", "attachments") : dir;
         const attachmentSnapshot = revision ? void 0 : await prepareAttachmentRestore(c, episodeId, attachmentRoot, canonicalPullPaths(episode, fileContents.keys()));
         if (!revision) {
           const { data: latest } = await c.getEpisode(episodeId).catch((error2) => {
@@ -89315,27 +89602,27 @@ function portalHandlers(fetchImpl) {
           }
         }
         if (mode === "side") {
-          sideDir = path15.join(sb, ".portal-head");
+          sideDir = path16.join(sb, ".portal-head");
           rmSync8(sideDir, { recursive: true, force: true });
           mkdirSync8(sideDir, { recursive: true });
-          for (const { filename, content } of files) writeFileSync11(path15.join(sideDir, filename), content);
+          for (const { filename, content } of files) writeFileSync11(path16.join(sideDir, filename), content);
         } else {
           mkdirSync8(sb, { recursive: true });
           const changed = files.filter(({ filename, content }) => {
-            const target = path15.join(sb, filename);
-            return existsSync17(target) && !readFileSync14(target).equals(Buffer.from(content));
+            const target = path16.join(sb, filename);
+            return existsSync18(target) && !readFileSync15(target).equals(Buffer.from(content));
           });
           if (changed.length > 0 || removed.length > 0) {
             const state = readPortalState(dir);
-            const backupRoot = path15.join(sb, ".portal-local");
+            const backupRoot = path16.join(sb, ".portal-local");
             backupDir = reserveBackupDirectory(backupRoot, `r${state?.headRevisionNo ?? 0}`);
             for (const filename of [...changed.map((file) => file.filename), ...removed]) {
-              copyFileSync(path15.join(sb, filename), path15.join(backupDir, filename));
+              copyFileSync(path16.join(sb, filename), path16.join(backupDir, filename));
             }
             replaced.push(...changed.map((file) => file.filename));
           }
-          for (const filename of removed) rmSync8(path15.join(sb, filename));
-          for (const { filename, content } of files) writeFileSync11(path15.join(sb, filename), content);
+          for (const filename of removed) rmSync8(path16.join(sb, filename));
+          for (const { filename, content } of files) writeFileSync11(path16.join(sb, filename), content);
         }
         const attachments = revision ? { skipped: "Attachments are current episode files, not revision snapshots." } : await restoreAttachments(c, episodeId, attachmentRoot, attachmentSnapshot);
         if (mode !== "side") writePortalState(dir, { workspace: c.workspace, storyboardId: episode.storyboardId, episodeId, headRevisionNo });
@@ -89426,8 +89713,8 @@ function portalHandlers(fetchImpl) {
         let uploadedScenes = 0;
         if (episodeDir) {
           const dir = episodeDirOf(episodeDir);
-          const sb = path15.join(dir, "storyboard");
-          if (existsSync17(path15.join(sb, "scenes.js"))) {
+          const sb = path16.join(dir, "storyboard");
+          if (existsSync18(path16.join(sb, "scenes.js"))) {
             const payload = buildImportPayload(dir);
             body.scenes = payload.scenes;
             body.meta = payload.episode.meta;
@@ -89513,14 +89800,14 @@ function portalHandlers(fetchImpl) {
       }
     },
     async scenarioSave({ candidate: cand, file, markdown, chosen, episodeId, episodeDir, channel }) {
-      const dirFromFile = file ? path15.basename(path15.dirname(file)) === "candidates" ? path15.dirname(path15.dirname(file)) : path15.dirname(file) : void 0;
+      const dirFromFile = file ? path16.basename(path16.dirname(file)) === "candidates" ? path16.dirname(path16.dirname(file)) : path16.dirname(file) : void 0;
       const r2 = await resolveClient(fetchImpl, channel, episodeDir, dirFromFile);
       if ("error" in r2) return r2.error;
       const refused = refuseMismatch(r2.client, episodeDir, dirFromFile);
       if (refused) return refused;
       try {
         const id = resolveEpisodeId2(episodeId, episodeDir, dirFromFile);
-        const source = markdown ?? (file ? readFileSync14(file, "utf8") : null);
+        const source = markdown ?? (file ? readFileSync15(file, "utf8") : null);
         if (source === null) throw new Error("one of file \xB7 markdown is required.");
         const { status, data } = await r2.client.saveScenario(id, cand, {
           markdown: source,
@@ -89552,8 +89839,8 @@ function portalHandlers(fetchImpl) {
         const replaced = [];
         if (targetDir) {
           const dir = episodeDirOf(targetDir);
-          const sb = path15.join(dir, "storyboard");
-          const candDir = path15.join(sb, "candidates");
+          const sb = path16.join(dir, "storyboard");
+          const candDir = path16.join(sb, "candidates");
           const files = /* @__PURE__ */ new Map();
           for (const s2 of data.scenarios) {
             if (cand && s2.candidate !== cand) continue;
@@ -89564,22 +89851,22 @@ function portalHandlers(fetchImpl) {
           }
           for (const [filename, content] of files) {
             const target = safeAttachmentTarget(dir, `storyboard/${filename}`);
-            if (!existsSync17(target)) continue;
+            if (!existsSync18(target)) continue;
             if (!lstatSync3(target).isFile()) throw new Error(`Not a regular scenario file: ${filename}`);
-            if (!readFileSync14(target).equals(Buffer.from(content))) replaced.push(`storyboard/${filename}`);
+            if (!readFileSync15(target).equals(Buffer.from(content))) replaced.push(`storyboard/${filename}`);
           }
           if (replaced.length > 0) {
-            const backupRoot = path15.join(sb, ".portal-local");
+            const backupRoot = path16.join(sb, ".portal-local");
             backupDir = reserveBackupDirectory(backupRoot, "scenarios");
             for (const relative of replaced) {
-              const backup = path15.join(backupDir, path15.relative("storyboard", relative));
-              mkdirSync8(path15.dirname(backup), { recursive: true });
-              copyFileSync(path15.join(dir, relative), backup);
+              const backup = path16.join(backupDir, path16.relative("storyboard", relative));
+              mkdirSync8(path16.dirname(backup), { recursive: true });
+              copyFileSync(path16.join(dir, relative), backup);
             }
           }
           mkdirSync8(candDir, { recursive: true });
           for (const [filename, content] of files) {
-            writeFileSync11(path15.join(sb, filename), content);
+            writeFileSync11(path16.join(sb, filename), content);
             written.push(`storyboard/${filename}`);
           }
         }
@@ -89616,7 +89903,7 @@ function portalHandlers(fetchImpl) {
 }
 
 // src/portal-unit-routes.ts
-import { mkdtempSync as mkdtempSync5, readFileSync as readFileSync15, rmSync as rmSync9, writeFileSync as writeFileSync12 } from "node:fs";
+import { mkdtempSync as mkdtempSync5, readFileSync as readFileSync16, rmSync as rmSync9, writeFileSync as writeFileSync12 } from "node:fs";
 import { tmpdir as tmpdir4 } from "node:os";
 import { join as join9, extname as extname8 } from "node:path";
 
@@ -89913,7 +90200,7 @@ async function apiOperation(c, name, a) {
     const file = required2(a.file, "file"), kind = required2(a.kind, "kind");
     const mime2 = extname8(file).toLowerCase() === ".wav" ? "audio/wav" : extname8(file).toLowerCase() === ".mp3" ? "audio/mpeg" : null;
     if (!mime2) throw new Error("Audio must be a WAV or MP3 file");
-    const bytes = readFileSync15(file);
+    const bytes = readFileSync16(file);
     if (!bytes.length || bytes.length > 10 * 1024 * 1024) throw new Error("Audio must be 1 byte..10 MiB");
     return (await c.uploadMedia(ep(), kind, bytes, mime2)).data;
   }
@@ -89940,7 +90227,7 @@ var UNIT_ROUTES = Object.fromEntries(UNIT_TOOL_NAMES.map((name) => [name, (args)
 
 // src/threads-gate.ts
 import { createHash as createHash6, randomUUID as randomUUID4 } from "node:crypto";
-import { appendFileSync as appendFileSync2, mkdirSync as mkdirSync9, readFileSync as readFileSync16, realpathSync as realpathSync3, renameSync as renameSync7, statSync as statSync7, writeFileSync as writeFileSync13 } from "node:fs";
+import { appendFileSync as appendFileSync2, mkdirSync as mkdirSync9, readFileSync as readFileSync17, realpathSync as realpathSync3, renameSync as renameSync7, statSync as statSync7, writeFileSync as writeFileSync13 } from "node:fs";
 import { dirname as dirname5, join as join10, resolve as resolve4 } from "node:path";
 import { fileURLToPath as fileURLToPath3 } from "node:url";
 import { spawnSync as spawnSync2 } from "node:child_process";
@@ -89999,7 +90286,7 @@ function save(draft) {
   renameSync7(temp, file);
 }
 function load(id) {
-  const value = JSON.parse(readFileSync16(draftLocation(id).file, "utf8"));
+  const value = JSON.parse(readFileSync17(draftLocation(id).file, "utf8"));
   draftSchema.parse(value);
   if (value.draftId !== id || value.channel !== draftLocation(id).channel || threadsBodyHash(value.body, value.selfReply) !== value.bodyHash) {
     throw new Error("Draft body hash mismatch; create and review a new draft");
@@ -90067,7 +90354,7 @@ function checkThreadsGate(input) {
     if (bodyHash !== draft.bodyHash) throw new Error("Publish body hash mismatch");
     let limits2;
     try {
-      limits2 = external_exports.object({ voice: external_exports.number().finite().min(0).max(100), purpose: external_exports.number().finite().min(0).max(100), flow: external_exports.number().finite().min(0).max(100) }).parse(JSON.parse(readFileSync16(join10(directory(draft.channel), "gate.json"), "utf8")));
+      limits2 = external_exports.object({ voice: external_exports.number().finite().min(0).max(100), purpose: external_exports.number().finite().min(0).max(100), flow: external_exports.number().finite().min(0).max(100) }).parse(JSON.parse(readFileSync17(join10(directory(draft.channel), "gate.json"), "utf8")));
     } catch (error2) {
       if (error2.code === "ENOENT") throw new Error("Gate thresholds not configured (\uAE30\uC900\uC810 \uBBF8\uC124\uC815): gate.json required");
       throw error2;
@@ -90103,7 +90390,7 @@ function checkThreadsEpisode(input) {
     if (!board.startsWith(episode + "/") || !statSync7(board).isFile()) throw new Error("Missing episode storyboard");
     const approvalPath = realpathSync3(join10(episode, "threads-publish-approval.json"));
     if (dirname5(approvalPath) !== episode) throw new Error("Invalid episode approval path");
-    const approval = JSON.parse(readFileSync16(approvalPath, "utf8"));
+    const approval = JSON.parse(readFileSync17(approvalPath, "utf8"));
     if (approval.approved !== true) throw new Error("Episode publishing approval required");
     for (const key of ["caption", "selfReply", "imageUrl", "videoUrl", "linkUrl", "replyToId"]) {
       if ((approval[key] ?? "") !== (input[key] ?? "")) throw new Error(`Episode approval mismatch: ${key}`);
@@ -90113,8 +90400,8 @@ function checkThreadsEpisode(input) {
 
 // src/portal-media.ts
 import { createHash as createHash7, randomUUID as randomUUID5 } from "node:crypto";
-import { appendFileSync as appendFileSync3, closeSync as closeSync6, fstatSync as fstatSync4, statSync as statSync8, mkdirSync as mkdirSync10, openSync as openSync6, readFileSync as readFileSync17, readSync as readSync4, realpathSync as realpathSync4, renameSync as renameSync8, rmSync as rmSync10, writeFileSync as writeFileSync14 } from "node:fs";
-import path16 from "node:path";
+import { appendFileSync as appendFileSync3, closeSync as closeSync6, fstatSync as fstatSync4, statSync as statSync8, mkdirSync as mkdirSync10, openSync as openSync6, readFileSync as readFileSync18, readSync as readSync4, realpathSync as realpathSync4, renameSync as renameSync8, rmSync as rmSync10, writeFileSync as writeFileSync14 } from "node:fs";
+import path17 from "node:path";
 var portalShotFields = {
   episodeDir: external_exports.string().min(1),
   shotId: external_exports.string().min(1).optional(),
@@ -90142,11 +90429,11 @@ var MediaTooLarge = class extends Error {
 };
 function recordOversize(dir, file, kind, bytes) {
   const result = { skipped: true, reason: "oversized", kind, file, byteSize: bytes, limitBytes: limits[kind] * 1024 * 1024 };
-  appendFileSync3(path16.join(dir, ".portal-media-skips.jsonl"), JSON.stringify({ at: (/* @__PURE__ */ new Date()).toISOString(), ...result }) + "\n");
+  appendFileSync3(path17.join(dir, ".portal-media-skips.jsonl"), JSON.stringify({ at: (/* @__PURE__ */ new Date()).toISOString(), ...result }) + "\n");
   return result;
 }
 function readMedia(file, kind) {
-  const mime2 = mimeByExt[path16.extname(file).toLowerCase()];
+  const mime2 = mimeByExt[path17.extname(file).toLowerCase()];
   if (!mime2 || !(["image", "end_frame"].includes(kind) ? mime2.startsWith("image/") : ["narration", "narration_segment"].includes(kind) ? mime2.startsWith("audio/") : mime2 === "video/mp4")) throw new Error("Media extension does not match its kind.");
   const limit2 = limits[kind] * 1024 * 1024, fd = openSync6(file, "r");
   try {
@@ -90169,16 +90456,16 @@ function readMedia(file, kind) {
   }
 }
 async function uploadShotMedia(args, fetchImpl) {
-  const dir = episodeDirOf(path16.resolve(args.episodeDir));
+  const dir = episodeDirOf(path17.resolve(args.episodeDir));
   const client = await portalClientFor(channelOfEpisodeDir(dir), fetchImpl);
   if (!client) return { skipped: true };
   const state = readPortalState(dir);
   if (!state?.episodeId || state.workspace !== client.workspace || !Number.isSafeInteger(state.headRevisionNo) || state.headRevisionNo < 0)
     throw new Error("Save/pull this episode with the configured workspace first; a matching .portal.json and explicit head revision are required. Nothing was sent.");
-  const root = realpathSync4(dir), file = realpathSync4(path16.resolve(dir, args.file));
-  if (!file.startsWith(root + path16.sep)) throw new Error("Media must be inside the episode directory, including symlinks.");
-  const sb = path16.join(dir, "storyboard"), scenesFile = path16.join(sb, "scenes.js");
-  const source = readFileSync17(scenesFile, "utf8"), stateSource = readFileSync17(path16.join(dir, ".portal.json"), "utf8");
+  const root = realpathSync4(dir), file = realpathSync4(path17.resolve(dir, args.file));
+  if (!file.startsWith(root + path17.sep)) throw new Error("Media must be inside the episode directory, including symlinks.");
+  const sb = path17.join(dir, "storyboard"), scenesFile = path17.join(sb, "scenes.js");
+  const source = readFileSync18(scenesFile, "utf8"), stateSource = readFileSync18(path17.join(dir, ".portal.json"), "utf8");
   const payload = buildImportPayload(dir), shots = payload.scenes;
   if (shots.some((s2) => !s2 || typeof s2 !== "object" || Array.isArray(s2))) throw new Error("Every shot must be an object.");
   const index = args.shotId ? shots.findIndex((s2) => s2.id === args.shotId) : (args.shotNo ?? 0) - 1;
@@ -90190,8 +90477,8 @@ async function uploadShotMedia(args, fetchImpl) {
   }
   const initial = statSync8(file);
   if (initial.isFile() && initial.size > limits[args.kind] * 1024 * 1024) return recordOversize(dir, file, args.kind, initial.size);
-  const unchanged = () => readFileSync17(scenesFile, "utf8") === source && readFileSync17(path16.join(dir, ".portal.json"), "utf8") === stateSource;
-  const lock = path16.join(dir, ".portal-media.lock");
+  const unchanged = () => readFileSync18(scenesFile, "utf8") === source && readFileSync18(path17.join(dir, ".portal.json"), "utf8") === stateSource;
+  const lock = path17.join(dir, ".portal-media.lock");
   let fd;
   try {
     fd = openSync6(lock, "wx");
@@ -90219,10 +90506,10 @@ async function uploadShotMedia(args, fetchImpl) {
 // Portal shot media UUID (no local path).
 ${assignment}
 `);
-    const backup = path16.join(sb, ".portal-local", `media-${randomUUID5()}`);
+    const backup = path17.join(sb, ".portal-local", `media-${randomUUID5()}`);
     mkdirSync10(backup, { recursive: true });
-    writeFileSync14(path16.join(backup, "scenes.js"), source);
-    recoveryFile = path16.join(backup, "uploaded-scenes.js");
+    writeFileSync14(path17.join(backup, "scenes.js"), source);
+    recoveryFile = path17.join(backup, "uploaded-scenes.js");
     writeFileSync14(recoveryFile, next);
     if (!unchanged()) throw new Error("Local board/state changed; upload is not linked.");
     phase = "checkpoint";
@@ -90299,7 +90586,7 @@ function withoutPortal(args) {
 
 // src/datago-client.ts
 import { mkdir, writeFile as writeFile2 } from "node:fs/promises";
-import { existsSync as existsSync18 } from "node:fs";
+import { existsSync as existsSync19 } from "node:fs";
 import { tmpdir as tmpdir5 } from "node:os";
 import { join as join11 } from "node:path";
 var PORTAL_BASE = "https://www.data.go.kr";
@@ -90543,7 +90830,7 @@ async function downloadFile2(input) {
   const saveDir = input.saveDir ?? join11(tmpdir5(), "social-flow-datago");
   await mkdir(saveDir, { recursive: true });
   let savedPath = join11(saveDir, filename);
-  for (let i2 = 1; existsSync18(savedPath); i2++) {
+  for (let i2 = 1; existsSync19(savedPath); i2++) {
     if (i2 >= 100) {
       return err(`there are already 100+ files with the same name in ${saveDir} \u2014 clean up saveDir or point at a different directory.`);
     }
@@ -90624,9 +90911,9 @@ var OPENAPI_CODE_HELP = {
 };
 async function callOpenApi(input) {
   const key = requireDataGoKrKey();
-  const path21 = input.path.replace(/^\/+/, "");
-  if (path21.includes("..") || path21.includes("://")) return err("path only accepts a route under apis.data.go.kr (e.g. 1360000/VilageFcstInfoService_2.0/getUltraSrtNcst)");
-  const url = `${OPENAPI_BASE}/${path21}${buildQuery({ ...input.params, serviceKey: key })}`;
+  const path22 = input.path.replace(/^\/+/, "");
+  if (path22.includes("..") || path22.includes("://")) return err("path only accepts a route under apis.data.go.kr (e.g. 1360000/VilageFcstInfoService_2.0/getUltraSrtNcst)");
+  const url = `${OPENAPI_BASE}/${path22}${buildQuery({ ...input.params, serviceKey: key })}`;
   const res = await requestRaw("get", url, { "User-Agent": BROWSER_UA });
   const body = res.body;
   if (/^\s*Unauthorized\s*$/i.test(body)) return err(`apis.data.go.kr: ${OPENAPI_AUTH_HELP}`);
@@ -91880,7 +92167,7 @@ async function stockSearch(input) {
 // src/sns-client.ts
 import { createHash as createHash8, randomUUID as randomUUID6 } from "node:crypto";
 import {
-  existsSync as existsSync19,
+  existsSync as existsSync20,
   mkdirSync as nodeMkdirSync,
   readFileSync as nodeReadFileSync,
   rmSync as nodeRmSync,
@@ -91891,11 +92178,11 @@ import { basename as basename8, dirname as dirname6, extname as extname9, join a
 function enabledPlatforms() {
   const channelDirs = listChannelDirs();
   return SNS_PLATFORMS.filter(
-    (platform2) => existsSync19(snsCredentialFile(platform2)) || channelDirs.some((dir) => dir.platforms.includes(platform2))
+    (platform2) => existsSync20(snsCredentialFile(platform2)) || channelDirs.some((dir) => dir.platforms.includes(platform2))
   );
 }
 function availablePlatformsFor(channel) {
-  return SNS_PLATFORMS.filter((platform2) => existsSync19(snsCredentialFile(platform2, channel)));
+  return SNS_PLATFORMS.filter((platform2) => existsSync20(snsCredentialFile(platform2, channel)));
 }
 var GRAPH_VERSION = "v23.0";
 var THREADS_BASE = "https://graph.threads.net/v1.0";
@@ -91973,8 +92260,8 @@ async function pollContainer(baseUrl, containerId, accessToken, statusField, opt
   }
   return fail2(504, `Media container ${containerId} not FINISHED after ${maxTries} tries`);
 }
-async function fetchMe(baseUrl, accessToken, fields) {
-  return graphRequest("get", `${baseUrl}/me`, { fields, access_token: accessToken });
+async function fetchMe(baseUrl, accessToken, fields2) {
+  return graphRequest("get", `${baseUrl}/me`, { fields: fields2, access_token: accessToken });
 }
 function okJson(payload) {
   return { ok: true, status: 200, body: JSON.stringify(payload) };
@@ -92032,14 +92319,14 @@ async function publishThreads(input, opts) {
     permalink: permalink.ok ? parseJson(permalink.body)?.permalink ?? null : null
   });
 }
-function withScopeHint(res, scope) {
+function withScopeHint(res, scope2) {
   if (res.ok) return res;
   const scopeLike = /permission|scope|not authorized|OAuthException/i.test(res.body) || /"code"\s*:\s*1\b/.test(res.body) && /unknown error/i.test(res.body);
   if (!scopeLike) return res;
   return fail2(
     res.status,
     `${res.body}
-\u2192 This endpoint needs the ${scope} scope. Your existing token may have been issued without it \u2014 enable the extra scope checkbox in the consent flow and re-issue the token (procedure: skills/publish/references/token-setup.md).`
+\u2192 This endpoint needs the ${scope2} scope. Your existing token may have been issued without it \u2014 enable the extra scope checkbox in the consent flow and re-issue the token (procedure: skills/publish/references/token-setup.md).`
   );
 }
 var THREADS_MEDIA_METRICS = "views,likes,replies,reposts,quotes,shares";
@@ -92478,19 +92765,19 @@ var YT_THUMB_MIME_BY_EXT = {
 var YT_THUMB_MAX_BYTES = 2 * 1024 * 1024;
 var CAPTION_MAX_BYTES_YT = 100 * 1024 * 1024;
 var CAPTION_MAX_BYTES_FB = 200 * 1024;
-async function readCaptionFile(path21, maxBytes) {
-  if (extname9(path21).toLowerCase() !== ".srt") {
-    return { error: fail2(400, `Caption file must be .srt (SubRip): ${path21}`) };
+async function readCaptionFile(path22, maxBytes) {
+  if (extname9(path22).toLowerCase() !== ".srt") {
+    return { error: fail2(400, `Caption file must be .srt (SubRip): ${path22}`) };
   }
   let bytes;
   try {
-    bytes = await readFile(path21);
+    bytes = await readFile(path22);
   } catch (error2) {
     return { error: fail2(400, `Cannot read caption file: ${error2 instanceof Error ? error2.message : String(error2)}`) };
   }
-  if (bytes.byteLength === 0) return { error: fail2(400, `Caption file is empty: ${path21}`) };
+  if (bytes.byteLength === 0) return { error: fail2(400, `Caption file is empty: ${path22}`) };
   if (bytes.byteLength > maxBytes) {
-    return { error: fail2(400, `Caption file exceeds ${maxBytes} bytes: ${path21} (${bytes.byteLength} bytes)`) };
+    return { error: fail2(400, `Caption file exceeds ${maxBytes} bytes: ${path22} (${bytes.byteLength} bytes)`) };
   }
   return { bytes };
 }
@@ -92870,14 +93157,14 @@ async function youtubeRequest(method, url, params, token, body) {
     return fail2(502, `YouTube API request failed: ${error2 instanceof Error ? error2.message : String(error2)}`);
   }
 }
-function withYoutubeScopeHint(res, scope) {
+function withYoutubeScopeHint(res, scope2) {
   if (res.ok) return res;
   const scopeLike = res.status === 401 || res.status === 403 || /insufficient|scope|forbidden|unauthorized/i.test(res.body);
   if (!scopeLike) return res;
   return fail2(
     res.status,
     `${res.body}
-\u2192 this endpoint needs the ${scope} scope. An existing refresh_token issued for publishing only (youtube.upload) does not have it \u2014 turn the extra scope on in the consent flow and reissue (procedure: skills/publish/references/token-setup.md). After reissuing, replace the refresh_token in youtube-oauth-client.json.`
+\u2192 this endpoint needs the ${scope2} scope. An existing refresh_token issued for publishing only (youtube.upload) does not have it \u2014 turn the extra scope on in the consent flow and reissue (procedure: skills/publish/references/token-setup.md). After reissuing, replace the refresh_token in youtube-oauth-client.json.`
   );
 }
 var YT_CHANNEL_METRICS = "views,engagedViews,estimatedMinutesWatched,averageViewDuration,averageViewPercentage,subscribersGained,subscribersLost,likes,comments,shares";
@@ -93670,10 +93957,10 @@ async function checkPlatformSet(channel) {
     ["threads", "THREADS", THREADS_BASE, "id,username"],
     ["instagram", "INSTAGRAM", IG_BASE, "id,username"],
     ["facebook", "FACEBOOK", FB_BASE, "id,name"]
-  ].map(async ([key, platform2, baseUrl, fields]) => {
+  ].map(async ([key, platform2, baseUrl, fields2]) => {
     const { token, error: error2 } = await loadTokenFile(platform2, channel);
     if (!token) return [key, { ok: false, reason: error2.body }];
-    const me = await fetchMe(baseUrl, token, fields);
+    const me = await fetchMe(baseUrl, token, fields2);
     return [
       key,
       me.ok ? { ok: true, account: parseJson(me.body) } : { ok: false, status: me.status, reason: me.body.slice(0, 300) }
@@ -93726,9 +94013,9 @@ async function checkAccounts(channel) {
 
 // src/tts-final-quality.ts
 import { execFile as execFile8 } from "node:child_process";
-import { existsSync as existsSync20, mkdtempSync as mkdtempSync6, readFileSync as readFileSync18, rmSync as rmSync11, writeFileSync as writeFileSync15, renameSync as renameSync9, openSync as openSync7, closeSync as closeSync7 } from "node:fs";
+import { existsSync as existsSync21, mkdtempSync as mkdtempSync6, readFileSync as readFileSync19, rmSync as rmSync11, writeFileSync as writeFileSync15, renameSync as renameSync9, openSync as openSync7, closeSync as closeSync7 } from "node:fs";
 import { tmpdir as tmpdir6 } from "node:os";
-import path18 from "node:path";
+import path19 from "node:path";
 import { promisify as promisify3 } from "node:util";
 var exec2 = promisify3(execFile8);
 var finalSpeechSchema = external_exports.object({
@@ -93738,7 +94025,7 @@ var finalSpeechSchema = external_exports.object({
   delivery: external_exports.string().trim().min(1).max(2e3)
 }).strict();
 async function reviewFinalSpeech(input) {
-  const request = finalSpeechSchema.parse(input), media = path18.resolve(request.mediaPath);
+  const request = finalSpeechSchema.parse(input), media = path19.resolve(request.mediaPath);
   const proofPath = media + ".speech-quality.json", lockPath = proofPath + ".lock";
   let lock;
   try {
@@ -93746,24 +94033,24 @@ async function reviewFinalSpeech(input) {
   } catch {
     return { success: false, status: "unverified", error: "Final speech review is already locked" };
   }
-  const temp = mkdtempSync6(path18.join(tmpdir6(), "speech-final-"));
+  const temp = mkdtempSync6(path19.join(tmpdir6(), "speech-final-"));
   let base = { version: 1, policy: "final-speech-v1", model: REVIEW_MODEL, ...request, mediaPath: media };
   function save2(status, extra) {
     const result = { ...base, status, checkedAt: (/* @__PURE__ */ new Date()).toISOString(), ...extra };
-    const staging = path18.join(temp, "proof.json");
+    const staging = path19.join(temp, "proof.json");
     writeFileSync15(staging, JSON.stringify(result, null, 2) + "\n");
-    writeFileSync15(proofPath + ".tmp", readFileSync18(staging));
+    writeFileSync15(proofPath + ".tmp", readFileSync19(staging));
     renameSync9(proofPath + ".tmp", proofPath);
     return { success: status === "pass", status, proofPath, ...extra };
   }
   try {
-    base = { ...base, mediaSha256: sha256(readFileSync18(media)), textSha256: sha256(normalizeSpeech(request.expectedText)) };
-    const wav = path18.join(temp, "final.flac");
+    base = { ...base, mediaSha256: sha256(readFileSync19(media)), textSha256: sha256(normalizeSpeech(request.expectedText)) };
+    const wav = path19.join(temp, "final.flac");
     await exec2("ffmpeg", ["-y", "-v", "error", "-i", media, "-map", "0:a:0", "-map_metadata", "-1", "-ac", "1", "-ar", "24000", "-c:a", "flac", wav], { timeout: 6e4 });
-    base.audioSha256 = sha256(readFileSync18(wav));
-    if (sha256(readFileSync18(media)) !== base.mediaSha256) throw new Error("Final media changed during decoding");
-    if (existsSync20(proofPath)) {
-      const old = JSON.parse(readFileSync18(proofPath, "utf8"));
+    base.audioSha256 = sha256(readFileSync19(wav));
+    if (sha256(readFileSync19(media)) !== base.mediaSha256) throw new Error("Final media changed during decoding");
+    if (existsSync21(proofPath)) {
+      const old = JSON.parse(readFileSync19(proofPath, "utf8"));
       const same = Object.entries(base).every(([k, v]) => ["mediaSha256", "expectedText"].includes(k) || old[k] === v);
       if (old.audioSha256 === base.audioSha256 && old.textSha256 === base.textSha256 && old.status === "fail") return save2("fail", { reused: true, signal: old.signal, transcript: old.transcript, failures: old.failures, review: old.review, error: "This exact final audio already failed; fix the audio before another listening review" });
       if (same && old.status === "pass") {
@@ -93781,13 +94068,13 @@ async function reviewFinalSpeech(input) {
       expectedText: request.expectedText.slice(0, 4e3),
       language: request.language,
       delivery: request.delivery,
-      outputPath: path18.dirname(media),
+      outputPath: path19.dirname(media),
       filename: "final.wav"
     }), expectedText: request.expectedText };
     const result = await listen(wav, reviewRequest, true);
     failures.push(...reviewFailures(request.expectedText, result.transcript, result.review, signal.duration));
     if ((result.review.continuity ?? 0) < 95 || !result.review.continuityEvidence) failures.push("Episode continuity below 95 or missing listening evidence");
-    if (sha256(readFileSync18(media)) !== base.mediaSha256) throw new Error("Final media changed during listening");
+    if (sha256(readFileSync19(media)) !== base.mediaSha256) throw new Error("Final media changed during listening");
     return save2(failures.length ? "fail" : "pass", { signal, ...result, failures });
   } catch (error2) {
     return save2("unverified", { error: error2 instanceof Error ? error2.message : String(error2) });
@@ -95346,9 +95633,9 @@ function isShortEnough(seconds, duration3) {
   if (seconds == null) return true;
   return seconds <= 180;
 }
-async function youtubeGet(path21, params, auth) {
+async function youtubeGet(path22, params, auth) {
   const query = auth.kind === "key" ? { ...params, key: auth.key } : params;
-  const url = `${YT_DATA_BASE2}/${path21}${buildQuery(query)}`;
+  const url = `${YT_DATA_BASE2}/${path22}${buildQuery(query)}`;
   try {
     const res = await fetch(url, {
       method: "GET",
@@ -95360,7 +95647,7 @@ async function youtubeGet(path21, params, auth) {
     return { ok: false, status: res.status, body: maskKey4(text2) };
   } catch (error2) {
     const message = error2 instanceof Error ? error2.message : String(error2);
-    return fail3(502, `YouTube Data API call failed (${path21}): ${maskKey4(message)}`);
+    return fail3(502, `YouTube Data API call failed (${path22}): ${maskKey4(message)}`);
   }
 }
 function chunk(items, size) {
@@ -96158,14 +96445,14 @@ ${errors.join("\n")}`);
 }
 
 // src/capability-status.ts
-import { existsSync as existsSync22 } from "node:fs";
-import path19 from "node:path";
+import { existsSync as existsSync23 } from "node:fs";
+import path20 from "node:path";
 import os from "node:os";
 var has2 = (v) => Boolean(v && v.length > 0);
 var binOk = (p) => {
   try {
-    if (p.includes(path19.sep)) return existsSync22(p);
-    return (process.env.PATH || "").split(path19.delimiter).some((dir) => dir && existsSync22(path19.join(dir, p)));
+    if (p.includes(path20.sep)) return existsSync23(p);
+    return (process.env.PATH || "").split(path20.delimiter).some((dir) => dir && existsSync23(path20.join(dir, p)));
   } catch {
     return false;
   }
@@ -96407,14 +96694,14 @@ function renderCapabilityStatus() {
 // src/portal-backups.ts
 import { createHash as createHash9 } from "node:crypto";
 import { lstatSync as lstatSync4, readdirSync as readdirSync4, rmSync as rmSync12 } from "node:fs";
-import path20 from "node:path";
+import path21 from "node:path";
 var backupSchema = external_exports.object({
   episodeDir: external_exports.string().min(1),
   keep: external_exports.number().int().min(1).max(1e3).default(10),
   apply: external_exports.boolean().default(false),
   confirm: external_exports.string().regex(/^[a-f0-9]{64}$/).optional()
 }).refine((a) => !a.apply || a.confirm, { message: "Preview first, then pass its plan token as confirm to apply." });
-var uuid3 = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
+var uuid5 = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
 var dated = /^(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z)-(r\d+|scenarios)$/;
 function kindOf(name, root) {
   const stamp = dated.exec(name);
@@ -96423,8 +96710,8 @@ function kindOf(name, root) {
     const time3 = Date.parse(iso);
     if (Number.isFinite(time3) && new Date(time3).toISOString() === iso) return { kind: stamp[2] === "scenarios" ? "scenarios" : "board", time: time3 };
   }
-  if (root === "storyboard/.portal-local" && new RegExp(`^images-${uuid3}$`).test(name)) return { kind: "images" };
-  if (root === ".portal-local" && new RegExp(`^attachments-${uuid3}$`).test(name)) return { kind: "attachments" };
+  if (root === "storyboard/.portal-local" && new RegExp(`^images-${uuid5}$`).test(name)) return { kind: "images" };
+  if (root === ".portal-local" && new RegExp(`^attachments-${uuid5}$`).test(name)) return { kind: "attachments" };
   return null;
 }
 function statIfPresent(file) {
@@ -96437,17 +96724,17 @@ function statIfPresent(file) {
 }
 function manageBackups(input) {
   const args = backupSchema.parse(input);
-  const dir = path20.dirname(safeAttachmentTarget(episodeDirOf(args.episodeDir), "backup-root-check"));
+  const dir = path21.dirname(safeAttachmentTarget(episodeDirOf(args.episodeDir), "backup-root-check"));
   const entries = [], ignored2 = [], fingerprint = [];
   let visited = 0;
   function scan(relative) {
     if (++visited > 1e5) throw new Error("Backup inventory exceeds 100000 entries; no backups were pruned.");
-    const stat4 = lstatSync4(path20.join(dir, relative));
+    const stat4 = lstatSync4(path21.join(dir, relative));
     if (stat4.isSymbolicLink() || !stat4.isDirectory() && !stat4.isFile()) throw new Error(`Unsafe backup entry: ${relative}`);
     fingerprint.push([relative, stat4.dev, stat4.ino, stat4.size, stat4.mtimeMs, stat4.ctimeMs]);
     if (stat4.isFile()) return { files: 1, bytes: stat4.size };
     let files = 0, bytes = 0;
-    for (const name of readdirSync4(path20.join(dir, relative)).sort()) {
+    for (const name of readdirSync4(path21.join(dir, relative)).sort()) {
       const child = scan(`${relative}/${name}`);
       files += child.files;
       bytes += child.bytes;
@@ -96456,17 +96743,17 @@ function manageBackups(input) {
   }
   for (const root of ["storyboard/.portal-local", ".portal-local"]) {
     if (root.startsWith("storyboard/")) safeAttachmentTarget(dir, "storyboard/backup-root-check");
-    const rootStat = statIfPresent(path20.join(dir, root));
+    const rootStat = statIfPresent(path21.join(dir, root));
     if (!rootStat) continue;
     if (rootStat.isSymbolicLink() || !rootStat.isDirectory()) throw new Error(`Unsafe backup root: ${root}`);
     fingerprint.push([root, rootStat.dev, rootStat.ino]);
-    for (const name of readdirSync4(path20.join(dir, root)).sort()) {
+    for (const name of readdirSync4(path21.join(dir, root)).sort()) {
       const relative = `${root}/${name}`, type = kindOf(name, root);
       if (!type) {
         ignored2.push(relative);
         continue;
       }
-      const stat4 = lstatSync4(path20.join(dir, relative));
+      const stat4 = lstatSync4(path21.join(dir, relative));
       if (!stat4.isDirectory() || stat4.isSymbolicLink()) throw new Error(`Unsafe backup directory: ${relative}`);
       const sizes = scan(relative);
       entries.push({ path: relative, kind: type.kind, timestamp: new Date(type.time ?? stat4.mtimeMs).toISOString(), ...sizes });
@@ -96486,7 +96773,7 @@ function manageBackups(input) {
   if (args.apply) {
     try {
       for (const entry of remove) {
-        rmSync12(path20.join(dir, entry.path), { recursive: true });
+        rmSync12(path21.join(dir, entry.path), { recursive: true });
         deleted.push(entry.path);
       }
     } catch (cause) {
@@ -96740,7 +97027,7 @@ var instagramPublishSchema = external_exports.object({
   videoUrl: external_exports.string().url().optional(),
   channel: channelSlugSchema
 }).superRefine((v, ctx) => {
-  const issue2 = (path21, message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: [path21], message });
+  const issue2 = (path22, message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: [path22], message });
   if (!v.imageUrls && !v.videoUrl) issue2("imageUrls", "INSTAGRAM requires imageUrls (1-10) or videoUrl (reel)");
   if (v.imageUrls && v.videoUrl) issue2("videoUrl", "imageUrls and videoUrl are mutually exclusive");
   if (v.videoUrl && !isVideoUrl(v.videoUrl)) issue2("videoUrl", "videoUrl must be a .mp4/.mov URL");
@@ -96760,7 +97047,7 @@ var facebookPublishSchema = external_exports.object({
   linkUrl: external_exports.string().url().optional(),
   channel: channelSlugSchema
 }).superRefine((v, ctx) => {
-  const issue2 = (path21, message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: [path21], message });
+  const issue2 = (path22, message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: [path22], message });
   if (v.imageUrls && v.videoUrl) issue2("videoUrl", "imageUrls and videoUrl are mutually exclusive");
   if (v.videoUrl && !isVideoUrl(v.videoUrl)) issue2("videoUrl", "videoUrl must be a .mp4/.mov URL");
   if (v.linkUrl && (v.imageUrls || v.videoUrl)) issue2("linkUrl", "linkUrl is for text-only posts (no media)");
@@ -97949,6 +98236,13 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
   portal_attachments_sync: async (args) => fromPortal(await portalRoutes.attachmentsSync(parseArgs(attachmentsSyncSchema, args))),
   portal_assets_search: async (args) => fromPortal(await portalRoutes.assetsSearch(parseArgs(assetsSearchSchema, args))),
   portal_assets_get: async (args) => fromPortal(await portalRoutes.assetsGet(parseArgs(assetsGetSchema, args))),
+  portal_character_list: async (args) => fromPortal(await portalRoutes.characterList(parseArgs(characterListSchema, args))),
+  portal_character_get: async (args) => fromPortal(await portalRoutes.characterGet(parseArgs(characterGetSchema, args))),
+  portal_character_create: async (args) => fromPortal(await portalRoutes.characterCreate(parseArgs(characterCreateSchema, args))),
+  portal_character_update: async (args) => fromPortal(await portalRoutes.characterUpdate(parseArgs(characterUpdateSchema, args))),
+  portal_character_delete: async (args) => fromPortal(await portalRoutes.characterDelete(parseArgs(characterDeleteSchema, args))),
+  portal_character_image_upload: async (args) => fromPortal(await portalRoutes.characterImageUpload(parseArgs(characterImageUploadSchema, args))),
+  portal_character_tts_set: async (args) => fromPortal(await portalRoutes.characterTtsSet(parseArgs(characterTtsSetSchema, args))),
   portal_images_upload: async (args) => fromPortal(await portalRoutes.imagesUpload(parseArgs(imageUploadSchema, args))),
   portal_render_allocation: async (args) => fromPortal(await portalRoutes.renderAllocation(parseArgs(renderAllocationSchema, args))),
   portal_scenario_choose: async (args) => fromPortal(await portalRoutes.scenarioChoose(parseArgs(scenarioChooseSchema, args)))
@@ -97957,7 +98251,7 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
 // src/index.ts
 import { readFileSync as readFinalRequest } from "node:fs";
 var server = new Server(
-  { name: "social-flow", version: "0.93.0" },
+  { name: "social-flow", version: "0.94.0" },
   { capabilities: { tools: {} } }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {

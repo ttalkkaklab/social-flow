@@ -1768,12 +1768,15 @@ describe('portal tool surface', () => {
     assert.deepEqual(stray, []);
   });
 
-  it('the two tools that overwrite local files are marked destructive and say HITL; the rest are not', () => {
+  it('the two tools that overwrite local files are marked destructive and say HITL, delete asks first; the rest are not', () => {
     for (const name of ['portal_storyboard_pull', 'portal_scenario_pull']) {
       const tool = TOOLS.find((t) => t.name === name);
       assert.equal(tool.annotations.destructiveHint, true, name);
       assert.match(tool.description, /HITL/);
     }
+    const deletes = TOOLS.find((t) => t.name === 'portal_character_delete');
+    assert.equal(deletes.annotations.destructiveHint, true); // the one portal tool that deletes a record (#91)
+    assert.match(deletes.description, /Ask the user/);
     for (const name of portal.PORTAL_TOOL_NAMES.filter((n) => !n.endsWith('_pull') && !n.endsWith('_delete'))) {
       const tool = TOOLS.find((t) => t.name === name);
       assert.notEqual(tool.annotations.destructiveHint, true, `${name} must not read as destructive — it writes the portal, never deletes`);
