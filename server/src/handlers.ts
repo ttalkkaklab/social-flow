@@ -1464,6 +1464,8 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   portal_storyboard_list: async (args) => fromPortal(await portalRoutes.storyboardList(parseArgs(portal.storyboardListSchema, args))),
   portal_storyboard_pull: async (args) => fromPortal(await portalRoutes.storyboardPull(parseArgs(portal.storyboardPullSchema, args))),
   portal_episode_status: async (args) => fromPortal(await portalRoutes.episodeStatus(parseArgs(portal.episodeStatusSchema, args))),
+  portal_episode_artifacts_sync: async (args) => fromPortal(await portalRoutes.episodeArtifactsSync(parseArgs(portal.artifactSyncSchema, args))),
+  portal_publication_record: async (args) => fromPortal(await portalRoutes.publicationRecord(parseArgs(portal.publicationRecordSchema, args))),
   portal_episode_create: async (args) => fromPortal(await portalRoutes.episodeCreate(parseArgs(portal.episodeCreateSchema, args))),
   portal_episode_checkpoint: async (args) => fromPortal(await portalRoutes.episodeCheckpoint(parseArgs(portal.episodeCheckpointSchema, args))),
   portal_episode_revisions: async (args) => fromPortal(await portalRoutes.episodeRevisions(parseArgs(portal.episodeRevisionsSchema, args))),
