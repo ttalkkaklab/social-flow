@@ -1037,8 +1037,8 @@ so produce doesn't have to guess.
 - **Any screen that has to contain text → `gpt_image_text2img`** whatever the scene — the
   local engine breaks Korean jamo (measured: "딸깍연구소" → "달닥연구소").
 - **A scene with `visual.character` → a reference call** (`gpt_image_img2img`), that
-  character's panels as input images, face first then body, `back.png` only on a back-facing
-  shot. Never merge the panels into one sheet (`../produce/references/video-model-selection.md` §The character panels).
+  character's needed views as separate input images: face + body for a front shot, face alone
+  for a close-up, back for a rear shot (face only if visible). All new sets store all three views. Never merge the panels into one sheet (`../produce/references/video-model-selection.md` §The character panels).
 
 **The cover background is this episode's meta image** — the cover frame becomes `cover.jpg`
 (the YouTube thumbnail and the first frame of the IG and FB videos) as-is. Not a metaphorical

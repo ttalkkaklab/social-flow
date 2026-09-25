@@ -352,8 +352,8 @@ means generating something nobody approved.
   # → …/assets/characters/claude — reference set: $CH/face.png then $CH/body.png
   ```
   Keep source-image order as previz, style pack, episode cast. **Inside channel panels, order is
-  weight**: face first, body second, and
-  `back.png` third only when the shot is back-facing. No panels yet means falling back to that character's `front.png`; a live-action
+  weight**: front/three-quarter shots use face then body, close-ups use face alone,
+  rear shots use back (add face only when visible). Store all three views for new characters. No panels yet means falling back to that character's `front.png`; a live-action
   character keeps its single image (`real.png`). Drawn character → `seedance_reference`,
   photoreal person → `veo_reference` (**3 images max**, validated in code). The full rule is
   [video-model-selection.md](references/video-model-selection.md) §The character panels.
