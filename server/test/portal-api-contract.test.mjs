@@ -84,6 +84,29 @@ describe('generated portal API contract', () => {
     assert.equal(result.data.title, '새 제목');
   });
 
+  it('allows bodyless lease release and revision restore exactly as the API contract does', async () => {
+    const episodeId = '11111111-1111-4111-8111-111111111111';
+    const seen = [];
+    const { impl } = fakeFetch((url, init) => {
+      seen.push({ path: url.pathname, method: init.method, body: init.body });
+      return Response.json({ success: true, data: { ok: true } });
+    });
+    payload(await contract.runPortalApiTool(
+      'portal_api_episodes_episode_lease_delete',
+      { episodeId },
+      impl,
+    ));
+    payload(await contract.runPortalApiTool(
+      'portal_api_episodes_episode_revisions_revision_restore_post',
+      { episodeId, revisionNo: 3 },
+      impl,
+    ));
+    assert.deepEqual(seen, [
+      { path: `/api/workspaces/lab/episodes/${episodeId}/lease`, method: 'DELETE', body: undefined },
+      { path: `/api/workspaces/lab/episodes/${episodeId}/revisions/3/restore`, method: 'POST', body: undefined },
+    ]);
+  });
+
   it('uploads raw bytes with the contract headers', async () => {
     const file = path.join(scratch, 'asset.bin');
     writeFileSync(file, Buffer.from([1, 2, 3, 4]));
@@ -92,7 +115,7 @@ describe('generated portal API contract', () => {
       assert.equal(url.pathname, `/api/assets/${assetId}/binary`);
       assert.equal(init.method, 'PUT');
       assert.equal(init.headers['content-type'], 'application/octet-stream');
-      assert.equal(init.headers['x-sha-256'], 'a'.repeat(64));
+      assert.equal(init.headers['x-asset-sha256'], 'a'.repeat(64));
       assert.deepEqual(Buffer.from(init.body), Buffer.from([1, 2, 3, 4]));
       return Response.json({ success: true, data: { stored: true } });
     });
@@ -125,6 +148,27 @@ describe('generated portal API contract', () => {
     );
     assert.equal(second.isError, true);
     assert.match(second.content[0].text, /EEXIST/);
+  });
+
+  it('cancels the binary response body when the destination already exists', async () => {
+    const targetFile = path.join(scratch, 'occupied.bin');
+    writeFileSync(targetFile, 'keep');
+    let cancelled = false;
+    const body = new ReadableStream({
+      pull() {},
+      cancel() { cancelled = true; },
+    });
+    const assetId = '55555555-5555-4555-8555-555555555555';
+    const { impl } = fakeFetch(() => new Response(body, { status: 200 }));
+    const result = await contract.runPortalApiTool(
+      'portal_api_assets_asset_binary_get',
+      { assetId, targetFile },
+      impl,
+    );
+    assert.equal(result.isError, true);
+    assert.match(result.content[0].text, /EEXIST/);
+    assert.equal(cancelled, true);
+    assert.equal(readFileSync(targetFile, 'utf8'), 'keep');
   });
 
   it('returns a conditional binary 304 without creating the destination', async () => {

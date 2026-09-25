@@ -364,9 +364,19 @@ export function createPortalClient(credential: PortalCredential & { workspace: s
       throw new Error('A binary GET requires targetFile as an absolute local path.');
     }
 
+    let fd: number;
+    try {
+      fd = openSync(request.targetFile, 'wx');
+    } catch (error) {
+      await response.body?.cancel().catch(() => {});
+      throw error;
+    }
     const reader = response.body?.getReader();
-    if (!reader) throw new Error('Portal binary response has no body.');
-    const fd = openSync(request.targetFile, 'wx');
+    if (!reader) {
+      closeSync(fd);
+      unlinkSync(request.targetFile);
+      throw new Error('Portal binary response has no body.');
+    }
     let bytes = 0;
     let failed = false;
     try {

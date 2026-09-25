@@ -76029,9 +76029,20 @@ function createPortalClient(credential, fetchImpl = fetch, resolvedBy = "file") 
     if (!request.targetFile || !path.isAbsolute(request.targetFile)) {
       throw new Error("A binary GET requires targetFile as an absolute local path.");
     }
+    let fd;
+    try {
+      fd = openSync(request.targetFile, "wx");
+    } catch (error2) {
+      await response.body?.cancel().catch(() => {
+      });
+      throw error2;
+    }
     const reader = response.body?.getReader();
-    if (!reader) throw new Error("Portal binary response has no body.");
-    const fd = openSync(request.targetFile, "wx");
+    if (!reader) {
+      closeSync(fd);
+      unlinkSync(request.targetFile);
+      throw new Error("Portal binary response has no body.");
+    }
     let bytes = 0;
     let failed2 = false;
     try {
@@ -78913,8 +78924,7 @@ var portal_api_contract_default = {
           }
         },
         required: [
-          "episodeId",
-          "body"
+          "episodeId"
         ],
         additionalProperties: false
       }
@@ -79590,8 +79600,7 @@ var portal_api_contract_default = {
         },
         required: [
           "episodeId",
-          "revisionNo",
-          "body"
+          "revisionNo"
         ],
         additionalProperties: false
       }
@@ -82834,7 +82843,7 @@ async function runPortalApiTool(name, input, fetchImpl) {
     if (typeof args.range === "string") headers.range = args.range;
     if (typeof args.ifRange === "string") headers["if-range"] = args.ifRange;
     if (typeof args.ifNoneMatch === "string") headers["if-none-match"] = args.ifNoneMatch;
-    if (typeof args.sha256 === "string") headers["x-sha-256"] = args.sha256;
+    if (typeof args.sha256 === "string") headers["x-asset-sha256"] = args.sha256;
     if (args.provenance !== void 0) headers["x-attachment-provenance"] = encodeURIComponent(JSON.stringify(args.provenance));
     const file = typeof args.file === "string" ? args.file : void 0;
     if (file) {

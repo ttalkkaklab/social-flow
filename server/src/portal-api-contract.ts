@@ -141,7 +141,7 @@ export async function runPortalApiTool(name: string, input: unknown, fetchImpl?:
     if (typeof args.range === 'string') headers.range = args.range;
     if (typeof args.ifRange === 'string') headers['if-range'] = args.ifRange;
     if (typeof args.ifNoneMatch === 'string') headers['if-none-match'] = args.ifNoneMatch;
-    if (typeof args.sha256 === 'string') headers['x-sha-256'] = args.sha256;
+    if (typeof args.sha256 === 'string') headers['x-asset-sha256'] = args.sha256;
     if (args.provenance !== undefined) headers['x-attachment-provenance'] = encodeURIComponent(JSON.stringify(args.provenance));
     const file = typeof args.file === 'string' ? args.file : undefined;
     if (file) {

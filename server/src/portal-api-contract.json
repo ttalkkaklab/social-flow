@@ -2519,8 +2519,7 @@
           }
         },
         "required": [
-          "episodeId",
-          "body"
+          "episodeId"
         ],
         "additionalProperties": false
       }
@@ -3196,8 +3195,7 @@
         },
         "required": [
           "episodeId",
-          "revisionNo",
-          "body"
+          "revisionNo"
         ],
         "additionalProperties": false
       }
