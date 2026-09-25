@@ -51,7 +51,7 @@ window.STORY = {
   },
   "ctaReason": "부의 기준을 시청자가 댓글에서 직접 고르게 한다.",
   "review": {
-    "hash": "bd47d8a87133bb5a32226ff36baf2a9664b811e578d2bcf84c36afec09f3665a",
+    "hash": "aa3dc2ea8408248d69fb3ebf9fdae5623dd3a2c95247eeb1e3c5381ffd697912",
     "verdict": "pass",
     "unresolved": [],
     "narration": {
@@ -189,10 +189,11 @@ window.PRODUCTION = {
   "mode": "full_video",
   "imageProvider": "host",
   "videoProvider": "api",
-  "maxAttempts": 3,
-  "videoBudgetUsd": 0,
+  "maxAttempts": 2,
+  "videoBudgetUsd": 7,
   "comparison": {
-    "model": "seedance-1-5-pro-251215"
+    "model": "seedance-1-5-pro-251215",
+    "resolution": "1080p"
   },
   "previz": {
     "renderer": "blender",
@@ -203,10 +204,17 @@ window.PRODUCTION = {
   },
   "videoModel": {
     "model": "seedance-1-5-pro-251215",
+    "resolution": "1080p",
     "selection": {
       "kind": "user",
-      "reference": "Buzz assignment #81: Seedance 1.5 Pro; resolution will be chosen separately before generation."
+      "reference": "Buzz assignment #106 from leader, relaying owner directive: Seedance 1.5 Pro at 1080p, with a $7 episode cap (2026-09-26)."
     }
+  },
+  "approval": {
+    "kind": "user",
+    "reference": "Buzz assignment #106: full video with Seedance 1.5 Pro at 1080p, capped at $7 (event 8558086577a2c71e81d06ab39af8a1d05571348f6b53102d97f89b9c58e00c24).",
+    "at": "2026-09-26T07:13:02+09:00",
+    "quoteFingerprint": "eb72b3b2e2c72b94d5ff1b28db9e910c9d41e881a4f47b0de8983f30713e5200"
   },
   "style": {
     "preset": "cinematic-miniature",
@@ -349,7 +357,8 @@ window.SCENES = [
         "modelReason": "Seedance 1.5 Pro was selected for the later image-to-video pass; this stage prepares only the frame and prompt.",
         "realFaceInput": false,
         "generateAudio": false,
-        "resolutionPending": true,
+        "resolution": "1080p",
+        "clip": ".work/video/s01-attempt-1.mp4",
         "previz": {
           "renderer": "blender",
           "clip": "previz/s1.mp4",
@@ -473,7 +482,8 @@ window.SCENES = [
         "modelReason": "Seedance 1.5 Pro was selected for the later image-to-video pass; this stage prepares only the frame and prompt.",
         "realFaceInput": false,
         "generateAudio": false,
-        "resolutionPending": true,
+        "resolution": "1080p",
+        "clip": ".work/video/s02-attempt-1.mp4",
         "previz": {
           "renderer": "blender",
           "clip": "previz/s2.mp4",
@@ -610,7 +620,8 @@ window.SCENES = [
         "modelReason": "Seedance 1.5 Pro was selected for the later image-to-video pass; this stage prepares only the frame and prompt.",
         "realFaceInput": false,
         "generateAudio": false,
-        "resolutionPending": true,
+        "resolution": "1080p",
+        "clip": ".work/video/s03-attempt-1.mp4",
         "previz": {
           "renderer": "blender",
           "clip": "previz/s3.mp4",
@@ -748,7 +759,8 @@ window.SCENES = [
         "modelReason": "Seedance 1.5 Pro was selected for the later image-to-video pass; this stage prepares only the frame and prompt.",
         "realFaceInput": false,
         "generateAudio": false,
-        "resolutionPending": true,
+        "resolution": "1080p",
+        "clip": ".work/video/s04-attempt-1.mp4",
         "previz": {
           "renderer": "blender",
           "clip": "previz/s4.mp4",
@@ -873,7 +885,8 @@ window.SCENES = [
         "modelReason": "Seedance 1.5 Pro was selected for the later image-to-video pass; this stage prepares only the frame and prompt.",
         "realFaceInput": false,
         "generateAudio": false,
-        "resolutionPending": true,
+        "resolution": "1080p",
+        "clip": ".work/video/s05-attempt-1.mp4",
         "previz": {
           "renderer": "blender",
           "clip": "previz/s5.mp4",
@@ -975,7 +988,7 @@ window.SCENES = [
     },
     "edit": {
       "pre": 1.11,
-      "post": 2,
+      "post": 1.6,
       "reason": "빈자리에서 마을 밖으로 이어지는 같은 길을 따라간다.",
       "continuity": "4컷의 길 방향과 흙빛을 정확히 맞춘다."
     }
@@ -1011,7 +1024,8 @@ window.SCENES = [
         "modelReason": "Seedance 1.5 Pro was selected for the later image-to-video pass; this stage prepares only the frame and prompt.",
         "realFaceInput": false,
         "generateAudio": false,
-        "resolutionPending": true,
+        "resolution": "1080p",
+        "clip": ".work/video/s06-attempt-1.mp4",
         "previz": {
           "renderer": "blender",
           "clip": "previz/s6.mp4",
@@ -1145,7 +1159,8 @@ window.SCENES = [
         "modelReason": "Seedance 1.5 Pro was selected for the later image-to-video pass; this stage prepares only the frame and prompt.",
         "realFaceInput": false,
         "generateAudio": false,
-        "resolutionPending": true,
+        "resolution": "1080p",
+        "clip": ".work/video/s07-attempt-1.mp4",
         "previz": {
           "renderer": "blender",
           "clip": "previz/s7.mp4",
@@ -1277,7 +1292,8 @@ window.SCENES = [
         "modelReason": "Seedance 1.5 Pro was selected for the later image-to-video pass; this stage prepares only the frame and prompt.",
         "realFaceInput": false,
         "generateAudio": false,
-        "resolutionPending": true,
+        "resolution": "1080p",
+        "clip": ".work/video/s08-attempt-1.mp4",
         "previz": {
           "renderer": "blender",
           "clip": "previz/s8.mp4",
@@ -1411,7 +1427,8 @@ window.SCENES = [
         "modelReason": "Seedance 1.5 Pro was selected for the later image-to-video pass; this stage prepares only the frame and prompt.",
         "realFaceInput": false,
         "generateAudio": false,
-        "resolutionPending": true,
+        "resolution": "1080p",
+        "clip": ".work/video/s09-attempt-1.mp4",
         "previz": {
           "renderer": "blender",
           "clip": "previz/s9.mp4",
@@ -1566,3 +1583,30 @@ window.SCENES.find(shot => shot.id === "s0018").portalImageId = "a2d839ec-63a4-4
 
 // Portal shot media UUID (no local path).
 window.SCENES.find(shot => shot.id === "s0018").portalMedia = { ...window.SCENES.find(shot => shot.id === "s0018").portalMedia, "previz": "9735c6ac-2b1b-42b2-a9c6-bfc7dfacefcd" };
+
+// Portal shot media UUID (no local path).
+window.SCENES.find(shot => shot.id === "s0010").portalMedia = { ...window.SCENES.find(shot => shot.id === "s0010").portalMedia, "video": "cf9f4f7d-a31c-4ae9-b113-e3292d0a9b35" };
+
+// Portal shot media UUID (no local path).
+window.SCENES.find(shot => shot.id === "s0011").portalMedia = { ...window.SCENES.find(shot => shot.id === "s0011").portalMedia, "video": "88a80394-6097-44c1-938a-ea934323ddc2" };
+
+// Portal shot media UUID (no local path).
+window.SCENES.find(shot => shot.id === "s0013").portalMedia = { ...window.SCENES.find(shot => shot.id === "s0013").portalMedia, "video": "b9ff9794-06d0-487e-922d-172daebcfe06" };
+
+// Portal shot media UUID (no local path).
+window.SCENES.find(shot => shot.id === "s0016").portalMedia = { ...window.SCENES.find(shot => shot.id === "s0016").portalMedia, "video": "08221697-9d61-48e8-ba90-dbd1ce54bd0a" };
+
+// Portal shot media UUID (no local path).
+window.SCENES.find(shot => shot.id === "s0018").portalMedia = { ...window.SCENES.find(shot => shot.id === "s0018").portalMedia, "video": "4c55cd80-1bb5-48e0-b0f6-f58f34608d5e" };
+
+// Portal shot media UUID (no local path).
+window.SCENES.find(shot => shot.id === "s0012").portalMedia = { ...window.SCENES.find(shot => shot.id === "s0012").portalMedia, "video": "3de3a098-5c25-4b17-964a-2147ed97eaf8" };
+
+// Portal shot media UUID (no local path).
+window.SCENES.find(shot => shot.id === "s0014").portalMedia = { ...window.SCENES.find(shot => shot.id === "s0014").portalMedia, "video": "ce42a1b7-b67e-465f-8270-1f91a7bc09c3" };
+
+// Portal shot media UUID (no local path).
+window.SCENES.find(shot => shot.id === "s0015").portalMedia = { ...window.SCENES.find(shot => shot.id === "s0015").portalMedia, "video": "4376e282-5f5e-497d-aa4f-22c67018db8a" };
+
+// Portal shot media UUID (no local path).
+window.SCENES.find(shot => shot.id === "s0017").portalMedia = { ...window.SCENES.find(shot => shot.id === "s0017").portalMedia, "video": "5a5a4e6c-ca13-4ad1-ac8e-4eb51462542f" };
