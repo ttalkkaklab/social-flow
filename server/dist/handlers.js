@@ -1333,6 +1333,7 @@ export const ROUTES = {
     portal_character_create: async (args) => fromPortal(await portalRoutes.characterCreate(parseArgs(portal.characterCreateSchema, args))),
     portal_character_update: async (args) => fromPortal(await portalRoutes.characterUpdate(parseArgs(portal.characterUpdateSchema, args))),
     portal_character_delete: async (args) => fromPortal(await portalRoutes.characterDelete(parseArgs(portal.characterDeleteSchema, args))),
+    portal_character_extra_delete: async (args) => fromPortal(await portalRoutes.characterExtraDelete(parseArgs(portal.characterExtraDeleteSchema, args))),
     portal_character_image_upload: async (args) => fromPortal(await portalRoutes.characterImageUpload(parseArgs(portal.characterImageUploadSchema, args))),
     portal_character_tts_set: async (args) => fromPortal(await portalRoutes.characterTtsSet(parseArgs(portal.characterTtsSetSchema, args))),
     portal_images_upload: async (args) => fromPortal(await portalRoutes.imagesUpload(parseArgs(portal.imageUploadSchema, args))),

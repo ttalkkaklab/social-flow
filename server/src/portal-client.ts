@@ -89,8 +89,9 @@ export interface PortalClient {
   createCharacter(body: Record<string, unknown>): Promise<PortalResponse<PortalCharacter>>;
   updateCharacter(id: string, patch: Record<string, unknown>): Promise<PortalResponse<PortalCharacter>>;
   deleteCharacter(id: string): Promise<PortalResponse<{ id: string }>>;
-  /** PUT — one image per character; 201 replaced, 200 same bytes. */
-  uploadCharacterImage(id: string, bytes: Uint8Array, mime: string): Promise<PortalResponse<{ id: string; sha256: string; mime: string; byteSize: number; created: boolean; url: string }>>;
+  /** Required slots replace; extra appends. Omitted view uses the legacy front alias. */
+  uploadCharacterImage(id: string, bytes: Uint8Array, mime: string, view?: "front" | "back" | "face" | "extra", label?: string, sort?: number): Promise<PortalResponse<{ id: string; sha256: string; mime: string; byteSize: number; created: boolean; url: string }>>;
+  deleteCharacterExtraImage(id: string, imageId: string): Promise<PortalResponse<{ characterId: string }>>;
   /** Global asset library (portal `/api/assets`, #87) — outside the workspace; any live key reads the same library. */
   assetsSearch(query: Record<string, string | number | undefined>): Promise<PortalResponse<PortalAssetPage>>;
   assetsGet(id: string): Promise<PortalResponse<PortalAsset>>;
@@ -98,7 +99,12 @@ export interface PortalClient {
   assetsDownload(id: string, sink: (chunk: Uint8Array) => void, maxBytes: number): Promise<number>;
 }
 
+export interface PortalCharacterImages {
+  front: string | null; back: string | null; face: string | null;
+  extra: Array<{ id: string; url: string; label: string | null; sort: number }>;
+}
 export interface PortalCharacter {
+  images?: PortalCharacterImages; imagesComplete?: boolean;
   id: string; projectId: string; key: string | null; name: string; role: string | null; appearance: string | null;
   referenceImageUrl: string | null; tts: { engine: 'gemini' | 'supertonic' | 'elevenlabs' | 'mlx'; voiceId: string; model?: string; speed?: number; language?: string; stylePrompt?: string } | null;
   updatedAt: string;
@@ -320,7 +326,14 @@ export function createPortalClient(credential: PortalCredential & { workspace: s
     createCharacter: (body) => json<PortalCharacter>('POST', '/characters', body),
     updateCharacter: (id, patch) => json<PortalCharacter>('PATCH', `/characters/${id}`, patch),
     deleteCharacter: (id) => json('DELETE', `/characters/${id}`),
-    uploadCharacterImage: (id, bytes, mime) => json('PUT', `/characters/${id}/image`, bytes, mime),
+    uploadCharacterImage: (id, bytes, mime, view, label, sort) => {
+      const query = new URLSearchParams();
+      if (label !== undefined) query.set('label', label);
+      if (sort !== undefined) query.set('sort', String(sort));
+      const suffix = query.size ? `?${query}` : '';
+      return json(view === 'extra' ? 'POST' : 'PUT', `/characters/${id}/${view ? `images/${view}` : 'image'}${suffix}`, bytes, mime);
+    },
+    deleteCharacterExtraImage: (id, imageId) => json('DELETE', `/characters/${id}/images/extra/${imageId}`),
     listAttachments: (episodeId) => json('GET', `/episodes/${episodeId}/attachments`),
     uploadAttachment: (episodeId, relativePath, bytes, mime, provenance) => json('POST', `${withHolder(`/episodes/${episodeId}/attachments`)}&path=${encodeURIComponent(relativePath)}`, bytes, mime, provenance ? { 'x-attachment-provenance': encodeURIComponent(JSON.stringify(provenance)) } : {}),
     downloadAttachment: async (episodeId, id) => {

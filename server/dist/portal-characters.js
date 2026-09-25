@@ -45,7 +45,8 @@ export const characterCreateSchema = z.object({
 export const characterUpdateSchema = z.object({ ...scope, id: uuid, key: keyArg.nullable().optional(), name: fields.name.optional(), role: fields.role.nullable(), appearance: fields.appearance.nullable(), referenceImageUrl: fields.referenceImageUrl.nullable(), tts: ttsSchema.nullable().optional() })
     .refine(a => ['key', 'name', 'role', 'appearance', 'referenceImageUrl', 'tts'].some(k => a[k] !== undefined), 'Nothing to change');
 export const characterDeleteSchema = z.object({ ...scope, id: uuid });
-export const characterImageUploadSchema = z.object({ ...scope, id: uuid, file: z.string().min(1) });
+export const characterImageUploadSchema = z.object({ ...scope, id: uuid, file: z.string().min(1), view: z.enum(['front', 'back', 'face', 'extra']).optional(), label: z.string().max(100).optional(), sort: z.number().int().min(0).max(2147483647).optional() });
+export const characterExtraDeleteSchema = z.object({ ...scope, id: uuid, imageId: uuid });
 export const characterTtsSetSchema = z.object({ ...scope, id: uuid, engine: ttsSchema.shape.engine.optional(), voiceId: ttsSchema.shape.voiceId.optional(), model: ttsSchema.shape.model, speed: ttsSchema.shape.speed, language: ttsSchema.shape.language, stylePrompt: ttsSchema.shape.stylePrompt });
 /** The identity.md fields the import already reads — heading, **역할**, **생김새**. The folder name is the key. */
 export function readIdentity(dir) {
@@ -64,7 +65,8 @@ export function readIdentity(dir) {
 }
 const summarize = (c) => ({
     id: c.id, key: c.key, name: c.name, role: c.role, appearance: c.appearance,
-    referenceImageUrl: c.referenceImageUrl, tts: c.tts, updatedAt: c.updatedAt,
+    images: c.images ?? { front: c.referenceImageUrl, back: null, face: null, extra: [] }, imagesComplete: c.imagesComplete ?? false,
+    referenceImageUrl: c.images ? c.images.front : c.referenceImageUrl, tts: c.tts, updatedAt: c.updatedAt,
 });
 export async function listCharacters(client, args) {
     const { data } = await client.listCharacters({ q: args.q, key: args.key, page: args.page });
@@ -98,8 +100,10 @@ export async function createCharacter(client, args, channel) {
     const image = args.file ? readImage(args.file) : undefined; // validate before any write
     const { data: created } = await client.createCharacter(body);
     let record = created;
-    if (image)
-        record = { ...record, referenceImageUrl: (await client.uploadCharacterImage(created.id, image.bytes, image.mime)).data.url };
+    if (image) {
+        await client.uploadCharacterImage(created.id, image.bytes, image.mime);
+        record = (await client.getCharacter(created.id)).data;
+    }
     return { created: true, ...summarize(record), project: body.project };
 }
 export async function updateCharacter(client, args) {
@@ -113,10 +117,10 @@ export async function deleteCharacter(client, args) {
 }
 export async function uploadCharacterImage(client, args) {
     const image = readImage(args.file);
-    const { status, data } = await client.uploadCharacterImage(args.id, image.bytes, image.mime);
+    const { status, data } = await client.uploadCharacterImage(args.id, image.bytes, image.mime, args.view, args.label, args.sort);
     if (data.sha256 !== image.sha256)
         throw new Error(`The portal stored sha256 ${data.sha256} but the file is ${image.sha256}. Re-upload.`);
-    return { id: args.id, replaced: status === 201, sha256: data.sha256, mime: data.mime, byteSize: data.byteSize, referenceImageUrl: data.url };
+    return { id: args.id, imageId: data.id, view: args.view ?? "front", url: data.url, replaced: args.view !== "extra" && status === 201, sha256: data.sha256, mime: data.mime, byteSize: data.byteSize, ...(args.view === undefined || args.view === "front" ? { referenceImageUrl: data.url } : {}) };
 }
 /** Fills the owner's defaults (ElevenLabs multilingual v2, speed 1.0) for whatever the caller leaves out; an existing block's fields survive. */
 export async function setCharacterTts(client, args) {
@@ -134,4 +138,8 @@ export async function setCharacterTts(client, args) {
     });
     const { data } = await client.updateCharacter(args.id, { tts });
     return { id: data.id, name: data.name, tts: data.tts };
+}
+export async function deleteCharacterExtraImage(client, args) {
+    await client.deleteCharacterExtraImage(args.id, args.imageId);
+    return { deleted: true, id: args.id, imageId: args.imageId };
 }

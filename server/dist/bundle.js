@@ -76011,7 +76011,14 @@ function createPortalClient(credential, fetchImpl = fetch, resolvedBy = "file") 
     createCharacter: (body) => json2("POST", "/characters", body),
     updateCharacter: (id, patch) => json2("PATCH", `/characters/${id}`, patch),
     deleteCharacter: (id) => json2("DELETE", `/characters/${id}`),
-    uploadCharacterImage: (id, bytes, mime2) => json2("PUT", `/characters/${id}/image`, bytes, mime2),
+    uploadCharacterImage: (id, bytes, mime2, view, label, sort) => {
+      const query = new URLSearchParams();
+      if (label !== void 0) query.set("label", label);
+      if (sort !== void 0) query.set("sort", String(sort));
+      const suffix = query.size ? `?${query}` : "";
+      return json2(view === "extra" ? "POST" : "PUT", `/characters/${id}/${view ? `images/${view}` : "image"}${suffix}`, bytes, mime2);
+    },
+    deleteCharacterExtraImage: (id, imageId) => json2("DELETE", `/characters/${id}/images/extra/${imageId}`),
     listAttachments: (episodeId) => json2("GET", `/episodes/${episodeId}/attachments`),
     uploadAttachment: (episodeId, relativePath, bytes, mime2, provenance) => json2("POST", `${withHolder(`/episodes/${episodeId}/attachments`)}&path=${encodeURIComponent(relativePath)}`, bytes, mime2, provenance ? { "x-attachment-provenance": encodeURIComponent(JSON.stringify(provenance)) } : {}),
     downloadAttachment: async (episodeId, id) => {
@@ -84513,21 +84520,21 @@ Returns: JSON \u2014 { candidate, chosen, findings[] }.`,
     name: "portal_character_list",
     title: "List the workspace characters on the portal",
     annotations: { readOnlyHint: true, openWorldHint: true },
-    description: "The characters of the workspace the key opens \u2014 id, key (the assets/characters/<id> folder name), name, role, appearance, referenceImageUrl and the tts block. q searches name and role; key finds one exactly; 24 per page. Read-only. No key \u2192 one line, go on.",
+    description: "The characters of the workspace the key opens \u2014 id, key (the assets/characters/<id> folder name), name, role, appearance, referenceImageUrl, images (front/back/face URLs and extra entries), imagesComplete and the tts block. q searches name and role; key finds one exactly; 24 per page. Read-only. No key \u2192 one line, go on.",
     inputSchema: { type: "object", properties: { channel: PORTAL_CHANNEL_ARG, episodeDir: PORTAL_EPISODE_DIR_ARG, q: { type: "string", maxLength: 200, description: "Name or role contains" }, key: { type: "string", description: "Exact character key" }, page: { type: "integer", minimum: 1, description: "Page number, 24 per page (default 1)" } } }
   },
   {
     name: "portal_character_get",
     title: "Fetch one portal character",
     annotations: { readOnlyHint: true, openWorldHint: true },
-    description: "One character by id or by key (exactly one of the two). Returns the same fields as portal_character_list. Read-only.",
+    description: "One character by id or by key (exactly one of the two). Returns images (front/back/face URLs and extra entries), imagesComplete, and the same fields as portal_character_list. Read-only.",
     inputSchema: { type: "object", properties: { channel: PORTAL_CHANNEL_ARG, episodeDir: PORTAL_EPISODE_DIR_ARG, id: { type: "string", format: "uuid", description: "Portal character id" }, key: { type: "string", description: "Character key, e.g. the assets/characters/<id> folder name" } } }
   },
   {
     name: "portal_character_create",
     title: "Create a portal character",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
-    description: "Create a character in the workspace. Never a project id: the portal files it under project = the channel name (default: the channel the key was read off, override with project) \u2014 the same rule the storyboard import uses, so the character is available to that channel's playlists. Pass name and fields directly, or identityDir (assets/characters/<id>) to read the key from the folder name and name/\uC5ED\uD560/\uC0DD\uAE40\uC0C8 from identity.md; explicit fields win. file sends one PNG/JPEG/WebP panel (5 MiB) as the reference image right after creation. tts is optional here \u2014 portal_character_tts_set fills the owner defaults.",
+    description: "Create a character in the workspace. Never a project id: the portal files it under project = the channel name (default: the channel the key was read off, override with project) \u2014 the same rule the storyboard import uses, so the character is available to that channel's playlists. Pass name and fields directly, or identityDir (assets/characters/<id>) to read the key from the folder name and name/\uC5ED\uD560/\uC0DD\uAE40\uC0C8 from identity.md; explicit fields win. file sends one PNG/JPEG/WebP panel (5 MiB) as the front view right after creation; use image_upload for back and face. tts is optional here \u2014 portal_character_tts_set fills the owner defaults.",
     inputSchema: { type: "object", properties: {
       channel: PORTAL_CHANNEL_ARG,
       episodeDir: PORTAL_EPISODE_DIR_ARG,
@@ -84568,10 +84575,30 @@ Returns: JSON \u2014 { candidate, chosen, findings[] }.`,
   },
   {
     name: "portal_character_image_upload",
-    title: "Upload a character reference image",
-    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-    description: "Send one local PNG/JPEG/WebP (5 MiB, matching extension and signature) as the character's reference image. One image per character: a different file replaces the old one, the same bytes are a no-op. The portal keeps the bytes and sets referenceImageUrl to its own authenticated URL \u2014 no public link. Verifies the returned sha256 against the file.",
-    inputSchema: { type: "object", required: ["id", "file"], properties: { channel: PORTAL_CHANNEL_ARG, episodeDir: PORTAL_EPISODE_DIR_ARG, id: { type: "string", format: "uuid", description: "Portal character id" }, file: { type: "string", description: "Absolute path of the panel, e.g. assets/characters/<id>/face.png" } } }
+    title: "Upload a character reference view",
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    description: "Upload local PNG/JPEG/WebP, up to 5 MiB. view defaults to front; front/back/face each replace one required slot (same bytes are a no-op). extra appends a new image on every call: do not retry blindly. Front/back are full body without a face, face is a close-up. Verifies sha256; returns imageId, view and authenticated url. Only front updates referenceImageUrl.",
+    inputSchema: { type: "object", required: ["id", "file"], properties: {
+      channel: PORTAL_CHANNEL_ARG,
+      episodeDir: PORTAL_EPISODE_DIR_ARG,
+      id: { type: "string", format: "uuid", description: "Portal character id" },
+      file: { type: "string", description: "Absolute local image path" },
+      view: { type: "string", enum: ["front", "back", "face", "extra"], default: "front", description: "Required view to replace, or extra to append" },
+      label: { type: "string", maxLength: 100, description: "Optional image label" },
+      sort: { type: "integer", minimum: 0, maximum: 2147483647, description: "Optional display order, default 0" }
+    } }
+  },
+  {
+    name: "portal_character_extra_delete",
+    title: "Delete one extra character image",
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
+    description: "\u26A0\uFE0F never call without explicit user approval to delete the specified image. Delete exactly one optional extra image by imageId from portal_character_get/list images.extra. Required views and local files are untouched.",
+    inputSchema: { type: "object", required: ["id", "imageId"], properties: {
+      channel: PORTAL_CHANNEL_ARG,
+      episodeDir: PORTAL_EPISODE_DIR_ARG,
+      id: { type: "string", format: "uuid", description: "Portal character id" },
+      imageId: { type: "string", format: "uuid", description: "Extra image id" }
+    } }
   },
   {
     name: "portal_character_tts_set",
@@ -88989,7 +89016,8 @@ var characterCreateSchema = external_exports.object({
 }).refine((a) => a.name || a.identityDir, "Pass name, or identityDir with an identity.md heading");
 var characterUpdateSchema = external_exports.object({ ...scope, id: uuid2, key: keyArg.nullable().optional(), name: fields.name.optional(), role: fields.role.nullable(), appearance: fields.appearance.nullable(), referenceImageUrl: fields.referenceImageUrl.nullable(), tts: ttsSchema.nullable().optional() }).refine((a) => ["key", "name", "role", "appearance", "referenceImageUrl", "tts"].some((k) => a[k] !== void 0), "Nothing to change");
 var characterDeleteSchema = external_exports.object({ ...scope, id: uuid2 });
-var characterImageUploadSchema = external_exports.object({ ...scope, id: uuid2, file: external_exports.string().min(1) });
+var characterImageUploadSchema = external_exports.object({ ...scope, id: uuid2, file: external_exports.string().min(1), view: external_exports.enum(["front", "back", "face", "extra"]).optional(), label: external_exports.string().max(100).optional(), sort: external_exports.number().int().min(0).max(2147483647).optional() });
+var characterExtraDeleteSchema = external_exports.object({ ...scope, id: uuid2, imageId: uuid2 });
 var characterTtsSetSchema = external_exports.object({ ...scope, id: uuid2, engine: ttsSchema.shape.engine.optional(), voiceId: ttsSchema.shape.voiceId.optional(), model: ttsSchema.shape.model, speed: ttsSchema.shape.speed, language: ttsSchema.shape.language, stylePrompt: ttsSchema.shape.stylePrompt });
 function readIdentity(dir) {
   const folder = path15.resolve(dir);
@@ -89009,7 +89037,9 @@ var summarize = (c) => ({
   name: c.name,
   role: c.role,
   appearance: c.appearance,
-  referenceImageUrl: c.referenceImageUrl,
+  images: c.images ?? { front: c.referenceImageUrl, back: null, face: null, extra: [] },
+  imagesComplete: c.imagesComplete ?? false,
+  referenceImageUrl: c.images ? c.images.front : c.referenceImageUrl,
   tts: c.tts,
   updatedAt: c.updatedAt
 });
@@ -89042,7 +89072,10 @@ async function createCharacter(client, args, channel) {
   const image = args.file ? readImage(args.file) : void 0;
   const { data: created } = await client.createCharacter(body);
   let record2 = created;
-  if (image) record2 = { ...record2, referenceImageUrl: (await client.uploadCharacterImage(created.id, image.bytes, image.mime)).data.url };
+  if (image) {
+    await client.uploadCharacterImage(created.id, image.bytes, image.mime);
+    record2 = (await client.getCharacter(created.id)).data;
+  }
   return { created: true, ...summarize(record2), project: body.project };
 }
 async function updateCharacter(client, args) {
@@ -89056,9 +89089,9 @@ async function deleteCharacter(client, args) {
 }
 async function uploadCharacterImage(client, args) {
   const image = readImage(args.file);
-  const { status, data } = await client.uploadCharacterImage(args.id, image.bytes, image.mime);
+  const { status, data } = await client.uploadCharacterImage(args.id, image.bytes, image.mime, args.view, args.label, args.sort);
   if (data.sha256 !== image.sha256) throw new Error(`The portal stored sha256 ${data.sha256} but the file is ${image.sha256}. Re-upload.`);
-  return { id: args.id, replaced: status === 201, sha256: data.sha256, mime: data.mime, byteSize: data.byteSize, referenceImageUrl: data.url };
+  return { id: args.id, imageId: data.id, view: args.view ?? "front", url: data.url, replaced: args.view !== "extra" && status === 201, sha256: data.sha256, mime: data.mime, byteSize: data.byteSize, ...args.view === void 0 || args.view === "front" ? { referenceImageUrl: data.url } : {} };
 }
 async function setCharacterTts(client, args) {
   const { data: current } = await client.getCharacter(args.id);
@@ -89076,6 +89109,10 @@ async function setCharacterTts(client, args) {
   const { data } = await client.updateCharacter(args.id, { tts });
   return { id: data.id, name: data.name, tts: data.tts };
 }
+async function deleteCharacterExtraImage(client, args) {
+  await client.deleteCharacterExtraImage(args.id, args.imageId);
+  return { deleted: true, id: args.id, imageId: args.imageId };
+}
 
 // src/portal-tools.ts
 var PORTAL_TOOL_NAMES = [
@@ -89088,6 +89125,7 @@ var PORTAL_TOOL_NAMES = [
   "portal_character_update",
   "portal_character_delete",
   "portal_character_image_upload",
+  "portal_character_extra_delete",
   "portal_character_tts_set",
   ...REVIEW_TOOL_NAMES,
   "portal_attachments_sync",
@@ -89433,6 +89471,15 @@ function portalHandlers(fetchImpl) {
       if ("error" in r2) return r2.error;
       try {
         return ok(await deleteCharacter(r2.client, args));
+      } catch (error2) {
+        return failed(error2);
+      }
+    },
+    async characterExtraDelete(args) {
+      const r2 = await resolveClient(fetchImpl, args.channel, args.episodeDir);
+      if ("error" in r2) return r2.error;
+      try {
+        return ok(await deleteCharacterExtraImage(r2.client, args));
       } catch (error2) {
         return failed(error2);
       }
@@ -98325,6 +98372,7 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
   portal_character_create: async (args) => fromPortal(await portalRoutes.characterCreate(parseArgs(characterCreateSchema, args))),
   portal_character_update: async (args) => fromPortal(await portalRoutes.characterUpdate(parseArgs(characterUpdateSchema, args))),
   portal_character_delete: async (args) => fromPortal(await portalRoutes.characterDelete(parseArgs(characterDeleteSchema, args))),
+  portal_character_extra_delete: async (args) => fromPortal(await portalRoutes.characterExtraDelete(parseArgs(characterExtraDeleteSchema, args))),
   portal_character_image_upload: async (args) => fromPortal(await portalRoutes.characterImageUpload(parseArgs(characterImageUploadSchema, args))),
   portal_character_tts_set: async (args) => fromPortal(await portalRoutes.characterTtsSet(parseArgs(characterTtsSetSchema, args))),
   portal_images_upload: async (args) => fromPortal(await portalRoutes.imagesUpload(parseArgs(imageUploadSchema, args))),
@@ -98335,7 +98383,7 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
 // src/index.ts
 import { readFileSync as readFinalRequest } from "node:fs";
 var server = new Server(
-  { name: "social-flow", version: "0.95.0" },
+  { name: "social-flow", version: "0.96.0" },
   { capabilities: { tools: {} } }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {
