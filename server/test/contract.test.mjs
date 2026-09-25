@@ -228,6 +228,9 @@ describe('parameter naming convention', () => {
 
   for (const tool of TOOLS) {
     it(`${tool.name}: parameters are camelCase`, () => {
+      // portal_api_* mirrors the portal's generated API contract byte-for-byte. API-owned
+      // nested fields such as scenario meta.wow_type must keep their wire name.
+      if (tool.name.startsWith('portal_api_')) return;
       for (const [path] of walkProperties(tool.inputSchema)) {
         const key = path.split('.').pop().replace(/\[\]$/, '');
         // external-API standard abbreviations like gl/hl/q are exempt — renaming them blurs the mapping

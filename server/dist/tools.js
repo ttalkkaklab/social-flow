@@ -1,5 +1,6 @@
 import { REVIEW_TOOLS } from './portal-review-tools.js';
 import { UNIT_TOOLS } from './portal-unit-tools.js';
+import { PORTAL_API_TOOLS } from './portal-api-contract.js';
 import { cameraContract, renderPurposes, stillCameraEffectList, contract as storyboardContract } from './storyboard.js';
 import { MUSIC_GENERATION_MODES, MUSIC_SCALES } from './music-client.js';
 import { DEFAULT_SUPERTONIC_CHUNK_PAUSE, DEFAULT_SUPERTONIC_LANGUAGE, DEFAULT_SUPERTONIC_SPEED, DEFAULT_SUPERTONIC_STEPS, DEFAULT_SUPERTONIC_VOICE, MAX_SUPERTONIC_INPUT_CHARS, MAX_SUPERTONIC_SPEED, SUPERTONIC_LANGUAGES, SUPERTONIC_VOICE_NAMES, } from './supertonic-client.js';
@@ -732,6 +733,7 @@ const PORTAL_EPISODE_DIR_ARG = {
 const PORTAL_STAGE_ENUM = ['researched', 'candidates', 'scenario', 'narration', 'board', 'approved', 'produced', 'published'];
 const PORTAL_CANDIDATE_ENUM = ['D1', 'D2', 'D3'];
 const PORTAL_TOOLS = [
+    ...PORTAL_API_TOOLS,
     {
         name: 'portal_workspace_check',
         title: 'Check the portal key and its workspace',
