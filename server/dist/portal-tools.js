@@ -23,8 +23,8 @@ import { getAsset, searchAssets } from './portal-assets.js';
 export { assetsGetSchema, assetsSearchSchema } from './portal-assets.js';
 import { recordPublication, syncEpisodeArtifacts } from './portal-artifacts.js';
 export { artifactSyncSchema, publicationRecordSchema } from './portal-artifacts.js';
-import { createCharacter, deleteCharacter, getCharacter, listCharacters, setCharacterTts, updateCharacter, uploadCharacterImage, } from './portal-characters.js';
-export { characterCreateSchema, characterDeleteSchema, characterGetSchema, characterImageUploadSchema, characterListSchema, characterTtsSetSchema, characterUpdateSchema, } from './portal-characters.js';
+import { deleteCharacterExtraImage, createCharacter, deleteCharacter, getCharacter, listCharacters, setCharacterTts, updateCharacter, uploadCharacterImage, } from './portal-characters.js';
+export { characterExtraDeleteSchema, characterCreateSchema, characterDeleteSchema, characterGetSchema, characterImageUploadSchema, characterListSchema, characterTtsSetSchema, characterUpdateSchema, } from './portal-characters.js';
 import { portalCredentialFile, PORTAL_CREDENTIAL_FILENAME } from './config.js';
 import { describePortalError, PortalError, portalClientFor, SAFE_DOCUMENT_NAME } from './portal-client.js';
 import { buildImportPayload, channelOfEpisodeDir, DOCUMENT_FILES, EPISODE_STAGES, EPISODE_STATUSES, episodeDirOf, readDocuments, readPortalState, SCENARIO_CANDIDATES, writePortalState, } from './portal-episode.js';
@@ -38,6 +38,7 @@ export const PORTAL_TOOL_NAMES = [
     'portal_character_update',
     'portal_character_delete',
     'portal_character_image_upload',
+    'portal_character_extra_delete',
     'portal_character_tts_set',
     ...REVIEW_TOOL_NAMES,
     'portal_attachments_sync',
@@ -447,6 +448,17 @@ export function portalHandlers(fetchImpl) {
                 return r.error;
             try {
                 return ok(await deleteCharacter(r.client, args));
+            }
+            catch (error) {
+                return failed(error);
+            }
+        },
+        async characterExtraDelete(args) {
+            const r = await resolveClient(fetchImpl, args.channel, args.episodeDir);
+            if ('error' in r)
+                return r.error;
+            try {
+                return ok(await deleteCharacterExtraImage(r.client, args));
             }
             catch (error) {
                 return failed(error);

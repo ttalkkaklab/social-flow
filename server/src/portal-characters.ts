@@ -9,7 +9,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { z } from 'zod';
-import { type PortalClient, type PortalResponse } from './portal-client.js';
+import { type PortalClient, type PortalResponse, type PortalCharacterImages } from './portal-client.js';
 import { readImage } from './portal-images.js';
 
 const channelArg = z.string().regex(/^[a-z0-9][a-z0-9-]{0,63}$/, 'kebab-case channel slug').optional();
@@ -51,10 +51,12 @@ export const characterCreateSchema = z.object({
 export const characterUpdateSchema = z.object({ ...scope, id: uuid, key: keyArg.nullable().optional(), name: fields.name.optional(), role: fields.role.nullable(), appearance: fields.appearance.nullable(), referenceImageUrl: fields.referenceImageUrl.nullable(), tts: ttsSchema.nullable().optional() })
   .refine(a => ['key', 'name', 'role', 'appearance', 'referenceImageUrl', 'tts'].some(k => (a as Record<string, unknown>)[k] !== undefined), 'Nothing to change');
 export const characterDeleteSchema = z.object({ ...scope, id: uuid });
-export const characterImageUploadSchema = z.object({ ...scope, id: uuid, file: z.string().min(1) });
+export const characterImageUploadSchema = z.object({ ...scope, id: uuid, file: z.string().min(1), view: z.enum(['front', 'back', 'face', 'extra']).optional(), label: z.string().max(100).optional(), sort: z.number().int().min(0).max(2147483647).optional() });
+export const characterExtraDeleteSchema = z.object({ ...scope, id: uuid, imageId: uuid });
 export const characterTtsSetSchema = z.object({ ...scope, id: uuid, engine: ttsSchema.shape.engine.optional(), voiceId: ttsSchema.shape.voiceId.optional(), model: ttsSchema.shape.model, speed: ttsSchema.shape.speed, language: ttsSchema.shape.language, stylePrompt: ttsSchema.shape.stylePrompt });
 
 export interface PortalCharacterRecord {
+  images?: PortalCharacterImages; imagesComplete?: boolean;
   id: string; projectId: string; key: string | null; name: string; role: string | null; appearance: string | null;
   referenceImageUrl: string | null; tts: z.infer<typeof ttsSchema> | null; updatedAt: string;
 }
@@ -75,7 +77,8 @@ export function readIdentity(dir: string): { key: string; name?: string; role?: 
 
 const summarize = (c: PortalCharacterRecord) => ({
   id: c.id, key: c.key, name: c.name, role: c.role, appearance: c.appearance,
-  referenceImageUrl: c.referenceImageUrl, tts: c.tts, updatedAt: c.updatedAt,
+  images: c.images ?? { front: c.referenceImageUrl, back: null, face: null, extra: [] }, imagesComplete: c.imagesComplete ?? false,
+  referenceImageUrl: c.images ? c.images.front : c.referenceImageUrl, tts: c.tts, updatedAt: c.updatedAt,
 });
 
 export async function listCharacters(client: PortalClient, args: z.infer<typeof characterListSchema>) {
@@ -110,7 +113,10 @@ export async function createCharacter(client: PortalClient, args: z.infer<typeof
   const image = args.file ? readImage(args.file) : undefined; // validate before any write
   const { data: created } = await client.createCharacter(body);
   let record = created;
-  if (image) record = { ...record, referenceImageUrl: (await client.uploadCharacterImage(created.id, image.bytes, image.mime)).data.url };
+  if (image) {
+    await client.uploadCharacterImage(created.id, image.bytes, image.mime);
+    record = (await client.getCharacter(created.id)).data;
+  }
   return { created: true, ...summarize(record), project: body.project };
 }
 
@@ -127,9 +133,9 @@ export async function deleteCharacter(client: PortalClient, args: z.infer<typeof
 
 export async function uploadCharacterImage(client: PortalClient, args: z.infer<typeof characterImageUploadSchema>) {
   const image = readImage(args.file);
-  const { status, data } = await client.uploadCharacterImage(args.id, image.bytes, image.mime);
+  const { status, data } = await client.uploadCharacterImage(args.id, image.bytes, image.mime, args.view, args.label, args.sort);
   if (data.sha256 !== image.sha256) throw new Error(`The portal stored sha256 ${data.sha256} but the file is ${image.sha256}. Re-upload.`);
-  return { id: args.id, replaced: status === 201, sha256: data.sha256, mime: data.mime, byteSize: data.byteSize, referenceImageUrl: data.url };
+  return { id: args.id, imageId: data.id, view: args.view ?? "front", url: data.url, replaced: args.view !== "extra" && status === 201, sha256: data.sha256, mime: data.mime, byteSize: data.byteSize, ...(args.view === undefined || args.view === "front" ? { referenceImageUrl: data.url } : {}) };
 }
 
 /** Fills the owner's defaults (ElevenLabs multilingual v2, speed 1.0) for whatever the caller leaves out; an existing block's fields survive. */
@@ -151,3 +157,8 @@ export async function setCharacterTts(client: PortalClient, args: z.infer<typeof
 }
 
 export type CharacterListResponse = PortalResponse<{ items: PortalCharacterRecord[]; hasNext: boolean }>;
+
+export async function deleteCharacterExtraImage(client: PortalClient, args: z.infer<typeof characterExtraDeleteSchema>) {
+  await client.deleteCharacterExtraImage(args.id, args.imageId);
+  return { deleted: true, id: args.id, imageId: args.imageId };
+}

@@ -184,7 +184,16 @@ export function createPortalClient(credential, fetchImpl = fetch, resolvedBy = '
         createCharacter: (body) => json('POST', '/characters', body),
         updateCharacter: (id, patch) => json('PATCH', `/characters/${id}`, patch),
         deleteCharacter: (id) => json('DELETE', `/characters/${id}`),
-        uploadCharacterImage: (id, bytes, mime) => json('PUT', `/characters/${id}/image`, bytes, mime),
+        uploadCharacterImage: (id, bytes, mime, view, label, sort) => {
+            const query = new URLSearchParams();
+            if (label !== undefined)
+                query.set('label', label);
+            if (sort !== undefined)
+                query.set('sort', String(sort));
+            const suffix = query.size ? `?${query}` : '';
+            return json(view === 'extra' ? 'POST' : 'PUT', `/characters/${id}/${view ? `images/${view}` : 'image'}${suffix}`, bytes, mime);
+        },
+        deleteCharacterExtraImage: (id, imageId) => json('DELETE', `/characters/${id}/images/extra/${imageId}`),
         listAttachments: (episodeId) => json('GET', `/episodes/${episodeId}/attachments`),
         uploadAttachment: (episodeId, relativePath, bytes, mime, provenance) => json('POST', `${withHolder(`/episodes/${episodeId}/attachments`)}&path=${encodeURIComponent(relativePath)}`, bytes, mime, provenance ? { 'x-attachment-provenance': encodeURIComponent(JSON.stringify(provenance)) } : {}),
         downloadAttachment: async (episodeId, id) => {

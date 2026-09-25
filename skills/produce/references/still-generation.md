@@ -106,7 +106,10 @@ the strip calls "Shot n". Slide scenes have no still here (their screen is HTML,
 §3.6), and shooting mode has none at all.
 
 **A character scene is a reference call.** Resolve the id to its panel directory and pass the
-panels as input images, **face first, then body**, `back.png` third only on a back-facing shot.
+views the shot needs as separate reference inputs: face + body (portal front) for front/three-quarter
+shots, face alone for a facial close-up, and back for rear shots (add face only if visible).
+Optional extra panels need a shot-specific reason. A new reference set must contain all three
+required views even when the current shot uses only one; see channel/references/portal-characters.md.
 
 ```bash
 CH=$(python3 ${CLAUDE_PLUGIN_ROOT}/skills/channel/references/resolve-asset.py "$CHANNEL_DIR" character claude)

@@ -27,7 +27,7 @@ const IDENTITY = join(ROOT, 'data', 'lab', 'assets', 'characters', 'mina');
 const ID = '66666666-6666-4666-8666-666666666666';
 const PNG = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(200, 1)]);
 const sha = (b) => createHash('sha256').update(b).digest('hex');
-const NAMES = ['portal_character_list', 'portal_character_get', 'portal_character_create', 'portal_character_update', 'portal_character_delete', 'portal_character_image_upload', 'portal_character_tts_set'];
+const NAMES = ['portal_character_list', 'portal_character_get', 'portal_character_create', 'portal_character_update', 'portal_character_delete', 'portal_character_image_upload', 'portal_character_extra_delete', 'portal_character_tts_set'];
 
 const record = (over = {}) => ({ id: ID, projectId: 'p1', key: 'mina', name: '미나', role: '진행자', appearance: '단발', referenceImageUrl: null,
   tts: { engine: 'elevenlabs', voiceId: 'custom-voice', model: 'eleven_multilingual_v2', speed: 1 }, updatedAt: 'x', ...over });
@@ -105,7 +105,7 @@ describe('list · get', () => {
     assert.equal(call.headers.authorization, `Bearer ${KEY}`);
     const out = JSON.parse(r.text);
     assert.equal(out.workspace, 'lab');
-    assert.deepEqual(Object.keys(out.items[0]).sort(), ['appearance', 'id', 'key', 'name', 'referenceImageUrl', 'role', 'tts', 'updatedAt']);
+    assert.deepEqual(Object.keys(out.items[0]).sort(), ['appearance', 'id', 'images', 'imagesComplete', 'key', 'name', 'referenceImageUrl', 'role', 'tts', 'updatedAt']);
   });
 
   it('get by key uses the list filter, get by id the single route, and neither-or-both is refused', async () => {
@@ -204,5 +204,54 @@ describe('update · tts_set · image · delete', () => {
     assert.equal(r.isError, false, r.text);
     assert.equal(calls.find((c) => c.method === 'DELETE').path, `/api/workspaces/lab/characters/${ID}`);
     assert.deepEqual(JSON.parse(r.text), { deleted: true, id: ID });
+  });
+});
+
+describe('character image slots #96', () => {
+  const EXTRA = '77777777-7777-4777-8777-777777777777';
+  it('preserves slot URLs, extra ids and completeness in list/get', async () => {
+    const images = { front: 'front-url', back: 'back-url', face: 'face-url', extra: [{ id: EXTRA, url: 'extra-url', label: 'side', sort: 2 }] };
+    const h = portal.portalHandlers(fakePortal(record({ images, imagesComplete: true })).impl);
+    const one = JSON.parse((await h.characterGet({ channel: 'lab', id: ID })).text);
+    const list = JSON.parse((await h.characterList({ channel: 'lab' })).text);
+    assert.deepEqual(one.images, images);
+    assert.equal(one.imagesComplete, true);
+    assert.equal(one.referenceImageUrl, images.front);
+    assert.deepEqual(list.items[0].images, images);
+    assert.equal(list.items[0].imagesComplete, true);
+  });
+  it('routes all views, encodes labels/sort, appends extra with POST and deletes by image id', async () => {
+    const calls = [];
+    const fallback = fakePortal().impl;
+    const h = portal.portalHandlers(async (url, init = {}) => {
+      const u = new URL(url);
+      if (!u.pathname.includes('/images/')) return fallback(url, init);
+      calls.push({ path: u.pathname, query: u.searchParams, method: init.method, body: init.body });
+      if (init.method === 'DELETE') return Response.json({ success: true, data: { characterId: ID } });
+      return Response.json({ success: true, data: { id: EXTRA, url: `${u.origin}${u.pathname}`, sha256: sha(init.body), mime: 'image/png', byteSize: init.body.length } }, { status: 201 });
+    });
+    for (const view of ['front', 'back', 'face', 'extra']) {
+      const r = await h.characterImageUpload({ channel: 'lab', id: ID, file: join(IDENTITY, 'face.png'), view, label: '옆 & detail', sort: 3 });
+      assert.equal(r.isError, false, r.text);
+      const out = JSON.parse(r.text);
+      assert.equal(out.imageId, EXTRA); assert.equal(out.view, view);
+      assert.equal('referenceImageUrl' in out, view === 'front');
+      assert.equal(out.replaced, view !== 'extra');
+      const last = calls.at(-1);
+      assert.equal(last.path, `/api/workspaces/lab/characters/${ID}/images/${view}`);
+      assert.equal(last.method, view === 'extra' ? 'POST' : 'PUT');
+      assert.equal(last.query.get('label'), '옆 & detail'); assert.equal(last.query.get('sort'), '3');
+    }
+    const removed = await h.characterExtraDelete({ channel: 'lab', id: ID, imageId: EXTRA });
+    assert.equal(removed.isError, false, removed.text);
+    assert.equal(calls.at(-1).method, 'DELETE');
+    assert.equal(calls.at(-1).path, `/api/workspaces/lab/characters/${ID}/images/extra/${EXTRA}`);
+    assert.equal(TOOLS.find(t => t.name === 'portal_character_image_upload').annotations.idempotentHint, false);
+  });
+  it('refuses unknown views, long labels, invalid sort and image ids before routing', () => {
+    for (const over of [{ view: 'left' }, { label: 'a'.repeat(101) }, { sort: -1 }, { sort: 0.5 }]) {
+      assert.throws(() => chars.characterImageUploadSchema.parse({ id: ID, file: '/tmp/x.png', ...over }));
+    }
+    assert.throws(() => chars.characterExtraDeleteSchema.parse({ id: ID, imageId: 'invalid' }));
   });
 });

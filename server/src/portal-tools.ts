@@ -25,11 +25,11 @@ export { assetsGetSchema, assetsSearchSchema } from './portal-assets.js';
 import { artifactSyncSchema, publicationRecordSchema, recordPublication, syncEpisodeArtifacts } from './portal-artifacts.js';
 export { artifactSyncSchema, publicationRecordSchema } from './portal-artifacts.js';
 import {
-  characterCreateSchema, characterDeleteSchema, characterGetSchema, characterImageUploadSchema, characterListSchema, characterTtsSetSchema, characterUpdateSchema,
-  createCharacter, deleteCharacter, getCharacter, listCharacters, setCharacterTts, updateCharacter, uploadCharacterImage,
+  characterExtraDeleteSchema, characterCreateSchema, characterDeleteSchema, characterGetSchema, characterImageUploadSchema, characterListSchema, characterTtsSetSchema, characterUpdateSchema,
+  deleteCharacterExtraImage, createCharacter, deleteCharacter, getCharacter, listCharacters, setCharacterTts, updateCharacter, uploadCharacterImage,
 } from './portal-characters.js';
 export {
-  characterCreateSchema, characterDeleteSchema, characterGetSchema, characterImageUploadSchema, characterListSchema, characterTtsSetSchema, characterUpdateSchema,
+  characterExtraDeleteSchema, characterCreateSchema, characterDeleteSchema, characterGetSchema, characterImageUploadSchema, characterListSchema, characterTtsSetSchema, characterUpdateSchema,
 } from './portal-characters.js';
 import { portalCredentialFile, PORTAL_CREDENTIAL_FILENAME } from './config.js';
 import { describePortalError, PortalError, portalClientFor, SAFE_DOCUMENT_NAME, type FetchLike, type PortalClient, type PortalRevisionDiff } from './portal-client.js';
@@ -56,6 +56,7 @@ export const PORTAL_TOOL_NAMES = [
   'portal_character_update',
   'portal_character_delete',
   'portal_character_image_upload',
+  'portal_character_extra_delete',
   'portal_character_tts_set',
   ...REVIEW_TOOL_NAMES,
   'portal_attachments_sync',
@@ -399,6 +400,7 @@ export interface PortalHandlers {
   characterCreate(a: z.infer<typeof characterCreateSchema>): Promise<PortalToolResult>;
   characterUpdate(a: z.infer<typeof characterUpdateSchema>): Promise<PortalToolResult>;
   characterDelete(a: z.infer<typeof characterDeleteSchema>): Promise<PortalToolResult>;
+  characterExtraDelete(a: z.infer<typeof characterExtraDeleteSchema>): Promise<PortalToolResult>;
   characterImageUpload(a: z.infer<typeof characterImageUploadSchema>): Promise<PortalToolResult>;
   characterTtsSet(a: z.infer<typeof characterTtsSetSchema>): Promise<PortalToolResult>;
   attachmentsSync(a: z.infer<typeof attachmentsSyncSchema>): Promise<PortalToolResult>;
@@ -460,6 +462,11 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
       const r = await resolveClient(fetchImpl, args.channel, args.episodeDir);
       if ('error' in r) return r.error;
       try { return ok(await deleteCharacter(r.client, args)); } catch (error) { return failed(error); }
+    },
+    async characterExtraDelete(args) {
+      const r = await resolveClient(fetchImpl, args.channel, args.episodeDir);
+      if ('error' in r) return r.error;
+      try { return ok(await deleteCharacterExtraImage(r.client, args)); } catch (error) { return failed(error); }
     },
     async characterImageUpload(args) {
       const r = await resolveClient(fetchImpl, args.channel, args.episodeDir);
