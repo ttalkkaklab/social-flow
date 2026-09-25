@@ -1,5 +1,6 @@
 import { REVIEW_ROUTES } from './portal-review-tools.js';
 import { UNIT_ROUTES } from './portal-unit-routes.js';
+import { PORTAL_API_ROUTES } from './portal-api-contract.js';
 import { createThreadsDraft, submitThreadsReview, checkThreadsGate, checkThreadsEpisode, gateCall } from './threads-gate.js';
 import { withShotMedia, uploadShotMedia, mediaUploadSchema, portalMediaReport, withoutPortal } from './portal-media.js';
 import { z } from 'zod';
@@ -674,6 +675,7 @@ function fromPortal(r: portal.PortalToolResult): ToolResult {
 }
 
 export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
+  ...PORTAL_API_ROUTES as Record<string, (args: unknown) => Promise<ToolResult>>,
   ...UNIT_ROUTES,
   ...REVIEW_ROUTES,
   serp_web_search: async (args) => {
