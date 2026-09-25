@@ -1,10 +1,21 @@
 # Portal unit tools
 
 Use `portal_storyboard_create/get/update/delete` alongside the existing list tool.
-Creation takes `value: {title, characterId}`; the portal derives the hidden project
-from that narrator character. `portal_episode_list/get/update/delete` complements
+Creation takes `value: {title, characterId}`; this workflow helper derives the project
+from that narrator character. The underlying project records are available through
+`portal_api_projects_get/post` and `portal_api_projects_project_get/patch/delete`, using
+the exact API `body` and path fields. `portal_episode_list/get/update/delete` complements
 create/status/lease/checkpoint/revisions/restore. Episode update accepts title,
 status and stage; edit content metadata with the settings tools below.
+
+The `portal_api_*` family mirrors every workspace-key API route from the generated
+contract. Use it when there is no local-file workflow helper or when the caller needs
+the API's complete field set. Inputs keep path fields at the top level, query fields
+inside `query`, and JSON payloads inside `body`. For example,
+`portal_api_storyboards_get` accepts `query: {q,status,projectId,page}` and
+`portal_api_storyboards_storyboard_episodes_post` accepts
+`{storyboardId, body:{slug,title,format?,stage?,ordinal?,meta?,sourceChannelSlug?}}`.
+Binary GET tools require an absolute `targetFile` and refuse to overwrite it.
 
 `portal_sequence_*`, `portal_scene_*`, `portal_shot_*` provide list, get, create,
 update, delete and reorder. Sequence identifiers are `id`, story scenes are `no`,
@@ -46,6 +57,20 @@ Music and legacy voice have `portal_episode_music_get/update` and
 `portal_episode_voice_get/update` aliases. Character TTS remains the speaking
 voice authority. Music `$mix` uses targetLufs, truePeakDbtp, bedSeparationLu,
 minimumSeparationLu and the existing mix contract, not abbreviated unit names.
+
+Use `portal_api_settings_get` to read the workspace name. `portal_api_settings_patch`
+is intentionally absent because renaming remains an admin browser-session action.
+Persist an episode's selected visual style with
+`portal_api_episodes_episode_style_preset_post`. Its `body` requires `preset`,
+`baseRevisionNo`, `sourceHost`, `chosenBy`, and `source`; add `reason` when useful.
+Record the actual selector in `chosenBy` (`user`, `standing`, `auto`, or `imported`) and
+never label an automated choice as `user`.
+
+For an exact revision restore, use
+`portal_api_episodes_episode_revisions_revision_restore_post` with `episodeId`,
+`revisionNo`, and `body: {baseRevisionNo, sourceHost?, note?}`. The convenience
+`portal_episode_restore` remains available for local `.portal.json` integration, but
+the route tool exposes the API's explicit optimistic-lock field.
 
 Shot field tools use `shotId`:
 

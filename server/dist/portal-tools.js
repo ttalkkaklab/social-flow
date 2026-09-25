@@ -1,5 +1,6 @@
 import { REVIEW_TOOL_NAMES } from './portal-review-tools.js';
 import { UNIT_TOOL_NAMES } from './portal-unit-tools.js';
+import { PORTAL_API_TOOL_NAMES } from './portal-api-contract.js';
 import { canonicalPullPaths } from './portal-canonical.js';
 import { uploadAttachments, restoreAttachments, prepareAttachmentRestore, attachmentSyncReport, safeAttachmentTarget } from './portal-attachments.js';
 /**
@@ -29,6 +30,7 @@ import { portalCredentialFile, PORTAL_CREDENTIAL_FILENAME } from './config.js';
 import { describePortalError, PortalError, portalClientFor, SAFE_DOCUMENT_NAME } from './portal-client.js';
 import { buildImportPayload, channelOfEpisodeDir, DOCUMENT_FILES, EPISODE_STAGES, EPISODE_STATUSES, episodeDirOf, readDocuments, readPortalState, SCENARIO_CANDIDATES, writePortalState, } from './portal-episode.js';
 export const PORTAL_TOOL_NAMES = [
+    ...PORTAL_API_TOOL_NAMES,
     'portal_assets_search',
     'portal_assets_get',
     ...UNIT_TOOL_NAMES,

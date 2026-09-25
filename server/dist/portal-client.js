@@ -12,7 +12,9 @@
  * of retrying blind. Route list = the portal's `docs/API.md`; one method per route.
  */
 import { createHash } from 'node:crypto';
+import { closeSync, openSync, unlinkSync, writeSync } from 'node:fs';
 import { hostname } from 'node:os';
+import path from 'node:path';
 import { config, portalCredential } from './config.js';
 export class PortalError extends Error {
     status;
@@ -34,6 +36,7 @@ export function defaultHolder(apiKey) {
 }
 /** Portal timeout — a checkpoint carries a whole board (scenes + five documents); 15 s is too tight for a slow link. */
 export const PORTAL_TIMEOUT_MS = 60_000;
+const PORTAL_MAX_TRANSFER_BYTES = 100 * 1024 * 1024;
 /** A filename the portal may hand back that is safe to write next to scenes.js — no path parts, not `.`/`..`. */
 export const SAFE_DOCUMENT_NAME = /^(?!\.\.?$)[^/\\\0]+$/;
 // A process/session cache, isolated by transport and API origin/key. Rejected lookups are retriable.
@@ -115,6 +118,8 @@ export function createPortalClient(credential, fetchImpl = fetch, resolvedBy = '
         catch (error) {
             throw new PortalError(502, `portal unreachable (${origin}${path}): ${error instanceof Error ? error.message : String(error)}`);
         }
+        if (response.status === 204 || response.status === 304)
+            return { status: response.status, data: null };
         let envelope;
         try {
             envelope = (await response.json());
@@ -139,9 +144,94 @@ export function createPortalClient(credential, fetchImpl = fetch, resolvedBy = '
             throw new PortalError(response.status, `request failed (${response.status}): GET ${path}`);
         return response.text();
     }
+    const responseHeaders = (response) => {
+        const result = {};
+        response.headers.forEach((value, key) => { result[key] = value; });
+        return result;
+    };
+    async function raw(request) {
+        const origin = request.scope === 'global' ? root : base;
+        const binaryBytes = request.body instanceof Uint8Array ? request.body : undefined;
+        const binaryBody = binaryBytes !== undefined;
+        if (request.response === 'json') {
+            return json(request.method, request.path, request.body, binaryBody ? request.contentType : undefined, request.headers, origin);
+        }
+        let response;
+        try {
+            response = await fetchImpl(`${origin}${request.path}`, {
+                method: request.method,
+                headers: {
+                    ...headers,
+                    ...request.headers,
+                    ...(request.body === undefined ? {} : {
+                        'content-type': request.contentType ?? (binaryBody ? 'application/octet-stream' : 'application/json'),
+                    }),
+                    ...(binaryBytes ? { 'content-length': String(binaryBytes.byteLength) } : {}),
+                },
+                body: request.body === undefined
+                    ? undefined
+                    : binaryBytes
+                        ? binaryBytes
+                        : JSON.stringify(request.body),
+                redirect: 'error',
+                signal: AbortSignal.timeout(timeoutMs * (request.response === 'binary' ? 5 : 1)),
+            });
+        }
+        catch (error) {
+            throw new PortalError(502, `portal unreachable (${origin}${request.path}): ${error instanceof Error ? error.message : String(error)}`);
+        }
+        if (response.status === 204 || response.status === 304)
+            return { status: response.status, data: null };
+        if (!response.ok) {
+            let envelope = {};
+            try {
+                envelope = await response.json();
+            }
+            catch { /* binary/text failures may have no JSON body */ }
+            throw new PortalError(response.status, envelope.error ?? `request failed (${response.status})`, envelope.error_code, envelope.detail);
+        }
+        const metadata = responseHeaders(response);
+        if (request.response === 'text')
+            return { status: response.status, data: await response.text() };
+        if (request.method === 'HEAD')
+            return { status: response.status, data: { headers: metadata } };
+        if (!request.targetFile || !path.isAbsolute(request.targetFile)) {
+            throw new Error('A binary GET requires targetFile as an absolute local path.');
+        }
+        const reader = response.body?.getReader();
+        if (!reader)
+            throw new Error('Portal binary response has no body.');
+        const fd = openSync(request.targetFile, 'wx');
+        let bytes = 0;
+        let failed = false;
+        try {
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done)
+                    break;
+                bytes += value.byteLength;
+                if (bytes > PORTAL_MAX_TRANSFER_BYTES)
+                    throw new Error('Portal download exceeds 100 MiB.');
+                writeSync(fd, value);
+            }
+        }
+        catch (error) {
+            failed = true;
+            throw error;
+        }
+        finally {
+            await reader.cancel().catch(() => { });
+            reader.releaseLock();
+            closeSync(fd);
+            if (failed)
+                unlinkSync(request.targetFile);
+        }
+        return { status: response.status, data: { targetFile: request.targetFile, byteSize: bytes, headers: metadata } };
+    }
     const withHolder = (path) => `${path}?holder=${encodeURIComponent(holder)}`;
     return {
         request: (method, path, body) => json(method, `${path}${path.includes('?') ? '&' : '?'}holder=${encodeURIComponent(holder)}`, body),
+        requestRaw: raw,
         base,
         workspace: credential.workspace,
         resolvedBy,
