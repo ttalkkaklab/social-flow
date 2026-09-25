@@ -420,14 +420,16 @@ data/<channel>/assets/characters/<id>/
   identity.md   # the canonical description — look, marks, expression, voice, veo verdict
   face.png      # face close-up — neutral, minimal shoulders, plain background. The headshot the vendor asks for
   body.png      # full body, front, HEADLESS — body, clothes, shoes. No face
-  back.png      # full body, back (optional — add it when back-facing shots happen)
+  back.png      # full body, back, no face — required for every new reference set
   front.png     # legacy: full body with the head on. Fallback when the panels don't exist yet
   voice.wav     # the fixed voice sample — 5–10 s of speech in the character's register, no music or effects. Reference audio for cuts the model voices
 ```
 
-**The reference set is `[face.png, body.png]`, in that order.** That is the vendor's headshot +
+**Front-facing reference set: `[face.png, body.png]`, in that order.** That is the vendor's headshot +
 full body, and array order is weight, so the face leads. Add `back.png` only for a shot where the
-character is seen from behind. Never build a combined sheet out of the panels — the moment two
+character is seen from behind; a pure rear shot uses back alone, and a facial close-up uses face alone.
+Portal slots map body → front, back → back, face → face. All three must be stored before
+a new character reference set is complete; optional extra images serve specific poses/details. Never build a combined sheet out of the panels — the moment two
 angles share one image, this whole section's warning applies again.
 
 **Why the front panel is headless.** The face is already carried by `face.png` at a much larger

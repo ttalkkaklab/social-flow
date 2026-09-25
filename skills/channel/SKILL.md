@@ -8,7 +8,7 @@ description: >
   platforms, fact-check policy — the source of truth every storyboard, produce and publish
   run opens before anything else.
 argument-hint: "[add|list|update|serve] [channel-name]"
-allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_list_voices", "mcp__social-flow__tts_elevenlabs_voices", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__portal_character_list", "mcp__social-flow__portal_character_get", "mcp__social-flow__portal_character_create", "mcp__social-flow__portal_character_update", "mcp__social-flow__portal_character_delete", "mcp__social-flow__portal_character_image_upload", "mcp__social-flow__portal_character_tts_set"]
+allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_list_voices", "mcp__social-flow__tts_elevenlabs_voices", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__portal_character_list", "mcp__social-flow__portal_character_get", "mcp__social-flow__portal_character_create", "mcp__social-flow__portal_character_update", "mcp__social-flow__portal_character_delete", "mcp__social-flow__portal_character_image_upload", "mcp__social-flow__portal_character_extra_delete", "mcp__social-flow__portal_character_tts_set"]
 ---
 
 # Channel management — data/[channel]/profile.md
@@ -193,8 +193,13 @@ When the channel has a ttalkkakstory portal key, its characters live on the port
 the record the storyboard import and the narration lane read. Register or refresh them
 with the `portal_character_*` tools after the local `assets/characters/<id>/` folder is
 final: `portal_character_create` with `identityDir` (key from the folder, name·역할·생김새
-from `identity.md`) and `file` (the face panel), then `portal_character_tts_set` with the
-channel's voice. Steps, field mapping and the update/delete rules:
+from `identity.md`), then generate and upload all three required views with
+`portal_character_image_upload`: `body.png` → `view:"front"` (full body without a face),
+`back.png` → `view:"back"` (back full body without a face), and `face.png` → `view:"face"`
+(face close-up). Keep one view per file, the same clothing, proportions and visual style.
+Use `view:"extra"` and an explanatory `label` only for optional poses or details.
+Verify `portal_character_get.imagesComplete` before reporting the reference set ready,
+then use `portal_character_tts_set` with the channel's voice. Steps, field mapping and the update/delete rules:
 `references/portal-characters.md`. No key → the tools answer one line; skip the step.
 
 ## Rules
