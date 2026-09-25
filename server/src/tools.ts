@@ -1,3 +1,4 @@
+import { REVIEW_TOOLS } from './portal-review-tools.js';
 import { UNIT_TOOLS } from './portal-unit-tools.js';
 import { cameraContract, renderPurposes, stillCameraEffectList, contract as storyboardContract } from './storyboard.js';
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
@@ -1319,6 +1320,7 @@ Returns: JSON — { candidate, chosen, findings[] }.`,
 
 export const TOOLS: Tool[] = [
   ...UNIT_TOOLS,
+  ...REVIEW_TOOLS,
   // ── Research & fact-checking ──────────────────────────────────────────
   {
     name: 'serp_web_search',

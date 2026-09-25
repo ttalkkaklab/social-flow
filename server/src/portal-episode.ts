@@ -107,6 +107,13 @@ export function evaluateScenesJs(source: string): EvaluatedScenes {
   const plain = evaluateWindowScript(source);
   if (!Array.isArray(plain.SCENES)) throw new Error('scenes.js has no window.SCENES array.');
   const { SCENES, SB_DOC, ...meta } = plain;
+  // Only leading line comments are annotations; text inside script strings is not.
+  for (const line of source.replace(/^\uFEFF/, '').split(/\r\n|[\n\r\u2028\u2029]/)) {
+    if (!line.trim()) continue;
+    if (!/^\s*\/\//.test(line)) break;
+    const marker = /^\s*\/\/\s*(approved|review):[ \t]*(.*)$/.exec(line);
+    if (marker) meta[marker[1]] = marker[2];
+  }
   return {
     scenes: SCENES as unknown[],
     meta,
