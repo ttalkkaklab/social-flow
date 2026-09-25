@@ -1,3 +1,4 @@
+import { REVIEW_TOOLS } from './portal-review-tools.js';
 import { UNIT_TOOLS } from './portal-unit-tools.js';
 import { cameraContract, renderPurposes, stillCameraEffectList, contract as storyboardContract } from './storyboard.js';
 import { MUSIC_GENERATION_MODES, MUSIC_SCALES } from './music-client.js';
@@ -1150,6 +1151,7 @@ Returns: JSON — { candidate, chosen, findings[] }.`,
 ];
 export const TOOLS = [
     ...UNIT_TOOLS,
+    ...REVIEW_TOOLS,
     // ── Research & fact-checking ──────────────────────────────────────────
     {
         name: 'serp_web_search',

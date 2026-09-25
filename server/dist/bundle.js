@@ -75853,6 +75853,327 @@ function describeToolGate(knownNames, env2 = process.env, jsonPatterns = []) {
   return `tool gate ${on.length} on / ${off} off (${bits.join("; ")})`;
 }
 
+// src/portal-client.ts
+import { createHash } from "node:crypto";
+import { hostname as hostname2 } from "node:os";
+var PortalError = class extends Error {
+  status;
+  code;
+  detail;
+  constructor(status, message, code, detail) {
+    super(message);
+    this.name = "PortalError";
+    this.status = status;
+    if (code) this.code = code;
+    if (detail !== void 0) this.detail = detail;
+  }
+};
+function defaultHolder(apiKey) {
+  return `${apiKey.slice(0, 8)}@${hostname2()}`;
+}
+var PORTAL_TIMEOUT_MS = 6e4;
+var SAFE_DOCUMENT_NAME = /^(?!\.\.?$)[^/\\\0]+$/;
+var tokenWorkspaces = /* @__PURE__ */ new WeakMap();
+async function resolveToken(credential, fetchImpl) {
+  const root = credential.apiUrl.replace(/\/+$/, "");
+  let cache = tokenWorkspaces.get(fetchImpl);
+  if (!cache) {
+    cache = /* @__PURE__ */ new Map();
+    tokenWorkspaces.set(fetchImpl, cache);
+  }
+  const key = createHash("sha256").update(JSON.stringify([root, credential.apiKey])).digest("hex");
+  let pending = cache.get(key);
+  if (!pending) {
+    pending = (async () => {
+      let response;
+      try {
+        response = await fetchImpl(`${root}/api/token`, {
+          headers: { authorization: `Bearer ${credential.apiKey}` },
+          redirect: "error",
+          signal: AbortSignal.timeout(Math.max(config2.requestTimeoutMs, PORTAL_TIMEOUT_MS))
+        });
+      } catch {
+        throw new PortalError(502, "Token workspace lookup failed. Check the portal URL and connection.");
+      }
+      if (!response.ok) throw new PortalError(response.status, "Token workspace lookup failed. Check the API key and portal deployment.");
+      let envelope;
+      try {
+        envelope = await response.json();
+      } catch {
+        throw new PortalError(502, "Token workspace lookup returned invalid JSON.");
+      }
+      const data = envelope?.data;
+      if (!envelope?.success || !data || typeof data.workspaceSlug !== "string" || !/^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/.test(data.workspaceSlug) || typeof data.workspaceName !== "string" || data.role !== "member") {
+        throw new PortalError(502, "Token workspace lookup returned an invalid workspace.");
+      }
+      return data;
+    })();
+    cache.set(key, pending);
+    if (cache.size > 100) cache.delete(cache.keys().next().value);
+    pending.catch(() => {
+      if (cache.get(key) === pending) cache.delete(key);
+    });
+  }
+  return pending;
+}
+async function portalClientFor(channel, fetchImpl = fetch) {
+  const credential = portalCredential(channel);
+  if (!credential) return null;
+  const token = await resolveToken(credential, fetchImpl);
+  if (credential.workspace && credential.workspace !== token.workspaceSlug) {
+    throw new PortalError(409, `Workspace mismatch \u2014 ${credential.source} specifies "${credential.workspace}", but the API key opens "${token.workspaceSlug}". Fix the credential file or environment. Nothing was sent to a workspace.`);
+  }
+  return createPortalClient({ ...credential, workspace: token.workspaceSlug }, fetchImpl, credential.workspace ? "file" : "token");
+}
+function createPortalClient(credential, fetchImpl = fetch, resolvedBy = "file") {
+  const root = credential.apiUrl.replace(/\/+$/, "");
+  const base = `${root}/api/workspaces/${encodeURIComponent(credential.workspace)}`;
+  const headers = { authorization: `Bearer ${credential.apiKey}` };
+  const holder = credential.holder || defaultHolder(credential.apiKey);
+  const timeoutMs = Math.max(config2.requestTimeoutMs, PORTAL_TIMEOUT_MS);
+  async function json2(method, path22, body, binaryMime, extraHeaders = {}, origin = base) {
+    let response;
+    try {
+      response = await fetchImpl(`${origin}${path22}`, {
+        method,
+        headers: body === void 0 ? headers : { ...headers, ...extraHeaders, "content-type": binaryMime ?? "application/json", ...binaryMime ? { "content-length": String(body.byteLength) } : {} },
+        body: body === void 0 ? void 0 : binaryMime ? body : JSON.stringify(body),
+        redirect: "error",
+        signal: AbortSignal.timeout(timeoutMs)
+      });
+    } catch (error2) {
+      throw new PortalError(502, `portal unreachable (${origin}${path22}): ${error2 instanceof Error ? error2.message : String(error2)}`);
+    }
+    let envelope;
+    try {
+      envelope = await response.json();
+    } catch {
+      throw new PortalError(response.status, `portal answered ${response.status} without a JSON body (${method} ${path22}).`);
+    }
+    if (!envelope.success) {
+      throw new PortalError(
+        response.status,
+        envelope.error ?? `request failed (${response.status})`,
+        envelope.error_code,
+        envelope.detail
+      );
+    }
+    return { status: response.status, data: envelope.data };
+  }
+  async function text2(path22) {
+    let response;
+    try {
+      response = await fetchImpl(`${base}${path22}`, { headers, signal: AbortSignal.timeout(timeoutMs) });
+    } catch (error2) {
+      throw new PortalError(502, `portal unreachable (${base}${path22}): ${error2 instanceof Error ? error2.message : String(error2)}`);
+    }
+    if (!response.ok) throw new PortalError(response.status, `request failed (${response.status}): GET ${path22}`);
+    return response.text();
+  }
+  const withHolder = (path22) => `${path22}?holder=${encodeURIComponent(holder)}`;
+  return {
+    request: (method, path22, body) => json2(method, `${path22}${path22.includes("?") ? "&" : "?"}holder=${encodeURIComponent(holder)}`, body),
+    base,
+    workspace: credential.workspace,
+    resolvedBy,
+    source: credential.source,
+    holder,
+    uploadMedia: (episodeId, kind, bytes, mime2) => json2("POST", `${withHolder(`/episodes/${episodeId}/media`)}&kind=${encodeURIComponent(kind)}`, bytes, mime2),
+    me: () => json2("GET", "/me"),
+    listStoryboards: (query = {}) => {
+      const sp = new URLSearchParams();
+      for (const [k, v] of Object.entries(query)) if (v !== void 0 && v !== "") sp.set(k, String(v));
+      const qs = sp.toString();
+      return json2("GET", `/storyboards${qs ? `?${qs}` : ""}`);
+    },
+    listEpisodes: (storyboardId) => json2("GET", `/storyboards/${storyboardId}/episodes`),
+    getEpisode: (episodeId) => json2("GET", `/episodes/${episodeId}`),
+    // holder travels on every write — a lease held by another machine on the same key is still someone else's.
+    updateEpisode: (episodeId, patch) => json2("PATCH", withHolder(`/episodes/${episodeId}`), patch),
+    updateArtifacts: (episodeId, body) => json2("PUT", withHolder(`/episodes/${episodeId}/artifacts`), body),
+    recordPublication: (episodeId, body) => json2("POST", withHolder(`/episodes/${episodeId}/publications`), body),
+    importStoryboard: (payload) => json2("POST", "/storyboards/import", payload),
+    scenesJs: (episodeId, revision2) => text2(`/episodes/${episodeId}/scenes.js${revision2 ? `?revision=${revision2}` : ""}`),
+    document: (episodeId, filename) => text2(`/episodes/${episodeId}/documents/${encodeURIComponent(filename)}`),
+    createEpisode: (storyboardId, body) => json2("POST", `/storyboards/${storyboardId}/episodes`, body),
+    listRevisions: (episodeId) => json2("GET", `/episodes/${episodeId}/revisions`),
+    getRevision: (episodeId, no) => json2("GET", `/episodes/${episodeId}/revisions/${no}`),
+    revisionDiff: (episodeId, from, to) => json2("GET", `/episodes/${episodeId}/revisions/${from}/diff/${to}`),
+    renderAllocation: (episodeId, body) => json2(body ? "PUT" : "GET", `/episodes/${episodeId}/render-allocation`, body ? { ...body, sourceHost: holder } : void 0),
+    uploadImage: (episodeId, bytes, mime2) => json2("POST", withHolder(`/episodes/${episodeId}/images`), bytes, mime2),
+    listCharacters: (query = {}) => {
+      const sp = new URLSearchParams();
+      for (const [k, v] of Object.entries(query)) if (v !== void 0 && v !== "") sp.set(k, String(v));
+      const qs = sp.toString();
+      return json2("GET", `/characters${qs ? `?${qs}` : ""}`);
+    },
+    getCharacter: (id) => json2("GET", `/characters/${id}`),
+    createCharacter: (body) => json2("POST", "/characters", body),
+    updateCharacter: (id, patch) => json2("PATCH", `/characters/${id}`, patch),
+    deleteCharacter: (id) => json2("DELETE", `/characters/${id}`),
+    uploadCharacterImage: (id, bytes, mime2) => json2("PUT", `/characters/${id}/image`, bytes, mime2),
+    listAttachments: (episodeId) => json2("GET", `/episodes/${episodeId}/attachments`),
+    uploadAttachment: (episodeId, relativePath, bytes, mime2, provenance) => json2("POST", `${withHolder(`/episodes/${episodeId}/attachments`)}&path=${encodeURIComponent(relativePath)}`, bytes, mime2, provenance ? { "x-attachment-provenance": encodeURIComponent(JSON.stringify(provenance)) } : {}),
+    downloadAttachment: async (episodeId, id) => {
+      const response = await fetchImpl(`${base}/episodes/${episodeId}/attachments/${id}`, { headers, redirect: "error", signal: AbortSignal.timeout(timeoutMs) });
+      if (!response.ok) throw new PortalError(response.status, "Attachment download failed");
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error("Attachment download has no body");
+      const chunks = [];
+      let size = 0;
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          size += value.length;
+          if (size > 10 * 1024 * 1024) throw new Error("Attachment exceeds 10 MiB");
+          chunks.push(value);
+        }
+      } finally {
+        await reader.cancel().catch(() => {
+        });
+        reader.releaseLock();
+      }
+      return Buffer.concat(chunks);
+    },
+    checkpoint: (episodeId, body) => json2("POST", `/episodes/${episodeId}/revisions`, body),
+    restoreRevision: (episodeId, no, body = {}) => json2("POST", `/episodes/${episodeId}/revisions/${no}/restore`, body),
+    getLease: (episodeId) => json2("GET", `/episodes/${episodeId}/lease`),
+    acquireLease: (episodeId, body) => json2("POST", `/episodes/${episodeId}/lease`, body),
+    releaseLease: (episodeId, body) => json2("DELETE", `/episodes/${episodeId}/lease`, body),
+    listScenarios: (episodeId) => json2("GET", `/episodes/${episodeId}/scenarios`),
+    saveScenario: (episodeId, candidate2, body) => json2("PUT", `/episodes/${episodeId}/scenarios/${candidate2}`, body),
+    chooseScenario: (episodeId, candidate2) => json2("POST", withHolder(`/episodes/${episodeId}/scenarios/${candidate2}/choose`)),
+    scenarioMd: (episodeId, candidate2) => text2(`/episodes/${episodeId}/scenarios/${candidate2}/scenario.md`),
+    pageUrl: (relative) => `${root}${relative}`,
+    assetsSearch: (query) => {
+      const sp = new URLSearchParams();
+      for (const [k, v] of Object.entries(query)) if (v !== void 0 && v !== "") sp.set(k, String(v));
+      const qs = sp.toString();
+      return json2("GET", `/api/assets${qs ? `?${qs}` : ""}`, void 0, void 0, {}, root);
+    },
+    assetsGet: (id) => json2("GET", `/api/assets/${encodeURIComponent(id)}`, void 0, void 0, {}, root),
+    assetsDownload: async (id, sink, maxBytes) => {
+      let response;
+      try {
+        response = await fetchImpl(`${root}/api/assets/${encodeURIComponent(id)}/binary`, { headers, redirect: "error", signal: AbortSignal.timeout(timeoutMs * 5) });
+      } catch (error2) {
+        throw new PortalError(502, `portal unreachable (asset ${id}): ${error2 instanceof Error ? error2.message : String(error2)}`);
+      }
+      if (!response.ok) {
+        let code;
+        try {
+          code = (await response.json()).error_code;
+        } catch {
+        }
+        throw new PortalError(response.status, "Asset download failed", code);
+      }
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error("Asset download has no body");
+      let size = 0;
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          size += value.length;
+          if (size > maxBytes) throw new Error(`Asset exceeds ${maxBytes} bytes`);
+          sink(value);
+        }
+      } finally {
+        await reader.cancel().catch(() => {
+        });
+        reader.releaseLock();
+      }
+      return size;
+    }
+  };
+}
+function describePortalError(error2) {
+  if (error2 instanceof PortalError) {
+    const head = `portal ${error2.status}${error2.code ? ` ${error2.code}` : ""}: ${error2.message}`;
+    const detail = error2.detail === void 0 ? head : `${head}
+${JSON.stringify(error2.detail)}`;
+    return error2.status === 409 && error2.code === "leased" ? `${detail}
+Use portal_episode_lease with action:"status" for this episode. Wait for its holder to release or expire, then read and reconcile before writing. Unit tools do not acquire or release leases automatically.` : detail;
+  }
+  return error2 instanceof Error ? error2.message : String(error2);
+}
+
+// src/portal-review-tools.ts
+var REVIEW_TOOL_NAMES = ["portal_decision_list", "portal_decision_record", "portal_review_list", "portal_review_record"];
+var reviewCommonInput = external_exports.object({ channel: external_exports.string().regex(/^[a-z0-9][a-z0-9-]{0,63}$/).optional(), episodeId: external_exports.string().uuid() });
+var decision = external_exports.object({
+  key: external_exports.string().min(1).max(200),
+  value: external_exports.unknown().refine((v) => v !== void 0 && v !== null, "Decision value is required"),
+  options: external_exports.unknown().optional(),
+  chosenBy: external_exports.enum(["user", "standing", "auto", "imported"]),
+  source: external_exports.string().trim().min(1).max(500),
+  reason: external_exports.string().max(4e3).optional(),
+  decidedAt: external_exports.string().datetime({ offset: true }).optional()
+});
+var review = external_exports.object({
+  kind: external_exports.enum(["scenario", "narration_content", "narration_wording", "board", "content", "other"]),
+  reviewer: external_exports.string().trim().min(1).max(200),
+  score: external_exports.number().int().min(0).max(100),
+  p0: external_exports.array(external_exports.string().trim().min(1).max(2e3)).max(100),
+  summary: external_exports.string().trim().min(1).max(8e3),
+  source: external_exports.string().trim().min(1).max(500)
+});
+var reviewToolSchemas = {
+  portal_decision_list: reviewCommonInput.extend({ history: external_exports.boolean().optional() }).strict(),
+  portal_decision_record: reviewCommonInput.extend({ decision, baseRevisionNo: external_exports.number().int().min(0) }).strict(),
+  portal_review_list: reviewCommonInput.strict(),
+  portal_review_record: reviewCommonInput.extend({ review, baseRevisionNo: external_exports.number().int().min(0) }).strict()
+};
+var common = { channel: { type: "string", description: "Credential channel slug." }, episodeId: { type: "string", format: "uuid", description: "Portal episode UUID." } };
+var revision = { type: "integer", minimum: 0, description: "headRevisionNo from the last read; stale writes return head_moved." };
+var decisionProperties = {
+  key: { type: "string", description: "Existing HITL key, including narration_approval, board_approval, publish_approval; per-shot keys use the stable shot id." },
+  value: { description: "Actual decision value as JSON. Never infer approval from reviewer scores." },
+  options: { description: "Options shown to the decision maker, as JSON." },
+  chosenBy: { type: "string", enum: ["user", "standing", "auto", "imported"], description: "Use user only for an explicit human answer, standing only for applicable standing authorization." },
+  source: { type: "string", minLength: 1, maxLength: 500, description: "Evidence reference, such as the human message id or standing authorization path." },
+  reason: { type: "string", maxLength: 4e3, description: "Reason stated with the decision." },
+  decidedAt: { type: "string", format: "date-time", description: "Time of the actual decision, with timezone." }
+};
+var reviewProperties = {
+  kind: { type: "string", description: "Review phase.", enum: ["scenario", "narration_content", "narration_wording", "board", "content", "other"] },
+  reviewer: { type: "string", minLength: 1, maxLength: 200, description: "Name of the reviewer who produced the observation; recorder attribution is assigned by the server." },
+  score: { type: "integer", minimum: 0, maximum: 100, description: "Actual reviewer score out of 100." },
+  p0: { type: "array", maxItems: 100, items: { type: "string", minLength: 1, maxLength: 2e3, description: "One reported P0 defect." }, description: "Actual P0 defects. Supply [] only when none were reported." },
+  summary: { type: "string", minLength: 1, maxLength: 8e3, description: "Actual review conclusion and remaining changes." },
+  source: { type: "string", minLength: 1, maxLength: 500, description: "Reference to the actual review output." }
+};
+var REVIEW_TOOLS = REVIEW_TOOL_NAMES.map((name) => {
+  const record2 = name.endsWith("_record"), isDecision = name.startsWith("portal_decision_");
+  const payload = isDecision ? "decision" : "review";
+  return {
+    name,
+    title: name.slice(7).replaceAll("_", " "),
+    description: isDecision ? `${record2 ? "Record an evidenced HITL decision" : "Read current HITL decisions or their history"} for a portal episode. Human approvals require the actual human answer and its source; imported comments and review scores never constitute authorization. Recording creates a checkpoint and returns revisionNo; it does not publish or spend money.` : `${record2 ? "Append an actual reviewer score, P0 list and source" : "Read persisted reviewer observations"} for a portal episode. Reviews are bound to the assessed revisionNo, survive later saves, and are separate from human approvals. Recording does not advance the episode revision or status.`,
+    annotations: record2 ? { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true } : { readOnlyHint: true, openWorldHint: true },
+    inputSchema: { type: "object", properties: {
+      ...common,
+      ...record2 ? { baseRevisionNo: revision, [payload]: { type: "object", description: isDecision ? "Actual decision with its provenance." : "Actual reviewer observation for the assessed revision.", properties: isDecision ? decisionProperties : reviewProperties, required: isDecision ? ["key", "value", "chosenBy", "source"] : ["kind", "reviewer", "score", "p0", "summary", "source"], additionalProperties: false } } : isDecision ? { history: { type: "boolean", description: "Include superseded decisions for every key." } } : {}
+    }, required: ["episodeId", ...record2 ? ["baseRevisionNo", payload] : []], additionalProperties: false }
+  };
+});
+async function runReviewTool(name, args, fetchImpl) {
+  try {
+    const parsed = reviewToolSchemas[name].parse(args);
+    const client = await portalClientFor(parsed.channel, fetchImpl);
+    if (!client) return { content: [{ type: "text", text: "Portal API key is not configured for this channel." }], isError: true };
+    const decisions = name.startsWith("portal_decision_");
+    const endpoint = `/episodes/${parsed.episodeId}/${decisions ? "decisions" : "reviews"}`;
+    const body = "decision" in parsed && "baseRevisionNo" in parsed ? { decision: parsed.decision, baseRevisionNo: parsed.baseRevisionNo, sourceHost: client.holder } : "review" in parsed && "baseRevisionNo" in parsed ? { review: parsed.review, baseRevisionNo: parsed.baseRevisionNo, sourceHost: client.holder } : void 0;
+    const response = await client.request(body ? "POST" : "GET", endpoint + ("history" in parsed && parsed.history ? "?history=1" : ""), body);
+    return { content: [{ type: "text", text: JSON.stringify(response.data, null, 2) }] };
+  } catch (error2) {
+    return { content: [{ type: "text", text: describePortalError(error2) }], isError: true };
+  }
+}
+var REVIEW_ROUTES = Object.fromEntries(REVIEW_TOOL_NAMES.map((name) => [name, (args) => runReviewTool(name, args)]));
+
 // src/portal-unit-tools.ts
 var CRUD = ["list", "get", "create", "update", "delete", "reorder"];
 var specs = [
@@ -78257,7 +78578,7 @@ async function generateDialogue(request) {
 // src/tts-quality.ts
 var import_tts_speed_policy3 = __toESM(require_tts_speed_policy(), 1);
 import { execFile as execFile5 } from "node:child_process";
-import { createHash, randomUUID } from "node:crypto";
+import { createHash as createHash2, randomUUID } from "node:crypto";
 import { closeSync, existsSync as existsSync9, mkdirSync as mkdirSync4, openSync, readFileSync as readFileSync7, renameSync as renameSync3, rmSync as rmSync4, writeFileSync as writeFileSync6 } from "node:fs";
 import path8 from "node:path";
 import { promisify as promisify2 } from "node:util";
@@ -80409,7 +80730,7 @@ var reviewSchema = external_exports.object({
   }).strict()).max(100)
 }).strict();
 var normalizeSpeech = (s2) => s2.normalize("NFKC").toLowerCase().replace(/[\p{P}\p{Z}\s]/gu, "");
-var sha256 = (s2) => createHash("sha256").update(s2).digest("hex");
+var sha256 = (s2) => createHash2("sha256").update(s2).digest("hex");
 function characterErrorRate(expected, heard) {
   const a = [...normalizeSpeech(expected)], b = [...normalizeSpeech(heard)];
   if (!a.length || b.length > 12e3) return 1;
@@ -80443,15 +80764,15 @@ function signalFailures(signal, expected, maxSeconds = 120) {
   if (signal.clippedFraction > 1e-3) failures.push("Digital clipping");
   return failures;
 }
-function reviewFailures(expected, transcript, review, duration3) {
+function reviewFailures(expected, transcript, review2, duration3) {
   const failures = [];
   if (characterErrorRate(expected, transcript) > 0.02) failures.push("Blind transcript CER exceeds 2%");
-  if (!review.complete || review.confidence < 0.9) failures.push("Incomplete or uncertain listening review");
+  if (!review2.complete || review2.confidence < 0.9) failures.push("Incomplete or uncertain listening review");
   for (const axis of ["accuracy", "pronunciation", "naturalness", "clarity"]) {
-    if (review[axis] < (axis === "accuracy" ? 98 : 95)) failures.push(`${axis} below threshold`);
+    if (review2[axis] < (axis === "accuracy" ? 98 : 95)) failures.push(`${axis} below threshold`);
   }
-  if (review.issues.length) failures.push("Audible defects reported");
-  if (review.issues.some((i2) => i2.end < i2.start || i2.end > duration3 + 0.1)) failures.push("Invalid issue timestamps");
+  if (review2.issues.length) failures.push("Audible defects reported");
+  if (review2.issues.some((i2) => i2.end < i2.start || i2.end > duration3 + 0.1)) failures.push("Invalid issue timestamps");
   return failures;
 }
 var REVIEW_JSON_SCHEMA = {
@@ -80525,7 +80846,7 @@ async function listen(file, request, episodeReview = false) {
     { type: "object", properties: { transcript: { type: "string" } }, required: ["transcript"] },
     "blind-transcription"
   ));
-  const review = reviewSchema.parse(await call(
+  const review2 = reviewSchema.parse(await call(
     `Audit the full audio against this data: ${JSON.stringify({ expectedText: request.expectedText, language: request.language, delivery: request.delivery, blindTranscript: blind.transcript, ...laidInPauses ? { laidInPauses } : {} })}.${laidInPauses ? " laidInPauses marks inserted silence. Judge those pauses critically too: reject choppy rhythm, clipped breaths, unnatural gaps or fades even if intentional." : ""}
 ${episodeReview ? "This is the assembled episode, not an isolated sentence. Compare every adjacent sentence and scene for pitch, timbre, emotion, loudness, speaking rate, breaths and pauses. Score continuity 0\u2013100 separately and describe specific transitions with timestamps in continuityEvidence. A repeated fresh-start tone or mismatched mood requires a retake, even if each sentence sounds good alone." : ""}
 Score 0\u2013100: accuracy (all words, quantities, names, endings, no omissions or additions), pronunciation (native phonemes, liaison, stress), naturalness (human phrasing, breath, pacing, intonation appropriate to delivery), clarity (no noise, clipping, metallic artifacts, audible joins or unstable voice).
@@ -80533,7 +80854,7 @@ Score 0\u2013100: accuracy (all words, quantities, names, endings, no omissions 
     episodeReview ? { ...REVIEW_JSON_SCHEMA, required: [...REVIEW_JSON_SCHEMA.required, "continuity", "continuityEvidence"], properties: { ...REVIEW_JSON_SCHEMA.properties, continuity: { type: "number" }, continuityEvidence: { type: "string" } } } : REVIEW_JSON_SCHEMA,
     episodeReview ? "episode-listening-review" : "listening-review"
   ));
-  return { transcript: blind.transcript, review };
+  return { transcript: blind.transcript, review: review2 };
 }
 function prepareGeneration(request) {
   const args = { ...request.generation, outputPath: request.outputPath, filename: request.filename };
@@ -84272,6 +84593,7 @@ Returns: JSON \u2014 { candidate, chosen, findings[] }.`,
 ];
 var TOOLS = [
   ...UNIT_TOOLS,
+  ...REVIEW_TOOLS,
   // ── Research & fact-checking ──────────────────────────────────────────
   {
     name: "serp_web_search",
@@ -87850,6 +88172,12 @@ function evaluateScenesJs(source) {
   const plain = evaluateWindowScript(source);
   if (!Array.isArray(plain.SCENES)) throw new Error("scenes.js has no window.SCENES array.");
   const { SCENES, SB_DOC, ...meta } = plain;
+  for (const line of source.replace(/^\uFEFF/, "").split(/\r\n|[\n\r\u2028\u2029]/)) {
+    if (!line.trim()) continue;
+    if (!/^\s*\/\//.test(line)) break;
+    const marker = /^\s*\/\/\s*(approved|review):[ \t]*(.*)$/.exec(line);
+    if (marker) meta[marker[1]] = marker[2];
+  }
   return {
     scenes: SCENES,
     meta,
@@ -88003,252 +88331,6 @@ function normalizeNarrationSpeakers(scenes, characters) {
       })
     };
   });
-}
-
-// src/portal-client.ts
-import { createHash as createHash2 } from "node:crypto";
-import { hostname as hostname2 } from "node:os";
-var PortalError = class extends Error {
-  status;
-  code;
-  detail;
-  constructor(status, message, code, detail) {
-    super(message);
-    this.name = "PortalError";
-    this.status = status;
-    if (code) this.code = code;
-    if (detail !== void 0) this.detail = detail;
-  }
-};
-function defaultHolder(apiKey) {
-  return `${apiKey.slice(0, 8)}@${hostname2()}`;
-}
-var PORTAL_TIMEOUT_MS = 6e4;
-var SAFE_DOCUMENT_NAME = /^(?!\.\.?$)[^/\\\0]+$/;
-var tokenWorkspaces = /* @__PURE__ */ new WeakMap();
-async function resolveToken(credential, fetchImpl) {
-  const root = credential.apiUrl.replace(/\/+$/, "");
-  let cache = tokenWorkspaces.get(fetchImpl);
-  if (!cache) {
-    cache = /* @__PURE__ */ new Map();
-    tokenWorkspaces.set(fetchImpl, cache);
-  }
-  const key = createHash2("sha256").update(JSON.stringify([root, credential.apiKey])).digest("hex");
-  let pending = cache.get(key);
-  if (!pending) {
-    pending = (async () => {
-      let response;
-      try {
-        response = await fetchImpl(`${root}/api/token`, {
-          headers: { authorization: `Bearer ${credential.apiKey}` },
-          redirect: "error",
-          signal: AbortSignal.timeout(Math.max(config2.requestTimeoutMs, PORTAL_TIMEOUT_MS))
-        });
-      } catch {
-        throw new PortalError(502, "Token workspace lookup failed. Check the portal URL and connection.");
-      }
-      if (!response.ok) throw new PortalError(response.status, "Token workspace lookup failed. Check the API key and portal deployment.");
-      let envelope;
-      try {
-        envelope = await response.json();
-      } catch {
-        throw new PortalError(502, "Token workspace lookup returned invalid JSON.");
-      }
-      const data = envelope?.data;
-      if (!envelope?.success || !data || typeof data.workspaceSlug !== "string" || !/^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/.test(data.workspaceSlug) || typeof data.workspaceName !== "string" || data.role !== "member") {
-        throw new PortalError(502, "Token workspace lookup returned an invalid workspace.");
-      }
-      return data;
-    })();
-    cache.set(key, pending);
-    if (cache.size > 100) cache.delete(cache.keys().next().value);
-    pending.catch(() => {
-      if (cache.get(key) === pending) cache.delete(key);
-    });
-  }
-  return pending;
-}
-async function portalClientFor(channel, fetchImpl = fetch) {
-  const credential = portalCredential(channel);
-  if (!credential) return null;
-  const token = await resolveToken(credential, fetchImpl);
-  if (credential.workspace && credential.workspace !== token.workspaceSlug) {
-    throw new PortalError(409, `Workspace mismatch \u2014 ${credential.source} specifies "${credential.workspace}", but the API key opens "${token.workspaceSlug}". Fix the credential file or environment. Nothing was sent to a workspace.`);
-  }
-  return createPortalClient({ ...credential, workspace: token.workspaceSlug }, fetchImpl, credential.workspace ? "file" : "token");
-}
-function createPortalClient(credential, fetchImpl = fetch, resolvedBy = "file") {
-  const root = credential.apiUrl.replace(/\/+$/, "");
-  const base = `${root}/api/workspaces/${encodeURIComponent(credential.workspace)}`;
-  const headers = { authorization: `Bearer ${credential.apiKey}` };
-  const holder = credential.holder || defaultHolder(credential.apiKey);
-  const timeoutMs = Math.max(config2.requestTimeoutMs, PORTAL_TIMEOUT_MS);
-  async function json2(method, path22, body, binaryMime, extraHeaders = {}, origin = base) {
-    let response;
-    try {
-      response = await fetchImpl(`${origin}${path22}`, {
-        method,
-        headers: body === void 0 ? headers : { ...headers, ...extraHeaders, "content-type": binaryMime ?? "application/json", ...binaryMime ? { "content-length": String(body.byteLength) } : {} },
-        body: body === void 0 ? void 0 : binaryMime ? body : JSON.stringify(body),
-        redirect: "error",
-        signal: AbortSignal.timeout(timeoutMs)
-      });
-    } catch (error2) {
-      throw new PortalError(502, `portal unreachable (${origin}${path22}): ${error2 instanceof Error ? error2.message : String(error2)}`);
-    }
-    let envelope;
-    try {
-      envelope = await response.json();
-    } catch {
-      throw new PortalError(response.status, `portal answered ${response.status} without a JSON body (${method} ${path22}).`);
-    }
-    if (!envelope.success) {
-      throw new PortalError(
-        response.status,
-        envelope.error ?? `request failed (${response.status})`,
-        envelope.error_code,
-        envelope.detail
-      );
-    }
-    return { status: response.status, data: envelope.data };
-  }
-  async function text2(path22) {
-    let response;
-    try {
-      response = await fetchImpl(`${base}${path22}`, { headers, signal: AbortSignal.timeout(timeoutMs) });
-    } catch (error2) {
-      throw new PortalError(502, `portal unreachable (${base}${path22}): ${error2 instanceof Error ? error2.message : String(error2)}`);
-    }
-    if (!response.ok) throw new PortalError(response.status, `request failed (${response.status}): GET ${path22}`);
-    return response.text();
-  }
-  const withHolder = (path22) => `${path22}?holder=${encodeURIComponent(holder)}`;
-  return {
-    request: (method, path22, body) => json2(method, `${path22}${path22.includes("?") ? "&" : "?"}holder=${encodeURIComponent(holder)}`, body),
-    base,
-    workspace: credential.workspace,
-    resolvedBy,
-    source: credential.source,
-    holder,
-    uploadMedia: (episodeId, kind, bytes, mime2) => json2("POST", `${withHolder(`/episodes/${episodeId}/media`)}&kind=${encodeURIComponent(kind)}`, bytes, mime2),
-    me: () => json2("GET", "/me"),
-    listStoryboards: (query = {}) => {
-      const sp = new URLSearchParams();
-      for (const [k, v] of Object.entries(query)) if (v !== void 0 && v !== "") sp.set(k, String(v));
-      const qs = sp.toString();
-      return json2("GET", `/storyboards${qs ? `?${qs}` : ""}`);
-    },
-    listEpisodes: (storyboardId) => json2("GET", `/storyboards/${storyboardId}/episodes`),
-    getEpisode: (episodeId) => json2("GET", `/episodes/${episodeId}`),
-    // holder travels on every write — a lease held by another machine on the same key is still someone else's.
-    updateEpisode: (episodeId, patch) => json2("PATCH", withHolder(`/episodes/${episodeId}`), patch),
-    updateArtifacts: (episodeId, body) => json2("PUT", withHolder(`/episodes/${episodeId}/artifacts`), body),
-    recordPublication: (episodeId, body) => json2("POST", withHolder(`/episodes/${episodeId}/publications`), body),
-    importStoryboard: (payload) => json2("POST", "/storyboards/import", payload),
-    scenesJs: (episodeId, revision) => text2(`/episodes/${episodeId}/scenes.js${revision ? `?revision=${revision}` : ""}`),
-    document: (episodeId, filename) => text2(`/episodes/${episodeId}/documents/${encodeURIComponent(filename)}`),
-    createEpisode: (storyboardId, body) => json2("POST", `/storyboards/${storyboardId}/episodes`, body),
-    listRevisions: (episodeId) => json2("GET", `/episodes/${episodeId}/revisions`),
-    getRevision: (episodeId, no) => json2("GET", `/episodes/${episodeId}/revisions/${no}`),
-    revisionDiff: (episodeId, from, to) => json2("GET", `/episodes/${episodeId}/revisions/${from}/diff/${to}`),
-    renderAllocation: (episodeId, body) => json2(body ? "PUT" : "GET", `/episodes/${episodeId}/render-allocation`, body ? { ...body, sourceHost: holder } : void 0),
-    uploadImage: (episodeId, bytes, mime2) => json2("POST", withHolder(`/episodes/${episodeId}/images`), bytes, mime2),
-    listCharacters: (query = {}) => {
-      const sp = new URLSearchParams();
-      for (const [k, v] of Object.entries(query)) if (v !== void 0 && v !== "") sp.set(k, String(v));
-      const qs = sp.toString();
-      return json2("GET", `/characters${qs ? `?${qs}` : ""}`);
-    },
-    getCharacter: (id) => json2("GET", `/characters/${id}`),
-    createCharacter: (body) => json2("POST", "/characters", body),
-    updateCharacter: (id, patch) => json2("PATCH", `/characters/${id}`, patch),
-    deleteCharacter: (id) => json2("DELETE", `/characters/${id}`),
-    uploadCharacterImage: (id, bytes, mime2) => json2("PUT", `/characters/${id}/image`, bytes, mime2),
-    listAttachments: (episodeId) => json2("GET", `/episodes/${episodeId}/attachments`),
-    uploadAttachment: (episodeId, relativePath, bytes, mime2, provenance) => json2("POST", `${withHolder(`/episodes/${episodeId}/attachments`)}&path=${encodeURIComponent(relativePath)}`, bytes, mime2, provenance ? { "x-attachment-provenance": encodeURIComponent(JSON.stringify(provenance)) } : {}),
-    downloadAttachment: async (episodeId, id) => {
-      const response = await fetchImpl(`${base}/episodes/${episodeId}/attachments/${id}`, { headers, redirect: "error", signal: AbortSignal.timeout(timeoutMs) });
-      if (!response.ok) throw new PortalError(response.status, "Attachment download failed");
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error("Attachment download has no body");
-      const chunks = [];
-      let size = 0;
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          size += value.length;
-          if (size > 10 * 1024 * 1024) throw new Error("Attachment exceeds 10 MiB");
-          chunks.push(value);
-        }
-      } finally {
-        await reader.cancel().catch(() => {
-        });
-        reader.releaseLock();
-      }
-      return Buffer.concat(chunks);
-    },
-    checkpoint: (episodeId, body) => json2("POST", `/episodes/${episodeId}/revisions`, body),
-    restoreRevision: (episodeId, no, body = {}) => json2("POST", `/episodes/${episodeId}/revisions/${no}/restore`, body),
-    getLease: (episodeId) => json2("GET", `/episodes/${episodeId}/lease`),
-    acquireLease: (episodeId, body) => json2("POST", `/episodes/${episodeId}/lease`, body),
-    releaseLease: (episodeId, body) => json2("DELETE", `/episodes/${episodeId}/lease`, body),
-    listScenarios: (episodeId) => json2("GET", `/episodes/${episodeId}/scenarios`),
-    saveScenario: (episodeId, candidate2, body) => json2("PUT", `/episodes/${episodeId}/scenarios/${candidate2}`, body),
-    chooseScenario: (episodeId, candidate2) => json2("POST", withHolder(`/episodes/${episodeId}/scenarios/${candidate2}/choose`)),
-    scenarioMd: (episodeId, candidate2) => text2(`/episodes/${episodeId}/scenarios/${candidate2}/scenario.md`),
-    pageUrl: (relative) => `${root}${relative}`,
-    assetsSearch: (query) => {
-      const sp = new URLSearchParams();
-      for (const [k, v] of Object.entries(query)) if (v !== void 0 && v !== "") sp.set(k, String(v));
-      const qs = sp.toString();
-      return json2("GET", `/api/assets${qs ? `?${qs}` : ""}`, void 0, void 0, {}, root);
-    },
-    assetsGet: (id) => json2("GET", `/api/assets/${encodeURIComponent(id)}`, void 0, void 0, {}, root),
-    assetsDownload: async (id, sink, maxBytes) => {
-      let response;
-      try {
-        response = await fetchImpl(`${root}/api/assets/${encodeURIComponent(id)}/binary`, { headers, redirect: "error", signal: AbortSignal.timeout(timeoutMs * 5) });
-      } catch (error2) {
-        throw new PortalError(502, `portal unreachable (asset ${id}): ${error2 instanceof Error ? error2.message : String(error2)}`);
-      }
-      if (!response.ok) {
-        let code;
-        try {
-          code = (await response.json()).error_code;
-        } catch {
-        }
-        throw new PortalError(response.status, "Asset download failed", code);
-      }
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error("Asset download has no body");
-      let size = 0;
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          size += value.length;
-          if (size > maxBytes) throw new Error(`Asset exceeds ${maxBytes} bytes`);
-          sink(value);
-        }
-      } finally {
-        await reader.cancel().catch(() => {
-        });
-        reader.releaseLock();
-      }
-      return size;
-    }
-  };
-}
-function describePortalError(error2) {
-  if (error2 instanceof PortalError) {
-    const head = `portal ${error2.status}${error2.code ? ` ${error2.code}` : ""}: ${error2.message}`;
-    const detail = error2.detail === void 0 ? head : `${head}
-${JSON.stringify(error2.detail)}`;
-    return error2.status === 409 && error2.code === "leased" ? `${detail}
-Use portal_episode_lease with action:"status" for this episode. Wait for its holder to release or expire, then read and reconcile before writing. Unit tools do not acquire or release leases automatically.` : detail;
-  }
-  return error2 instanceof Error ? error2.message : String(error2);
 }
 
 // src/portal-canonical.ts
@@ -89007,6 +89089,7 @@ var PORTAL_TOOL_NAMES = [
   "portal_character_delete",
   "portal_character_image_upload",
   "portal_character_tts_set",
+  ...REVIEW_TOOL_NAMES,
   "portal_attachments_sync",
   "portal_images_upload",
   "portal_shot_media_upload",
@@ -89544,7 +89627,7 @@ function portalHandlers(fetchImpl) {
         return failed(error2);
       }
     },
-    async storyboardPull({ episodeId, targetDir, includeDocuments = true, revision, mode = "replace" }) {
+    async storyboardPull({ episodeId, targetDir, includeDocuments = true, revision: revision2, mode = "replace" }) {
       const r2 = await resolveClient(fetchImpl, void 0, targetDir);
       if ("error" in r2) return r2.error;
       const refused = refuseMismatch(r2.client, targetDir);
@@ -89556,10 +89639,10 @@ function portalHandlers(fetchImpl) {
         const dir = episodeDirOf(targetDir);
         const sb = path16.join(dir, "storyboard");
         const fileContents = /* @__PURE__ */ new Map();
-        fileContents.set("scenes.js", await c.scenesJs(episodeId, revision));
-        if (revision) {
+        fileContents.set("scenes.js", await c.scenesJs(episodeId, revision2));
+        if (revision2) {
           if (includeDocuments) {
-            const { data: rev } = await c.getRevision(episodeId, revision);
+            const { data: rev } = await c.getRevision(episodeId, revision2);
             for (const [filename, content] of Object.entries(rev.documents ?? {})) {
               if (filename === "scenes.js" || !SAFE_DOCUMENT_NAME.test(filename)) continue;
               fileContents.set(filename, content);
@@ -89579,21 +89662,21 @@ function portalHandlers(fetchImpl) {
           }
         }
         for (const filename of fileContents.keys()) safeAttachmentTarget(dir, `storyboard/${filename}`);
-        const removed = revision && includeDocuments && mode === "replace" ? [.../* @__PURE__ */ new Set([...DOCUMENT_FILES, "scenario.md", ...(episode.documents ?? []).map((doc) => doc.filename)])].filter((filename) => SAFE_DOCUMENT_NAME.test(filename) && !fileContents.has(filename)).filter((filename) => {
+        const removed = revision2 && includeDocuments && mode === "replace" ? [.../* @__PURE__ */ new Set([...DOCUMENT_FILES, "scenario.md", ...(episode.documents ?? []).map((doc) => doc.filename)])].filter((filename) => SAFE_DOCUMENT_NAME.test(filename) && !fileContents.has(filename)).filter((filename) => {
           const target = safeAttachmentTarget(dir, `storyboard/${filename}`);
           if (!existsSync18(target)) return false;
           if (!lstatSync3(target).isFile()) throw new Error(`Not a regular document: ${filename}`);
           return true;
         }) : [];
         const files = [...fileContents].map(([filename, content]) => ({ filename, content }));
-        const headRevisionNo = revision ?? episode.headRevisionNo ?? 0;
+        const headRevisionNo = revision2 ?? episode.headRevisionNo ?? 0;
         const written = files.map(({ filename }) => filename);
         let backupDir = null;
         let sideDir = null;
         const replaced = [];
         const attachmentRoot = mode === "side" ? path16.join(sb, ".portal-head", "attachments") : dir;
-        const attachmentSnapshot = revision ? void 0 : await prepareAttachmentRestore(c, episodeId, attachmentRoot, canonicalPullPaths(episode, fileContents.keys()));
-        if (!revision) {
+        const attachmentSnapshot = revision2 ? void 0 : await prepareAttachmentRestore(c, episodeId, attachmentRoot, canonicalPullPaths(episode, fileContents.keys()));
+        if (!revision2) {
           const { data: latest } = await c.getEpisode(episodeId).catch((error2) => {
             throw new Error(`Could not verify episode head during pull. Pull did not write local files. Retry portal_storyboard_pull. ${error2 instanceof Error ? error2.message : String(error2)}`);
           });
@@ -89624,7 +89707,7 @@ function portalHandlers(fetchImpl) {
           for (const filename of removed) rmSync8(path16.join(sb, filename));
           for (const { filename, content } of files) writeFileSync11(path16.join(sb, filename), content);
         }
-        const attachments = revision ? { skipped: "Attachments are current episode files, not revision snapshots." } : await restoreAttachments(c, episodeId, attachmentRoot, attachmentSnapshot);
+        const attachments = revision2 ? { skipped: "Attachments are current episode files, not revision snapshots." } : await restoreAttachments(c, episodeId, attachmentRoot, attachmentSnapshot);
         if (mode !== "side") writePortalState(dir, { workspace: c.workspace, storyboardId: episode.storyboardId, episodeId, headRevisionNo });
         return ok({
           attachments,
@@ -89638,7 +89721,7 @@ function portalHandlers(fetchImpl) {
             lease: episode.lease
           },
           mode,
-          revision: revision ?? null,
+          revision: revision2 ?? null,
           headRevisionNo,
           dir: mode === "side" ? sideDir : sb,
           written,
@@ -90333,15 +90416,15 @@ function submitThreadsReview(args) {
     for (const finding of input.findings) {
       if (!surfaces.some((body) => body.includes(whitespace(finding.quote)))) throw new Error("Finding quote not present in draft");
     }
-    const review = {
+    const review2 = {
       ...input,
       selfReview: draft.submitter ? input.reviewer === draft.submitter : null,
       sameContext: draft.submitterContext ? input.reviewerContext === draft.submitterContext : null
     };
-    draft.reviews[input.axis] = review;
+    draft.reviews[input.axis] = review2;
     save(draft);
-    audit(draft.channel, "threads_review_submit", "reviewed", review);
-    return review;
+    audit(draft.channel, "threads_review_submit", "reviewed", review2);
+    return review2;
   });
 }
 function checkThreadsGate(input) {
@@ -90361,13 +90444,13 @@ function checkThreadsGate(input) {
     }
     const axes = draft.surface === "reply" ? ["voice"] : AXES;
     for (const axis of axes) {
-      const review = draft.reviews[axis];
-      if (!review) throw new Error(`Missing ${axis} review`);
-      reviewSchema2.parse(review);
-      if (review.draftId !== draft.draftId || review.axis !== axis) throw new Error("Review identity mismatch");
-      if (review.findings.some((finding) => finding.severity === "P0")) throw new Error(`${axis} review has unresolved P0`);
-      if (review.bodyHash !== bodyHash) throw new Error(`${axis} review hash mismatch`);
-      if (review.score < limits2[axis]) throw new Error(`${axis} score ${review.score} below ${limits2[axis]}`);
+      const review2 = draft.reviews[axis];
+      if (!review2) throw new Error(`Missing ${axis} review`);
+      reviewSchema2.parse(review2);
+      if (review2.draftId !== draft.draftId || review2.axis !== axis) throw new Error("Review identity mismatch");
+      if (review2.findings.some((finding) => finding.severity === "P0")) throw new Error(`${axis} review has unresolved P0`);
+      if (review2.bodyHash !== bodyHash) throw new Error(`${axis} review hash mismatch`);
+      if (review2.score < limits2[axis]) throw new Error(`${axis} score ${review2.score} below ${limits2[axis]}`);
     }
     const checker = resolve4(dirname5(fileURLToPath3(import.meta.url)), "../../skills/platform-guide/references/check-style.py");
     for (const [body, surface] of [[input.caption, input.replyToId ? "reply" : "threads"], [input.selfReply, "reply"]]) {
@@ -94054,8 +94137,8 @@ async function reviewFinalSpeech(input) {
       const same = Object.entries(base).every(([k, v]) => ["mediaSha256", "expectedText"].includes(k) || old[k] === v);
       if (old.audioSha256 === base.audioSha256 && old.textSha256 === base.textSha256 && old.status === "fail") return save2("fail", { reused: true, signal: old.signal, transcript: old.transcript, failures: old.failures, review: old.review, error: "This exact final audio already failed; fix the audio before another listening review" });
       if (same && old.status === "pass") {
-        const review = reviewSchema.parse(old.review);
-        if (!signalFailures(old.signal, request.expectedText, 1800).length && !reviewFailures(request.expectedText, old.transcript, review, old.signal.duration).length && (review.continuity ?? 0) >= 95 && review.continuityEvidence) return save2("pass", { reused: true, signal: old.signal, transcript: old.transcript, review, failures: [] });
+        const review2 = reviewSchema.parse(old.review);
+        if (!signalFailures(old.signal, request.expectedText, 1800).length && !reviewFailures(request.expectedText, old.transcript, review2, old.signal.duration).length && (review2.continuity ?? 0) >= 95 && review2.continuityEvidence) return save2("pass", { reused: true, signal: old.signal, transcript: old.transcript, review: review2, failures: [] });
       }
     }
     save2("unverified", {});
@@ -97215,6 +97298,7 @@ function fromPortal(r2) {
 }
 var ROUTES = {
   ...UNIT_ROUTES,
+  ...REVIEW_ROUTES,
   serp_web_search: async (args) => {
     const result = await webSearch(parseArgs(serpWebSchema, args));
     return text(result.text, result.isError);

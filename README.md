@@ -480,7 +480,7 @@ social-flow/
 ├── .plugin/plugin.json          # Buzz persona pack (Open Plugin Spec)
 ├── personas/                    # Buzz pack persona (pipeline.persona.md)
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 178 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 182 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
 │       ├── tools.ts             # tool definitions — 83: research 9 + open data 5 + generation 40 + publish 6 + comments 3 + growth insights 5 + growth review 2 + check 2 + blender 7 + storyboard 4
@@ -542,14 +542,14 @@ social-flow/
 └── data/                        # content data root (see data/README.md)
 ```
 
-## MCP tool surface (178 tools)
+## MCP tool surface (182 tools)
 
-**`tools/list` does not show all 178.** The credential-gated publish, review and insights tools
+**`tools/list` does not show all 182.** The credential-gated publish, review and insights tools
 (`threads_draft_create` · `threads_review_submit` · `threads_publish` · `instagram_publish` · `facebook_publish` · `facebook_comment` ·
 `youtube_publish` · `threads_insights` · `instagram_insights` · `youtube_insights` ·
 `threads_search`) are exposed **only for platforms whose credential file exists** —
 evaluated at list time, so adding a token makes them appear without restarting the
-server. The 94 `portal_*` tools follow the same rule on the ttalkkakstory workspace key
+server. The 98 `portal_*` tools follow the same rule on the ttalkkakstory workspace key
 (`<SNS_TOKEN_DIR>/<channel>/ttalkkakstory.json`, the flat file, or `TTALKKAKSTORY_*`). With
 no tokens and no portal key you'll count 73; explicit tool-disable settings can reduce
 that list further. Hidden tools still have live handlers:
@@ -1019,3 +1019,26 @@ and render-allocation requests. See
 [portal unit tools](skills/storyboard/references/portal-units.md) for identifiers,
 atomic companion edits, validation and conflict recovery. These tools require only
 the credential channel and playlist/episode identifiers, never a project input.
+
+### Decisions and reviewer records
+
+`portal_decision_list` / `portal_decision_record` read and record evidenced HITL choices,
+including `narration_approval`, `board_approval` and `publish_approval`. Pass `episodeId`,
+optional credential `channel`, and for writes `baseRevisionNo` plus `decision`
+(`key`, `value`, `chosenBy`, `source`, optional `options`, `reason`, `decidedAt`).
+Use `chosenBy:user` only for an actual human answer; `source` identifies that evidence.
+Read history with `history:true`. Recording a choice checkpoints the episode; it does
+not publish or authorize additional spending by itself.
+
+`portal_review_list` / `portal_review_record` store actual reviewer observations separately
+from approvals. Writes take `baseRevisionNo` and `review`: `kind` (scenario,
+narration_content, narration_wording, board, content, other), `reviewer`, `score` (0–100),
+`p0` (defect strings, or []), `summary`, `source`. Reviews are bound to the assessed
+revision and survive later saves. Review writes do not advance the head. Both write tools
+honor portal leases and reject stale revisions; read again before deciding whether to retry.
+
+Leading `// approved:` and `// review:` lines in scenes.js survive save/pull through
+portal metadata. They preserve annotations, never invent a human decision. With repeated
+leading markers the last value wins; comments after executable code are not annotations.
+The live cross-repository regression probe is `scripts/test-approval-roundtrip.mjs` in the
+portal repository; the server suite also covers save/pull with a scripted portal.

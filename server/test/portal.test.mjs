@@ -502,6 +502,42 @@ describe('portal_* handlers on a scripted portal', () => {
     clearTokenDir();
   });
 
+  it('save → pull preserves approved and review header annotations', async () => {
+    const dir = makeEpisodeDir(root, 'my-channel', 'header-roundtrip');
+    const file = join(dir, 'storyboard', 'scenes.js');
+    writeFileSync(file, '// approved: owner event:93\n// review: content 95 wording 96 P0=0\n' + scenesJs());
+    let stored;
+    const { impl } = fakeFetch({
+      'POST /api/workspaces/lab/storyboards/import': ({ body }) => {
+        stored = body;
+        return { success:true, data:{ episodeId:EPISODE_ID,storyboardId:STORYBOARD_ID,revisionNo:1,url:'/lab/episodes/ep' } };
+      },
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}`]: () => ({ success:true,data:{ headRevisionNo:1,storyboardId:STORYBOARD_ID,documents:[] } }),
+      [`GET /api/workspaces/lab/episodes/${EPISODE_ID}/scenes.js`]: () => {
+        const meta=stored.episode.meta;
+        return [typeof meta.approved==='string'?`// approved: ${meta.approved}`:'',typeof meta.review==='string'?`// review: ${meta.review}`:'',`window.SCENES=${JSON.stringify(stored.scenes)};`].join('\n');
+      },
+    });
+    const h=portal.portalHandlers(impl);
+    assert.equal((await h.storyboardSave({episodeDir:dir})).isError,false);
+    assert.equal(stored.episode.meta.approved,'owner event:93');
+    assert.equal(stored.episode.meta.review,'content 95 wording 96 P0=0');
+    const target=join(root,'data','my-channel','episodes','header-pull');
+    assert.equal((await h.storyboardPull({episodeId:EPISODE_ID,targetDir:target})).isError,false);
+    const pulled=readFileSync(join(target,'storyboard','scenes.js'),'utf8');
+    assert.match(pulled,/^\/\/ approved: owner event:93$/m);
+    assert.match(pulled,/^\/\/ review: content 95 wording 96 P0=0$/m);
+  });
+
+  it('does not mistake template strings or later comments for approval headers', () => {
+    const evaluated=episode.evaluateScenesJs('window.NOTE=`\n// approved: invented\n// review: invented`;\n// approved: later\nwindow.SCENES=[];');
+    assert.equal(evaluated.meta.approved,undefined);
+    assert.equal(evaluated.meta.review,undefined);
+    const header=episode.evaluateScenesJs('\ufeff// title\r\n// approved: yes\r\n// review: checked\r\nwindow.SCENES=[];');
+    assert.equal(header.meta.approved,'yes');
+    assert.equal(header.meta.review,'checked');
+  });
+
   it('reads a pending render request and submits exact revision and holder', async () => {
     const { impl, calls } = fakeFetch({
       [`GET /api/workspaces/lab/episodes/${EPISODE_ID}/render-allocation`]: { success:true, data:{ request: {status:'pending'}, bounds:{min:5,max:7}, shots:[] } },

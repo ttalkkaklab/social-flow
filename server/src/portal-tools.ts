@@ -1,3 +1,4 @@
+import { REVIEW_TOOL_NAMES } from './portal-review-tools.js';
 import { UNIT_TOOL_NAMES } from './portal-unit-tools.js';
 import { canonicalPullPaths } from './portal-canonical.js';
 import { uploadAttachments, restoreAttachments, prepareAttachmentRestore, attachmentSyncReport, safeAttachmentTarget } from './portal-attachments.js';
@@ -56,6 +57,7 @@ export const PORTAL_TOOL_NAMES = [
   'portal_character_delete',
   'portal_character_image_upload',
   'portal_character_tts_set',
+  ...REVIEW_TOOL_NAMES,
   'portal_attachments_sync',
   'portal_images_upload',
   'portal_shot_media_upload',
