@@ -13,7 +13,9 @@
  */
 
 import { createHash } from 'node:crypto';
+import { closeSync, openSync, unlinkSync, writeSync } from 'node:fs';
 import { hostname } from 'node:os';
+import path from 'node:path';
 import { config, portalCredential, type PortalCredential } from './config.js';
 
 export class PortalError extends Error {
@@ -36,6 +38,22 @@ export interface PortalResponse<T = unknown> {
   data: T;
 }
 
+export interface PortalRawRequest {
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD';
+  path: string;
+  scope: 'global' | 'workspace';
+  response: 'json' | 'text' | 'binary';
+  body?: unknown | Uint8Array;
+  contentType?: string;
+  headers?: Record<string, string>;
+  targetFile?: string;
+}
+
+export interface PortalRawResponse {
+  status: number;
+  data: unknown;
+}
+
 /** Lease/revision holder — `<key prefix>@<host>`; a human reads it as "who touched this last". */
 export function defaultHolder(apiKey: string): string {
   return `${apiKey.slice(0, 8)}@${hostname()}`;
@@ -43,9 +61,12 @@ export function defaultHolder(apiKey: string): string {
 
 /** Portal timeout — a checkpoint carries a whole board (scenes + five documents); 15 s is too tight for a slow link. */
 export const PORTAL_TIMEOUT_MS = 60_000;
+const PORTAL_MAX_TRANSFER_BYTES = 100 * 1024 * 1024;
 
 export interface PortalClient {
   request(method: 'GET' | 'POST' | 'PATCH' | 'DELETE', path: string, body?: unknown): Promise<PortalResponse>;
+  /** Execute one generated API-contract operation, including text and streamed binary responses. */
+  requestRaw(request: PortalRawRequest): Promise<PortalRawResponse>;
   /** The workspace-scoped API base, e.g. https://story.example/api/workspaces/lab */
   base: string;
   workspace: string;
@@ -256,6 +277,7 @@ export function createPortalClient(credential: PortalCredential & { workspace: s
     } catch (error) {
       throw new PortalError(502, `portal unreachable (${origin}${path}): ${error instanceof Error ? error.message : String(error)}`);
     }
+    if (response.status === 204 || response.status === 304) return { status: response.status, data: null as T };
     let envelope: { success?: boolean; data?: T; error?: string; error_code?: string; detail?: unknown };
     try {
       envelope = (await response.json()) as typeof envelope;
@@ -284,10 +306,104 @@ export function createPortalClient(credential: PortalCredential & { workspace: s
     return response.text();
   }
 
+  const responseHeaders = (response: Response): Record<string, string> => {
+    const result: Record<string, string> = {};
+    response.headers.forEach((value, key) => { result[key] = value; });
+    return result;
+  };
+
+  async function raw(request: PortalRawRequest): Promise<PortalRawResponse> {
+    const origin = request.scope === 'global' ? root : base;
+    const binaryBytes = request.body instanceof Uint8Array ? request.body : undefined;
+    const binaryBody = binaryBytes !== undefined;
+    if (request.response === 'json') {
+      return json(
+        request.method,
+        request.path,
+        request.body,
+        binaryBody ? request.contentType : undefined,
+        request.headers,
+        origin,
+      );
+    }
+
+    let response: Response;
+    try {
+      response = await fetchImpl(`${origin}${request.path}`, {
+        method: request.method,
+        headers: {
+          ...headers,
+          ...request.headers,
+          ...(request.body === undefined ? {} : {
+            'content-type': request.contentType ?? (binaryBody ? 'application/octet-stream' : 'application/json'),
+          }),
+          ...(binaryBytes ? { 'content-length': String(binaryBytes.byteLength) } : {}),
+        },
+        body: request.body === undefined
+          ? undefined
+          : binaryBytes
+            ? binaryBytes as BodyInit
+            : JSON.stringify(request.body),
+        redirect: 'error',
+        signal: AbortSignal.timeout(timeoutMs * (request.response === 'binary' ? 5 : 1)),
+      });
+    } catch (error) {
+      throw new PortalError(502, `portal unreachable (${origin}${request.path}): ${error instanceof Error ? error.message : String(error)}`);
+    }
+
+    if (response.status === 204 || response.status === 304) return { status: response.status, data: null };
+    if (!response.ok) {
+      let envelope: { error?: string; error_code?: string; detail?: unknown } = {};
+      try { envelope = await response.json() as typeof envelope; } catch { /* binary/text failures may have no JSON body */ }
+      throw new PortalError(response.status, envelope.error ?? `request failed (${response.status})`, envelope.error_code, envelope.detail);
+    }
+    const metadata = responseHeaders(response);
+    if (request.response === 'text') return { status: response.status, data: await response.text() };
+    if (request.method === 'HEAD') return { status: response.status, data: { headers: metadata } };
+    if (!request.targetFile || !path.isAbsolute(request.targetFile)) {
+      throw new Error('A binary GET requires targetFile as an absolute local path.');
+    }
+
+    let fd: number;
+    try {
+      fd = openSync(request.targetFile, 'wx');
+    } catch (error) {
+      await response.body?.cancel().catch(() => {});
+      throw error;
+    }
+    const reader = response.body?.getReader();
+    if (!reader) {
+      closeSync(fd);
+      unlinkSync(request.targetFile);
+      throw new Error('Portal binary response has no body.');
+    }
+    let bytes = 0;
+    let failed = false;
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        bytes += value.byteLength;
+        if (bytes > PORTAL_MAX_TRANSFER_BYTES) throw new Error('Portal download exceeds 100 MiB.');
+        writeSync(fd, value);
+      }
+    } catch (error) {
+      failed = true;
+      throw error;
+    } finally {
+      await reader.cancel().catch(() => {});
+      reader.releaseLock();
+      closeSync(fd);
+      if (failed) unlinkSync(request.targetFile);
+    }
+    return { status: response.status, data: { targetFile: request.targetFile, byteSize: bytes, headers: metadata } };
+  }
+
   const withHolder = (path: string): string => `${path}?holder=${encodeURIComponent(holder)}`;
 
   return {
     request: (method, path, body) => json(method, `${path}${path.includes('?') ? '&' : '?'}holder=${encodeURIComponent(holder)}`, body),
+    requestRaw: raw,
     base,
     workspace: credential.workspace,
     resolvedBy,
