@@ -29,7 +29,13 @@ import {
 import { SNS_PLATFORM_BY_TOOL, TOOLS } from '../dist/tools.js';
 import { ROUTES, threadsTextLength } from '../dist/handlers.js';
 import { STOCK_PROVIDERS, STOCK_MEDIA, STOCK_ORIENTATIONS, STOCK_MAX_LIMIT } from '../dist/stock-client.js';
-import { TTS_VOICE_NAMES, VALID_TTS_MODELS } from '../dist/tts-client.js';
+import {
+  DEFAULT_GEMINI_38_TTS_MODEL,
+  GEMINI_38_TTS_MODELS,
+  MAX_GEMINI_38_TTS_INPUT_CHARS,
+  TTS_VOICE_NAMES,
+  VALID_TTS_MODELS,
+} from '../dist/tts-client.js';
 import {
   DEFAULT_SUPERTONIC_LANGUAGE,
   MAX_SUPERTONIC_INPUT_CHARS,
@@ -873,6 +879,18 @@ describe('single-source constants', () => {
 
   it('the TTS model enum matches the source of truth', () => {
     assert.deepEqual(enumOf('tts_generate', 'model'), [...VALID_TTS_MODELS]);
+  });
+
+  it('the Gemini 3.8 acted TTS tool matches the Interactions client contract', () => {
+    const tool = byName.get('tts_gemini_38');
+    assert.ok(tool, 'tts_gemini_38 is not registered');
+    assert.deepEqual(enumOf('tts_gemini_38', 'model'), [...GEMINI_38_TTS_MODELS]);
+    assert.equal(tool.inputSchema.properties.model.default, DEFAULT_GEMINI_38_TTS_MODEL);
+    assert.equal(tool.inputSchema.properties.turns.items.properties.text.maxLength, MAX_GEMINI_38_TTS_INPUT_CHARS);
+    assert.equal(tool.inputSchema.properties.speakers.minItems, 2);
+    assert.equal(tool.inputSchema.properties.speakers.maxItems, 2);
+    assert.deepEqual(tool.inputSchema.properties.speakers.items.properties.voice.enum, [...TTS_VOICE_NAMES]);
+    assert.match(tool.description, /ElevenLabs L4az9Gb378GIycFl2nAB/);
   });
 
   it('music scale/mode enums match the music-client source of truth', () => {

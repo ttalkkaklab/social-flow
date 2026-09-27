@@ -14,6 +14,7 @@
  */
 import { z } from 'zod';
 import { requireGeminiKey } from './config.js';
+import { requestRaw } from './http.js';
 import { bareFilenameSchema, pcmToWav, saveAudioFile } from './media-utils.js';
 /**
  * The 30 supported voices and their character traits.
@@ -260,6 +261,183 @@ export async function generateDialogue(request) {
     catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         console.error(`[TTS] Error: ${errorMessage}`);
+        return { success: false, error: errorMessage };
+    }
+}
+// ── Gemini 3.8 Interactions API ─────────────────────────────────
+export const GEMINI_38_TTS_MODELS = [
+    'gemini-3.8-flash-tts',
+    'gemini-3.8-flash-lite-tts',
+];
+export const DEFAULT_GEMINI_38_TTS_MODEL = 'gemini-3.8-flash-tts';
+export const MAX_GEMINI_38_TTS_INPUT_CHARS = 16_000;
+const GEMINI_INTERACTIONS_URL = 'https://generativelanguage.googleapis.com/v1beta/interactions';
+const gemini38TurnSchema = z.object({
+    text: z.string().min(1, 'Turn text is required').max(MAX_GEMINI_38_TTS_INPUT_CHARS),
+    speaker: z.string().min(1).max(100).optional(),
+    style: z.string().min(1).max(500).optional(),
+});
+const gemini38SpeakerSchema = z.object({
+    speaker: z.string().min(1, 'Speaker name is required').max(100),
+    voice: z.enum(TTS_VOICE_NAMES),
+});
+export const gemini38TtsSchema = z
+    .object({
+    turns: z.array(gemini38TurnSchema).min(1, 'At least one turn is required').max(200),
+    model: z.enum(GEMINI_38_TTS_MODELS).optional().default(DEFAULT_GEMINI_38_TTS_MODEL),
+    voice: z.string().min(1).max(300).optional().default(DEFAULT_VOICE),
+    speakers: z.array(gemini38SpeakerSchema).length(2, 'Conversational mode requires exactly 2 speakers').optional(),
+    outputPath: z.string().optional(),
+    filename: bareFilenameSchema('audio').optional(),
+})
+    .superRefine((request, ctx) => {
+    const totalChars = request.turns.reduce((sum, turn) => sum + turn.text.length, 0);
+    if (totalChars > MAX_GEMINI_38_TTS_INPUT_CHARS) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['turns'],
+            message: `Turn text exceeds ${MAX_GEMINI_38_TTS_INPUT_CHARS} characters in total; split the script`,
+        });
+    }
+    if (request.speakers) {
+        const names = new Set(request.speakers.map((speaker) => speaker.speaker));
+        if (names.size !== request.speakers.length) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ['speakers'],
+                message: 'Speaker names must be unique',
+            });
+        }
+        request.turns.forEach((turn, index) => {
+            if (!turn.speaker || !names.has(turn.speaker)) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    path: ['turns', index, 'speaker'],
+                    message: 'Every dialogue turn must name one of the configured speakers',
+                });
+            }
+        });
+    }
+    else {
+        request.turns.forEach((turn, index) => {
+            if (turn.speaker) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    path: ['turns', index, 'speaker'],
+                    message: 'speaker requires the two-entry speakers array',
+                });
+            }
+        });
+    }
+});
+/** Build the documented Interactions API body without moving stage directions into spoken text. */
+export function buildGemini38InteractionBody(request) {
+    const content = request.turns.map((turn) => {
+        const metadata = {
+            type: 'speech_metadata',
+            ...(turn.speaker ? { speaker: turn.speaker } : {}),
+            ...(turn.style ? { style: turn.style } : {}),
+        };
+        return {
+            type: 'text',
+            text: turn.text,
+            ...(turn.speaker || turn.style ? { annotations: [metadata] } : {}),
+        };
+    });
+    return {
+        model: request.model,
+        input: [{ type: 'user_input', content }],
+        response_format: { type: 'audio' },
+        generation_config: {
+            speech_config: request.speakers
+                ? {
+                    mode: 'conversational',
+                    speakers: request.speakers.map((speaker) => ({
+                        speaker: speaker.speaker,
+                        voice: speaker.voice,
+                    })),
+                }
+                : [{ voice: request.voice }],
+        },
+    };
+}
+/** Read the final audio content block from the raw Interaction response. */
+export function extractGemini38Audio(interaction) {
+    if (typeof interaction !== 'object' || interaction === null) {
+        throw new Error('Interactions API returned a non-object response');
+    }
+    const steps = interaction.steps;
+    if (!Array.isArray(steps))
+        throw new Error('Interactions API response has no steps array');
+    for (let stepIndex = steps.length - 1; stepIndex >= 0; stepIndex--) {
+        const step = steps[stepIndex];
+        if (typeof step !== 'object' || step === null || step.type !== 'model_output')
+            continue;
+        const content = step.content;
+        if (!Array.isArray(content))
+            continue;
+        for (let contentIndex = content.length - 1; contentIndex >= 0; contentIndex--) {
+            const block = content[contentIndex];
+            if (typeof block !== 'object' || block === null || block.type !== 'audio')
+                continue;
+            const data = block.data;
+            const mimeType = block.mime_type;
+            if (typeof data === 'string' && data.length > 0) {
+                return { data, mimeType: typeof mimeType === 'string' ? mimeType : 'audio/wav' };
+            }
+        }
+    }
+    throw new Error('Interaction completed without an audio content block');
+}
+export function describeGemini38Error(status, body) {
+    try {
+        const parsed = JSON.parse(body);
+        const code = typeof parsed.error?.code === 'string' ? parsed.error.code : undefined;
+        const message = typeof parsed.error?.message === 'string' ? parsed.error.message : undefined;
+        if (code && message) {
+            if (code === 'payment_required') {
+                return `HTTP ${status} ${code}: ${message} Add Gemini prepayment credits before retrying.`;
+            }
+            if (code === 'model_not_found') {
+                return `HTTP ${status} ${code}: ${message} Use gemini-3.8-flash-tts or gemini-3.8-flash-lite-tts.`;
+            }
+            return `HTTP ${status} ${code}: ${message}`;
+        }
+    }
+    catch {
+        // Fall through to the raw body. requestRaw already bounds this to one response.
+    }
+    return `HTTP ${status}: ${body || '(empty body)'}`;
+}
+/** Gemini 3.8 single-voice or two-speaker synthesis through POST /v1beta/interactions. */
+export async function generateGemini38Speech(request) {
+    try {
+        const apiKey = requireGeminiKey();
+        const response = await requestRaw('post', GEMINI_INTERACTIONS_URL, { 'x-goog-api-key': apiKey }, buildGemini38InteractionBody(request), 120_000);
+        if (!response.ok) {
+            return { success: false, error: describeGemini38Error(response.status, response.body) };
+        }
+        let interaction;
+        try {
+            interaction = JSON.parse(response.body);
+        }
+        catch {
+            throw new Error('Interactions API returned invalid JSON');
+        }
+        const audio = extractGemini38Audio(interaction);
+        const audioPath = saveAudio(audio, request.outputPath, request.filename, 'tts_gemini_38');
+        const speakers = request.speakers?.map((speaker) => speaker.speaker).join(', ');
+        return {
+            success: true,
+            audioPath,
+            text: speakers ? `Gemini 3.8 conversation with: ${speakers}` : request.turns.map((turn) => turn.text).join('\n'),
+            voiceName: speakers ? undefined : request.voice,
+            model: request.model,
+        };
+    }
+    catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error(`[Gemini 3.8 TTS] Error: ${errorMessage}`);
         return { success: false, error: errorMessage };
     }
 }
