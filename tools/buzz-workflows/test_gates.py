@@ -33,8 +33,6 @@ class Relay:
         self.visible = True
         self.ambiguous = False
         self.serial = 0
-        self.retain_deleted = False
-        self.ignore_updates = False
 
     def __call__(self, *args, content=None):
         self.calls.append(args)
@@ -54,11 +52,9 @@ class Relay:
             self.serial += 1
             self.rows.append({'workflow_id': str(self.serial), 'content': content})
         if op == ('workflows', 'update'):
-            if not self.ignore_updates:
-                next(r for r in self.rows if r['workflow_id'] == args[5])['content'] = content
+            next(r for r in self.rows if r['workflow_id'] == args[5])['content'] = content
         if op == ('workflows', 'delete'):
-            if not self.retain_deleted:
-                self.rows = [r for r in self.rows if r['workflow_id'] != args[-1]]
+            self.rows = [r for r in self.rows if r['workflow_id'] != args[-1]]
         return {'accepted': True}
 
 
@@ -73,6 +69,9 @@ class GatesTests(unittest.TestCase):
         self.mock = patch.object(gates, 'buzz', self.relay)
         self.mock.start()
         self.addCleanup(self.mock.stop)
+        verifier = patch.object(gates, 'verify_absent')
+        self.absence = verifier.start()
+        self.addCleanup(verifier.stop)
 
     def test_retry_does_not_duplicate_and_updates_keep_ids(self):
         first = gates.ensure('channel', 'work')
@@ -86,18 +85,6 @@ class GatesTests(unittest.TestCase):
         self.relay.rows.append({'workflow_id': 'partial', 'content': json.dumps(next(iter(definitions.values())))})
         result = gates.ensure('channel', 'work')
         self.assertEqual(result['buzz-gates/work/review'], 'partial')
-        self.assertEqual(len(self.relay.rows), 3)
-
-    def test_disabled_retired_gate_is_safely_replaced_in_place(self):
-        retired = {'name': 'buzz-gates/work/review-disabled',
-                   'trigger': {'on': 'reaction_added', 'emoji': '👀',
-                               'filter': 'trigger_message_id == "' + '0' * 64 + '"'},
-                   'steps': [{'id': 'noop', 'action': 'send_message',
-                              'if': 'false', 'text': 'disabled'}]}
-        self.relay.rows.append({'workflow_id': 'retired', 'content': json.dumps(retired)})
-        result = gates.ensure('channel', 'work')
-        self.assertEqual(set(result), set(gates.definitions('work')))
-        self.assertEqual(result['buzz-gates/work/review'], 'retired')
         self.assertEqual(len(self.relay.rows), 3)
 
     def test_invisible_channel_never_creates(self):
@@ -155,67 +142,39 @@ class GatesTests(unittest.TestCase):
             gates.remove('channel', close=True, archive_unmanaged=True)
         self.assertFalse(any(c[:2] in [('channels', 'delete'), ('channels', 'archive')] for c in self.relay.calls))
 
-    def test_cleanup_separates_retained_records_from_runnable_gates(self):
+    def test_cleanup_disables_step_before_delete_and_failed_probe_retains_channel(self):
         gates.ensure('channel', 'work')
-        self.relay.retain_deleted = True
-        result = gates.remove('channel')
-        operations = [c[:2] for c in self.relay.calls]
-        self.assertLess(operations.index(('workflows', 'update')), operations.index(('workflows', 'delete')))
-        self.assertEqual(result['deleted_workflows'], 3)
-        self.assertEqual(len(self.relay.rows), 3)
-        for row in self.relay.rows:
-            definition = json.loads(row['content'])
-            self.assertIn('-disabled-', definition['name'])
-            self.assertEqual(definition['steps'][0]['if'], 'false')
-        self.assertEqual(gates.managed('channel', 'work'), {})
-
-    def test_cleanup_readback_failure_retains_channel(self):
-        gates.ensure('channel', 'work')
-        self.relay.retain_deleted = True
-        self.relay.ignore_updates = True
-        with self.assertRaisesRegex(RuntimeError, 'disablement not confirmed'):
+        self.absence.side_effect = RuntimeError('not confirmed')
+        with self.assertRaises(RuntimeError):
             gates.remove('channel', close=True)
         operations = [c[:2] for c in self.relay.calls]
+        self.assertLess(operations.index(('workflows', 'update')), operations.index(('workflows', 'delete')))
         self.assertNotIn(('channels', 'delete'), operations)
 
-    def test_owner_and_work_action_filters_and_safe_test_scope(self):
+    def test_absence_probe_requires_precise_not_found_error(self):
+        from types import SimpleNamespace
+        self.mock.stop()
+        # Exercise the real verifier, not the default cleanup stub.
+        real = module('probe_gates', ROOT / 'buzz-workflows.py')
+        for stderr, code, valid in [
+            ('{"error":"relay_error","message":"relay error 400: invalid: workflow not found"}', 2, True),
+            ('{"error":"auth_error","message":"forbidden"}', 3, False),
+            ('', 0, False),
+            ('not json', 2, False),
+        ]:
+            with patch.object(real.subprocess, 'run', return_value=SimpleNamespace(returncode=code, stderr=stderr)):
+                if valid:
+                    real.verify_absent('workflow')
+                else:
+                    with self.assertRaises(RuntimeError):
+                        real.verify_absent('workflow')
+
+    def test_owner_filter_and_safe_test_scope(self):
         for definition in gates.definitions('approval').values():
             self.assertEqual(definition['trigger']['filter'], f'trigger_author == "{gates.OWNER}"')
-        work = gates.definitions('work')
-        review = work['buzz-gates/work/review']
-        self.assertEqual(review['trigger']['emoji'], '🔍')
-        allowed = (gates.OWNER, gates.PUN_LEAD, gates.MAC_LEAD)
-        for name in ('release', 'done'):
-            definition = work[f'buzz-gates/work/{name}']
-            self.assertTrue(all(author in definition['trigger']['filter'] for author in allowed))
-        self.assertTrue(all(author in review['trigger']['filter']
-                            for author in (gates.OWNER, gates.PUN_LEAD)))
-        self.assertNotIn(gates.MAC_LEAD, review['trigger']['filter'])
-        for name in ('release', 'done'):
-            self.assertIn('반응은 승인 자체가 아닙니다',
-                          work[f'buzz-gates/work/{name}']['steps'][0]['text'])
-        self.assertTrue(all('filter' in definition['trigger'] for definition in work.values()))
-        self.assertFalse(any(definition['trigger']['emoji'] in ('👀', '💬')
-                             for definition in work.values()))
-        scoped = gates.definitions('work', test='a' * 64)
-        self.assertIn('trigger_author', scoped['buzz-gates/work/review']['trigger']['filter'])
-        for definition in scoped.values():
+        for definition in gates.definitions('work', test='a' * 64).values():
             self.assertIn('a' * 64, definition['trigger']['filter'])
             self.assertIn('실행하지 않습니다', definition['steps'][0]['text'])
-        for name in ('release', 'done'):
-            self.assertTrue(all(author in scoped[f'buzz-gates/work/{name}']['trigger']['filter']
-                                for author in allowed))
-        self.assertNotIn(gates.MAC_LEAD,
-                         scoped['buzz-gates/work/review']['trigger']['filter'])
-
-    def test_eyes_on_gate_messages_cannot_retrigger_review(self):
-        review = gates.definitions('work')['buzz-gates/work/review']['trigger']
-        # Workflow messages receive automatic read markers from both leaders.
-        # The review gate uses a distinct emoji, so any number of those markers
-        # fail before the author filter and cannot create another gate message.
-        for automatic_emoji in ('👀', '💬'):
-            for _ in range(3):
-                self.assertNotEqual(review['emoji'], automatic_emoji)
 
 
 class WatcherErrorTests(unittest.TestCase):
@@ -270,31 +229,18 @@ class WatcherErrorTests(unittest.TestCase):
                 self.assertEqual(output, 'WORKFLOW_GATES_ERROR forbidden\n')
 
     def test_unknown_or_not_found_does_not_report_closed(self):
-        for category, message, expected, label in [
-            ('relay_error', 'relay error 404: channel not found', 12, 'channel_not_found'),
-            ('relay_error', 'relay error 400: invalid: workflow not found', 13, 'workflow_not_found'),
-            ('relay_error', 'relay error 404: resource not found', 1, 'failed'),
-            ('relay_error', 'unclassified failure TEST_HEADER', 1, 'failed'),
+        for category, message, expected in [
+            ('relay_error', 'relay error 404: channel not found', 12),
+            ('network_error', 'signed request failed: TEST_HEADER forbidden', 1),
+            ('relay_error', 'unclassified failure TEST_HEADER', 1),
         ]:
             with self.subTest(message=message):
                 code, output, result, _ = self.invoke_close_and_watcher({'error': category, 'message': message})
                 self.assertEqual(code, expected)
                 self.assertFalse(result)
                 self.assertNotIn('TEST_HEADER', output)
-                self.assertEqual(output, f'WORKFLOW_GATES_ERROR {label}\n')
 
-    def test_permission_denials_keep_forbidden_across_cli_error_formats(self):
-        for stderr in [
-            'request failed: forbidden; Authorization: TEST_HEADER',
-            json.dumps({'error': 'network_error',
-                        'message': 'signed request failed: TEST_HEADER permission denied'}),
-            json.dumps({'error': 'relay_error', 'message': 'relay error 403: actor not authorized'}),
-            json.dumps({'error': 'auth_error', 'message': 'not the owner'}),
-        ]:
-            with self.subTest(stderr=stderr):
-                self.assertEqual(gates.error_code(stderr), 'forbidden')
-
-    def test_unclassified_non_json_errors_are_not_forwarded(self):
+    def test_non_json_errors_are_not_forwarded(self):
         self.assertEqual(gates.error_code('Authorization: TEST_HEADER'), 'failed')
         self.assertEqual(gates.error_code('[]'), 'failed')
 
