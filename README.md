@@ -480,7 +480,7 @@ social-flow/
 ├── .plugin/plugin.json          # Buzz persona pack (Open Plugin Spec)
 ├── personas/                    # Buzz pack persona (pipeline.persona.md)
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 280 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 281 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
 │       ├── tools.ts             # tool definitions — 83: research 9 + open data 5 + generation 40 + publish 6 + comments 3 + growth insights 5 + growth review 2 + check 2 + blender 7 + storyboard 4
@@ -542,7 +542,7 @@ social-flow/
 └── data/                        # content data root (see data/README.md)
 ```
 
-## MCP tool surface (280 tools)
+## MCP tool surface (281 tools)
 
 **`tools/list` does not show all 280.** The credential-gated publish, review and insights tools
 (`threads_draft_create` · `threads_review_submit` · `threads_publish` · `instagram_publish` · `facebook_publish` · `facebook_comment` ·
@@ -579,7 +579,7 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | Checked narration | `tts_generate_checked` | Generates with the pinned engine and reviews the actual WAV: blind transcript, pronunciation, naturalness and clarity. Up to three takes (one episode seed stays fixed across retakes); current hash-bound PASS required for assembly. Every single-voice take gets a fixed pause laid in at each sentence boundary — ElevenLabs from its own alignment, the local/Gemini/mlx engines from the local forced aligner — with `<wav>.sentences.json` for the builder. Requires Gemini API review even for local TTS; see [speech quality gate](skills/produce/references/tts-quality.md). |
 | Final speech review | `tts_review_final` | Listens to the assembled media and every sentence transition; continuity and other listening axes must reach 95, accuracy 98. The final hash-bound proof is required for delivery. |
 | Pronunciation dictionary | `tts_elevenlabs_dictionary` | Creates Korean alias rules and returns pinned dictionary/version IDs for `pronunciationDictionaryLocators`. Keep the source name intact and test the actual pronunciation. |
-| Voice generation | `tts_generate` / `tts_multi_speaker` / `tts_list_voices` | Gemini TTS (GEMINI_API_KEY — 30 voices, automatic language detection, saves mono 24kHz wav) |
+| Voice generation | `tts_generate` / `tts_multi_speaker` / `tts_gemini_38` / `tts_list_voices` | Gemini TTS (GEMINI_API_KEY — 30 curated voices, automatic language detection, saves mono 24kHz wav). `tts_gemini_38` uses the Interactions API for turn-level style, inline vocal events, and two-speaker backchannels. |
 | Voice generation | `tts_local_generate` | Supertonic 3 on-device (**no API key, no network** — 10 voices, 31 explicitly specified languages, mono 44.1kHz wav. Needs local python + `pip install supertonic`) |
 | Voice generation | `mlx_tts_generate` | MLX Core / mlx-serve (raw WAV. Optional; never a silent fallback for the engine in profile §2) |
 | Voice generation | `tts_elevenlabs_generate` / `tts_elevenlabs_dialogue` / `tts_elevenlabs_voices` | ElevenLabs (ELEVENLABS_API_KEY — the paid third lane: inline audio-tag acting on eleven_v3, text-to-dialogue with **up to 10 voices in one request**, per-character timestamps for subtitle sync, any cloned or Voice Library voice. Saves mono 24kHz wav by default, so the builder reads it like the Gemini lane. API rate $0.10 per 1,000 characters on v2·v3, $0.05 on flash and v3 conversational, the same on every plan; the Free tier is non-commercial) |
@@ -628,7 +628,7 @@ human. grow-instagram publishes only with a public HTTPS URL, and with no hostin
 configured it disables both publishing and auto-authoring (the loop won't start
 tunnels, and it won't spend money making a video with no way out).
 
-All 37 generation tools run **inside this plugin — no external MCP server required**.
+All 38 generation tools run **inside this plugin — no external MCP server required**.
 Two keys cover the hosted ones: OPENAI_API_KEY for images, GEMINI_API_KEY for
 video/voice/music (Seedance adds ARK_API_KEY, ElevenLabs adds ELEVENLABS_API_KEY).
 `image_local_generate` and `tts_local_generate` run on-device and need no key at
@@ -680,7 +680,7 @@ explicit error and everything else works.
 | `PIXABAY_API_KEY` | stock_search (Pixabay) | — | Pixabay API key (pixabay.com/api/docs — free, 100 requests/minute) |
 | `DATA_GO_KR_API_KEY` | datago_file_fetch · api_call | — | data.go.kr auth key (My Page on data.go.kr — beyond the key, each API needs a **per-API usage application**. Search/detail/download work without a key) |
 | `OPENAI_API_KEY` | gpt_image_* | — | OpenAI API key (platform.openai.com/api-keys — image generation) |
-| `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) | veo_* · omni_* · tts_generate · tts_multi_speaker · music_* | — | Gemini API key (aistudio.google.com/apikey — video, voice, and music generation. `tts_local_generate` works without it) |
+| `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) | veo_* · omni_* · tts_generate · tts_multi_speaker · tts_gemini_38 · music_* | — | Gemini API key (aistudio.google.com/apikey — video, voice, and music generation. `tts_local_generate` works without it) |
 | `ARK_API_KEY` | seedance_* | — | BytePlus ModelArk API key (ai.byteplus.com/ark — the second video engine. Dreamina Seedance 2.x models additionally require **an account balance over $30 or a resource pack** to activate; 1.5 pro and 1.0 have no such gate. `veo_*` works fine without this key) |
 | `SUNO_API_KEY` | suno_* | — | sunoapi.org API key (https://sunoapi.org/api-key — third-party REST, not Gemini and not an official Suno Inc. API). Unset, `music_*(Lyria)` still works |
 | `SUNO_BASE_URL` | | `https://api.sunoapi.org` | Same-spec self-host or regional mirror. Other vendors use different auth/paths — do not point this there |
