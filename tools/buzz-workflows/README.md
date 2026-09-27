@@ -1,6 +1,12 @@
 # Buzz reaction gates
 
 Local operations tooling; this does not add a plugin skill or an MCP tool.
+운영 훅 설치는 맥미니 `~/.buzz` 전용입니다.
+The three kickoff jobs and channel watcher run on that Mac mini; do not install
+these hooks on the MacBook. The standalone helper's Python requirements below do
+not expand the deployment scope. Before editing any target, the installer collects
+all missing files and exits with `missing: <path list>`; it never skips missing
+hooks or installs only the available subset.
 Requires Python 3.9+ on macOS/Linux and the authenticated `buzz` CLI. The caller's
 identity must see the channel, create workflows and resolve the literal leader name
 to exactly one channel member. Cleanup requires permission to delete the workflows

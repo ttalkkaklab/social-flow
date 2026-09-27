@@ -7,14 +7,25 @@ import json
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 
 SOURCE = Path(__file__).resolve().parent
 
 
+class MissingTargets(RuntimeError):
+    def __init__(self, paths):
+        super().__init__('missing: ' + ', '.join(str(path) for path in paths))
+
+
 def prepare(home):
+    edits = json.loads((SOURCE / 'runtime-edits.json').read_text())
+    targets = dict.fromkeys(home / edit['path'] for edit in edits)
+    missing = [path for path in targets if not path.is_file()]
+    if missing:
+        raise MissingTargets(missing)
     changes = {}
-    for edit in json.loads((SOURCE / 'runtime-edits.json').read_text()):
+    for edit in edits:
         path = home / edit['path']
         text = changes.get(path, path.read_text())
         if edit['new'] in text:
@@ -59,4 +70,9 @@ if __name__ == '__main__':
     parser.add_argument('--home', type=Path, default=Path.home() / '.buzz')
     parser.add_argument('--apply', action='store_true')
     args = parser.parse_args()
-    print(json.dumps({'applied': args.apply, 'files': install(args.home, args.apply)}, ensure_ascii=False))
+    try:
+        files = install(args.home, args.apply)
+    except MissingTargets as exc:
+        print(str(exc), file=sys.stderr)
+        sys.exit(1)
+    print(json.dumps({'applied': args.apply, 'files': files}, ensure_ascii=False))

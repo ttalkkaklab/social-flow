@@ -5,6 +5,8 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -244,6 +246,34 @@ class WatcherErrorTests(unittest.TestCase):
 
 
 class InstallerTests(unittest.TestCase):
+    def test_missing_targets_report_all_paths_without_partial_install(self):
+        for missing_names in [('b',), ('b', 'c')]:
+            with self.subTest(missing=missing_names), tempfile.TemporaryDirectory() as tmp:
+                home = Path(tmp) / 'home'
+                source = Path(tmp) / 'source'
+                source.mkdir()
+                (home / 'bin').mkdir(parents=True)
+                (source / 'install.py').write_text((ROOT / 'install.py').read_text())
+                (source / 'buzz-workflows.py').write_text('pass\n')
+                edits = [{'path': f'bin/{name}.py', 'old': 'x = 1', 'new': 'x = 2'}
+                         for name in ['a', 'b', 'c']]
+                # Multiple edits to a missing target must report its path just once.
+                edits.append({'path': 'bin/b.py', 'old': 'x = 2', 'new': 'x = 3'})
+                (source / 'runtime-edits.json').write_text(json.dumps(edits))
+                for name in ['a', 'b', 'c']:
+                    if name not in missing_names:
+                        (home / f'bin/{name}.py').write_text('x = 1\n')
+                result = subprocess.run([sys.executable, str(source / 'install.py'),
+                                         '--home', str(home), '--apply'],
+                                        capture_output=True, text=True, timeout=30)
+                self.assertEqual(result.returncode, 1)
+                expected = ', '.join(str(home / f'bin/{name}.py') for name in missing_names)
+                self.assertEqual(result.stderr, f'missing: {expected}\n')
+                self.assertEqual(result.stdout, '')
+                self.assertEqual((home / 'bin/a.py').read_text(), 'x = 1\n')
+                self.assertFalse((home / 'bin/buzz-workflows.py').exists())
+                self.assertFalse((home / 'var/workflows/backups').exists())
+
     def test_preflight_is_all_or_nothing_and_repeat_install_is_safe(self):
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp) / 'home'
