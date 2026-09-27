@@ -37,6 +37,6 @@
   {
     "path": "bin/channel-watch.py",
     "old": "        run([\"channels\", \"archive\", \"--channel\", channel])",
-    "new": "        result = subprocess.run([sys.executable, os.path.join(HOME, \"bin/buzz-workflows.py\"),\n                                 \"close\", \"--channel\", channel, \"--archive-unmanaged\"],\n                                capture_output=True, text=True, timeout=300)\n        if result.returncode:\n            raise RuntimeError(\"workflow cleanup failed; channel retained\")"
+    "new": "        result = subprocess.run([sys.executable, os.path.join(HOME, \"bin/buzz-workflows.py\"),\n                                 \"close\", \"--channel\", channel, \"--archive-unmanaged\"],\n                                capture_output=True, text=True, timeout=300)\n        if result.returncode == 10:\n            return \"already\"\n        if result.returncode == 11:\n            return \"forbidden\"\n        if result.returncode:\n            raise RuntimeError(\"workflow cleanup failed; channel retained\")"
   }
 ]

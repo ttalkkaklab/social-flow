@@ -14,6 +14,7 @@ import uuid
 OWNER = '9fb347496dfa2e34883b2ebe8156af2cca564b5208242921feb9d4b317b32dc0'
 LEAD = '리더(푼)'
 PREFIX = 'buzz-gates/'
+ERROR_EXITS = {'archived': 10, 'forbidden': 11, 'not_found': 12, 'failed': 1}
 GATES = {
     'approval': [('approve', '✅', '승인: 원문 태스크를 확인하고 배정·진행 상태를 갱신해 주세요.'),
                  ('rework', '🔁', '재작업: 원문과 진스의 요구를 확인하고 담당자에게 수정 배정해 주세요.')],
@@ -23,12 +24,36 @@ GATES = {
 }
 
 
+class BuzzError(RuntimeError):
+    def __init__(self, code):
+        self.code = code
+        super().__init__(code)
+
+
+def error_code(stderr):
+    """Only emit a fixed code, never relay text or signed request headers."""
+    try:
+        error = json.loads(stderr)
+    except (ValueError, TypeError):
+        return 'failed'
+    if not isinstance(error, dict) or error.get('error') not in ('relay_error', 'auth_error'):
+        return 'failed'
+    message = str(error.get('message', '')).lower()
+    if 'channel is archived' in message:
+        return 'archived'
+    if any(reason in message for reason in
+           ('actor not authorized', 'forbidden', 'not the owner', 'permission denied')):
+        return 'forbidden'
+    if 'not found' in message:
+        return 'not_found'
+    return 'failed'
+
+
 def buzz(*args, content=None):
     result = subprocess.run([os.environ.get('BUZZ_BIN', 'buzz'), *args], input=content,
                             capture_output=True, text=True, timeout=60)
     if result.returncode:
-        # CLI errors may embed signed request headers; do not copy them into logs.
-        raise RuntimeError(f'Buzz {" ".join(args[:2])} failed (exit {result.returncode})')
+        raise BuzzError(error_code(result.stderr))
     data = json.loads(result.stdout)
     if isinstance(data, dict) and data.get('accepted') is False:
         raise RuntimeError(f'Buzz {" ".join(args[:2])} rejected')
@@ -179,9 +204,17 @@ def main():
     print(json.dumps(result, ensure_ascii=False))
 
 
-if __name__ == '__main__':
+def run_cli():
     try:
         main()
-    except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as exc:
-        print(f'WORKFLOW_GATES_FAILED: {exc}', file=sys.stderr)
-        sys.exit(1)
+        return 0
+    except BuzzError as exc:
+        print(f'WORKFLOW_GATES_ERROR {exc.code}', file=sys.stderr)
+        return ERROR_EXITS[exc.code]
+    except (OSError, ValueError, RuntimeError, subprocess.SubprocessError):
+        print('WORKFLOW_GATES_ERROR failed', file=sys.stderr)
+        return ERROR_EXITS['failed']
+
+
+if __name__ == '__main__':
+    sys.exit(run_cli())

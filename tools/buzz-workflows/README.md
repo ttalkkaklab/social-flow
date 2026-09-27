@@ -67,3 +67,11 @@ absence; success, auth errors and network errors retain the channel. The disable
 step makes this probe inert even when deletion fails. Historical definitions can
 still appear in list after successful removal. This behavior was verified against
 the relay and Buzz `handlers/side_effects.rs::handle_a_tag_deletion` on 2026-09-27.
+
+Cleanup verification depends on the exact relay error text
+`relay error 400: invalid: workflow not found`; a changed response retains the channel.
+The CLI reports only fixed error codes: exit 10 `archived`, 11 `forbidden`,
+12 `not_found`, or 1 `failed`, with `WORKFLOW_GATES_ERROR CODE` on stderr.
+No relay error text or signed headers are forwarded. The channel watcher maps 10 to
+`already` and 11 to `forbidden`, preserving its existing stop/escalation behavior.
+Unknown errors and not-found responses keep the channel for investigation.

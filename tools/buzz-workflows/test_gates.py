@@ -1,4 +1,6 @@
 import copy
+from contextlib import redirect_stderr
+import io
 import importlib.util
 import json
 import os
@@ -171,6 +173,74 @@ class GatesTests(unittest.TestCase):
         for definition in gates.definitions('work', test='a' * 64).values():
             self.assertIn('a' * 64, definition['trigger']['filter'])
             self.assertIn('실행하지 않습니다', definition['steps'][0]['text'])
+
+
+class WatcherErrorTests(unittest.TestCase):
+    def invoke_close_and_watcher(self, error):
+        from types import SimpleNamespace
+        real = module('watcher_error_gates', ROOT / 'buzz-workflows.py')
+        calls = []
+
+        def cli(*args, **kwargs):
+            command = args[0]
+            calls.append(command)
+            if command[1:3] == ['workflows', 'list']:
+                return SimpleNamespace(returncode=0, stdout='[]', stderr='')
+            self.assertEqual(command[1:3], ['channels', 'archive'])
+            return SimpleNamespace(returncode=2, stdout='', stderr=json.dumps(error))
+
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ, {'BUZZ_HOME': tmp}):
+            argv = ['buzz-workflows.py', 'close', '--channel',
+                    '11111111-1111-1111-1111-111111111111', '--archive-unmanaged']
+            stderr = io.StringIO()
+            with patch.object(real.sys, 'argv', argv), patch.object(real.subprocess, 'run', side_effect=cli), redirect_stderr(stderr):
+                code = real.run_cli()
+            output = stderr.getvalue()
+
+        # Exercise the actual installed watcher patch, including its return codes.
+        edit = next(e for e in json.loads((ROOT / 'runtime-edits.json').read_text())
+                    if e['path'] == 'bin/channel-watch.py')
+        source = ('def archive(channel):\n    try:\n' + edit['new'] +
+                  '\n        return True\n    except RuntimeError:\n        return False\n')
+        namespace = {'subprocess': SimpleNamespace(run=lambda *a, **k: SimpleNamespace(returncode=code)),
+                     'sys': real.sys, 'os': os, 'HOME': '/unused'}
+        exec(compile(source, '<installed watcher hook>', 'exec'), namespace)
+        return code, output, namespace['archive']('channel'), calls
+
+    def test_close_archive_unmanaged_already_archived_returns_already(self):
+        code, output, result, calls = self.invoke_close_and_watcher({
+            'error': 'relay_error',
+            'message': 'relay error 400: invalid: channel is archived; Authorization: TEST_HEADER',
+        })
+        self.assertEqual(code, 10)
+        self.assertEqual(output, 'WORKFLOW_GATES_ERROR archived\n')
+        self.assertEqual(result, 'already')
+        self.assertEqual(len(calls), 2)
+
+    def test_close_archive_unmanaged_permission_denied_returns_forbidden(self):
+        for reason in ['actor not authorized', 'forbidden', 'not the owner', 'permission denied']:
+            with self.subTest(reason=reason):
+                code, output, result, _ = self.invoke_close_and_watcher({
+                    'error': 'relay_error', 'message': 'relay error 403: ' + reason,
+                })
+                self.assertEqual((code, result), (11, 'forbidden'))
+                self.assertEqual(output, 'WORKFLOW_GATES_ERROR forbidden\n')
+
+    def test_unknown_or_not_found_does_not_report_closed(self):
+        for category, message, expected in [
+            ('relay_error', 'relay error 404: channel not found', 12),
+            ('network_error', 'signed request failed: TEST_HEADER forbidden', 1),
+            ('relay_error', 'unclassified failure TEST_HEADER', 1),
+        ]:
+            with self.subTest(message=message):
+                code, output, result, _ = self.invoke_close_and_watcher({'error': category, 'message': message})
+                self.assertEqual(code, expected)
+                self.assertFalse(result)
+                self.assertNotIn('TEST_HEADER', output)
+
+    def test_non_json_errors_are_not_forwarded(self):
+        self.assertEqual(gates.error_code('Authorization: TEST_HEADER'), 'failed')
+        self.assertEqual(gates.error_code('[]'), 'failed')
 
 
 class InstallerTests(unittest.TestCase):
