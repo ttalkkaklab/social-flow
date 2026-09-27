@@ -1,0 +1,42 @@
+[
+  {
+    "path": "bin/ai-news-daily.sh",
+    "old": "\n  sleep \"$SUBSCRIBE_WAIT\"\n",
+    "new": "\n  BUZZ_BIN=\"$BUZZ_BIN\" BUZZ_HOME=\"$BUZZ_HOME\" \"$PY\" \"${BUZZ_HOME}/bin/buzz-workflows.py\" ensure --channel \"$work_channel\" \\\n    --leader \"리더(푼)\" --review-leader \"리더(맥북)\" >/dev/null \\\n    || fail \"작업 채널 워크플로 등록 실패 — 채널 ${work_channel}\"\n  sleep \"$SUBSCRIBE_WAIT\"\n"
+  },
+  {
+    "path": "bin/threads-daily.sh",
+    "old": "\n  sleep \"$SUBSCRIBE_WAIT\"\n",
+    "new": "\n  BUZZ_BIN=\"$BUZZ_BIN\" BUZZ_HOME=\"$BUZZ_HOME\" \"$PY\" \"${BUZZ_HOME}/bin/buzz-workflows.py\" ensure --channel \"$work_channel\" \\\n    --leader \"리더(푼)\" --review-leader \"리더(맥북)\" >/dev/null \\\n    || fail \"작업 채널 워크플로 등록 실패 — 채널 ${work_channel}\"\n  sleep \"$SUBSCRIBE_WAIT\"\n"
+  },
+  {
+    "path": "var/bin/gemini-assets/work_channel.py",
+    "old": "        return channel\n\n\ndef finish",
+    "new": "        workflow_gates('ensure', channel)\n        return channel\n\n\ndef finish"
+  },
+  {
+    "path": "var/bin/gemini-assets/work_channel.py",
+    "old": "        return cached_channel()",
+    "new": "        channel = cached_channel()\n        workflow_gates('ensure', channel)\n        return channel"
+  },
+  {
+    "path": "var/bin/gemini-assets/work_channel.py",
+    "old": "            buzz(['channels', 'delete', '--channel', channel])",
+    "new": "            workflow_gates('close', channel)"
+  },
+  {
+    "path": "var/bin/gemini-assets/work_channel.py",
+    "old": "def run_key():",
+    "new": "def workflow_gates(action, channel):\n    home = Path(os.environ.get('BUZZ_HOME', str(Path.home() / '.buzz')))\n    subprocess.run([sys.executable, str(home / 'bin/buzz-workflows.py'), action,\n                    '--channel', channel, '--review-leader', '리더(맥북)'],\n                   check=True, capture_output=True, text=True, timeout=300)\n\n\ndef run_key():"
+  },
+  {
+    "path": "var/bin/threads-queue/run.py",
+    "old": "    r = subprocess.run(['buzz', 'channels', 'archive', '--channel', work], capture_output=True, text=True)\n    log('archive rc', r.returncode, (r.stdout or r.stderr)[:160])",
+    "new": "    helper = os.path.join(os.environ.get('BUZZ_HOME', os.path.expanduser('~/.buzz')), 'bin/buzz-workflows.py')\n    r = subprocess.run([sys.executable, helper, 'close', '--channel', work],\n                       capture_output=True, text=True, timeout=300)\n    log('workflow cleanup and channel delete rc', r.returncode)\n    if r.returncode:\n        log('channel retained; retry cleanup with buzz-workflows.py close --channel', work)"
+  },
+  {
+    "path": "bin/channel-watch.py",
+    "old": "        run([\"channels\", \"archive\", \"--channel\", channel])",
+    "new": "        result = subprocess.run([sys.executable, os.path.join(HOME, \"bin/buzz-workflows.py\"),\n                                 \"close\", \"--channel\", channel, \"--archive-unmanaged\"],\n                                capture_output=True, text=True, timeout=300)\n        if result.returncode:\n            raise RuntimeError(\"workflow cleanup failed; channel retained\")"
+  }
+]
