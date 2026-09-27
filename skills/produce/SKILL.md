@@ -745,6 +745,7 @@ A scene of one sentence is one call, and one call restarts the voice: measured 2
 pundago voice, three sentences as three calls reviewed at continuity 94 · naturalness 92 against
 96 · 95 for the same three in one call. When consecutive sentences are one breath, keep them in
 one scene as several segments (each segment still gets its own clip or reveal).
+
 **For a board without portal character voice data, profile §2 decides the engine.** A new channel's narration default is `tts_local_generate`
 (Supertonic, local) — no key, no quota, and 0 cost however many times you rerun the episode,
 so regenerating is free. Only lines that need a style instruction, meaning shots where an
@@ -754,8 +755,7 @@ voiceId · model · stability (and seed, if pinned) and leaves `outputFormat` at
 `wav_24000` — mono 24kHz WAV, the same spec as Gemini, so the builder reads it as-is. The
 checked wrapper adds `timestamps` and preserves one episode seed on every retake. Pass
 `episode: {texts, index, seed}` so it derives the neighboring scene text automatically.
-For v3, the wrapper omits unsupported text context; final listening checks the scene joins.
-**Pundago keeps its fixed ElevenLabs narrator:** `L4az9Gb378GIycFl2nAB`, `eleven_multilingual_v2`, speed `1.0`. `tts_gemini_38` only supports cuts that specifically need turn-level emotional acting, inline vocal events, or a two-person conversation; do not replace the episode narrator or profile default.
+For v3, the wrapper omits unsupported text context; final listening checks the scene joins. **Pundago keeps its fixed ElevenLabs narrator:** `L4az9Gb378GIycFl2nAB`, `eleven_multilingual_v2`, speed `1.0`. `tts_gemini_38` only supports cuts that specifically need turn-level emotional acting, inline vocal events, or a two-person conversation; do not replace the episode narrator or profile default.
 Set `SPEED=1` and `generation.speed=1`. Any non-1 synthesis rate requires the explicit human request in [tts-speed.md](references/tts-speed.md). Assembly always preserves 1.0x.
 Keep names intact and pin pronunciation dictionaries; see `references/tts-quality.md`.
 **Never pass an mp3_* outputFormat for narration**: build-reel.sh reads any non-RIFF audio
