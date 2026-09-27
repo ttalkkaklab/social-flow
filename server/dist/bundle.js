@@ -84954,6 +84954,75 @@ async function generateWithReferences(request) {
   }
 }
 
+// src/http.ts
+async function requestRaw(method, url, headers, body, timeoutMs) {
+  const effectiveTimeoutMs = timeoutMs ?? config2.requestTimeoutMs;
+  try {
+    const res = await fetch(url, {
+      method: method.toUpperCase(),
+      headers: {
+        ...body !== void 0 ? { "Content-Type": "application/json" } : {},
+        ...headers
+      },
+      body: body !== void 0 ? JSON.stringify(body) : void 0,
+      signal: AbortSignal.timeout(effectiveTimeoutMs)
+    });
+    const text2 = await res.text();
+    return { ok: res.ok, status: res.status, body: text2 };
+  } catch (error2) {
+    if (error2 instanceof Error && error2.name === "TimeoutError") {
+      return { ok: false, status: 504, body: `Request timed out after ${effectiveTimeoutMs}ms: ${url}` };
+    }
+    const message = error2 instanceof Error ? error2.message : String(error2);
+    return { ok: false, status: 502, body: `Upstream unreachable (${url}): ${message}` };
+  }
+}
+async function requestBytes(method, url, headers, body, timeoutMs) {
+  const effectiveTimeoutMs = timeoutMs ?? config2.requestTimeoutMs;
+  try {
+    const res = await fetch(url, {
+      method: method.toUpperCase(),
+      headers: {
+        ...body !== void 0 ? { "Content-Type": "application/json" } : {},
+        ...headers
+      },
+      body: body !== void 0 ? JSON.stringify(body) : void 0,
+      signal: AbortSignal.timeout(effectiveTimeoutMs)
+    });
+    const bytes = Buffer.from(await res.arrayBuffer());
+    return {
+      ok: res.ok,
+      status: res.status,
+      bytes,
+      contentType: res.headers.get("content-type") || ""
+    };
+  } catch (error2) {
+    if (error2 instanceof Error && error2.name === "TimeoutError") {
+      return {
+        ok: false,
+        status: 504,
+        bytes: Buffer.from(`Request timed out after ${effectiveTimeoutMs}ms: ${url}`),
+        contentType: "text/plain"
+      };
+    }
+    const message = error2 instanceof Error ? error2.message : String(error2);
+    return {
+      ok: false,
+      status: 502,
+      bytes: Buffer.from(`Upstream unreachable (${url}): ${message}`),
+      contentType: "text/plain"
+    };
+  }
+}
+function buildQuery(params) {
+  const sp = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== void 0 && value !== "") sp.set(key, String(value));
+  }
+  const qs = sp.toString();
+  return qs ? `?${qs}` : "";
+}
+
 // src/tts-client.ts
 var TTS_VOICES = {
   Zephyr: "Bright",
@@ -85155,6 +85224,172 @@ async function generateDialogue(request) {
   } catch (error2) {
     const errorMessage = error2 instanceof Error ? error2.message : String(error2);
     console.error(`[TTS] Error: ${errorMessage}`);
+    return { success: false, error: errorMessage };
+  }
+}
+var GEMINI_38_TTS_MODELS = [
+  "gemini-3.8-flash-tts",
+  "gemini-3.8-flash-lite-tts"
+];
+var DEFAULT_GEMINI_38_TTS_MODEL = "gemini-3.8-flash-tts";
+var MAX_GEMINI_38_TTS_INPUT_CHARS = 16e3;
+var GEMINI_INTERACTIONS_URL = "https://generativelanguage.googleapis.com/v1beta/interactions";
+var gemini38TurnSchema = external_exports.object({
+  text: external_exports.string().min(1, "Turn text is required").max(MAX_GEMINI_38_TTS_INPUT_CHARS),
+  speaker: external_exports.string().min(1).max(100).optional(),
+  style: external_exports.string().min(1).max(500).optional()
+});
+var gemini38SpeakerSchema = external_exports.object({
+  speaker: external_exports.string().min(1, "Speaker name is required").max(100),
+  voice: external_exports.enum(TTS_VOICE_NAMES)
+});
+var gemini38TtsSchema = external_exports.object({
+  turns: external_exports.array(gemini38TurnSchema).min(1, "At least one turn is required").max(200),
+  model: external_exports.enum(GEMINI_38_TTS_MODELS).optional().default(DEFAULT_GEMINI_38_TTS_MODEL),
+  voice: external_exports.string().min(1).max(300).optional().default(DEFAULT_VOICE),
+  speakers: external_exports.array(gemini38SpeakerSchema).length(2, "Conversational mode requires exactly 2 speakers").optional(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("audio").optional()
+}).superRefine((request, ctx) => {
+  const totalChars = request.turns.reduce((sum, turn) => sum + turn.text.length, 0);
+  if (totalChars > MAX_GEMINI_38_TTS_INPUT_CHARS) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["turns"],
+      message: `Turn text exceeds ${MAX_GEMINI_38_TTS_INPUT_CHARS} characters in total; split the script`
+    });
+  }
+  if (request.speakers) {
+    const names = new Set(request.speakers.map((speaker) => speaker.speaker));
+    if (names.size !== request.speakers.length) {
+      ctx.addIssue({
+        code: external_exports.ZodIssueCode.custom,
+        path: ["speakers"],
+        message: "Speaker names must be unique"
+      });
+    }
+    request.turns.forEach((turn, index) => {
+      if (!turn.speaker || !names.has(turn.speaker)) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: ["turns", index, "speaker"],
+          message: "Every dialogue turn must name one of the configured speakers"
+        });
+      }
+    });
+  } else {
+    request.turns.forEach((turn, index) => {
+      if (turn.speaker) {
+        ctx.addIssue({
+          code: external_exports.ZodIssueCode.custom,
+          path: ["turns", index, "speaker"],
+          message: "speaker requires the two-entry speakers array"
+        });
+      }
+    });
+  }
+});
+function buildGemini38InteractionBody(request) {
+  const content = request.turns.map((turn) => {
+    const metadata = {
+      type: "speech_metadata",
+      ...turn.speaker ? { speaker: turn.speaker } : {},
+      ...turn.style ? { style: turn.style } : {}
+    };
+    return {
+      type: "text",
+      text: turn.text,
+      ...turn.speaker || turn.style ? { annotations: [metadata] } : {}
+    };
+  });
+  return {
+    model: request.model,
+    input: [{ type: "user_input", content }],
+    response_format: { type: "audio" },
+    generation_config: {
+      speech_config: request.speakers ? {
+        mode: "conversational",
+        speakers: request.speakers.map((speaker) => ({
+          speaker: speaker.speaker,
+          voice: speaker.voice
+        }))
+      } : [{ voice: request.voice }]
+    }
+  };
+}
+function extractGemini38Audio(interaction) {
+  if (typeof interaction !== "object" || interaction === null) {
+    throw new Error("Interactions API returned a non-object response");
+  }
+  const steps = interaction.steps;
+  if (!Array.isArray(steps)) throw new Error("Interactions API response has no steps array");
+  for (let stepIndex = steps.length - 1; stepIndex >= 0; stepIndex--) {
+    const step = steps[stepIndex];
+    if (typeof step !== "object" || step === null || step.type !== "model_output") continue;
+    const content = step.content;
+    if (!Array.isArray(content)) continue;
+    for (let contentIndex = content.length - 1; contentIndex >= 0; contentIndex--) {
+      const block = content[contentIndex];
+      if (typeof block !== "object" || block === null || block.type !== "audio") continue;
+      const data = block.data;
+      const mimeType = block.mime_type;
+      if (typeof data === "string" && data.length > 0) {
+        return { data, mimeType: typeof mimeType === "string" ? mimeType : "audio/wav" };
+      }
+    }
+  }
+  throw new Error("Interaction completed without an audio content block");
+}
+function describeGemini38Error(status, body) {
+  try {
+    const parsed = JSON.parse(body);
+    const code = typeof parsed.error?.code === "string" ? parsed.error.code : void 0;
+    const message = typeof parsed.error?.message === "string" ? parsed.error.message : void 0;
+    if (code && message) {
+      if (code === "payment_required") {
+        return `HTTP ${status} ${code}: ${message} Add Gemini prepayment credits before retrying.`;
+      }
+      if (code === "model_not_found") {
+        return `HTTP ${status} ${code}: ${message} Use gemini-3.8-flash-tts or gemini-3.8-flash-lite-tts.`;
+      }
+      return `HTTP ${status} ${code}: ${message}`;
+    }
+  } catch {
+  }
+  return `HTTP ${status}: ${body || "(empty body)"}`;
+}
+async function generateGemini38Speech(request) {
+  try {
+    const apiKey = requireGeminiKey();
+    const response = await requestRaw(
+      "post",
+      GEMINI_INTERACTIONS_URL,
+      { "x-goog-api-key": apiKey },
+      buildGemini38InteractionBody(request),
+      12e4
+    );
+    if (!response.ok) {
+      return { success: false, error: describeGemini38Error(response.status, response.body) };
+    }
+    let interaction;
+    try {
+      interaction = JSON.parse(response.body);
+    } catch {
+      throw new Error("Interactions API returned invalid JSON");
+    }
+    const audio = extractGemini38Audio(interaction);
+    const audioPath = saveAudio(audio, request.outputPath, request.filename, "tts_gemini_38");
+    const speakers = request.speakers?.map((speaker) => speaker.speaker).join(", ");
+    return {
+      success: true,
+      audioPath,
+      text: speakers ? `Gemini 3.8 conversation with: ${speakers}` : request.turns.map((turn) => turn.text).join("\n"),
+      voiceName: speakers ? void 0 : request.voice,
+      model: request.model
+    };
+  } catch (error2) {
+    const errorMessage = error2 instanceof Error ? error2.message : String(error2);
+    console.error(`[Gemini 3.8 TTS] Error: ${errorMessage}`);
     return { success: false, error: errorMessage };
   }
 }
@@ -85751,77 +85986,6 @@ import { execFile as execFile3 } from "node:child_process";
 import { existsSync as existsSync5, mkdtempSync, readFileSync as readFileSync6, rmSync, writeFileSync as writeFileSync5 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join as join4 } from "node:path";
-
-// src/http.ts
-async function requestRaw(method, url, headers, body, timeoutMs) {
-  const effectiveTimeoutMs = timeoutMs ?? config2.requestTimeoutMs;
-  try {
-    const res = await fetch(url, {
-      method: method.toUpperCase(),
-      headers: {
-        ...body !== void 0 ? { "Content-Type": "application/json" } : {},
-        ...headers
-      },
-      body: body !== void 0 ? JSON.stringify(body) : void 0,
-      signal: AbortSignal.timeout(effectiveTimeoutMs)
-    });
-    const text2 = await res.text();
-    return { ok: res.ok, status: res.status, body: text2 };
-  } catch (error2) {
-    if (error2 instanceof Error && error2.name === "TimeoutError") {
-      return { ok: false, status: 504, body: `Request timed out after ${effectiveTimeoutMs}ms: ${url}` };
-    }
-    const message = error2 instanceof Error ? error2.message : String(error2);
-    return { ok: false, status: 502, body: `Upstream unreachable (${url}): ${message}` };
-  }
-}
-async function requestBytes(method, url, headers, body, timeoutMs) {
-  const effectiveTimeoutMs = timeoutMs ?? config2.requestTimeoutMs;
-  try {
-    const res = await fetch(url, {
-      method: method.toUpperCase(),
-      headers: {
-        ...body !== void 0 ? { "Content-Type": "application/json" } : {},
-        ...headers
-      },
-      body: body !== void 0 ? JSON.stringify(body) : void 0,
-      signal: AbortSignal.timeout(effectiveTimeoutMs)
-    });
-    const bytes = Buffer.from(await res.arrayBuffer());
-    return {
-      ok: res.ok,
-      status: res.status,
-      bytes,
-      contentType: res.headers.get("content-type") || ""
-    };
-  } catch (error2) {
-    if (error2 instanceof Error && error2.name === "TimeoutError") {
-      return {
-        ok: false,
-        status: 504,
-        bytes: Buffer.from(`Request timed out after ${effectiveTimeoutMs}ms: ${url}`),
-        contentType: "text/plain"
-      };
-    }
-    const message = error2 instanceof Error ? error2.message : String(error2);
-    return {
-      ok: false,
-      status: 502,
-      bytes: Buffer.from(`Upstream unreachable (${url}): ${message}`),
-      contentType: "text/plain"
-    };
-  }
-}
-function buildQuery(params) {
-  const sp = new URLSearchParams();
-  for (const [key, value] of Object.entries(params)) {
-    if (value !== void 0 && value !== "") sp.set(key, String(value));
-  }
-  const qs = sp.toString();
-  return qs ? `?${qs}` : "";
-}
-
-// src/mlx-serve-client.ts
 var MLX_HEALTH_TIMEOUT_MS = 3e3;
 var MLX_MODELS_TIMEOUT_MS = 1e4;
 var MLX_LOAD_TIMEOUT_MS = 10 * 6e4;
@@ -87262,7 +87426,7 @@ var exec = promisify2(execFile5);
 var QUALITY_POLICY = "speech-quality-v1";
 var REVIEW_API_VERSION = process.env.SOCIAL_FLOW_TTS_REVIEW_API_VERSION?.trim() || "v1";
 var REVIEW_MODEL = process.env.SOCIAL_FLOW_TTS_REVIEW_MODEL?.trim() || "gemini-3.8-flash";
-var GENERATORS = ["tts_generate", "tts_multi_speaker", "tts_local_generate", "tts_elevenlabs_generate", "tts_elevenlabs_dialogue", "mlx_tts_generate"];
+var GENERATORS = ["tts_generate", "tts_multi_speaker", "tts_gemini_38", "tts_local_generate", "tts_elevenlabs_generate", "tts_elevenlabs_dialogue", "mlx_tts_generate"];
 var checkedSpeechSchema = external_exports.object({
   generator: external_exports.enum(GENERATORS),
   generation: external_exports.record(external_exports.unknown()),
@@ -87472,6 +87636,14 @@ function prepareGeneration(request) {
         return name ? line.trimStart().slice(name.speakerName.length + 1) : line;
       }).join(" ");
       run = () => generateDialogue(p);
+      break;
+    }
+    case "tts_gemini_38": {
+      const p = gemini38TtsSchema.parse(args);
+      parsed = p;
+      spoken = p.turns.map((turn) => turn.text.replace(/<[^>]+>/g, "")).join(" ");
+      run = () => generateGemini38Speech(p);
+      spacing = !p.speakers;
       break;
     }
     case "tts_local_generate": {
@@ -93090,6 +93262,71 @@ Returns: a text block with the saved .wav file path, voice name, and text length
         }
       },
       required: ["text"]
+    }
+  },
+  {
+    name: "tts_gemini_38",
+    title: "Acted speech synthesis (Gemini 3.8)",
+    annotations: HINT.generate,
+    description: `Generate acted single-voice or two-speaker speech with Gemini 3.8 TTS through the Interactions API.
+
+Use for emotional acting, per-line delivery changes, vocal events, pauses, and two-person dialogue. Put lasting delivery in each turn's style field. Put point events directly in text with the documented English angle-bracket tags, such as <laugh>, <sigh>, <cough>, <breath>, <short pause>, or <long pause>. For listener backchannels and overlapping speech in two-speaker mode, put pipe segments such as |oh really?| inside the active speaker's text. The text is read verbatim, so never put stage directions in it unless they are a supported tag.
+Single voice accepts a curated name, an extended-library voice, or a voice_ / voicekey_ identifier. Two-speaker mode requires exactly two configured curated voices and every turn must name one configured speaker. Gemini 3.8 supports at most two speakers in one request.
+This is a supporting engine for acted cuts and two-person scenes. The Pundago narration default remains ElevenLabs L4az9Gb378GIycFl2nAB on eleven_multilingual_v2 at speed 1.0. Do not replace that channel default with this tool.
+
+Returns: a text block with the saved 24kHz mono RIFF WAV path, model, voice or speaker assignments, turn count, and total text length.`,
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        turns: {
+          type: "array",
+          minItems: 1,
+          maxItems: 200,
+          description: `Spoken turns in playback order; combined text is capped at ${MAX_GEMINI_38_TTS_INPUT_CHARS} characters. Inline vocal tags and |backchannels| stay inside text.`,
+          items: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              text: { type: "string", minLength: 1, maxLength: MAX_GEMINI_38_TTS_INPUT_CHARS, description: "Verbatim spoken text, optionally including documented inline vocal tags or pipe backchannels." },
+              speaker: { type: "string", minLength: 1, maxLength: 100, description: "Required on every turn in two-speaker mode; omit for single voice." },
+              style: { type: "string", minLength: 1, maxLength: 500, description: 'Optional turn-level emotion, pace, volume, or delivery, e.g. "whispered urgently". This is metadata and is not spoken.' }
+            },
+            required: ["text"]
+          }
+        },
+        model: {
+          type: "string",
+          enum: [...GEMINI_38_TTS_MODELS],
+          default: DEFAULT_GEMINI_38_TTS_MODEL,
+          description: "gemini-3.8-flash-tts for maximum fidelity and acting nuance; gemini-3.8-flash-lite-tts for lower cost and higher throughput."
+        },
+        voice: {
+          type: "string",
+          minLength: 1,
+          maxLength: 300,
+          default: DEFAULT_VOICE,
+          description: "Single-voice selection: curated name, extended-library voice, designed voice_ ID, or replicated voice_ / voicekey_ ID. Ignored when speakers is present."
+        },
+        speakers: {
+          type: "array",
+          minItems: 2,
+          maxItems: 2,
+          description: "Exactly two curated speaker/voice assignments for conversational mode. Omit for single voice.",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              speaker: { type: "string", minLength: 1, maxLength: 100, description: "Speaker label used by matching turns." },
+              voice: { type: "string", enum: TTS_VOICE_ENUM, description: "Curated prebuilt voice. Custom voice IDs cannot be combined in one multi-speaker request." }
+            },
+            required: ["speaker", "voice"]
+          }
+        },
+        outputPath: { type: "string", description: "Directory path to save the audio file (default: current working directory)." },
+        filename: { type: "string", description: "WAV filename (default: tts_gemini_38_<timestamp>.wav)." }
+      },
+      required: ["turns"]
     }
   },
   {
@@ -104366,6 +104603,23 @@ Temperature: ${request.temperature}${style}
 Text length: ${request.text.length} chars`
     );
   },
+  tts_gemini_38: async (args) => {
+    const request = parseArgs(gemini38TtsSchema, args);
+    const result = await generateGemini38Speech(request);
+    if (!result.success) return text(`Gemini 3.8 TTS generation failed: ${result.error}`, true);
+    const totalChars = request.turns.reduce((sum, turn) => sum + turn.text.length, 0);
+    const voiceInfo = request.speakers ? `Speakers:
+${request.speakers.map((speaker) => `  - ${speaker.speaker}: ${speaker.voice}`).join("\n")}` : `Voice: ${request.voice}`;
+    return text(
+      `Gemini 3.8 audio generated successfully!
+
+File: ${result.audioPath}
+Model: ${result.model}
+${voiceInfo}
+Turns: ${request.turns.length}
+Text length: ${totalChars} chars`
+    );
+  },
   tts_multi_speaker: async (args) => {
     const request = parseArgs(ttsMultiSpeakerSchema, args);
     const result = await generateDialogue(request);
@@ -104963,7 +105217,7 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
 // src/index.ts
 import { readFileSync as readFinalRequest } from "node:fs";
 var server = new Server(
-  { name: "social-flow", version: "0.97.0" },
+  { name: "social-flow", version: "0.98.0" },
   { capabilities: { tools: {} } }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {
@@ -105065,7 +105319,7 @@ async function main() {
     console.error(`[social-flow] ${warning}`);
   }
   console.error(
-    `Credentials: serpapi key ${config2.serpApiKey ? "set" : "MISSING (serp_* and sns_issue_scout tools will fail)"}, naver keys ${config2.naverClientId && config2.naverClientSecret ? "set" : "MISSING (naver_search will fail)"}, data.go.kr key ${config2.dataGoKrApiKey ? "set" : "MISSING (datago_file_fetch/datago_api_call will fail \u2014 search/detail/download still work)"}, gemini key ${config2.geminiApiKey ? "set" : "MISSING (veo_*/omni_*/tts_generate/tts_multi_speaker/music_* will fail \u2014 tts_local_generate does not need it)"}, openai key ${config2.openaiApiKey ? "set" : "MISSING (gpt_image_* image generation tools will fail \u2014 image_local_generate does not need it)"}, ark key ${config2.arkApiKey ? "set" : "MISSING (seedance_* video generation tools will fail \u2014 veo_* does not need it)"}, suno key ${config2.sunoApiKey ? "set" : "MISSING (suno_* will fail \u2014 music_*(Lyria) does not need it)"}, elevenlabs key ${config2.elevenLabsApiKey ? "set" : "MISSING (tts_elevenlabs_* and sfx_elevenlabs_generate will fail \u2014 tts_generate/tts_local_generate do not need it)"}, local tts python ${process.env.SUPERTONIC_PYTHON ? process.env.SUPERTONIC_PYTHON : "python3 (default \u2014 set SUPERTONIC_PYTHON for a virtualenv)"}, local image mflux ${process.env.MFLUX_ZIMAGE_BIN ? process.env.MFLUX_ZIMAGE_BIN : "~/.local/bin/mflux-generate-z-image-turbo (default \u2014 set MFLUX_ZIMAGE_BIN if elsewhere)"}, local stt mlx-qwen3-asr ${process.env.QWEN3_ASR_BIN ? process.env.QWEN3_ASR_BIN : "~/.local/bin/mlx-qwen3-asr (default \u2014 set QWEN3_ASR_BIN if elsewhere)"}, mlx-serve ${process.env.MLX_SERVE_URL ? process.env.MLX_SERVE_URL : "http://127.0.0.1:11234 (default \u2014 MLX Core.app / mlx-serve; this plugin never launches the app)"}, youtube data key ${config2.youtubeApiKey ? "set" : "MISSING (youtube_topic_scout falls back to OAuth youtube.readonly)"}, sns platforms ${snsEnabled.length > 0 ? snsEnabled.join(",") : "none"} (credential files found \u2014 others hidden from ListTools), sns channels ${channelDirs.length > 0 ? channelDirs.map((d) => `${d.channel}[${d.platforms.join(",")}]`).join(" ") : "none (flat/default tokens only)"}, ttalkkakstory portal key ${portalConfigured() ? "set (portal_* tools listed)" : "MISSING (portal_* hidden \u2014 episodes stay local files; save <SNS_TOKEN_DIR>/<channel>/ttalkkakstory.json to mirror)"}, ` + describeToolGate(toolNames, process.env, jsonPatterns)
+    `Credentials: serpapi key ${config2.serpApiKey ? "set" : "MISSING (serp_* and sns_issue_scout tools will fail)"}, naver keys ${config2.naverClientId && config2.naverClientSecret ? "set" : "MISSING (naver_search will fail)"}, data.go.kr key ${config2.dataGoKrApiKey ? "set" : "MISSING (datago_file_fetch/datago_api_call will fail \u2014 search/detail/download still work)"}, gemini key ${config2.geminiApiKey ? "set" : "MISSING (veo_*/omni_*/tts_generate/tts_multi_speaker/tts_gemini_38/music_* will fail \u2014 tts_local_generate does not need it)"}, openai key ${config2.openaiApiKey ? "set" : "MISSING (gpt_image_* image generation tools will fail \u2014 image_local_generate does not need it)"}, ark key ${config2.arkApiKey ? "set" : "MISSING (seedance_* video generation tools will fail \u2014 veo_* does not need it)"}, suno key ${config2.sunoApiKey ? "set" : "MISSING (suno_* will fail \u2014 music_*(Lyria) does not need it)"}, elevenlabs key ${config2.elevenLabsApiKey ? "set" : "MISSING (tts_elevenlabs_* and sfx_elevenlabs_generate will fail \u2014 tts_generate/tts_local_generate do not need it)"}, local tts python ${process.env.SUPERTONIC_PYTHON ? process.env.SUPERTONIC_PYTHON : "python3 (default \u2014 set SUPERTONIC_PYTHON for a virtualenv)"}, local image mflux ${process.env.MFLUX_ZIMAGE_BIN ? process.env.MFLUX_ZIMAGE_BIN : "~/.local/bin/mflux-generate-z-image-turbo (default \u2014 set MFLUX_ZIMAGE_BIN if elsewhere)"}, local stt mlx-qwen3-asr ${process.env.QWEN3_ASR_BIN ? process.env.QWEN3_ASR_BIN : "~/.local/bin/mlx-qwen3-asr (default \u2014 set QWEN3_ASR_BIN if elsewhere)"}, mlx-serve ${process.env.MLX_SERVE_URL ? process.env.MLX_SERVE_URL : "http://127.0.0.1:11234 (default \u2014 MLX Core.app / mlx-serve; this plugin never launches the app)"}, youtube data key ${config2.youtubeApiKey ? "set" : "MISSING (youtube_topic_scout falls back to OAuth youtube.readonly)"}, sns platforms ${snsEnabled.length > 0 ? snsEnabled.join(",") : "none"} (credential files found \u2014 others hidden from ListTools), sns channels ${channelDirs.length > 0 ? channelDirs.map((d) => `${d.channel}[${d.platforms.join(",")}]`).join(" ") : "none (flat/default tokens only)"}, ttalkkakstory portal key ${portalConfigured() ? "set (portal_* tools listed)" : "MISSING (portal_* hidden \u2014 episodes stay local files; save <SNS_TOKEN_DIR>/<channel>/ttalkkakstory.json to mirror)"}, ` + describeToolGate(toolNames, process.env, jsonPatterns)
   );
 }
 main().catch((error2) => {

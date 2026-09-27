@@ -20,7 +20,7 @@ const exec = promisify(execFile);
 export const QUALITY_POLICY = 'speech-quality-v1';
 export const REVIEW_API_VERSION = process.env.SOCIAL_FLOW_TTS_REVIEW_API_VERSION?.trim() || 'v1';
 export const REVIEW_MODEL = process.env.SOCIAL_FLOW_TTS_REVIEW_MODEL?.trim() || 'gemini-3.8-flash';
-export const GENERATORS = ['tts_generate', 'tts_multi_speaker', 'tts_local_generate', 'tts_elevenlabs_generate', 'tts_elevenlabs_dialogue', 'mlx_tts_generate'];
+export const GENERATORS = ['tts_generate', 'tts_multi_speaker', 'tts_gemini_38', 'tts_local_generate', 'tts_elevenlabs_generate', 'tts_elevenlabs_dialogue', 'mlx_tts_generate'];
 export const checkedSpeechSchema = z.object({
     generator: z.enum(GENERATORS),
     generation: z.record(z.unknown()),
@@ -220,6 +220,14 @@ export function prepareGeneration(request) {
             parsed = p;
             spoken = p.script.split('\n').map(line => { const name = p.speakers.find(s => line.trimStart().startsWith(s.speakerName + ':')); return name ? line.trimStart().slice(name.speakerName.length + 1) : line; }).join(' ');
             run = () => gemini.generateDialogue(p);
+            break;
+        }
+        case 'tts_gemini_38': {
+            const p = gemini.gemini38TtsSchema.parse(args);
+            parsed = p;
+            spoken = p.turns.map(turn => turn.text.replace(/<[^>]+>/g, '')).join(' ');
+            run = () => gemini.generateGemini38Speech(p);
+            spacing = !p.speakers;
             break;
         }
         case 'tts_local_generate': {

@@ -22,7 +22,7 @@ allowed-tools: ["mcp__social-flow__portal_assets_search", "mcp__social-flow__por
   "mcp__social-flow__datago_api_call",
   "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img",
   "mcp__social-flow__mlx_image_generate", "mcp__social-flow__mlx_image_edit",
-  "mcp__social-flow__tts_generate_checked", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue", "mcp__social-flow__sfx_elevenlabs_generate",
+  "mcp__social-flow__tts_generate_checked", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_gemini_38", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue", "mcp__social-flow__sfx_elevenlabs_generate",
   "mcp__social-flow__tts_list_voices", "mcp__social-flow__mlx_tts_generate",
   "mcp__social-flow__veo_img2video",
   "mcp__social-flow__seedance_img2video", "mcp__social-flow__seedance_reference",
