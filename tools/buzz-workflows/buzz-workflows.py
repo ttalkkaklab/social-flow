@@ -12,15 +12,18 @@ import sys
 import uuid
 
 OWNER = '9fb347496dfa2e34883b2ebe8156af2cca564b5208242921feb9d4b317b32dc0'
+PUN_LEAD = '9e9d4068369acfe6e71d22ba6559abb21d53312872b918a97b98f3c41f7eff2a'
+MAC_LEAD = 'f275816f3941f930b0ac318f427c973f77fd9a5eb8c8ab00157e47de491498da'
 LEAD = '리더(푼)'
 PREFIX = 'buzz-gates/'
-ERROR_EXITS = {'archived': 10, 'forbidden': 11, 'not_found': 12, 'failed': 1}
+ERROR_EXITS = {'archived': 10, 'forbidden': 11, 'channel_not_found': 12,
+               'workflow_not_found': 13, 'failed': 1}
 GATES = {
     'approval': [('approve', '✅', '승인: 원문 태스크를 확인하고 배정·진행 상태를 갱신해 주세요.'),
                  ('rework', '🔁', '재작업: 원문과 진스의 요구를 확인하고 담당자에게 수정 배정해 주세요.')],
-    'work': [('review', '👀', '리뷰 요청: 원문의 PR·산출물·검증 근거를 확인하고 리뷰를 진행해 주세요.'),
-             ('release', '🚀', '운영 반영: 리뷰·검증 통과 여부와 적용 순서를 확인한 뒤 운영에 반영해 주세요.'),
-             ('done', '🏁', '완료: 결과·산출물·검증을 태스크에 기록하고 resolved 후 워크플로와 작업 채널을 삭제해 주세요.')],
+    'work': [('review', '🔍', '리뷰 요청: 원문의 PR·산출물·검증 근거를 확인하고 리뷰를 진행해 주세요.'),
+             ('release', '🚀', '운영 반영: 이 반응은 승인 자체가 아닙니다. 리뷰·검증 통과 여부와 적용 순서를 확인한 뒤 운영에 반영해 주세요.'),
+             ('done', '🏁', '완료: 이 반응은 승인 자체가 아닙니다. 결과·산출물·검증을 태스크에 기록하고 resolved 후 워크플로와 작업 채널을 삭제해 주세요.')],
 }
 
 
@@ -32,20 +35,26 @@ class BuzzError(RuntimeError):
 
 def error_code(stderr):
     """Only emit a fixed code, never relay text or signed request headers."""
+    permission_reasons = ('actor not authorized', 'forbidden', 'not the owner',
+                          'permission denied')
     try:
         error = json.loads(stderr)
     except (ValueError, TypeError):
-        return 'failed'
+        error = None
+    message = (str(error.get('message', '')) if isinstance(error, dict)
+               else str(stderr or '')).lower()
+    # Older CLI builds and some transport failures do not use the documented JSON
+    # category, but the watcher still has to stop and escalate explicit denials.
+    if any(reason in message for reason in permission_reasons):
+        return 'forbidden'
     if not isinstance(error, dict) or error.get('error') not in ('relay_error', 'auth_error'):
         return 'failed'
-    message = str(error.get('message', '')).lower()
     if 'channel is archived' in message:
         return 'archived'
-    if any(reason in message for reason in
-           ('actor not authorized', 'forbidden', 'not the owner', 'permission denied')):
-        return 'forbidden'
-    if 'not found' in message:
-        return 'not_found'
+    if 'channel not found' in message:
+        return 'channel_not_found'
+    if 'workflow not found' in message:
+        return 'workflow_not_found'
     return 'failed'
 
 
@@ -70,9 +79,17 @@ def definitions(profile, leader=LEAD, review_leader=None, test=None):
         trigger = {'on': 'reaction_added', 'emoji': emoji}
         if profile == 'approval':
             trigger['filter'] = f'trigger_author == "{OWNER}"'
+        elif key == 'review':
+            trigger['filter'] = '(' + ' || '.join(
+                f'trigger_author == "{author}"' for author in (OWNER, PUN_LEAD)) + ')'
+        elif profile == 'work':
+            trigger['filter'] = '(' + ' || '.join(
+                f'trigger_author == "{author}"' for author in (OWNER, PUN_LEAD, MAC_LEAD)) + ')'
         text = f'@{target} [{emoji} {name}] {instruction} 원문: {{{{trigger.message_id}}}}'
         if test:
-            trigger['filter'] = f'trigger_message_id == "{test}"'
+            scope = f'trigger_message_id == "{test}"'
+            trigger['filter'] = (f'{trigger["filter"]} && {scope}'
+                                 if 'filter' in trigger else scope)
             text = f'@{target} [W2 검증 {emoji}] 수신한 반응과 원문 ID만 이 스레드에 기록해 주세요. 검증 글이므로 배포·태스크 종료·채널 삭제는 실행하지 않습니다. 원문: {{{{trigger.message_id}}}}'
         out[name] = {'name': name, 'trigger': trigger,
                      'steps': [{'id': key, 'action': 'send_message',
@@ -84,6 +101,9 @@ def managed(channel, profile):
     rows = buzz('workflows', 'list', '--channel', channel)
     if not isinstance(rows, list):
         raise RuntimeError('invalid workflow list')
+    expected_names = {PREFIX + profile + '/' + key for key, _, _ in GATES[profile]}
+    retired_names = ({PREFIX + 'work/review-disabled': PREFIX + 'work/review'}
+                     if profile == 'work' else {})
     result = {}
     for row in rows:
         try:
@@ -92,10 +112,11 @@ def managed(channel, profile):
             # Other workflows may use block YAML. These are not ours.
             continue
         name = definition.get('name', '') if isinstance(definition, dict) else ''
-        if name.startswith(PREFIX + profile + '/'):
-            if name in result:
-                raise RuntimeError(f'duplicate managed workflow: {name}; reconcile manually')
-            result[name] = (row['workflow_id'], definition)
+        canonical_name = retired_names.get(name, name)
+        if canonical_name in expected_names:
+            if canonical_name in result:
+                raise RuntimeError(f'duplicate managed workflow: {canonical_name}; reconcile manually')
+            result[canonical_name] = (row['workflow_id'], definition)
     return result
 
 
@@ -154,31 +175,20 @@ def remove(channel, profile='work', close=False, archive_unmanaged=False):
             # Remember intent if workflow cleanup succeeds but channel deletion fails.
             pending.touch()
         for workflow, definition in existing.values():
-            # Manual trigger bypasses trigger filters. Disable the step itself
-            # before deletion so a failed delete can be probed without sending.
-            inert = dict(definition, steps=[{'id': 'cleanup_probe', 'action': 'send_message',
-                                           'if': 'false', 'text': 'cleanup probe'}])
+            # A successful delete response confirms event publication, not that the
+            # engine applied it. Rename and disable first, then verify by readback.
+            inert = dict(definition, name=f'{definition["name"]}-disabled-{workflow}',
+                          steps=[{'id': 'cleanup_probe', 'action': 'send_message',
+                                  'if': 'false', 'text': 'cleanup probe'}])
             buzz('workflows', 'update', '--channel', channel, '--workflow', workflow,
                  '--yaml', '-', content=json.dumps(inert, ensure_ascii=False))
             buzz('workflows', 'delete', '--workflow', workflow)
-            verify_absent(workflow)
+        if managed(channel, profile):
+            raise RuntimeError('workflow disablement not confirmed by readback; channel retained')
         if close:
             buzz('channels', 'delete', '--channel', channel)
             pending.unlink(missing_ok=True)
     return {'channel': channel, 'deleted_workflows': len(existing), 'closed': close}
-
-
-def verify_absent(workflow):
-    result = subprocess.run([os.environ.get('BUZZ_BIN', 'buzz'), 'workflows', 'trigger',
-                             '--workflow', workflow], capture_output=True, text=True, timeout=60)
-    try:
-        error = json.loads(result.stderr)
-    except (ValueError, TypeError):
-        error = {}
-    if not (result.returncode and error.get('error') == 'relay_error'
-            and error.get('message') == 'relay error 400: invalid: workflow not found'):
-        raise RuntimeError('workflow absence not confirmed; channel retained (probe step disabled)')
-
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
