@@ -21,7 +21,7 @@ const exec = promisify(execFile);
 export const QUALITY_POLICY = 'speech-quality-v1';
 export const REVIEW_API_VERSION = process.env.SOCIAL_FLOW_TTS_REVIEW_API_VERSION?.trim() || 'v1';
 export const REVIEW_MODEL = process.env.SOCIAL_FLOW_TTS_REVIEW_MODEL?.trim() || 'gemini-3.8-flash';
-export const GENERATORS = ['tts_generate', 'tts_multi_speaker', 'tts_local_generate', 'tts_elevenlabs_generate', 'tts_elevenlabs_dialogue', 'mlx_tts_generate'] as const;
+export const GENERATORS = ['tts_generate', 'tts_multi_speaker', 'tts_gemini_38', 'tts_local_generate', 'tts_elevenlabs_generate', 'tts_elevenlabs_dialogue', 'mlx_tts_generate'] as const;
 export const checkedSpeechSchema = z.object({
   generator: z.enum(GENERATORS),
   generation: z.record(z.unknown()),
@@ -195,6 +195,7 @@ export function prepareGeneration(request: CheckedSpeechRequest): PreparedGenera
     // Single-voice engines without a vendor alignment get one from the local aligner (applySentenceSpacing), so their sentences are spaced like an ElevenLabs take.
     case 'tts_generate': { const p = gemini.ttsGenerateSchema.parse(args); parsed = p; spoken = p.text; run = () => gemini.generateSpeech(p); spacing = true; break; }
     case 'tts_multi_speaker': { const p = gemini.ttsMultiSpeakerSchema.parse(args); parsed = p; spoken = p.script.split('\n').map(line => { const name = p.speakers.find(s => line.trimStart().startsWith(s.speakerName + ':')); return name ? line.trimStart().slice(name.speakerName.length + 1) : line; }).join(' '); run = () => gemini.generateDialogue(p); break; }
+    case 'tts_gemini_38': { const p = gemini.gemini38TtsSchema.parse(args); parsed = p; spoken = p.turns.map(turn => turn.text.replace(/<[^>]+>/g, '')).join(' '); run = () => gemini.generateGemini38Speech(p); spacing = !p.speakers; break; }
     case 'tts_local_generate': { const p = local.supertonicGenerateSchema.parse(args); parsed = p; spoken = p.text; run = () => local.generateLocalSpeech(p); spacing = true; break; }
     // Timestamps cost nothing extra and are what the sentence spacing reads, so the checked lane always asks for them.
     case 'tts_elevenlabs_generate': { const p = eleven.elevenLabsGenerateSchema.parse({ ...args, timestamps: true }); parsed = p; spoken = p.text.replace(/\[[^\]]*\]/g, ''); run = (o) => eleven.generateElevenLabsSpeech({ ...p, ...(o?.seed !== undefined ? { seed: o.seed } : {}) }); spacing = true; seed = p.seed; break; }

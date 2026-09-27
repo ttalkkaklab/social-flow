@@ -26,7 +26,16 @@ import {
   VALID_SEEDANCE_RATIOS,
   VALID_SEEDANCE_RESOLUTIONS,
 } from './seedance-client.js';
-import { DEFAULT_TTS_MODEL, DEFAULT_TTS_TEMPERATURE, DEFAULT_VOICE, TTS_VOICE_NAMES, VALID_TTS_MODELS } from './tts-client.js';
+import {
+  DEFAULT_GEMINI_38_TTS_MODEL,
+  DEFAULT_TTS_MODEL,
+  DEFAULT_TTS_TEMPERATURE,
+  DEFAULT_VOICE,
+  GEMINI_38_TTS_MODELS,
+  MAX_GEMINI_38_TTS_INPUT_CHARS,
+  TTS_VOICE_NAMES,
+  VALID_TTS_MODELS,
+} from './tts-client.js';
 import { GENERATORS, REVIEW_MODEL } from './tts-quality.js';
 import {
   DEFAULT_ELEVENLABS_MODEL,
@@ -3240,6 +3249,71 @@ Returns: a text block with the saved .wav file path, voice name, and text length
         },
       },
       required: ['text'],
+    },
+  },
+  {
+    name: 'tts_gemini_38',
+    title: 'Acted speech synthesis (Gemini 3.8)',
+    annotations: HINT.generate,
+    description: `Generate acted single-voice or two-speaker speech with Gemini 3.8 TTS through the Interactions API.
+
+Use for emotional acting, per-line delivery changes, vocal events, pauses, and two-person dialogue. Put lasting delivery in each turn's style field. Put point events directly in text with the documented English angle-bracket tags, such as <laugh>, <sigh>, <cough>, <breath>, <short pause>, or <long pause>. For listener backchannels and overlapping speech in two-speaker mode, put pipe segments such as |oh really?| inside the active speaker's text. The text is read verbatim, so never put stage directions in it unless they are a supported tag.
+Single voice accepts a curated name, an extended-library voice, or a voice_ / voicekey_ identifier. Two-speaker mode requires exactly two configured curated voices and every turn must name one configured speaker. Gemini 3.8 supports at most two speakers in one request.
+This is a supporting engine for acted cuts and two-person scenes. The Pundago narration default remains ElevenLabs L4az9Gb378GIycFl2nAB on eleven_multilingual_v2 at speed 1.0. Do not replace that channel default with this tool.
+
+Returns: a text block with the saved 24kHz mono RIFF WAV path, model, voice or speaker assignments, turn count, and total text length.`,
+    inputSchema: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        turns: {
+          type: 'array',
+          minItems: 1,
+          maxItems: 200,
+          description: `Spoken turns in playback order; combined text is capped at ${MAX_GEMINI_38_TTS_INPUT_CHARS} characters. Inline vocal tags and |backchannels| stay inside text.`,
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              text: { type: 'string', minLength: 1, maxLength: MAX_GEMINI_38_TTS_INPUT_CHARS, description: 'Verbatim spoken text, optionally including documented inline vocal tags or pipe backchannels.' },
+              speaker: { type: 'string', minLength: 1, maxLength: 100, description: 'Required on every turn in two-speaker mode; omit for single voice.' },
+              style: { type: 'string', minLength: 1, maxLength: 500, description: 'Optional turn-level emotion, pace, volume, or delivery, e.g. "whispered urgently". This is metadata and is not spoken.' },
+            },
+            required: ['text'],
+          },
+        },
+        model: {
+          type: 'string',
+          enum: [...GEMINI_38_TTS_MODELS],
+          default: DEFAULT_GEMINI_38_TTS_MODEL,
+          description: 'gemini-3.8-flash-tts for maximum fidelity and acting nuance; gemini-3.8-flash-lite-tts for lower cost and higher throughput.',
+        },
+        voice: {
+          type: 'string',
+          minLength: 1,
+          maxLength: 300,
+          default: DEFAULT_VOICE,
+          description: 'Single-voice selection: curated name, extended-library voice, designed voice_ ID, or replicated voice_ / voicekey_ ID. Ignored when speakers is present.',
+        },
+        speakers: {
+          type: 'array',
+          minItems: 2,
+          maxItems: 2,
+          description: 'Exactly two curated speaker/voice assignments for conversational mode. Omit for single voice.',
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              speaker: { type: 'string', minLength: 1, maxLength: 100, description: 'Speaker label used by matching turns.' },
+              voice: { type: 'string', enum: TTS_VOICE_ENUM, description: 'Curated prebuilt voice. Custom voice IDs cannot be combined in one multi-speaker request.' },
+            },
+            required: ['speaker', 'voice'],
+          },
+        },
+        outputPath: { type: 'string', description: 'Directory path to save the audio file (default: current working directory).' },
+        filename: { type: 'string', description: 'WAV filename (default: tts_gemini_38_<timestamp>.wav).' },
+      },
+      required: ['turns'],
     },
   },
   {

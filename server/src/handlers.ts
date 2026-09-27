@@ -972,6 +972,18 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
       `Audio generated successfully!\n\nFile: ${result.audioPath}\nVoice: ${result.voiceName}\nModel: ${result.model}\nTemperature: ${request.temperature}${style}\nText length: ${request.text.length} chars`,
     );
   },
+  tts_gemini_38: async (args) => {
+    const request = parseArgs(tts.gemini38TtsSchema, args);
+    const result = await tts.generateGemini38Speech(request);
+    if (!result.success) return text(`Gemini 3.8 TTS generation failed: ${result.error}`, true);
+    const totalChars = request.turns.reduce((sum, turn) => sum + turn.text.length, 0);
+    const voiceInfo = request.speakers
+      ? `Speakers:\n${request.speakers.map((speaker) => `  - ${speaker.speaker}: ${speaker.voice}`).join('\n')}`
+      : `Voice: ${request.voice}`;
+    return text(
+      `Gemini 3.8 audio generated successfully!\n\nFile: ${result.audioPath}\nModel: ${result.model}\n${voiceInfo}\nTurns: ${request.turns.length}\nText length: ${totalChars} chars`,
+    );
+  },
   tts_multi_speaker: async (args) => {
     const request = parseArgs(tts.ttsMultiSpeakerSchema, args);
     const result = await tts.generateDialogue(request);
