@@ -195,8 +195,10 @@ class GatesTests(unittest.TestCase):
             self.assertIn('반응은 승인 자체가 아닙니다',
                           work[f'buzz-gates/work/{name}']['steps'][0]['text'])
         self.assertTrue(all('filter' in definition['trigger'] for definition in work.values()))
+        all_gates = [definition for profile in gates.GATES
+                     for definition in gates.definitions(profile).values()]
         self.assertFalse(any(definition['trigger']['emoji'] in ('👀', '💬')
-                             for definition in work.values()))
+                             for definition in all_gates))
         scoped = gates.definitions('work', test='a' * 64)
         self.assertIn('trigger_author', scoped['buzz-gates/work/review']['trigger']['filter'])
         for definition in scoped.values():
