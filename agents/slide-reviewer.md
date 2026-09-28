@@ -74,6 +74,10 @@ directives, and write nothing but the verdict file the delegator names.
   axes look at (§7 and §8). An editorial diagram adds §6.1. Score the wrong kind or treatment
   and the review misses the only defects that frame can commit
 - Unresolved findings from the previous round (if any) — judge explicitly whether each is resolved
+- `skills/storyboard/references/slide-examples.md` — open its historical comparison images
+  for calibration. Compare only the named property and obey the newer chart/mesh contracts;
+  these examples carry no reusable PASS or score. Verify `profile.md` → `window.THEME` →
+  rendered palette against slide-design.md §2, including any approved custom-theme mapping.
 - **Several slides in one delegation** — a delegator may batch every slide it wants read into
   one call (slide-authoring.md step 4 describes when this read runs). Each slide brings the
   same file set; judge them one at a time in the order

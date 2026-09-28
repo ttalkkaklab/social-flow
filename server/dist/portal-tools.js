@@ -3,6 +3,7 @@ import { UNIT_TOOL_NAMES } from './portal-unit-tools.js';
 import { PORTAL_API_TOOL_NAMES } from './portal-api-contract.js';
 import { canonicalPullPaths } from './portal-canonical.js';
 import { uploadAttachments, restoreAttachments, prepareAttachmentRestore, attachmentSyncReport, safeAttachmentTarget } from './portal-attachments.js';
+import { channelSync } from './portal-channel-sync.js';
 /**
  * `portal_*` tool handlers — the ttalkkakstory portal called by workspace API key.
  *
@@ -44,6 +45,7 @@ export const PORTAL_TOOL_NAMES = [
     'portal_character_tts_set',
     ...REVIEW_TOOL_NAMES,
     'portal_attachments_sync',
+    'portal_channel_sync',
     'portal_images_upload',
     'portal_shot_media_upload',
     'portal_workspace_check',
@@ -76,6 +78,11 @@ export const renderAllocationSchema = z.object({
     })).min(1).max(500).optional(),
 }).refine(a => !a.assignments || (a.requestId && a.baseRevisionNo !== undefined), 'Submitting requires requestId and baseRevisionNo from the latest read');
 export const attachmentsSyncSchema = z.object({ episodeDir: z.string().min(1), episodeId: uuid.optional(), channel: channelArg });
+export const channelSyncSchema = z.object({
+    action: z.enum(['pull', 'push', 'status']),
+    channel: z.string().regex(/^[a-z0-9][a-z0-9-]{0,63}$/, 'kebab-case channel slug'),
+    projectId: uuid.optional(),
+});
 export const workspaceCheckSchema = z.object({ channel: channelArg, episodeDir: z.string().optional(), episodeId: uuid.optional() });
 export const storyboardSaveSchema = z.object({
     episodeDir: z.string().min(1),
@@ -498,6 +505,17 @@ export function portalHandlers(fetchImpl) {
             try {
                 const id = resolveEpisodeId(args.episodeId, args.episodeDir);
                 return ok(await uploadAttachments(r.client, id, episodeDirOf(args.episodeDir)));
+            }
+            catch (error) {
+                return failed(error);
+            }
+        },
+        async channelSync(args) {
+            const r = await resolveClient(fetchImpl, args.channel);
+            if ('error' in r)
+                return r.error;
+            try {
+                return ok(await channelSync(r.client, args));
             }
             catch (error) {
                 return failed(error);

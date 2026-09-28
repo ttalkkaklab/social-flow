@@ -11,10 +11,15 @@ description: >
   resizes under data/[slug]/assets/branding/ with profile.md updated. Boundary — this
   makes the still profile image; the intro skill makes the moving opening.
 argument-hint: "<channel> [extra instructions]"
-allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__gpt_image_img2img"]
+allowed-tools: ["mcp__social-flow__portal_channel_sync", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__gpt_image_img2img"]
 ---
 
 # Channel profile image — data/[channel]/assets/branding/
+
+Call `portal_channel_sync` with `action: "pull"` before reading `profile.md`. A 409 conflict
+stops the run. A missing key, network error, 401 or 5xx gets one warning line, then continue
+with the local files. After the accepted branding files and profile path are installed, call
+it with `action: "push"` so the portal keeps the shared channel copy.
 
 Produces the channel's profile image (logo/avatar) in this order: **brief
 collection → 4 candidate generation → HITL direction pick (browser) →
