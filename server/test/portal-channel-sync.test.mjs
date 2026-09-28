@@ -99,6 +99,30 @@ test('a later attachment conflict is detected before an earlier profile write', 
   } finally { process.chdir(previous); rmSync(root, { recursive: true, force: true }); }
 });
 
+test('push refuses to overwrite a remote addition that is absent from the local base', async () => {
+  const previous = process.cwd();
+  const root = mkdtempSync(path.join(tmpdir(), 'channel-sync-remote-addition-'));
+  const remote = fakeClient();
+  try {
+    process.chdir(root);
+    mkdirSync('data/sample/assets/sfx', { recursive: true });
+    writeFileSync('data/sample/profile.md', '# sample\n');
+    await channelSync(remote.client, { action: 'push', channel: 'sample' });
+
+    const remoteBytes = Buffer.from('device B');
+    const remoteItem = {
+      id: randomUUID(), relativePath: 'assets/sfx/ding.wav', sha256: digest(remoteBytes),
+      byteSize: remoteBytes.length, mime: 'audio/wav', provenance: {}, bytes: remoteBytes,
+    };
+    remote.files.set(remoteItem.id, remoteItem);
+    writeFileSync('data/sample/assets/sfx/ding.wav', Buffer.from('device A'));
+
+    await assert.rejects(channelSync(remote.client, { action: 'push', channel: 'sample' }), /attachment conflict/);
+    assert.equal(remote.files.get(remoteItem.id).sha256, digest(remoteBytes));
+    assert.deepEqual(remote.files.get(remoteItem.id).bytes, remoteBytes);
+  } finally { process.chdir(previous); rmSync(root, { recursive: true, force: true }); }
+});
+
 test('push refuses two-sided changes and never deletes a remote file without the matching base hash', async () => {
   const previous = process.cwd();
   const root = mkdtempSync(path.join(tmpdir(), 'channel-sync-conflict-'));

@@ -244,8 +244,7 @@ export async function channelSync(client: PortalClient, args: { action: 'pull' |
   for (const [relative, file] of local) {
     const existing = remote.get(relative);
     const base = state?.attachments[relative];
-    if (!state && existing && existing.sha256 !== file.sha256) conflict('attachment', relative);
-    if (base && existing?.sha256 !== base && file.sha256 !== existing?.sha256) conflict('attachment', relative);
+    if (existing && existing.sha256 !== file.sha256 && existing.sha256 !== base) conflict('attachment', relative);
   }
   if (profile?.sha256 !== localProfileSha) {
     if (baseProfile && profile?.sha256 !== baseProfile && localProfileSha === baseProfile) conflict('profile', PROFILE_FILE);

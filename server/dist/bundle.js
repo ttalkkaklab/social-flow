@@ -95584,8 +95584,7 @@ async function channelSync(client, args) {
   for (const [relative, file] of local) {
     const existing = remote.get(relative);
     const base = state?.attachments[relative];
-    if (!state && existing && existing.sha256 !== file.sha256) conflict("attachment", relative);
-    if (base && existing?.sha256 !== base && file.sha256 !== existing?.sha256) conflict("attachment", relative);
+    if (existing && existing.sha256 !== file.sha256 && existing.sha256 !== base) conflict("attachment", relative);
   }
   if (profile?.sha256 !== localProfileSha) {
     if (baseProfile && profile?.sha256 !== baseProfile && localProfileSha === baseProfile) conflict("profile", PROFILE_FILE);
@@ -105523,7 +105522,7 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
 // src/index.ts
 import { readFileSync as readFinalRequest } from "node:fs";
 var server = new Server(
-  { name: "social-flow", version: "0.98.0" },
+  { name: "social-flow", version: "0.99.0" },
   { capabilities: { tools: {} } }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {
