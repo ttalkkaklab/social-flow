@@ -13,7 +13,7 @@ description: >
   report, one content-reviewer read at 95 with zero P0, and a cost cap. Boundary — storyboard
   plans and stops, produce builds an approved episode, autoproduce does both without stopping.
 argument-hint: "<channel> \"<topic>\" [unattended]"
-allowed-tools: ["mcp__social-flow__portal_assets_search", "mcp__social-flow__portal_assets_get", "mcp__social-flow__portal_render_allocation", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent",
+allowed-tools: ["mcp__social-flow__portal_channel_sync", "mcp__social-flow__portal_assets_search", "mcp__social-flow__portal_assets_get", "mcp__social-flow__portal_render_allocation", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent",
   "WebSearch", "WebFetch",
   "mcp__social-flow__naver_search", "mcp__social-flow__serp_web_search",
   "mcp__social-flow__serp_news_search", "mcp__social-flow__serp_naver_search",
@@ -30,6 +30,9 @@ allowed-tools: ["mcp__social-flow__portal_assets_search", "mcp__social-flow__por
 ---
 
 # From one topic to a finished video — unattended authoring
+Before reading `profile.md`, call `portal_channel_sync` with `action: "pull"`. A 409 conflict
+holds this queue item. A missing key, network error, 401 or 5xx gets one warning line, then
+continue with the local profile and shared assets.
 For pending portal render requests, follow [the six-ratio allocation contract](../storyboard/references/production-mode.md): `portal_render_allocation` read → host LLM reasons over every shot → submit requestId/baseRevisionNo and all assignments → pull. New choices persist `PRODUCTION.renderRatioVersion:1`; neither a pending request nor ratio selection approves spending.
 Read [story-quality.md](../storyboard/references/story-quality.md) before candidate writing, including skip-research channels. It overrides mandatory closing questions and modern parallels. Write STORY with the story pass; use gate 6f's existing narration read for the four quoted findings. After vocabulary edits revalidate and run `check-story.js storyboard/` before any generation. Missing, failed or stale reviews stop production with queue hold, not merely publication. A closing beat may have `cta:"none"`. An ask stays optional; a forwardable thing does not — an ask requests behaviour from the viewer, while a forwardable thing is one sentence, figure or verdict they can pass on as-is. Asking to be shared is an ask, not a trigger.
 

@@ -11,10 +11,15 @@ description: >
   under data/[slug]/assets/intro/. Boundary — branding makes the still profile image, this
   makes the moving opening.
 argument-hint: "<channel> [extra instructions]"
-allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__gpt_image_img2img", "mcp__social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__social-flow__music_generate_clip", "mcp__social-flow__mlx_music_generate", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue"]
+allowed-tools: ["mcp__social-flow__portal_channel_sync", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__gpt_image_img2img", "mcp__social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__social-flow__music_generate_clip", "mcp__social-flow__mlx_music_generate", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue"]
 ---
 
 # Channel intro video — data/[channel]/assets/intro/
+
+Call `portal_channel_sync` with `action: "pull"` before reading `profile.md`. A 409 conflict
+stops the run. A missing key, network error, 401 or 5xx gets one warning line, then continue
+with the local files. After the accepted intro files and profile path are installed, call it
+with `action: "push"` so the portal keeps the shared channel copy.
 
 Makes the intro (logo sting) that the channel's profile character **acts in
 person** — in this order: **4-concept HITL pick → veo video generation

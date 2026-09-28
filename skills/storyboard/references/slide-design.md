@@ -84,6 +84,25 @@ the flow never calls it.
 
 ## 2. Palette — ink, paper, one accent
 
+### Channel theme handoff
+
+Use the channel's approved `profile.md` §3 as the source for `window.THEME` in `scenes.js`.
+The motion template reads `THEME.ink` and `THEME.accent`; it does not read arbitrary theme
+objects or `THEME.accent2`. A theme-factory custom theme, when supplied, is a planning input:
+map its approved background to `ink`, its single emphasis colour to `accent`, and its channel
+name to `brand` through the profile. Do not install a second palette directly in a slide.
+Type sizes, paper, safe zones and motion still follow this document and the current template.
+Chart slides retain chart-design.md's separate data surface contract.
+
+For example, if the approved profile supplies ink `#152438`, accent `#F47A16` and brand
+`Example channel`, copy those exact values into `window.THEME`. These are illustrative values,
+not a replacement for any channel's profile. Check the rendered contrast before accepting a
+new palette. A requested colour change goes through the profile first, then the board and
+slides; do not silently recolour an approved episode.
+
+Read [slide-examples.md](slide-examples.md) for historical good/bad comparisons and their limits.
+Compare the new slide's pixels and narration, not just its source tokens.
+
 | Token | Value | Role |
 |---|---|---|
 | `--ink` | `THEME.ink` | the ground |

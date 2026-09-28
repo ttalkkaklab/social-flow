@@ -1339,6 +1339,7 @@ export const ROUTES = {
     portal_scenario_save: async (args) => fromPortal(await portalRoutes.scenarioSave(parseArgs(portal.scenarioSaveSchema, args))),
     portal_scenario_pull: async (args) => fromPortal(await portalRoutes.scenarioPull(parseArgs(portal.scenarioPullSchema, args))),
     portal_attachments_sync: async (args) => fromPortal(await portalRoutes.attachmentsSync(parseArgs(portal.attachmentsSyncSchema, args))),
+    portal_channel_sync: async (args) => fromPortal(await portalRoutes.channelSync(parseArgs(portal.channelSyncSchema, args))),
     portal_assets_search: async (args) => fromPortal(await portalRoutes.assetsSearch(parseArgs(portal.assetsSearchSchema, args))),
     portal_assets_get: async (args) => fromPortal(await portalRoutes.assetsGet(parseArgs(portal.assetsGetSchema, args))),
     portal_character_list: async (args) => fromPortal(await portalRoutes.characterList(parseArgs(portal.characterListSchema, args))),

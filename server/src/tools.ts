@@ -1220,6 +1220,16 @@ Returns: JSON — { scenarios: [{ candidate, chosen, score, p0, findings }], wri
     inputSchema: { type: 'object', properties: { episodeDir: PORTAL_EPISODE_DIR_ARG, episodeId: { type: 'string', description: 'Episode UUID; defaults to the directory portal state.' }, channel: PORTAL_CHANNEL_ARG }, required: ['episodeDir'] },
   },
   {
+    name: 'portal_channel_sync', title: 'Sync channel profile and shared assets',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    description: 'Pull, push or compare a channel profile.md and shared intro, outro, branding and SFX files with one portal project. The first explicit projectId is pinned in data/[channel]/.portal-channel.json; later calls refuse another project. Pull stages and hash-checks every remote file before replacing local files. Push uses the last synced hashes for conflict-safe updates and deletions.',
+    inputSchema: { type: 'object', required: ['action', 'channel'], properties: {
+      action: { type: 'string', enum: ['pull', 'push', 'status'], description: 'pull applies remote changes locally, push sends local changes, status compares hashes without writing.' },
+      channel: PORTAL_CHANNEL_ARG,
+      projectId: { type: 'string', format: 'uuid', description: 'Required once when the portal project name is not exactly the channel slug.' },
+    } },
+  },
+  {
     name: 'portal_images_upload', title: 'Upload and link local shot images',
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     description: 'After portal_storyboard_save has linked the episode, upload PNG/JPEG/WebP files (5 MiB each), then checkpoint their portalImageId UUIDs with the local base revision. Images upload sequentially. Defaults to storyboard/images/scene-N.* by source array ordinal, retaining shot IDs. Explicit mappings require shotId when present; shotNo is only for legacy shots without IDs. Paths stay inside storyboard/. Missing default images are reported as skipped. Success updates scenes.js and .portal.json; partial failures report uploaded UUIDs and recovery instructions. No automatic conflict retry. No image generation or publishing.',
