@@ -252,14 +252,14 @@ const OMNI_ASPECT_RATIO_PROPERTY = {
  */
 const ASTRA_NUM_FRAMES_PROPERTY = {
   type: 'integer',
-  description: `Clip length in FRAMES, not seconds: 8k+1 between ${ASTRA_VIDEO_MIN_FRAMES} and ${ASTRA_VIDEO_MAX_FRAMES} (25, 33, 41 … 481). The server default is 121, about 5.0 seconds at 24fps. A value off the 8k+1 grid is refused before the call.`,
+  description: `Clip length in FRAMES, not seconds: 8k+1 between ${ASTRA_VIDEO_MIN_FRAMES} and ${ASTRA_VIDEO_MAX_FRAMES} (25, 33, 41 … 481). The server default is 121, about 5.0 seconds at 24fps. A value off the 8k+1 grid is refused before the call. The 481-frame boundary is accepted by validation but has not been generation-tested.`,
   minimum: ASTRA_VIDEO_MIN_FRAMES,
   maximum: ASTRA_VIDEO_MAX_FRAMES,
 } as const;
 
 const ASTRA_AUTO_DURATION_PROPERTY = {
   type: 'object',
-  description: 'Let the server pick the length inside a range instead of naming frames. Capped at 121 frames whatever you ask for. Ignored when numFrames is also given.',
+  description: 'Let the server pick the length inside a range instead of naming frames. After seconds are rounded at frameRate, the range must start at frame 1 or later, end at frame 121 or earlier, and contain an 8k+1 value. Ignored when numFrames is also given.',
   properties: {
     minSeconds: { type: 'number', description: 'Shortest acceptable clip length in seconds.' },
     maxSeconds: { type: 'number', description: 'Longest acceptable clip length in seconds.' },
@@ -293,8 +293,9 @@ const ASTRA_SEED_PROPERTY = {
 
 const ASTRA_LORA_PROPERTY = {
   type: 'array',
-  description: 'Look adapters to load, at most 2. "cinemagraph" freezes the frame except for one moving element; "slow-motion" stretches the action. Accepted ONLY on tier "default" (mode generate) — any other tier is refused before the call.',
+  description: 'Distinct look adapters to load, at most 2. "cinemagraph" freezes the frame except for one moving element; "slow-motion" stretches the action. Duplicate names are refused. Accepted ONLY on tier "default" (mode generate) — any other tier is refused before the call.',
   maxItems: 2,
+  uniqueItems: true,
   items: { type: 'string', description: 'Adapter name.', enum: [...ASTRA_VIDEO_LORAS] },
 } as const;
 
@@ -326,6 +327,8 @@ const ASTRA_FILENAME_PROPERTY = {
   type: 'string',
   description: 'File name for the generated video (default: astra_<timestamp>.mp4). A bare name — put the directory in outputPath.',
 } as const;
+
+const ASTRA_LIMITS_LINE = 'Uploads: 10/min per key. Job acceptance: 5/min and 60/hour per key. The waiting queue holds 20 jobs, and each /v1/jobs JSON body is limited to 1 MiB.';
 
 /**
  * Shared Seedance property definitions (BytePlus ModelArk) — lists and
@@ -2468,8 +2471,9 @@ Returns: a text block with the saved .mp4 path, the new interaction id, and the 
 
 Use when the shot is not time-critical and you would rather not spend vendor money: this server is ours, so a call costs wall clock instead of dollars, and no vendor content policy applies. It is also the only lane with an adapter (lora) for cinemagraph and slow-motion looks.
 Do NOT use when someone is waiting: the box renders ONE job at a time and yours queues behind whatever else is running. A measured 121-frame 1536x1024 render takes about 66s (tier "default"), 169s ("guided"), 121s ("fast") — plus the queue. For an immediate clip go to veo_text2video or seedance_text2video.
-tier picks the pipeline and also which arguments exist: lora only on "default", negativePrompt and numInferenceSteps only on "guided"/"fast". Passing one to the wrong tier is refused before the call.
-Length is frames, not seconds: numFrames must be 8k+1 between 25 and 481 (121 = about 5.0s at 24fps, the server default). Give autoDuration instead to let the server choose a length; numFrames wins if both are given.
+tier picks the pipeline and also which arguments exist: lora only on "default", negativePrompt and numInferenceSteps only on "guided"/"fast". "fast" means a draft that is faster than "guided"; it is not faster than the default pipeline. Passing one to the wrong tier is refused before the call.
+Length is frames, not seconds: numFrames must be 8k+1 between 25 and 481 (121 = about 5.0s at 24fps, the server default; 481 passes validation but is not generation-tested). Give autoDuration instead to let the server choose at most 121 frames; the rounded range must contain an 8k+1 value. numFrames wins if both are given.
+${ASTRA_LIMITS_LINE}
 Every clip comes back with a generated AAC audio track (48kHz stereo, measured) and there is no argument to turn it off — no mode's allow-list has one. If the episode lays its own narration or BGM over this clip, drop or duck the generated track in the edit instead of expecting silence.
 
 Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and the request the server recorded.`,
@@ -2482,7 +2486,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
         },
         tier: {
           type: 'string',
-          description: 'Pipeline: "default" (generate — fastest, the only tier taking lora), "guided" (slower, takes negativePrompt and numInferenceSteps), "fast" (guided_fast — 768x512 default, 32-pixel grid).',
+          description: 'Pipeline: "default" (generate — the only tier taking lora), "guided" (slower, takes negativePrompt and numInferenceSteps), "fast" (guided_fast — 768x512 draft, 32-pixel grid, faster than guided but not faster than default).',
           enum: ['default', 'guided', 'fast'],
           default: 'default',
         },
@@ -2511,6 +2515,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
 Use when a generated background or photo has to move and nobody is waiting on it — same trade as astra_text2video: free, ours, one job at a time. Give firstFramePath alone to animate from that frame, or add lastFramePath and the clip lands on it. The tool uploads the files itself; pass local paths, not ids.
 Do NOT use for more than two stills — that is astra_keyframe_video, which pins each image to a frame index. For an immediate clip use veo_img2video or seedance_img2video.
 The last frame is pinned to numFrames-1, so a 121-frame clip ends on frame 120. png, jpg and jpeg are accepted, up to 32 MiB each.
+${ASTRA_LIMITS_LINE}
 Every clip comes back with a generated AAC audio track (48kHz stereo, measured) and there is no argument to turn it off — no mode's allow-list has one. If the episode lays its own narration or BGM over this clip, drop or duck the generated track in the edit instead of expecting silence.
 
 Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and the request the server recorded.`,
@@ -2555,6 +2560,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
 Use when the shot has to hit specific compositions in a specific order — a storyboard row rendered as one continuous move rather than three cuts. Each image names its own frameIdx, so the pacing between beats is yours.
 Do NOT use for one or two stills (astra_img2video is simpler) or when the clip is driven by sound (astra_audio2video).
 frameIdx is 0-based and must be inside the clip: a 121-frame render accepts 0-120. This mode has no length-guessing and no adapters — autoDuration, numGeneratedKeyframes and lora do not exist here and are refused before the call. A measured 121-frame render took about 184s plus queue.
+${ASTRA_LIMITS_LINE}
 Every clip comes back with a generated AAC audio track (48kHz stereo, measured) and there is no argument to turn it off — no mode's allow-list has one. If the episode lays its own narration or BGM over this clip, drop or duck the generated track in the edit instead of expecting silence.
 
 Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and the request the server recorded.`,
@@ -2615,7 +2621,8 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
 
 Use when the picture has to follow a sound you already have — a narration take, a music bed, a recorded effect — instead of the picture being cut to it afterwards. The tool uploads the audio itself; pass a local .wav or .mp3 path.
 Do NOT use to add sound to a finished clip: this generates new picture from the audio, it does not mux. The rendered video carries its own generated AAC track (48kHz stereo) rather than the audio you supplied, and there is no argument to turn it off — drop or duck it in the edit.
-The clip length is still numFrames, not the audio length — a 5-second wav against 121 frames at 24fps lines up; a longer track is read from audioStartTime for audioMaxDuration seconds. A measured 121-frame render took about 170s plus queue.
+Choose either numFrames or audioMaxDuration, never both. numFrames fixes the clip length. audioMaxDuration uses the shorter of that value and the audio remaining after audioStartTime, floors seconds × frameRate, then rounds down to 8k+1; more than 481 frames is refused. audioStartTime must be before the uploaded audio ends. With neither length field, the official default is 121 frames. A measured 121-frame render took about 170s plus queue.
+${ASTRA_LIMITS_LINE}
 
 Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and the request the server recorded.`,
     inputSchema: {
@@ -2631,11 +2638,11 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
         },
         audioStartTime: {
           type: 'number',
-          description: 'Seconds into the track to start reading from (default: 0).',
+          description: 'Seconds into the track to start reading from (default: 0). Must be less than the uploaded audio duration.',
         },
         audioMaxDuration: {
           type: 'number',
-          description: 'How many seconds of the track to use from audioStartTime (default: as much as the clip needs).',
+          description: 'Maximum seconds to use after audioStartTime. Mutually exclusive with numFrames. The shorter of this and the remaining audio determines a floored, 8k+1 frame count no greater than 481.',
         },
         numFrames: ASTRA_NUM_FRAMES_PROPERTY,
         width: ASTRA_WIDTH_PROPERTY,
@@ -2659,6 +2666,8 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
 Use when a cut is right except for a stretch in the middle — a gesture that lands wrong, a background that wobbles for a second — and re-rolling the whole shot would lose the framing you already liked. Name the span in seconds with startTime and endTime; the tool uploads the source mp4 itself.
 Do NOT use to make a clip longer or to change its size: the output inherits the source exactly, and this mode has no width, height, frameRate or numFrames argument at all.
 The SOURCE has to be on the grid already — 8k+1 frames, both sides a multiple of 32 — or the server refuses at acceptance. A clip this API produced always qualifies. A measured retake took about 80s plus queue.
+The tool checks the upload response before submission: endTime must not pass source frames/fps, so an invalid source or span does not consume a queue slot.
+${ASTRA_LIMITS_LINE}
 Every clip comes back with a generated AAC audio track (48kHz stereo, measured) and there is no argument to turn it off — no mode's allow-list has one. If the episode lays its own narration or BGM over this clip, drop or duck the generated track in the edit instead of expecting silence.
 
 Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and the request the server recorded.`,
@@ -2679,7 +2688,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
         },
         endTime: {
           type: 'number',
-          description: 'Where the re-rolled span ends, in seconds. Must be greater than startTime.',
+          description: 'Where the re-rolled span ends, in seconds. Must be greater than startTime and no later than the uploaded source duration.',
         },
         seed: ASTRA_SEED_PROPERTY,
         outputPath: ASTRA_OUTPUT_PATH_PROPERTY,

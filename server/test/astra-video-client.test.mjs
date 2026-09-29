@@ -16,14 +16,19 @@ import {
   ASTRA_VIDEO_LORAS,
   ASTRA_VIDEO_MAX_PIXELS,
   ASTRA_VIDEO_TIERS,
+  ASTRA_VIDEO_USER_AGENT,
+  astraVideoHeaders,
   astraAudio2VideoSchema,
   astraImg2VideoSchema,
   astraKeyframeVideoSchema,
   astraText2VideoSchema,
   astraVideoRetakeSchema,
   buildJobBody,
+  checkAudioSource,
+  checkAutoDuration,
   checkDimensions,
   checkFrameIdx,
+  checkRetakeSource,
   uploadContentType,
 } from '../dist/astra-video-client.js';
 
@@ -205,6 +210,30 @@ describe('validators', () => {
     assert.match(checkFrameIdx(121, undefined), /between 0 and 120/);
   });
 
+  it('autoDuration enforces the final 121-frame grid examples', () => {
+    assert.equal(checkAutoDuration({ minSeconds: 1, maxSeconds: 5 }, 24), null);
+    assert.match(checkAutoDuration({ minSeconds: 1, maxSeconds: 1 }, 24), /contain an 8k\+1 frame count/);
+    assert.match(checkAutoDuration({ minSeconds: 1, maxSeconds: 20 }, 24), /121 frames or earlier/);
+    assert.equal(checkAutoDuration({ minSeconds: 1, maxSeconds: 2.02 }, 60), null);
+    assert.match(checkAutoDuration({ minSeconds: 1, maxSeconds: 2.03 }, 60), /121 frames or earlier/);
+
+    parseOk(astraText2VideoSchema, { prompt: 'x', autoDuration: { minSeconds: 1, maxSeconds: 5 } });
+    parseFails(astraText2VideoSchema, { prompt: 'x', autoDuration: { minSeconds: 1, maxSeconds: 1 } });
+    parseFails(astraText2VideoSchema, { prompt: 'x', autoDuration: { minSeconds: 1, maxSeconds: 20 } });
+    parseOk(astraText2VideoSchema, { prompt: 'x', frameRate: 60, autoDuration: { minSeconds: 1, maxSeconds: 2.02 } });
+    parseFails(astraText2VideoSchema, { prompt: 'x', frameRate: 60, autoDuration: { minSeconds: 1, maxSeconds: 2.03 } });
+    // The final API checks the object's fields but ignores its range when numFrames is explicit.
+    parseOk(astraText2VideoSchema, { prompt: 'x', numFrames: 121, autoDuration: { minSeconds: 1, maxSeconds: 20 } });
+  });
+
+  it('uses an explicit versioned User-Agent on every centralized ASTRA header set', () => {
+    assert.equal(ASTRA_VIDEO_USER_AGENT, 'social-flow/0.100.0');
+    assert.deepEqual(astraVideoHeaders('secret'), {
+      Authorization: 'Bearer secret',
+      'User-Agent': 'social-flow/0.100.0',
+    });
+  });
+
   it('upload content types come from the extension, and nothing else is accepted', () => {
     assert.deepEqual(uploadContentType('/tmp/a.png'), { contentType: 'image/png', kind: 'image' });
     assert.deepEqual(uploadContentType('/tmp/a.JPG'), { contentType: 'image/jpeg', kind: 'image' });
@@ -233,6 +262,10 @@ describe('tier-bound arguments are refused at the schema, not at the server', ()
     parseFails(astraText2VideoSchema, { prompt: 'x', lora: ['deblur'] });
     parseFails(astraText2VideoSchema, { prompt: 'x', lora: ['/etc/passwd'] });
     parseFails(astraText2VideoSchema, { prompt: 'x', lora: ['cinemagraph', 'slow-motion', 'cinemagraph'] });
+    assert.match(
+      parseFails(astraText2VideoSchema, { prompt: 'x', lora: ['slow-motion', 'slow-motion'] }),
+      /lora values must be unique/,
+    );
   });
 
   it('guided_fast validates its own 32 grid through the tier', () => {
@@ -271,9 +304,28 @@ describe('per-tool schemas', () => {
     );
   });
 
-  it('audio2video wants the audio path', () => {
+  it('audio2video wants the audio path and one length control at most', () => {
     parseOk(astraAudio2VideoSchema, { prompt: 'x', audioPath: '/tmp/a.wav' });
     parseFails(astraAudio2VideoSchema, { prompt: 'x' });
+    assert.match(
+      parseFails(astraAudio2VideoSchema, {
+        prompt: 'x',
+        audioPath: '/tmp/a.wav',
+        numFrames: 121,
+        audioMaxDuration: 5,
+      }),
+      /mutually exclusive/,
+    );
+  });
+
+  it('audio upload metadata rejects starts at the end and more than 481 selected frames', () => {
+    const audio = { uploadId: 'a'.repeat(32), bytes: 1, kind: 'audio', duration: 30 };
+    assert.equal(checkAudioSource(audio, { audioStartTime: 0, audioMaxDuration: 20.1, frameRate: 24 }), null);
+    assert.match(
+      checkAudioSource(audio, { audioStartTime: 0, audioMaxDuration: 20.5, frameRate: 24 }),
+      /selects 489 frames.*maximum is 481/,
+    );
+    assert.match(checkAudioSource(audio, { audioStartTime: 30, numFrames: 121 }), /must be less than the source duration/);
   });
 
   it('retake wants an ordered span and has no size arguments at all', () => {
@@ -286,6 +338,22 @@ describe('per-tool schemas', () => {
     for (const absent of ['width', 'height', 'numFrames', 'frameRate']) {
       assert.ok(!shape.includes(absent), `retake must not expose ${absent}`);
     }
+  });
+
+  it('retake upload metadata enforces 8k+1 frames, the 32 grid and source duration', () => {
+    const source = {
+      uploadId: 'b'.repeat(32),
+      bytes: 1,
+      kind: 'video',
+      width: 1536,
+      height: 1024,
+      frames: 121,
+      fps: 24,
+    };
+    assert.equal(checkRetakeSource(source, 1, 3), null);
+    assert.match(checkRetakeSource({ ...source, frames: 120 }, 1, 3), /frames must be 8k\+1/);
+    assert.match(checkRetakeSource({ ...source, width: 1530 }, 1, 3), /width must be a positive multiple of 32/);
+    assert.match(checkRetakeSource(source, 1, 5.05), /endTime must be at most the source duration/);
   });
 
   it('a prompt is required everywhere and capped at 2000 characters', () => {

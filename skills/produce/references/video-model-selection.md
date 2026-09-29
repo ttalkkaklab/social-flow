@@ -18,6 +18,18 @@ through several supplied stills, or to re-roll one span of an existing cut; stay
 Seedance whenever the answer is needed now. It does not change the default route for anything
 below.
 
+ASTRA's `fast` tier is a lower-resolution draft that finishes sooner than `guided`; measured at
+121s, it was slower than the default pipeline's 66s. Automatic duration selection stops at 121
+frames and its rounded range must contain an 8k+1 frame count. Direct `numFrames` accepts
+25-481 on the same grid, though 481 has not been generation-tested. For `astra_audio2video`,
+choose `numFrames` or `audioMaxDuration`, never both; the tool also checks that `audioStartTime`
+is before the uploaded track ends. Retakes check source frames, 32-pixel dimensions and the
+requested end time against uploaded metadata before submission.
+
+The front door has returned 403 for a runtime-default User-Agent, so every ASTRA request sends
+`User-Agent: social-flow/<version>`. Per key, uploads are limited to 10/min and jobs to 5/min and
+60/hour; the waiting queue holds 20 jobs, and `/v1/jobs` bodies stop at 1 MiB.
+
 Two things to know before you write the call. Sizes sit on a 64-pixel grid with a 2,088,960-pixel
 area ceiling, so **use 1024x1920 first for a 9:16 frame**. ASTRA server measurements on
 2026-09-29 showed that 1088x1920 works only at 25 frames (about 1 second); higher frame counts
