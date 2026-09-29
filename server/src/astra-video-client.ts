@@ -12,6 +12,8 @@
  *   and answers 201 `{upload_id, kind, bytes, expires_at}` (audio adds `duration`, video adds
  *   `width/height/frames/fps`). Uploads live 24h; 20 per key, 1 GiB total.
  * - `POST /v1/jobs` answers 202 `{job_id, status:"queued", queue_position, status_url, result_url}`.
+ *   Job bodies stop at 1 MiB; acceptance is limited to 5/min and 60/hour per key, with at
+ *   most 20 jobs waiting in the queue.
  * - `GET /v1/jobs/<id>` answers `status` queued → running → succeeded | failed, plus the
  *   `request` the server actually recorded.
  * - `GET /v1/jobs/<id>/result` answers `video/mp4`, or **409** while the job is still running.
@@ -33,6 +35,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { z } from 'zod';
+import packageMetadata from '../package.json' with { type: 'json' };
 import { astraVideoBaseUrl, requireAstraVideoKey } from './config.js';
 import { requestRaw } from './http.js';
 import { bareFilenameSchema, resolveOutputFile } from './media-utils.js';
@@ -45,7 +48,7 @@ export const ASTRA_VIDEO_TIERS = {
   default: 'generate',
   /** `guided` — slower, takes a negative prompt and a step count. */
   guided: 'guided',
-  /** `guided_fast` — 768x512 default, 32-pixel grid, quickest of the three. */
+  /** `guided_fast` — 768x512 draft tier, faster than guided but not the default pipeline. */
   fast: 'guided_fast',
 } as const;
 
@@ -76,6 +79,8 @@ export const ASTRA_VIDEO_ALLOWED_FIELDS: Record<string, readonly string[]> = {
 export const ASTRA_VIDEO_MIN_FRAMES = 25;
 export const ASTRA_VIDEO_MAX_FRAMES = 481;
 export const ASTRA_VIDEO_FRAME_STEP = 8;
+/** Server-side automatic duration selection never chooses more than 121 frames. */
+export const ASTRA_VIDEO_MAX_AUTO_FRAMES = 121;
 
 /** Pixel grid: 64 for generate/guided/keyframe/audio2video, 32 for guided_fast. */
 export const ASTRA_VIDEO_DIMENSION_STEP = 64;
@@ -97,6 +102,14 @@ export const ASTRA_VIDEO_UPLOAD_LIMITS = {
 
 /** Job acceptance is rate-limited to 5/min per key; the client spaces its own submits. */
 export const ASTRA_VIDEO_SUBMITS_PER_MINUTE = 5;
+/** The same key may accept at most 60 jobs/hour, and the waiting queue holds 20 jobs. */
+export const ASTRA_VIDEO_SUBMITS_PER_HOUR = 60;
+export const ASTRA_VIDEO_MAX_QUEUED_JOBS = 20;
+/** Uploads have a separate 10/min limit; job JSON bodies stop at 1 MiB. */
+export const ASTRA_VIDEO_UPLOADS_PER_MINUTE = 10;
+export const ASTRA_VIDEO_MAX_JOB_BODY_BYTES = 1024 * 1024;
+/** Explicit because the front door has rejected the runtime's default User-Agent with 403. */
+export const ASTRA_VIDEO_USER_AGENT = `social-flow/${packageMetadata.version}`;
 
 /** A single job is capped at 1800s server-side, so polling gives up at the same wall. */
 export const ASTRA_VIDEO_MAX_WAIT_MS = 1_800_000;
@@ -141,7 +154,11 @@ const autoDurationSchema = z
   })
   .optional();
 
-const loraSchema = z.array(z.enum(ASTRA_VIDEO_LORAS)).max(ASTRA_VIDEO_MAX_LORAS).optional();
+const loraSchema = z
+  .array(z.enum(ASTRA_VIDEO_LORAS))
+  .max(ASTRA_VIDEO_MAX_LORAS)
+  .refine((values) => new Set(values).size === values.length, { message: 'lora values must be unique' })
+  .optional();
 
 const outputFields = {
   outputPath: z.string().optional(),
@@ -177,6 +194,26 @@ export function checkFrameIdx(frameIdx: number, numFrames: number | undefined): 
   const last = (numFrames ?? 121) - 1;
   if (frameIdx < 0 || frameIdx > last) {
     return `frameIdx must be between 0 and ${last} for a ${numFrames ?? 121}-frame clip (got ${frameIdx})`;
+  }
+  return null;
+}
+
+/** Validate the automatic-length grid after applying the request's frame rate. */
+export function checkAutoDuration(
+  duration: { minSeconds: number; maxSeconds: number },
+  frameRate = 24,
+): string | null {
+  const minFrames = Math.round(duration.minSeconds * frameRate);
+  const maxFrames = Math.round(duration.maxSeconds * frameRate);
+  if (minFrames < 1) {
+    return `autoDuration must start at 1 frame or later after rounding (got ${minFrames} at ${frameRate}fps)`;
+  }
+  if (maxFrames > ASTRA_VIDEO_MAX_AUTO_FRAMES) {
+    return `autoDuration must end at ${ASTRA_VIDEO_MAX_AUTO_FRAMES} frames or earlier after rounding (got ${maxFrames} at ${frameRate}fps)`;
+  }
+  const firstGridFrame = 1 + ASTRA_VIDEO_FRAME_STEP * Math.ceil((minFrames - 1) / ASTRA_VIDEO_FRAME_STEP);
+  if (firstGridFrame > maxFrames) {
+    return `autoDuration must contain an 8k+1 frame count after rounding (got ${minFrames}..${maxFrames} at ${frameRate}fps)`;
   }
   return null;
 }
@@ -230,6 +267,14 @@ export const astraText2VideoSchema = z
     const dimensionError = checkDimensions(data.width, data.height, mode);
     if (dimensionError) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['width'], message: dimensionError });
+    }
+    // The server gives an explicit num_frames precedence over auto_duration. It still checks
+    // the object's shape, but ignores the automatic range when num_frames is present.
+    if (data.autoDuration && data.numFrames === undefined) {
+      const durationError = checkAutoDuration(data.autoDuration, data.frameRate ?? 24);
+      if (durationError) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['autoDuration'], message: durationError });
+      }
     }
   });
 
@@ -314,6 +359,13 @@ export const astraAudio2VideoSchema = z
     if (dimensionError) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['width'], message: dimensionError });
     }
+    if (data.numFrames !== undefined && data.audioMaxDuration !== undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['audioMaxDuration'],
+        message: 'audioMaxDuration and numFrames are mutually exclusive',
+      });
+    }
   });
 
 /**
@@ -358,6 +410,71 @@ export interface AstraVideoResponse {
   elapsedSeconds: number;
   /** What the server recorded as the request — the authoritative echo of defaults it filled in. */
   request?: Record<string, unknown>;
+}
+
+export interface AstraVideoUpload {
+  uploadId: string;
+  bytes: number;
+  kind: string;
+  duration?: number;
+  width?: number;
+  height?: number;
+  frames?: number;
+  fps?: number;
+}
+
+/** Validate audio metadata after upload, before consuming a job slot. */
+export function checkAudioSource(
+  upload: AstraVideoUpload,
+  args: { audioStartTime?: number; audioMaxDuration?: number; numFrames?: number; frameRate?: number },
+): string | null {
+  if (upload.kind !== 'audio') return `audioPath uploaded as ${upload.kind}, not audio`;
+  if (!Number.isFinite(upload.duration) || (upload.duration ?? 0) <= 0) {
+    return 'audio upload response did not include a positive duration';
+  }
+  const start = args.audioStartTime ?? 0;
+  const duration = upload.duration as number;
+  if (start >= duration) {
+    return `audioStartTime must be less than the source duration ${duration}s (got ${start})`;
+  }
+  if (args.numFrames !== undefined || args.audioMaxDuration === undefined) return null;
+
+  const usableSeconds = Math.min(args.audioMaxDuration, duration - start);
+  const rawFrames = Math.floor(usableSeconds * (args.frameRate ?? 24));
+  const clampedFrames = Math.max(1, Math.min(1024, rawFrames));
+  const gridFrames = 1 + ASTRA_VIDEO_FRAME_STEP * Math.floor((clampedFrames - 1) / ASTRA_VIDEO_FRAME_STEP);
+  if (gridFrames > ASTRA_VIDEO_MAX_FRAMES) {
+    return `audioMaxDuration selects ${gridFrames} frames after clipping and the 8k+1 grid; maximum is ${ASTRA_VIDEO_MAX_FRAMES}`;
+  }
+  return null;
+}
+
+/** Validate retake source metadata and time span after upload, before consuming a job slot. */
+export function checkRetakeSource(
+  upload: AstraVideoUpload,
+  startTime: number,
+  endTime: number,
+): string | null {
+  if (upload.kind !== 'video') return `sourceVideoPath uploaded as ${upload.kind}, not video`;
+  if (!Number.isInteger(upload.frames) || (upload.frames ?? 0) < 1 || ((upload.frames as number) - 1) % ASTRA_VIDEO_FRAME_STEP !== 0) {
+    return `retake source frames must be 8k+1 (got ${String(upload.frames)})`;
+  }
+  for (const [name, value] of [['width', upload.width], ['height', upload.height]] as const) {
+    if (!Number.isInteger(value) || (value ?? 0) < 1 || (value as number) % ASTRA_VIDEO_FAST_DIMENSION_STEP !== 0) {
+      return `retake source ${name} must be a positive multiple of ${ASTRA_VIDEO_FAST_DIMENSION_STEP} (got ${String(value)})`;
+    }
+  }
+  if (!Number.isFinite(upload.fps) || (upload.fps ?? 0) <= 0) {
+    return `retake source fps must be positive (got ${String(upload.fps)})`;
+  }
+  const sourceSeconds = (upload.frames as number) / (upload.fps as number);
+  if (endTime > sourceSeconds) {
+    return `endTime must be at most the source duration ${sourceSeconds}s (got ${endTime})`;
+  }
+  if (startTime < 0 || startTime >= endTime) {
+    return `retake span must satisfy 0 <= startTime < endTime (got ${startTime} .. ${endTime})`;
+  }
+  return null;
 }
 
 // ── body construction (pure — this is what the tests lock) ───────────────────
@@ -453,20 +570,42 @@ function sleep(ms: number): Promise<void> {
 }
 
 /**
- * Acceptance is 5 requests per rolling minute per key; a 429 there wastes a round trip and,
- * worse, races other sessions on the same key. So submits queue behind a module-level window.
+ * Acceptance is 5 requests per rolling minute and 60 per rolling hour per key; a 429 there
+ * wastes a round trip and races other sessions on the same key. Submits therefore queue behind
+ * module-level windows. The server also stops accepting work when 20 jobs are already waiting.
  */
 const submitTimestamps: number[] = [];
 
 async function waitForSubmitSlot(): Promise<void> {
   for (;;) {
     const now = Date.now();
-    while (submitTimestamps.length && now - submitTimestamps[0] >= 60_000) submitTimestamps.shift();
-    if (submitTimestamps.length < ASTRA_VIDEO_SUBMITS_PER_MINUTE) {
+    while (submitTimestamps.length && now - submitTimestamps[0] >= 3_600_000) submitTimestamps.shift();
+    const recentMinute = submitTimestamps.filter((timestamp) => now - timestamp < 60_000);
+    if (recentMinute.length < ASTRA_VIDEO_SUBMITS_PER_MINUTE && submitTimestamps.length < ASTRA_VIDEO_SUBMITS_PER_HOUR) {
       submitTimestamps.push(now);
       return;
     }
-    await sleep(60_000 - (now - submitTimestamps[0]) + 250);
+    const minuteWait = recentMinute.length >= ASTRA_VIDEO_SUBMITS_PER_MINUTE
+      ? 60_000 - (now - recentMinute[0])
+      : 0;
+    const hourWait = submitTimestamps.length >= ASTRA_VIDEO_SUBMITS_PER_HOUR
+      ? 3_600_000 - (now - submitTimestamps[0])
+      : 0;
+    await sleep(Math.max(minuteWait, hourWait) + 250);
+  }
+}
+
+const uploadTimestamps: number[] = [];
+
+async function waitForUploadSlot(): Promise<void> {
+  for (;;) {
+    const now = Date.now();
+    while (uploadTimestamps.length && now - uploadTimestamps[0] >= 60_000) uploadTimestamps.shift();
+    if (uploadTimestamps.length < ASTRA_VIDEO_UPLOADS_PER_MINUTE) {
+      uploadTimestamps.push(now);
+      return;
+    }
+    await sleep(60_000 - (now - uploadTimestamps[0]) + 250);
   }
 }
 
@@ -481,8 +620,15 @@ function isTerminalStatus(status: number): boolean {
   return status === 400 || status === 401 || status === 403 || status === 404 || status === 413 || status === 415;
 }
 
+export function astraVideoHeaders(key: string): Record<string, string> {
+  return {
+    Authorization: `Bearer ${key}`,
+    'User-Agent': ASTRA_VIDEO_USER_AGENT,
+  };
+}
+
 function authHeaders(): Record<string, string> {
-  return { Authorization: `Bearer ${requireAstraVideoKey()}` };
+  return astraVideoHeaders(requireAstraVideoKey());
 }
 
 function jobsUrl(suffix = ''): string {
@@ -540,7 +686,7 @@ export function uploadContentType(filePath: string): { contentType: string; kind
  *
  * Raw bytes as the body, which is why this does not go through http.ts (see the file header).
  */
-export async function uploadFile(filePath: string): Promise<{ uploadId: string; bytes: number; kind: string }> {
+export async function uploadFile(filePath: string): Promise<AstraVideoUpload> {
   const resolved = path.resolve(filePath);
   if (!fs.existsSync(resolved)) throw new Error(`File not found: ${filePath}`);
   const { contentType, kind } = uploadContentType(resolved);
@@ -550,6 +696,7 @@ export async function uploadFile(filePath: string): Promise<{ uploadId: string; 
     throw new Error(`${path.basename(resolved)} is ${bytes} bytes; the ${kind} upload ceiling is ${limit} bytes.`);
   }
 
+  await waitForUploadSlot();
   const headers = authHeaders();
   const result = await withBackoff('upload', async () => {
     try {
@@ -567,12 +714,34 @@ export async function uploadFile(filePath: string): Promise<{ uploadId: string; 
   });
 
   if (!result.ok) throw redactedFailure(`upload of ${path.basename(resolved)}`, result.status, result.body);
-  const parsed = JSON.parse(result.body) as { upload_id: string; kind: string; bytes: number };
-  return { uploadId: parsed.upload_id, bytes: parsed.bytes, kind: parsed.kind };
+  const parsed = JSON.parse(result.body) as {
+    upload_id: string;
+    kind: string;
+    bytes: number;
+    duration?: number;
+    width?: number;
+    height?: number;
+    frames?: number;
+    fps?: number;
+  };
+  return {
+    uploadId: parsed.upload_id,
+    bytes: parsed.bytes,
+    kind: parsed.kind,
+    ...(parsed.duration !== undefined ? { duration: parsed.duration } : {}),
+    ...(parsed.width !== undefined ? { width: parsed.width } : {}),
+    ...(parsed.height !== undefined ? { height: parsed.height } : {}),
+    ...(parsed.frames !== undefined ? { frames: parsed.frames } : {}),
+    ...(parsed.fps !== undefined ? { fps: parsed.fps } : {}),
+  };
 }
 
-/** Accept a job and return its id. Honours the client-side 5/min window before calling. */
+/** Accept a job and return its id. Honours the client-side minute/hour windows before calling. */
 async function submitJob(body: JobBody): Promise<string> {
+  const bodyBytes = Buffer.byteLength(JSON.stringify(body));
+  if (bodyBytes > ASTRA_VIDEO_MAX_JOB_BODY_BYTES) {
+    throw new Error(`ASTRA video job body is ${bodyBytes} bytes; the ceiling is ${ASTRA_VIDEO_MAX_JOB_BODY_BYTES} bytes.`);
+  }
   await waitForSubmitSlot();
   const result = await withBackoff(
     'submit',
@@ -710,12 +879,16 @@ export async function generateFromKeyframes(args: AstraKeyframeVideoRequest): Pr
 
 export async function generateFromAudio(args: AstraAudio2VideoRequest): Promise<AstraVideoResponse> {
   const audio = await uploadFile(args.audioPath);
+  const sourceError = checkAudioSource(audio, args);
+  if (sourceError) throw new Error(`ASTRA video audio source refused: ${sourceError}`);
   const body = buildJobBody('audio2video', { ...args, audioUploadId: audio.uploadId });
   return runJob('audio2video', args.prompt, body, args.outputPath, args.filename);
 }
 
 export async function retakeVideo(args: AstraVideoRetakeRequest): Promise<AstraVideoResponse> {
   const source = await uploadFile(args.sourceVideoPath);
+  const sourceError = checkRetakeSource(source, args.startTime, args.endTime);
+  if (sourceError) throw new Error(`ASTRA video retake source refused: ${sourceError}`);
   const body = buildJobBody('retake', { ...args, videoUploadId: source.uploadId });
   return runJob('retake', args.prompt, body, args.outputPath, args.filename);
 }
