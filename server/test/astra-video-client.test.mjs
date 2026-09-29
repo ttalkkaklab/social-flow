@@ -11,6 +11,8 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
+import packageMetadata from '../package.json' with { type: 'json' };
+
 import {
   ASTRA_VIDEO_ALLOWED_FIELDS,
   ASTRA_VIDEO_LORAS,
@@ -227,10 +229,10 @@ describe('validators', () => {
   });
 
   it('uses an explicit versioned User-Agent on every centralized ASTRA header set', () => {
-    assert.equal(ASTRA_VIDEO_USER_AGENT, 'social-flow/0.100.0');
+    assert.equal(ASTRA_VIDEO_USER_AGENT, `social-flow/${packageMetadata.version}`);
     assert.deepEqual(astraVideoHeaders('secret'), {
       Authorization: 'Bearer secret',
-      'User-Agent': 'social-flow/0.100.0',
+      'User-Agent': `social-flow/${packageMetadata.version}`,
     });
   });
 
