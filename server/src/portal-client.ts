@@ -127,7 +127,7 @@ export interface PortalCharacterImages {
 export interface PortalCharacter {
   images?: PortalCharacterImages; imagesComplete?: boolean;
   id: string; projectId: string; key: string | null; name: string; role: string | null; appearance: string | null;
-  referenceImageUrl: string | null; tts: { engine: 'gemini' | 'supertonic' | 'elevenlabs' | 'mlx'; voiceId: string; model?: string; speed?: number; language?: string; stylePrompt?: string } | null;
+  referenceImageUrl: string | null; tts: { voiceLock?: import('./voice-lock-config.js').VoiceLockConfig; engine: 'gemini' | 'supertonic' | 'elevenlabs' | 'mlx'; voiceId: string; model?: string; speed?: number; language?: string; stylePrompt?: string } | null;
   updatedAt: string;
 }
 

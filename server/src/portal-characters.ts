@@ -1,3 +1,4 @@
+import { voiceLockConfigSchema } from './voice-lock-config.js';
 /**
  * `portal_character_*` — the workspace's characters on the portal (#91): list, get, create, update,
  * delete, reference image upload and the TTS block. One tool = one portal route
@@ -20,6 +21,7 @@ const scope = { channel: channelArg, episodeDir: z.string().optional() };
 export const TTS_DEFAULTS = { engine: 'elevenlabs', voiceId: 'L4az9Gb378GIycFl2nAB', model: 'eleven_multilingual_v2', speed: 1 } as const;
 
 export const ttsSchema = z.object({
+  voiceLock: voiceLockConfigSchema.optional(),
   engine: z.enum(['gemini', 'supertonic', 'elevenlabs', 'mlx']),
   voiceId: z.string().trim().min(1).max(128),
   model: z.string().trim().min(1).max(128).optional(),
@@ -53,7 +55,7 @@ export const characterUpdateSchema = z.object({ ...scope, id: uuid, key: keyArg.
 export const characterDeleteSchema = z.object({ ...scope, id: uuid });
 export const characterImageUploadSchema = z.object({ ...scope, id: uuid, file: z.string().min(1), view: z.enum(['front', 'back', 'face', 'extra']).optional(), label: z.string().max(100).optional(), sort: z.number().int().min(0).max(2147483647).optional() });
 export const characterExtraDeleteSchema = z.object({ ...scope, id: uuid, imageId: uuid });
-export const characterTtsSetSchema = z.object({ ...scope, id: uuid, engine: ttsSchema.shape.engine.optional(), voiceId: ttsSchema.shape.voiceId.optional(), model: ttsSchema.shape.model, speed: ttsSchema.shape.speed, language: ttsSchema.shape.language, stylePrompt: ttsSchema.shape.stylePrompt });
+export const characterTtsSetSchema = z.object({ ...scope, id: uuid, voiceLock: voiceLockConfigSchema.optional(), engine: ttsSchema.shape.engine.optional(), voiceId: ttsSchema.shape.voiceId.optional(), model: ttsSchema.shape.model, speed: ttsSchema.shape.speed, language: ttsSchema.shape.language, stylePrompt: ttsSchema.shape.stylePrompt });
 
 export interface PortalCharacterRecord {
   images?: PortalCharacterImages; imagesComplete?: boolean;
@@ -145,6 +147,7 @@ export async function setCharacterTts(client: PortalClient, args: z.infer<typeof
   const tts = ttsSchema.parse({
     ...TTS_DEFAULTS,
     ...existing,
+    ...(args.voiceLock !== undefined ? { voiceLock: args.voiceLock } : {}),
     ...(args.engine ? { engine: args.engine } : {}),
     ...(args.voiceId ? { voiceId: args.voiceId } : {}),
     ...(args.model ? { model: args.model } : {}),

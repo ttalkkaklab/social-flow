@@ -34,6 +34,7 @@ import type { ApiResult } from './http.js';
 import { renderCapabilityStatus } from './capability-status.js';
 import * as portal from './portal-tools.js';
 import { manageBackups } from './portal-backups.js';
+import { applyVoiceLock, voiceLockApplySchema } from './voice-lock.js';
 
 /** MCP content blocks — generated images are also returned as base64 image blocks. */
 export type ToolContent =
@@ -1008,6 +1009,10 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   tts_review_final: async (args) => {
     const result = await reviewFinalSpeech(parseArgs(finalSpeechSchema, args));
     return text(JSON.stringify(result, null, 2), result.success !== true);
+  },
+  voice_lock_apply: async (args) => {
+    const result = await applyVoiceLock(parseArgs(voiceLockApplySchema, args));
+    return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }], structuredContent: { ...result }, isError: result.status === 'failed' };
   },
   tts_elevenlabs_dictionary: async (args) => {
     const result = await elevenlabs.createElevenLabsDictionary(parseArgs(elevenlabs.elevenLabsDictionarySchema, args));

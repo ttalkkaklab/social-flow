@@ -51,7 +51,7 @@ function argsFor(operation, index) {
 }
 
 describe('generated portal API operation wiring', () => {
-  it('routes all 97 named operations through their declared method and path', async () => {
+  it('routes all 101 named operations through their declared method and path', async () => {
     const seen = [];
     let tokenResolved = false;
     const fetchImpl = async (input, init = {}) => {
@@ -67,7 +67,7 @@ describe('generated portal API operation wiring', () => {
       return Response.json({ success: true, data: { ok: true } });
     };
 
-    assert.equal(contract.PORTAL_API_OPERATIONS.length, 97);
+    assert.equal(contract.PORTAL_API_OPERATIONS.length, 101);
     for (const [index, operation] of contract.PORTAL_API_OPERATIONS.entries()) {
       const name = `portal_${operation.toolName}`;
       const result = await contract.runPortalApiTool(name, argsFor(operation, index), fetchImpl);
@@ -78,6 +78,6 @@ describe('generated portal API operation wiring', () => {
         method: operation.method,
       }, name);
     }
-    assert.equal(seen.length, 97);
+    assert.equal(seen.length, 101);
   });
 });
