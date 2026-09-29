@@ -14,6 +14,8 @@ import { DEFAULT_QWEN3_ASR_LANGUAGE, DEFAULT_QWEN3_ASR_MODEL, QWEN3_ASR_LANGUAGE
 import { BLENDER_INTERPOLATIONS, BLENDER_PREVIZ_ENGINES, BLENDER_PROXY_KINDS, BLENDER_RIG_BONES, BLENDER_ROOT_MOTIONS, DEFAULT_FRAME_END, DEFAULT_FRAME_START, DEFAULT_PREVIZ_ENGINE, DEFAULT_PREVIZ_FILENAME, DEFAULT_PREVIZ_HEIGHT, DEFAULT_PREVIZ_WIDTH, DEFAULT_SCENE_FPS, MAX_PREVIZ_FRAMES, } from './blender-bridge.js';
 import { DEFAULT_SUNO_MODEL, SUNO_MODELS, SUNO_PERSONA_MODELS, SUNO_SOUND_KEYS, SUNO_VOCAL_GENDERS, } from './suno-client.js';
 import { DEFAULT_MLX_IMAGE_SIZE, DEFAULT_MLX_MUSIC_SECONDS, DEFAULT_MLX_VIDEO_FRAMES, DEFAULT_MLX_VIDEO_HEIGHT, DEFAULT_MLX_VIDEO_WIDTH, MAX_MLX_IMAGE_DIMENSION, MAX_MLX_IMAGE_REFS, MAX_MLX_MUSIC_SECONDS, MAX_MLX_TTS_CHARS, MAX_MLX_VIDEO_DIMENSION, MAX_MLX_VIDEO_FRAMES, MAX_VIDEO_RGB_BYTES, MIN_MLX_IMAGE_DIMENSION, MIN_MLX_MUSIC_SECONDS, MIN_MLX_VIDEO_DIMENSION, MIN_MLX_VIDEO_FRAMES, MLX_IMAGE_DIMENSION_STEP, MLX_VIDEO_DIMENSION_STEP, MLX_VIDEO_DIMENSION_STEP_ONE_STAGE, MLX_VIDEO_FRAME_STEP, MLX_VIDEO_FPS, } from './mlx-serve-client.js';
+import { VOICE_LOCK_PROPERTY } from './voice-lock-config.js';
+import { VOICE_LOCK_TOOLS } from './voice-lock.js';
 /**
  * Tool surface definitions (83 tools) — 9 research (incl. stock_search) + 5 open-data +
  * 40 generation (5 image + 12 video + 9 voice + 1 STT + 9 music + 1 mesh +
@@ -1199,7 +1201,7 @@ Returns: JSON — { candidate, chosen, findings[] }.`,
                 key: { type: 'string', description: 'Character key — lowercase letters, digits, hyphens' },
                 name: { type: 'string', maxLength: 100, description: 'Display name' }, role: { type: 'string', maxLength: 500, description: 'Role in the channel, e.g. 진행자' }, appearance: { type: 'string', maxLength: 4000, description: 'Look — the 생김새 line' },
                 referenceImageUrl: { type: 'string', maxLength: 2000, description: 'External image URL; prefer file' },
-                tts: { type: 'object', description: 'Voice block; optional — portal_character_tts_set fills the defaults', properties: { engine: { type: 'string', enum: ['gemini', 'supertonic', 'elevenlabs', 'mlx'], description: 'TTS engine' }, voiceId: { type: 'string', description: 'Voice id on that engine' }, model: { type: 'string', description: 'Model name, e.g. eleven_multilingual_v2' }, speed: { type: 'number', minimum: 0.7, maximum: 1.2, description: 'Speaking rate' }, language: { type: 'string', description: 'Language code, e.g. ko' }, stylePrompt: { type: 'string', description: 'Style direction for engines that read one' } }, required: ['engine', 'voiceId'] },
+                tts: { type: 'object', description: 'Voice block; optional — portal_character_tts_set fills the defaults', properties: { voiceLock: VOICE_LOCK_PROPERTY, engine: { type: 'string', enum: ['gemini', 'supertonic', 'elevenlabs', 'mlx'], description: 'TTS engine' }, voiceId: { type: 'string', description: 'Voice id on that engine' }, model: { type: 'string', description: 'Model name, e.g. eleven_multilingual_v2' }, speed: { type: 'number', minimum: 0.7, maximum: 1.2, description: 'Speaking rate' }, language: { type: 'string', description: 'Language code, e.g. ko' }, stylePrompt: { type: 'string', description: 'Style direction for engines that read one' } }, required: ['engine', 'voiceId'] },
             } },
     },
     {
@@ -1210,7 +1212,7 @@ Returns: JSON — { candidate, chosen, findings[] }.`,
                 channel: PORTAL_CHANNEL_ARG, episodeDir: PORTAL_EPISODE_DIR_ARG, id: { type: 'string', format: 'uuid', description: 'Portal character id' },
                 key: { type: ['string', 'null'], description: 'Character key; null clears' }, name: { type: 'string', maxLength: 100, description: 'Display name' }, role: { type: ['string', 'null'], maxLength: 500, description: 'Role; null clears' }, appearance: { type: ['string', 'null'], maxLength: 4000, description: 'Look; null clears' },
                 referenceImageUrl: { type: ['string', 'null'], maxLength: 2000, description: 'External image URL; null clears (prefer portal_character_image_upload)' },
-                tts: { type: ['object', 'null'], description: 'Whole voice block; null clears (prefer portal_character_tts_set)', properties: { engine: { type: 'string', enum: ['gemini', 'supertonic', 'elevenlabs', 'mlx'], description: 'TTS engine' }, voiceId: { type: 'string', description: 'Voice id on that engine' }, model: { type: 'string', description: 'Model name' }, speed: { type: 'number', description: 'Speaking rate 0.7–1.2' }, language: { type: 'string', description: 'Language code' }, stylePrompt: { type: 'string', description: 'Style direction' } } },
+                tts: { type: ['object', 'null'], description: 'Whole voice block; null clears (prefer portal_character_tts_set)', properties: { voiceLock: VOICE_LOCK_PROPERTY, engine: { type: 'string', enum: ['gemini', 'supertonic', 'elevenlabs', 'mlx'], description: 'TTS engine' }, voiceId: { type: 'string', description: 'Voice id on that engine' }, model: { type: 'string', description: 'Model name' }, speed: { type: 'number', description: 'Speaking rate 0.7–1.2' }, language: { type: 'string', description: 'Language code' }, stylePrompt: { type: 'string', description: 'Style direction' } } },
             } },
     },
     {
@@ -1248,12 +1250,14 @@ Returns: JSON — { candidate, chosen, findings[] }.`,
         description: 'Write the tts block the narration lane reads — engine, voiceId, model, speed (0.7–1.2), language, stylePrompt. Whatever you leave out keeps its current value or falls back to the owner defaults: ElevenLabs voice L4az9Gb378GIycFl2nAB, model eleven_multilingual_v2, speed 1.0. Call with only id to apply the defaults.',
         inputSchema: { type: 'object', required: ['id'], properties: {
                 channel: PORTAL_CHANNEL_ARG, episodeDir: PORTAL_EPISODE_DIR_ARG, id: { type: 'string', format: 'uuid', description: 'Portal character id' },
+                voiceLock: VOICE_LOCK_PROPERTY,
                 engine: { type: 'string', enum: ['gemini', 'supertonic', 'elevenlabs', 'mlx'], description: 'TTS engine (default elevenlabs)' }, voiceId: { type: 'string', maxLength: 128, description: 'Voice id (default L4az9Gb378GIycFl2nAB)' }, model: { type: 'string', maxLength: 128, description: 'Model name (default eleven_multilingual_v2)' },
                 speed: { type: 'number', minimum: 0.7, maximum: 1.2, description: 'Speaking rate (default 1.0)' }, language: { type: 'string', maxLength: 32, description: 'Language code, e.g. ko' }, stylePrompt: { type: 'string', maxLength: 1000, description: 'Style direction for engines that read one' },
             } },
     },
 ];
 export const TOOLS = [
+    ...VOICE_LOCK_TOOLS,
     ...UNIT_TOOLS,
     ...REVIEW_TOOLS,
     // ── Research & fact-checking ──────────────────────────────────────────

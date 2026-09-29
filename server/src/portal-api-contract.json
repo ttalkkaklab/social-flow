@@ -1460,6 +1460,29 @@
                         "type": "string",
                         "minLength": 1,
                         "maxLength": 1000
+                      },
+                      "voiceLock": {
+                        "type": "object",
+                        "properties": {
+                          "enabled": {
+                            "default": true,
+                            "type": "boolean"
+                          },
+                          "model": {
+                            "default": "eleven_multilingual_sts_v2",
+                            "type": "string",
+                            "const": "eleven_multilingual_sts_v2"
+                          },
+                          "removeBackgroundNoise": {
+                            "default": true,
+                            "type": "boolean"
+                          },
+                          "referenceAudioUrl": {
+                            "type": "string",
+                            "maxLength": 2000,
+                            "format": "uri"
+                          }
+                        }
                       }
                     },
                     "required": [
@@ -1656,6 +1679,29 @@
                         "type": "string",
                         "minLength": 1,
                         "maxLength": 1000
+                      },
+                      "voiceLock": {
+                        "type": "object",
+                        "properties": {
+                          "enabled": {
+                            "default": true,
+                            "type": "boolean"
+                          },
+                          "model": {
+                            "default": "eleven_multilingual_sts_v2",
+                            "type": "string",
+                            "const": "eleven_multilingual_sts_v2"
+                          },
+                          "removeBackgroundNoise": {
+                            "default": true,
+                            "type": "boolean"
+                          },
+                          "referenceAudioUrl": {
+                            "type": "string",
+                            "maxLength": 2000,
+                            "format": "uri"
+                          }
+                        }
                       }
                     },
                     "required": [
@@ -4697,6 +4743,29 @@
                         "type": "string",
                         "minLength": 1,
                         "maxLength": 1000
+                      },
+                      "voiceLock": {
+                        "type": "object",
+                        "properties": {
+                          "enabled": {
+                            "default": true,
+                            "type": "boolean"
+                          },
+                          "model": {
+                            "default": "eleven_multilingual_sts_v2",
+                            "type": "string",
+                            "const": "eleven_multilingual_sts_v2"
+                          },
+                          "removeBackgroundNoise": {
+                            "default": true,
+                            "type": "boolean"
+                          },
+                          "referenceAudioUrl": {
+                            "type": "string",
+                            "maxLength": 2000,
+                            "format": "uri"
+                          }
+                        }
                       }
                     },
                     "required": [
@@ -5990,6 +6059,29 @@
                           "type": "string",
                           "minLength": 1,
                           "maxLength": 1000
+                        },
+                        "voiceLock": {
+                          "type": "object",
+                          "properties": {
+                            "enabled": {
+                              "default": true,
+                              "type": "boolean"
+                            },
+                            "model": {
+                              "default": "eleven_multilingual_sts_v2",
+                              "type": "string",
+                              "const": "eleven_multilingual_sts_v2"
+                            },
+                            "removeBackgroundNoise": {
+                              "default": true,
+                              "type": "boolean"
+                            },
+                            "referenceAudioUrl": {
+                              "type": "string",
+                              "maxLength": 2000,
+                              "format": "uri"
+                            }
+                          }
                         }
                       },
                       "required": [
@@ -6329,6 +6421,243 @@
           }
         },
         "required": [
+          "body"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/characters/[characterId]/voice-sample",
+      "scope": "workspace",
+      "source": "src/app/api/workspaces/[workspaceSlug]/characters/[characterId]/voice-sample/route.ts:28",
+      "toolName": "api_characters_character_voice_sample_put",
+      "bodyEncoding": "raw",
+      "response": "json",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "characterId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "query": {
+            "type": "object",
+            "properties": {
+              "label": {
+                "type": "string",
+                "maxLength": 100
+              },
+              "sort": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2147483647
+              }
+            },
+            "required": [],
+            "additionalProperties": false
+          },
+          "file": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Absolute local file path; uploaded unchanged as raw bytes."
+          },
+          "contentType": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "characterId",
+          "file",
+          "contentType"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/characters/[characterId]/voice-sample",
+      "scope": "workspace",
+      "source": "src/app/api/workspaces/[workspaceSlug]/characters/[characterId]/voice-sample/route.ts:112",
+      "toolName": "api_characters_character_voice_sample_get",
+      "bodyEncoding": "none",
+      "response": "binary",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "characterId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "targetFile": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Absolute local destination, created exclusively; existing files are never overwritten."
+          },
+          "range": {
+            "type": "string"
+          },
+          "ifRange": {
+            "type": "string"
+          },
+          "ifNoneMatch": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "characterId",
+          "targetFile"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "method": "HEAD",
+      "path": "/characters/[characterId]/voice-sample",
+      "scope": "workspace",
+      "source": "src/app/api/workspaces/[workspaceSlug]/characters/[characterId]/voice-sample/route.ts:130",
+      "toolName": "api_characters_character_voice_sample_head",
+      "bodyEncoding": "none",
+      "response": "binary",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "characterId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "range": {
+            "type": "string"
+          },
+          "ifRange": {
+            "type": "string"
+          },
+          "ifNoneMatch": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "characterId"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/episodes/[episodeId]/shots/[shotId]/voice-lock",
+      "scope": "workspace",
+      "source": "src/app/api/workspaces/[workspaceSlug]/episodes/[episodeId]/shots/[shotId]/voice-lock/route.ts:17",
+      "toolName": "api_episodes_episode_shots_shot_voice_lock_put",
+      "bodyEncoding": "json",
+      "response": "json",
+      "schemaExpression": "shotVoiceLockResult",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "episodeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "shotId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "query": {
+            "type": "object",
+            "properties": {
+              "holder": {
+                "type": "string",
+                "maxLength": 200
+              }
+            },
+            "required": [],
+            "additionalProperties": false
+          },
+          "body": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "passed",
+                  "failed",
+                  "skipped"
+                ]
+              },
+              "characterId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100
+              },
+              "voiceId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "model": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "sourceSha256": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "outputSha256": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "sourceDurationSeconds": {
+                "type": "number",
+                "minimum": 0
+              },
+              "outputDurationSeconds": {
+                "type": "number",
+                "minimum": 0
+              },
+              "transcript": {
+                "type": "string",
+                "maxLength": 20000
+              },
+              "expectedText": {
+                "type": "string",
+                "maxLength": 20000
+              },
+              "error": {
+                "type": "string",
+                "maxLength": 20000
+              },
+              "sourceTranscript": {
+                "type": "string",
+                "maxLength": 20000
+              },
+              "sourceCer": {
+                "type": "number",
+                "minimum": 0
+              },
+              "outputCer": {
+                "type": "number",
+                "minimum": 0
+              },
+              "warnings": {
+                "maxItems": 100,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "maxLength": 2000
+                }
+              }
+            },
+            "required": [
+              "status",
+              "characterId"
+            ]
+          }
+        },
+        "required": [
+          "episodeId",
+          "shotId",
           "body"
         ],
         "additionalProperties": false

@@ -1,3 +1,4 @@
+import { voiceLockConfigSchema } from './voice-lock-config.js';
 /**
  * Local episode directory ⇄ portal — the file side of the `portal_*` tools.
  *
@@ -208,6 +209,7 @@ function ttsOf(value) {
         return null;
     return {
         engine: tts.engine, voiceId: tts.voiceId,
+        ...(tts.voiceLock !== undefined ? { voiceLock: voiceLockConfigSchema.parse(tts.voiceLock) } : {}),
         ...(typeof tts.model === 'string' ? { model: tts.model } : {}),
         ...(typeof tts.speed === 'number' ? { speed: tts.speed } : {}),
         ...(typeof tts.language === 'string' ? { language: tts.language } : {}),
