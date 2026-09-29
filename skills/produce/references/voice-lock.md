@@ -17,9 +17,13 @@ supplied, and fills defaults inside the replacement. STS never uses the TTS mode
 or changes speed.
 
 The local comparison sample is `data/<channel>/assets/characters/<key>/voice.wav`.
-The portal upload URL is `tts.voiceLock.referenceAudioUrl`. Samples support
-preview/comparison; uploading one does not clone a voice. STS receives the source
-cut's dialogue and the pinned voiceId, not the comparison sample.
+The portal upload URL is `tts.voiceLock.referenceAudioUrl`, and it takes an
+absolute http(s) URL — the `/characters/<id>/voice-sample` address the portal
+upload answers with, on the portal host. A local or relative path such as
+`/sample.wav` is rejected here, because the portal keeps the same field as an
+absolute URL and would answer 400. Samples support preview/comparison; uploading
+one does not clone a voice. STS receives the source cut's dialogue and the pinned
+voiceId, not the comparison sample.
 
 ## Per-cut pass
 

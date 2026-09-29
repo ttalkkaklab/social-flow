@@ -10,6 +10,7 @@ const { voiceLockConfigSchema } = await import('../dist/voice-lock-config.js');
 const { setCharacterTts, characterTtsSetSchema } = await import('../dist/portal-characters.js');
 const { pcmToWav } = await import('../dist/media-utils.js');
 const ffmpeg = spawnSync('ffmpeg', ['-version']).status === 0;
+const SAMPLE_URL = 'https://story.ttalkkaklab.com/api/workspaces/pundago/characters/mina/voice-sample';
 function wav(seconds = 1) {
   const pcm = Buffer.alloc(seconds * 24000 * 2);
   for (let i = 0; i < pcm.length / 2; i++) pcm.writeInt16LE(Math.round(Math.sin(i * 0.1) * 4000), i * 2);
@@ -37,10 +38,10 @@ test('STS multipart contract, PCM wrapping and no retry on failure', async () =>
   } finally { globalThis.fetch = original; }
 });
 test('config defaults and tts_set preserves or replaces the voiceLock object', async () => {
-  let current = { id: '66666666-6666-4666-8666-666666666666', tts: { engine: 'elevenlabs', voiceId: 'pinned', voiceLock: voiceLockConfigSchema.parse({ referenceAudioUrl: '/sample.wav' }) } };
+  let current = { id: '66666666-6666-4666-8666-666666666666', tts: { engine: 'elevenlabs', voiceId: 'pinned', voiceLock: voiceLockConfigSchema.parse({ referenceAudioUrl: SAMPLE_URL }) } };
   const client = { getCharacter: async () => ({ data: current }), updateCharacter: async (id, patch) => { current = { ...current, ...patch }; return { data: current }; } };
   await setCharacterTts(client, characterTtsSetSchema.parse({ id: current.id, speed: 1.1 }));
-  assert.equal(current.tts.voiceLock.referenceAudioUrl, '/sample.wav');
+  assert.equal(current.tts.voiceLock.referenceAudioUrl, SAMPLE_URL);
   await setCharacterTts(client, characterTtsSetSchema.parse({ id: current.id, voiceLock: { enabled: false } }));
   assert.equal(current.tts.voiceLock.enabled, false);
   assert.equal(current.tts.voiceLock.referenceAudioUrl, undefined);
@@ -48,6 +49,15 @@ test('config defaults and tts_set preserves or replaces the voiceLock object', a
   assert.equal(voiceLockConfigSchema.parse({}).enabled, true);
   assert.throws(() => voiceLockConfigSchema.parse({ model: 'eleven_multilingual_v2' }));
   assert.equal(VOICE_LOCK_TOOLS[0].annotations.idempotentHint, false);
+});
+test('referenceAudioUrl takes absolute http(s) URLs only', () => {
+  for (const url of [SAMPLE_URL, 'http://127.0.0.1:3000/voice.wav']) assert.equal(voiceLockConfigSchema.parse({ referenceAudioUrl: url }).referenceAudioUrl, url);
+  assert.equal(voiceLockConfigSchema.parse({ referenceAudioUrl: `  ${SAMPLE_URL}  ` }).referenceAudioUrl, SAMPLE_URL);
+  for (const url of ['/sample.wav', 'sample.wav', 'data/mina/voice.wav', '/Users/me/voice.wav', 'file:///Users/me/voice.wav', 'story.ttalkkaklab.com/voice.wav'])
+    assert.throws(() => voiceLockConfigSchema.parse({ referenceAudioUrl: url }), /absolute http\(s\) URL/, url);
+  assert.equal(voiceLockConfigSchema.parse({}).referenceAudioUrl, undefined);
+  assert.equal(characterTtsSetSchema.parse({ id: '66666666-6666-4666-8666-666666666666', voiceLock: { referenceAudioUrl: SAMPLE_URL } }).voiceLock.referenceAudioUrl, SAMPLE_URL);
+  assert.throws(() => characterTtsSetSchema.parse({ id: '66666666-6666-4666-8666-666666666666', voiceLock: { referenceAudioUrl: '/sample.wav' } }), /absolute http\(s\) URL/);
 });
 for (const scenario of ['pass', 'source-mismatch', 'output-mismatch', 'drift', 'asr-failure', 'api-failure', 'disabled', 'wrong-engine']) {
   test(`voice-lock ${scenario}: artifacts and paid-call boundary`, { skip: !ffmpeg }, async () => {
