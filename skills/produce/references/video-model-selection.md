@@ -18,6 +18,13 @@ through several supplied stills, or to re-roll one span of an existing cut; stay
 Seedance whenever the answer is needed now. It does not change the default route for anything
 below.
 
+Two things to know before you write the call. Sizes sit on a 64-pixel grid with a 2,088,960-pixel
+area ceiling, so **the 9:16 frame is 1088x1920 or 1024x1920 — 1080x1920 is refused**, 1080 being
+a multiple of neither 64 nor 32; downscale 1088 to 1080 in the edit. And **every clip comes back
+with a generated AAC track (48kHz stereo) that cannot be switched off** — no mode has an argument
+for it — so an episode laying its own narration or BGM over the clip has to drop or duck that
+track, the same care the Veo section asks for.
+
 This document is the source of truth for choosing between the two engines. Tool descriptions
 carry their own summaries of it, and `skills/autoproduce/references/prices.tsv` is the source
 of truth for unit prices.
