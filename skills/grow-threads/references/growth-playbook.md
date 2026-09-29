@@ -12,6 +12,7 @@ carries **growth-loop tactics only**.
 
 - [Principles — what creates reach](#principles-what-creates-reach)
 - [Rhythm](#rhythm)
+- [§Message selection — settle the topic before the wording](#message-selection-settle-the-topic-before-the-wording)
 - [§New-post style](#new-post-style)
 - [§Post types — what each one buys](#post-types-what-each-one-buys)
 - [§Chain posts (hook + own replies)](#chain-posts-hook-own-replies)
@@ -101,6 +102,46 @@ measurements.
   carrying §Cross-platform push may use this path at all.
 - Hashtags (topic tags) ≤1 — they carry no ranking weight.
 
+## §Message selection — settle the topic before the wording
+
+Style work cannot rescue a topic the reader has no stake in. The humanization
+literature is all surface rewriting: the nine levers in harshaneel/humanize
+(perplexity, burstiness, hedge surgery, structural flattening, specificity,
+voice, transitions, punctuation, RLHF register) assume the message is already
+worth reading and never touch what to say. Post-training also pulls topic
+choice toward the safe middle — "Narrative Flattening" (arXiv 2605.27878)
+measures thematic and affective variation collapsing after alignment — so a
+topic the generator picked on its own is the topic everyone else would pick.
+Settle these two before drafting a sentence.
+
+1. **One post, one topic.** People average arguments, they don't add them:
+   attaching a 25-point argument to a 75-point one lands at 50 (Nisbett, Zukier
+   & Lemley 1981; Obermaier & Koch 2024, *Scientific Reports* — weak supporting
+   arguments reduced the persuasive effect of a strong one). Write the topic as
+   one sentence first. If it needs an "and", it is two posts. The second-best
+   point is cut, not demoted to a closing line.
+2. **Write the reader's stake in two lines.** Self-relevance ("this applies to
+   me") and social-relevance ("this applies to someone I know") each raise
+   sharing intentions, and a preregistered experiment moved them causally by
+   reframing the same message (Cosme et al., *JEP: General* 2023 — 3,727
+   participants, 362 messages, 30,954 ratings). So the stake is a framing
+   decision, not a property of the news. Before drafting, write: the situation
+   the reader has already been in, and what this post changes for them. If
+   neither line can be written, the topic is ours, not theirs — change the
+   topic or reframe it until the reader is the subject.
+
+Our own channel measurement says the same thing (`ttalkkak-lab`, 4 posts):
+the confession about whether one can keep working as a developer while using
+AI took 6.3% reaction rate (189 views · 12 reactions) because that worry is the
+reader's own; the tool recommendation took 0% on 449 views. Both carried
+first-hand experience and slang. The difference was who the post was about.
+
+§New-post style's 여는 자리 rules work on the first sentence of a draft that
+already has a topic. This section runs before that: if the reader's stake
+cannot be written, rewriting the opening only moves our subject one sentence
+down. The rejected monitoring-script draft recorded there failed both tests at
+once — it passed the style checker at 100 and an adversarial review at 98.
+
 ## §New-post style
 
 Use the single speech style pinned in the plan (the Korean Threads default is
@@ -152,6 +193,38 @@ account). Rules:
    never "많이 봐줘"-type filler, and it goes through the gate like any other
    copy.
 
+### 글의 뼈대 — four beats, any topic
+
+Three posts published on 2026-09-20 (skill atrophy · an agent routing around a
+ban · a robot in a house it never trained on) share one shape. The topics have
+nothing in common, so the shape is what carried them. Write the beats in order
+and each one earns the next.
+
+1. **The reader's situation.** One sentence the reader has already lived,
+   framed so they can confirm it. `AI한테 맡기고 나서 이제 직접은 못 하게 된 거,
+   하나씩 있지 않아?` · `파일은 로컬에만 두라고 시켰는데 그게 공개 사이트에
+   올라가 있으면 어떨 것 같아?` · `우리 집 수건은 우리 집 방식으로 접혀 있잖아.`
+   No `저희는`, no our-system subject — `check-style.py` C15 warns on it.
+2. **One concrete case.** A single fact with a figure, a name or a time in it:
+   ten minutes on a regex, six disclosed incidents, thirty houses. Our own
+   experience or today's research, never a summary of a field. C16 warns when
+   a post carries no anchor at all.
+3. **The turn.** The line where the case contradicts what the opening assumed.
+   `3년을 매일 쓰던 건데.` · `시킨 걸 했는지만 봤지 어떻게 했는지는 본 적이
+   없더라.` · `예전엔 그 집에서 찍은 데이터가 있어야 됐거든.` A post without
+   this beat is a news relay, and §Form records those dying.
+4. **Hand it over.** Close on something the other person answers from their own
+   experience, not from the post. `들여다본 적 있어?` · `뭘 시킬 거야?` An empty
+   `여러분 생각은?` is the failure of this beat, not the beat itself.
+
+The beats map onto the draft fields the server gate requires: beat 1 is `flow.hook`,
+beats 2–3 are `flow.turn`, beat 4 is `flow.residue`, and §Message selection's two
+stake lines are what decide whether the topic gets beats at all.
+
+**The shape is not a template to fill.** Each beat is a decision about the
+material; if beat 3 has to be invented, the topic has no turn in it and beats
+1–2 are already wasted. Change the topic instead.
+
 ### 여는 자리 — begin with the reader's thought
 
 - **The first sentence brings out something the reader already wonders or
@@ -182,9 +255,8 @@ account). Rules:
   what they feel. Keep factual qualifiers even when they soften the joke.
 - **Check the opening before scoring the rest.** If it needs internal context
   to make sense, rewrite it; high style or scene scores don't compensate.
-  When the review uses F0, a zero must be submitted as a P0 finding quoting
-  the complete first sentence, so the gate can block it without inferring
-  meaning from a total score.
+  Report it as P0-12 in the review, quoting the complete first sentence, so
+  the gate blocks it without inferring meaning from a total score.
 
 ### AI 티가 나는 구조 — avoid the template
 
