@@ -19,9 +19,12 @@ Seedance whenever the answer is needed now. It does not change the default route
 below.
 
 Two things to know before you write the call. Sizes sit on a 64-pixel grid with a 2,088,960-pixel
-area ceiling, so **the 9:16 frame is 1088x1920 or 1024x1920 — 1080x1920 is refused**, 1080 being
-a multiple of neither 64 nor 32; downscale 1088 to 1080 in the edit. And **every clip comes back
-with a generated AAC track (48kHz stereo) that cannot be switched off** — no mode has an argument
+area ceiling, so **use 1024x1920 first for a 9:16 frame**. ASTRA server measurements on
+2026-09-29 showed that 1088x1920 works only at 25 frames (about 1 second); higher frame counts
+fail. 1080x1920 is refused because 1080 is a multiple of neither 64 nor 32. To fit a 1080x1920
+canvas, widen the 1024-pixel output to 1080 (about 5.5%) in the edit or add
+side padding. And **every clip comes back with a generated AAC track (48kHz stereo) that cannot
+be switched off** — no mode has an argument
 for it — so an episode laying its own narration or BGM over the clip has to drop or duck that
 track, the same care the Veo section asks for.
 
