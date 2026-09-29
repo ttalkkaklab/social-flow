@@ -79,6 +79,8 @@ export function capabilityStatus(): {
           note: 'seedance_text2video · seedance_img2video · seedance_reference' },
         { provider: 'mlx-serve (local, MLX Core)', configured: mlx, needs: 'MLX Core.app or mlx-serve on PATH',
           note: 'mlx_video_generate — 24fps rgb8 muxed to mp4, RAM-capped; not the default path' },
+        { provider: 'astra video (self-hosted LTX-2.5)', configured: has(config.astraVideoApiKey), needs: 'ASTRA_VIDEO',
+          note: 'astra_text2video · astra_img2video · astra_keyframe_video · astra_audio2video · astra_video_retake — our own box, no per-call bill, but ONE render at a time (66-184s each plus queue); the batch lane, not the interactive one' },
       ],
     },
     {

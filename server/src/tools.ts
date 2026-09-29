@@ -16,6 +16,14 @@ import {
   SUPERTONIC_VOICE_NAMES,
 } from './supertonic-client.js';
 import {
+  ASTRA_VIDEO_FAST_DIMENSION_STEP,
+  ASTRA_VIDEO_LORAS,
+  ASTRA_VIDEO_MAX_FRAMES,
+  ASTRA_VIDEO_MAX_PIXELS,
+  ASTRA_VIDEO_MAX_SEED,
+  ASTRA_VIDEO_MIN_FRAMES,
+} from './astra-video-client.js';
+import {
   DEFAULT_SEEDANCE_DURATION,
   DEFAULT_SEEDANCE_MODEL,
   DEFAULT_SEEDANCE_REFERENCE_MODEL,
@@ -233,6 +241,90 @@ const OMNI_ASPECT_RATIO_PROPERTY = {
   description: 'Aspect ratio of the generated video (default: "16:9")',
   enum: ['16:9', '9:16'],
   default: '16:9',
+} as const;
+
+/**
+ * Shared ASTRA video property definitions (self-hosted LTX-2.5).
+ *
+ * Length is frames rather than seconds and sizes sit on a pixel grid, so the same four
+ * numeric levers appear on four of the five tools. astra_video_retake takes none of them —
+ * a retake inherits the source exactly.
+ */
+const ASTRA_NUM_FRAMES_PROPERTY = {
+  type: 'integer',
+  description: `Clip length in FRAMES, not seconds: 8k+1 between ${ASTRA_VIDEO_MIN_FRAMES} and ${ASTRA_VIDEO_MAX_FRAMES} (25, 33, 41 … 481). The server default is 121, about 5.0 seconds at 24fps. A value off the 8k+1 grid is refused before the call.`,
+  minimum: ASTRA_VIDEO_MIN_FRAMES,
+  maximum: ASTRA_VIDEO_MAX_FRAMES,
+} as const;
+
+const ASTRA_AUTO_DURATION_PROPERTY = {
+  type: 'object',
+  description: 'Let the server pick the length inside a range instead of naming frames. Capped at 121 frames whatever you ask for. Ignored when numFrames is also given.',
+  properties: {
+    minSeconds: { type: 'number', description: 'Shortest acceptable clip length in seconds.' },
+    maxSeconds: { type: 'number', description: 'Longest acceptable clip length in seconds.' },
+  },
+  required: ['minSeconds', 'maxSeconds'],
+} as const;
+
+const ASTRA_WIDTH_PROPERTY = {
+  type: 'integer',
+  description: `Frame width in pixels (default: 1536, or 768 on tier "fast"). Must be a multiple of 64 — or of ${ASTRA_VIDEO_FAST_DIMENSION_STEP} within 32-1920 on tier "fast". width * height must not exceed ${ASTRA_VIDEO_MAX_PIXELS}.`,
+} as const;
+
+const ASTRA_HEIGHT_PROPERTY = {
+  type: 'integer',
+  description: `Frame height in pixels (default: 1024, or 512 on tier "fast"). Same grid rule as width, and the same ${ASTRA_VIDEO_MAX_PIXELS}-pixel area ceiling.`,
+} as const;
+
+const ASTRA_FRAME_RATE_PROPERTY = {
+  type: 'number',
+  description: 'Frames per second, 1-60 (default: 24). This sets playback speed against numFrames — 121 frames at 24fps is about 5.0s, at 12fps about 10.1s.',
+  minimum: 1,
+  maximum: 60,
+} as const;
+
+const ASTRA_SEED_PROPERTY = {
+  type: 'integer',
+  description: `Decoding seed for reproducibility, 0-${ASTRA_VIDEO_MAX_SEED} (default: 42). The same seed with the same request gives the same clip.`,
+  minimum: 0,
+  maximum: ASTRA_VIDEO_MAX_SEED,
+} as const;
+
+const ASTRA_LORA_PROPERTY = {
+  type: 'array',
+  description: 'Look adapters to load, at most 2. "cinemagraph" freezes the frame except for one moving element; "slow-motion" stretches the action. Accepted ONLY on tier "default" (mode generate) — any other tier is refused before the call.',
+  maxItems: 2,
+  items: { type: 'string', description: 'Adapter name.', enum: [...ASTRA_VIDEO_LORAS] },
+} as const;
+
+const ASTRA_NEGATIVE_PROMPT_PROPERTY = {
+  type: 'string',
+  description: 'What to keep out of the frame, at most 2000 characters. Accepted ONLY on tiers "guided" and "fast" and on the keyframe/audio2video tools — mode generate has no such field and it is refused before the call.',
+} as const;
+
+const ASTRA_STEPS_PROPERTY = {
+  type: 'integer',
+  description: 'Denoising steps, 1-50. More steps means longer render, not always a better clip. Accepted on the same modes as negativePrompt — never on tier "default".',
+  minimum: 1,
+  maximum: 50,
+} as const;
+
+const ASTRA_GENERATED_KEYFRAMES_PROPERTY = {
+  type: 'integer',
+  description: 'How many intermediate keyframes the pipeline generates for itself first, 0-16 (default: 0). Raises coherence over a long move at the cost of render time. Not available on the keyframe, audio2video or retake tools.',
+  minimum: 0,
+  maximum: 16,
+} as const;
+
+const ASTRA_OUTPUT_PATH_PROPERTY = {
+  type: 'string',
+  description: 'Directory to save the generated video in (default: current working directory).',
+} as const;
+
+const ASTRA_FILENAME_PROPERTY = {
+  type: 'string',
+  description: 'File name for the generated video (default: astra_<timestamp>.mp4). A bare name — put the directory in outputPath.',
 } as const;
 
 /**
@@ -2363,6 +2455,235 @@ Returns: a text block with the saved .mp4 path, the new interaction id, and the 
     },
   },
 
+
+  // ── Video generation (ASTRA video API — self-hosted LTX-2.5) ──────────────
+  // The only lane that is ours: no per-call bill, no vendor policy, weights on our box.
+  // It renders one job at a time, so it is the batch lane, not the interactive one.
+  // Which engine when: skills/produce/references/video-model-selection.md.
+  {
+    name: 'astra_text2video',
+    title: 'ASTRA video generation (text → video)',
+    annotations: HINT.generate,
+    description: `Generate a video from a text prompt on the self-hosted ASTRA video API (LTX-2.5).
+
+Use when the shot is not time-critical and you would rather not spend vendor money: this server is ours, so a call costs wall clock instead of dollars, and no vendor content policy applies. It is also the only lane with an adapter (lora) for cinemagraph and slow-motion looks.
+Do NOT use when someone is waiting: the box renders ONE job at a time and yours queues behind whatever else is running. A measured 121-frame 1536x1024 render takes about 66s (tier "default"), 169s ("guided"), 121s ("fast") — plus the queue. For an immediate clip go to veo_text2video or seedance_text2video.
+tier picks the pipeline and also which arguments exist: lora only on "default", negativePrompt and numInferenceSteps only on "guided"/"fast". Passing one to the wrong tier is refused before the call.
+Length is frames, not seconds: numFrames must be 8k+1 between 25 and 481 (121 = about 5.0s at 24fps, the server default). Give autoDuration instead to let the server choose a length; numFrames wins if both are given.
+
+Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and the request the server recorded.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        prompt: {
+          type: 'string',
+          description: 'What the clip shows — subject, movement, environment, camera. English recommended. 1-2000 characters.',
+        },
+        tier: {
+          type: 'string',
+          description: 'Pipeline: "default" (generate — fastest, the only tier taking lora), "guided" (slower, takes negativePrompt and numInferenceSteps), "fast" (guided_fast — 768x512 default, 32-pixel grid).',
+          enum: ['default', 'guided', 'fast'],
+          default: 'default',
+        },
+        numFrames: ASTRA_NUM_FRAMES_PROPERTY,
+        autoDuration: ASTRA_AUTO_DURATION_PROPERTY,
+        width: ASTRA_WIDTH_PROPERTY,
+        height: ASTRA_HEIGHT_PROPERTY,
+        frameRate: ASTRA_FRAME_RATE_PROPERTY,
+        seed: ASTRA_SEED_PROPERTY,
+        lora: ASTRA_LORA_PROPERTY,
+        negativePrompt: ASTRA_NEGATIVE_PROMPT_PROPERTY,
+        numInferenceSteps: ASTRA_STEPS_PROPERTY,
+        numGeneratedKeyframes: ASTRA_GENERATED_KEYFRAMES_PROPERTY,
+        outputPath: ASTRA_OUTPUT_PATH_PROPERTY,
+        filename: ASTRA_FILENAME_PROPERTY,
+      },
+      required: ['prompt'],
+    },
+  },
+  {
+    name: 'astra_img2video',
+    title: 'ASTRA video generation (image → video)',
+    annotations: HINT.generate,
+    description: `Animate a still, or interpolate between a first and a last still, on the self-hosted ASTRA video API.
+
+Use when a generated background or photo has to move and nobody is waiting on it — same trade as astra_text2video: free, ours, one job at a time. Give firstFramePath alone to animate from that frame, or add lastFramePath and the clip lands on it. The tool uploads the files itself; pass local paths, not ids.
+Do NOT use for more than two stills — that is astra_keyframe_video, which pins each image to a frame index. For an immediate clip use veo_img2video or seedance_img2video.
+The last frame is pinned to numFrames-1, so a 121-frame clip ends on frame 120. png, jpg and jpeg are accepted, up to 32 MiB each.
+
+Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and the request the server recorded.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        prompt: {
+          type: 'string',
+          description: 'What happens between the frames — movement, camera, mood. English recommended. 1-2000 characters.',
+        },
+        firstFramePath: {
+          type: 'string',
+          description: 'Local path to the still the clip starts from (.png/.jpg/.jpeg, at most 32 MiB). Uploaded automatically.',
+        },
+        lastFramePath: {
+          type: 'string',
+          description: 'Optional local path to the still the clip ends on. Pinned to the last frame; omit to animate freely from the first.',
+        },
+        strength: {
+          type: 'number',
+          description: 'How strictly the generated frames must match the supplied stills, 0.0-1.0 (default: 1.0 — hold the image exactly).',
+        },
+        numFrames: ASTRA_NUM_FRAMES_PROPERTY,
+        width: ASTRA_WIDTH_PROPERTY,
+        height: ASTRA_HEIGHT_PROPERTY,
+        frameRate: ASTRA_FRAME_RATE_PROPERTY,
+        seed: ASTRA_SEED_PROPERTY,
+        lora: ASTRA_LORA_PROPERTY,
+        numGeneratedKeyframes: ASTRA_GENERATED_KEYFRAMES_PROPERTY,
+        outputPath: ASTRA_OUTPUT_PATH_PROPERTY,
+        filename: ASTRA_FILENAME_PROPERTY,
+      },
+      required: ['prompt', 'firstFramePath'],
+    },
+  },
+  {
+    name: 'astra_keyframe_video',
+    title: 'ASTRA video generation (keyframes → video)',
+    annotations: HINT.generate,
+    description: `Render a clip that passes through 2-8 supplied stills at frame indices you choose (ASTRA video API, mode keyframe).
+
+Use when the shot has to hit specific compositions in a specific order — a storyboard row rendered as one continuous move rather than three cuts. Each image names its own frameIdx, so the pacing between beats is yours.
+Do NOT use for one or two stills (astra_img2video is simpler) or when the clip is driven by sound (astra_audio2video).
+frameIdx is 0-based and must be inside the clip: a 121-frame render accepts 0-120. This mode has no length-guessing and no adapters — autoDuration, numGeneratedKeyframes and lora do not exist here and are refused before the call. A measured 121-frame render took about 184s plus queue.
+
+Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and the request the server recorded.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        prompt: {
+          type: 'string',
+          description: 'What the move between the keyframes looks like. English recommended. 1-2000 characters.',
+        },
+        images: {
+          type: 'array',
+          description: 'The 2-8 stills the clip must pass through, each pinned to a frame index. Uploaded automatically.',
+          minItems: 2,
+          maxItems: 8,
+          items: {
+            type: 'object',
+            description: 'One keyframe: the local image and the frame it lands on.',
+            properties: {
+              imagePath: {
+                type: 'string',
+                description: 'Local path to the still (.png/.jpg/.jpeg, at most 32 MiB).',
+              },
+              frameIdx: {
+                type: 'integer',
+                description: 'Frame this still lands on, 0-based. Must be 0..numFrames-1 (0-120 for the default 121 frames).',
+              },
+              strength: {
+                type: 'number',
+                description: 'How strictly this frame must match the still, 0.0-1.0 (default: 1.0).',
+              },
+              crf: {
+                type: 'integer',
+                description: 'Per-image encode quality passed through to the pipeline, 0-51 (default: 18). Lower is higher quality.',
+              },
+            },
+            required: ['imagePath', 'frameIdx'],
+          },
+        },
+        numFrames: ASTRA_NUM_FRAMES_PROPERTY,
+        width: ASTRA_WIDTH_PROPERTY,
+        height: ASTRA_HEIGHT_PROPERTY,
+        frameRate: ASTRA_FRAME_RATE_PROPERTY,
+        seed: ASTRA_SEED_PROPERTY,
+        negativePrompt: ASTRA_NEGATIVE_PROMPT_PROPERTY,
+        numInferenceSteps: ASTRA_STEPS_PROPERTY,
+        outputPath: ASTRA_OUTPUT_PATH_PROPERTY,
+        filename: ASTRA_FILENAME_PROPERTY,
+      },
+      required: ['prompt', 'images'],
+    },
+  },
+  {
+    name: 'astra_audio2video',
+    title: 'ASTRA video generation (audio → video)',
+    annotations: HINT.generate,
+    description: `Render a clip driven by an existing audio track on the self-hosted ASTRA video API (mode audio2video).
+
+Use when the picture has to follow a sound you already have — a narration take, a music bed, a recorded effect — instead of the picture being cut to it afterwards. The tool uploads the audio itself; pass a local .wav or .mp3 path.
+Do NOT use to add sound to a finished clip: this generates new picture from the audio, it does not mux. The rendered video still carries its own generated audio track.
+The clip length is still numFrames, not the audio length — a 5-second wav against 121 frames at 24fps lines up; a longer track is read from audioStartTime for audioMaxDuration seconds. A measured 121-frame render took about 170s plus queue.
+
+Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and the request the server recorded.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        prompt: {
+          type: 'string',
+          description: 'What the picture shows while the audio plays. English recommended. 1-2000 characters.',
+        },
+        audioPath: {
+          type: 'string',
+          description: 'Local path to the driving audio (.wav or .mp3, at most 32 MiB). Uploaded automatically.',
+        },
+        audioStartTime: {
+          type: 'number',
+          description: 'Seconds into the track to start reading from (default: 0).',
+        },
+        audioMaxDuration: {
+          type: 'number',
+          description: 'How many seconds of the track to use from audioStartTime (default: as much as the clip needs).',
+        },
+        numFrames: ASTRA_NUM_FRAMES_PROPERTY,
+        width: ASTRA_WIDTH_PROPERTY,
+        height: ASTRA_HEIGHT_PROPERTY,
+        frameRate: ASTRA_FRAME_RATE_PROPERTY,
+        seed: ASTRA_SEED_PROPERTY,
+        negativePrompt: ASTRA_NEGATIVE_PROMPT_PROPERTY,
+        numInferenceSteps: ASTRA_STEPS_PROPERTY,
+        outputPath: ASTRA_OUTPUT_PATH_PROPERTY,
+        filename: ASTRA_FILENAME_PROPERTY,
+      },
+      required: ['prompt', 'audioPath'],
+    },
+  },
+  {
+    name: 'astra_video_retake',
+    title: 'ASTRA video retake (re-roll a span)',
+    annotations: HINT.generate,
+    description: `Re-generate one time span of an existing clip and keep the rest (ASTRA video API, mode retake).
+
+Use when a cut is right except for a stretch in the middle — a gesture that lands wrong, a background that wobbles for a second — and re-rolling the whole shot would lose the framing you already liked. Name the span in seconds with startTime and endTime; the tool uploads the source mp4 itself.
+Do NOT use to make a clip longer or to change its size: the output inherits the source exactly, and this mode has no width, height, frameRate or numFrames argument at all.
+The SOURCE has to be on the grid already — 8k+1 frames, both sides a multiple of 32 — or the server refuses at acceptance. A clip this API produced always qualifies. A measured retake took about 80s plus queue.
+
+Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and the request the server recorded.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        prompt: {
+          type: 'string',
+          description: 'What should happen in the re-rolled span. English recommended. 1-2000 characters.',
+        },
+        sourceVideoPath: {
+          type: 'string',
+          description: 'Local path to the clip being retaken (.mp4, at most 100 MiB). Must be 8k+1 frames with both sides a multiple of 32.',
+        },
+        startTime: {
+          type: 'number',
+          description: 'Where the re-rolled span begins, in seconds from the start of the clip.',
+        },
+        endTime: {
+          type: 'number',
+          description: 'Where the re-rolled span ends, in seconds. Must be greater than startTime.',
+        },
+        seed: ASTRA_SEED_PROPERTY,
+        outputPath: ASTRA_OUTPUT_PATH_PROPERTY,
+        filename: ASTRA_FILENAME_PROPERTY,
+      },
+      required: ['prompt', 'sourceVideoPath', 'startTime', 'endTime'],
+    },
+  },
   // ── Video generation (ByteDance Seedance — BytePlus ModelArk) ─────────────
   // The second engine sharing Veo's slot. The source of truth for which to use
   // when is skills/produce/references/video-model-selection.md.

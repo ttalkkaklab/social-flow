@@ -42,6 +42,14 @@ export const config = {
      */
     elevenLabsApiKey: process.env.ELEVENLABS_API_KEY || '',
     /**
+     * ASTRA video API key (required by the astra_* video generation tools).
+     *
+     * The self-hosted LTX lane — our own box, so there is no vendor bill and no vendor
+     * policy, but also only one render at a time. The env name has no _API_KEY suffix
+     * because that is what the server's operators issue it under.
+     */
+    astraVideoApiKey: process.env.ASTRA_VIDEO || '',
+    /**
      * YouTube Data API key (youtube_topic_scout's preferred public-query path).
      * Unlike OAuth it doesn't spend your channel's quota. Without it, falls back to
      * channel OAuth (youtube.readonly).
@@ -454,6 +462,25 @@ export function requireArkKey() {
             'see skills/produce/references/video-model-selection.md.');
     }
     return config.arkApiKey;
+}
+/**
+ * ASTRA video API base.
+ *
+ * The env override is for a second box or a local port-forward of the same server —
+ * it is not a vendor switch, the request shape here belongs to this API alone.
+ */
+export function astraVideoBaseUrl() {
+    return (process.env.ASTRA_VIDEO_URL || 'https://video.astravision.co.kr').replace(/\/+$/, '');
+}
+export function requireAstraVideoKey() {
+    if (!config.astraVideoApiKey) {
+        throw new Error('ASTRA_VIDEO is not set. astra_* video generation tools talk to the self-hosted ASTRA video API ' +
+            '(https://video.astravision.co.kr) and it rejects every route but /healthz without a key. ' +
+            'Ask the server operator for a key and export ASTRA_VIDEO; point ASTRA_VIDEO_URL at another host only ' +
+            'if you run a second box of the same server. ' +
+            'Without it, veo_* (GEMINI_API_KEY), seedance_* (ARK_API_KEY) and mlx_video_generate (on-device) still work.');
+    }
+    return config.astraVideoApiKey;
 }
 export function requireNaverKeys() {
     if (!config.naverClientId || !config.naverClientSecret) {
