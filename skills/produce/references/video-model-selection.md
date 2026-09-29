@@ -10,6 +10,21 @@ different things.
 - **Veo 3.1** (`veo_*`, `GEMINI_API_KEY`) — native audio, extending local files, live-action person references
 - **Seedance** (`seedance_*`, `ARK_API_KEY`) — free-form length/ratio, much cheaper silent cuts, up to 30 reference images
 
+There is also a third, off to the side: **ASTRA video** (`astra_*`, `ASTRA_VIDEO`) is our own
+LTX-2.5 box, so a call costs wall clock instead of money and no vendor policy applies — but it
+renders one job at a time (66-184s each plus whatever is queued ahead of you). Take it for batch
+work nobody is waiting on, for a cinemagraph or slow-motion look, for a clip that has to pass
+through several supplied stills, or to re-roll one span of an existing cut; stay on Veo or
+Seedance whenever the answer is needed now. It does not change the default route for anything
+below.
+
+Two things to know before you write the call. Sizes sit on a 64-pixel grid with a 2,088,960-pixel
+area ceiling, so **the 9:16 frame is 1088x1920 or 1024x1920 — 1080x1920 is refused**, 1080 being
+a multiple of neither 64 nor 32; downscale 1088 to 1080 in the edit. And **every clip comes back
+with a generated AAC track (48kHz stereo) that cannot be switched off** — no mode has an argument
+for it — so an episode laying its own narration or BGM over the clip has to drop or duck that
+track, the same care the Veo section asks for.
+
 This document is the source of truth for choosing between the two engines. Tool descriptions
 carry their own summaries of it, and `skills/autoproduce/references/prices.tsv` is the source
 of truth for unit prices.
