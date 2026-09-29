@@ -84120,6 +84120,45 @@ ${stdout.slice(0, 500)}` };
 import * as fs4 from "node:fs";
 import * as path5 from "node:path";
 
+// package.json
+var package_default = {
+  name: "@zeans/social-flow-mcp-server",
+  version: "0.100.1",
+  license: "Apache-2.0",
+  description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
+  type: "module",
+  main: "dist/index.js",
+  engines: {
+    node: ">=20"
+  },
+  scripts: {
+    build: "tsc && npm run bundle && npm run bundle:mesh",
+    start: "node dist/index.js",
+    test: "node --test test/*.test.mjs",
+    check: "npm run build && npm test",
+    bundle: `esbuild src/index.ts --bundle --platform=node --format=esm --outfile=dist/bundle.js --banner:js="import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);"`,
+    "bundle:mesh": "node build-mesh.mjs"
+  },
+  dependencies: {
+    "@google/genai": "^2.21.0",
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    openai: "^6.46.0",
+    zod: "^3.23.8"
+  },
+  devDependencies: {
+    "@types/node": "^20.14.0",
+    esbuild: "^0.28.2",
+    three: "0.180.0",
+    typescript: "^5.6.0"
+  },
+  bin: {
+    "social-flow-mcp": "dist/index.js"
+  },
+  files: [
+    "dist"
+  ]
+};
+
 // src/http.ts
 async function requestRaw(method, url, headers, body, timeoutMs) {
   const effectiveTimeoutMs = timeoutMs ?? config2.requestTimeoutMs;
@@ -84195,7 +84234,7 @@ var ASTRA_VIDEO_TIERS = {
   default: "generate",
   /** `guided` — slower, takes a negative prompt and a step count. */
   guided: "guided",
-  /** `guided_fast` — 768x512 default, 32-pixel grid, quickest of the three. */
+  /** `guided_fast` — 768x512 draft tier, faster than guided but not the default pipeline. */
   fast: "guided_fast"
 };
 var VALID_ASTRA_VIDEO_TIERS = Object.keys(ASTRA_VIDEO_TIERS);
@@ -84212,6 +84251,7 @@ var ASTRA_VIDEO_ALLOWED_FIELDS = {
 var ASTRA_VIDEO_MIN_FRAMES = 25;
 var ASTRA_VIDEO_MAX_FRAMES = 481;
 var ASTRA_VIDEO_FRAME_STEP = 8;
+var ASTRA_VIDEO_MAX_AUTO_FRAMES = 121;
 var ASTRA_VIDEO_DIMENSION_STEP = 64;
 var ASTRA_VIDEO_FAST_DIMENSION_STEP = 32;
 var ASTRA_VIDEO_FAST_MIN_DIMENSION = 32;
@@ -84225,6 +84265,10 @@ var ASTRA_VIDEO_UPLOAD_LIMITS = {
   audio: 32 * 1024 * 1024
 };
 var ASTRA_VIDEO_SUBMITS_PER_MINUTE = 5;
+var ASTRA_VIDEO_SUBMITS_PER_HOUR = 60;
+var ASTRA_VIDEO_UPLOADS_PER_MINUTE = 10;
+var ASTRA_VIDEO_MAX_JOB_BODY_BYTES = 1024 * 1024;
+var ASTRA_VIDEO_USER_AGENT = `social-flow/${package_default.version}`;
 var ASTRA_VIDEO_MAX_WAIT_MS = 18e5;
 var POLL_INTERVAL_MS = 5e3;
 var SUBMIT_TIMEOUT_MS = 6e4;
@@ -84247,7 +84291,7 @@ var autoDurationSchema = external_exports.object({
 }).refine((d) => d.minSeconds <= d.maxSeconds, {
   message: "autoDuration.minSeconds must be <= maxSeconds"
 }).optional();
-var loraSchema = external_exports.array(external_exports.enum(ASTRA_VIDEO_LORAS)).max(ASTRA_VIDEO_MAX_LORAS).optional();
+var loraSchema = external_exports.array(external_exports.enum(ASTRA_VIDEO_LORAS)).max(ASTRA_VIDEO_MAX_LORAS).refine((values) => new Set(values).size === values.length, { message: "lora values must be unique" }).optional();
 var outputFields = {
   outputPath: external_exports.string().optional(),
   filename: bareFilenameSchema("video").optional()
@@ -84271,6 +84315,21 @@ function checkFrameIdx(frameIdx, numFrames) {
   const last = (numFrames ?? 121) - 1;
   if (frameIdx < 0 || frameIdx > last) {
     return `frameIdx must be between 0 and ${last} for a ${numFrames ?? 121}-frame clip (got ${frameIdx})`;
+  }
+  return null;
+}
+function checkAutoDuration(duration3, frameRate = 24) {
+  const minFrames = Math.round(duration3.minSeconds * frameRate);
+  const maxFrames = Math.round(duration3.maxSeconds * frameRate);
+  if (minFrames < 1) {
+    return `autoDuration must start at 1 frame or later after rounding (got ${minFrames} at ${frameRate}fps)`;
+  }
+  if (maxFrames > ASTRA_VIDEO_MAX_AUTO_FRAMES) {
+    return `autoDuration must end at ${ASTRA_VIDEO_MAX_AUTO_FRAMES} frames or earlier after rounding (got ${maxFrames} at ${frameRate}fps)`;
+  }
+  const firstGridFrame = 1 + ASTRA_VIDEO_FRAME_STEP * Math.ceil((minFrames - 1) / ASTRA_VIDEO_FRAME_STEP);
+  if (firstGridFrame > maxFrames) {
+    return `autoDuration must contain an 8k+1 frame count after rounding (got ${minFrames}..${maxFrames} at ${frameRate}fps)`;
   }
   return null;
 }
@@ -84311,6 +84370,12 @@ var astraText2VideoSchema = external_exports.object({
   const dimensionError = checkDimensions(data.width, data.height, mode);
   if (dimensionError) {
     ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["width"], message: dimensionError });
+  }
+  if (data.autoDuration && data.numFrames === void 0) {
+    const durationError = checkAutoDuration(data.autoDuration, data.frameRate ?? 24);
+    if (durationError) {
+      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["autoDuration"], message: durationError });
+    }
   }
 });
 var astraImg2VideoSchema = external_exports.object({
@@ -84380,6 +84445,13 @@ var astraAudio2VideoSchema = external_exports.object({
   if (dimensionError) {
     ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["width"], message: dimensionError });
   }
+  if (data.numFrames !== void 0 && data.audioMaxDuration !== void 0) {
+    ctx.addIssue({
+      code: external_exports.ZodIssueCode.custom,
+      path: ["audioMaxDuration"],
+      message: "audioMaxDuration and numFrames are mutually exclusive"
+    });
+  }
 });
 var astraVideoRetakeSchema = external_exports.object({
   prompt: promptSchema,
@@ -84397,6 +84469,48 @@ var astraVideoRetakeSchema = external_exports.object({
     });
   }
 });
+function checkAudioSource(upload, args) {
+  if (upload.kind !== "audio") return `audioPath uploaded as ${upload.kind}, not audio`;
+  if (!Number.isFinite(upload.duration) || (upload.duration ?? 0) <= 0) {
+    return "audio upload response did not include a positive duration";
+  }
+  const start = args.audioStartTime ?? 0;
+  const duration3 = upload.duration;
+  if (start >= duration3) {
+    return `audioStartTime must be less than the source duration ${duration3}s (got ${start})`;
+  }
+  if (args.numFrames !== void 0 || args.audioMaxDuration === void 0) return null;
+  const usableSeconds = Math.min(args.audioMaxDuration, duration3 - start);
+  const rawFrames = Math.floor(usableSeconds * (args.frameRate ?? 24));
+  const clampedFrames = Math.max(1, Math.min(1024, rawFrames));
+  const gridFrames = 1 + ASTRA_VIDEO_FRAME_STEP * Math.floor((clampedFrames - 1) / ASTRA_VIDEO_FRAME_STEP);
+  if (gridFrames > ASTRA_VIDEO_MAX_FRAMES) {
+    return `audioMaxDuration selects ${gridFrames} frames after clipping and the 8k+1 grid; maximum is ${ASTRA_VIDEO_MAX_FRAMES}`;
+  }
+  return null;
+}
+function checkRetakeSource(upload, startTime, endTime) {
+  if (upload.kind !== "video") return `sourceVideoPath uploaded as ${upload.kind}, not video`;
+  if (!Number.isInteger(upload.frames) || (upload.frames ?? 0) < 1 || (upload.frames - 1) % ASTRA_VIDEO_FRAME_STEP !== 0) {
+    return `retake source frames must be 8k+1 (got ${String(upload.frames)})`;
+  }
+  for (const [name, value] of [["width", upload.width], ["height", upload.height]]) {
+    if (!Number.isInteger(value) || (value ?? 0) < 1 || value % ASTRA_VIDEO_FAST_DIMENSION_STEP !== 0) {
+      return `retake source ${name} must be a positive multiple of ${ASTRA_VIDEO_FAST_DIMENSION_STEP} (got ${String(value)})`;
+    }
+  }
+  if (!Number.isFinite(upload.fps) || (upload.fps ?? 0) <= 0) {
+    return `retake source fps must be positive (got ${String(upload.fps)})`;
+  }
+  const sourceSeconds = upload.frames / upload.fps;
+  if (endTime > sourceSeconds) {
+    return `endTime must be at most the source duration ${sourceSeconds}s (got ${endTime})`;
+  }
+  if (startTime < 0 || startTime >= endTime) {
+    return `retake span must satisfy 0 <= startTime < endTime (got ${startTime} .. ${endTime})`;
+  }
+  return null;
+}
 function put(body, key, value) {
   if (value !== void 0) body[key] = value;
 }
@@ -84447,12 +84561,27 @@ var submitTimestamps = [];
 async function waitForSubmitSlot() {
   for (; ; ) {
     const now = Date.now();
-    while (submitTimestamps.length && now - submitTimestamps[0] >= 6e4) submitTimestamps.shift();
-    if (submitTimestamps.length < ASTRA_VIDEO_SUBMITS_PER_MINUTE) {
+    while (submitTimestamps.length && now - submitTimestamps[0] >= 36e5) submitTimestamps.shift();
+    const recentMinute = submitTimestamps.filter((timestamp) => now - timestamp < 6e4);
+    if (recentMinute.length < ASTRA_VIDEO_SUBMITS_PER_MINUTE && submitTimestamps.length < ASTRA_VIDEO_SUBMITS_PER_HOUR) {
       submitTimestamps.push(now);
       return;
     }
-    await sleep2(6e4 - (now - submitTimestamps[0]) + 250);
+    const minuteWait = recentMinute.length >= ASTRA_VIDEO_SUBMITS_PER_MINUTE ? 6e4 - (now - recentMinute[0]) : 0;
+    const hourWait = submitTimestamps.length >= ASTRA_VIDEO_SUBMITS_PER_HOUR ? 36e5 - (now - submitTimestamps[0]) : 0;
+    await sleep2(Math.max(minuteWait, hourWait) + 250);
+  }
+}
+var uploadTimestamps = [];
+async function waitForUploadSlot() {
+  for (; ; ) {
+    const now = Date.now();
+    while (uploadTimestamps.length && now - uploadTimestamps[0] >= 6e4) uploadTimestamps.shift();
+    if (uploadTimestamps.length < ASTRA_VIDEO_UPLOADS_PER_MINUTE) {
+      uploadTimestamps.push(now);
+      return;
+    }
+    await sleep2(6e4 - (now - uploadTimestamps[0]) + 250);
   }
 }
 function redactedFailure(what, status, body) {
@@ -84462,8 +84591,14 @@ function redactedFailure(what, status, body) {
 function isTerminalStatus(status) {
   return status === 400 || status === 401 || status === 403 || status === 404 || status === 413 || status === 415;
 }
+function astraVideoHeaders(key) {
+  return {
+    Authorization: `Bearer ${key}`,
+    "User-Agent": ASTRA_VIDEO_USER_AGENT
+  };
+}
 function authHeaders() {
-  return { Authorization: `Bearer ${requireAstraVideoKey()}` };
+  return astraVideoHeaders(requireAstraVideoKey());
 }
 function jobsUrl(suffix = "") {
   return `${astraVideoBaseUrl()}/v1/jobs${suffix}`;
@@ -84507,6 +84642,7 @@ async function uploadFile(filePath) {
   if (bytes > limit2) {
     throw new Error(`${path5.basename(resolved)} is ${bytes} bytes; the ${kind} upload ceiling is ${limit2} bytes.`);
   }
+  await waitForUploadSlot();
   const headers = authHeaders();
   const result = await withBackoff("upload", async () => {
     try {
@@ -84524,9 +84660,22 @@ async function uploadFile(filePath) {
   });
   if (!result.ok) throw redactedFailure(`upload of ${path5.basename(resolved)}`, result.status, result.body);
   const parsed = JSON.parse(result.body);
-  return { uploadId: parsed.upload_id, bytes: parsed.bytes, kind: parsed.kind };
+  return {
+    uploadId: parsed.upload_id,
+    bytes: parsed.bytes,
+    kind: parsed.kind,
+    ...parsed.duration !== void 0 ? { duration: parsed.duration } : {},
+    ...parsed.width !== void 0 ? { width: parsed.width } : {},
+    ...parsed.height !== void 0 ? { height: parsed.height } : {},
+    ...parsed.frames !== void 0 ? { frames: parsed.frames } : {},
+    ...parsed.fps !== void 0 ? { fps: parsed.fps } : {}
+  };
 }
 async function submitJob(body) {
+  const bodyBytes = Buffer.byteLength(JSON.stringify(body));
+  if (bodyBytes > ASTRA_VIDEO_MAX_JOB_BODY_BYTES) {
+    throw new Error(`ASTRA video job body is ${bodyBytes} bytes; the ceiling is ${ASTRA_VIDEO_MAX_JOB_BODY_BYTES} bytes.`);
+  }
   await waitForSubmitSlot();
   const result = await withBackoff(
     "submit",
@@ -84633,11 +84782,15 @@ async function generateFromKeyframes(args) {
 }
 async function generateFromAudio(args) {
   const audio = await uploadFile(args.audioPath);
+  const sourceError = checkAudioSource(audio, args);
+  if (sourceError) throw new Error(`ASTRA video audio source refused: ${sourceError}`);
   const body = buildJobBody("audio2video", { ...args, audioUploadId: audio.uploadId });
   return runJob("audio2video", args.prompt, body, args.outputPath, args.filename);
 }
 async function retakeVideo(args) {
   const source = await uploadFile(args.sourceVideoPath);
+  const sourceError = checkRetakeSource(source, args.startTime, args.endTime);
+  if (sourceError) throw new Error(`ASTRA video retake source refused: ${sourceError}`);
   const body = buildJobBody("retake", { ...args, videoUploadId: source.uploadId });
   return runJob("retake", args.prompt, body, args.outputPath, args.filename);
 }
@@ -90765,13 +90918,13 @@ var OMNI_ASPECT_RATIO_PROPERTY = {
 };
 var ASTRA_NUM_FRAMES_PROPERTY = {
   type: "integer",
-  description: `Clip length in FRAMES, not seconds: 8k+1 between ${ASTRA_VIDEO_MIN_FRAMES} and ${ASTRA_VIDEO_MAX_FRAMES} (25, 33, 41 \u2026 481). The server default is 121, about 5.0 seconds at 24fps. A value off the 8k+1 grid is refused before the call.`,
+  description: `Clip length in FRAMES, not seconds: 8k+1 between ${ASTRA_VIDEO_MIN_FRAMES} and ${ASTRA_VIDEO_MAX_FRAMES} (25, 33, 41 \u2026 481). The server default is 121, about 5.0 seconds at 24fps. A value off the 8k+1 grid is refused before the call. The 481-frame boundary is accepted by validation but has not been generation-tested.`,
   minimum: ASTRA_VIDEO_MIN_FRAMES,
   maximum: ASTRA_VIDEO_MAX_FRAMES
 };
 var ASTRA_AUTO_DURATION_PROPERTY = {
   type: "object",
-  description: "Let the server pick the length inside a range instead of naming frames. Capped at 121 frames whatever you ask for. Ignored when numFrames is also given.",
+  description: "Let the server pick the length inside a range instead of naming frames. After seconds are rounded at frameRate, the range must start at frame 1 or later, end at frame 121 or earlier, and contain an 8k+1 value. Ignored when numFrames is also given.",
   properties: {
     minSeconds: { type: "number", description: "Shortest acceptable clip length in seconds." },
     maxSeconds: { type: "number", description: "Longest acceptable clip length in seconds." }
@@ -90780,11 +90933,11 @@ var ASTRA_AUTO_DURATION_PROPERTY = {
 };
 var ASTRA_WIDTH_PROPERTY = {
   type: "integer",
-  description: `Frame width in pixels (default: 1536, or 768 on tier "fast"). Must be a multiple of 64 \u2014 or of ${ASTRA_VIDEO_FAST_DIMENSION_STEP} within 32-1920 on tier "fast". width * height must not exceed ${ASTRA_VIDEO_MAX_PIXELS}. FOR 9:16 ASK FOR 1088x1920 (area exactly ${ASTRA_VIDEO_MAX_PIXELS}, the tallest this server renders) or 1024x1920 \u2014 the plugin's usual 1080x1920 is REFUSED, because 1080 is not a multiple of 64 or of 32. Downscale 1088 to 1080 in the edit if the canvas needs it.`
+  description: `Frame width in pixels (default: 1536, or 768 on tier "fast"). Must be a multiple of 64 \u2014 or of ${ASTRA_VIDEO_FAST_DIMENSION_STEP} within 32-1920 on tier "fast". width * height must not exceed ${ASTRA_VIDEO_MAX_PIXELS}. FOR 9:16 ASK FOR 1024x1920 FIRST. Use 1088x1920 only with numFrames 25 (about 1 second); the server fails at higher frame counts. The plugin's usual 1080x1920 is REFUSED, because 1080 is not a multiple of 64 or of 32. To fit a 1080x1920 canvas, widen the 1024-pixel output to 1080 (about 5.5%) in the edit or add side padding.`
 };
 var ASTRA_HEIGHT_PROPERTY = {
   type: "integer",
-  description: `Frame height in pixels (default: 1024, or 512 on tier "fast"). Same grid rule as width, and the same ${ASTRA_VIDEO_MAX_PIXELS}-pixel area ceiling. 1920 is on the grid, so a 9:16 frame is 1088x1920 or 1024x1920 \u2014 never 1080x1920, whose width is off the grid.`
+  description: `Frame height in pixels (default: 1024, or 512 on tier "fast"). Same grid rule as width, and the same ${ASTRA_VIDEO_MAX_PIXELS}-pixel area ceiling. For 9:16, use 1024x1920 first. Use 1088x1920 only with numFrames 25 (about 1 second); the server fails at higher frame counts. Never use 1080x1920, whose width is off the grid. To fit a 1080x1920 canvas, widen the 1024-pixel output to 1080 (about 5.5%) in the edit or add side padding.`
 };
 var ASTRA_FRAME_RATE_PROPERTY = {
   type: "number",
@@ -90800,8 +90953,9 @@ var ASTRA_SEED_PROPERTY = {
 };
 var ASTRA_LORA_PROPERTY = {
   type: "array",
-  description: 'Look adapters to load, at most 2. "cinemagraph" freezes the frame except for one moving element; "slow-motion" stretches the action. Accepted ONLY on tier "default" (mode generate) \u2014 any other tier is refused before the call.',
+  description: 'Distinct look adapters to load, at most 2. "cinemagraph" freezes the frame except for one moving element; "slow-motion" stretches the action. Duplicate names are refused. Accepted ONLY on tier "default" (mode generate) \u2014 any other tier is refused before the call.',
   maxItems: 2,
+  uniqueItems: true,
   items: { type: "string", description: "Adapter name.", enum: [...ASTRA_VIDEO_LORAS] }
 };
 var ASTRA_NEGATIVE_PROMPT_PROPERTY = {
@@ -90828,6 +90982,7 @@ var ASTRA_FILENAME_PROPERTY = {
   type: "string",
   description: "File name for the generated video (default: astra_<timestamp>.mp4). A bare name \u2014 put the directory in outputPath."
 };
+var ASTRA_LIMITS_LINE = "Uploads: 10/min per key. Job acceptance: 5/min and 60/hour per key. The waiting queue holds 20 jobs, and each /v1/jobs JSON body is limited to 1 MiB.";
 var SEEDANCE_MODEL_PROPERTY = {
   type: "string",
   description: `Seedance model (default: "${DEFAULT_SEEDANCE_MODEL}" \u2014 the cheapest model that reaches 1080p, accepts photoreal human faces as input, supports seed, and has no balance gate \u2014 every ModelArk model still needs console activation). Quality, from the Artificial Analysis blind image-to-video arena: dreamina-seedance-2-0-260128 ranks 1st overall (Elo 1,198), the three Veo 3.1 tiers sit at 1,066-1,086, and seedance-1-5-pro-251215 is the arena baseline at 1,000 \u2014 so 2.0 is clearly the best Seedance, and 1.5 pro trades roughly a 59:41 preference against Veo for about a third of the price. dreamina-seedance-2-5-260628, the 2.0 fast/mini variants, and seedance-1-0-pro-fast-251015 have NO public evaluation at all \u2014 prefer them only for cost or for a capability the tested models lack, not for a shot that matters. The 2.x models REJECT input images containing real human faces and need account balance > $30 to activate, which rules them out for photoreal-person sources.`,
@@ -92916,8 +93071,9 @@ Returns: a text block with the saved .mp4 path, the new interaction id, and the 
 
 Use when the shot is not time-critical and you would rather not spend vendor money: this server is ours, so a call costs wall clock instead of dollars, and no vendor content policy applies. It is also the only lane with an adapter (lora) for cinemagraph and slow-motion looks.
 Do NOT use when someone is waiting: the box renders ONE job at a time and yours queues behind whatever else is running. A measured 121-frame 1536x1024 render takes about 66s (tier "default"), 169s ("guided"), 121s ("fast") \u2014 plus the queue. For an immediate clip go to veo_text2video or seedance_text2video.
-tier picks the pipeline and also which arguments exist: lora only on "default", negativePrompt and numInferenceSteps only on "guided"/"fast". Passing one to the wrong tier is refused before the call.
-Length is frames, not seconds: numFrames must be 8k+1 between 25 and 481 (121 = about 5.0s at 24fps, the server default). Give autoDuration instead to let the server choose a length; numFrames wins if both are given.
+tier picks the pipeline and also which arguments exist: lora only on "default", negativePrompt and numInferenceSteps only on "guided"/"fast". "fast" means a draft that is faster than "guided"; it is not faster than the default pipeline. Passing one to the wrong tier is refused before the call.
+Length is frames, not seconds: numFrames must be 8k+1 between 25 and 481 (121 = about 5.0s at 24fps, the server default; 481 passes validation but is not generation-tested). Give autoDuration instead to let the server choose at most 121 frames; the rounded range must contain an 8k+1 value. numFrames wins if both are given.
+${ASTRA_LIMITS_LINE}
 Every clip comes back with a generated AAC audio track (48kHz stereo, measured) and there is no argument to turn it off \u2014 no mode's allow-list has one. If the episode lays its own narration or BGM over this clip, drop or duck the generated track in the edit instead of expecting silence.
 
 Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and the request the server recorded.`,
@@ -92930,7 +93086,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
         },
         tier: {
           type: "string",
-          description: 'Pipeline: "default" (generate \u2014 fastest, the only tier taking lora), "guided" (slower, takes negativePrompt and numInferenceSteps), "fast" (guided_fast \u2014 768x512 default, 32-pixel grid).',
+          description: 'Pipeline: "default" (generate \u2014 the only tier taking lora), "guided" (slower, takes negativePrompt and numInferenceSteps), "fast" (guided_fast \u2014 768x512 draft, 32-pixel grid, faster than guided but not faster than default).',
           enum: ["default", "guided", "fast"],
           default: "default"
         },
@@ -92959,6 +93115,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
 Use when a generated background or photo has to move and nobody is waiting on it \u2014 same trade as astra_text2video: free, ours, one job at a time. Give firstFramePath alone to animate from that frame, or add lastFramePath and the clip lands on it. The tool uploads the files itself; pass local paths, not ids.
 Do NOT use for more than two stills \u2014 that is astra_keyframe_video, which pins each image to a frame index. For an immediate clip use veo_img2video or seedance_img2video.
 The last frame is pinned to numFrames-1, so a 121-frame clip ends on frame 120. png, jpg and jpeg are accepted, up to 32 MiB each.
+${ASTRA_LIMITS_LINE}
 Every clip comes back with a generated AAC audio track (48kHz stereo, measured) and there is no argument to turn it off \u2014 no mode's allow-list has one. If the episode lays its own narration or BGM over this clip, drop or duck the generated track in the edit instead of expecting silence.
 
 Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and the request the server recorded.`,
@@ -93003,6 +93160,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
 Use when the shot has to hit specific compositions in a specific order \u2014 a storyboard row rendered as one continuous move rather than three cuts. Each image names its own frameIdx, so the pacing between beats is yours.
 Do NOT use for one or two stills (astra_img2video is simpler) or when the clip is driven by sound (astra_audio2video).
 frameIdx is 0-based and must be inside the clip: a 121-frame render accepts 0-120. This mode has no length-guessing and no adapters \u2014 autoDuration, numGeneratedKeyframes and lora do not exist here and are refused before the call. A measured 121-frame render took about 184s plus queue.
+${ASTRA_LIMITS_LINE}
 Every clip comes back with a generated AAC audio track (48kHz stereo, measured) and there is no argument to turn it off \u2014 no mode's allow-list has one. If the episode lays its own narration or BGM over this clip, drop or duck the generated track in the edit instead of expecting silence.
 
 Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and the request the server recorded.`,
@@ -93063,7 +93221,8 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
 
 Use when the picture has to follow a sound you already have \u2014 a narration take, a music bed, a recorded effect \u2014 instead of the picture being cut to it afterwards. The tool uploads the audio itself; pass a local .wav or .mp3 path.
 Do NOT use to add sound to a finished clip: this generates new picture from the audio, it does not mux. The rendered video carries its own generated AAC track (48kHz stereo) rather than the audio you supplied, and there is no argument to turn it off \u2014 drop or duck it in the edit.
-The clip length is still numFrames, not the audio length \u2014 a 5-second wav against 121 frames at 24fps lines up; a longer track is read from audioStartTime for audioMaxDuration seconds. A measured 121-frame render took about 170s plus queue.
+Choose either numFrames or audioMaxDuration, never both. numFrames fixes the clip length. audioMaxDuration uses the shorter of that value and the audio remaining after audioStartTime, floors seconds \xD7 frameRate, then rounds down to 8k+1; more than 481 frames is refused. audioStartTime must be before the uploaded audio ends. With neither length field, the official default is 121 frames. A measured 121-frame render took about 170s plus queue.
+${ASTRA_LIMITS_LINE}
 
 Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and the request the server recorded.`,
     inputSchema: {
@@ -93079,11 +93238,11 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
         },
         audioStartTime: {
           type: "number",
-          description: "Seconds into the track to start reading from (default: 0)."
+          description: "Seconds into the track to start reading from (default: 0). Must be less than the uploaded audio duration."
         },
         audioMaxDuration: {
           type: "number",
-          description: "How many seconds of the track to use from audioStartTime (default: as much as the clip needs)."
+          description: "Maximum seconds to use after audioStartTime. Mutually exclusive with numFrames. The shorter of this and the remaining audio determines a floored, 8k+1 frame count no greater than 481."
         },
         numFrames: ASTRA_NUM_FRAMES_PROPERTY,
         width: ASTRA_WIDTH_PROPERTY,
@@ -93107,6 +93266,8 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
 Use when a cut is right except for a stretch in the middle \u2014 a gesture that lands wrong, a background that wobbles for a second \u2014 and re-rolling the whole shot would lose the framing you already liked. Name the span in seconds with startTime and endTime; the tool uploads the source mp4 itself.
 Do NOT use to make a clip longer or to change its size: the output inherits the source exactly, and this mode has no width, height, frameRate or numFrames argument at all.
 The SOURCE has to be on the grid already \u2014 8k+1 frames, both sides a multiple of 32 \u2014 or the server refuses at acceptance. A clip this API produced always qualifies. A measured retake took about 80s plus queue.
+The tool checks the upload response before submission: endTime must not pass source frames/fps, so an invalid source or span does not consume a queue slot.
+${ASTRA_LIMITS_LINE}
 Every clip comes back with a generated AAC audio track (48kHz stereo, measured) and there is no argument to turn it off \u2014 no mode's allow-list has one. If the episode lays its own narration or BGM over this clip, drop or duck the generated track in the edit instead of expecting silence.
 
 Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and the request the server recorded.`,
@@ -93127,7 +93288,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
         },
         endTime: {
           type: "number",
-          description: "Where the re-rolled span ends, in seconds. Must be greater than startTime."
+          description: "Where the re-rolled span ends, in seconds. Must be greater than startTime and no later than the uploaded source duration."
         },
         seed: ASTRA_SEED_PROPERTY,
         outputPath: ASTRA_OUTPUT_PATH_PROPERTY,
@@ -106352,7 +106513,7 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
 // src/index.ts
 import { readFileSync as readFinalRequest } from "node:fs";
 var server = new Server(
-  { name: "social-flow", version: "0.100.0" },
+  { name: "social-flow", version: "0.100.1" },
   { capabilities: { tools: {} } }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {
