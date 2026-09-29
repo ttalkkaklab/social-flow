@@ -25,6 +25,12 @@ un-rebuilt dist means the installed plugin silently runs old code.
 **After changing anything in `server/src/`, run `npm run build` and commit
 `server/dist/` in the same commit.** CI can't fix this for you.
 
+Run `cd server && npm run check:dist` to rebuild and run the same dist freshness
+gate as CI. If dist differs, it reports `node_modules/../`, `/Volumes`, and `/Users`
+occurrences in both the committed bundle and the rebuilt bundle. A symlinked
+`node_modules` can embed worktree paths: run `npm ci` inside the worktree's `server`
+directory, rebuild, and commit the resulting dist.
+
 ## What changes need what
 
 **Adding or changing an MCP tool.** Tool definitions live in `server/src/tools.ts`,
