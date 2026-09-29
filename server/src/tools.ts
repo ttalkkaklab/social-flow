@@ -269,12 +269,12 @@ const ASTRA_AUTO_DURATION_PROPERTY = {
 
 const ASTRA_WIDTH_PROPERTY = {
   type: 'integer',
-  description: `Frame width in pixels (default: 1536, or 768 on tier "fast"). Must be a multiple of 64 — or of ${ASTRA_VIDEO_FAST_DIMENSION_STEP} within 32-1920 on tier "fast". width * height must not exceed ${ASTRA_VIDEO_MAX_PIXELS}. FOR 9:16 ASK FOR 1088x1920 (area exactly ${ASTRA_VIDEO_MAX_PIXELS}, the tallest this server renders) or 1024x1920 — the plugin's usual 1080x1920 is REFUSED, because 1080 is not a multiple of 64 or of 32. Downscale 1088 to 1080 in the edit if the canvas needs it.`,
+  description: `Frame width in pixels (default: 1536, or 768 on tier "fast"). Must be a multiple of 64 — or of ${ASTRA_VIDEO_FAST_DIMENSION_STEP} within 32-1920 on tier "fast". width * height must not exceed ${ASTRA_VIDEO_MAX_PIXELS}. FOR 9:16 ASK FOR 1024x1920 FIRST. Use 1088x1920 only with numFrames 25 (about 1 second); the server fails at higher frame counts. The plugin's usual 1080x1920 is REFUSED, because 1080 is not a multiple of 64 or of 32.`,
 } as const;
 
 const ASTRA_HEIGHT_PROPERTY = {
   type: 'integer',
-  description: `Frame height in pixels (default: 1024, or 512 on tier "fast"). Same grid rule as width, and the same ${ASTRA_VIDEO_MAX_PIXELS}-pixel area ceiling. 1920 is on the grid, so a 9:16 frame is 1088x1920 or 1024x1920 — never 1080x1920, whose width is off the grid.`,
+  description: `Frame height in pixels (default: 1024, or 512 on tier "fast"). Same grid rule as width, and the same ${ASTRA_VIDEO_MAX_PIXELS}-pixel area ceiling. For 9:16, use 1024x1920 first. Use 1088x1920 only with numFrames 25 (about 1 second); the server fails at higher frame counts. Never use 1080x1920, whose width is off the grid.`,
 } as const;
 
 const ASTRA_FRAME_RATE_PROPERTY = {
