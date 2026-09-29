@@ -23,6 +23,7 @@ import * as mlx from './mlx-serve-client.js';
 import * as tts from './tts-client.js';
 import { checkedSpeechSchema, generateCheckedSpeech } from './tts-quality.js';
 import { finalSpeechSchema, reviewFinalSpeech } from './tts-final-quality.js';
+import * as astraVideo from './astra-video-client.js';
 import * as omni from './omni-client.js';
 import * as video from './video-client.js';
 import { contentFeedback } from './content-feedback.js';
@@ -152,6 +153,19 @@ function knownKeys(schema) {
         current = def.schema ?? def.innerType;
     }
     return undefined;
+}
+/**
+ * One report shape for all five astra_* routes.
+ *
+ * The server echoes back the request it actually recorded, defaults filled in — that echo is
+ * the only place a caller can see what 121 frames at 24fps became, so it is reported verbatim
+ * rather than summarised. It contains no credentials; the key travels in a header only.
+ */
+function astraVideoReport(headline, result) {
+    const recorded = result.request ? `\nServer recorded: ${JSON.stringify(result.request)}` : '';
+    return (`${headline}.\n\nFile: ${result.videoPath}\nJob: ${result.jobId} (mode ${result.mode})\n` +
+        `Bytes: ${result.bytes}\nElapsed: ${result.elapsedSeconds}s (queue wait included)\n` +
+        `Prompt: ${result.prompt}${recorded}`);
 }
 // ── research schemas ─────────────────────────────────────────────
 /**
@@ -806,6 +820,40 @@ export const ROUTES = {
             return text(`Omni video edit failed: ${result.error}`, true);
         const source = result.sourceVideo ? `\nSource Video: ${result.sourceVideo}` : '';
         return text(`Video edited with Gemini Omni.\n\nFile: ${result.videoPath}\nInteraction: ${result.interactionId}${source}\nModel: ${result.model}\nResolution: ${result.resolution}\nInstruction: ${result.prompt}\n\nLength is unchanged from the input.`);
+    },
+    // ── video generation (ASTRA video API — self-hosted LTX-2.5) ──────────────────────
+    //    Acceptance and result are separate calls, so the client polls; these routes only
+    //    parse, call, and report. Failures arrive as thrown errors carrying the server's own
+    //    message — never the request headers, which is where the key lives.
+    astra_text2video: async (args) => {
+        const result = await astraVideo.generateFromText(parseArgs(astraVideo.astraText2VideoSchema, args));
+        return text(astraVideoReport('Video generated on the ASTRA video API', result));
+    },
+    astra_img2video: async (args) => {
+        const parsed = parseArgs(astraVideo.astraImg2VideoSchema, args);
+        const result = await astraVideo.generateFromImage(parsed);
+        const frames = parsed.lastFramePath
+            ? `\nFrames: ${parsed.firstFramePath} → ${parsed.lastFramePath}`
+            : `\nFirst frame: ${parsed.firstFramePath}`;
+        return text(`${astraVideoReport('Video generated from a still on the ASTRA video API', result)}${frames}`);
+    },
+    astra_keyframe_video: async (args) => {
+        const parsed = parseArgs(astraVideo.astraKeyframeVideoSchema, args);
+        const result = await astraVideo.generateFromKeyframes(parsed);
+        const pins = parsed.images.map((image) => `  frame ${image.frameIdx}: ${image.imagePath}`).join('\n');
+        return text(`${astraVideoReport('Video generated through keyframes on the ASTRA video API', result)}\nKeyframes:\n${pins}`);
+    },
+    astra_audio2video: async (args) => {
+        const parsed = parseArgs(astraVideo.astraAudio2VideoSchema, args);
+        const result = await astraVideo.generateFromAudio(parsed);
+        return text(`${astraVideoReport('Video generated from audio on the ASTRA video API', result)}\nAudio: ${parsed.audioPath}`);
+    },
+    astra_video_retake: async (args) => {
+        const parsed = parseArgs(astraVideo.astraVideoRetakeSchema, args);
+        const result = await astraVideo.retakeVideo(parsed);
+        return text(`${astraVideoReport('Span re-rolled on the ASTRA video API', result)}` +
+            `\nSource: ${parsed.sourceVideoPath}\nSpan: ${parsed.startTime}s → ${parsed.endTime}s` +
+            '\nSize and length are inherited from the source.');
     },
     // ── video generation (Seedance) — saves the mp4 locally, returns path + meta text ──
     // The billed tokens (completionTokens) come back too — this value is the vendor's
