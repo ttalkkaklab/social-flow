@@ -37,8 +37,8 @@ area ceiling (`LTX_MAX_PIXELS=2064384`, measured 2026-09-30), so **use 1024x1920
 multiple of neither 64 nor 32. To fit a 1080x1920 canvas, widen the 1024-pixel output to 1080
 (about 5.5%) in the edit or add side padding.
 
-For image-conditioned calls, the measured failure frames are **generate: {121,129,137}** at
-1280x704/768 and **guided: {121}** at 1280x704. Guided 129 and 137 succeeded in server probes;
+For image-conditioned calls, the server blocks **generate: {121,129,137}** at
+width 1280 (measured at heights 704/768) and **guided: {121}** at width 1280 (measured at height 704). Guided 129 and 137 succeeded in server probes;
 the client's existing guided ceiling is still 121. Generate 113/145 and guided 113 are measured
 frame alternatives within the current client limits; generate at width 1536 also succeeded at
 121 frames. The image-conditioned warning does not apply to `astra_text2video`: text-only

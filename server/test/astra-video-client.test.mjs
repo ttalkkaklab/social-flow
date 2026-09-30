@@ -379,11 +379,24 @@ describe('measured ASTRA guidance', () => {
 
   it('image warning keeps generate and guided failure frames separate', () => {
     const description = tool('astra_img2video').description;
-    const frames = mode => description.match(new RegExp(`${mode} \\(1280x[^)]+\\) failure frames: \\{([^}]+)\\}`))?.[1].split(',').map(Number);
+    const frames = mode => description.match(new RegExp(`${mode} \\(width 1280, measured at [^)]+\\) failure frames: \\{([^}]+)\\}`))?.[1].split(',').map(Number);
     assert.deepEqual(frames('generate'), [121, 129, 137]);
     assert.deepEqual(frames('guided'), [121]);
     assert.match(description, /Guided 129\/137 succeeded/);
     assert.match(description, /hypothesis, not a confirmed cause/);
+  });
+
+  it('image failure warnings use width gates and preserve measured success points', () => {
+    const description = tool('astra_img2video').description;
+    assert.match(description, /generate \(width 1280, measured at heights 704\/768\) failure frames/);
+    assert.match(description, /guided \(width 1280, measured at height 704\) failure frames/);
+    assert.match(description, /Text-only 1280x704 at 121 frames succeeded/);
+    assert.match(description, /generate width 1536 at 121 frames also succeeded/);
+    const guide = fs.readFileSync(new URL('../../skills/produce/references/video-model-selection.md', import.meta.url), 'utf8');
+    assert.match(guide, /generate: \{121,129,137\}\*\* at\s+width 1280 \(measured at heights 704\/768\)/);
+    assert.match(guide, /guided: \{121\}\*\* at width 1280 \(measured at height 704\)/);
+    assert.match(guide, /text-only\s+1280x704 at 121 frames succeeded/);
+    assert.match(guide, /generate at width 1536 also succeeded at\s+121 frames/);
   });
 
   it('text-only tool does not advertise an image-conditioned failure band', () => {
