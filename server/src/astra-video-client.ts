@@ -95,7 +95,7 @@ export const ASTRA_VIDEO_FAST_DIMENSION_STEP = 32;
 export const ASTRA_VIDEO_FAST_MIN_DIMENSION = 32;
 export const ASTRA_VIDEO_FAST_MAX_DIMENSION = 1920;
 /** width * height ceiling, whatever the grid. 1536x1024 (the default) is 1,572,864. */
-export const ASTRA_VIDEO_MAX_PIXELS = 2_088_960;
+export const ASTRA_VIDEO_MAX_PIXELS = 2_064_384;
 
 export const ASTRA_VIDEO_MAX_SEED = 2_147_483_647;
 export const ASTRA_VIDEO_MAX_PROMPT_CHARS = 2000;

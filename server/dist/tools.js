@@ -147,11 +147,11 @@ const ASTRA_AUTO_DURATION_PROPERTY = {
 };
 const ASTRA_WIDTH_PROPERTY = {
     type: 'integer',
-    description: `Frame width in pixels (default: 1536, or 768 on tier "fast"). Must be a multiple of 64 — or of ${ASTRA_VIDEO_FAST_DIMENSION_STEP} within 32-1920 on tier "fast". width * height must not exceed ${ASTRA_VIDEO_MAX_PIXELS}. FOR 9:16 ASK FOR 1024x1920 FIRST. Use 1088x1920 only with numFrames 25 (about 1 second); the server fails at higher frame counts. The plugin's usual 1080x1920 is REFUSED, because 1080 is not a multiple of 64 or of 32. To fit a 1080x1920 canvas, widen the 1024-pixel output to 1080 (about 5.5%) in the edit or add side padding.`,
+    description: `Frame width in pixels (default: 1536, or 768 on tier "fast"). Must be a multiple of 64 — or of ${ASTRA_VIDEO_FAST_DIMENSION_STEP} within 32-1920 on tier "fast". width * height must not exceed ${ASTRA_VIDEO_MAX_PIXELS}. FOR 9:16 ASK FOR 1024x1920 FIRST. 1088x1920 exceeds the area ceiling at every frame count. The plugin's usual 1080x1920 is REFUSED, because 1080 is not a multiple of 64 or of 32. To fit a 1080x1920 canvas, widen the 1024-pixel output to 1080 (about 5.5%) in the edit or add side padding.`,
 };
 const ASTRA_HEIGHT_PROPERTY = {
     type: 'integer',
-    description: `Frame height in pixels (default: 1024, or 512 on tier "fast"). Same grid rule as width, and the same ${ASTRA_VIDEO_MAX_PIXELS}-pixel area ceiling. For 9:16, use 1024x1920 first. Use 1088x1920 only with numFrames 25 (about 1 second); the server fails at higher frame counts. Never use 1080x1920, whose width is off the grid. To fit a 1080x1920 canvas, widen the 1024-pixel output to 1080 (about 5.5%) in the edit or add side padding.`,
+    description: `Frame height in pixels (default: 1024, or 512 on tier "fast"). Same grid rule as width, and the same ${ASTRA_VIDEO_MAX_PIXELS}-pixel area ceiling. For 9:16, use 1024x1920 first. 1088x1920 exceeds the area ceiling at every frame count. Never use 1080x1920, whose width is off the grid. To fit a 1080x1920 canvas, widen the 1024-pixel output to 1080 (about 5.5%) in the edit or add side padding.`,
 };
 const ASTRA_FRAME_RATE_PROPERTY = {
     type: 'number',
@@ -2258,7 +2258,6 @@ Use when the shot is not time-critical and you would rather not spend vendor mon
 Do NOT use when someone is waiting: the box renders ONE job at a time and yours queues behind whatever else is running. A measured 121-frame 1536x1024 render takes about 66s (tier "default"), 169s ("guided"), 121s ("fast") — plus the queue. For an immediate clip go to veo_text2video or seedance_text2video.
 tier picks the pipeline and also which arguments exist: lora only on "default", negativePrompt and numInferenceSteps only on "guided"/"fast". "fast" means a draft that is faster than "guided"; it is not faster than the default pipeline. Passing one to the wrong tier is refused before the call.
 Length is frames, not seconds: numFrames must be 8k+1, minimum 25. Mode ceilings: ${ASTRA_FRAME_LIMITS_DESCRIPTION} 121 = about 5.0s at 24fps, the server default. Give autoDuration instead to let the server choose at most 121 frames; the rounded range must contain an 8k+1 value. numFrames wins if both are given.
-Warning: image-conditioned generate (1280x704/768) and guided (1280x704) failed with CUDA illegal memory access at 121/129/137 frames on an otherwise idle GPU; use width 1536 or, for generate, 113/145 frames (guided is capped at 121, so use 113). Other combinations are unmeasured; text-only 1280x704 at 121 frames succeeded.
 ${ASTRA_LIMITS_LINE}
 Every clip comes back with a generated AAC audio track (48kHz stereo, measured) and there is no argument to turn it off — no mode's allow-list has one. If the episode lays its own narration or BGM over this clip, drop or duck the generated track in the edit instead of expecting silence.
 
@@ -2302,7 +2301,7 @@ Use when a generated background or photo has to move and nobody is waiting on it
 Do NOT use for more than two stills — that is astra_keyframe_video, which pins each image to a frame index. For an immediate clip use veo_img2video or seedance_img2video.
 tier accepts default (generate) or guided only. guided images require 1536x1024 (omitted dimensions use that size); fast images are not enabled. lora is default-only.
 The last frame is pinned to numFrames-1, so a 121-frame clip ends on frame 120. png, jpg and jpeg are accepted, up to 32 MiB each.
-Warning: image-conditioned generate (1280x704/768) and guided (1280x704) failed with CUDA illegal memory access at 121/129/137 frames on an otherwise idle GPU; use width 1536 or, for generate, 113/145 frames (guided is capped at 121, so use 113). Other combinations are unmeasured; text-only 1280x704 at 121 frames succeeded.
+Warning: image-conditioned generate (1280x704/768) failure frames: {121,129,137}; guided (1280x704) failure frames: {121}. Guided 129/137 succeeded in server probes, but the existing client guided ceiling is 121. Within current client limits use generate 113/145 or guided 113; generate width 1536 at 121 frames also succeeded. Text-only 1280x704 at 121 frames succeeded. An upstream defect is a hypothesis, not a confirmed cause. The server owns the failure-band acceptance gate; this warning adds no client-side block.
 ${ASTRA_LIMITS_LINE}
 Every clip comes back with a generated AAC audio track (48kHz stereo, measured) and there is no argument to turn it off — no mode's allow-list has one. If the episode lays its own narration or BGM over this clip, drop or duck the generated track in the edit instead of expecting silence.
 
@@ -2426,11 +2425,11 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
                 },
                 audioPath: {
                     type: 'string',
-                    description: 'Local path to the driving audio (.wav or .mp3, at most 32 MiB). Uploaded automatically.',
+                    description: 'Local path to the driving audio (.wav or .mp3, at most 32 MiB). Stereo (2-channel) input required. Mono WAV passes acceptance (202) but fails during generation. Uploaded automatically.',
                 },
                 audioUploadId: {
                     type: 'string', minLength: 1,
-                    description: 'Existing audio upload id, mutually exclusive with audioPath. No upload or local source-duration check. Server rejects expired ids.',
+                    description: 'Existing audio upload id, mutually exclusive with audioPath. Stereo (2-channel) input required. Mono WAV passes acceptance (202) but fails during generation. No upload or local source-duration check. Server rejects expired ids.',
                 },
                 imagePath: {
                     type: 'string', minLength: 1,
@@ -2442,7 +2441,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
                 },
                 audioMaxDuration: {
                     type: 'number',
-                    description: `Maximum seconds to use after audioStartTime. Mutually exclusive with numFrames. With a fresh upload, the shorter of this and remaining audio must produce at most ${ASTRA_VIDEO_FRAME_LIMITS.audio2video} frames on the 8k+1 grid. Reused ids defer duration checks to the server.`,
+                    description: `Maximum seconds to use after audioStartTime. Mutually exclusive with numFrames. With a fresh upload, the shorter of this and remaining audio must produce at most ${ASTRA_VIDEO_FRAME_LIMITS.audio2video} frames on the 8k+1 grid. Reused ids defer duration checks to the server. At 24fps, 8 seconds selects 185 frames (about 7.71s). If both length fields are omitted, the server uses 121 frames (about 5.04s), not the audio length.`,
                 },
                 numFrames: astraNumFramesProperty('audio2video'),
                 width: ASTRA_WIDTH_PROPERTY,

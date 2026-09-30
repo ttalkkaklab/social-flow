@@ -21,7 +21,8 @@ below.
 ASTRA's `fast` tier is a lower-resolution draft that finishes sooner than `guided`; measured at
 121s, it was slower than the default pipeline's 66s. Automatic duration selection stops at 121
 frames and its rounded range must contain an 8k+1 frame count. Direct `numFrames` accepts
-25-481 on the same grid, though 481 has not been generation-tested. For `astra_audio2video`,
+25-193 on the same grid under the live server ceiling (2026-09-30); the client keeps
+`guided` and `fast` capped at 121. For `astra_audio2video`,
 choose `numFrames` or `audioMaxDuration`, never both; the tool also checks that `audioStartTime`
 is before the uploaded track ends. Retakes check source frames, 32-pixel dimensions and the
 requested end time against uploaded metadata before submission.
@@ -30,15 +31,28 @@ The front door has returned 403 for a runtime-default User-Agent, so every ASTRA
 `User-Agent: social-flow/<version>`. Per key, uploads are limited to 10/min and jobs to 5/min and
 60/hour; the waiting queue holds 20 jobs, and `/v1/jobs` bodies stop at 1 MiB.
 
-Two things to know before you write the call. Sizes sit on a 64-pixel grid with a 2,088,960-pixel
-area ceiling, so **use 1024x1920 first for a 9:16 frame**. ASTRA server measurements on
-2026-09-29 showed that 1088x1920 works only at 25 frames (about 1 second); higher frame counts
-fail. 1080x1920 is refused because 1080 is a multiple of neither 64 nor 32. To fit a 1080x1920
-canvas, widen the 1024-pixel output to 1080 (about 5.5%) in the edit or add
-side padding. And **every clip comes back with a generated AAC track (48kHz stereo) that cannot
-be switched off** — no mode has an argument
-for it — so an episode laying its own narration or BGM over the clip has to drop or duck that
-track, the same care the Veo section asks for.
+Two things to know before you write the call. Sizes sit on a 64-pixel grid with a 2,064,384-pixel
+area ceiling (`LTX_MAX_PIXELS=2064384`, measured 2026-09-30), so **use 1024x1920 first for a 9:16 frame**.
+1088x1920 exceeds that ceiling at every frame count. 1080x1920 is refused because 1080 is a
+multiple of neither 64 nor 32. To fit a 1080x1920 canvas, widen the 1024-pixel output to 1080
+(about 5.5%) in the edit or add side padding.
+
+For image-conditioned calls, the measured failure frames are **generate: {121,129,137}** at
+1280x704/768 and **guided: {121}** at 1280x704. Guided 129 and 137 succeeded in server probes;
+the client's existing guided ceiling is still 121. Generate 113/145 and guided 113 are measured
+frame alternatives within the current client limits; generate at width 1536 also succeeded at
+121 frames. The image-conditioned warning does not apply to `astra_text2video`: text-only
+1280x704 at 121 frames succeeded. An upstream defect is a hypothesis, not a confirmed cause.
+The server owns the failure-band acceptance gate; the client documents it without a second gate.
+
+Clips carry AAC (48kHz stereo) with no audio-off argument. **audio2video carries the supplied
+WAV re-encoded as AAC**, rather than newly generated sound: job `558632165cfe4678a631eb460bf89457`
+measured 100ms RMS Pearson correlation 0.99997 at zero lag. Use stereo (2-channel) input;
+mono WAV passes upload and job acceptance (202) but fails during generation. With neither
+`numFrames` nor `audioMaxDuration`, the server uses 121 frames (~5.04s at 24fps), even for an
+8-second WAV. `numFrames` fixes the length; `audioMaxDuration: 8` selects 185 frames (~7.71s)
+at 24fps after rounding, so it can trim the tail. Drop or duck the output track in the edit
+when laying another narration or BGM over it.
 
 This document is the source of truth for choosing between the two engines. Tool descriptions
 carry their own summaries of it, and `skills/autoproduce/references/prices.tsv` is the source

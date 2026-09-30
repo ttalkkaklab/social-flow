@@ -374,6 +374,62 @@ describe('per-tool schemas', () => {
 });
 
 
+describe('measured ASTRA guidance', () => {
+  const tool = name => TOOLS.find(t => t.name === name);
+
+  it('image warning keeps generate and guided failure frames separate', () => {
+    const description = tool('astra_img2video').description;
+    const frames = mode => description.match(new RegExp(`${mode} \\(1280x[^)]+\\) failure frames: \\{([^}]+)\\}`))?.[1].split(',').map(Number);
+    assert.deepEqual(frames('generate'), [121, 129, 137]);
+    assert.deepEqual(frames('guided'), [121]);
+    assert.match(description, /Guided 129\/137 succeeded/);
+    assert.match(description, /hypothesis, not a confirmed cause/);
+  });
+
+  it('text-only tool does not advertise an image-conditioned failure band', () => {
+    assert.doesNotMatch(tool('astra_text2video').description, /image-conditioned|failure frames|CUDA illegal memory access/);
+  });
+
+  it('audio inputs warn that mono is accepted but fails generation', () => {
+    const audio = tool('astra_audio2video');
+    assert.match(audio.description, /mono passes upload and job acceptance but fails during generation/);
+    for (const name of ['audioPath', 'audioUploadId']) {
+      const description = audio.inputSchema.properties[name].description;
+      assert.match(description, /Stereo \(2-channel\) input required/);
+      assert.match(description, /Mono WAV passes acceptance \(202\) but fails during generation/);
+    }
+  });
+
+  it('audio guidance preserves the source track and explains default and rounded duration', () => {
+    const audio = tool('astra_audio2video');
+    assert.match(audio.description, /supplied WAV re-encoded as AAC/);
+    assert.match(audio.description, /0\.99997 at zero lag/);
+    assert.match(audio.description, /default is 121 frames.*not the source audio length/);
+    assert.match(audio.description, /audioMaxDuration=8\.0 at 24fps rounds down to 185 frames/);
+    assert.match(audio.inputSchema.properties.audioMaxDuration.description, /8 seconds selects 185 frames/);
+    assert.match(audio.inputSchema.properties.audioMaxDuration.description, /both length fields are omitted.*121 frames/);
+  });
+
+  it('pixel ceiling accepts its exact boundary and rejects 1088x1920 even at 25 frames', () => {
+    assert.equal(ASTRA_VIDEO_MAX_PIXELS, 2_064_384);
+    assert.equal(checkDimensions(1344, 1536, 'generate'), null);
+    assert.equal(checkDimensions(1024, 1920, 'generate'), null);
+    assert.match(checkDimensions(1088, 1920, 'generate'), /at most 2064384/);
+    assert.match(parseFails(astraText2VideoSchema, { prompt: 'x', width: 1088, height: 1920, numFrames: 25 }), /2064384/);
+    for (const name of ['astra_text2video', 'astra_img2video', 'astra_keyframe_video', 'astra_audio2video']) {
+      for (const axis of ['width', 'height']) {
+        assert.match(tool(name).inputSchema.properties[axis].description, /1088x1920 exceeds the area ceiling at every frame count/);
+      }
+    }
+  });
+
+  it('image failure-band guidance adds no client rejection', () => {
+    for (const numFrames of [121, 129, 137]) {
+      parseOk(astraImg2VideoSchema, { prompt: 'x', firstFramePath: 'a.png', width: 1280, height: 704, numFrames });
+    }
+  });
+});
+
 describe('mode-specific ceilings and new input contracts', () => {
   it('pins all five mode ceilings to the measured client and server limits', () => {
     assert.deepEqual(ASTRA_VIDEO_FRAME_LIMITS, { generate: 193, guided: 121, guided_fast: 121, keyframe: 193, audio2video: 193 });
