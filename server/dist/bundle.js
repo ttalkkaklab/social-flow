@@ -84579,7 +84579,16 @@ var ASTRA_VIDEO_ALLOWED_FIELDS = {
   retake: ["end_time", "hdr", "mode", "prompt", "seed", "start_time", "video_upload_id"]
 };
 var ASTRA_VIDEO_MIN_FRAMES = 25;
-var ASTRA_VIDEO_MAX_FRAMES = 481;
+var ASTRA_VIDEO_FRAME_LIMITS = {
+  generate: 193,
+  guided: 121,
+  guided_fast: 121,
+  // Conservative guided-family ceiling; not generation-tested.
+  keyframe: 481,
+  // Not generation-tested.
+  audio2video: 481
+  // Not generation-tested.
+};
 var ASTRA_VIDEO_FRAME_STEP = 8;
 var ASTRA_VIDEO_MAX_AUTO_FRAMES = 121;
 var ASTRA_VIDEO_DIMENSION_STEP = 64;
@@ -84605,8 +84614,8 @@ var SUBMIT_TIMEOUT_MS = 6e4;
 var STATUS_TIMEOUT_MS = 3e4;
 var TRANSFER_TIMEOUT_MS = 6e5;
 var promptSchema = external_exports.string().min(1, "prompt is required").max(ASTRA_VIDEO_MAX_PROMPT_CHARS, `prompt must be at most ${ASTRA_VIDEO_MAX_PROMPT_CHARS} characters`);
-var numFramesSchema = external_exports.number().int().min(ASTRA_VIDEO_MIN_FRAMES).max(ASTRA_VIDEO_MAX_FRAMES).refine((n) => (n - 1) % ASTRA_VIDEO_FRAME_STEP === 0, {
-  message: `numFrames must be 8k+1 (25, 33, 41 \u2026 ${ASTRA_VIDEO_MAX_FRAMES})`
+var numFramesSchema = (mode) => external_exports.number().int().min(ASTRA_VIDEO_MIN_FRAMES).max(ASTRA_VIDEO_FRAME_LIMITS[mode]).refine((n) => (n - 1) % ASTRA_VIDEO_FRAME_STEP === 0, {
+  message: `numFrames must be 8k+1 (25, 33, 41 \u2026 ${ASTRA_VIDEO_FRAME_LIMITS[mode]})`
 }).optional();
 var seedSchema = external_exports.number().int().min(0).max(ASTRA_VIDEO_MAX_SEED).optional();
 var frameRateSchema = external_exports.number().min(1).max(60).optional();
@@ -84666,7 +84675,7 @@ function checkAutoDuration(duration3, frameRate = 24) {
 var astraText2VideoSchema = external_exports.object({
   prompt: promptSchema,
   tier: external_exports.enum(["default", "guided", "fast"]).optional().default("default"),
-  numFrames: numFramesSchema,
+  numFrames: numFramesSchema("generate"),
   autoDuration: autoDurationSchema,
   width: widthSchema,
   height: heightSchema,
@@ -84679,6 +84688,9 @@ var astraText2VideoSchema = external_exports.object({
   ...outputFields
 }).superRefine((data, ctx) => {
   const mode = ASTRA_VIDEO_TIERS[data.tier];
+  if (data.numFrames !== void 0 && data.numFrames > ASTRA_VIDEO_FRAME_LIMITS[mode]) {
+    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["numFrames"], message: `numFrames must be at most ${ASTRA_VIDEO_FRAME_LIMITS[mode]} for mode ${mode}` });
+  }
   if (data.lora?.length && mode !== "generate") {
     ctx.addIssue({
       code: external_exports.ZodIssueCode.custom,
@@ -84710,10 +84722,11 @@ var astraText2VideoSchema = external_exports.object({
 });
 var astraImg2VideoSchema = external_exports.object({
   prompt: promptSchema,
+  tier: external_exports.enum(["default", "guided"]).optional().default("default"),
   firstFramePath: external_exports.string().min(1, "firstFramePath is required"),
   lastFramePath: external_exports.string().optional(),
   strength: external_exports.number().min(0).max(1).optional(),
-  numFrames: numFramesSchema,
+  numFrames: numFramesSchema("generate"),
   width: widthSchema,
   height: heightSchema,
   frameRate: frameRateSchema,
@@ -84722,7 +84735,19 @@ var astraImg2VideoSchema = external_exports.object({
   numGeneratedKeyframes: numGeneratedKeyframesSchema,
   ...outputFields
 }).superRefine((data, ctx) => {
-  const dimensionError = checkDimensions(data.width, data.height, "generate");
+  const mode = ASTRA_VIDEO_TIERS[data.tier];
+  if (data.numFrames !== void 0 && data.numFrames > ASTRA_VIDEO_FRAME_LIMITS[mode]) {
+    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["numFrames"], message: `numFrames must be at most ${ASTRA_VIDEO_FRAME_LIMITS[mode]} for mode ${mode}` });
+  }
+  if (mode === "guided") {
+    if ((data.width ?? 1536) !== 1536 || (data.height ?? 1024) !== 1024) {
+      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["width"], message: "guided images require 1536x1024" });
+    }
+    if (data.lora?.length) {
+      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["lora"], message: 'lora is accepted only on tier "default"' });
+    }
+  }
+  const dimensionError = checkDimensions(data.width, data.height, mode);
   if (dimensionError) {
     ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["width"], message: dimensionError });
   }
@@ -84737,7 +84762,7 @@ var astraKeyframeVideoSchema = external_exports.object({
       crf: external_exports.number().int().min(0).max(51).optional()
     })
   ).min(2, "keyframe needs at least 2 images").max(8, "keyframe takes at most 8 images"),
-  numFrames: numFramesSchema,
+  numFrames: numFramesSchema("keyframe"),
   width: widthSchema,
   height: heightSchema,
   frameRate: frameRateSchema,
@@ -84759,10 +84784,12 @@ var astraKeyframeVideoSchema = external_exports.object({
 });
 var astraAudio2VideoSchema = external_exports.object({
   prompt: promptSchema,
-  audioPath: external_exports.string().min(1, "audioPath is required"),
+  audioPath: external_exports.string().trim().min(1).optional(),
+  audioUploadId: external_exports.string().trim().min(1).optional(),
+  imagePath: external_exports.string().trim().min(1).optional(),
   audioStartTime: external_exports.number().min(0).optional(),
   audioMaxDuration: external_exports.number().positive().optional(),
-  numFrames: numFramesSchema,
+  numFrames: numFramesSchema("audio2video"),
   width: widthSchema,
   height: heightSchema,
   frameRate: frameRateSchema,
@@ -84771,6 +84798,9 @@ var astraAudio2VideoSchema = external_exports.object({
   numInferenceSteps: numInferenceStepsSchema,
   ...outputFields
 }).superRefine((data, ctx) => {
+  if (data.audioPath !== void 0 === (data.audioUploadId !== void 0)) {
+    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["audioPath"], message: "Provide exactly one of audioPath or audioUploadId" });
+  }
   const dimensionError = checkDimensions(data.width, data.height, "audio2video");
   if (dimensionError) {
     ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["width"], message: dimensionError });
@@ -84814,8 +84844,8 @@ function checkAudioSource(upload, args) {
   const rawFrames = Math.floor(usableSeconds * (args.frameRate ?? 24));
   const clampedFrames = Math.max(1, Math.min(1024, rawFrames));
   const gridFrames = 1 + ASTRA_VIDEO_FRAME_STEP * Math.floor((clampedFrames - 1) / ASTRA_VIDEO_FRAME_STEP);
-  if (gridFrames > ASTRA_VIDEO_MAX_FRAMES) {
-    return `audioMaxDuration selects ${gridFrames} frames after clipping and the 8k+1 grid; maximum is ${ASTRA_VIDEO_MAX_FRAMES}`;
+  if (gridFrames > ASTRA_VIDEO_FRAME_LIMITS.audio2video) {
+    return `audioMaxDuration selects ${gridFrames} frames after clipping and the 8k+1 grid; maximum is ${ASTRA_VIDEO_FRAME_LIMITS.audio2video}`;
   }
   return null;
 }
@@ -84994,6 +85024,7 @@ async function uploadFile(filePath) {
     uploadId: parsed.upload_id,
     bytes: parsed.bytes,
     kind: parsed.kind,
+    ...parsed.expires_at !== void 0 ? { expiresAt: parsed.expires_at } : {},
     ...parsed.duration !== void 0 ? { duration: parsed.duration } : {},
     ...parsed.width !== void 0 ? { width: parsed.width } : {},
     ...parsed.height !== void 0 ? { height: parsed.height } : {},
@@ -85098,8 +85129,10 @@ async function generateFromImage(args) {
     const last = await uploadFile(args.lastFramePath);
     images.push({ uploadId: last.uploadId, frameIdx: (args.numFrames ?? 121) - 1, strength: args.strength ?? 1 });
   }
-  const body = buildJobBody("generate", { ...args, images });
-  return runJob("generate", args.prompt, body, args.outputPath, args.filename);
+  const mode = ASTRA_VIDEO_TIERS[args.tier];
+  const dimensions = mode === "guided" ? { width: 1536, height: 1024 } : {};
+  const body = buildJobBody(mode, { ...args, ...dimensions, images });
+  return runJob(mode, args.prompt, body, args.outputPath, args.filename);
 }
 async function generateFromKeyframes(args) {
   const images = [];
@@ -85111,11 +85144,21 @@ async function generateFromKeyframes(args) {
   return runJob("keyframe", args.prompt, body, args.outputPath, args.filename);
 }
 async function generateFromAudio(args) {
-  const audio = await uploadFile(args.audioPath);
-  const sourceError = checkAudioSource(audio, args);
-  if (sourceError) throw new Error(`ASTRA video audio source refused: ${sourceError}`);
-  const body = buildJobBody("audio2video", { ...args, audioUploadId: audio.uploadId });
-  return runJob("audio2video", args.prompt, body, args.outputPath, args.filename);
+  if (args.imagePath && uploadContentType(args.imagePath).kind !== "image") {
+    throw new Error("ASTRA video imagePath must be an image (.png/.jpg/.jpeg)");
+  }
+  const audio = args.audioPath !== void 0 ? await uploadFile(args.audioPath) : void 0;
+  if (audio) {
+    const sourceError = checkAudioSource(audio, args);
+    if (sourceError) throw new Error(`ASTRA video audio source refused: ${sourceError}`);
+  }
+  const audioUploadId = audio?.uploadId ?? args.audioUploadId;
+  const image = args.imagePath ? await uploadFile(args.imagePath) : void 0;
+  if (image && image.kind !== "image") throw new Error("ASTRA video imagePath must upload as image");
+  const images = image ? [{ uploadId: image.uploadId, frameIdx: 0 }] : void 0;
+  const body = buildJobBody("audio2video", { ...args, audioUploadId, images });
+  const result = await runJob("audio2video", args.prompt, body, args.outputPath, args.filename);
+  return { ...result, audioUploadId, audioExpiresAt: audio?.expiresAt, audioDuration: audio?.duration };
 }
 async function retakeVideo(args) {
   const source = await uploadFile(args.sourceVideoPath);
@@ -91914,12 +91957,13 @@ var OMNI_ASPECT_RATIO_PROPERTY = {
   enum: ["16:9", "9:16"],
   default: "16:9"
 };
-var ASTRA_NUM_FRAMES_PROPERTY = {
+var ASTRA_FRAME_LIMITS_DESCRIPTION = `generate/default: ${ASTRA_VIDEO_FRAME_LIMITS.generate}; guided: ${ASTRA_VIDEO_FRAME_LIMITS.guided}; guided_fast/fast: ${ASTRA_VIDEO_FRAME_LIMITS.guided_fast} (conservative, not generation-tested); keyframe: ${ASTRA_VIDEO_FRAME_LIMITS.keyframe} and audio2video: ${ASTRA_VIDEO_FRAME_LIMITS.audio2video} (both unmeasured / \uC548 \uC7BC).`;
+var astraNumFramesProperty = (mode) => ({
   type: "integer",
-  description: `Clip length in FRAMES, not seconds: 8k+1 between ${ASTRA_VIDEO_MIN_FRAMES} and ${ASTRA_VIDEO_MAX_FRAMES} (25, 33, 41 \u2026 481). The server default is 121, about 5.0 seconds at 24fps. A value off the 8k+1 grid is refused before the call. The 481-frame boundary is accepted by validation but has not been generation-tested.`,
+  description: `Clip length in FRAMES, not seconds: 8k+1, minimum ${ASTRA_VIDEO_MIN_FRAMES}. Mode ceilings: ${ASTRA_FRAME_LIMITS_DESCRIPTION} Server default: 121 (~5.0s at 24fps). Off-grid and over-limit values are refused before the call.`,
   minimum: ASTRA_VIDEO_MIN_FRAMES,
-  maximum: ASTRA_VIDEO_MAX_FRAMES
-};
+  maximum: ASTRA_VIDEO_FRAME_LIMITS[mode]
+});
 var ASTRA_AUTO_DURATION_PROPERTY = {
   type: "object",
   description: "Let the server pick the length inside a range instead of naming frames. After seconds are rounded at frameRate, the range must start at frame 1 or later, end at frame 121 or earlier, and contain an 8k+1 value. Ignored when numFrames is also given.",
@@ -94072,7 +94116,7 @@ Returns: a text block with the saved .mp4 path, the new interaction id, and the 
 Use when the shot is not time-critical and you would rather not spend vendor money: this server is ours, so a call costs wall clock instead of dollars, and no vendor content policy applies. It is also the only lane with an adapter (lora) for cinemagraph and slow-motion looks.
 Do NOT use when someone is waiting: the box renders ONE job at a time and yours queues behind whatever else is running. A measured 121-frame 1536x1024 render takes about 66s (tier "default"), 169s ("guided"), 121s ("fast") \u2014 plus the queue. For an immediate clip go to veo_text2video or seedance_text2video.
 tier picks the pipeline and also which arguments exist: lora only on "default", negativePrompt and numInferenceSteps only on "guided"/"fast". "fast" means a draft that is faster than "guided"; it is not faster than the default pipeline. Passing one to the wrong tier is refused before the call.
-Length is frames, not seconds: numFrames must be 8k+1 between 25 and 481 (121 = about 5.0s at 24fps, the server default; 481 passes validation but is not generation-tested). Give autoDuration instead to let the server choose at most 121 frames; the rounded range must contain an 8k+1 value. numFrames wins if both are given.
+Length is frames, not seconds: numFrames must be 8k+1, minimum 25. Mode ceilings: ${ASTRA_FRAME_LIMITS_DESCRIPTION} 121 = about 5.0s at 24fps, the server default. Give autoDuration instead to let the server choose at most 121 frames; the rounded range must contain an 8k+1 value. numFrames wins if both are given.
 ${ASTRA_LIMITS_LINE}
 Every clip comes back with a generated AAC audio track (48kHz stereo, measured) and there is no argument to turn it off \u2014 no mode's allow-list has one. If the episode lays its own narration or BGM over this clip, drop or duck the generated track in the edit instead of expecting silence.
 
@@ -94090,7 +94134,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
           enum: ["default", "guided", "fast"],
           default: "default"
         },
-        numFrames: ASTRA_NUM_FRAMES_PROPERTY,
+        numFrames: astraNumFramesProperty("generate"),
         autoDuration: ASTRA_AUTO_DURATION_PROPERTY,
         width: ASTRA_WIDTH_PROPERTY,
         height: ASTRA_HEIGHT_PROPERTY,
@@ -94114,6 +94158,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
 
 Use when a generated background or photo has to move and nobody is waiting on it \u2014 same trade as astra_text2video: free, ours, one job at a time. Give firstFramePath alone to animate from that frame, or add lastFramePath and the clip lands on it. The tool uploads the files itself; pass local paths, not ids.
 Do NOT use for more than two stills \u2014 that is astra_keyframe_video, which pins each image to a frame index. For an immediate clip use veo_img2video or seedance_img2video.
+tier accepts default (generate) or guided only. guided images require 1536x1024 (omitted dimensions use that size); fast images are not enabled. lora is default-only.
 The last frame is pinned to numFrames-1, so a 121-frame clip ends on frame 120. png, jpg and jpeg are accepted, up to 32 MiB each.
 ${ASTRA_LIMITS_LINE}
 Every clip comes back with a generated AAC audio track (48kHz stereo, measured) and there is no argument to turn it off \u2014 no mode's allow-list has one. If the episode lays its own narration or BGM over this clip, drop or duck the generated track in the edit instead of expecting silence.
@@ -94125,6 +94170,12 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
         prompt: {
           type: "string",
           description: "What happens between the frames \u2014 movement, camera, mood. English recommended. 1-2000 characters."
+        },
+        tier: {
+          type: "string",
+          enum: ["default", "guided"],
+          default: "default",
+          description: "default (generate), or guided at 1536x1024 only. fast images are unmeasured and not enabled."
         },
         firstFramePath: {
           type: "string",
@@ -94138,7 +94189,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
           type: "number",
           description: "How strictly the generated frames must match the supplied stills, 0.0-1.0 (default: 1.0 \u2014 hold the image exactly)."
         },
-        numFrames: ASTRA_NUM_FRAMES_PROPERTY,
+        numFrames: astraNumFramesProperty("generate"),
         width: ASTRA_WIDTH_PROPERTY,
         height: ASTRA_HEIGHT_PROPERTY,
         frameRate: ASTRA_FRAME_RATE_PROPERTY,
@@ -94200,7 +94251,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
             required: ["imagePath", "frameIdx"]
           }
         },
-        numFrames: ASTRA_NUM_FRAMES_PROPERTY,
+        numFrames: astraNumFramesProperty("keyframe"),
         width: ASTRA_WIDTH_PROPERTY,
         height: ASTRA_HEIGHT_PROPERTY,
         frameRate: ASTRA_FRAME_RATE_PROPERTY,
@@ -94219,9 +94270,9 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
     annotations: HINT.generate,
     description: `Render a clip driven by an existing audio track on the self-hosted ASTRA video API (mode audio2video).
 
-Use when the picture has to follow a sound you already have \u2014 a narration take, a music bed, a recorded effect \u2014 instead of the picture being cut to it afterwards. The tool uploads the audio itself; pass a local .wav or .mp3 path.
+Use when the picture has to follow a sound you already have \u2014 a narration take, a music bed, a recorded effect \u2014 instead of the picture being cut to it afterwards. Provide exactly one of audioPath (local .wav/.mp3) or audioUploadId (reuse an existing upload without uploading again). Reused ids have unknown expiry/duration locally, so the server checks them. Optionally give imagePath to pin one portrait to frame 0.
 Do NOT use to add sound to a finished clip: this generates new picture from the audio, it does not mux. The rendered video carries its own generated AAC track (48kHz stereo) rather than the audio you supplied, and there is no argument to turn it off \u2014 drop or duck it in the edit.
-Choose either numFrames or audioMaxDuration, never both. numFrames fixes the clip length. audioMaxDuration uses the shorter of that value and the audio remaining after audioStartTime, floors seconds \xD7 frameRate, then rounds down to 8k+1; more than 481 frames is refused. audioStartTime must be before the uploaded audio ends. With neither length field, the official default is 121 frames. A measured 121-frame render took about 170s plus queue.
+Choose either numFrames or audioMaxDuration, never both. numFrames fixes the clip length. audioMaxDuration uses the shorter of that value and the audio remaining after audioStartTime, floors seconds \xD7 frameRate, then rounds down to 8k+1; more than ${ASTRA_VIDEO_FRAME_LIMITS.audio2video} frames is refused when upload duration is known. audioStartTime must be before the uploaded audio ends. With neither length field, the official default is 121 frames. A measured 121-frame render took about 170s plus queue.
 ${ASTRA_LIMITS_LINE}
 
 Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and the request the server recorded.`,
@@ -94236,15 +94287,25 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
           type: "string",
           description: "Local path to the driving audio (.wav or .mp3, at most 32 MiB). Uploaded automatically."
         },
+        audioUploadId: {
+          type: "string",
+          minLength: 1,
+          description: "Existing audio upload id, mutually exclusive with audioPath. No upload or local source-duration check. Server rejects expired ids."
+        },
+        imagePath: {
+          type: "string",
+          minLength: 1,
+          description: "Optional local portrait (.png/.jpg/.jpeg, at most 32 MiB), pinned to frame 0."
+        },
         audioStartTime: {
           type: "number",
           description: "Seconds into the track to start reading from (default: 0). Must be less than the uploaded audio duration."
         },
         audioMaxDuration: {
           type: "number",
-          description: "Maximum seconds to use after audioStartTime. Mutually exclusive with numFrames. The shorter of this and the remaining audio determines a floored, 8k+1 frame count no greater than 481."
+          description: `Maximum seconds to use after audioStartTime. Mutually exclusive with numFrames. With a fresh upload, the shorter of this and remaining audio must produce at most ${ASTRA_VIDEO_FRAME_LIMITS.audio2video} frames on the 8k+1 grid. Reused ids defer duration checks to the server.`
         },
-        numFrames: ASTRA_NUM_FRAMES_PROPERTY,
+        numFrames: astraNumFramesProperty("audio2video"),
         width: ASTRA_WIDTH_PROPERTY,
         height: ASTRA_HEIGHT_PROPERTY,
         frameRate: ASTRA_FRAME_RATE_PROPERTY,
@@ -94254,7 +94315,8 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
         outputPath: ASTRA_OUTPUT_PATH_PROPERTY,
         filename: ASTRA_FILENAME_PROPERTY
       },
-      required: ["prompt", "audioPath"]
+      required: ["prompt"],
+      oneOf: [{ required: ["audioPath"] }, { required: ["audioUploadId"] }]
     }
   },
   {
@@ -106299,7 +106361,10 @@ ${pins}`);
     const parsed = parseArgs(astraAudio2VideoSchema, args);
     const result = await generateFromAudio(parsed);
     return text(`${astraVideoReport("Video generated from audio on the ASTRA video API", result)}
-Audio: ${parsed.audioPath}`);
+Audio: ${parsed.audioPath ?? "reused upload"}
+audioUploadId: ${result.audioUploadId}
+Audio expires at: ${result.audioExpiresAt ?? "unknown (reused upload or metadata unavailable)"}
+Audio duration (seconds): ${result.audioDuration ?? "unknown (reused upload or metadata unavailable)"}`);
   },
   astra_video_retake: async (args) => {
     const parsed = parseArgs(astraVideoRetakeSchema, args);
