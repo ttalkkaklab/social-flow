@@ -377,6 +377,28 @@ describe('per-tool schemas', () => {
 describe('measured ASTRA guidance', () => {
   const tool = name => TOOLS.find(t => t.name === name);
 
+  // The README ASTRA row is the third public surface beside tools and the engine guide.
+  // Keep the checks scoped to that row so unrelated model limits cannot satisfy them.
+  const readmeAstraRow = () => {
+    const readme = fs.readFileSync(new URL('../../README.md', import.meta.url), 'utf8');
+    const rows = readme.split('\n').filter(line => line.startsWith('| Video generation | `astra_text2video`'));
+    assert.equal(rows.length, 1, 'README must have one ASTRA video row');
+    return rows[0];
+  };
+  for (const [name, pattern] of [
+    ['server frame ceiling', /8k\+1, 25–193/],
+    ['guided and fast client ceiling', /guided\/fast client ceiling 121/],
+    ['pixel ceiling', /2,064,384-pixel ceiling/],
+    ['1088x1920 refusal at every frame count', /1088×1920 exceeds the area ceiling at every frame count/],
+    ['supplied audio preservation', /Clips carry 48kHz stereo AAC; `audio2video` carries the supplied sound re-encoded, rather than a newly generated track/],
+    ['stereo input and mono generation failure', /Stereo \(2-channel\) input is required: mono WAV passes acceptance but fails generation/],
+    ['default audio length', /With neither length argument, audio2video uses 121 frames \(~5\.04s\), not the source length/],
+    ['rounded audio length', /`audioMaxDuration: 8` selects 185 frames \(~7\.71s\) at 24fps/],
+    ['no audio-off argument', /There is no audio-off argument/],
+  ]) {
+    it(`README ASTRA documents ${name}`, () => assert.match(readmeAstraRow(), pattern));
+  }
+
   it('image warning keeps generate and guided failure frames separate', () => {
     const description = tool('astra_img2video').description;
     const frames = mode => description.match(new RegExp(`${mode} \\(width 1280, measured at [^)]+\\) failure frames: \\{([^}]+)\\}`))?.[1].split(',').map(Number);
