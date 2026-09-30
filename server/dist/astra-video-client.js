@@ -67,14 +67,14 @@ export const ASTRA_VIDEO_ALLOWED_FIELDS = {
     audio2video: ['audio_max_duration', 'audio_start_time', 'audio_upload_id', 'frame_rate', 'hdr', 'height', 'images', 'mode', 'negative_prompt', 'num_frames', 'num_inference_steps', 'prompt', 'seed', 'width'],
     retake: ['end_time', 'hdr', 'mode', 'prompt', 'seed', 'start_time', 'video_upload_id'],
 };
-/** Client ceilings: generate/guided measured; guided_fast conservative; other modes unmeasured. */
+/** Client ceilings: generate/guided measured; guided_fast conservative; server rejects all modes above 193. */
 export const ASTRA_VIDEO_MIN_FRAMES = 25;
 export const ASTRA_VIDEO_FRAME_LIMITS = {
     generate: 193,
     guided: 121,
     guided_fast: 121, // Conservative guided-family ceiling; not generation-tested.
-    keyframe: 481, // Not generation-tested.
-    audio2video: 481, // Not generation-tested.
+    keyframe: 193, // Server-enforced ceiling.
+    audio2video: 193, // Server-enforced ceiling.
 };
 export const ASTRA_VIDEO_FRAME_STEP = 8;
 /** Server-side automatic duration selection never chooses more than 121 frames. */

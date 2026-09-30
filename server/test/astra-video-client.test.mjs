@@ -327,12 +327,12 @@ describe('per-tool schemas', () => {
     );
   });
 
-  it('audio upload metadata rejects starts at the end and more than 481 selected frames', () => {
+  it('audio upload metadata rejects starts at the end and more than 193 selected frames', () => {
     const audio = { uploadId: 'a'.repeat(32), bytes: 1, kind: 'audio', duration: 30 };
-    assert.equal(checkAudioSource(audio, { audioStartTime: 0, audioMaxDuration: 20.1, frameRate: 24 }), null);
+    assert.equal(checkAudioSource(audio, { audioStartTime: 0, audioMaxDuration: 8.1, frameRate: 24 }), null);
     assert.match(
-      checkAudioSource(audio, { audioStartTime: 0, audioMaxDuration: 20.5, frameRate: 24 }),
-      /selects 489 frames.*maximum is 481/,
+      checkAudioSource(audio, { audioStartTime: 0, audioMaxDuration: 8.5, frameRate: 24 }),
+      /selects 201 frames.*maximum is 193/,
     );
     assert.match(checkAudioSource(audio, { audioStartTime: 30, numFrames: 121 }), /must be less than the source duration/);
   });
@@ -375,8 +375,11 @@ describe('per-tool schemas', () => {
 
 
 describe('mode-specific ceilings and new input contracts', () => {
-  it('every mode accepts its ceiling and refuses the next grid value', () => {
-    assert.deepEqual(ASTRA_VIDEO_FRAME_LIMITS, { generate: 193, guided: 121, guided_fast: 121, keyframe: 481, audio2video: 481 });
+  it('pins all five mode ceilings to the measured client and server limits', () => {
+    assert.deepEqual(ASTRA_VIDEO_FRAME_LIMITS, { generate: 193, guided: 121, guided_fast: 121, keyframe: 193, audio2video: 193 });
+  });
+
+  it('every text and image tier accepts its ceiling and refuses the next grid value', () => {
     for (const [tier, max] of [['default', 193], ['guided', 121], ['fast', 121]]) {
       parseOk(astraText2VideoSchema, { prompt: 'x', tier, numFrames: max });
       parseFails(astraText2VideoSchema, { prompt: 'x', tier, numFrames: max + 8 });
@@ -385,15 +388,20 @@ describe('mode-specific ceilings and new input contracts', () => {
       parseOk(astraImg2VideoSchema, { prompt: 'x', firstFramePath: 'a.png', tier, numFrames: max });
       parseFails(astraImg2VideoSchema, { prompt: 'x', firstFramePath: 'a.png', tier, numFrames: max + 8 });
     }
-    const images = [{ imagePath: 'a.png', frameIdx: 0 }, { imagePath: 'b.png', frameIdx: 480 }];
-    for (const [schema, args] of [
-      [astraKeyframeVideoSchema, { prompt: 'x', images }],
-      [astraAudio2VideoSchema, { prompt: 'x', audioUploadId: 'reuse' }],
-    ]) {
-      parseOk(schema, { ...args, numFrames: 481 });
-      for (const numFrames of [24, 480, 489]) parseFails(schema, { ...args, numFrames });
-    }
   });
+
+  for (const [mode, schema, args] of [
+    ['keyframe', astraKeyframeVideoSchema, { prompt: 'x', images: [{ imagePath: 'a.png', frameIdx: 0 }, { imagePath: 'b.png', frameIdx: 192 }] }],
+    ['audio2video', astraAudio2VideoSchema, { prompt: 'x', audioUploadId: 'reuse' }],
+  ]) {
+    it(`${mode} accepts 193 frames at the server ceiling`, () => {
+      parseOk(schema, { ...args, numFrames: 193 });
+    });
+    it(`${mode} refuses 201 frames above the server ceiling`, () => {
+      assert.match(parseFails(schema, { ...args, numFrames: 201 }), /193/);
+      for (const numFrames of [24, 192, 481, 489]) parseFails(schema, { ...args, numFrames });
+    });
+  }
 
   it('guided images only accept the measured size and reject fast and lora', () => {
     const args = { prompt: 'x', firstFramePath: 'a.png', tier: 'guided' };
@@ -415,18 +423,18 @@ describe('mode-specific ceilings and new input contracts', () => {
   });
 
   it('advertises the same mode limits and new arguments', () => {
-    for (const [name, max] of [['astra_text2video', 193], ['astra_img2video', 193], ['astra_keyframe_video', 481], ['astra_audio2video', 481]]) {
+    for (const [name, max] of [['astra_text2video', 193], ['astra_img2video', 193], ['astra_keyframe_video', 193], ['astra_audio2video', 193]]) {
       const property = TOOLS.find(t => t.name === name).inputSchema.properties.numFrames;
       assert.equal(property.maximum, max);
       assert.match(property.description, /guided: 121/);
-      assert.match(property.description, /unmeasured/);
+      assert.match(property.description, /server rejects values above 193/);
     }
     const image = TOOLS.find(t => t.name === 'astra_img2video');
     assert.deepEqual(image.inputSchema.properties.tier.enum, ['default', 'guided']);
     const audio = TOOLS.find(t => t.name === 'astra_audio2video');
     assert.deepEqual(audio.inputSchema.oneOf, [{ required: ['audioPath'] }, { required: ['audioUploadId'] }]);
     assert.ok(audio.inputSchema.properties.imagePath);
-    assert.match(audio.description, /rather than the audio you supplied/);
+    assert.match(audio.description, /supplied WAV re-encoded as AAC/);
   });
 });
 
