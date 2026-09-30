@@ -40,8 +40,8 @@ multiple of neither 64 nor 32. To fit a 1080x1920 canvas, widen the 1024-pixel o
 For image-conditioned calls, the server blocks **generate: {121,129,137}** at
 width 1280 (measured at heights 704/768) and **guided: {121}** at width 1280 (measured at height 704). Guided 129 and 137 succeeded in server probes;
 the client's existing guided ceiling is still 121. Generate 113/145 and guided 113 are measured
-frame alternatives within the current client limits; generate at width 1536 also succeeded at
-121 frames. The image-conditioned warning does not apply to `astra_text2video`: text-only
+frame alternatives within the current client limits; generate 1536x704 and 1536x1024 at
+121 frames also succeeded. The image-conditioned warning does not apply to `astra_text2video`: text-only
 1280x704 at 121 frames succeeded. An upstream defect is a hypothesis, not a confirmed cause.
 The server owns the failure-band acceptance gate; the client documents it without a second gate.
 
