@@ -77889,7 +77889,6 @@ var portal_api_contract_default = {
                         type: "object",
                         properties: {
                           enabled: {
-                            default: true,
                             type: "boolean"
                           },
                           model: {
@@ -77906,7 +77905,10 @@ var portal_api_contract_default = {
                             maxLength: 2e3,
                             format: "uri"
                           }
-                        }
+                        },
+                        required: [
+                          "enabled"
+                        ]
                       }
                     },
                     required: [
@@ -78108,7 +78110,6 @@ var portal_api_contract_default = {
                         type: "object",
                         properties: {
                           enabled: {
-                            default: true,
                             type: "boolean"
                           },
                           model: {
@@ -78125,7 +78126,10 @@ var portal_api_contract_default = {
                             maxLength: 2e3,
                             format: "uri"
                           }
-                        }
+                        },
+                        required: [
+                          "enabled"
+                        ]
                       }
                     },
                     required: [
@@ -81172,7 +81176,6 @@ var portal_api_contract_default = {
                         type: "object",
                         properties: {
                           enabled: {
-                            default: true,
                             type: "boolean"
                           },
                           model: {
@@ -81189,7 +81192,10 @@ var portal_api_contract_default = {
                             maxLength: 2e3,
                             format: "uri"
                           }
-                        }
+                        },
+                        required: [
+                          "enabled"
+                        ]
                       }
                     },
                     required: [
@@ -82488,7 +82494,6 @@ var portal_api_contract_default = {
                           type: "object",
                           properties: {
                             enabled: {
-                              default: true,
                               type: "boolean"
                             },
                             model: {
@@ -82505,7 +82510,10 @@ var portal_api_contract_default = {
                               maxLength: 2e3,
                               format: "uri"
                             }
-                          }
+                          },
+                          required: [
+                            "enabled"
+                          ]
                         }
                       },
                       required: [

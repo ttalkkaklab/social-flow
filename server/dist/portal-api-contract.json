@@ -1465,7 +1465,6 @@
                                                 "type": "object",
                                                 "properties": {
                                                     "enabled": {
-                                                        "default": true,
                                                         "type": "boolean"
                                                     },
                                                     "model": {
@@ -1482,7 +1481,10 @@
                                                         "maxLength": 2000,
                                                         "format": "uri"
                                                     }
-                                                }
+                                                },
+                                                "required": [
+                                                    "enabled"
+                                                ]
                                             }
                                         },
                                         "required": [
@@ -1684,7 +1686,6 @@
                                                 "type": "object",
                                                 "properties": {
                                                     "enabled": {
-                                                        "default": true,
                                                         "type": "boolean"
                                                     },
                                                     "model": {
@@ -1701,7 +1702,10 @@
                                                         "maxLength": 2000,
                                                         "format": "uri"
                                                     }
-                                                }
+                                                },
+                                                "required": [
+                                                    "enabled"
+                                                ]
                                             }
                                         },
                                         "required": [
@@ -4748,7 +4752,6 @@
                                                 "type": "object",
                                                 "properties": {
                                                     "enabled": {
-                                                        "default": true,
                                                         "type": "boolean"
                                                     },
                                                     "model": {
@@ -4765,7 +4768,10 @@
                                                         "maxLength": 2000,
                                                         "format": "uri"
                                                     }
-                                                }
+                                                },
+                                                "required": [
+                                                    "enabled"
+                                                ]
                                             }
                                         },
                                         "required": [
@@ -6064,7 +6070,6 @@
                                                     "type": "object",
                                                     "properties": {
                                                         "enabled": {
-                                                            "default": true,
                                                             "type": "boolean"
                                                         },
                                                         "model": {
@@ -6081,7 +6086,10 @@
                                                             "maxLength": 2000,
                                                             "format": "uri"
                                                         }
-                                                    }
+                                                    },
+                                                    "required": [
+                                                        "enabled"
+                                                    ]
                                                 }
                                             },
                                             "required": [
