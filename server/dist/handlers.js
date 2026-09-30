@@ -847,7 +847,7 @@ export const ROUTES = {
     astra_audio2video: async (args) => {
         const parsed = parseArgs(astraVideo.astraAudio2VideoSchema, args);
         const result = await astraVideo.generateFromAudio(parsed);
-        return text(`${astraVideoReport('Video generated from audio on the ASTRA video API', result)}\nAudio: ${parsed.audioPath}`);
+        return text(`${astraVideoReport('Video generated from audio on the ASTRA video API', result)}\nAudio: ${parsed.audioPath ?? 'reused upload'}\naudioUploadId: ${result.audioUploadId}\nAudio expires at: ${result.audioExpiresAt ?? 'unknown (reused upload or metadata unavailable)'}\nAudio duration (seconds): ${result.audioDuration ?? 'unknown (reused upload or metadata unavailable)'}`);
     },
     astra_video_retake: async (args) => {
         const parsed = parseArgs(astraVideo.astraVideoRetakeSchema, args);

@@ -10,11 +10,18 @@
 
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
+import { config } from '../dist/config.js';
+import { ROUTES } from '../dist/handlers.js';
+import { TOOLS } from '../dist/tools.js';
 
 import packageMetadata from '../package.json' with { type: 'json' };
 
 import {
   ASTRA_VIDEO_ALLOWED_FIELDS,
+  ASTRA_VIDEO_FRAME_LIMITS,
   ASTRA_VIDEO_LORAS,
   ASTRA_VIDEO_MAX_PIXELS,
   ASTRA_VIDEO_TIERS,
@@ -181,11 +188,11 @@ describe('buildJobBody — wire shape', () => {
 });
 
 describe('validators', () => {
-  it('frame counts are 8k+1 within 25..481', () => {
-    for (const good of [25, 33, 121, 481]) {
+  it('generate frame counts are 8k+1 within 25..193', () => {
+    for (const good of [25, 33, 121, 193]) {
       parseOk(astraText2VideoSchema, { prompt: 'x', numFrames: good });
     }
-    for (const bad of [9, 24, 120, 489]) {
+    for (const bad of [9, 24, 120, 194, 201, 481, 489]) {
       parseFails(astraText2VideoSchema, { prompt: 'x', numFrames: bad });
     }
   });
@@ -363,5 +370,149 @@ describe('per-tool schemas', () => {
     parseFails(astraText2VideoSchema, { prompt: '' });
     parseFails(astraText2VideoSchema, { prompt: long });
     parseFails(astraVideoRetakeSchema, { prompt: long, sourceVideoPath: '/tmp/a.mp4', startTime: 0, endTime: 1 });
+  });
+});
+
+
+describe('mode-specific ceilings and new input contracts', () => {
+  it('every mode accepts its ceiling and refuses the next grid value', () => {
+    assert.deepEqual(ASTRA_VIDEO_FRAME_LIMITS, { generate: 193, guided: 121, guided_fast: 121, keyframe: 481, audio2video: 481 });
+    for (const [tier, max] of [['default', 193], ['guided', 121], ['fast', 121]]) {
+      parseOk(astraText2VideoSchema, { prompt: 'x', tier, numFrames: max });
+      parseFails(astraText2VideoSchema, { prompt: 'x', tier, numFrames: max + 8 });
+    }
+    for (const [tier, max] of [['default', 193], ['guided', 121]]) {
+      parseOk(astraImg2VideoSchema, { prompt: 'x', firstFramePath: 'a.png', tier, numFrames: max });
+      parseFails(astraImg2VideoSchema, { prompt: 'x', firstFramePath: 'a.png', tier, numFrames: max + 8 });
+    }
+    const images = [{ imagePath: 'a.png', frameIdx: 0 }, { imagePath: 'b.png', frameIdx: 480 }];
+    for (const [schema, args] of [
+      [astraKeyframeVideoSchema, { prompt: 'x', images }],
+      [astraAudio2VideoSchema, { prompt: 'x', audioUploadId: 'reuse' }],
+    ]) {
+      parseOk(schema, { ...args, numFrames: 481 });
+      for (const numFrames of [24, 480, 489]) parseFails(schema, { ...args, numFrames });
+    }
+  });
+
+  it('guided images only accept the measured size and reject fast and lora', () => {
+    const args = { prompt: 'x', firstFramePath: 'a.png', tier: 'guided' };
+    for (const dims of [{}, { width: 1536 }, { height: 1024 }, { width: 1536, height: 1024 }]) parseOk(astraImg2VideoSchema, { ...args, ...dims });
+    for (const dims of [{ width: 1280, height: 704 }, { width: 1024 }, { height: 1536 }]) parseFails(astraImg2VideoSchema, { ...args, ...dims });
+    parseFails(astraImg2VideoSchema, { ...args, tier: 'fast' });
+    parseFails(astraImg2VideoSchema, { ...args, lora: ['cinemagraph'] });
+    parseOk(astraImg2VideoSchema, { ...args, tier: 'default', width: 1280, height: 704, lora: ['cinemagraph'] });
+  });
+
+  it('audio takes exactly one nonblank source and an optional nonblank portrait', () => {
+    for (const source of [{ audioPath: 'a.wav' }, { audioUploadId: 'reuse' }]) {
+      parseOk(astraAudio2VideoSchema, { prompt: 'x', ...source });
+      parseOk(astraAudio2VideoSchema, { prompt: 'x', ...source, imagePath: 'face.png' });
+      parseFails(astraAudio2VideoSchema, { prompt: 'x', ...source, imagePath: '' });
+      parseFails(astraAudio2VideoSchema, { prompt: 'x', ...source, numFrames: 121, audioMaxDuration: 5 });
+    }
+    for (const source of [{}, { audioPath: 'a.wav', audioUploadId: 'reuse' }, { audioPath: '' }, { audioUploadId: ' ' }]) parseFails(astraAudio2VideoSchema, { prompt: 'x', ...source });
+  });
+
+  it('advertises the same mode limits and new arguments', () => {
+    for (const [name, max] of [['astra_text2video', 193], ['astra_img2video', 193], ['astra_keyframe_video', 481], ['astra_audio2video', 481]]) {
+      const property = TOOLS.find(t => t.name === name).inputSchema.properties.numFrames;
+      assert.equal(property.maximum, max);
+      assert.match(property.description, /guided: 121/);
+      assert.match(property.description, /unmeasured/);
+    }
+    const image = TOOLS.find(t => t.name === 'astra_img2video');
+    assert.deepEqual(image.inputSchema.properties.tier.enum, ['default', 'guided']);
+    const audio = TOOLS.find(t => t.name === 'astra_audio2video');
+    assert.deepEqual(audio.inputSchema.oneOf, [{ required: ['audioPath'] }, { required: ['audioUploadId'] }]);
+    assert.ok(audio.inputSchema.properties.imagePath);
+    assert.match(audio.description, /rather than the audio you supplied/);
+  });
+});
+
+// All network requests are intercepted. Unexpected routes fail; no LTX calls are made.
+describe('mocked tool calls', () => {
+  async function withServer(fn) {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'astra-contract-'));
+    const oldKey = config.astraVideoApiKey;
+    const oldFetch = globalThis.fetch;
+    config.astraVideoApiKey = 'test-only-key';
+    const uploads = [], jobs = [];
+    let duration = 30, rejectJob = false;
+    globalThis.fetch = async (url, init = {}) => {
+      const pathname = new URL(url).pathname;
+      if (pathname === '/v1/uploads') {
+        const kind = init.headers['Content-Type'].startsWith('image/') ? 'image' : 'audio';
+        uploads.push(kind);
+        return Response.json({ upload_id: `${kind}-id`, kind, bytes: 4, duration, expires_at: '2026-10-01T04:00:00Z' }, { status: 201 });
+      }
+      if (pathname === '/v1/jobs') {
+        jobs.push(JSON.parse(init.body));
+        if (rejectJob) return new Response('expired audio upload', { status: 400 });
+        return Response.json({ job_id: 'test-job' }, { status: 202 });
+      }
+      if (pathname === '/v1/jobs/test-job') return Response.json({ status: 'succeeded', request: jobs.at(-1) });
+      if (pathname === '/v1/jobs/test-job/result') return new Response('mock-mp4');
+      throw new Error(`Unexpected mocked route ${pathname}`);
+    };
+    fs.writeFileSync(path.join(dir, 'a.wav'), 'wave');
+    fs.writeFileSync(path.join(dir, 'face.png'), 'png');
+    try { await fn({ dir, uploads, jobs, setDuration: value => { duration = value; }, rejectJob: () => { rejectJob = true; } }); }
+    finally { globalThis.fetch = oldFetch; config.astraVideoApiKey = oldKey; fs.rmSync(dir, { recursive: true, force: true }); }
+  }
+
+  it('uploads audio and portrait, pins frame zero and reports reusable metadata', async () => {
+    await withServer(async ({ dir, uploads, jobs }) => {
+      const result = await ROUTES.astra_audio2video({ prompt: 'x', audioPath: path.join(dir, 'a.wav'), imagePath: path.join(dir, 'face.png'), outputPath: dir });
+      assert.deepEqual(uploads, ['audio', 'image']);
+      assert.equal(jobs[0].audio_upload_id, 'audio-id');
+      assert.deepEqual(jobs[0].images, [{ upload_id: 'image-id', frame_idx: 0 }]);
+      assert.match(result.content[0].text, /audioUploadId: audio-id/);
+      assert.match(result.content[0].text, /Audio expires at: 2026-10-01T04:00:00Z/);
+      assert.match(result.content[0].text, /Audio duration \(seconds\): 30/);
+    });
+  });
+
+  it('reuses an id without uploading or source-duration validation', async () => {
+    await withServer(async ({ dir, uploads, jobs }) => {
+      const result = await ROUTES.astra_audio2video({ prompt: 'x', audioUploadId: 'reuse', audioStartTime: 999, audioMaxDuration: 99, outputPath: dir });
+      assert.deepEqual(uploads, []);
+      assert.equal(jobs[0].audio_upload_id, 'reuse');
+      assert.equal(jobs[0].audio_start_time, 999);
+      assert.equal(jobs[0].images, undefined);
+      assert.match(result.content[0].text, /audioUploadId: reuse/);
+      assert.match(result.content[0].text, /Audio expires at: unknown/);
+      assert.match(result.content[0].text, /Audio duration \(seconds\): unknown/);
+    });
+  });
+
+  it('surfaces server refusal of reused ids', async () => {
+    await withServer(async ({ uploads, rejectJob }) => {
+      rejectJob();
+      await assert.rejects(ROUTES.astra_audio2video({ prompt: 'x', audioUploadId: 'expired' }), /expired audio upload/);
+      assert.deepEqual(uploads, []);
+    });
+  });
+
+  it('rejects invalid input and fresh audio duration before job submission', async () => {
+    await withServer(async ({ dir, uploads, jobs, setDuration }) => {
+      await assert.rejects(ROUTES.astra_audio2video({ prompt: 'x', audioPath: 'a.wav', audioUploadId: 'reuse' }), /exactly one/);
+      await assert.rejects(ROUTES.astra_audio2video({ prompt: 'x', audioUploadId: 'reuse', imagePath: 'not-image.wav' }), /must be an image/);
+      await assert.rejects(ROUTES.astra_img2video({ prompt: 'x', firstFramePath: 'face.png', tier: 'guided', width: 1280, height: 704 }), /1536x1024/);
+      assert.deepEqual(uploads, []);
+      setDuration(1);
+      await assert.rejects(ROUTES.astra_audio2video({ prompt: 'x', audioPath: path.join(dir, 'a.wav'), audioStartTime: 1 }), /source duration/);
+      assert.deepEqual(jobs, []);
+    });
+  });
+
+  it('guided image calls send the tier and explicit measured default dimensions', async () => {
+    await withServer(async ({ dir, jobs }) => {
+      await ROUTES.astra_img2video({ prompt: 'x', tier: 'guided', firstFramePath: path.join(dir, 'face.png'), lastFramePath: path.join(dir, 'face.png'), numFrames: 121, outputPath: dir });
+      assert.equal(jobs[0].mode, 'guided');
+      assert.equal(jobs[0].width, 1536);
+      assert.equal(jobs[0].height, 1024);
+      assert.equal(jobs[0].images[1].frame_idx, 120);
+    });
   });
 });
