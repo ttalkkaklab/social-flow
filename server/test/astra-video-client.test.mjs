@@ -421,6 +421,22 @@ describe('measured ASTRA guidance', () => {
     assert.match(guide, /generate 1536x704 and 1536x1024 at\s+121 frames also succeeded/);
   });
 
+  for (const [surface, read] of [
+    ['image tool', () => tool('astra_img2video').description],
+    ['engine guide', () => fs.readFileSync(new URL('../../skills/produce/references/video-model-selection.md', import.meta.url), 'utf8')],
+  ]) {
+    it(`${surface} gives the guided probe success point`, () => {
+      assert.match(read(), /Guided (?:129\/137|129 and 137) succeeded at 1280x704 in server probes \(the only guided size probed\)/);
+    });
+    it(`${surface} recommends generate frames at their measured point`, () => {
+      assert.match(read(), /Within current client limits use\s+generate 113\/145 \(measured at 1280x704\)/);
+    });
+    it(`${surface} excludes guided probes from client alternatives`, () => {
+      assert.match(read(), /The client requires 1536x1024 for guided images,\s+so the guided 1280x704 probes are not client alternatives/);
+      assert.doesNotMatch(read(), /(?:or|and) guided 113/);
+    });
+  }
+
   it('text-only tool does not advertise an image-conditioned failure band', () => {
     assert.doesNotMatch(tool('astra_text2video').description, /image-conditioned|failure frames|CUDA illegal memory access/);
   });
