@@ -1426,6 +1426,14 @@ function check(win, fmt, opts) {
       });
     }
 
+    // `sound.drop` cuts the bed under this shot, so it carries the same card restriction the
+    // silence window carries: a broll or an outro is not a card. The two checks used to disagree —
+    // and the one that was missing cost more than a lost error message, because the reversal budget
+    // below counts a dropping shot without asking what kind it is. An outro drop put in to clear
+    // room for the brand sting was spending one of the episode's two reversal places.
+    if (s.sound && s.sound.drop === true && (s.type === 'broll' || s.type === 'outro'))
+      bad(where, `sound.drop on a ${s.type} — not a card`);
+
     // Explicit music-only silence windows preserve narration and room tone. Full digital silence
     // is not represented here because it would also erase the words the shot is meant to carry.
     if (s.sound && s.sound.silence !== undefined) {
@@ -2394,6 +2402,13 @@ function selftest() {
   const dropShot = (base) => Object.assign({}, base, { sound: { drop: true } });
   const silenceShot = (base, n) => Object.assign({}, base, {
     sound: { silence: Array.from({ length: n }, (_, i) => ({ startSeconds: i, endSeconds: i + 0.5, scope: 'music' })) } });
+  // `drop` carries the card restriction the silence window carries — and an outro drop used to
+  // spend a reversal place, so the pair below checks both the refusal and the budget.
+  ok('sound.drop on an outro is a violation',
+     has(bads(run([cover, goodShot, ctaShot, Object.assign({ type: 'outro', visual: {} }, { sound: { drop: true } })])),
+         /sound\.drop on a outro — not a card/));
+  ok('sound.drop on a card passes',
+     !has(bads(run([cover, dropShot(goodShot), ctaShot])), /sound\.drop on a/));
   const bothShot = (base) => Object.assign({}, base, {
     sound: { drop: true, silence: [{ startSeconds: 0, endSeconds: 0.5, scope: 'music' }] } });
   ok('two reversal places pass',

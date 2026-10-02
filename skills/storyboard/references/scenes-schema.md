@@ -2082,6 +2082,10 @@ sets the music below measured narration; `minimumSeparationLu` is the speech-tim
 `ambienceSeparationLu` does the same for the room-tone bed (`AMB_SEP`, 15 by default), which is laid
 once and never ducked.
 
+`drop` carries the same card restriction the silence window carries — `broll` and `outro` are
+refused. An outro drop put in to clear room for the brand sting used to spend one of the two
+reversal places below.
+
 **Reversal places are an episode budget of two.** A shot with `drop: true`, or one carrying any
 `silence` window, is one reversal place, and `check-scenes.js` refuses a third. The unit is the
 shot, so a card that both drops the bed and empties a window still counts once. Impacts are not
