@@ -76424,6 +76424,115 @@ import path2 from "node:path";
 // src/portal-api-contract.json
 var portal_api_contract_default = {
   version: 1,
+  sourceHashes: {
+    "src/app/api/assets/[assetId]/binary/route.ts": "dd971cff9eb01137b815388b13198073765135556752974b0399f86384ca86ee",
+    "src/app/api/assets/[assetId]/route.ts": "31652c1c419fffb1156d51ccc411453cddb95862eaff9256cd3bb544697e7262",
+    "src/app/api/assets/route.ts": "0a4314d3375cd0ea8c8eabb649a86810efdceb48d6d8ff91056280d58f722899",
+    "src/app/api/auth/dev-login/route.ts": "dd9bb891797b76c0511afa86794e08f473f856770d9f333e0a2294e43a279c7b",
+    "src/app/api/auth/logout/route.ts": "2fad32a2281bb0e702534e6ffa28768fdbf89a71ad955f8c8c7324e3b13f6b71",
+    "src/app/api/auth/session/route.ts": "8f1695cd57248c194e412c1c1b4fe6c27a551e836d29137175e9c26d2ae13405",
+    "src/app/api/health/route.ts": "95666fdbc04718b9f872cec2ec01163c268d029febfd38c908dad02070fa3786",
+    "src/app/api/invitations/[token]/accept/route.ts": "f09aaf6170a2004ad6b85d8881825796b247647843ec4f5e3fc041672632c621",
+    "src/app/api/token/route.ts": "fefae2190f44e0d3f5492679e462cc0602ed9809fdc940896a7c3560bf3b86d7",
+    "src/app/api/workspaces/[workspaceSlug]/api-keys/[tokenId]/route.ts": "9628a1f3dd9d4b4385f03bf97eacd4f85c31f1e2072a1915b8c15c5110cb99d5",
+    "src/app/api/workspaces/[workspaceSlug]/api-keys/route.ts": "91a6bcc21926a9303c0f74a722f6523c64c080ca1d95096efcd17bb8bbd5273a",
+    "src/app/api/workspaces/[workspaceSlug]/assets/[assetId]/binary/route.ts": "3e4be57b25a4906a26c3298be632728ce215aa9b9faa6fbf3134cf381f25a154",
+    "src/app/api/workspaces/[workspaceSlug]/assets/[assetId]/route.ts": "16d0e0baabe47d729922b5a4f6e3a2dad8ecc6088b1b893048ceea2d81c2ac6e",
+    "src/app/api/workspaces/[workspaceSlug]/assets/route.ts": "443475cd8349fadfec01947d741dc4208d722605b09e7bdf6ea0b5d4c4f003de",
+    "src/app/api/workspaces/[workspaceSlug]/backgrounds/[backgroundId]/route.ts": "cdecdb442bd555562b1e054ba50e5bf7c46288eb4fe9e42457c82e3c386eb0c7",
+    "src/app/api/workspaces/[workspaceSlug]/characters/[characterId]/image/route.ts": "24814ae463e4d770588df1d8812c3b6f6b26529104074aa51eb09ea23417dff4",
+    "src/app/api/workspaces/[workspaceSlug]/characters/[characterId]/images/[view]/route.ts": "6777208f74b4c1e1b0b6e23df640d70a30a6d13ec18d64dadf7cafdf398a59ef",
+    "src/app/api/workspaces/[workspaceSlug]/characters/[characterId]/images/extra/[imageId]/route.ts": "d4108833ebe4d7cf3e27f0c41ef343c0fee30e7cbb55d345ee9dd49e78d4085f",
+    "src/app/api/workspaces/[workspaceSlug]/characters/[characterId]/images/extra/route.ts": "058419bae5bc5671a15bbb461b19fff4411877637e02d17ff057d473ff5bf26d",
+    "src/app/api/workspaces/[workspaceSlug]/characters/[characterId]/route.ts": "ca4c4a0989dcd203bc3f31468e52377ee585b7f715b7eddb9cbc963ec06d5b45",
+    "src/app/api/workspaces/[workspaceSlug]/characters/[characterId]/voice-sample/route.ts": "ae85c781ab93ff5059b0d16b9f64f928aedaa292eab15258d95daa52541f7dcb",
+    "src/app/api/workspaces/[workspaceSlug]/characters/route.ts": "a11b9aa4df233e2189442c2d8ab572f77e9fbd2f437d80d16b6d90229cb0ed5f",
+    "src/app/api/workspaces/[workspaceSlug]/episodes/[episodeId]/artifacts/route.ts": "6a095d644c66b1a74eb61208da31c6a759df5f5095fc19d36d387627a8be2025",
+    "src/app/api/workspaces/[workspaceSlug]/episodes/[episodeId]/attachments/[attachmentId]/route.ts": "3fa544fd94a40e2a7f419c5da0f01e06706cc60b9157834b6a5c42c926eba82d",
+    "src/app/api/workspaces/[workspaceSlug]/episodes/[episodeId]/attachments/route.ts": "466565db71830018a87886f9a72daf3d02086a8edc59692ae2e4bac4548a0d75",
+    "src/app/api/workspaces/[workspaceSlug]/episodes/[episodeId]/decisions/route.ts": "0ad1bf3dc115a88374e390a7c858b55e61632ccbfec02bd4e007d3a30459a878",
+    "src/app/api/workspaces/[workspaceSlug]/episodes/[episodeId]/documents/[filename]/route.ts": "da7e7e0cb498c22a786f5f797c542dad7cbca2030deebd0740fbc3708bab41ef",
+    "src/app/api/workspaces/[workspaceSlug]/episodes/[episodeId]/images/[imageId]/route.ts": "89f53661ccb4cf3157cbf0f6d64fa3b835f77c002fa11f33e6052e41878e5204",
+    "src/app/api/workspaces/[workspaceSlug]/episodes/[episodeId]/images/route.ts": "aa4c9f19c617447fce1ba88e0f350277e5053736a0d5259ba565518460945011",
+    "src/app/api/workspaces/[workspaceSlug]/episodes/[episodeId]/lease/route.ts": "44f63187dff62ddf8b2cd3fd2c530858d44cd78d954c5b728f69c44dd56a1c52",
+    "src/app/api/workspaces/[workspaceSlug]/episodes/[episodeId]/media/[mediaId]/route.ts": "0b26c5b9c0898ba8d7628eae653ad2ae9a445ce3e3a61661f46202a9d5d6208d",
+    "src/app/api/workspaces/[workspaceSlug]/episodes/[episodeId]/media/route.ts": "60b548775e0bddf7033fd547f9acd4f67c9ac8d6443a2850057c332e60cab3cc",
+    "src/app/api/workspaces/[workspaceSlug]/episodes/[episodeId]/publications/route.ts": "228e8a816f977e497142264bf3879ea6135329b20b6a29cc83270decb6ee2fee",
+    "src/app/api/workspaces/[workspaceSlug]/episodes/[episodeId]/render-allocation/route.ts": "193c4268c25eb58ab7d5b5f5ff0978243a87aa338017e1c38d50fc3a0007001d",
+    "src/app/api/workspaces/[workspaceSlug]/episodes/[episodeId]/reviews/route.ts": "5729852c33a1e1fb10d77a53b23ed3aee15a9cd2cb5a5fe1e681931a8ab7c6ad",
+    "src/app/api/workspaces/[workspaceSlug]/episodes/[episodeId]/revisions/[revisionNo]/diff/[toRevisionNo]/route.ts": "3a1be47fcdae91ec3c17175c9f83ddfd90edbc3828fdba6844033bb1103d468a",
+    "src/app/api/workspaces/[workspaceSlug]/episodes/[episodeId]/revisions/[revisionNo]/restore/route.ts": "eec4c83894c60694ca7e5abf8502d7fc4617e3ae8577a137c893d0b8c9ef3b42",
+    "src/app/api/workspaces/[workspaceSlug]/episodes/[episodeId]/revisions/[revisionNo]/route.ts": "dfadb2104b11fa03bc89320db8da708e44be68ba27ee17390606839a2845fbae",
+    "src/app/api/workspaces/[workspaceSlug]/episodes/[episodeId]/revisions/route.ts": "7a4364189ef1f991d2e5bbae2f65cc8b69fc1cbf508dc8185119e336c60bb4d6",
+    "src/app/api/workspaces/[workspaceSlug]/episodes/[episodeId]/route.ts": "6e4fe4ee4b588c1112830e10712dfe6f35a90d8a33acab57277aef566e4a48cc",
+    "src/app/api/workspaces/[workspaceSlug]/episodes/[episodeId]/scenarios/[candidate]/choose/route.ts": "216d13a6745c6037e1a818a7119437bcee1084d0c0bc86f98fd7b561bf9f8aa2",
+    "src/app/api/workspaces/[workspaceSlug]/episodes/[episodeId]/scenarios/[candidate]/route.ts": "0c6fd563f591261d428f194068a6542e3d7e6f970894215e7754e71b0daf978a",
+    "src/app/api/workspaces/[workspaceSlug]/episodes/[episodeId]/scenarios/[candidate]/scenario.md/route.ts": "2fdf3b6676d59efb2c59dae1c8fe3d7fe536b4989e40e620920ad33efaea0e49",
+    "src/app/api/workspaces/[workspaceSlug]/episodes/[episodeId]/scenarios/route.ts": "afdb3c9e952b9b35fd41648fee49d24cbe9fdbf8abc06a42a3b856f167b12920",
+    "src/app/api/workspaces/[workspaceSlug]/episodes/[episodeId]/scenes.js/route.ts": "e1517b26be7b57cf391853cdae477035183dab2d4d5d752c92e622daca816f00",
+    "src/app/api/workspaces/[workspaceSlug]/episodes/[episodeId]/shots/[shotId]/voice-lock/route.ts": "d45b032164142df772e10a9a713cc6a654de873f57f633d39c3e61ab6f91ecb0",
+    "src/app/api/workspaces/[workspaceSlug]/episodes/[episodeId]/style-preset/route.ts": "b34032a65d1f4020af425595f99fb530d0ef37e6da54a10fd6750bc00f5eb18a",
+    "src/app/api/workspaces/[workspaceSlug]/invitations/[invitationId]/route.ts": "3be77148ca77dfee95cab200b455ff2a5a7892ee468d478eaae5e668dd1128ed",
+    "src/app/api/workspaces/[workspaceSlug]/invitations/route.ts": "5e4578e999aa4b38f50e14adcdc0e0e8c962cf03aa5e8f8a95848e577de12f37",
+    "src/app/api/workspaces/[workspaceSlug]/me/route.ts": "f71f91e4c11f63031aa82b1531698fcc2913c3eb68b46291e3cd8db0138f7eae",
+    "src/app/api/workspaces/[workspaceSlug]/members/[userId]/route.ts": "74de5669140d69b5df5a8a10d0169390498b61e509d4ab01a2565249e7297c4f",
+    "src/app/api/workspaces/[workspaceSlug]/members/route.ts": "5cf302d5ff1195cd957d40e6864358ebc14a84fd35f74ab023f687918ad7759f",
+    "src/app/api/workspaces/[workspaceSlug]/projects/[projectId]/attachments/[attachmentId]/route.ts": "8869a87c1e896e8664b84030cdd2ab0e7d42dea1549274495d62c48c956e557e",
+    "src/app/api/workspaces/[workspaceSlug]/projects/[projectId]/attachments/route.ts": "f550960e37a3deabfe206b3945587c9406ebd3b39114b8720d9660a1ee303f07",
+    "src/app/api/workspaces/[workspaceSlug]/projects/[projectId]/backgrounds/route.ts": "0722716cc365a12f2b63041dd4981a85383013f0efe68e12574ff43e8d31dedb",
+    "src/app/api/workspaces/[workspaceSlug]/projects/[projectId]/characters/route.ts": "988e4103999780378841e86d011257c178e87ec9103b4f5dffb31d3a6c7cae77",
+    "src/app/api/workspaces/[workspaceSlug]/projects/[projectId]/profile/route.ts": "9a2f8e051d9366cd387b47fed74b5f8c8f454189aeb8c14120b2646d589d840b",
+    "src/app/api/workspaces/[workspaceSlug]/projects/[projectId]/props/route.ts": "51d6bc8d6daa4d3741592ced1d776d2162533bc943a92c0246cf715f4df7b3f0",
+    "src/app/api/workspaces/[workspaceSlug]/projects/[projectId]/route.ts": "97bcbaa40f8bdadd70b9e18ce7f6f0074a07e74af75012108e95e8a52c6f9d22",
+    "src/app/api/workspaces/[workspaceSlug]/projects/[projectId]/sound/route.ts": "faef28e5a9f08d63e83256fc34aa9510a385305c09b095b249e7aaf7f9568c84",
+    "src/app/api/workspaces/[workspaceSlug]/projects/route.ts": "5c5057a93bb9411a92d70253beac44323922944071ecff917e3fe2960d323314",
+    "src/app/api/workspaces/[workspaceSlug]/props/[propId]/route.ts": "c45fdf7a60c43fdf22f1278c62e2bf3db8159b409639035a646e354cd51c0e53",
+    "src/app/api/workspaces/[workspaceSlug]/scenes/search/route.ts": "ff67cd134096148520081a1c08e6dd995763a02c23b67d1840bc025fcd26469d",
+    "src/app/api/workspaces/[workspaceSlug]/settings/route.ts": "a758eefce0bc47c89b43d7e11c5ab8004789e44cd33acb42b4ccb20385f73cd5",
+    "src/app/api/workspaces/[workspaceSlug]/storyboards/[storyboardId]/episodes/route.ts": "fd2f8cea3e62fc1f978b2ff87ff697f62cb86569cbf226a62d1c86079bfed1d0",
+    "src/app/api/workspaces/[workspaceSlug]/storyboards/[storyboardId]/registry/route.ts": "d4e6798a440246e2b20e565cacb59e92694b4792a8e35efff635120f59a86520",
+    "src/app/api/workspaces/[workspaceSlug]/storyboards/[storyboardId]/route.ts": "0cec9428127e4ce7cd51879f1748bd5e18546eb74200818d22ff161101778077",
+    "src/app/api/workspaces/[workspaceSlug]/storyboards/import/route.ts": "27d0a6caea4962e3f10b6ceb47afc3f9cba6ef8fb161dc14ed93c7c128e10c6f",
+    "src/app/api/workspaces/[workspaceSlug]/storyboards/route.ts": "658470b8ff615f96621f1d439c92a0cc55bcd1a7d35e94169ce8aa1f290f18ae",
+    "src/app/api/workspaces/route.ts": "809c9bca260f2b09519c37e6af26c0b70745e89d49df840b9b4053c0a3b1a019",
+    "src/features/apikey/schema.ts": "5189b0d9a5dcc7e5c3b73484b25247351cf3b94138fbf6bceffc7061aafdcc1d",
+    "src/features/auth/schema.ts": "2ca03196977a2a824b3474e01ab98241862d1e255fe4471b394bcfeabb39372f",
+    "src/features/characters/schema.ts": "c58200bc5a181bc4f3e0b59e269d3fd6bc694623de30f6a2b5f7699235856259",
+    "src/features/entity/schema.ts": "15af7f6820514068c7c7c4527be53821b3abccb1e7d3d4cb1a033b4427bafbdd",
+    "src/features/invite/schema.ts": "c2f6c3e3edd8a723ee7ba0a684e78cbdaa9e23f51942c2618ef584835ca42614",
+    "src/features/member/schema.ts": "a813bb3ebe33b9e1ac011d3f400f08e06aee60da53e2948631380fcad7b35fac",
+    "src/features/project/schema.ts": "128df2351f2cf93ae59984ff6b3811e02e2bcb2367428c8d200f35c0edff425a",
+    "src/features/storyboard/artifacts.ts": "a8a6b0a011f3e8644f0e5ef58c6939adb1cc4565fb1bcc1fc59e849932f7b8f6",
+    "src/features/storyboard/decision-schema.ts": "afee267ccf92ca6326edd416faa07ae14e5750436754d81d01a6dda8a2f07ee3",
+    "src/features/storyboard/import-schema.ts": "ecb9ddc819401019abaec2cf9787fcea95431747716fdb0cf5c44e70b36a73b0",
+    "src/features/storyboard/render-ratio.ts": "2d4e6aee402c86542d0ac4adffd43a081e8732a5cd8bbe77644fb167ddaccdf6",
+    "src/features/storyboard/review-schema.ts": "57c38b38f458744b9825b488052890d081e332b541122dc97e67bdb04c3610be",
+    "src/features/storyboard/scenario-schema.ts": "c93027356a2b2523fe05d1cc7bffca23ae769cc1b3f47c140beb5540f0587b1a",
+    "src/features/storyboard/scenario.ts": "87e361f8ab9ab4c5904a94f6eff6f667169aa98b750ddc7311ef4572d80b2117",
+    "src/features/storyboard/schema.ts": "a593d7e827a5eb81bc97234ca8b946ae1b66a1a51333fac806d9a0857f4a27d2",
+    "src/features/storyboard/shot/vocabulary.ts": "5bea5a9b62daff64f51bfd09eb0d1e86b5af5ba04608a0df7897770ea9aa5910",
+    "src/features/storyboard/style-schema.ts": "7588227e3bb9914b2ab3567807be1d30dee5d0cf4c2fa4c7bd0c53b1f93dfb00",
+    "src/features/storyboard/voice-lock.ts": "27caca8aeb0d99a65909e91ffcb4cf11bf05ff71787652e41fc8583065361c2f",
+    "src/features/workspace/schema.ts": "fce0924feba9b55b384e9c4485587cce030c8525080f92240616fea3c95236c5",
+    "src/features/workspace/settings-schema.ts": "a22a5d253268c9c0d2b78129f3545b45362aeb28053cfab7fa836ba49737a373",
+    "src/lib/asset-title.ts": "ad224d0c5217fc8099fe3c52beac337ad8886632ca0fb06676d5091d105c2ce1",
+    "src/lib/voice-lock.ts": "b8c30d0b291822b69404b01c12e59c69f30b8b4e3e34d13c6a04c1d98d65cf1a",
+    "src/server/assets/input.ts": "ce47ea75395cec422e9330b5def71717bed8e40b9f8e073df5690e3cecbd6a48",
+    "src/server/db/schema/api-tokens.ts": "db55013da724d88d480fac784fa8b1d40f062bc5b4c93765dd3470bc796c93b5",
+    "src/server/db/schema/enums.ts": "7a7319c4d6653c0605ee7c4c49d008ca62d8e7e3c7edfb425009e1d5093271bb",
+    "src/server/db/schema/episode-attachments.ts": "868299b3d8930498d864d423e7d0f4557dafd9281a8449808b64d377844ff14d",
+    "src/server/db/schema/episode-decisions.ts": "b425bac98bf944acb3fc71825b5c5e11b5aecb916389b294d19507929cb55c1f",
+    "src/server/db/schema/episode-images.ts": "5b7e5d3aaf1caa9b11312779c116f567dabf24b502e26e8a4943d81a1d606f37",
+    "src/server/db/schema/episode-revisions.ts": "fd926204446c9b2f10cff4052d7483d73042e9529ff3cab6cf2ecf776e78c87f",
+    "src/server/db/schema/global-assets.ts": "a02527f233a003d885d5164d4e8d326c6d60632b0caaad92b3e86f5e1a1934ce",
+    "src/server/db/schema/index.ts": "cf03b677f0e9b460ac9138d00c95f9cc212eff66faead686778752963eae0300",
+    "src/server/db/schema/projects.ts": "4421ab4553d26ac3880ef4bb6b9289ce4829bbf75ee2ef14d71700435a829267",
+    "src/server/db/schema/scenes.ts": "3ea09d30a39d958f0c1c05cbfd4d7f66740bac4b9301145c47f93529718f824c",
+    "src/server/db/schema/storyboard-entities.ts": "e82a313d1d29cda13ef231433d4ad3539b7b92305e766bedba823630b37b3e28",
+    "src/server/db/schema/storyboards.ts": "d75af094dc69eeaf2b1c7d3e80db5a6eba9fed7735d84093d1ab9706a5a66bc7",
+    "src/server/db/schema/users.ts": "4614b651c9fde93f7f98276c9b0df59adfa66487a316db36abf23c998d34cd2d",
+    "src/server/db/schema/workspaces.ts": "8708e808aff5691a6b1a6a6b22c6bd6c5a9627b2d608ba957a3c002222f17ffb"
+  },
   validation: "Structural input schemas are extracted from API Zod input definitions. Cross-field/domain refinements, authorization, leases and revision conflicts remain enforced by the API.",
   operations: [
     {
@@ -77945,6 +78054,123 @@ var portal_api_contract_default = {
           characterId: {
             type: "string",
             format: "uuid"
+          }
+        },
+        required: [
+          "characterId"
+        ],
+        additionalProperties: false
+      }
+    },
+    {
+      method: "PUT",
+      path: "/characters/[characterId]/voice-sample",
+      scope: "workspace",
+      source: "src/app/api/workspaces/[workspaceSlug]/characters/[characterId]/voice-sample/route.ts:33",
+      toolName: "api_characters_character_voice_sample_put",
+      bodyEncoding: "raw",
+      response: "json",
+      inputSchema: {
+        type: "object",
+        properties: {
+          characterId: {
+            type: "string",
+            format: "uuid"
+          },
+          query: {
+            type: "object",
+            properties: {
+              label: {
+                type: "string",
+                maxLength: 100
+              },
+              sort: {
+                type: "integer",
+                minimum: 0,
+                maximum: 2147483647
+              }
+            },
+            required: [],
+            additionalProperties: false
+          },
+          file: {
+            type: "string",
+            minLength: 1,
+            description: "Absolute local file path; uploaded unchanged as raw bytes."
+          },
+          contentType: {
+            type: "string",
+            minLength: 1
+          }
+        },
+        required: [
+          "characterId",
+          "file",
+          "contentType"
+        ],
+        additionalProperties: false
+      }
+    },
+    {
+      method: "GET",
+      path: "/characters/[characterId]/voice-sample",
+      scope: "workspace",
+      source: "src/app/api/workspaces/[workspaceSlug]/characters/[characterId]/voice-sample/route.ts:119",
+      toolName: "api_characters_character_voice_sample_get",
+      bodyEncoding: "none",
+      response: "binary",
+      inputSchema: {
+        type: "object",
+        properties: {
+          characterId: {
+            type: "string",
+            format: "uuid"
+          },
+          targetFile: {
+            type: "string",
+            minLength: 1,
+            description: "Absolute local destination, created exclusively; existing files are never overwritten."
+          },
+          range: {
+            type: "string"
+          },
+          ifRange: {
+            type: "string"
+          },
+          ifNoneMatch: {
+            type: "string"
+          }
+        },
+        required: [
+          "characterId",
+          "targetFile"
+        ],
+        additionalProperties: false
+      }
+    },
+    {
+      method: "HEAD",
+      path: "/characters/[characterId]/voice-sample",
+      scope: "workspace",
+      source: "src/app/api/workspaces/[workspaceSlug]/characters/[characterId]/voice-sample/route.ts:137",
+      toolName: "api_characters_character_voice_sample_head",
+      bodyEncoding: "none",
+      response: "binary",
+      inputSchema: {
+        type: "object",
+        properties: {
+          characterId: {
+            type: "string",
+            format: "uuid"
+          },
+          range: {
+            type: "string"
+          },
+          ifRange: {
+            type: "string"
+          },
+          ifNoneMatch: {
+            type: "string"
           }
         },
         required: [
@@ -80697,6 +80923,126 @@ var portal_api_contract_default = {
       }
     },
     {
+      method: "PUT",
+      path: "/episodes/[episodeId]/shots/[shotId]/voice-lock",
+      scope: "workspace",
+      source: "src/app/api/workspaces/[workspaceSlug]/episodes/[episodeId]/shots/[shotId]/voice-lock/route.ts:18",
+      toolName: "api_episodes_episode_shots_shot_voice_lock_put",
+      bodyEncoding: "json",
+      response: "json",
+      schemaExpression: "shotVoiceLockResult",
+      inputSchema: {
+        type: "object",
+        properties: {
+          episodeId: {
+            type: "string",
+            format: "uuid"
+          },
+          shotId: {
+            type: "string",
+            format: "uuid"
+          },
+          query: {
+            type: "object",
+            properties: {
+              holder: {
+                type: "string",
+                maxLength: 200
+              }
+            },
+            required: [],
+            additionalProperties: false
+          },
+          body: {
+            type: "object",
+            properties: {
+              status: {
+                type: "string",
+                enum: [
+                  "passed",
+                  "failed",
+                  "skipped"
+                ]
+              },
+              characterId: {
+                type: "string",
+                minLength: 1,
+                maxLength: 100
+              },
+              voiceId: {
+                type: "string",
+                minLength: 1,
+                maxLength: 128
+              },
+              model: {
+                type: "string",
+                minLength: 1,
+                maxLength: 128
+              },
+              sourceSha256: {
+                type: "string",
+                pattern: "^[a-f0-9]{64}$"
+              },
+              outputSha256: {
+                type: "string",
+                pattern: "^[a-f0-9]{64}$"
+              },
+              sourceDurationSeconds: {
+                type: "number",
+                minimum: 0
+              },
+              outputDurationSeconds: {
+                type: "number",
+                minimum: 0
+              },
+              transcript: {
+                type: "string",
+                maxLength: 2e4
+              },
+              expectedText: {
+                type: "string",
+                maxLength: 2e4
+              },
+              error: {
+                type: "string",
+                maxLength: 2e4
+              },
+              sourceTranscript: {
+                type: "string",
+                maxLength: 2e4
+              },
+              sourceCer: {
+                type: "number",
+                minimum: 0
+              },
+              outputCer: {
+                type: "number",
+                minimum: 0
+              },
+              warnings: {
+                maxItems: 100,
+                type: "array",
+                items: {
+                  type: "string",
+                  maxLength: 2e3
+                }
+              }
+            },
+            required: [
+              "status",
+              "characterId"
+            ]
+          }
+        },
+        required: [
+          "episodeId",
+          "shotId",
+          "body"
+        ],
+        additionalProperties: false
+      }
+    },
+    {
       method: "POST",
       path: "/episodes/[episodeId]/style-preset",
       scope: "workspace",
@@ -80964,6 +81310,235 @@ var portal_api_contract_default = {
     },
     {
       method: "GET",
+      path: "/projects/[projectId]/attachments/[attachmentId]",
+      scope: "workspace",
+      source: "src/app/api/workspaces/[workspaceSlug]/projects/[projectId]/attachments/[attachmentId]/route.ts:31",
+      toolName: "api_projects_project_attachments_attachment_get",
+      bodyEncoding: "none",
+      response: "binary",
+      inputSchema: {
+        type: "object",
+        properties: {
+          projectId: {
+            type: "string",
+            format: "uuid"
+          },
+          attachmentId: {
+            type: "string",
+            format: "uuid"
+          },
+          query: {
+            type: "object",
+            properties: {
+              play: {
+                enum: [
+                  "0",
+                  "1"
+                ]
+              }
+            },
+            required: [],
+            additionalProperties: false
+          },
+          targetFile: {
+            type: "string",
+            minLength: 1,
+            description: "Absolute local destination, created exclusively; existing files are never overwritten."
+          },
+          range: {
+            type: "string"
+          },
+          ifRange: {
+            type: "string"
+          },
+          ifNoneMatch: {
+            type: "string"
+          }
+        },
+        required: [
+          "projectId",
+          "attachmentId",
+          "targetFile"
+        ],
+        additionalProperties: false
+      }
+    },
+    {
+      method: "HEAD",
+      path: "/projects/[projectId]/attachments/[attachmentId]",
+      scope: "workspace",
+      source: "src/app/api/workspaces/[workspaceSlug]/projects/[projectId]/attachments/[attachmentId]/route.ts:70",
+      toolName: "api_projects_project_attachments_attachment_head",
+      bodyEncoding: "none",
+      response: "binary",
+      inputSchema: {
+        type: "object",
+        properties: {
+          projectId: {
+            type: "string",
+            format: "uuid"
+          },
+          attachmentId: {
+            type: "string",
+            format: "uuid"
+          },
+          query: {
+            type: "object",
+            properties: {
+              play: {
+                enum: [
+                  "0",
+                  "1"
+                ]
+              }
+            },
+            required: [],
+            additionalProperties: false
+          },
+          range: {
+            type: "string"
+          },
+          ifRange: {
+            type: "string"
+          },
+          ifNoneMatch: {
+            type: "string"
+          }
+        },
+        required: [
+          "projectId",
+          "attachmentId"
+        ],
+        additionalProperties: false
+      }
+    },
+    {
+      method: "DELETE",
+      path: "/projects/[projectId]/attachments/[attachmentId]",
+      scope: "workspace",
+      source: "src/app/api/workspaces/[workspaceSlug]/projects/[projectId]/attachments/[attachmentId]/route.ts:72",
+      toolName: "api_projects_project_attachments_attachment_delete",
+      bodyEncoding: "none",
+      response: "json",
+      inputSchema: {
+        type: "object",
+        properties: {
+          projectId: {
+            type: "string",
+            format: "uuid"
+          },
+          attachmentId: {
+            type: "string",
+            format: "uuid"
+          },
+          query: {
+            type: "object",
+            properties: {
+              sha256: {
+                type: "string",
+                pattern: "^[0-9a-f]{64}$"
+              }
+            },
+            required: [
+              "sha256"
+            ],
+            additionalProperties: false
+          }
+        },
+        required: [
+          "projectId",
+          "attachmentId",
+          "query"
+        ],
+        additionalProperties: false
+      }
+    },
+    {
+      method: "GET",
+      path: "/projects/[projectId]/attachments",
+      scope: "workspace",
+      source: "src/app/api/workspaces/[workspaceSlug]/projects/[projectId]/attachments/route.ts:10",
+      toolName: "api_projects_project_attachments_get",
+      bodyEncoding: "none",
+      response: "json",
+      inputSchema: {
+        type: "object",
+        properties: {
+          projectId: {
+            type: "string",
+            format: "uuid"
+          }
+        },
+        required: [
+          "projectId"
+        ],
+        additionalProperties: false
+      }
+    },
+    {
+      method: "POST",
+      path: "/projects/[projectId]/attachments",
+      scope: "workspace",
+      source: "src/app/api/workspaces/[workspaceSlug]/projects/[projectId]/attachments/route.ts:17",
+      toolName: "api_projects_project_attachments_post",
+      bodyEncoding: "raw",
+      response: "json",
+      inputSchema: {
+        type: "object",
+        properties: {
+          projectId: {
+            type: "string",
+            format: "uuid"
+          },
+          query: {
+            type: "object",
+            properties: {
+              path: {
+                type: "string",
+                minLength: 1
+              },
+              sha256: {
+                type: "string",
+                pattern: "^[0-9a-f]{64}$"
+              },
+              baseSha256: {
+                type: "string",
+                pattern: "^[0-9a-f]{64}$"
+              }
+            },
+            required: [
+              "path",
+              "sha256"
+            ],
+            additionalProperties: false
+          },
+          file: {
+            type: "string",
+            minLength: 1,
+            description: "Absolute local file path; uploaded unchanged as raw bytes."
+          },
+          contentType: {
+            type: "string",
+            minLength: 1
+          },
+          provenance: {
+            type: "object",
+            additionalProperties: {
+              type: "string"
+            }
+          }
+        },
+        required: [
+          "projectId",
+          "query",
+          "file",
+          "contentType"
+        ],
+        additionalProperties: false
+      }
+    },
+    {
+      method: "GET",
       path: "/projects/[projectId]/backgrounds",
       scope: "workspace",
       source: "src/app/api/workspaces/[workspaceSlug]/projects/[projectId]/backgrounds/route.ts:11",
@@ -81223,6 +81798,72 @@ var portal_api_contract_default = {
     },
     {
       method: "GET",
+      path: "/projects/[projectId]/profile",
+      scope: "workspace",
+      source: "src/app/api/workspaces/[workspaceSlug]/projects/[projectId]/profile/route.ts:15",
+      toolName: "api_projects_project_profile_get",
+      bodyEncoding: "none",
+      response: "json",
+      inputSchema: {
+        type: "object",
+        properties: {
+          projectId: {
+            type: "string",
+            format: "uuid"
+          }
+        },
+        required: [
+          "projectId"
+        ],
+        additionalProperties: false
+      }
+    },
+    {
+      method: "PUT",
+      path: "/projects/[projectId]/profile",
+      scope: "workspace",
+      source: "src/app/api/workspaces/[workspaceSlug]/projects/[projectId]/profile/route.ts:38",
+      toolName: "api_projects_project_profile_put",
+      bodyEncoding: "json",
+      response: "json",
+      schemaExpression: "channelProfileInput",
+      inputSchema: {
+        type: "object",
+        properties: {
+          projectId: {
+            type: "string",
+            format: "uuid"
+          },
+          body: {
+            type: "object",
+            properties: {
+              content: {
+                type: "string"
+              },
+              sha256: {
+                type: "string",
+                pattern: "^[a-f0-9]{64}$"
+              },
+              baseSha256: {
+                type: "string",
+                pattern: "^[a-f0-9]{64}$"
+              }
+            },
+            required: [
+              "content",
+              "sha256"
+            ]
+          }
+        },
+        required: [
+          "projectId",
+          "body"
+        ],
+        additionalProperties: false
+      }
+    },
+    {
+      method: "GET",
       path: "/projects/[projectId]/props",
       scope: "workspace",
       source: "src/app/api/workspaces/[workspaceSlug]/projects/[projectId]/props/route.ts:11",
@@ -81382,6 +82023,157 @@ var portal_api_contract_default = {
         },
         required: [
           "projectId"
+        ],
+        additionalProperties: false
+      }
+    },
+    {
+      method: "GET",
+      path: "/projects/[projectId]/sound",
+      scope: "workspace",
+      source: "src/app/api/workspaces/[workspaceSlug]/projects/[projectId]/sound/route.ts:11",
+      toolName: "api_projects_project_sound_get",
+      bodyEncoding: "none",
+      response: "json",
+      inputSchema: {
+        type: "object",
+        properties: {
+          projectId: {
+            type: "string",
+            format: "uuid"
+          }
+        },
+        required: [
+          "projectId"
+        ],
+        additionalProperties: false
+      }
+    },
+    {
+      method: "PUT",
+      path: "/projects/[projectId]/sound",
+      scope: "workspace",
+      source: "src/app/api/workspaces/[workspaceSlug]/projects/[projectId]/sound/route.ts:31",
+      toolName: "api_projects_project_sound_put",
+      bodyEncoding: "json",
+      response: "json",
+      schemaExpression: "channelSoundInput",
+      inputSchema: {
+        type: "object",
+        properties: {
+          projectId: {
+            type: "string",
+            format: "uuid"
+          },
+          body: {
+            type: "object",
+            properties: {
+              value: {
+                type: "object",
+                properties: {
+                  mix: {
+                    type: "object",
+                    properties: {
+                      targetLufs: {
+                        type: "number",
+                        minimum: -30,
+                        maximum: -5
+                      },
+                      truePeakDbtp: {
+                        type: "number",
+                        minimum: -6,
+                        maximum: 0
+                      },
+                      bedSeparationLu: {
+                        type: "number",
+                        minimum: 0,
+                        maximum: 30
+                      },
+                      minimumSeparationLu: {
+                        type: "number",
+                        minimum: 0,
+                        maximum: 30
+                      },
+                      ambienceSeparationLu: {
+                        type: "number",
+                        minimum: 0,
+                        maximum: 30
+                      },
+                      cueCrossfadeSeconds: {
+                        type: "number",
+                        minimum: 0,
+                        maximum: 10
+                      },
+                      endingFadeSeconds: {
+                        type: "number",
+                        minimum: 0,
+                        maximum: 10
+                      },
+                      silenceRampSeconds: {
+                        type: "number",
+                        minimum: 0,
+                        maximum: 3
+                      },
+                      hook: {
+                        type: "object",
+                        properties: {
+                          attenuationLu: {
+                            type: "number",
+                            minimum: 0,
+                            maximum: 30
+                          },
+                          releaseSeconds: {
+                            type: "number",
+                            minimum: 0,
+                            maximum: 10
+                          }
+                        },
+                        additionalProperties: false
+                      },
+                      ducking: {
+                        type: "object",
+                        properties: {
+                          ratio: {
+                            type: "number",
+                            minimum: 1,
+                            maximum: 20
+                          },
+                          attackMs: {
+                            type: "number",
+                            minimum: 1,
+                            maximum: 1e3
+                          },
+                          releaseMs: {
+                            type: "number",
+                            minimum: 10,
+                            maximum: 3e3
+                          }
+                        },
+                        additionalProperties: false
+                      }
+                    },
+                    additionalProperties: false
+                  }
+                },
+                required: [
+                  "mix"
+                ],
+                additionalProperties: false
+              },
+              baseSha256: {
+                type: "string",
+                pattern: "^[a-f0-9]{64}$"
+              }
+            },
+            required: [
+              "value",
+              "baseSha256"
+            ]
+          }
+        },
+        required: [
+          "projectId",
+          "body"
         ],
         additionalProperties: false
       }
@@ -82853,243 +83645,6 @@ var portal_api_contract_default = {
           }
         },
         required: [
-          "body"
-        ],
-        additionalProperties: false
-      }
-    },
-    {
-      method: "PUT",
-      path: "/characters/[characterId]/voice-sample",
-      scope: "workspace",
-      source: "src/app/api/workspaces/[workspaceSlug]/characters/[characterId]/voice-sample/route.ts:28",
-      toolName: "api_characters_character_voice_sample_put",
-      bodyEncoding: "raw",
-      response: "json",
-      inputSchema: {
-        type: "object",
-        properties: {
-          characterId: {
-            type: "string",
-            format: "uuid"
-          },
-          query: {
-            type: "object",
-            properties: {
-              label: {
-                type: "string",
-                maxLength: 100
-              },
-              sort: {
-                type: "integer",
-                minimum: 0,
-                maximum: 2147483647
-              }
-            },
-            required: [],
-            additionalProperties: false
-          },
-          file: {
-            type: "string",
-            minLength: 1,
-            description: "Absolute local file path; uploaded unchanged as raw bytes."
-          },
-          contentType: {
-            type: "string",
-            minLength: 1
-          }
-        },
-        required: [
-          "characterId",
-          "file",
-          "contentType"
-        ],
-        additionalProperties: false
-      }
-    },
-    {
-      method: "GET",
-      path: "/characters/[characterId]/voice-sample",
-      scope: "workspace",
-      source: "src/app/api/workspaces/[workspaceSlug]/characters/[characterId]/voice-sample/route.ts:112",
-      toolName: "api_characters_character_voice_sample_get",
-      bodyEncoding: "none",
-      response: "binary",
-      inputSchema: {
-        type: "object",
-        properties: {
-          characterId: {
-            type: "string",
-            format: "uuid"
-          },
-          targetFile: {
-            type: "string",
-            minLength: 1,
-            description: "Absolute local destination, created exclusively; existing files are never overwritten."
-          },
-          range: {
-            type: "string"
-          },
-          ifRange: {
-            type: "string"
-          },
-          ifNoneMatch: {
-            type: "string"
-          }
-        },
-        required: [
-          "characterId",
-          "targetFile"
-        ],
-        additionalProperties: false
-      }
-    },
-    {
-      method: "HEAD",
-      path: "/characters/[characterId]/voice-sample",
-      scope: "workspace",
-      source: "src/app/api/workspaces/[workspaceSlug]/characters/[characterId]/voice-sample/route.ts:130",
-      toolName: "api_characters_character_voice_sample_head",
-      bodyEncoding: "none",
-      response: "binary",
-      inputSchema: {
-        type: "object",
-        properties: {
-          characterId: {
-            type: "string",
-            format: "uuid"
-          },
-          range: {
-            type: "string"
-          },
-          ifRange: {
-            type: "string"
-          },
-          ifNoneMatch: {
-            type: "string"
-          }
-        },
-        required: [
-          "characterId"
-        ],
-        additionalProperties: false
-      }
-    },
-    {
-      method: "PUT",
-      path: "/episodes/[episodeId]/shots/[shotId]/voice-lock",
-      scope: "workspace",
-      source: "src/app/api/workspaces/[workspaceSlug]/episodes/[episodeId]/shots/[shotId]/voice-lock/route.ts:17",
-      toolName: "api_episodes_episode_shots_shot_voice_lock_put",
-      bodyEncoding: "json",
-      response: "json",
-      schemaExpression: "shotVoiceLockResult",
-      inputSchema: {
-        type: "object",
-        properties: {
-          episodeId: {
-            type: "string",
-            format: "uuid"
-          },
-          shotId: {
-            type: "string",
-            format: "uuid"
-          },
-          query: {
-            type: "object",
-            properties: {
-              holder: {
-                type: "string",
-                maxLength: 200
-              }
-            },
-            required: [],
-            additionalProperties: false
-          },
-          body: {
-            type: "object",
-            properties: {
-              status: {
-                type: "string",
-                enum: [
-                  "passed",
-                  "failed",
-                  "skipped"
-                ]
-              },
-              characterId: {
-                type: "string",
-                minLength: 1,
-                maxLength: 100
-              },
-              voiceId: {
-                type: "string",
-                minLength: 1,
-                maxLength: 128
-              },
-              model: {
-                type: "string",
-                minLength: 1,
-                maxLength: 128
-              },
-              sourceSha256: {
-                type: "string",
-                pattern: "^[a-f0-9]{64}$"
-              },
-              outputSha256: {
-                type: "string",
-                pattern: "^[a-f0-9]{64}$"
-              },
-              sourceDurationSeconds: {
-                type: "number",
-                minimum: 0
-              },
-              outputDurationSeconds: {
-                type: "number",
-                minimum: 0
-              },
-              transcript: {
-                type: "string",
-                maxLength: 2e4
-              },
-              expectedText: {
-                type: "string",
-                maxLength: 2e4
-              },
-              error: {
-                type: "string",
-                maxLength: 2e4
-              },
-              sourceTranscript: {
-                type: "string",
-                maxLength: 2e4
-              },
-              sourceCer: {
-                type: "number",
-                minimum: 0
-              },
-              outputCer: {
-                type: "number",
-                minimum: 0
-              },
-              warnings: {
-                maxItems: 100,
-                type: "array",
-                items: {
-                  type: "string",
-                  maxLength: 2e3
-                }
-              }
-            },
-            required: [
-              "status",
-              "characterId"
-            ]
-          }
-        },
-        required: [
-          "episodeId",
-          "shotId",
           "body"
         ],
         additionalProperties: false
