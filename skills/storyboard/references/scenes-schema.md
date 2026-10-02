@@ -2009,6 +2009,7 @@ window.MUSIC = {
   $mix: {                               // optional; omit the whole block for today's builder defaults
     targetLufs: -14, truePeakDbtp: -1, // project delivery values, not a published YouTube upload spec
     bedSeparationLu: 10, minimumSeparationLu: 4,
+    ambienceSeparationLu: 15,          // room tone under the speech (amb.tsv)
     cueCrossfadeSeconds: 2,
     hook: { attenuationLu: 6, releaseSeconds: 2 },
     ducking: { ratio: 8, attackMs: 20, releaseMs: 250 },
@@ -2078,6 +2079,22 @@ the builder's existing defaults, and omitting `$mix` entirely leaves a legacy bo
 manifest and mix path. `targetLufs` and `truePeakDbtp` are this project's delivery values; YouTube's
 public help describes Stable volume but does not publish a numeric upload target. `bedSeparationLu`
 sets the music below measured narration; `minimumSeparationLu` is the speech-time build floor.
+`ambienceSeparationLu` does the same for the room-tone bed (`AMB_SEP`, 15 by default), which is laid
+once and never ducked.
+
+**Reversal places are an episode budget of two.** A shot with `drop: true`, or one carrying any
+`silence` window, is one reversal place, and `check-scenes.js` refuses a third. The unit is the
+shot, so a card that both drops the bed and empties a window still counts once. Impacts are not
+counted — `sound.effects` holds every effect and nothing marks which one is the reversal — so
+"two drops and six impacts" passes this check and meets the one-per-10s density warning instead.
+
+**Audio rights travel with the cue.** A cue or `window.SFX` entry that fetches a file (`asset`)
+carries `license`, the same nine-field record a stock clip carries (§stock material), validated by
+the same `checkLicense`. A cue that generates its file (`prompt` / `prompts`) carries
+`provenance: { tool, prompt, generatedAt, plan }` instead — the generator, the prompt it was given,
+the date (the same prompt gives a different result another day) and the account tier the download
+happened under. A missing record is a warning today; a malformed one is an error. **Creator Music
+is refused on a 9:16 board** — that license is licensed for long-form only.
 
 - **`cue` names a key in `window.MUSIC`.** A name that isn't there is an error, not a new cue.
 - **Omitting `sound` carries the previous bed.** Only write a cue where it changes.

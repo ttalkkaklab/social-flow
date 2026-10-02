@@ -149,6 +149,7 @@ put('FINAL_LUFS', mix.targetLufs); put('FINAL_TP', mix.truePeakDbtp);
 put('BGM_SEP', mix.bedSeparationLu); put('BGM_SEP_MIN', mix.minimumSeparationLu);
 put('BGM_CUE_XF', mix.cueCrossfadeSeconds); put('BGM_FADE_OUT', mix.endingFadeSeconds);
 put('BGM_GATE_R', mix.silenceRampSeconds);
+put('AMB_SEP', mix.ambienceSeparationLu);
 const hook = record(mix.hook), ducking = record(mix.ducking);
 put('BGM_HOOK_LU', hook.attenuationLu); put('BGM_HOOK_R', hook.releaseSeconds);
 put('DUCK_RATIO', ducking.ratio); put('DUCK_ATTACK', ducking.attackMs); put('DUCK_RELEASE', ducking.releaseMs);
