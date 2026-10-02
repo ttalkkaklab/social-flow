@@ -224,7 +224,7 @@ optional, and they're what turns the tool from a video maker into an operator.**
   9:16 or 16:9 video plus per-platform text into
   `data/<channel>/episodes/<topic>/output/`, and you upload those files by hand. Only
   the publishing and growth-loop half is unavailable: the 11 publish/review/insight tools
-  aren't even listed (`tools/list` shows 80 instead of 292 — the 201 `portal_*` tools are
+  aren't even listed (`tools/list` shows 80 instead of 301 — the 210 `portal_*` tools are
   gated the same way on a portal key), and the growth skills have
   nothing to drive. Explicit tool-disable settings can reduce that list further.
 
@@ -480,7 +480,7 @@ social-flow/
 ├── .plugin/plugin.json          # Buzz persona pack (Open Plugin Spec)
 ├── personas/                    # Buzz pack persona (pipeline.persona.md)
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 292 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 301 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
 │       ├── tools.ts             # tool definitions — 91: research 9 + open data 5 + generation 47 + publish 6 + comments 3 + growth insights 5 + growth review 2 + check 2 + blender 7 + storyboard 5
@@ -542,14 +542,14 @@ social-flow/
 └── data/                        # content data root (see data/README.md)
 ```
 
-## MCP tool surface (292 tools)
+## MCP tool surface (301 tools)
 
-**`tools/list` does not show all 292.** The credential-gated publish, review and insights tools
+**`tools/list` does not show all 301.** The credential-gated publish, review and insights tools
 (`threads_draft_create` · `threads_review_submit` · `threads_publish` · `instagram_publish` · `facebook_publish` · `facebook_comment` ·
 `youtube_publish` · `threads_insights` · `instagram_insights` · `youtube_insights` ·
 `threads_search`) are exposed **only for platforms whose credential file exists** —
 evaluated at list time, so adding a token makes them appear without restarting the
-server. The 201 `portal_*` tools follow the same rule on the ttalkkakstory workspace key
+server. The 210 `portal_*` tools follow the same rule on the ttalkkakstory workspace key
 (`<SNS_TOKEN_DIR>/<channel>/ttalkkakstory.json`, the flat file, or `TTALKKAKSTORY_*`). With
 no tokens and no portal key you'll count 80; explicit tool-disable settings can reduce
 that list further. Hidden tools still have live handlers:
