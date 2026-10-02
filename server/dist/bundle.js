@@ -99464,6 +99464,34 @@ async function runPortalUnit(name, raw, fetchImpl) {
     return { content: [{ type: "text", text: describePortalError(error2) }], isError: true };
   }
 }
+async function fillMixFromProject(client, storyboardId, board) {
+  const { data: storyboard } = await client.request("GET", `/storyboards/${storyboardId}`);
+  const projectId = object3(storyboard).projectId;
+  if (typeof projectId !== "string" || !projectId) throw new Error("storyboard has no projectId \u2014 cannot resolve the channel sound defaults");
+  const { data: sound } = await client.request("GET", `/projects/${projectId}/sound`);
+  const defaults4 = object3(object3(object3(sound).value ?? {}).mix ?? {});
+  const music = object3(board.MUSIC ?? {});
+  const mix = object3(music.$mix ?? {});
+  const filled = [];
+  const next = { ...mix };
+  for (const [key, value] of Object.entries(defaults4)) {
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      const current = object3(mix[key] ?? {}), merged = { ...current };
+      for (const [inner, innerValue] of Object.entries(object3(value))) {
+        if (current[inner] === void 0) {
+          merged[inner] = innerValue;
+          filled.push(`${key}.${inner}`);
+        }
+      }
+      if (Object.keys(merged).length) next[key] = merged;
+    } else if (mix[key] === void 0) {
+      next[key] = value;
+      filled.push(key);
+    }
+  }
+  if (filled.length) board.MUSIC = { ...music, $mix: next };
+  return { filled };
+}
 async function boardOperation(client, name, args) {
   const suffix = name.slice(7), split = suffix.lastIndexOf("_"), area = suffix.slice(0, split), action = suffix.slice(split + 1);
   const { data: episode } = await client.getEpisode(args.episodeId);
@@ -99474,6 +99502,9 @@ async function boardOperation(client, name, args) {
   const meta = object3(detail.meta ?? {});
   const board = { ...meta, SB_DOC: { ...object3(meta.SB_DOC ?? {}), backgrounds: detail.backgrounds, props: detail.props, characters: detail.characters, narratorCharacterId: detail.narratorCharacterId }, SCENES: detail.scenes.map((s2) => s2.extra) };
   const identified = (board.SCENES ?? []).some((shot) => !shot.id) ? applyPatch(board, { path: "", dryRun: false, draft: args.draft }).win : board;
+  let filledFromProject = [];
+  if (area === "episode_music" && !read2)
+    filledFromProject = (await fillMixFromProject(client, episode.storyboardId, identified)).filled;
   const result = editUnit(identified, area, action, args);
   if (read2) return { headRevisionNo: head, value: result.value };
   const normalized = applyPatch(result.board, { path: "", dryRun: false, draft: args.draft });
@@ -99491,7 +99522,13 @@ async function boardOperation(client, name, args) {
     if (check2.violations) return { saved: false, headRevisionNo: head, check: check2 };
     const { SCENES, SB_DOC, ...nextMeta } = checked;
     const { data } = await client.checkpoint(args.episodeId, { stage: episode.stage ?? "board", baseRevisionNo: head, sourceHost: client.holder, note: args.note ?? name, scenes: SCENES, backgrounds: object3(SB_DOC).backgrounds, props: object3(SB_DOC).props, meta: { ...nextMeta, SB_DOC }, characters: object3(SB_DOC).characters, narratorCharacterId: object3(SB_DOC).narratorCharacterId });
-    return { saved: true, ...data, check: check2, localCopy: { unchanged: true, syncRequired: true } };
+    return {
+      saved: true,
+      ...data,
+      check: check2,
+      localCopy: { unchanged: true, syncRequired: true },
+      ...filledFromProject.length ? { filledFromProjectSound: filledFromProject } : {}
+    };
   } finally {
     rmSync10(dir, { recursive: true, force: true });
   }

@@ -24,6 +24,51 @@ export async function runPortalUnit(name:string, raw:unknown, fetchImpl?:FetchLi
     return { content:[{type:'text' as const,text:JSON.stringify(value,null,2)}], isError:typeof value === 'object' && value !== null && 'saved' in value && value.saved === false };
   } catch(error) { return {content:[{type:'text' as const,text:describePortalError(error)}], isError:true}; }
 }
+/**
+ * 채널 음향 기본값을 회차 보드의 `$mix` 빈 칸에만 채운다 — 우선순위는
+ * 샷 > 회차 `$mix` > 프로젝트 `sound` > `build-reel.sh` 기본값이고, 해석은 보드 한 곳이다.
+ * 빌드는 지금처럼 보드만 읽으므로 이 함수가 도는 자리(스토리보드 단계의 음악 쓰기)가
+ * 프로젝트 값이 보드에 서는 유일한 길이다.
+ *
+ * **키 단위로 빈 칸만 채운다.** 회차에 이미 있는 값은 덮지 않고, `hook`·`ducking` 안쪽도
+ * 같은 규칙이다. 그래서 프로젝트가 `hook.attenuationLu` 를 주고 회차가
+ * `hook.releaseSeconds` 를 주면 둘이 합쳐진다.
+ *
+ * **스냅숏이다.** 한 번 채운 뒤 프로젝트 값을 바꿔도 이미 채워진 회차에는 번지지 않는다 —
+ * 빌드를 다시 돌려도 같은 결과가 나오게 하려고 고른 모양이다.
+ *
+ * 프로젝트에 값이 없으면(빈 `mix`) 아무것도 하지 않는다. **404 는 삼키지 않는다** — 그 코드는
+ * 「기본값 없음」이 아니라 「그 프로젝트가 없다」는 뜻이고, 조용히 넘기면 빌드가 기본값으로
+ * 돌아 「코드는 맞는데 측정이 떨어지는」 꼴이 된다(포털 `/sound` 는 값이 없는 프로젝트에도
+ * 200 + 빈 `mix` 를 준다).
+ *
+ * 라우트 밖으로 내보낸 까닭: 쓰기 경로 전체를 거치면 보드가 검사기를 통과해야 checkpoint 에
+ * 닿으므로, 채우기 규칙(빈 칸만·중첩 병합·404 는 던진다)이 검사기 실패에 묻힌다. 여기서
+ * 직접 불러 그 규칙만 잰다.
+ */
+export async function fillMixFromProject(client:Pick<PortalClient,'request'>,storyboardId:string,board:Board):Promise<{filled:string[]}> {
+  const {data:storyboard}=await client.request('GET',`/storyboards/${storyboardId}`);
+  const projectId=object(storyboard as Record<string,unknown>).projectId;
+  if(typeof projectId!=='string'||!projectId) throw new Error('storyboard has no projectId — cannot resolve the channel sound defaults');
+  const {data:sound}=await client.request('GET',`/projects/${projectId}/sound`);
+  const defaults=object(object(object(sound as Record<string,unknown>).value ?? {}).mix ?? {});
+  const music=object(board.MUSIC ?? {});
+  const mix=object(music.$mix ?? {});
+  const filled:string[]=[];
+  const next:Record<string,unknown>={...mix};
+  for(const [key,value] of Object.entries(defaults)) {
+    if(value&&typeof value==='object'&&!Array.isArray(value)) {
+      const current=object(mix[key] ?? {}), merged={...current};
+      for(const [inner,innerValue] of Object.entries(object(value))) {
+        if(current[inner]===undefined) {merged[inner]=innerValue;filled.push(`${key}.${inner}`);}
+      }
+      if(Object.keys(merged).length) next[key]=merged;
+    } else if(mix[key]===undefined) {next[key]=value;filled.push(key);}
+  }
+  if(filled.length) board.MUSIC={...music,$mix:next};
+  return {filled};
+}
+
 async function boardOperation(client:PortalClient,name:string,args:z.infer<typeof unitEditSchema>) {
   const suffix=name.slice(7), split=suffix.lastIndexOf('_'), area=suffix.slice(0,split), action=suffix.slice(split+1);
   const {data:episode}=await client.getEpisode(args.episodeId);
@@ -38,6 +83,12 @@ async function boardOperation(client:PortalClient,name:string,args:z.infer<typeo
   // A later write persists them under the same optimistic revision guard.
   const identified = (board.SCENES ?? []).some(shot => !shot.id)
     ? applyPatch(board,{path:'',dryRun:false,draft:args.draft}).win : board;
+  // 음악 쓰기 전에 채널 기본값으로 빈 `$mix` 칸을 채운다 — 이 자리가 프로젝트 값이 보드에
+  // 서는 유일한 길이다(위 `fillMixFromProject`). 읽기에는 걸지 않는다: 읽기가 포털 상태를
+  // 바꾸면 GET 이 멱등하지 않게 되고, 채우기는 쓰기와 같은 revision 가드 안에 있어야 한다.
+  let filledFromProject:string[]=[];
+  if(area==='episode_music'&&!read)
+    filledFromProject=(await fillMixFromProject(client,episode.storyboardId,identified)).filled;
   const result=editUnit(identified,area,action,args);
   if(read) return {headRevisionNo:head,value:result.value};
   const normalized=applyPatch(result.board,{path:'',dryRun:false,draft:args.draft});
@@ -56,7 +107,8 @@ async function boardOperation(client:PortalClient,name:string,args:z.infer<typeo
     const {SCENES,SB_DOC,...nextMeta}=checked;
     // SB_DOC is metadata too; keep extensions such as imported registries.
     const {data}=await client.checkpoint(args.episodeId,{stage:episode.stage ?? 'board',baseRevisionNo:head,sourceHost:client.holder,note:args.note ?? name,scenes:SCENES,backgrounds:object(SB_DOC).backgrounds,props:object(SB_DOC).props,meta:{...nextMeta,SB_DOC},characters:object(SB_DOC).characters,narratorCharacterId:object(SB_DOC).narratorCharacterId});
-    return {saved:true,...data,check,localCopy:{unchanged:true,syncRequired:true}};
+    return {saved:true,...data,check,localCopy:{unchanged:true,syncRequired:true},
+            ...(filledFromProject.length?{filledFromProjectSound:filledFromProject}:{})};
   } finally {rmSync(dir,{recursive:true,force:true});}
 }
 async function apiOperation(c:PortalClient,name:string,a:z.infer<typeof apiArgs>) {

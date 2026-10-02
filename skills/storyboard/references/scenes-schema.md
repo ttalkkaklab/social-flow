@@ -2082,6 +2082,14 @@ sets the music below measured narration; `minimumSeparationLu` is the speech-tim
 `ambienceSeparationLu` does the same for the room-tone bed (`AMB_SEP`, 15 by default), which is laid
 once and never ducked.
 
+Empty `$mix` keys are filled from the channel's portal defaults (`GET /projects/{id}/sound`) when
+`portal_episode_music_update` writes the board — key by key, nested blocks included, and only where
+the episode said nothing. Whatever the episode already carries wins, so the resolution order is shot
+> episode `$mix` > project `sound` > the builder's defaults, and the board stays the single place
+anything reads it from. The fill is a snapshot: changing the project defaults later does not reach an
+episode that has already been written, which is what keeps a rebuild reproducible. The tool reports
+the keys it filled as `filledFromProjectSound`.
+
 `drop` carries the same card restriction the silence window carries — `broll` and `outro` are
 refused. An outro drop put in to clear room for the brand sting used to spend one of the two
 reversal places below.
