@@ -70,7 +70,9 @@ const HOOK_TYPES = ['fear', 'empathy', 'curiosity', 'spoiler'];
 const HOOK_FORMS = ['paradox', 'gap', 'payoff', 'identify', 'number', 'secret'];
 const TYPES = ['cover', 'hooking', 'points', 'quote', 'broll', 'outro'];
 const COMPREHENSION_MODES = ['informational', 'narrative'];
-// SOUND_DIRECTOR_KB §BGM 선택·편집 — the emptied-bed / impact places an episode may spend.
+// SOUND_DIRECTOR_KB §BGM 선택·편집 — the emptied-bed / impact places a *short* may spend.
+// The KB sentence is "같은 쇼정에서 두 번 이상은 피한다", so this ceiling is short-form only; a 10-minute
+// long-form episode has room for more reversals and no ceiling is set for it (decision 2026-10-02).
 const REVERSAL_PLACES_MAX = 2;
 const SLIDE_TREATMENTS = ['editorial', 'photo-action'];
 /* User directive 2026-09-05 — it outranks every other rule in this file: nothing is drawn over
@@ -1532,11 +1534,13 @@ function check(win, fmt, opts) {
   // would push ordinary whooshes into this ceiling, so impacts stay out. What that leaves open: "2 drops
   // + 6 impacts" passes here. The effect side has its own cover — the one-per-10s density warning above.
   // Do not add `sound.effects` to this count without a field that names the reversal impact.
-  {
+  // Short-form only. The KB quote above is about shorts, and the Creator Music check in this same
+  // function already splits on `isShort`; long-form carries no reversal ceiling (decision 2026-10-02).
+  if (isShort) {
     const places = scenes.filter((s) => s.sound &&
       (s.sound.drop === true || (Array.isArray(s.sound.silence) && s.sound.silence.length > 0))).length;
     if (places > REVERSAL_PLACES_MAX)
-      bad('sound', `${places} shots empty the bed (sound.drop / sound.silence) — at most ${REVERSAL_PLACES_MAX} reversal places per episode; a third emptied bed spends the effect the first two bought`);
+      bad('sound', `${places} shots empty the bed (sound.drop / sound.silence) — at most ${REVERSAL_PLACES_MAX} reversal places per short; a third emptied bed spends the effect the first two bought`);
   }
 
   // window.MUSIC — every cue has to be something produce can turn into a file: a prompt for
@@ -2418,6 +2422,14 @@ function selftest() {
          /3 shots empty the bed/));
   ok('a drop shot and a silence shot and a third reversal shot are three places',
      has(bads(run([cover, dropShot(goodShot), silenceShot(goodShot, 1), bothShot(goodShot), ctaShot])),
+         /3 shots empty the bed/));
+  // 반전 상한은 쇼츠 전용이다(결정 2026-10-02) — KB 인용이 「같은 쇼츠에서」이고 같은 함수의
+  // Creator Music 검사도 `isShort` 로 갈라져 있다. 장편 상한은 정하지 않고 둔다.
+  ok('three reversal shots on a long-form board are not a violation',
+     !has(bads(runLong([cover, dropShot(goodShot), dropShot(goodShot), dropShot(goodShot), ctaShot])),
+          /empty the bed/));
+  ok('the same three reversal shots on a short are still a violation',
+     has(bads(run([cover, dropShot(goodShot), dropShot(goodShot), dropShot(goodShot), ctaShot])),
          /3 shots empty the bed/));
   // The unit is the shot: these two boards hold one reversal place each, not two.
   ok('a shot carrying both drop and silence counts once',

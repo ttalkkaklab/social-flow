@@ -25,6 +25,15 @@ export async function runPortalUnit(name:string, raw:unknown, fetchImpl?:FetchLi
   } catch(error) { return {content:[{type:'text' as const,text:describePortalError(error)}], isError:true}; }
 }
 /**
+ * 교차 제약이 걸린 `$mix` 키 묶음 — **한 덩이로** 채운다. 회차가 묶음 안의 한 칸이라도 적었으면
+ * 나머지는 프로젝트에서 안 가져온다. 키 단위로 채우면 양쪽 다 혼자서는 유효한 값인데
+ * 합쳐진 `$mix` 가 모순되어 보드 쓰기가 통째로 막힌다 — 프로젝트 `{bed:10,min:8}` + 회차
+ * `{bed:4}` 는 `min 8 > bed 4` 가 되고, 쓰는 사람은 그 회차에 적지도 않은 값 때문에 막힌다.
+ * 포털 `SOUND_MIX_RANGES` 13칸 중 교차 규칙이 걸린 자리는 이 쌍 하나뿐이다
+ * (`check-scenes.js` 의 `minimumSeparationLu > bedSeparationLu` 검사).
+ */
+const COUPLED_MIX_KEYS:readonly (readonly string[])[] = [['bedSeparationLu','minimumSeparationLu']];
+/**
  * 채널 음향 기본값을 회차 보드의 `$mix` 빈 칸에만 채운다 — 우선순위는
  * 샷 > 회차 `$mix` > 프로젝트 `sound` > `build-reel.sh` 기본값이고, 해석은 보드 한 곳이다.
  * 빌드는 지금처럼 보드만 읽으므로 이 함수가 도는 자리(스토리보드 단계의 음악 쓰기)가
@@ -33,6 +42,9 @@ export async function runPortalUnit(name:string, raw:unknown, fetchImpl?:FetchLi
  * **키 단위로 빈 칸만 채운다.** 회차에 이미 있는 값은 덮지 않고, `hook`·`ducking` 안쪽도
  * 같은 규칙이다. 그래서 프로젝트가 `hook.attenuationLu` 를 주고 회차가
  * `hook.releaseSeconds` 를 주면 둘이 합쳐진다.
+ *
+ * **단 `COUPLED_MIX_KEYS` 의 묶음은 한 덩이다** — 그 쌍은 포털도 검사기도 「함께」 보므로
+ * 반쪽만 채우면 모순된 `$mix` 가 된다. 자세한 까닭은 그 상수의 주석에 적어 두었다.
  *
  * **스냅숏이다.** 한 번 채운 뒤 프로젝트 값을 바꿔도 이미 채워진 회차에는 번지지 않는다 —
  * 빌드를 다시 돌려도 같은 결과가 나오게 하려고 고른 모양이다.
@@ -56,7 +68,12 @@ export async function fillMixFromProject(client:Pick<PortalClient,'request'>,sto
   const mix=object(music.$mix ?? {});
   const filled:string[]=[];
   const next:Record<string,unknown>={...mix};
+  // 교차 제약 묶음은 회차가 한 칸이라도 적었으면 그 묶음 전체를 건드리지 않는다.
+  const coupledSkip=new Set<string>();
+  for(const group of COUPLED_MIX_KEYS)
+    if(group.some(key=>mix[key]!==undefined)) for(const key of group) coupledSkip.add(key);
   for(const [key,value] of Object.entries(defaults)) {
+    if(coupledSkip.has(key)) continue;
     if(value&&typeof value==='object'&&!Array.isArray(value)) {
       const current=object(mix[key] ?? {}), merged={...current};
       for(const [inner,innerValue] of Object.entries(object(value))) {
@@ -91,8 +108,12 @@ async function boardOperation(client:PortalClient,name:string,args:z.infer<typeo
     filledFromProject=(await fillMixFromProject(client,episode.storyboardId,identified)).filled;
   const result=editUnit(identified,area,action,args);
   if(read) return {headRevisionNo:head,value:result.value};
+  // 채우기가 넣은 키는 성공뿐 아니라 **실패에도** 실어야 한다 — 검사기가 떨어뜨렸을 때
+  // 「프로젝트 기본값이 끼어들어 깨졌다」를 응답만 보고 알 수 있어야 한다.
+  const filledNote=filledFromProject.length?{filledFromProjectSound:filledFromProject}:{};
+  const filledSuffix=filledFromProject.length?` (filledFromProjectSound: ${JSON.stringify(filledFromProject)})`:'';
   const normalized=applyPatch(result.board,{path:'',dryRun:false,draft:args.draft});
-  if(normalized.findings.some(f=>f.level==='bad')) throw new Error(`Board not saved: ${JSON.stringify(normalized.findings)}`);
+  if(normalized.findings.some(f=>f.level==='bad')) throw new Error(`Board not saved: ${JSON.stringify(normalized.findings)}${filledSuffix}`);
   const source=Object.entries(normalized.win).map(([key,value])=>`window[${JSON.stringify(key)}] = ${JSON.stringify(value)};`).join('\n');
   const checked=evaluateWindowScript(source);
   const dir=mkdtempSync(join(tmpdir(),'portal-unit-'));
@@ -103,12 +124,11 @@ async function boardOperation(client:PortalClient,name:string,args:z.infer<typeo
     const chosen=episode.scenarios?.find(s=>s.chosen);
     if(chosen) writeFileSync(join(dir,'scenario.md'),await client.scenarioMd(args.episodeId,chosen.candidate));
     const check=checkStoryboard({path:file,draft:args.draft});
-    if(check.violations) return {saved:false,headRevisionNo:head,check};
+    if(check.violations) return {saved:false,headRevisionNo:head,check,...filledNote};
     const {SCENES,SB_DOC,...nextMeta}=checked;
     // SB_DOC is metadata too; keep extensions such as imported registries.
     const {data}=await client.checkpoint(args.episodeId,{stage:episode.stage ?? 'board',baseRevisionNo:head,sourceHost:client.holder,note:args.note ?? name,scenes:SCENES,backgrounds:object(SB_DOC).backgrounds,props:object(SB_DOC).props,meta:{...nextMeta,SB_DOC},characters:object(SB_DOC).characters,narratorCharacterId:object(SB_DOC).narratorCharacterId});
-    return {saved:true,...data,check,localCopy:{unchanged:true,syncRequired:true},
-            ...(filledFromProject.length?{filledFromProjectSound:filledFromProject}:{})};
+    return {saved:true,...data,check,localCopy:{unchanged:true,syncRequired:true},...filledNote};
   } finally {rmSync(dir,{recursive:true,force:true});}
 }
 async function apiOperation(c:PortalClient,name:string,a:z.infer<typeof apiArgs>) {

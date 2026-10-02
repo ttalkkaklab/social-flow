@@ -110,6 +110,28 @@ test('an empty project sound leaves the board untouched and creates no $mix', as
  assert.deepEqual(fresh.MUSIC.$mix,{targetLufs:-14});
 });
 
+test('a coupled separation pair fills as one block, never half', async()=>{
+ // 특급개발자(맥북) 재현 그대로 — 양쪽 다 혼자서는 유효한 값이다. 반쪽만 채우면
+ // `min 8 > bed 4` 가 되어 보드 쓰기가 `Board not saved` 로 통째로 막힌다.
+ const board={MUSIC:{$mix:{bedSeparationLu:4}}};
+ const {filled}=await fillMixFromProject(fakeClient({bedSeparationLu:10,minimumSeparationLu:8,targetLufs:-14}),sb,board);
+ assert.equal(board.MUSIC.$mix.bedSeparationLu,4,'회차 값은 그대로');
+ assert.equal(board.MUSIC.$mix.minimumSeparationLu,undefined,'반쪽만 채우지 않는다');
+ // 묶음 밖의 일반 칸은 종전대로 채운다 — 특례가 번지지 않는지 본다.
+ assert.equal(board.MUSIC.$mix.targetLufs,-14);
+ assert.deepEqual(filled,['targetLufs']);
+ // 거울 짝: 회차가 묶음에 전혀 손대지 않으면 둘 다 선다.
+ const fresh={MUSIC:{$mix:{targetLufs:-16}}};
+ const second=await fillMixFromProject(fakeClient({bedSeparationLu:10,minimumSeparationLu:8}),sb,fresh);
+ assert.deepEqual(fresh.MUSIC.$mix,{targetLufs:-16,bedSeparationLu:10,minimumSeparationLu:8});
+ assert.deepEqual(second.filled.sort(),['bedSeparationLu','minimumSeparationLu']);
+ // 반대 방향도 같다 — 회차가 바닥만 썼을 때 베드를 끌어오면 또 모순된다.
+ const floorOnly={MUSIC:{$mix:{minimumSeparationLu:12}}};
+ const third=await fillMixFromProject(fakeClient({bedSeparationLu:10,minimumSeparationLu:8}),sb,floorOnly);
+ assert.deepEqual(floorOnly.MUSIC.$mix,{minimumSeparationLu:12});
+ assert.deepEqual(third.filled,[]);
+});
+
 test('filling never swallows a portal 404 and refuses a storyboard without projectId', async()=>{
  await assert.rejects(()=>fillMixFromProject(fakeClient(null),sb,{MUSIC:{}}),/404/);
  await assert.rejects(()=>fillMixFromProject(fakeClient({targetLufs:-14},{projectId:null}),sb,{MUSIC:{}}),/projectId/);

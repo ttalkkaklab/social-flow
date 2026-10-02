@@ -2088,14 +2088,20 @@ the episode said nothing. Whatever the episode already carries wins, so the reso
 > episode `$mix` > project `sound` > the builder's defaults, and the board stays the single place
 anything reads it from. The fill is a snapshot: changing the project defaults later does not reach an
 episode that has already been written, which is what keeps a rebuild reproducible. The tool reports
-the keys it filled as `filledFromProjectSound`.
+the keys it filled as `filledFromProjectSound`, on a failed write as well as a saved one, so a
+board the checker rejected shows whether a project default is what broke it. Keys with a
+cross-field rule fill as one block: an episode that wrote either `bedSeparationLu` or
+`minimumSeparationLu` gets neither from the project, because filling half the pair can produce
+a `$mix` that contradicts itself and fails the whole write.
 
 `drop` carries the same card restriction the silence window carries — `broll` and `outro` are
 refused. An outro drop put in to clear room for the brand sting used to spend one of the two
 reversal places below.
 
-**Reversal places are an episode budget of two.** A shot with `drop: true`, or one carrying any
-`silence` window, is one reversal place, and `check-scenes.js` refuses a third. The unit is the
+**Reversal places are a short's budget of two.** A shot with `drop: true`, or one carrying any
+`silence` window, is one reversal place, and `check-scenes.js` refuses a third **on a short**.
+Long-form carries no reversal ceiling — the KB sentence this comes from is about shorts
+("같은 쇼츠에서 두 번 이상은 피한다"), and a 10-minute episode has room for more (decision 2026-10-02). The unit is the
 shot, so a card that both drops the bed and empties a window still counts once. Impacts are not
 counted — `sound.effects` holds every effect and nothing marks which one is the reversal — so
 "two drops and six impacts" passes this check and meets the one-per-10s density warning instead.

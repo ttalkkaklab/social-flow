@@ -99464,6 +99464,7 @@ async function runPortalUnit(name, raw, fetchImpl) {
     return { content: [{ type: "text", text: describePortalError(error2) }], isError: true };
   }
 }
+var COUPLED_MIX_KEYS = [["bedSeparationLu", "minimumSeparationLu"]];
 async function fillMixFromProject(client, storyboardId, board) {
   const { data: storyboard } = await client.request("GET", `/storyboards/${storyboardId}`);
   const projectId = object3(storyboard).projectId;
@@ -99474,7 +99475,11 @@ async function fillMixFromProject(client, storyboardId, board) {
   const mix = object3(music.$mix ?? {});
   const filled = [];
   const next = { ...mix };
+  const coupledSkip = /* @__PURE__ */ new Set();
+  for (const group of COUPLED_MIX_KEYS)
+    if (group.some((key) => mix[key] !== void 0)) for (const key of group) coupledSkip.add(key);
   for (const [key, value] of Object.entries(defaults4)) {
+    if (coupledSkip.has(key)) continue;
     if (value && typeof value === "object" && !Array.isArray(value)) {
       const current = object3(mix[key] ?? {}), merged = { ...current };
       for (const [inner, innerValue] of Object.entries(object3(value))) {
@@ -99507,8 +99512,10 @@ async function boardOperation(client, name, args) {
     filledFromProject = (await fillMixFromProject(client, episode.storyboardId, identified)).filled;
   const result = editUnit(identified, area, action, args);
   if (read2) return { headRevisionNo: head, value: result.value };
+  const filledNote = filledFromProject.length ? { filledFromProjectSound: filledFromProject } : {};
+  const filledSuffix = filledFromProject.length ? ` (filledFromProjectSound: ${JSON.stringify(filledFromProject)})` : "";
   const normalized = applyPatch(result.board, { path: "", dryRun: false, draft: args.draft });
-  if (normalized.findings.some((f3) => f3.level === "bad")) throw new Error(`Board not saved: ${JSON.stringify(normalized.findings)}`);
+  if (normalized.findings.some((f3) => f3.level === "bad")) throw new Error(`Board not saved: ${JSON.stringify(normalized.findings)}${filledSuffix}`);
   const source = Object.entries(normalized.win).map(([key, value]) => `window[${JSON.stringify(key)}] = ${JSON.stringify(value)};`).join("\n");
   const checked = evaluateWindowScript(source);
   const dir = mkdtempSync6(join9(tmpdir4(), "portal-unit-"));
@@ -99519,16 +99526,10 @@ async function boardOperation(client, name, args) {
     const chosen = episode.scenarios?.find((s2) => s2.chosen);
     if (chosen) writeFileSync15(join9(dir, "scenario.md"), await client.scenarioMd(args.episodeId, chosen.candidate));
     const check2 = checkStoryboard({ path: file, draft: args.draft });
-    if (check2.violations) return { saved: false, headRevisionNo: head, check: check2 };
+    if (check2.violations) return { saved: false, headRevisionNo: head, check: check2, ...filledNote };
     const { SCENES, SB_DOC, ...nextMeta } = checked;
     const { data } = await client.checkpoint(args.episodeId, { stage: episode.stage ?? "board", baseRevisionNo: head, sourceHost: client.holder, note: args.note ?? name, scenes: SCENES, backgrounds: object3(SB_DOC).backgrounds, props: object3(SB_DOC).props, meta: { ...nextMeta, SB_DOC }, characters: object3(SB_DOC).characters, narratorCharacterId: object3(SB_DOC).narratorCharacterId });
-    return {
-      saved: true,
-      ...data,
-      check: check2,
-      localCopy: { unchanged: true, syncRequired: true },
-      ...filledFromProject.length ? { filledFromProjectSound: filledFromProject } : {}
-    };
+    return { saved: true, ...data, check: check2, localCopy: { unchanged: true, syncRequired: true }, ...filledNote };
   } finally {
     rmSync10(dir, { recursive: true, force: true });
   }
