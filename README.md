@@ -224,7 +224,7 @@ optional, and they're what turns the tool from a video maker into an operator.**
   9:16 or 16:9 video plus per-platform text into
   `data/<channel>/episodes/<topic>/output/`, and you upload those files by hand. Only
   the publishing and growth-loop half is unavailable: the 11 publish/review/insight tools
-  aren't even listed (`tools/list` shows 80 instead of 292 — the 201 `portal_*` tools are
+  aren't even listed (`tools/list` shows 80 instead of 301 — the 210 `portal_*` tools are
   gated the same way on a portal key), and the growth skills have
   nothing to drive. Explicit tool-disable settings can reduce that list further.
 
@@ -480,7 +480,7 @@ social-flow/
 ├── .plugin/plugin.json          # Buzz persona pack (Open Plugin Spec)
 ├── personas/                    # Buzz pack persona (pipeline.persona.md)
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 292 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 301 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
 │       ├── tools.ts             # tool definitions — 91: research 9 + open data 5 + generation 47 + publish 6 + comments 3 + growth insights 5 + growth review 2 + check 2 + blender 7 + storyboard 5
@@ -542,14 +542,14 @@ social-flow/
 └── data/                        # content data root (see data/README.md)
 ```
 
-## MCP tool surface (292 tools)
+## MCP tool surface (301 tools)
 
-**`tools/list` does not show all 292.** The credential-gated publish, review and insights tools
+**`tools/list` does not show all 301.** The credential-gated publish, review and insights tools
 (`threads_draft_create` · `threads_review_submit` · `threads_publish` · `instagram_publish` · `facebook_publish` · `facebook_comment` ·
 `youtube_publish` · `threads_insights` · `instagram_insights` · `youtube_insights` ·
 `threads_search`) are exposed **only for platforms whose credential file exists** —
 evaluated at list time, so adding a token makes them appear without restarting the
-server. The 201 `portal_*` tools follow the same rule on the ttalkkakstory workspace key
+server. The 210 `portal_*` tools follow the same rule on the ttalkkakstory workspace key
 (`<SNS_TOKEN_DIR>/<channel>/ttalkkakstory.json`, the flat file, or `TTALKKAKSTORY_*`). With
 no tokens and no portal key you'll count 80; explicit tool-disable settings can reduce
 that list further. Hidden tools still have live handlers:
@@ -595,7 +595,7 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | Publish | `threads_publish` / `instagram_publish` / `facebook_publish` / `facebook_comment` / `youtube_publish` / `youtube_update` | Direct platform API calls — **exposed only for platforms with a credential file** (`youtube_update` edits title/description/tags/visibility of an already-uploaded video) |
 | Comment inbox | `sns_comment_inbox` / `sns_comment_reply` / `sns_comment_moderate` | Cross-platform normalized inbox · replies · hiding (no deletes). Inbox and replies cover all 4 platforms; hiding excludes YouTube (its API only offers held-for-review, which means something else) |
 | Storyboard | `storyboard_read` / `storyboard_apply` / `storyboard_check` / `storyboard_backups` / `scenario_check` | The episode board as sequences → scenes → shots (`window.STRUCTURE` beside the flat `SCENES` produce reads), plus the scenario input contract. `read` returns the tree at four levels; `apply` writes or patches the board and refuses to write past a violation; `storyboard_check` runs the structure rules plus the full `check-scenes.js` contract; `scenario_check` runs S1–S12 on `candidates/` or `scenario.md` and returns the checker JSON. Local files only — the board rules live in [structure-contract.js](skills/storyboard/references/structure-contract.js), shared with the checker and approval page |
-| Portal | 100 workflow tools such as `portal_storyboard_save`, `portal_episode_lease` and `portal_channel_sync`, plus 101 route tools named `portal_api_<resource>_<operation>` | The ttalkkakstory portal by **workspace API key** (`Authorization: Bearer tks_…`) — the episode and channel-shared assets have remote records while local directories stay working copies. The workflow tools preserve local-file integration and recovery flows. The 101 `portal_api_*` tools are generated from `server/src/portal-api-contract.json`: every workspace-key API route has one named tool with the API's exact path, method and input schema, while all 19 exclusions carry an authentication-boundary reason. Binary downloads require an absolute `targetFile` and never overwrite a file. Delete tools are marked destructive and require user authorization. The key comes from `<SNS_TOKEN_DIR>/<channel>/ttalkkakstory.json`, read off the channel or episode path, so one channel is one workspace; all portal tools are listed only while a key exists. See [the portal section](#the-ttalkkakstory-portal-by-workspace-api-key). |
+| Portal | 100 workflow tools such as `portal_storyboard_save`, `portal_episode_lease` and `portal_channel_sync`, plus 110 route tools named `portal_api_<resource>_<operation>` | The ttalkkakstory portal by **workspace API key** (`Authorization: Bearer tks_…`) — the episode and channel-shared assets have remote records while local directories stay working copies. The workflow tools preserve local-file integration and recovery flows. The 110 `portal_api_*` tools are generated from `server/src/portal-api-contract.json`: every workspace-key API route has one named tool with the API's exact path, method and input schema, while all 19 exclusions carry an authentication-boundary reason. Binary downloads require an absolute `targetFile` and never overwrite a file. Delete tools are marked destructive and require user authorization. The key comes from `<SNS_TOKEN_DIR>/<channel>/ttalkkakstory.json`, read off the channel or episode path, so one channel is one workspace; all portal tools are listed only while a key exists. See [the portal section](#the-ttalkkakstory-portal-by-workspace-api-key). |
 | Capability | `capability_status` | What this machine has configured, grouped by capability with an "N of M" count, plus the env var that would unlock each missing provider. Call it before planning anything that spends money — otherwise a missing key only surfaces when the call fails, after the plan was built around it. Reports configuration, not reachability |
 | Check | `sns_account_check` | Batch /me check across tokens (token values never shown) |
 | Growth insights | `threads_insights` / `threads_search` | Threads insights (account/post metrics) + public keyword search — for grow-threads (`threads_manage_insights` · `threads_keyword_search` scopes) |

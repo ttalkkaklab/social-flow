@@ -67,7 +67,12 @@ describe('generated portal API operation wiring', () => {
       return Response.json({ success: true, data: { ok: true } });
     };
 
-    assert.equal(contract.PORTAL_API_OPERATIONS.length, 101);
+    // 사본 크기 단정 — 「사본이 내가 아는 그 사본이다」, 곧 드리프트 경보다. 리터럴이어야 뜻이
+    // 선다. 이 값은 계산한 것이 아니라 **다시 들여온 사본에서 센 값**이다:
+    //   python3 -c "import json;o=json.load(open('server/src/portal-api-contract.json'))['operations'];print(sum(1 for x in o if x.get('toolName')))"
+    // 포털 계약이 늘면 이 수도 그 자리에서 다시 세어 적는다. `>=` 류로 느슨하게 두면 다음
+    // 드리프트를 못 잡는다 — 97 이 101 로, 101 이 110 으로 벌어진 것이 그 기제다.
+    assert.equal(contract.PORTAL_API_OPERATIONS.length, 110);
     for (const [index, operation] of contract.PORTAL_API_OPERATIONS.entries()) {
       const name = `portal_${operation.toolName}`;
       const result = await contract.runPortalApiTool(name, argsFor(operation, index), fetchImpl);
@@ -78,6 +83,7 @@ describe('generated portal API operation wiring', () => {
         method: operation.method,
       }, name);
     }
-    assert.equal(seen.length, 101);
+    // 전수 단정 — 「모든 연산을 실제로 찔렀다」다. 수를 베끼지 않고 그것을 직접 말한다.
+    assert.equal(seen.length, contract.PORTAL_API_OPERATIONS.length);
   });
 });
