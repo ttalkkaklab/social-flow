@@ -203,6 +203,8 @@ if(r.mode==='data_graph'||(fullVideo&&CHARTS[r.purpose])){
   return errors;
  }
  function checkData(data,segments,{wide=false}={}){
+  // Label budgets, circular radius and separator-share geometry must match chart-runtime.js.
+
   if(!data)return [];
   const errors=[],values=Array.isArray(data.values)?data.values:[],labels=values.map(v=>v?.label);
   if(new Set(labels).size!==labels.length)errors.push('chart labels must be unique');

@@ -20,6 +20,7 @@
       return sampleY(t);
     };
   };
+  // Keep easing and growMs/plateMs defaults aligned with chart-slide-template --grow/--plate and bezier tokens.
   const ease = bezier(.05,.7,.1,1), geometryEase=bezier(.4,0,.2,1);
   function wrapLabel(value,limit){
     limit=Math.max(1,Math.floor(limit));const rows=[];let line='';

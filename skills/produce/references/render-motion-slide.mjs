@@ -838,7 +838,7 @@ const openPage = async () => {
     segments: segCount, durations_ms: groups.slice(1).map(g => g.dur),
     segs_ms: segMap && segsApplied ? Array.from({ length: N }, (_, i) => segMap[i + 1] || null) : null,
     word_cues:wordCueMode, word_cue_application:wordCueApplied,
-    word_cue_chain:wordCueApplied?.applied?'word cues bypass lead-in; other entrance chains retain it — review a cued group sheet':null,
+    word_cue_chain:wordCueApplied?.applied?'word cues bypass lead-in; cross strike-through (.cross .bar.rv.fx-grow) retains lead-in and may start before cued words — review a cued group sheet':null,
     camera, camera_cut: cameraCut, camera_expected_rate_per_sec: cameraCut?.speedChecked?(CAMERA_RATE[scene.visual?.camera?.speed??'very slow']??null):null, chart_motion: meta.chart_motion ?? null,
     min_text_px: legibility?.min_text_px ?? null, min_stroke_px: legibility?.min_stroke_px ?? null,
     min_contrast: minContrast, max_lines: legibility?.max_lines ?? null,
