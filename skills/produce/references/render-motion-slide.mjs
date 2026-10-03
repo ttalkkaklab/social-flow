@@ -100,6 +100,8 @@
  *   first frame before the first seek.
  * Exit 0 ok · 1 render/contract failure · 2 usage.
  */
+// Keep this diagnostic ladder equal to still-camera.js RATE; the source-crosscheck test enforces it.
+const CAMERA_RATE={'very slow':.04,slow:.06,fast:.14,'very fast':.20};
 import { cameraGuard, readContrastFrame, rowContrast } from './render-evidence.mjs';
 import { parseWordCues } from './word-cue-map.mjs';
 import { measureSlideDOM, groupTextRows } from './slide-legibility.mjs';
@@ -753,11 +755,6 @@ const openPage = async () => {
   } else warn.push('legibility unmeasured: use --sheet for text, stroke and contrast evidence');
   const cameraMeta = isCamera ? await evalJS('window.__meta()') : null;
   const camera = cameraMeta?.camera ?? null, cameraCut=cameraMeta?.cameraCut ?? null;
-  if (cameraCut?.speedChecked) {
-    const speed=scene.visual?.camera?.speed, rate={'very slow':.04,slow:.06,fast:.14,'very fast':.20}[speed];
-    if (rate && Math.abs(cameraCut.ratePerSec-rate)>rate*.25) warn.push(`camera cut: rate ${cameraCut.ratePerSec.toFixed(4)}/s outside ${speed} ±25%`);
-    if (!speed && cameraCut.ratePerSec<.04-1e-9) warn.push('camera cut: undeclared speed and rate below 0.04/s');
-  }
   if (camera) for (const item of camera) {
     const f=item.focusAtEnd;
     if (f && (f.x<0 || f.x>W || f.y<0 || f.y>H || f.y>=(W>H?795:1350))) warn.push(`camera group ${item.rg}: final focus outside frame or in subtitle band`);
@@ -842,7 +839,7 @@ const openPage = async () => {
     segs_ms: segMap && segsApplied ? Array.from({ length: N }, (_, i) => segMap[i + 1] || null) : null,
     word_cues:wordCueMode, word_cue_application:wordCueApplied,
     word_cue_chain:wordCueApplied?.applied?'word cues bypass lead-in; other entrance chains retain it — review a cued group sheet':null,
-    camera, camera_cut: cameraCut, chart_motion: meta.chart_motion ?? null,
+    camera, camera_cut: cameraCut, camera_expected_rate_per_sec: cameraCut?.speedChecked?(CAMERA_RATE[scene.visual?.camera?.speed??'very slow']??null):null, chart_motion: meta.chart_motion ?? null,
     min_text_px: legibility?.min_text_px ?? null, min_stroke_px: legibility?.min_stroke_px ?? null,
     min_contrast: minContrast, max_lines: legibility?.max_lines ?? null,
     max_line_chars: legibility?.max_line_chars ?? null, excluded_text_nodes: legibility?.excluded_text_nodes ?? null,

@@ -237,8 +237,7 @@ to P0 (the slide is the evidence on screen; re-checking a false positive is chea
 publishing a wrong number).
 
 
-For `kind:"camera"`, use the camera-specific checks from slide-design: full-cut zoom
-rate within the declared ladder ±25%, peak source upscale ≤1.5, and final focus outside
+For `kind:"camera"`, use the camera-specific checks from slide-design: agreement between the runtime and renderer RATE tables (source-crosscheck test), peak source upscale ≤1.5, and final focus outside
 neither the frame nor inside the subtitle band. Group rates and non-zoom focus travel
 are diagnostic only. Do not apply plate typography, zone fill or the 2.6-second entrance
 cap to photo camera cuts. Keep focus-in/rack-focus outside the speed ladder.

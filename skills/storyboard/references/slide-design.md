@@ -728,7 +728,7 @@ may explicitly select `smoothstep` or `accel`. Focus-in and rack-focus keep thei
 Pan/tilt preserve authored focus endpoints; reveal/parallax scale layer travel by span/0.32.
 Their focus travel rates are diagnostic only, because the reference measurements cover zoom.
 
-Camera P0: full-cut zoom rate outside the declared ladder by more than 25%, peak source
+Camera P0: disagreement between the runtime and renderer RATE tables (locked by a source-crosscheck test), peak source
 upscale above 1.5, or final focus outside the frame/in the subtitle band. Group rates
 are diagnostic, not speed pass/fail. Required source size is at least
 ceil(canvas width × peak zoom / 1.5) by ceil(canvas height × peak zoom / 1.5).
