@@ -6,7 +6,7 @@ export function measureSlideDOM(groupRows) {
   const hidden = el => {
     for (let p = el; p; p = p.parentElement) {
       const s = getComputedStyle(p);
-      if (s.display === 'none' || s.visibility === 'hidden' || s.visibility === 'collapse' || Number(s.opacity) === 0) return true;
+      if (s.display === 'none' || s.visibility === 'hidden' || s.visibility === 'collapse' || Number(s.opacity) === 0) return selector(p);
     }
     return false;
   };
@@ -41,12 +41,13 @@ export function measureSlideDOM(groupRows) {
     return sizes.foot[wide ? 1 : 0];
   };
   const groups = new Map(), textSamples = [], strokeSamples = [];
-  let excludedTextNodes = 0;
+  const excludedText = [];
   const walker = document.createTreeWalker(stage, NodeFilter.SHOW_TEXT);
   for (let node; (node = walker.nextNode());) {
     if (!node.textContent.trim() || node.parentElement.closest('script,style')) continue;
     const el = node.parentElement;
-    if (hidden(el)) { excludedTextNodes++; continue; }
+    const hiddenBy=hidden(el);
+    if (hiddenBy) { excludedText.push({sel:selector(el),hiddenBy,text:node.textContent.trim()}); continue; }
     const parent = owner(el), cs = getComputedStyle(el), px = parseFloat(cs.fontSize);
     const sel = selector(el);
     const glyphs = [];
@@ -82,7 +83,7 @@ export function measureSlideDOM(groupRows) {
   const min = items => items.length ? items.reduce((a,b)=>a.px<=b.px?a:b) : null;
   return {text,textSamples,strokeSamples,min_text_px:min(textSamples),min_stroke_px:min(strokeSamples),
     max_lines:Math.max(0,...text.map(t=>t.lines)),max_line_chars:Math.max(0,...text.map(t=>t.chars)),
-    excluded_text_nodes:excludedTextNodes};
+    excluded_text_nodes:excludedText.length,excluded_text:excludedText};
 }
 
 export function percentileContrast(bytes) {

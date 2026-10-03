@@ -82,10 +82,11 @@ test('derived percentages and map keys do not inherit integer source precision',
  assert.doesNotMatch(render(d),/>0%<\/text>|>100%<\/text>/);
  const m=map();m.unit='rate';m.decimals=0;m.values[0].value=.001;assert.match(render(m),/>0\.001<\/text>/);
 });
-test('slice fills have no separator stroke that hides a small positive area',()=>{
+test('slice separators require a minimum source share',()=>{
  const d=data();d.values[0].value=.1;d.values[1].value=99.9;
  const marks=[...render(d).matchAll(/<path data-mark="slice"[^>]*>/g)].map(m=>m[0]);
- assert.equal(marks.length,2);marks.forEach(mark=>assert.doesNotMatch(mark,/stroke=/));
+ assert.equal(marks.length,2);marks.forEach(mark=>assert.match(mark,/stroke-width="3"/));
+ assert.match(checkData(d,2).join(),/share below/);
 });
 test('zero and missing map points have an animated focus indicator',()=>{
  const d=map();d.unit='items';d.map.mode='symbol';d.values=[{label:'A',value:0,longitude:1,latitude:1},{label:'B',value:null,longitude:3,latitude:1},{label:'C',value:100,longitude:2,latitude:1}];
@@ -95,6 +96,42 @@ test('zero and missing map points have an animated focus indicator',()=>{
 });
 test('circular legend wraps to the available phone width and rejects excessive rows',()=>{
  const d=data();d.values[0].label='가'.repeat(24);d.beats[0].focus=[d.values[0].label];
- assert.deepEqual(checkData(d,2),[]);const labels=[...render(d).matchAll(/>(가+)<\/text>/g)].map(m=>m[1]);assert.deepEqual(labels.map(x=>x.length),[11,11,2]);
+ assert.deepEqual(checkData(d,2),[]);const labels=[...render(d).matchAll(/>(가+)<\/text>/g)].map(m=>m[1]);assert.deepEqual(labels.map(x=>x.length),[6,6,6,6]);
  d.values=Array.from({length:6},(_,i)=>({label:'가'.repeat(11)+i,value:100/6}));assert.match(checkData(d,2).join(),/phone-height/);
+});
+
+test('portrait floors and row clearance reduce bar and donut capacity without shrinking type',()=>{
+ for(const chart of ['bar','donut']){
+  const d=data();d.chart=chart;const cap=chart==='bar'?4:5;d.values=Array.from({length:cap},(_,i)=>({label:String.fromCharCode(65+i),value:20}));
+  assert.deepEqual(checkData(d,2),[]);
+  assert.match(render(d),/font-size="44"/);
+  d.values.push({label:'F',value:20});assert.match(checkData(d,2).join(),new RegExp('exceeds '+cap));
+ }
+});
+test('labels break at spaces, shared domains hold and reject clipped values',()=>{
+ const {wrapLabel}=require('../../skills/storyboard/references/chart-runtime.js');
+ assert.deepEqual(wrapLabel('서울특별시 강남구 역삼제일동',10),['서울특별시 강남구','역삼제일동']);
+ const d=data();d.chart='bar';d.domain=[0,100];assert.deepEqual(checkData(d,2),[]);
+ const chart=render(d);assert.match(chart,/>100<\/text>/);
+ d.domain=[0,50];assert.match(checkData(d,2).join(),/data.domain/);
+});
+test('chart geometry ends at grow, focus at plate, independently of segment duration',()=>{
+ const d=data();assert.equal(render(d,{elapsedMs:1000}),render(d,{elapsedMs:8000}));
+ assert.equal(render(d,{group:2,elapsedMs:400}),render(d,{group:2,elapsedMs:8000}));
+ assert.notEqual(render(d,{elapsedMs:200}),render(d,{elapsedMs:1000}));
+});
+
+test('the scenes CLI rejects changed or missing domains only inside a comparable run',async()=>{
+ const {mkdtempSync,writeFileSync,rmSync}=await import('node:fs');
+ const {tmpdir}=await import('node:os');const {join}=await import('node:path');
+ const {spawnSync}=await import('node:child_process');
+ const folder=mkdtempSync(join(tmpdir(),'chart-domain-'));
+ try{
+  const a=scene({...data(),chart:'bar',domain:[0,100]}),b=structuredClone(a);
+  const run=()=>{writeFileSync(join(folder,'scenes.js'),'window.FORMAT="shorts-9x16";window.SCENES='+JSON.stringify([a,b])+';');return spawnSync(process.execPath,[new URL('../../skills/storyboard/references/check-scenes.js',import.meta.url).pathname,folder,'--draft','--json'],{encoding:'utf8'}).stdout;};
+  assert.doesNotMatch(run(),/consecutive charts/);
+  b.shot.render.data.domain=[0,200];assert.match(run(),/consecutive charts/);
+  delete b.shot.render.data.domain;assert.match(run(),/consecutive charts/);
+  b.shot.render.data.unit='different';assert.doesNotMatch(run(),/consecutive charts/);
+ }finally{rmSync(folder,{recursive:true,force:true});}
 });

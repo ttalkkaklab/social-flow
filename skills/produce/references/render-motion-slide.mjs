@@ -721,7 +721,7 @@ const openPage = async () => {
       if (ratio != null && (!minContrast || ratio<minContrast.ratio)) minContrast={ratio,sel:item.sel};
       if (ratio != null && ratio<threshold) warn.push(`contrast ${item.sel}: ${ratio.toFixed(2)}:1 below ${threshold}:1`);
     }
-    if (legibility.excluded_text_nodes) warn.push(`${legibility.excluded_text_nodes} text nodes excluded at the final frame (hidden or transparent)`);
+    // Crossfade remnants can legitimately be hidden; record their identity, not a defect warning.
   } else warn.push('legibility unmeasured: use --sheet for text, stroke and contrast evidence');
   const camera = isCamera ? (await evalJS('window.__meta()')).camera : null;
   if (camera) for (const item of camera) {
@@ -809,10 +809,11 @@ const openPage = async () => {
     treatment: treatment || null,
     segments: segCount, durations_ms: groups.slice(1).map(g => g.dur),
     segs_ms: segMap && segsApplied ? Array.from({ length: N }, (_, i) => segMap[i + 1] || null) : null,
-    camera,
+    camera, chart_motion: meta.chart_motion ?? null,
     min_text_px: legibility?.min_text_px ?? null, min_stroke_px: legibility?.min_stroke_px ?? null,
     min_contrast: minContrast, max_lines: legibility?.max_lines ?? null,
     max_line_chars: legibility?.max_line_chars ?? null, excluded_text_nodes: legibility?.excluded_text_nodes ?? null,
+    excluded_text: legibility?.excluded_text ?? null,
     text_lines: legibility?.text ?? null,
     zone_fill_pct: zoneFill, grain: opt.pngOnly ? null : opt.grain, frames: framesTotal,
     seconds: +sec.toFixed(2), fps_capture: +(framesTotal / sec).toFixed(1), out: OUT, warnings: warn };

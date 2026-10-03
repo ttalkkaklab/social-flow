@@ -1098,6 +1098,17 @@ function check(win, fmt, opts) {
                      '(slide.motionBeats — a motion slide and an explanation slide sit outside the cap)');
   }
 
+  // Consecutive comparable charts must not silently change their value scale.
+  let previousChart = null;
+  scenes.forEach((s,i)=>{
+    const r=s.shot?.render,d=r?.data;
+    if(r?.mode!=='data_graph'||!d||['map','timeline'].includes(d.chart)){previousChart=null;return;}
+    if(previousChart && previousChart.unit===d.unit && previousChart.purpose===r.purpose &&
+       JSON.stringify(previousChart.domain??null)!==JSON.stringify(d.domain??null))
+      bad('shot '+(i+1),'consecutive charts with the same unit and purpose need the same data.domain');
+    previousChart={unit:d.unit,purpose:r.purpose,domain:d.domain};
+  });
+
   // ── Shot level ──
   const brollAfters = [];
   scenes.forEach((s, i) => {
@@ -1106,7 +1117,7 @@ function check(win, fmt, opts) {
     const v = s.visual || {};
     const shot = s.shot || {};
     if ((opts && opts.requireRenderPlan) || shot.render)
-      require('./render-routing.js').checkScene(s, { draft, production: win.PRODUCTION }).forEach(message => bad(where, message));
+      require('./render-routing.js').checkScene(s, { draft, production: win.PRODUCTION, format:win.FORMAT }).forEach(message => bad(where, message));
 
     if (!s.type) { bad(where, 'no type'); return; }
     if (TYPES.indexOf(s.type) === -1) bad(where, `type "${s.type}" is outside ${TYPES.join(' · ')}`);

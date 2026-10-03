@@ -428,7 +428,8 @@ The final sheet frame supplies per-row 5th/95th percentile luminance. Text-node 
 rectangles form a row when their vertical overlap is at least 50% of the smaller
 height; emphasis spans share a row. `text_lines`, `max_lines` and `max_line_chars`
 record those rows. Hidden or zero-opacity ancestors exclude a text node; the summary
-reports `excluded_text_nodes`. No sheet means null measurements, not a pass.
+reports `excluded_text_nodes` and `excluded_text` identities. A nonzero count alone
+is not a defect: a completed crossfade can retain a hidden previous value. No sheet means null measurements, not a pass.
 These measurements inform this score and P0-10; threshold findings are warnings.
 
 Findings that are a matter of taste go to fix directives, not P0. A P0 is something a
@@ -657,3 +658,16 @@ the vector-illustration tell (flat fills, an outline, no wall shadow) and the pl
 surface with no grain); motion-carries-meaning compares `g<k>-mid` with `g<k>-end` on the
 object itself — stamps landed, angle changed — against the sentence; legibility is unchanged,
 with the object's shadow never under text.
+
+### Chart type and motion tokens
+
+Chart type follows §3 and P0-10; it has no exemption from the type floors.
+Portrait / wide sizes in pixels: chart headline 62/52, insight and mark labels/values
+44/32, eyebrow 34/26, source and axis ticks/map keys/dates/secondary values 28/24.
+The donut centre stays between 44 and 52px portrait (32 and 52px wide).
+Chart labels wrap at spaces; split within a word only when that word cannot fit alone.
+Touching slices, stacked segments, histogram bins and adjacent map regions use a
+paper-colour `--hair` separator, 3px portrait / 2px wide. This supplies the category
+boundary evidence for §6 palette scoring.
+Chart geometry reveals over `--grow` 1000ms on `--ease-mask`; focus shifts over
+`--plate` 400ms on `--ease`. These are §5 tokens, sampled deterministically.
