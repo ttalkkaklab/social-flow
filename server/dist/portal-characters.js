@@ -82,6 +82,16 @@ const summarize = (c) => ({
 /**
  * `project` (a channel name) to the id the portal filters by. Exact match on the name; a workspace
  * with two same-named projects is itself ambiguous, so it throws rather than guess.
+ *
+ * The name↔id layer is one capped read: the portal answers `GET /projects` with
+ * `desc(updatedAt)` and `limit: 200` and the route takes no query at all — no paging, no name
+ * filter (ttalkkaklab `src/features/project/dal.ts:12-18`, `projects/[…]/route.ts:9-12`; read off
+ * `origin/main`·`origin/dev`, which carry the same value). So past that cap a name cannot be
+ * resolved through this path, and a project nobody has touched lately is the one that falls out.
+ * That is a real ceiling for a `project`-only `list` — there is no candidate set to work back from.
+ * A read that carries a `key` does have one (`GET /projects/{projectId}` is uncapped), and the PR
+ * body records why that reverse lookup was not taken. Until then: never state the miss as more
+ * than this read saw.
  */
 async function resolveProjectId(client, project) {
     const { data: projects } = await client.listProjects();
@@ -97,11 +107,16 @@ async function resolveProjectId(client, project) {
     }
     const names = projects.map(p => p.name).sort();
     if (matches.length === 0) {
-        throw new Error(`No project named "${project}" in workspace ${client.workspace}. It has ${names.length}: ${names.join(', ')}.`);
+        throw new Error(`No project named "${project}" among the ${names.length} most recently updated projects of ` +
+            `workspace ${client.workspace}: ${names.join(', ')}. That list is the whole read — the portal ` +
+            `caps it and offers no paging — so a project left untouched for longer can sit outside it.`);
     }
-    throw new Error(`Workspace ${client.workspace} has ${matches.length} projects named "${project}" (${matches.map(p => p.id).join(', ')}) — it cannot be named unambiguously. Ask the portal owner to rename one.`);
+    throw new Error(`Workspace ${client.workspace} has ${matches.length} projects named "${project}" in this read (${matches.map(p => p.id).join(', ')}) — it cannot be named unambiguously. Ask the portal owner to rename one.`);
 }
-/** Names for an ambiguity message; ids alone if the project list cannot be read. */
+/**
+ * Names for an ambiguity message; ids alone if the project list cannot be read. Candidates past the
+ * project cap above degrade to their id here (`?? c.projectId`) rather than go missing.
+ */
 async function projectNames(client) {
     try {
         const { data: projects } = await client.listProjects();
@@ -119,19 +134,27 @@ export async function listCharacters(client, args) {
 /**
  * One record for a key. With a projectId the portal returns at most one. Without one, several
  * projects can hold the same key — then the order decides, so this refuses to pick.
+ *
+ * The candidate read is one page (the portal's character page size is 24), so the count in the
+ * message is "at least" whenever `hasNext` says more are behind it. The verdict itself does not
+ * depend on the page: `key` is a `where` clause, applied before the LIMIT, so every candidate the
+ * first page holds really matches and two of them are already enough to refuse. A page that cut
+ * the set can only understate how many projects share the key, never hide the sharing.
  */
 async function byKey(client, key, projectId, project) {
     const { data } = await client.listCharacters({ key, projectId });
     if (data.items.length <= 1)
         return data.items[0] ?? null;
+    const counted = data.hasNext ? `at least ${data.items.length}` : `${data.items.length}`;
+    const page = data.hasNext ? ' Only the first page of candidates was read, so there may be more.' : '';
     // Narrowed and still several — one project holds duplicate keys, so only an id can pick.
     if (project) {
-        throw new Error(`Project "${project}" holds ${data.items.length} characters with key "${key}" (ids ${data.items.map(c => c.id).join(', ')}). Pass id — nothing was read.`);
+        throw new Error(`Project "${project}" holds ${counted} characters with key "${key}" (ids ${data.items.map(c => c.id).join(', ')}). Pass id — nothing was read.${page}`);
     }
     const names = await projectNames(client);
     const where = data.items.map(c => `${names.get(c.projectId) ?? c.projectId} (id ${c.id})`).sort().join(' · ');
-    throw new Error(`Key "${key}" exists in ${data.items.length} projects of workspace ${client.workspace}: ${where}. ` +
-        `Pass project (the channel name) or id to say which one — nothing was read from the wrong one.`);
+    throw new Error(`Key "${key}" exists in ${counted} projects of workspace ${client.workspace}: ${where}. ` +
+        `Pass project (the channel name) or id to say which one — nothing was read from the wrong one.${page}`);
 }
 export async function getCharacter(client, args) {
     const projectId = args.project ? await resolveProjectId(client, args.project) : undefined;

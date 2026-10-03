@@ -188,12 +188,15 @@ describe('one key in two projects', () => {
     assert.equal('project' in out, false);
   });
 
-  it('an unknown project name is refused with the names that exist', async () => {
+  it('an unknown project name is refused with the names that exist, scoped to what was read', async () => {
     const { impl } = fakeTwoProjects();
     const r = await portal.portalHandlers(impl).characterGet({ channel: 'lab', key: 'narrator', project: 'nope' });
     assert.equal(r.isError, true);
     assert.match(r.text, /No project named "nope"/);
     assert.match(r.text, /eumsigeul, inmuleul/);
+    // the project list is one capped, unpaged read — the miss may not be a miss in the workspace
+    assert.match(r.text, /most recently updated projects/);
+    assert.match(r.text, /caps it and offers no paging/);
   });
 
   it('two projects sharing a name are refused rather than guessed', async () => {
@@ -216,6 +219,52 @@ describe('one key in two projects', () => {
     assert.throws(() => chars.characterGetSchema.parse({ id: ID, key: 'narrator', project: 'lab' }), /exactly one/);
     assert.equal(chars.characterGetSchema.parse({ key: 'narrator', project: 'lab' }).project, 'lab');
     assert.equal(chars.characterGetSchema.parse({ key: 'narrator' }).project, undefined);
+  });
+
+  it('a candidate page that was cut counts "at least", and the enumeration is not trimmed', async () => {
+    // the portal's character page size is 24: a full page plus hasNext means the count is a floor,
+    // never the total. The verdict is unaffected — key is a where clause, applied before the LIMIT.
+    const page = Array.from({ length: 24 }, (_, i) => record({ id: `6666666${i.toString(16)}-6666-4666-8666-666666666666`, projectId: `p${i}`, key: 'narrator' }));
+    const projects = page.map((c, i) => ({ id: c.projectId, name: `project-${i}` }));
+    const impl = async (url, init = {}) => {
+      const u = new URL(url);
+      if (u.pathname === '/api/token') return Response.json({ success: true, data: { workspaceSlug: 'lab', workspaceName: 'Lab', role: 'member' } });
+      if (u.pathname === '/api/workspaces/lab/projects') return Response.json({ success: true, data: projects });
+      if (u.pathname === '/api/workspaces/lab/characters') {
+        const wanted = u.searchParams.get('projectId');
+        const hits = wanted ? page.filter((c) => c.projectId === wanted) : page;
+        return Response.json({ success: true, data: { items: hits, hasNext: !wanted } });
+      }
+      return new Response(JSON.stringify({ success: false, error: 'no route' }), { status: 404 });
+    };
+    const r = await portal.portalHandlers(impl).characterGet({ channel: 'lab', key: 'narrator' });
+    assert.equal(r.isError, true, r.text);
+    assert.match(r.text, /exists in at least 24 projects/);
+    assert.match(r.text, /Only the first page of candidates was read/);
+    for (const c of page) assert.match(r.text, new RegExp(c.id), `${c.id} must stay in the list`);
+
+    // same floor wording on the narrowed branch, where duplicates sit inside one project
+    const dupes = page.map((c) => ({ ...c, projectId: 'p0' }));
+    const narrowed = async (url, init = {}) => {
+      const u = new URL(url);
+      if (u.pathname === '/api/token') return Response.json({ success: true, data: { workspaceSlug: 'lab', workspaceName: 'Lab', role: 'member' } });
+      if (u.pathname === '/api/workspaces/lab/projects') return Response.json({ success: true, data: [{ id: 'p0', name: 'project-0' }] });
+      if (u.pathname === '/api/workspaces/lab/characters') return Response.json({ success: true, data: { items: dupes, hasNext: true } });
+      return new Response(JSON.stringify({ success: false, error: 'no route' }), { status: 404 });
+    };
+    const r2 = await portal.portalHandlers(narrowed).characterGet({ channel: 'lab', key: 'narrator', project: 'project-0' });
+    assert.equal(r2.isError, true, r2.text);
+    assert.match(r2.text, /holds at least 24 characters/);
+    assert.match(r2.text, /Only the first page of candidates was read/);
+  });
+
+  it('a whole candidate set still counts exactly, with no page caveat', async () => {
+    const { impl } = fakeTwoProjects();
+    const r = await portal.portalHandlers(impl).characterGet({ channel: 'lab', key: 'narrator' });
+    assert.equal(r.isError, true, r.text);
+    assert.match(r.text, /exists in 2 projects/);
+    assert.equal(/at least/.test(r.text), false, 'hasNext is false — the count is the total');
+    assert.equal(/first page/.test(r.text), false);
   });
 
   it('a project whose id comes back blank is refused, not widened to the workspace', async () => {

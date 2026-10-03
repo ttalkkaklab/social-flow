@@ -92299,9 +92299,11 @@ async function resolveProjectId(client, project) {
   }
   const names = projects.map((p) => p.name).sort();
   if (matches.length === 0) {
-    throw new Error(`No project named "${project}" in workspace ${client.workspace}. It has ${names.length}: ${names.join(", ")}.`);
+    throw new Error(
+      `No project named "${project}" among the ${names.length} most recently updated projects of workspace ${client.workspace}: ${names.join(", ")}. That list is the whole read \u2014 the portal caps it and offers no paging \u2014 so a project left untouched for longer can sit outside it.`
+    );
   }
-  throw new Error(`Workspace ${client.workspace} has ${matches.length} projects named "${project}" (${matches.map((p) => p.id).join(", ")}) \u2014 it cannot be named unambiguously. Ask the portal owner to rename one.`);
+  throw new Error(`Workspace ${client.workspace} has ${matches.length} projects named "${project}" in this read (${matches.map((p) => p.id).join(", ")}) \u2014 it cannot be named unambiguously. Ask the portal owner to rename one.`);
 }
 async function projectNames(client) {
   try {
@@ -92319,13 +92321,15 @@ async function listCharacters(client, args) {
 async function byKey(client, key, projectId, project) {
   const { data } = await client.listCharacters({ key, projectId });
   if (data.items.length <= 1) return data.items[0] ?? null;
+  const counted = data.hasNext ? `at least ${data.items.length}` : `${data.items.length}`;
+  const page = data.hasNext ? " Only the first page of candidates was read, so there may be more." : "";
   if (project) {
-    throw new Error(`Project "${project}" holds ${data.items.length} characters with key "${key}" (ids ${data.items.map((c) => c.id).join(", ")}). Pass id \u2014 nothing was read.`);
+    throw new Error(`Project "${project}" holds ${counted} characters with key "${key}" (ids ${data.items.map((c) => c.id).join(", ")}). Pass id \u2014 nothing was read.${page}`);
   }
   const names = await projectNames(client);
   const where = data.items.map((c) => `${names.get(c.projectId) ?? c.projectId} (id ${c.id})`).sort().join(" \xB7 ");
   throw new Error(
-    `Key "${key}" exists in ${data.items.length} projects of workspace ${client.workspace}: ${where}. Pass project (the channel name) or id to say which one \u2014 nothing was read from the wrong one.`
+    `Key "${key}" exists in ${counted} projects of workspace ${client.workspace}: ${where}. Pass project (the channel name) or id to say which one \u2014 nothing was read from the wrong one.${page}`
   );
 }
 async function getCharacter(client, args) {
