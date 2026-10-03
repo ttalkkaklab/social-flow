@@ -1,6 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
+import {fileURLToPath} from 'node:url';
 const require=createRequire(import.meta.url);
 const {checkScene,checkData,checkMap}=require('../../skills/storyboard/references/render-routing.js');
 const {render,sectorPath,mapGeometry,project}=require('../../skills/storyboard/references/chart-runtime.js');
@@ -128,11 +129,11 @@ test('the scenes CLI rejects changed or missing domains only inside a comparable
  const folder=mkdtempSync(join(tmpdir(),'chart-domain-'));
  try{
   const a=scene({...data(),chart:'bar',domain:[0,100]}),b=structuredClone(a);
-  const run=()=>{writeFileSync(join(folder,'scenes.js'),'window.FORMAT="shorts-9x16";window.SCENES='+JSON.stringify([a,b])+';');return spawnSync(process.execPath,[new URL('../../skills/storyboard/references/check-scenes.js',import.meta.url).pathname,folder,'--draft','--json'],{encoding:'utf8'}).stdout;};
-  assert.doesNotMatch(run(),/consecutive charts/);
-  b.shot.render.data.domain=[0,200];assert.match(run(),/consecutive charts/);
-  delete b.shot.render.data.domain;assert.match(run(),/consecutive charts/);
-  b.shot.render.data.unit='different';assert.doesNotMatch(run(),/consecutive charts/);
+  const run=()=>{writeFileSync(join(folder,'scenes.js'),'window.FORMAT="shorts-9x16";window.SCENES='+JSON.stringify([a,b])+';');const child=spawnSync(process.execPath,[fileURLToPath(new URL('../../skills/storyboard/references/check-scenes.js',import.meta.url)),folder,'--draft','--json'],{encoding:'utf8'});return parseSceneReport(child);};
+  assert.equal(run().findings.some(f=>f.what.includes('consecutive charts')),false);
+  b.shot.render.data.domain=[0,200];assert.ok(run().findings.some(f=>f.what.includes('consecutive charts')));
+  delete b.shot.render.data.domain;assert.ok(run().findings.some(f=>f.what.includes('consecutive charts')));
+  b.shot.render.data.unit='different';assert.equal(run().findings.some(f=>f.what.includes('consecutive charts')),false);
  }finally{rmSync(folder,{recursive:true,force:true});}
 });
 
@@ -144,8 +145,22 @@ test('comparable charts cannot both omit domain and silently use independent aut
  try{
   const a=scene({...data(),chart:'bar',values:[{label:'A',value:10},{label:'B',value:20}]}),b=structuredClone(a);
   b.shot.render.data.values=[{label:'A',value:1000},{label:'B',value:2000}];
-  const run=()=>{writeFileSync(join(folder,'scenes.js'),'window.FORMAT="shorts-9x16";window.SCENES='+JSON.stringify([a,b])+';');return spawnSync(process.execPath,[new URL('../../skills/storyboard/references/check-scenes.js',import.meta.url).pathname,folder,'--draft','--json'],{encoding:'utf8'}).stdout;};
-  assert.match(run(),/consecutive charts.*explicit shared data.domain/);
-  a.shot.render.data.domain=b.shot.render.data.domain=[0,2000];assert.doesNotMatch(run(),/consecutive charts/);
+  const run=()=>{writeFileSync(join(folder,'scenes.js'),'window.FORMAT="shorts-9x16";window.SCENES='+JSON.stringify([a,b])+';');const child=spawnSync(process.execPath,[fileURLToPath(new URL('../../skills/storyboard/references/check-scenes.js',import.meta.url)),folder,'--draft','--json'],{encoding:'utf8'});return parseSceneReport(child);};
+  assert.ok(run().findings.some(f=>/consecutive charts.*explicit shared data.domain/.test(f.what)));
+  a.shot.render.data.domain=b.shot.render.data.domain=[0,2000];assert.equal(run().findings.some(f=>f.what.includes('consecutive charts')),false);
  }finally{rmSync(folder,{recursive:true,force:true});}
 });
+
+function parseSceneReport(child) {
+ assert.ifError(child.error);
+ assert.equal(child.signal,null,child.stderr);
+ const report=JSON.parse(child.stdout);
+ assert.equal(report.format,'shorts-9x16');
+ assert.equal(report.shots,2);
+ assert.equal(report.draft,true);
+ assert.ok(Array.isArray(report.findings));
+ for(const finding of report.findings){assert.equal(typeof finding.what,'string');assert.ok(['bad','warn','later'].includes(finding.level));}
+ assert.equal(report.violations,report.findings.filter(f=>f.level==='bad').length);
+ assert.equal(child.status,report.violations?1:0,child.stderr);
+ return report;
+}

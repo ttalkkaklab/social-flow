@@ -1,6 +1,6 @@
 // Evidence for slide-design §6. Warning thresholds do not replace the reviewer.
 // This function is serialized into the capture page; keep it free of module state.
-export function measureSlideDOM(groupRows) {
+export function measureSlideDOM(groupRows, fontFloor) {
   const stage = document.getElementById('stage') || document.body;
   const wide = window.FORMAT === 'youtube-long-16x9';
   const hidden = el => {
@@ -30,16 +30,15 @@ export function measureSlideDOM(groupRows) {
   };
   const floor = el => {
     const role = el.closest('[data-type-role]')?.dataset.typeRole;
-    // Keep role floors aligned with slide-design §3 and chart-runtime TYPE/HAIR/RULE.
-    const sizes = {foot:[28,24], kicker:[34,26], description:[44,32], label:[54,40], title:[76,56], word:[124,92], word2:[68,50]};
-    if (role && sizes[role]) return sizes[role][wide ? 1 : 0];
-    if (el.closest('#source,.foot')) return sizes.foot[wide ? 1 : 0];
-    if (el.closest('#eyebrow,.kicker')) return sizes.kicker[wide ? 1 : 0];
-    if (el.closest('#insight,.desc,.sub')) return sizes.description[wide ? 1 : 0];
-    if (el.closest('.word2')) return sizes.word2[wide ? 1 : 0];
-    if (el.closest('.word')) return sizes.word[wide ? 1 : 0];
-    // Unclassified text gets the smallest role floor; role-specific checks remain review evidence.
-    return sizes.foot[wide ? 1 : 0];
+    const explicit = fontFloor(role, wide);
+    if (explicit != null) return explicit;
+    if (el.closest('#source,.foot')) return fontFloor('foot', wide);
+    if (el.closest('#eyebrow,.kicker')) return fontFloor('kicker', wide);
+    if (el.closest('#insight,.desc,.sub')) return fontFloor('description', wide);
+    if (el.closest('.word2')) return fontFloor('word2', wide);
+    if (el.closest('.word')) return fontFloor('word', wide);
+    // Unclassified text gets the smallest role floor.
+    return fontFloor('foot', wide);
   };
   const groups = new Map(), textSamples = [], strokeSamples = [];
   const excludedText = [];
@@ -122,4 +121,10 @@ export function groupTextRows(glyphs) {
       r.y=top; r.h=Math.max(0,bottom-top);
     });
     return boxes;
+}
+
+// Keep role floors aligned with slide-design §3 and chart-runtime TYPE.
+export function roleFontFloor(role, wide) {
+  const sizes = {foot:[28,24], kicker:[34,26], description:[44,32], label:[54,40], title:[76,56], word:[124,92], word2:[68,50]};
+  return Object.hasOwn(sizes, role) ? sizes[role][wide ? 1 : 0] : null;
 }

@@ -102,9 +102,9 @@
  */
 // Keep this diagnostic ladder equal to still-camera.js RATE; the source-crosscheck test enforces it.
 const CAMERA_RATE={'very slow':.04,slow:.06,fast:.14,'very fast':.20};
-import { cameraGuard, readContrastFrame, rowContrast } from './render-evidence.mjs';
+import { cameraGuard, readContrastFrame, rowContrast, contrastWarning } from './render-evidence.mjs';
 import { parseWordCues } from './word-cue-map.mjs';
-import { measureSlideDOM, groupTextRows } from './slide-legibility.mjs';
+import { measureSlideDOM, groupTextRows, roleFontFloor } from './slide-legibility.mjs';
 import { spawn, execFileSync } from "node:child_process";
 import { createRequire } from "node:module";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -734,7 +734,7 @@ const openPage = async () => {
   }
   // Measure the same final state as the last sheet frame. No sheet means unmeasured, not zero.
   await seek(groups[N].dur, N);
-  const legibility = opt.sheet ? await evalJS(`(${measureSlideDOM.toString()})(${groupTextRows.toString()})`) : null;
+  const legibility = opt.sheet ? await evalJS(`(${measureSlideDOM.toString()})(${groupTextRows.toString()},${roleFontFloor.toString()})`) : null;
   let minContrast = null;
   if (legibility) {
     if (scene?.visual?.slide?.kind==='kinetic') for(const item of legibility.text)
@@ -747,9 +747,10 @@ const openPage = async () => {
       ?readContrastFrame(path.join(OUT,'sheet',`g${N}-end.png`),W,H):{pixels:null,error:null};
     if(contrastFrame.error)warn.push(`contrast unmeasured: ${contrastFrame.error}`);
     for (const item of legibility.text) for (const row of item.rows) {
-      const ratio=contrastFrame.pixels?rowContrast(contrastFrame.pixels,W,H,row):null, threshold=row.px>=66?3:4.5;
+      const ratio=contrastFrame.pixels?rowContrast(contrastFrame.pixels,W,H,row):null;
       if (ratio != null && (!minContrast || ratio<minContrast.ratio)) minContrast={ratio,sel:item.sel};
-      if (ratio != null && ratio<threshold) warn.push(`contrast ${item.sel}: ${ratio.toFixed(2)}:1 below ${threshold}:1`);
+      const contrastProblem=contrastWarning(ratio,row.px,item.sel);
+      if (contrastProblem) warn.push(contrastProblem);
     }
     // Crossfade remnants can legitimately be hidden; record their identity, not a defect warning.
   } else warn.push('legibility unmeasured: use --sheet for text, stroke and contrast evidence');

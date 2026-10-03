@@ -25,3 +25,9 @@ export function rowContrast(pixels, width, height, row) {
   for(let i=0;i<h;i++)crop.set(pixels.subarray((y+i)*width+x,(y+i)*width+x+w),i*w);
   return percentileContrast(crop);
 }
+
+export function contrastWarning(ratio, px, selector) {
+  const threshold = px >= 66 ? 3 : 4.5;
+  return ratio != null && ratio < threshold
+    ? `contrast ${selector}: ${ratio.toFixed(2)}:1 below ${threshold}:1` : null;
+}
