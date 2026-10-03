@@ -101,6 +101,26 @@ node $PG/format-resolve.js storyboard/scenes.js --json | python3 -c \
 Portrait is 1088×1920 rather than an exact 9:16 because of gpt-image's multiple-of-16
 constraint; it cover-crops onto the 1080×1920 canvas, so the 0.7% difference is ignorable.
 
+Plan still-camera source dimensions before generating an image. All zoom ladder rows
+use `peakZoom = 1 + rate × seconds` for push/pull/approach, and need at least
+`ceil(canvas width × peakZoom / 1.5)` × `ceil(canvas height × peakZoom / 1.5)`.
+Pan/tilt and optical effects use their actual fixed/end-point zoom instead.
+
+| Speed | Rate | Example length | Minimum portrait | Minimum wide |
+|---|---:|---:|---:|---:|
+| Omitted / very slow | .04/s | 8s | 951×1690 | 1690×951 |
+| slow | .06/s | 9s | 1109×1972 | 1972×1109 |
+| fast (maximum 6s) | .14/s | 6s | 1325×2356 | 2356×1325 |
+| very fast (maximum 5s) | .20/s | 5s | 1440×2560 | 2560×1440 |
+
+The standard portrait 1088×1920 source supports at most 12.5s at .04/s or
+8⅓s at .06/s: very slow 12.6s and slow 8.4s already need a larger source.
+The local wide 2048×1152 source supports at most 15s at .04/s or 10s at .06/s.
+Recalculate for every planned length; these are size limits, not permissions to exceed
+the fast/very-fast duration caps. For fast rows, 1440×2560 portrait or 2560×1440 wide
+covers the allowed durations. The renderer remains the final 1.5× guard; an earlier
+PNG-header authoring check is outside this change.
+
 Save each one as `storyboard/images/scene-<n>.png`, `<n>` counting from 1 — the same number
 the strip calls "Shot n". Slide scenes have no still here (their screen is HTML, authored at
 §3.6), and shooting mode has none at all.

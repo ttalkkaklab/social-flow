@@ -1,14 +1,15 @@
 <!doctype html>
 <html class="studio"><meta charset="utf-8">
 <style>
+:root{--grow:1000ms;--plate:400ms;--ease-mask:cubic-bezier(.4,0,.2,1);--ease:cubic-bezier(.05,.7,.1,1)}
 *{box-sizing:border-box}html,body{margin:0;overflow:hidden}body{font-family:'Pretendard Variable','Pretendard','Apple SD Gothic Neo','Noto Sans KR',sans-serif}
 .studio-plate{position:absolute;inset:0;background:var(--paper)}
 #stage{position:absolute;left:var(--x);top:var(--top);width:var(--width);height:var(--height);color:var(--ink)}
-#eyebrow{font-size:30px;font-weight:600;letter-spacing:.02em;color:var(--muted)}
+#eyebrow{font-size:34px;font-weight:600;letter-spacing:.02em;color:var(--muted)}
 #title{font-size:62px;line-height:1.18;letter-spacing:-.025em;font-weight:750;word-break:keep-all;text-wrap:balance;margin:28px 0 20px;max-height:150px}
-#insight{font-size:36px;line-height:1.4;word-break:keep-all;text-wrap:balance;min-height:104px;color:var(--muted)}
-#plot{margin-top:30px}#source{position:absolute;bottom:0;font-size:27px;line-height:1.4;color:var(--muted);max-width:100%;overflow-wrap:anywhere;border-top:2px solid var(--line);padding-top:20px}
-.wide #title{font-size:52px;max-height:125px}.wide #insight{font-size:32px}.wide #stage{display:grid;grid-template-columns:520px 1fr;gap:50px}.wide #intro{padding-top:18px}.wide #plot{margin-top:0}.wide #source{max-width:480px;font-size:25px}
+#insight{font-size:44px;line-height:1.4;word-break:keep-all;text-wrap:balance;min-height:104px;color:var(--muted)}
+#plot{margin-top:30px}#source{position:absolute;bottom:0;font-size:28px;line-height:1.4;color:var(--muted);max-width:100%;overflow-wrap:anywhere;border-top:3px solid var(--line);padding-top:20px}
+.wide #eyebrow{font-size:26px}.wide #source{border-top-width:2px}.wide #title{font-size:52px;max-height:125px}.wide #insight{font-size:32px}.wide #stage{display:grid;grid-template-columns:520px 1fr;gap:50px}.wide #intro{padding-top:18px}.wide #plot{margin-top:0}.wide #source{max-width:480px;font-size:24px}
 </style>
 <div class="studio-plate" data-ground></div>
 <main id="stage"><section id="intro"><div id="eyebrow"></div><div id="title"></div><div id="insight"></div></section><div id="plot"></div><div id="source"></div></main>
@@ -33,15 +34,15 @@ function renderSlide(ms,group){
   const motion={primitive:'chart-reveal'};plot.dataset.primitive=motion.primitive;plot.dataset.rg=group;
   const i=Math.max(0,Math.min(segments.length-1,group-1)),p=Math.max(0,Math.min(1,ms/segments[i]));
   // The graph and its focus continue across narration boundaries. No group restarts the bars.
-  plot.innerHTML=CHART_RUNTIME.render(D,{width:pw,height:ph,group:i+1,progress:p,accent:window.THEME?.chartAccent});
-  insight.textContent=D.beats[p<.25&&i>0?i-1:i].insight;
+  plot.innerHTML=CHART_RUNTIME.render(D,{width:pw,height:ph,group:i+1,progress:p,wide,elapsedMs:ms,growMs:parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--grow')),plateMs:parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--plate')),accent:window.THEME?.chartAccent});
+  insight.textContent=D.beats[ms<parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--plate'))/2&&i>0?i-1:i].insight;
 }
 // SEEK-RUNTIME-BEGIN
 window.__seek=(ms,group=1)=>renderSlide(ms,group);
 window.__setSegs=map=>{segments=segments.map((d,i)=>map[i+1]>0?map[i+1]:d)};
 window.__groups=()=>[{rg:0,dur:0},...segments.map((dur,i)=>({rg:i+1,dur}))];
 window.__size=()=>({w:W,h:H});
-window.__meta=()=>({hold:0,stray:document.getAnimations().length,infinite:0,broken:[]});
+window.__meta=()=>({hold:0,stray:document.getAnimations().length,infinite:0,broken:[],chart_motion:{grow_ms:parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--grow')),plate_ms:parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--plate'))}});
 window.__ready=()=>window._chartReady||(window._chartReady=(async()=>{
   const errors=RENDER_ROUTING.checkScene(S);if(errors.length)throw new Error(errors.join('\n'));
   await document.fonts.ready;
