@@ -34,6 +34,7 @@ import type { ApiResult } from './http.js';
 import { renderCapabilityStatus } from './capability-status.js';
 import * as portal from './portal-tools.js';
 import { manageBackups } from './portal-backups.js';
+import { applyVoiceLock, voiceLockApplySchema } from './voice-lock.js';
 
 /** MCP content blocks — generated images are also returned as base64 image blocks. */
 export type ToolContent =
@@ -954,7 +955,7 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   astra_audio2video: async (args) => {
     const parsed = parseArgs(astraVideo.astraAudio2VideoSchema, args);
     const result = await astraVideo.generateFromAudio(parsed);
-    return text(`${astraVideoReport('Video generated from audio on the ASTRA video API', result)}\nAudio: ${parsed.audioPath}`);
+    return text(`${astraVideoReport('Video generated from audio on the ASTRA video API', result)}\nAudio: ${parsed.audioPath ?? 'reused upload'}\naudioUploadId: ${result.audioUploadId}\nAudio expires at: ${result.audioExpiresAt ?? 'unknown (reused upload or metadata unavailable)'}\nAudio duration (seconds): ${result.audioDuration ?? 'unknown (reused upload or metadata unavailable)'}`);
   },
   astra_video_retake: async (args) => {
     const parsed = parseArgs(astraVideo.astraVideoRetakeSchema, args);
@@ -1008,6 +1009,10 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   tts_review_final: async (args) => {
     const result = await reviewFinalSpeech(parseArgs(finalSpeechSchema, args));
     return text(JSON.stringify(result, null, 2), result.success !== true);
+  },
+  voice_lock_apply: async (args) => {
+    const result = await applyVoiceLock(parseArgs(voiceLockApplySchema, args));
+    return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }], structuredContent: { ...result }, isError: result.status === 'failed' };
   },
   tts_elevenlabs_dictionary: async (args) => {
     const result = await elevenlabs.createElevenLabsDictionary(parseArgs(elevenlabs.elevenLabsDictionarySchema, args));

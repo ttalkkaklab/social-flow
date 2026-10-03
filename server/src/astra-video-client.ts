@@ -21,7 +21,7 @@
  * Six modes, and the server rejects any body key the mode does not own — the error names the
  * whole allow-list, which is how the per-mode field tables below were measured rather than read
  * off a manual. The five exported tools cover all six: text2video carries generate/guided/
- * guided_fast behind `tier`, img2video is generate with 1-2 images, and keyframe / audio2video /
+ * guided_fast behind `tier`, img2video is generate/guided with 1-2 images, and keyframe / audio2video /
  * retake are one mode each.
  *
  * Two deliberate departures from the sibling clients:
@@ -75,9 +75,16 @@ export const ASTRA_VIDEO_ALLOWED_FIELDS: Record<string, readonly string[]> = {
   retake: ['end_time', 'hdr', 'mode', 'prompt', 'seed', 'start_time', 'video_upload_id'],
 } as const;
 
-/** Frame counts are 8k+1 in [25, 481]. 121 frames at 24fps is the server's own default (~5.04s). */
+/** Client ceilings: generate/guided measured; guided_fast conservative; server rejects all modes above 193. */
 export const ASTRA_VIDEO_MIN_FRAMES = 25;
-export const ASTRA_VIDEO_MAX_FRAMES = 481;
+export const ASTRA_VIDEO_FRAME_LIMITS = {
+  generate: 193,
+  guided: 121,
+  guided_fast: 121, // Conservative guided-family ceiling; not generation-tested.
+  keyframe: 193, // Server-enforced ceiling.
+  audio2video: 193, // Server-enforced ceiling.
+} as const;
+export type AstraFrameMode = keyof typeof ASTRA_VIDEO_FRAME_LIMITS;
 export const ASTRA_VIDEO_FRAME_STEP = 8;
 /** Server-side automatic duration selection never chooses more than 121 frames. */
 export const ASTRA_VIDEO_MAX_AUTO_FRAMES = 121;
@@ -88,7 +95,7 @@ export const ASTRA_VIDEO_FAST_DIMENSION_STEP = 32;
 export const ASTRA_VIDEO_FAST_MIN_DIMENSION = 32;
 export const ASTRA_VIDEO_FAST_MAX_DIMENSION = 1920;
 /** width * height ceiling, whatever the grid. 1536x1024 (the default) is 1,572,864. */
-export const ASTRA_VIDEO_MAX_PIXELS = 2_088_960;
+export const ASTRA_VIDEO_MAX_PIXELS = 2_064_384;
 
 export const ASTRA_VIDEO_MAX_SEED = 2_147_483_647;
 export const ASTRA_VIDEO_MAX_PROMPT_CHARS = 2000;
@@ -126,13 +133,13 @@ const promptSchema = z
   .min(1, 'prompt is required')
   .max(ASTRA_VIDEO_MAX_PROMPT_CHARS, `prompt must be at most ${ASTRA_VIDEO_MAX_PROMPT_CHARS} characters`);
 
-export const numFramesSchema = z
+const numFramesSchema = (mode: AstraFrameMode) => z
   .number()
   .int()
   .min(ASTRA_VIDEO_MIN_FRAMES)
-  .max(ASTRA_VIDEO_MAX_FRAMES)
+  .max(ASTRA_VIDEO_FRAME_LIMITS[mode])
   .refine((n) => (n - 1) % ASTRA_VIDEO_FRAME_STEP === 0, {
-    message: `numFrames must be 8k+1 (25, 33, 41 … ${ASTRA_VIDEO_MAX_FRAMES})`,
+    message: `numFrames must be 8k+1 (25, 33, 41 … ${ASTRA_VIDEO_FRAME_LIMITS[mode]})`,
   })
   .optional();
 
@@ -232,7 +239,7 @@ export const astraText2VideoSchema = z
   .object({
     prompt: promptSchema,
     tier: z.enum(['default', 'guided', 'fast'] as const).optional().default('default'),
-    numFrames: numFramesSchema,
+    numFrames: numFramesSchema('generate'),
     autoDuration: autoDurationSchema,
     width: widthSchema,
     height: heightSchema,
@@ -246,6 +253,9 @@ export const astraText2VideoSchema = z
   })
   .superRefine((data, ctx) => {
     const mode = ASTRA_VIDEO_TIERS[data.tier];
+    if (data.numFrames !== undefined && data.numFrames > ASTRA_VIDEO_FRAME_LIMITS[mode]) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['numFrames'], message: `numFrames must be at most ${ASTRA_VIDEO_FRAME_LIMITS[mode]} for mode ${mode}` });
+    }
     if (data.lora?.length && mode !== 'generate') {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -278,14 +288,15 @@ export const astraText2VideoSchema = z
     }
   });
 
-/** astra_img2video — mode generate with one or two stills pinned to frames. */
+/** astra_img2video — generate or guided with one or two stills pinned to frames. */
 export const astraImg2VideoSchema = z
   .object({
     prompt: promptSchema,
+    tier: z.enum(['default', 'guided']).optional().default('default'),
     firstFramePath: z.string().min(1, 'firstFramePath is required'),
     lastFramePath: z.string().optional(),
     strength: z.number().min(0).max(1).optional(),
-    numFrames: numFramesSchema,
+    numFrames: numFramesSchema('generate'),
     width: widthSchema,
     height: heightSchema,
     frameRate: frameRateSchema,
@@ -295,7 +306,19 @@ export const astraImg2VideoSchema = z
     ...outputFields,
   })
   .superRefine((data, ctx) => {
-    const dimensionError = checkDimensions(data.width, data.height, 'generate');
+    const mode = ASTRA_VIDEO_TIERS[data.tier];
+    if (data.numFrames !== undefined && data.numFrames > ASTRA_VIDEO_FRAME_LIMITS[mode]) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['numFrames'], message: `numFrames must be at most ${ASTRA_VIDEO_FRAME_LIMITS[mode]} for mode ${mode}` });
+    }
+    if (mode === 'guided') {
+      if ((data.width ?? 1536) !== 1536 || (data.height ?? 1024) !== 1024) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['width'], message: 'guided images require 1536x1024' });
+      }
+      if (data.lora?.length) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['lora'], message: 'lora is accepted only on tier "default"' });
+      }
+    }
+    const dimensionError = checkDimensions(data.width, data.height, mode);
     if (dimensionError) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['width'], message: dimensionError });
     }
@@ -316,7 +339,7 @@ export const astraKeyframeVideoSchema = z
       )
       .min(2, 'keyframe needs at least 2 images')
       .max(8, 'keyframe takes at most 8 images'),
-    numFrames: numFramesSchema,
+    numFrames: numFramesSchema('keyframe'),
     width: widthSchema,
     height: heightSchema,
     frameRate: frameRateSchema,
@@ -342,10 +365,12 @@ export const astraKeyframeVideoSchema = z
 export const astraAudio2VideoSchema = z
   .object({
     prompt: promptSchema,
-    audioPath: z.string().min(1, 'audioPath is required'),
+    audioPath: z.string().trim().min(1).optional(),
+    audioUploadId: z.string().trim().min(1).optional(),
+    imagePath: z.string().trim().min(1).optional(),
     audioStartTime: z.number().min(0).optional(),
     audioMaxDuration: z.number().positive().optional(),
-    numFrames: numFramesSchema,
+    numFrames: numFramesSchema('audio2video'),
     width: widthSchema,
     height: heightSchema,
     frameRate: frameRateSchema,
@@ -355,6 +380,9 @@ export const astraAudio2VideoSchema = z
     ...outputFields,
   })
   .superRefine((data, ctx) => {
+    if ((data.audioPath !== undefined) === (data.audioUploadId !== undefined)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['audioPath'], message: 'Provide exactly one of audioPath or audioUploadId' });
+    }
     const dimensionError = checkDimensions(data.width, data.height, 'audio2video');
     if (dimensionError) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['width'], message: dimensionError });
@@ -410,12 +438,16 @@ export interface AstraVideoResponse {
   elapsedSeconds: number;
   /** What the server recorded as the request — the authoritative echo of defaults it filled in. */
   request?: Record<string, unknown>;
+  audioUploadId?: string;
+  audioExpiresAt?: string;
+  audioDuration?: number;
 }
 
 export interface AstraVideoUpload {
   uploadId: string;
   bytes: number;
   kind: string;
+  expiresAt?: string;
   duration?: number;
   width?: number;
   height?: number;
@@ -443,8 +475,8 @@ export function checkAudioSource(
   const rawFrames = Math.floor(usableSeconds * (args.frameRate ?? 24));
   const clampedFrames = Math.max(1, Math.min(1024, rawFrames));
   const gridFrames = 1 + ASTRA_VIDEO_FRAME_STEP * Math.floor((clampedFrames - 1) / ASTRA_VIDEO_FRAME_STEP);
-  if (gridFrames > ASTRA_VIDEO_MAX_FRAMES) {
-    return `audioMaxDuration selects ${gridFrames} frames after clipping and the 8k+1 grid; maximum is ${ASTRA_VIDEO_MAX_FRAMES}`;
+  if (gridFrames > ASTRA_VIDEO_FRAME_LIMITS.audio2video) {
+    return `audioMaxDuration selects ${gridFrames} frames after clipping and the 8k+1 grid; maximum is ${ASTRA_VIDEO_FRAME_LIMITS.audio2video}`;
   }
   return null;
 }
@@ -718,6 +750,7 @@ export async function uploadFile(filePath: string): Promise<AstraVideoUpload> {
     upload_id: string;
     kind: string;
     bytes: number;
+    expires_at?: string;
     duration?: number;
     width?: number;
     height?: number;
@@ -728,6 +761,7 @@ export async function uploadFile(filePath: string): Promise<AstraVideoUpload> {
     uploadId: parsed.upload_id,
     bytes: parsed.bytes,
     kind: parsed.kind,
+    ...(parsed.expires_at !== undefined ? { expiresAt: parsed.expires_at } : {}),
     ...(parsed.duration !== undefined ? { duration: parsed.duration } : {}),
     ...(parsed.width !== undefined ? { width: parsed.width } : {}),
     ...(parsed.height !== undefined ? { height: parsed.height } : {}),
@@ -863,8 +897,10 @@ export async function generateFromImage(args: AstraImg2VideoRequest): Promise<As
     const last = await uploadFile(args.lastFramePath);
     images.push({ uploadId: last.uploadId, frameIdx: (args.numFrames ?? 121) - 1, strength: args.strength ?? 1.0 });
   }
-  const body = buildJobBody('generate', { ...args, images });
-  return runJob('generate', args.prompt, body, args.outputPath, args.filename);
+  const mode = ASTRA_VIDEO_TIERS[args.tier];
+  const dimensions = mode === 'guided' ? { width: 1536, height: 1024 } : {};
+  const body = buildJobBody(mode, { ...args, ...dimensions, images });
+  return runJob(mode, args.prompt, body, args.outputPath, args.filename);
 }
 
 export async function generateFromKeyframes(args: AstraKeyframeVideoRequest): Promise<AstraVideoResponse> {
@@ -878,11 +914,22 @@ export async function generateFromKeyframes(args: AstraKeyframeVideoRequest): Pr
 }
 
 export async function generateFromAudio(args: AstraAudio2VideoRequest): Promise<AstraVideoResponse> {
-  const audio = await uploadFile(args.audioPath);
-  const sourceError = checkAudioSource(audio, args);
-  if (sourceError) throw new Error(`ASTRA video audio source refused: ${sourceError}`);
-  const body = buildJobBody('audio2video', { ...args, audioUploadId: audio.uploadId });
-  return runJob('audio2video', args.prompt, body, args.outputPath, args.filename);
+  if (args.imagePath && uploadContentType(args.imagePath).kind !== 'image') {
+    throw new Error('ASTRA video imagePath must be an image (.png/.jpg/.jpeg)');
+  }
+  const audio = args.audioPath !== undefined ? await uploadFile(args.audioPath) : undefined;
+  if (audio) {
+    const sourceError = checkAudioSource(audio, args);
+    if (sourceError) throw new Error(`ASTRA video audio source refused: ${sourceError}`);
+  }
+  // Reused ids have no locally known metadata; the server validates expiry and duration.
+  const audioUploadId = audio?.uploadId ?? args.audioUploadId!;
+  const image = args.imagePath ? await uploadFile(args.imagePath) : undefined;
+  if (image && image.kind !== 'image') throw new Error('ASTRA video imagePath must upload as image');
+  const images = image ? [{ uploadId: image.uploadId, frameIdx: 0 }] : undefined;
+  const body = buildJobBody('audio2video', { ...args, audioUploadId, images });
+  const result = await runJob('audio2video', args.prompt, body, args.outputPath, args.filename);
+  return { ...result, audioUploadId, audioExpiresAt: audio?.expiresAt, audioDuration: audio?.duration };
 }
 
 export async function retakeVideo(args: AstraVideoRetakeRequest): Promise<AstraVideoResponse> {

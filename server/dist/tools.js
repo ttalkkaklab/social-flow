@@ -4,7 +4,7 @@ import { PORTAL_API_TOOLS } from './portal-api-contract.js';
 import { cameraContract, renderPurposes, stillCameraEffectList, contract as storyboardContract } from './storyboard.js';
 import { MUSIC_GENERATION_MODES, MUSIC_SCALES } from './music-client.js';
 import { DEFAULT_SUPERTONIC_CHUNK_PAUSE, DEFAULT_SUPERTONIC_LANGUAGE, DEFAULT_SUPERTONIC_SPEED, DEFAULT_SUPERTONIC_STEPS, DEFAULT_SUPERTONIC_VOICE, MAX_SUPERTONIC_INPUT_CHARS, MAX_SUPERTONIC_SPEED, SUPERTONIC_LANGUAGES, SUPERTONIC_VOICE_NAMES, } from './supertonic-client.js';
-import { ASTRA_VIDEO_FAST_DIMENSION_STEP, ASTRA_VIDEO_LORAS, ASTRA_VIDEO_MAX_FRAMES, ASTRA_VIDEO_MAX_PIXELS, ASTRA_VIDEO_MAX_SEED, ASTRA_VIDEO_MIN_FRAMES, } from './astra-video-client.js';
+import { ASTRA_VIDEO_FAST_DIMENSION_STEP, ASTRA_VIDEO_LORAS, ASTRA_VIDEO_FRAME_LIMITS, ASTRA_VIDEO_MAX_PIXELS, ASTRA_VIDEO_MAX_SEED, ASTRA_VIDEO_MIN_FRAMES, } from './astra-video-client.js';
 import { DEFAULT_SEEDANCE_DURATION, DEFAULT_SEEDANCE_MODEL, DEFAULT_SEEDANCE_REFERENCE_MODEL, DEFAULT_SEEDANCE_RESOLUTION, SEEDANCE_FPS, SEEDANCE_REFERENCE_MODELS, VALID_SEEDANCE_MODELS, VALID_SEEDANCE_RATIOS, VALID_SEEDANCE_RESOLUTIONS, } from './seedance-client.js';
 import { DEFAULT_GEMINI_38_TTS_MODEL, DEFAULT_TTS_MODEL, DEFAULT_TTS_TEMPERATURE, DEFAULT_VOICE, GEMINI_38_TTS_MODELS, MAX_GEMINI_38_TTS_INPUT_CHARS, TTS_VOICE_NAMES, VALID_TTS_MODELS, } from './tts-client.js';
 import { GENERATORS, REVIEW_MODEL } from './tts-quality.js';
@@ -14,6 +14,8 @@ import { DEFAULT_QWEN3_ASR_LANGUAGE, DEFAULT_QWEN3_ASR_MODEL, QWEN3_ASR_LANGUAGE
 import { BLENDER_INTERPOLATIONS, BLENDER_PREVIZ_ENGINES, BLENDER_PROXY_KINDS, BLENDER_RIG_BONES, BLENDER_ROOT_MOTIONS, DEFAULT_FRAME_END, DEFAULT_FRAME_START, DEFAULT_PREVIZ_ENGINE, DEFAULT_PREVIZ_FILENAME, DEFAULT_PREVIZ_HEIGHT, DEFAULT_PREVIZ_WIDTH, DEFAULT_SCENE_FPS, MAX_PREVIZ_FRAMES, } from './blender-bridge.js';
 import { DEFAULT_SUNO_MODEL, SUNO_MODELS, SUNO_PERSONA_MODELS, SUNO_SOUND_KEYS, SUNO_VOCAL_GENDERS, } from './suno-client.js';
 import { DEFAULT_MLX_IMAGE_SIZE, DEFAULT_MLX_MUSIC_SECONDS, DEFAULT_MLX_VIDEO_FRAMES, DEFAULT_MLX_VIDEO_HEIGHT, DEFAULT_MLX_VIDEO_WIDTH, MAX_MLX_IMAGE_DIMENSION, MAX_MLX_IMAGE_REFS, MAX_MLX_MUSIC_SECONDS, MAX_MLX_TTS_CHARS, MAX_MLX_VIDEO_DIMENSION, MAX_MLX_VIDEO_FRAMES, MAX_VIDEO_RGB_BYTES, MIN_MLX_IMAGE_DIMENSION, MIN_MLX_MUSIC_SECONDS, MIN_MLX_VIDEO_DIMENSION, MIN_MLX_VIDEO_FRAMES, MLX_IMAGE_DIMENSION_STEP, MLX_VIDEO_DIMENSION_STEP, MLX_VIDEO_DIMENSION_STEP_ONE_STAGE, MLX_VIDEO_FRAME_STEP, MLX_VIDEO_FPS, } from './mlx-serve-client.js';
+import { VOICE_LOCK_PROPERTY } from './voice-lock-config.js';
+import { VOICE_LOCK_TOOLS } from './voice-lock.js';
 /**
  * Tool surface definitions (83 tools) — 9 research (incl. stock_search) + 5 open-data +
  * 40 generation (5 image + 12 video + 9 voice + 1 STT + 9 music + 1 mesh +
@@ -127,12 +129,13 @@ const OMNI_ASPECT_RATIO_PROPERTY = {
  * numeric levers appear on four of the five tools. astra_video_retake takes none of them —
  * a retake inherits the source exactly.
  */
-const ASTRA_NUM_FRAMES_PROPERTY = {
+const ASTRA_FRAME_LIMITS_DESCRIPTION = `generate/default: ${ASTRA_VIDEO_FRAME_LIMITS.generate}; guided: ${ASTRA_VIDEO_FRAME_LIMITS.guided}; guided_fast/fast: ${ASTRA_VIDEO_FRAME_LIMITS.guided_fast} (conservative, not generation-tested); keyframe: ${ASTRA_VIDEO_FRAME_LIMITS.keyframe} and audio2video: ${ASTRA_VIDEO_FRAME_LIMITS.audio2video} (server rejects values above 193).`;
+const astraNumFramesProperty = (mode) => ({
     type: 'integer',
-    description: `Clip length in FRAMES, not seconds: 8k+1 between ${ASTRA_VIDEO_MIN_FRAMES} and ${ASTRA_VIDEO_MAX_FRAMES} (25, 33, 41 … 481). The server default is 121, about 5.0 seconds at 24fps. A value off the 8k+1 grid is refused before the call. The 481-frame boundary is accepted by validation but has not been generation-tested.`,
+    description: `Clip length in FRAMES, not seconds: 8k+1, minimum ${ASTRA_VIDEO_MIN_FRAMES}. Mode ceilings: ${ASTRA_FRAME_LIMITS_DESCRIPTION} Server default: 121 (~5.0s at 24fps). Off-grid and over-limit values are refused before the call.`,
     minimum: ASTRA_VIDEO_MIN_FRAMES,
-    maximum: ASTRA_VIDEO_MAX_FRAMES,
-};
+    maximum: ASTRA_VIDEO_FRAME_LIMITS[mode],
+});
 const ASTRA_AUTO_DURATION_PROPERTY = {
     type: 'object',
     description: 'Let the server pick the length inside a range instead of naming frames. After seconds are rounded at frameRate, the range must start at frame 1 or later, end at frame 121 or earlier, and contain an 8k+1 value. Ignored when numFrames is also given.',
@@ -144,11 +147,11 @@ const ASTRA_AUTO_DURATION_PROPERTY = {
 };
 const ASTRA_WIDTH_PROPERTY = {
     type: 'integer',
-    description: `Frame width in pixels (default: 1536, or 768 on tier "fast"). Must be a multiple of 64 — or of ${ASTRA_VIDEO_FAST_DIMENSION_STEP} within 32-1920 on tier "fast". width * height must not exceed ${ASTRA_VIDEO_MAX_PIXELS}. FOR 9:16 ASK FOR 1024x1920 FIRST. Use 1088x1920 only with numFrames 25 (about 1 second); the server fails at higher frame counts. The plugin's usual 1080x1920 is REFUSED, because 1080 is not a multiple of 64 or of 32. To fit a 1080x1920 canvas, widen the 1024-pixel output to 1080 (about 5.5%) in the edit or add side padding.`,
+    description: `Frame width in pixels (default: 1536, or 768 on tier "fast"). Must be a multiple of 64 — or of ${ASTRA_VIDEO_FAST_DIMENSION_STEP} within 32-1920 on tier "fast". width * height must not exceed ${ASTRA_VIDEO_MAX_PIXELS}. FOR 9:16 ASK FOR 1024x1920 FIRST. 1088x1920 exceeds the area ceiling at every frame count. The plugin's usual 1080x1920 is REFUSED, because 1080 is not a multiple of 64 or of 32. To fit a 1080x1920 canvas, widen the 1024-pixel output to 1080 (about 5.5%) in the edit or add side padding.`,
 };
 const ASTRA_HEIGHT_PROPERTY = {
     type: 'integer',
-    description: `Frame height in pixels (default: 1024, or 512 on tier "fast"). Same grid rule as width, and the same ${ASTRA_VIDEO_MAX_PIXELS}-pixel area ceiling. For 9:16, use 1024x1920 first. Use 1088x1920 only with numFrames 25 (about 1 second); the server fails at higher frame counts. Never use 1080x1920, whose width is off the grid. To fit a 1080x1920 canvas, widen the 1024-pixel output to 1080 (about 5.5%) in the edit or add side padding.`,
+    description: `Frame height in pixels (default: 1024, or 512 on tier "fast"). Same grid rule as width, and the same ${ASTRA_VIDEO_MAX_PIXELS}-pixel area ceiling. For 9:16, use 1024x1920 first. 1088x1920 exceeds the area ceiling at every frame count. Never use 1080x1920, whose width is off the grid. To fit a 1080x1920 canvas, widen the 1024-pixel output to 1080 (about 5.5%) in the edit or add side padding.`,
 };
 const ASTRA_FRAME_RATE_PROPERTY = {
     type: 'number',
@@ -1199,7 +1202,7 @@ Returns: JSON — { candidate, chosen, findings[] }.`,
                 key: { type: 'string', description: 'Character key — lowercase letters, digits, hyphens' },
                 name: { type: 'string', maxLength: 100, description: 'Display name' }, role: { type: 'string', maxLength: 500, description: 'Role in the channel, e.g. 진행자' }, appearance: { type: 'string', maxLength: 4000, description: 'Look — the 생김새 line' },
                 referenceImageUrl: { type: 'string', maxLength: 2000, description: 'External image URL; prefer file' },
-                tts: { type: 'object', description: 'Voice block; optional — portal_character_tts_set fills the defaults', properties: { engine: { type: 'string', enum: ['gemini', 'supertonic', 'elevenlabs', 'mlx'], description: 'TTS engine' }, voiceId: { type: 'string', description: 'Voice id on that engine' }, model: { type: 'string', description: 'Model name, e.g. eleven_multilingual_v2' }, speed: { type: 'number', minimum: 0.7, maximum: 1.2, description: 'Speaking rate' }, language: { type: 'string', description: 'Language code, e.g. ko' }, stylePrompt: { type: 'string', description: 'Style direction for engines that read one' } }, required: ['engine', 'voiceId'] },
+                tts: { type: 'object', description: 'Voice block; optional — portal_character_tts_set fills the defaults', properties: { voiceLock: VOICE_LOCK_PROPERTY, engine: { type: 'string', enum: ['gemini', 'supertonic', 'elevenlabs', 'mlx'], description: 'TTS engine' }, voiceId: { type: 'string', description: 'Voice id on that engine' }, model: { type: 'string', description: 'Model name, e.g. eleven_multilingual_v2' }, speed: { type: 'number', minimum: 0.7, maximum: 1.2, description: 'Speaking rate' }, language: { type: 'string', description: 'Language code, e.g. ko' }, stylePrompt: { type: 'string', description: 'Style direction for engines that read one' } }, required: ['engine', 'voiceId'] },
             } },
     },
     {
@@ -1210,7 +1213,7 @@ Returns: JSON — { candidate, chosen, findings[] }.`,
                 channel: PORTAL_CHANNEL_ARG, episodeDir: PORTAL_EPISODE_DIR_ARG, id: { type: 'string', format: 'uuid', description: 'Portal character id' },
                 key: { type: ['string', 'null'], description: 'Character key; null clears' }, name: { type: 'string', maxLength: 100, description: 'Display name' }, role: { type: ['string', 'null'], maxLength: 500, description: 'Role; null clears' }, appearance: { type: ['string', 'null'], maxLength: 4000, description: 'Look; null clears' },
                 referenceImageUrl: { type: ['string', 'null'], maxLength: 2000, description: 'External image URL; null clears (prefer portal_character_image_upload)' },
-                tts: { type: ['object', 'null'], description: 'Whole voice block; null clears (prefer portal_character_tts_set)', properties: { engine: { type: 'string', enum: ['gemini', 'supertonic', 'elevenlabs', 'mlx'], description: 'TTS engine' }, voiceId: { type: 'string', description: 'Voice id on that engine' }, model: { type: 'string', description: 'Model name' }, speed: { type: 'number', description: 'Speaking rate 0.7–1.2' }, language: { type: 'string', description: 'Language code' }, stylePrompt: { type: 'string', description: 'Style direction' } } },
+                tts: { type: ['object', 'null'], description: 'Whole voice block; null clears (prefer portal_character_tts_set)', properties: { voiceLock: VOICE_LOCK_PROPERTY, engine: { type: 'string', enum: ['gemini', 'supertonic', 'elevenlabs', 'mlx'], description: 'TTS engine' }, voiceId: { type: 'string', description: 'Voice id on that engine' }, model: { type: 'string', description: 'Model name' }, speed: { type: 'number', description: 'Speaking rate 0.7–1.2' }, language: { type: 'string', description: 'Language code' }, stylePrompt: { type: 'string', description: 'Style direction' } } },
             } },
     },
     {
@@ -1248,12 +1251,14 @@ Returns: JSON — { candidate, chosen, findings[] }.`,
         description: 'Write the tts block the narration lane reads — engine, voiceId, model, speed (0.7–1.2), language, stylePrompt. Whatever you leave out keeps its current value or falls back to the owner defaults: ElevenLabs voice L4az9Gb378GIycFl2nAB, model eleven_multilingual_v2, speed 1.0. Call with only id to apply the defaults.',
         inputSchema: { type: 'object', required: ['id'], properties: {
                 channel: PORTAL_CHANNEL_ARG, episodeDir: PORTAL_EPISODE_DIR_ARG, id: { type: 'string', format: 'uuid', description: 'Portal character id' },
+                voiceLock: VOICE_LOCK_PROPERTY,
                 engine: { type: 'string', enum: ['gemini', 'supertonic', 'elevenlabs', 'mlx'], description: 'TTS engine (default elevenlabs)' }, voiceId: { type: 'string', maxLength: 128, description: 'Voice id (default L4az9Gb378GIycFl2nAB)' }, model: { type: 'string', maxLength: 128, description: 'Model name (default eleven_multilingual_v2)' },
                 speed: { type: 'number', minimum: 0.7, maximum: 1.2, description: 'Speaking rate (default 1.0)' }, language: { type: 'string', maxLength: 32, description: 'Language code, e.g. ko' }, stylePrompt: { type: 'string', maxLength: 1000, description: 'Style direction for engines that read one' },
             } },
     },
 ];
 export const TOOLS = [
+    ...VOICE_LOCK_TOOLS,
     ...UNIT_TOOLS,
     ...REVIEW_TOOLS,
     // ── Research & fact-checking ──────────────────────────────────────────
@@ -2252,7 +2257,7 @@ Returns: a text block with the saved .mp4 path, the new interaction id, and the 
 Use when the shot is not time-critical and you would rather not spend vendor money: this server is ours, so a call costs wall clock instead of dollars, and no vendor content policy applies. It is also the only lane with an adapter (lora) for cinemagraph and slow-motion looks.
 Do NOT use when someone is waiting: the box renders ONE job at a time and yours queues behind whatever else is running. A measured 121-frame 1536x1024 render takes about 66s (tier "default"), 169s ("guided"), 121s ("fast") — plus the queue. For an immediate clip go to veo_text2video or seedance_text2video.
 tier picks the pipeline and also which arguments exist: lora only on "default", negativePrompt and numInferenceSteps only on "guided"/"fast". "fast" means a draft that is faster than "guided"; it is not faster than the default pipeline. Passing one to the wrong tier is refused before the call.
-Length is frames, not seconds: numFrames must be 8k+1 between 25 and 481 (121 = about 5.0s at 24fps, the server default; 481 passes validation but is not generation-tested). Give autoDuration instead to let the server choose at most 121 frames; the rounded range must contain an 8k+1 value. numFrames wins if both are given.
+Length is frames, not seconds: numFrames must be 8k+1, minimum 25. Mode ceilings: ${ASTRA_FRAME_LIMITS_DESCRIPTION} 121 = about 5.0s at 24fps, the server default. Give autoDuration instead to let the server choose at most 121 frames; the rounded range must contain an 8k+1 value. numFrames wins if both are given.
 ${ASTRA_LIMITS_LINE}
 Every clip comes back with a generated AAC audio track (48kHz stereo, measured) and there is no argument to turn it off — no mode's allow-list has one. If the episode lays its own narration or BGM over this clip, drop or duck the generated track in the edit instead of expecting silence.
 
@@ -2270,7 +2275,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
                     enum: ['default', 'guided', 'fast'],
                     default: 'default',
                 },
-                numFrames: ASTRA_NUM_FRAMES_PROPERTY,
+                numFrames: astraNumFramesProperty('generate'),
                 autoDuration: ASTRA_AUTO_DURATION_PROPERTY,
                 width: ASTRA_WIDTH_PROPERTY,
                 height: ASTRA_HEIGHT_PROPERTY,
@@ -2294,7 +2299,9 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
 
 Use when a generated background or photo has to move and nobody is waiting on it — same trade as astra_text2video: free, ours, one job at a time. Give firstFramePath alone to animate from that frame, or add lastFramePath and the clip lands on it. The tool uploads the files itself; pass local paths, not ids.
 Do NOT use for more than two stills — that is astra_keyframe_video, which pins each image to a frame index. For an immediate clip use veo_img2video or seedance_img2video.
+tier accepts default (generate) or guided only. guided images require 1536x1024 (omitted dimensions use that size); fast images are not enabled. lora is default-only.
 The last frame is pinned to numFrames-1, so a 121-frame clip ends on frame 120. png, jpg and jpeg are accepted, up to 32 MiB each.
+Warning: image-conditioned generate (width 1280, measured at heights 704/768) failure frames: {121,129,137}; guided (width 1280, measured at height 704) failure frames: {121}. Guided 129/137 succeeded at 1280x704 in server probes (the only guided size probed), but the existing client guided ceiling is 121. The client requires 1536x1024 for guided images, so the guided 1280x704 probes are not client alternatives. Within current client limits use generate 113/145 (measured at 1280x704); generate 1536x704 and 1536x1024 at 121 frames also succeeded. Text-only 1280x704 at 121 frames succeeded. An upstream defect is a hypothesis, not a confirmed cause. The server owns the failure-band acceptance gate; this warning adds no client-side block.
 ${ASTRA_LIMITS_LINE}
 Every clip comes back with a generated AAC audio track (48kHz stereo, measured) and there is no argument to turn it off — no mode's allow-list has one. If the episode lays its own narration or BGM over this clip, drop or duck the generated track in the edit instead of expecting silence.
 
@@ -2305,6 +2312,10 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
                 prompt: {
                     type: 'string',
                     description: 'What happens between the frames — movement, camera, mood. English recommended. 1-2000 characters.',
+                },
+                tier: {
+                    type: 'string', enum: ['default', 'guided'], default: 'default',
+                    description: 'default (generate), or guided at 1536x1024 only. fast images are unmeasured and not enabled.',
                 },
                 firstFramePath: {
                     type: 'string',
@@ -2318,7 +2329,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
                     type: 'number',
                     description: 'How strictly the generated frames must match the supplied stills, 0.0-1.0 (default: 1.0 — hold the image exactly).',
                 },
-                numFrames: ASTRA_NUM_FRAMES_PROPERTY,
+                numFrames: astraNumFramesProperty('generate'),
                 width: ASTRA_WIDTH_PROPERTY,
                 height: ASTRA_HEIGHT_PROPERTY,
                 frameRate: ASTRA_FRAME_RATE_PROPERTY,
@@ -2380,7 +2391,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
                         required: ['imagePath', 'frameIdx'],
                     },
                 },
-                numFrames: ASTRA_NUM_FRAMES_PROPERTY,
+                numFrames: astraNumFramesProperty('keyframe'),
                 width: ASTRA_WIDTH_PROPERTY,
                 height: ASTRA_HEIGHT_PROPERTY,
                 frameRate: ASTRA_FRAME_RATE_PROPERTY,
@@ -2399,9 +2410,9 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
         annotations: HINT.generate,
         description: `Render a clip driven by an existing audio track on the self-hosted ASTRA video API (mode audio2video).
 
-Use when the picture has to follow a sound you already have — a narration take, a music bed, a recorded effect — instead of the picture being cut to it afterwards. The tool uploads the audio itself; pass a local .wav or .mp3 path.
-Do NOT use to add sound to a finished clip: this generates new picture from the audio, it does not mux. The rendered video carries its own generated AAC track (48kHz stereo) rather than the audio you supplied, and there is no argument to turn it off — drop or duck it in the edit.
-Choose either numFrames or audioMaxDuration, never both. numFrames fixes the clip length. audioMaxDuration uses the shorter of that value and the audio remaining after audioStartTime, floors seconds × frameRate, then rounds down to 8k+1; more than 481 frames is refused. audioStartTime must be before the uploaded audio ends. With neither length field, the official default is 121 frames. A measured 121-frame render took about 170s plus queue.
+Use when the picture has to follow a sound you already have — a narration take, a music bed, a recorded effect — instead of the picture being cut to it afterwards. Provide exactly one of audioPath (local .wav/.mp3) or audioUploadId (reuse an existing upload without uploading again). Reused ids have unknown expiry/duration locally, so the server checks them. Optionally give imagePath to pin one portrait to frame 0.
+Do NOT use to add sound to a finished clip: this generates new picture from the audio, it does not mux. The rendered video carries the supplied WAV re-encoded as AAC (48kHz stereo): a measured upload-to-output 100ms RMS Pearson correlation was 0.99997 at zero lag. Input WAV must have two channels; mono passes upload and job acceptance but fails during generation with "expected input[1, 1, 507, 66] to have 2 channels, but got 1 channels instead".
+Choose either numFrames or audioMaxDuration, never both. numFrames fixes the clip length. audioMaxDuration uses the shorter of that value and the audio remaining after audioStartTime, floors seconds × frameRate, then rounds down to 8k+1; more than ${ASTRA_VIDEO_FRAME_LIMITS.audio2video} frames is refused when upload duration is known. audioStartTime must be before the uploaded audio ends. With neither length field, the default is 121 frames (about 5.04s at 24fps), not the source audio length: an 8.000s WAV produced 5.041s of audio. Set numFrames or audioMaxDuration to request a longer span; audioMaxDuration=8.0 at 24fps rounds down to 185 frames (about 7.708s), so grid rounding can still trim the tail. A measured 121-frame render took about 170s plus queue.
 ${ASTRA_LIMITS_LINE}
 
 Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and the request the server recorded.`,
@@ -2414,7 +2425,15 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
                 },
                 audioPath: {
                     type: 'string',
-                    description: 'Local path to the driving audio (.wav or .mp3, at most 32 MiB). Uploaded automatically.',
+                    description: 'Local path to the driving audio (.wav or .mp3, at most 32 MiB). Stereo (2-channel) input required. Mono WAV passes acceptance (202) but fails during generation. Uploaded automatically.',
+                },
+                audioUploadId: {
+                    type: 'string', minLength: 1,
+                    description: 'Existing audio upload id, mutually exclusive with audioPath. Stereo (2-channel) input required. Mono WAV passes acceptance (202) but fails during generation. No upload or local source-duration check. Server rejects expired ids.',
+                },
+                imagePath: {
+                    type: 'string', minLength: 1,
+                    description: 'Optional local portrait (.png/.jpg/.jpeg, at most 32 MiB), pinned to frame 0.',
                 },
                 audioStartTime: {
                     type: 'number',
@@ -2422,9 +2441,9 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
                 },
                 audioMaxDuration: {
                     type: 'number',
-                    description: 'Maximum seconds to use after audioStartTime. Mutually exclusive with numFrames. The shorter of this and the remaining audio determines a floored, 8k+1 frame count no greater than 481.',
+                    description: `Maximum seconds to use after audioStartTime. Mutually exclusive with numFrames. With a fresh upload, the shorter of this and remaining audio must produce at most ${ASTRA_VIDEO_FRAME_LIMITS.audio2video} frames on the 8k+1 grid. Reused ids defer duration checks to the server. At 24fps, 8 seconds selects 185 frames (about 7.71s). If both length fields are omitted, the server uses 121 frames (about 5.04s), not the audio length.`,
                 },
-                numFrames: ASTRA_NUM_FRAMES_PROPERTY,
+                numFrames: astraNumFramesProperty('audio2video'),
                 width: ASTRA_WIDTH_PROPERTY,
                 height: ASTRA_HEIGHT_PROPERTY,
                 frameRate: ASTRA_FRAME_RATE_PROPERTY,
@@ -2434,7 +2453,8 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
                 outputPath: ASTRA_OUTPUT_PATH_PROPERTY,
                 filename: ASTRA_FILENAME_PROPERTY,
             },
-            required: ['prompt', 'audioPath'],
+            required: ['prompt'],
+            oneOf: [{ required: ['audioPath'] }, { required: ['audioUploadId'] }],
         },
     },
     {

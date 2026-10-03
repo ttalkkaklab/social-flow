@@ -224,7 +224,7 @@ optional, and they're what turns the tool from a video maker into an operator.**
   9:16 or 16:9 video plus per-platform text into
   `data/<channel>/episodes/<topic>/output/`, and you upload those files by hand. Only
   the publishing and growth-loop half is unavailable: the 11 publish/review/insight tools
-  aren't even listed (`tools/list` shows 79 instead of 287 — the 197 `portal_*` tools are
+  aren't even listed (`tools/list` shows 80 instead of 301 — the 210 `portal_*` tools are
   gated the same way on a portal key), and the growth skills have
   nothing to drive. Explicit tool-disable settings can reduce that list further.
 
@@ -480,10 +480,10 @@ social-flow/
 ├── .plugin/plugin.json          # Buzz persona pack (Open Plugin Spec)
 ├── personas/                    # Buzz pack persona (pipeline.persona.md)
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 287 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 301 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
-│       ├── tools.ts             # tool definitions — 90: research 9 + open data 5 + generation 46 + publish 6 + comments 3 + growth insights 5 + growth review 2 + check 2 + blender 7 + storyboard 5
+│       ├── tools.ts             # tool definitions — 91: research 9 + open data 5 + generation 47 + publish 6 + comments 3 + growth insights 5 + growth review 2 + check 2 + blender 7 + storyboard 5
 │       ├── handlers.ts          # zod validation + routing
 │       ├── sns-client.ts        # Threads·IG·FB·YouTube publish/comments
 │       ├── serp-client.ts       # SerpApi (key masking + response slimming)
@@ -542,16 +542,16 @@ social-flow/
 └── data/                        # content data root (see data/README.md)
 ```
 
-## MCP tool surface (287 tools)
+## MCP tool surface (301 tools)
 
-**`tools/list` does not show all 287.** The credential-gated publish, review and insights tools
+**`tools/list` does not show all 301.** The credential-gated publish, review and insights tools
 (`threads_draft_create` · `threads_review_submit` · `threads_publish` · `instagram_publish` · `facebook_publish` · `facebook_comment` ·
 `youtube_publish` · `threads_insights` · `instagram_insights` · `youtube_insights` ·
 `threads_search`) are exposed **only for platforms whose credential file exists** —
 evaluated at list time, so adding a token makes them appear without restarting the
-server. The 197 `portal_*` tools follow the same rule on the ttalkkakstory workspace key
+server. The 210 `portal_*` tools follow the same rule on the ttalkkakstory workspace key
 (`<SNS_TOKEN_DIR>/<channel>/ttalkkakstory.json`, the flat file, or `TTALKKAKSTORY_*`). With
-no tokens and no portal key you'll count 79; explicit tool-disable settings can reduce
+no tokens and no portal key you'll count 80; explicit tool-disable settings can reduce
 that list further. Hidden tools still have live handlers:
 calling one directly returns a missing-token error rather than failing silently.
 `content_feedback`, `youtube_topic_scout`, and `sns_issue_scout` sit outside the
@@ -576,7 +576,7 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | Video generation | `omni_text2video` / `omni_img2video` / `omni_extend` / `omni_edit` | Gemini Omni 1.1 Flash (GEMINI_API_KEY, Interactions API — 360p–4k, **any whole 3–10s**, and the only lane that **edits a clip by instruction** or extends a local mp4 to a 40s cumulative cap. **Billed flat ~$1.01 per call** — measured against the spend counter, not per second as the pricing page reads — so a 3s draft costs more than a full 8s veo-3.1-lite shot; worth it at the full 10s or for the edit lane, never for a short cut. No reference-image or negative-prompt field, and its person policy is unmeasured — photoreal faces stay on `veo_img2video`) |
 | Video generation | `seedance_text2video` / `seedance_img2video` / `seedance_reference` | Seedance (ARK_API_KEY, BytePlus ModelArk — 480p–4k, **2–30s in 1-second steps** billed for what you request, 7 aspect ratios, up to 30 reference images plus reference audio — a character's fixed voice (`referenceAudioPaths`, 2.x) — plus reference video (`referenceVideoPaths`, 2.x): the 3D previz as `Video 1`, the vendor's clay-model reference — every generated cut pre-renders in Blender or three.js first (user directive 2026-09-11), so the camera path and timing land as planned; a local clip is served through `MEDIA_UPLOAD_URL` or a cloudflared quick tunnel for the life of the task. Audio can be turned off, so silent cuts are cheap — $0.23 for 1080p 4s vs $0.64 on Veo lite. Every generated motion background is a previz cut on the 2.x grade the user chose (`PRODUCTION.videoModel`); 1.5 Pro serves only b-roll or speech slots that land on Seedance; fixed voice or over nine reference images use 2.5. The storyboard records the reason and forecasts that model's cost. Which engine when: [decision table](skills/produce/references/video-model-selection.md)) |
 | Video generation | `mlx_video_generate` | MLX Core / mlx-serve (24fps rgb8 muxed to mp4 with ffmpeg. Default 768×1280, RAM-capped at 800MB decoded RGB. Not the default path and not on the Veo/Seedance face-policy table. Pack install, request grid and measured render times: [LTX 2.5 runbook](docs/mlx-ltx-2.5.md)) |
-| Video generation | `astra_text2video` / `astra_img2video` / `astra_keyframe_video` / `astra_audio2video` / `astra_video_retake` | ASTRA video API (`ASTRA_VIDEO`, self-hosted LTX-2.5 — **our own box, so no per-call bill and no vendor policy**, but it renders ONE job at a time: 66–184s each plus queue, which makes it the batch lane rather than the interactive one. Five tools over six server modes; `tier` picks generate·guided·guided_fast. The only lane with `lora` adapters (`cinemagraph` · `slow-motion`, generate only), with a keyframe mode that passes through 2–8 supplied stills at chosen frame indices, and with a retake mode that re-rolls one time span of an existing clip. Length is frames (8k+1, 25–481) not seconds; sizes sit on a 64-pixel grid with a 2,088,960-pixel ceiling, so 9:16 is **1024×1920** — 1088×1920 only at numFrames 25 (~1s), and never 1080×1920. Every clip returns a generated 48kHz stereo AAC track that cannot be switched off. Which engine when: [decision table](skills/produce/references/video-model-selection.md)) |
+| Video generation | `astra_text2video` / `astra_img2video` / `astra_keyframe_video` / `astra_audio2video` / `astra_video_retake` | ASTRA video API (`ASTRA_VIDEO`, self-hosted LTX-2.5 — **our own box, so no per-call bill and no vendor policy**, but it renders ONE job at a time: 66–184s each plus queue, which makes it the batch lane rather than the interactive one. Five tools over six server modes; `tier` picks generate·guided·guided_fast. The only lane with `lora` adapters (`cinemagraph` · `slow-motion`, generate only), with a keyframe mode that passes through 2–8 supplied stills at chosen frame indices, and with a retake mode that re-rolls one time span of an existing clip. Length is frames (8k+1, 25–193; guided/fast client ceiling 121) not seconds; sizes sit on a 64-pixel grid with a 2,064,384-pixel ceiling, so 9:16 is **1024×1920** — 1088×1920 exceeds the area ceiling at every frame count, and 1080×1920 is off-grid. Clips carry 48kHz stereo AAC; `audio2video` carries the supplied sound re-encoded, rather than a newly generated track. Stereo (2-channel) input is required: mono WAV passes acceptance but fails generation. With neither length argument, audio2video uses 121 frames (~5.04s), not the source length; `audioMaxDuration: 8` selects 185 frames (~7.71s) at 24fps. There is no audio-off argument. Which engine when: [decision table](skills/produce/references/video-model-selection.md)) |
 | Checked narration | `tts_generate_checked` | Generates with the pinned engine and reviews the actual WAV: blind transcript, pronunciation, naturalness and clarity. Up to three takes (one episode seed stays fixed across retakes); current hash-bound PASS required for assembly. Every single-voice take gets a fixed pause laid in at each sentence boundary — ElevenLabs from its own alignment, the local/Gemini/mlx engines from the local forced aligner — with `<wav>.sentences.json` for the builder. Requires Gemini API review even for local TTS; see [speech quality gate](skills/produce/references/tts-quality.md). |
 | Final speech review | `tts_review_final` | Listens to the assembled media and every sentence transition; continuity and other listening axes must reach 95, accuracy 98. The final hash-bound proof is required for delivery. |
 | Pronunciation dictionary | `tts_elevenlabs_dictionary` | Creates Korean alias rules and returns pinned dictionary/version IDs for `pronunciationDictionaryLocators`. Keep the source name intact and test the actual pronunciation. |
@@ -595,7 +595,7 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | Publish | `threads_publish` / `instagram_publish` / `facebook_publish` / `facebook_comment` / `youtube_publish` / `youtube_update` | Direct platform API calls — **exposed only for platforms with a credential file** (`youtube_update` edits title/description/tags/visibility of an already-uploaded video) |
 | Comment inbox | `sns_comment_inbox` / `sns_comment_reply` / `sns_comment_moderate` | Cross-platform normalized inbox · replies · hiding (no deletes). Inbox and replies cover all 4 platforms; hiding excludes YouTube (its API only offers held-for-review, which means something else) |
 | Storyboard | `storyboard_read` / `storyboard_apply` / `storyboard_check` / `storyboard_backups` / `scenario_check` | The episode board as sequences → scenes → shots (`window.STRUCTURE` beside the flat `SCENES` produce reads), plus the scenario input contract. `read` returns the tree at four levels; `apply` writes or patches the board and refuses to write past a violation; `storyboard_check` runs the structure rules plus the full `check-scenes.js` contract; `scenario_check` runs S1–S12 on `candidates/` or `scenario.md` and returns the checker JSON. Local files only — the board rules live in [structure-contract.js](skills/storyboard/references/structure-contract.js), shared with the checker and approval page |
-| Portal | 100 workflow tools such as `portal_storyboard_save`, `portal_episode_lease` and `portal_channel_sync`, plus 97 route tools named `portal_api_<resource>_<operation>` | The ttalkkakstory portal by **workspace API key** (`Authorization: Bearer tks_…`) — the episode and channel-shared assets have remote records while local directories stay working copies. The workflow tools preserve local-file integration and recovery flows. The 97 `portal_api_*` tools are generated from `server/src/portal-api-contract.json`: every workspace-key API route has one named tool with the API's exact path, method and input schema, while all 19 exclusions carry an authentication-boundary reason. Binary downloads require an absolute `targetFile` and never overwrite a file. Delete tools are marked destructive and require user authorization. The key comes from `<SNS_TOKEN_DIR>/<channel>/ttalkkakstory.json`, read off the channel or episode path, so one channel is one workspace; all portal tools are listed only while a key exists. See [the portal section](#the-ttalkkakstory-portal-by-workspace-api-key). |
+| Portal | 100 workflow tools such as `portal_storyboard_save`, `portal_episode_lease` and `portal_channel_sync`, plus 110 route tools named `portal_api_<resource>_<operation>` | The ttalkkakstory portal by **workspace API key** (`Authorization: Bearer tks_…`) — the episode and channel-shared assets have remote records while local directories stay working copies. The workflow tools preserve local-file integration and recovery flows. The 110 `portal_api_*` tools are generated from `server/src/portal-api-contract.json`: every workspace-key API route has one named tool with the API's exact path, method and input schema, while all 19 exclusions carry an authentication-boundary reason. Binary downloads require an absolute `targetFile` and never overwrite a file. Delete tools are marked destructive and require user authorization. The key comes from `<SNS_TOKEN_DIR>/<channel>/ttalkkakstory.json`, read off the channel or episode path, so one channel is one workspace; all portal tools are listed only while a key exists. See [the portal section](#the-ttalkkakstory-portal-by-workspace-api-key). |
 | Capability | `capability_status` | What this machine has configured, grouped by capability with an "N of M" count, plus the env var that would unlock each missing provider. Call it before planning anything that spends money — otherwise a missing key only surfaces when the call fails, after the plan was built around it. Reports configuration, not reachability |
 | Check | `sns_account_check` | Batch /me check across tokens (token values never shown) |
 | Growth insights | `threads_insights` / `threads_search` | Threads insights (account/post metrics) + public keyword search — for grow-threads (`threads_manage_insights` · `threads_keyword_search` scopes) |
@@ -1054,3 +1054,9 @@ portal metadata. They preserve annotations, never invent a human decision. With 
 leading markers the last value wins; comments after executable code are not annotations.
 The live cross-repository regression probe is `scripts/test-approval-roundtrip.mjs` in the
 portal repository; the server suite also covers save/pull with a scripted portal.
+
+### Generated character voice lock
+
+`voice_lock_apply` converts single-speaker generated audio/video to the character’s
+ElevenLabs voice and checks blind transcripts and duration drift. It saves originals,
+new media and a per-shot result report. See the [produce contract](skills/produce/references/voice-lock.md).
