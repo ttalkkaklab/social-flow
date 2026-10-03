@@ -41,7 +41,7 @@
    layers.forEach((layer,i)=>{const depth=spec.layers[i].depth,dx=(spec.template==='reveal'?s.progress*w*1.25:(s.progress-.5)*w*.09)*depth;ctx.drawImage(layer,x+dx,y,dw,dh)});
    return s;
   };
-  return {draw,diagnostics:()=>({technique:'still-camera',template:spec.template,focusMethod:['focus-in','rack-focus'].includes(spec.template)?'feathered-region':null,layers:layers.length})};
+  return {draw,diagnostics:()=>({source:{w:photo.width,h:photo.height},technique:'still-camera',template:spec.template,focusMethod:['focus-in','rack-focus'].includes(spec.template)?'feathered-region':null,layers:layers.length})};
  }
  const api={mount,state};if(typeof module==='object'&&module.exports)module.exports=api;else root.STILL_CAMERA=api;
 })(typeof window==='object'?window:globalThis);

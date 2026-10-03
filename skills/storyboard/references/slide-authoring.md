@@ -265,3 +265,7 @@ For `shot.render.mode:"data_graph"`, use [chart-design.md](chart-design.md). Cop
 and [render-routing.js](render-routing.js) as directed there. Chart plans use
 `chartRenderer:"svg-v1"` and `chart-reveal` beats. Do not start a data graph from the generic
 number poster. The shared renderer owns scales, marks, focus transitions and layout.
+
+Camera and chart templates and their runtimes are byte-checked by `check-slide.js`.
+After a plugin template update, recopy the template and matching assets for new work.
+Do not rerender already delivered episodes merely to refresh their template copies.

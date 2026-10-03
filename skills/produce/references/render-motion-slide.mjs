@@ -100,6 +100,7 @@
  *   first frame before the first seek.
  * Exit 0 ok · 1 render/contract failure · 2 usage.
  */
+import { measureSlideDOM, groupTextRows, percentileContrast } from './slide-legibility.mjs';
 import { spawn, execFileSync } from "node:child_process";
 import { createRequire } from "node:module";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -197,6 +198,7 @@ const semanticBeats = scene && scene.visual && scene.visual.slide && Array.isArr
 // from scenes.js so the SEEK-RUNTIME block stays byte-identical across the three templates.
 const treatment = scene && scene.visual && scene.visual.slide ? String(scene.visual.slide.treatment || "") : "";
 const isFootage = treatment === "footage";
+const isCamera = scene?.visual?.slide?.kind === "camera";
 // Footage clips play for their whole segment — the video ground's sustain layer. data-vdur becomes the
 // segment length (--segs) or stays as authored, and never exceeds what the file holds: __groups() would
 // otherwise report a clip length the pixels do not deliver. Returns the clips that came up short.
@@ -563,7 +565,7 @@ const openPage = async () => {
         warn.push(`group ${g.rg} clip is ${g.dur}ms — over its ${seg}ms segment; the cut to the next clip lands mid-motion`);
       else if (seg - g.dur > seg * 0.4)
         warn.push(`group ${g.rg} moves ${(g.dur / 1000).toFixed(1)}s of its ${(seg / 1000).toFixed(1)}s segment — the tail freezes ${((seg - g.dur) / 1000).toFixed(1)}s; mark a .sv sustain element (slide-design.md §5) or accept the freeze`);
-    } else if (!isFootage && !opt.previz && g.dur > 2600 + meta.hold) {
+    } else if (!isFootage && !isCamera && !opt.previz && g.dur > 2600 + meta.hold) {
       warn.push(`group ${g.rg} clip is ${g.dur}ms — over the cap (2.6s motion + ${meta.hold}ms hold, slide-design.md §motion); a shorter segment cuts it mid-motion`);
     }
   }
@@ -700,6 +702,35 @@ const openPage = async () => {
       else { await seek(dur, k); await shot(path.join(sdir, `g${k}-end.png`)); }
     }
   }
+  // Measure the same final state as the last sheet frame. No sheet means unmeasured, not zero.
+  await seek(groups[N].dur, N);
+  const legibility = opt.sheet ? await evalJS(`(${measureSlideDOM.toString()})(${groupTextRows.toString()})`) : null;
+  let minContrast = null;
+  if (legibility) {
+    for (const item of legibility.textSamples) if (item.px < item.floor)
+      warn.push(`text ${item.sel}: ${item.px}px below its ${item.floor}px role floor`);
+    for (const item of legibility.strokeSamples) if (item.px < item.floor)
+      warn.push(`stroke ${item.sel}: ${item.px}px below structural floor ${item.floor}px`);
+    for (const item of legibility.text) for (const row of item.rows) {
+      const x=Math.max(0,Math.ceil(row.x)), y=Math.max(0,Math.ceil(row.y));
+      const w=Math.min(W,Math.floor(row.x+row.w))-x, h=Math.min(H,Math.floor(row.y+row.h))-y;
+      if (w<=0 || h<=0) continue;
+      const bytes=execFileSync('ffmpeg',['-v','error','-i',path.join(OUT,'sheet',`g${N}-end.png`),
+        '-vf',`crop=${w}:${h}:${x}:${y},format=gray`,'-frames:v','1','-f','rawvideo','-'],{maxBuffer:W*H*4});
+      const ratio=percentileContrast(bytes), threshold=row.px>=66?3:4.5;
+      if (ratio != null && (!minContrast || ratio<minContrast.ratio)) minContrast={ratio,sel:item.sel};
+      if (ratio != null && ratio<threshold) warn.push(`contrast ${item.sel}: ${ratio.toFixed(2)}:1 below ${threshold}:1`);
+    }
+    if (legibility.excluded_text_nodes) warn.push(`${legibility.excluded_text_nodes} text nodes excluded at the final frame (hidden or transparent)`);
+  } else warn.push('legibility unmeasured: use --sheet for text, stroke and contrast evidence');
+  const camera = isCamera ? (await evalJS('window.__meta()')).camera : null;
+  if (camera) for (const item of camera) {
+    const speed=scene.visual?.camera?.speed, rate={'very slow':.04,slow:.06,fast:.14,'very fast':.20}[speed];
+    if (rate && Math.abs(item.ratePerSec-rate)>rate*.25) warn.push(`camera group ${item.rg}: rate ${item.ratePerSec.toFixed(4)}/s outside ${speed} ±25%`);
+    if (!speed && item.ratePerSec<.04) warn.push(`camera group ${item.rg}: undeclared speed and rate below 0.04/s`);
+    const f=item.focusAtEnd;
+    if (f && (f.x<0 || f.x>W || f.y<0 || f.y>H || f.y>=(W>H?795:1350))) warn.push(`camera group ${item.rg}: final focus outside frame or in subtitle band`);
+  }
   // Zone fill — measured at the final rest state (clip N's end frame, the frame the video
   // freezes on), against the subtitle-free zone. Painted content only: text rects, replaced
   // elements, and boxes with their own background or border — container divs span the zone
@@ -707,7 +738,7 @@ const openPage = async () => {
   await seek(groups[N].dur, N);
   // A footage slide has no zone composition to measure — the clip fills the frame and the marks sit
   // where the picture puts them (slide-design.md §6.2), so the number is reported as null.
-  const zoneFill = isFootage || opt.previz ? null : await evalJS(`(() => {
+  const zoneFill = isFootage || isCamera || opt.previz ? null : await evalJS(`(() => {
     const cs = getComputedStyle(document.documentElement);
     const px = v => parseFloat(cs.getPropertyValue(v)) || 0;
     const W = px("--w"), H = px("--h"), zx = px("--zone-x"), zt = px("--zone-top"), zb = px("--zone-bottom");
@@ -778,6 +809,11 @@ const openPage = async () => {
     treatment: treatment || null,
     segments: segCount, durations_ms: groups.slice(1).map(g => g.dur),
     segs_ms: segMap && segsApplied ? Array.from({ length: N }, (_, i) => segMap[i + 1] || null) : null,
+    camera,
+    min_text_px: legibility?.min_text_px ?? null, min_stroke_px: legibility?.min_stroke_px ?? null,
+    min_contrast: minContrast, max_lines: legibility?.max_lines ?? null,
+    max_line_chars: legibility?.max_line_chars ?? null, excluded_text_nodes: legibility?.excluded_text_nodes ?? null,
+    text_lines: legibility?.text ?? null,
     zone_fill_pct: zoneFill, grain: opt.pngOnly ? null : opt.grain, frames: framesTotal,
     seconds: +sec.toFixed(2), fps_capture: +(framesTotal / sec).toFixed(1), out: OUT, warnings: warn };
   // slide-reviewer reads zone_fill_pct and the coverage warnings from this file — stdout

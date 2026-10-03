@@ -419,6 +419,18 @@ verdict, and horizontal spread stays a judgement made by eye.
   the sheet at 25% scale, ink on an accent plate 5 / a source line is present when a
   number is on screen 5
 
+Use the renderer's `--sheet` summary as evidence: `min_text_px`, `min_stroke_px`
+and `min_contrast`. Text follows the role floors in §3; separators use `--hair`
+(3px portrait / 2px wide), axes and connectors use `--rule` (6px / 4px).
+Contrast warnings use 4.5:1 below 66px and 3:1 from 66px (WCAG web-text criteria,
+with 24 CSS px scaled from a 390pt phone to a 1080px canvas; not a broadcast standard).
+The final sheet frame supplies per-row 5th/95th percentile luminance. Text-node Range
+rectangles form a row when their vertical overlap is at least 50% of the smaller
+height; emphasis spans share a row. `text_lines`, `max_lines` and `max_line_chars`
+record those rows. Hidden or zero-opacity ancestors exclude a text node; the summary
+reports `excluded_text_nodes`. No sheet means null measurements, not a pass.
+These measurements inform this score and P0-10; threshold findings are warnings.
+
 Findings that are a matter of taste go to fix directives, not P0. A P0 is something a
 viewer would notice as wrong, not something a designer would do differently.
 
