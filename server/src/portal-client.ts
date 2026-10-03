@@ -104,6 +104,8 @@ export interface PortalClient {
   chooseScenario(episodeId: string, candidate: string): Promise<PortalResponse<PortalScenarioSaved>>;
   scenarioMd(episodeId: string, candidate: string): Promise<string>;
   pageUrl(relative: string): string;
+  /** The workspace's projects — the layer the tools name by `project` and never expose as an id (#88). */
+  listProjects(): Promise<PortalResponse<PortalProject[]>>;
   /** Workspace characters (#91) — `/characters`, never a project id; `project` in create is the channel name. */
   listCharacters(query?: Record<string, string | number | undefined>): Promise<PortalResponse<{ items: PortalCharacter[]; hasNext: boolean }>>;
   getCharacter(id: string): Promise<PortalResponse<PortalCharacter>>;
@@ -118,6 +120,10 @@ export interface PortalClient {
   assetsGet(id: string): Promise<PortalResponse<PortalAsset>>;
   /** Stream one asset's bytes to `sink`; resolves with the byte count. `maxBytes` aborts an oversized body before it lands on disk. */
   assetsDownload(id: string, sink: (chunk: Uint8Array) => void, maxBytes: number): Promise<number>;
+}
+
+export interface PortalProject {
+  id: string; name: string;
 }
 
 export interface PortalCharacterImages {
@@ -432,6 +438,7 @@ export function createPortalClient(credential: PortalCredential & { workspace: s
     revisionDiff: (episodeId, from, to) => json<PortalRevisionDiff>('GET', `/episodes/${episodeId}/revisions/${from}/diff/${to}`),
     renderAllocation: (episodeId, body) => json(body ? 'PUT' : 'GET', `/episodes/${episodeId}/render-allocation`, body ? { ...body, sourceHost: holder } : undefined),
     uploadImage: (episodeId, bytes, mime) => json<PortalImage>('POST', withHolder(`/episodes/${episodeId}/images`), bytes, mime),
+    listProjects: () => json<PortalProject[]>('GET', '/projects'),
     listCharacters: (query = {}) => {
       const sp = new URLSearchParams();
       for (const [k, v] of Object.entries(query)) if (v !== undefined && v !== '') sp.set(k, String(v));

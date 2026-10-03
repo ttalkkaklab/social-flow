@@ -6,6 +6,12 @@ import { voiceLockConfigSchema } from './voice-lock-config.js';
  * folder as an optional source: `identityDir` reads identity.md the way the import does, and
  * `file` sends one PNG/JPEG/WebP panel. Never a project id — the portal hides that layer (#88);
  * `project` is the channel name and defaults to the channel the key was read off.
+ *
+ * Reads name that layer too: one `key` can exist in several projects, so `project` narrows a
+ * lookup and every summary carries `projectId` so the caller can see which one it got. Without
+ * `project` the lookup stays workspace-wide, but a `key` matching more than one project throws
+ * instead of picking by order — the one documented key caller decides create-or-reuse from the
+ * answer (skills/channel/references/portal-characters.md), so a quiet pick becomes a wrong write.
  */
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -15,6 +21,8 @@ const channelArg = z.string().regex(/^[a-z0-9][a-z0-9-]{0,63}$/, 'kebab-case cha
 const uuid = z.string().uuid();
 const keyArg = z.string().regex(/^[a-z0-9][a-z0-9-]{0,62}$/, 'lowercase letters, digits or hyphens');
 const scope = { channel: channelArg, episodeDir: z.string().optional() };
+/** The project layer, named not identified (#88) — one arg shared by create and the two reads so they cannot drift apart again. */
+const projectArg = z.string().trim().min(1).max(100);
 export const TTS_DEFAULTS = { engine: 'elevenlabs', voiceId: 'L4az9Gb378GIycFl2nAB', model: 'eleven_multilingual_v2', speed: 1 };
 export const ttsSchema = z.object({
     voiceLock: voiceLockConfigSchema.optional(),
@@ -33,12 +41,13 @@ const fields = {
     referenceImageUrl: z.string().trim().max(2000).optional(),
     tts: ttsSchema.optional(),
 };
-export const characterListSchema = z.object({ ...scope, q: z.string().trim().min(1).max(200).optional(), key: keyArg.optional(), page: z.number().int().min(1).max(10000).optional() });
-export const characterGetSchema = z.object({ ...scope, id: uuid.optional(), key: keyArg.optional() })
-    .refine(a => Number(Boolean(a.id)) + Number(Boolean(a.key)) === 1, 'Pass exactly one of id or key');
+export const characterListSchema = z.object({ ...scope, project: projectArg.optional(), q: z.string().trim().min(1).max(200).optional(), key: keyArg.optional(), page: z.number().int().min(1).max(10000).optional() });
+export const characterGetSchema = z.object({ ...scope, project: projectArg.optional(), id: uuid.optional(), key: keyArg.optional() })
+    .refine(a => Number(Boolean(a.id)) + Number(Boolean(a.key)) === 1, 'Pass exactly one of id or key')
+    .refine(a => !(a.project && a.id), 'project narrows a key lookup; an id is already exact. Drop one.');
 export const characterCreateSchema = z.object({
     ...scope,
-    project: z.string().trim().min(1).max(100).optional(),
+    project: projectArg.optional(),
     identityDir: z.string().min(1).optional(),
     file: z.string().min(1).optional(),
     ...fields,
@@ -66,22 +75,72 @@ export function readIdentity(dir) {
     return { key, ...(heading ? { name: heading } : {}), ...(role ? { role } : {}), ...(appearance ? { appearance } : {}) };
 }
 const summarize = (c) => ({
-    id: c.id, key: c.key, name: c.name, role: c.role, appearance: c.appearance,
+    id: c.id, projectId: c.projectId, key: c.key, name: c.name, role: c.role, appearance: c.appearance,
     images: c.images ?? { front: c.referenceImageUrl, back: null, face: null, extra: [] }, imagesComplete: c.imagesComplete ?? false,
     referenceImageUrl: c.images ? c.images.front : c.referenceImageUrl, tts: c.tts, updatedAt: c.updatedAt,
 });
-export async function listCharacters(client, args) {
-    const { data } = await client.listCharacters({ q: args.q, key: args.key, page: args.page });
-    return { items: data.items.map(summarize), hasNext: data.hasNext, workspace: client.workspace };
+/**
+ * `project` (a channel name) to the id the portal filters by. Exact match on the name; a workspace
+ * with two same-named projects is itself ambiguous, so it throws rather than guess.
+ */
+async function resolveProjectId(client, project) {
+    const { data: projects } = await client.listProjects();
+    const matches = projects.filter(p => p.name === project);
+    if (matches.length === 1) {
+        const id = matches[0].id?.trim();
+        // An empty projectId is "no filter" on the portal side (characters schema takes z.literal("")),
+        // and the query builder drops empty values — so a blank id here would quietly widen the read
+        // back to the whole workspace. Refuse instead.
+        if (!id)
+            throw new Error(`The portal returned project "${project}" with no id, so the read cannot be narrowed to it. Nothing was read.`);
+        return id;
+    }
+    const names = projects.map(p => p.name).sort();
+    if (matches.length === 0) {
+        throw new Error(`No project named "${project}" in workspace ${client.workspace}. It has ${names.length}: ${names.join(', ')}.`);
+    }
+    throw new Error(`Workspace ${client.workspace} has ${matches.length} projects named "${project}" (${matches.map(p => p.id).join(', ')}) — it cannot be named unambiguously. Ask the portal owner to rename one.`);
 }
-async function byKey(client, key) {
-    const { data } = await client.listCharacters({ key });
-    return data.items[0] ?? null;
+/** Names for an ambiguity message; ids alone if the project list cannot be read. */
+async function projectNames(client) {
+    try {
+        const { data: projects } = await client.listProjects();
+        return new Map(projects.map((p) => [p.id, p.name]));
+    }
+    catch {
+        return new Map();
+    }
+}
+export async function listCharacters(client, args) {
+    const projectId = args.project ? await resolveProjectId(client, args.project) : undefined;
+    const { data } = await client.listCharacters({ projectId, q: args.q, key: args.key, page: args.page });
+    return { items: data.items.map(summarize), hasNext: data.hasNext, workspace: client.workspace, ...(args.project ? { project: args.project, projectId } : {}) };
+}
+/**
+ * One record for a key. With a projectId the portal returns at most one. Without one, several
+ * projects can hold the same key — then the order decides, so this refuses to pick.
+ */
+async function byKey(client, key, projectId, project) {
+    const { data } = await client.listCharacters({ key, projectId });
+    if (data.items.length <= 1)
+        return data.items[0] ?? null;
+    // Narrowed and still several — one project holds duplicate keys, so only an id can pick.
+    if (project) {
+        throw new Error(`Project "${project}" holds ${data.items.length} characters with key "${key}" (ids ${data.items.map(c => c.id).join(', ')}). Pass id — nothing was read.`);
+    }
+    const names = await projectNames(client);
+    const where = data.items.map(c => `${names.get(c.projectId) ?? c.projectId} (id ${c.id})`).sort().join(' · ');
+    throw new Error(`Key "${key}" exists in ${data.items.length} projects of workspace ${client.workspace}: ${where}. ` +
+        `Pass project (the channel name) or id to say which one — nothing was read from the wrong one.`);
 }
 export async function getCharacter(client, args) {
-    const record = args.id ? (await client.getCharacter(args.id)).data : await byKey(client, args.key);
-    if (!record)
-        throw new Error(`No character with key "${args.key}" in workspace ${client.workspace}.`);
+    const projectId = args.project ? await resolveProjectId(client, args.project) : undefined;
+    const record = args.id ? (await client.getCharacter(args.id)).data : await byKey(client, args.key, projectId, args.project);
+    if (!record) {
+        throw new Error(args.project
+            ? `No character with key "${args.key}" in project "${args.project}" of workspace ${client.workspace}.`
+            : `No character with key "${args.key}" in workspace ${client.workspace}.`);
+    }
     return summarize(record);
 }
 export async function createCharacter(client, args, channel) {

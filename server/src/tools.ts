@@ -1378,14 +1378,14 @@ Returns: JSON — { candidate, chosen, findings[] }.`,
   {
     name: 'portal_character_list', title: 'List the workspace characters on the portal',
     annotations: { readOnlyHint: true, openWorldHint: true },
-    description: 'The characters of the workspace the key opens — id, key (the assets/characters/<id> folder name), name, role, appearance, referenceImageUrl, images (front/back/face URLs and extra entries), imagesComplete and the tts block. q searches name and role; key finds one exactly; 24 per page. Read-only. No key → one line, go on.',
-    inputSchema: { type: 'object', properties: { channel: PORTAL_CHANNEL_ARG, episodeDir: PORTAL_EPISODE_DIR_ARG, q: { type: 'string', maxLength: 200, description: 'Name or role contains' }, key: { type: 'string', description: 'Exact character key' }, page: { type: 'integer', minimum: 1, description: 'Page number, 24 per page (default 1)' } } },
+    description: 'The characters of the workspace the key opens — id, projectId (which project holds it), key (the assets/characters/<id> folder name), name, role, appearance, referenceImageUrl, images (front/back/face URLs and extra entries), imagesComplete and the tts block. q searches name and role; key finds one exactly; project (a channel name) lists only that project; 24 per page. Read-only. No key → one line, go on.',
+    inputSchema: { type: 'object', properties: { channel: PORTAL_CHANNEL_ARG, episodeDir: PORTAL_EPISODE_DIR_ARG, project: { type: 'string', maxLength: 100, description: 'Channel name to list only that project\'s characters (default: the whole workspace)' }, q: { type: 'string', maxLength: 200, description: 'Name or role contains' }, key: { type: 'string', description: 'Exact character key' }, page: { type: 'integer', minimum: 1, description: 'Page number, 24 per page (default 1)' } } },
   },
   {
     name: 'portal_character_get', title: 'Fetch one portal character',
     annotations: { readOnlyHint: true, openWorldHint: true },
-    description: 'One character by id or by key (exactly one of the two). Returns images (front/back/face URLs and extra entries), imagesComplete, and the same fields as portal_character_list. Read-only.',
-    inputSchema: { type: 'object', properties: { channel: PORTAL_CHANNEL_ARG, episodeDir: PORTAL_EPISODE_DIR_ARG, id: { type: 'string', format: 'uuid', description: 'Portal character id' }, key: { type: 'string', description: 'Character key, e.g. the assets/characters/<id> folder name' } } },
+    description: 'One character by id or by key (exactly one of the two). Returns projectId, images (front/back/face URLs and extra entries), imagesComplete, and the same fields as portal_character_list. A key can exist in several projects: pass project (the channel name) to say which one — without it a shared key is refused rather than picked by order, and the error names the projects holding it. Read-only.',
+    inputSchema: { type: 'object', properties: { channel: PORTAL_CHANNEL_ARG, episodeDir: PORTAL_EPISODE_DIR_ARG, project: { type: 'string', maxLength: 100, description: 'Channel name the key belongs to — narrows a key that several projects share. Not with id' }, id: { type: 'string', format: 'uuid', description: 'Portal character id' }, key: { type: 'string', description: 'Character key, e.g. the assets/characters/<id> folder name' } } },
   },
   {
     name: 'portal_character_create', title: 'Create a portal character',
