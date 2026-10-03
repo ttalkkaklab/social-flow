@@ -9,6 +9,12 @@ files the character under `project` = the channel name — the channel the key w
 (`channel` or `episodeDir`), overridable with `project` — the same rule the storyboard
 import uses, so the character is available to that channel's playlists.
 
+Reads name that layer the same way. One `key` can exist in several projects — `narrator`
+commonly does — so `portal_character_get` and `portal_character_list` take the same
+`project` (a channel name), and every answer carries `projectId`. Without `project` a key
+held by two projects is **refused**, not picked: the portal orders by name then id, so a
+quiet pick would return the same wrong record every time instead of failing once.
+
 ## Steps
 
 1. **Generate three separate panels** in `assets/characters/<id>/`, with one consistent
@@ -18,14 +24,18 @@ import uses, so the character is available to that channel's playlists.
    into one sheet. Use the host image tool first where available. Optional poses/details
    are extra files. Write `identity.md` (`# Name`, `**역할**:`, `**생김새**:`); the folder
    name is the character `key` (lowercase letters, digits, hyphens).
-2. **Check whether it is already there** — `portal_character_get` with `key:"<id>"`.
+2. **Check whether it is already there** — `portal_character_get` with `key:"<id>"` **and
+   `project:"<channel>"`**, the channel you are registering for. This answer decides
+   create-or-reuse, so it must not come from another channel's project: without `project`
+   a key two projects share is refused, and reusing the wrong `id` would send step 3's
+   panels and step 4's voice to that other channel's character.
    Found → reuse its `id`; not found → `portal_character_create` with `identityDir`.
    The legacy create `file` argument uploads to **front**, so never pass the face panel there.
 3. **Upload** with `portal_character_image_upload` three times, supplying `id`, `file`
    and `view`: `body.png` → `front`, `back.png` → `back`, `face.png` → `face`.
    Optional images use `view:"extra"`, `label` and optionally `sort`.
-   Read `portal_character_get` and verify `imagesComplete:true`; false means the set
-   is still incomplete. Legacy single images become front only and need back and face.
+   Read `portal_character_get` by `id` (not by key — you have the id from step 2) and
+   verify `imagesComplete:true`; false means the set is still incomplete. Legacy single images become front only and need back and face.
 4. **Voice** — `portal_character_tts_set` with the channel's engine·voiceId·model·speed·
    language·stylePrompt from `profile.md`. Fields you leave out keep the character's current
    value, and only then fall back to the owner defaults (ElevenLabs `L4az9Gb378GIycFl2nAB`,
@@ -50,10 +60,14 @@ import uses, so the character is available to that channel's playlists.
 
 ## Reading
 
-- `portal_character_list` — `q` (name·role contains), `key` (exact), `page` (24 each).
-- `portal_character_get` — exactly one of `id` or `key`.
+- `portal_character_list` — `q` (name·role contains), `key` (exact), `project` (a channel
+  name; lists only that project), `page` (24 each). With `project` the answer echoes
+  `project` and `projectId`.
+- `portal_character_get` — exactly one of `id` or `key`, plus optional `project` to say
+  which project a shared key belongs to. `project` with `id` is refused — an id is already
+  exact. A key in two projects throws and the error names them, so pass `project` and retry.
 
-Both return id · key · name · role · appearance · referenceImageUrl · images ·
+Both return id · projectId · key · name · role · appearance · referenceImageUrl · images ·
 imagesComplete · tts · updatedAt. `images` has front/back/face URLs or null, plus
 `extra:[{id,url,label,sort}]`. These URLs require workspace authentication. Only front
 sets `referenceImageUrl`. Old servers without slots report `imagesComplete:false`.

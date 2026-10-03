@@ -2,7 +2,9 @@
 
 After a model generates speech (LTX, Seedance, Veo or another provider), run
 `voice_lock_apply` before selecting that cut for assembly. Use the speaking
-character's `tts` block from `portal_character_get` or the approved board. Keep
+character's `tts` block from `portal_character_get` — by `id`, or with `project` (the
+channel name) when only the key is known, since one key can sit in two projects and an
+unqualified key is refused — or from the approved board. Keep
 that voiceId across cuts and episodes. A missing character or voice is a setup
 error; do not silently choose a different voice.
 
