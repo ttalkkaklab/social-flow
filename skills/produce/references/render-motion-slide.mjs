@@ -100,8 +100,9 @@
  *   first frame before the first seek.
  * Exit 0 ok · 1 render/contract failure · 2 usage.
  */
+import { cameraGuard, readContrastFrame, rowContrast } from './render-evidence.mjs';
 import { parseWordCues } from './word-cue-map.mjs';
-import { measureSlideDOM, groupTextRows, percentileContrast } from './slide-legibility.mjs';
+import { measureSlideDOM, groupTextRows } from './slide-legibility.mjs';
 import { spawn, execFileSync } from "node:child_process";
 import { createRequire } from "node:module";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -456,8 +457,8 @@ const openPage = async () => {
   const size = await evalJS("window.__size()");
   if (size.w !== W || size.h !== H) return die(`page size ${size.w}x${size.h} ≠ format canvas ${W}x${H} (window.FORMAT=${FORMAT})`);
   const meta = await evalJS("window.__meta()");           // { hold, stray, infinite }
-  if (isCamera && meta.peakUpscale > 1.5)
-    return die(`camera peak upscale ${meta.peakUpscale.toFixed(3)} exceeds 1.5; minimum source ${Math.ceil(W*meta.zoomPeak/1.5)}x${Math.ceil(H*meta.zoomPeak/1.5)}`);
+  const cameraProblem=isCamera?cameraGuard(meta,W,H):null;
+  if(cameraProblem)return die(cameraProblem);
   if (meta.broken && meta.broken.length)
     return die(`could not load: ${meta.broken.join(", ")} — a slide's images and video are local files next to it. ` +
                `Check the path, and use H.264 or VP9 for video (HEVC does not decode under --disable-gpu)`);
@@ -740,13 +741,11 @@ const openPage = async () => {
       warn.push(`text ${item.sel}: ${item.px}px below its ${item.floor}px role floor`);
     for (const item of legibility.strokeSamples) if (item.px < item.floor)
       warn.push(`stroke ${item.sel}: ${item.px}px below structural floor ${item.floor}px`);
+    const contrastFrame=legibility.text.some(item=>item.rows.length)
+      ?readContrastFrame(path.join(OUT,'sheet',`g${N}-end.png`),W,H):{pixels:null,error:null};
+    if(contrastFrame.error)warn.push(`contrast unmeasured: ${contrastFrame.error}`);
     for (const item of legibility.text) for (const row of item.rows) {
-      const x=Math.max(0,Math.ceil(row.x)), y=Math.max(0,Math.ceil(row.y));
-      const w=Math.min(W,Math.floor(row.x+row.w))-x, h=Math.min(H,Math.floor(row.y+row.h))-y;
-      if (w<=0 || h<=0) continue;
-      const bytes=execFileSync('ffmpeg',['-v','error','-i',path.join(OUT,'sheet',`g${N}-end.png`),
-        '-vf',`crop=${w}:${h}:${x}:${y},format=gray`,'-frames:v','1','-f','rawvideo','-'],{maxBuffer:W*H*4});
-      const ratio=percentileContrast(bytes), threshold=row.px>=66?3:4.5;
+      const ratio=contrastFrame.pixels?rowContrast(contrastFrame.pixels,W,H,row):null, threshold=row.px>=66?3:4.5;
       if (ratio != null && (!minContrast || ratio<minContrast.ratio)) minContrast={ratio,sel:item.sel};
       if (ratio != null && ratio<threshold) warn.push(`contrast ${item.sel}: ${ratio.toFixed(2)}:1 below ${threshold}:1`);
     }

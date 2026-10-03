@@ -458,7 +458,8 @@ Markers are exempt from structural floors: `min_stroke_px` may be a 1px marker,
 so review each `strokeSamples` entry against its own role floor, not the minimum alone.
 Contrast warnings use 4.5:1 below 66px and 3:1 from 66px (WCAG web-text criteria,
 with 24 CSS px scaled from a 390pt phone to a 1080px canvas; not a broadcast standard).
-The final sheet frame supplies per-row 5th/95th percentile luminance. Text-node Range
+The final sheet frame is decoded once and supplies per-row 5th/95th percentile luminance.
+A failed decode emits `contrast unmeasured` instead of crashing; it is not contrast approval. Text-node Range
 rectangles form a row when their vertical overlap is at least 50% of the smaller
 height; emphasis spans share a row. `text_lines`, `max_lines` and `max_line_chars`
 record those rows. Hidden or zero-opacity ancestors exclude a text node; the summary
