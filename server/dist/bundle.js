@@ -85184,7 +85184,7 @@ var astraVideoDeleteUploadSchema = external_exports.object({
 var uploadListingSchema = external_exports.object({
   uploads: external_exports.array(external_exports.object({
     upload_id: external_exports.string().min(1),
-    kind: external_exports.enum(["image", "audio", "video"]),
+    kind: external_exports.enum(["image", "audio", "video"]).or(external_exports.string()),
     bytes: external_exports.number().int().nonnegative(),
     expires_at: external_exports.string().min(1)
   }))

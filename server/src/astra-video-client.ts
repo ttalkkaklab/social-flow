@@ -136,7 +136,7 @@ export const astraVideoDeleteUploadSchema = z.object({
 const uploadListingSchema = z.object({
   uploads: z.array(z.object({
     upload_id: z.string().min(1),
-    kind: z.enum(['image', 'audio', 'video']),
+    kind: z.enum(['image', 'audio', 'video']).or(z.string()),
     bytes: z.number().int().nonnegative(),
     expires_at: z.string().min(1),
   })),

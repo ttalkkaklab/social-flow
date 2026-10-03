@@ -677,6 +677,39 @@ describe('ASTRA upload management', () => {
     });
   });
 
+  it('rejects deleted false for the requested upload id', async () => {
+    await withReply(200, JSON.stringify({ upload_id, deleted: false }), async () => {
+      const result = await ROUTES.astra_video_delete_upload({ uploadId: upload_id });
+      assert.equal(result.isError, true);
+      assert.match(content(result), /no deletion is confirmed/);
+    });
+  });
+
+  it('rejects HTTP 202 as an unconfirmed empty upload list', async () => {
+    await withReply(202, JSON.stringify({ uploads: [] }), async () => {
+      const result = await ROUTES.astra_video_list_uploads({});
+      assert.equal(result.isError, true);
+      assert.match(content(result), /HTTP 202.*no empty list is confirmed/);
+    });
+  });
+
+  it('preserves unknown upload kinds and the full list', async () => {
+    const uploads = [item, { ...item, upload_id: 'future-kind', kind: 'mesh' }];
+    await withReply(200, JSON.stringify({ uploads }), async () => {
+      const result = await ROUTES.astra_video_list_uploads({});
+      assert.notEqual(result.isError, true);
+      assert.deepEqual(JSON.parse(content(result)), { uploads });
+    });
+  });
+
+  for (const bytes of ['42', -1, 1.5]) it(`rejects malformed upload bytes ${JSON.stringify(bytes)}`, async () => {
+    await withReply(200, JSON.stringify({ uploads: [{ ...item, bytes }] }), async () => {
+      const result = await ROUTES.astra_video_list_uploads({});
+      assert.equal(result.isError, true);
+      assert.match(content(result), /no empty list is confirmed/);
+    });
+  });
+
   for (const status of [200, 204]) it(`confirms deletion with HTTP ${status}`, async () => {
     await withReply(status, JSON.stringify({ upload_id, deleted: true }), async calls => {
       const result = await ROUTES.astra_video_delete_upload({ uploadId: upload_id });
