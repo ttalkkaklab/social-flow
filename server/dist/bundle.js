@@ -85177,6 +85177,48 @@ var POLL_INTERVAL_MS = 5e3;
 var SUBMIT_TIMEOUT_MS = 6e4;
 var STATUS_TIMEOUT_MS = 3e4;
 var TRANSFER_TIMEOUT_MS = 6e5;
+var astraVideoListUploadsSchema = external_exports.object({}).strict();
+var astraVideoDeleteUploadSchema = external_exports.object({
+  uploadId: external_exports.string().min(1).max(256).regex(/^[A-Za-z0-9_-]+$/, "uploadId must be a bare upload identifier")
+}).strict();
+var uploadListingSchema = external_exports.object({
+  uploads: external_exports.array(external_exports.object({
+    upload_id: external_exports.string().min(1),
+    kind: external_exports.enum(["image", "audio", "video"]).or(external_exports.string()),
+    bytes: external_exports.number().int().nonnegative(),
+    expires_at: external_exports.string().min(1)
+  }))
+});
+function uploadManagementFailure(operation, status) {
+  const reason = status === 404 || status === 501 ? "The server upload endpoint is unavailable or not implemented; server support is required." : status === 401 || status === 403 ? "The server refused access. Check ASTRA_VIDEO and upload ownership." : status === 429 ? "The server rate limit was reached. Try again later." : "The server could not complete the request. Check server availability before retrying.";
+  return new Error(`ASTRA video ${operation} failed (HTTP ${status}): ${reason}`);
+}
+function invalidUploadResponse(operation, status) {
+  return new Error(`ASTRA video ${operation} failed (HTTP ${status}): The server did not return the expected upload response. The endpoint may not be implemented yet; no ${operation === "list uploads" ? "empty list" : "deletion"} is confirmed.`);
+}
+async function listUploads() {
+  const result = await requestRaw("get", `${astraVideoBaseUrl()}/v1/uploads`, authHeaders(), void 0, STATUS_TIMEOUT_MS);
+  if (!result.ok) throw uploadManagementFailure("list uploads", result.status);
+  if (result.status !== 200) throw invalidUploadResponse("list uploads", result.status);
+  try {
+    return uploadListingSchema.parse(JSON.parse(result.body));
+  } catch {
+    throw invalidUploadResponse("list uploads", result.status);
+  }
+}
+async function deleteUpload(args) {
+  const { uploadId: upload_id } = astraVideoDeleteUploadSchema.parse(args);
+  const result = await requestRaw("delete", `${astraVideoBaseUrl()}/v1/uploads/${encodeURIComponent(upload_id)}`, authHeaders(), void 0, STATUS_TIMEOUT_MS);
+  if (!result.ok) throw uploadManagementFailure("delete upload", result.status);
+  if (result.status === 204) return { upload_id, deleted: true };
+  try {
+    const confirmed = external_exports.object({ upload_id: external_exports.literal(upload_id), deleted: external_exports.literal(true) }).parse(JSON.parse(result.body));
+    if (result.status !== 200) throw new Error("Deletion is not complete");
+    return confirmed;
+  } catch {
+    throw invalidUploadResponse("delete upload", result.status);
+  }
+}
 var promptSchema = external_exports.string().min(1, "prompt is required").max(ASTRA_VIDEO_MAX_PROMPT_CHARS, `prompt must be at most ${ASTRA_VIDEO_MAX_PROMPT_CHARS} characters`);
 var numFramesSchema = (mode) => external_exports.number().int().min(ASTRA_VIDEO_MIN_FRAMES).max(ASTRA_VIDEO_FRAME_LIMITS[mode]).refine((n) => (n - 1) % ASTRA_VIDEO_FRAME_STEP === 0, {
   message: `numFrames must be 8k+1 (25, 33, 41 \u2026 ${ASTRA_VIDEO_FRAME_LIMITS[mode]})`
@@ -94972,6 +95014,25 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
         filename: ASTRA_FILENAME_PROPERTY
       },
       required: ["prompt", "sourceVideoPath", "startTime", "endTime"]
+    }
+  },
+  {
+    name: "astra_video_list_uploads",
+    title: "ASTRA video upload list",
+    annotations: HINT.read,
+    description: "List uploads owned by the configured ASTRA_VIDEO key. No filters or pagination arguments. Uploads expire after 24 hours; the key has a 20-upload / 1 GiB storage ceiling. Requires server GET /v1/uploads support; an unavailable endpoint or invalid response is an error, never an empty list. Server support and response contract still require live verification.",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false }
+  },
+  {
+    name: "astra_video_delete_upload",
+    title: "Delete an ASTRA video upload",
+    annotations: HINT.moderate,
+    description: "\u26A0\uFE0F Destructive: never call without user approval for the selected upload (HITL). Permanently delete one upload owned by the configured ASTRA_VIDEO key. List uploads first and choose the exact uploadId; do not delete inputs still needed by queued/running jobs or planned reuse. Requires server DELETE /v1/uploads/<id> support. An unavailable endpoint or unconfirmed response is an error, never a successful deletion. Server support and response contract still require live verification.",
+    inputSchema: {
+      type: "object",
+      properties: { uploadId: { type: "string", minLength: 1, maxLength: 256, pattern: "^[A-Za-z0-9_-]+$", description: "Exact upload identifier from the list; not a URL or local path." } },
+      required: ["uploadId"],
+      additionalProperties: false
     }
   },
   // ── Video generation (ByteDance Seedance — BytePlus ModelArk) ─────────────
@@ -105886,7 +105947,7 @@ function capabilityStatus() {
           provider: "astra video (self-hosted LTX-2.5)",
           configured: has2(config2.astraVideoApiKey),
           needs: "ASTRA_VIDEO",
-          note: "astra_text2video \xB7 astra_img2video \xB7 astra_keyframe_video \xB7 astra_audio2video \xB7 astra_video_retake \u2014 our own box, no per-call bill, but ONE render at a time (66-184s each plus queue); the batch lane, not the interactive one"
+          note: "astra_text2video \xB7 astra_img2video \xB7 astra_keyframe_video \xB7 astra_audio2video \xB7 astra_video_retake \xB7 astra_video_list_uploads \xB7 astra_video_delete_upload (upload management requires server endpoint support; configuration is not a live check) \u2014 our own box, no per-call bill, but ONE render at a time (66-184s each plus queue); the batch lane, not the interactive one"
         }
       ]
     },
@@ -107018,6 +107079,22 @@ Audio: ${parsed.audioPath ?? "reused upload"}
 audioUploadId: ${result.audioUploadId}
 Audio expires at: ${result.audioExpiresAt ?? "unknown (reused upload or metadata unavailable)"}
 Audio duration (seconds): ${result.audioDuration ?? "unknown (reused upload or metadata unavailable)"}`);
+  },
+  astra_video_list_uploads: async (args) => {
+    astraVideoListUploadsSchema.parse(args);
+    try {
+      return text(JSON.stringify(await listUploads()));
+    } catch (error2) {
+      return text(error2 instanceof Error ? error2.message : "ASTRA upload listing failed", true);
+    }
+  },
+  astra_video_delete_upload: async (args) => {
+    const parsed = parseArgs(astraVideoDeleteUploadSchema, args);
+    try {
+      return text(JSON.stringify(await deleteUpload(parsed)));
+    } catch (error2) {
+      return text(error2 instanceof Error ? error2.message : "ASTRA upload deletion failed", true);
+    }
   },
   astra_video_retake: async (args) => {
     const parsed = parseArgs(astraVideoRetakeSchema, args);

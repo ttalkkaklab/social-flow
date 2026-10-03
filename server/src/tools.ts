@@ -2717,6 +2717,25 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
       required: ['prompt', 'sourceVideoPath', 'startTime', 'endTime'],
     },
   },
+  {
+    name: 'astra_video_list_uploads',
+    title: 'ASTRA video upload list',
+    annotations: HINT.read,
+    description: 'List uploads owned by the configured ASTRA_VIDEO key. No filters or pagination arguments. Uploads expire after 24 hours; the key has a 20-upload / 1 GiB storage ceiling. Requires server GET /v1/uploads support; an unavailable endpoint or invalid response is an error, never an empty list. Server support and response contract still require live verification.',
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+  },
+  {
+    name: 'astra_video_delete_upload',
+    title: 'Delete an ASTRA video upload',
+    annotations: HINT.moderate,
+    description: '⚠️ Destructive: never call without user approval for the selected upload (HITL). Permanently delete one upload owned by the configured ASTRA_VIDEO key. List uploads first and choose the exact uploadId; do not delete inputs still needed by queued/running jobs or planned reuse. Requires server DELETE /v1/uploads/<id> support. An unavailable endpoint or unconfirmed response is an error, never a successful deletion. Server support and response contract still require live verification.',
+    inputSchema: {
+      type: 'object',
+      properties: { uploadId: { type: 'string', minLength: 1, maxLength: 256, pattern: '^[A-Za-z0-9_-]+$', description: 'Exact upload identifier from the list; not a URL or local path.' } },
+      required: ['uploadId'],
+      additionalProperties: false,
+    },
+  },
   // ── Video generation (ByteDance Seedance — BytePlus ModelArk) ─────────────
   // The second engine sharing Veo's slot. The source of truth for which to use
   // when is skills/produce/references/video-model-selection.md.
