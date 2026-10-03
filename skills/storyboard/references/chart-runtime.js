@@ -61,6 +61,7 @@
   }
   function render(data,{width=728,height=660,group=1,progress=1,accent,wide=false,elapsedMs=progress*1000,growMs=1000,plateMs=400}={}){
     const C=colors(data.surface,color(accent)),v=data.values,n=v.length;
+    // Keep type/stroke floors aligned with slide-design §3 and slide-legibility role floors.
     const TYPE=wide?{label:32,value:32,foot:24}:{label:44,value:44,foot:28},HAIR=wide?2:3,RULE=wide?4:6;
     const first=group<=1,p=ease(clamp(elapsedMs/(first?growMs:plateMs))),reveal=first?geometryEase(clamp(elapsedMs/growMs)):1;
     const beat=data.beats[Math.max(0,group-1)],prev=data.beats[Math.max(0,group-2)];
@@ -69,7 +70,7 @@
     const percent=x=>{if(x>0&&x<.0001)return x.toExponential(1);if(x<100&&x>99.9999)return '>99.9999';const gap=Math.min(Math.abs(x),Math.abs(100-x));const digits=gap?Math.min(4,Math.max(1,1-Math.floor(Math.log10(gap)))):0;return new Intl.NumberFormat('en-US',{maximumFractionDigits:digits}).format(x)};
     const num=x=>{const result=new Intl.NumberFormat('en-US',{maximumFractionDigits:data.decimals??1,...(Math.abs(x)>=1e6?{notation:'compact'}:{})}).format(x);return x!==0&&Number(result.replace(/,/g,''))===0?axisNum(x):result};
     const t=(x,y,s,size,fill=C.ink,anchor='start',weight=500,opacity=1)=>`<text data-type-role="${size===TYPE.foot?'foot':'description'}" x="${x}" y="${y}" font-size="${size}" fill="${fill}" text-anchor="${anchor}" font-weight="${weight}" opacity="${opacity}">${esc(s)}</text>`;
-    const line=(x1,y1,x2,y2,stroke=C.line,w=RULE,extra='')=>`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${stroke}" stroke-width="${w}" ${extra}/>`;
+    const line=(x1,y1,x2,y2,stroke=C.line,w=HAIR,extra='',role='hair')=>`<line data-stroke-role="${role}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${stroke}" stroke-width="${w}" ${extra}/>`;
     const label=(x,y,s,anchor='start',size=TYPE.label,limit=Math.floor(width/size))=>
       wrapLabel(s,limit).map((row,i)=>t(x,y+i*size*1.15,row,size,C.ink,anchor)).join('');
     let out='';
@@ -83,7 +84,7 @@
       const total=sizes.reduce((a,b)=>a+b,0),space=Math.max(0,(available-total)/n);
       const x=a=>left+(a-lo)/span*right;
       for(let k=0;k<=4;k++){const value=lo+span*k/4,xx=x(value);out+=line(xx,56,xx,height-45)+t(xx,32,axisNum(value),TYPE.foot,C.muted,k===0?'start':k===4?'end':'middle')}
-      if(lo<0)out+=line(x(0),56,x(0),height-45,C.muted,3);
+      if(lo<0)out+=line(x(0),56,x(0),height-45,C.muted,RULE,'','rule');
       let cursor=top;
       v.forEach((d,i)=>{
         const y=cursor,hot=emphasis(i),end=x(d.value*reveal),zero=x(0);cursor+=sizes[i]+space;
@@ -93,7 +94,7 @@
           out+=`<rect x="${Math.min(zero,end)}" y="${yy-12}" width="${Math.abs(end-zero)}" height="24" fill="${C.neutral}"/>`;
           out+=`<rect x="${Math.min(zero,end)}" y="${yy-12}" width="${Math.abs(end-zero)}" height="24" fill="${C.accent}" opacity="${hot}"/>`;
         }else{
-          out+=line(zero,yy,end,yy,C.neutral,4)+`<circle cx="${end}" cy="${yy}" r="10" fill="${C.ink}"/><circle cx="${end}" cy="${yy}" r="10" fill="${C.accent}" opacity="${hot}"/>`;
+          out+=line(zero,yy,end,yy,C.neutral,RULE,'','rule')+`<circle cx="${end}" cy="${yy}" r="10" fill="${C.ink}"/><circle cx="${end}" cy="${yy}" r="10" fill="${C.accent}" opacity="${hot}"/>`;
         }
         out+=t(width,yy+10,num(d.value),TYPE.value,C.ink,'end',700,first?p:1);
       });
@@ -154,16 +155,16 @@
         const d=byRegion.get(region.id),measured=Number.isFinite(d?.value),hot=d?emphasis(d.index):0;
         const fill=m.mode==='choropleth'?(measured?shade(d.value):'url(#map-missing)'):C.line;
         out+=`<path data-region="${esc(region.id)}" d="${region.path}" fill="${fill}" fill-rule="evenodd" stroke="${C.paper}" stroke-width="${HAIR}" opacity="${first?.25+.75*p:1}"/>`;
-        if(m.mode==='choropleth'&&d)out+=`<path d="${region.path}" fill="none" fill-rule="evenodd" stroke="${C.ink}" stroke-width="2.8" opacity="${hot}"/>`;
+        if(m.mode==='choropleth'&&d)out+=`<path data-stroke-role="hair" d="${region.path}" fill="none" fill-rule="evenodd" stroke="${C.ink}" stroke-width="${HAIR}" opacity="${hot}"/>`;
       }
       if(m.mode==='symbol'){
         // Large circles first, so smaller co-located observations remain visible. Area encodes value.
         v.map((d,i)=>({...d,index:i})).sort((a,b)=>(b.value||0)-(a.value||0)).forEach(d=>{
           const [x,y]=geo.locate([d.longitude,d.latitude]),hot=emphasis(d.index),radius=24*Math.sqrt((d.value||0)/max)*reveal;
           if(d.value===null||d.value===0)out+=`<circle data-focus="${esc(d.label)}" cx="${x}" cy="${y}" r="10" fill="none" stroke="${C.accent}" stroke-width="3" opacity="${hot}"/>`;
-          if(d.value===null)out+=line(x-4,y-4,x+4,y+4,C.muted,2)+line(x-4,y+4,x+4,y-4,C.muted,2);
-          else if(d.value===0)out+=line(x-4,y,x+4,y,C.ink,2)+line(x,y-4,x,y+4,C.ink,2);
-          else out+=`<circle data-mark="symbol" data-value="${d.value}" cx="${x}" cy="${y}" r="${radius}" fill="${C.accent}" fill-opacity="${.5+.25*hot}" stroke="${C.ink}" stroke-width="${1+hot*2}"/>`;
+          if(d.value===null)out+=line(x-4,y-4,x+4,y+4,C.muted,2,'','marker')+line(x-4,y+4,x+4,y-4,C.muted,2,'','marker');
+          else if(d.value===0)out+=line(x-4,y,x+4,y,C.ink,2,'','marker')+line(x,y-4,x,y+4,C.ink,2,'','marker');
+          else out+=`<circle data-stroke-role="marker" data-mark="symbol" data-value="${d.value}" cx="${x}" cy="${y}" r="${radius}" fill="${C.accent}" fill-opacity="${.5+.25*hot}" stroke="${C.ink}" stroke-width="${1+hot*2}"/>`;
         });
       }
       const ly=mapH+24;
@@ -186,7 +187,7 @@
       if(!first)out+=`<g opacity="${p}">${readout(focused)}</g>`;
     }else if(data.chart==='timeline'){
       const dates=v.map(d=>Date.parse(d.date)),range=dates[n-1]-dates[0],top=48,bottom=height-100;
-      out+=line(22,top,22,bottom,C.line,3);
+      out+=line(22,top,22,bottom,C.line,RULE,'','rule');
       v.forEach((d,i)=>{const yy=top+(dates[i]-dates[0])/range*(bottom-top),hot=emphasis(i);out+=`<circle cx="22" cy="${yy}" r="${6+hot*4}" fill="${C.accent}" opacity="${first?p:1}"/>`+t(58,yy-9,d.date,TYPE.foot,C.muted)+label(58,yy+34,d.label,'start',TYPE.label,Math.floor((width-58)/TYPE.label))});
     }
     return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="${esc(beat.insight)}" style="font-family:inherit;font-variant-numeric:tabular-nums">${out}</svg>`;

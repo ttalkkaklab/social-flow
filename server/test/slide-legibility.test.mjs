@@ -36,3 +36,37 @@ test('the 50 percent row boundary rejects both zero and full-overlap mutants',()
  assert.equal(groupTextRows([glyph(0,100),glyph(50,100)]).length,1);
  assert.equal(groupTextRows([glyph(0,100),glyph(50.01,100)]).length,2);
 });
+
+import vm from 'node:vm';
+import {measureSlideDOM} from '../../skills/produce/references/slide-legibility.mjs';
+function measureStrokes(wide, values) {
+ class SVGElement {}
+ const elements=values.map(([role,px,name='line'])=>Object.assign(new SVGElement(),{id:role||'fallback',localName:name,dataset:role?{strokeRole:role}:{},px,parentElement:null,getClientRects:()=>[{}]}));
+ const stage={querySelectorAll:()=>elements};
+ const context={SVGElement,window:{FORMAT:wide?'youtube-long-16x9':'shorts-9x16'},NodeFilter:{SHOW_TEXT:4},document:{getElementById:()=>stage,createTreeWalker:()=>({nextNode:()=>null})},getComputedStyle:el=>({display:'block',visibility:'visible',opacity:'1',stroke:'#000',strokeWidth:String(el.px)})};
+ return vm.runInNewContext('('+measureSlideDOM.toString()+')(()=>[])',context).strokeSamples;
+}
+for(const wide of [false,true])for(const [role,floor] of [['rule',wide?4:6],['hair',wide?2:3]]){
+ test(`${wide?'wide':'portrait'} ${role} accepts floor and rejects thinner stroke`,()=>{
+  const rows=measureStrokes(wide,[[role,floor],[role,floor-1]]);
+  assert.equal(rows[0].floor,floor);assert.equal(rows[0].px<rows[0].floor,false);
+  assert.equal(rows[1].px<rows[1].floor,true);
+ });
+}
+test('markers preserve glyph/focus strokes while unclassified lines retain structural protection',()=>{
+ for(const wide of [false,true]){
+  const rows=measureStrokes(wide,[['marker',1,'circle'],['marker',2],[undefined,1]]);
+  assert.equal(rows[0].floor,null);assert.equal(rows[1].floor,null);
+  assert.equal(rows[2].floor,wide?4:6);assert.ok(rows[2].px<rows[2].floor);
+ }
+});
+
+import {createRequire} from 'node:module';
+const {render}=createRequire(import.meta.url)('../../skills/storyboard/references/chart-runtime.js');
+test('choropleth focus outlines use the structural hair floor in both formats',()=>{
+ const data={chart:'map',values:[{label:'A',regionId:'a',value:25}],beats:[{focus:['A'],insight:'A'}],map:{mode:'choropleth',geojson:{type:'FeatureCollection',features:[{type:'Feature',id:'a',properties:{},geometry:{type:'Polygon',coordinates:[[[0,0],[2,0],[2,2],[0,2],[0,0]]]}}]}}};
+ for(const wide of [false,true]){
+  const svg=render(data,{wide});
+  assert.match(svg,new RegExp('data-stroke-role="hair"[^>]*fill="none"[^>]*stroke-width="'+(wide?2:3)+'"'));
+ }
+});

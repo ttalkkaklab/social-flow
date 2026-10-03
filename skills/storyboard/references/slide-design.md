@@ -163,10 +163,23 @@ fixture). Install Pretendard on the render machine anyway; the cells make the la
 either way.
 
 **Strokes.** A 1.5px hairline at 1080 wide is 0.09mm on a phone — under the eye's
-resolving limit at arm's length, and the codec smears it further. Every line on a slide
+resolving limit at arm's length, and the codec smears it further. Every structural or relationship line on a slide
 is one of three weights: `--hair` 3px for dividers, tracks and brackets; `--rule` 6px for
 axes, connectors, the timeline rail dot ring and the spine; `--band` 10px for an underline
 or the strike-through. Bar tracks are `--bar-h` 44px tall.
+
+| Stroke role | Portrait / wide | Uses |
+|---|---|---|
+| `rule` | 6px / 4px | axes, zero baseline, connectors, timeline spine |
+| `hair` | 3px / 2px | grid lines, separators, tracks, brackets |
+| `marker` | exempt from structural floor | compact missing/zero glyphs and value-sized map symbol circles whose stroke signals focus |
+
+SVG `data-stroke-role` takes precedence over element-name inference. Marker exemption
+preserves the 8px glyph and the map symbol's 1→3px focus signal; it does not exempt
+axes, grids, connectors or region outlines. Region focus outlines use `hair`.
+Unclassified SVG lines keep the rule floor. The preserved fill-opacity .5→.75 alone
+has weak state contrast: paper 1.60:1, ink 1.75:1; exemption does not establish 3:1 contrast.
+
 
 ### Subtitles and screen type
 

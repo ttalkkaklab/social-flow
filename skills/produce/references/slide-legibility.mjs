@@ -30,6 +30,7 @@ export function measureSlideDOM(groupRows) {
   };
   const floor = el => {
     const role = el.closest('[data-type-role]')?.dataset.typeRole;
+    // Keep role floors aligned with slide-design §3 and chart-runtime TYPE/HAIR/RULE.
     const sizes = {foot:[28,24], kicker:[34,26], description:[44,32], label:[54,40], title:[76,56], word:[124,92], word2:[68,50]};
     if (role && sizes[role]) return sizes[role][wide ? 1 : 0];
     if (el.closest('#source,.foot')) return sizes.foot[wide ? 1 : 0];
@@ -77,7 +78,9 @@ export function measureSlideDOM(groupRows) {
     }
     if (el instanceof SVGElement && cs.stroke !== 'none') {
       const px=parseFloat(cs.strokeWidth);
-      if (px>0) strokeSamples.push({px,sel,floor:el.localName==='line'?(wide?4:6):(wide?2:3)});
+      const role=el.dataset.strokeRole;
+      const strokeFloor=role==='marker'?null:role==='rule'?(wide?4:6):role==='hair'?(wide?2:3):el.localName==='line'?(wide?4:6):(wide?2:3);
+      if (px>0) strokeSamples.push({px,sel,role:role||null,floor:strokeFloor});
     }
   }
   const min = items => items.length ? items.reduce((a,b)=>a.px<=b.px?a:b) : null;
