@@ -30,7 +30,7 @@ export function measureSlideDOM(groupRows) {
   };
   const floor = el => {
     const role = el.closest('[data-type-role]')?.dataset.typeRole;
-    const sizes = {foot:[28,24], kicker:[34,26], description:[44,32], label:[54,40], title:[76,54], word:[124,92], word2:[68,52]};
+    const sizes = {foot:[28,24], kicker:[34,26], description:[44,32], label:[54,40], title:[76,56], word:[124,92], word2:[68,50]};
     if (role && sizes[role]) return sizes[role][wide ? 1 : 0];
     if (el.closest('#source,.foot')) return sizes.foot[wide ? 1 : 0];
     if (el.closest('#eyebrow,.kicker')) return sizes.kicker[wide ? 1 : 0];
@@ -66,7 +66,7 @@ export function measureSlideDOM(groupRows) {
   const text = [];
   for (const [el, glyphs] of groups) {
     const boxes = groupRows(glyphs);
-    text.push({sel:selector(el),lines:boxes.length,chars:Math.max(0,...boxes.map(r=>r.chars)),rows:boxes});
+    text.push({sel:selector(el),line_limit:el.matches('.word.max')?2:el.matches('.word')?3:el.matches('.word2')?2:null,lines:boxes.length,chars:Math.max(0,...boxes.map(r=>r.chars)),rows:boxes});
   }
   for (const el of stage.querySelectorAll('*')) {
     if (hidden(el) || !el.getClientRects().length) continue;

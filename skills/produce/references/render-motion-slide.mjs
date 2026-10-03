@@ -5,7 +5,7 @@
  *
  *   node render-motion-slide.mjs <storyboard/slides/sN-slug.html> --out <dir> [--fps 30]
  *        [--jobs 4] [--sheet] [--png-only] [--group k] [--frame k:ms] [--keep-frames]
- *        [--segs auto|k:ms,...] [--grain 0..30] [--previz]
+ *        [--segs auto|k:ms,...] [--word-cues k:path,...] [--grain 0..30] [--previz]
  *
  * --previz renders a three.js previz page (storyboard previz-template.html, blender-previz.md §6.5):
  *   one clip for the whole cut at 24 fps, no grain, and none of the slide rules — the page has one
@@ -100,6 +100,7 @@
  *   first frame before the first seek.
  * Exit 0 ok · 1 render/contract failure · 2 usage.
  */
+import { parseWordCues } from './word-cue-map.mjs';
 import { measureSlideDOM, groupTextRows, percentileContrast } from './slide-legibility.mjs';
 import { spawn, execFileSync } from "node:child_process";
 import { createRequire } from "node:module";
@@ -112,7 +113,7 @@ const require = createRequire(import.meta.url);
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const { FORMATS, DEFAULT_FORMAT } = require(path.join(HERE, "../../platform-guide/references/formats.js"));
 
-const USAGE = "usage: render-motion-slide.mjs <slides/sN-slug.html> --out <dir> [--fps 30] [--jobs 4] [--sheet] [--png-only] [--group k] [--frame k:ms] [--keep-frames] [--segs auto|k:ms,...] [--grain 0..30] [--previz]";
+const USAGE = "usage: render-motion-slide.mjs <slides/sN-slug.html> --out <dir> [--fps 30] [--jobs 4] [--sheet] [--png-only] [--group k] [--frame k:ms] [--keep-frames] [--segs auto|k:ms,...] [--word-cues k:path,...] [--grain 0..30] [--previz]";
 const usage = msg => { console.error("✗ " + msg + "\n" + USAGE); process.exit(2); };
 const CDP_TIMEOUT_MS = 30000;
 
@@ -121,7 +122,7 @@ const argv = process.argv.slice(2);
 // jobs = tabs capturing at once. Capture is mostly PNG encoding, so each takes a core — stop at
 // half the cores and never above 4; past that only Chrome's memory grows, not throughput.
 const opt = { fps: 30, jobs: Math.max(1, Math.min(4, Math.floor((os.cpus().length || 4) / 2))),
-  sheet: false, pngOnly: false, group: null, frame: null, keep: false, out: null, segs: null, grain: 6, previz: false };
+  sheet: false, pngOnly: false, group: null, frame: null, keep: false, out: null, segs: null, wordCues: null, grain: 6, previz: false };
 const pos = [], given = new Set();
 const intArg = (v, name, lo, hi) => {
   const n = Number(v);
@@ -144,6 +145,7 @@ for (let i = 0; i < argv.length; i++) {
     opt.segs = argv[++i];
     if (!opt.segs) usage('--segs wants "auto" or k:ms[,k:ms...]');
   }
+  else if (a === "--word-cues") { opt.wordCues=argv[++i]; if(!opt.wordCues) usage("--word-cues needs k:path[,k:path...]"); }
   else if (a === "--frame") {
     const m = String(argv[++i] || "").match(/^(\d+):(\d+(?:\.\d+)?)$/);
     if (!m) usage(`--frame wants k:ms (e.g. 2:800), got "${argv[i]}"`);
@@ -533,6 +535,28 @@ const openPage = async () => {
       }
     }
   }
+  let wordCueMode='none',wordCueMap={},wordCueApplied={applied:0,groups:[]};
+  if(opt.wordCues){
+    if(!segsApplied) warn.push('--word-cues ignored: supply valid --segs with the same group boundaries');
+    else {
+      const modes=[];
+      for(const entry of opt.wordCues.split(',')){
+        const match=entry.match(/^(\d+):(.+)$/);
+        if(!match || Number(match[1])<1) return die('--word-cues needs k:path[,k:path...]');
+        const k=Number(match[1]);let startMs=0;
+        for(let g=1;g<k;g++){if(!(segMap[g]>0))return die('word cues need all preceding segment lengths');startMs+=segMap[g];}
+        if(!(segMap[k]>0)||wordCueMap[k])return die('word cues need one file per existing segment');
+        const parsed=parseWordCues(fs.readFileSync(path.resolve(match[2]),'utf8'),startMs,segMap[k]);
+        wordCueMap[k]=parsed.offsets;modes.push(parsed.mode);
+      }
+      wordCueApplied=await evalJS(`typeof window.__setWordCues==='function' ? window.__setWordCues(${JSON.stringify(wordCueMap)}) : null`);
+      if(!wordCueApplied?.applied) warn.push('word cues supplied but no owned .w words accepted them');
+      else {
+        wordCueMode=modes.includes('proportional')?'proportional':modes.every(m=>m==='aligned')?'aligned':'provided';
+        for(const g of wordCueApplied.groups)if(g.words!==g.cues)warn.push(`word cue group ${g.group}: ${g.cues} onsets for ${g.words} words; inspect partial application`);
+      }
+    }
+  }
   // A settle sustain without --segs holds its own fallback length, and downstream that shows up
   // as a bare "over the cap" warning that names the symptom instead of the cause.
   if (!segsApplied) {
@@ -618,6 +642,7 @@ const openPage = async () => {
   for (const w of workers.slice(1)) {
     await w.evalJS("window.__ready()", true);
     if (segsApplied) await w.evalJS(`window.__setSegs(${JSON.stringify(segMap)})`);
+    if (wordCueApplied?.applied) await w.evalJS(`window.__setWordCues(${JSON.stringify(wordCueMap)})`);
     if (isFootage) await w.evalJS(footageVdurJS(JSON.stringify(segMap && segsApplied ? segMap : {})));
   }
   const rows = new Array(todo.length);
@@ -707,6 +732,8 @@ const openPage = async () => {
   const legibility = opt.sheet ? await evalJS(`(${measureSlideDOM.toString()})(${groupTextRows.toString()})`) : null;
   let minContrast = null;
   if (legibility) {
+    if (scene?.visual?.slide?.kind==='kinetic') for(const item of legibility.text)
+      if(item.line_limit && item.lines>item.line_limit) warn.push(`P0-14 evidence ${item.sel}: ${item.lines} rendered lines exceed ${item.line_limit}`);
     for (const item of legibility.textSamples) if (item.px < item.floor)
       warn.push(`text ${item.sel}: ${item.px}px below its ${item.floor}px role floor`);
     for (const item of legibility.strokeSamples) if (item.px < item.floor)
@@ -809,6 +836,8 @@ const openPage = async () => {
     treatment: treatment || null,
     segments: segCount, durations_ms: groups.slice(1).map(g => g.dur),
     segs_ms: segMap && segsApplied ? Array.from({ length: N }, (_, i) => segMap[i + 1] || null) : null,
+    word_cues:wordCueMode, word_cue_application:wordCueApplied,
+    word_cue_chain:wordCueApplied?.applied?'word cues bypass lead-in; other entrance chains retain it — review a cued group sheet':null,
     camera, chart_motion: meta.chart_motion ?? null,
     min_text_px: legibility?.min_text_px ?? null, min_stroke_px: legibility?.min_stroke_px ?? null,
     min_contrast: minContrast, max_lines: legibility?.max_lines ?? null,

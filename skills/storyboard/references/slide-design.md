@@ -287,6 +287,7 @@ Rules:
   finished videos read as a slideshow. The renderer warns when a group's frozen tail
   passes 40% of its segment. Type reveals and fades never stretch — a 4-second wipe over
   a word is a crawl, not an entrance.
+- Sustained semantic animation subtracts its actual entrance delay from the segment duration; hold stays separate. Without a segment, all three templates use a 2600ms settle fallback matching the renderer entrance cap. Check mid-motion cuts and 40% frozen tails separately.
 - **Focus shift.** A group marked `dim: true` drops to 55% while the next group
   enters, so the eye follows the narration and the end frame keeps its hierarchy — the
   runtime computes it from (g, t), no animation to own, no seam to break. Use it on
@@ -535,8 +536,9 @@ decisions.
   Everything else is `--fs-word2` (68px) or smaller. A one-line verdict or hook that is the
   whole screen takes `cls:"max"` (176px portrait / 128px wide) — at the base size alone it
   floats in the zone and the renderer's fill warning fires.
-- **Five words to a line, four lines to a screen.** Korean breaks by word
-  (`word-break:keep-all`), so a phrase that needs a sixth word is a phrase to cut, not to shrink.
+- **Count rendered lines, not words.** A hero phrase uses at most three lines; a max-size
+  quote or supporting phrase at most two; the screen at most four. Korean breaks at words
+  (`word-break:keep-all`). Use the Range-row measurements; character counts are guidance, not P0.
 - **One effect kind per screen.** `mask` is the default — the phrase climbs out of its line
   box; `words:true` staggers the same rise word by word at `--wstagger` and still counts as
   the same kind. `drop` (a settle from 24px above) and `wipe` (a clip-path reveal on
@@ -560,7 +562,7 @@ decisions.
 **P0, added for this kind**
 
 13. A screen phrase identical to its segment's `sub` — the same sentence twice, once burned in and once as the picture
-14. More than one hero-sized phrase, or a line past five words
+14. More than one hero-sized phrase, or rendered lines above the limits: hero 3, max quote 2, supporting phrase 2, screen total 4
 15. Two effect kinds on one screen, or a word that rotates, bounces, or arcs in. An art that travels and a word that enters on the same group is one event, not two. Mixing `drop` and `wipe` is still two; `mask` and `words:true` are one.
 
 **What the axes look at here** — design craft reads type hierarchy and line breaking instead of
@@ -671,3 +673,13 @@ paper-colour `--hair` separator, 3px portrait / 2px wide. This supplies the cate
 boundary evidence for §6 palette scoring.
 Chart geometry reveals over `--grow` 1000ms on `--ease-mask`; focus shifts over
 `--plate` 400ms on `--ease`. These are §5 tokens, sampled deterministically.
+
+Kinetic width guidance (portrait/wide): hero 124/92px → about 5/18 full-width
+characters per line, max quote 176/128px → 4/13, supporting phrase 68/50px → 10/34.
+These conservative character estimates never decide P0-14; rendered rows do.
+
+Pass `--word-cues k:path[,k:path...]` with `--segs` to the renderer using the same
+`start<TAB>end<TAB>word` output as subtitle alignment. Absolute seconds convert to
+local group milliseconds. Cued words bypass lead-in; uncued words keep 80ms stagger
+and lead-in. `word_cues` distinguishes aligned, proportional, provided and none.
+Inspect one cued group's sheet to verify its other entrance chains still read in order.
