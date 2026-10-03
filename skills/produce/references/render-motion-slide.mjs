@@ -456,6 +456,8 @@ const openPage = async () => {
   const size = await evalJS("window.__size()");
   if (size.w !== W || size.h !== H) return die(`page size ${size.w}x${size.h} ≠ format canvas ${W}x${H} (window.FORMAT=${FORMAT})`);
   const meta = await evalJS("window.__meta()");           // { hold, stray, infinite }
+  if (isCamera && meta.peakUpscale > 1.5)
+    return die(`camera peak upscale ${meta.peakUpscale.toFixed(3)} exceeds 1.5; minimum source ${Math.ceil(W*meta.zoomPeak/1.5)}x${Math.ceil(H*meta.zoomPeak/1.5)}`);
   if (meta.broken && meta.broken.length)
     return die(`could not load: ${meta.broken.join(", ")} — a slide's images and video are local files next to it. ` +
                `Check the path, and use H.264 or VP9 for video (HEVC does not decode under --disable-gpu)`);
@@ -750,11 +752,14 @@ const openPage = async () => {
     }
     // Crossfade remnants can legitimately be hidden; record their identity, not a defect warning.
   } else warn.push('legibility unmeasured: use --sheet for text, stroke and contrast evidence');
-  const camera = isCamera ? (await evalJS('window.__meta()')).camera : null;
-  if (camera) for (const item of camera) {
+  const cameraMeta = isCamera ? await evalJS('window.__meta()') : null;
+  const camera = cameraMeta?.camera ?? null, cameraCut=cameraMeta?.cameraCut ?? null;
+  if (cameraCut?.speedChecked) {
     const speed=scene.visual?.camera?.speed, rate={'very slow':.04,slow:.06,fast:.14,'very fast':.20}[speed];
-    if (rate && Math.abs(item.ratePerSec-rate)>rate*.25) warn.push(`camera group ${item.rg}: rate ${item.ratePerSec.toFixed(4)}/s outside ${speed} ±25%`);
-    if (!speed && item.ratePerSec<.04) warn.push(`camera group ${item.rg}: undeclared speed and rate below 0.04/s`);
+    if (rate && Math.abs(cameraCut.ratePerSec-rate)>rate*.25) warn.push(`camera cut: rate ${cameraCut.ratePerSec.toFixed(4)}/s outside ${speed} ±25%`);
+    if (!speed && cameraCut.ratePerSec<.04-1e-9) warn.push('camera cut: undeclared speed and rate below 0.04/s');
+  }
+  if (camera) for (const item of camera) {
     const f=item.focusAtEnd;
     if (f && (f.x<0 || f.x>W || f.y<0 || f.y>H || f.y>=(W>H?795:1350))) warn.push(`camera group ${item.rg}: final focus outside frame or in subtitle band`);
   }
@@ -838,7 +843,7 @@ const openPage = async () => {
     segs_ms: segMap && segsApplied ? Array.from({ length: N }, (_, i) => segMap[i + 1] || null) : null,
     word_cues:wordCueMode, word_cue_application:wordCueApplied,
     word_cue_chain:wordCueApplied?.applied?'word cues bypass lead-in; other entrance chains retain it — review a cued group sheet':null,
-    camera, chart_motion: meta.chart_motion ?? null,
+    camera, camera_cut: cameraCut, chart_motion: meta.chart_motion ?? null,
     min_text_px: legibility?.min_text_px ?? null, min_stroke_px: legibility?.min_stroke_px ?? null,
     min_contrast: minContrast, max_lines: legibility?.max_lines ?? null,
     max_line_chars: legibility?.max_line_chars ?? null, excluded_text_nodes: legibility?.excluded_text_nodes ?? null,

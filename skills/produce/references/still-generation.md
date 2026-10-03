@@ -101,6 +101,10 @@ node $PG/format-resolve.js storyboard/scenes.js --json | python3 -c \
 Portrait is 1088×1920 rather than an exact 9:16 because of gpt-image's multiple-of-16
 constraint; it cover-crops onto the 1080×1920 canvas, so the 0.7% difference is ignorable.
 
+For fast/very fast still-camera cuts, prepare at least 1440×2560 portrait or
+2560×1440 wide. The renderer also checks the actual peak-zoom formula in
+render-routing.md; dimensions alone do not override the 1.5× upscale limit.
+
 Save each one as `storyboard/images/scene-<n>.png`, `<n>` counting from 1 — the same number
 the strip calls "Shot n". Slide scenes have no still here (their screen is HTML, authored at
 §3.6), and shooting mode has none at all.

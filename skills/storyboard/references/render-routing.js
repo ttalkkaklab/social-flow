@@ -131,7 +131,10 @@
   if(['human_process','mechanism','physical_state'].includes(r.purpose)&&info!=='principle')bad('explanation purposes require infoType principle');
   if(CHARTS[r.purpose]&&info!==(r.purpose==='timeline'?'timeline':'statistic'))bad('chart purpose and infoType disagree');
   if(r.mode==='still_camera'){
-   const camera=r.camera;
+   const camera=r.camera,speed=scene.visual?.camera?.speed;
+   if(speed!==undefined&&!['very slow','slow','fast','very fast'].includes(speed))bad('still camera speed must be very slow, slow, fast or very fast');
+   if(speed==='fast'&&scene.duration>6)bad('fast still camera requires duration <= 6 seconds');
+   if(speed==='very fast'&&scene.duration>5)bad('very fast still camera requires duration <= 5 seconds');
    const region=p=>Array.isArray(p)&&p.length===4&&p.every(Number.isFinite)&&p[0]>=0&&p[0]<=1&&p[1]>=0&&p[1]<=1&&p[2]>0&&p[2]<=1&&p[3]>0&&p[3]<=1;
    if(!camera||!STILL_CAMERA_EFFECTS.includes(camera.effect)||!text(camera.target)||!text(camera.reason))bad('still camera needs effect, target and a content-based reason');
    // L13 — a pan or tilt is a sentence from A to B: both ends are regions of the actual picture, and they differ.

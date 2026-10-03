@@ -683,3 +683,19 @@ Pass `--word-cues k:path[,k:path...]` with `--segs` to the renderer using the sa
 local group milliseconds. Cued words bypass lead-in; uncued words keep 80ms stagger
 and lead-in. `word_cues` distinguishes aligned, proportional, provided and none.
 Inspect one cued group's sheet to verify its other entrance chains still read in order.
+
+
+### Camera motion and source resolution
+
+Still-camera zoom effects (`push`, `pull`, `approach`) use the full-cut average ladder:
+very slow/default 4%/s, slow 6%/s, fast 14%/s (at most 6 s), very fast 20%/s
+(at most 5 s). Slow uses quintic smoothstep; fast uses q². `visual.camera.ease`
+may explicitly select `smoothstep` or `accel`. Focus-in and rack-focus keep their optical timing.
+Pan/tilt preserve authored focus endpoints; reveal/parallax scale layer travel by span/0.32.
+Their focus travel rates are diagnostic only, because the reference measurements cover zoom.
+
+Camera P0: full-cut zoom rate outside the declared ladder by more than 25%, peak source
+upscale above 1.5, or final focus outside the frame/in the subtitle band. Group rates
+are diagnostic, not speed pass/fail. Required source size is at least
+ceil(canvas width × peak zoom / 1.5) by ceil(canvas height × peak zoom / 1.5).
+These changes affect newly rendered cuts; do not rerender delivered episodes.
