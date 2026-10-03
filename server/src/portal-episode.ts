@@ -1,3 +1,4 @@
+import { voiceLockConfigSchema, type VoiceLockConfig } from './voice-lock-config.js';
 /**
  * Local episode directory ⇄ portal — the file side of the `portal_*` tools.
  *
@@ -159,6 +160,7 @@ export interface PortalCharacter {
 }
 
 export interface PortalTts {
+  voiceLock?: VoiceLockConfig;
   engine: 'gemini' | 'supertonic' | 'elevenlabs' | 'mlx';
   voiceId: string;
   model?: string;
@@ -265,6 +267,7 @@ function ttsOf(value: unknown): PortalTts | null {
   if (!['gemini', 'supertonic', 'elevenlabs', 'mlx'].includes(String(tts.engine)) || typeof tts.voiceId !== 'string' || !tts.voiceId.trim()) return null;
   return {
     engine: tts.engine as PortalTts['engine'], voiceId: tts.voiceId,
+    ...(tts.voiceLock !== undefined ? { voiceLock: voiceLockConfigSchema.parse(tts.voiceLock) } : {}),
     ...(typeof tts.model === 'string' ? { model: tts.model } : {}),
     ...(typeof tts.speed === 'number' ? { speed: tts.speed } : {}),
     ...(typeof tts.language === 'string' ? { language: tts.language } : {}),

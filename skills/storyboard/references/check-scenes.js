@@ -70,6 +70,10 @@ const HOOK_TYPES = ['fear', 'empathy', 'curiosity', 'spoiler'];
 const HOOK_FORMS = ['paradox', 'gap', 'payoff', 'identify', 'number', 'secret'];
 const TYPES = ['cover', 'hooking', 'points', 'quote', 'broll', 'outro'];
 const COMPREHENSION_MODES = ['informational', 'narrative'];
+// SOUND_DIRECTOR_KB §BGM 선택·편집 — the emptied-bed / impact places a *short* may spend.
+// The KB sentence is "같은 쇼정에서 두 번 이상은 피한다", so this ceiling is short-form only; a 10-minute
+// long-form episode has room for more reversals and no ceiling is set for it (decision 2026-10-02).
+const REVERSAL_PLACES_MAX = 2;
 const SLIDE_TREATMENTS = ['editorial', 'photo-action'];
 /* User directive 2026-09-05 — it outranks every other rule in this file: nothing is drawn over
    video. No mark, arrow, ring, hatch, bracket, label or callout goes over a generated clip, a
@@ -1424,6 +1428,14 @@ function check(win, fmt, opts) {
       });
     }
 
+    // `sound.drop` cuts the bed under this shot, so it carries the same card restriction the
+    // silence window carries: a broll or an outro is not a card. The two checks used to disagree —
+    // and the one that was missing cost more than a lost error message, because the reversal budget
+    // below counts a dropping shot without asking what kind it is. An outro drop put in to clear
+    // room for the brand sting was spending one of the episode's two reversal places.
+    if (s.sound && s.sound.drop === true && (s.type === 'broll' || s.type === 'outro'))
+      bad(where, `sound.drop on a ${s.type} — not a card`);
+
     // Explicit music-only silence windows preserve narration and room tone. Full digital silence
     // is not represented here because it would also erase the words the shot is meant to carry.
     if (s.sound && s.sound.silence !== undefined) {
@@ -1478,6 +1490,7 @@ function check(win, fmt, opts) {
           bad(at, 'an effect id is lowercase letters, digits and hyphens — it becomes assets/audio/sfx/<id>.wav');
         const hasPrompt = typeof e.prompt === 'string' && e.prompt.trim() !== '';
         const hasAsset = typeof e.asset === 'string' && e.asset.trim() !== '';
+        checkAudioLicense(e, at, isShort, bad, warn);
         if (!hasPrompt && !hasAsset) bad(at, 'neither prompt nor asset — nothing to generate and nothing to fetch');
         if (hasPrompt && hasAsset) bad(at, 'both prompt and asset — one or the other');
         if (e.seconds !== undefined) {
@@ -1507,6 +1520,29 @@ function check(win, fmt, opts) {
       warn('sound', `${n} effects over ${total}s of cards — past one per 10 s they read as decoration; keep the ones on the cuts that changed most`);
   }
 
+  // Reversal places are an episode-wide budget, not a per-shot one (SOUND_DIRECTOR_KB §BGM 선택·편집:
+  // "같은 쇼츠에서 두 번 이상은 피한다"). Emptying the bed is what makes the line land, and a third one
+  // spends the effect the first two bought. Counted over the whole board because a per-shot loop cannot
+  // see the total.
+  //
+  // The unit is the *shot*, not the field: a card that both cuts the music (`sound.drop`) and empties a
+  // window (`sound.silence`) is one reversal place, and so is a card carrying two windows. Adding the
+  // fields instead would put an episode with a single reversal at the ceiling.
+  //
+  // KB spells a reversal place as "음악 비우기 **또는** 임팩트", so an impact looks countable too — but
+  // `sound.effects` holds every effect and nothing marks which one is the reversal impact. Counting them
+  // would push ordinary whooshes into this ceiling, so impacts stay out. What that leaves open: "2 drops
+  // + 6 impacts" passes here. The effect side has its own cover — the one-per-10s density warning above.
+  // Do not add `sound.effects` to this count without a field that names the reversal impact.
+  // Short-form only. The KB quote above is about shorts, and the Creator Music check in this same
+  // function already splits on `isShort`; long-form carries no reversal ceiling (decision 2026-10-02).
+  if (isShort) {
+    const places = scenes.filter((s) => s.sound &&
+      (s.sound.drop === true || (Array.isArray(s.sound.silence) && s.sound.silence.length > 0))).length;
+    if (places > REVERSAL_PLACES_MAX)
+      bad('sound', `${places} shots empty the bed (sound.drop / sound.silence) — at most ${REVERSAL_PLACES_MAX} reversal places per short; a third emptied bed spends the effect the first two bought`);
+  }
+
   // window.MUSIC — every cue has to be something produce can turn into a file: a prompt for
   // music_generate, a weighted-prompt blend for music_generate_advanced, or a channel asset.
   if (win.MUSIC && typeof win.MUSIC === 'object') {
@@ -1522,6 +1558,7 @@ function check(win, fmt, opts) {
         };
         numeric('targetLufs', -30, -5); numeric('truePeakDbtp', -6, 0);
         numeric('bedSeparationLu', 0, 30); numeric('minimumSeparationLu', 0, 30);
+        numeric('ambienceSeparationLu', 0, 30);
         numeric('cueCrossfadeSeconds', 0, 10); numeric('endingFadeSeconds', 0, 10);
         numeric('silenceRampSeconds', 0, 3);
         if (Number(mix.minimumSeparationLu) > Number(mix.bedSeparationLu))
@@ -1551,6 +1588,7 @@ function check(win, fmt, opts) {
         bad(at, 'a cue is an object — { prompt } · { prompts: [{ text, weight }] } · { asset } (scenes-schema §music cues)');
         return;
       }
+      checkAudioLicense(c, at, isShort, bad, warn);
       if (c.asset) return;
       const hasPrompt = typeof c.prompt === 'string' && c.prompt.trim().length > 0;
       const hasPrompts = Array.isArray(c.prompts) && c.prompts.length > 0;
@@ -1565,6 +1603,49 @@ function check(win, fmt, opts) {
   }
 
   return out;
+}
+
+// SOUND_DIRECTOR_KB §게시 전: 저작권 — an audio file carries the same license record a stock clip
+// carries (`visual.license`, render-routing.js checkLicense), so the two surfaces use one validator
+// instead of two spellings of the same nine fields. Creator Music is licensed for long-form only,
+// so that license on a 9:16 board is refused outright; a missing record on a catalog asset is a
+// warning for now (existing boards predate the field — the follow-up card makes it an error).
+function checkAudioLicense(entry, at, isShort, bad, warn) {
+  const license = entry && entry.license, provenance = entry && entry.provenance;
+  const fetched = !!(entry && typeof entry.asset === 'string' && entry.asset.trim());
+  // Which record a cue owes follows how the file came to exist, not the author's taste:
+  // a fetched catalog file has terms someone else wrote (`license`), a generated one has a
+  // prompt, a tool and an account tier (`provenance`). checkLicense demands provider, url,
+  // licenseUrl and retrievedAt — fields a Lyria or Suno render simply has no values for — so
+  // routing a generated cue there would ask for data that does not exist.
+  if (license !== undefined && provenance !== undefined)
+    warn(at, 'both license and provenance — a fetched file records its license, a generated one its provenance');
+  if (license === undefined && provenance === undefined) {
+    if (fetched)
+      warn(at, 'a catalog audio asset has no license record — record provider, url, license, licenseUrl, commercial, modify, attributionRequired and retrievedAt (SOUND_DIRECTOR_KB §게시 전)');
+    else
+      warn(at, 'a generated audio cue has no provenance record — record { tool, prompt, generatedAt, plan } (SOUND_DIRECTOR_KB §도구별 실행: 프롬프트·생성 날짜, §게시 전: Suno 등급)');
+  }
+  if (license !== undefined) {
+    require('./render-routing.js').checkLicense({ license }).forEach((message) =>
+      bad(at, message.replace(/^visual\.license/, 'license')));
+    const name = license && typeof license === 'object' && typeof license.license === 'string' ? license.license : '';
+    if (/creator\s*music/i.test(name) && isShort)
+      bad(at, 'Creator Music is licensed for long-form only and cannot ride a 9:16 board (SOUND_DIRECTOR_KB §게시 전: Creator Music)');
+  }
+  if (provenance !== undefined) {
+    if (!provenance || typeof provenance !== 'object' || Array.isArray(provenance))
+      bad(at, 'provenance is { tool, prompt, generatedAt, plan }');
+    else {
+      for (const field of ['tool', 'prompt'])
+        if (typeof provenance[field] !== 'string' || !provenance[field].trim())
+          bad(at, `provenance.${field} is required — the generator and the prompt it was given`);
+      if (!Number.isFinite(Date.parse(provenance.generatedAt)))
+        bad(at, 'provenance.generatedAt must be the generation date (ISO) — the same prompt gives a different result on another day');
+      if (provenance.plan !== undefined && (typeof provenance.plan !== 'string' || !provenance.plan.trim()))
+        bad(at, 'provenance.plan names the account tier the file was downloaded under (SOUND_DIRECTOR_KB §게시 전: Suno)');
+    }
+  }
 }
 
 function selftest() {
@@ -2308,6 +2389,105 @@ function selftest() {
      has(bads(run([cover, goodShot, ctaShot], { MUSIC: {
        $mix: { bedSeparationLu: 4, minimumSeparationLu: 10 }, base: { asset: 'default' }
      } })), /floor must not exceed/));
+
+  // $mix.ambienceSeparationLu — the room-tone distance (SOUND_DIRECTOR_KB: 15 LU under the speech).
+  // The pair varies only the one number, so both sides are otherwise identical boards.
+  ok('an ambience separation inside 0–30 passes',
+     !has(bads(run([cover, goodShot, ctaShot], { MUSIC: {
+       $mix: { ambienceSeparationLu: 15 }, base: { asset: 'default' }
+     } })), /ambienceSeparationLu/));
+  ok('an ambience separation past 30 is a violation',
+     has(bads(run([cover, goodShot, ctaShot], { MUSIC: {
+       $mix: { ambienceSeparationLu: 31 }, base: { asset: 'default' }
+     } })), /ambienceSeparationLu 31 — expected 0–30/));
+
+  // reversal places — an episode-wide budget of 2, so the count has to cross shots and add the
+  // two kinds together. A per-shot loop passes every one of these boards.
+  const dropShot = (base) => Object.assign({}, base, { sound: { drop: true } });
+  const silenceShot = (base, n) => Object.assign({}, base, {
+    sound: { silence: Array.from({ length: n }, (_, i) => ({ startSeconds: i, endSeconds: i + 0.5, scope: 'music' })) } });
+  // `drop` carries the card restriction the silence window carries — and an outro drop used to
+  // spend a reversal place, so the pair below checks both the refusal and the budget.
+  ok('sound.drop on an outro is a violation',
+     has(bads(run([cover, goodShot, ctaShot, Object.assign({ type: 'outro', visual: {} }, { sound: { drop: true } })])),
+         /sound\.drop on a outro — not a card/));
+  ok('sound.drop on a card passes',
+     !has(bads(run([cover, dropShot(goodShot), ctaShot])), /sound\.drop on a/));
+  const bothShot = (base) => Object.assign({}, base, {
+    sound: { drop: true, silence: [{ startSeconds: 0, endSeconds: 0.5, scope: 'music' }] } });
+  ok('two reversal places pass',
+     !has(bads(run([cover, dropShot(goodShot), silenceShot(goodShot, 1), ctaShot])), /reversal places/));
+  ok('three reversal shots across the episode are a violation',
+     has(bads(run([cover, dropShot(goodShot), dropShot(goodShot), dropShot(goodShot), ctaShot])),
+         /3 shots empty the bed/));
+  ok('a drop shot and a silence shot and a third reversal shot are three places',
+     has(bads(run([cover, dropShot(goodShot), silenceShot(goodShot, 1), bothShot(goodShot), ctaShot])),
+         /3 shots empty the bed/));
+  // 반전 상한은 쇼츠 전용이다(결정 2026-10-02) — KB 인용이 「같은 쇼츠에서」이고 같은 함수의
+  // Creator Music 검사도 `isShort` 로 갈라져 있다. 장편 상한은 정하지 않고 둔다.
+  ok('three reversal shots on a long-form board are not a violation',
+     !has(bads(runLong([cover, dropShot(goodShot), dropShot(goodShot), dropShot(goodShot), ctaShot])),
+          /empty the bed/));
+  ok('the same three reversal shots on a short are still a violation',
+     has(bads(run([cover, dropShot(goodShot), dropShot(goodShot), dropShot(goodShot), ctaShot])),
+         /3 shots empty the bed/));
+  // The unit is the shot: these two boards hold one reversal place each, not two.
+  ok('a shot carrying both drop and silence counts once',
+     !has(bads(run([cover, bothShot(goodShot), dropShot(goodShot), ctaShot])), /empty the bed/));
+  ok('two silence windows on one shot count once',
+     !has(bads(run([cover, silenceShot(goodShot, 2), dropShot(goodShot), ctaShot])), /empty the bed/));
+
+  // audio license (SOUND_DIRECTOR_KB §게시 전) — the same record a stock clip carries.
+  const audioLicense = { provider: 'pundago-assets', url: 'https://example.com/bgm/1',
+    license: 'CC0', licenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/',
+    author: 'A. Composer', attributionRequired: false, commercial: true, modify: true,
+    retrievedAt: '2026-10-01' };
+  ok('a music cue with a complete license passes',
+     !has(bads(run([cover, goodShot, ctaShot], { MUSIC: { base: { asset: 'calm-1', license: audioLicense } } })),
+          /license/));
+  ok('a catalog cue without a license record warns but does not fail',
+     !has(bads(run([cover, goodShot, ctaShot], { MUSIC: { base: { asset: 'calm-1' } } })), /license/) &&
+     has(warns(run([cover, goodShot, ctaShot], { MUSIC: { base: { asset: 'calm-1' } } })), /no license record/));
+  ok('a non-commercial music license is a violation',
+     has(bads(run([cover, goodShot, ctaShot], { MUSIC: { base: { asset: 'calm-1',
+       license: Object.assign({}, audioLicense, { commercial: false }) } } })), /commercial must be true/));
+  ok('a share-alike music license is a violation',
+     has(bads(run([cover, goodShot, ctaShot], { MUSIC: { base: { asset: 'calm-1',
+       license: Object.assign({}, audioLicense, { shareAlike: true }) } } })), /share-alike/));
+  ok('Creator Music on a 9:16 board is a violation',
+     has(bads(run([cover, goodShot, ctaShot], { MUSIC: { base: { asset: 'calm-1',
+       license: Object.assign({}, audioLicense, { license: 'Creator Music' }) } } })),
+         /Creator Music is licensed for long-form only/));
+  ok('an SFX entry license is read on the same validator',
+     has(bads(run([cover, Object.assign({}, goodShot, { sound: { sfx: 'hit' } }), ctaShot],
+                  { SFX: { hit: { asset: 'hit',
+                    license: Object.assign({}, audioLicense, { commercial: false }) } } })), /commercial must be true/));
+  ok('Creator Music on a 9:16 board is refused on the SFX surface too',
+     has(bads(run([cover, Object.assign({}, goodShot, { sound: { sfx: 'hit' } }), ctaShot],
+                  { SFX: { hit: { asset: 'hit',
+                    license: Object.assign({}, audioLicense, { license: 'Creator Music' }) } } })),
+         /Creator Music is licensed for long-form only/));
+  ok('Creator Music passes on a long-form board — the ban is the 9:16 pairing, not the license',
+     !has(bads(runLong([cover, goodShot, ctaShot], { MUSIC: { base: { asset: 'calm-1',
+       license: Object.assign({}, audioLicense, { license: 'Creator Music' }) } } })),
+          /Creator Music/));
+  const audioProvenance = { tool: 'music_generate', prompt: 'calm piano, no vocals, room for voiceover',
+    generatedAt: '2026-10-01', plan: 'lyria-api' };
+  ok('a generated cue with provenance passes',
+     !has(bads(run([cover, goodShot, ctaShot], { MUSIC: { base: { prompt: 'calm piano', provenance: audioProvenance } } })),
+          /provenance/));
+  ok('a generated cue without provenance warns but does not fail',
+     !has(bads(run([cover, goodShot, ctaShot], { MUSIC: { base: { prompt: 'calm piano' } } })), /provenance/) &&
+     has(warns(run([cover, goodShot, ctaShot], { MUSIC: { base: { prompt: 'calm piano' } } })), /no provenance record/));
+  ok('provenance without a generation date is a violation',
+     has(bads(run([cover, goodShot, ctaShot], { MUSIC: { base: { prompt: 'calm piano',
+       provenance: { tool: 'music_generate', prompt: 'calm piano' } } } })), /provenance\.generatedAt/));
+  ok('provenance without its tool is a violation',
+     has(bads(run([cover, goodShot, ctaShot], { MUSIC: { base: { prompt: 'calm piano',
+       provenance: Object.assign({}, audioProvenance, { tool: '' }) } } })), /provenance\.tool is required/));
+  ok('a cue carrying both license and provenance warns',
+     has(warns(run([cover, goodShot, ctaShot], { MUSIC: { base: { asset: 'calm-1',
+       license: audioLicense, provenance: audioProvenance } } })), /both license and provenance/));
 
   // sound effects
   const withSfx = (base, id) => Object.assign({}, base, { sound: { sfx: id } });

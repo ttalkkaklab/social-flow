@@ -133,7 +133,8 @@ down. The report prints where the loudest moment of the whole effects track land
 Room tone (`amb.tsv`, scenes-schema §sound effects) is the third lane: rendered by `bgm-bed.sh`
 exactly like the music bed — measured, gained, self-looped with a crossfade, cue changes
 crossfaded, a `-` cue for silence — to `AMB_SEP` LU under the narration, 15 by default, which is
-the same JAES paper's figure for ambience under commentary (§1). It is **not ducked**: the
+the same JAES paper's figure for ambience under commentary (§1). A board sets that distance with
+`window.MUSIC.$mix.ambienceSeparationLu`, the way it sets the music bed with `bedSeparationLu`. It is **not ducked**: the
 ducker's job is to move music out of the way of a sentence, and a room that dips at every
 sentence start is the pumping it was tuned to avoid. Its floor is the sound between sentences,
 which is what the 0.79.0 chunk-gap work found the ear reading as a splice when it is digital

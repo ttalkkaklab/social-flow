@@ -223,3 +223,18 @@ describe('generated portal API contract', () => {
     assert.equal(calls.length, 0);
   });
 });
+
+testVoiceLockContract();
+function testVoiceLockContract() {
+  it('saves failed voice-lock evidence to the correct portal shot without local artifact paths', async () => {
+    const body = { status: 'failed', characterId: 'mina', expectedText: '물', transcript: '음물', outputCer: 1, error: 'Transcript mismatch' };
+    const { impl } = fakeFetch((url, init) => {
+      assert.equal(url.pathname, '/api/workspaces/lab/episodes/episode-uuid/shots/shot-uuid/voice-lock');
+      assert.equal(init.method, 'PUT');
+      assert.deepEqual(JSON.parse(init.body), body);
+      return Response.json({ success: true, data: body });
+    });
+    const result = payload(await contract.runPortalApiTool('portal_api_episodes_episode_shots_shot_voice_lock_put', { episodeId: 'episode-uuid', shotId: 'shot-uuid', body }, impl));
+    assert.equal(result.data.status, 'failed');
+  });
+}
