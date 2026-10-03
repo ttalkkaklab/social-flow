@@ -148,11 +148,17 @@ happen). Weight does the hierarchy: 900 for the hero number, 800 for titles and 
 | description / bar label / value | 44px | 32px | 400 (bar value 800) |
 | foot (source) | 28px | 24px | 400, muted |
 
-Measurement limit: unclassified text uses the loosest `foot` floor (28px / 24px).
-Current chart output emits only `foot` and `description`; title/label have no direct
-selector mapping. Their table values are contract locks, not evidence of applied checks.
-A supported ancestor can select another existing floor; zero warnings do not establish
-title/label compliance. Wiring those roles requires a separate rendered-DOM review.
+Measurement limit for this §3 table: only kicker, description and foot have wired
+role floors. Title/label exist in the measurement map but current templates do not
+emit those roles or map their selectors. Hero has no map key at all. Unit also has
+no map key, but motion-slide-template.html enforces its floor in CSS with
+`font-size:max(calc(var(--fs-hero)*.3), var(--fs-desc))` (44px / 32px).
+Unclassified text falls back to the loosest foot floor (28px / 24px); supported
+ancestors can select another existing floor. Until wiring is complete, zero warnings
+from this layer are not proof of type compliance. Title/label values are contract
+locks; hero/unit are documented contracts outside this measurement map, not newly
+wired checks. Kinetic word/word2 retain their existing selector checks. Additional
+wiring belongs to a separate rendered-DOM review.
 
 Floor: nothing below `desc` size goes on screen. 44px is the mobile caption minimum the
 research converged on, and 16 Korean characters at 44px fill the 728px zone width, which

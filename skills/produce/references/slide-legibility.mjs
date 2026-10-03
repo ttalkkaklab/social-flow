@@ -28,6 +28,7 @@ export function measureSlideDOM(groupRows, fontFloor) {
     }
     return el;
   };
+  // Title/label are unwired; hero has no key; unit has a CSS floor. Foot fallback is not type approval.
   const floor = el => {
     const role = el.closest('[data-type-role]')?.dataset.typeRole;
     const explicit = fontFloor(role, wide);
