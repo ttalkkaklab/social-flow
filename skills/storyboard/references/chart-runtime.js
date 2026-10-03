@@ -83,7 +83,7 @@
       const sizes=labelRows.map(n=>n*TYPE.label*1.15+60.2),available=height-154;
       const total=sizes.reduce((a,b)=>a+b,0),space=Math.max(0,(available-total)/n);
       const x=a=>left+(a-lo)/span*right;
-      for(let k=0;k<=4;k++){const value=lo+span*k/4,xx=x(value);out+=line(xx,56,xx,height-45)+t(xx,32,axisNum(value),TYPE.foot,C.muted,k===0?'start':k===4?'end':'middle')}
+      for(let k=0;k<=4;k++){const value=lo+span*k/4,xx=x(value);out+=line(xx,56,xx,height-45,C.line,k===0?RULE:HAIR,'',k===0?'rule':'hair')+t(xx,32,axisNum(value),TYPE.foot,C.muted,k===0?'start':k===4?'end':'middle')}
       if(lo<0)out+=line(x(0),56,x(0),height-45,C.muted,RULE,'','rule');
       let cursor=top;
       v.forEach((d,i)=>{
@@ -101,7 +101,7 @@
     }else if(data.chart==='line'||data.chart==='histogram'){
       const left=92,right=width-24,top=58,bottom=height-105,pw=right-left,ph=bottom-top;
       const y=a=>bottom-(a-lo)/span*ph;
-      for(let k=0;k<=4;k++){const value=lo+span*k/4,yy=y(value);out+=line(left,yy,right,yy)+t(left-16,yy+9,axisNum(value),TYPE.foot,C.muted,'end')}
+      for(let k=0;k<=4;k++){const value=lo+span*k/4,yy=y(value);out+=line(left,yy,right,yy,C.line,k===0?RULE:HAIR,'',k===0?'rule':'hair')+t(left-16,yy+9,axisNum(value),TYPE.foot,C.muted,'end')}
       if(data.chart==='line'){
         const dates=v.map(d=>Date.parse(d.date)),ds=dates[n-1]-dates[0],x=i=>left+(dates[i]-dates[0])/ds*pw;
         const points=v.map((d,i)=>`${x(i)},${y(d.value)}`).join(' ');

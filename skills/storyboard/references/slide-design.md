@@ -454,6 +454,8 @@ verdict, and horizontal spread stays a judgement made by eye.
 Use the renderer's `--sheet` summary as evidence: `min_text_px`, `min_stroke_px`
 and `min_contrast`. Text follows the role floors in §3; separators use `--hair`
 (3px portrait / 2px wide), axes and connectors use `--rule` (6px / 4px).
+Markers are exempt from structural floors: `min_stroke_px` may be a 1px marker,
+so review each `strokeSamples` entry against its own role floor, not the minimum alone.
 Contrast warnings use 4.5:1 below 66px and 3:1 from 66px (WCAG web-text criteria,
 with 24 CSS px scaled from a 390pt phone to a 1080px canvas; not a broadcast standard).
 The final sheet frame supplies per-row 5th/95th percentile luminance. Text-node Range

@@ -70,3 +70,11 @@ test('choropleth focus outlines use the structural hair floor in both formats',(
   assert.match(svg,new RegExp('data-stroke-role="hair"[^>]*fill="none"[^>]*stroke-width="'+(wide?2:3)+'"'));
  }
 });
+
+for(const chart of ['bar','dot','line','histogram'])test(`${chart} has a rule baseline and hair grid in both formats`,()=>{
+ const data={chart,values:[{label:'A',value:10,date:'2020-01-01'},{label:'B',value:30,date:'2021-01-01'}],beats:[{focus:['A'],insight:'A'}]};
+ for(const wide of [false,true]){
+  const lines=[...render(data,{wide}).matchAll(/<line data-stroke-role="([^"]+)"[^>]*stroke-width="([^"]+)"/g)];
+  assert.deepEqual(lines.slice(0,5).map(m=>[m[1],Number(m[2])]),[['rule',wide?4:6],...Array.from({length:4},()=>['hair',wide?2:3])]);
+ }
+});
