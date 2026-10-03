@@ -31,6 +31,19 @@ The front door has returned 403 for a runtime-default User-Agent, so every ASTRA
 `User-Agent: social-flow/<version>`. Per key, uploads are limited to 10/min and jobs to 5/min and
 60/hour; the waiting queue holds 20 jobs, and `/v1/jobs` bodies stop at 1 MiB.
 
+Uploads expire after 24 hours and each key has a storage ceiling of **20 uploads / 1 GiB**.
+Use `astra_video_list_uploads` with no arguments to find ids, then
+`astra_video_delete_upload({uploadId: "the-exact-id"})` only for inputs no longer needed
+by queued/running jobs or planned reuse. Deleting an upload does not delete a local source file.
+These tools require server `GET /v1/uploads` and `DELETE /v1/uploads/<id>` support:
+the reported server baseline is GET 404 and DELETE 501 (2026-10-03). They fail explicitly
+on those responses or HTML, including HTML served as HTTP 200; they never turn them into
+an empty list or a successful deletion. Until server support and a valid key are available,
+only mocked transport tests establish client behavior, not live operation.
+The provisional success contract is `{uploads: [{upload_id, kind, bytes, expires_at}]}`
+for listing and HTTP 204 or HTTP 200 `{upload_id, deleted: true}` for deletion.
+It must be checked against the server before this change becomes ready for use.
+
 Two things to know before you write the call. Sizes sit on a 64-pixel grid with a 2,064,384-pixel
 area ceiling (`LTX_MAX_PIXELS=2064384`, measured 2026-09-30), so **use 1024x1920 first for a 9:16 frame**.
 1088x1920 exceeds that ceiling at every frame count. 1080x1920 is refused because 1080 is a

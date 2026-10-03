@@ -126,6 +126,64 @@ const STATUS_TIMEOUT_MS = 30_000;
 /** Uploads and the result download are byte transfers, not the 300s undici header wall. */
 const TRANSFER_TIMEOUT_MS = 600_000;
 
+// Upload management is a provisional client contract until the server endpoints ship.
+// Reject unknown input keys rather than silently deleting a different caller-selected item.
+export const astraVideoListUploadsSchema = z.object({}).strict();
+export const astraVideoDeleteUploadSchema = z.object({
+  uploadId: z.string().min(1).max(256).regex(/^[A-Za-z0-9_-]+$/, 'uploadId must be a bare upload identifier'),
+}).strict();
+
+const uploadListingSchema = z.object({
+  uploads: z.array(z.object({
+    upload_id: z.string().min(1),
+    kind: z.enum(['image', 'audio', 'video']),
+    bytes: z.number().int().nonnegative(),
+    expires_at: z.string().min(1),
+  })),
+});
+
+/** Never expose upstream HTML, credentials, or a stack trace as an upload-management error. */
+function uploadManagementFailure(operation: string, status: number): Error {
+  const reason = status === 404 || status === 501
+    ? 'The server upload endpoint is unavailable or not implemented; server support is required.'
+    : status === 401 || status === 403
+      ? 'The server refused access. Check ASTRA_VIDEO and upload ownership.'
+      : status === 429
+        ? 'The server rate limit was reached. Try again later.'
+        : 'The server could not complete the request. Check server availability before retrying.';
+  return new Error(`ASTRA video ${operation} failed (HTTP ${status}): ${reason}`);
+}
+
+function invalidUploadResponse(operation: string, status: number): Error {
+  return new Error(`ASTRA video ${operation} failed (HTTP ${status}): The server did not return the expected upload response. The endpoint may not be implemented yet; no ${operation === 'list uploads' ? 'empty list' : 'deletion'} is confirmed.`);
+}
+
+export async function listUploads(): Promise<z.infer<typeof uploadListingSchema>> {
+  const result = await requestRaw('get', `${astraVideoBaseUrl()}/v1/uploads`, authHeaders(), undefined, STATUS_TIMEOUT_MS);
+  if (!result.ok) throw uploadManagementFailure('list uploads', result.status);
+  if (result.status !== 200) throw invalidUploadResponse('list uploads', result.status);
+  try {
+    // An HTML SPA with HTTP 200, a missing array, and malformed items are failures, not [].
+    return uploadListingSchema.parse(JSON.parse(result.body));
+  } catch {
+    throw invalidUploadResponse('list uploads', result.status);
+  }
+}
+
+export async function deleteUpload(args: z.infer<typeof astraVideoDeleteUploadSchema>): Promise<{ upload_id: string; deleted: true }> {
+  const { uploadId: upload_id } = astraVideoDeleteUploadSchema.parse(args);
+  const result = await requestRaw('delete', `${astraVideoBaseUrl()}/v1/uploads/${encodeURIComponent(upload_id)}`, authHeaders(), undefined, STATUS_TIMEOUT_MS);
+  if (!result.ok) throw uploadManagementFailure('delete upload', result.status);
+  if (result.status === 204) return { upload_id, deleted: true };
+  try {
+    const confirmed = z.object({ upload_id: z.literal(upload_id), deleted: z.literal(true) }).parse(JSON.parse(result.body));
+    if (result.status !== 200) throw new Error('Deletion is not complete');
+    return confirmed;
+  } catch {
+    throw invalidUploadResponse('delete upload', result.status);
+  }
+}
+
 // ── shared validation ────────────────────────────────────────────────────────
 
 const promptSchema = z

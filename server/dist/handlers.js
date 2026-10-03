@@ -849,6 +849,24 @@ export const ROUTES = {
         const result = await astraVideo.generateFromAudio(parsed);
         return text(`${astraVideoReport('Video generated from audio on the ASTRA video API', result)}\nAudio: ${parsed.audioPath ?? 'reused upload'}\naudioUploadId: ${result.audioUploadId}\nAudio expires at: ${result.audioExpiresAt ?? 'unknown (reused upload or metadata unavailable)'}\nAudio duration (seconds): ${result.audioDuration ?? 'unknown (reused upload or metadata unavailable)'}`);
     },
+    astra_video_list_uploads: async (args) => {
+        astraVideo.astraVideoListUploadsSchema.parse(args);
+        try {
+            return text(JSON.stringify(await astraVideo.listUploads()));
+        }
+        catch (error) {
+            return text(error instanceof Error ? error.message : 'ASTRA upload listing failed', true);
+        }
+    },
+    astra_video_delete_upload: async (args) => {
+        const parsed = parseArgs(astraVideo.astraVideoDeleteUploadSchema, args);
+        try {
+            return text(JSON.stringify(await astraVideo.deleteUpload(parsed)));
+        }
+        catch (error) {
+            return text(error instanceof Error ? error.message : 'ASTRA upload deletion failed', true);
+        }
+    },
     astra_video_retake: async (args) => {
         const parsed = parseArgs(astraVideo.astraVideoRetakeSchema, args);
         const result = await astraVideo.retakeVideo(parsed);

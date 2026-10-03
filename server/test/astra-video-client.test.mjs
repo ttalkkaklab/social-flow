@@ -631,3 +631,131 @@ describe('mocked tool calls', () => {
     });
   });
 });
+
+// Fixtures only, not live-server evidence. Assertions run in-process, so node:test
+// owns failures directly; no child process or output-only pass criterion is used.
+describe('ASTRA upload management', () => {
+  const upload_id = 'a'.repeat(32);
+  const item = { upload_id, kind: 'audio', bytes: 42, expires_at: '2026-10-04T19:00:00Z' };
+  const content = result => result.content.map(x => x.text ?? '').join('\n');
+  async function withReply(status, body, run) {
+    const savedFetch = globalThis.fetch;
+    const savedKey = config.astraVideoApiKey;
+    const calls = [];
+    config.astraVideoApiKey = 'test-upload-key-do-not-expose';
+    globalThis.fetch = async (url, init) => {
+      calls.push({ url, ...init });
+      return new Response(status === 204 ? null : body, { status });
+    };
+    try { await run(calls); }
+    finally { globalThis.fetch = savedFetch; config.astraVideoApiKey = savedKey; }
+  }
+  const routes = [['astra_video_list_uploads', {}], ['astra_video_delete_upload', { uploadId: upload_id }]];
+
+  it('registers both tools, routes, annotations and capability names', async () => {
+    const { capabilityStatus } = await import('../dist/capability-status.js');
+    for (const [name] of routes) {
+      assert.equal(TOOLS.filter(t => t.name === name).length, 1);
+      assert.equal(typeof ROUTES[name], 'function');
+      assert.ok(JSON.stringify(capabilityStatus()).includes(name));
+    }
+    assert.equal(TOOLS.find(t => t.name === routes[0][0]).annotations.readOnlyHint, true);
+    assert.equal(TOOLS.find(t => t.name === routes[1][0]).annotations.destructiveHint, true);
+  });
+
+  for (const uploads of [[item], []]) it(`lists ${uploads.length} uploads with GET and auth headers`, async () => {
+    await withReply(200, JSON.stringify({ uploads }), async calls => {
+      const result = await ROUTES.astra_video_list_uploads({});
+      assert.notEqual(result.isError, true);
+      assert.deepEqual(JSON.parse(content(result)), { uploads });
+      assert.equal(calls.length, 1);
+      assert.ok(calls[0].url.endsWith('/v1/uploads'));
+      assert.equal(calls[0].method, 'GET');
+      assert.equal(calls[0].headers.Authorization, 'Bearer test-upload-key-do-not-expose');
+      assert.equal(calls[0].headers['User-Agent'], ASTRA_VIDEO_USER_AGENT);
+      assert.equal(calls[0].body, undefined);
+    });
+  });
+
+  for (const status of [200, 204]) it(`confirms deletion with HTTP ${status}`, async () => {
+    await withReply(status, JSON.stringify({ upload_id, deleted: true }), async calls => {
+      const result = await ROUTES.astra_video_delete_upload({ uploadId: upload_id });
+      assert.notEqual(result.isError, true);
+      assert.deepEqual(JSON.parse(content(result)), { upload_id, deleted: true });
+      assert.equal(calls.length, 1);
+      assert.ok(calls[0].url.endsWith(`/v1/uploads/${upload_id}`));
+      assert.equal(calls[0].method, 'DELETE');
+      assert.equal(calls[0].headers.Authorization, 'Bearer test-upload-key-do-not-expose');
+      assert.equal(calls[0].headers['User-Agent'], ASTRA_VIDEO_USER_AGENT);
+      assert.equal(calls[0].body, undefined);
+    });
+  });
+
+  for (const [name, args, status] of [
+    ['astra_video_list_uploads', {}, 404],
+    ['astra_video_delete_upload', { uploadId: upload_id }, 501],
+  ]) it(`${name} reports unsupported HTTP ${status} without HTML or secrets`, async () => {
+    await withReply(status, '<html>test-upload-key-do-not-expose Traceback: Unsupported method</html>', async calls => {
+      const result = await ROUTES[name](args);
+      assert.equal(result.isError, true);
+      assert.match(content(result), new RegExp(`HTTP ${status}`));
+      assert.match(content(result), /not implemented/);
+      assert.doesNotMatch(content(result), /<html|Traceback|test-upload-key/);
+      assert.equal(calls.length, 1);
+    });
+  });
+
+  for (const body of ['<html>console SPA</html>', '{}', '{"uploads":null}', '{"uploads":[{}]}', 'not JSON']) {
+    it(`rejects invalid HTTP 200 list response: ${body}`, async () => {
+      await withReply(200, body, async () => {
+        const result = await ROUTES.astra_video_list_uploads({});
+        assert.equal(result.isError, true);
+        assert.match(content(result), /HTTP 200.*expected upload response/);
+        assert.doesNotMatch(content(result), /<html|console SPA/);
+      });
+    });
+  }
+  for (const body of ['<html>console SPA</html>', '{}', '{"deleted":false}', JSON.stringify({ upload_id: 'wrong', deleted: true })]) {
+    it(`rejects invalid HTTP 200 deletion response: ${body}`, async () => {
+      await withReply(200, body, async () => {
+        const result = await ROUTES.astra_video_delete_upload({ uploadId: upload_id });
+        assert.equal(result.isError, true);
+        assert.match(content(result), /no deletion is confirmed/);
+      });
+    });
+  }
+  it('does not treat 202 acceptance as completed deletion', async () => {
+    await withReply(202, JSON.stringify({ upload_id, deleted: true }), async () => {
+      assert.equal((await ROUTES.astra_video_delete_upload({ uploadId: upload_id })).isError, true);
+    });
+  });
+  for (const status of [401, 403, 429, 500]) it(`reports HTTP ${status} without the raw body`, async () => {
+    await withReply(status, 'test-upload-key-do-not-expose', async calls => {
+      for (const [name, args] of routes) {
+        const result = await ROUTES[name](args);
+        assert.equal(result.isError, true);
+        assert.match(content(result), new RegExp(`HTTP ${status}`));
+        assert.doesNotMatch(content(result), /test-upload-key/);
+      }
+      assert.equal(calls.length, 2);
+    });
+  });
+  it('rejects unexpected arguments and unsafe ids before fetching', async () => {
+    await withReply(200, '{}', async calls => {
+      for (const args of [{}, { uploadId: '' }, { uploadId: '../jobs' }, { uploadId: 'a/b' }, { uploadId: upload_id, all: true }]) {
+        await assert.rejects(() => ROUTES.astra_video_delete_upload(args));
+      }
+      await assert.rejects(() => ROUTES.astra_video_list_uploads({ page: 1 }));
+      assert.equal(calls.length, 0);
+    });
+  });
+  it('reports a network failure without echoing its message', async () => {
+    await withReply(200, '{}', async () => {
+      globalThis.fetch = async () => { throw new Error('test-upload-key-do-not-expose'); };
+      const result = await ROUTES.astra_video_list_uploads({});
+      assert.equal(result.isError, true);
+      assert.match(content(result), /HTTP 502/);
+      assert.doesNotMatch(content(result), /test-upload-key/);
+    });
+  });
+});
