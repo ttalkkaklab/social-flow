@@ -1104,8 +1104,8 @@ function check(win, fmt, opts) {
     const r=s.shot?.render,d=r?.data;
     if(r?.mode!=='data_graph'||!d||['map','timeline'].includes(d.chart)){previousChart=null;return;}
     if(previousChart && previousChart.unit===d.unit && previousChart.purpose===r.purpose &&
-       JSON.stringify(previousChart.domain??null)!==JSON.stringify(d.domain??null))
-      bad('shot '+(i+1),'consecutive charts with the same unit and purpose need the same data.domain');
+       (!previousChart.domain || !d.domain || JSON.stringify(previousChart.domain)!==JSON.stringify(d.domain)))
+      bad('shot '+(i+1),'consecutive charts with the same unit and purpose need an explicit shared data.domain');
     previousChart={unit:d.unit,purpose:r.purpose,domain:d.domain};
   });
 

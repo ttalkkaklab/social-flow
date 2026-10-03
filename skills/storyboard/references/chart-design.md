@@ -166,6 +166,7 @@ verify these against the original source during research and review actual playb
 ## Shared scales across cuts
 
 `data.domain:[lo,hi]` fixes a numeric value axis across consecutive cuts with the same
-unit and purpose. Use identical domains for that sequence; map and timeline are excluded.
+unit and purpose. A sequence of two or more comparable cuts must declare an identical
+explicit domain on every cut; omitting it on both cuts is invalid. Map and timeline are excluded.
 `lo <= min(0, values)`, `hi >= max(0, values)`, and `hi > lo`; both endpoints are finite.
 Without a domain a standalone cut derives its extent from the source values.

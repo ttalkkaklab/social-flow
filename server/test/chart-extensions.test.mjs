@@ -135,3 +135,17 @@ test('the scenes CLI rejects changed or missing domains only inside a comparable
   b.shot.render.data.unit='different';assert.doesNotMatch(run(),/consecutive charts/);
  }finally{rmSync(folder,{recursive:true,force:true});}
 });
+
+
+test('comparable charts cannot both omit domain and silently use independent automatic scales',async()=>{
+ const {mkdtempSync,writeFileSync,rmSync}=await import('node:fs');
+ const {tmpdir}=await import('node:os');const {join}=await import('node:path');const {spawnSync}=await import('node:child_process');
+ const folder=mkdtempSync(join(tmpdir(),'chart-domain-absent-'));
+ try{
+  const a=scene({...data(),chart:'bar',values:[{label:'A',value:10},{label:'B',value:20}]}),b=structuredClone(a);
+  b.shot.render.data.values=[{label:'A',value:1000},{label:'B',value:2000}];
+  const run=()=>{writeFileSync(join(folder,'scenes.js'),'window.FORMAT="shorts-9x16";window.SCENES='+JSON.stringify([a,b])+';');return spawnSync(process.execPath,[new URL('../../skills/storyboard/references/check-scenes.js',import.meta.url).pathname,folder,'--draft','--json'],{encoding:'utf8'}).stdout;};
+  assert.match(run(),/consecutive charts.*explicit shared data.domain/);
+  a.shot.render.data.domain=b.shot.render.data.domain=[0,2000];assert.doesNotMatch(run(),/consecutive charts/);
+ }finally{rmSync(folder,{recursive:true,force:true});}
+});
