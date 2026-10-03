@@ -6,9 +6,12 @@ import {roleFontFloor,measureSlideDOM,groupTextRows} from '../../skills/produce/
 import {contrastWarning} from '../../skills/produce/references/render-evidence.mjs';
 
 const floors={foot:[28,24],kicker:[34,26],description:[44,32],label:[54,40],title:[76,56],word:[124,92],word2:[68,50]};
-for(const [role,pair] of Object.entries(floors))test(`font floor ${role} stays ${pair.join('/')} and reaches DOM evidence`,()=>{
+// Only foot/description are currently emitted as data-type-role. Other explicit roles
+// are value-contract locks; kicker/word/word2 behavior is covered by selectors below.
+for(const [role,pair] of Object.entries(floors))test(`${['foot','description'].includes(role)?'emitted font role':'font value contract'} ${role} stays ${pair.join('/')}`,()=>{
  for(const [i,wide] of [false,true].entries()){
   assert.equal(roleFontFloor(role,wide),pair[i]);
+  if(!['foot','description'].includes(role))continue;
   const el={id:'sample',dataset:{typeRole:role},parentElement:null,closest:s=>s==='[data-type-role]'?el:null,matches:()=>false};
   const node={textContent:'A',parentElement:el};let read=false;
   const context={window:{FORMAT:wide?'youtube-long-16x9':'shorts-9x16'},NodeFilter:{SHOW_TEXT:4},document:{getElementById:()=>({querySelectorAll:()=>[]}),createTreeWalker:()=>({nextNode:()=>read?null:(read=true,node)}),createRange:()=>({setStart(){},setEnd(){},getBoundingClientRect:()=>({x:0,y:0,width:10,height:20})})},getComputedStyle:()=>({display:'block',visibility:'visible',opacity:'1',fontSize:String(pair[i])})};
@@ -51,7 +54,7 @@ for(const [selector,pair] of [['#source',[28,24]],['.foot',[28,24]],['#eyebrow',
   assert.equal(small.textSamples.filter(s=>s.px<s.floor).length,1);
  }
 });
-test('explicit role takes precedence and unknown role falls back to element shape',()=>{
+test('explicit role contract precedence and reachable unknown-role fallback',()=>{
  assert.equal(measureElement(['.word'],'label',false,54).textSamples[0].floor,54);
  assert.equal(measureElement(['.word'],'unknown',true,92).textSamples[0].floor,92);
 });

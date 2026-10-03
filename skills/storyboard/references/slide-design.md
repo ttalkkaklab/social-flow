@@ -139,14 +139,20 @@ happen). Weight does the hierarchy: 900 for the hero number, 800 for titles and 
 | Role | Portrait 1080×1920 | Wide 1920×1080 | Weight · tracking |
 |---|---|---|---|
 | kicker / tag | 34px | 26px | 700, `.03em`, ink on an accent plate |
-| title | 76px | 56px | 800, `-.03em`, line-height 1.18 |
+| title | 76px | 56px | 800, `-.03em`, line-height 1.18; current templates do not wire this role floor to the checker |
 | hero number | 260px | 180px | 900, `-.03em`, `tabular-nums` |
 | hero number, stat poster (`.hero.max`) | 340px | 230px | same — up to 3 digits; more digits go back to the base size |
 | second value (`.hero.mid`) | 122px | 90px | same |
 | unit | 30% of hero, never below `--fs-desc` (44) | 30% of hero, never below `--fs-desc` (32) | 700, accent |
-| label / band | 54px | 40px | 700 (band 800) |
+| label / band | 54px | 40px | 700 (band 800); current templates do not wire this role floor to the checker |
 | description / bar label / value | 44px | 32px | 400 (bar value 800) |
 | foot (source) | 28px | 24px | 400, muted |
+
+Measurement limit: unclassified text uses the loosest `foot` floor (28px / 24px).
+Current chart output emits only `foot` and `description`; title/label have no direct
+selector mapping. Their table values are contract locks, not evidence of applied checks.
+A supported ancestor can select another existing floor; zero warnings do not establish
+title/label compliance. Wiring those roles requires a separate rendered-DOM review.
 
 Floor: nothing below `desc` size goes on screen. 44px is the mobile caption minimum the
 research converged on, and 16 Korean characters at 44px fill the 728px zone width, which
