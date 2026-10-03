@@ -606,11 +606,11 @@ order.
 4. **Read the sheet yourself** — `sheet/g<k>-end.png` for the last group of every slide:
    everything the scene claims is on it, inside the zone, the ground is a plate and not a flat
    fill, and no photo with an animated rectangle stands in for a diagram (slide-design.md
-   §1·§6). Re-author once if it fails. The `slide-reviewer` loop of 0.49 is not part of the
-   flow — it was the largest reviewer sink measured (46 calls, 674 million tokens on one
-   episode) — and stays available for a read the user asks for by name. **Still wrong after
-   the re-author**: put the frame to the user with AskUserQuestion rather than shipping it or
-   silently swapping in a still.
+   §1·§6). Re-author once if it fails. Before capture, independently review at least one
+   sample of every `slide.kind` used in the episode with `slide-reviewer`; supply the
+   scenes, narration, sheet and summary in one batch. Require score ≥95 and P0=0, and
+   record reviewer, sample and evidence in storyboard.md. Review only changed failed samples again.
+   If a cut still fails, present its sheet to the user rather than shipping or replacing it.
 
 Then the capture: authored HTML screens get captured like any other card, and an
 all-live-voice episode takes its audio from `voice/` instead of the TTS in §5. Both lanes are

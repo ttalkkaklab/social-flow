@@ -3,9 +3,9 @@ name: slide-reviewer
 description: >
   Read-only reviewer that adversarially evaluates a rendered authored screen — a
   motion slide, a kinetic-type screen, or a character-act screen (the `--sheet`
-  frames render-motion-slide.mjs writes). Called on request only since 0.50.0 — the
-  flow admits a slide on check-slide.js and the author's own read of the sheet
-  (produce §3.6), so nothing delegates here by default — it hunts for
+  frames render-motion-slide.mjs writes). After the author's check, independently review
+  at least one sample per slide.kind present in each episode (produce §3.6). Batch the
+  samples in one context, require score ≥95 and P0=0, and record evidence. It hunts for
   P0 defects (text outside the zone, on-screen words absent from scenes.js, a
   figure that contradicts the research, gradient text or a second accent, tofu
   glyphs, text under its role's size or a line thinner than the format's stroke tokens, decorative motion

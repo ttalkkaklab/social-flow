@@ -173,14 +173,14 @@ rubric the reviewer applies.
    §6 — text inside the zone, every on-screen word in scenes.js, every figure matching `labels`
    and research.md, one accent and no gradient text, a plate ground and not a flat fill, motion
    that means the value spoken, an end frame that is the conclusion. A cut that fails a point is
-   re-authored once and re-rendered (steps 2–3). The `slide-reviewer` loop of 0.49 (five
-   delegations an episode) is no longer part of the flow — it was the largest reviewer sink
-   measured, 46 calls and 674 million tokens on one episode — and stays available for a read the
-   user asks for by name; when it runs it still returns a `SLIDE_REVIEW: slide=<file> score=NN
-   p0=N verdict=PASS|FAIL` tail per slide, judged in one context, and a slide under 95 is a
-   failed cut. Log what you changed in storyboard.md under the slide table
-   (`s5 · authored → re-authored: zone overflow`), so the check is a record and not a claim. A
-   cut still wrong after the re-author goes back to the user with the sheet, not into the build.
+   re-authored once and re-rendered (steps 2–3). After the author's check, an independent
+   reviewer scores at least one sample of each `slide.kind` present in the episode. Supply
+   scenes.js, narration, the sheet and summary together; batch samples in one review.
+   The reviewer returns `SLIDE_REVIEW: slide=<file> score=NN p0=N verdict=PASS|FAIL`.
+   Acceptance requires score ≥95 and P0=0. Record reviewer, sample, score and evidence
+   path in storyboard.md. Rework failed samples and independently review the changed
+   samples again; do not repeat all samples without a new finding. An unresolved cut
+   goes back to the user with its sheet rather than into the build.
 5. Nothing goes in the ledger — the render is local. The `.work/slide-check/` frames stay
    for produce to compare against (§3.6 re-renders the clips from the same file).
 

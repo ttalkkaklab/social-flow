@@ -168,6 +168,20 @@ is one of three weights: `--hair` 3px for dividers, tracks and brackets; `--rule
 axes, connectors, the timeline rail dot ring and the spine; `--band` 10px for an underline
 or the strike-through. Bar tracks are `--bar-h` 44px tall.
 
+### Subtitles and screen type
+
+These are the existing portrait ASS defaults from build-reel.sh, not changes to rendering.
+
+| Subtitle mode | Fontsize | Outline | Bottom margin |
+|---|---:|---:|---:|
+| Sentence | 58 | 5 | 380 |
+| Word | 84 | 5 | 640 |
+| Phrase | 92 | 4 | 680 |
+
+Screen text supplies hierarchy or evidence; subtitles carry the spoken sentence. Avoid
+repeating the same full sentence in both. Keep authored text outside the format's
+subtitle band and use the same word-cue input when kinetic words track subtitle onsets.
+
 ## 4. Composition — one fact, then the evidence
 
 - **One hero per slide.** One big number, or one comparison, or one flow. A second hero
@@ -408,6 +422,10 @@ verdict, and horizontal spread stays a judgement made by eye.
   centred-everything with no read order · a flat ground with type floating in it (the
   plate missing — a slide not built from the template) · a rendered object that is a
   vector illustration — flat fills with an outline, no material, no shadow on the wall
+- Unit pictograms may repeat one equal-sized mark per unit or use an explicitly stated
+  scale. Supply marks through `slide.arts`, put no text inside them, use one row per
+  screen and at most 100 marks (the same limit as `h.dots`). Marks encode the measured
+  value; decorative icons do not substitute for a relationship or a data scale.
 - **Motion carries meaning (25)** — each group moves one thing and that thing is what the
   segment says; a plate-then-text or the opening chain counts as one 10 / durations
   inside the tokens and the 2.6s entrance cap, the decelerate curve, no overshoot on a
