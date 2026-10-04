@@ -62,7 +62,12 @@ The server owns the failure-band acceptance gate; the client documents it withou
 For `audio2video`, one 1536×1024 × 177-frame job (`09f0132b`) failed with
 `CUDA error: an illegal memory access`. That single observation does not establish that
 this combination always fails: resolution, frame count and prompt changed together.
-The 2026-10-04 seven-job record also contains six successful 1280×704 jobs
+A later 2026-10-04 07:3x UTC snapshot of 562 stored requests contained 20
+`audio2video` jobs, eight with image conditions, and two failures: one CUDA failure
+above and one mono-audio encoding failure (`ef33b3a4`, 1536×1024 × 81 frames).
+The latter failed before denoising and does not establish a working resolution/frame pair.
+Source: reviewer census report `c2c358f6063283651e0ac007d99fe4ff7d38484cdaf19303a0d2200c9f65b6b7`.
+The earlier 2026-10-04 seven-job record contains six successful 1280×704 jobs
 (121 frames × 3, 81 frames × 2, 89 frames × 1). The supplied timing log establishes
 92 seconds for the **89-frame** job `6331bf1a`, not a 92–107-second range at 121 frames.
 Source: `LTX_A2V_STRENGTH_EVIDENCE_20261004.tgz`, `logs/r253.log` and `ERRATA.md` §5/8.
