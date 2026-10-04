@@ -279,7 +279,9 @@ as a sequence:
    Under `videoProvider:'astra'` the call goes to our own LTX-2.5 box and the ledger row is
    `video.astra` at $0 — the cost is wall clock, so book the seconds but expect no charge.
    **Default: `astra_img2video`** with the shot's still as `firstFramePath`, the stored prompt,
-   `width:1024 height:1920` (the board carries that size; 1080 is off the 64-pixel grid), and
+   and the shot's `visual.video.resolution` passed through as `width` and `height`:
+   `1024x1920` for `shorts-9x16`, or `1920x1024` for `youtube-long-16x9`. Both stay on the
+   64-pixel grid; the edit scales the short edge to the final 1080-pixel canvas. Also pass
    `numFrames` — not `duration`. Frames sit on the 8k+1 grid at `frameRate` 24, so convert the
    approved seconds and round **down**: 5s → 113 frames (≈4.71s), 8s → 185 (≈7.71s), ceiling 193.
    A cut that has both a first and a last still stays on `astra_img2video` and adds
