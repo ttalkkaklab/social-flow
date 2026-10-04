@@ -33,12 +33,14 @@ function quote(win, { krwPerUsd = 1400, legacy = false } = {}) {
   const reusedClips = (win.SCENES || []).filter(mode.reused).length;
   const inputs = (win.SCENES || []).filter(s => mode.eligible(s) && !mode.reused(s));
   // Under the host lane (owner directive 2026-09-07) the comparison is the CLI's own image_to_video at $0;
-  // the Seedance planning fields exist only on the API lane.
-  const hostVideo = p.videoProvider === 'host';
+  // the astra lane is our own LTX-2.5 box, also $0 — it spends wall clock, which this quote does not
+  // price. The Seedance planning fields exist only on the API lane.
+  const hostVideo = p.videoProvider === 'host', astraVideo = p.videoProvider === 'astra';
+  const ownBox = hostVideo || astraVideo;
   const model = p.comparison?.model || DEFAULT_MODEL;
-  const resolution = p.comparison?.resolution || (hostVideo ? '720p' : '1080p');
+  const resolution = p.comparison?.resolution || (hostVideo ? '720p' : astraVideo ? mode.ASTRA_RESOLUTION : '1080p');
   const candidate = inputs.map(s => ({ type: 'points', duration: s.duration,
-    visual: { video: hostVideo ? { engine: 'host', resolution, generateAudio: false }
+    visual: { video: ownBox ? { engine: hostVideo ? 'host' : 'astra', resolution, generateAudio: false }
       : { engine: 'seedance', model, modelReason: 'HITL comparison', realFaceInput: false, resolution, generateAudio: false } } }));
   const selectedHybrid = p.comparison?.hybridShots || inputs.slice(0, 2).map((_, i) => i + 1);
   if (!Array.isArray(selectedHybrid) || selectedHybrid.length < (inputs.length ? 1 : 0) || selectedHybrid.length > 2 ||
@@ -66,7 +68,7 @@ function quote(win, { krwPerUsd = 1400, legacy = false } = {}) {
       retryLowKrw: Math.round(estimate.totalUsd * Math.min(2, attempts) * krwPerUsd),
       retryHighKrw: Math.round(estimate.totalUsd * attempts * krwPerUsd), rows: estimate.rows };
   }
-  const result = { version: 1, selected: p.mode || null, videoProvider: hostVideo ? 'host' : 'api', planSignature: mode.signature(win),
+  const result = { version: 1, selected: p.mode || null, videoProvider: hostVideo ? 'host' : astraVideo ? 'astra' : 'api', planSignature: mode.signature(win),
     priceDigest: digest(fs.readFileSync(PRICES)), krwPerUsd, exchangeRateIsAssumption: true,
     scope: 'Video API generation only; images, narration, music, editing, tax and payment fees excluded.',
     priceSource: 'skills/autoproduce/references/prices.tsv',
