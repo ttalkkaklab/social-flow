@@ -14,6 +14,8 @@ const checker=require('../../skills/produce/references/check-tts-quality.js');
 const script='오늘은 맑고 따뜻한 날입니다.';
 const good=()=>({accuracy:100,pronunciation:98,naturalness:97,clarity:99,confidence:0.98,complete:true,evidence:'Every word and final syllable is clear, with smooth phrase breaks and no audible artifacts.',issues:[]});
 const signal={duration:2.4,rmsDb:-18,clippedFraction:0};
+// The dictation check runs only on an explicit user request (owner directive 2026-10-04).
+const dictation={requestedBy:'user',reason:'오너가 내레이션 받아쓰기 검사를 이 회차에만 켜 달라고 요청했다.'};
 function setup(t){
   const dir=mkdtempSync(path.join(tmpdir(),'tts-quality-'));
   t.after(()=>rmSync(dir,{recursive:true,force:true}));
@@ -200,7 +202,8 @@ test('failed replacement review never attributes old scores to the new reviewer'
   assert.equal(f.proof().attempts[0].model,REVIEW_MODEL);assert.equal(f.count(),1);
 });
 
-test('review API version override and blank default reach only the review requests',async t=>{
+test('review API version override and blank default reach both review requests',async t=>{
+  // both only exist when the dictation check was asked for; by default there is one review call
   const f=setup(t);await f.deps.generate();
   for(const [value,expected] of [['  v1beta  ','v1beta'],['  ','v1']]){
     const child=`
@@ -211,7 +214,7 @@ test('review API version override and blank default reach only the review reques
         const result=urls.length===1?{transcript:${JSON.stringify(script)}}:${JSON.stringify(good())};
         return new Response(JSON.stringify({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify(result)}]}}]}),{status:200,headers:{'Content-Type':'application/json'}});
       };
-      await listen(${JSON.stringify(f.file)},${JSON.stringify(f.request)});
+      await listen(${JSON.stringify(f.file)},${JSON.stringify({...f.request,transcriptCheck:dictation})});
       console.log(JSON.stringify({version:REVIEW_API_VERSION,urls}));
     `;
     const result=spawnSync(process.execPath,['--input-type=module','-e',child],{
@@ -222,4 +225,86 @@ test('review API version override and blank default reach only the review reques
     const actual=JSON.parse(result.stdout);assert.equal(actual.version,expected);assert.equal(actual.urls.length,2);
     for(const url of actual.urls)assert.equal(new URL(url).pathname.split('/')[1],expected);
   }
+});
+
+test('the dictation check does not run unless it was asked for',async t=>{
+  const f=setup(t);await f.deps.generate();
+  const child=`
+    import {listen} from './dist/tts-quality.js';
+    const TRANSCRIBE='Transcribe every audible spoken word';
+    const bodies=[];
+    globalThis.fetch=async(input,init)=>{
+      let body='';
+      try{body=typeof init?.body==='string'?init.body:(input&&typeof input.text==='function'?await input.text():String(init?.body??''));}catch{body='';}
+      bodies.push(body);
+      const result=body.includes(TRANSCRIBE)?{transcript:${JSON.stringify(script)}}:${JSON.stringify(good())};
+      return new Response(JSON.stringify({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify(result)}]}}]}),{status:200,headers:{'Content-Type':'application/json'}});
+    };
+    const ALONE='No blind transcript accompanies this take';
+    const seen=()=>{const b=bodies.splice(0);return {calls:b.length,transcribe:b.filter(x=>x.includes(TRANSCRIBE)).length,
+      blindInReview:b.filter(x=>x.includes('blindTranscript')).length,readingAlone:b.filter(x=>x.includes(ALONE)).length,
+      firstIsTranscribe:b.length?b[0].includes(TRANSCRIBE):false};};
+    const off=await listen(${JSON.stringify(f.file)},${JSON.stringify(f.request)});
+    const offSeen=seen();
+    const on=await listen(${JSON.stringify(f.file)},${JSON.stringify({...f.request,transcriptCheck:dictation})});
+    console.log(JSON.stringify({off:{...offSeen,transcript:off.transcript},on:{...seen(),transcript:on.transcript}}));
+  `;
+  const result=spawnSync(process.execPath,['--input-type=module','-e',child],{cwd:path.resolve(import.meta.dirname,'..'),encoding:'utf8',
+    env:{...process.env,GEMINI_API_KEY:'test-only',GOOGLE_API_KEY:'',GOOGLE_GENAI_USE_VERTEXAI:'false',SOCIAL_FLOW_TTS_REVIEW_API_VERSION:''}});
+  assert.equal(result.status,0,result.stderr);
+  const {off,on}=JSON.parse(result.stdout);
+  // Off: one paid call, no transcription prompt leaves the process, and the judge is never handed a transcript.
+  // The judge is told the second reading is absent; this states the absence, it does not replace it.
+  assert.deepEqual(off,{calls:1,transcribe:0,blindInReview:0,readingAlone:1,firstIsTranscribe:false,transcript:null});
+  // On request: the blind pass runs first, separately, and its words reach the listening judge.
+  assert.deepEqual(on,{calls:2,transcribe:1,blindInReview:1,readingAlone:0,firstIsTranscribe:true,transcript:script});
+});
+
+test('a null transcript disarms the CER gate and nothing else',()=>{
+  // Nothing was transcribed, so there is nothing to compare — the listening review alone judges the take.
+  assert.deepEqual(reviewFailures(script,null,good(),2.4),[]);
+  // A transcript that was asked for is still held to 2%.
+  assert.ok(reviewFailures(script,'오늘은 흐리고 추운 날입니다.',good(),2.4).includes('Blind transcript CER exceeds 2%'));
+  assert.deepEqual(reviewFailures(script,script,good(),2.4),[]);
+  // Listening thresholds keep failing takes with the check off.
+  for(const patch of [{accuracy:97},{pronunciation:94},{naturalness:94},{clarity:94},{confidence:0.89},{complete:false},
+    {issues:[{start:1,end:2,category:'pronunciation',heard:'wrong',expected:'right',correction:'Retake the final word'}]}])
+    assert.ok(reviewFailures(script,null,{...good(),...patch},2.4).length,JSON.stringify(patch));
+  // Signal failures never saw the transcript at all.
+  for(const patch of [{duration:600},{rmsDb:-80},{clippedFraction:0.01}])assert.ok(signalFailures({...signal,...patch},script).length);
+});
+
+test('the proof checker accepts a take with no transcript and still catches a bad one',async t=>{
+  const f=setup(t);f.deps.listen=async()=>({transcript:null,review:good()});
+  assert.equal((await generateCheckedSpeech(f.request,f.deps)).status,'pass');
+  const take=()=>f.proof().attempts.at(-1);
+  assert.equal(take().transcript,null);assert.equal(take().cer,null);assert.equal(take().transcriptCheck,null);
+  assert.ok(checker.verifyProof(f.file,script)[f.file],'a proof with no transcript is a valid PASS');
+  assert.ok(checker.check(path.join(f.dir,'.work'),path.join(f.dir,'storyboard'))[f.file]);
+  // A recorded transcript that drifts is rejected exactly as before.
+  const drifted=f.proof();drifted.attempts.at(-1).transcript='오늘은 흐리고 추운 날입니다.';
+  writeFileSync(f.file+'.quality.json',JSON.stringify(drifted));
+  assert.throws(()=>checker.verifyProof(f.file,script),/blind transcript did not pass/);
+  // A missing key is not the same claim as a recorded null: the proof says nothing, so it does not pass.
+  const absent=f.proof();delete absent.attempts.at(-1).transcript;
+  writeFileSync(f.file+'.quality.json',JSON.stringify(absent));
+  assert.throws(()=>checker.verifyProof(f.file,script),/no transcript record/);
+});
+
+test('a stored take with no transcript is rechecked, not resynthesised, when the check is asked for',async t=>{
+  const f=setup(t);f.deps.listen=async()=>({transcript:null,review:good()});
+  assert.equal((await generateCheckedSpeech(f.request,f.deps)).status,'pass');assert.equal(f.count(),1);
+  assert.equal((await generateCheckedSpeech(f.request,f.deps)).reused,true);assert.equal(f.count(),1);
+  // The stored PASS cannot answer a request that now asks for the dictation check.
+  let listens=0;f.deps.listen=async()=>{listens++;return {transcript:script,review:good()};};
+  const rechecked=await generateCheckedSpeech({...f.request,transcriptCheck:dictation},f.deps);
+  assert.equal(rechecked.status,'pass');assert.notEqual(rechecked.reused,true);
+  assert.equal(listens,1,'the same WAV was reviewed again');
+  assert.equal(f.count(),1,'no second synthesis was paid for');
+  const take=f.proof().attempts.at(-1);
+  assert.equal(take.transcript,script);assert.deepEqual(take.transcriptCheck,dictation);
+  assert.equal(take.previousReviews.length,1);assert.equal(take.previousReviews[0].transcript,null);
+  // With the transcript on record the same request reuses again.
+  assert.equal((await generateCheckedSpeech({...f.request,transcriptCheck:dictation},f.deps)).reused,true);
+  assert.equal(listens,1);
 });

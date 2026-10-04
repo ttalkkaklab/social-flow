@@ -731,7 +731,7 @@ numbers and proper nouns alone and work on the grain of the sentence.
 Use `tts_generate_checked` for every generated scene; read `references/tts-quality.md` first.
 The calls below describe `generator` and `generation`; raw TTS has no assembly proof. A take
 that ends `fail` after its attempts is not the end of the episode: present its findings and
-follow `references/tts-hitl.md` — the user decides whether it ships.
+follow `references/tts-hitl.md` — the user decides whether it ships. The blind-transcription (STT) check and its 2% CER gate do not run (owner directive 2026-10-04): the proof records `transcript: null` and the listening review judges the take. Pass `transcriptCheck` only when the user actually asked for dictation on that call.
 
 Resolve every checked call from `window.SB_DOC`: `speaker` selects that character id and its absence selects `SB_DOC.narratorCharacterId`. The matched `tts` supplies `generator` and `generation`: map `voiceId` to Gemini `voiceName`, Supertonic/MLX `voice`, or ElevenLabs `voiceId`, and pass model, speed, language and stylePrompt only when accepted. Portal voice data overrides profile §2; unknown speakers, missing narrator/characters, or missing TTS stop production.
 One checked call per scene when all segments share a character — join their `tts` sentences with periods into `.work/pcm/c<n>.wav`. For changes, synthesize each contiguous speaker run with its character settings, join in order with the standard sentence pause, apply the same speech-quality gate, and resample differing engine rates before joining.
