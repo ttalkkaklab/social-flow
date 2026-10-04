@@ -443,7 +443,7 @@ function motionKind(scene) {
 function engineOf(scene) {
   const v = (scene && scene.visual) || {};
   const named = (v.video && v.video.engine) || (v.clip && v.clip.engine) || v.engine;
-  if (named === 'veo' || named === 'seedance' || named === 'host') return named;   // host: the CLI's own video tool
+  if (named === 'veo' || named === 'seedance' || named === 'host' || named === 'astra') return named;   // host: the CLI's own video tool; astra: our LTX-2.5 box
   if (scene && (scene.type === 'broll' || scene.type === 'quote')) return 'veo';
   return 'seedance';
 }
@@ -2898,6 +2898,14 @@ function selftest() {
      engineOf({ type: 'broll', visual: { engine: 'host' } }) === 'host');
   ok('a host clip prompt is not held to the Seedance grammar',
      seedancePromptFindings('she turns to the window', 'host').length === 0);
+  // ── our own LTX-2.5 box is a route of its own (2026-10-04) ──
+  ok('engine:"astra" resolves to the astra route, not the type default',
+     engineOf({ type: 'points', visual: { video: { engine: 'astra' } } }) === 'astra' &&
+     engineOf({ type: 'broll', visual: { engine: 'astra' } }) === 'astra');
+  ok('an astra clip prompt is not held to the Seedance grammar',
+     seedancePromptFindings('she turns to the window', 'astra').length === 0);
+  ok('a board that names the model instead of the lane still falls back to the type default',
+     engineOf({ type: 'points', visual: { video: { engine: 'ltx' } } }) === 'seedance');
 
   // ── per-cut look and episode cast contracts (2026-09-15) ──
   const perShotFixture = () => {

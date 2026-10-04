@@ -18,6 +18,14 @@ through several supplied stills, or to re-roll one span of an existing cut; stay
 Seedance whenever the answer is needed now. It does not change the default route for anything
 below.
 
+A board asks for this lane per shot with `visual.video.engine: "astra"` (b-roll and quote cuts
+take the same key). The lane name is `astra`, not `ltx` — a board that writes the model name
+gets `unknown video engine: ltx` from scenePlan, because a silently-ignored engine would have
+planned a Seedance call and billed for it. Like the host lane it carries the same source and
+prompt as Veo and none of the Seedance planning fields (`model`, `modelPurpose`, `modelReason`,
+`referenceImagePaths`, `referenceAudioPaths`); naming one of those on an astra shot is refused
+rather than dropped. The engine stays opt-in: nothing routes here unless the board says so.
+
 ASTRA's `fast` tier is a lower-resolution draft that finishes sooner than `guided`; measured at
 121s, it was slower than the default pipeline's 66s. Automatic duration selection stops at 121
 frames and its rounded range must contain an 8k+1 frame count. Direct `numFrames` accepts

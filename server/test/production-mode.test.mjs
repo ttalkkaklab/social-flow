@@ -1037,3 +1037,49 @@ test('an unchanged four-choice approval retains its quote fingerprint; new contr
   assert.notEqual(mode.signature(win),old);
   assert.deepEqual(Object.keys(quote(win).options),mode.CHOICES);
 });
+
+test('the astra lane is a provider of its own: our own box, no price record, the one grid size it renders', () => {
+  // Our LTX-2.5 box stands next to host and the API vendors (video-model-selection §ASTRA).
+  const astra = fixture(); astra.PRODUCTION.videoProvider = 'astra'; delete astra.PRODUCTION.videoModel;
+  // There is no priced tier to pick, so nothing asks which model — the exemption host already had.
+  assert.doesNotMatch(mode.check(astra).join(), /Ask which video model|videoModel/);
+  astra.PRODUCTION.videoModel = { model: 'dreamina-seedance-2-0-260128', resolution: '1080p', selection: { kind: 'user', reference: 'x' } };
+  assert.match(mode.check(astra).join(), /must be astra under videoProvider astra/);
+  // Naming our box needs no HITL reference: the record exists to say who chose among prices.
+  astra.PRODUCTION.videoModel = { model: 'astra' };
+  assert.doesNotMatch(mode.check(astra).join(), /videoModel\.selection/);
+  // A board that says astra and leaves its cuts on the Seedance route is refused, not quietly rerouted —
+  // a silently-ignored provider would have billed a vendor for every cut.
+  const stale = mode.check(astra, { requireApproval: true }).join('\n');
+  assert.match(stale, /routes every full_video cut to engine:"astra"/);
+  assert.match(stale, /write resolution:"1024x1920"/);
+  // 1080x1920 is refused by the box itself — 1080 is a multiple of neither 64 nor 32 — so the board
+  // carries the grid size it can render and the edit widens it to the 1080-wide canvas.
+  assert.equal(mode.ASTRA_RESOLUTION, '1024x1920');
+  for (const s of astra.SCENES) {
+    Object.assign(s.visual.video, { engine: 'astra', resolution: mode.ASTRA_RESOLUTION, generateAudio: false });
+    delete s.visual.video.model;            // a Seedance planning field has no meaning on this lane
+  }
+  const clean = mode.check(astra, { requireApproval: true }).join('\n');
+  assert.doesNotMatch(clean, /engine:"astra"|resolution/, clean);
+  // The quote prices wall clock at nothing, and says which lane it priced.
+  const q = quote(astra);
+  assert.equal(q.videoProvider, 'astra');
+  assert.equal(q.options.full_video.firstPassUsd, 0);
+  assert.equal(q.options.full_video.clips, astra.SCENES.length);
+  // The comparison table has nothing to compare, and says so rather than printing an empty grid.
+  const { options, text } = require('../../skills/produce/references/video-model-options.js');
+  const table = options(astra);
+  assert.equal(table.rows.length, 0);
+  assert.equal(table.provider, 'astra');
+  assert.match(text(table), /videoProvider astra/);
+  assert.match(text(table), /wall clock/);
+  // Negative control: the host lane still reads as host, not as our box.
+  const host = fixture(); host.PRODUCTION.videoProvider = 'host'; delete host.PRODUCTION.videoModel;
+  assert.equal(options(host).provider, 'host');
+  assert.match(text(options(host)), /videoProvider host/);
+  assert.equal(quote(host).videoProvider, 'host');
+  // There is no image lane on our box, so astra is not a value imageProvider accepts.
+  const img = fixture(); img.PRODUCTION.imageProvider = 'astra';
+  assert.match(mode.check(img).join(), /imageProvider must be host or api/);
+});

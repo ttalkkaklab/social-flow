@@ -276,6 +276,28 @@ as a sequence:
    `imagePath`, optional `lastImagePath`, and stored prompt to `mcp__social-flow__seedance_img2video`.
    Under `videoProvider:'host'` the call is the host `image_to_video` instead (source image,
    stored prompt, `duration`, 720p) and the ledger row is `video.host` for the requested seconds.
+   Under `videoProvider:'astra'` the call goes to our own LTX-2.5 box and the ledger row is
+   `video.astra` at $0 — the cost is wall clock, so book the seconds but expect no charge.
+   **Default: `astra_img2video`** with the shot's still as `firstFramePath`, the stored prompt,
+   `width:1024 height:1920` (the board carries that size; 1080 is off the 64-pixel grid), and
+   `numFrames` — not `duration`. Frames sit on the 8k+1 grid at `frameRate` 24, so convert the
+   approved seconds and round **down**: 5s → 113 frames (≈4.71s), 8s → 185 (≈7.71s), ceiling 193.
+   A cut that has both a first and a last still stays on `astra_img2video` and adds
+   `lastFramePath`; `astra_keyframe_video` is for **3–8** stills pinned to frame indices, not for
+   a two-frame cut. **A speech cut whose mouth is visible uses `astra_audio2video`** with the
+   narration take as `audioPath`, the portrait as `imagePath` and `strength` 0.9 (the default;
+   it is ignored without `imagePath`, and 1.0 is unmeasured on a visible mouth). Two traps
+   there: the WAV has to be **stereo** — mono is accepted at submission and then fails during
+   generation — and the clip **does not take its length from the audio**. With neither
+   `numFrames` nor `audioMaxDuration` the server renders 121 frames (≈5.04s) regardless, so an
+   8.000s take came back as 5.041s; name the length explicitly. Re-roll one bad stretch of an
+   accepted clip with `astra_video_retake` (span in seconds; it inherits the source's size and
+   length exactly) rather than regenerating the shot. Uploads expire after 24h under a
+   20-upload ceiling — when a long episode hits it, clear finished ones with
+   `astra_video_list_uploads` / `astra_video_delete_upload` instead of waiting out the expiry.
+   Image-conditioned `generate` has a measured failure band at frames {121,129,137} (width
+   1280); the server owns the acceptance gate, so a refusal there is a retry at another frame
+   count on the grid, not a defect to report.
    On the API lane each cut records its selected model and resolution. A 2.x reference-video
    cut uses `seedance_reference` with the previz clip as `referenceVideoPaths`; 1.5 Pro uses
    `seedance_img2video` with a `frame_and_prompt` previz and no reference arrays. Either uses

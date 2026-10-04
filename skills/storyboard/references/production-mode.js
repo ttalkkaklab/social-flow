@@ -53,6 +53,9 @@
     'dreamina-seedance-2-0-mini-260615': { label: 'Seedance 2.0 mini', resolutions: ['720p'] },
     'dreamina-seedance-2-5-260628': { label: 'Seedance 2.5', resolutions: ['720p', '1080p'] }
   };
+  // Our own LTX-2.5 box is not a tier in the table above: it has no price, so nothing to compare.
+  // What it does have is a grid — the only 9:16 size it renders under the area ceiling.
+  const ASTRA_RESOLUTION = '1024x1920';
   const selectionRecorded = sel => sel && ['user', 'standing'].includes(sel.kind) && text(sel.reference);
   // The four slots every generated shot stores (scenes-schema §camera); spatial-prompts.js
   // assembles the motion prompt's camera span from them, so nothing else describes the camera.
@@ -466,8 +469,10 @@
     if (p.renderRatioVersion !== undefined && p.renderRatioVersion !== 1) errors.push('renderRatioVersion must be 1');
     if (bandContract(p) && (win.SCENES || []).every(s => s.shot?.render?.mode)) errors.push(...ratioErrors(win));
     // host = the CLI's own media tool (image_gen on Codex and Grok, image_to_video on Grok); absent reads as api.
-    for (const key of ['imageProvider', 'videoProvider'])
-      if (p[key] !== undefined && !['host', 'api'].includes(p[key])) errors.push('PRODUCTION.' + key + ' must be host or api');
+    if (p.imageProvider !== undefined && !['host', 'api'].includes(p.imageProvider)) errors.push('PRODUCTION.imageProvider must be host or api');
+    // astra = our own LTX-2.5 box (video-model-selection §ASTRA). Video only: there is no image lane on it,
+    // and unlike the two API vendors a call spends wall clock instead of money, so it carries no price record.
+    if (p.videoProvider !== undefined && !['host', 'api', 'astra'].includes(p.videoProvider)) errors.push('PRODUCTION.videoProvider must be host, api or astra');
     if (!Number.isFinite(p.videoBudgetUsd) || p.videoBudgetUsd < 0)
       errors.push('PRODUCTION.videoBudgetUsd must be a finite nonnegative episode cap');
     if (!Number.isInteger(p.maxAttempts) || p.maxAttempts < 1 || p.maxAttempts > 5)
@@ -523,8 +528,12 @@
       const vm = p.videoModel;
       if (p.videoProvider === 'host') {
         if (vm && vm.model !== 'host') errors.push('PRODUCTION.videoModel.model must be host under videoProvider host');
+      } else if (p.videoProvider === 'astra') {
+        if (vm && vm.model !== 'astra') errors.push('PRODUCTION.videoModel.model must be astra under videoProvider astra');
       } else if (!vm || !text(vm.model)) errors.push('Ask which video model makes the generated cuts and record it in PRODUCTION.videoModel (an episode default or mixed; each cut records its model and resolution)');
-      if (vm && vm.model !== 'host' && !selectionRecorded(vm.selection)) errors.push('Record the actual video model HITL choice in PRODUCTION.videoModel.selection');
+      // The model HITL exists to pick among priced vendor tiers. Our own boxes have no tiers to price,
+      // so host and astra record no selection; every other value still has to name who chose it.
+      if (vm && !['host', 'astra'].includes(vm.model) && !selectionRecorded(vm.selection)) errors.push('Record the actual video model HITL choice in PRODUCTION.videoModel.selection');
     }
     errors.push(...coverageErrors(win));
     if (!full(p)) {
@@ -562,14 +571,20 @@
       if (!text(v.bg) || (!text(v.bgPrompt) && v.source !== 'stock')) bad('keep a source image path and its generation prompt');
       if (!text(v.video?.prompt)) bad('store the motion prompt before generation');
       // The host video tool (owner directive 2026-09-07) tops out at 720p and takes every full_video cut.
-      const hostVideo = p.videoProvider === 'host';
+      const hostVideo = p.videoProvider === 'host', astraVideo = p.videoProvider === 'astra';
+      // ASTRA sizes sit on a 64-pixel grid under a 2,064,384-pixel area ceiling, so a 9:16 cut renders
+      // 1024x1920 and the edit widens it to the 1080-wide canvas; 1080x1920 is refused outright because
+      // 1080 is a multiple of neither 64 nor 32 (video-model-selection, measured 2026-09-30). Naming a
+      // vendor tier label here would be a size the box cannot render.
       // The API lane renders at the resolution the user chose with the model (PRODUCTION.videoModel); 1080p before that record exists.
-      const wantRes = hostVideo ? '720p' : (v.video?.resolution || p.videoModel?.resolution || '1080p');
+      const wantRes = hostVideo ? '720p' : astraVideo ? ASTRA_RESOLUTION : (v.video?.resolution || p.videoModel?.resolution || '1080p');
       if (v.video?.resolution !== wantRes || v.video?.generateAudio !== false)
         bad(hostVideo ? 'the host video tool tops out at 720p; write resolution:"720p" and generateAudio:false with separate narration'
+          : astraVideo ? 'ASTRA renders on a 64-pixel grid; write resolution:"' + ASTRA_RESOLUTION + '" (the edit widens it to 1080) and generateAudio:false with separate narration'
                       : 'write the chosen model\'s resolution (' + wantRes + ') and generateAudio:false with separate narration');
-      if (v.video?.engine !== (hostVideo ? 'host' : 'seedance'))
+      if (v.video?.engine !== (hostVideo ? 'host' : astraVideo ? 'astra' : 'seedance'))
         bad(hostVideo ? 'videoProvider:host routes every full_video cut to engine:"host" (the CLI\'s own image_to_video)'
+          : astraVideo ? 'videoProvider:astra routes every full_video cut to engine:"astra" (our own LTX-2.5 box)'
                       : 'full_video uses the priced Seedance image-to-video route');
       for (const key of ['look', 'worldId', 'before', 'action', 'continuity', 'reject'])
         if (!text(design[key])) bad('videoDesign.' + key + ' is required');
@@ -630,7 +645,7 @@
       // hook_only: the hook plus every imported clip — reuse is outside the count but still a slot.
       generatedVideoMax: production.mode === 'hook_only' ? 1 + scenes.filter(reused).length : RATIOS[production.mode] ? scenes.filter(eligible).length : Math.min(base.generatedVideoMax ?? 2, 2) };
   }
-  const api = { BANDS, ratioMode, ratioBounds, ratioErrors, videoRender, bandContract, CAMERA_INPUT_SCHEMA, cameraInputErrors, CAMERA_PRESETS, isDrone, droneErrors, droneSample, droneSlots, droneBinding, droneCameraKeys, droneSceneErrors, STYLES, MODES, CHOICES, CUT_TYPES, RATIOS, videoCap, newCut, generated, hookScene, coverageErrors, CAMERA_SLOTS, PREVIZ_RENDERERS, VIDEO_MODELS, packPresets, ALL_LOOKS, shotStyle, shotStyleErrors, eligible, reused, reuseErrors, full, signature, check, policy, motionErrors, missingCameraSlots, cameraErrors, cameraWarnings, episodeMoveErrors, moveOf, travels, MOVES, staticCamera, finalState };
+  const api = { BANDS, ratioMode, ratioBounds, ratioErrors, videoRender, bandContract, CAMERA_INPUT_SCHEMA, cameraInputErrors, CAMERA_PRESETS, isDrone, droneErrors, droneSample, droneSlots, droneBinding, droneCameraKeys, droneSceneErrors, STYLES, MODES, CHOICES, CUT_TYPES, RATIOS, videoCap, newCut, generated, hookScene, coverageErrors, CAMERA_SLOTS, PREVIZ_RENDERERS, VIDEO_MODELS, ASTRA_RESOLUTION, packPresets, ALL_LOOKS, shotStyle, shotStyleErrors, eligible, reused, reuseErrors, full, signature, check, policy, motionErrors, missingCameraSlots, cameraErrors, cameraWarnings, episodeMoveErrors, moveOf, travels, MOVES, staticCamera, finalState };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.PRODUCTION_MODE = api;
 })(typeof window === 'object' ? window : globalThis);

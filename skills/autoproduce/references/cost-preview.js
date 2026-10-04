@@ -122,6 +122,28 @@ const ROUTES = {
     key: 'video.host',
     why: 'host image_to_video — a footage slide clip on the CLI\'s own tool · 720p ceiling'
   },
+  /* The astra lane: our own LTX-2.5 box (video-model-selection §ASTRA). Like the host rows it
+     bills $0 — the cost is wall clock (66-184s a job, one at a time), which this forecast does not
+     price. The slot still shows on the approval page as a generated shot. A speech clip goes
+     through audio-driven generation, and that clip does not take its length from the track
+     either — without an explicit frame count the box renders 121 frames whatever the audio is —
+     so the forecast and the call both read the cut's approved seconds, not the take. */
+  'broll/astra': {
+    key: 'video.astra',
+    why: 'astra_img2video — our own LTX-2.5 box · no per-second charge, one job at a time'
+  },
+  'motion/astra': {
+    key: 'video.astra',
+    why: 'astra_img2video · silent use — the builder keeps only the video track · our own LTX-2.5 box'
+  },
+  'quote/astra': {
+    key: 'video.astra',
+    why: 'astra_audio2video — the cut\'s own seconds; the clip does not inherit the track length · our own LTX-2.5 box'
+  },
+  'footage/astra': {
+    key: 'video.astra',
+    why: 'astra_img2video — a footage slide clip on our own LTX-2.5 box'
+  },
   /* A footage slide (scenes-schema §footage treatment — retired 2026-09-05, priced only so an
      archived board's forecast still adds up) carries one generated clip per reveal
      group. The builder keeps only the video track, so the silent Seedance route applies — and
@@ -166,8 +188,11 @@ const ROUTES = {
 
 /** The route a named engine resolves to: `host` is the CLI's own video tool (owner directive
     2026-09-07), the two API names pass through, anything else is the slot's type default. */
+/* An engine name this forecast knows how to price. An unknown name falls back to the slot's
+ * default — which is why a new engine has to be added here and in ROUTES on the same change:
+ * a missing name does not error, it quietly bills the fallback vendor for a call we never make. */
 function routeEngine(named, fallback) {
-  return named === 'host' || named === 'veo' || named === 'seedance' ? named : fallback;
+  return ['host', 'veo', 'seedance', 'astra'].includes(named) ? named : fallback;
 }
 
 /**
