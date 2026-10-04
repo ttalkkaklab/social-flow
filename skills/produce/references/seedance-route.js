@@ -51,13 +51,17 @@ function scenePlan(scene) {
   if (endFrame) settings.lastImagePath = endFrame;
   // `host` is the CLI's own video tool (Grok image_to_video — owner directive 2026-09-07); it takes
   // the same source and prompt as Veo and none of the Seedance planning fields.
+  // `astra` is our own LTX-2.5 box (`astra_*`, video-model-selection §ASTRA). It is opt-in per
+  // shot and never a default: a call costs wall clock instead of money and renders one job at a
+  // time, so a board only asks for it where nobody is waiting. Like `host` it takes the same
+  // source and prompt as Veo and none of the Seedance planning fields.
   const engine = settings.engine || (kind === 'motion' ? 'seedance' : 'veo');
-  if (!['seedance', 'veo', 'host'].includes(engine)) throw new Error('unknown video engine: ' + engine);
+  if (!['seedance', 'veo', 'host', 'astra'].includes(engine)) throw new Error('unknown video engine: ' + engine);
   if (engine !== 'seedance') {
     // A host video tool takes no reference clip, so a previz on that lane shapes the still and the
     // prompt instead (handoff frame_and_prompt, render-routing checkPreviz) and is not a Seedance field.
     const named = SEEDANCE_KEYS.filter((k) => settings[k] !== undefined &&
-      !(k === 'previz' && engine === 'host' && previzHandoff(scene) === 'frame_and_prompt'));
+      !(k === 'previz' && (engine === 'host' || engine === 'astra') && previzHandoff(scene) === 'frame_and_prompt'));
     if (named.length)
       throw new Error(named.join(', ') + ' only applies to Seedance — set engine:"seedance" or drop the setting');
     return { kind, engine };

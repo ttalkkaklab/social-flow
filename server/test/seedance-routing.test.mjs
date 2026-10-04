@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, mkdirSync, rmSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -129,6 +129,56 @@ test('Seedance settings on a Veo slot are refused instead of silently skipped', 
   assert.throws(() => scenePlan({ type: 'quote', duration: 6, visual: { clip: {
     modelPurpose: 'fixed-voice', referenceAudioPaths: ['voice.wav'] } } }),
     /only applies to Seedance/);
+});
+
+test('the astra lane routes to our LTX box, takes no Seedance field, and an unknown name is still refused', () => {
+  // Our own LTX-2.5 box is opt-in per shot (video-model-selection §ASTRA). It travels the same
+  // road as `host`: same source and prompt as Veo, none of the Seedance planning fields.
+  const astra = scene({ engine: 'astra' });
+  assert.deepEqual(scenePlan(astra), { kind: 'motion', engine: 'astra' });
+  // A board that asks for the box by its model name instead of its lane name is still refused —
+  // the lane is `astra`, and `ltx` would silently plan nothing.
+  assert.throws(() => scenePlan(scene({ engine: 'ltx' })), /unknown video engine: ltx/);
+  // Seedance-only planning fields do not apply to this lane.
+  assert.throws(() => scenePlan(scene({ engine: 'astra', model: 'seedance-1-5-pro-251215' })),
+    /only applies to Seedance/);
+  assert.throws(() => scenePlan(scene({ engine: 'astra', modelPurpose: 'reference' })),
+    /only applies to Seedance/);
+});
+
+test('an engine the router accepts has its tools in produce\'s allow-list and its call named in the recipe', () => {
+  // A board can only reach a tool produce is allowed to call. An engine added to scenePlan
+  // without its tools here passes every board check and then dies at the call site, so the
+  // two lists are asserted against each other rather than maintained in parallel by hand.
+  const read = (rel) => readFileSync(fileURLToPath(new URL('../../' + rel, import.meta.url)), 'utf8');
+  const allowed = JSON.parse(read('skills/produce/SKILL.md')
+    .split('\n').find((l) => l.startsWith('allowed-tools:')).slice('allowed-tools:'.length));
+  // produce's call instructions sit in two files — the per-step recipe and the engine guide —
+  // so a tool named in either one counts as documented.
+  const recipe = read('skills/produce/references/full-video.md')
+    + read('skills/produce/references/video-generation.md');
+  // The tools each lane's cuts are made with. `host` is the CLI's own tool, named by the host
+  // rather than by us, so it has no mcp entry to assert.
+  const LANE_TOOLS = {
+    seedance: ['seedance_img2video', 'seedance_reference'],
+    veo: ['veo_img2video', 'veo_reference'],
+    astra: ['astra_img2video', 'astra_keyframe_video', 'astra_audio2video', 'astra_video_retake'],
+  };
+  for (const [engine, tools] of Object.entries(LANE_TOOLS)) {
+    assert.equal(scenePlan(scene({ engine })).engine, engine,
+      engine + ' is no longer a route this test knows');
+    for (const tool of tools) {
+      assert.ok(allowed.includes('mcp__social-flow__' + tool),
+        'produce SKILL.md allowed-tools is missing ' + tool + ' for engine:"' + engine + '"');
+      assert.ok(recipe.includes(tool),
+        'neither full-video.md nor video-generation.md says when to call ' + tool
+        + ' on engine:"' + engine + '"');
+    }
+  }
+  // Negative control: the assertion is reading the real lists, not passing on everything.
+  assert.ok(!allowed.includes('mcp__social-flow__astra_text2video'),
+    'produce starts from a still, so a text-to-video tool should not be reachable');
+  assert.ok(!recipe.includes('ltx_img2video'), 'the lane is named astra, not ltx');
 });
 
 test('a previz on the host lane is not a Seedance field, and on the Seedance route it must travel as Video 1', () => {

@@ -124,6 +124,7 @@ video.mlx	second	0.000	official	mlx_video_generate — MLX Core on-device. Quant
 # Same $0 ledger pattern: the subscription allowance pays, a quota is not a price, and a missing
 # key would still kill the report. image.host sits with the images above. Owner directive 2026-09-07.
 video.host	second	0.000	derived	Host-provided video generation (Grok image_to_video · reference_to_video) uses the subscription allowance; no separate API charge. Quota limits are not priced here. 720p ceiling
+video.astra	second	0.000	derived	Our own LTX-2.5 box (astra_* · ASTRA_VIDEO) runs on hardware we already pay for; no per-second API charge. The real cost is wall clock — 66-184s a job, one at a time, queue of 20 — which this table does not price. 64-pixel grid, 2,064,384-pixel area ceiling
 
 # Seedance escalation — conservative list price; no expiring promotions (verified 2026-09-05).
 seedance.2-5.1080p	second	0.569	derived	dreamina-seedance-2-5-260628 — reference/voice escalation; list price

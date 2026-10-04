@@ -13,15 +13,23 @@ const { readScenes } = require('../../autoproduce/references/cost-preview.js');
 const { quote } = require('../../autoproduce/references/production-cost.js');
 const mode = require('../../storyboard/references/production-mode.js');
 
+/* The two engines we run ourselves (Grok's image_to_video, our LTX-2.5 box). Neither bills per
+ * second, so neither belongs in a table whose whole job is to compare per-second prices. */
+const OWN_BOX = ['host', 'astra'];
+
 function previzCuts(win) {
   return (win.SCENES || []).map((s, i) => ({ s, i })).filter(({ s }) =>
-    mode.eligible(s) && !mode.reused(s) && s.visual?.video && s.shot?.render?.mode === 'generated_video' && (s.visual.video.engine || 'seedance') !== 'host');
+    mode.eligible(s) && !mode.reused(s) && s.visual?.video && s.shot?.render?.mode === 'generated_video' &&
+    !OWN_BOX.includes(s.visual.video.engine || 'seedance'));
 }
 /* One quote per model: the board with every previz cut routed to that model and resolution. */
 function options(win, { krwPerUsd = 1400 } = {}) {
   const cuts = previzCuts(win), rows = [];
   if (!mode.MODES[win.PRODUCTION?.mode]) throw new Error('Choose full_video, video_50, video_30 or hook_only first (PRODUCTION.mode is missing)');
-  if (win.PRODUCTION.videoProvider === 'host') return { host: true, cuts: cuts.length, rows: [] };
+  // A board on one of our own boxes has nothing to compare: the question the table answers is
+  // "which priced tier", and the answer there is "none of them".
+  const ownBox = OWN_BOX.includes(win.PRODUCTION.videoProvider) ? win.PRODUCTION.videoProvider : null;
+  if (ownBox) return { host: true, provider: ownBox, cuts: cuts.length, rows: [] };
   for (const [model, spec] of Object.entries(mode.VIDEO_MODELS)) {
     for (const resolution of spec.resolutions) {
       const clone = JSON.parse(JSON.stringify(win));
@@ -47,7 +55,9 @@ function options(win, { krwPerUsd = 1400 } = {}) {
   return { host: false, cuts: cuts.length, budgetUsd: win.PRODUCTION.videoBudgetUsd, rows };
 }
 function text(result) {
-  if (result.host) return `videoProvider host — the CLI's own video tool makes the ${result.cuts} cuts at $0 on its allowance; the model question does not apply.`;
+  if (result.host) return result.provider === 'astra'
+    ? `videoProvider astra — our own LTX-2.5 box makes the ${result.cuts} cuts at $0; it spends wall clock instead (66-184s a job, one at a time), so the model question does not apply.`
+    : `videoProvider host — the CLI's own video tool makes the ${result.cuts} cuts at $0 on its allowance; the model question does not apply.`;
   const lines = [`${result.cuts} generated cut(s), budget cap $${result.budgetUsd}`];
   for (const r of result.rows) {
     if (r.error) { lines.push(`  ${r.label} ${r.resolution}: !! ${r.error}`); continue; }
