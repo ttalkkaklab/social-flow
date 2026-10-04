@@ -16,7 +16,9 @@ export const finalSpeechSchema = z.object({
 export async function reviewFinalSpeech(input) {
     const request = finalSpeechSchema.parse(input), media = path.resolve(request.mediaPath);
     // The handle stays out of the proof identity: putting it there would make every proof written
-    // without it unreusable. Whether the check ran is recorded by the stored transcript.
+    // without it unreusable. Whether the check ran is recorded by the stored transcript. It is still
+    // carried into every saved proof, reused ones included — a transcribed take whose request record
+    // was dropped cannot say who asked for it or why.
     const { transcriptCheck, ...identity } = request;
     const proofPath = media + '.speech-quality.json', lockPath = proofPath + '.lock';
     let lock;
@@ -48,13 +50,13 @@ export async function reviewFinalSpeech(input) {
             const old = JSON.parse(readFileSync(proofPath, 'utf8'));
             const same = Object.entries(base).every(([k, v]) => ['mediaSha256', 'expectedText'].includes(k) || old[k] === v);
             if (old.audioSha256 === base.audioSha256 && old.textSha256 === base.textSha256 && old.status === 'fail')
-                return save('fail', { reused: true, signal: old.signal, transcript: old.transcript, failures: old.failures, review: old.review, error: 'This exact final audio already failed; fix the audio before another listening review' });
+                return save('fail', { reused: true, signal: old.signal, transcript: old.transcript, transcriptCheck: transcriptCheck ?? old.transcriptCheck ?? null, failures: old.failures, review: old.review, error: 'This exact final audio already failed; fix the audio before another listening review' });
             // A request that now asks for the dictation check cannot reuse a PASS that was never transcribed.
             if (same && old.status === 'pass' && (!transcriptCheck || typeof old.transcript === 'string')) {
                 const review = reviewSchema.parse(old.review);
                 if (!signalFailures(old.signal, request.expectedText, 1800).length && !reviewFailures(request.expectedText, typeof old.transcript === 'string' ? old.transcript : null, review, old.signal.duration).length &&
                     (review.continuity ?? 0) >= 95 && review.continuityEvidence)
-                    return save('pass', { reused: true, signal: old.signal, transcript: old.transcript, review, failures: [] });
+                    return save('pass', { reused: true, signal: old.signal, transcript: old.transcript, transcriptCheck: transcriptCheck ?? old.transcriptCheck ?? null, review, failures: [] });
             }
         }
         save('unverified', {});
