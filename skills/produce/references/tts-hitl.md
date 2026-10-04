@@ -17,7 +17,8 @@ Two gates, same shape as `assembly-video-hitl.md`:
 A clean check proceeds. With findings the check throws `TTS checks need HITL` and writes the
 report: one line per card with the checker's reason and what the proof says — status, attempt
 count, the four scores, the failures, every reported defect with its time, what was heard and
-what was expected, and the blind transcript. Show the user the affected cards and those lines.
+what was expected, and the blind transcript when one was taken (it is absent unless the user
+asked for the dictation check). Show the user the affected cards and those lines.
 Offer **proceed with these takes** (assemble the current WAVs), **fix first** (regenerate the
 affected scenes, correct the narration or a pronunciation dictionary), or **stop**. Ask with
 the host's HITL tool. A request to make a video is not approval of warnings the user has not

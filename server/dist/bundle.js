@@ -89036,6 +89036,10 @@ var QUALITY_POLICY = "speech-quality-v1";
 var REVIEW_API_VERSION = process.env.SOCIAL_FLOW_TTS_REVIEW_API_VERSION?.trim() || "v1";
 var REVIEW_MODEL = process.env.SOCIAL_FLOW_TTS_REVIEW_MODEL?.trim() || "gemini-3.8-flash";
 var GENERATORS = ["tts_generate", "tts_multi_speaker", "tts_gemini_38", "tts_local_generate", "tts_elevenlabs_generate", "tts_elevenlabs_dialogue", "mlx_tts_generate"];
+var transcriptCheckSchema = external_exports.object({
+  requestedBy: external_exports.string().trim().min(1).max(200),
+  reason: external_exports.string().trim().min(10).max(1e3)
+}).strict();
 var checkedSpeechSchema = external_exports.object({
   generator: external_exports.enum(GENERATORS),
   generation: external_exports.record(external_exports.unknown()),
@@ -89046,6 +89050,8 @@ var checkedSpeechSchema = external_exports.object({
   filename: bareFilenameSchema("audio").refine((s2) => s2.endsWith(".wav"), "Use a .wav filename"),
   maxAttempts: external_exports.number().int().min(1).max(3).default(3),
   rejectTake: external_exports.object({ audioSha256: external_exports.string().regex(/^[a-f0-9]{64}$/), reason: external_exports.string().trim().min(10).max(1e3) }).strict().optional(),
+  /** Present only on an explicit user request: also transcribe the take blind and hold it to the 2% CER. */
+  transcriptCheck: transcriptCheckSchema.optional(),
   /** The scene's narration[].tts sentences in order — where the fixed pauses go (ElevenLabs takes). */
   segments: external_exports.array(external_exports.string().trim().min(1).max(1e3)).min(1).max(80).optional(),
   episode: external_exports.object({
@@ -89123,7 +89129,7 @@ function signalFailures(signal, expected, maxSeconds = 120) {
 }
 function reviewFailures(expected, transcript, review2, duration3) {
   const failures = [];
-  if (characterErrorRate(expected, transcript) > 0.02) failures.push("Blind transcript CER exceeds 2%");
+  if (transcript !== null && characterErrorRate(expected, transcript) > 0.02) failures.push("Blind transcript CER exceeds 2%");
   if (!review2.complete || review2.confidence < 0.9) failures.push("Incomplete or uncertain listening review");
   for (const axis of ["accuracy", "pronunciation", "naturalness", "clarity"]) {
     if (review2[axis] < (axis === "accuracy" ? 98 : 95)) failures.push(`${axis} below threshold`);
@@ -89198,20 +89204,21 @@ async function listen(file, request, episodeReview = false) {
       });
     }
   }
-  const blind = external_exports.object({ transcript: external_exports.string().min(1).max(12e3) }).strict().parse(await call(
+  const blind = !request.transcriptCheck ? null : external_exports.object({ transcript: external_exports.string().min(1).max(12e3) }).strict().parse(await call(
     `Transcribe every audible spoken word verbatim in ${JSON.stringify(request.language)}. No correction, summary or guesses. Preserve repetitions, mistakes and unfinished words. Write numbers and abbreviations as the words actually spoken (for Korean use Hangul spoken forms, not digits). Exclude speaker labels.`,
     { type: "object", properties: { transcript: { type: "string" } }, required: ["transcript"] },
     "blind-transcription"
   ));
+  const noBlindNote = blind ? "" : " No blind transcript accompanies this take: do not assume the script was spoken. Confirm every word from the audio alone.";
   const review2 = reviewSchema.parse(await call(
-    `Audit the full audio against this data: ${JSON.stringify({ expectedText: request.expectedText, language: request.language, delivery: request.delivery, blindTranscript: blind.transcript, ...laidInPauses ? { laidInPauses } : {} })}.${laidInPauses ? " laidInPauses marks inserted silence. Judge those pauses critically too: reject choppy rhythm, clipped breaths, unnatural gaps or fades even if intentional." : ""}
+    `Audit the full audio against this data: ${JSON.stringify({ expectedText: request.expectedText, language: request.language, delivery: request.delivery, ...blind ? { blindTranscript: blind.transcript } : {}, ...laidInPauses ? { laidInPauses } : {} })}.${noBlindNote}${laidInPauses ? " laidInPauses marks inserted silence. Judge those pauses critically too: reject choppy rhythm, clipped breaths, unnatural gaps or fades even if intentional." : ""}
 ${episodeReview ? "This is the assembled episode, not an isolated sentence. Compare every adjacent sentence and scene for pitch, timbre, emotion, loudness, speaking rate, breaths and pauses. Score continuity 0\u2013100 separately and describe specific transitions with timestamps in continuityEvidence. A repeated fresh-start tone or mismatched mood requires a retake, even if each sentence sounds good alone." : ""}
 Score 0\u2013100: accuracy (all words, quantities, names, endings, no omissions or additions), pronunciation (native phonemes, liaison, stress), naturalness (human phrasing, breath, pacing, intonation appropriate to delivery), clarity (no noise, clipping, metallic artifacts, audible joins or unstable voice).
 100 means no audible defect; 95 is professional delivery with no correction needed; 90 means a noticeable defect needs a retake; below 80 is distracting. Do not inflate scores because the script is plausible. Check every word, especially names/numbers and final syllables. Do not silently correct a wrong word using the script. List every defect with actual start/end seconds, heard/expected wording and a concrete correction. complete is true only if the whole audio was heard. Give confidence 0\u20131 and specific listening evidence even on a pass.`,
     episodeReview ? { ...REVIEW_JSON_SCHEMA, required: [...REVIEW_JSON_SCHEMA.required, "continuity", "continuityEvidence"], properties: { ...REVIEW_JSON_SCHEMA.properties, continuity: { type: "number" }, continuityEvidence: { type: "string" } } } : REVIEW_JSON_SCHEMA,
     episodeReview ? "episode-listening-review" : "listening-review"
   ));
-  return { transcript: blind.transcript, review: review2 };
+  return { transcript: blind ? blind.transcript : null, review: review2 };
 }
 function prepareGeneration(request) {
   const args = { ...request.generation, outputPath: request.outputPath, filename: request.filename };
@@ -89381,6 +89388,9 @@ async function generateCheckedSpeech(input, dependencies) {
         if (!Array.isArray(old.attempts) || old.attempts.length > 3) throw new Error("Invalid attempt history");
         attempts.push(...old.attempts.map((take) => ({ ...take, model: take.model ?? old.model })));
         const last = attempts.at(-1);
+        const storedTranscript = typeof last?.transcript === "string" ? last.transcript : null;
+        const transcriptRecorded = storedTranscript !== null || last?.transcript === null;
+        const transcriptSatisfied = transcriptRecorded && (!request.transcriptCheck || storedTranscript !== null);
         if (last?.duplicateOf) return save2("fail", { error: "Identical rejected audio already stopped this request; correct the episode pronunciation or delivery plan" });
         if (request.rejectTake) {
           if (!last || last.audioSha256 !== request.rejectTake.audioSha256 || !existsSync10(output2) || sha256(readFileSync9(output2)) !== request.rejectTake.audioSha256) throw new Error("The rejected take is not the current audio; inspect the current file before requesting another retake");
@@ -89388,7 +89398,7 @@ async function generateCheckedSpeech(input, dependencies) {
           last.pending = false;
           last.failures = [...Array.isArray(last.failures) ? last.failures : [], "Rejected during final listening: " + request.rejectTake.reason];
         }
-        if (!request.rejectTake && old.model === REVIEW_MODEL && old.status === "pass" && last?.pending === false && Array.isArray(last.failures) && !last.failures.length && typeof last.transcript === "string" && existsSync10(output2) && old.audioSha256 === sha256(readFileSync9(output2)) && last.audioSha256 === old.audioSha256 && !signalFailures(last.signal, request.expectedText).length && !reviewFailures(request.expectedText, String(last.transcript), reviewSchema.parse(last.review), last.signal.duration).length) {
+        if (!request.rejectTake && old.model === REVIEW_MODEL && old.status === "pass" && last?.pending === false && Array.isArray(last.failures) && !last.failures.length && transcriptSatisfied && existsSync10(output2) && old.audioSha256 === sha256(readFileSync9(output2)) && last.audioSha256 === old.audioSha256 && !signalFailures(last.signal, request.expectedText).length && !reviewFailures(request.expectedText, storedTranscript, reviewSchema.parse(last.review), last.signal.duration).length) {
           const lastSpacing = last.spacing;
           return {
             success: true,
@@ -89400,12 +89410,12 @@ async function generateCheckedSpeech(input, dependencies) {
             spacing: !prepared.spacing ? "not applicable" : lastSpacing?.skipped ? "skipped: " + String(lastSpacing.skipped) : "applied"
           };
         }
-        if (!request.rejectTake && old.model !== REVIEW_MODEL && old.status === "pass" && last && existsSync10(output2) && last.audioSha256 === sha256(readFileSync9(output2))) {
+        if (!request.rejectTake && (old.model !== REVIEW_MODEL || !transcriptSatisfied) && old.status === "pass" && last && existsSync10(output2) && last.audioSha256 === sha256(readFileSync9(output2))) {
           last.previousReviews = [
             ...Array.isArray(last.previousReviews) ? last.previousReviews : [],
-            { model: last.model, transcript: last.transcript, review: last.review, failures: last.failures, signal: last.signal, cer: last.cer }
+            { model: last.model, transcript: last.transcript, review: last.review, failures: last.failures, signal: last.signal, cer: last.cer, transcriptCheck: last.transcriptCheck ?? null }
           ];
-          for (const key of ["transcript", "review", "failures", "signal", "cer"]) delete last[key];
+          for (const key of ["transcript", "review", "failures", "signal", "cer", "transcriptCheck"]) delete last[key];
           last.pending = true;
         }
       }
@@ -89466,7 +89476,15 @@ async function generateCheckedSpeech(input, dependencies) {
         failures = reviewFailures(request.expectedText, listened.transcript, listened.review, signal.duration);
       }
       if (audioSha256 !== sha256(readFileSync9(output2))) throw new Error("Audio changed during review");
-      Object.assign(take, { pending: false, audioSha256, signal, ...listened ? { model: REVIEW_MODEL, ...listened } : {}, cer: listened ? characterErrorRate(request.expectedText, listened.transcript) : null, failures });
+      Object.assign(take, {
+        pending: false,
+        audioSha256,
+        signal,
+        ...listened ? { model: REVIEW_MODEL, ...listened } : {},
+        transcriptCheck: request.transcriptCheck ?? null,
+        cer: listened?.transcript != null ? characterErrorRate(request.expectedText, listened.transcript) : null,
+        failures
+      });
       const spacingState = take.spacing;
       const spacing = !prepared.spacing ? "not applicable" : spacingState?.skipped ? "skipped: " + String(spacingState.skipped) : "applied";
       if (!failures.length) return save2("pass", { audioSha256, spacing });
@@ -95850,12 +95868,16 @@ Returns: a text block with the mp4 path, still paths (and any requested still ou
     name: "tts_review_final",
     title: "Review assembled speech",
     annotations: HINT.generate,
-    description: "Listen to the actual final WAV or video, including all sentence transitions and the music mix. Requires accuracy >=98 and pronunciation, naturalness, clarity and continuity >=95, with no defects. Writes a hash-bound .speech-quality.json proof. Two paid Gemini review calls; no synthesis. Review outages hold delivery. Supply the complete spoken text including native clip speech. Supports up to 30 minutes and 12,000 script characters, with a lossless FLAC review payload under 14 MiB. Longer media holds for chapter review.",
+    description: "Listen to the actual final WAV or video, including all sentence transitions and the music mix. Requires accuracy >=98 and pronunciation, naturalness, clarity and continuity >=95, with no defects. Writes a hash-bound .speech-quality.json proof. The blind-transcription (STT) check and its CER <=2% gate do not run unless transcriptCheck carries a user request for them (owner directive 2026-10-04). One paid Gemini review call (two with transcriptCheck); no synthesis. Review outages hold delivery. Supply the complete spoken text including native clip speech. Supports up to 30 minutes and 12,000 script characters, with a lossless FLAC review payload under 14 MiB. Longer media holds for chapter review.",
     inputSchema: { type: "object", additionalProperties: false, properties: {
       mediaPath: { type: "string", description: "Absolute path of the final media that ships." },
       expectedText: { description: "Complete spoken text, including speech in clips and the outro.", type: "string", minLength: 1, maxLength: 12e3 },
       language: { description: "Spoken language, for example Korean.", type: "string", minLength: 2, maxLength: 80 },
-      delivery: { description: "Intended delivery and continuity across the whole episode.", type: "string", minLength: 1, maxLength: 2e3 }
+      delivery: { description: "Intended delivery and continuity across the whole episode.", type: "string", minLength: 1, maxLength: 2e3 },
+      transcriptCheck: { type: "object", additionalProperties: false, required: ["requestedBy", "reason"], description: "Present only when the user asked for the blind-transcription (STT) check; omitted, that check does not run and only the listening review judges the take. Carries who asked and their actual words \u2014 there is no environment default.", properties: {
+        requestedBy: { type: "string", minLength: 1, maxLength: 200, description: 'Who asked for the dictation check, e.g. "user".' },
+        reason: { type: "string", minLength: 10, maxLength: 1e3, description: "The actual request that turned it on, quoted or referenced." }
+      } }
     }, required: ["mediaPath", "expectedText", "language", "delivery"] }
   },
   {
@@ -95881,8 +95903,8 @@ Returns: a text block with the mp4 path, still paths (and any requested still ou
     description: `Generate one scene with the pinned TTS engine, review the actual WAV, and regenerate failed takes up to maxAttempts (1\u20133, including the first take).
 Use for every generated narration scene in produce/autoproduce. Pass the existing generator's arguments in generation, the complete spoken expectedText (phonetic spelling; no acting tags or speaker labels), language, and the profile's intended delivery. Voice and generation settings stay unchanged across attempts; the episode seed stays fixed on every retake (vendor determinism is best-effort). An entire scene is one call; never split it into sentence calls.
 Every single-voice take has its sentences re-spaced before review: a fixed sentencePause of digital silence between sentences (stretched up to 1.0s where a subtitle cue would read faster than 6.0 chars/s after playbackSpeed), a 0.14s lead, speech samples copied as generated (the 12 ms fades stay on the natural gap). tts_elevenlabs_generate is fetched with timestamps and spaced from its own alignment; tts_local_generate, tts_generate and mlx_tts_generate are aligned by the local forced aligner (mlx-qwen3-asr --timestamps) first, so a multi-sentence scene on any engine ships with the same pauses. Pass segments (the scene's narration[].tts list) so the pauses land on the builder's segment boundaries; the wrapper writes <wav>.sentences.json and the .alignment.json for the shipped audio. Generate consecutive sentences in one call whenever they belong to one breath \u2014 the engine reads them as one utterance, where one call per sentence restarts the voice at every sentence.
-Checks signal/duration, a blind transcript (CER <=2%), then ${REVIEW_MODEL} listening scores: accuracy >=98, pronunciation/naturalness/clarity >=95, confidence >=0.9, no audible defects. Returns a hash-bound .wav.quality.json proof required by the builder. Missing keys, unavailable reviewer or malformed responses hold production (unverified); exhausted attempts return fail, and that finding goes to the user as a warning they can accept for the current take (skills/produce/references/tts-hitl.md). Scores are operational thresholds, not a guarantee of human judgement.
-Requires ffmpeg and GEMINI_API_KEY even for local synthesis. Two paid audio-review calls per acoustically valid take, plus the selected generator's costs. Record the retry-inclusive allowance before calling; review tokens are logged as unpriced until reconciled with provider billing. Do not call again to reset an exhausted attempt budget. Do not use for recordings or native clip speech; retain their final listening QA. Do not change engines/voices or lower thresholds to obtain PASS.`,
+Checks signal/duration, then ${REVIEW_MODEL} listening scores: accuracy >=98, pronunciation/naturalness/clarity >=95, confidence >=0.9, no audible defects. The blind-transcription (STT) check and its CER <=2% gate do not run unless transcriptCheck carries a user request for them (owner directive 2026-10-04); the proof then records transcript: null. Returns a hash-bound .wav.quality.json proof required by the builder. Missing keys, unavailable reviewer or malformed responses hold production (unverified); exhausted attempts return fail, and that finding goes to the user as a warning they can accept for the current take (skills/produce/references/tts-hitl.md). Scores are operational thresholds, not a guarantee of human judgement.
+Requires ffmpeg and GEMINI_API_KEY even for local synthesis. One paid audio-review call per acoustically valid take (two with transcriptCheck), plus the selected generator's costs. Record the retry-inclusive allowance before calling; review tokens are logged as unpriced until reconciled with provider billing. Do not call again to reset an exhausted attempt budget. Do not use for recordings or native clip speech; retain their final listening QA. Do not change engines/voices or lower thresholds to obtain PASS.`,
     inputSchema: {
       type: "object",
       additionalProperties: false,
@@ -95912,7 +95934,11 @@ Requires ffmpeg and GEMINI_API_KEY even for local synthesis. Two paid audio-revi
         }, required: ["texts", "index", "seed"] },
         segments: { type: "array", minItems: 1, maxItems: 80, items: { type: "string", minLength: 1, maxLength: 1e3 }, description: "The scene's narration[].tts sentences in order (joined they read as expectedText). Every single-voice take gets a fixed pause at each segment boundary \u2014 the boundary the builder's reveals and subtitle cues use. Without it, pauses go after sentence-final punctuation." },
         sentencePause: { type: "number", minimum: 0.25, maximum: 1.5, default: 0.5, description: "Silence between sentences in the take's own timeline, seconds. The builder detects pauses from 0.16s and fits a 0.35s reveal fade inside one." },
-        playbackSpeed: { type: "number", minimum: 0.5, maximum: 3, default: 1, description: "ElevenLabs requires 1: use generation.speed for the requested rate and keep assembly at 1. Other engines require an explicit user request in outputPath/speed-authorization.json for any non-1 factor; this controls subtitle pause sizing." }
+        playbackSpeed: { type: "number", minimum: 0.5, maximum: 3, default: 1, description: "ElevenLabs requires 1: use generation.speed for the requested rate and keep assembly at 1. Other engines require an explicit user request in outputPath/speed-authorization.json for any non-1 factor; this controls subtitle pause sizing." },
+        transcriptCheck: { type: "object", additionalProperties: false, required: ["requestedBy", "reason"], description: "Present only when the user asked for the blind-transcription (STT) check; omitted, that check does not run and only the listening review judges the take. Carries who asked and their actual words \u2014 there is no environment default.", properties: {
+          requestedBy: { type: "string", minLength: 1, maxLength: 200, description: 'Who asked for the dictation check, e.g. "user".' },
+          reason: { type: "string", minLength: 10, maxLength: 1e3, description: "The actual request that turned it on, quoted or referenced." }
+        } }
       },
       required: ["generator", "generation", "expectedText", "language", "delivery", "outputPath", "filename"]
     }
@@ -103485,10 +103511,13 @@ var finalSpeechSchema = external_exports.object({
   mediaPath: external_exports.string().min(1),
   expectedText: external_exports.string().trim().min(1).max(12e3),
   language: external_exports.string().trim().min(2).max(80),
-  delivery: external_exports.string().trim().min(1).max(2e3)
+  delivery: external_exports.string().trim().min(1).max(2e3),
+  /** Present only on an explicit user request: also transcribe the episode blind and hold it to the 2% CER. */
+  transcriptCheck: transcriptCheckSchema.optional()
 }).strict();
 async function reviewFinalSpeech(input) {
   const request = finalSpeechSchema.parse(input), media = path24.resolve(request.mediaPath);
+  const { transcriptCheck, ...identity } = request;
   const proofPath = media + ".speech-quality.json", lockPath = proofPath + ".lock";
   let lock;
   try {
@@ -103497,7 +103526,7 @@ async function reviewFinalSpeech(input) {
     return { success: false, status: "unverified", error: "Final speech review is already locked" };
   }
   const temp = mkdtempSync7(path24.join(tmpdir6(), "speech-final-"));
-  let base = { version: 1, policy: "final-speech-v1", model: REVIEW_MODEL, ...request, mediaPath: media };
+  let base = { version: 1, policy: "final-speech-v1", model: REVIEW_MODEL, ...identity, mediaPath: media };
   function save2(status, extra) {
     const result = { ...base, status, checkedAt: (/* @__PURE__ */ new Date()).toISOString(), ...extra };
     const staging = path24.join(temp, "proof.json");
@@ -103515,30 +103544,34 @@ async function reviewFinalSpeech(input) {
     if (existsSync23(proofPath)) {
       const old = JSON.parse(readFileSync23(proofPath, "utf8"));
       const same = Object.entries(base).every(([k, v]) => ["mediaSha256", "expectedText"].includes(k) || old[k] === v);
-      if (old.audioSha256 === base.audioSha256 && old.textSha256 === base.textSha256 && old.status === "fail") return save2("fail", { reused: true, signal: old.signal, transcript: old.transcript, failures: old.failures, review: old.review, error: "This exact final audio already failed; fix the audio before another listening review" });
-      if (same && old.status === "pass") {
+      if (old.audioSha256 === base.audioSha256 && old.textSha256 === base.textSha256 && old.status === "fail") return save2("fail", { reused: true, signal: old.signal, transcript: old.transcript, transcriptCheck: transcriptCheck ?? old.transcriptCheck ?? null, failures: old.failures, review: old.review, error: "This exact final audio already failed; fix the audio before another listening review" });
+      if (same && old.status === "pass" && (!transcriptCheck || typeof old.transcript === "string")) {
         const review2 = reviewSchema.parse(old.review);
-        if (!signalFailures(old.signal, request.expectedText, 1800).length && !reviewFailures(request.expectedText, old.transcript, review2, old.signal.duration).length && (review2.continuity ?? 0) >= 95 && review2.continuityEvidence) return save2("pass", { reused: true, signal: old.signal, transcript: old.transcript, review: review2, failures: [] });
+        if (!signalFailures(old.signal, request.expectedText, 1800).length && !reviewFailures(request.expectedText, typeof old.transcript === "string" ? old.transcript : null, review2, old.signal.duration).length && (review2.continuity ?? 0) >= 95 && review2.continuityEvidence) return save2("pass", { reused: true, signal: old.signal, transcript: old.transcript, transcriptCheck: transcriptCheck ?? old.transcriptCheck ?? null, review: review2, failures: [] });
       }
     }
     save2("unverified", {});
     const signal = await measureSignal(wav, 1800);
     const failures = signalFailures(signal, request.expectedText, 1800);
     if (failures.length) return save2("fail", { signal, failures });
-    const reviewRequest = { ...checkedSpeechSchema.parse({
-      generator: "tts_local_generate",
-      generation: {},
-      expectedText: request.expectedText.slice(0, 4e3),
-      language: request.language,
-      delivery: request.delivery,
-      outputPath: path24.dirname(media),
-      filename: "final.wav"
-    }), expectedText: request.expectedText };
+    const reviewRequest = {
+      ...checkedSpeechSchema.parse({
+        generator: "tts_local_generate",
+        generation: {},
+        expectedText: request.expectedText.slice(0, 4e3),
+        language: request.language,
+        delivery: request.delivery,
+        outputPath: path24.dirname(media),
+        filename: "final.wav"
+      }),
+      expectedText: request.expectedText,
+      transcriptCheck
+    };
     const result = await listen(wav, reviewRequest, true);
     failures.push(...reviewFailures(request.expectedText, result.transcript, result.review, signal.duration));
     if ((result.review.continuity ?? 0) < 95 || !result.review.continuityEvidence) failures.push("Episode continuity below 95 or missing listening evidence");
     if (sha256(readFileSync23(media)) !== base.mediaSha256) throw new Error("Final media changed during listening");
-    return save2(failures.length ? "fail" : "pass", { signal, ...result, failures });
+    return save2(failures.length ? "fail" : "pass", { signal, ...result, transcriptCheck: transcriptCheck ?? null, failures });
   } catch (error2) {
     return save2("unverified", { error: error2 instanceof Error ? error2.message : String(error2) });
   } finally {

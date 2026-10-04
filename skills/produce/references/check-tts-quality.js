@@ -28,7 +28,11 @@ function verifyProof(file, expected) {
   if(report.audioSha256!==audioHash)throw new Error('audio changed after review');
   if(!Array.isArray(report.attempts)||report.attempts.length<1||report.attempts.length>3)throw new Error('missing bounded attempt history');
   const take=report.attempts.at(-1), r=take.review, s=take.signal;
-  if(take.pending!==false||take.audioSha256!==audioHash||!Array.isArray(take.failures)||take.failures.length||typeof take.transcript!=='string'||cer(expected,take.transcript)>0.02)throw new Error('blind transcript did not pass');
+  if(take.pending!==false||take.audioSha256!==audioHash||!Array.isArray(take.failures)||take.failures.length)throw new Error('take has no clean recorded review');
+  // The dictation check runs only on an explicit user request (owner directive 2026-10-04), so a
+  // proof may record transcript: null. A recorded transcript is still held to the 2% CER.
+  if(take.transcript!==null&&typeof take.transcript!=='string')throw new Error('take has no transcript record');
+  if(typeof take.transcript==='string'&&cer(expected,take.transcript)>0.02)throw new Error('blind transcript did not pass');
   if(!s||![s.duration,s.rmsDb,s.clippedFraction].every(Number.isFinite)||s.duration<0.25||s.duration>120||s.duration>Math.max(2,[...normalize(expected)].length/4.5*2)||s.rmsDb< -45||s.clippedFraction<0||s.clippedFraction>0.001)throw new Error('audio signal did not pass');
   if(!r||r.complete!==true||!Number.isFinite(r.confidence)||r.confidence<0.9||r.confidence>1||typeof r.evidence!=='string'||r.evidence.trim().length<20||!Array.isArray(r.issues)||r.issues.length)throw new Error('listening review incomplete or defective');
   for(const axis of ['accuracy','pronunciation','naturalness','clarity'])if(!Number.isFinite(r[axis])||r[axis]<(axis==='accuracy'?98:95)||r[axis]>100)throw new Error(axis+' did not pass');

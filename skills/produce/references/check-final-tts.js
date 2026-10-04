@@ -20,7 +20,10 @@ function verify(media,text){
 function verifyReport(p,media,text){
   const r=p.review,s=p.signal;
   if(p.version!==1||p.policy!=='final-speech-v1'||p.status!=='pass'||p.mediaSha256!==hash(media))throw new Error('Final speech needs a current hash-bound PASS');
-  if(typeof p.expectedText!=='string'||normalize(p.expectedText)!==normalize(text)||cer(text,p.transcript||'')>0.02)throw new Error('Final speech transcript differs from narration');
+  if(typeof p.expectedText!=='string'||normalize(p.expectedText)!==normalize(text))throw new Error('Final speech was reviewed against other narration');
+  // transcript is null when the dictation check was not requested (owner directive 2026-10-04).
+  if(p.transcript!==null&&typeof p.transcript!=='string')throw new Error('Final speech has no transcript record');
+  if(typeof p.transcript==='string'&&cer(text,p.transcript)>0.02)throw new Error('Final speech transcript differs from narration');
   if(!Array.isArray(p.failures)||p.failures.length||!r||r.complete!==true||!Number.isFinite(r.confidence)||r.confidence<0.9||r.confidence>1||!Array.isArray(r.issues)||r.issues.length)throw new Error('Final speech review is incomplete or defective');
   for(const k of ['accuracy','pronunciation','naturalness','clarity','continuity'])if(!Number.isFinite(r[k])||r[k]<(k==='accuracy'?98:95)||r[k]>100)throw new Error(`Final speech ${k} below threshold`);
   for(const k of ['evidence','continuityEvidence'])if(typeof r[k]!=='string'||r[k].trim().length<20)throw new Error('Missing final listening evidence');
