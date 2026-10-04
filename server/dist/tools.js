@@ -2435,6 +2435,10 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
                     type: 'string', minLength: 1,
                     description: 'Optional local portrait (.png/.jpg/.jpeg, at most 32 MiB), pinned to frame 0.',
                 },
+                strength: {
+                    type: 'number', minimum: 0, maximum: 1, default: 0.9,
+                    description: 'How strictly the generated frames must match the portrait, 0.0-1.0 (default: 0.9); ignored without imagePath. In 2026-10-04 dialogue probes, 0.9 accompanied mouth movement and 0.7 accompanied a changed person; prompts and uploads also differed, so these observations do not isolate strength. 1.0 is unmeasured on cuts with a visible mouth.',
+                },
                 audioStartTime: {
                     type: 'number',
                     description: 'Seconds into the track to start reading from (default: 0). Must be less than the uploaded audio duration.',

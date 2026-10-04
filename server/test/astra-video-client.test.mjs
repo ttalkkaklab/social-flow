@@ -541,6 +541,11 @@ describe('mode-specific ceilings and new input contracts', () => {
     const audio = TOOLS.find(t => t.name === 'astra_audio2video');
     assert.deepEqual(audio.inputSchema.oneOf, [{ required: ['audioPath'] }, { required: ['audioUploadId'] }]);
     assert.ok(audio.inputSchema.properties.imagePath);
+    assert.equal(audio.inputSchema.properties.strength.type, 'number');
+    assert.equal(audio.inputSchema.properties.strength.minimum, 0);
+    assert.equal(audio.inputSchema.properties.strength.maximum, 1);
+    assert.equal(audio.inputSchema.properties.strength.default, 0.9);
+    assert.match(audio.inputSchema.properties.strength.description, /ignored without imagePath/);
     assert.match(audio.description, /supplied WAV re-encoded as AAC/);
   });
 });
@@ -581,10 +586,32 @@ describe('mocked tool calls', () => {
       const result = await ROUTES.astra_audio2video({ prompt: 'x', audioPath: path.join(dir, 'a.wav'), imagePath: path.join(dir, 'face.png'), outputPath: dir });
       assert.deepEqual(uploads, ['audio', 'image']);
       assert.equal(jobs[0].audio_upload_id, 'audio-id');
-      assert.deepEqual(jobs[0].images, [{ upload_id: 'image-id', frame_idx: 0 }]);
+      assert.deepEqual(jobs[0].images, [{ upload_id: 'image-id', frame_idx: 0, strength: 0.9 }]);
       assert.match(result.content[0].text, /audioUploadId: audio-id/);
       assert.match(result.content[0].text, /Audio expires at: 2026-10-01T04:00:00Z/);
       assert.match(result.content[0].text, /Audio duration \(seconds\): 30/);
+    });
+  });
+
+  it('forwards explicit portrait strength including zero instead of the default', async () => {
+    await withServer(async ({ dir, jobs }) => {
+      for (const strength of [0, 0.7, 1]) {
+        await ROUTES.astra_audio2video({ prompt: 'x', audioUploadId: 'reuse', imagePath: path.join(dir, 'face.png'), strength, outputPath: dir });
+        assert.deepEqual(jobs.at(-1).images, [{ upload_id: 'image-id', frame_idx: 0, strength }]);
+        assert.equal(jobs.at(-1).strength, undefined);
+      }
+      for (const strength of [-0.1, 1.1]) {
+        await assert.rejects(ROUTES.astra_audio2video({ prompt: 'x', audioUploadId: 'reuse', strength, outputPath: dir }));
+      }
+      assert.equal(jobs.length, 3);
+    });
+  });
+
+  it('ignores explicit strength when no portrait is supplied', async () => {
+    await withServer(async ({ dir, jobs }) => {
+      await ROUTES.astra_audio2video({ prompt: 'x', audioUploadId: 'reuse', strength: 0.7, outputPath: dir });
+      assert.equal(jobs[0].images, undefined);
+      assert.equal(jobs[0].strength, undefined);
     });
   });
 

@@ -85393,6 +85393,7 @@ var astraAudio2VideoSchema = external_exports.object({
   audioPath: external_exports.string().trim().min(1).optional(),
   audioUploadId: external_exports.string().trim().min(1).optional(),
   imagePath: external_exports.string().trim().min(1).optional(),
+  strength: external_exports.number().min(0).max(1).default(0.9).describe("Portrait conditioning strength; ignored without imagePath. Observed dialogue cuts: 0.9 preserved the person with mouth movement following audio; 0.7 changed the person. Prompts also differed, so this is not an isolated strength comparison. 1.0 is unmeasured on cuts with a visible mouth."),
   audioStartTime: external_exports.number().min(0).optional(),
   audioMaxDuration: external_exports.number().positive().optional(),
   numFrames: numFramesSchema("audio2video"),
@@ -85761,7 +85762,7 @@ async function generateFromAudio(args) {
   const audioUploadId = audio?.uploadId ?? args.audioUploadId;
   const image = args.imagePath ? await uploadFile(args.imagePath) : void 0;
   if (image && image.kind !== "image") throw new Error("ASTRA video imagePath must upload as image");
-  const images = image ? [{ uploadId: image.uploadId, frameIdx: 0 }] : void 0;
+  const images = image ? [{ uploadId: image.uploadId, frameIdx: 0, strength: args.strength }] : void 0;
   const body = buildJobBody("audio2video", { ...args, audioUploadId, images });
   const result = await runJob("audio2video", args.prompt, body, args.outputPath, args.filename);
   return { ...result, audioUploadId, audioExpiresAt: audio?.expiresAt, audioDuration: audio?.duration };
@@ -94953,6 +94954,13 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
           type: "string",
           minLength: 1,
           description: "Optional local portrait (.png/.jpg/.jpeg, at most 32 MiB), pinned to frame 0."
+        },
+        strength: {
+          type: "number",
+          minimum: 0,
+          maximum: 1,
+          default: 0.9,
+          description: "How strictly the generated frames must match the portrait, 0.0-1.0 (default: 0.9); ignored without imagePath. In 2026-10-04 dialogue probes, 0.9 accompanied mouth movement and 0.7 accompanied a changed person; prompts and uploads also differed, so these observations do not isolate strength. 1.0 is unmeasured on cuts with a visible mouth."
         },
         audioStartTime: {
           type: "number",
