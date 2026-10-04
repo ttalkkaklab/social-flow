@@ -2,10 +2,15 @@
 (function(root){
  'use strict';
  const clamp=x=>Math.max(0,Math.min(1,x)),ease=x=>{x=clamp(x);return x*x*x*(x*(x*6-15)+10)},mix=(a,b,t)=>a+(b-a)*t;
+ const RATE={'very slow':.04,slow:.06,fast:.14,'very fast':.20};
+ const accel=x=>clamp(x)**2;
  function state(spec,seconds){
-  const q=clamp(seconds/spec.duration),u=ease(q),kind=spec.template;
-  let zoom=1+.10*u,fx=.45,fy=.4;   // the default is `push` — a plain eased zoom-in
-  if(kind==='pull'){zoom=mix(1.34,1,u);fx=spec.focusTo?.[0]??.35;fy=spec.focusTo?.[1]??.38}
+  const q=clamp(seconds/spec.duration),kind=spec.template,span=(RATE[spec.speed]??RATE['very slow'])*spec.duration;
+  const optical=['focus-in','rack-focus'].includes(kind);
+  const curve=optical?ease:spec.ease==='accel'?accel:spec.ease==='smoothstep'?ease:['fast','very fast'].includes(spec.speed)?accel:ease;
+  const u=curve(q);
+  let zoom=1+span*u,fx=.45,fy=.4;   // the default is `push` — a plain eased zoom-in
+  if(kind==='pull'){zoom=mix(1+span,1,u);fx=spec.focusTo?.[0]??.35;fy=spec.focusTo?.[1]??.38}
   // pan · tilt — the window travels from focusFrom to focusTo (L13: a pan is a sentence from A
   // to B). The smoothstep ease is the hold in and hold out: zero velocity on both ends. Without
   // regions a pan keeps the classic diagonal and a tilt looks up the picture, bottom to top.
@@ -13,7 +18,7 @@
   if(kind==='tilt'){zoom=1.22;const a=spec.focusFrom||[.5,.92],b=spec.focusTo||[.5,.08];fx=mix(a[0],b[0],u);fy=mix(a[1],b[1],u)}
   if(kind==='focus-in'){zoom=1.04+.055*u;fx=spec.focusTo[0];fy=spec.focusTo[1]}
   if(kind==='rack-focus'){zoom=1.08;fx=mix(spec.focusFrom[0],spec.focusTo[0],u);fy=mix(spec.focusFrom[1],spec.focusTo[1],u)}
-  if(kind==='approach'){zoom=mix(1,1.38,u);fx=spec.focusTo[0];fy=spec.focusTo[1]}
+  if(kind==='approach'){zoom=mix(1,1+span,u);fx=spec.focusTo[0];fy=spec.focusTo[1]}
   if(kind==='reveal'||kind==='parallax'){zoom=1.10;fx=mix(.4,.6,u)}
   return {zoom,fx,fy,progress:u,focus:kind==='focus-in'?ease((q-.05)/.43):kind==='rack-focus'?ease((q-.25)/.45):1};
  }
@@ -38,10 +43,10 @@
     if(focusedFrom){ctx.globalAlpha=1-s.focus;ctx.drawImage(focusedFrom,x,y,dw,dh)}
     ctx.globalAlpha=s.focus;ctx.drawImage(focusedTo,x,y,dw,dh);ctx.globalAlpha=1;
    }else ctx.drawImage(photo,x,y,dw,dh);
-   layers.forEach((layer,i)=>{const depth=spec.layers[i].depth,dx=(spec.template==='reveal'?s.progress*w*1.25:(s.progress-.5)*w*.09)*depth;ctx.drawImage(layer,x+dx,y,dw,dh)});
+   layers.forEach((layer,i)=>{const depth=spec.layers[i].depth,dx=(spec.template==='reveal'?s.progress*w*1.25:(s.progress-.5)*w*.09)*depth*((RATE[spec.speed]??RATE['very slow'])*spec.duration/.32);ctx.drawImage(layer,x+dx,y,dw,dh)});
    return s;
   };
-  return {draw,diagnostics:()=>({technique:'still-camera',template:spec.template,focusMethod:['focus-in','rack-focus'].includes(spec.template)?'feathered-region':null,layers:layers.length})};
+  return {draw,diagnostics:()=>({source:{w:photo.width,h:photo.height},zoomPeak:Math.max(state(spec,0).zoom,state(spec,spec.duration).zoom),peakUpscale:Math.max(canvas.width/photo.width,canvas.height/photo.height)*Math.max(state(spec,0).zoom,state(spec,spec.duration).zoom),technique:'still-camera',template:spec.template,focusMethod:['focus-in','rack-focus'].includes(spec.template)?'feathered-region':null,layers:layers.length})};
  }
  const api={mount,state};if(typeof module==='object'&&module.exports)module.exports=api;else root.STILL_CAMERA=api;
 })(typeof window==='object'?window:globalThis);

@@ -3177,9 +3177,9 @@ on it.
   screen that repeats it word for word says everything twice and gives the eye nothing to do.
   What lands on screen is what survives the trim — `title`, `bullets`, `labels`. A screen
   phrase identical to its segment's `sub` is a P0 on the sheet read.
-- **One big phrase per slide**, four lines at the very most, five words to a line. Past that it
+- **One big phrase per slide**: at most three rendered hero lines, two for a max-size quote or supporting phrase, and four text lines on the screen. Past that it
   is a paragraph, and a paragraph belongs to the narration.
-- **One effect kind per slide** — `drop` (from above, the default) or `wipe` (left to right, for
+- **One effect kind per slide** — `mask` is the default; `drop` (from above) and `wipe` (left to right, for
   a longer phrase). Mixing them inside one screen reads as a template showing off. An art that
   travels while the word enters with `in` is one event, not two.
 - Words don't spin, bounce, or fly in on an arc. They arrive and stop. Same argument as the

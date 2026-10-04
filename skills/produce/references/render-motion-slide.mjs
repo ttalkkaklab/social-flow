@@ -5,7 +5,7 @@
  *
  *   node render-motion-slide.mjs <storyboard/slides/sN-slug.html> --out <dir> [--fps 30]
  *        [--jobs 4] [--sheet] [--png-only] [--group k] [--frame k:ms] [--keep-frames]
- *        [--segs auto|k:ms,...] [--grain 0..30] [--previz]
+ *        [--segs auto|k:ms,...] [--word-cues k:path,...] [--grain 0..30] [--previz]
  *
  * --previz renders a three.js previz page (storyboard previz-template.html, blender-previz.md §6.5):
  *   one clip for the whole cut at 24 fps, no grain, and none of the slide rules — the page has one
@@ -100,6 +100,11 @@
  *   first frame before the first seek.
  * Exit 0 ok · 1 render/contract failure · 2 usage.
  */
+// Keep this diagnostic ladder equal to still-camera.js RATE; the source-crosscheck test enforces it.
+const CAMERA_RATE={'very slow':.04,slow:.06,fast:.14,'very fast':.20};
+import { cameraGuard, readContrastFrame, rowContrast, contrastWarning } from './render-evidence.mjs';
+import { parseWordCues } from './word-cue-map.mjs';
+import { measureSlideDOM, groupTextRows, roleFontFloor } from './slide-legibility.mjs';
 import { spawn, execFileSync } from "node:child_process";
 import { createRequire } from "node:module";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -111,7 +116,7 @@ const require = createRequire(import.meta.url);
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const { FORMATS, DEFAULT_FORMAT } = require(path.join(HERE, "../../platform-guide/references/formats.js"));
 
-const USAGE = "usage: render-motion-slide.mjs <slides/sN-slug.html> --out <dir> [--fps 30] [--jobs 4] [--sheet] [--png-only] [--group k] [--frame k:ms] [--keep-frames] [--segs auto|k:ms,...] [--grain 0..30] [--previz]";
+const USAGE = "usage: render-motion-slide.mjs <slides/sN-slug.html> --out <dir> [--fps 30] [--jobs 4] [--sheet] [--png-only] [--group k] [--frame k:ms] [--keep-frames] [--segs auto|k:ms,...] [--word-cues k:path,...] [--grain 0..30] [--previz]";
 const usage = msg => { console.error("✗ " + msg + "\n" + USAGE); process.exit(2); };
 const CDP_TIMEOUT_MS = 30000;
 
@@ -120,7 +125,7 @@ const argv = process.argv.slice(2);
 // jobs = tabs capturing at once. Capture is mostly PNG encoding, so each takes a core — stop at
 // half the cores and never above 4; past that only Chrome's memory grows, not throughput.
 const opt = { fps: 30, jobs: Math.max(1, Math.min(4, Math.floor((os.cpus().length || 4) / 2))),
-  sheet: false, pngOnly: false, group: null, frame: null, keep: false, out: null, segs: null, grain: 6, previz: false };
+  sheet: false, pngOnly: false, group: null, frame: null, keep: false, out: null, segs: null, wordCues: null, grain: 6, previz: false };
 const pos = [], given = new Set();
 const intArg = (v, name, lo, hi) => {
   const n = Number(v);
@@ -143,6 +148,7 @@ for (let i = 0; i < argv.length; i++) {
     opt.segs = argv[++i];
     if (!opt.segs) usage('--segs wants "auto" or k:ms[,k:ms...]');
   }
+  else if (a === "--word-cues") { opt.wordCues=argv[++i]; if(!opt.wordCues) usage("--word-cues needs k:path[,k:path...]"); }
   else if (a === "--frame") {
     const m = String(argv[++i] || "").match(/^(\d+):(\d+(?:\.\d+)?)$/);
     if (!m) usage(`--frame wants k:ms (e.g. 2:800), got "${argv[i]}"`);
@@ -197,6 +203,7 @@ const semanticBeats = scene && scene.visual && scene.visual.slide && Array.isArr
 // from scenes.js so the SEEK-RUNTIME block stays byte-identical across the three templates.
 const treatment = scene && scene.visual && scene.visual.slide ? String(scene.visual.slide.treatment || "") : "";
 const isFootage = treatment === "footage";
+const isCamera = scene?.visual?.slide?.kind === "camera";
 // Footage clips play for their whole segment — the video ground's sustain layer. data-vdur becomes the
 // segment length (--segs) or stays as authored, and never exceeds what the file holds: __groups() would
 // otherwise report a clip length the pixels do not deliver. Returns the clips that came up short.
@@ -452,6 +459,8 @@ const openPage = async () => {
   const size = await evalJS("window.__size()");
   if (size.w !== W || size.h !== H) return die(`page size ${size.w}x${size.h} ≠ format canvas ${W}x${H} (window.FORMAT=${FORMAT})`);
   const meta = await evalJS("window.__meta()");           // { hold, stray, infinite }
+  const cameraProblem=isCamera?cameraGuard(meta,W,H):null;
+  if(cameraProblem)return die(cameraProblem);
   if (meta.broken && meta.broken.length)
     return die(`could not load: ${meta.broken.join(", ")} — a slide's images and video are local files next to it. ` +
                `Check the path, and use H.264 or VP9 for video (HEVC does not decode under --disable-gpu)`);
@@ -531,6 +540,28 @@ const openPage = async () => {
       }
     }
   }
+  let wordCueMode='none',wordCueMap={},wordCueApplied={applied:0,groups:[]};
+  if(opt.wordCues){
+    if(!segsApplied) warn.push('--word-cues ignored: supply valid --segs with the same group boundaries');
+    else {
+      const modes=[];
+      for(const entry of opt.wordCues.split(',')){
+        const match=entry.match(/^(\d+):(.+)$/);
+        if(!match || Number(match[1])<1) return die('--word-cues needs k:path[,k:path...]');
+        const k=Number(match[1]);let startMs=0;
+        for(let g=1;g<k;g++){if(!(segMap[g]>0))return die('word cues need all preceding segment lengths');startMs+=segMap[g];}
+        if(!(segMap[k]>0)||wordCueMap[k])return die('word cues need one file per existing segment');
+        const parsed=parseWordCues(fs.readFileSync(path.resolve(match[2]),'utf8'),startMs,segMap[k]);
+        wordCueMap[k]=parsed.offsets;modes.push(parsed.mode);
+      }
+      wordCueApplied=await evalJS(`typeof window.__setWordCues==='function' ? window.__setWordCues(${JSON.stringify(wordCueMap)}) : null`);
+      if(!wordCueApplied?.applied) warn.push('word cues supplied but no owned .w words accepted them');
+      else {
+        wordCueMode=modes.includes('proportional')?'proportional':modes.every(m=>m==='aligned')?'aligned':'provided';
+        for(const g of wordCueApplied.groups)if(g.words!==g.cues)warn.push(`word cue group ${g.group}: ${g.cues} onsets for ${g.words} words; inspect partial application`);
+      }
+    }
+  }
   // A settle sustain without --segs holds its own fallback length, and downstream that shows up
   // as a bare "over the cap" warning that names the symptom instead of the cause.
   if (!segsApplied) {
@@ -563,7 +594,7 @@ const openPage = async () => {
         warn.push(`group ${g.rg} clip is ${g.dur}ms — over its ${seg}ms segment; the cut to the next clip lands mid-motion`);
       else if (seg - g.dur > seg * 0.4)
         warn.push(`group ${g.rg} moves ${(g.dur / 1000).toFixed(1)}s of its ${(seg / 1000).toFixed(1)}s segment — the tail freezes ${((seg - g.dur) / 1000).toFixed(1)}s; mark a .sv sustain element (slide-design.md §5) or accept the freeze`);
-    } else if (!isFootage && !opt.previz && g.dur > 2600 + meta.hold) {
+    } else if (!isFootage && !isCamera && !opt.previz && g.dur > 2600 + meta.hold) {
       warn.push(`group ${g.rg} clip is ${g.dur}ms — over the cap (2.6s motion + ${meta.hold}ms hold, slide-design.md §motion); a shorter segment cuts it mid-motion`);
     }
   }
@@ -616,6 +647,7 @@ const openPage = async () => {
   for (const w of workers.slice(1)) {
     await w.evalJS("window.__ready()", true);
     if (segsApplied) await w.evalJS(`window.__setSegs(${JSON.stringify(segMap)})`);
+    if (wordCueApplied?.applied) await w.evalJS(`window.__setWordCues(${JSON.stringify(wordCueMap)})`);
     if (isFootage) await w.evalJS(footageVdurJS(JSON.stringify(segMap && segsApplied ? segMap : {})));
   }
   const rows = new Array(todo.length);
@@ -700,6 +732,34 @@ const openPage = async () => {
       else { await seek(dur, k); await shot(path.join(sdir, `g${k}-end.png`)); }
     }
   }
+  // Measure the same final state as the last sheet frame. No sheet means unmeasured, not zero.
+  await seek(groups[N].dur, N);
+  const legibility = opt.sheet ? await evalJS(`(${measureSlideDOM.toString()})(${groupTextRows.toString()},${roleFontFloor.toString()})`) : null;
+  let minContrast = null;
+  if (legibility) {
+    if (scene?.visual?.slide?.kind==='kinetic') for(const item of legibility.text)
+      if(item.line_limit && item.lines>item.line_limit) warn.push(`P0-14 evidence ${item.sel}: ${item.lines} rendered lines exceed ${item.line_limit}`);
+    for (const item of legibility.textSamples) if (item.px < item.floor)
+      warn.push(`text ${item.sel}: ${item.px}px below its ${item.floor}px role floor`);
+    for (const item of legibility.strokeSamples) if (item.px < item.floor)
+      warn.push(`stroke ${item.sel}: ${item.px}px below structural floor ${item.floor}px`);
+    const contrastFrame=legibility.text.some(item=>item.rows.length)
+      ?readContrastFrame(path.join(OUT,'sheet',`g${N}-end.png`),W,H):{pixels:null,error:null};
+    if(contrastFrame.error)warn.push(`contrast unmeasured: ${contrastFrame.error}`);
+    for (const item of legibility.text) for (const row of item.rows) {
+      const ratio=contrastFrame.pixels?rowContrast(contrastFrame.pixels,W,H,row):null;
+      if (ratio != null && (!minContrast || ratio<minContrast.ratio)) minContrast={ratio,sel:item.sel};
+      const contrastProblem=contrastWarning(ratio,row.px,item.sel);
+      if (contrastProblem) warn.push(contrastProblem);
+    }
+    // Crossfade remnants can legitimately be hidden; record their identity, not a defect warning.
+  } else warn.push('legibility unmeasured: use --sheet for text, stroke and contrast evidence');
+  const cameraMeta = isCamera ? await evalJS('window.__meta()') : null;
+  const camera = cameraMeta?.camera ?? null, cameraCut=cameraMeta?.cameraCut ?? null;
+  if (camera) for (const item of camera) {
+    const f=item.focusAtEnd;
+    if (f && (f.x<0 || f.x>W || f.y<0 || f.y>H || f.y>=(W>H?795:1350))) warn.push(`camera group ${item.rg}: final focus outside frame or in subtitle band`);
+  }
   // Zone fill — measured at the final rest state (clip N's end frame, the frame the video
   // freezes on), against the subtitle-free zone. Painted content only: text rects, replaced
   // elements, and boxes with their own background or border — container divs span the zone
@@ -707,7 +767,7 @@ const openPage = async () => {
   await seek(groups[N].dur, N);
   // A footage slide has no zone composition to measure — the clip fills the frame and the marks sit
   // where the picture puts them (slide-design.md §6.2), so the number is reported as null.
-  const zoneFill = isFootage || opt.previz ? null : await evalJS(`(() => {
+  const zoneFill = isFootage || isCamera || opt.previz ? null : await evalJS(`(() => {
     const cs = getComputedStyle(document.documentElement);
     const px = v => parseFloat(cs.getPropertyValue(v)) || 0;
     const W = px("--w"), H = px("--h"), zx = px("--zone-x"), zt = px("--zone-top"), zb = px("--zone-bottom");
@@ -778,6 +838,14 @@ const openPage = async () => {
     treatment: treatment || null,
     segments: segCount, durations_ms: groups.slice(1).map(g => g.dur),
     segs_ms: segMap && segsApplied ? Array.from({ length: N }, (_, i) => segMap[i + 1] || null) : null,
+    word_cues:wordCueMode, word_cue_application:wordCueApplied,
+    word_cue_chain:wordCueApplied?.applied?'word cues bypass lead-in; cross strike-through (.cross .bar.rv.fx-grow) retains lead-in and may start before cued words — review a cued group sheet':null,
+    camera, camera_cut: cameraCut, camera_expected_rate_per_sec: cameraCut?.speedChecked?(CAMERA_RATE[scene.visual?.camera?.speed??'very slow']??null):null, chart_motion: meta.chart_motion ?? null,
+    min_text_px: legibility?.min_text_px ?? null, min_stroke_px: legibility?.min_stroke_px ?? null,
+    min_contrast: minContrast, max_lines: legibility?.max_lines ?? null,
+    max_line_chars: legibility?.max_line_chars ?? null, excluded_text_nodes: legibility?.excluded_text_nodes ?? null,
+    excluded_text: legibility?.excluded_text ?? null,
+    text_lines: legibility?.text ?? null,
     zone_fill_pct: zoneFill, grain: opt.pngOnly ? null : opt.grain, frames: framesTotal,
     seconds: +sec.toFixed(2), fps_capture: +(framesTotal / sec).toFixed(1), out: OUT, warnings: warn };
   // slide-reviewer reads zone_fill_pct and the coverage warnings from this file — stdout

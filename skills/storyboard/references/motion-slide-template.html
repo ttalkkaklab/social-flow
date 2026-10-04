@@ -282,13 +282,13 @@
   /* ── 지속 층 (slide-design.md §5) — 렌더러가 --seg-d(세그먼트 길이)를 넣으면 .sv 의
         의미 운동이 문장 끝까지 늘어나 동결 꼬리가 사라진다. 늘리는 것은 단조 운동
         하나뿐이다 — 바 채움·긋기·도트 채움·카운트업. 글자 리빌·페이드는 늘리지 않는다. */
-  .rv.sv.fx-grow{animation-duration:var(--seg-d,var(--grow))}
-  .rv.sv.fx-draw{animation-duration:var(--seg-d,var(--draw))}
-  .rv.sv.fx-in{animation-duration:var(--seg-d,var(--rise))}
+  .rv.sv.fx-grow{animation-duration:var(--sv-d,var(--grow))}
+  .rv.sv.fx-draw{animation-duration:var(--sv-d,var(--draw))}
+  .rv.sv.fx-in{animation-duration:var(--sv-d,var(--rise))}
   /* 느린 정착 — 들어온 것이 문장 내내 조금씩 내려앉는다. 등장 애니메이션과 변형이
         겹치도록 래퍼(.svw)가 따로 든다 — 캐릭터 템플릿 .ly 겹과 같은 중첩 변형이다. */
   .svw{display:block; transform-origin:center;
-       animation:svsettle var(--seg-d,4000ms) var(--ease) both paused}
+       animation:svsettle var(--seg-d,2600ms) var(--ease) both paused}
   @keyframes svsettle{from{transform:scale(1.045)}to{transform:scale(1)}}
   .dw{display:block}                                /* 포커스 시프트 래퍼 — opacity 는 런타임이 적는다 */
   .mk{display:block}
@@ -957,7 +957,7 @@ const SLIDE_SHOT = 0;
     } else {
       const items = S.bullets || [];
       out += '<div class="bars">' + items.map((b, i) =>
-        h.bar(i + 1, Math.round(100 - i * 100 / Math.max(items.length, 2)), b.t || "", b.d || "", { hot: i === 0, lead: i === 0 ? 2 : 0 })
+        h.bar(i + 1, Math.round(100 - i * 100 / Math.max(items.length, 2)), b.t || "", b.d || "", { sv: true, hot: i === 0, lead: i === 0 ? 2 : 0 })
       ).join("") + "</div>";
     }
     if (h.labels.length > 1) out += h.foot(0, h.L(h.labels.length - 1));
@@ -1091,12 +1091,43 @@ const SLIDE_SHOT = 0;
       const ms = map[+el.dataset.rg];
       if (ms > 0) el.style.setProperty("--seg-d", Math.round(ms) + "ms");
     }
+    // Sustained semantic motion ends at the segment boundary, after its entrance delay.
+    for (const el of document.querySelectorAll('.rv.sv.fx-grow, .rv.sv.fx-draw, .rv.sv.fx-in')) {
+      const rg = el.closest('[data-rg]')?.dataset.rg;
+      const ms = map[rg];
+      if (!(ms > 0)) continue;
+      const delay = parseFloat(getComputedStyle(el).animationDelay) * 1000 || 0;
+      el.style.setProperty('--sv-d', Math.max(0, Math.round(ms) - delay) + 'ms');
+    }
     for (const c of counters) {
       const ms = map[c.rg];
       if (ms > 0 && c.el.closest(".sv")) c.dur = Math.max(400, Math.round(ms) - c.lead);
     }
     for (const s of sprites) for (const k in s.dur) if (map[k] > 0) s.dur[k] = Math.round(map[k]);
     syncGround();
+  };
+
+  // Word onsets are group-relative; only the nearest reveal group owns a word.
+  window.__setWordCues = function (map) {
+    const rise = cssMs('--rise');
+    let applied = 0;
+    const groups = [];
+    for (const [rg, offsets] of Object.entries(map)) {
+      const ws = Array.from(document.querySelectorAll('[data-rg="' + rg + '"] .w'))
+        .filter(el => el.closest('[data-rg]')?.dataset.rg === rg);
+      if (!ws.length) continue;
+      let count = 0;
+      ws.forEach((el,j) => {
+        el.style.removeProperty('--wd'); el.style.removeProperty('--wr');
+        if (!Number.isFinite(offsets[j]) || offsets[j] < 0) return;
+        el.style.setProperty('--wd', Math.round(offsets[j]) + 'ms');
+        const next = offsets[j+1];
+        if (next > offsets[j]) el.style.setProperty('--wr', Math.min(rise, Math.round(next-offsets[j])) + 'ms');
+        applied++; count++;
+      });
+      groups.push({group:Number(rg),words:ws.length,cues:offsets.length,applied:count});
+    }
+    return {applied,groups};
   };
 
   /* ── 포커스 시프트 — .dim 그룹은 다음 그룹이 들어오는 동안 muted 급으로 내려앉는다.

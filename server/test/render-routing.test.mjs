@@ -191,3 +191,29 @@ test('a still pan or tilt travels between two regions of the actual image (L13)'
  near(cam.state(pan,0).fx,.2);near(cam.state(pan,5).fx,.8);
  near(cam.state({template:'pan',duration:5},0).fx,.26);
 });
+
+test('camera speed ladder validates vocabulary and fast shot lengths without rejecting window travel',()=>{
+ for(const [speed,duration] of [['very slow',8],['slow',8],['fast',6],['very fast',5]]){
+  const s=still();s.duration=duration;s.visual.camera.speed=speed;assert.deepEqual(checkScene(s),[]);
+  if(speed.includes('fast')){s.duration++;assert.match(checkScene(s).join(),/duration <=/)}
+ }
+ const s=still();s.visual.camera.speed='medium';assert.match(checkScene(s).join(),/speed must/);
+});
+test('zoom ladder uses whole-cut averages, quintic slow easing and accelerating fast easing',()=>{
+ const {state}=require(path.join(ref,'still-camera.js'));
+ for(const [speed,rate] of [[undefined,.04],['very slow',.04],['slow',.06],['fast',.14],['very fast',.20]]){
+  for(const template of ['push','pull','approach']){
+   const spec={template,duration:5,speed,focusTo:[.5,.4,.1,.1]};
+   assert.ok(Math.abs(Math.abs(state(spec,5).zoom-state(spec,0).zoom)/5-rate)<1e-12);
+  }
+ }
+ const fast={template:'push',duration:4,speed:'fast'};
+ assert.ok(Math.abs(state(fast,2).zoom-1.14)<1e-12);
+ assert.equal(state({...fast,ease:'smoothstep'},2).zoom,1.28);
+ const slow={template:'push',duration:8};
+ assert.ok(Math.abs(state(slow,8/3).zoom-(1+.32*(17/81)))<1e-12);
+ for(const template of ['focus-in','rack-focus']){
+  const spec={template,duration:8,focusFrom:[.2,.6,.1,.1],focusTo:[.5,.3,.1,.1]};
+  assert.deepEqual(state({...spec,speed:'fast'},2),state(spec,2));
+ }
+});
