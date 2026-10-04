@@ -76116,6 +76116,7 @@ function createPortalClient(credential, fetchImpl = fetch, resolvedBy = "file") 
     revisionDiff: (episodeId, from, to) => json3("GET", `/episodes/${episodeId}/revisions/${from}/diff/${to}`),
     renderAllocation: (episodeId, body) => json3(body ? "PUT" : "GET", `/episodes/${episodeId}/render-allocation`, body ? { ...body, sourceHost: holder } : void 0),
     uploadImage: (episodeId, bytes, mime3) => json3("POST", withHolder(`/episodes/${episodeId}/images`), bytes, mime3),
+    listProjects: () => json3("GET", "/projects"),
     listCharacters: (query = {}) => {
       const sp = new URLSearchParams();
       for (const [k, v] of Object.entries(query)) if (v !== void 0 && v !== "") sp.set(k, String(v));
@@ -85015,7 +85016,7 @@ import * as path5 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.101.0",
+  version: "0.102.0",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -85176,6 +85177,48 @@ var POLL_INTERVAL_MS = 5e3;
 var SUBMIT_TIMEOUT_MS = 6e4;
 var STATUS_TIMEOUT_MS = 3e4;
 var TRANSFER_TIMEOUT_MS = 6e5;
+var astraVideoListUploadsSchema = external_exports.object({}).strict();
+var astraVideoDeleteUploadSchema = external_exports.object({
+  uploadId: external_exports.string().min(1).max(256).regex(/^[A-Za-z0-9_-]+$/, "uploadId must be a bare upload identifier")
+}).strict();
+var uploadListingSchema = external_exports.object({
+  uploads: external_exports.array(external_exports.object({
+    upload_id: external_exports.string().min(1),
+    kind: external_exports.enum(["image", "audio", "video"]).or(external_exports.string()),
+    bytes: external_exports.number().int().nonnegative(),
+    expires_at: external_exports.string().min(1)
+  }))
+});
+function uploadManagementFailure(operation, status) {
+  const reason = status === 404 || status === 501 ? "The server upload endpoint is unavailable or not implemented; server support is required." : status === 401 || status === 403 ? "The server refused access. Check ASTRA_VIDEO and upload ownership." : status === 429 ? "The server rate limit was reached. Try again later." : "The server could not complete the request. Check server availability before retrying.";
+  return new Error(`ASTRA video ${operation} failed (HTTP ${status}): ${reason}`);
+}
+function invalidUploadResponse(operation, status) {
+  return new Error(`ASTRA video ${operation} failed (HTTP ${status}): The server did not return the expected upload response. The endpoint may not be implemented yet; no ${operation === "list uploads" ? "empty list" : "deletion"} is confirmed.`);
+}
+async function listUploads() {
+  const result = await requestRaw("get", `${astraVideoBaseUrl()}/v1/uploads`, authHeaders(), void 0, STATUS_TIMEOUT_MS);
+  if (!result.ok) throw uploadManagementFailure("list uploads", result.status);
+  if (result.status !== 200) throw invalidUploadResponse("list uploads", result.status);
+  try {
+    return uploadListingSchema.parse(JSON.parse(result.body));
+  } catch {
+    throw invalidUploadResponse("list uploads", result.status);
+  }
+}
+async function deleteUpload(args) {
+  const { uploadId: upload_id } = astraVideoDeleteUploadSchema.parse(args);
+  const result = await requestRaw("delete", `${astraVideoBaseUrl()}/v1/uploads/${encodeURIComponent(upload_id)}`, authHeaders(), void 0, STATUS_TIMEOUT_MS);
+  if (!result.ok) throw uploadManagementFailure("delete upload", result.status);
+  if (result.status === 204) return { upload_id, deleted: true };
+  try {
+    const confirmed = external_exports.object({ upload_id: external_exports.literal(upload_id), deleted: external_exports.literal(true) }).parse(JSON.parse(result.body));
+    if (result.status !== 200) throw new Error("Deletion is not complete");
+    return confirmed;
+  } catch {
+    throw invalidUploadResponse("delete upload", result.status);
+  }
+}
 var promptSchema = external_exports.string().min(1, "prompt is required").max(ASTRA_VIDEO_MAX_PROMPT_CHARS, `prompt must be at most ${ASTRA_VIDEO_MAX_PROMPT_CHARS} characters`);
 var numFramesSchema = (mode) => external_exports.number().int().min(ASTRA_VIDEO_MIN_FRAMES).max(ASTRA_VIDEO_FRAME_LIMITS[mode]).refine((n) => (n - 1) % ASTRA_VIDEO_FRAME_STEP === 0, {
   message: `numFrames must be 8k+1 (25, 33, 41 \u2026 ${ASTRA_VIDEO_FRAME_LIMITS[mode]})`
@@ -85350,6 +85393,7 @@ var astraAudio2VideoSchema = external_exports.object({
   audioPath: external_exports.string().trim().min(1).optional(),
   audioUploadId: external_exports.string().trim().min(1).optional(),
   imagePath: external_exports.string().trim().min(1).optional(),
+  strength: external_exports.number().min(0).max(1).default(0.9).describe("Portrait conditioning strength; ignored without imagePath. Observed dialogue cuts: 0.9 preserved the person with mouth movement following audio; 0.7 changed the person. Prompts also differed, so this is not an isolated strength comparison. 1.0 is unmeasured on cuts with a visible mouth."),
   audioStartTime: external_exports.number().min(0).optional(),
   audioMaxDuration: external_exports.number().positive().optional(),
   numFrames: numFramesSchema("audio2video"),
@@ -85718,7 +85762,7 @@ async function generateFromAudio(args) {
   const audioUploadId = audio?.uploadId ?? args.audioUploadId;
   const image = args.imagePath ? await uploadFile(args.imagePath) : void 0;
   if (image && image.kind !== "image") throw new Error("ASTRA video imagePath must upload as image");
-  const images = image ? [{ uploadId: image.uploadId, frameIdx: 0 }] : void 0;
+  const images = image ? [{ uploadId: image.uploadId, frameIdx: 0, strength: args.strength }] : void 0;
   const body = buildJobBody("audio2video", { ...args, audioUploadId, images });
   const result = await runJob("audio2video", args.prompt, body, args.outputPath, args.filename);
   return { ...result, audioUploadId, audioExpiresAt: audio?.expiresAt, audioDuration: audio?.duration };
@@ -92229,6 +92273,7 @@ var channelArg = external_exports.string().regex(/^[a-z0-9][a-z0-9-]{0,63}$/, "k
 var uuid2 = external_exports.string().uuid();
 var keyArg = external_exports.string().regex(/^[a-z0-9][a-z0-9-]{0,62}$/, "lowercase letters, digits or hyphens");
 var scope = { channel: channelArg, episodeDir: external_exports.string().optional() };
+var projectArg = external_exports.string().trim().min(1).max(100);
 var TTS_DEFAULTS = { engine: "elevenlabs", voiceId: "L4az9Gb378GIycFl2nAB", model: "eleven_multilingual_v2", speed: 1 };
 var ttsSchema = external_exports.object({
   voiceLock: voiceLockConfigSchema.optional(),
@@ -92247,11 +92292,11 @@ var fields = {
   referenceImageUrl: external_exports.string().trim().max(2e3).optional(),
   tts: ttsSchema.optional()
 };
-var characterListSchema = external_exports.object({ ...scope, q: external_exports.string().trim().min(1).max(200).optional(), key: keyArg.optional(), page: external_exports.number().int().min(1).max(1e4).optional() });
-var characterGetSchema = external_exports.object({ ...scope, id: uuid2.optional(), key: keyArg.optional() }).refine((a) => Number(Boolean(a.id)) + Number(Boolean(a.key)) === 1, "Pass exactly one of id or key");
+var characterListSchema = external_exports.object({ ...scope, project: projectArg.optional(), q: external_exports.string().trim().min(1).max(200).optional(), key: keyArg.optional(), page: external_exports.number().int().min(1).max(1e4).optional() });
+var characterGetSchema = external_exports.object({ ...scope, project: projectArg.optional(), id: uuid2.optional(), key: keyArg.optional() }).refine((a) => Number(Boolean(a.id)) + Number(Boolean(a.key)) === 1, "Pass exactly one of id or key").refine((a) => !(a.project && a.id), "project narrows a key lookup; an id is already exact. Drop one.");
 var characterCreateSchema = external_exports.object({
   ...scope,
-  project: external_exports.string().trim().min(1).max(100).optional(),
+  project: projectArg.optional(),
   identityDir: external_exports.string().min(1).optional(),
   file: external_exports.string().min(1).optional(),
   ...fields,
@@ -92276,6 +92321,7 @@ function readIdentity(dir) {
 }
 var summarize = (c) => ({
   id: c.id,
+  projectId: c.projectId,
   key: c.key,
   name: c.name,
   role: c.role,
@@ -92286,17 +92332,55 @@ var summarize = (c) => ({
   tts: c.tts,
   updatedAt: c.updatedAt
 });
-async function listCharacters(client, args) {
-  const { data } = await client.listCharacters({ q: args.q, key: args.key, page: args.page });
-  return { items: data.items.map(summarize), hasNext: data.hasNext, workspace: client.workspace };
+async function resolveProjectId(client, project) {
+  const { data: projects } = await client.listProjects();
+  const matches = projects.filter((p) => p.name === project);
+  if (matches.length === 1) {
+    const id = matches[0].id?.trim();
+    if (!id) throw new Error(`The portal returned project "${project}" with no id, so the read cannot be narrowed to it. Nothing was read.`);
+    return id;
+  }
+  const names = projects.map((p) => p.name).sort();
+  if (matches.length === 0) {
+    throw new Error(
+      `No project named "${project}" among the ${names.length} most recently updated projects of workspace ${client.workspace}: ${names.join(", ")}. That list is the whole read \u2014 the portal caps it and offers no paging \u2014 so a project left untouched for longer can sit outside it.`
+    );
+  }
+  throw new Error(`Workspace ${client.workspace} has ${matches.length} projects named "${project}" in this read (${matches.map((p) => p.id).join(", ")}) \u2014 it cannot be named unambiguously. Ask the portal owner to rename one.`);
 }
-async function byKey(client, key) {
-  const { data } = await client.listCharacters({ key });
-  return data.items[0] ?? null;
+async function projectNames(client) {
+  try {
+    const { data: projects } = await client.listProjects();
+    return new Map(projects.map((p) => [p.id, p.name]));
+  } catch {
+    return /* @__PURE__ */ new Map();
+  }
+}
+async function listCharacters(client, args) {
+  const projectId = args.project ? await resolveProjectId(client, args.project) : void 0;
+  const { data } = await client.listCharacters({ projectId, q: args.q, key: args.key, page: args.page });
+  return { items: data.items.map(summarize), hasNext: data.hasNext, workspace: client.workspace, ...args.project ? { project: args.project, projectId } : {} };
+}
+async function byKey(client, key, projectId, project) {
+  const { data } = await client.listCharacters({ key, projectId });
+  if (data.items.length <= 1) return data.items[0] ?? null;
+  const counted = data.hasNext ? `at least ${data.items.length}` : `${data.items.length}`;
+  const page = data.hasNext ? " Only the first page of candidates was read, so there may be more." : "";
+  if (project) {
+    throw new Error(`Project "${project}" holds ${counted} characters with key "${key}" (ids ${data.items.map((c) => c.id).join(", ")}). Pass id \u2014 nothing was read.${page}`);
+  }
+  const names = await projectNames(client);
+  const where = data.items.map((c) => `${names.get(c.projectId) ?? c.projectId} (id ${c.id})`).sort().join(" \xB7 ");
+  throw new Error(
+    `Key "${key}" exists in ${counted} projects of workspace ${client.workspace}: ${where}. Pass project (the channel name) or id to say which one \u2014 nothing was read from the wrong one.${page}`
+  );
 }
 async function getCharacter(client, args) {
-  const record2 = args.id ? (await client.getCharacter(args.id)).data : await byKey(client, args.key);
-  if (!record2) throw new Error(`No character with key "${args.key}" in workspace ${client.workspace}.`);
+  const projectId = args.project ? await resolveProjectId(client, args.project) : void 0;
+  const record2 = args.id ? (await client.getCharacter(args.id)).data : await byKey(client, args.key, projectId, args.project);
+  if (!record2) {
+    throw new Error(args.project ? `No character with key "${args.key}" in project "${args.project}" of workspace ${client.workspace}.` : `No character with key "${args.key}" in workspace ${client.workspace}.`);
+  }
   return summarize(record2);
 }
 async function createCharacter(client, args, channel) {
@@ -93592,15 +93676,15 @@ Returns: JSON \u2014 { candidate, chosen, findings[] }.`,
     name: "portal_character_list",
     title: "List the workspace characters on the portal",
     annotations: { readOnlyHint: true, openWorldHint: true },
-    description: "The characters of the workspace the key opens \u2014 id, key (the assets/characters/<id> folder name), name, role, appearance, referenceImageUrl, images (front/back/face URLs and extra entries), imagesComplete and the tts block. q searches name and role; key finds one exactly; 24 per page. Read-only. No key \u2192 one line, go on.",
-    inputSchema: { type: "object", properties: { channel: PORTAL_CHANNEL_ARG, episodeDir: PORTAL_EPISODE_DIR_ARG, q: { type: "string", maxLength: 200, description: "Name or role contains" }, key: { type: "string", description: "Exact character key" }, page: { type: "integer", minimum: 1, description: "Page number, 24 per page (default 1)" } } }
+    description: "The characters of the workspace the key opens \u2014 id, projectId (which project holds it), key (the assets/characters/<id> folder name), name, role, appearance, referenceImageUrl, images (front/back/face URLs and extra entries), imagesComplete and the tts block. q searches name and role; key finds one exactly; project (a channel name) lists only that project; 24 per page. Read-only. No key \u2192 one line, go on.",
+    inputSchema: { type: "object", properties: { channel: PORTAL_CHANNEL_ARG, episodeDir: PORTAL_EPISODE_DIR_ARG, project: { type: "string", maxLength: 100, description: "Channel name to list only that project's characters (default: the whole workspace)" }, q: { type: "string", maxLength: 200, description: "Name or role contains" }, key: { type: "string", description: "Exact character key" }, page: { type: "integer", minimum: 1, description: "Page number, 24 per page (default 1)" } } }
   },
   {
     name: "portal_character_get",
     title: "Fetch one portal character",
     annotations: { readOnlyHint: true, openWorldHint: true },
-    description: "One character by id or by key (exactly one of the two). Returns images (front/back/face URLs and extra entries), imagesComplete, and the same fields as portal_character_list. Read-only.",
-    inputSchema: { type: "object", properties: { channel: PORTAL_CHANNEL_ARG, episodeDir: PORTAL_EPISODE_DIR_ARG, id: { type: "string", format: "uuid", description: "Portal character id" }, key: { type: "string", description: "Character key, e.g. the assets/characters/<id> folder name" } } }
+    description: "One character by id or by key (exactly one of the two). Returns projectId, images (front/back/face URLs and extra entries), imagesComplete, and the same fields as portal_character_list. A key can exist in several projects: pass project (the channel name) to say which one \u2014 without it a shared key is refused rather than picked by order, and the error names the projects holding it. Read-only.",
+    inputSchema: { type: "object", properties: { channel: PORTAL_CHANNEL_ARG, episodeDir: PORTAL_EPISODE_DIR_ARG, project: { type: "string", maxLength: 100, description: "Channel name the key belongs to \u2014 narrows a key that several projects share. Not with id" }, id: { type: "string", format: "uuid", description: "Portal character id" }, key: { type: "string", description: "Character key, e.g. the assets/characters/<id> folder name" } } }
   },
   {
     name: "portal_character_create",
@@ -94871,6 +94955,13 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
           minLength: 1,
           description: "Optional local portrait (.png/.jpg/.jpeg, at most 32 MiB), pinned to frame 0."
         },
+        strength: {
+          type: "number",
+          minimum: 0,
+          maximum: 1,
+          default: 0.9,
+          description: "How strictly the generated frames must match the portrait, 0.0-1.0 (default: 0.9); ignored without imagePath. In 2026-10-04 dialogue probes, 0.9 accompanied mouth movement and 0.7 accompanied a changed person; prompts and uploads also differed, so these observations do not isolate strength. 1.0 is unmeasured on cuts with a visible mouth."
+        },
         audioStartTime: {
           type: "number",
           description: "Seconds into the track to start reading from (default: 0). Must be less than the uploaded audio duration."
@@ -94931,6 +95022,25 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
         filename: ASTRA_FILENAME_PROPERTY
       },
       required: ["prompt", "sourceVideoPath", "startTime", "endTime"]
+    }
+  },
+  {
+    name: "astra_video_list_uploads",
+    title: "ASTRA video upload list",
+    annotations: HINT.read,
+    description: "List uploads owned by the configured ASTRA_VIDEO key. No filters or pagination arguments. Uploads expire after 24 hours; the key has a 20-upload / 1 GiB storage ceiling. Requires server GET /v1/uploads support; an unavailable endpoint or invalid response is an error, never an empty list. Server support and response contract still require live verification.",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false }
+  },
+  {
+    name: "astra_video_delete_upload",
+    title: "Delete an ASTRA video upload",
+    annotations: HINT.moderate,
+    description: "\u26A0\uFE0F Destructive: never call without user approval for the selected upload (HITL). Permanently delete one upload owned by the configured ASTRA_VIDEO key. List uploads first and choose the exact uploadId; do not delete inputs still needed by queued/running jobs or planned reuse. Requires server DELETE /v1/uploads/<id> support. An unavailable endpoint or unconfirmed response is an error, never a successful deletion. Server support and response contract still require live verification.",
+    inputSchema: {
+      type: "object",
+      properties: { uploadId: { type: "string", minLength: 1, maxLength: 256, pattern: "^[A-Za-z0-9_-]+$", description: "Exact upload identifier from the list; not a URL or local path." } },
+      required: ["uploadId"],
+      additionalProperties: false
     }
   },
   // ── Video generation (ByteDance Seedance — BytePlus ModelArk) ─────────────
@@ -105845,7 +105955,7 @@ function capabilityStatus() {
           provider: "astra video (self-hosted LTX-2.5)",
           configured: has2(config2.astraVideoApiKey),
           needs: "ASTRA_VIDEO",
-          note: "astra_text2video \xB7 astra_img2video \xB7 astra_keyframe_video \xB7 astra_audio2video \xB7 astra_video_retake \u2014 our own box, no per-call bill, but ONE render at a time (66-184s each plus queue); the batch lane, not the interactive one"
+          note: "astra_text2video \xB7 astra_img2video \xB7 astra_keyframe_video \xB7 astra_audio2video \xB7 astra_video_retake \xB7 astra_video_list_uploads \xB7 astra_video_delete_upload (upload management requires server endpoint support; configuration is not a live check) \u2014 our own box, no per-call bill, but ONE render at a time (66-184s each plus queue); the batch lane, not the interactive one"
         }
       ]
     },
@@ -106978,6 +107088,22 @@ audioUploadId: ${result.audioUploadId}
 Audio expires at: ${result.audioExpiresAt ?? "unknown (reused upload or metadata unavailable)"}
 Audio duration (seconds): ${result.audioDuration ?? "unknown (reused upload or metadata unavailable)"}`);
   },
+  astra_video_list_uploads: async (args) => {
+    astraVideoListUploadsSchema.parse(args);
+    try {
+      return text(JSON.stringify(await listUploads()));
+    } catch (error2) {
+      return text(error2 instanceof Error ? error2.message : "ASTRA upload listing failed", true);
+    }
+  },
+  astra_video_delete_upload: async (args) => {
+    const parsed = parseArgs(astraVideoDeleteUploadSchema, args);
+    try {
+      return text(JSON.stringify(await deleteUpload(parsed)));
+    } catch (error2) {
+      return text(error2 instanceof Error ? error2.message : "ASTRA upload deletion failed", true);
+    }
+  },
   astra_video_retake: async (args) => {
     const parsed = parseArgs(astraVideoRetakeSchema, args);
     const result = await retakeVideo(parsed);
@@ -107689,7 +107815,7 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
 // src/index.ts
 import { readFileSync as readFinalRequest } from "node:fs";
 var server = new Server(
-  { name: "social-flow", version: "0.101.0" },
+  { name: "social-flow", version: "0.102.0" },
   { capabilities: { tools: {} } }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {

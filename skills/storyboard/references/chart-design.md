@@ -26,7 +26,8 @@ characters or a dashboard of rounded cards.
 | Distribution | `histogram` | contiguous equal-width `from`/`to` bins and frequencies | Adjacent columns; `binUnit` names the horizontal measurement. |
 | Dated events | `timeline` | labels with ISO dates | An elapsed-time rail. Split crowded event clusters into another cut. |
 
-Use at most six categories, four timeline events, or twelve line observations/histogram bins per cut.
+Use at most four bar/dot categories or five donut/pie parts, six stacked-bar categories, four timeline events, or twelve line observations/histogram bins per cut.
+Bar/dot labels allow four one-line or three two-line categories at the portrait type floor.
 Maps allow up to 250 regional values or twelve symbols; focus on one location per narration beat.
 Keep labels short. Do not drop source values merely to fit the cap; split the evidence or
 aggregate only when the source and narration justify it. Do not switch chart types simply
@@ -99,7 +100,8 @@ Use `purpose:'share'`, `chart:'donut'` or `'pie'`, `baseline:0`, and a positive 
 The nonnegative source values must sum to that total. If the unit is `%`, the total is 100.
 Prefer a donut for one or a few highlighted shares and a pie for a small, easily distinguished
 composition. Prefer a bar when the viewer needs to compare similar values accurately.
-Keep at most six parts (four with labels longer than twelve characters). The checker also
+Keep at most five parts. A legend line holds six full-width characters at 44px;
+multiple lines consume the shared 600px label budget. The checker also
 limits the total label rows at portrait width; shorten labels or split when that budget fails. Do not merge
 categories into “other” without a source-faithful calculation and a spoken reason.
 
@@ -109,7 +111,9 @@ The donut center crossfades the exact focused share; the transition is not a mea
 Source values retain their configured precision throughout the reveal; a nonzero value never
 rounds to zero. Derived percentages use independent adaptive precision. Extremely small shares
 use scientific notation and a share just below 100% uses an explicit lower bound. A zero share
-has no area. Fixed-width separator strokes cannot cover a small positive slice.
+has no area. Paper-colour separator strokes use 3px portrait / 2px wide. A slice needs an outer
+arc at least three separator widths long: 0.84% portrait, about 0.43% wide.
+Below that floor, combine only with source-faithful calculation or split the cut.
 
 ## Maps
 
@@ -158,3 +162,11 @@ emphasis while the exact label and value appear below the map. The next beat pre
 map's geometry and scale. Boundary attribution appears beside the statistical source.
 The checker cannot establish whether a license, boundary, coordinate or claim is truthful:
 verify these against the original source during research and review actual playback.
+
+## Shared scales across cuts
+
+`data.domain:[lo,hi]` fixes a numeric value axis across consecutive cuts with the same
+unit and purpose. A sequence of two or more comparable cuts must declare an identical
+explicit domain on every cut; omitting it on both cuts is invalid. Map and timeline are excluded.
+`lo <= min(0, values)`, `hi >= max(0, values)`, and `hi > lo`; both endpoints are finite.
+Without a domain a standalone cut derives its extent from the source values.

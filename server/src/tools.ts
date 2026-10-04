@@ -1378,14 +1378,14 @@ Returns: JSON — { candidate, chosen, findings[] }.`,
   {
     name: 'portal_character_list', title: 'List the workspace characters on the portal',
     annotations: { readOnlyHint: true, openWorldHint: true },
-    description: 'The characters of the workspace the key opens — id, key (the assets/characters/<id> folder name), name, role, appearance, referenceImageUrl, images (front/back/face URLs and extra entries), imagesComplete and the tts block. q searches name and role; key finds one exactly; 24 per page. Read-only. No key → one line, go on.',
-    inputSchema: { type: 'object', properties: { channel: PORTAL_CHANNEL_ARG, episodeDir: PORTAL_EPISODE_DIR_ARG, q: { type: 'string', maxLength: 200, description: 'Name or role contains' }, key: { type: 'string', description: 'Exact character key' }, page: { type: 'integer', minimum: 1, description: 'Page number, 24 per page (default 1)' } } },
+    description: 'The characters of the workspace the key opens — id, projectId (which project holds it), key (the assets/characters/<id> folder name), name, role, appearance, referenceImageUrl, images (front/back/face URLs and extra entries), imagesComplete and the tts block. q searches name and role; key finds one exactly; project (a channel name) lists only that project; 24 per page. Read-only. No key → one line, go on.',
+    inputSchema: { type: 'object', properties: { channel: PORTAL_CHANNEL_ARG, episodeDir: PORTAL_EPISODE_DIR_ARG, project: { type: 'string', maxLength: 100, description: 'Channel name to list only that project\'s characters (default: the whole workspace)' }, q: { type: 'string', maxLength: 200, description: 'Name or role contains' }, key: { type: 'string', description: 'Exact character key' }, page: { type: 'integer', minimum: 1, description: 'Page number, 24 per page (default 1)' } } },
   },
   {
     name: 'portal_character_get', title: 'Fetch one portal character',
     annotations: { readOnlyHint: true, openWorldHint: true },
-    description: 'One character by id or by key (exactly one of the two). Returns images (front/back/face URLs and extra entries), imagesComplete, and the same fields as portal_character_list. Read-only.',
-    inputSchema: { type: 'object', properties: { channel: PORTAL_CHANNEL_ARG, episodeDir: PORTAL_EPISODE_DIR_ARG, id: { type: 'string', format: 'uuid', description: 'Portal character id' }, key: { type: 'string', description: 'Character key, e.g. the assets/characters/<id> folder name' } } },
+    description: 'One character by id or by key (exactly one of the two). Returns projectId, images (front/back/face URLs and extra entries), imagesComplete, and the same fields as portal_character_list. A key can exist in several projects: pass project (the channel name) to say which one — without it a shared key is refused rather than picked by order, and the error names the projects holding it. Read-only.',
+    inputSchema: { type: 'object', properties: { channel: PORTAL_CHANNEL_ARG, episodeDir: PORTAL_EPISODE_DIR_ARG, project: { type: 'string', maxLength: 100, description: 'Channel name the key belongs to — narrows a key that several projects share. Not with id' }, id: { type: 'string', format: 'uuid', description: 'Portal character id' }, key: { type: 'string', description: 'Character key, e.g. the assets/characters/<id> folder name' } } },
   },
   {
     name: 'portal_character_create', title: 'Create a portal character',
@@ -2655,6 +2655,10 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
           type: 'string', minLength: 1,
           description: 'Optional local portrait (.png/.jpg/.jpeg, at most 32 MiB), pinned to frame 0.',
         },
+        strength: {
+          type: 'number', minimum: 0, maximum: 1, default: 0.9,
+          description: 'How strictly the generated frames must match the portrait, 0.0-1.0 (default: 0.9); ignored without imagePath. In 2026-10-04 dialogue probes, 0.9 accompanied mouth movement and 0.7 accompanied a changed person; prompts and uploads also differed, so these observations do not isolate strength. 1.0 is unmeasured on cuts with a visible mouth.',
+        },
         audioStartTime: {
           type: 'number',
           description: 'Seconds into the track to start reading from (default: 0). Must be less than the uploaded audio duration.',
@@ -2715,6 +2719,25 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
         filename: ASTRA_FILENAME_PROPERTY,
       },
       required: ['prompt', 'sourceVideoPath', 'startTime', 'endTime'],
+    },
+  },
+  {
+    name: 'astra_video_list_uploads',
+    title: 'ASTRA video upload list',
+    annotations: HINT.read,
+    description: 'List uploads owned by the configured ASTRA_VIDEO key. No filters or pagination arguments. Uploads expire after 24 hours; the key has a 20-upload / 1 GiB storage ceiling. Requires server GET /v1/uploads support; an unavailable endpoint or invalid response is an error, never an empty list. Server support and response contract still require live verification.',
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+  },
+  {
+    name: 'astra_video_delete_upload',
+    title: 'Delete an ASTRA video upload',
+    annotations: HINT.moderate,
+    description: '⚠️ Destructive: never call without user approval for the selected upload (HITL). Permanently delete one upload owned by the configured ASTRA_VIDEO key. List uploads first and choose the exact uploadId; do not delete inputs still needed by queued/running jobs or planned reuse. Requires server DELETE /v1/uploads/<id> support. An unavailable endpoint or unconfirmed response is an error, never a successful deletion. Server support and response contract still require live verification.',
+    inputSchema: {
+      type: 'object',
+      properties: { uploadId: { type: 'string', minLength: 1, maxLength: 256, pattern: '^[A-Za-z0-9_-]+$', description: 'Exact upload identifier from the list; not a URL or local path.' } },
+      required: ['uploadId'],
+      additionalProperties: false,
     },
   },
   // ── Video generation (ByteDance Seedance — BytePlus ModelArk) ─────────────

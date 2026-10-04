@@ -59,7 +59,7 @@ export function capabilityStatus() {
                 { provider: 'mlx-serve (local, MLX Core)', configured: mlx, needs: 'MLX Core.app or mlx-serve on PATH',
                     note: 'mlx_video_generate — 24fps rgb8 muxed to mp4, RAM-capped; not the default path' },
                 { provider: 'astra video (self-hosted LTX-2.5)', configured: has(config.astraVideoApiKey), needs: 'ASTRA_VIDEO',
-                    note: 'astra_text2video · astra_img2video · astra_keyframe_video · astra_audio2video · astra_video_retake — our own box, no per-call bill, but ONE render at a time (66-184s each plus queue); the batch lane, not the interactive one' },
+                    note: 'astra_text2video · astra_img2video · astra_keyframe_video · astra_audio2video · astra_video_retake · astra_video_list_uploads · astra_video_delete_upload (upload management requires server endpoint support; configuration is not a live check) — our own box, no per-call bill, but ONE render at a time (66-184s each plus queue); the batch lane, not the interactive one' },
             ],
         },
         {

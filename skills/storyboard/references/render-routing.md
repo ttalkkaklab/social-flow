@@ -242,3 +242,10 @@ Seedance 2.x can continue to use `reference_video`. Keep previz asset and camera
 A validated `drone-flythrough` camera permits `place` with `generated_video` when
 `motionEssential` and `whyNotStill` explain the spatial change. Ordinary place shots keep
 the still-camera default. Follow [drone-flythrough.md](drone-flythrough.md).
+
+
+Still-camera sources must satisfy `max(W/sw,H/sh) × peakZoom <= 1.5`.
+Minimum source dimensions are `ceil(W × peakZoom / 1.5)` × `ceil(H × peakZoom / 1.5)`.
+`visual.camera.speed` selects very slow (default), slow, fast or very fast; fast shots
+last at most 6 seconds and very fast shots at most 5. Pan/tilt retain authored endpoints;
+window travel is diagnostic rather than a zoom-speed acceptance test.

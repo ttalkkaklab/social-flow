@@ -1,6 +1,7 @@
 /**
  * portal_character_* (#91) — the workspace's characters on a scripted fetch: gating and routing,
  * the query string list sends, get by key, create from identityDir + panel file (project = channel),
+ * the project scoping that keeps one key in two projects from being picked by order,
  * partial update, tts_set that keeps what the caller leaves out (speed only → voiceId survives),
  * image upload with the sha256 check, delete, and the one-line answer without a key. No network.
  */
@@ -105,7 +106,7 @@ describe('list · get', () => {
     assert.equal(call.headers.authorization, `Bearer ${KEY}`);
     const out = JSON.parse(r.text);
     assert.equal(out.workspace, 'lab');
-    assert.deepEqual(Object.keys(out.items[0]).sort(), ['appearance', 'id', 'images', 'imagesComplete', 'key', 'name', 'referenceImageUrl', 'role', 'tts', 'updatedAt']);
+    assert.deepEqual(Object.keys(out.items[0]).sort(), ['appearance', 'id', 'images', 'imagesComplete', 'key', 'name', 'projectId', 'referenceImageUrl', 'role', 'tts', 'updatedAt']);
   });
 
   it('get by key uses the list filter, get by id the single route, and neither-or-both is refused', async () => {
@@ -118,6 +119,162 @@ describe('list · get', () => {
     assert.equal(missing.isError, true); assert.match(missing.text, /No character with key "nobody"/);
     assert.throws(() => chars.characterGetSchema.parse({ id: ID, key: 'mina' }), /exactly one/);
     assert.throws(() => chars.characterGetSchema.parse({}), /exactly one/);
+  });
+});
+
+const ID_B = '77777777-7777-4777-8777-777777777777';
+
+/**
+ * A workspace whose `narrator` sits in two projects — the shape measured on the live portal
+ * (same key, same name, different project and id). `projects` is the name↔id layer, and
+ * `GET /characters` honours `projectId` the way the portal's contract does.
+ */
+function fakeTwoProjects(projects = [{ id: 'p1', name: 'inmuleul' }, { id: 'p2', name: 'eumsigeul' }], holders = ['p1', 'p2']) {
+  const calls = [];
+  const items = [record({ id: ID, projectId: holders[0], key: 'narrator' }), record({ id: ID_B, projectId: holders[1], key: 'narrator' })];
+  const impl = async (url, init = {}) => {
+    const u = new URL(url);
+    calls.push({ method: init.method ?? 'GET', path: u.pathname, search: u.search });
+    if (u.pathname === '/api/token') return Response.json({ success: true, data: { workspaceSlug: 'lab', workspaceName: 'Lab', role: 'member' } });
+    if (u.pathname === '/api/workspaces/lab/projects') return Response.json({ success: true, data: projects });
+    if (u.pathname === '/api/workspaces/lab/characters') {
+      const key = u.searchParams.get('key');
+      const projectId = u.searchParams.get('projectId');
+      const hits = items.filter((c) => (!key || c.key === key) && (!projectId || c.projectId === projectId));
+      return Response.json({ success: true, data: { items: hits, hasNext: false } });
+    }
+    return new Response(JSON.stringify({ success: false, error: 'no route' }), { status: 404 });
+  };
+  return { impl, calls };
+}
+
+describe('one key in two projects', () => {
+  it('refuses a shared key instead of picking by order, and names both projects', async () => {
+    const { impl, calls } = fakeTwoProjects();
+    const r = await portal.portalHandlers(impl).characterGet({ channel: 'lab', key: 'narrator' });
+    assert.equal(r.isError, true, r.text);
+    assert.match(r.text, /exists in 2 projects/);
+    assert.match(r.text, /inmuleul/); assert.match(r.text, /eumsigeul/);
+    assert.match(r.text, new RegExp(ID)); assert.match(r.text, new RegExp(ID_B));
+    assert.match(r.text, /Pass project \(the channel name\) or id/);
+    // nothing was read off either record — no single-character GET went out
+    assert.equal(calls.filter((c) => c.path.startsWith('/api/workspaces/lab/characters/')).length, 0);
+  });
+
+  it('project picks the right one of the two and sends projectId, not a name', async () => {
+    const { impl, calls } = fakeTwoProjects();
+    const r = await portal.portalHandlers(impl).characterGet({ channel: 'lab', key: 'narrator', project: 'eumsigeul' });
+    assert.equal(r.isError, false, r.text);
+    const out = JSON.parse(r.text);
+    assert.equal(out.id, ID_B);
+    assert.equal(out.projectId, 'p2');
+    const call = calls.find((c) => c.path === '/api/workspaces/lab/characters' && c.search.includes('projectId'));
+    assert.equal(new URLSearchParams(call.search).get('projectId'), 'p2');
+    assert.equal(call.search.includes('eumsigeul'), false, 'the name must not travel to the portal');
+  });
+
+  it('list narrows to one project and echoes which one', async () => {
+    const { impl } = fakeTwoProjects();
+    const out = JSON.parse((await portal.portalHandlers(impl).characterList({ channel: 'lab', project: 'inmuleul' })).text);
+    assert.equal(out.items.length, 1);
+    assert.equal(out.items[0].id, ID);
+    assert.equal(out.project, 'inmuleul'); assert.equal(out.projectId, 'p1');
+  });
+
+  it('list without project still spans the workspace', async () => {
+    const { impl } = fakeTwoProjects();
+    const out = JSON.parse((await portal.portalHandlers(impl).characterList({ channel: 'lab' })).text);
+    assert.equal(out.items.length, 2);
+    assert.equal('project' in out, false);
+  });
+
+  it('an unknown project name is refused with the names that exist, scoped to what was read', async () => {
+    const { impl } = fakeTwoProjects();
+    const r = await portal.portalHandlers(impl).characterGet({ channel: 'lab', key: 'narrator', project: 'nope' });
+    assert.equal(r.isError, true);
+    assert.match(r.text, /No project named "nope"/);
+    assert.match(r.text, /eumsigeul, inmuleul/);
+    // the project list is one capped, unpaged read — the miss may not be a miss in the workspace
+    assert.match(r.text, /most recently updated projects/);
+    assert.match(r.text, /caps it and offers no paging/);
+  });
+
+  it('two projects sharing a name are refused rather than guessed', async () => {
+    const { impl } = fakeTwoProjects([{ id: 'p1', name: 'same' }, { id: 'p2', name: 'same' }]);
+    const r = await portal.portalHandlers(impl).characterGet({ channel: 'lab', key: 'narrator', project: 'same' });
+    assert.equal(r.isError, true);
+    assert.match(r.text, /2 projects named "same"/);
+  });
+
+  it('a key duplicated inside one project asks for an id, not a project', async () => {
+    // both records in p1: narrowing cannot help, so the advice must change
+    const { impl } = fakeTwoProjects([{ id: 'p1', name: 'only' }], ['p1', 'p1']);
+    const r = await portal.portalHandlers(impl).characterGet({ channel: 'lab', key: 'narrator', project: 'only' });
+    assert.equal(r.isError, true);
+    assert.match(r.text, /Pass id/);
+  });
+
+  it('project and id together are refused — an id is already exact', () => {
+    assert.throws(() => chars.characterGetSchema.parse({ id: ID, project: 'lab' }), /narrows a key lookup/);
+    assert.throws(() => chars.characterGetSchema.parse({ id: ID, key: 'narrator', project: 'lab' }), /exactly one/);
+    assert.equal(chars.characterGetSchema.parse({ key: 'narrator', project: 'lab' }).project, 'lab');
+    assert.equal(chars.characterGetSchema.parse({ key: 'narrator' }).project, undefined);
+  });
+
+  it('a candidate page that was cut counts "at least", and the enumeration is not trimmed', async () => {
+    // the portal's character page size is 24: a full page plus hasNext means the count is a floor,
+    // never the total. The verdict is unaffected — key is a where clause, applied before the LIMIT.
+    const page = Array.from({ length: 24 }, (_, i) => record({ id: `6666666${i.toString(16)}-6666-4666-8666-666666666666`, projectId: `p${i}`, key: 'narrator' }));
+    const projects = page.map((c, i) => ({ id: c.projectId, name: `project-${i}` }));
+    const impl = async (url, init = {}) => {
+      const u = new URL(url);
+      if (u.pathname === '/api/token') return Response.json({ success: true, data: { workspaceSlug: 'lab', workspaceName: 'Lab', role: 'member' } });
+      if (u.pathname === '/api/workspaces/lab/projects') return Response.json({ success: true, data: projects });
+      if (u.pathname === '/api/workspaces/lab/characters') {
+        const wanted = u.searchParams.get('projectId');
+        const hits = wanted ? page.filter((c) => c.projectId === wanted) : page;
+        return Response.json({ success: true, data: { items: hits, hasNext: !wanted } });
+      }
+      return new Response(JSON.stringify({ success: false, error: 'no route' }), { status: 404 });
+    };
+    const r = await portal.portalHandlers(impl).characterGet({ channel: 'lab', key: 'narrator' });
+    assert.equal(r.isError, true, r.text);
+    assert.match(r.text, /exists in at least 24 projects/);
+    assert.match(r.text, /Only the first page of candidates was read/);
+    for (const c of page) assert.match(r.text, new RegExp(c.id), `${c.id} must stay in the list`);
+
+    // same floor wording on the narrowed branch, where duplicates sit inside one project
+    const dupes = page.map((c) => ({ ...c, projectId: 'p0' }));
+    const narrowed = async (url, init = {}) => {
+      const u = new URL(url);
+      if (u.pathname === '/api/token') return Response.json({ success: true, data: { workspaceSlug: 'lab', workspaceName: 'Lab', role: 'member' } });
+      if (u.pathname === '/api/workspaces/lab/projects') return Response.json({ success: true, data: [{ id: 'p0', name: 'project-0' }] });
+      if (u.pathname === '/api/workspaces/lab/characters') return Response.json({ success: true, data: { items: dupes, hasNext: true } });
+      return new Response(JSON.stringify({ success: false, error: 'no route' }), { status: 404 });
+    };
+    const r2 = await portal.portalHandlers(narrowed).characterGet({ channel: 'lab', key: 'narrator', project: 'project-0' });
+    assert.equal(r2.isError, true, r2.text);
+    assert.match(r2.text, /holds at least 24 characters/);
+    assert.match(r2.text, /Only the first page of candidates was read/);
+  });
+
+  it('a whole candidate set still counts exactly, with no page caveat', async () => {
+    const { impl } = fakeTwoProjects();
+    const r = await portal.portalHandlers(impl).characterGet({ channel: 'lab', key: 'narrator' });
+    assert.equal(r.isError, true, r.text);
+    assert.match(r.text, /exists in 2 projects/);
+    assert.equal(/at least/.test(r.text), false, 'hasNext is false — the count is the total');
+    assert.equal(/first page/.test(r.text), false);
+  });
+
+  it('a project whose id comes back blank is refused, not widened to the workspace', async () => {
+    // the portal's characters schema accepts projectId:"" as "no filter" and the query builder
+    // drops empty values, so a blank id must never reach the query
+    const { impl, calls } = fakeTwoProjects([{ id: '', name: 'blank' }]);
+    const r = await portal.portalHandlers(impl).characterGet({ channel: 'lab', key: 'narrator', project: 'blank' });
+    assert.equal(r.isError, true, r.text);
+    assert.match(r.text, /no id/);
+    assert.equal(calls.some((c) => c.path === '/api/workspaces/lab/characters'), false, 'no character read may go out');
   });
 });
 

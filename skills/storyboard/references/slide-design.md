@@ -139,14 +139,26 @@ happen). Weight does the hierarchy: 900 for the hero number, 800 for titles and 
 | Role | Portrait 1080×1920 | Wide 1920×1080 | Weight · tracking |
 |---|---|---|---|
 | kicker / tag | 34px | 26px | 700, `.03em`, ink on an accent plate |
-| title | 76px | 56px | 800, `-.03em`, line-height 1.18 |
+| title | 76px | 56px | 800, `-.03em`, line-height 1.18; current templates do not wire this role floor to the checker |
 | hero number | 260px | 180px | 900, `-.03em`, `tabular-nums` |
 | hero number, stat poster (`.hero.max`) | 340px | 230px | same — up to 3 digits; more digits go back to the base size |
 | second value (`.hero.mid`) | 122px | 90px | same |
 | unit | 30% of hero, never below `--fs-desc` (44) | 30% of hero, never below `--fs-desc` (32) | 700, accent |
-| label / band | 54px | 40px | 700 (band 800) |
+| label / band | 54px | 40px | 700 (band 800); current templates do not wire this role floor to the checker |
 | description / bar label / value | 44px | 32px | 400 (bar value 800) |
 | foot (source) | 28px | 24px | 400, muted |
+
+Measurement limit for this §3 table: only kicker, description and foot have wired
+role floors. Title/label exist in the measurement map but current templates do not
+emit those roles or map their selectors. Hero has no map key at all. Unit also has
+no map key, but motion-slide-template.html enforces its floor in CSS with
+`font-size:max(calc(var(--fs-hero)*.3), var(--fs-desc))` (44px / 32px).
+Unclassified text falls back to the loosest foot floor (28px / 24px); supported
+ancestors can select another existing floor. Until wiring is complete, zero warnings
+from this layer are not proof of type compliance. Title/label values are contract
+locks; hero/unit are documented contracts outside this measurement map, not newly
+wired checks. Kinetic word/word2 retain their existing selector checks. Additional
+wiring belongs to a separate rendered-DOM review.
 
 Floor: nothing below `desc` size goes on screen. 44px is the mobile caption minimum the
 research converged on, and 16 Korean characters at 44px fill the 728px zone width, which
@@ -163,10 +175,37 @@ fixture). Install Pretendard on the render machine anyway; the cells make the la
 either way.
 
 **Strokes.** A 1.5px hairline at 1080 wide is 0.09mm on a phone — under the eye's
-resolving limit at arm's length, and the codec smears it further. Every line on a slide
+resolving limit at arm's length, and the codec smears it further. Every structural or relationship line on a slide
 is one of three weights: `--hair` 3px for dividers, tracks and brackets; `--rule` 6px for
 axes, connectors, the timeline rail dot ring and the spine; `--band` 10px for an underline
 or the strike-through. Bar tracks are `--bar-h` 44px tall.
+
+| Stroke role | Portrait / wide | Uses |
+|---|---|---|
+| `rule` | 6px / 4px | axes, zero baseline, connectors, timeline spine |
+| `hair` | 3px / 2px | grid lines, separators, tracks, brackets |
+| `marker` | exempt from structural floor | compact missing/zero glyphs and value-sized map symbol circles whose stroke signals focus |
+
+SVG `data-stroke-role` takes precedence over element-name inference. Marker exemption
+preserves the 8px glyph and the map symbol's 1→3px focus signal; it does not exempt
+axes, grids, connectors or region outlines. Region focus outlines use `hair`.
+Unclassified SVG lines keep the rule floor. The preserved fill-opacity .5→.75 alone
+has weak state contrast: paper 1.60:1, ink 1.75:1; exemption does not establish 3:1 contrast.
+
+
+### Subtitles and screen type
+
+These are the existing portrait ASS defaults from build-reel.sh, not changes to rendering.
+
+| Subtitle mode | Fontsize | Outline | Bottom margin |
+|---|---:|---:|---:|
+| Sentence | 58 | 5 | 380 |
+| Word | 84 | 5 | 640 |
+| Phrase | 92 | 4 | 680 |
+
+Screen text supplies hierarchy or evidence; subtitles carry the spoken sentence. Avoid
+repeating the same full sentence in both. Keep authored text outside the format's
+subtitle band and use the same word-cue input when kinetic words track subtitle onsets.
 
 ## 4. Composition — one fact, then the evidence
 
@@ -287,6 +326,7 @@ Rules:
   finished videos read as a slideshow. The renderer warns when a group's frozen tail
   passes 40% of its segment. Type reveals and fades never stretch — a 4-second wipe over
   a word is a crawl, not an entrance.
+- Sustained semantic animation subtracts its actual entrance delay from the segment duration; hold stays separate. Without a segment, all three templates use a 2600ms settle fallback matching the renderer entrance cap. Check mid-motion cuts and 40% frozen tails separately.
 - **Focus shift.** A group marked `dim: true` drops to 55% while the next group
   enters, so the eye follows the narration and the end frame keeps its hierarchy — the
   runtime computes it from (g, t), no animation to own, no seam to break. Use it on
@@ -407,6 +447,10 @@ verdict, and horizontal spread stays a judgement made by eye.
   centred-everything with no read order · a flat ground with type floating in it (the
   plate missing — a slide not built from the template) · a rendered object that is a
   vector illustration — flat fills with an outline, no material, no shadow on the wall
+- Unit pictograms may repeat one equal-sized mark per unit or use an explicitly stated
+  scale. Supply marks through `slide.arts`, put no text inside them, use one row per
+  screen and at most 100 marks (the same limit as `h.dots`). Marks encode the measured
+  value; decorative icons do not substitute for a relationship or a data scale.
 - **Motion carries meaning (25)** — each group moves one thing and that thing is what the
   segment says; a plate-then-text or the opening chain counts as one 10 / durations
   inside the tokens and the 2.6s entrance cap, the decelerate curve, no overshoot on a
@@ -418,6 +462,22 @@ verdict, and horizontal spread stays a judgement made by eye.
   Korean characters, titles ≤ 2 lines 10 / contrast: paper on ink, muted still readable on
   the sheet at 25% scale, ink on an accent plate 5 / a source line is present when a
   number is on screen 5
+
+Use the renderer's `--sheet` summary as evidence: `min_text_px`, `min_stroke_px`
+and `min_contrast`. Text follows the role floors in §3; separators use `--hair`
+(3px portrait / 2px wide), axes and connectors use `--rule` (6px / 4px).
+Markers are exempt from structural floors: `min_stroke_px` may be a 1px marker,
+so review each `strokeSamples` entry against its own role floor, not the minimum alone.
+Contrast warnings use 4.5:1 below 66px and 3:1 from 66px (WCAG web-text criteria,
+with 24 CSS px scaled from a 390pt phone to a 1080px canvas; not a broadcast standard).
+The final sheet frame is decoded once and supplies per-row 5th/95th percentile luminance.
+A failed decode emits `contrast unmeasured` instead of crashing; it is not contrast approval. Text-node Range
+rectangles form a row when their vertical overlap is at least 50% of the smaller
+height; emphasis spans share a row. `text_lines`, `max_lines` and `max_line_chars`
+record those rows. Hidden or zero-opacity ancestors exclude a text node; the summary
+reports `excluded_text_nodes` and `excluded_text` identities. A nonzero count alone
+is not a defect: a completed crossfade can retain a hidden previous value. No sheet means null measurements, not a pass.
+These measurements inform this score and P0-10; threshold findings are warnings.
 
 Findings that are a matter of taste go to fix directives, not P0. A P0 is something a
 viewer would notice as wrong, not something a designer would do differently.
@@ -522,8 +582,9 @@ decisions.
   Everything else is `--fs-word2` (68px) or smaller. A one-line verdict or hook that is the
   whole screen takes `cls:"max"` (176px portrait / 128px wide) — at the base size alone it
   floats in the zone and the renderer's fill warning fires.
-- **Five words to a line, four lines to a screen.** Korean breaks by word
-  (`word-break:keep-all`), so a phrase that needs a sixth word is a phrase to cut, not to shrink.
+- **Count rendered lines, not words.** A hero phrase uses at most three lines; a max-size
+  quote or supporting phrase at most two; the screen at most four. Korean breaks at words
+  (`word-break:keep-all`). Use the Range-row measurements; character counts are guidance, not P0.
 - **One effect kind per screen.** `mask` is the default — the phrase climbs out of its line
   box; `words:true` staggers the same rise word by word at `--wstagger` and still counts as
   the same kind. `drop` (a settle from 24px above) and `wipe` (a clip-path reveal on
@@ -547,7 +608,7 @@ decisions.
 **P0, added for this kind**
 
 13. A screen phrase identical to its segment's `sub` — the same sentence twice, once burned in and once as the picture
-14. More than one hero-sized phrase, or a line past five words
+14. More than one hero-sized phrase, or rendered lines above the limits: hero 3, max quote 2, supporting phrase 2, screen total 4
 15. Two effect kinds on one screen, or a word that rotates, bounces, or arcs in. An art that travels and a word that enters on the same group is one event, not two. Mixing `drop` and `wipe` is still two; `mask` and `words:true` are one.
 
 **What the axes look at here** — design craft reads type hierarchy and line breaking instead of
@@ -645,3 +706,42 @@ the vector-illustration tell (flat fills, an outline, no wall shadow) and the pl
 surface with no grain); motion-carries-meaning compares `g<k>-mid` with `g<k>-end` on the
 object itself — stamps landed, angle changed — against the sentence; legibility is unchanged,
 with the object's shadow never under text.
+
+### Chart type and motion tokens
+
+Chart type follows §3 and P0-10; it has no exemption from the type floors.
+Portrait / wide sizes in pixels: chart headline 62/52, insight and mark labels/values
+44/32, eyebrow 34/26, source and axis ticks/map keys/dates/secondary values 28/24.
+The donut centre stays between 44 and 52px portrait (32 and 52px wide).
+Chart labels wrap at spaces; split within a word only when that word cannot fit alone.
+Touching slices, stacked segments, histogram bins and adjacent map regions use a
+paper-colour `--hair` separator, 3px portrait / 2px wide. This supplies the category
+boundary evidence for §6 palette scoring.
+Chart geometry reveals over `--grow` 1000ms on `--ease-mask`; focus shifts over
+`--plate` 400ms on `--ease`. These are §5 tokens, sampled deterministically.
+
+Kinetic width guidance (portrait/wide): hero 124/92px → about 5/18 full-width
+characters per line, max quote 176/128px → 4/13, supporting phrase 68/50px → 10/34.
+These conservative character estimates never decide P0-14; rendered rows do.
+
+Pass `--word-cues k:path[,k:path...]` with `--segs` to the renderer using the same
+`start<TAB>end<TAB>word` output as subtitle alignment. Absolute seconds convert to
+local group milliseconds. Cued words bypass lead-in; uncued words keep 80ms stagger
+and lead-in. `word_cues` distinguishes aligned, proportional, provided and none.
+Inspect one cued group's sheet to verify its other entrance chains still read in order.
+
+
+### Camera motion and source resolution
+
+Still-camera zoom effects (`push`, `pull`, `approach`) use the full-cut average ladder:
+very slow/default 4%/s, slow 6%/s, fast 14%/s (at most 6 s), very fast 20%/s
+(at most 5 s). Slow uses quintic smoothstep; fast uses q². `visual.camera.ease`
+may explicitly select `smoothstep` or `accel`. Focus-in and rack-focus keep their optical timing.
+Pan/tilt preserve authored focus endpoints; reveal/parallax scale layer travel by span/0.32.
+Their focus travel rates are diagnostic only, because the reference measurements cover zoom.
+
+Camera P0: disagreement between the runtime and renderer RATE tables (locked by a source-crosscheck test), peak source
+upscale above 1.5, or final focus outside the frame/in the subtitle band. Group rates
+are diagnostic, not speed pass/fail. Required source size is at least
+ceil(canvas width × peak zoom / 1.5) by ceil(canvas height × peak zoom / 1.5).
+These changes affect newly rendered cuts; do not rerender delivered episodes.
