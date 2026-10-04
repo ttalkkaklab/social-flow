@@ -913,6 +913,12 @@ test('partial production choices can assemble generated-cut prompts and model qu
    assert.deepEqual(resolutionErrors({visual:{video:{resolution:'720p'}}},hd,format),[]);
    assert.match(resolutionErrors({visual:{video:{resolution:'1080p'}}},hd,format).join(),/1080p/);
   }
+  for (const [format, resolution] of [['shorts-9x16', '1024x1920'], ['youtube-long-16x9', '1920x1024']]) {
+   const [width, height] = resolution.split('x').map(Number), scene = { visual: { video: { resolution } } };
+   assert.deepEqual(resolutionErrors(scene, { width, height }, format), []);
+   assert.ok(resolutionErrors(scene, { width: width - 1, height }, format).length);
+   assert.ok(resolutionErrors(scene, { width, height: height - 1 }, format).length);
+  }
  });
 
 test('three 2.5 hook cuts can mix with 1.5 body cuts and retain per-cut pricing', () => {
