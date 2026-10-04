@@ -391,6 +391,8 @@ export const astraAudio2VideoSchema = z
     audioPath: z.string().trim().min(1).optional(),
     audioUploadId: z.string().trim().min(1).optional(),
     imagePath: z.string().trim().min(1).optional(),
+    strength: z.number().min(0).max(1).default(0.9)
+        .describe("Portrait conditioning strength; ignored without imagePath. Observed dialogue cuts: 0.9 preserved the person with mouth movement following audio; 0.7 changed the person. Prompts also differed, so this is not an isolated strength comparison. 1.0 is unmeasured on cuts with a visible mouth."),
     audioStartTime: z.number().min(0).optional(),
     audioMaxDuration: z.number().positive().optional(),
     numFrames: numFramesSchema('audio2video'),
@@ -821,7 +823,7 @@ export async function generateFromAudio(args) {
     const image = args.imagePath ? await uploadFile(args.imagePath) : undefined;
     if (image && image.kind !== 'image')
         throw new Error('ASTRA video imagePath must upload as image');
-    const images = image ? [{ uploadId: image.uploadId, frameIdx: 0 }] : undefined;
+    const images = image ? [{ uploadId: image.uploadId, frameIdx: 0, strength: args.strength }] : undefined;
     const body = buildJobBody('audio2video', { ...args, audioUploadId, images });
     const result = await runJob('audio2video', args.prompt, body, args.outputPath, args.filename);
     return { ...result, audioUploadId, audioExpiresAt: audio?.expiresAt, audioDuration: audio?.duration };
