@@ -97,9 +97,11 @@ function motionReviewErrors(scene, review) {
 // Source pixels and output canvas are separate: assembly scales accepted sources.
 function resolutionErrors(scene, stream, format) {
   const resolution = mode.reused(scene) ? '720p' : (scene.visual?.video?.resolution || '1080p');
+  const dimensions = /^(\d+)x(\d+)$/.exec(resolution);
   const short = resolution === '720p' ? 720 : 1080, long = short * 16 / 9;
   const wide = format === 'youtube-long-16x9';
-  const width = wide ? long : short, height = wide ? short : long;
+  const width = dimensions ? Number(dimensions[1]) : wide ? long : short;
+  const height = dimensions ? Number(dimensions[2]) : wide ? short : long;
   if (!stream || !Number.isFinite(stream.width) || !Number.isFinite(stream.height) ||
       stream.width < width || stream.height < height)
     return [`clip is below the ${resolution} source minimum (${width}x${height}); inspect the source or choose another existing clip before considering generation`];
