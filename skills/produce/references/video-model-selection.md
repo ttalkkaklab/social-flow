@@ -77,11 +77,32 @@ sends it inside `images[]`. Without `imagePath`, strength is ignored. In the
 2026-10-04 dialogue probes, 19.2 at 0.9 showed mouth movement following the audio;
 19.2 at 0.7 showed mouth movement but changed the person. Prompts and upload ids
 also changed, so these observations do not isolate strength. The 25.3 probe used
-0.9 without a control. The isolated 8.1 pair (1.0 versus 0.5) showed no mouth change;
+0.9 without a control. Its regenerated wide side view hid the mouth (motion score
+0.670, with only slight hand movement), so lip-sync could not be judged; 19.2 was
+the only dialogue cut with a visible mouth. The isolated 8.1 pair (1.0 versus 0.5) showed no mouth change;
 the source mouth was not visible. **1.0 is unmeasured on cuts with a visible mouth.**
 The default selects a value used by successful jobs, not a proven causal improvement.
 Source: the same evidence bundle, server jobs `a361afa9`, `4a9e9f85`, `6331bf1a`,
 `af272f36`, `df8561ed`; corrected local `README.md` and `ERRATA.md` §9/11/12.
+
+A same-session 2026-10-04 09:47–09:50 UTC **19.2 pair** used strength 0.7 and 0.9
+with identical prompt bytes (`diff` exit 0), seed 42, 1280×704, 81 frames and 24 fps.
+Both used the same source image and stereo WAV bytes; fresh upload ids differed.
+The submitted requests matched after excluding those ids and strength, and the server
+recorded the requested strengths. Jobs `9bb19cea6f9d4b43ac2bab9a0152bd4e` (0.7, 86s)
+and `4557a98c1a9a4e4f863f86784f91570f` (0.9, 88s) both produced 3.375-second clips.
+**Observation:** sampled frames 0/16/32/48/64/80 show mouth-shape changes and a
+full-body-to-close-up transition in both clips. **Causal limit:** this one pair does
+not establish better identity preservation or lip-sync at 0.9; sampled frames do not
+measure audio/mouth synchronization, and no repeated runs or identity metric were used.
+The earlier changed-person observation at 0.7 must not be generalized to all 0.7 jobs.
+1.0 was not tested in this pair. The default remains 0.9 without a causal quality claim.
+Source: `WORK_LOGS/SENIOR_A2V_STRENGTH_PAIR_20261004/` — `WIRE.json`, `PAIR_CHECK.json`,
+`PROMPT_DIFF.txt`, `INPUT-19.2-s*.json`, `RESULT-19.2-s*.json`, `FFPROBE_S*.json`,
+and `FRAMES_S*.png` in the originating Buzz task channel
+`59a95fc9-8f93-4708-b1c8-e8e388fe45ad`. The 25.3 limitation above comes from the
+prior regeneration `d9924624e3474c6482ce698fb9645e50` and follow-up assignment
+`5fb75506873de4ae35666900b88c34dace1d141604961081d461c5f12d687458`.
 
 Clips carry AAC (48kHz stereo) with no audio-off argument. **audio2video carries the supplied
 WAV re-encoded as AAC**, rather than newly generated sound: job `558632165cfe4678a631eb460bf89457`
