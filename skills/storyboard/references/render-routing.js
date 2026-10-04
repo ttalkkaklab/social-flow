@@ -105,7 +105,7 @@
   }
   return errors;
  }
- function checkScene(scene,{draft=false,production=null}={}){
+ function checkScene(scene,{draft=false,production=null,format=root.FORMAT}={}){
   if(exempt(scene))return [];
   const r=scene.shot?.render,v=scene.visual||{},errors=checkFrames(scene,{draft}).concat(checkPreviz(scene,{draft,production})),bad=s=>errors.push('shot.render: '+s);
   if(v.source==='stock'){
@@ -131,7 +131,10 @@
   if(['human_process','mechanism','physical_state'].includes(r.purpose)&&info!=='principle')bad('explanation purposes require infoType principle');
   if(CHARTS[r.purpose]&&info!==(r.purpose==='timeline'?'timeline':'statistic'))bad('chart purpose and infoType disagree');
   if(r.mode==='still_camera'){
-   const camera=r.camera;
+   const camera=r.camera,speed=scene.visual?.camera?.speed;
+   if(speed!==undefined&&!['very slow','slow','fast','very fast'].includes(speed))bad('still camera speed must be very slow, slow, fast or very fast');
+   if(speed==='fast'&&scene.duration>6)bad('fast still camera requires duration <= 6 seconds');
+   if(speed==='very fast'&&scene.duration>5)bad('very fast still camera requires duration <= 5 seconds');
    const region=p=>Array.isArray(p)&&p.length===4&&p.every(Number.isFinite)&&p[0]>=0&&p[0]<=1&&p[1]>=0&&p[1]<=1&&p[2]>0&&p[2]<=1&&p[3]>0&&p[3]<=1;
    if(!camera||!STILL_CAMERA_EFFECTS.includes(camera.effect)||!text(camera.target)||!text(camera.reason))bad('still camera needs effect, target and a content-based reason');
    // L13 — a pan or tilt is a sentence from A to B: both ends are regions of the actual picture, and they differ.
@@ -174,7 +177,7 @@ if(r.mode==='data_graph'||(fullVideo&&CHARTS[r.purpose])){
    if(['bar','histogram','stacked-bar','donut','pie'].includes(data?.chart)&&data.baseline!==0)bad('length/area charts need baseline 0');
    if(r.purpose==='share'&&Array.isArray(values)&&(!Number.isFinite(data.total)||data.total<=0||values.some(p=>p?.value<0)||Math.abs(values.reduce((sum,p)=>sum+(p?.value||0),0)-data.total)>Math.abs(data.total)*1e-9))bad('part-to-whole values must sum to the stated total');
    if(r.purpose==='share'&&data?.unit==='%'&&data.total!==100)bad('percentage shares need total 100');
-   checkData(data,(scene.narration||[]).length).forEach(bad);
+   checkData(data,(scene.narration||[]).length,{wide:format==='youtube-long-16x9'}).forEach(bad);
   }
   // Draft validates meaning; production also validates the selected renderer's handoff.
   if(!draft){
@@ -199,16 +202,37 @@ if(r.mode==='data_graph'||(fullVideo&&CHARTS[r.purpose])){
   }
   return errors;
  }
- function checkData(data,segments){
+ function checkData(data,segments,{wide=false}={}){
+  // Label budgets, circular radius and separator-share geometry must match chart-runtime.js.
+
   if(!data)return [];
   const errors=[],values=Array.isArray(data.values)?data.values:[],labels=values.map(v=>v?.label);
   if(new Set(labels).size!==labels.length)errors.push('chart labels must be unique');
   if(labels.some(l=>!text(l)||Array.from(l).length>24))errors.push('chart labels must have 1..24 characters; use concise source-faithful names');
-  const max=data.chart==='map'?(data.map?.mode==='symbol'?12:250):['line','histogram'].includes(data.chart)?12:data.chart==='timeline'?4:6;
+  const wrap=(value,limit)=>{
+   const rows=[];let line='';
+   for(const word of String(value).split(/\s+/).filter(Boolean)){
+    const candidate=line?line+' '+word:word;
+    if(Array.from(candidate).length<=limit){line=candidate;continue;}
+    if(line){rows.push(line);line='';}let chars=Array.from(word);
+    while(chars.length>limit){rows.push(chars.slice(0,limit).join(''));chars=chars.slice(limit);}
+    line=chars.join('');
+   }
+   if(line)rows.push(line);return rows.length;
+  };
+  const max=data.chart==='map'?(data.map?.mode==='symbol'?12:250):['line','histogram'].includes(data.chart)?12:data.chart==='timeline'?4:data.chart==='stacked-bar'?6:['bar','dot'].includes(data.chart)?4:5;
   if(values.length>max)errors.push('chart exceeds '+max+' marks; split the comparison into readable cuts');
-  if(['bar','dot'].includes(data.chart)&&values.reduce((sum,v)=>sum+(Array.from(String(v?.label||'')).length>12?118:82),0)>496)errors.push('chart labels need more vertical space; shorten source-faithful labels or split the cut');
-  if(['stacked-bar','donut','pie'].includes(data.chart)&&values.some(v=>Array.from(String(v?.label||'')).length>12)&&values.length>4)errors.push('long share labels need at most four parts; shorten labels or split the cut');
-  if(['donut','pie'].includes(data.chart)&&values.reduce((sum,v)=>sum+Math.max(88,Math.ceil(Array.from(String(v?.label||'')).length/11)*31.05+50),0)>600)errors.push('circular chart labels exceed the phone-height budget; shorten source-faithful labels or split the composition');
+  if(['bar','dot'].includes(data.chart)&&values.reduce((sum,v)=>sum+wrap(v?.label||'',16)*44*1.15+60.2,0)>496)errors.push('chart labels need more vertical space; shorten source-faithful labels or split the cut');
+  if(data.chart==='stacked-bar'&&values.some(v=>Array.from(String(v?.label||'')).length>12)&&values.length>4)errors.push('long share labels need at most four parts; shorten labels or split the cut');
+  if(['donut','pie'].includes(data.chart)){
+   if(values.reduce((sum,v)=>sum+wrap(v?.label||'',6)*44*1.15+50,0)>600)errors.push('circular chart labels exceed the phone-height budget; shorten source-faithful labels or split the composition');
+   const minShare=wide?6/(2*Math.PI*Math.min(1158*.235,699*.32)):.0084;
+   if(values.some(v=>Number.isFinite(v?.value)&&v.value/data.total<minShare))errors.push('circular share below '+(minShare*100).toFixed(2)+'%; separators cover it: combine only with source support or split the cut');
+  }
+  if(data.domain!=null){
+   const d=data.domain,finite=values.filter(v=>Number.isFinite(v?.value)).map(v=>v.value);
+   if(!Array.isArray(d)||d.length!==2||!d.every(Number.isFinite)||d[1]<=d[0]||d[0]>Math.min(0,...finite)||d[1]<Math.max(0,...finite))errors.push('data.domain needs finite [lo,hi], lo <= min(0,values), hi >= max(0,values), hi > lo');
+  }
   if(data.surface!=null&&!['paper','ink'].includes(data.surface))errors.push('chart surface must be paper or ink');
   if(data.decimals!=null&&(!Number.isInteger(data.decimals)||data.decimals<0||data.decimals>3))errors.push('chart decimals must be 0..3');
   if(data.chart==='line'||data.chart==='timeline'){

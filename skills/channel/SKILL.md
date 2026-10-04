@@ -204,7 +204,7 @@ from `identity.md`), then generate and upload all three required views with
 `back.png` → `view:"back"` (back full body without a face), and `face.png` → `view:"face"`
 (face close-up). Keep one view per file, the same clothing, proportions and visual style.
 Use `view:"extra"` and an explanatory `label` only for optional poses or details.
-Verify `portal_character_get.imagesComplete` before reporting the reference set ready,
+Verify `portal_character_get.imagesComplete` (by `id`) before reporting the reference set ready,
 then use `portal_character_tts_set` with the channel's voice. Steps, field mapping and the update/delete rules:
 `references/portal-characters.md`. No key → the tools answer one line; skip the step.
 

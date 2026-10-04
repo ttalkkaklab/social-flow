@@ -272,6 +272,7 @@ export function createPortalClient(credential, fetchImpl = fetch, resolvedBy = '
         revisionDiff: (episodeId, from, to) => json('GET', `/episodes/${episodeId}/revisions/${from}/diff/${to}`),
         renderAllocation: (episodeId, body) => json(body ? 'PUT' : 'GET', `/episodes/${episodeId}/render-allocation`, body ? { ...body, sourceHost: holder } : undefined),
         uploadImage: (episodeId, bytes, mime) => json('POST', withHolder(`/episodes/${episodeId}/images`), bytes, mime),
+        listProjects: () => json('GET', '/projects'),
         listCharacters: (query = {}) => {
             const sp = new URLSearchParams();
             for (const [k, v] of Object.entries(query))

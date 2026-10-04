@@ -10,12 +10,28 @@ const canvas=document.getElementById('photo');
 const wide=window.FORMAT==='youtube-long-16x9',W=wide?1920:1080,H=wide?1080:1920;
 canvas.width=W;canvas.height=H;document.body.style.width=W+'px';document.body.style.height=H+'px';
 let engine,segments=(S.narration?.length?S.narration:[null]).map(()=>S.duration*1000/Math.max(1,S.narration?.length||0));
-const spec={template:C.effect,duration:S.duration,focusFrom:C.focusFrom,focusTo:C.focusTo,layers:C.layers};
+const spec={template:C.effect,duration:S.duration,speed:S.visual?.camera?.speed,ease:S.visual?.camera?.ease,focusFrom:C.focusFrom,focusTo:C.focusTo,layers:C.layers};
 async function renderCamera(){engine=await STILL_CAMERA.mount(canvas,spec,'../'+S.visual.bg,(C.layers||[]).map(l=>'../'+l.image))}
 window.__ready=()=>window._ready||(window._ready=(async()=>{await document.fonts.ready;await renderCamera();await window.__seek(0,1)})());
 window.__groups=()=>[{rg:0,dur:0},...segments.map((dur,i)=>({rg:i+1,dur}))];
 window.__setSegs=m=>{segments=segments.map((d,i)=>m[i+1]>0?m[i+1]:d)};
 window.__size=()=>({w:W,h:H});
 window.__seek=async(ms,group=1)=>{const i=Math.max(0,Math.min(segments.length-1,group-1)),offset=segments.slice(0,i).reduce((a,b)=>a+b,0),total=segments.reduce((a,b)=>a+b,0);engine.draw((offset+Math.max(0,Math.min(segments[i]||0,ms)))/total*spec.duration)};
-window.__meta=()=>({hold:0,stray:0,infinite:0,broken:[],...engine.diagnostics()});
+window.__meta=()=>{
+ const diagnostics=engine.diagnostics(),source=diagnostics.source,base=Math.max(W/source.w,H/source.h);
+ const zoomEffect=['push','pull','approach'].includes(spec.template),optical=['focus-in','rack-focus'].includes(spec.template);
+ const start=STILL_CAMERA.state(spec,0),end=STILL_CAMERA.state(spec,spec.duration);
+ const cutRate=(zoomEffect?Math.abs(end.zoom-start.zoom):Math.hypot(end.fx-start.fx,end.fy-start.fy))/spec.duration;
+ const total=segments.reduce((a,b)=>a+b,0);let elapsed=0;
+ const camera=segments.map((duration,i)=>{
+  const t0=elapsed/total*spec.duration;elapsed+=duration;const t1=elapsed/total*spec.duration;
+  const a=STILL_CAMERA.state(spec,t0),b=STILL_CAMERA.state(spec,t1);
+  const dw=source.w*base*b.zoom,dh=source.h*base*b.zoom;
+  const target=spec.focusTo||[b.fx,b.fy];
+  return {rg:i+1,zoomFrom:a.zoom,zoomTo:b.zoom,ratePerSec:optical?null:(zoomEffect?Math.abs(b.zoom-a.zoom):Math.hypot(b.fx-a.fx,b.fy-a.fy))/(t1-t0),
+   travel:Math.hypot(b.fx-a.fx,b.fy-a.fy),peak_upscale:base*Math.max(a.zoom,b.zoom),
+   focusAtEnd:{x:(W-dw)*b.fx+target[0]*dw,y:(H-dh)*b.fy+target[1]*dh}};
+ });
+ return {hold:0,stray:0,infinite:0,broken:[],...diagnostics,camera,cameraCut:{effect:spec.template,axis:optical?null:zoomEffect?'zoom':'focus-travel',ratePerSec:optical?null:cutRate,speedChecked:zoomEffect}};
+};
 </script></html>

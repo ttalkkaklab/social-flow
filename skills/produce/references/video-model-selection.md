@@ -31,6 +31,19 @@ The front door has returned 403 for a runtime-default User-Agent, so every ASTRA
 `User-Agent: social-flow/<version>`. Per key, uploads are limited to 10/min and jobs to 5/min and
 60/hour; the waiting queue holds 20 jobs, and `/v1/jobs` bodies stop at 1 MiB.
 
+Uploads expire after 24 hours and each key has a storage ceiling of **20 uploads / 1 GiB**.
+Use `astra_video_list_uploads` with no arguments to find ids, then
+`astra_video_delete_upload({uploadId: "the-exact-id"})` only for inputs no longer needed
+by queued/running jobs or planned reuse. Deleting an upload does not delete a local source file.
+These tools require server `GET /v1/uploads` and `DELETE /v1/uploads/<id>` support:
+the reported server baseline is GET 404 and DELETE 501 (2026-10-03). They fail explicitly
+on those responses or HTML, including HTML served as HTTP 200; they never turn them into
+an empty list or a successful deletion. Until server support and a valid key are available,
+only mocked transport tests establish client behavior, not live operation.
+The provisional success contract is `{uploads: [{upload_id, kind, bytes, expires_at}]}`
+for listing and HTTP 204 or HTTP 200 `{upload_id, deleted: true}` for deletion.
+It must be checked against the server before this change becomes ready for use.
+
 Two things to know before you write the call. Sizes sit on a 64-pixel grid with a 2,064,384-pixel
 area ceiling (`LTX_MAX_PIXELS=2064384`, measured 2026-09-30), so **use 1024x1920 first for a 9:16 frame**.
 1088x1920 exceeds that ceiling at every frame count. 1080x1920 is refused because 1080 is a
@@ -45,6 +58,30 @@ generate 113/145 (measured at 1280x704); generate 1536x704 and 1536x1024 at
 121 frames also succeeded. The image-conditioned warning does not apply to `astra_text2video`: text-only
 1280x704 at 121 frames succeeded. An upstream defect is a hypothesis, not a confirmed cause.
 The server owns the failure-band acceptance gate; the client documents it without a second gate.
+
+For `audio2video`, one 1536×1024 × 177-frame job (`09f0132b`) failed with
+`CUDA error: an illegal memory access`. That single observation does not establish that
+this combination always fails: resolution, frame count and prompt changed together.
+A later 2026-10-04 07:3x UTC snapshot of 562 stored requests contained 20
+`audio2video` jobs, eight with image conditions, and two failures: one CUDA failure
+above and one mono-audio encoding failure (`ef33b3a4`, 1536×1024 × 81 frames).
+The latter failed before denoising and does not establish a working resolution/frame pair.
+Source: reviewer census report `c2c358f6063283651e0ac007d99fe4ff7d38484cdaf19303a0d2200c9f65b6b7`.
+The earlier 2026-10-04 seven-job record contains six successful 1280×704 jobs
+(121 frames × 3, 81 frames × 2, 89 frames × 1). The supplied timing log establishes
+92 seconds for the **89-frame** job `6331bf1a`, not a 92–107-second range at 121 frames.
+Source: `LTX_A2V_STRENGTH_EVIDENCE_20261004.tgz`, `logs/r253.log` and `ERRATA.md` §5/8.
+
+`astra_audio2video` exposes portrait `strength` from 0 to 1, default **0.9**, and
+sends it inside `images[]`. Without `imagePath`, strength is ignored. In the
+2026-10-04 dialogue probes, 19.2 at 0.9 showed mouth movement following the audio;
+19.2 at 0.7 showed mouth movement but changed the person. Prompts and upload ids
+also changed, so these observations do not isolate strength. The 25.3 probe used
+0.9 without a control. The isolated 8.1 pair (1.0 versus 0.5) showed no mouth change;
+the source mouth was not visible. **1.0 is unmeasured on cuts with a visible mouth.**
+The default selects a value used by successful jobs, not a proven causal improvement.
+Source: the same evidence bundle, server jobs `a361afa9`, `4a9e9f85`, `6331bf1a`,
+`af272f36`, `df8561ed`; corrected local `README.md` and `ERRATA.md` §9/11/12.
 
 Clips carry AAC (48kHz stereo) with no audio-off argument. **audio2video carries the supplied
 WAV re-encoded as AAC**, rather than newly generated sound: job `558632165cfe4678a631eb460bf89457`
