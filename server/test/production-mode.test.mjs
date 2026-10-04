@@ -9,7 +9,7 @@ import { spawnSync } from 'node:child_process';
 const require = createRequire(import.meta.url);
 const root = path.resolve(import.meta.dirname, '../..');
 const mode = require('../../skills/storyboard/references/production-mode.js');
-const { quote, digest } = require('../../skills/autoproduce/references/production-cost.js');
+const { quote, digest, comparisonResolution } = require('../../skills/autoproduce/references/production-cost.js');
 const { check, shotDigest, hashFile } = require('../../skills/produce/references/check-production.js');
 const { assemble } = require('../../skills/storyboard/references/spatial-prompts.js');
 const { checkScene } = require('../../skills/storyboard/references/render-routing.js');
@@ -1082,4 +1082,20 @@ test('the astra lane is a provider of its own: our own box, no price record, the
   // There is no image lane on our box, so astra is not a value imageProvider accepts.
   const img = fixture(); img.PRODUCTION.imageProvider = 'astra';
   assert.match(mode.check(img).join(), /imageProvider must be host or api/);
+});
+
+test('a 16:9 astra board and its quote use the landscape grid size while 9:16 stays unchanged', () => {
+  const portrait = fixture(); portrait.PRODUCTION.videoProvider = 'astra'; portrait.PRODUCTION.videoModel = { model: 'astra' };
+  assert.equal(mode.astraResolution(portrait), mode.ASTRA_RESOLUTION);
+  assert.equal(comparisonResolution(portrait), '1024x1920');
+
+  const wide = fixture(); wide.FORMAT = 'youtube-long-16x9'; wide.PRODUCTION.videoProvider = 'astra'; wide.PRODUCTION.videoModel = { model: 'astra' };
+  assert.equal(mode.astraResolution(wide), mode.ASTRA_WIDE_RESOLUTION);
+  assert.equal(comparisonResolution(wide), '1920x1024');
+  assert.match(mode.check(wide, { requireApproval: true }).join('\n'), /write resolution:"1920x1024"/);
+  for (const s of wide.SCENES) {
+    Object.assign(s.visual.video, { engine: 'astra', resolution: mode.ASTRA_WIDE_RESOLUTION, generateAudio: false });
+    delete s.visual.video.model;
+  }
+  assert.doesNotMatch(mode.check(wide, { requireApproval: true }).join('\n'), /engine:"astra"|resolution/);
 });

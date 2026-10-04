@@ -54,8 +54,13 @@
     'dreamina-seedance-2-5-260628': { label: 'Seedance 2.5', resolutions: ['720p', '1080p'] }
   };
   // Our own LTX-2.5 box is not a tier in the table above: it has no price, so nothing to compare.
-  // What it does have is a grid — the only 9:16 size it renders under the area ceiling.
+  // Its dimensions follow the board FORMAT while staying on the 64-pixel grid and below the area ceiling.
   const ASTRA_RESOLUTION = '1024x1920';
+  const ASTRA_WIDE_RESOLUTION = '1920x1024';
+  const astraResolution = win => win.FORMAT === 'youtube-long-16x9' ? ASTRA_WIDE_RESOLUTION : ASTRA_RESOLUTION;
+  const astraSize = win => win.FORMAT === 'youtube-long-16x9'
+    ? { source: ASTRA_WIDE_RESOLUTION, edit: '1920x1080' }
+    : { source: ASTRA_RESOLUTION, edit: '1080x1920' };
   const selectionRecorded = sel => sel && ['user', 'standing'].includes(sel.kind) && text(sel.reference);
   // The four slots every generated shot stores (scenes-schema §camera); spatial-prompts.js
   // assembles the motion prompt's camera span from them, so nothing else describes the camera.
@@ -572,15 +577,16 @@
       if (!text(v.video?.prompt)) bad('store the motion prompt before generation');
       // The host video tool (owner directive 2026-09-07) tops out at 720p and takes every full_video cut.
       const hostVideo = p.videoProvider === 'host', astraVideo = p.videoProvider === 'astra';
-      // ASTRA sizes sit on a 64-pixel grid under a 2,064,384-pixel area ceiling, so a 9:16 cut renders
-      // 1024x1920 and the edit widens it to the 1080-wide canvas; 1080x1920 is refused outright because
-      // 1080 is a multiple of neither 64 nor 32 (video-model-selection, measured 2026-09-30). Naming a
-      // vendor tier label here would be a size the box cannot render.
+      // ASTRA sizes sit on a 64-pixel grid under a 2,064,384-pixel area ceiling. Read the board's
+      // existing FORMAT: portrait renders 1024x1920 and landscape renders 1920x1024, then the edit
+      // scales the short edge to the final canvas. Naming a vendor tier label here would be a size
+      // the box cannot render (video-model-selection, measured 2026-09-30).
       // The API lane renders at the resolution the user chose with the model (PRODUCTION.videoModel); 1080p before that record exists.
-      const wantRes = hostVideo ? '720p' : astraVideo ? ASTRA_RESOLUTION : (v.video?.resolution || p.videoModel?.resolution || '1080p');
+      const astra = astraSize(win);
+      const wantRes = hostVideo ? '720p' : astraVideo ? astra.source : (v.video?.resolution || p.videoModel?.resolution || '1080p');
       if (v.video?.resolution !== wantRes || v.video?.generateAudio !== false)
         bad(hostVideo ? 'the host video tool tops out at 720p; write resolution:"720p" and generateAudio:false with separate narration'
-          : astraVideo ? 'ASTRA renders on a 64-pixel grid; write resolution:"' + ASTRA_RESOLUTION + '" (the edit widens it to 1080) and generateAudio:false with separate narration'
+          : astraVideo ? 'ASTRA renders on a 64-pixel grid; write resolution:"' + astra.source + '" (the edit scales it to ' + astra.edit + ') and generateAudio:false with separate narration'
                       : 'write the chosen model\'s resolution (' + wantRes + ') and generateAudio:false with separate narration');
       if (v.video?.engine !== (hostVideo ? 'host' : astraVideo ? 'astra' : 'seedance'))
         bad(hostVideo ? 'videoProvider:host routes every full_video cut to engine:"host" (the CLI\'s own image_to_video)'
@@ -645,7 +651,7 @@
       // hook_only: the hook plus every imported clip — reuse is outside the count but still a slot.
       generatedVideoMax: production.mode === 'hook_only' ? 1 + scenes.filter(reused).length : RATIOS[production.mode] ? scenes.filter(eligible).length : Math.min(base.generatedVideoMax ?? 2, 2) };
   }
-  const api = { BANDS, ratioMode, ratioBounds, ratioErrors, videoRender, bandContract, CAMERA_INPUT_SCHEMA, cameraInputErrors, CAMERA_PRESETS, isDrone, droneErrors, droneSample, droneSlots, droneBinding, droneCameraKeys, droneSceneErrors, STYLES, MODES, CHOICES, CUT_TYPES, RATIOS, videoCap, newCut, generated, hookScene, coverageErrors, CAMERA_SLOTS, PREVIZ_RENDERERS, VIDEO_MODELS, ASTRA_RESOLUTION, packPresets, ALL_LOOKS, shotStyle, shotStyleErrors, eligible, reused, reuseErrors, full, signature, check, policy, motionErrors, missingCameraSlots, cameraErrors, cameraWarnings, episodeMoveErrors, moveOf, travels, MOVES, staticCamera, finalState };
+  const api = { BANDS, ratioMode, ratioBounds, ratioErrors, videoRender, bandContract, CAMERA_INPUT_SCHEMA, cameraInputErrors, CAMERA_PRESETS, isDrone, droneErrors, droneSample, droneSlots, droneBinding, droneCameraKeys, droneSceneErrors, STYLES, MODES, CHOICES, CUT_TYPES, RATIOS, videoCap, newCut, generated, hookScene, coverageErrors, CAMERA_SLOTS, PREVIZ_RENDERERS, VIDEO_MODELS, ASTRA_RESOLUTION, ASTRA_WIDE_RESOLUTION, astraResolution, packPresets, ALL_LOOKS, shotStyle, shotStyleErrors, eligible, reused, reuseErrors, full, signature, check, policy, motionErrors, missingCameraSlots, cameraErrors, cameraWarnings, episodeMoveErrors, moveOf, travels, MOVES, staticCamera, finalState };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.PRODUCTION_MODE = api;
 })(typeof window === 'object' ? window : globalThis);

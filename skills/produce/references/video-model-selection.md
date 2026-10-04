@@ -53,10 +53,11 @@ for listing and HTTP 204 or HTTP 200 `{upload_id, deleted: true}` for deletion.
 It must be checked against the server before this change becomes ready for use.
 
 Two things to know before you write the call. Sizes sit on a 64-pixel grid with a 2,064,384-pixel
-area ceiling (`LTX_MAX_PIXELS=2064384`, measured 2026-09-30), so **use 1024x1920 first for a 9:16 frame**.
-1088x1920 exceeds that ceiling at every frame count. 1080x1920 is refused because 1080 is a
-multiple of neither 64 nor 32. To fit a 1080x1920 canvas, widen the 1024-pixel output to 1080
-(about 5.5%) in the edit or add side padding.
+area ceiling (`LTX_MAX_PIXELS=2064384`, measured 2026-09-30). Read the board's existing `FORMAT`:
+use **1024x1920 for `shorts-9x16`**, then widen it to 1080x1920 in the edit; use **1920x1024 for
+`youtube-long-16x9`**, then scale it to 1920x1080. Both source sizes contain 1,966,080 pixels.
+1088x1920 exceeds the ceiling at every frame count. 1080x1920 is refused because 1080 is a
+multiple of neither 64 nor 32. The edit may add padding instead of scaling when composition needs it.
 
 For image-conditioned calls, the server blocks **generate: {121,129,137}** at
 width 1280 (measured at heights 704/768) and **guided: {121}** at width 1280 (measured at height 704). Guided 129 and 137 succeeded at 1280x704 in server probes (the only guided size probed);
