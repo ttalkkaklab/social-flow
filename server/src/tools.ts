@@ -2657,7 +2657,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
         },
         strength: {
           type: 'number', minimum: 0, maximum: 1, default: 0.9,
-          description: 'Portrait conditioning strength, 0.0-1.0 (default: 0.9); ignored without imagePath. Earlier dialogue probes: 0.9 accompanied mouth movement and 0.7 accompanied a changed person, but prompts also differed. A later fixed-prompt 19.2 pair is an observation, not proof of improved identity or lip-sync at 0.9. 1.0 is unmeasured on cuts with a visible mouth.',
+          description: 'Portrait conditioning strength, 0.0-1.0 (default: 0.9); ignored without imagePath. Earlier dialogue probes: 0.9 accompanied mouth movement and 0.7 accompanied a changed person, but prompts also differed. A later fixed-prompt 19.2 pair is an observation, not proof of improved identity or lip-sync at 0.9. 1.0 is unmeasured on cuts with a clearly detailed, unobscured mouth close-up in the conditioning image; neither local dialogue source (19.2 or 25.3) meets that condition.',
         },
         audioStartTime: {
           type: 'number',
