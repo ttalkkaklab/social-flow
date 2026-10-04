@@ -38,7 +38,7 @@ function quote(win, { krwPerUsd = 1400, legacy = false } = {}) {
   const hostVideo = p.videoProvider === 'host', astraVideo = p.videoProvider === 'astra';
   const ownBox = hostVideo || astraVideo;
   const model = p.comparison?.model || DEFAULT_MODEL;
-  const resolution = p.comparison?.resolution || (hostVideo ? '720p' : astraVideo ? mode.ASTRA_RESOLUTION : '1080p');
+  const resolution = comparisonResolution(win);
   const candidate = inputs.map(s => ({ type: 'points', duration: s.duration,
     visual: { video: ownBox ? { engine: hostVideo ? 'host' : 'astra', resolution, generateAudio: false }
       : { engine: 'seedance', model, modelReason: 'HITL comparison', realFaceInput: false, resolution, generateAudio: false } } }));
@@ -81,6 +81,11 @@ function quote(win, { krwPerUsd = 1400, legacy = false } = {}) {
   }
   return result;
 }
+function comparisonResolution(win) {
+  const p = win.PRODUCTION || {};
+  return p.comparison?.resolution || (p.videoProvider === 'host' ? '720p'
+    : p.videoProvider === 'astra' ? mode.astraResolution(win) : '1080p');
+}
 
 function main() {
   const args = process.argv.slice(2), value = name => args[args.indexOf(name) + 1];
@@ -109,7 +114,7 @@ function main() {
     (option.provisional ? ' · 장면 확정 전 추산' : ' · 현재 장면 계획 기준'));
   console.log(`원화는 1달러=${result.krwPerUsd}원 가정. 모델·해상도·생성 시간은 --json의 rows에 표시합니다.`);
 }
-module.exports = { quote, pricedRows, digest };
+module.exports = { quote, pricedRows, digest, comparisonResolution };
 if (require.main === module) {
   try { main(); } catch (e) { console.error('production-cost: ' + e.message); process.exitCode = 1; }
 }
