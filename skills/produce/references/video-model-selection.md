@@ -77,16 +77,19 @@ sends it inside `images[]`. Without `imagePath`, strength is ignored. In the
 2026-10-04 dialogue probes, 19.2 at 0.9 showed mouth movement following the audio;
 19.2 at 0.7 showed mouth movement but changed the person. Prompts and upload ids
 also changed, so these observations do not isolate strength.
-**Conditioning-image visibility:** the 25.3 source is already a wide side view with
-the mouth obscured by a beard; regeneration did not introduce that composition.
-Repeating generation does not fix the source visibility limitation. The 19.2 source
+**Conditioning-image visibility:** the 25.3 source is a wide side view of a bearded
+face, with the lip line visible. The side view is a less useful reference for frontal
+mouth opening; regeneration did not introduce that composition. The 19.2 source
 is a full-body view with a small face: the mouth outline is visible, but it is not a
 detailed mouth close-up. Neither local dialogue source supplies a detailed, unobscured
 mouth close-up for evaluating source-mouth conditioning.
-**Output visibility:** the 25.3 regeneration retains the source's obscured-mouth view
-(motion score 0.670, with only slight hand movement), so its lip-sync could not be judged.
-Among these dialogue outputs, only 19.2 has a clearly visible mouth in close-up, after the
-full-body-to-close-up transition described below; that does not describe its source.
+**Output visibility:** the 25.3 regeneration keeps the side view. Its lips are visible
+and change shape across sampled frames 0/20/40/60/85. The side view, small face and
+beard limit inspection, but do not make the lips invisible. These frame samples do
+not establish synchronization with audio, just as the 19.2 samples do not.
+The 19.2 outputs show the mouth in close-up after the full-body-to-close-up transition
+described below; that does not describe the 19.2 source. The earlier 25.3 motion score
+0.670 concerns overall movement, not mouth visibility or audio/mouth synchronization.
 The isolated 8.1 pair (1.0 versus 0.5) showed no output mouth change; its source mouth
 was not visible. **1.0 is unmeasured on cuts with a clearly detailed, unobscured mouth
 close-up in the conditioning image; neither local dialogue source (19.2 or 25.3) meets that condition.**
@@ -129,7 +132,10 @@ Evidence local to this Mac: `WORK_LOGS/SENIOR_A2V_STRENGTH_PAIR_20261004/` —
 `RESULT-19.2-s*.json`, `FFPROBE_S*.json` and `FRAMES_S*.png`.
 The 25.3 output limitation also refers to prior regeneration
 `d9924624e3474c6482ce698fb9645e50`; the source/output distinction and face comparison
-are documented in PR #398 review `5405432757`.
+are documented in PR #398 review `5405432757`, with the later source-visibility
+correction in PR comment `5978877144`. The 25.3 output observation above follows
+the reviewer's inspection of frames 0/20/40/60/85 from job
+`d9924624e3474c6482ce698fb9645e50`; it supersedes the earlier obscured-mouth claim.
 
 Clips carry AAC (48kHz stereo) with no audio-off argument. **audio2video carries the supplied
 WAV re-encoded as AAC**, rather than newly generated sound: job `558632165cfe4678a631eb460bf89457`
