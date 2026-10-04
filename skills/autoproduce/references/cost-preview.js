@@ -125,8 +125,9 @@ const ROUTES = {
   /* The astra lane: our own LTX-2.5 box (video-model-selection §ASTRA). Like the host rows it
      bills $0 — the cost is wall clock (66-184s a job, one at a time), which this forecast does not
      price. The slot still shows on the approval page as a generated shot. A speech clip goes
-     through audio-driven generation, whose length follows the uploaded track; the forecast books
-     the cut's own seconds rather than a vendor's fixed span. */
+     through audio-driven generation, and that clip does not take its length from the track
+     either — without an explicit frame count the box renders 121 frames whatever the audio is —
+     so the forecast and the call both read the cut's approved seconds, not the take. */
   'broll/astra': {
     key: 'video.astra',
     why: 'astra_img2video — our own LTX-2.5 box · no per-second charge, one job at a time'
@@ -137,7 +138,7 @@ const ROUTES = {
   },
   'quote/astra': {
     key: 'video.astra',
-    why: 'astra_audio2video — the clip follows the uploaded track · our own LTX-2.5 box'
+    why: 'astra_audio2video — the cut\'s own seconds; the clip does not inherit the track length · our own LTX-2.5 box'
   },
   'footage/astra': {
     key: 'video.astra',
