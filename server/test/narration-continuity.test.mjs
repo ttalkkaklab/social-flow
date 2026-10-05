@@ -50,19 +50,27 @@ test('real ffmpeg final audio review rejects continuity-only defects and binds a
  const child=`
  import {reviewFinalSpeech} from './dist/tts-final-quality.js';
  import {writeFileSync,readFileSync} from 'node:fs';
- let calls=0;globalThis.fetch=async()=>{calls++;const value=calls%2?{transcript:${JSON.stringify(texts[1])}}:{...${JSON.stringify(good)},continuity:calls===2?70:98};return new Response(JSON.stringify({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify(value)}]}}]}),{headers:{'Content-Type':'application/json'}});};
+ let calls=0,blind=0;
+ globalThis.fetch=async(input,init)=>{
+  let body='';try{body=typeof init?.body==='string'?init.body:(input&&typeof input.text==='function'?await input.text():'');}catch{body='';}
+  let value;
+  if(body.includes('Transcribe every audible spoken word')){blind++;value={transcript:${JSON.stringify(texts[1])}};}
+  else {calls++;value={...${JSON.stringify(good)},continuity:calls===1?70:98};}
+  return new Response(JSON.stringify({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify(value)}]}}]}),{headers:{'Content-Type':'application/json'}});};
  const req=${JSON.stringify({mediaPath:file,expectedText:texts[1],language:'Korean',delivery:'One connected narrator.'})};
  const a=await reviewFinalSpeech(req);if(a.status!=='fail')throw new Error(JSON.stringify(a));
- const cosmetic=await reviewFinalSpeech({...req,expectedText:req.expectedText.replace(/.$/,'!'),delivery:'A slightly revised direction.'});if(cosmetic.status!=='fail'||calls!==2)throw new Error('cosmetic edits must not reroll scores');
- const rejectedAgain=await reviewFinalSpeech(req);if(rejectedAgain.status!=='fail'||!rejectedAgain.reused||calls!==2)throw new Error('failed media must not reroll scores');
+ const cosmetic=await reviewFinalSpeech({...req,expectedText:req.expectedText.replace(/.$/,'!'),delivery:'A slightly revised direction.'});if(cosmetic.status!=='fail'||calls!==1)throw new Error('cosmetic edits must not reroll scores');
+ const rejectedAgain=await reviewFinalSpeech(req);if(rejectedAgain.status!=='fail'||!rejectedAgain.reused||calls!==1)throw new Error('failed media must not reroll scores');
  writeFileSync(req.mediaPath,Buffer.concat([readFileSync(req.mediaPath),Buffer.from('metadata-changed-for-test')]));
- const remux=await reviewFinalSpeech(req);if(remux.status!=='fail'||calls!==2)throw new Error('metadata must not reroll scores');
+ const remux=await reviewFinalSpeech(req);if(remux.status!=='fail'||calls!==1)throw new Error('metadata must not reroll scores');
  const changed=readFileSync(req.mediaPath);changed.writeInt16LE(1500,2048);writeFileSync(req.mediaPath,changed);
  const b=await reviewFinalSpeech(req);if(!b.success)throw new Error(JSON.stringify(b));
- const c=await reviewFinalSpeech(req);if(!c.reused||calls!==4)throw new Error('cache failed');
- console.log(JSON.stringify({calls}));`;
+ const c=await reviewFinalSpeech(req);if(!c.reused||calls!==2)throw new Error('cache failed');
+ console.log(JSON.stringify({calls,blind}));`;
  const run=spawnSync(process.execPath,['--input-type=module','-e',child],{cwd:path.resolve(import.meta.dirname,'..'),encoding:'utf8',env:{...process.env,GEMINI_API_KEY:'test-only',GOOGLE_API_KEY:'test-only',GOOGLE_GENAI_USE_VERTEXAI:'false'}});
- assert.equal(run.status,0,run.stderr);assert.equal(JSON.parse(run.stdout).calls,4);
+ assert.equal(run.status,0,run.stderr);
+ // Two listening reviews and no dictation call: the final review does not transcribe by default.
+ assert.deepEqual(JSON.parse(run.stdout),{calls:2,blind:0});
  const p=JSON.parse(readFileSync(file+'.speech-quality.json','utf8'));
  assert.doesNotThrow(()=>finalChecker.verify(file,texts[1]));
  assert.throws(()=>finalChecker.verifyReport({...p,review:{...p.review,continuity:94}},file,texts[1]),/continuity/);
@@ -84,6 +92,51 @@ test('real ffmpeg final audio review rejects continuity-only defects and binds a
  assert.throws(()=>finalChecker.verifyEvidence(evidence,file,texts[1]),/other media, narration or findings/);
  writeFileSync(file+'.speech-quality.json',JSON.stringify({...p,status:'unverified',error:'reviewer outage'}));
  assert.throws(()=>finalChecker.gate(work,file,texts[1]),/unverified/);
+});
+
+test('the final review transcribes only on request and never drops the request record',t=>{
+ const dir=setup(t),file=path.join(dir,'final.wav'),other=path.join(dir,'other.wav');
+ const tone=hz=>{const pcm=Buffer.alloc(24000*2*2);for(let i=0;i<pcm.length/2;i++)pcm.writeInt16LE(Math.round(5000*Math.sin(i*2*Math.PI*hz/24000)),i*2);return pcmToWav(pcm,24000,1);};
+ writeFileSync(file,tone(220));writeFileSync(other,tone(300));
+ const child=`
+ import {reviewFinalSpeech} from './dist/tts-final-quality.js';
+ import {readFileSync} from 'node:fs';
+ const TRANSCRIBE='Transcribe every audible spoken word';
+ let review=0,blind=0,mode='pass';
+ globalThis.fetch=async(input,init)=>{
+  let body='';try{body=typeof init?.body==='string'?init.body:(input&&typeof input.text==='function'?await input.text():'');}catch{body='';}
+  let value;
+  if(body.includes(TRANSCRIBE)){blind++;value={transcript:${JSON.stringify(texts[1])}};}
+  else {review++;value={...${JSON.stringify(good)},continuity:mode==='fail'?70:98};}
+  return new Response(JSON.stringify({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify(value)}]}}]}),{headers:{'Content-Type':'application/json'}});};
+ const req=${JSON.stringify({mediaPath:file,expectedText:texts[1],language:'Korean',delivery:'One connected narrator.'})};
+ const bad={...req,mediaPath:${JSON.stringify(other)}};
+ const ask={requestedBy:'user',reason:'오너가 이 회차의 내레이션만 받아쓰기로 대조해 달라고 요청했다.'};
+ // What the written proof says, which is what a later reader actually has.
+ const stored=m=>{const p=JSON.parse(readFileSync(m+'.speech-quality.json','utf8'));return p.transcriptCheck===undefined?'ABSENT':p.transcriptCheck;};
+ const seen=(o,m)=>({review,blind,status:o.status,transcript:o.transcript??null,reused:o.reused===true,stored:stored(m)});
+ const off=seen(await reviewFinalSpeech(req),req.mediaPath);
+ const on=seen(await reviewFinalSpeech({...req,transcriptCheck:ask}),req.mediaPath);
+ const backOff=seen(await reviewFinalSpeech(req),req.mediaPath);
+ mode='fail';
+ const failed=seen(await reviewFinalSpeech({...bad,transcriptCheck:ask}),bad.mediaPath);
+ const failReused=seen(await reviewFinalSpeech(bad),bad.mediaPath);
+ console.log(JSON.stringify({off,on,backOff,failed,failReused,ask}));`;
+ const run=spawnSync(process.execPath,['--input-type=module','-e',child],{cwd:path.resolve(import.meta.dirname,'..'),encoding:'utf8',
+  env:{...process.env,GEMINI_API_KEY:'test-only',GOOGLE_API_KEY:'',GOOGLE_GENAI_USE_VERTEXAI:'false'}});
+ assert.equal(run.status,0,run.stderr);
+ const {off,on,backOff,failed,failReused,ask}=JSON.parse(run.stdout);
+ // Default: one listening call, nothing transcribed, and the proof says nobody asked.
+ assert.deepEqual(off,{review:1,blind:0,status:'pass',transcript:null,reused:false,stored:null});
+ // Asked for: the stored PASS cannot answer it, so the episode is listened to again — and transcribed.
+ assert.deepEqual(on,{review:2,blind:1,status:'pass',transcript:texts[1],reused:false,stored:ask});
+ // Turning it back off reuses the transcribed PASS — and keeps who asked. A transcript whose
+ // request record was dropped could not say why the dictation had run.
+ assert.deepEqual(backOff,{review:2,blind:1,status:'pass',transcript:texts[1],reused:true,stored:ask});
+ // The cached FAIL carries it too: a take rejected over its dictation must keep the reason it ran.
+ assert.deepEqual(failed,{review:3,blind:2,status:'fail',transcript:texts[1],reused:false,stored:ask});
+ assert.deepEqual(failReused,{review:3,blind:2,status:'fail',transcript:texts[1],reused:true,stored:ask});
+ assert.doesNotThrow(()=>finalChecker.verify(file,texts[1]));
 });
 
 test('mixed generated, recording and b-roll speech uses actual playback order',t=>{

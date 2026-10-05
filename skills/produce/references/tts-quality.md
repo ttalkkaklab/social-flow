@@ -144,25 +144,44 @@ by `chunkPause` (0.3 s) and then spaced like any other boundary.
 |---|---|
 | WAV signal | Decodable, at least 0.25 seconds, at most 120 seconds, RMS at least -45 dBFS, no more than 0.1% clipped samples |
 | Duration | At most twice spoken characters / 4.5, with a two-second allowance for very short utterances |
-| Blind transcription | Character error rate at most 2%, ignoring punctuation, spacing and case |
+| Blind transcription | Only when `transcriptCheck` asked for it: character error rate at most 2%, ignoring punctuation, spacing and case |
 | Accuracy | At least 98/100; quantities, names, endings, omissions and repetitions checked |
 | Pronunciation | At least 95/100; native sounds, liaison and stress |
 | Naturalness | At least 95/100; phrase breaks, breath, pacing and intonation |
 | Clarity | At least 95/100; no audible noise, clipping, metallic sound or joins |
 | Evidence | Full audio reviewed, confidence at least 0.9, concrete listening observations and no reported defect |
 
-The blind transcription request does not receive the script. A separate request listens to
-the audio with the script and delivery direction. It records defects with timestamps and
-correction instructions. The listening judge cannot override a failed transcript comparison.
-These are conservative operating thresholds, not calibrated human MOS scores. ASR can spell
-a correct word differently and cause a false rejection; do not turn that rejection into PASS.
+The blind transcription (STT) check does not run by default (owner directive 2026-10-04). A
+take is judged by the listening review alone and the proof records `transcript: null`. Pass
+`transcriptCheck` — `requestedBy` and the `reason` in the asker's own words — to turn it back
+on for that call. There is no environment default and no config file: the handle carries a
+request or the check does not run.
+
+With it off the listening judge is told that no second reading accompanies the take, so it
+does not assume the script was spoken. That states the absence; it does not measure what the
+absence costs. What is lost is the independent second opinion — one request transcribes the
+audio without the script, the other listens with it, and the two disagree out loud. Accuracy
+stays at 98/100 either way: the word-level check is not switched off, it loses its second
+reader. Thresholds are not tightened to compensate, because tightening them brings back the
+same false rejections this change removes.
+
+With it on, the blind transcription request still does not receive the script, runs first, and
+its words go to the listening judge. The listening judge cannot override a failed transcript
+comparison. These are conservative operating thresholds, not calibrated human MOS scores. ASR
+can spell a correct word differently and cause a false rejection; do not turn that rejection
+into PASS — turn the check off instead, which is now the default.
+
+A stored PASS that was never transcribed cannot answer a request that now asks for the check.
+It is reviewed again from the same WAV — no second synthesis is paid for — and the earlier
+review moves to `previousReviews`. Turning the check off never invalidates a proof that has a
+transcript on record, so no existing evidence has to be regenerated.
 
 ## Retry and stop
 
 `maxAttempts` includes the first take and is capped at three. A failed acoustic or listening
 check regenerates the scene at the same settings. The JSON proof keeps each attempt's hash,
-measurements, transcript, scores and defects. Repeating the same request preserves the attempt
-history; it does not grant three more takes. An unchanged PASS is reused.
+measurements, transcript (`null` when the dictation check did not run), scores and defects.
+Repeating the same request preserves the attempt history; it does not grant three more takes. An unchanged PASS is reused.
 
 A missing key/runtime, API error, invalid review or uncertain evaluation returns `unverified`.
 It does not trigger another synthesis in that call. After fixing a review outage, the same
