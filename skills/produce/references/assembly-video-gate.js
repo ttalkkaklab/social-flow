@@ -101,6 +101,10 @@ function check(work, board) {
   warnings.push(...production.errors.map(e=>'check-production: '+e));
   // Mode validation may return early; reuse still needs its manifest indices downstream.
   const win=evaluateWindowScript(fs.readFileSync(path.join(board,'scenes.js'),'utf8'));
+  // Source/trim/clock errors are invalid inputs, never approvable quality warnings.
+  win.SCENES.forEach(s=>require('./video-groups.js').declaration(s,{mode:win.PRODUCTION?.mode??null}));
+  if(win.SCENES.some(s=>s.visual?.video?.groupPlan!==undefined))
+    require('./verify-build-plan.js').verifyManifest(work,board,win.SCENES,win.FORMAT,{videoWarningsApproved:true});
   warnings.push(...assemblyWarnings(work,board,win.SCENES,win.FORMAT));
   production.reusedShots=win.SCENES.flatMap((s,i)=>s.visual?.reuse!==undefined?[i]:[]);
   fs.writeFileSync(path.join(work,'production-preflight.json'),JSON.stringify(production,null,2)+'\n');

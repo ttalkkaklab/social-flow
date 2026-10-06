@@ -628,6 +628,45 @@ fast/mini grades, 1080p otherwise) and audio false; only burned subtitles overla
 outro retains its source. Full-video quality evidence is in `.work/video-review.json`, tied to
 the actual source and clip hashes, checked before the build.
 
+### Full-video sentence group sources
+
+Keep the card and its narration array intact. A `full_video` generated card may replace
+its single `visual.video.clip` assembly source with `visual.video.groupPlan`:
+
+```js
+groupPlan: {
+  fps: 30,                // output frames per second, not the source's 24fps
+  bodyFrames: 478,        // output body frames; excludes the outgoing live handle
+  groups: [
+    { segment: 0, startFrame: 0, clip: 'video/s01_g1.mp4', sha256: 'actual 64 hex digest', in: 0 },
+    { segment: 1, startFrame: 177, clip: 'video/s01_g2.mp4', sha256: 'actual 64 hex digest', in: 0 },
+    { segment: 2, startFrame: 294, clip: 'video/s01_g3.mp4', sha256: 'actual 64 hex digest', in: 1.5 }
+  ]
+}
+```
+
+`segment` is a zero-based narration index. There is exactly one group per sentence in
+the same order, starting at output frame zero, with strictly increasing `startFrame`
+values below `bodyFrames`. Those boundaries are explicit visual cuts; the existing audio
+and subtitle clocks are unchanged. Choose them from the current measured sentence clock.
+`in` is source seconds. It rounds forward to the first source frame at or after that time;
+for 24fps, 1.5 stays 1.5 and 1.501 becomes 37/24. Sources must have a measurable constant
+frame rate. Conversion to the declared output fps preserves playback speed.
+
+Every group ends at the next boundary. The last group covers the remaining body plus
+the existing outgoing handle from the next card's compiled transition, rounded upward
+to output frames. Do not put that handle in `bodyFrames` or add it twice. Card `edit.in`
+must be zero; each group owns its source trim. Internal joins are direct cuts. Card-level
+cut/jcut/dip edits still use the common edit plan, including explicit `edit.pre:0` when
+the audio clock must stay unchanged. A slide, sync recording, imported reuse, b-roll or
+outro cannot use this contract.
+
+The common builder requires the audio-derived body frame count and output fps to match
+the declaration exactly. It rejects stale SHA, source/order mismatches, invalid boundaries,
+insufficient source after rounded trim, and missing outgoing frames. These input errors
+cannot be approved through HITL. No padding, looping or speed change repairs a mismatch.
+The normal single-clip source remains supported when `groupPlan` is absent.
+
 ### Episode visual style selection
 
 Before authoring, follow [visual-style.md](visual-style.md). Both production modes store
