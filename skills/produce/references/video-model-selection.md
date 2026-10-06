@@ -85,12 +85,66 @@ Source: `LTX_A2V_STRENGTH_EVIDENCE_20261004.tgz`, `logs/r253.log` and `ERRATA.md
 sends it inside `images[]`. Without `imagePath`, strength is ignored. In the
 2026-10-04 dialogue probes, 19.2 at 0.9 showed mouth movement following the audio;
 19.2 at 0.7 showed mouth movement but changed the person. Prompts and upload ids
-also changed, so these observations do not isolate strength. The 25.3 probe used
-0.9 without a control. The isolated 8.1 pair (1.0 versus 0.5) showed no mouth change;
-the source mouth was not visible. **1.0 is unmeasured on cuts with a visible mouth.**
+also changed, so these observations do not isolate strength.
+**Conditioning-image visibility:** the 25.3 source is a wide side view of a bearded
+face, with the lip line visible. The side view is a less useful reference for frontal
+mouth opening; regeneration did not introduce that composition. The 19.2 source
+is a full-body view with a small face: the mouth outline is visible, but it is not a
+detailed mouth close-up. Neither local dialogue source supplies a detailed, unobscured
+mouth close-up for evaluating source-mouth conditioning.
+**Output visibility:** the 25.3 regeneration keeps the side view. Its lips are visible
+and change shape across sampled frames 0/20/40/60/85. The side view, small face and
+beard limit inspection, but do not make the lips invisible. These frame samples do
+not establish synchronization with audio, just as the 19.2 samples do not.
+The 19.2 outputs show the mouth in close-up after the full-body-to-close-up transition
+described below; that does not describe the 19.2 source. The earlier 25.3 motion score
+0.670 concerns overall movement, not mouth visibility or audio/mouth synchronization.
+The isolated 8.1 pair (1.0 versus 0.5) showed no output mouth change; its source mouth
+was not visible. **1.0 is unmeasured on cuts with a clearly detailed, unobscured mouth
+close-up in the conditioning image; neither local dialogue source (19.2 or 25.3) meets that condition.**
+The source close-up condition is a qualitative judgment, not a calibrated threshold.
+Anyone testing 1.0 should record why the selected source meets that condition alongside
+the results.
 The default selects a value used by successful jobs, not a proven causal improvement.
 Source: the same evidence bundle, server jobs `a361afa9`, `4a9e9f85`, `6331bf1a`,
 `af272f36`, `df8561ed`; corrected local `README.md` and `ERRATA.md` §9/11/12.
+
+A same-session 2026-10-04 09:47–09:50 UTC **19.2 pair** used strength 0.7 and 0.9
+with identical prompt bytes (`diff` exit 0), seed 42, 1280×704, 81 frames and 24 fps.
+Both used the same source image and stereo WAV bytes; fresh upload ids differed.
+The submitted requests matched after excluding those ids and strength, and the server
+recorded the requested strengths. Jobs `9bb19cea6f9d4b43ac2bab9a0152bd4e` (0.7, 86s)
+and `4557a98c1a9a4e4f863f86784f91570f` (0.9, 88s) both produced 3.375-second clips.
+**Observation (outputs):** sampled frames 0/16/32/48/64/80 show mouth-shape changes
+in both clips. Despite attaching the full-body source at `frame_idx: 0`, including
+at strength 0.9, both outputs show a close-up by sampled frame 32. This is how the
+mouth becomes visible in close-up in the 19.2 outputs; the source provides only a
+small mouth outline.
+The close-up faces were not distinguishably different between the two strengths in
+the reviewer's frame reading. The source face is too small to support an identity
+comparison, so this pair does not establish that the earlier 0.7 person change recurred.
+**Causal limit (conditioning image):** an obscured or small source mouth does not
+provide the detailed mouth reference needed to assess source-mouth conditioning.
+Repeating these same inputs cannot establish the effect of conditioning on a detailed,
+visible source mouth; that requires a suitable conditioning image. This is not a claim
+that strength cannot affect generated faces or that the audio cannot drive mouth motion.
+**Causal limit (outputs):** this one pair does not establish better identity preservation
+or lip-sync at 0.9; sampled frames do not measure audio/mouth synchronization, and no
+repeated runs or identity metric were used. The earlier changed-person observation
+at 0.7 must not be generalized to all 0.7 jobs.
+1.0 was not tested in this pair. The default remains 0.9 without a causal quality claim.
+Source: permanent discussion and review in
+[ttalkkaklab/social-flow#398](https://github.com/ttalkkaklab/social-flow/pull/398)
+and task `f5e0e15aa27a751a324ff1012f26d1747b1ca452675fc4d76ad6b6a9e9a1a919`.
+Evidence local to this Mac: `WORK_LOGS/SENIOR_A2V_STRENGTH_PAIR_20261004/` —
+`WIRE.json`, `PAIR_CHECK.json`, `PROMPT_DIFF.txt`, `INPUT-19.2-s*.json`,
+`RESULT-19.2-s*.json`, `FFPROBE_S*.json` and `FRAMES_S*.png`.
+The 25.3 output limitation also refers to prior regeneration
+`d9924624e3474c6482ce698fb9645e50`; the source/output distinction and face comparison
+are documented in PR #398 review `5405432757`, with the later source-visibility
+correction in PR comment `5978877144`. The 25.3 output observation above follows
+the reviewer's inspection of frames 0/20/40/60/85 from job
+`d9924624e3474c6482ce698fb9645e50`; it supersedes the earlier obscured-mouth claim.
 
 Clips carry AAC (48kHz stereo) with no audio-off argument. **audio2video carries the supplied
 WAV re-encoded as AAC**, rather than newly generated sound: job `558632165cfe4678a631eb460bf89457`

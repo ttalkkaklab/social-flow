@@ -1076,10 +1076,10 @@ var require_util = __commonJS({
     var codegen_1 = require_codegen();
     var code_1 = require_code();
     function toHash(arr) {
-      const hash3 = {};
+      const hash4 = {};
       for (const item of arr)
-        hash3[item] = true;
-      return hash3;
+        hash4[item] = true;
+      return hash4;
     }
     exports.toHash = toHash;
     function alwaysValidSchema(it, schema) {
@@ -1885,8 +1885,8 @@ var require_keyword = __commonJS({
       var _a4;
       const { gen, keyword, schema, parentSchema, $data, it } = cxt;
       checkAsyncKeyword(it, def);
-      const validate = !$data && def.compile ? def.compile.call(it.self, schema, parentSchema, it) : def.validate;
-      const validateRef = useKeyword(gen, keyword, validate);
+      const validate2 = !$data && def.compile ? def.compile.call(it.self, schema, parentSchema, it) : def.validate;
+      const validateRef = useKeyword(gen, keyword, validate2);
       const valid = gen.let("valid");
       cxt.block$data(valid, validateKeyword);
       cxt.ok((_a4 = def.valid) !== null && _a4 !== void 0 ? _a4 : valid);
@@ -2959,28 +2959,28 @@ var require_compile = __commonJS({
         if (this.opts.code.process)
           sourceCode = this.opts.code.process(sourceCode, sch);
         const makeValidate = new Function(`${names_1.default.self}`, `${names_1.default.scope}`, sourceCode);
-        const validate = makeValidate(this, this.scope.get());
-        this.scope.value(validateName, { ref: validate });
-        validate.errors = null;
-        validate.schema = sch.schema;
-        validate.schemaEnv = sch;
+        const validate2 = makeValidate(this, this.scope.get());
+        this.scope.value(validateName, { ref: validate2 });
+        validate2.errors = null;
+        validate2.schema = sch.schema;
+        validate2.schemaEnv = sch;
         if (sch.$async)
-          validate.$async = true;
+          validate2.$async = true;
         if (this.opts.code.source === true) {
-          validate.source = { validateName, validateCode, scopeValues: gen._values };
+          validate2.source = { validateName, validateCode, scopeValues: gen._values };
         }
         if (this.opts.unevaluated) {
           const { props, items } = schemaCxt;
-          validate.evaluated = {
+          validate2.evaluated = {
             props: props instanceof codegen_1.Name ? void 0 : props,
             items: items instanceof codegen_1.Name ? void 0 : items,
             dynamicProps: props instanceof codegen_1.Name,
             dynamicItems: items instanceof codegen_1.Name
           };
-          if (validate.source)
-            validate.source.evaluated = (0, codegen_1.stringify)(validate.evaluated);
+          if (validate2.source)
+            validate2.source.evaluated = (0, codegen_1.stringify)(validate2.evaluated);
         }
-        sch.validate = validate;
+        sch.validate = validate2;
         return sch;
       } catch (e2) {
         delete sch.validate;
@@ -6619,8 +6619,8 @@ var require_formats = __commonJS({
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.formatNames = exports.fastFormats = exports.fullFormats = void 0;
-    function fmtDef(validate, compare) {
-      return { validate, compare };
+    function fmtDef(validate2, compare) {
+      return { validate: validate2, compare };
     }
     exports.fullFormats = {
       // date: http://tools.ietf.org/html/rfc3339#section-5.6
@@ -7942,12 +7942,12 @@ var require_common2 = __commonJS({
       createDebug.skips = [];
       createDebug.formatters = {};
       function selectColor(namespace) {
-        let hash3 = 0;
+        let hash4 = 0;
         for (let i2 = 0; i2 < namespace.length; i2++) {
-          hash3 = (hash3 << 5) - hash3 + namespace.charCodeAt(i2);
-          hash3 |= 0;
+          hash4 = (hash4 << 5) - hash4 + namespace.charCodeAt(i2);
+          hash4 |= 0;
         }
-        return createDebug.colors[Math.abs(hash3) % createDebug.colors.length];
+        return createDebug.colors[Math.abs(hash4) % createDebug.colors.length];
       }
       createDebug.selectColor = selectColor;
       function createDebug(namespace) {
@@ -14742,8 +14742,8 @@ var init_get_search = __esm({
         return parsedURL.search;
       }
       const lastOffset = parsedURL.href.length - 1;
-      const hash3 = parsedURL.hash || (parsedURL.href[lastOffset] === "#" ? "#" : "");
-      return parsedURL.href[lastOffset - hash3.length] === "?" ? "?" : "";
+      const hash4 = parsedURL.hash || (parsedURL.href[lastOffset] === "#" ? "#" : "");
+      return parsedURL.href[lastOffset - hash4.length] === "?" ? "?" : "";
     };
   }
 });
@@ -18198,7 +18198,7 @@ var require_src4 = __commonJS({
       }
       return new URL(exports.BASE_PATH, baseUrl).href;
     }
-    function validate(options) {
+    function validate2(options) {
       Object.keys(options).forEach((key) => {
         switch (key) {
           case "params":
@@ -18229,7 +18229,7 @@ var require_src4 = __commonJS({
       if (typeof options === "string") {
         metadataKey += `/${options}`;
       } else {
-        validate(options);
+        validate2(options);
         if (options.property) {
           metadataKey += `/${options.property}`;
         }
@@ -28514,8 +28514,8 @@ var require_websocket = __commonJS({
           abortHandshake(websocket, socket, "Invalid Upgrade header");
           return;
         }
-        const digest = createHash11("sha1").update(key + GUID).digest("base64");
-        if (res.headers["sec-websocket-accept"] !== digest) {
+        const digest2 = createHash11("sha1").update(key + GUID).digest("base64");
+        if (res.headers["sec-websocket-accept"] !== digest2) {
           abortHandshake(websocket, socket, "Invalid Sec-WebSocket-Accept header");
           return;
         }
@@ -29190,12 +29190,12 @@ var require_websocket_server = __commonJS({
           );
         }
         if (this._state > RUNNING) return abortHandshake(socket, 503);
-        const digest = createHash11("sha1").update(key + GUID).digest("base64");
+        const digest2 = createHash11("sha1").update(key + GUID).digest("base64");
         const headers = [
           "HTTP/1.1 101 Switching Protocols",
           "Upgrade: websocket",
           "Connection: Upgrade",
-          `Sec-WebSocket-Accept: ${digest}`
+          `Sec-WebSocket-Accept: ${digest2}`
         ];
         const ws = new this.options.WebSocket(null, void 0, this.options);
         if (protocols.size) {
@@ -64288,6 +64288,508 @@ var init_openai = __esm({
   }
 });
 
+// ../skills/_shared/scenes-vm.js
+var require_scenes_vm = __commonJS({
+  "../skills/_shared/scenes-vm.js"(exports, module) {
+    "use strict";
+    var vm2 = __require("node:vm");
+    var SCENES_VM_POLICY2 = Object.freeze({
+      timeoutMs: 5e3,
+      codeGeneration: Object.freeze({ strings: false, wasm: false })
+    });
+    function escapeRegExp2(value) {
+      return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    }
+    function describeEvaluationError2(error2, filename) {
+      const detail = error2 && typeof error2 === "object" ? error2 : {};
+      const message = typeof detail.message === "string" ? detail.message : String(error2);
+      const stack = typeof detail.stack === "string" ? detail.stack : "";
+      const locations = [...stack.matchAll(new RegExp(`${escapeRegExp2(filename)}:([0-9]+)(?::([0-9]+))?`, "g"))];
+      const location = locations.find((match2) => match2[2]) || locations[0];
+      const line = location?.[1] || "1";
+      const column = location?.[2] || "1";
+      const wrapped = new Error(
+        `${filename}:${line}:${column}: ${message}. Allowed syntax: storyboard JavaScript that assigns JSON-serializable data to window.*; eval and Function are disabled.`
+      );
+      wrapped.name = typeof detail.name === "string" ? detail.name : "Error";
+      wrapped.cause = error2;
+      return wrapped;
+    }
+    function evaluateWindowScript2(source, options = {}) {
+      const timeout = options.timeoutMs ?? SCENES_VM_POLICY2.timeoutMs;
+      const filename = options.filename ?? "scenes.js";
+      const context = vm2.createContext(/* @__PURE__ */ Object.create(null), {
+        codeGeneration: SCENES_VM_POLICY2.codeGeneration
+      });
+      try {
+        vm2.runInContext(
+          "var window = {}; var console = { log() {}, warn() {}, error() {}, info() {}, debug() {} };",
+          context,
+          { timeout }
+        );
+        vm2.runInContext(source, context, { filename, timeout });
+        const json3 = vm2.runInContext("JSON.stringify(window)", context, { timeout });
+        if (typeof json3 !== "string") throw new Error("the script did not leave a window object");
+        const plain = JSON.parse(json3);
+        if (!plain || typeof plain !== "object" || Array.isArray(plain)) {
+          throw new Error("the script replaced window with a non-object");
+        }
+        return plain;
+      } catch (error2) {
+        throw describeEvaluationError2(error2, filename);
+      }
+    }
+    module.exports = { SCENES_VM_POLICY: SCENES_VM_POLICY2, evaluateWindowScript: evaluateWindowScript2 };
+  }
+});
+
+// ../skills/storyboard/references/story-contract.js
+var require_story_contract = __commonJS({
+  "../skills/storyboard/references/story-contract.js"(exports, module) {
+    "use strict";
+    var crypto2 = __require("node:crypto");
+    var object4 = (x2) => x2 !== null && typeof x2 === "object" && !Array.isArray(x2);
+    var text2 = (x2) => typeof x2 === "string" && x2.trim().length > 0;
+    var canonical = (x2) => Array.isArray(x2) ? x2.map(canonical) : object4(x2) ? Object.fromEntries(Object.keys(x2).sort().map((k) => [k, canonical(x2[k])])) : x2;
+    var PAST_FINAL = /(았|었|였|했|왔|갔|봤|됐|냈|셨|잤|샀|썼|줬|놨|뒀|했었|았었|었었)(?:다|어요|어|습니다|죠|네요|거든요|대요|답니다|지요|잖아요|던\s*것이다|던\s*거다|던\s*겁니다|던\s*거예요)\s*$/;
+    var MORAL_FINAL = /(?:하자|합시다|말자|맙시다|세요|십시오|해야\s*(?:한다|해요|합니다|해|돼요|됩니다|된다)|[아어해마]라)\s*$/;
+    function storySpeech(win) {
+      const scenes = Array.isArray(win.SCENES) ? win.SCENES : [];
+      const transcripts = Array.isArray(win.STORY?.transcripts) ? win.STORY.transcripts : [];
+      const ordered2 = [];
+      scenes.forEach((s2, i2) => {
+        if (s2.type === "outro" || s2.type === "broll") return;
+        ordered2.push({ s: s2, shot: i2 + 1 });
+        scenes.forEach((b, j) => {
+          if (b.type === "broll" && Number(b.after) === i2) ordered2.push({ s: b, shot: j + 1 });
+        });
+      });
+      return ordered2.flatMap(({ s: s2, shot }) => {
+        const live = transcripts.find((t2) => t2?.shot === shot);
+        const groups = Array.isArray(s2.narration) && s2.narration.length ? s2.narration : Array.isArray(live?.groups) ? live.groups.map((g) => ({ tts: g?.text, sub: g?.text })) : [];
+        return groups.map((n, i2) => ({ shot, group: i2 + 1, n })).filter((x2) => text2(x2.n?.tts) || text2(x2.n?.sub));
+      });
+    }
+    function storyHash(win) {
+      const story = object4(win.STORY) ? { ...win.STORY } : null;
+      if (story) delete story.review;
+      const scenes = (win.SCENES || []).map((s2) => ({
+        type: s2.type,
+        beat: s2.beat,
+        arc: s2.arc,
+        after: s2.after,
+        title: s2.title,
+        stat: s2.stat,
+        bullets: s2.bullets,
+        narration: s2.narration,
+        info: s2.shot?.info,
+        // The forwardable thing is an editorial decision the reviewer reads, so rewriting it after
+        // the read has to invalidate the review the same way rewriting narration does.
+        share: s2.shot?.share,
+        // Slide copy is burned on screen, so rewriting it changes the episode the reviewer read.
+        slideLabels: s2.visual?.slide?.labels,
+        slideSubject: s2.visual?.slide?.subject,
+        ...s2.visual?.reuse !== void 0 ? { reuse: s2.visual.reuse } : {},
+        recording: s2.visual?.source === "recording" ? s2.visual.clip : void 0
+      }));
+      return crypto2.createHash("sha256").update(JSON.stringify(canonical({
+        comprehension: win.COMPREHENSION,
+        story,
+        scenes
+      }))).digest("hex");
+    }
+    function checkStory(win, { requireReview = true } = {}) {
+      const errors = [], fail6 = (message) => errors.push(message);
+      const story = win.STORY, scenes = Array.isArray(win.SCENES) ? win.SCENES : [];
+      if (!object4(story) || story.version !== "story-v1")
+        return ["window.STORY requires version story-v1; read story-quality.md before authoring"];
+      for (const key of ["viewerNeed", "thesis", "basis", "endingReason"])
+        if (!text2(story[key])) fail6(`STORY.${key} must explain a concrete editorial decision`);
+      if (!["evidence", "fiction"].includes(story.kind)) fail6("STORY.kind must be evidence or fiction");
+      if (!["none", "question", "action", "next"].includes(story.cta)) fail6("STORY.cta must be none, question, action or next");
+      const live = /* @__PURE__ */ new Map();
+      if (story.transcripts !== void 0 && !Array.isArray(story.transcripts)) fail6("STORY.transcripts must be an array");
+      (Array.isArray(story.transcripts) ? story.transcripts : []).forEach((t2, i2) => {
+        const s2 = scenes[t2?.shot - 1];
+        if (!object4(t2) || !Number.isInteger(t2.shot) || !s2 || s2.type === "outro" || s2.visual?.source !== "recording" && !s2.visual?.reuse || !text2(t2.source) || t2.source !== (s2.visual?.reuse?.clip || s2.visual.clip) || Array.isArray(s2.narration) && s2.narration.length || live.has(t2.shot) || !Array.isArray(t2.groups) || !t2.groups.length) {
+          fail6(`STORY.transcripts[${i2}] requires a unique live-voice recording or reused shot, matching clip and groups`);
+          return;
+        }
+        let end = 0;
+        t2.groups.forEach((g) => {
+          if (!object4(g) || !text2(g.text) || !Number.isFinite(g.start) || !Number.isFinite(g.end) || g.start < end || g.end <= g.start || s2.visual?.reuse && g.end > s2.duration) fail6(`STORY.transcripts[${i2}] requires ordered timed speech`);
+          if (object4(g)) end = g.end;
+        });
+        live.set(t2.shot, t2.groups.map((g) => ({ tts: g?.text, sub: g?.text })));
+      });
+      const speech = storySpeech(win);
+      const narrated = [...new Set(speech.map((x2) => x2.shot))].map((i2) => ({ i: i2 }));
+      function ref(r2, label) {
+        if (!object4(r2) || !Number.isInteger(r2.shot) || !Number.isInteger(r2.group) || r2.shot < 1 || r2.group < 1 || !text2(r2.quote)) {
+          fail6(`${label} requires 1-based shot, group and exact quote`);
+          return null;
+        }
+        const n = speech.find((x2) => x2.shot === r2.shot && x2.group === r2.group)?.n;
+        const said = [n?.tts, n?.sub].filter((v) => text2(v));
+        const found = said.filter((v) => v.includes(r2.quote));
+        if (!found.length) {
+          fail6(`${label} quote is not in the referenced narration`);
+          return null;
+        }
+        if (found.some((v) => r2.quote.trim().length < Math.min(12, Math.ceil(v.trim().length / 2)))) {
+          fail6(`${label} quote is too short to identify the line \u2014 quote at least half of it`);
+          return null;
+        }
+        return [r2.shot, r2.group];
+      }
+      const opening = ref(story.opening, "STORY.opening");
+      const payoff = ref(story.payoff, "STORY.payoff");
+      const ending = ref(story.ending, "STORY.ending");
+      const position = (a) => speech.findIndex((x2) => x2.shot === a[0] && x2.group === a[1]);
+      const before = (a, b) => position(a) < position(b);
+      if (opening && position(opening) !== 0) fail6("STORY.opening must reference the first spoken group");
+      const revealCover = scenes.find((s2) => object4(s2) && s2.type === "cover");
+      const coverReveal = !!revealCover && (revealCover.hookType === "spoiler" || revealCover.hookForm === "payoff");
+      if (opening && payoff) {
+        if (position(payoff) < position(opening)) fail6("STORY.payoff cannot precede the opening");
+        else if (position(payoff) === position(opening) && !coverReveal)
+          fail6('STORY.payoff must follow the opening \u2014 only a cover that states the result (hookType:"spoiler" or hookForm:"payoff") pays in the opening group');
+      }
+      if (ending && position(ending) !== speech.length - 1) fail6("STORY.ending must reference the last spoken group");
+      if (payoff && ending && before(ending, payoff)) fail6("STORY.ending cannot precede the payoff");
+      if (text2(story.thesis)) {
+        const thesis = story.thesis.trim();
+        const core = thesis.replace(/[\s.。!?…」"'”’)]+$/g, "");
+        const past = core.match(PAST_FINAL);
+        if (past) fail6(`STORY.thesis is told in the past tense ("\u2026${past[0].trim()}") \u2014 a fact about this episode; the message is a present-tense sentence that stays true with the names gone`);
+        if (/\d/.test(core)) fail6("STORY.thesis carries a figure \u2014 a figure is a fact for the body; the thesis is what it means");
+        const moral = core.match(MORAL_FINAL);
+        if (moral) fail6(`STORY.thesis commands ("\u2026${moral[0].trim()}") \u2014 a moral tells the viewer what to do; a thesis states what leads to what`);
+        if (payoff && speech.length) {
+          const norm = (v) => String(v || "").replace(/[\s\p{P}]+/gu, "");
+          const want = norm(thesis);
+          const heard = speech.filter((x2, i2) => i2 >= position(payoff) && [x2.n?.tts, x2.n?.sub].some((v) => text2(v) && norm(v).includes(want)));
+          if (!heard.length)
+            fail6("STORY.thesis is heard by no spoken group at or after the payoff \u2014 the message is a sentence the viewer hears over the closing picture, not a note");
+          const payoffLine = norm(story.payoff.quote);
+          if (want && payoffLine && (want.includes(payoffLine) || payoffLine.includes(want)))
+            fail6("STORY.thesis restates the payoff line \u2014 the payoff is the reversal, the thesis is what it means once the names are gone");
+        }
+      }
+      if (story.themeStated !== void 0) {
+        const stated = ref(story.themeStated, "STORY.themeStated");
+        if (stated && payoff && !before(stated, payoff)) fail6("STORY.themeStated must be spoken before the payoff");
+      }
+      if (story.person !== void 0) {
+        const person = story.person;
+        const names = object4(person) ? [person.name, ...Array.isArray(person.aliases) ? person.aliases : []] : [];
+        if (!object4(person) || !text2(person.name) || person.aliases !== void 0 && !(Array.isArray(person.aliases) && person.aliases.every(text2))) {
+          fail6("STORY.person requires a name and optional aliases (person-short.md)");
+        } else if (names.some((v) => v.trim().length < 2)) {
+          fail6("STORY.person names and aliases need at least two characters");
+        } else {
+          const first = speech[0]?.n;
+          const said = [first?.tts, first?.sub].filter((v) => text2(v));
+          if (said.some((v) => names.some((name) => v.includes(name.trim()))))
+            fail6("STORY.person: the opening sentence names the person \u2014 open inside the event, introduce nobody");
+          if (text2(story.thesis) && names.some((name) => story.thesis.includes(name.trim())))
+            fail6("STORY.person: the thesis names the person \u2014 erase the name and the message has to still stand");
+          const YEAR = /(^|[^\d])(\d{4}\s*년|\d{3}\s*년(?!째|\s*(동안|넘게|만에|간|이상|가까이|가량|남짓)|(이|을|를|은|는|만|이나)\s*(흘렀|넘었|버텼|견뎠|기다렸|이어졌)))|\d+\s*세기|\d{4}\s*[-–.]\s*\d{1,2}\s*[-–.]\s*\d{1,2}(?!\d)/;
+          if (said.some((v) => YEAR.test(v)))
+            fail6("STORY.person: the opening sentence carries a year \u2014 the date comes after the scene");
+          if (coverReveal || revealCover?.hookForm === "number")
+            fail6('STORY.person: the first cut is a scene, not the result \u2014 no hookType:"spoiler", hookForm:"payoff" or hookForm:"number"');
+          if (payoff && ending && position(payoff) === position(ending))
+            fail6("STORY.person: the closing scene comes after the turn \u2014 payoff and ending cannot share a group");
+          scenes.forEach((s2, i2) => {
+            if (s2.type === "outro" || s2.type === "broll") return;
+            const groups = Array.isArray(s2.narration) ? s2.narration.filter((n) => text2(n?.tts) || text2(n?.sub)) : [];
+            if (groups.length > 1)
+              fail6(`STORY.person: shot ${i2 + 1} speaks ${groups.length} sentences \u2014 the picture changes every sentence, one group per shot`);
+            const sentences = (v) => (v.match(/(?<![\d.A-Z])\.(?=\s|$)|(?<!까|는지|을지|는가|던가)[?!]+(?=\s|$)(?!\s*((하고|라고|이라고|라며|하며|라는|이라는)(\s|$)|싶|궁금|물었|물어|되물|중얼|소리\s?쳤|소리\s?치|소리\s?질렀|소리\s?지르|외쳤|외치|말했|말하|되뇌))/g) || []).length;
+            if (groups.some((n) => Math.max(sentences(n.tts || ""), sentences(n.sub || "")) > 1))
+              fail6(`STORY.person: shot ${i2 + 1} packs two sentences into one group \u2014 split the shot`);
+          });
+        }
+      }
+      if (story.cta !== "none") {
+        const ask = ref(story.ask, "STORY.ask");
+        if (ask && payoff && !before(payoff, ask)) fail6("STORY.ask must follow the paid promise");
+        if (!text2(story.ctaReason)) fail6("STORY.ctaReason must explain why the ask helps this episode");
+      } else if (story.ask != null) fail6("STORY.cta none must not declare an ask");
+      const beats = Array.isArray(story.beats) ? story.beats : [];
+      if (beats.length !== narrated.length) fail6("STORY.beats requires one row per narrated shot");
+      const seen = /* @__PURE__ */ new Set();
+      beats.forEach((b, i2) => {
+        if (!object4(b)) {
+          fail6(`STORY.beats[${i2}] must be an object`);
+          return;
+        }
+        if (!Number.isInteger(b.shot) || !narrated.some((x2) => x2.i === b.shot) || seen.has(b.shot))
+          fail6(`STORY.beats[${i2}] must reference a unique narrated shot`);
+        seen.add(b.shot);
+        for (const key of ["change", "necessity"])
+          if (!text2(b[key])) fail6(`STORY.beats[${i2}].${key} is required`);
+      });
+      if (!requireReview) return errors;
+      const review2 = story.review;
+      if (!object4(review2)) return [...errors, "STORY.review is required before production; a score alone is not evidence"];
+      if (review2.hash !== storyHash(win)) fail6("STORY.review is stale; review the current narration and contract again");
+      if (review2.verdict !== "pass" || !Array.isArray(review2.unresolved) || review2.unresolved.length)
+        fail6("STORY.review must pass with an empty unresolved list");
+      for (const key of ["meaning", "progression", "payoff", "grounding"]) {
+        const item = review2[key];
+        if (!object4(item) || !text2(item.reason) || !Array.isArray(item.refs) || !item.refs.length) {
+          fail6(`STORY.review.${key} requires reasoning and quoted narration evidence`);
+          continue;
+        }
+        item.refs.forEach((r2, i2) => ref(r2, `STORY.review.${key}.refs[${i2}]`));
+      }
+      return errors;
+    }
+    module.exports = { checkStory, storyHash, storySpeech };
+  }
+});
+
+// ../skills/produce/references/check-tts-quality.js
+var require_check_tts_quality = __commonJS({
+  "../skills/produce/references/check-tts-quality.js"(exports, module) {
+    "use strict";
+    var fs10 = __require("node:fs");
+    var path27 = __require("node:path");
+    var { evaluateWindowScript: evaluateWindowScript2 } = require_scenes_vm();
+    var { createHash: createHash11 } = __require("node:crypto");
+    var { authorizeSpeed: authorizeSpeed4 } = require_tts_speed_policy();
+    var hash4 = (value) => createHash11("sha256").update(value).digest("hex");
+    var normalize2 = (text2) => text2.normalize("NFKC").toLowerCase().replace(/[\p{P}\p{Z}\s]/gu, "");
+    function cer(expected, heard) {
+      const a = [...normalize2(expected)], b = [...normalize2(heard)];
+      if (!a.length || b.length > 12e3) return 1;
+      let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+      for (let i2 = 1; i2 <= a.length; i2++) {
+        const next = [i2];
+        for (let j = 1; j <= b.length; j++) next[j] = Math.min(next[j - 1] + 1, prev[j] + 1, prev[j - 1] + Number(a[i2 - 1] !== b[j - 1]));
+        prev = next;
+      }
+      return prev[b.length] / a.length;
+    }
+    function verifyProof(file, expected) {
+      const proofFile = file + ".quality.json";
+      const report = JSON.parse(fs10.readFileSync(proofFile, "utf8"));
+      if (report.version !== 1 || report.policy !== "speech-quality-v1" || report.status !== "pass") throw new Error("missing current speech-quality-v1 PASS");
+      if (typeof expected !== "string" || !normalize2(expected) || expected.length > 4e3) throw new Error("invalid expected narration");
+      if (report.textSha256 !== hash4(normalize2(expected)) || typeof report.expectedText !== "string" || normalize2(report.expectedText) !== normalize2(expected)) throw new Error("narration changed after audio review");
+      const audioHash = hash4(fs10.readFileSync(file));
+      if (report.audioSha256 !== audioHash) throw new Error("audio changed after review");
+      if (!Array.isArray(report.attempts) || report.attempts.length < 1 || report.attempts.length > 3) throw new Error("missing bounded attempt history");
+      const take = report.attempts.at(-1), r2 = take.review, s2 = take.signal;
+      if (take.pending !== false || take.audioSha256 !== audioHash || !Array.isArray(take.failures) || take.failures.length) throw new Error("take has no clean recorded review");
+      if (take.transcript !== null && typeof take.transcript !== "string") throw new Error("take has no transcript record");
+      if (typeof take.transcript === "string" && cer(expected, take.transcript) > 0.02) throw new Error("blind transcript did not pass");
+      if (!s2 || ![s2.duration, s2.rmsDb, s2.clippedFraction].every(Number.isFinite) || s2.duration < 0.25 || s2.duration > 120 || s2.duration > Math.max(2, [...normalize2(expected)].length / 4.5 * 2) || s2.rmsDb < -45 || s2.clippedFraction < 0 || s2.clippedFraction > 1e-3) throw new Error("audio signal did not pass");
+      if (!r2 || r2.complete !== true || !Number.isFinite(r2.confidence) || r2.confidence < 0.9 || r2.confidence > 1 || typeof r2.evidence !== "string" || r2.evidence.trim().length < 20 || !Array.isArray(r2.issues) || r2.issues.length) throw new Error("listening review incomplete or defective");
+      for (const axis of ["accuracy", "pronunciation", "naturalness", "clarity"]) if (!Number.isFinite(r2[axis]) || r2[axis] < (axis === "accuracy" ? 98 : 95) || r2[axis] > 100) throw new Error(axis + " did not pass");
+      return { [file]: audioHash, [proofFile]: hash4(fs10.readFileSync(proofFile)) };
+    }
+    var REPORT = "tts-warnings.json";
+    var APPROVAL = "tts-approval.json";
+    var read2 = (file) => fs10.existsSync(file) ? JSON.parse(fs10.readFileSync(file, "utf8")) : null;
+    function findings(file) {
+      const proof = read2(file + ".quality.json");
+      if (!proof) return "no speech-quality proof beside the take";
+      const take = Array.isArray(proof.attempts) ? proof.attempts.at(-1) : null, r2 = take?.review;
+      const parts = [`proof status ${proof.status}`, `${Array.isArray(proof.attempts) ? proof.attempts.length : 0} attempt(s)`];
+      if (r2) parts.push(`accuracy ${r2.accuracy} \xB7 pronunciation ${r2.pronunciation} \xB7 naturalness ${r2.naturalness} \xB7 clarity ${r2.clarity}`);
+      if (Array.isArray(take?.failures) && take.failures.length) parts.push("failures: " + take.failures.join("; "));
+      for (const i2 of r2?.issues || []) parts.push(`${i2.category} at ${Number(i2.start).toFixed(2)}s heard "${i2.heard}" for "${i2.expected}" \u2014 ${i2.correction}`);
+      if (typeof take?.transcript === "string") parts.push("heard: " + take.transcript);
+      return parts.join(" | ");
+    }
+    function decide(work, warnings, inputs) {
+      const fingerprint = hash4(JSON.stringify({ inputs, warnings }));
+      const approval = read2(path27.join(work, APPROVAL));
+      const approved = warnings.length > 0 && approval?.kind === "user" && approval.fingerprint === fingerprint && typeof approval.reference === "string" && approval.reference.trim().length > 0 && Number.isFinite(Date.parse(approval.at));
+      const report = { fingerprint, warnings, inputs, approved: Boolean(approved), approval: approved ? approval : null, status: warnings.length ? approved ? "approved-with-warnings" : "awaiting-user" : "pass" };
+      fs10.writeFileSync(path27.join(work, REPORT), JSON.stringify(report, null, 2) + "\n");
+      for (const warning of warnings) console.error("TTS warning: " + warning);
+      if (warnings.length && !approved) throw new Error("TTS checks need HITL: show " + path27.join(work, REPORT) + " to the user. After explicit approval, record it with check-tts-quality.js approve; then rerun.");
+      if (approved) console.error("User approved these TTS warnings; continuing.");
+      return report;
+    }
+    function approve(work, reference) {
+      work = path27.resolve(work);
+      if (typeof reference !== "string" || !reference.trim()) throw new Error("An explicit user approval reference is required");
+      const report = read2(path27.join(work, REPORT));
+      if (!report?.warnings?.length || !report.fingerprint) throw new Error("Run the TTS check and present the warnings before recording approval");
+      fs10.writeFileSync(path27.join(work, APPROVAL), JSON.stringify({ kind: "user", fingerprint: report.fingerprint, reference, at: (/* @__PURE__ */ new Date()).toISOString() }, null, 2) + "\n");
+    }
+    var lastReport = (work) => read2(path27.join(path27.resolve(work), REPORT));
+    function check2(work, board) {
+      work = path27.resolve(work);
+      board = path27.resolve(board);
+      const scenesFile = path27.join(board, "scenes.js");
+      const win = evaluateWindowScript2(fs10.readFileSync(scenesFile, "utf8"), { filename: scenesFile });
+      if (!Array.isArray(win.SCENES)) throw new Error("SCENES missing");
+      const rows = fs10.readFileSync(path27.join(work, "cards.tsv"), "utf8").split(/\r?\n/).filter((l) => l.trim() && !l.startsWith("#")).map((l) => l.split("	"));
+      const expected = win.SCENES.map((s2, i2) => ({ s: s2, i: i2 })).filter(({ s: s2 }) => !["broll", "outro"].includes(s2.type));
+      if (JSON.stringify(rows.map((r2) => r2[0])) !== JSON.stringify(expected.map(({ i: i2 }) => String(i2)))) throw new Error("card order differs from SCENES");
+      const media = {}, warnings = [], inputs = {};
+      const speech = require_story_contract().storySpeech(win);
+      const spoken = [...new Set(speech.map((g) => g.shot))].map((shot) => ({ i: shot - 1, text: speech.filter((g) => g.shot === shot).map((g) => g.n.tts || g.n.sub).join(". ") }));
+      const texts = spoken.map((s2) => s2.text);
+      let episodeSettings;
+      for (const [k, { s: s2, i: i2 }] of expected.entries()) {
+        const file = path27.resolve(work, rows[k][1]);
+        media[file] = hash4(fs10.readFileSync(file));
+        const text2 = (s2.narration || []).map((n) => n.tts || "").join(". ");
+        const live = win.VOICE === "user" || s2.visual?.source === "recording" && !normalize2(text2) || s2.visual?.source === "screencast" && s2.visual?.sync === true;
+        if (live || !normalize2(text2)) continue;
+        const proofFile = file + ".quality.json";
+        inputs[file] = media[file];
+        inputs[proofFile] = fs10.existsSync(proofFile) ? hash4(fs10.readFileSync(proofFile)) : null;
+        inputs["text:" + i2] = normalize2(text2);
+        try {
+          Object.assign(media, verifyProof(file, text2));
+          const proof2 = JSON.parse(fs10.readFileSync(proofFile, "utf8"));
+          if (proof2.generator === "tts_elevenlabs_generate") {
+            const e2 = proof2.episode;
+            if (!e2 || e2.index !== spoken.findIndex((v) => v.i === i2) || JSON.stringify(e2.texts.map(normalize2)) !== JSON.stringify(texts.map(normalize2))) throw new Error("ElevenLabs requires complete ordered episode context");
+            if (!proof2.voiceSettings || proof2.voiceSettings.seed !== e2.seed || proof2.attempts.some((t2) => t2.seed !== e2.seed)) throw new Error("ElevenLabs episode seed drift");
+            const { pronunciationDictionaryLocators, ...voiceIdentity } = proof2.voiceSettings;
+            const settings = JSON.stringify(voiceIdentity);
+            if (episodeSettings && episodeSettings !== settings) throw new Error("ElevenLabs voice/settings changed between scenes");
+            episodeSettings = settings;
+          }
+        } catch (e2) {
+          if (fs10.existsSync(proofFile)) media[proofFile] = hash4(fs10.readFileSync(proofFile));
+          warnings.push(`card ${i2}: ${e2.message} \u2014 ${findings(file)}`);
+        }
+        const proof = read2(proofFile);
+        if (proof) {
+          if (!Number.isFinite(proof.generationSpeed) || !Number.isFinite(proof.playbackSpeed)) throw new Error(`card ${i2}: missing recorded TTS speed; regenerate at 1.0 or with an explicit user request`);
+          const approval = authorizeSpeed4(work, "generation", proof.generationSpeed);
+          if (approval && JSON.stringify(approval) !== JSON.stringify(proof.speedAuthorization?.generation)) throw new Error(`card ${i2}: TTS speed request changed after audio review; regenerate with the current explicit request`);
+          authorizeSpeed4(work, "final", proof.playbackSpeed ?? 1);
+        }
+      }
+      decide(work, warnings, inputs);
+      return media;
+    }
+    function checkTempo(work, speed, min = 1, max = 1) {
+      if ([min, max].some((n) => Number(n) !== 1)) throw new Error("Per-card tempo changes are forbidden; assembly is fixed at 1.0");
+      authorizeSpeed4(work, "final", Number(speed));
+      const cards = path27.join(work, "cards.tsv");
+      if (!fs10.existsSync(cards)) return;
+      const generated = fs10.readFileSync(cards, "utf8").split(/\r?\n/).filter((l) => l.trim() && !l.startsWith("#")).some((l) => {
+        const p = path27.resolve(work, l.split("	")[1]) + ".quality.json";
+        return fs10.existsSync(p) && JSON.parse(fs10.readFileSync(p, "utf8")).generator === "tts_elevenlabs_generate";
+      });
+      if (generated && [speed, min, max].some((n) => Number(n) !== 1)) throw new Error("ElevenLabs narration forbids post-synthesis tempo changes; set SPEED=1 and ATEMPO_MIN=ATEMPO_MAX=1, use generation.speed");
+    }
+    module.exports = { check: check2, decide, approve, lastReport, findings, verifyProof, normalize: normalize2, cer, checkTempo };
+    if (__require.main === module) {
+      try {
+        const [command, work, arg] = process.argv.slice(2);
+        if (command === "approve") approve(work, arg);
+        else {
+          const dir = command === "check" ? work : command, board = (command === "check" ? arg : work) || path27.resolve(dir, "../storyboard");
+          if (!dir) throw new Error("usage: check-tts-quality.js check <workdir> [storyboard] | approve <workdir> <user approval reference>");
+          check2(dir, board);
+          const report = lastReport(dir);
+          console.log(report.warnings.length ? `Generated narration proceeds with ${report.warnings.length} user-approved warning(s); see ${REPORT}` : "PASS all generated narration: current audio, transcript and listening review");
+        }
+      } catch (e2) {
+        console.error("TTS quality: " + e2.message);
+        process.exitCode = 1;
+      }
+    }
+  }
+});
+
+// ../skills/produce/references/final-speech-chapters.js
+var require_final_speech_chapters = __commonJS({
+  "../skills/produce/references/final-speech-chapters.js"(exports, module) {
+    "use strict";
+    var { createHash: createHash11 } = __require("node:crypto");
+    var { spawnSync: spawnSync3 } = __require("node:child_process");
+    var { normalize: normalize2, cer } = require_check_tts_quality();
+    var RATE2 = 24e3;
+    var BYTES2 = 4;
+    var LIMIT3 = 14 * 1024 * 1024;
+    var POLICY2 = "final-speech-chapters-v1";
+    var hash4 = (x2) => createHash11("sha256").update(x2).digest("hex");
+    var digest2 = (x2) => hash4(JSON.stringify(x2));
+    function decode2(media) {
+      const encoded2 = spawnSync3("ffmpeg", ["-v", "error", "-i", media, "-map", "0:a:0", "-map_metadata", "-1", "-ac", "1", "-ar", String(RATE2), "-c:a", "flac", "-f", "flac", "pipe:1"], { maxBuffer: RATE2 * BYTES2 * 1800 + 65536, timeout: 6e4 });
+      if (encoded2.error || encoded2.status !== 0) throw new Error("Cannot decode final audio: " + (encoded2.error?.message || String(encoded2.stderr)));
+      const r2 = spawnSync3("ffmpeg", ["-v", "error", "-i", "pipe:0", "-map", "0:a:0", "-f", "s32le", "pipe:1"], { input: encoded2.stdout, maxBuffer: RATE2 * BYTES2 * 1800 + 1024, timeout: 6e4 });
+      if (r2.error || r2.status !== 0) throw new Error("Cannot decode canonical FLAC: " + (r2.error?.message || String(r2.stderr)));
+      if (!r2.stdout.length || r2.stdout.length % BYTES2) throw new Error("Empty or invalid final PCM");
+      return r2.stdout;
+    }
+    function plan2(segments, totalSamples, text2) {
+      if (!Number.isInteger(totalSamples) || totalSamples <= 0 || totalSamples > RATE2 * 1800 || !Array.isArray(segments) || !segments.length || segments.length > 1e3) throw new Error("Invalid chapter timeline");
+      if (normalize2(segments.map((s2) => s2.expectedText).join(" ")) !== normalize2(text2)) throw new Error("Chapter text does not cover the complete narration in order");
+      const units = segments.map((s2, i2) => ({ startSample: Math.round(s2.startSeconds * RATE2), endSample: i2 + 1 < segments.length ? Math.round(segments[i2 + 1].startSeconds * RATE2) : totalSamples, expectedText: s2.expectedText }));
+      for (const [i2, u] of units.entries()) if (!Number.isFinite(segments[i2].startSeconds) || !Number.isSafeInteger(u.startSample) || u.startSample < 0 || i2 === 0 && u.startSample !== 0 || u.endSample <= u.startSample || u.endSample > totalSamples || u.endSample - u.startSample > RATE2 * 60 || typeof u.expectedText !== "string" || !normalize2(u.expectedText) || u.expectedText.length > 1e3) throw new Error("Invalid sentence boundary or sentence longer than 60 seconds");
+      const chapters2 = [];
+      let first = 0;
+      for (let i2 = 0; i2 < units.length; i2++) {
+        const next = units[i2 + 1];
+        if (!next || next.endSample - units[first].startSample > RATE2 * 120 || units.slice(first, i2 + 2).map((u) => u.expectedText).join(". ").length > 4e3) {
+          chapters2.push({ kind: "chapter", index: chapters2.length, firstUnit: first, lastUnit: i2, startSample: units[first].startSample, endSample: units[i2].endSample, expectedText: units.slice(first, i2 + 1).map((u) => u.expectedText).join(". ") });
+          first = i2 + 1;
+        }
+      }
+      const boundaries = chapters2.slice(1).map((c, i2) => {
+        const a = units[c.firstUnit - 1], b = units[c.firstUnit];
+        return { kind: "boundary", index: i2, firstUnit: c.firstUnit - 1, lastUnit: c.firstUnit, startSample: a.startSample, endSample: b.endSample, expectedText: [a.expectedText, b.expectedText].join(". ") };
+      });
+      return [...chapters2, ...boundaries];
+    }
+    function manifest2(p) {
+      return digest2({ sampleRate: p.sampleRate, totalSamples: p.totalSamples, pcmSha256: p.pcmSha256, segments: p.segments, pieces: p.pieces });
+    }
+    function listeningFailures2(p) {
+      const r2 = p.review, s2 = p.signal, f3 = [];
+      if (p.status === "unverified" || !r2) throw new Error("Chapter listening is unverified");
+      if (p.transcript !== null && typeof p.transcript !== "string") throw new Error("Missing chapter transcript record");
+      if (p.transcriptCheck && typeof p.transcript !== "string") throw new Error("Requested chapter transcript is missing");
+      if (typeof p.transcript === "string" && cer(p.expectedText, p.transcript) > 0.02) f3.push("Blind transcript CER exceeds 2%");
+      if (!r2.complete || !Number.isFinite(r2.confidence) || r2.confidence < 0.9 || r2.confidence > 1 || !Array.isArray(r2.issues)) throw new Error("Incomplete chapter listening");
+      for (const k of ["accuracy", "pronunciation", "naturalness", "clarity", "continuity"]) {
+        if (!Number.isFinite(r2[k]) || r2[k] < 0 || r2[k] > 100) throw new Error("Invalid chapter score");
+        if (r2[k] < (k === "accuracy" ? 98 : 95)) f3.push(k + " below threshold");
+      }
+      for (const k of ["evidence", "continuityEvidence"]) if (typeof r2[k] !== "string" || r2[k].trim().length < 20) throw new Error("Missing chapter listening evidence");
+      if (r2.issues.length) f3.push("Audible defects reported");
+      if (r2.issues.some((i2) => ![i2.start, i2.end].every(Number.isFinite) || i2.start < 0 || i2.end < i2.start || i2.end > s2?.duration + 0.1)) throw new Error("Invalid chapter issue timestamps");
+      if (!s2 || ![s2.duration, s2.rmsDb, s2.clippedFraction].every(Number.isFinite) || Math.abs(s2.duration - (p.endSample - p.startSample) / RATE2) > 1 / RATE2 || s2.clippedFraction < 0) throw new Error("Invalid chapter signal");
+      if (s2.duration < 0.25 || s2.duration > Math.max(2, [...normalize2(p.expectedText)].length / 4.5 * 2) || s2.rmsDb < -45 || s2.clippedFraction > 1e-3) f3.push("Chapter signal did not pass");
+      return f3;
+    }
+    function validate2(p, pcm, text2, requirePass = true) {
+      if (p.policy !== POLICY2 || p.version !== 1 || p.sampleRate !== RATE2 || p.totalSamples !== pcm.length / BYTES2 || p.pcmSha256 !== hash4(pcm) || normalize2(p.expectedText) !== normalize2(text2) || p.textSha256 !== hash4(normalize2(text2))) throw new Error("Chapter proof describes other audio or narration");
+      const expected = plan2(p.segments, p.totalSamples, text2);
+      if (!Array.isArray(p.pieces) || p.pieces.length !== expected.length || p.manifestSha256 !== manifest2(p)) throw new Error("Missing, duplicated or altered chapter/boundary evidence");
+      const failures = [];
+      for (let i2 = 0; i2 < expected.length; i2++) {
+        const e2 = expected[i2], v = p.pieces[i2];
+        for (const [k, value] of Object.entries(e2)) if (v[k] !== value) throw new Error("Chapter order or boundary changed: " + k);
+        if (v.pcmSha256 !== hash4(pcm.subarray(e2.startSample * BYTES2, e2.endSample * BYTES2)) || !Number.isInteger(v.payloadBytes) || v.payloadBytes <= 0 || v.payloadBytes > LIMIT3 || !/^[a-f0-9]{64}$/.test(v.audioSha256 || "")) throw new Error("Chapter audio hash or payload changed");
+        if (v.model !== p.model || digest2(v.transcriptCheck ?? null) !== digest2(p.transcriptCheck ?? null)) throw new Error("Chapter reviewer/request differs from manifest");
+        const f3 = listeningFailures2(v);
+        if (!["pass", "fail"].includes(v.status) || !Array.isArray(v.failures) || digest2(v.failures) !== digest2(f3) || v.status !== (f3.length ? "fail" : "pass")) throw new Error("Chapter verdict does not match its review");
+        failures.push(...f3.map((x2) => `${e2.kind} ${e2.index}: ${x2}`));
+      }
+      if (!["pass", "fail"].includes(p.status) || p.status !== (failures.length ? "fail" : "pass") || digest2(p.failures) !== digest2(failures)) throw new Error("Final chapter verdict does not match complete evidence");
+      if (requirePass && failures.length) throw new Error(failures.join("; "));
+      return failures;
+    }
+    module.exports = { RATE: RATE2, BYTES: BYTES2, LIMIT: LIMIT3, POLICY: POLICY2, hash: hash4, digest: digest2, decode: decode2, plan: plan2, manifest: manifest2, listeningFailures: listeningFailures2, validate: validate2 };
+  }
+});
+
 // node_modules/zod/v3/external.js
 var external_exports = {};
 __export(external_exports, {
@@ -85016,7 +85518,7 @@ import * as path5 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.104.0",
+  version: "0.106.0",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -85393,7 +85895,7 @@ var astraAudio2VideoSchema = external_exports.object({
   audioPath: external_exports.string().trim().min(1).optional(),
   audioUploadId: external_exports.string().trim().min(1).optional(),
   imagePath: external_exports.string().trim().min(1).optional(),
-  strength: external_exports.number().min(0).max(1).default(0.9).describe("Portrait conditioning strength; ignored without imagePath. Observed dialogue cuts: 0.9 preserved the person with mouth movement following audio; 0.7 changed the person. Prompts also differed, so this is not an isolated strength comparison. 1.0 is unmeasured on cuts with a visible mouth."),
+  strength: external_exports.number().min(0).max(1).default(0.9).describe("Portrait conditioning strength, 0.0-1.0 (default: 0.9); ignored without imagePath. Earlier dialogue probes: 0.9 accompanied mouth movement and 0.7 accompanied a changed person, but prompts also differed. A later fixed-prompt 19.2 pair is an observation, not proof of improved identity or lip-sync at 0.9. 1.0 is unmeasured on cuts with a clearly detailed, unobscured mouth close-up in the conditioning image; neither local dialogue source (19.2 or 25.3) meets that condition."),
   audioStartTime: external_exports.number().min(0).optional(),
   audioMaxDuration: external_exports.number().positive().optional(),
   numFrames: numFramesSchema("audio2video"),
@@ -89036,6 +89538,10 @@ var QUALITY_POLICY = "speech-quality-v1";
 var REVIEW_API_VERSION = process.env.SOCIAL_FLOW_TTS_REVIEW_API_VERSION?.trim() || "v1";
 var REVIEW_MODEL = process.env.SOCIAL_FLOW_TTS_REVIEW_MODEL?.trim() || "gemini-3.8-flash";
 var GENERATORS = ["tts_generate", "tts_multi_speaker", "tts_gemini_38", "tts_local_generate", "tts_elevenlabs_generate", "tts_elevenlabs_dialogue", "mlx_tts_generate"];
+var transcriptCheckSchema = external_exports.object({
+  requestedBy: external_exports.string().trim().min(1).max(200),
+  reason: external_exports.string().trim().min(10).max(1e3)
+}).strict();
 var checkedSpeechSchema = external_exports.object({
   generator: external_exports.enum(GENERATORS),
   generation: external_exports.record(external_exports.unknown()),
@@ -89046,6 +89552,8 @@ var checkedSpeechSchema = external_exports.object({
   filename: bareFilenameSchema("audio").refine((s2) => s2.endsWith(".wav"), "Use a .wav filename"),
   maxAttempts: external_exports.number().int().min(1).max(3).default(3),
   rejectTake: external_exports.object({ audioSha256: external_exports.string().regex(/^[a-f0-9]{64}$/), reason: external_exports.string().trim().min(10).max(1e3) }).strict().optional(),
+  /** Present only on an explicit user request: also transcribe the take blind and hold it to the 2% CER. */
+  transcriptCheck: transcriptCheckSchema.optional(),
   /** The scene's narration[].tts sentences in order — where the fixed pauses go (ElevenLabs takes). */
   segments: external_exports.array(external_exports.string().trim().min(1).max(1e3)).min(1).max(80).optional(),
   episode: external_exports.object({
@@ -89123,7 +89631,7 @@ function signalFailures(signal, expected, maxSeconds = 120) {
 }
 function reviewFailures(expected, transcript, review2, duration3) {
   const failures = [];
-  if (characterErrorRate(expected, transcript) > 0.02) failures.push("Blind transcript CER exceeds 2%");
+  if (transcript !== null && characterErrorRate(expected, transcript) > 0.02) failures.push("Blind transcript CER exceeds 2%");
   if (!review2.complete || review2.confidence < 0.9) failures.push("Incomplete or uncertain listening review");
   for (const axis of ["accuracy", "pronunciation", "naturalness", "clarity"]) {
     if (review2[axis] < (axis === "accuracy" ? 98 : 95)) failures.push(`${axis} below threshold`);
@@ -89198,20 +89706,21 @@ async function listen(file, request, episodeReview = false) {
       });
     }
   }
-  const blind = external_exports.object({ transcript: external_exports.string().min(1).max(12e3) }).strict().parse(await call(
+  const blind = !request.transcriptCheck ? null : external_exports.object({ transcript: external_exports.string().min(1).max(12e3) }).strict().parse(await call(
     `Transcribe every audible spoken word verbatim in ${JSON.stringify(request.language)}. No correction, summary or guesses. Preserve repetitions, mistakes and unfinished words. Write numbers and abbreviations as the words actually spoken (for Korean use Hangul spoken forms, not digits). Exclude speaker labels.`,
     { type: "object", properties: { transcript: { type: "string" } }, required: ["transcript"] },
     "blind-transcription"
   ));
+  const noBlindNote = blind ? "" : " No blind transcript accompanies this take: do not assume the script was spoken. Confirm every word from the audio alone.";
   const review2 = reviewSchema.parse(await call(
-    `Audit the full audio against this data: ${JSON.stringify({ expectedText: request.expectedText, language: request.language, delivery: request.delivery, blindTranscript: blind.transcript, ...laidInPauses ? { laidInPauses } : {} })}.${laidInPauses ? " laidInPauses marks inserted silence. Judge those pauses critically too: reject choppy rhythm, clipped breaths, unnatural gaps or fades even if intentional." : ""}
+    `Audit the full audio against this data: ${JSON.stringify({ expectedText: request.expectedText, language: request.language, delivery: request.delivery, ...blind ? { blindTranscript: blind.transcript } : {}, ...laidInPauses ? { laidInPauses } : {} })}.${noBlindNote}${laidInPauses ? " laidInPauses marks inserted silence. Judge those pauses critically too: reject choppy rhythm, clipped breaths, unnatural gaps or fades even if intentional." : ""}
 ${episodeReview ? "This is the assembled episode, not an isolated sentence. Compare every adjacent sentence and scene for pitch, timbre, emotion, loudness, speaking rate, breaths and pauses. Score continuity 0\u2013100 separately and describe specific transitions with timestamps in continuityEvidence. A repeated fresh-start tone or mismatched mood requires a retake, even if each sentence sounds good alone." : ""}
 Score 0\u2013100: accuracy (all words, quantities, names, endings, no omissions or additions), pronunciation (native phonemes, liaison, stress), naturalness (human phrasing, breath, pacing, intonation appropriate to delivery), clarity (no noise, clipping, metallic artifacts, audible joins or unstable voice).
 100 means no audible defect; 95 is professional delivery with no correction needed; 90 means a noticeable defect needs a retake; below 80 is distracting. Do not inflate scores because the script is plausible. Check every word, especially names/numbers and final syllables. Do not silently correct a wrong word using the script. List every defect with actual start/end seconds, heard/expected wording and a concrete correction. complete is true only if the whole audio was heard. Give confidence 0\u20131 and specific listening evidence even on a pass.`,
     episodeReview ? { ...REVIEW_JSON_SCHEMA, required: [...REVIEW_JSON_SCHEMA.required, "continuity", "continuityEvidence"], properties: { ...REVIEW_JSON_SCHEMA.properties, continuity: { type: "number" }, continuityEvidence: { type: "string" } } } : REVIEW_JSON_SCHEMA,
     episodeReview ? "episode-listening-review" : "listening-review"
   ));
-  return { transcript: blind.transcript, review: review2 };
+  return { transcript: blind ? blind.transcript : null, review: review2 };
 }
 function prepareGeneration(request) {
   const args = { ...request.generation, outputPath: request.outputPath, filename: request.filename };
@@ -89381,6 +89890,9 @@ async function generateCheckedSpeech(input, dependencies) {
         if (!Array.isArray(old.attempts) || old.attempts.length > 3) throw new Error("Invalid attempt history");
         attempts.push(...old.attempts.map((take) => ({ ...take, model: take.model ?? old.model })));
         const last = attempts.at(-1);
+        const storedTranscript = typeof last?.transcript === "string" ? last.transcript : null;
+        const transcriptRecorded = storedTranscript !== null || last?.transcript === null;
+        const transcriptSatisfied = transcriptRecorded && (!request.transcriptCheck || storedTranscript !== null);
         if (last?.duplicateOf) return save2("fail", { error: "Identical rejected audio already stopped this request; correct the episode pronunciation or delivery plan" });
         if (request.rejectTake) {
           if (!last || last.audioSha256 !== request.rejectTake.audioSha256 || !existsSync10(output2) || sha256(readFileSync9(output2)) !== request.rejectTake.audioSha256) throw new Error("The rejected take is not the current audio; inspect the current file before requesting another retake");
@@ -89388,7 +89900,7 @@ async function generateCheckedSpeech(input, dependencies) {
           last.pending = false;
           last.failures = [...Array.isArray(last.failures) ? last.failures : [], "Rejected during final listening: " + request.rejectTake.reason];
         }
-        if (!request.rejectTake && old.model === REVIEW_MODEL && old.status === "pass" && last?.pending === false && Array.isArray(last.failures) && !last.failures.length && typeof last.transcript === "string" && existsSync10(output2) && old.audioSha256 === sha256(readFileSync9(output2)) && last.audioSha256 === old.audioSha256 && !signalFailures(last.signal, request.expectedText).length && !reviewFailures(request.expectedText, String(last.transcript), reviewSchema.parse(last.review), last.signal.duration).length) {
+        if (!request.rejectTake && old.model === REVIEW_MODEL && old.status === "pass" && last?.pending === false && Array.isArray(last.failures) && !last.failures.length && transcriptSatisfied && existsSync10(output2) && old.audioSha256 === sha256(readFileSync9(output2)) && last.audioSha256 === old.audioSha256 && !signalFailures(last.signal, request.expectedText).length && !reviewFailures(request.expectedText, storedTranscript, reviewSchema.parse(last.review), last.signal.duration).length) {
           const lastSpacing = last.spacing;
           return {
             success: true,
@@ -89400,12 +89912,12 @@ async function generateCheckedSpeech(input, dependencies) {
             spacing: !prepared.spacing ? "not applicable" : lastSpacing?.skipped ? "skipped: " + String(lastSpacing.skipped) : "applied"
           };
         }
-        if (!request.rejectTake && old.model !== REVIEW_MODEL && old.status === "pass" && last && existsSync10(output2) && last.audioSha256 === sha256(readFileSync9(output2))) {
+        if (!request.rejectTake && (old.model !== REVIEW_MODEL || !transcriptSatisfied) && old.status === "pass" && last && existsSync10(output2) && last.audioSha256 === sha256(readFileSync9(output2))) {
           last.previousReviews = [
             ...Array.isArray(last.previousReviews) ? last.previousReviews : [],
-            { model: last.model, transcript: last.transcript, review: last.review, failures: last.failures, signal: last.signal, cer: last.cer }
+            { model: last.model, transcript: last.transcript, review: last.review, failures: last.failures, signal: last.signal, cer: last.cer, transcriptCheck: last.transcriptCheck ?? null }
           ];
-          for (const key of ["transcript", "review", "failures", "signal", "cer"]) delete last[key];
+          for (const key of ["transcript", "review", "failures", "signal", "cer", "transcriptCheck"]) delete last[key];
           last.pending = true;
         }
       }
@@ -89466,7 +89978,15 @@ async function generateCheckedSpeech(input, dependencies) {
         failures = reviewFailures(request.expectedText, listened.transcript, listened.review, signal.duration);
       }
       if (audioSha256 !== sha256(readFileSync9(output2))) throw new Error("Audio changed during review");
-      Object.assign(take, { pending: false, audioSha256, signal, ...listened ? { model: REVIEW_MODEL, ...listened } : {}, cer: listened ? characterErrorRate(request.expectedText, listened.transcript) : null, failures });
+      Object.assign(take, {
+        pending: false,
+        audioSha256,
+        signal,
+        ...listened ? { model: REVIEW_MODEL, ...listened } : {},
+        transcriptCheck: request.transcriptCheck ?? null,
+        cer: listened?.transcript != null ? characterErrorRate(request.expectedText, listened.transcript) : null,
+        failures
+      });
       const spacingState = take.spacing;
       const spacing = !prepared.spacing ? "not applicable" : spacingState?.skipped ? "skipped: " + String(spacingState.skipped) : "applied";
       if (!failures.length) return save2("pass", { audioSha256, spacing });
@@ -92188,7 +92708,7 @@ async function uploadEpisodeImages(client, args, base) {
   if (!inputs.length) throw new Error("No shot images found in storyboard/images/scene-N.{png,jpg,jpeg,webp}. Nothing was sent.");
   const root = realpathSync(sb);
   const seen = /* @__PURE__ */ new Set();
-  const plan = inputs.map((input) => {
+  const plan2 = inputs.map((input) => {
     const index = input.shotId ? shots.findIndex((s2) => s2.id === input.shotId) : (input.shotNo ?? 0) - 1;
     if (index < 0 || index >= shots.length || seen.has(index)) throw new Error("Unknown or duplicate shot target. Nothing was sent.");
     if (!input.shotId && shots[index].id !== void 0) throw new Error("Use shotId for shots that have an ID. Nothing was sent.");
@@ -92205,7 +92725,7 @@ async function uploadEpisodeImages(client, args, base) {
   const unchanged = () => readFileSync12(file, "utf8") === source && readFileSync12(path14.join(dir, ".portal.json"), "utf8") === stateSource;
   try {
     if (!unchanged()) throw new Error("Local board or portal state changed during validation.");
-    for (const item of plan) {
+    for (const item of plan2) {
       const image = readImage(item.file);
       if (image.sha256 !== item.sha256) throw new Error("Image changed during upload; rerun with the intended files.");
       const { data: data2 } = await client.uploadImage(state.episodeId, image.bytes, image.mime);
@@ -94960,7 +95480,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
           minimum: 0,
           maximum: 1,
           default: 0.9,
-          description: "How strictly the generated frames must match the portrait, 0.0-1.0 (default: 0.9); ignored without imagePath. In 2026-10-04 dialogue probes, 0.9 accompanied mouth movement and 0.7 accompanied a changed person; prompts and uploads also differed, so these observations do not isolate strength. 1.0 is unmeasured on cuts with a visible mouth."
+          description: "Portrait conditioning strength, 0.0-1.0 (default: 0.9); ignored without imagePath. Earlier dialogue probes: 0.9 accompanied mouth movement and 0.7 accompanied a changed person, but prompts also differed. A later fixed-prompt 19.2 pair is an observation, not proof of improved identity or lip-sync at 0.9. 1.0 is unmeasured on cuts with a clearly detailed, unobscured mouth close-up in the conditioning image; neither local dialogue source (19.2 or 25.3) meets that condition."
         },
         audioStartTime: {
           type: "number",
@@ -95850,12 +96370,17 @@ Returns: a text block with the mp4 path, still paths (and any requested still ou
     name: "tts_review_final",
     title: "Review assembled speech",
     annotations: HINT.generate,
-    description: "Listen to the actual final WAV or video, including all sentence transitions and the music mix. Requires accuracy >=98 and pronunciation, naturalness, clarity and continuity >=95, with no defects. Writes a hash-bound .speech-quality.json proof. Two paid Gemini review calls; no synthesis. Review outages hold delivery. Supply the complete spoken text including native clip speech. Supports up to 30 minutes and 12,000 script characters, with a lossless FLAC review payload under 14 MiB. Longer media holds for chapter review.",
+    description: "Listen to the actual final WAV or video, including all sentence transitions and the music mix. Requires accuracy >=98 and pronunciation, naturalness, clarity and continuity >=95, with no defects. Writes a hash-bound .speech-quality.json proof. The blind-transcription (STT) check and its CER <=2% gate do not run unless transcriptCheck carries a user request for them (owner directive 2026-10-04). One paid Gemini review call per payload (two with transcriptCheck); no synthesis. Review outages hold delivery. Supply the complete spoken text including native clip speech. Supports up to 30 minutes and 12,000 script characters, with a lossless FLAC review payload under 14 MiB. Payloads over 14 MiB require final-timeline sentence segments; the tool reviews lossless chapters and every cross-chapter sentence join, then binds all coverage to the complete media. Budget one review per chapter and boundary (two with transcriptCheck).",
     inputSchema: { type: "object", additionalProperties: false, properties: {
       mediaPath: { type: "string", description: "Absolute path of the final media that ships." },
+      segments: { type: "array", minItems: 1, maxItems: 1e3, description: "Required when the final FLAC exceeds 14 MiB. Complete spoken sentences in playback order on the final timeline. First starts at 0; each extends to the next start (last to audio EOF), at most 60 seconds each. Joined text must equal expectedText. The tool groups them into bounded chapters and reviews every chapter boundary.", items: { type: "object", additionalProperties: false, required: ["startSeconds", "expectedText"], properties: { startSeconds: { type: "number", minimum: 0, description: "Start of this complete sentence on the final audio timeline; the first is 0." }, expectedText: { type: "string", minLength: 1, maxLength: 1e3, description: "Complete spoken sentence, including intended phonetic number/name spelling." } } } },
       expectedText: { description: "Complete spoken text, including speech in clips and the outro.", type: "string", minLength: 1, maxLength: 12e3 },
       language: { description: "Spoken language, for example Korean.", type: "string", minLength: 2, maxLength: 80 },
-      delivery: { description: "Intended delivery and continuity across the whole episode.", type: "string", minLength: 1, maxLength: 2e3 }
+      delivery: { description: "Intended delivery and continuity across the whole episode.", type: "string", minLength: 1, maxLength: 2e3 },
+      transcriptCheck: { type: "object", additionalProperties: false, required: ["requestedBy", "reason"], description: "Present only when the user asked for the blind-transcription (STT) check; omitted, that check does not run and only the listening review judges the take. Carries who asked and their actual words \u2014 there is no environment default.", properties: {
+        requestedBy: { type: "string", minLength: 1, maxLength: 200, description: 'Who asked for the dictation check, e.g. "user".' },
+        reason: { type: "string", minLength: 10, maxLength: 1e3, description: "The actual request that turned it on, quoted or referenced." }
+      } }
     }, required: ["mediaPath", "expectedText", "language", "delivery"] }
   },
   {
@@ -95881,8 +96406,8 @@ Returns: a text block with the mp4 path, still paths (and any requested still ou
     description: `Generate one scene with the pinned TTS engine, review the actual WAV, and regenerate failed takes up to maxAttempts (1\u20133, including the first take).
 Use for every generated narration scene in produce/autoproduce. Pass the existing generator's arguments in generation, the complete spoken expectedText (phonetic spelling; no acting tags or speaker labels), language, and the profile's intended delivery. Voice and generation settings stay unchanged across attempts; the episode seed stays fixed on every retake (vendor determinism is best-effort). An entire scene is one call; never split it into sentence calls.
 Every single-voice take has its sentences re-spaced before review: a fixed sentencePause of digital silence between sentences (stretched up to 1.0s where a subtitle cue would read faster than 6.0 chars/s after playbackSpeed), a 0.14s lead, speech samples copied as generated (the 12 ms fades stay on the natural gap). tts_elevenlabs_generate is fetched with timestamps and spaced from its own alignment; tts_local_generate, tts_generate and mlx_tts_generate are aligned by the local forced aligner (mlx-qwen3-asr --timestamps) first, so a multi-sentence scene on any engine ships with the same pauses. Pass segments (the scene's narration[].tts list) so the pauses land on the builder's segment boundaries; the wrapper writes <wav>.sentences.json and the .alignment.json for the shipped audio. Generate consecutive sentences in one call whenever they belong to one breath \u2014 the engine reads them as one utterance, where one call per sentence restarts the voice at every sentence.
-Checks signal/duration, a blind transcript (CER <=2%), then ${REVIEW_MODEL} listening scores: accuracy >=98, pronunciation/naturalness/clarity >=95, confidence >=0.9, no audible defects. Returns a hash-bound .wav.quality.json proof required by the builder. Missing keys, unavailable reviewer or malformed responses hold production (unverified); exhausted attempts return fail, and that finding goes to the user as a warning they can accept for the current take (skills/produce/references/tts-hitl.md). Scores are operational thresholds, not a guarantee of human judgement.
-Requires ffmpeg and GEMINI_API_KEY even for local synthesis. Two paid audio-review calls per acoustically valid take, plus the selected generator's costs. Record the retry-inclusive allowance before calling; review tokens are logged as unpriced until reconciled with provider billing. Do not call again to reset an exhausted attempt budget. Do not use for recordings or native clip speech; retain their final listening QA. Do not change engines/voices or lower thresholds to obtain PASS.`,
+Checks signal/duration, then ${REVIEW_MODEL} listening scores: accuracy >=98, pronunciation/naturalness/clarity >=95, confidence >=0.9, no audible defects. The blind-transcription (STT) check and its CER <=2% gate do not run unless transcriptCheck carries a user request for them (owner directive 2026-10-04); the proof then records transcript: null. Returns a hash-bound .wav.quality.json proof required by the builder. Missing keys, unavailable reviewer or malformed responses hold production (unverified); exhausted attempts return fail, and that finding goes to the user as a warning they can accept for the current take (skills/produce/references/tts-hitl.md). Scores are operational thresholds, not a guarantee of human judgement.
+Requires ffmpeg and GEMINI_API_KEY even for local synthesis. One paid audio-review call per acoustically valid take (two with transcriptCheck), plus the selected generator's costs. Record the retry-inclusive allowance before calling; review tokens are logged as unpriced until reconciled with provider billing. Do not call again to reset an exhausted attempt budget. Do not use for recordings or native clip speech; retain their final listening QA. Do not change engines/voices or lower thresholds to obtain PASS.`,
     inputSchema: {
       type: "object",
       additionalProperties: false,
@@ -95912,7 +96437,11 @@ Requires ffmpeg and GEMINI_API_KEY even for local synthesis. Two paid audio-revi
         }, required: ["texts", "index", "seed"] },
         segments: { type: "array", minItems: 1, maxItems: 80, items: { type: "string", minLength: 1, maxLength: 1e3 }, description: "The scene's narration[].tts sentences in order (joined they read as expectedText). Every single-voice take gets a fixed pause at each segment boundary \u2014 the boundary the builder's reveals and subtitle cues use. Without it, pauses go after sentence-final punctuation." },
         sentencePause: { type: "number", minimum: 0.25, maximum: 1.5, default: 0.5, description: "Silence between sentences in the take's own timeline, seconds. The builder detects pauses from 0.16s and fits a 0.35s reveal fade inside one." },
-        playbackSpeed: { type: "number", minimum: 0.5, maximum: 3, default: 1, description: "ElevenLabs requires 1: use generation.speed for the requested rate and keep assembly at 1. Other engines require an explicit user request in outputPath/speed-authorization.json for any non-1 factor; this controls subtitle pause sizing." }
+        playbackSpeed: { type: "number", minimum: 0.5, maximum: 3, default: 1, description: "ElevenLabs requires 1: use generation.speed for the requested rate and keep assembly at 1. Other engines require an explicit user request in outputPath/speed-authorization.json for any non-1 factor; this controls subtitle pause sizing." },
+        transcriptCheck: { type: "object", additionalProperties: false, required: ["requestedBy", "reason"], description: "Present only when the user asked for the blind-transcription (STT) check; omitted, that check does not run and only the listening review judges the take. Carries who asked and their actual words \u2014 there is no environment default.", properties: {
+          requestedBy: { type: "string", minLength: 1, maxLength: 200, description: 'Who asked for the dictation check, e.g. "user".' },
+          reason: { type: "string", minLength: 10, maxLength: 1e3, description: "The actual request that turned it on, quoted or referenced." }
+        } }
       },
       required: ["generator", "generation", "expectedText", "language", "delivery", "outputPath", "filename"]
     }
@@ -97780,9 +98309,9 @@ async function restoreAttachments(client, episodeId, root, snapshot) {
     renameSync5(temporary, target);
   }
   mkdirSync7(root, { recursive: true });
-  const manifest = path17.join(root, MANIFEST);
-  if (existsSync16(manifest) && lstatSync2(manifest).isSymbolicLink()) throw new Error("Unsafe attachment metadata file");
-  writeFileSync12(manifest, JSON.stringify(Object.fromEntries(items.map((item) => [item.relativePath, item])), null, 2));
+  const manifest2 = path17.join(root, MANIFEST);
+  if (existsSync16(manifest2) && lstatSync2(manifest2).isSymbolicLink()) throw new Error("Unsafe attachment metadata file");
+  writeFileSync12(manifest2, JSON.stringify(Object.fromEntries(items.map((item) => [item.relativePath, item])), null, 2));
   return { restored: staged.length, bytes: staged.reduce((n, file) => n + file.bytes.length, 0), skipped };
 }
 async function attachmentSyncReport(action) {
@@ -97857,7 +98386,7 @@ function readState(root) {
   if (!existsSync17(file)) return null;
   if (!lstatSync3(file).isFile()) throw new Error(`${STATE_FILE} is not a regular file`);
   const value = JSON.parse(readFileSync16(file, "utf8"));
-  if (value.format !== STATE_FORMAT || typeof value.workspace !== "string" || typeof value.projectId !== "string" || !validUuid(value.projectId) || value.profileSha256 !== void 0 && !/^[a-f0-9]{64}$/.test(value.profileSha256) || !value.attachments || typeof value.attachments !== "object" || Array.isArray(value.attachments) || Object.entries(value.attachments).some(([relative, hash3]) => !ALLOWED_ROOTS.some((allowed) => relative.startsWith(`${allowed}/`)) || typeof hash3 !== "string" || !/^[a-f0-9]{64}$/.test(hash3))) {
+  if (value.format !== STATE_FORMAT || typeof value.workspace !== "string" || typeof value.projectId !== "string" || !validUuid(value.projectId) || value.profileSha256 !== void 0 && !/^[a-f0-9]{64}$/.test(value.profileSha256) || !value.attachments || typeof value.attachments !== "object" || Array.isArray(value.attachments) || Object.entries(value.attachments).some(([relative, hash4]) => !ALLOWED_ROOTS.some((allowed) => relative.startsWith(`${allowed}/`)) || typeof hash4 !== "string" || !/^[a-f0-9]{64}$/.test(hash4))) {
     throw new Error(`${STATE_FILE} has an unsupported format`);
   }
   return value;
@@ -98220,15 +98749,15 @@ async function getAsset(client, args) {
   mkdirSync9(path19.dirname(file), { recursive: true });
   const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
   const fd = openSync6(tmp, "wx");
-  const hash3 = createHash6("sha256");
+  const hash4 = createHash6("sha256");
   let size = 0;
   try {
     size = await client.assetsDownload(asset.id, (chunk2) => {
-      hash3.update(chunk2);
+      hash4.update(chunk2);
       writeSync2(fd, chunk2);
     }, asset.byteSize);
     closeSync6(fd);
-    if (size !== asset.byteSize || hash3.digest("hex") !== asset.sha256) throw new Error(`Downloaded bytes do not match the portal's sha256/byteSize for asset ${asset.id}. Nothing was kept.`);
+    if (size !== asset.byteSize || hash4.digest("hex") !== asset.sha256) throw new Error(`Downloaded bytes do not match the portal's sha256/byteSize for asset ${asset.id}. Nothing was kept.`);
     renameSync7(tmp, file);
   } catch (error2) {
     try {
@@ -103480,15 +104009,20 @@ import { existsSync as existsSync23, mkdtempSync as mkdtempSync7, readFileSync a
 import { tmpdir as tmpdir6 } from "node:os";
 import path24 from "node:path";
 import { promisify as promisify4 } from "node:util";
+var chapters = __toESM(require_final_speech_chapters(), 1);
 var exec3 = promisify4(execFile9);
 var finalSpeechSchema = external_exports.object({
   mediaPath: external_exports.string().min(1),
   expectedText: external_exports.string().trim().min(1).max(12e3),
   language: external_exports.string().trim().min(2).max(80),
-  delivery: external_exports.string().trim().min(1).max(2e3)
+  delivery: external_exports.string().trim().min(1).max(2e3),
+  /** Present only on an explicit user request: also transcribe the episode blind and hold it to the 2% CER. */
+  transcriptCheck: transcriptCheckSchema.optional(),
+  segments: external_exports.array(external_exports.object({ startSeconds: external_exports.number().finite().nonnegative(), expectedText: external_exports.string().trim().min(1).max(1e3) }).strict()).min(1).max(1e3).optional()
 }).strict();
-async function reviewFinalSpeech(input) {
+async function reviewFinalSpeech(input, deps = { listen }) {
   const request = finalSpeechSchema.parse(input), media = path24.resolve(request.mediaPath);
+  const { transcriptCheck, segments, ...identity } = request;
   const proofPath = media + ".speech-quality.json", lockPath = proofPath + ".lock";
   let lock;
   try {
@@ -103497,7 +104031,8 @@ async function reviewFinalSpeech(input) {
     return { success: false, status: "unverified", error: "Final speech review is already locked" };
   }
   const temp = mkdtempSync7(path24.join(tmpdir6(), "speech-final-"));
-  let base = { version: 1, policy: "final-speech-v1", model: REVIEW_MODEL, ...request, mediaPath: media };
+  let base = { version: 1, policy: "final-speech-v1", model: REVIEW_MODEL, ...identity, mediaPath: media };
+  let singleReviewStarted = false;
   function save2(status, extra) {
     const result = { ...base, status, checkedAt: (/* @__PURE__ */ new Date()).toISOString(), ...extra };
     const staging = path24.join(temp, "proof.json");
@@ -103512,39 +104047,109 @@ async function reviewFinalSpeech(input) {
     await exec3("ffmpeg", ["-y", "-v", "error", "-i", media, "-map", "0:a:0", "-map_metadata", "-1", "-ac", "1", "-ar", "24000", "-c:a", "flac", wav], { timeout: 6e4 });
     base.audioSha256 = sha256(readFileSync23(wav));
     if (sha256(readFileSync23(media)) !== base.mediaSha256) throw new Error("Final media changed during decoding");
+    if (readFileSync23(wav).length > chapters.LIMIT) {
+      return await reviewChapters(request, media, wav, temp, base, proofPath, save2, deps);
+    }
+    if (sha256(readFileSync23(media)) !== base.mediaSha256) throw new Error("Final media changed during decoding");
     if (existsSync23(proofPath)) {
       const old = JSON.parse(readFileSync23(proofPath, "utf8"));
       const same = Object.entries(base).every(([k, v]) => ["mediaSha256", "expectedText"].includes(k) || old[k] === v);
-      if (old.audioSha256 === base.audioSha256 && old.textSha256 === base.textSha256 && old.status === "fail") return save2("fail", { reused: true, signal: old.signal, transcript: old.transcript, failures: old.failures, review: old.review, error: "This exact final audio already failed; fix the audio before another listening review" });
-      if (same && old.status === "pass") {
+      if (old.audioSha256 === base.audioSha256 && old.textSha256 === base.textSha256 && old.status === "fail") return save2("fail", { reused: true, signal: old.signal, transcript: old.transcript, transcriptCheck: transcriptCheck ?? old.transcriptCheck ?? null, failures: old.failures, review: old.review, error: "This exact final audio already failed; fix the audio before another listening review" });
+      if (same && old.status === "pass" && (!transcriptCheck || typeof old.transcript === "string")) {
         const review2 = reviewSchema.parse(old.review);
-        if (!signalFailures(old.signal, request.expectedText, 1800).length && !reviewFailures(request.expectedText, old.transcript, review2, old.signal.duration).length && (review2.continuity ?? 0) >= 95 && review2.continuityEvidence) return save2("pass", { reused: true, signal: old.signal, transcript: old.transcript, review: review2, failures: [] });
+        if (!signalFailures(old.signal, request.expectedText, 1800).length && !reviewFailures(request.expectedText, typeof old.transcript === "string" ? old.transcript : null, review2, old.signal.duration).length && (review2.continuity ?? 0) >= 95 && review2.continuityEvidence) return save2("pass", { reused: true, signal: old.signal, transcript: old.transcript, transcriptCheck: transcriptCheck ?? old.transcriptCheck ?? null, review: review2, failures: [] });
       }
     }
+    singleReviewStarted = true;
     save2("unverified", {});
     const signal = await measureSignal(wav, 1800);
     const failures = signalFailures(signal, request.expectedText, 1800);
     if (failures.length) return save2("fail", { signal, failures });
-    const reviewRequest = { ...checkedSpeechSchema.parse({
-      generator: "tts_local_generate",
-      generation: {},
-      expectedText: request.expectedText.slice(0, 4e3),
-      language: request.language,
-      delivery: request.delivery,
-      outputPath: path24.dirname(media),
-      filename: "final.wav"
-    }), expectedText: request.expectedText };
-    const result = await listen(wav, reviewRequest, true);
+    const reviewRequest = {
+      ...checkedSpeechSchema.parse({
+        generator: "tts_local_generate",
+        generation: {},
+        expectedText: request.expectedText.slice(0, 4e3),
+        language: request.language,
+        delivery: request.delivery,
+        outputPath: path24.dirname(media),
+        filename: "final.wav"
+      }),
+      expectedText: request.expectedText,
+      transcriptCheck
+    };
+    const result = await deps.listen(wav, reviewRequest, true);
     failures.push(...reviewFailures(request.expectedText, result.transcript, result.review, signal.duration));
     if ((result.review.continuity ?? 0) < 95 || !result.review.continuityEvidence) failures.push("Episode continuity below 95 or missing listening evidence");
     if (sha256(readFileSync23(media)) !== base.mediaSha256) throw new Error("Final media changed during listening");
-    return save2(failures.length ? "fail" : "pass", { signal, ...result, failures });
+    return save2(failures.length ? "fail" : "pass", { signal, ...result, transcriptCheck: transcriptCheck ?? null, failures });
   } catch (error2) {
-    return save2("unverified", { error: error2 instanceof Error ? error2.message : String(error2) });
+    const failure2 = { error: error2 instanceof Error ? error2.message : String(error2) };
+    return singleReviewStarted ? save2("unverified", failure2) : { success: false, status: "unverified", proofPath, ...failure2 };
   } finally {
     rmSync12(temp, { recursive: true, force: true });
     closeSync9(lock);
     rmSync12(lockPath, { force: true });
+  }
+}
+async function reviewChapters(request, media, wav, temp, base, proofPath, save2, deps) {
+  if (!request.segments) throw new Error("Final FLAC exceeds 14 MiB; provide final-timeline sentence segments for chapter listening");
+  const pcm = chapters.decode(wav), totalSamples = pcm.length / chapters.BYTES;
+  const planned = chapters.plan(request.segments, totalSamples, request.expectedText);
+  const identity = { policy: chapters.POLICY, sampleRate: chapters.RATE, totalSamples, pcmSha256: chapters.hash(pcm), segments: request.segments, transcriptCheck: request.transcriptCheck ?? null };
+  const old = existsSync23(proofPath) ? JSON.parse(readFileSync23(proofPath, "utf8")) : null;
+  const pieces = [];
+  const commit = (status, extra = {}) => save2(status, { ...identity, pieces, manifestSha256: chapters.manifest({ ...identity, pieces }), ...extra });
+  if (old?.pcmSha256 === identity.pcmSha256 && old.textSha256 === base.textSha256 && old.status === "fail") {
+    chapters.validate(old, pcm, request.expectedText, false);
+    return save2("fail", { ...identity, model: old.model, language: old.language, delivery: old.delivery, transcriptCheck: old.transcriptCheck ?? null, segments: old.segments, pieces: old.pieces, manifestSha256: old.manifestSha256, failures: old.failures, reused: true });
+  }
+  if (old?.policy === chapters.POLICY && old.model === base.model && old.language === request.language && old.delivery === request.delivery && old.pcmSha256 === identity.pcmSha256 && chapters.digest(old.segments) === chapters.digest(identity.segments) && chapters.digest(old.transcriptCheck ?? null) === chapters.digest(identity.transcriptCheck) && old.status === "pass") {
+    chapters.validate(old, pcm, request.expectedText);
+    return save2("pass", { ...identity, pieces: old.pieces, manifestSha256: old.manifestSha256, failures: [], reused: true });
+  }
+  commit("unverified");
+  try {
+    for (const piece of planned) {
+      const samples = pcm.subarray(piece.startSample * chapters.BYTES, piece.endSample * chapters.BYTES);
+      const raw = path24.join(temp, "piece.pcm"), file = path24.join(temp, "piece.flac");
+      writeFileSync18(raw, samples);
+      await exec3("ffmpeg", ["-y", "-v", "error", "-f", "s32le", "-ar", String(chapters.RATE), "-ac", "1", "-i", raw, "-map_metadata", "-1", "-c:a", "flac", file], { timeout: 6e4 });
+      const payload = readFileSync23(file);
+      if (payload.length > chapters.LIMIT || !chapters.decode(file).equals(samples)) throw new Error("Chapter encoding exceeded the limit or changed PCM samples");
+      const binding = { ...piece, pcmSha256: chapters.hash(samples), audioSha256: chapters.hash(payload), payloadBytes: payload.length, model: REVIEW_MODEL, transcriptCheck: request.transcriptCheck ?? null };
+      const reusable = old?.pcmSha256 === identity.pcmSha256 && old.textSha256 === base.textSha256 && old.language === request.language && old.delivery === request.delivery && old.manifestSha256 === chapters.manifest(old);
+      const cached2 = reusable && old?.pieces?.find((p) => Object.entries(binding).every(([k, v]) => chapters.digest(p[k]) === chapters.digest(v)));
+      let evidence;
+      if (cached2 && ["pass", "fail"].includes(cached2.status)) {
+        const failures2 = chapters.listeningFailures(cached2);
+        if (chapters.digest(cached2.failures) !== chapters.digest(failures2) || cached2.status !== (failures2.length ? "fail" : "pass")) throw new Error("Invalid cached chapter verdict");
+        evidence = cached2;
+      } else {
+        const signal = await measureSignal(file, 120);
+        const reviewRequest = { ...checkedSpeechSchema.parse({
+          generator: "tts_local_generate",
+          generation: {},
+          expectedText: piece.expectedText,
+          language: request.language,
+          delivery: request.delivery,
+          outputPath: path24.dirname(media),
+          filename: "final.wav"
+        }), transcriptCheck: request.transcriptCheck };
+        const result = await deps.listen(file, reviewRequest, true);
+        reviewSchema.parse(result.review);
+        evidence = { ...binding, signal, ...result, status: "pass" };
+        const failures2 = chapters.listeningFailures(evidence);
+        evidence = { ...evidence, status: failures2.length ? "fail" : "pass", failures: failures2 };
+      }
+      pieces.push(evidence);
+      if (sha256(readFileSync23(media)) !== base.mediaSha256) throw new Error("Final media changed during chapter listening");
+      commit("unverified");
+    }
+    const failures = pieces.flatMap((p) => p.failures.map((f3) => `${p.kind} ${p.index}: ${f3}`));
+    return commit(failures.length ? "fail" : "pass", { failures });
+  } catch (error2) {
+    return commit("unverified", { error: error2 instanceof Error ? error2.message : String(error2) });
   }
 }
 
@@ -106235,8 +106840,8 @@ function manageBackups(input) {
     counts.set(entry.kind, n);
     return n > args.keep;
   });
-  const plan = createHash10("sha256").update(JSON.stringify({ dir, keep: args.keep, entries, ignored: ignored2, fingerprint })).digest("hex");
-  if (args.apply && args.confirm !== plan) throw new Error("Backup inventory changed or confirmation does not match. Preview again; nothing was pruned.");
+  const plan2 = createHash10("sha256").update(JSON.stringify({ dir, keep: args.keep, entries, ignored: ignored2, fingerprint })).digest("hex");
+  if (args.apply && args.confirm !== plan2) throw new Error("Backup inventory changed or confirmation does not match. Preview again; nothing was pruned.");
   const deleted = [];
   let error2;
   if (args.apply) {
@@ -106253,7 +106858,7 @@ function manageBackups(input) {
     episodeDir: dir,
     keep: args.keep,
     dryRun: !args.apply,
-    plan,
+    plan: plan2,
     entries,
     ignored: ignored2,
     remove: remove.map((e2) => e2.path),
@@ -107815,7 +108420,7 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
 // src/index.ts
 import { readFileSync as readFinalRequest } from "node:fs";
 var server = new Server(
-  { name: "social-flow", version: "0.104.0" },
+  { name: "social-flow", version: "0.106.0" },
   { capabilities: { tools: {} } }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {

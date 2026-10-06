@@ -144,25 +144,44 @@ by `chunkPause` (0.3 s) and then spaced like any other boundary.
 |---|---|
 | WAV signal | Decodable, at least 0.25 seconds, at most 120 seconds, RMS at least -45 dBFS, no more than 0.1% clipped samples |
 | Duration | At most twice spoken characters / 4.5, with a two-second allowance for very short utterances |
-| Blind transcription | Character error rate at most 2%, ignoring punctuation, spacing and case |
+| Blind transcription | Only when `transcriptCheck` asked for it: character error rate at most 2%, ignoring punctuation, spacing and case |
 | Accuracy | At least 98/100; quantities, names, endings, omissions and repetitions checked |
 | Pronunciation | At least 95/100; native sounds, liaison and stress |
 | Naturalness | At least 95/100; phrase breaks, breath, pacing and intonation |
 | Clarity | At least 95/100; no audible noise, clipping, metallic sound or joins |
 | Evidence | Full audio reviewed, confidence at least 0.9, concrete listening observations and no reported defect |
 
-The blind transcription request does not receive the script. A separate request listens to
-the audio with the script and delivery direction. It records defects with timestamps and
-correction instructions. The listening judge cannot override a failed transcript comparison.
-These are conservative operating thresholds, not calibrated human MOS scores. ASR can spell
-a correct word differently and cause a false rejection; do not turn that rejection into PASS.
+The blind transcription (STT) check does not run by default (owner directive 2026-10-04). A
+take is judged by the listening review alone and the proof records `transcript: null`. Pass
+`transcriptCheck` — `requestedBy` and the `reason` in the asker's own words — to turn it back
+on for that call. There is no environment default and no config file: the handle carries a
+request or the check does not run.
+
+With it off the listening judge is told that no second reading accompanies the take, so it
+does not assume the script was spoken. That states the absence; it does not measure what the
+absence costs. What is lost is the independent second opinion — one request transcribes the
+audio without the script, the other listens with it, and the two disagree out loud. Accuracy
+stays at 98/100 either way: the word-level check is not switched off, it loses its second
+reader. Thresholds are not tightened to compensate, because tightening them brings back the
+same false rejections this change removes.
+
+With it on, the blind transcription request still does not receive the script, runs first, and
+its words go to the listening judge. The listening judge cannot override a failed transcript
+comparison. These are conservative operating thresholds, not calibrated human MOS scores. ASR
+can spell a correct word differently and cause a false rejection; do not turn that rejection
+into PASS — turn the check off instead, which is now the default.
+
+A stored PASS that was never transcribed cannot answer a request that now asks for the check.
+It is reviewed again from the same WAV — no second synthesis is paid for — and the earlier
+review moves to `previousReviews`. Turning the check off never invalidates a proof that has a
+transcript on record, so no existing evidence has to be regenerated.
 
 ## Retry and stop
 
 `maxAttempts` includes the first take and is capped at three. A failed acoustic or listening
 check regenerates the scene at the same settings. The JSON proof keeps each attempt's hash,
-measurements, transcript, scores and defects. Repeating the same request preserves the attempt
-history; it does not grant three more takes. An unchanged PASS is reused.
+measurements, transcript (`null` when the dictation check did not run), scores and defects.
+Repeating the same request preserves the attempt history; it does not grant three more takes. An unchanged PASS is reused.
 
 A missing key/runtime, API error, invalid review or uncertain evaluation returns `unverified`.
 It does not trigger another synthesis in that call. After fixing a review outage, the same
@@ -230,9 +249,49 @@ review errors hold delivery; an unchanged final PASS is reused. An unchanged fai
 candidate cannot obtain another score through punctuation, direction or container edits.
 The final proof binds to the complete media bytes and full spoken script, and travels inside
 `delivery-proof.json`. A scene-level PASS cannot replace it. Replacing the final media or script
-invalidates the final proof. Include the two paid final-review calls in the production allowance.
+invalidates the final proof. Include one paid listening call per review payload in the production allowance, or two when the user requested the blind-transcription check.
 
 For a standalone listening test call `tts_review_final` with `mediaPath`, `expectedText`,
 `language` and `delivery`. The full-audio review accepts at most 30 minutes and 12,000
-script characters, with a lossless FLAC review payload smaller than 14 MiB. Longer narration holds for a chapter review workflow; it never receives a
-short-form PASS from a partial listen.
+script characters, with a lossless FLAC review payload smaller than 14 MiB. A payload over that limit uses the chapter workflow below; it never receives a short-form PASS from a partial listen.
+
+#### Chapter listening for a large final payload
+
+The shared implementation is [final-speech-chapters.js](final-speech-chapters.js);
+[final-speech-chapters.d.ts](final-speech-chapters.d.ts) defines its server import contract.
+
+`check-final-tts.js` maps `subs-fast.srt` to the complete approved narration, in order,
+using visible subtitle wording for the match and spoken `tts` wording for listening.
+It supplies `segments: [{startSeconds: 0, expectedText: "First sentence."}, ...]` to
+`tts_review_final`. A standalone caller must provide the same final-timeline sentence
+map. Missing, reordered, extra or unmatched subtitle text holds the review; correct
+that map rather than dropping words. Each sentence is at most 60 seconds and 1,000
+characters. The first starts at zero, each ends at the next start, and the last ends
+at the decoded audio EOF. Lead-in, inter-sentence pauses and the entire tail are covered.
+
+The server decodes the existing standard 24 kHz mono FLAC to canonical PCM, then groups
+whole sentence spans into chapters of at most 120 seconds and 4,000 characters. It encodes
+each slice losslessly to FLAC and compares decoded samples with the exact original slice.
+There is no lower sample rate, lossy conversion, fade, speech trim or silence removal.
+Every adjacent chapter also needs a separate boundary payload containing the last complete
+sentence of the preceding chapter and the first complete sentence of the next chapter.
+Boundary listening checks a cut syllable, breath, pitch or mood change; it cannot replace
+any main chapter. An over-limit sentence/boundary holds rather than splitting a word.
+
+Budget one listening call for each chapter and each boundary (two per payload only when
+`transcriptCheck` records the user's request). For N chapters, this is 2N−1 payloads.
+No automatic synthesis follows. Every payload keeps the existing accuracy 98, other axes
+95, confidence 0.9 and no-defect thresholds. A review outage holds the whole episode.
+Completed pieces are checkpointed so recovery can reuse matching evidence. A completed
+failed audio candidate cannot reroll through cosmetic changes.
+
+The `final-speech-chapters-v1` proof embeds every chapter and boundary, PCM and FLAC hashes,
+byte sizes, sample ranges, sentence map, reviewer, transcript request, signal and listening
+findings. Its manifest binds all of those to the complete media bytes and complete spoken
+text. `check-final-tts.js`, `delivery-proof.js` and publishing's `episode-state.js` preflight
+use the same verifier. They decode shipped media and verify exact full coverage, ordering,
+all PCM slices and all review verdicts. Missing or unverified evidence, changed boundaries
+and stale audio/text cannot become approved warnings. A complete acoustic failure can go
+through the existing explicit HITL warning approval, bound to the exact chapter manifest;
+the report retains global timestamps and actual heard/expected words. It remains a fail,
+never a manufactured PASS.
