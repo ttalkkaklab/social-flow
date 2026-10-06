@@ -1116,6 +1116,8 @@ function check(win, fmt, opts) {
     const where = 'shot ' + n;
     const v = s.visual || {};
     const shot = s.shot || {};
+    try { require('../../produce/references/video-groups.js').declaration(s,{mode:win.PRODUCTION?.mode}); }
+    catch(e) { bad(where,e.message); }
     if ((opts && opts.requireRenderPlan) || shot.render)
       require('./render-routing.js').checkScene(s, { draft, production: win.PRODUCTION, format:win.FORMAT }).forEach(message => bad(where, message));
 

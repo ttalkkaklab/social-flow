@@ -387,9 +387,28 @@ node ${CLAUDE_PLUGIN_ROOT}/skills/produce/references/measure-motion.js .work/vid
 
 ## Build handoff
 
+For already generated sentence sources within one card, use the optional
+[full-video groupPlan contract](../../storyboard/references/scenes-schema.md#full-video-sentence-group-sources).
+Keep one card and the original narration array. Manifest rows use each declared local clip
+directly, with no `@`, `|` or overlay wrapper. Each source needs its actual SHA and trim;
+output-frame boundaries and bodyFrames come from the existing measured audio clock.
+The common builder checks source coverage including the compiled final live handle,
+renders direct group cuts, and verifies runtime provenance and actual source frames.
+
+For these cards, the shot review keeps the current `planDigest` and has a `groups` array
+in narration order. Each record includes `segment`, `videoSha256`, `in`, `startFrame`,
+`playback`, `reviewer`, `at`, the six concrete evidence fields above, `defects`, `seeks`
+and `motionEvidence`. `seeks` are source-file times inside the actual trimmed interval;
+`motionEvidence.beats[].at` is local to that interval. Inspect the final group's outgoing
+handle too. A previous whole-card review cannot establish these new source reviews.
+Motion is measured separately over each used source interval. Existing still review,
+budget, unknown music price and TTS findings retain their gates; source/trim/clock errors
+are structural failures and cannot be approved as quality warnings.
+
+
 Run `check-production.js storyboard/ --ready` before capture/build. Generate no HTML scene
-captures for these cuts. Write cards with `zoom=none`; every narration segment names the same
-accepted video path, without `@`, `::overlay.png`, palindrome files or still-image substitutes.
+captures for these cuts. Write cards with `zoom=none`. In the single-clip path, every
+narration segment names the same accepted video path, without `@`, `::overlay.png`, palindrome files or still-image substitutes.
 The builder reads continuous video offsets across segments, disables loops and freeze padding,
 and refuses a card whose source cannot cover its duration plus the outgoing live handle.
 Follow [cinematic-edit.md](cinematic-edit.md): choose each join by action and continuity,
