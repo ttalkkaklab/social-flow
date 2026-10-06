@@ -33,6 +33,14 @@ function setup(t){
  return {dir,media,request,proof};
 }
 function reseal(p){p.manifestSha256=chapters.manifest(p);return p;}
+async function assertInvalidPlansPreserveProof(f,deps){
+ const before=readFileSync(f.media+'.speech-quality.json');
+ for(const patch of [{segments:undefined},{segments:f.request.segments.slice(1)},{segments:[...f.request.segments].reverse()},{segments:f.request.segments.map((s,i)=>({...s,startSeconds:i?i*30:1}))},{expectedText:'Other narration'}]){
+  const result=await reviewFinalSpeech({...f.request,...patch},deps);
+  assert.equal(result.status,'unverified');assert.equal(result.success,false);assert.ok(result.error);
+  assert.deepEqual(readFileSync(f.media+'.speech-quality.json'),before,'invalid planning must not alter stored evidence');
+ }
+}
 test('over-cap FLAC reviews full chapters and all joins, then caches only complete evidence',async t=>{
  const f=setup(t);let calls=0;
  const deps={listen:async(file,request,episode)=>{calls++;assert.equal(episode,true);assert.ok(readFileSync(file).length<=chapters.LIMIT);return {transcript:null,review:good};}};
@@ -40,6 +48,8 @@ test('over-cap FLAC reviews full chapters and all joins, then caches only comple
  const p=f.proof();assert.equal(p.policy,chapters.POLICY);assert.equal(calls,3);assert.equal(p.pieces.filter(x=>x.kind==='chapter').length,2);assert.equal(p.pieces.filter(x=>x.kind==='boundary').length,1);
  assert.equal(p.pieces[0].startSample,0);assert.equal(p.pieces[1].startSample,p.pieces[0].endSample);assert.equal(p.pieces[1].endSample,pcm.length/4);
  const actual=chapters.decode(f.media);assert.deepEqual(actual,pcm);assert.doesNotThrow(()=>checker.verify(f.media,f.request.expectedText));
+ assert.equal((await reviewFinalSpeech(f.request,deps)).reused,true);assert.equal(calls,3);
+ await assertInvalidPlansPreserveProof(f,deps);assert.equal(calls,3);
  assert.equal((await reviewFinalSpeech(f.request,deps)).reused,true);assert.equal(calls,3);
  for(const alter of [p=>p.pieces.splice(0,1),p=>p.pieces.push(p.pieces[0]),p=>p.pieces.reverse(),p=>p.pieces.pop(),p=>p.pieces[0].endSample--,p=>p.pieces[1].startSample++,p=>p.pieces[0].startSample=1,p=>p.pieces[1].endSample--,p=>p.pieces[2].startSample++,p=>p.pieces[0].pcmSha256='0'.repeat(64),p=>p.segments[1].expectedText+=' changed',p=>p.pieces[1].status='unverified',p=>p.pieces[2].review.continuity=94,p=>p.pieces[1].audioSha256='bad']){
   const bad=structuredClone(p);alter(bad);reseal(bad);
@@ -58,6 +68,9 @@ test('one failed chapter or clipped cross-boundary syllable fails the whole revi
   const deps={listen:async()=>({transcript:null,review:++calls===badCall?{...good,issues:[{start:29.9,end:30,category:'clipping',heard:'unfinished ending',expected:'complete ending',correction:'Move the boundary into the actual pause.'}]}:good})};
   assert.equal((await reviewFinalSpeech(f.request,deps)).status,'fail');assert.equal(calls,3);
   assert.throws(()=>checker.verify(f.media,f.request.expectedText),/Audible defects/);
+  await assertInvalidPlansPreserveProof(f,deps);assert.equal(calls,3);
+  const retry=await reviewFinalSpeech(f.request,deps);assert.equal(retry.status,'fail');assert.equal(retry.reused,true);assert.equal(calls,3,'a failed review cannot reroll after invalid requests');
+  assert.throws(()=>checker.verify(f.media,f.request.expectedText),/Audible defects/);
   assert.equal((await reviewFinalSpeech({...f.request,delivery:'A cosmetic new direction.'},deps)).reused,true);assert.equal(calls,3);
   assert.throws(()=>checker.gate(f.dir,f.media,f.request.expectedText),/need HITL/);
   checker.approve(f.dir,'User reviewed and accepted this exact clipped-syllable finding.');
@@ -73,7 +86,18 @@ test('review outage holds delivery, saves preceding reviews, and resumes without
  const deps={listen:async()=>{if(++calls===2)throw new Error('mock outage');return {transcript:null,review:good};}};
  assert.equal((await reviewFinalSpeech(f.request,deps)).status,'unverified');assert.equal(f.proof().pieces.length,1);
  assert.throws(()=>checker.gate(f.dir,f.media,f.request.expectedText),/unverified/);
+ await assertInvalidPlansPreserveProof(f,deps);assert.equal(calls,2);
  assert.equal((await reviewFinalSpeech(f.request,deps)).status,'pass');assert.equal(calls,4,'one prior review is reused, two remaining reviews run');
+});
+test('a failed piece in an interrupted review survives invalid plans and resumes as fail',async t=>{
+ const f=setup(t);let calls=0;
+ const deps={listen:async()=>{if(++calls===2)throw new Error('mock outage');return {transcript:null,review:calls===1?{...good,accuracy:97}:good};}};
+ assert.equal((await reviewFinalSpeech(f.request,deps)).status,'unverified');
+ assert.equal(f.proof().pieces[0].status,'fail');
+ await assertInvalidPlansPreserveProof(f,deps);assert.equal(calls,2);
+ assert.equal((await reviewFinalSpeech(f.request,deps)).status,'fail');assert.equal(calls,4);
+ assert.equal(f.proof().pieces[0].status,'fail');
+ assert.throws(()=>checker.verify(f.media,f.request.expectedText),/accuracy below threshold/);
 });
 test('invalid text, start, order or missing segments fail before listening; source mutation holds',async t=>{
  const f=setup(t);let calls=0;

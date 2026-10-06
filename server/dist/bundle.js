@@ -104032,6 +104032,7 @@ async function reviewFinalSpeech(input, deps = { listen }) {
   }
   const temp = mkdtempSync7(path24.join(tmpdir6(), "speech-final-"));
   let base = { version: 1, policy: "final-speech-v1", model: REVIEW_MODEL, ...identity, mediaPath: media };
+  let singleReviewStarted = false;
   function save2(status, extra) {
     const result = { ...base, status, checkedAt: (/* @__PURE__ */ new Date()).toISOString(), ...extra };
     const staging = path24.join(temp, "proof.json");
@@ -104059,6 +104060,7 @@ async function reviewFinalSpeech(input, deps = { listen }) {
         if (!signalFailures(old.signal, request.expectedText, 1800).length && !reviewFailures(request.expectedText, typeof old.transcript === "string" ? old.transcript : null, review2, old.signal.duration).length && (review2.continuity ?? 0) >= 95 && review2.continuityEvidence) return save2("pass", { reused: true, signal: old.signal, transcript: old.transcript, transcriptCheck: transcriptCheck ?? old.transcriptCheck ?? null, review: review2, failures: [] });
       }
     }
+    singleReviewStarted = true;
     save2("unverified", {});
     const signal = await measureSignal(wav, 1800);
     const failures = signalFailures(signal, request.expectedText, 1800);
@@ -104082,7 +104084,8 @@ async function reviewFinalSpeech(input, deps = { listen }) {
     if (sha256(readFileSync23(media)) !== base.mediaSha256) throw new Error("Final media changed during listening");
     return save2(failures.length ? "fail" : "pass", { signal, ...result, transcriptCheck: transcriptCheck ?? null, failures });
   } catch (error2) {
-    return save2("unverified", { error: error2 instanceof Error ? error2.message : String(error2) });
+    const failure2 = { error: error2 instanceof Error ? error2.message : String(error2) };
+    return singleReviewStarted ? save2("unverified", failure2) : { success: false, status: "unverified", proofPath, ...failure2 };
   } finally {
     rmSync12(temp, { recursive: true, force: true });
     closeSync9(lock);

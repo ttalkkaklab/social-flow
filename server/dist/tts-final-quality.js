@@ -32,6 +32,7 @@ export async function reviewFinalSpeech(input, deps = { listen }) {
     }
     const temp = mkdtempSync(path.join(tmpdir(), 'speech-final-'));
     let base = { version: 1, policy: 'final-speech-v1', model: REVIEW_MODEL, ...identity, mediaPath: media };
+    let singleReviewStarted = false;
     function save(status, extra) {
         const result = { ...base, status, checkedAt: new Date().toISOString(), ...extra };
         const staging = path.join(temp, 'proof.json');
@@ -66,6 +67,7 @@ export async function reviewFinalSpeech(input, deps = { listen }) {
                     return save('pass', { reused: true, signal: old.signal, transcript: old.transcript, transcriptCheck: transcriptCheck ?? old.transcriptCheck ?? null, review, failures: [] });
             }
         }
+        singleReviewStarted = true;
         save('unverified', {});
         const signal = await measureSignal(wav, 1800);
         const failures = signalFailures(signal, request.expectedText, 1800);
@@ -83,7 +85,12 @@ export async function reviewFinalSpeech(input, deps = { listen }) {
         return save(failures.length ? 'fail' : 'pass', { signal, ...result, transcriptCheck: transcriptCheck ?? null, failures });
     }
     catch (error) {
-        return save('unverified', { error: error instanceof Error ? error.message : String(error) });
+        const failure = { error: error instanceof Error ? error.message : String(error) };
+        // Decoding, request planning and proof validation do not own a new review.
+        // Preserve completed verdicts and resumable chapter checkpoints on these errors.
+        // Chapter listening saves its own checkpoint; only an active single review may
+        // replace its proof here.
+        return singleReviewStarted ? save('unverified', failure) : { success: false, status: 'unverified', proofPath, ...failure };
     }
     finally {
         rmSync(temp, { recursive: true, force: true });
