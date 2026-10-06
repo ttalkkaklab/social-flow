@@ -73,6 +73,12 @@ function motionGateErrors(scene, metrics, clipSeconds) {
 }
 function accepted(win, index, storyboard, review) {
   const scene = win.SCENES[index];
+  if(scene.visual?.video?.groupPlan!==undefined){
+    const plan=require('./video-groups.js').compile(scene,storyboard,{mode:win.PRODUCTION?.mode});
+    return review && review.planDigest===shotDigest(win,index) &&
+      Array.isArray(review.groups) && review.groups.length===plan.groups.length &&
+      plan.groups.every((g,j)=>review.groups[j]?.segment===j && review.groups[j]?.videoSha256===g.sha256 && review.groups[j]?.in===g.in && review.groups[j]?.startFrame===g.startFrame);
+  }
   if (mode.reused(scene)) return review && review.planDigest === shotDigest(win, index) &&
     review.videoSha256 === scene.visual.reuse.sha256 && review.videoSha256 === hashFile(storyboard, videoFile(scene));
   const previz = scene.visual.video.previz;
@@ -216,6 +222,30 @@ function check(storyboard, { requireSelection = false, ready = false, beforeCall
       if (!mode.reused(scene) && !(mode.full(p) && mode.eligible(scene))) return;
       const prefix = 'shot ' + (index + 1) + ': ', bad = msg => errors.push(prefix + msg);
       const matches = (reviews.shots || []).filter(r => r.shot === index + 1), review = matches[0];
+      if(scene.visual?.video?.groupPlan!==undefined){
+        try {
+          const edit=require('./edit-plan.js').preview(win.SCENES,{videoWarningsApproved:true}).find(e=>e.card===index);
+          const p=scene.visual.video.groupPlan;
+          const plan=require('./video-groups.js').compile(scene,storyboard,{mode:win.PRODUCTION?.mode,handleFrames:Math.ceil(edit.handle*p.fps-1e-6)});
+          if(matches.length!==1||!accepted(win,index,storyboard,review))bad('group video review is missing or stale; inspect every current trimmed source');
+          for(const g of plan.groups){
+            const label='group '+(g.segment+1)+': ';
+            resolutionErrors(scene,{width:g.width,height:g.height},win.FORMAT).forEach(e=>bad(label+e));
+            const used=g.frames/plan.fps;
+            const m=motion.measure(g.file,{start:g.sourceIn,seconds:used});
+            motionGateErrors({...scene,duration:used,edit:{in:0}},m,used).forEach(e=>bad(label+e));
+            const r=review?.groups?.[g.segment];
+            if(r?.playback!==true||!r.reviewer||!Number.isFinite(Date.parse(r.at)))bad(label+'record full trimmed playback inspection, reviewer and time');
+            for(const key of ['composition','materials','continuity','action','camera','referenceMatch'])
+              if(typeof r?.[key]!=='string'||r[key].trim().length<12)bad(label+'review needs concrete evidence for '+key);
+            if(!Array.isArray(r?.defects)||r.defects.length)bad(label+'unresolved visual defects');
+            const seeks=r?.seeks;
+            if(!Array.isArray(seeks)||seeks.length<3||seeks.some(t=>!Number.isFinite(t)||t<g.sourceIn||t>g.sourceIn+used)||!seeks.some(t=>t<=g.sourceIn+used*.15)||!seeks.some(t=>t>=g.sourceIn+used*.85)||!seeks.some(t=>t>=g.sourceIn+used*.4&&t<=g.sourceIn+used*.6))bad(label+'inspect start, middle and end of the source interval');
+            motionReviewErrors({...scene,duration:used},r||{}).forEach(e=>bad(label+e));
+          }
+        } catch(e){bad(e.message);}
+        return;
+      }
       if (matches.length !== 1) { bad('one current video review is required; inspect this existing clip and record the review without generating a replacement'); return; }
       try {
         if (!accepted(win, index, storyboard, review)) bad('review is stale; inspect the current image, clip and shot plan');
@@ -247,6 +277,14 @@ function check(storyboard, { requireSelection = false, ready = false, beforeCall
     for (const index of plainVideoShots) {
       const card = cards.filter(r => Number(r[0]) === index), segs = segments.filter(r => Number(r[0]) === index);
       if (card.length !== 1 || card[0][3] !== 'none' || !segs.length) errors.push('Plain-video manifest needs one zoom=none card with segments for shot ' + (index + 1));
+      if(win.SCENES[index].visual?.video?.groupPlan!==undefined){
+        try {
+          const edit=require('./edit-plan.js').preview(win.SCENES,{videoWarningsApproved:true}).find(e=>e.card===index);
+          const p=win.SCENES[index].visual.video.groupPlan;
+          require('./video-groups.js').checkManifest(win.SCENES[index],storyboard,work,segs,{mode:win.PRODUCTION?.mode,handleFrames:Math.ceil(edit.handle*p.fps-1e-6)});
+        }catch(e){errors.push('shot '+(index+1)+': '+e.message);}
+        continue;
+      }
       const expected = assetPath(storyboard, videoFile(win.SCENES[index]));
       if (segs.some(r => !r[2] || /::|\||^@/.test(r[2]) || path.resolve(work, r[2]) !== expected))
         errors.push('Plain-video segments must use only the approved clip, without overlays or freeze/palindrome wrappers: shot ' + (index + 1));

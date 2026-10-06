@@ -75,9 +75,9 @@ function write(work, scenes, options) {
   fs.writeFileSync(path.join(work,'edit-plan.json'),JSON.stringify({version:1, cardsSha256:createHash('sha256').update(result.cards).digest('hex'), shots:result.plan},null,2)+'\n');
   return result;
 }
-function preview(scenes) {
+function preview(scenes, options) {
   const cards=scenes.flatMap((s,i)=>['broll','outro'].includes(s.type)?[]:[`${i}\tvoice.wav\t0\tnone\t${s.visual?.sync===true?'sync=1':''}`]).join('\n');
-  return compile(scenes,cards).plan;
+  return compile(scenes,cards,options).plan;
 }
 module.exports={compile,write,carry,preview};
 if(require.main===module){try{

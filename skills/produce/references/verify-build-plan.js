@@ -12,6 +12,9 @@ function verifyManifest(work,board,scenes,format,{videoWarningsApproved=false}={
   const remember=file=>{media[file]=createHash('sha256').update(fs.readFileSync(file)).digest('hex')};
   const lines=fs.readFileSync(path.join(work,'segs.tsv'),'utf8').split(/\r?\n/).filter(l=>l.trim()&&!l.startsWith('#')).map(l=>l.split('\t'));
   const expected=[];
+  const grouped=scenes.some(s=>s.visual?.video?.groupPlan!==undefined);
+  const edits=grouped?require('./edit-plan.js').preview(scenes,{videoWarningsApproved}):[];
+  const checkedGroups=new Set();
   scenes.forEach((s,i)=>{
     if(['broll','outro'].includes(s.type))return;
     const segs=s.narration?.length?s.narration:[{tts:'',sub:''}];
@@ -36,6 +39,15 @@ function verifyManifest(work,board,scenes,format,{videoWarningsApproved=false}={
       }
     } else {
       const production=require('./check-production.js');
+      if(s.visual?.video?.groupPlan!==undefined){
+        if(checkedGroups.has(i))return;
+        const edit=edits.find(p=>p.card===i);
+        const p=s.visual.video.groupPlan;
+        const groups=require('./video-groups.js').checkManifest(s,board,work,lines.filter(r=>r[0]===String(i)),{handleFrames:Math.ceil(edit.handle*p.fps-1e-6)});
+        groups.groups.forEach(g=>remember(g.file));
+        checkedGroups.add(i);
+        return;
+      }
       const reuse=s.visual?.reuse;
       if(reuse!==undefined && !videoWarningsApproved)production.validateReuseAsset(board,s,format);
       const generated=s.visual?.video?.clip;
@@ -59,11 +71,19 @@ function verify(work, board) {
   const cards = fs.readFileSync(path.join(work, 'cards.tsv'), 'utf8').split(/\r?\n/).filter(l=>l.trim()&&!l.startsWith('#'));
   const ids = cards.map(l=>l.split('\t')[0]);
   if (JSON.stringify(ids)!==JSON.stringify(expected.map(String))) throw new Error('cards.tsv does not match SCENES order; no unplanned opening, missing card or duplicate card is allowed');
-  require('./edit-plan.js').write(work,win.SCENES,{videoWarningsApproved:videoGate.approved});
+  const editResult=require('./edit-plan.js').write(work,win.SCENES,{videoWarningsApproved:videoGate.approved});
   const mediaSha256={...verifyManifest(work,board,win.SCENES,win.FORMAT,{videoWarningsApproved:videoGate.approved}),...require('./check-tts-quality.js').check(work,board)};
   const hash = p=>createHash('sha256').update(fs.readFileSync(p)).digest('hex');
+  const groupPlans={};
+  const edits=editResult.plan;
+  win.SCENES.forEach((s,i)=>{
+    if(s.visual?.video?.groupPlan!==undefined){
+      const p=s.visual.video.groupPlan;
+      groupPlans[i]=require('./video-groups.js').compile(s,board,{mode:win.PRODUCTION?.mode,handleFrames:Math.ceil(edits.find(e=>e.card===i).handle*p.fps-1e-6)});
+    }
+  });
   const plugin = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../../.claude-plugin/plugin.json'),'utf8'));
-  fs.writeFileSync(path.join(work, 'build-plan-check.json'), JSON.stringify({videoGate,ttsGate:require('./check-tts-quality.js').lastReport(work),mediaSha256,version:plugin.version,storyboard:board,scenesSha256:hash(file),cardsSha256:hash(path.join(work,'cards.tsv')),segsSha256:hash(path.join(work,'segs.tsv')),resolvedCardsSha256:hash(path.join(work,'cards.resolved.tsv')),editPlanSha256:hash(path.join(work,'edit-plan.json')),checks:['check-scenes','check-slide','segment-inputs','edit-plan'],cards:expected},null,2)+'\n');
+  fs.writeFileSync(path.join(work, 'build-plan-check.json'), JSON.stringify({videoGate,ttsGate:require('./check-tts-quality.js').lastReport(work),mediaSha256,groupPlans,version:plugin.version,storyboard:board,scenesSha256:hash(file),cardsSha256:hash(path.join(work,'cards.tsv')),segsSha256:hash(path.join(work,'segs.tsv')),resolvedCardsSha256:hash(path.join(work,'cards.resolved.tsv')),editPlanSha256:hash(path.join(work,'edit-plan.json')),checks:['check-scenes','check-slide','segment-inputs','edit-plan'],cards:expected},null,2)+'\n');
 }
 if (require.main === module) {
   try {
