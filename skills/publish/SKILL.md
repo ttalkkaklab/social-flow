@@ -152,7 +152,10 @@ into promoting that prompt to "always allow".
 
   The check also verifies `output/video/delivery-proof.json` against the delivered video,
   subtitles and source storyboard. A separate export without current assembly provenance
-  must be rebuilt through the common builder and final pace pass.
+  must be rebuilt through the common builder and final pace pass. For a large final speech
+  payload, the embedded chapter manifest must cover every original audio sample and every
+  chapter join. The same preflight rejects a missing/unverified chapter, boundary gap,
+  changed ordering or stale audio/script; a source scene PASS cannot replace this proof.
 
   Exit 1 here means the directory promised something it never delivered — a video with no
   per-platform text, a `queue_*: ready` marker with no video behind it, **an `output/` still
