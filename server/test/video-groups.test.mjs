@@ -13,14 +13,27 @@ const builder=readFileSync(path.join(root,'skills/produce/references/build-reel.
 const render=builder.slice(builder.indexOf('  INS=(); FILT=""; NIN=0'),builder.indexOf('  # ── 7.5)'));
 const ff=args=>execFileSync('ffmpeg',['-v','error','-y',...args]);
 const scene=(a,b)=>({type:'cover',transition:'cut',narration:[{tts:'first',sub:'one'},{tts:'next',sub:'two'}],shot:{render:{mode:'generated_video'}},visual:{video:{groupPlan:{fps:30,bodyFrames:60,groups:[{segment:0,startFrame:0,clip:a,sha256:groups.hash(a),in:1.5},{segment:1,startFrame:30,clip:b,sha256:groups.hash(b),in:2}]}}}});
-const withSources=fn=>{
+const withSources=(fn,{sourceFps=24,secondFps=sourceFps,alternating=false}={})=>{
  const dir=mkdtempSync(path.join(tmpdir(),'video-groups-'));mkdirSync(path.join(dir,'work'));
  try{
   const a=path.join(dir,'a.mp4'),b=path.join(dir,'b.mp4');
-  ff(['-f','lavfi','-i','testsrc2=size=160x90:rate=24:duration=4','-c:v','libx264','-pix_fmt','yuv420p',a]);
-  ff(['-f','lavfi','-i','color=blue:size=160x90:rate=24:duration=4','-c:v','libx264','-pix_fmt','yuv420p',b]);
+  ff(['-f','lavfi','-i',alternating?`nullsrc=size=160x90:rate=${sourceFps}:duration=4,geq=lum='if(mod(N,2),235,16)':cb=128:cr=128`:`testsrc2=size=160x90:rate=${sourceFps}:duration=4`,'-c:v','libx264','-pix_fmt','yuv420p',a]);
+  ff(['-f','lavfi','-i',alternating?`nullsrc=size=160x90:rate=${secondFps}:duration=4,geq=lum='if(mod(N,2),16,235)':cb=128:cr=128`:`color=blue:size=160x90:rate=${secondFps}:duration=4`,'-c:v','libx264','-pix_fmt','yuv420p',b]);
   fn({dir,a,b,s:scene(a,b)});
  }finally{rmSync(dir,{recursive:true,force:true});}
+};
+// Exercise the actual common renderer block, including its input -ss/-t and EOF.
+const renderPlan=(dir,plan)=>{
+ const settings=`set -euo pipefail
+say(){ echo "$1"; }
+W=160; H=90; FPS=${plan.fps}; FULL_VIDEO_SHOTS='0 1'; REUSED_VIDEO_SHOTS=''; MV=${plan.groups.length}; FOFF=(${plan.groups.map(g=>g.startFrame/plan.fps).join(' ')}); FDUR=(${plan.groups.map(()=>0).join(' ')})
+FVIS=(${plan.groups.map(g=>g.file).join(' ')}); GIN=(${plan.groups.map(g=>g.sourceIn).join(' ')}); GFR=(${plan.groups.map(g=>g.frames).join(' ')}); GROUPED=1
+SPANSET=1; SPAN=0.035; ZOOM_SPAN=0.035; PAN=''; EASE=linear; KB_EASE=linear; DRIFT=0; FX=0.5; FY=0.5; ZDIR=none; N=1; ZB=240:135; SCENE_FADE=0.3
+WHIP_BLUR=9; ZOOM_THRU=0.3; PREVEXIT=''; EXITM=''; PUSH_DIR=''; WARN=0
+FRAMES=${plan.bodyFrames}; D=${plan.bodyFrames/plan.fps}; D1=${plan.bodyFrames/plan.fps}; SOURCE_IN=0; TOTF=0; JOIN=0; ENTER=cut; PREVIDX=''; IDX=0; HANDLE_FRAMES=${plan.handleFrames}; RENDER_FRAMES=${plan.bodyFrames+plan.handleFrames}; RENDER_D=${(plan.bodyFrames+plan.handleFrames)/plan.fps}
+`;
+ writeFileSync(path.join(dir,'render.sh'),settings+render);
+ const run=spawnSync('bash',['render.sh'],{cwd:dir,encoding:'utf8'});assert.equal(run.status,0,run.stdout+run.stderr);
 };
 test('groups bind source bytes, ordered manifest, 24fps trims and output30fps handles',()=>withSources(({dir,s})=>{
  const p=groups.compile(s,dir,{handleFrames:8});assert.deepEqual(p.groups.map(g=>g.frames),[30,38]);assert.equal(p.groups[0].sourceIn,1.5);assert.equal(p.groups[0].sourceFps,24);
@@ -49,16 +62,7 @@ test('source81 frames covers body95 plus6 output30fps handle, without adding han
 }));
 test('common builder renders direct group cut, trims and live handle; provenance catches substitutions', {timeout:60000},()=>withSources(({dir,s})=>{
  const plan=groups.compile(s,dir,{handleFrames:8});
- const settings=`set -euo pipefail
-say(){ echo "$1"; }
-W=160; H=90; FPS=30; FULL_VIDEO_SHOTS='0 1'; REUSED_VIDEO_SHOTS=''; MV=2; FOFF=(0 1); FDUR=(0 0)
-FVIS=(${plan.groups.map(g=>g.file).join(' ')}); GIN=(1.5 2); GFR=(30 38); GROUPED=1
-SPANSET=1; SPAN=0.035; ZOOM_SPAN=0.035; PAN=''; EASE=linear; KB_EASE=linear; DRIFT=0; FX=0.5; FY=0.5; ZDIR=none; N=1; ZB=240:135; SCENE_FADE=0.3
-WHIP_BLUR=9; ZOOM_THRU=0.3; PREVEXIT=''; EXITM=''; PUSH_DIR=''; WARN=0
-FRAMES=60; D=2; D1=2; SOURCE_IN=0; TOTF=0; JOIN=0; ENTER=cut; PREVIDX=''; IDX=0; HANDLE_FRAMES=8; RENDER_FRAMES=68; RENDER_D=2.266666667
-`;
- writeFileSync(path.join(dir,'render.sh'),settings+render);
- const run=spawnSync('bash',['render.sh'],{cwd:dir,encoding:'utf8'});assert.equal(run.status,0,run.stdout+run.stderr);
+ renderPlan(dir,plan);
  const scenes=[s,{type:'points',transition:'jcut',edit:{transitionSeconds:.24}}];
  // .24s rounds to8 frames: the same compiler and renderer rule as ep10c s01.
  writeFileSync(path.join(dir,'cards.tsv'),'0\tvoice.wav\t0\tnone\n1\tvoice.wav\t0\tnone\n');edits.write(dir,scenes);
@@ -84,3 +88,62 @@ FRAMES=60; D=2; D1=2; SOURCE_IN=0; TOTF=0; JOIN=0; ENTER=cut; PREVIDX=''; IDX=0;
  ff(['-f','lavfi','-i','color=red:size=160x90:rate=30:duration=2','-c:v','libx264',path.join(dir,'work/v0.mp4')]);
  assert.throws(()=>groups.verifyRendered(dir,dir,scenes,proof),/differs from declared/);
 }));
+
+// Sharp frame changes expose a one-source-frame error that low-motion footage hides.
+for(const options of [
+ {sourceFps:24,secondFps:24,fps:30,in:1.5},
+ {sourceFps:24,secondFps:25,fps:30,in:1.501},
+ {sourceFps:25,secondFps:60,fps:30,in:1.501},
+ {sourceFps:60,secondFps:24,fps:30,in:1.501},
+ {sourceFps:'30000/1001',secondFps:25,fps:24,in:1.001},
+])test(`output-frame references match alternating ${options.sourceFps}/${options.secondFps}fps → ${options.fps}fps, trim ${options.in}, body and handle EOF`,{timeout:60000},()=>withSources(({dir,s,b})=>{
+ const p=s.visual.video.groupPlan;
+ p.fps=options.fps;p.bodyFrames=2*p.fps;p.groups[1].startFrame=p.fps;
+ p.groups[0].in=options.in;p.groups[1].in=options.in;
+ const handleFrames=Math.ceil(.24*p.fps-1e-6),plan=groups.compile(s,dir,{handleFrames});
+ const scenes=[s,{type:'points',transition:'jcut',edit:{transitionSeconds:.24}}];
+ writeFileSync(path.join(dir,'cards.tsv'),'0\tvoice.wav\t0\tnone\n1\tvoice.wav\t0\tnone\n');edits.write(dir,scenes);
+ writeFileSync(path.join(dir,'work/groups0.json'),JSON.stringify(plan));
+ const proof={groupPlans:{0:plan}};
+ renderPlan(dir,plan);
+ const samples=groups.verifyRendered(dir,dir,scenes,proof)[0].samples;
+ assert.deepEqual(samples.filter(x=>x.kind==='first').map(x=>x.sourceOutputFrame),[0,0]);
+ assert.deepEqual(samples.filter(x=>x.kind==='last').map(x=>x.sourceOutputFrame),[p.fps-1,p.fps-1]);
+ assert.deepEqual(samples.filter(x=>x.kind==='outgoing-live-handle').map(x=>x.sourceOutputFrame),[p.fps,p.fps+Math.floor((handleFrames-1)/2),p.fps+handleFrames-1]);
+ assert.ok(samples.every(x=>x.meanPixelError<1),'the same converted frame must match, including last body/handle frames');
+ if(options.sourceFps===24&&options.in===1.5){
+  assert.equal(samples.find(x=>x.segment===0&&x.kind==='middle').sourceOutputFrame,14);
+  assert.equal(samples.find(x=>x.segment===0&&x.kind==='last').sourceOutputFrame,29);
+ }
+ const [numerator,denominator=1]=String(options.sourceFps).split('/').map(Number),sourceFps=numerator/denominator;
+ assert.equal(plan.groups[0].sourceIn,Math.ceil(options.in*sourceFps-1e-6)/sourceFps);
+ // Alter the pixels actually rendered while preserving the declared runtime/proof.
+ // A byte-consistent manifest alone must not bless a different source or in-point.
+ const other=structuredClone(plan);other.groups[0].file=b;
+ renderPlan(dir,other);
+ assert.throws(()=>groups.verifyRendered(dir,dir,scenes,proof),/differs from declared trimmed source/);
+ const shifted=structuredClone(plan);shifted.groups[0].sourceIn+=1/sourceFps;
+ renderPlan(dir,shifted);
+ assert.throws(()=>groups.verifyRendered(dir,dir,scenes,proof),/differs from declared trimmed source/);
+ renderPlan(dir,plan);
+ // Corrupt only the handle EOF: first/middle samples remain untouched.
+ const handle=path.join(dir,'work/handle0.mp4'),badHandle=path.join(dir,'bad-handle.mp4');
+ ff(['-i',handle,'-vf',`negate=enable='eq(n,${handleFrames-1})'`,'-c:v','libx264',badHandle]);
+ writeFileSync(handle,readFileSync(badHandle));
+ assert.throws(()=>groups.verifyRendered(dir,dir,scenes,proof),/live handle differs/);
+},{...options,alternating:true}));
+
+test('source24fps physical EOF covers body95 plus6 output30fps handle with no padding', {timeout:60000},()=>withSources(({dir,a,s})=>{
+ const file=path.join(dir,'short.mp4');ff(['-i',a,'-frames:v','81','-c:v','libx264',file]);
+ s.narration=[s.narration[0]];s.visual.video.groupPlan={fps:30,bodyFrames:95,groups:[{segment:0,startFrame:0,clip:file,sha256:groups.hash(file),in:0}]};
+ const plan=groups.compile(s,dir,{handleFrames:6});
+ const scenes=[s,{type:'points',transition:'jcut',edit:{transitionSeconds:.2}}];
+ writeFileSync(path.join(dir,'cards.tsv'),'0\tvoice.wav\t0\tnone\n1\tvoice.wav\t0\tnone\n');edits.write(dir,scenes);
+ writeFileSync(path.join(dir,'work/groups0.json'),JSON.stringify(plan));
+ renderPlan(dir,plan);
+ const samples=groups.verifyRendered(dir,dir,scenes,{groupPlans:{0:plan}})[0].samples;
+ assert.equal(samples.at(-1).sourceOutputFrame,100);
+ assert.equal(samples.at(-1).frame,5);
+ assert.ok(samples.every(x=>x.meanPixelError<1));
+ assert.throws(()=>groups.compile(s,dir,{handleFrames:7}),/too short/);
+},{alternating:true}));

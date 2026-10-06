@@ -83,8 +83,14 @@ function verifyRendered(work,board,scenes,proof) {
     const probe=JSON.parse(execFileSync('ffprobe',['-v','error','-count_frames','-select_streams','v:0','-show_entries','stream=nb_read_frames,avg_frame_rate,width,height','-of','json',output],{encoding:'utf8'})).streams[0];
     const [num,den]=probe.avg_frame_rate.split('/').map(Number);
     if(+probe.nb_read_frames!==p.bodyFrames||num/den!==p.fps)throw new Error('video group plan: rendered body clock differs');
-    // Inspect each group's actual source at an interior frame, outside card fades/joins.
-    const frame=(file,at,source=false)=>execFileSync('ffmpeg',['-v','error','-ss',String(at),'-i',file,'-frames:v','1','-vf',(source?`scale=${probe.width}:${probe.height}:force_original_aspect_ratio=increase:flags=lanczos,crop=${probe.width}:${probe.height},`:'')+'scale=80:46,format=gray','-f','rawvideo','-'],{maxBuffer:1024*1024});
+    // Match build-reel's input trim, PTS reset and fps conversion before selecting
+    // an output frame. Seeking to sourceIn + index/fps selects a different source
+    // frame when the source and output clocks differ, especially at group EOF.
+    const frame=(file,index,group)=>{
+      const input=group?['-ss',String(group.sourceIn),'-t',(group.frames/p.fps).toFixed(9)]:[];
+      const transform=group?`scale=${probe.width}:${probe.height}:force_original_aspect_ratio=increase:flags=lanczos,crop=${probe.width}:${probe.height},setpts=PTS-STARTPTS,fps=${p.fps},trim=end_frame=${group.frames},setpts=PTS-STARTPTS,settb=AVTB,setsar=1,format=yuv420p,`:'';
+      return execFileSync('ffmpeg',['-v','error',...input,'-i',file,'-frames:v','1','-vf',transform+`select=eq(n\\,${index}),scale=80:46,format=gray`,'-fps_mode','passthrough','-f','rawvideo','-'],{maxBuffer:1024*1024});
+    };
     const samples=[];
     for(const g of expected.groups){
       const end=Math.min(p.bodyFrames,g.endFrame),mid=Math.floor((g.startFrame+end-1)/2),at=mid/p.fps;
@@ -95,11 +101,12 @@ function verifyRendered(work,board,scenes,proof) {
           samples.push({segment:g.segment,kind,at:time,coveredByCardTransition:true});continue;
         }
         const sourceAt=g.sourceIn+(index-g.startFrame)/p.fps;
-        const a=frame(output,time),b=frame(g.file,sourceAt,true);
+        const sourceOutputFrame=index-g.startFrame;
+        const a=frame(output,index),b=frame(g.file,sourceOutputFrame,g);
         if(a.length!==80*46||a.length!==b.length)throw new Error('video group plan: cannot inspect rendered source frame');
         let diff=0;for(let i=0;i<a.length;i++)diff+=Math.abs(a[i]-b[i]);diff/=a.length;
         if(diff>15)throw new Error('video group plan: rendered group differs from declared trimmed source at card '+card+' segment '+g.segment);
-        samples.push({segment:g.segment,kind,at:time,sourceAt,meanPixelError:diff});
+        samples.push({segment:g.segment,kind,at:time,sourceAt,sourceOutputFrame,meanPixelError:diff});
       }
     }
     if(expected.handleFrames){
@@ -110,11 +117,12 @@ function verifyRendered(work,board,scenes,proof) {
       const g=expected.groups.at(-1);
       for(const index of new Set([0,Math.floor((expected.handleFrames-1)/2),expected.handleFrames-1])){
         const local=index/p.fps,sourceAt=g.sourceIn+(p.bodyFrames-g.startFrame)/p.fps+local;
-        const a=frame(handle,local),b=frame(g.file,sourceAt,true);
+        const sourceOutputFrame=p.bodyFrames-g.startFrame+index;
+        const a=frame(handle,index),b=frame(g.file,sourceOutputFrame,g);
         if(a.length!==80*46||a.length!==b.length)throw new Error('video group plan: cannot inspect live handle frame');
         let diff=0;for(let i=0;i<a.length;i++)diff+=Math.abs(a[i]-b[i]);diff/=a.length;
         if(diff>15)throw new Error('video group plan: rendered live handle differs from declared trimmed source');
-        samples.push({segment:g.segment,kind:'outgoing-live-handle',frame:index,at:local,sourceAt,meanPixelError:diff});
+        samples.push({segment:g.segment,kind:'outgoing-live-handle',frame:index,at:local,sourceAt,sourceOutputFrame,meanPixelError:diff});
       }
     }
     checks.push({card,runtimeSha256:hash(record),samples});
