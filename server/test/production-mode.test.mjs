@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, cpSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import vm from 'node:vm';
@@ -1104,4 +1104,117 @@ test('a 16:9 astra board and its quote use the landscape grid size while 9:16 st
     delete s.visual.video.model;
   }
   assert.doesNotMatch(mode.check(wide, { requireApproval: true }).join('\n'), /engine:"astra"|resolution/);
+});
+
+// Captured verbatim from ep10c on 2026-10-06: the report must keep the BGM
+// exclusion and exit 1 while a separately approved free ASTRA call can proceed.
+const ep10cLedger = readFileSync(new URL('./fixtures/ep10c-cost-tally.tsv', import.meta.url), 'utf8');
+function freeAstraBoard() {
+  const win = fixture(1);
+  win.PRODUCTION.videoProvider = 'astra';
+  win.PRODUCTION.videoModel = { model: 'astra' };
+  win.PRODUCTION.videoBudgetUsd = 0;
+  Object.assign(win.SCENES[0].visual.video, { engine: 'astra', resolution: mode.ASTRA_RESOLUTION, generateAudio: false, clip: 'video/s1.mp4' });
+  delete win.SCENES[0].visual.video.model;
+  approve(win);
+  return win;
+}
+function costGateFixture(t, win = freeAstraBoard(), ledgerText = ep10cLedger) {
+  const dir = mkdtempSync(path.join(tmpdir(), 'production-cost-gate-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const board = path.join(dir, 'storyboard'), work = path.join(dir, '.work');
+  mkdirSync(board); mkdirSync(work);
+  const ledger = path.join(work, 'cost-tally.tsv');
+  writeFileSync(ledger, ledgerText);
+  writeFileSync(path.join(work, 'cards.tsv'), '');
+  writeFileSync(path.join(work, 'segs.tsv'), '');
+  const save = () => writeFileSync(path.join(board, 'scenes.js'),
+    Object.entries(win).map(([k, v]) => `window.${k} = ${JSON.stringify(v)};`).join('\n'));
+  save();
+  return { board, ledger, save, win };
+}
+test('ep10c Lyria exclusion permits only a verified free ASTRA before-call, with its cost warning intact', t => {
+  const { board, ledger } = costGateFixture(t);
+  const { runReport } = require('../../skills/autoproduce/references/cost-preview.js');
+  const report = runReport(ledger);
+  assert.equal(report.exit, 1);
+  assert.deepEqual(report.unresolved, ['!! price unconfirmed: music.lyria-realtime (unconfirmed)']);
+  const result = check(board, { beforeCall: 1 });
+  assert.deepEqual(result.errors, []);
+  assert.equal(result.costReport.exit, 1);
+  assert.deepEqual(result.costReport.unresolved, report.unresolved);
+  assert.match(result.warnings.join(), /music.lyria-realtime.*episode cost report still exits 1/);
+  assert.equal(readFileSync(ledger, 'utf8'), ep10cLedger);
+  const cli = spawnSync(process.execPath, [path.join(root, 'skills/produce/references/check-production.js'), board, '--before-call', '1'], { encoding: 'utf8' });
+  assert.equal(cli.status, 0, cli.stderr);
+  assert.match(cli.stdout, /Warning: !! price unconfirmed: music.lyria-realtime/);
+  for (const opts of [{}, { requireSelection: true }, { beforeCall: 1, requireSelection: true }, { ready: true }, { beforeCall: 1, ready: true }, { beforeCall: 1, manifest: true }, { beforeCall: 2 }])
+    assert.match(check(board, opts).errors.join(), /Actual cost ledger has unresolved prices/);
+});
+test('free ASTRA cannot excuse unknown keys, other missing prices or malformed historical ledger rows', t => {
+  for (const ledger of [
+    ep10cLedger + 'unknown.video\t1\tproduce: invalid key\n',
+    ep10cLedger + 'veo.not-a-tier\t1\tproduce: unknown video price\n',
+    ep10cLedger.replace('\t480\t', '\tnope\t'),
+    ep10cLedger.replace('\t480\t', '\t-480\t'),
+    ep10cLedger.replace('\t480\t', '\t\t'),
+    ep10cLedger.replace('\t480\t', '\t' + '9'.repeat(400) + '\t'),
+    ep10cLedger + 'tts.elevenlabs\tbad\tproduce: bad quantity\n',
+    ep10cLedger + '\t1\tproduce: empty key\n',
+    ep10cLedger + 'tts.elevenlabs\t1\tproduce: memo\textra\n',
+    ep10cLedger.replace('\t480\t', '\t480 extra\t')
+  ]) {
+    const { board } = costGateFixture(t, freeAstraBoard(), ledger);
+    assert.match(check(board, { beforeCall: 1 }).errors.join(), /Actual cost ledger has unresolved prices/, ledger);
+  }
+});
+test('the BGM exception never permits a paid or host video lane', t => {
+  for (const provider of ['api', 'host']) {
+    const win = provider === 'api' ? fixture(1) : freeAstraBoard();
+    if (provider === 'host') {
+      win.PRODUCTION.videoProvider = 'host'; delete win.PRODUCTION.videoModel;
+      win.SCENES[0].visual.video.engine = 'host'; win.SCENES[0].visual.video.resolution = '720p';
+    }
+    approve(win);
+    const { board } = costGateFixture(t, win);
+    assert.match(check(board, { beforeCall: 1 }).errors.join(), /Actual cost ledger has unresolved prices/);
+  }
+});
+test('free ASTRA still requires current approval, sufficient video budget and a valid generation plan', t => {
+  for (const mutate of [
+    win => { delete win.PRODUCTION.approval; },
+    win => { win.PRODUCTION.approval.quoteFingerprint = '0'.repeat(64); },
+    win => { win.PRODUCTION.approval.reference = ''; },
+    win => { win.SCENES[0].visual.video.engine = 'seedance'; },
+    win => { win.PRODUCTION.generationRevision = 'invalid revision'; }
+  ]) {
+    const win = freeAstraBoard(); mutate(win);
+    const { board } = costGateFixture(t, win);
+    assert.ok(check(board, { beforeCall: 1 }).errors.length);
+  }
+  const { board } = costGateFixture(t, freeAstraBoard(), ep10cLedger +
+    'veo.lite.1080p\t8\tproduce: video:shot=1:attempt=1\n');
+  assert.match(check(board, { beforeCall: 1 }).errors.join(), /Actual video spend exceeds the approved budget/);
+});
+
+test('a changed or unconfirmed ASTRA price cannot enter the free-call exclusion', t => {
+  const { board, ledger } = costGateFixture(t);
+  const isolated = mkdtempSync(path.join(tmpdir(), 'production-price-gate-'));
+  t.after(() => rmSync(isolated, { recursive: true, force: true }));
+  // Copy only reference code and price data; neither the real table nor ep10c is edited.
+  cpSync(path.join(root, 'skills'), path.join(isolated, 'skills'), { recursive: true,
+    filter: file => !path.extname(file) || /\.(?:js|sh|tsv)$/.test(file) });
+  const priceFile = path.join(isolated, 'skills/autoproduce/references/prices.tsv');
+  const original = readFileSync(priceFile, 'utf8');
+  const checker = path.join(isolated, 'skills/produce/references/check-production.js');
+  for (const price of ['?', '0.10', '0.00000001']) {
+    const altered = original.replace(/^(video\.astra\tsecond\t)[^\t\n]+/m, '$1' + price);
+    assert.notEqual(altered, original);
+    writeFileSync(priceFile, altered);
+    const call = spawnSync(process.execPath, [checker, board, '--before-call', '1'], { encoding: 'utf8' });
+    assert.equal(call.status, 1, call.stdout + call.stderr);
+    assert.match(call.stdout + call.stderr, /Price unavailable|unresolved prices|quote is stale|exceeds/);
+  }
+  assert.equal(readFileSync(ledger, 'utf8'), ep10cLedger);
+  assert.equal(readFileSync(path.join(root, 'skills/autoproduce/references/prices.tsv'), 'utf8'), original);
 });

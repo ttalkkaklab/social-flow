@@ -123,6 +123,15 @@ verdict — autoproduce §5).
   report it as **"total $X + 1 item excluded from the tally (BGM 90s)"**.
   Don't write it as 0 and don't delete the line.
 
+`check-production.js --before-call N` can proceed with this BGM exclusion only
+when the requested row is `video.astra` at a verified $0 unit and call cost, the
+ASTRA plan has a current approval, and the original ledger has valid three-column
+rows and quantities. It prints the exclusion warning and exposes the cost report's
+exit 1 in JSON; it does not resolve the episode total. Unknown keys, any other
+unconfirmed price, malformed rows, paid video and budget/approval failures still
+block. Selection, `--ready` and manifest checks keep the unresolved-cost failure.
+No ledger or price row is changed by the gate.
+
 **Never report a $0 total as-is.** If `storyboard/images/*.png` exist but the
 ledger is empty, they weren't made for free — the logging was skipped. Count
 the files, backfill the ledger, and note the backfill in your report.

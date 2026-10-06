@@ -123,6 +123,32 @@ function validateReuseAsset(storyboard, scene, format) {
   if (!Number.isFinite(seconds) || Math.abs(seconds - (range.end - range.start)) > .05)
     throw new Error('reused clip duration differs from sourceRange; import an already trimmed clip (0.05s tolerance)');
 }
+// cost-tally.md excludes an unpriced Lyria BGM from the episode total. It cannot
+// increase a verified free ASTRA video call, but the report itself still fails.
+function freeAstraMusicExclusion(win, option, spent, ledger, beforeCall) {
+  const row = option.rows.find(r => r.shot === beforeCall);
+  if (win.PRODUCTION.videoProvider !== 'astra' || !Number.isInteger(beforeCall) ||
+      !row || row.key !== 'video.astra' || row.unitUsd !== 0 || row.usd !== 0 ||
+      spent.exit !== 1 || !spent.unresolved.length ||
+      !spent.unresolved.every(m => m === '!! price unconfirmed: music.lyria-realtime (unconfirmed)')) return false;
+  // Report amounts are rounded to four decimals. Confirm a literal zero in the
+  // same price table too; a tiny positive ASTRA price must not round into this lane.
+  const prices = fs.readFileSync(path.join(__dirname, '../../autoproduce/references/prices.tsv'), 'utf8')
+    .split(/\r?\n/).filter(line => line.trim() && !/^\s*#/.test(line))
+    .map(line => line.split('\t').map(field => field.trim()))
+    .filter(fields => fields[0] === 'video.astra');
+  if (prices.length !== 1 || prices[0][1] !== 'second' ||
+      !/^[0-9]+(?:\.[0-9]+)?$/.test(prices[0][2]) || Number(prices[0][2]) !== 0) return false;
+  // The calculator checks an unconfirmed price before checking its quantity.
+  // Validate every original row here so malformed music cannot enter this exception.
+  return fs.readFileSync(ledger, 'utf8').split(/\r?\n/)
+    .filter(line => line.trim() && !/^\s*#/.test(line)).every(line => {
+      const fields = line.split('\t');
+      const quantity = fields[1]?.trim();
+      return fields.length === 3 && fields[0].trim() !== '' &&
+        /^[0-9]+(?:\.[0-9]+)?$/.test(quantity) && Number.isFinite(Number(quantity));
+    });
+}
 function check(storyboard, { requireSelection = false, ready = false, beforeCall = null, manifest = false, workdir = null } = {}) {
   storyboard = path.resolve(storyboard);
   const win = cost.readScenes(path.join(storyboard, 'scenes.js'));
@@ -152,7 +178,11 @@ function check(storyboard, { requireSelection = false, ready = false, beforeCall
   }
   const ledger = path.join(work, 'cost-tally.tsv');
   const spent = fs.existsSync(ledger) ? cost.runReport(ledger) : { exit: 0, items: [] };
-  if (spent.exit) errors.push('Actual cost ledger has unresolved prices');
+  const excludedMusic = !requireSelection && !ready && !manifest && errors.length === 0 &&
+    freeAstraMusicExclusion(win, option, spent, ledger, beforeCall);
+  const warnings = excludedMusic ? spent.unresolved.map(message =>
+    message + ' — excluded BGM cost; episode cost report still exits 1') : [];
+  if (spent.exit && !excludedMusic) errors.push('Actual cost ledger has unresolved prices');
   if (cost.videoSpent(spent.items) > p.videoBudgetUsd + 1e-9) errors.push('Actual video spend exceeds the approved budget');
   const reviews = readReviews(work);
   if (!Array.isArray(reviews.shots)) errors.push('video-review.json needs a shots array');
@@ -222,7 +252,7 @@ function check(storyboard, { requireSelection = false, ready = false, beforeCall
         errors.push('Plain-video segments must use only the approved clip, without overlays or freeze/palindrome wrappers: shot ' + (index + 1));
     }
   }
-  return { active: true, mode: p.mode, generatedShots, reusedShots, plainVideoShots, errors, quote: current };
+  return { active: true, mode: p.mode, generatedShots, reusedShots, plainVideoShots, errors, warnings, costReport: { exit: spent.exit, unresolved: spent.unresolved || [] }, quote: current };
 }
 // A zero-video board reaches this gate with no quote and no approval; every other mode still
 // owes both. The fixture boards live in a temp dir so the checker runs its real file path.
@@ -269,7 +299,10 @@ if (require.main === module) {
     const result = check(target, { requireSelection: args.includes('--selection'), ready: args.includes('--ready'), manifest: args.includes('--manifest'), workdir: args.includes('--workdir') ? args[args.indexOf('--workdir') + 1] : null,
       beforeCall: args.includes('--before-call') ? Number(args[args.indexOf('--before-call') + 1]) : null });
     if (args.includes('--json')) console.log(JSON.stringify(result, null, 2));
-    else console.log(result.errors.length ? result.errors.join('\n') : 'Production mode, approved quote and requested checks OK');
+    else {
+      console.log(result.errors.length ? result.errors.join('\n') : 'Production mode, approved quote and requested checks OK');
+      for (const warning of result.warnings || []) console.log('Warning: ' + warning);
+    }
     process.exitCode = result.errors.length ? 1 : 0;
   } catch (e) { console.error('check-production: ' + e.message); process.exitCode = 1; }
 }
