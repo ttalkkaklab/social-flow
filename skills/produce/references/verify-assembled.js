@@ -46,6 +46,8 @@ function load(work){
   match(work,proof.mediaSha256);
   for(const [file,digest] of Object.entries(speechMedia))if(proof.mediaSha256[file]!==digest)throw new Error('rebuild: missing or stale audio review provenance: '+file);
   const win=evaluateWindowScript(fs.readFileSync(source,'utf8'),{filename:source});
+  const groupChecks=require('./video-groups.js').verifyRendered(work,proof.storyboard,win.SCENES,proof);
+  if(groupChecks.length)fs.writeFileSync(path.join(work,'group-check.json'),JSON.stringify(groupChecks,null,2)+'\n');
   return {proof,scenes:win.SCENES,policy:win.MOTION_POLICY};
 }
 function masters(work){
@@ -54,6 +56,7 @@ function masters(work){
   match(work,verified.outputs);
   if(!verified.editCheckSha256)throw new Error('rebuild: missing rendered edit verification');
   match(work,{'edit-check.json':verified.editCheckSha256});
+  if(verified.groupCheckSha256)match(work,{'group-check.json':verified.groupCheckSha256});
   return verified;
 }
 function check(work,delivery,burned,subtitles){
@@ -79,7 +82,7 @@ function check(work,delivery,burned,subtitles){
   if(fs.existsSync(path.join(work,'reel-sub.mp4'))&&Math.abs(duration(path.join(work,'reel-sub.mp4'))-duration(master))>.07)throw new Error('clean and burned masters differ in duration');
   require('./check-edit-timeline.js').check(work);
   const measured=cardMotion(work,scenes,policy);
-  fs.writeFileSync(path.join(work,'assembled-check.json'),JSON.stringify({editCheckSha256:hash(path.join(work,'edit-check.json')),outputs:hashes(work,BASE),duration:duration(master),opening:actual,plannedOpening:planned,motion:measured},null,2)+'\n');
+  fs.writeFileSync(path.join(work,'assembled-check.json'),JSON.stringify({editCheckSha256:hash(path.join(work,'edit-check.json')),groupCheckSha256:scenes.some(s=>s.visual?.video?.groupPlan!==undefined)?hash(path.join(work,'group-check.json')):null,outputs:hashes(work,BASE),duration:duration(master),opening:actual,plannedOpening:planned,motion:measured},null,2)+'\n');
 }
 function splice(work,args,finish=false){
   const {proof,scenes}=load(work);masters(work);

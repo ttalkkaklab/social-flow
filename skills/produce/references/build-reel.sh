@@ -676,7 +676,17 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
     SUBS="${SUBS}${SUBS:+,}${#SUBV[@]}"
     for v in "${SUBV[@]}"; do FVIS+=("$v"); done
   done
+  GROUPED=0; GIN=(); GFR=()
+  node "$HERE/video-groups.js" "$PWD" "$STORYBOARD" "$IDX" "$FPS" "$FRAMES" "$HANDLE_FRAMES" > "work/groups$IDX.tsv"
+  if [ -s "work/groups$IDX.tsv" ]; then
+    GROUPED=1; FVIS=(); FOFF=(); FDUR=()
+    while IFS=$'\t' read -r -u 4 file source frames start; do
+      FVIS+=("$file"); GIN+=("$source"); GFR+=("$frames")
+      FOFF+=("$(awk -v n="$start" -v f="$FPS" 'BEGIN{printf "%.9f",n/f}')"); FDUR+=(0)
+    done 4< "work/groups$IDX.tsv"
+  fi
   MV=${#FVIS[@]}
+  if [ "$GROUPED" = 0 ]; then
   FOFF=(0); FDUR=("$REVEAL_D")      # [0] is the base state — no transition
   if [ "$MV" -gt 1 ]; then
     FB=""; case "$BMETHOD" in 'proportional fallback'*) FB="--fallback";; esac   # an empty array dies under set -u in bash 3.2
@@ -691,6 +701,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
     awk -v g="$GMIN" 'BEGIN{exit !(g < 0.40)}' \
       && { say "⚠ card $IDX min gap between reveals ${GMIN}s (<0.40s) — the appearances look overlapped. Lengthen the sentence or drop bullets."; WARN=1; }
   fi
+  fi # legacy reveal timing; explicit video groups use output-frame cuts
   # State completeness check — reads the k out of the capture convention filename …r<k>.png
   # (pure b-roll segments naturally drop out).
   #   ① skipped → several elements appear at once in that transition
@@ -737,6 +748,11 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
           if [ "$j" -eq $((MV-1)) ]; then END_D=$RENDER_D;
           else END_D=$(awk -v o="${FOFF[$((j+1))]}" -v f="${FDUR[$((j+1))]}" 'BEGIN{print o+f}'); fi
           NEED=$(awk -v s="$SOURCE_IN" -v e="$END_D" -v o="$OFFSET" -v start="${FOFF[$j]}" 'BEGIN{printf "%.6f", s+e-start+o}')
+          if [ "${GROUPED:-0}" = 1 ]; then
+            SS=${GIN[$j]}
+            NEED=$(awk -v s="$SS" -v n="${GFR[$j]}" -v f="$FPS" 'BEGIN{printf "%.9f",s+n/f}')
+            T=$(awk -v n="${GFR[$j]}" -v f="$FPS" 'BEGIN{printf "%.9f",n/f}')
+          fi
           awk -v actual="$BDUR" -v needed="$NEED" 'BEGIN{exit !(actual+0.00001>=needed)}' \
             || { say "card $IDX: source needs ${NEED}s including live handle; has ${BDUR}s. Choose an earlier edit.in, shorten/replan the cut, or regenerate. No freeze or loop substitution."; exit 1; }
           case " $REUSED_VIDEO_SHOTS " in *" $IDX "*)
@@ -748,7 +764,8 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
       *) INS+=(-loop 1 -framerate "$FPS" -t "$T" -i "$BASE") ;;
     esac
     NIN=$((NIN+1))
-    FILT+="[$BI:v]${HOLD}scale=$W:$H:force_original_aspect_ratio=increase:flags=lanczos,crop=$W:$H,setpts=PTS-STARTPTS,fps=$FPS,settb=AVTB,setsar=1,format=yuv420p[b$j];"
+    GTRIM=""; if [ "${GROUPED:-0}" = 1 ]; then GTRIM="trim=end_frame=${GFR[$j]},setpts=PTS-STARTPTS,"; fi
+    FILT+="[$BI:v]${HOLD}scale=$W:$H:force_original_aspect_ratio=increase:flags=lanczos,crop=$W:$H,setpts=PTS-STARTPTS,fps=$FPS,${GTRIM}settb=AVTB,setsar=1,format=yuv420p[b$j];"
     if [ -n "$OVL" ]; then
       OI=$NIN
       INS+=(-loop 1 -framerate "$FPS" -t "$T" -i "$OVL")
@@ -760,10 +777,15 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
     j=$((j+1))
   done
   CUR="[i0]"
+  if [ "${GROUPED:-0}" = 1 ] && [ "$MV" -gt 1 ]; then
+    for ((j=1; j<MV; j++)); do CUR+="[i$j]"; done
+    FILT+="${CUR}concat=n=$MV:v=1:a=0[gcut];"; CUR="[gcut]"
+  else
   for ((j=1; j<MV; j++)); do
     FILT+="${CUR}[i$j]xfade=transition=fade:duration=${FDUR[$j]}:offset=${FOFF[$j]}[x$j];"
     CUR="[x$j]"
   done
+  fi
   # Ken Burns (in=push in / out=pull out); auto alternates on the card's odd/even index — the rhythm
   #   changes cut to cut.
   #   z must be written as a function of the output frame number on. The common accumulating idiom
