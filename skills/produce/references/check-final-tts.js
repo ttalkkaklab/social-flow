@@ -5,6 +5,7 @@ const {evaluateWindowScript}=require('../../_shared/scenes-vm.js');
 const {createHash}=require('node:crypto');
 const {spawnSync}=require('node:child_process');
 const {normalize,cer}=require('./check-tts-quality.js');
+const chapters=require('./final-speech-chapters.js');
 const hash=file=>createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 function narration(board){
   const w=evaluateWindowScript(fs.readFileSync(board,'utf8'),{filename:board});
@@ -17,7 +18,12 @@ function narration(board){
 function verify(media,text){
   return verifyReport(JSON.parse(fs.readFileSync(media+'.speech-quality.json','utf8')),media,text);
 }
+function chapterIntegrity(p,media,text,pass=true){
+  if(p.mediaSha256!==hash(media))throw new Error('Chapter final speech needs current hash-bound media');
+  return chapters.validate(p,chapters.decode(media),text,pass);
+}
 function verifyReport(p,media,text){
+  if(p.policy===chapters.POLICY){chapterIntegrity(p,media,text);return p;}
   const r=p.review,s=p.signal;
   if(p.version!==1||p.policy!=='final-speech-v1'||p.status!=='pass'||p.mediaSha256!==hash(media))throw new Error('Final speech needs a current hash-bound PASS');
   if(typeof p.expectedText!=='string'||normalize(p.expectedText)!==normalize(text))throw new Error('Final speech was reviewed against other narration');
@@ -38,6 +44,13 @@ function findings(p){
   if(Array.isArray(p.failures)&&p.failures.length) parts.push('failures: '+p.failures.join('; '));
   for(const i of r.issues||[]) parts.push(`${i.category} at ${Number(i.start).toFixed(2)}s heard "${i.heard}" for "${i.expected}" — ${i.correction}`);
   if(typeof r.continuityEvidence==='string') parts.push('continuity: '+r.continuityEvidence);
+  for(const piece of p.pieces||[]){
+    if(piece.status==='pass')continue;
+    const r=piece.review||{},offset=piece.startSample/chapters.RATE;
+    parts.push(`${piece.kind} ${piece.index}: status ${piece.status}, accuracy ${r.accuracy}, pronunciation ${r.pronunciation}, naturalness ${r.naturalness}, clarity ${r.clarity}, continuity ${r.continuity}`);
+    for(const i of r.issues||[])parts.push(`${i.category} at ${(offset+i.start).toFixed(2)}s heard ${JSON.stringify(i.heard)} for ${JSON.stringify(i.expected)} — ${i.correction}`);
+    if(r.continuityEvidence)parts.push(r.continuityEvidence);
+  }
   if(typeof p.error==='string') parts.push(p.error);
   return parts.join(' | ');
 }
@@ -52,9 +65,11 @@ function gate(work, media, text){
   const p=read(media+'.speech-quality.json');
   if(!p)throw new Error('Final listening has not run for '+media);
   if(p.status==='unverified')throw new Error('Final listening is unverified ('+(p.error||'review outage')+'); rerun the review before deciding');
+  // Missing coverage/reviews and stale bytes cannot become approved acoustic warnings.
+  if(p.policy===chapters.POLICY)chapterIntegrity(p,media,text,false);
   const warnings=[];
   try{verifyReport(p,media,text);}catch(e){warnings.push('final: '+e.message+' — '+findings(p));}
-  const fingerprint=createHash('sha256').update(JSON.stringify({mediaSha256:hash(media),textSha256:createHash('sha256').update(normalize(text)).digest('hex'),warnings})).digest('hex');
+  const fingerprint=createHash('sha256').update(JSON.stringify({mediaSha256:hash(media),textSha256:createHash('sha256').update(normalize(text)).digest('hex'),warnings,...(p.policy===chapters.POLICY?{manifestSha256:p.manifestSha256}:{})})).digest('hex');
   const approval=read(path.join(work,APPROVAL));
   const approved=warnings.length>0&&approval?.kind==='user'&&approval.fingerprint===fingerprint&&typeof approval.reference==='string'&&approval.reference.trim().length>0&&Number.isFinite(Date.parse(approval.at));
   const report={fingerprint,warnings,approved:Boolean(approved),approval:approved?approval:null,status:warnings.length?(approved?'approved-with-warnings':'awaiting-user'):'pass'};
@@ -79,11 +94,36 @@ function evidence(media,text,work){
 /** verifyReport, or the approved-warnings form of it: the approval must still match these bytes, this narration and these warnings. */
 function verifyEvidence(p,media,text){
   if(!p?.approvedWarnings)return verifyReport(p,media,text);
+  if(p.policy===chapters.POLICY)chapterIntegrity(p,media,text,false);
   const {warnings,approval}=p.approvedWarnings;
-  const fingerprint=createHash('sha256').update(JSON.stringify({mediaSha256:hash(media),textSha256:createHash('sha256').update(normalize(text)).digest('hex'),warnings})).digest('hex');
+  const fingerprint=createHash('sha256').update(JSON.stringify({mediaSha256:hash(media),textSha256:createHash('sha256').update(normalize(text)).digest('hex'),warnings,...(p.policy===chapters.POLICY?{manifestSha256:p.manifestSha256}:{})})).digest('hex');
   if(!Array.isArray(warnings)||!warnings.length||approval?.kind!=='user'||approval.fingerprint!==fingerprint||typeof approval.reference!=='string'||!approval.reference.trim())throw new Error('Final speech warnings were approved for other media, narration or findings');
   if(p.mediaSha256!==hash(media))throw new Error('Final speech evidence describes other media');
   return p;
+}
+/** Map final subtitle cues to the approved spoken sentences, including phonetic TTS spelling. */
+function sentenceSegments(work,board){
+  const w=evaluateWindowScript(fs.readFileSync(board,'utf8'),{filename:board});
+  const units=[...require('../../storyboard/references/story-contract.js').storySpeech(w).map(g=>g.n),...w.SCENES.filter(s=>s.type==='outro').flatMap(s=>s.narration||[])].filter(n=>normalize(n.tts||n.sub||''));
+  const file=path.join(work,'subs-fast.srt');
+  if(!fs.existsSync(file))return undefined;
+  const clock=s=>{const m=/^(\d+):(\d{2}):(\d{2}),(\d{3})$/.exec(s);if(!m)throw new Error('Invalid final subtitle clock');return +m[1]*3600+ +m[2]*60+ +m[3]+ +m[4]/1000;};
+  const cues=fs.readFileSync(file,'utf8').trim().split(/\r?\n\s*\r?\n/).map(block=>{
+    const rows=block.split(/\r?\n/),i=rows.findIndex(l=>l.includes(' --> '));
+    if(i<0)throw new Error('Invalid final subtitle cue');
+    const [a,b]=rows[i].split(' --> '),start=clock(a),end=clock(b);
+    if(end<=start)throw new Error('Invalid final subtitle span');
+    return {start,end,text:normalize(rows.slice(i+1).join(' ').replace(/<[^>]*>/g,''))};
+  });
+  let cursor=0;const segments=[];
+  for(const unit of units){
+    const target=normalize(unit.sub||unit.tts),start=cues[cursor]?.start;let joined='';
+    while(joined!==target&&cursor<cues.length){joined+=cues[cursor++].text;if(!target.startsWith(joined))throw new Error('Final subtitle text/order does not match approved narration');}
+    if(joined!==target||!Number.isFinite(start))throw new Error('Final subtitle narration is incomplete');
+    segments.push({startSeconds:segments.length?start:0,expectedText:unit.tts||unit.sub});
+  }
+  if(cursor!==cues.length)throw new Error('Extra final subtitle speech is missing from narration');
+  return segments;
 }
 function review(work){
   const board=path.resolve(work,'../storyboard/scenes.js');
@@ -94,13 +134,13 @@ function review(work){
   const proof=rows.map(l=>path.resolve(work,l.split('\t')[1])+'.quality.json').filter(f=>fs.existsSync(f)).map(f=>JSON.parse(fs.readFileSync(f,'utf8'))).find(p=>p.language&&p.delivery);
   if(!proof)throw new Error('Final listening needs reviewed narration and its language/delivery');
   const request=path.join(work,'final-speech-request.json');
-  fs.writeFileSync(request,JSON.stringify({mediaPath:media,expectedText:text,language:proof.language,delivery:proof.delivery}));
+  fs.writeFileSync(request,JSON.stringify({mediaPath:media,expectedText:text,language:proof.language,delivery:proof.delivery,segments:sentenceSegments(work,board)}));
   const result=spawnSync(process.execPath,[path.resolve(__dirname,'../../../server/dist/bundle.js'),'--review-final',path.resolve(request)],{stdio:'inherit'});
   if(result.error)throw result.error;
   // A failed listen is a warning for the user (gate); a review that did not run is not.
   gate(work,media,text);
 }
-module.exports={narration,verify,verifyReport,verifyEvidence,evidence,gate,approve,review};
+module.exports={narration,sentenceSegments,chapterIntegrity,verify,verifyReport,verifyEvidence,evidence,gate,approve,review};
 if(require.main===module){
   try{
     const [command,work,arg]=process.argv.slice(2);

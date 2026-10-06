@@ -48,12 +48,15 @@ function check(episode){
     }
     const board=path.join(episode,'storyboard/scenes.js');
     if(proof.kind==='storyboard'&&!fs.existsSync(board))throw new Error('storyboard missing after delivery review');
+    if(proof.finalSpeech?.policy==='final-speech-chapters-v1'&&!fs.existsSync(board))throw new Error('chapter speech proof requires the complete source narration');
     if(proof.requiresFinalSpeech&&!proof.finalSpeech)throw new Error('required final speech evidence missing');
     if(fs.existsSync(board)){
       const gate=require('./check-final-tts.js'),n=gate.narration(board);
       if(n.generated||proof.requiresFinalSpeech){
         if(!proof.finalSpeech||proof.finalSpeech.mediaSha256!==proof.outputs['video.mp4'])throw new Error('missing final speech proof');
-        // Validate embedded evidence with the same verifier without creating output artifacts.
+        // Validate embedded full-listen or chapter evidence with the same verifier.
+        // Chapter validation decodes shipped media and checks all sample ranges and joins;
+        // sidecar files on the production machine cannot stand in for embedded evidence.
         gate.verifyEvidence(proof.finalSpeech,path.join(out,'video.mp4'),n.text);
       }
     }
