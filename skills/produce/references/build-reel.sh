@@ -1100,7 +1100,9 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
   say "$(printf 'card %s | %s segs | boundary %s | %s chars | %s chars/s | x%s | %s chars/s | %.2fs | %ss | %sf | zoom:%s' \
         "$IDX" "$M" "$BMETHOD" "$C" "$R0" "$F" "$R" "$L" "$D" "$FRAMES" "$ZD")"
   # Non-ASCII glued right after a variable gets absorbed into the name — braces are mandatory
-  if [ "$MV" -gt 1 ]; then
+  if [ "$GROUPED" = 1 ]; then
+    say "  └ direct video groups ${MV}"
+  elif [ "$MV" -gt 1 ]; then
     say "  └ reveal ${MV} states"
     while IFS= read -r line; do say "$line"; done < "work/rt$IDX.txt"
   fi
