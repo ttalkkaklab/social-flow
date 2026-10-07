@@ -85,6 +85,9 @@ function verify(work, board) {
   const plugin = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../../.claude-plugin/plugin.json'),'utf8'));
   fs.writeFileSync(path.join(work, 'build-plan-check.json'), JSON.stringify({videoGate,ttsGate:require('./check-tts-quality.js').lastReport(work),mediaSha256,groupPlans,version:plugin.version,storyboard:board,scenesSha256:hash(file),cardsSha256:hash(path.join(work,'cards.tsv')),segsSha256:hash(path.join(work,'segs.tsv')),resolvedCardsSha256:hash(path.join(work,'cards.resolved.tsv')),editPlanSha256:hash(path.join(work,'edit-plan.json')),checks:['check-scenes','check-slide','segment-inputs','edit-plan'],cards:expected},null,2)+'\n');
 }
+// The assembly gate re-enters this module for grouped manifest checks during verify().
+// Publish the API before the CLI invokes it, just as a completed require() would.
+module.exports={verify,verifyManifest};
 if (require.main === module) {
   try {
     if (!process.argv[2]) throw new Error('usage: verify-build-plan.js <workdir> [storyboard directory]');
@@ -93,4 +96,3 @@ if (require.main === module) {
     console.log('Assembly preflight complete; see build-plan-check.json for video warnings and user approval.');
   } catch (e) {console.error('build plan: '+e.message);process.exitCode=1;}
 }
-module.exports={verify,verifyManifest};
