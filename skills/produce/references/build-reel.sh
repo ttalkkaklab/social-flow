@@ -1100,7 +1100,9 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
   say "$(printf 'card %s | %s segs | boundary %s | %s chars | %s chars/s | x%s | %s chars/s | %.2fs | %ss | %sf | zoom:%s' \
         "$IDX" "$M" "$BMETHOD" "$C" "$R0" "$F" "$R" "$L" "$D" "$FRAMES" "$ZD")"
   # Non-ASCII glued right after a variable gets absorbed into the name — braces are mandatory
-  if [ "$MV" -gt 1 ]; then
+  if [ "$GROUPED" = 1 ]; then
+    say "  └ direct video groups ${MV}"
+  elif [ "$MV" -gt 1 ]; then
     say "  └ reveal ${MV} states"
     while IFS= read -r line; do say "$line"; done < "work/rt$IDX.txt"
   fi
@@ -1136,10 +1138,18 @@ if [ -n "$CHAPTSV" ] && [ -s work/chapstart.tsv ]; then
   say "── chapters: $(wc -l < chapters.txt | tr -d ' ') → chapters.txt"
 fi
 
-# ── 9) Main-part concat + drift assertion (same as v2)
+# ── 9) Main-part concat + drift assertion
 : > work/list.txt
-while read -r i; do echo "file 'v$i.mp4'" >> work/list.txt; done < work/order.txt
-ffmpeg -y -v error -f concat -safe 0 -i work/list.txt -c copy work/video.mp4
+while read -r i; do
+  # MP4 edit lists can round down at the default 1kHz movie timescale. Anchor
+  # each next card to the declared frame clock instead of that shortened header.
+  CFRAMES=$(awk -F'\t' -v i="$i" '$1==i{print $3; exit}' work/edit-timeline.tsv)
+  case "$CFRAMES" in ''|*[!0-9]*|0) say "✗ missing frame count for card $i — build stopped"; exit 1;; esac
+  printf "file 'v%s.mp4'\nduration %s\n" "$i" \
+    "$(awk -v n="$CFRAMES" -v fps="$FPS" 'BEGIN{printf "%.9f", n/fps}')" >> work/list.txt
+done < work/order.txt
+# Keep the output edit list on the same 48kHz sample grid as the narration.
+ffmpeg -y -v error -f concat -safe 0 -i work/list.txt -c copy -movie_timescale 48000 work/video.mp4
 
 INPUTS=(); FC=""
 K=0
