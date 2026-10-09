@@ -30,6 +30,8 @@
 #                                         times in seconds from card start. For subtitles that skip
 #                                         speech-boundary detection (transcripts). Combined with the
 #                                         subtitle-display column of segs.tsv, both appear
+#                           subs-mode=replace replaces automatic cues with checked sentence TSV rows;
+#                                             append (default) retains automatic + file cues.
 #                           pan=<dir>[:z] Ken Burns as a travel instead of a centre zoom — l2r|r2l|u2d|d2u
 #                                         plus diagonals tl2br|br2tl|tr2bl|bl2tr. z is the scale (default
 #                                         1.12, clamped to KB_ZOOM_MIN~KB_ZOOM_MAX). Travel = W(z-1)
@@ -433,7 +435,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
   #    An unknown key is a failure (silently ignored typos ship a filmed card with its picture
   #    and sound out of step, and only eyes would catch it). Two-value options use ":" inside the value
   #    (pan=l2r:1.12, focus=0.6:0.4) — "," is the k=v separator and stays out of values.
-  SYNC=0; SUBSF=""; PAN=""; PZ="$PAN_Z"; FX=0.5; FY=0.5; DRIFT=0; SPAN="$ZOOM_SPAN"; EASE="$KB_EASE"; SPANSET=0
+  SYNC=0; SUBSF=""; SUBS_MODE=append; PAN=""; PZ="$PAN_Z"; FX=0.5; FY=0.5; DRIFT=0; SPAN="$ZOOM_SPAN"; EASE="$KB_EASE"; SPANSET=0
   ENTER=""; EXITM=""; PUSH_DIR=""; JOIN=0; HANDLE=0; SOURCE_IN=0; EDIT_PRE=0; EDIT_POST=0.12
   case "${ZDIR:-auto}" in in|out|auto|none|punch|hold) : ;;
     *) say "✗ card $IDX: unknown zoom (column 4) — $ZDIR (in|out|auto|none|punch|hold)"; exit 1 ;; esac
@@ -450,6 +452,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
         sync=1) SYNC=1 ;;
         sync=0) SYNC=0 ;;
         subs=*) SUBSF="${KV#subs=}"; [ -f "$SUBSF" ] || { say "✗ card $IDX: subs file missing — $SUBSF"; exit 1; } ;;
+        subs-mode=append|subs-mode=replace) SUBS_MODE="${KV#subs-mode=}" ;;
         pan=*)  PAN="${KV#pan=}"; case "$PAN" in *:*) PZ="${PAN#*:}"; PAN="${PAN%%:*}";; esac
                 case "$PAN" in l2r|r2l|u2d|d2u|tl2br|br2tl|tr2bl|bl2tr) : ;; *) say "✗ card $IDX: unknown pan direction — $PAN (l2r|r2l|u2d|d2u|tl2br|br2tl|tr2bl|bl2tr)"; exit 1;; esac
                 PZ=$(awk -v z="$PZ" -v lo="$KB_ZOOM_MIN" -v hi="$KB_ZOOM_MAX" 'BEGIN{if(z<lo)z=lo; if(z>hi)z=hi; printf "%.3f", z}') ;;
@@ -598,7 +601,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
   #   cards.tsv reader — closed for the child so the loop's input never sits in a process that
   #   outlives an iteration.
   ALIGN_PID=""
-  if [ "$SUB" = "1" ] && { [ "$SUB_MODE" = "word" ] || [ "$SUB_MODE" = "phrase" ]; } && [ "$MUTE" -eq 0 ] && [ -x "$QWEN3_ASR_BIN" ]; then
+  if [ "$SUB" = "1" ] && [ "$SUBS_MODE" != "replace" ] && { [ "$SUB_MODE" = "word" ] || [ "$SUB_MODE" = "phrase" ]; } && [ "$MUTE" -eq 0 ] && [ -x "$QWEN3_ASR_BIN" ]; then
     mkdir -p work/align
     "$QWEN3_ASR_BIN" --timestamps -f json --language Korean -o work/align "work/s$IDX.wav" > "work/align/s$IDX.log" 2>&1 3<&- &
     ALIGN_PID=$!
@@ -651,6 +654,12 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
   D1=$(awk -v d="$D0" -v m="$CMIN" 'BEGIN{printf "%.6f", (d>m)?d:m}')
   FRAMES=$(awk -v d="$D1" -v f="$FPS" 'BEGIN{n=d*f; printf "%d", (n==int(n))?n:int(n)+1}')
   D=$(awk -v n="$FRAMES" -v f="$FPS" 'BEGIN{printf "%.6f", n/f}')
+  # Subtitle inputs use this measured frame clock, not the storyboard's estimated
+  # duration. Check and snapshot before encoding any card audio or video.
+  if [ -n "${SUBSF:-}" ]; then
+    node "$HERE/explicit-subtitles.js" "$PWD" "$STORYBOARD" "$IDX" "$FRAMES/$FPS" "$(awk -v f="$TOTF" -v fps="$FPS" 'BEGIN{printf "%.12f",f/fps}')" > "work/subs$IDX.checked.tsv"
+    SUBSF="work/subs$IDX.checked.tsv"
+  fi
   SAMPLES=$((FRAMES * SPF))
   HANDLE_FRAMES=$(awk -v d="$HANDLE" -v f="$FPS" 'BEGIN{printf "%d", int(d*f+0.999999)}')
   RENDER_FRAMES=$((FRAMES + HANDLE_FRAMES))
@@ -1019,6 +1028,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
   # ── 8) ASS subtitle lines (the subtitle-text column) — times are card absolute offsets (cumulative frames/FPS)
   if [ "$SUB" = "1" ]; then
     CS=$(awk -v f="$TOTF" -v fps="$FPS" 'BEGIN{printf "%.4f", f/fps}')
+    if [ "${SUBS_MODE:-append}" != "replace" ]; then
     # Word mode wants real word times. The forced aligner was started in §3.5 on the trimmed
     # narration and has been running under the encode; its token times are card-relative, so the
     # offset handed to word-cues.py is this card's absolute speech start (CS + pre-roll).
@@ -1066,6 +1076,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
         printf '%d\n%s --> %s\n%s\n\n' "$SRTN" "$(srttime "$ST")" "$(srttime "$EN")" "$TXT" >> work/subs.srtbody
       fi
     done
+    fi # automatic cues; an explicit replacement owns both subtitle outputs
     # File subtitles (subs=) — shifts seconds measured from the card start onto absolute time. It skips
     # boundary detection, so it's for subtitles whose times are already known, like a transcript.
     # An end past the card duration is clipped to the card end.
@@ -1076,10 +1087,13 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
         case "$FS" in \#*) continue;; esac
         FT=$(printf '%s' "${FT:-}" | sed 's/[{}\\]//g')
         [ -n "$FT" ] || continue
-        ST=$(awk -v cs="$CS" -v s="$FS" 'BEGIN{if(s<0)s=0; printf "%.3f", cs+s}')
-        EN=$(awk -v cs="$CS" -v e="$FE" -v d="$D" 'BEGIN{if(e>d)e=d; printf "%.3f", cs+e}')
+        if [ "${SUBS_MODE:-append}" = "replace" ]; then ST="$FS"; EN="$FE"
+        else
+          ST=$(awk -v cs="$CS" -v s="$FS" 'BEGIN{if(s<0)s=0; printf "%.3f", cs+s}')
+          EN=$(awk -v cs="$CS" -v e="$FE" -v d="$D" 'BEGIN{if(e>d)e=d; printf "%.3f", cs+e}')
+        fi
         awk -v s="$ST" -v e="$EN" 'BEGIN{exit !(e>s)}' || continue
-        if [ "$SUB_MODE" = "word" ] || [ "$SUB_MODE" = "phrase" ]; then
+        if [ "${SUBS_MODE:-append}" != "replace" ] && { [ "$SUB_MODE" = "word" ] || [ "$SUB_MODE" = "phrase" ]; }; then
           python3 "$HERE/word-cues.py" "$ST" "$EN" "$ST" "$EN" "$SUB_WORD_MIN" "$FT" $PHRASE_ARG ${SUB_ACCENT:+--accent "$SUB_ACCENT" --accent-words "$SUB_ACCENT_WORDS"} |
             while IFS=$'\t' read -r WS WE WT; do
               case "$WS" in \#*) continue;; esac
