@@ -656,7 +656,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
   D=$(awk -v n="$FRAMES" -v f="$FPS" 'BEGIN{printf "%.6f", n/f}')
   # Subtitle inputs use this measured frame clock, not the storyboard's estimated
   # duration. Check and snapshot before encoding any card audio or video.
-  if [ -n "$SUBSF" ]; then
+  if [ -n "${SUBSF:-}" ]; then
     node "$HERE/explicit-subtitles.js" "$PWD" "$STORYBOARD" "$IDX" "$FRAMES/$FPS" "$(awk -v f="$TOTF" -v fps="$FPS" 'BEGIN{printf "%.12f",f/fps}')" > "work/subs$IDX.checked.tsv"
     SUBSF="work/subs$IDX.checked.tsv"
   fi
