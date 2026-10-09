@@ -46,6 +46,7 @@ function load(work){
   match(work,proof.mediaSha256);
   for(const [file,digest] of Object.entries(speechMedia))if(proof.mediaSha256[file]!==digest)throw new Error('rebuild: missing or stale audio review provenance: '+file);
   const win=evaluateWindowScript(fs.readFileSync(source,'utf8'),{filename:source});
+  require('./explicit-subtitles.js').match(work,win.SCENES,proof);
   const groupChecks=require('./video-groups.js').verifyRendered(work,proof.storyboard,win.SCENES,proof);
   if(groupChecks.length)fs.writeFileSync(path.join(work,'group-check.json'),JSON.stringify(groupChecks,null,2)+'\n');
   return {proof,scenes:win.SCENES,policy:win.MOTION_POLICY};

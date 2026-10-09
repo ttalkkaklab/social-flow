@@ -79,7 +79,7 @@ function preview(scenes, options) {
   const cards=scenes.flatMap((s,i)=>['broll','outro'].includes(s.type)?[]:[`${i}\tvoice.wav\t0\tnone\t${s.visual?.sync===true?'sync=1':''}`]).join('\n');
   return compile(scenes,cards,options).plan;
 }
-module.exports={compile,write,carry,preview};
+module.exports={compile,write,carry,preview,parseOptions};
 if(require.main===module){try{
   const board=path.resolve(process.argv[2]||'storyboard');
   const win=require('../../autoproduce/references/cost-preview.js').readScenes(path.join(board,'scenes.js'));
