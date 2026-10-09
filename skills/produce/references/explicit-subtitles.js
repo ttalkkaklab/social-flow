@@ -6,6 +6,19 @@ const {createHash}=require('node:crypto');
 const {evaluateWindowScript}=require('../../_shared/scenes-vm.js');
 const {parseOptions}=require('./edit-plan.js');
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
+function inwardCentiseconds(offset,seconds,up) {
+  // Add decimal inputs exactly: binary multiplication/addition can move an
+  // aligned boundary by one tick. No tolerance may widen a nonaligned window.
+  const parts=[offset,seconds].map(value=>{
+    const [,whole,fraction='',exponent='0']=String(value).match(/^(\d+)(?:\.(\d+))?(?:e([+-]?\d+))?$/);
+    const scale=fraction.length-Number(exponent),digits=BigInt(whole+fraction);
+    return scale<0?[digits*10n**BigInt(-scale),0]:[digits,scale];
+  });
+  const scale=Math.max(2,...parts.map(([,scale])=>scale));
+  const total=parts.reduce((sum,[digits,power])=>sum+digits*10n**BigInt(scale-power),0n);
+  const divisor=10n**BigInt(scale-2);
+  return Number((total+(up?divisor-1n:0n))/divisor)/100;
+}
 function replacement(bytes,scene,duration) {
   if(duration!==undefined&&(!Number.isFinite(duration)||duration<=0))throw new Error('Replacement subtitles need a finite positive card duration');
   const text=new TextDecoder('utf-8',{fatal:true}).decode(bytes);
@@ -66,7 +79,7 @@ function checkedCard(work,board,card,duration,offset=0) {
   if(entry.mode==='replace') {
     if(!Number.isFinite(offset)||offset<0)throw new Error('Invalid subtitle card offset');
     const rows=replacement(entry.bytes,win.SCENES[card],duration).map(([s,e,text])=>{
-      const start=Math.ceil((offset+Number(s))*100)/100,end=Math.floor((offset+Number(e))*100)/100;
+      const start=inwardCentiseconds(offset,s,true),end=inwardCentiseconds(offset,e,false);
       if(end<=start)throw new Error('Replacement subtitle interval collapses at output precision');
       return [start.toFixed(2),end.toFixed(2),text].join('\t');
     });

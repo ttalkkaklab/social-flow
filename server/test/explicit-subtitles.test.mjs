@@ -85,6 +85,54 @@ test('exact fractional-frame card boundary rejects V1 overshoot and keeps V2 out
   const good=f.render({duration:380/30,offset:478/30});assert.equal(good.status,0,good.stderr);
   assert.match(good.ass,/0:00:24.26,0:00:28.59/);assert.match(good.srt,/00:00:24,260 --> 00:00:28,590/);
 });
+test('aligned centiseconds survive both clocks and the official 31-character/5-second rate boundary',t=>{
+  const text='가'.repeat(31),f=fixture(t,[text]);
+  for(const offset of [0,6/30,303/30]){
+    f.write(`0.28\t5.28\t${text}\n`);f.proof();
+    const r=f.render({duration:6,offset});assert.equal(r.status,0,r.stderr);
+    const rows=subs.checkedCard(f.work,f.board,0,6,offset).toString().trim().split('\t');
+    assert.deepEqual(rows,[(offset+.28).toFixed(2),(offset+5.28).toFixed(2),text]);
+    assert.equal((r.ass.match(/^Dialogue:/gm)||[]).length,1);
+    assert.equal((r.srt.match(/ --> /g)||[]).length,1);
+    const file=path.join(f.work,'rate.srt');writeFileSync(file,r.srt);
+    const rate=spawnSync('python3',[path.join(ref,'check-final-speech-rate.py'),file,'--json'],{encoding:'utf8'});
+    assert.equal(rate.status,0,rate.stdout+rate.stderr);
+    assert.equal(JSON.parse(rate.stdout).peakCueRate,6.2);
+    f.write(`0.2801\t5.28\t${text}\n`);f.proof();
+    const shorter=f.render({duration:6,offset});assert.equal(shorter.status,0,shorter.stderr);
+    writeFileSync(file,shorter.srt);
+    const over=spawnSync('python3',[path.join(ref,'check-final-speech-rate.py'),file,'--json'],{encoding:'utf8'});
+    assert.equal(over.status,1);assert.equal(JSON.parse(over.stdout).peakCueRate,6.212);
+  }
+});
+test('one-tick windows survive; nonaligned endpoints still round inward without any epsilon',t=>{
+  const f=fixture(t);
+  for(const offset of [0,6/30,1/30]){
+    for(const [start,end,local,fractional] of [
+      ['0.28','0.29',['0.28','0.29'],null],
+      ['0.281','0.309',['0.29','0.30'],['0.32','0.34']],
+      ['0.28','0.309',['0.28','0.30'],['0.32','0.34']],
+      ['0.281','0.31',['0.29','0.31'],['0.32','0.34']],
+      ['0.28000000000000001','0.29',null,null],
+      ['0.28','0.28999999999999999',null,null],
+      ['0.281','0.289',null,null]
+    ]){
+      f.write(`${start}\t${end}\t그대로의 자막입니다.\n`);f.proof();
+      const r=f.render({offset});
+      const want=offset===1/30?fractional:local?.map(v=>(offset+Number(v)).toFixed(2));
+      if(want){
+        assert.equal(r.status,0,r.stderr);
+        const [s,e]=want;
+        assert.deepEqual(subs.checkedCard(f.work,f.board,0,2,offset).toString().trim().split('\t').slice(0,2),[s,e]);
+        assert.ok(r.ass.includes(`0:00:${s.padStart(5,'0')},0:00:${e.padStart(5,'0')}`));
+        const stamp=v=>'00:00:'+Number(v).toFixed(3).padStart(6,'0').replace('.',',');
+        assert.ok(r.srt.includes(`${stamp(s)} --> ${stamp(e)}`));
+      }else{assert.notEqual(r.status,0);assert.match(r.stderr,/collapses/);assert.equal(r.ass,'');assert.equal(r.srt,'');}
+    }
+  }
+  f.write('0.28\t2.000000000000001\t그대로의 자막입니다.\n');f.proof();
+  const over=f.render();assert.notEqual(over.status,0);assert.match(over.stderr,/outside card/);
+});
 test('replacement input errors stop preflight before HITL and before output; scene/segment source cannot be bypassed',t=>{
   const f=fixture(t,['첫 문장.','두 문장.']);
   for(const text of [
