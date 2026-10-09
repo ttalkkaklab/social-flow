@@ -32,6 +32,7 @@ function snapshot(work, board) {
   }
   const dimensions={W:process.env.W||null,H:process.env.H||null};
   files.add(path.join(work,'format.env'));
+  for(const file of Object.keys(require('./explicit-subtitles.js').media(work,win.SCENES)))files.add(file);
   return {dimensions,files:Object.fromEntries([...files].sort().map(file=>[file,fs.existsSync(file)?hash(fs.readFileSync(file)):null]))};
 }
 function assemblyWarnings(work, board, scenes, format) {
@@ -101,6 +102,7 @@ function check(work, board) {
   warnings.push(...production.errors.map(e=>'check-production: '+e));
   // Mode validation may return early; reuse still needs its manifest indices downstream.
   const win=evaluateWindowScript(fs.readFileSync(path.join(board,'scenes.js'),'utf8'));
+  require('./explicit-subtitles.js').media(work,win.SCENES);
   // Source/trim/clock errors are invalid inputs, never approvable quality warnings.
   win.SCENES.forEach(s=>require('./video-groups.js').declaration(s,{mode:win.PRODUCTION?.mode??null}));
   if(win.SCENES.some(s=>s.visual?.video?.groupPlan!==undefined))

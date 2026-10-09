@@ -65,14 +65,16 @@ function verifyManifest(work,board,scenes,format,{videoWarningsApproved=false}={
 function verify(work, board) {
   const file = path.join(board, 'scenes.js');
   if (!fs.existsSync(file)) throw new Error('source storyboard/scenes.js is required; pass the storyboard directory as build-reel.sh argument 2');
-  const videoGate = require('./assembly-video-gate.js').check(work, board);
   const win = evaluateWindowScript(fs.readFileSync(file, 'utf8'), {filename:file});
+  // Invalid subtitle inputs are not quality warnings and cannot be approved away.
+  const subtitleMedia=require('./explicit-subtitles.js').media(work,win.SCENES);
+  const videoGate = require('./assembly-video-gate.js').check(work, board);
   const expected = win.SCENES.map((s,i)=>({s,i})).filter(({s})=>!['broll','outro'].includes(s.type)).map(({i})=>i);
   const cards = fs.readFileSync(path.join(work, 'cards.tsv'), 'utf8').split(/\r?\n/).filter(l=>l.trim()&&!l.startsWith('#'));
   const ids = cards.map(l=>l.split('\t')[0]);
   if (JSON.stringify(ids)!==JSON.stringify(expected.map(String))) throw new Error('cards.tsv does not match SCENES order; no unplanned opening, missing card or duplicate card is allowed');
   const editResult=require('./edit-plan.js').write(work,win.SCENES,{videoWarningsApproved:videoGate.approved});
-  const mediaSha256={...verifyManifest(work,board,win.SCENES,win.FORMAT,{videoWarningsApproved:videoGate.approved}),...require('./check-tts-quality.js').check(work,board)};
+  const mediaSha256={...verifyManifest(work,board,win.SCENES,win.FORMAT,{videoWarningsApproved:videoGate.approved}),...require('./check-tts-quality.js').check(work,board),...subtitleMedia};
   const hash = p=>createHash('sha256').update(fs.readFileSync(p)).digest('hex');
   const groupPlans={};
   const edits=editResult.plan;
