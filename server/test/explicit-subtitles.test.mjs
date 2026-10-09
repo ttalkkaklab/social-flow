@@ -14,6 +14,7 @@ const plan=require(path.join(ref,'verify-build-plan.js'));
 const reel=readFileSync(path.join(ref,'build-reel.sh'),'utf8');
 const stage=reel.slice(reel.indexOf('  # ── 8)'),reel.indexOf('  echo "$IDX"',reel.indexOf('  # ── 8)')));
 const inputStage=reel.slice(reel.indexOf('  # Subtitle inputs use'),reel.indexOf('  SAMPLES=',reel.indexOf('  # Subtitle inputs use')));
+const clockFunction=reel.split('\n').find(l=>l.startsWith('autotimes()'));
 const hash=f=>createHash('sha256').update(readFileSync(f)).digest('hex');
 function fixture(t,texts=['그대로의 자막입니다.']) {
   const dir=realpathSync(mkdtempSync(path.join(tmpdir(),'explicit-subs-')));
@@ -42,6 +43,7 @@ HERE='${ref}'; STORYBOARD='${board}'; SUB_WORD_MIN=0.10; WSTYLE=Word; PHRASE_ARG
 say() { :; }
 asstime() { awk -v t="$1" 'BEGIN{h=int(t/3600);m=int((t-h*3600)/60);s=t-h*3600-m*60;printf "%d:%02d:%05.2f",h,m,s}'; }
 srttime() { awk -v t="$1" 'BEGIN{h=int(t/3600);m=int((t-h*3600)/60);s=t-h*3600-m*60;printf "%02d:%02d:%06.3f",h,m,s}' | tr '.' ','; }
+${clockFunction}
 ${inputStage}
 ${stage}`;
     const run=spawnSync('bash',['-c',shell],{cwd:work,encoding:'utf8'});
