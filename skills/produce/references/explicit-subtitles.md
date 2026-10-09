@@ -23,6 +23,14 @@ Replacement output windows round inward to shared centisecond ticks (start up, e
 down), so both formats stay inside the exact frame-based card clock. A window that
 collapses after this rounding is rejected. Check the final subtitle rate after rounding.
 
+Automatic cues keep their separate SRT millisecond and ASS centisecond clocks.
+The builder limits only final ticks outside the exact integer-frame card range;
+interior times, sentence boundaries and word/phrase alignment stay as before.
+An automatic interval that collapses at either output precision stops the build.
+This also bounds automatic cues emitted before legacy append file cues. Legacy file
+append parsing, clipping and splitting use their original path. Replacement timing
+and its shared inward centisecond contract do not change.
+
 All `subs=` file bytes, including legacy append files, enter the assembly input SHA
 proof and video-warning fingerprint. Changed/missing files require a fresh preflight
 and any current warning approval. The builder checks the original file against that
