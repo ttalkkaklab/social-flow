@@ -838,13 +838,13 @@ camera (`KB_EASE=linear` restores the old ramp). `auto` alternates in/out card t
 | `hold` | fixed scale, no zoom motion | the base for `drift=1` (pure handheld) or a `pan=` travel — never alone on a still: the build refuses a frozen still card |
 | `none` | no Ken Burns at all, source untouched | **a filmed clip already moves** — a zoom on top shakes the frame. Filmed cards are usually `none` + `sync=1`. Never on a still card — the build refuses it |
 
-**The 5th cards.tsv column (options) is `k=v,k=v`.** It's optional, and existing 4-column
-files keep working. Two-value options use `:` inside the value — `,` stays the k=v separator.
+**The 5th cards.tsv column (options) is `k=v,k=v`.** It's optional; existing 4-column files keep working. Two-value options use `:` inside the value — `,` stays the k=v separator.
 
 | Option | What | When |
 |---|---|---|
 | `sync=1` | turns off preroll, silence trim, and speed correction entirely. Normalization only | **live voice on a filmed scene** — any one of the three throws mouth and sound out of step |
-| `subs=<tsv>` | supplies that card's subtitles as a file (`start<TAB>end<TAB>sentence`, seconds from the card's start) | subtitles built from a transcript — scenes that skip speech-boundary detection |
+| `subs=<tsv>` | appends file subtitles to automatic cues (`start<TAB>end<TAB>sentence`, seconds from the card's start); paths resolve from `.work/` | legacy transcript subtitles; omit automatic sub text only if the source scenes also omit it |
+| `subs-mode=replace` | with `subs=<tsv>`, replaces automatic cues in both SRT and ASS with checked sentence rows, including when `SUB_MODE=word` or `phrase` | reviewed timings for existing narration; `append` is the default; see [explicit-subtitles.md](references/explicit-subtitles.md) |
 | `pan=<direction>[:scale]` | Ken Burns as a travel instead of a centre zoom (`l2r`·`r2l`·`u2d`·`d2u` + diagonals `tl2br`·`br2tl`·`tr2bl`·`bl2tr`). Column 4 `in`/`out` layers a zoom drift over the travel (the classic pan+zoom); `auto` keeps the scale fixed | scenery and wide sources. Travel = width × (scale−1) ≈ 130px at the default 1.12 — measured on portrait too, so the old landscape-only advice is dead |
 | `focus=fx:fy` | zoom towards this normalized point instead of the centre (0.5:0.5 = centre). The far side of the frame shifts up to 2× the centre case — pipeline.md has the numbers | the scene has one subject and it isn't centred — the zoom should arrive at the subject, not at the frame's middle |
 | `drift=1` | handheld micro-drift — two non-integer-ratio sines wobble the window a few pixels. Composes with `in`/`out`/`punch` (adds a 1.04 base scale) or `hold` (pure handheld) | presence, unease, cutting the AI look — the still counterpart of the `handheld` row in directing-grammar §4 |
