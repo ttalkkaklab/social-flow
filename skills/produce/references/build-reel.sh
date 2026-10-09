@@ -266,6 +266,7 @@ f2() { awk -v v="$1" 'BEGIN{printf "%.2f", v}'; }
 asstime() { awk -v t="$1" 'BEGIN{if(t<0)t=0; h=int(t/3600); m=int((t-h*3600)/60); s=t-h*3600-m*60; printf "%d:%02d:%05.2f", h, m, s}'; }
 # SRT is hh:mm:ss,mmm — digits and separator differ from ASS (h:mm:ss.cc), so print both from the same source instead of converting
 srttime() { awk -v t="$1" 'BEGIN{if(t<0)t=0; h=int(t/3600); m=int((t-h*3600)/60); s=t-h*3600-m*60; printf "%02d:%02d:%06.3f", h, m, s}' | tr '.' ','; }
+autotimes() { node "$HERE/subtitle-clock.js" "$TOTF" "$FRAMES" "$FPS" "$(srttime "$1")" "$(srttime "$2")" "$(asstime "$1")" "$(asstime "$2")"; }
 
 [ -f cards.tsv ] || { echo "cards.tsv missing"; exit 1; }
 [ -f segs.tsv ] || { echo "segs.tsv missing"; exit 1; }
@@ -1050,6 +1051,10 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
       else EN=$(awk -v cs="$CS" -v p="$CPRE" -v l="$L" -v d="$D" 'BEGIN{e=p+l+0.45; if(e>d)e=d; printf "%.3f", cs+e}'); fi
       TXT=$(printf '%s' "${SARR[$j]}" | sed 's/[{}\\]//g')
       if [ -n "$TXT" ]; then
+        # Bound each format's final tick against integer frames. ST/EN and the
+        # detected speech windows stay unchanged for word/phrase alignment.
+        AUTO_TIMES=$(autotimes "$ST" "$EN") || { say "✗ card $IDX seg $j: automatic subtitle clock failed"; exit 1; }
+        IFS=$'\t' read -r SRT_ST SRT_EN ASS_ST ASS_EN <<< "$AUTO_TIMES"
         if [ "$SUB_MODE" = "word" ] || [ "$SUB_MODE" = "phrase" ]; then
           # One 어절 per cue (word) or one short line of a few 어절 (phrase), hard swaps, no fade. The speech window is the sentence's real
           # voice span: a detected boundary is the END of the pause (the next sentence's first
@@ -1065,15 +1070,17 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
           python3 "$HERE/word-cues.py" "$ST" "$EN" "$SPS" "$SPE" "$SUB_WORD_MIN" "$TXT" ${ALIGNJ:+--align "$ALIGNJ" --offset "$AOFF" --tts "${TARR[$j]}"} $PHRASE_ARG ${SUB_ACCENT:+--accent "$SUB_ACCENT" --accent-words "$SUB_ACCENT_WORDS"} |
             while IFS=$'\t' read -r WS WE WT; do
               case "$WS" in \#*) say "· card $IDX seg $j words: ${WS#\# }"; continue;; esac
-              printf 'Dialogue: 0,%s,%s,%s,,0,0,0,,%s\n' "$(asstime "$WS")" "$(asstime "$WE")" "$WSTYLE" "$WT" >> work/subs.body
+              WORD_TIMES=$(autotimes "$WS" "$WE") || { say "✗ card $IDX seg $j: automatic word subtitle clock failed"; exit 1; }
+              IFS=$'\t' read -r _ _ WORD_ST WORD_EN <<< "$WORD_TIMES"
+              printf 'Dialogue: 0,%s,%s,%s,,0,0,0,,%s\n' "$WORD_ST" "$WORD_EN" "$WSTYLE" "$WT" >> work/subs.body
             done
         else
-          printf 'Dialogue: 0,%s,%s,Sub,,0,0,0,,{\\fad(160,120)}%s\n' "$(asstime "$ST")" "$(asstime "$EN")" "$TXT" >> work/subs.body
+          printf 'Dialogue: 0,%s,%s,Sub,,0,0,0,,{\\fad(160,120)}%s\n' "$ASS_ST" "$ASS_EN" "$TXT" >> work/subs.body
         fi
         # Print the SRT from the same ST/EN/TXT — burn-in and subtitle file share one source, so they can't drift apart.
         # The fade tag ({\fad}) is ASS-only, so it's dropped (SRT doesn't know formatting tags).
         SRTN=$((SRTN+1))
-        printf '%d\n%s --> %s\n%s\n\n' "$SRTN" "$(srttime "$ST")" "$(srttime "$EN")" "$TXT" >> work/subs.srtbody
+        printf '%d\n%s --> %s\n%s\n\n' "$SRTN" "$SRT_ST" "$SRT_EN" "$TXT" >> work/subs.srtbody
       fi
     done
     fi # automatic cues; an explicit replacement owns both subtitle outputs
