@@ -326,6 +326,14 @@ Rules:
   finished videos read as a slideshow. The renderer warns when a group's frozen tail
   passes 40% of its segment. Type reveals and fades never stretch — a 4-second wipe over
   a word is a crawl, not an entrance.
+- **Duration is not visible-motion approval.** `sv:true` stretches the helper's animation;
+  it does not guarantee enough changing pixels for the final motion check. A default 6px
+  `h.link` or `h.range` can draw throughout the sentence and still trigger that check.
+  The renderer now records the same pixel metric per encoded group in
+  `summary.json.rendered_motion`, with warnings before assembly. Read the
+  [motion measurement contract](../../produce/references/motion-contract.md) for the thin-line,
+  static, flicker, background-only and subject-action comparison. Review meaning and readability
+  in playback even when the metric has no findings; do not add noise or background drift to pass it.
 - Sustained semantic animation subtracts its actual entrance delay from the segment duration; hold stays separate. Without a segment, all three templates use a 2600ms settle fallback matching the renderer entrance cap. Check mid-motion cuts and 40% frozen tails separately.
 - **Focus shift.** A group marked `dim: true` drops to 55% while the next group
   enters, so the eye follows the narration and the end frame keeps its hierarchy — the
