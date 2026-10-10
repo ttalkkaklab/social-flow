@@ -225,8 +225,10 @@ export function checkDimensions(width, height, mode) {
             return `${name} must be between ${ASTRA_VIDEO_FAST_MIN_DIMENSION} and ${ASTRA_VIDEO_FAST_MAX_DIMENSION} for mode guided_fast (got ${value})`;
         }
     }
-    if (width !== undefined && height !== undefined && width * height > ASTRA_VIDEO_MAX_PIXELS) {
-        return `width * height must be at most ${ASTRA_VIDEO_MAX_PIXELS} (got ${width * height})`;
+    // The server fills each omitted side independently, including single-sided requests.
+    const pixels = (width ?? (fast ? 768 : 1536)) * (height ?? (fast ? 512 : 1024));
+    if (pixels > ASTRA_VIDEO_MAX_PIXELS) {
+        return `width * height must be at most ${ASTRA_VIDEO_MAX_PIXELS} (got ${pixels})`;
     }
     return null;
 }

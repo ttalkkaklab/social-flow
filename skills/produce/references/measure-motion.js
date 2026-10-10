@@ -58,6 +58,12 @@ function summarize(frames) {
 
 function measure(file, window) { return summarize(samples(file, window)); }
 
+// Shared early diagnostic for an encoded slide group. Pixel motion is not semantic approval.
+function slideEvidence(file, { stillLimit = STILL_CEILING_SECONDS, ...window } = {}) {
+  const measured = measure(file, window);
+  return { ...measured, stillLimit, findings: findings(measured, 'card', { stillLimit }), semanticReview: 'required' };
+}
+
 /* kind: 'video' for a generated/imported clip, 'card' for an authored slide card on the reel. */
 function findings(s, kind = 'video', { stillLimit = null } = {}) {
   const out = [];
@@ -79,7 +85,7 @@ function plateStillLimit(policy) {
   return Number.isFinite(n) && n > 0 ? Math.min(n, STILL_CEILING_SECONDS) : STILL_CEILING_SECONDS;
 }
 
-module.exports = { samples, summarize, measure, findings, plateStillLimit, LIMITS, STILL_DIFF, MOVE_DIFF, SAMPLE_FPS, STILL_CEILING_SECONDS };
+module.exports = { samples, summarize, measure, slideEvidence, findings, plateStillLimit, LIMITS, STILL_DIFF, MOVE_DIFF, SAMPLE_FPS, STILL_CEILING_SECONDS };
 
 if (require.main === module) {
   try {
