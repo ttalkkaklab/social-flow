@@ -114,6 +114,7 @@ import path from "node:path";
 
 const require = createRequire(import.meta.url);
 const HERE = path.dirname(fileURLToPath(import.meta.url));
+const motion = require(path.join(HERE, 'measure-motion.js'));
 const { FORMATS, DEFAULT_FORMAT } = require(path.join(HERE, "../../platform-guide/references/formats.js"));
 
 const USAGE = "usage: render-motion-slide.mjs <slides/sN-slug.html> --out <dir> [--fps 30] [--jobs 4] [--sheet] [--png-only] [--group k] [--frame k:ms] [--keep-frames] [--segs auto|k:ms,...] [--word-cues k:path,...] [--grain 0..30] [--previz]";
@@ -832,11 +833,20 @@ const openPage = async () => {
               `${captureWobble.slice(0, 3).join(", ")}${captureWobble.length > 3 ? ", …" : ""}. The last capture was kept. ` +
               `Sub-pixel antialiasing wobble is invisible; a torn frame is not — open those files before trusting them`);
   fs.writeFileSync(path.join(OUT, "manifest.tsv"), manifest.join("\n") + "\n");
+  // Use the final assembler's pixel metric before the author leaves the render step.
+  // The assembler checks every slide, including camera slides; previz is not an assembled card.
+  const renderedMotion = opt.pngOnly || opt.previz ? null : rows.map(r => {
+    const evidence = motion.slideEvidence(r.mp4, { stillLimit: motion.plateStillLimit(global.window.MOTION_POLICY) });
+    for (const finding of evidence.findings) warn.push(`group ${r.k} encoded motion: ${finding}. ` +
+      'sv proves duration only; inspect the subject action and see motion-contract.md before assembly');
+    return { group: r.k, ...evidence };
+  });
   if (!opt.pngOnly) renderProof.writeProof(htmlAbs, OUT, proofInputs, rows, opt.fps);
   const sec = (Date.now() - t0) / 1000;
   const summary = { slide: path.basename(htmlAbs), format: FORMAT, canvas: `${W}x${H}`, groups: N, jobs,
     treatment: treatment || null,
     segments: segCount, durations_ms: groups.slice(1).map(g => g.dur),
+    rendered_motion: renderedMotion,
     segs_ms: segMap && segsApplied ? Array.from({ length: N }, (_, i) => segMap[i + 1] || null) : null,
     word_cues:wordCueMode, word_cue_application:wordCueApplied,
     word_cue_chain:wordCueApplied?.applied?'word cues bypass lead-in; cross strike-through (.cross .bar.rv.fx-grow) retains lead-in and may start before cued words — review a cued group sheet':null,

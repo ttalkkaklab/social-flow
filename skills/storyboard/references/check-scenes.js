@@ -47,6 +47,7 @@ const FORMAT_RESOLVE = path.resolve(SELF_DIR, '..', '..', 'platform-guide', 'ref
    checker and the assembler can never disagree about what a seedance prompt may say. */
 const PROMPT = require(path.join(SELF_DIR, 'assemble-bg-prompt.js'));
 const { scenePlan } = require('../../produce/references/seedance-route.js');
+const { mixFindings } = require('../../produce/references/sound-mix-contract.js');
 const { assemble: assembleSpatialPrompt } = require('./spatial-prompts.js');
 const { APPEARANCE_WORDS } = require('./cut-treatments.js');
 
@@ -1560,40 +1561,7 @@ function check(win, fmt, opts) {
   // music_generate, a weighted-prompt blend for music_generate_advanced, or a channel asset.
   if (win.MUSIC && typeof win.MUSIC === 'object') {
     const mix = win.MUSIC.$mix;
-    if (mix !== undefined) {
-      const at = 'window.MUSIC.$mix';
-      if (!mix || typeof mix !== 'object' || Array.isArray(mix)) bad(at, 'mix settings are an object');
-      else {
-        const numeric = (key, min, max) => {
-          if (mix[key] === undefined) return;
-          const n = Number(mix[key]);
-          if (!Number.isFinite(n) || n < min || n > max) bad(at, `${key} ${JSON.stringify(mix[key])} — expected ${min}–${max}`);
-        };
-        numeric('targetLufs', -30, -5); numeric('truePeakDbtp', -6, 0);
-        numeric('bedSeparationLu', 0, 30); numeric('minimumSeparationLu', 0, 30);
-        numeric('ambienceSeparationLu', 0, 30);
-        numeric('cueCrossfadeSeconds', 0, 10); numeric('endingFadeSeconds', 0, 10);
-        numeric('silenceRampSeconds', 0, 3);
-        if (Number(mix.minimumSeparationLu) > Number(mix.bedSeparationLu))
-          bad(at, 'minimumSeparationLu is wider than bedSeparationLu — the floor must not exceed the resting target');
-        if (mix.hook !== undefined) {
-          const h = mix.hook;
-          if (!h || typeof h !== 'object' || Array.isArray(h)) bad(at, 'hook is { attenuationLu, releaseSeconds }');
-          else for (const [key, min, max] of [['attenuationLu', 0, 30], ['releaseSeconds', 0, 10]]) {
-            if (h[key] !== undefined && (!Number.isFinite(Number(h[key])) || Number(h[key]) < min || Number(h[key]) > max))
-              bad(at, `hook.${key} ${JSON.stringify(h[key])} — expected ${min}–${max}`);
-          }
-        }
-        if (mix.ducking !== undefined) {
-          const d = mix.ducking;
-          if (!d || typeof d !== 'object' || Array.isArray(d)) bad(at, 'ducking is { ratio, attackMs, releaseMs }');
-          else for (const [key, min, max] of [['ratio', 1, 20], ['attackMs', 1, 1000], ['releaseMs', 10, 3000]]) {
-            if (d[key] !== undefined && (!Number.isFinite(Number(d[key])) || Number(d[key]) < min || Number(d[key]) > max))
-              bad(at, `ducking.${key} ${JSON.stringify(d[key])} — expected ${min}–${max}`);
-          }
-        }
-      }
-    }
+    for (const finding of mixFindings(mix)) bad('window.MUSIC.$mix', finding);
     Object.keys(win.MUSIC).filter((name) => name !== '$mix').forEach((name) => {
       const c = win.MUSIC[name];
       const at = `window.MUSIC.${name}`;

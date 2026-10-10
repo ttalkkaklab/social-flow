@@ -812,6 +812,14 @@ Revision comparisons and `409 head_moved` recovery summaries include decision ke
 `+key` added, `−key` removed and `~key` changed, including revisions that change only decisions.
 Older diff responses without `decisions` keep their existing summary.
 
+Save and checkpoint read `storyboard/decisions.json` as structured HITL answers. Checkpoint
+also works before `scenes.js` exists. A missing sidecar leaves the field out. Pull rebuilds it from the same head
+or historical snapshot as the board, including empty answers, with the existing backup/side-copy
+rules. Documents and attachments cannot overwrite this canonical file. Existing decision-record
+revision checks stay unchanged. See [the decision record contract](skills/storyboard/references/portal-decisions.md)
+for provenance, gate keys and channel records. `portal_episode_status` with no status/stage/title
+reads the episode without changing it; publication results still use `portal_publication_record`.
+
 `storyboard_backups` lists local recovery copies and previews retention with `keep` (default 10,
 minimum 1 per kind). It needs no portal credential. Board/scenario backups use their timestamp name;
 image/attachment backups use directory modification time. Unknown names are reported and preserved.
@@ -828,7 +836,7 @@ Historical `portal_storyboard_pull` with `mode: "replace"` and documents enabled
 managed documents absent from that revision, after backing them up under `storyboard/.portal-local/`.
 Managed names are the standard board documents, `scenario.md`, and documents listed by the current
 episode. The result lists them in `removed`; unrelated local notes stay untouched. `mode: "side"`
-preserves the working copy, and `includeDocuments: false` replaces only the board without this cleanup.
+preserves the working copy, and `includeDocuments: false` replaces the board and canonical decisions without document cleanup.
 
 `portal_scenario_pull` backs up changed local candidates and the chosen `scenario.md` under
 `storyboard/.portal-local/<timestamp>-scenarios/` before replacing any file. Its result includes

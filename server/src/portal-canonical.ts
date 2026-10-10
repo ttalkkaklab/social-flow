@@ -3,7 +3,7 @@ import { SAFE_DOCUMENT_NAME } from './portal-client.js';
 
 /** Every working path owned by revision/scenario pull; upload and restore share this source. */
 export function canonicalPullPaths(episode: { documents?: Array<{ filename: string }> }, written: Iterable<string> = []) {
-  return new Set([...DOCUMENT_FILES, 'scenario.md', ...(episode.documents ?? []).map(d => d.filename), ...written]
+  return new Set([...DOCUMENT_FILES, 'scenario.md', 'decisions.json', ...(episode.documents ?? []).map(d => d.filename), ...written]
     .filter(filename => SAFE_DOCUMENT_NAME.test(filename))
     .map(filename => `storyboard/${filename}`.toLowerCase()));
 }

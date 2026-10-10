@@ -14,6 +14,9 @@ argument-hint: "<channel> <topic> [platformCSV|auto]"
 allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__sns_account_check", "mcp__social-flow__capability_status", "mcp__social-flow__portal_publication_record", "mcp__social-flow__portal_episode_status"]
 ---
 
+**HITL records:** Record final platform approval separately from actual publication outcomes. Follow [the decision record contract](../storyboard/references/portal-decisions.md); preserve actual provenance and reuse existing authorization. This adds no approval gate.
+
+
 # Platform publishing — public immediately after HITL approval
 
 Reuse the episode destination from [storyboard-target.md](../storyboard/references/storyboard-target.md). Local mode keeps publish records locally and skips every portal call below, even if a key or old portal ID exists. A legacy episode without a choice resolves the destination before any portal call; publishing approval does not imply portal consent.

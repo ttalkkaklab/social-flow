@@ -28,6 +28,9 @@ allowed-tools: ["mcp__social-flow__portal_channel_sync", "mcp__social-flow__capa
   "mcp__social-flow__music_generate_clip", "mcp__social-flow__mlx_music_generate"]
 ---
 
+**HITL records:** Record authorized automatic choices and queue actions with the exact platform scope. Follow [the decision record contract](../storyboard/references/portal-decisions.md); preserve actual provenance and reuse existing authorization. This adds no approval gate.
+
+
 # From one topic to a finished video — unattended authoring
 First follow [storyboard-target.md](../storyboard/references/storyboard-target.md). No key means local HTML. With a key, reuse an explicit episode/standing destination choice or hold this queue item for the destination HITL; unattended production never supplies portal consent. Local mode skips all portal steps below and media-tool `portal` arguments. Both modes use the shared [storyboard design](../storyboard/references/storyboard-design.md). Only chosen portal mode calls `portal_channel_sync` before reading the profile; a 409 holds this item, while network/auth failures warn once and continue locally.
 For pending portal render requests, follow [the six-ratio allocation contract](../storyboard/references/production-mode.md): `portal_render_allocation` read → host LLM reasons over every shot → submit requestId/baseRevisionNo and all assignments → pull. New choices persist `PRODUCTION.renderRatioVersion:1`; neither a pending request nor ratio selection approves spending.
