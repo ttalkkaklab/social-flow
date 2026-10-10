@@ -1045,7 +1045,7 @@ Returns: JSON — { channel, workspace, resolvedBy: "file"|"token", source, hold
     name: 'portal_storyboard_save',
     title: 'Upload an episode directory to the portal',
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-    description: `Upload data/<channel>/episodes/<topic>/storyboard/ — scenes.js (the shots verbatim, the window.* blocks as episode meta), storyboard.md, research.md, script.md, storyboard.html — to the ttalkkakstory portal under the channel's workspace key. Saving the same episode again updates it (idempotent); the project is the channel, the storyboard is found or created by the episode title (or storyboardTitle for a series). When .portal.json exists, its episodeId updates that same row even if the title changed. The save is also a checkpoint: stage from the argument or storyboard.md's status (approved → approved, otherwise board), baseRevisionNo from .portal.json. A 409 head_moved means another machine saved first — the answer lists what THEY changed since your base (shots · meta · documents): keep your local edits aside, portal_storyboard_pull the head, re-apply all of your changes on it and resolve by hand where the list overlaps them, save again; a 409 leased names who holds the lease and until when.
+    description: `Upload data/<channel>/episodes/<topic>/storyboard/ — scenes.js (the shots verbatim, the window.* blocks as episode meta), storyboard.md, research.md, script.md, storyboard.html — to the ttalkkakstory portal under the channel's workspace key. Saving the same episode again updates it (idempotent); the project is the channel, the storyboard is found or created by the episode title (or storyboardTitle for a series). When .portal.json exists, its episodeId updates that same row even if the title changed. The save reads storyboard/decisions.json when present and uploads its evidenced answers as structured decisions, outside meta; a missing sidecar omits the decisions field. The save is also a checkpoint: stage from the argument or storyboard.md's status (approved → approved, otherwise board), baseRevisionNo from .portal.json. A 409 head_moved means another machine saved first — the answer lists what THEY changed since your base (shots · meta · documents): keep your local edits aside, portal_storyboard_pull the head, re-apply all of your changes on it and resolve by hand where the list overlaps them, save again; a 409 leased names who holds the lease and until when.
 
 Writes .portal.json (workspace · storyboardId · episodeId · headRevisionNo) into the episode directory. Returns: JSON — { result: created|updated, storyboardId, episodeId, revisionNo, url, pageUrl, uploaded: { scenes, characters, documents } }.`,
     inputSchema: {
@@ -1084,7 +1084,7 @@ Returns: JSON — the portal's paginated list (storyboards with id · title · p
     name: 'portal_storyboard_pull',
     title: 'Download a portal episode into a local directory',
     annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
-    description: `⚠️ Download an episode from the ttalkkakstory portal after the session-opening HITL. scenes.js is rebuilt from the portal's rows; uploaded documents and the chosen scenario arrive beside it. mode replace (default) writes into storyboard/, first copies changed local files to backupDir under .portal-local/, and updates .portal.json. mode side clears and writes sideDir under .portal-head/ while leaving storyboard/ and .portal.json untouched. With revision, every file comes from that revision's snapshot and headRevisionNo is that revision; otherwise it is the portal head. Returns backupDir (null when no local file changed), replaced[], sideDir, and headRevisionNo.`,
+    description: `⚠️ Download an episode from the ttalkkakstory portal after the session-opening HITL. scenes.js is rebuilt from the portal's rows; decisions.json comes from the same head or revision snapshot (including an empty array), never an attachment or ordinary document. Uploaded documents and the chosen scenario arrive beside it. mode replace (default) writes into storyboard/, first copies changed local files to backupDir under .portal-local/, and updates .portal.json. mode side clears and writes sideDir under .portal-head/ while leaving storyboard/ and .portal.json untouched. With revision, every file comes from that revision's snapshot and headRevisionNo is that revision; otherwise it is the portal head. Returns backupDir (null when no local file changed), replaced[], sideDir, and headRevisionNo.`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -1099,11 +1099,11 @@ Returns: JSON — the portal's paginated list (storyboards with id · title · p
   },
   {
     name: 'portal_episode_status',
-    title: 'Advance a portal episode\'s status or stage',
+    title: 'Read or update a portal episode',
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-    description: `Move a portal episode forward — status draft → approved → produced → published (produce calls produced when the build passes, publish calls published), or the finer stage; the title can change in the same call. The holder travels with the call, so a lease held by another machine on the same key answers 409 leased.
+    description: `With no status, stage or title, read the episode including decisions and publication records without changing it. Otherwise move a portal episode forward — status draft → approved → produced → published (produce calls produced when the build passes, publish calls published), or the finer stage; the title can change in the same call. The holder travels with the call, so a lease held by another machine on the same key answers 409 leased.
 
-Returns: JSON — the updated episode (id, status, stage, title, headRevisionNo).`,
+Returns: JSON — the current or updated episode (id, status, stage, title, headRevisionNo; available decisions and publication records on reads).`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -1167,7 +1167,7 @@ Returns: JSON — { id, slug, title, stage, url, pageUrl }.`,
     name: 'portal_episode_checkpoint',
     title: 'Save a revision when a stage ends',
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-    description: `Checkpoint the episode on the portal when a stage ends — candidates after the three scenario pages, scenario after the pick, board after scenes.js is written. With episodeDir the shots and meta from storyboard/scenes.js (when present) and the standard documents that exist (research.md · storyboard.md · script.md · storyboard.html) go up together; identical content makes no new revision and only moves the stage. baseRevisionNo defaults to .portal.json's head; when it differs from the portal's head the answer is 409 head_moved with what the other machine changed since your base (shots · meta · documents): keep your local edits aside, portal_storyboard_pull the head, re-apply all of your changes on it (the list marks the overlaps to resolve by hand), checkpoint again. Never retry a 409 blind.
+    description: `Checkpoint the episode on the portal when a stage ends — candidates after the three scenario pages, scenario after the pick, board after scenes.js is written. With episodeDir, storyboard/decisions.json supplies structured HITL answers even before scenes.js exists; a missing sidecar omits the decisions field. The shots and meta from storyboard/scenes.js (when present) and the standard documents that exist (research.md · storyboard.md · script.md · storyboard.html) go up together; identical content makes no new revision and only moves the stage. baseRevisionNo defaults to .portal.json's head; when it differs from the portal's head the answer is 409 head_moved with what the other machine changed since your base (shots · meta · documents): keep your local edits aside, portal_storyboard_pull the head, re-apply all of your changes on it (the list marks the overlaps to resolve by hand), checkpoint again. Never retry a 409 blind.
 
 Updates .portal.json headRevisionNo. Returns: JSON — { result: "new revision"|"unchanged (stage only)", revisionNo, stage, uploaded: { scenes, documents } }.`,
     inputSchema: {
