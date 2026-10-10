@@ -156,6 +156,8 @@ export interface PortalImage {
 }
 
 export interface PortalEpisode {
+  decisions?: unknown;
+  publications?: unknown;
   id: string;
   slug: string;
   title: string;
@@ -177,6 +179,7 @@ export interface ImportResult {
 }
 
 export interface PortalRevision {
+  snapshot?: { decisions?: unknown };
   revisionNo: number;
   documents?: Record<string, string>;
   [key: string]: unknown;

@@ -29,6 +29,9 @@ allowed-tools: ["mcp__social-flow__portal_channel_sync", "mcp__social-flow__port
   "mcp__social-flow__music_generate_clip", "mcp__social-flow__mlx_music_generate"]
 ---
 
+**HITL records:** Record authorized automatic choices and queue actions with the exact platform scope. Follow [the decision record contract](../storyboard/references/portal-decisions.md); preserve actual provenance and reuse existing authorization. This adds no approval gate.
+
+
 # From one topic to a finished video — unattended authoring
 Before reading `profile.md`, call `portal_channel_sync` with `action: "pull"`. A 409 conflict
 holds this queue item. A missing key, network error, 401 or 5xx gets one warning line, then

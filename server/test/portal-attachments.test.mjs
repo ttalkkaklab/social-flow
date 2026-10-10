@@ -61,12 +61,12 @@ test('canonical revision paths are excluded from upload and legacy restore inclu
   const root = mkdtempSync(path.join(tmpdir(), 'attachments81-canonical-'));
   try {
     mkdirSync(path.join(root, 'storyboard'));
-    const names = ['scenes.js', 'storyboard.md', 'research.md', 'script.md', 'storyboard.html', 'scenario.md', 'custom.md'];
+    const names = ['scenes.js', 'storyboard.md', 'research.md', 'script.md', 'storyboard.html', 'scenario.md', 'decisions.json', 'custom.md'];
     for (const name of names) writeFileSync(path.join(root, 'storyboard', name), 'revision-owned');
     let writes = 0;
     const client = {
       getEpisode: async () => ({ data: { documents: [{ filename: 'custom.md' }] } }),
-      listAttachments: async () => ({ data: { items: [...names, 'SCENES.JS'].map(name => ({ relativePath: `storyboard/${name}`, byteSize: 1 })) } }),
+      listAttachments: async () => ({ data: { items: [...names, 'SCENES.JS', 'DECISIONS.JSON'].map(name => ({ relativePath: `storyboard/${name}`, byteSize: 1 })) } }),
       uploadAttachment: async () => { writes++; throw new Error('must not upload canonical'); },
       downloadAttachment: async () => { throw new Error('must not download canonical'); },
     };
@@ -77,7 +77,7 @@ test('canonical revision paths are excluded from upload and legacy restore inclu
     assert.equal(writes, 0);
     const restore = await restoreAttachments(client, 'ep', root);
     assert.equal(restore.restored, 0);
-    assert.equal(restore.skipped.length, names.length + 1);
+    assert.equal(restore.skipped.length, names.length + 2);
     for (const name of names) assert.equal(readFileSync(path.join(root, 'storyboard', name), 'utf8'), 'revision-owned');
   } finally { rmSync(root, { recursive: true, force: true }); }
 });

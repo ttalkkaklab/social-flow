@@ -425,11 +425,11 @@ var require_codegen = __commonJS({
         const rhs = this.rhs === void 0 ? "" : ` = ${this.rhs}`;
         return `${varKind} ${this.name}${rhs};` + _n;
       }
-      optimizeNames(names, constants4) {
+      optimizeNames(names, constants5) {
         if (!names[this.name.str])
           return;
         if (this.rhs)
-          this.rhs = optimizeExpr(this.rhs, names, constants4);
+          this.rhs = optimizeExpr(this.rhs, names, constants5);
         return this;
       }
       get names() {
@@ -446,10 +446,10 @@ var require_codegen = __commonJS({
       render({ _n }) {
         return `${this.lhs} = ${this.rhs};` + _n;
       }
-      optimizeNames(names, constants4) {
+      optimizeNames(names, constants5) {
         if (this.lhs instanceof code_1.Name && !names[this.lhs.str] && !this.sideEffects)
           return;
-        this.rhs = optimizeExpr(this.rhs, names, constants4);
+        this.rhs = optimizeExpr(this.rhs, names, constants5);
         return this;
       }
       get names() {
@@ -510,8 +510,8 @@ var require_codegen = __commonJS({
       optimizeNodes() {
         return `${this.code}` ? this : void 0;
       }
-      optimizeNames(names, constants4) {
-        this.code = optimizeExpr(this.code, names, constants4);
+      optimizeNames(names, constants5) {
+        this.code = optimizeExpr(this.code, names, constants5);
         return this;
       }
       get names() {
@@ -540,12 +540,12 @@ var require_codegen = __commonJS({
         }
         return nodes.length > 0 ? this : void 0;
       }
-      optimizeNames(names, constants4) {
+      optimizeNames(names, constants5) {
         const { nodes } = this;
         let i2 = nodes.length;
         while (i2--) {
           const n = nodes[i2];
-          if (n.optimizeNames(names, constants4))
+          if (n.optimizeNames(names, constants5))
             continue;
           subtractNames(names, n.names);
           nodes.splice(i2, 1);
@@ -598,12 +598,12 @@ var require_codegen = __commonJS({
           return void 0;
         return this;
       }
-      optimizeNames(names, constants4) {
+      optimizeNames(names, constants5) {
         var _a4;
-        this.else = (_a4 = this.else) === null || _a4 === void 0 ? void 0 : _a4.optimizeNames(names, constants4);
-        if (!(super.optimizeNames(names, constants4) || this.else))
+        this.else = (_a4 = this.else) === null || _a4 === void 0 ? void 0 : _a4.optimizeNames(names, constants5);
+        if (!(super.optimizeNames(names, constants5) || this.else))
           return;
-        this.condition = optimizeExpr(this.condition, names, constants4);
+        this.condition = optimizeExpr(this.condition, names, constants5);
         return this;
       }
       get names() {
@@ -626,10 +626,10 @@ var require_codegen = __commonJS({
       render(opts) {
         return `for(${this.iteration})` + super.render(opts);
       }
-      optimizeNames(names, constants4) {
-        if (!super.optimizeNames(names, constants4))
+      optimizeNames(names, constants5) {
+        if (!super.optimizeNames(names, constants5))
           return;
-        this.iteration = optimizeExpr(this.iteration, names, constants4);
+        this.iteration = optimizeExpr(this.iteration, names, constants5);
         return this;
       }
       get names() {
@@ -665,10 +665,10 @@ var require_codegen = __commonJS({
       render(opts) {
         return `for(${this.varKind} ${this.name} ${this.loop} ${this.iterable})` + super.render(opts);
       }
-      optimizeNames(names, constants4) {
-        if (!super.optimizeNames(names, constants4))
+      optimizeNames(names, constants5) {
+        if (!super.optimizeNames(names, constants5))
           return;
-        this.iterable = optimizeExpr(this.iterable, names, constants4);
+        this.iterable = optimizeExpr(this.iterable, names, constants5);
         return this;
       }
       get names() {
@@ -710,11 +710,11 @@ var require_codegen = __commonJS({
         (_b = this.finally) === null || _b === void 0 ? void 0 : _b.optimizeNodes();
         return this;
       }
-      optimizeNames(names, constants4) {
+      optimizeNames(names, constants5) {
         var _a4, _b;
-        super.optimizeNames(names, constants4);
-        (_a4 = this.catch) === null || _a4 === void 0 ? void 0 : _a4.optimizeNames(names, constants4);
-        (_b = this.finally) === null || _b === void 0 ? void 0 : _b.optimizeNames(names, constants4);
+        super.optimizeNames(names, constants5);
+        (_a4 = this.catch) === null || _a4 === void 0 ? void 0 : _a4.optimizeNames(names, constants5);
+        (_b = this.finally) === null || _b === void 0 ? void 0 : _b.optimizeNames(names, constants5);
         return this;
       }
       get names() {
@@ -1015,7 +1015,7 @@ var require_codegen = __commonJS({
     function addExprNames(names, from) {
       return from instanceof code_1._CodeOrName ? addNames(names, from.names) : names;
     }
-    function optimizeExpr(expr, names, constants4) {
+    function optimizeExpr(expr, names, constants5) {
       if (expr instanceof code_1.Name)
         return replaceName(expr);
       if (!canOptimize(expr))
@@ -1030,14 +1030,14 @@ var require_codegen = __commonJS({
         return items;
       }, []));
       function replaceName(n) {
-        const c = constants4[n.str];
+        const c = constants5[n.str];
         if (c === void 0 || names[n.str] !== 1)
           return n;
         delete names[n.str];
         return c;
       }
       function canOptimize(e2) {
-        return e2 instanceof code_1._Code && e2._items.some((c) => c instanceof code_1.Name && names[c.str] === 1 && constants4[c.str] !== void 0);
+        return e2 instanceof code_1._Code && e2._items.some((c) => c instanceof code_1.Name && names[c.str] === 1 && constants5[c.str] !== void 0);
       }
     }
     function subtractNames(names, from) {
@@ -76727,7 +76727,7 @@ Use portal_episode_lease with action:"status" for this episode. Wait for its hol
 // src/portal-review-tools.ts
 var REVIEW_TOOL_NAMES = ["portal_decision_list", "portal_decision_record", "portal_review_list", "portal_review_record"];
 var reviewCommonInput = external_exports.object({ channel: external_exports.string().regex(/^[a-z0-9][a-z0-9-]{0,63}$/).optional(), episodeId: external_exports.string().uuid() });
-var decision = external_exports.object({
+var decisionSchema = external_exports.object({
   key: external_exports.string().min(1).max(200),
   value: external_exports.unknown().refine((v) => v !== void 0 && v !== null, "Decision value is required"),
   options: external_exports.unknown().optional(),
@@ -76746,7 +76746,7 @@ var review = external_exports.object({
 });
 var reviewToolSchemas = {
   portal_decision_list: reviewCommonInput.extend({ history: external_exports.boolean().optional() }).strict(),
-  portal_decision_record: reviewCommonInput.extend({ decision, baseRevisionNo: external_exports.number().int().min(0) }).strict(),
+  portal_decision_record: reviewCommonInput.extend({ decision: decisionSchema, baseRevisionNo: external_exports.number().int().min(0) }).strict(),
   portal_review_list: reviewCommonInput.strict(),
   portal_review_record: reviewCommonInput.extend({ review, baseRevisionNo: external_exports.number().int().min(0) }).strict()
 };
@@ -93836,7 +93836,7 @@ Returns: JSON \u2014 { channel, workspace, resolvedBy: "file"|"token", source, h
     name: "portal_storyboard_save",
     title: "Upload an episode directory to the portal",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-    description: `Upload data/<channel>/episodes/<topic>/storyboard/ \u2014 scenes.js (the shots verbatim, the window.* blocks as episode meta), storyboard.md, research.md, script.md, storyboard.html \u2014 to the ttalkkakstory portal under the channel's workspace key. Saving the same episode again updates it (idempotent); the project is the channel, the storyboard is found or created by the episode title (or storyboardTitle for a series). When .portal.json exists, its episodeId updates that same row even if the title changed. The save is also a checkpoint: stage from the argument or storyboard.md's status (approved \u2192 approved, otherwise board), baseRevisionNo from .portal.json. A 409 head_moved means another machine saved first \u2014 the answer lists what THEY changed since your base (shots \xB7 meta \xB7 documents): keep your local edits aside, portal_storyboard_pull the head, re-apply all of your changes on it and resolve by hand where the list overlaps them, save again; a 409 leased names who holds the lease and until when.
+    description: `Upload data/<channel>/episodes/<topic>/storyboard/ \u2014 scenes.js (the shots verbatim, the window.* blocks as episode meta), storyboard.md, research.md, script.md, storyboard.html \u2014 to the ttalkkakstory portal under the channel's workspace key. Saving the same episode again updates it (idempotent); the project is the channel, the storyboard is found or created by the episode title (or storyboardTitle for a series). When .portal.json exists, its episodeId updates that same row even if the title changed. The save reads storyboard/decisions.json when present and uploads its evidenced answers as structured decisions, outside meta; a missing sidecar omits the decisions field. The save is also a checkpoint: stage from the argument or storyboard.md's status (approved \u2192 approved, otherwise board), baseRevisionNo from .portal.json. A 409 head_moved means another machine saved first \u2014 the answer lists what THEY changed since your base (shots \xB7 meta \xB7 documents): keep your local edits aside, portal_storyboard_pull the head, re-apply all of your changes on it and resolve by hand where the list overlaps them, save again; a 409 leased names who holds the lease and until when.
 
 Writes .portal.json (workspace \xB7 storyboardId \xB7 episodeId \xB7 headRevisionNo) into the episode directory. Returns: JSON \u2014 { result: created|updated, storyboardId, episodeId, revisionNo, url, pageUrl, uploaded: { scenes, characters, documents } }.`,
     inputSchema: {
@@ -93875,7 +93875,7 @@ Returns: JSON \u2014 the portal's paginated list (storyboards with id \xB7 title
     name: "portal_storyboard_pull",
     title: "Download a portal episode into a local directory",
     annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
-    description: `\u26A0\uFE0F Download an episode from the ttalkkakstory portal after the session-opening HITL. scenes.js is rebuilt from the portal's rows; uploaded documents and the chosen scenario arrive beside it. mode replace (default) writes into storyboard/, first copies changed local files to backupDir under .portal-local/, and updates .portal.json. mode side clears and writes sideDir under .portal-head/ while leaving storyboard/ and .portal.json untouched. With revision, every file comes from that revision's snapshot and headRevisionNo is that revision; otherwise it is the portal head. Returns backupDir (null when no local file changed), replaced[], sideDir, and headRevisionNo.`,
+    description: `\u26A0\uFE0F Download an episode from the ttalkkakstory portal after the session-opening HITL. scenes.js is rebuilt from the portal's rows; decisions.json comes from the same head or revision snapshot (including an empty array), never an attachment or ordinary document. Uploaded documents and the chosen scenario arrive beside it. mode replace (default) writes into storyboard/, first copies changed local files to backupDir under .portal-local/, and updates .portal.json. mode side clears and writes sideDir under .portal-head/ while leaving storyboard/ and .portal.json untouched. With revision, every file comes from that revision's snapshot and headRevisionNo is that revision; otherwise it is the portal head. Returns backupDir (null when no local file changed), replaced[], sideDir, and headRevisionNo.`,
     inputSchema: {
       type: "object",
       properties: {
@@ -93890,11 +93890,11 @@ Returns: JSON \u2014 the portal's paginated list (storyboards with id \xB7 title
   },
   {
     name: "portal_episode_status",
-    title: "Advance a portal episode's status or stage",
+    title: "Read or update a portal episode",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-    description: `Move a portal episode forward \u2014 status draft \u2192 approved \u2192 produced \u2192 published (produce calls produced when the build passes, publish calls published), or the finer stage; the title can change in the same call. The holder travels with the call, so a lease held by another machine on the same key answers 409 leased.
+    description: `With no status, stage or title, read the episode including decisions and publication records without changing it. Otherwise move a portal episode forward \u2014 status draft \u2192 approved \u2192 produced \u2192 published (produce calls produced when the build passes, publish calls published), or the finer stage; the title can change in the same call. The holder travels with the call, so a lease held by another machine on the same key answers 409 leased.
 
-Returns: JSON \u2014 the updated episode (id, status, stage, title, headRevisionNo).`,
+Returns: JSON \u2014 the current or updated episode (id, status, stage, title, headRevisionNo; available decisions and publication records on reads).`,
     inputSchema: {
       type: "object",
       properties: {
@@ -93968,7 +93968,7 @@ Returns: JSON \u2014 { id, slug, title, stage, url, pageUrl }.`,
     name: "portal_episode_checkpoint",
     title: "Save a revision when a stage ends",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-    description: `Checkpoint the episode on the portal when a stage ends \u2014 candidates after the three scenario pages, scenario after the pick, board after scenes.js is written. With episodeDir the shots and meta from storyboard/scenes.js (when present) and the standard documents that exist (research.md \xB7 storyboard.md \xB7 script.md \xB7 storyboard.html) go up together; identical content makes no new revision and only moves the stage. baseRevisionNo defaults to .portal.json's head; when it differs from the portal's head the answer is 409 head_moved with what the other machine changed since your base (shots \xB7 meta \xB7 documents): keep your local edits aside, portal_storyboard_pull the head, re-apply all of your changes on it (the list marks the overlaps to resolve by hand), checkpoint again. Never retry a 409 blind.
+    description: `Checkpoint the episode on the portal when a stage ends \u2014 candidates after the three scenario pages, scenario after the pick, board after scenes.js is written. With episodeDir, storyboard/decisions.json supplies structured HITL answers even before scenes.js exists; a missing sidecar omits the decisions field. The shots and meta from storyboard/scenes.js (when present) and the standard documents that exist (research.md \xB7 storyboard.md \xB7 script.md \xB7 storyboard.html) go up together; identical content makes no new revision and only moves the stage. baseRevisionNo defaults to .portal.json's head; when it differs from the portal's head the answer is 409 head_moved with what the other machine changed since your base (shots \xB7 meta \xB7 documents): keep your local edits aside, portal_storyboard_pull the head, re-apply all of your changes on it (the list marks the overlaps to resolve by hand), checkpoint again. Never retry a 409 blind.
 
 Updates .portal.json headRevisionNo. Returns: JSON \u2014 { result: "new revision"|"unchanged (stage only)", revisionNo, stage, uploaded: { scenes, documents } }.`,
     inputSchema: {
@@ -98171,9 +98171,12 @@ var SNS_PLATFORM_BY_TOOL = {
   youtube_insights: "YOUTUBE"
 };
 
+// src/portal-decisions.ts
+import { closeSync as closeSync5, constants as constants3, fstatSync as fstatSync3, openSync as openSync5, readSync as readSync3 } from "node:fs";
+
 // src/portal-canonical.ts
 function canonicalPullPaths(episode, written = []) {
-  return new Set([...DOCUMENT_FILES, "scenario.md", ...(episode.documents ?? []).map((d) => d.filename), ...written].filter((filename) => SAFE_DOCUMENT_NAME.test(filename)).map((filename) => `storyboard/${filename}`.toLowerCase()));
+  return new Set([...DOCUMENT_FILES, "scenario.md", "decisions.json", ...(episode.documents ?? []).map((d) => d.filename), ...written].filter((filename) => SAFE_DOCUMENT_NAME.test(filename)).map((filename) => `storyboard/${filename}`.toLowerCase()));
 }
 
 // src/portal-attachments.ts
@@ -98323,18 +98326,59 @@ async function attachmentSyncReport(action) {
   }
 }
 
+// src/portal-decisions.ts
+var decisionsSchema = external_exports.array(decisionSchema).max(500).refine(
+  (items) => new Set(items.map((item) => item.key)).size === items.length,
+  "Duplicate decision keys"
+);
+var portalDecisionsSchema = external_exports.preprocess((input) => {
+  if (!Array.isArray(input)) return input;
+  return input.map((item) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return item;
+    const decision = { ...item };
+    if (decision.options === null) delete decision.options;
+    if (decision.reason === null) delete decision.reason;
+    return decision;
+  });
+}, decisionsSchema);
+function readDecisions(episodeDir) {
+  const file = safeAttachmentTarget(episodeDir, "storyboard/decisions.json");
+  let fd;
+  try {
+    fd = openSync5(file, constants3.O_RDONLY | constants3.O_NOFOLLOW);
+  } catch (error2) {
+    if (error2.code === "ENOENT") return void 0;
+    throw error2;
+  }
+  try {
+    const limit2 = 10 * 1024 * 1024;
+    const stat4 = fstatSync3(fd);
+    if (!stat4.isFile() || stat4.size > limit2) throw new Error("decisions.json must be a regular file of at most 10 MiB.");
+    const bytes = Buffer.alloc(limit2 + 1);
+    let size = 0;
+    let count = 0;
+    while ((count = readSync3(fd, bytes, size, bytes.length - size, null)) > 0) {
+      size += count;
+      if (size > limit2) throw new Error("decisions.json exceeds 10 MiB.");
+    }
+    return decisionsSchema.parse(JSON.parse(bytes.subarray(0, size).toString("utf8")));
+  } finally {
+    closeSync5(fd);
+  }
+}
+
 // src/portal-channel-sync.ts
 import { createHash as createHash5, randomUUID as randomUUID4 } from "node:crypto";
 import {
-  constants as constants3,
-  closeSync as closeSync5,
+  constants as constants4,
+  closeSync as closeSync6,
   existsSync as existsSync17,
-  fstatSync as fstatSync3,
+  fstatSync as fstatSync4,
   lstatSync as lstatSync3,
   mkdirSync as mkdirSync8,
-  openSync as openSync5,
+  openSync as openSync6,
   readFileSync as readFileSync16,
-  readSync as readSync3,
+  readSync as readSync4,
   readdirSync as readdirSync3,
   renameSync as renameSync6,
   rmSync as rmSync7,
@@ -98370,16 +98414,16 @@ function inside(root, relative) {
   return target;
 }
 function readBounded2(file) {
-  const fd = openSync5(file, constants3.O_RDONLY | constants3.O_NOFOLLOW);
+  const fd = openSync6(file, constants4.O_RDONLY | constants4.O_NOFOLLOW);
   try {
-    const stat4 = fstatSync3(fd);
+    const stat4 = fstatSync4(fd);
     if (!stat4.isFile() || stat4.size > MAX_FILE_BYTES2) throw new Error(`Channel asset exceeds 100 MiB: ${file}`);
     const out = Buffer.alloc(stat4.size);
     let offset = 0;
-    while (offset < out.length) offset += readSync3(fd, out, offset, out.length - offset, null);
+    while (offset < out.length) offset += readSync4(fd, out, offset, out.length - offset, null);
     return out;
   } finally {
-    closeSync5(fd);
+    closeSync6(fd);
   }
 }
 function readState(root) {
@@ -98607,7 +98651,7 @@ import path21 from "node:path";
 
 // src/portal-assets.ts
 import { createHash as createHash6 } from "node:crypto";
-import { closeSync as closeSync6, existsSync as existsSync18, mkdirSync as mkdirSync9, openSync as openSync6, readFileSync as readFileSync17, renameSync as renameSync7, rmSync as rmSync8, statSync as statSync9, writeSync as writeSync2 } from "node:fs";
+import { closeSync as closeSync7, existsSync as existsSync18, mkdirSync as mkdirSync9, openSync as openSync7, readFileSync as readFileSync17, renameSync as renameSync7, rmSync as rmSync8, statSync as statSync9, writeSync as writeSync2 } from "node:fs";
 import path19 from "node:path";
 var channelArg2 = external_exports.string().regex(/^[a-z0-9][a-z0-9-]{0,63}$/, "kebab-case channel slug").optional();
 var list = external_exports.array(external_exports.string().trim().min(1).max(64)).max(32).optional();
@@ -98749,7 +98793,7 @@ async function getAsset(client, args) {
   }
   mkdirSync9(path19.dirname(file), { recursive: true });
   const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
-  const fd = openSync6(tmp, "wx");
+  const fd = openSync7(tmp, "wx");
   const hash4 = createHash6("sha256");
   let size = 0;
   try {
@@ -98757,12 +98801,12 @@ async function getAsset(client, args) {
       hash4.update(chunk2);
       writeSync2(fd, chunk2);
     }, asset.byteSize);
-    closeSync6(fd);
+    closeSync7(fd);
     if (size !== asset.byteSize || hash4.digest("hex") !== asset.sha256) throw new Error(`Downloaded bytes do not match the portal's sha256/byteSize for asset ${asset.id}. Nothing was kept.`);
     renameSync7(tmp, file);
   } catch (error2) {
     try {
-      closeSync6(fd);
+      closeSync7(fd);
     } catch {
     }
     rmSync8(tmp, { force: true });
@@ -98772,7 +98816,7 @@ async function getAsset(client, args) {
 }
 
 // src/portal-artifacts.ts
-import { closeSync as closeSync7, existsSync as existsSync19, fstatSync as fstatSync4, openSync as openSync7, readFileSync as readFileSync18, readSync as readSync4, realpathSync as realpathSync2 } from "node:fs";
+import { closeSync as closeSync8, existsSync as existsSync19, fstatSync as fstatSync5, openSync as openSync8, readFileSync as readFileSync18, readSync as readSync5, realpathSync as realpathSync2 } from "node:fs";
 import path20 from "node:path";
 import { fileURLToPath as fileURLToPath2 } from "node:url";
 var platform = external_exports.enum(["youtube", "instagram", "threads", "facebook"]);
@@ -98866,21 +98910,21 @@ function readCosts(dir) {
   return { lines, actualUsd, complete: unpricedItems.size === 0, unpricedItems: [...unpricedItems], source: ".work/cost-tally.tsv" };
 }
 function readSmallMedia(file) {
-  const fd = openSync7(file, "r");
+  const fd = openSync8(file, "r");
   try {
-    const stat4 = fstatSync4(fd);
+    const stat4 = fstatSync5(fd);
     if (!stat4.isFile() || !stat4.size) throw new Error("Cover must be a regular nonempty file.");
     if (stat4.size > 5 * 1024 * 1024) throw new Error("Cover exceeds the 5 MiB image limit.");
     const bytes = Buffer.allocUnsafe(stat4.size);
     let size = 0;
     while (size < bytes.length) {
-      const n = readSync4(fd, bytes, size, bytes.length - size, null);
+      const n = readSync5(fd, bytes, size, bytes.length - size, null);
       if (!n) break;
       size += n;
     }
     return bytes.subarray(0, size);
   } finally {
-    closeSync7(fd);
+    closeSync8(fd);
   }
 }
 function resolveEpisodeId(dir, explicit) {
@@ -99451,8 +99495,10 @@ function portalHandlers(fetchImpl) {
         const payload = buildImportPayload(episodeDir, { project, storyboard: storyboardTitle, title });
         const state = readPortalState(episodeDir);
         const base = saveBase(episodeDir, baseRevisionNo);
+        const decisions = readDecisions(episodeDirOf(episodeDir));
         payload.episode = {
           ...payload.episode,
+          ...decisions !== void 0 ? { decisions } : {},
           ...state?.episodeId ? { id: state.episodeId } : {},
           ...stageArg ? { stage: stageArg } : {},
           ...base !== void 0 ? { baseRevisionNo: base } : {},
@@ -99512,18 +99558,20 @@ function portalHandlers(fetchImpl) {
         const sb = path21.join(dir, "storyboard");
         const fileContents = /* @__PURE__ */ new Map();
         fileContents.set("scenes.js", await c.scenesJs(episodeId, revision2));
+        let decisions = portalDecisionsSchema.parse(revision2 ? [] : episode.decisions ?? []);
         if (revision2) {
+          const { data: rev } = await c.getRevision(episodeId, revision2);
+          decisions = portalDecisionsSchema.parse(rev.snapshot?.decisions ?? []);
           if (includeDocuments) {
-            const { data: rev } = await c.getRevision(episodeId, revision2);
             for (const [filename, content] of Object.entries(rev.documents ?? {})) {
-              if (filename === "scenes.js" || !SAFE_DOCUMENT_NAME.test(filename)) continue;
+              if (filename === "scenes.js" || filename.toLowerCase() === "decisions.json" || !SAFE_DOCUMENT_NAME.test(filename)) continue;
               fileContents.set(filename, content);
             }
           }
         } else {
           if (includeDocuments) {
             for (const doc of episode.documents ?? []) {
-              if (doc.filename === "scenes.js") continue;
+              if (doc.filename === "scenes.js" || doc.filename.toLowerCase() === "decisions.json") continue;
               if (!SAFE_DOCUMENT_NAME.test(doc.filename)) continue;
               fileContents.set(doc.filename, await c.document(episodeId, doc.filename));
             }
@@ -99533,6 +99581,7 @@ function portalHandlers(fetchImpl) {
             fileContents.set("scenario.md", await c.scenarioMd(episodeId, chosen.candidate));
           }
         }
+        fileContents.set("decisions.json", JSON.stringify(decisions, null, 2) + "\n");
         for (const filename of fileContents.keys()) safeAttachmentTarget(dir, `storyboard/${filename}`);
         const removed = revision2 && includeDocuments && mode === "replace" ? [.../* @__PURE__ */ new Set([...DOCUMENT_FILES, "scenario.md", ...(episode.documents ?? []).map((doc) => doc.filename)])].filter((filename) => SAFE_DOCUMENT_NAME.test(filename) && !fileContents.has(filename)).filter((filename) => {
           const target = safeAttachmentTarget(dir, `storyboard/${filename}`);
@@ -99583,6 +99632,8 @@ function portalHandlers(fetchImpl) {
         if (mode !== "side") writePortalState(dir, { workspace: c.workspace, storyboardId: episode.storyboardId, episodeId, headRevisionNo });
         return ok({
           attachments,
+          decisions,
+          ...revision2 ? {} : { publications: episode.publications ?? [] },
           episode: {
             id: episode.id,
             slug: episode.slug,
@@ -99613,8 +99664,8 @@ function portalHandlers(fetchImpl) {
       if (refused) return refused;
       try {
         const patch = { ...status ? { status } : {}, ...stageArg ? { stage: stageArg } : {}, ...title ? { title } : {} };
-        if (Object.keys(patch).length === 0) throw new Error("one of status \xB7 stage \xB7 title is required.");
         const id = resolveEpisodeId2(episodeId, episodeDir);
+        if (Object.keys(patch).length === 0) return ok((await r2.client.getEpisode(id)).data);
         return ok((await r2.client.updateEpisode(id, patch)).data);
       } catch (error2) {
         return failed(error2);
@@ -99658,11 +99709,13 @@ function portalHandlers(fetchImpl) {
       try {
         const id = resolveEpisodeId2(episodeId, episodeDir);
         const base = saveBase(episodeDir, baseRevisionNo, true);
+        const decisions = episodeDir ? readDecisions(episodeDirOf(episodeDir)) : void 0;
         const body = {
           stage: stageArg,
           note,
           sourceHost: r2.client.holder,
-          baseRevisionNo: base
+          baseRevisionNo: base,
+          ...decisions !== void 0 ? { decisions } : {}
         };
         let uploadedDocuments = [];
         let uploadedScenes = 0;
@@ -99679,7 +99732,7 @@ function portalHandlers(fetchImpl) {
             body.narratorCharacterId = payload.narratorCharacterId;
             uploadedScenes = payload.scenes.length;
           }
-          const docs = readDocuments(sb, documents ?? DOCUMENT_FILES);
+          const docs = readDocuments(sb, (documents ?? DOCUMENT_FILES).filter((filename) => filename.toLowerCase() !== "decisions.json"));
           body.documents = docs;
           uploadedDocuments = docs.map((d) => d.filename);
         }
@@ -100393,7 +100446,7 @@ function checkThreadsEpisode(input) {
 
 // src/portal-media.ts
 import { createHash as createHash8, randomUUID as randomUUID6 } from "node:crypto";
-import { appendFileSync as appendFileSync3, closeSync as closeSync8, fstatSync as fstatSync5, statSync as statSync11, mkdirSync as mkdirSync12, openSync as openSync8, readFileSync as readFileSync22, readSync as readSync5, realpathSync as realpathSync4, renameSync as renameSync9, rmSync as rmSync11, writeFileSync as writeFileSync17 } from "node:fs";
+import { appendFileSync as appendFileSync3, closeSync as closeSync9, fstatSync as fstatSync6, statSync as statSync11, mkdirSync as mkdirSync12, openSync as openSync9, readFileSync as readFileSync22, readSync as readSync6, realpathSync as realpathSync4, renameSync as renameSync9, rmSync as rmSync11, writeFileSync as writeFileSync17 } from "node:fs";
 import path22 from "node:path";
 var portalShotFields = {
   episodeDir: external_exports.string().min(1),
@@ -100428,15 +100481,15 @@ function recordOversize(dir, file, kind, bytes) {
 function readMedia(file, kind) {
   const mime3 = mimeByExt[path22.extname(file).toLowerCase()];
   if (!mime3 || !(["image", "end_frame"].includes(kind) ? mime3.startsWith("image/") : ["narration", "narration_segment"].includes(kind) ? mime3.startsWith("audio/") : mime3 === "video/mp4")) throw new Error("Media extension does not match its kind.");
-  const limit2 = limits[kind] * 1024 * 1024, fd = openSync8(file, "r");
+  const limit2 = limits[kind] * 1024 * 1024, fd = openSync9(file, "r");
   try {
-    const stat4 = fstatSync5(fd);
+    const stat4 = fstatSync6(fd);
     if (!stat4.isFile() || !stat4.size) throw new Error(`${kind} must be a regular nonempty file.`);
     if (stat4.size > limit2) throw new MediaTooLarge(stat4.size);
     const buffer = Buffer.allocUnsafe(limit2 + 1);
     let size = 0;
     while (size < buffer.length) {
-      const n = readSync5(fd, buffer, size, buffer.length - size, null);
+      const n = readSync6(fd, buffer, size, buffer.length - size, null);
       if (!n) break;
       size += n;
     }
@@ -100445,7 +100498,7 @@ function readMedia(file, kind) {
     const bytes = buffer.subarray(0, size);
     return { bytes, mime: mime3, sha256: createHash8("sha256").update(bytes).digest("hex") };
   } finally {
-    closeSync8(fd);
+    closeSync9(fd);
   }
 }
 async function uploadShotMedia(args, fetchImpl) {
@@ -100474,7 +100527,7 @@ async function uploadShotMedia(args, fetchImpl) {
   const lock = path22.join(dir, ".portal-media.lock");
   let fd;
   try {
-    fd = openSync8(lock, "wx");
+    fd = openSync9(lock, "wx");
   } catch {
     throw new Error("Another media upload is active for this episode. After a crash, inspect .portal-media.lock before removing it.");
   }
@@ -100543,7 +100596,7 @@ ${assignment}
       next: phase === "validate" ? "Resolve the local target or side-pull/merge the head. No generation was called." : "Keep the existing media file. Do not regenerate it. Side-pull/merge the head and recovery copy before retrying with an explicit base. Unlinked uploads may be cleaned after 24h."
     }));
   } finally {
-    closeSync8(fd);
+    closeSync9(fd);
     rmSync11(lock, { force: true });
   }
 }
@@ -104006,7 +104059,7 @@ async function checkAccounts(channel) {
 
 // src/tts-final-quality.ts
 import { execFile as execFile9 } from "node:child_process";
-import { existsSync as existsSync23, mkdtempSync as mkdtempSync7, readFileSync as readFileSync23, rmSync as rmSync12, writeFileSync as writeFileSync18, renameSync as renameSync10, openSync as openSync9, closeSync as closeSync9 } from "node:fs";
+import { existsSync as existsSync23, mkdtempSync as mkdtempSync7, readFileSync as readFileSync23, rmSync as rmSync12, writeFileSync as writeFileSync18, renameSync as renameSync10, openSync as openSync10, closeSync as closeSync10 } from "node:fs";
 import { tmpdir as tmpdir6 } from "node:os";
 import path24 from "node:path";
 import { promisify as promisify4 } from "node:util";
@@ -104027,7 +104080,7 @@ async function reviewFinalSpeech(input, deps = { listen }) {
   const proofPath = media + ".speech-quality.json", lockPath = proofPath + ".lock";
   let lock;
   try {
-    lock = openSync9(lockPath, "wx");
+    lock = openSync10(lockPath, "wx");
   } catch {
     return { success: false, status: "unverified", error: "Final speech review is already locked" };
   }
@@ -104089,7 +104142,7 @@ async function reviewFinalSpeech(input, deps = { listen }) {
     return singleReviewStarted ? save2("unverified", failure2) : { success: false, status: "unverified", proofPath, ...failure2 };
   } finally {
     rmSync12(temp, { recursive: true, force: true });
-    closeSync9(lock);
+    closeSync10(lock);
     rmSync12(lockPath, { force: true });
   }
 }

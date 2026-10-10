@@ -14,6 +14,9 @@ argument-hint: "<channel> <topic> [platformCSV|auto]"
 allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__sns_account_check", "mcp__social-flow__portal_publication_record", "mcp__social-flow__portal_episode_status"]
 ---
 
+**HITL records:** Record final platform approval separately from actual publication outcomes. Follow [the decision record contract](../storyboard/references/portal-decisions.md); preserve actual provenance and reuse existing authorization. This adds no approval gate.
+
+
 # Platform publishing — public immediately after HITL approval
 
 Publishes the finished artifacts in `output/` with the per-platform publish tools.
