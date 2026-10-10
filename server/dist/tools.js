@@ -1,6 +1,7 @@
 import { REVIEW_TOOLS } from './portal-review-tools.js';
 import { UNIT_TOOLS } from './portal-unit-tools.js';
 import { PORTAL_API_TOOLS } from './portal-api-contract.js';
+import { CHANNEL_SLUG_RE } from './config.js';
 import { cameraContract, renderPurposes, stillCameraEffectList, contract as storyboardContract } from './storyboard.js';
 import { MUSIC_GENERATION_MODES, MUSIC_SCALES } from './music-client.js';
 import { DEFAULT_SUPERTONIC_CHUNK_PAUSE, DEFAULT_SUPERTONIC_LANGUAGE, DEFAULT_SUPERTONIC_SPEED, DEFAULT_SUPERTONIC_STEPS, DEFAULT_SUPERTONIC_VOICE, MAX_SUPERTONIC_INPUT_CHARS, MAX_SUPERTONIC_SPEED, SUPERTONIC_LANGUAGES, SUPERTONIC_VOICE_NAMES, } from './supertonic-client.js';
@@ -816,7 +817,7 @@ const PORTAL_TOOLS = [
         name: 'portal_workspace_check',
         title: 'Check the portal key and its workspace',
         annotations: HINT.read,
-        description: `Resolve the ttalkkakstory portal key for a channel and ask the portal who it is — the workspace the key opens, the role (member), and which file answered (per-channel · flat · env). Call it once at the top of a storyboard session before any portal write, so a save never lands in another workspace.
+        description: `Resolve the ttalkkakstory portal key for a channel and ask the portal who it is — the workspace the key opens, the role (member), and which file answered (per-channel · flat · env). Call only after the user chose portal integration for this episode. Use capability_status with channel for the local key check before that HITL; this tool makes network calls.
 
 The key is issued on the portal at /{workspace}/settings/api-keys (admin+) and saved as <SNS_TOKEN_DIR>/<channel>/ttalkkakstory.json — { "apiKey": "tks_…" }. apiUrl defaults to https://story.ttalkkaklab.com; workspace is resolved from /api/token and an explicit workspace must match the key. With no key anywhere the portal_* tools are hidden and every call answers one line; the episode stays a local file.
 
@@ -948,7 +949,7 @@ Returns: JSON — the current or updated episode (id, status, stage, title, head
         name: 'portal_episode_create',
         title: 'Create an empty episode row on the portal',
         annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
-        description: `Create an episode on the ttalkkakstory portal before anything is written locally — from the research stage on, the portal is the record and the directory a working copy. slug is the local directory name (data/<channel>/episodes/<slug>); storyboardId comes from portal_storyboard_list. With episodeDir the directory is created and .portal.json written (headRevisionNo 0), which the later checkpoints read.
+        description: `Create an episode on the ttalkkakstory portal after the user chose portal integration for this episode — in that mode the portal is the record and the directory a working copy. Key presence alone does not authorize creation; local HTML mode skips this tool. slug is the local directory name (data/<channel>/episodes/<slug>); storyboardId comes from portal_storyboard_list. With episodeDir the directory is created and .portal.json written (headRevisionNo 0), which the later checkpoints read.
 
 Returns: JSON — { id, slug, title, stage, url, pageUrl }.`,
         inputSchema: {
@@ -4188,15 +4189,17 @@ Returns: a text block with the saved .wav path, model, duration, and generation 
         name: 'capability_status',
         title: 'What this machine can do right now',
         annotations: HINT.local,
-        description: `Report which generation and research capabilities are configured on this machine, grouped by capability with an "N of M configured" count per group, plus the env vars that would unlock the rest.
+        description: `Report which generation and research capabilities are configured on this machine, grouped by capability with an "N of M configured" count per group, plus the env vars that would unlock the rest. Pass channel to check that channel's storyboard portal key locally (per-channel file → flat file → env), without printing the key or calling the portal. Another channel's key never enables this channel. storyboard_portal reports configured (ask local HTML vs portal HITL before portal calls), missing (local HTML without a question), or invalid (warn and keep local HTML). Reuse an explicit episode choice; tool visibility and key presence are not consent. Without channel, only the flat/env credential is checked.
 
 Use it BEFORE planning anything that spends money or depends on a provider — the top of a storyboard, produce, or autoproduce run. Without it, a missing key shows up only when the call fails, which is after the plan was built around a tool that was never going to run: planning two Veo b-roll slots on a machine with no GEMINI_API_KEY costs the review rounds before anyone finds out. Also use it when the user asks what they can make, or why a tool is failing.
 Do NOT use it to test whether a key still works. It reports CONFIGURATION, not reachability — a revoked key reads as configured here and fails at the call. Local engines report only whether their binary resolves (mflux, python3, mlx-qwen3-asr) or whether MLX Core.app / mlx-serve is installed — not whether :11234 is up. Read-only; makes no API call, so one call per session is enough.
 
-Returns: a capability menu — video_generation, image_generation, tts, music_generation, 3d_generation, speech_to_text, stock_footage, research — each listing its providers with the env var or local install each one needs, then the publishing platforms that have credential files, then the env vars grouped by what each would turn on.`,
+Returns: a capability menu — video_generation, image_generation, tts, music_generation, 3d_generation, speech_to_text, stock_footage, research — each listing its providers with the env var or local install each one needs, then the publishing platforms, storyboard_portal configuration for the channel, and the env vars grouped by what each would turn on.`,
         inputSchema: {
             type: 'object',
-            properties: {},
+            properties: {
+                channel: { type: 'string', pattern: CHANNEL_SLUG_RE.source, description: 'Target channel slug, as in data/<channel>. Checks local portal configuration only; no network request.' },
+            },
             required: [],
         },
     },

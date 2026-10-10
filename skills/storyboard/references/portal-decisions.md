@@ -1,5 +1,7 @@
 # Record actual HITL answers
 
+Episode portal calls follow [storyboard-target.md](storyboard-target.md). Local mode records answers locally and skips every remote call below, even with a key. The destination choice stays in `.storyboard-target.json` and is never included in the synced decisions array.
+
 Keep episode answers in `storyboard/decisions.json`, a JSON array with one entry per key.
 Update the matching key when the user changes an answer. Preserve the original source,
 options, reason and answer time when reusing it. A reviewer score, stage or completed build

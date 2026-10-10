@@ -1,8 +1,7 @@
 ---
 name: autoproduce
 description: >
-  Runs one topic all the way to shipped files with no human gate — the unattended twin of
-  storyboard plus produce. Use when the user asks to "이 주제로 영상 하나 만들어", "주제만 주면 영상까지
+  Builds an episode unattended after its destination choice. Combines storyboard and produce. Use when the user asks to "이 주제로 영상 하나 만들어", "주제만 주면 영상까지
   만들어줘", "자동으로 쇼츠 만들어", "make a short about X end to end", or when a growth loop needs to
   refill its publish queue by itself. Researches, writes 3 seven-item scenario candidates and
   has them judged in one batched reviewer read, authors scenes.js, loops the narration alone
@@ -11,9 +10,9 @@ description: >
   data/[channel]/episodes/[topic]/output/. Machine gates replace human approval: facts, the
   batched scenario read, the two narration loops, the style and contract checkers, build
   report, one content-reviewer read at 95 with zero P0, and a cost cap. Boundary — storyboard
-  plans and stops, produce builds an approved episode, autoproduce does both without stopping.
+  plans and stops, produce builds an approved episode, autoproduce does both after destination consent.
 argument-hint: "<channel> \"<topic>\" [unattended]"
-allowed-tools: ["mcp__social-flow__portal_channel_sync", "mcp__social-flow__portal_assets_search", "mcp__social-flow__portal_assets_get", "mcp__social-flow__portal_render_allocation", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent",
+allowed-tools: ["mcp__social-flow__portal_channel_sync", "mcp__social-flow__capability_status", "mcp__social-flow__portal_assets_search", "mcp__social-flow__portal_assets_get", "mcp__social-flow__portal_render_allocation", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent",
   "WebSearch", "WebFetch",
   "mcp__social-flow__naver_search", "mcp__social-flow__serp_web_search",
   "mcp__social-flow__serp_news_search", "mcp__social-flow__serp_naver_search",
@@ -33,13 +32,11 @@ allowed-tools: ["mcp__social-flow__portal_channel_sync", "mcp__social-flow__port
 
 
 # From one topic to a finished video — unattended authoring
-Before reading `profile.md`, call `portal_channel_sync` with `action: "pull"`. A 409 conflict
-holds this queue item. A missing key, network error, 401 or 5xx gets one warning line, then
-continue with the local profile and shared assets.
+First follow [storyboard-target.md](../storyboard/references/storyboard-target.md). No key means local HTML. With a key, reuse an explicit episode/standing destination choice or hold this queue item for the destination HITL; unattended production never supplies portal consent. Local mode skips all portal steps below and media-tool `portal` arguments. Both modes use the shared [storyboard design](../storyboard/references/storyboard-design.md). Only chosen portal mode calls `portal_channel_sync` before reading the profile; a 409 holds this item, while network/auth failures warn once and continue locally.
 For pending portal render requests, follow [the six-ratio allocation contract](../storyboard/references/production-mode.md): `portal_render_allocation` read → host LLM reasons over every shot → submit requestId/baseRevisionNo and all assignments → pull. New choices persist `PRODUCTION.renderRatioVersion:1`; neither a pending request nor ratio selection approves spending.
 Read [story-quality.md](../storyboard/references/story-quality.md) before candidate writing, including skip-research channels. It overrides mandatory closing questions and modern parallels. Write STORY with the story pass; use gate 6f's existing narration read for the four quoted findings. After vocabulary edits revalidate and run `check-story.js storyboard/` before any generation. Missing, failed or stale reviews stop production with queue hold, not merely publication. A closing beat may have `cta:"none"`. An ask stays optional; a forwardable thing does not — an ask requests behaviour from the viewer, while a forwardable thing is one sentence, figure or verdict they can pass on as-is. Asking to be shared is an ask, not a trigger.
 
-Runs `storyboard → produce` end to end without human approval. The input is a
+After the destination is resolved, runs `storyboard → produce` end to end without production approval. The input is a
 single topic string; the output is a publishable `output/` set.
 
 **This does not replace those two skills.** Contracts, templates, and builders
@@ -736,7 +733,7 @@ the price.
   out and this step copies or generates a single `.work/bgm.wav`. If the channel has a
   shared bed, just copy it.
   `python3 ${CLAUDE_PLUGIN_ROOT}/skills/channel/references/resolve-asset.py data/<channel> bgm default`
-  — if a path comes back, copy it to `.work/bgm.wav`. Otherwise, with a portal key,
+  — if a path comes back, copy it to `.work/bgm.wav`. Otherwise, in chosen portal mode with a key,
   `portal_assets_search` `type: ["music"]`, `query` the episode's mood words; a hit goes through
   `portal_assets_get` `download: true` to `.work/portal/<sourceId>.m4a` and then ffmpeg
   (`-vn -ac 2 -ar 48000`) to `.work/bgm.wav` at no cost. Only when the library has nothing put a
