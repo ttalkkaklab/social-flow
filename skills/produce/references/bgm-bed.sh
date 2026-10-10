@@ -130,7 +130,12 @@ done
 IN=(); FC=""; MIX="[0:a]"
 for ((k=0; k<NC; k++)); do IN+=(-i "${SEGS[$k]}"); done
 for ((k=1; k<NC; k++)); do
-  FC+="${MIX}[$k:a]acrossfade=d=$CUE_XF:c1=tri:c2=tri[m$k];"; MIX="[m$k]"
+  if awk -v x="$CUE_XF" 'BEGIN{exit !(x == 0)}'; then
+    FC+="${MIX}[$k:a]concat=n=2:v=0:a=1[m$k];"
+  else
+    FC+="${MIX}[$k:a]acrossfade=d=$CUE_XF:c1=tri:c2=tri[m$k];"
+  fi
+  MIX="[m$k]"
 done
 ffmpeg -y -v error "${IN[@]}" -filter_complex "${FC}${MIX}atrim=0:$LEN,asetpts=PTS-STARTPTS[o]" \
   -map "[o]" -ac 2 -ar 48000 -c:a pcm_s16le "$OUT"

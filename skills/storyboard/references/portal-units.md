@@ -1,5 +1,7 @@
 # Portal unit tools
 
+For episode workflows, use these only after the destination choice in [storyboard-target.md](storyboard-target.md) selects portal mode. Local HTML mode uses local storyboard tools and never calls these endpoints.
+
 Use `portal_storyboard_create/get/update/delete` alongside the existing list tool.
 Creation takes `value: {title, characterId}`; this workflow helper derives the project
 from that narrator character. The underlying project records are available through

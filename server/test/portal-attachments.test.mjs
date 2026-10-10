@@ -16,6 +16,10 @@ test('attachment round trip preserves duplicate paths, empty files, binary audio
     for (const [name, bytes] of Object.entries(files)) writeFileSync(path.join(source, name), bytes);
     const provenance = { tool: 'Suno', planAtGeneration: 'Basic', rightsAtGeneration: 'non-commercial' };
     writeFileSync(path.join(source, '.portal-attachments.json'), JSON.stringify({ 'storyboard/audio.m4a': { provenance } }));
+    writeFileSync(path.join(source, '.storyboard-target.json'), JSON.stringify({ version: 1, target: 'portal', chosenBy: 'user' }));
+    mkdirSync(target);
+    const localChoice = JSON.stringify({ version: 1, target: 'local', chosenBy: 'user' });
+    writeFileSync(path.join(target, '.storyboard-target.json'), localChoice);
     const saved = new Map(), blobs = new Map(); let sends = 0;
     const client = {
       getEpisode: async () => ({ data: { documents: [] } }),
@@ -31,17 +35,19 @@ test('attachment round trip preserves duplicate paths, empty files, binary audio
       downloadAttachment: async (_id, id) => { const item = [...saved.values()].find(item => item.id === id); return blobs.get(item.sha256); },
     };
     assert.equal((await uploadAttachments(client, 'ep', source)).uploaded, 4);
+    assert.equal(saved.has('.storyboard-target.json'), false);
     assert.equal(blobs.size, 3);
     assert.equal((await uploadAttachments(client, 'ep', source)).unchanged, 4);
     assert.equal(sends, 4);
     assert.equal((await restoreAttachments(client, 'ep', target)).restored, 4);
+    assert.equal(readFileSync(path.join(target, '.storyboard-target.json'), 'utf8'), localChoice);
     for (const [name, bytes] of Object.entries(files)) assert.deepEqual(readFileSync(path.join(target, name)), bytes);
     assert.deepEqual(JSON.parse(readFileSync(path.join(target, '.portal-attachments.json')))['storyboard/audio.m4a'].provenance, provenance);
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
 
 test('rejects traversal, reserved state paths, symlink escapes and corrupt downloads before file writes', async () => {
-  for (const name of ['../out', '/absolute', 'a\\b', 'a/../b', '.portal.json', 'storyboard/.portal-local/x', 'C:drive']) assert.throws(() => validateAttachmentPath(name));
+  for (const name of ['../out', '/absolute', 'a\\b', 'a/../b', '.portal.json', '.storyboard-target.json', '.STORYBOARD-TARGET.JSON', 'storyboard/.portal-local/x', 'C:drive']) assert.throws(() => validateAttachmentPath(name));
   const root = mkdtempSync(path.join(tmpdir(), 'attachments81-'));
   try {
     const target = path.join(root, 'target'), outside = path.join(root, 'outside');
@@ -61,12 +67,12 @@ test('canonical revision paths are excluded from upload and legacy restore inclu
   const root = mkdtempSync(path.join(tmpdir(), 'attachments81-canonical-'));
   try {
     mkdirSync(path.join(root, 'storyboard'));
-    const names = ['scenes.js', 'storyboard.md', 'research.md', 'script.md', 'storyboard.html', 'scenario.md', 'custom.md'];
+    const names = ['scenes.js', 'storyboard.md', 'research.md', 'script.md', 'storyboard.html', 'scenario.md', 'decisions.json', 'custom.md'];
     for (const name of names) writeFileSync(path.join(root, 'storyboard', name), 'revision-owned');
     let writes = 0;
     const client = {
       getEpisode: async () => ({ data: { documents: [{ filename: 'custom.md' }] } }),
-      listAttachments: async () => ({ data: { items: [...names, 'SCENES.JS'].map(name => ({ relativePath: `storyboard/${name}`, byteSize: 1 })) } }),
+      listAttachments: async () => ({ data: { items: [...names, 'SCENES.JS', 'DECISIONS.JSON'].map(name => ({ relativePath: `storyboard/${name}`, byteSize: 1 })) } }),
       uploadAttachment: async () => { writes++; throw new Error('must not upload canonical'); },
       downloadAttachment: async () => { throw new Error('must not download canonical'); },
     };
@@ -77,7 +83,7 @@ test('canonical revision paths are excluded from upload and legacy restore inclu
     assert.equal(writes, 0);
     const restore = await restoreAttachments(client, 'ep', root);
     assert.equal(restore.restored, 0);
-    assert.equal(restore.skipped.length, names.length + 1);
+    assert.equal(restore.skipped.length, names.length + 2);
     for (const name of names) assert.equal(readFileSync(path.join(root, 'storyboard', name), 'utf8'), 'revision-owned');
   } finally { rmSync(root, { recursive: true, force: true }); }
 });

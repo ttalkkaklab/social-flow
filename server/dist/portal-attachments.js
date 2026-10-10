@@ -5,7 +5,7 @@ import path from 'node:path';
 const LIMIT = 10 * 1024 * 1024;
 const MANIFEST = '.portal-attachments.json';
 const hash = (bytes) => createHash('sha256').update(bytes).digest('hex');
-const ignored = (part) => ['.git', 'node_modules', '.portal.json', MANIFEST, '.portal-head', '.portal-local', '.DS_Store'].includes(part) || part === '.env' || part.startsWith('.env.');
+const ignored = (part) => ['.git', 'node_modules', '.portal.json', MANIFEST, '.portal-head', '.portal-local', '.DS_Store'].includes(part) || part.toLowerCase() === '.storyboard-target.json' || part === '.env' || part.startsWith('.env.');
 export function validateAttachmentPath(value) {
     if (!value || Buffer.byteLength(value) > 1024 || /[\\\x00-\x1f\x7f:]/.test(value) || value.startsWith('/') ||
         value.split('/').some(p => !p || p === '.' || p === '..' || /[. ]$/.test(p) || ignored(p)))

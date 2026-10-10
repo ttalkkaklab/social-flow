@@ -225,6 +225,17 @@ or `model: 'mixed'`, with the recorded choice covering the plan. Seedance 1.5 Pr
 A 1.x previz uses `frame_and_prompt`; 2.x may send `reference_video`. Keep real API input
 constraints, cost quotes and approved budgets. `modelReason` is optional.
 
+## Storyboard destination and design (user directive, 2026-10-10)
+
+Before any episode portal call, follow `skills/storyboard/references/storyboard-target.md`.
+Check the target channel's local configuration with `capability_status`: no key means local
+HTML; a configured key requires the user's local HTML / portal choice. Reuse an explicit
+choice across storyboard, produce and publish. A key, listed tools or `.portal.json` alone
+never authorize integration. Unattended runs need explicit episode or standing destination
+consent when a key exists. Local mode skips all portal calls and generation-tool `portal`
+arguments. Always use the same storyboard review design as ttalkkakstory; storage does not
+select a layout. Follow `skills/storyboard/references/storyboard-design.md` for template upkeep.
+
 ## Branch strategy
 
 ```

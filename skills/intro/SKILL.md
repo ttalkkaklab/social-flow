@@ -14,6 +14,9 @@ argument-hint: "<channel> [extra instructions]"
 allowed-tools: ["mcp__social-flow__portal_channel_sync", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__gpt_image_img2img", "mcp__social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__social-flow__music_generate_clip", "mcp__social-flow__mlx_music_generate", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue"]
 ---
 
+**HITL records:** Keep the chosen concept and action/music details in channel intro files. Follow [the decision record contract](../storyboard/references/portal-decisions.md); preserve actual provenance and reuse existing authorization. This adds no approval gate.
+
+
 # Channel intro video — data/[channel]/assets/intro/
 
 Call `portal_channel_sync` with `action: "pull"` before reading `profile.md`. A 409 conflict

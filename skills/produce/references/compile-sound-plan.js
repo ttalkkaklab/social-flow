@@ -15,6 +15,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { spawnSync } = require('child_process');
 const { evaluateWindowScript } = require('../../_shared/scenes-vm.js');
+const { mixFindings, mixEnvironment } = require('./sound-mix-contract.js');
 const assetResolver = path.resolve(__dirname, '../../channel/references/resolve-asset.py');
 
 function die(message) { process.stderr.write(`compile-sound-plan: ${message}\n`); process.exit(1); }
@@ -32,6 +33,8 @@ const sourceText = fs.readFileSync(source, 'utf8');
 const win = evaluateWindowScript(sourceText);
 const scenes = Array.isArray(win.SCENES) ? win.SCENES : die(`${source} has no window.SCENES array`);
 const music = record(win.MUSIC), sfxBook = record(win.SFX), mix = record(music.$mix);
+const mixErrors = mixFindings(music.$mix);
+if (mixErrors.length) die(`window.MUSIC.$mix: ${mixErrors.join('; ')}`);
 fs.mkdirSync(work, { recursive: true });
 const markerFile = path.join(work, 'sound-plan.json');
 const ownedNames = new Set(['bgm.tsv', 'sfx.tsv', 'amb.tsv', 'silence.tsv', 'sound.env']);
@@ -143,16 +146,7 @@ writeRows('sfx.tsv', effects);
 writeRows('amb.tsv', ambience);
 writeRows('silence.tsv', silence);
 
-const env = [];
-const put = (name, value) => { if (value !== undefined) env.push(`: "\${${name}:=${Number(value)}}"`); };
-put('FINAL_LUFS', mix.targetLufs); put('FINAL_TP', mix.truePeakDbtp);
-put('BGM_SEP', mix.bedSeparationLu); put('BGM_SEP_MIN', mix.minimumSeparationLu);
-put('BGM_CUE_XF', mix.cueCrossfadeSeconds); put('BGM_FADE_OUT', mix.endingFadeSeconds);
-put('BGM_GATE_R', mix.silenceRampSeconds);
-put('AMB_SEP', mix.ambienceSeparationLu);
-const hook = record(mix.hook), ducking = record(mix.ducking);
-put('BGM_HOOK_LU', hook.attenuationLu); put('BGM_HOOK_R', hook.releaseSeconds);
-put('DUCK_RATIO', ducking.ratio); put('DUCK_ATTACK', ducking.attackMs); put('DUCK_RELEASE', ducking.releaseMs);
+const env = mixEnvironment(mix);
 if (env.length) writeOwned('sound.env', env.join('\n') + '\n');
 cleanPrevious();
 fs.writeFileSync(markerFile, JSON.stringify({

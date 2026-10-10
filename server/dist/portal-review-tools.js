@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { describePortalError, portalClientFor } from './portal-client.js';
 export const REVIEW_TOOL_NAMES = ['portal_decision_list', 'portal_decision_record', 'portal_review_list', 'portal_review_record'];
 const reviewCommonInput = z.object({ channel: z.string().regex(/^[a-z0-9][a-z0-9-]{0,63}$/).optional(), episodeId: z.string().uuid() });
-const decision = z.object({
+export const decisionSchema = z.object({
     key: z.string().min(1).max(200), value: z.unknown().refine(v => v !== undefined && v !== null, 'Decision value is required'),
     options: z.unknown().optional(), chosenBy: z.enum(['user', 'standing', 'auto', 'imported']),
     source: z.string().trim().min(1).max(500), reason: z.string().max(4000).optional(),
@@ -16,7 +16,7 @@ const review = z.object({
 });
 export const reviewToolSchemas = {
     portal_decision_list: reviewCommonInput.extend({ history: z.boolean().optional() }).strict(),
-    portal_decision_record: reviewCommonInput.extend({ decision, baseRevisionNo: z.number().int().min(0) }).strict(),
+    portal_decision_record: reviewCommonInput.extend({ decision: decisionSchema, baseRevisionNo: z.number().int().min(0) }).strict(),
     portal_review_list: reviewCommonInput.strict(),
     portal_review_record: reviewCommonInput.extend({ review, baseRevisionNo: z.number().int().min(0) }).strict(),
 };

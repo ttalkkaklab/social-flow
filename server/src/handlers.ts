@@ -32,6 +32,7 @@ import * as snsScout from './sns-issue-scout.js';
 import { formatError, formatFileSize, saveBase64Image } from './media-utils.js';
 import type { ApiResult } from './http.js';
 import { renderCapabilityStatus } from './capability-status.js';
+import { CHANNEL_SLUG_RE } from './config.js';
 import * as portal from './portal-tools.js';
 import { manageBackups } from './portal-backups.js';
 import { applyVoiceLock, voiceLockApplySchema } from './voice-lock.js';
@@ -1305,7 +1306,10 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
       `Advanced music generated successfully!\n\nFile: ${result.audioPath}\nModel: ${result.model}\nDuration: ${result.durationSeconds} seconds\n\nWeighted Prompts:\n${promptInfo}${configInfo}\n\n48kHz stereo 16-bit WAV.`,
     );
   },
-  capability_status: async () => text(renderCapabilityStatus()),
+  capability_status: async (args) => {
+    const a = parseArgs(z.object({ channel: z.string().regex(CHANNEL_SLUG_RE).optional() }), args ?? {});
+    return text(renderCapabilityStatus(a.channel));
+  },
   music_list_options: async () => {
     const bullets = (items: readonly string[]) => items.map((item) => `  - ${item}`).join('\n');
     return text(

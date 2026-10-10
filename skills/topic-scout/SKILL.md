@@ -16,6 +16,9 @@ allowed-tools: ["Read", "Write", "Glob", "Bash", "AskUserQuestion",
   "mcp__social-flow__serp_trending_now"]
 ---
 
+**HITL records:** Keep selected and banned phrases in channel keyword files; these are not episode approvals. Follow [the decision record contract](../storyboard/references/portal-decisions.md); preserve actual provenance and reuse existing authorization. This adds no approval gate.
+
+
 # Finding market-validated topics
 
 Views usually don't come because you posted **what you wanted to say**.

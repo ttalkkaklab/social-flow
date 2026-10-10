@@ -11,6 +11,9 @@ argument-hint: "[add|list|update|serve] [channel-name]"
 allowed-tools: ["mcp__social-flow__portal_channel_sync", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_list_voices", "mcp__social-flow__tts_elevenlabs_voices", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__portal_character_list", "mcp__social-flow__portal_character_get", "mcp__social-flow__portal_character_create", "mcp__social-flow__portal_character_update", "mcp__social-flow__portal_character_delete", "mcp__social-flow__portal_character_image_upload", "mcp__social-flow__portal_character_extra_delete", "mcp__social-flow__portal_character_tts_set"]
 ---
 
+**HITL records:** Keep channel answers in profile.md and follow the existing channel-sync contract. Follow [the decision record contract](../storyboard/references/portal-decisions.md); preserve actual provenance and reuse existing authorization. This adds no approval gate.
+
+
 # Channel management — data/[channel]/profile.md
 
 For `update`, call `portal_channel_sync` with `action: "pull"` before reading the profile.

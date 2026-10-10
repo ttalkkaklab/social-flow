@@ -474,6 +474,36 @@ describe('measured ASTRA guidance', () => {
     }
   });
 
+  it('checks the pixel ceiling with server defaults for every omitted-side shape', () => {
+    for (const mode of ['generate', 'guided', 'keyframe', 'audio2video']) {
+      assert.equal(checkDimensions(undefined, undefined, mode), null, mode);
+      assert.equal(checkDimensions(1984, undefined, mode), null, mode);
+      assert.equal(checkDimensions(undefined, 1344, mode), null, mode);
+      assert.match(checkDimensions(2048, undefined, mode), /at most 2064384/, mode);
+      assert.match(checkDimensions(undefined, 1408, mode), /at most 2064384/, mode);
+      assert.match(checkDimensions(undefined, 1920, mode), /at most 2064384/, mode);
+    }
+    // Fast mode uses 768x512 defaults; its per-side cap keeps single-sided inputs below the ceiling.
+    for (const dims of [[undefined, undefined], [1920, undefined], [undefined, 1920], [1344, 1536]]) {
+      assert.equal(checkDimensions(...dims, 'guided_fast'), null);
+    }
+    assert.match(checkDimensions(1920, 1920, 'guided_fast'), /at most 2064384/);
+    for (const [schema, args] of [
+      [astraText2VideoSchema, { prompt: 'x' }],
+      [astraText2VideoSchema, { prompt: 'x', tier: 'guided' }],
+      [astraImg2VideoSchema, { prompt: 'x', firstFramePath: 'a.png' }],
+      [astraKeyframeVideoSchema, { prompt: 'x', images: [{ imagePath: 'a.png', frameIdx: 0 }, { imagePath: 'b.png', frameIdx: 24 }] }],
+      [astraAudio2VideoSchema, { prompt: 'x', audioPath: 'voice.wav' }],
+    ]) {
+      for (const dims of [{}, { width: 1984 }, { height: 1344 }, { width: 1344, height: 1536 }]) {
+        parseOk(schema, { ...args, ...dims });
+      }
+      for (const dims of [{ width: 2048 }, { height: 1920 }, { width: 1088, height: 1920 }]) {
+        assert.match(parseFails(schema, { ...args, ...dims }), /at most 2064384/);
+      }
+    }
+  });
+
   it('image failure-band guidance adds no client rejection', () => {
     for (const numFrames of [121, 129, 137]) {
       parseOk(astraImg2VideoSchema, { prompt: 'x', firstFramePath: 'a.png', width: 1280, height: 704, numFrames });
