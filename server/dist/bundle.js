@@ -85518,7 +85518,7 @@ import * as path5 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.111.0",
+  version: "0.111.1",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -93799,7 +93799,7 @@ var PORTAL_TOOLS = [
     name: "portal_workspace_check",
     title: "Check the portal key and its workspace",
     annotations: HINT.read,
-    description: `Resolve the ttalkkakstory portal key for a channel and ask the portal who it is \u2014 the workspace the key opens, the role (member), and which file answered (per-channel \xB7 flat \xB7 env). Call it once at the top of a storyboard session before any portal write, so a save never lands in another workspace.
+    description: `Resolve the ttalkkakstory portal key for a channel and ask the portal who it is \u2014 the workspace the key opens, the role (member), and which file answered (per-channel \xB7 flat \xB7 env). Call only after the user chose portal integration for this episode. Use capability_status with channel for the local key check before that HITL; this tool makes network calls.
 
 The key is issued on the portal at /{workspace}/settings/api-keys (admin+) and saved as <SNS_TOKEN_DIR>/<channel>/ttalkkakstory.json \u2014 { "apiKey": "tks_\u2026" }. apiUrl defaults to https://story.ttalkkaklab.com; workspace is resolved from /api/token and an explicit workspace must match the key. With no key anywhere the portal_* tools are hidden and every call answers one line; the episode stays a local file.
 
@@ -93945,7 +93945,7 @@ Returns: JSON \u2014 the updated episode (id, status, stage, title, headRevision
     name: "portal_episode_create",
     title: "Create an empty episode row on the portal",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
-    description: `Create an episode on the ttalkkakstory portal before anything is written locally \u2014 from the research stage on, the portal is the record and the directory a working copy. slug is the local directory name (data/<channel>/episodes/<slug>); storyboardId comes from portal_storyboard_list. With episodeDir the directory is created and .portal.json written (headRevisionNo 0), which the later checkpoints read.
+    description: `Create an episode on the ttalkkakstory portal after the user chose portal integration for this episode \u2014 in that mode the portal is the record and the directory a working copy. Key presence alone does not authorize creation; local HTML mode skips this tool. slug is the local directory name (data/<channel>/episodes/<slug>); storyboardId comes from portal_storyboard_list. With episodeDir the directory is created and .portal.json written (headRevisionNo 0), which the later checkpoints read.
 
 Returns: JSON \u2014 { id, slug, title, stage, url, pageUrl }.`,
     inputSchema: {
@@ -97259,15 +97259,17 @@ Returns: a text block with the saved .wav path, model, duration, and generation 
     name: "capability_status",
     title: "What this machine can do right now",
     annotations: HINT.local,
-    description: `Report which generation and research capabilities are configured on this machine, grouped by capability with an "N of M configured" count per group, plus the env vars that would unlock the rest.
+    description: `Report which generation and research capabilities are configured on this machine, grouped by capability with an "N of M configured" count per group, plus the env vars that would unlock the rest. Pass channel to check that channel's storyboard portal key locally (per-channel file \u2192 flat file \u2192 env), without printing the key or calling the portal. Another channel's key never enables this channel. storyboard_portal reports configured (ask local HTML vs portal HITL before portal calls), missing (local HTML without a question), or invalid (warn and keep local HTML). Reuse an explicit episode choice; tool visibility and key presence are not consent. Without channel, only the flat/env credential is checked.
 
 Use it BEFORE planning anything that spends money or depends on a provider \u2014 the top of a storyboard, produce, or autoproduce run. Without it, a missing key shows up only when the call fails, which is after the plan was built around a tool that was never going to run: planning two Veo b-roll slots on a machine with no GEMINI_API_KEY costs the review rounds before anyone finds out. Also use it when the user asks what they can make, or why a tool is failing.
 Do NOT use it to test whether a key still works. It reports CONFIGURATION, not reachability \u2014 a revoked key reads as configured here and fails at the call. Local engines report only whether their binary resolves (mflux, python3, mlx-qwen3-asr) or whether MLX Core.app / mlx-serve is installed \u2014 not whether :11234 is up. Read-only; makes no API call, so one call per session is enough.
 
-Returns: a capability menu \u2014 video_generation, image_generation, tts, music_generation, 3d_generation, speech_to_text, stock_footage, research \u2014 each listing its providers with the env var or local install each one needs, then the publishing platforms that have credential files, then the env vars grouped by what each would turn on.`,
+Returns: a capability menu \u2014 video_generation, image_generation, tts, music_generation, 3d_generation, speech_to_text, stock_footage, research \u2014 each listing its providers with the env var or local install each one needs, then the publishing platforms, storyboard_portal configuration for the channel, and the env vars grouped by what each would turn on.`,
     inputSchema: {
       type: "object",
-      properties: {},
+      properties: {
+        channel: { type: "string", pattern: CHANNEL_SLUG_RE.source, description: "Target channel slug, as in data/<channel>. Checks local portal configuration only; no network request." }
+      },
       required: []
     }
   },
@@ -98182,7 +98184,7 @@ import path17 from "node:path";
 var LIMIT = 10 * 1024 * 1024;
 var MANIFEST = ".portal-attachments.json";
 var hash2 = (bytes) => createHash4("sha256").update(bytes).digest("hex");
-var ignored = (part) => [".git", "node_modules", ".portal.json", MANIFEST, ".portal-head", ".portal-local", ".DS_Store"].includes(part) || part === ".env" || part.startsWith(".env.");
+var ignored = (part) => [".git", "node_modules", ".portal.json", MANIFEST, ".portal-head", ".portal-local", ".DS_Store"].includes(part) || part.toLowerCase() === ".storyboard-target.json" || part === ".env" || part.startsWith(".env.");
 function validateAttachmentPath(value) {
   if (!value || Buffer.byteLength(value) > 1024 || /[\\\x00-\x1f\x7f:]/.test(value) || value.startsWith("/") || value.split("/").some((p) => !p || p === "." || p === ".." || /[. ]$/.test(p) || ignored(p))) throw new Error(`Unsafe attachment path: ${value}`);
   return value;
@@ -106516,6 +106518,18 @@ ${errors.join("\n")}`);
 import { existsSync as existsSync25 } from "node:fs";
 import path25 from "node:path";
 import os from "node:os";
+function portalConfigurationStatus(channel) {
+  try {
+    const credential = portalCredential(channel);
+    return {
+      channel: channel ?? null,
+      state: credential ? "configured" : "missing",
+      ...credential ? { source: credential.source } : {}
+    };
+  } catch {
+    return { channel: channel ?? null, state: "invalid" };
+  }
+}
 var has2 = (v) => Boolean(v && v.length > 0);
 var binOk = (p) => {
   try {
@@ -106525,7 +106539,7 @@ var binOk = (p) => {
     return false;
   }
 };
-function capabilityStatus() {
+function capabilityStatus(channel) {
   const gemini = has2(config2.geminiApiKey);
   const mlx = mlxServeConfigured();
   const capabilities = [
@@ -106737,11 +106751,12 @@ function capabilityStatus() {
   return {
     capabilities,
     setupOffers: Array.from(offers, ([env2, unlocks]) => ({ env: env2, unlocks })),
-    sns: { platforms: enabledPlatforms(), tokenDir: snsTokenDir }
+    sns: { platforms: enabledPlatforms(), tokenDir: snsTokenDir },
+    portal: portalConfigurationStatus(channel)
   };
 }
-function renderCapabilityStatus() {
-  const { capabilities, setupOffers, sns } = capabilityStatus();
+function renderCapabilityStatus(channel) {
+  const { capabilities, setupOffers, sns, portal } = capabilityStatus(channel);
   const lines = ["What this machine can do right now", ""];
   capabilities.forEach((c) => {
     lines.push(`  ${c.capability.padEnd(18)} ${c.configured}/${c.total} configured`);
@@ -106752,6 +106767,10 @@ function renderCapabilityStatus() {
   });
   lines.push("");
   lines.push(`  publishing         ${sns.platforms.length ? sns.platforms.join(", ") : "none"}  (credential files under ${sns.tokenDir})`);
+  lines.push("");
+  lines.push(`  storyboard_portal  ${portal.state} (channel: ${portal.channel ?? "flat/env only"})`);
+  if (portal.source) lines.push(`      source: ${portal.source}`);
+  lines.push(portal.state === "configured" ? "      Ask HITL: local HTML or ttalkkakstory integration BEFORE any portal call. A key is not consent; reuse an explicit episode choice." : portal.state === "missing" ? "      Use local storyboard.html with the shared portal design; no portal call or setup question." : "      Portal configuration is invalid. Use local HTML; do not try another channel or expose credential contents.");
   if (setupOffers.length) {
     lines.push("");
     lines.push("  One env var away:");
@@ -108127,7 +108146,10 @@ ${promptInfo}${configInfo}
 48kHz stereo 16-bit WAV.`
     );
   },
-  capability_status: async () => text(renderCapabilityStatus()),
+  capability_status: async (args) => {
+    const a = parseArgs(external_exports.object({ channel: external_exports.string().regex(CHANNEL_SLUG_RE).optional() }), args ?? {});
+    return text(renderCapabilityStatus(a.channel));
+  },
   music_list_options: async () => {
     const bullets = (items) => items.map((item) => `  - ${item}`).join("\n");
     return text(
@@ -108420,7 +108442,7 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
 // src/index.ts
 import { readFileSync as readFinalRequest } from "node:fs";
 var server = new Server(
-  { name: "social-flow", version: "0.111.0" },
+  { name: "social-flow", version: "0.111.1" },
   { capabilities: { tools: {} } }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {

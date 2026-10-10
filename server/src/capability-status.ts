@@ -25,7 +25,7 @@
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { blenderBin, config, mfluxZImageBin, mlxServeConfigured, qwen3AsrBin, snsTokenDir, supertonicPython } from './config.js';
+import { blenderBin, config, mfluxZImageBin, mlxServeConfigured, portalCredential, qwen3AsrBin, snsTokenDir, supertonicPython } from './config.js';
 import { enabledPlatforms } from './sns-client.js';
 
 export interface ProviderStatus {
@@ -41,6 +41,24 @@ export interface CapabilityStatus {
   configured: number;
   total: number;
   providers: ProviderStatus[];
+}
+
+export interface PortalConfigurationStatus {
+  channel: string | null;
+  state: 'configured' | 'missing' | 'invalid';
+  source?: string;
+}
+
+/** Check only the selected channel's local configuration; never resolve a token remotely. */
+export function portalConfigurationStatus(channel?: string): PortalConfigurationStatus {
+  try {
+    const credential = portalCredential(channel);
+    return { channel: channel ?? null, state: credential ? 'configured' : 'missing',
+      ...(credential ? { source: credential.source } : {}) };
+  } catch {
+    // Credential parser messages and values must not become capability output.
+    return { channel: channel ?? null, state: 'invalid' };
+  }
 }
 
 const has = (v: string | undefined): boolean => Boolean(v && v.length > 0);
@@ -59,10 +77,11 @@ const binOk = (p: string): boolean => {
   }
 };
 
-export function capabilityStatus(): {
+export function capabilityStatus(channel?: string): {
   capabilities: CapabilityStatus[];
   setupOffers: Array<{ env: string; unlocks: string[] }>;
   sns: { platforms: string[]; tokenDir: string };
+  portal: PortalConfigurationStatus;
 } {
   const gemini = has(config.geminiApiKey);
   const mlx = mlxServeConfigured();
@@ -186,12 +205,13 @@ export function capabilityStatus(): {
     capabilities,
     setupOffers: Array.from(offers, ([env, unlocks]) => ({ env, unlocks })),
     sns: { platforms: enabledPlatforms(), tokenDir: snsTokenDir },
+    portal: portalConfigurationStatus(channel),
   };
 }
 
 /** The same picture as a menu a person reads — "N of M configured", then what one key unlocks. */
-export function renderCapabilityStatus(): string {
-  const { capabilities, setupOffers, sns } = capabilityStatus();
+export function renderCapabilityStatus(channel?: string): string {
+  const { capabilities, setupOffers, sns, portal } = capabilityStatus(channel);
   const lines: string[] = ['What this machine can do right now', ''];
   capabilities.forEach((c) => {
     lines.push(`  ${c.capability.padEnd(18)} ${c.configured}/${c.total} configured`);
@@ -203,6 +223,14 @@ export function renderCapabilityStatus(): string {
   lines.push('');
   lines.push(`  publishing         ${sns.platforms.length ? sns.platforms.join(', ') : 'none'}` +
              `  (credential files under ${sns.tokenDir})`);
+  lines.push('');
+  lines.push(`  storyboard_portal  ${portal.state} (channel: ${portal.channel ?? 'flat/env only'})`);
+  if (portal.source) lines.push(`      source: ${portal.source}`);
+  lines.push(portal.state === 'configured'
+    ? '      Ask HITL: local HTML or ttalkkakstory integration BEFORE any portal call. A key is not consent; reuse an explicit episode choice.'
+    : portal.state === 'missing'
+      ? '      Use local storyboard.html with the shared portal design; no portal call or setup question.'
+      : '      Portal configuration is invalid. Use local HTML; do not try another channel or expose credential contents.');
   if (setupOffers.length) {
     lines.push('');
     lines.push('  One env var away:');

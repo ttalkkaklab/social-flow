@@ -746,10 +746,21 @@ when the portal still has that exact base hash. A two-sided edit returns 409 ins
 a winner. Network/auth/server failures at a skill entry warn once and use local files; a 409
 conflict stops that run.
 
-The storyboard, produce and publish skills keep an episode on the ttalkkakstory portal
-**when the channel has a portal key** — the plugin's own server calls the portal API with it
-(owner directive 2026-09-21; before that the portal's MCP server had to be registered by hand
-in user settings). A key is issued per workspace on the portal at `/{workspace}/settings/api-keys`
+Storyboard first calls `capability_status` with the target `channel`. This reads local
+configuration without a portal request or key disclosure. No key means a local
+`storyboard/storyboard.html`; a configured key triggers a **local HTML / ttalkkakstory HITL**
+before any portal call, including channel sync. A malformed credential warns and uses local
+HTML without trying another channel. Tool visibility is not a channel-specific key check.
+The episode choice in `.storyboard-target.json` carries through produce, autoproduce and
+publish. Existing explicit choices are reused; unattended runs without destination consent
+hold for the same HITL when a key exists. Local mode skips portal calls and optional media
+`portal` arguments even if an old portal ID exists. Both modes use the same review design.
+See [the destination contract](skills/storyboard/references/storyboard-target.md) and
+[the design contract](skills/storyboard/references/storyboard-design.md).
+
+The skills keep an episode on the portal **only when the user chose portal integration and
+the channel has a key** (owner directive 2026-10-10). The plugin's own server calls the portal
+API with it (since 2026-09-21; earlier the portal's MCP server was registered by hand). A key is issued per workspace on the portal at `/{workspace}/settings/api-keys`
 (admin+; the plaintext is shown once, the portal keeps a hash) and that page prints the file
 ready to save:
 
@@ -771,7 +782,7 @@ Deploy a portal with `/api/token` before updating the plugin.
 The channel is read off the episode path (`data/<channel>/episodes/<topic>`), the channel file
 falls through to the flat file, and the `TTALKKAKSTORY_*` env is the last resort. Mode 600,
 never committed. `portal_workspace_check` tells which file answered and which workspace the
-key opens — the storyboard skill calls it once at the top of a session.
+key opens — the storyboard skill calls it after the destination choice selects portal mode.
 
 `portal_storyboard_save` requires `SB_DOC.characters` with at least one character, a matching
 `SB_DOC.narratorCharacterId`, and a `tts` object on every character. Narration segment
@@ -779,7 +790,7 @@ key opens — the storyboard skill calls it once at the top of a session.
 an unmatched value fails instead of falling back. `portal_storyboard_pull` restores the same
 block, and produce uses it for synthesis.
 
-With a key present the portal is the episode's **source of truth and the local directory a
+In chosen portal mode with a key the portal is the episode's **source of truth and the local directory a
 working copy** (portal design note, 2026-09-20). The storyboard skill takes a lease and pulls
 at the top of a session (`portal_episode_lease acquire` · `portal_storyboard_pull`, or
 `portal_episode_create` for a topic the portal has never seen), uploads the three candidate
@@ -902,10 +913,10 @@ registrations) and the skill asks before deleting a character a playlist still n
 with. No key → one line. Procedure: `skills/channel/references/portal-characters.md`.
 
 ### Global asset library on ttalkkakstory
-`portal_assets_search` and `portal_assets_get` read the portal's **global** asset library (`/api/assets`, portal #87) — Gemini B-roll clips, BGM beds, sound effects and images the owner collected on the Mac mini and synced up. The library sits outside every workspace: any channel's key returns the same results, and only the owner's admin key can write. Storyboard asks it before `stock_search` when a cut wants real footage; produce and autoproduce ask it before `music_generate_clip` for a bed. Search is AND over Korean/English words plus tag, type, category, duration and aspect filters. `get` with `download:true` writes the file into the supplied-file lanes that already exist — video to `storyboard/footage/s<shot>-portal-<sourceId>.mp4` (a `stock_video` cut with `visual.source: "stock"` and the returned `visual.license`, provider `ttalkkakstory`), music and effects to `.work/portal/<sourceId>.<ext>`, images to `storyboard/images/stock/` — and verifies the portal's sha256; an identical file is not fetched twice and a different file at that name is refused. No key → one line, and the skill goes on to the paid lane.
+`portal_assets_search` and `portal_assets_get` read the portal's **global** asset library (`/api/assets`, portal #87) — Gemini B-roll clips, BGM beds, sound effects and images the owner collected on the Mac mini and synced up. The library sits outside every workspace: any channel's key returns the same results, and only the owner's admin key can write. In chosen portal mode, storyboard asks it before `stock_search` when a cut wants real footage; produce and autoproduce ask it before `music_generate_clip` for a bed. Search is AND over Korean/English words plus tag, type, category, duration and aspect filters. `get` with `download:true` writes the file into the supplied-file lanes that already exist — video to `storyboard/footage/s<shot>-portal-<sourceId>.mp4` (a `stock_video` cut with `visual.source: "stock"` and the returned `visual.license`, provider `ttalkkakstory`), music and effects to `.work/portal/<sourceId>.<ext>`, images to `storyboard/images/stock/` — and verifies the portal's sha256; an identical file is not fetched twice and a different file at that name is refused. Local mode or no key → skip the portal library and continue with the skill’s existing stock/music rules.
 
 ### Shot media on ttalkkakstory
-`portal_shot_media_upload` uploads and checkpoints one episode-local file: source/end-frame image (5 MiB), previz/video MP4 (10 MiB), whole-shot narration or one indexed narration segment as WAV/MP3 (10 MiB each). Save the board first, then use episodeDir and shotId (shotNo only for ID-less shots); `narration_segment` also requires `segmentIndex`. The portal card displays both visual frames and each segment audio player. With a configured key, Blender and checked TTS take an optional `portal` target and upload the result immediately; Seedance also requires `portal.previzFile`, uploading and linking it **before** the vendor call. Host/other generation tools use the explicit uploader in the same order. Missing keys silently preserve local-only production. Oversized files alone are skipped with `.portal-media-skips.jsonl`, and production continues; larger files need a later chunked-storage/object-storage extension. Failures preserve generated files and offer upload recovery; do not regenerate media to fix an upload. See [produce order](skills/produce/references/portal-shot-media.md).
+`portal_shot_media_upload` uploads and checkpoints one episode-local file: source/end-frame image (5 MiB), previz/video MP4 (10 MiB), whole-shot narration or one indexed narration segment as WAV/MP3 (10 MiB each). Save the board first, then use episodeDir and shotId (shotNo only for ID-less shots); `narration_segment` also requires `segmentIndex`. The portal card displays both visual frames and each segment audio player. In chosen portal mode with a configured key, Blender and checked TTS take an optional `portal` target and upload the result immediately; Seedance also requires `portal.previzFile`, uploading and linking it **before** the vendor call. Host/other generation tools use the explicit uploader in the same order. Missing keys silently preserve local-only production. Oversized files alone are skipped with `.portal-media-skips.jsonl`, and production continues; larger files need a later chunked-storage/object-storage extension. Failures preserve generated files and offer upload recovery; do not regenerate media to fix an upload. See [produce order](skills/produce/references/portal-shot-media.md).
 
 
 ## Documentation (docs/)

@@ -11,10 +11,12 @@ argument-hint: "<channel> <topic> [platformCSV|auto]"
 # *_publish/facebook_comment are deliberately left un-pre-approved — the native
 # permission prompt on every irreversible publish call has to act as a second line of
 # defense, separate from the HITL approval gate.
-allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__sns_account_check", "mcp__social-flow__portal_publication_record", "mcp__social-flow__portal_episode_status"]
+allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__sns_account_check", "mcp__social-flow__capability_status", "mcp__social-flow__portal_publication_record", "mcp__social-flow__portal_episode_status"]
 ---
 
 # Platform publishing — public immediately after HITL approval
+
+Reuse the episode destination from [storyboard-target.md](../storyboard/references/storyboard-target.md). Local mode keeps publish records locally and skips every portal call below, even if a key or old portal ID exists. A legacy episode without a choice resolves the destination before any portal call; publishing approval does not imply portal consent.
 
 Publishes the finished artifacts in `output/` with the per-platform publish tools.
 **The publish tools have no review gate, so calling one = instantly public.** This
@@ -487,7 +489,7 @@ write the reason into the publish log.
   timestamp, platform, post id, permalink, caption summary, and the approver's decision.
   **Write the §4 checklist beside it, item by item, as O/X** — an open item has to
   survive in the log for the next person to finish it.
-- After each platform publish succeeds, call `portal_publication_record` with the returned
+- In chosen portal mode with a configured key, after each platform publish succeeds, call `portal_publication_record` with the returned
   post ID and permanent link, the approval record, timestamp and SHA-256 of the exact caption.
   One platform failing does not erase the successful records. If the tool is absent, keep the
   local publish log; if it errors, report the error beside that platform and preserve the link.
@@ -495,8 +497,7 @@ write the reason into the publish log.
   (rule 11) — write what they asked for and why under the episode's row, and the next
   episode carries the fix. Comment replies are the exception; they're the post-publish
   work, and the copy check above covers them.
-- Update `storyboard.md` to `status: published`. If the `portal_*` tools are listed (the
-  channel has a ttalkkakstory workspace API key, README §The ttalkkakstory portal), call
+- Update `storyboard.md` to `status: published`. If the episode chose portal mode and its channel key is configured (README §The ttalkkakstory portal), call
   `portal_episode_status` with `status: "published"` only after every successful platform has
   a `portal_publication_record`, using the `episodeId` in `storyboard.md`'s
   `portal_episode` frontmatter (written at approval); without that field,
