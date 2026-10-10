@@ -2121,6 +2121,16 @@ sets the music below measured narration; `minimumSeparationLu` is the speech-tim
 `ambienceSeparationLu` does the same for the room-tone bed (`AMB_SEP`, 15 by default), which is laid
 once and never ducked.
 
+Numeric bounds and environment mappings live in
+[`sound-mix-contract.js`](../../produce/references/sound-mix-contract.js), shared by the
+storyboard checker and sound compiler. The compiler rejects out-of-range values before writing
+manifests. Seconds use whole milliseconds (at most three decimal places), matching the builder's
+cue-span precision and avoiding crossfades shorter than an audio sample. Zero `cueCrossfadeSeconds` concatenates cues, zero `endingFadeSeconds` disables the
+ending fade, zero `silenceRampSeconds` makes a hard mute window, and zero
+`hook.releaseSeconds` disables hook attenuation. Omitting these settings preserves the builder's
+existing defaults. Bed and ambience separation are gain targets; measured speech-to-bed separation
+still has to satisfy the requested floor after mixing.
+
 Empty `$mix` keys are filled from the channel's portal defaults (`GET /projects/{id}/sound`) when
 `portal_episode_music_update` writes the board — key by key, nested blocks included, and only where
 the episode said nothing. Whatever the episode already carries wins, so the resolution order is shot

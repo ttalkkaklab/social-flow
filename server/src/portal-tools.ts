@@ -1,3 +1,4 @@
+import { portalDecisionsSchema, readDecisions } from './portal-decisions.js';
 import { REVIEW_TOOL_NAMES } from './portal-review-tools.js';
 import { UNIT_TOOL_NAMES } from './portal-unit-tools.js';
 import { PORTAL_API_TOOL_NAMES } from './portal-api-contract.js';
@@ -617,8 +618,10 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
         const payload = buildImportPayload(episodeDir, { project, storyboard: storyboardTitle, title });
         const state = readPortalState(episodeDir);
         const base = saveBase(episodeDir, baseRevisionNo);
+        const decisions = readDecisions(episodeDirOf(episodeDir));
         payload.episode = {
           ...payload.episode,
+          ...(decisions !== undefined ? { decisions } : {}),
           ...(state?.episodeId ? { id: state.episodeId } : {}),
           ...(stageArg ? { stage: stageArg } : {}),
           ...(base !== undefined ? { baseRevisionNo: base } : {}),
@@ -680,21 +683,23 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
         const sb = path.join(dir, 'storyboard');
         const fileContents = new Map<string, string>();
         fileContents.set('scenes.js', await c.scenesJs(episodeId, revision));
+        let decisions = portalDecisionsSchema.parse(revision ? [] : (episode.decisions ?? []));
 
         if (revision) {
           // A named revision writes that revision's documents — mixing head's documents under old shots
           // puts today's script on yesterday's board. A document the revision lacks is not fetched.
+          const { data: rev } = await c.getRevision(episodeId, revision);
+          decisions = portalDecisionsSchema.parse(rev.snapshot?.decisions ?? []);
           if (includeDocuments) {
-            const { data: rev } = await c.getRevision(episodeId, revision);
             for (const [filename, content] of Object.entries(rev.documents ?? {})) {
-              if (filename === 'scenes.js' || !SAFE_DOCUMENT_NAME.test(filename)) continue;
+              if (filename === 'scenes.js' || filename.toLowerCase() === 'decisions.json' || !SAFE_DOCUMENT_NAME.test(filename)) continue;
               fileContents.set(filename, content);
             }
           }
         } else {
           if (includeDocuments) {
             for (const doc of episode.documents ?? []) {
-              if (doc.filename === 'scenes.js') continue; // the rebuilt one is the source of truth
+              if (doc.filename === 'scenes.js' || doc.filename.toLowerCase() === 'decisions.json') continue; // canonical values win
               if (!SAFE_DOCUMENT_NAME.test(doc.filename)) continue;
               fileContents.set(doc.filename, await c.document(episodeId, doc.filename));
             }
@@ -705,6 +710,7 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
             fileContents.set('scenario.md', await c.scenarioMd(episodeId, chosen.candidate));
           }
         }
+        fileContents.set('decisions.json', JSON.stringify(decisions, null, 2) + '\n');
         for (const filename of fileContents.keys()) safeAttachmentTarget(dir, `storyboard/${filename}`);
         // A historical working copy must not carry newer managed documents into the next save.
         // Unknown local notes are not ours to remove; preserve every removed file in the same backup.
@@ -764,6 +770,8 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
         if (mode !== 'side') writePortalState(dir, { workspace: c.workspace, storyboardId: episode.storyboardId, episodeId, headRevisionNo });
         return ok({
           attachments,
+          decisions,
+          ...(revision ? {} : { publications: episode.publications ?? [] }),
           episode: {
             id: episode.id,
             slug: episode.slug,
@@ -795,8 +803,8 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
       if (refused) return refused;
       try {
         const patch = { ...(status ? { status } : {}), ...(stageArg ? { stage: stageArg } : {}), ...(title ? { title } : {}) };
-        if (Object.keys(patch).length === 0) throw new Error('one of status · stage · title is required.');
         const id = resolveEpisodeId(episodeId, episodeDir);
+        if (Object.keys(patch).length === 0) return ok((await r.client.getEpisode(id)).data);
         return ok((await r.client.updateEpisode(id, patch)).data);
       } catch (error) {
         return failed(error);
@@ -838,11 +846,13 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
       try {
         const id = resolveEpisodeId(episodeId, episodeDir);
         const base = saveBase(episodeDir, baseRevisionNo, true);
+        const decisions = episodeDir ? readDecisions(episodeDirOf(episodeDir)) : undefined;
         const body: Record<string, unknown> = {
           stage: stageArg,
           note,
           sourceHost: r.client.holder,
           baseRevisionNo: base,
+          ...(decisions !== undefined ? { decisions } : {}),
         };
         let uploadedDocuments: string[] = [];
         let uploadedScenes = 0;
@@ -859,7 +869,7 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
             body.narratorCharacterId = payload.narratorCharacterId;
             uploadedScenes = payload.scenes.length;
           }
-          const docs = readDocuments(sb, documents ?? DOCUMENT_FILES);
+          const docs = readDocuments(sb, (documents ?? DOCUMENT_FILES).filter(filename => filename.toLowerCase() !== 'decisions.json'));
           body.documents = docs;
           uploadedDocuments = docs.map((d) => d.filename);
         }

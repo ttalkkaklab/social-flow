@@ -1,5 +1,7 @@
 ## Shot media on the portal — before the video call
-When a workspace key exists, save/pull the episode first so `.portal.json` records its workspace, episode and base revision. Keep each file inside this episode directory. A missing key silently keeps local-only production.
+
+Read [storyboard-target.md](../../storyboard/references/storyboard-target.md) first. Local mode skips this whole procedure and omits optional `portal` arguments on generation tools.
+Only in chosen portal mode with a workspace key, save/pull the episode first so `.portal.json` records its workspace, episode and base revision. Keep each file inside this episode directory. A missing key silently keeps local-only production.
 
 For every shot, use this order:
 1. Render the Blender previz with `portal: { episodeDir, shotId }` (`shotNo` only for an ID-less board). The handler uploads and checkpoints its MP4 before returning. For three.js or an existing previz, call `portal_shot_media_upload` with the same target, `kind:"previz"`, and `file` immediately after rendering.
@@ -10,7 +12,7 @@ For every shot, use this order:
 
 The uploader writes only UUIDs into `portalImageId` / `portalMedia.{endFrame,previz,video,narration,narrationSegments}`, preserves authored JavaScript, and updates the local base. Await uploads for the same episode sequentially. The portal's shot card shows both image frames, the two video roles and every narration segment; absent files say “아직 없음”. Each source/end image is limited to 5 MiB; each MP4 or WAV/MP3 is limited to 10 MiB. Portal quotas remain shared across all kinds.
 
-If a file exists but its portal step fails, keep that file and retry `portal_shot_media_upload` after resolving the reported error; never pay to regenerate it. A previz upload failure stops the next video call while a key is configured, except for a file above the size limit: skip only that file, append its kind/path/size/limit to `.portal-media-skips.jsonl`, and continue production (owner direction 2026-09-23). A conflict requires a side pull and merge, preserving local files and `.portal-local/media-*/uploaded-scenes.js`; no blind retry and no deletion of the base revision. A missing key silently skips; oversized files skip with the local log. Neither exception approves new spending.
+If a file exists but its portal step fails, keep that file and retry `portal_shot_media_upload` after resolving the reported error; never pay to regenerate it. A previz upload failure stops the next video call in chosen portal mode while a key is configured, except for a file above the size limit: skip only that file, append its kind/path/size/limit to `.portal-media-skips.jsonl`, and continue production (owner direction 2026-09-23). A conflict requires a side pull and merge, preserving local files and `.portal-local/media-*/uploaded-scenes.js`; no blind retry and no deletion of the base revision. A missing key silently skips; oversized files skip with the local log. Neither exception approves new spending.
 
 
 Previz framing: explicitly set Blender width/height from the episode format or approved shot render ratio, then check the returned dimensions before upload. The bridge preserves .blend dimensions when omitted; it does not infer them from portal metadata. See storyboard/references/blender-previz.md §6.1.

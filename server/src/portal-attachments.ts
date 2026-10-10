@@ -7,7 +7,7 @@ import type { PortalAttachment, PortalClient } from './portal-client.js';
 const LIMIT = 10 * 1024 * 1024;
 const MANIFEST = '.portal-attachments.json';
 const hash = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest('hex');
-const ignored = (part: string) => ['.git', 'node_modules', '.portal.json', MANIFEST, '.portal-head', '.portal-local', '.DS_Store'].includes(part) || part === '.env' || part.startsWith('.env.');
+const ignored = (part: string) => ['.git', 'node_modules', '.portal.json', MANIFEST, '.portal-head', '.portal-local', '.DS_Store'].includes(part) || part.toLowerCase() === '.storyboard-target.json' || part === '.env' || part.startsWith('.env.');
 
 export function validateAttachmentPath(value: string): string {
   if (!value || Buffer.byteLength(value) > 1024 || /[\\\x00-\x1f\x7f:]/.test(value) || value.startsWith('/') ||

@@ -1299,7 +1299,8 @@ fi
 BGMGATE=""
 if [ -s work/bgmgate.list ]; then
   BGMGATE=$(awk -F'\t' -v r="$BGM_GATE_R" '
-    {printf "%smax(min(1\\,max(0\\,(%s-t)/%s))\\,min(1\\,max(0\\,(t-%s)/%s)))", (NR>1?"*":""), $1, r, $2, r}' work/bgmgate.list)
+    {if(r==0) printf "%snot(between(t\\,%s\\,%s))", (NR>1?"*":""), $1, $2;
+     else printf "%smax(min(1\\,max(0\\,(%s-t)/%s))\\,min(1\\,max(0\\,(t-%s)/%s)))", (NR>1?"*":""), $1, r, $2, r}' work/bgmgate.list)
   BGMGATE=",volume=eval=frame:volume='$BGMGATE'"
   say "── BGM mute $(wc -l < work/bgmgate.list | tr -d ' ') windows (ramp ${BGM_GATE_R}s)"
 fi
@@ -1310,7 +1311,7 @@ fi
 #      A one-card build has no card 1 and gets no attenuation.
 HOOKVOL=""
 C1=$(awk -F'\t' '$1==1{print $2; exit}' work/cardstart.tsv)
-if [ -n "$C1" ] && awk -v h="$BGM_HOOK_LU" 'BEGIN{exit !(h > 0)}'; then
+if [ -n "$C1" ] && awk -v h="$BGM_HOOK_LU" -v r="$BGM_HOOK_R" 'BEGIN{exit !(h > 0 && r > 0)}'; then
   HOOKG=$(awk -v h="$BGM_HOOK_LU" 'BEGIN{printf "%.4f", 10^(-h/20)}')
   HOOKVOL=$(awk -v g="$HOOKG" -v c="$C1" -v r="$BGM_HOOK_R" \
     'BEGIN{printf "volume=eval=frame:volume='"'"'if(lt(t\\,%s)\\,%s\\,if(lt(t\\,%s+%s)\\,%s+(1-%s)*(t-%s)/%s\\,1))'"'"',", c, g, c, r, g, g, c, r}')
@@ -1328,8 +1329,12 @@ if [ -n "$SFXIN" ]; then VOMIX="[vo_raw][sfxa]amix=inputs=2:duration=first:norma
 else VOMIX="[vo_raw]anull[vo_mix];"; fi
 # The ambience is the third leg of the final sum. Its input index follows the sfx track's.
 AMBIDX=2; [ -n "$SFXIN" ] && AMBIDX=3
+FADEOUT=""
+if awk -v f="$BGM_FADE_OUT" 'BEGIN{exit !(f > 0)}'; then
+  FADEOUT="afade=t=out:st=$FOUT:d=$BGM_FADE_OUT,"
+fi
 if [ -n "$AMBIN" ]; then
-  AMBLEG="[${AMBIDX}:a]aformat=channel_layouts=stereo,afade=t=in:st=0:d=1.2,afade=t=out:st=$FOUT:d=$BGM_FADE_OUT[amb];"
+  AMBLEG="[${AMBIDX}:a]aformat=channel_layouts=stereo,afade=t=in:st=0:d=1.2,${FADEOUT}anull[amb];"
   FINALMIX="[vo_mix][duck][amb]amix=inputs=3:duration=first:dropout_transition=0"
 else
   AMBLEG=""; FINALMIX="[vo_mix][duck]amix=inputs=2:duration=first:dropout_transition=0"
@@ -1343,7 +1348,7 @@ ffmpeg -y -v error -i work/narration.wav -i work/bed.wav $SFXIN $AMBIN -filter_c
   $AMBLEG
   $VOMIX
   [1:a]atrim=0:$NT,asetpts=PTS-STARTPTS,${BEDEQ}
-       afade=t=in:st=0:d=1.2,afade=t=out:st=$FOUT:d=$BGM_FADE_OUT,${HOOKVOL}anull$BGMGATE[bgv];
+       afade=t=in:st=0:d=1.2,${FADEOUT}${HOOKVOL}anull$BGMGATE[bgv];
   [bgv][vo_key]sidechaincompress=threshold=0.02:ratio=$DUCK_RATIO:attack=$DUCK_ATTACK:release=$DUCK_RELEASE:makeup=1,
        asplit=2[duck][duckqa];
   ${FINALMIX},

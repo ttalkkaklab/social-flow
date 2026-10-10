@@ -14,6 +14,9 @@ argument-hint: "<channel> [extra instructions]"
 allowed-tools: ["mcp__social-flow__portal_channel_sync", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__gpt_image_img2img"]
 ---
 
+**HITL records:** Keep the branding brief and chosen candidate in channel branding files. Follow [the decision record contract](../storyboard/references/portal-decisions.md); preserve actual provenance and reuse existing authorization. This adds no approval gate.
+
+
 # Channel profile image — data/[channel]/assets/branding/
 
 Call `portal_channel_sync` with `action: "pull"` before reading `profile.md`. A 409 conflict

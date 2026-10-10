@@ -1,11 +1,13 @@
 ### Episode attachment backup
 
-With a portal key, `portal_storyboard_save` and `portal_episode_checkpoint` also sync
+Read [storyboard-target.md](../../storyboard/references/storyboard-target.md) first. Local mode skips this whole procedure and omits optional `portal` arguments on generation tools.
+
+Only in chosen portal mode with a key, `portal_storyboard_save` and `portal_episode_checkpoint` also sync
 files under the episode directory. Check `attachments.complete` and the skipped/error
 list before deleting local files. A successful board save does not certify a complete
 file backup. Retry files alone with `portal_attachments_sync` (no new board revision).
 Each file is limited to 10 MiB; the shared episode/workspace quotas remain 100/500 MiB.
-Do not raise limits automatically. Symlinks, `.env`, `.git`, `node_modules`, portal state,
+Do not raise limits automatically. Symlinks, `.env`, `.git`, `node_modules`, portal state, `.storyboard-target.json`,
 and pull backup directories are excluded. Keep oversized or skipped originals locally
 until an owner-approved archive exists.
 
