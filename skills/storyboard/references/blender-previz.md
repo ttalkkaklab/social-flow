@@ -152,7 +152,11 @@ bone's clip keys within ±`ease` frames (default 6) are dropped and the pose is 
 from the clip and back out to it. `ease: 0` changes that one frame alone. On a clip the
 `hips` group is a delta — the clip's own pelvis turn and floor height stay and `offset`,
 `turn`, `bow`, `lean` move it from there — while every other group is the absolute pose
-it always is. `clearExisting:true` (the default) also puts every bone back at rest, so a
+it always is. With `clearExisting:true`, a channel first keyed after the scene starts gets
+a rest key at the opening frame. This prevents Blender from extrapolating the later pose
+backwards. Pelvis translation is anchored separately from pelvis rotation. An explicit
+opening pose wins; `clearExisting:false` keeps the existing clip and accent behavior.
+`clearExisting:true` (the default) also puts every bone back at rest, so a
 bone this call does not key is not left holding the previous call's pose.
 
 ## 5. Motion capture onto the mannequin
