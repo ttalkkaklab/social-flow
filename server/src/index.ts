@@ -13,11 +13,11 @@ import { readFileSync as readFinalRequest } from 'node:fs';
 import { reviewFinalSpeech } from './tts-final-quality.js';
 
 // The server version carried in the initialize response — the plugin release, same value as
-// package.json's version and the four plugin manifests (skill-lint.js checks that they agree).
+// package.json's version and every plugin manifest in skill-lint.js's MANIFESTS (it checks that they agree).
 // If the two drift, the version clients see stops matching the actual package, so bump this
 // line together with package.json (the contract test checks that the two agree).
 const server = new Server(
-  { name: 'social-flow', version: '0.111.1' },
+  { name: 'social-flow', version: '0.112.0' },
   { capabilities: { tools: {} } },
 );
 

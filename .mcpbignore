@@ -1,0 +1,31 @@
+# What the Claude Desktop extension leaves out. The server resolves the plugin root from
+# server/dist/bundle.js and reads skills/**/references at run time (contracts, prices.tsv,
+# check-style.py), so skills/ and server/package.json ("type": "module") stay in. The mcpb
+# CLI drops .env* on its own (measured on @anthropic-ai/mcpb, 2026-10-16), so .env.example is
+# not in the bundle whatever this file says — the template is README § Environment variables.
+.claude-plugin/
+.codex-plugin/
+.grok-plugin/
+.plugin/
+.github/
+agents/
+apps/
+data/
+docs/
+personas/
+tools/
+server/src/
+server/test/
+server/node_modules/
+server/*.mjs
+server/tsconfig.json
+.mcp.json
+codex.mcp.json
+mcp.json
+plugin.json
+AGENTS.md
+CLAUDE.md
+CONTRIBUTING.md
+README.md
+SECURITY.md
+*.mcpb
