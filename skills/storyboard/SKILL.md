@@ -1152,7 +1152,7 @@ why. The "what to film today" table at the top lists both the footage files and 
 files. Only a TTS episode carries filmed scenes alone — there the generated scenes have
 nothing for the user to do, and including them blurs what has to be done.
 
-**storyboard.html (the review render, required in both destinations)** — follow [storyboard-design.md](references/storyboard-design.md): run `node "${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/storyboard-html.js" "<episodeDir>/storyboard"` to create/refresh the shared template and its four helpers; it preserves existing title and editorial metadata. Fill in **only the `<title>` and the `✎ SB_DOC` block**, then run the same command with `--check` before delivery. Its labels follow the
+**storyboard.html (the review render, required in both destinations)** — follow [storyboard-design.md](references/storyboard-design.md): run `node "${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/storyboard-html.js" "<episodeDir>/storyboard"` to create/refresh the shared template and its runtime helpers, shared CSS and font; it preserves existing title and editorial metadata. Fill in **only the `<title>` and the `✎ SB_DOC` block**, then run the same command with `--check` before delivery. Its labels follow the
 reader's language (`?lang=en` · `?lang=ko`, or the picker at the end of the section menu); the
 episode's own copy stays in the language scenes.js is written in, so nothing here needs setting. Never write scene data
 (title, lines, bullets, shot, duration, THEME) into the HTML — the document loads the SoT

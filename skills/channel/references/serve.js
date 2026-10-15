@@ -865,9 +865,16 @@ function route(root, req, res) {
     let urlPath;
     try { urlPath = new URL(req.url, 'http://localhost').pathname; } catch (e) { return sendText(res, 400, 'bad url'); }
 
-    if (urlPath === '/' || urlPath === '/index.html') {
+    if (urlPath === '/legacy') {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
       return res.end(SHELL);
+    }
+    if (urlPath === '/' || urlPath === '/index.html') {
+      const { exportChannel, libraryHub } = require('./review-library.js');
+      const channels = listChannels(root);
+      for (const channel of channels) exportChannel(path.join(root, channel.slug));
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+      return res.end(libraryHub(channels));
     }
     if (urlPath === '/api/channels') return sendJson(res, 200, listChannels(root));
 
@@ -890,6 +897,11 @@ function route(root, req, res) {
     if (urlPath.startsWith('/files/')) {
       const file = safeResolve(root, urlPath);
       if (!file) return sendText(res, 404, 'not found');
+      // Refresh managed HTML from current data; ordinary media requests remain read-only.
+      if (urlPath.endsWith('/index.html') && isFile(file) && readText(file).includes('social-flow:review-library:v1')) {
+        const slug = urlPath.split('/')[2];
+        require('./review-library.js').exportChannel(channelDir(root, slug));
+      }
       return sendFile(req, res, file);
     }
     return sendText(res, 404, 'not found');
@@ -1004,8 +1016,8 @@ function selftest() {
       const range = await raw(server, '/files/alpha/assets/characters/hero/voice.wav', { Range: 'bytes=0-3' });
       ok('Range → 206 with Content-Range', range.status === 206 && range.headers['content-range'] === 'bytes 0-3/16' && range.body.toString() === 'RIFF');
       ok('unsatisfiable Range → 416', (await raw(server, '/files/alpha/assets/characters/hero/voice.wav', { Range: 'bytes=99-' })).status === 416);
-      const shell = (await raw(server, '/')).body.toString();
-      ok('shell page at /', /<select id="channel"/.test(shell));
+      const shell = (await raw(server, '/legacy')).body.toString();
+      ok('legacy shell page at /legacy', /<select id="channel"/.test(shell));
       // The page script travels inside a template literal — a backslash eaten on the way
       // makes the whole page a blank "불러오는 중…". Parse it the way the browser will.
       ok('shell page script parses', (shell.match(/<script>([\s\S]*?)<\/script>/g) || []).every((block) => {
@@ -1093,4 +1105,6 @@ function main() {
   }).catch((e) => die(e && e.code === 'EADDRINUSE' ? 'port ' + port + ' is taken — pass --port' : (e && e.message) || String(e)));
 }
 
-main();
+if (require.main === module) main();
+
+module.exports = { listChannels, listStoryboards, listCharacters, characterDetail, insideReal };

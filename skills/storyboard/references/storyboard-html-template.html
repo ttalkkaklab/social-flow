@@ -69,15 +69,15 @@
     color-scheme: light;   /* fixed light — native checkboxes included (2026-08-14) */
     --accent: #3f6cff; --accent2: #7b4dff; --ink: #0b1020;
 
-    --bg: #f7f7f5; --card: #ffffff; --sunk: #f2f2ef;
-    --text: #17191d; --muted: #555b64; --faint: #5f6773;
-    --line: #e4e3de; --hair: #eeede9;
+    --bg: #fcfcfd; --card: #ffffff; --sunk: #f4f4f5;
+    --text: #18181b; --muted: #52525b; --faint: #52525b;
+    --line: #e4e4e7; --hair: #ebebee;
     --ok: #0f6d43; --warn: #855400; --bad: #b52f24;
     --shadow: 0 1px 2px rgba(18,20,24,.05), 0 12px 28px -22px rgba(18,20,24,.35);
     /* Links and emphasis push the channel color toward the text color to keep body-text
        legibility — the pure accent goes only where there are no letters: badge dots,
        timeline slots, swatches */
-    --accent-ink: color-mix(in srgb, var(--accent) 62%, var(--text));
+    --accent-ink: #1d4ed8;
 
     /* Type scale — 1.25 ratio */
     --t-micro: 11px; --t-cap: 12px; --t-aux: 13px; --t-body: 15px;
@@ -999,10 +999,10 @@
        white (measured). */
     :root, :root:not([data-theme]) {
       --bg: #fff; --card: #fff; --sunk: #f2f2ef; --shadow: none;
-      --text: #17191d; --muted: #555b64; --faint: #5f6773;
+      --text: #18181b; --muted: #52525b; --faint: #52525b;
       --line: #d8d7d2; --hair: #e8e7e3;
       --ok: #0f6d43; --warn: #855400; --bad: #b52f24;
-      --accent-ink: color-mix(in srgb, var(--accent) 62%, var(--text));
+      --accent-ink: #1d4ed8;
     }
     .conti { --fw: 104px; }
     body { background: #fff; }
@@ -1022,10 +1022,12 @@
     .fr, .badge, .tl-seg { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   }
 </style>
+<link rel="stylesheet" href="./review.css">
 </head>
 <body class="subs">
-<div class="wrap"><div id="app"><noscript>This document renders by loading scenes.js — please turn JavaScript on.</noscript></div></div>
+<main class="wrap"><div id="app"><noscript>This document renders by loading scenes.js — please turn JavaScript on.</noscript></div></main>
 
+<script src="./review-files.js"></script>
 <script src="./scenes.js"></script>
 <script src="./render-routing.js"></script>
 <script src="./production-mode.js"></script>
@@ -2643,7 +2645,7 @@ window.SB_DOC = {
     var syl = narr.reduce(function (a, n) { return a + netLen(n.tts); }, 0);
     var rate = s.duration ? syl / s.duration : 0;
     var maxSent = narr.reduce(function (a, n) { return Math.max(a, netLen(n.tts)); }, 0);
-    var chips = [badge("", T.sec(s.duration || "?"))];
+    var chips = [badge("", T.sec(Number.isFinite(s.duration) ? Math.round(s.duration * 1000) / 1000 : "?"))];
     if (recOf(s)) {
       if (syl) {
         chips.push(badge("", T.chars(syl)));
@@ -4381,9 +4383,9 @@ window.SB_DOC = {
           var pair = fp.mode === 'first_last' || !!previz;
           var inputs = frameInput(fp.start, T.frameStart);
           if (fp.mode === 'first_last') inputs += frameInput(fp.end, T.frameEnd);
-          // The previz clip sits beside the still: the approver sees the camera and timing the
-          // vendor will receive as Video 1, and its hash is part of the approved quote.
-          if (previz) inputs += '<figure><figcaption>' + esc(T.framePreviz) + '</figcaption>' + (previz.clip
+          // Only reference_video sends this clip to the vendor; LTX and host lanes use its frame and prompt.
+          var previzLabel = previz && previz.handoff === 'frame_and_prompt' ? T.framePreviz.replace(' · Video 1', '') : T.framePreviz;
+          if (previz) inputs += '<figure><figcaption>' + esc(previzLabel) + '</figcaption>' + (previz.clip
             ? '<video src="' + esc(previz.clip) + '" muted loop controls playsinline preload="metadata"></video>'
             : '<div class="pending-frame">' + esc(T.framePending) + '</div>') +
             '<div class="frame-reason">' + esc((previz.renderer || '?') + ' · ' + (previz.seconds || '?') + 's · ' + (previz.fps || '?') + ' fps · ' +
@@ -4632,8 +4634,9 @@ window.SB_DOC = {
 
   h += '<footer class="doc-foot"><b>scenes.js is the original</b> — this document only draws it, so when a shot looks wrong, fix scenes.js. ' +
        "In this file, edit SB_DOC only (notes, audio directions, sources, platform plan).<br>" +
-       '<a href="./storyboard.md">storyboard.md</a> · <a href="./script.md">script.md</a> · ' +
-       '<a href="./research.md">research.md</a> · <a href="./scenes.js">scenes.js</a></footer>';
+       (window.REVIEW_FILES || []).map(function (name) {
+         return '<a href="./' + esc(name) + '">' + esc(name) + '</a>';
+       }).join(' · ') + '</footer>';
 
   app.innerHTML = h;
 
@@ -4694,5 +4697,6 @@ window.SB_DOC = {
   document.title = (DOC.displayTitle || DOC.topic || "Storyboard") + (who ? " — Storyboard · " + who : " — Storyboard");
 })();
 </script>
+<script src="./review-layout.js"></script>
 </body>
 </html>
