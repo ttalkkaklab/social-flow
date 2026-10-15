@@ -1,0 +1,79 @@
+{
+  "manifest_version": "0.3",
+  "name": "social-flow",
+  "display_name": "Social Flow",
+  "version": "0.111.1",
+  "description": "The social-flow MCP tools for the Claude Desktop chat — research search, image, video, voice and music generation, and SNS publishing. A desktop extension carries no skills; the full pipeline installs as a plugin in Cowork.",
+  "author": {
+    "name": "Zeans",
+    "email": "zeans@astratech.vn",
+    "url": "https://github.com/ttalkkaklab"
+  },
+  "homepage": "https://github.com/ttalkkaklab/social-flow",
+  "license": "Apache-2.0",
+  "keywords": [
+    "social",
+    "shortform",
+    "threads",
+    "instagram",
+    "facebook",
+    "youtube",
+    "video",
+    "tts",
+    "publishing"
+  ],
+  "server": {
+    "type": "node",
+    "entry_point": "server/dist/bundle.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/server/dist/bundle.js"],
+      "env": {
+        "OPENAI_API_KEY": "${user_config.openai_api_key}",
+        "GEMINI_API_KEY": "${user_config.gemini_api_key}",
+        "ARK_API_KEY": "${user_config.ark_api_key}",
+        "SERPAPI_API_KEY": "${user_config.serpapi_api_key}",
+        "SNS_TOKEN_DIR": "${user_config.sns_token_dir}"
+      }
+    }
+  },
+  "user_config": {
+    "openai_api_key": {
+      "type": "string",
+      "title": "OpenAI API key",
+      "description": "gpt_image_* — covers and any frame with text on it. Empty keeps the on-device image engine.",
+      "sensitive": true
+    },
+    "gemini_api_key": {
+      "type": "string",
+      "title": "Gemini API key",
+      "description": "veo_* video, tts_generate narration, music_* BGM. Empty keeps the on-device voice.",
+      "sensitive": true
+    },
+    "ark_api_key": {
+      "type": "string",
+      "title": "BytePlus ModelArk API key",
+      "description": "seedance_* video. Optional — veo_* works without it.",
+      "sensitive": true
+    },
+    "serpapi_api_key": {
+      "type": "string",
+      "title": "SerpApi key",
+      "description": "serp_* research search. Optional.",
+      "sensitive": true
+    },
+    "sns_token_dir": {
+      "type": "directory",
+      "title": "Credentials directory",
+      "description": "SNS token files, plus a .env file with every other variable (README § Environment variables). The server fills any key left empty here from that file.",
+      "default": "${HOME}/.config/social-flow"
+    }
+  },
+  "tools_generated": true,
+  "compatibility": {
+    "platforms": ["darwin"],
+    "runtimes": {
+      "node": ">=20"
+    }
+  }
+}

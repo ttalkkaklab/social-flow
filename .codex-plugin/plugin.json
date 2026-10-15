@@ -21,6 +21,7 @@
   ],
   "skills": "./skills/",
   "mcpServers": "./codex.mcp.json",
+  "requires_local_executor": true,
   "interface": {
     "displayName": "Social Flow",
     "shortDescription": "Create, review, and publish social content",

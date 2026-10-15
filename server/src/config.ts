@@ -10,6 +10,48 @@ import { accessSync, constants, existsSync, readFileSync, readdirSync, statSync 
 import { homedir } from 'node:os';
 import { delimiter, join } from 'node:path';
 
+/**
+ * Fills process.env from a KEY=VALUE file before anything below reads it.
+ *
+ * Under a terminal host the keys arrive as exported shell variables. A GUI host — Claude
+ * Cowork, Claude Desktop, the ChatGPT desktop app — starts the server with no shell, and
+ * `.mcp.json`'s `${OPENAI_API_KEY:-}` passthrough then arrives as an empty string (or, on a
+ * host that does not expand it, as the literal template). So every variable that is unset,
+ * empty or still a `${…}` template is taken from `<SNS_TOKEN_DIR>/.env` — next to the SNS
+ * tokens, outside any repository. A value the shell exported wins over the file, and
+ * SNS_TOKEN_DIR itself cannot come from the file it locates.
+ *
+ * Returns the names it filled. A missing or unreadable file fills nothing.
+ */
+export function loadEnvFile(file = join(process.env.SNS_TOKEN_DIR || join(homedir(), '.config', 'social-flow'), '.env')): string[] {
+  // A host that does not expand `.mcp.json`'s `${VAR:-}` hands the template over as the value.
+  // That shape is never a real key, so it goes first — a key the file does not supply then
+  // stays unset (tool hidden, or an explicit error) instead of a 401 on a garbage value.
+  for (const [key, value] of Object.entries(process.env)) {
+    if (value && /^\$\{[A-Za-z_][A-Za-z0-9_]*(:-[^}]*)?\}$/.test(value)) delete process.env[key];
+  }
+  let text: string;
+  try { text = readFileSync(file, 'utf8'); } catch { return []; }
+  const filled: string[] = [];
+  // ponytail: KEY=VALUE lines, optional quotes, no interpolation or multiline — add dotenv if a file needs them
+  for (const raw of text.split('\n')) {
+    const line = raw.trim();
+    if (!line || line.startsWith('#')) continue;
+    const eq = line.indexOf('=');
+    if (eq <= 0) continue;
+    const key = line.slice(0, eq).replace(/^export\s+/, '').trim();
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) continue;
+    let value = line.slice(eq + 1).trim();
+    const quote = value[0];
+    if ((quote === '"' || quote === "'") && value.length >= 2 && value.endsWith(quote)) value = value.slice(1, -1);
+    if (process.env[key]) continue;
+    process.env[key] = value;
+    filled.push(key);
+  }
+  return filled;
+}
+loadEnvFile();
+
 export const config = {
   /** SerpApi key (required by the serp_* research/fact-check tools) — https://serpapi.com/manage-api-key */
   serpApiKey: process.env.SERPAPI_API_KEY || '',

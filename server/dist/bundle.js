@@ -75923,6 +75923,34 @@ var StdioServerTransport = class {
 import { accessSync, constants, existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { delimiter, join } from "node:path";
+function loadEnvFile(file = join(process.env.SNS_TOKEN_DIR || join(homedir(), ".config", "social-flow"), ".env")) {
+  for (const [key, value] of Object.entries(process.env)) {
+    if (value && /^\$\{[A-Za-z_][A-Za-z0-9_]*(:-[^}]*)?\}$/.test(value)) delete process.env[key];
+  }
+  let text2;
+  try {
+    text2 = readFileSync(file, "utf8");
+  } catch {
+    return [];
+  }
+  const filled = [];
+  for (const raw of text2.split("\n")) {
+    const line = raw.trim();
+    if (!line || line.startsWith("#")) continue;
+    const eq = line.indexOf("=");
+    if (eq <= 0) continue;
+    const key = line.slice(0, eq).replace(/^export\s+/, "").trim();
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) continue;
+    let value = line.slice(eq + 1).trim();
+    const quote = value[0];
+    if ((quote === '"' || quote === "'") && value.length >= 2 && value.endsWith(quote)) value = value.slice(1, -1);
+    if (process.env[key]) continue;
+    process.env[key] = value;
+    filled.push(key);
+  }
+  return filled;
+}
+loadEnvFile();
 var config2 = {
   /** SerpApi key (required by the serp_* research/fact-check tools) — https://serpapi.com/manage-api-key */
   serpApiKey: process.env.SERPAPI_API_KEY || "",
