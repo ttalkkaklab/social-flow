@@ -137,6 +137,17 @@ test('a previz clip is bound by hash, rendered at whole seconds, and named in th
  const c=good();c.visual.camera.movement=' Arc  Shot ';assert.deepEqual(checkPreviz(c),[]);
  const t=good();t.visual.video.previz.renderer='threejs';assert.deepEqual(checkPreviz(t),[]);
 });
+test('ASTRA previz keeps the exact frame duration instead of rounding up',()=>{
+ const {checkPreviz}=require(path.join(ref,'render-routing.js'));
+ const s=video();s.visual.video.engine='astra';s.visual.video.numFrames=185;s.visual.video.frameRate=24;
+ s.visual.video.previz.handoff='frame_and_prompt';s.visual.video.previz.fps=24;s.visual.video.previz.seconds=185/24;
+ assert.deepEqual(checkPreviz(s),[]);
+ s.visual.video.previz.seconds=8;assert.match(checkPreviz(s).join(),/match numFrames/);
+ s.visual.video.previz.seconds=185/24;s.visual.video.previz.fps=30;assert.match(checkPreviz(s).join(),/match numFrames/);
+ s.visual.video.previz.fps=24;s.visual.video.numFrames=184;assert.match(checkPreviz(s).join(),/8k\+1/);
+ s.visual.video.numFrames=201;assert.match(checkPreviz(s).join(),/through 193/);
+ delete s.visual.video.numFrames;assert.match(checkPreviz(s).join(),/fractional seconds require numFrames/);
+});
 // ── free stock material (scenes-schema §stock material) ──
 const routing=require(path.join(ref,'render-routing.js'));
 const stockLicense=()=>({provider:'nasa',url:'https://images.nasa.gov/details/A11',license:'NASA media usage guidelines',licenseUrl:'https://www.nasa.gov/nasa-brand-center/images-and-media/',attributionRequired:false,commercial:true,modify:true,retrievedAt:'2026-09-07'});
