@@ -180,13 +180,42 @@ four slots (`framing, speed movement, ending on end`; a travelling move reads `f
 speed movement, settling on end` — the hold on each end; a static camera has no speed), the
 subject action with its beats in words, a consistency lock that carries the look and the
 episode camera language, and `Audio: silent`. Store it as `visual.video.prompt`. Before
-returning, the helper runs the Seedance prompt gate that `check-scenes.js` runs on every
-stored prompt (Korean outside dialogue quotes, a negative directive, a timecode or digit
+returning on the Seedance lane, the helper runs the Seedance prompt gate that `check-scenes.js` runs on every
+stored Seedance prompt (Korean outside dialogue quotes, a negative directive, a timecode or digit
 seconds, a missing lock) and fails with the reason instead of emitting a prompt the board
 would then reject. Duration is an API parameter. If a fixed-camera change benefits from an
 end frame, edit the same source using `endFramePrompt`, keep that file, and set
 `visual.frames.end`; the router forwards it as `lastImagePath`. Do not impose a fixed-camera
 end frame on a travelling-camera shot.
+
+For `visual.video.engine:"astra"`, the helper builds an LTX prompt from the same
+camera, ordered action beats, style and identity lock. It does not run Seedance's
+wording gate or claim that a reference video or silent audio request is sent.
+Selected cast sheets also enter the ASTRA prompt as appearance locks for action,
+reaction and insert cuts. Their text counts toward the limit; it is never dropped
+to make an oversized request fit. The locks describe appearance without name labels.
+The complete prompt must fit ASTRA's 2,000-character limit; overflow stops before
+generation and asks the author to shorten the plan. It never truncates the action.
+Identical action and landing beats are written once. On the webtoon preset, the
+prompt opens with continuous hand-drawn 2D cel animation and asks for ink contours
+and flat shading on both the actors and the background throughout the clip.
+ASTRA supplies an AAC track, which the motion-background edit discards.
+When narration is planned, the prompt also requests silent, closed-mouth acting
+and excludes generated captions and lettering. This is a model direction, not an
+audio-disable API flag or a guarantee: inspect the returned frames and reject
+unrequested baked text instead of covering it with another subtitle.
+Run `check-clip-artifacts.js` on the returned file too. Different OCR words on
+different frames can still be changing subtitles; a clean automated result is
+not proof that every frame is text-free or that the drawing style survived.
+If a first-frame-only LTX take changes a drawn character into live action despite
+the style direction, consider a reviewed end image from the approved previz endpoint.
+Declare `visual.frames.mode:"first_last"`, preserve the original scene and camera
+plan, and send that image as ASTRA's `lastFramePath` on the next authorized attempt.
+Inspect the middle too: two drawn anchors do not guarantee a drawn transition.
+For repeated invented captions or speech, simplify the motion description to visible
+actors and actions (for example, the young man on the left) rather than a dialogue-like
+sequence of character names. Keep the cast identities and narration in the storyboard.
+This is a retry option, not evidence that captions have been removed.
 
 ### Subject motion contract
 
@@ -278,6 +307,13 @@ as a sequence:
    stored prompt, `duration`, 720p) and the ledger row is `video.host` for the requested seconds.
    Under `videoProvider:'astra'` the call goes to our own LTX-2.5 box and the ledger row is
    `video.astra` at $0 — the cost is wall clock, so book the seconds but expect no charge.
+   Submit ASTRA cuts serially: its single worker cannot render them in parallel, and queue
+   time counts against the host's tool-response timeout. A transport timeout does not mean
+   the accepted generation failed. Before another submission, inspect the requested output
+   and its `<video>.astra-job.json` receipt. The client writes the job ID and request before
+   polling, then the saved response after download even if the host stopped waiting. A
+   `submitted` receipt is unresolved, not a failed take; do not reset attempts or duplicate
+   that job. If a completed file exists, probe and review it normally and retain the receipt.
    **Default: `astra_img2video`** with the shot's still as `firstFramePath`, the stored prompt,
    and the shot's `visual.video.resolution` passed through as `width` and `height`:
    `1024x1920` for `shorts-9x16`, or `1920x1024` for `youtube-long-16x9`. Both stay on the
@@ -321,6 +357,12 @@ not a promise that a model or a numeric score guarantees it. Every generated cli
 an actual source-image read, full playback read, and start/middle/end frame reads. Use the
 host's permitted media-viewing route. If full playback cannot be inspected, report that
 limitation and hold; do not invent a playback review from still frames.
+
+When arranging sampled frames in a contact sheet, leave visible gutters between panels
+and retain their timestamps. An actor in the neighboring panel is not a duplicate in the
+same frame. Before rejecting a clip for extra actors, duplicated objects or fused anatomy,
+extract and inspect the original frame at the suspected time. Record that time and frame
+path with the finding. A contact sheet remains a diagnostic aid, never full playback proof.
 
 Write `.work/video-review.json` with exactly one accepted record per generated shot:
 

@@ -160,19 +160,22 @@ reused in two or more episodes; single-episode artifacts go in the topic's `.wor
 
 ## serve procedure
 
-`references/serve.js` serves `data/` over HTTP on this machine — a channel picker at the
-top, **스토리보드 · 캐릭터** in the left nav. The storyboard list is a card per episode —
+`references/serve.js` serves the offline library over HTTP on this machine. The root
+lists channels; each channel has **스토리보드 · 캐릭터** in the left nav. The current
+library follows the static layout described below.
+
+The previous browser remains at `/legacy`. Its storyboard list is a card per episode —
 cover (the first scene's image as scenes.js names it), title, frontmatter status, the stage
 `episode-state.js` derives, format, image count and blockers — grouped by playlist tabs:
 전체 · one tab per distinct `series:` frontmatter line (the same line pundago's site reads;
 a ` (n/m)` tail becomes the card's episode marker) · 재생목록없음 for episodes without
-one. A card opens the episode's own `storyboard.html` in place (it only references
+one. The legacy browser at `/legacy` opens the episode's own `storyboard.html` in place (it only references
 `./scenes.js`, `images/` and `../../../assets/characters/…`, so it renders the same as
 from file://). The character list shows every panel image in
 `assets/characters/<id>/` and the catalog note; the detail page renders `identity.md`,
 swaps the main panel from thumbnails, and plays `voice.wav`.
 
-**Panels come back face → front → back** — the order the reference set goes into a
+**Legacy panels come back face → front → back** — the order the reference set goes into a
 generation call (`../produce/references/video-model-selection.md` §The character panels), so the card
 thumbnail and the detail page's opening panel are both the face. Naming isn't uniform
 across channels, so the rank is read off the filename: `face`/`head` is the face,
@@ -188,13 +191,51 @@ node "$CLAUDE_PLUGIN_ROOT/skills/channel/references/serve.js" data --port 8400
 
 1. Run it **in the background** (`run_in_background`) so the session stays free, then
    hand the URL to the user. If the port is taken, pass `--port`.
-2. It reads the disk on every request — nothing to regenerate after a skill edits a
-   storyboard; reload the page.
+2. The home page exports the offline library for every channel. Opening a generated
+   index refreshes that channel; ordinary media requests only read files. `/legacy`
+   retains the previous API browser. A conflicting hand-authored index is reported.
 3. It binds `127.0.0.1` on purpose. `data/` holds research notes, growth state and
    `.work/` intermediates, so `--host 0.0.0.0` (other machines, a cloudflared tunnel) is
    the user's call, never a default. Path segments starting with `.` are never served.
 4. Stop it when the user is done (`pkill -f references/serve.js`) — a listener left
    behind is one more process the next session has to notice.
+
+## Local review HTML (required after character edits)
+
+After creating or updating character identity, panels or voice, run:
+
+```bash
+node "$CLAUDE_PLUGIN_ROOT/skills/channel/references/review-library.js" "data/<channel>"
+node "$CLAUDE_PLUGIN_ROOT/skills/channel/references/review-library.js" "data/<channel>" --check
+```
+
+Deliver `data/<channel>/assets/characters/index.html` for the complete cast and
+`assets/characters/<id>/index.html` for each sheet. They open directly with file://;
+no portal key or HTTP server is needed. Each sheet shows basic identity, three
+required image slots (front/body, back, face), optional extras, voice.wav and the
+full identity document. Keep `identity.md` and media as the source; do not edit
+exported HTML. Named voice/appearance/role fields are read from identity.md.
+
+Optional `review.json` exposes independent review separately from image availability:
+Keep changing scores, thresholds and pending/passed state in this record, not in
+`identity.md`. The identity document defines the character; duplicate status prose
+can contradict a later review or user threshold change and invalidate its input hash.
+`score` (0–100), `iteration` (positive integer), `critical` (nonnegative integer),
+and `inputHashes` mapping identity.md/body.png/back.png/face.png to their reviewed
+SHA-256 values. Optional `threshold` (integer 1–100, legacy default 95) records the
+user's chosen passing score; do not lower it without their instruction. Write only
+an actual review result. A score at or above that threshold with zero critical
+defects displays a pass only while all four hashes match. Changed inputs
+display a request for re-review; missing/invalid records display draft status.
+
+The same export updates `storyboards/index.html` and
+`storyboards/<episode>/index.html`. The latter uses the canonical storyboard
+renderer and relative references to `episodes/<episode>/storyboard/`; it never
+moves production data or duplicates media. Re-export after changes, including
+SB_DOC edits, and run --check before delivery. Hand-authored index.html files and
+output symlinks are refused, never overwritten. Keep the channel folder together
+when copying it to another machine. Design source and limits:
+[local-review-design.md](references/local-review-design.md).
 
 ## register procedure (portal characters)
 
@@ -230,4 +271,5 @@ then use `portal_character_tts_set` with the channel's voice. Steps, field mappi
 - **`references/assets-catalog-template.md`** — `assets/catalog.md` starter (kind+id table)
 - **`references/resolve-asset.py`** — resolve shared assets via catalog + well-known paths (`--ensure` adds a row, `--selftest`)
 - **`references/portal-characters.md`** — registering the channel's characters on the ttalkkakstory portal with `portal_character_*` (create from `identityDir`, image, TTS block, update, delete)
+- **`references/review-library.js`** — exports offline character sheets, both indexes and episode review pages; `--check` detects stale output
 - **`references/serve.js`** — the channel browser over HTTP: `/api/channels`, `/api/channels/<slug>/storyboards`, `/api/channels/<slug>/characters[/<id>]`, and `/files/<slug>/…` static from `data/` (dot segments refused, Range for audio/video). Zero dependencies, `--selftest`

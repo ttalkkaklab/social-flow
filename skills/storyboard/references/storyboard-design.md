@@ -19,7 +19,7 @@ node "$CLAUDE_PLUGIN_ROOT/skills/storyboard/references/storyboard-html.js" "<epi
 ```
 
 On refresh it preserves the existing title and `SB_DOC` block, replaces the review
-shell with the current template, and copies its four runtime helpers. It never
+shell with the current template, and copies its runtime helpers, shared review CSS and bundled font. It never
 reads a key or calls the portal. Fill the metadata after first creation. Before
 delivery in either mode, run:
 
@@ -47,3 +47,23 @@ source/screen is unavailable, preserve the bundled design and report that parity
 could not be verified. Do not describe a guessed layout as matching the portal.
 Ship the template in the plugin so keyless users never need a portal connection
 to render or review a board.
+
+## Offline library and portal source (2026-10-15)
+
+The shell now uses the portal's neutral palette, Wanted Sans 1.0.3, left-aligned
+240px sidebar and shot-first reading order. Source: ttalkkak-story `d29f1a6`
+(2026-10-11), DESIGN.md 1.2.0, CharacterForm, CharacterCard, PageShell and ShotTree.
+`review-layout.js` rearranges existing rendered nodes; all checks, costs, scene
+previews, metadata and event handlers remain available. The closed checks summary
+shows the actual warning/error totals. Printing expands the review disclosures.
+The local review remains read-only and does not impersonate portal editing controls.
+
+When invoked on `data/<channel>/episodes/<topic>/storyboard`, storyboard-html.js also
+exports/checks the channel library. After editing SB_DOC, run it again so the copy
+at `storyboards/<topic>/index.html` is current. That copy adds only a relative base
+URL to the SAME renderer, never an independently authored storyboard UI.
+
+Character changes call `skills/channel/references/review-library.js <channelDir>`.
+Shared review assets live under the channel skill’s `review-assets/` directory.
+See `skills/channel/references/local-review-design.md` for provenance and scope.
+A local template pass still does not certify parity with a newer portal deployment.
