@@ -588,7 +588,7 @@ describe('mocked tool calls', () => {
     const oldFetch = globalThis.fetch;
     config.astraVideoApiKey = 'test-only-key';
     const uploads = [], jobs = [];
-    let duration = 30, rejectJob = false;
+    let duration = 30, rejectJob = false, onStatus = null;
     globalThis.fetch = async (url, init = {}) => {
       const pathname = new URL(url).pathname;
       if (pathname === '/v1/uploads') {
@@ -601,13 +601,16 @@ describe('mocked tool calls', () => {
         if (rejectJob) return new Response('expired audio upload', { status: 400 });
         return Response.json({ job_id: 'test-job' }, { status: 202 });
       }
-      if (pathname === '/v1/jobs/test-job') return Response.json({ status: 'succeeded', request: jobs.at(-1) });
+      if (pathname === '/v1/jobs/test-job') {
+        const override = onStatus?.();
+        return override || Response.json({ status: 'succeeded', request: jobs.at(-1) });
+      }
       if (pathname === '/v1/jobs/test-job/result') return new Response('mock-mp4');
       throw new Error(`Unexpected mocked route ${pathname}`);
     };
     fs.writeFileSync(path.join(dir, 'a.wav'), 'wave');
     fs.writeFileSync(path.join(dir, 'face.png'), 'png');
-    try { await fn({ dir, uploads, jobs, setDuration: value => { duration = value; }, rejectJob: () => { rejectJob = true; } }); }
+    try { await fn({ dir, uploads, jobs, setDuration: value => { duration = value; }, rejectJob: () => { rejectJob = true; }, onStatus: fn => { onStatus = fn; } }); }
     finally { globalThis.fetch = oldFetch; config.astraVideoApiKey = oldKey; fs.rmSync(dir, { recursive: true, force: true }); }
   }
 
@@ -620,6 +623,39 @@ describe('mocked tool calls', () => {
       assert.match(result.content[0].text, /audioUploadId: audio-id/);
       assert.match(result.content[0].text, /Audio expires at: 2026-10-01T04:00:00Z/);
       assert.match(result.content[0].text, /Audio duration \(seconds\): 30/);
+    });
+  });
+
+  it('persists the accepted job before polling and the complete response beside the video', async () => {
+    await withServer(async ({ dir, onStatus }) => {
+      const receipt = path.join(dir, 'recover.mp4.astra-job.json');
+      let observedPending = false;
+      onStatus(() => {
+        const saved = JSON.parse(fs.readFileSync(receipt, 'utf8'));
+        assert.equal(saved.status, 'submitted');
+        assert.equal(saved.jobId, 'test-job');
+        assert.equal(saved.submittedRequest.prompt, 'receipt test');
+        observedPending = true;
+      });
+      await ROUTES.astra_text2video({ prompt: 'receipt test', outputPath: dir, filename: 'recover.mp4' });
+      assert.equal(observedPending, true);
+      const saved = JSON.parse(fs.readFileSync(receipt, 'utf8'));
+      assert.equal(saved.status, 'completed');
+      assert.equal(saved.request.prompt, 'receipt test');
+      assert.equal(saved.bytes, fs.statSync(saved.videoPath).size);
+      assert.ok(saved.completedAt);
+      assert.ok(!fs.readFileSync(receipt, 'utf8').includes('test-only-key'));
+    });
+  });
+
+  it('retains the accepted job identity when status retrieval fails', async () => {
+    await withServer(async ({ dir, onStatus }) => {
+      onStatus(() => new Response('access denied', { status: 401 }));
+      await assert.rejects(ROUTES.astra_text2video({ prompt: 'pending test', outputPath: dir, filename: 'pending.mp4' }), /401/);
+      const saved = JSON.parse(fs.readFileSync(path.join(dir, 'pending.mp4.astra-job.json'), 'utf8'));
+      assert.equal(saved.status, 'submitted');
+      assert.equal(saved.jobId, 'test-job');
+      assert.equal(fs.existsSync(saved.videoPath), false);
     });
   });
 

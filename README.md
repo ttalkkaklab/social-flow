@@ -1080,3 +1080,19 @@ portal repository; the server suite also covers save/pull with a scripted portal
 `voice_lock_apply` converts single-speaker generated audio/video to the character’s
 ElevenLabs voice and checks blind transcripts and duration drift. It saves originals,
 new media and a per-shot result report. See the [produce contract](skills/produce/references/voice-lock.md).
+
+### Offline character and storyboard library
+
+`node skills/channel/references/review-library.js data/<channel>` saves a channel
+home, `assets/characters/index.html`, `assets/characters/<id>/index.html`,
+`storyboards/index.html` and `storyboards/<episode>/index.html`. All open directly
+with file://, with bundled Wanted Sans and no portal request. Character sheets
+show front/back/face, additional images, identity and voice. Episode pages use the
+same canonical review renderer; production inputs remain in `episodes/`.
+`--check` detects stale/missing exports without writing. Character and storyboard
+skills refresh these views before delivery. The optional channel HTTP browser now
+opens this library; its previous API browser is at `/legacy`.
+
+Portal reference: ttalkkak-story `d29f1a6`, DESIGN.md 1.2.0. See
+[local review design](skills/channel/references/local-review-design.md) for the
+reference, supported offline behavior and visual verification scope.

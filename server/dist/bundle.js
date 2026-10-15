@@ -86212,20 +86212,22 @@ async function awaitResult(jobId) {
     await sleep2(POLL_INTERVAL_MS);
   }
 }
-function saveResult(bytes, outputPath, filename) {
-  const target = resolveOutputFile(
-    outputPath || process.cwd(),
-    filename || `astra_${Date.now()}.mp4`,
-    "video"
-  );
-  fs4.writeFileSync(target, bytes);
-  return target;
-}
 async function runJob(mode, prompt, body, outputPath, filename) {
+  const videoPath = resolveOutputFile(outputPath || process.cwd(), filename || `astra_${Date.now()}.mp4`, "video");
+  const receiptPath = `${videoPath}.astra-job.json`;
+  const writeReceipt = (value) => {
+    const temp = `${receiptPath}.${process.pid}.tmp`;
+    fs4.writeFileSync(temp, JSON.stringify(value, null, 2) + "\n", { mode: 384 });
+    fs4.renameSync(temp, receiptPath);
+  };
   const jobId = await submitJob(body);
+  const submitted = { jobId, mode, prompt, videoPath, submittedAt: (/* @__PURE__ */ new Date()).toISOString(), submittedRequest: body };
+  writeReceipt({ ...submitted, status: "submitted" });
   const { bytes, request, elapsedSeconds } = await awaitResult(jobId);
-  const videoPath = saveResult(bytes, outputPath, filename);
-  return { videoPath, jobId, mode, prompt, bytes: bytes.length, elapsedSeconds, ...request ? { request } : {} };
+  fs4.writeFileSync(videoPath, bytes);
+  const response = { videoPath, jobId, mode, prompt, bytes: bytes.length, elapsedSeconds, ...request ? { request } : {} };
+  writeReceipt({ ...submitted, ...response, status: "completed", completedAt: (/* @__PURE__ */ new Date()).toISOString() });
+  return response;
 }
 async function generateFromText(args) {
   const mode = ASTRA_VIDEO_TIERS[args.tier];
@@ -87510,7 +87512,7 @@ async function generateGemini38Speech(request) {
 var import_tts_speed_policy3 = __toESM(require_tts_speed_policy(), 1);
 import { execFile as execFile5 } from "node:child_process";
 import { createHash as createHash2, randomUUID } from "node:crypto";
-import { closeSync as closeSync2, existsSync as existsSync10, mkdirSync as mkdirSync4, openSync as openSync2, readFileSync as readFileSync9, renameSync as renameSync3, rmSync as rmSync4, writeFileSync as writeFileSync7 } from "node:fs";
+import { closeSync as closeSync2, existsSync as existsSync10, mkdirSync as mkdirSync4, openSync as openSync2, readFileSync as readFileSync9, renameSync as renameSync4, rmSync as rmSync4, writeFileSync as writeFileSync7 } from "node:fs";
 import path11 from "node:path";
 import { promisify as promisify2 } from "node:util";
 
@@ -89178,7 +89180,7 @@ import path10 from "node:path";
 
 // src/qwen3-asr-client.ts
 import { execFile as execFile4 } from "node:child_process";
-import { existsSync as existsSync8, mkdirSync as mkdirSync3, mkdtempSync as mkdtempSync2, readFileSync as readFileSync8, renameSync as renameSync2, rmSync as rmSync2 } from "node:fs";
+import { existsSync as existsSync8, mkdirSync as mkdirSync3, mkdtempSync as mkdtempSync2, readFileSync as readFileSync8, renameSync as renameSync3, rmSync as rmSync2 } from "node:fs";
 import { homedir as homedir2 } from "node:os";
 import { basename as basename8, extname as extname6, join as join5 } from "node:path";
 var QWEN3_ASR_MODELS = ["Qwen/Qwen3-ASR-1.7B", "Qwen/Qwen3-ASR-0.6B"];
@@ -89418,7 +89420,7 @@ ${tail}` : ""}`));
     const message = error2 instanceof Error ? error2.message : String(error2);
     return { success: false, error: `Failed to parse CLI JSON: ${message}` };
   }
-  renameSync2(cliJsonPath, outFile);
+  renameSync3(cliJsonPath, outFile);
   rmSync2(scratchDir, { recursive: true, force: true });
   const segments = normalizeSegments(parsed);
   const text2 = (parsed.text ?? segments.map((s2) => s2.text).join("")).trim();
@@ -89881,7 +89883,7 @@ async function generateCheckedSpeech(input, dependencies) {
     const report = { ...base, status, attempts, checkedAt: (/* @__PURE__ */ new Date()).toISOString(), ...extra };
     const temporary = proofFile + "." + randomUUID() + ".tmp";
     writeFileSync7(temporary, JSON.stringify(report, null, 2) + "\n");
-    renameSync3(temporary, proofFile);
+    renameSync4(temporary, proofFile);
     return { success: status === "pass", status, audioPath: output2, proofPath: proofFile, attempts: attempts.length, ...extra };
   }
   try {
@@ -91065,9 +91067,24 @@ def op_pose(job):
     # another bone's, and only those keys (plus the clip key each window opens from) take
     # this call's interpolation
     per_bone = {}
+    location_frames = {}
     for k in job["keys"]:
-        for bname, _world, _offset in pose_to_bones(k["pose"]):
+        for bname, _world, offset in pose_to_bones(k["pose"]):
             per_bone.setdefault(bname, set()).add(int(k["frame"]))
+            if offset is not None:
+                location_frames.setdefault(bname, set()).add(int(k["frame"]))
+    if not layered:
+        # Blender extrapolates the first key backwards. Anchor a delayed channel at rest
+        # so a later gesture cannot overwrite the opening pose. Translation has its own
+        # clock: an earlier hips rotation does not anchor a later pelvis offset.
+        start = min(sc.frame_start, min(frames))
+        for channel, keyed in (("rotation_quaternion", per_bone), ("location", location_frames)):
+            for bname, fs in keyed.items():
+                if min(fs) > start:
+                    pb = rig.pose.bones[bname]
+                    pb.rotation_mode = "QUATERNION"
+                    pb.keyframe_insert(data_path=channel, frame=start, group=bname)
+                    frames.append(start)
     interp = {b: set(fs) for b, fs in per_bone.items()}
     touched = set()
     for k in job["keys"]:
@@ -92417,7 +92434,7 @@ import path15 from "node:path";
 
 // src/portal-images.ts
 import { createHash as createHash3, randomUUID as randomUUID2 } from "node:crypto";
-import { closeSync as closeSync3, existsSync as existsSync14, fstatSync, mkdirSync as mkdirSync5, openSync as openSync3, readFileSync as readFileSync12, readSync, realpathSync, renameSync as renameSync4, rmSync as rmSync6, writeFileSync as writeFileSync10 } from "node:fs";
+import { closeSync as closeSync3, existsSync as existsSync14, fstatSync, mkdirSync as mkdirSync5, openSync as openSync3, readFileSync as readFileSync12, readSync, realpathSync, renameSync as renameSync5, rmSync as rmSync6, writeFileSync as writeFileSync10 } from "node:fs";
 import path14 from "node:path";
 
 // src/portal-episode.ts
@@ -92767,7 +92784,7 @@ async function uploadEpisodeImages(client, args, base) {
     const temporary = `${file}.${randomUUID2()}.tmp`;
     try {
       writeFileSync10(temporary, nextSource);
-      renameSync4(temporary, file);
+      renameSync5(temporary, file);
     } finally {
       rmSync6(temporary, { force: true });
     }
@@ -96145,7 +96162,7 @@ Returns: the scene summary; the object's line shows its keyframes.`,
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     description: `Key the body of a person proxy in a .blend previz **on this machine** \u2014 poses over frames in plain channels, degrees in the figure's own frame: arms (raise, side, twist, elbow), legs (raise, side, knee, ankle), torso (bow, lean, turn), head (nod, tilt, turn) and hips (offset in metres, turn, bow, lean). The mannequin bends at its 19 joints; between keys the pose eases (BEZIER by default). Saves and returns the scene summary plus where the hands, feet and head ended up.
 
-Use for acted beats the cut is about \u2014 a point, a wave, a bow, a crouch and jump, a dance count \u2014 when no motion-capture clip fits (blender_motion_import is the natural-motion path). A group that is present keys every bone it covers with omitted channels at 0 (the rest pose: arms hanging, standing straight); a group that is absent leaves those bones alone at that frame. raise 90 puts a limb horizontal in front, side 90 horizontal out to the side, elbow/knee 0\u2013150 bend the joint; bow/nod + lean forward, lean/tilt + go to the figure's left, turn + turns to the figure's left; hips.offset [0, 0, -0.2] drops the pelvis 20 cm (a crouch, with knees and thighs bent to match). The raw bones map takes any rig bone as [x, y, z] degrees about the figure's X (side), Y (front-back) and Z (up) axes. Keys more than about 120\xB0 apart need an intermediate key or the joint may swing the other way round.
+Use for acted beats the cut is about \u2014 a point, a wave, a bow, a crouch and jump, a dance count \u2014 when no motion-capture clip fits (blender_motion_import is the natural-motion path). A group that is present keys every bone it covers with omitted channels at 0 (the rest pose: arms hanging, standing straight); a group that is absent leaves those bones alone at that frame. With clearExisting:true, channels first keyed later get a rest key at the scene start, so future poses do not leak into the opening; pelvis translation is anchored separately from rotation. Layered accents (clearExisting:false) keep the existing clip. raise 90 puts a limb horizontal in front, side 90 horizontal out to the side, elbow/knee 0\u2013150 bend the joint; bow/nod + lean forward, lean/tilt + go to the figure's left, turn + turns to the figure's left; hips.offset [0, 0, -0.2] drops the pelvis 20 cm (a crouch, with knees and thighs bent to match). The raw bones map takes any rig bone as [x, y, z] degrees about the figure's X (side), Y (front-back) and Z (up) axes. Keys more than about 120\xB0 apart need an intermediate key or the joint may swing the other way round.
 Do NOT pose with this what a clip can carry \u2014 a full dance by hand is hundreds of keys and reads mechanical; import a clip and hand-key only the accents with clearExisting false (each accent takes over \xB1ease frames of the clip, default 6, so it is reached and left rather than spiked). Do NOT move the figure across the floor with this \u2014 that is blender_object_animate on the person's root. Do NOT name the rig or the body \u2014 name the person proxy.
 
 Returns: the scene summary; the person's rig line shows its keyframes, and a landmark line gives hand.L, hand.R, foot.L, foot.R and head positions in world metres at the last keyed frame.`,
@@ -98183,7 +98200,7 @@ function canonicalPullPaths(episode, written = []) {
 
 // src/portal-attachments.ts
 import { createHash as createHash4, randomUUID as randomUUID3 } from "node:crypto";
-import { constants as constants2, closeSync as closeSync4, existsSync as existsSync16, fstatSync as fstatSync2, lstatSync as lstatSync2, mkdirSync as mkdirSync7, openSync as openSync4, readFileSync as readFileSync15, readSync as readSync2, readdirSync as readdirSync2, renameSync as renameSync5, writeFileSync as writeFileSync12 } from "node:fs";
+import { constants as constants2, closeSync as closeSync4, existsSync as existsSync16, fstatSync as fstatSync2, lstatSync as lstatSync2, mkdirSync as mkdirSync7, openSync as openSync4, readFileSync as readFileSync15, readSync as readSync2, readdirSync as readdirSync2, renameSync as renameSync6, writeFileSync as writeFileSync12 } from "node:fs";
 import path17 from "node:path";
 var LIMIT = 10 * 1024 * 1024;
 var MANIFEST = ".portal-attachments.json";
@@ -98312,7 +98329,7 @@ async function restoreAttachments(client, episodeId, root, snapshot) {
     const temporary = `${target}.${randomUUID3()}.tmp`;
     writeFileSync12(temporary, bytes, { flag: "wx" });
     safeAttachmentTarget(root, item.relativePath);
-    renameSync5(temporary, target);
+    renameSync6(temporary, target);
   }
   mkdirSync7(root, { recursive: true });
   const manifest2 = path17.join(root, MANIFEST);
@@ -98382,7 +98399,7 @@ import {
   readFileSync as readFileSync16,
   readSync as readSync4,
   readdirSync as readdirSync3,
-  renameSync as renameSync6,
+  renameSync as renameSync7,
   rmSync as rmSync7,
   unlinkSync as unlinkSync3,
   writeFileSync as writeFileSync13
@@ -98444,7 +98461,7 @@ function writeState(root, state) {
   const temporary = `${target}.${randomUUID4()}.tmp`;
   writeFileSync13(temporary, `${JSON.stringify({ ...state, format: STATE_FORMAT, updatedAt: (/* @__PURE__ */ new Date()).toISOString() }, null, 2)}
 `, { flag: "wx" });
-  renameSync6(temporary, target);
+  renameSync7(temporary, target);
 }
 function mime2(relative) {
   const ext = path18.extname(relative).toLowerCase();
@@ -98542,7 +98559,7 @@ function replaceFile(root, relative, bytes, backupRoot) {
   }
   const temporary = `${target}.${randomUUID4()}.tmp`;
   writeFileSync13(temporary, bytes, { flag: "wx" });
-  renameSync6(temporary, target);
+  renameSync7(temporary, target);
 }
 async function channelSync(client, args) {
   const root = channelRoot(args.channel);
@@ -98653,7 +98670,7 @@ import path21 from "node:path";
 
 // src/portal-assets.ts
 import { createHash as createHash6 } from "node:crypto";
-import { closeSync as closeSync7, existsSync as existsSync18, mkdirSync as mkdirSync9, openSync as openSync7, readFileSync as readFileSync17, renameSync as renameSync7, rmSync as rmSync8, statSync as statSync9, writeSync as writeSync2 } from "node:fs";
+import { closeSync as closeSync7, existsSync as existsSync18, mkdirSync as mkdirSync9, openSync as openSync7, readFileSync as readFileSync17, renameSync as renameSync8, rmSync as rmSync8, statSync as statSync9, writeSync as writeSync2 } from "node:fs";
 import path19 from "node:path";
 var channelArg2 = external_exports.string().regex(/^[a-z0-9][a-z0-9-]{0,63}$/, "kebab-case channel slug").optional();
 var list = external_exports.array(external_exports.string().trim().min(1).max(64)).max(32).optional();
@@ -98805,7 +98822,7 @@ async function getAsset(client, args) {
     }, asset.byteSize);
     closeSync7(fd);
     if (size !== asset.byteSize || hash4.digest("hex") !== asset.sha256) throw new Error(`Downloaded bytes do not match the portal's sha256/byteSize for asset ${asset.id}. Nothing was kept.`);
-    renameSync7(tmp, file);
+    renameSync8(tmp, file);
   } catch (error2) {
     try {
       closeSync7(fd);
@@ -100275,7 +100292,7 @@ var UNIT_ROUTES = Object.fromEntries(UNIT_TOOL_NAMES.map((name) => [name, (args)
 
 // src/threads-gate.ts
 import { createHash as createHash7, randomUUID as randomUUID5 } from "node:crypto";
-import { appendFileSync as appendFileSync2, mkdirSync as mkdirSync11, readFileSync as readFileSync21, realpathSync as realpathSync3, renameSync as renameSync8, statSync as statSync10, writeFileSync as writeFileSync16 } from "node:fs";
+import { appendFileSync as appendFileSync2, mkdirSync as mkdirSync11, readFileSync as readFileSync21, realpathSync as realpathSync3, renameSync as renameSync9, statSync as statSync10, writeFileSync as writeFileSync16 } from "node:fs";
 import { dirname as dirname5, join as join10, resolve as resolve5 } from "node:path";
 import { fileURLToPath as fileURLToPath3 } from "node:url";
 import { spawnSync as spawnSync2 } from "node:child_process";
@@ -100331,7 +100348,7 @@ function save(draft) {
   mkdirSync11(dirname5(file), { recursive: true });
   const temp = `${file}.${randomUUID5()}.tmp`;
   writeFileSync16(temp, JSON.stringify(draft), { mode: 384 });
-  renameSync8(temp, file);
+  renameSync9(temp, file);
 }
 function load(id) {
   const value = JSON.parse(readFileSync21(draftLocation(id).file, "utf8"));
@@ -100448,7 +100465,7 @@ function checkThreadsEpisode(input) {
 
 // src/portal-media.ts
 import { createHash as createHash8, randomUUID as randomUUID6 } from "node:crypto";
-import { appendFileSync as appendFileSync3, closeSync as closeSync9, fstatSync as fstatSync6, statSync as statSync11, mkdirSync as mkdirSync12, openSync as openSync9, readFileSync as readFileSync22, readSync as readSync6, realpathSync as realpathSync4, renameSync as renameSync9, rmSync as rmSync11, writeFileSync as writeFileSync17 } from "node:fs";
+import { appendFileSync as appendFileSync3, closeSync as closeSync9, fstatSync as fstatSync6, statSync as statSync11, mkdirSync as mkdirSync12, openSync as openSync9, readFileSync as readFileSync22, readSync as readSync6, realpathSync as realpathSync4, renameSync as renameSync10, rmSync as rmSync11, writeFileSync as writeFileSync17 } from "node:fs";
 import path22 from "node:path";
 var portalShotFields = {
   episodeDir: external_exports.string().min(1),
@@ -100579,7 +100596,7 @@ ${assignment}
     const tmp = `${scenesFile}.${randomUUID6()}.tmp`;
     try {
       writeFileSync17(tmp, next);
-      renameSync9(tmp, scenesFile);
+      renameSync10(tmp, scenesFile);
     } finally {
       rmSync11(tmp, { force: true });
     }
@@ -104061,7 +104078,7 @@ async function checkAccounts(channel) {
 
 // src/tts-final-quality.ts
 import { execFile as execFile9 } from "node:child_process";
-import { existsSync as existsSync23, mkdtempSync as mkdtempSync7, readFileSync as readFileSync23, rmSync as rmSync12, writeFileSync as writeFileSync18, renameSync as renameSync10, openSync as openSync10, closeSync as closeSync10 } from "node:fs";
+import { existsSync as existsSync23, mkdtempSync as mkdtempSync7, readFileSync as readFileSync23, rmSync as rmSync12, writeFileSync as writeFileSync18, renameSync as renameSync11, openSync as openSync10, closeSync as closeSync10 } from "node:fs";
 import { tmpdir as tmpdir6 } from "node:os";
 import path24 from "node:path";
 import { promisify as promisify4 } from "node:util";
@@ -104094,7 +104111,7 @@ async function reviewFinalSpeech(input, deps = { listen }) {
     const staging = path24.join(temp, "proof.json");
     writeFileSync18(staging, JSON.stringify(result, null, 2) + "\n");
     writeFileSync18(proofPath + ".tmp", readFileSync23(staging));
-    renameSync10(proofPath + ".tmp", proofPath);
+    renameSync11(proofPath + ".tmp", proofPath);
     return { success: status === "pass", status, proofPath, ...extra };
   }
   try {

@@ -8,12 +8,19 @@ three stages:
 ```
 data/
 └── <channel slug>/                  # created by /social-flow:channel add
+    ├── index.html                   # generated offline library home
+    ├── storyboards/                 # generated review views, not production inputs
+    │   ├── index.html               # all episodes
+    │   └── <topic>/index.html       # same renderer, relative links to canonical episode data
     ├── profile.md                   # channel profile (tone·voice·theme·platform SoT)
     ├── assets/                      # channel-shared assets — only what two or more episodes reuse
     │   ├── catalog.md               #   kind+id → path (resolve-asset.py reads this)
     │   ├── branding/                #   profile logo (master + platform resizes)
     │   ├── intro/                   #   intro master·stinger·lockup·sonic logo
     │   ├── outro/                   #   default.mp4 · per-platform youtube.mp4 / instagram.mp4
+    │   ├── review/                 # shared review CSS/JS + bundled OFL font
+    │   ├── characters/index.html    # all characters, generated
+    │   ├── characters/<id>/index.html # per-character sheet, generated
     │   ├── characters/<id>/         #   identity.md + panels (face/body/back) + voice.wav — the same face and the same voice across episodes
     │   ├── audio/bgm/ · audio/sfx/  #   channel default BGM · recurring SFX
     │   ├── stills/                  #   stills you pull back out (swatches·products·card props)
@@ -46,8 +53,9 @@ data/
                 └── publish-log.md   # publish record (permalinks)
 ```
 
-- **Episodes go under `episodes/`** — the channel root has four slots: `profile.md` ·
-  `assets/` · `growth/` · `episodes/`. Don't put topic directories at the channel
+- **Episodes go under `episodes/`** — production inputs stay in `profile.md` ·
+  `assets/` · `growth/` · `episodes/`. Generated `index.html` and `storyboards/`
+  are review views only. Don't put topic directories at the channel
   root. Move old layouts into `episodes/<topic>/`. The lookup glob is
   `data/<channel>/episodes/*/storyboard/`.
 - **`assets/` holds shared things only** — single-episode artifacts (episode BGM,
@@ -65,3 +73,9 @@ data/
 - **SNS publish tokens don't live in this directory** — they go outside the repo
   in `~/.config/social-flow/<channel slug>/` (same slug as under data/), and the
   publish tools' `channel` argument points at that directory.
+
+Generate or refresh offline reviews with
+`node skills/channel/references/review-library.js data/<channel>`; append `--check`
+to detect stale/missing files without writing. A storyboard HTML refresh in the
+canonical episode path also refreshes these views. Copy the whole channel folder
+for portable file:// review; HTML, scenes.js, fonts and relative media travel together.
