@@ -37,11 +37,15 @@ fi
 CHROME="${CHROME:-/Applications/Google Chrome.app/Contents/MacOS/Google Chrome}"
 EXTRA=(); [ "$ALPHA" = "1" ] && EXTRA+=(--default-background-color=00000000)
 mkdir -p "$(dirname "$OUT")"; rm -f "$OUT"
+if [ "$CAP_W" -lt 500 ]; then
+  node "$(dirname "$0")/capture-viewport.js" "$CHROME" "$URL" "$OUT" "$CAP_W" "$CAP_H" "$ALPHA" >/dev/null
+else
 "$CHROME" --headless=new --disable-gpu --window-size=$CAP_W,$CAP_H --hide-scrollbars \
   ${EXTRA[@]+"${EXTRA[@]}"} --screenshot="$OUT" "$URL" >/dev/null 2>&1 &
 PID=$!
 for _ in $(seq 1 60); do [ -s "$OUT" ] && sleep 0.4 && break; sleep 0.25; done
 kill $PID 2>/dev/null || true; wait $PID 2>/dev/null || true
+fi
 [ -s "$OUT" ] || { echo "FAIL $URL" >&2; exit 1; }
 
 # Dimension assertion — holds the equality PNG pixels = requested window size = CSS px.
