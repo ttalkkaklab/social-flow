@@ -1,6 +1,6 @@
 {
   "name": "social-flow",
-  "version": "0.111.1",
+  "version": "0.112.0",
   "description": "Plan, produce, review, and publish channel-based social content for Threads, Instagram, Facebook, and YouTube.",
   "author": {
     "name": "Zeans",
@@ -21,6 +21,7 @@
   ],
   "skills": "./skills/",
   "mcpServers": "./codex.mcp.json",
+  "requires_local_executor": true,
   "interface": {
     "displayName": "Social Flow",
     "shortDescription": "Create, review, and publish social content",

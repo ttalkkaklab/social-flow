@@ -9,7 +9,7 @@
  *
  *   text    — one frame per second through tesseract (kor+eng, sparse-text mode). A frame counts
  *             when it has a readable word (2+ Hangul syllables or 3+ letters at 75+ confidence);
- *             a finding needs the word in two frames or two words in one, so a texture that
+ *             a finding needs words in two frames or two words in one, so a texture that
  *             happens to read as "lll" for one frame does not stop a build.
  *   audio   — ffprobe for a track, R128 integrated loudness for whether anything is on it.
  *             A clip planned silent (generateAudio:false) that carries sound is a finding.
@@ -70,7 +70,7 @@ function ocrFrames(clip, fps, lang, workDir) {
     const idx = Number(/f(\d+)\.png/.exec(f)[1]);
     const t = Math.round(((idx - 1) / fps) * 100) / 100;
     const o = run('tesseract', [path.join(frames, f), 'stdout', '-l', lang, '--psm', '11', 'tsv'], { stdio: ['ignore', 'pipe', 'ignore'] });
-    if (o.status !== 0) continue;
+    if (o.status !== 0) throw new Error('tesseract failed to read frame ' + f + ' (exit ' + o.status + '); OCR coverage is incomplete');
     const words = [];
     for (const line of (o.stdout || '').split('\n').slice(1)) {
       const c = line.split('\t');
@@ -88,7 +88,10 @@ function ocrFrames(clip, fps, lang, workDir) {
 function textFindings(frames) {
   const seen = new Map();
   frames.forEach((f) => f.words.forEach((w) => seen.set(w.toLowerCase(), (seen.get(w.toLowerCase()) || 0) + 1)));
-  const solid = frames.filter((f) => f.words.length >= 2 || f.words.some((w) => seen.get(w.toLowerCase()) >= 2));
+  // Generated subtitles can change every frame, and malformed words can still be legible.
+  // Requiring the same spelling twice misses moving captions that OCR only partly reads.
+  const wordFrames = frames.filter(f => f.words.length);
+  const solid = frames.filter((f) => f.words.length >= 2 || (wordFrames.length >= 2 && f.words.length) || f.words.some((w) => seen.get(w.toLowerCase()) >= 2));
   if (!solid.length) return [];
   const span = solid.length === 1 ? `${solid[0].t}s` : `${solid[0].t}–${solid[solid.length - 1].t}s`;
   const sample = Array.from(new Set(solid.flatMap((f) => f.words))).slice(0, 6).join(' ');
@@ -208,7 +211,8 @@ function main() {
   console.log(`${path.basename(result.clip)} · ${result.seconds}s · expected ${result.expect} · audio ${result.audio.present ? (result.audio.lufs === null ? 'present' : result.audio.lufs + ' LUFS') : 'none'} · ${result.text.length} frame(s) with words` +
               (result.speech.ran ? ` · heard "${(result.speech.text || '').slice(0, 60)}"` : result.speech.why ? ` · ASR skipped: ${result.speech.why}` : ''));
   result.findings.forEach((f) => console.log(`⚠ ${f.kind}: ${f.what}`));
-  if (!result.findings.length) console.log('clean — nothing the prompt did not ask for');
+  if (result.textSkipped) console.log('OCR skipped: ' + result.textSkipped);
+  if (!result.findings.length) console.log('No automated artifact findings; sampled OCR does not replace full playback review.');
   process.exit(result.findings.length ? 2 : 0);
 }
 

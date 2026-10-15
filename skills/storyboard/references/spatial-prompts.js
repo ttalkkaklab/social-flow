@@ -62,6 +62,30 @@ function characterIds(value) {
   return [...new Set(values.map(entry => typeof entry === 'string' ? entry : entry?.id)
     .filter(id => typeof id === 'string' && id.trim()))];
 }
+// LTX takes the source frame, not a Seedance reference clip. Its 2000-character
+// request limit applies to the complete prompt; reject overflow without losing action beats.
+function astraMotionPrompt(d, camera, style, treatment, externalNarration, castAppearance = []) {
+  const beats = d.motion?.kind === 'subject_action' ? d.motion.beats : [];
+  const states = beats.length ? beatsInWords(beats)
+    : 'At first, ' + clause(d.before) + '. Finally, ' + clause(finalState(d));
+  const actionInBeats = beats.some(b => clause(b.state) === clause(d.action));
+  const sameLanding = clause(camera.end) === clause(finalState(d));
+  const prompt = [...(style.preset === 'webtoon' ? [
+    'A continuous shot of hand-drawn 2D cel animation. Black ink contours and flat shaded colour planes persist on faces, hands, hair, clothing and the illustrated background in every frame.'
+  ] : [treatment]),
+    'Camera: ' + [camera.framing, camera.movement, camera.speed].map(clause).join('; ') + '.',
+    ...(!actionInBeats ? ['Action: ' + clause(d.action) + '.'] : []), states + '.',
+    ...(!sameLanding ? ['Camera landing: ' + clause(camera.end) + '.'] : []),
+    'The input image fixes identity, face, costume, proportions, materials and actor screen positions; preserve them while the planned action changes pose and location.',
+    ...castAppearance,
+    clause(d.continuity) + '.',
+    'Episode camera language: ' + clause(style.camera) + '.',
+    ...(externalNarration ? ['The characters keep their mouths closed throughout their physical actions.'] : []),
+    'Animate through the last frame with stable anatomy and natural contact. No captions, subtitles, lettering, logos or overlays in any frame.'].join(' ');
+  if (prompt.length > 2000)
+    throw new Error('ASTRA motion prompt exceeds 2000 characters (' + prompt.length + '); shorten the action, motion beats or camera descriptions before generation');
+  return prompt;
+}
 function assemble(win, index, dir) {
   if (!MODES[win.PRODUCTION?.mode]) throw new Error('Choose a production mode before assembling prompts');
   const scene = win.SCENES[index], d = scene?.shot?.videoDesign, v = scene?.visual;
@@ -131,7 +155,12 @@ function assemble(win, index, dir) {
     'Keep the physical subject legible at phone size. The image contains only the scene; subtitles are added in editing.'].join('\n');
   const lock = lockText(d, style, treatment, castLocks) + (isDrone(camera) ? '. The flight keeps continuous terrain parallax and stable landmarks; the picture stays a clean aerial view with scenery at every frame edge' : '');
   let motionPrompt = null;
-  if (!missingSlots.length) {
+  const engine = v.video?.engine || v.engine || 'seedance';
+  if (!missingSlots.length && engine === 'astra') {
+    const astraAppearance = activeCast.filter(({ entry }) => text(entry.sheet))
+      .map(({ entry }) => 'Appearance to preserve in every frame: ' + clause(entry.sheet) + '.');
+    motionPrompt = astraMotionPrompt(d, camera, style, treatment, !!spoken.trim(), astraAppearance);
+  } else if (!missingSlots.length) {
     const onReferenceRoute = previz && (v.video.engine || v.engine || 'seedance') !== 'host' && previzHandoff(scene) === 'reference_video';
     const clip = PROMPT.clipAssemble({ engine: 'seedance', camera, motion: motionText(d), locks: lock,
       ...(onReferenceRoute ? { scene: previzPreamble(previz) } : {}),

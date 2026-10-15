@@ -16,6 +16,9 @@ npm-debug.log*
 # server/dist/ is NOT ignored — .mcp.json runs
 # ${CLAUDE_PLUGIN_ROOT}/server/dist/index.js directly with no build step, so it's committed.
 
+# ── Packaged Claude Desktop extension (`mcpb pack` output) ────────
+*.mcpb
+
 # ── Python (skills/**/references/*.py) ────────────────────────────
 __pycache__/
 *.py[cod]
