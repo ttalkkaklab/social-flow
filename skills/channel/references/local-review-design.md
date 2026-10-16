@@ -10,10 +10,10 @@ Source components: `src/components/ui/page.tsx`, `globals.css`,
 - Typography: bundled Wanted Sans Variable 1.0.3; source npm wanted-sans@1.0.3,
   `fonts/webfonts/variable/complete/woff2/WantedSansVariable.woff2`.
   OFL license travels beside the font. No CDN requests. Latin text uses Wanted Sans
-  locally; the portal's Google Sans Flex and other language families are not bundled.
+  locally; other font families are not bundled.
 - Shared CSS declares color and size tokens once; all review components use them.
   Responsive thresholds are 640px, 768px and 1024px (max-width rules use one pixel
-  below the threshold). The 20px brand name follows the portal sidebar heading.
+  below the threshold). The brand name is 20px.
 - Layout: 240px sidebar, left-aligned content, 32px desktop / 20px mobile padding,
   28px desktop / 22px mobile titles. Navigation flows above the content below 1024px so a tablet does not lose
   240px of reading space to a rail. Content can grow to 1280px.
@@ -21,24 +21,21 @@ Source components: `src/components/ui/page.tsx`, `globals.css`,
   full identity. Offline sheets are read-only; they do not offer server mutations.
 - Storyboard: shots first, style next, then checks/costs and reference disclosures.
   Existing renderer nodes and validation remain intact. Source and alias use one
-  template. Local frame/reveal previews remain richer than portal shot media cards;
-  this is an offline review adaptation, not a claim of pixel-identical portal output.
+  template with local frame/reveal previews.
 
 `review-library.js <channelDir>` exports from existing files. `--check` is read-only.
-No portal client, credentials or network are consulted. Existing handwritten HTML
+No credentials or network are consulted. Existing handwritten HTML
 and symlinked output paths are refused before any files are written. Export refreshes
 current views; obsolete generated files are not deleted automatically. Indexes only
 link current records. Production inputs are never moved.
 
-A template comparison proves the local copies agree. Compare 1440px and 390px
-renders against the recorded portal reference separately before claiming visual
-parity; a new portal release requires a new comparison and reference revision.
+A template comparison proves the local copies agree. Verify 1440px and 390px
+renders when changing the shared design.
 
 ## Generator refinement (2026-10-16)
 
 The owner requested a simpler, more polished responsive review interface. This is
-an intentional local refinement of the recorded portal reference, not a claim
-that the remote portal has changed. The shared generator remains the only source.
+a local refinement. The shared generator remains the only source.
 
 - Character galleries show the complete silhouette without a fade mask, with a
   360px desktop art stage. Detail images open a native modal with a visible close

@@ -33,9 +33,9 @@ test('malformed character containers produce validation errors instead of crashi
 });
 
 
-test('local and portal character settings obey the generation engine contracts', async () => {
+test('local character settings obey the generation engine contracts', async () => {
   const { voiceErrors, normalizeLanguage } = require('../../skills/_shared/character-voice.js');
-  const { ttsSchema, normalizeCharacterLanguage } = await import('../dist/portal-characters.js');
+  const { ttsSchema, normalizeCharacterLanguage } = await import('../dist/character-tts.js');
   const { SUPERTONIC_LANGUAGES } = await import('../dist/supertonic-client.js');
   const { VALID_TTS_MODELS, GEMINI_38_TTS_MODELS } = await import('../dist/tts-client.js');
   const { ELEVENLABS_MODELS } = await import('../dist/elevenlabs-client.js');
@@ -51,9 +51,9 @@ test('local and portal character settings obey the generation engine contracts',
 });
 
 
-test('optional voice fields reject malformed types without throwing and trim like portal',async()=>{
+test('optional voice fields reject malformed types without throwing and trim consistently',async()=>{
   const {voiceErrors}=require('../../skills/_shared/character-voice.js');
-  const {ttsSchema}=await import('../dist/portal-characters.js');
+  const {ttsSchema}=await import('../dist/character-tts.js');
   for(const engine of ['gemini','mlx']) for(const patch of [{model:{}},{model:[]},{model:''},{model:' '},{stylePrompt:[]},{stylePrompt:{}},{stylePrompt:''},{model:{},stylePrompt:'warm'}]) {
     const value={engine,voiceId:'Kore',language:'ko',speed:1,...patch};
     assert.ok(voiceErrors(value).length);assert.equal(ttsSchema.safeParse(value).success,false);

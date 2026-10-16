@@ -8,19 +8,13 @@ description: >
   platforms, fact-check policy — the source of truth every storyboard, produce and publish
   run opens before anything else.
 argument-hint: "[add|list|update|serve|character] [channel-name]"
-allowed-tools: ["mcp__social-flow__portal_channel_sync", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__tts_local_generate", "mcp__social-flow__stt_local_transcribe", "mcp__social-flow__tts_list_voices", "mcp__social-flow__tts_elevenlabs_voices", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__portal_character_list", "mcp__social-flow__portal_character_get", "mcp__social-flow__portal_character_create", "mcp__social-flow__portal_character_update", "mcp__social-flow__portal_character_delete", "mcp__social-flow__portal_character_image_upload", "mcp__social-flow__portal_character_extra_delete", "mcp__social-flow__portal_character_tts_set"]
+allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__tts_local_generate", "mcp__social-flow__stt_local_transcribe", "mcp__social-flow__tts_list_voices", "mcp__social-flow__tts_elevenlabs_voices", "mcp__social-flow__tts_elevenlabs_generate"]
 ---
 
-**HITL records:** Keep channel answers in profile.md and follow the existing channel-sync contract. Follow [the decision record contract](../storyboard/references/portal-decisions.md); preserve actual provenance and reuse existing authorization. This adds no approval gate.
+**HITL records:** Keep channel answers in profile.md. Preserve actual provenance in local files and reuse existing authorization. This adds no approval gate.
 
 
 # Channel management — data/[channel]/profile.md
-
-For `update`, call `portal_channel_sync` with `action: "pull"` before reading the profile.
-A 409 conflict stops the edit. A missing key, network error, 401 or 5xx gets one warning line,
-then continue with the local files. After `add` or `update` changes `profile.md`, call
-`portal_channel_sync` with `action: "push"`; use `projectId` on that first call only when the
-portal project name is not exactly the channel slug. The tool pins the mapping after success.
 
 A channel is the top-level unit of the social-flow pipeline — one **content channel
 (brand)** the user runs maps to one directory under `data/`, and its output gets
@@ -214,7 +208,7 @@ Every character sheet must include one fenced `json` block in `identity.md`:
 This is an example, not a default for the cast. Choose and pin each character's
 voice; include model/stylePrompt when the engine uses them. Silent characters still
 need a voice configuration for reuse. Narrator settings do not substitute for a
-character voice. Copy this exact `tts` into `SB_DOC.characters` and portal creation.
+character voice. Copy this exact `tts` into `SB_DOC.characters`.
 Keep dialogue speaker IDs attached to their characters; voice settings alone do not
 author dialogue or lip sync. Missing or invalid settings make `--check` fail and
 prevent the sheet from displaying a review pass. Existing sheets need migration,
@@ -242,7 +236,7 @@ node "$CLAUDE_PLUGIN_ROOT/skills/channel/references/review-library.js" "data/<ch
 
 Deliver `data/<channel>/assets/characters/index.html` for the complete cast and
 `assets/characters/<id>/index.html` for each sheet. They open directly with file://;
-no portal key or HTTP server is needed. Each sheet shows basic identity, three
+no HTTP server is needed. Each sheet shows basic identity, three
 required image slots (front/body, back, face), optional extras, voice.wav and the
 full identity document. Keep `identity.md` and media as the source; do not edit
 exported HTML. Named voice/appearance/role fields are read from identity.md.
@@ -270,21 +264,6 @@ output symlinks are refused, never overwritten. Keep the channel folder together
 when copying it to another machine. Design source and limits:
 [local-review-design.md](references/local-review-design.md).
 
-## register procedure (portal characters)
-
-When the channel has a ttalkkakstory portal key, its characters live on the portal too —
-the record the storyboard import and the narration lane read. Register or refresh them
-with the `portal_character_*` tools after the local `assets/characters/<id>/` folder is
-final: `portal_character_create` with `identityDir` (key from the folder, name·역할·생김새
-from `identity.md`), then generate and upload all three required views with
-`portal_character_image_upload`: `body.png` → `view:"front"` (full body including a neutral face),
-`back.png` → `view:"back"` (back full body including a neutral face), and `face.png` → `view:"face"`
-(face close-up). Keep one view per file, the same clothing, proportions and visual style.
-Use `view:"extra"` and an explanatory `label` only for optional poses or details.
-Verify `portal_character_get.imagesComplete` (by `id`) before reporting the reference set ready,
-then verify its `tts` matches the character sheet exactly. Use
-`portal_character_tts_set` only with that character's pinned configuration. Steps, field mapping and the update/delete rules:
-`references/portal-characters.md`. No key → the tools answer one line; skip the step.
 
 ## Rules
 
@@ -304,6 +283,5 @@ then verify its `tts` matches the character sheet exactly. Use
 - **`references/profile-template.md`** — standard profile.md template (section structure, THEME contract, voice examples)
 - **`references/assets-catalog-template.md`** — `assets/catalog.md` starter (kind+id table)
 - **`references/resolve-asset.py`** — resolve shared assets via catalog + well-known paths (`--ensure` adds a row, `--selftest`)
-- **`references/portal-characters.md`** — registering the channel's characters on the ttalkkakstory portal with `portal_character_*` (create from `identityDir`, image, TTS block, update, delete)
 - **`references/review-library.js`** — exports offline character sheets, both indexes and episode review pages; `--check` detects stale output
 - **`references/serve.js`** — the channel browser over HTTP: `/api/channels`, `/api/channels/<slug>/storyboards`, `/api/channels/<slug>/characters[/<id>]`, and `/files/<slug>/…` static from `data/` (dot segments refused, Range for audio/video). Zero dependencies, `--selftest`

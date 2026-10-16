@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
-// Static, offline views of the existing channel data. Never reads portal keys.
+// Static, offline views of the existing channel data. Reads local files only.
 const fs = require('node:fs');
 const path = require('node:path');
 const { createHash } = require('node:crypto');

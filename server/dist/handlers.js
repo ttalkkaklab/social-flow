@@ -1,10 +1,6 @@
 import { manageLocation } from './location.js';
 import { manageSpeech, speechManageSchema } from './speech.js';
-import { REVIEW_ROUTES } from './portal-review-tools.js';
-import { UNIT_ROUTES } from './portal-unit-routes.js';
-import { PORTAL_API_ROUTES } from './portal-api-contract.js';
 import { createThreadsDraft, submitThreadsReview, checkThreadsGate, checkThreadsEpisode, gateCall } from './threads-gate.js';
-import { withShotMedia, uploadShotMedia, mediaUploadSchema, portalMediaReport, withoutPortal } from './portal-media.js';
 import { z } from 'zod';
 import * as datago from './datago-client.js';
 import * as elevenlabs from './elevenlabs-client.js';
@@ -33,9 +29,6 @@ import { youtubeTopicScout } from './youtube-topic-scout.js';
 import * as snsScout from './sns-issue-scout.js';
 import { formatError, formatFileSize, saveBase64Image } from './media-utils.js';
 import { renderCapabilityStatus } from './capability-status.js';
-import { CHANNEL_SLUG_RE } from './config.js';
-import * as portal from './portal-tools.js';
-import { manageBackups } from './portal-backups.js';
 import { applyVoiceLock, voiceLockApplySchema } from './voice-lock.js';
 function text(message, isError = false) {
     return { content: [{ type: 'text', text: message }], isError };
@@ -600,14 +593,7 @@ const snsIssueScoutSchema = z.object({
     limit: z.number().int().min(3).max(30).optional(),
 });
 // ── routing ──────────────────────────────────────────────────────
-const portalRoutes = portal.portalHandlers();
-function fromPortal(r) {
-    return text(r.text, r.isError);
-}
 export const ROUTES = {
-    ...PORTAL_API_ROUTES,
-    ...UNIT_ROUTES,
-    ...REVIEW_ROUTES,
     serp_web_search: async (args) => {
         const result = await serp.webSearch(parseArgs(serpWebSchema, args));
         return text(result.text, result.isError);
@@ -882,21 +868,21 @@ export const ROUTES = {
     // billing basis, not a rate-sheet estimate, so per-episode cost tallies should
     // record this number.
     seedance_text2video: async (args) => {
-        const result = await withShotMedia(args, 'video', () => seedance.generateFromText(parseArgs(seedance.seedanceText2VideoSchema, withoutPortal(args))), result => result.videoPath);
+        const result = await seedance.generateFromText(parseArgs(seedance.seedanceText2VideoSchema, args));
         if (!result.success)
             return text(`Seedance video generation failed: ${result.error}`, true);
-        return text(`Video generated successfully!\n\nFile: ${result.videoPath}\n${seedanceMeta(result)}${portalMediaReport(result)}\nPrompt: ${result.prompt}`, Boolean(result.portalMedia?.error));
+        return text(`Video generated successfully!\n\nFile: ${result.videoPath}\n${seedanceMeta(result)}\nPrompt: ${result.prompt}`);
     },
     seedance_img2video: async (args) => {
-        const result = await withShotMedia(args, 'video', () => seedance.generateFromImage(parseArgs(seedance.seedanceImg2VideoSchema, withoutPortal(args))), result => result.videoPath);
+        const result = await seedance.generateFromImage(parseArgs(seedance.seedanceImg2VideoSchema, args));
         if (!result.success)
             return text(`Seedance video generation from image failed: ${result.error}`, true);
         const lastImageInfo = result.lastImage ? `\nLast Frame Image: ${result.lastImage}` : '';
         const modeInfo = result.lastImage ? ' (frame interpolation mode)' : '';
-        return text(`Video generated from image${modeInfo} successfully!\n\nOutput: ${result.videoPath}\nFirst Frame Image: ${result.sourceImage}${lastImageInfo}\n${seedanceMeta(result)}${portalMediaReport(result)}\nPrompt: ${result.prompt}`, Boolean(result.portalMedia?.error));
+        return text(`Video generated from image${modeInfo} successfully!\n\nOutput: ${result.videoPath}\nFirst Frame Image: ${result.sourceImage}${lastImageInfo}\n${seedanceMeta(result)}\nPrompt: ${result.prompt}`);
     },
     seedance_reference: async (args) => {
-        const result = await withShotMedia(args, 'video', () => seedance.generateWithReferences(parseArgs(seedance.seedanceReferenceSchema, withoutPortal(args))), result => result.videoPath);
+        const result = await seedance.generateWithReferences(parseArgs(seedance.seedanceReferenceSchema, args));
         if (!result.success)
             return text(`Seedance video generation with references failed: ${result.error}`, true);
         const refImagesInfo = result.referenceImages?.length
@@ -908,7 +894,7 @@ export const ROUTES = {
         const refVideoInfo = result.referenceVideos?.length
             ? `\nReference Videos (${result.referenceVideos.length}, ${result.referenceVideoSeconds ?? '?'}s billed as input${result.referenceVideoRoute ? `, served by ${result.referenceVideoRoute}` : ''}):\n  - ${result.referenceVideos.join('\n  - ')}`
             : '';
-        return text(`Video generated with references successfully!\n\nOutput: ${result.videoPath}${refImagesInfo}${refVideoInfo}${refAudioInfo}\n${seedanceMeta(result)}${portalMediaReport(result)}\nPrompt: ${result.prompt}`, Boolean(result.portalMedia?.error));
+        return text(`Video generated with references successfully!\n\nOutput: ${result.videoPath}${refImagesInfo}${refVideoInfo}${refAudioInfo}\n${seedanceMeta(result)}\nPrompt: ${result.prompt}`);
     },
     // ── speech synthesis (Gemini TTS) — saves the wav locally, returns path + meta text ──
     // Returns the script length, not the full text — echoing a 16k-char script back
@@ -927,8 +913,8 @@ export const ROUTES = {
         return text(JSON.stringify(result, null, 2));
     },
     tts_generate_checked: async (args) => {
-        const result = await withShotMedia(args, 'narration', () => generateCheckedSpeech(parseArgs(checkedSpeechSchema, withoutPortal(args))), result => typeof result.audioPath === 'string' ? result.audioPath : undefined);
-        return text(JSON.stringify(result, null, 2), result.success !== true || Boolean(result.portalMedia?.error));
+        const result = await generateCheckedSpeech(parseArgs(checkedSpeechSchema, args));
+        return text(JSON.stringify(result, null, 2), result.success !== true);
     },
     tts_generate: async (args) => {
         const request = parseArgs(tts.ttsGenerateSchema, args);
@@ -1131,14 +1117,14 @@ export const ROUTES = {
             `Next: blender_render_previz to watch it; blender_object_animate on the root for the path across the floor.\n\n${blender.describeScene(r.scene)}`);
     },
     blender_render_previz: async (args) => {
-        const r = await withShotMedia(args, 'previz', () => blender.renderPreviz(parseArgs(blender.blenderRenderPrevizSchema, withoutPortal(args))), result => result.success ? result.videoPath : undefined);
+        const r = await blender.renderPreviz(parseArgs(blender.blenderRenderPrevizSchema, args));
         if (!r.success)
             return text(`Blender previz render failed: ${r.error}`, true);
         const skipped = r.skippedStills.length ? `\nSkipped stills (outside frames ${r.frameStart}–${r.frameEnd}): ${r.skippedStills.join(', ')}` : '';
         return text(`Previz rendered.\n\nFile: ${r.videoPath}\nStills: ${r.stillPaths.join(', ') || '(none)'}${skipped}\n` +
             `Engine: ${r.engine} · ${r.width}×${r.height} @ ${r.fps} fps · frames ${r.frameStart}–${r.frameEnd} (${r.frames} = ${r.seconds}s)\n` +
-            `Render time: ${r.elapsedSeconds}s${portalMediaReport(r)}\n\n` +
-            `Open the stills before judging the move — the stamp shows frame, camera and lens. The clip is a camera and blocking plan, not appearance.`, Boolean(r.portalMedia?.error));
+            `Render time: ${r.elapsedSeconds}s\n\n` +
+            `Open the stills before judging the move — the stamp shows frame, camera and lens. The clip is a camera and blocking plan, not appearance.`);
     },
     // ── music generation (Lyria) — 30s batch clip / streaming with an exact duration ──
     music_generate_clip: async (args) => {
@@ -1176,10 +1162,7 @@ export const ROUTES = {
             : '';
         return text(`Advanced music generated successfully!\n\nFile: ${result.audioPath}\nModel: ${result.model}\nDuration: ${result.durationSeconds} seconds\n\nWeighted Prompts:\n${promptInfo}${configInfo}\n\n48kHz stereo 16-bit WAV.`);
     },
-    capability_status: async (args) => {
-        const a = parseArgs(z.object({ channel: z.string().regex(CHANNEL_SLUG_RE).optional() }), args ?? {});
-        return text(renderCapabilityStatus(a.channel));
-    },
+    capability_status: async () => text(renderCapabilityStatus()),
     music_list_options: async () => {
         const bullets = (items) => items.map((item) => `  - ${item}`).join('\n');
         return text(`Suggested Music Generation Options (non-exhaustive — free text is accepted everywhere):\n\n` +
@@ -1361,15 +1344,6 @@ export const ROUTES = {
         return fromApi(await sns.threadsKeywordSearch(input));
     },
     // ── Storyboard ──
-    storyboard_backups: async (args) => {
-        try {
-            const result = manageBackups(args);
-            return text(JSON.stringify(result, null, 2), Boolean(result.error));
-        }
-        catch (error) {
-            return text(error instanceof Error ? error.message : String(error), true);
-        }
-    },
     location_manage: async (args) => {
         try {
             return text(JSON.stringify(await manageLocation(args), null, 2));
@@ -1404,44 +1378,4 @@ export const ROUTES = {
         const r = storyboard.checkScenario(parseArgs(storyboard.scenarioCheckSchema, args));
         return text(JSON.stringify(r, null, 2), r.violations > 0);
     },
-    // ── ttalkkakstory portal (workspace API key) ──
-    // One route per portal endpoint; the handler resolves the key from the channel on the
-    // episode path and answers one line (isError) when there is none — a mirror, not a gate.
-    portal_workspace_check: async (args) => fromPortal(await portalRoutes.workspaceCheck(parseArgs(portal.workspaceCheckSchema, args))),
-    portal_shot_media_upload: async (args) => {
-        try {
-            return text(JSON.stringify(await uploadShotMedia(parseArgs(mediaUploadSchema, args))));
-        }
-        catch (error) {
-            return text(error instanceof Error ? error.message : String(error), true);
-        }
-    },
-    portal_storyboard_save: async (args) => fromPortal(await portalRoutes.storyboardSave(parseArgs(portal.storyboardSaveSchema, args))),
-    portal_storyboard_list: async (args) => fromPortal(await portalRoutes.storyboardList(parseArgs(portal.storyboardListSchema, args))),
-    portal_storyboard_pull: async (args) => fromPortal(await portalRoutes.storyboardPull(parseArgs(portal.storyboardPullSchema, args))),
-    portal_episode_status: async (args) => fromPortal(await portalRoutes.episodeStatus(parseArgs(portal.episodeStatusSchema, args))),
-    portal_episode_artifacts_sync: async (args) => fromPortal(await portalRoutes.episodeArtifactsSync(parseArgs(portal.artifactSyncSchema, args))),
-    portal_publication_record: async (args) => fromPortal(await portalRoutes.publicationRecord(parseArgs(portal.publicationRecordSchema, args))),
-    portal_episode_create: async (args) => fromPortal(await portalRoutes.episodeCreate(parseArgs(portal.episodeCreateSchema, args))),
-    portal_episode_checkpoint: async (args) => fromPortal(await portalRoutes.episodeCheckpoint(parseArgs(portal.episodeCheckpointSchema, args))),
-    portal_episode_revisions: async (args) => fromPortal(await portalRoutes.episodeRevisions(parseArgs(portal.episodeRevisionsSchema, args))),
-    portal_episode_restore: async (args) => fromPortal(await portalRoutes.episodeRestore(parseArgs(portal.episodeRestoreSchema, args))),
-    portal_episode_lease: async (args) => fromPortal(await portalRoutes.episodeLease(parseArgs(portal.episodeLeaseSchema, args))),
-    portal_scenario_save: async (args) => fromPortal(await portalRoutes.scenarioSave(parseArgs(portal.scenarioSaveSchema, args))),
-    portal_scenario_pull: async (args) => fromPortal(await portalRoutes.scenarioPull(parseArgs(portal.scenarioPullSchema, args))),
-    portal_attachments_sync: async (args) => fromPortal(await portalRoutes.attachmentsSync(parseArgs(portal.attachmentsSyncSchema, args))),
-    portal_channel_sync: async (args) => fromPortal(await portalRoutes.channelSync(parseArgs(portal.channelSyncSchema, args))),
-    portal_assets_search: async (args) => fromPortal(await portalRoutes.assetsSearch(parseArgs(portal.assetsSearchSchema, args))),
-    portal_assets_get: async (args) => fromPortal(await portalRoutes.assetsGet(parseArgs(portal.assetsGetSchema, args))),
-    portal_character_list: async (args) => fromPortal(await portalRoutes.characterList(parseArgs(portal.characterListSchema, args))),
-    portal_character_get: async (args) => fromPortal(await portalRoutes.characterGet(parseArgs(portal.characterGetSchema, args))),
-    portal_character_create: async (args) => fromPortal(await portalRoutes.characterCreate(parseArgs(portal.characterCreateSchema, args))),
-    portal_character_update: async (args) => fromPortal(await portalRoutes.characterUpdate(parseArgs(portal.characterUpdateSchema, args))),
-    portal_character_delete: async (args) => fromPortal(await portalRoutes.characterDelete(parseArgs(portal.characterDeleteSchema, args))),
-    portal_character_extra_delete: async (args) => fromPortal(await portalRoutes.characterExtraDelete(parseArgs(portal.characterExtraDeleteSchema, args))),
-    portal_character_image_upload: async (args) => fromPortal(await portalRoutes.characterImageUpload(parseArgs(portal.characterImageUploadSchema, args))),
-    portal_character_tts_set: async (args) => fromPortal(await portalRoutes.characterTtsSet(parseArgs(portal.characterTtsSetSchema, args))),
-    portal_images_upload: async (args) => fromPortal(await portalRoutes.imagesUpload(parseArgs(portal.imageUploadSchema, args))),
-    portal_render_allocation: async (args) => fromPortal(await portalRoutes.renderAllocation(parseArgs(portal.renderAllocationSchema, args))),
-    portal_scenario_choose: async (args) => fromPortal(await portalRoutes.scenarioChoose(parseArgs(portal.scenarioChooseSchema, args))),
 };

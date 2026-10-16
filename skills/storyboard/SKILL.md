@@ -10,17 +10,19 @@ description: >
   Short-form 9:16 or long-form 16:9. Nothing is generated here. Produce builds the approved board;
   autoproduce runs unattended.
 argument-hint: "<channel> <topic or topic hint>"
-allowed-tools: ["mcp__social-flow__location_manage", "mcp__social-flow__portal_channel_sync", "mcp__social-flow__portal_assets_search", "mcp__social-flow__portal_assets_get", "mcp__social-flow__portal_shot_media_upload", "mcp__social-flow__portal_render_allocation", "Read", "Write", "Edit", "Glob", "Bash", "Agent", "AskUserQuestion", "WebSearch", "WebFetch", "mcp__social-flow__capability_status", "mcp__social-flow__storyboard_apply", "mcp__social-flow__storyboard_check", "mcp__social-flow__storyboard_read", "mcp__social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__social-flow__serp_image_search", "mcp__social-flow__stock_search", "mcp__social-flow__datago_search", "mcp__social-flow__datago_detail", "mcp__social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch", "mcp__social-flow__datago_api_call", "mcp__social-flow__suno_generate_lyrics", "mcp__social-flow__portal_sequence_list", "mcp__social-flow__portal_sequence_get", "mcp__social-flow__portal_sequence_create", "mcp__social-flow__portal_sequence_update", "mcp__social-flow__portal_sequence_delete", "mcp__social-flow__portal_sequence_reorder", "mcp__social-flow__portal_scene_list", "mcp__social-flow__portal_scene_get", "mcp__social-flow__portal_scene_create", "mcp__social-flow__portal_scene_update", "mcp__social-flow__portal_scene_delete", "mcp__social-flow__portal_scene_reorder", "mcp__social-flow__portal_shot_list", "mcp__social-flow__portal_shot_get", "mcp__social-flow__portal_shot_create", "mcp__social-flow__portal_shot_update", "mcp__social-flow__portal_shot_delete", "mcp__social-flow__portal_shot_reorder", "mcp__social-flow__portal_shot_narration_list", "mcp__social-flow__portal_shot_narration_get", "mcp__social-flow__portal_shot_narration_create", "mcp__social-flow__portal_shot_narration_update", "mcp__social-flow__portal_shot_narration_delete", "mcp__social-flow__portal_shot_narration_reorder", "mcp__social-flow__portal_episode_meta_get", "mcp__social-flow__portal_episode_meta_update", "mcp__social-flow__portal_episode_music_get", "mcp__social-flow__portal_episode_music_update", "mcp__social-flow__portal_episode_voice_get", "mcp__social-flow__portal_episode_voice_update", "mcp__social-flow__portal_shot_camera_get", "mcp__social-flow__portal_shot_camera_update", "mcp__social-flow__portal_shot_background_get", "mcp__social-flow__portal_shot_background_update", "mcp__social-flow__portal_shot_slide_get", "mcp__social-flow__portal_shot_slide_update", "mcp__social-flow__portal_shot_sound_get", "mcp__social-flow__portal_shot_sound_update", "mcp__social-flow__portal_shot_transition_get", "mcp__social-flow__portal_shot_transition_update", "mcp__social-flow__portal_storyboard_create", "mcp__social-flow__portal_storyboard_get", "mcp__social-flow__portal_storyboard_update", "mcp__social-flow__portal_storyboard_delete", "mcp__social-flow__portal_episode_list", "mcp__social-flow__portal_episode_get", "mcp__social-flow__portal_episode_update", "mcp__social-flow__portal_episode_delete", "mcp__social-flow__portal_background_list", "mcp__social-flow__portal_background_get", "mcp__social-flow__portal_background_create", "mcp__social-flow__portal_background_update", "mcp__social-flow__portal_background_delete", "mcp__social-flow__portal_background_register", "mcp__social-flow__portal_background_unregister", "mcp__social-flow__portal_prop_list", "mcp__social-flow__portal_prop_get", "mcp__social-flow__portal_prop_create", "mcp__social-flow__portal_prop_update", "mcp__social-flow__portal_prop_delete", "mcp__social-flow__portal_prop_register", "mcp__social-flow__portal_prop_unregister", "mcp__social-flow__portal_scenario_delete", "mcp__social-flow__portal_render_allocation_create", "mcp__social-flow__portal_scene_search", "mcp__social-flow__portal_episode_audio_upload", "mcp__social-flow__portal_api_projects_get", "mcp__social-flow__portal_api_projects_post", "mcp__social-flow__portal_api_projects_project_get", "mcp__social-flow__portal_api_projects_project_patch", "mcp__social-flow__portal_api_projects_project_delete", "mcp__social-flow__portal_api_settings_get", "mcp__social-flow__portal_api_storyboards_get", "mcp__social-flow__portal_api_storyboards_storyboard_episodes_post", "mcp__social-flow__portal_api_episodes_episode_style_preset_post", "mcp__social-flow__portal_api_episodes_episode_revisions_revision_restore_post"]
+allowed-tools: ["mcp__social-flow__location_manage", "Read", "Write", "Edit", "Glob", "Bash", "Agent", "AskUserQuestion", "WebSearch", "WebFetch", "mcp__social-flow__capability_status", "mcp__social-flow__storyboard_apply", "mcp__social-flow__storyboard_check", "mcp__social-flow__storyboard_read", "mcp__social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__social-flow__serp_image_search", "mcp__social-flow__stock_search", "mcp__social-flow__datago_search", "mcp__social-flow__datago_detail", "mcp__social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch", "mcp__social-flow__datago_api_call", "mcp__social-flow__suno_generate_lyrics"]
 ---
+
+Save and read episode files locally under `data/<channel>/episodes/<topic>/`.
+Use [the local storyboard contract](../storyboard/references/storyboard-target.md).
 Prop ownership and custody: read [prop continuity](references/prop-continuity.md) when a story uses recurring or transferred props. Keep sheets in scenes.js SB_DOC; use storyboard_apply.propSheet with the read hash and show the shared prop review section.
 
-**New authoring contract (2026-10-16):** Read [character-led scenarios](references/character-scenarios.md) first. New scenarios use `scenario-v2` and boards use `story-v2`: cast existing characters (including narrators), choose evidence/fiction/adapted, write observable actions and attributed speech, and review the whole performance. Its type-specific grounding and rubric replace the legacy research quotas, forced wow/engine mix, spoken-message and narration-only requirements below. Legacy unversioned scenarios and story-v1 boards keep their existing checks. Production voice, budget, destination and publishing consent are unchanged.
+**New authoring contract (2026-10-16):** Read [character-led scenarios](references/character-scenarios.md) first. New scenarios use `scenario-v2` and boards use `story-v2`: cast existing characters (including narrators), choose evidence/fiction/adapted, write observable actions and attributed speech, and review the whole performance. Its type-specific grounding and rubric replace the legacy research quotas, forced wow/engine mix, spoken-message and narration-only requirements below. Legacy unversioned scenarios and story-v1 boards keep their existing checks. Production voice, budget and publishing consent are unchanged.
 
 # Storyboard authoring — data/[channel]/episodes/[topic]/storyboard/
-Before any portal call, follow [storyboard-target.md](references/storyboard-target.md): check the target channel with `capability_status`, use local HTML without a key, and ask local HTML vs portal HITL when a key exists. Persist and reuse the episode choice. **Every portal instruction below applies only to the chosen portal mode**; local mode skips all portal calls and optional media `portal` arguments. Both destinations use the same [design contract](references/storyboard-design.md).
-A linked copy without a valid `headRevisionNo` cannot save or checkpoint: pull `mode: "side"`, merge, and pass the returned head as `baseRevisionNo`. Keep `.portal.json`; directory-free checkpoints also require an explicit base. For pending portal render requests, follow [the six-ratio allocation contract](references/production-mode.md): `portal_render_allocation` read → host LLM reasons over every shot → submit requestId/baseRevisionNo and all assignments → pull. New choices persist `PRODUCTION.renderRatioVersion:1`; neither a pending request nor ratio selection approves spending. **HITL records:** Record topic, format, visual/model choices and narration/board approvals. Follow [the decision record contract](references/portal-decisions.md); preserve actual provenance and reuse existing authorization. This adds no approval gate.
 Read [story-quality.md](references/story-quality.md) before candidates or narration. Its evidence → meaning → ending → optional CTA contract overrides older mandatory-question and modern-case rules. Write `window.STORY` in §4a; draft checks require it. The existing narration review supplies its four evidence-backed findings; after vocabulary edits revalidate the read and run `check-story.js storyboard/` before §4b or approval. No score waives a failed criterion.
 Takes one topic through **research → wow points → three messages → three scenario candidates → one pick → more research → narration (the story pass) → narration read-through (looped to 95) → narration vocabulary (looped to 95) → the narration approval → the board (camera · space · sound · slides) → the image and clip plan → storyboard approval**. **No generation call happens in this skill** — every still, slide art and video slot is generated by produce after approval, so a plan the user rejects costs nothing. The `scenes.js` settled here is the one data source (SoT) for production (produce) — video, captions, and per-platform text all derive from this file, so factual mismatch between platforms can't arise in the first place.
+
 
 Three candidate pages — seven items each: 주제 · 훅 · 전개 #1 · 전개 #2 · 전개 #3 · 마무리 · CTA —
 go to the user in full, and the user picks. Contract: [scenario-stage.md](references/scenario-stage.md).
@@ -284,12 +286,6 @@ the seven items is what starts the rest** — write `Chosen: D#`, copy the winne
 `scenario.md`, then §2.3. Unattended autoproduce has no user to ask, so it gets one batched
 reviewer read of the three pages and takes the highest (its §2.2).
 
-Portal (chosen portal mode and configured channel key): **§3's lease-then-pull runs first** — a new topic has no `.portal.json`
-until `portal_episode_create`. Then `portal_scenario_save` per page as shown (`candidate: D<n>`, `file:` the
-absolute path of `candidates/d<n>.md`, `episodeDir:`), the pick as the same call with `chosen: true` — the
-portal keeps the seven items as structure and renders the page back through `portal_scenario_pull`.
-`portal_episode_checkpoint` `stage: "candidates"` before the pick, `"scenario"` after. Absent/erroring tools: one line, never hold the pick — except **409 `leased`** (§3 rule).
-
 #### 2.3 Additional research — close the chosen direction
 
 Now the question map is the 5–8 questions **this** episode has to answer. Write off
@@ -396,29 +392,11 @@ name that aren't on disk, a `queue_*: ready` marker pointing at no video). Show 
 before asking whether to continue from the existing storyboard, so the choice is made against
 the real state rather than a guess.
 
-**Portal — only after the destination HITL: lease, then pull, before touching the copy (README §The
-ttalkkakstory portal).** The plugin's server calls the portal with the channel's workspace API key
-(`<SNS_TOKEN_DIR>/<channel>/ttalkkakstory.json`, read off the episode path, containing only `{ "apiKey": "tks_…" }`); the tools are listed
-only while a key exists. The API URL defaults to `https://story.ttalkkaklab.com`; the key resolves its workspace automatically, and an explicit workspace must match. `portal_workspace_check` reports `resolvedBy: "token"|"file"`. Their absence is local-file mode — one line, go on. An episode the
-portal has seen is the portal's; the directory is a working copy (two machines on one topic used
-to be last-writer-wins, silently). Top of a session, before any portal write (§2.2 included):
-`portal_workspace_check` once (reuse the entry check if unchanged; `episodeDir:` — names the workspace the key opens and whether the
-directory is that workspace's copy; on `workspaceMatches: false` every write is refused — fix the key
-file or, to start over there, delete `.portal.json`; it also answers `sync` and `portal.lease`: on `sync:
-"portal_ahead"` pull `mode: "side"` and merge before any write, on `pending.sideDir: true` finish the
-merge left in `.portal-head/` first, on a lease held by someone else wait), then `portal_episode_lease` `action: "acquire"`, `episodeDir:` the episode directory —
-with no `.portal.json` yet, `portal_episode_create` first (`storyboardId` from `portal_storyboard_list`, `slug` = the directory name, `title`, `format`, `episodeDir`), which writes that file. A **409 `leased`** names who
-holds it and until when: one line to the user, wait or ask an admin to release — never write over a
-held episode; **every later write** (checkpoint, save, scenario, status) returns the same 409 while someone else holds it, handled the same way, never skipped as an error. Then
-on `portal_ahead` the side pull above **is** the pull — do not call `portal_storyboard_pull` again without `mode`
-(the default `replace` would overwrite what you just merged; use it only on a directory with no local edits — changed files still go to `.portal-local/`). Save with `baseRevisionNo:` the side result's `headRevisionNo`. Later `portal_episode_checkpoint` / `portal_storyboard_save` send that number as base; **409
-`head_moved`** = the portal moved under you: call `portal_storyboard_pull` with `mode: "side"`, use `.portal-head/` and the 409 list of what the other side changed to resolve only overlapping scenes and documents by hand while keeping every other local change, then call `portal_storyboard_save` with `baseRevisionNo: <the side result's headRevisionNo>`. Release in §7 or expire (2h).
-
 ### 3.5 Scenario — freeze the winner
 
 `storyboard/scenario.md` is already the §2.2 winner. After §2.3 extra research (and §2.5's
 long-form pick), patch that page if a new fact breaks an item, a false answer or a promise.
-Stamp `frozen:` when §4 opens — then `portal_scenario_save` it once more (`chosen: true`, chosen portal mode). Four devices: [scenario-stage.md](references/scenario-stage.md). No reviewer reads this page.
+Stamp `frozen:` when §4 opens. Four devices: [scenario-stage.md](references/scenario-stage.md). No reviewer reads this page.
 ### 4. Scene design — writing scenes.js
 
 Write it to the contract in `references/scenes-schema.md` **through `storyboard_apply`** — one call carries the whole board (`set`: `structure` + `shots`) or one change (`scenes`·`sequences`·`shots` by key), validates the grammar vocabularies and the structure rules, and writes nothing past a violation. Keep the array name (`SCENES`); one entry is a **shot**.
@@ -973,9 +951,6 @@ once, in this order, before §5:
 Write what you changed and what you chose not to change into the §7 hand-off note — the
 approval screen is where a defect on the board gets its human look.
 
-Chosen portal mode only: `portal_episode_checkpoint` `stage: "board"`, `episodeDir:` — `scenes.js` shots as-is, `window.*`
-as meta, the documents. Same content as the last checkpoint makes no revision, only a stage move.
-
 ### 5. The image and clip plan — nothing is generated here
 
 Every still, slide art and clip this episode needs is **decided here and generated by produce
@@ -985,7 +960,7 @@ costs nothing — which is the whole reason the plan and the spend were split (o
 2026-09-04).
 
 **Shooting mode plans no stills at all** (the screen comes from the user's recording), and
-**slide scenes have no image** — their screen is HTML, authored at produce §3.6. **A stock cut is planned here and downloaded by produce**: in chosen portal mode, `portal_assets_search` (the owner's global library — free, already cleared) comes first and `portal_assets_get` returns the license record and the `footage/s<n>-portal-<sourceId>.mp4` name; only when the library has nothing does `stock_search` give the file URL and the license record. Either way the board stores `visual.source: "stock"`, the `footage/` or `images/stock/` name and `visual.license` (scenes-schema §stock material).
+**slide scenes have no image** — their screen is HTML, authored at produce §3.6. **A stock cut is planned here and downloaded by produce**: use `stock_search` for the file URL and license record. The board stores `visual.source: "stock"`, the `footage/` or `images/stock/` name and `visual.license` (scenes-schema §stock material).
 
 **Read the size off the preset, don't memorize it** — it goes in the plan so produce doesn't
 re-decide it.
@@ -1192,7 +1167,7 @@ For every new board set `SB_DOC.speechPlanVersion:1`. Each `narration` entry has
 Write character dialogue for dramatic exchanges rather than summarizing every action through
 the narrator. The review shows who says each line. Use `speech_manage` to prepare/search/edit
 lines. Plan with the model-independent [speech contract](../produce/references/shot-speech.md).
-Old boards may omit speaker to select the narrator; new boards may not. Import accepts names but saves ids, while unmatched non-empty values fail. Do not approve or call `portal_storyboard_save` until complete. `channel/references/resolve-asset.py --list <channel dir>` prints ids and paths.
+Old boards may omit speaker to select the narrator; new boards may not. Import accepts names but saves ids, while unmatched non-empty values fail. Do not approve until complete. `channel/references/resolve-asset.py --list <channel dir>` prints ids and paths.
 
 **Fill `SB_DOC.craft` with the promises the episode makes** — the loop ledger the §4 craft
 rules ask for, in the one place the approver reads. `loops[]` first: the cover's own hook as
@@ -1314,17 +1289,7 @@ Once approved, write two lines at the top of scenes.js — `// approved: <YYYY-M
 produced which performance. `unresolved` is how many findings went to the user unfixed,
 reviewer findings and your own board notes together.
 
-**Set `status: approved` in `storyboard.md` in both modes.** Local mode delivers the local HTML link and skips the following sync. Only in chosen portal mode with a configured channel key (README §The ttalkkakstory portal), call `portal_storyboard_save` with
-`episodeDir` as the **absolute** path of `data/<channel>/episodes/<topic>` right after the two approval lines are written. It uploads `scenes.js` (the shots verbatim, the `window.*` blocks as episode meta),
-`storyboard.md`, `research.md`, `script.md` and `storyboard.html`, and returns `pageUrl`,
-`episodeId` and `storyboardId` — show the URL on the wrap-up line and write `portal_episode:
-<episodeId>` and `portal_url: <pageUrl>` into `storyboard.md`'s frontmatter, which is how
-produce and publish address the same record later. On every later save, `.portal.json` supplies
-the episode id, so a changed episode or storyboard title updates that same portal record. If the
-tools are not there, say so in one line and move on; if a call errors (a broken key file, 401),
-report the message in one line and never hold the approval on it — the portal records the
-approval, it does not gate it. The save is also a **checkpoint** at stage `approved` (revision into
-`.portal.json`); **409 `head_moved`** is not a retry — another machine saved first: call `portal_storyboard_pull` with `mode: "side"`, use `.portal-head/` and the 409 list of what the other side changed to resolve only overlapping scenes and documents by hand while keeping every other local change (`portal_episode_revisions` `compareTo` gives the full diff), then call `portal_storyboard_save` with `baseRevisionNo: <the side result's headRevisionNo>`; **409 `leased`** is the §3 rule. If local shot images exist, call `portal_images_upload` with `episodeDir` and `stage: "approved"` after the initial save. It uploads `images/scene-N.*` (PNG/JPEG/WebP, 5 MiB) and checkpoints UUIDs; use `images: [{ shotId, file }]` for explicit mapping. Inspect `skipped` and partial failures; on 409/uncertain checkpoint, keep the recovery copy and side-pull/merge before an explicit-base save. See README §The ttalkkakstory portal. Then `portal_episode_lease` `action: "release"`.
+Set `status: approved` in `storyboard.md` and deliver the local HTML link.
 
 **If there are filmed scenes**, the hand-off after approval is recording. It differs by lane.
 
@@ -1341,9 +1306,8 @@ approval, it does not gate it. The save is also a **checkpoint** at stage `appro
   Motion slides are authored at produce §3.6.
 
 ## Traps
-What has actually gone wrong on this skill, one item per incident, with the section that
-catches each — [traps.md](references/traps.md). Read it once per episode before §2. Attachment sync and rights evidence: follow [portal attachments](../produce/references/portal-attachments.md). Check `attachments.complete` before removing local originals. Retry files only with `portal_attachments_sync`.
-In chosen portal mode with a key, save the board then upload source images via `portal_shot_media_upload`; follow [produce media order](../produce/references/portal-shot-media.md) for previz before video and for narration. Missing keys keep local-only mode.
-For portal unit edits, follow [the portal unit tool contract](references/portal-units.md).
+
+Read [traps.md](references/traps.md) once per episode before §2. Keep attachments and rights evidence locally.
+
 ## Persistent locations
 For recurring places, follow [location assets](references/location-assets.md). Bind an immutable set/state/camera to each shot, render and review references, then pass the assembler's actual reference paths to generation. Never substitute a prose-only location description for a bound set. Camera changes invalidate its references.

@@ -1,7 +1,7 @@
 ---
 name: autoproduce
 description: >
-  Builds an episode unattended after its destination choice. Combines storyboard and produce. Use when the user asks to "이 주제로 영상 하나 만들어", "주제만 주면 영상까지
+  Builds an episode unattended locally. Combines storyboard and produce. Use when the user asks to "이 주제로 영상 하나 만들어", "주제만 주면 영상까지
   만들어줘", "자동으로 쇼츠 만들어", "make a short about X end to end", or when a growth loop needs to
   refill its publish queue by itself. Researches, writes 3 seven-item scenario candidates and
   has them judged in one batched reviewer read, authors scenes.js, reviews actions and character speech
@@ -10,9 +10,9 @@ description: >
   data/[channel]/episodes/[topic]/output/. Machine gates replace human approval: facts, the
   batched scenario read, the two narration loops, the style and contract checkers, build
   report, one content-reviewer read at 95 with zero P0, and a cost cap. Boundary — storyboard
-  plans and stops, produce builds an approved episode, autoproduce does both after destination consent.
+  plans and stops, produce builds an approved episode, autoproduce does both unattended.
 argument-hint: "<channel> \"<topic>\" [unattended]"
-allowed-tools: ["mcp__social-flow__portal_channel_sync", "mcp__social-flow__capability_status", "mcp__social-flow__portal_assets_search", "mcp__social-flow__portal_assets_get", "mcp__social-flow__portal_render_allocation", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent",
+allowed-tools: ["mcp__social-flow__capability_status", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent",
   "WebSearch", "WebFetch",
   "mcp__social-flow__naver_search", "mcp__social-flow__serp_web_search",
   "mcp__social-flow__serp_news_search", "mcp__social-flow__serp_naver_search",
@@ -28,10 +28,13 @@ allowed-tools: ["mcp__social-flow__portal_channel_sync", "mcp__social-flow__capa
   "mcp__social-flow__music_generate_clip", "mcp__social-flow__mlx_music_generate"]
 ---
 
-**New authoring contract (2026-10-16):** Read [character-led scenarios](../storyboard/references/character-scenarios.md) first. New scenarios use `scenario-v2` and boards use `story-v2`: cast existing characters (including narrators), choose evidence/fiction/adapted, write observable actions and attributed speech, and review the whole performance. Its type-specific grounding and rubric replace the legacy research quotas, forced wow/engine mix, spoken-message and narration-only requirements below. Legacy unversioned scenarios and story-v1 boards keep their existing checks. Production voice, budget, destination and publishing consent are unchanged.
+Save and read episode files locally under `data/<channel>/episodes/<topic>/`.
+Use [the local storyboard contract](../storyboard/references/storyboard-target.md).
+
+**New authoring contract (2026-10-16):** Read [character-led scenarios](../storyboard/references/character-scenarios.md) first. New scenarios use `scenario-v2` and boards use `story-v2`: cast existing characters (including narrators), choose evidence/fiction/adapted, write observable actions and attributed speech, and review the whole performance. Its type-specific grounding and rubric replace the legacy research quotas, forced wow/engine mix, spoken-message and narration-only requirements below. Legacy unversioned scenarios and story-v1 boards keep their existing checks. Production voice, budget and publishing consent are unchanged.
 
 
-**HITL records:** Record authorized automatic choices and queue actions with the exact platform scope. Follow [the decision record contract](../storyboard/references/portal-decisions.md); preserve actual provenance and reuse existing authorization. This adds no approval gate.
+**HITL records:** Record authorized automatic choices and queue actions with the exact platform scope. Preserve actual provenance in local files and reuse existing authorization. This adds no approval gate.
 
 
 # From one topic to a finished video — unattended authoring
@@ -40,11 +43,9 @@ Speech generation follows [shot-speech.md](../produce/references/shot-speech.md)
 listening, STT, scoring or human listening approval. Use raw TTS and provenance records;
 continue with `not_reviewed` audio. Later user corrections invoke edit-speech.
 
-First follow [storyboard-target.md](../storyboard/references/storyboard-target.md). No key means local HTML. With a key, reuse an explicit episode/standing destination choice or hold this queue item for the destination HITL; unattended production never supplies portal consent. Local mode skips all portal steps below and media-tool `portal` arguments. Both modes use the shared [storyboard design](../storyboard/references/storyboard-design.md). Only chosen portal mode calls `portal_channel_sync` before reading the profile; a 409 holds this item, while network/auth failures warn once and continue locally.
-For pending portal render requests, follow [the six-ratio allocation contract](../storyboard/references/production-mode.md): `portal_render_allocation` read → host LLM reasons over every shot → submit requestId/baseRevisionNo and all assignments → pull. New choices persist `PRODUCTION.renderRatioVersion:1`; neither a pending request nor ratio selection approves spending.
 Read [story-quality.md](../storyboard/references/story-quality.md) before candidate writing, including skip-research channels. It overrides mandatory closing questions and modern parallels. Write STORY with the story pass; use gate 6f's existing narration read for the four quoted findings. After vocabulary edits revalidate and run `check-story.js storyboard/` before any generation. Missing, failed or stale reviews stop production with queue hold, not merely publication. A closing beat may have `cta:"none"`. An ask stays optional; a forwardable thing does not — an ask requests behaviour from the viewer, while a forwardable thing is one sentence, figure or verdict they can pass on as-is. Asking to be shared is an ask, not a trigger.
 
-After the destination is resolved, runs `storyboard → produce` end to end without production approval. The input is a
+Runs `storyboard → produce` end to end without production approval. The input is a
 single topic string; the output is a publishable `output/` set.
 
 Before asset generation, check the narrator runtime, encoder, destination and media-generation
@@ -754,10 +755,7 @@ the price.
   out and this step copies or generates a single `.work/bgm.wav`. If the channel has a
   shared bed, just copy it.
   `python3 ${CLAUDE_PLUGIN_ROOT}/skills/channel/references/resolve-asset.py data/<channel> bgm default`
-  — if a path comes back, copy it to `.work/bgm.wav`. Otherwise, in chosen portal mode with a key,
-  `portal_assets_search` `type: ["music"]`, `query` the episode's mood words; a hit goes through
-  `portal_assets_get` `download: true` to `.work/portal/<sourceId>.m4a` and then ffmpeg
-  (`-vn -ac 2 -ar 48000`) to `.work/bgm.wav` at no cost. Only when the library has nothing put a
+  — if a path comes back, copy it to `.work/bgm.wav`. Otherwise, put a
   30-second `music_generate_clip` instrumental at `.work/bgm.wav`. Include
   "leaves space for a spoken voiceover, no melody in the vocal frequency range"
   in the prompt. To reuse the same tone next episode, copy it to
@@ -1043,6 +1041,3 @@ authorization.
 - `../produce/references/build-reel.sh` — the compositing pipeline
 - `../platform-guide/references/platform-playbook.md` · `korean-style.md` · `check-style.py`
 - `../../docs/guides/ai-video-production/index.html` — why hybrid is the default, Veo hard specs, prompt rules
-
-
-Attachment sync and rights evidence: follow [portal attachments](../produce/references/portal-attachments.md). Check `attachments.complete` before removing local originals. Retry files only with `portal_attachments_sync`.
