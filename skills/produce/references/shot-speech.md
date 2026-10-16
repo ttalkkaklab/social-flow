@@ -20,7 +20,7 @@ Set `SB_DOC.speechPlanVersion:1`. For story-v2, select a narrator only when the 
 explicit character speakers and silent stories need no narrator. When selected, include the
 narrator in `SB_DOC.characters` with its own pinned `tts` and set narratorCharacterId. Legacy
 boards still need the narrator for their default speech routing. Each narration entry is one ordered spoken line:
-`{id, speaker, delivery, tts, sub}`. delivery is voiceover (narration or inner monologue),
+`{id, speaker, delivery, tts, sub, acting?}`. delivery is voiceover (narration or inner monologue),
 on_screen (the character visibly speaks), or off_screen (a character speaks outside frame).
 The field keeps its historical name `narration`, but carries all dialogue. Every line has an
 explicit speaker, including narrator lines. Do not use a character's mere visual presence to
@@ -56,7 +56,10 @@ pinned voices survive default-model updates; resolve incompatible voices with th
 user rather than silently changing engine, voice ID or model. Pass a selectable
 model explicitly to the raw tool so its own default cannot drift between episodes.
 
-Resolve speaker to character.tts. Generate with the corresponding raw engine tool, not
+Resolve speaker to character.tts. Call `speech_manage action:plan_audio` to compile
+line acting into the selected provider’s arguments; use its generator/generation
+output. Attach with clean expectedText as `generation.text` and the actual tagged
+request in `generation.voiceSettings`. Generate with the corresponding raw engine tool, not
 `tts_generate_checked`. Save a generation receipt beside each scene WAV as `.generation.json`
 with generator, voiceSettings (the actual arguments), generationSpeed, playbackSpeed:1,
 expectedText, lineIds and audioSha256. For a single line the bound line WAV can be used
@@ -103,7 +106,15 @@ A reference-voice imitation is not guaranteed preservation of the original audio
 actual adapter capability and preserve the source WAV; use an explicit synchronization route
 when lip-sync matters. Never assume every video model accepts audio or requires LTX.
 
-Generation receipts keep actual API arguments in voiceSettings. For Gemini and MLX,
+Generation receipts keep actual API arguments in voiceSettings. For Gemini,
 which have no language argument, put the declared text language in generation.language
 (e.g. ko). This is metadata, not an API parameter. Both attachment and assembly use the
 same voice/language normalization rules.
+
+Per-line `acting: {direction?: string, tags?: string[]}` is separate from the pinned
+identity voice and from visible/off-screen `delivery`. Use `speech_manage` to update
+acting, invalidate affected speech, and preserve unchanged takes. Follow
+[acting prompts](acting-prompts.md).
+ElevenLabs permits `eleven_v4` only; Gemini remains supported. Local TTS is removed.
+An explicitly requested review/improvement loop is permitted within its scope;
+normal production continues without scoring or listening approval.

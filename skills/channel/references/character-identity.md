@@ -1,5 +1,13 @@
 # Character identity contract (schemaVersion 1)
 
+## Contents
+
+- [Prepare the shared sheet before episode authoring](#prepare-the-shared-sheet-before-episode-authoring)
+- [Author and validate](#author-and-validate)
+- [Generate and use](#generate-and-use)
+- [Update without losing identity](#update-without-losing-identity)
+
+
 **Automatic execution:** [Automation guidance](../../_shared/automation-guidance.md) supersedes creative quality gates, repeated approvals and review-score requirements here. Keep the concrete guidance and truthful review state. Enforce only actual runtime dependencies and the scope of external-action authorization.
 
 
@@ -69,10 +77,13 @@ Resolve unknowns with the user, or retain pending; never retrofit a fabricated r
 2. Use the host image tool where available. Generate the first panel, inspect it, then
    use it as the reference for subsequent views. Keep each panel in a separate file;
    do not feed a multi-view composite to an image/video generator.
-3. Generate the voice sample from the pinned `tts`, with `sample.txt` drawn from
-   `speech.examples`. `direction.voice` is acting guidance, not an API argument:
-   pass style only when the chosen engine supports it. Unsupported emotional controls
-   are documented limitations; never claim they were rendered by an engine without them.
+3. Before confirming a new character voice, generate **three distinct voice candidates**
+   matched to the identity. Use the selected engine/model and the same natural Korean
+   sample from `speech.examples`. Present real audio with playback and wait for the
+   user's explicit candidate selection. Only then persist that candidate's `tts` and
+   reference audio in the identity/sheet. A pending draft must not claim a confirmed voice.
+   Follow [acting prompts and auditions](../../produce/references/acting-prompts.md).
+   `direction.voice` guides performance; per-line `acting` does not replace voice identity.
 4. New storyboards set `SB_DOC.characterSchemaVersion = 1`. Copy each compiler result
    into `SB_DOC.characters` (add shared panel paths separately, never scene images). `direction.image` feeds still
    prompts; `direction.video` feeds motion/acting prompts; `direction.dialogue` guides

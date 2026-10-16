@@ -7,7 +7,7 @@ description: >
   Finds stable shot and line ids, preserves other characters and reports affected outputs.
   Storyboard plans a new episode; produce builds it; this skill repairs an existing one.
 argument-hint: "<channel> <episode> <shot, character or quoted line> <change>"
-allowed-tools: ["mcp__social-flow__speech_manage", "mcp__social-flow__storyboard_read", "mcp__social-flow__storyboard_check", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_gemini_38", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__astra_audio2video", "mcp__social-flow__seedance_reference", "mcp__social-flow__veo_reference", "mcp__social-flow__mlx_tts_generate"]
+allowed-tools: ["mcp__social-flow__speech_manage", "mcp__social-flow__tts_review_acting", "mcp__social-flow__storyboard_read", "mcp__social-flow__storyboard_check", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_gemini_38", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__astra_audio2video", "mcp__social-flow__seedance_reference", "mcp__social-flow__veo_reference"]
 ---
 **Automatic execution policy:** Read [automation guidance](../_shared/automation-guidance.md) first. Creative rules and review findings guide improvements; scores, review/hash/freeze records, CTA choices and intermediate approval steps do not block authorized work. Preserve actual external-action authorization and stop at the artifact the user requested. This policy supersedes older quality-gate wording below.
 
@@ -35,7 +35,10 @@ new character dialogue or voices. Do not silently turn a user's dialogue into na
    `.work/speech-history/`. Never overwrite an old take. A voice configuration change affects
    every line spoken by that character; list those lines and regenerate them as a set only
    when the user asked for that voice change.
-3. Generate only affected speech with the character's pinned TTS settings and save a new take.
+3. Call `speech_manage action:plan_audio` for the affected line. Generate a new take
+   with its returned generator and provider-ready generation arguments, preserving
+   the character’s pinned settings. Attach with clean `generation.text` from
+   `expectedText` and the actual tagged request in `generation.voiceSettings`.
    Do not call automatic listening, dictation, scoring or approval tools. Record the generator,
    actual voice settings, text and speed in the generation receipt. Use `attach_audio` to bind
    the file to its line revision, passing the actual generation arguments and text. Generated speech stays `not_reviewed`; that is usable output.
@@ -51,7 +54,15 @@ new character dialogue or voices. Do not silently turn a user's dialogue into na
    Do not label a script-only patch as a regenerated video. Return the changed shot/line,
    speaker, text, new files and any media still needing regeneration. No listening approval.
 
-Generation receipts keep actual API arguments in voiceSettings. For Gemini and MLX,
+Generation receipts keep actual API arguments in voiceSettings. For Gemini,
 which have no language argument, put the declared text language in generation.language
 (e.g. ko). This is metadata, not an API parameter. Both attachment and assembly use the
 same voice/language normalization rules.
+
+Per-line `acting: {direction?: string, tags?: string[]}` is separate from the pinned
+identity voice and from visible/off-screen `delivery`. Use `speech_manage` to update
+acting, invalidate affected speech, and preserve unchanged takes. Follow
+[acting prompts](../produce/references/acting-prompts.md).
+ElevenLabs permits `eleven_v4` only; Gemini remains supported. Local TTS is removed.
+An explicitly requested review/improvement loop is permitted within its scope;
+normal production continues without scoring or listening approval.

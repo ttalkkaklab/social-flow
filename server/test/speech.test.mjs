@@ -6,7 +6,7 @@ import path from 'node:path';
 import {createRequire} from 'node:module';
 import {manageSpeech,speechVideoPlan} from '../dist/speech.js';
 const require=createRequire(import.meta.url);
-const voice={engine:'supertonic',voiceId:'M1',language:'ko',speed:1};
+const voice={engine:'gemini',voiceId:'Kore',language:'ko',speed:1};
 const caps={provider:'replaceable',model:'first',audioConditioning:true,lipSync:true,postLipSync:false,evidence:'fixture adapter contract'};
 function setup(t){
  const dir=mkdtempSync(path.join(tmpdir(),'shot-speech-'));t.after(()=>rmSync(dir,{recursive:true,force:true}));
@@ -38,8 +38,8 @@ test('video adapters select by capabilities, never a provider name',()=>{
 });
 test('generation binding rejects wrong voices and invalidates old audio after edits',t=>{
  const {dir,target,r}=setup(t),line=r.lines[0];const audio=path.join(dir,'voice.wav');writeFileSync(audio,'fixture audio bytes');
- const generation={generator:'tts_local_generate',voiceSettings:{voice:'M1',lang:'ko',speed:1},text:'Hello'};
- assert.throws(()=>manageSpeech({path:target,action:'attach_audio',lineId:line.id,expectedRevision:r.revision,audioPath:audio,generation:{...generation,voiceSettings:{voice:'F1'}}}),/pinned/);
+ const generation={generator:'tts_generate',language:'ko',voiceSettings:{voiceName:'Kore',speed:1},text:'Hello'};
+ assert.throws(()=>manageSpeech({path:target,action:'attach_audio',lineId:line.id,expectedRevision:r.revision,audioPath:audio,generation:{...generation,voiceSettings:{voiceName:'Puck'}}}),/pinned/);
  let next=manageSpeech({path:target,action:'attach_audio',lineId:line.id,expectedRevision:r.revision,audioPath:audio,generation});
  assert.equal(next.lines[0].audioCurrent,true);assert.equal(next.lines[0].audio.status,'not_reviewed');
  writeFileSync(audio,'changed bytes');assert.equal(manageSpeech({path:target,action:'list',lineId:line.id}).lines[0].audioCurrent,false);
@@ -60,7 +60,7 @@ test('same-text audio retake invalidates bound lip-sync video until rebound',t=>
  const {dir,target,r}=setup(t),line=r.lines[0];
  const audio=path.join(dir,'take1.wav'),retake=path.join(dir,'take2.wav'),video=path.join(dir,'clip.mp4');
  writeFileSync(audio,'first audio');writeFileSync(retake,'different timing');writeFileSync(video,'video fixture');
- const generation={generator:'tts_local_generate',voiceSettings:{voice:'M1',lang:'ko',speed:1},text:'Hello'};
+ const generation={generator:'tts_generate',language:'ko',voiceSettings:{voiceName:'Kore',speed:1},text:'Hello'};
  let next=manageSpeech({path:target,action:'attach_audio',lineId:line.id,expectedRevision:r.revision,audioPath:audio,generation});
  next=manageSpeech({path:target,action:'attach_video',shotId:line.shotId,expectedRevision:next.revision,videoPath:video,capabilities:caps});
  next=manageSpeech({path:target,action:'attach_audio',lineId:line.id,expectedRevision:next.revision,audioPath:audio,generation});
@@ -70,17 +70,18 @@ test('same-text audio retake invalidates bound lip-sync video until rebound',t=>
  assert.equal(next.lines[0].audioCurrent,true);
  assert.match(readFileSync(path.join(target,'scenes.js'),'utf8'),/"speechStatus": "stale"/);
 });
-for(const engine of ['gemini','mlx'])test(engine+' raw API arguments attach and pass assembly provenance without invented language arguments',t=>{
+for(const generator of ['tts_generate','tts_gemini_38','tts_elevenlabs_generate'])test(generator+' raw API arguments attach and pass assembly provenance without invented language arguments',t=>{
  const {dir,target,r}=setup(t),line=r.lines[1];
  const board=path.join(target,'scenes.js');let source=readFileSync(board,'utf8');
- const replacement={engine,voiceId:engine==='gemini'?'Kore':'speaker-a',language:'Korean',speed:1};
+ const replacement={engine:generator==='tts_elevenlabs_generate'?'elevenlabs':'gemini',voiceId:generator==='tts_elevenlabs_generate'?'actor-one':generator==='tts_gemini_38'?'voice_custom':'Kore',model:generator==='tts_elevenlabs_generate'?'eleven_v4':generator==='tts_gemini_38'?'gemini-3.8-flash-tts':'gemini-2.5-flash-preview-tts',language:'Korean',speed:1};
  source=source.replaceAll(JSON.stringify(voice,null,2),JSON.stringify(replacement,null,2));
  // serializeBoard indents nested fields; use its parsed object to change the pinned identity.
  const win={};new Function('window',source)(win);win.SB_DOC.characters.forEach(c=>c.tts=replacement);
  win.SCENES=[win.SCENES[1]];writeFileSync(board,Object.entries(win).map(([k,v])=>`window.${k}=${JSON.stringify(v)};`).join('\n'));
  const audio=path.join(dir,'.work','c0.wav');writeFileSync(audio,'fixture bytes');
  const revision=manageSpeech({path:target,action:'list'}).revision;
- const generation={generator:engine==='gemini'?'tts_generate':'mlx_tts_generate',voiceSettings:engine==='gemini'?{voiceName:'Kore'}:{voice:'speaker-a'},language:'ko',text:'Outside'};
+ const voiceSettings={model:replacement.model,...(generator==='tts_generate'?{voiceName:replacement.voiceId}:generator==='tts_gemini_38'?{voice:replacement.voiceId,turns:[{text:'Outside',style:'calm'}]}:{voiceId:replacement.voiceId})};
+ const generation={generator,voiceSettings,language:'ko',text:'Outside'};
  const attached=manageSpeech({path:target,action:'attach_audio',lineId:line.id,expectedRevision:revision,audioPath:audio,generation});
  assert.equal(attached.lines[0].audioCurrent,true);
  writeFileSync(path.join(dir,'.work','cards.tsv'),'0\tc0.wav\t1\n');

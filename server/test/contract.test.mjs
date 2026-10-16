@@ -37,13 +37,6 @@ import {
   VALID_TTS_MODELS,
 } from '../dist/tts-client.js';
 import {
-  DEFAULT_SUPERTONIC_LANGUAGE,
-  MAX_SUPERTONIC_INPUT_CHARS,
-  SUPERTONIC_LANGUAGES,
-  SUPERTONIC_SAMPLE_RATE,
-  SUPERTONIC_VOICE_NAMES,
-} from '../dist/supertonic-client.js';
-import {
   DEFAULT_ELEVENLABS_MODEL,
   DEFAULT_ELEVENLABS_OUTPUT_FORMAT,
   ELEVENLABS_DIALOGUE_MAX_INPUTS,
@@ -364,13 +357,12 @@ describe('mlx_* tools', () => {
   const MLX = [
     'mlx_image_generate',
     'mlx_image_edit',
-    'mlx_tts_generate',
     'mlx_music_generate',
     'mlx_video_generate',
     'mlx_3d_generate',
   ];
 
-  it('all six mlx tools are listed and routed as local generation', () => {
+  it('all five mlx tools are listed and routed as local generation', () => {
     for (const name of MLX) {
       const tool = byName.get(name);
       assert.ok(tool, `missing tool ${name}`);
@@ -383,7 +375,7 @@ describe('mlx_* tools', () => {
     }
   });
 
-  it('the mlx family pattern hides exactly the six mlx tools', () => {
+  it('the mlx family pattern hides exactly the five mlx tools', () => {
     const hidden = TOOLS.filter((tool) => isToolDisabled(tool.name, ['mlx_*'])).map((t) => t.name).sort();
     assert.deepEqual(hidden, [...MLX].sort());
   });
@@ -398,15 +390,6 @@ describe('mlx_* tools', () => {
     assert.match(edit.description, /mode:"edit"/);
     assert.match(edit.description, /gpt_image_img2img/);
     assert.equal(gen.inputSchema.properties.width.default, 1024);
-  });
-
-  it('tts is not a silent fallback and names input, not text', () => {
-    const tts = byName.get('mlx_tts_generate');
-    assert.match(tts.description, /silent fallback/);
-    assert.match(tts.description, /profile §2/);
-    assert.ok('input' in tts.inputSchema.properties);
-    assert.ok(!('text' in tts.inputSchema.properties));
-    assert.ok((tts.inputSchema.required ?? []).includes('input'));
   });
 
   it('music defaults instrumental and names the lyrics 400', () => {
@@ -887,7 +870,7 @@ describe('single-source constants', () => {
     assert.equal(tool.inputSchema.properties.speakers.minItems, 2);
     assert.equal(tool.inputSchema.properties.speakers.maxItems, 2);
     assert.deepEqual(tool.inputSchema.properties.speakers.items.properties.voice.enum, [...TTS_VOICE_NAMES]);
-    assert.match(tool.description, /ElevenLabs L4az9Gb378GIycFl2nAB/);
+    assert.doesNotMatch(tool.description, /L4az9Gb378GIycFl2nAB/, "a generic tool must not inject a channel-specific identity voice");
   });
 
   it('music scale/mode enums match the music-client source of truth', () => {
@@ -895,11 +878,6 @@ describe('single-source constants', () => {
     assert.deepEqual(enumOf('music_generate_advanced', 'config.musicGenerationMode'), [
       ...MUSIC_GENERATION_MODES,
     ]);
-  });
-
-  it('local TTS voice/language enums match the supertonic-client source of truth', () => {
-    assert.deepEqual(enumOf('tts_local_generate', 'voice'), [...SUPERTONIC_VOICE_NAMES]);
-    assert.deepEqual(enumOf('tts_local_generate', 'lang'), [...SUPERTONIC_LANGUAGES]);
   });
 
   it('ElevenLabs model/format/normalization/category enums match the elevenlabs-client source of truth', () => {
@@ -916,66 +894,42 @@ describe('single-source constants', () => {
   });
 });
 
-/**
- * Pins as contract the fact that the two speech lanes are different things.
- *
- * Local (Supertonic) and Gemini are both named tts_*, so callers swap them
- * easily — yet the sample rate (44.1kHz vs 24kHz) and whether acted delivery
- * is possible differ. Lose that boundary in the descriptions and the two mix
- * inside one video, breaking the splice.
- */
-describe('speech lane separation (local · Gemini)', () => {
-  const local = byName.get('tts_local_generate');
-
-  it('local synthesis is marked as not touching the network', () => {
-    assert.equal(local.annotations.openWorldHint, false, 'openWorldHint is open');
-    assert.equal(local.annotations.readOnlyHint, false);
+describe('supported speech surface', () => {
+  it('removed local synthesis and v2 voice conversion cannot be listed or called', () => {
+    for (const name of ['tts_local_generate', 'mlx_tts_generate', 'voice_lock_apply']) {
+      assert.equal(byName.has(name), false, name);
+      assert.equal(ROUTES[name], undefined, name);
+    }
   });
 
-  it('the local tool description gives the Python runtime requirement and install steps', () => {
-    assert.match(local.description, /pip install supertonic/, 'no install guidance');
-    assert.match(local.description, /SUPERTONIC_PYTHON/, 'no venv selection method');
+  it('Gemini, ElevenLabs v4 and character auditions have live handlers', () => {
+    for (const name of ['tts_generate', 'tts_multi_speaker', 'tts_gemini_38', 'tts_list_voices', 'tts_elevenlabs_generate', 'tts_elevenlabs_dialogue', 'tts_elevenlabs_voices', 'character_voice_audition']) {
+      assert.ok(byName.has(name), name);
+      assert.equal(typeof ROUTES[name], 'function', name);
+    }
+    for (const name of ['tts_elevenlabs_generate', 'tts_elevenlabs_dialogue']) {
+      const props = byName.get(name).inputSchema.properties;
+      assert.deepEqual(props.model.enum, ['eleven_v4']);
+      assert.equal(props.model.default, 'eleven_v4');
+      assert.deepEqual(props.speed.enum, [1]);
+      assert.ok(props.stability && props.similarity);
+      assert.equal(props.style, undefined);
+    }
   });
 
-  it('the local tool description notes the weight license (OpenRAIL-M)', () => {
-    // the code is MIT but the weights carry use-based restrictions — the audio ships in posts, so it must be flagged
-    assert.match(local.description, /OpenRAIL-M/, 'no weight-license caution');
-  });
-
-  it('the description warns about the sample-rate difference between the two engines', () => {
-    assert.match(local.description, /44\.1kHz/, 'no local output spec');
-    assert.match(local.description, /24kHz/, 'no warning about the difference from the Gemini spec');
-    assert.equal(SUPERTONIC_SAMPLE_RATE, 44_100);
-  });
-
-  it('routes cuts needing acted delivery to Gemini — local has no style argument', () => {
-    assert.ok(!('stylePrompt' in local.inputSchema.properties), 'a stylePrompt appeared on local');
-    assert.match(local.description, /tts_generate/, 'no Gemini lane guidance');
-  });
-
-  it('language is an argument, not auto-detected (the opposite of Gemini)', () => {
-    // Gemini detects the language from the text, while Supertonic uses the code even for chunking
-    assert.equal(local.inputSchema.properties.lang.default, DEFAULT_SUPERTONIC_LANGUAGE);
-    assert.ok(!('lang' in byName.get('tts_generate').inputSchema.properties));
-  });
-
-  it('both lanes share the same input cap — so swapping never trips', () => {
-    assert.equal(local.inputSchema.properties.text.maxLength, MAX_SUPERTONIC_INPUT_CHARS);
-    assert.equal(
-      byName.get('tts_generate').inputSchema.properties.text.maxLength,
-      MAX_SUPERTONIC_INPUT_CHARS,
-    );
+  it('audition surface exposes three candidates and explicit user selection', () => {
+    const tool = byName.get('character_voice_audition');
+    const props = tool.inputSchema.properties;
+    assert.deepEqual(props.action.enum, ['create', 'read', 'select']);
+    assert.equal(props.candidates.minItems, 3);
+    assert.equal(props.candidates.maxItems, 3);
+    assert.deepEqual(props.candidateId.enum, ['1', '2', '3']);
+    assert.ok(props.userSelection);
+    assert.equal(tool.annotations.readOnlyHint, false);
+    assert.equal(tool.annotations.openWorldHint, true);
   });
 });
 
-/**
- * The third speech lane (ElevenLabs) is paid and account-specific, so its
- * contract is the opposite of the two above on three points: the voice is a
- * required account ID with no default, the file that comes back has to be RIFF
- * for the builder, and the voice listing is a separate keyed tool instead of a
- * server constant. Lose any of these from the surface and a profile engine
- * switch breaks at runtime.
- */
 describe('speech lane separation (ElevenLabs)', () => {
   const generate = byName.get('tts_elevenlabs_generate');
   const dialogue = byName.get('tts_elevenlabs_dialogue');
@@ -1000,7 +954,7 @@ describe('speech lane separation (ElevenLabs)', () => {
     const item = dialogue.inputSchema.properties.inputs.items;
     assert.ok(item.required.includes('voiceId') && item.required.includes('text'));
     assert.equal(dialogue.inputSchema.properties.inputs.maxItems, ELEVENLABS_DIALOGUE_MAX_INPUTS);
-    assert.ok(!('model' in dialogue.inputSchema.properties), 'dialogue is v3-only — no model argument');
+    assert.deepEqual(dialogue.inputSchema.properties.model.enum, ['eleven_v4']);
   });
 
   it('the output contract names the RIFF default and warns that mp3 is not builder input', () => {
@@ -1012,19 +966,19 @@ describe('speech lane separation (ElevenLabs)', () => {
     assert.match(generate.description, /RIFF/);
   });
 
-  it('input caps: schema cap is the default model cap, the v3 cap is spelled out', () => {
+  it('input cap is the v4 provider cap', () => {
     assert.equal(generate.inputSchema.properties.text.maxLength, MAX_ELEVENLABS_INPUT_CHARS);
-    assert.match(generate.inputSchema.properties.text.description, /5000 on eleven_v3/);
+    assert.equal(MAX_ELEVENLABS_INPUT_CHARS, 10000);
   });
 
   it('routes the caller: cost vs the other lanes, dialogue vs single, voices vs tts_list_voices', () => {
-    assert.match(generate.description, /tts_local_generate/, 'no free-lane pointer');
+    assert.doesNotMatch(generate.description, /use tts_local_generate|use mlx_tts_generate/i);
     assert.match(generate.description, /tts_elevenlabs_dialogue/, 'no dialogue pointer');
     assert.match(generate.description, /non-commercial/, 'no free-tier license caution');
     assert.match(dialogue.description, /tts_multi_speaker/, 'no Gemini 2-speaker contrast');
     assert.match(voices.description, /voices_read/, 'no permission note');
     assert.match(voices.description, /tts_list_voices/, 'no pointer to the static list');
-    assert.match(byName.get('tts_list_voices').description, /tts_elevenlabs_voices/, 'the static list does not point at the third lane');
+    assert.match(byName.get('tts_list_voices').description, /tts_elevenlabs_voices/, 'Gemini catalog does not point at ElevenLabs');
   });
 
   it('pagination on the voice listing uses the server-wide `limit` name', () => {

@@ -81,8 +81,8 @@ prices. A configured credential does not guarantee a successful generation.
    Use the installed video-model selection reference and cost tables. Explain the
    change each option makes. The host is the recommended initial choice when it
    supports the requested job; the user can explicitly choose an API instead.
-2. **Speech model.** Offer the available Gemini, ElevenLabs, Supertonic or MLX
-   engines and selectable models. Keep model selection separate from each
+2. **Speech model.** Offer available Gemini models or ElevenLabs `eleven_v4` only. Local TTS
+   engines are removed; do not offer Supertonic or MLX speech. Keep model selection separate from each
    character's voice ID, language, speed and style. Show existing pinned voices
    that conflict with the proposed engine/model during setup; let the user retain
    an explicit character exception or request migration. Do not silently change
@@ -116,7 +116,7 @@ JSON
 
 The file is `.social-flow/models.json`, schema version 1. Store no credentials.
 `engine` is required in each category; `model` is required for selectable engines.
-ASTRA, Supertonic and Z-Image use fixed server models, so omit `model` for them.
+ASTRA and Z-Image use fixed server models, so omit `model` for them.
 For a host with no model selector use `host-managed`, a label rather than a claimed
 vendor model/version. Also record `host` (for example `codex` or `grok`); verify
 that the same CLI and tool are available on resume. A different CLI requires an

@@ -25,7 +25,7 @@ stage <TAB> category <TAB> subject <TAB> selected <TAB> reason
 ```tsv
 storyboard	engine_selection	motion background shot 2	seedance-2-0-mini-video-720p	previz cut on the plan's standing video_model, silent slot; rejected veo.lite (no clip input, pays 8s for a 4s cut)
 storyboard	image_engine	points backgrounds	image_local_generate	local Z-Image, $0 — no text in frame; rejected gpt high (cost, not needed without text)
-produce	voice_selection	narration TTS	tts_local	profile §2 voice, offline; rejected gemini-flash (voice changes mid-series)
+produce	voice_selection	narration TTS	tts_gemini_38	profile §2 pinned voice/model; no engine change
 produce	fallback	motion background shot 2	hold	ARK_API_KEY absent — a previz cut has no Veo route; held for the key, logged in build-report.txt
 ```
 
@@ -62,8 +62,8 @@ change of mind into something that looks like it was always true — which is ex
 question you'd be opening the file to answer.
 
 ```tsv
-produce	voice_selection	narration TTS	tts_local	offline, profile §2 voice; rejected gemini-flash
-produce	voice_selection	narration TTS	tts_elevenlabs	user asked for the warmer read; supersedes tts_local (accent on 안녕하세요 was flat)
+produce	voice_selection	narration TTS	tts_gemini_38	profile §2 pinned voice/model
+produce	voice_selection	narration TTS	tts_elevenlabs	user asked for the warmer read; supersedes the prior Gemini selection for this requested voice change
 ```
 
 `decisions.sh` reads the last line per `(category, subject)` as current and marks it `revised`.

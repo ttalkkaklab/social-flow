@@ -17,17 +17,17 @@ const finalChecker={...sourceFinal,evidence:sourceFinal.legacyEvidence};
 const texts=['오늘의 이야기를 시작합니다.','다음 문장도 같은 목소리로 읽어요.','이렇게 이야기를 마칩니다.'];
 function setup(t){const dir=mkdtempSync(path.join(tmpdir(),'continuity-'));t.after(()=>rmSync(dir,{recursive:true,force:true}));return dir;}
 function approve(dir){writeFileSync(path.join(dir,'speed-authorization.json'),JSON.stringify({version:1,requests:[{source:'explicit-user-request',scope:'generation',factor:1.2,request:'Please synthesize this episode at 1.2x.',requestedAt:'2026-09-12T00:00:00Z'}]}));}
-function request(dir,index=1){approve(dir);return checkedSpeechSchema.parse({generator:'tts_elevenlabs_generate',generation:{text:texts[index],voiceId:'voice',model:'eleven_multilingual_v2',speed:1.2},expectedText:texts[index],language:'Korean',delivery:'Calm connected narration.',outputPath:dir,filename:`c${index}.wav`,episode:{texts,index,seed:210836}});}
+function request(dir,index=1){approve(dir);return checkedSpeechSchema.parse({generator:'tts_elevenlabs_generate',generation:{text:texts[index],voiceId:'voice',model:'eleven_v4',speed:1},expectedText:texts[index],language:'Korean',delivery:'Calm connected narration.',outputPath:dir,filename:`c${index}.wav`,episode:{texts,index,seed:210836}});}
 const good={accuracy:100,pronunciation:98,naturalness:98,clarity:98,continuity:98,continuityEvidence:'At 1.2 seconds the next sentence continues the same tone naturally.',confidence:0.98,complete:true,evidence:'The complete speech has clear endings and no clipped breaths or unnatural joins.',issues:[]};
-test('episode derives real preceding/following text and keeps native synthesis speed',t=>{
+test('episode derives bounded v4 context and retains its seed at native speed',t=>{
  const dir=setup(t);
  for(let i=0;i<texts.length;i++){
-  const p=prepareGeneration(request(dir,i));assert.equal(p.args.previousText,texts.slice(0,i).join(' ')||undefined);assert.equal(p.args.nextText,texts.slice(i+1).join(' ')||undefined);assert.equal(p.args.seed,210836);assert.equal(p.args.speed,1.2);
+  const p=prepareGeneration(request(dir,i));assert.equal(p.args.previousText,texts.slice(0,i).join(' ').slice(-100)||undefined);assert.equal(p.args.nextText,texts.slice(i+1).join(' ').slice(0,100)||undefined);assert.equal(p.args.seed,210836);assert.equal(p.args.speed,1);
  }
  const r=request(dir);
  assert.throws(()=>prepareGeneration({...r,generation:{...r.generation,seed:1}}),/seed/);
  assert.throws(()=>prepareGeneration({...r,generation:{...r.generation,previousText:'wrong'}}),/previousText/);
- const v3=prepareGeneration({...r,generation:{...r.generation,model:'eleven_v3'}});assert.equal(v3.args.previousText,undefined);assert.equal(v3.args.nextText,undefined);assert.equal(v3.args.seed,210836);
+ assert.throws(()=>prepareGeneration({...r,generation:{...r.generation,model:'eleven_v3'}}));
  assert.equal(checkedSpeechSchema.safeParse({...r,episode:{...r.episode,index:99}}).success,false);
  assert.equal(checkedSpeechSchema.safeParse({...r,playbackSpeed:1.2}).success,false);
 });
@@ -149,19 +149,19 @@ test('mixed generated, recording and b-roll speech uses actual playback order',t
  writeFileSync(board,`window.SCENES=[{type:'points',narration:[{tts:'첫 문장입니다.'}]},{type:'points',visual:{source:'recording'},narration:[]},{type:'broll',after:0,narration:[{tts:'삽입된 말입니다.'}]}];window.STORY={transcripts:[{shot:2,groups:[{text:'녹음한 목소리입니다.',start:0,end:2}]}]};`);
  assert.deepEqual(finalChecker.narration(board),{generated:true,text:'첫 문장입니다.. 삽입된 말입니다.. 녹음한 목소리입니다.'});
 });
-test('dictionary and native speed/context reach the real HTTP serialization',t=>{
+test('dictionary and v4 context reach the real HTTP serialization without a speed control',t=>{
  const dir=setup(t);approve(dir);
  const child=`
  import {generateElevenLabsSpeech,elevenLabsGenerateSchema,createElevenLabsDictionary} from './dist/elevenlabs-client.js';
  import {pcmToWav} from './dist/media-utils.js';
  const requests=[];globalThis.fetch=async(url,init)=>{const body=JSON.parse(init.body);requests.push({url:String(url),body});return String(url).includes('add-from-rules')?new Response(JSON.stringify({id:'dict',version_id:'v1'}),{status:200}):new Response(pcmToWav(Buffer.alloc(48000),24000,1),{status:200});};
  const dict=await createElevenLabsDictionary({name:'test',rules:[{stringToReplace:'어을우동',alias:'어으루동'}]});
- const result=await generateElevenLabsSpeech(elevenLabsGenerateSchema.parse({text:'어을우동',voiceId:'voice',outputPath:${JSON.stringify(dir)},filename:'out.wav',seed:210836,speed:1.2,previousText:'앞 문장',nextText:'뒷 문장',pronunciationDictionaryLocators:[dict]}));
+ const result=await generateElevenLabsSpeech(elevenLabsGenerateSchema.parse({text:'어을우동',voiceId:'voice',outputPath:${JSON.stringify(dir)},filename:'out.wav',seed:210836,speed:1,previousText:'앞 문장',nextText:'뒷 문장',pronunciationDictionaryLocators:[dict]}));
  if(!result.success)throw new Error(result.error);console.log(JSON.stringify(requests));`;
  const run=spawnSync(process.execPath,['--input-type=module','-e',child],{cwd:path.resolve(import.meta.dirname,'..'),encoding:'utf8',env:{...process.env,ELEVENLABS_API_KEY:'test-only'}});
  assert.equal(run.status,0,run.stderr);const [d,r]=JSON.parse(run.stdout);
  assert.deepEqual(d.body.rules,[{type:'alias',string_to_replace:'어을우동',alias:'어으루동'}]);
- assert.equal(r.body.text,'어을우동');assert.equal(r.body.seed,210836);assert.equal(r.body.voice_settings.speed,1.2);assert.equal(r.body.previous_text,'앞 문장');assert.equal(r.body.next_text,'뒷 문장');
+ assert.equal(r.body.inputs[0].text,'어을우동');assert.equal(r.body.model_id,'eleven_v4');assert.equal(r.body.seed,210836);assert.equal(r.body.voice_settings?.speed,undefined);assert.equal(r.body.previous_text,'앞 문장');assert.equal(r.body.future_text,'뒷 문장');
  assert.deepEqual(r.body.pronunciation_dictionary_locators,[{pronunciation_dictionary_id:'dict',version_id:'v1'}]);
 });
 

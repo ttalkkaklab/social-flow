@@ -4,7 +4,6 @@ import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import { generateLocalSpeech, supertonicGenerateSchema } from '../dist/supertonic-client.js';
 import { generateElevenLabsSpeech, elevenLabsGenerateSchema } from '../dist/elevenlabs-client.js';
 import { generateCheckedSpeech, checkedSpeechSchema } from '../dist/tts-quality.js';
 const require = createRequire(import.meta.url);
@@ -20,7 +19,7 @@ function save(dir, requests) { writeFileSync(path.join(dir, 'speed-authorization
 
 test('1.0 works without approval; exact scope and explicit request are required otherwise', t => {
   const dir = setup(t);
-  assert.equal(supertonicGenerateSchema.parse({ text: 'Hello.' }).speed, 1);
+  assert.equal(elevenLabsGenerateSchema.parse({ text: 'Hello.', voiceId: 'voice', speed: 1 }).speed, 1);
   assert.equal(authorizeSpeed(dir, 'generation', 1), null);
   for (const factor of [0.88, 1.05, 1.2]) assert.throws(() => authorizeSpeed(dir, 'generation', factor), /explicit user request/);
   for (const mutation of [{ source: 'channel-profile' }, { scope: 'final' }, { factor: 1.1 }, { request: '' }, { requestedAt: 'invalid' }]) {
@@ -34,10 +33,9 @@ test('1.0 works without approval; exact scope and explicit request are required 
 
 test('direct and checked generators block before synthesis or paid preflight', async t => {
   const dir = setup(t);
-  await assert.rejects(generateLocalSpeech(supertonicGenerateSchema.parse({ text: 'Hello.', speed: 1.2, outputPath: dir })), /explicit user request/);
-  await assert.rejects(generateElevenLabsSpeech(elevenLabsGenerateSchema.parse({ text: 'Hello.', voiceId: 'voice', speed: 1.2, outputPath: dir })), /explicit user request/);
+  assert.equal(elevenLabsGenerateSchema.safeParse({ text: 'Hello.', voiceId: 'voice', speed: 1.2, outputPath: dir }).success, false);
   let called = false;
-  const req = checkedSpeechSchema.parse({ generator: 'tts_local_generate', generation: { text: 'Hello.', speed: 1.2 }, expectedText: 'Hello.', language: 'English', delivery: 'Calm.', outputPath: dir, filename: 'test.wav' });
+  const req = checkedSpeechSchema.parse({ generator: 'tts_generate', generation: { text: 'Hello.' }, playbackSpeed: 1.2, expectedText: 'Hello.', language: 'English', delivery: 'Calm.', outputPath: dir, filename: 'test.wav' });
   await assert.rejects(generateCheckedSpeech(req, { preflight: async () => { called = true; } }), /explicit user request/);
   assert.equal(called, false);
   await assert.rejects(generateCheckedSpeech({ ...req, generation: { text: 'Hello.' }, playbackSpeed: 1.2 }, { preflight: async () => { called = true; } }), /explicit user request/);

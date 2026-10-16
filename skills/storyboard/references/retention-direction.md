@@ -141,9 +141,9 @@ In the table, map every intended event to a supported control:
   an essential sound must have a supported mix route. B-roll keeps its own sound under
   the existing no-narration contract. Never plan dialogue over that slot.
 - Voice delivery follows the profile's engine and voice. Mark emphasis and breathing in
-  the handoff, using only controls that engine supports. For local TTS, adjust sentence
-  boundaries and punctuation and listen to the result; it has no emotion control. Never
-  put acting directions into spoken text or change voice to obtain an effect.
+  the handoff using `narration[].acting` and the selected engine’s supported controls.
+  Follow [acting prompts](../../produce/references/acting-prompts.md). Keep spoken
+  wording and subtitles separate from generated tags; do not change identity voice for an effect.
 
 Autoproduce uses one bed, without window.MUSIC or sound.cue. Design its contrast with
 supported drops, resolved SFX and scene rhythm from the outset. Missing sound assets require

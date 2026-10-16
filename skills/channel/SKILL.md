@@ -8,7 +8,7 @@ description: >
   platforms, fact-check policy — the source of truth every storyboard, produce and publish
   run opens before anything else.
 argument-hint: "[add|list|update|serve|character] [channel-name]"
-allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__tts_local_generate", "mcp__social-flow__stt_local_transcribe", "mcp__social-flow__tts_list_voices", "mcp__social-flow__tts_elevenlabs_voices", "mcp__social-flow__tts_elevenlabs_generate"]
+allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__stt_local_transcribe", "mcp__social-flow__character_voice_audition", "mcp__social-flow__tts_list_voices", "mcp__social-flow__tts_elevenlabs_voices", "mcp__social-flow__tts_elevenlabs_generate"]
 ---
 **Automatic execution policy:** Read [automation guidance](../_shared/automation-guidance.md) first. Creative rules and review findings guide improvements; scores, review/hash/freeze records, CTA choices and intermediate approval steps do not block authorized work. Preserve actual external-action authorization and stop at the artifact the user requested. This policy supersedes older quality-gate wording below.
 
@@ -72,14 +72,17 @@ reused in two or more episodes; single-episode artifacts go in the topic's `.wor
    - Publish platforms (threads / instagram / facebook / youtube)
    - Fact-check policy (informational=research required / creative·daily-life=skip)
 
-3. **Assign the TTS voice** — from the `mcp__social-flow__tts_list_voices` result
-   or the voice examples in `references/profile-template.md`, propose the engine
-   (`local` Supertonic is the default — zero cost; `gemini` only when acted emotion
-   is the channel's identity) and one voice that fits the tone, and pin down the
-   stylePrompt. **Once fixed, never
-   change voiceName·stylePrompt** — Gemini TTS interprets style directions as
-   natural language, so if the wording drifts, the voice changes from episode to
-   episode. Change them only when the user explicitly says so.
+3. **Assign the TTS voice** — use `tts_list_voices` for Gemini or
+   `tts_elevenlabs_voices` for the ElevenLabs account. Follow the saved speech model;
+   ElevenLabs permits `eleven_v4` only. Local TTS is removed. Pin the voice ID and
+   identity settings. Keep line-specific emotion in `narration[].acting`, not the
+   character's identity. Follow [acting prompts](../produce/references/acting-prompts.md).
+   Change the identity voice only when the user requests it.
+   For each new character, generate three actual voice samples using distinct voices,
+   one shared Korean sample and the selected engine/model. Show the playable candidates,
+   wait for explicit selection, then save the selected voice settings/reference audio
+   to the identity and sheet. Pending drafts must not label a candidate as confirmed.
+
 
    If the working directory already has [model settings](../_shared/model-settings.md),
    use its speech engine/model when proposing a new voice instead of the default
@@ -214,10 +217,12 @@ For every new or updated character, follow [character-identity.md](references/ch
 
 Export the bundled sheet before any episode candidates or scene images, including drafts with pending media. Follow [panel specifications](references/character-panels.md) for purpose, canvas ratio and subject size. Never hand-author the review HTML.
 
-Every character sheet must include one fenced `json` block in `identity.md`:
+Every confirmed character sheet includes its selected `tts` in the identity JSON.
+Before the three-candidate audition selection, the draft may omit `tts`; do not
+substitute the following example as a confirmed voice. After selection, the block includes:
 
 ```json
-{"tts":{"engine":"supertonic","voiceId":"M1","language":"ko","speed":1}}
+{"tts":{"engine":"gemini","model":"gemini-3.8-flash-tts","voiceId":"Charon","language":"ko","speed":1}}
 ```
 
 This is an example, not a default for the cast. Choose and pin each character's

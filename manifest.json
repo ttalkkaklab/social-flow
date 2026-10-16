@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "social-flow",
   "display_name": "Social Flow",
-  "version": "0.113.0",
+  "version": "0.114.0",
   "description": "The social-flow MCP tools for the Claude Desktop chat — research search, image, video, voice and music generation, and SNS publishing. A desktop extension carries no skills; the full pipeline installs as a plugin in Cowork.",
   "author": {
     "name": "Zeans",
@@ -27,7 +27,9 @@
     "entry_point": "server/dist/bundle.js",
     "mcp_config": {
       "command": "node",
-      "args": ["${__dirname}/server/dist/bundle.js"],
+      "args": [
+        "${__dirname}/server/dist/bundle.js"
+      ],
       "env": {
         "OPENAI_API_KEY": "${user_config.openai_api_key}",
         "GEMINI_API_KEY": "${user_config.gemini_api_key}",
@@ -71,7 +73,9 @@
   },
   "tools_generated": true,
   "compatibility": {
-    "platforms": ["darwin"],
+    "platforms": [
+      "darwin"
+    ],
     "runtimes": {
       "node": ">=20"
     }

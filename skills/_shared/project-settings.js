@@ -42,10 +42,11 @@ function layout(root, channel) {
 function status(root) {
   const saved = read(root);
   const missing = config.missingProjectFields(saved.config);
+  if (saved.status === 'migration_required') missing.push('models.speech');
   const paths = saved.config?.project ? layout(root, saved.config.project.channel) : undefined;
   if (paths) for (const [key, file] of Object.entries(paths)) if (!fs.existsSync(file)) missing.push(key);
   return {
-    ...saved, workspace: root, status: missing.length ? 'project_setup_required' : 'ready', missing,
+    ...saved, workspace: root, status: saved.status === 'migration_required' ? 'migration_required' : missing.length ? 'project_setup_required' : 'ready', missing,
     paths,
     pendingConnections: Object.entries(saved.config?.sns || {}).filter(([, a]) => a.enabled && a.status !== 'connected').map(([name]) => name),
     connectionNote: 'Saved connection status is historical. Recheck sns_account_check before publishing; setup does not authorize publication.',

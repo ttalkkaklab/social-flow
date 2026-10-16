@@ -23,7 +23,7 @@ function setup(t){
   t.after(()=>rmSync(dir,{recursive:true,force:true}));
   mkdirSync(path.join(dir,'storyboard'));mkdirSync(path.join(dir,'.work/pcm'),{recursive:true});
   writeFileSync(path.join(dir,'storyboard/scenes.js'),`window.SCENES=[{type:'points',narration:[{tts:${JSON.stringify(script)}}]}];`);
-  const request=checkedSpeechSchema.parse({generator:'tts_local_generate',generation:{text:script,voice:'F1',lang:'ko'},expectedText:script,language:'Korean',delivery:'Calm and conversational.',outputPath:path.join(dir,'.work/pcm'),filename:'c0.wav'});
+  const request=checkedSpeechSchema.parse({generator:'tts_generate',generation:{text:script,voiceName:'Kore'},expectedText:script,language:'Korean',delivery:'Calm and conversational.',outputPath:path.join(dir,'.work/pcm'),filename:'c0.wav'});
   const file=path.join(request.outputPath,request.filename);
   writeFileSync(path.join(dir,'.work/cards.tsv'),`0\t${file}\t4.5\tin\n`);
   let count=0;
@@ -51,7 +51,7 @@ test('failed naturalness regenerates only the scene, and unchanged PASS costs no
   assert.ok(checker.check(path.join(f.dir,'.work'),path.join(f.dir,'storyboard'))[f.file]);
   assert.equal((await generateCheckedSpeech(f.request,f.deps)).reused,true);assert.equal(f.count(),2);
   const events=readFileSync(path.join(f.dir,'.work/events.jsonl'),'utf8').trim().split('\n').map(JSON.parse);
-  assert.equal(events.filter(e=>e.tool==='tts_local_generate').length,2);
+  assert.equal(events.filter(e=>e.tool==='tts_generate').length,2);
 });
 test('exhausted attempts stay exhausted across calls, even if a caller retries',async t=>{
   const f=setup(t);f.deps.listen=async()=>({transcript:script,review:{...good(),pronunciation:70}});
@@ -124,9 +124,9 @@ test('real recordings and silence keep audio provenance without a synthesis proo
 });
 test('generation args bind the whole spoken text and preserve voice settings',t=>{
   const f=setup(t);const prepared=prepareGeneration(f.request);
-  assert.equal(prepared.args.voice,'F1');assert.equal(prepared.args.text,script);
+  assert.equal(prepared.args.voiceName,'Kore');assert.equal(prepared.args.text,script);
   assert.throws(()=>prepareGeneration({...f.request,expectedText:'다른 대본'}),/match the complete/);
-  const eleven={...f.request,generator:'tts_elevenlabs_generate',generation:{text:'[whispers] '+script,voiceId:'21m00Tcm4TlvDq8ikWAM',model:'eleven_v3'}};
+  const eleven={...f.request,generator:'tts_elevenlabs_generate',generation:{text:'[whispers] '+script,voiceId:'21m00Tcm4TlvDq8ikWAM',model:'eleven_v4'}};
   assert.equal(prepareGeneration(eleven).args.voiceId,eleven.generation.voiceId);
   assert.throws(()=>prepareGeneration({...f.request,filename:'../outside.wav'}));
 });
@@ -312,34 +312,34 @@ test('a stored take with no transcript is rechecked, not resynthesised, when the
 });
 
 test('three character voices bind their actual generation proofs and reject narrator substitution',async t=>{
-  const f=setup(t), characters=['F1','F2','M1'].map((voiceId,i)=>({id:'cast-'+i,tts:{engine:'supertonic',voiceId,language:'ko',speed:1}}));
+  const f=setup(t), characters=['Kore','Puck','Charon'].map((voiceId,i)=>({id:'cast-'+i,tts:{engine:'gemini',voiceId,language:'ko',speed:1}}));
   const scenes=characters.map(c=>({type:'points',narration:[{tts:script,speaker:c.id}]}));
   const cards=[];
   for(const [i,c] of characters.entries()) {
     const filename=`cast-${i}.wav`, file=path.join(f.request.outputPath,filename);
-    const request={...f.request,filename,generation:{...f.request.generation,voice:c.tts.voiceId,speed:1}};
+    const request={...f.request,filename,generation:{...f.request.generation,voiceName:c.tts.voiceId,speed:1}};
     const deps={...f.deps,generate:async()=>{writeFileSync(file,pcmToWav(Buffer.alloc(48000,i+1),24000,1));return {success:true,audioPath:file};}};
     assert.equal((await generateCheckedSpeech(request,deps)).status,'pass');
-    assert.equal(JSON.parse(readFileSync(file+'.quality.json')).voiceSettings.voice,c.tts.voiceId);
+    assert.equal(JSON.parse(readFileSync(file+'.quality.json')).voiceSettings.voiceName,c.tts.voiceId);
     cards.push(`${i}\t${file}\t4.5\tin`);
   }
   const board=path.join(f.dir,'storyboard'),work=path.join(f.dir,'.work');
   const writeBoard=()=>writeFileSync(path.join(board,'scenes.js'),`window.SB_DOC=${JSON.stringify({characters,narratorCharacterId:'cast-0'})};window.SCENES=${JSON.stringify(scenes)};`);
   writeBoard();writeFileSync(path.join(work,'cards.tsv'),cards.join('\n')+'\n');
   assert.ok(checker.check(work,board));
-  characters[1].tts.voiceId='F1';writeBoard();
+  characters[1].tts.voiceId='Kore';writeBoard();
   assert.throws(()=>checker.check(work,board),/cast-1 voiceId differs/);
-  characters[1].tts.voiceId='F2';scenes[1].narration[0].speaker=undefined;writeBoard();
+  characters[1].tts.voiceId='Puck';scenes[1].narration[0].speaker=undefined;writeBoard();
   assert.throws(()=>checker.check(work,board),/cast-0 voiceId differs/);
 });
 
 test('voice binding rejects mixed speakers, missing proofs, and changed required settings',()=>{
-  const tts={engine:'supertonic',voiceId:'F1',language:'ko',speed:1};
+  const tts={engine:'gemini',voiceId:'Kore',language:'ko',speed:1};
   const win={SB_DOC:{characters:[{id:'a',tts},{id:'b',tts}],narratorCharacterId:'a'}};
   const scene={narration:[{tts:script,speaker:'a'}]};
-  const proof={generator:'tts_local_generate',language:'Korean',voiceSettings:{voice:'F1',lang:'ko',speed:1}};
+  const proof={generator:'tts_generate',language:'Korean',voiceSettings:{voiceName:'Kore',speed:1}};
   assert.equal(checker.characterVoice(win,scene,proof),'a');
-  for(const patch of [{voice:'F2'},{lang:'en'},{speed:0.9}]) assert.throws(()=>checker.characterVoice(win,scene,{...proof,voiceSettings:{...proof.voiceSettings,...patch}}),/differs/);
+  for(const patch of [{voiceName:'Puck'},{language:'en'},{speed:0.9}]) assert.throws(()=>checker.characterVoice(win,scene,{...proof,voiceSettings:{...proof.voiceSettings,...patch}}),/differs/);
   assert.throws(()=>checker.characterVoice(win,scene,{}),/voiceSettings/);
   assert.throws(()=>checker.characterVoice(win,{narration:[...scene.narration,{tts:script,speaker:'b'}]},proof),/one speaker per scene/);
   assert.equal(checker.characterVoice({},{narration:[{tts:script}]},{}),null);
@@ -351,7 +351,7 @@ test('legacy voice proof gains settings without synthesis or resetting attempts'
   const old=f.proof();delete old.voiceSettings;writeFileSync(f.file+'.quality.json',JSON.stringify(old));
   assert.equal((await generateCheckedSpeech(f.request,f.deps)).reused,true);
   assert.equal(f.count(),1);assert.equal(f.proof().attempts.length,1);
-  assert.equal(f.proof().voiceSettings.voice,'F1');
+  assert.equal(f.proof().voiceSettings.voiceName,'Kore');
 });
 
 test('different ElevenLabs characters can speak in successive scenes',async t=>{

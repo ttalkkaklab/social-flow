@@ -80,8 +80,8 @@ export const config = {
   /**
    * ElevenLabs API key (required by the tts_elevenlabs_* speech tools) — https://elevenlabs.io/app/settings/api-keys
    *
-   * The third speech lane next to Gemini (tts_generate) and on-device Supertonic
-   * (tts_local_generate). Keys can be restricted per permission — synthesis needs
+   * The hosted speech lane alongside Gemini (tts_generate).
+   * Keys can be restricted per permission — synthesis needs
    * `text_to_speech`, the voice listing needs `voices_read`.
    */
   elevenLabsApiKey: process.env.ELEVENLABS_API_KEY || '',
@@ -116,25 +116,9 @@ export function arkBaseUrl(): string {
 }
 
 /**
- * Python interpreter that runs the local TTS (Supertonic).
- *
- * Unlike the other credentials, **startup works without it** — it falls back to
- * `python3`, and if that's missing or the package isn't installed, the call fails
- * at invocation time with install instructions (supertonic-client).
- *
- * Not auto-discovering venv paths is deliberate. Scanning `./venv`/`./.venv` would
- * be convenient, but silently picking up a different virtualenv per repo creates
- * "yesterday's voice is a different voice today" failures. Which interpreter to use
- * is decided explicitly, never inferred.
- */
-export function supertonicPython(): string {
-  return process.env.SUPERTONIC_PYTHON || 'python3';
-}
-
-/**
  * mflux CLI executable that runs local image generation (Z-Image Turbo).
  *
- * Same principle as supertonicPython — startup works without it, and the call fails
+ * Startup works without it, and the call fails
  * at invocation time with install instructions (zimage-client). The default is uv
  * tool's deterministic install path. There is no PATH-scanning fallback — silent
  * auto-discovery turns into "what worked yesterday gives different results today".
@@ -409,7 +393,7 @@ export function requireElevenLabsKey(): string {
       'ELEVENLABS_API_KEY is not set. tts_elevenlabs_* speech tools and sfx_elevenlabs_generate require an ElevenLabs API key ' +
         '(https://elevenlabs.io/app/settings/api-keys — a restricted key needs the text_to_speech permission, ' +
         'plus voices_read for tts_elevenlabs_voices and sound generation for sfx_elevenlabs_generate). ' +
-        'Without it, tts_generate/tts_multi_speaker (Gemini, GEMINI_API_KEY) and tts_local_generate (on-device, no key) still work.',
+        'Without it, tts_generate/tts_multi_speaker (Gemini, GEMINI_API_KEY) still work.',
     );
   }
   return config.elevenLabsApiKey;

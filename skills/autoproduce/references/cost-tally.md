@@ -78,7 +78,7 @@ silently.
 | `veo.*` | second | **generated length**. Generate 8s and use only 4s, still `8` (1080p is 8s-only) |
 | `seedance.*` | second | the requested `durationSeconds` as-is. Note the response's `completion_tokens` in the memo |
 | `video.mlx` | second | `numFrames` ÷ 24 (LTX is 24 fps) |
-| `tts.*` | 1000 chars | **characters ÷ 1000**. 412 chars is `0.412`. `mlx_tts_generate` counts `input` |
+| `tts.*` | 1000 chars | **characters ÷ 1000**. 412 chars is `0.412` |
 | `music.lyria-clip` | clip | number of clips |
 | `music.mlx` | second | `durationSeconds` |
 | `3d.mlx` | mesh | 1 per call |

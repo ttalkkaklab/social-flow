@@ -56,6 +56,75 @@ export const TTS_VOICES = {
     Sadaltager: 'Knowledgeable',
     Sulafat: 'Warm',
 };
+/** Curated is offline; library uses the caller's live Gemini Voices API catalog. */
+export const ttsVoicesSchema = z.object({
+    source: z.enum(['curated', 'library']).optional().default('curated'),
+    pageToken: z.string().min(1).optional(),
+    // A small tool response is deliberate; the provider itself permits up to 1,000.
+    limit: z.number().int().min(1).max(100).optional().default(30),
+}).strict().superRefine((value, ctx) => {
+    if (value.source === 'curated' && value.pageToken) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['pageToken'], message: 'pageToken is available only for source:library' });
+    }
+});
+const geminiVoiceListBodySchema = z.object({
+    voices: z.array(z.object({
+        id: z.string().min(1),
+        display_name: z.string().optional(),
+        type: z.string().optional(),
+        language_code: z.string().optional(),
+        region_code: z.string().optional(),
+        accent: z.string().optional(),
+        persona: z.string().optional(),
+        context: z.string().optional(),
+        gender: z.string().optional(),
+        pitch: z.string().optional(),
+        description: z.string().optional(),
+    })).optional().default([]),
+    next_page_token: z.string().optional(),
+});
+/** GET /v1beta/voices; wire fields verified against ai.google.dev/api/voices. */
+export async function listTtsVoices(request) {
+    try {
+        const parsed = ttsVoicesSchema.parse(request);
+        if (parsed.source === 'curated') {
+            return {
+                success: true,
+                source: 'curated',
+                voices: Object.entries(TTS_VOICES).map(([id, description]) => ({ id, displayName: id, type: 'prebuilt', description })),
+            };
+        }
+        const params = new URLSearchParams({ page_size: String(parsed.limit) });
+        if (parsed.pageToken)
+            params.set('page_token', parsed.pageToken);
+        const response = await requestRaw('get', `https://generativelanguage.googleapis.com/v1beta/voices?${params}`, { 'x-goog-api-key': requireGeminiKey() }, undefined, 30_000);
+        if (!response.ok)
+            return { success: false, source: 'library', error: describeGemini38Error(response.status, response.body) };
+        const body = geminiVoiceListBodySchema.parse(JSON.parse(response.body));
+        return {
+            success: true,
+            source: 'library',
+            voices: body.voices.map(voice => ({
+                id: voice.id,
+                displayName: voice.display_name ?? voice.id,
+                type: voice.type,
+                languageCode: voice.language_code,
+                regionCode: voice.region_code,
+                accent: voice.accent,
+                persona: voice.persona,
+                context: voice.context,
+                gender: voice.gender,
+                pitch: voice.pitch,
+                description: voice.description,
+            })),
+            ...(body.next_page_token ? { nextPageToken: body.next_page_token } : {}),
+            previewNote: 'Gemini ListVoices does not include audio previews. GetVoice provides sample_audio only for stored prompted voices.',
+        };
+    }
+    catch (error) {
+        return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+}
 /** Voice name array — single source for the zod enum and the JSON Schema enum. */
 export const TTS_VOICE_NAMES = Object.keys(TTS_VOICES);
 export const DEFAULT_VOICE = 'Kore';

@@ -200,10 +200,6 @@ publishable episodes. Improve reusable plugin templates and rebuild; do not hand
 ## Requirements
 
 - Node 20+, ffmpeg, Google Chrome (headless capture), python3
-- `pip install supertonic` — for `tts_local_generate` (on-device voice). The first call
-  downloads 385MB of weights into `~/.cache/supertonic3` (~24s). If you installed it in
-  a virtualenv, point `SUPERTONIC_PYTHON` at that interpreter. Code is MIT; **the
-  weights are OpenRAIL-M** (commercial use allowed, with use-based restrictions)
 - `uv tool install --python 3.12 "mlx-qwen3-asr[aligner]"` — for `stt_local_transcribe`
   and ingest's Korean STT. The first call downloads ~3.4GB of Qwen3-ASR-1.7B weights
   into `~/.cache/huggingface`. Installed elsewhere, point `QWEN3_ASR_BIN` at it
@@ -232,10 +228,9 @@ The keys come in two independent groups, and **you can stop after either one**.
 cover and any frame with text on it (local image generation garbles Korean glyphs, so
 text frames go to GPT Image), and `GEMINI_API_KEY` covers generated video clips,
 acted narration, and BGM. Scene backgrounds default to on-device `image_local_generate`
-and narration synthesis defaults to on-device `tts_local_generate`. Generated narration
-requires `GEMINI_API_KEY` for the mandatory audio quality review, including local synthesis.
-A no-key run can synthesize local audio but cannot pass that narration into the builder.
-Review calls have a separate cost; include them and retakes in the episode allowance.
+and speech uses the saved Gemini model or ElevenLabs v4 with its own API key.
+Raw speech needs no automatic paid review; record generation provenance and
+`not_reviewed`. Only explicitly requested reviews add reviewer cost.
 For research, `SERPAPI_API_KEY` and the Naver pair are
 optional too; the storyboard skill falls back to WebSearch.
 
@@ -286,7 +281,7 @@ the whole projection rather than a bill that has already partly arrived.
 |---|---|---|---|
 | **Images** | `image_local_generate` — Z-Image Turbo via mflux, $0. Optional: `mlx_image_*` when MLX Core is running. Under Codex or Grok the CLI's own `image_gen` comes first, on the subscription allowance | `gpt_image_*` — OpenAI, per image by quality | …you accept no text in the frame. Local generation breaks Korean glyphs apart, so covers and any text-bearing frame have to go to the paid path. Default stays Z-Image on Claude Code and the host tool on Codex and Grok |
 | **Video** | deterministic HTML motion slides rendered locally with headless Chrome. Optional: `mlx_video_generate` (24fps, RAM-capped). Under Grok the CLI's own `image_to_video` comes first (1–15 s, 720p ceiling, subscription allowance) | Veo 3.1 (Gemini) per second · Seedance (ModelArk) per second | …you use the HTML motion lane or the Grok host lane. A channel can prohibit stills and still spend zero on generated video; Ken Burns does not count as true motion. mlx_video is not the default and is not on the Veo/Seedance face-policy table |
-| **Speech (TTS)** | `tts_local_generate` — Supertonic 3, $0 synthesis. Optional: `mlx_tts_generate` | `tts_generate` / `tts_multi_speaker` — Gemini, per 1,000 chars. Every generated scene also pays the Gemini audio review inside `tts_generate_checked` (two calls per take) | …the scene is your own recording. Local synthesis is free, but the builder only accepts narration with a current review proof, and the review is a paid Gemini call even for local voices. The local engine has no style or emotion control. mlx_tts is never a silent fallback for profile §2 |
+| **Speech (TTS)** | Your own recording | Gemini TTS or ElevenLabs `eleven_v4` | Generate with the saved voice and record provenance. No automatic paid speech review; local TTS is removed. |
 | **Transcription (STT)** | `stt_local_transcribe` — Qwen3-ASR via mlx, $0 (whisper.cpp fallback) | none | never — there is no paid STT path here |
 | **Music (BGM)** | `mlx_music_generate` when MLX Core is running | Lyria clip via Gemini (the default) | …you ship without BGM, or you have MLX Core up with a music model |
 
@@ -553,10 +548,10 @@ social-flow/
 ├── mcp.json                     #   its stdio server entry
 ├── manifest.json                # Claude Desktop extension (.mcpb) manifest — .mcpbignore picks the contents
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 95 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 94 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
-│       ├── tools.ts             # tool definitions — 93: research 9 + open data 5 + generation 49 + publish 6 + comments 3 + growth insights 5 + growth review 2 + check 2 + blender 7 + storyboard 5
+│       ├── tools.ts             # tool definitions — 94 tools, including voice auditions and opt-in acting review
 │       ├── handlers.ts          # zod validation + routing
 │       ├── sns-client.ts        # Threads·IG·FB·YouTube publish/comments
 │       ├── serp-client.ts       # SerpApi (key masking + response slimming)
@@ -564,12 +559,11 @@ social-flow/
 │       ├── datago-client.ts     # data.go.kr (search·detail·download·odcloud·standard open API)
 │       ├── image-client.ts      # OpenAI GPT Image generation
 │       ├── zimage-client.ts     # Z-Image Turbo on-device generation (mflux/MLX)
-│       ├── mlx-serve-client.ts  # MLX Core / mlx-serve HTTP client (image·edit·tts·music·video·3d)
+│       ├── mlx-serve-client.ts  # MLX Core / mlx-serve HTTP client (image·edit·music·video·3d)
 │       ├── qwen3-asr-client.ts  # Qwen3-ASR on-device STT (mlx-qwen3-asr CLI)
 │       ├── video-client.ts      # Veo 3.1 — t2v·i2v·extension·reference
 │       ├── seedance-client.ts   # Seedance — t2v·i2v·reference (BytePlus ModelArk)
 │       ├── tts-client.ts        # Gemini TTS — single speaker + 2-speaker dialogue
-│       ├── supertonic-client.ts # Supertonic 3 on-device TTS
 │       ├── elevenlabs-client.ts # ElevenLabs TTS — single voice · multi-voice dialogue · voice list (REST)
 │       ├── music-client.ts      # Lyria — 30s clips (batch) + variable length (streaming)
 │       └── media-utils.ts       # path validation · base64 saves · PCM→WAV utils
@@ -624,7 +618,7 @@ Episodes are saved only under `data/<channel>/episodes/<topic>/`. Open
 media and publication logs stay in the local episode directory; no destination
 selection or workspace key is required.
 
-## MCP tool surface (95 tools)
+## MCP tool surface (94 tools)
 
 `project_manage`: options · status · init · update · episode. Local project setup
 with genre, models, style, ratio, format and SNS records; no generation or publishing.
@@ -660,13 +654,13 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | Video generation | `mlx_video_generate` | MLX Core / mlx-serve (24fps rgb8 muxed to mp4 with ffmpeg. Default 768×1280, RAM-capped at 800MB decoded RGB. Not the default path and not on the Veo/Seedance face-policy table. Pack install, request grid and measured render times: [LTX 2.5 runbook](docs/mlx-ltx-2.5.md)) |
 | Video generation | `astra_text2video` / `astra_img2video` / `astra_keyframe_video` / `astra_audio2video` / `astra_video_retake` | ASTRA video API (`ASTRA_VIDEO`, self-hosted LTX-2.5 — **our own box, so no per-call bill and no vendor policy**, but it renders ONE job at a time: 66–184s each plus queue, which makes it the batch lane rather than the interactive one. Five tools over six server modes; `tier` picks generate·guided·guided_fast. The only lane with `lora` adapters (`cinemagraph` · `slow-motion`, generate only), with a keyframe mode that passes through 2–8 supplied stills at chosen frame indices, and with a retake mode that re-rolls one time span of an existing clip. Length is frames (8k+1, 25–193; guided/fast client ceiling 121) not seconds; sizes sit on a 64-pixel grid with a 2,064,384-pixel ceiling, so 9:16 is **1024×1920** — 1088×1920 exceeds the area ceiling at every frame count, and 1080×1920 is off-grid. Clips carry 48kHz stereo AAC; `audio2video` carries the supplied sound re-encoded, rather than a newly generated track. Stereo (2-channel) input is required: mono WAV passes acceptance but fails generation. With neither length argument, audio2video uses 121 frames (~5.04s), not the source length; `audioMaxDuration: 8` selects 185 frames (~7.71s) at 24fps. There is no audio-off argument. Which engine when: [decision table](skills/produce/references/video-model-selection.md)) |
 | ASTRA upload management | `astra_video_list_uploads` / `astra_video_delete_upload` | List uploads with no arguments; delete one with `uploadId` after user approval. Requires `ASTRA_VIDEO` and server endpoint support. Uploads expire after 24h, with 20 uploads / 1 GiB per key. Unsupported endpoints and invalid responses return errors; live verification is pending. |
-| Checked narration | `tts_generate_checked` | Generates with the pinned engine and reviews the actual WAV: accuracy, pronunciation, naturalness and clarity. The blind-transcription (STT) check and its 2% CER gate run only when `transcriptCheck` carries a user request for them. Up to three takes (one episode seed stays fixed across retakes); current hash-bound PASS required for assembly. Every single-voice take gets a fixed pause laid in at each sentence boundary — ElevenLabs from its own alignment, the local/Gemini/mlx engines from the local forced aligner — with `<wav>.sentences.json` for the builder. Requires Gemini API review even for local TTS; see [speech quality gate](skills/produce/references/tts-quality.md). |
-| Final speech review | `tts_review_final` | Listens to the assembled media and every sentence transition; continuity and other listening axes must reach 95, accuracy 98. The final hash-bound proof is required for delivery. |
+| Optional checked narration | `tts_generate_checked` | Legacy/explicitly requested review workflow. New production uses raw Gemini tools or ElevenLabs v4 synthesis and records `not_reviewed`; review scores never gate unrelated assembly. |
+| Optional final speech review | `tts_review_final` | Reviews actual media only when the user requests it. Keep file-bound evidence and honest findings; no automatic delivery gate. |
 | Pronunciation dictionary | `tts_elevenlabs_dictionary` | Creates Korean alias rules and returns pinned dictionary/version IDs for `pronunciationDictionaryLocators`. Keep the source name intact and test the actual pronunciation. |
-| Voice generation | `tts_generate` / `tts_multi_speaker` / `tts_gemini_38` / `tts_list_voices` | Gemini TTS (GEMINI_API_KEY — 30 curated voices, automatic language detection, saves mono 24kHz wav). `tts_gemini_38` uses the Interactions API for turn-level style, inline vocal events, and two-speaker backchannels. |
-| Voice generation | `tts_local_generate` | Supertonic 3 on-device (**no API key, no network** — 10 voices, 31 explicitly specified languages, mono 44.1kHz wav. Needs local python + `pip install supertonic`) |
-| Voice generation | `mlx_tts_generate` | MLX Core / mlx-serve (raw WAV. Optional; never a silent fallback for the engine in profile §2) |
-| Voice generation | `tts_elevenlabs_generate` / `tts_elevenlabs_dialogue` / `tts_elevenlabs_voices` | ElevenLabs (ELEVENLABS_API_KEY — the paid third lane: inline audio-tag acting on eleven_v3, text-to-dialogue with **up to 10 voices in one request**, per-character timestamps for subtitle sync, any cloned or Voice Library voice. Saves mono 24kHz wav by default, so the builder reads it like the Gemini lane. API rate $0.10 per 1,000 characters on v2·v3, $0.05 on flash and v3 conversational, the same on every plan; the Free tier is non-commercial) |
+| Character voice auditions | `character_voice_audition` | Generate three candidates, present playable audio, and persist only the user-selected voice to the character identity. |
+| Requested acting evaluation | `tts_review_acting` | Explicit user request only. Evaluates actual WAV bytes with a fixed acting rubric and records timestamps, model judgment and audio hash. No default production gate. |
+| Voice generation | `tts_generate` / `tts_multi_speaker` / `tts_gemini_38` / `tts_list_voices` | Gemini TTS (GEMINI_API_KEY — curated and live library voice lookup, automatic language detection, saves mono 24kHz wav). `tts_gemini_38` uses the Interactions API for turn-level style, inline vocal events, and two-speaker backchannels. |
+| Voice generation | `tts_elevenlabs_generate` / `tts_elevenlabs_dialogue` / `tts_elevenlabs_voices` | ElevenLabs (`ELEVENLABS_API_KEY`). Only `eleven_v4` is allowed for speech. Square-bracket acting tags, Stability/Similarity and timestamped output; no style/speed slider or SSML. Voice listing supports language/gender/accent filters, pagination and preview URLs. Use current API pricing and save actual usage. |
 | Sound effects | `sfx_elevenlabs_generate` | ElevenLabs text→SFX (ELEVENLABS_API_KEY — `eleven_text_to_sound_v2`, 0.5–30 s, prompt influence, seamless loops for room-tone beds). The endpoint has no WAV format, so the server asks for PCM and writes the RIFF header itself: a mono 48 kHz WAV the builder reads directly, plus a `.json` provenance sidecar (tool, model, prompt, seconds, request id, date, rights). The storyboard names each effect in `window.SFX` and points shots at it with `sound.sfx`; produce generates each id **once into the channel catalog** (`assets/audio/sfx/<id>.wav`) and later episodes reuse it at $0. $0.12 per minute of generated audio on every plan; the Free tier is non-commercial. Which cuts get one: [scenes-schema §sound effects](skills/storyboard/references/scenes-schema.md#sound-effects-windowsfx-soundsfx) |
 | Speech recognition | `stt_local_transcribe` | Qwen3-ASR on-device via mlx-qwen3-asr/MLX (**no API key, no network, no billing — the default Korean STT**. Needs Apple Silicon + `uv tool install --python 3.12 "mlx-qwen3-asr[aligner]"`; the first call downloads ~3.4GB of weights. ingest runs the same engine and falls back to whisper.cpp without it) |
 | Music generation | `music_generate_clip` / `music_generate` / `music_generate_advanced` / `music_list_options` | Lyria 3 Clip (fixed 30s mp3 — the default BGM path) · Lyria RealTime (5–300s variable wav 48kHz, seed reproducibility). `GEMINI_API_KEY` |
@@ -711,35 +705,27 @@ human. grow-instagram publishes only with a public HTTPS URL, and with no hostin
 configured it disables both publishing and auto-authoring (the loop won't start
 tunnels, and it won't spend money making a video with no way out).
 
-All 38 generation tools run **inside this plugin — no external MCP server required**.
-Two keys cover the hosted ones: OPENAI_API_KEY for images, GEMINI_API_KEY for
-video/voice/music (Seedance adds ARK_API_KEY, ElevenLabs adds ELEVENLABS_API_KEY).
-`image_local_generate` and `tts_local_generate` run on-device and need no key at
-all. The six `mlx_*` tools talk to MLX Core on loopback through this same server —
-skills never curl :11234 themselves.
+Generation tools run **inside this plugin — no external MCP server required**.
+Keys cover hosted models: OPENAI_API_KEY for images, GEMINI_API_KEY for Gemini
+video/voice/music, ARK_API_KEY for Seedance and ELEVENLABS_API_KEY for ElevenLabs.
+Local image, STT, music and video tools retain their own capability requirements.
+Local speech synthesis is removed, including Supertonic and MLX TTS.
 
-Findings from porting the voice/music modules:
-
-- **Narration bodies go to `tts_local_generate` (local); only cuts that need acting
-  go to `tts_generate` (Gemini).** Measured on this machine, Supertonic runs 6.3×
-  realtime on CPU alone at zero per-episode cost. It has no style/emotion controls,
-  so intro lines and character dialogue belong to Gemini. Evidence and a cost
-  comparison across 13 commercial APIs:
-  [local TTS vs commercial APIs](docs/research/2026-08-11-local-tts-and-commercial-api/index.html) (Korean).
-- **The two engines differ in sample rate — local 44.1kHz, Gemini 24kHz.** Mixing
-  them in one video needs resampling. `tts_local_generate` returns audio duration in
-  its response, so scene-length checks don't need a separate ffprobe call.
-- **ElevenLabs is the third speech lane, opt-in per channel** (`engine: elevenlabs` in
-  profile §2) — for acted cuts with inline audio tags (eleven_v3), scenes with 3+
-  speakers (`tts_elevenlabs_dialogue`, one request instead of per-speaker stitching),
-  and subtitle timing (`timestamps: true` writes per-character start/end seconds).
-  Measured against the live API: `output_format` is a query parameter (in the body it
-  is silently ignored); the default `wav_24000` comes back as a real RIFF WAV at the
-  Gemini spec, so **never pass an mp3 format for narration** — build-reel.sh reads any
-  non-RIFF file as raw PCM; `normalized_alignment` romanizes Korean, so the sidecar's
-  `alignment` is the one to read; text-to-dialogue runs on eleven_v3 only. Background:
-  [ElevenLabs API research](docs/research/2026-08-22-elevenlabs-tts-api/index.html) (Korean) ·
-  [API reference](docs/api-reference/elevenlabs-tts.html).
+- **Speech uses the saved Gemini model or ElevenLabs `eleven_v4`.** Every ElevenLabs
+  speech request rejects older model IDs. No failed call silently switches provider.
+- **Identity and acting are separate.** Pin each character's voice ID/model and store
+  line-specific `acting.direction`/`acting.tags` beside spoken text and subtitles.
+  `speech_manage` tracks acting edits as speech revisions. Follow the
+  [acting-prompt guide](skills/produce/references/acting-prompts.md).
+- **Generate character auditions before fixing a new voice.** Make three real audio
+  candidates using the same sample text and selected engine/model, play or expose them,
+  and persist the candidate the user explicitly selects. A draft sheet is not a voice choice.
+- **Raw speech has no automatic quality gate.** Save audio and generation provenance
+  with `not_reviewed`. A requested adversarial improvement loop evaluates real audio
+  against its stated target and records each finding; it does not become the default.
+- **Use WAV for assembly.** Keep provider timestamps and actual generated duration;
+  resample sources where required. A mixed-speaker dialogue take still needs a supported
+  scene/line binding before it can enter the current single-speaker scene builder.
 - **The default BGM path is `music_generate_clip`** (Lyria 3, fixed 30s, ~$0.04 per
   clip). Use the `music_generate` family only when you need exact length
   (narration-fitted) or seed reproducibility.
@@ -766,14 +752,13 @@ works.
 | `PIXABAY_API_KEY` | stock_search (Pixabay) | — | Pixabay API key (pixabay.com/api/docs — free, 100 requests/minute) |
 | `DATA_GO_KR_API_KEY` | datago_file_fetch · api_call | — | data.go.kr auth key (My Page on data.go.kr — beyond the key, each API needs a **per-API usage application**. Search/detail/download work without a key) |
 | `OPENAI_API_KEY` | gpt_image_* | — | OpenAI API key (platform.openai.com/api-keys — image generation) |
-| `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) | veo_* · omni_* · tts_generate · tts_multi_speaker · tts_gemini_38 · music_* | — | Gemini API key (aistudio.google.com/apikey — video, voice, and music generation. `tts_local_generate` works without it) |
+| `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) | veo_* · omni_* · tts_generate · tts_multi_speaker · tts_gemini_38 · music_* | — | Gemini API key (aistudio.google.com/apikey — video, voice, and music generation. ElevenLabs uses its own key) |
 | `ARK_API_KEY` | seedance_* | — | BytePlus ModelArk API key (ai.byteplus.com/ark — the second video engine. Dreamina Seedance 2.x models additionally require **an account balance over $30 or a resource pack** to activate; 1.5 pro and 1.0 have no such gate. `veo_*` works fine without this key) |
 | `SUNO_API_KEY` | suno_* | — | sunoapi.org API key (https://sunoapi.org/api-key — third-party REST, not Gemini and not an official Suno Inc. API). Unset, `music_*(Lyria)` still works |
 | `SUNO_BASE_URL` | | `https://api.sunoapi.org` | Same-spec self-host or regional mirror. Other vendors use different auth/paths — do not point this there |
-| `ELEVENLABS_API_KEY` | tts_elevenlabs_* · sfx_elevenlabs_generate | — | ElevenLabs API key (elevenlabs.io/app/settings/api-keys — a restricted key needs the `text_to_speech` permission, plus `voices_read` for `tts_elevenlabs_voices` and the sound-generation permission for `sfx_elevenlabs_generate`). Unset, `tts_generate` (Gemini) and `tts_local_generate` still work |
+| `ELEVENLABS_API_KEY` | tts_elevenlabs_* · sfx_elevenlabs_generate | — | ElevenLabs API key (elevenlabs.io/app/settings/api-keys — a restricted key needs the `text_to_speech` permission, plus `voices_read` for `tts_elevenlabs_voices` and the sound-generation permission for `sfx_elevenlabs_generate`). Unset, `tts_generate` (Gemini) still works |
 | `ELEVENLABS_BASE_URL` | | `https://api.elevenlabs.io` | Same-spec proxy or the EU residency host (`api.eu.residency.elevenlabs.io`). Normally leave it alone |
 | `ARK_BASE_URL` | | `https://ark.ap-southeast.bytepluses.com/api/v3` | ModelArk region endpoint. The video models only exist in ap-southeast-1, so normally leave it alone |
-| `SUPERTONIC_PYTHON` | | `python3` | Python interpreter for local TTS. Point it at your virtualenv if you used one (e.g. `~/venvs/tts/bin/python`). No venv auto-discovery — quietly picking up a different environment per repo and changing the voice is exactly the accident this avoids |
 | `QWEN3_ASR_BIN` | | `~/.local/bin/mlx-qwen3-asr` | Local STT executable. With the default uv tool install location there is nothing to set |
 | `MLX_SERVE_URL` | mlx_* | `http://127.0.0.1:11234` | MLX Core / mlx-serve HTTP base. This plugin never launches the app; a down server fails closed |
 | `MLX_SERVE_API_KEY` | mlx_* on a non-loopback bind | — | Optional bearer. Loopback needs no key unless the server was started with `--api-key-strict` |
@@ -846,11 +831,11 @@ server calls, and how this implementation honors (or deliberately narrows) each 
   [Meta Graph](docs/api-reference/meta-graph.html) ·
   [YouTube Data](docs/api-reference/youtube-data.html)
 
-The on-device engines (`image_local_generate` · `tts_local_generate` ·
-`stt_local_transcribe` · the six `mlx_*` tools) have no
+The on-device engines (`image_local_generate` ·
+`stt_local_transcribe` · the five `mlx_*` tools) have no
 external vendor contract to document, so their evidence lives in research notes instead —
 [local image generation](docs/research/2026-08-12-local-image-generation/index.html) ·
-[local TTS vs commercial APIs](docs/research/2026-08-11-local-tts-and-commercial-api/index.html)
+[historical local TTS research](docs/research/2026-08-11-local-tts-and-commercial-api/index.html)
 (Korean).
 
 ### Guides (docs/guides/)
@@ -923,9 +908,10 @@ responsibility (see the disclaimer in LICENSE).
 
 ### Generated character voice lock
 
-`voice_lock_apply` converts single-speaker generated audio/video to the character’s
-ElevenLabs voice and checks blind transcripts and duration drift. It saves originals,
-new media and a per-shot result report. See the [produce contract](skills/produce/references/voice-lock.md).
+New character speech uses the selected Gemini or ElevenLabs v4 voice before audio-conditioned
+video generation. The older `voice_lock_apply`/v2 speech-to-speech lane is removed.
+Existing recordings remain reusable with their provenance. See the
+[produce contract](skills/produce/references/voice-lock.md).
 
 ### Offline character and storyboard library
 

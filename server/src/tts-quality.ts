@@ -10,9 +10,7 @@ import { disabledToolPatterns, disabledToolsFile, requireGeminiKey } from './con
 import { resolveToolGate } from './tool-gate.js';
 import { bareFilenameSchema } from './media-utils.js';
 import * as gemini from './tts-client.js';
-import * as local from './supertonic-client.js';
 import * as eleven from './elevenlabs-client.js';
-import * as mlx from './mlx-serve-client.js';
 import { priceOf, recordUsage } from './usage-ledger.js';
 import { SPACING_POLICY, respace, splitSentences, type Alignment } from './sentence-spacing.js';
 import { alignmentFromAsr } from './asr-alignment.js';
@@ -21,7 +19,7 @@ const exec = promisify(execFile);
 export const QUALITY_POLICY = 'speech-quality-v1';
 export const REVIEW_API_VERSION = process.env.SOCIAL_FLOW_TTS_REVIEW_API_VERSION?.trim() || 'v1';
 export const REVIEW_MODEL = process.env.SOCIAL_FLOW_TTS_REVIEW_MODEL?.trim() || 'gemini-3.8-flash';
-export const GENERATORS = ['tts_generate', 'tts_multi_speaker', 'tts_gemini_38', 'tts_local_generate', 'tts_elevenlabs_generate', 'tts_elevenlabs_dialogue', 'mlx_tts_generate'] as const;
+export const GENERATORS = ['tts_generate', 'tts_multi_speaker', 'tts_gemini_38', 'tts_elevenlabs_generate', 'tts_elevenlabs_dialogue'] as const;
 /**
  * The dictation check — a blind transcription of the take, compared to the script by character
  * error rate — runs only when the user asked for it (owner directive 2026-10-04). Off, the
@@ -58,7 +56,7 @@ export const checkedSpeechSchema = z.object({
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['episode'], message: 'episode.index must select the complete expectedText' });
   }
   if (value.generator === 'tts_elevenlabs_generate' && value.playbackSpeed !== 1) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['playbackSpeed'], message: 'Use generation.speed (0.7–1.2) at synthesis; ElevenLabs narration must ship at playbackSpeed 1' });
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['playbackSpeed'], message: 'ElevenLabs v4 narration must ship at playbackSpeed 1; express delivery with audio tags' });
   }
   if (value.segments && normalizeSpeech(value.segments.join(' ')) !== normalizeSpeech(value.expectedText)) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['segments'], message: 'segments joined must read exactly as expectedText' });
@@ -201,10 +199,10 @@ export function prepareGeneration(request: CheckedSpeechRequest): PreparedGenera
   if (request.generator === 'tts_elevenlabs_generate' && request.episode) {
     const { texts, index, seed } = request.episode;
     if (args.seed !== undefined && args.seed !== seed) throw new Error('generation.seed must match the episode seed');
-    const previousText = texts.slice(0, index).join(' '), nextText = texts.slice(index + 1).join(' ');
+    const previousText = texts.slice(0, index).join(' ').slice(-100), nextText = texts.slice(index + 1).join(' ').slice(0, 100);
     for (const [key, value] of Object.entries({ previousText, nextText })) {
       if (args[key] !== undefined && args[key] !== value) throw new Error(`${key} must match the episode text order`);
-      if (value && args.model !== 'eleven_v3') args[key] = value; else delete args[key];
+      if (value) args[key] = value; else delete args[key];
     }
     args.seed = seed;
   }
@@ -214,11 +212,9 @@ export function prepareGeneration(request: CheckedSpeechRequest): PreparedGenera
     case 'tts_generate': { const p = gemini.ttsGenerateSchema.parse(args); parsed = p; spoken = p.text; run = () => gemini.generateSpeech(p); spacing = true; break; }
     case 'tts_multi_speaker': { const p = gemini.ttsMultiSpeakerSchema.parse(args); parsed = p; spoken = p.script.split('\n').map(line => { const name = p.speakers.find(s => line.trimStart().startsWith(s.speakerName + ':')); return name ? line.trimStart().slice(name.speakerName.length + 1) : line; }).join(' '); run = () => gemini.generateDialogue(p); break; }
     case 'tts_gemini_38': { const p = gemini.gemini38TtsSchema.parse(args); parsed = p; spoken = p.turns.map(turn => turn.text.replace(/<[^>]+>/g, '')).join(' '); run = () => gemini.generateGemini38Speech(p); spacing = !p.speakers; break; }
-    case 'tts_local_generate': { const p = local.supertonicGenerateSchema.parse(args); parsed = p; spoken = p.text; run = () => local.generateLocalSpeech(p); spacing = true; break; }
     // Timestamps cost nothing extra and are what the sentence spacing reads, so the checked lane always asks for them.
     case 'tts_elevenlabs_generate': { const p = eleven.elevenLabsGenerateSchema.parse({ ...args, timestamps: true }); parsed = p; spoken = p.text.replace(/\[[^\]]*\]/g, ''); run = (o) => eleven.generateElevenLabsSpeech({ ...p, ...(o?.seed !== undefined ? { seed: o.seed } : {}) }); spacing = true; seed = p.seed; break; }
     case 'tts_elevenlabs_dialogue': { const p = eleven.elevenLabsDialogueSchema.parse(args); parsed = p; spoken = p.inputs.map(i => i.text.replace(/\[[^\]]*\]/g, '')).join(' '); run = (o) => eleven.generateElevenLabsDialogue({ ...p, ...(o?.seed !== undefined ? { seed: o.seed } : {}) }); seed = p.seed; break; }
-    case 'mlx_tts_generate': { const p = mlx.mlxTtsGenerateSchema.parse(args); parsed = p; spoken = p.input; run = () => mlx.generateMlxTts(p); spacing = true; break; }
   }
   if (normalizeSpeech(spoken) !== normalizeSpeech(request.expectedText)) throw new Error('expectedText must match the complete spoken generation text; only punctuation, spacing, speaker labels and ElevenLabs acting tags may differ');
   if ('outputFormat' in parsed && !String(parsed.outputFormat).startsWith('wav_')) throw new Error('Checked narration requires WAV output');
