@@ -36,7 +36,7 @@ function ordered<T>(items: T[], order: Array<string | number> | undefined, key: 
     throw new Error('order must contain every current identifier exactly once');
   return order.map(id => items.find(v => key(v) === id)!);
 }
-export const META_KEYS = ['THEME','COMPREHENSION','STORY','PRODUCTION','MOTION_POLICY','STRUCTURE','PREVIZ','SLIDE_OBJECTS','MUSIC','VOICE'] as const;
+export const META_KEYS = ['THEME','COMPREHENSION','STORY','PRODUCTION','MOTION_POLICY','STRUCTURE','PREVIZ','SLIDE_OBJECTS','MUSIC','VOICE','SB_DOC'] as const;
 export function editUnit(input: Board, area: string, action: string, args: UnitArgs): { board: Board; value: unknown } {
   const board = structuredClone(input);
   if (args.globals) {

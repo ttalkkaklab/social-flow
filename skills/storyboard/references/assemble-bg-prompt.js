@@ -237,6 +237,7 @@ function clipAssemble(opts) {
   const parts = [];
   const space = opts.withSpace ? spaceSentence(opts) : "";
   if (space) parts.push(space);
+  if (opts.propPrompt) parts.push(opts.propPrompt);
   if (scene) parts.push(dot(scene));
   const move = isStatic ? "static camera" : ((cam.speed || "").trim() + " " + (cam.movement || "").trim()).trim();
   // A pan, tilt, truck, pedestal, dolly or zoom is a sentence from A to B, and the sentence has a
@@ -332,6 +333,7 @@ function assemble(opts) {
   if (sizeWords) parts.push(sizeWords + ", " + angleWords + ".");
   else parts.push(angleWords + ".");
   if (space) parts.push(space);
+  if (opts.propPrompt) parts.push(opts.propPrompt);
   parts.push(...styleSentences(opts.style));
   if (scene) parts.push(scene.replace(/[.!?\s]*$/, "") + ".");
   if (mood) parts.push(mood.replace(/[.!?\s]*$/, "") + ".");
@@ -343,7 +345,7 @@ function assemble(opts) {
 
   // The whole prompt is checked — a "left view of" in --scene ships to the model just the same.
   const hits = bannedHits(prompt);
-  return { prompt, space, hits, unknown, size, angle, layout: opts.layout, facing: opts.facing, ...(opts.location ? {sourceImageArgs:{referenced_image_paths:opts.location.paths},locationBinding:opts.location.binding} : {}) };
+  return { prompt, space, hits, unknown, size, angle, layout: opts.layout, facing: opts.facing, ...(opts.propSnapshot?.length ? {propSnapshot:opts.propSnapshot}:{}), sourceImageArgs:{referenced_image_paths:[...(opts.sourceImageArgs?.referenced_image_paths || []), ...(opts.location?.paths || [])]}, ...(opts.location ? {locationBinding:opts.location.binding}:{}) };
 }
 
 function loadShot(file, index) {
@@ -363,8 +365,13 @@ function loadShot(file, index) {
   const sh = s.shot || {};
   const sp = sh.space || {};
   const v = s.visual || {};
+  const propSnapshot = require('./prop-continuity.js').snapshot(win, i);
+  const propReferenceImages = propSnapshot.filter(p => p.visible).flatMap(p => p.references.map(r => path.resolve(path.dirname(file), r.path)));
   return {
     location: sh.location ? require('./location-assets.js').references(win, i, path.dirname(path.resolve(file))) : null,
+    propPrompt: require('./prop-continuity.js').prompt(win, i),
+    propSnapshot,
+    sourceImageArgs: propReferenceImages.length ? { referenced_image_paths: propReferenceImages } : {},
     size: sh.size,
     angle: sh.angle,
     layout: sp.layout,
@@ -696,7 +703,7 @@ function main(argv) {
     const cam = { ...(opts.camera || {}) };
     ["movement", "speed", "framing", "end"].forEach(k => { if (args[k] !== undefined) cam[k] = args[k]; });
     const r = clipAssemble({
-      camera: cam, engine: args.engine,
+      camera: cam, engine: args.engine, propPrompt: opts.propPrompt,
       scene: opts.scene, motion: args.motion, locks: args.locks,
       audio: args.audio !== undefined ? args.audio : opts.audio,
       withSpace: !!args["with-space"],
@@ -718,7 +725,7 @@ function main(argv) {
       bad++;
     }
     if (bad) process.exit(1);
-    process.stdout.write(r.prompt + "\n");
+    process.stdout.write((args.json ? JSON.stringify({ ...r, propSnapshot: opts.propSnapshot || [] }, null, 2) : r.prompt) + "\n");
     return;
   }
 

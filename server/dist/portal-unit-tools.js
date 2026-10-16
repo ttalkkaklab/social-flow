@@ -21,7 +21,7 @@ const properties = {
     sequenceId: { type: 'string', description: 'Parent sequence for a new story scene.' },
     shotId: { type: 'string' }, index: { type: 'integer', minimum: 0, description: 'Zero-based insertion position, or narration line index.' },
     value: { type: 'object', additionalProperties: true, description: 'Field patch; nested objects merge, arrays replace. Transition: {transition,reason,transitionSeconds?,continuity?}. Sound: {sound?,effect?}. Background prompt: {bgPrompt}. Other settings use their direct object.' },
-    key: { type: 'string', description: 'Episode meta key: THEME, COMPREHENSION, STORY, PRODUCTION, MOTION_POLICY, STRUCTURE, PREVIZ, SLIDE_OBJECTS, MUSIC, VOICE.' },
+    key: { type: 'string', description: 'Episode meta key: THEME, COMPREHENSION, STORY, PRODUCTION, MOTION_POLICY, STRUCTURE, PREVIZ, SLIDE_OBJECTS, MUSIC, VOICE, SB_DOC (prop sheets and continuity).' },
     order: { type: 'array', items: { anyOf: [{ type: 'string' }, { type: 'integer' }] }, description: 'Every identifier exactly once; narration uses zero-based indexes.' },
     targetSequenceId: { type: 'string', description: 'On sequence deletion, explicitly transfer its scenes to this sequence instead of deleting them.' },
     targetSceneNo: { type: 'integer', minimum: 1, description: 'On scene deletion, explicitly transfer its shots to this scene instead of deleting them.' },

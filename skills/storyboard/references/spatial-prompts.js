@@ -134,7 +134,9 @@ function assemble(win, index, dir) {
   const castReferenceImages = activeCast.filter(({ entry }) => text(entry.name) && text(entry.image))
     .map(({ id, entry }) => ({ id, name: entry.name, path: dir ? path.resolve(dir, entry.image) : entry.image }));
   const locationRef = scene.shot?.location ? require('./location-assets.js').references(win, index, dir) : null;
-  const sourceReferenceImages = [...(previzFrame ? [previzFrame] : []), ...(pack?.referenceImagePaths || []), ...castReferenceImages.map(ref => ref.path), ...(locationRef?.paths || [])];
+  const propSnapshot = require('./prop-continuity.js').snapshot(win, index);
+  const propReferenceImages = propSnapshot.filter(p => p.visible).flatMap(p => p.references.map(r => dir ? path.resolve(dir, r.path) : r.path));
+  const sourceReferenceImages = [...(previzFrame ? [previzFrame] : []), ...(pack?.referenceImagePaths || []), ...castReferenceImages.map(ref => ref.path), ...propReferenceImages, ...(locationRef?.paths || [])];
   const castPromptLines = appliesCutLook ? castLines(cast, castIds, cutType) : [];
   const castImageLines = castReferenceImages.map(ref => {
     const imageNumber = sourceReferenceImages.indexOf(ref.path) + 1;
@@ -144,7 +146,8 @@ function assemble(win, index, dir) {
     .map(({ entry }) => `${entry.name.trim()} keeps this exact appearance: ${entry.sheet}`);
   const perCutTreatment = appliesCutLook ? cutTreatment(preset, cutType) : '';
   const world = style.worlds?.[d.worldId] ?? style.world;
-  const source = [canvas + ', edge-to-edge composition.',
+  const propPrompt = require('./prop-continuity.js').prompt(win, index);
+  const source = [...(propPrompt ? [propPrompt] : []), canvas + ', edge-to-edge composition.',
     'Narrated meaning this picture must convey: ' + spoken,
     'Opening state: ' + d.before,
     ...(previzFrame ? [PREVIZ_SOURCE_LOCK] : []),
@@ -159,13 +162,13 @@ function assemble(win, index, dir) {
     ...(locationRef ? [locationRef.prompt, 'Attached image ' + (sourceReferenceImages.indexOf(locationRef.paths[0]) + 1) + ' is the approved LOCATION reference. Preserve its camera and architecture.'] : []),
     'Keep the physical subject legible at phone size. The image contains only the scene; subtitles are added in editing.'].join('\n');
   const locationLock = locationRef ? '. The location holds the approved reference architecture and fixed object inventory: ' + locationRef.invariants.join('; ') : '';
-  const lock = lockText(d, style, treatment, castLocks) + locationLock + (isDrone(camera) ? '. The flight keeps continuous terrain parallax and stable landmarks; the picture stays a clean aerial view with scenery at every frame edge' : '');
+  const lock = lockText(d, style, treatment, castLocks) + locationLock + (propPrompt ? ". " + propPrompt : "") + (isDrone(camera) ? '. The flight keeps continuous terrain parallax and stable landmarks; the picture stays a clean aerial view with scenery at every frame edge' : '');
   let motionPrompt = null;
   const engine = v.video?.engine || v.engine || 'seedance';
   if (!missingSlots.length && engine === 'astra') {
     const astraAppearance = activeCast.filter(({ entry }) => text(entry.sheet))
       .map(({ entry }) => 'Appearance to preserve in every frame: ' + clause(entry.sheet) + '.');
-    motionPrompt = astraMotionPrompt(d, camera, style, treatment, !!spoken.trim() && (scene.narration || []).every(n => n.delivery === 'voiceover' || (!n.delivery && (!n.speaker || n.speaker === win.SB_DOC?.narratorCharacterId))), astraAppearance) + locationLock;
+    motionPrompt = astraMotionPrompt(d, camera, style, treatment, !!spoken.trim() && (scene.narration || []).every(n => n.delivery === 'voiceover' || (!n.delivery && (!n.speaker || n.speaker === win.SB_DOC?.narratorCharacterId))), [...astraAppearance, ...(propPrompt ? [propPrompt] : [])]) + locationLock;
     if(motionPrompt.length>2000)throw new Error('ASTRA motion prompt including location exceeds 2000 characters');
   } else if (!missingSlots.length) {
     const onReferenceRoute = previz && (v.video.engine || v.engine || 'seedance') !== 'host' && previzHandoff(scene) === 'reference_video';
@@ -179,7 +182,7 @@ function assemble(win, index, dir) {
     motionPrompt = clip.prompt;
   }
   const locationEndReady = !locationRef || !!(locationRef.resultReview?.verdict === 'pass' && locationRef.resultImage && v.bg && path.resolve(dir,v.bg)===path.resolve(dir,locationRef.resultImage));
-  return { endFrameImageArgs: locationRef && locationEndReady ? {referenced_image_paths: [path.resolve(dir,v.bg), ...locationRef.endPaths]} : {}, endFrameReady: locationEndReady, locationEndReferenceImages: locationRef?.endPaths || [], locationBinding: locationRef?.binding || null, locationReferenceRoles: locationRef?.roles || [], sourcePrompt: source, stylePreset: preset, cutType, castIds,
+  return { propSnapshot, propReferenceImages, endFrameImageArgs: locationRef && locationEndReady ? {referenced_image_paths: [path.resolve(dir,v.bg), ...locationRef.endPaths]} : {}, endFrameReady: locationEndReady, locationEndReferenceImages: locationRef?.endPaths || [], locationBinding: locationRef?.binding || null, locationReferenceRoles: locationRef?.roles || [], sourcePrompt: source, stylePreset: preset, cutType, castIds,
     styleBinding: pack?.binding || null,
     styleGuidePath: pack?.guidePath || null,
     castReferenceImages,
