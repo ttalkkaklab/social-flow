@@ -88,3 +88,36 @@ for(const engine of ['gemini','mlx'])test(engine+' raw API arguments attach and 
  assert.ok(checker.check(path.join(dir,'.work'),target)[audio]);
  assert.throws(()=>manageSpeech({path:target,action:'attach_audio',lineId:line.id,expectedRevision:attached.revision,audioPath:audio,generation:{...generation,language:'ja'}}),/language/);
 });
+
+test('story-v2 prepares explicit dialogue and silent shots without an unused narrator',t=>{
+ const {target}=setup(t),file=path.join(target,'scenes.js');
+ const voiceContract=require('../../skills/_shared/character-voice.js');
+ for(const silent of [false,true]){
+  const win={STORY:{version:'story-v2'},SB_DOC:{characters:[{id:'hero',tts:voice}]},SCENES:[{type:'points',narration:silent?[]:[{tts:'Hello',sub:'Hello',speaker:'hero'}]}]};
+  const save=()=>writeFileSync(file,Object.entries(win).map(([k,v])=>`window.${k}=${JSON.stringify(v)};`).join('\n'));
+  save();let current=manageSpeech({path:target,action:'list'});
+  const result=manageSpeech({path:target,action:'prepare',expectedRevision:current.revision});
+  assert.equal(result.lines.length,silent?0:1);
+  const prepared={};new Function('window',readFileSync(file,'utf8'))(prepared);
+  assert.deepEqual(voiceContract.boardVoiceErrors(prepared),[]);
+  if(!silent){
+   assert.equal(result.lines[0].speaker,'hero');assert.equal(result.lines[0].delivery,'on_screen');
+   delete win.SCENES[0].narration[0].speaker;save();current=manageSpeech({path:target,action:'list'});
+   assert.throws(()=>manageSpeech({path:target,action:'prepare',expectedRevision:current.revision}),/narratorCharacterId/);
+  }
+  delete win.STORY;save();current=manageSpeech({path:target,action:'list'});
+  assert.throws(()=>manageSpeech({path:target,action:'prepare',expectedRevision:current.revision}),/narratorCharacterId/);
+ }
+});
+
+test('story-v2 speaker edits synchronize performance without changing its addressee',t=>{
+ const {target,r}=setup(t),file=path.join(target,'scenes.js'),win={};
+ new Function('window',readFileSync(file,'utf8'))(win);
+ win.STORY={version:'story-v2'};
+ win.SCENES[0].performance=[{kind:'dialogue',character:'hero',to:'audience',group:1},{kind:'action',character:'hero',text:'Waves.'}];
+ writeFileSync(file,Object.entries(win).map(([k,v])=>`window.${k}=${JSON.stringify(v)};`).join('\n'));
+ const revision=manageSpeech({path:target,action:'list'}).revision;
+ manageSpeech({path:target,action:'update',lineId:r.lines[0].id,expectedRevision:revision,patch:{speaker:'narrator'}});
+ const edited={};new Function('window',readFileSync(file,'utf8'))(edited);
+ assert.deepEqual(edited.SCENES[0].performance,[{kind:'dialogue',character:'narrator',to:'audience',group:1},{kind:'action',character:'hero',text:'Waves.'}]);
+});

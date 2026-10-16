@@ -45,7 +45,11 @@ export function manageSpeech(args: z.infer<typeof speechManageSchema>) {
   const scenes = win.SCENES!;
   let changed = false;
   if (args.action === 'prepare') {
-    if (typeof doc.narratorCharacterId !== 'string' || !character(doc.narratorCharacterId)) throw new Error('Set SB_DOC.characters and narratorCharacterId before preparing speech; no voice is invented');
+    const needsNarrator = object(win.STORY).version !== 'story-v2' || scenes.some(scene =>
+      ((scene.narration || []) as Line[]).some(line => !line.speaker));
+    if ((needsNarrator || doc.narratorCharacterId !== undefined) &&
+        (typeof doc.narratorCharacterId !== 'string' || !character(doc.narratorCharacterId)))
+      throw new Error('Set SB_DOC.characters and narratorCharacterId before preparing speech without explicit speakers; no voice is invented');
     let next = Math.max(0, ...scenes.map(s => Number(String(s.id || '').replace(/^s/, '')) || 0));
     for (const scene of scenes) {
       scene.id ||= 's' + String(++next).padStart(4, '0');
@@ -72,6 +76,14 @@ export function manageSpeech(args: z.infer<typeof speechManageSchema>) {
       const oldAudio = line.audio;
       const oldDelivery = line.delivery;
       Object.assign(line, args.patch);
+      if (args.patch.speaker && object(win.STORY).version === 'story-v2') {
+        const group = ((scene.narration || []) as Line[]).indexOf(line) + 1;
+        for (const event of Array.isArray(scene.performance) ? scene.performance : []) {
+          const performance = object(event);
+          if (performance.group === group && ['dialogue', 'narration'].includes(String(performance.kind)))
+            performance.character = line.speaker;
+        }
+      }
       if (speechRevision(line, character(line.speaker)) !== prior) {
         const video = object(object(scene.visual).video);
         const binding = object(video.speechBinding);

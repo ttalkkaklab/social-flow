@@ -104,6 +104,15 @@ test('action and cast edits stale the review; camera changes do not', () => {
   const w = board(); w.SCENES[0].visual = {camera: {movement: 'dolly'}};
   assert.deepEqual(checkStory(w), []);
 });
+
+test('speech production receipts do not invalidate editorial review, delivery changes do', () => {
+  const w = board();
+  w.SCENES[0].narration[0].audio = {path: 'take.wav', status: 'not_reviewed'};
+  w.SCENES[0].narration[0].mediaStatus = 'ready';
+  assert.deepEqual(checkStory(w), []);
+  w.SCENES[0].narration[0].delivery = 'off_screen';
+  assert.match(checkStory(w).join(), /stale/);
+});
 test('all-visual fiction can be reviewed and live transcript errors fail cleanly', () => {
   const w = board();
   w.SCENES.forEach((s, i) => { s.duration = 3; s.narration = []; s.performance = [{kind: 'action', character: i === 0 ? 'father' : 'child', text: 'The family exchanges food and looks.'}]; });

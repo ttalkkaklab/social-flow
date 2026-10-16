@@ -64425,7 +64425,7 @@ var require_character_voice = __commonJS({
       const characters = Array.isArray(entries) ? entries : Object.entries(entries || {}).map(([id, c]) => ({ ...c, id }));
       const ids = new Set(Object.keys(win.PRODUCTION?.cast || {}));
       const lineIds = /* @__PURE__ */ new Set();
-      if (win.SB_DOC?.speechPlanVersion === 1 && !win.SB_DOC.narratorCharacterId) errors.push("Speech plan needs narratorCharacterId");
+      if (win.SB_DOC?.speechPlanVersion === 1 && win.STORY?.version !== "story-v2" && !win.SB_DOC.narratorCharacterId) errors.push("Speech plan needs narratorCharacterId");
       for (const scene of win.SCENES || []) {
         if (!scene || typeof scene !== "object") {
           errors.push("Scene must be an object");
@@ -64642,7 +64642,11 @@ var require_story_contract = __commonJS({
         stat: s2.stat,
         bullets: s2.bullets,
         ...win.STORY?.version === "story-v2" ? { performance: s2.performance, action: s2.visual?.action, character: s2.visual?.character } : {},
-        narration: s2.narration,
+        narration: win.STORY?.version === "story-v2" && Array.isArray(s2.narration) ? s2.narration.map((n) => {
+          if (!object5(n)) return n;
+          const { audio, mediaStatus, ...editorial } = n;
+          return editorial;
+        }) : s2.narration,
         info: s2.shot?.info,
         // The forwardable thing is an editorial decision the reviewer reads, so rewriting it after
         // the read has to invalidate the review the same way rewriting narration does.
@@ -100379,7 +100383,9 @@ function manageSpeech(args) {
   const scenes = win.SCENES;
   let changed = false;
   if (args.action === "prepare") {
-    if (typeof doc.narratorCharacterId !== "string" || !character(doc.narratorCharacterId)) throw new Error("Set SB_DOC.characters and narratorCharacterId before preparing speech; no voice is invented");
+    const needsNarrator = object3(win.STORY).version !== "story-v2" || scenes.some((scene) => (scene.narration || []).some((line) => !line.speaker));
+    if ((needsNarrator || doc.narratorCharacterId !== void 0) && (typeof doc.narratorCharacterId !== "string" || !character(doc.narratorCharacterId)))
+      throw new Error("Set SB_DOC.characters and narratorCharacterId before preparing speech without explicit speakers; no voice is invented");
     let next = Math.max(0, ...scenes.map((s2) => Number(String(s2.id || "").replace(/^s/, "")) || 0));
     for (const scene of scenes) {
       scene.id ||= "s" + String(++next).padStart(4, "0");
@@ -100408,6 +100414,14 @@ function manageSpeech(args) {
       const oldAudio = line.audio;
       const oldDelivery = line.delivery;
       Object.assign(line, args.patch);
+      if (args.patch.speaker && object3(win.STORY).version === "story-v2") {
+        const group = (scene.narration || []).indexOf(line) + 1;
+        for (const event of Array.isArray(scene.performance) ? scene.performance : []) {
+          const performance = object3(event);
+          if (performance.group === group && ["dialogue", "narration"].includes(String(performance.kind)))
+            performance.character = line.speaker;
+        }
+      }
       if (speechRevision(line, character(line.speaker)) !== prior) {
         const video = object3(object3(scene.visual).video);
         const binding = object3(video.speechBinding);

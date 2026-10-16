@@ -131,11 +131,14 @@ Keep production speech in `narration[]`, including character dialogue. Every v2 
 has an explicit `speaker` ID, including the narrator. Do not rename the production array.
 Copy selected identities and their actual TTS settings into the existing SB_DOC cast contract.
 `STORY.cast` holds the selected role/want/voice/source records, not a second TTS configuration.
+Follow [shot speech](../../produce/references/shot-speech.md): assign stable shot/line IDs,
+delivery and `SB_DOC.speechPlanVersion:1` before review. Split speaker changes into consecutive
+shots for the current one-speaker-per-scene builder, then update performance group references.
 
 Each shot has an ordered `performance` array:
 
 ```js
-narration: [{tts: "Did you eat?", sub: "Did you eat?", speaker: "child"}],
+narration: [{id: "line-1", tts: "Did you eat?", sub: "Did you eat?", speaker: "child", delivery: "on_screen"}],
 performance: [
   {kind: "dialogue", character: "child", to: "father", group: 1},
   {kind: "action", character: "father", text: "He slides his untouched bowl toward the child."}

@@ -37,7 +37,9 @@ function storyHash(win) {
     type: s.type, beat: s.beat, arc: s.arc, after: s.after,
     title: s.title, stat: s.stat, bullets: s.bullets,
     ...(win.STORY?.version === 'story-v2' ? { performance: s.performance, action: s.visual?.action, character: s.visual?.character } : {}),
-    narration: s.narration, info: s.shot?.info,
+    narration: win.STORY?.version === 'story-v2' && Array.isArray(s.narration)
+      ? s.narration.map(n => { if (!object(n)) return n; const { audio, mediaStatus, ...editorial } = n; return editorial; })
+      : s.narration, info: s.shot?.info,
     // The forwardable thing is an editorial decision the reviewer reads, so rewriting it after
     // the read has to invalidate the review the same way rewriting narration does.
     share: s.shot?.share,

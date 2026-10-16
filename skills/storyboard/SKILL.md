@@ -1184,7 +1184,7 @@ The block carries a fingerprint of the video slots, and the check strip recomput
 live scenes — so a snapshot that no longer matches shows up as a violation instead of a stale
 number. Regenerate it after any §7 change that adds, retimes, reroutes or moves a video slot.
 
-**Every storyboard has at least one character and one narrator.** Set `SB_DOC.narratorCharacterId` to a character `id`; `SB_DOC.characters` contains it and every id used by `visual.character` or `narration[].speaker`. Each entry has `id`, `name`, its character identity JSON `tts` (required `engine`, `voiceId`, `language`, `speed`; model/stylePrompt when applicable), identity `role`, existing `panels` paths, governing `note`, and `veo:"banned"` when applicable.
+**Every storyboard has at least one character; story-v2 selects a narrator only when needed.** Legacy boards retain their narrator. When selected, set `SB_DOC.narratorCharacterId` to that character `id`; `SB_DOC.characters` contains it and every id used by `visual.character` or `narration[].speaker`. Each entry has `id`, `name`, its character identity JSON `tts` (required `engine`, `voiceId`, `language`, `speed`; model/stylePrompt when applicable), identity `role`, existing `panels` paths, governing `note`, and `veo:"banned"` when applicable.
 For every new board set `SB_DOC.speechPlanVersion:1`. Each `narration` entry has a stable
 `id`, explicit `speaker` (including the narrator), and `delivery` (`voiceover`, `on_screen`,
 `off_screen`). Keep these fields in scenes.js, with SB_DOC character voices there too.
