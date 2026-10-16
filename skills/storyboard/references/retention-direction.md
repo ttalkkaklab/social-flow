@@ -1,5 +1,8 @@
 # Story, picture and sound that earn the next beat
 
+**New authoring contract (2026-10-16):** Read [character-led scenarios](character-scenarios.md) first. New scenarios use `scenario-v2` and boards use `story-v2`: cast existing characters (including narrators), choose evidence/fiction/adapted, write observable actions and attributed speech, and review the whole performance. Its type-specific grounding and rubric replace the legacy research quotas, forced wow/engine mix, spoken-message and narration-only requirements below. Legacy unversioned scenarios and story-v1 boards keep their existing checks. Production voice, budget, destination and publishing consent are unchanged.
+
+
 Read this alongside scenario-stage.md when drafting candidates, and again when building
 the board. Produce and autoproduce carry its decisions into the finished edit. These are
 editorial tests, not measured retention predictions. A reviewer score cannot guarantee

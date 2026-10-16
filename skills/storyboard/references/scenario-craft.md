@@ -1,5 +1,8 @@
 # Scenario craft — fourteen rules that run underneath the beats
 
+**New authoring contract (2026-10-16):** Read [character-led scenarios](character-scenarios.md) first. New scenarios use `scenario-v2` and boards use `story-v2`: cast existing characters (including narrators), choose evidence/fiction/adapted, write observable actions and attributed speech, and review the whole performance. Its type-specific grounding and rubric replace the legacy research quotas, forced wow/engine mix, spoken-message and narration-only requirements below. Legacy unversioned scenarios and story-v1 boards keep their existing checks. Production voice, budget, destination and publishing consent are unchanged.
+
+
 The beat skeleton (`scenes-schema.md` §playback order) says **where** scenes go. Short-form
 is three beats, always: hook → drip (1–n) → cta. Long-form still walks two arcs. This file
 says **how scenes push each other** — the craft layer classic screenwriting settled long

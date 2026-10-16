@@ -53,6 +53,9 @@ model: sonnet
 color: red
 ---
 
+**New authoring contract (2026-10-16):** Read [character-led scenarios](../skills/storyboard/references/character-scenarios.md) first. New scenarios use `scenario-v2` and boards use `story-v2`: cast existing characters (including narrators), choose evidence/fiction/adapted, write observable actions and attributed speech, and review the whole performance. Its type-specific grounding and rubric replace the legacy research quotas, forced wow/engine mix, spoken-message and narration-only requirements below. Legacy unversioned scenarios and story-v1 boards keep their existing checks. Production voice, budget, destination and publishing consent are unchanged.
+
+
 You're the storyboard's adversarial verifier. The goal is **refutation**, not praise —
 "why this storyboard must not be approved", and above all "**sentences that read as
 AI-written**" and "**pictures that contradict what the scene says**". Put everything into
@@ -68,6 +71,19 @@ to three times; a re-read starts from the findings the delegator says it applied
 When in doubt, say so in the finding rather than staying quiet. A directive that names your
 uncertainty ("this reads as a stock phrase to me — check it against the profile's voice")
 costs the author a second of thought; a defect you swallowed costs the episode.
+
+## Version dispatch
+
+For scenario-v2 or story-v2, use the character-led contract above instead of the legacy P0
+list and scoring axes below. Scenario mode reads the three candidates' observable events,
+then compares cast motivation, intended experience and type-specific evidence. Narration mode
+is the existing wire name for the whole-performance read: first read actions and attributed
+speech without intent, write what happened and what changed, then compare STORY and sources.
+Return five quoted judgments (meaning, progression, payoff, grounding, character) and the same
+STORYBOARD_REVIEW tail. Vocabulary mode reads only spoken lines with character context; no
+speech is not applicable. Do not penalize an unspoken theme, silent ending, absent twist,
+shared primary engine or fictional event without a research citation. Require sources for
+claims presented as real; assess invented events against world rules and motivation.
 
 ## Picking the mode
 

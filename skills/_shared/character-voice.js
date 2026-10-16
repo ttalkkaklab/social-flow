@@ -80,7 +80,7 @@ function boardVoiceErrors(win) {
   const characters = Array.isArray(entries) ? entries : Object.entries(entries || {}).map(([id, c]) => ({ ...c, id }));
   const ids = new Set(Object.keys(win.PRODUCTION?.cast || {}));
   const lineIds = new Set();
-  if (win.SB_DOC?.speechPlanVersion === 1 && !win.SB_DOC.narratorCharacterId) errors.push('Speech plan needs narratorCharacterId');
+  if (win.SB_DOC?.speechPlanVersion === 1 && win.STORY?.version !== 'story-v2' && !win.SB_DOC.narratorCharacterId) errors.push('Speech plan needs narratorCharacterId');
   for (const scene of win.SCENES || []) {
     if (!scene || typeof scene !== 'object') { errors.push('Scene must be an object'); continue; }
     const raw = scene.visual?.character;

@@ -96,6 +96,12 @@ function analyse(src, research, opts = {}) {
   const { meta: m, body, errors } = parseScenario(src), findings = [];
   const add = (rule, what, level = 'bad') => findings.push({ level, where: opts.where || 'scenario', what: rule + ' ' + what });
   errors.forEach(e => add('S1', e));
+  if (m.version === 'scenario-v2') {
+    const result = require('./scenario-v2.js').checkScenarioV2(m, body, research, opts);
+    result.findings.unshift(...findings);
+    return result;
+  }
+  if (m.version !== undefined) add('S1', 'unsupported scenario version');
   const required = ['channel','topic','direction','message','wow','wow_type','wow_belief','wow_truth','wow_lands',
     'engine_primary','engine_secondary','reveal','structure','arc','anchors','claims','score','p0','round','frozen'];
   required.forEach(k => {
@@ -170,19 +176,29 @@ function checkPath(target) {
   if (!fs.existsSync(target)) throw Error('path not found: ' + target);
   const directory = fs.statSync(target).isDirectory();
   const files = directory ? ['d1.md','d2.md','d3.md'].map(f => path.join(target, f)) : [target];
-  const findings = [], engines = [], directions = [];
+  const findings = [], engines = [], directions = [], stories = [];
   for (const file of files) {
     if (!fs.existsSync(file)) { findings.push({level:'bad', where:file, what:'S7 missing candidate'}); continue; }
     const research = researchAt(file), dir = research ? path.dirname(research) : path.dirname(file);
     const fmt = formatOf(dir);
     const src = fs.readFileSync(file, 'utf8'), m = parseScenario(src).meta;
+    const directory = path.basename(path.dirname(file)) === 'candidates' ? path.dirname(path.dirname(file)) : path.dirname(file);
+    let pool;
+    if (m.version === 'scenario-v2') {
+      try { pool = JSON.parse(fs.readFileSync(path.join(directory, 'cast.json'), 'utf8')).characters; } catch (_) { pool = undefined; }
+    }
     const result = analyse(src, research ? fs.readFileSync(research, 'utf8') : null, {
-      where:file, long:fmt ? fmt.format === 'youtube-long-16x9' : ['answer-first','story'].includes(m.arc),
+      directory, pool, where:file, long:fmt ? fmt.format === 'youtube-long-16x9' : ['answer-first','story'].includes(m.arc),
       chosen:path.basename(file) === 'scenario.md', hasScenes:fs.existsSync(path.join(path.dirname(file), 'scenes.js'))
     });
+    if (result.data) {
+      const { difference, ...story } = result.data;
+      stories.push(JSON.stringify(story));
+    }
     findings.push(...result.findings); engines.push(result.meta.engine_primary); directions.push(result.meta.direction);
   }
-  if (directory && (new Set(engines).size !== 3 || !engines.every(e => ENGINES.includes(e)))) findings.push({level:'bad',where:target,what:'S7 d1–d3 require three different primary engines'});
+  if (directory && !files.every(f => fs.existsSync(f) && parseScenario(fs.readFileSync(f, 'utf8')).meta.version === 'scenario-v2') && (new Set(engines).size !== 3 || !engines.every(e => ENGINES.includes(e)))) findings.push({level:'bad',where:target,what:'S7 d1–d3 require three different primary engines'});
+  if (directory && stories.length === 3 && new Set(stories).size !== 3) findings.push({level:'bad',where:target,what:'V2 duplicate story candidates — change the situation, choice or payoff'});
   if (directory && directions.some((d,i) => d !== 'D' + (i+1))) findings.push({level:'bad',where:target,what:'S7 d1–d3 must carry D1–D3 respectively'});
   return { files, violations:findings.filter(f => f.level === 'bad').length, warnings:findings.filter(f => f.level === 'warn').length, findings };
 }
@@ -191,7 +207,7 @@ function checkPath(target) {
 // The board remains the production source of truth. Legacy pages without anchors skip.
 function checkAnchors(win, scenario, spokenText) {
   const parsed = parseScenario(scenario), m = parsed.meta;
-  if (!m.anchors) return [];
+  if (m.version === 'scenario-v2' || !m.anchors) return [];
   const out = [], warn = what => out.push({level:'warn',where:'scenario',what:'S13 ' + what});
   if (parsed.errors.length) warn('invalid scenario frontmatter: ' + parsed.errors.join('; '));
   const a = m.anchors, scenes = (win.SCENES || []).filter(s => s.type !== 'outro');

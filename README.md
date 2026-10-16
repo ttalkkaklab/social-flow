@@ -1143,6 +1143,16 @@ reference, supported offline behavior and visual verification scope.
 
 Storyboards support independent owners and holders, initial states, atomic transfer/loss/damage events, flashbacks, and per-shot state assertions. The shared offline review has prop sheets and character/time filters. MCP edits require the current file hash; CLI edits also back up the original. See [prop continuity](skills/storyboard/references/prop-continuity.md) for authoring, production snapshots and the legacy portal metadata transport boundary.
 
+
+### Character-led scenario authoring
+
+New scenarios select characters from the channel library, including narrators, and develop
+actions, dialogue and narration together. `scenario-v2` separates evidence, fiction and adapted
+content; fictional events need internal consistency, not search quotas or fabricated sources.
+`story-v2` reviews observable performance before camera work and keeps speech in the existing
+`narration[]`/`speaker` production contract. See the [authoring and review contract](skills/storyboard/references/character-scenarios.md).
+Existing unversioned scenarios and story-v1 boards retain their checks.
+
 ### Structured character identity
 
 New and updated character sheets carry explicit personality, measurements, speech,
