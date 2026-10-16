@@ -85167,7 +85167,10 @@ function applyStoryboard(args) {
   else if (!existsSync2(dirname(file))) throw new Error(`directory does not exist: ${dirname(file)}`);
   const original = exists ? readFileSync3(file, "utf8") : "";
   const originalHash = createHash2("sha256").update(original).digest("hex");
-  if (args.propSheet && exists && args.expectedSha256 !== originalHash)
+  const previousDoc = win.SB_DOC;
+  const incomingDoc = args.globals?.SB_DOC;
+  const changesProps = !!args.propSheet || !!args.globals && Object.prototype.hasOwnProperty.call(args.globals, "SB_DOC") && ["props", "propContinuity"].some((key) => JSON.stringify(previousDoc?.[key]) !== JSON.stringify(incomingDoc?.[key]));
+  if (changesProps && exists && args.expectedSha256 !== originalHash)
     throw new Error("head_moved: propSheet requires the current expectedSha256 from storyboard_read");
   const { win: next, findings, synced } = applyPatch(win, args);
   const bad = findings.some((f3) => f3.level === "bad");
@@ -85186,7 +85189,7 @@ function applyStoryboard(args) {
   if (bad || args.dryRun) return result;
   const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
   try {
-    if (args.propSheet && exists) {
+    if (changesProps && exists) {
       if (createHash2("sha256").update(readFileSync3(file)).digest("hex") !== originalHash) throw new Error("head_moved");
       const history = join2(dirname(file), ".prop-history");
       mkdirSync(history, { recursive: true });

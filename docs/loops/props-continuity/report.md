@@ -37,3 +37,7 @@ The demo under `data/prop-qa/` is a prop-focused test fixture, not an approved p
 ## Known limits
 
 Concurrent MCP/CLI writers do not yet share a common lock. Hash checks and backups protect ordinary stale edits, but a simultaneous-write stress test was not completed. Full keyboard and print accessibility remain beyond the browser checks performed here. The independent reviewer deducted two points for these limits.
+
+## Dev integration follow-up
+
+The PR preserves the latest `dev` character and shot-speech changes. PR review found a metadata-route bypass: `globals.SB_DOC` could modify prop data without the prop hash/backup guards. Both write routes now use the guards, including prop removal; metadata-only edits remain supported. A regression test covers rejection, unchanged bytes, a valid write and backup. This follow-up concerns the repository PR; the earlier local installation receipt documents the separately tested combined build.

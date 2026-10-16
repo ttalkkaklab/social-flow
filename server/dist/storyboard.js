@@ -533,7 +533,11 @@ export function applyStoryboard(args) {
         throw new Error(`directory does not exist: ${dirname(file)}`);
     const original = exists ? readFileSync(file, 'utf8') : '';
     const originalHash = createHash('sha256').update(original).digest('hex');
-    if (args.propSheet && exists && args.expectedSha256 !== originalHash)
+    const previousDoc = win.SB_DOC;
+    const incomingDoc = args.globals?.SB_DOC;
+    const changesProps = !!args.propSheet || (!!args.globals && Object.prototype.hasOwnProperty.call(args.globals, 'SB_DOC')
+        && ['props', 'propContinuity'].some(key => JSON.stringify(previousDoc?.[key]) !== JSON.stringify(incomingDoc?.[key])));
+    if (changesProps && exists && args.expectedSha256 !== originalHash)
         throw new Error('head_moved: propSheet requires the current expectedSha256 from storyboard_read');
     const { win: next, findings, synced } = applyPatch(win, args);
     const bad = findings.some((f) => f.level === 'bad');
@@ -548,7 +552,7 @@ export function applyStoryboard(args) {
     // Same-directory temp file + rename: a crash mid-write never leaves a truncated scenes.js behind.
     const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
     try {
-        if (args.propSheet && exists) {
+        if (changesProps && exists) {
             if (createHash('sha256').update(readFileSync(file)).digest('hex') !== originalHash)
                 throw new Error('head_moved');
             const history = join(dirname(file), '.prop-history');

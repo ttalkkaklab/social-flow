@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import api from '../../skills/storyboard/references/prop-continuity.js';
 import cli from '../../skills/storyboard/references/prop-sheet-cli.js';
-import { applyPatch, storyboardApplySchema, serializeBoard, readBoard } from '../dist/storyboard.js';
+import { applyStoryboard, applyPatch, storyboardApplySchema, serializeBoard, readBoard } from '../dist/storyboard.js';
 
 import { fixture } from './fixtures/prop-board.mjs';
 import { TOOLS } from '../dist/tools.js';
@@ -150,4 +150,27 @@ test('actual still CLI includes custody and reference snapshot', () => {
 test('condition-specific source references do not mix intact and damaged images', () => {
   const win=fixture();win.SB_DOC.props[0].references=[{path:'intact.png',version:'v1',condition:'intact'},{path:'broken.png',version:'v2',condition:'broken'}];
   assert.deepEqual(api.snapshot(win,0)[0].references.map(r=>r.path),['intact.png']);
+});
+
+
+test('globals prop edits and removals require a current hash and preserve a backup', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'props-globals-'));
+  try {
+    const win = fixture();
+    win.STRUCTURE = {version:'structure-v1',sequences:[{id:'q1',title:'Loan',purpose:'Track watch',scenes:[1]}],scenes:[{no:1,place:'Room',time:'Day',event:'Loan',charge:{open:'-',close:'+'},turn:'Possession A to B'}]};
+    win.SCENES.forEach((s,i)=>Object.assign(s,{scene:1,beat:i?'cta':'hook',shot:{size:i?'cu':'ls',angle:'eye',feel:'calm',info:'Watch '+i,infoType:'other'}}));
+    const file=join(dir,'scenes.js');writeFileSync(file,serializeBoard(win));
+    const original=readFileSync(file,'utf8'), hash=cli.run([dir]).sha256;
+    const doc=structuredClone(win.SB_DOC);doc.props[0].description='Changed through globals';
+    for (const SB_DOC of [doc, {characters:doc.characters}, null]) {
+      assert.throws(()=>applyStoryboard({path:dir,globals:{SB_DOC},draft:true}),/head_moved/);
+      assert.equal(readFileSync(file,'utf8'),original);
+    }
+    const saved=applyStoryboard({path:dir,globals:{SB_DOC:doc},draft:true,expectedSha256:hash});
+    assert.equal(saved.written,true,JSON.stringify(saved.findings));
+    assert.equal(readFileSync(join(dir,'.prop-history',hash+'.js'),'utf8'),original);
+    assert.match(readFileSync(file,'utf8'),/Changed through globals/);
+    const unchanged=readBoard(dir).win.SB_DOC;unchanged.displayTitle='Metadata only';
+    assert.equal(applyStoryboard({path:dir,globals:{SB_DOC:unchanged},draft:true}).written,true);
+  } finally {rmSync(dir,{recursive:true,force:true});}
 });
