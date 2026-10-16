@@ -1,9 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { mkdtempSync, readFileSync, writeFileSync, rmSync, existsSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync, rmSync, existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { runInNewContext } from 'node:vm';
 const require = createRequire(import.meta.url);
 const { storyboardHtml } = require('../../skills/storyboard/references/storyboard-html.js');
 
@@ -35,6 +36,27 @@ test('HTML creation and refresh keep one design while preserving episode metadat
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
+test('review resolves existing channel portraits without changing dialogue or inventing missing images', () => {
+  const root = mkdtempSync(join(tmpdir(), 'sf-board-portraits-'));
+  try {
+    const board = join(root, 'episodes', 'example', 'storyboard');
+    const character = join(root, 'assets', 'characters', 'mina');
+    mkdirSync(board, { recursive: true });
+    mkdirSync(character, { recursive: true });
+    writeFileSync(join(character, 'face.png'), 'fixture');
+    const scenes = 'window.SB_DOC={characters:{mina:{name:"Mina"},missing:{name:"No image"}}}; window.SCENES=[];';
+    writeFileSync(join(board, 'scenes.js'), scenes);
+    storyboardHtml(board);
+    const context = { window: {} };
+    runInNewContext(readFileSync(join(board, 'review-files.js'), 'utf8'), context);
+    assert.equal(context.window.REVIEW_CHARACTER_PORTRAITS.mina, '../../../assets/characters/mina/face.png');
+    assert.equal(context.window.REVIEW_CHARACTER_PORTRAITS.missing, undefined);
+    assert.equal(context.window.REVIEW_VIDEO_TYPES.drama.ko, '드라마');
+    assert.equal(readFileSync(join(board, 'scenes.js'), 'utf8'), scenes);
+    assert.deepEqual(storyboardHtml(board, true), []);
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
 test('check is read-only and malformed existing metadata is preserved for repair', () => {
   const root = mkdtempSync(join(tmpdir(), 'sf-board-html-check-'));
   try {
@@ -48,4 +70,23 @@ test('check is read-only and malformed existing metadata is preserved for repair
     assert.throws(() => storyboardHtml(dir), /SB_DOC/);
     assert.equal(readFileSync(file, 'utf8'), broken);
   } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test('dialogue portrait honors the episode cast image before channel images', () => {
+  const template = readFileSync(new URL('../../skills/storyboard/references/storyboard-html-template.html', import.meta.url), 'utf8');
+  const start = template.indexOf('  function speechHtml(');
+  const end = template.indexOf('  /** One line of screen text', start);
+  const context = {
+    DOC: { speechPlanVersion: 1 },
+    CAST: [{ id: 'mina', name: 'Mina', panels: { face: 'channel-face.png' } }],
+    window: { PRODUCTION: { cast: { mina: { image: 'episode-mina.png' } } }, REVIEW_CHARACTER_PORTRAITS: { mina: 'resolved-face.png' } },
+    T: { speechDelivery: { on_screen: 'On-screen dialogue' }, chars: n => `${n} chars` },
+    castName: id => id, esc: value => String(value ?? ''), strip: value => String(value ?? ''), netLen: value => String(value ?? '').length,
+  };
+  const render = () => runInNewContext(template.slice(start, end) + '\nspeechHtml({speaker:"mina",delivery:"on_screen",tts:"Hello",sub:"Hello"},0)', context);
+  assert.match(render(), /src="episode-mina.png"/);
+  delete context.window.PRODUCTION.cast.mina.image;
+  assert.match(render(), /src="channel-face.png"/);
+  delete context.CAST[0].panels.face;
+  assert.match(render(), /src="resolved-face.png"/);
 });

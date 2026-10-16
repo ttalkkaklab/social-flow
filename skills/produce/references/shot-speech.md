@@ -1,5 +1,13 @@
 # Shot speech and replaceable video adapters
 
+## Contents
+
+- [Common data](#common-data)
+- [Delivery follows the story](#delivery-follows-the-story)
+- [Common voice layer](#common-voice-layer)
+- [Adapter layer](#adapter-layer)
+- [Current adapter examples](#current-adapter-examples-checked-2026-10-16)
+
 Owner directive 2026-10-16: there is no automatic audio-quality review and no human listening
 approval gate. Generate, record provenance and continue. A later user correction invokes
 edit-speech. Do not report a generated file as listened to or approved. This supersedes older
@@ -18,6 +26,20 @@ The field keeps its historical name `narration`, but carries all dialogue. Every
 explicit speaker, including narrator lines. Do not use a character's mere visual presence to
 invent speech. Do not rewrite confession, warning or bargaining as summary merely to avoid
 animating speech. List the dramatic exchange in the board before choosing a video model.
+
+## Delivery follows the story
+
+An explanation video may be entirely narrator `voiceover`, including illustrated people
+who never speak. In drama, a visible person addressing another character normally uses
+`on_screen`: animate the speaking face, expression and body from that person's actual audio.
+Do not convert a whole conversation to `off_screen` or closed-mouth action for convenience.
+Use off-screen speech where the scene calls for a listener reaction, an insert or a speaker
+outside the frame. A visible character can instead narrate, think, or read a text message;
+that is `voiceover`, not physical speech. Record a short `deliveryReason` for such choices
+when the picture could be mistaken for spoken dialogue. A narrator visibly presenting to
+camera still uses `on_screen` when their mouth is supposed to speak. No speaking-shot quota
+applies, and silent shots need no invented lines. The storyboard displays these distinctions
+beside each speaker's portrait and dialogue bubble.
 
 Stable shot ids and line ids survive reorder and model changes. `speech_manage` prepares,
 finds and updates them and attaches audio hashes. Per-line audio records are not scene WAVs:

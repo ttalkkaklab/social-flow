@@ -164,8 +164,11 @@ data/<channel>/episodes/<topic-slug>/
 ### 0. Load · lock · budget
 
 First follow [model settings](../_shared/model-settings.md) for the selected working
-directory. Interactive first use asks video → speech → image and saves the choices.
+directory. Interactive first use asks video type → video model → speech model → image model and saves the choices.
 Unattended first use with no settings reports `model_setup_required` before taking
+the production lock; if only the type is missing, report `video_type_required`.
+Do not infer the user's standing type choice. Apply [video types](../_shared/video-types.md)
+to the storyboard and carry the selected type into `PRODUCTION.videoType` before taking
 the production lock or spending. Later runs reuse the saved choices and snapshot
 them into each new episode without questions. These settings supersede the old
 host/economy routing, per-cut escalation and growth-plan model defaults below;

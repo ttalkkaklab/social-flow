@@ -6,6 +6,7 @@ const crypto = require('node:crypto');
 
 const SETTINGS_FILE = '.social-flow/models.json';
 const SNAPSHOT_FILE = '.work/model-settings.json';
+const VIDEO_TYPES = require('./video-types.json').types;
 const ENGINES = {
   video: ['host', 'seedance', 'veo', 'astra', 'mlx'],
   speech: ['gemini', 'elevenlabs', 'supertonic', 'mlx'],
@@ -23,6 +24,17 @@ function object(value) {
 
 function nonempty(value) {
   return typeof value === 'string' && value.trim().length > 0;
+}
+
+function validateVideoType(choice) {
+  if (!object(choice) || !VIDEO_TYPES.some(type => type.id === choice.id)) {
+    throw new Error('videoType.id must name a video type from model-settings.js types');
+  }
+  for (const [key, value] of Object.entries(choice)) {
+    if (!['id', 'detail'].includes(key) || !nonempty(value) || value.length > 1000) throw new Error(`Invalid videoType.${key}`);
+  }
+  if (choice.id === 'custom' && !nonempty(choice.detail)) throw new Error('Custom videoType requires detail describing the type and speech approach');
+  return choice;
 }
 
 // Model IDs and adapter-specific dimensions are checked by the actual generation tool.
@@ -66,6 +78,7 @@ function validateConfig(config) {
     throw new Error('Invalid model settings version or selection record; repair explicitly, do not reset');
   }
   validateModels(config.models);
+  if (config.videoType !== undefined) validateVideoType(config.videoType);
   return config;
 }
 
@@ -78,7 +91,7 @@ function readSettings(workspace) {
   const config = readJson(file);
   if (config === undefined) return { status: 'setup_required', file };
   validateConfig(config);
-  return { status: 'configured', file, revision: revision(config), config };
+  return { status: config.videoType ? 'configured' : 'video_type_required', file, revision: revision(config), config };
 }
 
 function writeJson(file, value, exclusive = false) {
@@ -97,7 +110,7 @@ function writeJson(file, value, exclusive = false) {
   }
 }
 
-function saveSettings(workspace, models, { request, expectedRevision } = {}) {
+function saveSettings(workspace, models, { request, expectedRevision, videoType } = {}) {
   if (!nonempty(request)) throw new Error('Record the actual user selection/change request');
   const file = settingsPath(workspace);
   // Serialize updates so two sessions cannot both overwrite the same revision.
@@ -106,12 +119,17 @@ function saveSettings(workspace, models, { request, expectedRevision } = {}) {
   fs.mkdirSync(lock);
   try {
     const current = readSettings(workspace);
-    if (expectedRevision === undefined && current.status === 'configured') throw new Error('Settings already exist; use update with the current revision and explicit user request');
+    if (expectedRevision === undefined && current.config) throw new Error('Settings already exist; use update with the current revision and explicit user request');
     if (expectedRevision !== undefined && current.revision !== expectedRevision) throw new Error('Settings revision changed or settings are missing; read again');
-    validateModels(models, expectedRevision !== undefined);
+    const typeOnly = expectedRevision !== undefined && videoType !== undefined &&
+      (models === undefined || (object(models) && !Object.keys(models).length));
+    if (!typeOnly) validateModels(models, expectedRevision !== undefined);
+    if (videoType !== undefined) validateVideoType(videoType);
+    if (!current.config && videoType === undefined) throw new Error('Select a video type before saving initial settings');
     const config = {
       version: 1,
       models: { ...current.config?.models, ...models },
+      ...(videoType || current.config?.videoType ? { videoType: videoType || current.config.videoType } : {}),
       updatedAt: new Date().toISOString(),
       request: request.trim(),
     };
@@ -139,19 +157,24 @@ function snapshotSettings(workspace, episode) {
     return { ...existing, file, resumed: true };
   }
   const current = readSettings(root);
-  if (current.status !== 'configured') throw new Error('Select video, speech and image models before creating an episode snapshot');
+  if (current.status === 'video_type_required') throw new Error('video_type_required: select a video type before starting a new episode; keep saved models');
+  if (current.status !== 'configured') throw new Error('Select video, speech and image models and a video type before creating an episode snapshot');
   const snapshot = { version: 1, source: current.file, revision: current.revision, config: current.config };
   writeJson(file, snapshot, true);
   return { ...snapshot, file, resumed: false };
 }
 
-module.exports = { SETTINGS_FILE, SNAPSHOT_FILE, validateModels, readSettings, saveSettings, snapshotSettings };
+module.exports = { SETTINGS_FILE, SNAPSHOT_FILE, VIDEO_TYPES, validateVideoType, validateModels, readSettings, saveSettings, snapshotSettings };
 
 if (require.main === module) {
   try {
     const [command, workspace, argument] = process.argv.slice(2);
+    if (command === 'types') {
+      console.log(JSON.stringify(VIDEO_TYPES, null, 2));
+      process.exit(0);
+    }
     if (!workspace || !['show', 'init', 'update', 'snapshot'].includes(command)) {
-      throw new Error('Usage: model-settings.js show|init|update|snapshot WORKSPACE [REVISION|EPISODE]; init/update read {models,request} JSON from stdin');
+      throw new Error('Usage: model-settings.js types | show|init|update|snapshot WORKSPACE [REVISION|EPISODE]; init/update read {models,videoType,request} JSON from stdin');
     }
     let result;
     if (command === 'show') result = readSettings(workspace);
@@ -161,7 +184,7 @@ if (require.main === module) {
     } else {
       if (command === 'update' && !argument) throw new Error('update requires the revision returned by show');
       const input = JSON.parse(fs.readFileSync(0, 'utf8'));
-      result = saveSettings(workspace, input.models, { request: input.request, expectedRevision: command === 'update' ? argument : undefined });
+      result = saveSettings(workspace, input.models, { request: input.request, videoType: input.videoType, expectedRevision: command === 'update' ? argument : undefined });
     }
     console.log(JSON.stringify(result, null, 2));
   } catch (error) {

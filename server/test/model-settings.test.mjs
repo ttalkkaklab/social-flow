@@ -9,6 +9,7 @@ import { spawnSync } from 'node:child_process';
 const require = createRequire(import.meta.url);
 const settings = require('../../skills/_shared/model-settings.js');
 const cli = require.resolve('../../skills/_shared/model-settings.js');
+const videoType = { id: 'drama' };
 const models = {
   video: { engine: 'seedance', model: 'seedance-1-5-pro-251215', resolution: '720p' },
   speech: { engine: 'gemini', model: 'gemini-2.5-flash-preview-tts' },
@@ -34,12 +35,13 @@ test('first setup requires all three actual selections, persists across processe
   assert.throws(() => settings.saveSettings(root, { video: models.video }, { request: 'Use Seedance' }), /speech.engine/);
   assert.throws(() => settings.saveSettings(root, models), /actual user selection/);
   const init = spawnSync(process.execPath, [cli, 'init', root], {
-    input: JSON.stringify({ models, request: 'Use Seedance 720p, Gemini Flash TTS and host images' }), encoding: 'utf8',
+    input: JSON.stringify({ models, videoType, request: 'Use drama, Seedance 720p, Gemini Flash TTS and host images' }), encoding: 'utf8',
   });
   assert.equal(init.status, 0, init.stderr);
   const read = spawnSync(process.execPath, [cli, 'show', root], { encoding: 'utf8' });
   assert.equal(read.status, 0, read.stderr);
   assert.deepEqual(JSON.parse(read.stdout).config.models, models);
+  assert.deepEqual(JSON.parse(read.stdout).config.videoType, videoType);
   const bytes = fs.readFileSync(settings.readSettings(root).file, 'utf8');
   assert.throws(() => settings.saveSettings(root, models, { request: 'Repeat setup' }), /already exist/);
   assert.equal(fs.readFileSync(settings.readSettings(root).file, 'utf8'), bytes);
@@ -47,7 +49,7 @@ test('first setup requires all three actual selections, persists across processe
 
 test('later episodes inherit settings; explicit partial changes affect new episodes only', t => {
   const root = workspace(t);
-  const first = settings.saveSettings(root, models, { request: 'Initial user choices' });
+  const first = settings.saveSettings(root, models, { videoType, request: 'Initial user choices' });
   const a = episode(root, 'first');
   const old = settings.snapshotSettings(root, a);
   assert.deepEqual(settings.snapshotSettings(root, episode(root, 'second')).config.models, models);
@@ -69,7 +71,7 @@ test('later episodes inherit settings; explicit partial changes affect new episo
 
 test('separate workspaces never discover each other or a parent config', t => {
   const root = workspace(t);
-  settings.saveSettings(root, models, { request: 'Initial choices' });
+  settings.saveSettings(root, models, { videoType, request: 'Initial choices' });
   const other = workspace(t);
   const nested = path.join(root, 'nested');
   fs.mkdirSync(nested);
@@ -94,7 +96,7 @@ test('broken settings are never treated as missing or replaced', t => {
 
 test('invalid categories, credentials and incomplete engine changes do not enter the settings', t => {
   const root = workspace(t);
-  const current = settings.saveSettings(root, models, { request: 'Initial choices' });
+  const current = settings.saveSettings(root, models, { videoType, request: 'Initial choices' });
   for (const patch of [
     {}, { music: {} }, { image: { engine: 'unknown' } },
     { image: { engine: 'gpt-image' } },
@@ -110,7 +112,7 @@ test('invalid categories, credentials and incomplete engine changes do not enter
 
 test('resume uses its snapshot even if defaults disappear, and rejects snapshot corruption', t => {
   const root = workspace(t);
-  const current = settings.saveSettings(root, models, { request: 'Initial choices' });
+  const current = settings.saveSettings(root, models, { videoType, request: 'Initial choices' });
   const dir = episode(root, 'resume');
   const snapshot = settings.snapshotSettings(root, dir);
   fs.unlinkSync(current.file);
@@ -123,11 +125,57 @@ test('resume uses its snapshot even if defaults disappear, and rejects snapshot 
 
 test('an active settings writer prevents a second writer from overwriting preferences', t => {
   const root = workspace(t);
-  const current = settings.saveSettings(root, models, { request: 'Initial choices' });
+  const current = settings.saveSettings(root, models, { videoType, request: 'Initial choices' });
   fs.mkdirSync(current.file + '.lock');
   assert.throws(() => settings.saveSettings(root, { image: { engine: 'zimage' } }, {
     request: 'Concurrent update', expectedRevision: current.revision,
   }), /EEXIST/);
   assert.equal(settings.readSettings(root).revision, current.revision);
   assert.equal(fs.existsSync(current.file + '.lock'), true);
+});
+
+test('video type selection is explicit, validates custom details, and changes only future episodes', t => {
+  const root = workspace(t);
+  assert.throws(() => settings.saveSettings(root, models, { request: 'Models only' }), /Select a video type/);
+  for (const choice of [{ id: 'invented' }, { id: 'custom' }, { id: 'drama', apiKey: 'invalid' }]) {
+    assert.throws(() => settings.saveSettings(root, models, { videoType: choice, request: 'Invalid type' }));
+  }
+  const first = settings.saveSettings(root, models, { videoType, request: 'Drama' });
+  const original = episode(root, 'original');
+  settings.snapshotSettings(root, original);
+  const updated = settings.saveSettings(root, undefined, {
+    videoType: { id: 'explainer' }, request: 'Make future episodes narrator-led explainers', expectedRevision: first.revision,
+  });
+  assert.deepEqual(updated.config.models, models);
+  assert.deepEqual(settings.snapshotSettings(root, original).config.videoType, videoType);
+  assert.equal(settings.snapshotSettings(root, episode(root, 'new')).config.videoType.id, 'explainer');
+  const custom = settings.saveSettings(root, {}, {
+    videoType: { id: 'custom', detail: 'Documentary with acted conversations' }, request: 'Use this hybrid', expectedRevision: updated.revision,
+  });
+  assert.equal(custom.config.videoType.detail, 'Documentary with acted conversations');
+  const listed = spawnSync(process.execPath, [cli, 'types'], { encoding: 'utf8' });
+  assert.equal(listed.status, 0, listed.stderr);
+  const choices = JSON.parse(listed.stdout);
+  assert.ok(choices.some(choice => choice.id === 'drama' && choice.speechGuidance === 'character_dialogue'));
+  assert.ok(choices.some(choice => choice.id === 'explainer' && choice.speechGuidance === 'narrator_led'));
+});
+
+test('legacy settings request only the missing type and legacy episode snapshots remain resumable', t => {
+  const root = workspace(t);
+  const file = path.join(root, settings.SETTINGS_FILE);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, JSON.stringify({ version: 1, models, request: 'Legacy model choices', updatedAt: '2026-10-15' }));
+  const old = settings.readSettings(root);
+  assert.equal(old.status, 'video_type_required');
+  assert.throws(() => settings.saveSettings(root, models, { videoType, request: 'Do not overwrite' }), /already exist/);
+  const existing = episode(root, 'legacy');
+  const snapshotFile = path.join(existing, settings.SNAPSHOT_FILE);
+  fs.mkdirSync(path.dirname(snapshotFile), { recursive: true });
+  fs.writeFileSync(snapshotFile, JSON.stringify({ version: 1, source: file, revision: old.revision, config: old.config }));
+  assert.equal(settings.snapshotSettings(root, existing).resumed, true);
+  assert.throws(() => settings.snapshotSettings(root, episode(root, 'new')), /video_type_required/);
+  const fixed = settings.saveSettings(root, undefined, { videoType, request: 'Choose drama', expectedRevision: old.revision });
+  assert.equal(fixed.status, 'configured');
+  assert.deepEqual(fixed.config.models, models);
+  assert.equal(settings.snapshotSettings(root, existing).config.videoType, undefined);
 });

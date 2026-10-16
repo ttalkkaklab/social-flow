@@ -1,7 +1,7 @@
-# Working-directory media models
+# Working-directory video type and media models
 
 Owner directive, 2026-10-16: once the production working directory is known, select
-**video → speech → image** models once and save them in that directory. Every new
+**video type → video model → speech model → image model** once and save them in that directory. Every new
 episode uses those choices until the user explicitly requests a change. This takes
 precedence over automatic host detection, economy/quality routing, per-cut model
 escalation and repeated model questions in older skill sections. It is an explicit
@@ -20,14 +20,37 @@ cannot be identified from the session or that record, ask where to work.
 node "${CLAUDE_PLUGIN_ROOT}/skills/_shared/model-settings.js" show "$WORKSPACE"
 ```
 
-`configured`: briefly state the saved choices and continue without another model
-question. `setup_required`: run the three selection steps below before authoring a
-new generated episode or making a media call. A malformed file is an error to
+`configured`: briefly state the saved type and models and continue without another
+question. `setup_required`: select the type and three models below before authoring a
+new generated episode or making a media call. `video_type_required`: older settings
+already contain models; ask only for the type before the next new episode and save
+it with `update`. Resume an existing episode from its snapshot/board without another
+setup question, even if that legacy snapshot has no type. A malformed file is an error to
 repair, not permission to overwrite it with defaults. Do not copy choices from a
 previous episode or channel profile into directory settings without the user's
 selection. Existing choices may be offered as candidates.
 
-## First setup: three actual choices
+## First setup: video type, then three models
+
+First read [video types](video-types.md) and run:
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/skills/_shared/model-settings.js" types
+```
+
+Use the returned localized names and descriptions in the host's user-choice/HITL
+interface. Ask which type this directory should make, with one sentence per option
+explaining its dialogue and directing implications. Recommend a type from the
+user's stated intent but wait for their choice; an explicit earlier choice already
+answers this question. Offer custom/hybrid through the interface's free-text option.
+If the interface limits option count, first offer groups (acted stories,
+factual/educational, conversation/observation, brand/music), then the concrete type
+in that group. Keep review/comparison in factual/educational. Never silently drop types.
+
+Save `{id, detail?}` as `videoType` alongside `models`. Custom types require `detail`.
+This is a persistent user preference, not an inferred genre from a filename or
+permission to generate media. Keep it separate from visual style, aspect ratio,
+generation ratio and platform upload category.
 
 Call `capability_status` and inspect the host's exposed tool schemas. Use those
 schemas for supported model IDs and arguments; the config helper validates storage,
@@ -57,11 +80,12 @@ Do not bill for samples during setup unless requested. Do not treat silence as a
 selection. This first setup is a user-requested preference step and is not waived
 by the general automation advice to choose unspecified creative preferences.
 
-Save all three selections together. Example only — these are **not defaults**:
+Save the type and all three model selections together. Example only — these are **not defaults**:
 
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/skills/_shared/model-settings.js" init "$WORKSPACE" <<'JSON'
 {
+  "videoType": {"id":"drama"},
   "models": {
     "video": {"engine":"seedance","model":"seedance-1-5-pro-251215","resolution":"720p"},
     "speech": {"engine":"gemini","model":"gemini-2.5-flash-preview-tts"},
@@ -94,7 +118,10 @@ node "${CLAUDE_PLUGIN_ROOT}/skills/_shared/model-settings.js" snapshot "$WORKSPA
 This writes `$EPISODE/.work/model-settings.json` once. On resume it returns the
 existing snapshot even if workspace preferences changed; it never rewrites the
 board or approved assets. Copy `{source, revision, models: config.models}` from
-the result into `PRODUCTION.modelSettings` in `scenes.js`. Preserve this record
+the result into `PRODUCTION.modelSettings` in `scenes.js`, and copy `config.videoType`
+into `PRODUCTION.videoType`. Apply [video types](video-types.md) when planning
+dialogue and performance; the type never rewrites lines or assigns delivery by
+itself. The review displays the episode's selected type. Preserve these records
 through storyboard → produce → edit-speech. Apply choices before cost quotes:
 
 | Selection | Production handoff |
@@ -145,9 +172,17 @@ settings from leaking into its replacement, and preserves the other two. `init`
 refuses to overwrite existing settings; `update` rejects a stale revision. A lock
 conflict reports an error; do not delete another session's lock automatically.
 
+To change only the default type, use `update` with the current revision and
+`{"videoType":{"id":"explainer"},"request":"Actual user request"}`. Keep all
+model selections. Existing episode snapshots keep their type. A type change for
+one episode sets `PRODUCTION.videoType` and records the request under
+`PRODUCTION.modelSettings.overrides`; it does not update the directory default.
+
 Interactive autoproduce runs the same setup once. An unattended growth invocation
 with no complete config reports `model_setup_required` and defers new production
-until the user selects models. With a config it reuses it without questions;
+until the user selects a type and models. If only the type is missing, report
+`video_type_required` and ask only that choice on interactive return.
+With a complete config it reuses it without questions;
 legacy growth-plan model defaults do not override it. Existing explicit per-run
 exceptions still apply. Continue to honor standing budgets and other applicable
 render settings; the saved video selection satisfies the model-choice step.

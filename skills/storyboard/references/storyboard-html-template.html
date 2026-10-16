@@ -1459,7 +1459,9 @@ window.SB_DOC = Object.assign({}, window.SB_DOC, window.SCENE_SB_DOC || {});
       vtTyping: "typing video · code render", vtArt: "illustration", vtStill: "still background", vtStock: "stock clip",
       revealNo: function (n) { return "reveal " + n; },
       screenText: "Screen text", noScreenText: "no screen text — the picture alone",
-      audioSec: "Sound", subtitleLabel: "Subtitle",
+      audioSec: "Dialogue / voice", subtitleLabel: "Subtitle",
+      speechDelivery: { on_screen: "On-screen dialogue", off_screen: "Off-screen dialogue", voiceover: "Voiceover", unspecified: "Delivery not specified" },
+      speechUnassigned: "Unassigned speaker", speechNarrator: "Narrator", speechSilent: "No dialogue",
       carryNote: function (states, lines) {
         return "The screen changes " + states + " times but there are " + lines +
                " sentences — one sentence will cover two subtitles, and which one is settled at production."; },
@@ -1797,7 +1799,9 @@ window.SB_DOC = Object.assign({}, window.SB_DOC, window.SCENE_SB_DOC || {});
       vtTyping: "타이핑 영상 · 코드 렌더", vtArt: "삽화", vtStill: "정지 배경", vtStock: "외부 영상",
       revealNo: function (n) { return "공개 " + n; },
       screenText: "화면 글자", noScreenText: "화면 글자 없음 — 그림만",
-      audioSec: "소리", subtitleLabel: "자막",
+      audioSec: "대사·음성", subtitleLabel: "자막",
+      speechDelivery: { on_screen: "화면 속 대사", off_screen: "화면 밖 대사", voiceover: "보이스오버", unspecified: "발화 방식 미지정" },
+      speechUnassigned: "화자 미지정", speechNarrator: "나레이터", speechSilent: "대사 없음",
       carryNote: function (states, lines) {
         return "화면은 " + states + "번 바뀌는데 문장은 " + lines +
                "개예요 — 한 문장이 자막 두 개를 물게 되고, 어느 쪽인지는 제작 때 정해집니다."; },
@@ -2010,10 +2014,34 @@ window.SB_DOC = Object.assign({}, window.SB_DOC, window.SCENE_SB_DOC || {});
   function charsOf(s) {
     return charEntries(s).map(function (e) { return e.id; });
   }
-  var CAST = (DOC.characters || []).filter(function (c) { return c && c.id; });
+  var castEntries = DOC.characters || [];
+  var CAST = (Array.isArray(castEntries) ? castEntries : Object.keys(castEntries).map(function (id) {
+    return Object.assign({}, castEntries[id], { id: id });
+  })).filter(function (c) { return c && c.id; });
   function castName(id) {
     for (var i = 0; i < CAST.length; i++) if (CAST[i].id === id) return CAST[i].name || id;
     return id;
+  }
+  function speechHtml(n, index) {
+    var speakerId = n.speaker || (DOC.speechPlanVersion === 1 ? undefined : DOC.narratorCharacterId);
+    var character = CAST.find(function (c) { return c.id === speakerId; }) || {};
+    var name = castName(speakerId) || T.speechUnassigned;
+    var narrator = !!speakerId && speakerId === DOC.narratorCharacterId;
+    var delivery = n.delivery || (narrator ? 'voiceover' : 'unspecified');
+    var productionCast = (window.PRODUCTION && window.PRODUCTION.cast || {})[speakerId] || {};
+    var portrait = productionCast.image || (character.panels || {}).face ||
+      (window.REVIEW_CHARACTER_PORTRAITS || {})[speakerId];
+    var avatar = '<span class="speech-avatar" aria-hidden="true"><span>' + esc(Array.from(name)[0]) + '</span>' +
+      (portrait ? '<img src="' + esc(portrait) + '" alt="" loading="lazy" onerror="this.hidden=true">' : '') + '</span>';
+    return '<div class="speech-turn" data-speaker="' + esc(speakerId || '') + '" data-delivery="' + esc(delivery) + '"' +
+      (n.id ? ' data-line-id="' + esc(n.id) + '"' : '') + '>' + avatar + '<div class="speech-content">' +
+      '<div class="speech-meta"><b>' + esc(name) + '</b>' + (narrator ? '<span>' + esc(T.speechNarrator) + '</span>' : '') +
+      '<span class="speech-delivery">' + esc(T.speechDelivery[delivery] || delivery) + '</span></div>' +
+      '<div class="speech-bubble"><p class="speech-text">' + esc(n.tts || n.sub || '') + '</p>' +
+      (n.sub && strip(n.tts) !== strip(n.sub) ? '<div class="sub-diff"><b>' + esc(T.subtitleLabel) + '</b> ' + esc(n.sub) + '</div>' : '') + '</div>' +
+      (n.deliveryReason ? '<p class="speech-reason">' + esc(n.deliveryReason) + '</p>' : '') +
+      '<div class="speech-reference">' + (index + 1) + (n.id ? ' · ' + esc(n.id) : '') + ' · ' + esc(T.chars(netLen(n.tts || n.sub))) + '</div>' +
+      '</div></div>';
   }
   /** One line of screen text in the scene-frame row's right column — arguments come in pre-escaped */
   function capline(t, d, f2, num) {
@@ -2871,6 +2899,13 @@ window.SB_DOC = Object.assign({}, window.SB_DOC, window.SCENE_SB_DOC || {});
   h += '<div class="doc-kicker">' + esc(DOC.channelName || DOC.channel || THEME.brand) +
        (DOC.series ? " · " + esc(DOC.series) : "") + "</div>";
   h += '<h1 class="doc-title">' + esc(DOC.displayTitle || DOC.topic || "") + "</h1>";
+  var videoType = window.PRODUCTION && window.PRODUCTION.videoType;
+  if (videoType && videoType.id) {
+    var typeNames = (window.REVIEW_VIDEO_TYPES || {})[videoType.id] || {};
+    h += '<p class="review-video-type">' + esc(LANG === 'ko' ? '영상 유형: ' : 'Video type: ') +
+      esc(typeNames[LANG] || typeNames.en || videoType.id) +
+      (videoType.detail ? ' · ' + esc(videoType.detail) : '') + '</p>';
+  }
 
   /* The channel may narrow the short-form band from either end (profile.md length_min_seconds /
      length_max_seconds, copied into window.MOTION_POLICY). Long-form keeps the preset's own band,
@@ -4328,18 +4363,12 @@ window.SB_DOC = Object.assign({}, window.SB_DOC, window.SCENE_SB_DOC || {});
         if (st.carry && st.seg >= 0)
           lines += '<div class="cut-carry">line ' + (st.seg + 1) + " carries over — only the screen (the caption) changes</div>";
         segRows[k].forEach(function (j) {
-          var n = narr[j], same = strip(n.tts) === strip(n.sub);
-          var speakerId = n.speaker || DOC.narratorCharacterId;
-          var speechLabel = castName(speakerId) || 'Unassigned speaker';
-          var deliveryLabel = n.delivery || (speakerId === DOC.narratorCharacterId ? 'voiceover' : 'unspecified');
-          if (LANG === 'ko') deliveryLabel = ({voiceover:'내레이션·독백',on_screen:'화면 속 대사',off_screen:'화면 밖 대사',unspecified:'발화 방식 미지정'})[deliveryLabel] || deliveryLabel;
-          lines += '<div class="cut-line"><span class="k">' + (j + 1) + '</span><div class="b"><b>' + esc(speechLabel) + '</b> · ' + esc(deliveryLabel) + (n.id ? ' · ' + esc(n.id) : '') + '<br>' + esc(n.tts) +
-            '<span class="len"> · ' + esc(T.chars(netLen(n.tts))) + "</span>" +
-            (same ? "" : '<div class="sub-diff"><b>' + esc(T.subtitleLabel) + "</b> " + esc(n.sub) + "</div>") +
-            "</div></div>";
+          lines += speechHtml(narr[j], j);
         });
         if (!lines && s.type === "quote" && vis.clip)
           lines = '<div class="cut-carry">speech clip — the actor speaks, so there is no TTS narration</div>';
+        if (!lines && !narr.length && k === 0 && !recOf(s))
+          lines = '<div class="speech-silent">' + esc(T.speechSilent) + '</div>';
         if (lines) cell += '<div class="cut-sec">' + esc(T.audioSec) + "</div>" + lines;
 
         if (k === 0 && window.STORY && window.STORY.version === "story-v2") {

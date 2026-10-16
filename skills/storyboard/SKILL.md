@@ -72,9 +72,12 @@ publishable episode and does not fabricate a story approval. Match camera effect
 ### 1. Load the profile
 
 **Directory model setup comes first:** follow [model settings](../_shared/model-settings.md)
-as soon as the working directory is known. Select video → speech → image once if
+as soon as the working directory is known. Select video type → video model → speech model → image model once if
 missing; otherwise reuse `.social-flow/models.json` without asking. Snapshot it into
-the episode and carry it into `PRODUCTION.modelSettings` before quotes and authoring.
+the episode and carry its models into `PRODUCTION.modelSettings` and its type into
+`PRODUCTION.videoType` before quotes and authoring. Follow [video types](../_shared/video-types.md)
+for the selected type's speech and directing defaults. If only the type is missing,
+ask only that choice; existing episode resumes keep their original snapshot.
 Saved choices override host detection and all model recommendations below.
 
 **Call `capability_status` with `channel: <channel slug>` first** and resolve the destination above. It says which engines this machine actually has, grouped by
@@ -1145,8 +1148,16 @@ New or updated casts follow [character-identity.md](../channel/references/charac
 For every new board set `SB_DOC.speechPlanVersion:1`. Each `narration` entry has a stable
 `id`, explicit `speaker` (including the narrator), and `delivery` (`voiceover`, `on_screen`,
 `off_screen`). Keep these fields in scenes.js, with SB_DOC character voices there too.
-Write character dialogue for dramatic exchanges rather than summarizing every action through
-the narrator. The review shows who says each line. Use `speech_manage` to prepare/search/edit
+Choose delivery by the episode's expression. An explainer may use only a narrator's
+`voiceover` throughout; do not invent on-screen dialogue for illustrations. In drama,
+visible characters speaking to each other use `on_screen`, with voice-driven mouth movement
+and acting. Use `off_screen` only for a purposeful reaction/insert or a speaker outside the
+frame, not to avoid animating speech throughout a conversation. A character acting as the
+narrator, reading a message or thinking may use `voiceover` while visible; describe that
+choice in `deliveryReason` when it would otherwise look like unsynchronized dialogue.
+Do not infer delivery from visual presence alone or impose a speaking-shot quota. Silent
+actions stay silent. The review shows each speaker's profile image, name, delivery and line
+in a speech bubble. Use `speech_manage` to prepare/search/edit
 lines. Plan with the model-independent [speech contract](../produce/references/shot-speech.md).
 Old boards may omit speaker to select the narrator; new boards may not. Import accepts names but saves ids, while unmatched non-empty values fail. Do not approve until complete. `channel/references/resolve-asset.py --list <channel dir>` prints ids and paths.
 

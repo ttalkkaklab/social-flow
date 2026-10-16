@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "researchedAt": "2026-10-16",
+  "sources": [
+    "https://www.bfi.org.uk/features/genres-where-draw-line",
+    "https://replay.bfi.org.uk/",
+    "https://support.google.com/youtube/answer/13616340?hl=en"
+  ],
+  "types": [
+    { "id": "drama", "label": { "ko": "드라마", "en": "Drama" }, "description": { "ko": "인물의 대화와 행동으로 이야기를 전개합니다. 화면 속 발화와 상대의 반응을 중심으로 연출합니다.", "en": "Tell a story through character dialogue and action, with visible speaking and listener reactions." }, "speechGuidance": "character_dialogue" },
+    { "id": "comedy", "label": { "ko": "코미디·상황극", "en": "Comedy / sketches" }, "description": { "ko": "대사 타이밍, 몸짓, 반응으로 웃음을 만듭니다. 말하는 인물의 입과 음성을 맞춥니다.", "en": "Build humor through delivery, physical action and reactions; synchronize visible speech." }, "speechGuidance": "character_dialogue" },
+    { "id": "documentary", "label": { "ko": "다큐멘터리", "en": "Documentary" }, "description": { "ko": "사실과 자료를 중심으로 구성합니다. 내레이션, 인터뷰, 현장음을 내용에 맞게 조합합니다.", "en": "Build from factual material, using narration, interviews and location sound as needed." }, "speechGuidance": "mixed" },
+    { "id": "explainer", "label": { "ko": "지식·이론 설명", "en": "Educational explainer" }, "description": { "ko": "개념과 원리를 설명합니다. 전체를 나레이터 음성과 도해로 구성해도 됩니다.", "en": "Explain concepts and mechanisms; narrator-only voiceover with diagrams is valid throughout." }, "speechGuidance": "narrator_led" },
+    { "id": "tutorial", "label": { "ko": "튜토리얼·시연", "en": "Tutorial / demonstration" }, "description": { "ko": "실행 순서와 결과를 보여줍니다. 화면 녹화나 손동작에 설명을 붙입니다.", "en": "Show steps and results, with explanation over screen recordings or hands-on demonstrations." }, "speechGuidance": "demonstration" },
+    { "id": "review", "label": { "ko": "리뷰·비교", "en": "Review / comparison" }, "description": { "ko": "사용 경험과 비교 근거를 보여줍니다. 진행자의 설명과 제품 시연을 연결합니다.", "en": "Show experience and comparison evidence through a presenter and product demonstrations." }, "speechGuidance": "presenter_led" },
+    { "id": "interview", "label": { "ko": "인터뷰·토크", "en": "Interview / conversation" }, "description": { "ko": "질문과 답변을 중심으로 구성합니다. 화자 전환과 듣는 사람의 반응을 살립니다.", "en": "Build around questions and answers, preserving speaker turns and listening reactions." }, "speechGuidance": "conversation" },
+    { "id": "vlog", "label": { "ko": "브이로그·관찰", "en": "Vlog / observational" }, "description": { "ko": "일상의 경험과 현장을 따라갑니다. 직접 말하는 장면과 회고 내레이션을 구분합니다.", "en": "Follow lived experiences and places, distinguishing direct speech from reflective narration." }, "speechGuidance": "mixed" },
+    { "id": "advertisement", "label": { "ko": "광고·브랜드", "en": "Advertisement / brand film" }, "description": { "ko": "제품과 브랜드의 메시지를 전달합니다. 상황극, 시연, 내레이션 중 메시지에 맞는 방식을 씁니다.", "en": "Communicate a product or brand message using a scene, demonstration or narration as appropriate." }, "speechGuidance": "mixed" },
+    { "id": "music_video", "label": { "ko": "뮤직비디오·퍼포먼스", "en": "Music video / performance" }, "description": { "ko": "음악과 동작을 중심으로 구성합니다. 노래하는 인물은 원본 음성과 입 모양을 맞춥니다.", "en": "Build around music and movement; synchronize visible singing with the source vocals." }, "speechGuidance": "performance" },
+    { "id": "custom", "label": { "ko": "직접 지정·혼합", "en": "Custom / hybrid" }, "description": { "ko": "원하는 유형과 대사 방식을 직접 적습니다. 드라마와 다큐멘터리를 섞는 구성도 가능합니다.", "en": "Describe the intended type and speech approach, including hybrids such as documentary drama." }, "speechGuidance": "user_defined" }
+  ]
+}
