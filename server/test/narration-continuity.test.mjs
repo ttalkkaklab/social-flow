@@ -8,7 +8,12 @@ import { spawnSync } from 'node:child_process';
 import {checkedSpeechSchema,prepareGeneration,generateCheckedSpeech,sha256} from '../dist/tts-quality.js';
 import {elevenLabsGenerateSchema} from '../dist/elevenlabs-client.js';
 import {pcmToWav} from '../dist/media-utils.js';
-const require=createRequire(import.meta.url), checker=require('../../skills/produce/references/check-tts-quality.js'), finalChecker=require('../../skills/produce/references/check-final-tts.js');
+const require=createRequire(import.meta.url);
+// Historical reviews stay readable; production no longer invokes these gates.
+const sourceChecker=require('../../skills/produce/references/check-tts-quality.js');
+const sourceFinal=require('../../skills/produce/references/check-final-tts.js');
+const checker={...sourceChecker,check:sourceChecker.checkLegacy};
+const finalChecker={...sourceFinal,evidence:sourceFinal.legacyEvidence};
 const texts=['오늘의 이야기를 시작합니다.','다음 문장도 같은 목소리로 읽어요.','이렇게 이야기를 마칩니다.'];
 function setup(t){const dir=mkdtempSync(path.join(tmpdir(),'continuity-'));t.after(()=>rmSync(dir,{recursive:true,force:true}));return dir;}
 function approve(dir){writeFileSync(path.join(dir,'speed-authorization.json'),JSON.stringify({version:1,requests:[{source:'explicit-user-request',scope:'generation',factor:1.2,request:'Please synthesize this episode at 1.2x.',requestedAt:'2026-09-12T00:00:00Z'}]}));}

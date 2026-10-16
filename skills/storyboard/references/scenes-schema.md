@@ -860,6 +860,22 @@ shot: {
 
 ### narration segments
 
+New boards set `SB_DOC.speechPlanVersion:1`. The array includes both narration and character
+dialogue in spoken order. Each entry requires unique stable `id`, explicit character `speaker`
+and `delivery: "voiceover" | "on_screen" | "off_screen"`. Narrator is a character with pinned
+TTS settings. Omitted speakers are a legacy import convention only. Example:
+
+```js
+narration: [
+  { id: "d-intro", speaker: "narrator", delivery: "voiceover", tts: "The door opened.", sub: "The door opened." },
+  { id: "d-warning", speaker: "mina", delivery: "on_screen", tts: "Stay here.", sub: "Stay here." }
+]
+```
+
+The board may describe exchanges; before the current single-speaker scene builder runs,
+split speaker changes into consecutive shots preserving these line ids.
+
+
 ```js
 narration: [
   { tts: "사천칠백만 동이 기준입니다.", sub: "4,700만 동이 기준입니다.", speaker: "mina" },

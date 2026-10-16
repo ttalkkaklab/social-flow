@@ -21,7 +21,7 @@ allowed-tools: ["mcp__social-flow__portal_channel_sync", "mcp__social-flow__capa
   "mcp__social-flow__datago_api_call",
   "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img",
   "mcp__social-flow__mlx_image_generate", "mcp__social-flow__mlx_image_edit",
-  "mcp__social-flow__tts_generate_checked", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_gemini_38", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue", "mcp__social-flow__sfx_elevenlabs_generate",
+  "mcp__social-flow__speech_manage", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_gemini_38", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue", "mcp__social-flow__sfx_elevenlabs_generate",
   "mcp__social-flow__tts_list_voices", "mcp__social-flow__mlx_tts_generate",
   "mcp__social-flow__veo_img2video",
   "mcp__social-flow__seedance_img2video", "mcp__social-flow__seedance_reference",
@@ -35,6 +35,11 @@ allowed-tools: ["mcp__social-flow__portal_channel_sync", "mcp__social-flow__capa
 
 
 # From one topic to a finished video — unattended authoring
+
+Speech generation follows [shot-speech.md](../produce/references/shot-speech.md): no automated
+listening, STT, scoring or human listening approval. Use raw TTS and provenance records;
+continue with `not_reviewed` audio. Later user corrections invoke edit-speech.
+
 First follow [storyboard-target.md](../storyboard/references/storyboard-target.md). No key means local HTML. With a key, reuse an explicit episode/standing destination choice or hold this queue item for the destination HITL; unattended production never supplies portal consent. Local mode skips all portal steps below and media-tool `portal` arguments. Both modes use the shared [storyboard design](../storyboard/references/storyboard-design.md). Only chosen portal mode calls `portal_channel_sync` before reading the profile; a 409 holds this item, while network/auth failures warn once and continue locally.
 For pending portal render requests, follow [the six-ratio allocation contract](../storyboard/references/production-mode.md): `portal_render_allocation` read → host LLM reasons over every shot → submit requestId/baseRevisionNo and all assignments → pull. New choices persist `PRODUCTION.renderRatioVersion:1`; neither a pending request nor ratio selection approves spending.
 Read [story-quality.md](../storyboard/references/story-quality.md) before candidate writing, including skip-research channels. It overrides mandatory closing questions and modern parallels. Write STORY with the story pass; use gate 6f's existing narration read for the four quoted findings. After vocabulary edits revalidate and run `check-story.js storyboard/` before any generation. Missing, failed or stale reviews stop production with queue hold, not merely publication. A closing beat may have `cta:"none"`. An ask stays optional; a forwardable thing does not — an ask requests behaviour from the viewer, while a forwardable thing is one sentence, figure or verdict they can pass on as-is. Asking to be shared is an ask, not a trigger.
@@ -42,15 +47,10 @@ Read [story-quality.md](../storyboard/references/story-quality.md) before candid
 After the destination is resolved, runs `storyboard → produce` end to end without production approval. The input is a
 single topic string; the output is a publishable `output/` set.
 
-Before asset generation, apply produce's whole-delivery preflight: check the narrator
-runtime, scene and final listening-review allowance, encoder and destination. Free
-local synthesis does not make the listening API free. Resolve missing spending consent
-before the long generation run while continuing independent authorized work. On resume,
-use `episode-state.js` and keep going through final assembly and delivery verification;
-generated clips and a saved continuation checkpoint never count as completion. Quality
-findings follow the existing video/speech HITL contracts, with exact existing approvals
-reused. Do not promise uninterrupted completion when a required dependency or consent
-is genuinely unavailable; state the concrete blocker without marking the episode done.
+Before asset generation, check the narrator runtime, encoder, destination and media-generation
+budget. No listening-review API or allowance is required. Resume with episode-state.js and
+continue through final assembly and delivery verification. Existing video-warning contracts
+still apply; speech has provenance checks only and never waits for listening approval.
 
 **This does not replace those two skills.** Contracts, templates, and builders
 are all used as-is from them — this document decides only two things: **who
@@ -850,16 +850,11 @@ TTS and build.
 
 ### 7. Narration
 
-Exactly produce skill §5 and `../produce/references/tts-quality.md`: call
-`tts_generate_checked` once per scene with engine/voice pinned to profile §2 and all
-`tts` sentences joined with periods, the same sentences as `segments`, and the profile's
-playback speed as `playbackSpeed`. Keep the WAV and its `.quality.json` sidecar (plus
-`.sentences.json` on every single-voice engine) in `.work/pcm/`. It reviews actual speech
-and retries up to three takes at fixed settings (one episode seed stays fixed across retakes).
-A take that ends `fail` is a warning for the user (`../produce/references/tts-hitl.md`):
-unattended, write the findings and wait — the run does not approve its own warnings — and an
-unavailable review sets `queue_*: hold`; never reset attempts or substitute a raw unchecked take. Include paid
-Gemini audio review in the allowance even for local TTS; an older local-only budget is insufficient.
+Follow produce §5 and [shot-speech.md](../produce/references/shot-speech.md).
+Generate raw TTS with each explicit speaker's pinned voice. Attach each line's audio through
+speech_manage and record any combined scene WAV's generation receipt and ordered lineIds.
+Use WAV in `.work/pcm/`; align the edit to the generated duration. Continue with not_reviewed
+speech. Do not invoke automatic listening, STT, retry-to-pass or human listening approval.
 
 If the local engine fails with "Python interpreter not found" /
 "No module named 'supertonic'", **abort right there — do not switch to
@@ -975,8 +970,8 @@ if a recycled phrase shows up in this episode, fix that sentence and move on.
 First run `../storyboard/references/retention-direction.md` §5 on the final `-fast` video.
 Save `.work/experience-review.md` and pass it to the content reviewer with build-report.txt
 and the storyboard's handoff table. An unresolved promise, missing essential sound or
-unverified motion/listening check sets `queue_*: hold`; screenshots and numeric scores
-cannot stand in for those checks. Preserve that hold through wrap-up even if copy scores 95.
+unverified motion check sets `queue_*: hold`; screenshots and numeric scores
+cannot stand in for those checks. Speech stays not_reviewed without a listening hold. Preserve visual holds through wrap-up even if copy scores 95.
 
 Delegate to the content-reviewer agent — **frames pulled from the burned-in
 copy** (the clean master has no subtitles, so typos and clipping don't show),

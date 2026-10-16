@@ -519,7 +519,7 @@ social-flow/
 ├── mcp.json                     #   its stdio server entry
 ├── manifest.json                # Claude Desktop extension (.mcpb) manifest — .mcpbignore picks the contents
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 303 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 304 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
 │       ├── tools.ts             # tool definitions — 93: research 9 + open data 5 + generation 49 + publish 6 + comments 3 + growth insights 5 + growth review 2 + check 2 + blender 7 + storyboard 5
@@ -581,7 +581,7 @@ social-flow/
 └── data/                        # content data root (see data/README.md)
 ```
 
-## MCP tool surface (303 tools)
+## MCP tool surface (304 tools)
 
 **`tools/list` does not show all 303.** The credential-gated publish, review and insights tools
 (`threads_draft_create` · `threads_review_submit` · `threads_publish` · `instagram_publish` · `facebook_publish` · `facebook_comment` ·
@@ -1148,3 +1148,14 @@ content; fictional events need internal consistency, not search quotas or fabric
 `story-v2` reviews observable performance before camera work and keeps speech in the existing
 `narration[]`/`speaker` production contract. See the [authoring and review contract](skills/storyboard/references/character-scenarios.md).
 Existing unversioned scenarios and story-v1 boards retain their checks.
+
+## Shot dialogue and later corrections
+
+New storyboards assign stable line ids, explicit speakers (narrator included) and delivery
+modes. `speech_manage` lists, prepares, patches and binds audio to dialogue, and plans video
+from adapter capabilities. `edit-speech` repairs a requested shot/character without replacing
+unaffected takes. Speech generation has no automatic listening or human approval gate;
+outputs are marked `not_reviewed`. File, voice and timing provenance remain required.
+See [the speech contract](skills/produce/references/shot-speech.md). Video models are
+replaceable: audio-conditioned generation, post lip-sync and off-screen voiceover are separate
+routes; LTX is one adapter, not the common data model.
