@@ -2,9 +2,7 @@
 
 After a model generates speech (LTX, Seedance, Veo or another provider), run
 `voice_lock_apply` before selecting that cut for assembly. Use the speaking
-character's `tts` block from `portal_character_get` — by `id`, or with `project` (the
-channel name) when only the key is known, since one key can sit in two projects and an
-unqualified key is refused — or from the approved board. Keep
+character's `tts` block from the approved local board. Keep
 that voiceId across cuts and episodes. A missing character or voice is a setup
 error; do not silently choose a different voice.
 
@@ -14,19 +12,7 @@ Existing `tts.engine`, `voiceId`, `model`, `speed`, `language`, `stylePrompt` st
 `tts.voiceLock` adds `enabled` (true), `model` (`eleven_multilingual_sts_v2`),
 `removeBackgroundNoise` (true), and optional `referenceAudioUrl`. An absent block
 uses those defaults. Enabled conversion requires `tts.engine: "elevenlabs"`.
-`portal_character_tts_set` preserves the block when omitted, replaces it when
-supplied, and fills defaults inside the replacement. STS never uses the TTS model
-or changes speed.
-
 The local comparison sample is `data/<channel>/assets/characters/<key>/voice.wav`.
-The portal upload URL is `tts.voiceLock.referenceAudioUrl`, and it takes an
-absolute http(s) URL — the `/characters/<id>/voice-sample` address the portal
-upload answers with, on the portal host. A local or relative path such as
-`/sample.wav` is rejected here, because the portal keeps the same field as an
-absolute URL and would answer 400. Samples support preview/comparison; uploading
-one does not clone a voice. STS receives the source cut's dialogue and the pinned
-voiceId, not the comparison sample.
-
 ## Per-cut pass
 
 1. Identify one speaker and the approved spoken text. For multiple speakers,
@@ -49,21 +35,13 @@ voiceId, not the comparison sample.
 5. Store the result under the shot's `voiceLock`. The JSON report includes status,
    characterId, voiceId, model, source/output SHA-256, source/output durations,
    source/converted transcripts, expectedText and error. Retain the full report
-   and original alongside the output. With portal credentials, call
-   `portal_api_episodes_episode_shots_shot_voice_lock_put` with `channel`, `episodeId`,
-   portal shot row UUID as `shotId` (not the local S01 key), and `body` containing
-   the shared fields above plus optional `sourceTranscript`, `sourceCer`,
-   `outputCer`, `warnings`. Omit local paths, requestId and the local shotId from
-   body. It writes `PUT /episodes/{episodeId}/shots/{shotId}/voice-lock`.
-   Send failed and skipped outcomes too. Keep local production usable without a
-   portal key; if a configured portal write fails, report the sync failure and
-   retain the local JSON for retry. Local paths stay in the local report.
+   and original alongside the output.
 6. `passed` means text/signal checks passed, not proof of identical voice or lip
    sync. Listen beside the pinned reference and watch the mouth movements. Remix
    converted stems with the preserved background. Inspect the final mix again.
    Use the new media path only after this review and record it in the shot media.
 
-`failed` must appear as a failed cut in the production report and portal. Show the
+`failed` must appear as a failed cut in the production report. Show the
 actual transcript, duration drift or API/ASR error. Follow [tts-hitl.md](tts-hitl.md)
 for measured findings: an explicit owner acceptance applies to those exact files,
 not a fabricated PASS. A missing file or review that never ran still stops.

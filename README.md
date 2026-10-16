@@ -164,7 +164,7 @@ publishable episodes. Improve reusable plugin templates and rebuild; do not hand
 
 ## Persistent 3D locations
 
-`location_manage` builds versioned Blender sets, exports GLB, renders multi-view sheets and shot references, binds them to stable shots, and rejects stale approval or changed asset bytes. The shared storyboard adds an offline 3D viewer with orbit, top view, wall visibility, object inspection, camera-path scrub and camera proposal export. Spatial image prompts include the approved location render as a scoped image input. See [location workflow](skills/storyboard/references/location-assets.md). Blender and a local HTTP server are needed for this workflow. Existing boards are unaffected until a shot binds a location; no portal connection or paid generation is implicit.
+`location_manage` builds versioned Blender sets, exports GLB, renders multi-view sheets and shot references, binds them to stable shots, and rejects stale approval or changed asset bytes. The shared storyboard adds an offline 3D viewer with orbit, top view, wall visibility, object inspection, camera-path scrub and camera proposal export. Spatial image prompts include the approved location render as a scoped image input. See [location workflow](skills/storyboard/references/location-assets.md). Blender and a local HTTP server are needed for this workflow. Existing boards are unaffected until a shot binds a location; no paid generation is implicit.
 
 ## Requirements
 
@@ -228,8 +228,7 @@ optional, and they're what turns the tool from a video maker into an operator.**
   9:16 or 16:9 video plus per-platform text into
   `data/<channel>/episodes/<topic>/output/`, and you upload those files by hand. Only
   the publishing and growth-loop half is unavailable: the 11 publish/review/insight tools
-  aren't even listed (`tools/list` shows 82 instead of 305 — the 210 `portal_*` tools are
-  gated the same way on a portal key), and the growth skills have
+  aren't listed without credentials, and the growth skills have
   nothing to drive. Explicit tool-disable settings can reduce that list further.
 
 Credentials are per platform, so this is not all-or-nothing — a YouTube-only setup
@@ -523,7 +522,7 @@ social-flow/
 ├── mcp.json                     #   its stdio server entry
 ├── manifest.json                # Claude Desktop extension (.mcpb) manifest — .mcpbignore picks the contents
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 305 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 94 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
 │       ├── tools.ts             # tool definitions — 93: research 9 + open data 5 + generation 49 + publish 6 + comments 3 + growth insights 5 + growth review 2 + check 2 + blender 7 + storyboard 5
@@ -585,17 +584,21 @@ social-flow/
 └── data/                        # content data root (see data/README.md)
 ```
 
-## MCP tool surface (305 tools)
+## Local storyboards
 
-**`tools/list` does not show all 305.** The credential-gated publish, review and insights tools
+Episodes are saved only under `data/<channel>/episodes/<topic>/`. Open
+`storyboard/storyboard.html` to review the board. Research, scenarios, approvals,
+media and publication logs stay in the local episode directory; no destination
+selection or workspace key is required.
+
+## MCP tool surface (94 tools)
+
+**`tools/list` does not show all 94.** The credential-gated publish, review and insights tools
 (`threads_draft_create` · `threads_review_submit` · `threads_publish` · `instagram_publish` · `facebook_publish` · `facebook_comment` ·
 `youtube_publish` · `threads_insights` · `instagram_insights` · `youtube_insights` ·
 `threads_search`) are exposed **only for platforms whose credential file exists** —
 evaluated at list time, so adding a token makes them appear without restarting the
-server. The 210 `portal_*` tools follow the same rule on the ttalkkakstory workspace key
-(`<SNS_TOKEN_DIR>/<channel>/ttalkkakstory.json`, the flat file, or `TTALKKAKSTORY_*`). With
-no tokens and no portal key you'll count 80; explicit tool-disable settings can reduce
-that list further. Hidden tools still have live handlers:
+server. Explicit tool-disable settings can reduce that list further. Hidden tools still have live handlers:
 calling one directly returns a missing-token error rather than failing silently.
 `content_feedback`, `youtube_topic_scout`, and `sns_issue_scout` sit outside the
 platform gate and stay listed without tokens — the YouTube scout needs
@@ -638,8 +641,7 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | Growth review | `threads_draft_create` / `threads_review_submit` | Persist drafts and quote-grounded voice/purpose/flow reviews; no model API calls |
 | Publish | `threads_publish` / `instagram_publish` / `facebook_publish` / `facebook_comment` / `youtube_publish` / `youtube_update` | Direct platform API calls — **exposed only for platforms with a credential file** (`youtube_update` edits title/description/tags/visibility of an already-uploaded video) |
 | Comment inbox | `sns_comment_inbox` / `sns_comment_reply` / `sns_comment_moderate` | Cross-platform normalized inbox · replies · hiding (no deletes). Inbox and replies cover all 4 platforms; hiding excludes YouTube (its API only offers held-for-review, which means something else) |
-| Storyboard | `storyboard_read` / `storyboard_apply` / `storyboard_check` / `storyboard_backups` / `scenario_check` | The episode board as sequences → scenes → shots (`window.STRUCTURE` beside the flat `SCENES` produce reads), plus the scenario input contract. `read` returns the tree at four levels; `apply` writes or patches the board and refuses to write past a violation; `storyboard_check` runs the structure rules plus the full `check-scenes.js` contract; `scenario_check` runs S1–S12 on `candidates/` or `scenario.md` and returns the checker JSON. Local files only — the board rules live in [structure-contract.js](skills/storyboard/references/structure-contract.js), shared with the checker and approval page |
-| Portal | 100 workflow tools such as `portal_storyboard_save`, `portal_episode_lease` and `portal_channel_sync`, plus 110 route tools named `portal_api_<resource>_<operation>` | The ttalkkakstory portal by **workspace API key** (`Authorization: Bearer tks_…`) — the episode and channel-shared assets have remote records while local directories stay working copies. The workflow tools preserve local-file integration and recovery flows. The 110 `portal_api_*` tools are generated from `server/src/portal-api-contract.json`: every workspace-key API route has one named tool with the API's exact path, method and input schema, while all 19 exclusions carry an authentication-boundary reason. Binary downloads require an absolute `targetFile` and never overwrite a file. Delete tools are marked destructive and require user authorization. The key comes from `<SNS_TOKEN_DIR>/<channel>/ttalkkakstory.json`, read off the channel or episode path, so one channel is one workspace; all portal tools are listed only while a key exists. See [the portal section](#the-ttalkkakstory-portal-by-workspace-api-key). |
+| Storyboard | `storyboard_read` / `storyboard_apply` / `storyboard_check` / `scenario_check` | The episode board as sequences → scenes → shots (`window.STRUCTURE` beside the flat `SCENES` produce reads), plus the scenario input contract. `read` returns the tree at four levels; `apply` writes or patches the board and refuses to write past a violation; `storyboard_check` runs the structure rules plus the full `check-scenes.js` contract; `scenario_check` runs S1–S12 on `candidates/` or `scenario.md` and returns the checker JSON. Local files only — the board rules live in [structure-contract.js](skills/storyboard/references/structure-contract.js), shared with the checker and approval page |
 | Capability | `capability_status` | What this machine has configured, grouped by capability with an "N of M" count, plus the env var that would unlock each missing provider. Call it before planning anything that spends money — otherwise a missing key only surfaces when the call fails, after the plan was built around it. Reports configuration, not reachability |
 | Check | `sns_account_check` | Batch /me check across tokens (token values never shown) |
 | Growth insights | `threads_insights` / `threads_search` | Threads insights (account/post metrics) + public keyword search — for grow-threads (`threads_manage_insights` · `threads_keyword_search` scopes) |
@@ -748,7 +750,6 @@ works.
 | `HF_HOME` | image_local_generate · stt_local_transcribe | HF default | Hugging Face cache for the local models |
 | `MEDIA_UPLOAD_URL` / `MEDIA_UPLOAD_API_KEY` | grow-threads image posts · Seedance reference-video hosting | — | Media hosting endpoint + key. Threads only accepts images as **public URLs**, so local files need somewhere to live. Anything works that accepts `POST` with an `x-api-key` header + raw bytes, returns `201 {data:{url}}`, and serves that url as unauthenticated public GET (the header of `skills/grow-threads/references/upload-media.sh` is the contract SoT). Unset, only the image step turns off — text posts still go out |
 | `THREADS_TOKEN_FILE` and friends | | `<SNS_TOKEN_DIR>/conventional name` | Per-platform override of the default (flat) path — not applied to channel directories |
-| `TTALKKAKSTORY_API_URL` / `TTALKKAKSTORY_WORKSPACE` / `TTALKKAKSTORY_API_KEY` | portal_* | — | The ttalkkakstory portal key **when no `ttalkkakstory.json` exists** — the file under the channel directory, then the flat one, come first. `TTALKKAKSTORY_HOLDER` renames the lease holder (default `<key prefix>@<hostname>`) |
 
 Credential file convention (mode 600, never committed) — `threads_token` ·
 `instagram_token` · `facebook_page_token` · `youtube-oauth-client.json`.
@@ -777,201 +778,6 @@ The JSON file is read per request, so edits apply without a server restart; remo
 the entry (or delete the file) to turn the tools back on. A per-tool env override
 can turn one JSON-disabled tool back on for that session. Values split on commas
 or whitespace; a bare `*` matches every tool.
-
-### The ttalkkakstory portal by workspace API key
-
-`portal_render_allocation` reads the episode’s pending six-ratio request and accepts the host LLM’s complete shot-mode assignment with revision checks. The portal UI records the request; no background worker is started.
-
-`portal_channel_sync pull|push|status` keeps `data/<channel>/profile.md` and the shared
-`assets/intro/**`, `assets/outro/**`, `assets/branding/**` and `assets/sfx/**` trees on one
-portal project. An exact project-name match bootstraps automatically; any other name needs one
-explicit `projectId`, which the tool pins in `.portal-channel.json`. Pull downloads and hashes
-every file before replacing anything and backs up changed local files under `.portal-local/`.
-Push compares the last synced hashes before updates, and deletes an absent local asset only
-when the portal still has that exact base hash. A two-sided edit returns 409 instead of choosing
-a winner. Network/auth/server failures at a skill entry warn once and use local files; a 409
-conflict stops that run.
-
-Storyboard first calls `capability_status` with the target `channel`. This reads local
-configuration without a portal request or key disclosure. No key means a local
-`storyboard/storyboard.html`; a configured key triggers a **local HTML / ttalkkakstory HITL**
-before any portal call, including channel sync. A malformed credential warns and uses local
-HTML without trying another channel. Tool visibility is not a channel-specific key check.
-The episode choice in `.storyboard-target.json` carries through produce, autoproduce and
-publish. Existing explicit choices are reused; unattended runs without destination consent
-hold for the same HITL when a key exists. Local mode skips portal calls and optional media
-`portal` arguments even if an old portal ID exists. Both modes use the same review design.
-See [the destination contract](skills/storyboard/references/storyboard-target.md) and
-[the design contract](skills/storyboard/references/storyboard-design.md).
-
-The skills keep an episode on the portal **only when the user chose portal integration and
-the channel has a key** (owner directive 2026-10-10). The plugin's own server calls the portal
-API with it (since 2026-09-21; earlier the portal's MCP server was registered by hand). A key is issued per workspace on the portal at `/{workspace}/settings/api-keys`
-(admin+; the plaintext is shown once, the portal keeps a hash) and that page prints the file
-ready to save:
-
-```
-~/.config/social-flow/<channel>/ttalkkakstory.json      # one channel → one workspace
-~/.config/social-flow/ttalkkakstory.json                # or one key for every channel
-{ "apiKey": "tks_…" }
-```
-
-Only `apiKey` is required, including for the flat file and `TTALKKAKSTORY_API_KEY` env.
-The API URL defaults to `https://story.ttalkkaklab.com`; an optional `apiUrl` in the file
-(or `TTALKKAKSTORY_API_URL` for a custom/local portal) overrides it. Before any workspace
-request, `/api/token` resolves the workspace and caches that result for the server session.
-An optional `workspace` must match the key or the call stops. `portal_workspace_check`
-returns `resolvedBy: "token"` for automatic lookup and `"file"` for an explicitly configured
-workspace (file or env); `source` identifies the credential source. Failed lookups are not cached.
-Deploy a portal with `/api/token` before updating the plugin.
-
-The channel is read off the episode path (`data/<channel>/episodes/<topic>`), the channel file
-falls through to the flat file, and the `TTALKKAKSTORY_*` env is the last resort. Mode 600,
-never committed. `portal_workspace_check` tells which file answered and which workspace the
-key opens — the storyboard skill calls it after the destination choice selects portal mode.
-
-`portal_storyboard_save` requires `SB_DOC.characters` with at least one character, a matching
-`SB_DOC.narratorCharacterId`, and a `tts` object on every character. Narration segment
-`speaker` values are saved as character ids; a name is accepted only at the save boundary, and
-an unmatched value fails instead of falling back. `portal_storyboard_pull` restores the same
-block, and produce uses it for synthesis.
-
-In chosen portal mode with a key the portal is the episode's **source of truth and the local directory a
-working copy** (portal design note, 2026-09-20). The storyboard skill takes a lease and pulls
-at the top of a session (`portal_episode_lease acquire` · `portal_storyboard_pull`, or
-`portal_episode_create` for a topic the portal has never seen), uploads the three candidate
-pages and the pick (`portal_scenario_save`, `chosen: true` for the winner), checkpoints the
-stages (`portal_episode_checkpoint` — `candidates` · `scenario` · `board`), and approval calls
-`portal_storyboard_save` on the episode directory's absolute path — also a checkpoint at
-`approved` — recording the returned `episodeId`/`pageUrl` in `storyboard.md`'s frontmatter
-(`portal_episode` · `portal_url`) and the revision in `.portal.json`; produce saves again and
-syncs platform copy, cover and actual cost (`portal_episode_artifacts_sync`) before it sets
-`produced`; publish records every returned post ID and permanent link (`portal_publication_record`)
-before it sets `published` by that id (`portal_episode_status`). A
-`409 head_moved` means another machine saved first: pull, re-apply, save; a `409 leased` names
-who holds the topic and until when. Without a key the `portal_*` tools are not listed, the
-skills say so in one line and carry on with local files, and an errored call is reported in one
-line — the portal records, it does not gate. The portal repository's own `mcp/` server still
-exists for other clients; this plugin no longer needs it.
-
-Revision comparisons and `409 head_moved` recovery summaries include decision keys as
-`+key` added, `−key` removed and `~key` changed, including revisions that change only decisions.
-Older diff responses without `decisions` keep their existing summary.
-
-Save and checkpoint read `storyboard/decisions.json` as structured HITL answers. Checkpoint
-also works before `scenes.js` exists. A missing sidecar leaves the field out. Pull rebuilds it from the same head
-or historical snapshot as the board, including empty answers, with the existing backup/side-copy
-rules. Documents and attachments cannot overwrite this canonical file. Existing decision-record
-revision checks stay unchanged. See [the decision record contract](skills/storyboard/references/portal-decisions.md)
-for provenance, gate keys and channel records. `portal_episode_status` with no status/stage/title
-reads the episode without changing it; publication results still use `portal_publication_record`.
-
-`storyboard_backups` lists local recovery copies and previews retention with `keep` (default 10,
-minimum 1 per kind). It needs no portal credential. Board/scenario backups use their timestamp name;
-image/attachment backups use directory modification time. Unknown names are reported and preserved.
-To prune an authorized list, pass `apply: true` and the preview's `plan` as `confirm`; changed inventory
-requires a new preview. Working files, state and `.portal-head` are excluded. Pull never prunes automatically.
-Symlinks or unreadable recognized backups stop pruning; an I/O failure during deletion reports which paths
-were already deleted. This is not a transaction across directories; stop other local backup writers before pruning.
-
-Board and scenario pulls reserve a new backup directory before copying. A timestamp collision
-uses another timestamp and never reuses an existing directory, file or symlink. After 100 collisions
-or another directory-creation error, the pull stops before replacing local files or advancing state.
-
-Historical `portal_storyboard_pull` with `mode: "replace"` and documents enabled also removes
-managed documents absent from that revision, after backing them up under `storyboard/.portal-local/`.
-Managed names are the standard board documents, `scenario.md`, and documents listed by the current
-episode. The result lists them in `removed`; unrelated local notes stay untouched. `mode: "side"`
-preserves the working copy, and `includeDocuments: false` replaces the board and canonical decisions without document cleanup.
-
-`portal_scenario_pull` backs up changed local candidates and the chosen `scenario.md` under
-`storyboard/.portal-local/<timestamp>-scenarios/` before replacing any file. Its result includes
-`backupDir` and episode-relative `replaced` paths. Identical files need no backup; candidate filtering
-and text-only reads keep their existing behavior. A failed download, target validation or backup
-leaves the existing scenario files and `.portal.json` untouched.
-
-A missing `.portal.json` is an unlinked copy. An existing unreadable file, dangling
-symlink, malformed JSON, non-object JSON or wrongly typed present field is an
-error, never an unlinked fallback. Optional string fields must be strings and a
-present `headRevisionNo` must be a nonnegative safe integer. Every existing state record needs a nonempty string `episodeId`; all state
-writers supply it or patch an already linked copy. Other missing fields remain
-allowed for legacy/pre-checkpoint records; save/checkpoint/images still require a
-valid recorded or explicit base. Keep a damaged state file and local edits, restore a readable valid backup
-or inspect the portal in a new directory, then repair the original copy. Neither
-an explicit ID/base nor `writePortalState` bypasses a damaged existing record.
-
-The read-only `portal_workspace_check` is the diagnostic exception: it returns
-`localWarning`, `copyOf: null`, `workspaceMatches: null`, `sync: "unknown"` and
-local `pending` when the state cannot be read. Pass an explicit `episodeId` to
-inspect the remote head and lease, or omit the directory and specify ID + channel
-for a remote-only check. Without an ID the tool still answers `/me` and pending,
-with `portal: null` and a `portalWarning`; it never extracts an ID from damaged JSON.
-Readable but conflicting workspace/episode identities skip the episode lookup
-with a warning. No local revision means unknown sync, including valid first-lease
-records. Simultaneous identity mismatches preserve both messages in `warning`.
-`pending.sideDir` and `pending.backups` use false/0 only for missing entries; an
-unreadable entry, dangling link or wrong entry type returns null with a matching
-`pending.warnings.sideDir`/`backups` message. The other field and remote diagnosis
-still answer. Diagnostic success neither repairs local files nor relaxes write guards.
-
-An explicit `episodeId` must agree with `.portal.json` in every supplied local
-copy, including scenario input files and pull targets. Conflicting IDs are refused
-before HTTP or file writes; equal revision numbers do not make two episodes the
-same copy. Use the matching directory, or a fresh unlinked directory for a pull.
-For a remote-only call, omit local directories and files and specify the ID and
-channel. Keep the existing state file and local edits when resolving a mismatch.
-
-`portal_episode_restore` changes the portal head only. Local files and `.portal.json`
-keep their previous base so an immediate save cannot silently overwrite the restored
-head. With `episodeDir`, the result includes `localCopy.syncRequired` and recovery
-steps: side-pull the head, review and merge intended local edits, then save with
-that pull result's explicit `baseRevisionNo`.
-
-Once local shot images exist, call `portal_images_upload` with `episodeDir` and the
-current `stage` after the first `portal_storyboard_save` has created the episode. It
-uploads `storyboard/images/scene-N.{png,jpg,jpeg,webp}` sequentially (PNG/JPEG/WebP,
-5 MiB each), then checkpoints the returned `portalImageId` UUIDs using the copy's
-base revision. N is the 1-based source array ordinal, independent of a shot's `no`.
-An explicit `images: [{ shotId, file }]` mapping uses stable source IDs; `shotNo`
-is accepted only for legacy shots without IDs. Files must resolve inside storyboard/.
-Missing default files are listed as `skipped`; an empty selection is an error.
-The tool adds only UUID references to shots and updates local `scenes.js` and
-`.portal.json` after the checkpoint succeeds. It preserves authored JavaScript and
-keeps recovery copies under `storyboard/.portal-local/images-*/`.
-An upload or checkpoint failure is **not** a completed save: the error includes
-successful uploads, the failed phase and recovery instructions. Identical bytes are
-deduplicated by the portal. On 409 or an unknown checkpoint outcome, side-pull the
-head, merge local edits and recovered image UUIDs, then save with that explicit base.
-A checkpoint success followed by a local write failure reports the saved revision;
-keep local edits and merge the recovery copy rather than retrying blindly.
-
-### Characters on ttalkkakstory
-
-The eight `portal_character_*` tools (portal #96) keep the channel's characters on the
-portal by the same workspace key — the record the narration lane and the storyboard import
-read. **Never a project id**: the portal hides that layer (#88), so `create` files the
-character under `project` = the channel name (default: the channel the key was read off,
-the rule the storyboard import already uses). `list` filters by `q` (name·role) or exact
-`key`; `get` takes `id` or `key`; `create` reads `key`/name/역할/생김새 off
-`identityDir` (`assets/characters/<id>/`, the folder name is the key) with explicit
-fields winning, and `file` sends one PNG/JPEG/WebP panel right after; `update` is a
-partial PATCH (`null` clears); `image_upload` accepts view (default front), label and sort.
-Front/back/face each replace one required slot; extra appends an optional image with a new id.
-`extra_delete` removes one extra by imageId. List/get expose images and imagesComplete.
-Only front sets `referenceImageUrl` to its authenticated URL (no public link), and the returned sha256
-is checked against the file; `tts_set` writes the voice block, filling **only the fields
-the caller leaves out** from the existing block first and then the owner defaults
-(ElevenLabs `L4az9Gb378GIycFl2nAB` · `eleven_multilingual_v2` · speed 1.0) — `speed` alone
-never touches `voiceId`; `delete` removes the record (the portal cascades its image and
-registrations) and the skill asks before deleting a character a playlist still narrates
-with. No key → one line. Procedure: `skills/channel/references/portal-characters.md`.
-
-### Global asset library on ttalkkakstory
-`portal_assets_search` and `portal_assets_get` read the portal's **global** asset library (`/api/assets`, portal #87) — Gemini B-roll clips, BGM beds, sound effects and images the owner collected on the Mac mini and synced up. The library sits outside every workspace: any channel's key returns the same results, and only the owner's admin key can write. In chosen portal mode, storyboard asks it before `stock_search` when a cut wants real footage; produce and autoproduce ask it before `music_generate_clip` for a bed. Search is AND over Korean/English words plus tag, type, category, duration and aspect filters. `get` with `download:true` writes the file into the supplied-file lanes that already exist — video to `storyboard/footage/s<shot>-portal-<sourceId>.mp4` (a `stock_video` cut with `visual.source: "stock"` and the returned `visual.license`, provider `ttalkkakstory`), music and effects to `.work/portal/<sourceId>.<ext>`, images to `storyboard/images/stock/` — and verifies the portal's sha256; an identical file is not fetched twice and a different file at that name is refused. Local mode or no key → skip the portal library and continue with the skill’s existing stock/music rules.
-
-### Shot media on ttalkkakstory
-`portal_shot_media_upload` uploads and checkpoints one episode-local file: source/end-frame image (5 MiB), previz/video MP4 (10 MiB), whole-shot narration or one indexed narration segment as WAV/MP3 (10 MiB each). Save the board first, then use episodeDir and shotId (shotNo only for ID-less shots); `narration_segment` also requires `segmentIndex`. The portal card displays both visual frames and each segment audio player. In chosen portal mode with a configured key, Blender and checked TTS take an optional `portal` target and upload the result immediately; Seedance also requires `portal.previzFile`, uploading and linking it **before** the vendor call. Host/other generation tools use the explicit uploader in the same order. Missing keys silently preserve local-only production. Oversized files alone are skipped with `.portal-media-skips.jsonl`, and production continues; larger files need a later chunked-storage/object-storage extension. Failures preserve generated files and offer upload recovery; do not regenerate media to fix an upload. See [produce order](skills/produce/references/portal-shot-media.md).
-
 
 ## Documentation (docs/)
 
@@ -1079,48 +885,6 @@ responsibility (see the disclaimer in LICENSE).
 [Apache License 2.0](LICENSE). Copyright 2026 Zeans.
 
 
-Episode attachments: `portal_attachments_sync` uploads missing/changed files after a board is linked.
-Board import/checkpoint also call it automatically; current-head pull restores original paths and SHA256-verified bytes.
-Current-head pull rechecks the episode revision after all downloads, before writing local files. If the head changed
-or that check fails, the working copy, side copy, backups, attachments and `.portal.json` stay untouched; retry the pull.
-This check also applies with `includeDocuments: false`. Explicit historical revision pulls keep their existing behavior.
-Inspect `attachments.complete` before removing local originals. The per-file maximum is 10 MiB; shared quotas are
-100 MiB/episode and 500 MiB/workspace. Rights evidence in `.portal-attachments.json` is keyed by relative path
-and travels with the file. Scene sound design refers to the returned logical attachment UUID.
-
-### Portal unit editing
-
-The portal also exposes playlist/episode CRUD, sequence/scene/shot CRUD and reorder,
-meta/music/voice settings, narration lines, camera/background/slide/sound/transition
-patches, background/prop registries, audio uploads, scenario deletion, scene search,
-and render-allocation requests. See
-[portal unit tools](skills/storyboard/references/portal-units.md) for identifiers,
-atomic companion edits, validation and conflict recovery. These tools require only
-the credential channel and playlist/episode identifiers, never a project input.
-
-### Decisions and reviewer records
-
-`portal_decision_list` / `portal_decision_record` read and record evidenced HITL choices,
-including `narration_approval`, `board_approval` and `publish_approval`. Pass `episodeId`,
-optional credential `channel`, and for writes `baseRevisionNo` plus `decision`
-(`key`, `value`, `chosenBy`, `source`, optional `options`, `reason`, `decidedAt`).
-Use `chosenBy:user` only for an actual human answer; `source` identifies that evidence.
-Read history with `history:true`. Recording a choice checkpoints the episode; it does
-not publish or authorize additional spending by itself.
-
-`portal_review_list` / `portal_review_record` store actual reviewer observations separately
-from approvals. Writes take `baseRevisionNo` and `review`: `kind` (scenario,
-narration_content, narration_wording, board, content, other), `reviewer`, `score` (0–100),
-`p0` (defect strings, or []), `summary`, `source`. Reviews are bound to the assessed
-revision and survive later saves. Review writes do not advance the head. Both write tools
-honor portal leases and reject stale revisions; read again before deciding whether to retry.
-
-Leading `// approved:` and `// review:` lines in scenes.js survive save/pull through
-portal metadata. They preserve annotations, never invent a human decision. With repeated
-leading markers the last value wins; comments after executable code are not annotations.
-The live cross-repository regression probe is `scripts/test-approval-roundtrip.mjs` in the
-portal repository; the server suite also covers save/pull with a scripted portal.
-
 ### Generated character voice lock
 
 `voice_lock_apply` converts single-speaker generated audio/video to the character’s
@@ -1132,20 +896,20 @@ new media and a per-shot result report. See the [produce contract](skills/produc
 `node skills/channel/references/review-library.js data/<channel>` saves a channel
 home, `assets/characters/index.html`, `assets/characters/<id>/index.html`,
 `storyboards/index.html` and `storyboards/<episode>/index.html`. All open directly
-with file://, with bundled Wanted Sans and no portal request. Character sheets
+with file://, with bundled Wanted Sans and no network request. Character sheets
 show front/back/face, additional images, identity and voice. Episode pages use the
 same canonical review renderer; production inputs remain in `episodes/`.
 `--check` detects stale/missing exports without writing. Character and storyboard
 skills refresh these views before delivery. The optional channel HTTP browser now
 opens this library; its previous API browser is at `/legacy`.
 
-Portal reference: ttalkkak-story `d29f1a6`, DESIGN.md 1.2.0. See
+See
 [local review design](skills/channel/references/local-review-design.md) for the
 reference, supported offline behavior and visual verification scope.
 
 ### Prop sheets and story-time ownership
 
-Storyboards support independent owners and holders, initial states, atomic transfer/loss/damage events, flashbacks, and per-shot state assertions. The shared offline review has prop sheets and character/time filters. MCP edits require the current file hash; CLI edits also back up the original. See [prop continuity](skills/storyboard/references/prop-continuity.md) for authoring, production snapshots and the legacy portal metadata transport boundary.
+Storyboards support independent owners and holders, initial states, atomic transfer/loss/damage events, flashbacks, and per-shot state assertions. The shared offline review has prop sheets and character/time filters. MCP edits require the current file hash; CLI edits also back up the original. See [prop continuity](skills/storyboard/references/prop-continuity.md) for authoring, production snapshots.
 
 
 ### Character-led scenario authoring
@@ -1164,7 +928,6 @@ acting, relationships and continuity fields, each confirmed, pending or not appl
 The local compiler generates lane-specific directions; review export refuses a pass
 for incomplete settings. Follow [the character contract](skills/channel/references/character-identity.md).
 Existing sheets need explicit migration; legacy storyboards remain readable.
-The portal currently stores only its existing role/appearance/TTS subset.
 
 ## Shot dialogue and later corrections
 

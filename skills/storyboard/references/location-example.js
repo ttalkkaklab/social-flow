@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* Reproducible local workshop fixture. No credentials, portal or paid calls. */
+/* Reproducible local workshop fixture. No credentials or paid calls. */
 'use strict';
 const fs=require('node:fs'),path=require('node:path');
 const objects=[];

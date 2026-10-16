@@ -113,16 +113,4 @@ function boardIdentityErrors(win) {
   return errors;
 }
 
-function portalIdentityFields(source) {
-  const structured = [...source.matchAll(/```json\s*\n([\s\S]*?)```/g)].some(m => {
-    const value = JSON.parse(m[1]);
-    return object(value) && Object.hasOwn(value, 'character');
-  });
-  if (!structured) return {};
-  const c = identityCharacter(source);
-  const role = c.identity.role.value, appearance = c.physical.appearance.value;
-  if (role.length > 500) throw new Error('Character role exceeds portal limit of 500 characters');
-  return { role, appearance };
-}
-
-module.exports = { GROUPS, identityErrors, identityCharacter, direction, boardIdentityErrors, portalIdentityFields };
+module.exports = { GROUPS, identityErrors, identityCharacter, direction, boardIdentityErrors };

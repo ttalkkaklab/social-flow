@@ -1,7 +1,3 @@
-import { REVIEW_TOOLS } from './portal-review-tools.js';
-import { UNIT_TOOLS } from './portal-unit-tools.js';
-import { PORTAL_API_TOOLS } from './portal-api-contract.js';
-import { CHANNEL_SLUG_RE } from './config.js';
 import { cameraContract, renderPurposes, stillCameraEffectList, contract as storyboardContract } from './storyboard.js';
 import { MUSIC_GENERATION_MODES, MUSIC_SCALES } from './music-client.js';
 import { DEFAULT_SUPERTONIC_CHUNK_PAUSE, DEFAULT_SUPERTONIC_LANGUAGE, DEFAULT_SUPERTONIC_SPEED, DEFAULT_SUPERTONIC_STEPS, DEFAULT_SUPERTONIC_VOICE, MAX_SUPERTONIC_INPUT_CHARS, MAX_SUPERTONIC_SPEED, SUPERTONIC_LANGUAGES, SUPERTONIC_VOICE_NAMES, } from './supertonic-client.js';
@@ -15,7 +11,6 @@ import { DEFAULT_QWEN3_ASR_LANGUAGE, DEFAULT_QWEN3_ASR_MODEL, QWEN3_ASR_LANGUAGE
 import { BLENDER_INTERPOLATIONS, BLENDER_PREVIZ_ENGINES, BLENDER_PROXY_KINDS, BLENDER_RIG_BONES, BLENDER_ROOT_MOTIONS, DEFAULT_FRAME_END, DEFAULT_FRAME_START, DEFAULT_PREVIZ_ENGINE, DEFAULT_PREVIZ_FILENAME, DEFAULT_PREVIZ_HEIGHT, DEFAULT_PREVIZ_WIDTH, DEFAULT_SCENE_FPS, MAX_PREVIZ_FRAMES, } from './blender-bridge.js';
 import { DEFAULT_SUNO_MODEL, SUNO_MODELS, SUNO_PERSONA_MODELS, SUNO_SOUND_KEYS, SUNO_VOCAL_GENDERS, } from './suno-client.js';
 import { DEFAULT_MLX_IMAGE_SIZE, DEFAULT_MLX_MUSIC_SECONDS, DEFAULT_MLX_VIDEO_FRAMES, DEFAULT_MLX_VIDEO_HEIGHT, DEFAULT_MLX_VIDEO_WIDTH, MAX_MLX_IMAGE_DIMENSION, MAX_MLX_IMAGE_REFS, MAX_MLX_MUSIC_SECONDS, MAX_MLX_TTS_CHARS, MAX_MLX_VIDEO_DIMENSION, MAX_MLX_VIDEO_FRAMES, MAX_VIDEO_RGB_BYTES, MIN_MLX_IMAGE_DIMENSION, MIN_MLX_MUSIC_SECONDS, MIN_MLX_VIDEO_DIMENSION, MIN_MLX_VIDEO_FRAMES, MLX_IMAGE_DIMENSION_STEP, MLX_VIDEO_DIMENSION_STEP, MLX_VIDEO_DIMENSION_STEP_ONE_STAGE, MLX_VIDEO_FRAME_STEP, MLX_VIDEO_FPS, } from './mlx-serve-client.js';
-import { VOICE_LOCK_PROPERTY } from './voice-lock-config.js';
 import { VOICE_LOCK_TOOLS } from './voice-lock.js';
 /**
  * Tool surface definitions (83 tools) — 9 research (incl. stock_search) + 5 open-data +
@@ -794,475 +789,11 @@ const storyboardShotInput = {
         }
     },
 };
-// ── ttalkkakstory portal tool surface ─────────────────────────────────────────
-// The channel (and so the workspace key) is read off the episode directory's path,
-// data/<channel>/episodes/<topic>; `channel` is for the tools that have no directory to read.
-const PORTAL_CHANNEL_ARG = {
-    type: 'string',
-    description: 'Channel slug (data/<channel>) that picks the key file <SNS_TOKEN_DIR>/<channel>/ttalkkakstory.json. Optional when an episodeDir is given — the slug is read off its path; without either, the flat <SNS_TOKEN_DIR>/ttalkkakstory.json or the TTALKKAKSTORY_* env is used',
-};
-const PORTAL_EPISODE_ID_ARG = {
-    type: 'string',
-    description: 'Episode id (uuid). Must match every supplied local copy; mismatch is refused before HTTP or file writes. Optional when episodeDir holds .portal.json (written by portal_storyboard_pull · portal_storyboard_save · portal_episode_create)',
-};
-const PORTAL_EPISODE_DIR_ARG = {
-    type: 'string',
-    description: 'Absolute path of data/<channel>/episodes/<topic> (or its storyboard/). Supplies the episode id from .portal.json and the channel for the key. A supplied episodeId must match this copy',
-};
-const PORTAL_STAGE_ENUM = ['researched', 'candidates', 'scenario', 'narration', 'board', 'approved', 'produced', 'published'];
-const PORTAL_CANDIDATE_ENUM = ['D1', 'D2', 'D3'];
-const PORTAL_TOOLS = [
-    ...PORTAL_API_TOOLS,
-    {
-        name: 'portal_workspace_check',
-        title: 'Check the portal key and its workspace',
-        annotations: HINT.read,
-        description: `Resolve the ttalkkakstory portal key for a channel and ask the portal who it is — the workspace the key opens, the role (member), and which file answered (per-channel · flat · env). Call only after the user chose portal integration for this episode. Use capability_status with channel for the local key check before that HITL; this tool makes network calls.
-
-The key is issued on the portal at /{workspace}/settings/api-keys (admin+) and saved as <SNS_TOKEN_DIR>/<channel>/ttalkkakstory.json — { "apiKey": "tks_…" }. apiUrl defaults to https://story.ttalkkaklab.com; workspace is resolved from /api/token and an explicit workspace must match the key. With no key anywhere the portal_* tools are hidden and every call answers one line; the episode stays a local file.
-
-With episodeDir, also compares the directory's .portal.json (the workspace it is a copy of) with the key's workspace — workspaceMatches:false with a warning means every write to that directory will be refused until the key file or the record is fixed, so the topic does not fork into a second workspace. When the record names an episode, the portal's side comes too: portal { headRevisionNo, stage, status, lease { holder, until, mine } | null } and sync — "portal_ahead" (pull with mode "side" and merge before writing), "local_ahead" (never in the normal flow — syncWarning says how to resync), "in_sync", or "unknown" (no record, or the lookup failed — see portalWarning) — plus pending { sideDir, backups }: a leftover .portal-head/ means a merge was started and not finished, backups counts .portal-local/ directory entries. Missing entries return false/0; unreadable entries, dangling links or wrong entry types return null for the affected field plus pending.warnings { sideDir?, backups? }. Both mismatch messages are preserved in warning when workspace and episode identities conflict together.
-
-A damaged or unreadable local record returns localWarning, copyOf:null, workspaceMatches:null and sync:"unknown"; pending is still inspected. Pass episodeId explicitly to read the remote head and lease without trusting that record, or use episodeId + channel alone for a remote-only check. Without a trustworthy ID no episode is guessed; portalWarning explains how to request it. A valid local record conflicting with the explicit ID or key workspace skips the episode lookup with a warning. A missing local revision also means sync:"unknown". Diagnostic success does not repair the record or permit writes: other tools keep refusing the damaged state.
-
-Returns: JSON — { channel, workspace, resolvedBy: "file"|"token", source, holder, episodeDir?, copyOf?, workspaceMatches?, warning?, localWarning?, portal?, sync?, pending?, portalWarning?, …the portal's /me answer }.`,
-        inputSchema: {
-            type: 'object',
-            properties: {
-                channel: PORTAL_CHANNEL_ARG,
-                episodeDir: { type: 'string', description: 'Absolute path of data/<channel>/episodes/<topic> — checks its .portal.json against the key\'s workspace and picks the channel off the path' },
-                episodeId: { type: 'string', format: 'uuid', description: 'Explicit episode to inspect when local state is damaged or absent; must agree with a readable local record' },
-            },
-        },
-    },
-    {
-        name: 'portal_shot_media_upload',
-        title: 'Upload and link one shot media file',
-        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-        description: 'Upload a source image, end frame, Blender/three.js previz, generated video, whole-shot narration or one narration segment, then checkpoint the shot UUID. Render previz → await this upload → call video generation. Save the episode first. Missing key silently skips. Oversized files alone are skipped and logged to .portal-media-skips.jsonl; production continues. Existing .portal.json must match the workspace and head; conflicts preserve local files and provide recovery instructions. Never regenerate a file just because its upload failed.',
-        inputSchema: { type: 'object', properties: {
-                episodeDir: { type: 'string', description: 'Episode directory; its channel path selects the workspace key.' }, shotId: { type: 'string', description: 'Stable source shot ID; preferred over ordinal.' }, shotNo: { type: 'integer', minimum: 1, description: 'One-based source position, only for ID-less shots.' },
-                kind: { type: 'string', enum: ['image', 'end_frame', 'previz', 'video', 'narration', 'narration_segment'], description: 'Shot media role; MP4 for previz/video, WAV/MP3 for narration, PNG/JPEG/WebP for image/end_frame.' }, segmentIndex: { type: 'integer', minimum: 0, description: 'Zero-based narration[] index; required only for narration_segment.' }, file: { type: 'string', description: 'Absolute file or episode-relative path; must stay inside this episode.' },
-            }, required: ['episodeDir', 'kind', 'file'] },
-    },
-    {
-        name: 'portal_storyboard_save',
-        title: 'Upload an episode directory to the portal',
-        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-        description: `Upload data/<channel>/episodes/<topic>/storyboard/ — scenes.js (the shots verbatim, the window.* blocks as episode meta), storyboard.md, research.md, script.md, storyboard.html — to the ttalkkakstory portal under the channel's workspace key. Saving the same episode again updates it (idempotent); the project is the channel, the storyboard is found or created by the episode title (or storyboardTitle for a series). When .portal.json exists, its episodeId updates that same row even if the title changed. The save reads storyboard/decisions.json when present and uploads its evidenced answers as structured decisions, outside meta; a missing sidecar omits the decisions field. The save is also a checkpoint: stage from the argument or storyboard.md's status (approved → approved, otherwise board), baseRevisionNo from .portal.json. A 409 head_moved means another machine saved first — the answer lists what THEY changed since your base (shots · meta · documents): keep your local edits aside, portal_storyboard_pull the head, re-apply all of your changes on it and resolve by hand where the list overlaps them, save again; a 409 leased names who holds the lease and until when.
-
-Writes .portal.json (workspace · storyboardId · episodeId · headRevisionNo) into the episode directory. Returns: JSON — { result: created|updated, storyboardId, episodeId, revisionNo, url, pageUrl, uploaded: { scenes, characters, documents } }.`,
-        inputSchema: {
-            type: 'object',
-            properties: {
-                episodeDir: { type: 'string', description: 'Absolute path of data/<channel>/episodes/<topic> or its storyboard/ — the channel slug on the path picks the key' },
-                project: { type: 'string', description: 'Portal project name. Default: storyboard.md channel, else the channel directory name' },
-                storyboardTitle: { type: 'string', description: 'Group several episodes under one storyboard (a series) by this title. Default: the episode title' },
-                title: { type: 'string', description: 'Episode title override. Default: storyboard.md heading, else the scenes.js header comment, else the directory name' },
-                stage: { type: 'string', enum: PORTAL_STAGE_ENUM, description: 'Checkpoint stage. Default: approved when storyboard.md says status: approved, otherwise board' },
-                baseRevisionNo: { type: 'number', description: 'The last revision this copy saw. Default: .portal.json headRevisionNo. Differs from head → 409 head_moved' },
-                note: { type: 'string', description: 'Revision note, up to 500 characters — e.g. "narration 95 · approved"' },
-            },
-            required: ['episodeDir'],
-        },
-    },
-    {
-        name: 'portal_storyboard_list',
-        title: 'List portal storyboards or their episodes',
-        annotations: HINT.read,
-        description: `List the storyboards in the channel's portal workspace, or — with storyboardId — the episodes under one storyboard. Use it to find the storyboardId that portal_episode_create needs, or to see which topics the portal already holds before starting one locally.
-
-Returns: JSON — the portal's paginated list (storyboards with id · title · project · episode counts, or episodes with id · slug · title · stage · headRevisionNo).`,
-        inputSchema: {
-            type: 'object',
-            properties: {
-                channel: PORTAL_CHANNEL_ARG,
-                storyboardId: { type: 'string', description: 'List this storyboard\'s episodes instead of the storyboards' },
-                query: { type: 'string', description: 'Title search text' },
-                projectId: { type: 'string', description: 'Only storyboards under this project (uuid)' },
-                page: { type: 'number', description: 'Page number, starting at 1' },
-            },
-        },
-    },
-    {
-        name: 'portal_storyboard_pull',
-        title: 'Download a portal episode into a local directory',
-        annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
-        description: `⚠️ Download an episode from the ttalkkakstory portal after the session-opening HITL. scenes.js is rebuilt from the portal's rows; decisions.json comes from the same head or revision snapshot (including an empty array), never an attachment or ordinary document. Uploaded documents and the chosen scenario arrive beside it. mode replace (default) writes into storyboard/, first copies changed local files to backupDir under .portal-local/, and updates .portal.json. mode side clears and writes sideDir under .portal-head/ while leaving storyboard/ and .portal.json untouched. With revision, every file comes from that revision's snapshot and headRevisionNo is that revision; otherwise it is the portal head. Returns backupDir (null when no local file changed), replaced[], sideDir, and headRevisionNo.`,
-        inputSchema: {
-            type: 'object',
-            properties: {
-                episodeId: { type: 'string', description: 'Episode id (uuid) — from portal_storyboard_list or .portal.json' },
-                targetDir: { type: 'string', description: 'Absolute path of data/<channel>/episodes/<topic>; storyboard/ is created inside. An existing linked target must match episodeId; use a new directory for another episode. The channel slug on the path picks the key' },
-                includeDocuments: { type: 'boolean', description: 'Also write the uploaded documents (storyboard.md · research.md · script.md · storyboard.html). Default true' },
-                revision: { type: 'number', description: 'Pull this revision\'s snapshot instead of head — scenes and documents both from that revision' },
-                mode: { type: 'string', enum: ['replace', 'side'], description: 'replace updates the working copy after backing up changed files; side writes only to storyboard/.portal-head/. Default replace' },
-            },
-            required: ['episodeId', 'targetDir'],
-        },
-    },
-    {
-        name: 'portal_episode_status',
-        title: 'Read or update a portal episode',
-        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-        description: `With no status, stage or title, read the episode including decisions and publication records without changing it. Otherwise move a portal episode forward — status draft → approved → produced → published (produce calls produced when the build passes, publish calls published), or the finer stage; the title can change in the same call. The holder travels with the call, so a lease held by another machine on the same key answers 409 leased.
-
-Returns: JSON — the current or updated episode (id, status, stage, title, headRevisionNo; available decisions and publication records on reads).`,
-        inputSchema: {
-            type: 'object',
-            properties: {
-                episodeId: PORTAL_EPISODE_ID_ARG,
-                episodeDir: PORTAL_EPISODE_DIR_ARG,
-                channel: PORTAL_CHANNEL_ARG,
-                status: { type: 'string', enum: ['draft', 'approved', 'produced', 'published'], description: 'Publication status to set' },
-                stage: { type: 'string', enum: PORTAL_STAGE_ENUM, description: 'Internal stage to set; status follows it' },
-                title: { type: 'string', description: 'New episode title (1–200 characters)' },
-            },
-        },
-    },
-    {
-        name: 'portal_episode_artifacts_sync',
-        title: 'Sync platform copy, cover and actual costs',
-        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-        description: 'Read output platform copy and .work/cost-tally.tsv from an episode, upload output/video/cover.jpg when present, and store structured outputs plus actual USD cost on the portal. Unknown prices stay explicit and postpone the budget verdict.',
-        inputSchema: { type: 'object', properties: {
-                episodeDir: PORTAL_EPISODE_DIR_ARG,
-                episodeId: { type: 'string', format: 'uuid', description: 'Optional explicit episode ID; must match .portal.json.' },
-                uploadCover: { type: 'boolean', description: 'Upload and link output/video/cover.jpg. Default true.' },
-                outputs: { type: 'array', maxItems: 4, description: 'Optional structured override. Omit to read the standard output/<platform> files.', items: { type: 'object', properties: {
-                            platform: { type: 'string', enum: ['youtube', 'instagram', 'threads', 'facebook'], description: 'Destination platform.' },
-                            title: { type: 'string', description: 'Final platform title, when the platform has one.' }, description: { type: 'string', description: 'Final description or post body.' }, hashtags: { type: 'array', items: { type: 'string' }, description: 'Final hashtags including #.' }, coverMediaId: { type: ['string', 'null'], format: 'uuid', description: 'An already uploaded episode image to use as the cover.' },
-                        }, required: ['platform', 'hashtags'] } },
-            }, required: ['episodeDir'] },
-    },
-    {
-        name: 'portal_publication_record',
-        title: 'Record a published platform post',
-        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-        description: 'Persist one successful platform publication with its post ID, permanent link, approval record, time and caption hash. Call immediately after each platform publish succeeds, before setting the episode status to published.',
-        inputSchema: { type: 'object', properties: {
-                episodeDir: PORTAL_EPISODE_DIR_ARG, episodeId: PORTAL_EPISODE_ID_ARG, channel: PORTAL_CHANNEL_ARG,
-                platform: { type: 'string', enum: ['youtube', 'instagram', 'threads', 'facebook'], description: 'Platform that accepted the post.' }, postId: { type: 'string', description: 'Platform post or video ID returned by the publish call.' }, permalink: { type: 'string', description: 'Permanent public URL returned by the publish call.' }, approvedBy: { type: 'string', description: 'Approval record or approver display name.' }, publishedAt: { type: 'string', format: 'date-time', description: 'Successful publish time in ISO 8601. Defaults to now.' }, captionHash: { type: 'string', pattern: '^[a-f0-9]{64}$', description: 'SHA-256 of the exact published caption or description.' },
-            }, required: ['platform', 'postId', 'permalink'] },
-    },
-    {
-        name: 'portal_episode_create',
-        title: 'Create an empty episode row on the portal',
-        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
-        description: `Create an episode on the ttalkkakstory portal after the user chose portal integration for this episode — in that mode the portal is the record and the directory a working copy. Key presence alone does not authorize creation; local HTML mode skips this tool. slug is the local directory name (data/<channel>/episodes/<slug>); storyboardId comes from portal_storyboard_list. With episodeDir the directory is created and .portal.json written (headRevisionNo 0), which the later checkpoints read.
-
-Returns: JSON — { id, slug, title, stage, url, pageUrl }.`,
-        inputSchema: {
-            type: 'object',
-            properties: {
-                storyboardId: { type: 'string', description: 'The storyboard (series) to create the episode under (uuid)' },
-                slug: { type: 'string', description: 'Episode slug = the local directory name under episodes/' },
-                title: { type: 'string', description: 'Episode title (1–200 characters)' },
-                format: { type: 'string', enum: ['shorts-9x16', 'youtube-long-16x9'], description: 'Episode format' },
-                stage: { type: 'string', enum: PORTAL_STAGE_ENUM, description: 'Starting stage. Default researched' },
-                sourceChannelSlug: { type: 'string', description: 'The social-flow channel directory name, recorded on the episode' },
-                episodeDir: { type: 'string', description: 'Absolute path of data/<channel>/episodes/<slug> — created if missing, .portal.json written there' },
-                channel: PORTAL_CHANNEL_ARG,
-            },
-            required: ['storyboardId', 'slug', 'title'],
-        },
-    },
-    {
-        name: 'portal_episode_checkpoint',
-        title: 'Save a revision when a stage ends',
-        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-        description: `Checkpoint the episode on the portal when a stage ends — candidates after the three scenario pages, scenario after the pick, board after scenes.js is written. With episodeDir, storyboard/decisions.json supplies structured HITL answers even before scenes.js exists; a missing sidecar omits the decisions field. The shots and meta from storyboard/scenes.js (when present) and the standard documents that exist (research.md · storyboard.md · script.md · storyboard.html) go up together; identical content makes no new revision and only moves the stage. baseRevisionNo defaults to .portal.json's head; when it differs from the portal's head the answer is 409 head_moved with what the other machine changed since your base (shots · meta · documents): keep your local edits aside, portal_storyboard_pull the head, re-apply all of your changes on it (the list marks the overlaps to resolve by hand), checkpoint again. Never retry a 409 blind.
-
-Updates .portal.json headRevisionNo. Returns: JSON — { result: "new revision"|"unchanged (stage only)", revisionNo, stage, uploaded: { scenes, documents } }.`,
-        inputSchema: {
-            type: 'object',
-            properties: {
-                stage: { type: 'string', enum: PORTAL_STAGE_ENUM, description: 'The stage that just ended' },
-                episodeId: PORTAL_EPISODE_ID_ARG,
-                episodeDir: PORTAL_EPISODE_DIR_ARG,
-                channel: PORTAL_CHANNEL_ARG,
-                baseRevisionNo: { type: 'number', description: 'The last revision this copy saw. Default: .portal.json headRevisionNo' },
-                note: { type: 'string', description: 'Revision note, up to 500 characters — e.g. "narration 95 · three candidates"' },
-                documents: { type: 'array', items: { type: 'string', description: 'A filename inside storyboard/' }, description: 'Document filenames to upload from storyboard/. Default: the standard five that exist' },
-            },
-            required: ['stage'],
-        },
-    },
-    {
-        name: 'portal_episode_revisions',
-        title: 'List an episode\'s revisions or read one',
-        annotations: HINT.read,
-        description: `List a portal episode's revisions, newest first — number, stage, note, who saved it and when — or, with revisionNo, read one revision's snapshot (shots · meta · documents). With compareTo (a number or "head"), return what changed from revisionNo (default: the directory's recorded head) to it — shots added/removed/changed with the changed field names, meta keys, and a unified diff per document — plus a one-line summary. Read before portal_episode_restore so the number being restored is the one meant, and after a 409 head_moved to see the full list of what the other side changed (the 409 line is cut at 8 items).
-
-Returns: JSON — the revision list, one revision's snapshot, or { summary, from, to, identical, scenes, meta, documents }.`,
-        inputSchema: {
-            type: 'object',
-            properties: {
-                episodeId: PORTAL_EPISODE_ID_ARG,
-                episodeDir: PORTAL_EPISODE_DIR_ARG,
-                channel: PORTAL_CHANNEL_ARG,
-                revisionNo: { type: 'number', description: 'Read this revision\'s snapshot instead of listing; with compareTo, the revision to compare from' },
-                compareTo: { type: ['number', 'string'], description: 'Compare revisionNo (or the directory\'s recorded head) to this revision number or "head" — returns the diff instead of the list' },
-            },
-        },
-    },
-    {
-        name: 'portal_episode_restore',
-        title: 'Restore an older revision as a new one',
-        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
-        description: `Re-publish an older revision of a portal episode as the new head — history only moves forward, nothing is deleted. Local files and .portal.json stay unchanged, including their base revision. With episodeDir, the result marks localCopy.syncRequired: pull mode "side", review the restored head, merge intended local edits, then save with that pull result's explicit baseRevisionNo. Never advance the local head without synchronizing files.
-
-Returns: JSON — { revisionNo, stage, restoredFrom, localCopy?: { unchanged, syncRequired }, next? }.`,
-        inputSchema: {
-            type: 'object',
-            properties: {
-                revisionNo: { type: 'number', description: 'The revision to bring back as head' },
-                episodeId: PORTAL_EPISODE_ID_ARG,
-                episodeDir: PORTAL_EPISODE_DIR_ARG,
-                channel: PORTAL_CHANNEL_ARG,
-                note: { type: 'string', description: 'Revision note, up to 500 characters' },
-            },
-            required: ['revisionNo'],
-        },
-    },
-    {
-        name: 'portal_episode_lease',
-        title: 'Take, release or read the episode lease',
-        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-        description: `acquire at the top of a session (and to extend), release when done, status to look. The holder is <key prefix>@<hostname> (TTALKKAKSTORY_HOLDER or the "holder" field of ttalkkakstory.json to change it); the lease's owner is key + holder, so another machine on the same key is someone else. A live lease held by someone else answers 409 with who and until when — wait or ask the user, never force. While it is held, their checkpoint · save · scenario · status calls all answer 409 leased. Default 2 hours.
-
-Returns: JSON — { holder, expiresAt, … } as the portal reports it.`,
-        inputSchema: {
-            type: 'object',
-            properties: {
-                action: { type: 'string', enum: ['acquire', 'release', 'status'], description: 'acquire = take or extend · release = give back · status = read' },
-                episodeId: PORTAL_EPISODE_ID_ARG,
-                episodeDir: PORTAL_EPISODE_DIR_ARG,
-                channel: PORTAL_CHANNEL_ARG,
-                ttlMinutes: { type: 'number', description: 'Lease length in minutes for acquire (1–1440). Default 120' },
-                force: { type: 'boolean', description: 'release only — take someone else\'s lease away. A workspace key is always member, so the portal refuses this with 409; an admin releases it on the episode page' },
-            },
-            required: ['action'],
-        },
-    },
-    {
-        name: 'portal_scenario_save',
-        title: 'Upload one scenario candidate page',
-        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-        description: `Upload one scenario page — candidates/d1.md … d3.md written on the scenario-stage template, or the chosen scenario.md — to the portal episode. The same candidate saved again is updated; chosen: true picks it (the others are unpicked). The findings in the answer are the portal's in-file checks (S1 · S4 …); the research cross-check stays local (check-scenario.js).
-
-Returns: JSON — { result: created|updated, candidate, chosen, findings[], updatedAt }.`,
-        inputSchema: {
-            type: 'object',
-            properties: {
-                candidate: { type: 'string', enum: PORTAL_CANDIDATE_ENUM, description: 'Which candidate slot this page is' },
-                file: { type: 'string', description: 'Absolute path of storyboard/candidates/dN.md or storyboard/scenario.md — its episode directory supplies the id and channel' },
-                markdown: { type: 'string', description: 'The page text itself, instead of file' },
-                chosen: { type: 'boolean', description: 'true = this is the pick; the other candidates are unpicked' },
-                episodeId: PORTAL_EPISODE_ID_ARG,
-                episodeDir: PORTAL_EPISODE_DIR_ARG,
-                channel: PORTAL_CHANNEL_ARG,
-            },
-            required: ['candidate'],
-        },
-    },
-    {
-        name: 'portal_scenario_pull',
-        title: 'Download the scenario candidates',
-        annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
-        description: `⚠️ Overwrites local scenario files — never call without the user knowing the directory is a working copy of the portal (HITL at the top of a session). Write the portal episode's candidates to storyboard/candidates/d1.md … and the chosen one to storyboard/scenario.md. With candidate and no targetDir, return that one page's text and write nothing.
-
-Changed local candidates and the chosen scenario are backed up together under storyboard/.portal-local/ before any are replaced. Identical files need no backup.
-
-Returns: JSON — { scenarios: [{ candidate, chosen, score, p0, findings }], written[], backupDir, replaced[] } — or the page text.`,
-        inputSchema: {
-            type: 'object',
-            properties: {
-                targetDir: { type: 'string', description: 'Absolute path of data/<channel>/episodes/<topic>. A linked target must match the source episode. Omit to return text only' },
-                candidate: { type: 'string', enum: PORTAL_CANDIDATE_ENUM, description: 'Only this candidate' },
-                episodeId: PORTAL_EPISODE_ID_ARG,
-                episodeDir: PORTAL_EPISODE_DIR_ARG,
-                channel: PORTAL_CHANNEL_ARG,
-            },
-        },
-    },
-    {
-        name: 'portal_assets_search', title: 'Search the ttalkkakstory global asset library',
-        annotations: HINT.read,
-        description: `Search the portal's global asset library — Gemini B-roll clips, BGM beds, sound effects and images the owner collected, shared by every workspace (any channel's key reads the same library). Ask here **before** stock_search, music_generate_clip or a video generator: a library hit costs nothing and is already cleared for commercial use. query is AND over Korean/English words in title, description, tags and category; tags matches any (or all with tagsMode); type picks video/music/sfx/image; minDurationMs/maxDurationMs and aspect (16:9 · 9:16 · …) fit the cut. Returns { items[{ id, sourceId, type, category, categoryKo, descKo, descEn, tagsKo, tagsEn, mime, byteSize, durationMs, width, height, aspect, ready }], total, hasNext }. Read-only; it downloads nothing — pick an item and call portal_assets_get with download:true. No key → one line, go on to the existing lane.`,
-        inputSchema: { type: 'object', required: ['query'], properties: {
-                channel: PORTAL_CHANNEL_ARG, episodeDir: PORTAL_EPISODE_DIR_ARG,
-                query: { type: 'string', minLength: 2, maxLength: 64, description: 'Words that must all match (Korean or English) — "도시 야경", "rain night"; a category or mood word ("upbeat") also matches the catalog category' },
-                tags: { type: 'array', items: { type: 'string' }, maxItems: 32, description: 'Tag filter (Korean or English); any tag matches unless tagsMode is all' },
-                tagsMode: { type: 'string', enum: ['any', 'all'], description: 'any (default) — one tag is enough · all — every tag must be present' },
-                type: { type: 'array', items: { type: 'string', enum: ['video', 'music', 'sfx', 'image'] }, description: 'video for a stock_video cut · music for a bed · sfx for a one-shot effect · image for a still source' },
-                category: { type: 'array', items: { type: 'string' }, description: 'Catalog category slugs (English)' },
-                minDurationMs: { type: 'integer', minimum: 0, description: 'Shortest clip or bed to keep, in milliseconds' }, maxDurationMs: { type: 'integer', minimum: 0, description: 'Longest clip or bed to keep, in milliseconds' },
-                aspect: { type: 'array', items: { type: 'string', enum: ['16:9', '9:16', '1:1', '4:3', '3:4', 'other'] }, description: '9:16 for a short, 16:9 for long-form' },
-                sort: { type: 'string', enum: ['relevance', 'newest', 'duration', '-duration'], description: 'relevance (default with q) · newest · duration · -duration' },
-                limit: { type: 'integer', minimum: 1, maximum: 100, description: 'Items per page (default 24)' },
-                page: { type: 'integer', minimum: 1, description: 'Page number, 1-based (default 1); hasNext says whether another page exists' },
-            } },
-    },
-    {
-        name: 'portal_assets_get', title: 'Fetch one global asset (metadata, optionally the file)',
-        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-        description: `One asset from the portal's global library by id — the full record (prompt, extra, play/download URLs) plus the visual.license block a supplied cut stores. With download:true and episodeDir it writes the file where produce already looks and verifies the portal's sha256: a video to storyboard/footage/s<shot>-portal-<sourceId>.mp4 (pass shot; the cut stores visual.source "stock", visual.clip and the returned license — render.mode stock_video), music or sfx to .work/portal/<sourceId>.<ext> — produce converts a bed with ffmpeg to .work/bgm.wav (base) or .work/bgm-<cue>.wav and registers an effect in the channel catalog (resolve-asset.py --ensure … sfx <id>); never write this path into window.MUSIC[cue].asset or sound.sfx, those hold channel catalog ids that resolve-asset.py resolves — an image to storyboard/images/stock/portal-<sourceId>.<ext>. A file with the same sha256 already on disk is not downloaded again; a different file at that name is refused, never overwritten. Nothing is generated or billed.`,
-        inputSchema: { type: 'object', required: ['id'], properties: {
-                id: { type: 'string', format: 'uuid', description: 'Asset id from portal_assets_search' },
-                channel: PORTAL_CHANNEL_ARG, episodeDir: PORTAL_EPISODE_DIR_ARG,
-                download: { type: 'boolean', description: 'Write the file into the episode (needs episodeDir)' },
-                shot: { type: 'integer', minimum: 1, maximum: 999, description: 'Scene number for a video cut — names footage/s<shot>-portal-…' },
-            } },
-    },
-    {
-        name: 'portal_attachments_sync', title: 'Sync episode attachments',
-        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-        description: 'Upload missing or changed episode files with original relative paths and optional rights evidence from .portal-attachments.json. Returns incomplete for skipped files; keep local files until complete. No board revision is created.',
-        inputSchema: { type: 'object', properties: { episodeDir: PORTAL_EPISODE_DIR_ARG, episodeId: { type: 'string', description: 'Episode UUID; defaults to the directory portal state.' }, channel: PORTAL_CHANNEL_ARG }, required: ['episodeDir'] },
-    },
-    {
-        name: 'portal_channel_sync', title: 'Sync channel profile and shared assets',
-        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-        description: 'Pull, push or compare a channel profile.md and shared intro, outro, branding and SFX files with one portal project. The first explicit projectId is pinned in data/[channel]/.portal-channel.json; later calls refuse another project. Pull stages and hash-checks every remote file before replacing local files. Push uses the last synced hashes for conflict-safe updates and deletions.',
-        inputSchema: { type: 'object', required: ['action', 'channel'], properties: {
-                action: { type: 'string', enum: ['pull', 'push', 'status'], description: 'pull applies remote changes locally, push sends local changes, status compares hashes without writing.' },
-                channel: PORTAL_CHANNEL_ARG,
-                projectId: { type: 'string', format: 'uuid', description: 'Required once when the portal project name is not exactly the channel slug.' },
-            } },
-    },
-    {
-        name: 'portal_images_upload', title: 'Upload and link local shot images',
-        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
-        description: 'After portal_storyboard_save has linked the episode, upload PNG/JPEG/WebP files (5 MiB each), then checkpoint their portalImageId UUIDs with the local base revision. Images upload sequentially. Defaults to storyboard/images/scene-N.* by source array ordinal, retaining shot IDs. Explicit mappings require shotId when present; shotNo is only for legacy shots without IDs. Paths stay inside storyboard/. Missing default images are reported as skipped. Success updates scenes.js and .portal.json; partial failures report uploaded UUIDs and recovery instructions. No automatic conflict retry. No image generation or publishing.',
-        inputSchema: { type: 'object', required: ['episodeDir', 'stage'], properties: {
-                episodeDir: PORTAL_EPISODE_DIR_ARG,
-                stage: { type: 'string', enum: PORTAL_STAGE_ENUM, description: 'Current workflow stage to checkpoint; do not downgrade an approved or produced episode.' },
-                baseRevisionNo: { type: 'integer', minimum: 0, description: 'Explicit merged base; defaults to .portal.json headRevisionNo.' },
-                images: { type: 'array', minItems: 1, maxItems: 500, description: 'Optional explicit shot-to-file mappings. Omit to discover scene-N files.', items: {
-                        type: 'object', required: ['file'], properties: {
-                            shotId: { type: 'string', minLength: 1, description: 'Stable source shot ID (preferred).' },
-                            shotNo: { type: 'integer', minimum: 1, description: '1-based array ordinal, only for shots without IDs.' },
-                            file: { type: 'string', minLength: 1, description: 'File path relative to storyboard/, or an absolute path inside it.' },
-                        }, oneOf: [{ required: ['shotId'], not: { required: ['shotNo'] } }, { required: ['shotNo'], not: { required: ['shotId'] } }],
-                    } },
-            } },
-    },
-    {
-        name: 'portal_render_allocation', title: 'Read or submit the episode render allocation',
-        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
-        description: 'Read the pending render ratio request and every shot. The host LLM chooses render.mode by shot purpose within bounds, then submits assignments with requestId and baseRevisionNo. No LLM API or paid asset call occurs here. The portal validates complete shot IDs, video bands, lease and revision, then saves atomically. Read again on conflict; pull the updated board before local edits. Returns request, bounds, shots and instructions on read, or the new revision on submit.',
-        inputSchema: { type: 'object', properties: {
-                episodeId: PORTAL_EPISODE_ID_ARG, episodeDir: PORTAL_EPISODE_DIR_ARG, channel: PORTAL_CHANNEL_ARG,
-                requestId: { type: 'string', format: 'uuid', description: 'Exact pending request ID returned by the read; required when submitting.' }, baseRevisionNo: { type: 'integer', minimum: 0, description: 'Read revision; required when submitting. Stale writes are rejected.' },
-                assignments: { type: 'array', description: 'One assignment per returned shot ID; omit to read the pending plan.', minItems: 1, maxItems: 500, items: { type: 'object', required: ['id', 'mode', 'purpose', 'reason'], properties: {
-                            id: { type: 'string', format: 'uuid', description: 'Portal shot row ID from the latest read, never an array position.' }, mode: enumInput(storyboardVocabulary?.RENDER_MODES, 'Shot render route; generated_video and stock_video both count toward the ratio.'),
-                            purpose: { type: 'string', minLength: 1, maxLength: 200, description: 'Shot purpose in the render-routing vocabulary.' }, reason: { type: 'string', minLength: 1, maxLength: 2000, description: 'Specific reason this render mode serves this shot.' },
-                        } } },
-            } },
-    },
-    {
-        name: 'portal_scenario_choose',
-        title: 'Pick one scenario candidate as scenario.md',
-        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-        description: `Make one candidate the episode's scenario on the portal (the others are unpicked); a stage below scenario moves up to scenario. Use it after the user's pick when the pages were uploaded earlier without chosen.
-
-Returns: JSON — { candidate, chosen, findings[] }.`,
-        inputSchema: {
-            type: 'object',
-            properties: {
-                candidate: { type: 'string', enum: PORTAL_CANDIDATE_ENUM, description: 'The candidate to pick' },
-                episodeId: PORTAL_EPISODE_ID_ARG,
-                episodeDir: PORTAL_EPISODE_DIR_ARG,
-                channel: PORTAL_CHANNEL_ARG,
-            },
-            required: ['candidate'],
-        },
-    },
-    {
-        name: 'portal_character_list', title: 'List the workspace characters on the portal',
-        annotations: { readOnlyHint: true, openWorldHint: true },
-        description: 'The characters of the workspace the key opens — id, projectId (which project holds it), key (the assets/characters/<id> folder name), name, role, appearance, referenceImageUrl, images (front/back/face URLs and extra entries), imagesComplete and the tts block. q searches name and role; key finds one exactly; project (a channel name) lists only that project; 24 per page. Read-only. No key → one line, go on.',
-        inputSchema: { type: 'object', properties: { channel: PORTAL_CHANNEL_ARG, episodeDir: PORTAL_EPISODE_DIR_ARG, project: { type: 'string', maxLength: 100, description: 'Channel name to list only that project\'s characters (default: the whole workspace)' }, q: { type: 'string', maxLength: 200, description: 'Name or role contains' }, key: { type: 'string', description: 'Exact character key' }, page: { type: 'integer', minimum: 1, description: 'Page number, 24 per page (default 1)' } } },
-    },
-    {
-        name: 'portal_character_get', title: 'Fetch one portal character',
-        annotations: { readOnlyHint: true, openWorldHint: true },
-        description: 'One character by id or by key (exactly one of the two). Returns projectId, images (front/back/face URLs and extra entries), imagesComplete, and the same fields as portal_character_list. A key can exist in several projects: pass project (the channel name) to say which one — without it a shared key is refused rather than picked by order, and the error names the projects holding it. Read-only.',
-        inputSchema: { type: 'object', properties: { channel: PORTAL_CHANNEL_ARG, episodeDir: PORTAL_EPISODE_DIR_ARG, project: { type: 'string', maxLength: 100, description: 'Channel name the key belongs to — narrows a key that several projects share. Not with id' }, id: { type: 'string', format: 'uuid', description: 'Portal character id' }, key: { type: 'string', description: 'Character key, e.g. the assets/characters/<id> folder name' } } },
-    },
-    {
-        name: 'portal_character_create', title: 'Create a portal character',
-        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
-        description: 'Create a character in the workspace. Never a project id: the portal files it under project = the channel name (default: the channel the key was read off, override with project) — the same rule the storyboard import uses, so the character is available to that channel\'s playlists. Pass name and fields directly, or identityDir (assets/characters/<id>) to read the key from the folder name and name/역할/생김새 from identity.md; explicit fields win. file sends one PNG/JPEG/WebP panel (5 MiB) as the front view right after creation; use image_upload for back and face. tts is required at creation; pass the character sheet voice explicitly.',
-        inputSchema: { type: 'object', properties: {
-                channel: PORTAL_CHANNEL_ARG, episodeDir: PORTAL_EPISODE_DIR_ARG,
-                project: { type: 'string', maxLength: 100, description: 'Channel name the character belongs to (default: the key\'s channel)' },
-                identityDir: { type: 'string', description: 'Absolute path of assets/characters/<id> — key from the folder, name/role/appearance from identity.md' },
-                file: { type: 'string', description: 'Absolute path of a PNG/JPEG/WebP reference panel to upload after creating' },
-                key: { type: 'string', description: 'Character key — lowercase letters, digits, hyphens' },
-                name: { type: 'string', maxLength: 100, description: 'Display name' }, role: { type: 'string', maxLength: 500, description: 'Role in the channel, e.g. 진행자' }, appearance: { type: 'string', maxLength: 4000, description: 'Look — the 생김새 line' },
-                referenceImageUrl: { type: 'string', maxLength: 2000, description: 'External image URL; prefer file' },
-                tts: { type: 'object', description: 'Required character voice from identity.md; never substitute narrator defaults', properties: { voiceLock: VOICE_LOCK_PROPERTY, engine: { type: 'string', enum: ['gemini', 'supertonic', 'elevenlabs', 'mlx'], description: 'TTS engine' }, voiceId: { type: 'string', description: 'Voice id on that engine' }, model: { type: 'string', description: 'Model name, e.g. eleven_multilingual_v2' }, speed: { type: 'number', minimum: 0.7, maximum: 1.2, description: 'Speaking rate 0.7–1.2; Gemini and MLX require 1' }, language: { type: 'string', description: 'Two-letter language code or supported name, e.g. ko or Korean; must be supported by the engine' }, stylePrompt: { type: 'string', description: 'Only Gemini 2.5/3.1 accepts stylePrompt' } }, required: ['engine', 'voiceId', 'language', 'speed'] },
-            }, required: ['tts'] },
-    },
-    {
-        name: 'portal_character_update', title: 'Update a portal character',
-        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-        description: 'Partial update by id — key, name, role, appearance, referenceImageUrl, tts. null clears a nullable field. Fields you leave out stay. For the voice block alone prefer portal_character_tts_set (it preserves existing fields); for the image prefer portal_character_image_upload.',
-        inputSchema: { type: 'object', required: ['id'], properties: {
-                channel: PORTAL_CHANNEL_ARG, episodeDir: PORTAL_EPISODE_DIR_ARG, id: { type: 'string', format: 'uuid', description: 'Portal character id' },
-                key: { type: ['string', 'null'], description: 'Character key; null clears' }, name: { type: 'string', maxLength: 100, description: 'Display name' }, role: { type: ['string', 'null'], maxLength: 500, description: 'Role; null clears' }, appearance: { type: ['string', 'null'], maxLength: 4000, description: 'Look; null clears' },
-                referenceImageUrl: { type: ['string', 'null'], maxLength: 2000, description: 'External image URL; null clears (prefer portal_character_image_upload)' },
-                tts: { type: 'object', description: 'Whole voice block; cannot be cleared (prefer portal_character_tts_set)', required: ['engine', 'voiceId', 'language', 'speed'], properties: { voiceLock: VOICE_LOCK_PROPERTY, engine: { type: 'string', enum: ['gemini', 'supertonic', 'elevenlabs', 'mlx'], description: 'TTS engine' }, voiceId: { type: 'string', description: 'Voice id on that engine' }, model: { type: 'string', description: 'Supported engine model; Supertonic has no model selector' }, speed: { type: 'number', description: 'Speaking rate 0.7–1.2; Gemini and MLX require 1' }, language: { type: 'string', description: 'Language code' }, stylePrompt: { type: 'string', description: 'Only Gemini 2.5/3.1 accepts stylePrompt' } } },
-            } },
-    },
-    {
-        name: 'portal_character_delete', title: 'Delete a portal character',
-        annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
-        description: '⚠️ Delete one character by id on the portal — never call without the user confirming that character (HITL). The portal cascades its playlist registrations, scene links, props it owns and its reference image; a playlist that still narrates with it loses the speaker. Ask the user before deleting a character a playlist still narrates with. Local assets/characters/<id> files are untouched.',
-        inputSchema: { type: 'object', required: ['id'], properties: { channel: PORTAL_CHANNEL_ARG, episodeDir: PORTAL_EPISODE_DIR_ARG, id: { type: 'string', format: 'uuid', description: 'Portal character id' } } },
-    },
-    {
-        name: 'portal_character_image_upload', title: 'Upload a character reference view',
-        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
-        description: 'Upload local PNG/JPEG/WebP, up to 5 MiB. view defaults to front; front/back/face each replace one required slot (same bytes are a no-op). extra appends a new image on every call: do not retry blindly. Front/back are full body without a face, face is a close-up. Verifies sha256; returns imageId, view and authenticated url. Only front updates referenceImageUrl.',
-        inputSchema: { type: 'object', required: ['id', 'file'], properties: {
-                channel: PORTAL_CHANNEL_ARG, episodeDir: PORTAL_EPISODE_DIR_ARG,
-                id: { type: 'string', format: 'uuid', description: 'Portal character id' },
-                file: { type: 'string', description: 'Absolute local image path' },
-                view: { type: 'string', enum: ['front', 'back', 'face', 'extra'], default: 'front', description: 'Required view to replace, or extra to append' },
-                label: { type: 'string', maxLength: 100, description: 'Optional image label' },
-                sort: { type: 'integer', minimum: 0, maximum: 2147483647, description: 'Optional display order, default 0' },
-            } },
-    },
-    {
-        name: 'portal_character_extra_delete', title: 'Delete one extra character image',
-        annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
-        description: '⚠️ never call without explicit user approval to delete the specified image. Delete exactly one optional extra image by imageId from portal_character_get/list images.extra. Required views and local files are untouched.',
-        inputSchema: { type: 'object', required: ['id', 'imageId'], properties: {
-                channel: PORTAL_CHANNEL_ARG, episodeDir: PORTAL_EPISODE_DIR_ARG,
-                id: { type: 'string', format: 'uuid', description: 'Portal character id' },
-                imageId: { type: 'string', format: 'uuid', description: 'Extra image id' },
-            } },
-    },
-    {
-        name: 'portal_character_tts_set', title: 'Set a character\'s TTS voice',
-        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-        description: 'Write the tts block the narration lane reads — engine, voiceId, model, speed (0.7–1.2), language, stylePrompt. Omitted fields keep their current values. A character without a complete voice must supply engine, voiceId, language and speed explicitly; no narrator defaults are substituted.',
-        inputSchema: { type: 'object', required: ['id'], properties: {
-                channel: PORTAL_CHANNEL_ARG, episodeDir: PORTAL_EPISODE_DIR_ARG, id: { type: 'string', format: 'uuid', description: 'Portal character id' },
-                voiceLock: VOICE_LOCK_PROPERTY,
-                engine: { type: 'string', enum: ['gemini', 'supertonic', 'elevenlabs', 'mlx'], description: 'TTS engine; preserves current value when omitted' }, voiceId: { type: 'string', maxLength: 128, description: 'Character voice id; no implicit default' }, model: { type: 'string', maxLength: 128, description: 'Supported engine model; Supertonic has no model selector' },
-                speed: { type: 'number', minimum: 0.7, maximum: 1.2, description: 'Speaking rate; Gemini and MLX require 1' }, language: { type: 'string', maxLength: 32, description: 'Two-letter language code or supported name, e.g. ko or Korean; must be supported by the engine' }, stylePrompt: { type: 'string', maxLength: 1000, description: 'Only Gemini 2.5/3.1 accepts stylePrompt' },
-            } },
-    },
-];
 export const TOOLS = [
     {
         name: 'location_manage', title: 'Build, bind and review a persistent 3D location',
         annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
-        description: 'Manage local versioned location assets with installed Blender. build reads spec (JSON path or object) and writes root/id/vN without overwriting; read verifies manifest/assets; sheet renders cameras into a NEW output folder; bind connects manifest/stateId/cameraId to board scenes.js and shotId; render writes clean start/end references; approve requires actual reviewer and observed notes; references returns approved image paths/roles/hashes, refusing stale files; camera applies an exported proposal with a base fingerprint; check returns findings (ready requires approved renders). No paid generation, portal calls or publishing. Coordinates: metres, Z up. See skills/storyboard/references/location-assets.md.',
+        description: 'Manage local versioned location assets with installed Blender. build reads spec (JSON path or object) and writes root/id/vN without overwriting; read verifies manifest/assets; sheet renders cameras into a NEW output folder; bind connects manifest/stateId/cameraId to board scenes.js and shotId; render writes clean start/end references; approve requires actual reviewer and observed notes; references returns approved image paths/roles/hashes, refusing stale files; camera applies an exported proposal with a base fingerprint; check returns findings (ready requires approved renders). No paid generation or publishing. Coordinates: metres, Z up. See skills/storyboard/references/location-assets.md.',
         inputSchema: { type: 'object', required: ['action'], additionalProperties: false, properties: {
                 action: { type: 'string', description: 'Operation; build/sheet/render write local assets, bind/camera/approve/receipt update the board, read/references/check are read-only', enum: ['build', 'read', 'sheet', 'bind', 'render', 'approve', 'references', 'camera', 'check', 'receipt', 'review'] },
                 verdict: { type: 'string', enum: ['pass', 'warning', 'fail'], description: 'Observed generation result verdict; review never certifies unseen images' },
@@ -1277,8 +808,6 @@ export const TOOLS = [
             } }
     },
     ...VOICE_LOCK_TOOLS,
-    ...UNIT_TOOLS,
-    ...REVIEW_TOOLS,
     // ── Research & fact-checking ──────────────────────────────────────────
     {
         name: 'serp_web_search',
@@ -2555,9 +2084,6 @@ Returns: a text block with the saved .mp4 file path, model, ratio, resolution, d
         inputSchema: {
             type: 'object',
             properties: {
-                portal: { type: 'object', description: 'Configured portal shot target. Previz uploads immediately after rendering; video uploads previzFile before its vendor call and the output afterwards; narration uploads its completed take. Omit only in local-only mode.', properties: {
-                        episodeDir: { type: 'string', description: 'Episode directory; its channel path selects the workspace key.' }, shotId: { type: 'string', description: 'Stable source shot ID; use this when the shot has an ID.' }, shotNo: { type: 'integer', minimum: 1, description: 'One-based source position, only for ID-less shots.' }, previzFile: { type: 'string', description: 'Required on video calls; episode-relative or absolute previz mp4.' },
-                    }, required: ['episodeDir'] },
                 prompt: {
                     type: 'string',
                     description: 'Video description. Vendor formula: Subject + Movement + Environment + Camera movement + Aesthetic description + Sound. Write camera as a span, not a verb — "starting frame composition + movement + movement amplitude + ending frame composition" (combos the docs name: Hitchcock = dolly-in/out + zoom-out/in, bullet time = time slowdown + surround). Shot size follows the example word order, "Close-up of the man on the left". Do NOT write timecodes such as "0-3 seconds" — the vendor states precise-timing support is unstable and forcing it degrades the result; cut timing in the edit instead, and write an in-clip state change in words ("in under half a second"). Multi-cut in one call is supported via "Shot 1: ... Shot 2: ..." or "The shot cuts to ..." — open on the wide so the later cuts inherit one floor plan, time each cut by a dialogue or action beat, and give each its own shot size. There is no negativePrompt parameter on this engine: an unwanted element is designed out of the sentence, never forbidden in it, and what must hold goes into a closing positive-locks paragraph ("the lantern stays lit in every cut; only two people ever appear") — the one exception the vendor templates is the artifact classes (subtitles, on-frame text, logo, watermark, BGM), which may stay negative. Prompt body must be English or Chinese (Korean only on dreamina-seedance-2-5-260628) — Korean dialogue still works inside quotes on 1.5-pro, which lip-syncs it.',
@@ -2601,9 +2127,6 @@ Returns: a text block with the saved .mp4 file path, source/last frame image pat
         inputSchema: {
             type: 'object',
             properties: {
-                portal: { type: 'object', description: 'Configured portal shot target. Previz uploads immediately after rendering; video uploads previzFile before its vendor call and the output afterwards; narration uploads its completed take. Omit only in local-only mode.', properties: {
-                        episodeDir: { type: 'string', description: 'Episode directory; its channel path selects the workspace key.' }, shotId: { type: 'string', description: 'Stable source shot ID; use this when the shot has an ID.' }, shotNo: { type: 'integer', minimum: 1, description: 'One-based source position, only for ID-less shots.' }, previzFile: { type: 'string', description: 'Required on video calls; episode-relative or absolute previz mp4.' },
-                    }, required: ['episodeDir'] },
                 prompt: {
                     type: 'string',
                     description: 'Identity words stay, layout words go — the Seedance image lane is not motion-only (that is Veo\'s rule). Reuse the source image prompt\'s identity words (who and what the subject is), drop the composition words (where things sit — the frame already holds that), add the motion, write camera as a span ("starting frame composition + movement + ending frame composition"), and CLOSE WITH A CONSISTENCY LOCK: "the subject stays exactly consistent with the input frame; appearance, proportions and materials hold; no unrelated elements appear". Re-describe the layout, facing or lighting and the model redesigns the scene. Do NOT write timecodes such as "0-3 seconds" (vendor: precise-timing support is unstable) — an in-clip state change goes in words ("in under half a second"), and the length lives in durationSeconds. English or Chinese only (Korean on dreamina-seedance-2-5 alone, and inside dialogue quotes on 1.5-pro). There is no negativePrompt parameter on this engine: an unwanted element is designed out of the sentence and pinned by the lock, never forbidden in it — the one exception the vendor templates is the artifact classes (subtitles, on-frame text, logo, watermark, BGM), which may stay negative.',
@@ -2658,9 +2181,6 @@ Returns: a text block with the saved .mp4 file path, reference image, video and 
         inputSchema: {
             type: 'object',
             properties: {
-                portal: { type: 'object', description: 'Configured portal shot target. Previz uploads immediately after rendering; video uploads previzFile before its vendor call and the output afterwards; narration uploads its completed take. Omit only in local-only mode.', properties: {
-                        episodeDir: { type: 'string', description: 'Episode directory; its channel path selects the workspace key.' }, shotId: { type: 'string', description: 'Stable source shot ID; use this when the shot has an ID.' }, shotNo: { type: 'integer', minimum: 1, description: 'One-based source position, only for ID-less shots.' }, previzFile: { type: 'string', description: 'Required on video calls; episode-relative or absolute previz mp4.' },
-                    }, required: ['episodeDir'] },
                 prompt: {
                     type: 'string',
                     description: 'Scene and subject interactions. The 2.x advanced formula: precise subject + action details + scene/environment + lighting & color tone + camera movement + visual style + image quality + constraints. For multi-cut, write a "Shot 1 / Shot 2 / Shot 3" storyboard and order each shot as camera movement -> subject action and expression -> position change -> audio; open on the wide so the later cuts inherit one floor plan, and time each cut by an action beat. Do NOT put timecodes on the shots — the vendor states precise-timing support is unstable (dreamina-seedance-2-5-260628 alone takes integer-second forms). Close with the constraints slot as a POSITIVE-LOCKS paragraph — what holds in every frame, said positively, with each reference given its scope ("@ocean_location controls water and sky only"; "the lantern stays lit in every cut") — because this engine has no negativePrompt parameter; the one exception the vendor templates is the artifact classes (subtitles, on-frame text, logo, watermark, BGM), which may stay negative. English or Chinese only (Korean on dreamina-seedance-2-5-260628 alone; on other models Korean belongs inside dialogue quotes). Unwanted subtitles cannot be fully blocked at 9:16: the vendor notes portrait output hallucinates burned-in text noticeably more often than landscape, so inspect the frames.',
@@ -3287,9 +2807,6 @@ Returns: a text block with the mp4 path, still paths (and any requested still ou
         inputSchema: {
             type: 'object',
             properties: {
-                portal: { type: 'object', description: 'Configured portal shot target. Previz uploads immediately after rendering; video uploads previzFile before its vendor call and the output afterwards; narration uploads its completed take. Omit only in local-only mode.', properties: {
-                        episodeDir: { type: 'string', description: 'Episode directory; its channel path selects the workspace key.' }, shotId: { type: 'string', description: 'Stable source shot ID; use this when the shot has an ID.' }, shotNo: { type: 'integer', minimum: 1, description: 'One-based source position, only for ID-less shots.' }, previzFile: { type: 'string', description: 'Required on video calls; episode-relative or absolute previz mp4.' },
-                    }, required: ['episodeDir'] },
                 blendPath: { type: 'string', description: 'Absolute path to the .blend file (must end in .blend, no "..").' },
                 outputPath: { type: 'string', description: 'Directory for the mp4 and stills (default: <blend dir>/previz).' },
                 filename: {
@@ -3368,9 +2885,6 @@ Requires ffmpeg and GEMINI_API_KEY even for local synthesis. One paid audio-revi
         inputSchema: {
             type: 'object', additionalProperties: false,
             properties: {
-                portal: { type: 'object', description: 'Configured portal shot target. Previz uploads immediately after rendering; video uploads previzFile before its vendor call and the output afterwards; narration uploads its completed take. Omit only in local-only mode.', properties: {
-                        episodeDir: { type: 'string', description: 'Episode directory; its channel path selects the workspace key.' }, shotId: { type: 'string', description: 'Stable source shot ID; use this when the shot has an ID.' }, shotNo: { type: 'integer', minimum: 1, description: 'One-based source position, only for ID-less shots.' }, previzFile: { type: 'string', description: 'Required on video calls; episode-relative or absolute previz mp4.' },
-                    }, required: ['episodeDir'] },
                 generator: { type: 'string', enum: [...GENERATORS], description: 'Existing synthesis tool matching profile §2.' },
                 generation: { type: 'object', additionalProperties: true, description: 'Arguments accepted by generator, including its text/script/inputs and pinned voice settings. Outer outputPath and filename control the output.' },
                 expectedText: { type: 'string', minLength: 1, maxLength: 4000, description: 'All spoken narration for this scene, matching narration[].tts. Write numbers as spoken words.' },
@@ -4206,17 +3720,15 @@ Returns: a text block with the saved .wav path, model, duration, and generation 
         name: 'capability_status',
         title: 'What this machine can do right now',
         annotations: HINT.local,
-        description: `Report which generation and research capabilities are configured on this machine, grouped by capability with an "N of M configured" count per group, plus the env vars that would unlock the rest. Pass channel to check that channel's storyboard portal key locally (per-channel file → flat file → env), without printing the key or calling the portal. Another channel's key never enables this channel. storyboard_portal reports configured (ask local HTML vs portal HITL before portal calls), missing (local HTML without a question), or invalid (warn and keep local HTML). Reuse an explicit episode choice; tool visibility and key presence are not consent. Without channel, only the flat/env credential is checked.
+        description: `Report which generation and research capabilities are configured on this machine, grouped by capability with an "N of M configured" count per group, plus the env vars that would unlock the rest.
 
 Use it BEFORE planning anything that spends money or depends on a provider — the top of a storyboard, produce, or autoproduce run. Without it, a missing key shows up only when the call fails, which is after the plan was built around a tool that was never going to run: planning two Veo b-roll slots on a machine with no GEMINI_API_KEY costs the review rounds before anyone finds out. Also use it when the user asks what they can make, or why a tool is failing.
 Do NOT use it to test whether a key still works. It reports CONFIGURATION, not reachability — a revoked key reads as configured here and fails at the call. Local engines report only whether their binary resolves (mflux, python3, mlx-qwen3-asr) or whether MLX Core.app / mlx-serve is installed — not whether :11234 is up. Read-only; makes no API call, so one call per session is enough.
 
-Returns: a capability menu — video_generation, image_generation, tts, music_generation, 3d_generation, speech_to_text, stock_footage, research — each listing its providers with the env var or local install each one needs, then the publishing platforms, storyboard_portal configuration for the channel, and the env vars grouped by what each would turn on.`,
+Returns: a capability menu — video_generation, image_generation, tts, music_generation, 3d_generation, speech_to_text, stock_footage, research — each listing its providers with the env var or local install each one needs, then the publishing platforms, the env vars grouped by what each would turn on.`,
         inputSchema: {
             type: 'object',
-            properties: {
-                channel: { type: 'string', pattern: CHANNEL_SLUG_RE.source, description: 'Target channel slug, as in data/<channel>. Checks local portal configuration only; no network request.' },
-            },
+            properties: {},
             required: [],
         },
     },
@@ -4968,22 +4480,6 @@ Returns: integer credit balance.`,
     },
     // ── Storyboard — sequence → scene → shot (skills/storyboard/references/structure-contract.js) ──
     {
-        name: 'storyboard_backups',
-        title: 'Inspect and prune local recovery backups',
-        annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
-        description: '⚠️ Never apply pruning without user approval (HITL). Read-only previews need no approval. Local-only inventory and retention preview for portal recovery backups; no portal key needed. Keeps the newest N backups per kind (board, scenarios, images, attachments), minimum 1. Default is read-only. Show the remove list to the user and use apply:true only when pruning is authorized, with the exact preview plan token in confirm. A changed inventory requires a new preview. Stop other local writers while pruning backups. Unknown names, working files, .portal-head and state are never cleanup targets. UUID media backups use directory modification time; timestamp-named board/scenario backups use their name. Returns entries with paths/files/bytes, ignored paths, remove, reclaimBytes, plan and deleted. Partial deletion errors report deleted paths.',
-        inputSchema: {
-            type: 'object',
-            properties: {
-                episodeDir: { type: 'string', description: 'Local episode directory or its storyboard directory.' },
-                keep: { type: 'integer', minimum: 1, maximum: 1000, default: 10, description: 'Newest backups to preserve per kind; at least one.' },
-                apply: { type: 'boolean', default: false, description: 'Delete the reviewed remove list only after user approval; false previews without writes.' },
-                confirm: { type: 'string', pattern: '^[a-f0-9]{64}$', description: 'Exact plan token from the reviewed preview.' },
-            },
-            required: ['episodeDir'],
-        },
-    },
-    {
         name: 'speech_manage',
         title: 'Find and revise shot dialogue and audio dependencies',
         annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
@@ -5125,10 +4621,6 @@ Returns: JSON — { files, violations, warnings, findings: [{ level, where, what
             required: ['path'],
         },
     },
-    // ── ttalkkakstory portal (workspace API key) ──
-    // Listed only when a portal key exists (config.portalConfigured, per request like the SNS gate).
-    // Every tool answers one line and isError when no key resolves — the skills carry on in local-file mode.
-    ...PORTAL_TOOLS,
 ];
 /**
  * Per-platform publish tool → required credential platform — index.ts uses this

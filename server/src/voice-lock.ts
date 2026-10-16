@@ -10,7 +10,7 @@ import { describeElevenLabsError } from './elevenlabs-client.js';
 import { pcmToWav, validateFilePath } from './media-utils.js';
 import { characterErrorRate, measureSignal, sha256, signalFailures } from './tts-quality.js';
 import { transcribeLocal, qwen3AsrTranscribeSchema } from './qwen3-asr-client.js';
-import { ttsSchema } from './portal-characters.js';
+import { ttsSchema } from './character-tts.js';
 import { VOICE_LOCK_MODEL, VOICE_LOCK_PROPERTY, voiceLockConfigSchema } from './voice-lock-config.js';
 const exec = promisify(execFile);
 export const voiceLockApplySchema = z.object({
@@ -120,7 +120,7 @@ export const VOICE_LOCK_TOOLS: Tool[] = [{
     sourcePath: { type: 'string', description: 'Local single-speaker audio/video file' },
     outputPath: { type: 'string', description: 'Episode output/voice-lock directory; each attempt gets a new folder' },
     shotId: { type: 'string', pattern: '^[A-Za-z0-9_-]{1,80}$', description: 'Shot key for the report and folder' },
-    characterId: { type: 'string', description: 'Speaking character id from the board/portal' },
+    characterId: { type: 'string', description: 'Speaking character id from the board' },
     expectedText: { type: 'string', minLength: 1, maxLength: 4000, description: 'Approved dialogue for comparison; never supplied to blind ASR' },
     inputKind: { type: 'string', enum: ['single_speaker', 'dialogue_stem'], description: 'Confirm one speaker without background music/effects to preserve; stems must be remixed externally' },
     tts: { type: 'object', required: ['engine', 'voiceId', 'language', 'speed'], description: 'Complete pinned character voice block from the character sheet', properties: {

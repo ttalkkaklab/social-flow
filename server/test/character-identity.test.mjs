@@ -80,19 +80,3 @@ test('production verifies the current on-disk identity, not a copied hash alone'
     win.SB_DOC.characters[0].id='../escape';assert.match(sourceErrors(win,root).join(),/Invalid character id/);
   }finally{rmSync(root,{recursive:true,force:true});}
 });
-
-test('structured identity populates existing portal fields and rejects unresolved updates', async () => {
-  const {readIdentity}=await import('../dist/portal-characters.js');
-  const root=mkdtempSync(join(tmpdir(),'sf-portal-id-'));const folder=join(root,'mori');mkdirSync(folder);
-  try {
-    writeFileSync(join(folder,'identity.md'),source);
-    const result=readIdentity(folder);
-    assert.equal(result.role,doc().character.identity.role.value);
-    assert.equal(result.appearance,doc().character.physical.appearance.value);
-    const updated=doc();updated.character.physical.appearance.value='Red coat';
-    writeFileSync(join(folder,'identity.md'),markdown(updated));
-    assert.equal(readIdentity(folder).appearance,'Red coat');
-    updated.character.physical.appearance={status:'pending',value:null,reason:'Not decided'};
-    writeFileSync(join(folder,'identity.md'),markdown(updated));assert.throws(()=>readIdentity(folder),/pending/);
-  }finally{rmSync(root,{recursive:true,force:true});}
-});

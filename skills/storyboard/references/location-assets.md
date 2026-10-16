@@ -1,6 +1,6 @@
 # Persistent locations (v1)
 
-A location is an immutable Blender set plus semantic JSON, not a collection of independently generated angles. Use the existing storyboard/produce skills; `location_manage` is the bundled local tool. It never calls paid providers or the portal. Blender is required for location authoring/rendering; existing three.js previz remains available for other shots.
+A location is an immutable Blender set plus semantic JSON, not a collection of independently generated angles. Use the existing storyboard/produce skills; `location_manage` is the bundled local tool. It never calls paid providers. Blender is required for location authoring/rendering; existing three.js previz remains available for other shots.
 
 ## Author and build
 
@@ -25,7 +25,7 @@ A generated video's grey motion previz and the location still must share the sam
 ## Interactive review and camera changes
 
 Refresh with `storyboard-html.js`. The shared HTML embeds a location section with GLB orbit, shot camera, top view, wall visibility, object lookup, camera-path scrub, and reference images. Serve the channel directory over local HTTP; file URL GLB loading is not guaranteed by browsers. All runtime assets are bundled; no CDN is required.
-Exploration and wall hiding never write the set or the shot. `Export camera proposal` downloads a versioned JSON patch; apply with `{action:"camera",board:".../scenes.js",patch:"/downloaded/proposal.json"}`. It refuses a stale base fingerprint. Render, inspect, approve and refresh afterward. This is an explicit proposal workflow, not a pretend save button on a read-only page. The local portal-style shell is preserved; remote portal editor parity has not been asserted.
+Exploration and wall hiding never write the set or the shot. `Export camera proposal` downloads a versioned JSON patch; apply with `{action:"camera",board:".../scenes.js",patch:"/downloaded/proposal.json"}`. It refuses a stale base fingerprint. Render, inspect, approve and refresh afterward. This is an explicit proposal workflow, not a pretend save button on a read-only page. The shared local review shell is preserved.
 
 ## Checks and compatibility
 

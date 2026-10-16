@@ -5,7 +5,6 @@
 - [Authoring](#authoring)
 - [Contract version 1](#contract-version-1)
 - [Production and review](#production-and-review)
-- [Portal compatibility](#portal-compatibility)
 
 Store the canonical sheet in `scenes.js` under `window.SB_DOC`. The review renderer
 merges that metadata over the HTML's editorial defaults. Never keep two editable
@@ -96,8 +95,8 @@ in editorial metadata. Automatic cross-episode propagation is not enabled.
 
 ## Production and review
 
-The shared `prop-continuity.js` validates MCP writes, `check-scenes.js`, portal
-transport and prompt generation. It computes snapshots without mutating input.
+The shared `prop-continuity.js` validates MCP writes, `check-scenes.js`
+and prompt generation. It computes snapshots without mutating input.
 The ordinary still assembler and spatial assembler include per-shot prop states;
 source image arguments include prop reference images (`--json` on the ordinary
 still CLI exports its snapshot and image arguments). References with a condition
@@ -111,18 +110,3 @@ Inspect the generated image/clip for matching object, holder, hand and condition
 The storyboard has a prop section, story-time and character selectors, per-prop
 history, shot links and per-shot start/end states. `none` and `unknown` are distinct.
 It uses the shared review stylesheet, works offline and prints expanded histories.
-
-## Portal compatibility
-
-Existing portal prop tables require an owner and cannot express this model.
-For version-1 ledgers the plugin preserves the sheet and shot bindings in
-`SB_DOC.propSheetTransport` metadata, omitting legacy registry writes instead of
-inventing an owner. The plugin restores the sheet on pull and before unit edits,
-then checkpoints the envelope under the existing revision/lease guard.
-`portal_episode_meta_update` accepts `key: SB_DOC` for validated sheet changes.
-Legacy boards use their original registry contract unchanged.
-
-This implements lossless plugin save/pull compatibility, not a deployed portal UI
-or database migration. Native portal prop forms do not edit the temporal sheet.
-Use the plugin's shared review HTML and MCP/CLI. Keep the existing destination
-consent rule; tests use a local scripted portal, never production credentials.

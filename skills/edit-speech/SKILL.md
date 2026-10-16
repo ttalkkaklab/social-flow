@@ -44,9 +44,6 @@ new character dialogue or voices. Do not silently turn a user's dialogue into na
    Do not label a script-only patch as a regenerated video. Return the changed shot/line,
    speaker, text, new files and any media still needing regeneration. No listening approval.
 
-Portal calls remain governed by the episode's existing destination choice. This local tool
-never contacts the portal; use the existing portal revision workflow only for a portal episode.
-
 Generation receipts keep actual API arguments in voiceSettings. For Gemini and MLX,
 which have no language argument, put the declared text language in generation.language
 (e.g. ko). This is metadata, not an API parameter. Both attachment and assembly use the

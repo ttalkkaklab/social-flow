@@ -2127,8 +2127,7 @@ When adding `effects` or `silence` to an existing `sound` object, merge the new 
 its `sfx`, `cue`, `drop` and `ambience` values unless the storyboard intentionally changes them.
 `effects[].sfx` uses the same logical id as the legacy `sound.sfx`: a key in `window.SFX`, or a
 channel SFX catalog id when the book is absent. It does not introduce `sfxId`, a file path or a URL.
-Likewise, music continues to use cue names and each cue's existing `asset` id. The attachment
-record owned by the portal stores the physical file and rights metadata; the board stores design
+Likewise, music continues to use cue names and each cue's existing `asset` id. The local asset catalog stores file paths and rights metadata; the board stores design
 and logical ids only.
 
 `window.MUSIC.$mix` is reserved metadata, not a cue. Every member is optional. Omitted values take
@@ -2148,18 +2147,6 @@ ending fade, zero `silenceRampSeconds` makes a hard mute window, and zero
 `hook.releaseSeconds` disables hook attenuation. Omitting these settings preserves the builder's
 existing defaults. Bed and ambience separation are gain targets; measured speech-to-bed separation
 still has to satisfy the requested floor after mixing.
-
-Empty `$mix` keys are filled from the channel's portal defaults (`GET /projects/{id}/sound`) when
-`portal_episode_music_update` writes the board — key by key, nested blocks included, and only where
-the episode said nothing. Whatever the episode already carries wins, so the resolution order is shot
-> episode `$mix` > project `sound` > the builder's defaults, and the board stays the single place
-anything reads it from. The fill is a snapshot: changing the project defaults later does not reach an
-episode that has already been written, which is what keeps a rebuild reproducible. The tool reports
-the keys it filled as `filledFromProjectSound`, on a failed write as well as a saved one, so a
-board the checker rejected shows whether a project default is what broke it. Keys with a
-cross-field rule fill as one block: an episode that wrote either `bedSeparationLu` or
-`minimumSeparationLu` gets neither from the project, because filling half the pair can produce
-a `$mix` that contradicts itself and fails the whole write.
 
 `drop` carries the same card restriction the silence window carries — `broll` and `outro` are
 refused. An outro drop put in to clear room for the brand sting used to spend one of the two

@@ -12,8 +12,6 @@ channel: <channel slug>
 topic: <topic slug>
 status: draft            # draft | approved | produced | published
 created: <YYYY-MM-DD>
-portal_episode: <uuid>   # optional — written at approval by portal_storyboard_save after the user chose portal mode and the channel key is configured
-portal_url: <url>        # optional — the portal page of that episode
 ---
 
 # <topic display name> — Storyboard

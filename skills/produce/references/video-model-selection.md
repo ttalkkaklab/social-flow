@@ -573,7 +573,7 @@ data/<channel>/assets/characters/<id>/
 **Front-facing reference set: `[face.png, body.png]`, in that order.** That is the vendor's headshot +
 full body, and array order is weight, so the face leads. Add `back.png` only for a shot where the
 character is seen from behind; a pure rear shot uses back alone, and a facial close-up uses face alone.
-Portal slots map body → front, back → back, face → face. All three must be stored before
+Keep body, back and face reference images locally. All three must be stored before
 a new character reference set is complete; optional extra images serve specific poses/details. Never build a combined sheet out of the panels — the moment two
 angles share one image, this whole section's warning applies again.
 

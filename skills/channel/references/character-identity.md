@@ -77,11 +77,3 @@ a new sample. Keep previous inputs and reviews in a sibling evidence folder. Exi
 hash-bound reviews become stale on any identity/media change; never carry their score
 forward. Obtain a fresh independent review on the actual revised files before recording
 new hashes. Test create and update paths as well as rejected incomplete updates.
-
-## Portal boundary
-
-The current portal API has role, appearance and TTS fields, not this full schema.
-Keep the complete character identity locally. When portal integration was authorized,
-map the confirmed `identity.role` and `physical.appearance` into the existing fields,
-pass exact TTS, and retain the complete local handoff for production. Do not claim the
-portal stored or returned the full specification. Do not add unsupported remote fields.
