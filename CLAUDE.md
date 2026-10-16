@@ -13,16 +13,14 @@ reviews or asking again. This exception supersedes pre-assembly quality gates
 elsewhere in this repository. Keep the approval and warnings in the build record.
 It authorizes neither additional spending nor publishing.
 
-## Speech checks (user directive, 2026-09-15)
+## Speech production (user directive, 2026-10-16)
 
-Narration findings — a scene take that failed `tts_generate_checked`, a final listening
-verdict below threshold — are warnings subject to HITL, not an unconditional veto. Present
-the actual findings (scores, defects with times, what was heard) and follow
-`skills/produce/references/tts-hitl.md`. Once the user approves those warnings for the
-current takes, assemble and deliver without fabricating PASS reviews or asking again. Keep
-the approval and warnings in the build record. It authorizes neither additional spending
-nor publishing; a missing WAV, a review that never ran and a speed record that does not match
-its request still stop.
+Generate speech without automatic listening/scoring/STT or human approval gates. Record
+`not_reviewed`, never a fabricated pass. Keep file, speaker, voice settings and timing
+provenance so the user can request targeted corrections later through `edit-speech` and
+`speech_manage`. This supersedes previous speech-quality and final-listening gates, including
+voice-lock ASR. Follow `skills/produce/references/shot-speech.md`. Narrator and character
+lines use explicit speakers; video models are replaceable adapters with declared capabilities.
 
 ## Style ban — report-style stative verbs (user directive, 2026-08-12)
 

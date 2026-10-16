@@ -63,6 +63,23 @@ test('ASTRA prompt assembly uses its own image-to-video contract instead of Seed
   scene.visual.video.engine = 'seedance';
   assert.throws(() => assemble(win, 0), /Seedance prompt gate/);
 });
+test('ASTRA speech locks distinguish narrator, visible dialogue and off-screen character speech', () => {
+  const win = fixture(1), scene = win.SCENES[0];
+  scene.visual.video = { engine: 'astra' };
+  win.SB_DOC = { narratorCharacterId: 'narrator' };
+  scene.narration[0].speaker = 'hero';
+  assert.doesNotMatch(assemble(win, 0).motionPrompt, /mouths closed/);
+  scene.narration[0].delivery = 'on_screen';
+  assert.doesNotMatch(assemble(win, 0).motionPrompt, /mouths closed/);
+  const continuity=scene.shot.videoDesign.continuity;
+  scene.shot.videoDesign.continuity='He never speaks.';
+  assert.throws(()=>assemble(win,0),/On-screen dialogue conflicts/);
+  scene.shot.videoDesign.continuity=continuity;
+  scene.narration.push({tts:'Narration',speaker:'narrator',delivery:'voiceover'});
+  assert.doesNotMatch(assemble(win, 0).motionPrompt, /mouths closed/);
+  scene.narration = [{tts:'Narration',speaker:'narrator',delivery:'voiceover'}];
+  assert.match(assemble(win, 0).motionPrompt, /mouths closed/);
+});
 test('ASTRA oversized motion plans fail before generation without truncating the action', () => {
   const win = fixture(1);
   win.SCENES[0].visual.video = { engine: 'astra' };

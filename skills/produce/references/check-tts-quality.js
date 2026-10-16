@@ -48,19 +48,8 @@ function characterVoice(win, scene, proof) {
   const matches=characters.filter(c=>c?.id===ids[0]);
   if(!ids[0] || matches.length!==1) throw new Error('Character speech has no uniquely resolved speaker or narrator');
   const expected=matches[0].tts;
-  const errors=require('../../_shared/character-voice.js').voiceErrors(expected);
-  if(errors.length) throw new Error('Character speech: '+errors.join('; '));
-  const settings=proof?.voiceSettings;
-  if(!settings) throw new Error('Character speech requires recorded generation voiceSettings');
-  const engines={tts_generate:'gemini',tts_gemini_38:'gemini',tts_local_generate:'supertonic',tts_elevenlabs_generate:'elevenlabs',mlx_tts_generate:'mlx'};
-  if(!engines[proof.generator] || settings.speakers || settings.inputs) throw new Error('Character speech requires a single-speaker generation proof');
-  const language=require('../../_shared/character-voice.js').normalizeLanguage;
-  const actual={engine:engines[proof.generator],voiceId:settings.voiceId||settings.voiceName||settings.voice,language:language(settings.lang||settings.languageCode||proof.language),speed:settings.speed??1};
-  for(const key of ['engine','voiceId','language','speed']) {
-    const wanted=key==='language'?language(expected[key]):typeof expected[key]==='string'?expected[key].trim():expected[key];
-    if(actual[key]!==wanted) throw new Error(`Character ${ids[0]} ${key} differs from generated speech`);
-  }
-  for(const key of ['model','stylePrompt']) if(expected[key]!==undefined && settings[key]!==expected[key].trim()) throw new Error(`Character ${ids[0]} ${key} differs from generated speech`);
+  const errors=require('../../_shared/character-voice.js').generationVoiceErrors(expected,proof);
+  if(errors.length) throw new Error('Character '+ids[0]+' '+errors.join('; '));
   return ids[0];
 }
 const REPORT='tts-warnings.json', APPROVAL='tts-approval.json';
@@ -104,7 +93,7 @@ function approve(work, reference) {
   fs.writeFileSync(path.join(work,APPROVAL),JSON.stringify({kind:'user',fingerprint:report.fingerprint,reference,at:new Date().toISOString()},null,2)+'\n');
 }
 const lastReport=work=>read(path.join(path.resolve(work),REPORT));
-function check(work, board) {
+function checkLegacy(work, board) {
   work=path.resolve(work);board=path.resolve(board);
   const scenesFile=path.join(board,'scenes.js');
   const win=evaluateWindowScript(fs.readFileSync(scenesFile,'utf8'),{filename:scenesFile});
@@ -161,6 +150,65 @@ function check(work, board) {
   decide(work,warnings,inputs);
   return media;
 }
+/** Production checks provenance only. Listening and approval are not production gates. */
+function check(work, board) {
+  work=path.resolve(work); board=path.resolve(board);
+  const file=path.join(board,'scenes.js');
+  const win=evaluateWindowScript(fs.readFileSync(file,'utf8'),{filename:file});
+  if(!Array.isArray(win.SCENES))throw new Error('SCENES missing');
+  const rows=fs.readFileSync(path.join(work,'cards.tsv'),'utf8').split(/\r?\n/).filter(l=>l.trim()&&!l.startsWith('#')).map(l=>l.split('\t'));
+  const expected=win.SCENES.map((s,i)=>({s,i})).filter(({s})=>!['broll','outro'].includes(s.type));
+  if(JSON.stringify(rows.map(r=>r[0]))!==JSON.stringify(expected.map(({i})=>String(i))))throw new Error('card order differs from SCENES');
+  const media={};
+  for(const [k,{s,i}] of expected.entries()) {
+    const audio=path.resolve(work,rows[k][1]);
+    const bytes=fs.readFileSync(audio);
+    if(!bytes.length)throw new Error('Empty audio for card '+i);
+    media[audio]=hash(bytes);
+    if(s.visual?.video?.speechStatus==='stale')throw new Error('Dialogue-dependent video is stale for card '+i);
+    const characters=win.SB_DOC?.characters||[];
+    const cast=Array.isArray(characters)?characters:Object.entries(characters).map(([id,c])=>({...c,id}));
+    for(const line of s.narration||[]) {
+      if(line.mediaStatus==='needs_audio')throw new Error('Regenerate modified dialogue '+line.id);
+      if(win.SB_DOC?.speechPlanVersion===1 && (line.tts||'').trim() && !line.audio)throw new Error('Attach generated dialogue audio: '+line.id);
+      if(line.audio) {
+        const voice=cast.find(c=>c.id===line.speaker)?.tts;
+        const revision=hash(JSON.stringify({tts:line.tts,sub:line.sub,speaker:line.speaker,delivery:line.delivery,voice}));
+        if(line.audio.revision!==revision)throw new Error('Dialogue or voice changed: '+line.id);
+        const source=path.resolve(board,line.audio.path);
+        if(hash(fs.readFileSync(source))!==line.audio.sha256)throw new Error('Dialogue audio changed: '+line.id);
+        media[source]=line.audio.sha256;
+        if(!line.audio.generation || line.audio.generation.text!==line.tts)throw new Error('Missing dialogue generation receipt: '+line.id);
+        characterVoice(win,{narration:[line]},line.audio.generation);
+      }
+    }
+    const binding=s.visual?.video?.speechBinding;
+    if(binding) {
+      if((s.visual.video.engine && binding.provider!==s.visual.video.engine)||(s.visual.video.model && binding.model!==s.visual.video.model))throw new Error('Video adapter changed for card '+i);
+      if(path.resolve(board,s.visual.video.clip||'')!==path.resolve(binding.videoPath) || hash(fs.readFileSync(binding.videoPath))!==binding.videoSha256)throw new Error('Bound video changed for card '+i);
+      const audio=(s.narration||[]).map(n=>({lineId:n.id,sha256:n.audio?.sha256,revision:n.audio?.revision}));
+      if(JSON.stringify(binding.audio)!==JSON.stringify(audio))throw new Error('Video speech binding is stale for card '+i);
+      media[binding.videoPath]=binding.videoSha256;
+    }
+    if(win.SB_DOC?.speechPlanVersion===1 && (s.narration||[]).some(n=>n.delivery==='on_screen') && s.visual?.video && !binding)throw new Error('On-screen dialogue needs a video speech binding for card '+i);
+    // The actual scene WAV must be tied to these lines, not merely accompanied by other WAVs.
+    const lines=(s.narration||[]).filter(n=>(n.tts||'').trim());
+    const receipt=read(audio+'.generation.json')||read(audio+'.quality.json');
+    if(win.SB_DOC?.speechPlanVersion===1 && lines.length && win.VOICE!=='user') {
+      if(new Set(lines.map(n=>n.speaker)).size!==1)throw new Error('Split speaker changes into single-speaker shots before assembly');
+      const direct=lines.length===1 && lines[0].audio?.sha256===media[audio];
+      if(!direct && (!receipt || receipt.audioSha256!==media[audio] || JSON.stringify(receipt.lineIds)!==JSON.stringify(lines.map(n=>n.id)) || receipt.expectedText!==lines.map(n=>n.tts).join('. ')))throw new Error('Scene WAV has no current line-bound generation receipt for card '+i);
+    }
+    // Generation receipts validate voice and speed, never a listening score.
+    if(receipt) {
+      characterVoice(win,s,receipt);
+      authorizeSpeed(work,'generation',receipt.generationSpeed??1);
+      authorizeSpeed(work,'final',receipt.playbackSpeed??1);
+    }
+  }
+  fs.writeFileSync(path.join(work,REPORT),JSON.stringify({status:'not_reviewed',policy:'speech-provenance-v1',warnings:[],inputs:media,approved:false},null,2)+'\n');
+  return media;
+}
 function checkTempo(work,speed,min=1,max=1) {
   if ([min,max].some(n => Number(n) !== 1)) throw new Error('Per-card tempo changes are forbidden; assembly is fixed at 1.0');
   authorizeSpeed(work, 'final', Number(speed));
@@ -171,7 +219,7 @@ function checkTempo(work,speed,min=1,max=1) {
   });
   if(generated&&[speed,min,max].some(n=>Number(n)!==1))throw new Error('ElevenLabs narration forbids post-synthesis tempo changes; set SPEED=1 and ATEMPO_MIN=ATEMPO_MAX=1, use generation.speed');
 }
-module.exports={characterVoice,check,decide,approve,lastReport,findings,verifyProof,normalize,cer,checkTempo};
+module.exports={characterVoice,checkLegacy,check,decide,approve,lastReport,findings,verifyProof,normalize,cer,checkTempo};
 if(require.main===module){
   try{
     const [command,work,arg]=process.argv.slice(2);
@@ -181,7 +229,7 @@ if(require.main===module){
       if(!dir) throw new Error('usage: check-tts-quality.js check <workdir> [storyboard] | approve <workdir> <user approval reference>');
       check(dir,board);
       const report=lastReport(dir);
-      console.log(report.warnings.length?`Generated narration proceeds with ${report.warnings.length} user-approved warning(s); see ${REPORT}`:'PASS all generated narration: current audio, transcript and listening review');
+      console.log(report.warnings.length?`Generated narration proceeds with ${report.warnings.length} user-approved warning(s); see ${REPORT}`:'Speech media recorded; listening not performed and no approval required');
     }
   }catch(e){console.error('TTS quality: '+e.message);process.exitCode=1;}
 }

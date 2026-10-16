@@ -1,3 +1,7 @@
+> Historical reference. Owner directive 2026-10-16 removes automatic listening and human
+> approval from production. Follow [shot-speech.md](shot-speech.md). The old procedure below
+> only explains existing artifacts; do not execute it for new or resumed production.
+
 # Narration quality gate
 
 Every generated narration scene must pass `tts_generate_checked` before assembly.
