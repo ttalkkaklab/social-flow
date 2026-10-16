@@ -2751,6 +2751,8 @@ window.SB_DOC = {
         // behavior as absolute rule 9). A still-background cover with empty narration drops to
         // the violation branch below.
         chips.push(badge("", T.clipAudio));
+      } else if (window.STORY && window.STORY.version === "story-v2" && (s.performance || []).some(function(e) { return e.kind === "action"; })) {
+        chips.push(badge("", "Visual action"));
       } else {
         chips.push(badge("bad", T.noNarration));
         flag("bad", T.shotCap(no), "narration is empty — it holds " + (s.duration || "?") + " seconds with no sound");
@@ -3248,7 +3250,7 @@ window.SB_DOC = {
       var ctaSpoken = (lastMain.s.narration || []).map(function (seg) {
         return (seg && (seg.sub || seg.tts)) || "";
       }).join("").replace(/\s/g, "");
-      if (!ctaSpoken) {
+      if (!ctaSpoken && !(window.STORY && window.STORY.version === "story-v2" && (lastMain.s.performance || []).some(function(e) { return e.kind === "action"; }))) {
         flag("bad", T.where.order, "the last narrated shot is the CTA but has no narration — a short ends on a spoken close");
         orderOk = false; orderBad = true;
       } else if (compactLetters(((lastMain.s.shot || {}).share) || "").length < 8) {
@@ -4362,6 +4364,16 @@ window.SB_DOC = {
         if (!lines && s.type === "quote" && vis.clip)
           lines = '<div class="cut-carry">speech clip — the actor speaks, so there is no TTS narration</div>';
         if (lines) cell += '<div class="cut-sec">' + esc(T.audioSec) + "</div>" + lines;
+
+        if (k === 0 && window.STORY && window.STORY.version === "story-v2") {
+          cell += '<div class="cut-sec">Story performance</div>';
+          (s.performance || []).forEach(function(e) {
+            var speech = narr[e.group - 1] || {};
+            var words = e.kind === "action" ? e.text : (speech.sub || speech.tts || "");
+            cell += '<div class="cut-line"><div class="b"><b>' + esc(e.character) + ' · ' + esc(e.kind) +
+              (e.to ? ' → ' + esc(e.to) : '') + '</b> ' + esc(words) + '</div></div>';
+          });
+        }
 
         // This path diagram belongs to the plan, never to the rendered footage.
         if (k === 0 && window.PRODUCTION_MODE && window.PRODUCTION_MODE.isDrone(vis.camera)) {

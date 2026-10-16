@@ -3618,3 +3618,11 @@ with times relative to the trimmed file. Review the final sound and subtitle tim
 episode look. Its trajectory generates the four camera slots and both previz camera paths.
 Follow [drone-flythrough.md](drone-flythrough.md) for the schema, preparation command,
 plan binding and review. It is not a ninth episode style or a Google Earth importer.
+
+
+## Character performance (story-v2)
+
+New boards follow [character-led scenarios](character-scenarios.md). `narration[]` remains the
+production speech array for both dialogue and narration, with explicit `speaker` IDs. Shot
+`performance` records ordered actions and speech-group references; STORY references use event
+indices. A silent action can deliver the opening, payoff or close. The thesis need not be spoken.

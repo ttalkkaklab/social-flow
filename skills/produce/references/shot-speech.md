@@ -8,8 +8,10 @@ Historical proof parsers remain for old artifacts; they are not new-production r
 
 ## Common data
 
-Set `SB_DOC.speechPlanVersion:1`. Include the narrator in `SB_DOC.characters` with its own
-pinned `tts`, and set narratorCharacterId. Each narration entry is one ordered spoken line:
+Set `SB_DOC.speechPlanVersion:1`. For story-v2, select a narrator only when the story needs one;
+explicit character speakers and silent stories need no narrator. When selected, include the
+narrator in `SB_DOC.characters` with its own pinned `tts` and set narratorCharacterId. Legacy
+boards still need the narrator for their default speech routing. Each narration entry is one ordered spoken line:
 `{id, speaker, delivery, tts, sub}`. delivery is voiceover (narration or inner monologue),
 on_screen (the character visibly speaks), or off_screen (a character speaks outside frame).
 The field keeps its historical name `narration`, but carries all dialogue. Every line has an

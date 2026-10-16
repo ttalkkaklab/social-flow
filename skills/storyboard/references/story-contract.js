@@ -36,7 +36,10 @@ function storyHash(win) {
   const scenes = (win.SCENES || []).map(s => ({
     type: s.type, beat: s.beat, arc: s.arc, after: s.after,
     title: s.title, stat: s.stat, bullets: s.bullets,
-    narration: s.narration, info: s.shot?.info,
+    ...(win.STORY?.version === 'story-v2' ? { performance: s.performance, action: s.visual?.action, character: s.visual?.character } : {}),
+    narration: win.STORY?.version === 'story-v2' && Array.isArray(s.narration)
+      ? s.narration.map(n => { if (!object(n)) return n; const { audio, mediaStatus, ...editorial } = n; return editorial; })
+      : s.narration, info: s.shot?.info,
     // The forwardable thing is an editorial decision the reviewer reads, so rewriting it after
     // the read has to invalidate the review the same way rewriting narration does.
     share: s.shot?.share,
@@ -46,6 +49,7 @@ function storyHash(win) {
     recording: s.visual?.source === 'recording' ? s.visual.clip : undefined
   }));
   return crypto.createHash('sha256').update(JSON.stringify(canonical({
+    ...(win.STORY?.version === 'story-v2' ? { cast: win.SB_DOC?.characters, narrator: win.SB_DOC?.narratorCharacterId } : {}),
     comprehension: win.COMPREHENSION, story, scenes
   }))).digest('hex');
 }
@@ -53,6 +57,7 @@ function storyHash(win) {
 function checkStory(win, { requireReview = true } = {}) {
   const errors = [], fail = message => errors.push(message);
   const story = win.STORY, scenes = Array.isArray(win.SCENES) ? win.SCENES : [];
+  if (story?.version === 'story-v2') return require('./story-performance.js').checkPerformanceStory(win, { requireReview, hash: storyHash(win) });
   if (!object(story) || story.version !== 'story-v1')
     return ['window.STORY requires version story-v1; read story-quality.md before authoring'];
   for (const key of ['viewerNeed', 'thesis', 'basis', 'endingReason'])

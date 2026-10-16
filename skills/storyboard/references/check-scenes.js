@@ -624,6 +624,21 @@ function check(win, fmt, opts) {
   productionMode.check(win, { draft, generatedVideoMax: channelPolicy.generatedVideoMax })
     .forEach(message => bad('production mode', message));
   perShotLookFindings(win, { bad, machine, warn });
+  if (win.STORY?.version === 'story-v2') {
+    const registry = Array.isArray(win.SB_DOC?.characters) ? win.SB_DOC.characters : Object.entries(win.SB_DOC?.characters || {}).map(([id, c]) => ({ ...c, id }));
+    for (const c of Array.isArray(win.STORY.cast) ? win.STORY.cast : []) {
+      if (!registry.some(entry => entry.id === c?.id))
+        machine('story cast', 'selected character ' + c?.id + ' must be in SB_DOC.characters');
+    }
+    scenes.forEach((s, i) => {
+      const actions = (Array.isArray(s.performance) ? s.performance : []).filter(e => e?.kind === 'action');
+      for (const action of actions) {
+        if (typeof action.text === 'string' && !String(s.visual?.action || '').includes(action.text))
+          machine('shot ' + (i + 1), 'performance action is missing from visual.action — carry the reviewed action into the production plan');
+      }
+    });
+  }
+
   /* Sequence → scene → shot (structure-contract.js) — the same rules storyboard_apply refuses
      to write past. A board with no window.STRUCTURE only warns here: old boards still build. */
   require('./structure-contract.js').check(win, { draft }).forEach(f => {
@@ -795,7 +810,7 @@ function check(win, fmt, opts) {
       if (last.beat !== 'cta')
         bad('episode', 'a short ends on a spoken CTA — the last narrated shot is beat:"cta" ' +
                       '(an outro asset is not the spoken close)');
-      else if (!spokenText(scenes[last.i - 1]).trim())
+      else if (!spokenText(scenes[last.i - 1]).trim() && !(win.STORY?.version === 'story-v2' && Array.isArray(scenes[last.i - 1].performance) && scenes[last.i - 1].performance.some(e => e?.kind === 'action')))
         bad('episode', 'a short ends on a spoken CTA — the last narrated shot has no narration');
       /* An ask stays optional; a forwardable thing does not — an ask requests behaviour from the
          viewer, while a forwardable thing is one sentence, figure or verdict they can pass on

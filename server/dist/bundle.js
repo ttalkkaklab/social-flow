@@ -64576,7 +64576,7 @@ var require_character_voice = __commonJS({
       const characters = Array.isArray(entries) ? entries : Object.entries(entries || {}).map(([id, c]) => ({ ...c, id }));
       const ids = new Set(Object.keys(win.PRODUCTION?.cast || {}));
       const lineIds = /* @__PURE__ */ new Set();
-      if (win.SB_DOC?.speechPlanVersion === 1 && !win.SB_DOC.narratorCharacterId) errors.push("Speech plan needs narratorCharacterId");
+      if (win.SB_DOC?.speechPlanVersion === 1 && win.STORY?.version !== "story-v2" && !win.SB_DOC.narratorCharacterId) errors.push("Speech plan needs narratorCharacterId");
       for (const scene of win.SCENES || []) {
         if (!scene || typeof scene !== "object") {
           errors.push("Scene must be an object");
@@ -64612,6 +64612,145 @@ var require_character_voice = __commonJS({
       return errors;
     }
     module.exports = { normalizeLanguage, voiceErrors, generationVoiceErrors, identityVoice, boardVoiceErrors };
+  }
+});
+
+// ../skills/storyboard/references/story-performance.js
+var require_story_performance = __commonJS({
+  "../skills/storyboard/references/story-performance.js"(exports, module) {
+    "use strict";
+    var text2 = (x2) => typeof x2 === "string" && !!x2.trim();
+    var object5 = (x2) => x2 !== null && typeof x2 === "object" && !Array.isArray(x2);
+    function storyPerformance(win) {
+      const scenes = Array.isArray(win.SCENES) ? win.SCENES : [];
+      const order = [];
+      scenes.forEach((s2, i2) => {
+        if (s2.type === "outro" || s2.type === "broll") return;
+        order.push(i2);
+        scenes.forEach((b, j) => {
+          if (b.type === "broll" && b.after === i2) order.push(j);
+        });
+      });
+      return order.flatMap((i2) => (Array.isArray(scenes[i2].performance) ? scenes[i2].performance : []).map((e2, j) => {
+        const s2 = scenes[i2], n = s2.narration?.[e2?.group - 1];
+        const transcript = (Array.isArray(win.STORY?.transcripts) ? win.STORY.transcripts : []).find((t2) => t2?.shot === i2 + 1)?.groups?.[e2?.group - 1];
+        return {
+          shot: i2 + 1,
+          event: j + 1,
+          kind: e2?.kind,
+          character: e2?.character,
+          to: e2?.to,
+          group: e2?.group,
+          quote: e2?.kind === "action" ? e2.text : n?.sub || n?.tts || transcript?.text || ""
+        };
+      }));
+    }
+    function checkPerformanceStory(win, { requireReview = true, hash: hash5 } = {}) {
+      const errors = [], fail6 = (s2) => errors.push(s2), story = win.STORY;
+      const scenes = Array.isArray(win.SCENES) ? win.SCENES : [];
+      if (!["evidence", "fiction", "adapted"].includes(story.kind)) fail6("STORY.kind must be evidence, fiction or adapted");
+      if (!["narration", "dialogue", "visual", "mixed"].includes(story.expression)) fail6("STORY.expression is required");
+      for (const key of ["viewerNeed", "thesis", "basis", "endingReason"]) if (!text2(story[key])) fail6("STORY." + key + " is required");
+      if (story.kind === "adapted" && !text2(story.adaptationBoundary)) fail6("STORY.adaptationBoundary is required");
+      const cast = Array.isArray(story.cast) ? story.cast : [], ids = /* @__PURE__ */ new Set();
+      for (const c of cast) {
+        if (!object5(c) || !text2(c.id) || ids.has(c.id)) {
+          fail6("STORY.cast requires unique character IDs");
+          continue;
+        }
+        ids.add(c.id);
+        for (const key of ["role", "want", "voice", "source"]) if (!text2(c[key])) fail6("STORY.cast " + c.id + " requires " + key);
+      }
+      if (!cast.length) fail6("STORY.cast is required");
+      if (story.transcripts !== void 0 && !Array.isArray(story.transcripts)) fail6("STORY.transcripts must be an array");
+      for (const t2 of Array.isArray(story.transcripts) ? story.transcripts : [])
+        if (!Number.isInteger(t2?.shot) || !scenes[t2.shot - 1] || scenes[t2.shot - 1].type === "outro") fail6("transcript references an invalid shot");
+      const used = /* @__PURE__ */ new Set();
+      scenes.forEach((s2, i2) => {
+        if (s2.type === "outro") return;
+        const events2 = Array.isArray(s2.performance) ? s2.performance : [];
+        if (!events2.length) fail6("shot " + (i2 + 1) + " requires performance events");
+        const groups = Array.isArray(s2.narration) ? s2.narration : [];
+        const live = (Array.isArray(story.transcripts) ? story.transcripts : []).filter((t2) => t2?.shot === i2 + 1);
+        if (live.length > 1) fail6("duplicate transcript for shot " + (i2 + 1));
+        const transcript = live[0];
+        if (transcript && (groups.length || !text2(transcript.source) || transcript.source !== (s2.visual?.reuse?.clip || s2.visual?.clip) || !(s2.visual?.reuse || s2.visual?.source === "recording") || !Array.isArray(transcript.groups))) fail6("transcript requires matching live recording and no generated speech");
+        let end = 0;
+        for (const g of Array.isArray(transcript?.groups) ? transcript.groups : []) {
+          if (!text2(g?.text) || !Number.isFinite(g.start) || !Number.isFinite(g.end) || g.start < end || g.end <= g.start || s2.visual?.reuse && g.end > s2.duration) fail6("transcript requires ordered timed speech within the reused clip");
+          end = g?.end;
+        }
+        const spoken = groups.length ? groups : Array.isArray(transcript?.groups) ? transcript.groups : [], seen = /* @__PURE__ */ new Set();
+        let lastGroup = 0;
+        events2.forEach((e2) => {
+          if (!object5(e2) || !["action", "dialogue", "narration"].includes(e2.kind)) {
+            fail6("invalid performance event");
+            return;
+          }
+          if (!ids.has(e2.character)) fail6("performance character is not cast: " + e2.character);
+          used.add(e2.character);
+          if (e2.kind === "action") {
+            if (!text2(e2.text) || e2.group !== void 0) fail6("action requires visible text and no speech group");
+          } else {
+            const n = spoken[e2.group - 1];
+            if (!Number.isInteger(e2.group) || !n || seen.has(e2.group) || e2.group <= lastGroup) fail6("speech events require ordered unique narration groups");
+            seen.add(e2.group);
+            lastGroup = e2.group;
+            if (!text2(n?.tts) && !text2(n?.sub) && !text2(n?.text)) fail6("speech group is empty");
+            if (n?.speaker !== e2.character) fail6("speech speaker must equal performance character");
+            if (e2.text !== void 0) fail6("speech event must reference a group, not duplicate text");
+            if (e2.kind === "dialogue" && !ids.has(e2.to) && !["self", "audience"].includes(e2.to)) fail6("dialogue requires a known addressee");
+          }
+        });
+        if (seen.size !== spoken.length) fail6("performance must include every speech group exactly once");
+      });
+      for (const id of ids) if (!used.has(id)) fail6("unused STORY.cast member: " + id);
+      const events = storyPerformance(win);
+      const speech = events.filter((e2) => e2.kind !== "action");
+      if (story.expression === "visual" && speech.length) fail6("visual expression must not contain speech");
+      if (story.expression === "dialogue" && speech.some((e2) => e2.kind === "narration")) fail6("dialogue expression cannot include narrator speech");
+      if (story.expression === "narration" && speech.some((e2) => e2.kind === "dialogue")) fail6("narration expression cannot include dialogue");
+      scenes.forEach((s2, i2) => {
+        if (s2.type !== "outro" && !(s2.narration || []).length && !(Array.isArray(story.transcripts) && story.transcripts.some((t2) => t2?.shot === i2 + 1)) && (!Number.isFinite(s2.duration) || s2.duration <= 0)) fail6("silent performance shot requires a positive duration");
+      });
+      function ref(r2, label) {
+        const index = events.findIndex((e3) => e3.shot === r2?.shot && e3.event === r2?.event);
+        const e2 = events[index];
+        if (!object5(r2) || !Number.isInteger(r2.shot) || !Number.isInteger(r2.event) || !text2(r2.quote) || !e2 || !text2(e2.quote) || !e2.quote.includes(r2.quote) || r2.quote.trim().length < Math.min(12, Math.ceil(e2.quote.trim().length / 2))) {
+          fail6(label + " requires an exact observable event quote with 1-based shot/event");
+          return -1;
+        }
+        return index;
+      }
+      const opening = ref(story.opening, "STORY.opening"), payoff = ref(story.payoff, "STORY.payoff"), ending = ref(story.ending, "STORY.ending");
+      if (opening !== 0) fail6("STORY.opening must reference the first event");
+      if (ending !== events.length - 1) fail6("STORY.ending must reference the last event");
+      if (payoff >= 0 && (payoff < opening || payoff > ending)) fail6("STORY.payoff must fall between opening and ending");
+      if (payoff === opening && story.reveal !== "upfront") fail6("opening payoff requires reveal upfront");
+      if (!["held", "upfront", "none"].includes(story.reveal)) fail6("STORY.reveal is required");
+      if (!["none", "question", "action", "next"].includes(story.cta)) fail6("invalid STORY.cta");
+      if (story.cta !== "none") {
+        const ask = ref(story.ask, "STORY.ask");
+        if (ask <= payoff || !text2(story.ctaReason)) fail6("CTA must follow payoff and have a reason");
+      } else if (story.ask != null) fail6("CTA none must not declare ask");
+      const shots = [...new Set(events.map((e2) => e2.shot))], beats = Array.isArray(story.beats) ? story.beats : [];
+      if (beats.length !== shots.length || new Set(beats.map((b) => b?.shot)).size !== shots.length || beats.some((b) => !shots.includes(b?.shot) || !text2(b.change) || !text2(b.necessity))) fail6("STORY.beats must cover every performance shot with change and necessity");
+      if (!requireReview) return errors;
+      const review2 = story.review;
+      if (!object5(review2)) return [...errors, "STORY.review is required before production"];
+      if (review2.hash !== hash5) fail6("STORY.review is stale; reread the current performance");
+      if (review2.verdict !== "pass" || !Array.isArray(review2.unresolved) || review2.unresolved.length) fail6("STORY.review must pass without unresolved findings");
+      for (const key of ["meaning", "progression", "payoff", "grounding", "character"]) {
+        const item = review2[key];
+        if (!object5(item) || !text2(item.reason) || !Array.isArray(item.refs) || !item.refs.length) {
+          fail6("STORY.review." + key + " needs reasoning and event evidence");
+          continue;
+        }
+        item.refs.forEach((r2, i2) => ref(r2, "STORY.review." + key + ".refs[" + i2 + "]"));
+      }
+      return errors;
+    }
+    module.exports = { storyPerformance, checkPerformanceStory };
   }
 });
 
@@ -64653,7 +64792,12 @@ var require_story_contract = __commonJS({
         title: s2.title,
         stat: s2.stat,
         bullets: s2.bullets,
-        narration: s2.narration,
+        ...win.STORY?.version === "story-v2" ? { performance: s2.performance, action: s2.visual?.action, character: s2.visual?.character } : {},
+        narration: win.STORY?.version === "story-v2" && Array.isArray(s2.narration) ? s2.narration.map((n) => {
+          if (!object5(n)) return n;
+          const { audio, mediaStatus, ...editorial } = n;
+          return editorial;
+        }) : s2.narration,
         info: s2.shot?.info,
         // The forwardable thing is an editorial decision the reviewer reads, so rewriting it after
         // the read has to invalidate the review the same way rewriting narration does.
@@ -64665,6 +64809,7 @@ var require_story_contract = __commonJS({
         recording: s2.visual?.source === "recording" ? s2.visual.clip : void 0
       }));
       return crypto2.createHash("sha256").update(JSON.stringify(canonical({
+        ...win.STORY?.version === "story-v2" ? { cast: win.SB_DOC?.characters, narrator: win.SB_DOC?.narratorCharacterId } : {},
         comprehension: win.COMPREHENSION,
         story,
         scenes
@@ -64673,6 +64818,7 @@ var require_story_contract = __commonJS({
     function checkStory(win, { requireReview = true } = {}) {
       const errors = [], fail6 = (message) => errors.push(message);
       const story = win.STORY, scenes = Array.isArray(win.SCENES) ? win.SCENES : [];
+      if (story?.version === "story-v2") return require_story_performance().checkPerformanceStory(win, { requireReview, hash: storyHash(win) });
       if (!object5(story) || story.version !== "story-v1")
         return ["window.STORY requires version story-v1; read story-quality.md before authoring"];
       for (const key of ["viewerNeed", "thesis", "basis", "endingReason"])
@@ -98573,16 +98719,16 @@ Returns: counts (violations \xB7 warnings \xB7 deferred) and two lists \u2014 st
     name: "scenario_check",
     title: "Check scenario candidates against their contract",
     annotations: HINT.local,
-    description: `Run check-scenario.js on candidates/d1\u2013d3.md or the selected scenario.md and return its machine-readable S1\u2013S12 findings. Reads local scenario and research files and runs a local script; no API call.
+    description: `Check local scenario candidates or a selected story plan.
 
-Use it after writing the three candidates and before showing them for selection, then again on scenario.md before the board is authored. A candidates/ directory includes the S7 set check; a selected scenario.md includes the chosen-direction and frozen checks.
-Do NOT treat a pass as approval of the wording or replace the storyboard review \u2014 this checks fields, references, structure, anchors, reveal discipline, length bands and frozen state.
+Use it after drafting candidates/d1\u2013d3.md before selection, and on scenario.md before board authoring. Reads local files and runs a local script; no writes or API calls. Legacy scenarios use S1\u2013S12. scenario-v2 reads cast.json and character identity paths, validates actions and attributed speech, and requires research references only for factual assertions; fiction has no search quota.
+Do NOT use for shot/camera validation \u2014 use storyboard_check. A pass verifies structure and references, not factual truth, character motivation, entertainment value or user approval.
 
-Returns: JSON \u2014 { files, violations, warnings, findings: [{ level, where, what }] }. Every what starts with S1\u2013S12; violations are P0 and warnings do not make the tool fail.`,
+Returns: JSON \u2014 { files, violations, warnings, findings: [{ level, where, what }] }, in candidate file order. Findings start with S1\u2013S12 or V2; violations block authoring, warnings do not.`,
     inputSchema: {
       type: "object",
       properties: {
-        path: { type: "string", description: "The candidates/ directory or the selected scenario.md" }
+        path: { type: "string", description: "Local candidate directory or selected page, e.g. data/my-channel/episodes/my-topic/storyboard/candidates or data/my-channel/episodes/my-topic/storyboard/scenario.md" }
       },
       required: ["path"]
     }
@@ -100391,7 +100537,9 @@ function manageSpeech(args) {
   const scenes = win.SCENES;
   let changed = false;
   if (args.action === "prepare") {
-    if (typeof doc.narratorCharacterId !== "string" || !character(doc.narratorCharacterId)) throw new Error("Set SB_DOC.characters and narratorCharacterId before preparing speech; no voice is invented");
+    const needsNarrator = object3(win.STORY).version !== "story-v2" || scenes.some((scene) => (scene.narration || []).some((line) => !line.speaker));
+    if ((needsNarrator || doc.narratorCharacterId !== void 0) && (typeof doc.narratorCharacterId !== "string" || !character(doc.narratorCharacterId)))
+      throw new Error("Set SB_DOC.characters and narratorCharacterId before preparing speech without explicit speakers; no voice is invented");
     let next = Math.max(0, ...scenes.map((s2) => Number(String(s2.id || "").replace(/^s/, "")) || 0));
     for (const scene of scenes) {
       scene.id ||= "s" + String(++next).padStart(4, "0");
@@ -100420,6 +100568,14 @@ function manageSpeech(args) {
       const oldAudio = line.audio;
       const oldDelivery = line.delivery;
       Object.assign(line, args.patch);
+      if (args.patch.speaker && object3(win.STORY).version === "story-v2") {
+        const group = (scene.narration || []).indexOf(line) + 1;
+        for (const event of Array.isArray(scene.performance) ? scene.performance : []) {
+          const performance = object3(event);
+          if (performance.group === group && ["dialogue", "narration"].includes(String(performance.kind)))
+            performance.character = line.speaker;
+        }
+      }
       if (speechRevision(line, character(line.speaker)) !== prior) {
         const video = object3(object3(scene.visual).video);
         const binding = object3(video.speechBinding);
