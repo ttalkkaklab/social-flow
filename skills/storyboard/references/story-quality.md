@@ -1,5 +1,8 @@
 # Story quality: evidence, meaning, ending, then an optional CTA
 
+**New authoring contract (2026-10-16):** Read [character-led scenarios](character-scenarios.md) first. New scenarios use `scenario-v2` and boards use `story-v2`: cast existing characters (including narrators), choose evidence/fiction/adapted, write observable actions and attributed speech, and review the whole performance. Its type-specific grounding and rubric replace the legacy research quotas, forced wow/engine mix, spoken-message and narration-only requirements below. Legacy unversioned scenarios and story-v1 boards keep their existing checks. Production voice, budget, destination and publishing consent are unchanged.
+
+
 Apply this contract to every model and authoring route, including skip-research channels,
 recordings, test episodes and revisions. Read it before candidates or narration. It overrides
 older requirements for a closing question, modern parallels, high-arousal emotions or a twist.

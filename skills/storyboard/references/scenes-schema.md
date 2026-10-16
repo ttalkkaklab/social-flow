@@ -3622,3 +3622,10 @@ plan binding and review. It is not a ninth episode style or a Google Earth impor
 ## Persistent 3D locations
 
 `shot.location` binds a versioned location manifest, state, numerical camera and required object IDs. `visual.location` stores rendered references, approval, generation receipt and pixel review. Use `location_manage` to author these records; do not fabricate hashes or approvals. See [location-assets.md](location-assets.md) for the schema, browser proposal workflow and generation handoff. Boards without location bindings remain compatible.
+
+## Character performance (story-v2)
+
+New boards follow [character-led scenarios](character-scenarios.md). `narration[]` remains the
+production speech array for both dialogue and narration, with explicit `speaker` IDs. Shot
+`performance` records ordered actions and speech-group references; STORY references use event
+indices. A silent action can deliver the opening, payoff or close. The thesis need not be spoken.
