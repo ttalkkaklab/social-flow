@@ -254,6 +254,10 @@ is still a failed clip, even if its faces and buildings look better.
 A full-video episode is an edit, not a list of clips. Before generating, read the shot table
 as a sequence:
 
+- Apply [opening-frame planning](../../storyboard/references/visual-direction.md#plan-each-opening-frame-before-assigning-images).
+  Compare return shots of each character as well as adjacent shots. Plan the visible opening
+  state before assigning a source image; shared identity references never substitute for
+  shot-specific staging. Inspect the actual source frames together before motion generation.
 - Change the set-up for a reason. Introduce a place wide, move closer as the narration narrows
   to the part that matters, and return wide when the sentence needs the relationship again.
   `production-mode.js` rejects three consecutive shots with the same `framing` and
@@ -288,6 +292,15 @@ as a sequence:
   more than three seconds longer than its card unless `edit.in` skips into the action.
 
 ## Generation and cost
+
+**Keep shot boundaries in generation.** Each planned cut receives its own source frame and
+camera/action prompt. Do not group cuts by source filename, concatenate their dialogue and
+actions into one continuous-shot request, then slice that result back into unrelated cuts.
+That loses per-shot framing and action timing, even if every slice has a distinct filename.
+Batch scheduling may queue independent requests; it does not merge creative inputs. An
+intentionally continuous take is planned as such with its full action/timing, and any reuse
+of its excerpts must preserve that plan. Use the shared prompt assembler so the saved camera
+plan reaches the model; never replace it with a global "static or subtle drift" sentence.
 
 1. Run `check-scenes.js storyboard/`, then
    `node ${CLAUDE_PLUGIN_ROOT}/skills/produce/references/check-production.js storyboard/ --selection`.

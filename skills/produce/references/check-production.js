@@ -162,8 +162,10 @@ function freeAstraMusicExclusion(win, option, spent, ledger, beforeCall) {
 function check(storyboard, { requireSelection = false, ready = false, beforeCall = null, manifest = false, workdir = null, assemblyOnly = false } = {}) {
   storyboard = path.resolve(storyboard);
   const win = cost.readScenes(path.join(storyboard, 'scenes.js'));
+  const imageReview = require('../../storyboard/references/shot-image-review.js').check(win, storyboard);
+  const imageWarnings = imageReview.map(f => f.what);
   if (assemblyOnly) {
-    const errors=[], warnings=['Visual quality review is advisory; assembly does not certify unseen media.'];
+    const errors=[], warnings=['Visual quality review is advisory; assembly does not certify unseen media.', ...imageWarnings];
     const reusedShots=[];
     for (const [index,scene] of win.SCENES.entries()) {
       try {
@@ -182,17 +184,17 @@ function check(storyboard, { requireSelection = false, ready = false, beforeCall
         if(!(Number(media.format?.duration)+.05>=scene.duration)) throw new Error('clip is shorter than the shot; never loop, reverse or freeze-pad');
       } catch(error) { errors.push('shot '+(index+1)+': '+error.message); }
     }
-    return {active:true,errors,warnings,reusedShots};
+    return {active:true,errors,warnings,reusedShots,imageReview};
   }
-  const warnings = [];
+  const warnings = [...imageWarnings];
   const errors = mode.check(win, { requireSelection, requireApproval: beforeCall !== null, advice: warnings });
   const locations = require('../../storyboard/references/location-assets.js');
   const locationScope = beforeCall !== null ? {...win, SCENES: win.SCENES[beforeCall-1] ? [win.SCENES[beforeCall-1]] : []} : win;
   errors.push(...locations.check(locationScope, storyboard, {ready:ready || beforeCall!==null}).map(f=>f.where+': '+f.what));
-  if (!win.PRODUCTION) return { errors, warnings, active: false };
-  if (errors.length) return { errors, warnings, active: true };
+  if (!win.PRODUCTION) return { errors, warnings, imageReview, active: false };
+  if (errors.length) return { errors, warnings, imageReview, active: true };
   if (beforeCall !== null && win.SCENES[beforeCall - 1] && mode.reused(win.SCENES[beforeCall - 1]))
-    return { active: true, errors: ['A reused clip cannot be selected for a new video API call'] };
+    return { active: true, warnings, imageReview, errors: ['A reused clip cannot be selected for a new video API call'] };
   // Imports already exist at selection time. Check bytes and dimensions even before other assets.
   for (const [index, scene] of win.SCENES.entries()) {
     if (!mode.reused(scene)) continue;
@@ -323,7 +325,7 @@ function check(storyboard, { requireSelection = false, ready = false, beforeCall
         errors.push('Plain-video segments must use only the approved clip, without overlays or freeze/palindrome wrappers: shot ' + (index + 1));
     }
   }
-  return { active: true, mode: p.mode, generatedShots, reusedShots, plainVideoShots, errors, warnings, costReport: { exit: spent.exit, unresolved: spent.unresolved || [] }, quote: current };
+  return { active: true, mode: p.mode, generatedShots, reusedShots, plainVideoShots, errors, warnings, imageReview, costReport: { exit: spent.exit, unresolved: spent.unresolved || [] }, quote: current };
 }
 // A zero-video board reaches this gate with no quote and no approval; every other mode still
 // owes both. The fixture boards live in a temp dir so the checker runs its real file path.

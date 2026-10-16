@@ -1,0 +1,26 @@
+{
+  "codex": {
+    "passed": true,
+    "serverVersion": {
+      "name": "social-flow",
+      "version": "0.114.0-shot-images.4"
+    },
+    "bundleSha256": "df5ac19ecd9e30ebcf85a00c6b9d235fc758014efcd9af8dbfab5c58770b08e5",
+    "freshProcess": true,
+    "containsActualSimilarityEvidence": true,
+    "existingBoardContractViolationsReported": 25,
+    "note": "MCP transport and evidence verification passed; the original legacy board is not certified contract-clean."
+  },
+  "claude": {
+    "passed": true,
+    "serverVersion": {
+      "name": "social-flow",
+      "version": "0.114.0-shot-images.4"
+    },
+    "bundleSha256": "df5ac19ecd9e30ebcf85a00c6b9d235fc758014efcd9af8dbfab5c58770b08e5",
+    "freshProcess": true,
+    "containsActualSimilarityEvidence": true,
+    "existingBoardContractViolationsReported": 25,
+    "note": "MCP transport and evidence verification passed; the original legacy board is not certified contract-clean."
+  }
+}

@@ -1,5 +1,12 @@
 # Direct the episode before choosing assets
 
+## Contents
+
+- [Plan a change the viewer can identify](#plan-a-change-the-viewer-can-identify)
+- [Plan each opening frame before assigning images](#plan-each-opening-frame-before-assigning-images)
+- [Hard stops before assets](#hard-stops-before-assets)
+- [Review the episode, not only individual end frames](#review-the-episode-not-only-individual-end-frames)
+
 **Automatic execution:** [Automation guidance](../../_shared/automation-guidance.md) supersedes creative quality gates, repeated approvals and review-score requirements here. Keep the concrete guidance and truthful review state. Enforce only actual runtime dependencies and the scope of external-action authorization.
 
 
@@ -38,6 +45,39 @@ the character/object action, or the chart beat; do not create another parallel m
 No fixed photo/3D/video quota applies. A data episode may use several appropriate charts and
 a mechanism episode may stay in one 3D environment. Continuity needs evolving evidence,
 framing or action. Do not rotate chart types or insert unrelated people merely to vary the screen.
+
+## Plan each opening frame before assigning images
+
+Shared character panels describe identity; location references describe the set. Neither is
+the default opening frame for every line spoken by that character. First write each cut's
+visible opening state in `shot.videoDesign.before` (or `visual.action` for a still),
+`shot.size`, `shot.angle`, `shot.composition` and `visual.camera.framing`. Describe the single
+moment actually pictured, including the visible prop state and recipient. Then assign its
+source image. Do not build an actor-to-image lookup and distribute lines over those portraits.
+
+Read the sequence both in playback order and grouped by recurring character/location.
+Alternating two portraits can hide repetition from an adjacent-shot check. For each return,
+decide what the viewer needs now: the two people's relationship, a reaction, a hand/prop
+detail, or the speaker's face. Keep an established reverse shot when it serves that beat;
+change scale, viewpoint or blocking when new information needs it. A smile edit, another
+filename, a different render reason or a push-in label alone does not change the setup.
+Avoid assigning camera moves by shot index or filling every cut with the same framing.
+
+For example, a mistaken-interview comedy can establish the studio with a two-shot, show
+the applicant's envelope when its meaning matters, isolate the tasting action, and cut to
+the host's reaction when the misunderstanding breaks. These are story choices, not quotas.
+
+`check-scenes.js` and `check-production.js` include [shot-image-review.js](shot-image-review.js):
+they report shared source paths, identical local file bytes even under different names,
+visually similar local stills after decoding with ffmpeg, and recurring supplied spatial
+and opening-state fields across nonadjacent cuts. Findings include source paths and stable
+shot IDs for side-by-side inspection. The 32×32 RGB/edge comparison catches re-encoding
+and some small edits; it can miss crops, lighting changes or semantically similar scenes,
+and can flag intentional matches. It is a review prompt, not a quality score or automatic
+rejection. Missing, unsupported or undecodable images and remote pixels stay unverified. Read the actual images together before treating
+the board as visually reviewed. Explain intentional reuse in the existing shot reason or
+review notes; otherwise correct the plan and use shot-specific frames within the authorized
+generation scope. A warning does not authorize regeneration or another spending allowance.
 
 ## Hard stops before assets
 

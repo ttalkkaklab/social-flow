@@ -3103,6 +3103,7 @@ function main() {
   require('./render-routing.js').checkEpisode(win, {advice: episodeAdvice}).forEach(what =>
     findings.push({ level: 'bad', where: 'visual direction', what }));
   episodeAdvice.forEach(what => findings.push({level: 'warn', where: 'visual direction', what}));
+  findings.push(...require('./shot-image-review.js').check(win, path.dirname(scenesPath)));
   // Story quality guides the next pass; review metadata never gates automatic production.
   require('./story-contract.js').checkStory(win, { requireReview: false }).forEach(what =>
     findings.push({ level: 'warn', where: 'story quality', what }));
