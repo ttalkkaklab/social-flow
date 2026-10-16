@@ -84930,6 +84930,8 @@ function applyStoryboard(args) {
   else if (!args.set) throw new Error(`no scenes.js at ${file} \u2014 a new board is written with \`set\` (structure + shots)`);
   else if (!existsSync2(dirname(file))) throw new Error(`directory does not exist: ${dirname(file)}`);
   const { win: next, findings, synced } = applyPatch(win, args);
+  const location = loadFromHere(join2(REFERENCES_DIR, "location-assets.js"));
+  findings.push(...location.check(next, dirname(file)));
   const bad = findings.some((f3) => f3.level === "bad");
   const st = next.STRUCTURE;
   const result = {
@@ -94481,6 +94483,33 @@ Returns: JSON \u2014 { candidate, chosen, findings[] }.`,
   }
 ];
 var TOOLS = [
+  {
+    name: "location_manage",
+    title: "Build, bind and review a persistent 3D location",
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    description: "Manage local versioned location assets with installed Blender. build reads spec (JSON path or object) and writes root/id/vN without overwriting; read verifies manifest/assets; sheet renders cameras into a NEW output folder; bind connects manifest/stateId/cameraId to board scenes.js and shotId; render writes clean start/end references; approve requires actual reviewer and observed notes; references returns approved image paths/roles/hashes, refusing stale files; camera applies an exported proposal with a base fingerprint; check returns findings (ready requires approved renders). No paid generation, portal calls or publishing. Coordinates: metres, Z up. See skills/storyboard/references/location-assets.md.",
+    inputSchema: { type: "object", required: ["action"], additionalProperties: false, properties: {
+      action: { type: "string", description: "Operation; build/sheet/render write local assets, bind/camera/approve/receipt update the board, read/references/check are read-only", enum: ["build", "read", "sheet", "bind", "render", "approve", "references", "camera", "check", "receipt", "review"] },
+      verdict: { type: "string", enum: ["pass", "warning", "fail"], description: "Observed generation result verdict; review never certifies unseen images" },
+      provider: { type: "string", description: "Actual output provider for receipt", enum: ["host", "api", "blender"] },
+      callId: { type: "string", description: "Actual tool call or render job identifier" },
+      referencePaths: { type: "array", description: "Absolute paths actually sent to generation", items: { type: "string" } },
+      spec: { oneOf: [{ type: "string" }, { type: "object", additionalProperties: true }], description: "Location spec file or object for build" },
+      root: { type: "string", description: "Channel assets/locations directory" },
+      manifest: { type: "string", description: "location.json path" },
+      output: { type: "string", description: "New sheet output directory" },
+      board: { type: "string", description: "scenes.js path" },
+      shotId: { type: "string", description: "Stable shot id" },
+      stateId: { description: "Registered location state id", type: "string" },
+      cameraId: { description: "Registered numerical camera id", type: "string" },
+      mustShow: { description: "Object IDs that must be visible; review actual images", type: "array", items: { type: "string" } },
+      continuityGroup: { description: "Related shots sharing location continuity", type: "string" },
+      reviewer: { description: "Identity of the actual visual reviewer", type: "string" },
+      notes: { description: "Observed visual findings, not an assumed pass", type: "string" },
+      ready: { description: "Require fresh reviewed image evidence", type: "boolean" },
+      patch: { oneOf: [{ type: "string" }, { type: "object", additionalProperties: true }], description: "Exported camera proposal file or object" }
+    } }
+  },
   ...VOICE_LOCK_TOOLS,
   ...UNIT_TOOLS,
   ...REVIEW_TOOLS,
@@ -100096,10 +100125,41 @@ function portalHandlers(fetchImpl) {
   };
 }
 
+// src/location.ts
+import * as nodeModule2 from "node:module";
+import { join as join9 } from "node:path";
+var loader = nodeModule2.createRequire(import.meta.url);
+var locationSchema = external_exports.object({
+  action: external_exports.enum(["build", "read", "sheet", "bind", "render", "approve", "references", "camera", "check", "receipt", "review"]),
+  verdict: external_exports.enum(["pass", "warning", "fail"]).optional(),
+  provider: external_exports.enum(["host", "api", "blender"]).optional(),
+  callId: external_exports.string().optional(),
+  referencePaths: external_exports.array(external_exports.string()).optional(),
+  spec: external_exports.union([external_exports.string(), external_exports.record(external_exports.unknown())]).optional(),
+  root: external_exports.string().optional(),
+  manifest: external_exports.string().optional(),
+  output: external_exports.string().optional(),
+  stateId: external_exports.string().optional(),
+  cameraId: external_exports.string().optional(),
+  board: external_exports.string().optional(),
+  shotId: external_exports.string().optional(),
+  mustShow: external_exports.array(external_exports.string()).optional(),
+  continuityGroup: external_exports.string().optional(),
+  reviewer: external_exports.string().optional(),
+  notes: external_exports.string().optional(),
+  ready: external_exports.boolean().optional(),
+  patch: external_exports.union([external_exports.string(), external_exports.record(external_exports.unknown())]).optional()
+}).strict();
+async function manageLocation(args) {
+  const input = locationSchema.parse(args);
+  const contract2 = loader(join9(REFERENCES_DIR, "location-assets.js"));
+  return contract2.run(input);
+}
+
 // src/portal-unit-routes.ts
 import { mkdtempSync as mkdtempSync6, readFileSync as readFileSync20, rmSync as rmSync10, writeFileSync as writeFileSync15 } from "node:fs";
 import { tmpdir as tmpdir4 } from "node:os";
-import { join as join9, extname as extname9 } from "node:path";
+import { join as join10, extname as extname9 } from "node:path";
 
 // src/portal-unit-edit.ts
 var unitEditSchema = external_exports.object({
@@ -100397,13 +100457,13 @@ async function boardOperation(client, name, args) {
   if (normalized.findings.some((f3) => f3.level === "bad")) throw new Error(`Board not saved: ${JSON.stringify(normalized.findings)}${filledSuffix}`);
   const source = Object.entries(normalized.win).map(([key, value]) => `window[${JSON.stringify(key)}] = ${JSON.stringify(value)};`).join("\n");
   const checked = evaluateWindowScript(source);
-  const dir = mkdtempSync6(join9(tmpdir4(), "portal-unit-"));
+  const dir = mkdtempSync6(join10(tmpdir4(), "portal-unit-"));
   try {
-    const file = join9(dir, "scenes.js");
+    const file = join10(dir, "scenes.js");
     writeFileSync15(file, source);
-    for (const doc of episode.documents ?? []) if (["scenario.md", "script.md"].includes(doc.filename)) writeFileSync15(join9(dir, doc.filename), await client.document(args.episodeId, doc.filename));
+    for (const doc of episode.documents ?? []) if (["scenario.md", "script.md"].includes(doc.filename)) writeFileSync15(join10(dir, doc.filename), await client.document(args.episodeId, doc.filename));
     const chosen = episode.scenarios?.find((s2) => s2.chosen);
-    if (chosen) writeFileSync15(join9(dir, "scenario.md"), await client.scenarioMd(args.episodeId, chosen.candidate));
+    if (chosen) writeFileSync15(join10(dir, "scenario.md"), await client.scenarioMd(args.episodeId, chosen.candidate));
     const check2 = checkStoryboard({ path: file, draft: args.draft });
     if (check2.violations) return { saved: false, headRevisionNo: head, check: check2, ...filledNote };
     const { SCENES, SB_DOC, ...nextMeta } = checked;
@@ -100460,7 +100520,7 @@ var UNIT_ROUTES = Object.fromEntries(UNIT_TOOL_NAMES.map((name) => [name, (args)
 // src/threads-gate.ts
 import { createHash as createHash7, randomUUID as randomUUID5 } from "node:crypto";
 import { appendFileSync as appendFileSync2, mkdirSync as mkdirSync11, readFileSync as readFileSync21, realpathSync as realpathSync3, renameSync as renameSync9, statSync as statSync10, writeFileSync as writeFileSync16 } from "node:fs";
-import { dirname as dirname5, join as join10, resolve as resolve5 } from "node:path";
+import { dirname as dirname5, join as join11, resolve as resolve5 } from "node:path";
 import { fileURLToPath as fileURLToPath3 } from "node:url";
 import { spawnSync as spawnSync2 } from "node:child_process";
 var nonempty = external_exports.string().trim().min(1);
@@ -100498,17 +100558,17 @@ function threadsBodyHash(body, selfReply = "") {
   return createHash7("sha256").update(JSON.stringify([normalize(body), normalize(selfReply)])).digest("hex");
 }
 function directory(channel) {
-  return join10(process.cwd(), "data", channelSchema.parse(channel), "growth", "threads");
+  return join11(process.cwd(), "data", channelSchema.parse(channel), "growth", "threads");
 }
 function draftLocation(id) {
   const match2 = /^([a-z0-9][a-z0-9-]*)\.([a-f0-9-]{36})$/.exec(id);
   if (!match2 || !external_exports.string().uuid().safeParse(match2[2]).success) throw new Error("Invalid draftId");
-  return { channel: match2[1], file: join10(directory(match2[1]), "drafts", `${match2[2]}.json`) };
+  return { channel: match2[1], file: join11(directory(match2[1]), "drafts", `${match2[2]}.json`) };
 }
 function audit(channel, tool, result, details = {}) {
   const dir = directory(channel);
   mkdirSync11(dir, { recursive: true });
-  appendFileSync2(join10(dir, "gate-log.jsonl"), JSON.stringify({ at: (/* @__PURE__ */ new Date()).toISOString(), tool, result, ...details }) + "\n", { mode: 384 });
+  appendFileSync2(join11(dir, "gate-log.jsonl"), JSON.stringify({ at: (/* @__PURE__ */ new Date()).toISOString(), tool, result, ...details }) + "\n", { mode: 384 });
 }
 function save(draft) {
   const { file } = draftLocation(draft.draftId);
@@ -100586,7 +100646,7 @@ function checkThreadsGate(input) {
     if (bodyHash !== draft.bodyHash) throw new Error("Publish body hash mismatch");
     let limits2;
     try {
-      limits2 = external_exports.object({ voice: external_exports.number().finite().min(0).max(100), purpose: external_exports.number().finite().min(0).max(100), flow: external_exports.number().finite().min(0).max(100) }).parse(JSON.parse(readFileSync21(join10(directory(draft.channel), "gate.json"), "utf8")));
+      limits2 = external_exports.object({ voice: external_exports.number().finite().min(0).max(100), purpose: external_exports.number().finite().min(0).max(100), flow: external_exports.number().finite().min(0).max(100) }).parse(JSON.parse(readFileSync21(join11(directory(draft.channel), "gate.json"), "utf8")));
     } catch (error2) {
       if (error2.code === "ENOENT") throw new Error("Gate thresholds not configured (\uAE30\uC900\uC810 \uBBF8\uC124\uC815): gate.json required");
       throw error2;
@@ -100615,12 +100675,12 @@ function checkThreadsEpisode(input) {
   gateCall("threads_publish", input, () => {
     const channel = channelSchema.parse(input.channel);
     const topic = channelSchema.parse(input.episodeRef);
-    const root = realpathSync3(join10(process.cwd(), "data", channel, "episodes"));
-    const episode = realpathSync3(join10(root, topic));
+    const root = realpathSync3(join11(process.cwd(), "data", channel, "episodes"));
+    const episode = realpathSync3(join11(root, topic));
     if (dirname5(episode) !== root || !statSync10(episode).isDirectory()) throw new Error("Invalid episode directory");
-    const board = realpathSync3(join10(episode, "storyboard", "scenes.js"));
+    const board = realpathSync3(join11(episode, "storyboard", "scenes.js"));
     if (!board.startsWith(episode + "/") || !statSync10(board).isFile()) throw new Error("Missing episode storyboard");
-    const approvalPath = realpathSync3(join10(episode, "threads-publish-approval.json"));
+    const approvalPath = realpathSync3(join11(episode, "threads-publish-approval.json"));
     if (dirname5(approvalPath) !== episode) throw new Error("Invalid episode approval path");
     const approval = JSON.parse(readFileSync21(approvalPath, "utf8"));
     if (approval.approved !== true) throw new Error("Episode publishing approval required");
@@ -100820,7 +100880,7 @@ function withoutPortal(args) {
 import { mkdir, writeFile as writeFile2 } from "node:fs/promises";
 import { existsSync as existsSync21 } from "node:fs";
 import { tmpdir as tmpdir5 } from "node:os";
-import { join as join11 } from "node:path";
+import { join as join12 } from "node:path";
 var PORTAL_BASE = "https://www.data.go.kr";
 var ODCLOUD_BASE = "https://api.odcloud.kr/api";
 var OPENAPI_BASE = "https://apis.data.go.kr";
@@ -101059,14 +101119,14 @@ async function downloadFile2(input) {
   const cd = fileRes.headers.get("content-disposition") ?? "";
   const rawName = cd.match(/filename\*?=(?:UTF-8''|")?([^";]+)/i)?.[1] ?? `datago-${input.publicDataPk}.bin`;
   const filename = sanitizeFilename(fixHeaderEncoding(rawName.replace(/"/g, "")));
-  const saveDir = input.saveDir ?? join11(tmpdir5(), "social-flow-datago");
+  const saveDir = input.saveDir ?? join12(tmpdir5(), "social-flow-datago");
   await mkdir(saveDir, { recursive: true });
-  let savedPath = join11(saveDir, filename);
+  let savedPath = join12(saveDir, filename);
   for (let i2 = 1; existsSync21(savedPath); i2++) {
     if (i2 >= 100) {
       return err(`there are already 100+ files with the same name in ${saveDir} \u2014 clean up saveDir or point at a different directory.`);
     }
-    savedPath = join11(saveDir, filename.replace(/(\.[^.]*)?$/, `-${i2}$1`));
+    savedPath = join12(saveDir, filename.replace(/(\.[^.]*)?$/, `-${i2}$1`));
   }
   await writeFile2(savedPath, buf);
   const preview = decodePreview(buf.subarray(0, 4096));
@@ -102406,7 +102466,7 @@ import {
   writeFileSync as nodeWriteFileSync
 } from "node:fs";
 import { open as nodeOpen, readFile, stat as stat3 } from "node:fs/promises";
-import { basename as basename9, dirname as dirname6, extname as extname10, join as join12 } from "node:path";
+import { basename as basename9, dirname as dirname6, extname as extname10, join as join13 } from "node:path";
 function enabledPlatforms() {
   const channelDirs = listChannelDirs();
   return SNS_PLATFORMS.filter(
@@ -103111,7 +103171,7 @@ function parseResumeOffset(range) {
 }
 function sessionStateFile(filePath) {
   const key = createHash9("sha256").update(filePath).digest("hex").slice(0, 16);
-  return join12(snsTokenDir, ".yt-upload", `${key}.json`);
+  return join13(snsTokenDir, ".yt-upload", `${key}.json`);
 }
 function readState2(filePath) {
   try {
@@ -105079,7 +105139,7 @@ async function generateWithReferences2(request) {
 
 // src/content-feedback.ts
 import { mkdirSync as mkdirSync13, writeFileSync as writeFileSync21 } from "node:fs";
-import { dirname as dirname7, isAbsolute, join as join13, resolve as resolve6 } from "node:path";
+import { dirname as dirname7, isAbsolute, join as join14, resolve as resolve6 } from "node:path";
 
 // src/content-feedback-html.ts
 function escapeHtml(value) {
@@ -105664,7 +105724,7 @@ function analyzeInstagramMedia(media, limit2) {
   return { items, cohort, notes };
 }
 function defaultHtmlPath(channel) {
-  return join13(process.cwd(), "data", channel, "growth", "review-recent.html");
+  return join14(process.cwd(), "data", channel, "growth", "review-recent.html");
 }
 function resolveHtmlPath(channel, outputPath) {
   if (outputPath) {
@@ -108612,6 +108672,13 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
     try {
       const result = manageBackups(args);
       return text(JSON.stringify(result, null, 2), Boolean(result.error));
+    } catch (error2) {
+      return text(error2 instanceof Error ? error2.message : String(error2), true);
+    }
+  },
+  location_manage: async (args) => {
+    try {
+      return text(JSON.stringify(await manageLocation(args), null, 2));
     } catch (error2) {
       return text(error2 instanceof Error ? error2.message : String(error2), true);
     }

@@ -3074,6 +3074,7 @@ function main() {
     : normalizeMotionPolicy(null, formatVideoMax, 'format default', fmt.pacing, isShort);
   const findings = check(win, fmt, { draft, policy: effectivePolicy, requireRenderPlan: true,
                                      channelDir: profilePath ? path.dirname(profilePath) : null });
+  require('./location-assets.js').check(win, path.dirname(scenesPath), {ready: !draft}).forEach(f => findings.push(f));
   require('./render-routing.js').checkEpisode(win).forEach(what =>
     findings.push({ level: 'bad', where: 'visual direction', what }));
   // Draft validates the plan; full production also requires a current evidence-backed read.

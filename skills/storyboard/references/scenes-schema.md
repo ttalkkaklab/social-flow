@@ -3602,3 +3602,7 @@ with times relative to the trimmed file. Review the final sound and subtitle tim
 episode look. Its trajectory generates the four camera slots and both previz camera paths.
 Follow [drone-flythrough.md](drone-flythrough.md) for the schema, preparation command,
 plan binding and review. It is not a ninth episode style or a Google Earth importer.
+
+## Persistent 3D locations
+
+`shot.location` binds a versioned location manifest, state, numerical camera and required object IDs. `visual.location` stores rendered references, approval, generation receipt and pixel review. Use `location_manage` to author these records; do not fabricate hashes or approvals. See [location-assets.md](location-assets.md) for the schema, browser proposal workflow and generation handoff. Boards without location bindings remain compatible.

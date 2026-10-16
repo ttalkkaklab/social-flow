@@ -159,6 +159,9 @@ function check(storyboard, { requireSelection = false, ready = false, beforeCall
   storyboard = path.resolve(storyboard);
   const win = cost.readScenes(path.join(storyboard, 'scenes.js'));
   const errors = mode.check(win, { requireSelection, requireApproval: true });
+  const locations = require('../../storyboard/references/location-assets.js');
+  const locationScope = beforeCall !== null ? {...win, SCENES: win.SCENES[beforeCall-1] ? [win.SCENES[beforeCall-1]] : []} : win;
+  errors.push(...locations.check(locationScope, storyboard, {ready:ready || beforeCall!==null}).map(f=>f.where+': '+f.what));
   if (!win.PRODUCTION) return { errors, active: false };
   if (errors.length) return { errors, active: true };
   if (beforeCall !== null && win.SCENES[beforeCall - 1] && mode.reused(win.SCENES[beforeCall - 1]))

@@ -1,3 +1,4 @@
+import { manageLocation } from './location.js';
 import { REVIEW_ROUTES } from './portal-review-tools.js';
 import { UNIT_ROUTES } from './portal-unit-routes.js';
 import { PORTAL_API_ROUTES } from './portal-api-contract.js';
@@ -1520,6 +1521,10 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
       const result = manageBackups(args as Parameters<typeof manageBackups>[0]);
       return text(JSON.stringify(result, null, 2), Boolean(result.error));
     } catch (error) { return text(error instanceof Error ? error.message : String(error), true); }
+  },
+  location_manage: async (args) => {
+    try { return text(JSON.stringify(await manageLocation(args), null, 2)); }
+    catch (error) { return text(error instanceof Error ? error.message : String(error), true); }
   },
   storyboard_read: async (args) => {
     storyboard.contract();  // a missing structure-contract.js reports itself here, before the argument schema does

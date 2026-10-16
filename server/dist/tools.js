@@ -1259,6 +1259,23 @@ Returns: JSON — { candidate, chosen, findings[] }.`,
     },
 ];
 export const TOOLS = [
+    {
+        name: 'location_manage', title: 'Build, bind and review a persistent 3D location',
+        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+        description: 'Manage local versioned location assets with installed Blender. build reads spec (JSON path or object) and writes root/id/vN without overwriting; read verifies manifest/assets; sheet renders cameras into a NEW output folder; bind connects manifest/stateId/cameraId to board scenes.js and shotId; render writes clean start/end references; approve requires actual reviewer and observed notes; references returns approved image paths/roles/hashes, refusing stale files; camera applies an exported proposal with a base fingerprint; check returns findings (ready requires approved renders). No paid generation, portal calls or publishing. Coordinates: metres, Z up. See skills/storyboard/references/location-assets.md.',
+        inputSchema: { type: 'object', required: ['action'], additionalProperties: false, properties: {
+                action: { type: 'string', description: 'Operation; build/sheet/render write local assets, bind/camera/approve/receipt update the board, read/references/check are read-only', enum: ['build', 'read', 'sheet', 'bind', 'render', 'approve', 'references', 'camera', 'check', 'receipt', 'review'] },
+                verdict: { type: 'string', enum: ['pass', 'warning', 'fail'], description: 'Observed generation result verdict; review never certifies unseen images' },
+                provider: { type: 'string', description: 'Actual output provider for receipt', enum: ['host', 'api', 'blender'] }, callId: { type: 'string', description: 'Actual tool call or render job identifier' }, referencePaths: { type: 'array', description: 'Absolute paths actually sent to generation', items: { type: 'string' } },
+                spec: { oneOf: [{ type: 'string' }, { type: 'object', additionalProperties: true }], description: 'Location spec file or object for build' },
+                root: { type: 'string', description: 'Channel assets/locations directory' }, manifest: { type: 'string', description: 'location.json path' },
+                output: { type: 'string', description: 'New sheet output directory' }, board: { type: 'string', description: 'scenes.js path' },
+                shotId: { type: 'string', description: 'Stable shot id' }, stateId: { description: 'Registered location state id', type: 'string' }, cameraId: { description: 'Registered numerical camera id', type: 'string' },
+                mustShow: { description: 'Object IDs that must be visible; review actual images', type: 'array', items: { type: 'string' } }, continuityGroup: { description: 'Related shots sharing location continuity', type: 'string' },
+                reviewer: { description: 'Identity of the actual visual reviewer', type: 'string' }, notes: { description: 'Observed visual findings, not an assumed pass', type: 'string' }, ready: { description: 'Require fresh reviewed image evidence', type: 'boolean' },
+                patch: { oneOf: [{ type: 'string' }, { type: 'object', additionalProperties: true }], description: 'Exported camera proposal file or object' }
+            } }
+    },
     ...VOICE_LOCK_TOOLS,
     ...UNIT_TOOLS,
     ...REVIEW_TOOLS,

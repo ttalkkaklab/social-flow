@@ -519,6 +519,8 @@ export function applyStoryboard(args) {
     else if (!existsSync(dirname(file)))
         throw new Error(`directory does not exist: ${dirname(file)}`);
     const { win: next, findings, synced } = applyPatch(win, args);
+    const location = loadFromHere(join(REFERENCES_DIR, 'location-assets.js'));
+    findings.push(...location.check(next, dirname(file)));
     const bad = findings.some((f) => f.level === 'bad');
     const st = next.STRUCTURE;
     const result = {
