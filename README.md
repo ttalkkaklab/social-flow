@@ -162,6 +162,10 @@ compares still-camera portraits, contextual 3D character scenes and object mecha
 installed entrypoint and asset hashes. These silent previews wait for user feedback and are not
 publishable episodes. Improve reusable plugin templates and rebuild; do not hand-edit their outputs.
 
+## Persistent 3D locations
+
+`location_manage` builds versioned Blender sets, exports GLB, renders multi-view sheets and shot references, binds them to stable shots, and rejects stale approval or changed asset bytes. The shared storyboard adds an offline 3D viewer with orbit, top view, wall visibility, object inspection, camera-path scrub and camera proposal export. Spatial image prompts include the approved location render as a scoped image input. See [location workflow](skills/storyboard/references/location-assets.md). Blender and a local HTTP server are needed for this workflow. Existing boards are unaffected until a shot binds a location; no portal connection or paid generation is implicit.
+
 ## Requirements
 
 - Node 20+, ffmpeg, Google Chrome (headless capture), python3
@@ -224,7 +228,7 @@ optional, and they're what turns the tool from a video maker into an operator.**
   9:16 or 16:9 video plus per-platform text into
   `data/<channel>/episodes/<topic>/output/`, and you upload those files by hand. Only
   the publishing and growth-loop half is unavailable: the 11 publish/review/insight tools
-  aren't even listed (`tools/list` shows 80 instead of 303 — the 210 `portal_*` tools are
+  aren't even listed (`tools/list` shows 82 instead of 305 — the 210 `portal_*` tools are
   gated the same way on a portal key), and the growth skills have
   nothing to drive. Explicit tool-disable settings can reduce that list further.
 
@@ -519,7 +523,7 @@ social-flow/
 ├── mcp.json                     #   its stdio server entry
 ├── manifest.json                # Claude Desktop extension (.mcpb) manifest — .mcpbignore picks the contents
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 304 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 305 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
 │       ├── tools.ts             # tool definitions — 93: research 9 + open data 5 + generation 49 + publish 6 + comments 3 + growth insights 5 + growth review 2 + check 2 + blender 7 + storyboard 5
@@ -581,9 +585,9 @@ social-flow/
 └── data/                        # content data root (see data/README.md)
 ```
 
-## MCP tool surface (304 tools)
+## MCP tool surface (305 tools)
 
-**`tools/list` does not show all 303.** The credential-gated publish, review and insights tools
+**`tools/list` does not show all 305.** The credential-gated publish, review and insights tools
 (`threads_draft_create` · `threads_review_submit` · `threads_publish` · `instagram_publish` · `facebook_publish` · `facebook_comment` ·
 `youtube_publish` · `threads_insights` · `instagram_insights` · `youtube_insights` ·
 `threads_search`) are exposed **only for platforms whose credential file exists** —

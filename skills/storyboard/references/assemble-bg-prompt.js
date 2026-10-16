@@ -272,7 +272,7 @@ function parseArgs(argv) {
   const out = { _: [] };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
-    if (a === "--selftest" || a === "--help" || a === "--space-only" || a === "--no-person" ||
+    if (a === "--json" || a === "--selftest" || a === "--help" || a === "--space-only" || a === "--no-person" ||
         a === "--clip" || a === "--with-space") { out[a.slice(2)] = true; continue; }
     if (a.startsWith("--") && i + 1 < argv.length && !argv[i + 1].startsWith("--")) {
       out[a.slice(2)] = argv[++i];
@@ -338,13 +338,14 @@ function assemble(opts) {
   if (scene) parts.push(scene.replace(/[.!?\s]*$/, "") + ".");
   if (mood) parts.push(mood.replace(/[.!?\s]*$/, "") + ".");
   if (exclude) parts.push(exclude.replace(/[.!?\s]*$/, "") + ".");
+  if (opts.location) parts.push(opts.location.prompt);
   if (tail) parts.push(tail.replace(/[.!?\s]*$/, "") + ".");
 
   const prompt = parts.join(" ").replace(/\s+/g, " ").replace(/\s+\./g, ".").trim();
 
   // The whole prompt is checked — a "left view of" in --scene ships to the model just the same.
   const hits = bannedHits(prompt);
-  return { prompt, space, hits, unknown, size, angle, layout: opts.layout, facing: opts.facing, ...(opts.propSnapshot?.length ? { propSnapshot: opts.propSnapshot, sourceImageArgs: opts.sourceImageArgs || {} } : {}) };
+  return { prompt, space, hits, unknown, size, angle, layout: opts.layout, facing: opts.facing, ...(opts.propSnapshot?.length ? {propSnapshot:opts.propSnapshot}:{}), sourceImageArgs:{referenced_image_paths:[...(opts.sourceImageArgs?.referenced_image_paths || []), ...(opts.location?.paths || [])]}, ...(opts.location ? {locationBinding:opts.location.binding}:{}) };
 }
 
 function loadShot(file, index) {
@@ -367,6 +368,7 @@ function loadShot(file, index) {
   const propSnapshot = require('./prop-continuity.js').snapshot(win, i);
   const propReferenceImages = propSnapshot.filter(p => p.visible).flatMap(p => p.references.map(r => path.resolve(path.dirname(file), r.path)));
   return {
+    location: sh.location ? require('./location-assets.js').references(win, i, path.dirname(path.resolve(file))) : null,
     propPrompt: require('./prop-continuity.js').prompt(win, i),
     propSnapshot,
     sourceImageArgs: propReferenceImages.length ? { referenced_image_paths: propReferenceImages } : {},
@@ -635,7 +637,7 @@ function main(argv) {
   }
 
   // A mistyped flag (--scen, --layoutt) would silently drop that value from the prompt.
-  const KNOWN = new Set([...VALUE_FLAGS, "selftest", "help", "space-only", "no-person", "check", "clip", "with-space", "json", "_"]);
+  const KNOWN = new Set([...VALUE_FLAGS, "json", "selftest", "help", "space-only", "no-person", "check", "clip", "with-space", "_"]);
   const unknownFlags = Object.keys(args).filter(k => !KNOWN.has(k));
   if (unknownFlags.length) {
     console.error("assemble-bg-prompt: unknown flag --" + unknownFlags.join(", --") + " — see --help");
@@ -729,6 +731,7 @@ function main(argv) {
 
   const result = assemble(opts);
   const { prompt, space, hits, unknown } = result;
+  if(opts.location && !args.json && !args["space-only"]){console.error("Bound locations require --json so actual reference image arguments are preserved");process.exit(1);}
   if (unknown.length) {
     console.error("warning: " + unknown.join(", ") + " outside the vocabulary (scenes-schema §shot) — sent to the model as written");
   }
@@ -740,7 +743,8 @@ function main(argv) {
     console.error("note: no shot.space on this shot — the prompt carries size and angle only; " +
       "on a generated still fill layout/facing first (directing-grammar §3.5)");
   }
-  process.stdout.write((args.json ? JSON.stringify(result, null, 2) : args["space-only"] ? space : prompt) + "\n");
+  if(args.json){console.log(JSON.stringify(result,null,2));return;}
+  process.stdout.write((args["space-only"] ? space : prompt) + "\n");
 }
 
 if (require.main === module) main(process.argv.slice(2));

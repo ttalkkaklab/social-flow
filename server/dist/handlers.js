@@ -1,3 +1,4 @@
+import { manageLocation } from './location.js';
 import { manageSpeech, speechManageSchema } from './speech.js';
 import { REVIEW_ROUTES } from './portal-review-tools.js';
 import { UNIT_ROUTES } from './portal-unit-routes.js';
@@ -1364,6 +1365,14 @@ export const ROUTES = {
         try {
             const result = manageBackups(args);
             return text(JSON.stringify(result, null, 2), Boolean(result.error));
+        }
+        catch (error) {
+            return text(error instanceof Error ? error.message : String(error), true);
+        }
+    },
+    location_manage: async (args) => {
+        try {
+            return text(JSON.stringify(await manageLocation(args), null, 2));
         }
         catch (error) {
             return text(error instanceof Error ? error.message : String(error), true);

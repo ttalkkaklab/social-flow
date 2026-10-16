@@ -5,7 +5,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-const HELPERS = ['render-routing.js', 'production-mode.js', 'structure-contract.js', 'style-samples.js', 'review-layout.js', 'prop-continuity.js', 'prop-sheet.js'];
+const HELPERS = ['render-routing.js', 'production-mode.js', 'structure-contract.js', 'style-samples.js', 'review-layout.js', 'prop-continuity.js', 'prop-sheet.js', 'location-contract.js', 'location-review-runtime.js', 'location-review.css'];
 const REVIEW_ASSETS = path.join(__dirname, '..', '..', 'channel', 'references', 'review-assets');
 const ASSETS = ['review.css', 'WantedSansVariable.woff2', 'OFL.txt'];
 const TITLE = /<title>[^]*?<\/title>/g;
@@ -39,7 +39,8 @@ function storyboardHtml(directory, check = false) {
   const current = fs.existsSync(target) ? fs.readFileSync(target, 'utf8') : null;
   const html = current === null ? template : refreshHtml(template, current);
   const available = ['storyboard.md', 'script.md', 'research.md', 'scenes.js'].filter(name => fs.existsSync(path.join(dir, name)));
-  const files = [['storyboard.html', html], ['review-files.js', 'window.REVIEW_FILES = ' + JSON.stringify(available) + ';\n'], ...HELPERS.map(name => [name, fs.readFileSync(path.join(__dirname, name))]),
+  const locationData = fs.existsSync(path.join(dir, 'scenes.js')) ? require('./location-assets.js').preview(require('../../autoproduce/references/cost-preview.js').readScenes(path.join(dir, 'scenes.js')), dir) : [];
+  const files = [['location-review-data.js', 'window.LOCATION_REVIEW = ' + JSON.stringify(locationData).replace(/</g, '\\u003c') + ';\n'], ['storyboard.html', html], ['review-files.js', 'window.REVIEW_FILES = ' + JSON.stringify(available) + ';\n'], ...HELPERS.map(name => [name, fs.readFileSync(path.join(__dirname, name))]),
     ...ASSETS.map(name => [name, fs.readFileSync(path.join(REVIEW_ASSETS, name))])];
   const changed = files.filter(([name, content]) => {
     const file = path.join(dir, name);

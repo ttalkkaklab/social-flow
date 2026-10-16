@@ -3092,6 +3092,7 @@ function main() {
     : normalizeMotionPolicy(null, formatVideoMax, 'format default', fmt.pacing, isShort);
   const findings = check(win, fmt, { draft, policy: effectivePolicy, requireRenderPlan: true,
                                      channelDir: profilePath ? path.dirname(profilePath) : null });
+  require('./location-assets.js').check(win, path.dirname(scenesPath), {ready: !draft}).forEach(f => findings.push(f));
   require('../../channel/references/character-sheet.js').sourceErrors(win, path.dirname(scenesPath)).forEach(what =>
     findings.push({ level: 'bad', where: 'character identity', what }));
   require('./render-routing.js').checkEpisode(win).forEach(what =>

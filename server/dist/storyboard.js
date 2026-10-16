@@ -540,6 +540,8 @@ export function applyStoryboard(args) {
     if (changesProps && exists && args.expectedSha256 !== originalHash)
         throw new Error('head_moved: propSheet requires the current expectedSha256 from storyboard_read');
     const { win: next, findings, synced } = applyPatch(win, args);
+    const location = loadFromHere(join(REFERENCES_DIR, 'location-assets.js'));
+    findings.push(...location.check(next, dirname(file)));
     const bad = findings.some((f) => f.level === 'bad');
     const st = next.STRUCTURE;
     const result = {

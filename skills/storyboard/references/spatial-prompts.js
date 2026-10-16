@@ -133,9 +133,10 @@ function assemble(win, index, dir) {
   const previzFrame = previz && typeof previz.firstFrame === 'string' ? (dir ? path.resolve(dir, previz.firstFrame) : previz.firstFrame) : null;
   const castReferenceImages = activeCast.filter(({ entry }) => text(entry.name) && text(entry.image))
     .map(({ id, entry }) => ({ id, name: entry.name, path: dir ? path.resolve(dir, entry.image) : entry.image }));
+  const locationRef = scene.shot?.location ? require('./location-assets.js').references(win, index, dir) : null;
   const propSnapshot = require('./prop-continuity.js').snapshot(win, index);
   const propReferenceImages = propSnapshot.filter(p => p.visible).flatMap(p => p.references.map(r => dir ? path.resolve(dir, r.path) : r.path));
-  const sourceReferenceImages = [...(previzFrame ? [previzFrame] : []), ...(pack?.referenceImagePaths || []), ...castReferenceImages.map(ref => ref.path), ...propReferenceImages];
+  const sourceReferenceImages = [...(previzFrame ? [previzFrame] : []), ...(pack?.referenceImagePaths || []), ...castReferenceImages.map(ref => ref.path), ...propReferenceImages, ...(locationRef?.paths || [])];
   const castPromptLines = appliesCutLook ? castLines(cast, castIds, cutType) : [];
   const castImageLines = castReferenceImages.map(ref => {
     const imageNumber = sourceReferenceImages.indexOf(ref.path) + 1;
@@ -158,14 +159,17 @@ function assemble(win, index, dir) {
     'Camera language: ' + style.camera,
     'Camera composition: ' + camera.framing,
     'Spatial continuity: ' + d.continuity,
+    ...(locationRef ? [locationRef.prompt, 'Attached image ' + (sourceReferenceImages.indexOf(locationRef.paths[0]) + 1) + ' is the approved LOCATION reference. Preserve its camera and architecture.'] : []),
     'Keep the physical subject legible at phone size. The image contains only the scene; subtitles are added in editing.'].join('\n');
-  const lock = lockText(d, style, treatment, castLocks) + (propPrompt ? ". " + propPrompt : "") + (isDrone(camera) ? '. The flight keeps continuous terrain parallax and stable landmarks; the picture stays a clean aerial view with scenery at every frame edge' : '');
+  const locationLock = locationRef ? '. The location holds the approved reference architecture and fixed object inventory: ' + locationRef.invariants.join('; ') : '';
+  const lock = lockText(d, style, treatment, castLocks) + locationLock + (propPrompt ? ". " + propPrompt : "") + (isDrone(camera) ? '. The flight keeps continuous terrain parallax and stable landmarks; the picture stays a clean aerial view with scenery at every frame edge' : '');
   let motionPrompt = null;
   const engine = v.video?.engine || v.engine || 'seedance';
   if (!missingSlots.length && engine === 'astra') {
     const astraAppearance = activeCast.filter(({ entry }) => text(entry.sheet))
       .map(({ entry }) => 'Appearance to preserve in every frame: ' + clause(entry.sheet) + '.');
-    motionPrompt = astraMotionPrompt(d, camera, style, treatment, !!spoken.trim() && (scene.narration || []).every(n => n.delivery === 'voiceover' || (!n.delivery && (!n.speaker || n.speaker === win.SB_DOC?.narratorCharacterId))), [...astraAppearance, ...(propPrompt ? [propPrompt] : [])]);
+    motionPrompt = astraMotionPrompt(d, camera, style, treatment, !!spoken.trim() && (scene.narration || []).every(n => n.delivery === 'voiceover' || (!n.delivery && (!n.speaker || n.speaker === win.SB_DOC?.narratorCharacterId))), [...astraAppearance, ...(propPrompt ? [propPrompt] : [])]) + locationLock;
+    if(motionPrompt.length>2000)throw new Error('ASTRA motion prompt including location exceeds 2000 characters');
   } else if (!missingSlots.length) {
     const onReferenceRoute = previz && (v.video.engine || v.engine || 'seedance') !== 'host' && previzHandoff(scene) === 'reference_video';
     const clip = PROMPT.clipAssemble({ engine: 'seedance', camera, motion: motionText(d), locks: lock,
@@ -177,7 +181,8 @@ function assemble(win, index, dir) {
       '. Rewrite videoDesign.action, motion.beats or continuity positively, in English, without seconds.');
     motionPrompt = clip.prompt;
   }
-  return { propSnapshot, propReferenceImages, sourcePrompt: source, stylePreset: preset, cutType, castIds,
+  const locationEndReady = !locationRef || !!(locationRef.resultReview?.verdict === 'pass' && locationRef.resultImage && v.bg && path.resolve(dir,v.bg)===path.resolve(dir,locationRef.resultImage));
+  return { propSnapshot, propReferenceImages, endFrameImageArgs: locationRef && locationEndReady ? {referenced_image_paths: [path.resolve(dir,v.bg), ...locationRef.endPaths]} : {}, endFrameReady: locationEndReady, locationEndReferenceImages: locationRef?.endPaths || [], locationBinding: locationRef?.binding || null, locationReferenceRoles: locationRef?.roles || [], sourcePrompt: source, stylePreset: preset, cutType, castIds,
     styleBinding: pack?.binding || null,
     styleGuidePath: pack?.guidePath || null,
     castReferenceImages,
@@ -185,7 +190,7 @@ function assemble(win, index, dir) {
     // The previz frame goes first, followed by the pack image and the episode cast images.
     sourceImageArgs: sourceReferenceImages.length ? { referenced_image_paths: sourceReferenceImages } : {},
     previzFirstFrame: previzFrame,
-    endFramePrompt: 'Edit the supplied opening image into this final state: ' + after + '\n' + treatment + '\n' + lock +
+    endFramePrompt: (locationRef ? 'Image 1 is the generated opening frame; image 2 is the location endpoint render. Preserve image 1 appearance while using image 2 for the final camera and architecture. ' + locationRef.prompt + '\n' : '') + 'Edit the supplied opening image into this final state: ' + after + '\n' + treatment + '\n' + lock +
       '\nPreserve lighting. Follow the planned camera endpoint: ' + (camera.end || camera.framing),
     motionPrompt };
 }
