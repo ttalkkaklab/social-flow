@@ -1,5 +1,12 @@
 # Production choice with a cost estimate
 
+For new episodes, inherit `production.mode`, `renderRatioVersion`, format and any
+previz choice from the project snapshot created by project-init. The saved ratio
+is a standing preference; do not ask it again. Populate the new board from the
+project tool's handoff, then calculate the actual episode quote and preserve real
+spending authorization. Existing episode choices and explicit overrides win.
+This supersedes per-episode preference prompts below, not cost accounting.
+
 **Automatic execution:** [Automation guidance](../../_shared/automation-guidance.md) supersedes creative quality gates, repeated approvals and review-score requirements here. Keep the concrete guidance and truthful review state. Enforce only actual runtime dependencies and the scope of external-action authorization.
 
 

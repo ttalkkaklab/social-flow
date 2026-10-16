@@ -11,7 +11,7 @@ description: >
   report, and actual cost limits without intermediate quality approval gates. Boundary — storyboard
   plans and stops, produce builds an approved episode, autoproduce does both unattended.
 argument-hint: "<channel> \"<topic>\" [unattended]"
-allowed-tools: ["mcp__social-flow__capability_status", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent",
+allowed-tools: ["mcp__social-flow__project_manage", "mcp__social-flow__capability_status", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent",
   "WebSearch", "WebFetch",
   "mcp__social-flow__naver_search", "mcp__social-flow__serp_web_search",
   "mcp__social-flow__serp_news_search", "mcp__social-flow__serp_naver_search",
@@ -163,7 +163,15 @@ data/<channel>/episodes/<topic-slug>/
 
 ### 0. Load · lock · budget
 
-First follow [model settings](../_shared/model-settings.md) for the selected working
+For NEW episodes, first follow [project-init](../project-init/SKILL.md): save SNS
+targets, genre/models, visual style, video ratio and output format once. Interactive
+runs ask only missing preferences. Unattended runs with incomplete project settings
+return `project_setup_required` and missing fields before taking the lock or spending.
+Pending SNS connections do not block production. Create the episode with the project
+tool/CLI and use its full snapshot and handoff. Existing resumes retain their board.
+This takes precedence over the older model-only setup and per-run style/ratio defaults below.
+
+Then follow [model settings](../_shared/model-settings.md) for the selected working
 directory. Interactive first use asks video type → video model → speech model → image model and saves the choices.
 Unattended first use with no settings reports `model_setup_required` before taking
 the production lock; if only the type is missing, report `video_type_required`.

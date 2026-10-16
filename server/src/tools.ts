@@ -3951,6 +3951,72 @@ Returns: a text block with the saved .wav path, model, duration, and generation 
     },
   },
   {
+    name: 'project_manage',
+    title: 'Set up a multi-episode project',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    description: `Create or update local project settings and episode directories.
+
+Use for initial setup (프로젝트 초기 설정), saved genre/style/video ratio, SNS connection records, or a new episode inheriting project defaults. options and status are read-only. init creates missing channel folders, profile, catalog and local .gitignore entries; it preserves existing files and rejects changed preferences. update requires the revision from status and an explicit user request. episode creates a snapshot and directories, returning a new-board handoff; an existing snapshot or legacy board is preserved. All mutations are local, locked and make no network calls.
+Do NOT use to verify credentials — use sns_account_check. Do NOT use to discover live media engines — use capability_status. Never pass token values, generate media, or publish as part of setup. Record connected only after an actual account check; enabled platforms may stay pending.
+Returns JSON: status, missing fields, canonical paths, config and revision; episode returns snapshot and handoff (FORMAT/PRODUCTION/SNS). options returns the supported type, style, ratio and format catalog. Errors report invalid choices, path conflicts or stale revisions without changing existing settings. Settings live in WORKSPACE/.social-flow/models.json; snapshots in EPISODE/.work/model-settings.json.`,
+    inputSchema: {
+      type: 'object', additionalProperties: false,
+      properties: {
+        action: { type: 'string', enum: ['options', 'status', 'init', 'update', 'episode'], description: 'Operation; e.g. status before init or update.' },
+        workspace: { type: 'string', description: 'Explicit absolute existing project root, e.g. /workspace/videos. Required except for options; never infer the plugin install directory.' },
+        request: { type: 'string', description: 'Actual user preference request for init/update, e.g. Use webtoon for future episodes. Not an invented approval.' },
+        expectedRevision: { type: 'string', description: 'Revision returned by status, required for update; e.g. the exact SHA-256 string from the previous result.' },
+        topic: { type: 'string', pattern: '^[a-z0-9][a-z0-9-]{0,63}$', description: 'Episode directory slug for episode, e.g. history-01.' },
+        profileMarkdown: { type: 'string', description: 'Completed channel profile Markdown for a missing profile, e.g. ---\nslug: history\n... . Author from the channel template; an existing different profile is rejected.' },
+        settings: {
+          type: 'object', additionalProperties: false, description: 'Explicit selected defaults. init needs all fields (existing legacy selections may be reused); update replaces each supplied category except models, which replaces only supplied engines. Example shape is documented in project-init.',
+          properties: {
+            project: { type: 'object', additionalProperties: false, description: 'Project identity; e.g. History with channel history.', properties: {
+              name: { type: 'string', description: 'Display name, e.g. History.' },
+              channel: { type: 'string', pattern: '^[a-z0-9][a-z0-9-]{0,63}$', description: 'Primary channel slug, e.g. history; immutable after setup.' },
+            }, required: ['name', 'channel'] },
+            videoType: { type: 'object', additionalProperties: false, description: 'Saved genre from options, e.g. {id:documentary}.', properties: {
+              id: { type: 'string', description: 'Type ID from options, e.g. drama or documentary.' },
+              detail: { type: 'string', description: 'Required for custom, e.g. Documentary with acted historical scenes.' },
+            }, required: ['id'] },
+            models: { type: 'object', additionalProperties: false, description: 'Video, speech and image model selections; use capability_status and host schemas for actual availability.', properties: Object.fromEntries(['video', 'speech', 'image'].map(kind => [kind, {
+              type: 'object', additionalProperties: false, description: `${kind} selection; fixed engines omit model, host uses host-managed.`,
+              properties: {
+                engine: { type: 'string', enum: kind === 'video' ? ['host', 'seedance', 'veo', 'astra', 'mlx'] : kind === 'speech' ? ['gemini', 'elevenlabs', 'supertonic', 'mlx'] : ['host', 'gpt-image', 'zimage', 'mlx'], description: 'Selected engine, e.g. host for an exposed host media tool.' },
+                model: { type: 'string', description: 'Supported model ID, e.g. host-managed. Omit for astra, supertonic and zimage.' },
+                ...(kind !== 'speech' ? { host: { type: 'string', description: 'Host CLI when engine is host, e.g. codex.' } } : {}),
+                ...(kind === 'video' ? { resolution: { type: 'string', description: 'Supported source resolution, e.g. 720p.' } } : {}),
+                ...(kind === 'image' ? { quality: { type: 'string', description: 'Supported quality, e.g. high; a prompt preference on host tools without a quality parameter.' } } : {}),
+              }, required: ['engine'],
+            }])) },
+            style: { type: 'object', additionalProperties: false, description: 'Visual style, separate from genre and video ratio; e.g. preset:webtoon.', properties: {
+              preset: { type: 'string', enum: ['cinematic-miniature', 'photoreal', 'webtoon', 'claymation', 'paper-cutout', 'ink-wash', 'toon-3d', 'arcade-2d'], description: 'Supported visual style from options, e.g. webtoon.' },
+              ...Object.fromEntries(['reference', 'world', 'materials', 'palette', 'lighting', 'camera'].map(key => [key, { type: 'string', description: `Optional standing ${key} direction, e.g. consistent illustrated window light for lighting.` }])),
+            }, required: ['preset'] },
+            production: { type: 'object', additionalProperties: false, description: 'Default video ratio and format. A budget is a ceiling, not authorization to spend.', properties: {
+              mode: { type: 'string', enum: ['full_video', 'video_80', 'video_50', 'video_30', 'video_lt10', 'no_video'], description: 'Six ratio bands: 100%, 80–<100%, 50–<80%, 30–<50%, <10%, 0%. Count shots, not seconds; use existing production rules for integer rounding.' },
+              renderRatioVersion: { type: 'integer', enum: [1], description: 'Ratio contract version, always 1 for new settings.' },
+              format: { type: 'string', enum: ['shorts-9x16', 'youtube-long-16x9'], description: 'Output format, e.g. shorts-9x16.' },
+              previzRenderer: { type: 'string', enum: ['blender', 'threejs'], description: 'Optional saved previz choice; e.g. blender. Ask only when needed and missing.' },
+              episodeBudgetUsd: { type: 'number', minimum: 0, description: 'Optional per-episode USD ceiling, e.g. 5. Does not replace an actual quote and spending authorization.' },
+            }, required: ['mode', 'renderRatioVersion', 'format'] },
+            sns: { type: 'object', additionalProperties: false, description: 'All four platform records, including disabled ones. Replacement updates must preserve unchanged platforms. Never pass credentials.', properties: Object.fromEntries(['threads', 'instagram', 'facebook', 'youtube'].map(platform => [platform, {
+              type: 'object', additionalProperties: false, description: `${platform} publishing preference and historical account check.`,
+              properties: {
+                enabled: { type: 'boolean', description: 'Whether this project targets the platform, e.g. true.' },
+                status: { type: 'string', enum: ['pending', 'connected', 'disabled'], description: 'pending until verified by sns_account_check; disabled requires enabled:false.' },
+                accountId: { type: 'string', description: 'Verified platform account ID, e.g. UC... for YouTube; required for connected.' },
+                handle: { type: 'string', description: 'Optional public handle, e.g. @history.' },
+                checkedAt: { type: 'string', description: 'Actual account check ISO timestamp, e.g. 2026-10-16T03:00:00Z; required for connected.' },
+                credentialRef: { type: 'string', description: 'External token reference, automatically filled when omitted; e.g. ${SNS_TOKEN_DIR}/history/threads_token. Never a token value.' },
+              }, required: ['enabled', 'status'],
+            }])), required: ['threads', 'instagram', 'facebook', 'youtube'] },
+          },
+        },
+      }, required: ['action'],
+    },
+  },
+  {
     name: 'capability_status',
     title: 'What this machine can do right now',
     annotations: HINT.local,

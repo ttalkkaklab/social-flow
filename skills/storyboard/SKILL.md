@@ -10,7 +10,7 @@ description: >
   Short-form 9:16 or long-form 16:9. Nothing is generated here. Produce builds the approved board;
   autoproduce runs unattended.
 argument-hint: "<channel> <topic or topic hint>"
-allowed-tools: ["mcp__social-flow__location_manage", "Read", "Write", "Edit", "Glob", "Bash", "Agent", "AskUserQuestion", "WebSearch", "WebFetch", "mcp__social-flow__capability_status", "mcp__social-flow__storyboard_apply", "mcp__social-flow__storyboard_check", "mcp__social-flow__storyboard_read", "mcp__social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__social-flow__serp_image_search", "mcp__social-flow__stock_search", "mcp__social-flow__datago_search", "mcp__social-flow__datago_detail", "mcp__social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch", "mcp__social-flow__datago_api_call", "mcp__social-flow__suno_generate_lyrics"]
+allowed-tools: ["mcp__social-flow__project_manage", "mcp__social-flow__location_manage", "Read", "Write", "Edit", "Glob", "Bash", "Agent", "AskUserQuestion", "WebSearch", "WebFetch", "mcp__social-flow__capability_status", "mcp__social-flow__storyboard_apply", "mcp__social-flow__storyboard_check", "mcp__social-flow__storyboard_read", "mcp__social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__social-flow__serp_image_search", "mcp__social-flow__stock_search", "mcp__social-flow__datago_search", "mcp__social-flow__datago_detail", "mcp__social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch", "mcp__social-flow__datago_api_call", "mcp__social-flow__suno_generate_lyrics"]
 ---
 
 Save and read episode files locally under `data/<channel>/episodes/<topic>/`.
@@ -71,7 +71,14 @@ publishable episode and does not fabricate a story approval. Match camera effect
 
 ### 1. Load the profile
 
-**Directory model setup comes first:** follow [model settings](../_shared/model-settings.md)
+**Project setup comes first for new episodes:** follow [project-init](../project-init/SKILL.md)
+and inspect project settings before authoring. Reuse saved genre, models, style,
+video ratio, format and SNS targets. Create the episode with `project_manage episode`
+or its CLI and apply the returned handoff. A resumed board keeps its existing
+snapshot and explicit overrides. Missing preferences are asked once during setup;
+later style/ratio/format questions below apply only when missing or explicitly changed.
+
+**Model adapter mapping:** follow [model settings](../_shared/model-settings.md)
 as soon as the working directory is known. Select video type → video model → speech model → image model once if
 missing; otherwise reuse `.social-flow/models.json` without asking. Snapshot it into
 the episode and carry its models into `PRODUCTION.modelSettings` and its type into

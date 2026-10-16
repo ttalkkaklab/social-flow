@@ -3,6 +3,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
+const { PROJECT_FIELDS, validateProjectFields } = require('./project-config.js');
 
 const SETTINGS_FILE = '.social-flow/models.json';
 const SNAPSHOT_FILE = '.work/model-settings.json';
@@ -79,6 +80,7 @@ function validateConfig(config) {
   }
   validateModels(config.models);
   if (config.videoType !== undefined) validateVideoType(config.videoType);
+  validateProjectFields(config);
   return config;
 }
 
@@ -110,8 +112,9 @@ function writeJson(file, value, exclusive = false) {
   }
 }
 
-function saveSettings(workspace, models, { request, expectedRevision, videoType } = {}) {
+function saveSettings(workspace, models, { request, expectedRevision, videoType, ...projectFields } = {}) {
   if (!nonempty(request)) throw new Error('Record the actual user selection/change request');
+  if (Object.keys(projectFields).some(key => !PROJECT_FIELDS.includes(key))) throw new Error('Unknown project setting');
   const file = settingsPath(workspace);
   // Serialize updates so two sessions cannot both overwrite the same revision.
   fs.mkdirSync(path.dirname(file), { recursive: true });
@@ -121,15 +124,17 @@ function saveSettings(workspace, models, { request, expectedRevision, videoType 
     const current = readSettings(workspace);
     if (expectedRevision === undefined && current.config) throw new Error('Settings already exist; use update with the current revision and explicit user request');
     if (expectedRevision !== undefined && current.revision !== expectedRevision) throw new Error('Settings revision changed or settings are missing; read again');
-    const typeOnly = expectedRevision !== undefined && videoType !== undefined &&
+    const typeOnly = expectedRevision !== undefined && (videoType !== undefined || Object.keys(projectFields).length > 0) &&
       (models === undefined || (object(models) && !Object.keys(models).length));
     if (!typeOnly) validateModels(models, expectedRevision !== undefined);
     if (videoType !== undefined) validateVideoType(videoType);
     if (!current.config && videoType === undefined) throw new Error('Select a video type before saving initial settings');
     const config = {
+      ...current.config,
       version: 1,
       models: { ...current.config?.models, ...models },
       ...(videoType || current.config?.videoType ? { videoType: videoType || current.config.videoType } : {}),
+      ...projectFields,
       updatedAt: new Date().toISOString(),
       request: request.trim(),
     };
@@ -164,7 +169,7 @@ function snapshotSettings(workspace, episode) {
   return { ...snapshot, file, resumed: false };
 }
 
-module.exports = { SETTINGS_FILE, SNAPSHOT_FILE, VIDEO_TYPES, validateVideoType, validateModels, readSettings, saveSettings, snapshotSettings };
+module.exports = { SETTINGS_FILE, SNAPSHOT_FILE, VIDEO_TYPES, validateVideoType, validateModels, validateConfig, readSettings, saveSettings, snapshotSettings };
 
 if (require.main === module) {
   try {

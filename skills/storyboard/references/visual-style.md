@@ -3,7 +3,12 @@
 **Automatic execution:** [Automation guidance](../../_shared/automation-guidance.md) supersedes creative quality gates, repeated approvals and review-score requirements here. Keep the concrete guidance and truthful review state. Enforce only actual runtime dependencies and the scope of external-action authorization.
 
 
-A new episode asks for a visual style in HITL before the storyboard and its images are
+First reuse `style` from the episode's project settings snapshot. A saved project
+choice uses `selection.kind:standing` with the snapshot path as reference. Ask only
+when no saved or explicit episode choice exists; unattended new episodes require
+complete project setup. Later instructions to ask every episode do not override this.
+
+A new episode without a saved choice asks for a visual style in HITL before the storyboard and its images are
 written. Production mode (100%, at least 50%, at least 30%, or hook only) and style are separate choices; the two
 questions may be shown together. The production-mode question carries production-mode.md's
 first-pass cost, retry cost and budget cap. Do not say that the style alone changes the API

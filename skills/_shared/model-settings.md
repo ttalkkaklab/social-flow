@@ -1,5 +1,23 @@
 # Working-directory video type and media models
 
+## Complete project setup
+
+For a new project or NEW episode, first follow [project-init](../project-init/SKILL.md).
+Use `project_manage status` (or `project-settings.js status`) with the explicit
+workspace. It checks SNS targets/connection records, genre/models, visual style,
+video ratio and output format together in this same `.social-flow/models.json`.
+Existing model-only files remain valid: ask only for missing project preferences.
+New unattended production with missing fields reports `project_setup_required`;
+pending SNS connections do not block local authoring. Existing episode resumes
+retain their original snapshot/board, including legacy ones without these fields.
+
+Create NEW episodes with `project_manage episode` so directory creation, the full
+snapshot and the authoring handoff stay together. Apply its `FORMAT` and
+`PRODUCTION` to the new board before the adapter mappings below. Reuse the saved
+style and ratio without a fresh preference question; quote actual costs and keep
+spending authorization separate. The low-level model CLI below remains available
+for compatibility and explicit model changes; it preserves all project fields.
+
 Owner directive, 2026-10-16: once the production working directory is known, select
 **video type → video model → speech model → image model** once and save them in that directory. Every new
 episode uses those choices until the user explicitly requests a change. This takes
