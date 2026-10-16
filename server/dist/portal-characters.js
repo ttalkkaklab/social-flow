@@ -1,4 +1,5 @@
 import { SUPERTONIC_LANGUAGES } from './supertonic-client.js';
+import { portalIdentityFields } from '../../skills/_shared/character-identity.js';
 import { ELEVENLABS_MODELS } from './elevenlabs-client.js';
 import { TTS_VOICES, VALID_TTS_MODELS, GEMINI_38_TTS_MODELS } from './tts-client.js';
 import { voiceLockConfigSchema } from './voice-lock-config.js';
@@ -100,7 +101,7 @@ export function readIdentity(dir) {
     const heading = /^#\s+(.+?)\s*(?:\(([^)]*)\))?\s*$/m.exec(text)?.[1]?.trim();
     const role = /\*\*역할\*\*:\s*(.+)/.exec(text)?.[1]?.trim();
     const appearance = /\*\*생김새\*\*:\s*(.+)/.exec(text)?.[1]?.trim();
-    return { key, ...(heading ? { name: heading } : {}), ...(role ? { role } : {}), ...(appearance ? { appearance } : {}) };
+    return { key, ...(heading ? { name: heading } : {}), ...(role ? { role } : {}), ...(appearance ? { appearance } : {}), ...portalIdentityFields(text) };
 }
 const summarize = (c) => ({
     id: c.id, projectId: c.projectId, key: c.key, name: c.name, role: c.role, appearance: c.appearance,

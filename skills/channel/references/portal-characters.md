@@ -15,11 +15,14 @@ commonly does — so `portal_character_get` and `portal_character_list` take the
 held by two projects is **refused**, not picked: the portal orders by name then id, so a
 quiet pick would return the same wrong record every time instead of failing once.
 
+Use [character-identity.md](character-identity.md) for structured settings and the
+portal field boundary. Read the source before updates.
+
 ## Steps
 
 1. **Generate three separate panels** in `assets/characters/<id>/`, with one consistent
    character, outfit, proportions and channel visual style: `body.png` = front full body
-   without a face, `back.png` = back full body without a face, `face.png` = face close-up.
+   including a neutral face, `back.png` = back full body facing away, `face.png` = face close-up.
    All three are required for new reference sets. Inspect each image; never merge them
    into one sheet. Use the host image tool first where available. Optional poses/details
    are extra files. Write `identity.md` (`# Name`, `**역할**:`, `**생김새**:`); the folder
