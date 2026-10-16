@@ -80,3 +80,21 @@ test('only supported hosted speech engines and v4 character settings are accepte
   assert.match(generationVoiceErrors(v4, { ...proof, voiceSettings: { ...proof.voiceSettings, stability: 0.9 } }).join(), /stability differs/);
   assert.match(generationVoiceErrors(v4, { ...proof, generator: 'tts_local_generate' }).join(), /single-speaker/);
 });
+
+test('provenance checks the voice and language fields consumed by each generator',()=>{
+  const {generationVoiceErrors}=require('../../skills/_shared/character-voice.js');
+  const gemini={engine:'gemini',model:'gemini-2.5-flash-preview-tts',voiceId:'Kore',language:'ko',speed:1};
+  const line={tts:'Hello'},proof={generator:'tts_generate',text:line.tts,language:'ko',voiceSettings:{model:gemini.model,text:line.tts,voiceId:'Kore',voiceName:'Puck'}};
+  assert.match(generationVoiceErrors(gemini,proof,line).join(),/voiceId differs/);
+  proof.voiceSettings.voiceName='Kore';proof.voiceSettings.voiceId='Puck';assert.match(generationVoiceErrors(gemini,proof,line).join(),/Conflicting voice alias/);
+  delete proof.voiceSettings.voiceId;delete proof.voiceSettings.voiceName;assert.deepEqual(generationVoiceErrors(gemini,proof,line),[]);
+  assert.match(generationVoiceErrors({...gemini,voiceId:'Puck'},proof,line).join(),/voiceId differs/);
+  const v38={...gemini,model:'gemini-3.8-flash-tts'};
+  assert.match(generationVoiceErrors(v38,{...proof,generator:'tts_gemini_38',voiceSettings:{model:v38.model,voiceId:'Kore',voice:'Puck',turns:[{text:line.tts}]}},line).join(),/voiceId differs/);
+  const eleven={engine:'elevenlabs',model:'eleven_v4',voiceId:'actor123',language:'ko',speed:1};
+  const eproof={generator:'tts_elevenlabs_generate',text:line.tts,language:'ko',voiceSettings:{model:eleven.model,voiceId:eleven.voiceId,lang:'ko',languageCode:'en',text:line.tts}};
+  assert.match(generationVoiceErrors(eleven,eproof,line).join(),/language differs/);
+  delete eproof.voiceSettings.lang;eproof.voiceSettings.languageCode='ko';assert.deepEqual(generationVoiceErrors(eleven,eproof,line),[]);
+  delete eproof.voiceSettings.languageCode;assert.deepEqual(generationVoiceErrors(eleven,eproof,line),[]);
+  delete eproof.voiceSettings.voiceId;eproof.voiceSettings.voiceName=eleven.voiceId;assert.match(generationVoiceErrors(eleven,eproof,line).join(),/voiceId differs/);
+});

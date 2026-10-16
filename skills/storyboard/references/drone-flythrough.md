@@ -115,7 +115,7 @@ Inspect the whole previz and generated clip, including random seeks and bends:
 - The route exposes the planned landmark; near and far objects show changing parallax.
 - Turns and banking stay continuous, without flips, collisions or unexplained cuts.
 - The endpoint and timing match the plan; trees, terrain and buildings keep their identity.
-- The picture contains no route line, HUD or added marker; only normal burned subtitles.
+- The picture contains no route line, HUD or added marker; no burned subtitles.
 
 A valid drone shot is excluded from the full-video wide-shot ratio. Other shots keep their
 existing limits, and repeated framing/movement still triggers the repetition check.

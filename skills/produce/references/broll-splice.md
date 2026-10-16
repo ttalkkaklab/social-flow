@@ -52,7 +52,7 @@ cardend() {   # cardend <after> — sum of confirmed lengths for cards 0..after 
 $REF/splice-clip.sh .work \
   .work/broll/broll-a0-mixed.mp4 "$(cardend 0)" \
   .work/broll/broll-a3-mixed.mp4 "$(cardend 3)"
-# → reel-spliced.mp4 · reel-sub-spliced.mp4 · subs-spliced.srt
+# → reel-spliced.mp4 · optional subs-spliced.srt
 ```
 
 - **Pass both slots in a single call.** Call the script twice and the second call re-reads
@@ -61,10 +61,7 @@ $REF/splice-clip.sh .work \
   out. The script does the pushing math.
 - **Don't eyeball T** — a card's confirmed length (seconds after frame rounding) is when the
   scene ends. Approximate it and the last frame of that scene gets cut off.
-- Splice the clean and burned-in versions **separately, at the same T with the same clip**.
-  The burned-in version already has the subtitles on screen so it needs no timecode shift, and
-  the builder's ASS styling is preserved (re-burning from the srt changes the font, position,
-  and outline from the original).
+- Splice the clean master only. Historical burned-in copies must not enter delivery.
 - Each cue in `subs.srt` shifts back by **the sum of the measured lengths of the clips
   inserted before it**. Use the value **measured with ffprobe after re-encoding**, not the
   nominal length (for example 4 seconds) — frame rounding throws it off by tens of
@@ -72,14 +69,6 @@ $REF/splice-clip.sh .work \
   out of sync.
 - **Confirm that 0 subtitle cues straddle T** (the script reports per T). A straddle drops the
   b-roll into the middle of a sentence — move that T to a sentence boundary.
-- After splicing, check that **the clean and burned-in versions have the same length**. A
-  mismatch means one side's pieces got cut wrong. An output length tens of milliseconds above
-  "expected" is normal (each piece rounds up to a frame boundary) — with two slots there are
-  three pieces, so that error grows a little.
+- After splicing, check that the clean output duration matches the measured insertion plan. Frame rounding may add tens of milliseconds per piece.
 
-There's one reason to keep the burned-in version (`reel-sub.mp4`) around — **Instagram has no
-path for a subtitle file.** The IG Content Publishing container has no subtitle parameter, so
-there, burning them into the picture is the only way to deliver subtitles. The two files are
-each encoded from the same original, so both are first-generation (the clean one isn't
-re-encoded), and the builder verifies that the lengths match.
-
+Every platform uses the clean master. Optional sidecar captions remain separate; when requested, upload them as a YouTube caption track.

@@ -471,7 +471,7 @@ The builder reads continuous video offsets across segments, disables loops and f
 and refuses a card whose source cannot cover its duration plus the outgoing live handle.
 Follow [cinematic-edit.md](cinematic-edit.md): choose each join by action and continuity,
 reserve its handle before quoting generation, and use the common builder for delivery.
-Do not blanket-assign `cut` or replace the builder with an episode-specific concatenation script. Keep narration and burned subtitles; clear on-screen `title`, `bullets`, `stat` and
+Do not blanket-assign `cut` or replace the builder with an episode-specific concatenation script. Keep narration without burned subtitles; clear on-screen `title`, `bullets`, `stat` and
 `footnote`, storing thumbnail/title copy in platform metadata instead.
 
 `build-reel.sh` reruns the approved-quote, review and manifest gates, and `verify-assembled.js`

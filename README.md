@@ -112,7 +112,7 @@ with a real 3D object when a thing is the subject. The offline mesh lane renders
 and articulated parts at every frame, with 3D illustration or photoreal materials and refined
 curved arrows ([object authoring](skills/storyboard/references/mesh-objects.md)), held to the quality of
 `docs/research/2026-09-04-rendered-object-slide/reference-slide.html`. Generated video is
-reserved for essential continuous action, with the subtitle as its only type. **Every cut is chosen by purpose** (user directive 2026-09-06):
+reserved for essential continuous action, with no subtitles burned into the picture. **Every cut is chosen by purpose** (user directive 2026-09-06):
 the storyboard reads the narration first and writes `shot.render` — a still under a camera
 move, a 3D character scene, a 3D object scene, a data graph, or generated video — with the
 reason for the choice ([render routing](skills/storyboard/references/render-routing.md)). The
@@ -146,7 +146,7 @@ These checks enforce the workflow, not a promised audience retention rate.
 A one-person history short declares `STORY.person` and follows
 [person-short.md](skills/storyboard/references/person-short.md): the opening names nobody and
 carries no year, the body is cause → block → one blow, the close is one scene after the blow,
-the picture changes with every sentence, and the subtitle colours only the year and the name.
+the picture changes with every sentence, and optional sidecar subtitles remain separate from the picture.
 A message is a sentence that stays true with the episode's names gone — *what leads to what*,
 present tense, no figure, no name ([scenario-stage.md](skills/storyboard/references/scenario-stage.md)
 §The message): `check-research.js` refuses a past-tense, numbered or hero-named Message cell,
@@ -548,10 +548,10 @@ social-flow/
 ├── mcp.json                     #   its stdio server entry
 ├── manifest.json                # Claude Desktop extension (.mcpb) manifest — .mcpbignore picks the contents
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 94 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 95 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
-│       ├── tools.ts             # tool definitions — 94 tools, including voice auditions and opt-in acting review
+│       ├── tools.ts             # tool definitions — 95 tools, including voice auditions and opt-in acting review
 │       ├── handlers.ts          # zod validation + routing
 │       ├── sns-client.ts        # Threads·IG·FB·YouTube publish/comments
 │       ├── serp-client.ts       # SerpApi (key masking + response slimming)
@@ -618,7 +618,7 @@ Episodes are saved only under `data/<channel>/episodes/<topic>/`. Open
 media and publication logs stay in the local episode directory; no destination
 selection or workspace key is required.
 
-## MCP tool surface (94 tools)
+## MCP tool surface (95 tools)
 
 `project_manage`: options · status · init · update · episode. Local project setup
 with genre, models, style, ratio, format and SNS records; no generation or publishing.
@@ -656,6 +656,7 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | ASTRA upload management | `astra_video_list_uploads` / `astra_video_delete_upload` | List uploads with no arguments; delete one with `uploadId` after user approval. Requires `ASTRA_VIDEO` and server endpoint support. Uploads expire after 24h, with 20 uploads / 1 GiB per key. Unsupported endpoints and invalid responses return errors; live verification is pending. |
 | Optional checked narration | `tts_generate_checked` | Legacy/explicitly requested review workflow. New production uses raw Gemini tools or ElevenLabs v4 synthesis and records `not_reviewed`; review scores never gate unrelated assembly. |
 | Optional final speech review | `tts_review_final` | Reviews actual media only when the user requests it. Keep file-bound evidence and honest findings; no automatic delivery gate. |
+| Requested acting review | `acting_review` | Optional paid Gemini evaluation of actual speech, expression, body action and lip sync against a scene direction. Requires an explicit review request and existing spending authorization; never runs as a default production gate. Records hashes, coverage, evidence and pass/fail/unverified status. Reuses unchanged receipts rather than rerolling scores. |
 | Pronunciation dictionary | `tts_elevenlabs_dictionary` | Creates Korean alias rules and returns pinned dictionary/version IDs for `pronunciationDictionaryLocators`. Keep the source name intact and test the actual pronunciation. |
 | Character voice auditions | `character_voice_audition` | Generate three candidates, present playable audio, and persist only the user-selected voice to the character identity. |
 | Requested acting evaluation | `tts_review_acting` | Explicit user request only. Evaluates actual WAV bytes with a fixed acting rubric and records timestamps, model judgment and audio hash. No default production gate. |
@@ -861,8 +862,7 @@ external vendor contract to document, so their evidence lives in research notes 
   the two gates of account standing and per-post auditions, what ranking actually
   predicts, 9 myths that died in verification. The commentary edition of grow-instagram.
 - **[Making short-form video with AI](docs/guides/ai-video-production/index.html)** —
-  where the two video engines diverge, official prompt rules, and when to burn
-  subtitles into the video.
+  where the two video engines diverge, official prompt rules, and how to keep optional subtitle files separate from the video.
 - **[Marketing basics](docs/guides/marketing-basics/index.html)** — the vocabulary a
   marketing beginner needs first.
 - **[Affiliate video compliance](docs/guides/affiliate-video-compliance/index.html)** —
@@ -955,7 +955,13 @@ Existing sheets need explicit migration; legacy storyboards remain readable.
 
 New storyboards assign stable line ids, explicit speakers (narrator included) and delivery
 modes. `speech_manage` lists, prepares, patches and binds audio to dialogue, and plans video
-from adapter capabilities. `edit-speech` repairs a requested shot/character without replacing
+from adapter capabilities. Per-line `acting` separates situation, intent, emotion, vocal and
+visual direction from the pinned character voice, with optional reaction time before/after
+speech. `plan_audio` returns the selected raw generator arguments and unsupported-control
+warnings; production uses those arguments instead of repeating one generic character tone.
+Video prompts use the same beat and a matching source-image state. Distinct emotional beats
+are not concatenated by shared image and sliced at arbitrary audio boundaries.
+`edit-speech` repairs a requested shot/character without replacing
 unaffected takes. Speech generation has no automatic listening or human approval gate;
 outputs are marked `not_reviewed`. File, voice and timing provenance remain required.
 See [the speech contract](skills/produce/references/shot-speech.md). Video models are
@@ -972,3 +978,7 @@ neighbours. Returned metadata and prior review records are explicitly unverified
 Creative quality guidance lives in [the shared automation guide](skills/_shared/automation-guidance.md).
 CTA checks are removed. Missing review scores and creative metadata are advice;
 invalid references, unusable media and actual spending authorization remain execution contracts.
+
+### Clean video and optional subtitle tracks (2026-10-17)
+
+Videos contain no burned-in subtitles, even when they contain speech. The builders ignore legacy burn-in switches and never select an old `*-sub.mp4` as the publishing master. Generated performance prompts prohibit caption/text overlays. Optional SRT files stay separate; when requested, YouTube uploads them as viewer-selectable caption tracks. A missing SRT is not a production defect. This user directive replaces earlier subtitle burn-in guidance.

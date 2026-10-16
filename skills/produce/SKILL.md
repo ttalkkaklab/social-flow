@@ -1,9 +1,9 @@
 ---
 name: produce
 description: >
-  Builds the video and the per-platform text from an already-approved storyboard. Use when the user asks to "영상 만들어", "콘텐츠 제작", "produce the video", "플랫폼별 콘텐츠 만들어", or right after a storyboard is approved. Turns the approved scenes.js under data/[channel]/episodes/[topic]/storyboard/ into a narrated 9:16 video at 1080x1920/30fps — generated backgrounds, TTS narration, BGM with ducking, kinetic subtitles, brand outro — plus the Threads, Instagram, Facebook and YouTube text under the episode's output/, checked on a phone viewport before publishing. Where recording/alignment.json exists it cuts the user's own screen recording instead of generating scenes. Boundary — storyboard plans and stops for approval, produce starts after it, autoproduce runs both unattended.
+  Builds the video and the per-platform text from an already-approved storyboard. Use when the user asks to "영상 만들어", "콘텐츠 제작", "produce the video", "플랫폼별 콘텐츠 만들어", or right after a storyboard is approved. Turns the approved scenes.js under data/[channel]/episodes/[topic]/storyboard/ into a narrated 9:16 video at 1080x1920/30fps — generated backgrounds, TTS narration, BGM with ducking, clean speech video, brand outro — plus the Threads, Instagram, Facebook and YouTube text under the episode's output/, checked on a phone viewport before publishing. Where recording/alignment.json exists it cuts the user's own screen recording instead of generating scenes. Boundary — storyboard plans and stops for approval, produce starts after it, autoproduce runs both unattended.
 argument-hint: "<channel> <topic> [platformCSV|auto]"
-allowed-tools: ["mcp__social-flow__project_manage", "mcp__social-flow__location_manage", "mcp__social-flow__speech_manage", "mcp__social-flow__tts_review_acting", "mcp__social-flow__capability_status", "Bash", "Read", "Write", "Edit", "Glob", "AskUserQuestion", "Agent", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_gemini_38", "mcp__social-flow__tts_elevenlabs_dictionary", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue", "mcp__social-flow__tts_list_voices", "mcp__social-flow__music_generate", "mcp__social-flow__music_generate_clip", "mcp__social-flow__music_generate_advanced", "mcp__social-flow__stock_search", "mcp__social-flow__suno_generate", "mcp__social-flow__suno_generate_sound", "mcp__social-flow__suno_generate_lyrics", "mcp__social-flow__suno_credits", "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__gpt_image_img2img", "mcp__social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__social-flow__seedance_img2video", "mcp__social-flow__seedance_reference", "mcp__social-flow__astra_img2video", "mcp__social-flow__astra_keyframe_video", "mcp__social-flow__astra_audio2video", "mcp__social-flow__astra_video_retake", "mcp__social-flow__astra_video_list_uploads", "mcp__social-flow__astra_video_delete_upload", "mcp__social-flow__mlx_image_generate", "mcp__social-flow__mlx_image_edit", "mcp__social-flow__mlx_music_generate", "mcp__social-flow__mlx_video_generate", "mcp__social-flow__mlx_3d_generate"]
+allowed-tools: ["mcp__social-flow__project_manage", "mcp__social-flow__location_manage", "mcp__social-flow__speech_manage", "mcp__social-flow__acting_review", "mcp__social-flow__tts_review_acting", "mcp__social-flow__capability_status", "Bash", "Read", "Write", "Edit", "Glob", "AskUserQuestion", "Agent", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_gemini_38", "mcp__social-flow__tts_elevenlabs_dictionary", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue", "mcp__social-flow__tts_list_voices", "mcp__social-flow__music_generate", "mcp__social-flow__music_generate_clip", "mcp__social-flow__music_generate_advanced", "mcp__social-flow__stock_search", "mcp__social-flow__suno_generate", "mcp__social-flow__suno_generate_sound", "mcp__social-flow__suno_generate_lyrics", "mcp__social-flow__suno_credits", "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__gpt_image_img2img", "mcp__social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__social-flow__seedance_img2video", "mcp__social-flow__seedance_reference", "mcp__social-flow__astra_img2video", "mcp__social-flow__astra_keyframe_video", "mcp__social-flow__astra_audio2video", "mcp__social-flow__astra_video_retake", "mcp__social-flow__astra_video_list_uploads", "mcp__social-flow__astra_video_delete_upload", "mcp__social-flow__mlx_image_generate", "mcp__social-flow__mlx_image_edit", "mcp__social-flow__mlx_music_generate", "mcp__social-flow__mlx_video_generate", "mcp__social-flow__mlx_3d_generate"]
 ---
 
 Use local episode files under `data/<channel>/episodes/<topic>/`.
@@ -12,12 +12,25 @@ Use local episode files under `data/<channel>/episodes/<topic>/`.
 For tracked props, read [prop continuity](../storyboard/references/prop-continuity.md). Resolve the shot snapshot before prompts, preserve reference versions and record the snapshot with generated assets; verify the actual holder and condition in images and clips.
 **New authoring contract (2026-10-16):** Read [character-led scenarios](../storyboard/references/character-scenarios.md) first. New scenarios use `scenario-v2` and boards use `story-v2`: cast existing characters (including narrators), choose evidence/fiction/adapted, write observable actions and attributed speech, and review the whole performance. Its type-specific grounding and rubric replace the legacy research quotas, forced wow/engine mix, spoken-message and narration-only requirements below. Legacy unversioned scenarios and story-v1 boards keep their existing checks. Production voice, budget and publishing consent are unchanged.
 # Per-platform content production — data/[channel]/episodes/[topic]/output/
+**Owner directive (2026-10-17): every delivered video is subtitle-free, including speech.**
+This supersedes older burned-subtitle exceptions and rendering recipes below. Use the clean
+master on every platform. No subtitle/caption typography may be generated into clips or
+burned during editing. Keep exact dialogue for audio checks and optional separate YouTube
+subtitle files only when requested; existing subtitle files do not authorize uploading them.
+Use plan_video.videoPrompt and its no-visible-text policy. Do not paste literal dialogue
+into an audio-conditioned video prompt; the supplied WAV carries the exact spoken words.
+Inspect actual clips for accidental text; a no-text prompt alone does not prove clean frames.
 **Speech production override (2026-10-16):** Read [shot-speech.md](references/shot-speech.md).
 Generate with raw TTS tools; do not run automatic speech reviews, dictation, voice-lock ASR,
 or listening approval. The provenance-only builder proceeds with `not_reviewed` speech.
 Older checked-TTS/listening recipes below are historical and do not govern new work.
 Use explicit per-line speakers including narrator; resolve video via adapter capabilities.
 Later corrections use edit-speech and `speech_manage`.
+For scene emotion, use each line's `acting` and `speech_manage action:plan_audio`; preserve
+voice identity while passing the resolved line direction to the raw generator. The same
+direction and reaction timing inform `plan_video`, its prompt and the scene's starting image.
+Do not group different emotions or nonconsecutive shots by source image and cut the result
+into arbitrary audio-length slices. See shot-speech.md for timing and continuity details.
 Turn the approved storyboard (`storyboard/scenes.js`) into a narrated video and per-platform text. **Assembly video warnings use HITL:** follow [assembly-video-hitl.md](references/assembly-video-hitl.md). Show failed video/visual-plan checks to the user; their explicit approval permits assembly of the current inputs. This exception overrides pre-assembly quality holds below. Preserve warnings and resume without asking again.
 **scenes.js is the only data source** for screens, narration, subtitles and captions. **HITL records:** Record assembly and slide-fallback answers with their actual warning evidence. Preserve actual provenance in local files and reuse existing authorization. This adds no approval gate.
 ```
@@ -25,7 +38,7 @@ data/<channel>/episodes/<topic>/
 ├── storyboard/          # input (has to be in the approved state)
 ├── .work/               # intermediates (gitignore — cards/ broll/ pcm/ manifest)
 └── output/
-    ├── video/           # video.mp4 (clean) · video-sub.mp4 (burned-in) · subs.srt · cover.jpg · build-report.txt
+    ├── video/           # video.mp4 (subtitle-free) · cover.jpg · build-report.txt
     ├── threads/post.md  # 반말 (casual) body + video link on the last line (no attached image)
     ├── instagram/caption.md
     ├── facebook/post.md
@@ -52,7 +65,9 @@ Use [story-quality.md](../storyboard/references/story-quality.md) to improve the
    real people, no national symbols, no staged news screens. Cards (static text) are code-rendered only.
 6. **Branding belongs in the outro** — no logo or badge in the body (a brand eating the first 3
    seconds is a skip signal). Under `shortform_outro: off` the episode carries no logo at all: the avatar and the handle do that job.
-7. **The identity voice is fixed** — preserve profile.md §2's voice ID and model. Per-line `acting` may change without replacing the identity; use [acting prompts](references/acting-prompts.md).
+7. **The TTS identity is fixed** — preserve the pinned engine, model and voice ID/name.
+   Resolve each line's emotion and delivery from `acting`; the character stylePrompt is only
+   its baseline. Use `plan_audio` arguments so a confused question does not inherit a sales smile. Follow [acting prompts](references/acting-prompts.md).
 8. **Generated video comes from an image** — don't use `veo_text2video`. The order is always
    approved image provider → keep the PNG in `storyboard/images/` → the selected image-to-video engine.
    With `PRODUCTION.imageProvider:"host"` (Codex, Grok) the still comes from the host `image_gen`, and with `videoProvider:"host"` (Grok) the clip comes from the host `image_to_video` — the plugin's API tools are the fallback the user is asked about, never a silent one (still-generation §1, video-model-selection §The host video tool comes first).
@@ -66,7 +81,7 @@ Use [story-quality.md](../storyboard/references/story-quality.md) to improve the
    `narration: []` with no subtitles either (§6 has to push the subtitle timecodes back by
    that much). **This rule is about b-roll inserts** — on a motion-background scene
    (scenes-schema §Motion background, `visual.video`) the builder uses only the video
-   track, so the clip's sound gets dropped and the narration and subtitles stay as they are.
+   track, so the clip's sound gets dropped and the narration stays; subtitles remain outside the video.
 10. **The cover's (first screen's) text is code-rendered only** — the engine never draws
    the title. **Veo can't write Hangul** (user confirmed 2026-08-11), and the cover is a
    screen of nothing but the hook title and the hero number, so broken glyphs write off the
@@ -142,13 +157,13 @@ Use [story-quality.md](../storyboard/references/story-quality.md) to improve the
    another factor in profile.md §2, and either way the shipped result has to stay at or below
    **6.2 spoken characters/s overall and per substantive cue**.
    The outro stays at 1.0x when the channel splices one. What goes to `output/` is `reel-fast.mp4` ·
-   `reel-sub-fast.mp4` · `subs-fast.srt`, never the pre-pass files.
+   `reel-fast.mp4` · `subs-fast.srt`, never the pre-pass files.
 16. **Nothing is drawn over video; hybrid explanations use HTML** (user directive
    2026-09-05 — it outranks every other rule here and in every reference doc; CLAUDE.md
    §Nothing is drawn over video. An approved full-video episode lifts only the HTML
    requirement, never the ban on marks). No arrow, route, X, ring, hatch, bracket, dot, label or
    callout goes over a generated clip, a motion background, a b-roll, a quote clip or a
-   recording; the burned subtitle is the only type on a moving picture. A cut that needs an
+   recording; subtitles and captions are also forbidden on the moving picture. A cut that needs an
    arrow, a figure or a principle is `kind:"diagram", motion:true, treatment:"editorial"` on
    the studio stage, with a rendered object when a thing is the subject, built to the quality
    of `docs/research/2026-09-04-rendered-object-slide/reference-slide.html`. The footage slide
@@ -174,7 +189,7 @@ Follow [delivery preflight and continuation](references/delivery-continuation.md
   **The shooting-edit path** follows `references/screencast-pipeline.md` §Edit procedure
   instead of §2–7 (overlay capture → edit.json → build-screencast.sh — no TTS, no generated
   backgrounds, no reveals; the voice is the user's own). The artifact names (reel.mp4 ·
-  reel-sub.mp4 · subs.srt · cover.jpg · build-report.txt) are the same, so §7.5–10 (the speed
+  cover.jpg · build-report.txt; requested SRT separately) are the same, so §7.5–10 (the speed
   pass, phone QA, platform text, quality gate) run unchanged — **a shooting edit ships sped up
   too**, and `speedup.sh` reads the xfade join that builder makes on its own. Use screencast-pipeline.md's gate table.
   **`alignment.json` + landscape doesn't work.** `build-screencast.sh`'s band constants
@@ -333,7 +348,7 @@ means generating something nobody approved.
   Then append the subject motion, and for b-roll the audio line. **An empty `end` is a storyboard
   defect, not something to fill in here** — send it back. Older episodes carry a single
   `visual.motion` string instead; use that as-is.
-- **`shot.composition` owns framing room.** Source prompts and filming scripts read the record. Check headroom, gaze space, travel space and subtitle clearance in actual frames and motion endpoints; image-to-video inherits the approved source composition. **`shot.depth` owns focus** the same way: shallow names the one sharp plane, deep lists every plane that must read; check the actual still and clip, and treat a still-camera focus mask that blurs two objects at one distance differently, or a soft key subject, as a failed cut rather than a look.
+- **`shot.composition` owns framing room.** Source prompts and filming scripts read the record. Check headroom, gaze space, travel space and unobstructed framing in actual frames and motion endpoints; image-to-video inherits the approved source composition. **`shot.depth` owns focus** the same way: shallow names the one sharp plane, deep lists every plane that must read; check the actual still and clip, and treat a still-camera focus mask that blurs two objects at one distance differently, or a soft key subject, as a failed cut rather than a look.
 - **`shot.eyeline` owns gaze.** Read the scene plan before source images. `assemble-bg-prompt.js --from` includes it in source prompts; the shooting script prints the marker. Compare linked images and final boundary playback for direction, eye height and target distance. Keep the image-to-video prompt from restating locked space.
 - **`shot.feel`·`shot.size`·`shot.angle`·`shot.space` — the shot grammar.** The storyboard wrote
   what the audience should feel on each shot and chose the size, the angle and the frame space
@@ -738,10 +753,13 @@ leaves it out of step with the video (scenes.js is the single source). When fixi
 numbers and proper nouns alone and work on the grain of the sentence.
 
 Follow [shot-speech.md](references/shot-speech.md). Resolve each explicit speaker from
-SB_DOC.characters and use its pinned raw TTS engine and voice. Store stable line ids,
+SB_DOC.characters and use `speech_manage action:plan_audio` to obtain its raw TTS arguments
+with the current line's acting direction. Do not replace those arguments with a generic
+character stylePrompt. Store stable line ids,
 generation receipts and audio hashes with `speech_manage`. Keep raw API arguments in
 voiceSettings; declare text language separately when the API auto-detects it. No automatic
-listening, STT, scores, retry-to-pass loop or human listening approval runs.
+listening, STT, scores, retry-to-pass loop or human listening approval runs by default;
+an explicitly requested review/improvement loop may inspect actual media and report findings.
 
 Use one speaker per scene. Split speaker changes into separate shots before synthesis.
 Use WAV, preserve the selected voice and speed, and resample differing sample rates before
@@ -749,7 +767,11 @@ assembly. The current builder cannot concatenate MP3 as PCM. Keep speech at spee
 the user requested another speed under [tts-speed.md](references/tts-speed.md).
 Generate each stable line as a take; combine consecutive lines into the scene WAV and record
 its ordered lineIds, expectedText and actual audioSha256. For single-line shots, use the bound
-WAV directly. Subtitle timing follows the actual WAV; file and timing checks do not listen.
+WAV directly when no reaction padding is planned. For directed or multi-line scenes, attach all line
+audio first; build-reel invokes [compose-speech.js](references/compose-speech.js) to add
+leadInSeconds/tailOutSeconds and align subtitles to measured speech intervals. Run that
+same composer before audio-conditioned video generation so video uses the padded WAV. Subtitle timing follows the
+actual WAV; file and timing checks do not listen.
 Keep ElevenLabs seed, stability and pronunciation dictionaries fixed across retakes when
 pinned. Never switch engines silently after an API failure.
 
@@ -841,7 +863,7 @@ After assembly, inspect `edit-check.json`, play every `work/seams/` excerpt with
 record observations in `edit-review.md` with the final master hash. The machine checks frame
 counts and applied joins; the review checks whether the edit actually feels continuous.
 
-**Word cues — `SUB_MODE=word`.** The burn-in shows **one 어절 at a time**, a hard swap every
+**Legacy subtitle-layout reference; do not burn into current video. Word cues — `SUB_MODE=word`.** The burn-in shows **one 어절 at a time**, a hard swap every
 half second, sitting on the 65% line in a 60px glyph with no fade — the subtitle grammar of
 the reference short measured in docs/research/2026-08-29-one-world-word-cue (164 swaps in
 85 s, 1.23 words per cue, 0.47 s median). The words get real times: the builder runs the
@@ -1006,14 +1028,14 @@ made it from `window.SFX` and registered it — so an id that fails to resolve h
 that was skipped, not a file to invent.
 
 ```bash
-$REF/build-reel.sh .work storyboard/    # → .work/reel.mp4 (clean) · reel-sub.mp4 (burned-in) · subs.srt · cover.jpg · build-report.txt
+$REF/build-reel.sh .work storyboard/    # → subtitle-free reel.mp4 · cover.jpg · build-report.txt; optional sidecar with SUB=1
 ```
 
-**You get two videos, not one.** This pipeline's principle is to keep subtitles out of the
-video and upload them as a separate file — subtitles stay fixable after publishing, viewers
-can turn them off, and YouTube even auto-translates from that file. Burned-in subtitles turn
-a single typo into a re-encode and a repost. So `reel.mp4` is the clean master with no
-subtitles, and `subs.srt` goes to the publish tools alongside it.
+**Deliver the clean master on every platform.** No burned-in variant is required or
+selected. If separate YouTube subtitles are requested, generate an SRT sidecar with
+`SUB=1`; it never becomes pixels or an embedded subtitle stream in the video. Upload
+that track separately when publishing to YouTube. Do not infer a subtitle request
+from a legacy profile, a stale SRT or the presence of a `reel-sub` file.
 
 #### Splicing in the b-roll (when §3 made one — inside the approved channel cap)
 
@@ -1044,7 +1066,7 @@ The builder has trimmed and loudness-normalized card speech at the engine's own 
 is the only tempo change the voice goes through.
 
 ```bash
-$REF/speedup.sh .work        # → .work/reel-fast.mp4 · reel-sub-fast.mp4 · subs-fast.srt · chapters-fast.txt
+$REF/speedup.sh .work        # → .work/reel-fast.mp4 · optional subs-fast.srt · chapters-fast.txt
 $REF/speedup.sh .work 1.2    # only with an explicit user request for final x1.2 in .work/speed-authorization.json
 ```
 
@@ -1097,17 +1119,16 @@ REF=${CLAUDE_PLUGIN_ROOT}/skills/produce/references
 # FORMAT_ENV is cleared on purpose — the script sources it and would put CAP_W back
 # to 1080. The QA harness is a phone mockup, not a 1080×1920 frame.
 FORMAT_ENV= CAP_W=470 CAP_H=920 $REF/capture-frames.sh \
-  "file://$PWD/.work/reel-qa.html?v=./reel-sub-fast.mp4&ui=ig&fit=crop&zone=1&frame=1&t=<sec>" \
+  "file://$PWD/.work/reel-qa.html?v=./reel-fast.mp4&ui=ig&fit=crop&zone=1&frame=1&t=<sec>" \
   .work/qa/s<n>.png
 ```
 
 One shot per scene at the reveal-complete moment, plus one at `&t=0` — a cover's reveal-complete
 frame is not its first, and the pass already saved that moment as `.work/qa/first-frame.png`. Then
-read the PNGs. **QA runs on the final burn-in (`reel-sub-fast.mp4`)** — that's the file that
-ships. The default 1.0x preserves subtitle timing; a faster channel setting may make a previously
-readable subtitle disappear. The clean one has no subtitles, so you can't see clipping or
-intrusion, and the burned-in one is what actually goes to IG. Check: action bar (x≈890) intrusion
-/ subtitle centering / hero number clipping / can you tell the topic from the first frame alone /
+read the PNGs. **QA runs on the clean final `reel-fast.mp4` that ships.** Check that
+speech clips have no subtitles, captions or accidental typography at any point.
+Inspect framing, action bar intrusion, clipping and whether the first frame establishes
+the topic. Also check
 **whether the background photo shows through the middle of the frame** (a box or dim outside the
 bands is the slide look — a violation of absolute rule 14). On a problem: fix the template →
 regenerate frame.html → recapture only that state → rebuild.
@@ -1157,30 +1178,24 @@ and the link URL only. The link slot is the IG reels permalink, whose value isn'
 publish time — leave a placeholder like `<IG_REELS_URL>` in `post.md` and let publish fill in
 the real URL. Save each under `output/<platform>/`, and finalize the video and cover with
 `cp .work/reel-fast.mp4 output/video/video.mp4` ·
-`cp .work/reel-sub-fast.mp4 output/video/video-sub.mp4` ·
-`cp .work/subs-fast.srt output/video/subs.srt` · `cp .work/cover.jpg output/video/cover.jpg` ·
+`cp .work/cover.jpg output/video/cover.jpg` ·
 `cp .work/build-report.txt output/video/` ·
 `cp .work/delivery-proof.json output/video/` (publish checks the final files against these
 hashes; an ad hoc export or stale copy cannot substitute for the checked assembly).
 **The `-fast` files are the deliverables** (§7.5) — copy `reel.mp4` or `subs.srt` here and the
-episode ships un-sped with subtitles on the wrong timeline. On a long-form episode the chapter
+episode ships at the wrong pace. Copy `subs-fast.srt` to `subs.srt` only for a requested separate YouTube track. On a long-form episode the chapter
 file goes over under its published name too: `cp .work/chapters-fast.txt output/video/chapters.txt`
 (publish reads `output/video/chapters.txt`, so leaving the build's original there ships the
 pre-speed timestamps).
-**Publishing is complete only with all three files** — the clean version and the subtitle file
-go to YouTube and Facebook, the burned-in version to Instagram. Miss one and the subtitles
-disappear on that platform.
+**All platforms receive the same subtitle-free `video.mp4`.** A stale
+`video-sub.mp4` is never selected. Separate YouTube caption tracks are optional and
+require the user's request; language defaults alone do not enable them. Preserve
+source dialogue and timing for such a future request.
 
-#### Multi-language subtitles (only when the profile lists them)
-
-Extra `.srt` tracks beyond the channel language, and how the platforms take them:
-[optional-lanes.md](references/optional-lanes.md) §From §9. **A profile with one language
-skips this.**
 ### 10. Quality gate + completion report
 
 Delegate artifact verification to the content-reviewer agent (Agent) — hand over video frame
-screenshots (**taken from the sped-up burn-in `reel-sub-fast.mp4`** — the clean one has no subtitles, so
-typos and clipping aren't visible), the per-platform copy, scenes.js, §8's `.work/experience-review.md`,
+screenshots (**taken from the clean final `reel-fast.mp4`**; verify no accidental subtitles or typography), the per-platform copy, scenes.js, §8's `.work/experience-review.md`,
 `build-report.txt` and the storyboard's hand-to-produce table (the reviewer's P0-11 needs all three), and get back P0
 detections (typos, clipping, factual mismatch, platform taboos, copy-pasted sentences,
 unexplained jargon, AI tells, a result given away in the title or description) and axis scores.
@@ -1278,7 +1293,7 @@ length, platforms) together with the cost summary, and point the user at
 
 - **`references/pipeline.md`** — build contract · report gate verdict table · the three TTS failure modes · palindrome loop · collected field-tested pitfalls
 - **`references/screencast-pipeline.md`** — the shooting-edit path: edit.json contract · edit procedure · gates · pitfalls (replaces §2–7 when alignment.json exists)
-- **`references/build-screencast.sh`** — the shooting-edit builder (scene cut → crop → 9:16 composite → subtitle burn-in → BGM ducking → outro, drift 0)
+- **`references/build-screencast.sh`** — the shooting-edit builder (scene cut → crop → 9:16 clean composite → BGM ducking → outro, drift 0)
 - **`references/cut-screencast.sh`** — the screencast-splice cutter (§3.7): one window of a screen recording → focus crop → fit onto the canvas over `THEME.ink`, warning when the picture shrinks past legibility or the clip outruns its card. One card inside an ordinary episode, not a whole-episode mode
 - **`references/screencast-overlay.html`** — scene title alpha overlay renderer (top block y 190–460, scenes.js injected)
 - **`references/video-template.html`** — 1080×1920 scene renderer (THEME injection · reveal · alpha · safe zone · overflow guard)
@@ -1290,7 +1305,7 @@ length, platforms) together with the cost summary, and point the user at
 - **`references/build-outro.sh`** — generates the channel's shared outro
 - **`references/speedup.sh`** — the required final pace pass (§7.5). Uses 1.0 unless the episode has an explicit user request for another factor while leaving the outro at 1.0x, retimes `subs.srt` and `chapters.txt`, verifies the measured length, and blocks a final speech rate over 6.2 characters/s. Reads the pre-pass set and writes `-fast` names, so it never stacks
 - **`references/check-final-speech-rate.py`** — measures Unicode letters and numbers on `subs-fast.srt`; catches a whole-video speed factor that made otherwise valid cards too dense to follow
-- **`references/splice-clip.sh`** — post-build clip insertion (b-roll up to 2 slots · series stinger). Takes several `<clip> <T>` pairs and splices them in **a single run** (split it into two calls and the first splice is erased), handles clean and burned-in separately, shifts each subtitle cue by the sum of the measured lengths of the insertions before it, and checks for cues straddling T and for matching lengths
+- **`references/splice-clip.sh`** — post-build clip insertion (b-roll up to 2 slots · series stinger). Takes several `<clip> <T>` pairs and splices them in **a single run** (split it into two calls and the first splice is erased), uses the clean master, shifts each requested sidecar subtitle cue by the sum of the measured lengths of the insertions before it, and checks for cues straddling T and for matching lengths
 - **`references/capture-frames.sh` / `capture-reveals.sh`** — headless capture (state count derived automatically)
 - **`references/render-motion-slide.mjs`** — motion-slide renderer (§3.6): one clip per reveal group, headless Chrome over the DevTools pipe with no npm dependency, every frame seeked to an exact time so a re-render is byte-identical; `--sheet` writes the frames the §3.6 sheet read looks at. It renders **every authored screen** — diagram, kinetic type, character act — since all it asks a page for is the seek contract
 - **`references/shot-speech.md`** — explicit speakers, generation receipts, replaceable video adapters and targeted corrections

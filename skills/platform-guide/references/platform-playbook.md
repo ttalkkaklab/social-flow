@@ -151,7 +151,7 @@ five read — so it now sits here, in `check-meta.js` (verbatim copies of
   characters. Use it when the material is a list or a sequence of lines the
   reader can use as-is; a single observation stays a single post.
 - **A video episode carries the video on the post itself** — pass the public URL
-  of the subtitle-burned cut (`video-sub.mp4`) as `threads_publish`'s `videoUrl`
+  of the clean cut (`video.mp4`) as `threads_publish`'s `videoUrl`
   (user directive 2026-08-19). Don't attach the video as a reply and don't settle
   for a bare link. One call completes it. The video plays inline in the timeline,
   so nothing links out and the link penalty below never applies.
@@ -353,7 +353,7 @@ five read — so it now sits here, in `check-meta.js` (verbatim copies of
     source of truth.
   - Grounds: [camera technique research §06](../../../docs/research/2026-08-15-ai-video-camera-technique/index.html#vertical)
 - Field-tested font minimums: cover title 108px · news title 74px · bullet
-  title 44px · body 34px · burned-in subtitles 58px — smaller than this is
+  title 44px · body 34px — smaller than this is
   unreadable on a phone.
 - Cover (first screen) rules: hook title (≤16 chars + topic word) + hero
   figure; no subtitle line, no source. **The first frame of every surface must
@@ -364,7 +364,7 @@ five read — so it now sits here, in `check-meta.js` (verbatim copies of
   t=0 frame captured beside it. Past 1.0s it warns; it never fails the build,
   because by then the episode is encoded and the fix belongs to the board (the
   hook sentence starts later than the cut does), not to the encoder.
-- Most viewing is muted — never turn off burned-in subtitles.
+- Never burn subtitles into a video. Optional SRT tracks may be uploaded separately to YouTube when requested.
 
 ## §8 Anti-pattern checklist (self-check before the approval gate)
 

@@ -52,7 +52,19 @@ function generationVoiceErrors(expected, proof, line) {
       if (value !== undefined && JSON.stringify(settings[key]) !== JSON.stringify(value)) errors.push('Acting generation differs from plan_audio: ' + key);
     }
   }
-  const actual = {engine:engines[proof.generator],voiceId:settings.voiceId||settings.voiceName||settings.voice,language:normalizeLanguage(settings.lang||settings.languageCode||settings.language||proof.language),speed:settings.speed??1};
+  if (!compiled) {
+    const text=typeof line?.tts==='string'?line.tts:proof.text;
+    if (typeof text==='string' && settings.text!==undefined && settings.text!==text) errors.push('Generation text differs from the clean speech line');
+    if (settings.turns!==undefined) {
+      if (!Array.isArray(settings.turns) || settings.turns.length!==1 || settings.turns[0]?.speaker!==undefined || (typeof text==='string' && settings.turns[0]?.text!==text)) errors.push('Generation turns differ from the clean single-speaker line');
+    }
+  }
+  const voiceField={tts_generate:'voiceName',tts_gemini_38:'voice',tts_elevenlabs_generate:'voiceId'}[proof.generator];
+  const actualVoice=settings[voiceField]===undefined && engines[proof.generator]==='gemini' ? 'Kore' : settings[voiceField];
+  for(const alias of ['voiceId','voiceName','voice']) if(alias!==voiceField && settings[alias]!==undefined && settings[alias]!==actualVoice) errors.push('Conflicting voice alias: '+alias+' differs from '+voiceField);
+  const actualLanguage=normalizeLanguage(proof.generator==='tts_elevenlabs_generate' && settings.languageCode!==undefined ? settings.languageCode : proof.language);
+  for(const alias of ['lang','language','languageCode']) if(settings[alias]!==undefined && normalizeLanguage(settings[alias])!==actualLanguage) errors.push('Conflicting language alias: '+alias+' differs from provider language');
+  const actual = {engine:engines[proof.generator],voiceId:actualVoice,language:actualLanguage,speed:settings.speed??1};
   for (const key of ['engine','voiceId','language','speed']) {
     const wanted = key==='language' ? normalizeLanguage(expected[key]) : typeof expected[key]==='string' ? expected[key].trim() : expected[key];
     if (actual[key] !== wanted) errors.push(key+' differs from pinned character voice');
@@ -60,7 +72,7 @@ function generationVoiceErrors(expected, proof, line) {
   if (proof.language && normalizeLanguage(proof.language)!==normalizeLanguage(expected.language)) errors.push('Declared text language differs from pinned character voice');
   for (const key of ['model','stylePrompt']) {
     const wanted = key === 'stylePrompt' && compiled ? compiled.generation.stylePrompt : expected[key]?.trim();
-    if (wanted !== undefined && settings[key] !== wanted) errors.push(key+' differs from pinned character voice');
+    if ((wanted !== undefined || key==='stylePrompt') && settings[key] !== wanted) errors.push(key==='stylePrompt'?'stylePrompt differs from resolved line acting':key+' differs from pinned character voice');
   }
   for (const key of ['stability','similarity']) if (expected[key] !== undefined && settings[key] !== expected[key]) errors.push(key+' differs from pinned character voice');
   return errors;
@@ -99,6 +111,7 @@ function boardVoiceErrors(win) {
     if (scene.narration != null && !Array.isArray(scene.narration)) { errors.push('Scene narration must be an array'); continue; }
     for (const n of scene.narration || []) {
       if (!n || typeof n !== 'object') { errors.push('Narration segment must be an object'); continue; }
+      errors.push(...require('./scene-acting.js').actingErrors(n.acting));
       if (n.speaker) ids.add(n.speaker);
       if (win.SB_DOC?.speechPlanVersion === 1) {
         if (typeof n.id !== 'string' || !n.id.trim() || lineIds.has(n.id)) errors.push('Every speech line needs a unique stable id');

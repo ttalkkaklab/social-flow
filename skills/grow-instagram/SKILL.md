@@ -315,7 +315,7 @@ build per platform and the cost doubles. But stamp **approved platforms only**
 
 **The loop cannot create the hosting URL** (rule 4). With
 `media_hosting: base_url`, the authored episode's public URL is determined as
-`<media_base_url>/<topic slug>/video-sub.mp4`, but **putting the file there is
+`<media_base_url>/<topic slug>/video.mp4`, but **putting the file there is
 a human's job**. So §3 rarely publishes right after autoproduce — being
 blocked at the URL check (§3-4) is the normal case; put
 "authored · awaiting upload" in the tick report so a human uploads the file.
@@ -357,13 +357,10 @@ Pre-publish checks:
    by widening the gate to `published`).
 2. `output/instagram/caption.md` exists — the caption body is read from here.
 3. Resolve the video's public URL — with `media_hosting: base_url` it's
-   `<media_base_url>/<topic slug>/**video-sub.mp4**`; with `staged`, the
-   frontmatter `video_url`. **IG gets the subtitle burn-in build** — other
-   platforms take the subtitles as a separate file, but the IG container has
-   no subtitle parameter, so uploading the clean build (`video.mp4`) loses the
-   subtitles entirely (publish skill rule 8). A `staged` `video_url` must also
-   point at the burn-in build; if the filename ends in `video.mp4`, check with
-   a human.
+   `<media_base_url>/<topic slug>/**video.mp4**`; with `staged`, the
+   frontmatter `video_url`. **IG receives the clean master with no burned subtitles.**
+   Never select a historical `video-sub.mp4` or add captions because Instagram lacks
+   a separate subtitle parameter. Verify that a staged URL references the clean master.
 4. `curl -sI <URL>` to **confirm 200 and a video MIME**. On failure, don't
    publish and report the reason (the file isn't on the hosting yet — a human
    handles it).

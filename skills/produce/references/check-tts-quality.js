@@ -196,12 +196,27 @@ function check(work, board) {
     const lines=(s.narration||[]).filter(n=>(n.tts||'').trim());
     const receipt=read(audio+'.generation.json')||read(audio+'.quality.json');
     if(win.SB_DOC?.speechPlanVersion===1 && lines.length && win.VOICE!=='user') {
-      if(new Set(lines.map(n=>n.speaker)).size!==1)throw new Error('Split speaker changes into single-speaker shots before assembly');
-      const direct=lines.length===1 && lines[0].audio?.sha256===media[audio];
+      if(new Set(lines.map(n=>n.speaker)).size!==1 && receipt?.generator!=='speech_compose')throw new Error('Multi-speaker shots need separately attached lines and speech_compose receipt');
+      const padded=lines.some(n=>(n.acting?.leadInSeconds??0)>0||(n.acting?.tailOutSeconds??0)>0);
+      const direct=!padded && lines.length===1 && lines[0].audio?.sha256===media[audio];
       if(!direct && (!receipt || receipt.audioSha256!==media[audio] || JSON.stringify(receipt.lineIds)!==JSON.stringify(lines.map(n=>n.id)) || receipt.expectedText!==lines.map(n=>n.tts).join('. ')))throw new Error('Scene WAV has no current line-bound generation receipt for card '+i);
     }
     // Generation receipts validate voice and speed, never a listening score.
-    if(receipt) {
+    if(receipt?.generator==='speech_compose') {
+      const composition=require('./compose-speech.js');
+      if(JSON.stringify(receipt.lineSources)!==JSON.stringify(composition.lineSources(lines)))throw new Error('Scene audio composition is stale for card '+i);
+      if(receipt.audioSha256!==media[audio])throw new Error('Scene audio composition changed for card '+i);
+      let duration=0;
+      const intervals=lines.map(n=>{
+        const startSeconds=duration,lead=n.acting?.leadInSeconds??0,tail=n.acting?.tailOutSeconds??0;
+        const speechStartSeconds=duration+lead,speechEndSeconds=speechStartSeconds+composition.duration(path.resolve(board,n.audio.path));
+        duration=speechEndSeconds+tail;
+        return {lineId:n.id,startSeconds,speechStartSeconds,speechEndSeconds,endSeconds:duration};
+      });
+      if(JSON.stringify(receipt.intervals)!==JSON.stringify(intervals))throw new Error('Scene audio timing intervals are stale for card '+i);
+      if(Math.abs(composition.duration(audio)-duration)>0.03)throw new Error('Scene audio does not preserve planned acting timing for card '+i);
+    } else if(receipt) {
+      if(lines.some(n=>(n.acting?.leadInSeconds??0)>0||(n.acting?.tailOutSeconds??0)>0))throw new Error('Compose planned acting timing for card '+i);
       characterVoice(win,s,receipt);
       authorizeSpeed(work,'generation',receipt.generationSpeed??1);
       authorizeSpeed(work,'final',receipt.playbackSpeed??1);

@@ -155,7 +155,7 @@ data/<channel>/episodes/<topic-slug>/
 │   ├── cost-tally.tsv   # what was actually used and how much (appended line by line from §6 on)
 │   └── …
 └── output/
-    ├── video/           # video.mp4 (clean) · video-sub.mp4 (burned-in) · subs.srt · cover.jpg
+    ├── video/           # video.mp4 (clean, no burned subtitles) · optional subs.srt · cover.jpg
     │                    #   · build-report.txt · cost-report.txt
     ├── instagram/caption.md · youtube/meta.md · (per platform)
     └── publish-log.md
@@ -460,11 +460,9 @@ The rules automated authoring breaks most often:
   `payoff` cover opens its loop on the why, so that is the loop the drips close. **The first
   frame has no logo, no intro, no greeting** (big title, strong frame, movement
   in it), and **the first second is the floor under the first three** — at t=0 the topic
-  word or the figure is legible and the picture is already moving, and the first subtitle
-  cue is up inside 1.0 s, which §8 measures on the shipped file. **Every narration
+  word or the figure is legible on an authored information slide and the picture is already moving. Never burn narration subtitles into the video. **Every narration
   sentence opens curiosity, moves the information forward, or puts evidence down — or
-  it's cut** (copy-gate P0-11). Subtitles are written for muted viewing — one sentence,
-  one subtitle, 4–7 words.
+  it's cut** (copy-gate P0-11). Optional sidecar subtitles use one sentence per cue and follow actual speech timing.
 - **A short is always hook → drip (1–n) → cta.** Do not default to
   `answer-first`. Write `beat:"hook"` on the cover, `beat:"drip"` on every
   middle shot, `beat:"cta"` on the last narrated shot. n ≥ 1. Do not write
@@ -693,8 +691,7 @@ the price.
   `seedance_reference` with the previz as `referenceVideoPaths`, the stored `visual.video.prompt`
   verbatim, `generateAudio: false`, the cover's `duration` (4–8 s; input plus output seconds are
   billed on the `…-video` rows — 2.0 mini 720p ≈ $0.54 for a 6 s cut, 2.0 1080p ≈ $2.74). The
-  builder keeps only the video track, so the narration, subtitles and the code-rendered title
-  stay. No `ARK_API_KEY` means no hook video (the previz has no Veo fallback).
+  builder keeps only the video track and composes the narration separately, without subtitle overlays. No `ARK_API_KEY` means no hook video (the previz has no Veo fallback).
   `.work/motion/motion-i0.mp4`. This is the one slot the baseline pays for
   (cost-tiers §economy baseline).
 - **Opening b-roll (only when escalated)** — `veo_img2video`
@@ -927,8 +924,7 @@ content reviewer with the frame.
 
 ```bash
 cp .work/reel-fast.mp4 output/video/video.mp4
-cp .work/reel-sub-fast.mp4 output/video/video-sub.mp4
-cp .work/subs-fast.srt output/video/subs.srt
+[ ! -f .work/subs-fast.srt ] || cp .work/subs-fast.srt output/video/subs.srt
 cp .work/cover.jpg .work/build-report.txt .work/delivery-proof.json output/video/   # publish checks the files against the proof (produce §9)
 [ -f .work/chapters-fast.txt ] && cp .work/chapters-fast.txt output/video/chapters.txt
 ```
@@ -936,9 +932,7 @@ cp .work/cover.jpg .work/build-report.txt .work/delivery-proof.json output/video
 **The `-fast` files are the deliverables.** Copy `reel.mp4` or `subs.srt` here
 and the episode publishes un-sped with subtitles on the wrong timeline.
 
-**Publishing is complete only with all three files** — the clean master and
-`subs.srt` go to YouTube and Facebook, the burned-in copy to Instagram
-(publish skill rule 8).
+**Every platform receives the clean master.** Never copy or select a historical burned-in file. An optional `subs.srt` is uploaded separately to YouTube only when requested; its absence is not a production failure (publish skill rule 8).
 
 Rewrite the platform text per platform following the platform-guide playbooks,
 and run the per-surface style check right after saving (produce §9's script

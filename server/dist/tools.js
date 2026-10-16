@@ -168,7 +168,7 @@ const ASTRA_LORA_PROPERTY = {
 };
 const ASTRA_NEGATIVE_PROMPT_PROPERTY = {
     type: 'string',
-    description: 'What to keep out of the frame, at most 2000 characters. Accepted ONLY on tiers "guided" and "fast" and on the keyframe/audio2video tools — mode generate has no such field and it is refused before the call.',
+    description: 'What to keep out of the frame, at most 2000 characters. Include subtitles, captions, dialogue text, typography, letters, logos and watermarks. Accepted ONLY on tiers "guided" and "fast" and on the keyframe/audio2video tools — mode generate has no such field and it is refused before the call.',
 };
 const ASTRA_STEPS_PROPERTY = {
     type: 'integer',
@@ -2021,7 +2021,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
             properties: {
                 prompt: {
                     type: 'string',
-                    description: 'What the picture shows while the audio plays. English recommended. 1-2000 characters.',
+                    description: 'What the text-free picture shows while the supplied audio plays. Use speech_manage plan_video.videoPrompt; describe action without quoting the spoken dialogue. Explicitly exclude subtitles, captions and typography. English recommended. 1-2000 characters.',
                 },
                 audioPath: {
                     type: 'string',
@@ -2236,7 +2236,7 @@ Returns: a text block with the saved .mp4 file path, reference image, video and 
             properties: {
                 prompt: {
                     type: 'string',
-                    description: 'Scene and subject interactions. The 2.x advanced formula: precise subject + action details + scene/environment + lighting & color tone + camera movement + visual style + image quality + constraints. For multi-cut, write a "Shot 1 / Shot 2 / Shot 3" storyboard and order each shot as camera movement -> subject action and expression -> position change -> audio; open on the wide so the later cuts inherit one floor plan, and time each cut by an action beat. Do NOT put timecodes on the shots — the vendor states precise-timing support is unstable (dreamina-seedance-2-5-260628 alone takes integer-second forms). Close with the constraints slot as a POSITIVE-LOCKS paragraph — what holds in every frame, said positively, with each reference given its scope ("@ocean_location controls water and sky only"; "the lantern stays lit in every cut") — because this engine has no negativePrompt parameter; the one exception the vendor templates is the artifact classes (subtitles, on-frame text, logo, watermark, BGM), which may stay negative. English or Chinese only (Korean on dreamina-seedance-2-5-260628 alone; on other models Korean belongs inside dialogue quotes). Unwanted subtitles cannot be fully blocked at 9:16: the vendor notes portrait output hallucinates burned-in text noticeably more often than landscape, so inspect the frames.',
+                    description: 'Scene and subject interactions. The 2.x advanced formula: precise subject + action details + scene/environment + lighting & color tone + camera movement + visual style + image quality + constraints. For multi-cut, write a "Shot 1 / Shot 2 / Shot 3" storyboard and order each shot as camera movement -> subject action and expression -> position change -> audio; open on the wide so the later cuts inherit one floor plan, and time each cut by an action beat. Do NOT put timecodes on the shots — the vendor states precise-timing support is unstable (dreamina-seedance-2-5-260628 alone takes integer-second forms). Close with the constraints slot as a POSITIVE-LOCKS paragraph — what holds in every frame, said positively, with each reference given its scope ("@ocean_location controls water and sky only"; "the lantern stays lit in every cut") — because this engine has no negativePrompt parameter; the one exception the vendor templates is the artifact classes (subtitles, on-frame text, logo, watermark, BGM), which may stay negative. English or Chinese only (Korean on dreamina-seedance-2-5-260628 alone; for audio-conditioned speech, use the supplied audio and omit literal dialogue quotes from the visual prompt). Unwanted subtitles cannot be fully blocked at 9:16: the vendor notes portrait output hallucinates burned-in text noticeably more often than landscape, so inspect the frames.',
                 },
                 referenceImagePaths: {
                     type: 'array',
@@ -2971,7 +2971,7 @@ Requires ffmpeg and GEMINI_API_KEY even for local synthesis. One paid audio-revi
 
 Use when the user asks to read text aloud, narrate, voice-over, or convert text to speech/audio (음성 변환, TTS, 나레이션). 30 voices; 90+ languages are auto-detected from the input text itself (there is no language parameter) — Korean, English, Japanese, Vietnamese and both Simplified (zh-CN) and Traditional (zh-TW) Chinese are all supported. Control delivery with stylePrompt (e.g. "Say cheerfully", "In a spooky whisper").
 Do NOT use for two-person dialogue scripts — use tts_multi_speaker. Unsure which voice fits? Call tts_list_voices first.
-Keep voiceName/stylePrompt/temperature byte-identical across takes of one video — the model re-interprets any wording change and the narrator's voice drifts between cuts. If a script fails repeatedly (the server already retries 3x), switch model to gemini-2.5-pro-preview-tts rather than rewording it.
+Keep the selected model, voiceName and pinned synthesis settings stable. Scene emotion and delivery belong in each line's stylePrompt, resolved by speech_manage plan_audio; do not force one cheerful baseline onto every scene. Reuse that planned direction across retakes unless revising the acting. After repeated failures, report them; do not silently switch the episode's selected model.
 
 Returns: a text block with the saved .wav file path, voice name, and text length.`,
         inputSchema: {
@@ -3864,7 +3864,7 @@ Returns: integer credit balance.`,
                 videoUrl: {
                     type: 'string',
                     format: 'uri',
-                    description: 'One publicly reachable video URL (.mp4/.mov) carried by the post itself — mutually exclusive with imageUrl and linkUrl. **This is the default for video episodes.** Give the subtitle-burned cut: the Threads container takes no subtitle file, so burning them into the picture is the only way (same as IG reels). Video containers transcode, and the tool waits up to 2 minutes for FINISHED',
+                    description: 'One publicly reachable video URL (.mp4/.mov) carried by the post itself — mutually exclusive with imageUrl and linkUrl. **This is the default for video episodes.** Use the clean subtitle-free master, including speech videos. Do not select a burned-in copy; Threads has no separate subtitle input. Video containers transcode, and the tool waits up to 2 minutes for FINISHED',
                 },
                 linkUrl: {
                     type: 'string',
@@ -3900,7 +3900,7 @@ Returns: integer credit balance.`,
                 videoUrl: {
                     type: 'string',
                     format: 'uri',
-                    description: 'One public Reels video URL (.mp4/.mov) — cannot be used together with imageUrls. **Provide the burned-in subtitle master** — IG Content Publishing has no parameter for a subtitle file, so unlike the platforms that take subtitles separately, subtitles burned into the frame are the only way here',
+                    description: 'One public Reels video URL (.mp4/.mov) — cannot be used together with imageUrls. **Provide the clean subtitle-free master**, including speech videos. Do not burn captions into the picture or select a legacy video-sub file; Instagram has no separate subtitle input',
                 },
                 channel: SNS_CHANNEL_PROPERTY,
             },
@@ -3912,7 +3912,7 @@ Returns: integer credit balance.`,
         title: '⚠️ Facebook Page publish (immediately public)',
         annotations: HINT.publish,
         outputSchema: FACEBOOK_PUBLISH_OUTPUT,
-        description: `⚠️ Direct Facebook Page publishing — posts to the Graph API with the local Page token, **immediately public** (the posting Page is auto-resolved from the token's /me). There is no separate review gate, so call only right after the user has checked and approved the final copy and media (HITL — never call without approval). Forms: text / up to 10 images / one video (regular video — not Reels). Video posts **include a subtitle file** (captionFilePath) — this pipeline uploads subtitles separately instead of burning them in, so give videoUrl the clean subtitle-free master, not a burned-in copy. The source link goes **without exception** in the first comment via facebook_comment right after a successful publish, not in the body (linkUrl). ${SNS_HITL_LINE}`,
+        description: `⚠️ Direct Facebook Page publishing — posts to the Graph API with the local Page token, **immediately public** (the posting Page is auto-resolved from the token's /me). There is no separate review gate, so call only right after the user has checked and approved the final copy and media (HITL — never call without approval). Forms: text / up to 10 images / one video (regular video — not Reels). Video posts may include a separate subtitle file (captionFilePath) only when requested — this pipeline uploads subtitles separately instead of burning them in, so give videoUrl the clean subtitle-free master, not a burned-in copy. The source link goes **without exception** in the first comment via facebook_comment right after a successful publish, not in the body (linkUrl). ${SNS_HITL_LINE}`,
         inputSchema: {
             type: 'object',
             properties: {
@@ -3922,7 +3922,7 @@ Returns: integer credit balance.`,
                     items: { type: 'string', format: 'uri' },
                     description: 'Up to 10 publicly reachable image URLs — cannot be used together with videoUrl',
                 },
-                videoUrl: { type: 'string', format: 'uri', description: 'One public video URL (.mp4/.mov) — cannot be used together with imageUrls. Give the **clean master**, not a burned-in copy (subtitles go separately via captionFilePath)' },
+                videoUrl: { type: 'string', format: 'uri', description: 'One public video URL (.mp4/.mov) — cannot be used together with imageUrls. Give the **clean master**, not a burned-in copy (only separately requested subtitles use captionFilePath)' },
                 captionFilePath: {
                     type: 'string',
                     description: '**Local** absolute path to the subtitle file (.srt, ≤200K) — valid only on videoUrl posts. Unlike the video URL it needs no hosting (direct file upload). It uploads automatically right after a successful publish; if only the subtitles fail, captionWarning is returned (the post stands — do not re-publish). Single-locale shorthand — for two or more languages use captionFiles instead (mutually exclusive)',
@@ -3970,7 +3970,7 @@ Returns: integer credit balance.`,
         title: '⚠️ YouTube upload (immediately public)',
         annotations: HINT.publish,
         outputSchema: YOUTUBE_PUBLISH_OUTPUT,
-        description: `⚠️ Direct YouTube publishing — uploads a **local video file, immediately public**, with the local OAuth refresh token (the target channel is the token-owning account). There is no separate review gate, so call only right after the user has checked and approved the final copy and video (HITL — never call without approval). Portrait 9:16 videos of 3 minutes or less are auto-classified as Shorts (no separate flag). The only platform that needs no public URL hosting (direct file upload — subtitle files included). **Video and subtitles upload separately** — pass an .srt via captionFilePath and give videoFilePath the clean master with no burned-in subtitles. Uploads draw from the videos.insert-only "Video Uploads" quota bucket — 1 unit per call, 100/day by default, so there is no reason to ration episode publishing (the old "1,600 units = 6/day" limit disappeared in the 2026 quota overhaul). ${SNS_HITL_LINE}`,
+        description: `⚠️ Direct YouTube publishing — uploads a **local video file, immediately public**, with the local OAuth refresh token (the target channel is the token-owning account). There is no separate review gate, so call only right after the user has checked and approved the final copy and video (HITL — never call without approval). Portrait 9:16 videos of 3 minutes or less are auto-classified as Shorts (no separate flag). The only platform that needs no public URL hosting (direct file upload — subtitle files included). **Every video stays subtitle-free.** Give videoFilePath the clean master. Only when the user requests separate YouTube subtitles, pass an .srt via captionFilePath or requested captionTracks; otherwise omit caption inputs. Uploads draw from the videos.insert-only "Video Uploads" quota bucket — 1 unit per call, 100/day by default, so there is no reason to ration episode publishing (the old "1,600 units = 6/day" limit disappeared in the 2026 quota overhaul). ${SNS_HITL_LINE}`,
         inputSchema: {
             type: 'object',
             properties: {
@@ -3983,7 +3983,7 @@ Returns: integer credit balance.`,
                 },
                 captionFilePath: {
                     type: 'string',
-                    description: 'Absolute path of the subtitle file (.srt) — **pass it by default**. Uploading subtitles separately instead of burning them in means they can be swapped after publishing, viewers can toggle them, and they seed YouTube auto-translation. Give videoFilePath the clean subtitle-free master, not a burned-in copy. The upload needs the **youtube.force-ssl scope** (rejected on the publish-only youtube.upload) and costs a **quota of 400 units** per track — heavy next to the 1-unit video upload, so once per language per episode. If only the subtitles fail, captionWarning is returned and the publish stands (do not re-upload). Single-track shorthand — for two or more languages use captionTracks instead (mutually exclusive)',
+                    description: 'Absolute path of an optional separate subtitle file (.srt) — **pass only when the user requests YouTube subtitles; otherwise omit it**. Uploading subtitles separately instead of burning them in means they can be swapped after publishing, viewers can toggle them, and they seed YouTube auto-translation. Give videoFilePath the clean subtitle-free master, not a burned-in copy. The upload needs the **youtube.force-ssl scope** (rejected on the publish-only youtube.upload) and costs a **quota of 400 units** per track — heavy next to the 1-unit video upload, so once per language per episode. If only the subtitles fail, captionWarning is returned and the publish stands (do not re-upload). Single-track shorthand — for two or more languages use captionTracks instead (mutually exclusive)',
                 },
                 captionLanguage: {
                     type: 'string',
@@ -3999,7 +3999,7 @@ Returns: integer credit balance.`,
                         },
                         required: ['filePath', 'language'],
                     },
-                    description: 'Multi-language subtitle tracks — one captions.insert per entry, so viewers pick their language in the player and each track seeds auto-translation. Mutually exclusive with captionFilePath. Every file is validated before the video upload starts; each track costs 400 quota units, and a failed language comes back in captionWarning with the publish intact (upload just that language in YouTube Studio instead of re-publishing)',
+                    description: 'Optional requested multi-language subtitle tracks — one captions.insert per entry, so viewers pick their language in the player and each track seeds auto-translation. Mutually exclusive with captionFilePath. Every file is validated before the video upload starts; each track costs 400 quota units, and a failed language comes back in captionWarning with the publish intact (upload just that language in YouTube Studio instead of re-publishing)',
                 },
                 privacyStatus: {
                     type: 'string',
@@ -4363,18 +4363,58 @@ Returns: integer credit balance.`,
         name: 'speech_manage',
         title: 'Find and revise shot dialogue and audio dependencies',
         annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
-        description: 'List dialogue by shot, character or text; prepare stable line ids with explicit narrator; update text or acting on one line; plan_audio compiles provider arguments; attach generated audio; or plan a model-independent video route from adapter capabilities. Local files only, no generation, automatic listening or approval. Read first and pass expectedRevision for writes. Unknown speakers, ambiguous line targets, stale revisions and unsupported lip-sync routes fail. Returns revision, matching lines with voice/audio hashes, invalidated dependencies and optional video plan. Keeps source backups. Use existing generation tools and rebuild affected media after update; this tool never claims to regenerate assets.',
+        description: `Update shot dialogue, line acting and local audio/video bindings.
+
+Use for dialogue edits, expression or intonation corrections, stable speaker routing and generation planning. list finds lines; prepare assigns stable ids; update replaces requested line fields; attach_audio/attach_video bind generated files. plan_audio resolves the pinned voice and each line's scene direction into raw generator arguments; plan_video resolves the selected adapter's capabilities and carries the same acting/timing context. Scene direction overrides baseline style without changing voice identity. Local files only: plans do not generate, listen, score or approve. Read first and pass expectedRevision for writes; unknown speakers, ambiguous targets, stale revisions and unsupported lip-sync routes fail. Keeps source backups.
+
+Do NOT use to generate media: call the planned raw TTS tool or selected video adapter, then attach the result. Do NOT use for read-only whole-story inspection: use storyboard_read instead. Never group different emotional beats or nonconsecutive shots by shared image and slice them into unrelated reactions.
+
+Returns revision, ordered matching lines with generationPlan and voice/audio hashes, invalidated dependencies, audioPlans for plan_audio (generator, generation/arguments aliases, clean expectedText, language and speechRevision), or a video plan with videoPrompt and textPolicy:no_visible_text; performance.text preserves exact speech for verification, never copy it into the visual prompt. Direction warnings disclose unsupported engine controls; generated audio remains not_reviewed. Acting lead-in/tail-out use seconds. Plans and metadata cannot establish audible or visible quality.`,
         inputSchema: {
             type: 'object', properties: {
                 path: { type: 'string', description: 'Storyboard directory or scenes.js' },
-                action: { type: 'string', description: 'Local operation: list, prepare ids, update a line, attach generated audio/video, or plan the selected adapter', enum: ['prepare', 'list', 'update', 'plan_audio', 'attach_audio', 'plan_video', 'attach_video'] },
+                action: { type: 'string', description: 'Local operation: list, prepare ids, update a line, attach generated audio/video, plan raw speech arguments, or plan the selected video adapter', enum: ['prepare', 'list', 'update', 'attach_audio', 'plan_audio', 'plan_video', 'attach_video'] },
                 shotId: { type: 'string', description: 'Stable shot id, not its display number' }, lineId: { type: 'string', description: 'Stable dialogue id; required for line writes' }, speaker: { type: 'string', description: 'Filter by character id or exact display name' }, query: { type: 'string', description: 'Exact substring of spoken or subtitle text to find' },
                 expectedRevision: { type: 'string', description: 'Current revision from list; required for writes' },
-                patch: { type: 'object', description: 'Only the requested line fields to replace; speaker uses its stable id', properties: { tts: { type: 'string', description: 'Spoken text with intended pronunciation' }, sub: { type: 'string', description: 'Subtitle display text' }, speaker: { type: 'string', description: 'Stable character id' }, delivery: { type: 'string', description: 'Narration, visible speech, or speech outside frame', enum: ['voiceover', 'on_screen', 'off_screen'] }, acting: { ...ACTING_PROPERTY, type: ['object', 'null'] } }, additionalProperties: false },
+                patch: { type: 'object', description: 'Only the requested line fields to replace; speaker uses its stable id', properties: {
+                        tts: { type: 'string', description: 'Spoken text with intended pronunciation' }, sub: { type: 'string', description: 'Subtitle display text' }, speaker: { type: 'string', description: 'Stable character id' }, delivery: { type: 'string', description: 'Narration, visible speech, or speech outside frame', enum: ['voiceover', 'on_screen', 'off_screen'] },
+                        acting: { type: ['object', 'null'], description: 'Replace this line\'s entire acting object; null clears it. Does not change the character voice. Omitted fields use no scene override or zero reaction time.', additionalProperties: false, properties: {
+                                ...ACTING_PROPERTY.properties,
+                                context: { type: 'string', minLength: 1, maxLength: 1000, description: 'Immediate situation, e.g. The applicant mistook a sales result for a job offer.' },
+                                intent: { type: 'string', minLength: 1, maxLength: 1000, description: 'What the speaker wants, e.g. Find out what he thinks he passed.' },
+                                emotion: { type: 'string', minLength: 1, maxLength: 1000, description: 'Current emotion/change, e.g. Confusion after celebration.' },
+                                vocal: { type: 'string', minLength: 1, maxLength: 1000, description: 'Audible delivery, e.g. Quiet question, stress passed, no cheering.' },
+                                visual: { type: 'string', minLength: 1, maxLength: 1000, description: 'Visible action and state, e.g. Lower hands, smile fades, look at applicant.' },
+                                leadInSeconds: { type: 'number', minimum: 0, maximum: 5, description: 'Reaction time before this line in seconds, e.g. 0.25; default zero.' },
+                                tailOutSeconds: { type: 'number', minimum: 0, maximum: 5, description: 'Reaction time after this line in seconds, e.g. 0.4; default zero.' }
+                            } }
+                    }, additionalProperties: false },
                 audioPath: { type: 'string', description: 'Generated audio file; absolute or relative to storyboard directory' }, videoPath: { type: 'string', description: 'New video file to bind to the shot and current audio' },
                 generation: { type: 'object', description: 'Raw TTS request and declared text language; no listening score', properties: { generator: { type: 'string', description: 'Raw TTS tool that generated this file' }, voiceSettings: { type: 'object', description: 'Exact voice and language settings sent to the generator' }, text: { type: 'string', description: 'Exact clean line text; voiceSettings stores the actual tagged provider request from plan_audio' }, language: { type: 'string', description: 'Declared text language, e.g. ko; metadata for engines without a language argument, never an invented API parameter' } }, required: ['generator', 'voiceSettings', 'text'], additionalProperties: false },
                 capabilities: { type: 'object', description: 'Selected adapter capabilities from verified schema/documentation, with evidence', properties: { provider: { type: 'string', description: 'Selected video adapter provider id, matching the shot engine' }, model: { type: 'string', description: 'Selected model id, matching the shot model when set' }, audioConditioning: { type: 'boolean', description: 'Whether the adapter accepts supplied speech as conditioning' }, lipSync: { type: 'boolean', description: 'Whether supplied speech drives visible mouth motion' }, postLipSync: { type: 'boolean', description: 'Whether a separately selected post lip-sync adapter is available' }, evidence: { type: 'string', description: 'Documentation or verified capability record supporting these settings' } }, required: ['provider', 'model', 'audioConditioning', 'lipSync', 'postLipSync', 'evidence'], additionalProperties: false }
             }, required: ['path', 'action'], additionalProperties: false
+        }
+    },
+    {
+        name: 'acting_review',
+        title: 'Review requested acting against actual audio and video',
+        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+        description: `Review actual acting only for an explicitly requested paid evaluation.
+
+Use when the user asks to listen/watch, adversarially evaluate, or improve expression, intonation and acting against a scene direction. Sends the supplied local media to Gemini and writes an immutable local receipt beside it. This is an optional paid external call under existing authorization, never a default produce/autoproduce gate. Supports media up to 12 MiB and 120 seconds; audiovisual/video modes require MP4, audio supports WAV, MP3, FLAC or M4A. Same media/direction/request reuses its receipt, including failures, rather than rerolling a score.
+
+Do NOT use for free provenance or generation planning: use speech_manage instead. Do NOT use metadata or still frames as proof that speech or continuous acting works.
+
+Returns status pass/fail/unverified, nullable score, failures, review with situation/expression/body/vocalEmotion/speechAccuracy/lipSync evidence, media/direction hashes, usage, receiptPath and reused. success requires verified score >=95 on all required axes, confidence >=0.9, complete required track coverage and no findings. Unobserved axes are null; audio-only review cannot certify visual acting.`,
+        inputSchema: {
+            type: 'object', additionalProperties: false, properties: {
+                mediaPath: { type: 'string', minLength: 1, description: 'Local clip/audio file, e.g. /Volumes/data/story/meleon/test/shot-21.mp4.' },
+                expectedText: { type: 'string', maxLength: 8000, default: '', description: 'Exact intended spoken words, e.g. What did you pass? Empty for silent media.' },
+                direction: { type: 'string', minLength: 20, maxLength: 12000, description: 'Scene situation, intent, emotion, audible delivery, visible actions and timing, e.g. Celebration ends; lower hands and quietly ask the applicant what he passed.' },
+                mode: { type: 'string', enum: ['audiovisual', 'audio', 'video'], default: 'audiovisual', description: 'Tracks to inspect; audiovisual requests both sound and picture.' },
+                requestedBy: { type: 'string', minLength: 1, maxLength: 200, description: 'Source of explicit user review request, e.g. User request in this session.' },
+                reason: { type: 'string', minLength: 10, maxLength: 1000, description: 'Requested evaluation purpose, e.g. Verify the confused reaction after revising the sales tone.' }
+            }, required: ['mediaPath', 'direction', 'requestedBy', 'reason']
         }
     },
     {

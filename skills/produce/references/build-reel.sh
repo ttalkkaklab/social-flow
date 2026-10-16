@@ -91,8 +91,7 @@
 #                         muxes the feature alone; OUTRO=1 with no file stops the build
 #   <workdir>/fonts/    : (optional) subtitle fonts ttf/otf — libass can't read woff2
 # Output: <workdir>/reel.mp4 (clean master without subtitles — for platforms that take a separate subtitle file)
-#         <workdir>/reel-sub.mp4 (burned-in copy — for platforms with no subtitle-file path, skipped when BURN=0)
-#         <workdir>/subs.srt (subtitle file handed to the publish tools as-is), subs.ass (burn-in source)
+#         <workdir>/subs.srt (subtitle file handed to the publish tools as-is), subs.ass (optional sidecar)
 #         <workdir>/cover.jpg, build-report.txt
 #
 # Sync principle (v3):
@@ -111,6 +110,8 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"   # grab before cd (path to
 WORKDIR="${1:?usage: build-reel.sh <workdir>}"
 # Resolve the supplied board before changing directories; both gates inspect the same plan.
 STORYBOARD=$(node -e 'console.log(require("path").resolve(process.argv[1]))' "${2:-$WORKDIR/../storyboard}")
+[ -f "$STORYBOARD/scenes.js" ] || { echo "source storyboard/scenes.js is required; pass the storyboard directory as build-reel.sh argument 2" >&2; exit 1; }
+node "$HERE/compose-speech.js" "$WORKDIR" "$STORYBOARD" >/dev/null
 node "$HERE/verify-build-plan.js" "$WORKDIR" "$STORYBOARD"
 # A normal board is <channel>/episodes/<topic>/storyboard. Proof fixtures may put storyboard/
 # directly under their channel root, so fall back to the storyboard parent in that shape.
@@ -194,7 +195,7 @@ KB_RATE=${KB_RATE:-0.04}           # default still zoom per second when no span=
 KB_ZMAX=${KB_ZMAX:-1.075}          # cap on the default's total scale. Text is baked into a still card, so a centre
                                    #   zoom pushes every edge of the text zone outward, and the cap is the tightest of
                                    #   the three. Portrait, zone y 190~1350 · x 176~904, canvas centre 960:
-                                   #     bottom  390*z+960 <= 1380 (the burned-in subtitle band, line 1201) -> z <= 1.0769
+                                   #     bottom  390*z+960 <= 1380 (the reserved platform UI margin, line 1201) -> z <= 1.0769
                                    #     top     -770*z+960 = 132 at 1.075, still under the phone's status bar
                                    #     side    the 640px hero stat ends at x 884, inside the 890 action-bar icons
                                    #   The bottom edge is what binds. Landscape has its zone bottom (y 795) sitting on
@@ -206,8 +207,8 @@ W=${W:-1080}                       # canvas width — the format decides
 H=${H:-1920}                       # canvas height
 ZOOM_BASE=${ZOOM_BASE:-1620x2880}  # Ken Burns source resolution (1.5x the canvas)
 ZB=${ZOOM_BASE/x/:}                # ffmpeg scale= uses colon notation, so convert once
-SUB=${SUB:-1}                      # 1=generate subtitle data (subs.srt·subs.ass), 0=no subtitles
-BURN=${BURN:-1}                    # 1=also produce burned-in reel-sub.mp4, 0=clean master only
+SUB=${SUB:-0}                      # opt-in sidecar files only; no subtitle overlay
+BURN=0                             # user directive: never burn captions into video
 SUB_FONT=${SUB_FONT:-Pretendard}   # fontconfig fallback when fonts/ has no ttf
 OUTRO_ASSET=${OUTRO_ASSET:-outro.mp4}   # outro to join — a different file per format
 OUTRO=${OUTRO:-1}                  # 1=join the outro (default), 0=the channel's shortform_outro is off
@@ -553,6 +554,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
   #   so then only resample.
   if head -c 4 "$SRC" | LC_ALL=C grep -q RIFF; then INARGS=(-i "$SRC")
   else INARGS=(-f s16le -ar 24000 -ac 1 -i "$SRC"); fi
+  ACTED_AUDIO=$(node -e 'const fs=require("fs");const p=process.argv[1]+".generation.json";console.log(fs.existsSync(p)&&JSON.parse(fs.readFileSync(p,"utf8")).generator==="speech_compose"?1:0)' "$SRC")
   if [ "$SYNC" -eq 1 ]; then
     MEANV=$(ffmpeg -hide_banner "${INARGS[@]}" -af volumedetect -f null - 2>&1 | sed -n 's/.*mean_volume: \([-0-9.]*\) dB/\1/p')
     if [ -n "$MEANV" ] && awk -v v="$MEANV" 'BEGIN{exit !(v > -50)}'; then
@@ -563,6 +565,9 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
       SYNCNOTE="silent clip — normalization skipped"
     fi
     MUTE=1   # bypasses the audio machine below (rate/warnings/atempo) entirely — sound and picture are one body
+  elif [ "$ACTED_AUDIO" -eq 1 ]; then
+    # The composition already contains measured anticipation and reaction intervals.
+    ffmpeg -y -v error "${INARGS[@]}" -af "loudnorm=I=-16:TP=-1.5:LRA=11,aresample=48000" -ac 1 -ar 48000 "work/t$IDX.wav"
   elif [ "$MUTE" -eq 1 ]; then
     ffmpeg -y -v error "${INARGS[@]}" -af "aresample=48000" -ac 1 -ar 48000 "work/t$IDX.wav"
   else
@@ -626,6 +631,9 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
     if [ "$NSIL" -ge $((M-1)) ] && [ -f "$SIDE" ]; then
       HB=$(python3 "$HERE/snap-boundaries.py" "$SIDE" "work/silin$IDX.txt" "$M" --tempo "$F" --wav "$SRC" 2>"work/snap$IDX.txt" || true)
       [ -z "$HB" ] && { say "⚠ card $IDX sentence sidecar did not match the detected pauses ($(head -1 "work/snap$IDX.txt")) — using the longest pauses instead."; WARN=1; }
+    fi
+    if [ "$ACTED_AUDIO" -eq 1 ]; then
+      HB=$(node -e 'const r=require(require("path").resolve(process.argv[1]+".generation.json"));const n=Number(process.argv[2]);if(r.intervals.length!==n)throw Error("Composed speech intervals differ from subtitle groups");console.log(r.intervals.slice(1).map(i=>i.startSeconds).join(" "))' "$SRC" "$M")
     fi
     if [ -n "$HB" ]; then
       BLIST="$HB "
@@ -1044,11 +1052,36 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
         say "⚠ card $IDX: no forced aligner at $QWEN3_ASR_BIN — word cues fall back to char-count proportion (uv tool install --python 3.12 \"mlx-qwen3-asr[aligner]\")"; WARN=1
       fi
     fi
+    ACTED_STARTS=(); ACTED_ENDS=()
+    if [ "${ACTED_AUDIO:-0}" -eq 1 ]; then
+      # Caption only the measured speech, not its anticipation or reaction silence.
+      COMPOSED_CUES=$(node - "$SRC" "$M" "$L" <<'JS'
+const fs=require('fs');
+const [source,count,duration]=process.argv.slice(2);
+const receipt=JSON.parse(fs.readFileSync(source+'.generation.json','utf8'));
+if(receipt.generator!=='speech_compose'||!Array.isArray(receipt.intervals)||receipt.intervals.length!==Number(count))throw Error('Composed speech intervals differ from subtitle groups');
+let previousEnd=0;
+for(const interval of receipt.intervals){
+  const {speechStartSeconds:start,speechEndSeconds:end}=interval;
+  if(!Number.isFinite(start)||!Number.isFinite(end)||start<previousEnd||end<=start||end>Number(duration)+0.001)throw Error('Invalid composed speech subtitle interval');
+  console.log(start+'\t'+end);previousEnd=end;
+}
+JS
+      )
+      while IFS=$'\t' read -r SPEECH_START SPEECH_END; do
+        ACTED_STARTS+=("$SPEECH_START"); ACTED_ENDS+=("$SPEECH_END")
+      done <<< "$COMPOSED_CUES"
+    fi
     for ((j=0; j<M; j++)); do
+      if [ "${ACTED_AUDIO:-0}" -eq 1 ]; then
+        ST=$(awk -v cs="$CS" -v p="$CPRE" -v s="${ACTED_STARTS[$j]}" 'BEGIN{printf "%.3f",cs+p+s}')
+        EN=$(awk -v cs="$CS" -v p="$CPRE" -v e="${ACTED_ENDS[$j]}" 'BEGIN{printf "%.3f",cs+p+e}')
+      else
       if [ "$j" -eq 0 ]; then ST=$(awk -v cs="$CS" -v p="$CPRE" 'BEGIN{s=p-0.15; if(s<0)s=0; printf "%.3f", cs+s}')
       else ST=$(awk -v cs="$CS" -v p="$CPRE" -v b="${BARR[$((j-1))]}" 'BEGIN{printf "%.3f", cs+p+b}'); fi
       if [ "$j" -lt $((M-1)) ]; then EN=$(awk -v cs="$CS" -v p="$CPRE" -v b="${BARR[$j]}" 'BEGIN{printf "%.3f", cs+p+b-0.06}')
       else EN=$(awk -v cs="$CS" -v p="$CPRE" -v l="$L" -v d="$D" 'BEGIN{e=p+l+0.45; if(e>d)e=d; printf "%.3f", cs+e}'); fi
+      fi
       TXT=$(printf '%s' "${SARR[$j]}" | sed 's/[{}\\]//g')
       if [ -n "$TXT" ]; then
         # Bound each format's final tick against integer frames. ST/EN and the
@@ -1060,12 +1093,16 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
           # voice span: a detected boundary is the END of the pause (the next sentence's first
           # sound), so the window closes at that pause's START — the silin line whose end is
           # the boundary. A proportional-fallback boundary has no pause and stays as it is.
+          if [ "${ACTED_AUDIO:-0}" -eq 1 ]; then
+            SPS="$ST"; SPE="$EN"
+          else
           if [ "$j" -eq 0 ]; then PB=0; else PB="${BARR[$((j-1))]}"; fi
           SPS=$(awk -v cs="$CS" -v p="$CPRE" -v b="$PB" 'BEGIN{printf "%.3f", cs+p+b}')
           if [ "$j" -lt $((M-1)) ]; then
             SPE=$(awk -v cs="$CS" -v p="$CPRE" -v b="${BARR[$j]}" 'BEGIN{e=b} FILENAME!="" && ($2-b)<0.002 && ($2-b)>-0.002 {e=$1} END{printf "%.3f", cs+p+e}' "work/silin$IDX.txt" 2>/dev/null \
                   || awk -v cs="$CS" -v p="$CPRE" -v b="${BARR[$j]}" 'BEGIN{printf "%.3f", cs+p+b}')
           else SPE=$(awk -v cs="$CS" -v p="$CPRE" -v l="$L" 'BEGIN{printf "%.3f", cs+p+l}'); fi
+          fi
           AOFF=$(awk -v cs="$CS" -v p="$CPRE" 'BEGIN{printf "%.3f", cs+p}')
           python3 "$HERE/word-cues.py" "$ST" "$EN" "$SPS" "$SPE" "$SUB_WORD_MIN" "$TXT" ${ALIGNJ:+--align "$ALIGNJ" --offset "$AOFF" --tts "${TARR[$j]}"} $PHRASE_ARG ${SUB_ACCENT:+--accent "$SUB_ACCENT" --accent-words "$SUB_ACCENT_WORDS"} |
             while IFS=$'\t' read -r WS WE WT; do
@@ -1077,7 +1114,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
         else
           printf 'Dialogue: 0,%s,%s,Sub,,0,0,0,,{\\fad(160,120)}%s\n' "$ASS_ST" "$ASS_EN" "$TXT" >> work/subs.body
         fi
-        # Print the SRT from the same ST/EN/TXT — burn-in and subtitle file share one source, so they can't drift apart.
+        # Print the SRT from the same ST/EN/TXT — ASS and SRT sidecars share one source, so they can't drift apart.
         # The fade tag ({\fad}) is ASS-only, so it's dropped (SRT doesn't know formatting tags).
         SRTN=$((SRTN+1))
         printf '%d\n%s --> %s\n%s\n\n' "$SRTN" "$SRT_ST" "$SRT_EN" "$TXT" >> work/subs.srtbody
@@ -1405,7 +1442,6 @@ fi
 #      the screen's center (measured 60px); at 168 a long single line crosses the action bar's start
 #      line x≈890 (measured 907px); at 200 the clearance drops to 39~61px, the smallest of any screen
 #      element — 250 puts it in the same clearance band as the list and hero
-SUBFILTER=""
 if [ "$SUB" = "1" ] && [ -s work/subs.body ]; then
   {
     printf "[Script Info]\nScriptType: v4.00+\nPlayResX: ${W}\nPlayResY: ${H}\nWrapStyle: 0\nScaledBorderAndShadow: yes\n\n"
@@ -1416,21 +1452,16 @@ if [ "$SUB" = "1" ] && [ -s work/subs.body ]; then
     printf '[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n'
     cat work/subs.body
   } > subs.ass
-  if [ -d fonts ] && ls fonts/*.[to]tf >/dev/null 2>&1; then SUBFILTER="subtitles=subs.ass:fontsdir=fonts"
-  else SUBFILTER="subtitles=subs.ass"; fi
   # Publish SRT — line endings are CRLF (the original SubRip spec). Nobody has confirmed the platform
   # parsers accept LF, so this follows the spec. The one blank line at the end of the file marks the
   # last cue's end, so it stays.
   awk '{printf "%s\r\n", $0}' work/subs.srtbody > subs.srt
   ASSN=$(grep -c '^Dialogue:' work/subs.body || true)
-  say "── subtitles: ${SRTN} lines in subs.srt · ${ASSN} burn-in cues (${SUB_MODE} mode) / font $SUB_FONT"
+  say "── subtitles: ${SRTN} lines in subs.srt · ${ASSN} sidecar cues (${SUB_MODE} mode) / font $SUB_FONT"
 fi
 
 # ── 12) Render + outro splice (no subtitles over the outro) — never -shortest (same as v2)
-#      Subtitles go up as a separate file by default, so **the clean master is reel.mp4**. The burn-in
-#      is a separate artifact for platforms with no subtitle-file path (IG Reels); it isn't a
-#      re-encode of reel.mp4 but a second pass from the same source — no second-generation encoding,
-#      both files are first-generation.
+#      The final video has no captions; requested subtitle files stay separate.
 # Split into video and audio halves — the outro splice encodes the picture on its own
 # and then stream-copies it, so the two halves have to be usable separately.
 VENC=(-c:v libx264 -profile:v high -level 4.1 -preset slow -crf 19 -pix_fmt yuv420p
@@ -1471,46 +1502,34 @@ if outro_on; then
   AUDSRC="work/asplice.wav"
 fi
 
-# The faded outro is identical for the clean and burned-in renders, so build it once.
+# Render the faded outro once for the clean master.
 if outro_on; then
   ffmpeg -y -v error -i "$OUTRO_ASSET" \
     -vf "fade=t=in:st=0:d=$XFADE,setsar=1,format=yuv420p" -an "${VENC[@]}" work/outro-fade.mp4
 fi
 
-render() {                          # $1=output file  $2=subtitle filter (empty string = no burn-in)
-  local OUT="$1" SF="${2:-}"
+render() {                          # $1=clean output file; subtitles stay separate
+  local OUT="$1"
   if outro_on; then
-    # Subtitles ride the feature only — the outro carries none, so SF goes on the feature.
     # Both pieces get the same VENC so the concat demuxer can stream-copy them.
     ffmpeg -y -v error -i work/video.mp4 \
-      -vf "${SF:+$SF,}fade=t=out:st=$FO:d=$XFADE,setsar=1,format=yuv420p" \
+      -vf "fade=t=out:st=$FO:d=$XFADE,setsar=1,format=yuv420p" \
       -an "${VENC[@]}" "work/body-$(basename "$OUT" .mp4).mp4"
     printf "file '%s'\nfile '%s'\n" "body-$(basename "$OUT" .mp4).mp4" "outro-fade.mp4" \
       > "work/join-$(basename "$OUT" .mp4).txt"
     ffmpeg -y -v error -f concat -safe 0 -i "work/join-$(basename "$OUT" .mp4).txt" -i "$AUDSRC" \
-      -map 0:v -map 1:a -c:v copy "${AENC[@]}" -movflags +faststart "$OUT"
-  elif [ -n "$SF" ]; then
-    ffmpeg -y -v error -i work/video.mp4 -i "$AUDSRC" -filter_complex "[0:v]$SF[v]" \
-      -map "[v]" -map 1:a "${ENC[@]}" "$OUT"
+      -map 0:v -map 1:a -c:v copy "${AENC[@]}" -sn -movflags +faststart "$OUT"
   else
-    ffmpeg -y -v error -i work/video.mp4 -i "$AUDSRC" -map 0:v -map 1:a "${ENC[@]}" "$OUT"
+    ffmpeg -y -v error -i work/video.mp4 -i "$AUDSRC" -map 0:v -map 1:a "${ENC[@]}" -sn "$OUT"
   fi
 }
 
-render reel.mp4 ""
+render reel.mp4
 if outro_on; then say "── outro splice: black fade ${XFADE}s @ ${FO}s → total ${VDUR}s"
 else say "── no outro (OUTRO=0, the channel ships without one): muxing the main part alone"; fi
 
 rm -f reel-sub.mp4
-if [ "$BURN" = "1" ] && [ -n "$SUBFILTER" ]; then
-  render reel-sub.mp4 "$SUBFILTER"
-  say "── burn-in reel-sub.mp4: for platforms that can't take a subtitle file (the clean master is reel.mp4)"
-elif [ "$BURN" = "1" ]; then
-  say "⚠ BURN=1 but there's no subtitle data, so no burn-in was made (SUB=$SUB)"
-  WARN=1
-else
-  say "── burn-in skipped (BURN=0) — only correct when every publish target takes a subtitle file"
-fi
+say "── clean video only; optional subtitles remain separate files"
 
 # ── 13) Final verification (same as v2)
 RV=$(ffprobe -v error -select_streams v -show_entries stream=duration -of csv=p=0 reel.mp4)
@@ -1563,19 +1582,8 @@ avgate() {    # $1=file $2=role
   say "── $ROLE splice check: duration ${V}s (expected ${VDUR}s) · A/V gap $(awk -v a="$V" -v b="$A" 'BEGIN{d=a-b; if(d<0)d=-d; printf "%.3f", d}')s · PTS pile-ups 0${SPREAD:+ · seam ramp ${SPREAD}}"
 }
 avgate reel.mp4 "reel.mp4"
-# The burn-in comes from the same source through the same filter chain, so its duration must match the
-# clean copy — a mismatch means one of the two files is a leftover from an older build (which ships a
-# different video to different platforms).
-if [ -f reel-sub.mp4 ]; then
-  SV=$(ffprobe -v error -select_streams v -show_entries stream=duration -of csv=p=0 reel-sub.mp4)
-  if awk -v a="$RV" -v b="$SV" 'BEGIN{exit (a-b<0.05 && b-a<0.05) ? 0 : 1}'; then
-    say "── reel-sub.mp4: video ${SV}s (matches the clean copy)"
-  else
-    say "✗ reel-sub.mp4 duration ${SV}s ≠ reel.mp4 ${RV}s — not from the same build"; exit 1
-  fi
-  avgate reel-sub.mp4 "reel-sub.mp4"
-fi
-# The subtitle file goes straight to the publish tools — if it's empty here, that only surfaces at publish
+
+# Requested subtitle sidecars must contain cues before a separate upload.
 if [ "$SUB" = "1" ]; then
   if [ -s subs.srt ]; then say "── subs.srt: ${SRTN} cues / $(wc -c < subs.srt | tr -d ' ') bytes (FB cap 200K)"
   else say "✗ SUB=1 but subs.srt is empty — check the subtitle-text column in segs.tsv"; exit 1; fi

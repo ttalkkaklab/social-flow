@@ -39,18 +39,15 @@ autoproduce:                # when the queue runs dry the loop authors directly 
 The platform crawls it directly, so local paths and authenticated URLs don't
 work. The loop can't produce this URL by itself, so pick one of three.
 
-**The file to serve is the subtitle burn-in build (`video-sub.mp4`).** Other
-platforms take the subtitles as a separate file, but the IG container has no
-subtitle parameter — upload the clean master (`video.mp4`) and the subtitles
-vanish entirely. The builder cuts both from the same source; just pick the
-right one for hosting.
+**Serve the clean master (`video.mp4`) without burned subtitles.** Instagram receives
+no separate subtitle file. Never substitute a historical burned-in version.
 
 - **`base_url`** — stable hosting exists. The URL is built deterministically
-  as `<media_base_url>/<topic slug>/video-sub.mp4`. Putting the file there is
+  as `<media_base_url>/<topic slug>/video.mp4`. Putting the file there is
   a human's job.
 - **`staged`** — the human queuing the topic writes `video_url:` directly in
   the storyboard.md frontmatter. URLs may differ per topic but **must point at
-  the burn-in build**.
+  the clean master**.
 - **`off`** — no stable hosting (temporary tunnels, etc.). **The loop doesn't
   publish**; it handles the inbox and observes metrics only, and puts the
   queue level in the tick report. Publishing is done by a human via
@@ -74,7 +71,7 @@ How to queue — add to the storyboard.md frontmatter.
 ```yaml
 queue_instagram: ready
 queue_at: 2026-08-11        # oldest goes first when there are several (file mtime if omitted)
-video_url: https://…/video-sub.mp4   # only with media_hosting: staged (subtitle burn-in build)
+video_url: https://…/video.mp4   # only with media_hosting: staged (clean master without subtitles)
 ```
 
 **Why the marker is `queue_instagram:`, not `queue:`** — `queue:` is
@@ -155,7 +152,7 @@ topic_keywords: ["Vietnam visa", "expat paperwork"]   # only with topic_source: 
 ## Originality (the line that keeps account eligibility)
 
 Publish targets are **our pipeline's outputs**
-(`output/video/video-sub.mp4`) only. Videos taken from elsewhere, files with
+(`output/video/video.mp4`) only. Videos taken from elsewhere, files with
 another platform's watermark left on, speed-only re-edits: never queued —
 fail the originality verdict and it's not one post, the whole account drops
 out of non-follower recommendations (playbook §Losing eligibility).

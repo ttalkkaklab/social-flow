@@ -223,8 +223,8 @@ save `output/video/subs.<lang>.srt` (BCP-47 code — `subs.en.srt`, `subs.vi.srt
 - Keep each cue about as long as the original — a cue that doubles in length overflows
   the two-line subtitle band on the phone surface.
 - These files ride only on the platforms that take a subtitle file (YouTube ·
-  Facebook). The burned-in copy stays in the default language — IG and Threads viewers
-  see that one, so there is no re-render per language.
+  Facebook) only when the user requests separate tracks. Every platform receives the
+  clean picture; IG and Threads do not get burned subtitles.
 
 Run the D2/D9 surface check on each translated file the same way as `subs.srt` when the
 language is Korean; other languages skip the Korean style gate.

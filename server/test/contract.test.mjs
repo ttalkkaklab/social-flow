@@ -612,9 +612,11 @@ describe('separate subtitle upload contract', () => {
     assert.equal(ig()?.inputSchema.properties.captionFilePath, undefined);
   });
 
-  it('the Instagram videoUrl description demands the burned-in master', () => {
-    // this is the only place subtitles live in the frame — without the note, the clean master goes up
-    assert.match(ig().inputSchema.properties.videoUrl.description, /burned-in/, 'no burned-in requirement');
+  it('Instagram receives the clean master without burning captions', () => {
+    const description = ig().inputSchema.properties.videoUrl.description;
+    assert.match(description, /clean subtitle-free master/);
+    assert.match(description, /Do not burn captions/);
+    assert.doesNotMatch(description, /Provide the burned-in/);
   });
 
   it('the YouTube subtitle description mentions the force-ssl scope', () => {

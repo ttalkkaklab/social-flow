@@ -33,7 +33,7 @@
  * Silently falling back to portrait only surfaces after burning 12 minutes of
  * capture, so exit 1 happens here instead.
  *   ① a call that needs geometry blocks (zone·fonts·sub) on a preset where they are null
- *   ② BURN=1 + 16:9 — the landscape subtitle block is unmeasured, so there are no coordinates to burn at
+ *   ② BURN=1 — final videos are subtitle-free in every format
  */
 
 'use strict';
@@ -124,7 +124,7 @@ function toShell(key) {
     ['MAX_SCENE', f.pacing.recSceneMax === null ? NO_SCENE_CAP : f.pacing.recSceneMax],
     ['TOTAL_HARD', f.pacing.totalHard],
   );
-  line(['SUB', 1], ['BURN', f.burn ? 1 : 0], ['STRICT_DIM', f.guards.strictDim]);
+  line(['SUB', 0], ['BURN', 0], ['STRICT_DIM', f.guards.strictDim]);
 
   const cap = [['CAP_W', f.capture.w], ['CAP_H', f.capture.h]];
   // No urlFormat, no URL_FMT emitted — a portrait URL without format= is today's behavior.
@@ -142,9 +142,8 @@ function toShell(key) {
     ['KB_ZOOM_MAX', num(f.kenburns.panZoomMax, 2)],
   );
 
-  // Only formats with burn-in enabled emit the six subtitle values. BURN=0 has nowhere to burn.
-  if (f.burn) {
-    if (!f.sub) die(`${key}: burn=true but the sub block is null`);
+  // Optional ASS sidecars retain measured styling; these values never enable burn-in.
+  if (f.sub) {
     line(['SUB_SIZE', f.sub.fontSize], ['SUB_ML', f.sub.marginLR], ['SUB_MR', f.sub.marginLR]);
     line(['SUB_MV', f.sub.marginV], ['SUB_OUT', f.sub.outline], ['SUB_SHA', num(f.sub.shadow, 1)]);
   }
@@ -203,16 +202,9 @@ function main(argv) {
   const key = pickFormat(win, override);
   const f = FORMATS[key];
 
-  // Rejection ② — landscape burn-in has no subtitle coordinates to burn at.
-  // The preset says burn is false; if the caller demands BURN=1 it would
-  // silently burn at portrait coordinates, so stop here.
-  const wantBurn = burn === null ? (f.burn ? '1' : '0') : String(burn);
-  if (wantBurn === '1' && !f.burn) {
-    die(
-      `${key}: BURN=1 was requested but this format's sub block is null.\n` +
-      `  16:9 is the clean-master + subs.srt contract, so there is no burn-in. Burning at\n` +
-      `  portrait coordinates puts subtitles off-screen or inside the safe zone.`,
-    );
+  // Explicit burn-in requests conflict with the clean-video policy in every format.
+  if (String(burn) === '1') {
+    die(`${key}: BURN=1 is disabled: final videos must be subtitle-free; use an optional SRT upload instead.`);
   }
 
   if (mode === 'sh') {

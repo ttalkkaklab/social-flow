@@ -171,9 +171,7 @@ only the summary is here.
   span splitting as a workflow (blog grade — the reference docs never took it up, checked
   2026-08-25).
 - **Dialogue on a Veo call is `speaker says: line` — colon, no quotation marks.** Quotes make
-  the model burn the line into the frame as on-screen text (Best practices, 2026-08-24); our
-  overlays already carry the subtitles, so a burned-in line is a double. Seedance keeps its
-  quotes.
+  the model burn the line into the frame as on-screen text (Best practices, 2026-08-24); the user requires a caption-free picture. For supplied-audio conditioning, describe speech timing and visible mouth action without repeating the dialogue in the visual prompt. Prohibit subtitles, captions and text overlays in each video request.
 - **One clip is one moment** — chaining A-then-B-then-C into one short prompt is the vendor's
   own named failure ("muddled or incomplete"). The storyboard already cut the scene to one
   beat (scenes-schema §clip prompt); don't merge scenes at call time to save calls.
