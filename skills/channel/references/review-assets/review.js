@@ -29,6 +29,20 @@
   }
   if (search) search.addEventListener('input', filter);
   if (series) series.addEventListener('change', filter);
+  // Print the specification even if a reader collapsed a group, then restore it.
+  var printState;
+  window.addEventListener('beforeprint', function () {
+    if (printState) return;
+    printState = Array.from(document.querySelectorAll('.character-group, .character-voice details')).map(function (el) {
+      var state = { el: el, open: el.open };
+      el.open = true;
+      return state;
+    });
+  });
+  window.addEventListener('afterprint', function () {
+    (printState || []).forEach(function (state) { state.el.open = state.open; });
+    printState = null;
+  });
   // Native dialog supplies focus containment, Escape and focus restoration.
   var dialog = document.createElement('dialog');
   dialog.className = 'review-lightbox';

@@ -210,7 +210,34 @@ test('structured updates render every field, escape values and make prior review
     d.character.physical.weightKg={status:'pending',value:null,reason:'Waiting on author'};writeDoc();
     assert.ok(exportChannel(f.dir).warnings.some(x=>x.includes('weightKg')));
     html=readFileSync(join(folder,'index.html'),'utf8');
-    assert.ok(html.includes('Pending: Waiting on author'));
+    assert.match(html, /data-en="Pending"[^>]*>.*?<\/span><\/span><span class="character-field-reason">Waiting on author<\/span>/);
     assert.ok(!html.includes('Review passed'));
   }finally{f.clean();}
+});
+
+test('character detail keeps structured facts and lists, local transcript and reachable fallback sections', () => {
+  const f = fixture();
+  try {
+    f.write('assets/characters/hero/sample.txt', 'Sample <script>bad()</script>');
+    exportChannel(f.dir);
+    const file = join(f.dir, 'assets/characters/hero/index.html');
+    let html = readFileSync(file, 'utf8');
+    const groups = require('../../skills/_shared/character-identity.js').GROUPS;
+    for (const [group, , , fields] of groups) {
+      for (const [key] of fields) assert.ok(html.includes(`data-character-field="${group}.${key}"`));
+    }
+    assert.match(html, /<dd><ul><li>/);
+    assert.ok(html.includes('Sample &lt;script&gt;bad()&lt;/script&gt;'));
+    assert.ok(!html.includes('<script>bad()'));
+    assert.equal((html.match(/class="character-group" open/g) || []).length, groups.length);
+    assert.equal((html.match(/class="character-icon"/g) || []).length, groups.length + 4);
+    f.write('assets/characters/hero/identity.md', '# Legacy hero\n**역할**: Guide');
+    rmSync(join(f.dir, 'assets/characters/hero/sample.txt'));
+    exportChannel(f.dir);
+    html = readFileSync(file, 'utf8');
+    for (const id of ['appearance', 'identity', 'voice']) assert.ok(html.includes(`id="${id}"`));
+    assert.ok(html.includes('Sample transcript not supplied'));
+    assert.ok(html.includes('Voice sample not supplied'));
+    assert.ok(html.includes('Full character identity'));
+  } finally { f.clean(); }
 });
