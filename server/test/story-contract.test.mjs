@@ -7,7 +7,9 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 const require = createRequire(import.meta.url);
 const root = path.resolve(import.meta.dirname, '../../skills/storyboard/references');
-const { checkStory, storyHash, storySpeech } = require(path.join(root, 'story-contract.js'));
+const { checkStory: inspectStory, storyHash, storySpeech } = require(path.join(root, 'story-contract.js'));
+// These unit cases explicitly exercise optional review diagnostics.
+const checkStory = (win, options = {}) => inspectStory(win, { requireReview: true, ...options });
 const ref = shot => ({ shot, group: 1, quote: ['Why is the box moving?', 'The table shakes.', 'A fan moves the table.', 'Check the table before the box.'][shot - 1] });
 function fixture() {
   const w = { COMPREHENSION: { question: 'Why?', answer: 'A fan.', takeaway: 'Check the support.' },
@@ -28,7 +30,7 @@ test('story contract permits an earned close without CTA and no numeric score', 
 test('draft requires plan but does not require completed review', () => {
   const w = fixture(); delete w.STORY.review;
   assert.deepEqual(checkStory(w, { requireReview: false }), []);
-  assert.match(checkStory(w).join(), /review is required/);
+  assert.match(checkStory(w).join(), /review is absent/);
   delete w.STORY;
   assert.match(checkStory(w, { requireReview: false }).join(), /requires version/);
 });
@@ -67,10 +69,10 @@ test('the payoff lands in the opening group only when the cover states the resul
   assert.match(errors, /first spoken group/);
   assert.match(errors, /STORY\.payoff cannot precede the opening/);
 });
-test('an optional ask must follow the payoff with its own reason', () => {
+test('CTA metadata and placement never impose a story gate', () => {
   const w = fixture(); w.STORY.cta = 'question'; w.STORY.ask = ref(2);
-  assert.match(checkStory(w).join(), /must follow the paid promise/);
-  assert.match(checkStory(w).join(), /ctaReason/);
+  w.STORY.review.hash = storyHash(w);
+  assert.deepEqual(checkStory(w), []);
   w.STORY.ask = ref(4); w.STORY.ctaReason = 'Invite a related observation';
   w.STORY.review.hash = storyHash(w); assert.deepEqual(checkStory(w), []);
 });
@@ -80,9 +82,9 @@ test('review requires all four evidenced judgments; score cannot waive unresolve
     assert.match(checkStory(w).join(), new RegExp(key));
   }
   const w = fixture(); w.STORY.review.score = 100; w.STORY.review.unresolved = ['No supported conclusion'];
-  assert.match(checkStory(w).join(), /empty unresolved/);
+  assert.match(checkStory(w).join(), /unresolved/);
   w.STORY.review.unresolved = []; w.STORY.review.verdict = 'fail';
-  assert.match(checkStory(w).join(), /must pass/);
+  assert.match(checkStory(w).join(), /non-pass/);
 });
 test('narration, subtitles, order, screen copy and thesis invalidate the review; camera does not', () => {
   for (const mutate of [w => w.SCENES[1].narration[0].tts += ' changed',
@@ -131,7 +133,7 @@ test('recorded insert speech uses playback order, not the broll array position',
   assert.deepEqual(checkStory(w), []);
   assert.deepEqual(storySpeech(w).map(x => x.shot), [1, 5, 2, 3, 4]);
 });
-test('CLI gates block missing plans in draft and missing review in full production', () => {
+test('CLI exposes readable plans without requiring review metadata; malformed code still fails', () => {
   const dir = mkdtempSync(path.join(tmpdir(), 'story-contract-'));
   try {
     const file = path.join(dir, 'scenes.js');
@@ -144,11 +146,11 @@ test('CLI gates block missing plans in draft and missing review in full producti
     assert.deepEqual(JSON.parse(run('check-story.js', '--map').stdout).map(x => x.shot), [1, 2, 3, 4]);
     delete w.STORY.review; write(w);
     assert.equal(run('check-story.js', '--draft').status, 0);
-    assert.equal(run('check-story.js').status, 1);
-    assert.match(run('check-scenes.js', '--json').stdout, /review is required/);
+    assert.equal(run('check-story.js').status, 0);
+    assert.doesNotMatch(run('check-scenes.js', '--json').stdout, /review is absent/);
     delete w.STORY; write(w);
     const result = run('check-scenes.js', '--draft', '--json');
-    assert.equal(result.status, 1); assert.match(result.stdout, /requires version story-v1/);
+    assert.equal(result.status, 0); assert.match(result.stdout, /requires version story-v1/);
     writeFileSync(file, 'invalid syntax'); assert.equal(run('check-story.js').status, 3);
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
@@ -244,7 +246,7 @@ test('a person short opens without the name or a year, one sentence a shot, clos
                      '무슨 일이야? 아무도 몰랐어요.', '정말 갈 거니? 걱정했어요.', '아까 왜 그랬어? 나중에 물었죠.'])
     assert.match(person(says(two)), /packs two sentences/, two);
 });
-test('the person-short fixture passes the draft gate and fails once the name moves into the opening', () => {
+test('the person-short fixture reports the opening-name advice without blocking the draft', () => {
   const dir = mkdtempSync(path.join(tmpdir(), 'person-short-'));
   try {
     const src = path.join(root, 'person-short-fixture.js');
@@ -254,7 +256,7 @@ test('the person-short fixture passes the draft gate and fails once the name mov
     const broken = path.join(dir, 'scenes.js');
     writeFileSync(broken, readFileSync(src, 'utf8').replace(/한 남자가 성냥/g, '박만수가 성냥'));
     const out = run(broken, '--draft');
-    assert.equal(out.status, 1); assert.match(out.stdout, /names the person/);
+    assert.equal(out.status, 0); assert.match(out.stdout, /names the person/);
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 test('the thesis is a present-tense message heard after the payoff, not the payoff line, a figure, a moral or the name', () => {
@@ -286,7 +288,7 @@ test('the thesis is a present-tense message heard after the payoff, not the payo
   assert.match(checkStory(stated).join(' '), /themeStated must be spoken before the payoff/);
 
 });
-test('a person short refuses a thesis that names the person', () => {
+test('a person short reports a thesis that names the person', () => {
   const file = path.join(root, 'person-short-fixture.js');
   const src = readFileSync(file, 'utf8').replace('thesis: "배 한 척을 돌리는 불빛은 집 한 채 값이에요"', 'thesis: "만수의 불빛은 집 한 채 값이에요"')
     .replace('배 한 척을 돌리는 불빛은 집 한 채 값이에요."', '만수의 불빛은 집 한 채 값이에요."');
@@ -294,6 +296,6 @@ test('a person short refuses a thesis that names the person', () => {
   writeFileSync(path.join(dir, 'scenes.js'), src);
   const r = spawnSync('node', [path.join(root, 'check-story.js'), dir, '--draft'], { encoding: 'utf8' });
   rmSync(dir, { recursive: true, force: true });
-  assert.equal(r.status, 1);
+  assert.equal(r.status, 0);
   assert.match(r.stdout, /thesis names the person/);
 });

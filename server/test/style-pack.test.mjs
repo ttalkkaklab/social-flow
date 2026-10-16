@@ -54,7 +54,8 @@ test('style choice and its evidence are checked before assets and bound to the q
  const {check}=require('../../skills/storyboard/references/production-mode.js');
  const w=plan();Object.assign(w.PRODUCTION,{videoBudgetUsd:10,maxAttempts:3});
  w.PRODUCTION.style.preset='photoreal';
- assert.ok(check(w,{draft:true}).some(x=>x.includes('HITL')));
+ const advice=[]; assert.deepEqual(check(w,{draft:true,advice}),[]);
+ assert.ok(advice.some(x=>x.includes('HITL')));
  w.PRODUCTION.style.selection={kind:'user',reference:'User selected photoreal for this episode.'};
  assert.deepEqual(check(w,{draft:true}),[]);
  const before=signature(w);w.PRODUCTION.style.preset='webtoon';assert.notEqual(signature(w),before);

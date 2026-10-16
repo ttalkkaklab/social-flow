@@ -1,6 +1,23 @@
 # social-flow — Project instructions
 
 Channel-based short-form/long-form content pipeline Claude Code plugin.
+
+## Guided automation (owner directive, 2026-10-16)
+
+CTA checks are removed. Creative structure, writing style, camera direction, review
+scores, frozen stamps and subjective quality belong primarily in skills as guidance,
+not automatic execution gates. Continue authorized work with honest findings and
+`not_reviewed` or stale evidence instead of manufacturing a passing review. A user
+who explicitly requests a quality-improvement loop still gets that loop; its score
+does not become a prerequisite for unrelated tool execution.
+
+Keep the minimum contracts required to execute: readable inputs, stable references,
+supported adapter payloads, usable media, finite timing, concurrency and actual
+spending limits. Existing authorization persists. Quality warnings do not require a
+new approval, including assembly warnings described in older sections below. This
+does not expand the requested artifact into paid generation, external uploads or
+publishing that the user has not authorized. Prefer the skill's practical guidance
+over mandatory metadata and arbitrary checker thresholds.
 [README.md](README.md) is the source of truth for structure, skills, and the MCP tool list.
 
 ## Assembly video checks (user directive, 2026-09-14)

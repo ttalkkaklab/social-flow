@@ -159,7 +159,7 @@ function assemble(win, index, dir) {
     'Camera language: ' + style.camera,
     'Camera composition: ' + camera.framing,
     'Spatial continuity: ' + d.continuity,
-    ...(locationRef ? [locationRef.prompt, 'Attached image ' + (sourceReferenceImages.indexOf(locationRef.paths[0]) + 1) + ' is the approved LOCATION reference. Preserve its camera and architecture.'] : []),
+    ...(locationRef ? [locationRef.prompt, 'Attached image ' + (sourceReferenceImages.indexOf(locationRef.paths[0]) + 1) + ' is the LOCATION reference (reference review: ' + (locationRef.approved ? 'reviewed' : 'not_reviewed or stale') + '). Preserve its camera and architecture.'] : []),
     'Keep the physical subject legible at phone size. The image contains only the scene; subtitles are added in editing.'].join('\n');
   const locationLock = locationRef ? '. The location holds the approved reference architecture and fixed object inventory: ' + locationRef.invariants.join('; ') : '';
   const lock = lockText(d, style, treatment, castLocks) + locationLock + (propPrompt ? ". " + propPrompt : "") + (isDrone(camera) ? '. The flight keeps continuous terrain parallax and stable landmarks; the picture stays a clean aerial view with scenery at every frame edge' : '');
@@ -181,7 +181,7 @@ function assemble(win, index, dir) {
       '. Rewrite videoDesign.action, motion.beats or continuity positively, in English, without seconds.');
     motionPrompt = clip.prompt;
   }
-  const locationEndReady = !locationRef || !!(locationRef.resultReview?.verdict === 'pass' && locationRef.resultImage && v.bg && path.resolve(dir,v.bg)===path.resolve(dir,locationRef.resultImage));
+  const locationEndReady = !locationRef || !!(locationRef.resultImage && v.bg && path.resolve(dir,v.bg)===path.resolve(dir,locationRef.resultImage));
   return { propSnapshot, propReferenceImages, endFrameImageArgs: locationRef && locationEndReady ? {referenced_image_paths: [path.resolve(dir,v.bg), ...locationRef.endPaths]} : {}, endFrameReady: locationEndReady, locationEndReferenceImages: locationRef?.endPaths || [], locationBinding: locationRef?.binding || null, locationReferenceRoles: locationRef?.roles || [], sourcePrompt: source, stylePreset: preset, cutType, castIds,
     styleBinding: pack?.binding || null,
     styleGuidePath: pack?.guidePath || null,

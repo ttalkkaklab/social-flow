@@ -1,5 +1,8 @@
 # Direct the episode before choosing assets
 
+**Automatic execution:** [Automation guidance](../../_shared/automation-guidance.md) supersedes creative quality gates, repeated approvals and review-score requirements here. Keep the concrete guidance and truthful review state. Enforce only actual runtime dependencies and the scope of external-action authorization.
+
+
 Read the narration as a sequence of things the viewer must see. Write the route and reason
 for each cut separately. A topic, a noun or an available tool is not a visual brief.
 

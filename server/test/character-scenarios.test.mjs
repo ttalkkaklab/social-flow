@@ -1,14 +1,17 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { mkdtempSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, readFileSync, mkdirSync, rmSync } from 'node:fs';
+import { runInNewContext } from 'node:vm';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 const require = createRequire(import.meta.url);
 const root = path.resolve(import.meta.dirname, '../../skills/storyboard/references');
-const { checkScenarioV2 } = require(path.join(root, 'scenario-v2.js'));
-const { checkStory, storyHash } = require(path.join(root, 'story-contract.js'));
+const { checkScenarioV2, observableOpeningSignature } = require(path.join(root, 'scenario-v2.js'));
+const { checkStory: inspectStory, storyHash, storySpeech } = require(path.join(root, 'story-contract.js'));
+// These unit cases explicitly exercise optional review diagnostics.
+const checkStory = (win, options = {}) => inspectStory(win, { requireReview: true, ...options });
 const { storyPerformance } = require(path.join(root, 'story-performance.js'));
 const meta = { version: 'scenario-v2', channel: 'test', topic: 'bowl', direction: 'D1' };
 const pool = [{ id: 'father', source: 'identity.md' }, { id: 'child', source: 'identity.md' }];
@@ -25,6 +28,24 @@ const body = c => '```scenario-json\n' + JSON.stringify(c) + '\n```\n';
 const run = (c, research) => checkScenarioV2(meta, body(c), research, { pool }).findings;
 test('fiction works without research, a factual wow, a narrator or a second engine', () => {
   assert.deepEqual(run(candidate()), []);
+});
+test('CTA row and metadata are optional and never prescribe placement or wording', () => {
+  const c = candidate(); delete c.cta; c.beats.pop();
+  assert.deepEqual(run(c), []);
+  c.cta = 'custom invitation';
+  c.beats.splice(1, 0, { item: 'CTA', events: [{kind:'dialogue', character:'child', to:'audience', text:'Please subscribe.', basis:'invented'}] });
+  assert.deepEqual(run(c), []);
+  c.beats[1].events = 'broken';
+  assert.ok(run(c).some(f => f.level === 'bad' && /needs events/.test(f.what)));
+});
+test('creative outline and freeze differences guide authoring without weakening readable event shapes', () => {
+  const c = candidate(); c.beats[0].item = 'A different opening';
+  const result = checkScenarioV2(meta, body(c), null, { pool, chosen:true, hasScenes:true }).findings;
+  assert.equal(result.filter(f => f.level === 'bad').length, 0);
+  assert.ok(result.some(f => /Suggested structure/.test(f.what)));
+  assert.ok(result.some(f => /freeze stamp/.test(f.what)));
+  c.beats[0].events = { text: 'Not an array' };
+  assert.ok(run(c).some(f => f.level === 'bad' && /needs events/.test(f.what)));
 });
 test('factual and adapted claims cannot bypass evidence; inventions stay explicitly marked', () => {
   const c = candidate(); c.kind = 'evidence';
@@ -56,6 +77,69 @@ test('candidate CLI accepts three distinct stories sharing an engine and rejects
     assert.equal(cli().status, 1);
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
+test('candidate CLI warns on copied first four event sequences despite different premises and endings', () => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'scenario-openings-'));
+  try {
+    mkdirSync(path.join(dir, 'candidates')); writeFileSync(path.join(dir, 'identity.md'), '# Character');
+    writeFileSync(path.join(dir, 'cast.json'), JSON.stringify({ characters: pool }));
+    const candidates = [1, 2, 3].map(i => {
+      const c = candidate(); c.premise = 'Different author intention ' + i;
+      c.difference = 'Claimed different choice ' + i;
+      c.beats[4].events[0].text = 'Ending demand ' + i;
+      return c;
+    });
+    const check = () => {
+      candidates.forEach((c, i) => writeFileSync(path.join(dir, 'candidates', `d${i + 1}.md`),
+        `---\nversion: scenario-v2\nchannel: test\ntopic: bowl\ndirection: D${i + 1}\nfrozen:\n---\n` + body(c)));
+      const result = spawnSync(process.execPath, [path.join(root, 'check-scenario.js'), path.join(dir, 'candidates'), '--json'], { encoding: 'utf8' });
+      assert.equal(result.status, 0, result.stdout);
+      return JSON.parse(result.stdout);
+    };
+    let result = check();
+    assert.equal(result.violations, 0);
+    assert.equal(result.findings.filter(f => f.what.startsWith('V2 shared causal opening')).length, 1);
+    assert.match(result.findings.find(f => f.what.startsWith('V2 shared causal opening')).what, /d1.md, d2.md, d3.md/);
+    // A shared cast/setup is not enough: different observable developments avoid this exact-copy warning.
+    candidates[1].beats[2].events[0].text = 'The child refuses the bowl and leaves.';
+    candidates[2].beats[1].events[0].text = 'The parent brings a second bowl from the kitchen.';
+    result = check();
+    assert.equal(result.findings.filter(f => f.what.startsWith('V2 shared causal opening')).length, 0);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+test('candidate CLI accepts one readable candidate despite creative metadata gaps but rejects unreadable input', () => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'scenario-guidance-'));
+  try {
+    mkdirSync(path.join(dir,'candidates')); writeFileSync(path.join(dir,'identity.md'),'# Character');
+    writeFileSync(path.join(dir,'cast.json'),JSON.stringify({characters:pool}));
+    const file=path.join(dir,'candidates/d1.md'), c=candidate();
+    delete c.viewerExperience; delete c.message; c.beats.pop();
+    const save = value => writeFileSync(file,'---\nversion: scenario-v2\nchannel: test\ntopic: bowl\ndirection: D1\n---\n'+body(value));
+    const cli=()=>spawnSync(process.execPath,[path.join(root,'check-scenario.js'),path.dirname(file),'--json'],{encoding:'utf8'});
+    save(c); let result=cli(); assert.equal(result.status,0,result.stdout);
+    assert.equal(JSON.parse(result.stdout).files.length,1);
+    assert.ok(JSON.parse(result.stdout).warnings > 0);
+    c.beats[0].events = 'not an array'; save(c); result=cli();
+    assert.equal(result.status,1); assert.match(result.stdout,/needs events/);
+    writeFileSync(file,'---\nversion: scenario-v2\n---\n```scenario-json\n{broken\n```');
+    assert.equal(cli().status,1);
+  } finally {rmSync(dir,{recursive:true,force:true});}
+});
+test('opening comparison ignores only metadata/whitespace and retains actor, order, recipient and event kind', () => {
+  const original = candidate(), changed = candidate();
+  changed.beats[0].expectation = 'Different expectation';
+  changed.beats[0].events[0].text = ' Shares  the last\n bowl of rice. ';
+  assert.equal(observableOpeningSignature(original), observableOpeningSignature(changed));
+  for (const key of ['kind', 'character', 'to']) {
+    const other = candidate(); other.beats[0].events[0][key] = key === 'kind' ? 'dialogue' : 'child';
+    assert.notEqual(observableOpeningSignature(original), observableOpeningSignature(other));
+  }
+  const ordered = candidate(); ordered.beats[0].events.push({ kind: 'action', character: 'child', text: 'Refuses the bowl.' });
+  const reversed = structuredClone(ordered); reversed.beats[0].events.reverse();
+  assert.notEqual(observableOpeningSignature(ordered), observableOpeningSignature(reversed));
+  assert.equal(observableOpeningSignature({ beats: [] }), null);
+  const malformed = candidate(); malformed.beats[0].events = [];
+  assert.equal(observableOpeningSignature(malformed), null);
+});
 function board() {
   const w = { SCENES: [
     { type: 'cover', beat: 'hook', narration: [{tts: 'Have you eaten?', sub: 'Have you eaten?', speaker: 'child'}],
@@ -78,6 +162,29 @@ function board() {
 }
 test('dialogue and silent action deliver meaning without a spoken thesis', () => {
   assert.deepEqual(checkStory(board()), []);
+});
+
+test('automatic story checks never demand or fabricate a reviewed pass', () => {
+  const w = board(); delete w.STORY.review;
+  assert.deepEqual(inspectStory(w), []);
+  assert.equal(w.STORY.review, undefined);
+  assert.match(inspectStory(w, {requireReview:true}).join(), /review is absent/);
+  w.STORY.review = {hash:'old', verdict:'fail', unresolved:['Needs improvement']};
+  const before = JSON.stringify(w);
+  assert.deepEqual(inspectStory(w), []);
+  assert.match(inspectStory(w, {requireReview:true}).join(), /stale|unresolved/);
+  assert.equal(JSON.stringify(w), before);
+});
+test('readers retain original indices through invalid slots and never invent unresolved speech', () => {
+  const win = { STORY:{version:'story-v2'}, SCENES:[null,
+    { narration:[null, {tts:'Actual line'}], performance:[null, {kind:'dialogue',group:2,character:'child'},
+      {kind:'dialogue',group:99}, {kind:'action',text:{intent:'Not observable text'}}, {kind:'unknown',group:2}] },
+    42, {type:'broll', after:1, narration:[{tts:'Insert line'}], performance:[{kind:'dialogue',group:1,character:'child'}]}] };
+  const rows = storyPerformance(win);
+  assert.deepEqual(rows.map(r=>[r.shot,r.event]), [[2,1],[2,2],[2,3],[2,4],[2,5],[4,1]]);
+  assert.equal(rows[1].quote,'Actual line');
+  assert.ok([0,2,3,4].every(i=>rows[i].unresolved === true && rows[i].quote === ''));
+  assert.deepEqual(storySpeech(win).map(r=>[r.shot,r.group]), [[2,2],[4,1]]);
 });
 test('whole-story extraction attributes speech and includes silent actions, never author intent', () => {
   const dir = mkdtempSync(path.join(tmpdir(), 'performance-'));
@@ -171,7 +278,47 @@ test('scene checker permits a visual close but requires the action in the produc
     w.SCENES.forEach(s => {s.visual = {action:s.performance.filter(e=>e.kind==='action').map(e=>e.text).join(' ')};});
     save(); result = cli();
     assert.doesNotMatch(result.stdout, /performance action is missing/);
-    // Other visual/format contracts still fail this deliberately minimal fixture.
-    assert.equal(result.status,1);
+    // Visual/format advice does not stop this deliberately minimal draft.
+    assert.equal(result.status,0);
   } finally {rmSync(dir,{recursive:true,force:true});}
+});
+
+test('CLI and browser never require CTA presence, speech, metadata or terminal placement', () => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'narrative-ending-'));
+  const template = readFileSync(path.join(root, 'storyboard-html-template.html'), 'utf8');
+  const start = template.indexOf('    mainOrder.forEach(function (o, pos) {');
+  const end = template.indexOf('    // A short-form cover', start);
+  assert.ok(start >= 0 && end > start);
+  const checkBrowser = w => {
+    const findings = [];
+    runInNewContext(template.slice(start, end), { window: w, mainOrder: w.SCENES.map((s, i) => ({s, i})),
+      beatOf: s => s.beat, compactLetters: s => s.replace(/\s/g, ''), flag: (level, where, what) => findings.push(what),
+      T: { where: { order: 'order', share: 'share' } }, orderOk: true, orderBad: false });
+    return findings.join('\n');
+  };
+  try {
+    const w = board(); w.SCENES[2].beat = 'drip';
+    const checkCli = () => {
+      writeFileSync(path.join(dir, 'scenes.js'), Object.entries(w).map(([k,v]) => `window.${k}=${JSON.stringify(v)};`).join('\n'));
+      const result = spawnSync(process.execPath, [path.join(root, 'check-scenes.js'), dir, '--draft', '--json'], { encoding: 'utf8' });
+      assert.notEqual(result.status, 3, result.stderr);
+      return JSON.parse(result.stdout).findings.map(f => f.what).join('\n');
+    };
+    for (const silent of [true, false]) {
+      w.SCENES[2].narration = silent ? [] : [{ speaker: 'child', tts: 'Let us share.' }];
+      w.SCENES[2].performance = silent ? [{kind: 'action', character: 'child', text: 'The child shares the rice.'}]
+        : [{kind: 'dialogue', character: 'child', to: 'father', group: 1}];
+      assert.doesNotMatch(checkCli(), /spoken CTA|share trigger/);
+      assert.equal(checkBrowser(w), '');
+    }
+    w.STORY.cta = 'question';
+    assert.doesNotMatch(checkCli(), /spoken CTA|after the cta|share trigger/);
+    assert.equal(checkBrowser(w), '');
+    w.SCENES[1].beat = 'cta';
+    assert.doesNotMatch(checkCli(), /spoken CTA|after the cta|share trigger/);
+    assert.equal(checkBrowser(w), '');
+    w.STORY.version = 'story-v1'; delete w.STORY.cta;
+    assert.doesNotMatch(checkCli(), /spoken CTA|after the cta|share trigger/);
+    assert.equal(checkBrowser(w), '');
+  } finally { rmSync(dir, { recursive: true, force: true }); }
 });

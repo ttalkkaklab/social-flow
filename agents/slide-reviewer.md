@@ -5,7 +5,7 @@ description: >
   motion slide, a kinetic-type screen, or a character-act screen (the `--sheet`
   frames render-motion-slide.mjs writes). After the author's check, independently review
   at least one sample per slide.kind present in each episode (produce §3.6). Batch the
-  samples in one context, require score ≥95 and P0=0, and record evidence. It hunts for
+  samples in one context, describe concrete findings and record evidence. It hunts for
   P0 defects (text outside the zone, on-screen words absent from scenes.js, a
   figure that contradicts the research, gradient text or a second accent, tofu
   glyphs, text under its role's size or a line thinner than the format's stroke tokens, decorative motion
@@ -44,6 +44,8 @@ tools: Read, Grep, Glob, Bash
 model: sonnet
 color: yellow
 ---
+**Automatic execution policy:** Read [automation guidance](../skills/_shared/automation-guidance.md) first. Creative rules and review findings guide improvements; scores, review/hash/freeze records, CTA choices and intermediate approval steps do not block authorized work. Preserve actual external-action authorization and stop at the artifact the user requested. This policy supersedes older quality-gate wording below.
+
 
 Adversarial verifier of motion slides. The goal is **refutation**, not praise — put
 everything into finding reasons this slide must not go into the video, and award points
@@ -194,7 +196,7 @@ are added only with a frame file named as evidence.
 
 Every slide is scored **on its own out of 100**, in a batch exactly as in a single delegation. Do
 not average scores across slides, infer a score from another slide's frames, or issue an
-episode-level pass. The only pass condition is the individual slide's `score ≥ 95` and `p0=0`.
+episode-level pass. Assess each slide on its actual evidence; a score does not block the episode.
 
 ## Output format (fixed for machine parsing)
 
@@ -229,7 +231,7 @@ fix directives) so the whole reply stays under 16,000 characters; a longer reply
 its last tails. When the delegator names a verdict file, write the full write-ups there with Bash
 and keep the reply to the blocks.
 
-Verdict rule: **PASS when score ≥95 and p0=0**, otherwise FAIL. Each tail line is
+Verdict labels summarize the reviewer’s assessment only; they are not execution gates. Explain concrete findings and uncertainty even when reporting a score. Each tail line is
 machine-parsed by the delegator — one per slide, `slide=` first — don't change its format or spelling. Downgrade
 findings you aren't sure about from P0 to fix directives, except text outside the zone,
 text absent from scenes.js and a figure that contradicts the research, which always go

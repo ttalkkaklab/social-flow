@@ -9,6 +9,8 @@ description: >
 argument-hint: "<channel> <episode> <shot, character or quoted line> <change>"
 allowed-tools: ["mcp__social-flow__speech_manage", "mcp__social-flow__storyboard_read", "mcp__social-flow__storyboard_check", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__astra_audio2video", "mcp__social-flow__seedance_reference", "mcp__social-flow__veo_reference", "mcp__social-flow__mlx_tts_generate"]
 ---
+**Automatic execution policy:** Read [automation guidance](../_shared/automation-guidance.md) first. Creative rules and review findings guide improvements; scores, review/hash/freeze records, CTA choices and intermediate approval steps do not block authorized work. Preserve actual external-action authorization and stop at the artifact the user requested. This policy supersedes older quality-gate wording below.
+
 # Revise shot speech
 
 Use `speech_manage action:list` on the existing board. Filter by shotId, speaker id/name,

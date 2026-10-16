@@ -383,7 +383,26 @@
     const warn = (where, what) => out.push({ level: 'warn', where, what });
     const cameraRule = opts && opts.draft ? later : bad;
     const performanceStory = win.STORY && win.STORY.version === 'story-v2';
+    const performedEvents = s => (Array.isArray(s.performance) ? s.performance : []).map(e => {
+      if (!e || typeof e !== 'object') return '';
+      if (e.kind === 'action') return e.text;
+      if (!['dialogue', 'narration'].includes(e.kind) || !Number.isInteger(e.group) || e.group < 1) return '';
+      const group = (Array.isArray(s.narration) ? s.narration : [])[e.group - 1];
+      return group && (group.tts || group.sub);
+    }).filter(text);
     const shots = Array.isArray(win.SCENES) ? win.SCENES : [];
+    const shotIds = new Map();
+    shots.forEach((shot, i) => {
+      const id = shot && shot.id;
+      if (id === undefined) return; // Legacy readers accept absent IDs; writers assign them.
+      if (typeof id !== 'string' || !/^s\d{4,}$/.test(id)) {
+        bad('shot ' + (i + 1), 'id: expected s followed by at least four digits (for example s0001)');
+        return;
+      }
+      const first = shotIds.get(id);
+      if (first !== undefined) bad('shot ' + (i + 1), `id: duplicate ${id} (already used by shot ${first})`);
+      else shotIds.set(id, i + 1);
+    });
     const placed = shots.map((s, i) => ({ s, no: i + 1 })).filter(x => PLACED(x.s));
     out.push(...checkEyelines(shots, opts && opts.draft));
     out.push(...checkCompositions(shots, opts && opts.draft));
@@ -422,7 +441,7 @@
       if (sc.out !== undefined && !text(sc.out)) bad(where, 'scene.out, when written, is the sentence the scene goes out on');
       if (text(sc.place) && SCREEN_RE.test(sc.place))
         warn(where, `place "${sc.place.trim()}" names a picture — a diagram, chart or slide is a shot inside the scene of the story it explains, not a place of its own (scenes-schema §structure)`);
-      if (text(sc.event) && SUMMARY_RE.test(sc.event.trim()))
+      if (text(sc.event) && SUMMARY_RE.test(sc.event.trim()) && !(performanceStory && /에게.{0,60}보여\s?준/.test(sc.event)))
         warn(where, `event "${sc.event.trim()}" says what the viewer learns, not what happens — one subject, one verb, something that happens on screen (리더가 셋을 소집한다)`);
       else if (text(sc.event) && CHAIN_RE.test(sc.event) && bare(sc.event).length >= 18)
         warn(where, 'event chains two actions — one subject, one verb; the second action is the next scene when the value turned there, or a shot of this scene when it did not');
@@ -645,10 +664,7 @@
         warn('shot ' + x.no, `shot.info "${k.trim().slice(0, 40)}…" ends on a delivery verb — info is the fact the viewer takes, not what the shot does; a shot whose job is staging starts its info with "연출 —" (rule 10)`);
       if (segs.length && MEASURE_RE.test(segs.join(' ')) && x.s.shot && x.s.shot.infoType && ['statistic', 'timeline', 'principle'].indexOf(x.s.shot.infoType) === -1 && x.s.shot.render && x.s.shot.render.mode === 'generated_video')
         warn('shot ' + x.no, `a measured value in the lines on a generated_video shot with infoType "${x.s.shot.infoType}" — a number the viewer must read is a statistic on an HTML screen, never video (scenes-schema §shot.infoType)`);
-      if (x.s.beat === 'cta' && staged && segs.length && overlap(k.replace(/^연출\s?[—–-]\s?/, ''), segs.join(' ')) < 0.1 && /미소|표정|끄덕|바라보|돌아보|구도|프레임|카메라/.test(k))
-        warn('shot ' + x.no, `the hand-back shot's info is a gesture or a framing note ("${k.trim().slice(0, 30)}…") — the hand-back's info names what this shot adds, the changed meaning of the cover's line, not the face that says it (rule 7)`);
-      if (x.s.beat === 'cta' && x.s.shot && text(x.s.shot.share) && segs.length && !segs.some(seg => bare(seg) === bare(x.s.shot.share) || overlap(x.s.shot.share, seg) >= 0.6))
-        warn('shot ' + x.no, `share "${String(x.s.shot.share).trim().slice(0, 30)}…" is not a line this shot says — the share is the spoken sentence viewers carry off, on the shot that says it (rule 7)`);
+
     });
     placed.forEach((x, i) => {
       (x.s.narration || []).map(seg => seg && (seg.tts || seg.sub) || '').filter(text).forEach(line => {
@@ -681,7 +697,7 @@
         warn('structure', `${stagedN} of ${placed.length} shots carry a "연출 —" info — the prefix is for a shot whose picture carries its one thing; when the line carries a fact, the info is that fact, and a board that stages half its shots has hidden its facts from the ledger (rule 10)`);
     }
     const takeaway = win.COMPREHENSION && win.COMPREHENSION.takeaway;
-    if (text(takeaway) && placed.length >= 5) {
+    if (!performanceStory && text(takeaway) && placed.length >= 5) {
       const best = Math.max(0, ...placed.map(x => bare(spokenOf(x)).length >= 4 ? overlap(takeaway, spokenOf(x)) : 0));
       const raw = String(takeaway).split(/[\s,.!?…]+/).filter(Boolean);
       const strip = w => w.replace(/(이에요|예요|이에|예|에서는|에서|으로는|으로|이라고|라고|까지|부터|처럼|보다|이랑|랑|은|는|이|가|을|를|도|의|에|로|와|과|만|요)$/, '');
@@ -710,7 +726,7 @@
       const isScreen = x => x.s.shot && x.s.shot.render && EXPLAIN_MODES.indexOf(x.s.shot.render.mode) !== -1;
       const pics = xs.filter(x => !isScreen(x));
       const sizes = new Set(pics.map(x => x.s.shot && x.s.shot.size).filter(Boolean));
-      if (xs.length === 1 && placed.length >= 5 && groups.size >= 2)
+      if (!performanceStory && xs.length === 1 && placed.length >= 5 && groups.size >= 2)
         warn(where, `one shot — coverage is two sizes per scene, a wide and a close; give it a second shot or fold it into a neighbour (scenes-schema §grammar units)`);
       else if (xs.length >= 2 && pics.length === 1 && placed.length >= 5)
         warn(where, `one picture shot and ${xs.length - 1} explanation screen(s) — an explanation screen's size frames the drawing and fills neither slot; coverage is two picture sizes, a wide and a close (rule 9)`);
@@ -821,12 +837,13 @@
       });
       // The out-line is spoken — it is the last sentence of the scene's last shot, not a planning note.
       const last = xs[xs.length - 1];
-      const segs = performanceStory ? (last.s.performance || []).map(e => e.kind === 'action' ? e.text : (last.s.narration || [])[e.group - 1]?.sub || (last.s.narration || [])[e.group - 1]?.tts || '').filter(text) : (last.s.narration || []).map(seg => seg && (seg.tts || seg.sub) || '').filter(text);
+      const segs = performanceStory ? performedEvents(last.s) : (last.s.narration || []).map(seg => seg && (seg.tts || seg.sub) || '').filter(text);
       const said = bare(segs.join(' '));
       if (sc && text(sc.out) && said) {
         const o = bare(sc.out);
         if (said.indexOf(o) === -1)
-          warn(where, `out "${sc.out.trim()}" is not said in the scene's last shot (shot ${last.no}) — out is the spoken sentence the scene goes out on, written verbatim, not a note (scenario-craft §13)`);
+          warn(where, performanceStory ? `out "${sc.out.trim()}" is absent from the last shot's ordered performance (shot ${last.no}) — reference its final action or speech event, not author intent`
+            : `out "${sc.out.trim()}" is not said in the scene's last shot (shot ${last.no}) — out is the spoken sentence the scene goes out on, written verbatim, not a note (scenario-craft §13)`);
         else if (!said.endsWith(o))
           warn(where, `out "${sc.out.trim()}" is said in shot ${last.no} but the shot goes on after it — out is the last sentence the scene's last shot says; end the shot on it or move the lines that follow`);
       }
@@ -837,9 +854,24 @@
           warn(where, `out "${sc.out.trim()}" is not the last sentence of shot ${last.no} word for word — verbatim means the segment and the out are the same string`);
       }
       const spokenAll = xs.map(x => (x.s.narration || []).map(seg => seg && (seg.tts || seg.sub) || '').join(' ')).join(' ');
+      const performanceEvents = performanceStory ? xs.flatMap(x => performedEvents(x.s)) : [];
+      const deliveredAll = performanceStory ? performanceEvents.join(' ') : spokenAll;
       const feels = xs.map(x => x.s.shot && x.s.shot.feel).filter(text);
       const spokenOfShot = x => (x.s.narration || []).map(seg => seg && (seg.tts || seg.sub) || '').join(' ');
-      if (sc && text(sc.turn) && sc.turn.indexOf('→') !== -1) {
+      // V2 can imply a value in silent acting: lexical absence does not prove absent meaning.
+      // Still flag absent performance and explicitly reversed event evidence, including one-shot turns.
+      if (performanceStory) {
+        if (!performanceEvents.length) warn(where, 'story-v2 scene has no readable ordered performance events — supply actions or resolved speech before reviewing its turn');
+        if (sc && text(sc.turn) && sc.turn.includes('→')) {
+          const poles = sc.turn.split('→').map(t => t.trim()).filter(text);
+          if (poles.length === 2) {
+            const hits = poles.map(pole => performanceEvents.map((event, i) => overlap(pole, event) >= 0.5 ? i : -1).filter(i => i >= 0));
+            if (hits.every(list => list.length) && Math.min(...hits[0]) > Math.max(...hits[1]))
+              warn(where, `turn "${sc.turn.trim()}" has reversed evidence in ordered performance — the closing pole appears before the opening pole; review the actions and attributed speech in playback order (rule 6)`);
+          }
+        }
+      }
+      if (!performanceStory && sc && text(sc.turn) && sc.turn.indexOf('→') !== -1) {
         const poles = sc.turn.split('→').map(t => t.trim()).filter(text);
         if (poles.length === 2) {
           const sa = signOf(poles[0]), sb = signOf(poles[1]);
@@ -897,7 +929,7 @@
           }
         });
       }
-      else if (sc && text(sc.turn) && xs.length >= 2)
+      else if (!performanceStory && sc && text(sc.turn) && xs.length >= 2)
         warn(where, `turn "${sc.turn.trim()}" has no → — write the turn as 앞 → 뒤 in the words the shots use (의심 → 확신), so each pole can be found in a line of this scene; a turn no shot speaks is a turn the viewer never gets (rule 6)`);
       const gazes = xs.filter(x => x.s.shot && x.s.shot.space && PERSON_RE.test(String(x.s.shot.space.layout || '') + ' ' + String(x.s.shot.space.facing || '')) && GAZE_RE.test(String(x.s.shot.space.facing || '').replace(CAMERA_RE, '')));
       const pictured = xs.filter(x => x.s.shot && x.s.shot.space && text(x.s.shot.space.layout));
@@ -937,9 +969,11 @@
       if (sc && text(sc.time) && MOMENT_RE.test(sc.time.trim()) && SPAN_RE.test(spokenAll))
         warn(where, `time "${sc.time.trim()}" is one moment but the lines speak of a span (내내·동안·마다) — a repeated action is one scene and time is the span it covers (rule 3)`);
       const layoutsAll = xs.map(x => x.s.shot && x.s.shot.space ? [x.s.shot.space.layout, x.s.shot.space.frame].filter(text).join(' ') : '').join(' ');
-      if (sc && text(sc.event) && pictured.length && overlap(sc.event, layoutsAll + ' ' + spokenAll) < 0.3)
-        warn(where, `event "${sc.event.trim()}" is drawn by no shot — no layout or line of this scene shows it; the event is the one thing that happens on screen, so a shot shows it or the event is what a shot shows (rule 5)`);
-      else if (sc && text(sc.event) && pictured.length >= 2 && overlap(sc.event, layoutsAll) < 0.2)
+      const visualActions = performanceStory ? xs.map(x => x.s.visual && x.s.visual.action || '').filter(text).join(' ') : '';
+      if (sc && text(sc.event) && pictured.length && overlap(sc.event, layoutsAll + ' ' + deliveredAll + ' ' + visualActions) < 0.3)
+        warn(where, performanceStory ? `event "${sc.event.trim()}" has no matching layout, visual action or ordered performance — check the event against the actual shot plans (rule 5)`
+          : `event "${sc.event.trim()}" is drawn by no shot — no layout or line of this scene shows it; the event is the one thing that happens on screen, so a shot shows it or the event is what a shot shows (rule 5)`);
+      else if (sc && text(sc.event) && pictured.length >= 2 && overlap(sc.event, layoutsAll + ' ' + visualActions) < 0.2)
         warn(where, `event "${sc.event.trim()}" is spoken but no picture layout of the scene draws it — the event happens on screen; a layout shows the action, or the event is the action a layout shows (rule 5)`);
       xs.filter(isScreen).forEach(x => {
         const k = x.s.shot.info;
@@ -1043,13 +1077,28 @@
     const shots = Array.isArray(win.SCENES) ? win.SCENES : [];
     const full = level === 'full';
     const shotRow = (s, i) => {
-      const row = { no: i + 1, type: s.type, beat: s.beat, duration: s.duration };
+      const row = { no: i + 1, id: s.id || null, type: s.type, beat: s.beat, duration: s.duration, after: s.after };
       if (s.shot) Object.assign(row, {
         feel: s.shot.feel, info: s.shot.info, infoType: s.shot.infoType, size: s.shot.size, angle: s.shot.angle, why: s.shot.why,
         render: s.shot.render && s.shot.render.mode, share: s.shot.share,
         depth: s.shot.depth && s.shot.depth.mode,
       });
-      row.narration = (s.narration || []).map(seg => seg && (seg.tts || seg.sub) || '').join(' ');
+      const narration = Array.isArray(s.narration) ? s.narration : [];
+      row.narration = narration.map(seg => seg && (seg.tts || seg.sub) || '').join(' ');
+      row.speech = narration.map((seg, group) => ({ group: group + 1, id: seg && seg.id,
+        speaker: seg && seg.speaker || null, delivery: seg && seg.delivery,
+        text: seg && (seg.tts || seg.sub) || '' }));
+      row.performance = (Array.isArray(s.performance) ? s.performance : []).map(event => {
+        if (!event || event.kind === 'action') return event;
+        const speech = row.speech[event.group - 1];
+        return Object.assign({}, event, { text: speech ? speech.text : null,
+          speaker: speech ? speech.speaker : null, lineId: speech && speech.id,
+          unresolvedGroup: !speech });
+      });
+      const visual = s.visual || {};
+      row.references = { characters: visual.character || [], location: s.shot && s.shot.location,
+        props: visual.props || [], propUsage: visual.propUsage || [] };
+      row.media = visual;
       if (s.transition) row.transition = s.transition;
       if (full) row.raw = s;
       return row;
@@ -1066,14 +1115,85 @@
     }));
     const orphans = placed.filter(x => x.s.scene === undefined || !byNo.has(x.s.scene)).map(x => shotRow(x.s, x.i));
     const spliced = shots.map((s, i) => ({ s, i })).filter(x => !PLACED(x.s)).map(x => shotRow(x.s, x.i));
+    const playbackIndices = [];
+    shots.forEach((s, i) => {
+      if (!PLACED(s)) return;
+      playbackIndices.push(i);
+      shots.forEach((b, j) => { if (b.type === 'broll' && b.after === i) playbackIndices.push(j); });
+    });
+    shots.forEach((s, i) => { if (s.type === 'outro') playbackIndices.push(i); });
+    const scheduled = new Set(playbackIndices);
     return { version: st.version, format: win.FORMAT || 'shorts-9x16', shots: shots.length,
-             sequences, unplacedShots: orphans, splicedShots: spliced };
+             sequences, unplacedShots: orphans, splicedShots: spliced,
+             playback: playbackIndices.map(i => shotRow(shots[i], i)),
+             unscheduledShots: shots.flatMap((s, i) => scheduled.has(i) ? [] : [shotRow(s, i)]) };
+
   }
 
+  // Authoring can proceed without editorial rationale, a review stamp or a camera
+  // grammar worksheet. These checks protect the data consumers actually address.
+  function executionCheck(win) {
+    const out = [], bad = (where, what) => out.push({level: 'bad', where, what});
+    if (!win || !Array.isArray(win.SCENES)) return [{level:'bad',where:'board',what:'SCENES must be an array'}];
+    const shots = win.SCENES, ids = new Map();
+    if (!shots.length) bad('board', 'the board has no shots');
+    shots.forEach((s, i) => {
+      const where = 'shot ' + (i + 1);
+      if (!s || typeof s !== 'object' || Array.isArray(s)) { bad(where, 'shot must be an object'); return; }
+      if (s.id !== undefined) {
+        if (typeof s.id !== 'string' || !/^s\d{4,}$/.test(s.id)) bad(where, 'id: expected s followed by at least four digits (for example s0001)');
+        else if (ids.has(s.id)) bad(where, `id: duplicate ${s.id} (already used by shot ${ids.get(s.id)})`);
+        else ids.set(s.id, i + 1);
+      }
+      if (TYPES.indexOf(s.type) < 0) bad(where, 'unsupported shot type');
+      if (s.shot?.render?.mode !== undefined && !RENDER_MODES.includes(s.shot.render.mode)) bad(where, 'unsupported render mode');
+      const matchShot = s.shot?.eyeline?.matchShot;
+      if (matchShot !== undefined && (!posInt(matchShot) || !shots[matchShot - 1] || matchShot === i + 1)) bad(where, 'eyeline.matchShot must reference another existing shot');
+      if (s.duration !== undefined && (!Number.isFinite(s.duration) || s.duration <= 0)) bad(where, 'duration must be finite and positive');
+      if (s.narration !== undefined && !Array.isArray(s.narration)) bad(where, 'narration must be an array');
+      if (Array.isArray(s.narration)) s.narration.forEach((n, j) => {
+        if (!n || typeof n !== 'object' || typeof n.tts !== 'string') bad(where, 'narration group ' + (j + 1) + ' requires text');
+      });
+      if (s.performance !== undefined && !Array.isArray(s.performance)) bad(where, 'performance must be an array');
+      if (Array.isArray(s.performance)) s.performance.forEach((e, j) => {
+        if (!e || !['action','dialogue','narration'].includes(e.kind)) { bad(where, 'invalid performance event ' + (j + 1)); return; }
+        if (e.kind === 'action') {
+          if (typeof e.text !== 'string') bad(where, 'action requires text');
+        } else if (!Number.isInteger(e.group) || e.group < 1 || !Array.isArray(s.narration) || !s.narration[e.group - 1])
+          bad(where, 'performance speech references a missing narration group');
+      });
+      if (s.type === 'broll' && (!Number.isInteger(s.after) || s.after < 0 || !shots[s.after] || ['broll','outro'].includes(shots[s.after].type)))
+        bad(where, 'broll.after must reference a main shot by zero-based index');
+    });
+    const st = win.STRUCTURE;
+    if (st === undefined) return out;
+    if (!st || typeof st !== 'object' || !Array.isArray(st.scenes) || !Array.isArray(st.sequences)) {
+      bad('structure', 'STRUCTURE.scenes and STRUCTURE.sequences must be arrays'); return out;
+    }
+    const sceneNos = new Set(), sequences = new Set();
+    st.scenes.forEach(sc => {
+      if (!sc || !posInt(sc.no)) bad('structure', 'scene.no must be a positive integer');
+      else if (sceneNos.has(sc.no)) bad('structure', 'duplicate scene.no ' + sc.no);
+      else sceneNos.add(sc.no);
+    });
+    st.sequences.forEach(q => {
+      if (!q || !text(q.id) || !Array.isArray(q.scenes)) { bad('structure', 'sequence requires id and scene references'); return; }
+      if (sequences.has(q.id)) bad('structure', 'duplicate sequence.id ' + q.id);
+      sequences.add(q.id);
+      q.scenes.forEach(no => { if (!sceneNos.has(no)) bad('structure', 'sequence references unknown scene ' + no); });
+    });
+    shots.forEach((s,i) => { if (s && s.scene !== undefined && !sceneNos.has(s.scene)) bad('shot ' + (i+1), 'scene reference does not exist'); });
+    return out;
+  }
+  function guidedCheck(win, opts) {
+    const blockers = executionCheck(win);
+    if (blockers.length) return blockers;
+    return blockers.concat(check(win, opts).map(f => ({...f, level: f.level === 'later' ? 'later' : 'warn'})));
+  }
   const PRODUCTION_MODES = ['full_video','video_80','video_50','video_30','video_lt10','no_video'];
   const api = { VERSION, COMPOSITION_SCHEMA, validateComposition, compositionNeeded, checkCompositions, compositionText, DEPTH_SCHEMA, validateDepth, depthNeeded, checkDepths, depthText, EYELINE_SCHEMA, validateEyeline, checkEyelines, eyelineNeeded, eyelineText, VOCAB: { SIZES, ANGLES, TYPES, BEATS, INFO_TYPES, SHARE_TYPES, HOOK_TYPES, HOOK_FORMS, ARCS,
                                   RENDER_MODES, PRODUCTION_MODES, CHARGES_OPEN, CHARGES_CLOSE, TRANSITION_RE },
-                check, sync, outline, slugOf, ownerOf };
+                check, executionCheck, guidedCheck, sync, outline, slugOf, ownerOf };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.STRUCTURE_CONTRACT = api;
 })(typeof window === 'object' ? window : globalThis);

@@ -77,8 +77,8 @@ function verify(work, board) {
   const cards = fs.readFileSync(path.join(work, 'cards.tsv'), 'utf8').split(/\r?\n/).filter(l=>l.trim()&&!l.startsWith('#'));
   const ids = cards.map(l=>l.split('\t')[0]);
   if (JSON.stringify(ids)!==JSON.stringify(expected.map(String))) throw new Error('cards.tsv does not match SCENES order; no unplanned opening, missing card or duplicate card is allowed');
-  const editResult=require('./edit-plan.js').write(work,win.SCENES,{videoWarningsApproved:videoGate.approved});
-  const mediaSha256={...verifyManifest(work,board,win.SCENES,win.FORMAT,{videoWarningsApproved:videoGate.approved}),...require('./check-tts-quality.js').check(work,board),...subtitleMedia};
+  const editResult=require('./edit-plan.js').write(work,win.SCENES,{videoWarningsApproved:videoGate.continueWithWarnings});
+  const mediaSha256={...verifyManifest(work,board,win.SCENES,win.FORMAT,{videoWarningsApproved:videoGate.continueWithWarnings}),...require('./check-tts-quality.js').check(work,board),...subtitleMedia};
   const hash = p=>createHash('sha256').update(fs.readFileSync(p)).digest('hex');
   const groupPlans={};
   const edits=editResult.plan;

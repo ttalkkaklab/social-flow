@@ -36,15 +36,15 @@ test('data and type have valid non-object paths', () => {
     assert.deepEqual(checkQuality(s, 1), []);
   }
 });
-test('quality violations block storyboard drafts before approval', () => {
+test('quality findings advise storyboard drafts without stopping authoring', () => {
   const dir = mkdtempSync(path.join(tmpdir(), 'slide-plan-'));
   try {
     writeFileSync(path.join(dir, 'scenes.js'), 'window.SCENES=' + JSON.stringify([
       {type:'cover', narration:[{tts:'test',sub:'test'}], visual:{slide:{kind:'diagram',motion:true,treatment:'editorial'}}}
     ]) + ';');
     const result = spawnSync(process.execPath, [path.join(root,'check-scenes.js'), dir, '--draft', '--json'], {encoding:'utf8'});
-    assert.notEqual(result.status, 0);
-    assert.match(result.stdout, /"level":\s*"bad"[\s\S]*requires quality/);
+    assert.equal(result.status, 0);
+    assert.match(result.stdout, /"level":\s*"warn"[\s\S]*requires quality/);
   } finally { rmSync(dir, {recursive:true, force:true}); }
 });
 test('sheet gate rejects frozen pixels, invisible-only changes, bad geometry and ranges', () => {

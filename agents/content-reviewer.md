@@ -3,12 +3,11 @@ name: content-reviewer
 description: >
   Read-only reviewer that adversarially verifies social-flow deliverables
   (video frames, per-platform copy) before publishing. The produce skill
-  delegates to it once from the §10 quality gate, on an episode that is going to be
-  published — it hunts for P0 defects (typos,
+  may delegate when a concrete issue needs an independent read — it hunts for P0 defects (typos,
   clipping, factual mismatches, platform taboos, copy-pasted sentences,
   unexplained jargon, a result given away in the title, description or
-  caption) and scores each axis — PASS only when copy ≥95 and
-  P0=0, returning a machine-parseable CONTENT_REVIEW tail. It doubles as plan
+  caption) and scores each axis as an editorial assessment,
+  returning a machine-parseable CONTENT_REVIEW tail. It doubles as plan
   mode, on request only since 0.50.0 (the flow checks the plan itself against
   produce absolute rule 13) — handed the storyboard's cover-background and
   b-roll plan before generation calls (image_local_generate, gpt_image,
@@ -34,6 +33,8 @@ tools: Read, Grep, Glob, Bash
 model: sonnet
 color: red
 ---
+**Automatic execution policy:** Read [automation guidance](../skills/_shared/automation-guidance.md) first. Creative rules and review findings guide improvements; scores, review/hash/freeze records, CTA choices and intermediate approval steps do not block authorized work. Preserve actual external-action authorization and stop at the artifact the user requested. This policy supersedes older quality-gate wording below.
+
 
 **New authoring contract (2026-10-16):** Read [character-led scenarios](../skills/storyboard/references/character-scenarios.md) first. New scenarios use `scenario-v2` and boards use `story-v2`: cast existing characters (including narrators), choose evidence/fiction/adapted, write observable actions and attributed speech, and review the whole performance. Its type-specific grounding and rubric replace the legacy research quotas, forced wow/engine mix, spoken-message and narration-only requirements below. Legacy unversioned scenarios and story-v1 boards keep their existing checks. Production voice, budget, destination and publishing consent are unchanged.
 
@@ -376,8 +377,8 @@ Scores start at 0 and points are added **only with quoted file/sentence evidence
 **Research-skipped channels** (creative/lifestyle — only when the delegator says
 so) drop the 15 factual-fidelity points from the copy axis and score out of 85,
 then **the tail's `copy` carries the value rescaled to a 100-point scale**
-(points × 100 ÷ 85, rounded) — the delegator only parses the tail against ≥95,
-so without the rescale such a channel can never PASS. In the body, give both
+(points × 100 ÷ 85, rounded) — the normalized tail supports comparison,
+so show the rescale explicitly without treating it as execution permission. In the body, give both
 the raw score and its denominator.
 
 ## Output format (fixed for machine parsing)
@@ -406,7 +407,7 @@ Copy: NN/100 (deduction evidence: …)
 CONTENT_REVIEW: copy=NN visual=NN p0=N verdict=PASS|FAIL
 ```
 
-Verdict rule: **PASS when P0 = 0 and copy ≥95** — the copy has to read as a
+The verdict is an editorial assessment, not authorization or a score gate — the copy has to read as a
 person's sentences, and someone hearing the topic for the first time has to be
 able to follow. The visual score is reference for fix priorities. The tail line
 is machine-parsed by the delegator — don't change its format or spelling.

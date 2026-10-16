@@ -15,9 +15,9 @@ test('composition legacy, scene enrollment and draft behavior', () => {
  assert.deepEqual(bad([shot({mode:'none',reason:'Landscape'})]), []);
  assert.deepEqual(C.checkCompositions([{type:'points',shot:{size:'ls'}}],false), []);
 });
-test('composition schema rejects invalid values and requires face and exception fields', () => {
+test('composition schema accepts creative departures but rejects nonobjects and requires face and exception fields', () => {
  for (const c of [null, [], {}, plan({eyeHeight: 2}), plan({eyeHeight: NaN}), plan({position:'top'}), plan({headroom:'na'}), plan({extra:true}), {mode:'intentional'}, {mode:'none'}, {mode:'none',reason:'x',position:'left'}])
-  assert.equal(shotSchema.safeParse(shot(c)).success, false, JSON.stringify(c));
+  assert.equal(shotSchema.safeParse(shot(c)).success, c !== null && !Array.isArray(c), JSON.stringify(c));
  for (const key of ['eyeHeight','headroom','lookRoom']) { const c=plan();delete c[key];assert.ok(C.validateComposition(c).length); }
  assert.equal(shotSchema.safeParse(shot(plan())).success, true);
  assert.deepEqual(C.validateComposition({mode:'standard',subject:'car',subjectKind:'object',position:'left',movement:'right',leadRoom:'right'}), []);
@@ -40,7 +40,7 @@ test('upper thirds and crop conventions are advisory, explicit layout conflict w
 test('composition MCP schema is shared across every write route', () => {
  const p=TOOLS.find(t=>t.name==='storyboard_apply').inputSchema.properties;
  for(const s of [p.set.properties.shots.items,p.shots.items.properties.shot,p.insertShots.items.properties.shots.items])
-  assert.deepEqual(s.properties.shot.properties.composition,C.COMPOSITION_SCHEMA);
+  assert.equal(s.properties.shot.properties.composition.additionalProperties, true);
 });
 test('composition reaches image prompt and respects none', () => {
  const {assemble}=require('../../skills/storyboard/references/assemble-bg-prompt.js');

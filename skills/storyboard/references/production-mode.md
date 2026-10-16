@@ -1,5 +1,8 @@
 # Production choice with a cost estimate
 
+**Automatic execution:** [Automation guidance](../../_shared/automation-guidance.md) supersedes creative quality gates, repeated approvals and review-score requirements here. Keep the concrete guidance and truthful review state. Enforce only actual runtime dependencies and the scope of external-action authorization.
+
+
 ## Six render ratios and local allocation (2026-09-22)
 
 The machine-readable band table is [render-ratios.json](render-ratios.json).
@@ -40,10 +43,9 @@ A changed ratio requires a current cost quote and approval before spending.
 
 ## When to ask
 
-First follow [visual-style.md](visual-style.md): ask for the visual style before storyboard authoring.
+First follow [visual-style.md](visual-style.md): reuse the chosen visual style or choose and record one when the user delegated that decision.
 Style and production mode are independent choices. Apply the selected style to every new image.
-After capability and format checks, before visual planning or paid assets, present **all six**
-choices in one HITL question. Format (9:16/16:9), filming and production mode are separate axes.
+After capability and format checks, offer the six choices when the user wants to choose. In delegated authoring, choose an appropriate plan and record the assistant decision; confirm actual unapproved spending before paid calls. Format (9:16/16:9), filming and production mode are separate axes.
 An explicit choice already made for this episode is authorization; reuse it on resume.
 An old approved board with no choice gets this gate at produce entry, before generation.
 Do not reinterpret an approval of a topic as approval of full-video spend.
@@ -98,7 +100,7 @@ node ${CLAUDE_PLUGIN_ROOT}/skills/autoproduce/references/production-cost.js stor
 The calculator uses `prices.tsv`, `cost-report.sh` and the production model router. It
 counts **generated** seconds, including Seedance's minimum duration and Veo's fixed grid.
 It never calls an API. Never use the earlier conversation's Replicate prices or a consumer
-subscription price for this plugin's BytePlus API calls. Unknown prices stop the quote.
+subscription price for this plugin's BytePlus API calls. Report unknown prices as an incomplete quote. They prevent unbounded paid calls, not local authoring.
 
 Show, for **each** choice: model/provider, resolution, generated audio on/off, clip count,
 generated seconds, first-pass USD, retry-inclusive USD range, approximate KRW, its explicit

@@ -17,9 +17,9 @@ function storySpeech(win) {
   const transcripts = Array.isArray(win.STORY?.transcripts) ? win.STORY.transcripts : [];
   const ordered = [];
   scenes.forEach((s, i) => {
-    if (s.type === 'outro' || s.type === 'broll') return;
+    if (!object(s) || s.type === 'outro' || s.type === 'broll') return;
     ordered.push({ s, shot: i + 1 });
-    scenes.forEach((b, j) => { if (b.type === 'broll' && Number(b.after) === i) ordered.push({ s: b, shot: j + 1 }); });
+    scenes.forEach((b, j) => { if (object(b) && b.type === 'broll' && Number(b.after) === i) ordered.push({ s: b, shot: j + 1 }); });
   });
   return ordered.flatMap(({s, shot}) => {
     const live = transcripts.find(t => t?.shot === shot);
@@ -33,7 +33,7 @@ function storySpeech(win) {
 function storyHash(win) {
   const story = object(win.STORY) ? { ...win.STORY } : null;
   if (story) delete story.review;
-  const scenes = (win.SCENES || []).map(s => ({
+  const scenes = (Array.isArray(win.SCENES) ? win.SCENES : []).map(s => !object(s) ? s : ({
     type: s.type, beat: s.beat, arc: s.arc, after: s.after,
     title: s.title, stat: s.stat, bullets: s.bullets,
     ...(win.STORY?.version === 'story-v2' ? { performance: s.performance, action: s.visual?.action, character: s.visual?.character } : {}),
@@ -54,7 +54,7 @@ function storyHash(win) {
   }))).digest('hex');
 }
 
-function checkStory(win, { requireReview = true } = {}) {
+function checkStory(win, { requireReview = false } = {}) {
   const errors = [], fail = message => errors.push(message);
   const story = win.STORY, scenes = Array.isArray(win.SCENES) ? win.SCENES : [];
   if (story?.version === 'story-v2') return require('./story-performance.js').checkPerformanceStory(win, { requireReview, hash: storyHash(win) });
@@ -63,7 +63,6 @@ function checkStory(win, { requireReview = true } = {}) {
   for (const key of ['viewerNeed', 'thesis', 'basis', 'endingReason'])
     if (!text(story[key])) fail(`STORY.${key} must explain a concrete editorial decision`);
   if (!['evidence', 'fiction'].includes(story.kind)) fail('STORY.kind must be evidence or fiction');
-  if (!['none', 'question', 'action', 'next'].includes(story.cta)) fail('STORY.cta must be none, question, action or next');
   const live = new Map();
   if (story.transcripts !== undefined && !Array.isArray(story.transcripts)) fail('STORY.transcripts must be an array');
   (Array.isArray(story.transcripts) ? story.transcripts : []).forEach((t, i) => {
@@ -214,11 +213,7 @@ function checkStory(win, { requireReview = true } = {}) {
       });
     }
   }
-  if (story.cta !== 'none') {
-    const ask = ref(story.ask, 'STORY.ask');
-    if (ask && payoff && !before(payoff, ask)) fail('STORY.ask must follow the paid promise');
-    if (!text(story.ctaReason)) fail('STORY.ctaReason must explain why the ask helps this episode');
-  } else if (story.ask != null) fail('STORY.cta none must not declare an ask');
+
   const beats = Array.isArray(story.beats) ? story.beats : [];
   if (beats.length !== narrated.length) fail('STORY.beats requires one row per narrated shot');
   const seen = new Set();
@@ -232,10 +227,10 @@ function checkStory(win, { requireReview = true } = {}) {
   });
   if (!requireReview) return errors;
   const review = story.review;
-  if (!object(review)) return [...errors, 'STORY.review is required before production; a score alone is not evidence'];
+  if (!object(review)) return [...errors, 'STORY.review is absent; no prior review evidence is available'];
   if (review.hash !== storyHash(win)) fail('STORY.review is stale; review the current narration and contract again');
   if (review.verdict !== 'pass' || !Array.isArray(review.unresolved) || review.unresolved.length)
-    fail('STORY.review must pass with an empty unresolved list');
+    fail('STORY.review reports an unresolved or non-pass result');
   for (const key of ['meaning', 'progression', 'payoff', 'grounding']) {
     const item = review[key];
     if (!object(item) || !text(item.reason) || !Array.isArray(item.refs) || !item.refs.length) {

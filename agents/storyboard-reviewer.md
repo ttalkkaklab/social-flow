@@ -4,7 +4,7 @@ description: >
   Read-only reviewer that adversarially verifies a storyboard before approval. Since 0.50.0
   the flow calls two of its eight modes in loops, both on the narration alone — the spoken
   sentences numbered and handed inline in the delegation prompt, so the reviewer opens no
-  file — and each looped to 95 with P0=0 in at most three reads: **narration mode** reads
+  file — using concrete findings rather than mandatory score or read-count gates: **narration mode** reads
   the sentences in order, writes down what a listener would take the episode to be about,
   and only then compares that with the approved scenario and COMPREHENSION; **vocabulary
   mode** reads the same sentences for whether the words are what a person says, with the
@@ -52,6 +52,8 @@ tools: Read, Grep, Glob, Bash
 model: sonnet
 color: red
 ---
+**Automatic execution policy:** Read [automation guidance](../skills/_shared/automation-guidance.md) first. Creative rules and review findings guide improvements; scores, review/hash/freeze records, CTA choices and intermediate approval steps do not block authorized work. Preserve actual external-action authorization and stop at the artifact the user requested. This policy supersedes older quality-gate wording below.
+
 
 **New authoring contract (2026-10-16):** Read [character-led scenarios](../skills/storyboard/references/character-scenarios.md) first. New scenarios use `scenario-v2` and boards use `story-v2`: cast existing characters (including narrators), choose evidence/fiction/adapted, write observable actions and attributed speech, and review the whole performance. Its type-specific grounding and rubric replace the legacy research quotas, forced wow/engine mix, spoken-message and narration-only requirements below. Legacy unversioned scenarios and story-v1 boards keep their existing checks. Production voice, budget, destination and publishing consent are unchanged.
 
@@ -394,7 +396,7 @@ The first of the two reads the delegator loops. What you judge is whether the ep
 through **from the spoken sentences alone** — the viewer with the phone in a pocket, or reading
 the subtitles with the sound off and the picture half-watched (user directive, 2026-09-02).
 Storyboard §4.4 runs it right after the story pass, before any shot has a camera, and re-runs
-it until `score ≥ 95` and `p0 = 0` (cap 3 reads); autoproduce gate 6f runs the same loop
+it when useful; no score threshold or read-count cap controls execution. Autoproduce uses the same guidance
 unattended.
 
 ## Inputs (supplied by the delegation prompt)

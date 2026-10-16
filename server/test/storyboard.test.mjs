@@ -55,30 +55,30 @@ const board = () => [
 const comprehension = { mode: 'informational', question: '무엇이 달라졌나요?', answer: '한 가지가 달라졌어요.', takeaway: '한 가지만 기억하면 돼요.', branches: [], terms: [] };
 
 describe('storyboard schemas', () => {
-  it('a scene needs place, time, event, a charge and a turn — and nothing unknown', () => {
+  it('scene creative fields are optional; typed identity and unknown keys stay checked', () => {
     assert.ok(sceneSchema.safeParse(scene(1)).success);
-    assert.ok(!sceneSchema.safeParse({ ...scene(1), place: '' }).success);
-    assert.ok(!sceneSchema.safeParse({ ...scene(1), charge: { open: '+', close: 'up' } }).success);
+    assert.ok(sceneSchema.safeParse({ ...scene(1), place: '' }).success);
+    assert.ok(sceneSchema.safeParse({ ...scene(1), charge: { open: '+', close: 'up' } }).success);
     assert.ok(!sceneSchema.safeParse({ ...scene(1), mood: 'x' }).success, 'a typo key is refused');
   });
   it('a sequence binds scenes under one purpose', () => {
     assert.ok(sequenceSchema.safeParse({ id: 'q1', title: 't', purpose: 'p', scenes: [1] }).success);
-    assert.ok(!sequenceSchema.safeParse({ id: 'q1', title: 't', purpose: 'p', scenes: [] }).success);
-    assert.ok(!sequenceSchema.safeParse({ id: 'q1', title: 't', scenes: [1] }).success, 'purpose is required');
+    assert.ok(sequenceSchema.safeParse({ id: 'q1', title: 't', purpose: 'p', scenes: [] }).success);
+    assert.ok(sequenceSchema.safeParse({ id: 'q1', title: 't', scenes: [1] }).success, 'purpose is creative guidance');
   });
-  it('the shot grammar is a closed vocabulary; the visual plan passes through', () => {
+  it('shot adapter values stay typed while creative vocabulary passes through', () => {
     assert.ok(shotSchema.safeParse(board()[1]).success);
     assert.ok(shotSchema.safeParse({ ...board()[1], id: 's0007' }).success);
     assert.ok(!shotSchema.safeParse({ ...board()[1], id: 's007' }).success);
-    assert.ok(!shotSchema.safeParse({ ...board()[1], shot: { size: 'wide' } }).success);
+    assert.ok(shotSchema.safeParse({ ...board()[1], shot: { size: 'wide' } }).success);
     assert.ok(!shotSchema.safeParse({ ...board()[1], transition: 'push:left' }).success);
-    assert.ok(!shotSchema.safeParse({ ...board()[1], beat: 'middle' }).success);
+    assert.ok(shotSchema.safeParse({ ...board()[1], beat: 'middle' }).success);
     const extra = shotSchema.safeParse({ ...board()[1], visual: { video: { engine: 'veo' } }, edit: { reason: 'x' } });
     assert.ok(extra.success && extra.data.edit.reason === 'x');
     assert.ok(shotSchema.safeParse({ ...board()[1], shot: { ...board()[1].shot, coverage: { azimuth: 35 } } }).success);
     assert.ok(shotSchema.safeParse({ ...board()[1], shot: { ...board()[1].shot, lineCrossing: { method: 'camera_move', from: 'A left, B right', to: 'B left, A right', reason: '카메라가 선을 지나간다' } } }).success);
-    assert.ok(!shotSchema.safeParse({ ...board()[1], shot: { ...board()[1].shot, coverage: { azimuth: 181 } } }).success);
-    assert.ok(!shotSchema.safeParse({ ...board()[1], shot: { ...board()[1].shot, lineCrossing: { method: 'teleport', from: 'A', to: 'B', reason: 'x' } } }).success);
+    assert.ok(shotSchema.safeParse({ ...board()[1], shot: { ...board()[1].shot, coverage: { azimuth: 181 } } }).success);
+    assert.ok(shotSchema.safeParse({ ...board()[1], shot: { ...board()[1].shot, lineCrossing: { method: 'teleport', from: 'A', to: 'B', reason: 'x' } } }).success);
   });
   it('the vocabularies come from structure-contract.js, the file check-scenes.js pins', () => {
     assert.ok(existsSync(CONTRACT_FILE));
@@ -220,7 +220,7 @@ describe('applyPatch', () => {
   });
   it('a violation in the structure comes back as findings, one per issue', () => {
     const r = applyPatch({}, storyboardApplySchema.parse({ path: 'x', set: { structure: structure([scene(1)]), shots: board() } }));
-    assert.ok(r.findings.some((f) => f.level === 'bad' && /scene 2 is not in STRUCTURE/.test(f.what)));
+    assert.ok(r.findings.some((f) => f.level === 'bad' && /scene reference does not exist/.test(f.what)));
   });
   it('upserts by key and removes by key', () => {
     const base = applyPatch({}, storyboardApplySchema.parse({ path: 'x', set: { structure: structure([scene(1), scene(2)]), shots: board() } })).win;
@@ -352,7 +352,7 @@ describe('checkStoryboard', () => {
     shots[1].shot.size = 'mcu';
     const dir = tmp();
     const full = applyStoryboard(storyboardApplySchema.parse({ path: dir, set: { structure: structure([scene(1), scene(2)]), shots }, globals: { FORMAT: 'shorts-9x16', COMPREHENSION: comprehension }, dryRun: true }));
-    assert.ok(full.findings.some((f) => f.level === 'bad' && /adjacent picture cut/.test(f.what)), JSON.stringify(full.findings));
+    assert.ok(full.findings.some((f) => f.level === 'warn' && /adjacent picture cut/.test(f.what)), JSON.stringify(full.findings));
     const draft = applyStoryboard(storyboardApplySchema.parse({ path: dir, draft: true, set: { structure: structure([scene(1), scene(2)]), shots }, globals: { FORMAT: 'shorts-9x16', COMPREHENSION: comprehension } }));
     assert.ok(!draft.findings.some((f) => f.level === 'bad'), JSON.stringify(draft.findings));
     assert.ok(draft.findings.some((f) => f.level === 'later' && /adjacent picture cut/.test(f.what)));
@@ -372,6 +372,15 @@ describe('checkStoryboard', () => {
     writeFileSync(join(dir, 'scenes.js'), serializeBoard({ ...base, SCENES: duplicate }));
     const checked = checkStoryboard({ path: dir, draft: true });
     assert.equal([...checked.structure, ...checked.contract].filter((f) => /duplicate s0002/.test(f.what)).length, 1);
+    for (const id of ['return', 42, null]) {
+      const malformed = board().map((s, i) => i ? s : { ...s, id });
+      writeFileSync(join(dir, 'scenes.js'), serializeBoard({ ...base, SCENES: malformed }));
+      const invalid = checkStoryboard({ path: dir, draft: true });
+      const findings = [...invalid.structure, ...invalid.contract].filter(f => /^id:/.test(f.what));
+      assert.equal(findings.length, 1, JSON.stringify(findings));
+      assert.equal(findings[0].level, 'bad');
+      assert.match(findings[0].what, /at least four digits/);
+    }
   });
 });
 
@@ -440,7 +449,7 @@ describe('shot camera MCP input', () => {
     for (const schema of shapes) {
       assert.deepEqual(schema.properties.type.enum, contract().VOCAB.TYPES);
       assert.deepEqual(schema.properties.shot.properties.render.properties.mode.enum, contract().VOCAB.RENDER_MODES);
-      assert.ok(schema.properties.shot.properties.render.properties.purpose.enum.includes('place'));
+      assert.equal(schema.properties.shot.properties.render.properties.purpose.type, 'string');
       assert.ok(schema.properties.shot.properties.videoDesign.properties.motion.properties.kind.enum.includes('spatial_reveal'));
       const camera = schema.properties.visual.properties.camera;
       assert.deepEqual(camera.properties.preset.enum, ['drone-flythrough']);
@@ -452,7 +461,7 @@ describe('shot camera MCP input', () => {
       // L13–L15: the move vocabulary rides the schema, and the still lane's window move is an item of its own.
       assert.ok(camera.properties.movement.description.includes('tilt up/down'));
       const stillCamera = schema.properties.shot.properties.render.properties.camera;
-      assert.deepEqual(stillCamera.required, ['effect', 'target', 'reason']);
+      assert.deepEqual(stillCamera.required, ['effect']);
       assert.deepEqual(stillCamera.properties.effect.enum, ['focus-in', 'rack-focus', 'approach', 'pull', 'pan', 'tilt', 'push', 'reveal', 'parallax']);
       assert.equal(schema.additionalProperties, true);
       assert.equal(schema.properties.visual.additionalProperties, true);

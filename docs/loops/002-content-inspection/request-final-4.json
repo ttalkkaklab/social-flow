@@ -1,0 +1,25 @@
+[
+  {
+    "name": "storyboard_read",
+    "arguments": {
+      "path": "/Users/zeans/orca/workspaces/social-flow/melusine/data/review-lab/final/gate-webtoon/episodes/gate-beyond-rewrite/storyboard",
+      "level": "full",
+      "includeContext": true
+    }
+  },
+  {
+    "name": "storyboard_read",
+    "arguments": {
+      "path": "/Users/zeans/orca/workspaces/social-flow/melusine/data/review-lab/final/gate-webtoon/episodes/gate-beyond-rewrite/storyboard",
+      "shotId": "s0021",
+      "level": "shots"
+    }
+  },
+  {
+    "name": "storyboard_check",
+    "arguments": {
+      "path": "/Users/zeans/orca/workspaces/social-flow/melusine/data/review-lab/final/gate-webtoon/episodes/gate-beyond-rewrite/storyboard",
+      "draft": true
+    }
+  }
+]

@@ -5,7 +5,7 @@
 
 Read [story-quality.md](story-quality.md) before drafting. It governs the meaning, evidence
 and ending of every candidate. Keep the seven headings, but modern parallels are optional,
-마무리 delivers the supported resolution, and CTA may be `없음` with a reason. No score
+마무리 delivers the supported resolution, and CTA may be omitted without a reason. No score
 waives a missing message or unpaid promise. This supersedes conflicting item rules below.
 
 `scenario.md` is what the storyboard skill writes before §4 opens a shot: one page that
@@ -22,6 +22,15 @@ from each message, each message the so-what of one wow point — are written as 
 all three in full and picks (§Score: no reviewer on the attended path; autoproduce scores the
 three once in scenario mode and picks only among pages that cleared 95). Additional
 research and the board come after that, on the winner only.
+
+## Automation directive (2026-10-16)
+
+CTA fields, sections, wording, speech, placement and share triggers are optional guidance
+for every scenario version. They never gate generation. Scores, review records and freeze
+stamps are useful provenance when available, not automatic-stop conditions. Continue with
+reported findings and do not fabricate approval or a pass. This directive supersedes older
+mandatory CTA/selection/freeze wording below.
+
 
 ## Contents
 
@@ -386,7 +395,7 @@ event itself; inventing a modern connection to prolong it is not a solution.
 | 5 | **전개 #3** | Develop or test the answer with evidence, action or a limit. Use sourced modern cases only when they serve this content; no minimum case count. |
 | — | *(the landing)* | One of 전개 #1–#3 is `wow_lands`: the reversal said plainly in its last sentence, on its claim, the feel curve's maximum on its header. Whatever follows it is the cost, the limit and what changes now. |
 | 6 | **마무리** | The earned resolution as a picture and a line: the 「그날 이후로」 frame — where the world stands after the reversal — and over it the page's Message sentence in the narration's words, heard once, last (§The wow first · §The message). Not a summary, not a moral, not the reversal said again, not the picture described in words. State limits honestly. Do not outsource the answer to a generic opinion question. Name the one forwardable thing here — the message line, or the reversal in one sentence when the line is too general to pass on; §4 writes it into the closing shot's `shot.share`, where a short requires it, and the message line into `STORY.thesis`, which the checker requires to be heard at or after the payoff. |
-| 7 | **CTA** | Optional. Write `없음` and why the ending is sufficient, or one relevant ask after the resolution. Never use an ask to replace the answer. Subscribe and like stay banned. An ask stays optional; a forwardable thing does not — an ask requests behaviour from the viewer, while a forwardable thing is one sentence, figure or verdict they can pass on as-is. Asking to be shared is an ask, not a trigger. |
+| 7 | **CTA** | Optional. Omit this row or write an ask if it serves the episode. Wording, position, speech and share metadata are editorial choices, not checks. |
 
 ### 훅 may invent a scene, not a fact
 
@@ -411,7 +420,7 @@ at §2.3; unused cases never become a claim or caption.
 | 전개 #1 | `drip`, 1–2 shots | `body` | `body` |
 | 전개 #2 | `drip`, 1 shot | `result` — the present answer plays before the body | `turn` |
 | 전개 #3 | `drip`, 1–2 shots — where the held answer is first complete, or where the answer the cover already stated meets its hardest test | `body` | `result` |
-| 마무리 + optional CTA | `cta` — the last narrated shot delivers the closing meaning and carries the forwardable thing in `shot.share`, with an optional ask after the answer; no fixed group count | `cta` | `cta` |
+| 마무리 + optional CTA | Narrative ending; optional `cta` label and share metadata | Same | Same |
 
 A short lands inside the 4–7 shot band (5–7 by this map). Long-form keeps the arc
 storyboard §2.3 picked (scenes-schema §playback order): unfinished-sentence material is
@@ -499,7 +508,7 @@ cases are the evidence>
 <forwardable — that line, or the reversal in one sentence, verbatim: "…">
 
 ## CTA — feel <s> · <감정>
-<!-- 없음 with a reason, or anchors.cta verbatim; no subscription or like request. -->
+<!-- Optional section; no required wording, reason or position. -->
 <없음 + reason, or the optional relevant ask verbatim after the resolution>
 ```
 

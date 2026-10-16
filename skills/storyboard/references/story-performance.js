@@ -9,19 +9,23 @@ function storyPerformance(win) {
   const scenes = Array.isArray(win.SCENES) ? win.SCENES : [];
   const order = [];
   scenes.forEach((s, i) => {
-    if (s.type === 'outro' || s.type === 'broll') return;
+    if (!object(s) || s.type === 'outro' || s.type === 'broll') return;
     order.push(i);
-    scenes.forEach((b, j) => { if (b.type === 'broll' && b.after === i) order.push(j); });
+    scenes.forEach((b, j) => { if (object(b) && b.type === 'broll' && b.after === i) order.push(j); });
   });
   return order.flatMap(i => (Array.isArray(scenes[i].performance) ? scenes[i].performance : []).map((e, j) => {
-    const s = scenes[i], n = s.narration?.[e?.group - 1];
-    const transcript = (Array.isArray(win.STORY?.transcripts) ? win.STORY.transcripts : []).find(t => t?.shot === i + 1)?.groups?.[e?.group - 1];
+    const s = scenes[i], validGroup = Number.isInteger(e?.group) && e.group > 0;
+    const n = validGroup && Array.isArray(s.narration) ? s.narration[e.group - 1] : undefined;
+    const transcriptGroups = (Array.isArray(win.STORY?.transcripts) ? win.STORY.transcripts : []).find(t => t?.shot === i + 1)?.groups;
+    const transcript = validGroup && Array.isArray(transcriptGroups) ? transcriptGroups[e.group - 1] : undefined;
+    const quote = e?.kind === 'action' ? (text(e.text) ? e.text : '')
+      : ['dialogue', 'narration'].includes(e?.kind) ? [n?.sub, n?.tts, transcript?.text].find(text) || '' : '';
     return { shot: i + 1, event: j + 1, kind: e?.kind, character: e?.character,
-      to: e?.to, group: e?.group, quote: e?.kind === 'action' ? e.text : (n?.sub || n?.tts || transcript?.text || '') };
+      to: e?.to, group: e?.group, quote, ...(!quote ? {unresolved: true} : {}) };
   }));
 }
 
-function checkPerformanceStory(win, { requireReview = true, hash } = {}) {
+function checkPerformanceStory(win, { requireReview = false, hash } = {}) {
   const errors = [], fail = s => errors.push(s), story = win.STORY;
   const scenes = Array.isArray(win.SCENES) ? win.SCENES : [];
   if (!['evidence', 'fiction', 'adapted'].includes(story.kind)) fail('STORY.kind must be evidence, fiction or adapted');
@@ -40,6 +44,7 @@ function checkPerformanceStory(win, { requireReview = true, hash } = {}) {
     if (!Number.isInteger(t?.shot) || !scenes[t.shot - 1] || scenes[t.shot - 1].type === 'outro') fail('transcript references an invalid shot');
   const used = new Set();
   scenes.forEach((s, i) => {
+    if (!object(s)) { fail('shot ' + (i + 1) + ' must be an object'); return; }
     if (s.type === 'outro') return;
     const events = Array.isArray(s.performance) ? s.performance : [];
     if (!events.length) fail('shot ' + (i + 1) + ' requires performance events');
@@ -100,19 +105,15 @@ function checkPerformanceStory(win, { requireReview = true, hash } = {}) {
   if (payoff >= 0 && (payoff < opening || payoff > ending)) fail('STORY.payoff must fall between opening and ending');
   if (payoff === opening && story.reveal !== 'upfront') fail('opening payoff requires reveal upfront');
   if (!['held', 'upfront', 'none'].includes(story.reveal)) fail('STORY.reveal is required');
-  if (!['none', 'question', 'action', 'next'].includes(story.cta)) fail('invalid STORY.cta');
-  if (story.cta !== 'none') {
-    const ask = ref(story.ask, 'STORY.ask');
-    if (ask <= payoff || !text(story.ctaReason)) fail('CTA must follow payoff and have a reason');
-  } else if (story.ask != null) fail('CTA none must not declare ask');
+
   const shots = [...new Set(events.map(e => e.shot))], beats = Array.isArray(story.beats) ? story.beats : [];
   if (beats.length !== shots.length || new Set(beats.map(b => b?.shot)).size !== shots.length ||
       beats.some(b => !shots.includes(b?.shot) || !text(b.change) || !text(b.necessity))) fail('STORY.beats must cover every performance shot with change and necessity');
   if (!requireReview) return errors;
   const review = story.review;
-  if (!object(review)) return [...errors, 'STORY.review is required before production'];
+  if (!object(review)) return [...errors, 'STORY.review is absent; no prior review evidence is available'];
   if (review.hash !== hash) fail('STORY.review is stale; reread the current performance');
-  if (review.verdict !== 'pass' || !Array.isArray(review.unresolved) || review.unresolved.length) fail('STORY.review must pass without unresolved findings');
+  if (review.verdict !== 'pass' || !Array.isArray(review.unresolved) || review.unresolved.length) fail('STORY.review reports an unresolved or non-pass result');
   for (const key of ['meaning', 'progression', 'payoff', 'grounding', 'character']) {
     const item = review[key];
     if (!object(item) || !text(item.reason) || !Array.isArray(item.refs) || !item.refs.length) { fail('STORY.review.' + key + ' needs reasoning and event evidence'); continue; }

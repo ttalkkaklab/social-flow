@@ -13,6 +13,8 @@ description: >
 argument-hint: "<channel> [extra instructions]"
 allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__gpt_image_img2img", "mcp__social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__social-flow__music_generate_clip", "mcp__social-flow__mlx_music_generate", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue"]
 ---
+**Automatic execution policy:** Read [automation guidance](../_shared/automation-guidance.md) first. Creative rules and review findings guide improvements; scores, review/hash/freeze records, CTA choices and intermediate approval steps do not block authorized work. Preserve actual external-action authorization and stop at the artifact the user requested. This policy supersedes older quality-gate wording below.
+
 
 **HITL records:** Keep the chosen concept and action/music details in channel intro files. Preserve actual provenance in local files and reuse existing authorization. This adds no approval gate.
 
@@ -123,7 +125,7 @@ echo "<tagline>" | python3 ${CLAUDE_PLUGIN_ROOT}/skills/platform-guide/reference
 ```
 
 After the checker passes, delegate to the growth-post-reviewer agent on the
-`standalone` surface — only a tagline that gets **score ≥95 and p0=0** goes on
+`standalone` surface — use the review’s concrete wording suggestions before putting the tagline on
 screen (3 rounds max — it's a one-line copy, so to save rounds delegate 2–3
 candidates together and pick).
 
@@ -212,7 +214,7 @@ lockup crossfade → hold → aligned sonic-logo mix (-14 LUFS). Knobs
 | `STINGER` | 2.5 | stinger length |
 | `AUDIO` / `SONIC_VOL` | native / 1.0 | drop veo audio / sonic-logo gain |
 
-### 8. Adversarial convergence (brand-reviewer intro mode, target score ≥90 AND p0 = 0)
+### 8. Optional adversarial review (brand-reviewer intro mode)
 
 **Delegate to the brand-reviewer agent (Agent)** — pass the paths of
 intro-master.mp4, frames/, lockup.png, profile.md, `.work/brief.md`, plus any
@@ -227,10 +229,10 @@ unresolved findings from the previous round, and state that this is
   soup): fold the findings into the prompt via the playbook §9 correction
   table and regenerate §5. **Model escalation contract**: ① up to 2
   improvement regenerations on Lite → ② if still FAIL, **one final render on
-  the default (quality) model** → ③ if still FAIL, hard cap.
-- At the hard cap, report the highest-scoring version + unresolved findings
-  as-is and ask: accept / keep looping / change concept (back to §2). Never
-  dress up a score to pass.
+  the default (quality) model**, only within existing budget and provider authorization.
+  Further attempts depend on concrete expected improvements, not a score or fixed review cap.
+- Report the chosen version and unresolved findings. Further generation depends
+  on the authorized budget and task, not a reviewer score or an automatic escalation.
 
 ### 9. HITL watch approval (browser)
 

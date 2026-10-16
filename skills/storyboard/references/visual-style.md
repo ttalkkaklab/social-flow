@@ -1,5 +1,8 @@
 # Choosing the storyboard's visual style
 
+**Automatic execution:** [Automation guidance](../../_shared/automation-guidance.md) supersedes creative quality gates, repeated approvals and review-score requirements here. Keep the concrete guidance and truthful review state. Enforce only actual runtime dependencies and the scope of external-action authorization.
+
+
 A new episode asks for a visual style in HITL before the storyboard and its images are
 written. Production mode (100%, at least 50%, at least 30%, or hook only) and style are separate choices; the two
 questions may be shown together. The production-mode question carries production-mode.md's

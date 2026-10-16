@@ -61,9 +61,11 @@ interface Contract {
     RENDER_MODES: string[]; PRODUCTION_MODES: string[]; CHARGES_OPEN: string[]; CHARGES_CLOSE: string[]; TRANSITION_RE: RegExp;
   };
   check(win: Board, opts?: { draft?: boolean }): Finding[];
+  executionCheck(win: Board): Finding[];
+  guidedCheck(win: Board, opts?: { draft?: boolean }): Finding[];
   sync(win: Board): number;
   outline(win: Board, level: string): Record<string, unknown>;
-  slugOf(scene: { place: string; time: string }): string;
+  slugOf(scene: { place?: string; time?: string }): string;
 }
 
 // Namespace import: the esbuild banner already declares a top-level `createRequire`, and a named
@@ -120,14 +122,11 @@ export const STRUCTURE_VERSION = (() => { try { return contract().VERSION; } cat
 export const sceneSchema = z
   .object({
     no: z.number().int().positive().describe('Scene number — the value shots point at with `scene`'),
-    place: nonEmpty.describe('One place — the slugline location'),
-    time: nonEmpty.describe('One continuous stretch of time — 낮 · 밤 · 새벽 · 10년 뒤'),
-    event: nonEmpty.describe('The one thing that happens in this scene'),
-    charge: z.object({
-      open: tuple(V.CHARGES_OPEN).describe('Value at the open: "+" or "-"'),
-      close: tuple(V.CHARGES_CLOSE).describe('Value at the close: "+", "-", or deeper into the same pole "++" / "--"'),
-    }),
-    turn: nonEmpty.describe('What flipped between the open and the close'),
+    place: z.string().optional().describe('One place — the slugline location'),
+    time: z.string().optional().describe('One continuous stretch of time — 낮 · 밤 · 새벽 · 10년 뒤'),
+    event: z.string().optional().describe('The one thing that happens in this scene'),
+    charge: z.record(z.unknown()).optional(),
+    turn: z.string().optional().describe('What flipped between the open and the close'),
     out: nonEmpty.optional().describe('The sentence the scene goes out on — the one that forces a 그런데 or 그래서 into the next scene'),
   })
   .strict();
@@ -136,11 +135,11 @@ export type Scene = z.infer<typeof sceneSchema>;
 export const sequenceSchema = z
   .object({
     id: nonEmpty.describe('Stable id, e.g. "q1"'),
-    title: nonEmpty.describe('The heading the approval page draws'),
-    purpose: nonEmpty.describe('The one purpose that binds these scenes — two purposes are two sequences'),
+    title: z.string().optional().describe('The heading the approval page draws'),
+    purpose: z.string().optional().describe('The one purpose that binds these scenes — two purposes are two sequences'),
     question: nonEmpty.optional().describe('The dramatic question this stretch opens'),
     payoff: z.number().int().positive().optional().describe('The scene number that answers the question'),
-    scenes: z.array(z.number().int().positive()).min(1).describe('Scene numbers in playback order'),
+    scenes: z.array(z.number().int().positive()).describe('Scene numbers in playback order'),
   })
   .strict();
 export type Sequence = z.infer<typeof sequenceSchema>;
@@ -149,16 +148,16 @@ export const structureSchema = z
   .object({
     version: z.literal(STRUCTURE_VERSION),
     nextShotId: z.number().int().positive().optional(),
-    sequences: z.array(sequenceSchema).min(1),
-    scenes: z.array(sceneSchema).min(1),
+    sequences: z.array(sequenceSchema),
+    scenes: z.array(sceneSchema),
   })
   .strict();
 export type Structure = z.infer<typeof structureSchema>;
 
 const coverageSchema = z.object({
-  azimuth: z.number().finite().min(0).max(180).optional().describe('Horizontal camera bearing, 0–180° inside the selected side of the axis'),
+  azimuth: z.number().finite().optional().describe('Horizontal camera bearing, 0–180° inside the selected side of the axis'),
   action: z.string().trim().min(1).optional().describe('Visible action that carries this cut when no 30° or two-step change is used'),
-}).strict().refine((value) => value.azimuth !== undefined || value.action !== undefined, 'coverage names an azimuth or the action that carries the cut');
+}).passthrough();
 
 const lineCrossingSchema = z.object({
   method: z.enum(['camera_move', 'subject_move', 'neutral', 'intentional']),
@@ -169,17 +168,9 @@ const lineCrossingSchema = z.object({
 }).strict();
 
 /** The grammar half of a shot is exact; the visual plan and the machine layer pass through (scenes-schema.md owns them). */
-export const compositionSchema = z.record(z.unknown()).superRefine((value, ctx) => {
-  for (const message of contract().validateComposition(value)) ctx.addIssue({ code: z.ZodIssueCode.custom, message });
-});
-
-export const eyelineSchema = z.record(z.unknown()).superRefine((value, ctx) => {
-  for (const message of contract().validateEyeline(value)) ctx.addIssue({ code: z.ZodIssueCode.custom, message });
-});
-
-export const depthSchema = z.record(z.unknown()).superRefine((value, ctx) => {
-  for (const message of contract().validateDepth(value)) ctx.addIssue({ code: z.ZodIssueCode.custom, message });
-});
+export const compositionSchema = z.record(z.unknown());
+export const eyelineSchema = z.object({ matchShot: z.number().int().positive().optional() }).passthrough();
+export const depthSchema = z.record(z.unknown());
 
 export const cameraSchema = z.record(z.unknown()).superRefine((value, ctx) => {
   for (const message of cameraContract().cameraInputErrors(value))
@@ -202,29 +193,29 @@ export const shotSchema = z
     sceneSlug: z.string().optional(),
     sequence: z.string().optional(),
     transition: z.string().regex(V.TRANSITION_RE, 'not a join from scenes-schema §scene transition').optional(),
-    beat: tuple(V.BEATS).optional(),
-    arc: tuple(V.ARCS).optional(),
-    hookType: tuple(V.HOOK_TYPES).optional(),
-    hookForm: tuple(V.HOOK_FORMS).optional(),
+    beat: z.string().optional(),
+    arc: z.string().optional(),
+    hookType: z.string().optional(),
+    hookForm: z.string().optional(),
     chapter: z.string().optional(),
-    after: z.number().int().positive().optional(),
+    after: z.number().int().nonnegative().optional(),
     shot: z
       .object({
         feel: z.string().optional(),
-        size: tuple(V.SIZES).optional(),
-        angle: tuple(V.ANGLES).optional(),
+        size: z.string().optional(),
+        angle: z.string().optional(),
         why: z.string().optional(),
         info: z.string().optional(),
-        infoType: tuple(V.INFO_TYPES).optional(),
+        infoType: z.string().optional(),
         share: z.string().optional(),
-        shareType: tuple(V.SHARE_TYPES).optional(),
+        shareType: z.string().optional(),
         space: z.record(z.unknown()).optional(),
         eyeline: eyelineSchema.optional(),
         composition: compositionSchema.optional(),
         depth: depthSchema.optional(),
         coverage: coverageSchema.optional(),
         lineNeutral: z.literal(true).optional(),
-        lineCrossing: lineCrossingSchema.optional(),
+        lineCrossing: z.record(z.unknown()).optional(),
         render: z.object({ mode: tuple(V.RENDER_MODES), purpose: z.string().optional(), reason: z.string().optional() }).passthrough().optional(),
       })
       .passthrough()
@@ -239,7 +230,40 @@ export const readLevelSchema = z.enum(['outline', 'scenes', 'shots', 'full']);
 export const storyboardReadSchema = z.object({
   path: z.string().min(1).describe('The storyboard directory, or its scenes.js'),
   level: readLevelSchema.default('shots').describe('outline = sequences with scene numbers · scenes = scene cards with shot numbers · shots = every shot summarised under its scene · full = the raw shot objects too'),
+  shotId: z.string().min(1).optional().describe('Stable shot ID to inspect, with its raw plan and neighboring shot IDs'),
+  includeContext: z.boolean().default(true).describe('Include STORY, PRODUCTION and SB_DOC as unverified review context'),
 });
+
+/** Read plans and recorded evidence without claiming to have inspected media or validated reviews. */
+export function readStoryboard(args: z.infer<typeof storyboardReadSchema>): Record<string, unknown> {
+  const { win, file, sha256 } = readBoard(args.path);
+  const result = contract().outline(win, args.level);
+  result.file = file;
+  result.mediaBaseDirectory = dirname(file);
+  result.sha256 = sha256;
+  const doc = win.SB_DOC as Record<string, unknown> | undefined;
+  if (doc?.props || doc?.propContinuity) result.propSheet = { props: doc.props, continuity: doc.propContinuity };
+  result.inspection = { mediaViewed: false, evidenceStatus: 'not_verified',
+    note: 'This response reads plans and recorded reviews only. Open referenced assets and verify current evidence before reporting visual quality or review validity.' };
+  if (args.includeContext) result.reviewContext = {
+    story: win.STORY || null, production: win.PRODUCTION || null, document: doc || null,
+    evidenceStatus: 'not_verified',
+  };
+  if (args.shotId) {
+    const shots = win.SCENES || [];
+    const matches = shots.map((shot, index) => ({ shot, index })).filter(item => item.shot.id === args.shotId);
+    if (matches.length !== 1) throw new Error(`shotId ${args.shotId}: expected one match, found ${matches.length}`);
+    const { shot, index } = matches[0];
+    const playback = result.playback as Array<{ id: string | null; no: number }>;
+    const position = playback.findIndex(row => row.no === index + 1);
+    const neighbor = (i: number) => i >= 0 && playback[i] ? { id: playback[i].id, no: playback[i].no } : null;
+    result.selectedShot = { no: index + 1, shot,
+      scene: win.STRUCTURE?.scenes?.find(scene => scene.no === shot.scene) || null,
+      playbackPosition: position < 0 ? null : position + 1,
+      previous: position < 0 ? null : neighbor(position - 1), next: position < 0 ? null : neighbor(position + 1) };
+  }
+  return result;
+}
 
 export const storyboardCheckSchema = z.object({
   path: z.string().min(1).describe('The storyboard directory, or its scenes.js'),
@@ -270,7 +294,7 @@ export const transitionPatchSchema = z.object({
 export const storyboardApplySchema = z.object({
   path: z.string().min(1).describe('The storyboard directory (scenes.js is created there when missing), or its scenes.js'),
   draft: z.boolean().default(false).describe('The story pass (storyboard §4a) — camera-continuity records (lineCrossing, coverage) are deferred, not violations'),
-  set: z.object({ structure: structureSchema, shots: z.array(shotSchema).min(1) }).optional()
+  set: z.object({ structure: structureSchema.optional(), shots: z.array(shotSchema).min(1) }).optional()
     .describe('Replace the whole board — the structure and every shot. The way a new board is written'),
   structure: structureSchema.optional().describe('Replace window.STRUCTURE only'),
   sequences: z.array(sequenceSchema).optional().describe('Upsert sequences by id'),
@@ -312,6 +336,7 @@ export function scenesPath(target: string): string {
 }
 
 export interface BoardFile {
+  sha256: string;
   file: string;
   header: string[];
   win: Board;
@@ -336,7 +361,7 @@ export function readBoard(target: string): BoardFile {
     throw new Error(`failed to evaluate ${file}: ${(e as Error).message}`);
   }
   if (!Array.isArray(win.SCENES)) throw new Error(`${file} has no window.SCENES array`);
-  return { file, header, win };
+  return { file, header, win, sha256: createHash('sha256').update(src).digest('hex') };
 }
 
 /** The order the schema document lists the blocks in; anything else follows alphabetically. */
@@ -390,7 +415,9 @@ export function validateShots(shots: unknown[]): Finding[] {
   shots.forEach((s, i) => {
     const parsed = shotSchema.safeParse(s);
     if (!parsed.success) {
-      for (const issue of parsed.error.issues) out.push({ level: 'bad', where: `shot ${i + 1}`, what: `${issue.path.join('.') || '(root)'}: ${issue.message}` });
+      for (const issue of parsed.error.issues) out.push({ level: 'bad', where: `shot ${i + 1}`, what: issue.path.length === 1 && issue.path[0] === 'id'
+        ? 'id: expected s followed by at least four digits (for example s0001)'
+        : `${issue.path.join('.') || '(root)'}: ${issue.message}` });
     }
     const id = s && typeof s === 'object' ? (s as Record<string, unknown>).id : undefined;
     if (typeof id !== 'string') return;
@@ -416,7 +443,7 @@ export function applyPatch(win: Board, patch: StoryboardApplyArgs): { win: Board
   }
   if (patch.propSheet) next.SB_DOC = { ...(next.SB_DOC as Record<string, unknown> ?? {}),
     props: patch.propSheet.props, propContinuity: patch.propSheet.continuity };
-  if (patch.set) { next.STRUCTURE = patch.set.structure; next.SCENES = patch.set.shots.slice(); }
+  if (patch.set) { if (patch.set.structure) next.STRUCTURE = patch.set.structure; next.SCENES = patch.set.shots.slice(); }
   if (patch.structure) next.STRUCTURE = patch.structure;
 
   const st: Structure = next.STRUCTURE ?? { version: STRUCTURE_VERSION, sequences: [], scenes: [] };
@@ -550,13 +577,12 @@ export function applyPatch(win: Board, patch: StoryboardApplyArgs): { win: Board
 
   const findings: Finding[] = [];
   if (!shots.length) findings.push({ level: 'bad', where: 'board', what: 'the board has no shots' });
-  if (next.STRUCTURE === undefined) findings.push({ level: 'bad', where: 'structure', what: 'no window.STRUCTURE — write the sequences and scenes (set, structure, sequences + scenes)' });
-  else findings.push(...validateStructure(next.STRUCTURE));
+  if (next.STRUCTURE !== undefined) findings.push(...validateStructure(next.STRUCTURE));
   findings.push(...validateShots(shots));
   let synced = 0;
   if (!findings.some((f) => f.level === 'bad')) {
     synced = contract().sync(next);
-    findings.push(...contract().check(next, { draft: patch.draft }));
+    findings.push(...contract().guidedCheck(next, { draft: patch.draft }));
   }
   findings.push(...propContract().check(next));
   return { win: next, findings, synced };
@@ -669,7 +695,13 @@ export function checkScenario(
 /** storyboard_check — the structure rules here plus the full scenes.js contract from check-scenes.js. */
 export function checkStoryboard(args: z.infer<typeof storyboardCheckSchema>): CheckResult {
   const { file, win } = readBoard(args.path);
-  const structure = contract().check(win, { draft: args.draft }).concat(validateShots(win.SCENES ?? []));
+  const seen = new Set<string>();
+  const structure = contract().guidedCheck(win, { draft: args.draft }).concat(validateShots(win.SCENES ?? [])).filter(f => {
+    const key = f.level + '\0' + f.where + '\0' + f.what;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
   const argv = [CHECK_SCENES_FILE, file, '--json'];
   if (args.draft) argv.push('--draft');
   let raw = '';
@@ -709,7 +741,7 @@ export function renderApply(r: ApplyResult): string {
     ? `${r.created ? 'Created' : 'Wrote'} ${r.file}`
     : bad.length ? `NOT written — ${bad.length} violation(s) in ${r.file}` : `Dry run — ${r.file} untouched`;
   const lines = [head, `  ${r.sequences} sequence(s) · ${r.scenes} scene(s) · ${r.shots} shot(s) · ${r.synced} shot label(s) synced from the structure`];
-  if (r.approvalDropped && r.written) lines.push('  the `// approved:` line was dropped — an edited board is approved again at the HITL gate');
+  if (r.approvalDropped && r.written) lines.push('  the stale `// approved:` line was dropped; existing task authorization is unchanged');
   lines.push('Findings:', renderFindings(r.findings));
   return lines.join('\n');
 }

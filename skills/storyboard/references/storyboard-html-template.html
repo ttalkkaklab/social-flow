@@ -2919,7 +2919,7 @@ window.SB_DOC = Object.assign({}, window.SB_DOC, window.SCENE_SB_DOC || {});
     // 2026-09-05 every timeline · statistic · principle beat is an editorial slide outside any cap.
   }
 
-  if (window.RENDER_ROUTING) window.RENDER_ROUTING.checkEpisode(window).forEach(function (message) { flag("bad", "Visual direction", message); });
+  if (window.RENDER_ROUTING) window.RENDER_ROUTING.checkEpisode(window, {advice: []}).forEach(function (message) { flag("bad", "Visual direction", message); });
 
   SCENES.forEach(function (s, i) {
     var v = (s && s.visual) || {}, sl = v.slide;
@@ -2939,8 +2939,7 @@ window.SB_DOC = Object.assign({}, window.SB_DOC, window.SCENE_SB_DOC || {});
     // of truth, and format-lint.js's crossCheckShareContract compares this copy against it, so a
     // sixth word goes into the checker first, then here, then the linter runs.
     var shareType = s && s.shot && s.shot.shareType;
-    if (shareType && ["fact", "verdict", "line", "checklist", "none"].indexOf(shareType) < 0)
-      flag("bad", T.shotCap(i + 1), "shot.shareType \"" + shareType + "\" is outside fact · verdict · line · checklist · none");
+
     if (s.type !== "broll" && s.type !== "outro") {
       if (infoTypes.indexOf(infoType) < 0)
         flag("bad", T.shotCap(i + 1), "shot.infoType must be other, timeline, statistic, or principle");
@@ -2994,13 +2993,13 @@ window.SB_DOC = Object.assign({}, window.SB_DOC, window.SCENE_SB_DOC || {});
     ? Number(MP.generatedVideoMax) : FMT.videoMax;
   // The sequence → scene → shot rules, the same ones storyboard_apply and check-scenes.js run.
   if (window.STRUCTURE !== undefined && window.STRUCTURE_CONTRACT)
-    window.STRUCTURE_CONTRACT.check(window).forEach(function (f) { flag(f.level === "bad" ? "bad" : "warn", f.where, f.what); });
+    window.STRUCTURE_CONTRACT.guidedCheck(window).forEach(function (f) { flag(f.level === "bad" ? "bad" : "warn", f.where, f.what); });
   else if (window.STRUCTURE !== undefined)
     flag("bad", "structure", "Missing structure-contract.js — copy it beside scenes.js; without it the sequence → scene → shot rules are not checked");
   if (window.PRODUCTION) {
     if (!window.PRODUCTION_MODE) flag("bad", T.where.production, "Missing production-mode.js");
     else {
-      window.PRODUCTION_MODE.check(window).forEach(function (message) { flag("bad", T.where.production, message); });
+      window.PRODUCTION_MODE.check(window, {advice: []}).forEach(function (message) { flag("bad", T.where.production, message); });
       policyVideoMax = window.PRODUCTION_MODE.policy({ generatedVideoMax: policyVideoMax }, window.PRODUCTION, SCENES).generatedVideoMax;
     }
   }
@@ -3226,15 +3225,15 @@ window.SB_DOC = Object.assign({}, window.SB_DOC, window.SCENE_SB_DOC || {});
     mainOrder.forEach(function (o) {
       var b = beatOf(o.s);
       if (LONG_BEATS[b]) {
-        flag("bad", T.where.order, "shot " + (o.i + 1) + " carries beat:\"" + b + "\" — a short walks hook → drip → cta (scenes-schema §playback order)");
+        flag("bad", T.where.order, "shot " + (o.i + 1) + " carries beat:\"" + b + "\" — consider hook → development → ending (scenes-schema §playback order)");
         orderOk = false; orderBad = true;
       } else if (!o.s.beat && o.s.type !== "cover") {
-        flag("bad", T.where.order, "shot " + (o.i + 1) + " has no beat — a short labels every shot hook · drip · cta");
+        flag("bad", T.where.order, "shot " + (o.i + 1) + " has no beat — label beats when useful for reviewing the flow");
         orderOk = false; orderBad = true;
       }
     });
     if (!firstBeat.drip) {
-      flag("bad", T.where.order, "there is no drip shot — after the hook, 1–n shots pay curiosity in stages (beat:\"drip\") before the CTA");
+      flag("bad", T.where.order, "there is no drip shot — after the hook, 1–n shots pay curiosity in stages (beat:\"drip\") before the ending");
       orderOk = false; orderBad = true;
     }
     if (mainOrder.length) {
@@ -3244,36 +3243,12 @@ window.SB_DOC = Object.assign({}, window.SB_DOC, window.SCENE_SB_DOC || {});
         orderOk = false; orderBad = true;
       }
     }
-    var lastMain = mainOrder.length ? mainOrder[mainOrder.length - 1] : null;
-    if (lastMain && beatOf(lastMain.s) !== "cta") {
-      flag("bad", T.where.order, "the last narrated shot is not the CTA — a short ends on beat:\"cta\" (an outro asset is not the spoken close)");
-      orderOk = false; orderBad = true;
-    } else if (lastMain) {
-      var ctaSpoken = (lastMain.s.narration || []).map(function (seg) {
-        return (seg && (seg.sub || seg.tts)) || "";
-      }).join("").replace(/\s/g, "");
-      if (!ctaSpoken && !(window.STORY && window.STORY.version === "story-v2" && (lastMain.s.performance || []).some(function(e) { return e.kind === "action"; }))) {
-        flag("bad", T.where.order, "the last narrated shot is the CTA but has no narration — a short ends on a spoken close");
-        orderOk = false; orderBad = true;
-      } else if (compactLetters(((lastMain.s.shot || {}).share) || "").length < 8) {
-        // The 8-compacted-character floor is check-scenes.js's number (its share-trigger check);
-        // format-lint.js's crossCheckShareContract reads both numbers and compares them, so the
-        // floor moves in the checker first and here second, with the linter run after.
-        // An ask stays optional; a forwardable thing does not — an ask requests behaviour from
-        // the viewer, while a forwardable thing is one sentence, figure or verdict they can pass
-        // on as-is. Asking to be shared is an ask, not a trigger.
-        flag("bad", T.where.share, "the close has no share trigger — write shot.share on the beat:\"cta\" shot: the one sentence, figure or verdict a viewer would forward as-is");
-        orderOk = false; orderBad = true;
-      }
-    }
     mainOrder.forEach(function (o, pos) {
       var b = beatOf(o.s);
       if (b === "hook" && pos !== 0) {
         flag("bad", T.where.order, "shot " + (o.i + 1) + " carries beat:\"hook\" — the cover opens the episode");
         orderOk = false; orderBad = true;
-      } else if (b === "cta" && pos !== mainOrder.length - 1) {
-        flag("bad", T.where.order, "a beat comes after the cta — the cta is the very end");
-        orderOk = false; orderBad = true;
+
       }
     });
     // A short-form cover may state the result — hookType "spoiler" and hookForm "payoff" are

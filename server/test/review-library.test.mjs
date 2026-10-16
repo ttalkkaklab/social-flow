@@ -5,6 +5,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { createHash } from 'node:crypto';
+import { spawnSync } from 'node:child_process';
 const require = createRequire(import.meta.url);
 const { exportChannel } = require('../../skills/channel/references/review-library.js');
 const example = readFileSync(new URL('../../skills/channel/references/character-identity-example.md', import.meta.url), 'utf8');
@@ -80,6 +81,44 @@ test('missing HTML is reported and not linked; no-key export never needs credent
     assert.equal(result.warnings.length, 1);
     assert.ok(!existsSync(join(f.dir, 'storyboards/one/index.html')));
     assert.ok(!readFileSync(join(f.dir, 'storyboards/index.html'), 'utf8').includes('href="one/index.html"'));
+  } finally { f.clean(); }
+});
+
+test('design CLI separates legacy content readiness from shell drift; content readiness remains advisory on both entry points', () => {
+  const f = fixture();
+  const board = join(f.dir, 'episodes/one/storyboard');
+  const designCli = require.resolve('../../skills/storyboard/references/storyboard-html.js');
+  const libraryCli = require.resolve('../../skills/channel/references/review-library.js');
+  const run = (cli, target) => spawnSync(process.execPath, [cli, target, '--check'], { encoding: 'utf8' });
+  try {
+    f.write('assets/characters/hero/identity.md', '# Legacy hero\n\n**역할**: Guide\n');
+    const exported = exportChannel(f.dir);
+    assert.ok(exported.contentWarnings.some(w => w.domain === 'voice' && w.characterId === 'hero'));
+    assert.ok(exported.contentWarnings.some(w => w.domain === 'identity' && w.characterId === 'hero'));
+    assert.deepEqual(exported.structuralWarnings, []);
+    assert.deepEqual(exported.warnings, exported.contentWarnings.map(w => w.message));
+    const clean = run(designCli, board);
+    assert.equal(clean.status, 0, clean.stdout + clean.stderr);
+    assert.match(clean.stdout, /PASS.*shared storyboard template/);
+    assert.match(clean.stderr, /Content readiness \[identity\]/);
+    assert.match(clean.stderr, /does not certify content readiness/);
+    const strict = run(libraryCli, f.dir);
+    assert.equal(strict.status, 0);
+    const report = JSON.parse(strict.stdout);
+    assert.deepEqual(report.changed, []);
+    assert.ok(report.warnings.length > 0);
+    assert.equal(readFileSync(join(f.dir, 'assets/characters/hero/identity.md'), 'utf8'), '# Legacy hero\n\n**역할**: Guide\n');
+
+    f.write('episodes/one/storyboard/render-routing.js', 'stale helper');
+    assert.equal(run(designCli, board).status, 1);
+    storyboardHtml(board); exportChannel(f.dir);
+    // A structurally missing neighboring board must still fail even after indexes are refreshed.
+    f.write('episodes/two/storyboard/storyboard.md', '---\nstatus: draft\n---\n# Missing HTML');
+    exportChannel(f.dir);
+    const missing = run(designCli, board);
+    assert.equal(missing.status, 1);
+    assert.match(missing.stderr, /Library structure: two: missing\/unsupported storyboard.html/);
+    assert.deepEqual(exportChannel(f.dir, { check: true }).changed, []);
   } finally { f.clean(); }
 });
 

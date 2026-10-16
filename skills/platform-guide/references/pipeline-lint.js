@@ -6,26 +6,17 @@
  *   pipeline-lint.js --list     prints every rule and its verdict
  *   pipeline-lint.js --selftest pins the document parsers
  *
- * ## Why mirrors exist
- *
- * The stage ladder and the gate policy live in pipeline.js as data, and in five SKILL.md
- * sections as prose an agent reads while it works. Neither copy can go: the data is what
- * episode-state.js runs on, and the prose is what teaches the agent how to run a gate.
- * Duplicate bookkeeping always drifts, so this does the checking instead of human eyes —
- * the same arrangement formats.js and format-lint.js already have on the format axis.
- *
- * ## A failure is not necessarily a regression
- *
- * A diverging pair means the two copies disagree, not which one is wrong. Renumbering a
- * section in produce and forgetting the manifest reads the same as adding a gate to the
- * manifest and forgetting the document. A human decides which side to move.
+ * Stage hand-offs, reviewer output contracts and media lanes still mirror pipeline.js.
+ * Creative guidance does not mirror historical gate counts or section headings.
+ * Entrypoints instead link the shared automation policy; this lint never adds an
+ * approval requirement or changes the runtime authorization manifest.
  */
 
 'use strict';
 
 const fs = require('fs');
 const path = require('path');
-const { GATES, REVIEWERS, LANES, STAGES, unattendedGates } = require('./pipeline.js');
+const { REVIEWERS, LANES, STAGES } = require('./pipeline.js');
 
 const ROOT = path.resolve(__dirname, '../../..');
 
@@ -57,7 +48,9 @@ function tableRows(src, headerRe) {
 const cells = (row) => row.split('|').slice(1, -1).map((c) => c.trim());
 
 const uniq = (a) => Array.from(new Set(a));
-const setEq = (a, b) => a.length === b.length && a.every((x) => b.indexOf(x) !== -1);
+const guidanceTarget = (src) => typeof src === 'string'
+  ? /\[[^\]]*\]\(([^)\s]*automation-guidance\.md)\)/.exec(src)?.[1] || null
+  : null;
 
 /**
  * One rule = { name, run() → { ok, got, want } }. Every rule reads the documents itself;
@@ -65,51 +58,31 @@ const setEq = (a, b) => a.length === b.length && a.every((x) => b.indexOf(x) !==
  */
 const RULES = [
   {
-    name: 'autoproduce gate numbers',
-    run() {
-      const src = read(SKILL('autoproduce'));
-      if (src === null) return { ok: false, got: '(file missing)', want: SKILL('autoproduce') };
-      // Section headings carry their own gate number: "### 4.5 Copy review gate (gate 6 — …)"
-      const found = uniq(Array.from(src.matchAll(/^###[^\n]*\(gate ([0-9]+[a-f]?)\b/gm), (m) => m[1])).sort();
-      const want = unattendedGates().map((g) => g.num).sort();
-      return { ok: setEq(found, want), got: found.join(' '), want: want.join(' ') };
-    },
-  },
-  {
-    name: 'unattended gate count',
-    run() {
-      const src = read(SKILL('autoproduce'));
-      const rows = src && tableRows(src, /^\|\s*What a human used to check\s*\|/);
-      const n = rows ? rows.length : -1;
-      return { ok: n === unattendedGates().length, got: String(n), want: String(unattendedGates().length) };
-    },
-  },
-  {
-    name: 'unattended gate sections',
-    run() {
-      const src = read(SKILL('autoproduce'));
-      const rows = src && tableRows(src, /^\|\s*What a human used to check\s*\|/);
-      if (!rows) return { ok: false, got: '(table not found)', want: 'the replacement table' };
-      // Every § the table points at, across all of its cells.
-      const cited = uniq(Array.from(rows.join('\n').matchAll(/§([\d.]+)/g), (m) => '§' + m[1]));
-      const missing = unattendedGates().map((g) => g.section).filter((s) => cited.indexOf(s) === -1);
-      return { ok: missing.length === 0, got: missing.length ? 'not cited: ' + missing.join(' ') : 'all cited',
-               want: 'every unattended gate section cited in the table' };
-    },
-  },
-  {
-    name: 'attended gate headings',
+    name: 'workflow guidance links resolve',
     run() {
       const missing = [];
-      for (const g of GATES.filter((x) => !x.num)) {
-        const src = read(SKILL(g.skill));
-        // "### 7. The build report gate" — the number comes from `section`, the text from `heading`.
-        const num = g.section.replace('§', '');
-        const re = new RegExp('^###\\s+' + num.replace('.', '\\.') + '\\.\\s+' + g.heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'mi');
-        if (!src || !re.test(src)) missing.push(g.id + ' (' + g.skill + ' ' + g.section + ')');
+      for (const name of ['storyboard', 'produce', 'autoproduce', 'publish']) {
+        const rel = SKILL(name), src = read(rel);
+        const target = guidanceTarget(src);
+        if (!target || path.resolve(ROOT, path.dirname(rel), target) !== path.join(ROOT, 'skills/_shared/automation-guidance.md') || !read('skills/_shared/automation-guidance.md')) missing.push(name);
       }
-      return { ok: missing.length === 0, got: missing.length ? missing.join(', ') : 'all present',
-               want: 'every attended gate has its heading' };
+      return { ok: missing.length === 0, got: missing.join(', ') || 'all resolve',
+               want: 'workflow entrypoints link the shared automation guidance' };
+    },
+  },
+  {
+    name: 'automation guidance preserves scope and honest review state',
+    run() {
+      const src = read('skills/_shared/automation-guidance.md') || '';
+      const checks = [
+        ['requested artifact', /storyboard request ends with a reviewable\s+storyboard/i],
+        ['review state', /not_reviewed/.test(src) && /stale/.test(src)],
+        ['external authorization', /authorization for new paid calls, external uploads, account changes, publication/i],
+        ['existing consent', /Reuse valid prior authorization/i],
+      ];
+      const missing = checks.filter(([, check]) => typeof check === 'boolean' ? !check : !check.test(src)).map(([name]) => name);
+      return { ok: missing.length === 0, got: missing.join(', ') || 'scope and evidence explicit',
+               want: 'truthful review state and actual external-action boundaries' };
     },
   },
   {
@@ -217,7 +190,9 @@ function selftest() {
   ok('tableRows stops at the blank line', rows[1] === '| three | four |');
   ok('cells splits a row', cells(rows[0]).join(',') === 'one,two');
   ok('a header that is not there returns null', tableRows(md, /^\|\s*Z\s*\|/) === null);
-  ok('setEq ignores order', setEq(['b', 'a'], ['a', 'b']) && !setEq(['a'], ['a', 'b']));
+  ok('guidance link resolves a Markdown target', guidanceTarget('[automation guidance](../_shared/automation-guidance.md)') === '../_shared/automation-guidance.md');
+  ok('mentioning a policy is not a link', guidanceTarget('automation-guidance.md') === null);
+  ok('missing skill has no guidance link', guidanceTarget(null) === null);
 
   // The rules have to hold against the repo as it stands — that is the acceptance condition.
   for (const r of RULES) {
@@ -246,11 +221,11 @@ function main() {
 
   if (issues.length) {
     if (!listOnly) {
-      process.stderr.write('pipeline-lint: the prose diverges from pipeline.js\n');
+      process.stderr.write('pipeline-lint: workflow documentation or manifest references diverge\n');
       for (const i of issues) {
-        process.stderr.write('  ✗ ' + i.name + ': actual ' + i.got + ' · manifest ' + i.want + '\n');
+        process.stderr.write('  ✗ ' + i.name + ': actual ' + i.got + ' · expected ' + i.want + '\n');
       }
-      process.stderr.write('\nA human decides which side moves — the manifest transcribes the prose, not the other way round.\n');
+      process.stderr.write('\nFix the reported contract or guidance link; do not restore historical quality gates to satisfy this lint.\n');
     }
     process.exit(1);
   }

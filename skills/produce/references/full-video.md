@@ -1,6 +1,9 @@
 # Full video — every new scene as a generated clip
 
-Assembly video-check failures follow [assembly-video-hitl.md](assembly-video-hitl.md): present warnings, obtain explicit user approval and assemble the approved inputs. This takes precedence over pre-assembly quality-block wording in this document.
+**Automatic execution:** [Automation guidance](../../_shared/automation-guidance.md) supersedes creative quality gates, repeated approvals and review-score requirements here. Keep the concrete guidance and truthful review state. Enforce only actual runtime dependencies and the scope of external-action authorization.
+
+
+Assembly video-check failures follow [assembly-video-hitl.md](assembly-video-hitl.md): report findings and assemble within the existing authorization. This takes precedence over pre-assembly quality-block wording in this document.
 
 
 ## Contents
@@ -288,7 +291,7 @@ as a sequence:
 
 1. Run `check-scenes.js storyboard/`, then
    `node ${CLAUDE_PLUGIN_ROOT}/skills/produce/references/check-production.js storyboard/ --selection`.
-   Missing/stale approval or an estimate above the approved cap blocks all assets.
+   Check actual authorization before new paid calls. An estimate above the authorized cap blocks that spend, not independent local planning.
 2. Generate and inspect source images at high quality. With `imageProvider:'host'` (Codex,
    Grok — the storyboard's detection), use the CLI's own `image_gen` / `image_edit` on its
    allowance. If unavailable, ask before any separately billed image API. Every still is edited
@@ -356,7 +359,7 @@ The quality target is the selected style's spatial clarity and material treatmen
 not a promise that a model or a numeric score guarantees it. Every generated clip must have
 an actual source-image read, full playback read, and start/middle/end frame reads. Use the
 host's permitted media-viewing route. If full playback cannot be inspected, report that
-limitation and hold; do not invent a playback review from still frames.
+limitation as `playback_not_reviewed` and continue authorized work; do not invent a playback review from still frames.
 
 When arranging sampled frames in a contact sheet, leave visible gutters between panels
 and retain their timestamps. An actor in the neighboring panel is not a duplicate in the

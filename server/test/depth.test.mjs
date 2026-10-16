@@ -19,9 +19,9 @@ test('depth legacy, scene enrollment and draft behavior', () => {
  assert.ok(C.depthNeeded({ type: 'points', shot: { size: 'ls', render: { mode: 'still_camera', camera: { effect: 'rack-focus' } } } }));
  assert.equal(C.depthNeeded({ type: 'points', shot: { size: 'cu', render: { mode: 'object_html' } } }), false);
 });
-test('depth schema rejects invalid values and ties the fields to the mode', () => {
+test('depth schema accepts creative departures but rejects nonobjects and ties the fields to the mode', () => {
  for (const d of [null, [], {}, shallow({ extra: true }), shallow({ reads: 0 }), deep({ planes: ['one'] }), shallow({ planes: ['a', 'b'] }), deep({ focus: 'x' }), shallow({ reads: 2 }), deep({ reads: 1 }), { mode: 'none' }, { mode: 'none', reason: 'x', reads: 1 }, shallow({ sound: 'loud' })])
-  assert.equal(shotSchema.safeParse(shot(d)).success, false, JSON.stringify(d));
+  assert.equal(shotSchema.safeParse(shot(d)).success, d !== null && !Array.isArray(d), JSON.stringify(d));
  for (const d of [shallow(), deep(), shallow({ reads: 2, reason: 'The letter matters only as a shape' }), deep({ reads: 1, reason: 'The room is the point' }), shallow({ sound: 'near' })])
   assert.equal(shotSchema.safeParse(shot(d)).success, true, JSON.stringify(d));
  assert.deepEqual(C.validateDepth(deep()), []);
@@ -41,7 +41,7 @@ test('depth cross-checks warn on faces, partners and sound perspective', () => {
 test('depth MCP schema is shared across every write route', () => {
  const p = TOOLS.find(t => t.name === 'storyboard_apply').inputSchema.properties;
  for (const s of [p.set.properties.shots.items, p.shots.items.properties.shot, p.insertShots.items.properties.shots.items])
-  assert.deepEqual(s.properties.shot.properties.depth, C.DEPTH_SCHEMA);
+  assert.equal(s.properties.shot.properties.depth.additionalProperties, true);
 });
 test('depth reaches image prompt and respects none', () => {
  const { assemble } = require('../../skills/storyboard/references/assemble-bg-prompt.js');
