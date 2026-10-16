@@ -706,7 +706,7 @@ export function checkStoryboard(args: z.infer<typeof storyboardCheckSchema>): Ch
   if (args.draft) argv.push('--draft');
   let raw = '';
   try {
-    raw = execFileSync(process.execPath, argv, { encoding: 'utf8', timeout: 60_000, stdio: ['ignore', 'pipe', 'pipe'] });
+    raw = execFileSync(process.execPath, argv, { encoding: 'utf8', timeout: 60_000, maxBuffer: 16 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'] });
   } catch (e) {
     const err = e as { stdout?: string; stderr?: string; message: string };
     raw = err.stdout || '';

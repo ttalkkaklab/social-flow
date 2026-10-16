@@ -1,10 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
+
+import { checkStoryboard } from '../dist/storyboard.js';
 
 const require = createRequire(import.meta.url);
 const review = require('../../skills/storyboard/references/shot-image-review.js');
@@ -129,4 +131,41 @@ test('unique unavailable or corrupt images and absent source frames explicitly r
   const findings = review.check({ SCENES: scenes }, dir).filter(f => f.code === 'unverified_source_image');
   assert.equal(findings.length, 5);
   assert.ok(findings.every(f => f.references[0].pixelStatus === 'unverified' && /unverified/.test(f.what)));
+}));
+
+
+test('dense similarity groups retain every shot and pair count without quadratic findings', () => fixture(dir => {
+  imageFile(dir, 'original.png');
+  const original = readFileSync(join(dir, 'original.png'));
+  const scenes = Array.from({ length: 12 }, (_, i) => {
+    const name = `image-${i}.png`;
+    writeFileSync(join(dir, name), Buffer.concat([original, Buffer.from(`metadata-${i}`)]));
+    return shot(`s${String(i + 1).padStart(4, '0')}`, 'host', name);
+  });
+  const findings = review.check({ SCENES: scenes }, dir).filter(f => f.code === 'similar_source_images');
+  assert.equal(findings.length, 1);
+  assert.equal(findings[0].references.length, 12);
+  assert.equal(findings[0].comparison.matchingPairs, 66);
+  assert.equal(findings[0].comparison.examples.length, 8);
+  assert.equal(findings[0].comparison.examplesTruncated, true);
+  assert.match(findings[0].what, /Not every pair/);
+  writeFileSync(join(dir, 'scenes.js'), 'window.SCENES=' + JSON.stringify(scenes) + ';');
+  const result = checkStoryboard({ path: dir, draft: true });
+  assert.equal(result.shots, 12);
+  assert.equal(result.contract.filter(f => f.code === 'similar_source_images').length, 1);
+}));
+
+test('piped checker output and storyboard adapter preserve diagnostics larger than one MiB', () => fixture(dir => {
+  const scenes = Array.from({ length: 12 }, (_, i) => shot(`s${String(i + 1).padStart(4, '0')}`,
+    `actor${i}`, `missing-${i}-${'x'.repeat(48000)}.png`));
+  writeFileSync(join(dir, 'scenes.js'), 'window.SCENES=' + JSON.stringify(scenes) + ';');
+  const cli = spawnSync(process.execPath, [resolve(import.meta.dirname, '../../skills/storyboard/references/check-scenes.js'),
+    dir, '--draft', '--json'], { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 });
+  assert.equal(cli.status, 0, cli.stderr);
+  assert.ok(Buffer.byteLength(cli.stdout) > 1024 * 1024);
+  assert.equal(JSON.parse(cli.stdout).shots, 12);
+  const result = checkStoryboard({ path: dir, draft: true });
+  const unknown = result.contract.filter(f => f.code === 'unverified_source_image');
+  assert.equal(unknown.length, 12);
+  assert.equal(unknown[11].references[0].image, scenes[11].visual.bg);
 }));

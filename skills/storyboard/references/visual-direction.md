@@ -71,7 +71,10 @@ the host's reaction when the misunderstanding breaks. These are story choices, n
 they report shared source paths, identical local file bytes even under different names,
 visually similar local stills after decoding with ffmpeg, and recurring supplied spatial
 and opening-state fields across nonadjacent cuts. Findings include source paths and stable
-shot IDs for side-by-side inspection. The 32×32 RGB/edge comparison catches re-encoding
+shot IDs for side-by-side inspection. Similar-image findings group connected candidates;
+not every pair in a group necessarily matches. Pair counts are complete, with at most
+eight example comparisons per group to keep reports readable.
+The 32×32 RGB/edge comparison catches re-encoding
 and some small edits; it can miss crops, lighting changes or semantically similar scenes,
 and can flag intentional matches. It is a review prompt, not a quality score or automatic
 rejection. Missing, unsupported or undecodable images and remote pixels stay unverified. Read the actual images together before treating

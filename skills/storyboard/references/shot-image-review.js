@@ -84,17 +84,39 @@ function check(win, storyboard) {
       '. Compare each opening state and framing; retain intentional reuse with its shot-specific reason, otherwise author separate source frames. Renaming a copy does not create a new shot.');
   }
   const decoded = [...sources.values()].filter(source => source.status === 'decoded');
+  // Connected candidates keep the report linear in source count, even if every
+  // image matches every other image. A component does not imply all pairs match.
+  const parents = decoded.map((_, i) => i), counts = decoded.map(() => 0), examples = decoded.map(() => []);
+  const root = i => { while (parents[i] !== i) { parents[i] = parents[parents[i]]; i = parents[i]; } return i; };
   for (let i = 0; i < decoded.length; i++) for (let j = i + 1; j < decoded.length; j++) {
     const a = decoded[i], b = decoded[j];
     if (a.hash === b.hash) continue;
     const metric = distance(a.pixels, b.pixels);
-    if (metric.meanRgbDifference <= .10 && metric.edgeDifference <= 12) {
-      report('similar_source_images', [...a.rows, ...b.rows].sort((a, b) => a.shot - b.shot),
-        'decoded opening images look similar at thumbnail scale: ' +
-        [...new Set([...a.rows, ...b.rows].map(row => row.image))].join(', ') +
-        '. Inspect the full images together for meaningful framing, action and prop changes. This is a review candidate, not proof of duplication or a generation gate.',
-        { comparison: { method: '32x32 RGB mean distance and 56 coarse luminance edges', ...metric } });
+    if (metric.meanRgbDifference > .10 || metric.edgeDifference > 12) continue;
+    const left = root(i), right = root(j);
+    if (left !== right) {
+      parents[right] = left;
+      counts[left] += counts[right];
+      examples[left] = examples[left].concat(examples[right]).slice(0, 8);
     }
+    counts[left]++;
+    if (examples[left].length < 8) examples[left].push({
+      images: [a.rows[0].image, b.rows[0].image], ...metric,
+    });
+  }
+  const candidates = new Map();
+  decoded.forEach((source, i) => {
+    const group = root(i);
+    if (counts[group]) for (const row of source.rows) add(candidates, group, row);
+  });
+  for (const [group, rows] of candidates) {
+    rows.sort((a, b) => a.shot - b.shot);
+    report('similar_source_images', rows,
+      'decoded opening images look similar at thumbnail scale in a connected candidate group: ' +
+      [...new Set(rows.map(row => row.image))].join(', ') +
+      '. Not every pair in this group necessarily matches. Inspect the full images together for meaningful framing, action and prop changes. This is a review candidate, not proof of duplication or a generation gate.',
+      { comparison: { method: '32x32 RGB mean distance and 56 coarse luminance edges',
+        matchingPairs: counts[group], examples: examples[group], examplesTruncated: counts[group] > examples[group].length } });
   }
   for (const source of sources.values()) if (source.status === 'unverified') {
     report('unverified_source_image', source.rows, source.reason + '; pixels unverified. Inspect or supply the actual local image before claiming visual review.');
