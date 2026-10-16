@@ -52,6 +52,7 @@ function approve(win) { win.PRODUCTION.approval = { kind: 'user', at: '2026-09-0
 test('ASTRA prompt assembly uses its own image-to-video contract instead of Seedance wording gates', () => {
   const win = fixture(1), scene = win.SCENES[0];
   scene.visual.video = { engine: 'astra', numFrames: 185, frameRate: 24 };
+  scene.visual.character = ['hero'];
   scene.shot.videoDesign.action = 'The person taps the glasses; no readable interface appears.';
   scene.shot.videoDesign.motion.beats[1].state = 'The person turns toward the courier.';
   const result = assemble(win, 0);
@@ -72,6 +73,7 @@ test('ASTRA speech locks distinguish narrator, visible dialogue and off-screen c
   const win = fixture(1), scene = win.SCENES[0];
   scene.visual.video = { engine: 'astra' };
   win.SB_DOC = { narratorCharacterId: 'narrator' };
+  scene.visual.character = ['hero'];
   scene.narration[0].speaker = 'hero';
   assert.doesNotMatch(assemble(win, 0).motionPrompt, /mouths closed/);
   scene.narration[0].delivery = 'on_screen';
@@ -100,7 +102,7 @@ test('ASTRA webtoon prompts hold drawn surfaces and avoid duplicating action and
   scene.visual.camera.end = scene.shot.videoDesign.motion.beats[1].state;
   const prompt = assemble(win, 0).motionPrompt;
   assert.match(prompt, /^A continuous shot of hand-drawn 2D cel animation/);
-  assert.match(prompt, /faces, hands, hair, clothing and the illustrated background in every frame/);
+  assert.match(prompt, /objects and the illustrated environment in every frame/);
   assert.equal(prompt.split(scene.shot.videoDesign.action).length - 1, 1);
   assert.doesNotMatch(prompt, /Camera landing:/);
 });
@@ -114,7 +116,7 @@ test('ASTRA forwards the selected character appearance locks without dialogue-li
     other: { name: 'Absent Person', sheet: 'A red silk robe.' }
   };
   const prompt = assemble(win, 0).motionPrompt;
-  assert.match(prompt, /Appearance to preserve in every frame: A young man with black rectangular smart glasses and a navy hoodie/);
+  assert.match(prompt, /Appearance to preserve on visible parts only: A young man with black rectangular smart glasses and a navy hoodie/);
   assert.doesNotMatch(prompt, /Named Hero|Absent Person|red silk robe/);
   win.PRODUCTION.cast.hero.sheet = 'Black rectangular smart glasses stay visible. '.repeat(60);
   assert.throws(() => assemble(win, 0), /ASTRA.*2000/);

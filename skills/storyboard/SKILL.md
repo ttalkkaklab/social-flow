@@ -900,6 +900,20 @@ blocking the next authoring step or manufacturing a replacement score.
 
 ### 4.7 The board — your own read, then the checker
 
+Read [distinct-shot guidance](references/directing-grammar.md#distinct-shots-carry-distinct-information).
+Choose new information, its primary subject and necessary visible extent before shot size;
+see [size and readable information](references/directing-grammar.md#size-follows-the-information-the-viewer-must-read).
+Specify the crop of two-shots, OTS and POV separately, and match `shot.size` to the literal
+framing. A wide view cannot be judged by a tiny action it does not let the viewer read.
+Compare adjacent shots by what they reveal, not camera-move names. Split at meaningful
+performance beats instead of each speaker or message, and author `feel`, visible `space`
+and `edit.post` for those beats. Action/reaction never overrides the chosen shot size.
+Include expected crops and the previz → source → clip comparison in the produce handoff;
+report ungenerated assets as unreviewed. When the user requests an adversarial improvement
+loop, delegate that review and iterate against the requested rubric without turning its
+score into a general execution gate. The default review-count guidance above does not
+limit an explicitly requested loop.
+
 Read [retention-direction.md](references/retention-direction.md) §2–§5. Add its scene/group
 table to the existing "hand to produce" note, linking the opening promise to evidence,
 visible changes, supported sound events and the payoff. Check every row against scenes.js.

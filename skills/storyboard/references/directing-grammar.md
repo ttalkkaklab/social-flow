@@ -42,6 +42,101 @@ above (the `[study]` rows).
 
 ---
 
+## Distinct shots carry distinct information
+
+Choose boundaries when an action, discovery, relationship or emotional state changes.
+A speaker change, text message or subtitle boundary alone does not require a new shot.
+Several lines can play over one coherent action; preserve their attributed speech events.
+
+Before choosing movement, describe what the viewer sees now that the previous shot did
+not show. Compare neighboring frames by subject, scale, viewpoint, occupied screen area,
+foreground/background and visible action. A different move name or adjective does not
+make the same frontal phone-holding portrait a different composition. Keep a repeated
+frame when a callback, sustained reaction or deliberate comparison earns it; explain that
+purpose. Do not rotate angles or impose a minimum diversity count.
+
+Write `feel` for the beat's actual change and `space` for the actors and props visible in
+that frame. Do not copy a two-person layout into solo shots or reuse one mood across a
+changing scene. Derive `edit.post` from the gesture, reading time or reaction that needs
+room; a blanket pause after every sentence creates repeated waiting.
+
+`cutType: action` and `reaction` describe function, not size. A thumb pausing over Send
+can be a hand insert; a reaction can be a small figure facing an empty chair. Resolve
+contradictions among `size`, `space`, `videoDesign`, prompt and previz before handoff.
+
+Example: waiting at a table can show the empty opposite seat; sending the reply can show
+only hands and the phone; relief can end on a face as the phone drops out of view. Each
+frame reveals a different part of the beat without changing the scene's geography.
+
+When revising composition or visible actors, reconcile `visual.character`, cast references
+and partial appearances with what the frame actually shows; an offscreen speaker is not
+a visible actor, while a hand or shoulder still needs the correct identity. Recompile the
+image and video prompts from the revised plan. Do not carry an original `STORY.review`
+score or production approval forward as proof that the new plan was reviewed: mark
+superseded review evidence stale or unreviewed and preserve the original record as history.
+Existing authorization remains valid within its recorded scope; distinguish that authority
+from validation of changed inputs. These are revision and review practices, not new gates.
+
+### Size follows the information the viewer must read
+
+Choose in this order: **new information → primary subject → necessary visible extent →
+shot size**. An emotional change is information too: `feel` helps identify the expression
+or relationship the audience needs to see; it does not choose a distance independently of
+that subject. Name one primary visual task before adding context. Show enough surrounding
+space to understand it, then choose the crop that keeps it readable at the delivery size.
+
+| Primary information | Subject and extent to retain | Size decision |
+|---|---|---|
+| Hesitation or relief | The face and the expression that changes | A close view when a small expression carries the beat; include hands only if they contribute |
+| Contact or manipulation | Hand, tool, object and their contact point | An insert that shows the relevant relationship; do not force macro if it cuts off the target |
+| A changed object state | Food in the container, steam from a cooker, an empty compartment | Give the object enough frame area to establish that state; a person is optional |
+| Exchange or connection | Both participants and the object or gap between them | A two-shot at the distance needed for the exchange, often medium; head count does not require full bodies |
+| Place, isolation or an empty seat | The meaningful spatial relationship and its landmarks | A wider view when the space is the information; keep any essential object large enough to recognize |
+
+Two-shot, OTS and POV describe participant arrangement or viewpoint, not camera distance.
+Specify their crop explicitly: a waist-up two-shot differs from a full-body two-shot; an
+OTS may frame a face or hands. Existing composition labels remain supported, but they do
+not replace size decisions in `visual.camera.framing` and the prompt.
+
+Do not ask a wide master to prove a tiny thumb pause, subtle smile, loose screw or distant
+clock reading. Move closer, place the subject prominently in the foreground, or give the
+small action another beat. If a new room and a small table wobble both matter, establish
+the room and then show the fault, or choose a table-centered composition where the fault
+is legible. A low two-shot of seated and standing people plus distant steam needs a clear
+primary subject; it cannot give all three equal emphasis and assume each will read.
+
+Match `shot.size` with the literal crop in `visual.camera.framing`, the generated prompt
+and the previz. For example, waist-up MS and mid-thigh MFS are different instructions;
+calling either one a two-shot does not resolve the discrepancy. Inspect actual images at
+phone viewing size for the primary information, contact point and frame edges. Without
+those images, report a planning assessment only. A varied size list or a high text-review
+score cannot establish visual success. These are judgment criteria, with no fixed size
+quota, insert ratio or automatic quality gate.
+
+Episode-wide text bans must preserve essential visual information. A phone used for typing
+needs a believable active display: use a lit interface without readable lettering, or angle
+the screen toward its owner while keeping its active state apparent. Do not show a thumb
+entering a reply on a visibly powered-off screen. If the beat depends on a food photo, show
+the photo rather than hiding all screen content. Put essential readable messages in a
+separate editorial screen consistent with the no-marks-over-video rule; a ban on generated
+lettering is not a ban on photos, screen illumination or the object's usable state.
+
+### Follow composition through production
+
+The board handoff names the expected crop and visible subjects for each source image.
+Compare the previz first frame with the generated source and neighboring source images:
+are the subject scale, camera height/viewpoint, actor count, contact point and intended
+frame edges preserved? A hand insert that acquires a face and torso has lost its crop,
+even if the prompt still says insert. Fix the blocking if the previz itself is wrong;
+otherwise correct the source within the authorized generation scope before using it as
+the video start frame. Do not expect an image-to-video prompt to repair its input framing.
+
+Compare the clip's opening, middle and ending frames with those sources and watch playback
+for the planned action. Record which artifacts were inspected and which are absent.
+Storyboard-only review evaluates the plan; it cannot certify source fidelity or motion.
+These comparisons guide corrections and truthful findings, not automatic score gates or
+permission for additional paid generation.
+
 ## Contents
 
 - [1. Four dials, four fields — never merged](#1-four-dials-four-fields-never-merged)

@@ -487,7 +487,6 @@ function playbackShots(scenes) {
   return out;
 }
 
-const PEOPLE_CUT_TYPES = ['action', 'reaction', 'insert'];
 const EMPTY_CUT_TYPES = ['document', 'map', 'scenery'];
 const APPEARANCE_PATTERNS = APPEARANCE_WORDS.map((word) => ({
   word,
@@ -556,8 +555,6 @@ function perShotLookFindings(win, { bad, machine, warn }) {
         });
       }
 
-      if (PEOPLE_CUT_TYPES.includes(cutType) && Object.keys(cast).length && !refs.length)
-        bad(where, `[character-missing] ${cutType} cuts need visual.character when PRODUCTION.cast is not empty`);
       if (EMPTY_CUT_TYPES.includes(cutType) && refs.length)
         warn(where, `[character-on-empty-cut] ${cutType} cuts omit cast sheets and should not carry visual.character`);
 
@@ -3007,10 +3004,16 @@ function selftest() {
     return lookHas(perShot(repeated), 'bad', /\[appearance-redefined\].*sleeve/) &&
       !lookHas(perShot(perShotFixture()), 'bad', /\[appearance-redefined\]/);
   })());
-  ok('character-missing rejects an empty people cut and accepts an episode cast reference', (() => {
-    const missing = perShotFixture(); delete missing.SCENES[0].visual.character;
-    return lookHas(perShot(missing), 'bad', /\[character-missing\]/) &&
-      !lookHas(perShot(perShotFixture()), 'bad', /\[character-missing\]/);
+  ok('off-screen cast does not force a character into an object insert or action', (() => {
+    return ['insert', 'action', 'reaction'].every(cutType => {
+      const board = perShotFixture();
+      board.SCENES[0].shot.cutType = cutType;
+      board.SCENES[0].visual.character = null;
+      board.SCENES[0].narration = [{ speaker: 'yi', tts: 'He has set the table.', delivery: 'voiceover' }];
+      const findings = perShot(board);
+      return !lookHas(findings, 'bad', /\[character-missing\]/) &&
+        !lookHas(findings, 'warn', /\[character-missing\]/);
+    }) && !lookHas(perShot(perShotFixture()), 'bad', /\[character-missing\]/);
   })());
   ok('character-on-empty-cut warns on a document cast and accepts an empty document', (() => {
     const carried = perShotFixture(); carried.SCENES[0].shot.cutType = 'document';

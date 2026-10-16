@@ -726,15 +726,20 @@ episode opts in through `PRODUCTION.cast` or any cut type:
 
 | Value | Picture treatment | Cast behavior |
 |---|---|---|
-| `action` | full or medium figure with action space | `visual.character` required when the episode has cast |
-| `reaction` | watchers in a medium or medium-close view | `visual.character` required when the episode has cast |
-| `insert` | hands, feet or one prop in macro framing | `visual.character` required; face stays outside frame |
+| `action` | the contact or movement at the authored shot size; a hand action may be an insert | reference only characters visible in this shot |
+| `reaction` | the response at the authored shot size, from a hand tightening to a face or group | reference only characters visible in this shot |
+| `insert` | hands, feet, props or their relationship at the authored framing and depth | `visual.character` may be null for props only; reference a visible hand/foot owner when needed; face stays outside frame |
 | `document` | written record as a physical object | cast omitted |
 | `map` | overhead terrain, route and landmarks | cast omitted |
 | `scenery` | wide place, light or transition view | cast omitted |
 
-The preset stays constant while `cutType` changes composition, lens emphasis and material
-detail. `style.worlds[videoDesign.worldId]` optionally selects a set-specific world sentence;
+Narration speakers and people mentioned in dialogue do not imply an on-screen character.
+A pure object insert may use `visual.character: null` even when the episode has cast.
+A visible hand or foot may reference its owner for partial identity without adding their face.
+
+The preset stays constant while `cutType` describes subject treatment and dramatic function.
+`shot.size`, visible subjects and `shot.space` own the crop; action/reaction never overrides
+that composition. `style.worlds[videoDesign.worldId]` optionally selects a set-specific world sentence;
 the required `style.world` is the fallback.
 
 ### Conditional start/end images
@@ -837,6 +842,18 @@ shot: {
   judgment worth arguing with), `line` (a quotable sentence), `checklist` (a short list someone
   screenshots), `none` (this shot has nothing to forward). Optional, the way `infoType` is a
   vocabulary beside `info`.
+- **Size serves readable information.** Choose new information → primary subject →
+  necessary visible extent → size. Two-shot, OTS and POV name arrangement or viewpoint,
+  so also describe their actual crop. Keep `shot.size` and `visual.camera.framing` consistent;
+  a wide scene must not depend on an unreadably small gesture. See
+  [size guidance](directing-grammar.md#size-follows-the-information-the-viewer-must-read).
+- **Function does not set the crop.** `cutType: action` or `reaction` does not force a
+  full, medium or face shot. `size`, visible subjects and `space` describe the composition.
+  Keep these consistent with `videoDesign` and the previz. Author `feel`, visible actor
+  placement and `edit.post` per beat rather than filling every shot with episode defaults.
+  See [distinct-shot guidance](directing-grammar.md#distinct-shots-carry-distinct-information)
+  for boundaries, deliberate repetition and the previz/source/clip comparison. These are
+  review criteria, not a numerical diversity gate or new required metadata.
 - **Feel first, dials second.** Write `feel`, then pick `size`·`angle` (and `space` on a
   generated still, `camera` on a generated shot, `duration` on a clip) from the
   directing-grammar §5 table — the row is a default, and leaving it means writing why on the

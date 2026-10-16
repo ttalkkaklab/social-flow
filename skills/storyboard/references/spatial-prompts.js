@@ -64,24 +64,25 @@ function characterIds(value) {
 }
 // LTX takes the source frame, not a Seedance reference clip. Its 2000-character
 // request limit applies to the complete prompt; reject overflow without losing action beats.
-function astraMotionPrompt(d, camera, style, treatment, externalNarration, castAppearance = []) {
+function astraMotionPrompt(d, camera, style, treatment, externalNarration, castAppearance = [], hasVisibleCast = true) {
   const beats = d.motion?.kind === 'subject_action' ? d.motion.beats : [];
   const states = beats.length ? beatsInWords(beats)
     : 'At first, ' + clause(d.before) + '. Finally, ' + clause(finalState(d));
   const actionInBeats = beats.some(b => clause(b.state) === clause(d.action));
   const sameLanding = clause(camera.end) === clause(finalState(d));
   const prompt = [...(style.preset === 'webtoon' ? [
-    'A continuous shot of hand-drawn 2D cel animation. Black ink contours and flat shaded colour planes persist on faces, hands, hair, clothing and the illustrated background in every frame.'
+    'A continuous shot of hand-drawn 2D cel animation. Black ink contours and flat shaded colour planes persist on ' + (hasVisibleCast ? 'visible faces, hands, hair, clothing and the illustrated background' : 'objects and the illustrated environment') + ' in every frame.'
   ] : [treatment]),
     'Camera: ' + [camera.framing, camera.movement, camera.speed].map(clause).join('; ') + '.',
     ...(!actionInBeats ? ['Action: ' + clause(d.action) + '.'] : []), states + '.',
     ...(!sameLanding ? ['Camera landing: ' + clause(camera.end) + '.'] : []),
-    'The input image fixes identity, face, costume, proportions, materials and actor screen positions; preserve them while the planned action changes pose and location.',
+    hasVisibleCast ? 'The input image fixes identity, face, costume, proportions, materials and actor screen positions; preserve them while the planned action changes pose and location.'
+      : 'The input image fixes object identity, proportions, materials and spatial layout; preserve them while the planned physical changes unfold.',
     ...castAppearance,
     clause(d.continuity) + '.',
     'Episode camera language: ' + clause(style.camera) + '.',
-    ...(externalNarration ? ['The characters keep their mouths closed throughout their physical actions.'] : []),
-    'Animate through the last frame with stable anatomy and natural contact. No captions, subtitles, lettering, logos or overlays in any frame.'].join(' ');
+    ...(externalNarration && hasVisibleCast ? ['The characters keep their mouths closed throughout their physical actions.'] : []),
+    'Animate through the last frame with stable ' + (hasVisibleCast ? 'anatomy' : 'geometry') + ' and natural contact. No captions, subtitles, lettering, logos or overlays in any frame.'].join(' ');
   if (prompt.length > 2000)
     throw new Error('ASTRA motion prompt exceeds 2000 characters (' + prompt.length + '); shorten the action, motion beats or camera descriptions before generation');
   return prompt;
@@ -140,10 +141,10 @@ function assemble(win, index, dir) {
   const castPromptLines = appliesCutLook ? castLines(cast, castIds, cutType) : [];
   const castImageLines = castReferenceImages.map(ref => {
     const imageNumber = sourceReferenceImages.indexOf(ref.path) + 1;
-    return `The attached image ${imageNumber} is the approved appearance of ${ref.name}; keep face, costume and build and take nothing else from it.`;
+    return `The attached image ${imageNumber} is the approved appearance of ${ref.name}; preserve the identity of visible parts only. The shot framing controls which parts appear; this reference supplies appearance, not pose, framing or background.`;
   });
   const castLocks = activeCast.filter(({ entry }) => text(entry.name) && text(entry.sheet))
-    .map(({ entry }) => `${entry.name.trim()} keeps this exact appearance: ${entry.sheet}`);
+    .map(({ entry }) => `${entry.name.trim()} keeps this exact appearance on visible parts only, within the planned framing: ${entry.sheet}`);
   const perCutTreatment = appliesCutLook ? cutTreatment(preset, cutType) : '';
   const world = style.worlds?.[d.worldId] ?? style.world;
   const propPrompt = require('./prop-continuity.js').prompt(win, index);
@@ -158,6 +159,9 @@ function assemble(win, index, dir) {
     'Materials: ' + style.materials, 'Palette: ' + style.palette, 'Lighting: ' + style.lighting,
     'Camera language: ' + style.camera,
     'Camera composition: ' + camera.framing,
+    ...(scene.shot?.depth?.mode === 'deep' ? ['Depth: keep all planned planes sharp and readable together: ' + (scene.shot.depth.planes || []).join('; ') + '.'] : []),
+    ...(scene.shot?.depth?.mode === 'shallow' ? ['Depth: shallow focus on ' + (scene.shot.depth.focus || 'the planned subject') + '.'] : []),
+    ...(perCutTreatment || activeCast.length ? ['Framing priority: the shot camera composition controls crop, angle, subject scale and visible body parts. Cast sheets, cut-type notes and episode camera language supply appearance and intent only; keep off-frame body parts outside the image.' + (previzFrame ? ' The previz first frame must already match this composition; correct a conflicting previz before generating the source image.' : '')] : []),
     'Spatial continuity: ' + d.continuity,
     ...(locationRef ? [locationRef.prompt, 'Attached image ' + (sourceReferenceImages.indexOf(locationRef.paths[0]) + 1) + ' is the LOCATION reference (reference review: ' + (locationRef.approved ? 'reviewed' : 'not_reviewed or stale') + '). Preserve its camera and architecture.'] : []),
     'Keep the physical subject legible at phone size. The image contains only the scene; subtitles are added in editing.'].join('\n');
@@ -167,8 +171,8 @@ function assemble(win, index, dir) {
   const engine = v.video?.engine || v.engine || 'seedance';
   if (!missingSlots.length && engine === 'astra') {
     const astraAppearance = activeCast.filter(({ entry }) => text(entry.sheet))
-      .map(({ entry }) => 'Appearance to preserve in every frame: ' + clause(entry.sheet) + '.');
-    motionPrompt = astraMotionPrompt(d, camera, style, treatment, !!spoken.trim() && (scene.narration || []).every(n => n.delivery === 'voiceover' || (!n.delivery && (!n.speaker || n.speaker === win.SB_DOC?.narratorCharacterId))), [...astraAppearance, ...(propPrompt ? [propPrompt] : [])]) + locationLock;
+      .map(({ entry }) => 'Appearance to preserve on visible parts only: ' + clause(entry.sheet) + '.');
+    motionPrompt = astraMotionPrompt(d, camera, style, treatment, !!spoken.trim() && (scene.narration || []).every(n => n.delivery === 'voiceover' || (!n.delivery && (!n.speaker || n.speaker === win.SB_DOC?.narratorCharacterId))), [...astraAppearance, ...(propPrompt ? [propPrompt] : [])], castIds.length > 0) + locationLock;
     if(motionPrompt.length>2000)throw new Error('ASTRA motion prompt including location exceeds 2000 characters');
   } else if (!missingSlots.length) {
     const onReferenceRoute = previz && (v.video.engine || v.engine || 'seedance') !== 'host' && previzHandoff(scene) === 'reference_video';

@@ -103,14 +103,15 @@ uses `style.world`. Characters defined in `PRODUCTION.cast` keep one English app
 sentence across every cut where they appear. Put face, build, costume and personal props in
 that sheet instead of repeating them in `videoDesign` or `shot.space`.
 
-Each generated image or video cut declares `shot.cutType`. This changes framing and subject
-treatment inside the selected preset:
+Each generated image or video cut declares `shot.cutType`. This describes the subject
+and dramatic function inside the selected preset. `shot.size`, the visible subject and
+`shot.space` own the actual crop; an action or reaction does not imply a body shot:
 
 | `cutType` | Treatment | Episode cast sheet |
 |---|---|---|
-| `action` | full or medium figure with room for the action | included |
-| `reaction` | medium or medium-close view of the people watching | included |
-| `insert` | macro view of hands, feet or one prop, with the face outside frame | included, with the insert crop |
+| `action` | show the contact or movement at the authored shot size; a hand action may be an insert | included only where visible |
+| `reaction` | show the authored response at the chosen size, from a hand tightening to a face or group | included only where visible |
+| `insert` | focused view of hands, feet, props or their relationship; authored framing and depth, face outside frame | only for visible character parts; omitted for props alone |
 | `document` | book, scroll, letter or ledger as a physical object | omitted |
 | `map` | overhead terrain, route and landmarks | omitted |
 | `scenery` | wide place, light or transition view | omitted |
@@ -127,7 +128,9 @@ cut still provides `shot.videoDesign`'s look, before, action, after and continui
 `sourcePrompt` for the actual image generation and link the result into the storyboard HTML.
 Pass the returned `sourceImageArgs` without reordering it. The helper puts the previz frame
 first, then the miniature pack image when used, then each `PRODUCTION.cast[id].image` selected
-by `visual.character`. A cast image is optional; its `sheet` is required. Document, map and
+by `visual.character`. Pure object inserts may set it to null even when narration mentions
+a cast member. Visible hands or feet may reference their owner for partial identity; this
+does not add their face or body. A cast image is optional; its `sheet` is required. Document, map and
 scenery cuts receive no cast sheet or cast image.
 
 A cut that needs an end image edits the start image with `endFramePrompt`. Start and end keep
