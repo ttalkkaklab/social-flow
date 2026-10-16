@@ -1,0 +1,1 @@
+{"root":"/Users/zeans/.claude/plugins/cache/social-flow/social-flow/0.112.0-character.1","passed":true,"checks":["installed CLI state query","atomic write and backup","bundled MCP initialize/listTools","MCP propSheet schema","MCP read hash and ledger","MCP refuses invalid transfer without writing","MCP valid write and backup","MCP rejects stale hash"]}

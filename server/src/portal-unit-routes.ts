@@ -1,3 +1,4 @@
+import { encodePropTransport, decodePropTransport } from './prop-transport.js';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, extname } from 'node:path';
@@ -95,7 +96,7 @@ async function boardOperation(client:PortalClient,name:string,args:z.infer<typeo
   // One detail response contains the head and its raw meta/shots; do not mix separate head reads.
   const detail=episode as unknown as Record<string,unknown>;
   const meta=object(detail.meta ?? {});
-  const board:Board={...meta, SB_DOC:{...object(meta.SB_DOC ?? {}),backgrounds:detail.backgrounds,props:detail.props,characters:detail.characters,narratorCharacterId:detail.narratorCharacterId},SCENES:(detail.scenes as Array<{extra:never}>).map(s=>s.extra)};
+  const board:Board=decodePropTransport({...meta, SB_DOC:{...object(meta.SB_DOC ?? {}),backgrounds:detail.backgrounds,props:detail.props,characters:detail.characters,narratorCharacterId:detail.narratorCharacterId},SCENES:(detail.scenes as Array<{extra:never}>).map(s=>s.extra)});
   // Legacy boards without ids receive deterministic ids at this observed head.
   // A later write persists them under the same optimistic revision guard.
   const identified = (board.SCENES ?? []).some(shot => !shot.id)
@@ -125,7 +126,7 @@ async function boardOperation(client:PortalClient,name:string,args:z.infer<typeo
     if(chosen) writeFileSync(join(dir,'scenario.md'),await client.scenarioMd(args.episodeId,chosen.candidate));
     const check=checkStoryboard({path:file,draft:args.draft});
     if(check.violations) return {saved:false,headRevisionNo:head,check,...filledNote};
-    const {SCENES,SB_DOC,...nextMeta}=checked;
+    const {SCENES,SB_DOC,...nextMeta}=encodePropTransport(checked);
     // SB_DOC is metadata too; keep extensions such as imported registries.
     const {data}=await client.checkpoint(args.episodeId,{stage:episode.stage ?? 'board',baseRevisionNo:head,sourceHost:client.holder,note:args.note ?? name,scenes:SCENES,backgrounds:object(SB_DOC).backgrounds,props:object(SB_DOC).props,meta:{...nextMeta,SB_DOC},characters:object(SB_DOC).characters,narratorCharacterId:object(SB_DOC).narratorCharacterId});
     return {saved:true,...data,check,localCopy:{unchanged:true,syncRequired:true},...filledNote};

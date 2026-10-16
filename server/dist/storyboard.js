@@ -22,9 +22,10 @@
  * with check-scenes.js (node) and the approval page (browser); this module loads that file
  * at runtime from the plugin tree, the same way the bundle finds the skills it ships with.
  */
+import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { evaluateWindowScript } from './scenes-vm.js';
-import { existsSync, readFileSync, renameSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, renameSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import * as nodeModule from 'node:module';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -55,6 +56,9 @@ export function renderPurposes() {
 export function stillCameraEffectList() {
     const routing = loadFromHere(join(REFERENCES_DIR, 'render-routing.js'));
     return routing.STILL_CAMERA_EFFECTS;
+}
+export function propContract() {
+    return loadFromHere(join(REFERENCES_DIR, 'prop-continuity.js'));
 }
 // ── Schemas ─────────────────────────────────────────────────────
 const tuple = (list) => z.enum(list);
@@ -238,6 +242,11 @@ export const storyboardApplySchema = z.object({
     removeScenes: z.array(z.number().int().positive()).optional(),
     removeSequences: z.array(z.string()).optional(),
     globals: globalsSchema.optional().describe('Set other window.* blocks — FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, SFX, VOICE, MOTION_POLICY'),
+    expectedSha256: z.string().regex(/^[a-f0-9]{64}$/).optional().describe('Required for propSheet file edits; use the hash from storyboard_read'),
+    propSheet: z.object({
+        props: z.array(z.record(z.unknown())),
+        continuity: z.record(z.unknown()).optional(),
+    }).strict().optional().describe('Replace the prop registry and optional version:1 continuity ledger together. SB_DOC.characters must register every owner and holder. See prop-continuity.md'),
     dryRun: z.boolean().default(false).describe('Validate and report, write nothing'),
 });
 /** Accepts a storyboard directory or the scenes.js inside it. */
@@ -342,6 +351,9 @@ export function applyPatch(win, patch) {
                 throw new Error(`set ${k} through the dedicated fields, not globals`);
             next[k] = v;
         }
+    if (patch.propSheet)
+        next.SB_DOC = { ...(next.SB_DOC ?? {}),
+            props: patch.propSheet.props, propContinuity: patch.propSheet.continuity };
     if (patch.set) {
         next.STRUCTURE = patch.set.structure;
         next.SCENES = patch.set.shots.slice();
@@ -504,6 +516,7 @@ export function applyPatch(win, patch) {
         synced = contract().sync(next);
         findings.push(...contract().check(next, { draft: patch.draft }));
     }
+    findings.push(...propContract().check(next));
     return { win: next, findings, synced };
 }
 /** storyboard_apply — read, patch, validate, write unless a violation or a dry run. */
@@ -518,6 +531,14 @@ export function applyStoryboard(args) {
         throw new Error(`no scenes.js at ${file} — a new board is written with \`set\` (structure + shots)`);
     else if (!existsSync(dirname(file)))
         throw new Error(`directory does not exist: ${dirname(file)}`);
+    const original = exists ? readFileSync(file, 'utf8') : '';
+    const originalHash = createHash('sha256').update(original).digest('hex');
+    const previousDoc = win.SB_DOC;
+    const incomingDoc = args.globals?.SB_DOC;
+    const changesProps = !!args.propSheet || (!!args.globals && Object.prototype.hasOwnProperty.call(args.globals, 'SB_DOC')
+        && ['props', 'propContinuity'].some(key => JSON.stringify(previousDoc?.[key]) !== JSON.stringify(incomingDoc?.[key])));
+    if (changesProps && exists && args.expectedSha256 !== originalHash)
+        throw new Error('head_moved: propSheet requires the current expectedSha256 from storyboard_read');
     const { win: next, findings, synced } = applyPatch(win, args);
     const bad = findings.some((f) => f.level === 'bad');
     const st = next.STRUCTURE;
@@ -531,6 +552,15 @@ export function applyStoryboard(args) {
     // Same-directory temp file + rename: a crash mid-write never leaves a truncated scenes.js behind.
     const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
     try {
+        if (changesProps && exists) {
+            if (createHash('sha256').update(readFileSync(file)).digest('hex') !== originalHash)
+                throw new Error('head_moved');
+            const history = join(dirname(file), '.prop-history');
+            mkdirSync(history, { recursive: true });
+            const backup = join(history, originalHash + '.js');
+            if (!existsSync(backup))
+                writeFileSync(backup, original, { flag: 'wx' });
+        }
         writeFileSync(tmp, serializeBoard(next, header), 'utf8');
         renameSync(tmp, file);
     }

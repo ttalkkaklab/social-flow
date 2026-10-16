@@ -1139,6 +1139,10 @@ Portal reference: ttalkkak-story `d29f1a6`, DESIGN.md 1.2.0. See
 [local review design](skills/channel/references/local-review-design.md) for the
 reference, supported offline behavior and visual verification scope.
 
+### Prop sheets and story-time ownership
+
+Storyboards support independent owners and holders, initial states, atomic transfer/loss/damage events, flashbacks, and per-shot state assertions. The shared offline review has prop sheets and character/time filters. MCP edits require the current file hash; CLI edits also back up the original. See [prop continuity](skills/storyboard/references/prop-continuity.md) for authoring, production snapshots and the legacy portal metadata transport boundary.
+
 
 ### Character-led scenario authoring
 

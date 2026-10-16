@@ -265,3 +265,31 @@
 .review-guide-copy { display: block; margin: var(--review-s16) 0; color: var(--review-muted); font-size: var(--review-s14); line-height: 1.65; }
 .review-board .review-shots > .review-detail { margin: var(--review-s12) 0 var(--review-s20); padding: 0; border: 0; }
 .review-board .toolbar { margin-bottom: var(--review-s12); }
+
+.prop-sheet { margin-block: var(--review-s32); }
+.prop-controls { display: flex; flex-wrap: wrap; gap: var(--review-s16); }
+.prop-controls label { display: grid; gap: var(--review-s4); }
+.prop-sheet select, .prop-sheet button {
+  min-height: var(--review-s44);
+  max-width: 100%;
+  padding: var(--review-s8) var(--review-s12);
+  border: var(--review-s1) solid var(--review-line);
+  border-radius: var(--review-s8);
+  background: var(--review-white);
+  color: var(--review-fg);
+  font: inherit;
+}
+.prop-card {
+  margin-block: var(--review-s16);
+  padding: var(--review-s20);
+  border: var(--review-s1) solid var(--review-line);
+  border-radius: var(--review-s12);
+  background: var(--review-white);
+  overflow-wrap: anywhere;
+}
+.prop-card img { width: var(--review-s180); max-width: 100%; height: auto; }
+.prop-muted { color: var(--review-muted); }
+.prop-state { padding: var(--review-s12); background: var(--review-muted-surface); }
+.prop-card summary { cursor: pointer; min-height: var(--review-s44); }
+.prop-findings { padding: var(--review-s20); background: var(--review-muted-surface); }
+@media print { .prop-controls, .prop-sheet button { display: none; } }

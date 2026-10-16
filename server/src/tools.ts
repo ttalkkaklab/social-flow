@@ -5328,6 +5328,19 @@ Returns: the file written or not, counts, and findings (! violation · warning).
         removeScenes: { type: 'array', items: { type: 'number', description: 'Scene number' }, description: 'Scene numbers to drop from STRUCTURE.scenes and from every sequence' },
         removeSequences: { type: 'array', items: { type: 'string', description: 'Sequence id' }, description: 'Sequence ids to drop' },
         globals: { type: 'object', description: 'Other window.* blocks to set — FORMAT, THEME, COMPREHENSION, STORY, PRODUCTION, MUSIC, SFX, VOICE, MOTION_POLICY. MUSIC.$mix is optional sound-design metadata; SFX keeps logical asset ids only. PRODUCTION.mode: full_video, video_80, video_50, video_30, video_lt10, no_video (hook_only/stills_only/hybrid are legacy). New selections write renderRatioVersion:1.' },
+        expectedSha256: { type: 'string', pattern: '^[a-f0-9]{64}$', description: 'Current scenes.js hash from storyboard_read; required when editing propSheet on an existing board.' },
+        propSheet: { type: 'object', additionalProperties: false, required: ['props'], description: 'Replace the complete prop sheet atomically. Keep other editorial metadata. Changes validate story-time custody and invalidate approval; original file is backed up.', properties: {
+          props: { type: 'array', description: 'Complete prop registry for this board', items: { type: 'object', additionalProperties: true, required: ['id'], properties: {
+            id: { type: 'string', description: 'Stable prop identity' }, name: { type: 'string', description: 'Display name' }, description: { type: 'string', description: 'Stable appearance, material and identifying features' },
+            tracking: { type: 'string', description: 'Appearance alone or time-dependent continuity', enum: ['appearance', 'continuity'] }, appearanceVersion: { type: 'string', description: 'Pinned reference appearance revision' },
+            references: { type: 'array', description: 'Versioned appearance images, optionally specific to a condition', items: { type: 'object', required: ['path','version'], properties: { path: {type:'string',description:'Storyboard-relative image path'}, version: {type:'string',description:'Reference image version'}, condition: {type:'string',description:'State condition this reference depicts'} } } },
+          } } },
+          continuity: { type: 'object', description: 'Initial states and ordered story events; omitted for appearance-only registries', required: ['version','timelineId','initial','events'], additionalProperties: true, properties: {
+            version: { type: 'integer', enum: [1], description: 'Contract version 1' }, timelineId: { type: 'string', description: 'Stable story timeline identity, independent of playback order' },
+            initial: { type: 'array', items: { type: 'object' }, description: 'Each: {propId,at:{day,order},state:{ownerId,holderId,location,condition}}. owner/holder is a registered character id, null (none) or unknown.' },
+            events: { type: 'array', items: { type: 'object' }, description: 'Each: {id,propId,kind,at:{day,order},from,to,reason,recordedAt,recordedBy,shotIds?}. Kinds transfer/lend/return/pick_up/put_down/lose/damage/repair/move/correct. from asserts every changed field. Story time is independent of shot order.' },
+          } },
+        } },
         dryRun: { type: 'boolean', description: 'Validate and report, write nothing' },
         draft: { type: 'boolean', description: 'The story pass (storyboard §4a): camera-continuity records — shot.lineCrossing, shot.coverage — are deferred (later), not violations; leave it off in §4b' },
       },

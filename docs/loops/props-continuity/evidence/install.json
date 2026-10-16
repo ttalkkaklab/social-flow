@@ -1,0 +1,22 @@
+{
+  "installedAt": "2026-10-16T08:11:24.620Z",
+  "source": "/Users/zeans/.local/state/social-flow-props/builds/2026-10-16-final",
+  "plan": "/Users/zeans/.local/state/social-flow-props/plan-2026-10-16T08-11-23-884Z.json",
+  "installations": [
+    {
+      "target": "/Users/zeans/.codex/plugins/cache/social-flow/social-flow/0.112.0-character.1",
+      "backup": "/Users/zeans/.local/state/social-flow-props/backups/2026-10-16T08-11-23-884Z/0",
+      "verifiedFiles": 740
+    },
+    {
+      "target": "/Users/zeans/.claude/plugins/cache/social-flow/social-flow/0.112.0-character.1",
+      "backup": "/Users/zeans/.local/state/social-flow-props/backups/2026-10-16T08-11-23-884Z/1",
+      "verifiedFiles": 740
+    },
+    {
+      "target": "/Users/zeans/.local/share/social-flow/character-verified-0.112.0-character.1",
+      "backup": "/Users/zeans/.local/state/social-flow-props/backups/2026-10-16T08-11-23-884Z/2",
+      "verifiedFiles": 740
+    }
+  ]
+}

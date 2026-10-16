@@ -1,3 +1,4 @@
+import { restorePropSource } from './prop-transport.js';
 import { portalDecisionsSchema, readDecisions } from './portal-decisions.js';
 import { REVIEW_TOOL_NAMES } from './portal-review-tools.js';
 import { UNIT_TOOL_NAMES } from './portal-unit-tools.js';
@@ -682,7 +683,7 @@ export function portalHandlers(fetchImpl?: FetchLike): PortalHandlers {
         const dir = episodeDirOf(targetDir);
         const sb = path.join(dir, 'storyboard');
         const fileContents = new Map<string, string>();
-        fileContents.set('scenes.js', await c.scenesJs(episodeId, revision));
+        fileContents.set('scenes.js', restorePropSource(await c.scenesJs(episodeId, revision)));
         let decisions = portalDecisionsSchema.parse(revision ? [] : (episode.decisions ?? []));
 
         if (revision) {
