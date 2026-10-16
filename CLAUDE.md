@@ -199,6 +199,16 @@ The builder reruns source-plan checks and records its version and input hashes b
 
 ## Host media tools first (user directive, 2026-09-07)
 
+**Directory model selection (user directive, 2026-10-16) supersedes automatic routing.**
+Once the working directory is known, follow `skills/_shared/model-settings.md`: ask
+for video, speech and image models once, save `.social-flow/models.json`, and use
+those settings for subsequent episodes until the user explicitly requests a change.
+Host-first is an initial recommendation, not a reason to replace a saved choice.
+Snapshot settings per episode; preserve existing approved work and explicit voice
+exceptions. Do not repeat model questions or silently switch engines after failures.
+Initial setup is an explicit preference step, including on interactive autoproduce;
+unattended callers without settings defer production with `model_setup_required`.
+
 When the CLI running a skill ships its own media generation, that tool comes before the
 plugin's API lanes. Codex and Grok expose `image_gen` (Grok also `image_edit`), so every
 generated still, slide art, candidate logo, intro keyframe and growth-post image goes there

@@ -24,6 +24,12 @@ then only from the fields — never by editing the stored string by hand.
 
 ## 1. Which engine, and why
 
+First resolve [directory model settings](../../_shared/model-settings.md). Use the
+episode snapshot's image engine/model/quality and explicit user overrides for every
+new still. The host preference and API table below are first-setup recommendations
+only when no choice exists. A saved API/local choice overrides host detection;
+missing tools, failed calls and unsupported edits do not authorize substitution.
+
 ### The host image tool comes first (owner directive 2026-09-07)
 
 The storyboard wrote `PRODUCTION.imageProvider` from the tool list of the CLI it ran in
@@ -95,8 +101,8 @@ something nobody approved.**
 `mlx_image_generate` / `mlx_image_edit` are an optional extra local lane when MLX Core is up.
 They do not replace Z-Image as the default and they do not take Hangul; the plugin never
 launches the app, so a down `:11234` fails closed. On a machine without mflux,
-`image_local_generate` fails with install instructions — fall back to `gpt_image_text2img`
-(quality `"low"`) for that episode only, and say so in the completion report.
+`image_local_generate` fails with install instructions — report the unavailable
+selected engine and request an explicit alternative before any GPT Image call.
 
 **Backgrounds that become video sources** — a scene with b-roll attached, a motion-background
 scene — are made on gpt high or the host image tool, never the local engine, with something

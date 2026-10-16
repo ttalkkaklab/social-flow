@@ -27,6 +27,13 @@ a mixed-speaker WAV to the single-speaker builder. Its file/timing checks are no
 
 ## Common voice layer
 
+For new episodes, apply [directory model settings](../../_shared/model-settings.md)
+before selecting speaker voices. Use its speech engine/model for new `tts` records
+and retain only explicit character exceptions. Existing episode snapshots and
+pinned voices survive default-model updates; resolve incompatible voices with the
+user rather than silently changing engine, voice ID or model. Pass a selectable
+model explicitly to the raw tool so its own default cannot drift between episodes.
+
 Resolve speaker to character.tts. Generate with the corresponding raw engine tool, not
 `tts_generate_checked`. Save a generation receipt beside each scene WAV as `.generation.json`
 with generator, voiceSettings (the actual arguments), generationSpeed, playbackSpeed:1,
