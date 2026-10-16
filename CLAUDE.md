@@ -236,6 +236,13 @@ consent when a key exists. Local mode skips all portal calls and generation-tool
 arguments. Always use the same storyboard review design as ttalkkakstory; storage does not
 select a layout. Follow `skills/storyboard/references/storyboard-design.md` for template upkeep.
 
+## GitHub authentication
+
+For this repository, prefer `TTALKKAKLAB_GITHUB_TOKEN`. Apply it to both `GH_TOKEN`
+and `GITHUB_TOKEN` only in the Git/gh command environment, as described in
+`AGENTS.md`. Check the account and repository push permission before publishing
+branches or merging PRs. Never log, persist or embed the token in a remote URL.
+
 ## Branch strategy
 
 ```
