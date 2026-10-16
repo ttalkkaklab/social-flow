@@ -39,6 +39,15 @@ and dialogue precede camera details; checks and costs stay reachable from the au
 shortcut. Print expands the review disclosures. Preserve all metadata, previews,
 checks and event handlers when changing layout.
 
+Each spoken line shows its speaker's profile image and name, delivery label, and speech
+bubble in the existing reveal order. Prefer the explicit face panel, then an existing channel
+face image, then the production cast image; a missing image shows the speaker's initial.
+An absent speaker is displayed as unassigned unless a legacy narrator was explicitly set.
+Keep spoken wording, alternate subtitle wording and optional `deliveryReason` visible.
+Narrator-only explainers are supported; drama distinguishes on-screen dialogue from
+purposeful off-screen lines. Silent shots show “No dialogue”. These are review elements,
+not overlays burned onto the video. Refresh existing boards with the same generator.
+
 Character changes refresh `skills/channel/references/review-library.js <channelDir>`.
 Follow [local review design](../../channel/references/local-review-design.md) for
 shared assets, historical design provenance and viewport/interaction regression checks.

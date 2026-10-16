@@ -39,8 +39,21 @@ function storyboardHtml(directory, check = false) {
   const current = fs.existsSync(target) ? fs.readFileSync(target, 'utf8') : null;
   const html = current === null ? template : refreshHtml(template, current);
   const available = ['storyboard.md', 'script.md', 'research.md', 'scenes.js'].filter(name => fs.existsSync(path.join(dir, name)));
-  const locationData = fs.existsSync(path.join(dir, 'scenes.js')) ? require('./location-assets.js').preview(require('../../autoproduce/references/cost-preview.js').readScenes(path.join(dir, 'scenes.js')), dir) : [];
-  const files = [['location-review-data.js', 'window.LOCATION_REVIEW = ' + JSON.stringify(locationData).replace(/</g, '\\u003c') + ';\n'], ['storyboard.html', html], ['review-files.js', 'window.REVIEW_FILES = ' + JSON.stringify(available) + ';\n'], ...HELPERS.map(name => [name, fs.readFileSync(path.join(__dirname, name))]),
+  const win = fs.existsSync(path.join(dir, 'scenes.js')) ? require('../../autoproduce/references/cost-preview.js').readScenes(path.join(dir, 'scenes.js')) : null;
+  const locationData = win ? require('./location-assets.js').preview(win, dir) : [];
+  const portraits = {};
+  const typeLabels = Object.fromEntries(require('../../_shared/video-types.json').types.map(type => [type.id, type.label]));
+  const characters = win?.SB_DOC?.characters || [];
+  const ids = Array.isArray(characters) ? characters.map(c => c?.id) : Object.keys(characters);
+  for (const id of ids) {
+    if (typeof id !== 'string' || !/^[A-Za-z0-9_-]+$/.test(id)) continue;
+    const face = '../../../assets/characters/' + id + '/face.png';
+    if (fs.existsSync(path.resolve(dir, face))) portraits[id] = face;
+  }
+  const reviewData = 'window.REVIEW_FILES = ' + JSON.stringify(available) + ';\n' +
+    'window.REVIEW_CHARACTER_PORTRAITS = ' + JSON.stringify(portraits).replace(/</g, '\\u003c') + ';\n' +
+    'window.REVIEW_VIDEO_TYPES = ' + JSON.stringify(typeLabels).replace(/</g, '\\u003c') + ';\n';
+  const files = [['location-review-data.js', 'window.LOCATION_REVIEW = ' + JSON.stringify(locationData).replace(/</g, '\\u003c') + ';\n'], ['storyboard.html', html], ['review-files.js', reviewData], ...HELPERS.map(name => [name, fs.readFileSync(path.join(__dirname, name))]),
     ...ASSETS.map(name => [name, fs.readFileSync(path.join(REVIEW_ASSETS, name))])];
   const changed = files.filter(([name, content]) => {
     const file = path.join(dir, name);

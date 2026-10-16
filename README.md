@@ -1,7 +1,10 @@
 # social-flow
 
-At first video production in a working directory, choose the video, speech and
-image models in that order. The choices are saved in `.social-flow/models.json`
+At first setup in a working directory, choose the video type, then the video,
+speech and image models. The [type catalog](skills/_shared/video-types.md) covers
+drama, comedy, documentary, explainer, tutorial, review, interview, vlog,
+advertisement, music video and custom/hybrid, with each choice's speech direction
+shown before selection. The choices are saved in `.social-flow/models.json`
 and reused for subsequent episodes until you explicitly request a change. Each
 episode snapshots its settings in `.work/model-settings.json`, so a later default
 change does not alter an episode already in progress. An unavailable model is

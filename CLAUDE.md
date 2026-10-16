@@ -201,11 +201,18 @@ The builder reruns source-plan checks and records its version and input hashes b
 
 **Directory model selection (user directive, 2026-10-16) supersedes automatic routing.**
 Once the working directory is known, follow `skills/_shared/model-settings.md`: ask
-for video, speech and image models once, save `.social-flow/models.json`, and use
+for the video type first (drama, comedy, documentary, explainer and the researched
+catalog's other options), then video, speech and image models once. Save all choices
+in `.social-flow/models.json`, and use
 those settings for subsequent episodes until the user explicitly requests a change.
 Host-first is an initial recommendation, not a reason to replace a saved choice.
 Snapshot settings per episode; preserve existing approved work and explicit voice
 exceptions. Do not repeat model questions or silently switch engines after failures.
+The type guides speech: narrator-only explainers are valid; drama normally shows
+characters physically speaking, with off-screen dialogue reserved for a purpose.
+Keep narrator roles, inner thoughts and messages explicit. Existing settings missing
+only the type ask only that choice for a new episode; existing episode resumes retain
+their original snapshot. The type is independent of the visual style and output format.
 Initial setup is an explicit preference step, including on interactive autoproduce;
 unattended callers without settings defer production with `model_setup_required`.
 

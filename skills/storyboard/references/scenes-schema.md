@@ -872,6 +872,16 @@ narration: [
 ]
 ```
 
+Choose delivery from the story: an explainer can be all narrator `voiceover`; drama uses
+`on_screen` for visible characters physically speaking to each other. Reserve `off_screen`
+for a motivated listener reaction, insert or speaker outside the frame. Visible narrators,
+inner thoughts and text messages may use `voiceover`; physical presentation to camera uses
+`on_screen`. Optional `deliveryReason` explains an exception on the review card. Do not
+replace an entire dramatic exchange with closed-mouth action to avoid lip synchronization.
+The review renders lines in order with the speaker's profile image, name and delivery label
+beside a speech bubble. A shot without lines displays “No dialogue”; it does not acquire a
+narrator automatically. See [shot speech](../../produce/references/shot-speech.md).
+
 The board may describe exchanges; before the current single-speaker scene builder runs,
 split speaker changes into consecutive shots preserving these line ids.
 
