@@ -73,7 +73,7 @@ function identityVoice(source) {
 
 function boardVoiceErrors(win) {
   if (!win || typeof win !== 'object') return ['Storyboard must be an object'];
-  const errors = [];
+  const errors = require('./character-identity.js').boardIdentityErrors(win);
   const entries = win.SB_DOC?.characters;
   if (entries != null && (typeof entries !== 'object')) return ['SB_DOC.characters must be an array or object'];
   if (win.SCENES != null && !Array.isArray(win.SCENES)) return ['SCENES must be an array'];

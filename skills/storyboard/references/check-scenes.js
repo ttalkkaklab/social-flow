@@ -3089,6 +3089,8 @@ function main() {
     : normalizeMotionPolicy(null, formatVideoMax, 'format default', fmt.pacing, isShort);
   const findings = check(win, fmt, { draft, policy: effectivePolicy, requireRenderPlan: true,
                                      channelDir: profilePath ? path.dirname(profilePath) : null });
+  require('../../channel/references/character-sheet.js').sourceErrors(win, path.dirname(scenesPath)).forEach(what =>
+    findings.push({ level: 'bad', where: 'character identity', what }));
   require('./render-routing.js').checkEpisode(win).forEach(what =>
     findings.push({ level: 'bad', where: 'visual direction', what }));
   // Draft validates the plan; full production also requires a current evidence-backed read.

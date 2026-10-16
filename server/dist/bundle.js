@@ -51845,6 +51845,157 @@ var require_tts_speed_policy = __commonJS({
   }
 });
 
+// ../skills/_shared/character-identity.js
+var require_character_identity = __commonJS({
+  "../skills/_shared/character-identity.js"(exports, module) {
+    "use strict";
+    var GROUPS = [
+      ["identity", "\uAE30\uBCF8 \uC124\uC815", "Identity", [
+        ["species", "\uC885\uC871 \xB7 \uC720\uD615", "Species / type"],
+        ["age", "\uB098\uC774 \xB7 \uC5F0\uB839\uB300", "Age"],
+        ["role", "\uC5ED\uD560", "Role"],
+        ["summary", "\uD55C \uC904 \uC18C\uAC1C", "Summary"]
+      ]],
+      ["physical", "\uC2E0\uCCB4\uC640 \uC678\uD615", "Body and appearance", [
+        ["heightCm", "\uD0A4 (cm)", "Height (cm)", "number"],
+        ["weightKg", "\uBAB8\uBB34\uAC8C (kg)", "Weight (kg)", "number", true],
+        ["relativeScale", "\uC0C1\uB300 \uD06C\uAE30", "Relative scale"],
+        ["build", "\uCCB4\uD615", "Build"],
+        ["proportions", "\uB4F1\uC2E0 \xB7 \uBE44\uC728", "Proportions"],
+        ["appearance", "\uC0C9 \xB7 \uC7AC\uC9C8 \xB7 \uC2DD\uBCC4 \uD2B9\uC9D5", "Colors, materials and landmarks"],
+        ["outfit", "\uAE30\uBCF8 \uC758\uC0C1", "Default outfit"],
+        ["props", "\uB300\uD45C \uC18C\uD488", "Props", "list", true]
+      ]],
+      ["personality", "\uC131\uACA9\uACFC \uB3D9\uAE30", "Personality and motivation", [
+        ["traits", "\uC131\uD5A5\uACFC \uD589\uB3D9 \uC608\uC2DC", "Traits with behavioral examples", "list"],
+        ["goal", "\uBAA9\uD45C \xB7 \uB3D9\uAE30", "Goal / motivation"],
+        ["flaw", "\uC57D\uC810", "Flaw"],
+        ["fear", "\uB450\uB824\uC6C0", "Fear"]
+      ]],
+      ["speech", "\uB9D0\uD22C\uC640 \uC74C\uC131 \uC5F0\uAE30", "Speech and voice direction", [
+        ["register", "\uC874\uB313\uB9D0 \xB7 \uBC18\uB9D0", "Register"],
+        ["vocabulary", "\uC5B4\uD718 \xB7 \uBB38\uC7A5 \uAE38\uC774", "Vocabulary and sentence length"],
+        ["habits", "\uB9D0\uBC84\uB987", "Speech habits"],
+        ["avoid", "\uD53C\uD558\uB294 \uD45C\uD604", "Avoided expressions", "list"],
+        ["examples", "\uC608\uC2DC \uB300\uC0AC", "Example dialogue", "list"],
+        ["timbre", "\uC74C\uC0C9 \xB7 \uB192\uB0AE\uC774", "Timbre / pitch"],
+        ["pace", "\uC18D\uB3C4 \xB7 \uC5B5\uC591", "Pace / accent"],
+        ["emotion", "\uAC10\uC815\uBCC4 \uC74C\uC131 \uBCC0\uD654", "Emotional delivery"]
+      ]],
+      ["acting", "\uD45C\uC815\uACFC \uB3D9\uC791", "Expressions and movement", [
+        ["baseline", "\uAE30\uBCF8 \uD45C\uC815 \xB7 \uC790\uC138", "Default expression / posture"],
+        ["reactions", "\uAC10\uC815\uBCC4 \uBC18\uC751", "Emotional reactions", "list"],
+        ["movement", "\uAC78\uC74C\uAC78\uC774 \xB7 \uBAB8\uC9D3", "Gait / gestures"]
+      ]],
+      ["story", "\uAD00\uACC4\uC640 \uBC30\uACBD", "Relationships and background", [
+        ["relationships", "\uAD00\uACC4 \xB7 \uD638\uCE6D \xB7 \uD0DC\uB3C4", "Relationships, address and attitude", "list", true],
+        ["backstory", "\uBC30\uACBD \xB7 \uACFC\uAC70", "Backstory", "text", true],
+        ["arc", "\uC131\uC7A5 \xB7 \uBCC0\uD654", "Character arc", "text", true]
+      ]],
+      ["continuity", "\uC124\uC815 \uC720\uC9C0", "Continuity", [
+        ["invariants", "\uBCC0\uACBD \uAE08\uC9C0 \uD2B9\uC9D5", "Invariants", "list"],
+        ["variants", "\uD5C8\uC6A9\uD558\uB294 \uBCC0\uD615", "Allowed variants", "list", true]
+      ]]
+    ];
+    var object5 = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
+    var text2 = (v) => typeof v === "string" && v.trim().length > 0 && v.length <= 2e3;
+    var placeholder = (v) => typeof v === "string" && /^(?:tbd|todo|unknown|미정|추후|<[^>]+>|\{\{.*\}\})$/i.test(v.trim());
+    function identityErrors(character, { ready = true } = {}) {
+      if (!object5(character)) return ["character: structured identity is required (migrate legacy identity.md explicitly)"];
+      const errors = [];
+      if (character.schemaVersion !== 1) errors.push("character.schemaVersion must be 1");
+      if (!Number.isInteger(character.version) || character.version < 1) errors.push("character.version must be a positive integer");
+      for (const key of Object.keys(character)) if (!["schemaVersion", "version", ...GROUPS.map((g) => g[0])].includes(key)) errors.push(`character.${key}: unknown field`);
+      for (const [group, , , fields2] of GROUPS) {
+        if (!object5(character[group])) {
+          errors.push(`character.${group}: required group`);
+          continue;
+        }
+        for (const key of Object.keys(character[group])) if (!fields2.some((f3) => f3[0] === key)) errors.push(`${group}.${key}: unknown field`);
+        for (const [key, , , type = "text", optional2 = false] of fields2) {
+          const p = `${group}.${key}`, f3 = character[group][key];
+          if (!object5(f3)) {
+            errors.push(`${p}: expected {status, value, reason?}`);
+            continue;
+          }
+          for (const k of Object.keys(f3)) if (!["status", "value", "reason"].includes(k)) errors.push(`${p}.${k}: unknown field`);
+          if (!["confirmed", "pending", "not_applicable"].includes(f3.status)) {
+            errors.push(`${p}: invalid status`);
+            continue;
+          }
+          if (f3.status !== "confirmed") {
+            if (f3.value !== null || !text2(f3.reason)) errors.push(`${p}: unresolved or inapplicable fields need value:null and a reason`);
+            if (f3.status === "pending" && ready) errors.push(`${p}: pending`);
+            if (f3.status === "not_applicable" && !optional2) errors.push(`${p}: cannot be not_applicable`);
+            continue;
+          }
+          const valid = type === "number" ? typeof f3.value === "number" && Number.isFinite(f3.value) && f3.value > 0 : type === "list" ? Array.isArray(f3.value) && f3.value.length > 0 && f3.value.length <= 20 && f3.value.every((v) => text2(v) && !placeholder(v)) : text2(f3.value) && !placeholder(f3.value);
+          if (!valid) errors.push(`${p}: expected ${type === "number" ? "a positive finite number" : type}, without placeholders`);
+          if (f3.reason !== void 0 && !text2(f3.reason)) errors.push(`${p}: reason must be nonempty text`);
+        }
+      }
+      return errors;
+    }
+    function identityCharacter(source, options) {
+      const values = [];
+      for (const m2 of source.matchAll(/```json\s*\n([\s\S]*?)```/g)) {
+        let v;
+        try {
+          v = JSON.parse(m2[1]);
+        } catch {
+          throw new Error("Invalid JSON in character identity");
+        }
+        if (object5(v) && Object.hasOwn(v, "character")) values.push(v.character);
+      }
+      if (values.length !== 1) throw new Error("identity.md must contain exactly one JSON block with character");
+      const errors = identityErrors(values[0], options);
+      if (errors.length) throw new Error(errors.join("; "));
+      return values[0];
+    }
+    function direction(character) {
+      const errors = identityErrors(character);
+      if (errors.length) throw new Error(errors.join("; "));
+      const lines = (groups) => GROUPS.filter((g) => groups.includes(g[0])).flatMap(([group, , , fields2]) => fields2.flatMap(([key, , label]) => {
+        const field = character[group][key];
+        return field.status === "confirmed" ? [`${label}: ${Array.isArray(field.value) ? field.value.join("; ") : field.value}`] : [];
+      })).join("\n");
+      return {
+        image: lines(["identity", "physical", "continuity"]),
+        video: lines(["physical", "personality", "acting", "continuity"]),
+        dialogue: lines(["identity", "personality", "speech", "story"]),
+        voice: lines(["speech"])
+      };
+    }
+    function boardIdentityErrors(win) {
+      const entries = win?.SB_DOC?.characters;
+      const chars = Array.isArray(entries) ? entries : Object.entries(entries || {}).map(([id, c]) => ({ ...c, id }));
+      const required3 = win?.SB_DOC?.characterSchemaVersion === 1;
+      const errors = [];
+      if (win?.SB_DOC?.characterSchemaVersion !== void 0 && !required3) errors.push("Unsupported SB_DOC.characterSchemaVersion");
+      for (const c of chars) {
+        if (!required3 && c?.character === void 0) continue;
+        const issues = identityErrors(c?.character);
+        errors.push(...issues.map((e2) => `Character ${c?.id}: ${e2}`));
+        if (!issues.length && Object.entries(direction(c.character)).some(([key, value]) => c.direction?.[key] !== value)) errors.push(`Character ${c.id}: direction does not match structured identity; regenerate handoff`);
+        if (!/^[a-f0-9]{64}$/.test(c?.identitySha256 || "")) errors.push(`Character ${c?.id}: identitySha256 is required`);
+      }
+      return errors;
+    }
+    function portalIdentityFields3(source) {
+      const structured = [...source.matchAll(/```json\s*\n([\s\S]*?)```/g)].some((m2) => {
+        const value = JSON.parse(m2[1]);
+        return object5(value) && Object.hasOwn(value, "character");
+      });
+      if (!structured) return {};
+      const c = identityCharacter(source);
+      const role = c.identity.role.value, appearance = c.physical.appearance.value;
+      if (role.length > 500) throw new Error("Character role exceeds portal limit of 500 characters");
+      return { role, appearance };
+    }
+    module.exports = { GROUPS, identityErrors, identityCharacter, direction, boardIdentityErrors, portalIdentityFields: portalIdentityFields3 };
+  }
+});
+
 // node_modules/openai/internal/tslib.mjs
 function __classPrivateFieldSet(receiver, state, value, kind, f3) {
   if (kind === "m")
@@ -64418,7 +64569,7 @@ var require_character_voice = __commonJS({
     }
     function boardVoiceErrors(win) {
       if (!win || typeof win !== "object") return ["Storyboard must be an object"];
-      const errors = [];
+      const errors = require_character_identity().boardIdentityErrors(win);
       const entries = win.SB_DOC?.characters;
       if (entries != null && typeof entries !== "object") return ["SB_DOC.characters must be an array or object"];
       if (win.SCENES != null && !Array.isArray(win.SCENES)) return ["SCENES must be an array"];
@@ -92797,6 +92948,7 @@ import { copyFileSync, mkdirSync as mkdirSync6, mkdtempSync as mkdtempSync5, rea
 import path16 from "node:path";
 
 // src/portal-characters.ts
+var import_character_identity2 = __toESM(require_character_identity(), 1);
 import { existsSync as existsSync15, readFileSync as readFileSync13 } from "node:fs";
 import path15 from "node:path";
 
@@ -92808,6 +92960,7 @@ import path14 from "node:path";
 // src/portal-episode.ts
 import { existsSync as existsSync13, lstatSync, readFileSync as readFileSync11, writeFileSync as writeFileSync9 } from "node:fs";
 import path13 from "node:path";
+var import_character_identity = __toESM(require_character_identity(), 1);
 var EPISODE_STATUSES = ["draft", "approved", "produced", "published"];
 var EPISODE_STAGES = ["researched", "candidates", "scenario", "narration", "board", "approved", "produced", "published"];
 var SCENARIO_CANDIDATES = ["D1", "D2", "D3"];
@@ -93000,6 +93153,7 @@ function collectCharacters(scenes, sbDoc, channelDir) {
       const look = /\*\*생김새\*\*:\s*(.+)/.exec(text2)?.[1];
       if (role) detail.role = role.trim();
       if (look) detail.appearance = look.trim();
+      Object.assign(detail, (0, import_character_identity.portalIdentityFields)(text2));
     }
     return detail;
   });
@@ -93238,7 +93392,7 @@ function readIdentity(dir) {
   const heading = /^#\s+(.+?)\s*(?:\(([^)]*)\))?\s*$/m.exec(text2)?.[1]?.trim();
   const role = /\*\*역할\*\*:\s*(.+)/.exec(text2)?.[1]?.trim();
   const appearance = /\*\*생김새\*\*:\s*(.+)/.exec(text2)?.[1]?.trim();
-  return { key, ...heading ? { name: heading } : {}, ...role ? { role } : {}, ...appearance ? { appearance } : {} };
+  return { key, ...heading ? { name: heading } : {}, ...role ? { role } : {}, ...appearance ? { appearance } : {}, ...(0, import_character_identity2.portalIdentityFields)(text2) };
 }
 var summarize = (c) => ({
   id: c.id,

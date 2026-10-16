@@ -1149,6 +1149,15 @@ content; fictional events need internal consistency, not search quotas or fabric
 `narration[]`/`speaker` production contract. See the [authoring and review contract](skills/storyboard/references/character-scenarios.md).
 Existing unversioned scenarios and story-v1 boards retain their checks.
 
+### Structured character identity
+
+New and updated character sheets carry explicit personality, measurements, speech,
+acting, relationships and continuity fields, each confirmed, pending or not applicable.
+The local compiler generates lane-specific directions; review export refuses a pass
+for incomplete settings. Follow [the character contract](skills/channel/references/character-identity.md).
+Existing sheets need explicit migration; legacy storyboards remain readable.
+The portal currently stores only its existing role/appearance/TTS subset.
+
 ## Shot dialogue and later corrections
 
 New storyboards assign stable line ids, explicit speakers (narrator included) and delivery

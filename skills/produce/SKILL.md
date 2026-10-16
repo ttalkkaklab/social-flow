@@ -345,7 +345,7 @@ means generating something nobody approved.
   scene and mood sentences lifted from the stored string (they sit between the `From the
   camera:` sentence and the exclusions — and `--no-person` again when the stored string reads
   "the subject" instead of a body) rather than editing the string by hand.
-
+- Follow [character-identity.md](../channel/references/character-identity.md) for cast directions: recompile current identities, compare source hashes, and apply image/video/dialogue/voice guidance to their respective generation lanes.
 - **`visual.character` — who is on screen.** Use `PRODUCTION.cast[id].image` when present;
   otherwise resolve the id to the channel panel directory:
 
