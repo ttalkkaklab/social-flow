@@ -54,3 +54,32 @@ a local refinement. The shared generator remains the only source.
   disclosures and print restoration. Do not infer visual quality from --check.
 
 See [the scored UX review](../../../docs/design-system/screen-quality/review-generator-20261016.md).
+
+## Character detail refinement (2026-10-16)
+
+The `.character-sheet` surface uses the actual summary below the name, followed by
+compact ID/version/review metadata. Three labeled pictogram links lead to artwork,
+the specification and voice. Existing storyboard type pictograms are preserved.
+Section icons are decorative SVGs paired with visible translated text.
+
+- Use a 1120px reading canvas with 16px body text and a 72ch maximum for values.
+  Keep references uncropped, with matching 2:3 body stages and a 1:1 face stage. Below
+  640px the front reference spans the row; back and face share the next row.
+- Render every structured identity field once in the specification, using
+  label/value rows instead of form-like boxes. Arrays are semantic lists. Native
+  disclosures start open, retain keyboard controls and show pending counts even
+  when collapsed. Pending/inapplicable reasons stay beside their status.
+- Keep voice playback and the local sample transcript visible. Technical voice
+  settings and the original identity document use separate disclosures. Never
+  infer a transcript, missing identity value or review pass.
+- Print expands identity groups and voice settings, then restores their previous
+  state. Gallery links retain the original-image fallback without JavaScript.
+- Scope detail styles to the character surface; list and storyboard layouts keep
+  their existing rules. `review-library.js` regenerates every sheet from this
+  template, with the same offline assets and review freshness checks.
+
+Evaluation rubric and independent reports: [character detail review](../../../docs/loops/003-character-detail/loop.md).
+
+Upstream image diagnostics and episode links remain available beneath the gallery.
+Diagnostic details show their count when collapsed; they do not override the
+character content review or imply that matching the template certifies the art.
