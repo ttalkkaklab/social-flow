@@ -1029,6 +1029,7 @@
 
 <script src="./review-files.js"></script>
 <script src="./scenes.js"></script>
+<script>window.SB_SCENES_DOC = window.SB_DOC;</script>
 <script src="./render-routing.js"></script>
 <script src="./production-mode.js"></script>
 <script src="./style-samples.js"></script>
@@ -1101,6 +1102,7 @@ window.SB_DOC = {
     //             back: "../../../assets/characters/claude/back.png" },
     //   note: "no lettered wordmark · voice is profile §2 Leda", veo: "" }
   ],
+  speechPlanVersion: 1, // explicit line ids, speakers and delivery on new boards
   narratorCharacterId: "", // required — one id from characters above
 
   // Promise ledger — what the episode promises and the shot that keeps each promise
@@ -1163,7 +1165,7 @@ window.SB_DOC = {
     app.innerHTML = '<div class="error-box">Could not load scenes.js — open this file inside the storyboard/ directory, next to scenes.js.</div>';
     return;
   }
-  var THEME = window.THEME, SCENES = window.SCENES, DOC = window.SB_DOC || {};
+  var THEME = window.THEME, SCENES = window.SCENES, DOC = Object.assign({}, window.SB_DOC || {}, window.SB_SCENES_DOC || {});
   var MUSIC = window.MUSIC || null;   // named music cues — absent means one bed all the way through
 
   /* ══ Format mirror ══
@@ -4145,6 +4147,8 @@ window.SB_DOC = {
     var narr = s.narration || [];
     h += '<article class="scene"><div class="scene-head">';
     h += '<span class="scene-no">' + esc(T.shotCap(no)) + " · " + esc(T.type[s.type] || s.type) + "</span>";
+    if (s.visual && s.visual.video && s.visual.video.speechStatus === 'stale')
+      h += '<span class="cut-carry">' + (LANG === 'ko' ? '이전 영상 참고용 · 대사 변경 후 재제작 필요' : 'Previous take only · dialogue changed, rebuild required') + '</span>';
     // Shot grammar — size tile, angle and render tile — sits on its own row under the head so
     // the head keeps the number, title and beat tags. Icons only: the term, its meaning and
     // this shot's why / render.reason are the tile's tooltip; the legend above names every icon.
@@ -4346,7 +4350,11 @@ window.SB_DOC = {
           lines += '<div class="cut-carry">line ' + (st.seg + 1) + " carries over — only the screen (the caption) changes</div>";
         segRows[k].forEach(function (j) {
           var n = narr[j], same = strip(n.tts) === strip(n.sub);
-          lines += '<div class="cut-line"><span class="k">' + (j + 1) + '</span><div class="b">' + esc(n.tts) +
+          var speakerId = n.speaker || DOC.narratorCharacterId;
+          var speechLabel = castName(speakerId) || 'Unassigned speaker';
+          var deliveryLabel = n.delivery || (speakerId === DOC.narratorCharacterId ? 'voiceover' : 'unspecified');
+          if (LANG === 'ko') deliveryLabel = ({voiceover:'내레이션·독백',on_screen:'화면 속 대사',off_screen:'화면 밖 대사',unspecified:'발화 방식 미지정'})[deliveryLabel] || deliveryLabel;
+          lines += '<div class="cut-line"><span class="k">' + (j + 1) + '</span><div class="b"><b>' + esc(speechLabel) + '</b> · ' + esc(deliveryLabel) + (n.id ? ' · ' + esc(n.id) : '') + '<br>' + esc(n.tts) +
             '<span class="len"> · ' + esc(T.chars(netLen(n.tts))) + "</span>" +
             (same ? "" : '<div class="sub-diff"><b>' + esc(T.subtitleLabel) + "</b> " + esc(n.sub) + "</div>") +
             "</div></div>";

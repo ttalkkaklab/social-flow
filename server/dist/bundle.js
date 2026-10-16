@@ -1076,10 +1076,10 @@ var require_util = __commonJS({
     var codegen_1 = require_codegen();
     var code_1 = require_code();
     function toHash(arr) {
-      const hash4 = {};
+      const hash5 = {};
       for (const item of arr)
-        hash4[item] = true;
-      return hash4;
+        hash5[item] = true;
+      return hash5;
     }
     exports.toHash = toHash;
     function alwaysValidSchema(it, schema) {
@@ -2999,7 +2999,7 @@ var require_compile = __commonJS({
       const schOrFunc = root.refs[ref];
       if (schOrFunc)
         return schOrFunc;
-      let _sch = resolve7.call(this, root, ref);
+      let _sch = resolve8.call(this, root, ref);
       if (_sch === void 0) {
         const schema = (_a4 = root.localRefs) === null || _a4 === void 0 ? void 0 : _a4[ref];
         const { schemaId } = this.opts;
@@ -3026,7 +3026,7 @@ var require_compile = __commonJS({
     function sameSchemaEnv(s1, s2) {
       return s1.schema === s2.schema && s1.root === s2.root && s1.baseId === s2.baseId;
     }
-    function resolve7(root, ref) {
+    function resolve8(root, ref) {
       let sch;
       while (typeof (sch = this.refs[ref]) == "string")
         ref = sch;
@@ -3657,7 +3657,7 @@ var require_fast_uri = __commonJS({
       }
       return uri;
     }
-    function resolve7(baseURI, relativeURI, options) {
+    function resolve8(baseURI, relativeURI, options) {
       const schemelessOptions = options ? Object.assign({ scheme: "null" }, options) : { scheme: "null" };
       const { parsed: baseParsed, malformedAuthorityOrPort: baseMalformed } = parseWithStatus(baseURI, schemelessOptions);
       const { parsed: relativeParsed, malformedAuthorityOrPort: relativeMalformed } = parseWithStatus(relativeURI, schemelessOptions);
@@ -3941,7 +3941,7 @@ var require_fast_uri = __commonJS({
     var fastUri = {
       SCHEMES,
       normalize: normalize2,
-      resolve: resolve7,
+      resolve: resolve8,
       resolveComponent,
       equal,
       serialize,
@@ -7194,7 +7194,7 @@ var require_p_retry = __commonJS({
       return error2;
     };
     var isNetworkError = (errorMessage) => networkErrorMsgs.includes(errorMessage);
-    var pRetry2 = (input, options) => new Promise((resolve7, reject) => {
+    var pRetry2 = (input, options) => new Promise((resolve8, reject) => {
       options = {
         onFailedAttempt: () => {
         },
@@ -7204,7 +7204,7 @@ var require_p_retry = __commonJS({
       const operation = retry2.operation(options);
       operation.attempt(async (attemptNumber) => {
         try {
-          resolve7(await input(attemptNumber));
+          resolve8(await input(attemptNumber));
         } catch (error2) {
           if (!(error2 instanceof Error)) {
             reject(new TypeError(`Non-error was thrown: "${error2}". You should only throw errors.`));
@@ -7738,8 +7738,8 @@ var require_retry3 = __commonJS({
       }
       const delay2 = getNextRetryDelay(config3);
       err4.config.retryConfig.currentRetryAttempt += 1;
-      const backoff = config3.retryBackoff ? config3.retryBackoff(err4, delay2) : new Promise((resolve7) => {
-        setTimeout(resolve7, delay2);
+      const backoff = config3.retryBackoff ? config3.retryBackoff(err4, delay2) : new Promise((resolve8) => {
+        setTimeout(resolve8, delay2);
       });
       if (config3.onRetryAttempt) {
         await config3.onRetryAttempt(err4);
@@ -7942,12 +7942,12 @@ var require_common2 = __commonJS({
       createDebug.skips = [];
       createDebug.formatters = {};
       function selectColor(namespace) {
-        let hash4 = 0;
+        let hash5 = 0;
         for (let i2 = 0; i2 < namespace.length; i2++) {
-          hash4 = (hash4 << 5) - hash4 + namespace.charCodeAt(i2);
-          hash4 |= 0;
+          hash5 = (hash5 << 5) - hash5 + namespace.charCodeAt(i2);
+          hash5 |= 0;
         }
-        return createDebug.colors[Math.abs(hash4) % createDebug.colors.length];
+        return createDebug.colors[Math.abs(hash5) % createDebug.colors.length];
       }
       createDebug.selectColor = selectColor;
       function createDebug(namespace) {
@@ -8515,8 +8515,8 @@ var require_helpers = __commonJS({
     function req(url, opts = {}) {
       const href = typeof url === "string" ? url : url.href;
       const req2 = (href.startsWith("https:") ? https2 : http4).request(url, opts);
-      const promise = new Promise((resolve7, reject) => {
-        req2.once("response", resolve7).once("error", reject).end();
+      const promise = new Promise((resolve8, reject) => {
+        req2.once("response", resolve8).once("error", reject).end();
       });
       req2.then = promise.then.bind(promise);
       return req2;
@@ -8693,7 +8693,7 @@ var require_parse_proxy_response = __commonJS({
     var debug_1 = __importDefault(require_src());
     var debug = (0, debug_1.default)("https-proxy-agent:parse-proxy-response");
     function parseProxyResponse(socket) {
-      return new Promise((resolve7, reject) => {
+      return new Promise((resolve8, reject) => {
         let buffersLength = 0;
         const buffers = [];
         function read2() {
@@ -8759,7 +8759,7 @@ var require_parse_proxy_response = __commonJS({
           }
           debug("got proxy server response: %o %o", firstLine, headers);
           cleanup();
-          resolve7({
+          resolve8({
             connect: {
               statusCode,
               statusText,
@@ -9001,7 +9001,7 @@ var require_ponyfill_es2018 = __commonJS({
         return new originalPromise(executor);
       }
       function promiseResolvedWith(value) {
-        return newPromise((resolve7) => resolve7(value));
+        return newPromise((resolve8) => resolve8(value));
       }
       function promiseRejectedWith(reason) {
         return originalPromiseReject(reason);
@@ -9171,8 +9171,8 @@ var require_ponyfill_es2018 = __commonJS({
         return new TypeError("Cannot " + name + " a stream using a released reader");
       }
       function defaultReaderClosedPromiseInitialize(reader) {
-        reader._closedPromise = newPromise((resolve7, reject) => {
-          reader._closedPromise_resolve = resolve7;
+        reader._closedPromise = newPromise((resolve8, reject) => {
+          reader._closedPromise_resolve = resolve8;
           reader._closedPromise_reject = reject;
         });
       }
@@ -9346,8 +9346,8 @@ var require_ponyfill_es2018 = __commonJS({
           }
           let resolvePromise;
           let rejectPromise;
-          const promise = newPromise((resolve7, reject) => {
-            resolvePromise = resolve7;
+          const promise = newPromise((resolve8, reject) => {
+            resolvePromise = resolve8;
             rejectPromise = reject;
           });
           const readRequest = {
@@ -9452,8 +9452,8 @@ var require_ponyfill_es2018 = __commonJS({
           const reader = this._reader;
           let resolvePromise;
           let rejectPromise;
-          const promise = newPromise((resolve7, reject) => {
-            resolvePromise = resolve7;
+          const promise = newPromise((resolve8, reject) => {
+            resolvePromise = resolve8;
             rejectPromise = reject;
           });
           const readRequest = {
@@ -10472,8 +10472,8 @@ var require_ponyfill_es2018 = __commonJS({
           }
           let resolvePromise;
           let rejectPromise;
-          const promise = newPromise((resolve7, reject) => {
-            resolvePromise = resolve7;
+          const promise = newPromise((resolve8, reject) => {
+            resolvePromise = resolve8;
             rejectPromise = reject;
           });
           const readIntoRequest = {
@@ -10785,10 +10785,10 @@ var require_ponyfill_es2018 = __commonJS({
           wasAlreadyErroring = true;
           reason = void 0;
         }
-        const promise = newPromise((resolve7, reject) => {
+        const promise = newPromise((resolve8, reject) => {
           stream._pendingAbortRequest = {
             _promise: void 0,
-            _resolve: resolve7,
+            _resolve: resolve8,
             _reject: reject,
             _reason: reason,
             _wasAlreadyErroring: wasAlreadyErroring
@@ -10805,9 +10805,9 @@ var require_ponyfill_es2018 = __commonJS({
         if (state === "closed" || state === "errored") {
           return promiseRejectedWith(new TypeError(`The stream (in ${state} state) is not in the writable state and cannot be closed`));
         }
-        const promise = newPromise((resolve7, reject) => {
+        const promise = newPromise((resolve8, reject) => {
           const closeRequest = {
-            _resolve: resolve7,
+            _resolve: resolve8,
             _reject: reject
           };
           stream._closeRequest = closeRequest;
@@ -10820,9 +10820,9 @@ var require_ponyfill_es2018 = __commonJS({
         return promise;
       }
       function WritableStreamAddWriteRequest(stream) {
-        const promise = newPromise((resolve7, reject) => {
+        const promise = newPromise((resolve8, reject) => {
           const writeRequest = {
-            _resolve: resolve7,
+            _resolve: resolve8,
             _reject: reject
           };
           stream._writeRequests.push(writeRequest);
@@ -11438,8 +11438,8 @@ var require_ponyfill_es2018 = __commonJS({
         return new TypeError("Cannot " + name + " a stream using a released writer");
       }
       function defaultWriterClosedPromiseInitialize(writer) {
-        writer._closedPromise = newPromise((resolve7, reject) => {
-          writer._closedPromise_resolve = resolve7;
+        writer._closedPromise = newPromise((resolve8, reject) => {
+          writer._closedPromise_resolve = resolve8;
           writer._closedPromise_reject = reject;
           writer._closedPromiseState = "pending";
         });
@@ -11475,8 +11475,8 @@ var require_ponyfill_es2018 = __commonJS({
         writer._closedPromiseState = "resolved";
       }
       function defaultWriterReadyPromiseInitialize(writer) {
-        writer._readyPromise = newPromise((resolve7, reject) => {
-          writer._readyPromise_resolve = resolve7;
+        writer._readyPromise = newPromise((resolve8, reject) => {
+          writer._readyPromise_resolve = resolve8;
           writer._readyPromise_reject = reject;
         });
         writer._readyPromiseState = "pending";
@@ -11563,7 +11563,7 @@ var require_ponyfill_es2018 = __commonJS({
         source._disturbed = true;
         let shuttingDown = false;
         let currentWrite = promiseResolvedWith(void 0);
-        return newPromise((resolve7, reject) => {
+        return newPromise((resolve8, reject) => {
           let abortAlgorithm;
           if (signal !== void 0) {
             abortAlgorithm = () => {
@@ -11708,7 +11708,7 @@ var require_ponyfill_es2018 = __commonJS({
             if (isError) {
               reject(error2);
             } else {
-              resolve7(void 0);
+              resolve8(void 0);
             }
             return null;
           }
@@ -11989,8 +11989,8 @@ var require_ponyfill_es2018 = __commonJS({
         let branch1;
         let branch2;
         let resolveCancelPromise;
-        const cancelPromise = newPromise((resolve7) => {
-          resolveCancelPromise = resolve7;
+        const cancelPromise = newPromise((resolve8) => {
+          resolveCancelPromise = resolve8;
         });
         function pullAlgorithm() {
           if (reading) {
@@ -12081,8 +12081,8 @@ var require_ponyfill_es2018 = __commonJS({
         let branch1;
         let branch2;
         let resolveCancelPromise;
-        const cancelPromise = newPromise((resolve7) => {
-          resolveCancelPromise = resolve7;
+        const cancelPromise = newPromise((resolve8) => {
+          resolveCancelPromise = resolve8;
         });
         function forwardReaderError(thisReader) {
           uponRejection(thisReader._closedPromise, (r2) => {
@@ -12862,8 +12862,8 @@ var require_ponyfill_es2018 = __commonJS({
           const writableHighWaterMark = ExtractHighWaterMark(writableStrategy, 1);
           const writableSizeAlgorithm = ExtractSizeAlgorithm(writableStrategy);
           let startPromise_resolve;
-          const startPromise = newPromise((resolve7) => {
-            startPromise_resolve = resolve7;
+          const startPromise = newPromise((resolve8) => {
+            startPromise_resolve = resolve8;
           });
           InitializeTransformStream(this, startPromise, writableHighWaterMark, writableSizeAlgorithm, readableHighWaterMark, readableSizeAlgorithm);
           SetUpTransformStreamDefaultControllerFromTransformer(this, transformer);
@@ -12956,8 +12956,8 @@ var require_ponyfill_es2018 = __commonJS({
         if (stream._backpressureChangePromise !== void 0) {
           stream._backpressureChangePromise_resolve();
         }
-        stream._backpressureChangePromise = newPromise((resolve7) => {
-          stream._backpressureChangePromise_resolve = resolve7;
+        stream._backpressureChangePromise = newPromise((resolve8) => {
+          stream._backpressureChangePromise_resolve = resolve8;
         });
         stream._backpressure = backpressure;
       }
@@ -13125,8 +13125,8 @@ var require_ponyfill_es2018 = __commonJS({
           return controller._finishPromise;
         }
         const readable = stream._readable;
-        controller._finishPromise = newPromise((resolve7, reject) => {
-          controller._finishPromise_resolve = resolve7;
+        controller._finishPromise = newPromise((resolve8, reject) => {
+          controller._finishPromise_resolve = resolve8;
           controller._finishPromise_reject = reject;
         });
         const cancelPromise = controller._cancelAlgorithm(reason);
@@ -13152,8 +13152,8 @@ var require_ponyfill_es2018 = __commonJS({
           return controller._finishPromise;
         }
         const readable = stream._readable;
-        controller._finishPromise = newPromise((resolve7, reject) => {
-          controller._finishPromise_resolve = resolve7;
+        controller._finishPromise = newPromise((resolve8, reject) => {
+          controller._finishPromise_resolve = resolve8;
           controller._finishPromise_reject = reject;
         });
         const flushPromise = controller._flushAlgorithm();
@@ -13183,8 +13183,8 @@ var require_ponyfill_es2018 = __commonJS({
           return controller._finishPromise;
         }
         const writable = stream._writable;
-        controller._finishPromise = newPromise((resolve7, reject) => {
-          controller._finishPromise_resolve = resolve7;
+        controller._finishPromise = newPromise((resolve8, reject) => {
+          controller._finishPromise_resolve = resolve8;
           controller._finishPromise_reject = reject;
         });
         const cancelPromise = controller._cancelAlgorithm(reason);
@@ -13482,8 +13482,8 @@ var init_fetch_blob = __esm({
       get [Symbol.toStringTag]() {
         return "Blob";
       }
-      static [Symbol.hasInstance](object4) {
-        return object4 && typeof object4 === "object" && typeof object4.constructor === "function" && (typeof object4.stream === "function" || typeof object4.arrayBuffer === "function") && /^(Blob|File)$/.test(object4[Symbol.toStringTag]);
+      static [Symbol.hasInstance](object5) {
+        return object5 && typeof object5 === "object" && typeof object5.constructor === "function" && (typeof object5.stream === "function" || typeof object5.arrayBuffer === "function") && /^(Blob|File)$/.test(object5[Symbol.toStringTag]);
       }
     };
     Object.defineProperties(_Blob.prototype, {
@@ -13531,8 +13531,8 @@ var init_file = __esm({
       get [Symbol.toStringTag]() {
         return "File";
       }
-      static [Symbol.hasInstance](object4) {
-        return !!object4 && object4 instanceof fetch_blob_default && /^(File)$/.test(object4[Symbol.toStringTag]);
+      static [Symbol.hasInstance](object5) {
+        return !!object5 && object5 instanceof fetch_blob_default && /^(File)$/.test(object5[Symbol.toStringTag]);
       }
     };
     File3 = _File;
@@ -13684,14 +13684,14 @@ var NAME, isURLSearchParameters, isBlob, isAbortSignal, isDomainOrSubdomain, isS
 var init_is = __esm({
   "node_modules/node-fetch/src/utils/is.js"() {
     NAME = Symbol.toStringTag;
-    isURLSearchParameters = (object4) => {
-      return typeof object4 === "object" && typeof object4.append === "function" && typeof object4.delete === "function" && typeof object4.get === "function" && typeof object4.getAll === "function" && typeof object4.has === "function" && typeof object4.set === "function" && typeof object4.sort === "function" && object4[NAME] === "URLSearchParams";
+    isURLSearchParameters = (object5) => {
+      return typeof object5 === "object" && typeof object5.append === "function" && typeof object5.delete === "function" && typeof object5.get === "function" && typeof object5.getAll === "function" && typeof object5.has === "function" && typeof object5.set === "function" && typeof object5.sort === "function" && object5[NAME] === "URLSearchParams";
     };
-    isBlob = (object4) => {
-      return object4 && typeof object4 === "object" && typeof object4.arrayBuffer === "function" && typeof object4.type === "string" && typeof object4.stream === "function" && typeof object4.constructor === "function" && /^(Blob|File)$/.test(object4[NAME]);
+    isBlob = (object5) => {
+      return object5 && typeof object5 === "object" && typeof object5.arrayBuffer === "function" && typeof object5.type === "string" && typeof object5.stream === "function" && typeof object5.constructor === "function" && /^(Blob|File)$/.test(object5[NAME]);
     };
-    isAbortSignal = (object4) => {
-      return typeof object4 === "object" && (object4[NAME] === "AbortSignal" || object4[NAME] === "EventTarget");
+    isAbortSignal = (object5) => {
+      return typeof object5 === "object" && (object5[NAME] === "AbortSignal" || object5[NAME] === "EventTarget");
     };
     isDomainOrSubdomain = (destination, original) => {
       const orig = new URL(original).hostname;
@@ -14742,8 +14742,8 @@ var init_get_search = __esm({
         return parsedURL.search;
       }
       const lastOffset = parsedURL.href.length - 1;
-      const hash4 = parsedURL.hash || (parsedURL.href[lastOffset] === "#" ? "#" : "");
-      return parsedURL.href[lastOffset - hash4.length] === "?" ? "?" : "";
+      const hash5 = parsedURL.hash || (parsedURL.href[lastOffset] === "#" ? "#" : "");
+      return parsedURL.href[lastOffset - hash5.length] === "?" ? "?" : "";
     };
   }
 });
@@ -14905,8 +14905,8 @@ var init_request = __esm({
     init_get_search();
     init_referrer();
     INTERNALS3 = /* @__PURE__ */ Symbol("Request internals");
-    isRequest = (object4) => {
-      return typeof object4 === "object" && typeof object4[INTERNALS3] === "object";
+    isRequest = (object5) => {
+      return typeof object5 === "object" && typeof object5[INTERNALS3] === "object";
     };
     doBadDataWarn = deprecate2(
       () => {
@@ -15135,7 +15135,7 @@ import zlib from "node:zlib";
 import Stream2, { PassThrough as PassThrough2, pipeline as pump } from "node:stream";
 import { Buffer as Buffer3 } from "node:buffer";
 async function fetch2(url, options_) {
-  return new Promise((resolve7, reject) => {
+  return new Promise((resolve8, reject) => {
     const request = new Request2(url, options_);
     const { parsedURL, options } = getNodeRequestOptions(request);
     if (!supportedSchemas.has(parsedURL.protocol)) {
@@ -15144,7 +15144,7 @@ async function fetch2(url, options_) {
     if (parsedURL.protocol === "data:") {
       const data = dist_default(request.url);
       const response2 = new Response2(data, { headers: { "Content-Type": data.typeFull } });
-      resolve7(response2);
+      resolve8(response2);
       return;
     }
     const send = (parsedURL.protocol === "https:" ? https : http2).request;
@@ -15266,7 +15266,7 @@ async function fetch2(url, options_) {
             if (responseReferrerPolicy) {
               requestOptions.referrerPolicy = responseReferrerPolicy;
             }
-            resolve7(fetch2(new Request2(locationURL, requestOptions)));
+            resolve8(fetch2(new Request2(locationURL, requestOptions)));
             finalize();
             return;
           }
@@ -15299,7 +15299,7 @@ async function fetch2(url, options_) {
       const codings = headers.get("Content-Encoding");
       if (!request.compress || request.method === "HEAD" || codings === null || response_.statusCode === 204 || response_.statusCode === 304) {
         response = new Response2(body, responseOptions);
-        resolve7(response);
+        resolve8(response);
         return;
       }
       const zlibOptions = {
@@ -15313,7 +15313,7 @@ async function fetch2(url, options_) {
           }
         });
         response = new Response2(body, responseOptions);
-        resolve7(response);
+        resolve8(response);
         return;
       }
       if (codings === "deflate" || codings === "x-deflate") {
@@ -15337,12 +15337,12 @@ async function fetch2(url, options_) {
             });
           }
           response = new Response2(body, responseOptions);
-          resolve7(response);
+          resolve8(response);
         });
         raw.once("end", () => {
           if (!response) {
             response = new Response2(body, responseOptions);
-            resolve7(response);
+            resolve8(response);
           }
         });
         return;
@@ -15354,11 +15354,11 @@ async function fetch2(url, options_) {
           }
         });
         response = new Response2(body, responseOptions);
-        resolve7(response);
+        resolve8(response);
         return;
       }
       response = new Response2(body, responseOptions);
-      resolve7(response);
+      resolve8(response);
     });
     writeToStream(request_, request).catch(reject);
   });
@@ -15430,7 +15430,7 @@ var require_gaxios = __commonJS({
     var retry_js_1 = require_retry3();
     var stream_1 = __require("stream");
     var interceptor_js_1 = require_interceptor();
-    var randomUUID8 = async () => globalThis.crypto?.randomUUID() || (await import("crypto")).randomUUID();
+    var randomUUID9 = async () => globalThis.crypto?.randomUUID() || (await import("crypto")).randomUUID();
     var HTTP_STATUS_NO_CONTENT = 204;
     var Gaxios = class {
       agentCache = /* @__PURE__ */ new Map();
@@ -15703,7 +15703,7 @@ var require_gaxios = __commonJS({
          */
         ["Blob", "File", "FormData"].includes(opts.data?.constructor?.name || "");
         if (opts.multipart?.length) {
-          const boundary = await randomUUID8();
+          const boundary = await randomUUID9();
           preparedHeaders.set("content-type", `multipart/related; boundary=${boundary}`);
           opts.body = stream_1.Readable.from(this.getMultipartRequest(opts.multipart, boundary));
         } else if (shouldDirectlyPassData) {
@@ -17580,20 +17580,20 @@ var require_parse = __commonJS({
           }
         }
         error2("Bad array");
-      }, object4 = function() {
-        var key, object5 = /* @__PURE__ */ Object.create(null);
+      }, object5 = function() {
+        var key, object6 = /* @__PURE__ */ Object.create(null);
         if (ch === "{") {
           next("{");
           white();
           if (ch === "}") {
             next("}");
-            return object5;
+            return object6;
           }
           while (ch) {
             key = string3();
             white();
             next(":");
-            if (_options.strict === true && Object.hasOwnProperty.call(object5, key)) {
+            if (_options.strict === true && Object.hasOwnProperty.call(object6, key)) {
               error2('Duplicate key "' + key + '"');
             }
             if (suspectProtoRx.test(key) === true) {
@@ -17602,7 +17602,7 @@ var require_parse = __commonJS({
               } else if (_options.protoAction === "ignore") {
                 value();
               } else {
-                object5[key] = value();
+                object6[key] = value();
               }
             } else if (suspectConstructorRx.test(key) === true) {
               if (_options.constructorAction === "error") {
@@ -17610,15 +17610,15 @@ var require_parse = __commonJS({
               } else if (_options.constructorAction === "ignore") {
                 value();
               } else {
-                object5[key] = value();
+                object6[key] = value();
               }
             } else {
-              object5[key] = value();
+              object6[key] = value();
             }
             white();
             if (ch === "}") {
               next("}");
-              return object5;
+              return object6;
             }
             next(",");
             white();
@@ -17630,7 +17630,7 @@ var require_parse = __commonJS({
         white();
         switch (ch) {
           case "{":
-            return object4();
+            return object5();
           case "[":
             return array2();
           case '"':
@@ -19003,13 +19003,13 @@ var require_util3 = __commonJS({
       }
     };
     exports.LRUCache = LRUCache;
-    function removeUndefinedValuesInObject(object4) {
-      Object.entries(object4).forEach(([key, value]) => {
+    function removeUndefinedValuesInObject(object5) {
+      Object.entries(object5).forEach(([key, value]) => {
         if (value === void 0 || value === "undefined") {
-          delete object4[key];
+          delete object5[key];
         }
       });
-      return object4;
+      return object5;
     }
     async function isValidFile(filePath) {
       try {
@@ -21426,7 +21426,7 @@ var require_jwtaccess = __commonJS({
         }
       }
       fromStreamAsync(inputStream) {
-        return new Promise((resolve7, reject) => {
+        return new Promise((resolve8, reject) => {
           if (!inputStream) {
             reject(new Error("Must pass in a stream containing the service account auth settings."));
           }
@@ -21435,7 +21435,7 @@ var require_jwtaccess = __commonJS({
             try {
               const data = JSON.parse(s2);
               this.fromJSON(data);
-              resolve7();
+              resolve8();
             } catch (err4) {
               reject(err4);
             }
@@ -21674,7 +21674,7 @@ var require_jwtclient = __commonJS({
         }
       }
       fromStreamAsync(inputStream) {
-        return new Promise((resolve7, reject) => {
+        return new Promise((resolve8, reject) => {
           if (!inputStream) {
             throw new Error("Must pass in a stream containing the service account auth settings.");
           }
@@ -21683,7 +21683,7 @@ var require_jwtclient = __commonJS({
             try {
               const data = JSON.parse(s2);
               this.fromJSON(data);
-              resolve7();
+              resolve8();
             } catch (e2) {
               reject(e2);
             }
@@ -21816,7 +21816,7 @@ var require_refreshclient = __commonJS({
         }
       }
       async fromStreamAsync(inputStream) {
-        return new Promise((resolve7, reject) => {
+        return new Promise((resolve8, reject) => {
           if (!inputStream) {
             return reject(new Error("Must pass in a stream containing the user refresh token."));
           }
@@ -21825,7 +21825,7 @@ var require_refreshclient = __commonJS({
             try {
               const data = JSON.parse(s2);
               this.fromJSON(data);
-              return resolve7();
+              return resolve8();
             } catch (err4) {
               return reject(err4);
             }
@@ -23658,7 +23658,7 @@ var require_pluggable_auth_handler = __commonJS({
        * @return A promise that resolves with the executable response.
        */
       retrieveResponseFromExecutable(envMap) {
-        return new Promise((resolve7, reject) => {
+        return new Promise((resolve8, reject) => {
           const child = childProcess.spawn(this.commandComponents[0], this.commandComponents.slice(1), {
             env: { ...process.env, ...Object.fromEntries(envMap) }
           });
@@ -23680,7 +23680,7 @@ var require_pluggable_auth_handler = __commonJS({
               try {
                 const responseJson = JSON.parse(output2);
                 const response = new executable_response_1.ExecutableResponse(responseJson);
-                return resolve7(response);
+                return resolve8(response);
               } catch (error2) {
                 if (error2 instanceof executable_response_1.ExecutableResponseError) {
                   return reject(error2);
@@ -24872,7 +24872,7 @@ var require_googleauth = __commonJS({
         }
       }
       fromStreamAsync(inputStream, options) {
-        return new Promise((resolve7, reject) => {
+        return new Promise((resolve8, reject) => {
           if (!inputStream) {
             throw new Error("Must pass in a stream containing the Google auth settings.");
           }
@@ -24882,7 +24882,7 @@ var require_googleauth = __commonJS({
               try {
                 const data = JSON.parse(chunks.join(""));
                 const r2 = this._cacheClientFromJSON(data, options);
-                return resolve7(r2);
+                return resolve8(r2);
               } catch (err4) {
                 if (!this.keyFilename)
                   throw err4;
@@ -24892,7 +24892,7 @@ var require_googleauth = __commonJS({
                 });
                 this.cachedCredential = client;
                 this.setGapicJWTValues(client);
-                return resolve7(client);
+                return resolve8(client);
               }
             } catch (err4) {
               return reject(err4);
@@ -24928,17 +24928,17 @@ var require_googleauth = __commonJS({
        * Run the Google Cloud SDK command that prints the default project ID
        */
       async getDefaultServiceProjectId() {
-        return new Promise((resolve7) => {
+        return new Promise((resolve8) => {
           (0, child_process_1.exec)("gcloud config config-helper --format json", (err4, stdout) => {
             if (!err4 && stdout) {
               try {
                 const projectId = JSON.parse(stdout).configuration.properties.core.project;
-                resolve7(projectId);
+                resolve8(projectId);
                 return;
               } catch (e2) {
               }
             }
-            resolve7(null);
+            resolve8(null);
           });
         });
       }
@@ -27846,7 +27846,7 @@ var require_websocket = __commonJS({
     var http4 = __require("http");
     var net = __require("net");
     var tls = __require("tls");
-    var { randomBytes: randomBytes2, createHash: createHash11 } = __require("crypto");
+    var { randomBytes: randomBytes2, createHash: createHash12 } = __require("crypto");
     var { Duplex, Readable: Readable2 } = __require("stream");
     var { URL: URL2 } = __require("url");
     var PerMessageDeflate2 = require_permessage_deflate();
@@ -28514,7 +28514,7 @@ var require_websocket = __commonJS({
           abortHandshake(websocket, socket, "Invalid Upgrade header");
           return;
         }
-        const digest2 = createHash11("sha1").update(key + GUID).digest("base64");
+        const digest2 = createHash12("sha1").update(key + GUID).digest("base64");
         if (res.headers["sec-websocket-accept"] !== digest2) {
           abortHandshake(websocket, socket, "Invalid Sec-WebSocket-Accept header");
           return;
@@ -28883,7 +28883,7 @@ var require_websocket_server = __commonJS({
     var EventEmitter = __require("events");
     var http4 = __require("http");
     var { Duplex } = __require("stream");
-    var { createHash: createHash11 } = __require("crypto");
+    var { createHash: createHash12 } = __require("crypto");
     var extension2 = require_extension();
     var PerMessageDeflate2 = require_permessage_deflate();
     var subprotocol2 = require_subprotocol();
@@ -29190,7 +29190,7 @@ var require_websocket_server = __commonJS({
           );
         }
         if (this._state > RUNNING) return abortHandshake(socket, 503);
-        const digest2 = createHash11("sha1").update(key + GUID).digest("base64");
+        const digest2 = createHash12("sha1").update(key + GUID).digest("base64");
         const headers = [
           "HTTP/1.1 101 Switching Protocols",
           "Upgrade: websocket",
@@ -32939,14 +32939,14 @@ function __asyncValues(o) {
   }, i2);
   function verb(n) {
     i2[n] = o[n] && function(v) {
-      return new Promise(function(resolve7, reject) {
-        v = o[n](v), settle(resolve7, reject, v.done, v.value);
+      return new Promise(function(resolve8, reject) {
+        v = o[n](v), settle(resolve8, reject, v.done, v.value);
       });
     };
   }
-  function settle(resolve7, reject, d, v) {
+  function settle(resolve8, reject, d, v) {
     Promise.resolve(v).then(function(v2) {
-      resolve7({ value: v2, done: d });
+      resolve8({ value: v2, done: d });
     }, reject);
   }
 }
@@ -38403,8 +38403,8 @@ function setMcpUsageHeader(headers) {
   const existingHeader = (_a4 = headers[GOOGLE_API_CLIENT_HEADER]) !== null && _a4 !== void 0 ? _a4 : "";
   headers[GOOGLE_API_CLIENT_HEADER] = (existingHeader + ` ${MCP_LABEL}`).trimStart();
 }
-function isMcpCallableTool(object4) {
-  return object4 !== null && typeof object4 === "object" && object4 instanceof McpCallableTool;
+function isMcpCallableTool(object5) {
+  return object5 !== null && typeof object5 === "object" && object5 instanceof McpCallableTool;
 }
 function listAllTools(mcpClient_1) {
   return __asyncGenerator(this, arguments, function* listAllTools_1(mcpClient, maxTools = 100) {
@@ -39880,7 +39880,7 @@ function retryIntervalFromResponse(res) {
   return 0;
 }
 async function delay(delay2) {
-  return new Promise((resolve7) => setTimeout(resolve7, delay2));
+  return new Promise((resolve8) => setTimeout(resolve8, delay2));
 }
 async function logRequest(logger, req) {
   if (!logger) {
@@ -47323,8 +47323,8 @@ var init_node = __esm({
         const url = `${websocketBaseUrl}/ws/google.ai.generativelanguage.${apiVersion}.GenerativeService.BidiGenerateMusic?key=${apiKey}`;
         let onopenResolve = () => {
         };
-        const onopenPromise = new Promise((resolve7) => {
-          onopenResolve = resolve7;
+        const onopenPromise = new Promise((resolve8) => {
+          onopenResolve = resolve8;
         });
         const callbacks = params.callbacks;
         const onopenAwaitedCallback = function() {
@@ -47530,8 +47530,8 @@ var init_node = __esm({
         }
         let onopenResolve = () => {
         };
-        const onopenPromise = new Promise((resolve7) => {
-          onopenResolve = resolve7;
+        const onopenPromise = new Promise((resolve8) => {
+          onopenResolve = resolve8;
         });
         const callbacks = params.callbacks;
         const onopenAwaitedCallback = function() {
@@ -47544,8 +47544,8 @@ var init_node = __esm({
         const messageQueue = [];
         let setupCompleteResolve = () => {
         };
-        const setupCompletePromise = new Promise((resolve7) => {
-          setupCompleteResolve = resolve7;
+        const setupCompletePromise = new Promise((resolve8) => {
+          setupCompleteResolve = resolve8;
         });
         const websocketCallbacks = {
           onopen: onopenAwaitedCallback,
@@ -51897,24 +51897,24 @@ var require_character_identity = __commonJS({
         ["variants", "\uD5C8\uC6A9\uD558\uB294 \uBCC0\uD615", "Allowed variants", "list", true]
       ]]
     ];
-    var object4 = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
+    var object5 = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
     var text2 = (v) => typeof v === "string" && v.trim().length > 0 && v.length <= 2e3;
     var placeholder = (v) => typeof v === "string" && /^(?:tbd|todo|unknown|미정|추후|<[^>]+>|\{\{.*\}\})$/i.test(v.trim());
     function identityErrors(character, { ready = true } = {}) {
-      if (!object4(character)) return ["character: structured identity is required (migrate legacy identity.md explicitly)"];
+      if (!object5(character)) return ["character: structured identity is required (migrate legacy identity.md explicitly)"];
       const errors = [];
       if (character.schemaVersion !== 1) errors.push("character.schemaVersion must be 1");
       if (!Number.isInteger(character.version) || character.version < 1) errors.push("character.version must be a positive integer");
       for (const key of Object.keys(character)) if (!["schemaVersion", "version", ...GROUPS.map((g) => g[0])].includes(key)) errors.push(`character.${key}: unknown field`);
       for (const [group, , , fields2] of GROUPS) {
-        if (!object4(character[group])) {
+        if (!object5(character[group])) {
           errors.push(`character.${group}: required group`);
           continue;
         }
         for (const key of Object.keys(character[group])) if (!fields2.some((f3) => f3[0] === key)) errors.push(`${group}.${key}: unknown field`);
         for (const [key, , , type = "text", optional2 = false] of fields2) {
           const p = `${group}.${key}`, f3 = character[group][key];
-          if (!object4(f3)) {
+          if (!object5(f3)) {
             errors.push(`${p}: expected {status, value, reason?}`);
             continue;
           }
@@ -51945,7 +51945,7 @@ var require_character_identity = __commonJS({
         } catch {
           throw new Error("Invalid JSON in character identity");
         }
-        if (object4(v) && Object.hasOwn(v, "character")) values.push(v.character);
+        if (object5(v) && Object.hasOwn(v, "character")) values.push(v.character);
       }
       if (values.length !== 1) throw new Error("identity.md must contain exactly one JSON block with character");
       const errors = identityErrors(values[0], options);
@@ -51984,7 +51984,7 @@ var require_character_identity = __commonJS({
     function portalIdentityFields3(source) {
       const structured = [...source.matchAll(/```json\s*\n([\s\S]*?)```/g)].some((m2) => {
         const value = JSON.parse(m2[1]);
-        return object4(value) && Object.hasOwn(value, "character");
+        return object5(value) && Object.hasOwn(value, "character");
       });
       if (!structured) return {};
       const c = identityCharacter(source);
@@ -52264,7 +52264,7 @@ var init_values = __esm({
 var sleep6;
 var init_sleep = __esm({
   "node_modules/openai/internal/utils/sleep.mjs"() {
-    sleep6 = (ms) => new Promise((resolve7) => setTimeout(resolve7, ms));
+    sleep6 = (ms) => new Promise((resolve8) => setTimeout(resolve8, ms));
   }
 });
 
@@ -52610,13 +52610,13 @@ var init_utils = __esm({
 function is_non_nullish_primitive(v) {
   return typeof v === "string" || typeof v === "number" || typeof v === "boolean" || typeof v === "symbol" || typeof v === "bigint";
 }
-function inner_stringify(object4, prefix, generateArrayPrefix, commaRoundTrip, allowEmptyArrays, strictNullHandling, skipNulls, encodeDotInKeys, encoder, filter, sort, allowDots, serializeDate, format, formatter, encodeValuesOnly, charset, sideChannel) {
-  let obj = object4;
+function inner_stringify(object5, prefix, generateArrayPrefix, commaRoundTrip, allowEmptyArrays, strictNullHandling, skipNulls, encodeDotInKeys, encoder, filter, sort, allowDots, serializeDate, format, formatter, encodeValuesOnly, charset, sideChannel) {
+  let obj = object5;
   let tmp_sc = sideChannel;
   let step = 0;
   let find_flag = false;
   while ((tmp_sc = tmp_sc.get(sentinel)) !== void 0 && !find_flag) {
-    const pos = tmp_sc.get(object4);
+    const pos = tmp_sc.get(object5);
     step += 1;
     if (typeof pos !== "undefined") {
       if (pos === step) {
@@ -52692,7 +52692,7 @@ function inner_stringify(object4, prefix, generateArrayPrefix, commaRoundTrip, a
     }
     const encoded_key = allowDots && encodeDotInKeys ? key.replace(/\./g, "%2E") : key;
     const key_prefix = isArray(obj) ? typeof generateArrayPrefix === "function" ? generateArrayPrefix(adjusted_prefix, encoded_key) : adjusted_prefix : adjusted_prefix + (allowDots ? "." + encoded_key : "[" + encoded_key + "]");
-    sideChannel.set(object4, step);
+    sideChannel.set(object5, step);
     const valueSideChannel = /* @__PURE__ */ new WeakMap();
     valueSideChannel.set(sentinel, sideChannel);
     push_to_array(values, inner_stringify(
@@ -52781,8 +52781,8 @@ function normalize_stringify_options(opts = defaults2) {
     strictNullHandling: typeof opts.strictNullHandling === "boolean" ? opts.strictNullHandling : defaults2.strictNullHandling
   };
 }
-function stringify(object4, opts = {}) {
-  let obj = object4;
+function stringify(object5, opts = {}) {
+  let obj = object5;
   const options = normalize_stringify_options(opts);
   let obj_keys;
   let filter;
@@ -53457,8 +53457,8 @@ var init_api_promise = __esm({
     init_parse();
     APIPromise2 = class _APIPromise extends Promise {
       constructor(client, responsePromise, parseResponse2 = defaultParseResponse) {
-        super((resolve7) => {
-          resolve7(null);
+        super((resolve8) => {
+          resolve8(null);
         });
         this.responsePromise = responsePromise;
         this.parseResponse = parseResponse2;
@@ -54428,12 +54428,12 @@ var init_EventStream = __esm({
         _EventStream_errored.set(this, false);
         _EventStream_aborted.set(this, false);
         _EventStream_catchingPromiseCreated.set(this, false);
-        __classPrivateFieldSet(this, _EventStream_connectedPromise, new Promise((resolve7, reject) => {
-          __classPrivateFieldSet(this, _EventStream_resolveConnectedPromise, resolve7, "f");
+        __classPrivateFieldSet(this, _EventStream_connectedPromise, new Promise((resolve8, reject) => {
+          __classPrivateFieldSet(this, _EventStream_resolveConnectedPromise, resolve8, "f");
           __classPrivateFieldSet(this, _EventStream_rejectConnectedPromise, reject, "f");
         }), "f");
-        __classPrivateFieldSet(this, _EventStream_endPromise, new Promise((resolve7, reject) => {
-          __classPrivateFieldSet(this, _EventStream_resolveEndPromise, resolve7, "f");
+        __classPrivateFieldSet(this, _EventStream_endPromise, new Promise((resolve8, reject) => {
+          __classPrivateFieldSet(this, _EventStream_resolveEndPromise, resolve8, "f");
           __classPrivateFieldSet(this, _EventStream_rejectEndPromise, reject, "f");
         }), "f");
         __classPrivateFieldGet(this, _EventStream_connectedPromise, "f").catch(() => {
@@ -54533,11 +54533,11 @@ var init_EventStream = __esm({
        *   const message = await stream.emitted('message') // rejects if the stream errors
        */
       emitted(event) {
-        return new Promise((resolve7, reject) => {
+        return new Promise((resolve8, reject) => {
           __classPrivateFieldSet(this, _EventStream_catchingPromiseCreated, true, "f");
           if (event !== "error")
             this.once("error", reject);
-          this.once(event, resolve7);
+          this.once(event, resolve8);
         });
       }
       /**
@@ -54620,8 +54620,8 @@ var init_EventStream = __esm({
             }
             if (ended)
               return Promise.resolve(doneResult());
-            return new Promise((resolve7, reject) => {
-              readQueue.push({ resolve: resolve7, reject });
+            return new Promise((resolve8, reject) => {
+              readQueue.push({ resolve: resolve8, reject });
             });
           },
           return: () => {
@@ -55839,7 +55839,7 @@ var init_ChatCompletionStream = __esm({
               if (done) {
                 return { value: void 0, done: true };
               }
-              return new Promise((resolve7, reject) => readQueue.push({ resolve: resolve7, reject })).then((chunk3) => chunk3 ? { value: chunk3, done: false } : { value: void 0, done: true });
+              return new Promise((resolve8, reject) => readQueue.push({ resolve: resolve8, reject })).then((chunk3) => chunk3 ? { value: chunk3, done: false } : { value: void 0, done: true });
             }
             const chunk2 = pushQueue.shift();
             return { value: chunk2, done: false };
@@ -55929,7 +55929,7 @@ var init_ChatCompletionStreamingRunner = __esm({
               if (done) {
                 return { value: void 0, done: true };
               }
-              return new Promise((resolve7, reject) => readQueue.push({ resolve: resolve7, reject })).then((event2) => event2 ? { value: event2, done: false } : { value: void 0, done: true });
+              return new Promise((resolve8, reject) => readQueue.push({ resolve: resolve8, reject })).then((event2) => event2 ? { value: event2, done: false } : { value: void 0, done: true });
             }
             const event = pushQueue.shift();
             if (!event) {
@@ -59723,7 +59723,7 @@ var init_AssistantStream = __esm({
               if (done) {
                 return { value: void 0, done: true };
               }
-              return new Promise((resolve7, reject) => readQueue.push({ resolve: resolve7, reject })).then((chunk3) => chunk3 ? { value: chunk3, done: false } : { value: void 0, done: true });
+              return new Promise((resolve8, reject) => readQueue.push({ resolve: resolve8, reject })).then((chunk3) => chunk3 ? { value: chunk3, done: false } : { value: void 0, done: true });
             }
             const chunk2 = pushQueue.shift();
             return { value: chunk2, done: false };
@@ -62387,7 +62387,7 @@ var init_ResponseStream = __esm({
               if (done) {
                 return { value: void 0, done: true };
               }
-              return new Promise((resolve7, reject) => readQueue.push({ resolve: resolve7, reject })).then((event2) => event2 ? { value: event2, done: false } : { value: void 0, done: true });
+              return new Promise((resolve8, reject) => readQueue.push({ resolve: resolve8, reject })).then((event2) => event2 ? { value: event2, done: false } : { value: void 0, done: true });
             }
             const event = pushQueue.shift();
             return { value: event, done: false };
@@ -64532,6 +64532,22 @@ var require_character_voice = __commonJS({
       if (tts.stylePrompt !== void 0 && (tts.engine !== "gemini" || typeof tts.model === "string" && tts.model.startsWith("gemini-3.8-"))) errors.push("This engine does not accept stylePrompt");
       return errors;
     }
+    function generationVoiceErrors(expected, proof) {
+      const errors = voiceErrors(expected);
+      if (errors.length) return errors;
+      const settings = proof?.voiceSettings;
+      if (!settings) return ["Character speech requires recorded generation voiceSettings"];
+      const engines = { tts_generate: "gemini", tts_gemini_38: "gemini", tts_local_generate: "supertonic", tts_elevenlabs_generate: "elevenlabs", mlx_tts_generate: "mlx" };
+      if (!engines[proof.generator] || settings.speakers || settings.inputs) return ["Character speech requires a single-speaker generation proof"];
+      const actual = { engine: engines[proof.generator], voiceId: settings.voiceId || settings.voiceName || settings.voice, language: normalizeLanguage(settings.lang || settings.languageCode || settings.language || proof.language), speed: settings.speed ?? 1 };
+      for (const key of ["engine", "voiceId", "language", "speed"]) {
+        const wanted = key === "language" ? normalizeLanguage(expected[key]) : typeof expected[key] === "string" ? expected[key].trim() : expected[key];
+        if (actual[key] !== wanted) errors.push(key + " differs from pinned character voice");
+      }
+      if (proof.language && normalizeLanguage(proof.language) !== normalizeLanguage(expected.language)) errors.push("Declared text language differs from pinned character voice");
+      for (const key of ["model", "stylePrompt"]) if (expected[key] !== void 0 && settings[key] !== expected[key].trim()) errors.push(key + " differs from pinned character voice");
+      return errors;
+    }
     function identityVoice(source) {
       const blocks = [...source.matchAll(/```json\s*\n([\s\S]*?)```/g)];
       const voices = [];
@@ -64559,6 +64575,8 @@ var require_character_voice = __commonJS({
       if (win.SCENES != null && !Array.isArray(win.SCENES)) return ["SCENES must be an array"];
       const characters = Array.isArray(entries) ? entries : Object.entries(entries || {}).map(([id, c]) => ({ ...c, id }));
       const ids = new Set(Object.keys(win.PRODUCTION?.cast || {}));
+      const lineIds = /* @__PURE__ */ new Set();
+      if (win.SB_DOC?.speechPlanVersion === 1 && !win.SB_DOC.narratorCharacterId) errors.push("Speech plan needs narratorCharacterId");
       for (const scene of win.SCENES || []) {
         if (!scene || typeof scene !== "object") {
           errors.push("Scene must be an object");
@@ -64576,6 +64594,12 @@ var require_character_voice = __commonJS({
             continue;
           }
           if (n.speaker) ids.add(n.speaker);
+          if (win.SB_DOC?.speechPlanVersion === 1) {
+            if (typeof n.id !== "string" || !n.id.trim() || lineIds.has(n.id)) errors.push("Every speech line needs a unique stable id");
+            lineIds.add(n.id);
+            if (typeof n.speaker !== "string" || !n.speaker.trim()) errors.push("Every speech line needs an explicit speaker, including narrator");
+            if (!["voiceover", "on_screen", "off_screen"].includes(n.delivery)) errors.push("Every speech line needs delivery: voiceover, on_screen or off_screen");
+          }
         }
       }
       for (const c of characters) ids.add(c?.id);
@@ -64587,7 +64611,7 @@ var require_character_voice = __commonJS({
       }
       return errors;
     }
-    module.exports = { normalizeLanguage, voiceErrors, identityVoice, boardVoiceErrors };
+    module.exports = { normalizeLanguage, voiceErrors, generationVoiceErrors, identityVoice, boardVoiceErrors };
   }
 });
 
@@ -64596,9 +64620,9 @@ var require_story_contract = __commonJS({
   "../skills/storyboard/references/story-contract.js"(exports, module) {
     "use strict";
     var crypto2 = __require("node:crypto");
-    var object4 = (x2) => x2 !== null && typeof x2 === "object" && !Array.isArray(x2);
+    var object5 = (x2) => x2 !== null && typeof x2 === "object" && !Array.isArray(x2);
     var text2 = (x2) => typeof x2 === "string" && x2.trim().length > 0;
-    var canonical = (x2) => Array.isArray(x2) ? x2.map(canonical) : object4(x2) ? Object.fromEntries(Object.keys(x2).sort().map((k) => [k, canonical(x2[k])])) : x2;
+    var canonical = (x2) => Array.isArray(x2) ? x2.map(canonical) : object5(x2) ? Object.fromEntries(Object.keys(x2).sort().map((k) => [k, canonical(x2[k])])) : x2;
     var PAST_FINAL = /(았|었|였|했|왔|갔|봤|됐|냈|셨|잤|샀|썼|줬|놨|뒀|했었|았었|었었)(?:다|어요|어|습니다|죠|네요|거든요|대요|답니다|지요|잖아요|던\s*것이다|던\s*거다|던\s*겁니다|던\s*거예요)\s*$/;
     var MORAL_FINAL = /(?:하자|합시다|말자|맙시다|세요|십시오|해야\s*(?:한다|해요|합니다|해|돼요|됩니다|된다)|[아어해마]라)\s*$/;
     function storySpeech(win) {
@@ -64619,7 +64643,7 @@ var require_story_contract = __commonJS({
       });
     }
     function storyHash(win) {
-      const story = object4(win.STORY) ? { ...win.STORY } : null;
+      const story = object5(win.STORY) ? { ...win.STORY } : null;
       if (story) delete story.review;
       const scenes = (win.SCENES || []).map((s2) => ({
         type: s2.type,
@@ -64649,7 +64673,7 @@ var require_story_contract = __commonJS({
     function checkStory(win, { requireReview = true } = {}) {
       const errors = [], fail6 = (message) => errors.push(message);
       const story = win.STORY, scenes = Array.isArray(win.SCENES) ? win.SCENES : [];
-      if (!object4(story) || story.version !== "story-v1")
+      if (!object5(story) || story.version !== "story-v1")
         return ["window.STORY requires version story-v1; read story-quality.md before authoring"];
       for (const key of ["viewerNeed", "thesis", "basis", "endingReason"])
         if (!text2(story[key])) fail6(`STORY.${key} must explain a concrete editorial decision`);
@@ -64659,21 +64683,21 @@ var require_story_contract = __commonJS({
       if (story.transcripts !== void 0 && !Array.isArray(story.transcripts)) fail6("STORY.transcripts must be an array");
       (Array.isArray(story.transcripts) ? story.transcripts : []).forEach((t2, i2) => {
         const s2 = scenes[t2?.shot - 1];
-        if (!object4(t2) || !Number.isInteger(t2.shot) || !s2 || s2.type === "outro" || s2.visual?.source !== "recording" && !s2.visual?.reuse || !text2(t2.source) || t2.source !== (s2.visual?.reuse?.clip || s2.visual.clip) || Array.isArray(s2.narration) && s2.narration.length || live.has(t2.shot) || !Array.isArray(t2.groups) || !t2.groups.length) {
+        if (!object5(t2) || !Number.isInteger(t2.shot) || !s2 || s2.type === "outro" || s2.visual?.source !== "recording" && !s2.visual?.reuse || !text2(t2.source) || t2.source !== (s2.visual?.reuse?.clip || s2.visual.clip) || Array.isArray(s2.narration) && s2.narration.length || live.has(t2.shot) || !Array.isArray(t2.groups) || !t2.groups.length) {
           fail6(`STORY.transcripts[${i2}] requires a unique live-voice recording or reused shot, matching clip and groups`);
           return;
         }
         let end = 0;
         t2.groups.forEach((g) => {
-          if (!object4(g) || !text2(g.text) || !Number.isFinite(g.start) || !Number.isFinite(g.end) || g.start < end || g.end <= g.start || s2.visual?.reuse && g.end > s2.duration) fail6(`STORY.transcripts[${i2}] requires ordered timed speech`);
-          if (object4(g)) end = g.end;
+          if (!object5(g) || !text2(g.text) || !Number.isFinite(g.start) || !Number.isFinite(g.end) || g.start < end || g.end <= g.start || s2.visual?.reuse && g.end > s2.duration) fail6(`STORY.transcripts[${i2}] requires ordered timed speech`);
+          if (object5(g)) end = g.end;
         });
         live.set(t2.shot, t2.groups.map((g) => ({ tts: g?.text, sub: g?.text })));
       });
       const speech = storySpeech(win);
       const narrated = [...new Set(speech.map((x2) => x2.shot))].map((i2) => ({ i: i2 }));
       function ref(r2, label) {
-        if (!object4(r2) || !Number.isInteger(r2.shot) || !Number.isInteger(r2.group) || r2.shot < 1 || r2.group < 1 || !text2(r2.quote)) {
+        if (!object5(r2) || !Number.isInteger(r2.shot) || !Number.isInteger(r2.group) || r2.shot < 1 || r2.group < 1 || !text2(r2.quote)) {
           fail6(`${label} requires 1-based shot, group and exact quote`);
           return null;
         }
@@ -64696,7 +64720,7 @@ var require_story_contract = __commonJS({
       const position = (a) => speech.findIndex((x2) => x2.shot === a[0] && x2.group === a[1]);
       const before = (a, b) => position(a) < position(b);
       if (opening && position(opening) !== 0) fail6("STORY.opening must reference the first spoken group");
-      const revealCover = scenes.find((s2) => object4(s2) && s2.type === "cover");
+      const revealCover = scenes.find((s2) => object5(s2) && s2.type === "cover");
       const coverReveal = !!revealCover && (revealCover.hookType === "spoiler" || revealCover.hookForm === "payoff");
       if (opening && payoff) {
         if (position(payoff) < position(opening)) fail6("STORY.payoff cannot precede the opening");
@@ -64730,8 +64754,8 @@ var require_story_contract = __commonJS({
       }
       if (story.person !== void 0) {
         const person = story.person;
-        const names = object4(person) ? [person.name, ...Array.isArray(person.aliases) ? person.aliases : []] : [];
-        if (!object4(person) || !text2(person.name) || person.aliases !== void 0 && !(Array.isArray(person.aliases) && person.aliases.every(text2))) {
+        const names = object5(person) ? [person.name, ...Array.isArray(person.aliases) ? person.aliases : []] : [];
+        if (!object5(person) || !text2(person.name) || person.aliases !== void 0 && !(Array.isArray(person.aliases) && person.aliases.every(text2))) {
           fail6("STORY.person requires a name and optional aliases (person-short.md)");
         } else if (names.some((v) => v.trim().length < 2)) {
           fail6("STORY.person names and aliases need at least two characters");
@@ -64769,7 +64793,7 @@ var require_story_contract = __commonJS({
       if (beats.length !== narrated.length) fail6("STORY.beats requires one row per narrated shot");
       const seen = /* @__PURE__ */ new Set();
       beats.forEach((b, i2) => {
-        if (!object4(b)) {
+        if (!object5(b)) {
           fail6(`STORY.beats[${i2}] must be an object`);
           return;
         }
@@ -64781,13 +64805,13 @@ var require_story_contract = __commonJS({
       });
       if (!requireReview) return errors;
       const review2 = story.review;
-      if (!object4(review2)) return [...errors, "STORY.review is required before production; a score alone is not evidence"];
+      if (!object5(review2)) return [...errors, "STORY.review is required before production; a score alone is not evidence"];
       if (review2.hash !== storyHash(win)) fail6("STORY.review is stale; review the current narration and contract again");
       if (review2.verdict !== "pass" || !Array.isArray(review2.unresolved) || review2.unresolved.length)
         fail6("STORY.review must pass with an empty unresolved list");
       for (const key of ["meaning", "progression", "payoff", "grounding"]) {
         const item = review2[key];
-        if (!object4(item) || !text2(item.reason) || !Array.isArray(item.refs) || !item.refs.length) {
+        if (!object5(item) || !text2(item.reason) || !Array.isArray(item.refs) || !item.refs.length) {
           fail6(`STORY.review.${key} requires reasoning and quoted narration evidence`);
           continue;
         }
@@ -64806,9 +64830,9 @@ var require_check_tts_quality = __commonJS({
     var fs10 = __require("node:fs");
     var path27 = __require("node:path");
     var { evaluateWindowScript: evaluateWindowScript2 } = require_scenes_vm();
-    var { createHash: createHash11 } = __require("node:crypto");
+    var { createHash: createHash12 } = __require("node:crypto");
     var { authorizeSpeed: authorizeSpeed4 } = require_tts_speed_policy();
-    var hash4 = (value) => createHash11("sha256").update(value).digest("hex");
+    var hash5 = (value) => createHash12("sha256").update(value).digest("hex");
     var normalize2 = (text2) => text2.normalize("NFKC").toLowerCase().replace(/[\p{P}\p{Z}\s]/gu, "");
     function cer(expected, heard) {
       const a = [...normalize2(expected)], b = [...normalize2(heard)];
@@ -64826,8 +64850,8 @@ var require_check_tts_quality = __commonJS({
       const report = JSON.parse(fs10.readFileSync(proofFile, "utf8"));
       if (report.version !== 1 || report.policy !== "speech-quality-v1" || report.status !== "pass") throw new Error("missing current speech-quality-v1 PASS");
       if (typeof expected !== "string" || !normalize2(expected) || expected.length > 4e3) throw new Error("invalid expected narration");
-      if (report.textSha256 !== hash4(normalize2(expected)) || typeof report.expectedText !== "string" || normalize2(report.expectedText) !== normalize2(expected)) throw new Error("narration changed after audio review");
-      const audioHash = hash4(fs10.readFileSync(file));
+      if (report.textSha256 !== hash5(normalize2(expected)) || typeof report.expectedText !== "string" || normalize2(report.expectedText) !== normalize2(expected)) throw new Error("narration changed after audio review");
+      const audioHash = hash5(fs10.readFileSync(file));
       if (report.audioSha256 !== audioHash) throw new Error("audio changed after review");
       if (!Array.isArray(report.attempts) || report.attempts.length < 1 || report.attempts.length > 3) throw new Error("missing bounded attempt history");
       const take = report.attempts.at(-1), r2 = take.review, s2 = take.signal;
@@ -64837,7 +64861,7 @@ var require_check_tts_quality = __commonJS({
       if (!s2 || ![s2.duration, s2.rmsDb, s2.clippedFraction].every(Number.isFinite) || s2.duration < 0.25 || s2.duration > 120 || s2.duration > Math.max(2, [...normalize2(expected)].length / 4.5 * 2) || s2.rmsDb < -45 || s2.clippedFraction < 0 || s2.clippedFraction > 1e-3) throw new Error("audio signal did not pass");
       if (!r2 || r2.complete !== true || !Number.isFinite(r2.confidence) || r2.confidence < 0.9 || r2.confidence > 1 || typeof r2.evidence !== "string" || r2.evidence.trim().length < 20 || !Array.isArray(r2.issues) || r2.issues.length) throw new Error("listening review incomplete or defective");
       for (const axis of ["accuracy", "pronunciation", "naturalness", "clarity"]) if (!Number.isFinite(r2[axis]) || r2[axis] < (axis === "accuracy" ? 98 : 95) || r2[axis] > 100) throw new Error(axis + " did not pass");
-      return { [file]: audioHash, [proofFile]: hash4(fs10.readFileSync(proofFile)) };
+      return { [file]: audioHash, [proofFile]: hash5(fs10.readFileSync(proofFile)) };
     }
     function characterVoice(win, scene, proof) {
       const entries = win.SB_DOC?.characters;
@@ -64849,19 +64873,8 @@ var require_check_tts_quality = __commonJS({
       const matches = characters.filter((c) => c?.id === ids[0]);
       if (!ids[0] || matches.length !== 1) throw new Error("Character speech has no uniquely resolved speaker or narrator");
       const expected = matches[0].tts;
-      const errors = require_character_voice().voiceErrors(expected);
-      if (errors.length) throw new Error("Character speech: " + errors.join("; "));
-      const settings = proof?.voiceSettings;
-      if (!settings) throw new Error("Character speech requires recorded generation voiceSettings");
-      const engines = { tts_generate: "gemini", tts_gemini_38: "gemini", tts_local_generate: "supertonic", tts_elevenlabs_generate: "elevenlabs", mlx_tts_generate: "mlx" };
-      if (!engines[proof.generator] || settings.speakers || settings.inputs) throw new Error("Character speech requires a single-speaker generation proof");
-      const language = require_character_voice().normalizeLanguage;
-      const actual = { engine: engines[proof.generator], voiceId: settings.voiceId || settings.voiceName || settings.voice, language: language(settings.lang || settings.languageCode || proof.language), speed: settings.speed ?? 1 };
-      for (const key of ["engine", "voiceId", "language", "speed"]) {
-        const wanted = key === "language" ? language(expected[key]) : typeof expected[key] === "string" ? expected[key].trim() : expected[key];
-        if (actual[key] !== wanted) throw new Error(`Character ${ids[0]} ${key} differs from generated speech`);
-      }
-      for (const key of ["model", "stylePrompt"]) if (expected[key] !== void 0 && settings[key] !== expected[key].trim()) throw new Error(`Character ${ids[0]} ${key} differs from generated speech`);
+      const errors = require_character_voice().generationVoiceErrors(expected, proof);
+      if (errors.length) throw new Error("Character " + ids[0] + " " + errors.join("; "));
       return ids[0];
     }
     var REPORT = "tts-warnings.json";
@@ -64879,7 +64892,7 @@ var require_check_tts_quality = __commonJS({
       return parts.join(" | ");
     }
     function decide(work, warnings, inputs) {
-      const fingerprint = hash4(JSON.stringify({ inputs, warnings }));
+      const fingerprint = hash5(JSON.stringify({ inputs, warnings }));
       const approval = read2(path27.join(work, APPROVAL));
       const approved = warnings.length > 0 && approval?.kind === "user" && approval.fingerprint === fingerprint && typeof approval.reference === "string" && approval.reference.trim().length > 0 && Number.isFinite(Date.parse(approval.at));
       const report = { fingerprint, warnings, inputs, approved: Boolean(approved), approval: approved ? approval : null, status: warnings.length ? approved ? "approved-with-warnings" : "awaiting-user" : "pass" };
@@ -64897,7 +64910,7 @@ var require_check_tts_quality = __commonJS({
       fs10.writeFileSync(path27.join(work, APPROVAL), JSON.stringify({ kind: "user", fingerprint: report.fingerprint, reference, at: (/* @__PURE__ */ new Date()).toISOString() }, null, 2) + "\n");
     }
     var lastReport = (work) => read2(path27.join(path27.resolve(work), REPORT));
-    function check2(work, board) {
+    function checkLegacy(work, board) {
       work = path27.resolve(work);
       board = path27.resolve(board);
       const scenesFile = path27.join(board, "scenes.js");
@@ -64913,13 +64926,13 @@ var require_check_tts_quality = __commonJS({
       const episodeSettings = /* @__PURE__ */ new Map();
       for (const [k, { s: s2, i: i2 }] of expected.entries()) {
         const file = path27.resolve(work, rows[k][1]);
-        media[file] = hash4(fs10.readFileSync(file));
+        media[file] = hash5(fs10.readFileSync(file));
         const text2 = (s2.narration || []).map((n) => n.tts || "").join(". ");
         const live = win.VOICE === "user" || s2.visual?.source === "recording" && !normalize2(text2) || s2.visual?.source === "screencast" && s2.visual?.sync === true;
         if (live || !normalize2(text2)) continue;
         const proofFile = file + ".quality.json";
         inputs[file] = media[file];
-        inputs[proofFile] = fs10.existsSync(proofFile) ? hash4(fs10.readFileSync(proofFile)) : null;
+        inputs[proofFile] = fs10.existsSync(proofFile) ? hash5(fs10.readFileSync(proofFile)) : null;
         inputs["text:" + i2] = normalize2(text2);
         const speaker = characterVoice(win, s2, read2(proofFile));
         try {
@@ -64935,7 +64948,7 @@ var require_check_tts_quality = __commonJS({
             episodeSettings.set(speaker, settings);
           }
         } catch (e2) {
-          if (fs10.existsSync(proofFile)) media[proofFile] = hash4(fs10.readFileSync(proofFile));
+          if (fs10.existsSync(proofFile)) media[proofFile] = hash5(fs10.readFileSync(proofFile));
           warnings.push(`card ${i2}: ${e2.message} \u2014 ${findings(file)}`);
         }
         const proof = read2(proofFile);
@@ -64949,6 +64962,63 @@ var require_check_tts_quality = __commonJS({
       decide(work, warnings, inputs);
       return media;
     }
+    function check2(work, board) {
+      work = path27.resolve(work);
+      board = path27.resolve(board);
+      const file = path27.join(board, "scenes.js");
+      const win = evaluateWindowScript2(fs10.readFileSync(file, "utf8"), { filename: file });
+      if (!Array.isArray(win.SCENES)) throw new Error("SCENES missing");
+      const rows = fs10.readFileSync(path27.join(work, "cards.tsv"), "utf8").split(/\r?\n/).filter((l) => l.trim() && !l.startsWith("#")).map((l) => l.split("	"));
+      const expected = win.SCENES.map((s2, i2) => ({ s: s2, i: i2 })).filter(({ s: s2 }) => !["broll", "outro"].includes(s2.type));
+      if (JSON.stringify(rows.map((r2) => r2[0])) !== JSON.stringify(expected.map(({ i: i2 }) => String(i2)))) throw new Error("card order differs from SCENES");
+      const media = {};
+      for (const [k, { s: s2, i: i2 }] of expected.entries()) {
+        const audio = path27.resolve(work, rows[k][1]);
+        const bytes = fs10.readFileSync(audio);
+        if (!bytes.length) throw new Error("Empty audio for card " + i2);
+        media[audio] = hash5(bytes);
+        if (s2.visual?.video?.speechStatus === "stale") throw new Error("Dialogue-dependent video is stale for card " + i2);
+        const characters = win.SB_DOC?.characters || [];
+        const cast = Array.isArray(characters) ? characters : Object.entries(characters).map(([id, c]) => ({ ...c, id }));
+        for (const line of s2.narration || []) {
+          if (line.mediaStatus === "needs_audio") throw new Error("Regenerate modified dialogue " + line.id);
+          if (win.SB_DOC?.speechPlanVersion === 1 && (line.tts || "").trim() && !line.audio) throw new Error("Attach generated dialogue audio: " + line.id);
+          if (line.audio) {
+            const voice = cast.find((c) => c.id === line.speaker)?.tts;
+            const revision2 = hash5(JSON.stringify({ tts: line.tts, sub: line.sub, speaker: line.speaker, delivery: line.delivery, voice }));
+            if (line.audio.revision !== revision2) throw new Error("Dialogue or voice changed: " + line.id);
+            const source = path27.resolve(board, line.audio.path);
+            if (hash5(fs10.readFileSync(source)) !== line.audio.sha256) throw new Error("Dialogue audio changed: " + line.id);
+            media[source] = line.audio.sha256;
+            if (!line.audio.generation || line.audio.generation.text !== line.tts) throw new Error("Missing dialogue generation receipt: " + line.id);
+            characterVoice(win, { narration: [line] }, line.audio.generation);
+          }
+        }
+        const binding = s2.visual?.video?.speechBinding;
+        if (binding) {
+          if (s2.visual.video.engine && binding.provider !== s2.visual.video.engine || s2.visual.video.model && binding.model !== s2.visual.video.model) throw new Error("Video adapter changed for card " + i2);
+          if (path27.resolve(board, s2.visual.video.clip || "") !== path27.resolve(binding.videoPath) || hash5(fs10.readFileSync(binding.videoPath)) !== binding.videoSha256) throw new Error("Bound video changed for card " + i2);
+          const audio2 = (s2.narration || []).map((n) => ({ lineId: n.id, sha256: n.audio?.sha256, revision: n.audio?.revision }));
+          if (JSON.stringify(binding.audio) !== JSON.stringify(audio2)) throw new Error("Video speech binding is stale for card " + i2);
+          media[binding.videoPath] = binding.videoSha256;
+        }
+        if (win.SB_DOC?.speechPlanVersion === 1 && (s2.narration || []).some((n) => n.delivery === "on_screen") && s2.visual?.video && !binding) throw new Error("On-screen dialogue needs a video speech binding for card " + i2);
+        const lines = (s2.narration || []).filter((n) => (n.tts || "").trim());
+        const receipt = read2(audio + ".generation.json") || read2(audio + ".quality.json");
+        if (win.SB_DOC?.speechPlanVersion === 1 && lines.length && win.VOICE !== "user") {
+          if (new Set(lines.map((n) => n.speaker)).size !== 1) throw new Error("Split speaker changes into single-speaker shots before assembly");
+          const direct = lines.length === 1 && lines[0].audio?.sha256 === media[audio];
+          if (!direct && (!receipt || receipt.audioSha256 !== media[audio] || JSON.stringify(receipt.lineIds) !== JSON.stringify(lines.map((n) => n.id)) || receipt.expectedText !== lines.map((n) => n.tts).join(". "))) throw new Error("Scene WAV has no current line-bound generation receipt for card " + i2);
+        }
+        if (receipt) {
+          characterVoice(win, s2, receipt);
+          authorizeSpeed4(work, "generation", receipt.generationSpeed ?? 1);
+          authorizeSpeed4(work, "final", receipt.playbackSpeed ?? 1);
+        }
+      }
+      fs10.writeFileSync(path27.join(work, REPORT), JSON.stringify({ status: "not_reviewed", policy: "speech-provenance-v1", warnings: [], inputs: media, approved: false }, null, 2) + "\n");
+      return media;
+    }
     function checkTempo(work, speed, min = 1, max = 1) {
       if ([min, max].some((n) => Number(n) !== 1)) throw new Error("Per-card tempo changes are forbidden; assembly is fixed at 1.0");
       authorizeSpeed4(work, "final", Number(speed));
@@ -64960,7 +65030,7 @@ var require_check_tts_quality = __commonJS({
       });
       if (generated && [speed, min, max].some((n) => Number(n) !== 1)) throw new Error("ElevenLabs narration forbids post-synthesis tempo changes; set SPEED=1 and ATEMPO_MIN=ATEMPO_MAX=1, use generation.speed");
     }
-    module.exports = { characterVoice, check: check2, decide, approve, lastReport, findings, verifyProof, normalize: normalize2, cer, checkTempo };
+    module.exports = { characterVoice, checkLegacy, check: check2, decide, approve, lastReport, findings, verifyProof, normalize: normalize2, cer, checkTempo };
     if (__require.main === module) {
       try {
         const [command, work, arg] = process.argv.slice(2);
@@ -64970,7 +65040,7 @@ var require_check_tts_quality = __commonJS({
           if (!dir) throw new Error("usage: check-tts-quality.js check <workdir> [storyboard] | approve <workdir> <user approval reference>");
           check2(dir, board);
           const report = lastReport(dir);
-          console.log(report.warnings.length ? `Generated narration proceeds with ${report.warnings.length} user-approved warning(s); see ${REPORT}` : "PASS all generated narration: current audio, transcript and listening review");
+          console.log(report.warnings.length ? `Generated narration proceeds with ${report.warnings.length} user-approved warning(s); see ${REPORT}` : "Speech media recorded; listening not performed and no approval required");
         }
       } catch (e2) {
         console.error("TTS quality: " + e2.message);
@@ -64984,15 +65054,15 @@ var require_check_tts_quality = __commonJS({
 var require_final_speech_chapters = __commonJS({
   "../skills/produce/references/final-speech-chapters.js"(exports, module) {
     "use strict";
-    var { createHash: createHash11 } = __require("node:crypto");
+    var { createHash: createHash12 } = __require("node:crypto");
     var { spawnSync: spawnSync3 } = __require("node:child_process");
     var { normalize: normalize2, cer } = require_check_tts_quality();
     var RATE2 = 24e3;
     var BYTES2 = 4;
     var LIMIT3 = 14 * 1024 * 1024;
     var POLICY2 = "final-speech-chapters-v1";
-    var hash4 = (x2) => createHash11("sha256").update(x2).digest("hex");
-    var digest2 = (x2) => hash4(JSON.stringify(x2));
+    var hash5 = (x2) => createHash12("sha256").update(x2).digest("hex");
+    var digest2 = (x2) => hash5(JSON.stringify(x2));
     function decode2(media) {
       const encoded2 = spawnSync3("ffmpeg", ["-v", "error", "-i", media, "-map", "0:a:0", "-map_metadata", "-1", "-ac", "1", "-ar", String(RATE2), "-c:a", "flac", "-f", "flac", "pipe:1"], { maxBuffer: RATE2 * BYTES2 * 1800 + 65536, timeout: 6e4 });
       if (encoded2.error || encoded2.status !== 0) throw new Error("Cannot decode final audio: " + (encoded2.error?.message || String(encoded2.stderr)));
@@ -65043,14 +65113,14 @@ var require_final_speech_chapters = __commonJS({
       return f3;
     }
     function validate2(p, pcm, text2, requirePass = true) {
-      if (p.policy !== POLICY2 || p.version !== 1 || p.sampleRate !== RATE2 || p.totalSamples !== pcm.length / BYTES2 || p.pcmSha256 !== hash4(pcm) || normalize2(p.expectedText) !== normalize2(text2) || p.textSha256 !== hash4(normalize2(text2))) throw new Error("Chapter proof describes other audio or narration");
+      if (p.policy !== POLICY2 || p.version !== 1 || p.sampleRate !== RATE2 || p.totalSamples !== pcm.length / BYTES2 || p.pcmSha256 !== hash5(pcm) || normalize2(p.expectedText) !== normalize2(text2) || p.textSha256 !== hash5(normalize2(text2))) throw new Error("Chapter proof describes other audio or narration");
       const expected = plan2(p.segments, p.totalSamples, text2);
       if (!Array.isArray(p.pieces) || p.pieces.length !== expected.length || p.manifestSha256 !== manifest2(p)) throw new Error("Missing, duplicated or altered chapter/boundary evidence");
       const failures = [];
       for (let i2 = 0; i2 < expected.length; i2++) {
         const e2 = expected[i2], v = p.pieces[i2];
         for (const [k, value] of Object.entries(e2)) if (v[k] !== value) throw new Error("Chapter order or boundary changed: " + k);
-        if (v.pcmSha256 !== hash4(pcm.subarray(e2.startSample * BYTES2, e2.endSample * BYTES2)) || !Number.isInteger(v.payloadBytes) || v.payloadBytes <= 0 || v.payloadBytes > LIMIT3 || !/^[a-f0-9]{64}$/.test(v.audioSha256 || "")) throw new Error("Chapter audio hash or payload changed");
+        if (v.pcmSha256 !== hash5(pcm.subarray(e2.startSample * BYTES2, e2.endSample * BYTES2)) || !Number.isInteger(v.payloadBytes) || v.payloadBytes <= 0 || v.payloadBytes > LIMIT3 || !/^[a-f0-9]{64}$/.test(v.audioSha256 || "")) throw new Error("Chapter audio hash or payload changed");
         if (v.model !== p.model || digest2(v.transcriptCheck ?? null) !== digest2(p.transcriptCheck ?? null)) throw new Error("Chapter reviewer/request differs from manifest");
         const f3 = listeningFailures2(v);
         if (!["pass", "fail"].includes(v.status) || !Array.isArray(v.failures) || digest2(v.failures) !== digest2(f3) || v.status !== (f3.length ? "fail" : "pass")) throw new Error("Chapter verdict does not match its review");
@@ -65060,7 +65130,7 @@ var require_final_speech_chapters = __commonJS({
       if (requirePass && failures.length) throw new Error(failures.join("; "));
       return failures;
     }
-    module.exports = { RATE: RATE2, BYTES: BYTES2, LIMIT: LIMIT3, POLICY: POLICY2, hash: hash4, digest: digest2, decode: decode2, plan: plan2, manifest: manifest2, listeningFailures: listeningFailures2, validate: validate2 };
+    module.exports = { RATE: RATE2, BYTES: BYTES2, LIMIT: LIMIT3, POLICY: POLICY2, hash: hash5, digest: digest2, decode: decode2, plan: plan2, manifest: manifest2, listeningFailures: listeningFailures2, validate: validate2 };
   }
 });
 
@@ -65208,10 +65278,10 @@ var util;
       return obj[e2];
     });
   };
-  util2.objectKeys = typeof Object.keys === "function" ? (obj) => Object.keys(obj) : (object4) => {
+  util2.objectKeys = typeof Object.keys === "function" ? (obj) => Object.keys(obj) : (object5) => {
     const keys = [];
-    for (const key in object4) {
-      if (Object.prototype.hasOwnProperty.call(object4, key)) {
+    for (const key in object5) {
+      if (Object.prototype.hasOwnProperty.call(object5, key)) {
         keys.push(key);
       }
     }
@@ -69272,19 +69342,19 @@ function floatSafeRemainder2(val, step) {
   const stepInt = Number.parseInt(step.toFixed(decCount).replace(".", ""));
   return valInt % stepInt / 10 ** decCount;
 }
-function defineLazy(object4, key, getter) {
+function defineLazy(object5, key, getter) {
   const set = false;
-  Object.defineProperty(object4, key, {
+  Object.defineProperty(object5, key, {
     get() {
       if (!set) {
         const value = getter();
-        object4[key] = value;
+        object5[key] = value;
         return value;
       }
       throw new Error("cached value already set");
     },
     set(v) {
-      Object.defineProperty(object4, key, {
+      Object.defineProperty(object5, key, {
         value: v
         // configurable: true,
       });
@@ -74945,7 +75015,7 @@ var Protocol = class {
           return;
         }
         const pollInterval = task2.pollInterval ?? this._options?.defaultTaskPollInterval ?? 1e3;
-        await new Promise((resolve7) => setTimeout(resolve7, pollInterval));
+        await new Promise((resolve8) => setTimeout(resolve8, pollInterval));
         options?.signal?.throwIfAborted();
       }
     } catch (error2) {
@@ -74962,7 +75032,7 @@ var Protocol = class {
    */
   request(request, resultSchema, options) {
     const { relatedRequestId, resumptionToken, onresumptiontoken, task, relatedTask } = options ?? {};
-    return new Promise((resolve7, reject) => {
+    return new Promise((resolve8, reject) => {
       const earlyReject = (error2) => {
         reject(error2);
       };
@@ -75040,7 +75110,7 @@ var Protocol = class {
           if (!parseResult.success) {
             reject(parseResult.error);
           } else {
-            resolve7(parseResult.data);
+            resolve8(parseResult.data);
           }
         } catch (error2) {
           reject(error2);
@@ -75301,12 +75371,12 @@ var Protocol = class {
       }
     } catch {
     }
-    return new Promise((resolve7, reject) => {
+    return new Promise((resolve8, reject) => {
       if (signal.aborted) {
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
         return;
       }
-      const timeoutId = setTimeout(resolve7, interval);
+      const timeoutId = setTimeout(resolve8, interval);
       signal.addEventListener("abort", () => {
         clearTimeout(timeoutId);
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
@@ -76182,12 +76252,12 @@ var StdioServerTransport = class {
     this.onclose?.();
   }
   send(message) {
-    return new Promise((resolve7) => {
+    return new Promise((resolve8) => {
       const json3 = serializeMessage(message);
       if (this._stdout.write(json3)) {
-        resolve7();
+        resolve8();
       } else {
-        this._stdout.once("drain", resolve7);
+        this._stdout.once("drain", resolve8);
       }
     });
   }
@@ -84763,7 +84833,7 @@ var shotSchema = external_exports.object({
   id: shotIdSchema.optional(),
   type: tuple(V.TYPES),
   title: external_exports.string().optional(),
-  narration: external_exports.array(external_exports.object({ tts: external_exports.string(), sub: external_exports.string().optional(), speaker: external_exports.string().trim().min(1).optional() }).passthrough()).optional(),
+  narration: external_exports.array(external_exports.object({ id: external_exports.string().trim().min(1).optional(), delivery: external_exports.enum(["voiceover", "on_screen", "off_screen"]).optional(), tts: external_exports.string(), sub: external_exports.string().optional(), speaker: external_exports.string().trim().min(1).optional() }).passthrough()).optional(),
   visual: visualSchema.optional(),
   duration: external_exports.number().positive().optional(),
   scene: external_exports.number().int().positive().optional(),
@@ -85569,7 +85639,7 @@ async function generateAdvanced(request) {
     const timeoutMs = targetDuration * 1e3 + REALTIME_TIMEOUT_MARGIN_MS;
     while (state.received < targetBytes && Date.now() - startTime < timeoutMs) {
       if (state.error) throw state.error;
-      await new Promise((resolve7) => setTimeout(resolve7, REALTIME_POLL_INTERVAL_MS));
+      await new Promise((resolve8) => setTimeout(resolve8, REALTIME_POLL_INTERVAL_MS));
     }
     state.done = true;
     closeQuietly(session);
@@ -85761,7 +85831,7 @@ async function generateLocalSpeech(request) {
   );
   let stdout;
   try {
-    stdout = await new Promise((resolve7, reject) => {
+    stdout = await new Promise((resolve8, reject) => {
       execFile(
         python,
         ["-c", SYNTH_SNIPPET, payload],
@@ -85777,7 +85847,7 @@ async function generateLocalSpeech(request) {
 ${errOut.trim()}`.trim())));
             return;
           }
-          resolve7(out);
+          resolve8(out);
         }
       );
     });
@@ -86327,7 +86397,7 @@ function buildJobBody(mode, args) {
   return body;
 }
 function sleep2(ms) {
-  return new Promise((resolve7) => setTimeout(resolve7, ms));
+  return new Promise((resolve8) => setTimeout(resolve8, ms));
 }
 var submitTimestamps = [];
 async function waitForSubmitSlot() {
@@ -86625,7 +86695,7 @@ async function assertReachable(url, attempts, waitMs) {
     } catch (error2) {
       last = error2 instanceof Error ? error2.message : String(error2);
     }
-    if (i2 < attempts - 1) await new Promise((resolve7) => setTimeout(resolve7, waitMs));
+    if (i2 < attempts - 1) await new Promise((resolve8) => setTimeout(resolve8, waitMs));
   }
   throw new Error(`public URL not reachable: ${url} (${last})`);
 }
@@ -86694,19 +86764,19 @@ function serveLocally(filePaths) {
     }
     fs5.createReadStream(file, { start, end }).on("error", () => res.destroy()).pipe(res);
   });
-  return new Promise((resolve7, reject) => {
+  return new Promise((resolve8, reject) => {
     server2.once("error", reject);
     server2.listen(0, "127.0.0.1", () => {
       const address = server2.address();
       const port = typeof address === "object" && address ? address.port : 0;
-      resolve7({ server: server2, port, routes });
+      resolve8({ server: server2, port, routes });
     });
   });
 }
 function closeServer(server2) {
-  return new Promise((resolve7) => {
+  return new Promise((resolve8) => {
     server2.closeAllConnections?.();
-    server2.close(() => resolve7());
+    server2.close(() => resolve8());
   });
 }
 var liveTunnels = /* @__PURE__ */ new Set();
@@ -86739,7 +86809,7 @@ async function publishViaTunnel(filePaths, cloudflared = "cloudflared") {
   };
   killTunnelsOnExit();
   try {
-    const origin = await new Promise((resolve7, reject) => {
+    const origin = await new Promise((resolve8, reject) => {
       child = spawn(cloudflared, ["tunnel", "--url", `http://127.0.0.1:${port}`, "--no-autoupdate"], {
         stdio: ["ignore", "pipe", "pipe"]
       });
@@ -86752,7 +86822,7 @@ ${log.slice(-600)}`)), 6e4);
         const m2 = /https:\/\/[a-z0-9-]+\.trycloudflare\.com/.exec(log);
         if (m2) {
           clearTimeout(timer);
-          resolve7(m2[0]);
+          resolve8(m2[0]);
         }
       };
       child.stdout?.on("data", onLine);
@@ -86768,7 +86838,7 @@ ${log.slice(-600)}`));
       });
     });
     const urls = routes.map((r2) => origin + r2);
-    await new Promise((resolve7) => setTimeout(resolve7, 5e3));
+    await new Promise((resolve8) => setTimeout(resolve8, 5e3));
     for (const url of urls) await assertReachable(url, 30, 3e3);
     console.error(`[media-publish] quick tunnel ${origin} serving ${filePaths.length} file(s)`);
     return { urls, how: "tunnel", close };
@@ -87101,7 +87171,7 @@ var seedanceReferenceSchema = external_exports.object({
   }
 });
 function sleep3(ms) {
-  return new Promise((resolve7) => setTimeout(resolve7, ms));
+  return new Promise((resolve8) => setTimeout(resolve8, ms));
 }
 function describeHttpError(status, body) {
   try {
@@ -87203,23 +87273,23 @@ function loadReferenceAudio(filePaths) {
   });
 }
 function probeVideo(filePath) {
-  return new Promise((resolve7) => {
+  return new Promise((resolve8) => {
     execFile2(
       "ffprobe",
       ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height,r_frame_rate:format=duration", "-of", "json", filePath],
       { timeout: 15e3 },
       (error2, out) => {
-        if (error2) return resolve7(null);
+        if (error2) return resolve8(null);
         try {
           const parsed = JSON.parse(String(out));
           const stream = parsed.streams?.[0];
           const [num5, den] = String(stream?.r_frame_rate || "").split("/").map(Number);
           const fps = num5 && den ? num5 / den : NaN;
           const seconds = Number.parseFloat(String(parsed.format?.duration ?? ""));
-          if (!stream?.width || !stream?.height || !Number.isFinite(fps) || !Number.isFinite(seconds) || seconds <= 0) return resolve7(null);
-          resolve7({ seconds, fps, width: stream.width, height: stream.height });
+          if (!stream?.width || !stream?.height || !Number.isFinite(fps) || !Number.isFinite(seconds) || seconds <= 0) return resolve8(null);
+          resolve8({ seconds, fps, width: stream.width, height: stream.height });
         } catch {
-          resolve7(null);
+          resolve8(null);
         }
       }
     );
@@ -87261,14 +87331,14 @@ async function checkReferenceVideos(filePaths, spec, model) {
   return total;
 }
 function probeAudioSeconds(filePath) {
-  return new Promise((resolve7) => {
+  return new Promise((resolve8) => {
     execFile2(
       "ffprobe",
       ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", filePath],
       { timeout: 15e3 },
       (error2, out) => {
         const seconds = Number.parseFloat(String(out ?? "").trim());
-        resolve7(!error2 && Number.isFinite(seconds) && seconds > 0 ? seconds : null);
+        resolve8(!error2 && Number.isFinite(seconds) && seconds > 0 ? seconds : null);
       }
     );
   });
@@ -87573,7 +87643,7 @@ async function synthesizeWithRetry(model, contentText, speechConfig, temperature
     } catch (error2) {
       lastError = error2;
       if (attempt < MAX_ATTEMPTS - 1) {
-        await new Promise((resolve7) => setTimeout(resolve7, RETRY_BASE_DELAY_MS * (attempt + 1)));
+        await new Promise((resolve8) => setTimeout(resolve8, RETRY_BASE_DELAY_MS * (attempt + 1)));
       }
     }
   }
@@ -88067,7 +88137,7 @@ function isRetryable(httpStatus) {
   return httpStatus === 429 || httpStatus >= 500;
 }
 function sleep4(ms) {
-  return new Promise((resolve7) => setTimeout(resolve7, ms));
+  return new Promise((resolve8) => setTimeout(resolve8, ms));
 }
 function timeoutFor2(textLength) {
   return Math.min(5 * 6e4, 6e4 + textLength * 40);
@@ -88628,7 +88698,7 @@ async function loadModel(id) {
     if (!listed.ok) return listed;
     const found = listed.models?.find((m2) => m2.id === id);
     if (found?.state === "ready") return { ok: true };
-    await new Promise((resolve7) => setTimeout(resolve7, 2e3));
+    await new Promise((resolve8) => setTimeout(resolve8, 2e3));
   }
   return { ok: false, error: `Timed out waiting for model "${id}" to become ready.` };
 }
@@ -88753,7 +88823,7 @@ async function muxRgbToMp4(opts) {
     );
     if (opts.audio) args.push("-c:a", "aac");
     args.push(opts.outFile);
-    await new Promise((resolve7, reject) => {
+    await new Promise((resolve8, reject) => {
       execFile3("ffmpeg", args, { timeout: 12e4, maxBuffer: 2 * 1024 * 1024 }, (error2, _out, errOut) => {
         if (error2) {
           const code = error2.code;
@@ -88765,7 +88835,7 @@ async function muxRgbToMp4(opts) {
 ${String(errOut).slice(-500)}` : ""}`));
           return;
         }
-        resolve7();
+        resolve8();
       });
     });
     if (!existsSync6(opts.outFile)) return { ok: false, error: "ffmpeg exited 0 but the mp4 was not written" };
@@ -89611,7 +89681,7 @@ var qwen3AsrTranscribeSchema = external_exports.object({
   filename: bareFilenameSchema("json").optional()
 });
 function probeDurationSeconds(audioPath) {
-  return new Promise((resolve7) => {
+  return new Promise((resolve8) => {
     execFile4(
       "ffprobe",
       ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", audioPath],
@@ -89619,10 +89689,10 @@ function probeDurationSeconds(audioPath) {
       (error2, out) => {
         const seconds = Number.parseFloat((out || "").trim());
         if (error2 || !Number.isFinite(seconds) || seconds <= 0) {
-          resolve7(60);
+          resolve8(60);
           return;
         }
-        resolve7(seconds);
+        resolve8(seconds);
       }
     );
   });
@@ -89679,7 +89749,7 @@ async function transcribeLocal(request) {
   );
   const startedAt = Date.now();
   try {
-    await new Promise((resolve7, reject) => {
+    await new Promise((resolve8, reject) => {
       execFile4(
         bin,
         cliArgs,
@@ -89699,7 +89769,7 @@ async function transcribeLocal(request) {
 ${tail}` : ""}`));
             return;
           }
-          resolve7();
+          resolve8();
         }
       );
     });
@@ -90383,7 +90453,7 @@ async function generateLocalImage(request) {
   );
   const startedAt = Date.now();
   try {
-    await new Promise((resolve7, reject) => {
+    await new Promise((resolve8, reject) => {
       execFile6(
         bin,
         cliArgs,
@@ -90405,7 +90475,7 @@ async function generateLocalImage(request) {
 ${tail}` : ""}`));
             return;
           }
-          resolve7();
+          resolve8();
         }
       );
     });
@@ -92349,7 +92419,7 @@ var sunoLyricsSchema = external_exports.object({
   prompt: external_exports.string().min(1).max(200)
 });
 function sleep5(ms) {
-  return new Promise((resolve7) => setTimeout(resolve7, ms));
+  return new Promise((resolve8) => setTimeout(resolve8, ms));
 }
 function describeSunoError(code, msg, httpStatus) {
   const text2 = (msg || "").trim() || "(no message)";
@@ -96709,7 +96779,7 @@ Returns: a text block with the mp4 path, still paths (and any requested still ou
     name: "tts_review_final",
     title: "Review assembled speech",
     annotations: HINT.generate,
-    description: "Listen to the actual final WAV or video, including all sentence transitions and the music mix. Requires accuracy >=98 and pronunciation, naturalness, clarity and continuity >=95, with no defects. Writes a hash-bound .speech-quality.json proof. The blind-transcription (STT) check and its CER <=2% gate do not run unless transcriptCheck carries a user request for them (owner directive 2026-10-04). One paid Gemini review call per payload (two with transcriptCheck); no synthesis. Review outages hold delivery. Supply the complete spoken text including native clip speech. Supports up to 30 minutes and 12,000 script characters, with a lossless FLAC review payload under 14 MiB. Payloads over 14 MiB require final-timeline sentence segments; the tool reviews lossless chapters and every cross-chapter sentence join, then binds all coverage to the complete media. Budget one review per chapter and boundary (two with transcriptCheck).",
+    description: "Optional review only when the user explicitly requests automatic audio review; never a default production or delivery requirement. Listen to the actual final WAV or video, including all sentence transitions and the music mix. Requires accuracy >=98 and pronunciation, naturalness, clarity and continuity >=95, with no defects. Writes a hash-bound .speech-quality.json proof. The blind-transcription (STT) check and its CER <=2% gate do not run unless transcriptCheck carries a user request for them (owner directive 2026-10-04). One paid Gemini review call per payload (two with transcriptCheck); no synthesis. An optional review outage is reported without blocking default delivery. Supply the complete spoken text including native clip speech. Supports up to 30 minutes and 12,000 script characters, with a lossless FLAC review payload under 14 MiB. Payloads over 14 MiB require final-timeline sentence segments; the tool reviews lossless chapters and every cross-chapter sentence join, then binds all coverage to the complete media. Budget one review per chapter and boundary (two with transcriptCheck).",
     inputSchema: { type: "object", additionalProperties: false, properties: {
       mediaPath: { type: "string", description: "Absolute path of the final media that ships." },
       segments: { type: "array", minItems: 1, maxItems: 1e3, description: "Required when the final FLAC exceeds 14 MiB. Complete spoken sentences in playback order on the final timeline. First starts at 0; each extends to the next start (last to audio EOF), at most 60 seconds each. Joined text must equal expectedText. The tool groups them into bounded chapters and reviews every chapter boundary.", items: { type: "object", additionalProperties: false, required: ["startSeconds", "expectedText"], properties: { startSeconds: { type: "number", minimum: 0, description: "Start of this complete sentence on the final audio timeline; the first is 0." }, expectedText: { type: "string", minLength: 1, maxLength: 1e3, description: "Complete spoken sentence, including intended phonetic number/name spelling." } } } },
@@ -96743,10 +96813,10 @@ Returns: a text block with the mp4 path, still paths (and any requested still ou
     title: "Generate and review narration",
     annotations: HINT.generate,
     description: `Generate one scene with the pinned TTS engine, review the actual WAV, and regenerate failed takes up to maxAttempts (1\u20133, including the first take).
-Use for every generated narration scene in produce/autoproduce. Pass the existing generator's arguments in generation, the complete spoken expectedText (phonetic spelling; no acting tags or speaker labels), language, and the profile's intended delivery. Voice and generation settings stay unchanged across attempts; the episode seed stays fixed on every retake (vendor determinism is best-effort). An entire scene is one call; never split it into sentence calls.
+Legacy opt-in review tool: use only when the user explicitly requests automatic audio review. Never call from default produce/autoproduce; those flows use raw TTS and speech_manage provenance. Pass the existing generator's arguments in generation, the complete spoken expectedText (phonetic spelling; no acting tags or speaker labels), language, and the profile's intended delivery. Voice and generation settings stay unchanged across attempts; the episode seed stays fixed on every retake (vendor determinism is best-effort). An entire scene is one call; never split it into sentence calls.
 Every single-voice take has its sentences re-spaced before review: a fixed sentencePause of digital silence between sentences (stretched up to 1.0s where a subtitle cue would read faster than 6.0 chars/s after playbackSpeed), a 0.14s lead, speech samples copied as generated (the 12 ms fades stay on the natural gap). tts_elevenlabs_generate is fetched with timestamps and spaced from its own alignment; tts_local_generate, tts_generate and mlx_tts_generate are aligned by the local forced aligner (mlx-qwen3-asr --timestamps) first, so a multi-sentence scene on any engine ships with the same pauses. Pass segments (the scene's narration[].tts list) so the pauses land on the builder's segment boundaries; the wrapper writes <wav>.sentences.json and the .alignment.json for the shipped audio. Generate consecutive sentences in one call whenever they belong to one breath \u2014 the engine reads them as one utterance, where one call per sentence restarts the voice at every sentence.
-Checks signal/duration, then ${REVIEW_MODEL} listening scores: accuracy >=98, pronunciation/naturalness/clarity >=95, confidence >=0.9, no audible defects. The blind-transcription (STT) check and its CER <=2% gate do not run unless transcriptCheck carries a user request for them (owner directive 2026-10-04); the proof then records transcript: null. Returns a hash-bound .wav.quality.json proof required by the builder. Missing keys, unavailable reviewer or malformed responses hold production (unverified); exhausted attempts return fail, and that finding goes to the user as a warning they can accept for the current take (skills/produce/references/tts-hitl.md). Scores are operational thresholds, not a guarantee of human judgement.
-Requires ffmpeg and GEMINI_API_KEY even for local synthesis. One paid audio-review call per acoustically valid take (two with transcriptCheck), plus the selected generator's costs. Record the retry-inclusive allowance before calling; review tokens are logged as unpriced until reconciled with provider billing. Do not call again to reset an exhausted attempt budget. Do not use for recordings or native clip speech; retain their final listening QA. Do not change engines/voices or lower thresholds to obtain PASS.`,
+Checks signal/duration, then ${REVIEW_MODEL} listening scores: accuracy >=98, pronunciation/naturalness/clarity >=95, confidence >=0.9, no audible defects. The blind-transcription (STT) check and its CER <=2% gate do not run unless transcriptCheck carries a user request for them (owner directive 2026-10-04); the proof then records transcript: null. Returns an optional historical hash-bound .wav.quality.json review proof. Missing keys, unavailable reviewer or malformed responses hold production (unverified); exhausted attempts return fail, and that finding goes to the user as a warning they can accept for the current take (skills/produce/references/tts-hitl.md). Scores are operational thresholds, not a guarantee of human judgement.
+Requires ffmpeg and GEMINI_API_KEY even for local synthesis. One paid audio-review call per acoustically valid take (two with transcriptCheck), plus the selected generator's costs. Record the retry-inclusive allowance before calling; review tokens are logged as unpriced until reconciled with provider billing. Do not call again to reset an exhausted attempt budget. Do not use for recordings or native clip speech. Do not change engines/voices or lower thresholds to obtain PASS.`,
     inputSchema: {
       type: "object",
       additionalProperties: false,
@@ -98381,6 +98451,31 @@ Returns: integer credit balance.`,
     }
   },
   {
+    name: "speech_manage",
+    title: "Find and revise shot dialogue and audio dependencies",
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    description: "List dialogue by shot, character or text; prepare stable line ids with explicit narrator; update one line; attach generated audio; or plan a model-independent video route from adapter capabilities. Local files only, no generation, automatic listening or approval. Read first and pass expectedRevision for writes. Unknown speakers, ambiguous line targets, stale revisions and unsupported lip-sync routes fail. Returns revision, matching lines with voice/audio hashes, invalidated dependencies and optional video plan. Keeps source backups. Use existing generation tools and rebuild affected media after update; this tool never claims to regenerate assets.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        path: { type: "string", description: "Storyboard directory or scenes.js" },
+        action: { type: "string", description: "Local operation: list, prepare ids, update a line, attach generated audio/video, or plan the selected adapter", enum: ["prepare", "list", "update", "attach_audio", "plan_video", "attach_video"] },
+        shotId: { type: "string", description: "Stable shot id, not its display number" },
+        lineId: { type: "string", description: "Stable dialogue id; required for line writes" },
+        speaker: { type: "string", description: "Filter by character id or exact display name" },
+        query: { type: "string", description: "Exact substring of spoken or subtitle text to find" },
+        expectedRevision: { type: "string", description: "Current revision from list; required for writes" },
+        patch: { type: "object", description: "Only the requested line fields to replace; speaker uses its stable id", properties: { tts: { type: "string", description: "Spoken text with intended pronunciation" }, sub: { type: "string", description: "Subtitle display text" }, speaker: { type: "string", description: "Stable character id" }, delivery: { type: "string", description: "Narration, visible speech, or speech outside frame", enum: ["voiceover", "on_screen", "off_screen"] } }, additionalProperties: false },
+        audioPath: { type: "string", description: "Generated audio file; absolute or relative to storyboard directory" },
+        videoPath: { type: "string", description: "New video file to bind to the shot and current audio" },
+        generation: { type: "object", description: "Raw TTS request and declared text language; no listening score", properties: { generator: { type: "string", description: "Raw TTS tool that generated this file" }, voiceSettings: { type: "object", description: "Exact voice and language settings sent to the generator" }, text: { type: "string", description: "Exact spoken text sent to the generator" }, language: { type: "string", description: "Declared text language, e.g. ko; metadata for engines without a language argument, never an invented API parameter" } }, required: ["generator", "voiceSettings", "text"], additionalProperties: false },
+        capabilities: { type: "object", description: "Selected adapter capabilities from verified schema/documentation, with evidence", properties: { provider: { type: "string", description: "Selected video adapter provider id, matching the shot engine" }, model: { type: "string", description: "Selected model id, matching the shot model when set" }, audioConditioning: { type: "boolean", description: "Whether the adapter accepts supplied speech as conditioning" }, lipSync: { type: "boolean", description: "Whether supplied speech drives visible mouth motion" }, postLipSync: { type: "boolean", description: "Whether a separately selected post lip-sync adapter is available" }, evidence: { type: "string", description: "Documentation or verified capability record supporting these settings" } }, required: ["provider", "model", "audioConditioning", "lipSync", "postLipSync", "evidence"], additionalProperties: false }
+      },
+      required: ["path", "action"],
+      additionalProperties: false
+    }
+  },
+  {
     name: "storyboard_read",
     title: "Read a storyboard as sequences \u2192 scenes \u2192 shots",
     annotations: HINT.local,
@@ -98771,7 +98866,7 @@ function readState(root) {
   if (!existsSync17(file)) return null;
   if (!lstatSync3(file).isFile()) throw new Error(`${STATE_FILE} is not a regular file`);
   const value = JSON.parse(readFileSync16(file, "utf8"));
-  if (value.format !== STATE_FORMAT || typeof value.workspace !== "string" || typeof value.projectId !== "string" || !validUuid(value.projectId) || value.profileSha256 !== void 0 && !/^[a-f0-9]{64}$/.test(value.profileSha256) || !value.attachments || typeof value.attachments !== "object" || Array.isArray(value.attachments) || Object.entries(value.attachments).some(([relative, hash4]) => !ALLOWED_ROOTS.some((allowed) => relative.startsWith(`${allowed}/`)) || typeof hash4 !== "string" || !/^[a-f0-9]{64}$/.test(hash4))) {
+  if (value.format !== STATE_FORMAT || typeof value.workspace !== "string" || typeof value.projectId !== "string" || !validUuid(value.projectId) || value.profileSha256 !== void 0 && !/^[a-f0-9]{64}$/.test(value.profileSha256) || !value.attachments || typeof value.attachments !== "object" || Array.isArray(value.attachments) || Object.entries(value.attachments).some(([relative, hash5]) => !ALLOWED_ROOTS.some((allowed) => relative.startsWith(`${allowed}/`)) || typeof hash5 !== "string" || !/^[a-f0-9]{64}$/.test(hash5))) {
     throw new Error(`${STATE_FILE} has an unsupported format`);
   }
   return value;
@@ -99134,15 +99229,15 @@ async function getAsset(client, args) {
   mkdirSync9(path19.dirname(file), { recursive: true });
   const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
   const fd = openSync7(tmp, "wx");
-  const hash4 = createHash6("sha256");
+  const hash5 = createHash6("sha256");
   let size = 0;
   try {
     size = await client.assetsDownload(asset.id, (chunk2) => {
-      hash4.update(chunk2);
+      hash5.update(chunk2);
       writeSync2(fd, chunk2);
     }, asset.byteSize);
     closeSync7(fd);
-    if (size !== asset.byteSize || hash4.digest("hex") !== asset.sha256) throw new Error(`Downloaded bytes do not match the portal's sha256/byteSize for asset ${asset.id}. Nothing was kept.`);
+    if (size !== asset.byteSize || hash5.digest("hex") !== asset.sha256) throw new Error(`Downloaded bytes do not match the portal's sha256/byteSize for asset ${asset.id}. Nothing was kept.`);
     renameSync8(tmp, file);
   } catch (error2) {
     try {
@@ -100250,10 +100345,162 @@ function portalHandlers(fetchImpl) {
   };
 }
 
+// src/speech.ts
+import { createHash as createHash7, randomUUID as randomUUID5 } from "node:crypto";
+import { readFileSync as readFileSync20, writeFileSync as writeFileSync15, renameSync as renameSync9, mkdirSync as mkdirSync11, existsSync as existsSync21 } from "node:fs";
+import { dirname as dirname5, resolve as resolve5, join as join9 } from "node:path";
+import * as nodeModule2 from "node:module";
+var voiceContract = () => nodeModule2.createRequire(import.meta.url)("../../skills/_shared/character-voice.js");
+var delivery = external_exports.enum(["voiceover", "on_screen", "off_screen"]);
+var speechManageSchema = external_exports.object({
+  path: external_exports.string().min(1),
+  action: external_exports.enum(["prepare", "list", "update", "attach_audio", "plan_video", "attach_video"]),
+  shotId: external_exports.string().optional(),
+  lineId: external_exports.string().optional(),
+  speaker: external_exports.string().optional(),
+  query: external_exports.string().optional(),
+  expectedRevision: external_exports.string().optional(),
+  patch: external_exports.object({ tts: external_exports.string().min(1).optional(), sub: external_exports.string().optional(), speaker: external_exports.string().min(1).optional(), delivery: delivery.optional() }).strict().optional(),
+  audioPath: external_exports.string().optional(),
+  videoPath: external_exports.string().optional(),
+  generation: external_exports.object({ generator: external_exports.string().min(1), voiceSettings: external_exports.record(external_exports.unknown()), text: external_exports.string().min(1), language: external_exports.string().min(1).optional() }).strict().optional(),
+  capabilities: external_exports.object({ provider: external_exports.string().min(1), model: external_exports.string().min(1), audioConditioning: external_exports.boolean(), lipSync: external_exports.boolean(), postLipSync: external_exports.boolean(), evidence: external_exports.string().min(1) }).strict().optional()
+}).strict();
+var hash3 = (s2) => createHash7("sha256").update(s2).digest("hex");
+var object3 = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
+function speechRevision(line, character) {
+  return hash3(JSON.stringify({ tts: line.tts, sub: line.sub, speaker: line.speaker, delivery: line.delivery, voice: character?.tts }));
+}
+function speechVideoPlan(lines, capabilities) {
+  if (!capabilities) throw new Error("Supply the selected adapter capabilities and their evidence; never infer support from the model name");
+  const onScreen = lines.some((line) => line.delivery === "on_screen");
+  const mode = !onScreen ? "voiceover" : capabilities.audioConditioning && capabilities.lipSync ? "audio_conditioned" : capabilities.postLipSync ? "post_lipsync" : null;
+  if (!mode) throw new Error("Selected adapter cannot synchronize on-screen dialogue. Select a capable adapter; do not silently change the scene to silent acting");
+  return { mode, provider: capabilities.provider, model: capabilities.model, capabilities, audioFirst: onScreen, lineIds: lines.map((line) => line.id), review: "not_reviewed" };
+}
+function manageSpeech(args) {
+  const { file, win, header } = readBoard(args.path);
+  const before = readFileSync20(file, "utf8");
+  const revision2 = hash3(before);
+  const mutates = ["prepare", "update", "attach_audio", "attach_video"].includes(args.action);
+  if (mutates && args.expectedRevision !== revision2) throw new Error("Read speech first and supply its current expectedRevision; the storyboard may have changed");
+  const doc = object3(win.SB_DOC);
+  const rawCharacters = doc.characters;
+  const characters = Array.isArray(rawCharacters) ? rawCharacters : Object.entries(object3(rawCharacters)).map(([id, c]) => ({ ...object3(c), id }));
+  const character = (id) => characters.find((c) => c.id === id);
+  const scenes = win.SCENES;
+  let changed = false;
+  if (args.action === "prepare") {
+    if (typeof doc.narratorCharacterId !== "string" || !character(doc.narratorCharacterId)) throw new Error("Set SB_DOC.characters and narratorCharacterId before preparing speech; no voice is invented");
+    let next = Math.max(0, ...scenes.map((s2) => Number(String(s2.id || "").replace(/^s/, "")) || 0));
+    for (const scene of scenes) {
+      scene.id ||= "s" + String(++next).padStart(4, "0");
+      for (const line of scene.narration || []) {
+        line.id ||= "d-" + randomUUID5();
+        line.speaker ||= doc.narratorCharacterId;
+        line.delivery ||= line.speaker === doc.narratorCharacterId ? "voiceover" : "on_screen";
+      }
+    }
+    if (win.STRUCTURE) win.STRUCTURE.nextShotId = Math.max(win.STRUCTURE.nextShotId || 1, next + 1);
+    doc.speechPlanVersion = 1;
+    win.SB_DOC = doc;
+    changed = true;
+  }
+  const all = scenes.flatMap((scene, index) => (scene.narration || []).map((line) => ({ scene, index, line })));
+  const selected = all.filter(({ scene, line }) => (!args.shotId || scene.id === args.shotId) && (!args.lineId || line.id === args.lineId) && (!args.speaker || line.speaker === args.speaker || character(line.speaker)?.name === args.speaker) && (!args.query || (line.tts + " " + (line.sub || "")).includes(args.query)));
+  let invalidated;
+  let plan2;
+  if (args.action === "update" || args.action === "attach_audio") {
+    if (!args.lineId || selected.length !== 1) throw new Error("Select exactly one stable lineId; list candidates for an ambiguous request");
+    const { scene, line } = selected[0];
+    if (args.action === "update") {
+      if (!args.patch || !Object.keys(args.patch).length) throw new Error("A non-empty dialogue patch is required");
+      if (args.patch.speaker && !character(args.patch.speaker)) throw new Error("Unknown speaker id");
+      const prior = speechRevision(line, character(line.speaker));
+      const oldAudio = line.audio;
+      const oldDelivery = line.delivery;
+      Object.assign(line, args.patch);
+      if (speechRevision(line, character(line.speaker)) !== prior) {
+        const video = object3(object3(scene.visual).video);
+        const binding = object3(video.speechBinding);
+        invalidated = { audio: oldAudio || null, video: Object.keys(video).length && (line.delivery === "on_screen" || oldDelivery === "on_screen") || ["audio_conditioned", "post_lipsync"].includes(String(binding.mode)) ? video : null, edit: true };
+        delete line.audio;
+        line.mediaStatus = "needs_audio";
+        if (invalidated.video) video.speechStatus = "stale";
+        scene.speechRevision = (Number(scene.speechRevision) || 0) + 1;
+      }
+    } else {
+      if (!args.audioPath) throw new Error("audioPath is required");
+      const audioPath = resolve5(dirname5(file), args.audioPath);
+      if (!args.generation || args.generation.text !== line.tts) throw new Error("Attach the actual generation arguments and exact line text");
+      const voice = character(line.speaker)?.tts;
+      const voiceErrors = voiceContract().generationVoiceErrors(voice, args.generation);
+      if (voiceErrors.length) throw new Error("Generation arguments do not match the pinned character voice: " + voiceErrors.join("; "));
+      const bytes = readFileSync20(audioPath);
+      if (!bytes.length) throw new Error("Audio file is empty");
+      const priorAudio = line.audio;
+      const audioHash = hash3(bytes), lineRevision = speechRevision(line, character(line.speaker));
+      const video = object3(object3(scene.visual).video), binding = object3(video.speechBinding);
+      const boundAudio = Array.isArray(binding.audio) ? binding.audio.map(object3).find((a) => a.lineId === line.id) : void 0;
+      if (priorAudio?.sha256 !== audioHash || priorAudio?.revision !== lineRevision || boundAudio && (boundAudio.sha256 !== audioHash || boundAudio.revision !== lineRevision)) {
+        const dependsOnSpeech = line.delivery === "on_screen" || ["audio_conditioned", "post_lipsync"].includes(String(binding.mode));
+        invalidated = { audio: priorAudio || null, video: dependsOnSpeech && Object.keys(video).length ? video : null, edit: true };
+        if (invalidated.video) video.speechStatus = "stale";
+      }
+      line.audio = { path: audioPath, sha256: audioHash, revision: lineRevision, status: "not_reviewed", generation: args.generation };
+      line.mediaStatus = "audio_ready";
+    }
+    changed = true;
+  }
+  if (args.action === "plan_video" || args.action === "attach_video") {
+    if (!args.shotId || !selected.length) throw new Error("Select one shot with speech");
+    if (selected.some(({ line }) => !line.id || !line.speaker || !line.delivery)) throw new Error("Prepare explicit speech before planning video");
+    if (args.lineId || args.speaker || args.query) throw new Error("Video planning uses all lines in the shot; remove line filters");
+    plan2 = speechVideoPlan(selected.map((s2) => s2.line), args.capabilities);
+    if (args.action === "attach_video") {
+      if (!args.videoPath) throw new Error("videoPath is required");
+      const videoPath = resolve5(dirname5(file), args.videoPath);
+      const bytes = readFileSync20(videoPath);
+      if (!bytes.length) throw new Error("Video file is empty");
+      const audio = selected.map(({ line }) => {
+        if (!line.audio || line.audio.revision !== speechRevision(line, character(line.speaker)) || hash3(readFileSync20(line.audio.path)) !== line.audio.sha256) throw new Error("Generate and attach current speech before binding video");
+        return { lineId: line.id, sha256: line.audio.sha256, revision: line.audio.revision };
+      });
+      const visual = object3(selected[0].scene.visual);
+      const video = object3(visual.video);
+      if (video.engine && video.engine !== plan2.provider || video.model && video.model !== plan2.model) throw new Error("Adapter does not match the selected shot model");
+      video.clip = args.videoPath;
+      video.speechBinding = { ...plan2, audio, videoPath, videoSha256: hash3(bytes) };
+      video.speechStatus = "current";
+      visual.video = video;
+      selected[0].scene.visual = visual;
+      changed = true;
+    }
+  }
+  if (changed) {
+    const ids = /* @__PURE__ */ new Set();
+    for (const { line } of all) {
+      if (!line.id || ids.has(line.id)) throw new Error("Dialogue ids must be present and unique");
+      ids.add(line.id);
+      if (!character(line.speaker)?.tts) throw new Error(`Missing pinned voice for ${line.speaker}`);
+    }
+    const work = resolve5(dirname5(file), "../.work/speech-history");
+    mkdirSync11(work, { recursive: true });
+    const backup = join9(work, revision2 + ".js");
+    if (!existsSync21(backup)) writeFileSync15(backup, before);
+    const nextSource = serializeBoard(win, header);
+    if (hash3(readFileSync20(file)) !== revision2) throw new Error("Storyboard changed during speech edit");
+    const tmp = file + "." + randomUUID5() + ".tmp";
+    writeFileSync15(tmp, nextSource);
+    renameSync9(tmp, file);
+  }
+  return { revision: hash3(readFileSync20(file)), changed, invalidated, plan: plan2, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: !!line.audio && line.audio.revision === speechRevision(line, character(line.speaker)) && existsSync21(line.audio.path) && hash3(readFileSync20(line.audio.path)) === line.audio.sha256 })) };
+}
+
 // src/portal-unit-routes.ts
-import { mkdtempSync as mkdtempSync6, readFileSync as readFileSync20, rmSync as rmSync10, writeFileSync as writeFileSync15 } from "node:fs";
+import { mkdtempSync as mkdtempSync6, readFileSync as readFileSync21, rmSync as rmSync10, writeFileSync as writeFileSync16 } from "node:fs";
 import { tmpdir as tmpdir4 } from "node:os";
-import { join as join9, extname as extname9 } from "node:path";
+import { join as join10, extname as extname9 } from "node:path";
 
 // src/portal-unit-edit.ts
 var unitEditSchema = external_exports.object({
@@ -100280,7 +100527,7 @@ var unitEditSchema = external_exports.object({
   scenes: external_exports.array(external_exports.record(external_exports.unknown())).optional(),
   shots: external_exports.array(external_exports.record(external_exports.unknown())).optional()
 }).strict();
-function object3(value) {
+function object4(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Expected an object");
   return value;
 }
@@ -100304,7 +100551,7 @@ function editUnit(input, area, action, args) {
     if (["get", "list"].includes(action)) throw new Error("Read operations do not accept globals");
     for (const [key, value2] of Object.entries(args.globals)) {
       if (!META_KEYS.includes(key) || key === "STRUCTURE") throw new Error("Unknown companion meta key");
-      board[key] = merge2(board[key], object3(value2));
+      board[key] = merge2(board[key], object4(value2));
     }
   }
   const read2 = action === "get" || action === "list";
@@ -100500,12 +100747,12 @@ async function runPortalUnit(name, raw, fetchImpl) {
 var COUPLED_MIX_KEYS = [["bedSeparationLu", "minimumSeparationLu"]];
 async function fillMixFromProject(client, storyboardId, board) {
   const { data: storyboard } = await client.request("GET", `/storyboards/${storyboardId}`);
-  const projectId = object3(storyboard).projectId;
+  const projectId = object4(storyboard).projectId;
   if (typeof projectId !== "string" || !projectId) throw new Error("storyboard has no projectId \u2014 cannot resolve the channel sound defaults");
   const { data: sound } = await client.request("GET", `/projects/${projectId}/sound`);
-  const defaults4 = object3(object3(object3(sound).value ?? {}).mix ?? {});
-  const music = object3(board.MUSIC ?? {});
-  const mix = object3(music.$mix ?? {});
+  const defaults4 = object4(object4(object4(sound).value ?? {}).mix ?? {});
+  const music = object4(board.MUSIC ?? {});
+  const mix = object4(music.$mix ?? {});
   const filled = [];
   const next = { ...mix };
   const coupledSkip = /* @__PURE__ */ new Set();
@@ -100514,8 +100761,8 @@ async function fillMixFromProject(client, storyboardId, board) {
   for (const [key, value] of Object.entries(defaults4)) {
     if (coupledSkip.has(key)) continue;
     if (value && typeof value === "object" && !Array.isArray(value)) {
-      const current = object3(mix[key] ?? {}), merged = { ...current };
-      for (const [inner, innerValue] of Object.entries(object3(value))) {
+      const current = object4(mix[key] ?? {}), merged = { ...current };
+      for (const [inner, innerValue] of Object.entries(object4(value))) {
         if (current[inner] === void 0) {
           merged[inner] = innerValue;
           filled.push(`${key}.${inner}`);
@@ -100537,8 +100784,8 @@ async function boardOperation(client, name, args) {
   const read2 = ["get", "list"].includes(action);
   if (!read2 && args.baseRevisionNo !== head) throw new Error(`head_moved: expected ${args.baseRevisionNo}, current ${head}. Read and reconcile before retrying.`);
   const detail = episode;
-  const meta = object3(detail.meta ?? {});
-  const board = { ...meta, SB_DOC: { ...object3(meta.SB_DOC ?? {}), backgrounds: detail.backgrounds, props: detail.props, characters: detail.characters, narratorCharacterId: detail.narratorCharacterId }, SCENES: detail.scenes.map((s2) => s2.extra) };
+  const meta = object4(detail.meta ?? {});
+  const board = { ...meta, SB_DOC: { ...object4(meta.SB_DOC ?? {}), backgrounds: detail.backgrounds, props: detail.props, characters: detail.characters, narratorCharacterId: detail.narratorCharacterId }, SCENES: detail.scenes.map((s2) => s2.extra) };
   const identified = (board.SCENES ?? []).some((shot) => !shot.id) ? applyPatch(board, { path: "", dryRun: false, draft: args.draft }).win : board;
   let filledFromProject = [];
   if (area === "episode_music" && !read2)
@@ -100551,17 +100798,17 @@ async function boardOperation(client, name, args) {
   if (normalized.findings.some((f3) => f3.level === "bad")) throw new Error(`Board not saved: ${JSON.stringify(normalized.findings)}${filledSuffix}`);
   const source = Object.entries(normalized.win).map(([key, value]) => `window[${JSON.stringify(key)}] = ${JSON.stringify(value)};`).join("\n");
   const checked = evaluateWindowScript(source);
-  const dir = mkdtempSync6(join9(tmpdir4(), "portal-unit-"));
+  const dir = mkdtempSync6(join10(tmpdir4(), "portal-unit-"));
   try {
-    const file = join9(dir, "scenes.js");
-    writeFileSync15(file, source);
-    for (const doc of episode.documents ?? []) if (["scenario.md", "script.md"].includes(doc.filename)) writeFileSync15(join9(dir, doc.filename), await client.document(args.episodeId, doc.filename));
+    const file = join10(dir, "scenes.js");
+    writeFileSync16(file, source);
+    for (const doc of episode.documents ?? []) if (["scenario.md", "script.md"].includes(doc.filename)) writeFileSync16(join10(dir, doc.filename), await client.document(args.episodeId, doc.filename));
     const chosen = episode.scenarios?.find((s2) => s2.chosen);
-    if (chosen) writeFileSync15(join9(dir, "scenario.md"), await client.scenarioMd(args.episodeId, chosen.candidate));
+    if (chosen) writeFileSync16(join10(dir, "scenario.md"), await client.scenarioMd(args.episodeId, chosen.candidate));
     const check2 = checkStoryboard({ path: file, draft: args.draft });
     if (check2.violations) return { saved: false, headRevisionNo: head, check: check2, ...filledNote };
     const { SCENES, SB_DOC, ...nextMeta } = checked;
-    const { data } = await client.checkpoint(args.episodeId, { stage: episode.stage ?? "board", baseRevisionNo: head, sourceHost: client.holder, note: args.note ?? name, scenes: SCENES, backgrounds: object3(SB_DOC).backgrounds, props: object3(SB_DOC).props, meta: { ...nextMeta, SB_DOC }, characters: object3(SB_DOC).characters, narratorCharacterId: object3(SB_DOC).narratorCharacterId });
+    const { data } = await client.checkpoint(args.episodeId, { stage: episode.stage ?? "board", baseRevisionNo: head, sourceHost: client.holder, note: args.note ?? name, scenes: SCENES, backgrounds: object4(SB_DOC).backgrounds, props: object4(SB_DOC).props, meta: { ...nextMeta, SB_DOC }, characters: object4(SB_DOC).characters, narratorCharacterId: object4(SB_DOC).narratorCharacterId });
     return { saved: true, ...data, check: check2, localCopy: { unchanged: true, syncRequired: true }, ...filledNote };
   } finally {
     rmSync10(dir, { recursive: true, force: true });
@@ -100586,19 +100833,19 @@ async function apiOperation(c, name, a) {
     const file = required2(a.file, "file"), kind = required2(a.kind, "kind");
     const mime3 = extname9(file).toLowerCase() === ".wav" ? "audio/wav" : extname9(file).toLowerCase() === ".mp3" ? "audio/mpeg" : null;
     if (!mime3) throw new Error("Audio must be a WAV or MP3 file");
-    const bytes = readFileSync20(file);
+    const bytes = readFileSync21(file);
     if (!bytes.length || bytes.length > 10 * 1024 * 1024) throw new Error("Audio must be 1 byte..10 MiB");
     return (await c.uploadMedia(ep(), kind, bytes, mime3)).data;
   }
   if (area === "background" || area === "prop") {
     const plural = area === "background" ? "backgrounds" : "props";
-    const registry2 = object3((await c.request("GET", `/storyboards/${sb()}/registry`)).data);
+    const registry2 = object4((await c.request("GET", `/storyboards/${sb()}/registry`)).data);
     if (action === "register" || action === "unregister") return (await c.request(action === "register" ? "POST" : "DELETE", `/storyboards/${sb()}/registry`, { kind: area, entityId: id() })).data;
     const entries = registry2[plural];
     if (action === "list") return entries;
     if (action === "get") {
       const response = (await c.request("GET", `/projects/${registry2.projectId}/${plural}`)).data;
-      const rows = Array.isArray(response) ? response : object3(response)[plural];
+      const rows = Array.isArray(response) ? response : object4(response)[plural];
       return required2(rows.find((row) => row.id === id() && entries.some((e2) => e2.entityId === row.id)), area);
     }
     if (action === "create") {
@@ -100612,9 +100859,9 @@ async function apiOperation(c, name, a) {
 var UNIT_ROUTES = Object.fromEntries(UNIT_TOOL_NAMES.map((name) => [name, (args) => runPortalUnit(name, args)]));
 
 // src/threads-gate.ts
-import { createHash as createHash7, randomUUID as randomUUID5 } from "node:crypto";
-import { appendFileSync as appendFileSync2, mkdirSync as mkdirSync11, readFileSync as readFileSync21, realpathSync as realpathSync3, renameSync as renameSync9, statSync as statSync10, writeFileSync as writeFileSync16 } from "node:fs";
-import { dirname as dirname5, join as join10, resolve as resolve5 } from "node:path";
+import { createHash as createHash8, randomUUID as randomUUID6 } from "node:crypto";
+import { appendFileSync as appendFileSync2, mkdirSync as mkdirSync12, readFileSync as readFileSync22, realpathSync as realpathSync3, renameSync as renameSync10, statSync as statSync10, writeFileSync as writeFileSync17 } from "node:fs";
+import { dirname as dirname6, join as join11, resolve as resolve6 } from "node:path";
 import { fileURLToPath as fileURLToPath3 } from "node:url";
 import { spawnSync as spawnSync2 } from "node:child_process";
 var nonempty = external_exports.string().trim().min(1);
@@ -100649,30 +100896,30 @@ var reviewSchema2 = external_exports.object({
 });
 var normalize = (s2) => s2.normalize("NFC").replace(/\r\n?/g, "\n").trim();
 function threadsBodyHash(body, selfReply = "") {
-  return createHash7("sha256").update(JSON.stringify([normalize(body), normalize(selfReply)])).digest("hex");
+  return createHash8("sha256").update(JSON.stringify([normalize(body), normalize(selfReply)])).digest("hex");
 }
 function directory(channel) {
-  return join10(process.cwd(), "data", channelSchema.parse(channel), "growth", "threads");
+  return join11(process.cwd(), "data", channelSchema.parse(channel), "growth", "threads");
 }
 function draftLocation(id) {
   const match2 = /^([a-z0-9][a-z0-9-]*)\.([a-f0-9-]{36})$/.exec(id);
   if (!match2 || !external_exports.string().uuid().safeParse(match2[2]).success) throw new Error("Invalid draftId");
-  return { channel: match2[1], file: join10(directory(match2[1]), "drafts", `${match2[2]}.json`) };
+  return { channel: match2[1], file: join11(directory(match2[1]), "drafts", `${match2[2]}.json`) };
 }
 function audit(channel, tool, result, details = {}) {
   const dir = directory(channel);
-  mkdirSync11(dir, { recursive: true });
-  appendFileSync2(join10(dir, "gate-log.jsonl"), JSON.stringify({ at: (/* @__PURE__ */ new Date()).toISOString(), tool, result, ...details }) + "\n", { mode: 384 });
+  mkdirSync12(dir, { recursive: true });
+  appendFileSync2(join11(dir, "gate-log.jsonl"), JSON.stringify({ at: (/* @__PURE__ */ new Date()).toISOString(), tool, result, ...details }) + "\n", { mode: 384 });
 }
 function save(draft) {
   const { file } = draftLocation(draft.draftId);
-  mkdirSync11(dirname5(file), { recursive: true });
-  const temp = `${file}.${randomUUID5()}.tmp`;
-  writeFileSync16(temp, JSON.stringify(draft), { mode: 384 });
-  renameSync9(temp, file);
+  mkdirSync12(dirname6(file), { recursive: true });
+  const temp = `${file}.${randomUUID6()}.tmp`;
+  writeFileSync17(temp, JSON.stringify(draft), { mode: 384 });
+  renameSync10(temp, file);
 }
 function load(id) {
-  const value = JSON.parse(readFileSync21(draftLocation(id).file, "utf8"));
+  const value = JSON.parse(readFileSync22(draftLocation(id).file, "utf8"));
   draftSchema.parse(value);
   if (value.draftId !== id || value.channel !== draftLocation(id).channel || threadsBodyHash(value.body, value.selfReply) !== value.bodyHash) {
     throw new Error("Draft body hash mismatch; create and review a new draft");
@@ -100702,7 +100949,7 @@ function createThreadsDraft(args) {
     const input = draftSchema.strict().parse(args);
     if (input.surface === "reply" !== Boolean(input.replyToId)) throw new Error("Reply drafts require replyToId; post drafts must omit it");
     if (!whitespace(input.body).includes(whitespace(input.purposeEvidence))) throw new Error("Purpose evidence quote not present in draft body");
-    const draftId = `${input.channel}.${randomUUID5()}`;
+    const draftId = `${input.channel}.${randomUUID6()}`;
     const bodyHash = threadsBodyHash(input.body, input.selfReply);
     save({ ...input, draftId, bodyHash, reviews: {} });
     audit(input.channel, "threads_draft_create", "created", { draftId, bodyHash, submitter: input.submitter ?? null, submitterContext: input.submitterContext ?? null });
@@ -100740,7 +100987,7 @@ function checkThreadsGate(input) {
     if (bodyHash !== draft.bodyHash) throw new Error("Publish body hash mismatch");
     let limits2;
     try {
-      limits2 = external_exports.object({ voice: external_exports.number().finite().min(0).max(100), purpose: external_exports.number().finite().min(0).max(100), flow: external_exports.number().finite().min(0).max(100) }).parse(JSON.parse(readFileSync21(join10(directory(draft.channel), "gate.json"), "utf8")));
+      limits2 = external_exports.object({ voice: external_exports.number().finite().min(0).max(100), purpose: external_exports.number().finite().min(0).max(100), flow: external_exports.number().finite().min(0).max(100) }).parse(JSON.parse(readFileSync22(join11(directory(draft.channel), "gate.json"), "utf8")));
     } catch (error2) {
       if (error2.code === "ENOENT") throw new Error("Gate thresholds not configured (\uAE30\uC900\uC810 \uBBF8\uC124\uC815): gate.json required");
       throw error2;
@@ -100755,7 +101002,7 @@ function checkThreadsGate(input) {
       if (review2.bodyHash !== bodyHash) throw new Error(`${axis} review hash mismatch`);
       if (review2.score < limits2[axis]) throw new Error(`${axis} score ${review2.score} below ${limits2[axis]}`);
     }
-    const checker = resolve5(dirname5(fileURLToPath3(import.meta.url)), "../../skills/platform-guide/references/check-style.py");
+    const checker = resolve6(dirname6(fileURLToPath3(import.meta.url)), "../../skills/platform-guide/references/check-style.py");
     for (const [body, surface] of [[input.caption, input.replyToId ? "reply" : "threads"], [input.selfReply, "reply"]]) {
       if (!body) continue;
       const run = spawnSync2("python3", [checker, "--surface", surface, "-"], { input: body, encoding: "utf8", timeout: 15e3, maxBuffer: 1024 * 1024 });
@@ -100769,14 +101016,14 @@ function checkThreadsEpisode(input) {
   gateCall("threads_publish", input, () => {
     const channel = channelSchema.parse(input.channel);
     const topic = channelSchema.parse(input.episodeRef);
-    const root = realpathSync3(join10(process.cwd(), "data", channel, "episodes"));
-    const episode = realpathSync3(join10(root, topic));
-    if (dirname5(episode) !== root || !statSync10(episode).isDirectory()) throw new Error("Invalid episode directory");
-    const board = realpathSync3(join10(episode, "storyboard", "scenes.js"));
+    const root = realpathSync3(join11(process.cwd(), "data", channel, "episodes"));
+    const episode = realpathSync3(join11(root, topic));
+    if (dirname6(episode) !== root || !statSync10(episode).isDirectory()) throw new Error("Invalid episode directory");
+    const board = realpathSync3(join11(episode, "storyboard", "scenes.js"));
     if (!board.startsWith(episode + "/") || !statSync10(board).isFile()) throw new Error("Missing episode storyboard");
-    const approvalPath = realpathSync3(join10(episode, "threads-publish-approval.json"));
-    if (dirname5(approvalPath) !== episode) throw new Error("Invalid episode approval path");
-    const approval = JSON.parse(readFileSync21(approvalPath, "utf8"));
+    const approvalPath = realpathSync3(join11(episode, "threads-publish-approval.json"));
+    if (dirname6(approvalPath) !== episode) throw new Error("Invalid episode approval path");
+    const approval = JSON.parse(readFileSync22(approvalPath, "utf8"));
     if (approval.approved !== true) throw new Error("Episode publishing approval required");
     for (const key of ["caption", "selfReply", "imageUrl", "videoUrl", "linkUrl", "replyToId"]) {
       if ((approval[key] ?? "") !== (input[key] ?? "")) throw new Error(`Episode approval mismatch: ${key}`);
@@ -100785,8 +101032,8 @@ function checkThreadsEpisode(input) {
 }
 
 // src/portal-media.ts
-import { createHash as createHash8, randomUUID as randomUUID6 } from "node:crypto";
-import { appendFileSync as appendFileSync3, closeSync as closeSync9, fstatSync as fstatSync6, statSync as statSync11, mkdirSync as mkdirSync12, openSync as openSync9, readFileSync as readFileSync22, readSync as readSync6, realpathSync as realpathSync4, renameSync as renameSync10, rmSync as rmSync11, writeFileSync as writeFileSync17 } from "node:fs";
+import { createHash as createHash9, randomUUID as randomUUID7 } from "node:crypto";
+import { appendFileSync as appendFileSync3, closeSync as closeSync9, fstatSync as fstatSync6, statSync as statSync11, mkdirSync as mkdirSync13, openSync as openSync9, readFileSync as readFileSync23, readSync as readSync6, realpathSync as realpathSync4, renameSync as renameSync11, rmSync as rmSync11, writeFileSync as writeFileSync18 } from "node:fs";
 import path22 from "node:path";
 var portalShotFields = {
   episodeDir: external_exports.string().min(1),
@@ -100836,7 +101083,7 @@ function readMedia(file, kind) {
     if (!size) throw new Error("Media is empty.");
     if (size > limit2) throw new MediaTooLarge(size);
     const bytes = buffer.subarray(0, size);
-    return { bytes, mime: mime3, sha256: createHash8("sha256").update(bytes).digest("hex") };
+    return { bytes, mime: mime3, sha256: createHash9("sha256").update(bytes).digest("hex") };
   } finally {
     closeSync9(fd);
   }
@@ -100851,7 +101098,7 @@ async function uploadShotMedia(args, fetchImpl) {
   const root = realpathSync4(dir), file = realpathSync4(path22.resolve(dir, args.file));
   if (!file.startsWith(root + path22.sep)) throw new Error("Media must be inside the episode directory, including symlinks.");
   const sb = path22.join(dir, "storyboard"), scenesFile = path22.join(sb, "scenes.js");
-  const source = readFileSync22(scenesFile, "utf8"), stateSource = readFileSync22(path22.join(dir, ".portal.json"), "utf8");
+  const source = readFileSync23(scenesFile, "utf8"), stateSource = readFileSync23(path22.join(dir, ".portal.json"), "utf8");
   const payload = buildImportPayload(dir), shots = payload.scenes;
   if (shots.some((s2) => !s2 || typeof s2 !== "object" || Array.isArray(s2))) throw new Error("Every shot must be an object.");
   const index = args.shotId ? shots.findIndex((s2) => s2.id === args.shotId) : (args.shotNo ?? 0) - 1;
@@ -100863,7 +101110,7 @@ async function uploadShotMedia(args, fetchImpl) {
   }
   const initial = statSync11(file);
   if (initial.isFile() && initial.size > limits[args.kind] * 1024 * 1024) return recordOversize(dir, file, args.kind, initial.size);
-  const unchanged = () => readFileSync22(scenesFile, "utf8") === source && readFileSync22(path22.join(dir, ".portal.json"), "utf8") === stateSource;
+  const unchanged = () => readFileSync23(scenesFile, "utf8") === source && readFileSync23(path22.join(dir, ".portal.json"), "utf8") === stateSource;
   const lock = path22.join(dir, ".portal-media.lock");
   let fd;
   try {
@@ -100892,11 +101139,11 @@ async function uploadShotMedia(args, fetchImpl) {
 // Portal shot media UUID (no local path).
 ${assignment}
 `);
-    const backup = path22.join(sb, ".portal-local", `media-${randomUUID6()}`);
-    mkdirSync12(backup, { recursive: true });
-    writeFileSync17(path22.join(backup, "scenes.js"), source);
+    const backup = path22.join(sb, ".portal-local", `media-${randomUUID7()}`);
+    mkdirSync13(backup, { recursive: true });
+    writeFileSync18(path22.join(backup, "scenes.js"), source);
     recoveryFile = path22.join(backup, "uploaded-scenes.js");
-    writeFileSync17(recoveryFile, next);
+    writeFileSync18(recoveryFile, next);
     if (!unchanged()) throw new Error("Local board/state changed; upload is not linked.");
     phase = "checkpoint";
     const saved = await client.checkpoint(state.episodeId, {
@@ -100914,10 +101161,10 @@ ${assignment}
     if (!Number.isSafeInteger(revisionNo) || revisionNo < state.headRevisionNo) throw new Error("Invalid checkpoint revision. Side-pull before proceeding.");
     phase = "local";
     if (!unchanged()) throw new Error("Portal saved; local board/state changed and was preserved.");
-    const tmp = `${scenesFile}.${randomUUID6()}.tmp`;
+    const tmp = `${scenesFile}.${randomUUID7()}.tmp`;
     try {
-      writeFileSync17(tmp, next);
-      renameSync10(tmp, scenesFile);
+      writeFileSync18(tmp, next);
+      renameSync11(tmp, scenesFile);
     } finally {
       rmSync11(tmp, { force: true });
     }
@@ -100972,9 +101219,9 @@ function withoutPortal(args) {
 
 // src/datago-client.ts
 import { mkdir, writeFile as writeFile2 } from "node:fs/promises";
-import { existsSync as existsSync21 } from "node:fs";
+import { existsSync as existsSync22 } from "node:fs";
 import { tmpdir as tmpdir5 } from "node:os";
-import { join as join11 } from "node:path";
+import { join as join12 } from "node:path";
 var PORTAL_BASE = "https://www.data.go.kr";
 var ODCLOUD_BASE = "https://api.odcloud.kr/api";
 var OPENAPI_BASE = "https://apis.data.go.kr";
@@ -101213,14 +101460,14 @@ async function downloadFile2(input) {
   const cd = fileRes.headers.get("content-disposition") ?? "";
   const rawName = cd.match(/filename\*?=(?:UTF-8''|")?([^";]+)/i)?.[1] ?? `datago-${input.publicDataPk}.bin`;
   const filename = sanitizeFilename(fixHeaderEncoding(rawName.replace(/"/g, "")));
-  const saveDir = input.saveDir ?? join11(tmpdir5(), "social-flow-datago");
+  const saveDir = input.saveDir ?? join12(tmpdir5(), "social-flow-datago");
   await mkdir(saveDir, { recursive: true });
-  let savedPath = join11(saveDir, filename);
-  for (let i2 = 1; existsSync21(savedPath); i2++) {
+  let savedPath = join12(saveDir, filename);
+  for (let i2 = 1; existsSync22(savedPath); i2++) {
     if (i2 >= 100) {
       return err(`there are already 100+ files with the same name in ${saveDir} \u2014 clean up saveDir or point at a different directory.`);
     }
-    savedPath = join11(saveDir, filename.replace(/(\.[^.]*)?$/, `-${i2}$1`));
+    savedPath = join12(saveDir, filename.replace(/(\.[^.]*)?$/, `-${i2}$1`));
   }
   await writeFile2(savedPath, buf);
   const preview = decodePreview(buf.subarray(0, 4096));
@@ -102551,24 +102798,24 @@ async function stockSearch(input) {
 }
 
 // src/sns-client.ts
-import { createHash as createHash9, randomUUID as randomUUID7 } from "node:crypto";
+import { createHash as createHash10, randomUUID as randomUUID8 } from "node:crypto";
 import {
-  existsSync as existsSync22,
+  existsSync as existsSync23,
   mkdirSync as nodeMkdirSync,
   readFileSync as nodeReadFileSync,
   rmSync as nodeRmSync,
   writeFileSync as nodeWriteFileSync
 } from "node:fs";
 import { open as nodeOpen, readFile, stat as stat3 } from "node:fs/promises";
-import { basename as basename9, dirname as dirname6, extname as extname10, join as join12 } from "node:path";
+import { basename as basename9, dirname as dirname7, extname as extname10, join as join13 } from "node:path";
 function enabledPlatforms() {
   const channelDirs = listChannelDirs();
   return SNS_PLATFORMS.filter(
-    (platform2) => existsSync22(snsCredentialFile(platform2)) || channelDirs.some((dir) => dir.platforms.includes(platform2))
+    (platform2) => existsSync23(snsCredentialFile(platform2)) || channelDirs.some((dir) => dir.platforms.includes(platform2))
   );
 }
 function availablePlatformsFor(channel) {
-  return SNS_PLATFORMS.filter((platform2) => existsSync22(snsCredentialFile(platform2, channel)));
+  return SNS_PLATFORMS.filter((platform2) => existsSync23(snsCredentialFile(platform2, channel)));
 }
 var GRAPH_VERSION = "v23.0";
 var THREADS_BASE = "https://graph.threads.net/v1.0";
@@ -102576,7 +102823,7 @@ var IG_BASE = `https://graph.instagram.com/${GRAPH_VERSION}`;
 var FB_BASE = `https://graph.facebook.com/${GRAPH_VERSION}`;
 var DEFAULT_POLL_INTERVAL_MS = 2e3;
 var DEFAULT_POLL_MAX_TRIES = 60;
-var sleep7 = (ms) => new Promise((resolve7) => setTimeout(resolve7, ms));
+var sleep7 = (ms) => new Promise((resolve8) => setTimeout(resolve8, ms));
 function fail3(status, message) {
   return { ok: false, status, body: message };
 }
@@ -103168,7 +103415,7 @@ async function readCaptionFile(path27, maxBytes) {
   return { bytes };
 }
 async function uploadYoutubeCaption(token, videoId, caption) {
-  const boundary = `sfcap${randomUUID7().replace(/-/g, "")}`;
+  const boundary = `sfcap${randomUUID8().replace(/-/g, "")}`;
   const meta = JSON.stringify({
     snippet: { videoId, language: caption.language, name: "", isDraft: false }
   });
@@ -103264,8 +103511,8 @@ function parseResumeOffset(range) {
   return m2 ? Number(m2[1]) + 1 : 0;
 }
 function sessionStateFile(filePath) {
-  const key = createHash9("sha256").update(filePath).digest("hex").slice(0, 16);
-  return join12(snsTokenDir, ".yt-upload", `${key}.json`);
+  const key = createHash10("sha256").update(filePath).digest("hex").slice(0, 16);
+  return join13(snsTokenDir, ".yt-upload", `${key}.json`);
 }
 function readState2(filePath) {
   try {
@@ -103284,7 +103531,7 @@ function writeState2(filePath, s2) {
       nodeRmSync(p, { force: true });
       return;
     }
-    nodeMkdirSync(dirname6(p), { recursive: true });
+    nodeMkdirSync(dirname7(p), { recursive: true });
     nodeWriteFileSync(p, JSON.stringify(s2), "utf8");
   } catch {
   }
@@ -104399,7 +104646,7 @@ async function checkAccounts(channel) {
 
 // src/tts-final-quality.ts
 import { execFile as execFile9 } from "node:child_process";
-import { existsSync as existsSync23, mkdtempSync as mkdtempSync7, readFileSync as readFileSync23, rmSync as rmSync12, writeFileSync as writeFileSync18, renameSync as renameSync11, openSync as openSync10, closeSync as closeSync10 } from "node:fs";
+import { existsSync as existsSync24, mkdtempSync as mkdtempSync7, readFileSync as readFileSync24, rmSync as rmSync12, writeFileSync as writeFileSync19, renameSync as renameSync12, openSync as openSync10, closeSync as closeSync10 } from "node:fs";
 import { tmpdir as tmpdir6 } from "node:os";
 import path24 from "node:path";
 import { promisify as promisify4 } from "node:util";
@@ -104430,23 +104677,23 @@ async function reviewFinalSpeech(input, deps = { listen }) {
   function save2(status, extra) {
     const result = { ...base, status, checkedAt: (/* @__PURE__ */ new Date()).toISOString(), ...extra };
     const staging = path24.join(temp, "proof.json");
-    writeFileSync18(staging, JSON.stringify(result, null, 2) + "\n");
-    writeFileSync18(proofPath + ".tmp", readFileSync23(staging));
-    renameSync11(proofPath + ".tmp", proofPath);
+    writeFileSync19(staging, JSON.stringify(result, null, 2) + "\n");
+    writeFileSync19(proofPath + ".tmp", readFileSync24(staging));
+    renameSync12(proofPath + ".tmp", proofPath);
     return { success: status === "pass", status, proofPath, ...extra };
   }
   try {
-    base = { ...base, mediaSha256: sha256(readFileSync23(media)), textSha256: sha256(normalizeSpeech(request.expectedText)) };
+    base = { ...base, mediaSha256: sha256(readFileSync24(media)), textSha256: sha256(normalizeSpeech(request.expectedText)) };
     const wav = path24.join(temp, "final.flac");
     await exec3("ffmpeg", ["-y", "-v", "error", "-i", media, "-map", "0:a:0", "-map_metadata", "-1", "-ac", "1", "-ar", "24000", "-c:a", "flac", wav], { timeout: 6e4 });
-    base.audioSha256 = sha256(readFileSync23(wav));
-    if (sha256(readFileSync23(media)) !== base.mediaSha256) throw new Error("Final media changed during decoding");
-    if (readFileSync23(wav).length > chapters.LIMIT) {
+    base.audioSha256 = sha256(readFileSync24(wav));
+    if (sha256(readFileSync24(media)) !== base.mediaSha256) throw new Error("Final media changed during decoding");
+    if (readFileSync24(wav).length > chapters.LIMIT) {
       return await reviewChapters(request, media, wav, temp, base, proofPath, save2, deps);
     }
-    if (sha256(readFileSync23(media)) !== base.mediaSha256) throw new Error("Final media changed during decoding");
-    if (existsSync23(proofPath)) {
-      const old = JSON.parse(readFileSync23(proofPath, "utf8"));
+    if (sha256(readFileSync24(media)) !== base.mediaSha256) throw new Error("Final media changed during decoding");
+    if (existsSync24(proofPath)) {
+      const old = JSON.parse(readFileSync24(proofPath, "utf8"));
       const same = Object.entries(base).every(([k, v]) => ["mediaSha256", "expectedText"].includes(k) || old[k] === v);
       if (old.audioSha256 === base.audioSha256 && old.textSha256 === base.textSha256 && old.status === "fail") return save2("fail", { reused: true, signal: old.signal, transcript: old.transcript, transcriptCheck: transcriptCheck ?? old.transcriptCheck ?? null, failures: old.failures, review: old.review, error: "This exact final audio already failed; fix the audio before another listening review" });
       if (same && old.status === "pass" && (!transcriptCheck || typeof old.transcript === "string")) {
@@ -104475,7 +104722,7 @@ async function reviewFinalSpeech(input, deps = { listen }) {
     const result = await deps.listen(wav, reviewRequest, true);
     failures.push(...reviewFailures(request.expectedText, result.transcript, result.review, signal.duration));
     if ((result.review.continuity ?? 0) < 95 || !result.review.continuityEvidence) failures.push("Episode continuity below 95 or missing listening evidence");
-    if (sha256(readFileSync23(media)) !== base.mediaSha256) throw new Error("Final media changed during listening");
+    if (sha256(readFileSync24(media)) !== base.mediaSha256) throw new Error("Final media changed during listening");
     return save2(failures.length ? "fail" : "pass", { signal, ...result, transcriptCheck: transcriptCheck ?? null, failures });
   } catch (error2) {
     const failure2 = { error: error2 instanceof Error ? error2.message : String(error2) };
@@ -104491,7 +104738,7 @@ async function reviewChapters(request, media, wav, temp, base, proofPath, save2,
   const pcm = chapters.decode(wav), totalSamples = pcm.length / chapters.BYTES;
   const planned = chapters.plan(request.segments, totalSamples, request.expectedText);
   const identity = { policy: chapters.POLICY, sampleRate: chapters.RATE, totalSamples, pcmSha256: chapters.hash(pcm), segments: request.segments, transcriptCheck: request.transcriptCheck ?? null };
-  const old = existsSync23(proofPath) ? JSON.parse(readFileSync23(proofPath, "utf8")) : null;
+  const old = existsSync24(proofPath) ? JSON.parse(readFileSync24(proofPath, "utf8")) : null;
   const pieces = [];
   const commit = (status, extra = {}) => save2(status, { ...identity, pieces, manifestSha256: chapters.manifest({ ...identity, pieces }), ...extra });
   if (old?.pcmSha256 === identity.pcmSha256 && old.textSha256 === base.textSha256 && old.status === "fail") {
@@ -104507,9 +104754,9 @@ async function reviewChapters(request, media, wav, temp, base, proofPath, save2,
     for (const piece of planned) {
       const samples = pcm.subarray(piece.startSample * chapters.BYTES, piece.endSample * chapters.BYTES);
       const raw = path24.join(temp, "piece.pcm"), file = path24.join(temp, "piece.flac");
-      writeFileSync18(raw, samples);
+      writeFileSync19(raw, samples);
       await exec3("ffmpeg", ["-y", "-v", "error", "-f", "s32le", "-ar", String(chapters.RATE), "-ac", "1", "-i", raw, "-map_metadata", "-1", "-c:a", "flac", file], { timeout: 6e4 });
-      const payload = readFileSync23(file);
+      const payload = readFileSync24(file);
       if (payload.length > chapters.LIMIT || !chapters.decode(file).equals(samples)) throw new Error("Chapter encoding exceeded the limit or changed PCM samples");
       const binding = { ...piece, pcmSha256: chapters.hash(samples), audioSha256: chapters.hash(payload), payloadBytes: payload.length, model: REVIEW_MODEL, transcriptCheck: request.transcriptCheck ?? null };
       const reusable = old?.pcmSha256 === identity.pcmSha256 && old.textSha256 === base.textSha256 && old.language === request.language && old.delivery === request.delivery && old.manifestSha256 === chapters.manifest(old);
@@ -104537,7 +104784,7 @@ async function reviewChapters(request, media, wav, temp, base, proofPath, save2,
         evidence = { ...evidence, status: failures2.length ? "fail" : "pass", failures: failures2 };
       }
       pieces.push(evidence);
-      if (sha256(readFileSync23(media)) !== base.mediaSha256) throw new Error("Final media changed during chapter listening");
+      if (sha256(readFileSync24(media)) !== base.mediaSha256) throw new Error("Final media changed during chapter listening");
       commit("unverified");
     }
     const failures = pieces.flatMap((p) => p.failures.map((f3) => `${p.kind} ${p.index}: ${f3}`));
@@ -104600,7 +104847,7 @@ function requireOneSource(data, ctx) {
 var omniExtendSchema = external_exports.object({ ...continuationFields, durationSeconds: durationSchema2 }).superRefine(requireOneSource);
 var omniEditSchema = external_exports.object(continuationFields).superRefine(requireOneSource);
 function sleep8(ms) {
-  return new Promise((resolve7) => setTimeout(resolve7, ms));
+  return new Promise((resolve8) => setTimeout(resolve8, ms));
 }
 function readInlineFile(filePath, kind) {
   const data = fs8.readFileSync(filePath).toString("base64");
@@ -104957,7 +105204,7 @@ async function downloadVideo2(apiKey, videoUri) {
   return Buffer.from(arrayBuffer);
 }
 function sleep9(ms) {
-  return new Promise((resolve7) => setTimeout(resolve7, ms));
+  return new Promise((resolve8) => setTimeout(resolve8, ms));
 }
 async function awaitVideoAndSave2(apiKey, operationName, outputPath, filename, label) {
   let pollCount = 0;
@@ -105232,8 +105479,8 @@ async function generateWithReferences2(request) {
 }
 
 // src/content-feedback.ts
-import { mkdirSync as mkdirSync13, writeFileSync as writeFileSync21 } from "node:fs";
-import { dirname as dirname7, isAbsolute, join as join13, resolve as resolve6 } from "node:path";
+import { mkdirSync as mkdirSync14, writeFileSync as writeFileSync22 } from "node:fs";
+import { dirname as dirname8, isAbsolute, join as join14, resolve as resolve7 } from "node:path";
 
 // src/content-feedback-html.ts
 function escapeHtml(value) {
@@ -105818,14 +106065,14 @@ function analyzeInstagramMedia(media, limit2) {
   return { items, cohort, notes };
 }
 function defaultHtmlPath(channel) {
-  return join13(process.cwd(), "data", channel, "growth", "review-recent.html");
+  return join14(process.cwd(), "data", channel, "growth", "review-recent.html");
 }
 function resolveHtmlPath(channel, outputPath) {
   if (outputPath) {
     if (outputPath.includes("..")) {
       throw new Error(`Path traversal detected: ${outputPath}`);
     }
-    const resolved = isAbsolute(outputPath) ? outputPath : resolve6(process.cwd(), outputPath);
+    const resolved = isAbsolute(outputPath) ? outputPath : resolve7(process.cwd(), outputPath);
     if (!resolved.toLowerCase().endsWith(".html")) {
       throw new Error(`outputPath must end in .html: ${outputPath}`);
     }
@@ -105864,8 +106111,8 @@ async function contentFeedback(input) {
     instagram
   };
   if (htmlPath) {
-    mkdirSync13(dirname7(htmlPath), { recursive: true });
-    writeFileSync21(htmlPath, renderFeedbackHtml(report), "utf8");
+    mkdirSync14(dirname8(htmlPath), { recursive: true });
+    writeFileSync22(htmlPath, renderFeedbackHtml(report), "utf8");
   }
   return { ok: true, status: 200, body: JSON.stringify(report) };
 }
@@ -106907,7 +107154,7 @@ ${errors.join("\n")}`);
 }
 
 // src/capability-status.ts
-import { existsSync as existsSync25 } from "node:fs";
+import { existsSync as existsSync26 } from "node:fs";
 import path25 from "node:path";
 import os from "node:os";
 function portalConfigurationStatus(channel) {
@@ -106925,8 +107172,8 @@ function portalConfigurationStatus(channel) {
 var has2 = (v) => Boolean(v && v.length > 0);
 var binOk = (p) => {
   try {
-    if (p.includes(path25.sep)) return existsSync25(p);
-    return (process.env.PATH || "").split(path25.delimiter).some((dir) => dir && existsSync25(path25.join(dir, p)));
+    if (p.includes(path25.sep)) return existsSync26(p);
+    return (process.env.PATH || "").split(path25.delimiter).some((dir) => dir && existsSync26(path25.join(dir, p)));
   } catch {
     return false;
   }
@@ -107177,7 +107424,7 @@ function renderCapabilityStatus(channel) {
 }
 
 // src/portal-backups.ts
-import { createHash as createHash10 } from "node:crypto";
+import { createHash as createHash11 } from "node:crypto";
 import { lstatSync as lstatSync5, readdirSync as readdirSync5, rmSync as rmSync13 } from "node:fs";
 import path26 from "node:path";
 var backupSchema = external_exports.object({
@@ -107251,7 +107498,7 @@ function manageBackups(input) {
     counts.set(entry.kind, n);
     return n > args.keep;
   });
-  const plan2 = createHash10("sha256").update(JSON.stringify({ dir, keep: args.keep, entries, ignored: ignored2, fingerprint })).digest("hex");
+  const plan2 = createHash11("sha256").update(JSON.stringify({ dir, keep: args.keep, entries, ignored: ignored2, fingerprint })).digest("hex");
   if (args.apply && args.confirm !== plan2) throw new Error("Backup inventory changed or confirmation does not match. Preview again; nothing was pruned.");
   const deleted = [];
   let error2;
@@ -108770,6 +109017,7 @@ suno_generate uses about 12 credits per call (\u2248 $0.06 at the $5/1000 pack).
       return text(error2 instanceof Error ? error2.message : String(error2), true);
     }
   },
+  speech_manage: async (args) => text(JSON.stringify(manageSpeech(parseArgs(speechManageSchema, args)), null, 2)),
   storyboard_read: async (args) => {
     contract();
     const a = parseArgs(storyboardReadSchema, args);

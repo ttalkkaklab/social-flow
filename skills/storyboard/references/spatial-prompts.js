@@ -90,6 +90,9 @@ function assemble(win, index, dir) {
   if (!MODES[win.PRODUCTION?.mode]) throw new Error('Choose a production mode before assembling prompts');
   const scene = win.SCENES[index], d = scene?.shot?.videoDesign, v = scene?.visual;
   if (!d || !win.PRODUCTION.style || !LOOKS[d.look]) throw new Error('Choose style and videoDesign before assembling prompts');
+  if ((scene.narration || []).some(line => line.delivery === 'on_screen') && /never speaks|mouths? (?:stay |remain |kept )?closed|no speech,? no dialogue/i.test(JSON.stringify(d))) {
+    throw new Error('On-screen dialogue conflicts with a silent-acting instruction in videoDesign; resolve the named speaker action before generating');
+  }
   const overrideProblems = shotStyleErrors(scene, index);
   if (overrideProblems.length) throw new Error(overrideProblems.join('; '));
   // The episode style, or the user-approved per-shot preset with its own materials/palette/lighting.
@@ -159,7 +162,7 @@ function assemble(win, index, dir) {
   if (!missingSlots.length && engine === 'astra') {
     const astraAppearance = activeCast.filter(({ entry }) => text(entry.sheet))
       .map(({ entry }) => 'Appearance to preserve in every frame: ' + clause(entry.sheet) + '.');
-    motionPrompt = astraMotionPrompt(d, camera, style, treatment, !!spoken.trim(), astraAppearance);
+    motionPrompt = astraMotionPrompt(d, camera, style, treatment, !!spoken.trim() && (scene.narration || []).every(n => n.delivery === 'voiceover' || (!n.delivery && (!n.speaker || n.speaker === win.SB_DOC?.narratorCharacterId))), astraAppearance);
   } else if (!missingSlots.length) {
     const onReferenceRoute = previz && (v.video.engine || v.engine || 'seedance') !== 'host' && previzHandoff(scene) === 'reference_video';
     const clip = PROMPT.clipAssemble({ engine: 'seedance', camera, motion: motionText(d), locks: lock,
