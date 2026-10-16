@@ -21,7 +21,7 @@
   var nav = document.createElement('nav'); nav.setAttribute('aria-label', words('탐색', 'Navigation'));
   [
     ['../../../storyboards/index.html', words('스토리보드', 'Storyboards')],
-    ['../../../assets/characters/index.html', words('캐릭터', 'Characters')]
+    ['../../../assets/characters/index.html', words('캐릭터 시트', 'Character sheets')]
   ].forEach(function (entry, i) {
     var a = document.createElement('a'); a.href = entry[0]; a.textContent = entry[1];
     if (!i) a.setAttribute('aria-current', 'page'); nav.appendChild(a);

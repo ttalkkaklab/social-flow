@@ -1317,7 +1317,7 @@ window.SB_DOC = Object.assign({}, window.SB_DOC, window.SCENE_SB_DOC || {});
       hookForm: { paradox: "paradox", gap: "leave a blank", payoff: "result first",
                   identify: "that is me", number: "number · frame", secret: "secret told" },
       cam: { movement: "movement", speed: "speed", framing: "framing", end: "end frame" },
-      panel: { face: "face", body: "body · no head", back: "from behind",
+      panel: { face: "face", body: "front full body · head included", back: "from behind",
                front: "FRONT · legacy", real: "LIVE ACTION" },
       deviceSteps: ["claim", "act", "result"],
 
@@ -1411,7 +1411,7 @@ window.SB_DOC = Object.assign({}, window.SB_DOC, window.SCENE_SB_DOC || {});
 
       // ── section menu ──
       nav: { audit: "Checks", scenario: "Scenario", timeline: "Timeline", promises: "Promises", shots: "Shots",
-             cost: "Cost", cast: "Cast", contract: "Contract", prep: "Shooting prep",
+             cost: "Cost", cast: "Episode cast", contract: "Contract", prep: "Shooting prep",
              sources: "Sources", platforms: "Platforms", recheck: "Recheck" },
 
       // ── scenario handoff ──
@@ -1503,8 +1503,8 @@ window.SB_DOC = Object.assign({}, window.SB_DOC, window.SCENE_SB_DOC || {});
       signatureNote: " — once only · no other shot's title says this line again (§7)",
 
       // ── cast ──
-      castHead: "Cast",
-      castAside: "the reference set — face first, then body (array order is weight)",
+      castHead: "Episode cast",
+      castAside: "shared identity references; scene images belong to shots",
       castShots: "Shots", castScopes: "Scope",
 
       // ── contract ──
@@ -1659,7 +1659,7 @@ window.SB_DOC = Object.assign({}, window.SB_DOC, window.SCENE_SB_DOC || {});
       hookForm: { paradox: "역설", gap: "빈칸 남기기", payoff: "결과 먼저", identify: "내 얘기네",
                   number: "숫자·틀", secret: "비밀 공개" },
       cam: { movement: "움직임", speed: "속도", framing: "프레임", end: "끝 프레임" },
-      panel: { face: "얼굴", body: "몸 · 머리 없음", back: "뒷모습",
+      panel: { face: "얼굴", body: "정면 전신 · 머리 포함", back: "뒷모습",
                front: "FRONT · legacy", real: "LIVE ACTION" },
       deviceSteps: ["주장", "행동", "결과"],
 
@@ -1751,7 +1751,7 @@ window.SB_DOC = Object.assign({}, window.SB_DOC, window.SCENE_SB_DOC || {});
 
       // ── section menu ──
       nav: { audit: "점검", scenario: "시나리오", timeline: "시간표", promises: "약속", shots: "샷 구성",
-             cost: "비용", cast: "등장인물", contract: "계약", prep: "촬영 준비",
+             cost: "비용", cast: "이번 편 출연진", contract: "계약", prep: "촬영 준비",
              sources: "출처", platforms: "플랫폼", recheck: "재확인" },
 
       // ── 시나리오 인계 ──
@@ -1843,8 +1843,8 @@ window.SB_DOC = Object.assign({}, window.SB_DOC, window.SCENE_SB_DOC || {});
       signatureNote: " — 한 번만 · 다른 샷의 제목이 이 말을 바꿔 말하지 않는다 (§7)",
 
       // ── cast ──
-      castHead: "등장인물",
-      castAside: "참고 그림 묶음 — 얼굴 먼저, 그다음 몸 (배열 순서가 비중)",
+      castHead: "이번 편 출연진",
+      castAside: "공용 외형 참조 · 장면 이미지는 각 샷에서 확인",
       castShots: "샷", castScopes: "범위",
 
       // ── contract ──
@@ -4561,6 +4561,8 @@ window.SB_DOC = Object.assign({}, window.SB_DOC, window.SCENE_SB_DOC || {});
       h += "</div><div>";
       h += '<div class="cast-name">' + esc(c.name || c.id) + " <code>" + esc(c.id) + "</code>" +
            (c.veo === "banned" ? " " + badge("bad", "veo banned") : "") + "</div>";
+      if (/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(c.id || "")) h += '<p><a href="../../../assets/characters/' + encodeURIComponent(c.id) + '/index.html">' + esc(LANG === "ko" ? "공용 캐릭터 시트" : "Shared character sheet") + '</a></p>';
+      (window.REVIEW_PANEL_FINDINGS || []).filter(function (f) { return f.characterId === c.id; }).forEach(function (f) { h += '<p class="cast-note">' + esc(LANG === 'ko' ? f.messageKo || f.message : f.message) + '</p>'; });
       if (c.role) h += '<div class="cast-role">' + mark(c.role) + "</div>";
       if (c.note) h += '<div class="cast-note">' + mark(c.note) + "</div>";
       h += '<div class="cast-shots"><b>' + esc(T.castShots) + "</b>" +
