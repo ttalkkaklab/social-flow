@@ -4,9 +4,9 @@ const CUT_TYPES = ['action', 'reaction', 'insert', 'document', 'map', 'scenery']
 const PEOPLE_CUT_TYPES = new Set(['action', 'reaction', 'insert']);
 
 const BASE = {
-  action: "Cut type action: a full or medium figure shot; the named character's whole body and the space the action needs are in frame; the actor and the thing acted on stay sharp.",
-  reaction: "Cut type reaction: a medium or medium-close shot on the people who watch; posture and head direction carry the response; the previous cut's subject is visible only as a partial shape at a frame edge.",
-  insert: 'Cut type insert: a close-up on hands, feet or one prop; the face stays outside the frame; macro distance with shallow depth of field on the point of contact; the texture of skin, cloth and the prop is the picture.',
+  action: "Cut type action: show the planned physical action and its point of contact within the shot's camera framing; the visible actor parts and the thing acted on stay legible.",
+  reaction: "Cut type reaction: show the planned response through the visible expression, posture or gesture within the shot's camera framing; include only the subjects specified for this shot.",
+  insert: 'Cut type insert: concentrate on the specified hands, feet, props or their relationship; the face stays outside the frame. Follow the shot camera framing and depth plan for distance, scale and sharp planes; keep every intended detail readable.',
   document: 'Cut type document: a written record as a physical object — a book, scroll, letter or ledger on a surface; three-quarter high angle; the pages carry texture and marks only, without readable characters; the frame holds only the record and its surface.',
   map: 'Cut type map: a spatial overview of the place — terrain, route and landmarks as physical relief seen from above; landmarks read as shapes without lettering; people, if any, are far specks.',
   scenery: 'Cut type scenery: a wide establishing or transition view of the place and its light; people are small distant shapes; the frame edges carry the world.'
@@ -14,7 +14,7 @@ const BASE = {
 
 const PRESET_NOTES = {
   'cinematic-miniature': {
-    insert: 'At miniature scale the insert is a macro photograph of a model hand and prop: painted fingers, cloth fibre, the seam of the figure.',
+    insert: 'At miniature scale, visible hands and props retain model materials: painted fingers, cloth fibre and figure seams, at the authored camera distance.',
     document: 'The record is a model book or scroll on a model desk with hand-cut paper edges and a tiny brush and inkstone; the tilt-shift band runs across the desk.',
     map: 'The map is the diorama itself seen from above with the tilt-shift plane on the route.',
     reaction: 'Onlooker figures keep the same figurine scale and paint finish as the main figure.'
@@ -25,11 +25,11 @@ const PRESET_NOTES = {
   },
   webtoon: {
     document: 'The page is drawn as a webtoon panel with hatched paper texture.',
-    insert: "Drawn hands in the episode's line weight."
+    insert: "Any visible hands use the episode's line weight."
   },
   claymation: {
     document: 'A clay book with thumbprinted pages.',
-    insert: 'Clay hands with visible thumbprints.'
+    insert: 'Any visible hands use clay with visible thumbprints.'
   },
   'paper-cutout': {
     document: 'A single paper sheet layer with a torn edge, lit from the side.',
@@ -38,7 +38,7 @@ const PRESET_NOTES = {
   'ink-wash': {
     document: 'The record is the painting itself: a scroll in brush strokes whose blank paper is the frame.',
     map: 'A brushed map with mountains as ink ranges and the route as the one accent line.',
-    insert: 'Hands in a few calligraphic strokes; the prop in ink.'
+    insert: 'Any visible hands use a few calligraphic strokes; props use ink.'
   },
   'toon-3d': {
     document: 'A rendered prop book with clean shaders and soft rim light.'
@@ -46,7 +46,7 @@ const PRESET_NOTES = {
   'arcade-2d': {
     document: 'For this document cut, a painted scroll item is held up on the stage; the stage holds only the scroll item and its painted backdrop.',
     map: 'A painted stage-select overview with the route as painted terrain.',
-    reaction: 'Spectator sprites at the stage edge.',
+    reaction: 'The reacting character uses the same painted sprite treatment as the episode.',
     scenery: 'A wide establishing stage fills the frame; any people read as small distant painted sprite silhouettes while layered parallax scenery carries the arcade look.'
   }
 };
@@ -76,7 +76,7 @@ function castLines(cast, ids, cutType) {
   if (cutType === 'insert') {
     for (const entry of entries) {
       if (typeof entry.name === 'string' && entry.name.trim())
-        lines.push(`Only the hands, sleeves and boots of ${entry.name.trim()} are in frame.`);
+        lines.push(`Show only the parts of ${entry.name.trim()} specified by the insert framing; the face stays outside the frame. Use the cast sheet for identity of visible parts only.`);
     }
   }
   for (const entry of entries) {
