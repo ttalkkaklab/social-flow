@@ -6,6 +6,12 @@ not generated episode imagery, audio, video or publishing.
 
 **Result: 96/100, zero unresolved P0 or P1 within the reviewed scope.**
 
+**Subsequent CI status — locally reverified:** Additional standalone CI selftests
+exposed assertions tied to the retired gating policy. The addendum below assesses
+their fixes and the new installation. The final local evaluation remains 96/100;
+the final commit must also pass remote CI before merge. The earlier 1,848-test
+result alone was not evidence that every standalone CI command had passed.
+
 | Criterion | Score | Evidence and limits |
 |---|---:|---|
 | Inspection functionality | 25/25 | Installed `storyboard_read` returns 27 ordered shots, silent actions and attributed speech; selected s0021 correctly returns s0020/s0022 neighbours. STORY, production, document, props and media paths are available. The inspector covers all five requested domains and explicitly separates plans from viewed media. Local character images opened successfully. Each of the five rubric items earns 5. |
@@ -57,3 +63,52 @@ The score evaluates the plugin and a reviewable planning artifact. It does not
 certify unseen visuals, historical costume accuracy, final pacing or speech quality.
 The minor readiness-label wording can be improved without imposing another approval
 step or inventing a passing media review.
+
+## Addendum: standalone CI alignment
+
+The evaluator independently inspected the subsequent diff in `pipeline-lint.js`
+and `check-scenes.js`. Pipeline lint no longer counts obsolete approval gates or
+requires their old headings. It checks actual shared-guidance links, honest review
+state, prior-consent reuse and external-action boundaries instead. Other reviewer,
+lane and stage hand-off rules remain. Scene selftests now expect creative findings
+as advice; camera advice is collected and surfaced rather than silently discarded.
+Missing scene references and missing executable speech text still fail. No test was
+deleted merely to hide an execution failure.
+
+Direct reruns by this evaluator passed:
+
+- `node skills/storyboard/references/check-scenes.js --selftest`.
+- `node skills/platform-guide/references/pipeline-lint.js --selftest`.
+- `node skills/platform-guide/references/skill-lint.js --selftest`.
+
+The new `/tmp/melusine-ci-aligned-check.log` finishes with 1,848 passes, zero
+failures and zero skips; SHA-256 is
+`c36b4f861e30d3b501085a834fe8ab5b8c11c6304846d390471ee08467bae05c`.
+The parent additionally reports the remaining standalone CI commands and dist
+freshness check passed. This evaluator reviewed the workflow command inventory;
+those remaining executions are parent-provided evidence, not independent reruns.
+
+`install-ci-aligned.json` records three fresh installations, 690 verified files
+each. This evaluator hash-compared both changed reference files against the
+installed Codex copies. `installed-ci-aligned.json` records a fresh installed MCP
+process with all three calls passing and no portal tool support. The installed
+bundle hash remains `114ec9ebf8e995344b3345567df18819adde2eb613d8711ee7cafc22d617bf5c`;
+the changed files are loaded references outside that bundle.
+
+The current board is in the same preserved artifact tree under `final-ci-aligned`
+instead of `final-guided`. Its scenes hash is
+`093d992165435e1149f134f3e930513a90f8d58d5fdc495b03e08d8c1b155ce6`.
+The installed response still contains 27 playback shots, and its complete STORY
+object is byte-equivalent after JSON serialization to the previous evaluated
+response. Earlier visual observations remain observations of the `final-guided`
+captures and reference images; no fresh visual-generation claim follows from this
+code-only alignment. The P2 readiness-label wording and all media limitations
+remain unchanged. No additional score deduction or inflation is warranted.
+The evaluator subsequently hash-compared both new `final-ci-aligned` desktop and
+mobile captures with the previously viewed files: both are identical. The final
+`verification-ci-aligned.json` agrees with the independently checked helper,
+bundle, board and test-log evidence.
+
+**Final independent local result: 96/100, no unresolved P0/P1 in the reviewed
+scope. Remote CI on the final commit remains a merge prerequisite, not a result
+claimed by this report.**

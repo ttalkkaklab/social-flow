@@ -1,0 +1,29 @@
+{
+  "tests": 1848,
+  "failures": 0,
+  "checkCommand": "npm run check --prefix server",
+  "checkLogSha256": "c36b4f861e30d3b501085a834fe8ab5b8c11c6304846d390471ee08467bae05c",
+  "skillLint": "16 rules hold across 20 skills",
+  "sourcePreserved": true,
+  "sourceScenesSha256": "c352263296665cc1fe3dfbb098a1ed1d1aafcc797bce1ce3416b2e7244ab349b",
+  "sourceIdentityCount": 3,
+  "finalBoard": "/Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/data/review-lab-melusine-20261016/final-ci-aligned/gate-webtoon/episodes/gate-beyond-rewrite/storyboard",
+  "scenesSha256": "093d992165435e1149f134f3e930513a90f8d58d5fdc495b03e08d8c1b155ce6",
+  "bundleSha256": "114ec9ebf8e995344b3345567df18819adde2eb613d8711ee7cafc22d617bf5c",
+  "storyHash": "4cf2b7445645f0e86b81c775662b30617d4fa1aa0d915b48981564e2264d10c0",
+  "mediaGenerated": false,
+  "standaloneSelftests": {
+    "scenes": 370,
+    "pipeline": "pass",
+    "skill": "pass",
+    "otherCiHelpers": 13
+  },
+  "helperHashes": {
+    "skills/storyboard/references/check-scenes.js": "d00ad654613854dacfa7c65bae4be3044c010a1eb14dd33b3715b5e767ac84d1",
+    "skills/platform-guide/references/pipeline-lint.js": "1bd3be226a5475604ea89e6a5326fd6811749cd024b557c31fc8a7a6e6d891f1"
+  },
+  "screensMatchPreviouslyViewed": {
+    "desktop.png": true,
+    "mobile.png": true
+  }
+}

@@ -1316,7 +1316,9 @@ function check(win, fmt, opts) {
       });
       // A move the viewer cannot see, a provider camera lock under a written move, a move outside
       // the vendor vocabulary or one missing what it needs (production-mode.js — L13–L15 rules).
-      productionMode.cameraErrors(s).forEach((e) => machine(where, e));
+      const cameraAdvice=[];
+      productionMode.cameraErrors(s,{advice:cameraAdvice}).forEach((e) => machine(where, e));
+      cameraAdvice.forEach((e) => warn(where, e));
       productionMode.cameraWarnings(s).forEach((w) => warn(where, w));
       const prompt = v.prompt || (v.video && v.video.prompt) ||
                      (v.clip && typeof v.clip === 'object' && v.clip.prompt);
@@ -1669,6 +1671,7 @@ function selftest() {
     Object.assign({ policy: defaultPolicy }, opts || {}));
   const has = (findings, re) => findings.some((f) => re.test(f.what));
   const bads = (findings) => findings.filter((f) => f.level === 'bad');
+  const advice = (findings) => findings.filter((f) => f.level === 'warn' || f.level === 'later');
 
   const goodShot = {
     type: 'points', duration: 6, beat: 'drip', transition: 'jcut',
@@ -1997,8 +2000,8 @@ function selftest() {
                    null, { policy: hookPolicy, draft: true })), /visual\.clip/) &&
      has(bads(run([videoCover, Object.assign({}, stockScene, { visual: { source: 'stock', license: stockLicense } }), ctaShot],
                   null, { policy: hookPolicy })), /visual\.clip under footage/));
-  ok('a portrait purpose cannot take the stock route',
-     has(bads(run([videoCover, Object.assign({}, stockScene, { shot: Object.assign({}, stockScene.shot,
+  ok('a portrait purpose gets advice about the stock route',
+     has(advice(run([videoCover, Object.assign({}, stockScene, { shot: Object.assign({}, stockScene.shot,
        { render: Object.assign({}, stockScene.shot.render, { purpose: 'portrait' }) }) }), ctaShot], null, { policy: hookPolicy })), /requires still_camera/));
   const statFootage = Object.assign({}, footageScene({ slide: { labels: ['34개'] } }), {
     shot: Object.assign({}, goodShot.shot, { infoType: 'statistic' }) });
@@ -2168,26 +2171,26 @@ function selftest() {
     { no: 1, place: '방', time: '낮', event: 'A가 B를 본다', charge: { open: '-', close: '+' }, turn: '의심 → 안심', out: '가' },
     { no: 2, place: '방', time: '낮', event: 'A와 B가 마주 선다', charge: { open: '-', close: '+' }, turn: '의심 → 안심', out: '가' }
   ], sequences: [{ id: 'q1', title: '대화', purpose: '둘 사이의 긴장을 푼다', scenes: [1, 2] }] };
-  ok('an unexplained line flip is a violation',
-     has(bads(run([cover, axis('A left, B right', 0), axis('B left, A right', 40), ctaShot], { STRUCTURE: axisStructure })), /space\.line changes/));
+  ok('an unexplained line flip is advisory',
+     has(advice(run([cover, axis('A left, B right', 0), axis('B left, A right', 40), ctaShot], { STRUCTURE: axisStructure })), /space\.line changes/));
   ok('a declared camera crossing with matching sides passes',
      !has(bads(run([cover, axis('A left, B right', 0), axis('B left, A right', 40, { lineCrossing: { method: 'camera_move', from: 'A left, B right', to: 'B left, A right', reason: '카메라가 화면 안에서 두 사람 사이를 지난다' } }), ctaShot], { STRUCTURE: axisStructure })), /lineCrossing|space\.line changes/));
   ok('a neutral crossing needs its marked bridge shot',
-     has(bads(run([cover, axis('A left, B right', 0), Object.assign({}, goodShot, { scene: 2, shot: Object.assign({}, goodShot.shot, { size: 'ms', info: 'neutral', space: { frame: 'camera', layout: 'A와 B 정면', facing: '두 사람이 카메라를 정면으로 본다' }, lineNeutral: true, coverage: { action: 'A가 고개를 든다' } }) }), axis('B left, A right', 40, { lineCrossing: { method: 'neutral', from: 'A left, B right', to: 'B left, A right', reason: '정면 샷을 지나 새쪽으로 옮긴다', bridgeShot: 99 } }), ctaShot], { STRUCTURE: axisStructure })), /neutral crossing/));
+     has(advice(run([cover, axis('A left, B right', 0), Object.assign({}, goodShot, { scene: 2, shot: Object.assign({}, goodShot.shot, { size: 'ms', info: 'neutral', space: { frame: 'camera', layout: 'A와 B 정면', facing: '두 사람이 카메라를 정면으로 본다' }, lineNeutral: true, coverage: { action: 'A가 고개를 든다' } }) }), axis('B left, A right', 40, { lineCrossing: { method: 'neutral', from: 'A left, B right', to: 'B left, A right', reason: '정면 샷을 지나 새쪽으로 옮긴다', bridgeShot: 99 } }), ctaShot], { STRUCTURE: axisStructure })), /neutral crossing/));
   const intentional = (from, to, azimuth) => axis(to, azimuth, { lineCrossing: { method: 'intentional', from, to, reason: '방향 감각이 흔들리게 만든다' } });
-  ok('three intentional crossings in one episode are a violation',
-     has(bads(run([cover, axis('A left, B right', 0), intentional('A left, B right', 'B left, A right', 40), intentional('B left, A right', 'A left, B right', 0), intentional('A left, B right', 'B left, A right', 40), ctaShot], { STRUCTURE: axisStructure })), /3 intentional 180° crossings/));
+  ok('three intentional crossings in one episode are advisory',
+     has(advice(run([cover, axis('A left, B right', 0), intentional('A left, B right', 'B left, A right', 40), intentional('B left, A right', 'A left, B right', 0), intentional('A left, B right', 'B left, A right', 40), ctaShot], { STRUCTURE: axisStructure })), /3 intentional 180° crossings/));
   ok('a 30 degree bearing, an action cut and a two-step size change pass',
      bads(run([cover, axis('A left, B right', 0), axis('A left, B right', 35), ctaShot], { STRUCTURE: axisStructure })).filter(f => /adjacent picture cut|camera azimuth/.test(f.what)).length === 0 &&
      bads(run([cover, axis('A left, B right', 0), axis('A left, B right', 0, { coverage: { action: 'A가 잔을 든다' } }), ctaShot], { STRUCTURE: axisStructure })).filter(f => /adjacent picture cut|camera azimuth/.test(f.what)).length === 0 &&
      bads(run([cover, Object.assign({}, axis('A left, B right', 0), { shot: Object.assign({}, axis('A left, B right', 0).shot, { size: 'ls', coverage: undefined }) }), Object.assign({}, axis('A left, B right', 0), { shot: Object.assign({}, axis('A left, B right', 0).shot, { size: 'mfs', coverage: undefined }) }), ctaShot], { STRUCTURE: axisStructure })).filter(f => /adjacent picture cut|camera azimuth/.test(f.what)).length === 0);
-  ok('a one-step change without an escape route and a 25 degree move are violations',
-     has(bads(run([cover, Object.assign({}, axis('A left, B right', 0), { shot: Object.assign({}, axis('A left, B right', 0).shot, { coverage: undefined }) }), Object.assign({}, axis('A left, B right', 0), { shot: Object.assign({}, axis('A left, B right', 0).shot, { size: 'mcu', coverage: undefined }) }), ctaShot], { STRUCTURE: axisStructure })), /adjacent picture cut/) &&
-     has(bads(run([cover, axis('A left, B right', 0), axis('A left, B right', 25), ctaShot], { STRUCTURE: axisStructure })), /camera azimuth changes 25/));
+  ok('a one-step change without an escape route and a 25 degree move are advisory',
+     has(advice(run([cover, Object.assign({}, axis('A left, B right', 0), { shot: Object.assign({}, axis('A left, B right', 0).shot, { coverage: undefined }) }), Object.assign({}, axis('A left, B right', 0), { shot: Object.assign({}, axis('A left, B right', 0).shot, { size: 'mcu', coverage: undefined }) }), ctaShot], { STRUCTURE: axisStructure })), /adjacent picture cut/) &&
+     has(advice(run([cover, axis('A left, B right', 0), axis('A left, B right', 25), ctaShot], { STRUCTURE: axisStructure })), /camera azimuth changes 25/));
   ok('a crossing on a shot with no line, or on the first line, is a finding and not an escape',
-     has(bads(run([cover, Object.assign({}, axis('A left, B right', 0), { shot: Object.assign({}, axis('A left, B right', 0).shot, { space: { frame: 'camera', layout: 'A와 B', facing: '서로 마주 본다' }, coverage: undefined }) }),
+     has(advice(run([cover, Object.assign({}, axis('A left, B right', 0), { shot: Object.assign({}, axis('A left, B right', 0).shot, { space: { frame: 'camera', layout: 'A와 B', facing: '서로 마주 본다' }, coverage: undefined }) }),
                    Object.assign({}, axis('A left, B right', 0), { shot: Object.assign({}, axis('A left, B right', 0).shot, { space: { frame: 'camera', layout: 'A와 B', facing: '서로 마주 본다' }, coverage: undefined, lineCrossing: { foo: 1 } }) }), ctaShot], { STRUCTURE: axisStructure })), /needs space\.line on the same shot/) &&
-     has(bads(run([cover, axis('A left, B right', 0, { lineCrossing: { method: 'intentional', from: 'x', to: 'A left, B right', reason: 'r' } }), axis('A left, B right', 40), ctaShot], { STRUCTURE: axisStructure })), /first shot with a line/));
+     has(advice(run([cover, axis('A left, B right', 0, { lineCrossing: { method: 'intentional', from: 'x', to: 'A left, B right', reason: 'r' } }), axis('A left, B right', 40), ctaShot], { STRUCTURE: axisStructure })), /first shot with a line/));
   ok('camera-continuity records wait for the story pass to end',
      !has(bads(run([cover, axis('A left, B right', 0), axis('B left, A right', 40), ctaShot], { STRUCTURE: axisStructure }, { draft: true })), /space\.line changes|adjacent picture cut/) &&
      has(run([cover, axis('A left, B right', 0), axis('B left, A right', 40), ctaShot], { STRUCTURE: axisStructure }, { draft: true }), /space\.line changes/));
@@ -2626,19 +2629,19 @@ function selftest() {
     ok('a scene with no wide warns',
        has(run([at(cover, 1), at(goodShot, 1, { shot: Object.assign({}, goodShot.shot, { size: 'cu', info: '둘' }) }), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure(clean) }), /no wide/));
     ok('a shot whose scene the structure does not define fails',
-       has(bads(run(board, { STRUCTURE: structure([scene(1)]) })), /scene 2 is not in STRUCTURE/));
-    ok('a scene in no sequence fails',
-       has(bads(run(board, { STRUCTURE: structure([scene(1), scene(2)], [{ id: 'q1', title: 't', purpose: 'p', scenes: [1] }]) })), /belongs to no sequence/));
+       has(bads(run(board, { STRUCTURE: structure([scene(1)]) })), /scene reference does not exist/));
+    ok('a scene in no sequence warns',
+       has(advice(run(board, { STRUCTURE: structure([scene(1), scene(2)], [{ id: 'q1', title: 't', purpose: 'p', scenes: [1] }]) })), /belongs to no sequence/));
     ok('the same charge at both ends is a nonevent warning',
        has(run(board, { STRUCTURE: structure([scene(1, { charge: { open: '+', close: '+' } }), scene(2)]) }), /nonevent/));
     ok('deepening into the same pole is a turn', !has(run(board, { STRUCTURE: structure([scene(1, { charge: { open: '-', close: '--' } }), scene(2)]) }), /nonevent|deepens/));
     ok('"++" on a "-" open is a big swing, not a violation', !has(bads(run(board, { STRUCTURE: structure([scene(1, { charge: { open: '-', close: '++' }, out: '가' }), clean[1]]) })), /charge/));
-    ok('a scene split by another scene fails',
-       has(bads(run([at(cover, 1), at(goodShot, 2, wide), at(goodShot, 1, wide), at(ctaShot, 2)], { STRUCTURE: structure([scene(1), scene(2)]) })), /split by another scene/));
-    ok('shots that play the sequences out of order fail',
-       has(bads(run(board, { STRUCTURE: structure([scene(1), scene(2)], [{ id: 'q1', title: 't', purpose: 'p', scenes: [2, 1] }]) })), /one order/));
-    ok('a stale sceneSlug fails',
-       has(bads(run([at(cover, 1, { sceneSlug: '다른 곳 / 밤' })].concat(board.slice(1)), { STRUCTURE: structure([scene(1), scene(2)]) })), /sceneSlug .* differs/));
+    ok('a scene split by another scene warns',
+       has(advice(run([at(cover, 1), at(goodShot, 2, wide), at(goodShot, 1, wide), at(ctaShot, 2)], { STRUCTURE: structure([scene(1), scene(2)]) })), /split by another scene/));
+    ok('shots that play the sequences out of order warn',
+       has(advice(run(board, { STRUCTURE: structure([scene(1), scene(2)], [{ id: 'q1', title: 't', purpose: 'p', scenes: [2, 1] }]) })), /one order/));
+    ok('a stale sceneSlug warns',
+       has(advice(run([at(cover, 1, { sceneSlug: '다른 곳 / 밤' })].concat(board.slice(1)), { STRUCTURE: structure([scene(1), scene(2)]) })), /sceneSlug .* differs/));
     ok('one size across a scene is a coverage warning',
        has(run([at(cover, 1), at(goodShot, 1), at(goodShot, 2), at(ctaShot, 2, wide)], { STRUCTURE: structure([scene(1), scene(2)]) }), /coverage is two sizes/));
     ok('a repeated shot.info anywhere on the board is a coverage warning',
@@ -2790,8 +2793,8 @@ function selftest() {
       motionEssential: true, action: 'cloth lifts', whyNotStill: 'the change is continuous' } }),
     visual: { bg: 'images/scene-2.png', why: 'continuous motion', audio: 'wind',
       camera: { movement: 'dolly in', speed: 'slow', framing: 'medium', end: 'the gate' }, video } });
-  ok('a generated_video cut without a previz is a violation after the draft',
-     has(bads(run([cover, videoCut({ prompt: SEEDANCE_PROMPT }), goodShot, ctaShot])), /pre-renders its camera and blocking in 3D/));
+  ok('a generated_video cut without a previz is advisory after the draft',
+     has(advice(run([cover, videoCut({ prompt: SEEDANCE_PROMPT }), goodShot, ctaShot])), /previz can guide camera and blocking/));
   ok('the previz waits for the camera pass (--draft)',
      !has(bads(run([cover, videoCut({ prompt: SEEDANCE_PROMPT }), goodShot, ctaShot], null, { draft: true })), /pre-renders/));
   ok('a previz on the host lane needs handoff frame_and_prompt and nothing Seedance asks for',
@@ -2811,8 +2814,8 @@ function selftest() {
                          narration: [{ sub: '가' }], visual: {} });   // no transition either — 4b writes it
   const skelCover = Object.assign(skel('hook'), { hookType: 'fear', hookForm: 'gap' });
   const skeleton = [skelCover, skel('drip'), skel('drip'), skel('cta')];
-  ok('a story-pass skeleton passes with --draft',
-     bads(run(skeleton, null, { draft: true })).length === 0);
+  ok('a story-pass skeleton without executable tts fails even with --draft',
+     has(bads(run(skeleton, null, { draft: true })), /narration group 1 requires text/));
   ok('the same skeleton fails without --draft',
      has(bads(run(skeleton)), /no tts/));
   ok('the CLI render gate rejects a skeleton that never chose a treatment',
@@ -2860,10 +2863,10 @@ function selftest() {
   // ── the move is a vendor word with what it needs (L13–L15, production-mode.js) ──
   const moveShot = (camera, over) => Object.assign({}, goodShot, {
     visual: Object.assign({ video: { prompt: SEEDANCE_PROMPT }, audio: 'wind', camera }, over || {}) });
-  ok('a generated shot whose move is a practitioner word is a violation with the vendor word',
-     has(bads(run([cover, moveShot({ movement: 'push in', speed: 'slow', framing: 'the desk', end: 'the door' }), goodShot, ctaShot])), /write "dolly in"/));
-  ok('a pan whose two ends are the same picture is a violation',
-     has(bads(run([cover, moveShot({ movement: 'pan left', speed: 'slow', framing: 'the desk', end: 'the desk' }), goodShot, ctaShot])), /has nowhere to go/));
+  ok('a generated shot whose move is a practitioner word is advisory with the vendor word',
+     has(advice(run([cover, moveShot({ movement: 'push in', speed: 'slow', framing: 'the desk', end: 'the door' }), goodShot, ctaShot])), /write "dolly in"/));
+  ok('a pan whose two ends are the same picture is advisory',
+     has(advice(run([cover, moveShot({ movement: 'pan left', speed: 'slow', framing: 'the desk', end: 'the desk' }), goodShot, ctaShot])), /has nowhere to go/));
   ok('"no speech, no dialogue, no voice-over" in visual.audio is the exclusion sentence, not a spoken line',
      !has(run([cover, moveShot({ movement: 'dolly in', speed: 'slow', framing: 'a', end: 'b' }, { audio: 'city traffic, no music, no speech, no dialogue, no voice-over' }), goodShot, ctaShot]), /spoken line/) &&
      has(run([cover, moveShot({ movement: 'dolly in', speed: 'slow', framing: 'a', end: 'b' }, { audio: 'a narrator says the line' }), goodShot, ctaShot]), /spoken line/));
@@ -3020,7 +3023,7 @@ function selftest() {
     return lookHas(perShot(stale), 'warn', /\[bgPrompt-stale\]/) &&
       !lookHas(perShot(perShotFixture()), 'warn', /\[bgPrompt-stale\]/);
   })());
-  ok('style-missing refuses a still whose prompt lacks the episode treatment, and follows an approved per-shot preset', (() => {
+  ok('style-missing advises on treatment and optional per-shot selection provenance', (() => {
     const pm = require('./production-mode.js');
     const handwritten = perShotFixture(); handwritten.SCENES[0].visual.bgPrompt = 'Medium full shot, the officer crosses the yard.';
     const bare = perShot(handwritten);
@@ -3032,12 +3035,14 @@ function selftest() {
     const stale = perShotFixture(); stale.SCENES[0].shot.style = over.SCENES[0].shot.style; stale.SCENES[0].shot.videoDesign.look = 'inkwash';
     // An override without the user's record is refused by production-mode.js, not silently applied.
     const unapproved = perShotFixture(); unapproved.SCENES[0].shot.style = { preset: 'ink-wash', reason: 'x' };
+    const selectionAdvice=[];
+    const selectionErrors=pm.check(unapproved, { draft: true, advice:selectionAdvice });
     return lookHas(bare, 'bad', /\[style-missing\].*episode style "photoreal"/) &&
       !lookHas(perShot(perShotFixture()), 'bad', /\[style-missing\]/) &&
       over.SCENES[0].visual.bgPrompt.includes(pm.STYLES['ink-wash'].prompt) &&
       !lookHas(perShot(over), 'bad', /\[style-missing\]/) &&
       lookHas(perShot(stale), 'bad', /\[style-missing\].*per-shot style "ink-wash"/) &&
-      pm.check(unapproved, { draft: true }).some(e => /\[shot-style\].*HITL approval/.test(e)) &&
+      selectionErrors.length === 0 && selectionAdvice.some(e => /\[shot-style\].*HITL approval/.test(e)) &&
       !pm.check(over, { draft: true }).some(e => /\[shot-style\]/.test(e));
   })());
   ok('worldId-unmapped warns on a missing set and accepts a mapped set', (() => {
