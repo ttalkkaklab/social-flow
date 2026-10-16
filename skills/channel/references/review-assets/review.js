@@ -14,7 +14,7 @@
   }
   translate(lang);
   if (picker) picker.addEventListener('change', function () { translate(picker.value); });
-  var search = document.querySelector('[data-search]');
+  var search = document.querySelector('input[data-search]');
   var series = document.querySelector('[data-series-filter]');
   function filter() {
     var q = (search ? search.value : '').trim().toLocaleLowerCase();
@@ -29,4 +29,28 @@
   }
   if (search) search.addEventListener('input', filter);
   if (series) series.addEventListener('change', filter);
+  // Native dialog supplies focus containment, Escape and focus restoration.
+  var dialog = document.createElement('dialog');
+  dialog.className = 'review-lightbox';
+  var close = document.createElement('button');
+  close.type = 'button';
+  var picture = document.createElement('img');
+  var caption = document.createElement('p');
+  caption.id = 'review-image-caption';
+  dialog.setAttribute('aria-labelledby', caption.id);
+  dialog.append(close, picture, caption);
+  document.body.appendChild(dialog);
+  close.addEventListener('click', function () { dialog.close(); });
+  dialog.addEventListener('click', function (event) { if (event.target === dialog) dialog.close(); });
+  document.querySelectorAll('[data-image-preview]').forEach(function (link) {
+    link.addEventListener('click', function (event) {
+      if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+      event.preventDefault();
+      picture.src = link.href;
+      picture.alt = link.querySelector('img').alt;
+      caption.textContent = picture.alt;
+      close.textContent = document.documentElement.lang === 'ko' ? '닫기' : 'Close';
+      dialog.showModal();
+    });
+  });
 })();

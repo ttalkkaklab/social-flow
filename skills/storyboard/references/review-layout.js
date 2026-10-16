@@ -34,6 +34,18 @@
     var summary = document.createElement('summary'); summary.textContent = title;
     box.appendChild(summary); return box;
   }
+  // Keep production grammar available without putting it ahead of the picture.
+  Array.from(app.querySelectorAll('.scene')).forEach(function (scene) {
+    var detail = disclosure(words('연출·카메라 상세', 'Direction / camera details'));
+    Array.from(scene.children).forEach(function (child) {
+      if (child.matches('.shot-grammar, .shot-meta, .cmeta, .transition')) detail.appendChild(child);
+    });
+    if (detail.children.length > 1) scene.appendChild(detail);
+  });
+  var skip = document.createElement('a');
+  skip.className = 'review-skip'; skip.href = '#shots';
+  skip.textContent = words('샷으로 건너뛰기', 'Skip to shots');
+  document.body.insertBefore(skip, sidebar);
   var header = app.querySelector('header');
   var audit = document.getElementById('audit');
   var status = audit && audit.querySelector('.count');
@@ -70,18 +82,36 @@
     keys[0].parentNode.insertBefore(legend, keys[0]);
     Array.from(keys).forEach(function (key) { legend.appendChild(key); });
   }
+  // Explanations belong with the legend; keep preview toggles in the toolbar.
+  [shots.querySelector('.aside'), shotSection.querySelector('.toolbar .legend')].forEach(function (hint) {
+    if (hint && keys.length) { hint.className = 'review-guide-copy'; legend.appendChild(hint); }
+  });
   app.appendChild(shotSection);
   if (style) app.appendChild(style);
   app.appendChild(checks); app.appendChild(notes);
+  checks.id = 'review-checks'; notes.id = 'review-notes';
+  var jump = document.createElement('nav');
+  jump.className = 'review-jump';
+  jump.setAttribute('aria-label', words('검토 바로가기', 'Review sections'));
+  [['shots', words('샷 보기', 'Shots')],
+    ['review-checks', words('검사·비용', 'Checks / costs') + (status ? ' · ' + status.textContent : '')],
+    ['review-notes', words('기획·자료', 'Plan / references')]].forEach(function (entry) {
+    var link = document.createElement('a'); link.href = '#' + entry[0];
+    link.textContent = entry[1]; jump.appendChild(link);
+  });
+  app.insertBefore(jump, shotSection);
   // A <base> in the library copy changes native fragment resolution. Keep fragments
   // in this document and expand their disclosure ancestors before scrolling.
   function reveal(hash) {
     var id;
     try { id = decodeURIComponent(hash.replace(/^#/, '')); } catch (_) { return; }
     var target = document.getElementById(id); if (!target) return;
+    if (target.tagName === 'DETAILS') target.open = true;
     var ancestor = target.parentElement;
     while (ancestor) { if (ancestor.tagName === 'DETAILS') ancestor.open = true; ancestor = ancestor.parentElement; }
     target.scrollIntoView();
+    if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
+    target.focus({ preventScroll: true });
   }
   document.addEventListener('click', function (event) {
     var a = event.target.closest('a[href^="#"]'); if (!a) return;

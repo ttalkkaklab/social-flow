@@ -67,3 +67,17 @@ Character changes call `skills/channel/references/review-library.js <channelDir>
 Shared review assets live under the channel skill’s `review-assets/` directory.
 See `skills/channel/references/local-review-design.md` for provenance and scope.
 A local template pass still does not certify parity with a newer portal deployment.
+
+## Responsive review refinement (2026-10-16)
+
+The owner-authorized generator refinement uses the same shared assets in both
+review destinations. Below 1024px navigation moves above the document. Each shot
+shows its frames and dialogue before a direction/camera disclosure; review checks
+and costs remain reachable from a shortcut carrying the actual audit totals.
+The shortcut opens the target and moves keyboard focus, including in library
+copies with a relative base URL. Print still includes the full review.
+
+This updates the local renderer, not the portal application. Do not claim fresh
+portal parity without the separate comparison described above. Follow the
+[local review design](../../channel/references/local-review-design.md) for the
+viewport and interaction regression checks.
