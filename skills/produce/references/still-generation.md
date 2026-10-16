@@ -148,6 +148,15 @@ Save each one as `storyboard/images/scene-<n>.png`, `<n>` counting from 1 — th
 the strip calls "Shot n". Slide scenes have no still here (their screen is HTML, authored at
 §3.6), and shooting mode has none at all.
 
+**Generate from the shot plan, not an actor lookup.** Apply
+[opening-frame planning](../../storyboard/references/visual-direction.md#plan-each-opening-frame-before-assigning-images).
+Use shared face/body/location references to preserve identity and geography while the shot
+plan controls framing, pose, expression and visible prop state. Do not bind `host.png` to
+every host line or copy one portrait into separately numbered files. When editing a previous
+scene image, explicitly describe the new composition and opening state; preserving the
+character does not mean preserving the previous camera. Intentional return shots may reuse
+an image after checking that it depicts the planned moment and recording why reuse fits.
+
 **A character scene is a reference call.** Resolve the id to its panel directory and pass the
 views the shot needs as separate reference inputs: face + body for front/three-quarter
 shots, face alone for a facial close-up, and back for rear shots (add face only if visible).
@@ -170,6 +179,13 @@ the body — "no maps" draws a map (measured: 4 of 4 failed). An element that ke
 gets designed out of the scene sentence instead.
 
 ## 3. The image check
+
+Compare all source images in playback order and compare recurring characters together before
+video generation. Open the actual paths declared by the board, including legacy filenames;
+`scene-*.png` alone may miss them. Read the shot-image warnings from `check-scenes.js` and
+resolve the creative question: an intentional return shot, or an accidentally repeated
+portrait? Inspect similar-looking files too: byte hashes cannot detect re-encoded copies or
+small expression edits. Record the observed framing/action, not merely a filename or hash.
 
 **Look at the picture that came out.** Open every `images/scene-*.png` (and the
 `narration[].img` files in illustration mode) once with Read against that scene's `shot.info`

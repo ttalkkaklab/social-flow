@@ -1,0 +1,33 @@
+{
+  "version": "0.114.0-shot-images.4",
+  "iteration": "4",
+  "stage": "/Users/zeans/.local/state/social-flow-shot-images/builds/0.114.0-shot-images.4",
+  "stageFiles": 796,
+  "hosts": {
+    "codex": {
+      "installed": "/Users/zeans/.codex/plugins/cache/social-flow/social-flow/0.114.0-shot-images.4",
+      "mismatches": [],
+      "bundleSha256": "b42224cda09f42cab6b21fbcf15744e7a498fe7179880975686f20536be0f871",
+      "counts": {
+        "shared_source_image": 6,
+        "similar_source_images": 5
+      },
+      "preflightEvidenceMatches": true
+    },
+    "claude": {
+      "installed": "/Users/zeans/.claude/plugins/cache/social-flow/social-flow/0.114.0-shot-images.4",
+      "mismatches": [],
+      "bundleSha256": "b42224cda09f42cab6b21fbcf15744e7a498fe7179880975686f20536be0f871",
+      "counts": {
+        "shared_source_image": 6,
+        "similar_source_images": 5
+      },
+      "preflightEvidenceMatches": true
+    }
+  },
+  "originalEpisode": {
+    "filesVerified": 143,
+    "changed": []
+  },
+  "sourcePatchSha256": "13dcd26c084716210bdf9114e5bf9ea95000fcf620e0a042f072b67b38077223"
+}

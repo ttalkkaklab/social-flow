@@ -44,6 +44,13 @@ above (the `[study]` rows).
 
 ## Distinct shots carry distinct information
 
+Plan the opening state and composition before assigning an image. Shared character sheets
+supply identity, not a portrait to reuse for every line. Compare return shots of the same
+person as well as adjacent cuts; alternating two speakers can conceal repeated setups.
+Follow [opening-frame planning](visual-direction.md#plan-each-opening-frame-before-assigning-images)
+and inspect actual source images together before video generation. Different camera-move
+labels or filenames do not establish different pictures.
+
 Choose boundaries when an action, discovery, relationship or emotional state changes.
 A speaker change, text message or subtitle boundary alone does not require a new shot.
 Several lines can play over one coherent action; preserve their attributed speech events.

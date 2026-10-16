@@ -245,7 +245,8 @@ test('stills_only accepts nine still cuts, keeps the four cost choices and prese
 });
 test('the production gate clears a stills_only board with no quote and refuses a video call', () => withBoard(({ board, save }) => {
   save(stillsBoard());
-  const gate = check(board);
+  const gate = production.check(board);
+  assert.ok(gate.imageReview.some(f => f.code === 'unverified_source_image'));
   assert.deepEqual(gate.errors, []);
   assert.equal(gate.active, true);
   assert.equal(gate.quote, null);
@@ -334,11 +335,11 @@ test('cast sheets and cut types affect validation and quote fingerprints', () =>
   assert.match(errors, /shot\.cutType must be one of/);
 });
 test('approval is bound to actual plan and prices but recording a generated output does not stale it', () => withBoard(({ board, save }) => {
-  const win = fixture(); save(win); assert.deepEqual(check(board, { requireSelection: true }).errors, []);
+  const win = fixture(); save(win); assert.deepEqual(production.check(board, { requireSelection: true }).errors, []);
   win.SCENES[0].visual.video.clip = '.work/accepted.mp4'; save(win);
-  assert.deepEqual(check(board).errors, []);
+  assert.deepEqual(production.check(board).errors, []);
   win.SCENES[0].duration = 6; save(win); assert.match(check(board).errors.join(), /quote is stale/);
-  approve(win); save(win); assert.deepEqual(check(board).errors, []);
+  approve(win); save(win); assert.deepEqual(production.check(board).errors, []);
   win.PRODUCTION.approval.quoteFingerprint = 'old-price-table'; save(win); assert.match(check(board).errors.join(), /quote is stale/);
   delete win.PRODUCTION; save(win); assert.match(check(board, { requireSelection: true }).errors.join(), /Choose a production mode/);
 }));
@@ -348,7 +349,7 @@ test('retry-inclusive budget, per-shot attempt limit and actual spend block new 
   win.PRODUCTION.videoBudgetUsd = 3; approve(win); save(win);
   writeFileSync(path.join(work, 'cost-tally.tsv'), [1, 2, 3].map(n => `seedance.1-5-pro-silent.1080p\t5\tvideo:shot=1:attempt=${n}`).join('\n'));
   assert.match(check(board, { beforeCall: 1 }).errors.join(), /attempt limit/);
-  assert.deepEqual(check(board, { beforeCall: 2 }).errors, []);
+  assert.deepEqual(production.check(board, { beforeCall: 2 }).errors, []);
   writeFileSync(path.join(work, 'cost-tally.tsv'), 'seedance.1-5-pro-silent.1080p\t100\tvideo:shot=1:attempt=1\n');
   assert.match(check(board, { beforeCall: 2 }).errors.join(), /Actual video spend/);
 }));
@@ -368,7 +369,7 @@ test('actual media and review hashes gate the full-video manifest', () => withBo
   writeFileSync(path.join(work, 'video-review.json'), JSON.stringify({ shots: [review] }));
   writeFileSync(path.join(work, 'cards.tsv'), '0\tvoice.wav\t4.5\tnone\n');
   writeFileSync(path.join(work, 'segs.tsv'), `0\t0\t${video}\tThe buildings rise.\tThe buildings rise.\n`);
-  assert.deepEqual(check(board, { ready: true, manifest: true }).errors, []);
+  assert.deepEqual(production.check(board, { ready: true, manifest: true }).errors, []);
   writeFileSync(path.join(work, 'segs.tsv'), `0\t0\t@${video}::overlay.png\tLine\tLine\n`);
   assert.match(check(board, { manifest: true }).errors.join(), /without overlays/);
   writeFileSync(path.join(board, 'images/scene-1.png'), 'changed source');
@@ -479,7 +480,7 @@ test('approved revisions count their own retries while retaining historical spen
  const win=fixture(1);win.PRODUCTION.generationRevision='content-v3';approve(win);save(win);
  const ledger=path.join(work,'cost-tally.tsv');
  const old=Array.from({length:3},(_,i)=>`seedance.1-5-pro-silent.1080p\t5\tvideo:shot=1:attempt=${i+1}\n`).join('');
- writeFileSync(ledger,old);assert.deepEqual(check(board,{beforeCall:1}).errors,[]);
+ writeFileSync(ledger,old);assert.deepEqual(production.check(board,{beforeCall:1}).errors, []);
  const current=Array.from({length:3},(_,i)=>`seedance.1-5-pro-silent.1080p\t5\tvideo:shot=1:attempt=${i+1} revision=content-v3\n`).join('');
  writeFileSync(ledger,old+current);assert.ok(check(board,{beforeCall:1}).errors.some(x=>x.includes('attempt limit')));
  win.PRODUCTION.generationRevision='content-v4';save(win);assert.ok(check(board,{beforeCall:1}).errors.some(x=>x.includes('stale')));
@@ -594,7 +595,7 @@ test('explicit imports pass scene and production gates at zero generation cost, 
  const saveReviews=()=>writeFileSync(path.join(work,'video-review.json'),JSON.stringify({shots:reviews}));saveReviews();
  writeFileSync(path.join(work,'cards.tsv'),w.SCENES.map((s,i)=>`${i}\tvoice.wav\t5\tnone\n`).join(''));
  writeFileSync(path.join(work,'segs.tsv'),w.SCENES.map((s,i)=>`${i}\t0\t${video}\t${s.narration[0].tts}\t${s.narration[0].sub}\n`).join(''));
- assert.deepEqual(check(board,{ready:true,manifest:true}).errors,[]);
+ assert.deepEqual(production.check(board,{ready:true,manifest:true}).errors, []);
  const {verifyManifest}=require('../../skills/produce/references/verify-build-plan.js');
  assert.equal(Object.keys(verifyManifest(work,board,w.SCENES,w.FORMAT)).length,1);
  const manifest=readFileSync(path.join(work,'segs.tsv'),'utf8');
@@ -618,7 +619,9 @@ test('explicit imports pass scene and production gates at zero generation cost, 
  mixed.STORY.review.hash=require('../../skills/storyboard/references/story-contract.js').storyHash(mixed);approve(mixed);save(mixed);
  const single=spawnSync(process.execPath,[path.join(root,'skills/storyboard/references/check-scenes.js'),board,'--json'],{encoding:'utf8'});
  assert.equal(single.status,0,single.stdout+single.stderr);
- assert.deepEqual(check(board,{requireSelection:true}).errors,[]);
+ const mixedResult=production.check(board,{requireSelection:true});
+ assert.deepEqual(mixedResult.errors,[]);
+ assert.ok(mixedResult.warnings.some(message=>message.includes('same source image reference')));
  assert.equal(quote(mixed).options.hybrid.reusedClips,1);assert.equal(quote(mixed).options.hybrid.firstPassUsd,0);
  mixed.SCENES[1]=fixture(1).SCENES[0];mixed.SCENES[1].shot.render={mode:'generated_video',purpose:'live_action',motionEssential:true,reason:'Watch the buildings rise.',action:'Buildings rise.',whyNotStill:'The removal is continuous.'};
  assert.equal(quote(mixed).options.hybrid.clips,1);assert.equal(quote(mixed).options.hybrid.firstPassUsd,.29);assert.equal(quote(mixed).options.hybrid.retryHighUsd,.58);
@@ -672,7 +675,9 @@ test('a spoiler cover can close without a required share trigger',()=>withBoard(
  const gate=()=>spawnSync(process.execPath,[path.join(root,'skills/storyboard/references/check-scenes.js'),board,'--json'],{encoding:'utf8'});
  const w=spoilerFixture(video);save(w);
  const pass=gate();assert.equal(pass.status,0,pass.stdout+pass.stderr);
- assert.deepEqual(check(board,{requireSelection:true}).errors,[]);
+ const spoilerResult=production.check(board,{requireSelection:true});
+ assert.deepEqual(spoilerResult.errors,[]);
+ assert.ok(spoilerResult.warnings.some(message=>message.includes('same source image reference')));
  delete w.SCENES[3].shot.share;save(w);
  const missing=gate();
  assert.equal(missing.status,0);

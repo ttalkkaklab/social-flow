@@ -77498,7 +77498,7 @@ function checkStoryboard(args) {
   if (args.draft) argv.push("--draft");
   let raw = "";
   try {
-    raw = execFileSync(process.execPath, argv, { encoding: "utf8", timeout: 6e4, stdio: ["ignore", "pipe", "pipe"] });
+    raw = execFileSync(process.execPath, argv, { encoding: "utf8", timeout: 6e4, maxBuffer: 16 * 1024 * 1024, stdio: ["ignore", "pipe", "pipe"] });
   } catch (e2) {
     const err4 = e2;
     raw = err4.stdout || "";

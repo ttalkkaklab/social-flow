@@ -3080,7 +3080,8 @@ function main() {
       violations: executionProblems.length, warnings: 0, deferred: 0, findings: executionProblems };
     process.stdout.write(argv.includes('--json') ? JSON.stringify(result, null, 2) + '\n'
       : executionProblems.map(f => f.where + ': ' + f.what).join('\n') + '\n');
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
   const fmt = formatOf(scenesPath);
   const formatVideoMax = fmt.video && Number.isFinite(Number(fmt.video.generatedSecondsMax))
@@ -3103,6 +3104,7 @@ function main() {
   require('./render-routing.js').checkEpisode(win, {advice: episodeAdvice}).forEach(what =>
     findings.push({ level: 'bad', where: 'visual direction', what }));
   episodeAdvice.forEach(what => findings.push({level: 'warn', where: 'visual direction', what}));
+  findings.push(...require('./shot-image-review.js').check(win, path.dirname(scenesPath)));
   // Story quality guides the next pass; review metadata never gates automatic production.
   require('./story-contract.js').checkStory(win, { requireReview: false }).forEach(what =>
     findings.push({ level: 'warn', where: 'story quality', what }));
@@ -3148,7 +3150,8 @@ function main() {
       format: fmt.format, shots: win.SCENES.length, draft,
       violations: bad.length, warnings: warn.length, deferred: later.length, findings
     }, null, 2) + '\n');
-    process.exit(bad.length ? 1 : 0);
+    process.exitCode = bad.length ? 1 : 0;
+    return;
   }
 
   const lines = ['scenes.js contract — ' + fmt.label + ' · ' + win.SCENES.length + ' shots' +
@@ -3184,7 +3187,7 @@ function main() {
     lines.push('  ' + later.length + ' machine-layer check(s) deferred to §4b — run again without --draft there.');
   }
   process.stdout.write(lines.join('\n') + '\n');
-  process.exit(bad.length ? 1 : 0);
+  process.exitCode = bad.length ? 1 : 0;
 }
 
 module.exports = { spokenText };
