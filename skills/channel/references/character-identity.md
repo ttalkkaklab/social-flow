@@ -7,6 +7,23 @@ Use this contract for new characters and requested character updates. `identity.
 is the character source of truth; `profile.md` remains the channel source. Never
 silently populate an existing character with the example's biography or voice.
 
+## Prepare the shared sheet before episode authoring
+
+Before candidate stories or scene images, inspect `assets/characters/` and read the
+selected identities. Create missing identity drafts using the worked example's
+structure, preserving unknown fields as pending. Export the shared sheets with
+`review-library.js` immediately, even when images or voice samples are missing.
+`assets/characters/<id>/index.html` is generated from the bundled review template;
+never hand-author a substitute HTML page or use the episode cast section as the sheet.
+If an unowned HTML page conflicts, preserve it in a sibling backup before explicitly
+migrating it. Do not overwrite another active session's artifacts.
+
+Then compile the selected identities into the episode cast. New identities use
+`identity.md` as the single source; `cast.json` locates it rather than creating a
+parallel `identity.json`. Resolve only missing facts needed by the next operation.
+A draft sheet with pending fields or media is valid planning progress. A template
+match is not a complete character, and media generation still needs authorization.
+
 ## Author and validate
 
 Use [character-identity-example.md](character-identity-example.md) as a complete
@@ -46,7 +63,7 @@ Resolve unknowns with the user, or retain pending; never retrofit a fabricated r
 
 1. Author the identity before images. Use `direction.image` for the appearance prompt
    plus the specific panel framing. Create separate front full-body, back full-body,
-   and face close-up images. The front includes the head and a neutral face; the back
+   and face close-up images following [character-panels.md](character-panels.md). The front includes the head and a neutral face; the back
    faces away. Never erase a face from the front body. Match proportions, clothing,
    colors and landmarks across all panels. Keep expressions/poses as optional extras.
 2. Use the host image tool where available. Generate the first panel, inspect it, then
@@ -57,7 +74,7 @@ Resolve unknowns with the user, or retain pending; never retrofit a fabricated r
    pass style only when the chosen engine supports it. Unsupported emotional controls
    are documented limitations; never claim they were rendered by an engine without them.
 4. New storyboards set `SB_DOC.characterSchemaVersion = 1`. Copy each compiler result
-   into `SB_DOC.characters` (add panel paths separately). `direction.image` feeds still
+   into `SB_DOC.characters` (add shared panel paths separately, never scene images). `direction.image` feeds still
    prompts; `direction.video` feeds motion/acting prompts; `direction.dialogue` guides
    script writing; `direction.voice` guides supported speech controls. Both board and
    assembly checks reject altered identity with stale direction. Recompile from the

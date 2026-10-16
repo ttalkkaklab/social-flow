@@ -71,13 +71,18 @@ test('exports offline characters, indexes and the SAME storyboard shell with rel
     const result = exportChannel(f.dir);
     assert.equal(result.characters, 1);
     assert.equal(result.episodes, 1);
-    assert.deepEqual(result.warnings, []);
+    assert.deepEqual(result.structuralWarnings, []);
+    assert.ok(result.contentWarnings.some(w => w.domain === 'image-framing'));
     const detail = readFileSync(join(f.dir, 'assets/characters/hero/index.html'), 'utf8');
     for (const name of ['body.png', 'back.png', 'face.png', 'extra.png']) assert.ok(detail.includes(`src="${name}"`));
     assert.ok(detail.includes('Guide &lt;script&gt;alert(1)&lt;/script&gt;'));
     assert.ok(detail.includes('Blue coat'));
     assert.ok(detail.includes('M1'));
     assert.ok(!detail.includes('fetch('));
+    assert.ok(detail.includes('캐릭터 시트 목록'));
+    assert.ok(detail.includes('Template match does not certify image readiness'));
+    assert.ok(detail.includes('review-panel-face'));
+    assert.equal(result.visualReview, 'not_reviewed');
     assert.ok(existsSync(join(f.dir, 'assets/review/WantedSansVariable.woff2')));
     assert.ok(readFileSync(join(f.dir, 'assets/characters/index.html'), 'utf8').includes('href="hero/index.html"'));
     const alias = readFileSync(join(f.dir, 'storyboards/one/index.html'), 'utf8');
@@ -112,7 +117,7 @@ test('missing HTML is reported and not linked; no-key export never needs credent
   try {
     rmSync(join(f.dir, 'episodes/one/storyboard/storyboard.html'));
     const result = exportChannel(f.dir);
-    assert.equal(result.warnings.length, 1);
+    assert.equal(result.structuralWarnings.length, 1);
     assert.ok(!existsSync(join(f.dir, 'storyboards/one/index.html')));
     assert.ok(!readFileSync(join(f.dir, 'storyboards/index.html'), 'utf8').includes('href="one/index.html"'));
   } finally { f.clean(); }

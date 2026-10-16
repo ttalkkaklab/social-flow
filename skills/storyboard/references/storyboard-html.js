@@ -50,7 +50,9 @@ function storyboardHtml(directory, check = false) {
     const face = '../../../assets/characters/' + id + '/face.png';
     if (fs.existsSync(path.resolve(dir, face))) portraits[id] = face;
   }
-  const reviewData = 'window.REVIEW_FILES = ' + JSON.stringify(available) + ';\n' +
+  const panelFindings = win ? require('../../channel/references/character-panels.js').boardPanelFindings(win, dir, path.resolve(dir, '../../..')) : [];
+  const reviewData = 'window.REVIEW_PANEL_FINDINGS = ' + JSON.stringify(panelFindings).replace(/</g, '\\u003c') + ';\n' +
+    'window.REVIEW_FILES = ' + JSON.stringify(available) + ';\n' +
     'window.REVIEW_CHARACTER_PORTRAITS = ' + JSON.stringify(portraits).replace(/</g, '\\u003c') + ';\n' +
     'window.REVIEW_VIDEO_TYPES = ' + JSON.stringify(typeLabels).replace(/</g, '\\u003c') + ';\n';
   const files = [['location-review-data.js', 'window.LOCATION_REVIEW = ' + JSON.stringify(locationData).replace(/</g, '\\u003c') + ';\n'], ['storyboard.html', html], ['review-files.js', reviewData], ...HELPERS.map(name => [name, fs.readFileSync(path.join(__dirname, name))]),
@@ -84,7 +86,7 @@ if (require.main === module) {
       console.log(`Library: ${result.characters} characters, ${result.episodes} episodes, ${result.changed.length} changed files`);
       for (const warning of result.structuralWarnings) console.warn('Library structure: ' + warning);
       for (const warning of result.contentWarnings) console.warn('Content readiness [' + warning.domain + ']: ' + warning.message);
-      if (result.contentWarnings.length) console.warn('Design check does not certify content readiness; identity/voice findings guide the next review without blocking authoring.');
+      if (result.contentWarnings.length) console.warn('Design check does not certify content readiness; identity/voice/image findings guide the next review without blocking authoring.');
       if (check && (result.changed.length || result.structuralWarnings.length)) process.exitCode = 1;
     }
     if (check && changed.length) process.exitCode = 1;

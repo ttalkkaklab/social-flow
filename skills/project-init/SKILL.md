@@ -97,6 +97,12 @@ channel and per-platform connection state. State pending connections honestly.
 works. Link the channel profile and report any profile/default conflicts without
 rewriting existing voices or an already-approved episode.
 
+Project settings readiness does not mean character readiness. Before continuing to
+an episode, follow [shared character preparation](../channel/references/character-identity.md#prepare-the-shared-sheet-before-episode-authoring).
+Create/reuse the needed identity drafts and export their bundled sheets before
+candidate writing. Do not generate media during project setup or substitute an
+ad hoc page for the shared sheet. Report absent images as pending.
+
 ## Starting subsequent episodes
 
 Call `project_manage episode` with the workspace and topic slug before authoring a

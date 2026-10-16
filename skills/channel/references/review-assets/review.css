@@ -464,3 +464,9 @@
 .prop-card summary { cursor: pointer; min-height: var(--review-s44); }
 .prop-findings { padding: var(--review-s20); background: var(--review-muted-surface); }
 @media print { .prop-controls, .prop-sheet button { display: none; } }
+
+/* Compare full bodies at the same scale; face slots stay square. */
+.review-panels .review-panel-front img, .review-panels .review-panel-back img { height: auto; aspect-ratio: 2 / 3; object-fit: contain; }
+.review-panels .review-panel-face img { height: auto; aspect-ratio: 1; object-fit: contain; }
+
+.review-media-findings { color: var(--review-muted); line-height: 1.7; }
