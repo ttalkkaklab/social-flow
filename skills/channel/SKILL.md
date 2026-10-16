@@ -75,6 +75,11 @@ reused in two or more episodes; single-episode artifacts go in the topic's `.wor
    natural language, so if the wording drifts, the voice changes from episode to
    episode. Change them only when the user explicitly says so.
 
+   If the working directory already has [model settings](../_shared/model-settings.md),
+   use its speech engine/model when proposing a new voice instead of the default
+   above. Do not start full media-model setup for a channel-only request. Preserve
+   existing pinned voices; resolve conflicts when the user starts episode production.
+
 4. **Fix the visual theme** — propose colors that fit the THEME contract of
    `video-template.html` (accent/accent2/ink/brand). The default is dark cinematic
    (ink navy + blue→violet gradient); channel personality comes from the accent

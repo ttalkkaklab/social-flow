@@ -71,11 +71,17 @@ publishable episode and does not fabricate a story approval. Match camera effect
 
 ### 1. Load the profile
 
+**Directory model setup comes first:** follow [model settings](../_shared/model-settings.md)
+as soon as the working directory is known. Select video → speech → image once if
+missing; otherwise reuse `.social-flow/models.json` without asking. Snapshot it into
+the episode and carry it into `PRODUCTION.modelSettings` before quotes and authoring.
+Saved choices override host detection and all model recommendations below.
+
 **Call `capability_status` with `channel: <channel slug>` first** and resolve the destination above. It says which engines this machine actually has, grouped by
 capability with an "N of M configured" count. Planning two Veo b-roll slots on a machine with no
 `GEMINI_API_KEY` spends five review rounds before anything reveals the problem, and the tool
 answers it in one call before any of that. If a capability the episode needs is missing, say so
-now — with what one env var would turn on — rather than routing around it silently. **Then look at your own tool list** — the server cannot see the CLI. `image_gen` present (Codex, Grok) means `PRODUCTION.imageProvider:"host"`; `image_to_video` present (Grok) means `videoProvider:"host"`; neither (Claude Code) means `"api"`. The host tool outranks every API lane; an explicit `"api"` written for the episode wins.
+now — with what one env var would turn on — rather than routing around it silently. **Then look at your own tool list** — the server cannot see the CLI. Use it to validate saved choices or offer first-setup options: `image_gen` supports the host image lane and `image_to_video` supports the host video lane. Derive `PRODUCTION.imageProvider` and `videoProvider` from the selected directory models, not tool presence alone.
 
 Read `data/<channel slug>/profile.md`. If it's missing, stop and point the user at
 `/social-flow:channel add` first. Tone, voice, theme, verification policy, and the topic

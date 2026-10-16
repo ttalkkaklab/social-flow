@@ -26,6 +26,7 @@ __pycache__/
 venv/
 
 # ── Local session settings ────────────────────────────────────────
+.social-flow/
 .claude/settings.local.json
 .claude/*.local.md
 CLAUDE.local.md

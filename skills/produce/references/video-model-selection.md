@@ -189,6 +189,12 @@ cross-engine multipliers below stand.
 
 ## The host video tool comes first
 
+For a configured workspace, [directory model settings](../../_shared/model-settings.md)
+take precedence: reuse the episode snapshot's video engine/model/resolution. The
+host default and per-cut recommendations below guide first setup only. Do not
+replace a saved choice because another host, cheaper tier or faster engine is now
+available. A capability mismatch needs an explicit user exception before switching.
+
 **Rule 0 (owner directive 2026-09-07).** When the CLI running produce ships its own video
 tool, that tool is the default route for every generated clip, and the four rules below choose
 between the API engines only where the episode wrote `videoProvider:"api"` or the cut wrote a

@@ -18,11 +18,12 @@ allowed-tools: ["mcp__social-flow__capability_status", "Read", "Write", "Edit", 
   "mcp__social-flow__datago_search", "mcp__social-flow__datago_detail",
   "mcp__social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch",
   "mcp__social-flow__datago_api_call",
-  "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img",
+  "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__gpt_image_img2img",
   "mcp__social-flow__mlx_image_generate", "mcp__social-flow__mlx_image_edit",
   "mcp__social-flow__speech_manage", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_gemini_38", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue", "mcp__social-flow__sfx_elevenlabs_generate",
   "mcp__social-flow__tts_list_voices", "mcp__social-flow__mlx_tts_generate",
-  "mcp__social-flow__veo_img2video",
+  "mcp__social-flow__veo_img2video", "mcp__social-flow__veo_reference",
+  "mcp__social-flow__astra_img2video", "mcp__social-flow__astra_keyframe_video", "mcp__social-flow__astra_audio2video", "mcp__social-flow__mlx_video_generate",
   "mcp__social-flow__seedance_img2video", "mcp__social-flow__seedance_reference",
   "mcp__social-flow__music_generate_clip", "mcp__social-flow__mlx_music_generate"]
 ---
@@ -161,6 +162,15 @@ data/<channel>/episodes/<topic-slug>/
 ## Procedure
 
 ### 0. Load · lock · budget
+
+First follow [model settings](../_shared/model-settings.md) for the selected working
+directory. Interactive first use asks video → speech → image and saves the choices.
+Unattended first use with no settings reports `model_setup_required` before taking
+the production lock or spending. Later runs reuse the saved choices and snapshot
+them into each new episode without questions. These settings supersede the old
+host/economy routing, per-cut escalation and growth-plan model defaults below;
+keep standing budget and renderer authorization. The saved video model satisfies
+the model-choice step even when the growth plan has no `video_model` field.
 
 Load `data/<channel>/profile.md` (abort if missing). On an unattended call,
 also read the calling growth plan's `autoproduce:` block

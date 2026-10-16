@@ -18,6 +18,11 @@ as an assistant decision. Do not label it a human approval. Reuse existing expli
 choices and standing authorization; do not ask the same question again. Keep the
 scope of those choices: a production budget is not publishing permission.
 
+Exception requested by the user: the first directory-level video, speech and image
+model selection follows [model settings](model-settings.md). Ask for actual choices
+once, persist them, and reuse them for every later episode. Do not invent these
+standing preferences or let automatic engine routing override them.
+
 ## Creative principles are review prompts
 
 Use the relevant skill's concrete advice when it improves the work: observable

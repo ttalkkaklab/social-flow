@@ -1,5 +1,12 @@
 # social-flow
 
+At first video production in a working directory, choose the video, speech and
+image models in that order. The choices are saved in `.social-flow/models.json`
+and reused for subsequent episodes until you explicitly request a change. Each
+episode snapshots its settings in `.work/model-settings.json`, so a later default
+change does not alter an episode already in progress. An unavailable model is
+reported instead of silently replaced. See [directory model settings](skills/_shared/model-settings.md).
+
 [![check](https://github.com/ttalkkaklab/social-flow/actions/workflows/check.yml/badge.svg)](https://github.com/ttalkkaklab/social-flow/actions/workflows/check.yml)
 [![license](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 &nbsp;·&nbsp; Docs: [English](docs/index.en.html) · [한국어](docs/index.html)
