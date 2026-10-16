@@ -39,6 +39,16 @@ Read [story-quality.md](../storyboard/references/story-quality.md) before candid
 After the destination is resolved, runs `storyboard → produce` end to end without production approval. The input is a
 single topic string; the output is a publishable `output/` set.
 
+Before asset generation, apply produce's whole-delivery preflight: check the narrator
+runtime, scene and final listening-review allowance, encoder and destination. Free
+local synthesis does not make the listening API free. Resolve missing spending consent
+before the long generation run while continuing independent authorized work. On resume,
+use `episode-state.js` and keep going through final assembly and delivery verification;
+generated clips and a saved continuation checkpoint never count as completion. Quality
+findings follow the existing video/speech HITL contracts, with exact existing approvals
+reused. Do not promise uninterrupted completion when a required dependency or consent
+is genuinely unavailable; state the concrete blocker without marking the episode done.
+
 **This does not replace those two skills.** Contracts, templates, and builders
 are all used as-is from them — this document decides only two things: **who
 judges when no human is present** and **which model to use**.

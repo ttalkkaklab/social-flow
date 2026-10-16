@@ -1,3 +1,6 @@
+import { SUPERTONIC_LANGUAGES } from './supertonic-client.js';
+import { ELEVENLABS_MODELS } from './elevenlabs-client.js';
+import { TTS_VOICES, VALID_TTS_MODELS, GEMINI_38_TTS_MODELS } from './tts-client.js';
 import { voiceLockConfigSchema } from './voice-lock-config.js';
 /**
  * `portal_character_*` — the workspace's characters on the portal (#91): list, get, create, update,
@@ -23,15 +26,40 @@ const keyArg = z.string().regex(/^[a-z0-9][a-z0-9-]{0,62}$/, 'lowercase letters,
 const scope = { channel: channelArg, episodeDir: z.string().optional() };
 /** The project layer, named not identified (#88) — one arg shared by create and the two reads so they cannot drift apart again. */
 const projectArg = z.string().trim().min(1).max(100);
-export const TTS_DEFAULTS = { engine: 'elevenlabs', voiceId: 'L4az9Gb378GIycFl2nAB', model: 'eleven_multilingual_v2', speed: 1 };
-export const ttsSchema = z.object({
+export const TTS_DEFAULTS = { engine: 'elevenlabs', voiceId: 'L4az9Gb378GIycFl2nAB', model: 'eleven_multilingual_v2', speed: 1, language: 'ko' };
+export function normalizeCharacterLanguage(value) {
+    const raw = value.trim().toLowerCase();
+    return { korean: 'ko', english: 'en', japanese: 'ja', chinese: 'zh', spanish: 'es', french: 'fr', portuguese: 'pt' }[raw] || raw;
+}
+const ttsFields = {
     voiceLock: voiceLockConfigSchema.optional(),
     engine: z.enum(['gemini', 'supertonic', 'elevenlabs', 'mlx']),
     voiceId: z.string().trim().min(1).max(128),
     model: z.string().trim().min(1).max(128).optional(),
-    speed: z.number().min(0.7).max(1.2).optional(),
-    language: z.string().trim().min(1).max(32).optional(),
+    speed: z.number().min(0.7).max(1.2),
+    language: z.string().trim().min(1).max(32).transform(normalizeCharacterLanguage).refine(v => /^[a-z]{2}$/.test(v), 'Use a two-letter language code or supported language name'),
     stylePrompt: z.string().trim().min(1).max(1000).optional(),
+};
+export const ttsSchema = z.object(ttsFields).superRefine((tts, ctx) => {
+    if (tts.engine === 'supertonic' && !/^[MF][1-5]$/.test(tts.voiceId))
+        ctx.addIssue({ code: 'custom', path: ['voiceId'], message: 'Supertonic voiceId must be M1–M5 or F1–F5' });
+    if (tts.engine === 'gemini' && !Object.hasOwn(TTS_VOICES, tts.voiceId))
+        ctx.addIssue({ code: 'custom', path: ['voiceId'], message: 'Unknown Gemini voiceId' });
+    const issue = (field, message) => ctx.addIssue({ code: 'custom', path: [field], message });
+    if (tts.engine === 'supertonic' && !SUPERTONIC_LANGUAGES.includes(tts.language))
+        issue('language', 'Unsupported Supertonic language');
+    if (['gemini', 'mlx'].includes(tts.engine) && tts.speed !== 1)
+        issue('speed', 'This engine supports character speed 1 only');
+    if (tts.engine === 'supertonic' && tts.model !== undefined)
+        issue('model', 'Supertonic has no selectable model');
+    if (tts.engine === 'gemini' && tts.model !== undefined && ![...VALID_TTS_MODELS, ...GEMINI_38_TTS_MODELS].includes(tts.model))
+        issue('model', 'Unsupported Gemini model');
+    if (tts.engine === 'elevenlabs' && tts.model !== undefined && !ELEVENLABS_MODELS.includes(tts.model))
+        issue('model', 'Unsupported ElevenLabs model');
+    if (tts.engine === 'elevenlabs' && !/^[A-Za-z0-9_-]{1,64}$/.test(tts.voiceId))
+        issue('voiceId', 'Invalid ElevenLabs voiceId');
+    if (tts.stylePrompt !== undefined && (tts.engine !== 'gemini' || tts.model?.startsWith('gemini-3.8-')))
+        issue('stylePrompt', 'This engine does not accept stylePrompt');
 });
 const fields = {
     key: keyArg.optional(),
@@ -39,7 +67,7 @@ const fields = {
     role: z.string().trim().max(500).optional(),
     appearance: z.string().trim().max(4000).optional(),
     referenceImageUrl: z.string().trim().max(2000).optional(),
-    tts: ttsSchema.optional(),
+    tts: ttsSchema,
 };
 export const characterListSchema = z.object({ ...scope, project: projectArg.optional(), q: z.string().trim().min(1).max(200).optional(), key: keyArg.optional(), page: z.number().int().min(1).max(10000).optional() });
 export const characterGetSchema = z.object({ ...scope, project: projectArg.optional(), id: uuid.optional(), key: keyArg.optional() })
@@ -53,12 +81,12 @@ export const characterCreateSchema = z.object({
     ...fields,
     name: fields.name.optional(),
 }).refine(a => a.name || a.identityDir, 'Pass name, or identityDir with an identity.md heading');
-export const characterUpdateSchema = z.object({ ...scope, id: uuid, key: keyArg.nullable().optional(), name: fields.name.optional(), role: fields.role.nullable(), appearance: fields.appearance.nullable(), referenceImageUrl: fields.referenceImageUrl.nullable(), tts: ttsSchema.nullable().optional() })
+export const characterUpdateSchema = z.object({ ...scope, id: uuid, key: keyArg.nullable().optional(), name: fields.name.optional(), role: fields.role.nullable(), appearance: fields.appearance.nullable(), referenceImageUrl: fields.referenceImageUrl.nullable(), tts: ttsSchema.optional() })
     .refine(a => ['key', 'name', 'role', 'appearance', 'referenceImageUrl', 'tts'].some(k => a[k] !== undefined), 'Nothing to change');
 export const characterDeleteSchema = z.object({ ...scope, id: uuid });
 export const characterImageUploadSchema = z.object({ ...scope, id: uuid, file: z.string().min(1), view: z.enum(['front', 'back', 'face', 'extra']).optional(), label: z.string().max(100).optional(), sort: z.number().int().min(0).max(2147483647).optional() });
 export const characterExtraDeleteSchema = z.object({ ...scope, id: uuid, imageId: uuid });
-export const characterTtsSetSchema = z.object({ ...scope, id: uuid, voiceLock: voiceLockConfigSchema.optional(), engine: ttsSchema.shape.engine.optional(), voiceId: ttsSchema.shape.voiceId.optional(), model: ttsSchema.shape.model, speed: ttsSchema.shape.speed, language: ttsSchema.shape.language, stylePrompt: ttsSchema.shape.stylePrompt });
+export const characterTtsSetSchema = z.object({ ...scope, id: uuid, voiceLock: voiceLockConfigSchema.optional(), engine: ttsFields.engine.optional(), voiceId: ttsFields.voiceId.optional(), model: ttsFields.model, speed: ttsFields.speed.optional(), language: ttsFields.language.optional(), stylePrompt: ttsFields.stylePrompt });
 /** The identity.md fields the import already reads — heading, **역할**, **생김새**. The folder name is the key. */
 export function readIdentity(dir) {
     const folder = path.resolve(dir);
@@ -175,7 +203,7 @@ export async function createCharacter(client, args, channel) {
         role: args.role ?? identity?.role,
         appearance: args.appearance ?? identity?.appearance,
         referenceImageUrl: args.referenceImageUrl,
-        tts: args.tts,
+        tts: ttsSchema.parse(args.tts),
     };
     if (!body.name)
         throw new Error(`${args.identityDir}/identity.md has no "# Name" heading — pass name. Nothing was sent.`);
@@ -206,12 +234,15 @@ export async function uploadCharacterImage(client, args) {
         throw new Error(`The portal stored sha256 ${data.sha256} but the file is ${image.sha256}. Re-upload.`);
     return { id: args.id, imageId: data.id, view: args.view ?? "front", url: data.url, replaced: args.view !== "extra" && status === 201, sha256: data.sha256, mime: data.mime, byteSize: data.byteSize, ...(args.view === undefined || args.view === "front" ? { referenceImageUrl: data.url } : {}) };
 }
-/** Fills the owner's defaults (ElevenLabs multilingual v2, speed 1.0) for whatever the caller leaves out; an existing block's fields survive. */
+/** Preserve existing fields; a new voice must be explicitly complete. */
 export async function setCharacterTts(client, args) {
     const { data: current } = await client.getCharacter(args.id);
-    const existing = current.tts ?? {};
+    const previous = current.tts;
+    // Engine changes cannot inherit engine-specific ids, models or acting controls.
+    const existing = previous && args.engine && args.engine !== previous.engine
+        ? { language: previous.language, speed: previous.speed }
+        : previous ?? {};
     const tts = ttsSchema.parse({
-        ...TTS_DEFAULTS,
         ...existing,
         ...(args.voiceLock !== undefined ? { voiceLock: args.voiceLock } : {}),
         ...(args.engine ? { engine: args.engine } : {}),

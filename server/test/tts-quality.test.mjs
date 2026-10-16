@@ -308,3 +308,62 @@ test('a stored take with no transcript is rechecked, not resynthesised, when the
   assert.equal((await generateCheckedSpeech({...f.request,transcriptCheck:dictation},f.deps)).reused,true);
   assert.equal(listens,1);
 });
+
+test('three character voices bind their actual generation proofs and reject narrator substitution',async t=>{
+  const f=setup(t), characters=['F1','F2','M1'].map((voiceId,i)=>({id:'cast-'+i,tts:{engine:'supertonic',voiceId,language:'ko',speed:1}}));
+  const scenes=characters.map(c=>({type:'points',narration:[{tts:script,speaker:c.id}]}));
+  const cards=[];
+  for(const [i,c] of characters.entries()) {
+    const filename=`cast-${i}.wav`, file=path.join(f.request.outputPath,filename);
+    const request={...f.request,filename,generation:{...f.request.generation,voice:c.tts.voiceId,speed:1}};
+    const deps={...f.deps,generate:async()=>{writeFileSync(file,pcmToWav(Buffer.alloc(48000,i+1),24000,1));return {success:true,audioPath:file};}};
+    assert.equal((await generateCheckedSpeech(request,deps)).status,'pass');
+    assert.equal(JSON.parse(readFileSync(file+'.quality.json')).voiceSettings.voice,c.tts.voiceId);
+    cards.push(`${i}\t${file}\t4.5\tin`);
+  }
+  const board=path.join(f.dir,'storyboard'),work=path.join(f.dir,'.work');
+  const writeBoard=()=>writeFileSync(path.join(board,'scenes.js'),`window.SB_DOC=${JSON.stringify({characters,narratorCharacterId:'cast-0'})};window.SCENES=${JSON.stringify(scenes)};`);
+  writeBoard();writeFileSync(path.join(work,'cards.tsv'),cards.join('\n')+'\n');
+  assert.ok(checker.check(work,board));
+  characters[1].tts.voiceId='F1';writeBoard();
+  assert.throws(()=>checker.check(work,board),/cast-1 voiceId differs/);
+  characters[1].tts.voiceId='F2';scenes[1].narration[0].speaker=undefined;writeBoard();
+  assert.throws(()=>checker.check(work,board),/cast-0 voiceId differs/);
+});
+
+test('voice binding rejects mixed speakers, missing proofs, and changed required settings',()=>{
+  const tts={engine:'supertonic',voiceId:'F1',language:'ko',speed:1};
+  const win={SB_DOC:{characters:[{id:'a',tts},{id:'b',tts}],narratorCharacterId:'a'}};
+  const scene={narration:[{tts:script,speaker:'a'}]};
+  const proof={generator:'tts_local_generate',language:'Korean',voiceSettings:{voice:'F1',lang:'ko',speed:1}};
+  assert.equal(checker.characterVoice(win,scene,proof),'a');
+  for(const patch of [{voice:'F2'},{lang:'en'},{speed:0.9}]) assert.throws(()=>checker.characterVoice(win,scene,{...proof,voiceSettings:{...proof.voiceSettings,...patch}}),/differs/);
+  assert.throws(()=>checker.characterVoice(win,scene,{}),/voiceSettings/);
+  assert.throws(()=>checker.characterVoice(win,{narration:[...scene.narration,{tts:script,speaker:'b'}]},proof),/one speaker per scene/);
+  assert.equal(checker.characterVoice({},{narration:[{tts:script}]},{}),null);
+});
+
+
+test('legacy voice proof gains settings without synthesis or resetting attempts',async t=>{
+  const f=setup(t);await generateCheckedSpeech(f.request,f.deps);
+  const old=f.proof();delete old.voiceSettings;writeFileSync(f.file+'.quality.json',JSON.stringify(old));
+  assert.equal((await generateCheckedSpeech(f.request,f.deps)).reused,true);
+  assert.equal(f.count(),1);assert.equal(f.proof().attempts.length,1);
+  assert.equal(f.proof().voiceSettings.voice,'F1');
+});
+
+test('different ElevenLabs characters can speak in successive scenes',async t=>{
+  const f=setup(t), board=path.join(f.dir,'storyboard'),work=path.join(f.dir,'.work');
+  const characters=['custom-voice-one','custom-voice-two'].map((voiceId,i)=>({id:'actor-'+i,tts:{engine:'elevenlabs',voiceId,language:'ko',speed:1}}));
+  const scenes=characters.map(c=>({type:'points',narration:[{tts:script,speaker:c.id}]}));
+  const cards=[];
+  for(const [i,c] of characters.entries()) {
+    const filename=`eleven-${i}.wav`,file=path.join(f.request.outputPath,filename);
+    const request={...f.request,generator:'tts_elevenlabs_generate',filename,generation:{text:script,voiceId:c.tts.voiceId,languageCode:'ko',speed:1,outputFormat:'wav_24000'},episode:{texts:[script,script],index:i,seed:42}};
+    assert.equal((await generateCheckedSpeech(request,{...f.deps,generate:async()=>{writeFileSync(file,pcmToWav(Buffer.alloc(48000,i+1),24000,1));return {success:true,audioPath:file};}})).status,'pass');
+    cards.push(`${i}\t${file}\t4.5\tin`);
+  }
+  writeFileSync(path.join(board,'scenes.js'),`window.SB_DOC=${JSON.stringify({characters})};window.SCENES=${JSON.stringify(scenes)};`);
+  writeFileSync(path.join(work,'cards.tsv'),cards.join('\n')+'\n');
+  assert.ok(checker.check(work,board));
+});

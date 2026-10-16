@@ -609,6 +609,9 @@ function check(win, fmt, opts) {
   const machine = (where, what) => out.push({ level: draft ? 'later' : 'bad', where, what });
   const warn = (where, what) => out.push({ level: 'warn', where, what });
 
+  require('../../_shared/character-voice.js').boardVoiceErrors(win)
+    .forEach(message => bad('character voice', message));
+
   const pacing = fmt.pacing || {};
   const formatVideoMax = fmt.video && Number.isFinite(Number(fmt.video.generatedSecondsMax))
     ? Math.floor(Number(fmt.video.generatedSecondsMax) / 8) : 2;

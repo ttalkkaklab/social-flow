@@ -38,6 +38,31 @@ function verifyProof(file, expected) {
   for(const axis of ['accuracy','pronunciation','naturalness','clarity'])if(!Number.isFinite(r[axis])||r[axis]<(axis==='accuracy'?98:95)||r[axis]>100)throw new Error(axis+' did not pass');
   return {[file]:audioHash,[proofFile]:hash(fs.readFileSync(proofFile))};
 }
+function characterVoice(win, scene, proof) {
+  const entries=win.SB_DOC?.characters;
+  const hasCast=entries!=null || win.SB_DOC?.narratorCharacterId || Object.keys(win.PRODUCTION?.cast||{}).length;
+  if(!hasCast && !(scene.narration||[]).some(n=>n.speaker)) return null;
+  const characters=Array.isArray(entries)?entries:Object.entries(entries||{}).map(([id,c])=>({...c,id}));
+  const ids=[...new Set((scene.narration||[]).filter(n=>normalize(n.tts||'')).map(n=>n.speaker||win.SB_DOC?.narratorCharacterId))];
+  if(ids.length!==1) throw new Error('Character speech needs one speaker per scene; split dialogue into single-speaker scenes with separate audio proofs');
+  const matches=characters.filter(c=>c?.id===ids[0]);
+  if(!ids[0] || matches.length!==1) throw new Error('Character speech has no uniquely resolved speaker or narrator');
+  const expected=matches[0].tts;
+  const errors=require('../../_shared/character-voice.js').voiceErrors(expected);
+  if(errors.length) throw new Error('Character speech: '+errors.join('; '));
+  const settings=proof?.voiceSettings;
+  if(!settings) throw new Error('Character speech requires recorded generation voiceSettings');
+  const engines={tts_generate:'gemini',tts_gemini_38:'gemini',tts_local_generate:'supertonic',tts_elevenlabs_generate:'elevenlabs',mlx_tts_generate:'mlx'};
+  if(!engines[proof.generator] || settings.speakers || settings.inputs) throw new Error('Character speech requires a single-speaker generation proof');
+  const language=require('../../_shared/character-voice.js').normalizeLanguage;
+  const actual={engine:engines[proof.generator],voiceId:settings.voiceId||settings.voiceName||settings.voice,language:language(settings.lang||settings.languageCode||proof.language),speed:settings.speed??1};
+  for(const key of ['engine','voiceId','language','speed']) {
+    const wanted=key==='language'?language(expected[key]):typeof expected[key]==='string'?expected[key].trim():expected[key];
+    if(actual[key]!==wanted) throw new Error(`Character ${ids[0]} ${key} differs from generated speech`);
+  }
+  for(const key of ['model','stylePrompt']) if(expected[key]!==undefined && settings[key]!==expected[key].trim()) throw new Error(`Character ${ids[0]} ${key} differs from generated speech`);
+  return ids[0];
+}
 const REPORT='tts-warnings.json', APPROVAL='tts-approval.json';
 const read=file=>fs.existsSync(file)?JSON.parse(fs.readFileSync(file,'utf8')):null;
 /** What a proof says about its last take, for the user to judge the warning by. */
@@ -91,7 +116,7 @@ function check(work, board) {
   const speech=require('../../storyboard/references/story-contract.js').storySpeech(win);
   const spoken=[...new Set(speech.map(g=>g.shot))].map(shot=>({i:shot-1,text:speech.filter(g=>g.shot===shot).map(g=>g.n.tts||g.n.sub).join('. ')}));
   const texts=spoken.map(s=>s.text);
-  let episodeSettings;
+  const episodeSettings=new Map();
 
   for(const [k,{s,i}] of expected.entries()) {
     const file=path.resolve(work,rows[k][1]);
@@ -102,6 +127,8 @@ function check(work, board) {
     if(live||!normalize(text))continue;
     const proofFile=file+'.quality.json';
     inputs[file]=media[file]; inputs[proofFile]=fs.existsSync(proofFile)?hash(fs.readFileSync(proofFile)):null; inputs['text:'+i]=normalize(text);
+    // Voice routing is an input contract, not a listening-quality warning.
+    const speaker=characterVoice(win,s,read(proofFile));
     try {
       Object.assign(media,verifyProof(file,text));
       const proof=JSON.parse(fs.readFileSync(proofFile,'utf8'));
@@ -113,8 +140,8 @@ function check(work, board) {
         // 목소리 정체성이 아니므로 컷 간 동일성 비교에서 제외한다.
         const {pronunciationDictionaryLocators, ...voiceIdentity} = proof.voiceSettings;
         const settings = JSON.stringify(voiceIdentity);
-        if(episodeSettings&&episodeSettings!==settings)throw new Error('ElevenLabs voice/settings changed between scenes');
-        episodeSettings=settings;
+        if(episodeSettings.has(speaker)&&episodeSettings.get(speaker)!==settings)throw new Error('ElevenLabs voice/settings changed between scenes for the same speaker');
+        episodeSettings.set(speaker,settings);
       }
     }
     catch(e){
@@ -144,7 +171,7 @@ function checkTempo(work,speed,min=1,max=1) {
   });
   if(generated&&[speed,min,max].some(n=>Number(n)!==1))throw new Error('ElevenLabs narration forbids post-synthesis tempo changes; set SPEED=1 and ATEMPO_MIN=ATEMPO_MAX=1, use generation.speed');
 }
-module.exports={check,decide,approve,lastReport,findings,verifyProof,normalize,cer,checkTempo};
+module.exports={characterVoice,check,decide,approve,lastReport,findings,verifyProof,normalize,cer,checkTempo};
 if(require.main===module){
   try{
     const [command,work,arg]=process.argv.slice(2);
