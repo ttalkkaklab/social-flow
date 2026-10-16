@@ -1184,8 +1184,15 @@ The block carries a fingerprint of the video slots, and the check strip recomput
 live scenes — so a snapshot that no longer matches shows up as a violation instead of a stale
 number. Regenerate it after any §7 change that adds, retimes, reroutes or moves a video slot.
 
+New or updated casts follow [character-identity.md](../channel/references/character-identity.md): compile each identity, set `SB_DOC.characterSchemaVersion:1`, and copy the structured identity plus its generation directions into each cast entry.
 **Every storyboard has at least one character and one narrator.** Set `SB_DOC.narratorCharacterId` to a character `id`; `SB_DOC.characters` contains it and every id used by `visual.character` or `narration[].speaker`. Each entry has `id`, `name`, its character identity JSON `tts` (required `engine`, `voiceId`, `language`, `speed`; model/stylePrompt when applicable), identity `role`, existing `panels` paths, governing `note`, and `veo:"banned"` when applicable.
-A narration `speaker` uses that character id; absence uses the narrator. Import accepts names but saves ids, while unmatched non-empty values fail. Do not approve or call `portal_storyboard_save` until complete. `channel/references/resolve-asset.py --list <channel dir>` prints ids and paths.
+For every new board set `SB_DOC.speechPlanVersion:1`. Each `narration` entry has a stable
+`id`, explicit `speaker` (including the narrator), and `delivery` (`voiceover`, `on_screen`,
+`off_screen`). Keep these fields in scenes.js, with SB_DOC character voices there too.
+Write character dialogue for dramatic exchanges rather than summarizing every action through
+the narrator. The review shows who says each line. Use `speech_manage` to prepare/search/edit
+lines. Plan with the model-independent [speech contract](../produce/references/shot-speech.md).
+Old boards may omit speaker to select the narrator; new boards may not. Import accepts names but saves ids, while unmatched non-empty values fail. Do not approve or call `portal_storyboard_save` until complete. `channel/references/resolve-asset.py --list <channel dir>` prints ids and paths.
 
 **Fill `SB_DOC.craft` with the promises the episode makes** — the loop ledger the §4 craft
 rules ask for, in the one place the approver reads. `loops[]` first: the cover's own hook as
@@ -1334,13 +1341,9 @@ approval, it does not gate it. The save is also a **checkpoint** at stage `appro
   Motion slides are authored at produce §3.6.
 
 ## Traps
-
 What has actually gone wrong on this skill, one item per incident, with the section that
 catches each — [traps.md](references/traps.md). Read it once per episode before §2. Attachment sync and rights evidence: follow [portal attachments](../produce/references/portal-attachments.md). Check `attachments.complete` before removing local originals. Retry files only with `portal_attachments_sync`.
 In chosen portal mode with a key, save the board then upload source images via `portal_shot_media_upload`; follow [produce media order](../produce/references/portal-shot-media.md) for previz before video and for narration. Missing keys keep local-only mode.
-
 For portal unit edits, follow [the portal unit tool contract](references/portal-units.md).
-
 ## Persistent locations
-
 For recurring places, follow [location assets](references/location-assets.md). Bind an immutable set/state/camera to each shot, render and review references, then pass the assembler's actual reference paths to generation. Never substitute a prose-only location description for a bound set. Camera changes invalidate its references.

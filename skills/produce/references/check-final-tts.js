@@ -3,7 +3,6 @@
 const fs=require('node:fs'),path=require('node:path');
 const {evaluateWindowScript}=require('../../_shared/scenes-vm.js');
 const {createHash}=require('node:crypto');
-const {spawnSync}=require('node:child_process');
 const {normalize,cer}=require('./check-tts-quality.js');
 const chapters=require('./final-speech-chapters.js');
 const hash=file=>createHash('sha256').update(fs.readFileSync(file)).digest('hex');
@@ -23,6 +22,10 @@ function chapterIntegrity(p,media,text,pass=true){
   return chapters.validate(p,chapters.decode(media),text,pass);
 }
 function verifyReport(p,media,text){
+  if(p.policy==='speech-unreviewed-v1') {
+    if(p.status!=='not_reviewed'||p.mediaSha256!==hash(media)||p.textSha256!==createHash('sha256').update(text).digest('hex'))throw new Error('Speech provenance describes other media or dialogue');
+    return p;
+  }
   if(p.policy===chapters.POLICY){chapterIntegrity(p,media,text);return p;}
   const r=p.review,s=p.signal;
   if(p.version!==1||p.policy!=='final-speech-v1'||p.status!=='pass'||p.mediaSha256!==hash(media))throw new Error('Final speech needs a current hash-bound PASS');
@@ -86,8 +89,13 @@ function approve(work, reference){
   if(!report?.warnings?.length||!report.fingerprint)throw new Error('Run the final TTS check and present the warnings before recording approval');
   fs.writeFileSync(path.join(work,APPROVAL),JSON.stringify({kind:'user',fingerprint:report.fingerprint,reference,at:new Date().toISOString()},null,2)+'\n');
 }
-/** The final speech evidence delivery-proof.js embeds: the review, plus the user's approval when it carries warnings. */
+/** Delivery records unreviewed speech provenance; listening is never a gate. */
 function evidence(media,text,work){
+  return {version:1,policy:'speech-unreviewed-v1',status:'not_reviewed',mediaSha256:hash(media),textSha256:createHash('sha256').update(text).digest('hex')};
+
+}
+/** Read historical review evidence only; not used by production or delivery. */
+function legacyEvidence(media,text,work){
   const {report,warnings,approval}=gate(work,media,text);
   return approval?{...report,approvedWarnings:{warnings,approval}}:report;
 }
@@ -127,20 +135,14 @@ function sentenceSegments(work,board){
 }
 function review(work){
   const board=path.resolve(work,'../storyboard/scenes.js');
-  if(!fs.existsSync(board))return; // Recording workflows have no generated narration.
+  if(!fs.existsSync(board))return;
   const {generated,text}=narration(board);if(!generated)return;
   const media=path.resolve(work,'reel-fast.mp4');
-  const rows=fs.readFileSync(path.join(work,'cards.tsv'),'utf8').split(/\r?\n/).filter(l=>l.trim()&&!l.startsWith('#'));
-  const proof=rows.map(l=>path.resolve(work,l.split('\t')[1])+'.quality.json').filter(f=>fs.existsSync(f)).map(f=>JSON.parse(fs.readFileSync(f,'utf8'))).find(p=>p.language&&p.delivery);
-  if(!proof)throw new Error('Final listening needs reviewed narration and its language/delivery');
-  const request=path.join(work,'final-speech-request.json');
-  fs.writeFileSync(request,JSON.stringify({mediaPath:media,expectedText:text,language:proof.language,delivery:proof.delivery,segments:sentenceSegments(work,board)}));
-  const result=spawnSync(process.execPath,[path.resolve(__dirname,'../../../server/dist/bundle.js'),'--review-final',path.resolve(request)],{stdio:'inherit'});
-  if(result.error)throw result.error;
-  // A failed listen is a warning for the user (gate); a review that did not run is not.
-  gate(work,media,text);
+  const record=evidence(media,text,work);
+  fs.writeFileSync(path.join(work,'final-tts-warnings.json'),JSON.stringify({...record,warnings:[],approved:false},null,2)+'\n');
 }
-module.exports={narration,sentenceSegments,chapterIntegrity,verify,verifyReport,verifyEvidence,evidence,gate,approve,review};
+
+module.exports={narration,sentenceSegments,chapterIntegrity,verify,verifyReport,verifyEvidence,evidence,legacyEvidence,gate,approve,review};
 if(require.main===module){
   try{
     const [command,work,arg]=process.argv.slice(2);

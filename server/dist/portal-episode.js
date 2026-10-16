@@ -258,6 +258,7 @@ function collectCharacters(scenes, sbDoc, channelDir) {
                 detail.role = role.trim();
             if (look)
                 detail.appearance = look.trim();
+            Object.assign(detail, portalIdentityFields(text));
         }
         return detail;
     });
@@ -293,3 +294,4 @@ export function normalizeNarrationSpeakers(scenes, characters) {
         };
     });
 }
+import { portalIdentityFields } from '../../skills/_shared/character-identity.js';

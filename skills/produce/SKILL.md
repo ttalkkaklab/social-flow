@@ -3,12 +3,18 @@ name: produce
 description: >
   Builds the video and the per-platform text from an already-approved storyboard. Use when the user asks to "영상 만들어", "콘텐츠 제작", "produce the video", "플랫폼별 콘텐츠 만들어", or right after a storyboard is approved. Turns the approved scenes.js under data/[channel]/episodes/[topic]/storyboard/ into a narrated 9:16 video at 1080x1920/30fps — generated backgrounds, TTS narration, BGM with ducking, kinetic subtitles, brand outro — plus the Threads, Instagram, Facebook and YouTube text under the episode's output/, checked on a phone viewport before publishing. Where recording/alignment.json exists it cuts the user's own screen recording instead of generating scenes. Boundary — storyboard plans and stops for approval, produce starts after it, autoproduce runs both unattended.
 argument-hint: "<channel> <topic> [platformCSV|auto]"
-allowed-tools: ["mcp__social-flow__location_manage", "mcp__social-flow__portal_api_episodes_episode_shots_shot_voice_lock_put", "mcp__social-flow__voice_lock_apply", "mcp__social-flow__portal_character_get", "mcp__social-flow__portal_channel_sync", "mcp__social-flow__capability_status", "mcp__social-flow__portal_assets_search", "mcp__social-flow__portal_assets_get", "mcp__social-flow__portal_shot_media_upload", "mcp__social-flow__portal_render_allocation", "mcp__social-flow__portal_episode_artifacts_sync", "Bash", "Read", "Write", "Edit", "Glob", "AskUserQuestion", "Agent", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_gemini_38", "mcp__social-flow__tts_generate_checked", "mcp__social-flow__tts_review_final", "mcp__social-flow__tts_elevenlabs_dictionary", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue", "mcp__social-flow__tts_list_voices", "mcp__social-flow__music_generate", "mcp__social-flow__music_generate_clip", "mcp__social-flow__music_generate_advanced", "mcp__social-flow__stock_search", "mcp__social-flow__suno_generate", "mcp__social-flow__suno_generate_sound", "mcp__social-flow__suno_generate_lyrics", "mcp__social-flow__suno_credits", "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__gpt_image_img2img", "mcp__social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__social-flow__seedance_img2video", "mcp__social-flow__seedance_reference", "mcp__social-flow__astra_img2video", "mcp__social-flow__astra_keyframe_video", "mcp__social-flow__astra_audio2video", "mcp__social-flow__astra_video_retake", "mcp__social-flow__astra_video_list_uploads", "mcp__social-flow__astra_video_delete_upload", "mcp__social-flow__mlx_image_generate", "mcp__social-flow__mlx_image_edit", "mcp__social-flow__mlx_tts_generate", "mcp__social-flow__mlx_music_generate", "mcp__social-flow__mlx_video_generate", "mcp__social-flow__mlx_3d_generate"]
+allowed-tools: ["mcp__social-flow__location_manage", "mcp__social-flow__speech_manage", "mcp__social-flow__portal_api_episodes_episode_shots_shot_voice_lock_put", "mcp__social-flow__voice_lock_apply", "mcp__social-flow__portal_character_get", "mcp__social-flow__portal_channel_sync", "mcp__social-flow__capability_status", "mcp__social-flow__portal_assets_search", "mcp__social-flow__portal_assets_get", "mcp__social-flow__portal_shot_media_upload", "mcp__social-flow__portal_render_allocation", "mcp__social-flow__portal_episode_artifacts_sync", "Bash", "Read", "Write", "Edit", "Glob", "AskUserQuestion", "Agent", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_gemini_38", "mcp__social-flow__tts_elevenlabs_dictionary", "mcp__social-flow__tts_local_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue", "mcp__social-flow__tts_list_voices", "mcp__social-flow__music_generate", "mcp__social-flow__music_generate_clip", "mcp__social-flow__music_generate_advanced", "mcp__social-flow__stock_search", "mcp__social-flow__suno_generate", "mcp__social-flow__suno_generate_sound", "mcp__social-flow__suno_generate_lyrics", "mcp__social-flow__suno_credits", "mcp__social-flow__image_local_generate", "mcp__social-flow__gpt_image_text2img", "mcp__social-flow__gpt_image_img2img", "mcp__social-flow__veo_img2video", "mcp__social-flow__veo_reference", "mcp__social-flow__seedance_img2video", "mcp__social-flow__seedance_reference", "mcp__social-flow__astra_img2video", "mcp__social-flow__astra_keyframe_video", "mcp__social-flow__astra_audio2video", "mcp__social-flow__astra_video_retake", "mcp__social-flow__astra_video_list_uploads", "mcp__social-flow__astra_video_delete_upload", "mcp__social-flow__mlx_image_generate", "mcp__social-flow__mlx_image_edit", "mcp__social-flow__mlx_tts_generate", "mcp__social-flow__mlx_music_generate", "mcp__social-flow__mlx_video_generate", "mcp__social-flow__mlx_3d_generate"]
 ---
 # Per-platform content production — data/[channel]/episodes/[topic]/output/
+**Speech production override (2026-10-16):** Read [shot-speech.md](references/shot-speech.md).
+Generate with raw TTS tools; do not run automatic speech reviews, dictation, voice-lock ASR,
+or listening approval. The provenance-only builder proceeds with `not_reviewed` speech.
+Older checked-TTS/listening recipes below are historical and do not govern new work.
+Use explicit per-line speakers including narrator; resolve video via adapter capabilities.
+Later corrections use edit-speech and `speech_manage`.
 Before any portal call, follow [storyboard-target.md](../storyboard/references/storyboard-target.md) and reuse the episode destination. Local mode skips every portal step below and omits media-tool `portal` arguments, even with a key. Only in chosen portal mode, before reading `profile.md`, call `portal_channel_sync` with `action: "pull"`; a 409 conflict stops the run, while a missing key, network error, 401 or 5xx gets one warning line before local-only work continues. For pending portal render requests, follow [the six-ratio allocation contract](../storyboard/references/production-mode.md): `portal_render_allocation` read → host LLM reasons over every shot → submit requestId/baseRevisionNo and all assignments → pull. New choices persist `PRODUCTION.renderRatioVersion:1`; neither a pending request nor ratio selection approves spending.
-Turn the approved storyboard (`storyboard/scenes.js`) into a narrated video and per-platform text. **Assembly video warnings use HITL:** follow [assembly-video-hitl.md](references/assembly-video-hitl.md). Show failed video/visual-plan checks to the user; their explicit approval permits assembly of the current inputs. This exception overrides pre-assembly quality holds below. Preserve warnings and resume without asking again. **Speech warnings use HITL the same way:** follow [tts-hitl.md](references/tts-hitl.md). A failed scene take or final listening verdict is shown to the user with its scores and defects; their explicit approval permits assembly and delivery of the current takes.
-**scenes.js is the only data source** for screens, narration, subtitles and captions. **HITL records:** Record assembly, speech and slide-fallback answers with their actual warning evidence. Follow [the decision record contract](../storyboard/references/portal-decisions.md); preserve actual provenance and reuse existing authorization. This adds no approval gate.
+Turn the approved storyboard (`storyboard/scenes.js`) into a narrated video and per-platform text. **Assembly video warnings use HITL:** follow [assembly-video-hitl.md](references/assembly-video-hitl.md). Show failed video/visual-plan checks to the user; their explicit approval permits assembly of the current inputs. This exception overrides pre-assembly quality holds below. Preserve warnings and resume without asking again.
+**scenes.js is the only data source** for screens, narration, subtitles and captions. **HITL records:** Record assembly and slide-fallback answers with their actual warning evidence. Follow [the decision record contract](../storyboard/references/portal-decisions.md); preserve actual provenance and reuse existing authorization. This adds no approval gate.
 ```
 data/<channel>/episodes/<topic>/
 ├── storyboard/          # input (has to be in the approved state)
@@ -145,30 +151,24 @@ Read [story-quality.md](../storyboard/references/story-quality.md) and run `node
    of `docs/research/2026-09-04-rendered-object-slide/reference-slide.html`. The footage slide
    (`treatment:"footage"`) is retired and the checkers reject it.
 ## Procedure
-
 ### 1. Check the inputs
-
 Follow [delivery preflight and continuation](references/delivery-continuation.md) before generating assets and on every resume. Clips alone are never completion.
-
 - Confirm `status: approved` in the `storyboard/storyboard.md` frontmatter — otherwise stop
   and point the user at `/social-flow:storyboard` for approval first.
 - Load `data/<channel>/profile.md` (voice, theme, platforms, `shortform_outro` — `on` if absent).
 - **Identify the source**: three paths, decided by `window.FORMAT` and the scenes'
   `visual.source`.
-
   | Condition | Path |
   |---|---|
   | `recording/alignment.json` present + portrait | **Shooting edit** — `references/screencast-pipeline.md` |
   | filmed scenes (`visual.source==="recording"`) mixed in | **Mixed shooting** — this document as-is + §3.5 |
   | anything else | generated (§2–7) |
-
   **The shooting-edit path** follows `references/screencast-pipeline.md` §Edit procedure
   instead of §2–7 (overlay capture → edit.json → build-screencast.sh — no TTS, no generated
   backgrounds, no reveals; the voice is the user's own). The artifact names (reel.mp4 ·
   reel-sub.mp4 · subs.srt · cover.jpg · build-report.txt) are the same, so §7.5–10 (the speed
   pass, phone QA, platform text, quality gate) run unchanged — **a shooting edit ships sped up
   too**, and `speedup.sh` reads the xfade join that builder makes on its own. Use screencast-pipeline.md's gate table.
-
   **`alignment.json` + landscape doesn't work.** `build-screencast.sh`'s band constants
   (BAND_MAX_H 900 · BAND_CY 880 · BAND_MIN_Y 460) and its background compositing are
   absolute portrait pixels and can't move to a landscape canvas. If you hit this
@@ -345,7 +345,7 @@ means generating something nobody approved.
   scene and mood sentences lifted from the stored string (they sit between the `From the
   camera:` sentence and the exclusions — and `--no-person` again when the stored string reads
   "the subject" instead of a body) rather than editing the string by hand.
-
+- Follow [character-identity.md](../channel/references/character-identity.md) for cast directions: recompile current identities, compare source hashes, and apply image/video/dialogue/voice guidance to their respective generation lanes.
 - **`visual.character` — who is on screen.** Use `PRODUCTION.cast[id].image` when present;
   otherwise resolve the id to the channel panel directory:
 
@@ -360,7 +360,7 @@ means generating something nobody approved.
   photoreal person → `veo_reference` (**3 images max**, validated in code). The full rule is
   [video-model-selection.md](references/video-model-selection.md) §The character panels.
 
-  **After model-generated speech, run the [character voice-lock pass](references/voice-lock.md).**
+  For character speech, follow [shot-speech.md](references/shot-speech.md); no voice-lock ASR or listening gate.
   **The character's voice travels the same way.** `$CH/voice.wav` is the fixed voice sample
   (`resolve-asset.py "$CHANNEL_DIR" voice claude`; §6). When the model voices the cut —
   `generateAudio: true` on `seedance_reference`, which is a b-roll slot routed to Seedance or a
@@ -369,7 +369,7 @@ means generating something nobody approved.
   speakers, two clips, one sentence each; `@Audio N` is the Nth entry of `referenceAudioPaths`.
   The route is `dreamina-seedance-2-5-260628` — the only model whose guide documents the
   per-character mapping, and the 2.0 series takes no audio-only input. Veo has no audio
-  reference; keep its speaking cuts consistent with the voice-lock pass below. A cut voiced
+  reference; select an explicit speech synchronization adapter under shot-speech.md. A cut voiced
   by TTS in the build needs no voice reference at all — the sample exists so the model-voiced
   lane and the TTS lane match the voice `identity.md` pins (profile §2). Imitation, not cloning: also describe the voice in words
   (gender, age, texture, pace, mood) and keep the lines in the sample's tone — the vendor's own
@@ -730,57 +730,21 @@ On exit 2, **fix scenes.js** and start again from here — fixing only `.work/te
 leaves it out of step with the video (scenes.js is the single source). When fixing, leave
 numbers and proper nouns alone and work on the grain of the sentence.
 
-Use `tts_generate_checked` for every generated scene; read `references/tts-quality.md` first.
-The calls below describe `generator` and `generation`; raw TTS has no assembly proof. A take
-that ends `fail` after its attempts is not the end of the episode: present its findings and
-follow `references/tts-hitl.md` — the user decides whether it ships. The blind-transcription (STT) check and its 2% CER gate do not run (owner directive 2026-10-04): the proof records `transcript: null` and the listening review judges the take. Pass `transcriptCheck` only when the user actually asked for dictation on that call.
+Follow [shot-speech.md](references/shot-speech.md). Resolve each explicit speaker from
+SB_DOC.characters and use its pinned raw TTS engine and voice. Store stable line ids,
+generation receipts and audio hashes with `speech_manage`. Keep raw API arguments in
+voiceSettings; declare text language separately when the API auto-detects it. No automatic
+listening, STT, scores, retry-to-pass loop or human listening approval runs.
 
-Resolve every checked call from `window.SB_DOC`: `speaker` selects that character id and its absence selects `SB_DOC.narratorCharacterId`. The matched `tts` supplies `generator` and `generation`: map `voiceId` to Gemini `voiceName`, Supertonic/MLX `voice`, or ElevenLabs `voiceId`, and pass model, speed, language and stylePrompt only when accepted. Portal voice data overrides profile §2; unknown speakers, missing narrator/characters, or missing TTS stop production.
-One checked call per scene when all segments share a character — join their `tts` sentences with periods into `.work/pcm/c<n>.wav`. When the speaker changes, split into single-speaker scenes with separate voice proofs; the current builder rejects mixed-speaker scene audio without segment-bound proofs. Never join unbound voices or substitute the narrator.
-Don't split a scene into several calls by sentence (the voice varies between calls). Pass the
-same `tts` sentences as `segments`. Default `generation.speed` and `playbackSpeed` to 1.0;
-non-1 values require the episode's explicit user request under `references/tts-speed.md`.
-On every single-voice take the wrapper lays a fixed pause at each segment boundary and
-writes `c<n>.wav.sentences.json` for reveal/cue timing (`references/tts-quality.md` §Sentence spacing) —
-ElevenLabs from its own timestamps, Supertonic·Gemini·mlx from the local forced aligner.
-A scene of one sentence is one call, and one call restarts the voice: measured 2026-09-15 on the
-pundago voice, three sentences as three calls reviewed at continuity 94 · naturalness 92 against
-96 · 95 for the same three in one call. When consecutive sentences are one breath, keep them in
-one scene as several segments (each segment still gets its own clip or reveal).
-
-**For a board without portal character voice data, profile §2 decides the engine.** A new channel's narration default is `tts_local_generate`
-(Supertonic, local) — no key, no quota, and 0 cost however many times you rerun the episode,
-so regenerating is free. Only lines that need a style instruction, meaning shots where an
-emotion has to be acted, go to `tts_generate` (Gemini). The local side has no stylePrompt.
-A profile with `engine: elevenlabs` calls `tts_elevenlabs_generate` with the profile's
-voiceId · model · stability (and seed, if pinned) and leaves `outputFormat` at its default
-`wav_24000` — mono 24kHz WAV, the same spec as Gemini, so the builder reads it as-is. The
-checked wrapper adds `timestamps` and preserves one episode seed on every retake. Pass
-`episode: {texts, index, seed}` so it derives the neighboring scene text automatically.
-For v3, the wrapper omits unsupported text context; final listening checks the scene joins. **Pundago keeps its fixed ElevenLabs narrator:** `L4az9Gb378GIycFl2nAB`, `eleven_multilingual_v2`, speed `1.0`. `tts_gemini_38` only supports cuts that specifically need turn-level emotional acting, inline vocal events, or a two-person conversation; do not replace the episode narrator or profile default.
-Set `SPEED=1` and `generation.speed=1`. Any non-1 synthesis rate requires the explicit human request in [tts-speed.md](references/tts-speed.md). Assembly always preserves 1.0x.
-Keep names intact and pin pronunciation dictionaries; see `references/tts-quality.md`.
-**Never pass an mp3_* outputFormat for narration**: build-reel.sh reads any non-RIFF audio
-file as raw PCM and that card becomes noise. A scene with three or more speakers goes to
-`tts_elevenlabs_dialogue` in one call (no per-speaker stitching, no 0.75s gaps). Audio tags
-for acted lines (`[whispers]`, `[laughs]`) only work on `eleven_v3`, and the v3 cap is 5,000
-characters per call — scenes are far under it.
-
-**An existing profile with no engine field counts as `gemini` and keeps the voiceName written
-there.** Don't switch it over just because local is the default — a channel a few episodes in
-would change narrators mid-run. A move to local happens only when the user updates profile §2
-and names the engine.
-
-**Don't mix engines with different sample rates inside one video** — 44.1kHz (local) and
-24kHz (Gemini · ElevenLabs default) on one timeline break the concatenation. Gemini and
-ElevenLabs at `wav_24000` share a spec and can sit on one timeline; local can't join either
-without resampling one side before the build. `mlx_tts_generate` is an optional local
-voice when MLX Core is up — never a silent fallback for the engine pinned in profile §2.
-
-**Mandatory speech quality gate.** The checked tool measures the WAV and reviews
-pronunciation, accuracy, naturalness and clarity. Blind transcription runs only when
-requested. It retries failed takes at the same settings, at most three takes total.
-A current PASS proceeds; failed verdicts follow `references/tts-hitl.md`. Unverified reviews need resolution. Include paid review in the allowance; preserve attempt limits and continue independent preparation.
+Use one speaker per scene. Split speaker changes into separate shots before synthesis.
+Use WAV, preserve the selected voice and speed, and resample differing sample rates before
+assembly. The current builder cannot concatenate MP3 as PCM. Keep speech at speed 1 unless
+the user requested another speed under [tts-speed.md](references/tts-speed.md).
+Generate each stable line as a take; combine consecutive lines into the scene WAV and record
+its ordered lineIds, expectedText and actual audioSha256. For single-line shots, use the bound
+WAV directly. Subtitle timing follows the actual WAV; file and timing checks do not listen.
+Keep ElevenLabs seed, stability and pronunciation dictionaries fixed across retakes when
+pinned. Never switch engines silently when the local runtime is unavailable.
 
 Once the whole scene is out, write a line to the ledger. **The quantity is chars÷1000, not
 the character count** — the unit price is per 1,000 characters, so writing 412 characters as
@@ -1121,7 +1085,7 @@ $REF/speedup.sh .work 1.2    # only with an explicit user request for final x1.2
 
 ### 8. Phone-mode QA (required before publishing)
 
-Run retention-direction.md §5 on the final video and save `.work/experience-review.md` for §10's reviewer. Frame checks verify layout; watching motion and listening verify timing, payoff and intelligibility. An unavailable check is unverified and holds publishing readiness.
+Run retention-direction.md §5 on the final video and save `.work/experience-review.md` for §10's reviewer. Frame and motion checks verify layout, timing and payoff. Speech stays not_reviewed and does not create a listening or approval hold.
 
 Copy `reel-qa.html` into `.work/` and shoot it **on a phone viewport with the platform UI
 overlay**, again with the headless Chrome the captures use. `?frame=1` draws the 390×844
@@ -1336,7 +1300,7 @@ Finish the report and the `status: produced` file update regardless — the port
 - **`references/splice-clip.sh`** — post-build clip insertion (b-roll up to 2 slots · series stinger). Takes several `<clip> <T>` pairs and splices them in **a single run** (split it into two calls and the first splice is erased), handles clean and burned-in separately, shifts each subtitle cue by the sum of the measured lengths of the insertions before it, and checks for cues straddling T and for matching lengths
 - **`references/capture-frames.sh` / `capture-reveals.sh`** — headless capture (state count derived automatically)
 - **`references/render-motion-slide.mjs`** — motion-slide renderer (§3.6): one clip per reveal group, headless Chrome over the DevTools pipe with no npm dependency, every frame seeked to an exact time so a re-render is byte-identical; `--sheet` writes the frames the §3.6 sheet read looks at. It renders **every authored screen** — diagram, kinetic type, character act — since all it asks a page for is the seek contract
-- **`references/tts-hitl.md`** — speech findings as warnings: the `check-tts-quality.js` and `check-final-tts.js` reports, the `approve` commands and what an approval binds to
+- **`references/shot-speech.md`** — explicit speakers, generation receipts, replaceable video adapters and targeted corrections
 - **`references/snap-boundaries.py`** — the checked take's sentence sidecar snapped to the detected pauses, bound to the WAV's hash (build-reel §4)
 - **`references/reveal-timing.py`** — reveal timing derived backwards from the narration's pauses
 - **`references/frame-persona-clip.py`** — unifies speaking-clip framing + palindrome

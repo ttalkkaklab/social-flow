@@ -228,7 +228,7 @@ optional, and they're what turns the tool from a video maker into an operator.**
   9:16 or 16:9 video plus per-platform text into
   `data/<channel>/episodes/<topic>/output/`, and you upload those files by hand. Only
   the publishing and growth-loop half is unavailable: the 11 publish/review/insight tools
-  aren't even listed (`tools/list` shows 81 instead of 304 — the 210 `portal_*` tools are
+  aren't even listed (`tools/list` shows 82 instead of 305 — the 210 `portal_*` tools are
   gated the same way on a portal key), and the growth skills have
   nothing to drive. Explicit tool-disable settings can reduce that list further.
 
@@ -523,7 +523,7 @@ social-flow/
 ├── mcp.json                     #   its stdio server entry
 ├── manifest.json                # Claude Desktop extension (.mcpb) manifest — .mcpbignore picks the contents
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 304 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 305 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
 │       ├── tools.ts             # tool definitions — 93: research 9 + open data 5 + generation 49 + publish 6 + comments 3 + growth insights 5 + growth review 2 + check 2 + blender 7 + storyboard 5
@@ -585,9 +585,9 @@ social-flow/
 └── data/                        # content data root (see data/README.md)
 ```
 
-## MCP tool surface (304 tools)
+## MCP tool surface (305 tools)
 
-**`tools/list` does not show all 304.** The credential-gated publish, review and insights tools
+**`tools/list` does not show all 305.** The credential-gated publish, review and insights tools
 (`threads_draft_create` · `threads_review_submit` · `threads_publish` · `instagram_publish` · `facebook_publish` · `facebook_comment` ·
 `youtube_publish` · `threads_insights` · `instagram_insights` · `youtube_insights` ·
 `threads_search`) are exposed **only for platforms whose credential file exists** —
@@ -1142,3 +1142,23 @@ opens this library; its previous API browser is at `/legacy`.
 Portal reference: ttalkkak-story `d29f1a6`, DESIGN.md 1.2.0. See
 [local review design](skills/channel/references/local-review-design.md) for the
 reference, supported offline behavior and visual verification scope.
+
+### Structured character identity
+
+New and updated character sheets carry explicit personality, measurements, speech,
+acting, relationships and continuity fields, each confirmed, pending or not applicable.
+The local compiler generates lane-specific directions; review export refuses a pass
+for incomplete settings. Follow [the character contract](skills/channel/references/character-identity.md).
+Existing sheets need explicit migration; legacy storyboards remain readable.
+The portal currently stores only its existing role/appearance/TTS subset.
+
+## Shot dialogue and later corrections
+
+New storyboards assign stable line ids, explicit speakers (narrator included) and delivery
+modes. `speech_manage` lists, prepares, patches and binds audio to dialogue, and plans video
+from adapter capabilities. `edit-speech` repairs a requested shot/character without replacing
+unaffected takes. Speech generation has no automatic listening or human approval gate;
+outputs are marked `not_reviewed`. File, voice and timing provenance remain required.
+See [the speech contract](skills/produce/references/shot-speech.md). Video models are
+replaceable: audio-conditioned generation, post lip-sync and off-screen voiceover are separate
+routes; LTX is one adapter, not the common data model.

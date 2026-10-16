@@ -1,4 +1,5 @@
 import { manageLocation } from './location.js';
+import { manageSpeech, speechManageSchema } from './speech.js';
 import { REVIEW_ROUTES } from './portal-review-tools.js';
 import { UNIT_ROUTES } from './portal-unit-routes.js';
 import { PORTAL_API_ROUTES } from './portal-api-contract.js';
@@ -1526,6 +1527,7 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
     try { return text(JSON.stringify(await manageLocation(args), null, 2)); }
     catch (error) { return text(error instanceof Error ? error.message : String(error), true); }
   },
+  speech_manage: async (args) => text(JSON.stringify(manageSpeech(parseArgs(speechManageSchema, args)), null, 2)),
   storyboard_read: async (args) => {
     storyboard.contract();  // a missing structure-contract.js reports itself here, before the argument schema does
     const a = parseArgs(storyboard.storyboardReadSchema, args);
