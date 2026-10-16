@@ -45,6 +45,20 @@ allowance, $0 — a quota is not a price). Two CLIs, two mechanics:
 A host call that fails, or a tool that is missing, is put to the user before any separately
 billed API call — a fallback nobody approved is money nobody approved.
 
+**Host image quality preference (owner directive, 2026-10-16).** Request the lowest
+available generation quality from the host image tool, including images used as LTX or
+other video-model references. Keep the approved `bgPrompt` verbatim and append this
+execution instruction separately: "Use the lowest available generation quality. Preserve
+the requested dimensions, composition, subject identity and required readable details."
+If the host exposes a quality parameter, select its lowest supported value. Codex
+`image_gen` currently exposes no such parameter: this is a prompt preference, not a
+verified low-tier setting or a guarantee of lower cost or latency. Do not invent a
+quality argument or report that the tool actually used `low` without tool evidence.
+Keep the planned visual style and source-resolution requirements; do not request blur,
+reduced detail or a rough sketch as a substitute for a quality setting. Video generation
+and upscaling do not guarantee correction of source-image defects. Apply the existing
+image checks. This preference does not change the separately billed API table below.
+
 **A generated-video cut's still is edited from its previz first frame** (user directive
 2026-09-11, storyboard blender-previz.md §6.6). `spatial-prompts.js --shot N` returns
 `previzFirstFrame` and puts it first in `sourceImageArgs.referenced_image_paths`, ahead of the
