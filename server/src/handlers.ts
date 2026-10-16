@@ -1,4 +1,5 @@
 import { manageLocation } from './location.js';
+import { manageProject } from './project.js';
 import { manageSpeech, speechManageSchema } from './speech.js';
 import { createThreadsDraft, submitThreadsReview, checkThreadsGate, checkThreadsEpisode, gateCall } from './threads-gate.js';
 import { z } from 'zod';
@@ -685,6 +686,10 @@ const snsIssueScoutSchema = z.object({
 // ── routing ──────────────────────────────────────────────────────
 
 export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
+  project_manage: async (args) => {
+    try { return text(JSON.stringify(manageProject(args), null, 2)); }
+    catch (error) { return text(error instanceof Error ? error.message : 'Project setup failed', true); }
+  },
   serp_web_search: async (args) => {
     const result = await serp.webSearch(parseArgs(serpWebSchema, args));
     return text(result.text, result.isError);

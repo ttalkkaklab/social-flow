@@ -11,7 +11,7 @@ argument-hint: "<channel> <topic> [platformCSV|auto]"
 # *_publish/facebook_comment are deliberately left un-pre-approved — the native
 # permission prompt on every irreversible publish call has to act as a second line of
 # defense, separate from the HITL approval gate.
-allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__sns_account_check", "mcp__social-flow__capability_status"]
+allowed-tools: ["mcp__social-flow__project_manage", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__sns_account_check", "mcp__social-flow__capability_status"]
 ---
 **Automatic execution policy:** Read [automation guidance](../_shared/automation-guidance.md) first. Creative rules and review findings guide improvements; scores, review/hash/freeze records, CTA choices and intermediate approval steps do not block authorized work. Preserve actual external-action authorization and stop at the artifact the user requested. This policy supersedes older quality-gate wording below.
 
@@ -509,3 +509,14 @@ Record unresolved findings without claiming a passing review.
 
 - **`references/token-setup.md`** — per-platform credential issuance, file conventions, refresh procedures (Threads/IG 60 days · FB indefinite · YouTube OAuth)
 - **`references/shorts-surface-adb.md`** — setting the YouTube shorts portrait surface (`oar*`) frame: the channel-dedicated AVD + adb procedure, its traps, and the oardefault verdict
+
+## Project SNS preferences
+
+Read the episode settings snapshot when present. Its `sns` records identify target
+platforms and the expected account IDs; explicit current publishing instructions
+still govern scope. Recheck live identity with `sns_account_check` before upload.
+Resolve an account-ID mismatch with the user before publishing to another account.
+Credentials stay in the external channel token directory; `credentialRef` never
+contains a token. After verification, refresh the workspace SNS record through
+`project_manage update` if it targets this channel, preserving other platforms and
+all existing episode snapshots. Pending connection state does not authorize upload.

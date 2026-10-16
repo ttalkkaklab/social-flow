@@ -10,7 +10,7 @@ description: >
   SNS_TOKEN_DIR/[slug]/instagram_token and verifies it with sns_account_check. Resumable —
   it detects what is already done and continues from the first unfinished step.
 argument-hint: "<channel> [status|signup|brand|token]"
-allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__sns_account_check"]
+allowed-tools: ["mcp__social-flow__project_manage", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp__social-flow__sns_account_check"]
 ---
 **Automatic execution policy:** Read [automation guidance](../_shared/automation-guidance.md) first. Creative rules and review findings guide improvements; scores, review/hash/freeze records, CTA choices and intermediate approval steps do not block authorized work. Preserve actual external-action authorization and stop at the artifact the user requested. This policy supersedes older quality-gate wording below.
 
@@ -186,3 +186,13 @@ apply.
 
 - **`references/setup-playbook.md`** — ego CDP driving principles, field-tested
   per-step recipes, standalone token exchange & 60-day refresh sections.
+
+## Persist project connection settings
+
+When this channel matches `project.channel` in the selected workspace, use
+`project_manage status` and update its `sns` category after the real account check.
+Preserve the other platforms. Save enabled/status, verified accountId, public handle
+when available and actual checkedAt; never copy credentials into project JSON.
+Use pending for an incomplete connection. With a legacy model-only workspace,
+continue the requested platform setup and offer project-init for missing project
+preferences; never manufacture them or create another workspace config.

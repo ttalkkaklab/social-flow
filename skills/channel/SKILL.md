@@ -3,7 +3,7 @@ name: channel
 description: >
   Creates channel profiles and reusable character sheets; stops before episodes. Use
   when the user asks to "채널 만들어", "채널 추가", "채널 목록", "프로파일 수정", "add a channel", "set up a
-  content channel", "캐릭터 만들어", "캐릭터 시트 수정", or wants to create or update the channel directory under data/. Writes
+  content channel", "캐릭터 만들어", "캐릭터 시트 수정", or wants to create or update the channel directory under data/. For full workspace defaults (SNS, genre, style, video ratio) use project-init. Writes
   data/[slug]/profile.md — target audience, tone, TTS voice, visual theme, target
   platforms, fact-check policy — the source of truth every storyboard, produce and publish
   run opens before anything else.
@@ -17,6 +17,12 @@ allowed-tools: ["Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "mcp
 
 
 # Channel management — data/[channel]/profile.md
+
+For an entire project setup use [project-init](../project-init/SKILL.md), which
+collects shared preferences and creates this layout with `project_manage`. A
+channel-only request still follows this skill without forcing full project setup.
+When project-init authors a new profile, use the choices already collected there,
+especially the speech engine and target platforms; do not ask them again.
 
 A channel is the top-level unit of the social-flow pipeline — one **content channel
 (brand)** the user runs maps to one directory under `data/`, and its output gets

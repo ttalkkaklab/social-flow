@@ -197,6 +197,17 @@ Data graphs follow `skills/storyboard/references/chart-design.md` and the shared
 No unsupported route, substituted number card or separate PRELUDE may reach assembly.
 The builder reruns source-plan checks and records its version and input hashes before encoding.
 
+## Complete project setup (user directive, 2026-10-16)
+
+Use `skills/project-init/SKILL.md` for workspace initialization. Save SNS targets
+and connection records, genre, models, visual style, video ratio and format in
+`.social-flow/models.json`. Reuse these defaults for new episodes without repeated
+preference questions; snapshot the full configuration per episode. Existing boards
+and explicit episode overrides keep their choices. This supersedes older repeated
+style/ratio prompts. Store credential references only; tokens stay in the external
+SNS directory. Pending SNS setup does not prevent local production. Defaults and
+budget ceilings do not authorize generation spending or publication.
+
 ## Host media tools first (user directive, 2026-09-07)
 
 **Directory model selection (user directive, 2026-10-16) supersedes automatic routing.**

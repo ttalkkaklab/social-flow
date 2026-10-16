@@ -1,5 +1,19 @@
 # social-flow
 
+Start a reusable video project with `/social-flow:project-init <directory>`.
+It saves SNS targets and connection records, video genre, video/speech/image
+models, visual style, video ratio and output format together in
+`.social-flow/models.json`. It creates the channel profile, shared asset catalog
+and episode directory, preserves existing content, and asks only missing choices.
+SNS credentials stay in the external channel token directory; connecting later
+is supported. New episodes inherit a complete settings snapshot, so changing a
+default does not change work in progress. See [project setup](skills/project-init/SKILL.md).
+
+`project_manage` provides the same initialization, status, revision-checked update
+and episode creation over MCP; `skills/_shared/project-settings.js` is its CLI.
+Claude Code's read-only SessionStart hook reports missing settings. Other hosts
+use the skill's explicit preflight; neither path silently chooses preferences.
+
 At first setup in a working directory, choose the video type, then the video,
 speech and image models. The [type catalog](skills/_shared/video-types.md) covers
 drama, comedy, documentary, explainer, tutorial, review, interview, vlog,
@@ -532,7 +546,7 @@ social-flow/
 ├── mcp.json                     #   its stdio server entry
 ├── manifest.json                # Claude Desktop extension (.mcpb) manifest — .mcpbignore picks the contents
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 94 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 95 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
 │       ├── tools.ts             # tool definitions — 93: research 9 + open data 5 + generation 49 + publish 6 + comments 3 + growth insights 5 + growth review 2 + check 2 + blender 7 + storyboard 5
@@ -553,6 +567,7 @@ social-flow/
 │       ├── music-client.ts      # Lyria — 30s clips (batch) + variable length (streaming)
 │       └── media-utils.ts       # path validation · base64 saves · PCM→WAV utils
 ├── skills/
+│   ├── project-init/            # workspace defaults, SNS records and repeatable episode setup
 │   ├── channel/                 # /social-flow:channel — channel & profile management
 │   │   └── references/          #   resolve-asset.py (catalog lookup) · serve.js (channel browser over HTTP — pick a channel, then storyboards or characters; serves data/ so storyboard.html opens in place)
 │   ├── branding/                # /social-flow:branding — channel profile image (4 candidates → HITL pick → adversarial convergence at 95)
@@ -602,7 +617,10 @@ Episodes are saved only under `data/<channel>/episodes/<topic>/`. Open
 media and publication logs stay in the local episode directory; no destination
 selection or workspace key is required.
 
-## MCP tool surface (94 tools)
+## MCP tool surface (95 tools)
+
+`project_manage`: options · status · init · update · episode. Local project setup
+with genre, models, style, ratio, format and SNS records; no generation or publishing.
 
 **`tools/list` does not show all 94.** The credential-gated publish, review and insights tools
 (`threads_draft_create` · `threads_review_submit` · `threads_publish` · `instagram_publish` · `facebook_publish` · `facebook_comment` ·
