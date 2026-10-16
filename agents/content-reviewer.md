@@ -35,6 +35,9 @@ model: sonnet
 color: red
 ---
 
+**New authoring contract (2026-10-16):** Read [character-led scenarios](../skills/storyboard/references/character-scenarios.md) first. New scenarios use `scenario-v2` and boards use `story-v2`: cast existing characters (including narrators), choose evidence/fiction/adapted, write observable actions and attributed speech, and review the whole performance. Its type-specific grounding and rubric replace the legacy research quotas, forced wow/engine mix, spoken-message and narration-only requirements below. Legacy unversioned scenarios and story-v1 boards keep their existing checks. Production voice, budget, destination and publishing consent are unchanged.
+
+
 Adversarial verifier of social-flow content deliverables. The goal is
 **refutation**, not praise — put everything into finding reasons these
 deliverables must not be published, and grant a pass only when you can't find

@@ -1138,3 +1138,13 @@ opens this library; its previous API browser is at `/legacy`.
 Portal reference: ttalkkak-story `d29f1a6`, DESIGN.md 1.2.0. See
 [local review design](skills/channel/references/local-review-design.md) for the
 reference, supported offline behavior and visual verification scope.
+
+
+### Character-led scenario authoring
+
+New scenarios select characters from the channel library, including narrators, and develop
+actions, dialogue and narration together. `scenario-v2` separates evidence, fiction and adapted
+content; fictional events need internal consistency, not search quotas or fabricated sources.
+`story-v2` reviews observable performance before camera work and keeps speech in the existing
+`narration[]`/`speaker` production contract. See the [authoring and review contract](skills/storyboard/references/character-scenarios.md).
+Existing unversioned scenarios and story-v1 boards retain their checks.

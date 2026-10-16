@@ -382,6 +382,7 @@
     const later = (where, what) => out.push({ level: 'later', where, what });
     const warn = (where, what) => out.push({ level: 'warn', where, what });
     const cameraRule = opts && opts.draft ? later : bad;
+    const performanceStory = win.STORY && win.STORY.version === 'story-v2';
     const shots = Array.isArray(win.SCENES) ? win.SCENES : [];
     const placed = shots.map((s, i) => ({ s, no: i + 1 })).filter(x => PLACED(x.s));
     out.push(...checkEyelines(shots, opts && opts.draft));
@@ -483,7 +484,7 @@
         warn(where, `payoff is scene ${q.payoff}, the sequence's first — a question answered on arrival is the cover's hook, not this sequence's; the sequence question is the one its later scenes pay`);
       if (st.sequences.length >= 2 && q.scenes.length === 1)
         warn(where, 'one scene — a sequence is scenes bound by one purpose; a single scene is a scene of its neighbour\'s sequence, or the sequence is missing its other scenes');
-      if (text(q.question)) {
+      if (!performanceStory && text(q.question)) {
         const spoken = placed.filter(x => q.scenes.indexOf(x.s.scene) !== -1)
           .map(x => (x.s.narration || []).map(seg => seg && (seg.tts || seg.sub) || '').join(' ')).join(' ');
         if (spoken && overlap(q.question, spoken) < 0.5)
@@ -511,7 +512,7 @@
         if (payShot && payShot.s.scene !== q.payoff)
           warn(where, `payoff is scene ${q.payoff} but COMPREHENSION.branches says this question pays in shot ${br.pay}, which sits in scene ${payShot.s.scene} — one ledger; the payoff is the scene where the answer completes, not a later scene that comments on it (rule 8)`);
       }
-      if (posInt(q.payoff) && text(answer) && st.sequences.length === 1) {
+      if (!performanceStory && posInt(q.payoff) && text(answer) && st.sequences.length === 1) {
         const linesOf = no => placed.filter(x => x.s.scene === no)
           .map(x => (x.s.narration || []).map(seg => seg && (seg.tts || seg.sub) || '').join(' ')).join(' ');
         const paid = overlap(answer, linesOf(q.payoff));
@@ -534,7 +535,7 @@
       brs.forEach((b, i) => {
         if (!b || !text(b.question) || !posInt(b.open)) return;
         const sh = placed.find(x => x.no === b.open);
-        if (sh && overlap(b.question, (sh.s.narration || []).map(seg => seg && (seg.tts || seg.sub) || '').join(' ')) < 0.3)
+        if (!performanceStory && sh && overlap(b.question, (sh.s.narration || []).map(seg => seg && (seg.tts || seg.sub) || '').join(' ')) < 0.3)
           warn('window.COMPREHENSION.branches[' + i + ']', `open says shot ${b.open} but that shot's lines do not ask "${String(b.question).trim().slice(0, 24)}…" — open is the shot whose line raises the branch question (scenario-craft §5)`);
       });
       const cq = win.COMPREHENSION && win.COMPREHENSION.question;
@@ -604,6 +605,7 @@
       }
     });
     placed.forEach(x => {
+      if (performanceStory) return; // Event-grounded review owns meaning, dialogue and visual subtext.
       const segs = (x.s.narration || []).map(seg => seg && (seg.tts || seg.sub) || '').filter(text);
       const k = x.s.shot && x.s.shot.info;
       const staged = text(k) && /^연출\s?[—–-]/.test(k.trim());
@@ -819,7 +821,7 @@
       });
       // The out-line is spoken — it is the last sentence of the scene's last shot, not a planning note.
       const last = xs[xs.length - 1];
-      const segs = (last.s.narration || []).map(seg => seg && (seg.tts || seg.sub) || '').filter(text);
+      const segs = performanceStory ? (last.s.performance || []).map(e => e.kind === 'action' ? e.text : (last.s.narration || [])[e.group - 1]?.sub || (last.s.narration || [])[e.group - 1]?.tts || '').filter(text) : (last.s.narration || []).map(seg => seg && (seg.tts || seg.sub) || '').filter(text);
       const said = bare(segs.join(' '));
       if (sc && text(sc.out) && said) {
         const o = bare(sc.out);

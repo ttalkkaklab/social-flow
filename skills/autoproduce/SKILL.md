@@ -4,8 +4,8 @@ description: >
   Builds an episode unattended after its destination choice. Combines storyboard and produce. Use when the user asks to "이 주제로 영상 하나 만들어", "주제만 주면 영상까지
   만들어줘", "자동으로 쇼츠 만들어", "make a short about X end to end", or when a growth loop needs to
   refill its publish queue by itself. Researches, writes 3 seven-item scenario candidates and
-  has them judged in one batched reviewer read, authors scenes.js, loops the narration alone
-  to 95 on content and then on wording (three reads each, handed inline), generates 9:16
+  has them judged in one batched reviewer read, authors scenes.js, reviews actions and character speech
+  to 95, then checks wording (three reads each, handed inline), generates 9:16
   backgrounds, synthesizes narration, and builds the video plus per-platform text under
   data/[channel]/episodes/[topic]/output/. Machine gates replace human approval: facts, the
   batched scenario read, the two narration loops, the style and contract checkers, build
@@ -27,6 +27,9 @@ allowed-tools: ["mcp__social-flow__portal_channel_sync", "mcp__social-flow__capa
   "mcp__social-flow__seedance_img2video", "mcp__social-flow__seedance_reference",
   "mcp__social-flow__music_generate_clip", "mcp__social-flow__mlx_music_generate"]
 ---
+
+**New authoring contract (2026-10-16):** Read [character-led scenarios](../storyboard/references/character-scenarios.md) first. New scenarios use `scenario-v2` and boards use `story-v2`: cast existing characters (including narrators), choose evidence/fiction/adapted, write observable actions and attributed speech, and review the whole performance. Its type-specific grounding and rubric replace the legacy research quotas, forced wow/engine mix, spoken-message and narration-only requirements below. Legacy unversioned scenarios and story-v1 boards keep their existing checks. Production voice, budget, destination and publishing consent are unchanged.
+
 
 **HITL records:** Record authorized automatic choices and queue actions with the exact platform scope. Follow [the decision record contract](../storyboard/references/portal-decisions.md); preserve actual provenance and reuse existing authorization. This adds no approval gate.
 
@@ -336,6 +339,14 @@ SB=${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references
 node $SB/check-research.js storyboard/ --direction   # exit 1 = not enough to pick → drop the topic
 node $SB/check-research.js storyboard/               # exit 1 = the research does not close → drop the topic
 ```
+
+**New episode branch:** Use [character-scenarios.md](../storyboard/references/character-scenarios.md)
+for kind selection, character pool, candidate writing and whole-story review. The v2 branch
+replaces §2's legacy fact/search/wow floors and §2.2–§3.6's speech-only requirements. Keep the
+same candidate and reviewer call budgets, locks, queue limits and production approvals. Fiction
+needs no research unless it asserts real facts. Read `check-story.js --text` for the story pass
+and `--text --speech` for wording. A silent story records lexicon as not applicable. Continue
+into visual planning and production only after the evidenced whole-story review passes.
 
 ### 2.2 Scenario candidates (gate 6a — storyboard-reviewer scenario mode, one batched read)
 
