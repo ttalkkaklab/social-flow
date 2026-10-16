@@ -53,9 +53,9 @@ const RULES = [
   { name: 'build-reel MAX_DUR', file: 'skills/produce/references/build-reel.sh',
     re: /MAX_DUR=\$\{MAX_DUR:-([\d.]+)\}/, want: fix(S.pacing.sceneMax, 1) },
   { name: 'build-reel SUB', file: 'skills/produce/references/build-reel.sh',
-    re: /\bSUB=\$\{SUB:-(\d)\}/, want: '1' },
+    re: /\bSUB=\$\{SUB:-(\d)\}/, want: '0' },
   { name: 'build-reel BURN', file: 'skills/produce/references/build-reel.sh',
-    re: /BURN=\$\{BURN:-(\d)\}/, want: S.burn ? '1' : '0' },
+    re: /^BURN=(\d)\b/m, want: S.burn ? '1' : '0' },
   { name: 'build-reel ZOOM_SPAN', file: 'skills/produce/references/build-reel.sh',
     re: /ZOOM_SPAN=\$\{ZOOM_SPAN:-([\d.]+)\}/, want: String(S.kenburns.zoomSpan) },
   // The builder sizes its speech-rate band and chapter minimum from the playback factor, and the

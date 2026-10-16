@@ -19,7 +19,11 @@ supported pinned settings. Keep the dramatic action in the script plan, such as
 "reassure a frightened friend, then ask them to act". Translate that intent into
 short audible cues rather than sending a biography to the synthesizer.
 
-Each line may carry `acting: {direction?: string, tags?: string[]}`. Keep `tts` as
+Each line may carry `acting: {direction?: string, tags?: string[]}`. It may also
+record `context`, `intent`, `emotion`, `vocal`, `visual`, `leadInSeconds` and
+`tailOutSeconds`; see [shot speech](shot-speech.md#direct-each-line-and-reaction)
+for the shared scene direction and materialized reaction timing. Scene vocal cues
+replace the character baseline rather than appending contradictory emotions. Keep `tts` as
 spoken words and `sub` as display words. Tags are bare English names, for example
 `"sigh"`; do not store angle or square brackets in the tag array. These line-level
 cues apply at the start of the line. For an exact mid-line event, split the line at
@@ -44,7 +48,8 @@ and dependent speaking video just as changed spoken words do. Preserve other tak
 
 Call `speech_manage action:plan_audio` for the selected line after an update. Its
 `audioPlans` entries include `generator`, provider-ready `generation`, clean
-`expectedText`, `language` and `speechRevision`. Call that generator with the
+`expectedText`, `language` and `speechRevision`; `arguments` is an alias of
+`generation` for the same provider request. Call that generator with the
 compiled generation arguments plus output path/filename. When attaching the actual
 WAV, use `generation.text: expectedText` and `generation.voiceSettings` containing
 the actual provider request, including tags/turn styles. `attach_audio` checks
@@ -57,7 +62,7 @@ acting against the compiled plan; prose directions alone are not generation proo
 |---|---|---|---|
 | Gemini 3.8 | `tts_gemini_38.turns[].style` | English angle tags in that turn's `text`, e.g. `<sigh>` | Pinned voice; no identity biography in style |
 | Earlier supported Gemini | `tts_generate.stylePrompt` | Use that model's documented prompt controls | Do not assume it accepts 3.8 metadata |
-| ElevenLabs v4 | Square tags in generated `text`, e.g. `[reassuring]` | Square tags such as `[sigh]` | `stability` and `similarity`; no speed/style slider or SSML |
+| ElevenLabs v4 | Explicit compact `acting.direction` becomes a square tag, e.g. `[reassuring]` | Square tags such as `[sigh]` | `stability` and `similarity`; no speed/style slider or SSML |
 
 Gemini example: `{"text":"<sigh> 괜찮아. 내가 옆에 있어.","style":"soft, reassuring"}`.
 ElevenLabs example: `[soft, reassuring] [sigh] 괜찮아. 내가 옆에 있어.` with
@@ -68,8 +73,14 @@ changes. Put voice identity in voice selection/design. Non-speech events use
 English tags even when the dialogue is Korean.
 [Google speech generation](https://ai.google.dev/gemini-api/docs/speech-generation).
 
-For ElevenLabs, use a voice suited to the intended performance. Tags are natural
-language cues, not a guaranteed enum. Start with a small set of clear directions,
+For ElevenLabs, use a voice suited to the intended performance. Only the explicit
+compact `acting.direction` and bare `acting.tags` compile into inline controls.
+The richer context/intent/emotion/vocal/visual fields remain available for planning,
+video and review; the compiler does not turn those paragraphs into speech tags.
+A scene with rich vocal direction but no compact cue gets an unsupported-direction
+warning. Author a concise audible cue that preserves the intended performance and
+replan before generation. Do not silently count rich metadata as a supported cue.
+Tags are natural language cues, not a guaranteed enum. Start with a small set of clear directions,
 place them where delivery changes, and avoid conflicting cues. Punctuation and
 wording also affect performance. Keep v4 model-specific settings; never send
 legacy style/speed sliders or SSML pauses.
@@ -136,12 +147,6 @@ Check the critic too: a report that says every word is correct but subtracts
 accuracy points without an audible example is inconsistent. Preserve its original
 scores, reject unsupported deductions and re-evaluate with the same rubric.
 Never raise scores by hand to reach a requested target.
-
-`evaluationStatus:invalid_evidence` means the evaluation failed its own evidence
-contract. Keep that report and re-evaluate the same audio; it does not justify
-another paid synthesis. The evaluator version and model belong in every comparison.
-Do not compare scores from different evaluators as if they measured one continuous
-improvement, or keep changing evaluators merely to obtain a passing number.
 
 ## Requested audio evaluation
 

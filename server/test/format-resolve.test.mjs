@@ -58,8 +58,8 @@ const SHORTS_TABLE = [
   ['MAX_DUR', '13.0', 'mirror', { file: 'build-reel.sh', re: /MAX_DUR=\$\{MAX_DUR:-13\.0\}/ }],
   ['MAX_SCENE', '20', 'mirror', { file: 'build-screencast.sh', re: /MAX_SCENE=\$\{MAX_SCENE:-20\}/ }],
   ['TOTAL_HARD', '180', 'mirror', { file: 'build-screencast.sh', re: /BEGIN\{exit !\(t>180\)\}/ }],
-  ['SUB', '1', 'mirror', { file: 'build-reel.sh', re: /SUB=\$\{SUB:-1\}/ }],
-  ['BURN', '1', 'mirror', { file: 'build-reel.sh', re: /BURN=\$\{BURN:-1\}/ }],
+  ['SUB', '0', 'mirror', { file: 'build-reel.sh', re: /^SUB=\$\{SUB:-0\}/m }],
+  ['BURN', '0', 'mirror', { file: 'build-reel.sh', re: /^BURN=0\b/m }],
   ['SHRINK_WARN', '3.0', 'mirror', { file: 'build-screencast.sh', re: /SHRINK_WARN=\$\{SHRINK_WARN:-3\.0\}/ }],
   ['CAP_W', '1080', 'mirror', { file: 'capture-frames.sh', re: /CAP_W="\$\{CAP_W:-1080\}"/ }],
   ['CAP_H', '1920', 'mirror', { file: 'capture-frames.sh', re: /CAP_H="\$\{CAP_H:-1920\}"/ }],
@@ -183,12 +183,22 @@ test('presets without typesetting coordinates still reject --json', () => {
   );
 });
 
-test('the BURN=1 + 16:9 combination is rejected', () => {
+test('both formats reject explicit burn-in and default to optional separate subtitles', () => {
+  const { FORMATS } = require(join(REF, 'formats.js'));
+  for (const format of Object.keys(FORMATS)) {
+  const env = parseEnv(run('--format', format, '--sh'));
+  assert.equal(env.SUB, '0');
+  assert.equal(env.BURN, '0');
+  assert.equal(FORMATS[format].burn, false);
+  assert.ok(!FORMATS[format].outputs.includes('reel-sub.mp4'));
+  assert.ok(!FORMATS[format].outputs.includes('subs.srt'));
+  assert.ok(FORMATS[format].optionalOutputs.includes('subs.srt'));
   assert.throws(
-    () => run('--format', 'youtube-long-16x9', '--burn', '1', '--sh'),
-    /BURN=1/,
-    'landscape burn-in has no subtitle coordinates to burn',
+    () => run('--format', format, '--burn', '1', '--sh'),
+    /BURN=1.*subtitle-free/,
+    'no format can enable burned captions',
   );
+  }
 });
 
 test('an unknown FORMAT value does not quietly fall back to portrait', () => {

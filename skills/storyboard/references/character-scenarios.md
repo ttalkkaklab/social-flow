@@ -162,13 +162,36 @@ selection reason when useful. Never fabricate a reviewer verdict or user approva
 
 ## Board handoff and review (story-v2)
 
+Owner directive 2026-10-17: spoken dialogue remains in the audio, never as subtitles
+or captions inside the video. Use text-free source images and video prompts, including
+speaking shots. Keep exact dialogue in the plan for speech verification and optional
+separate YouTube caption tracks when requested. Pass plan_video.videoPrompt to the
+adapter; do not copy literal spoken lines into an audio-conditioned prompt when the
+WAV already supplies them. Inspect actual output for accidental text and report it
+as a defect rather than treating a no-text instruction as proof of compliance.
+
+
 Keep production speech in `narration[]`, including character dialogue. Every v2 speech group
 has an explicit `speaker` ID, including the narrator. Do not rename the production array.
 Copy selected identities and their actual TTS settings into the existing SB_DOC cast contract.
 `STORY.cast` holds the selected role/want/voice/source records, not a second TTS configuration.
 Follow [shot speech](../../produce/references/shot-speech.md): assign stable shot/line IDs,
-delivery and `SB_DOC.speechPlanVersion:1` before review. Split speaker changes into consecutive
-shots for the current one-speaker-per-scene builder, then update performance group references.
+delivery and `SB_DOC.speechPlanVersion:1` before review. Keep each speaker’s lines and audio
+receipts separate. A shot may contain several speakers: the speech composer joins their
+attached takes in line order, including each line’s anticipation and reaction time. Split
+shots when the staging calls for a cut and update performance group references.
+
+Translate the dramatic situation into optional per-line `acting` before production:
+`context`, `intent`, `emotion`, `vocal`, `visual`, `leadInSeconds` and `tailOutSeconds`.
+Use the [speech contract](../../produce/references/shot-speech.md#direct-each-line-and-reaction)
+for field limits and generation planning. The character's identity voice stays fixed while
+confusion, restraint, celebration and other reactions follow the current beat. Write the
+trigger and observable response instead of repeating a generic confident/cheerful tone.
+Reserve time to notice the trigger and react after speech when the scene needs it. Align
+the planned source image's expression, gaze, hands and props with that starting state;
+a shared portrait is an identity reference, not a universal acting pose. Pass the same
+situation to voice and video generation. Distinct emotional beats and nonconsecutive
+shots are separate generation units even if they share a character or reference image.
 
 Each shot has an ordered `performance` array:
 

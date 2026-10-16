@@ -2,8 +2,8 @@
   "manifest_version": "0.3",
   "name": "social-flow",
   "display_name": "Social Flow",
-  "version": "0.114.0",
-  "description": "The social-flow MCP tools for the Claude Desktop chat — research search, image, video, voice and music generation, and SNS publishing. A desktop extension carries no skills; the full pipeline installs as a plugin in Cowork.",
+  "version": "0.114.1-acting.6",
+  "description": "The social-flow MCP tools for the Claude Desktop chat \u2014 research search, image, video, voice and music generation, and SNS publishing. A desktop extension carries no skills; the full pipeline installs as a plugin in Cowork.",
   "author": {
     "name": "Zeans",
     "email": "zeans@astratech.vn",
@@ -43,7 +43,7 @@
     "openai_api_key": {
       "type": "string",
       "title": "OpenAI API key",
-      "description": "gpt_image_* — covers and any frame with text on it. Empty keeps the on-device image engine.",
+      "description": "gpt_image_* \u2014 covers and any frame with text on it. Empty keeps the on-device image engine.",
       "sensitive": true
     },
     "gemini_api_key": {
@@ -55,7 +55,7 @@
     "ark_api_key": {
       "type": "string",
       "title": "BytePlus ModelArk API key",
-      "description": "seedance_* video. Optional — veo_* works without it.",
+      "description": "seedance_* video. Optional \u2014 veo_* works without it.",
       "sensitive": true
     },
     "serpapi_api_key": {
@@ -67,7 +67,7 @@
     "sns_token_dir": {
       "type": "directory",
       "title": "Credentials directory",
-      "description": "SNS token files, plus a .env file with every other variable (README § Environment variables). The server fills any key left empty here from that file.",
+      "description": "SNS token files, plus a .env file with every other variable (README \u00a7 Environment variables). The server fills any key left empty here from that file.",
       "default": "${HOME}/.config/social-flow"
     }
   },

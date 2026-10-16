@@ -168,7 +168,7 @@ rather than to any channel.
 | Scene length | 4–13s | 6–20s · **no cap in the filmed lane** |
 | Narration characters | cover 40 · body 50 | cover 70 · body 90 |
 | Sentence length | 8–25 chars | 12–40 chars |
-| Subtitles | burned in (BURN=1) | **clean master + `subs.srt`** — not burned |
+| Subtitles | clean master; optional separate SRT | clean master; optional separate SRT |
 | Generated video, combined | 16s (8s × 2 slots) | 40s (8s × 5 slots) |
 | Chapters | none | 5–10 (authored) · 3 or more in the filmed lane (derived) |
 | Ken Burns pan | available — travel = W(z−1) ≈ 130px at 1.12, measured on portrait | used (scale 1.06–1.35) |
@@ -624,7 +624,7 @@ from them through the same recipe and prompt gate as every other clip. Keep real
 infoType/purpose, data evidence and narration. The source PNG, stored motion prompt and
 optional `visual.frames.end` drive the same spatial action. Runtime output path is
 `visual.video.clip`. Use the resolution `PRODUCTION.videoModel` records (720p on the 2.0
-fast/mini grades, 1080p otherwise) and audio false; only burned subtitles overlay the video. The selected style replaces the generic photo rule. A verified recording or shared
+fast/mini grades, 1080p otherwise) and audio false; no subtitles overlay the video. The selected style replaces the generic photo rule. A verified recording or shared
 outro retains its source. Full-video quality evidence is in `.work/video-review.json`, tied to
 the actual source and clip hashes, checked before the build.
 
@@ -902,6 +902,16 @@ replace an entire dramatic exchange with closed-mouth action to avoid lip synchr
 The review renders lines in order with the speaker's profile image, name and delivery label
 beside a speech bubble. A shot without lines displays “No dialogue”; it does not acquire a
 narrator automatically. See [shot speech](../../produce/references/shot-speech.md).
+
+Alongside the supported `direction` and `tags`, optional per-line `acting` contains `context`, `intent`, `emotion`, `vocal` and `visual`
+strings (at most 1,000 characters each), plus `leadInSeconds` and `tailOutSeconds`
+(finite numbers from 0 to 5, default zero). These describe this line's situation,
+purpose, emotion, audible delivery, visible action and reaction time. They do not
+change the character's pinned voice ID. Scene vocal direction overrides baseline
+style rather than appending incompatible emotions. `speech_manage action:plan_audio`
+resolves supported generator arguments; `plan_video` carries the same acting context.
+Legacy lines without `acting` keep baseline delivery. Neither the field nor a successful
+plan certifies the resulting expression or prosody. See the speech contract for examples.
 
 The board may describe exchanges; before the current single-speaker scene builder runs,
 split speaker changes into consecutive shots preserving these line ids.
@@ -2824,10 +2834,9 @@ Rules that follow from the route:
 - **A stock clip is a supplied file, not a generated slot.** It sits outside
   `generated_video_max`, bills nothing, and does not free a slot for one more generated cut
   either. On a short it satisfies the hook rule the way a recording does.
-- **Its audio is discarded.** TTS, subtitles and BGM run over it as over a motion background.
+- **Its audio is discarded.** TTS and BGM run over it as over a motion background.
   A clip whose own sound is the point is the user's recording, not a stock cut.
-- **Nothing is drawn over it** — the rule above every other rule. The burned subtitle is the
-  only type on it.
+- **Nothing is drawn over it** — the rule above every other rule. Subtitles stay in optional sidecar files.
 - **Credits go into the platform text.** Every `attributionRequired: true` record is listed
   under a 출처 line at the end of the YouTube description and of the Instagram and Facebook
   captions; produce §6 collects them. Pexels, Pixabay and government works get the same line
@@ -3091,7 +3100,7 @@ What replaces it:
   sentence runs; the thing is a baked render whose movement is the sentence. The quality bar is
   `docs/research/2026-09-04-rendered-object-slide/reference-slide.html`.
 - **An event, a place, an action** is a motion background (`visual.video`) or a b-roll clip —
-  the generated picture alone, the burned subtitle the only type on it. No mark, no label, no
+  the generated picture alone, without burned subtitles. No mark, no label, no
   callout, no matte.
 
 The clip helpers (`h.footage` · `h.matte` · `h.mark.*` on a clip ground) stay in the template
@@ -3387,8 +3396,7 @@ strip says no violations.
       a real subject/evidence change in both `visual.action` and `slide.plan`. A photo with a
       moving box or line does not count
 - [ ] **No `treatment:"footage"` anywhere, and nothing drawn over any clip** (directive
-      2026-09-05) — a motion background or b-roll carries the picture and the burned subtitle
-      only
+      2026-09-05) — a motion background or b-roll carries the picture without burned subtitles
 - [ ] **Every narrated shot declares `shot.infoType`.** `timeline`, `statistic`, and `principle`
       use the required moving editorial diagram on the studio stage, mapped role, and one
       allowed `motionBeats` primitive per narration group — a rendered object when a thing is

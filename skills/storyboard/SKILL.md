@@ -678,9 +678,8 @@ Core rules:
   - Short-form: cover ≤40 chars · points/quote ≤50 chars · 8–25 chars per sentence
   - Long-form: cover ≤70 chars · points/quote ≤90 chars · 12–40 chars per sentence
 
-  Portrait is shorter not because the screen is narrow but **because the subtitles are burned
-  in** — burn-in subtitles top out at two lines at a time. Landscape hands `subs.srt` to the
-  player separately with a clean master, so the player handles line breaks. Either way, cut
+  Portrait and landscape both use a clean master without burned subtitles. Optional SRT
+  tracks go separately to YouTube when requested; the player handles line breaks. Cut
   clearly on periods (the TTS silence-boundary detector needs them). Two notations: `tts`
   is Korean phonetic spelling ("4,700만"→"사천칠백만"), `sub` keeps the original notation.
 - **Natural language for the channel audience** (korean-style §Eye level) applies to

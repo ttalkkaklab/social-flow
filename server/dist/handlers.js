@@ -1,8 +1,9 @@
-import { reviewActing, actingReviewSchema } from './acting-review.js';
+import { reviewActing as reviewTtsActing, actingReviewSchema as ttsActingReviewSchema } from './tts-acting-review.js';
 import { manageVoiceAudition, voiceAuditionSchema } from './voice-audition.js';
 import { manageLocation } from './location.js';
 import { manageProject } from './project.js';
 import { manageSpeech, speechManageSchema } from './speech.js';
+import { reviewActing, actingReviewSchema } from './acting-review.js';
 import { createThreadsDraft, submitThreadsReview, checkThreadsGate, checkThreadsEpisode, gateCall } from './threads-gate.js';
 import { z } from 'zod';
 import * as datago from './datago-client.js';
@@ -1317,8 +1318,9 @@ export const ROUTES = {
         }
     },
     character_voice_audition: async (args) => text(JSON.stringify(await manageVoiceAudition(voiceAuditionSchema.parse(args)), null, 2)),
-    tts_review_acting: async (args) => text(JSON.stringify(await reviewActing(actingReviewSchema.parse(args)), null, 2)),
+    tts_review_acting: async (args) => text(JSON.stringify(await reviewTtsActing(ttsActingReviewSchema.parse(args)), null, 2)),
     speech_manage: async (args) => text(JSON.stringify(manageSpeech(parseArgs(speechManageSchema, args)), null, 2)),
+    acting_review: async (args) => text(JSON.stringify(await reviewActing(parseArgs(actingReviewSchema, args)), null, 2)),
     storyboard_read: async (args) => {
         storyboard.contract(); // a missing structure-contract.js reports itself here, before the argument schema does
         const a = parseArgs(storyboard.storyboardReadSchema, args);

@@ -33,14 +33,15 @@ function record(work,speed){
       finalSpeech=gate.evidence(media,n.text,work);
     }
   }
-  const outputs=Object.fromEntries(pairs.map(([src,dst])=>[dst,fs.existsSync(path.join(work,src))?hash(path.join(work,src)):null]));
-  if(!outputs['video.mp4']||!outputs['subs.srt'])throw new Error('Delivery needs the checked video and subtitle set');
+  const outputs=Object.fromEntries(pairs.map(([src,dst])=>[dst,dst!=='video-sub.mp4'&&fs.existsSync(path.join(work,src))?hash(path.join(work,src)):null]));
+  if(!outputs['video.mp4'])throw new Error('Delivery needs the checked clean video');
   fs.writeFileSync(path.join(work,'delivery-proof.json'),JSON.stringify({version:1,speed,...provenance,outputs,requiresFinalSpeech:!!finalSpeech,...(finalSpeech?{finalSpeech}:{})},null,2)+'\n');
 }
 function check(episode){
   try{
     const out=path.join(episode,'output/video'),proof=JSON.parse(fs.readFileSync(path.join(out,'delivery-proof.json'),'utf8'));
-    if(proof.version!==1||!proof.outputs?.['video.mp4']||!proof.outputs?.['subs.srt'])throw new Error('missing output hashes');
+    if(proof.version!==1||!proof.outputs?.['video.mp4'])throw new Error('missing output hashes');
+    if(proof.outputs['video-sub.mp4']!=null)throw new Error('output changed: video-sub.mp4 is not a clean delivery');
     if(!['storyboard','screencast'].includes(proof.kind)||proof.kind==='storyboard'&&(!proof.editCheckSha256||!proof.assembledSha256)||proof.kind==='screencast'&&!proof.editSha256)throw new Error('missing assembly provenance');
     for(const [,dst] of pairs){
       const f=path.join(out,dst);

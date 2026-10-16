@@ -1,9 +1,14 @@
+> Output policy: spoken dialogue never becomes a caption overlay in the final video.
+> Keep the clean master for every platform. Subtitle sidecars are optional (`SUB=1`);
+> when requested, upload the SRT separately to YouTube. `BURN=1` does not enable burn-in.
+
 # Shot speech and replaceable video adapters
 
 ## Contents
 
 - [Common data](#common-data)
 - [Delivery follows the story](#delivery-follows-the-story)
+- [Direct each line and reaction](#direct-each-line-and-reaction)
 - [Common voice layer](#common-voice-layer)
 - [Adapter layer](#adapter-layer)
 - [Current adapter examples](#current-adapter-examples-checked-2026-10-16)
@@ -58,14 +63,111 @@ model explicitly to the raw tool so its own default cannot drift between episode
 
 Resolve speaker to character.tts. Call `speech_manage action:plan_audio` to compile
 line acting into the selected provider’s arguments; use its generator/generation
-output. Attach with clean expectedText as `generation.text` and the actual tagged
+output (`arguments` is an alias of `generation`). Do not overwrite the planned
+scene direction with the character baseline stylePrompt. Attach with clean expectedText as `generation.text` and the actual tagged
 request in `generation.voiceSettings`. Generate with the corresponding raw engine tool, not
 `tts_generate_checked`. Save a generation receipt beside each scene WAV as `.generation.json`
 with generator, voiceSettings (the actual arguments), generationSpeed, playbackSpeed:1,
-expectedText, lineIds and audioSha256. For a single line the bound line WAV can be used
-directly; a combined scene WAV needs this receipt bound to its actual bytes. Attach generated line WAVs with `speech_manage`.
+expectedText, lineIds and audioSha256. For a single line without reaction padding the bound
+line WAV can be used directly; a combined or padded scene WAV needs this receipt bound
+to its actual bytes. Attach generated line WAVs with `speech_manage`.
 No scores, STT, paid reviewer request or human approval is needed. File existence, hash,
 voice-routing, duration and edit synchronization still matter. No pass score is invented.
+
+## Direct each line and reaction
+
+Keep the character's engine, model, voice ID/name and pinned synthesis settings stable.
+The character's baseline delivery is a fallback; it cannot dictate the emotion of every
+scene. Author optional `acting` on the line when the situation changes:
+
+```js
+acting: {
+  direction: "quiet, briefly confused question",
+  context: "The applicant has just mistaken a sales result for a job offer.",
+  intent: "Find out what he thinks he passed.",
+  emotion: "Brief confusion after the earlier celebration.",
+  vocal: "Pause, then ask quietly with stress on passed; no sales smile or cheering.",
+  visual: "Hands lower, smile fades, gaze turns to the applicant; no applause.",
+  leadInSeconds: 0.25,
+  tailOutSeconds: 0.4
+}
+```
+
+Each context/intent/emotion/vocal/visual field is optional, at most 1,000 characters.
+Existing `direction` (a short plain cue, at most 500 characters, no brackets, pipes or
+line breaks) and `tags` (up to six bare English event names, at most 60 characters each)
+remain supported. `direction` contributes scene delivery; tags are compiled into the
+selected provider's supported syntax. Keep the clean line text separate from tagged
+provider text; see [acting prompts](acting-prompts.md). `leadInSeconds` and `tailOutSeconds`
+are optional finite seconds from 0 to 5, defaulting to zero. These are timing instructions,
+not TTS API parameters. `context` records the immediate trigger, `intent` the speaker's
+purpose, `emotion` the current change, `vocal` audible delivery and `visual` visible action.
+Keep physical direction out of spoken text. Missing `acting` preserves legacy baseline
+delivery; it does not prove the baseline fits the scene. `update patch.acting` replaces the
+whole acting object; `null` clears it. Preserve unrelated fields when revising one detail.
+
+Scene vocal direction replaces the baseline style instead of combining contradictory
+instructions such as cheerful selling and confused questioning. Reuse the resolved line
+direction for retakes unless the requested correction changes it. `plan_audio` reports
+unsupported delivery controls. For ElevenLabs v4, only the explicit compact
+`acting.direction` and `acting.tags` become inline speech cues. Keep context, intent,
+emotion, vocal paragraphs and visual action as planning/video/review context; do not
+flatten them into one long bracketed tag or copy them into spoken text. When rich
+vocal direction has no compact direction or tags, the planner warns that this scene
+direction is unsupported by the compiled request. Write a short audible cue that fits
+the same scene, then replan; do not treat the warning as proof that the desired acting
+was synthesized. Gemini retains its separate style/prompt mapping.
+
+Gemini and ElevenLabs v4 are the supported speech engines; preserve existing recordings from removed engines without silently regenerating them. Do not add unsupported API keys, silently change models or claim that planning
+alone improves the audible result. Preserve existing spending authorization.
+
+Use the same context, intent and emotion with the visual action in `plan_video` and the
+actual video prompt. Start each shot from an image with the planned expression, gaze,
+hands and props. Reuse identity references, but do not force confusion or restraint to
+start from an unrelated smiling sales pose. Preserve the previous shot's physical state
+where the story continues. Create a new image only within the authorized asset scope.
+
+Generate each emotional beat separately. Never concatenate nonconsecutive shots or
+different reactions into one generation merely because they share an image, then slice
+at audio-length boundaries. A deliberately continuous take needs ordered beat timings
+and observed cut points before reuse; a prompt does not establish where the model acted.
+The plans describe timing but do not render media. After attaching every line's current
+audio, `build-reel.sh` calls [compose-speech.js](compose-speech.js) for speechPlanVersion 1
+scenes with acting or multiple spoken lines. It reads cards.tsv, inserts each line's lead-in/tail-out, concatenates
+the speech into `c{index}-speech.wav`, updates the card audio path and records measured
+line intervals plus source hashes in `.generation.json`. The builder preserves that
+padding and uses speech intervals for subtitle timing. For preparation before an
+audio-conditioned video call, run the same composer explicitly:
+
+```bash
+node "$PLUGIN_ROOT/skills/produce/references/compose-speech.js" "$WORKDIR" "$STORYBOARD_DIR"
+```
+
+Include the full composed duration in video planning and pass the composed WAV to the
+selected audio-conditioned adapter. Convert its channel layout only as that adapter
+requires. If a provider rounds the request to a frame grid, pad the conditioning WAV
+with explicit silence through the provider duration and record the extra padding; do not
+speed up speech. Silence reserves reaction time; it does not animate a gesture or prove that
+the generated character reacts correctly. Do not count provider padding as an acted
+reaction or stretch speech to cover a missing pause.
+
+No new listening or score gate applies. If the user requests a review loop, inspect
+the actual audio and video against these line directions and report evidence and unresolved
+differences. Code checks, prompts and still frames cannot certify prosody or continuous
+acting; keep media that was not played/listened to explicitly `not_reviewed`.
+
+For an explicitly requested paid audiovisual evaluation, `acting_review` can inspect a
+local clip against the actual scene direction and expected speech. Supply requestedBy and
+reason from that request, preserve the authorized budget, and call it only for that review
+scope. It uploads media to Gemini and writes a receipt; it is never part of default speech
+generation. Receipts use a shared content-hash cache at `~/.cache/social-flow/acting-reviews`
+(or `SOCIAL_FLOW_ACTING_REVIEW_CACHE_DIR`), so copying a take does not create a new review.
+They are local provenance records, not tamper-proof attestations. Audio-only results do not
+certify facial expression, body action or lip sync.
+Reuse the receipt for unchanged media/direction, including a failing result; improve the
+take before evaluating it again. Report pass/fail/unverified and unresolved findings as
+returned. A requested 95-point target is an evaluation criterion, not permission to invent
+a passing score, reroll identical media, spend without a limit or block unrelated production.
 
 ## Adapter layer
 

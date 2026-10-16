@@ -21,7 +21,7 @@ Inherited from the fect-persona make-reels pipeline (same script, same contract)
 ```
 top 190px        system UI + IG/YT top-left wordmark
 left/right 176px IG action-bar avoidance (symmetric, since text is center-aligned)
-bottom 570px     burned-in subtitle band (y 1380–1560) + IG caption / YT channel overlay (y≥1580)
+bottom 570px     reserved margin (y 1380–1560) + IG caption / YT channel overlay (y≥1580)
 → text zone x 176–904 (width 728) · y 190–1350. Only the background visual uses the full 1080×1920.
 ```
 
@@ -31,12 +31,12 @@ bottom 570px     burned-in subtitle band (y 1380–1560) + IG caption / YT chann
 - Ken Burns margin: a still card with no `span=` zooms `KB_RATE` (4%/s) × card seconds,
   capped at a total scale of `KB_ZMAX` 1.075. Text is baked into the card, so the cap is the
   zone math on all three edges, and the tightest one binds. The bottom is the tightest: the
-  zone runs to y 1350 and the burned-in subtitle band starts at 1380, so `390·z + 960 ≤ 1380`
+  zone runs to y 1350 and the reserved platform UI margin starts at 1380, so `390·z + 960 ≤ 1380`
   gives z ≤ 1.0769 — at 1.075 a zone-filling card's last line ends at 1379, just above the band.
   The top ends at y≈132 (under the phone's status bar, not behind it) and the template's 640px
   hero stat ends at x 884, inside the 890 where the action-bar icons start. Landscape is the
   one place the cap does not decide the bottom — its zone bottom (y 795) sits on the worst-case
-  subtitle top, so any zoom past 1 crosses it, which was already true at the old 3.5%.
+  reserved lower margin, so any zoom past 1 crosses it, which was already true at the old 3.5%.
   **Every column-4 move keeps this cap** — easing changes the timing,
   not the span; `punch` lands 3.5% early and creeps to the same span; `drift` moves ±6px
   inside a 1.04 base scale that the crop absorbs. A `span=` written from the storyboard
@@ -54,17 +54,16 @@ Silence trim → loudnorm -16 → measured speech rate (warning band only — th
 duration rounded up to whole frames + sample-accurate audio padding (**zero drift**) → reveal transition
 timing (reveal-timing.py) → visual chain (video + alpha overlay composite → reveal xfade) → Ken Burns
 zoompan (4%/s on stills, capped at 1.075) → concat → BGM sidechain ducking → subtitle files (`subs.srt` for publishing ·
-`subs.ass` for burn-in) → outro splice through black (only when the channel's outro is on) → loudnorm -14 final encode (H.264 High 4.1, faststart)
+`subs.ass` as an optional sidecar) → outro splice through black (only when the channel's outro is on) → loudnorm -14 final encode (H.264 High 4.1, faststart)
 → cover still extraction (`COVER_TS`, and the frame it pulls now comes out of a moving still —
 a 5s punch cover sits at scale 1.062 at 3.2s, so the thumbnail is that bit tighter).
 
-**The build produces two videos** — `reel.mp4` (clean master, no subtitles) and `reel-sub.mp4`
-(bottom-band burn-in). The rule is to upload subtitles as a separate file instead of burning them
-into the video, so the clean copy is the default; the burn-in copy is for IG Reels, which can't
-take a subtitle file. The burn-in copy is not a re-encode of the clean master — it's rendered
-**once more from the same source** (both are first-generation). SRT and ASS are both written at
-the very spot the subtitle lines are produced — converting one from the other lets their timings
-diverge.
+**The build produces one clean video, `reel.mp4`.** Captions are never burned into
+any final video, including Instagram deliveries. `BURN=1` from an old environment cannot
+enable burn-in. Subtitle files are off by default (`SUB=0`). If the user wants separate
+YouTube captions, use `SUB=1` to create optional SRT/ASS sidecars and upload the SRT
+separately when requested. The speed pass produces only clean `reel-fast.mp4` and retimes
+an optional sidecar; it never propagates a historical `reel-sub.mp4`.
 
 **Synchronization comes from structure** — audio is one file per card, and card length is fixed
 by frame rounding + sample-accurate padding. Reveals are pure video-side timing, so even a wrong
@@ -98,7 +97,7 @@ falls back silently and no short video loops or freezes to fill its window.
 | `last reveal state unused` | **Do not proceed** — the last bullet/source never appears in the video. If `no reveals.tsv` shows, this check is off (capture-reveals.sh wasn't used) |
 | `REGEN recommended` (speech rate outside [3.2/factor, 6.2/factor] — [3.2, 6.2] at the 1.0 default · clipped ending) | Recheck that card through the checked speech gate within its remaining attempt allowance, then rebuild. If exhausted, hold and correct the script through the existing approval rules |
 | `boundary sidecar N/K` | OK — the boundaries are the pauses the checked TTS tool laid in (`<wav>.sentences.json`), snapped to the detected silences |
-| `주의: … sentence sidecar did not match the detected pauses` | OK to continue — the build used the longest pauses instead. Check that card's reveals in playback; a recurring mismatch means the WAV was edited after the checked tool wrote its sidecar |
+| `⚠ … sentence sidecar did not match the detected pauses` | OK to continue — the build used the longest pauses instead. Check that card's reveals in playback; a recurring mismatch means the WAV was edited after the checked tool wrote its sidecar |
 | `boundary proportional fallback` | OK to continue — if it recurs, fix the script's sentence boundaries (periods) |
 | `segment window under 0.9s` | Merge the short sentence with a neighbor |
 | `min gap between reveals <0.40s` | Trim bullets or lengthen the sentence |
@@ -108,14 +107,14 @@ falls back silently and no short video loops or freezes to fill its window.
 | `── voice-to-bed separation <N> LU` (no mark) | OK — at or above the 4 LU floor and wider than the resting distance |
 | Total length | the channel's band (`length_min_seconds`/`length_max_seconds`); unset, the preset's 35–120s stands, of which 35–75s is the recommendation, and 180s is the platform's own cap. Expect main + outro here (build-screencast.sh overlaps its xfade, so main + outro − 0.6s on that lane) and main alone with `OUTRO=0` — **measured on the final pace pass's output** |
 | `── no outro (OUTRO=0, …)` | Expected on a **short** from a channel whose `shortform_outro` is off. On long-form the toggle doesn't apply and the outro always splices, so there — or on a short whose channel keeps its outro — **do not proceed**: `OUTRO` in `.work/format.env` contradicts the channel, so fix the flag and rebuild |
-| `오류: OUTRO=1 but <asset> isn't in the workdir` | **Do not proceed** — the build stops there. Copy the outro under `format.env`'s `OUTRO_ASSET` name (produce §6), or set `OUTRO=0` when the channel ships without one |
-| `오류: OUTRO=0 but the build spliced an outro` | **Do not proceed** — the speed pass stops there. The flag was changed after the build, so the outro is sitting inside the feature and would be sped up with it. Rebuild under the flag you want |
-| `오류: OUTRO=1 but the build joined no outro` | **Do not proceed** — the speed pass stops there. The flag was changed after the build, so the tail boundary would be cut out of the feature and its last seconds shipped unsped. Rebuild under the flag you want |
-| `주의: first cue at …s — past the 1.0s mark` | The opening second carries no words. Not a build failure: look at `.work/qa/first-frame.png`, and if the frame is bare too, bring the cover's first sentence forward and rebuild |
+| `✗ OUTRO=1 but <asset> isn't in the workdir` | **Do not proceed** — the build stops there. Copy the outro under `format.env`'s `OUTRO_ASSET` name (produce §6), or set `OUTRO=0` when the channel ships without one |
+| `✗ OUTRO=0 but the build spliced an outro` | **Do not proceed** — the speed pass stops there. The flag was changed after the build, so the outro is sitting inside the feature and would be sped up with it. Rebuild under the flag you want |
+| `✗ OUTRO=1 but the build joined no outro` | **Do not proceed** — the speed pass stops there. The flag was changed after the build, so the tail boundary would be cut out of the feature and its last seconds shipped unsped. Rebuild under the flag you want |
+| `⚠ first cue at …s — past the 1.0s mark` | The opening second carries no words. Not a build failure: look at `.work/qa/first-frame.png`, and if the frame is bare too, bring the cover's first sentence forward and rebuild |
 | `── first cue …s` (no mark) | OK — the first subtitle is up inside the first second, and the t=0 still is in `.work/qa/` |
 | No `── speedup x…` line | **Do not proceed** — the required speed pass (produce §7.5) never ran, and `output/` would get the un-sped build. Run `speedup.sh .work` and copy the `-fast` set |
 | No `PASS final speech rate` line, or a `final speech rate` failure | **Do not proceed** — the shipped subtitle timeline was not checked or exceeds 6.2 characters/s. Lower the profile factor or shorten the dense line, rerun the pass, and use only the new `-fast` set |
-| `reel-fast.mp4 is …s but …s was expected` | **Do not proceed** — the speed pass exits 1; the filter didn't take. Check that the `outro.mp4` in the workdir is the same file the build spliced — a flag the build and the pass disagree on is caught earlier, by the `오류: OUTRO=…` lines above |
+| `reel-fast.mp4 is …s but …s was expected` | **Do not proceed** — the speed pass exits 1; the filter didn't take. Check that the `outro.mp4` in the workdir is the same file the build spliced — a flag the build and the pass disagree on is caught earlier, by the `✗ OUTRO=…` lines above |
 | `apart after the speed-up — YouTube drops chapters under 10s` | Long-form only. Merge the chapters that landed under 10s apart and rebuild — YouTube drops the entire list, not just that entry |
 
 ## Three TTS failure modes and responses (Gemini TTS, field-tested)

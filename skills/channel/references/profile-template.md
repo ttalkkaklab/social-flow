@@ -122,7 +122,7 @@ The THEME contract of video-template.html — it goes into scenes.js as-is:
 
 | Platform | Used | Notes |
 |---|---|---|
-| threads | ✅/❌ | one casual post body with the subtitle-burned video as `videoUrl` (needs public HTTPS hosting, 2026-08-19); growth posts may attach one image |
+| threads | ✅/❌ | one casual post body with the clean video without burned subtitles as `videoUrl` (needs public HTTPS hosting, 2026-08-19); growth posts may attach one image |
 | instagram | ✅/❌ | reels — needs public HTTPS hosting |
 | facebook | ✅/❌ | ordinary video post (not a reel) |
 | youtube | ✅/❌ | shorts — local upload, 100 uploads/day quota |

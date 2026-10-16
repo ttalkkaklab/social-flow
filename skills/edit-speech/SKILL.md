@@ -7,7 +7,7 @@ description: >
   Finds stable shot and line ids, preserves other characters and reports affected outputs.
   Storyboard plans a new episode; produce builds it; this skill repairs an existing one.
 argument-hint: "<channel> <episode> <shot, character or quoted line> <change>"
-allowed-tools: ["mcp__social-flow__speech_manage", "mcp__social-flow__tts_review_acting", "mcp__social-flow__storyboard_read", "mcp__social-flow__storyboard_check", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_gemini_38", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__astra_audio2video", "mcp__social-flow__seedance_reference", "mcp__social-flow__veo_reference"]
+allowed-tools: ["mcp__social-flow__speech_manage", "mcp__social-flow__acting_review", "mcp__social-flow__tts_review_acting", "mcp__social-flow__storyboard_read", "mcp__social-flow__storyboard_check", "mcp__social-flow__tts_generate", "mcp__social-flow__tts_gemini_38", "mcp__social-flow__tts_elevenlabs_generate", "mcp__social-flow__astra_audio2video", "mcp__social-flow__seedance_reference", "mcp__social-flow__veo_reference"]
 ---
 **Automatic execution policy:** Read [automation guidance](../_shared/automation-guidance.md) first. Creative rules and review findings guide improvements; scores, review/hash/freeze records, CTA choices and intermediate approval steps do not block authorized work. Preserve actual external-action authorization and stop at the artifact the user requested. This policy supersedes older quality-gate wording below.
 
@@ -28,7 +28,12 @@ or review HTML. Put that metadata in scenes.js and run `prepare` with the return
 Preparation assigns ids and makes the existing narrator fallback explicit; it does not invent
 new character dialogue or voices. Do not silently turn a user's dialogue into narration.
 
-1. Use `update` with the exact lineId, expectedRevision and requested patch. Keep tts (spoken
+1. Use `update` with the exact lineId, expectedRevision and requested patch. For expression,
+   intonation or acting corrections, set `patch.acting` with the line's context, intent,
+   emotion, vocal delivery, visible action and optional leadInSeconds/tailOutSeconds.
+   It replaces the whole acting object; retain existing fields that still apply, or use
+   null to clear it. Do not edit the character-wide stylePrompt for one line's emotion.
+   Keep tts (spoken
    spelling) and sub (display spelling) in agreement. A delivery-only change does not authorize
    changing the character's identity voice. Use speaker ids, not display names, in writes.
 2. Inspect `invalidated`. Old files remain available and source backups are in
@@ -39,11 +44,21 @@ new character dialogue or voices. Do not silently turn a user's dialogue into na
    with its returned generator and provider-ready generation arguments, preserving
    the character’s pinned settings. Attach with clean `generation.text` from
    `expectedText` and the actual tagged request in `generation.voiceSettings`.
+   Use the resolved line direction; do not overwrite it with a generic character's
+   stylePrompt. For ElevenLabs v4, write a compact acting.direction/tags cue for
+   audible delivery; rich context and vocal paragraphs stay in the scene plan.
+   Report unsupported-control warnings without silently changing engines.
    Do not call automatic listening, dictation, scoring or approval tools. Record the generator,
    actual voice settings, text and speed in the generation receipt. Use `attach_audio` to bind
    the file to its line revision, passing the actual generation arguments and text. Generated speech stays `not_reviewed`; that is usable output.
 4. For video work read the [speech production contract](../produce/references/shot-speech.md).
    `plan_video` takes the selected adapter's documented capabilities, not a hardcoded model.
+   Carry the same context, intent and emotion into its video prompt with the visual action.
+   Match the source image's expression, gaze and prop state to this beat. Never batch
+   different reactions or nonconsecutive shots by shared source image and slice them later.
+   Attach all current line audio, then use the speech contract's compose-speech command
+   before audio-conditioned video generation; build-reel also runs it automatically.
+   It materializes planned reaction time and synchronizes subtitles to speech intervals.
    On-screen dialogue requires audio-conditioned animation or an explicit post lip-sync
    adapter. Never silently substitute closed-mouth action. Off-screen speech and narration
    can be mixed over existing action footage. Preserve the selected model and budget; a
@@ -54,13 +69,19 @@ new character dialogue or voices. Do not silently turn a user's dialogue into na
    Do not label a script-only patch as a regenerated video. Return the changed shot/line,
    speaker, text, new files and any media still needing regeneration. No listening approval.
 
+If the user explicitly requests testing or an adversarial improvement loop, review the
+actual media as authorized and preserve the measured findings. A schema or planning pass
+does not establish improved acting; report unheard/unplayed output as `not_reviewed`.
+An explicitly requested paid evaluation may use `acting_review` under the authorized
+budget, as described in the speech contract. Do not call it in ordinary edit-speech runs.
+
 Generation receipts keep actual API arguments in voiceSettings. For Gemini,
-which have no language argument, put the declared text language in generation.language
+which has no language argument, put the declared text language in generation.language
 (e.g. ko). This is metadata, not an API parameter. Both attachment and assembly use the
 same voice/language normalization rules.
 
-Per-line `acting: {direction?: string, tags?: string[]}` is separate from the pinned
-identity voice and from visible/off-screen `delivery`. Use `speech_manage` to update
+Per-line `acting` supports `direction`/`tags` alongside the richer scene fields above.
+It is separate from the pinned identity voice and from visible/off-screen `delivery`. Use `speech_manage` to update
 acting, invalidate affected speech, and preserve unchanged takes. Follow
 [acting prompts](../produce/references/acting-prompts.md).
 ElevenLabs permits `eleven_v4` only; Gemini remains supported. Local TTS is removed.
